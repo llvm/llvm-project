@@ -9,6 +9,7 @@
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86EncodingOptimization.h"
 #include "MCTargetDesc/X86FixupKinds.h"
+#include "MCTargetDesc/X86MCExpr.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -360,7 +361,7 @@ static bool hasVariantSymbol(const MCInst &MI) {
       continue;
     const MCExpr &Expr = *Operand.getExpr();
     if (Expr.getKind() == MCExpr::SymbolRef &&
-        cast<MCSymbolRefExpr>(Expr).getKind() != MCSymbolRefExpr::VK_None)
+        getSpecifier(cast<MCSymbolRefExpr>(&Expr)) != X86MCExpr::VK_None)
       return true;
   }
   return false;
@@ -746,7 +747,7 @@ bool X86AsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
     MCValue Target;
     if (Fixup.getValue()->evaluateAsRelocatable(Target, &Asm) &&
         Target.getSymA() &&
-        Target.getSymA()->getKind() == MCSymbolRefExpr::VK_X86_ABS8)
+        getSpecifier(Target.getSymA()) == X86MCExpr::VK_ABS8)
       return false;
   }
   return true;

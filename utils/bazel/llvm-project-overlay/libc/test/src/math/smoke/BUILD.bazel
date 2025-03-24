@@ -26,6 +26,8 @@ math_test(name = "atan2")
 
 math_test(name = "atan2f")
 
+math_test(name = "atan")
+
 math_test(name = "atanf")
 
 math_test(name = "atanhf")
@@ -473,6 +475,11 @@ math_test(
 )
 
 # TODO: Add fma, fmaf, fmal, fmaf128 tests.
+
+math_test(
+    name = "fmaf16",
+    hdrs = ["FmaTest.h"],
+)
 
 math_test(
     name = "fmax",

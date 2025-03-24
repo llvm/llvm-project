@@ -346,7 +346,7 @@ int elsecondnoret(void) {
   return 0;
 }
 
-// CHECK-LABEL: _Z18statementexprnoretb
+// CHECK-LABEL: _Z18statementexprnoretb:
 int statementexprnoret(bool crash) {
   int rc = ({ if (crash) abort(); 0; }); // CHECK: File 0, 351:35 -> 352:12 = (#0 - #1)
   return rc;                             // CHECK-NOT: Gap

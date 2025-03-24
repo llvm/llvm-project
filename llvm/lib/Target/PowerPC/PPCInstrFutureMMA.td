@@ -163,14 +163,14 @@ let Predicates = [IsISAFuture] in {
   def DMXXEXTFDMR512 : XX3Form_AT3_XABp5_P1<60, 226,
                                             (outs vsrprc:$XAp, vsrprc:$XBp),
                                             (ins wacc:$AT),
-                                            "dmxxextfdmr512 $AT, $XAp, $XBp, 0", []> {
+                                            "dmxxextfdmr512 $XAp, $XBp, $AT, 0", []> {
     let P = 0;
   }
 
   def DMXXEXTFDMR512_HI : XX3Form_AT3_XABp5_P1<60, 226,
                                                (outs vsrprc:$XAp, vsrprc:$XBp),
                                                (ins wacc_hi:$AT),
-                                               "dmxxextfdmr512 $AT, $XAp, $XBp, 1", []> {
+                                               "dmxxextfdmr512 $XAp, $XBp, $AT, 1", []> {
     let P = 1;
   }
 
@@ -188,7 +188,7 @@ let Predicates = [IsISAFuture] in {
 
   def DMXXEXTFDMR256 : XX2Form_AT3_XBp5_P2<60, 484, (outs vsrprc:$XBp),
                                            (ins dmrrowp:$AT, u2imm:$P),
-                                           "dmxxextfdmr256 $AT, $XBp, $P", []>;
+                                           "dmxxextfdmr256 $XBp, $AT, $P", []>;
 
   def DMXXINSTFDMR256 : XX2Form_AT3_XBp5_P2<60, 485, (outs dmrrowp:$AT),
                                             (ins vsrprc:$XBp, u2imm:$P),

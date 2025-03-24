@@ -24,7 +24,7 @@ from pathlib import Path
 
 from .util import get_cursor, get_tu
 
-kInputsDir = os.path.join(os.path.dirname(__file__), "INPUTS")
+inputs_dir = os.path.join(os.path.dirname(__file__), "INPUTS")
 
 
 @contextmanager
@@ -51,26 +51,26 @@ def save_tu_pathlike(tu):
 
 class TestTranslationUnit(unittest.TestCase):
     def test_spelling(self):
-        path = os.path.join(kInputsDir, "hello.cpp")
+        path = os.path.join(inputs_dir, "hello.cpp")
         tu = TranslationUnit.from_source(path)
         self.assertEqual(tu.spelling, path)
 
     def test_cursor(self):
-        path = os.path.join(kInputsDir, "hello.cpp")
+        path = os.path.join(inputs_dir, "hello.cpp")
         tu = get_tu(path)
         c = tu.cursor
         self.assertIsInstance(c, Cursor)
         self.assertIs(c.kind, CursorKind.TRANSLATION_UNIT)
 
     def test_parse_arguments(self):
-        path = os.path.join(kInputsDir, "parse_arguments.c")
+        path = os.path.join(inputs_dir, "parse_arguments.c")
         tu = TranslationUnit.from_source(path, ["-DDECL_ONE=hello", "-DDECL_TWO=hi"])
         spellings = [c.spelling for c in tu.cursor.get_children()]
         self.assertEqual(spellings[-2], "hello")
         self.assertEqual(spellings[-1], "hi")
 
     def test_reparse_arguments(self):
-        path = os.path.join(kInputsDir, "parse_arguments.c")
+        path = os.path.join(inputs_dir, "parse_arguments.c")
         tu = TranslationUnit.from_source(path, ["-DDECL_ONE=hello", "-DDECL_TWO=hi"])
         tu.reparse()
         spellings = [c.spelling for c in tu.cursor.get_children()]
@@ -150,10 +150,10 @@ int SOME_DEFINE;
             else:
                 self.assert_normpaths_equal(expected[1], actual.include.name)
 
-        src = os.path.join(kInputsDir, "include.cpp")
-        h1 = os.path.join(kInputsDir, "header1.h")
-        h2 = os.path.join(kInputsDir, "header2.h")
-        h3 = os.path.join(kInputsDir, "header3.h")
+        src = os.path.join(inputs_dir, "include.cpp")
+        h1 = os.path.join(inputs_dir, "header1.h")
+        h2 = os.path.join(inputs_dir, "header2.h")
+        h3 = os.path.join(inputs_dir, "header3.h")
         inc = [(src, h1), (h1, h3), (src, h2), (h2, h3)]
 
         tu = TranslationUnit.from_source(src)
@@ -161,10 +161,10 @@ int SOME_DEFINE;
             eq(i[0], i[1])
 
     def test_inclusion_directive(self):
-        src = os.path.join(kInputsDir, "include.cpp")
-        h1 = os.path.join(kInputsDir, "header1.h")
-        h2 = os.path.join(kInputsDir, "header2.h")
-        h3 = os.path.join(kInputsDir, "header3.h")
+        src = os.path.join(inputs_dir, "include.cpp")
+        h1 = os.path.join(inputs_dir, "header1.h")
+        h2 = os.path.join(inputs_dir, "header2.h")
+        h3 = os.path.join(inputs_dir, "header3.h")
         inc = [h1, h3, h2, h3, h1]
 
         tu = TranslationUnit.from_source(
@@ -244,7 +244,7 @@ int SOME_DEFINE;
             del tu2
 
     def test_index_parse(self):
-        path = os.path.join(kInputsDir, "hello.cpp")
+        path = os.path.join(inputs_dir, "hello.cpp")
         index = Index.create()
         tu = index.parse(path)
         self.assertIsInstance(tu, TranslationUnit)
@@ -341,7 +341,7 @@ int SOME_DEFINE;
         gc.collect()  # Just in case.
 
     def test_fail_from_source(self):
-        path = os.path.join(kInputsDir, "non-existent.cpp")
+        path = os.path.join(inputs_dir, "non-existent.cpp")
         try:
             tu = TranslationUnit.from_source(path)
         except TranslationUnitLoadError:
@@ -349,7 +349,7 @@ int SOME_DEFINE;
         self.assertEqual(tu, None)
 
     def test_fail_from_ast_file(self):
-        path = os.path.join(kInputsDir, "non-existent.ast")
+        path = os.path.join(inputs_dir, "non-existent.ast")
         try:
             tu = TranslationUnit.from_ast_file(path)
         except TranslationUnitLoadError:

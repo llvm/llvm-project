@@ -3194,7 +3194,7 @@ void GVNPass::addDeadBlock(BasicBlock *BB) {
     // All blocks dominated by D are dead.
     SmallVector<BasicBlock *, 8> Dom;
     DT->getDescendants(D, Dom);
-    DeadBlocks.insert(Dom.begin(), Dom.end());
+    DeadBlocks.insert_range(Dom);
 
     // Figure out the dominance-frontier(D).
     for (BasicBlock *B : Dom) {

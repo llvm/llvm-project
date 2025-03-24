@@ -307,14 +307,14 @@ private:
     // This is an ARM branch relocation, need to use a stub function.
     // Look up for existing stub.
     SectionEntry &Section = Sections[RE.SectionID];
-    RuntimeDyldMachO::StubMap::const_iterator i = Stubs.find(Value);
+    auto [It, Inserted] = Stubs.try_emplace(Value);
     uint8_t *Addr;
-    if (i != Stubs.end()) {
-      Addr = Section.getAddressWithOffset(i->second);
+    if (!Inserted) {
+      Addr = Section.getAddressWithOffset(It->second);
     } else {
       // Create a new stub function.
       assert(Section.getStubOffset() % 4 == 0 && "Misaligned stub");
-      Stubs[Value] = Section.getStubOffset();
+      It->second = Section.getStubOffset();
       uint32_t StubOpcode = 0;
       if (RE.RelType == MachO::ARM_RELOC_BR24)
         StubOpcode = 0xe51ff004; // ldr pc, [pc, #-4]

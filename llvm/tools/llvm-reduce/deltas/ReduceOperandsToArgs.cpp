@@ -61,8 +61,20 @@ static void replaceFunctionCalls(Function *OldF, Function *NewF) {
   for (Use &U : OldF->uses()) {
     auto *CI = cast<CallBase>(U.getUser());
     assert(&U == &CI->getCalledOperandUse());
-    assert(CI->getCalledFunction() == OldF);
-    Callers.push_back(CI);
+
+    Function *CalledF = CI->getCalledFunction();
+    if (CalledF == OldF) {
+      Callers.push_back(CI);
+    } else {
+      // The call may have undefined behavior by calling a function with a
+      // mismatched signature. In this case, do not bother adjusting the
+      // callsites to pad with any new arguments.
+
+      // TODO: Better QoI to try to add new arguments to the end, and ignore
+      // existing mismatches.
+      assert(!CalledF && CI->getCalledOperand()->stripPointerCasts() == OldF &&
+             "only expected call and function signature mismatch");
+    }
   }
 
   // Call arguments for NewF.

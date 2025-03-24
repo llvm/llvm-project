@@ -1,5 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t/docs %t/build
 // RUN: sed 's|$test_dir|%/S|g' %S/Inputs/basic-project/database_template.json > %t/build/compile_commands.json
+
 // RUN: clang-doc --format=html --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
 // RUN: FileCheck %s -input-file=%t/docs/index_json.js -check-prefix=JSON-INDEX
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Shape.html -check-prefixes=HTML-SHAPE,SHAPE-NO-REPOSITORY
@@ -14,6 +15,13 @@
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Rectangle.html -check-prefixes=HTML-RECTANGLE,RECTANGLE-REPOSITORY
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Circle.html -check-prefixes=HTML-CIRCLE,CIRCLE-REPOSITORY
 
+// RUN: clang-doc --format=md --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
+// RUN: FileCheck %s -input-file=%t/docs/all_files.md -check-prefixes=MD-ALL-FILES
+// RUN: FileCheck %s -input-file=%t/docs/index.md -check-prefixes=MD-INDEX
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Shape.md -check-prefixes=MD-SHAPE
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Calculator.md -check-prefixes=MD-CALC
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Rectangle.md -check-prefixes=MD-RECTANGLE
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Circle.md -check-prefixes=MD-CIRCLE
 
 // JSON-INDEX: async function LoadIndex() {
 // JSON-INDEX-NEXT: return{
@@ -358,10 +366,6 @@
 // MD-SHAPE: **brief** Abstract base class for shapes.
 // MD-SHAPE:  Provides a common interface for different types of shapes.
 // MD-SHAPE: ## Functions
-// MD-SHAPE: ### ~Shape
-// MD-SHAPE: *public void ~Shape()*
-// MD-SHAPE: *Defined at .{{[\/]}}include{{[\/]}}Shape.h#13*
-// MD-SHAPE: **brief** Virtual destructor.
 // MD-SHAPE: ### area
 // MD-SHAPE: *public double area()*
 // MD-SHAPE: **brief** Calculates the area of the shape.
@@ -370,6 +374,10 @@
 // MD-SHAPE: *public double perimeter()*
 // MD-SHAPE: **brief** Calculates the perimeter of the shape.
 // MD-SHAPE: **return** double The perimeter of the shape.
+// MD-SHAPE: ### ~Shape
+// MD-SHAPE: *public void ~Shape()*
+// MD-SHAPE: *Defined at .{{[\/]}}include{{[\/]}}Shape.h#13*
+// MD-SHAPE: **brief** Virtual destructor.
 
 // MD-ALL-FILES: # All Files
 // MD-ALL-FILES: ## [GlobalNamespace](GlobalNamespace{{[\/]}}index.md)

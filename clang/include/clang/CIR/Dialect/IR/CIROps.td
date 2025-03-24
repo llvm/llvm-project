@@ -19,6 +19,7 @@ include "clang/CIR/Dialect/IR/CIRTypes.td"
 include "clang/CIR/Dialect/IR/CIRAttrs.td"
 
 include "clang/CIR/Interfaces/CIROpInterfaces.td"
+include "clang/CIR/Interfaces/CIRLoopOpInterface.td"
 
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
@@ -423,7 +424,7 @@ def StoreOp : CIR_Op<"store", [
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp"]>,
+def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp", "ForOp"]>,
                                  Terminator]> {
   let summary = "Return from function";
   let description = [{
@@ -461,11 +462,56 @@ def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp"]>,
 }
 
 //===----------------------------------------------------------------------===//
+// ConditionOp
+//===----------------------------------------------------------------------===//
+
+def ConditionOp : CIR_Op<"condition", [
+  Terminator,
+  DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+                            ["getSuccessorRegions"]>
+]> {
+  let summary = "Loop continuation condition.";
+  let description = [{
+    The `cir.condition` terminates conditional regions. It takes a single
+    `cir.bool` operand and, depending on its value, may branch to different
+    regions:
+
+     - When in the `cond` region of a `cir.loop`, it continues the loop
+       if true, or exits it if false.
+     - When in the `ready` region of a `cir.await`, it branches to the `resume`
+       region when true, and to the `suspend` region when false.
+
+    Example:
+
+    ```mlir
+    cir.loop for(cond : {
+      cir.condition(%arg0) // Branches to `step` region or exits.
+    }, step : {
+      [...]
+    }) {
+      [...]
+    }
+
+    cir.await(user, ready : {
+      cir.condition(%arg0) // Branches to `resume` or `suspend` region.
+    }, suspend : {
+      [...]
+    }, resume : {
+      [...]
+    },)
+    ```
+  }];
+  let arguments = (ins CIR_BoolType:$condition);
+  let assemblyFormat = " `(` $condition `)` attr-dict ";
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // YieldOp
 //===----------------------------------------------------------------------===//
 
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
-                               ParentOneOf<["ScopeOp"]>]> {
+                               ParentOneOf<["ScopeOp", "ForOp"]>]> {
   let summary = "Represents the default branching behaviour of a region";
   let description = [{
     The `cir.yield` operation terminates regions on different CIR operations,
@@ -664,6 +710,120 @@ def UnaryOp : CIR_Op<"unary", [Pure, SameOperandsAndResultType]> {
 
   let hasVerifier = 1;
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// BrCondOp
+//===----------------------------------------------------------------------===//
+
+def BrCondOp : CIR_Op<"brcond",
+      [DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
+       Pure, Terminator, AttrSizedOperandSegments]> {
+  let summary = "Conditional branch";
+  let description = [{
+    The `cir.brcond %cond, ^bb0, ^bb1` branches to 'bb0' block in case
+    %cond (which must be a !cir.bool type) evaluates to true, otherwise
+    it branches to 'bb1'.
+
+    Example:
+
+    ```mlir
+      ...
+        cir.brcond %a, ^bb3, ^bb4
+      ^bb3:
+        cir.return
+      ^bb4:
+        cir.yield
+    ```
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$cond, "mlir::Block *":$destTrue, "mlir::Block *":$destFalse,
+               CArg<"mlir::ValueRange", "{}">:$destOperandsTrue,
+               CArg<"mlir::ValueRange", "{}">:$destOperandsFalse), [{
+      build($_builder, $_state, cond, destOperandsTrue,
+            destOperandsFalse, destTrue, destFalse);
+    }]>
+  ];
+
+  let arguments = (ins CIR_BoolType:$cond,
+                       Variadic<CIR_AnyType>:$destOperandsTrue,
+                       Variadic<CIR_AnyType>:$destOperandsFalse);
+  let successors = (successor AnySuccessor:$destTrue, AnySuccessor:$destFalse);
+  let assemblyFormat = [{
+    $cond
+    $destTrue (`(` $destOperandsTrue^ `:` type($destOperandsTrue) `)`)?
+    `,`
+    $destFalse (`(` $destOperandsFalse^ `:` type($destOperandsFalse) `)`)?
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// ForOp
+//===----------------------------------------------------------------------===//
+
+def ForOp : CIR_Op<"for", [LoopOpInterface, NoRegionArguments]> {
+  let summary = "C/C++ for loop counterpart";
+  let description = [{
+    Represents a C/C++ for loop. It consists of three regions:
+
+     - `cond`: single block region with the loop's condition. Should be
+     terminated with a `cir.condition` operation.
+     - `body`: contains the loop body and an arbitrary number of blocks.
+     - `step`: single block region with the loop's step.
+
+    Example:
+
+    ```mlir
+    cir.for cond {
+      cir.condition(%val)
+    } body {
+      cir.break
+    ^bb2:
+      cir.yield
+    } step {
+      cir.yield
+    }
+    ```
+  }];
+
+  let regions = (region SizedRegion<1>:$cond,
+                        MinSizedRegion<1>:$body,
+                        SizedRegion<1>:$step);
+  let assemblyFormat = [{
+    `:` `cond` $cond
+    `body` $body
+    `step` $step
+    attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$condBuilder,
+                   "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$bodyBuilder,
+                   "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$stepBuilder), [{
+        mlir::OpBuilder::InsertionGuard guard($_builder);
+
+        // Build condition region.
+        $_builder.createBlock($_state.addRegion());
+        condBuilder($_builder, $_state.location);
+
+        // Build body region.
+        $_builder.createBlock($_state.addRegion());
+        bodyBuilder($_builder, $_state.location);
+
+        // Build step region.
+        $_builder.createBlock($_state.addRegion());
+        stepBuilder($_builder, $_state.location);
+      }]>
+  ];
+
+  let extraClassDeclaration = [{
+    mlir::Region *maybeGetStep() { return &getStep(); }
+    llvm::SmallVector<mlir::Region *> getRegionsInExecutionOrder() {
+      return llvm::SmallVector<mlir::Region *, 3>{&getCond(), &getBody(), &getStep()};
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//

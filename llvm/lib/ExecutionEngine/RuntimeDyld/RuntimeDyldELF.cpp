@@ -1515,15 +1515,15 @@ void RuntimeDyldELF::resolveAArch64Branch(unsigned SectionID,
   uint64_t Offset = RelI->getOffset();
   unsigned RelType = RelI->getType();
   // Look for an existing stub.
-  StubMap::const_iterator i = Stubs.find(Value);
-  if (i != Stubs.end()) {
+  auto [It, Inserted] = Stubs.try_emplace(Value);
+  if (!Inserted) {
     resolveRelocation(Section, Offset,
-                      Section.getLoadAddressWithOffset(i->second), RelType, 0);
+                      Section.getLoadAddressWithOffset(It->second), RelType, 0);
     LLVM_DEBUG(dbgs() << " Stub function found\n");
   } else if (!resolveAArch64ShortBranch(SectionID, RelI, Value)) {
     // Create a new stub function.
     LLVM_DEBUG(dbgs() << " Create a new stub function\n");
-    Stubs[Value] = Section.getStubOffset();
+    It->second = Section.getStubOffset();
     uint8_t *StubTargetAddr = createStubFunction(
         Section.getAddressWithOffset(Section.getStubOffset()));
 
@@ -1837,15 +1837,15 @@ RuntimeDyldELF::processRelocationRef(
       SectionEntry &Section = Sections[SectionID];
 
       //  Look up for existing stub.
-      StubMap::const_iterator i = Stubs.find(Value);
-      if (i != Stubs.end()) {
-        RelocationEntry RE(SectionID, Offset, RelType, i->second);
+      auto [It, Inserted] = Stubs.try_emplace(Value);
+      if (!Inserted) {
+        RelocationEntry RE(SectionID, Offset, RelType, It->second);
         addRelocationForSection(RE, SectionID);
         LLVM_DEBUG(dbgs() << " Stub function found\n");
       } else {
         // Create a new stub function.
         LLVM_DEBUG(dbgs() << " Create a new stub function\n");
-        Stubs[Value] = Section.getStubOffset();
+        It->second = Section.getStubOffset();
 
         unsigned AbiVariant = Obj.getPlatformFlags();
 
@@ -2075,10 +2075,10 @@ RuntimeDyldELF::processRelocationRef(
     SectionEntry &Section = Sections[SectionID];
 
     // Look for an existing stub.
-    StubMap::const_iterator i = Stubs.find(Value);
+    auto [It, Inserted] = Stubs.try_emplace(Value);
     uintptr_t StubAddress;
-    if (i != Stubs.end()) {
-      StubAddress = uintptr_t(Section.getAddressWithOffset(i->second));
+    if (!Inserted) {
+      StubAddress = uintptr_t(Section.getAddressWithOffset(It->second));
       LLVM_DEBUG(dbgs() << " Stub function found\n");
     } else {
       // Create a new stub function.
@@ -2089,7 +2089,7 @@ RuntimeDyldELF::processRelocationRef(
           alignTo(BaseAddress + Section.getStubOffset(), getStubAlignment());
       unsigned StubOffset = StubAddress - BaseAddress;
 
-      Stubs[Value] = StubOffset;
+      It->second = StubOffset;
       createStubFunction((uint8_t *)StubAddress);
       RelocationEntry RE(SectionID, StubOffset + 8, ELF::R_390_64,
                          Value.Offset);

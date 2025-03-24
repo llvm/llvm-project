@@ -33,7 +33,7 @@ public:
               CompFuncTy Comp) const override {
     const auto &RISCVExprA = cast<RISCVMCExpr>(A);
     const auto &RISCVExprB = cast<RISCVMCExpr>(B);
-    if (RISCVExprA.getKind() != RISCVExprB.getKind())
+    if (RISCVExprA.getSpecifier() != RISCVExprB.getSpecifier())
       return false;
 
     return MCPlusBuilder::equals(*RISCVExprA.getSubExpr(),
@@ -468,7 +468,7 @@ public:
     if (!isa<RISCVMCExpr>(ImmExpr))
       return false;
 
-    switch (cast<RISCVMCExpr>(ImmExpr)->getKind()) {
+    switch (cast<RISCVMCExpr>(ImmExpr)->getSpecifier()) {
     default:
       return false;
     case RISCVMCExpr::VK_CALL:

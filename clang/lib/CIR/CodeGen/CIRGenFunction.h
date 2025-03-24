@@ -175,6 +175,9 @@ public:
   void finishFunction(SourceLocation endLoc);
   mlir::LogicalResult emitFunctionBody(const clang::Stmt *body);
 
+  /// Build a debug stoppoint if we are emitting debug info.
+  void emitStopPoint(const Stmt *s);
+
   // Build CIR for a statement. useCurrentScope should be true if no
   // new scopes need be created when finding a compound statement.
   mlir::LogicalResult
@@ -183,6 +186,8 @@ public:
 
   mlir::LogicalResult emitSimpleStmt(const clang::Stmt *s,
                                      bool useCurrentScope);
+
+  mlir::LogicalResult emitForStmt(const clang::ForStmt &S);
 
   void emitCompoundStmt(const clang::CompoundStmt &s);
 
@@ -311,6 +316,10 @@ public:
   /// inside a function, including static vars etc.
   void emitVarDecl(const clang::VarDecl &d);
 
+  /// Perform the usual unary conversions on the specified expression and
+  /// compare the result against zero, returning an Int1Ty value.
+  mlir::Value evaluateExprAsBool(const clang::Expr *e);
+
   /// Set the address of a local variable.
   void setAddrOfLocalVar(const clang::VarDecl *vd, Address addr) {
     assert(!LocalDeclMap.count(vd) && "Decl already exists in LocalDeclMap!");
@@ -336,6 +345,12 @@ public:
                      cir::FuncOp fn, cir::FuncType funcType,
                      FunctionArgList args, clang::SourceLocation loc,
                      clang::SourceLocation startLoc);
+
+  /// Emit a conversion from the specified type to the specified destination
+  /// type, both of which are CIR scalar types.
+  mlir::Value emitScalarConversion(mlir::Value src, clang::QualType srcType,
+                                   clang::QualType dstType,
+                                   clang::SourceLocation loc);
 
   /// Represents a scope, including function bodies, compound statements, and
   /// the substatements of if/while/do/for/switch/try statements.  This class

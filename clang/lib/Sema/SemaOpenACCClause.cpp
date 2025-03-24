@@ -1991,6 +1991,9 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitCollapseClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitBindClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
+  if (checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
+    return nullptr;
+
   if (std::holds_alternative<StringLiteral *>(Clause.getBindDetails()))
     return OpenACCBindClause::Create(
         Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(),

@@ -1139,10 +1139,9 @@ define amdgpu_ps void @phi_use_def_before_kill(float inreg %x, i32 inreg %y) #0 
 ; SI:       ; %bb.0: ; %bb
 ; SI-NEXT:    v_add_f32_e64 v1, s0, 1.0
 ; SI-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v1
-; SI-NEXT:    s_mov_b64 s[2:3], exec
 ; SI-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, vcc
 ; SI-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v1
-; SI-NEXT:    s_andn2_b64 s[2:3], s[2:3], vcc
+; SI-NEXT:    s_andn2_b64 exec, exec, vcc
 ; SI-NEXT:    s_cbranch_scc0 .LBB11_6
 ; SI-NEXT:  ; %bb.1: ; %bb
 ; SI-NEXT:    s_andn2_b64 exec, exec, vcc
@@ -1174,11 +1173,10 @@ define amdgpu_ps void @phi_use_def_before_kill(float inreg %x, i32 inreg %y) #0 
 ; GFX10-WAVE64-LABEL: phi_use_def_before_kill:
 ; GFX10-WAVE64:       ; %bb.0: ; %bb
 ; GFX10-WAVE64-NEXT:    v_add_f32_e64 v1, s0, 1.0
-; GFX10-WAVE64-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX10-WAVE64-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v1
 ; GFX10-WAVE64-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, vcc
 ; GFX10-WAVE64-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v1
-; GFX10-WAVE64-NEXT:    s_andn2_b64 s[2:3], s[2:3], vcc
+; GFX10-WAVE64-NEXT:    s_andn2_b64 exec, exec, vcc
 ; GFX10-WAVE64-NEXT:    s_cbranch_scc0 .LBB11_6
 ; GFX10-WAVE64-NEXT:  ; %bb.1: ; %bb
 ; GFX10-WAVE64-NEXT:    s_andn2_b64 exec, exec, vcc
@@ -1206,11 +1204,10 @@ define amdgpu_ps void @phi_use_def_before_kill(float inreg %x, i32 inreg %y) #0 
 ; GFX10-WAVE32-LABEL: phi_use_def_before_kill:
 ; GFX10-WAVE32:       ; %bb.0: ; %bb
 ; GFX10-WAVE32-NEXT:    v_add_f32_e64 v1, s0, 1.0
-; GFX10-WAVE32-NEXT:    s_mov_b32 s2, exec_lo
 ; GFX10-WAVE32-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0, v1
 ; GFX10-WAVE32-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, vcc_lo
 ; GFX10-WAVE32-NEXT:    v_cmp_nlt_f32_e32 vcc_lo, 0, v1
-; GFX10-WAVE32-NEXT:    s_andn2_b32 s2, s2, vcc_lo
+; GFX10-WAVE32-NEXT:    s_andn2_b32 exec_lo, exec_lo, vcc_lo
 ; GFX10-WAVE32-NEXT:    s_cbranch_scc0 .LBB11_6
 ; GFX10-WAVE32-NEXT:  ; %bb.1: ; %bb
 ; GFX10-WAVE32-NEXT:    s_andn2_b32 exec_lo, exec_lo, vcc_lo
@@ -1238,12 +1235,11 @@ define amdgpu_ps void @phi_use_def_before_kill(float inreg %x, i32 inreg %y) #0 
 ; GFX11-LABEL: phi_use_def_before_kill:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    v_add_f32_e64 v1, s0, 1.0
-; GFX11-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v1
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, vcc
 ; GFX11-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v1
-; GFX11-NEXT:    s_and_not1_b64 s[2:3], s[2:3], vcc
+; GFX11-NEXT:    s_and_not1_b64 exec, exec, vcc
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB11_6
 ; GFX11-NEXT:  ; %bb.1: ; %bb
 ; GFX11-NEXT:    s_and_not1_b64 exec, exec, vcc

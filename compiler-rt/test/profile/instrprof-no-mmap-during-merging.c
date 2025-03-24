@@ -17,10 +17,9 @@
 // PROFDATA2: [  0,    0,          2 ]
 // PROFDATA2: Maximum function count: 2
 
-#include <string.h>
 int ar[8];
 int main() {
-  memcpy(ar, ar + 2, ar[0]);
-  memcpy(ar, ar + 2, ar[2]);
+  __builtin_memcpy(ar, ar + 2, ar[0]);
+  __builtin_memcpy(ar, ar + 2, ar[2]);
   return ar[2];
 }

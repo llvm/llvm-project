@@ -52,6 +52,15 @@ public:
     return cir::BoolAttr::get(getContext(), getBoolTy(), state);
   }
 
+  /// Create a for operation.
+  cir::ForOp createFor(
+      mlir::Location loc,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> stepBuilder) {
+    return create<cir::ForOp>(loc, condBuilder, bodyBuilder, stepBuilder);
+  }
+
   mlir::TypedAttr getConstPtrAttr(mlir::Type type, int64_t value) {
     auto valueAttr = mlir::IntegerAttr::get(
         mlir::IntegerType::get(type.getContext(), 64), value);
@@ -157,6 +166,16 @@ public:
     // it simple.
     return mlir::IntegerAttr::get(mlir::IntegerType::get(ctx, 64),
                                   size.getQuantity());
+  }
+
+  /// Create a loop condition.
+  cir::ConditionOp createCondition(mlir::Value condition) {
+    return create<cir::ConditionOp>(condition.getLoc(), condition);
+  }
+
+  /// Create a yield operation.
+  cir::YieldOp createYield(mlir::Location loc, mlir::ValueRange value = {}) {
+    return create<cir::YieldOp>(loc, value);
   }
 };
 

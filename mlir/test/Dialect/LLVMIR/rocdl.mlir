@@ -767,10 +767,14 @@ llvm.func @rocdl_8bit_floats(%source: i32, %source_half: f16, %source_bfloat: bf
 // CHECK: rocdl.cvt.scalef32.f32.fp8
 // CHECK: rocdl.cvt.scalef32.pk.f16.bf8 
 // CHECK: rocdl.cvt.scalef32.pk.f16.fp8 
+// CHECK: rocdl.cvt.scalef32.pk.bf16.bf8
+// CHECK: rocdl.cvt.scalef32.pk.bf16.fp8
 // CHECK: rocdl.cvt.scalef32.f16.fp8
 // CHECK: rocdl.cvt.scalef32.f16.bf8
 // CHECK: rocdl.cvt.pk.bf8.f32
 // CHECK: rocdl.cvt.pk.fp8.f32
+// CHECK: rocdl.cvt.pk.f32.bf8
+// CHECK: rocdl.cvt.pk.f32.fp8
 // CHECK: rocdl.cvt.sr.bf8.f32
 // CHECK: rocdl.cvt.sr.fp8.f32
 // CHECK: rocdl.cvt.scalef32.sr.fp8.f32
@@ -793,10 +797,14 @@ llvm.func @rocdl_8bit_floats(%source: i32, %source_half: f16, %source_bfloat: bf
   %v2_scaled = rocdl.cvt.scalef32.f32.fp8 %source[%c0], %c4 : f32
   %v3_scaled = rocdl.cvt.scalef32.pk.f16.bf8 %source[%false], %c4 : vector<2xf16>
   %v4_scaled = rocdl.cvt.scalef32.pk.f16.fp8 %source[%false], %c4 : vector<2xf16>
+  %v3_scaled_bf16 = rocdl.cvt.scalef32.pk.bf16.bf8 %source[%false], %c4 : vector<2xbf16>
+  %v4_scaled_bf16 = rocdl.cvt.scalef32.pk.bf16.fp8 %source[%false], %c4 : vector<2xbf16>
   %v5 = rocdl.cvt.scalef32.f16.fp8 %source[%false], %c4 -> %v3_scaled[%c0] : f16
   %v6  = rocdl.cvt.scalef32.f16.bf8 %source[%false], %c4 -> %v3_scaled[%c0] : f16
   %source2 = rocdl.cvt.pk.bf8.f32 %v1, %v2 -> %source[%false] : i32
   %source3 = rocdl.cvt.pk.fp8.f32 %v1, %v2 -> %source2[%false] : i32
+  %source2_ext = rocdl.cvt.pk.f32.bf8 %source[%false] : vector<2xf32>
+  %source3_ext = rocdl.cvt.pk.f32.fp8 %source[%false] : vector<2xf32>
   %source4 = rocdl.cvt.sr.bf8.f32 %v1, %stoch -> %source3[%c2] : i32
   %source5 = rocdl.cvt.sr.fp8.f32 %v2, %stoch -> %source4[%c3] : i32
   %source5_scaled = rocdl.cvt.scalef32.sr.fp8.f32 %v2, %stoch, %c4 -> %source4[%c3] : i32

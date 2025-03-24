@@ -16,7 +16,7 @@ import unittest
 
 from .util import get_cursor, get_tu
 
-baseInput = "int one;\nint two;\n"
+base_input = "int one;\nint two;\n"
 
 
 class TestLocation(unittest.TestCase):
@@ -26,7 +26,7 @@ class TestLocation(unittest.TestCase):
         self.assertEqual(loc.offset, offset)
 
     def test_location(self):
-        tu = get_tu(baseInput)
+        tu = get_tu(base_input)
         one = get_cursor(tu, "one")
         two = get_cursor(tu, "two")
 
@@ -37,7 +37,7 @@ class TestLocation(unittest.TestCase):
         self.assert_location(two.location, line=2, column=5, offset=13)
 
         # adding a linebreak at top should keep columns same
-        tu = get_tu("\n" + baseInput)
+        tu = get_tu("\n" + base_input)
         one = get_cursor(tu, "one")
         two = get_cursor(tu, "two")
 
@@ -48,7 +48,7 @@ class TestLocation(unittest.TestCase):
         self.assert_location(two.location, line=3, column=5, offset=14)
 
         # adding a space should affect column on first line only
-        tu = get_tu(" " + baseInput)
+        tu = get_tu(" " + base_input)
         one = get_cursor(tu, "one")
         two = get_cursor(tu, "two")
 
@@ -57,7 +57,7 @@ class TestLocation(unittest.TestCase):
 
         # define the expected location ourselves and see if it matches
         # the returned location
-        tu = get_tu(baseInput)
+        tu = get_tu(base_input)
 
         file = File.from_name(tu, "t.c")
         location = SourceLocation.from_position(tu, file, 1, 5)
@@ -83,20 +83,20 @@ class TestLocation(unittest.TestCase):
         self.assertTrue(verified)
 
     def test_extent(self):
-        tu = get_tu(baseInput)
+        tu = get_tu(base_input)
         one = get_cursor(tu, "one")
         two = get_cursor(tu, "two")
 
         self.assert_location(one.extent.start, line=1, column=1, offset=0)
         self.assert_location(one.extent.end, line=1, column=8, offset=7)
         self.assertEqual(
-            baseInput[one.extent.start.offset : one.extent.end.offset], "int one"
+            base_input[one.extent.start.offset : one.extent.end.offset], "int one"
         )
 
         self.assert_location(two.extent.start, line=2, column=1, offset=9)
         self.assert_location(two.extent.end, line=2, column=8, offset=16)
         self.assertEqual(
-            baseInput[two.extent.start.offset : two.extent.end.offset], "int two"
+            base_input[two.extent.start.offset : two.extent.end.offset], "int two"
         )
 
         file = File.from_name(tu, "t.c")

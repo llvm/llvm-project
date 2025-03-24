@@ -40,9 +40,9 @@ static_assert(__builtin_structured_binding_size(S5) == 2);
 // expected-error@-1 {{static assertion failed due to requirement '__builtin_structured_binding_size(S5) == 2'}} \
 // expected-note@-1 {{expression evaluates to '1 == 2'}}
 static_assert(__builtin_structured_binding_size(S6) == 2);
-// expected-error@-1 {{static assertion failed due to requirement '__builtin_structured_binding_size(S6) == 2'}} \
 // expected-error@-1 {{cannot decompose class type 'S6' because it has an anonymous union member}} \
-// expected-note@-1 {{expression evaluates to '1 == 2'}}
+// expected-error@-1 {{type 'S6' cannot be decomposed}} \
+// expected-error@-1 {{static assertion expression is not an integral constant expression}} \
 // expected-note@#note-anon-union {{declared here}}
 static_assert(__builtin_structured_binding_size(S7) == 1);
 

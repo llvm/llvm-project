@@ -694,15 +694,11 @@ def MoveChecker: Checker<"Move">,
   ]>,
   Documentation<HasDocumentation>;
 
-def VirtualCallModeling : Checker<"VirtualCallModeling">,
-  HelpText<"Auxiliary modeling for the virtual method call checkers">,
-  Documentation<NotDocumented>,
-  Hidden;
-
-def PureVirtualCallChecker : Checker<"PureVirtualCall">,
-  HelpText<"Check pure virtual function calls during construction/destruction">,
-  Dependencies<[VirtualCallModeling]>,
-  Documentation<HasDocumentation>;
+def PureVirtualCallChecker
+    : Checker<"PureVirtualCall">,
+      HelpText<
+          "Check pure virtual function calls during construction/destruction">,
+      Documentation<HasDocumentation>;
 } // end: "cplusplus"
 
 let ParentPackage = CplusplusOptIn in {
@@ -756,7 +752,6 @@ def VirtualCallChecker
       CheckerOptions<[CmdLineOption<Boolean, "ShowFixIts",
                                     "Enable fix-it hints for this checker",
                                     "false", InAlpha>]>,
-      Dependencies<[VirtualCallModeling]>,
       Documentation<HasDocumentation>;
 
 } // end: "optin.cplusplus"

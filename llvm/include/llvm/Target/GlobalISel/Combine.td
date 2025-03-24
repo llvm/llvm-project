@@ -1522,7 +1522,7 @@ def extract_vector_element_build_vector_trunc8 : GICombineRule<
 
 def sext_trunc : GICombineRule<
    (defs root:$root, build_fn_matchinfo:$matchinfo),
-   (match (G_TRUNC $src, $x, (MIFlags NoSWrap)),
+   (match (G_TRUNC $src, $x),
           (G_SEXT $root, $src),
    [{ return Helper.matchSextOfTrunc(${root}, ${matchinfo}); }]),
    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;

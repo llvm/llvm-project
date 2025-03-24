@@ -19,19 +19,11 @@ define void @load_store_interleave_group(ptr noalias %data) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP3]]
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[WIDE_VEC2:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <4 x i64> [[WIDE_VEC2]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <4 x i64> [[WIDE_VEC2]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i64> [[STRIDED_VEC]], <2 x i64> [[STRIDED_VEC1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i64> [[TMP8]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NEXT:    store <4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP4]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[STRIDED_VEC3]], <2 x i64> [[STRIDED_VEC4]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[INTERLEAVED_VEC5:%.*]] = shufflevector <4 x i64> [[TMP7]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NEXT:    store <4 x i64> [[INTERLEAVED_VEC5]], ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i64>, ptr [[TMP5]], align 8
+; CHECK-NEXT:    store <2 x i64> [[WIDE_LOAD]], ptr [[TMP4]], align 8
+; CHECK-NEXT:    store <2 x i64> [[WIDE_LOAD1]], ptr [[TMP5]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

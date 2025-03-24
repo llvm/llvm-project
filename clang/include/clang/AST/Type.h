@@ -3527,14 +3527,16 @@ class MemberPointerType : public Type, public llvm::FoldingSetNode {
   QualType PointeeType;
 
   /// The class of which the pointee is a member. Must ultimately be a
-  /// RecordType, but could be a typedef or a template parameter too.
-  const Type *Class;
+  /// CXXRecordType, but could be a typedef or a template parameter too.
+  NestedNameSpecifier *Qualifier;
 
-  MemberPointerType(QualType Pointee, const Type *Cls, QualType CanonicalPtr)
+  MemberPointerType(QualType Pointee, NestedNameSpecifier *Qualifier,
+                    QualType CanonicalPtr)
       : Type(MemberPointer, CanonicalPtr,
-             (Cls->getDependence() & ~TypeDependence::VariablyModified) |
+             (toTypeDependence(Qualifier->getDependence()) &
+              ~TypeDependence::VariablyModified) |
                  Pointee->getDependence()),
-        PointeeType(Pointee), Class(Cls) {}
+        PointeeType(Pointee), Qualifier(Qualifier) {}
 
 public:
   QualType getPointeeType() const { return PointeeType; }
@@ -3551,21 +3553,21 @@ public:
     return !PointeeType->isFunctionProtoType();
   }
 
-  const Type *getClass() const { return Class; }
+  NestedNameSpecifier *getQualifier() const { return Qualifier; }
   CXXRecordDecl *getMostRecentCXXRecordDecl() const;
 
-  bool isSugared() const { return false; }
-  QualType desugar() const { return QualType(this, 0); }
+  bool isSugared() const;
+  QualType desugar() const {
+    return isSugared() ? getCanonicalTypeInternal() : QualType(this, 0);
+  }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getPointeeType(), getClass());
+    Profile(ID, getPointeeType(), getQualifier(), getMostRecentCXXRecordDecl());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType Pointee,
-                      const Type *Class) {
-    ID.AddPointer(Pointee.getAsOpaquePtr());
-    ID.AddPointer(Class);
-  }
+                      const NestedNameSpecifier *Qualifier,
+                      const CXXRecordDecl *Cls);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == MemberPointer;

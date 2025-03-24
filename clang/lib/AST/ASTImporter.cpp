@@ -1244,12 +1244,16 @@ ASTNodeImporter::VisitMemberPointerType(const MemberPointerType *T) {
   if (!ToPointeeTypeOrErr)
     return ToPointeeTypeOrErr.takeError();
 
-  ExpectedTypePtr ClassTypeOrErr = import(T->getClass());
-  if (!ClassTypeOrErr)
-    return ClassTypeOrErr.takeError();
+  auto QualifierOrErr = import(T->getQualifier());
+  if (!QualifierOrErr)
+    return QualifierOrErr.takeError();
 
-  return Importer.getToContext().getMemberPointerType(*ToPointeeTypeOrErr,
-                                                      *ClassTypeOrErr);
+  auto ClsOrErr = import(T->getMostRecentCXXRecordDecl());
+  if (!ClsOrErr)
+    return ClsOrErr.takeError();
+
+  return Importer.getToContext().getMemberPointerType(
+      *ToPointeeTypeOrErr, *QualifierOrErr, *ClsOrErr);
 }
 
 ExpectedType

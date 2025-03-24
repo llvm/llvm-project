@@ -21,7 +21,7 @@ import unittest
 
 from .util import get_cursor, get_cursors, get_tu
 
-kInput = """\
+children_test = """\
 struct s0 {
   int a;
   int b;
@@ -41,7 +41,7 @@ void f0(int a0, int a1) {
 }
 """
 
-kParentTest = """\
+parent_test = """\
         class C {
             void f();
         }
@@ -49,7 +49,7 @@ kParentTest = """\
         void C::f() { }
     """
 
-kTemplateArgTest = """\
+template_arg_test = """\
         template <int kInt, typename T, bool kBool>
         void foo();
 
@@ -57,7 +57,7 @@ kTemplateArgTest = """\
         void foo<-7, float, true>();
     """
 
-kBinops = """\
+binops = """\
 struct C {
    int m;
  };
@@ -118,7 +118,7 @@ struct C {
 
 class TestCursor(unittest.TestCase):
     def test_get_children(self):
-        tu = get_tu(kInput)
+        tu = get_tu(children_test)
 
         it = tu.cursor.get_children()
         tu_nodes = list(it)
@@ -613,7 +613,7 @@ int add(float a, float b) { return a + b; }
         self.assertEqual(underlying.kind, TypeKind.INT)
 
     def test_semantic_parent(self):
-        tu = get_tu(kParentTest, "cpp")
+        tu = get_tu(parent_test, "cpp")
         curs = get_cursors(tu, "f")
         decl = get_cursor(tu, "C")
         self.assertEqual(len(curs), 2)
@@ -621,7 +621,7 @@ int add(float a, float b) { return a + b; }
         self.assertEqual(curs[0].semantic_parent, decl)
 
     def test_lexical_parent(self):
-        tu = get_tu(kParentTest, "cpp")
+        tu = get_tu(parent_test, "cpp")
         curs = get_cursors(tu, "f")
         decl = get_cursor(tu, "C")
         self.assertEqual(len(curs), 2)
@@ -865,13 +865,13 @@ int count(int a, int b){
         self.assertEqual(arguments[1].spelling, "j")
 
     def test_get_num_template_arguments(self):
-        tu = get_tu(kTemplateArgTest, lang="cpp")
+        tu = get_tu(template_arg_test, lang="cpp")
         foos = get_cursors(tu, "foo")
 
         self.assertEqual(foos[1].get_num_template_arguments(), 3)
 
     def test_get_template_argument_kind(self):
-        tu = get_tu(kTemplateArgTest, lang="cpp")
+        tu = get_tu(template_arg_test, lang="cpp")
         foos = get_cursors(tu, "foo")
 
         self.assertEqual(
@@ -885,20 +885,20 @@ int count(int a, int b){
         )
 
     def test_get_template_argument_type(self):
-        tu = get_tu(kTemplateArgTest, lang="cpp")
+        tu = get_tu(template_arg_test, lang="cpp")
         foos = get_cursors(tu, "foo")
 
         self.assertEqual(foos[1].get_template_argument_type(1).kind, TypeKind.FLOAT)
 
     def test_get_template_argument_value(self):
-        tu = get_tu(kTemplateArgTest, lang="cpp")
+        tu = get_tu(template_arg_test, lang="cpp")
         foos = get_cursors(tu, "foo")
 
         self.assertEqual(foos[1].get_template_argument_value(0), -7)
         self.assertEqual(foos[1].get_template_argument_value(2), True)
 
     def test_get_template_argument_unsigned_value(self):
-        tu = get_tu(kTemplateArgTest, lang="cpp")
+        tu = get_tu(template_arg_test, lang="cpp")
         foos = get_cursors(tu, "foo")
 
         self.assertEqual(foos[1].get_template_argument_unsigned_value(0), 2**32 - 7)
@@ -930,7 +930,7 @@ int count(int a, int b){
         )
 
     def test_binop(self):
-        tu = get_tu(kBinops, lang="cpp")
+        tu = get_tu(binops, lang="cpp")
 
         operators = {
             # not exposed yet

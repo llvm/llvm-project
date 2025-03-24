@@ -409,7 +409,7 @@ void TypeLocWriter::VisitRValueReferenceTypeLoc(RValueReferenceTypeLoc TL) {
 
 void TypeLocWriter::VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
   addSourceLocation(TL.getStarLoc());
-  Record.AddTypeSourceInfo(TL.getClassTInfo());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
 }
 
 void TypeLocWriter::VisitArrayTypeLoc(ArrayTypeLoc TL) {
@@ -8019,6 +8019,10 @@ void OMPClauseWriter::VisitOMPReductionClause(OMPReductionClause *C) {
     for (auto *E : C->copy_array_elems())
       Record.AddStmt(E);
   }
+  auto PrivateFlags = C->private_var_reduction_flags();
+  Record.push_back(std::distance(PrivateFlags.begin(), PrivateFlags.end()));
+  for (bool Flag : PrivateFlags)
+    Record.push_back(Flag);
 }
 
 void OMPClauseWriter::VisitOMPTaskReductionClause(OMPTaskReductionClause *C) {
@@ -8866,4 +8870,11 @@ void ASTRecordWriter::writeOpenACCClauseList(
     ArrayRef<const OpenACCClause *> Clauses) {
   for (const OpenACCClause *Clause : Clauses)
     writeOpenACCClause(Clause);
+}
+void ASTRecordWriter::AddOpenACCRoutineDeclAttr(
+    const OpenACCRoutineDeclAttr *A) {
+  // We have to write the size so that the reader can do a resize. Unlike the
+  // Decl version of this, we can't count on trailing storage to get this right.
+  writeUInt32(A->Clauses.size());
+  writeOpenACCClauseList(A->Clauses);
 }

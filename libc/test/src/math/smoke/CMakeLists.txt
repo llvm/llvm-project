@@ -3563,6 +3563,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fmaf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaf16_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.fmaf16
+    libc.src.__support.FPUtil.cast
+)
+
+add_fp_unittest(
   fma_test
   SUITE
     libc-math-smoke-tests
@@ -3946,6 +3959,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  acoshf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    acoshf16_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.acoshf16
+    libc.src.__support.FPUtil.cast
+)
+
+add_fp_unittest(
   asinf_test
   SUITE
     libc-math-smoke-tests
@@ -4001,6 +4026,16 @@ add_fp_unittest(
     libc.src.errno.errno
     libc.src.math.atanf
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  atan_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    atan_test.cpp
+  DEPENDS
+    libc.src.math.atan
 )
 
 add_fp_unittest(

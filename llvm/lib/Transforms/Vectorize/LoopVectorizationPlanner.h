@@ -446,17 +446,15 @@ public:
   /// TODO: \p VectorizingEpilogue indicates if the executed VPlan is for the
   /// epilogue vector loop. It should be removed once the re-use issue has been
   /// fixed.
-  /// \p ExpandedSCEVs is passed during execution of the plan for epilogue loop
-  /// to re-use expansion results generated during main plan execution.
   ///
   /// Returns a mapping of SCEVs to their expanded IR values.
   /// Note that this is a temporary workaround needed due to the current
   /// epilogue handling.
-  DenseMap<const SCEV *, Value *>
-  executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
-              InnerLoopVectorizer &LB, DominatorTree *DT,
-              bool VectorizingEpilogue,
-              const DenseMap<const SCEV *, Value *> *ExpandedSCEVs = nullptr);
+  DenseMap<const SCEV *, Value *> executePlan(ElementCount VF, unsigned UF,
+                                              VPlan &BestPlan,
+                                              InnerLoopVectorizer &LB,
+                                              DominatorTree *DT,
+                                              bool VectorizingEpilogue);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printPlans(raw_ostream &O);
@@ -494,8 +492,10 @@ protected:
 private:
   /// Build a VPlan according to the information gathered by Legal. \return a
   /// VPlan for vectorization factors \p Range.Start and up to \p Range.End
-  /// exclusive, possibly decreasing \p Range.End.
-  VPlanPtr buildVPlan(VFRange &Range);
+  /// exclusive, possibly decreasing \p Range.End. If no VPlan can be built for
+  /// the input range, set the largest included VF to the maximum VF for which
+  /// no plan could be built.
+  VPlanPtr tryToBuildVPlan(VFRange &Range);
 
   /// Build a VPlan using VPRecipes according to the information gather by
   /// Legal. This method is only used for the legacy inner loop vectorizer.

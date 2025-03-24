@@ -7,16 +7,16 @@
 # RUN: llvm-mc --disassemble %s -triple powerpc-unknown-aix-gnu \
 # RUN:   -mcpu=future | FileCheck %s
 
-#CHECK: dmxxextfdmr512 1, 2, 34, 0
+#CHECK: dmxxextfdmr512 2, 34, 1, 0
 0xf0 0x82 0x17 0x12
 
-#CHECK: dmxxextfdmr512 1, 2, 34, 1
+#CHECK: dmxxextfdmr512 2, 34, 1, 1
 0xf0 0x83 0x17 0x12
 
-#CHECK: dmxxextfdmr256 3, 8, 0
+#CHECK: dmxxextfdmr256 8, 3, 0
 0xf1 0x80 0x47 0x90
 
-#CHECK: dmxxextfdmr256 3, 8, 3
+#CHECK: dmxxextfdmr256 8, 3, 3
 0xf1 0x81 0x4f 0x90
 
 #CHECK: dmxxinstfdmr512 1, 2, 34, 0

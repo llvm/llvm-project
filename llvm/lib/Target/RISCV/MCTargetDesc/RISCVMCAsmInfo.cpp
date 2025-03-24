@@ -19,8 +19,8 @@
 using namespace llvm;
 
 const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
-    {MCSymbolRefExpr::VK_GOTPCREL, "GOTPCREL"},
-    {MCSymbolRefExpr::VK_PLT, "PLT"},
+    {RISCVMCExpr::VK_GOTPCREL, "GOTPCREL"},
+    {RISCVMCExpr::VK_PLT, "PLT"},
 };
 
 void RISCVMCAsmInfo::anchor() {}

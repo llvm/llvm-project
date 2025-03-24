@@ -2024,7 +2024,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         """Get the working directory that should be used when launching processes for local or remote processes."""
         if lldb.remote_platform:
             # Remote tests set the platform working directory up in
-            # TestBase.setUp()
+            # Base.setUp()
             return lldb.remote_platform.GetWorkingDirectory()
         else:
             # local tests change directory into each test subdirectory

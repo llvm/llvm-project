@@ -3317,22 +3317,16 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OpenMPFlushConstruct &flushConstruct) {
-  const auto &verbatim = std::get<parser::Verbatim>(flushConstruct.t);
-  const auto &objectList =
-      std::get<std::optional<parser::OmpObjectList>>(flushConstruct.t);
-  const auto &clauseList =
-      std::get<std::optional<parser::OmpClauseList>>(flushConstruct.t);
-  ObjectList objects =
-      objectList ? makeObjects(*objectList, semaCtx) : ObjectList{};
+                   const parser::OpenMPFlushConstruct &construct) {
+  const auto &argumentList = construct.v.Arguments();
+  const auto &clauseList = construct.v.Clauses();
+  ObjectList objects = makeObjects(argumentList, semaCtx);
   List<Clause> clauses =
-      clauseList ? makeList(clauseList->v,
-                            [&](auto &&s) { return makeClause(s, semaCtx); })
-                 : List<Clause>{};
-  mlir::Location currentLocation = converter.genLocation(verbatim.source);
+      makeList(clauseList.v, [&](auto &&s) { return makeClause(s, semaCtx); });
+  mlir::Location currentLocation = converter.genLocation(construct.source);
 
   ConstructQueue queue{buildConstructQueue(
-      converter.getFirOpBuilder().getModule(), semaCtx, eval, verbatim.source,
+      converter.getFirOpBuilder().getModule(), semaCtx, eval, construct.source,
       llvm::omp::Directive::OMPD_flush, clauses)};
   genFlushOp(converter, symTable, semaCtx, eval, currentLocation, objects,
              queue, queue.begin());
@@ -3359,11 +3353,12 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    const parser::OpenMPDepobjConstruct &construct) {
   // These values will be ignored until the construct itself is implemented,
   // but run them anyway for the sake of testing (via a Todo test).
-  auto &ompObj = std::get<parser::OmpObject>(construct.t);
-  const Object &depObj = makeObject(ompObj, semaCtx);
-  Clause clause = makeClause(std::get<parser::OmpClause>(construct.t), semaCtx);
-  (void)depObj;
-  (void)clause;
+  ObjectList objects = makeObjects(construct.v.Arguments(), semaCtx);
+  assert(objects.size() == 1);
+  List<Clause> clauses = makeClauses(construct.v.Clauses(), semaCtx);
+  assert(clauses.size() == 1);
+  (void)objects;
+  (void)clauses;
 
   TODO(converter.getCurrentLocation(), "OpenMPDepobjConstruct");
 }

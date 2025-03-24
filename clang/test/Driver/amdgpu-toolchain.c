@@ -19,10 +19,12 @@
 // AS_LINK_UR: ld.lld{{.*}} "--no-undefined"{{.*}} "--unresolved-symbols=ignore-all"
 
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack+:sramecc- -nogpulib \
-// RUN:   -L. -flto -fconvergent-functions %s 2>&1 | FileCheck -check-prefixes=LTO,MCPU %s
+// RUN:   -L. -flto -fconvergent-functions %s 2>&1 | FileCheck -check-prefix=LTO %s
+// LTO: clang{{.*}} "-flto=full"{{.*}}"-fconvergent-functions"
+// LTO: ld.lld{{.*}}"-L."{{.*}}"-plugin-opt=mcpu=gfx90a"{{.*}}"--lto-partitions={{[0-9]+}}"{{.*}}"-plugin-opt=-mattr=-sramecc,+xnack"
+
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack+:sramecc- -nogpulib \
 // RUN:   -L. -fconvergent-functions %s 2>&1 | FileCheck -check-prefix=MCPU %s
-// LTO: clang{{.*}} "-flto=full"{{.*}}"-fconvergent-functions"
 // MCPU: ld.lld{{.*}}"-L."{{.*}}"-plugin-opt=mcpu=gfx90a"{{.*}}"-plugin-opt=-mattr=-sramecc,+xnack"
 
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx906 -nogpulib \
@@ -36,3 +38,17 @@
 // RUN: %clang -target amdgcn-amd-amdhsa -march=gfx90a -stdlib -startfiles \
 // RUN:   -nogpulib -nogpuinc -### %s 2>&1 | FileCheck -check-prefix=STARTUP %s
 // STARTUP: ld.lld{{.*}}"-lc" "-lm" "{{.*}}crt1.o"
+
+// Check --flto-partitions
+
+// RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx90a -nogpulib \
+// RUN:   -L. -flto --flto-partitions=42 %s 2>&1 | FileCheck -check-prefix=LTO_PARTS %s
+// LTO_PARTS: ld.lld{{.*}}"-L."{{.*}}"-plugin-opt=mcpu=gfx90a"{{.*}}"--lto-partitions=42"
+
+// RUN: not %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx90a -nogpulib \
+// RUN:   -L. -flto --flto-partitions=a %s 2>&1 | FileCheck -check-prefix=LTO_PARTS_INV0 %s
+// LTO_PARTS_INV0: clang: error: invalid integral value 'a' in '--flto-partitions=a'
+
+// RUN: not %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx90a -nogpulib \
+// RUN:   -L. -flto --flto-partitions=0 %s 2>&1 | FileCheck -check-prefix=LTO_PARTS_INV1 %s
+// LTO_PARTS_INV1: clang: error: invalid integral value '0' in '--flto-partitions=0'

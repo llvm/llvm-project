@@ -2875,6 +2875,17 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
     CmdArgs.push_back("-target-feature");
     CmdArgs.push_back(MipsTargetFeature);
   }
+
+  // Those OSes default to enabling VIS on 64-bit SPARC.
+  // See also the corresponding code for external assemblers in
+  // sparc::getSparcAsmModeForCPU().
+  bool IsSparcV9ATarget =
+      (C.getDefaultToolChain().getArch() == llvm::Triple::sparcv9) &&
+      (Triple.isOSLinux() || Triple.isOSFreeBSD() || Triple.isOSOpenBSD());
+  if (IsSparcV9ATarget && SparcTargetFeatures.empty()) {
+    CmdArgs.push_back("-target-feature");
+    CmdArgs.push_back("+vis");
+  }
   for (const char *Feature : SparcTargetFeatures) {
     CmdArgs.push_back("-target-feature");
     CmdArgs.push_back(Feature);
@@ -6388,11 +6399,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fconvergent_functions,
                   options::OPT_fno_convergent_functions);
 
-  // NVPTX/AMDGCN doesn't support PGO or coverage. There's no runtime support
-  // for sampling, overhead of call arc collection is way too high and there's
-  // no way to collect the output.
-  if (!Triple.isNVPTX() && !Triple.isAMDGCN())
-    addPGOAndCoverageFlags(TC, C, JA, Output, Args, SanitizeArgs, CmdArgs);
+  addPGOAndCoverageFlags(TC, C, JA, Output, Args, SanitizeArgs, CmdArgs);
 
   Args.AddLastArg(CmdArgs, options::OPT_fclang_abi_compat_EQ);
 
@@ -9330,6 +9337,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back(
             Args.MakeArgString("--device-linker=" + TC.getTripleString() + "=" +
                                "-lclang_rt.builtins"));
+      bool HasFlangRT = HasCompilerRT && C.getDriver().IsFlangMode();
+      if (HasFlangRT)
+        CmdArgs.push_back(
+            Args.MakeArgString("--device-linker=" + TC.getTripleString() + "=" +
+                               "-lflang_rt.runtime"));
     });
   }
 

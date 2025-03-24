@@ -1205,7 +1205,7 @@ bool mlir::linalg::isDimSequencePreserved(AffineMap indexingMap,
          "expected indexing map to be projected permutation");
 
   llvm::SmallDenseSet<unsigned, 4> sequenceElements;
-  sequenceElements.insert(dimSequence.begin(), dimSequence.end());
+  sequenceElements.insert_range(dimSequence);
 
   unsigned dimSequenceStart = dimSequence[0];
   for (const auto &expr : enumerate(indexingMap.getResults())) {
@@ -1381,8 +1381,7 @@ getCollapsableIterationSpaceDims(GenericOp genericOp, OpOperand *fusableOperand,
                      }))
       continue;
 
-    processedIterationDims.insert(foldedIterationSpaceDims.begin(),
-                                  foldedIterationSpaceDims.end());
+    processedIterationDims.insert_range(foldedIterationSpaceDims);
     iterationSpaceReassociation.emplace_back(
         std::move(foldedIterationSpaceDims));
   }

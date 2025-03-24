@@ -136,14 +136,14 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
   // tosa::MulOp
   if (isa<tosa::MulOp>(op)) {
-    auto shift_val = cast<tosa::MulOp>(op).getShift();
-    DenseElementsAttr shift_elem;
-    if (!shift_val.getImpl() ||
-        !matchPattern(shift_val, m_Constant(&shift_elem))) {
+    auto shiftVal = cast<tosa::MulOp>(op).getShift();
+    DenseElementsAttr shiftElem;
+    if (!matchPattern(shiftVal, m_Constant(&shiftElem))) {
       (void)rewriter.notifyMatchFailure(op, "shift value of mul not found");
+      return nullptr;
     }
 
-    int32_t shift = shift_elem.getValues<IntegerAttr>()[0].getInt();
+    int32_t shift = shiftElem.getValues<IntegerAttr>()[0].getInt();
 
     if (isa<FloatType>(elementTy)) {
       if (shift != 0) {

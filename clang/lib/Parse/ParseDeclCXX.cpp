@@ -3732,7 +3732,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
     return ParseOpenMPDeclarativeDirectiveWithExtDecl(
         AS, AccessAttrs, /*Delayed=*/true, TagType, TagDecl);
   case tok::annot_pragma_openacc:
-    return ParseOpenACCDirectiveDecl();
+    return ParseOpenACCDirectiveDecl(AS, AccessAttrs, TagType, TagDecl);
 
   default:
     if (tok::isPragmaAnnotation(Tok.getKind())) {

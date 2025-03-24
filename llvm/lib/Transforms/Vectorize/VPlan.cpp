@@ -147,7 +147,7 @@ template <typename T> static T *getPlanEntry(T *Start) {
     if (Current->getNumPredecessors() == 0)
       return Current;
     auto &Predecessors = Current->getPredecessors();
-    WorkList.insert(Predecessors.begin(), Predecessors.end());
+    WorkList.insert_range(Predecessors);
   }
 
   llvm_unreachable("VPlan without any entry node without predecessors");
@@ -898,8 +898,6 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   // FIXME: Model VF * UF computation completely in VPlan.
-  assert((!getVectorLoopRegion() || VFxUF.getNumUsers()) &&
-         "VFxUF expected to always have users");
   unsigned UF = getUF();
   if (VF.getNumUsers()) {
     Value *RuntimeVF = getRuntimeVF(Builder, TCTy, State.VF);
@@ -1532,12 +1530,13 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
-    auto Plan = buildVPlan(SubRange);
-    VPlanTransforms::optimize(*Plan);
-    // Update the name of the latch of the top-level vector loop region region
-    // after optimizations which includes block folding.
-    Plan->getVectorLoopRegion()->getExiting()->setName("vector.latch");
-    VPlans.push_back(std::move(Plan));
+    if (auto Plan = tryToBuildVPlan(SubRange)) {
+      VPlanTransforms::optimize(*Plan);
+      // Update the name of the latch of the top-level vector loop region region
+      // after optimizations which includes block folding.
+      Plan->getVectorLoopRegion()->getExiting()->setName("vector.latch");
+      VPlans.push_back(std::move(Plan));
+    }
     VF = SubRange.End;
   }
 }

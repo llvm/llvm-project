@@ -378,7 +378,7 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
   // If this is a difference or a defined symbol plus an offset, then we need a
   // scattered relocation entry.  Differences always require scattered
   // relocations.
-  if (Target.getSymB()) {
+  if (Target.getSubSym()) {
     if (RelocType == MachO::ARM_RELOC_HALF)
       return recordARMScatteredHalfRelocation(Writer, Asm, Fragment, Fixup,
                                               Target, FixedValue);

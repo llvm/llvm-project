@@ -175,6 +175,11 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-ranges>` check by updating suppress 
   warnings logic for ``nullptr`` in ``std::find``.
 
+- Improved :doc:`modernize-use-starts-ends-with
+  <clang-tidy/checks/modernize/use-starts-ends-with>` check by adding more
+  matched scenarios of ``find`` and ``rfind`` methods and fixing false
+  positives when those methods were called with 3 arguments.
+
 - Improved :doc:`modernize-use-std-numbers
   <clang-tidy/checks/modernize/use-std-numbers>` check to support math
   functions of different precisions.

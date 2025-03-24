@@ -7215,7 +7215,7 @@ void Verifier::verifyCompileUnits() {
   auto *CUs = M.getNamedMetadata("llvm.dbg.cu");
   SmallPtrSet<const Metadata *, 2> Listed;
   if (CUs)
-    Listed.insert(CUs->op_begin(), CUs->op_end());
+    Listed.insert_range(CUs->operands());
   for (const auto *CU : CUVisited)
     CheckDI(Listed.count(CU), "DICompileUnit not listed in llvm.dbg.cu", CU);
   CUVisited.clear();

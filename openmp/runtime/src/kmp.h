@@ -2606,9 +2606,7 @@ typedef struct {
 typedef struct kmp_taskgraph_flags { /*This needs to be exactly 32 bits */
   unsigned nowait : 1;
   unsigned re_record : 1;
-  unsigned graph_reset : 1; /* 1==discard taskgraph record, 0==use taskgraph
-                               record */
-  unsigned reserved : 29;
+  unsigned reserved : 30;
 } kmp_taskgraph_flags_t;
 
 /// Represents a TDG node
@@ -2652,7 +2650,7 @@ typedef struct kmp_tdg_info {
 extern int __kmp_tdg_dot;
 extern kmp_int32 __kmp_max_tdgs;
 extern kmp_tdg_info_t **__kmp_global_tdgs;
-extern kmp_tdg_info_t *__kmp_curr_tdg;
+extern kmp_int32 __kmp_curr_tdg_idx;
 extern kmp_int32 __kmp_successors_size;
 extern std::atomic<kmp_int32> __kmp_tdg_task_id;
 extern kmp_int32 __kmp_num_tdg;

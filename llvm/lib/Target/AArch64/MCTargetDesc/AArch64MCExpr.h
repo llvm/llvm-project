@@ -145,6 +145,7 @@ public:
 
   /// Get the kind of this expression.
   VariantKind getKind() const { return Kind; }
+  VariantKind getSpecifier() const { return Kind; }
 
   /// Get the expression this modifier applies to.
   const MCExpr *getSubExpr() const { return Expr; }

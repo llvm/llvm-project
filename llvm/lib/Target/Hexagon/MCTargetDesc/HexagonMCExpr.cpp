@@ -37,48 +37,6 @@ MCFragment *llvm::HexagonMCExpr::findAssociatedFragment() const {
   return Expr->findAssociatedFragment();
 }
 
-static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {
-  switch (Expr->getKind()) {
-  case MCExpr::Target:
-    llvm_unreachable("Cannot handle nested target MCExpr");
-    break;
-  case MCExpr::Constant:
-    break;
-
-  case MCExpr::Binary: {
-    const MCBinaryExpr *be = cast<MCBinaryExpr>(Expr);
-    fixELFSymbolsInTLSFixupsImpl(be->getLHS(), Asm);
-    fixELFSymbolsInTLSFixupsImpl(be->getRHS(), Asm);
-    break;
-  }
-  case MCExpr::SymbolRef: {
-    const MCSymbolRefExpr &symRef = *cast<MCSymbolRefExpr>(Expr);
-    switch (getVariantKind(&symRef)) {
-    default:
-      return;
-    case HexagonMCExpr::VK_GD_GOT:
-    case HexagonMCExpr::VK_LD_GOT:
-    case HexagonMCExpr::VK_GD_PLT:
-    case HexagonMCExpr::VK_LD_PLT:
-    case HexagonMCExpr::VK_IE:
-    case HexagonMCExpr::VK_IE_GOT:
-    case HexagonMCExpr::VK_TPREL:
-      break;
-    }
-    cast<MCSymbolELF>(symRef.getSymbol()).setType(ELF::STT_TLS);
-    break;
-  }
-  case MCExpr::Unary:
-    fixELFSymbolsInTLSFixupsImpl(cast<MCUnaryExpr>(Expr)->getSubExpr(), Asm);
-    break;
-  }
-}
-
-void HexagonMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
-  auto expr = getExpr();
-  fixELFSymbolsInTLSFixupsImpl(expr, Asm);
-}
-
 MCExpr const *HexagonMCExpr::getExpr() const { return Expr; }
 
 void HexagonMCExpr::setMustExtend(bool Val) {
