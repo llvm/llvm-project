@@ -20,7 +20,6 @@ class NamespaceDecl;
 class Sema;
 
 class HLSLExternalSemaSource : public ExternalSemaSource {
-private:
   Sema *SemaPtr = nullptr;
   NamespaceDecl *HLSLNamespace = nullptr;
 
