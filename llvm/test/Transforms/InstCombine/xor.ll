@@ -1664,3 +1664,52 @@ entry:
   %or = or <2 x i32> %add, %c
   ret <2 x i32> %or
 }
+
+declare i32 @callee()
+
+define i32 @xor_disjoint() {
+; CHECK-LABEL: @xor_disjoint(
+; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @callee(), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[XOR:%.*]] = or disjoint i32 [[CALL1]], 4096
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %call1 = call i32 @callee(), !range !0
+  %xor = xor i32 %call1, 4096
+  ret i32 %xor
+}
+
+define i32 @xor_disjoint2() {
+; CHECK-LABEL: @xor_disjoint2(
+; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @callee(), !range [[RNG1:![0-9]+]]
+; CHECK-NEXT:    [[XOR:%.*]] = or disjoint i32 [[CALL1]], 512
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %call1 = call i32 @callee(), !range !1
+  %xor = xor i32 %call1, 512
+  ret i32 %xor
+}
+
+define i32 @xor_non_disjoint() {
+; CHECK-LABEL: @xor_non_disjoint(
+; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @callee(), !range [[RNG0]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[CALL1]], 1024
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %call1 = call i32 @callee(), !range !0
+  %xor = xor i32 %call1, 1024
+  ret i32 %xor
+}
+
+define i32 @xor_non_disjoint2() {
+; CHECK-LABEL: @xor_non_disjoint2(
+; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @callee(), !range [[RNG1]]
+; CHECK-NEXT:    [[XOR:%.*]] = and i32 [[CALL1]], 511
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %call1 = call i32 @callee(), !range !1
+  %xor = xor i32 %call1, 1024
+  ret i32 %xor
+}
+
+!0 = !{ i32 0, i32 2048 }
+!1 = !{ i32 1024, i32 1536 }
