@@ -295,7 +295,7 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     mlir::Value addrVal =
         emitAlloca(cast<NamedDecl>(paramVar)->getName(),
                    convertType(paramVar->getType()), paramLoc, alignment,
-                   /*insertIntoFnEntryBlock=*/false);
+                   /*insertIntoFnEntryBlock=*/true);
 
     declare(addrVal, paramVar, paramVar->getType(), paramLoc, alignment,
             /*isParam=*/true);
