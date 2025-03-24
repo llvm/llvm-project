@@ -2581,8 +2581,7 @@ define <vscale x 1 x i8> @not_signbit_mask_nxv1i8(<vscale x 1 x i8> %a, <vscale 
 ; CHECK-ZVKB:       # %bb.0:
 ; CHECK-ZVKB-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-ZVKB-NEXT:    vsra.vi v8, v8, 7
-; CHECK-ZVKB-NEXT:    vnot.v v8, v8
-; CHECK-ZVKB-NEXT:    vand.vv v8, v8, v9
+; CHECK-ZVKB-NEXT:    vandn.vv v8, v9, v8
 ; CHECK-ZVKB-NEXT:    ret
   %cond = icmp sgt <vscale x 1 x i8> %a, splat (i8 -1)
   %r = select <vscale x 1 x i1> %cond, <vscale x 1 x i8> %b, <vscale x 1 x i8> zeroinitializer
