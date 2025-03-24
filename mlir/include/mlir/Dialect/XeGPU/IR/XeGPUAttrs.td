@@ -166,7 +166,11 @@ def XeGPU_ScopeEnums : I32EnumAttr<"Scope", "enumeration of scope",
 
 def XeGPU_ScopeAttr
   : EnumAttr<XeGPU_Dialect, XeGPU_ScopeEnums, "Scope"> {
-    let summary = [{Describe the programming scope of the IR}];
+    let summary = [{Defines the programming scope of the IR,
+                    where WG represents the workgroup level,
+                    SG represents the subgroup level, and
+                    Lane represents the work-item level}];
+
     let assemblyFormat = "``$value";
 }
 
@@ -176,37 +180,53 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
     specified by the tensor descriptor.
   }];
   let description = [{
-    XeGPU operations leverages LayoutAttr to distribute data across subgroups and workitems.
-    It is specified in tensor_descs upon the tensor description creation. LayoutAttr contains
-    the following parameters.
+    XeGPU operations use `LayoutAttr` to define how data is distributed across subgroups and work-items.
+    This attribute is specified in tensor descriptors during tensor description creation. `LayoutAttr`
+    includes the following parameters, categorized into three groups:
 
-    * scope: Specifies the scope of the current code, which can be either wg (workgroup), sg (subgroup),
-            or lane (workitem). It is mandatory for subgroup-level programming and optional for workgroup
-            and workitem-level programming. By default, if a LayoutAttr includes sg_layout and sg_data,
-            it will be treated as workgroup level. Similarly, if it only includes lane_layout and lane_data,
-            it will be considered as workitem level.
-    * sg_layout: [optional] specifies the total number of subgroups and their layout in a workgroup.
-    * sg_data: [optional] specifies the data size accessed per subgroup.
-    * order: [optional] specifies the dimension order used to linearize n-d sbugroup ids to 1-d.
-            The first dimension in the order list is the fastest-changing dimension.
-    * lane_layout: [required] specifies the total number of work-items and their layout in a subgroup
-    * lane_data: [required] specifies the data size accessed per work-item for a single distribution.
+    ### Group 1:
+    * scope: Defines the scope of the code, which can be `wg` (workgroup), `sg` (subgroup),
+      or `lane` (work-item). It is mandatory for subgroup-level programming but optional
+      for workgroup and work-item levels. By default:
+        - If sg_layout is included, the layout is treated as workgroup level.
+        - If only `lane_layout` and `lane_data` are included, it is considered work-item level
+
+    ### Group 2:
+    * sg_layout (optional): Specifies the total number of subgroups and their layout within a workgroup.
+      It is mandatory for workgroup-level programming. Its presence implies workgroup-level code, and
+      the scope must be empty or set to `wg`.
+    * sg_data (optional): Defines the data size accessed per subgroup. It must be used with sg_layout or
+      left empty, in which case it can be derived from `lane_layout` and `lane_data` using the formula:
+      `sg_data[i] = lane_layout[i] * lane_data[i]`.
+    * order (optional): Specifies the dimension order used to linearize n-dimensional sbugroup IDs to
+      1-dimensional IDs. The first dimension in the order list is the fastest-changing dimension.
+
+    ### Group 3:
+    * lane_layout (required): Specifies the total number of work-items and their layout within a subgroup
+    * lane_data: (required): Specifies the data size accessed per work-item for a single distribution.
 
     `lane_data[0] * lane_data[1]` can be greater than 1, indicating that each work item operates on multiple
     elements. These elements are eventually lowered to a "SIMT-flavor" vector, such as a SPIR-V vector or
     an LLVM vector, or packed into a storage data type. The multiple elements specified by lane_data must
     come from a single dimension and be contiguous in memory along either dimension.
 
-    E.g., #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
-    In this example, the subgroup consists of 16 work items arranged as lane_layout=[1, 16], with
-    each work item accessing a single element as defined by lane_data=[1, 1].
+    ### Examples:
+      1. Work-item level layout:
+      ```mlir
+      #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+      ```
+      In this example, the subgroup consists of 16 work items arranged as lane_layout=[1, 16], with
+      each work item accessing a single element as defined by lane_data=[1, 1].
 
-    E.g., #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>
-    In this example, the layout represents a workgroup distribution. A workgroup consists of 8 subgroups
-    arranged in a 2x4 layout. Each subgroup accesses a 16x16 block per instruction, which is further
-    distributed to 16 work items as described above.
-
+      2. Workgroup level layout:
+      ```mlir
+      #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>
+      ```
+      In this example, the layout represents a workgroup distribution. A workgroup consists of 8 subgroups
+      arranged in a 2x4 layout. Each subgroup accesses a 16x16 block per instruction, which is further
+      distributed to 16 work items as described above.
   }];
+
   let parameters = (ins
     OptionalParameter<"ScopeAttr">: $scope,
     OptionalParameter<"DenseI32ArrayAttr">: $sg_layout,
