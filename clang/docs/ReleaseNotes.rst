@@ -356,6 +356,8 @@ Bug Fixes to C++ Support
   The issue has been addressed by propagating qualifiers during derived-to-base conversions in the AST. (#GH127824)
 - Clang now emits the ``-Wunused-variable`` warning when some structured bindings are unused
   and the ``[[maybe_unused]]`` attribute is not applied. (#GH125810)
+- Clang now issues an error when placement new is used to modify a const-qualified variable 
+  in a ``constexpr`` function. (#GH131432)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
