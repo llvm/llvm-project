@@ -59,6 +59,8 @@ TEST_F(PipeTest, OpenAsReader) {
 }
 #endif
 
+// Tests flaky on Windows
+#ifndef _WIN32
 TEST_F(PipeTest, WriteWithTimeout) {
   Pipe pipe;
   ASSERT_THAT_ERROR(pipe.CreateNew(false).ToError(), llvm::Succeeded());
@@ -197,3 +199,4 @@ TEST_F(PipeTest, ReadWithTimeout) {
                        llvm::HasValue(hello_world.size()));
   EXPECT_EQ(llvm::StringRef(buf, hello_world.size()), hello_world);
 }
+#endif /*ifndef _WIN32*/

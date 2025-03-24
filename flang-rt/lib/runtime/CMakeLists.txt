@@ -66,7 +66,6 @@ set(supported_sources
   type-code.cpp
   type-info.cpp
   unit.cpp
-  unit-map.cpp
   utf.cpp
 )
 
@@ -86,6 +85,7 @@ set(host_sources
   stop.cpp
   temporary-stack.cpp
   time-intrinsic.cpp
+  unit-map.cpp
 )
 
 file(GLOB_RECURSE public_headers

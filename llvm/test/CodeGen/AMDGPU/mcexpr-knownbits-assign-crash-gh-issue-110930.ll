@@ -8,7 +8,7 @@
 ; CHECK-LABEL: I_Quit:
 ; CHECK: .set I_Quit.num_vgpr, max(41, amdgpu.max_num_vgpr)
 ; CHECK: .set I_Quit.num_agpr, max(0, amdgpu.max_num_agpr)
-; CHECK: .set I_Quit.numbered_sgpr, max(48, amdgpu.max_num_sgpr)
+; CHECK: .set I_Quit.numbered_sgpr, max(56, amdgpu.max_num_sgpr)
 ; CHECK: .set I_Quit.private_seg_size, 16
 ; CHECK: .set I_Quit.uses_vcc, 1
 ; CHECK: .set I_Quit.uses_flat_scratch, 1
@@ -80,7 +80,7 @@ define void @P_SetThingPosition() {
 ; CHECK-LABEL: P_SetupPsprites:
 ; CHECK: .set P_SetupPsprites.num_vgpr, max(41, amdgpu.max_num_vgpr)
 ; CHECK: .set P_SetupPsprites.num_agpr, max(0, amdgpu.max_num_agpr)
-; CHECK: .set P_SetupPsprites.numbered_sgpr, max(48, amdgpu.max_num_sgpr)
+; CHECK: .set P_SetupPsprites.numbered_sgpr, max(56, amdgpu.max_num_sgpr)
 ; CHECK: .set P_SetupPsprites.private_seg_size, 16
 ; CHECK: .set P_SetupPsprites.uses_vcc, 1
 ; CHECK: .set P_SetupPsprites.uses_flat_scratch, 1
@@ -110,7 +110,7 @@ define void @HU_Start() {
 ; CHECK-LABEL: P_SpawnPlayer:
 ; CHECK: .set P_SpawnPlayer.num_vgpr, max(43, G_PlayerReborn.num_vgpr, P_SetThingPosition.num_vgpr, P_SetupPsprites.num_vgpr, HU_Start.num_vgpr)
 ; CHECK: .set P_SpawnPlayer.num_agpr, max(0, G_PlayerReborn.num_agpr, P_SetThingPosition.num_agpr, P_SetupPsprites.num_agpr, HU_Start.num_agpr)
-; CHECK: .set P_SpawnPlayer.numbered_sgpr, max(60, G_PlayerReborn.numbered_sgpr, P_SetThingPosition.numbered_sgpr, P_SetupPsprites.numbered_sgpr, HU_Start.numbered_sgpr)
+; CHECK: .set P_SpawnPlayer.numbered_sgpr, max(84, G_PlayerReborn.numbered_sgpr, P_SetThingPosition.numbered_sgpr, P_SetupPsprites.numbered_sgpr, HU_Start.numbered_sgpr)
 ; CHECK: .set P_SpawnPlayer.private_seg_size, 16+(max(G_PlayerReborn.private_seg_size, P_SetThingPosition.private_seg_size, P_SetupPsprites.private_seg_size, HU_Start.private_seg_size))
 ; CHECK: .set P_SpawnPlayer.uses_vcc, or(1, G_PlayerReborn.uses_vcc, P_SetThingPosition.uses_vcc, P_SetupPsprites.uses_vcc, HU_Start.uses_vcc)
 ; CHECK: .set P_SpawnPlayer.uses_flat_scratch, or(0, G_PlayerReborn.uses_flat_scratch, P_SetThingPosition.uses_flat_scratch, P_SetupPsprites.uses_flat_scratch, HU_Start.uses_flat_scratch)
@@ -128,7 +128,7 @@ define void @P_SpawnPlayer() {
 ; CHECK-LABEL: I_Error:
 ; CHECK: .set I_Error.num_vgpr, max(41, amdgpu.max_num_vgpr)
 ; CHECK: .set I_Error.num_agpr, max(0, amdgpu.max_num_agpr)
-; CHECK: .set I_Error.numbered_sgpr, max(48, amdgpu.max_num_sgpr)
+; CHECK: .set I_Error.numbered_sgpr, max(56, amdgpu.max_num_sgpr)
 ; CHECK: .set I_Error.private_seg_size, 16
 ; CHECK: .set I_Error.uses_vcc, 1
 ; CHECK: .set I_Error.uses_flat_scratch, 1
@@ -144,7 +144,7 @@ define void @I_Error(...) {
 ; CHECK-LABEL: G_DoReborn:
 ; CHECK: .set G_DoReborn.num_vgpr, max(44, P_RemoveMobj.num_vgpr, P_SpawnMobj.num_vgpr, P_SpawnPlayer.num_vgpr, I_Error.num_vgpr)
 ; CHECK: .set G_DoReborn.num_agpr, max(0, P_RemoveMobj.num_agpr, P_SpawnMobj.num_agpr, P_SpawnPlayer.num_agpr, I_Error.num_agpr)
-; CHECK: .set G_DoReborn.numbered_sgpr, max(72, P_RemoveMobj.numbered_sgpr, P_SpawnMobj.numbered_sgpr, P_SpawnPlayer.numbered_sgpr, I_Error.numbered_sgpr)
+; CHECK: .set G_DoReborn.numbered_sgpr, max(104, P_RemoveMobj.numbered_sgpr, P_SpawnMobj.numbered_sgpr, P_SpawnPlayer.numbered_sgpr, I_Error.numbered_sgpr)
 ; CHECK: .set G_DoReborn.private_seg_size, 32+(max(P_RemoveMobj.private_seg_size, P_SpawnMobj.private_seg_size, P_SpawnPlayer.private_seg_size, I_Error.private_seg_size))
 ; CHECK: .set G_DoReborn.uses_vcc, or(1, P_RemoveMobj.uses_vcc, P_SpawnMobj.uses_vcc, P_SpawnPlayer.uses_vcc, I_Error.uses_vcc)
 ; CHECK: .set G_DoReborn.uses_flat_scratch, or(0, P_RemoveMobj.uses_flat_scratch, P_SpawnMobj.uses_flat_scratch, P_SpawnPlayer.uses_flat_scratch, I_Error.uses_flat_scratch)
@@ -218,7 +218,7 @@ define void @F_Ticker() {
 ; CHECK-LABEL: G_CheckDemoStatus:
 ; CHECK: .set G_CheckDemoStatus.num_vgpr, max(43, I_Quit.num_vgpr, D_AdvanceDemo.num_vgpr, I_Error.num_vgpr)
 ; CHECK: .set G_CheckDemoStatus.num_agpr, max(0, I_Quit.num_agpr, D_AdvanceDemo.num_agpr, I_Error.num_agpr)
-; CHECK: .set G_CheckDemoStatus.numbered_sgpr, max(60, I_Quit.numbered_sgpr, D_AdvanceDemo.numbered_sgpr, I_Error.numbered_sgpr)
+; CHECK: .set G_CheckDemoStatus.numbered_sgpr, max(84, I_Quit.numbered_sgpr, D_AdvanceDemo.numbered_sgpr, I_Error.numbered_sgpr)
 ; CHECK: .set G_CheckDemoStatus.private_seg_size, 32+(max(I_Quit.private_seg_size, D_AdvanceDemo.private_seg_size, I_Error.private_seg_size))
 ; CHECK: .set G_CheckDemoStatus.uses_vcc, or(1, I_Quit.uses_vcc, D_AdvanceDemo.uses_vcc, I_Error.uses_vcc)
 ; CHECK: .set G_CheckDemoStatus.uses_flat_scratch, or(0, I_Quit.uses_flat_scratch, D_AdvanceDemo.uses_flat_scratch, I_Error.uses_flat_scratch)
@@ -264,7 +264,7 @@ define ptr @P_SaveGameFile() {
 ; CHECK-LABEL: R_FlatNumForName:
 ; CHECK: .set R_FlatNumForName.num_vgpr, max(42, I_Error.num_vgpr)
 ; CHECK: .set R_FlatNumForName.num_agpr, max(0, I_Error.num_agpr)
-; CHECK: .set R_FlatNumForName.numbered_sgpr, max(48, I_Error.numbered_sgpr)
+; CHECK: .set R_FlatNumForName.numbered_sgpr, max(56, I_Error.numbered_sgpr)
 ; CHECK: .set R_FlatNumForName.private_seg_size, 16+(max(I_Error.private_seg_size))
 ; CHECK: .set R_FlatNumForName.uses_vcc, or(1, I_Error.uses_vcc)
 ; CHECK: .set R_FlatNumForName.uses_flat_scratch, or(0, I_Error.uses_flat_scratch)
@@ -279,7 +279,7 @@ define i32 @R_FlatNumForName() {
 ; CHECK-LABEL: R_TextureNumForName:
 ; CHECK: .set R_TextureNumForName.num_vgpr, max(42, R_FlatNumForName.num_vgpr)
 ; CHECK: .set R_TextureNumForName.num_agpr, max(0, R_FlatNumForName.num_agpr)
-; CHECK: .set R_TextureNumForName.numbered_sgpr, max(48, R_FlatNumForName.numbered_sgpr)
+; CHECK: .set R_TextureNumForName.numbered_sgpr, max(56, R_FlatNumForName.numbered_sgpr)
 ; CHECK: .set R_TextureNumForName.private_seg_size, 16+(max(R_FlatNumForName.private_seg_size))
 ; CHECK: .set R_TextureNumForName.uses_vcc, or(1, R_FlatNumForName.uses_vcc)
 ; CHECK: .set R_TextureNumForName.uses_flat_scratch, or(0, R_FlatNumForName.uses_flat_scratch)
@@ -292,10 +292,10 @@ define i32 @R_TextureNumForName() {
 }
 
 ; CHECK-LABEL: G_Ticker:
-; CHECK: .set G_Ticker.num_vgpr, max(46, G_DoReborn.num_vgpr, F_Ticker.num_vgpr, AM_Stop.num_vgpr, F_StartFinale.num_vgpr, D_AdvanceDemo.num_vgpr, R_FlatNumForName.num_vgpr, R_TextureNumForName.num_vgpr, P_TempSaveGameFile.num_vgpr, P_SaveGameFile.num_vgpr, I_Error.num_vgpr)
+; CHECK: .set G_Ticker.num_vgpr, max(47, G_DoReborn.num_vgpr, F_Ticker.num_vgpr, AM_Stop.num_vgpr, F_StartFinale.num_vgpr, D_AdvanceDemo.num_vgpr, R_FlatNumForName.num_vgpr, R_TextureNumForName.num_vgpr, P_TempSaveGameFile.num_vgpr, P_SaveGameFile.num_vgpr, I_Error.num_vgpr)
 ; CHECK: .set G_Ticker.num_agpr, max(0, G_DoReborn.num_agpr, F_Ticker.num_agpr, AM_Stop.num_agpr, F_StartFinale.num_agpr, D_AdvanceDemo.num_agpr, R_FlatNumForName.num_agpr, R_TextureNumForName.num_agpr, P_TempSaveGameFile.num_agpr, P_SaveGameFile.num_agpr, I_Error.num_agpr)
-; CHECK: .set G_Ticker.numbered_sgpr, max(84, G_DoReborn.numbered_sgpr, F_Ticker.numbered_sgpr, AM_Stop.numbered_sgpr, F_StartFinale.numbered_sgpr, D_AdvanceDemo.numbered_sgpr, R_FlatNumForName.numbered_sgpr, R_TextureNumForName.numbered_sgpr, P_TempSaveGameFile.numbered_sgpr, P_SaveGameFile.numbered_sgpr, I_Error.numbered_sgpr)
-; CHECK: .set G_Ticker.private_seg_size, 32+(max(G_DoReborn.private_seg_size, F_Ticker.private_seg_size, AM_Stop.private_seg_size, F_StartFinale.private_seg_size, D_AdvanceDemo.private_seg_size, R_FlatNumForName.private_seg_size, R_TextureNumForName.private_seg_size, P_TempSaveGameFile.private_seg_size, P_SaveGameFile.private_seg_size, I_Error.private_seg_size))
+; CHECK: .set G_Ticker.numbered_sgpr, max(105, G_DoReborn.numbered_sgpr, F_Ticker.numbered_sgpr, AM_Stop.numbered_sgpr, F_StartFinale.numbered_sgpr, D_AdvanceDemo.numbered_sgpr, R_FlatNumForName.numbered_sgpr, R_TextureNumForName.numbered_sgpr, P_TempSaveGameFile.numbered_sgpr, P_SaveGameFile.numbered_sgpr, I_Error.numbered_sgpr)
+; CHECK: .set G_Ticker.private_seg_size, 48+(max(G_DoReborn.private_seg_size, F_Ticker.private_seg_size, AM_Stop.private_seg_size, F_StartFinale.private_seg_size, D_AdvanceDemo.private_seg_size, R_FlatNumForName.private_seg_size, R_TextureNumForName.private_seg_size, P_TempSaveGameFile.private_seg_size, P_SaveGameFile.private_seg_size, I_Error.private_seg_size))
 ; CHECK: .set G_Ticker.uses_vcc, or(1, G_DoReborn.uses_vcc, F_Ticker.uses_vcc, AM_Stop.uses_vcc, F_StartFinale.uses_vcc, D_AdvanceDemo.uses_vcc, R_FlatNumForName.uses_vcc, R_TextureNumForName.uses_vcc, P_TempSaveGameFile.uses_vcc, P_SaveGameFile.uses_vcc, I_Error.uses_vcc)
 ; CHECK: .set G_Ticker.uses_flat_scratch, or(0, G_DoReborn.uses_flat_scratch, F_Ticker.uses_flat_scratch, AM_Stop.uses_flat_scratch, F_StartFinale.uses_flat_scratch, D_AdvanceDemo.uses_flat_scratch, R_FlatNumForName.uses_flat_scratch, R_TextureNumForName.uses_flat_scratch, P_TempSaveGameFile.uses_flat_scratch, P_SaveGameFile.uses_flat_scratch, I_Error.uses_flat_scratch)
 ; CHECK: .set G_Ticker.has_dyn_sized_stack, or(0, G_DoReborn.has_dyn_sized_stack, F_Ticker.has_dyn_sized_stack, AM_Stop.has_dyn_sized_stack, F_StartFinale.has_dyn_sized_stack, D_AdvanceDemo.has_dyn_sized_stack, R_FlatNumForName.has_dyn_sized_stack, R_TextureNumForName.has_dyn_sized_stack, P_TempSaveGameFile.has_dyn_sized_stack, P_SaveGameFile.has_dyn_sized_stack, I_Error.has_dyn_sized_stack)
@@ -316,9 +316,9 @@ define void @G_Ticker() {
 }
 
 ; CHECK-LABEL: RunTic:
-; CHECK: .set RunTic.num_vgpr, max(46, G_CheckDemoStatus.num_vgpr, D_AdvanceDemo.num_vgpr, G_Ticker.num_vgpr)
+; CHECK: .set RunTic.num_vgpr, max(47, G_CheckDemoStatus.num_vgpr, D_AdvanceDemo.num_vgpr, G_Ticker.num_vgpr)
 ; CHECK: .set RunTic.num_agpr, max(0, G_CheckDemoStatus.num_agpr, D_AdvanceDemo.num_agpr, G_Ticker.num_agpr)
-; CHECK: .set RunTic.numbered_sgpr, max(84, G_CheckDemoStatus.numbered_sgpr, D_AdvanceDemo.numbered_sgpr, G_Ticker.numbered_sgpr)
+; CHECK: .set RunTic.numbered_sgpr, max(105, G_CheckDemoStatus.numbered_sgpr, D_AdvanceDemo.numbered_sgpr, G_Ticker.numbered_sgpr)
 ; CHECK: .set RunTic.private_seg_size, 32+(max(G_CheckDemoStatus.private_seg_size, D_AdvanceDemo.private_seg_size, G_Ticker.private_seg_size))
 ; CHECK: .set RunTic.uses_vcc, or(1, G_CheckDemoStatus.uses_vcc, D_AdvanceDemo.uses_vcc, G_Ticker.uses_vcc)
 ; CHECK: .set RunTic.uses_flat_scratch, or(0, G_CheckDemoStatus.uses_flat_scratch, D_AdvanceDemo.uses_flat_scratch, G_Ticker.uses_flat_scratch)

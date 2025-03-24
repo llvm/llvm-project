@@ -11,9 +11,38 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMMCAsmInfo.h"
+#include "MCTargetDesc/ARMMCExpr.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
+
+const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
+    {ARMMCExpr::VK_GOT_PREL, "GOT_PREL"},
+    {ARMMCExpr::VK_ARM_NONE, "none"},
+    {ARMMCExpr::VK_PREL31, "prel31"},
+    {ARMMCExpr::VK_SBREL, "sbrel"},
+    {ARMMCExpr::VK_TARGET1, "target1"},
+    {ARMMCExpr::VK_TARGET2, "target2"},
+    {ARMMCExpr::VK_TLSLDO, "TLSLDO"},
+    {MCSymbolRefExpr::VK_COFF_IMGREL32, "imgrel"},
+    {ARMMCExpr::VK_FUNCDESC, "FUNCDESC"},
+    {ARMMCExpr::VK_GOT, "GOT"},
+    {ARMMCExpr::VK_GOTFUNCDESC, "GOTFUNCDESC"},
+    {ARMMCExpr::VK_GOTOFF, "GOTOFF"},
+    {ARMMCExpr::VK_GOTOFFFUNCDESC, "GOTOFFFUNCDESC"},
+    {ARMMCExpr::VK_GOTTPOFF, "GOTTPOFF"},
+    {ARMMCExpr::VK_GOTTPOFF_FDPIC, "gottpoff_fdpic"},
+    {ARMMCExpr::VK_PLT, "PLT"},
+    {MCSymbolRefExpr::VK_SECREL, "SECREL32"},
+    {ARMMCExpr::VK_TLSCALL, "tlscall"},
+    {ARMMCExpr::VK_TLSDESC, "tlsdesc"},
+    {ARMMCExpr::VK_TLSGD, "TLSGD"},
+    {ARMMCExpr::VK_TLSGD_FDPIC, "tlsgd_fdpic"},
+    {ARMMCExpr::VK_TLSLDM, "TLSLDM"},
+    {ARMMCExpr::VK_TLSLDM_FDPIC, "tlsldm_fdpic"},
+    {ARMMCExpr::VK_TPOFF, "TPOFF"},
+};
 
 void ARMMCAsmInfoDarwin::anchor() { }
 
@@ -37,6 +66,8 @@ ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple) {
   ExceptionsType = (TheTriple.isOSDarwin() && !TheTriple.isWatchABI())
                        ? ExceptionHandling::SjLj
                        : ExceptionHandling::DwarfCFI;
+
+  initializeVariantKinds(variantKindDescs);
 }
 
 void ARMELFMCAsmInfo::anchor() { }
@@ -71,6 +102,8 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple) {
 
   // foo(plt) instead of foo@plt
   UseParensForSymbolVariant = true;
+
+  initializeVariantKinds(variantKindDescs);
 }
 
 void ARMELFMCAsmInfo::setUseIntegratedAssembler(bool Value) {
@@ -96,6 +129,8 @@ ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft() {
 
   // Conditional Thumb 4-byte instructions can have an implicit IT.
   MaxInstLength = 6;
+
+  initializeVariantKinds(variantKindDescs);
 }
 
 void ARMCOFFMCAsmInfoGNU::anchor() { }
@@ -119,4 +154,6 @@ ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU() {
 
   // Conditional Thumb 4-byte instructions can have an implicit IT.
   MaxInstLength = 6;
+
+  initializeVariantKinds(variantKindDescs);
 }

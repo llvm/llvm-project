@@ -144,12 +144,14 @@ func.func @ops(%arg0: i32, %arg1: f32,
   // CHECK:      llvm.switch %0 : i32, ^[[BB3]] [
   // CHECK-NEXT:   1: ^[[BB4:.*]],
   // CHECK-NEXT:   2: ^[[BB5:.*]],
-  // CHECK-NEXT:   3: ^[[BB6:.*]]
+  // CHECK-NEXT:   3: ^[[BB6:.*]],
+  // CHECK-NEXT:   -3: ^[[BB6:.*]]
   // CHECK-NEXT: ]
   llvm.switch %0 : i32, ^bb3 [
     1: ^bb4,
     2: ^bb5,
-    3: ^bb6
+    3: ^bb6,
+    -3: ^bb6
   ]
 
 // CHECK: ^[[BB3]]
@@ -985,4 +987,18 @@ llvm.func @test_invoke_arg_attrs_indirect(%arg0: i16, %arg1: !llvm.ptr) -> i16 a
   llvm.return %0 : i16
 ^bb2:
   llvm.return %0 : i16
+}
+
+// CHECK-LABEL: intrinsic_call_arg_attrs
+llvm.func @intrinsic_call_arg_attrs(%arg0: i32) -> i32 {
+  // CHECK: %{{.*}} = llvm.call_intrinsic "llvm.riscv.sha256sig0"({{.*}}) : (i32 {llvm.signext}) -> i32
+  %0 = llvm.call_intrinsic "llvm.riscv.sha256sig0"(%arg0) : (i32 {llvm.signext}) -> (i32)
+  llvm.return %0 : i32
+}
+
+// CHECK-LABEL: intrinsic_call_arg_attrs_bundles
+llvm.func @intrinsic_call_arg_attrs_bundles(%arg0: i32) -> i32 {
+  // CHECK: %{{.*}} = llvm.call_intrinsic "llvm.riscv.sha256sig0"({{.*}}) ["adazdazd"()] {constant} : (i32 {llvm.signext}) -> i32
+  %0 = llvm.call_intrinsic "llvm.riscv.sha256sig0"(%arg0) ["adazdazd"()] {constant} : (i32 {llvm.signext}) -> (i32)
+  llvm.return %0 : i32
 }

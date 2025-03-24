@@ -171,9 +171,9 @@ compound=true
 )";
   EXPECT_EQ(ExpectedStr, FullDump);
 #endif
-  TargetLibraryInfoImpl TLII(Triple(M.getTargetTriple()));
+  TargetLibraryInfoImpl TLII(M.getTargetTriple());
   TargetLibraryInfo TLI(TLII);
-  VPlanTransforms::VPInstructionsToVPRecipes(
+  VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
       Plan, [](PHINode *P) { return nullptr; }, *SE, TLI);
 }
 
@@ -201,9 +201,9 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
   auto Plan = buildVPlan(LoopHeader);
 
-  TargetLibraryInfoImpl TLII(Triple(M.getTargetTriple()));
+  TargetLibraryInfoImpl TLII(M.getTargetTriple());
   TargetLibraryInfo TLI(TLII);
-  VPlanTransforms::VPInstructionsToVPRecipes(
+  VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
       Plan, [](PHINode *P) { return nullptr; }, *SE, TLI);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
