@@ -987,6 +987,16 @@ public:
     return SignExtend64<32>(Imm);
   }
 
+  bool isUImm14Lsb00() const {
+    if (!isImm())
+      return false;
+    int64_t Imm;
+    RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && isShiftedUInt<12, 2>(Imm) &&
+           VK == RISCVMCExpr::VK_None;
+  }
+
   bool isSImm11() const {
     if (!isImm())
       return false;
@@ -1741,6 +1751,10 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 10) - 1);
   case Match_InvalidUImm11:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 11) - 1);
+  case Match_InvalidUImm14Lsb00:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, 0, (1 << 14) - 4,
+        "immediate must be a multiple of 4 bytes in the range");
   case Match_InvalidUImm16NonZero:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 16) - 1);
   case Match_InvalidSImm12:

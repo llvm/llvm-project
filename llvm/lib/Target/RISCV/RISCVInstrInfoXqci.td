@@ -69,6 +69,15 @@ def uimm10 : RISCVUImmLeafOp<10>;
 
 def uimm11 : RISCVUImmLeafOp<11>;
 
+// A 14-bit unsigned immediate where the least significant two bits are zero.
+def uimm14lsb00 : RISCVOp,
+                  ImmLeaf<XLenVT, [{return isShiftedUInt<12, 2>(Imm);}]> {
+  let ParserMatchClass = UImmAsmOperand<14, "Lsb00">;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeUImmOperand<14>";
+  let OperandType = "OPERAND_UIMM14_LSB00";
+}
+
 def uimm16nonzero : RISCVOp<XLenVT>,
                     ImmLeaf<XLenVT, [{return (Imm != 0) && isUInt<16>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<16, "NonZero">;
@@ -740,6 +749,28 @@ let mayLoad = 1, mayStore = 0, isBarrier = 1, isReturn = 1, isTerminator = 1,
 def QC_C_MILEAVERET   : QCIRVInst16CI_NONE<0b10100, "qc.c.mileaveret">;
 
 } // Predicates = [HasVendorXqciint, IsRV32], hasSideEffects = 1
+
+let Predicates = [HasVendorXqciio, IsRV32] in {
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
+  def QC_OUTW : RVInstI<0b100, OPC_CUSTOM_0, (outs),
+                        (ins GPR:$rs3, GPR:$rs1, uimm14lsb00:$imm14),
+                        "qc.outw", "$rs3, ${imm14}(${rs1})"> {
+    bits<5> rs3;
+    bits<14> imm14;
+
+    let rd = rs3;
+    let imm12 = imm14{13-2};
+  }
+
+  def QC_INW : RVInstI<0b101, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
+                       (ins GPR:$rs1, uimm14lsb00:$imm14),
+                       "qc.inw", "$rd, ${imm14}(${rs1})"> {
+    bits<14> imm14;
+
+    let imm12 = imm14{13-2};
+  }
+} // hasSideEffects = 1, mayLoad = 0, mayStore = 0
+} // Predicates = [HasVendorXqciio, IsRV32]
 
 let Predicates = [HasVendorXqcilo, IsRV32] in {
   def QC_E_LB    : QCIRVInstEILoad<0b101, 0b00, "qc.e.lb">;
