@@ -272,6 +272,12 @@ std::int32_t RTNAME(Hostnm)(
   char buf[256];
   std::int32_t status{0};
 
+  // Fill the output with spaces. Upon success, CopyCharsToDescriptor()
+  // will overwrite part of the string with the result, so we'll end up
+  // with a padded string. If we fail to obtain the host name, we return
+  // the string of all spaces, which is the original gfortran behavior.
+  FillWithSpaces(res);
+
 #ifdef _WIN32
 
   DWORD dwSize{sizeof(buf)};
@@ -293,6 +299,9 @@ std::int32_t RTNAME(Hostnm)(
   if (status == 0) {
     std::int64_t strLen{StringLength(buf)};
     status = CopyCharsToDescriptor(res, buf, strLen);
+
+    // Note: if the result string is too short, then we'll return partial
+    // host name with "too short" error status.
   }
 
   return status;
