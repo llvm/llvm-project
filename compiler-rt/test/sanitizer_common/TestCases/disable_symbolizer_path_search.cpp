@@ -8,9 +8,6 @@
 
 // REQUIRES: shell
 
-// Mobile device will not have symbolizer in provided path.
-// UNSUPPORTED: ios, android
-
 #include <sanitizer/common_interface_defs.h>
 #include <stdio.h>
 
