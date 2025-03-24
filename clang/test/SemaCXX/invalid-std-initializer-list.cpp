@@ -7,8 +7,12 @@ class initializer_list;
 
 }
 
+namespace gh132256 {
+
 auto x = {1}; // expected-note {{in instantiation of default argument for 'initializer_list<int>' required here}}
 
 void f() {
 	for(int x : {1, 2}); // expected-note {{in instantiation of default argument for 'initializer_list<int>' required here}}
+}
+
 }
