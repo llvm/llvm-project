@@ -272,6 +272,7 @@ DUMMY_MACHINE_MODULE_PASS("mir-check-debugify", CheckDebugMachineModulePass)
 #ifndef DUMMY_MACHINE_FUNCTION_PASS
 #define DUMMY_MACHINE_FUNCTION_PASS(NAME, PASS_NAME)
 #endif
+DUMMY_MACHINE_FUNCTION_PASS("bb-path-cloning", BasicBlockPathCloningPass)
 DUMMY_MACHINE_FUNCTION_PASS("bbsections-prepare", BasicBlockSectionsPass)
 DUMMY_MACHINE_FUNCTION_PASS("bbsections-profile-reader", BasicBlockSectionsProfileReaderPass)
 DUMMY_MACHINE_FUNCTION_PASS("cfguard-longjmp", CFGuardLongjmpPass)

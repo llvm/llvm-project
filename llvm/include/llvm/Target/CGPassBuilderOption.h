@@ -63,7 +63,6 @@ struct CGPassBuilderOption {
   bool MISchedPostRA = false;
   bool EarlyLiveIntervals = false;
   bool EnableGCEmptyBlocks = false;
-
   bool DisableLSR = false;
   bool DisableCGP = false;
   bool DisablePartialLibcallInlining = false;
@@ -73,6 +72,9 @@ struct CGPassBuilderOption {
   bool DisableExpandReductions = false;
   bool DisableRAFSProfileLoader = false;
   bool DisableCFIFixup = false;
+  bool DisableReplaceWithVecLib = false;
+  bool DisableLayoutFSProfileLoader = false;
+  bool DisablePrologEpilogInserterPass = false;
   bool PrintAfterISel = false;
   bool PrintISelInput = false;
   bool PrintRegUsage = false;
