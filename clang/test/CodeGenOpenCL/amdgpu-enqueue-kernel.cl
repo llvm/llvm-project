@@ -68,7 +68,7 @@ kernel void test_target_features_kernel(global int *i) {
 // CHECK: @__block_literal_global = internal addrspace(1) constant { i32, i32, ptr } { i32 16, i32 8, ptr @__test_target_features_kernel_block_invoke }, align 8 #0
 // CHECK: @__test_target_features_kernel_block_invoke_kernel.runtime.handle = internal addrspace(1) externally_initialized constant %block.runtime.handle.t.3 zeroinitializer, section ".amdgpu.kernel.runtime.handle"
 // CHECK: @llvm.used = appending addrspace(1) global [10 x ptr] [ptr @__test_block_invoke_kernel, ptr addrspacecast (ptr addrspace(1) @__test_block_invoke_kernel.runtime.handle to ptr), ptr @__test_block_invoke_2_kernel, ptr addrspacecast (ptr addrspace(1) @__test_block_invoke_2_kernel.runtime.handle to ptr), ptr @__test_block_invoke_3_kernel, ptr addrspacecast (ptr addrspace(1) @__test_block_invoke_3_kernel.runtime.handle to ptr), ptr @__test_block_invoke_4_kernel, ptr addrspacecast (ptr addrspace(1) @__test_block_invoke_4_kernel.runtime.handle to ptr), ptr @__test_target_features_kernel_block_invoke_kernel, ptr addrspacecast (ptr addrspace(1) @__test_target_features_kernel_block_invoke_kernel.runtime.handle to ptr)], section "llvm.metadata"
-// CHECK: @__oclc_ABI_version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 500
+// CHECK: @__oclc_ABI_version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 600
 //.
 // NOCPU: Function Attrs: convergent noinline norecurse nounwind optnone
 // NOCPU-LABEL: define {{[^@]+}}@callee
@@ -764,7 +764,7 @@ kernel void test_target_features_kernel(global int *i) {
 // GFX900: attributes #[[ATTR7]] = { nounwind }
 // GFX900: attributes #[[ATTR8]] = { convergent nounwind }
 //.
-// NOCPU: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 500}
+// NOCPU: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
 // NOCPU: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // NOCPU: [[META2:![0-9]+]] = !{i32 2, i32 0}
 // NOCPU: [[META3]] = !{i32 1, i32 0, i32 1, i32 0}
@@ -787,7 +787,7 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU: [[META20]] = !{!"int*"}
 // NOCPU: [[META21]] = !{ptr addrspace(1) @__test_target_features_kernel_block_invoke_kernel.runtime.handle}
 //.
-// GFX900: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 500}
+// GFX900: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
 // GFX900: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // GFX900: [[META2:![0-9]+]] = !{i32 2, i32 0}
 // GFX900: [[TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}

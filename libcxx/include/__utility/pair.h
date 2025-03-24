@@ -503,13 +503,14 @@ template <class _T1, class _T2, class _U1, class _U2, template <class> class _TQ
     typename pair<common_reference_t<_TQual<_T1>, _UQual<_U1>>, common_reference_t<_TQual<_T2>, _UQual<_U2>>>;
   }
 struct basic_common_reference<pair<_T1, _T2>, pair<_U1, _U2>, _TQual, _UQual> {
-  using type = pair<common_reference_t<_TQual<_T1>, _UQual<_U1>>, common_reference_t<_TQual<_T2>, _UQual<_U2>>>;
+  using type _LIBCPP_NODEBUG =
+      pair<common_reference_t<_TQual<_T1>, _UQual<_U1>>, common_reference_t<_TQual<_T2>, _UQual<_U2>>>;
 };
 
 template <class _T1, class _T2, class _U1, class _U2>
   requires requires { typename pair<common_type_t<_T1, _U1>, common_type_t<_T2, _U2>>; }
 struct common_type<pair<_T1, _T2>, pair<_U1, _U2>> {
-  using type = pair<common_type_t<_T1, _U1>, common_type_t<_T2, _U2>>;
+  using type _LIBCPP_NODEBUG = pair<common_type_t<_T1, _U1>, common_type_t<_T2, _U2>>;
 };
 #endif // _LIBCPP_STD_VER >= 23
 

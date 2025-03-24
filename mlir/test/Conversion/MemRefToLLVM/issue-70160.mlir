@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -finalize-memref-to-llvm 2>&1 | FileCheck %s
 // Since the error is at an unknown location, we use FileCheck instead of
-// -veri-y-diagnostics here
+// -verify-diagnostics here
 
 // CHECK: conversion of memref memory space #gpu.address_space<workgroup> to integer address space failed. Consider adding memory space conversions
 // CHECK-LABEL: @issue_70160
