@@ -462,7 +462,6 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-
 // -----
 
 // CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_with_collapse_producer(

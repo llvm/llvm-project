@@ -429,17 +429,19 @@ struct BubbleUpExpandShapeThroughExtractSlice
   }
 };
 
-/// Converts `tensor.collapse_shape(tensor.extract_slice)` to
-/// `tensor.extract_slice(tensor.collapse_shape)`.
+/// Converts `tensor.extract_slice(tensor.collapse_shape)` to
+///          `tensor.collapse_shape(tensor.extract_slice)`.
 ///
-/// For this transformation to be possible, the slice must be representable as a
-/// contiguous slice within each reassociation group of the src.
+/// For this transformation to be possible - after bubbling up, the extraction
+/// of the contiguous slice must be representable as a single slice obtained via
+/// tensor.extract_slice within each reassociation group of the src.
 ///
 /// In case the size and offset extracted are static then this is possible if
-/// the following conditions are met:
-/// Let T be a tensor of shape [A0, A1, ..., An], and let S = [S0, S1, ..., Sn]
-/// be the shape of a desired slice. A slice of shape S can be extracted as a
-/// contiguous block of memory if and only if there exists an index k in {0, 1,
+/// the following conditions are met within each reassociation group:
+/// Let T be a tensor of shape [A0, A1, ..., An] (these are the sizes of the
+/// dimensions in the reassociation group), and let S = [S0, S1, ..., Sn] be the
+/// shape of a desired slice. A slice of shape S can be extracted as a
+/// contiguous span of elements if and only if there exists an index k in {0, 1,
 /// ..., n} such that:
 ///      S_i = 1 for all i < k (that is, all leading dimensions are singleton),
 ///      1 <= S_k <= A_k (that is, non trivial slicing occurs along exactly
@@ -475,6 +477,31 @@ struct BubbleUpExpandShapeThroughExtractSlice
 /// %collapse = tensor.collapse_shape %slice [[0, 1], [2, 3], [4]] ...
 ///     tensor<2x16x1x?x10xf32> to tensor<32x?x10xf32>
 /// ```
+///
+/// Negative example:
+/// The transformation is not possible because we cannot use a single slice to
+/// represent the reassociation group [2x3x10->???]. If we would want the
+/// collapse to be after the extraction, we would need to extract multiple
+/// slices and concat them together.
+/// ```
+/// %collapse = tensor.collapse_shape %src [[0, 1, 2]] : tensor<2x3x10xf32> into
+/// tensor<60xf32> %extract = tensor.extract_slice %collapse[0][15][1] :
+///                                      tensor<60xf32> to tensor<15xf32>
+/// ```
+/// If we would want the collapse to be after the extraction, a possible
+/// alternate transformation could be to extract multiple slices and concat them
+/// together:
+/// ```
+/// %extract_1 = tensor.extract_slice %src[0, 0, 0][1, 1, 10] :
+///                               tensor<2x3x10xf32> to tensor <1x1x10xf32>
+/// %extract_2 = tensor.extract_slice %src[0, 1, 0][1, 1, 5] :
+///                               tensor<2x3x10xf32> to tensor <1x1x5xf32>
+/// %concat = tosa.concat %extract_1, %extract_2 {axis = 0 : i32} :
+///                    (<1x1x10xf32>, <1x1x5xf32>) -> <1x1x15xf32>
+/// %collapse = tensor.collapse_shape %concat [[0, 1, 2]] : tensor<1x1x15xf32>
+///                                                       to tensor<15xf32>
+/// ```
+/// But this is not the intended purpose of the transformation.
 struct BubbleUpCollapseShapeThroughExtractSlice
     : public OpRewritePattern<tensor::ExtractSliceOp> {
   using OpRewritePattern<tensor::ExtractSliceOp>::OpRewritePattern;
@@ -552,47 +579,69 @@ struct BubbleUpCollapseShapeThroughExtractSlice
       // Case #2 = size and offset are static.
       // Verify that the slice can be represented as a contiguous slice of the
       // src of the collapse_shape.
-      // Checking this must be done on order of most
-      // internal dimensions first, so traversal is done in reverse order of the
-      // reassociation group.
+      // Checking this is done on order of most internal dimensions first,
+      // so traversal is done in reverse order of the reassociation group.
+      // If the expected slice shape is [1, 1, ..., 1, Sk, Ak + 1, Ak + 2,
+      // ...,An] then we first find the size and offset for n...k+1 then for k
+      // and then for k-1...0.
       int64_t collapsedSizeValue = getConstantIntValue(collapsedSize).value();
       int64_t collapsedOffsetValue =
           getConstantIntValue(collapsedOffset).value();
 
       SmallVector<OpFoldResult> groupExpandedSizes, groupExpandedOffsets;
 
-      for (int64_t expandedShapeIdx : llvm::reverse(reassocIndices)) {
-        int64_t expandedShapeSize = srcShape[expandedShapeIdx];
+      ReassociationIndices reversedReassocIndices(reassocIndices.rbegin(),
+                                                  reassocIndices.rend());
+      int64_t idx = 0;
+      int64_t reassocGroupSize = reassocIndices.size();
 
-        // This is a dimension that slicing will occur on, so need to make sure
-        // that the slice size can be set to the shape size and the offset to 0.
-        if (collapsedSizeValue >= expandedShapeSize &&
-            (collapsedSizeValue % expandedShapeSize != 0 ||
-             collapsedOffsetValue % expandedShapeSize != 0)) {
+      // First handle the trailing dimensions where the slice size should be
+      // equal to the tensor shape and the offset should be 0 (n...k+1).
+      for (; idx < reassocGroupSize; ++idx) {
+        int64_t expandedShapeSize = srcShape[reversedReassocIndices[idx]];
+
+        if (collapsedSizeValue < expandedShapeSize)
+          break;
+
+        // We need to make sure that the slice size can be set to the shape size
+        // and the offset to 0.
+        if ((collapsedSizeValue % expandedShapeSize) != 0 ||
+            (collapsedOffsetValue % expandedShapeSize) != 0)
           return rewriter.notifyMatchFailure(
               sliceOp, "unsupported: cannot be extracted as a contiguous slice "
                        "of the src of the collapse_shape");
-        }
 
+        groupExpandedSizes.push_back(rewriter.getIndexAttr(expandedShapeSize));
+        groupExpandedOffsets.push_back(rewriter.getIndexAttr(0));
+
+        collapsedSizeValue /= expandedShapeSize;
+        collapsedOffsetValue /= expandedShapeSize;
+      }
+
+      // Now handle the first dim where slicing occurs on (k).
+      if (idx < reassocGroupSize) {
+        int64_t expandedShapeSize = srcShape[reversedReassocIndices[idx]];
         int64_t offsetInDim = collapsedOffsetValue % expandedShapeSize;
-
-        // This is the dimension that slicing will occur along, so need to make
-        // sure that the slice size + offset will not exceed the shape size.
-        if (collapsedSizeValue < expandedShapeSize &&
-            (collapsedSizeValue + offsetInDim) >= expandedShapeSize) {
+        // We need to make sure that the slice size in this dim + offset will
+        // not exceed the shape size.
+        if ((collapsedSizeValue + offsetInDim) >= expandedShapeSize)
           return rewriter.notifyMatchFailure(
               sliceOp, "unsupported: slice cannot be extracted as a contiguous "
                        "slice of the src of the collapse_shape");
-        }
 
-        groupExpandedSizes.push_back(rewriter.getIndexAttr(
-            std::min(collapsedSizeValue, expandedShapeSize)));
+        groupExpandedSizes.push_back(rewriter.getIndexAttr(collapsedSizeValue));
         groupExpandedOffsets.push_back(rewriter.getIndexAttr(offsetInDim));
 
-        // Remove the size and offset of trailing dimensions from the size and
-        // offset of the slice.
-        collapsedSizeValue /= expandedShapeSize;
-        collapsedSizeValue = std::max<int64_t>(collapsedSizeValue, 1);
+        collapsedOffsetValue /= expandedShapeSize;
+      }
+
+      // Now handle the leading dimensions where the slice size is equal to 1
+      // (k-1...0).
+      for (idx++; idx < reassocGroupSize; ++idx) {
+        int64_t expandedShapeSize = srcShape[reversedReassocIndices[idx]];
+        int64_t offsetInDim = collapsedOffsetValue % expandedShapeSize;
+        groupExpandedSizes.push_back(rewriter.getIndexAttr(1));
+        groupExpandedOffsets.push_back(rewriter.getIndexAttr(offsetInDim));
         collapsedOffsetValue /= expandedShapeSize;
       }
 
