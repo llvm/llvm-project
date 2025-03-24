@@ -1,49 +1,49 @@
-; RUN: opt < %s -mtriple=x86_64-unknown-unknown -passes=mergeicmps -verify-dom-info -S | FileCheck %s --check-prefix=REG
+; RUN: opt < %s -mtriple=x86_64-unknown-unknown -passes=mergeicmps -verify-dom-info -S | FileCheck %s
 
 ; Cannot merge only part of a select block if not entire block mergable.
 
 define zeroext i1 @cmp_partially_mergable_select(
     ptr nocapture readonly align 4 dereferenceable(24) %a,
     ptr nocapture readonly align 4 dereferenceable(24) %b) local_unnamed_addr {
-; REG-LABEL: @cmp_partially_mergable_select(
-; REG:      entry:
-; REG-NEXT:   [[IDX0:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i64 8
-; REG-NEXT:   [[TMP0:%.*]] = load i32, ptr [[IDX0]], align 4
-; REG-NEXT:   [[CMP0:%.*]] = icmp eq i32 [[TMP0]], 255
-; REG-NEXT:   br i1 [[CMP0]], label [[LAND_LHS_TRUE:%.*]], label [[LAND_END:%.*]]
-; REG:      land.lhs.true:
-; REG-NEXT:   [[TMP1:%.*]] = load i32, ptr [[A]], align 4
-; REG-NEXT:   [[TMP2:%.*]] = load i32, ptr [[B:%.*]], align 4
-; REG-NEXT:   [[CMP1:%.*]] = icmp eq i32 [[TMP1]], [[TMP2]]
-; REG-NEXT:   br i1 [[CMP1]], label [[LAND_LHS_TRUE_4:%.*]], label [[LAND_END]]
-; REG:      land.lhs.true4:
-; REG-NEXT:   [[IDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 5
-; REG-NEXT:   [[TMP3:%.*]] = load i8, ptr [[IDX1]], align 1
-; REG-NEXT:   [[IDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 5
-; REG-NEXT:   [[TMP4:%.*]] = load i8, ptr [[IDX2]], align 1
-; REG-NEXT:   [[CMP2:%.*]] = icmp eq i8 [[TMP3]], [[TMP4]]
-; REG-NEXT:   [[IDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
-; REG-NEXT:   [[TMP5:%.*]] = load i32, ptr [[IDX3]], align 4
-; REG-NEXT:   [[CMP3:%.*]] = icmp eq i32 [[TMP5]], 100
-; REG-NEXT:   [[SEL0:%.*]] = select i1 [[CMP2]], i1 [[CMP3]], i1 false
-; REG-NEXT:   br i1 [[SEL0]], label [[LAND_LHS_TRUE_10:%.*]], label [[LAND_END]]
-; REG:      land.lhs.true10:
-; REG-NEXT:   [[IDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 20
-; REG-NEXT:   [[TMP6:%.*]] = load i8, ptr [[IDX4]], align 4
-; REG-NEXT:   [[IDX5:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 20
-; REG-NEXT:   [[TMP7:%.*]] = load i8, ptr [[IDX5]], align 4
-; REG-NEXT:   [[CMP4:%.*]] = icmp eq i8 [[TMP6]], [[TMP7]]
-; REG-NEXT:   br i1 [[CMP4]], label [[LAND_RHS:%.*]], label [[LAND_END]]
-; REG:      land.rhs:
-; REG-NEXT:   [[IDX6:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
-; REG-NEXT:   [[TMP8:%.*]] = load i8, ptr [[IDX6]], align 4
-; REG-NEXT:   [[IDX7:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 4
-; REG-NEXT:   [[TMP9:%.*]] = load i8, ptr [[IDX7]], align 4
-; REG-NEXT:   [[CMP5:%.*]] = icmp eq i8 [[TMP8]], [[TMP9]]
-; REG-NEXT:   br label [[LAND_END]]
-; REG:      land.end:
-; REG-NEXT:   [[RES:%.*]] = phi i1 [ false, [[LAND_LHS_TRUE_10]] ], [ false, [[LAND_LHS_TRUE_4]] ], [ false, [[LAND_LHS_TRUE]] ], [ false, %entry ], [ [[CMP5]], [[LAND_RHS]] ]
-; REG-NEXT:   ret i1 [[RES]]
+; CHECK-LABEL: @cmp_partially_mergable_select(
+; CHECK:      entry:
+; CHECK-NEXT:   [[IDX0:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i64 8
+; CHECK-NEXT:   [[TMP0:%.*]] = load i32, ptr [[IDX0]], align 4
+; CHECK-NEXT:   [[CMP0:%.*]] = icmp eq i32 [[TMP0]], 255
+; CHECK-NEXT:   br i1 [[CMP0]], label [[LAND_LHS_TRUE:%.*]], label [[LAND_END:%.*]]
+; CHECK:      land.lhs.true:
+; CHECK-NEXT:   [[TMP1:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:   [[TMP2:%.*]] = load i32, ptr [[B:%.*]], align 4
+; CHECK-NEXT:   [[CMP1:%.*]] = icmp eq i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:   br i1 [[CMP1]], label [[LAND_LHS_TRUE_4:%.*]], label [[LAND_END]]
+; CHECK:      land.lhs.true4:
+; CHECK-NEXT:   [[IDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 5
+; CHECK-NEXT:   [[TMP3:%.*]] = load i8, ptr [[IDX1]], align 1
+; CHECK-NEXT:   [[IDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 5
+; CHECK-NEXT:   [[TMP4:%.*]] = load i8, ptr [[IDX2]], align 1
+; CHECK-NEXT:   [[CMP2:%.*]] = icmp eq i8 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:   [[IDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
+; CHECK-NEXT:   [[TMP5:%.*]] = load i32, ptr [[IDX3]], align 4
+; CHECK-NEXT:   [[CMP3:%.*]] = icmp eq i32 [[TMP5]], 100
+; CHECK-NEXT:   [[SEL0:%.*]] = select i1 [[CMP2]], i1 [[CMP3]], i1 false
+; CHECK-NEXT:   br i1 [[SEL0]], label [[LAND_LHS_TRUE_10:%.*]], label [[LAND_END]]
+; CHECK:      land.lhs.true10:
+; CHECK-NEXT:   [[IDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 20
+; CHECK-NEXT:   [[TMP6:%.*]] = load i8, ptr [[IDX4]], align 4
+; CHECK-NEXT:   [[IDX5:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 20
+; CHECK-NEXT:   [[TMP7:%.*]] = load i8, ptr [[IDX5]], align 4
+; CHECK-NEXT:   [[CMP4:%.*]] = icmp eq i8 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:   br i1 [[CMP4]], label [[LAND_RHS:%.*]], label [[LAND_END]]
+; CHECK:      land.rhs:
+; CHECK-NEXT:   [[IDX6:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
+; CHECK-NEXT:   [[TMP8:%.*]] = load i8, ptr [[IDX6]], align 4
+; CHECK-NEXT:   [[IDX7:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 4
+; CHECK-NEXT:   [[TMP9:%.*]] = load i8, ptr [[IDX7]], align 4
+; CHECK-NEXT:   [[CMP5:%.*]] = icmp eq i8 [[TMP8]], [[TMP9]]
+; CHECK-NEXT:   br label [[LAND_END]]
+; CHECK:      land.end:
+; CHECK-NEXT:   [[RES:%.*]] = phi i1 [ false, [[LAND_LHS_TRUE_10]] ], [ false, [[LAND_LHS_TRUE_4]] ], [ false, [[LAND_LHS_TRUE]] ], [ false, %entry ], [ [[CMP5]], [[LAND_RHS]] ]
+; CHECK-NEXT:   ret i1 [[RES]]
 ;
 entry:
   %e = getelementptr inbounds nuw i8, ptr %a, i64 8
@@ -95,43 +95,43 @@ land.end:                                         ; preds = %land.rhs, %land.lhs
 
 define dso_local zeroext i1 @cmp_partially_mergable_select_array(
     ptr nocapture readonly align 1 dereferenceable(24) %p) local_unnamed_addr {
-; REG-LABEL: @cmp_partially_mergable_select_array(
-; REG:       entry:
-; REG-NEXT:   [[IDX0:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 12
-; REG-NEXT:   [[TMP0:%.*]] = load i8, ptr [[IDX0]], align 1
-; REG-NEXT:   [[IDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
-; REG-NEXT:   [[TMP1:%.*]] = load i8, ptr [[IDX1]], align 1
-; REG-NEXT:   [[IDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 3
-; REG-NEXT:   [[TMP2:%.*]] = load i8, ptr [[IDX2]], align 1
-; REG-NEXT:   [[CMP0:%.*]] = icmp eq i8 [[TMP0]], -1
-; REG-NEXT:   [[CMP1:%.*]] = icmp eq i8 [[TMP1]], -56
-; REG-NEXT:   [[SEL0:%.*]] = select i1 [[CMP0]], i1 [[CMP1]], i1 false
-; REG-NEXT:   [[CMP2:%.*]] = icmp eq i8 [[TMP2]], -66
-; REG-NEXT:   [[SEL1:%.*]] = select i1 [[SEL0]], i1 [[CMP2]], i1 false
-; REG-NEXT:   br i1 [[SEL1]], label [[LAND_LHS_TRUE_11:%.*]], label [[LAND_END:%.*]]
-; REG:       land.lhs.true11:
-; REG-NEXT:   [[IDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 10
-; REG-NEXT:   [[TMP3:%.*]] = load i8, ptr [[IDX3]], align 1
-; REG-NEXT:   [[CMP3:%.*]] = icmp eq i8 [[TMP3]], 1
-; REG-NEXT:   br i1 [[CMP3]], label [[LAND_LHS_TRUE_16:%.*]], label [[LAND_END]]
-; REG:       land.lhs.true16:
-; REG-NEXT:   [[IDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 6
-; REG-NEXT:   [[TMP4:%.*]] = load i8, ptr [[IDX4]], align 1
-; REG-NEXT:   [[CMP4:%.*]] = icmp eq i8 [[TMP4]], 2
-; REG-NEXT:   br i1 [[CMP4]], label [[LAND_LHS_TRUE_21:%.*]], label [[LAND_END]]
-; REG:       land.lhs.true21:
-; REG-NEXT:   [[IDX5:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
-; REG-NEXT:   [[TMP5:%.*]] = load i8, ptr [[IDX5]], align 1
-; REG-NEXT:   [[CMP5:%.*]] = icmp eq i8 [[TMP5]], 7
-; REG-NEXT:   br i1 [[CMP5]], label [[LAND_RHS:%.*]], label [[LAND_END]]
-; REG:       land.rhs:
-; REG-NEXT:   [[IDX6:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 13
-; REG-NEXT:   [[TMP6:%.*]] = load i8, ptr [[IDX6]], align 1
-; REG-NEXT:   [[CMP6:%.*]] = icmp eq i8 [[TMP6]], 9
-; REG-NEXT:   br label [[LAND_END]]
-; REG:       land.end:
-; REG-NEXT:   [[RES:%.*]] = phi i1 [ false, [[LAND_LHS_TRUE_21]] ], [ false, [[LAND_LHS_TRUE_16]] ], [ false, [[LAND_LHS_TRUE_11]] ], [ false, %entry ], [ [[CMP6]], [[LAND_RHS]] ]
-; REG-NEXT:   ret i1 [[RES]]
+; CHECK-LABEL: @cmp_partially_mergable_select_array(
+; CHECK:       entry:
+; CHECK-NEXT:   [[IDX0:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 12
+; CHECK-NEXT:   [[TMP0:%.*]] = load i8, ptr [[IDX0]], align 1
+; CHECK-NEXT:   [[IDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
+; CHECK-NEXT:   [[TMP1:%.*]] = load i8, ptr [[IDX1]], align 1
+; CHECK-NEXT:   [[IDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 3
+; CHECK-NEXT:   [[TMP2:%.*]] = load i8, ptr [[IDX2]], align 1
+; CHECK-NEXT:   [[CMP0:%.*]] = icmp eq i8 [[TMP0]], -1
+; CHECK-NEXT:   [[CMP1:%.*]] = icmp eq i8 [[TMP1]], -56
+; CHECK-NEXT:   [[SEL0:%.*]] = select i1 [[CMP0]], i1 [[CMP1]], i1 false
+; CHECK-NEXT:   [[CMP2:%.*]] = icmp eq i8 [[TMP2]], -66
+; CHECK-NEXT:   [[SEL1:%.*]] = select i1 [[SEL0]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:   br i1 [[SEL1]], label [[LAND_LHS_TRUE_11:%.*]], label [[LAND_END:%.*]]
+; CHECK:       land.lhs.true11:
+; CHECK-NEXT:   [[IDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 10
+; CHECK-NEXT:   [[TMP3:%.*]] = load i8, ptr [[IDX3]], align 1
+; CHECK-NEXT:   [[CMP3:%.*]] = icmp eq i8 [[TMP3]], 1
+; CHECK-NEXT:   br i1 [[CMP3]], label [[LAND_LHS_TRUE_16:%.*]], label [[LAND_END]]
+; CHECK:       land.lhs.true16:
+; CHECK-NEXT:   [[IDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 6
+; CHECK-NEXT:   [[TMP4:%.*]] = load i8, ptr [[IDX4]], align 1
+; CHECK-NEXT:   [[CMP4:%.*]] = icmp eq i8 [[TMP4]], 2
+; CHECK-NEXT:   br i1 [[CMP4]], label [[LAND_LHS_TRUE_21:%.*]], label [[LAND_END]]
+; CHECK:       land.lhs.true21:
+; CHECK-NEXT:   [[IDX5:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
+; CHECK-NEXT:   [[TMP5:%.*]] = load i8, ptr [[IDX5]], align 1
+; CHECK-NEXT:   [[CMP5:%.*]] = icmp eq i8 [[TMP5]], 7
+; CHECK-NEXT:   br i1 [[CMP5]], label [[LAND_RHS:%.*]], label [[LAND_END]]
+; CHECK:       land.rhs:
+; CHECK-NEXT:   [[IDX6:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 13
+; CHECK-NEXT:   [[TMP6:%.*]] = load i8, ptr [[IDX6]], align 1
+; CHECK-NEXT:   [[CMP6:%.*]] = icmp eq i8 [[TMP6]], 9
+; CHECK-NEXT:   br label [[LAND_END]]
+; CHECK:       land.end:
+; CHECK-NEXT:   [[RES:%.*]] = phi i1 [ false, [[LAND_LHS_TRUE_21]] ], [ false, [[LAND_LHS_TRUE_16]] ], [ false, [[LAND_LHS_TRUE_11]] ], [ false, %entry ], [ [[CMP6]], [[LAND_RHS]] ]
+; CHECK-NEXT:   ret i1 [[RES]]
 ;
 entry:
   %arrayidx = getelementptr inbounds nuw i8, ptr %p, i64 12

@@ -4,11 +4,10 @@
 ; adjacent byte pointer accesses compared to constants, should be merged into single memcmp, spanning multiple basic blocks
 
 define zeroext i1 @test(ptr nocapture noundef nonnull dereferenceable(3) %p) local_unnamed_addr #0 {
+; CHECK: [[MEMCMP_OP:@memcmp_const_op]] = private constant <{ i8, i8, i8 }> <{ i8 -1, i8 -56, i8 -66 }>
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  "entry+land.lhs.true+land.rhs":
-; CHECK-NEXT:    [[TMP0:%.*]] = alloca <{ i8, i8, i8 }>, align 8
-; CHECK-NEXT:    store <{ i8, i8, i8 }> <{ i8 -1, i8 -56, i8 -66 }>, ptr [[TMP0]], align 1
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[p:%.*]], ptr [[TMP0:%.*]], i64 3)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[p:%.*]], ptr [[MEMCMP_OP]], i64 3)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    br label [[LAND_END5:%.*]]
 ; CHECK:       land.end:

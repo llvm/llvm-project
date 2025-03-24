@@ -861,8 +861,9 @@ void updateBranching(Value* CondResult,
   }
 }
 
-// Builds constant-struct to compare pointer to during memcmp(). Has to be a chain of const-comparisons.
-AllocaInst* buildStruct(ArrayRef<SingleBCECmpBlock>& Comparisons, IRBuilder<>& Builder, LLVMContext &Context) {
+// Builds global constant-struct to compare to pointer during memcmp().
+// Has to be global in order for expand-memcmp pass to be able to fold constants.
+GlobalVariable* buildConstantStruct(ArrayRef<SingleBCECmpBlock>& Comparisons, IRBuilder<>& Builder, LLVMContext &Context, Module& M) {
   std::vector<Constant*> Constants;
   std::vector<Type*> Types;
 
@@ -872,13 +873,10 @@ AllocaInst* buildStruct(ArrayRef<SingleBCECmpBlock>& Comparisons, IRBuilder<>& B
     Constants.emplace_back(ConstCmp->Const);
     Types.emplace_back(ConstCmp->Lhs.LoadI->getType());
   }
-  // NOTE: Could check if all elements are of the same type and then use an array instead, if that is more performat.
   auto* StructType = StructType::get(Context, Types, /* currently only matches packed offsets */ true);
-  auto* StructAlloca = Builder.CreateAlloca(StructType,nullptr);
   auto *StructConstant = ConstantStruct::get(StructType, Constants);
-  Builder.CreateStore(StructConstant, StructAlloca);
 
-  return StructAlloca;
+  return new GlobalVariable(M, StructType, true, GlobalVariable::PrivateLinkage, StructConstant, "memcmp_const_op");
 }
 
 // Merges the given contiguous comparison blocks into one memcmp block.
@@ -905,7 +903,7 @@ static BasicBlock *mergeComparisons(ArrayRef<SingleBCECmpBlock> Comparisons,
     Lhs = FirstCmp.Lhs()->LoadI->getPointerOperand();
 
   if (isa<BCEConstCmp>(FirstCmp.getCmp())) {
-    Rhs = buildStruct(Comparisons, Builder, Context);
+    Rhs = buildConstantStruct(Comparisons, Builder, Context, *Phi.getModule());
   } else {
     auto* FirstBceCmp = cast<BCECmp>(FirstCmp.getCmp());
     if (FirstBceCmp->Rhs.GEP)

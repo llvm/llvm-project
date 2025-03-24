@@ -2,29 +2,28 @@
 
 ; Can merge contiguous const-comparison basic blocks that include a select statement.
 
+; CHECK: [[MEMCMP_OP0:@memcmp_const_op]] = private constant <{ i8, i8 }> <{ i8 2, i8 7 }>
+; CHECK: [[MEMCMP_OP1:@memcmp_const_op.1]] = private constant <{ i8, i8, i8, i8 }> <{ i8 -1, i8 -56, i8 -66, i8 1 }>
+
 define dso_local zeroext i1 @is_all_ones_many(ptr nocapture noundef nonnull dereferenceable(24) %p) local_unnamed_addr {
 ; CHECK-LABEL: @is_all_ones_many(
 ; CHECK-NEXT:  "entry+land.lhs.true11":
-; CHECK-NEXT:    [[TMP0:%.*]] = alloca <{ i8, i8, i8, i8 }>
-; CHECK-NEXT:    store <{ i8, i8, i8, i8 }> <{ i8 -1, i8 -56, i8 -66, i8 1 }>, ptr [[TMP0]], align 1
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[P:%.*]], ptr [[TMP0]], i64 4)
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[MEMCMP]], 0
-; CHECK-NEXT:    br i1 [[TMP1]], label [[NEXT_MEMCMP:%.*]], label [[LAND_END:%.*]]
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[P:%.*]], ptr [[MEMCMP_OP1]], i64 4)
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[MEMCMP]], 0
+; CHECK-NEXT:    br i1 [[TMP0]], label [[NEXT_MEMCMP:%.*]], label [[LAND_END:%.*]]
 ; CHECK:  "land.lhs.true16+land.lhs.true21":
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 6
-; CHECK-NEXT:    [[TMP3:%.*]] = alloca <{ i8, i8 }>
-; CHECK-NEXT:    store <{ i8, i8 }> <{ i8 2, i8 7 }>, ptr [[TMP3]], align 1
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[TMP2]], ptr [[TMP3]], i64 2)
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[MEMCMP]], 0
-; CHECK-NEXT:    br i1 [[TMP4]], label [[LAST_CMP:%.*]], label [[LAND_END]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 6
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[TMP1]], ptr [[MEMCMP_OP0]], i64 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[MEMCMP]], 0
+; CHECK-NEXT:    br i1 [[TMP2]], label [[LAST_CMP:%.*]], label [[LAND_END]]
 ; CHECK:  land.rhs1:
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 9
-; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i8 [[TMP6]], 9
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 9
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 9
 ; CHECK-NEXT:    br label [[LAND_END]]
 ; CHECK:       land.end:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i1 [ [[TMP7]], [[LAST_CMP]] ], [ false, [[NEXT_MEMCMP]] ], [ false, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i1 [[TMP8]]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi i1 [ [[TMP5]], [[LAST_CMP]] ], [ false, [[NEXT_MEMCMP]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i1 [[TMP6]]
 ;
 entry:
   %0 = load i8, ptr %p, align 1

@@ -3,6 +3,9 @@
 ; Tests if a const-cmp-chain of different types can still be merged.
 ; This is usually the case when comparing different struct fields to constants.
 
+; CHECK: [[MEMCMP_OP0:@memcmp_const_op]] = private constant <{ i32, i8 }> <{ i32 3, i8 100 }>
+; CHECK: [[MEMCMP_OP1:@memcmp_const_op.1]] = private constant <{ i32, i8, i8 }> <{ i32 200, i8 3, i8 100 }>
+
 ; Can only merge gep 0 with gep 4 due to alignment since gep 8 is not directly adjacent to gep 4.
 define dso_local zeroext i1 @is_all_ones_struct(
 ; CHECK-LABEL: @is_all_ones_struct(
@@ -12,9 +15,7 @@ define dso_local zeroext i1 @is_all_ones_struct(
 ; CHECK-NEXT:   [[CMP0:%.*]] = icmp eq i32 [[TMP1]], 200
 ; CHECK-NEXT:   br i1 [[CMP0]], label [[MERGED:%.*]], label [[LAND_END:%.*]]
 ; CHECK:      "land.rhs+land.lhs.true":
-; CHECK-NEXT:   [[TMP2:%.*]] = alloca <{ i32, i8 }>
-; CHECK-NEXT:   store <{ i32, i8 }> <{ i32 3, i8 100 }>, ptr [[TMP2]]
-; CHECK-NEXT:   [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[P]], ptr [[TMP2]], i64 5)
+; CHECK-NEXT:   [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[P]], ptr [[MEMCMP_OP0]], i64 5)
 ; CHECK-NEXT:   [[CMP1:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:   br label [[LAND_END]]
 ; CHECK:      land.end:
@@ -49,9 +50,7 @@ land.end:                                         ; preds = %land.rhs, %land.lhs
 define dso_local noundef zeroext i1 @is_all_ones_struct_select_block(
 ; CHECK-LABEL: @is_all_ones_struct_select_block(
 ; CHECK:      "entry+land.rhs":
-; CHECK-NEXT:   [[TMP0:%.*]] = alloca <{ i32, i8, i8 }>
-; CHECK-NEXT:   store <{ i32, i8, i8 }> <{ i32 200, i8 3, i8 100 }>, ptr [[TMP0]]
-; CHECK-NEXT:   [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[P:%.*]], ptr [[TMP0]], i64 6)
+; CHECK-NEXT:   [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[P:%.*]], ptr [[MEMCMP_OP1]], i64 6)
 ; CHECK-NEXT:   [[CMP1:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:   br label [[LAND_END]]
 ; CHECK:      land.end:

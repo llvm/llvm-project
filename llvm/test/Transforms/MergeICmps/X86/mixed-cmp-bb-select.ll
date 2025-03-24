@@ -2,6 +2,8 @@
 
 ; Tests if a mixed chain of comparisons (including a select block) can still be merged into two memcmp calls.
 
+; CHECK: [[MEMCMP_OP0:@memcmp_const_op]] = private constant <{ i32, i32, i32 }> <{ i32 255, i32 200, i32 100 }>
+
 define dso_local noundef zeroext i1 @cmp_mixed(
     ptr noundef nonnull readonly align 4 captures(none) dereferenceable(20) %a,
     ptr noundef nonnull readonly align 4 captures(none) dereferenceable(20) %b) local_unnamed_addr {
@@ -12,9 +14,7 @@ define dso_local noundef zeroext i1 @cmp_mixed(
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[ENTRY_LAND_RHS:%.*]], label [[LAND_END:%.*]]
 ; CHECK:  "entry+land.rhs+land.lhs.true4":
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca <{ i32, i32, i32 }>
-; CHECK-NEXT:    store <{ i32, i32, i32 }> <{ i32 255, i32 200, i32 100 }>, ptr [[TMP1]], align 1
-; CHECK-NEXT:    [[MEMCMP2:%.*]] = call i32 @memcmp(ptr [[TMP0]], ptr [[TMP1]], i64 12)
+; CHECK-NEXT:    [[MEMCMP2:%.*]] = call i32 @memcmp(ptr [[TMP0]], ptr [[MEMCMP_OP0]], i64 12)
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[MEMCMP2]], 0
 ; CHECK-NEXT:    br label [[LAND_END]]
 ; CHECK:       land.end:

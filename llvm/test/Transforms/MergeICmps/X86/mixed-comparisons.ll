@@ -4,6 +4,8 @@
 ; Tests if a mixed chain of comparisons can still be merged into two memcmp calls.
 ; a.e == 255 && a.a == b.a && a.c == b.c && a.g == 100 && a.b == b.b && a.f == 200;
 
+; CHECK: [[MEMCMP_OP0:@memcmp_const_op]] = private constant <{ i32, i32, i32 }> <{ i32 255, i32 200, i32 100 }>
+
 define dso_local noundef zeroext i1 @cmp_mixed(ptr noundef nonnull align 4 dereferenceable(20) %a, ptr noundef nonnull align 4 dereferenceable(20) %b) local_unnamed_addr {
 ; CHECK-LABEL: @cmp_mixed(
 ; This is the classic BCE comparison block
@@ -14,9 +16,7 @@ define dso_local noundef zeroext i1 @cmp_mixed(ptr noundef nonnull align 4 deref
 ; This is the new BCE to constant comparison block
 ; CHECK:  "entry+land.rhs+land.lhs.true8":
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca <{ i32, i32, i32 }>
-; CHECK-NEXT:    store <{ i32, i32, i32 }> <{ i32 255, i32 200, i32 100 }>, ptr [[TMP1]], align 1
-; CHECK-NEXT:    [[MEMCMP2:%.*]] = call i32 @memcmp(ptr [[TMP0]], ptr [[TMP1]], i64 12)
+; CHECK-NEXT:    [[MEMCMP2:%.*]] = call i32 @memcmp(ptr [[TMP0]], ptr [[MEMCMP_OP0]], i64 12)
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[MEMCMP2]], 0
 ; CHECK-NEXT:    br label [[LAND_END]]
 ; CHECK:       land.end:

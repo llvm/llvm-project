@@ -879,8 +879,27 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
 
   if (Value *Res = Expansion.getMemCmpExpansion()) {
     // Replace call with result of expansion and erase call.
+    auto* GV = dyn_cast<GlobalVariable>(CI->getArgOperand(1)); 
     CI->replaceAllUsesWith(Res);
     CI->eraseFromParent();
+
+    // If the mergeicmps pass used a global constant to merge comparisons and
+    // the the global constants were folded then the variable can be deleted since it isn't used anymore.
+    if (GV) {
+      // NOTE: There is still a use lingering around but that use itself isn't
+      // used so it is fine to erase this instruction.
+      static bool (*hasActiveUses)(Value*) = [](Value* V) {
+        for (User* U: V->users()){
+          if (hasActiveUses(U))
+            return true;
+        }
+        return false;
+      };
+      if (!hasActiveUses(GV)) {
+        LLVM_DEBUG(dbgs() << "Removing global constant " << GV->getName() << " that was introduced by the previous mergeicmps pass\n");
+        GV->eraseFromParent();
+      }
+    }
   }
 
   return true;

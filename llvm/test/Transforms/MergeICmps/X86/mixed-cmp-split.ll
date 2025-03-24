@@ -4,15 +4,16 @@ declare void @foo(...)
 
 ; Tests that if both const-cmp and bce-cmp chains can be merged that the splitted block is still at the beginning.
 
+; CHECK: [[MEMCMP_OP0:@memcmp_const_op]] = private constant <{ i32, i32, i32 }> <{ i32 255, i32 200, i32 100 }>
+; CHECK: [[MEMCMP_OP1:@memcmp_const_op.1]] = private constant <{ i32, i32, i32 }> <{ i32 255, i32 200, i32 100 }>
+
 define dso_local noundef zeroext i1 @cmp_mixed_const_first(ptr noundef nonnull align 4 dereferenceable(20) %a, ptr noundef nonnull align 4 dereferenceable(20) %b) local_unnamed_addr {
 ; CHECK-LABEL: @cmp_mixed_const_first(
 ; This merged-block should come first as it should be split.
 ; CHECK:  "entry+land.rhs+land.lhs.true8":
 ; CHECK-NEXT:    call void (...) @foo() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i64 8
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca <{ i32, i32, i32 }>
-; CHECK-NEXT:    store <{ i32, i32, i32 }> <{ i32 255, i32 200, i32 100 }>, ptr [[TMP1]], align 1
-; CHECK-NEXT:    [[MEMCMP0:%.*]] = call i32 @memcmp(ptr [[TMP0]], ptr [[TMP1]], i64 12)
+; CHECK-NEXT:    [[MEMCMP0:%.*]] = call i32 @memcmp(ptr [[TMP0]], ptr [[MEMCMP_OP0]], i64 12)
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[MEMCMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP0]], label [[LAND_LHS_TRUE10:%.*]], label [[LAND_END:%.*]]
 ; CHECK:   "land.lhs.true+land.lhs.true10+land.lhs.true4":
@@ -82,9 +83,7 @@ define dso_local noundef zeroext i1 @cmp_mixed_bce_first(
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[LAND_LHS_TRUE:%.*]], label [[LAND_END:%.*]]
 ; CHECK:  "land.lhs.true+land.rhs+land.lhs.true4":
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca <{ i32, i32, i32 }>
-; CHECK-NEXT:    store <{ i32, i32, i32 }> <{ i32 255, i32 200, i32 100 }>, ptr [[TMP1]], align 1
-; CHECK-NEXT:    [[MEMCMP2:%.*]] = call i32 @memcmp(ptr [[TMP0]], ptr [[TMP1]], i64 12)
+; CHECK-NEXT:    [[MEMCMP2:%.*]] = call i32 @memcmp(ptr [[TMP0]], ptr [[MEMCMP_OP1]], i64 12)
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[MEMCMP2]], 0
 ; CHECK-NEXT:    br label [[LAND_END]]
 ; CHECK:       land.end:
