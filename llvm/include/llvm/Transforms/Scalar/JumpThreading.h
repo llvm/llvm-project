@@ -147,9 +147,6 @@ public:
 
   Constant *evaluateOnPredecessorEdge(BasicBlock *BB, BasicBlock *PredPredBB,
                                       Value *cond, const DataLayout &DL);
-  Constant *evaluateOnPredecessorEdge(BasicBlock *BB, BasicBlock *PredPredBB,
-                                      Value *cond, const DataLayout &DL,
-                                      SmallPtrSet<Value *, 8> &Visited);
   bool maybethreadThroughTwoBasicBlocks(BasicBlock *BB, Value *Cond);
   void threadThroughTwoBasicBlocks(BasicBlock *PredPredBB, BasicBlock *PredBB,
                                    BasicBlock *BB, BasicBlock *SuccBB);
@@ -211,6 +208,11 @@ private:
   ///   if 'HasProfile' is true creates new instance through
   ///   FunctionAnalysisManager, otherwise nullptr.
   BlockFrequencyInfo *getOrCreateBFI(bool Force = false);
+
+  // Internal overload of evaluateOnPredecessorEdge().
+  Constant *evaluateOnPredecessorEdge(BasicBlock *BB, BasicBlock *PredPredBB,
+                                      Value *cond, const DataLayout &DL,
+                                      SmallPtrSet<Value *, 8> &Visited);
 };
 
 } // end namespace llvm
