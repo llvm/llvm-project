@@ -1888,7 +1888,14 @@ def : BitConvert <v8i64,  v16f32, VReg_512>;
 def : BitConvert <v8f64,  v16f32, VReg_512>;
 def : BitConvert <v16f32, v8i64,  VReg_512>;
 def : BitConvert <v16f32, v8f64,  VReg_512>;
-
+def : BitConvert <v8i64,  v32f16, VReg_512>;
+def : BitConvert <v8i64,  v32i16, VReg_512>;
+def : BitConvert <v8f64,  v32f16, VReg_512>;
+def : BitConvert <v8f64,  v32i16, VReg_512>;
+def : BitConvert <v32f16, v8i64,  VReg_512>;
+def : BitConvert <v32f16, v8f64,  VReg_512>;
+def : BitConvert <v32i16, v8i64,  VReg_512>;
+def : BitConvert <v32i16, v8f64,  VReg_512>;
 
 
 def : BitConvert <v32bf16, v32i16, VReg_512>;

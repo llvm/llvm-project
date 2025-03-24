@@ -225,7 +225,7 @@ public:
           Kind == PPCMCExpr::VK_AIX_TLSIE || Kind == PPCMCExpr::VK_AIX_TLSLE ||
           Kind == PPCMCExpr::VK_AIX_TLSLD || Kind == PPCMCExpr::VK_AIX_TLSML)
         OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << "@"
-           << getContext().getAsmInfo()->getVariantKindName(Kind) << '\n';
+           << getContext().getAsmInfo()->getSpecifierName(Kind) << '\n';
       else
         OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << '\n';
 

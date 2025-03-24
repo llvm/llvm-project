@@ -15,7 +15,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
-#include "gtest/gtest-spi.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -236,7 +235,7 @@ TEST(SSAUpdaterBulk, SingleBBLoop) {
   Loop->dump();
   // Output:
   // loop: ; preds = %loop, %entry
-  //   %i.prev = phi i32 [ %i.prev, %loop ], [ 0, %entry ]
+  //   %i.prev = phi i32 [ %i, %loop ], [ 0, %entry ]
   //   %i = add i32 %i.prev, 1
   //   %cmp = icmp slt i32 %i, 42
   //   br i1 %cmp, label %loop, label %exit
@@ -246,8 +245,7 @@ TEST(SSAUpdaterBulk, SingleBBLoop) {
   PHINode *Phi = Inserted[0];
   EXPECT_EQ(Phi, dyn_cast<PHINode>(I->getOperand(0)));
   EXPECT_EQ(Phi->getIncomingValueForBlock(Entry), ConstantInt::get(I32Ty, 0));
-  EXPECT_NONFATAL_FAILURE(EXPECT_EQ(Phi->getIncomingValueForBlock(Loop), I),
-                          "Expected equality of these values");
+  EXPECT_EQ(Phi->getIncomingValueForBlock(Loop), I);
 }
 
 TEST(SSAUpdaterBulk, TwoBBLoop) {
@@ -298,15 +296,14 @@ TEST(SSAUpdaterBulk, TwoBBLoop) {
   //   %i.prev = phi i32 [ %i, %loop ], [ 0, %entry ]
   //   br label %loop
   // loop:                                             ; preds = %loop_header
-  //   %i = add i32 %i, 1
+  //   %i = add i32 %i.prev, 1
   //   %cmp = icmp slt i32 %i, 42
   //   br i1 %cmp, label %loop_header, label %exit
 #endif
 
   ASSERT_EQ(Inserted.size(), 1u);
   PHINode *Phi = Inserted[0];
-  EXPECT_NONFATAL_FAILURE(EXPECT_EQ(Phi, dyn_cast<PHINode>(I->getOperand(0))),
-                          "Expected equality of these values");
+  EXPECT_EQ(Phi, dyn_cast<PHINode>(I->getOperand(0)));
   EXPECT_EQ(Phi->getParent(), LoopHdr);
   EXPECT_EQ(Phi->getIncomingValueForBlock(Entry), ConstantInt::get(I32Ty, 0));
   EXPECT_EQ(Phi->getIncomingValueForBlock(Loop), I);

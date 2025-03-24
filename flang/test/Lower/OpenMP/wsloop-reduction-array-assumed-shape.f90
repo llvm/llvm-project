@@ -88,7 +88,7 @@ end program
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_11:.*]]) : i32 = (%[[VAL_7]]) to (%[[VAL_8]]) inclusive step (%[[VAL_9]]) {
 ! CHECK:                 %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFFreduceEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_10]] {fortran_attrs = {{.*}}, uniq_name = "_QFFreduceEr"} : (!fir.ref<!fir.box<!fir.array<?xf64>>>) -> (!fir.ref<!fir.box<!fir.array<?xf64>>>, !fir.ref<!fir.box<!fir.array<?xf64>>>)
-! CHECK:                 hlfir.assign %[[VAL_11]] to %[[VAL_6]]#1 : i32, !fir.ref<i32>
+! CHECK:                 hlfir.assign %[[VAL_11]] to %[[VAL_6]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_13:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (i32) -> f64
 ! CHECK:                 %[[VAL_15:.*]] = fir.load %[[VAL_12]]#0 : !fir.ref<!fir.box<!fir.array<?xf64>>>
