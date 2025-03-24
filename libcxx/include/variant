@@ -853,7 +853,8 @@ _LIBCPP_VARIANT_MOVE_CONSTRUCTOR(
 _LIBCPP_VARIANT_MOVE_CONSTRUCTOR(
     _Trait::_Available,
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __move_constructor(__move_constructor&& __that) noexcept(
-        __all<is_nothrow_move_constructible_v<_Types>...>::value) : __move_constructor(__valueless_t{}) {
+        __all<is_nothrow_move_constructible_v<_Types>...>::value)
+    : __move_constructor(__valueless_t{}) {
       this->__generic_construct(*this, std::move(__that));
     } _LIBCPP_EAT_SEMICOLON);
 
@@ -889,9 +890,8 @@ _LIBCPP_VARIANT_COPY_CONSTRUCTOR(
 
 _LIBCPP_VARIANT_COPY_CONSTRUCTOR(
     _Trait::_Available,
-    _LIBCPP_HIDE_FROM_ABI
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 __copy_constructor(const __copy_constructor& __that) : __copy_constructor(
-        __valueless_t{}) { this->__generic_construct(*this, __that); } _LIBCPP_EAT_SEMICOLON);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __copy_constructor(const __copy_constructor& __that)
+    : __copy_constructor(__valueless_t{}) { this->__generic_construct(*this, __that); } _LIBCPP_EAT_SEMICOLON);
 
 _LIBCPP_VARIANT_COPY_CONSTRUCTOR(
     _Trait::_Unavailable,
@@ -1581,8 +1581,8 @@ visit(_Visitor&& __visitor, _Vs&&... __vs) {
 
 template <class... _Types>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 auto
-swap(variant<_Types...>& __lhs, variant<_Types...>& __rhs) noexcept(noexcept(__lhs.swap(__rhs)))
-    -> decltype(__lhs.swap(__rhs)) {
+swap(variant<_Types...>& __lhs,
+     variant<_Types...>& __rhs) noexcept(noexcept(__lhs.swap(__rhs))) -> decltype(__lhs.swap(__rhs)) {
   return __lhs.swap(__rhs);
 }
 
