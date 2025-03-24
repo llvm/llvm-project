@@ -1191,7 +1191,7 @@ const MCExpr *TargetLoweringObjectFileELF::lowerRelativeReference(
     return nullptr;
 
   return MCBinaryExpr::createSub(
-      MCSymbolRefExpr::create(TM.getSymbol(LHS), PLTRelativeVariantKind,
+      MCSymbolRefExpr::create(TM.getSymbol(LHS), PLTRelativeSpecifier,
                               getContext()),
       MCSymbolRefExpr::create(TM.getSymbol(RHS), getContext()), getContext());
 }
@@ -1206,7 +1206,7 @@ const MCExpr *TargetLoweringObjectFileELF::lowerDSOLocalEquivalent(
   if (GV->isDSOLocal() || GV->isImplicitDSOLocal())
     return MCSymbolRefExpr::create(TM.getSymbol(GV), getContext());
 
-  return MCSymbolRefExpr::create(TM.getSymbol(GV), PLTRelativeVariantKind,
+  return MCSymbolRefExpr::create(TM.getSymbol(GV), PLTRelativeSpecifier,
                                  getContext());
 }
 
