@@ -119,8 +119,7 @@ struct ClonedCodeInfo {
 /// parameter.
 BasicBlock *CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
                             const Twine &NameSuffix = "", Function *F = nullptr,
-                            ClonedCodeInfo *CodeInfo = nullptr,
-                            DebugInfoFinder *DIFinder = nullptr);
+                            ClonedCodeInfo *CodeInfo = nullptr);
 
 /// Return a copy of the specified function and add it to that
 /// function's module.  Also, any references specified in the VMap are changed
@@ -174,6 +173,38 @@ void CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
                        ClonedCodeInfo *CodeInfo = nullptr,
                        ValueMapTypeRemapper *TypeMapper = nullptr,
                        ValueMaterializer *Materializer = nullptr);
+
+/// Clone OldFunc's attributes into NewFunc, transforming values based on the
+/// mappings in VMap.
+void CloneFunctionAttributesInto(Function *NewFunc, const Function *OldFunc,
+                                 ValueToValueMapTy &VMap,
+                                 bool ModuleLevelChanges,
+                                 ValueMapTypeRemapper *TypeMapper = nullptr,
+                                 ValueMaterializer *Materializer = nullptr);
+
+/// Clone OldFunc's metadata into NewFunc.
+///
+/// The caller is expected to populate \p VMap beforehand and set an appropriate
+/// \p RemapFlag. Subprograms/CUs/types that were already mapped to themselves
+/// won't be duplicated.
+///
+/// NOTE: This function doesn't clone !llvm.dbg.cu when cloning into a different
+/// module. Use CloneFunctionInto for that behavior.
+void CloneFunctionMetadataInto(Function &NewFunc, const Function &OldFunc,
+                               ValueToValueMapTy &VMap, RemapFlags RemapFlag,
+                               ValueMapTypeRemapper *TypeMapper = nullptr,
+                               ValueMaterializer *Materializer = nullptr,
+                               const MetadataPredicate *IdentityMD = nullptr);
+
+/// Clone OldFunc's body into NewFunc.
+void CloneFunctionBodyInto(Function &NewFunc, const Function &OldFunc,
+                           ValueToValueMapTy &VMap, RemapFlags RemapFlag,
+                           SmallVectorImpl<ReturnInst *> &Returns,
+                           const char *NameSuffix = "",
+                           ClonedCodeInfo *CodeInfo = nullptr,
+                           ValueMapTypeRemapper *TypeMapper = nullptr,
+                           ValueMaterializer *Materializer = nullptr,
+                           const MetadataPredicate *IdentityMD = nullptr);
 
 void CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
                                const Instruction *StartingInst,

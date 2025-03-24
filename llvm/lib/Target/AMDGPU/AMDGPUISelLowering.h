@@ -209,7 +209,7 @@ public:
   EVT getTypeForExtReturn(LLVMContext &Context, EVT VT,
                           ISD::NodeType ExtendKind) const override;
 
-  MVT getVectorIdxTy(const DataLayout &) const override;
+  unsigned getVectorIdxWidth(const DataLayout &) const override;
   bool isSelectSupported(SelectSupportKind) const override;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
@@ -394,7 +394,6 @@ namespace AMDGPUISD {
 enum NodeType : unsigned {
   // AMDIL ISD Opcodes
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
-  UMUL, // 32bit unsigned multiplication
   BRANCH_COND,
   // End AMDIL ISD Opcodes
 
@@ -403,6 +402,7 @@ enum NodeType : unsigned {
   TC_RETURN,
   TC_RETURN_GFX,
   TC_RETURN_CHAIN,
+  TC_RETURN_CHAIN_DVGPR,
   TRAP,
 
   // Masked control flow nodes.
@@ -439,7 +439,6 @@ enum NodeType : unsigned {
   // This is SETCC with the full mask result which is used for a compare with a
   // result bit per item in the wavefront.
   SETCC,
-  SETREG,
 
   DENORM_MODE,
 
@@ -514,10 +513,6 @@ enum NodeType : unsigned {
   CONST_ADDRESS,
   REGISTER_LOAD,
   REGISTER_STORE,
-  SAMPLE,
-  SAMPLEB,
-  SAMPLED,
-  SAMPLEL,
 
   // These cvt_f32_ubyte* nodes need to remain consecutive and in order.
   CVT_F32_UBYTE0,
@@ -552,8 +547,9 @@ enum NodeType : unsigned {
   LDS,
 
   DUMMY_CHAIN,
-  FIRST_MEM_OPCODE_NUMBER = ISD::FIRST_TARGET_MEMORY_OPCODE,
-  LOAD_D16_HI,
+
+  FIRST_MEMORY_OPCODE,
+  LOAD_D16_HI = FIRST_MEMORY_OPCODE,
   LOAD_D16_LO,
   LOAD_D16_HI_I8,
   LOAD_D16_HI_U8,
@@ -561,7 +557,6 @@ enum NodeType : unsigned {
   LOAD_D16_LO_U8,
 
   STORE_MSKOR,
-  LOAD_CONSTANT,
   TBUFFER_STORE_FORMAT,
   TBUFFER_STORE_FORMAT_D16,
   TBUFFER_LOAD_FORMAT,
@@ -610,8 +605,7 @@ enum NodeType : unsigned {
   BUFFER_ATOMIC_FMIN,
   BUFFER_ATOMIC_FMAX,
   BUFFER_ATOMIC_COND_SUB_U32,
-
-  LAST_AMDGPU_ISD_NUMBER
+  LAST_MEMORY_OPCODE = BUFFER_ATOMIC_COND_SUB_U32,
 };
 
 } // End namespace AMDGPUISD

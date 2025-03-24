@@ -19,7 +19,7 @@ define float @pr70988() {
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd contract float [[VEC_PHI]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = select contract i1 [[TMP1]], float 1.000000e+00, float -0.000000e+00
 ; CHECK-NEXT:    [[TMP5]] = fadd contract float [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[INDEX_NEXT3]] = add i32 [[INDEX1]], 2
+; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i32 [[INDEX1]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT3]], 1022
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
@@ -55,7 +55,7 @@ define float @pr70988() {
 ; CHECK-ALM-NEXT:    [[TMP3:%.*]] = fadd contract float [[VEC_PHI]], [[TMP2]]
 ; CHECK-ALM-NEXT:    [[TMP4:%.*]] = select contract i1 [[ACTIVE_LANE_MASK2]], float 1.000000e+00, float -0.000000e+00
 ; CHECK-ALM-NEXT:    [[TMP5]] = fadd contract float [[TMP3]], [[TMP4]]
-; CHECK-ALM-NEXT:    [[INDEX_NEXT3]] = add i32 [[INDEX1]], 2
+; CHECK-ALM-NEXT:    [[INDEX_NEXT3]] = add nuw i32 [[INDEX1]], 2
 ; CHECK-ALM-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT3]], 1022
 ; CHECK-ALM-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-ALM:       middle.block:
@@ -125,7 +125,7 @@ define float @pr72720reduction_using_active_lane_mask(ptr %src) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd contract float [[VEC_PHI]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = select contract i1 [[TMP1]], float [[TMP9]], float -0.000000e+00
 ; CHECK-NEXT:    [[TMP13]] = fadd contract float [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
@@ -178,7 +178,7 @@ define float @pr72720reduction_using_active_lane_mask(ptr %src) {
 ; CHECK-ALM-NEXT:    [[TMP9:%.*]] = fadd contract float [[VEC_PHI]], [[TMP8]]
 ; CHECK-ALM-NEXT:    [[TMP10:%.*]] = select contract i1 [[ACTIVE_LANE_MASK1]], float [[TMP7]], float -0.000000e+00
 ; CHECK-ALM-NEXT:    [[TMP11]] = fadd contract float [[TMP9]], [[TMP10]]
-; CHECK-ALM-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
+; CHECK-ALM-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-ALM-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
 ; CHECK-ALM-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-ALM:       middle.block:
@@ -216,4 +216,95 @@ loop:
 exit:
   %.lcssa = phi float [ %rdx.next, %loop ]
   ret float %.lcssa
+}
+
+define float @fadd_reduction_with_live_in(float %inc) {
+; CHECK-LABEL: define float @fadd_reduction_with_live_in(
+; CHECK-SAME: float [[INC:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IV:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    [[VEC_IV1:%.*]] = add i32 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i32 [[VEC_IV]], 1000
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i32 [[VEC_IV1]], 1000
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], float [[INC]], float -0.000000e+00
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd float [[VEC_PHI]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP1]], float [[INC]], float -0.000000e+00
+; CHECK-NEXT:    [[TMP5]] = fadd float [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1002
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1002, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP5]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi float [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[SUM_NEXT]] = fadd float [[SUM]], [[INC]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], 1000
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[LCSSA:%.*]] = phi float [ [[SUM_NEXT]], [[LOOP]] ], [ [[TMP5]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret float [[LCSSA]]
+;
+; CHECK-ALM-LABEL: define float @fadd_reduction_with_live_in(
+; CHECK-ALM-SAME: float [[INC:%.*]]) {
+; CHECK-ALM-NEXT:  entry:
+; CHECK-ALM-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-ALM:       vector.ph:
+; CHECK-ALM-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-ALM:       vector.body:
+; CHECK-ALM-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-ALM-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-ALM-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
+; CHECK-ALM-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
+; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = icmp ult i32 [[TMP0]], 1001
+; CHECK-ALM-NEXT:    [[ACTIVE_LANE_MASK1:%.*]] = icmp ult i32 [[TMP1]], 1001
+; CHECK-ALM-NEXT:    [[TMP2:%.*]] = select i1 [[ACTIVE_LANE_MASK]], float [[INC]], float -0.000000e+00
+; CHECK-ALM-NEXT:    [[TMP3:%.*]] = fadd float [[VEC_PHI]], [[TMP2]]
+; CHECK-ALM-NEXT:    [[TMP4:%.*]] = select i1 [[ACTIVE_LANE_MASK1]], float [[INC]], float -0.000000e+00
+; CHECK-ALM-NEXT:    [[TMP5]] = fadd float [[TMP3]], [[TMP4]]
+; CHECK-ALM-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; CHECK-ALM-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1002
+; CHECK-ALM-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-ALM:       middle.block:
+; CHECK-ALM-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-ALM:       scalar.ph:
+; CHECK-ALM-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1002, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-ALM-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP5]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
+; CHECK-ALM-NEXT:    br label [[LOOP:%.*]]
+; CHECK-ALM:       loop:
+; CHECK-ALM-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-ALM-NEXT:    [[SUM:%.*]] = phi float [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], [[LOOP]] ]
+; CHECK-ALM-NEXT:    [[SUM_NEXT]] = fadd float [[SUM]], [[INC]]
+; CHECK-ALM-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-ALM-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], 1000
+; CHECK-ALM-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-ALM:       exit:
+; CHECK-ALM-NEXT:    [[LCSSA:%.*]] = phi float [ [[SUM_NEXT]], [[LOOP]] ], [ [[TMP5]], [[MIDDLE_BLOCK]] ]
+; CHECK-ALM-NEXT:    ret float [[LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %sum = phi float [ 0.000000e+00, %entry ], [ %sum.next, %loop ]
+  %sum.next = fadd float %sum, %inc
+  %iv.next = add i32 %iv, 1
+  %ec = icmp eq i32 %iv, 1000
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %lcssa = phi float [ %sum.next, %loop ]
+  ret float %lcssa
 }

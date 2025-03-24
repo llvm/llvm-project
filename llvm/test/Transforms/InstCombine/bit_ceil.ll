@@ -268,11 +268,11 @@ define i32 @bit_ceil_32_sub_used_twice(i32 %x, ptr %p) {
 ; a vector version of @bit_ceil_32 above
 define <4 x i32> @bit_ceil_v4i32(<4 x i32> %x) {
 ; CHECK-LABEL: @bit_ceil_v4i32(
-; CHECK-NEXT:    [[DEC:%.*]] = add <4 x i32> [[X:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[DEC:%.*]] = add <4 x i32> [[X:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    [[CTLZ:%.*]] = tail call range(i32 0, 33) <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[DEC]], i1 false)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw <4 x i32> zeroinitializer, [[CTLZ]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[TMP1]], <i32 31, i32 31, i32 31, i32 31>
-; CHECK-NEXT:    [[SEL:%.*]] = shl nuw <4 x i32> <i32 1, i32 1, i32 1, i32 1>, [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[TMP1]], splat (i32 31)
+; CHECK-NEXT:    [[SEL:%.*]] = shl nuw <4 x i32> splat (i32 1), [[TMP2]]
 ; CHECK-NEXT:    ret <4 x i32> [[SEL]]
 ;
   %dec = add <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -302,9 +302,9 @@ define i32 @pr91691(i32 %0) {
   ret i32 %7
 }
 
-define i32 @pr91691_keep_nsw(i32 %0) {
-; CHECK-LABEL: @pr91691_keep_nsw(
-; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i32 -2, [[TMP0:%.*]]
+define i32 @pr91691_drop_nsw(i32 %0) {
+; CHECK-LABEL: @pr91691_drop_nsw(
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 -2, [[TMP0:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[TMP2]], i1 false)
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub nsw i32 0, [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 31
@@ -318,6 +318,63 @@ define i32 @pr91691_keep_nsw(i32 %0) {
   %6 = icmp ult i32 %0, -2
   %7 = select i1 %6, i32 %5, i32 1
   ret i32 %7
+}
+
+define i32 @test_drop_range_attr(i32 %x) {
+; CHECK-LABEL: @test_drop_range_attr(
+; CHECK-NEXT:    [[CTLZ:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i32 0, [[CTLZ]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 31
+; CHECK-NEXT:    [[SEL:%.*]] = shl nuw i32 1, [[TMP2]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %ctlz = call range(i32 1, 33) i32 @llvm.ctlz.i32(i32 %x, i1 false)
+  %sub = sub i32 32, %ctlz
+  %shl = shl i32 1, %sub
+  %dec = add i32 %x, -1
+  %ult = icmp ult i32 %dec, -2
+  %sel = select i1 %ult, i32 %shl, i32 1
+  ret i32 %sel
+}
+
+define i32 @bit_ceil_plus_nsw(i32 %x) {
+; CHECK-LABEL: @bit_ceil_plus_nsw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[CTLZ:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[SUB]], i1 false)
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i32 0, [[CTLZ]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 31
+; CHECK-NEXT:    [[SEL:%.*]] = shl nuw i32 1, [[TMP1]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+entry:
+  %sub = add nsw i32 %x, 1
+  %ctlz = tail call i32 @llvm.ctlz.i32(i32 %sub, i1 false)
+  %sub2 = sub nuw nsw i32 32, %ctlz
+  %shl = shl nuw i32 1, %sub2
+  %ult = icmp ult i32 %x, 2147483647
+  %sel = select i1 %ult, i32 %shl, i32 1
+  ret i32 %sel
+}
+
+define i32 @bit_ceil_plus_nuw(i32 %x) {
+; CHECK-LABEL: @bit_ceil_plus_nuw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[CTLZ:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[SUB]], i1 false)
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i32 0, [[CTLZ]]
+; CHECK-NEXT:    [[SUB2:%.*]] = and i32 [[TMP0]], 31
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[SUB2]]
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+entry:
+  %sub = add nuw i32 %x, 1
+  %ctlz = tail call i32 @llvm.ctlz.i32(i32 %sub, i1 false)
+  %sub2 = sub nuw nsw i32 32, %ctlz
+  %shl = shl nuw i32 1, %sub2
+  %ult = icmp ult i32 %x, 2147483647
+  %sel = select i1 %ult, i32 %shl, i32 1
+  ret i32 %sel
 }
 
 declare i32 @llvm.ctlz.i32(i32, i1 immarg)

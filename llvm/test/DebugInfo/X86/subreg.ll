@@ -1,5 +1,4 @@
 ; RUN: llc %s -mtriple=x86_64-pc-linux-gnu -O0 -o - | FileCheck %s
-; RUN: llc --try-experimental-debuginfo-iterators %s -mtriple=x86_64-pc-linux-gnu -O0 -o - | FileCheck %s
 
 ; We are testing that a value in a 16 bit register gets reported as
 ; being in its superregister.

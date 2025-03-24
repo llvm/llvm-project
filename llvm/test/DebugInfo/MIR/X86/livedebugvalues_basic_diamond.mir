@@ -1,7 +1,7 @@
 --- |
-  ; RUN: llc %s -march=x86-64 -run-pass=livedebugvalues -o - | FileCheck %s -implicit-check-not=DBG_VALUE
+ ; RUN: llc %s -mtriple=x86_64 -run-pass=livedebugvalues -o - | FileCheck %s -implicit-check-not=DBG_VALUE
 
-  ; Check that DBG_VALUE instructions are propogated through a CFG containing
+  ; Check that DBG_VALUE instructions are propagated through a CFG containing
   ; a diamond that doesn't move or clobber their locations.
 
   ; CHECK-LABEL: bb.0.entry:

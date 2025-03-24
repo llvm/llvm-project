@@ -300,6 +300,11 @@ class Enc96 {
   int Size = 12;
 }
 
+class Enc128 {
+  field bits<128> Inst;
+  int Size = 16;
+}
+
 def CPolBit {
   int GLC = 0;
   int SLC = 1;

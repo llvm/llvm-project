@@ -228,15 +228,16 @@ void X86InstrMappingEmitter::emitCompressEVEXTable(
       // For each pre-compression instruction look for a match in the
       // appropriate vector (instructions with the same opcode) using function
       // object IsMatch.
-      auto Match = llvm::find_if(CompressedInsts[Opcode], IsMatch(Inst));
-      if (Match != CompressedInsts[Opcode].end())
+      const auto &Insts = CompressedInsts[Opcode];
+      auto Match = llvm::find_if(Insts, IsMatch(Inst));
+      if (Match != Insts.end())
         NewInst = *Match;
     }
 
     if (!NewInst)
       continue;
 
-    Table.push_back(std::pair(Inst, NewInst));
+    Table.emplace_back(Inst, NewInst);
     auto Predicates = NewInst->TheDef->getValueAsListOfDefs("Predicates");
     auto It = llvm::find_if(Predicates, [](const Record *R) {
       StringRef Name = R->getName();
@@ -274,26 +275,26 @@ void X86InstrMappingEmitter::emitNFTransformTable(
     const Record *Rec = Inst->TheDef;
     if (!isInteresting(Rec))
       continue;
-    std::string Name = Rec->getName().str();
-    auto Pos = Name.find("_NF");
-    if (Pos == std::string::npos)
+    StringRef Name = Rec->getName();
+    if (Name.contains("_NF"))
       continue;
 
-    if (auto *NewRec = Records.getDef(Name.erase(Pos, 3))) {
+    if (auto *NewRec = Name.consume_back("_ND")
+                           ? Records.getDef(Name.str() + "_NF_ND")
+                           : Records.getDef(Name.str() + "_NF")) {
 #ifndef NDEBUG
       auto ClobberEFLAGS = [](const Record *R) {
         return llvm::any_of(
             R->getValueAsListOfDefs("Defs"),
             [](const Record *Def) { return Def->getName() == "EFLAGS"; });
       };
-      if (ClobberEFLAGS(Rec))
+      if (ClobberEFLAGS(NewRec))
         report_fatal_error("EFLAGS should not be clobbered by " +
-                           Rec->getName());
-      if (!ClobberEFLAGS(NewRec))
-        report_fatal_error("EFLAGS should be clobbered by " +
                            NewRec->getName());
+      if (!ClobberEFLAGS(Rec))
+        report_fatal_error("EFLAGS should be clobbered by " + Rec->getName());
 #endif
-      Table.push_back(std::pair(&Target.getInstruction(NewRec), Inst));
+      Table.emplace_back(Inst, &Target.getInstruction(NewRec));
     }
   }
   printTable(Table, "X86NFTransformTable", "GET_X86_NF_TRANSFORM_TABLE", OS);
@@ -321,7 +322,7 @@ void X86InstrMappingEmitter::emitND2NonNDTable(
       const auto *NewRec = Records.getDef(ManualMap.at(Rec->getName()));
       assert(NewRec && "Instruction not found!");
       auto &NewInst = Target.getInstruction(NewRec);
-      Table.push_back(std::pair(Inst, &NewInst));
+      Table.emplace_back(Inst, &NewInst);
       continue;
     }
 
@@ -332,7 +333,7 @@ void X86InstrMappingEmitter::emitND2NonNDTable(
       continue;
     const auto &NewInst = Target.getInstruction(NewRec);
     if (isRegisterOperand(NewInst.Operands[0].Rec))
-      Table.push_back(std::pair(Inst, &NewInst));
+      Table.emplace_back(Inst, &NewInst);
   }
   printTable(Table, "X86ND2NonNDTable", "GET_X86_ND2NONND_TABLE", OS);
 }
@@ -355,7 +356,7 @@ void X86InstrMappingEmitter::emitSSE2AVXTable(
       const auto *NewRec = Records.getDef(ManualMap.at(Rec->getName()));
       assert(NewRec && "Instruction not found!");
       const auto &NewInst = Target.getInstruction(NewRec);
-      Table.push_back(std::pair(Inst, &NewInst));
+      Table.emplace_back(Inst, &NewInst);
       continue;
     }
 
@@ -364,7 +365,7 @@ void X86InstrMappingEmitter::emitSSE2AVXTable(
     if (!AVXRec)
       continue;
     auto &AVXInst = Target.getInstruction(AVXRec);
-    Table.push_back(std::pair(Inst, &AVXInst));
+    Table.emplace_back(Inst, &AVXInst);
   }
   printTable(Table, "X86SSE2AVXTable", "GET_X86_SSE2AVX_TABLE", OS);
 }

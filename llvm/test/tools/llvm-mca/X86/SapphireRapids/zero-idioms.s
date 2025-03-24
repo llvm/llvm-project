@@ -345,14 +345,14 @@ vpxorq  %zmm19, %zmm19, %zmm21
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 46.00  44.00   -      -      -     46.00  1.00    -      -      -     2.00    -      -
+# CHECK-NEXT: 46.00  44.00   -      -      -     46.00  1.00    -      -      -      -     2.00    -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     subl	%eax, %eax
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     subl	%eax, %eax
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -      -     subq	%rax, %rax
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     xorl	%eax, %eax
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -     xorq	%rax, %rax
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     xorq	%rax, %rax
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     pcmpgtb	%mm2, %mm2
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     pcmpgtd	%mm2, %mm2
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     pcmpgtw	%mm2, %mm2

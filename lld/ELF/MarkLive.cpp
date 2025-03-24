@@ -221,7 +221,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
   // Preserve externally-visible symbols if the symbols defined by this
   // file can interpose other ELF file's symbols at runtime.
   for (Symbol *sym : ctx.symtab->getSymbols())
-    if (sym->includeInDynsym(ctx) && sym->partition == partition)
+    if (sym->isExported && sym->partition == partition)
       markSymbol(sym);
 
   // If this isn't the main partition, that's all that we need to preserve.
@@ -301,8 +301,8 @@ template <class ELFT> void MarkLive<ELFT>::run() {
       // As a workaround for glibc libc.a before 2.34
       // (https://sourceware.org/PR27492), retain __libc_atexit and similar
       // sections regardless of zStartStopGC.
-      cNamedSections[saver().save("__start_" + sec->name)].push_back(sec);
-      cNamedSections[saver().save("__stop_" + sec->name)].push_back(sec);
+      cNamedSections[ctx.saver.save("__start_" + sec->name)].push_back(sec);
+      cNamedSections[ctx.saver.save("__stop_" + sec->name)].push_back(sec);
     }
   }
 
@@ -391,7 +391,7 @@ template <class ELFT> void elf::markLive(Ctx &ctx) {
   if (ctx.arg.printGcSections)
     for (InputSectionBase *sec : ctx.inputSections)
       if (!sec->isLive())
-        message("removing unused section " + toString(sec));
+        Msg(ctx) << "removing unused section " << sec;
 }
 
 template void elf::markLive<ELF32LE>(Ctx &);

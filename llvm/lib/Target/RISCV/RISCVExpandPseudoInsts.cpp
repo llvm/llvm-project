@@ -56,6 +56,8 @@ private:
                             MachineBasicBlock::iterator MBBI);
   bool expandRV32ZdinxLoad(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI);
+  bool expandPseudoReadVLENBViaVSETVLIX0(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator MBBI);
 #ifndef NDEBUG
   unsigned getInstSizeInBytes(const MachineFunction &MF) const {
     unsigned Size = 0;
@@ -164,6 +166,8 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case RISCV::PseudoVMSET_M_B64:
     // vmset.m vd => vmxnor.mm vd, vd, vd
     return expandVMSET_VMCLR(MBB, MBBI, RISCV::VMXNOR_MM);
+  case RISCV::PseudoReadVLENBViaVSETVLIX0:
+    return expandPseudoReadVLENBViaVSETVLIX0(MBB, MBBI);
   }
 
   return false;
@@ -320,34 +324,37 @@ bool RISCVExpandPseudo::expandRV32ZdinxStore(MachineBasicBlock &MBB,
   Register Hi =
       TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_odd);
 
-  assert(MBBI->hasOneMemOperand() && "Expected mem operand");
-  MachineMemOperand *OldMMO = MBBI->memoperands().front();
-  MachineFunction *MF = MBB.getParent();
-  MachineMemOperand *MMOLo = MF->getMachineMemOperand(OldMMO, 0, 4);
-  MachineMemOperand *MMOHi = MF->getMachineMemOperand(OldMMO, 4, 4);
+  auto MIBLo = BuildMI(MBB, MBBI, DL, TII->get(RISCV::SW))
+                   .addReg(Lo, getKillRegState(MBBI->getOperand(0).isKill()))
+                   .addReg(MBBI->getOperand(1).getReg())
+                   .add(MBBI->getOperand(2));
 
-  BuildMI(MBB, MBBI, DL, TII->get(RISCV::SW))
-      .addReg(Lo, getKillRegState(MBBI->getOperand(0).isKill()))
-      .addReg(MBBI->getOperand(1).getReg())
-      .add(MBBI->getOperand(2))
-      .setMemRefs(MMOLo);
-
+  MachineInstrBuilder MIBHi;
   if (MBBI->getOperand(2).isGlobal() || MBBI->getOperand(2).isCPI()) {
     assert(MBBI->getOperand(2).getOffset() % 8 == 0);
     MBBI->getOperand(2).setOffset(MBBI->getOperand(2).getOffset() + 4);
-    BuildMI(MBB, MBBI, DL, TII->get(RISCV::SW))
-        .addReg(Hi, getKillRegState(MBBI->getOperand(0).isKill()))
-        .add(MBBI->getOperand(1))
-        .add(MBBI->getOperand(2))
-        .setMemRefs(MMOHi);
+    MIBHi = BuildMI(MBB, MBBI, DL, TII->get(RISCV::SW))
+                .addReg(Hi, getKillRegState(MBBI->getOperand(0).isKill()))
+                .add(MBBI->getOperand(1))
+                .add(MBBI->getOperand(2));
   } else {
     assert(isInt<12>(MBBI->getOperand(2).getImm() + 4));
-    BuildMI(MBB, MBBI, DL, TII->get(RISCV::SW))
-        .addReg(Hi, getKillRegState(MBBI->getOperand(0).isKill()))
-        .add(MBBI->getOperand(1))
-        .addImm(MBBI->getOperand(2).getImm() + 4)
-        .setMemRefs(MMOHi);
+    MIBHi = BuildMI(MBB, MBBI, DL, TII->get(RISCV::SW))
+                .addReg(Hi, getKillRegState(MBBI->getOperand(0).isKill()))
+                .add(MBBI->getOperand(1))
+                .addImm(MBBI->getOperand(2).getImm() + 4);
   }
+
+  MachineFunction *MF = MBB.getParent();
+  SmallVector<MachineMemOperand *> NewLoMMOs;
+  SmallVector<MachineMemOperand *> NewHiMMOs;
+  for (const MachineMemOperand *MMO : MBBI->memoperands()) {
+    NewLoMMOs.push_back(MF->getMachineMemOperand(MMO, 0, 4));
+    NewHiMMOs.push_back(MF->getMachineMemOperand(MMO, 4, 4));
+  }
+  MIBLo.setMemRefs(NewLoMMOs);
+  MIBHi.setMemRefs(NewHiMMOs);
+
   MBBI->eraseFromParent();
   return true;
 }
@@ -364,47 +371,67 @@ bool RISCVExpandPseudo::expandRV32ZdinxLoad(MachineBasicBlock &MBB,
   Register Hi =
       TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_odd);
 
-  assert(MBBI->hasOneMemOperand() && "Expected mem operand");
-  MachineMemOperand *OldMMO = MBBI->memoperands().front();
-  MachineFunction *MF = MBB.getParent();
-  MachineMemOperand *MMOLo = MF->getMachineMemOperand(OldMMO, 0, 4);
-  MachineMemOperand *MMOHi = MF->getMachineMemOperand(OldMMO, 4, 4);
+  MachineInstrBuilder MIBLo, MIBHi;
 
   // If the register of operand 1 is equal to the Lo register, then swap the
   // order of loading the Lo and Hi statements.
   bool IsOp1EqualToLo = Lo == MBBI->getOperand(1).getReg();
   // Order: Lo, Hi
   if (!IsOp1EqualToLo) {
-    BuildMI(MBB, MBBI, DL, TII->get(RISCV::LW), Lo)
-        .addReg(MBBI->getOperand(1).getReg())
-        .add(MBBI->getOperand(2))
-        .setMemRefs(MMOLo);
+    MIBLo = BuildMI(MBB, MBBI, DL, TII->get(RISCV::LW), Lo)
+                .addReg(MBBI->getOperand(1).getReg())
+                .add(MBBI->getOperand(2));
   }
 
   if (MBBI->getOperand(2).isGlobal() || MBBI->getOperand(2).isCPI()) {
     auto Offset = MBBI->getOperand(2).getOffset();
     assert(Offset % 8 == 0);
     MBBI->getOperand(2).setOffset(Offset + 4);
-    BuildMI(MBB, MBBI, DL, TII->get(RISCV::LW), Hi)
-        .addReg(MBBI->getOperand(1).getReg())
-        .add(MBBI->getOperand(2))
-        .setMemRefs(MMOHi);
+    MIBHi = BuildMI(MBB, MBBI, DL, TII->get(RISCV::LW), Hi)
+                .addReg(MBBI->getOperand(1).getReg())
+                .add(MBBI->getOperand(2));
     MBBI->getOperand(2).setOffset(Offset);
   } else {
     assert(isInt<12>(MBBI->getOperand(2).getImm() + 4));
-    BuildMI(MBB, MBBI, DL, TII->get(RISCV::LW), Hi)
-        .addReg(MBBI->getOperand(1).getReg())
-        .addImm(MBBI->getOperand(2).getImm() + 4)
-        .setMemRefs(MMOHi);
+    MIBHi = BuildMI(MBB, MBBI, DL, TII->get(RISCV::LW), Hi)
+                .addReg(MBBI->getOperand(1).getReg())
+                .addImm(MBBI->getOperand(2).getImm() + 4);
   }
 
   // Order: Hi, Lo
   if (IsOp1EqualToLo) {
-    BuildMI(MBB, MBBI, DL, TII->get(RISCV::LW), Lo)
-        .addReg(MBBI->getOperand(1).getReg())
-        .add(MBBI->getOperand(2))
-        .setMemRefs(MMOLo);
+    MIBLo = BuildMI(MBB, MBBI, DL, TII->get(RISCV::LW), Lo)
+                .addReg(MBBI->getOperand(1).getReg())
+                .add(MBBI->getOperand(2));
   }
+
+  MachineFunction *MF = MBB.getParent();
+  SmallVector<MachineMemOperand *> NewLoMMOs;
+  SmallVector<MachineMemOperand *> NewHiMMOs;
+  for (const MachineMemOperand *MMO : MBBI->memoperands()) {
+    NewLoMMOs.push_back(MF->getMachineMemOperand(MMO, 0, 4));
+    NewHiMMOs.push_back(MF->getMachineMemOperand(MMO, 4, 4));
+  }
+  MIBLo.setMemRefs(NewLoMMOs);
+  MIBHi.setMemRefs(NewHiMMOs);
+
+  MBBI->eraseFromParent();
+  return true;
+}
+
+bool RISCVExpandPseudo::expandPseudoReadVLENBViaVSETVLIX0(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
+  DebugLoc DL = MBBI->getDebugLoc();
+  Register Dst = MBBI->getOperand(0).getReg();
+  unsigned Mul = MBBI->getOperand(1).getImm();
+  RISCVVType::VLMUL VLMUL = RISCVVType::encodeLMUL(Mul, /*Fractional=*/false);
+  unsigned VTypeImm = RISCVVType::encodeVTYPE(
+      VLMUL, /*SEW=*/8, /*TailAgnostic=*/true, /*MaskAgnostic=*/true);
+
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::PseudoVSETVLIX0))
+      .addReg(Dst, RegState::Define)
+      .addReg(RISCV::X0, RegState::Kill)
+      .addImm(VTypeImm);
 
   MBBI->eraseFromParent();
   return true;

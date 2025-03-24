@@ -695,8 +695,16 @@ struct RemoveEmptyShapeOperandsPattern : public OpRewritePattern<OpTy> {
       }
       return true;
     };
-    auto newOperands = llvm::to_vector<8>(
-        llvm::make_filter_range(op->getOperands(), isPotentiallyNonEmptyShape));
+    auto newOperands = llvm::filter_to_vector<8>(op->getOperands(),
+                                                 isPotentiallyNonEmptyShape);
+
+    // Replace the op with empty shape constant if all operants are reduced to
+    // be empty.
+    if (newOperands.empty()) {
+      rewriter.replaceOpWithNewOp<ConstShapeOp>(
+          op, op->getResultTypes().front(), rewriter.getIndexTensorAttr({}));
+      return success();
+    }
 
     // Reduce op to equivalent without empty shape operands.
     if (newOperands.size() < op.getNumOperands()) {
@@ -1289,7 +1297,7 @@ void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
   if (argAttrs.empty())
     return;
   assert(type.getNumInputs() == argAttrs.size());
-  function_interface_impl::addArgAndResultAttrs(
+  call_interface_impl::addArgAndResultAttrs(
       builder, state, argAttrs, /*resultAttrs=*/std::nullopt,
       getArgAttrsAttrName(state.name), getResAttrsAttrName(state.name));
 }

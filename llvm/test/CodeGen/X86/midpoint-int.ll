@@ -80,11 +80,11 @@ define i32 @scalar_i32_unsigned_reg_reg(i32 %a1, i32 %a2) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    movl %edi, %esi
 ; X86-NEXT:    subl %ecx, %esi
-; X86-NEXT:    sbbl %edx, %edx
-; X86-NEXT:    orl $1, %edx
+; X86-NEXT:    setae %al
+; X86-NEXT:    leal -1(%eax,%eax), %edx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    subl %edi, %eax
 ; X86-NEXT:    ja .LBB1_2
@@ -362,11 +362,10 @@ define i64 @scalar_i64_unsigned_reg_reg(i64 %a1, i64 %a2) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    cmpl %eax, %ebp
-; X86-NEXT:    sbbl %edi, %esi
-; X86-NEXT:    movl %edi, %ecx
+; X86-NEXT:    sbbl %ecx, %esi
 ; X86-NEXT:    movl $0, %ebx
 ; X86-NEXT:    sbbl %ebx, %ebx
 ; X86-NEXT:    movl %ebx, %edi
@@ -700,10 +699,10 @@ define i16 @scalar_i16_signed_reg_reg(i16 %a1, i16 %a2) nounwind {
 define i16 @scalar_i16_unsigned_reg_reg(i16 %a1, i16 %a2) nounwind {
 ; X64-LABEL: scalar_i16_unsigned_reg_reg:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpw %di, %si
-; X64-NEXT:    sbbl %ecx, %ecx
-; X64-NEXT:    orl $1, %ecx
+; X64-NEXT:    setae %al
+; X64-NEXT:    leal -1(%rax,%rax), %ecx
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    subl %esi, %eax
 ; X64-NEXT:    movzwl %di, %edx
@@ -719,7 +718,7 @@ define i16 @scalar_i16_unsigned_reg_reg(i16 %a1, i16 %a2) nounwind {
 ;
 ; X86-LABEL: scalar_i16_unsigned_reg_reg:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, %eax
@@ -728,16 +727,16 @@ define i16 @scalar_i16_unsigned_reg_reg(i16 %a1, i16 %a2) nounwind {
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    negl %eax
 ; X86-NEXT:  .LBB11_2:
-; X86-NEXT:    xorl %esi, %esi
+; X86-NEXT:    xorl %ebx, %ebx
 ; X86-NEXT:    cmpw %cx, %dx
-; X86-NEXT:    sbbl %esi, %esi
-; X86-NEXT:    orl $1, %esi
+; X86-NEXT:    setae %bl
+; X86-NEXT:    leal -1(%ebx,%ebx), %edx
 ; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    shrl %eax
-; X86-NEXT:    imull %esi, %eax
+; X86-NEXT:    imull %edx, %eax
 ; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
-; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
   %t3 = icmp ugt i16 %a1, %a2
   %t4 = select i1 %t3, i16 -1, i16 1

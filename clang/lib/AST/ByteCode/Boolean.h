@@ -81,6 +81,14 @@ public:
 
   Boolean truncate(unsigned TruncBits) const { return *this; }
 
+  static Boolean bitcastFromMemory(const std::byte *Buff, unsigned BitWidth) {
+    // Just load the first byte.
+    bool Val = static_cast<bool>(*Buff);
+    return Boolean(Val);
+  }
+
+  void bitcastToMemory(std::byte *Buff) { std::memcpy(Buff, &V, sizeof(V)); }
+
   void print(llvm::raw_ostream &OS) const { OS << (V ? "true" : "false"); }
   std::string toDiagnosticString(const ASTContext &Ctx) const {
     std::string NameStr;

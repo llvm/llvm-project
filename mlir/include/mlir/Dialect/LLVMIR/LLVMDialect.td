@@ -33,6 +33,7 @@ def LLVM_Dialect : Dialect {
     static StringRef getAliasScopesAttrName() { return "alias_scopes"; }
     static StringRef getAccessGroupsAttrName() { return "access_groups"; }
     static StringRef getIdentAttrName() { return "llvm.ident"; }
+    static StringRef getModuleFlags() { return "llvm.module.flags"; }
     static StringRef getCommandlineAttrName() { return "llvm.commandline"; }
 
     /// Names of llvm parameter attributes.
@@ -44,6 +45,7 @@ def LLVM_Dialect : Dialect {
     static StringRef getNoUndefAttrName() { return "llvm.noundef"; }
     static StringRef getDereferenceableAttrName() { return "llvm.dereferenceable"; }
     static StringRef getDereferenceableOrNullAttrName() { return "llvm.dereferenceable_or_null"; }
+    static StringRef getElementTypeAttrName() { return "llvm.elementtype"; }
     static StringRef getInAllocaAttrName() { return "llvm.inalloca"; }
     static StringRef getInRegAttrName() { return "llvm.inreg"; }
     static StringRef getNestAttrName() { return "llvm.nest"; }
@@ -52,6 +54,7 @@ def LLVM_Dialect : Dialect {
     static StringRef getNoFreeAttrName() { return "llvm.nofree"; }
     static StringRef getNonNullAttrName() { return "llvm.nonnull"; }
     static StringRef getPreallocatedAttrName() { return "llvm.preallocated"; }
+    static StringRef getRangeAttrName() { return "llvm.range"; }
     static StringRef getReadonlyAttrName() { return "llvm.readonly"; }
     static StringRef getReturnedAttrName() { return "llvm.returned"; }
     static StringRef getSExtAttrName() { return "llvm.signext"; }

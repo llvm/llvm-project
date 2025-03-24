@@ -107,6 +107,15 @@ public:
     eRISCVSubType_riscv64,
   };
 
+  enum LoongArcheflags {
+    eLoongArch_abi_soft_float = 0x00000000, /// soft float
+    eLoongArch_abi_single_float =
+        0x00000001, /// single precision floating point, +f
+    eLoongArch_abi_double_float =
+        0x00000002, /// double precision floating point, +d
+    eLoongArch_abi_mask = 0x00000003,
+  };
+
   enum LoongArchSubType {
     eLoongArchSubType_unknown,
     eLoongArchSubType_loongarch32,
@@ -206,6 +215,8 @@ public:
 
     eCore_x86_64_x86_64,
     eCore_x86_64_x86_64h, // Haswell enabled x86_64
+    eCore_x86_64_amd64,
+
     eCore_hexagon_generic,
     eCore_hexagon_hexagonv4,
     eCore_hexagon_hexagonv5,

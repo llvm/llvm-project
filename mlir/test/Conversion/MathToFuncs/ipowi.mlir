@@ -170,3 +170,14 @@ func.func @ipowi_vec(%arg0: vector<2x3xi64>, %arg1: vector<2x3xi64>) {
   %0 = math.ipowi %arg0, %arg1 : vector<2x3xi64>
   func.return
 }
+
+// -----
+
+// Check that index is not converted
+
+// CHECK-LABEL: func.func @ipowi_index
+// CHECK:         math.ipowi
+func.func @ipowi_index(%arg0: index, %arg1: index) {
+  %0 = math.ipowi %arg0, %arg1 : index
+  func.return
+}

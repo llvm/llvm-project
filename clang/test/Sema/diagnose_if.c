@@ -2,10 +2,10 @@
 
 #define _diagnose_if(...) __attribute__((diagnose_if(__VA_ARGS__)))
 
-void failure1(void) _diagnose_if(); // expected-error{{exactly 3 arguments}}
-void failure2(void) _diagnose_if(0); // expected-error{{exactly 3 arguments}}
-void failure3(void) _diagnose_if(0, ""); // expected-error{{exactly 3 arguments}}
-void failure4(void) _diagnose_if(0, "", "error", 1); // expected-error{{exactly 3 arguments}}
+void failure1(void) _diagnose_if(); // expected-error{{at least 3 arguments}}
+void failure2(void) _diagnose_if(0); // expected-error{{at least 3 arguments}}
+void failure3(void) _diagnose_if(0, ""); // expected-error{{at least 3 arguments}}
+void failure4(void) _diagnose_if(0, "", "error", 1); // expected-error{{expected string literal as argument}}
 void failure5(void) _diagnose_if(0, 0, "error"); // expected-error{{expected string literal as argument of 'diagnose_if' attribute}}
 void failure6(void) _diagnose_if(0, "", "invalid"); // expected-error{{invalid diagnostic type for 'diagnose_if'; use "error" or "warning" instead}}
 void failure7(void) _diagnose_if(0, "", "ERROR"); // expected-error{{invalid diagnostic type}}

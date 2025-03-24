@@ -1,12 +1,16 @@
+set(LLVM_LINK_COMPONENTS nativecodegen)
+
+get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+
 add_mlir_unittest(MLIRTargetLLVMTests
   SerializeNVVMTarget.cpp
   SerializeROCDLTarget.cpp
   SerializeToLLVMBitcode.cpp
+DEPENDS
+  ${dialect_libs}
 )
 
-llvm_map_components_to_libnames(llvm_libs nativecodegen)
-
-target_link_libraries(MLIRTargetLLVMTests
+mlir_target_link_libraries(MLIRTargetLLVMTests
   PRIVATE
   MLIRTargetLLVM
   MLIRNVVMTarget
@@ -19,7 +23,6 @@ target_link_libraries(MLIRTargetLLVMTests
   MLIRNVVMToLLVMIRTranslation
   MLIRROCDLToLLVMIRTranslation
   MLIRGPUToLLVMIRTranslation
-  ${llvm_libs}
 )
 
 if (DEFINED LLVM_NATIVE_TARGET)

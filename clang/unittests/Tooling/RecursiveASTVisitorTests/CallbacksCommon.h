@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestVisitor.h"
+#include "CRTPTestVisitor.h"
 
 using namespace clang;
 
@@ -21,7 +21,7 @@ enum class ShouldTraversePostOrder : bool {
 /// sequence of calls to user-defined callbacks like Traverse*(), WalkUp*(),
 /// Visit*().
 template <typename Derived>
-class RecordingVisitorBase : public TestVisitor<Derived> {
+class RecordingVisitorBase : public CRTPTestVisitor<Derived> {
   ShouldTraversePostOrder ShouldTraversePostOrderValue;
 
 public:

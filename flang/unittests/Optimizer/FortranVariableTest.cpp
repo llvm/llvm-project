@@ -19,12 +19,12 @@ public:
 
     // Set up a Module with a dummy function operation inside.
     // Set the insertion point in the function entry block.
-    mlir::ModuleOp mod = builder->create<mlir::ModuleOp>(loc);
+    moduleOp = builder->create<mlir::ModuleOp>(loc);
+    builder->setInsertionPointToStart(moduleOp->getBody());
     mlir::func::FuncOp func =
-        mlir::func::FuncOp::create(loc, "fortran_variable_tests",
+        builder->create<mlir::func::FuncOp>(loc, "fortran_variable_tests",
             builder->getFunctionType(std::nullopt, std::nullopt));
     auto *entryBlock = func.addEntryBlock();
-    mod.push_back(mod);
     builder->setInsertionPointToStart(entryBlock);
   }
 
@@ -40,11 +40,12 @@ public:
   }
   mlir::MLIRContext context;
   std::unique_ptr<mlir::OpBuilder> builder;
+  mlir::OwningOpRef<mlir::ModuleOp> moduleOp;
 };
 
 TEST_F(FortranVariableTest, SimpleScalar) {
   mlir::Location loc = getLoc();
-  mlir::Type eleType = mlir::FloatType::getF32(&context);
+  mlir::Type eleType = mlir::Float32Type::get(&context);
   mlir::Value addr = builder->create<fir::AllocaOp>(loc, eleType);
   auto name = mlir::StringAttr::get(&context, "x");
   auto declare = builder->create<fir::DeclareOp>(loc, addr.getType(), addr,
@@ -95,7 +96,7 @@ TEST_F(FortranVariableTest, CharacterScalar) {
 
 TEST_F(FortranVariableTest, SimpleArray) {
   mlir::Location loc = getLoc();
-  mlir::Type eleType = mlir::FloatType::getF32(&context);
+  mlir::Type eleType = mlir::Float32Type::get(&context);
   llvm::SmallVector<mlir::Value> extents{
       createConstant(10), createConstant(20), createConstant(30)};
   fir::SequenceType::Shape typeShape(

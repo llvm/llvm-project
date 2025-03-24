@@ -1,4 +1,4 @@
-//===- ClangOpenCLBuiltinEmitter.cpp - Generate Clang OpenCL Builtin handling
+//===-- ClangOpenCLBuiltinEmitter.cpp - Generate OpenCL Builtin handling --===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,7 +18,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"

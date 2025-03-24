@@ -475,7 +475,7 @@ void IRNormalizer::reorderInstructions(Function &F) const {
             Call->getIntrinsicID() == Intrinsic::experimental_convergence_loop)
           FirstNonPHIOrDbgOrAlloca++;
       }
-      Instruction->moveBefore(&*FirstNonPHIOrDbgOrAlloca);
+      Instruction->moveBefore(FirstNonPHIOrDbgOrAlloca);
       TopologicalSort.pop();
     }
   }
@@ -679,7 +679,7 @@ SetVector<int> IRNormalizer::getOutputFootprint(
         // Vector for outputs which use UI.
         SetVector<int> OutputsUsingUI = getOutputFootprint(UI, Visited);
         // Insert the indexes of outputs using UI.
-        Outputs.insert(OutputsUsingUI.begin(), OutputsUsingUI.end());
+        Outputs.insert_range(OutputsUsingUI);
       }
     }
   }
@@ -691,5 +691,7 @@ SetVector<int> IRNormalizer::getOutputFootprint(
 PreservedAnalyses IRNormalizerPass::run(Function &F,
                                         FunctionAnalysisManager &AM) const {
   IRNormalizer{}.runOnFunction(F);
-  return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

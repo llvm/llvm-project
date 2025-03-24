@@ -28,7 +28,6 @@
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -97,12 +96,11 @@ Error DWARFYAML::emitDebugStr(raw_ostream &OS, const DWARFYAML::Data &DI) {
 StringRef DWARFYAML::Data::getAbbrevTableContentByIndex(uint64_t Index) const {
   assert(Index < DebugAbbrev.size() &&
          "Index should be less than the size of DebugAbbrev array");
-  auto It = AbbrevTableContents.find(Index);
-  if (It != AbbrevTableContents.cend())
+  auto [It, Inserted] = AbbrevTableContents.try_emplace(Index);
+  if (!Inserted)
     return It->second;
 
-  std::string AbbrevTableBuffer;
-  raw_string_ostream OS(AbbrevTableBuffer);
+  raw_string_ostream OS(It->second);
 
   uint64_t AbbrevCode = 0;
   for (const DWARFYAML::Abbrev &AbbrevDecl : DebugAbbrev[Index].Table) {
@@ -124,9 +122,7 @@ StringRef DWARFYAML::Data::getAbbrevTableContentByIndex(uint64_t Index) const {
   // consisting of a 0 byte for the abbreviation code.
   OS.write_zeros(1);
 
-  AbbrevTableContents.insert({Index, AbbrevTableBuffer});
-
-  return AbbrevTableContents[Index];
+  return It->second;
 }
 
 Error DWARFYAML::emitDebugAbbrev(raw_ostream &OS, const DWARFYAML::Data &DI) {
@@ -745,7 +741,6 @@ void emitDebugNamesHeader(raw_ostream &OS, bool IsLittleEndian,
   writeInteger(AbbrevSize, OS, IsLittleEndian);
   writeInteger(uint32_t(AugmentationString.size()), OS, IsLittleEndian);
   OS.write(AugmentationString.data(), AugmentationString.size());
-  return;
 }
 
 /// Emits the abbreviations for a DebugNames section.

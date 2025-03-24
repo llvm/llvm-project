@@ -221,21 +221,47 @@ struct SizeOffsetAPInt : public SizeOffsetType<APInt, SizeOffsetAPInt> {
   static bool known(const APInt &V) { return V.getBitWidth() > 1; }
 };
 
+/// OffsetSpan - Used internally by \p ObjectSizeOffsetVisitor. Represents a
+/// point in memory as a pair of allocated bytes before and after it.
+///
+/// \c Before and \c After fields are signed values. It makes it possible to
+/// represent out-of-bound access, e.g. as a result of a GEP, at the expense of
+/// not being able to represent very large allocation.
+struct OffsetSpan {
+  APInt Before; /// Number of allocated bytes before this point.
+  APInt After;  /// Number of allocated bytes after this point.
+
+  OffsetSpan() = default;
+  OffsetSpan(APInt Before, APInt After) : Before(Before), After(After) {}
+
+  bool knownBefore() const { return known(Before); }
+  bool knownAfter() const { return known(After); }
+  bool anyKnown() const { return knownBefore() || knownAfter(); }
+  bool bothKnown() const { return knownBefore() && knownAfter(); }
+
+  bool operator==(const OffsetSpan &RHS) const {
+    return Before == RHS.Before && After == RHS.After;
+  }
+  bool operator!=(const OffsetSpan &RHS) const { return !(*this == RHS); }
+
+  static bool known(const APInt &V) { return V.getBitWidth() > 1; }
+};
+
 /// Evaluate the size and offset of an object pointed to by a Value*
 /// statically. Fails if size or offset are not known at compile time.
 class ObjectSizeOffsetVisitor
-    : public InstVisitor<ObjectSizeOffsetVisitor, SizeOffsetAPInt> {
+    : public InstVisitor<ObjectSizeOffsetVisitor, OffsetSpan> {
   const DataLayout &DL;
   const TargetLibraryInfo *TLI;
   ObjectSizeOpts Options;
   unsigned IntTyBits;
   APInt Zero;
-  SmallDenseMap<Instruction *, SizeOffsetAPInt, 8> SeenInsts;
+  SmallDenseMap<Instruction *, OffsetSpan, 8> SeenInsts;
   unsigned InstructionsVisited;
 
   APInt align(APInt Size, MaybeAlign Align);
 
-  static SizeOffsetAPInt unknown() { return SizeOffsetAPInt(); }
+  static OffsetSpan unknown() { return OffsetSpan(); }
 
 public:
   ObjectSizeOffsetVisitor(const DataLayout &DL, const TargetLibraryInfo *TLI,
@@ -245,29 +271,30 @@ public:
 
   // These are "private", except they can't actually be made private. Only
   // compute() should be used by external users.
-  SizeOffsetAPInt visitAllocaInst(AllocaInst &I);
-  SizeOffsetAPInt visitArgument(Argument &A);
-  SizeOffsetAPInt visitCallBase(CallBase &CB);
-  SizeOffsetAPInt visitConstantPointerNull(ConstantPointerNull &);
-  SizeOffsetAPInt visitExtractElementInst(ExtractElementInst &I);
-  SizeOffsetAPInt visitExtractValueInst(ExtractValueInst &I);
-  SizeOffsetAPInt visitGlobalAlias(GlobalAlias &GA);
-  SizeOffsetAPInt visitGlobalVariable(GlobalVariable &GV);
-  SizeOffsetAPInt visitIntToPtrInst(IntToPtrInst &);
-  SizeOffsetAPInt visitLoadInst(LoadInst &I);
-  SizeOffsetAPInt visitPHINode(PHINode &);
-  SizeOffsetAPInt visitSelectInst(SelectInst &I);
-  SizeOffsetAPInt visitUndefValue(UndefValue &);
-  SizeOffsetAPInt visitInstruction(Instruction &I);
+  OffsetSpan visitAllocaInst(AllocaInst &I);
+  OffsetSpan visitArgument(Argument &A);
+  OffsetSpan visitCallBase(CallBase &CB);
+  OffsetSpan visitConstantPointerNull(ConstantPointerNull &);
+  OffsetSpan visitExtractElementInst(ExtractElementInst &I);
+  OffsetSpan visitExtractValueInst(ExtractValueInst &I);
+  OffsetSpan visitGlobalAlias(GlobalAlias &GA);
+  OffsetSpan visitGlobalVariable(GlobalVariable &GV);
+  OffsetSpan visitIntToPtrInst(IntToPtrInst &);
+  OffsetSpan visitLoadInst(LoadInst &I);
+  OffsetSpan visitPHINode(PHINode &);
+  OffsetSpan visitSelectInst(SelectInst &I);
+  OffsetSpan visitUndefValue(UndefValue &);
+  OffsetSpan visitInstruction(Instruction &I);
 
 private:
-  SizeOffsetAPInt findLoadSizeOffset(
-      LoadInst &LoadFrom, BasicBlock &BB, BasicBlock::iterator From,
-      SmallDenseMap<BasicBlock *, SizeOffsetAPInt, 8> &VisitedBlocks,
-      unsigned &ScannedInstCount);
-  SizeOffsetAPInt combineSizeOffset(SizeOffsetAPInt LHS, SizeOffsetAPInt RHS);
-  SizeOffsetAPInt computeImpl(Value *V);
-  SizeOffsetAPInt computeValue(Value *V);
+  OffsetSpan
+  findLoadOffsetRange(LoadInst &LoadFrom, BasicBlock &BB,
+                      BasicBlock::iterator From,
+                      SmallDenseMap<BasicBlock *, OffsetSpan, 8> &VisitedBlocks,
+                      unsigned &ScannedInstCount);
+  OffsetSpan combineOffsetRange(OffsetSpan LHS, OffsetSpan RHS);
+  OffsetSpan computeImpl(Value *V);
+  OffsetSpan computeValue(Value *V);
   bool CheckedZextOrTrunc(APInt &I);
 };
 

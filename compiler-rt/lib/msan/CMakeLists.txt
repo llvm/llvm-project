@@ -66,7 +66,6 @@ foreach(arch ${MSAN_SUPPORTED_ARCH})
     STATIC
     ARCHS ${arch}
     SOURCES ${MSAN_RTL_CXX_SOURCES}
-            $<TARGET_OBJECTS:RTUbsan_cxx.${arch}>
     ADDITIONAL_HEADERS ${MSAN_RTL_HEADERS}
     CFLAGS ${MSAN_RTL_CFLAGS}
     PARENT_TARGET msan)

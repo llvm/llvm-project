@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s
+; RUN: llc -mtriple=hexagon < %s
 target triple = "hexagon-unknown--elf"
 
 ; Function Attrs: norecurse nounwind

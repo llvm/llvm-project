@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5  < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 < %s | FileCheck %s
 ; Generate MemOps for V4 and above.
 
 define void @memop_unsigned_char_add5(ptr nocapture %p) nounwind {

@@ -22,6 +22,7 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOpsTypes.h.inc"

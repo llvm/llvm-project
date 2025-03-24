@@ -58,6 +58,13 @@ public:
       uint32_t CompatibilityVersion;
     };
 
+    struct LoadDylibCmd {
+      enum class LoadKind { Default, Weak };
+
+      Dylib D;
+      LoadKind K;
+    };
+
     struct BuildVersionOpts {
 
       // Derive platform from triple if possible.
@@ -74,7 +81,7 @@ public:
     std::optional<Dylib> IDDylib;
 
     /// List of LC_LOAD_DYLIBs.
-    std::vector<Dylib> LoadDylibs;
+    std::vector<LoadDylibCmd> LoadDylibs;
     /// List of LC_RPATHs.
     std::vector<std::string> RPaths;
     /// List of LC_BUILD_VERSIONs.
@@ -176,6 +183,11 @@ public:
   static ArrayRef<std::pair<const char *, const char *>>
   standardRuntimeUtilityAliases();
 
+  /// Returns a list of aliases required to enable lazy compilation via the
+  /// ORC runtime.
+  static ArrayRef<std::pair<const char *, const char *>>
+  standardLazyCompilationAliases();
+
 private:
   using SymbolTableVector = SmallVector<
       std::tuple<ExecutorAddr, ExecutorAddr, MachOExecutorSymbolFlags>>;
@@ -235,7 +247,6 @@ private:
     };
     using JITSymTabVector = SmallVector<SymbolTablePair>;
 
-    Error bootstrapPipelineStart(jitlink::LinkGraph &G);
     Error bootstrapPipelineRecordRuntimeFunctions(jitlink::LinkGraph &G);
     Error bootstrapPipelineEnd(jitlink::LinkGraph &G);
 
@@ -255,6 +266,7 @@ private:
 
     std::optional<UnwindSections> findUnwindSectionInfo(jitlink::LinkGraph &G);
     Error registerObjectPlatformSections(jitlink::LinkGraph &G, JITDylib &JD,
+                                         ExecutorAddr HeaderAddr,
                                          bool InBootstrapPhase);
 
     Error createObjCRuntimeObject(jitlink::LinkGraph &G);
@@ -363,11 +375,11 @@ private:
   DenseMap<JITDylib *, SymbolLookupSet> RegisteredInitSymbols;
 
   std::mutex PlatformMutex;
+  bool ForceEHFrames = false;
+  BootstrapInfo *Bootstrap = nullptr;
   DenseMap<JITDylib *, ExecutorAddr> JITDylibToHeaderAddr;
   DenseMap<ExecutorAddr, JITDylib *> HeaderAddrToJITDylib;
   DenseMap<JITDylib *, uint64_t> JITDylibToPThreadKey;
-
-  std::atomic<BootstrapInfo *> Bootstrap;
 };
 
 // Generates a MachO header.

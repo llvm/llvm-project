@@ -1,0 +1,40 @@
+# RUN: not --crash llc -verify-machineinstrs -mtriple=arm64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+---
+name:            g_abd_su
+body: |
+  bb.0:
+
+    %2:_(p0) = G_IMPLICIT_DEF
+    %3:_(p0) = G_IMPLICIT_DEF
+    ; CHECK: Type mismatch in generic instruction
+    ; CHECK: Type mismatch in generic instruction
+    %4:_(s1) = G_ABDS %2, %3
+
+    %12:_(s64) = G_IMPLICIT_DEF
+    %13:_(s64) = G_IMPLICIT_DEF
+    ; CHECK: Type mismatch in generic instruction
+    ; CHECK: Type mismatch in generic instruction
+    %14:_(p0) = G_ABDS %12, %13
+
+    %23:_(<2 x s32>) = G_IMPLICIT_DEF
+    %24:_(<2 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: Type mismatch in generic instruction
+    ; CHECK: Type mismatch in generic instruction
+    %5:_(s1) = G_ABDU  %23, %24
+
+    %15:_(s32) = G_CONSTANT i32 0
+    %16:_(s64) = G_CONSTANT i64 2
+    ; CHECK: Type mismatch in generic instruction
+    ; CHECK: Type mismatch in generic instruction
+    %17:_(s1) = G_ABDU %15, %16
+
+    %18:_(s64) = G_CONSTANT i64 0
+    %19:_(s64) = G_CONSTANT i64 2
+    ; CHECK: Type mismatch in generic instruction
+    ; CHECK: Type mismatch in generic instruction
+    %20:_(s1) = G_ABDU %18, %19
+
+...
+

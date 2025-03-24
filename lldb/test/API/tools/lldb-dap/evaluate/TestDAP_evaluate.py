@@ -101,9 +101,9 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         if context == "repl":
             # In the repl context expressions may be interpreted as lldb
             # commands since no variables have the same name as the command.
-            self.assertEvaluate("var", r"\(lldb\) var\n.*")
+            self.assertEvaluate("list", r"\(lldb\) list\n.*")
         else:
-            self.assertEvaluateFailure("var")  # local variable of a_function
+            self.assertEvaluateFailure("list")  # local variable of a_function
 
         self.assertEvaluateFailure("my_struct")  # type name
         self.assertEvaluateFailure("int")  # type name
@@ -162,7 +162,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
 
         # Expressions at breakpoint 3, which is inside a_function
         self.continue_to_next_stop()
-        self.assertEvaluate("var", "42")
+        self.assertEvaluate("list", "42")
         self.assertEvaluate("static_int", "42")
         self.assertEvaluate("non_static_int", "43")
 
@@ -176,13 +176,13 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         if self.isExpressionParsedExpected():
             self.assertEvaluate("a_function", "0x.*a.out`a_function.*")
             self.assertEvaluate("a_function(1)", "1")
-            self.assertEvaluate("var + 1", "43")
+            self.assertEvaluate("list + 1", "43")
             self.assertEvaluate("foo_func", "0x.*a.out`foo_func.*")
             self.assertEvaluate("foo_var", "44")
         else:
             self.assertEvaluateFailure("a_function")
             self.assertEvaluateFailure("a_function(1)")
-            self.assertEvaluateFailure("var + 1")
+            self.assertEvaluateFailure("list + 1")
             self.assertEvaluateFailure("foo_func")
             self.assertEvaluateFailure("foo_var")
 

@@ -14,25 +14,25 @@
 
 namespace llvm {
 
-struct RegAllocFastPassOptions {
-  RegAllocFilterFunc Filter = nullptr;
-  StringRef FilterName = "all";
-  bool ClearVRegs = true;
-};
-
 class RegAllocFastPass : public PassInfoMixin<RegAllocFastPass> {
-  RegAllocFastPassOptions Opts;
-
 public:
-  RegAllocFastPass(RegAllocFastPassOptions Opts = RegAllocFastPassOptions())
-      : Opts(Opts) {}
+  struct Options {
+    RegAllocFilterFunc Filter;
+    StringRef FilterName;
+    bool ClearVRegs;
+    Options(RegAllocFilterFunc F = nullptr, StringRef FN = "all",
+            bool CV = true)
+        : Filter(F), FilterName(FN), ClearVRegs(CV) {}
+  };
 
-  MachineFunctionProperties getRequiredProperties() {
+  RegAllocFastPass(Options Opts = Options()) : Opts(Opts) {}
+
+  MachineFunctionProperties getRequiredProperties() const {
     return MachineFunctionProperties().set(
         MachineFunctionProperties::Property::NoPHIs);
   }
 
-  MachineFunctionProperties getSetProperties() {
+  MachineFunctionProperties getSetProperties() const {
     if (Opts.ClearVRegs) {
       return MachineFunctionProperties().set(
           MachineFunctionProperties::Property::NoVRegs);
@@ -41,7 +41,7 @@ public:
     return MachineFunctionProperties();
   }
 
-  MachineFunctionProperties getClearedProperties() {
+  MachineFunctionProperties getClearedProperties() const {
     return MachineFunctionProperties().set(
         MachineFunctionProperties::Property::IsSSA);
   }
@@ -50,6 +50,11 @@ public:
 
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
+
+  static bool isRequired() { return true; }
+
+private:
+  Options Opts;
 };
 
 } // namespace llvm

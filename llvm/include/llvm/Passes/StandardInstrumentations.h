@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DroppedVariableStatsIR.h"
 #include "llvm/IR/OptBisect.h"
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/ValueHandle.h"
@@ -52,14 +53,16 @@ public:
 private:
   struct PassRunDescriptor {
     const Module *M;
-    const std::string DumpIRFilename;
+    const unsigned PassNumber;
+    const std::string IRFileDisplayName;
     const std::string IRName;
     const StringRef PassID;
 
-    PassRunDescriptor(const Module *M, std::string DumpIRFilename,
-                      std::string IRName, const StringRef PassID)
-        : M{M}, DumpIRFilename{DumpIRFilename}, IRName{IRName}, PassID(PassID) {
-    }
+    PassRunDescriptor(const Module *M, unsigned PassNumber,
+                      std::string &&IRFileDisplayName, std::string &&IRName,
+                      const StringRef PassID)
+        : M{M}, PassNumber{PassNumber}, IRFileDisplayName(IRFileDisplayName),
+          IRName{IRName}, PassID(PassID) {}
   };
 
   void printBeforePass(StringRef PassID, Any IR);
@@ -74,10 +77,20 @@ private:
   bool shouldPrintBeforeSomePassNumber();
   bool shouldPrintAfterSomePassNumber();
 
-  void pushPassRunDescriptor(StringRef PassID, Any IR,
-                             std::string &DumpIRFilename);
+  void pushPassRunDescriptor(StringRef PassID, Any IR, unsigned PassNumber);
   PassRunDescriptor popPassRunDescriptor(StringRef PassID);
-  std::string fetchDumpFilename(StringRef PassId, Any IR);
+
+  enum class IRDumpFileSuffixType {
+    Before,
+    After,
+    Invalidated,
+  };
+
+  static StringRef
+  getFileSuffix(PrintIRInstrumentation::IRDumpFileSuffixType Type);
+  std::string fetchDumpFilename(StringRef PassId, StringRef IRFileDisplayName,
+                                unsigned PassNumber,
+                                IRDumpFileSuffixType SuffixType);
 
   PassInstrumentationCallbacks *PIC;
   /// Stack of Pass Run descriptions, enough to print the IR unit after a given
@@ -579,83 +592,6 @@ private:
   static void SignalHandler(void *);
 };
 
-/// A class to collect and print dropped debug information variable statistics.
-/// After every LLVM IR pass is run, it will print how many #dbg_values were
-/// dropped due to that pass.
-class DroppedVariableStats {
-public:
-  DroppedVariableStats(bool DroppedVarStatsEnabled) {
-    if (DroppedVarStatsEnabled)
-      llvm::outs()
-          << "Pass Level, Pass Name, Num of Dropped Variables, Func or "
-             "Module Name\n";
-  };
-  // We intend this to be unique per-compilation, thus no copies.
-  DroppedVariableStats(const DroppedVariableStats &) = delete;
-  void operator=(const DroppedVariableStats &) = delete;
-
-  void registerCallbacks(PassInstrumentationCallbacks &PIC);
-  void runBeforePass(StringRef PassID, Any IR);
-  void runAfterPass(StringRef PassID, Any IR, const PreservedAnalyses &PA);
-  void runAfterPassInvalidated(StringRef PassID, const PreservedAnalyses &PA);
-  bool getPassDroppedVariables() { return PassDroppedVariables; }
-
-private:
-  bool PassDroppedVariables = false;
-  /// A unique key that represents a #dbg_value.
-  using VarID =
-      std::tuple<const DIScope *, const DIScope *, const DILocalVariable *>;
-
-  struct DebugVariables {
-    /// DenseSet of VarIDs before an optimization pass has run.
-    DenseSet<VarID> DebugVariablesBefore;
-    /// DenseSet of VarIDs after an optimization pass has run.
-    DenseSet<VarID> DebugVariablesAfter;
-  };
-
-  /// A stack of a DenseMap, that maps DebugVariables for every pass to an
-  /// llvm::Function. A stack is used because an optimization pass can call
-  /// other passes.
-  SmallVector<DenseMap<const Function *, DebugVariables>> DebugVariablesStack;
-
-  /// A DenseSet tracking whether a scope was visited before.
-  DenseSet<const DIScope *> VisitedScope;
-  /// A stack of DenseMaps, which map the name of an llvm::Function to a
-  /// DenseMap of VarIDs and their inlinedAt locations before an optimization
-  /// pass has run.
-  SmallVector<DenseMap<StringRef, DenseMap<VarID, DILocation *>>> InlinedAts;
-
-  /// Iterate over all Functions in a Module and report any dropped debug
-  /// information. Will call calculateDroppedVarStatsOnFunction on every
-  /// Function.
-  void calculateDroppedVarStatsOnModule(const Module *M, StringRef PassID,
-                                        std::string FuncOrModName,
-                                        std::string PassLevel);
-  /// Iterate over all Instructions in a Function and report any dropped debug
-  /// information.
-  void calculateDroppedVarStatsOnFunction(const Function *F, StringRef PassID,
-                                          std::string FuncOrModName,
-                                          std::string PassLevel);
-  /// Populate DebugVariablesBefore, DebugVariablesAfter, InlinedAts before or
-  /// after a pass has run to facilitate dropped variable calculation for an
-  /// llvm::Function.
-  void runOnFunction(const Function *F, bool Before);
-  /// Populate DebugVariablesBefore, DebugVariablesAfter, InlinedAts before or
-  /// after a pass has run to facilitate dropped variable calculation for an
-  /// llvm::Module. Calls runOnFunction on every Function in the Module.
-  void runOnModule(const Module *M, bool Before);
-  /// Remove a dropped #dbg_value VarID from all Sets in the
-  /// DroppedVariablesBefore stack.
-  void removeVarFromAllSets(VarID Var, const Function *F);
-  /// Return true if \p Scope is the same as \p DbgValScope or a child scope of
-  /// \p DbgValScope, return false otherwise.
-  bool isScopeChildOfOrEqualTo(DIScope *Scope, const DIScope *DbgValScope);
-  /// Return true if \p InlinedAt is the same as \p DbgValInlinedAt or part of
-  /// the InlinedAt chain, return false otherwise.
-  bool isInlinedAtChildOfOrEqualTo(const DILocation *InlinedAt,
-                                   const DILocation *DbgValInlinedAt);
-};
-
 /// This class provides an interface to register all the standard pass
 /// instrumentations and manages their state (if any).
 class StandardInstrumentations {
@@ -673,7 +609,7 @@ class StandardInstrumentations {
   PrintCrashIRInstrumentation PrintCrashIR;
   IRChangedTester ChangeTester;
   VerifyInstrumentation Verify;
-  DroppedVariableStats DroppedStats;
+  DroppedVariableStatsIR DroppedStatsIR;
 
   bool VerifyEach;
 

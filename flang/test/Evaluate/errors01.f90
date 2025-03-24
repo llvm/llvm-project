@@ -145,9 +145,9 @@ module m
   subroutine s12(x,y)
     class(t), intent(in) :: x
     class(*), intent(in) :: y
-    !CHERK: error: Must be a constant value
+    !CHECK: error: Must be a constant value
     integer, parameter :: bad1 = storage_size(x)
-    !CHERK: error: Must be a constant value
+    !CHECK: error: Must be a constant value
     integer, parameter :: bad2 = storage_size(y)
   end subroutine
   subroutine s13
@@ -168,10 +168,13 @@ module m
     print *, ibits(0, 33, n)
   end
   subroutine warnings
+    use ieee_arithmetic, only: ieee_scalb
     real, parameter :: ok1 = scale(0.0, 99999) ! 0.0
     real, parameter :: ok2 = scale(1.0, -99999) ! 0.0
-    !CHECK: SCALE intrinsic folding overflow
+    !CHECK: SCALE/IEEE_SCALB intrinsic folding overflow
     real, parameter :: bad1 = scale(1.0, 99999)
+    !CHECK: SCALE/IEEE_SCALB intrinsic folding overflow
+    real, parameter :: bad1a = ieee_scalb(1.0, 99999)
     !CHECK: complex ABS intrinsic folding overflow
     real, parameter :: bad2 = abs(cmplx(huge(0.),huge(0.)))
     !CHECK: warning: DIM intrinsic folding overflow

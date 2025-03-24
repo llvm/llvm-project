@@ -252,3 +252,110 @@ false:
   call void @use64(i64 %v)
   ret i1 false
 }
+
+define i1 @test_icmp_sgt_and_negpow2_zero(i32 %add) {
+; CHECK-LABEL: @test_icmp_sgt_and_negpow2_zero(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ADD:%.*]], 7
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %and = and i32 %add, -8
+  %cmp = icmp sgt i32 %and, 0
+  ret i1 %cmp
+}
+
+define i1 @test_icmp_slt_and_negpow2_one(i32 %add) {
+; CHECK-LABEL: @test_icmp_slt_and_negpow2_one(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD:%.*]], 8
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %and = and i32 %add, -8
+  %cmp = icmp slt i32 %and, 1
+  ret i1 %cmp
+}
+
+define i1 @test_icmp_sgt_and_negpow2_nonzero(i32 %add) {
+; CHECK-LABEL: @test_icmp_sgt_and_negpow2_nonzero(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD:%.*]], -8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[AND]], -2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %and = and i32 %add, -8
+  %cmp = icmp sgt i32 %and, -2
+  ret i1 %cmp
+}
+
+define i1 @test_icmp_sgt_and_nonnegpow2_zero(i32 %add) {
+; CHECK-LABEL: @test_icmp_sgt_and_nonnegpow2_zero(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD:%.*]], 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %and = and i32 %add, 8
+  %cmp = icmp sgt i32 %and, 0
+  ret i1 %cmp
+}
+
+define i1 @test_icmp_ult_and_negpow2_one(i32 %add) {
+; CHECK-LABEL: @test_icmp_ult_and_negpow2_one(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD:%.*]], 8
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %and = and i32 %add, -8
+  %cmp = icmp ult i32 %and, 1
+  ret i1 %cmp
+}
+
+define i1 @test_imply_dom_condition(i32 %add) {
+; CHECK-LABEL: @test_imply_dom_condition(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ADD:%.*]], 7
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret i1 false
+;
+  %and = and i32 %add, -8
+  %cmp = icmp sgt i32 %and, 0
+  tail call void @llvm.assume(i1 %cmp)
+  %min.iters.check = icmp ult i32 %and, 8
+  ret i1 %min.iters.check
+}
+
+define i1 @test_icmp_slt_and_negpow2_c(i32 %add) {
+; CHECK-LABEL: @test_icmp_slt_and_negpow2_c(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD:%.*]], 32
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %and = and i32 %add, -32
+  %cmp = icmp slt i32 %and, 16
+  ret i1 %cmp
+}
+
+define i1 @test_icmp_slt_and_negpow2_invalid_c(i32 %add) {
+; CHECK-LABEL: @test_icmp_slt_and_negpow2_invalid_c(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD:%.*]], -32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[AND]], 48
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %and = and i32 %add, -32
+  %cmp = icmp slt i32 %and, 48
+  ret i1 %cmp
+}
+
+define i1 @test_icmp_sgt_and_negpow2_c(i32 %add) {
+; CHECK-LABEL: @test_icmp_sgt_and_negpow2_c(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ADD:%.*]], 31
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %and = and i32 %add, -32
+  %cmp = icmp sgt i32 %and, 16
+  ret i1 %cmp
+}
+
+define i1 @test_icmp_sgt_and_negpow2_invalid_c(i32 %add) {
+; CHECK-LABEL: @test_icmp_sgt_and_negpow2_invalid_c(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD:%.*]], -32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[AND]], 48
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %and = and i32 %add, -32
+  %cmp = icmp sgt i32 %and, 48
+  ret i1 %cmp
+}

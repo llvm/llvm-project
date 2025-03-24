@@ -25,7 +25,15 @@
                  __target__("avx512vpopcntdq,avx512vl,no-evex512"),            \
                  __min_vector_width__(256)))
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128 constexpr
+#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256 constexpr
+#else
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128
+#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256
+#endif
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_popcnt_epi64(__m128i __A) {
   return (__m128i)__builtin_elementwise_popcount((__v2du)__A);
 }
@@ -41,7 +49,7 @@ _mm_maskz_popcnt_epi64(__mmask8 __U, __m128i __A) {
   return _mm_mask_popcnt_epi64((__m128i)_mm_setzero_si128(), __U, __A);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
+static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_popcnt_epi32(__m128i __A) {
   return (__m128i)__builtin_elementwise_popcount((__v4su)__A);
 }
@@ -57,7 +65,7 @@ _mm_maskz_popcnt_epi32(__mmask8 __U, __m128i __A) {
   return _mm_mask_popcnt_epi32((__m128i)_mm_setzero_si128(), __U, __A);
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_popcnt_epi64(__m256i __A) {
   return (__m256i)__builtin_elementwise_popcount((__v4du)__A);
 }
@@ -73,7 +81,7 @@ _mm256_maskz_popcnt_epi64(__mmask8 __U, __m256i __A) {
   return _mm256_mask_popcnt_epi64((__m256i)_mm256_setzero_si256(), __U, __A);
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_popcnt_epi32(__m256i __A) {
   return (__m256i)__builtin_elementwise_popcount((__v8su)__A);
 }

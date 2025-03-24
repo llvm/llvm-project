@@ -1,6 +1,6 @@
-; RUN: llc -march=mipsel -mcpu=mips32 -relocation-model=pic \
+; RUN: llc -mtriple=mipsel -mcpu=mips32 -relocation-model=pic \
 ; RUN:     -fast-isel=true -fast-isel-abort=3 < %s | FileCheck %s
-; RUN: llc -march=mipsel -mcpu=mips32r2 -relocation-model=pic \
+; RUN: llc -mtriple=mipsel -mcpu=mips32r2 -relocation-model=pic \
 ; RUN:     -fast-isel=true -fast-isel-abort=3 < %s | FileCheck %s
 
 @ARR = external global [10 x i32], align 4

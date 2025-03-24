@@ -9,6 +9,7 @@ typedef __fp16 float16_t;
 #if defined(__aarch64__)
 typedef unsigned char poly8_t;
 typedef unsigned short poly16_t;
+typedef __mfp8 mfloat8_t;
 #else
 typedef signed char poly8_t;
 typedef short poly16_t;
@@ -29,6 +30,8 @@ typedef __attribute__((neon_vector_type(4))) float16_t float16x4_t;
 typedef __attribute__((neon_vector_type(8))) float16_t float16x8_t;
 #ifdef __aarch64__
 typedef __attribute__((neon_vector_type(2))) float64_t float64x2_t;
+typedef __attribute__((neon_vector_type(8))) mfloat8_t mfloat8x8_t;
+typedef __attribute__((neon_vector_type(16))) mfloat8_t mfloat8x16_t;
 #endif
 typedef __attribute__((neon_polyvector_type(16))) poly8_t  poly8x16_t;
 typedef __attribute__((neon_polyvector_type(8)))  poly16_t poly16x8_t;
@@ -85,4 +88,12 @@ void f11(float64x2_t v) { }
 #if defined(__ARM_FEATURE_BF16)
 // CHECK-AARCH64-BF16: 14__Bfloat16x4_t
 void f12(bfloat16x4_t v) {}
+#endif
+
+
+#ifdef __aarch64__
+// CHECK-AARCH64: 13__Mfloat8x8_t
+void f13(mfloat8x8_t v) { }
+// CHECK-AARCH64: 14__Mfloat8x16_t
+void f14(mfloat8x16_t v) { }
 #endif

@@ -1,5 +1,5 @@
 --- |
-  ; RUN: llc %s -march=x86-64 -run-pass=livedebugvalues -o - -experimental-debug-variable-locations | FileCheck %s -implicit-check-not=DBG_VALUE
+ ; RUN: llc %s -mtriple=x86_64 -run-pass=livedebugvalues -o - -experimental-debug-variable-locations | FileCheck %s -implicit-check-not=DBG_VALUE
 
   ; The MIR below represents a pathalogical case for value-tracking
   ; LiveDebugValues. The code structure is eight nested loops, with loop heads

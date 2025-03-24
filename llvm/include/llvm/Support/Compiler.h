@@ -197,12 +197,13 @@
 #define LLVM_EXPORT_TEMPLATE
 #endif
 #define LLVM_ABI_EXPORT __declspec(dllexport)
-#elif defined(__ELF__) || defined(__MINGW32__) || defined(_AIX)
+#elif defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||             \
+    defined(__MVS__)
 #define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #define LLVM_TEMPLATE_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #define LLVM_EXPORT_TEMPLATE
 #define LLVM_ABI_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
-#elif defined(__MACH__) || defined(__WASM__)
+#elif defined(__MACH__) || defined(__WASM__) || defined(__EMSCRIPTEN__)
 #define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #define LLVM_TEMPLATE_ABI
 #define LLVM_EXPORT_TEMPLATE
@@ -410,6 +411,12 @@
 #define LLVM_GSL_POINTER [[gsl::Pointer]]
 #else
 #define LLVM_GSL_POINTER
+#endif
+
+#if LLVM_HAS_CPP_ATTRIBUTE(clang::lifetimebound)
+#define LLVM_LIFETIME_BOUND [[clang::lifetimebound]]
+#else
+#define LLVM_LIFETIME_BOUND
 #endif
 
 #if LLVM_HAS_CPP_ATTRIBUTE(nodiscard) >= 201907L

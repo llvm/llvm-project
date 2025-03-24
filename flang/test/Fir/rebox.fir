@@ -25,7 +25,7 @@ func.func @test_rebox_1(%arg0: !fir.box<!fir.array<?x?xf32>>) {
   // CHECK: %[[EXTRA_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 6
   // CHECK: %[[EXTRA:.*]] = load i8, ptr %[[EXTRA_GEP]]
   // CHECK: %[[EXTRA_WITH_ADDENDUM_CORRECTION:.*]] = and i8 %[[EXTRA]]
-  // CHECK: %[[OUTBOX0:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } { ptr undef, i64 ptrtoint (ptr getelementptr (float, ptr null, i32 1) to i64), i32 20240719, i8 1, i8 27, i8 0, i8 undef, [1 x [3 x i64]] undef }, i8 %[[EXTRA_WITH_ADDENDUM_CORRECTION]], 6
+  // CHECK: %[[OUTBOX0:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } { ptr undef, i64 4, i32 20240719, i8 1, i8 27, i8 0, i8 undef, [1 x [3 x i64]] undef }, i8 %[[EXTRA_WITH_ADDENDUM_CORRECTION]], 6
   // CHECK: %[[INSTRIDE_0_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 7, i32 0, i32 2
   // CHECK: %[[INSTRIDE_0:.*]] = load i64, ptr %[[INSTRIDE_0_GEP]]
   // CHECK: %[[INSTRIDE_1_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 7, i32 1, i32 2
@@ -63,7 +63,7 @@ func.func @test_rebox_2(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>>) {
   // CHECK: %[[OUTBOX:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }
   // CHECK: %[[LEN_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 1
   // CHECK: %[[LEN:.*]] = load i64, ptr %[[LEN_GEP]]
-  // CHECK: %[[SIZE:.*]] = mul i64 ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64), %[[LEN]]
+  // CHECK: %[[SIZE:.*]] = mul i64 1, %[[LEN]]
   // CHECK: insertvalue { ptr, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] } undef, i64 %[[SIZE]], 1
 
   %1 = fir.rebox %arg0 [%0]  : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.slice<2>) -> !fir.box<!fir.array<?x?x!fir.char<1,?>>>

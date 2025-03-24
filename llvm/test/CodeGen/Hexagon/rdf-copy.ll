@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -disable-copyprop < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -disable-copyprop < %s | FileCheck %s
 ; Disable MachineCopyPropagation to expose this opportunity to RDF copy.
 
 ;

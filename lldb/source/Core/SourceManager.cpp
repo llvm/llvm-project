@@ -430,14 +430,13 @@ SourceManager::GetDefaultFileAndLine() {
             false; // Force it to be a debug symbol.
         function_options.include_inlines = true;
         executable_ptr->FindFunctions(main_name, CompilerDeclContext(),
-                                      lldb::eFunctionNameTypeBase,
+                                      lldb::eFunctionNameTypeFull,
                                       function_options, sc_list);
         for (const SymbolContext &sc : sc_list) {
           if (sc.function) {
             lldb_private::LineEntry line_entry;
-            if (sc.function->GetAddressRange()
-                    .GetBaseAddress()
-                    .CalculateSymbolContextLineEntry(line_entry)) {
+            if (sc.function->GetAddress().CalculateSymbolContextLineEntry(
+                    line_entry)) {
               SetDefaultFileAndLine(line_entry.file_sp, line_entry.line);
               return SupportFileAndLine(line_entry.file_sp, m_last_line);
             }

@@ -10,17 +10,16 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGINFOENTRY_H
 
 #include "SymbolFileDWARF.h"
-#include "llvm/ADT/SmallVector.h"
 
 #include "DWARFAttribute.h"
 #include "DWARFBaseDIE.h"
-#include "DWARFDebugRanges.h"
 #include <map>
 #include <optional>
 #include <set>
 #include <vector>
 
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
+#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 
 namespace lldb_private::plugin {
 namespace dwarf {
@@ -53,12 +52,28 @@ public:
                lldb::offset_t *offset_ptr);
 
   using Recurse = DWARFBaseDIE::Recurse;
-  DWARFAttributes GetAttributes(DWARFUnit *cu,
-                                Recurse recurse = Recurse::yes) const {
-    DWARFAttributes attrs;
-    GetAttributes(cu, attrs, recurse, 0 /* curr_depth */);
-    return attrs;
-  }
+
+  /// Get all attribute values for a given DIE, optionally following any
+  /// specifications and abstract origins and including their attributes
+  /// in the result too.
+  ///
+  /// When following specifications/abstract origins, the attributes
+  /// on the referring DIE are guaranteed to be visited before the attributes of
+  /// the referenced DIE.
+  ///
+  /// \param[in] cu DWARFUnit that this entry belongs to.
+  ///
+  /// \param[in] recurse If set to \c Recurse::yes, will include attributes
+  /// on DIEs referenced via \c DW_AT_specification and \c DW_AT_abstract_origin
+  /// (including across multiple levels of indirection).
+  ///
+  /// \returns DWARFAttributes that include all attributes found on this DIE
+  /// (and possibly referenced DIEs). Attributes may appear multiple times
+  /// (e.g., if a declaration and definition both specify the same attribute).
+  /// On failure, the returned DWARFAttributes will be empty.
+  ///
+  DWARFAttributes GetAttributes(const DWARFUnit *cu,
+                                Recurse recurse = Recurse::yes) const;
 
   dw_offset_t GetAttributeValue(const DWARFUnit *cu, const dw_attr_t attr,
                                 DWARFFormValue &formValue,
@@ -96,7 +111,7 @@ public:
                                 dw_addr_t &hi_pc, uint64_t fail_value,
                                 bool check_elaborating_dies = false) const;
 
-  DWARFRangeList
+  llvm::Expected<llvm::DWARFAddressRangesVector>
   GetAttributeAddressRanges(DWARFUnit *cu, bool check_hi_lo_pc,
                             bool check_elaborating_dies = false) const;
 
@@ -107,15 +122,13 @@ public:
 
   const char *GetPubname(const DWARFUnit *cu) const;
 
-  bool GetDIENamesAndRanges(DWARFUnit *cu, const char *&name,
-                            const char *&mangled, DWARFRangeList &rangeList,
-                            std::optional<int> &decl_file,
-                            std::optional<int> &decl_line,
-                            std::optional<int> &decl_column,
-                            std::optional<int> &call_file,
-                            std::optional<int> &call_line,
-                            std::optional<int> &call_column,
-                            DWARFExpressionList *frame_base = nullptr) const;
+  bool GetDIENamesAndRanges(
+      DWARFUnit *cu, const char *&name, const char *&mangled,
+      llvm::DWARFAddressRangesVector &rangeList, std::optional<int> &decl_file,
+      std::optional<int> &decl_line, std::optional<int> &decl_column,
+      std::optional<int> &call_file, std::optional<int> &call_line,
+      std::optional<int> &call_column,
+      DWARFExpressionList *frame_base = nullptr) const;
 
   const llvm::DWARFAbbreviationDeclaration *
   GetAbbreviationDeclarationPtr(const DWARFUnit *cu) const;
@@ -181,10 +194,6 @@ protected:
   /// A copy of the DW_TAG value so we don't have to go through the compile
   /// unit abbrev table
   dw_tag_t m_tag = llvm::dwarf::DW_TAG_null;
-
-private:
-  void GetAttributes(DWARFUnit *cu, DWARFAttributes &attrs, Recurse recurse,
-                     uint32_t curr_depth) const;
 };
 } // namespace dwarf
 } // namespace lldb_private::plugin

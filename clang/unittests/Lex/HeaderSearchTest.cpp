@@ -16,7 +16,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Lex/HeaderSearchOptions.h"
-#include "clang/Serialization/InMemoryModuleCache.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -75,8 +74,7 @@ protected:
     // Test class supports only one HMap at a time.
     assert(!HMap);
     HMap = HeaderMap::Create(*FE, FileMgr);
-    auto DL =
-        DirectoryLookup(HMap.get(), SrcMgr::C_User, /*isFramework=*/false);
+    auto DL = DirectoryLookup(HMap.get(), SrcMgr::C_User);
     Search.AddSearchPath(DL, isAngled);
   }
 
@@ -251,7 +249,6 @@ TEST_F(HeaderSearchTest, HeaderFrameworkLookup) {
   auto FI = Search.getExistingFileInfo(FE);
   EXPECT_TRUE(FI);
   EXPECT_TRUE(FI->IsValid);
-  EXPECT_EQ(FI->Framework.str(), "Foo");
   EXPECT_EQ(Search.getIncludeNameForHeader(FE), "Foo/Foo.h");
 }
 
@@ -321,7 +318,6 @@ TEST_F(HeaderSearchTest, HeaderMapFrameworkLookup) {
   auto FI = Search.getExistingFileInfo(FE);
   EXPECT_TRUE(FI);
   EXPECT_TRUE(FI->IsValid);
-  EXPECT_EQ(FI->Framework.str(), "Foo");
   EXPECT_EQ(Search.getIncludeNameForHeader(FE), "Foo/Foo.h");
 }
 

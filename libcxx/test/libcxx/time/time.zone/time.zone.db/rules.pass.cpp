@@ -20,9 +20,10 @@
 // ADDITIONAL_COMPILE_FLAGS: -I %{libcxx-dir}/src/experimental/include
 
 #include <chrono>
+#include <cstdio>
 #include <fstream>
-#include <string>
 #include <string_view>
+#include <string>
 #include <variant>
 
 #include "assert_macros.h"
@@ -96,7 +97,7 @@ static void test_invalid() {
   test_exception("R r 0 mix", "corrupt tzdb: expected whitespace");
   test_exception("R r 0 1", "corrupt tzdb: expected whitespace");
 
-  test_exception("R r 0 1 X", "corrupt tzdb: expected character '-'");
+  test_exception("R r 0 1 X", "corrupt tzdb: expected character '-', got 'X' instead");
 
   test_exception("R r 0 1 -", "corrupt tzdb: expected whitespace");
 
@@ -106,13 +107,17 @@ static void test_invalid() {
 
   test_exception("R r 0 1 - Ja +", "corrupt tzdb weekday: invalid name");
   test_exception("R r 0 1 - Ja 32", "corrupt tzdb day: value too large");
-  test_exception("R r 0 1 - Ja l", "corrupt tzdb: expected string 'last'");
+  test_exception(
+      "R r 0 1 - Ja l",
+      std::string{"corrupt tzdb: expected character 'a' from string 'last', got '"} + (char)EOF + "' instead");
   test_exception("R r 0 1 - Ja last", "corrupt tzdb weekday: invalid name");
   test_exception("R r 0 1 - Ja lastS", "corrupt tzdb weekday: invalid name");
   test_exception("R r 0 1 - Ja S", "corrupt tzdb weekday: invalid name");
   test_exception("R r 0 1 - Ja Su", "corrupt tzdb on: expected '>=' or '<='");
-  test_exception("R r 0 1 - Ja Su>", "corrupt tzdb: expected character '='");
-  test_exception("R r 0 1 - Ja Su<", "corrupt tzdb: expected character '='");
+  test_exception(
+      "R r 0 1 - Ja Su>", std::string{"corrupt tzdb: expected character '=', got '"} + (char)EOF + "' instead");
+  test_exception(
+      "R r 0 1 - Ja Su<", std::string{"corrupt tzdb: expected character '=', got '"} + (char)EOF + "' instead");
   test_exception("R r 0 1 - Ja Su>=+", "corrupt tzdb: expected a non-zero digit");
   test_exception("R r 0 1 - Ja Su>=0", "corrupt tzdb: expected a non-zero digit");
   test_exception("R r 0 1 - Ja Su>=32", "corrupt tzdb day: value too large");

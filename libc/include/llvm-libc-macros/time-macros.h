@@ -7,4 +7,9 @@
 #include "linux/time-macros.h"
 #endif
 
+#define TIME_UTC 1
+#define TIME_MONOTONIC 2
+#define TIME_ACTIVE 3
+#define TIME_THREAD_ACTIVE 4
+
 #endif // LLVM_LIBC_MACROS_TIME_MACROS_H

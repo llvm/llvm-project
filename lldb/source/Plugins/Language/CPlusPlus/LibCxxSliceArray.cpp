@@ -8,8 +8,8 @@
 
 #include "LibCxx.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include <optional>
 
 using namespace lldb;
@@ -61,8 +61,6 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
-
-  bool MightHaveChildren() override;
 
   size_t GetIndexOfChildWithName(ConstString name) override;
 
@@ -125,7 +123,8 @@ lldb_private::formatters::LibcxxStdSliceArraySyntheticFrontEnd::Update() {
     return ChildCacheState::eRefetch;
 
   m_element_type = type.GetTypeTemplateArgument(0);
-  if (std::optional<uint64_t> size = m_element_type.GetByteSize(nullptr))
+  if (std::optional<uint64_t> size =
+          llvm::expectedToOptional(m_element_type.GetByteSize(nullptr)))
     m_element_size = *size;
 
   if (m_element_size == 0)
@@ -143,11 +142,6 @@ lldb_private::formatters::LibcxxStdSliceArraySyntheticFrontEnd::Update() {
   m_stride = stride->GetValueAsUnsigned(0);
 
   return ChildCacheState::eRefetch;
-}
-
-bool lldb_private::formatters::LibcxxStdSliceArraySyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
 }
 
 size_t lldb_private::formatters::LibcxxStdSliceArraySyntheticFrontEnd::

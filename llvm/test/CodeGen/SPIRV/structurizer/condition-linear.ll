@@ -1,5 +1,5 @@
+; RUN: llc -mtriple=spirv-unknown-vulkan-compute -O0 %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val %}
-; RUN: llc -mtriple=spirv-unknown-vulkan-compute -O0 %s -o - | FileCheck %s --match-full-lines
 
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-G1"
 target triple = "spirv-unknown-vulkan-compute"
@@ -25,90 +25,92 @@ entry:
   ret i32 1
 }
 
+
+; CHECK-DAG:             OpName %[[#reg_0:]] "cond.reg2mem"
+; CHECK-DAG:             OpName %[[#reg_1:]] "cond9.reg2mem"
+
 define internal spir_func void @main() #0 {
-; CHECK:    %[[#cond:]] = OpINotEqual %[[#bool_ty:]] %[[#a:]] %[[#b:]]
-; CHECK:                  OpSelectionMerge %[[#cond_end:]] None
-; CHECK:                  OpBranchConditional %[[#cond]] %[[#cond_true:]] %[[#cond_false:]]
+; CHECK:                  OpSelectionMerge %[[#cond1_merge:]] None
+; CHECK:                  OpBranchConditional %[[#]] %[[#cond1_true:]] %[[#cond1_false:]]
 entry:
   %0 = call token @llvm.experimental.convergence.entry()
   %a = alloca i32, align 4
   %b = alloca i32, align 4
-  %c = alloca i32, align 4
-  %val = alloca i32, align 4
-  store i32 0, ptr %val, align 4
-  %1 = load i32, ptr %a, align 4
-  %tobool = icmp ne i32 %1, 0
-  br i1 %tobool, label %cond.true, label %cond.false
+  br i1 true, label %cond1_true, label %cond1_false
 
-; CHECK:  %[[#cond_true]] = OpLabel
-; CHECK:                    OpBranch %[[#cond_end]]
-cond.true:
+; CHECK:  %[[#cond1_false]] = OpLabel
+; CHECK:                      OpStore %[[#reg_0]] %[[#]]
+; CHECK:                      OpBranch %[[#cond1_merge]]
+cond1_false:
   %2 = load i32, ptr %b, align 4
-  br label %cond.end
+  br label %cond1_merge
 
-; CHECK:  %[[#cond_false]] = OpLabel
-; CHECK:                     OpBranch %[[#cond_end]]
-cond.false:
-  %3 = load i32, ptr %c, align 4
-  br label %cond.end
+; CHECK:  %[[#cond1_true]] = OpLabel
+; CHECK:                     OpStore %[[#reg_0]] %[[#]]
+; CHECK:                     OpBranch %[[#cond1_merge]]
+cond1_true:
+  %3 = load i32, ptr %a, align 4
+  br label %cond1_merge
 
-; CHECK:  %[[#cond_end]] = OpLabel
-; CHECK:     %[[#tmp:]]  = OpPhi %[[#int_ty:]] %[[#load_cond_true:]] %[[#cond_true]] %[[#load_cond_false:]] %[[#cond_false:]]
-; CHECK:     %[[#cond:]] = OpINotEqual %[[#bool_ty]] %[[#tmp]] %[[#int_0:]]
-; CHECK:                   OpSelectionMerge %[[#if_end:]] None
-; CHECK:                   OpBranchConditional %[[#cond]] %[[#if_then:]] %[[#if_end]]
-cond.end:
-  %cond = phi i32 [ %2, %cond.true ], [ %3, %cond.false ]
+; CHECK: %[[#cond1_merge]] = OpLabel
+; CHECK:        %[[#tmp:]] = OpLoad %[[#]] %[[#reg_0]]
+; CHECK:       %[[#cond:]] = OpINotEqual %[[#]] %[[#tmp]] %[[#]]
+; CHECK:                     OpSelectionMerge %[[#cond2_merge:]] None
+; CHECK:                     OpBranchConditional %[[#cond]] %[[#cond2_true:]] %[[#cond2_merge]]
+cond1_merge:
+  %cond = phi i32 [ %3, %cond1_true ], [ %2, %cond1_false ]
   %tobool1 = icmp ne i32 %cond, 0
-  br i1 %tobool1, label %if.then, label %if.end
+  br i1 %tobool1, label %cond2_true, label %cond2_merge
 
-; CHECK:  %[[#if_then]] = OpLabel
-; CHECK:                  OpBranch %[[#if_end]]
-if.then:
-  %4 = load i32, ptr %val, align 4
-  %inc = add nsw i32 %4, 1
-  store i32 %inc, ptr %val, align 4
-  br label %if.end
+; CHECK:  %[[#cond2_true]] = OpLabel
+; CHECK:                     OpBranch %[[#cond2_merge]]
+cond2_true:
+  store i32 0, ptr %a
+  br label %cond2_merge
 
-; CHECK:    %[[#if_end]] = OpLabel
-; CHECK:                   OpSelectionMerge %[[#cond_end8:]] None
-; CHECK:                   OpBranchConditional %[[#tmp:]] %[[#cond4_true:]] %[[#cond_false6:]]
-if.end:
+; CHECK:    %[[#cond2_merge]] = OpLabel
+; CHECK:                        OpFunctionCall
+; CHECK:                        OpSelectionMerge %[[#cond3_merge:]] None
+; CHECK:                        OpBranchConditional %[[#]] %[[#cond3_true:]] %[[#cond3_false:]]
+cond2_merge:
   %call2 = call spir_func noundef i32 @fn() #4 [ "convergencectrl"(token %0) ]
-  %tobool3 = icmp ne i32 %call2, 0
-  br i1 %tobool3, label %cond.true4, label %cond.false6
+  br i1 true, label %cond3_true, label %cond3_false
+
+; CHECK:  %[[#cond3_false]] = OpLabel
+; CHECK:                      OpFunctionCall
+; CHECK:                      OpStore %[[#reg_1]] %[[#]]
+; CHECK:                      OpBranch %[[#cond3_merge]]
+cond3_false:
+  %call7 = call spir_func noundef i32 @fn2() #4 [ "convergencectrl"(token %0) ]
+  br label %cond3_merge
+
+; CHECK:  %[[#cond3_true]] = OpLabel
+; CHECK:                     OpFunctionCall
+; CHECK:                     OpStore %[[#reg_1]] %[[#]]
+; CHECK:                     OpBranch %[[#cond3_merge]]
+cond3_true:
+  %call5 = call spir_func noundef i32 @fn1() #4 [ "convergencectrl"(token %0) ]
+  br label %cond3_merge
+
+; CHECK:  %[[#cond3_merge]] = OpLabel
+; CHECK:         %[[#tmp:]] = OpLoad %[[#]] %[[#reg_1]]
+; CHECK:       %[[#cond:]] = OpINotEqual %[[#]] %[[#tmp]] %[[#]]
+; CHECK:                      OpSelectionMerge %[[#cond4_merge:]] None
+; CHECK:                      OpBranchConditional %[[#cond]] %[[#cond4_true:]] %[[#cond4_merge]]
+cond3_merge:
+  %cond9 = phi i32 [ %call5, %cond3_true ], [ %call7, %cond3_false ]
+  %tobool10 = icmp ne i32 %cond9, 0
+  br i1 %tobool10, label %cond4_true, label %cond4_merge
 
 ; CHECK:  %[[#cond4_true]] = OpLabel
-; CHECK:                     OpBranch %[[#cond_end8]]
-cond.true4:
-  %call5 = call spir_func noundef i32 @fn1() #4 [ "convergencectrl"(token %0) ]
-  br label %cond.end8
+; CHECK:                     OpBranch %[[#cond4_merge]]
+cond4_true:
+  store i32 0, ptr %a
+  br label %cond4_merge
 
-; CHECK:  %[[#cond_false6]] = OpLabel
-; CHECK:                      OpBranch %[[#cond_end8]]
-cond.false6:
-  %call7 = call spir_func noundef i32 @fn2() #4 [ "convergencectrl"(token %0) ]
-  br label %cond.end8
-
-; CHECK:  %[[#cond_end8]] = OpLabel
-; CHECK:                      OpSelectionMerge %[[#if_end13:]] None
-; CHECK:                      OpBranchConditional %[[#tmp:]] %[[#if_then11:]] %[[#if_end13]]
-cond.end8:
-  %cond9 = phi i32 [ %call5, %cond.true4 ], [ %call7, %cond.false6 ]
-  %tobool10 = icmp ne i32 %cond9, 0
-  br i1 %tobool10, label %if.then11, label %if.end13
-
-; CHECK:  %[[#if_then11]] = OpLabel
-; CHECK:                    OpBranch %[[#if_end13]]
-if.then11:
-  %5 = load i32, ptr %val, align 4
-  %inc12 = add nsw i32 %5, 1
-  store i32 %inc12, ptr %val, align 4
-  br label %if.end13
-
-; CHECK:  %[[#if_end13]] = OpLabel
+; CHECK:  %[[#cond4_merge]] = OpLabel
 ; CHECK:                  OpReturn
-if.end13:
+cond4_merge:
   ret void
 }
 

@@ -170,9 +170,10 @@ body:             |
 
   bb.8.return (machine-block-address-taken):
     $eax = MOV32rm $rbp, 1, $noreg, -12, $noreg :: (load (s32) from %stack.0)
-    SEH_Epilogue
+    SEH_BeginEpilogue
     $rsp = frame-destroy ADD64ri8 $rsp, 48, implicit-def dead $eflags
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    SEH_EndEpilogue
     RET64 $eax
 
   bb.1.if.then:
@@ -215,9 +216,10 @@ body:             |
     frame-setup SEH_EndPrologue
     MOV32mi $rbp, 1, $noreg, -12, $noreg, 1 :: (store (s32) into %stack.0)
     $rax = LEA64r $rip, 0, $noreg, %bb.8, $noreg
-    SEH_Epilogue
+    SEH_BeginEpilogue
     $rsp = frame-destroy ADD64ri8 $rsp, 32, implicit-def dead $eflags
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    SEH_EndEpilogue
     CATCHRET %bb.8, %bb.0
 
 ...

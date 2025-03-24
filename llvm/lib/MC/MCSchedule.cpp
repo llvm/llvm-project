@@ -69,39 +69,49 @@ int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
 int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
                                       const MCInstrInfo &MCII,
                                       const MCInst &Inst) const {
-  unsigned SchedClass = MCII.get(Inst.getOpcode()).getSchedClass();
-  const MCSchedClassDesc *SCDesc = getSchedClassDesc(SchedClass);
-  if (!SCDesc->isValid())
-    return 0;
+  return MCSchedModel::computeInstrLatency<MCSubtargetInfo, MCInstrInfo,
+                                           InstrItineraryData, MCInst>(
+      STI, MCII, Inst,
+      [&](const MCSchedClassDesc *SCDesc) -> const MCSchedClassDesc * {
+        if (!SCDesc->isValid())
+          return nullptr;
 
-  unsigned CPUID = getProcessorID();
-  while (SCDesc->isVariant()) {
-    SchedClass = STI.resolveVariantSchedClass(SchedClass, &Inst, &MCII, CPUID);
-    SCDesc = getSchedClassDesc(SchedClass);
-  }
+        unsigned CPUID = getProcessorID();
+        unsigned SchedClass = 0;
+        while (SCDesc->isVariant()) {
+          SchedClass =
+              STI.resolveVariantSchedClass(SchedClass, &Inst, &MCII, CPUID);
+          SCDesc = getSchedClassDesc(SchedClass);
+        }
 
-  if (SchedClass)
-    return MCSchedModel::computeInstrLatency(STI, *SCDesc);
+        if (!SchedClass) {
+          assert(false && "unsupported variant scheduling class");
+          return nullptr;
+        }
 
-  llvm_unreachable("unsupported variant scheduling class");
+        return SCDesc;
+      });
 }
 
 double
 MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
                                       const MCSchedClassDesc &SCDesc) {
-  std::optional<double> Throughput;
+  std::optional<double> MinThroughput;
   const MCSchedModel &SM = STI.getSchedModel();
   const MCWriteProcResEntry *I = STI.getWriteProcResBegin(&SCDesc);
   const MCWriteProcResEntry *E = STI.getWriteProcResEnd(&SCDesc);
   for (; I != E; ++I) {
-    if (!I->ReleaseAtCycle)
+    if (!I->ReleaseAtCycle || I->ReleaseAtCycle == I->AcquireAtCycle)
       continue;
+    assert(I->ReleaseAtCycle > I->AcquireAtCycle && "invalid resource segment");
     unsigned NumUnits = SM.getProcResource(I->ProcResourceIdx)->NumUnits;
-    double Temp = NumUnits * 1.0 / I->ReleaseAtCycle;
-    Throughput = Throughput ? std::min(*Throughput, Temp) : Temp;
+    double Throughput =
+        double(NumUnits) / double(I->ReleaseAtCycle - I->AcquireAtCycle);
+    MinThroughput =
+        MinThroughput ? std::min(*MinThroughput, Throughput) : Throughput;
   }
-  if (Throughput)
-    return 1.0 / *Throughput;
+  if (MinThroughput)
+    return 1.0 / *MinThroughput;
 
   // If no throughput value was calculated, assume that we can execute at the
   // maximum issue width scaled by number of micro-ops for the schedule class.

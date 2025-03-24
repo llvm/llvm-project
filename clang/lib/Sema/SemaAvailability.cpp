@@ -13,7 +13,9 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/ExprObjC.h"
+#include "clang/AST/StmtObjC.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
@@ -97,16 +99,29 @@ ShouldDiagnoseAvailabilityOfDecl(Sema &S, const NamedDecl *D,
   // For typedefs, if the typedef declaration appears available look
   // to the underlying type to see if it is more restrictive.
   while (const auto *TD = dyn_cast<TypedefNameDecl>(D)) {
-    if (Result == AR_Available) {
-      if (const auto *TT = TD->getUnderlyingType()->getAs<TagType>()) {
+    if (Result != AR_Available)
+      break;
+    for (const Type *T = TD->getUnderlyingType().getTypePtr(); /**/; /**/) {
+      if (auto *TT = dyn_cast<TagType>(T)) {
         D = TT->getDecl();
-        Result = D->getAvailability(Message);
+      } else if (isa<SubstTemplateTypeParmType>(T)) {
+        // A Subst* node represents a use through a template.
+        // Any uses of the underlying declaration happened through it's template
+        // specialization.
+        goto done;
+      } else {
+        const Type *NextT =
+            T->getLocallyUnqualifiedSingleStepDesugaredType().getTypePtr();
+        if (NextT == T)
+          goto done;
+        T = NextT;
         continue;
       }
+      Result = D->getAvailability(Message);
+      break;
     }
-    break;
   }
-
+done:
   // For alias templates, get the underlying declaration.
   if (const auto *ADecl = dyn_cast<TypeAliasTemplateDecl>(D)) {
     D = ADecl->getTemplatedDecl();
@@ -180,6 +195,12 @@ static bool ShouldDiagnoseAvailabilityInContext(
          S.getASTContext().getTargetInfo().getTriple().getEnvironment() ==
              llvm::Triple::EnvironmentType::Library))
       return false;
+  }
+
+  if (K == AR_Deprecated) {
+    if (const auto *VD = dyn_cast<VarDecl>(OffendingDecl))
+      if (VD->isLocalVarDeclOrParm() && VD->isDeprecated())
+        return true;
   }
 
   // Checks if we should emit the availability diagnostic in the context of C.
@@ -735,11 +756,11 @@ bool isBodyLikeChildStmt(const Stmt *S, const Stmt *Parent) {
   }
 }
 
-class StmtUSEFinder : public RecursiveASTVisitor<StmtUSEFinder> {
+class StmtUSEFinder : public DynamicRecursiveASTVisitor {
   const Stmt *Target;
 
 public:
-  bool VisitStmt(Stmt *S) { return S != Target; }
+  bool VisitStmt(Stmt *S) override { return S != Target; }
 
   /// Returns true if the given statement is present in the given declaration.
   static bool isContained(const Stmt *Target, const Decl *D) {
@@ -751,11 +772,11 @@ public:
 
 /// Traverses the AST and finds the last statement that used a given
 /// declaration.
-class LastDeclUSEFinder : public RecursiveASTVisitor<LastDeclUSEFinder> {
+class LastDeclUSEFinder : public DynamicRecursiveASTVisitor {
   const Decl *D;
 
 public:
-  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
     if (DRE->getDecl() == D)
       return false;
     return true;
@@ -779,10 +800,7 @@ public:
 /// to a partially available declaration. Whenever we encounter an \c if of the
 /// form: \c if(@available(...)), we use the version from the condition to visit
 /// the then statement.
-class DiagnoseUnguardedAvailability
-    : public RecursiveASTVisitor<DiagnoseUnguardedAvailability> {
-  typedef RecursiveASTVisitor<DiagnoseUnguardedAvailability> Base;
-
+class DiagnoseUnguardedAvailability : public DynamicRecursiveASTVisitor {
   Sema &SemaRef;
   Decl *Ctx;
 
@@ -800,26 +818,26 @@ public:
         SemaRef.Context.getTargetInfo().getPlatformMinVersion());
   }
 
-  bool TraverseStmt(Stmt *S) {
+  bool TraverseStmt(Stmt *S) override {
     if (!S)
       return true;
     StmtStack.push_back(S);
-    bool Result = Base::TraverseStmt(S);
+    bool Result = DynamicRecursiveASTVisitor::TraverseStmt(S);
     StmtStack.pop_back();
     return Result;
   }
 
   void IssueDiagnostics(Stmt *S) { TraverseStmt(S); }
 
-  bool TraverseIfStmt(IfStmt *If);
+  bool TraverseIfStmt(IfStmt *If) override;
 
   // for 'case X:' statements, don't bother looking at the 'X'; it can't lead
   // to any useful diagnostics.
-  bool TraverseCaseStmt(CaseStmt *CS) { return TraverseStmt(CS->getSubStmt()); }
+  bool TraverseCaseStmt(CaseStmt *CS) override {
+    return TraverseStmt(CS->getSubStmt());
+  }
 
-  bool VisitObjCPropertyRefExpr(ObjCPropertyRefExpr *PRE) { return true; }
-
-  bool VisitObjCMessageExpr(ObjCMessageExpr *Msg) {
+  bool VisitObjCMessageExpr(ObjCMessageExpr *Msg) override {
     if (ObjCMethodDecl *D = Msg->getMethodDecl()) {
       ObjCInterfaceDecl *ID = nullptr;
       QualType ReceiverTy = Msg->getClassReceiver();
@@ -832,25 +850,25 @@ public:
     return true;
   }
 
-  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
     DiagnoseDeclAvailability(DRE->getDecl(),
                              SourceRange(DRE->getBeginLoc(), DRE->getEndLoc()));
     return true;
   }
 
-  bool VisitMemberExpr(MemberExpr *ME) {
+  bool VisitMemberExpr(MemberExpr *ME) override {
     DiagnoseDeclAvailability(ME->getMemberDecl(),
                              SourceRange(ME->getBeginLoc(), ME->getEndLoc()));
     return true;
   }
 
-  bool VisitObjCAvailabilityCheckExpr(ObjCAvailabilityCheckExpr *E) {
+  bool VisitObjCAvailabilityCheckExpr(ObjCAvailabilityCheckExpr *E) override {
     SemaRef.Diag(E->getBeginLoc(), diag::warn_at_available_unchecked_use)
         << (!SemaRef.getLangOpts().ObjC);
     return true;
   }
 
-  bool VisitTypeLoc(TypeLoc Ty);
+  bool VisitTypeLoc(TypeLoc Ty) override;
 };
 
 void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
@@ -1032,7 +1050,7 @@ bool DiagnoseUnguardedAvailability::TraverseIfStmt(IfStmt *If) {
   ExtractedAvailabilityExpr IfCond = extractAvailabilityExpr(If->getCond());
   if (!IfCond.E) {
     // This isn't an availability checking 'if', we can just continue.
-    return Base::TraverseIfStmt(If);
+    return DynamicRecursiveASTVisitor::TraverseIfStmt(If);
   }
 
   VersionTuple CondVersion = IfCond.E->getVersion();

@@ -11,8 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjectYAML/GOFFYAML.h"
-#include "llvm/BinaryFormat/GOFF.h"
-#include <string.h>
 
 namespace llvm {
 namespace GOFFYAML {

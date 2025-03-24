@@ -146,7 +146,7 @@ TEST_F(ProfileSummaryInfoTest, TestNoProfile) {
   EXPECT_FALSE(PSI.isHotBlock(&BB0, &BFI));
   EXPECT_FALSE(PSI.isColdBlock(&BB0, &BFI));
 
-  CallBase &CS1 = cast<CallBase>(*BB1->getFirstNonPHI());
+  CallBase &CS1 = cast<CallBase>(*BB1->getFirstNonPHIIt());
   EXPECT_FALSE(PSI.isHotCallSite(CS1, &BFI));
   EXPECT_FALSE(PSI.isColdCallSite(CS1, &BFI));
 }
@@ -240,8 +240,8 @@ TEST_F(ProfileSummaryInfoTest, InstrProf) {
   EXPECT_TRUE(PSI.isColdBlockNthPercentile(10000, BB2, &BFI));
   EXPECT_TRUE(PSI.isColdBlockNthPercentile(10000, BB3, &BFI));
 
-  CallBase &CS1 = cast<CallBase>(*BB1->getFirstNonPHI());
-  auto *CI2 = BB2->getFirstNonPHI();
+  CallBase &CS1 = cast<CallBase>(*BB1->getFirstNonPHIIt());
+  BasicBlock::iterator CI2 = BB2->getFirstNonPHIIt();
   CallBase &CS2 = cast<CallBase>(*CI2);
 
   EXPECT_TRUE(PSI.isHotCallSite(CS1, &BFI));
@@ -336,8 +336,8 @@ TEST_F(ProfileSummaryInfoTest, SampleProf) {
   EXPECT_TRUE(PSI.isColdBlockNthPercentile(10000, BB2, &BFI));
   EXPECT_TRUE(PSI.isColdBlockNthPercentile(10000, BB3, &BFI));
 
-  CallBase &CS1 = cast<CallBase>(*BB1->getFirstNonPHI());
-  auto *CI2 = BB2->getFirstNonPHI();
+  CallBase &CS1 = cast<CallBase>(*BB1->getFirstNonPHIIt());
+  BasicBlock::iterator CI2 = BB2->getFirstNonPHIIt();
   // Manually attach branch weights metadata to the call instruction.
   SmallVector<uint32_t, 1> Weights;
   Weights.push_back(1000);

@@ -6,14 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/QualTypeNames.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
-#include "clang/AST/GlobalDecl.h"
 #include "clang/AST/Mangle.h"
-#include "clang/AST/QualTypeNames.h"
-
-#include <stdio.h>
-#include <memory>
 
 namespace clang {
 
@@ -395,9 +391,10 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
     Qualifiers Quals = QT.getQualifiers();
     // Fully qualify the pointee and class types.
     QT = getFullyQualifiedType(QT->getPointeeType(), Ctx, WithGlobalNsPrefix);
-    QualType Class = getFullyQualifiedType(QualType(MPT->getClass(), 0), Ctx,
-                                           WithGlobalNsPrefix);
-    QT = Ctx.getMemberPointerType(QT, Class.getTypePtr());
+    NestedNameSpecifier *Qualifier = getFullyQualifiedNestedNameSpecifier(
+        Ctx, MPT->getQualifier(), WithGlobalNsPrefix);
+    QT = Ctx.getMemberPointerType(QT, Qualifier,
+                                  MPT->getMostRecentCXXRecordDecl());
     // Add back the qualifiers.
     QT = Ctx.getQualifiedType(QT, Quals);
     return QT;

@@ -1,16 +1,16 @@
-; RUN: llc < %s -march=mips64 -mcpu=mips3 | \
+; RUN: llc < %s -mtriple=mips64 -mcpu=mips3 | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,PRE-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips4 | \
+; RUN: llc < %s -mtriple=mips64 -mcpu=mips4 | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,PRE-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64 | \
+; RUN: llc < %s -mtriple=mips64 -mcpu=mips64 | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,PRE-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64r2 | \
+; RUN: llc < %s -mtriple=mips64 -mcpu=mips64r2 | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,PRE-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64r3 | \
+; RUN: llc < %s -mtriple=mips64 -mcpu=mips64r3 | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,PRE-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64r5 | \
+; RUN: llc < %s -mtriple=mips64 -mcpu=mips64r5 | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,PRE-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64r6 | \
+; RUN: llc < %s -mtriple=mips64 -mcpu=mips64r6 | \
 ; RUN:   FileCheck %s -check-prefixes=ALL,R6
 
 ; Check that we don't emit redundant SLLs for sequences of

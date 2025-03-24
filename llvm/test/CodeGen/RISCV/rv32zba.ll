@@ -650,6 +650,115 @@ define i32 @addshl_5_8(i32 %a, i32 %b) {
   ret i32 %e
 }
 
+define i32 @srli_1_sh2add(ptr %0, i32 %1) {
+; RV32I-LABEL: srli_1_sh2add:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    andi a1, a1, -4
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    lw a0, 0(a0)
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: srli_1_sh2add:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    srli a1, a1, 1
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    lw a0, 0(a0)
+; RV32ZBA-NEXT:    ret
+  %3 = lshr i32 %1, 1
+  %4 = getelementptr inbounds i32, ptr %0, i32 %3
+  %5 = load i32, ptr %4, align 4
+  ret i32 %5
+}
+
+define i64 @srli_2_sh3add(ptr %0, i32 %1) {
+; RV32I-LABEL: srli_2_sh3add:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    andi a1, a1, -8
+; RV32I-NEXT:    add a1, a0, a1
+; RV32I-NEXT:    lw a0, 0(a1)
+; RV32I-NEXT:    lw a1, 4(a1)
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: srli_2_sh3add:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    srli a1, a1, 2
+; RV32ZBA-NEXT:    sh3add a1, a1, a0
+; RV32ZBA-NEXT:    lw a0, 0(a1)
+; RV32ZBA-NEXT:    lw a1, 4(a1)
+; RV32ZBA-NEXT:    ret
+  %3 = lshr i32 %1, 2
+  %4 = getelementptr inbounds i64, ptr %0, i32 %3
+  %5 = load i64, ptr %4, align 8
+  ret i64 %5
+}
+
+define signext i16 @srli_2_sh1add(ptr %0, i32 %1) {
+; RV32I-LABEL: srli_2_sh1add:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a1, a1, 1
+; RV32I-NEXT:    andi a1, a1, -2
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    lh a0, 0(a0)
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: srli_2_sh1add:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    srli a1, a1, 2
+; RV32ZBA-NEXT:    sh1add a0, a1, a0
+; RV32ZBA-NEXT:    lh a0, 0(a0)
+; RV32ZBA-NEXT:    ret
+  %3 = lshr i32 %1, 2
+  %4 = getelementptr inbounds i16, ptr %0, i32 %3
+  %5 = load i16, ptr %4, align 2
+  ret i16 %5
+}
+
+define i32 @srli_3_sh2add(ptr %0, i32 %1) {
+; RV32I-LABEL: srli_3_sh2add:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a1, a1, 1
+; RV32I-NEXT:    andi a1, a1, -4
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    lw a0, 0(a0)
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: srli_3_sh2add:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    srli a1, a1, 3
+; RV32ZBA-NEXT:    sh2add a0, a1, a0
+; RV32ZBA-NEXT:    lw a0, 0(a0)
+; RV32ZBA-NEXT:    ret
+  %3 = lshr i32 %1, 3
+  %4 = getelementptr inbounds i32, ptr %0, i32 %3
+  %5 = load i32, ptr %4, align 4
+  ret i32 %5
+}
+
+define i64 @srli_4_sh3add(ptr %0, i32 %1) {
+; RV32I-LABEL: srli_4_sh3add:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a1, a1, 1
+; RV32I-NEXT:    andi a1, a1, -8
+; RV32I-NEXT:    add a1, a0, a1
+; RV32I-NEXT:    lw a0, 0(a1)
+; RV32I-NEXT:    lw a1, 4(a1)
+; RV32I-NEXT:    ret
+;
+; RV32ZBA-LABEL: srli_4_sh3add:
+; RV32ZBA:       # %bb.0:
+; RV32ZBA-NEXT:    srli a1, a1, 4
+; RV32ZBA-NEXT:    sh3add a1, a1, a0
+; RV32ZBA-NEXT:    lw a0, 0(a1)
+; RV32ZBA-NEXT:    lw a1, 4(a1)
+; RV32ZBA-NEXT:    ret
+  %3 = lshr i32 %1, 4
+  %4 = getelementptr inbounds i64, ptr %0, i32 %3
+  %5 = load i64, ptr %4, align 8
+  ret i64 %5
+}
+
 define i32 @mul_neg1(i32 %a) {
 ; CHECK-LABEL: mul_neg1:
 ; CHECK:       # %bb.0:

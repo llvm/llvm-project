@@ -22,7 +22,7 @@ void ExceptionAnalyzer::ExceptionInfo::registerExceptions(
   if (Exceptions.empty())
     return;
   Behaviour = State::Throwing;
-  ThrownExceptions.insert(Exceptions.begin(), Exceptions.end());
+  ThrownExceptions.insert_range(Exceptions);
 }
 
 ExceptionAnalyzer::ExceptionInfo &ExceptionAnalyzer::ExceptionInfo::merge(
@@ -39,8 +39,7 @@ ExceptionAnalyzer::ExceptionInfo &ExceptionAnalyzer::ExceptionInfo::merge(
     Behaviour = State::Unknown;
 
   ContainsUnknown = ContainsUnknown || Other.ContainsUnknown;
-  ThrownExceptions.insert(Other.ThrownExceptions.begin(),
-                          Other.ThrownExceptions.end());
+  ThrownExceptions.insert_range(Other.ThrownExceptions);
   return *this;
 }
 
@@ -178,7 +177,9 @@ bool isFunctionPointerConvertible(QualType From, QualType To) {
 
     // Note: converting Derived::* to Base::* is a different kind of conversion,
     // called Pointer-to-member conversion.
-    return FromMember->getClass() == ToMember->getClass() &&
+    return FromMember->getQualifier() == ToMember->getQualifier() &&
+           FromMember->getMostRecentCXXRecordDecl() ==
+               ToMember->getMostRecentCXXRecordDecl() &&
            FromMember->getPointeeType() == ToMember->getPointeeType();
   }
 
@@ -219,8 +220,8 @@ bool isQualificationConvertiblePointer(QualType From, QualType To,
 
     if (P1->isMemberPointerType())
       return P2->isMemberPointerType() &&
-             P1->getAs<MemberPointerType>()->getClass() ==
-                 P2->getAs<MemberPointerType>()->getClass();
+             P1->getAs<MemberPointerType>()->getMostRecentCXXRecordDecl() ==
+                 P2->getAs<MemberPointerType>()->getMostRecentCXXRecordDecl();
 
     if (P1->isConstantArrayType())
       return P2->isConstantArrayType() &&
@@ -320,6 +321,12 @@ bool isQualificationConvertiblePointer(QualType From, QualType To,
 } // namespace
 
 static bool canThrow(const FunctionDecl *Func) {
+  // consteval specifies that every call to the function must produce a
+  // compile-time constant, which cannot evaluate a throw expression without
+  // producing a compilation error.
+  if (Func->isConsteval())
+    return false;
+
   const auto *FunProto = Func->getType()->getAs<FunctionProtoType>();
   if (!FunProto)
     return true;
@@ -418,7 +425,7 @@ ExceptionAnalyzer::ExceptionInfo::filterIgnoredExceptions(
       if (TD->getDeclName().isIdentifier()) {
         if ((IgnoreBadAlloc &&
              (TD->getName() == "bad_alloc" && TD->isInStdNamespace())) ||
-            (IgnoredTypes.count(TD->getName()) > 0))
+            (IgnoredTypes.contains(TD->getName())))
           TypesToDelete.push_back(T);
       }
     }
@@ -449,7 +456,8 @@ void ExceptionAnalyzer::ExceptionInfo::reevaluateBehaviour() {
 ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     const FunctionDecl *Func, const ExceptionInfo::Throwables &Caught,
     llvm::SmallSet<const FunctionDecl *, 32> &CallStack) {
-  if (!Func || CallStack.count(Func) || (!CallStack.empty() && !canThrow(Func)))
+  if (!Func || CallStack.contains(Func) ||
+      (!CallStack.empty() && !canThrow(Func)))
     return ExceptionInfo::createNonThrowing();
 
   if (const Stmt *Body = Func->getBody()) {
@@ -507,7 +515,7 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     for (unsigned I = 0; I < Try->getNumHandlers(); ++I) {
       const CXXCatchStmt *Catch = Try->getHandler(I);
 
-      // Everything is catched through 'catch(...)'.
+      // Everything is caught through 'catch(...)'.
       if (!Catch->getExceptionDecl()) {
         ExceptionInfo Rethrown = throwsException(
             Catch->getHandlerBlock(), Uncaught.getExceptionTypes(), CallStack);

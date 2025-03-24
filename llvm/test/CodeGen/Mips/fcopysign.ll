@@ -1,12 +1,12 @@
-; RUN: llc  < %s -verify-machineinstrs -march=mipsel -mcpu=mips32 \
+; RUN: llc  < %s -verify-machineinstrs -mtriple=mipsel -mcpu=mips32 \
 ; RUN:   | FileCheck %s -check-prefix=32
-; RUN: llc  < %s -verify-machineinstrs -march=mipsel -mcpu=mips32r2 \
+; RUN: llc  < %s -verify-machineinstrs -mtriple=mipsel -mcpu=mips32r2 \
 ; RUN:   | FileCheck %s -check-prefix=32R2
-; RUN: llc  < %s -verify-machineinstrs -march=mips64el -mcpu=mips4 -target-abi=n64 \
+; RUN: llc  < %s -verify-machineinstrs -mtriple=mips64el -mcpu=mips4 -target-abi=n64 \
 ; RUN:   | FileCheck %s -check-prefix=64
-; RUN: llc  < %s -verify-machineinstrs -march=mips64el -mcpu=mips64 -target-abi=n64 \
+; RUN: llc  < %s -verify-machineinstrs -mtriple=mips64el -mcpu=mips64 -target-abi=n64 \
 ; RUN:   | FileCheck %s -check-prefix=64
-; RUN: llc  < %s -verify-machineinstrs -march=mips64el -mcpu=mips64r2 -target-abi=n64 \
+; RUN: llc  < %s -verify-machineinstrs -mtriple=mips64el -mcpu=mips64r2 -target-abi=n64 \
 ; RUN:   | FileCheck %s -check-prefix=64R2
 
 define double @func0(double %d0, double %d1) nounwind readnone {
