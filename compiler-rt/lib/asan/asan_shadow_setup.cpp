@@ -115,7 +115,7 @@ void InitializeShadowMemory() {
     //   == 256MB) is a significant chunk of the address space; reclaiming it
     //   by disabling ASLR might allow chonky binaries to run.
     // - On 64-bit systems, some settings (e.g., for Linux, unlimited stack
-    //   size plus maximum ASLR entropy) can lead to an incompatible layout.
+    //   size plus 31+ bits of entropy) can lead to an incompatible layout.
     TryReExecWithoutASLR();
 
     Report(
