@@ -1972,7 +1972,7 @@ public:
         if (CurrI->mayHaveSideEffects() || CurrI->mayReadFromMemory())
           return;
         ToHoist.push_back(CurrI);
-        WorkList.insert(CurrI->op_begin(), CurrI->op_end());
+        WorkList.insert_range(CurrI->operands());
       }
 
       sort(ToHoist, [this](Instruction *A, Instruction *B) {

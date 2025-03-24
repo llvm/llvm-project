@@ -5342,15 +5342,19 @@ getScalarizationOverhead(const TargetTransformInfo &TTI, Type *ScalarTy,
   InstructionCost Cost = 0;
   if (!ForPoisonSrc && Insert) {
     // Handle insert into non-poison vector.
-    unsigned LeftMostBit = NewDemandedElts.countr_zero();
-    NewDemandedElts.clearBit(LeftMostBit);
-    Cost += TTI.getVectorInstrCost(Instruction::InsertElement, Ty, CostKind,
-                                   LeftMostBit, Constant::getNullValue(Ty));
+    for (unsigned I : seq(DemandedElts.getBitWidth())) {
+      if (!DemandedElts[I])
+        continue;
+      Cost += TTI.getVectorInstrCost(Instruction::InsertElement, Ty, CostKind,
+                                     I, Constant::getNullValue(Ty),
+                                     VL.empty() ? nullptr : VL[I]);
+    }
+    NewDemandedElts.clearAllBits();
+  } else if (!NewDemandedElts.isZero()) {
+    Cost += TTI.getScalarizationOverhead(Ty, NewDemandedElts, Insert, Extract,
+                                         CostKind, VL);
   }
-  return Cost + (NewDemandedElts.isZero()
-                     ? 0
-                     : TTI.getScalarizationOverhead(Ty, NewDemandedElts, Insert,
-                                                    Extract, CostKind, VL));
+  return Cost;
 }
 
 /// Correctly creates insert_subvector, checking that the index is multiple of

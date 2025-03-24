@@ -382,6 +382,8 @@ Target Specific Changes
 AMDGPU Support
 ^^^^^^^^^^^^^^
 
+- Bump the default code object version to 6. ROCm 6.3 is required to run any program compiled with COV6.
+
 NVPTX Support
 ^^^^^^^^^^^^^^
 

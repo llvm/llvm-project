@@ -547,7 +547,7 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
           // which evaluate exactly to a single unadorned symbol. Attach the
           // original VariantKind to SymA of the result.
           if (Res.getRefKind() != MCSymbolRefExpr::VK_None || !Res.getSymA() ||
-              Res.getSymB() || Res.getConstant())
+              Res.getSubSym() || Res.getConstant())
             return false;
           Res =
               MCValue::get(MCSymbolRefExpr::create(&Res.getSymA()->getSymbol(),
@@ -558,7 +558,7 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
           return true;
 
         const MCSymbolRefExpr *A = Res.getSymA();
-        const MCSymbolRefExpr *B = Res.getSymB();
+        auto *B = Res.getSubSym();
         // FIXME: This is small hack. Given
         // a = b + 4
         // .long a
@@ -592,7 +592,7 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
       break;
     case MCUnaryExpr::Minus:
       /// -(a - b + const) ==> (b - a - const)
-      if (Value.getSymA() && !Value.getSymB())
+      if (Value.getSymA() && !Value.getSubSym())
         return false;
 
       // The cast avoids undefined behavior if the constant is INT64_MIN.

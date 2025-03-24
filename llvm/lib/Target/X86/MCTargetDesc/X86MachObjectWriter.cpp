@@ -139,13 +139,13 @@ void X86MachObjectWriter::RecordX86_64Relocation(
       IsExtern = 1;
       Type = MachO::X86_64_RELOC_BRANCH;
     }
-  } else if (Target.getSymB()) { // A - B + constant
+  } else if (Target.getSubSym()) { // A - B + constant
     const MCSymbol *A = &Target.getSymA()->getSymbol();
     if (A->isTemporary())
       A = &Writer->findAliasedSymbol(*A);
     const MCSymbol *A_Base = Writer->getAtom(*A);
 
-    const MCSymbol *B = &Target.getSymB()->getSymbol();
+    const MCSymbol *B = Target.getSubSym();
     if (B->isTemporary())
       B = &Writer->findAliasedSymbol(*B);
     const MCSymbol *B_Base = Writer->getAtom(*B);
@@ -385,9 +385,7 @@ bool X86MachObjectWriter::recordScatteredRelocation(MachObjectWriter *Writer,
   FixedValue += SecAddr;
   uint32_t Value2 = 0;
 
-  if (const MCSymbolRefExpr *B = Target.getSymB()) {
-    const MCSymbol *SB = &B->getSymbol();
-
+  if (const MCSymbol *SB = Target.getSubSym()) {
     if (!SB->getFragment()) {
       Asm.getContext().reportError(
           Fixup.getLoc(),
@@ -474,13 +472,12 @@ void X86MachObjectWriter::recordTLVPRelocation(MachObjectWriter *Writer,
   // subtraction from the picbase. For 32-bit pic the addend is the difference
   // between the picbase and the next address.  For 32-bit static the addend is
   // zero.
-  if (auto *SymB = Target.getSymB()) {
+  if (auto *SymB = Target.getSubSym()) {
     // If this is a subtraction then we're pcrel.
     uint32_t FixupAddress =
         Writer->getFragmentAddress(Asm, Fragment) + Fixup.getOffset();
     IsPCRel = 1;
-    FixedValue = FixupAddress -
-                 Writer->getSymbolAddress(SymB->getSymbol(), Asm) +
+    FixedValue = FixupAddress - Writer->getSymbolAddress(*SymB, Asm) +
                  Target.getConstant();
     FixedValue += 1ULL << Log2Size;
   } else {
@@ -514,7 +511,7 @@ void X86MachObjectWriter::RecordX86Relocation(MachObjectWriter *Writer,
   // If this is a difference or a defined symbol plus an offset, then we need a
   // scattered relocation entry. Differences always require scattered
   // relocations.
-  if (Target.getSymB()) {
+  if (Target.getSubSym()) {
     recordScatteredRelocation(Writer, Asm, Fragment, Fixup, Target, Log2Size,
                               FixedValue);
     return;

@@ -455,6 +455,7 @@ void Analysis::computeDetailedInfo(BinaryFunction &BF,
   for (auto Report : Result.Diagnostics) {
     LLVM_DEBUG(
         { traceInst(BC, "Attaching clobbering info to", Report->Location); });
+    (void)BC;
     Report->setOverwritingInstrs(PRWIA.getLastClobberingInsts(
         Report->Location, BF, Report->getAffectedRegisters()));
   }
