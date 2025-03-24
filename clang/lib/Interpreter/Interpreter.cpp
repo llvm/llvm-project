@@ -141,6 +141,37 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
   return std::move(Clang);
 }
 
+static llvm::Error HandleFrontendOptions(const CompilerInstance &CI) {
+  const auto &FrontendOpts = CI.getFrontendOpts();
+
+  if (FrontendOpts.ShowHelp) {
+    driver::getDriverOptTable().printHelp(
+        llvm::outs(), "clang -cc1 [options] file...",
+        "LLVM 'Clang' Compiler: http://clang.llvm.org",
+        /*ShowHidden=*/false, /*ShowAllAliases=*/false,
+        llvm::opt::Visibility(driver::options::CC1Option));
+    return llvm::createStringError(llvm::errc::not_supported, "Help displayed");
+  }
+
+  if (FrontendOpts.ShowVersion) {
+    llvm::cl::PrintVersionMessage();
+    return llvm::createStringError(llvm::errc::not_supported, "Version displayed");
+  }
+
+  if (!FrontendOpts.LLVMArgs.empty()) {
+    unsigned NumArgs = FrontendOpts.LLVMArgs.size();
+    auto Args = std::make_unique<const char*[]>(NumArgs + 2);
+    Args[0] = "clang-repl (LLVM option parsing)";
+    for (unsigned i = 0; i != NumArgs; ++i)
+      Args[i + 1] = FrontendOpts.LLVMArgs[i].c_str();
+    Args[NumArgs + 1] = nullptr;
+    llvm::errs() << "Parsing LLVM backend options via cl::ParseCommandLineOptions...\n";
+    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get());
+  }
+
+  return llvm::Error::success();
+}
+
 } // anonymous namespace
 
 namespace clang {
@@ -451,7 +482,12 @@ const char *const Runtimes = R"(
 
 llvm::Expected<std::unique_ptr<Interpreter>>
 Interpreter::create(std::unique_ptr<CompilerInstance> CI) {
-  llvm::Error Err = llvm::Error::success();
+
+  llvm::Error Err = HandleFrontendOptions(*CI);
+  if (Err) {
+    return std::move(Err);
+  }
+
   auto Interp =
       std::unique_ptr<Interpreter>(new Interpreter(std::move(CI), Err));
   if (Err)
