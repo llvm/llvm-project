@@ -12,7 +12,9 @@
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
+#include "llvm/MC/MCParser/MCMasmParser.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCStreamer.h"
@@ -501,9 +503,8 @@ bool COFFMasmParser::parseDirectiveProc(StringRef Directive, SMLoc Loc) {
   if (Proc.Distance == PROC_DISTANCE_FAR)
     Sym->setIsFarProc();
 
-  getContext().setDefaultRetType(Proc.Distance == PROC_DISTANCE_NEAR
-                                     ? MCContext::IsNear
-                                     : MCContext::IsFar);
+  cast<MCMasmParser>(getParser())
+      .setDefaultRetIsFar(Proc.Distance == PROC_DISTANCE_FAR);
 
   if (Proc.IsFramed) {
     getStreamer().emitWinCFIStartProc(Sym, Loc);
@@ -529,11 +530,10 @@ bool COFFMasmParser::parseDirectiveEndProc(StringRef Directive, SMLoc Loc) {
     getStreamer().emitWinCFIEndProc(Loc);
   }
   CurrentProcedures.pop_back();
-  getContext().setDefaultRetType(
-      (CurrentProcedures.empty() ||
-       CurrentProcedures.back().Distance == PROC_DISTANCE_NEAR)
-          ? MCContext::IsNear
-          : MCContext::IsFar);
+  cast<MCMasmParser>(getParser())
+      .setDefaultRetIsFar(!CurrentProcedures.empty() &&
+                          CurrentProcedures.back().Distance ==
+                              PROC_DISTANCE_FAR);
   return false;
 }
 

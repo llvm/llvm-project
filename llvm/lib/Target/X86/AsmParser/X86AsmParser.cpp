@@ -25,6 +25,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
+#include "llvm/MC/MCParser/MCMasmParser.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -3451,7 +3452,7 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
     // MASM implicitly converts "ret" to "retf" in far procedures; this is
     // reflected in the default return type in the MCContext.
     if (PatchedName == "ret" &&
-        getContext().getDefaultRetType() == MCContext::IsFar)
+        cast<MCMasmParser>(getParser()).getDefaultRetIsFar())
       PatchedName = "retf";
   }
 

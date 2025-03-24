@@ -97,12 +97,8 @@ public:
     IsDXContainer
   };
 
-  enum DefaultRetType { IsNear, IsFar };
-
 private:
   Environment Env;
-
-  DefaultRetType DefaultRet = IsNear;
 
   /// The name of the Segment where Swift5 Reflection Section data will be
   /// outputted
@@ -397,9 +393,6 @@ public:
   ~MCContext();
 
   Environment getObjectFileType() const { return Env; }
-
-  DefaultRetType getDefaultRetType() const { return DefaultRet; }
-  void setDefaultRetType(DefaultRetType DR) { DefaultRet = DR; }
 
   const StringRef &getSwift5ReflectionSegmentName() const {
     return Swift5ReflectionSegmentName;
