@@ -376,12 +376,10 @@ struct ConvertConstructorToDeductionGuideTransform {
         if (NestedPattern)
           Args.addOuterRetainedLevels(NestedPattern->getTemplateDepth());
         auto [Depth, Index] = getDepthAndIndex(Param);
-        // Depth can still be 0 if FTD belongs to an explicit class template
-        // specialization with an empty template parameter list. In that case,
-        // we don't want the NewDepth to overflow, and it should remain 0.
-        assert(Depth ||
-               cast<ClassTemplateSpecializationDecl>(FTD->getDeclContext())
-                   ->isExplicitSpecialization());
+        // Depth can be 0 if FTD belongs to a non-template class/a class
+        // template specialization with an empty template parameter list. In
+        // that case, we don't want the NewDepth to overflow, and it should
+        // remain 0.
         NamedDecl *NewParam = transformTemplateParameter(
             SemaRef, DC, Param, Args, Index + Depth1IndexAdjustment,
             Depth ? Depth - 1 : 0);
