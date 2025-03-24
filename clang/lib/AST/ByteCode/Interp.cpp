@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Interp.h"
+#include "Compiler.h"
 #include "Function.h"
 #include "InterpFrame.h"
 #include "InterpShared.h"
@@ -202,68 +203,6 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
   S.Note(VD->getLocation(), diag::note_declared_at);
 }
 
-static bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                        AccessKinds AK) {
-  if (Ptr.isActive())
-    return true;
-
-  assert(Ptr.inUnion());
-  assert(Ptr.isField() && Ptr.getField());
-
-  Pointer U = Ptr.getBase();
-  Pointer C = Ptr;
-  while (!U.isRoot() && !U.isActive()) {
-    // A little arbitrary, but this is what the current interpreter does.
-    // See the AnonymousUnion test in test/AST/ByteCode/unions.cpp.
-    // GCC's output is more similar to what we would get without
-    // this condition.
-    if (U.getRecord() && U.getRecord()->isAnonymousUnion())
-      break;
-
-    C = U;
-    U = U.getBase();
-  }
-  assert(C.isField());
-
-  // Consider:
-  // union U {
-  //   struct {
-  //     int x;
-  //     int y;
-  //   } a;
-  // }
-  //
-  // When activating x, we will also activate a. If we now try to read
-  // from y, we will get to CheckActive, because y is not active. In that
-  // case, our U will be a (not a union). We return here and let later code
-  // handle this.
-  if (!U.getFieldDesc()->isUnion())
-    return true;
-
-  // Get the inactive field descriptor.
-  assert(!C.isActive());
-  const FieldDecl *InactiveField = C.getField();
-  assert(InactiveField);
-
-  // Find the active field of the union.
-  const Record *R = U.getRecord();
-  assert(R && R->isUnion() && "Not a union");
-
-  const FieldDecl *ActiveField = nullptr;
-  for (const Record::Field &F : R->fields()) {
-    const Pointer &Field = U.atField(F.Offset);
-    if (Field.isActive()) {
-      ActiveField = Field.getField();
-      break;
-    }
-  }
-
-  const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_access_inactive_union_member)
-      << AK << InactiveField << !ActiveField << ActiveField;
-  return false;
-}
-
 static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                            AccessKinds AK) {
   if (auto ID = Ptr.getDeclID()) {
@@ -375,7 +314,68 @@ bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
 
   if (const Expr *Base = Ptr.getDeclDesc()->asExpr())
     return isa<StringLiteral>(Base);
+  return false;
+}
 
+bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                 AccessKinds AK) {
+  if (Ptr.isActive())
+    return true;
+
+  assert(Ptr.inUnion());
+  assert(Ptr.isField() && Ptr.getField());
+
+  Pointer U = Ptr.getBase();
+  Pointer C = Ptr;
+  while (!U.isRoot() && !U.isActive()) {
+    // A little arbitrary, but this is what the current interpreter does.
+    // See the AnonymousUnion test in test/AST/ByteCode/unions.cpp.
+    // GCC's output is more similar to what we would get without
+    // this condition.
+    if (U.getRecord() && U.getRecord()->isAnonymousUnion())
+      break;
+
+    C = U;
+    U = U.getBase();
+  }
+  assert(C.isField());
+
+  // Consider:
+  // union U {
+  //   struct {
+  //     int x;
+  //     int y;
+  //   } a;
+  // }
+  //
+  // When activating x, we will also activate a. If we now try to read
+  // from y, we will get to CheckActive, because y is not active. In that
+  // case, our U will be a (not a union). We return here and let later code
+  // handle this.
+  if (!U.getFieldDesc()->isUnion())
+    return true;
+
+  // Get the inactive field descriptor.
+  assert(!C.isActive());
+  const FieldDecl *InactiveField = C.getField();
+  assert(InactiveField);
+
+  // Find the active field of the union.
+  const Record *R = U.getRecord();
+  assert(R && R->isUnion() && "Not a union");
+
+  const FieldDecl *ActiveField = nullptr;
+  for (const Record::Field &F : R->fields()) {
+    const Pointer &Field = U.atField(F.Offset);
+    if (Field.isActive()) {
+      ActiveField = Field.getField();
+      break;
+    }
+  }
+
+  const SourceInfo &Loc = S.Current->getSource(OpPC);
+  S.FFDiag(Loc, diag::note_constexpr_access_inactive_union_member)
+      << AK << InactiveField << !ActiveField << ActiveField;
   return false;
 }
 
@@ -496,6 +496,8 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
 
 static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isStatic() || !Ptr.isBlockPointer())
+    return true;
+  if (!Ptr.getDeclID())
     return true;
   return CheckConstant(S, OpPC, Ptr.getDeclDesc());
 }
@@ -977,17 +979,7 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
   if (AllocForm == DeleteForm)
     return true;
 
-  QualType TypeToDiagnose;
-  // We need to shuffle things around a bit here to get a better diagnostic,
-  // because the expression we allocated the block for was of type int*,
-  // but we want to get the array size right.
-  if (D->isArray()) {
-    QualType ElemQT = D->getType()->getPointeeType();
-    TypeToDiagnose = S.getASTContext().getConstantArrayType(
-        ElemQT, APInt(64, static_cast<uint64_t>(D->getNumElems()), false),
-        nullptr, ArraySizeModifier::Normal, 0);
-  } else
-    TypeToDiagnose = D->getType()->getPointeeType();
+  QualType TypeToDiagnose = D->getDataType(S.getASTContext());
 
   const SourceInfo &E = S.Current->getSource(OpPC);
   S.FFDiag(E, diag::note_constexpr_new_delete_mismatch)
@@ -1355,6 +1347,17 @@ static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
   return false;
 }
 
+static bool checkDestructor(InterpState &S, CodePtr OpPC, const Function *Func,
+                            const Pointer &ThisPtr) {
+  return CheckActive(S, OpPC, ThisPtr, AK_Destroy);
+}
+
+static void compileFunction(InterpState &S, const Function *Func) {
+  Compiler<ByteCodeEmitter>(S.getContext(), S.P)
+      .compileFunc(Func->getDecl()->getMostRecentDecl(),
+                   const_cast<Function *>(Func));
+}
+
 bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
              uint32_t VarArgSize) {
   if (Func->hasThisPointer()) {
@@ -1376,6 +1379,9 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
     if (S.checkingPotentialConstantExpression())
       return false;
   }
+
+  if (!Func->isFullyCompiled())
+    compileFunction(S, Func);
 
   if (!CheckCallable(S, OpPC, Func))
     return false;
@@ -1401,7 +1407,6 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   S.Current = FrameBefore;
   return false;
 }
-
 bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
           uint32_t VarArgSize) {
   assert(Func);
@@ -1433,14 +1438,20 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
     } else {
       if (!CheckInvoke(S, OpPC, ThisPtr))
         return cleanup();
-      if (!Func->isConstructor() &&
+      if (!Func->isConstructor() && !Func->isDestructor() &&
+          !Func->isCopyOrMoveOperator() &&
           !CheckActive(S, OpPC, ThisPtr, AK_MemberCall))
         return false;
     }
 
     if (Func->isConstructor() && !checkConstructor(S, OpPC, Func, ThisPtr))
       return false;
+    if (Func->isDestructor() && !checkDestructor(S, OpPC, Func, ThisPtr))
+      return false;
   }
+
+  if (!Func->isFullyCompiled())
+    compileFunction(S, Func);
 
   if (!CheckCallable(S, OpPC, Func))
     return cleanup();
@@ -1483,6 +1494,9 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   size_t ThisOffset = ArgSize - (Func->hasRVO() ? primSize(PT_Ptr) : 0);
   Pointer &ThisPtr = S.Stk.peek<Pointer>(ThisOffset);
   const FunctionDecl *Callee = Func->getDecl();
+
+  if (!Func->isFullyCompiled())
+    compileFunction(S, Func);
 
   // C++2a [class.abstract]p6:
   //   the effect of making a virtual call to a pure virtual function [...] is
@@ -1641,15 +1655,7 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
     return false;
 
   const auto *NewExpr = cast<CXXNewExpr>(E);
-  QualType StorageType = Ptr.getType();
-
-  if ((isa_and_nonnull<CXXNewExpr>(Ptr.getFieldDesc()->asExpr()) ||
-       isa_and_nonnull<CXXMemberCallExpr>(Ptr.getFieldDesc()->asExpr())) &&
-      StorageType->isPointerType()) {
-    // FIXME: Are there other cases where this is a problem?
-    StorageType = StorageType->getPointeeType();
-  }
-
+  QualType StorageType = Ptr.getFieldDesc()->getDataType(S.getASTContext());
   const ASTContext &ASTCtx = S.getASTContext();
   QualType AllocType;
   if (ArraySize) {

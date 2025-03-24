@@ -543,11 +543,17 @@ module std [system] {
     }
     module ranges_fill_n                          { header "__algorithm/ranges_fill_n.h" }
     module ranges_fill                            { header "__algorithm/ranges_fill.h" }
-    module ranges_find_end                        { header "__algorithm/ranges_find_end.h" }
+    module ranges_find_end {
+      header "__algorithm/ranges_find_end.h"
+      export std.ranges.subrange // return type
+    }
     module ranges_find_first_of                   { header "__algorithm/ranges_find_first_of.h" }
     module ranges_find_if_not                     { header "__algorithm/ranges_find_if_not.h" }
     module ranges_find_if                         { header "__algorithm/ranges_find_if.h" }
-    module ranges_find_last                       { header "__algorithm/ranges_find_last.h" }
+    module ranges_find_last {
+      header "__algorithm/ranges_find_last.h"
+      export std.ranges.subrange // return type
+    }
     module ranges_find                            { header "__algorithm/ranges_find.h" }
     module ranges_fold                            { header "__algorithm/ranges_fold.h" }
     module ranges_for_each_n {
@@ -681,6 +687,7 @@ module std [system] {
     }
     module ranges_partition {
       header "__algorithm/ranges_partition.h"
+      export std.ranges.subrange // return type
     }
     module ranges_pop_heap {
       header "__algorithm/ranges_pop_heap.h"
@@ -708,6 +715,7 @@ module std [system] {
     }
     module ranges_remove {
       header "__algorithm/ranges_remove.h"
+      export std.ranges.subrange // return type
     }
     module ranges_replace_copy_if {
       header "__algorithm/ranges_replace_copy_if.h"
@@ -732,12 +740,18 @@ module std [system] {
     }
     module ranges_rotate_copy {
       header "__algorithm/ranges_rotate_copy.h"
-      export std.algorithm.in_out_result
+      export std.ranges.subrange // return type
     }
     module ranges_rotate                          { header "__algorithm/ranges_rotate.h" }
     module ranges_sample                          { header "__algorithm/ranges_sample.h" }
-    module ranges_search_n                        { header "__algorithm/ranges_search_n.h" }
-    module ranges_search                          { header "__algorithm/ranges_search.h" }
+    module ranges_search_n {
+      header "__algorithm/ranges_search_n.h"
+      export std.ranges.subrange // return type
+    }
+    module ranges_search {
+      header "__algorithm/ranges_search.h"
+      export std.ranges.subrange // return type
+    }
     module ranges_set_difference {
       header "__algorithm/ranges_set_difference.h"
       export std.functional.ranges_operations
@@ -773,6 +787,7 @@ module std [system] {
     }
     module ranges_stable_partition {
       header "__algorithm/ranges_stable_partition.h"
+      export std.ranges.subrange // return type
     }
     module ranges_stable_sort {
       header "__algorithm/ranges_stable_sort.h"
@@ -925,10 +940,7 @@ module std [system] {
     module to_chars                   { header "__charconv/to_chars.h" }
     module to_chars_base_10           { header "__charconv/to_chars_base_10.h" }
     module to_chars_floating_point    { header "__charconv/to_chars_floating_point.h" }
-    module to_chars_integral          {
-      header "__charconv/to_chars_integral.h"
-      export std.charconv.to_chars_result
-    }
+    module to_chars_integral          { header "__charconv/to_chars_integral.h" }
     module to_chars_result            { header "__charconv/to_chars_result.h" }
     module traits                     { header "__charconv/traits.h" }
 
@@ -1286,6 +1298,19 @@ module std [system] {
     export *
   }
 
+  module flat_set {
+    module flat_set                       {
+      header "__flat_set/flat_set.h"
+      export std.vector.vector
+      export std.vector.fwd
+    }
+    module ra_iterator                    { header "__flat_set/ra_iterator.h" }
+
+    header "flat_set"
+    export std.flat_map.sorted_unique
+    export *
+  }
+
   module format {
     module buffer                             {
       header "__format/buffer.h"
@@ -1382,7 +1407,10 @@ module std [system] {
       header "__functional/not_fn.h"
       export std.functional.perfect_forward // inherited from and using its operators
     }
-    module operations                   { header "__functional/operations.h" }
+    module operations {
+      header "__functional/operations.h"
+      export std_core.fwd.functional
+    }
     module perfect_forward {
       header "__functional/perfect_forward.h"
       export std.tuple
@@ -1548,6 +1576,7 @@ module std [system] {
   }
 
   module map {
+    module fwd { header "__fwd/map.h" }
     header "map"
     export *
   }
@@ -1905,6 +1934,7 @@ module std [system] {
   }
 
   module set {
+    module fwd { header "__fwd/set.h" }
     header "set"
     export *
   }
@@ -1972,7 +2002,7 @@ module std [system] {
       export std.utility.element_count // used as part of the constexpr C function's API
     }
     module extern_template_lists    { header "__string/extern_template_lists.h" }
-    module fwd                      {  header "__fwd/string.h" }
+    module fwd                      { header "__fwd/string.h" }
 
     header "string"
     export *
@@ -2285,6 +2315,10 @@ module std [system] {
   }
   module internal_assert {
     header "__assert"
+    export *
+  }
+  module assertion_handler {
+    header "__assertion_handler" // generated via CMake
     export *
   }
 

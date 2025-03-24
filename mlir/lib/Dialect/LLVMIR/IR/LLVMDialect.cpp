@@ -2123,6 +2123,57 @@ OpFoldResult LLVM::AddressOfOp::fold(FoldAdaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// LLVM::DSOLocalEquivalentOp
+//===----------------------------------------------------------------------===//
+
+LLVMFuncOp
+DSOLocalEquivalentOp::getFunction(SymbolTableCollection &symbolTable) {
+  return dyn_cast_or_null<LLVMFuncOp>(symbolTable.lookupSymbolIn(
+      parentLLVMModule(*this), getFunctionNameAttr()));
+}
+
+AliasOp DSOLocalEquivalentOp::getAlias(SymbolTableCollection &symbolTable) {
+  return dyn_cast_or_null<AliasOp>(symbolTable.lookupSymbolIn(
+      parentLLVMModule(*this), getFunctionNameAttr()));
+}
+
+LogicalResult
+DSOLocalEquivalentOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  Operation *symbol = symbolTable.lookupSymbolIn(parentLLVMModule(*this),
+                                                 getFunctionNameAttr());
+  auto function = dyn_cast_or_null<LLVMFuncOp>(symbol);
+  auto alias = dyn_cast_or_null<AliasOp>(symbol);
+
+  if (!function && !alias)
+    return emitOpError(
+        "must reference a global defined by 'llvm.func' or 'llvm.mlir.alias'");
+
+  if (alias) {
+    if (alias.getInitializer()
+            .walk([&](AddressOfOp addrOp) {
+              if (addrOp.getGlobal(symbolTable))
+                return WalkResult::interrupt();
+              return WalkResult::advance();
+            })
+            .wasInterrupted())
+      return emitOpError("must reference an alias to a function");
+  }
+
+  if ((function && function.getLinkage() == LLVM::Linkage::ExternWeak) ||
+      (alias && alias.getLinkage() == LLVM::Linkage::ExternWeak))
+    return emitOpError(
+        "target function with 'extern_weak' linkage not allowed");
+
+  return success();
+}
+
+/// Fold a dso_local_equivalent operation to a dedicated dso_local_equivalent
+/// attribute.
+OpFoldResult DSOLocalEquivalentOp::fold(FoldAdaptor) {
+  return DSOLocalEquivalentAttr::get(getContext(), getFunctionNameAttr());
+}
+
+//===----------------------------------------------------------------------===//
 // Verifier for LLVM::ComdatOp.
 //===----------------------------------------------------------------------===//
 

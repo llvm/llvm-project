@@ -10,9 +10,11 @@
 #define LLVM_CLANG_CIR_DIALECT_BUILDER_CIRBASEBUILDER_H
 
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/Type.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -50,6 +52,15 @@ public:
     return cir::BoolAttr::get(getContext(), getBoolTy(), state);
   }
 
+  /// Create a for operation.
+  cir::ForOp createFor(
+      mlir::Location loc,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> condBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> stepBuilder) {
+    return create<cir::ForOp>(loc, condBuilder, bodyBuilder, stepBuilder);
+  }
+
   mlir::TypedAttr getConstPtrAttr(mlir::Type type, int64_t value) {
     auto valueAttr = mlir::IntegerAttr::get(
         mlir::IntegerType::get(type.getContext(), 64), value);
@@ -78,6 +89,60 @@ public:
     return create<cir::StoreOp>(loc, val, dst);
   }
 
+  mlir::Value createDummyValue(mlir::Location loc, mlir::Type type,
+                               clang::CharUnits alignment) {
+    auto addr = createAlloca(loc, getPointerTo(type), type, {},
+                             getSizeFromCharUnits(getContext(), alignment));
+    return createLoad(loc, addr);
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Cast/Conversion Operators
+  //===--------------------------------------------------------------------===//
+
+  mlir::Value createCast(mlir::Location loc, cir::CastKind kind,
+                         mlir::Value src, mlir::Type newTy) {
+    if (newTy == src.getType())
+      return src;
+    return create<cir::CastOp>(loc, newTy, kind, src);
+  }
+
+  mlir::Value createCast(cir::CastKind kind, mlir::Value src,
+                         mlir::Type newTy) {
+    if (newTy == src.getType())
+      return src;
+    return createCast(src.getLoc(), kind, src, newTy);
+  }
+
+  mlir::Value createIntCast(mlir::Value src, mlir::Type newTy) {
+    return createCast(cir::CastKind::integral, src, newTy);
+  }
+
+  mlir::Value createIntToPtr(mlir::Value src, mlir::Type newTy) {
+    return createCast(cir::CastKind::int_to_ptr, src, newTy);
+  }
+
+  mlir::Value createPtrToInt(mlir::Value src, mlir::Type newTy) {
+    return createCast(cir::CastKind::ptr_to_int, src, newTy);
+  }
+
+  mlir::Value createPtrToBoolCast(mlir::Value v) {
+    return createCast(cir::CastKind::ptr_to_bool, v, getBoolTy());
+  }
+
+  mlir::Value createBoolToInt(mlir::Value src, mlir::Type newTy) {
+    return createCast(cir::CastKind::bool_to_int, src, newTy);
+  }
+
+  mlir::Value createBitcast(mlir::Value src, mlir::Type newTy) {
+    return createCast(cir::CastKind::bitcast, src, newTy);
+  }
+
+  mlir::Value createBitcast(mlir::Location loc, mlir::Value src,
+                            mlir::Type newTy) {
+    return createCast(loc, cir::CastKind::bitcast, src, newTy);
+  }
+
   //
   // Block handling helpers
   // ----------------------
@@ -101,6 +166,16 @@ public:
     // it simple.
     return mlir::IntegerAttr::get(mlir::IntegerType::get(ctx, 64),
                                   size.getQuantity());
+  }
+
+  /// Create a loop condition.
+  cir::ConditionOp createCondition(mlir::Value condition) {
+    return create<cir::ConditionOp>(condition.getLoc(), condition);
+  }
+
+  /// Create a yield operation.
+  cir::YieldOp createYield(mlir::Location loc, mlir::ValueRange value = {}) {
+    return create<cir::YieldOp>(loc, value);
   }
 };
 

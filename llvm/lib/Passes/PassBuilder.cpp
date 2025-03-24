@@ -39,6 +39,7 @@
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/DomPrinter.h"
 #include "llvm/Analysis/DominanceFrontier.h"
+#include "llvm/Analysis/EphemeralValuesCache.h"
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/IRSimilarityIdentifier.h"
@@ -93,6 +94,7 @@
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
+#include "llvm/CodeGen/FEntryInserter.h"
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/FixupStatepointCallerSaved.h"
 #include "llvm/CodeGen/GCMetadata.h"
@@ -103,6 +105,7 @@
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/LiveDebugValuesPass.h"
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
@@ -1312,7 +1315,9 @@ Expected<GlobalMergeOptions> parseGlobalMergeOptions(StringRef Params) {
     else if (ParamName == "ignore-single-use")
       Result.IgnoreSingleUse = Enable;
     else if (ParamName == "merge-const")
-      Result.MergeConst = Enable;
+      Result.MergeConstantGlobals = Enable;
+    else if (ParamName == "merge-const-aggressive")
+      Result.MergeConstAggressive = Enable;
     else if (ParamName == "merge-external")
       Result.MergeExternal = Enable;
     else if (ParamName.consume_front("max-offset=")) {
@@ -1321,6 +1326,10 @@ Expected<GlobalMergeOptions> parseGlobalMergeOptions(StringRef Params) {
             formatv("invalid GlobalMergePass parameter '{0}' ", ParamName)
                 .str(),
             inconvertibleErrorCode());
+    } else {
+      return make_error<StringError>(
+          formatv("invalid global-merge pass parameter '{0}' ", Params).str(),
+          inconvertibleErrorCode());
     }
   }
   return Result;
