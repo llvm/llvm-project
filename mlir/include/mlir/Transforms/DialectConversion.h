@@ -899,7 +899,7 @@ public:
   /// results and value ranges must match. The given  operation is erased.
   void replaceOpWithMultiple(Operation *op, ArrayRef<ValueRange> newValues);
   template <typename RangeT>
-  void replaceOpWithMultiple(Operation *op, RangeT newValues) {
+  void replaceOpWithMultiple(Operation *op, RangeT&& newValues) {
     replaceOpWithMultiple(op,
                           ArrayRef(llvm::to_vector_of<ValueRange>(newValues)));
   }
