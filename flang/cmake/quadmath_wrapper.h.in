@@ -6,4 +6,18 @@
  *
  *===----------------------------------------------------------------------===*/
 
+#ifdef __clang_major__
+/*
+ * _Complex inside quadmath.h triggers c99-extension warnings,
+ * when this header file is included into a C++ file.
+ * Disable them just during the inclusion of quadmath.h.
+ */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc99-extensions"
+#endif
+
 #include ${FLANG_INCLUDE_QUADMATH_H}
+
+#ifdef __clang_major__
+#pragma clang diagnostic pop
+#endif
