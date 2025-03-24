@@ -44,9 +44,7 @@ bool XtensaMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                              const MCAssembler *Asm) const {
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
-
-  Res =
-      MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), specifier);
+  Res.setSpecifier(specifier);
   return !Res.getSymB();
 }
 
