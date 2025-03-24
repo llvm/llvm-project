@@ -435,6 +435,7 @@ set(files
   __fwd/byte.h
   __fwd/complex.h
   __fwd/deque.h
+  __fwd/fill.h
   __fwd/format.h
   __fwd/fstream.h
   __fwd/functional.h
