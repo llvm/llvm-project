@@ -39,6 +39,7 @@
 #  include "sanitizer_libc.h"
 #  include "sanitizer_procmaps.h"
 
+extern char **environ;
 extern char **p_xargv;
 
 namespace __sanitizer {
@@ -473,7 +474,7 @@ void SignalContext::InitPcSpBp() {
 
 void SignalContext::DumpAllRegisters(void *context) {}
 
-char **GetEnviron() { return nullptr; }
+char **GetEnviron() { return environ; }
 
 char **GetArgv() { return p_xargv; }
 
