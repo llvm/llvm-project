@@ -147,7 +147,7 @@ public:
     return createCast(loc, cir::CastKind::bitcast, src, newTy);
   }
 
-  mlir::Value createBinop(mlir::Value lhs, cir::BinOpKind kind,
+  mlir::Value createBinOp(mlir::Value lhs, cir::BinOpKind kind,
                           const llvm::APInt &rhs) {
     return create<cir::BinOp>(lhs.getLoc(), lhs.getType(), kind, lhs,
                               getConstAPInt(lhs.getLoc(), lhs.getType(), rhs));
