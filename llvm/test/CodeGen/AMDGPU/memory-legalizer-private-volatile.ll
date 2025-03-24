@@ -38,7 +38,10 @@ define amdgpu_kernel void @private_volatile_load_0(
 ;
 ; GFX7-LABEL: private_volatile_load_0:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_add_u32 s0, s0, s15
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GFX7-NEXT:    s_add_u32 s0, s0, s17
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX7-NEXT:    s_load_dword s6, s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x2
@@ -53,7 +56,7 @@ define amdgpu_kernel void @private_volatile_load_0(
 ;
 ; GFX10-WGP-LABEL: private_volatile_load_0:
 ; GFX10-WGP:       ; %bb.0: ; %entry
-; GFX10-WGP-NEXT:    s_add_u32 s0, s0, s15
+; GFX10-WGP-NEXT:    s_add_u32 s0, s0, s17
 ; GFX10-WGP-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-WGP-NEXT:    s_load_dword s6, s[8:9], 0x0
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x8
@@ -67,7 +70,7 @@ define amdgpu_kernel void @private_volatile_load_0(
 ;
 ; GFX10-CU-LABEL: private_volatile_load_0:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    s_add_u32 s0, s0, s15
+; GFX10-CU-NEXT:    s_add_u32 s0, s0, s17
 ; GFX10-CU-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-CU-NEXT:    s_load_dword s6, s[8:9], 0x0
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x8
@@ -152,7 +155,7 @@ define amdgpu_kernel void @private_volatile_load_0(
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-CU-NEXT:    s_endpgm
-    ptr addrspace(5) %in, ptr addrspace(1) %out) #0 {
+    ptr addrspace(5) %in, ptr addrspace(1) %out) {
 entry:
   %val = load volatile i32, ptr addrspace(5) %in, align 4
   store i32 %val, ptr addrspace(1) %out
@@ -190,7 +193,10 @@ define amdgpu_kernel void @private_volatile_load_1(
 ;
 ; GFX7-LABEL: private_volatile_load_1:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_add_u32 s0, s0, s15
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GFX7-NEXT:    s_add_u32 s0, s0, s17
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX7-NEXT:    s_load_dword s6, s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x2
@@ -207,7 +213,7 @@ define amdgpu_kernel void @private_volatile_load_1(
 ;
 ; GFX10-WGP-LABEL: private_volatile_load_1:
 ; GFX10-WGP:       ; %bb.0: ; %entry
-; GFX10-WGP-NEXT:    s_add_u32 s0, s0, s15
+; GFX10-WGP-NEXT:    s_add_u32 s0, s0, s17
 ; GFX10-WGP-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10-WGP-NEXT:    s_load_dword s7, s[8:9], 0x0
@@ -223,7 +229,7 @@ define amdgpu_kernel void @private_volatile_load_1(
 ;
 ; GFX10-CU-LABEL: private_volatile_load_1:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    s_add_u32 s0, s0, s15
+; GFX10-CU-NEXT:    s_add_u32 s0, s0, s17
 ; GFX10-CU-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10-CU-NEXT:    s_load_dword s7, s[8:9], 0x0
@@ -334,7 +340,7 @@ define amdgpu_kernel void @private_volatile_load_1(
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-CU-NEXT:    s_endpgm
-    ptr addrspace(5) %in, ptr addrspace(1) %out) #0 {
+    ptr addrspace(5) %in, ptr addrspace(1) %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %val.gep = getelementptr inbounds i32, ptr addrspace(5) %in, i32 %tid
@@ -365,7 +371,7 @@ define amdgpu_kernel void @private_volatile_store_0(
 ;
 ; GFX7-LABEL: private_volatile_store_0:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_add_u32 s0, s0, s15
+; GFX7-NEXT:    s_add_u32 s0, s0, s17
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX7-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dword s4, s[8:9], 0x2
@@ -380,7 +386,7 @@ define amdgpu_kernel void @private_volatile_store_0(
 ;
 ; GFX10-WGP-LABEL: private_volatile_store_0:
 ; GFX10-WGP:       ; %bb.0: ; %entry
-; GFX10-WGP-NEXT:    s_add_u32 s0, s0, s15
+; GFX10-WGP-NEXT:    s_add_u32 s0, s0, s17
 ; GFX10-WGP-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; GFX10-WGP-NEXT:    s_load_dword s4, s[8:9], 0x8
@@ -395,7 +401,7 @@ define amdgpu_kernel void @private_volatile_store_0(
 ;
 ; GFX10-CU-LABEL: private_volatile_store_0:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    s_add_u32 s0, s0, s15
+; GFX10-CU-NEXT:    s_add_u32 s0, s0, s17
 ; GFX10-CU-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; GFX10-CU-NEXT:    s_load_dword s4, s[8:9], 0x8
@@ -484,7 +490,7 @@ define amdgpu_kernel void @private_volatile_store_0(
 ; GFX12-CU-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
-    ptr addrspace(1) %in, ptr addrspace(5) %out) #0 {
+    ptr addrspace(1) %in, ptr addrspace(5) %out) {
 entry:
   %val = load i32, ptr addrspace(1) %in, align 4
   store volatile i32 %val, ptr addrspace(5) %out
@@ -515,7 +521,7 @@ define amdgpu_kernel void @private_volatile_store_1(
 ;
 ; GFX7-LABEL: private_volatile_store_1:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_add_u32 s0, s0, s15
+; GFX7-NEXT:    s_add_u32 s0, s0, s17
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX7-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -532,7 +538,7 @@ define amdgpu_kernel void @private_volatile_store_1(
 ;
 ; GFX10-WGP-LABEL: private_volatile_store_1:
 ; GFX10-WGP:       ; %bb.0: ; %entry
-; GFX10-WGP-NEXT:    s_add_u32 s0, s0, s15
+; GFX10-WGP-NEXT:    s_add_u32 s0, s0, s17
 ; GFX10-WGP-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; GFX10-WGP-NEXT:    s_load_dword s6, s[8:9], 0x8
@@ -548,7 +554,7 @@ define amdgpu_kernel void @private_volatile_store_1(
 ;
 ; GFX10-CU-LABEL: private_volatile_store_1:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    s_add_u32 s0, s0, s15
+; GFX10-CU-NEXT:    s_add_u32 s0, s0, s17
 ; GFX10-CU-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; GFX10-CU-NEXT:    s_load_dword s6, s[8:9], 0x8
@@ -658,7 +664,7 @@ define amdgpu_kernel void @private_volatile_store_1(
 ; GFX12-CU-NEXT:    scratch_store_b32 v1, v0, s0 scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
-    ptr addrspace(1) %in, ptr addrspace(5) %out) #0 {
+    ptr addrspace(1) %in, ptr addrspace(5) %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %val = load i32, ptr addrspace(1) %in, align 4
@@ -668,4 +674,3 @@ entry:
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x()
-attributes #0 = { "amdgpu-no-flat-scratch-init" }

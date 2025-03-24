@@ -90,10 +90,13 @@ bb:
   ret i32 %i9
 }
 
-define amdgpu_kernel void @s_add_co_br_user(i32 %i) #0 {
+define amdgpu_kernel void @s_add_co_br_user(i32 %i) {
 ; GFX7-LABEL: s_add_co_br_user:
 ; GFX7:       ; %bb.0: ; %bb
 ; GFX7-NEXT:    s_load_dword s2, s[8:9], 0x0
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_add_i32 s0, s2, s2
 ; GFX7-NEXT:    s_cmp_lt_u32 s0, s2
@@ -213,5 +216,3 @@ bb1:
   store volatile i32 10, ptr addrspace(1) null
   ret void
 }
-
-attributes #0 = { "amdgpu-no-flat-scratch-init" }
