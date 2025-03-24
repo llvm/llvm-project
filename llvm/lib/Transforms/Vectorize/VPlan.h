@@ -1031,8 +1031,6 @@ class VPInstructionWithType : public VPInstruction {
   /// Scalar result type produced by the recipe.
   Type *ResultTy;
 
-  Value *generate(VPTransformState &State);
-
 public:
   VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
                         Type *ResultTy, DebugLoc DL, const Twine &Name = "")
@@ -1048,16 +1046,16 @@ public:
   }
 
   VPInstruction *clone() override {
-    auto *New =
-        new VPInstructionWithType(getOpcode(), {getOperand(0)}, getResultType(),
-                                  getDebugLoc(), getName());
+    SmallVector<VPValue *, 2> Operands(operands());
+    auto *New = new VPInstructionWithType(
+        getOpcode(), Operands, getResultType(), getDebugLoc(), getName());
     New->setUnderlyingValue(getUnderlyingValue());
     return New;
   }
 
   void execute(VPTransformState &State) override;
 
-  /// Return the cost of this VPIRInstruction.
+  /// Return the cost of this VPInstruction.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override {
     // TODO: Compute accurate cost after retiring the legacy cost model.

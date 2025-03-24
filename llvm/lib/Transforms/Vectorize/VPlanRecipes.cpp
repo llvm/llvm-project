@@ -1069,26 +1069,22 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-Value *VPInstructionWithType::generate(VPTransformState &State) {
+void VPInstructionWithType::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
   assert(vputils::onlyFirstLaneUsed(this) &&
          "Codegen only implemented for first lane.");
   switch (getOpcode()) {
-  case Instruction::SExt:
   case Instruction::ZExt:
   case Instruction::Trunc: {
-    // Note: SExt/ZExt not used yet.
     Value *Op = State.get(getOperand(0), VPLane(0));
-    return State.Builder.CreateCast(Instruction::CastOps(getOpcode()), Op,
-                                    ResultTy);
+    Value *Cast = State.Builder.CreateCast(Instruction::CastOps(getOpcode()),
+                                           Op, ResultTy);
+    State.set(this, Cast, VPLane(0));
+    break;
   }
   default:
     llvm_unreachable("opcode not implemented yet");
   }
-}
-
-void VPInstructionWithType::execute(VPTransformState &State) {
-  State.set(this, generate(State), VPLane(0));
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
