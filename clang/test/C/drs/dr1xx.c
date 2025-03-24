@@ -1,8 +1,8 @@
-/* RUN: %clang_cc1 -std=c89 -fsyntax-only -verify=expected,c89only -pedantic -Wno-c11-extensions %s
-   RUN: %clang_cc1 -std=c99 -fsyntax-only -verify=expected,c99untilc2x -pedantic -Wno-c11-extensions %s
-   RUN: %clang_cc1 -std=c11 -fsyntax-only -verify=expected,c99untilc2x -pedantic %s
-   RUN: %clang_cc1 -std=c17 -fsyntax-only -verify=expected,c99untilc2x -pedantic %s
-   RUN: %clang_cc1 -std=c2x -fsyntax-only -verify=expected,c2xandup -pedantic %s
+/* RUN: %clang_cc1 -std=c89 -fsyntax-only -verify=expected,c89only,untilc23 -pedantic -Wno-c11-extensions %s
+   RUN: %clang_cc1 -std=c99 -fsyntax-only -verify=expected,c99untilc2x,untilc23 -pedantic -Wno-c11-extensions %s
+   RUN: %clang_cc1 -std=c11 -fsyntax-only -verify=expected,c99untilc2x,untilc23 -pedantic %s
+   RUN: %clang_cc1 -std=c17 -fsyntax-only -verify=expected,c99untilc2x,untilc23 -pedantic %s
+   RUN: %clang_cc1 -std=c23 -fsyntax-only -verify=expected,c2xandup -pedantic %s
  */
 
 /* The following are DRs which do not require tests to demonstrate
@@ -87,15 +87,15 @@ void dr101_caller(void) {
  * Tag redeclaration constraints
  */
 void dr102(void) {
-  struct S { int member; }; /* expected-note {{previous definition is here}} */
-  struct S { int member; }; /* expected-error {{redefinition of 'S'}} */
+  struct S { int member; }; /* untilc23-note {{previous definition is here}} */
+  struct S { int member; }; /* untilc23-error {{redefinition of 'S'}} */
 
-  union U { int member; }; /* expected-note {{previous definition is here}} */
-  union U { int member; }; /* expected-error {{redefinition of 'U'}} */
+  union U { int member; }; /* untilc23-note {{previous definition is here}} */
+  union U { int member; }; /* untilc23-error {{redefinition of 'U'}} */
 
-  enum E { member }; /* expected-note 2{{previous definition is here}} */
-  enum E { member }; /* expected-error {{redefinition of 'E'}}
-                        expected-error {{redefinition of enumerator 'member'}} */
+  enum E { member }; /* untilc23-note 2{{previous definition is here}} */
+  enum E { member }; /* untilc23-error {{redefinition of 'E'}}
+                        untilc23-error {{redefinition of enumerator 'member'}} */
 }
 
 /* WG14 DR103: yes
