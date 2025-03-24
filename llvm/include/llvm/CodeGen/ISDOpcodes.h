@@ -1519,6 +1519,12 @@ enum NodeType {
   // Operands: Mask
   VECTOR_FIND_LAST_ACTIVE,
 
+  // The `llvm.experimental.loop.dependence.{war, raw}.mask` intrinsics
+  // Operands: Load pointer, Store pointer, Element size
+  // Output: Mask
+  EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK,
+  EXPERIMENTAL_LOOP_DEPENDENCE_RAW_MASK,
+
   // llvm.clear_cache intrinsic
   // Operands: Input Chain, Start Addres, End Address
   // Outputs: Output Chain
