@@ -762,7 +762,7 @@ LValue ScalarExprEmitter::emitCompoundAssignLValue(
   SourceLocation loc = e->getExprLoc();
   if (!promotionTypeLHS.isNull())
     opInfo.lhs = emitScalarConversion(opInfo.lhs, lhsTy, promotionTypeLHS,
-                                      e->getExprLoc());
+                                      loc);
   else
     opInfo.lhs = emitScalarConversion(opInfo.lhs, lhsTy,
                                       e->getComputationLHSType(), loc);
