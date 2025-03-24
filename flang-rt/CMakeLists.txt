@@ -139,6 +139,17 @@ cmake_path(NORMAL_PATH FLANG_RT_INSTALL_RESOURCE_LIB_PATH)
 
 option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${LLVM_INCLUDE_TESTS}")
 
+# Provide an interface to link against the LLVM libc/libc++ projects directly.
+set(FLANG_RT_SUPPORTED_PROVIDERS system llvm)
+set(FLANG_RT_LIBC_PROVIDER "system" CACHE STRING "Specify C library to use. Supported values are ${FLANG_RT_SUPPORTED_PROVIDERS}.")
+if (NOT "${FLANG_RT_LIBC_PROVIDER}" IN_LIST FLANG_RT_SUPPORTED_PROVIDERS)
+  message(FATAL_ERROR "Unsupported library: '${FLANG_RT_RUNTIME_PROVIDER}'. Supported values are ${FLANG_RT_SUPPORTED_PROVIDERS}.")
+endif ()
+
+set(FLANG_RT_LIBCXX_PROVIDER "system" CACHE STRING "Specify C++ library to use. Supported values are ${FLANG_RT_SUPPORTED_PROVIDERS}.")
+if (NOT "${FLANG_RT_LIBCXX_PROVIDER}" IN_LIST FLANG_RT_SUPPORTED_PROVIDERS)
+  message(FATAL_ERROR "Unsupported library: '${FLANG_RT_LIBCXX_PROVIDER}'. Supported values are ${FLANG_RT_SUPPORTED_PROVIDERS}.")
+endif ()
 
 option(FLANG_RT_ENABLE_STATIC "Build Flang-RT as a static library." ON)
 if (WIN32)
@@ -244,6 +255,15 @@ check_cxx_compiler_flag("-UTESTFLAG" FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
 # Check whether -fno-lto is supported.
 check_cxx_compiler_flag(-fno-lto FLANG_RT_HAS_FNO_LTO_FLAG)
 
+# Check whether -nostdlibinc is supported.
+check_cxx_compiler_flag(-nostdlibinc FLANG_RT_HAS_NOSTDLIBINC_FLAG)
+
+# Check whether -nostdlib is supported.
+check_cxx_compiler_flag(-nostdlib FLANG_RT_HAS_NOSTDLIB_FLAG)
+
+# Check whether -stdlib= is supported.
+check_cxx_compiler_flag(-stdlib=platform FLANG_RT_HAS_STDLIB_FLAG)
+
 # Check whether -Wl,--as-needed is supported.
 check_linker_flag(C "LINKER:--as-needed" LINKER_SUPPORTS_AS_NEEDED)
 if (LINKER_SUPPORTS_AS_NEEDED)
@@ -302,6 +322,8 @@ endif ()
 #####################
 # Build Preparation #
 #####################
+
+include(HandleLibs)
 
 if (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT AND FLANG_RT_INCLUDE_TESTS)
   # If Fortran runtime is built as CUDA library, the linking
