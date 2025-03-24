@@ -20,12 +20,12 @@ class TestCase(TestBase):
             patterns=[
                 textwrap.dedent(
                     r"""
-                    \(UnsafeCurrentTask\) current_task = id:1 flags:(?:running\|)?future \{
+                    \(UnsafeCurrentTask\) current_task = id:1 flags:(?:running\|)?(?:enqueued\|)?future \{
                       address = 0x[0-9a-f]+
                       id = 1
                       enqueuePriority = 0
                       children = \{
-                        0 = id:2 flags:(?:running\|)?asyncLetTask\|childTask\|future {
+                        0 = id:2 flags:(?:running\|)?(?:enqueued\|)?asyncLetTask\|childTask\|future \{
                           address = 0x[0-9a-f]+
                           id = 2
                           enqueuePriority = \.medium

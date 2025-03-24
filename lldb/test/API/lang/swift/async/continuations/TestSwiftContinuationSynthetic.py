@@ -20,7 +20,7 @@ class TestCase(TestBase):
                 textwrap.dedent(
                     r"""
                     \(UnsafeContinuation<Void, Never>\) cont = \{
-                      task = id:(\d+) flags:(?:running\|)?future \{
+                      task = id:(\d+) flags:(?:running\|)?(?:enqueued\|)?future \{
                         address = 0x[0-9a-f]+
                         id = \1
                         enqueuePriority = 0
@@ -45,7 +45,7 @@ class TestCase(TestBase):
                 textwrap.dedent(
                     r"""
                     \(CheckedContinuation<Int, Never>\) cont = \{
-                      task = id:(\d+) flags:(?:running\|)?future \{
+                      task = id:(\d+) flags:(?:running\|)?(?:enqueued\|)?future \{
                         address = 0x[0-9a-f]+
                         id = \1
                         enqueuePriority = 0
