@@ -155,17 +155,19 @@ static llvm::Error HandleFrontendOptions(const CompilerInstance &CI) {
 
   if (FrontendOpts.ShowVersion) {
     llvm::cl::PrintVersionMessage();
-    return llvm::createStringError(llvm::errc::not_supported, "Version displayed");
+    return llvm::createStringError(llvm::errc::not_supported,
+                                   "Version displayed");
   }
 
   if (!FrontendOpts.LLVMArgs.empty()) {
     unsigned NumArgs = FrontendOpts.LLVMArgs.size();
-    auto Args = std::make_unique<const char*[]>(NumArgs + 2);
+    auto Args = std::make_unique<const char *[]>(NumArgs + 2);
     Args[0] = "clang-repl (LLVM option parsing)";
     for (unsigned i = 0; i != NumArgs; ++i)
       Args[i + 1] = FrontendOpts.LLVMArgs[i].c_str();
     Args[NumArgs + 1] = nullptr;
-    llvm::errs() << "Parsing LLVM backend options via cl::ParseCommandLineOptions...\n";
+    llvm::errs()
+        << "Parsing LLVM backend options via cl::ParseCommandLineOptions...\n";
     llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get());
   }
 
