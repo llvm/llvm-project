@@ -22,6 +22,8 @@ extern "C" {
   extern char *strchr(const char *s, int c);
   extern wchar_t *wmemchr(const wchar_t *s, wchar_t c, size_t n);
   extern wchar_t *wcschr(const wchar_t *s, wchar_t c);
+  extern int wcscmp(const wchar_t *s1, const wchar_t *s2);
+  extern int wcsncmp(const wchar_t *s1, const wchar_t *s2, size_t n);
 }
 
 namespace strcmp {
@@ -64,6 +66,50 @@ namespace strcmp {
   static_assert(__builtin_strncmp("abaa", "abba", 0) == 0);
   static_assert(__builtin_strncmp(0, 0, 0) == 0);
   static_assert(__builtin_strncmp("abab\0banana", "abab\0canada", 100) == 0);
+}
+
+namespace WcsCmp {
+  constexpr wchar_t kFoobar[6] = {L'f',L'o',L'o',L'b',L'a',L'r'};
+  constexpr wchar_t kFoobazfoobar[12] = {L'f',L'o',L'o',L'b',L'a',L'z',L'f',L'o',L'o',L'b',L'a',L'r'};
+
+  static_assert(__builtin_wcscmp(L"abab", L"abab") == 0);
+  static_assert(__builtin_wcscmp(L"abab", L"abba") == -1);
+  static_assert(__builtin_wcscmp(L"abab", L"abaa") == 1);
+  static_assert(__builtin_wcscmp(L"ababa", L"abab") == 1);
+  static_assert(__builtin_wcscmp(L"abab", L"ababa") == -1);
+  static_assert(__builtin_wcscmp(L"abab\0banana", L"abab") == 0);
+  static_assert(__builtin_wcscmp(L"abab", L"abab\0banana") == 0);
+  static_assert(__builtin_wcscmp(L"abab\0banana", L"abab\0canada") == 0);
+#if __WCHAR_WIDTH__ == 32
+  static_assert(__builtin_wcscmp(L"a\x83838383", L"a") == (wchar_t)-1U >> 31);
+#endif
+  static_assert(__builtin_wcscmp(0, L"abab") == 0); // both-error {{not an integral constant}} \
+                                                    // both-note {{dereferenced null}}
+  static_assert(__builtin_wcscmp(L"abab", 0) == 0); // both-error {{not an integral constant}} \
+                                                    // both-note {{dereferenced null}}
+
+  static_assert(__builtin_wcscmp(kFoobar, kFoobazfoobar) == -1);
+  static_assert(__builtin_wcscmp(kFoobar, kFoobazfoobar + 6) == 0); // both-error {{not an integral constant}} \
+                                                                    // both-note {{dereferenced one-past-the-end}}
+
+  static_assert(__builtin_wcsncmp(L"abaa", L"abba", 5) == -1);
+  static_assert(__builtin_wcsncmp(L"abaa", L"abba", 4) == -1);
+  static_assert(__builtin_wcsncmp(L"abaa", L"abba", 3) == -1);
+  static_assert(__builtin_wcsncmp(L"abaa", L"abba", 2) == 0);
+  static_assert(__builtin_wcsncmp(L"abaa", L"abba", 1) == 0);
+  static_assert(__builtin_wcsncmp(L"abaa", L"abba", 0) == 0);
+  static_assert(__builtin_wcsncmp(0, 0, 0) == 0);
+  static_assert(__builtin_wcsncmp(L"abab\0banana", L"abab\0canada", 100) == 0);
+#if __WCHAR_WIDTH__ == 32
+  static_assert(__builtin_wcsncmp(L"a\x83838383", L"aa", 2) ==
+                (wchar_t)-1U >> 31);
+#endif
+
+  static_assert(__builtin_wcsncmp(kFoobar, kFoobazfoobar, 6) == -1);
+  static_assert(__builtin_wcsncmp(kFoobar, kFoobazfoobar, 7) == -1);
+  static_assert(__builtin_wcsncmp(kFoobar, kFoobazfoobar + 6, 6) == 0);
+  static_assert(__builtin_wcsncmp(kFoobar, kFoobazfoobar + 6, 7) == 0); // both-error {{not an integral constant}} \
+                                                                        // both-note {{dereferenced one-past-the-end}}
 }
 
 /// Copied from constant-expression-cxx11.cpp
