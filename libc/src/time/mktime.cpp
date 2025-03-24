@@ -16,12 +16,11 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(time_t, mktime, (struct tm * tm_out)) {
   auto mktime_result = time_utils::mktime_internal(tm_out);
-  time_t seconds;
-  if (mktime_result.has_value()) {
+  if (!mktime_result) 
     return time_utils::out_of_range();
-  } else {
-    seconds = mktime_result.value();
-  }
+
+  time_t seconds = *mktime_result;
+
   // Update the tm structure's year, month, day, etc. from seconds.
   if (time_utils::update_from_seconds(seconds, tm_out) < 0)
     return time_utils::out_of_range();

@@ -330,9 +330,9 @@ public:
 
   LIBC_INLINE time_t get_epoch() const {
     auto seconds = mktime_internal(timeptr);
-    if (seconds.has_value()) {
+    if (seconds.has_value())
       return seconds.value();
-    }
+
     return time_utils::out_of_range(); 
   }
 

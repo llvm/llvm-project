@@ -27,21 +27,20 @@ cpp::optional<time_t> mktime_internal(const tm *tm_out) {
   if (sizeof(time_t) == 4 &&
       tm_year_from_base >= time_constants::END_OF32_BIT_EPOCH_YEAR) {
     if (tm_year_from_base > time_constants::END_OF32_BIT_EPOCH_YEAR)
-      return {};
+      return cpp::nullopt;
     if (tm_out->tm_mon > 0)
-      return {};
-    if (tm_out->tm_mday > 19) {
-      return {};
-    } else if (tm_out->tm_mday == 19) {
-      if (tm_out->tm_hour > 3) {
-        return {};
-      } else if (tm_out->tm_hour == 3) {
-        if (tm_out->tm_min > 14) {
-          return {};
-        } else if (tm_out->tm_min == 14) {
-          if (tm_out->tm_sec > 7) {
-            return {};
-          }
+      return cpp::nullopt;
+    if (tm_out->tm_mday > 19)
+      return cpp::nullopt;
+    else if (tm_out->tm_mday == 19) {
+      if (tm_out->tm_hour > 3) 
+        return cpp::nullopt;
+      else if (tm_out->tm_hour == 3) {
+        if (tm_out->tm_min > 14)
+          return cpp::nullopt;
+        else if (tm_out->tm_min == 14) {
+          if (tm_out->tm_sec > 7)
+            return cpp::nullopt;
         }
       }
     }
@@ -107,7 +106,7 @@ cpp::optional<time_t> mktime_internal(const tm *tm_out) {
                    tm_out->tm_min * time_constants::SECONDS_PER_MIN +
                    tm_out->tm_hour * time_constants::SECONDS_PER_HOUR +
                    total_days * time_constants::SECONDS_PER_DAY;
-  return {seconds};
+  return seconds;
 }
 
 static int64_t computeRemainingYears(int64_t daysPerYears,
