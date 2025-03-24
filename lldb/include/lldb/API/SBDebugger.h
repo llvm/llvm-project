@@ -250,6 +250,8 @@ public:
 
   lldb::SBTarget GetDummyTarget();
 
+  // Dispatch telemery from client to server if client-telemetry is enabled
+  // (by vendor), otherwise the data is ignored.
   void DispatchClientTelemetry(const lldb::SBStructuredData &data);
 
   // Return true if target is deleted from the target list of the debugger.
