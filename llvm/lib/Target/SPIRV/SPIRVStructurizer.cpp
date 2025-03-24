@@ -611,41 +611,10 @@ class SPIRVStructurizer : public FunctionPass {
       auto MergeAddress = BlockAddress::get(Merge->getParent(), Merge);
       auto ContinueAddress = BlockAddress::get(Continue->getParent(), Continue);
       SmallVector<Value *, 2> Args = {MergeAddress, ContinueAddress};
-      unsigned LC = SPIRV::LoopControl::None;
-      // Currently used only to store PartialCount value. Later when other
-      // LoopControls are added - this map should be sorted before making
-      // them loop_merge operands to satisfy 3.23. Loop Control requirements.
-      std::vector<std::pair<unsigned, unsigned>> MaskToValueMap;
-      if (getBooleanLoopAttribute(L, "llvm.loop.unroll.disable")) {
-        LC |= SPIRV::LoopControl::DontUnroll;
-      } else {
-        if (getBooleanLoopAttribute(L, "llvm.loop.unroll.enable")) {
-          LC |= SPIRV::LoopControl::Unroll;
-        }
-        std::optional<int> Count =
-            getOptionalIntLoopAttribute(L, "llvm.loop.unroll.count");
-        if (Count && Count != 1) {
-          LC |= SPIRV::LoopControl::PartialCount;
-          MaskToValueMap.emplace_back(
-              std::make_pair(SPIRV::LoopControl::PartialCount, *Count));
-        }
-        if (getBooleanLoopAttribute(L, "llvm.loop.unroll.full")) {
-          // llvm.loop.unroll.full doesn't have a direct counterpart in SPIR-V,
-          // the closest thing we can do is to add Unroll mask and if the trip
-          // count is not known at compile time - either disable unrolling by
-          // setting PartialCount to 1 or reuse already available PartialCount.
-          LC |= SPIRV::LoopControl::Unroll;
-          if ((LC & SPIRV::LoopControl::PartialCount) == 0) {
-            LC |= SPIRV::LoopControl::PartialCount;
-            MaskToValueMap.emplace_back(
-                std::make_pair(SPIRV::LoopControl::PartialCount, 1));
-          }
-        }
-      }
-      Args.emplace_back(llvm::ConstantInt::get(Builder.getInt32Ty(), LC));
-      for (auto &[Mask, Val] : MaskToValueMap)
-        Args.emplace_back(llvm::ConstantInt::get(Builder.getInt32Ty(), Val));
-
+      SmallVector<unsigned, 1> LoopControlImms =
+          getSpirvLoopControlOperandsFromLoopMetadata(L);
+      for (unsigned Imm : LoopControlImms)
+        Args.emplace_back(llvm::ConstantInt::get(Builder.getInt32Ty(), Imm));
       Builder.CreateIntrinsic(Intrinsic::spv_loop_merge, {}, {Args});
       Modified = true;
     }

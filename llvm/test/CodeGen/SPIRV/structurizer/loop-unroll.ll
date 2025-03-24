@@ -8,6 +8,7 @@
 ; CHECK-DAG: OpName %[[#Count:]] "unroll_count"
 ; CHECK-DAG: OpName %[[#Full:]] "unroll_full"
 ; CHECK-DAG: OpName %[[#FullCount:]] "unroll_full_count"
+; CHECK-DAG: OpName %[[#EnableDisable:]] "unroll_enable_disable"
 
 ; CHECK: %[[#For]] = OpFunction
 ; CHECK: OpLoopMerge %[[#]] %[[#]] Unroll
@@ -25,10 +26,15 @@
 ; CHECK: OpLoopMerge %[[#]] %[[#]] PartialCount 4
 
 ; CHECK: %[[#Full]] = OpFunction
-; CHECK: OpLoopMerge %[[#]] %[[#]] Unroll|PartialCount 1
+; CHECK: OpLoopMerge %[[#]] %[[#]] Unroll
 
 ; CHECK: %[[#FullCount]] = OpFunction
 ; CHECK: OpLoopMerge %[[#]] %[[#]] Unroll|PartialCount 4
+
+; CHECK: %[[#EnableDisable]] = OpFunction
+; CHECK: OpLoopMerge %[[#]] %[[#]] DontUnroll
+; CHECK-NOT: Unroll|DontUnroll
+; CHECK-NOT: DontUnroll|Unroll
 
 define dso_local void @for_loop(ptr noundef %0, i32 noundef %1) {
   %3 = alloca ptr, align 8
@@ -215,6 +221,29 @@ define dso_local void @unroll_full_count(i32 noundef %0) {
   ret void
 }
 
+define dso_local void @unroll_enable_disable(i32 noundef %0) {
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  store i32 %0, ptr %2, align 4
+  store i32 0, ptr %3, align 4
+  br label %4
+
+4:                                                ; preds = %7, %1
+  %5 = load i32, ptr %3, align 4
+  %6 = add nsw i32 %5, 1
+  store i32 %6, ptr %3, align 4
+  br label %7
+
+7:                                                ; preds = %4
+  %8 = load i32, ptr %3, align 4
+  %9 = load i32, ptr %2, align 4
+  %10 = icmp slt i32 %8, %9
+  br i1 %10, label %4, label %11, !llvm.loop !12
+
+11:                                               ; preds = %7
+  ret void
+}
+
 !1 = distinct !{!1, !2}
 !2 = !{!"llvm.loop.unroll.enable"}
 !3 = distinct !{!3, !2}
@@ -226,3 +255,4 @@ define dso_local void @unroll_full_count(i32 noundef %0) {
 !9 = distinct !{!9, !10}
 !10 = !{!"llvm.loop.unroll.full"}
 !11 = distinct !{!11, !10, !8}
+!12 = distinct !{!12, !2, !6}

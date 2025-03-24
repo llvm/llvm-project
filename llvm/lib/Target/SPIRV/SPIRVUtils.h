@@ -460,5 +460,6 @@ createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
                             ArrayRef<Register> Args, Register ReturnRegister,
                             Register TypeID);
 
+SmallVector<unsigned, 1> getSpirvLoopControlOperandsFromLoopMetadata(Loop *L);
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H
