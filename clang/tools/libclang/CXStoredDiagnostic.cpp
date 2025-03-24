@@ -78,6 +78,11 @@ CXString CXStoredDiagnostic::getCategoryText() const {
   return cxstring::createRef(DiagnosticIDs::getCategoryNameFromID(catID));
 }
 
+CXString CXStoredDiagnostic::getCategoryURL() const {
+  // Clang does not currently provide URLs for its own diagnostics.
+  return cxstring::createEmpty();
+}
+
 unsigned CXStoredDiagnostic::getNumRanges() const {
   if (Diag.getLocation().isInvalid())
     return 0;

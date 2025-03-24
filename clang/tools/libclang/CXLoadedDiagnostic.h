@@ -49,6 +49,9 @@ public:
   /// Return the category string of the diagnostic.
   CXString getCategoryText() const override;
 
+  /// Return the category URL of the diagnostic.
+  CXString getCategoryURL() const override;
+
   /// Return the number of source ranges for the diagnostic.
   unsigned getNumRanges() const override;
 
@@ -89,6 +92,7 @@ public:
   const char *Spelling;
   llvm::StringRef DiagOption;
   llvm::StringRef CategoryText;
+  llvm::StringRef CategoryURL;
   unsigned severity;
   unsigned category;
 };

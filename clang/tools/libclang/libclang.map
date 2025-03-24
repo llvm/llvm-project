@@ -339,6 +339,7 @@ LLVM_13 {
     clang_getDiagnosticCategory;
     clang_getDiagnosticCategoryName;
     clang_getDiagnosticCategoryText;
+    clang_getDiagnosticCategoryURL;
     clang_getDiagnosticFixIt;
     clang_getDiagnosticInSet;
     clang_getDiagnosticLocation;

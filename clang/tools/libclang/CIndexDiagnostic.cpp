@@ -70,6 +70,7 @@ public:
 
   unsigned getCategory() const override { return 0; }
   CXString getCategoryText() const override { return cxstring::createEmpty(); }
+  CXString getCategoryURL() const override { return cxstring::createEmpty(); }
 
   unsigned getNumRanges() const override { return 0; }
   CXSourceRange getRange(unsigned Range) const override {
@@ -431,7 +432,13 @@ CXString clang_getDiagnosticCategoryText(CXDiagnostic Diag) {
     return D->getCategoryText();
   return cxstring::createEmpty();
 }
-  
+
+CXString clang_getDiagnosticCategoryURL(CXDiagnostic Diag) {
+  if (CXDiagnosticImpl *D = static_cast<CXDiagnosticImpl *>(Diag))
+    return D->getCategoryURL();
+  return cxstring::createEmpty();
+}
+
 unsigned clang_getDiagnosticNumRanges(CXDiagnostic Diag) {
   if (CXDiagnosticImpl *D = static_cast<CXDiagnosticImpl *>(Diag))
     return D->getNumRanges();

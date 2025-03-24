@@ -99,6 +99,9 @@ public:
   /// Return the category string of the diagnostic.
   virtual CXString getCategoryText() const = 0;
 
+  /// Return the category URL of the diagnostic.
+  virtual CXString getCategoryURL() const = 0;
+
   /// Return the number of source ranges for the diagnostic.
   virtual unsigned getNumRanges() const = 0;
   
@@ -159,6 +162,9 @@ struct CXStoredDiagnostic : public CXDiagnosticImpl {
 
   /// Return the category string of the diagnostic.
   CXString getCategoryText() const override;
+
+  /// Return the category URL of the diagnostic.
+  CXString getCategoryURL() const override;
 
   /// Return the number of source ranges for the diagnostic.
   unsigned getNumRanges() const override;

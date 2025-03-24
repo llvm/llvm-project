@@ -89,8 +89,19 @@ protected:
   virtual std::error_code visitEndOfDiagnostic() { return {}; }
 
   /// Visit a category. This associates the category \c ID to a \c Name.
+  ///
+  /// This entrypoint has been superseded by the overload that follows, which
+  /// also takes a (possibly-empty) URL providing additional documentation for
+  /// the category.
   virtual std::error_code visitCategoryRecord(unsigned ID, StringRef Name) {
     return {};
+  }
+
+  /// Visit a category. This associates the category \c ID to a \c Name with
+  /// a (possibly empty) URL.
+  virtual std::error_code visitCategoryRecord(unsigned ID, StringRef Name,
+                                              StringRef URL) {
+    return visitCategoryRecord(ID, Name);
   }
 
   /// Visit a flag. This associates the flag's \c ID to a \c Name.
