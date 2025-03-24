@@ -33,7 +33,7 @@ cpp::optional<time_t> mktime_internal(const tm *tm_out) {
     if (tm_out->tm_mday > 19)
       return cpp::nullopt;
     else if (tm_out->tm_mday == 19) {
-      if (tm_out->tm_hour > 3) 
+      if (tm_out->tm_hour > 3)
         return cpp::nullopt;
       else if (tm_out->tm_hour == 3) {
         if (tm_out->tm_min > 14)

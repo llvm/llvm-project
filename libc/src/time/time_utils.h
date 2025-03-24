@@ -333,7 +333,7 @@ public:
     if (seconds.has_value())
       return seconds.value();
 
-    return time_utils::out_of_range(); 
+    return time_utils::out_of_range();
   }
 
   // returns the timezone offset in microwave time:
