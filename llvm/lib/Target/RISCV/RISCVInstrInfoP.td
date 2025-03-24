@@ -38,16 +38,6 @@ def simm10 : RISCVSImmLeafOp<10> {
 //===----------------------------------------------------------------------===//
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVPUnary<bits<5> funct5, bits<7> wuimm,
-               bits<3> funct3, RISCVOpcode opcode,
-               string opcodestr>
-    : RVInstIBase<funct3, opcode, (outs GPR:$rd), (ins GPR:$rs1),
-                  opcodestr, "$rd, $rs1"> {
-  let Inst{31-27} = funct5;
-  let Inst{26-20} = wuimm;
-}
-
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPUnaryImm9<bits<7> funct7, string opcodestr>
     : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd), (ins simm10:$simm10),
                   opcodestr, "$rd, $simm10"> {
@@ -285,31 +275,31 @@ class RVPBinary0LongFW<bits<4> f, bits<2> w, string opcodestr>
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtP] in {
-def CLS    : RVPUnary<0b01100, 0b0000011, 0b001, OPC_OP_IMM, "cls">;
-def ABS    : RVPUnary<0b01100, 0b0000111, 0b001, OPC_OP_IMM, "abs">;
+def CLS    : Unary_r<0b011000000011, 0b001, "cls">;
+def ABS    : Unary_r<0b011000000111, 0b001, "abs">;
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV32] in
-def REV_RV32  : RVPUnary<0b01101, 0b0011111, 0b101, OPC_OP_IMM, "rev">;
+def REV_RV32  : Unary_r<0b011010011111, 0b101, "rev">;
 
 let Predicates = [HasStdExtP, IsRV64] in {
-def REV16 : RVPUnary<0b01101, 0b0110000, 0b101, OPC_OP_IMM, "rev16">;
-def REV_RV64   : RVPUnary<0b01111, 0b0111111, 0b101, OPC_OP_IMM, "rev">;
+def REV16      : Unary_r<0b011010110000, 0b101, "rev16">;
+def REV_RV64   : Unary_r<0b011110111111, 0b101, "rev">;
 
-def CLSW  : RVPUnary<0b01100, 0b0000011, 0b001, OPC_OP_IMM_32, "clsw">;
-def ABSW  : RVPUnary<0b01100, 0b0000111, 0b001, OPC_OP_IMM_32, "absw">;
+def CLSW  : UnaryW_r<0b011000000011, 0b001, "clsw">;
+def ABSW  : UnaryW_r<0b011000000111, 0b001, "absw">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in {
-def PSLLI_B  : RVPUnary<0b10000, 0b0001000, 0b010, OPC_OP_IMM_32, "pslli.b">;
-def PSLLI_H  : RVPUnary<0b10000, 0b0010000, 0b010, OPC_OP_IMM_32, "pslli.h">;
-def PSSLAI_H : RVPUnary<0b11010, 0b0010000, 0b010, OPC_OP_IMM_32, "psslai.h">;
+def PSLLI_B  : UnaryW_r<0b100000001000, 0b010, "pslli.b">;
+def PSLLI_H  : UnaryW_r<0b100000010000, 0b010, "pslli.h">;
+def PSSLAI_H : UnaryW_r<0b110100010000, 0b010, "psslai.h">;
 } // Predicates = [HasStdExtP]
 let DecoderNamespace = "RV32Only",
     Predicates = [HasStdExtP, IsRV32] in
-def SSLAI : RVPUnary<0b11010, 0b0100000, 0b010, OPC_OP_IMM_32, "sslai">;
+def SSLAI    : UnaryW_r<0b110100100000, 0b010, "sslai">;
 let Predicates = [HasStdExtP, IsRV64] in {
-def PSLLI_W  : RVPUnary<0b10000, 0b0100000, 0b010, OPC_OP_IMM_32, "pslli.w">;
-def PSSLAI_W : RVPUnary<0b11010, 0b0100000, 0b010, OPC_OP_IMM_32, "psslai.w">;
+def PSLLI_W  : UnaryW_r<0b100000100000, 0b010, "pslli.w">;
+def PSSLAI_W : UnaryW_r<0b110100100000, 0b010, "psslai.w">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in
@@ -319,19 +309,14 @@ def PLI_W : RVPUnaryImm9<0b1011001, "pli.w">;
 let Predicates = [HasStdExtP] in
 def PLI_B : RVPUnaryImm8<0b10110100, "pli.b">;
 
-let DecoderNamespace = "RV32Only",
-    Predicates = [HasStdExtP, IsRV32] in {
-def PSEXT_H_B_RV32 : RVPUnaryWUF<0b00, 0b00100, "psext.h.b">;
-def PSABS_H_RV32  : RVPUnaryWUF<0b00, 0b00111, "psabs.h">;
-def PSABS_B_RV32  : RVPUnaryWUF<0b01, 0b00111, "psabs.b">;
-} // Predicates = [HasStdExtP, IsRV32]
-
+let Predicates = [HasStdExtP] in {
+def PSEXT_H_B : RVPUnaryWUF<0b00, 0b00100, "psext.h.b">;
+def PSABS_H   : RVPUnaryWUF<0b00, 0b00111, "psabs.h">;
+def PSABS_B   : RVPUnaryWUF<0b10, 0b00111, "psabs.b">;
+} // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV64] in {
-def PSEXT_H_B_RV64 : RVPUnaryWUF<0b00, 0b00100, "psext.h.b">;
 def PSEXT_W_B      : RVPUnaryWUF<0b01, 0b00100, "psext.w.b">;
 def PSEXT_W_H      : RVPUnaryWUF<0b01, 0b00101, "psext.w.h">;
-def PSABS_H_RV64  : RVPUnaryWUF<0b00, 0b00111, "psabs.h">;
-def PSABS_B_RV64  : RVPUnaryWUF<0b10, 0b00111, "psabs.b">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in
@@ -831,10 +816,10 @@ def PLUI_DH  : RVPUnaryImm9Rdp<0b0111000,  "plui.dh">;
 
 def PWSLLI_BS : RVPBinary0F1WRdp<0b000, 0b00, "pwslli.bs">;
 def PWSLL_HS  : RVPBinary0F1WRdp<0b000, 0b01, "pwsll.hs">;
-def WSLL        : RVPBinary0F1WRdp<0b000, 0b11, "wsll">;
+def WSLL      : RVPBinary0F1WRdp<0b000, 0b11, "wsll">;
 
-def PWSLA_BS : RVPBinary0F1WRdp<0b100, 0b00, "pwsla.bs">;
-def PWSLA_HS : RVPBinary0F1WRdp<0b100, 0b01, "pwsla.hs">;
+def PWSLA_BS   : RVPBinary0F1WRdp<0b100, 0b00, "pwsla.bs">;
+def PWSLA_HS   : RVPBinary0F1WRdp<0b100, 0b01, "pwsla.hs">;
 def WSLA       : RVPBinary0F1WRdp<0b100, 0b11, "wsla">;
 def WZIP8P     : RVPBinary0F1WRdp<0b111, 0b00, "wzip8p">;
 def WZIP16P    : RVPBinary0F1WRdp<0b111, 0b01, "wzip16p">;
