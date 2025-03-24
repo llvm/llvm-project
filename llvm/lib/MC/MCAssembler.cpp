@@ -488,10 +488,10 @@ static bool getSymbolOffsetImpl(const MCAssembler &Asm, const MCSymbol &S,
     Offset += ValA;
   }
 
-  const MCSymbolRefExpr *B = Target.getSymB();
+  const MCSymbol *B = Target.getSubSym();
   if (B) {
     uint64_t ValB;
-    if (!getSymbolOffsetImpl(Asm, B->getSymbol(), ReportError, ValB))
+    if (!getSymbolOffsetImpl(Asm, *B, ReportError, ValB))
       return false;
     Offset -= ValB;
   }
@@ -523,11 +523,11 @@ const MCSymbol *MCAssembler::getBaseSymbol(const MCSymbol &Symbol) const {
     return nullptr;
   }
 
-  const MCSymbolRefExpr *RefB = Value.getSymB();
-  if (RefB) {
+  const MCSymbol *SymB = Value.getSubSym();
+  if (SymB) {
     getContext().reportError(
         Expr->getLoc(),
-        Twine("symbol '") + RefB->getSymbol().getName() +
+        Twine("symbol '") + SymB->getName() +
             "' could not be evaluated in a subtraction expression");
     return nullptr;
   }
