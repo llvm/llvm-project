@@ -54,12 +54,12 @@ status of all important Fortran 2023 features.
 | Using integer arrays to specify subscripts                 | N      | |
 | Using integer arrays to specify rank and bound of an array | N      | |
 | Using an integer constant to specify rank                  | N      | |
-| Reduction specifier for do concurrent                      | Y      | |
+| Reduction specifier for do concurrent                      | P      | Syntax is accepted |
 | Enumerations                                               | N      | |
 
 ## Fortran 2018
 All features except those listed in the following table are supported. Almost all of the unsupported features are related to
-coarrays.
+the additional parallel features (coarrays/teams/collectives).
 
 | Feature                                                    | Status | Comments                                                |
 |------------------------------------------------------------|--------|---------------------------------------------------------|
