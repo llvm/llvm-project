@@ -460,9 +460,8 @@ AST Matchers
   specialization.
 - Move ``ast_matchers::MatchFinder::MatchFinderOptions`` to
   ``ast_matchers::MatchFinderOptions``.
-- Add a boolean member ``SkipSystemHeaders`` to ``MatchFinderOptions``, and make
-  ``MatchASTConsumer`` receive a reference to ``MatchFinderOptions`` in the
-  constructor. This allows it to skip system headers when traversing the AST.
+- Add a boolean member ``SkipSystemHeaders`` to ``MatchFinderOptions``. This
+  allows it to avoid matching declarations in system headers .
 
 clang-format
 ------------
