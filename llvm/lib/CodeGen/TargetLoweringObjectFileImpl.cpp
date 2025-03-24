@@ -1189,7 +1189,7 @@ const MCExpr *TargetLoweringObjectFileELF::lowerRelativeReference(
     return nullptr;
 
   return MCBinaryExpr::createSub(
-      MCSymbolRefExpr::create(TM.getSymbol(LHS), PLTRelativeVariantKind,
+      MCSymbolRefExpr::create(TM.getSymbol(LHS), PLTRelativeSpecifier,
                               getContext()),
       MCSymbolRefExpr::create(TM.getSymbol(RHS), getContext()), getContext());
 }
@@ -1204,7 +1204,7 @@ const MCExpr *TargetLoweringObjectFileELF::lowerDSOLocalEquivalent(
   if (GV->isDSOLocal() || GV->isImplicitDSOLocal())
     return MCSymbolRefExpr::create(TM.getSymbol(GV), getContext());
 
-  return MCSymbolRefExpr::create(TM.getSymbol(GV), PLTRelativeVariantKind,
+  return MCSymbolRefExpr::create(TM.getSymbol(GV), PLTRelativeSpecifier,
                                  getContext());
 }
 
@@ -1564,7 +1564,7 @@ const MCExpr *TargetLoweringObjectFileMachO::getIndirectSymViaGOTPCRel(
   // The offset must consider the original displacement from the base symbol
   // since 32-bit targets don't have a GOTPCREL to fold the PC displacement.
   Offset = -MV.getConstant();
-  const MCSymbol *BaseSym = &MV.getSymB()->getSymbol();
+  const MCSymbol *BaseSym = MV.getSubSym();
 
   // Access the final symbol via sym$non_lazy_ptr and generate the appropriated
   // non_lazy_ptr stubs.

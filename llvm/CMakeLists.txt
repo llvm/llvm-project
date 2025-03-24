@@ -1186,9 +1186,9 @@ endif()
 # Build with _XOPEN_SOURCE on AIX, as stray macros in _ALL_SOURCE mode tend to
 # break things. In this case we need to enable the large-file API as well.
 if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
-  add_compile_definitions(_XOPEN_SOURCE=700)
-  add_compile_definitions(_LARGE_FILE_API)
-  add_compile_options(-pthread)
+          add_compile_definitions(_XOPEN_SOURCE=700)
+          add_compile_definitions(_LARGE_FILE_API)
+          add_compile_options(-pthread)
 
   # Modules should be built with -shared -Wl,-G, so we can use runtime linking
   # with plugins.
@@ -1196,13 +1196,6 @@ if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
 
   # Also set the correct flags for building shared libraries.
   string(APPEND CMAKE_SHARED_LINKER_FLAGS " -shared")
-
-  # Set LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF as AIX doesn't support it
-  if (LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
-    message(WARNING
-    "LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON is not supported on AIX. LLVM_ENABLE_PER_TARGET_RUNTIME_DIR is set to OFF.")
-    set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR OFF CACHE BOOL "" FORCE)
-  endif()
 endif()
 
 # Build with _XOPEN_SOURCE on z/OS.
