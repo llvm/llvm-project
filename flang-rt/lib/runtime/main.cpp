@@ -12,6 +12,9 @@
 #include <cfenv>
 #include <cstdio>
 #include <cstdlib>
+#include <thread>
+std::thread::id main_thread_id = std::this_thread::get_id();
+extern "C" std::thread::id get_main_thread_id() { return main_thread_id; }
 
 static void ConfigureFloatingPoint() {
 #ifdef feclearexcept // a macro in some environments; omit std::

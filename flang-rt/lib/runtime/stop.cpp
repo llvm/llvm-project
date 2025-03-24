@@ -16,6 +16,8 @@
 #include <cfenv>
 #include <cstdio>
 #include <cstdlib>
+#include <thread>
+std::thread::id get_main_thread_id();
 
 #ifdef HAVE_BACKTRACE
 #include BACKTRACE_HEADER
@@ -79,6 +81,8 @@ static void CloseAllExternalUnits(const char *why) {
     std::fputc('\n', stderr);
     DescribeIEEESignaledExceptions();
   }
+  if (get_main_thread_id() != std::this_thread::get_id())
+    std::abort();
   std::exit(code);
 }
 
@@ -94,6 +98,8 @@ static void CloseAllExternalUnits(const char *why) {
     }
     DescribeIEEESignaledExceptions();
   }
+  if (get_main_thread_id() != std::this_thread::get_id())
+    std::abort();
   if (isErrorStop) {
     std::exit(EXIT_FAILURE);
   } else {
