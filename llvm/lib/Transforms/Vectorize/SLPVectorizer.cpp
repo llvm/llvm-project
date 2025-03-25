@@ -5343,6 +5343,25 @@ static InstructionCost getScalarizationOverhead(const TargetTransformInfo &TTI,
                                       CostKind, VL);
 }
 
+/// This is similar to TargetTransformInfo::getVectorInstrCost, but if ScalarTy
+/// is a FixedVectorType, a vector will be extracted instead of a scalar.
+static InstructionCost getVectorInstrCost(
+    const TargetTransformInfo &TTI, Type *ScalarTy, unsigned Opcode, Type *Val,
+    TTI::TargetCostKind CostKind, unsigned Index, Value *Scalar,
+    ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) {
+  if (Opcode == Instruction::ExtractElement) {
+    if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
+      assert(SLPReVec && "Only supported by REVEC.");
+      assert(isa<VectorType>(Val) && "Val must be a vector type.");
+      return getShuffleCost(TTI, TTI::SK_ExtractSubvector,
+                            cast<VectorType>(Val), {}, CostKind,
+                            Index * VecTy->getNumElements(), VecTy);
+    }
+  }
+  return TTI.getVectorInstrCost(Opcode, Val, CostKind, Index, Scalar,
+                                ScalarUserAndIdx);
+}
+
 /// Correctly creates insert_subvector, checking that the index is multiple of
 /// the subvectors length. Otherwise, generates shuffle using \p Generator or
 /// using default shuffle.
@@ -13716,16 +13735,9 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
       ExtraCost = TTI->getExtractWithExtendCost(Extend, EU.Scalar->getType(),
                                                 VecTy, EU.Lane);
     } else {
-      if (auto *FixedVecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
-        assert(SLPReVec && "Only supported by REVEC.");
-        ExtraCost =
-            getShuffleCost(*TTI, TTI::SK_ExtractSubvector, VecTy, {}, CostKind,
-                           EU.Lane * FixedVecTy->getNumElements(), FixedVecTy);
-      } else {
-        ExtraCost = TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy,
-                                            CostKind, EU.Lane, EU.Scalar,
-                                            ScalarUserAndIdx);
-      }
+      ExtraCost =
+          getVectorInstrCost(*TTI, ScalarTy, Instruction::ExtractElement, VecTy,
+                             CostKind, EU.Lane, EU.Scalar, ScalarUserAndIdx);
     }
     // Leave the scalar instructions as is if they are cheaper than extracts.
     if (Entry->Idx != 0 || Entry->getOpcode() == Instruction::GetElementPtr ||
