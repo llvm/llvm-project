@@ -722,8 +722,7 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
 #undef DEBUG_TYPE
 
   // Return PTX if the compilation target is `assembly`.
-  if (targetOptions.getCompilationTarget() ==
-      gpu::CompilationTarget::Assembly)
+  if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Assembly)
     return SmallVector<char, 0>(serializedISA->begin(), serializedISA->end());
 
   std::optional<SmallVector<char, 0>> result;

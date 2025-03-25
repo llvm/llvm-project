@@ -129,10 +129,8 @@ TEST_F(MLIRTargetLLVMNVVM, SKIP_WITHOUT_NVPTX(SerializeNVVMToPTX)) {
     ASSERT_TRUE(!object->empty());
 
     ASSERT_TRUE(
-        StringRef(object->data(), object->size()).contains("nvvm_kernel"));     
-    ASSERT_TRUE(
-        StringRef(object->data(), object->size()).count('\0') == 0);
-
+        StringRef(object->data(), object->size()).contains("nvvm_kernel"));
+    ASSERT_TRUE(StringRef(object->data(), object->size()).count('\0') == 0);
   }
 }
 
