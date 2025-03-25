@@ -84,11 +84,6 @@ class ModuleMap {
   /// such as "stdint.h".
   OptionalDirectoryEntryRef BuiltinIncludeDir;
 
-  /// Language options used to parse the module map itself.
-  ///
-  /// These are always simple C language options.
-  LangOptions MMapLangOpts;
-
   /// The module that the main source file is associated with (the module
   /// named LangOpts::CurrentModule, if we've loaded it).
   Module *SourceModule = nullptr;

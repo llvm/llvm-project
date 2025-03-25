@@ -54,6 +54,13 @@ public:
   bool hasSubnormalFlushingControl(bool any = false) const;
   void set_hasSubnormalFlushingControl(int kind, bool yes = true);
 
+  // Check if a given real kind has support for raising a nonstandard
+  // ieee_denorm exception.
+  bool hasSubnormalExceptionSupport(int kind) const;
+  // Check if all real kinds have support for the ieee_denorm exception.
+  bool hasSubnormalExceptionSupport() const;
+  void set_hasSubnormalExceptionSupport(int kind, bool yes = true);
+
   Rounding roundingMode() const { return roundingMode_; }
   void set_roundingMode(Rounding);
 
@@ -134,6 +141,7 @@ private:
   bool haltingSupportIsUnknownAtCompileTime_{false};
   bool areSubnormalsFlushedToZero_{false};
   bool hasSubnormalFlushingControl_[maxKind + 1]{};
+  bool hasSubnormalExceptionSupport_[maxKind + 1]{};
   Rounding roundingMode_{defaultRounding};
   std::size_t procedurePointerByteSize_{8};
   std::size_t procedurePointerAlignment_{8};
