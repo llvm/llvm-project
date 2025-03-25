@@ -156,16 +156,6 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
             errs() << "EVL is used as an operand in non-VPInstruction::Add\n";
             return false;
           }
-          if (!all_of(I->users(), [](VPUser *U) {
-                if (auto *VPI = dyn_cast<VPInstruction>(U))
-                  return VPI->getOpcode() == VPInstruction::BranchOnCount;
-                return isa<VPEVLBasedIVPHIRecipe>(U);
-              })) {
-            errs()
-                << "Result of VPInstruction::Add with EVL operand is not used "
-                   "by VPEVLBasedIVPHIRecipe or VPInstruction::BranchOnCount\n";
-            return false;
-          }
           return true;
         })
         .Default([&](const VPUser *U) {

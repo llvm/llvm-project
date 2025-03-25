@@ -2425,7 +2425,6 @@ InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
     return VectorTripCount;
 
   Value *TC = getTripCount();
-  Type *Ty = TC->getType();
   IRBuilder<> Builder(InsertBlock->getTerminator());
 
   // Use original trip count as the vector trip count if use predicated EVL
@@ -2437,6 +2436,7 @@ InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
     return VectorTripCount = TC;
   }
 
+  Type *Ty = TC->getType();
   // This is where we can make the step a runtime constant.
   Value *Step = createStepForVF(Builder, Ty, VF, UF);
 
@@ -4477,7 +4477,6 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPVectorPointerSC:
       case VPDef::VPVectorEndPointerSC:
       case VPDef::VPExpandSCEVSC:
-      case VPDef::VPEVLBasedIVPHISC:
       case VPDef::VPPredInstPHISC:
       case VPDef::VPBranchOnMaskSC:
         continue;

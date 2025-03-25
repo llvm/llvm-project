@@ -22,19 +22,17 @@ define void @iv32(ptr noalias %a, ptr noalias %b, i32 %N) {
 ; IF-EVL-NEXT:    [[TMP10:%.*]] = mul i32 [[TMP9]], 4
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_EVL_NEXT:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[TMP11:%.*]] = sub i32 [[N]], [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[TMP11:%.*]] = sub i32 [[N]], [[INDEX]]
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[TMP11]], i32 4, i1 true)
-; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[INDEX]]
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[TMP14]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP15]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
-; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP16]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[VP_OP_LOAD]], ptr align 4 [[TMP17]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP12]])
-; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i32 [[TMP12]], [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[TMP10]]
-; IF-EVL-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[INDEX_EVL_NEXT]], [[N]]
+; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], [[TMP12]]
+; IF-EVL-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N]]
 ; IF-EVL-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]

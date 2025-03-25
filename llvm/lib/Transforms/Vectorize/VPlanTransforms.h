@@ -143,11 +143,9 @@ struct VPlanTransforms {
       VPlan &Plan,
       const std::function<bool(BasicBlock *)> &BlockNeedsPredication);
 
-  /// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
-  /// replaces all uses except the canonical IV increment of
-  /// VPCanonicalIVPHIRecipe with a VPEVLBasedIVPHIRecipe.
-  /// VPCanonicalIVPHIRecipe is only used to control the loop after
-  /// this transformation.
+  /// Add a VPInstruction::ExplicitVectorLength and related recipes to \p Plan
+  /// and adjust the increment of the canonical induction variable to an
+  /// explicit vector length.
   /// \returns true if the transformation succeeds, or false if it doesn't.
   static bool
   tryAddExplicitVectorLength(VPlan &Plan,
