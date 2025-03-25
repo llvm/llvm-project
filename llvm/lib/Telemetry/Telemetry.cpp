@@ -21,6 +21,8 @@ void TelemetryInfo::serialize(Serializer &serializer) const {
 }
 
 Error Manager::dispatch(TelemetryInfo *Entry) {
+  assert(Config::BuildTimeEnableTelemetry &&
+         "Telemetry should have been enabled");
   if (Error Err = preDispatch(Entry))
     return Err;
 

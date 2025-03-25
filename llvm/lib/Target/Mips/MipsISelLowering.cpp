@@ -4475,12 +4475,18 @@ bool MipsTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
 }
 
 unsigned MipsTargetLowering::getJumpTableEncoding() const {
-
-  // FIXME: For space reasons this should be: EK_GPRel32BlockAddress.
-  if (ABI.IsN64() && isPositionIndependent())
+  if (!isPositionIndependent())
+    return MachineJumpTableInfo::EK_BlockAddress;
+  if (ABI.IsN64())
     return MachineJumpTableInfo::EK_GPRel64BlockAddress;
+  return MachineJumpTableInfo::EK_GPRel32BlockAddress;
+}
 
-  return TargetLowering::getJumpTableEncoding();
+SDValue MipsTargetLowering::getPICJumpTableRelocBase(SDValue Table,
+                                                     SelectionDAG &DAG) const {
+  if (!isPositionIndependent())
+    return Table;
+  return DAG.getGLOBAL_OFFSET_TABLE(getPointerTy(DAG.getDataLayout()));
 }
 
 bool MipsTargetLowering::useSoftFloat() const {

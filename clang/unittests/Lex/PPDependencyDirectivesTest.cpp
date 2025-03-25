@@ -122,9 +122,9 @@ TEST_F(PPDependencyDirectivesTest, MacroGuard) {
     return getDependencyDirectives(File);
   };
 
+  HeaderSearchOptions HSOpts;
   TrivialModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                          Diags, LangOpts, Target.get());
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
   Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,
                   /*OwnsHeaderSearch =*/false);

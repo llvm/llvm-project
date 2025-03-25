@@ -252,3 +252,24 @@ svfloat64x4_t test_svcreate4_f64(svfloat64_t x0, svfloat64_t x1, svfloat64_t x2,
 {
   return SVE_ACLE_FUNC(svcreate4,_f64,,)(x0, x1, x2, x4);
 }
+
+// CHECK-LABEL: @test_svcreate4_mf8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[X0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[X1:%.*]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], <vscale x 16 x i8> [[X2:%.*]], 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], <vscale x 16 x i8> [[X4:%.*]], 3
+// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]]
+//
+// CPP-CHECK-LABEL: @_Z18test_svcreate4_mf8u13__SVMfloat8_tS_S_S_(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[X0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[X1:%.*]], 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], <vscale x 16 x i8> [[X2:%.*]], 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], <vscale x 16 x i8> [[X4:%.*]], 3
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]]
+//
+svmfloat8x4_t test_svcreate4_mf8(svmfloat8_t x0, svmfloat8_t x1, svmfloat8_t x2, svmfloat8_t x4) ATTR
+{
+  return SVE_ACLE_FUNC(svcreate4,_mf8,,)(x0, x1, x2, x4);
+}

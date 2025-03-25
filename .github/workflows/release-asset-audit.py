@@ -24,7 +24,7 @@ def _get_uploaders(release_version):
         return set(
             [
                 "DimitryAndric",
-                "stefanp-ibm",
+                "stefanp-synopsys",
                 "lei137",
                 "omjavaid",
                 "nicolerabjohn",

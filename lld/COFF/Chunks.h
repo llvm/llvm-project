@@ -59,7 +59,8 @@ public:
     SectionKind,
     SectionECKind,
     OtherKind,
-    ImportThunkKind
+    ImportThunkKind,
+    ECExportThunkKind
   };
   Kind kind() const { return chunkKind; }
 
@@ -827,7 +828,10 @@ static const uint8_t ECExportThunkCode[] = {
 
 class ECExportThunkChunk : public NonSectionCodeChunk {
 public:
-  explicit ECExportThunkChunk(Defined *targetSym) : target(targetSym) {}
+  explicit ECExportThunkChunk(Defined *targetSym)
+      : NonSectionCodeChunk(ECExportThunkKind), target(targetSym) {}
+  static bool classof(const Chunk *c) { return c->kind() == ECExportThunkKind; }
+
   size_t getSize() const override { return sizeof(ECExportThunkCode); };
   void writeTo(uint8_t *buf) const override;
   MachineTypes getMachine() const override { return AMD64; }

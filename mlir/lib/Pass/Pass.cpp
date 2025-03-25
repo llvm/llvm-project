@@ -678,16 +678,16 @@ LogicalResult OpToOpPassAdaptor::tryMergeInto(MLIRContext *ctx,
   mgrs.clear();
 
   // After coalescing, sort the pass managers within rhs by name.
-  auto compareFn = [](const OpPassManager *lhs, const OpPassManager *rhs) {
+  auto compareFn = [](const OpPassManager &lhs, const OpPassManager &rhs) {
     // Order op-specific pass managers first and op-agnostic pass managers last.
-    if (std::optional<StringRef> lhsName = lhs->getOpName()) {
-      if (std::optional<StringRef> rhsName = rhs->getOpName())
-        return lhsName->compare(*rhsName);
-      return -1; // lhs(op-specific) < rhs(op-agnostic)
+    if (std::optional<StringRef> lhsName = lhs.getOpName()) {
+      if (std::optional<StringRef> rhsName = rhs.getOpName())
+        return *lhsName < *rhsName;
+      return true; // lhs(op-specific) < rhs(op-agnostic)
     }
-    return 1; // lhs(op-agnostic) > rhs(op-specific)
+    return false; // lhs(op-agnostic) > rhs(op-specific)
   };
-  llvm::array_pod_sort(rhs.mgrs.begin(), rhs.mgrs.end(), compareFn);
+  std::sort(rhs.mgrs.begin(), rhs.mgrs.end(), compareFn);
   return success();
 }
 
