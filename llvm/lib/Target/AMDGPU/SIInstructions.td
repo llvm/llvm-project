@@ -245,6 +245,12 @@ def S_INVERSE_BALLOT_U64 : SPseudoInstSI<
 >;
 } // End usesCustomInserter = 1
 
+let WaveSizePredicate = isWave32 in
+  def : GCNPat <
+    (i1 (int_amdgcn_inverse_ballot i64:$src)),
+    (S_INVERSE_BALLOT_U32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub0)))
+>;
+
 // Pseudo instructions used for @llvm.fptrunc.round. The final codegen is done
 // in the ModeRegister pass.
 let Uses = [MODE, EXEC] in {
@@ -1909,7 +1915,14 @@ def : BitConvert <v8i64,  v16f32, VReg_512>;
 def : BitConvert <v8f64,  v16f32, VReg_512>;
 def : BitConvert <v16f32, v8i64,  VReg_512>;
 def : BitConvert <v16f32, v8f64,  VReg_512>;
-
+def : BitConvert <v8i64,  v32f16, VReg_512>;
+def : BitConvert <v8i64,  v32i16, VReg_512>;
+def : BitConvert <v8f64,  v32f16, VReg_512>;
+def : BitConvert <v8f64,  v32i16, VReg_512>;
+def : BitConvert <v32f16, v8i64,  VReg_512>;
+def : BitConvert <v32f16, v8f64,  VReg_512>;
+def : BitConvert <v32i16, v8i64,  VReg_512>;
+def : BitConvert <v32i16, v8f64,  VReg_512>;
 
 
 def : BitConvert <v32bf16, v32i16, VReg_512>;
@@ -2329,7 +2342,7 @@ let True16Predicate = UseRealTrue16Insts in {
   foreach vt = [f16, bf16] in {
     def : GCNPat <
       (VGPRImm<(vt fpimm)>:$imm),
-      (V_MOV_B16_t16_e64 0, $imm, 0)
+      (V_MOV_B16_t16_e64 0, (vt (bitcast_fpimm_to_i16 $imm)), 0)
     >;
   }
 }

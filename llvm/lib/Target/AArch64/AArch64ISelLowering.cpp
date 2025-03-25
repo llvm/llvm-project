@@ -8241,7 +8241,10 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   }
 
   // varargs
-  if (isVarArg) {
+  // Note that IsWin64 part is required to prevent odd miscompilations on arm64
+  // windows platforms. For more info refer to GH#126780 PR comments.
+  if (isVarArg &&
+      (DAG.getMachineFunction().getFrameInfo().hasVAStart() || IsWin64)) {
     if (!Subtarget->isTargetDarwin() || IsWin64) {
       // The AAPCS variadic function ABI is identical to the non-variadic
       // one. As a result there may be more arguments in registers and we should
@@ -17652,8 +17655,7 @@ bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
         Builder.CreateVectorSplat(StTy->getElementCount(), Builder.getTrue());
 
   auto ExtractedValues = InterleavedValues;
-  SmallVector<Value *, 4> StoreOperands(InterleavedValues.begin(),
-                                        InterleavedValues.end());
+  SmallVector<Value *, 4> StoreOperands(InterleavedValues);
   if (UseScalable)
     StoreOperands.push_back(Pred);
   StoreOperands.push_back(BaseAddr);

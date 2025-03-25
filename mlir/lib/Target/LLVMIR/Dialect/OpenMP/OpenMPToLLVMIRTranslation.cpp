@@ -3368,7 +3368,7 @@ static void collectMapDataFromMapOperands(
                        mapData.BaseType.back(), builder, moduleTranslation));
     mapData.MapClause.push_back(mapOp.getOperation());
     mapData.Types.push_back(
-        llvm::omp::OpenMPOffloadMappingFlags(mapOp.getMapType().value()));
+        llvm::omp::OpenMPOffloadMappingFlags(mapOp.getMapType()));
     mapData.Names.push_back(LLVM::createMappingInformation(
         mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder()));
     mapData.DevicePointers.push_back(llvm::OpenMPIRBuilder::DeviceInfoTy::None);
@@ -3437,8 +3437,8 @@ static void collectMapDataFromMapOperands(
     Value offloadPtr =
         mapOp.getVarPtrPtr() ? mapOp.getVarPtrPtr() : mapOp.getVarPtr();
     llvm::Value *origValue = moduleTranslation.lookupValue(offloadPtr);
-    auto mapType = static_cast<llvm::omp::OpenMPOffloadMappingFlags>(
-        mapOp.getMapType().value());
+    auto mapType =
+        static_cast<llvm::omp::OpenMPOffloadMappingFlags>(mapOp.getMapType());
     auto mapTypeAlways = llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
 
     mapData.OriginalValue.push_back(origValue);
@@ -3768,8 +3768,8 @@ mapParentWithMembers(LLVM::ModuleTranslation &moduleTranslation,
   // runtime information on the dynamically allocated data).
   auto parentClause =
       llvm::cast<omp::MapInfoOp>(mapData.MapClause[mapDataIndex]);
-  auto parentMapFlags = llvm::omp::OpenMPOffloadMappingFlags(
-      parentClause.getMapType().value_or(0));
+  auto parentMapFlags =
+      llvm::omp::OpenMPOffloadMappingFlags(parentClause.getMapType());
   combinedInfo.Types[parentIndex] |=
       parentMapFlags & llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR;
 
@@ -3924,8 +3924,8 @@ static void processMapMembersWithParent(
     // in part as we currently have substantially less information on the data
     // being mapped at this stage.
     if (checkIfPointerMap(memberClause)) {
-      auto mapFlag = llvm::omp::OpenMPOffloadMappingFlags(
-          memberClause.getMapType().value());
+      auto mapFlag =
+          llvm::omp::OpenMPOffloadMappingFlags(memberClause.getMapType());
       mapFlag &= ~llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
       mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF;
       ompBuilder.setCorrectMemberOfFlag(mapFlag, memberOfFlag);
@@ -3945,7 +3945,7 @@ static void processMapMembersWithParent(
     // Same MemberOfFlag to indicate its link with parent and other members
     // of.
     auto mapFlag =
-        llvm::omp::OpenMPOffloadMappingFlags(memberClause.getMapType().value());
+        llvm::omp::OpenMPOffloadMappingFlags(memberClause.getMapType());
     mapFlag &= ~llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
     mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF;
     ompBuilder.setCorrectMemberOfFlag(mapFlag, memberOfFlag);
@@ -4000,8 +4000,7 @@ static void processIndividualMap(MapInfoData &mapData, size_t mapDataIdx,
       !mapData.IsDeclareTarget[mapDataIdx])
     mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
 
-  if (mapInfoOp.getMapCaptureType().value() ==
-          omp::VariableCaptureKind::ByCopy &&
+  if (mapInfoOp.getMapCaptureType() == omp::VariableCaptureKind::ByCopy &&
       !isPtrTy)
     mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL;
 
@@ -4074,8 +4073,7 @@ createAlteredByCaptureMap(MapInfoData &mapData,
     // if it's declare target, skip it, it's handled separately.
     if (!mapData.IsDeclareTarget[i]) {
       auto mapOp = cast<omp::MapInfoOp>(mapData.MapClause[i]);
-      omp::VariableCaptureKind captureKind =
-          mapOp.getMapCaptureType().value_or(omp::VariableCaptureKind::ByRef);
+      omp::VariableCaptureKind captureKind = mapOp.getMapCaptureType();
       bool isPtrTy = checkIfPointerMap(mapOp);
 
       // Currently handles array sectioning lowerbound case, but more
@@ -4805,8 +4803,7 @@ createDeviceArgumentAccessor(MapInfoData &mapData, llvm::Argument &arg,
   for (size_t i = 0; i < mapData.MapClause.size(); ++i)
     if (mapData.OriginalValue[i] == input) {
       auto mapOp = cast<omp::MapInfoOp>(mapData.MapClause[i]);
-      capture =
-          mapOp.getMapCaptureType().value_or(omp::VariableCaptureKind::ByRef);
+      capture = mapOp.getMapCaptureType();
 
       break;
     }

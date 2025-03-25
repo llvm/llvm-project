@@ -102,13 +102,13 @@ end
 ! COMMON-SAME:     step (%[[STEP_I]], %[[STEP_J]], %[[STEP_K]]) {
 
 ! COMMON-NEXT: %[[IV_IDX_I:.*]] = fir.convert %[[ARG0]]
-! COMMON-NEXT: fir.store %[[IV_IDX_I]] to %[[BINDING_I]]#1
+! COMMON-NEXT: fir.store %[[IV_IDX_I]] to %[[BINDING_I]]#0
 
 ! COMMON-NEXT: %[[IV_IDX_J:.*]] = fir.convert %[[ARG1]]
-! COMMON-NEXT: fir.store %[[IV_IDX_J]] to %[[BINDING_J]]#1
+! COMMON-NEXT: fir.store %[[IV_IDX_J]] to %[[BINDING_J]]#0
 
 ! COMMON-NEXT: %[[IV_IDX_K:.*]] = fir.convert %[[ARG2]]
-! COMMON-NEXT: fir.store %[[IV_IDX_K]] to %[[BINDING_K]]#1
+! COMMON-NEXT: fir.store %[[IV_IDX_K]] to %[[BINDING_K]]#0
 
 ! COMMON:      omp.yield
 ! COMMON-NEXT: }

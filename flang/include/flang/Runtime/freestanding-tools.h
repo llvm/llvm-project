@@ -110,12 +110,12 @@ using std::fill_n;
 
 #if STD_MEMSET_USE_BUILTIN
 static inline RT_API_ATTRS void memset(
-    void *dest, uint8_t value, std::size_t count) {
+    void *dest, unsigned char value, std::size_t count) {
   __builtin_memset(dest, value, count);
 }
 #elif STD_MEMSET_UNSUPPORTED
 static inline RT_API_ATTRS void memset(
-    void *dest, uint8_t value, std::size_t count) {
+    void *dest, unsigned char value, std::size_t count) {
   char *to{reinterpret_cast<char *>(dest)};
   while (count--) {
     *to++ = value;

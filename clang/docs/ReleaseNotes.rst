@@ -267,6 +267,7 @@ Improvements to Clang's diagnostics
   under the subgroup ``-Wunsafe-buffer-usage-in-libc-call``.
 - Diagnostics on chained comparisons (``a < b < c``) are now an error by default. This can be disabled with
   ``-Wno-error=parentheses``.
+- Clang now better preserves the sugared types of pointers to member.
 - The ``-Wshift-bool`` warning has been added to warn about shifting a boolean. (#GH28334)
 - Fixed diagnostics adding a trailing ``::`` when printing some source code
   constructs, like base classes.
@@ -354,6 +355,7 @@ Bug Fixes to C++ Support
 - Correctly diagnoses if unresolved using declarations shadows template paramters (#GH129411)
 - Clang was previously coalescing volatile writes to members of volatile base class subobjects.
   The issue has been addressed by propagating qualifiers during derived-to-base conversions in the AST. (#GH127824)
+- Fixed a Clang regression in C++20 mode where unresolved dependent call expressions were created inside non-dependent contexts (#GH122892)
 - Clang now emits the ``-Wunused-variable`` warning when some structured bindings are unused
   and the ``[[maybe_unused]]`` attribute is not applied. (#GH125810)
 
@@ -379,6 +381,8 @@ Target Specific Changes
 
 AMDGPU Support
 ^^^^^^^^^^^^^^
+
+- Bump the default code object version to 6. ROCm 6.3 is required to run any program compiled with COV6.
 
 NVPTX Support
 ^^^^^^^^^^^^^^
@@ -421,6 +425,11 @@ RISC-V Support
 
 - Add support for `-mtune=generic-ooo` (a generic out-of-order model).
 
+- Adds support for `__attribute__((interrupt("qci-nest")))` and
+  `__attribute__((interrupt("qci-nonest")))`. These use instructions from
+  Qualcomm's `Xqciint` extension to save and restore some GPRs in interrupt
+  service routines.
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -454,11 +463,6 @@ AST Matchers
 - Ensure ``isDerivedFrom`` matches the correct base in case more than one alias exists.
 - Extend ``templateArgumentCountIs`` to support function and variable template
   specialization.
-- Move ``ast_matchers::MatchFinder::MatchFinderOptions`` to
-  ``ast_matchers::MatchFinderOptions``.
-- Add a boolean member ``SkipSystemHeaders`` to ``MatchFinderOptions``, and make
-  ``MatchASTConsumer`` receive a reference to ``MatchFinderOptions`` in the
-  constructor. This allows it to skip system headers when traversing the AST.
 
 clang-format
 ------------

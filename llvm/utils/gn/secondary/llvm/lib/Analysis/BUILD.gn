@@ -50,6 +50,7 @@ static_library("Analysis") {
     "DomPrinter.cpp",
     "DomTreeUpdater.cpp",
     "DominanceFrontier.cpp",
+    "EphemeralValuesCache.cpp",
     "FunctionPropertiesAnalysis.cpp",
     "GlobalsModRef.cpp",
     "GuardUtils.cpp",
