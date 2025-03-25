@@ -2223,6 +2223,10 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   // See https://llvm.org/docs/RemoveDIsDebugInfo.html
   translator.llvmModule->setIsNewDbgInfoFormat(UseNewDbgInfoFormat);
 
+  // Add the necessary debug info module flags, if they were not encoded in MLIR
+  // beforehand.
+  translator.debugTranslation->addModuleFlagsIfNotPresent();
+
   if (!disableVerification &&
       llvm::verifyModule(*translator.llvmModule, &llvm::errs()))
     return nullptr;

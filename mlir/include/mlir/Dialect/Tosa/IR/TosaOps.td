@@ -801,7 +801,7 @@ def Tosa_LogicalAndOp : Tosa_ElementwiseOp<"logical_and", [
   );
 
   list<Availability> availability = [
-    Profile<[Tosa_PRO_INT]>,
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
 }
@@ -828,7 +828,7 @@ def Tosa_LogicalLeftShiftOp : Tosa_ElementwiseOp<"logical_left_shift",
   );
 
   list<Availability> availability = [
-    Profile<[Tosa_PRO_INT]>,
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
 }
@@ -856,7 +856,7 @@ def Tosa_LogicalRightShiftOp : Tosa_ElementwiseOp<"logical_right_shift",
   );
 
   list<Availability> availability = [
-    Profile<[Tosa_PRO_INT]>,
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
 }
@@ -884,7 +884,7 @@ def Tosa_LogicalOrOp : Tosa_ElementwiseOp<"logical_or", [
   );
 
   list<Availability> availability = [
-    Profile<[Tosa_PRO_INT]>,
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
 }
@@ -912,7 +912,7 @@ def Tosa_LogicalXorOp : Tosa_ElementwiseOp<"logical_xor", [
   );
 
   list<Availability> availability = [
-    Profile<[Tosa_PRO_INT]>,
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
 }
@@ -1108,7 +1108,7 @@ def Tosa_TableOp : Tosa_InferShapedTypeOp<"table"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_INT16]>,
   ];
 
   let assemblyFormat = [{
@@ -1882,7 +1882,7 @@ def Tosa_ConcatOp : Tosa_InferTensorTypeOp<"concat"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT16]>,
   ];
 
   let hasCanonicalizer = 1;
@@ -1910,15 +1910,17 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad"> {
     Example:
 
     ```mlir
-    %0 = tosa.const_shape { value = dense<[1, 2, 3, 4]> : tensor<4xindex> } : () -> !tosa.shape<4>
-    tosa.pad %arg0, %0 : (tensor<1x2xf32>, !tosa.shape<4>)  -> (tensor<4x9xf32>)
+    %pad_const = "tosa.const"() {values = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
+    %padding = tosa.const_shape {values = dense<[1, 2, 3, 4]> : tensor<4xindex> } : () -> !tosa.shape<4>
+    tosa.pad %arg0, %padding, %pad_const: (tensor<1x2xf32>, !tosa.shape<4>, tensor<1xf32>)  -> (tensor<4x9xf32>)
     ```
 
     Example 2:
 
     ```mlir
-    %0 = tosa.const_shape { value = dense<[-1, 2, 3, 4]> : tensor<4xindex> } : () -> !tosa.shape<4>
-    tosa.pad %arg0, %0 : (tensor<1x2xf32>, !tosa.shape<4>)  -> (tensor<?x9xf32>)
+    %pad_const = "tosa.const"() {values = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
+    %padding = tosa.const_shape {values = dense<[-1, 2, 3, 4]> : tensor<4xindex> } : () -> !tosa.shape<4>
+    tosa.pad %arg0, %padding, %pad_const : (tensor<1x2xf32>, !tosa.shape<4>, tensor<1xf32>)  -> (tensor<?x9xf32>)
     ```
   }];
 
@@ -2316,7 +2318,7 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure,
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
   ];
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";

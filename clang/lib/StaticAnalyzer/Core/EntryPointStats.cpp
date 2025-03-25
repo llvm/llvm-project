@@ -80,7 +80,7 @@ void EntryPointStat::lockRegistry() {
   StatsRegistry->IsLocked = true;
 }
 
-static bool isRegistered(llvm::StringLiteral Name) {
+[[maybe_unused]] static bool isRegistered(llvm::StringLiteral Name) {
   auto ByName = [Name](const EntryPointStat *M) { return M->name() == Name; };
   bool Result = false;
   enumerateStatVectors([ByName, &Result](const auto &Stats) {
