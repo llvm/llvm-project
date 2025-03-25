@@ -20,13 +20,38 @@ class IdivTest : public LIBC_NAMESPACE::testing::Test {
   static constexpr T min = FXRep::MIN();
   static constexpr T one_half = FXRep::ONE_HALF();
   static constexpr T one_fourth = FXRep::ONE_FOURTH();
-  static constexpr T eps = FXRep::EPS();
 
 public:
   typedef XType (*IdivFunc)(T, T);
 
   void testSpecialNumbers(IdivFunc func) {
+    constexpr bool is_signed = (FXRep::SIGN_LEN > 0);
+    constexpr bool has_integral = (FXRep::INTEGRAL_LEN > 0);
+
     EXPECT_EQ(func(one_half, one_fourth), static_cast<XType>(2));
+    EXPECT_EQ(func(one_half, one_half), static_cast<XType>(1));
+    EXPECT_EQ(func(one_fourth, one_half), static_cast<XType>(0));
+    EXPECT_EQ(func(0.75, 0.25), static_cast<XType>(3));
+    EXPECT_EQ(func(0.625, 0.125), static_cast<XType>(5));
+
+    if constexpr (is_signed) {
+      EXPECT_EQ(func(min, one_half), static_cast<XType>(min) * 2);
+    } else {
+      EXPECT_EQ(func(min, one_half), static_cast<XType>(0));
+    }
+
+    if constexpr (has_integral && min <= 7 && max >= 5) {
+      EXPECT_EQ(func(6.9, 4.2), static_cast<XType>(1));
+      EXPECT_EQ(func(4.2, 6.9), static_cast<XType>(0));
+      EXPECT_EQ(func(4.5, 2.2), static_cast<XType>(2));
+      EXPECT_EQ(func(2.2, 1.1), static_cast<XType>(2));
+
+      if constexpr (is_signed) {
+        EXPECT_EQ(func(4.2, -6.9), static_cast<XType>(0));
+        EXPECT_EQ(func(-6.9, 4.2), static_cast<XType>(-1));
+        EXPECT_EQ(func(-2.5, 1.25), static_cast<XType>(-2));
+      }
+    }
   }
 };
 
