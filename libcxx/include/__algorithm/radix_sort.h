@@ -306,28 +306,28 @@ struct __unsigned_integer_of_size;
 
 template <>
 struct __unsigned_integer_of_size<1> {
-  using type = uint8_t;
+  using type _LIBCPP_NODEBUG = uint8_t;
 };
 
 template <>
 struct __unsigned_integer_of_size<2> {
-  using type = uint16_t;
+  using type _LIBCPP_NODEBUG = uint16_t;
 };
 
 template <>
 struct __unsigned_integer_of_size<4> {
-  using type = uint32_t;
+  using type _LIBCPP_NODEBUG = uint32_t;
 };
 
 template <>
 struct __unsigned_integer_of_size<8> {
-  using type = uint64_t;
+  using type _LIBCPP_NODEBUG = uint64_t;
 };
 
 #  if _LIBCPP_HAS_INT128
 template <>
 struct __unsigned_integer_of_size<16> {
-  using type = __int128;
+  using type _LIBCPP_NODEBUG = __int128;
 };
 #  endif
 
