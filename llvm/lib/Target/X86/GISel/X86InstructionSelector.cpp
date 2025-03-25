@@ -453,11 +453,13 @@ bool X86InstructionSelector::select(MachineInstr &I) {
 unsigned X86InstructionSelector::getPtrLoadStoreOp(const LLT &Ty,
                                                    const RegisterBank &RB,
                                                    unsigned Opc) const {
-  bool Isload = (Opc == TargetOpcode::G_LOAD);
+  assert((Opc == TargetOpcode::G_STORE || Opc == TargetOpcode::G_LOAD) &&
+         "Only G_STORE and G_LOAD are expected for selection");
+  bool IsLoad = (Opc == TargetOpcode::G_LOAD);
   if (Ty == LLT::pointer(0, 32) && X86::GPRRegBankID == RB.getID())
-    return Isload ? X86::MOV32rm : X86::MOV32mr;
+    return IsLoad ? X86::MOV32rm : X86::MOV32mr;
   if (Ty == LLT::pointer(0, 64) && X86::GPRRegBankID == RB.getID())
-    return Isload ? X86::MOV64rm : X86::MOV64mr;
+    return IsLoad ? X86::MOV64rm : X86::MOV64mr;
   return Opc;
 }
 
@@ -592,7 +594,8 @@ static bool X86SelectAddress(MachineInstr &I, const X86TargetMachine &TM,
 
     if (STI.isPICStyleRIPRel()) {
       // Use rip-relative addressing.
-      assert(AM.Base.Reg == 0 && AM.IndexReg == 0);
+      assert(AM.Base.Reg == 0 && AM.IndexReg == 0 &&
+             "RIP-relative addresses can't have additional register operands");
       AM.Base.Reg = X86::RIP;
     }
     return true;
