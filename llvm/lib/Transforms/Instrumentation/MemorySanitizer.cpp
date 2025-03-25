@@ -3290,7 +3290,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// This differs from handleSSEVectorConvertIntrinsic() because it
   /// propagates uninitialized shadow (instead of checking the shadow).
   void handleSSEVectorConvertIntrinsicByProp(IntrinsicInst &I,
-                                             bool HasRoundingMode = false) {
+                                             bool HasRoundingMode) {
     if (HasRoundingMode) {
       assert(I.arg_size() == 2);
       [[maybe_unused]] Value *RoundingMode = I.getArgOperand(1);
