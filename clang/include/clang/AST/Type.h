@@ -2636,6 +2636,7 @@ public:
                                                 // C++14 decltype(auto)
   bool isTypedefNameType() const;               // typedef or alias template
 
+  bool isDestroyingDeleteT() const;             // C++ std::destroying_delete_t
   bool isTypeIdentitySpecialization() const; // std::type_identity<X> for any X
 
   /// If this type is a template specialization return the TemplateDecl
