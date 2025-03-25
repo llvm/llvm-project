@@ -397,7 +397,6 @@ FUNCTION_PASS("kcfi", KCFIPass())
 FUNCTION_PASS("kernel-info", KernelInfoPrinter(TM))
 FUNCTION_PASS("lcssa", LCSSAPass())
 FUNCTION_PASS("libcalls-shrinkwrap", LibCallsShrinkWrapPass())
-FUNCTION_PASS("lint", LintPass())
 FUNCTION_PASS("load-store-vectorizer", LoadStoreVectorizerPass())
 FUNCTION_PASS("loop-data-prefetch", LoopDataPrefetchPass())
 FUNCTION_PASS("loop-distribute", LoopDistributePass())
@@ -543,6 +542,11 @@ FUNCTION_PASS_WITH_PARAMS(
     parseInstCombineOptions,
     "no-use-loop-info;use-loop-info;no-verify-fixpoint;verify-fixpoint;"
     "max-iterations=N")
+FUNCTION_PASS_WITH_PARAMS(
+    "lint", "LintPass",
+    [](bool AbortOnError) { return LintPass(AbortOnError); },
+    parseLintOptions,
+    "abort-on-error")
 FUNCTION_PASS_WITH_PARAMS(
     "loop-unroll", "LoopUnrollPass",
     [](LoopUnrollOptions Opts) { return LoopUnrollPass(Opts); },
