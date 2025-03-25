@@ -16,13 +16,13 @@ namespace hlsl {
 // unsigned integer and floating point. Keeping this ordering consistent will
 // help keep this file manageable as it grows.
 
-#define DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(fn)                                  \
+#define _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(fn)                                 \
   constexpr float fn(double V) { return fn(__detail::imp_cast<float>(V)); }    \
   constexpr float2 fn(double2 V) { return fn(__detail::imp_cast<float2>(V)); } \
   constexpr float3 fn(double3 V) { return fn(__detail::imp_cast<float3>(V)); } \
   constexpr float4 fn(double4 V) { return fn(__detail::imp_cast<float4>(V)); }
 
-#define DXC_COMPAT_BINARY_DOUBLE_OVERLOADS(fn)                                 \
+#define _DXC_COMPAT_BINARY_DOUBLE_OVERLOADS(fn)                                \
   constexpr float fn(double V1, double V2) {                                   \
     return fn(__detail::imp_cast<float>(V1), __detail::imp_cast<float>(V2));   \
   }                                                                            \
@@ -36,7 +36,7 @@ namespace hlsl {
     return fn(__detail::imp_cast<float4>(V1), __detail::imp_cast<float4>(V2)); \
   }
 
-#define DXC_COMPAT_TERNARY_DOUBLE_OVERLOADS(fn)                                \
+#define _DXC_COMPAT_TERNARY_DOUBLE_OVERLOADS(fn)                               \
   constexpr float fn(double V1, double V2, double V3) {                        \
     return fn(__detail::imp_cast<float>(V1), __detail::imp_cast<float>(V2),    \
               __detail::imp_cast<float>(V3));                                  \
@@ -59,7 +59,7 @@ namespace hlsl {
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(acos)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(acos)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -67,7 +67,7 @@ DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(acos)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(asin)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(asin)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -75,7 +75,7 @@ DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(asin)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(atan)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(atan)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -83,7 +83,7 @@ DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(atan)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_BINARY_DOUBLE_OVERLOADS(atan2)
+_DXC_COMPAT_BINARY_DOUBLE_OVERLOADS(atan2)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -91,7 +91,7 @@ DXC_COMPAT_BINARY_DOUBLE_OVERLOADS(atan2)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(ceil)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(ceil)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -121,7 +121,7 @@ clamp(vector<T, N> p0, T p1, T p2) {
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(cos)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(cos)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -129,7 +129,7 @@ DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(cos)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(cosh)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(cosh)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -137,7 +137,7 @@ DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(cosh)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(degrees)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(degrees)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -145,7 +145,7 @@ DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(degrees)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(exp)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(exp)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -153,7 +153,7 @@ DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(exp)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(exp2)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(exp2)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -161,7 +161,7 @@ DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(exp2)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(floor)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(floor)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -169,7 +169,7 @@ DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(floor)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(frac)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(frac)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -194,7 +194,7 @@ constexpr bool4 isinf(double4 V) {
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_TERNARY_DOUBLE_OVERLOADS(lerp)
+_DXC_COMPAT_TERNARY_DOUBLE_OVERLOADS(lerp)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -202,7 +202,7 @@ DXC_COMPAT_TERNARY_DOUBLE_OVERLOADS(lerp)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(log)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(log)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -210,7 +210,7 @@ DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(log)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(log10)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(log10)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -218,7 +218,7 @@ DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(log10)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(log2)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(log2)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -258,7 +258,7 @@ min(T p0, vector<T, N> p1) {
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(normalize)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(normalize)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -266,7 +266,7 @@ DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(normalize)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_BINARY_DOUBLE_OVERLOADS(pow)
+_DXC_COMPAT_BINARY_DOUBLE_OVERLOADS(pow)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -274,7 +274,7 @@ DXC_COMPAT_BINARY_DOUBLE_OVERLOADS(pow)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(rsqrt)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(rsqrt)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -282,7 +282,7 @@ DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(rsqrt)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(round)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(round)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -290,7 +290,7 @@ DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(round)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(sin)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(sin)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -298,7 +298,7 @@ DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(sin)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(sinh)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(sinh)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -306,7 +306,7 @@ DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(sinh)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(sqrt)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(sqrt)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -314,7 +314,7 @@ DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(sqrt)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_BINARY_DOUBLE_OVERLOADS(step)
+_DXC_COMPAT_BINARY_DOUBLE_OVERLOADS(step)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -322,7 +322,7 @@ DXC_COMPAT_BINARY_DOUBLE_OVERLOADS(step)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(tan)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(tan)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -330,7 +330,7 @@ DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(tan)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(tanh)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(tanh)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -338,7 +338,7 @@ DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(tanh)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(trunc)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(trunc)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -346,7 +346,7 @@ DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(trunc)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(radians)
+_DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(radians)
 #endif
 
 } // namespace hlsl
