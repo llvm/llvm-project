@@ -2031,10 +2031,12 @@ auto SubsumptionChecker::find(FoldExpandedConstraint *Ori) -> Literal {
 }
 
 auto SubsumptionChecker::CNF(const NormalizedConstraint &C) -> CNFFormula {
-  return SubsumptionChecker::Normalize<CNFFormula>(C, /*ParentWillDoCrossProduct=*/false);
+  return SubsumptionChecker::Normalize<CNFFormula>(
+      C, /*ParentWillDoCrossProduct=*/false);
 }
 auto SubsumptionChecker::DNF(const NormalizedConstraint &C) -> DNFFormula {
-  return SubsumptionChecker::Normalize<DNFFormula>(C, /*ParentWillDoCrossProduct=*/false);
+  return SubsumptionChecker::Normalize<DNFFormula>(
+      C, /*ParentWillDoCrossProduct=*/false);
 }
 
 ///
@@ -2080,8 +2082,12 @@ FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC,
 
   FormulaType Left, Right;
   SemaRef.runWithSufficientStackSpace(SourceLocation(), [&] {
-    Left  = Normalize<FormulaType>(NC.getLHS(), ParentWillDoCrossProduct || NC.getCompoundKind() != FormulaType::Kind);
-    Right = Normalize<FormulaType>(NC.getRHS(), ParentWillDoCrossProduct || NC.getCompoundKind() != FormulaType::Kind);
+    Left = Normalize<FormulaType>(NC.getLHS(), ParentWillDoCrossProduct ||
+                                                   NC.getCompoundKind() !=
+                                                       FormulaType::Kind);
+    Right = Normalize<FormulaType>(NC.getRHS(), ParentWillDoCrossProduct ||
+                                                    NC.getCompoundKind() !=
+                                                        FormulaType::Kind);
   });
 
   if (NC.getCompoundKind() == FormulaType::Kind) {
