@@ -34,12 +34,12 @@ public:
 
   cir::ConstantOp getConstantInt(mlir::Location loc, mlir::Type ty,
                                  int64_t value) {
-    return create<cir::ConstantOp>(loc, ty, cir::IntAttr::get(ty, value));
+    return getConstant(loc, cir::IntAttr::get(ty, value));
   }
 
   // Creates constant null value for integral type ty.
   cir::ConstantOp getNullValue(mlir::Type ty, mlir::Location loc) {
-    return create<cir::ConstantOp>(loc, ty, getZeroInitAttr(ty));
+    return getConstant(loc, getZeroInitAttr(ty));
   }
 
   cir::ConstantOp getBool(bool state, mlir::Location loc) {

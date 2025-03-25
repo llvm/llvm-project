@@ -258,8 +258,8 @@ def PtrStrideOp : CIR_Op<"ptr_stride",
   let results = (outs CIR_PointerType:$result);
 
   let assemblyFormat = [{
-    `(` $base `:` qualified(type($base)) `,` $stride `:` qualified(type($stride)) `)`
-    `,` qualified(type($result)) attr-dict
+    `(` $base `:` qualified(type($base)) `,` $stride `:`
+    qualified(type($stride)) `)` `,` qualified(type($result)) attr-dict
   }];
 
   let extraClassDeclaration = [{
