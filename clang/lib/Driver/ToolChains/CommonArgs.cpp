@@ -3177,3 +3177,25 @@ bool tools::shouldEnableVectorizerAtOLevel(const ArgList &Args, bool isSlpVec) {
 
   return false;
 }
+
+/// Enable -fvectorize based on the optimization level selected.
+void tools::handleVectorizeLoopsArgs(const ArgList &Args,
+                                     ArgStringList &CmdArgs) {
+  bool enableVec = shouldEnableVectorizerAtOLevel(Args, false);
+  OptSpecifier vectorizeAliasOption =
+      enableVec ? options::OPT_O_Group : options::OPT_fvectorize;
+  if (Args.hasFlag(options::OPT_fvectorize, vectorizeAliasOption,
+                   options::OPT_fno_vectorize, enableVec))
+    CmdArgs.push_back("-vectorize-loops");
+}
+
+/// Enable -fslp-vectorize based on the optimization level selected.
+void tools::handleVectorizeSLPArgs(const ArgList &Args,
+                                   ArgStringList &CmdArgs) {
+  bool EnableSLPVec = shouldEnableVectorizerAtOLevel(Args, true);
+  OptSpecifier SLPVectAliasOption =
+      EnableSLPVec ? options::OPT_O_Group : options::OPT_fslp_vectorize;
+  if (Args.hasFlag(options::OPT_fslp_vectorize, SLPVectAliasOption,
+                   options::OPT_fno_slp_vectorize, EnableSLPVec))
+    CmdArgs.push_back("-vectorize-slp");
+}

@@ -151,23 +151,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
 
-  // Enable vectorization per default according to the optimization level
-  // selected. For optimization levels that want vectorization we use the alias
-  // option to simplify the hasFlag logic.
-  bool enableVec = shouldEnableVectorizerAtOLevel(Args, false);
-  OptSpecifier vectorizeAliasOption =
-      enableVec ? options::OPT_O_Group : options::OPT_fvectorize;
-  if (Args.hasFlag(options::OPT_fvectorize, vectorizeAliasOption,
-                   options::OPT_fno_vectorize, enableVec))
-    CmdArgs.push_back("-vectorize-loops");
-
-  // -fslp-vectorize is enabled based on the optimization level selected.
-  bool EnableSLPVec = shouldEnableVectorizerAtOLevel(Args, true);
-  OptSpecifier SLPVectAliasOption =
-      EnableSLPVec ? options::OPT_O_Group : options::OPT_fslp_vectorize;
-  if (Args.hasFlag(options::OPT_fslp_vectorize, SLPVectAliasOption,
-                   options::OPT_fno_slp_vectorize, EnableSLPVec))
-    CmdArgs.push_back("-vectorize-slp");
+  handleVectorizeLoopsArgs(Args, CmdArgs);
+  handleVectorizeSLPArgs(Args, CmdArgs);
 
   if (shouldLoopVersion(Args))
     CmdArgs.push_back("-fversion-loops-for-stride");

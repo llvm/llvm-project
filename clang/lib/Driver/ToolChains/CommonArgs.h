@@ -267,6 +267,12 @@ void renderCommonIntegerOverflowOptions(const llvm::opt::ArgList &Args,
 
 bool shouldEnableVectorizerAtOLevel(const llvm::opt::ArgList &Args,
                                     bool isSlpVec);
+
+void handleVectorizeLoopsArgs(const llvm::opt::ArgList &Args,
+                              llvm::opt::ArgStringList &CmdArgs);
+
+void handleVectorizeSLPArgs(const llvm::opt::ArgList &Args,
+                            llvm::opt::ArgStringList &CmdArgs);
 } // end namespace tools
 } // end namespace driver
 } // end namespace clang
