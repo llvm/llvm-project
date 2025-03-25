@@ -10,7 +10,6 @@
 #define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENBUILDER_H
 
 #include "CIRGenTypeCache.h"
-#include "mlir/IR/Location.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"

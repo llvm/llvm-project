@@ -13,6 +13,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #include "mlir/IR/Builders.h"
@@ -21,6 +22,35 @@
 #include "mlir/IR/Types.h"
 
 namespace cir {
+
+enum class OverflowBehavior {
+  None = 0,
+  NoSignedWrap = 1 << 0,
+  NoUnsignedWrap = 1 << 1,
+  Saturated = 1 << 2,
+};
+
+constexpr OverflowBehavior operator|(OverflowBehavior a, OverflowBehavior b) {
+  return static_cast<OverflowBehavior>(llvm::to_underlying(a) |
+                                       llvm::to_underlying(b));
+}
+
+constexpr OverflowBehavior operator&(OverflowBehavior a, OverflowBehavior b) {
+  return static_cast<OverflowBehavior>(llvm::to_underlying(a) &
+                                       llvm::to_underlying(b));
+}
+
+constexpr OverflowBehavior &operator|=(OverflowBehavior &a,
+                                       OverflowBehavior b) {
+  a = a | b;
+  return a;
+}
+
+constexpr OverflowBehavior &operator&=(OverflowBehavior &a,
+                                       OverflowBehavior b) {
+  a = a & b;
+  return a;
+}
 
 class CIRBaseBuilderTy : public mlir::OpBuilder {
 
@@ -148,6 +178,10 @@ public:
     return createCast(loc, cir::CastKind::bitcast, src, newTy);
   }
 
+  //===--------------------------------------------------------------------===//
+  // Binary Operators
+  //===--------------------------------------------------------------------===//
+
   mlir::Value createBinop(mlir::Location loc, mlir::Value lhs,
                           cir::BinOpKind kind, mlir::Value rhs) {
     return create<cir::BinOp>(loc, lhs.getType(), kind, lhs, rhs);
@@ -169,61 +203,66 @@ public:
   }
 
   mlir::Value createMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
-                        bool hasNUW = false, bool hasNSW = false) {
+                        OverflowBehavior ob = OverflowBehavior::None) {
     auto op =
         create<cir::BinOp>(loc, lhs.getType(), cir::BinOpKind::Mul, lhs, rhs);
-    op.setNoUnsignedWrap(hasNUW);
-    op.setNoSignedWrap(hasNSW);
+    op.setNoUnsignedWrap(
+        llvm::to_underlying(ob & OverflowBehavior::NoUnsignedWrap));
+    op.setNoSignedWrap(
+        llvm::to_underlying(ob & OverflowBehavior::NoSignedWrap));
     return op;
   }
   mlir::Value createNSWMul(mlir::Location loc, mlir::Value lhs,
                            mlir::Value rhs) {
-    return createMul(loc, lhs, rhs, false, true);
+    return createMul(loc, lhs, rhs, OverflowBehavior::NoSignedWrap);
   }
   mlir::Value createNUWAMul(mlir::Location loc, mlir::Value lhs,
                             mlir::Value rhs) {
-    return createMul(loc, lhs, rhs, true, false);
+    return createMul(loc, lhs, rhs, OverflowBehavior::NoUnsignedWrap);
   }
 
   mlir::Value createSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
-                        bool hasNUW = false, bool hasNSW = false,
-                        bool saturated = false) {
+                        OverflowBehavior ob = OverflowBehavior::Saturated) {
     auto op =
         create<cir::BinOp>(loc, lhs.getType(), cir::BinOpKind::Sub, lhs, rhs);
-    op.setNoUnsignedWrap(hasNUW);
-    op.setNoSignedWrap(hasNSW);
-    op.setSaturated(saturated);
+    op.setNoUnsignedWrap(
+        llvm::to_underlying(ob & OverflowBehavior::NoUnsignedWrap));
+    op.setNoSignedWrap(
+        llvm::to_underlying(ob & OverflowBehavior::NoSignedWrap));
+    op.setSaturated(llvm::to_underlying(ob & OverflowBehavior::Saturated));
     return op;
   }
 
   mlir::Value createNSWSub(mlir::Location loc, mlir::Value lhs,
                            mlir::Value rhs) {
-    return createSub(loc, lhs, rhs, false, true);
+    return createSub(loc, lhs, rhs, OverflowBehavior::NoSignedWrap);
   }
 
   mlir::Value createNUWSub(mlir::Location loc, mlir::Value lhs,
                            mlir::Value rhs) {
-    return createSub(loc, lhs, rhs, true, false);
+    return createSub(loc, lhs, rhs, OverflowBehavior::NoUnsignedWrap);
   }
 
   mlir::Value createAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
-                        bool hasNUW = false, bool hasNSW = false,
-                        bool saturated = false) {
+                        OverflowBehavior ob = OverflowBehavior::None) {
     auto op =
         create<cir::BinOp>(loc, lhs.getType(), cir::BinOpKind::Add, lhs, rhs);
-    op.setNoUnsignedWrap(hasNUW);
-    op.setNoSignedWrap(hasNSW);
-    op.setSaturated(saturated);
+    op.setNoUnsignedWrap(
+        llvm::to_underlying(ob & OverflowBehavior::NoUnsignedWrap));
+    op.setNoSignedWrap(
+        llvm::to_underlying(ob & OverflowBehavior::NoSignedWrap));
+    op.setSaturated(llvm::to_underlying(ob & OverflowBehavior::Saturated));
     return op;
   }
 
   mlir::Value createNSWAdd(mlir::Location loc, mlir::Value lhs,
                            mlir::Value rhs) {
-    return createAdd(loc, lhs, rhs, false, true);
+    return createAdd(loc, lhs, rhs, OverflowBehavior::NoSignedWrap);
   }
+
   mlir::Value createNUWAdd(mlir::Location loc, mlir::Value lhs,
                            mlir::Value rhs) {
-    return createAdd(loc, lhs, rhs, true, false);
+    return createAdd(loc, lhs, rhs, OverflowBehavior::NoUnsignedWrap);
   }
 
   //
