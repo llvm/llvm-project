@@ -184,25 +184,29 @@ struct State {
   /// only use register `X30`, and therefore, this vector will probably have
   /// length 1 in the second run.
   std::vector<SmallPtrSet<const MCInst *, 4>> LastInstWritingReg;
+
+  /// Construct an empty state.
   State() {}
+
   State(unsigned NumRegs, unsigned NumRegsToTrack)
       : SafeToDerefRegs(NumRegs), LastInstWritingReg(NumRegsToTrack) {}
 
-  /// Returns S, so that S.merge(S1) == S1.merge(S) == S1.
-  static State getMergeNeutralElement(unsigned NumRegs,
-                                      unsigned NumRegsToTrack) {
-    State S(NumRegs, NumRegsToTrack);
-    S.SafeToDerefRegs.set();
-    return S;
-  }
-
   State &merge(const State &StateIn) {
+    if (StateIn.empty())
+      return *this;
+    if (empty())
+      return (*this = StateIn);
+
     SafeToDerefRegs &= StateIn.SafeToDerefRegs;
     for (unsigned I = 0; I < LastInstWritingReg.size(); ++I)
       for (const MCInst *J : StateIn.LastInstWritingReg[I])
         LastInstWritingReg[I].insert(J);
     return *this;
   }
+
+  /// Returns true if this object does not store state of any registers -
+  /// neither safe, nor unsafe ones.
+  bool empty() const { return SafeToDerefRegs.empty(); }
 
   bool operator==(const State &RHS) const {
     return SafeToDerefRegs == RHS.SafeToDerefRegs &&
@@ -226,8 +230,12 @@ static void printLastInsts(
 
 raw_ostream &operator<<(raw_ostream &OS, const State &S) {
   OS << "pacret-state<";
-  OS << "SafeToDerefRegs: " << S.SafeToDerefRegs << ", ";
-  printLastInsts(OS, S.LastInstWritingReg);
+  if (S.empty()) {
+    OS << "empty";
+  } else {
+    OS << "SafeToDerefRegs: " << S.SafeToDerefRegs << ", ";
+    printLastInsts(OS, S.LastInstWritingReg);
+  }
   OS << ">";
   return OS;
 }
@@ -244,10 +252,16 @@ private:
 void PacStatePrinter::print(raw_ostream &OS, const State &S) const {
   RegStatePrinter RegStatePrinter(BC);
   OS << "pacret-state<";
-  OS << "SafeToDerefRegs: ";
-  RegStatePrinter.print(OS, S.SafeToDerefRegs);
-  OS << ", ";
-  printLastInsts(OS, S.LastInstWritingReg);
+  if (S.empty()) {
+    assert(S.SafeToDerefRegs.empty());
+    assert(S.LastInstWritingReg.empty());
+    OS << "empty";
+  } else {
+    OS << "SafeToDerefRegs: ";
+    RegStatePrinter.print(OS, S.SafeToDerefRegs);
+    OS << ", ";
+    printLastInsts(OS, S.LastInstWritingReg);
+  }
   OS << ">";
 }
 
@@ -295,14 +309,10 @@ protected:
     if (BB.isEntryPoint())
       return createEntryState();
 
-    return State::getMergeNeutralElement(
-        NumRegs, RegsToTrackInstsFor.getNumTrackedRegisters());
+    return State();
   }
 
-  State getStartingStateAtPoint(const MCInst &Point) {
-    return State::getMergeNeutralElement(
-        NumRegs, RegsToTrackInstsFor.getNumTrackedRegisters());
-  }
+  State getStartingStateAtPoint(const MCInst &Point) { return State(); }
 
   void doConfluence(State &StateOut, const State &StateIn) {
     PacStatePrinter P(BC);
@@ -335,6 +345,15 @@ protected:
       P.print(dbgs(), Cur);
       dbgs() << ")\n";
     });
+
+    // If this instruction is reachable, a non-empty state will be propagated
+    // to it from the entry basic block sooner or later. Until then, it is both
+    // more efficient and easier to reason about to skip computeNext().
+    if (Cur.empty()) {
+      LLVM_DEBUG(
+          { dbgs() << "Skipping computeNext(Point, Cur) as Cur is empty.\n"; });
+      return State();
+    }
 
     State Next = Cur;
     BitVector Clobbered(NumRegs, false);
@@ -451,6 +470,14 @@ Analysis::findGadgets(BinaryFunction &BF,
     for (int64_t I = 0, E = BB.size(); I < E; ++I) {
       MCInstReference Inst(&BB, I);
       const State &S = *PRA.getStateAt(Inst);
+
+      // If non-empty state was never propagated from the entry basic block
+      // to Inst, assume it to be unreachable and report a warning.
+      if (S.empty()) {
+        Result.Diagnostics.push_back(std::make_shared<GenericReport>(
+            Inst, "Warning: unreachable instruction found"));
+        continue;
+      }
 
       if (auto Report = shouldReportReturnGadget(BC, Inst, S))
         Result.Diagnostics.push_back(Report);

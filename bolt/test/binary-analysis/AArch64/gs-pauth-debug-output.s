@@ -45,7 +45,7 @@ simple:
 // CHECK-NEXT:  PacRetAnalysis::ComputeNext(   b       [[BB1]], pacret-state<SafeToDerefRegs: , Insts: >)
 // CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: , Insts: >)
 // CHECK-NEXT:  PacRetAnalysis::Confluence(
-// CHECK-NEXT:    State 1: pacret-state<SafeToDerefRegs: (all), Insts: >
+// CHECK-NEXT:    State 1: pacret-state<empty>
 // CHECK-NEXT:    State 2: pacret-state<SafeToDerefRegs: , Insts: >)
 // CHECK-NEXT:    merged state: pacret-state<SafeToDerefRegs: , Insts: >
 // CHECK-NEXT:  PacRetAnalysis::ComputeNext(   hint    #29, pacret-state<SafeToDerefRegs: , Insts: >)
