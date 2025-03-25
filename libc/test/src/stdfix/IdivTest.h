@@ -26,7 +26,7 @@ public:
   typedef XType (*IdivFunc)(T, T);
 
   void testSpecialNumbers(IdivFunc func) {
-    EXPECT_EQ(func(one_half, one_fourth), 2);
+    EXPECT_EQ(func(one_half, one_fourth), static_cast<XType>(2));
   }
 };
 
