@@ -359,7 +359,7 @@ class CGDebugInfo {
       llvm::ArrayRef<llvm::Metadata *> PreviousFieldsDI, const RecordDecl *RD);
 
   /// A cache that maps names of artificial inlined functions to subprograms.
-  llvm::StringMap<llvm::DISubprogram *> InlinedTrapFuncMap;
+  llvm::StringMap<llvm::DISubprogram *> InlinedSubprogramMap;
 
   /// A function that returns the subprogram corresponding to the artificial
   /// inlined function for traps.
