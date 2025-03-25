@@ -2169,12 +2169,8 @@ void ArchiveFile::addLazySymbols() {
       // Check `seen` but don't insert so a future eager load can still happen.
       if (seen.contains(c.getChildOffset()))
         continue;
-      if (!seenLazy.insert(c.getChildOffset()).second) {
+      if (!seenLazy.insert(c.getChildOffset()).second)
         continue;
-      }
-      // First check seen.
-      // Then, write to and check seenLazy
-      // Then, get the file, check for error, and add it to inputs.
       auto file = childToObjectFile(c, /*lazy=*/true);
       if (!file)
         error(toString(this) +
@@ -2235,8 +2231,7 @@ loadArchiveMember(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
   }
 }
 
-Error ArchiveFile::fetch(const object::Archive::Child &c, StringRef reason,
-                         bool lazy) {
+Error ArchiveFile::fetch(const object::Archive::Child &c, StringRef reason) {
   if (!seen.insert(c.getChildOffset()).second)
     return Error::success();
   auto file = childToObjectFile(c, /*lazy=*/false);
@@ -2277,10 +2272,8 @@ ArchiveFile::childToObjectFile(const llvm::object::Archive::Child &c,
   if (!modTime)
     return modTime.takeError();
 
-  Expected<InputFile *> file =
-      loadArchiveMember(*mb, toTimeT(*modTime), getName(), c.getChildOffset(),
-                        forceHidden, compatArch, lazy);
-  return file;
+  return loadArchiveMember(*mb, toTimeT(*modTime), getName(),
+                           c.getChildOffset(), forceHidden, compatArch, lazy);
 }
 
 static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,

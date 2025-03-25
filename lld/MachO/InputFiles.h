@@ -292,8 +292,7 @@ public:
   void fetch(const llvm::object::Archive::Symbol &);
   // LLD normally doesn't use Error for error-handling, but the underlying
   // Archive library does, so this is the cleanest way to wrap it.
-  Error fetch(const llvm::object::Archive::Child &, StringRef reason,
-              bool lazy = false);
+  Error fetch(const llvm::object::Archive::Child &, StringRef reason);
   const llvm::object::Archive &getArchive() const { return *file; };
   static bool classof(const InputFile *f) { return f->kind() == ArchiveKind; }
 
