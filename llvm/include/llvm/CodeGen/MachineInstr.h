@@ -994,15 +994,8 @@ public:
 
   /// Return true if this is an indirect branch, such as a
   /// branch through a register.
-  bool isIndirectBranch(QueryType Type = AnyInBundle,
-                        bool IncludeJumpTable = true) const {
-    return hasProperty(MCID::IndirectBranch, Type) &&
-           (IncludeJumpTable || jumpToIRBlockAddressTaken());
-  }
-
-  bool isComputedGoto(QueryType Type = AnyInBundle) const {
-    // Jump tables are not considered computed gotos.
-    return isIndirectBranch(Type, /*IncludeJumpTable=*/false);
+  bool isIndirectBranch(QueryType Type = AnyInBundle) const {
+    return hasProperty(MCID::IndirectBranch, Type);
   }
 
   /// Return true if this is a branch which may fall

@@ -359,13 +359,6 @@ void MachineInstr::setExtraInfo(MachineFunction &MF,
     Info.set<EIIK_MMO>(MMOs[0]);
 }
 
-bool MachineInstr::jumpToIRBlockAddressTaken() const {
-  return llvm::all_of(getParent()->successors(),
-                      [](const MachineBasicBlock *Succ) {
-                        return Succ->isIRBlockAddressTaken();
-                      });
-}
-
 void MachineInstr::dropMemRefs(MachineFunction &MF) {
   if (memoperands_empty())
     return;
