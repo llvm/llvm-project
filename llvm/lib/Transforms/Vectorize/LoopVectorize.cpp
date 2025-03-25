@@ -5832,6 +5832,14 @@ LoopVectorizationCostModel::getReductionPatternCost(Instruction *I,
     Intrinsic::ID MinMaxID = getMinMaxReductionIntrinsicOp(RK);
     BaseCost = TTI.getMinMaxReductionCost(MinMaxID, VectorTy,
                                           RdxDesc.getFastMathFlags(), CostKind);
+  } else if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
+    VectorType *BoolTy = VectorType::get(
+        Type::getInt1Ty(VectorTy->getContext()), VectorTy->getElementCount());
+    BaseCost =
+        TTI.getArithmeticReductionCost(Instruction::Or, BoolTy,
+                                       RdxDesc.getFastMathFlags(), CostKind) +
+        TTI.getArithmeticInstrCost(Instruction::Or, BoolTy->getScalarType(),
+                                   CostKind);
   } else {
     BaseCost = TTI.getArithmeticReductionCost(
         RdxDesc.getOpcode(), VectorTy, RdxDesc.getFastMathFlags(), CostKind);
@@ -9664,10 +9672,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
 
     const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
     RecurKind Kind = RdxDesc.getRecurrenceKind();
-    assert(
-        !RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
-        !RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind) &&
-        "AnyOf and FindLast reductions are not allowed for in-loop reductions");
+    assert(!RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind) &&
+           "FindLast reductions are not allowed for in-loop reductions");
 
     // Collect the chain of "link" recipes for the reduction starting at PhiR.
     SetVector<VPSingleDefRecipe *> Worklist;
@@ -9736,6 +9742,11 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
             CurrentLinkI->getFastMathFlags());
         LinkVPBB->insert(FMulRecipe, CurrentLink->getIterator());
         VecOp = FMulRecipe;
+      } else if (RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind)) {
+        assert(isa<VPWidenSelectRecipe>(CurrentLink) &&
+               "must be a select recipe");
+        VecOp = CurrentLink->getOperand(0);
+        Kind = RecurKind::Or;
       } else {
         if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
           if (isa<VPWidenRecipe>(CurrentLink)) {
@@ -9900,10 +9911,17 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       // selected if the negated condition is true in any iteration.
       if (Select->getOperand(1) == PhiR)
         Cmp = Builder.createNot(Cmp);
-      VPValue *Or = Builder.createOr(PhiR, Cmp);
-      Select->getVPSingleValue()->replaceAllUsesWith(Or);
-      // Delete Select now that it has invalid types.
-      ToDelete.push_back(Select);
+
+      if (PhiR->isInLoop() && MinVF.isVector()) {
+        auto *Reduction = cast<VPReductionRecipe>(
+            *find_if(PhiR->users(), IsaPred<VPReductionRecipe>));
+        Reduction->setOperand(1, Cmp);
+      } else {
+        VPValue *Or = Builder.createOr(PhiR, Cmp);
+        Select->getVPSingleValue()->replaceAllUsesWith(Or);
+        // Delete Select now that it has invalid types.
+        ToDelete.push_back(Select);
+      }
 
       // Convert the reduction phi to operate on bools.
       PhiR->setOperand(0, Plan->getOrAddLiveIn(ConstantInt::getFalse(
