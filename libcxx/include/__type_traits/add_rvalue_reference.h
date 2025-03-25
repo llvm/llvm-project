@@ -41,7 +41,7 @@ using __add_rvalue_reference_t = typename __add_rvalue_reference_impl<_Tp>::type
 
 template <class _Tp>
 struct _LIBCPP_NO_SPECIALIZATIONS add_rvalue_reference {
-  using type = __add_rvalue_reference_t<_Tp>;
+  using type _LIBCPP_NODEBUG = __add_rvalue_reference_t<_Tp>;
 };
 
 #if _LIBCPP_STD_VER >= 14
