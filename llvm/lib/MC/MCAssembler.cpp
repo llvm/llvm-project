@@ -175,7 +175,7 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
   bool IsPCRel = FixupFlags & MCFixupKindInfo::FKF_IsPCRel;
   bool IsResolved = false;
   if (IsPCRel) {
-    if (Target.getSymB()) {
+    if (Target.getSubSym()) {
       IsResolved = false;
     } else if (!Target.getSymA()) {
       IsResolved = false;
