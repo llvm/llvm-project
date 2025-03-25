@@ -34,42 +34,59 @@ aren't associated with a pull-request **will be deleted**.
 Stacked Pull Requests
 =====================
 
-GitHub does not natively support stacked pull requests. However, there are
-several common alternatives.
+To separate related changes or to break down a larger PR into smaller, reviewable
+pieces, use "stacked pull requests" — this helps make the review process
+smoother. While GitHub does not natively support stacked pull requests, there
+are several common alternatives.
 
-To illustrate, let's assume you're working on two branches in your fork of the
-``llvm/llvm-project`` repository, and you want to eventually merge both into ``main``:
+To illustrate, assume that you are working on two branches in your fork of the
+``llvm/llvm-project`` repository, and you want to eventually merge both into
+``main``:
 
-* `feature_1`, which contains commit `feature_commit_1`,
-* `feature_2`, which contains commit `feature_commit_2` and depends on
-  `feature_1` (so it also includes `feature_commit_1`).
+- `feature_1`, which contains commit `feature_commit_1`
+- `feature_2`, which contains commit `feature_commit_2` and depends on
+  `feature_1` (so it also includes `feature_commit_1`)
 
 Your options are as follows:
 
-#. Two PRs with dependency note
+#. Two PRs with a dependency note
 
-  Create PR_1 for branch feature_1 and PR_2 for branch feature_2. In PR_2, add a
-  note in the PR summary indicating that it is part of a series or depends on
-  another PR (e.g., “Depends on #PR_1”). It's also helpful to highlight which
-  commits belong to the base PR, so reviewers can focus on the new changes.
+   Create PR_1 for `feature_1` and PR_2 for `feature_2`. In PR_2, include a
+   note in the PR summary indicating that it depends on PR_1 (e.g.,
+   “Depends on #PR_1”).
 
-#. User branches in `llvm/llvm-project`
+   To make review easier, clearly highlight which commits are part of the base
+   PR and which are new. This helps reviewers focus only on the incremental
+   changes.
 
-  Create user branches in the main repository, as described
-  :ref:`above<github_branches>`. Then:
+#. Use user branches in ``llvm/llvm-project``
 
-  * Create a pull request from `users/<username>/feature_1` → `main`
-  * Create another from `users/<username>/feature_2` →
-    `users/<username>/feature_1` Once `feature_1` is merged, you can update the
-    base of the second PR to target main.
+   Create user branches in the main repository, as described
+   :ref:`above<github_branches>`. Then:
+
+   - Open a pull request from `users/<username>/feature_1` → `main`
+   - Open another from `users/<username>/feature_2` → `users/<username>/feature_1`
+
+   This approach allows GitHub to display clean, incremental diffs for each PR
+   in the stack, making it much easier for reviewers to see what’s changed
+   at each step. Once `feature_1` is merged, you can rebase and re-target
+   `feature_2` to `main`.
 
 #. Use a stacked PR tool
 
-  Use a tool like SPR or Graphite (described below) to manage stacked PRs more
-  easily.
+   Use tools like SPR or Graphite (described below) to automate managing
+   stacked PRs. These tools are also based on using user branches
+   in ``llvm/llvm-project``.
 
-Each of these approaches can help streamline the review process. Choose the one
-that works best for your workflow.
+.. note::
+   Without using user branches, GitHub will not display a proper diff for
+   subsequent PRs in the stack. Instead, it will show a combined diff that
+   includes all commits in the stack. It is the PR author’s responsibility to
+   make it clear which commits are relevant to the current PR.
+
+   You can avoid this issue by using user branches directly in the
+   ``llvm/llvm-project`` repository.
+
 
 Using Graphite for stacked Pull Requests
 ----------------------------------------
