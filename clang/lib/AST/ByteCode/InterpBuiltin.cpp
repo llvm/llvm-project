@@ -212,13 +212,11 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   const Pointer &A = getParam<Pointer>(Frame, 0);
   const Pointer &B = getParam<Pointer>(Frame, 1);
 
-  if (ID == Builtin::BIstrcmp || ID == Builtin::BIstrncmp ||
-      ID == Builtin::BIwcscmp || ID == Builtin::BIwcsncmp)
+  if (ID == Builtin::BIstrcmp || ID == Builtin::BIstrncmp)
     diagnoseNonConstexprBuiltin(S, OpPC, ID);
 
   uint64_t Limit = ~static_cast<uint64_t>(0);
-  if (ID == Builtin::BIstrncmp || ID == Builtin::BI__builtin_strncmp ||
-      ID == Builtin::BIwcsncmp || ID == Builtin::BI__builtin_wcsncmp)
+  if (ID == Builtin::BIstrncmp || ID == Builtin::BI__builtin_strncmp)
     Limit = peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)))
                 .getZExtValue();
 
@@ -233,9 +231,6 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   if (A.isDummy() || B.isDummy())
     return false;
 
-  bool IsWide = ID == Builtin::BIwcscmp || ID == Builtin::BIwcsncmp ||
-                ID == Builtin::BI__builtin_wcscmp ||
-                ID == Builtin::BI__builtin_wcsncmp;
   assert(A.getFieldDesc()->isPrimitiveArray());
   assert(B.getFieldDesc()->isPrimitiveArray());
 
@@ -253,21 +248,6 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
         !CheckRange(S, OpPC, PB, AK_Read)) {
       return false;
     }
-
-    if (IsWide)
-      INT_TYPE_SWITCH(
-          *S.getContext().classify(S.getASTContext().getWCharType()), {
-            T A = PA.deref<T>();
-            T B = PB.deref<T>();
-            if (A < B) {
-              pushInteger(S, -1, Call->getType());
-              return true;
-            } else if (A > B) {
-              pushInteger(S, 1, Call->getType());
-              return true;
-            }
-          });
-
     uint8_t CA = PA.deref<uint8_t>();
     uint8_t CB = PB.deref<uint8_t>();
 
@@ -2140,10 +2120,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BIstrcmp:
   case Builtin::BI__builtin_strncmp:
   case Builtin::BIstrncmp:
-  case Builtin::BI__builtin_wcsncmp:
-  case Builtin::BIwcsncmp:
-  case Builtin::BI__builtin_wcscmp:
-  case Builtin::BIwcscmp:
     if (!interp__builtin_strcmp(S, OpPC, Frame, F, Call))
       return false;
     break;
