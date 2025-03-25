@@ -564,9 +564,8 @@ operator<<(llvm::raw_ostream &os, const struct ol_wait_event_params_t *params) {
   return os;
 }
 
-inline llvm::raw_ostream &
-operator<<(llvm::raw_ostream &os,
-           const struct ol_enqueue_memcpy_params_t *params) {
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     const struct ol_memcpy_params_t *params) {
   os << ".Queue = ";
   printPtr(os, *params->pQueue);
   os << ", ";
@@ -592,7 +591,7 @@ operator<<(llvm::raw_ostream &os,
 
 inline llvm::raw_ostream &
 operator<<(llvm::raw_ostream &os,
-           const struct ol_enqueue_kernel_launch_params_t *params) {
+           const struct ol_launch_kernel_params_t *params) {
   os << ".Queue = ";
   printPtr(os, *params->pQueue);
   os << ", ";

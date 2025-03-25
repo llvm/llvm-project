@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 def : Function {
-    let name = "olEnqueueMemcpy";
+    let name = "olMemcpy";
     let desc = "Enqueue a memcpy operation.";
     let details = [
         "For host pointers, use the device returned by olGetHostDevice",
@@ -46,7 +46,7 @@ def : Struct {
 }
 
 def : Function {
-    let name = "olEnqueueKernelLaunch";
+    let name = "olLaunchKernel";
     let desc = "Enqueue a kernel launch with the specified size and parameters.";
     let details = [];
     let params = [

@@ -19,8 +19,8 @@ add_libompt_unittest("offload.unittests"
     ${CMAKE_CURRENT_SOURCE_DIR}/queue/olDestroyQueue.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/memory/olMemAlloc.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/memory/olMemFree.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/enqueue/olEnqueueMemcpy.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/enqueue/olEnqueueKernelLaunch.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/enqueue/olMemcpy.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/enqueue/olLaunchKernel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/program/olCreateProgram.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/program/olDestroyProgram.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel/olCreateKernel.cpp
