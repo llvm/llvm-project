@@ -83,7 +83,7 @@ namespace __format {
 /// When parsing a handle which is not enabled the code is ill-formed.
 /// This helper uses the parser of the appropriate formatter for the stored type.
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS __compile_time_handle {
+class __compile_time_handle {
 public:
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr void __parse(_ParseContext& __ctx) const {
@@ -110,7 +110,7 @@ private:
 // Dummy format_context only providing the parts used during constant
 // validation of the basic_format_string.
 template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS __compile_time_basic_format_context {
+struct __compile_time_basic_format_context {
 public:
   using char_type = _CharT;
 
@@ -339,12 +339,12 @@ _LIBCPP_HIDE_FROM_ABI constexpr typename _Ctx::iterator __vformat_to(_ParseCtx&&
 
 #  if _LIBCPP_STD_VER >= 26
 template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS __runtime_format_string {
+struct __runtime_format_string {
 private:
   basic_string_view<_CharT> __str_;
 
   template <class _Cp, class... _Args>
-  friend struct _LIBCPP_TEMPLATE_VIS basic_format_string;
+  friend struct basic_format_string;
 
 public:
   _LIBCPP_HIDE_FROM_ABI __runtime_format_string(basic_string_view<_CharT> __s) noexcept : __str_(__s) {}
@@ -362,7 +362,7 @@ _LIBCPP_HIDE_FROM_ABI inline __runtime_format_string<wchar_t> runtime_format(wst
 #  endif // _LIBCPP_STD_VER >= 26
 
 template <class _CharT, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS basic_format_string {
+struct basic_format_string {
   template <class _Tp>
     requires convertible_to<const _Tp&, basic_string_view<_CharT>>
   consteval basic_format_string(const _Tp& __str) : __str_{__str} {

@@ -21,10 +21,10 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Key, class _Tp, class _Compare = less<_Key>, class _Allocator = allocator<pair<const _Key, _Tp> > >
-class _LIBCPP_TEMPLATE_VIS map;
+class map;
 
 template <class _Key, class _Tp, class _Compare = less<_Key>, class _Allocator = allocator<pair<const _Key, _Tp> > >
-class _LIBCPP_TEMPLATE_VIS multimap;
+class multimap;
 
 _LIBCPP_END_NAMESPACE_STD
 

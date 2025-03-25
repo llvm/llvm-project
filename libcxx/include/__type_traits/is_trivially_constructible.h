@@ -21,7 +21,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS is_trivially_constructible
+struct _LIBCPP_NO_SPECIALIZATIONS is_trivially_constructible
     : integral_constant<bool, __is_trivially_constructible(_Tp, _Args...)> {};
 
 #if _LIBCPP_STD_VER >= 17
@@ -31,7 +31,7 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_trivially_constructible_v =
 #endif
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS is_trivially_copy_constructible
+struct _LIBCPP_NO_SPECIALIZATIONS is_trivially_copy_constructible
     : public integral_constant<bool, __is_trivially_constructible(_Tp, __add_lvalue_reference_t<const _Tp>)> {};
 
 #if _LIBCPP_STD_VER >= 17
@@ -41,7 +41,7 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_trivially_copy_constructible
 #endif
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS is_trivially_move_constructible
+struct _LIBCPP_NO_SPECIALIZATIONS is_trivially_move_constructible
     : public integral_constant<bool, __is_trivially_constructible(_Tp, __add_rvalue_reference_t<_Tp>)> {};
 
 #if _LIBCPP_STD_VER >= 17
@@ -51,7 +51,7 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_trivially_move_constructible
 #endif
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS is_trivially_default_constructible
+struct _LIBCPP_NO_SPECIALIZATIONS is_trivially_default_constructible
     : public integral_constant<bool, __is_trivially_constructible(_Tp)> {};
 
 #if _LIBCPP_STD_VER >= 17
