@@ -11,22 +11,22 @@
 #include "src/__support/fixed_point/fx_rep.h"
 
 template <typename T, typename XType>
-class IDivTest : public LIBC_NAMESPACE::testing::Test {
+class IdivTest : public LIBC_NAMESPACE::testing::Test {
 
   using FXRep = LIBC_NAMESPACE::fixed_point::FXRep<T>;
-  // static constexpr T zero = FXRep::ZERO();
-  // static constexpr T max = FXRep::MAX();
-  // static constexpr T min = FXRep::MIN();
-  // static constexpr T one_half = FXRep::ONE_HALF();
-  // static constexpr T one_fourth = FXRep::ONE_FOURTH();
-  // static constexpr T eps = FXRep::EPS();
+
+  static constexpr T zero = FXRep::ZERO();
+  static constexpr T max = FXRep::MAX();
+  static constexpr T min = FXRep::MIN();
+  static constexpr T one_half = FXRep::ONE_HALF();
+  static constexpr T one_fourth = FXRep::ONE_FOURTH();
+  static constexpr T eps = FXRep::EPS();
 
 public:
   typedef XType (*IdivFunc)(T, T);
 
   void testSpecialNumbers(IdivFunc func) {
-    EXPECT_EQ(1, 1);
-    EXPECT_EQ(1 + 1, 2);
+    EXPECT_EQ(func(one_half, one_fourth), 2);
   }
 };
 

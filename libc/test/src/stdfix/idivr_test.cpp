@@ -11,4 +11,4 @@
 #include "llvm-libc-macros/stdfix-macros.h" // fract
 #include "src/stdfix/idivr.h"
 
-LIST_IDIV_TESTS(r, fract, int, LIBC_NAMESPACE::bitsr);
+LIST_IDIV_TESTS(r, fract, int, LIBC_NAMESPACE::idivr);
