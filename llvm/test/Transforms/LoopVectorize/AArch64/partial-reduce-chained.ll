@@ -23,10 +23,9 @@ define i32 @chained_partial_reduce_add_sub(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-NEON:       vector.body:
 ; CHECK-NEON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEON-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE3:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEON-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP0]]
-; CHECK-NEON-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP0]]
-; CHECK-NEON-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[TMP0]]
+; CHECK-NEON-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEON-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEON-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDEX]]
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i32 0
 ; CHECK-NEON-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP4]], align 1
 ; CHECK-NEON-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i32 0
@@ -71,10 +70,9 @@ define i32 @chained_partial_reduce_add_sub(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE:       vector.body:
 ; CHECK-SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
-; CHECK-SVE-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 0
-; CHECK-SVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP6]]
-; CHECK-SVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP6]]
-; CHECK-SVE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[TMP6]]
+; CHECK-SVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-SVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-SVE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDEX]]
 ; CHECK-SVE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP7]], i32 0
 ; CHECK-SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i8>, ptr [[TMP10]], align 1
 ; CHECK-SVE-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i32 0
@@ -118,10 +116,9 @@ define i32 @chained_partial_reduce_add_sub(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE-MAXBW:       vector.body:
 ; CHECK-SVE-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-SVE-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE3:%.*]], [[VECTOR_BODY]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 0
-; CHECK-SVE-MAXBW-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP6]]
-; CHECK-SVE-MAXBW-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP6]]
-; CHECK-SVE-MAXBW-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[TMP6]]
+; CHECK-SVE-MAXBW-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-SVE-MAXBW-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-SVE-MAXBW-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDEX]]
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP7]], i32 0
 ; CHECK-SVE-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP10]], align 1
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i32 0
@@ -192,10 +189,9 @@ define i32 @chained_partial_reduce_add_add(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-NEON:       vector.body:
 ; CHECK-NEON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEON-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE3:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEON-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP0]]
-; CHECK-NEON-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP0]]
-; CHECK-NEON-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[TMP0]]
+; CHECK-NEON-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEON-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEON-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDEX]]
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i32 0
 ; CHECK-NEON-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP4]], align 1
 ; CHECK-NEON-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i32 0
@@ -239,10 +235,9 @@ define i32 @chained_partial_reduce_add_add(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE:       vector.body:
 ; CHECK-SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
-; CHECK-SVE-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 0
-; CHECK-SVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP6]]
-; CHECK-SVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP6]]
-; CHECK-SVE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[TMP6]]
+; CHECK-SVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-SVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-SVE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDEX]]
 ; CHECK-SVE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP7]], i32 0
 ; CHECK-SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i8>, ptr [[TMP10]], align 1
 ; CHECK-SVE-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i32 0
@@ -286,10 +281,9 @@ define i32 @chained_partial_reduce_add_add(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE-MAXBW:       vector.body:
 ; CHECK-SVE-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-SVE-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE3:%.*]], [[VECTOR_BODY]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 0
-; CHECK-SVE-MAXBW-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP6]]
-; CHECK-SVE-MAXBW-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP6]]
-; CHECK-SVE-MAXBW-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[TMP6]]
+; CHECK-SVE-MAXBW-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-SVE-MAXBW-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-SVE-MAXBW-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDEX]]
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP7]], i32 0
 ; CHECK-SVE-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP10]], align 1
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i32 0
@@ -359,10 +353,9 @@ define i32 @chained_partial_reduce_sub_add(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-NEON:       vector.body:
 ; CHECK-NEON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEON-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE3:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEON-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP0]]
-; CHECK-NEON-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP0]]
-; CHECK-NEON-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[TMP0]]
+; CHECK-NEON-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEON-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEON-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDEX]]
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i32 0
 ; CHECK-NEON-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP4]], align 1
 ; CHECK-NEON-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i32 0
@@ -407,10 +400,9 @@ define i32 @chained_partial_reduce_sub_add(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE:       vector.body:
 ; CHECK-SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
-; CHECK-SVE-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 0
-; CHECK-SVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP6]]
-; CHECK-SVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP6]]
-; CHECK-SVE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[TMP6]]
+; CHECK-SVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-SVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-SVE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDEX]]
 ; CHECK-SVE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP7]], i32 0
 ; CHECK-SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i8>, ptr [[TMP10]], align 1
 ; CHECK-SVE-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i32 0
@@ -454,10 +446,9 @@ define i32 @chained_partial_reduce_sub_add(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE-MAXBW:       vector.body:
 ; CHECK-SVE-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-SVE-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE3:%.*]], [[VECTOR_BODY]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 0
-; CHECK-SVE-MAXBW-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP6]]
-; CHECK-SVE-MAXBW-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP6]]
-; CHECK-SVE-MAXBW-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[TMP6]]
+; CHECK-SVE-MAXBW-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-SVE-MAXBW-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-SVE-MAXBW-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDEX]]
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP7]], i32 0
 ; CHECK-SVE-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP10]], align 1
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i32 0
@@ -530,10 +521,9 @@ define i32 @chained_partial_reduce_sub_sub(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-NEON:       vector.body:
 ; CHECK-NEON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEON-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE3:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEON-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP0]]
-; CHECK-NEON-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP0]]
-; CHECK-NEON-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[TMP0]]
+; CHECK-NEON-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEON-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEON-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDEX]]
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i32 0
 ; CHECK-NEON-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP4]], align 1
 ; CHECK-NEON-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i32 0
@@ -579,10 +569,9 @@ define i32 @chained_partial_reduce_sub_sub(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE:       vector.body:
 ; CHECK-SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
-; CHECK-SVE-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 0
-; CHECK-SVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP6]]
-; CHECK-SVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP6]]
-; CHECK-SVE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[TMP6]]
+; CHECK-SVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-SVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-SVE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDEX]]
 ; CHECK-SVE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP7]], i32 0
 ; CHECK-SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i8>, ptr [[TMP10]], align 1
 ; CHECK-SVE-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i32 0
@@ -626,10 +615,9 @@ define i32 @chained_partial_reduce_sub_sub(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE-MAXBW:       vector.body:
 ; CHECK-SVE-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-SVE-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE3:%.*]], [[VECTOR_BODY]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 0
-; CHECK-SVE-MAXBW-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP6]]
-; CHECK-SVE-MAXBW-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP6]]
-; CHECK-SVE-MAXBW-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[TMP6]]
+; CHECK-SVE-MAXBW-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-SVE-MAXBW-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-SVE-MAXBW-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDEX]]
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP7]], i32 0
 ; CHECK-SVE-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP10]], align 1
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i32 0
@@ -704,10 +692,9 @@ define i32 @chained_partial_reduce_add_add_add(ptr %a, ptr %b, ptr %c, i32 %N) #
 ; CHECK-NEON:       vector.body:
 ; CHECK-NEON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEON-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE4:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEON-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP0]]
-; CHECK-NEON-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP0]]
-; CHECK-NEON-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[TMP0]]
+; CHECK-NEON-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEON-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEON-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDEX]]
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i32 0
 ; CHECK-NEON-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP4]], align 1
 ; CHECK-NEON-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i32 0
@@ -753,10 +740,9 @@ define i32 @chained_partial_reduce_add_add_add(ptr %a, ptr %b, ptr %c, i32 %N) #
 ; CHECK-SVE:       vector.body:
 ; CHECK-SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP21:%.*]], [[VECTOR_BODY]] ]
-; CHECK-SVE-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 0
-; CHECK-SVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP6]]
-; CHECK-SVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP6]]
-; CHECK-SVE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[TMP6]]
+; CHECK-SVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-SVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-SVE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDEX]]
 ; CHECK-SVE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP7]], i32 0
 ; CHECK-SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i8>, ptr [[TMP10]], align 1
 ; CHECK-SVE-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i32 0
@@ -802,10 +788,9 @@ define i32 @chained_partial_reduce_add_add_add(ptr %a, ptr %b, ptr %c, i32 %N) #
 ; CHECK-SVE-MAXBW:       vector.body:
 ; CHECK-SVE-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-SVE-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE4:%.*]], [[VECTOR_BODY]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 0
-; CHECK-SVE-MAXBW-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP6]]
-; CHECK-SVE-MAXBW-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP6]]
-; CHECK-SVE-MAXBW-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[TMP6]]
+; CHECK-SVE-MAXBW-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-SVE-MAXBW-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-SVE-MAXBW-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDEX]]
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP7]], i32 0
 ; CHECK-SVE-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP10]], align 1
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i32 0
@@ -882,10 +867,9 @@ define i32 @chained_partial_reduce_sub_add_sub(ptr %a, ptr %b, ptr %c, i32 %N) #
 ; CHECK-NEON:       vector.body:
 ; CHECK-NEON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEON-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE4:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEON-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEON-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP0]]
-; CHECK-NEON-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP0]]
-; CHECK-NEON-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[TMP0]]
+; CHECK-NEON-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEON-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEON-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDEX]]
 ; CHECK-NEON-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i32 0
 ; CHECK-NEON-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP4]], align 1
 ; CHECK-NEON-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i32 0
@@ -933,10 +917,9 @@ define i32 @chained_partial_reduce_sub_add_sub(ptr %a, ptr %b, ptr %c, i32 %N) #
 ; CHECK-SVE:       vector.body:
 ; CHECK-SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP21:%.*]], [[VECTOR_BODY]] ]
-; CHECK-SVE-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 0
-; CHECK-SVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP6]]
-; CHECK-SVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP6]]
-; CHECK-SVE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[TMP6]]
+; CHECK-SVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-SVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-SVE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDEX]]
 ; CHECK-SVE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP7]], i32 0
 ; CHECK-SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i8>, ptr [[TMP10]], align 1
 ; CHECK-SVE-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i32 0
@@ -982,10 +965,9 @@ define i32 @chained_partial_reduce_sub_add_sub(ptr %a, ptr %b, ptr %c, i32 %N) #
 ; CHECK-SVE-MAXBW:       vector.body:
 ; CHECK-SVE-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-SVE-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE4:%.*]], [[VECTOR_BODY]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 0
-; CHECK-SVE-MAXBW-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP6]]
-; CHECK-SVE-MAXBW-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP6]]
-; CHECK-SVE-MAXBW-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[TMP6]]
+; CHECK-SVE-MAXBW-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-SVE-MAXBW-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-SVE-MAXBW-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDEX]]
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP7]], i32 0
 ; CHECK-SVE-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP10]], align 1
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i32 0

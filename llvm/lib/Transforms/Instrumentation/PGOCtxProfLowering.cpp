@@ -18,6 +18,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/ProfileData/CtxInstrContextNode.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
 #include <utility>
@@ -113,13 +114,16 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
   auto *I32Ty = Type::getInt32Ty(M.getContext());
   auto *I64Ty = Type::getInt64Ty(M.getContext());
 
-  FunctionDataTy =
-      StructType::get(M.getContext(), {
-                                          PointerTy,          /*Next*/
-                                          PointerTy,          /*CtxRoot*/
-                                          PointerTy,          /*FlatCtx*/
-                                          SanitizerMutexType, /*Mutex*/
-                                      });
+#define _PTRDECL(_, __) PointerTy,
+#define _VOLATILE_PTRDECL(_, __) PointerTy,
+#define _MUTEXDECL(_) SanitizerMutexType,
+
+  FunctionDataTy = StructType::get(
+      M.getContext(),
+      {CTXPROF_FUNCTION_DATA(_PTRDECL, _VOLATILE_PTRDECL, _MUTEXDECL)});
+#undef _PTRDECL
+#undef _VOLATILE_PTRDECL
+#undef _MUTEXDECL
 
   // The Context header.
   ContextNodeTy = StructType::get(M.getContext(), {

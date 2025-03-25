@@ -1,11 +1,17 @@
-// RUN: %clang_cc1 -Wno-string-plus-int -fexperimental-new-constant-interpreter %s -verify=expected,both
+// RUN: %clang_cc1 -Wno-string-plus-int -fexperimental-new-constant-interpreter -triple x86_64 %s -verify=expected,both
+// RUN: %clang_cc1 -Wno-string-plus-int                                         -triple x86_64 %s -verify=ref,both
+//
 // RUN: %clang_cc1 -Wno-string-plus-int -fexperimental-new-constant-interpreter -triple i686 %s -verify=expected,both
-// RUN: %clang_cc1 -Wno-string-plus-int -verify=ref,both %s -Wno-constant-evaluated
-// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int -fexperimental-new-constant-interpreter %s -verify=expected,both
+// RUN: %clang_cc1 -Wno-string-plus-int                                         -triple i686 %s -verify=ref,both
+//
+// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int -fexperimental-new-constant-interpreter -triple x86_64 %s -verify=expected,both
+// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int                                         -triple x86_64 %s -verify=ref,both
+//
 // RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int -fexperimental-new-constant-interpreter -triple i686 %s -verify=expected,both
-// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int -verify=ref,both %s -Wno-constant-evaluated
+// RUN: %clang_cc1 -std=c++20 -Wno-string-plus-int                                         -triple i686 %s -verify=ref,both
+//
 // RUN: %clang_cc1 -triple avr -std=c++20 -Wno-string-plus-int -fexperimental-new-constant-interpreter %s -verify=expected,both
-// RUN: %clang_cc1 -triple avr -std=c++20 -Wno-string-plus-int -verify=ref,both %s -Wno-constant-evaluated
+// RUN: %clang_cc1 -triple avr -std=c++20 -Wno-string-plus-int                                            -verify=ref,both %s
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 #define LITTLE_END 1
@@ -20,6 +26,8 @@ extern "C" {
   extern size_t wcslen(const wchar_t *p);
   extern void *memchr(const void *s, int c, size_t n);
   extern char *strchr(const char *s, int c);
+  extern wchar_t *wmemchr(const wchar_t *s, wchar_t c, size_t n);
+  extern wchar_t *wcschr(const wchar_t *s, wchar_t c);
 }
 
 namespace strcmp {
@@ -1275,7 +1283,6 @@ namespace BuiltinMemcpy {
   static_assert(test_incomplete_array_type() == 1234); // both-error {{constant}} both-note {{in call}}
 
 
-  /// FIXME: memmove needs to support overlapping memory regions.
   constexpr bool memmoveOverlapping() {
     char s1[] {1, 2, 3};
     __builtin_memmove(s1, s1 + 1, 2 * sizeof(char));
@@ -1288,7 +1295,13 @@ namespace BuiltinMemcpy {
 
     return Result1 && Result2;
   }
-  static_assert(memmoveOverlapping()); // expected-error {{failed}}
+  static_assert(memmoveOverlapping());
+
+#define fold(x) (__builtin_constant_p(0) ? (x) : (x))
+  static_assert(__builtin_memcpy(&global, fold((wchar_t*)123), sizeof(wchar_t))); // both-error {{not an integral constant expression}} \
+                                                                                  // both-note {{source of 'memcpy' is (void *)123}}
+  static_assert(__builtin_memcpy(fold(reinterpret_cast<wchar_t*>(123)), &global, sizeof(wchar_t))); // both-error {{not an integral constant expression}} \
+                                                                                                    // both-note {{destination of 'memcpy' is (void *)123}}
 }
 
 namespace Memcmp {
@@ -1488,4 +1501,47 @@ namespace Strchr {
 
   constexpr bool a = !strchr("hello", 'h'); // both-error {{constant expression}} \
                                             // both-note {{non-constexpr function 'strchr' cannot be used in a constant expression}}
+}
+
+namespace WMemChr {
+  constexpr const wchar_t *kStr = L"abca\xffff\0dL";
+  constexpr wchar_t kFoo[] = {L'f', L'o', L'o'};
+
+  static_assert(__builtin_wmemchr(kStr, L'a', 0) == nullptr);
+  static_assert(__builtin_wmemchr(kStr, L'a', 1) == kStr);
+  static_assert(__builtin_wmemchr(kStr, L'\0', 5) == nullptr);
+  static_assert(__builtin_wmemchr(kStr, L'\0', 6) == kStr + 5);
+  static_assert(__builtin_wmemchr(kStr, L'\xffff', 8) == kStr + 4);
+  static_assert(__builtin_wmemchr(kFoo, L'x', 3) == nullptr);
+  static_assert(__builtin_wmemchr(kFoo, L'x', 4) == nullptr); // both-error {{not an integral constant}} \
+                                                              // both-note {{dereferenced one-past-the-end}}
+  static_assert(__builtin_wmemchr(nullptr, L'x', 3) == nullptr); // both-error {{not an integral constant}} \
+                                                                 // both-note {{dereferenced null}}
+  static_assert(__builtin_wmemchr(nullptr, L'x', 0) == nullptr);
+
+  constexpr bool b = !wmemchr(L"hello", L'h', 3); // both-error {{constant expression}} \
+                                                  // both-note {{non-constexpr function 'wmemchr' cannot be used in a constant expression}}
+
+  constexpr wchar_t kStr2[] = {L'f', L'o', L'\xffff', L'o'};
+  static_assert(__builtin_wmemchr(kStr2, L'\xffff', 4) == kStr2 + 2);
+
+
+  static_assert(__builtin_wcschr(kStr, L'a') == kStr);
+  static_assert(__builtin_wcschr(kStr, L'b') == kStr + 1);
+  static_assert(__builtin_wcschr(kStr, L'c') == kStr + 2);
+  static_assert(__builtin_wcschr(kStr, L'd') == nullptr);
+  static_assert(__builtin_wcschr(kStr, L'e') == nullptr);
+  static_assert(__builtin_wcschr(kStr, L'\0') == kStr + 5);
+  static_assert(__builtin_wcschr(kStr, L'a' + 256) == nullptr);
+  static_assert(__builtin_wcschr(kStr, L'a' - 256) == nullptr);
+  static_assert(__builtin_wcschr(kStr, L'\xffff') == kStr + 4);
+  static_assert(__builtin_wcschr(kFoo, L'o') == kFoo + 1);
+  static_assert(__builtin_wcschr(kFoo, L'x') == nullptr); // both-error {{not an integral constant}} \
+                                                          // both-note {{dereferenced one-past-the-end}}
+  static_assert(__builtin_wcschr(nullptr, L'x') == nullptr); // both-error {{not an integral constant}} \
+                                                             // both-note {{dereferenced null}}
+
+
+  constexpr bool c = !wcschr(L"hello", L'h'); // both-error {{constant expression}} \
+                                              // both-note {{non-constexpr function 'wcschr' cannot be used in a constant expression}}
 }
