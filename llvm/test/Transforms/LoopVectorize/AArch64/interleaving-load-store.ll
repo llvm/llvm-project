@@ -86,14 +86,13 @@ define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 
 ; INTERLEAVE-4-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; INTERLEAVE-4:       vec.epilog.vector.body:
 ; INTERLEAVE-4-NEXT:    [[INDEX12:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT18:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; INTERLEAVE-4-NEXT:    [[TMP34:%.*]] = add i64 [[INDEX12]], 0
-; INTERLEAVE-4-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[TMP34]]
+; INTERLEAVE-4-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[INDEX12]]
 ; INTERLEAVE-4-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i8, ptr [[TMP35]], i32 0
 ; INTERLEAVE-4-NEXT:    [[WIDE_LOAD13:%.*]] = load <8 x i8>, ptr [[TMP36]], align 1
 ; INTERLEAVE-4-NEXT:    [[TMP37:%.*]] = icmp sgt <8 x i8> [[WIDE_LOAD13]], [[BROADCAST_SPLAT15]]
 ; INTERLEAVE-4-NEXT:    [[TMP38:%.*]] = call <8 x i8> @llvm.smax.v8i8(<8 x i8> [[WIDE_LOAD13]], <8 x i8> [[BROADCAST_SPLAT17]])
 ; INTERLEAVE-4-NEXT:    [[TMP39:%.*]] = select <8 x i1> [[TMP37]], <8 x i8> [[BROADCAST_SPLAT15]], <8 x i8> [[TMP38]]
-; INTERLEAVE-4-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[TMP34]]
+; INTERLEAVE-4-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX12]]
 ; INTERLEAVE-4-NEXT:    [[TMP41:%.*]] = getelementptr inbounds i8, ptr [[TMP40]], i32 0
 ; INTERLEAVE-4-NEXT:    store <8 x i8> [[TMP39]], ptr [[TMP41]], align 1
 ; INTERLEAVE-4-NEXT:    [[INDEX_NEXT18]] = add nuw i64 [[INDEX12]], 8
@@ -181,14 +180,13 @@ define void @interleave_single_load_store(ptr %src, ptr %dst, i64 %N, i8 %a, i8 
 ; INTERLEAVE-2-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; INTERLEAVE-2:       vec.epilog.vector.body:
 ; INTERLEAVE-2-NEXT:    [[INDEX10:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT16:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; INTERLEAVE-2-NEXT:    [[TMP18:%.*]] = add i64 [[INDEX10]], 0
-; INTERLEAVE-2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[TMP18]]
+; INTERLEAVE-2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[INDEX10]]
 ; INTERLEAVE-2-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[TMP19]], i32 0
 ; INTERLEAVE-2-NEXT:    [[WIDE_LOAD11:%.*]] = load <8 x i8>, ptr [[TMP20]], align 1
 ; INTERLEAVE-2-NEXT:    [[TMP21:%.*]] = icmp sgt <8 x i8> [[WIDE_LOAD11]], [[BROADCAST_SPLAT13]]
 ; INTERLEAVE-2-NEXT:    [[TMP22:%.*]] = call <8 x i8> @llvm.smax.v8i8(<8 x i8> [[WIDE_LOAD11]], <8 x i8> [[BROADCAST_SPLAT15]])
 ; INTERLEAVE-2-NEXT:    [[TMP23:%.*]] = select <8 x i1> [[TMP21]], <8 x i8> [[BROADCAST_SPLAT13]], <8 x i8> [[TMP22]]
-; INTERLEAVE-2-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[TMP18]]
+; INTERLEAVE-2-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX10]]
 ; INTERLEAVE-2-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i8, ptr [[TMP24]], i32 0
 ; INTERLEAVE-2-NEXT:    store <8 x i8> [[TMP23]], ptr [[TMP25]], align 1
 ; INTERLEAVE-2-NEXT:    [[INDEX_NEXT16]] = add nuw i64 [[INDEX10]], 8

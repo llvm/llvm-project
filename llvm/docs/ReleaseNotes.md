@@ -147,6 +147,9 @@ Changes to the RISC-V Backend
 * Adds assembler support for the 'Zclsd` (Compressed Load/Store Pair Instructions)
   extension.
 * Adds experimental assembler support for Zvqdotq.
+* Adds Support for Qualcomm's `qci-nest` and `qci-nonest` interrupt types, which
+  use instructions from `Xqciint` to save and restore some GPRs during interrupt
+  handlers.
 
 Changes to the WebAssembly Backend
 ----------------------------------
