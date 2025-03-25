@@ -7,15 +7,22 @@
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
 
 ;.
-; CHECK: @[[B:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global ptr null
-; CHECK: @[[C:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr constant [2 x ptr] zeroinitializer
+; CHECK: @b = internal unnamed_addr global ptr null
 ;.
 define void @test() {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr @b, ptr getelementptr inbounds ([2 x ptr], ptr @c, i64 0, i64 1), i64 8, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i64(ptr @b, ptr getelementptr inbounds ([2 x ptr], ptr @c, i64 0, i64 1), i64 8, i1 false)
+  ret void
+}
+
+define void @neg_test(ptr %arg) {
+; CHECK-LABEL: @neg_test(
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr @b, ptr [[ARG:%.*]], i64 8, i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memcpy.p0.p0.i64(ptr @b, ptr %arg, i64 8, i1 false)
   ret void
 }
 ;.
