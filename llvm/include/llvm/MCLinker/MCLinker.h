@@ -32,18 +32,17 @@ namespace llvm {
 /// (instead of one .a file with multiple .o files in .a) with reduced
 /// object file size (due to symbol dedup and linkage restoration).
 
+//==============================================================================
+// MCInfo
+//==============================================================================
+
 struct MCInfo {
   MCInfo(std::unique_ptr<llvm::MachineModuleInfo> &&MachineModuleInfo,
          LLVMModuleAndContext &&ModuleAndContext,
          llvm::StringMap<const llvm::Function *> &FnNameToFnPtr,
          std::unique_ptr<llvm::TargetMachine> &&TgtMachine,
          std::unique_ptr<llvm::MCContext> &&McContext,
-         std::optional<int> SplitIdx)
-      : ModuleAndContext(std::move(ModuleAndContext)),
-        McContext(std::move(McContext)),
-        MachineModuleInfo(std::move(MachineModuleInfo)),
-        FnNameToFnPtr(std::move(FnNameToFnPtr)),
-        TgtMachine(std::move(TgtMachine)), SplitIdx(SplitIdx){};
+         std::optional<int> SplitIdx);
 
   MCInfo(MCInfo &&Other)
       : ModuleBuf(std::move(Other.ModuleBuf)),
@@ -56,7 +55,7 @@ struct MCInfo {
   /// Serialize the llvm::Module into bytecode.
   //  We will deserialize it back to put into
   /// a different LLVMContext that is required for linking using llvm::Linker.
-  std::unique_ptr<WritableMemoryBuffer> ModuleBuf;
+  std::unique_ptr<WritableMemoryBuffer> ModuleBuf = nullptr;
 
   /// Keep original module split alive because llvm::Function is kept as
   /// reference in llvm::MachineFunctions and will be used during codegen.
@@ -80,6 +79,11 @@ struct MCInfo {
   std::optional<int> SplitIdx;
 };
 
+
+//==============================================================================
+// SymbolAndMCInfo
+//==============================================================================
+
 struct SymbolAndMCInfo {
   SymbolAndMCInfo() = default;
 
@@ -102,8 +106,7 @@ class MCLinker {
 public:
   MCLinker(SmallVectorImpl<SymbolAndMCInfo *> &SymbolAndMCInfos,
            llvm::TargetMachine &TgtMachine,
-           llvm::StringMap<llvm::GlobalValue::LinkageTypes> SymbolLinkageTypes,
-           llvm::StringMap<unsigned> OriginalFnOrdering);
+           llvm::StringMap<llvm::GlobalValue::LinkageTypes> SymbolLinkageTypes);
 
   /// Link multiple MC results and AsmPrint into one .o file.
   ErrorOr<std::unique_ptr<WritableMemoryBuffer>>
@@ -116,7 +119,7 @@ private:
   LLVMModuleAndContext LinkedModule;
 
   llvm::StringMap<llvm::GlobalValue::LinkageTypes> SymbolLinkageTypes;
-  llvm::StringMap<unsigned> OriginalFnOrdering;
+  // llvm::StringMap<unsigned> OriginalFnOrdering;
   llvm::MachineModuleInfoWrapperPass *MachineModInfoPass = nullptr;
 
   /// Link llvm::Modules from each split.
