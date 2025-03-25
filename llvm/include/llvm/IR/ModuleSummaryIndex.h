@@ -165,6 +165,8 @@ struct alignas(8) GlobalValueSummaryInfo {
   /// in the GlobalValueMap. Requires a vector in the case of multiple
   /// COMDAT values of the same name.
   GlobalValueSummaryList SummaryList;
+
+  mutable bool MarkedNonReadWriteOnly = false;
 };
 
 /// Map from global value GUID to corresponding summary structures. Use a

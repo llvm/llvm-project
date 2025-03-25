@@ -199,9 +199,7 @@ bool ModuleSummaryIndex::isGUIDLive(GlobalValue::GUID GUID) const {
   return false;
 }
 
-static void
-propagateAttributesToRefs(GlobalValueSummary *S,
-                          DenseSet<ValueInfo> &MarkedNonReadWriteOnly) {
+static void propagateAttributesToRefs(GlobalValueSummary *S) {
   // If reference is not readonly or writeonly then referenced summary is not
   // read/writeonly either. Note that:
   // - All references from GlobalVarSummary are conservatively considered as
@@ -213,9 +211,10 @@ propagateAttributesToRefs(GlobalValueSummary *S,
   for (auto &VI : S->refs()) {
     assert(VI.getAccessSpecifier() == 0 || isa<FunctionSummary>(S));
     if (!VI.getAccessSpecifier()) {
-      if (!MarkedNonReadWriteOnly.insert(VI).second)
+      if (VI.getRef()->second.MarkedNonReadWriteOnly)
         continue;
-    } else if (MarkedNonReadWriteOnly.contains(VI))
+      VI.getRef()->second.MarkedNonReadWriteOnly = true;
+    } else if (VI.getRef()->second.MarkedNonReadWriteOnly)
       continue;
     for (auto &Ref : VI.getSummaryList())
       // If references to alias is not read/writeonly then aliasee
@@ -260,7 +259,6 @@ void ModuleSummaryIndex::propagateAttributes(
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
   if (!PropagateAttrs)
     return;
-  DenseSet<ValueInfo> MarkedNonReadWriteOnly;
   for (auto &P : *this) {
     bool IsDSOLocal = true;
     for (auto &S : P.second.SummaryList) {
@@ -299,7 +297,7 @@ void ModuleSummaryIndex::propagateAttributes(
           GVS->setReadOnly(false);
           GVS->setWriteOnly(false);
         }
-      propagateAttributesToRefs(S.get(), MarkedNonReadWriteOnly);
+      propagateAttributesToRefs(S.get());
 
       // If the flag from any summary is false, the GV is not DSOLocal.
       IsDSOLocal &= S->isDSOLocal();
