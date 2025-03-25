@@ -2316,3 +2316,12 @@ bool SystemZInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
 
   return false;
 }
+
+std::optional<DestSourcePair>
+SystemZInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
+  // if MI is a simple single-register copy operation, return operand pair
+  if (MI.isMoveReg())
+    return DestSourcePair(MI.getOperand(0), MI.getOperand(1));
+
+  return std::nullopt;
+}
