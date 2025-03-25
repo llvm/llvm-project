@@ -2396,6 +2396,8 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
   auto *VectorTy = cast<VectorType>(toVectorTy(ElementTy, VF));
   unsigned Opcode = RecurrenceDescriptor::getOpcode(RdxKind);
   FastMathFlags FMFs = getFastMathFlags();
+  std::optional<FastMathFlags> OptionalFMF =
+      ElementTy->isFloatingPointTy() ? std::make_optional(FMFs) : std::nullopt;
 
   // TODO: Support any-of reductions.
   assert(
@@ -2410,12 +2412,7 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
     return Ctx.TTI.getMinMaxReductionCost(Id, VectorTy, FMFs, Ctx.CostKind);
   }
 
-  if (ElementTy->isFloatingPointTy())
-    return Ctx.TTI.getArithmeticReductionCost(Opcode, VectorTy, FMFs,
-                                              Ctx.CostKind);
-  // Cannot get correct cost when quering TTI with FMFs not contains `reassoc`
-  // for non-FP reductions.
-  return Ctx.TTI.getArithmeticReductionCost(Opcode, VectorTy, std::nullopt,
+  return Ctx.TTI.getArithmeticReductionCost(Opcode, VectorTy, OptionalFMF,
                                             Ctx.CostKind);
 }
 
@@ -2426,7 +2423,6 @@ VPExtendedReductionRecipe::computeCost(ElementCount VF,
   Type *RedTy = Ctx.Types.inferScalarType(this);
   auto *SrcVecTy =
       cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(getVecOp()), VF));
-
   assert(RedTy->isIntegerTy() &&
          "ExtendedReduction only support integer type currently.");
   return Ctx.TTI.getExtendedReductionCost(Opcode, isZExt(), RedTy, SrcVecTy,
@@ -2439,7 +2435,6 @@ VPMulAccumulateReductionRecipe::computeCost(ElementCount VF,
   Type *RedTy = Ctx.Types.inferScalarType(this);
   auto *SrcVecTy =
       cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
-
   return Ctx.TTI.getMulAccReductionCost(isZExt(), RedTy, SrcVecTy,
                                         Ctx.CostKind);
 }
@@ -2494,7 +2489,10 @@ void VPExtendedReductionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = ";
   getChainOp()->printAsOperand(O, SlotTracker);
   O << " +";
-  O << " reduce." << Instruction::getOpcodeName(RecurrenceDescriptor::getOpcode(getRecurrenceKind())) << " (";
+  O << " reduce."
+    << Instruction::getOpcodeName(
+           RecurrenceDescriptor::getOpcode(getRecurrenceKind()))
+    << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
   O << " extended to " << *getResultType();
   if (isConditional()) {
@@ -2511,7 +2509,10 @@ void VPMulAccumulateReductionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = ";
   getChainOp()->printAsOperand(O, SlotTracker);
   O << " + ";
-  O << "reduce." << Instruction::getOpcodeName(RecurrenceDescriptor::getOpcode(getRecurrenceKind())) << " (";
+  O << "reduce."
+    << Instruction::getOpcodeName(
+           RecurrenceDescriptor::getOpcode(getRecurrenceKind()))
+    << " (";
   O << "mul";
   printFlags(O);
   if (isExtended())

@@ -14,7 +14,6 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANTRANSFORMS_H
 
 #include "VPlan.h"
-#include "VPlanHelpers.h"
 #include "VPlanVerifier.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/CommandLine.h"
@@ -29,6 +28,8 @@ class PredicatedScalarEvolution;
 class TargetLibraryInfo;
 class VPBuilder;
 class VPRecipeBuilder;
+class VPCostContext;
+class VFRange;
 
 extern cl::opt<bool> VerifyEachVPlan;
 

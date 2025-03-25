@@ -17,6 +17,7 @@
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
+#include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanUtils.h"
 #include "VPlanVerifier.h"
@@ -2384,7 +2385,8 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         IsMulAccValidAndClampRange(RecipeA->getOpcode() ==
                                        Instruction::CastOps::ZExt,
                                    Mul, RecipeA, RecipeB, nullptr))
-      return new VPMulAccumulateReductionRecipe(Red, Mul, RecipeA, RecipeB, RecipeA->getResultType());
+      return new VPMulAccumulateReductionRecipe(Red, Mul, RecipeA, RecipeB,
+                                                RecipeA->getResultType());
     // Matched reduce.add(mul)
     if (IsMulAccValidAndClampRange(true, Mul, nullptr, nullptr, nullptr))
       return new VPMulAccumulateReductionRecipe(Red, Mul);
@@ -2405,7 +2407,8 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         IsMulAccValidAndClampRange(Ext0->getOpcode() ==
                                        Instruction::CastOps::ZExt,
                                    Mul, Ext0, Ext1, Ext))
-      return new VPMulAccumulateReductionRecipe(Red, Mul, Ext0, Ext1, Ext->getResultType());
+      return new VPMulAccumulateReductionRecipe(Red, Mul, Ext0, Ext1,
+                                                Ext->getResultType());
   }
   return nullptr;
 }
