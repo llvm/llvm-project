@@ -76,6 +76,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPWidenCastSC:
   case VPWidenGEPSC:
   case VPWidenIntOrFpInductionSC:
+  case VPWidenStridedLoadSC:
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
   case VPWidenPHISC:
@@ -97,6 +98,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   switch (getVPDefID()) {
   case VPInstructionSC:
     return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
+  case VPWidenStridedLoadSC:
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
     return true;
@@ -175,6 +177,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   }
   case VPInterleaveSC:
     return mayWriteToMemory();
+  case VPWidenStridedLoadSC:
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
   case VPWidenStoreEVLSC:
@@ -2689,11 +2692,6 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
     assert(!Reverse &&
            "Inconsecutive memory access should not have the order.");
-    if (Strided)
-      return Ctx.TTI.getStridedMemoryOpCost(Ingredient.getOpcode(), Ty, Ptr,
-                                            IsMasked, Alignment, Ctx.CostKind,
-                                            &Ingredient);
-
     return Ctx.TTI.getAddressComputationCost(Ty) +
            Ctx.TTI.getGatherScatterOpCost(Ingredient.getOpcode(), Ty, Ptr,
                                           IsMasked, Alignment, Ctx.CostKind,
@@ -2724,12 +2722,10 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
   Type *ScalarDataTy = getLoadStoreType(&Ingredient);
   auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
-  bool CreateGather = !isConsecutive() && !isStrided();
+  bool CreateGather = !isConsecutive();
 
   auto &Builder = State.Builder;
-  Value *Mask = isStrided()
-                    ? Builder.CreateVectorSplat(State.VF, Builder.getTrue())
-                    : nullptr;
+  Value *Mask = nullptr;
   if (auto *VPMask = getMask()) {
     // Mask reversal is only needed for non-all-one (null) masks, as reverse
     // of a null all-one mask is a null mask.
@@ -2744,25 +2740,9 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
     NewLI = Builder.CreateMaskedGather(DataTy, Addr, Alignment, Mask, nullptr,
                                        "wide.masked.gather");
   } else if (Mask) {
-    if (isStrided()) {
-      const DataLayout &DL = LI->getDataLayout();
-      auto *PtrTy = Addr->getType();
-      auto *StrideTy = DL.getIndexType(PtrTy);
-      // TODO: Support non-unit-reverse strided accesses.
-      auto *StrideVal =
-          ConstantInt::get(StrideTy, -1 * DL.getTypeAllocSize(ScalarDataTy));
-      Value *RuntimeVF =
-          getRuntimeVF(State.Builder, State.Builder.getInt32Ty(), State.VF);
-      NewLI = Builder.CreateIntrinsic(
-          Intrinsic::experimental_vp_strided_load, {DataTy, PtrTy, StrideTy},
-          {Addr, StrideVal, Mask, RuntimeVF}, nullptr, "wide.strided.load");
-      cast<CallInst>(NewLI)->addParamAttr(
-          0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
-    } else {
-      NewLI = Builder.CreateMaskedLoad(DataTy, Addr, Alignment, Mask,
-                                       PoisonValue::get(DataTy),
-                                       "wide.masked.load");
-    }
+    NewLI =
+        Builder.CreateMaskedLoad(DataTy, Addr, Alignment, Mask,
+                                 PoisonValue::get(DataTy), "wide.masked.load");
   } else {
     NewLI = Builder.CreateAlignedLoad(DataTy, Addr, Alignment, "wide.load");
   }
@@ -2800,7 +2780,7 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   Type *ScalarDataTy = getLoadStoreType(&Ingredient);
   auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
-  bool CreateGather = !isConsecutive() && !isStrided();
+  bool CreateGather = !isConsecutive();
 
   auto &Builder = State.Builder;
   CallInst *NewLI;
@@ -2819,16 +2799,6 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
     NewLI =
         Builder.CreateIntrinsic(DataTy, Intrinsic::vp_gather, {Addr, Mask, EVL},
                                 nullptr, "wide.masked.gather");
-  } else if (isStrided()) {
-    const DataLayout &DL = LI->getDataLayout();
-    auto *PtrTy = Addr->getType();
-    auto *StrideTy = DL.getIndexType(PtrTy);
-    // TODO: Support non-unit-reverse strided accesses.
-    auto *StrideVal =
-        ConstantInt::get(StrideTy, -1 * DL.getTypeAllocSize(ScalarDataTy));
-    NewLI = Builder.CreateIntrinsic(
-        Intrinsic::experimental_vp_strided_load, {DataTy, PtrTy, StrideTy},
-        {Addr, StrideVal, Mask, EVL}, nullptr, "wide.strided.load");
   } else {
     VectorBuilder VBuilder(Builder);
     VBuilder.setEVL(EVL).setMask(Mask);
@@ -2879,18 +2849,72 @@ void VPWidenLoadEVLRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+void VPWidenStridedLoadRecipe::execute(VPTransformState &State) {
+  auto *LI = cast<LoadInst>(&Ingredient);
+
+  Type *ScalarDataTy = getLoadStoreType(&Ingredient);
+  auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
+  const Align Alignment = getLoadStoreAlignment(&Ingredient);
+
+  auto &Builder = State.Builder;
+  State.setDebugLocFrom(getDebugLoc());
+  Value *Addr = State.get(getAddr(), /*IsScalar*/ true);
+  Value *Stride = State.get(getStride(), /*IsScalar*/ true);
+  Value *Mask = nullptr;
+  if (VPValue *VPMask = getMask())
+    Mask = State.get(VPMask);
+  else
+    Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  Value *RunTimeVF = Builder.CreateZExtOrTrunc(State.get(getVF(), VPLane(0)),
+                                               Builder.getInt32Ty());
+
+  auto *PtrTy = Addr->getType();
+  auto *StrideTy = Stride->getType();
+  CallInst *NewLI = Builder.CreateIntrinsic(
+      Intrinsic::experimental_vp_strided_load, {DataTy, PtrTy, StrideTy},
+      {Addr, Stride, Mask, RunTimeVF}, nullptr, "wide.strided.load");
+  NewLI->addParamAttr(
+      0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
+  State.addMetadata(NewLI, LI);
+  State.set(this, NewLI);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPWidenStridedLoadRecipe::print(raw_ostream &O, const Twine &Indent,
+                                     VPSlotTracker &SlotTracker) const {
+  O << Indent << "WIDEN ";
+  printAsOperand(O, SlotTracker);
+  O << " = load ";
+  getAddr()->printAsOperand(O, SlotTracker);
+  O << ", stride = ";
+  getStride()->printAsOperand(O, SlotTracker);
+  O << ", runtimeVF = ";
+  getVF()->printAsOperand(O, SlotTracker);
+}
+#endif
+
+InstructionCost
+VPWidenStridedLoadRecipe::computeCost(ElementCount VF,
+                                      VPCostContext &Ctx) const {
+  Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
+  const Align Alignment = getLoadStoreAlignment(&Ingredient);
+  const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
+
+  return Ctx.TTI.getStridedMemoryOpCost(Ingredient.getOpcode(), Ty, Ptr,
+                                        IsMasked, Alignment, Ctx.CostKind,
+                                        &Ingredient);
+}
+
 void VPWidenStoreRecipe::execute(VPTransformState &State) {
   auto *SI = cast<StoreInst>(&Ingredient);
 
   VPValue *StoredVPValue = getStoredValue();
-  bool CreateScatter = !isConsecutive() && !isStrided();
+  bool CreateScatter = !isConsecutive();
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
 
   auto &Builder = State.Builder;
 
-  Value *Mask = isStrided()
-                    ? Builder.CreateVectorSplat(State.VF, Builder.getTrue())
-                    : nullptr;
+  Value *Mask = nullptr;
   if (auto *VPMask = getMask()) {
     // Mask reversal is only needed for non-all-one (null) masks, as reverse
     // of a null all-one mask is a null mask.
@@ -2909,32 +2933,12 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
   }
   Value *Addr = State.get(getAddr(), /*IsScalar*/ !CreateScatter);
   Instruction *NewSI = nullptr;
-  if (CreateScatter) {
+  if (CreateScatter)
     NewSI = Builder.CreateMaskedScatter(StoredVal, Addr, Alignment, Mask);
-  } else if (Mask) {
-    if (isStrided()) {
-      const DataLayout &DL = SI->getDataLayout();
-      auto *StoredVecTy = cast<VectorType>(StoredVal->getType());
-      Type *StoredEltTy = StoredVecTy->getElementType();
-      auto *PtrTy = Addr->getType();
-      auto *StrideTy = DL.getIndexType(PtrTy);
-      // TODO: Support non-unit-reverse strided accesses.
-      auto *StrideVal =
-          ConstantInt::get(StrideTy, -1 * DL.getTypeAllocSize(StoredEltTy));
-      Value *RuntimeVF =
-          getRuntimeVF(State.Builder, State.Builder.getInt32Ty(), State.VF);
-      NewSI = Builder.CreateIntrinsic(
-          Intrinsic::experimental_vp_strided_store,
-          {StoredVecTy, PtrTy, StrideTy},
-          {StoredVal, Addr, StrideVal, Mask, RuntimeVF});
-      cast<CallInst>(NewSI)->addParamAttr(
-          1, Attribute::getWithAlignment(NewSI->getContext(), Alignment));
-    } else {
-      NewSI = Builder.CreateMaskedStore(StoredVal, Addr, Alignment, Mask);
-    }
-  } else {
+  else if (Mask)
+    NewSI = Builder.CreateMaskedStore(StoredVal, Addr, Alignment, Mask);
+  else
     NewSI = Builder.CreateAlignedStore(StoredVal, Addr, Alignment);
-  }
   State.addMetadata(NewSI, SI);
 }
 
@@ -2950,7 +2954,7 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   auto *SI = cast<StoreInst>(&Ingredient);
 
   VPValue *StoredValue = getStoredValue();
-  bool CreateScatter = !isConsecutive() && !isStrided();
+  bool CreateScatter = !isConsecutive();
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
 
   auto &Builder = State.Builder;
@@ -2974,25 +2978,11 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
                                     Intrinsic::vp_scatter,
                                     {StoredVal, Addr, Mask, EVL});
   } else {
-    if (isStrided()) {
-      const DataLayout &DL = SI->getDataLayout();
-      auto *StoredVecTy = cast<VectorType>(StoredVal->getType());
-      Type *StoredEltTy = StoredVecTy->getElementType();
-      auto *PtrTy = Addr->getType();
-      auto *StrideTy = DL.getIndexType(PtrTy);
-      // TODO: Support non-unit-reverse strided accesses.
-      auto *StrideVal =
-          ConstantInt::get(StrideTy, -1 * DL.getTypeAllocSize(StoredEltTy));
-      NewSI = Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_store,
-                                      {StoredVecTy, PtrTy, StrideTy},
-                                      {StoredVal, Addr, StrideVal, Mask, EVL});
-    } else {
-      VectorBuilder VBuilder(Builder);
-      VBuilder.setEVL(EVL).setMask(Mask);
-      NewSI = cast<CallInst>(VBuilder.createVectorInstruction(
-          Instruction::Store, Type::getVoidTy(EVL->getContext()),
-          {StoredVal, Addr}));
-    }
+    VectorBuilder VBuilder(Builder);
+    VBuilder.setEVL(EVL).setMask(Mask);
+    NewSI = cast<CallInst>(VBuilder.createVectorInstruction(
+        Instruction::Store, Type::getVoidTy(EVL->getContext()),
+        {StoredVal, Addr}));
   }
   NewSI->addParamAttr(
       1, Attribute::getWithAlignment(NewSI->getContext(), Alignment));

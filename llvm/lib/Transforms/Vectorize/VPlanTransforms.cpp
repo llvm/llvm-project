@@ -76,13 +76,13 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
           NewRecipe = new VPWidenLoadRecipe(
               *Load, Ingredient.getOperand(0), nullptr /*Mask*/,
-              false /*Consecutive*/, false /*Reverse*/, false /*Strided*/,
+              false /*Consecutive*/, false /*Reverse*/,
               Ingredient.getDebugLoc());
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
           NewRecipe = new VPWidenStoreRecipe(
               *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
               nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/,
-              false /*Strided*/, Ingredient.getDebugLoc());
+              Ingredient.getDebugLoc());
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
@@ -1957,6 +1957,12 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
         VPValue *NewMask = GetNewMask(L->getMask());
         return new VPWidenLoadEVLRecipe(*L, EVL, NewMask);
       })
+      .Case<VPWidenStridedLoadRecipe>([&](VPWidenStridedLoadRecipe *L) {
+        VPValue *NewMask = GetNewMask(L->getMask());
+        return new VPWidenStridedLoadRecipe(
+            *cast<LoadInst>(&L->getIngredient()), L->getAddr(), L->getStride(),
+            &EVL, NewMask, L->getDebugLoc());
+      })
       .Case<VPWidenStoreRecipe>([&](VPWidenStoreRecipe *S) {
         VPValue *NewMask = GetNewMask(S->getMask());
         return new VPWidenStoreEVLRecipe(*S, EVL, NewMask);
@@ -2056,7 +2062,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
           NumDefVal <= 1 &&
           "Only supports recipes with a single definition or without users.");
       EVLRecipe->insertBefore(CurRecipe);
-      if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe>(EVLRecipe)) {
+      if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe,
+              VPWidenStridedLoadRecipe>(EVLRecipe)) {
         VPValue *CurVPV = CurRecipe->getVPSingleValue();
         CurVPV->replaceAllUsesWith(EVLRecipe->getVPSingleValue());
       }
@@ -2658,7 +2665,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
       auto *L = new VPWidenLoadRecipe(
           *cast<LoadInst>(LoadGroup->getInterleaveGroup()->getInsertPos()),
           LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true,
-          /*Reverse=*/false, /*Strided=*/false, LoadGroup->getDebugLoc());
+          /*Reverse=*/false, LoadGroup->getDebugLoc());
       L->insertBefore(LoadGroup);
       return L;
     }
@@ -2689,7 +2696,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     auto *S = new VPWidenStoreRecipe(
         *cast<StoreInst>(StoreGroup->getInterleaveGroup()->getInsertPos()),
         StoreGroup->getAddr(), Res, nullptr, /*Consecutive=*/true,
-        /*Reverse=*/false, /*Strided=*/false, StoreGroup->getDebugLoc());
+        /*Reverse=*/false, StoreGroup->getDebugLoc());
     S->insertBefore(StoreGroup);
     StoreGroup->eraseFromParent();
   }

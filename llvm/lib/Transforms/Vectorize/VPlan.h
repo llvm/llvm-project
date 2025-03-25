@@ -537,6 +537,7 @@ public:
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPInterleaveSC:
     case VPRecipeBase::VPIRInstructionSC:
+    case VPRecipeBase::VPWidenStridedLoadSC:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
     case VPRecipeBase::VPWidenStoreEVLSC:
@@ -2569,9 +2570,6 @@ protected:
   /// Whether the consecutive accessed addresses are in reverse order.
   bool Reverse;
 
-  /// Whether the accessed addresses are evenly spaced apart by a fixed stride.
-  bool Strided = false;
-
   /// Whether the memory access is masked.
   bool IsMasked = false;
 
@@ -2585,9 +2583,9 @@ protected:
 
   VPWidenMemoryRecipe(const char unsigned SC, Instruction &I,
                       std::initializer_list<VPValue *> Operands,
-                      bool Consecutive, bool Reverse, bool Strided, DebugLoc DL)
+                      bool Consecutive, bool Reverse, DebugLoc DL)
       : VPRecipeBase(SC, Operands, DL), Ingredient(I), Consecutive(Consecutive),
-        Reverse(Reverse), Strided(Strided) {
+        Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
   }
 
@@ -2600,7 +2598,8 @@ public:
     return R->getVPDefID() == VPRecipeBase::VPWidenLoadSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenStoreSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenLoadEVLSC ||
-           R->getVPDefID() == VPRecipeBase::VPWidenStoreEVLSC;
+           R->getVPDefID() == VPRecipeBase::VPWidenStoreEVLSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenStridedLoadSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -2614,10 +2613,6 @@ public:
   /// Return whether the consecutive loaded/stored addresses are in reverse
   /// order.
   bool isReverse() const { return Reverse; }
-
-  /// Return whether the accessed addresses are evenly spaced apart by a fixed
-  /// stride.
-  bool isStrided() const { return Strided; }
 
   /// Return the address accessed by this recipe.
   VPValue *getAddr() const { return getOperand(0); }
@@ -2648,16 +2643,16 @@ public:
 /// optional mask.
 struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
   VPWidenLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
-                    bool Consecutive, bool Reverse, bool Strided, DebugLoc DL)
+                    bool Consecutive, bool Reverse, DebugLoc DL)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadSC, Load, {Addr}, Consecutive,
-                            Reverse, Strided, DL),
+                            Reverse, DL),
         VPValue(this, &Load) {
     setMask(Mask);
   }
 
   VPWidenLoadRecipe *clone() override {
     return new VPWidenLoadRecipe(cast<LoadInst>(Ingredient), getAddr(),
-                                 getMask(), Consecutive, Reverse, Strided,
+                                 getMask(), Consecutive, Reverse,
                                  getDebugLoc());
   }
 
@@ -2676,9 +2671,9 @@ struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    // Widened, consecutive/strided loads operations only demand the first
-    // lane of their address.
-    return Op == getAddr() && (isConsecutive() || isStrided());
+    // Widened, consecutive loads operations only demand the first lane of their
+    // address.
+    return Op == getAddr() && isConsecutive();
   }
 };
 
@@ -2689,7 +2684,7 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
   VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue &EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadEVLSC, L.getIngredient(),
                             {L.getAddr(), &EVL}, L.isConsecutive(),
-                            L.isReverse(), L.isStrided(), L.getDebugLoc()),
+                            L.isReverse(), L.getDebugLoc()),
         VPValue(this, &getIngredient()) {
     setMask(Mask);
   }
@@ -2718,8 +2713,55 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
            "Op must be an operand of the recipe");
     // Widened loads only demand the first lane of EVL and consecutive/strided
     // loads only demand the first lane of their address.
-    return Op == getEVL() ||
-           (Op == getAddr() && (isConsecutive() || isStrided()));
+    return Op == getEVL() || (Op == getAddr() && isConsecutive());
+  }
+};
+
+/// A recipe for strided load operations, using the base address, stride, and an
+/// optional mask.
+struct VPWidenStridedLoadRecipe final : public VPWidenMemoryRecipe,
+                                        public VPValue {
+  VPWidenStridedLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Stride,
+                           VPValue *VF, VPValue *Mask, DebugLoc DL)
+      : VPWidenMemoryRecipe(VPDef::VPWidenStridedLoadSC, Load,
+                            {Addr, Stride, VF},
+                            /*Consecutive=*/false, /*Reverse=*/false, DL),
+        VPValue(this, &Load) {
+    setMask(Mask);
+  }
+
+  VPWidenStridedLoadRecipe *clone() override {
+    return new VPWidenStridedLoadRecipe(cast<LoadInst>(Ingredient), getAddr(),
+                                        getStride(), getVF(), getMask(),
+                                        getDebugLoc());
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPWidenStridedLoadSC);
+
+  /// Return the stride operand.
+  VPValue *getStride() const { return getOperand(1); }
+
+  /// Return the VF operand.
+  VPValue *getVF() const { return getOperand(2); }
+
+  /// Generate a strided load.
+  void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPWidenStridedLoadRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return Op == getAddr() || Op == getStride() || Op == getVF();
   }
 };
 
@@ -2727,17 +2769,16 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
 /// to store to and an optional mask.
 struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
   VPWidenStoreRecipe(StoreInst &Store, VPValue *Addr, VPValue *StoredVal,
-                     VPValue *Mask, bool Consecutive, bool Reverse,
-                     bool Strided, DebugLoc DL)
+                     VPValue *Mask, bool Consecutive, bool Reverse, DebugLoc DL)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreSC, Store, {Addr, StoredVal},
-                            Consecutive, Reverse, Strided, DL) {
+                            Consecutive, Reverse, DL) {
     setMask(Mask);
   }
 
   VPWidenStoreRecipe *clone() override {
     return new VPWidenStoreRecipe(cast<StoreInst>(Ingredient), getAddr(),
                                   getStoredValue(), getMask(), Consecutive,
-                                  Reverse, Strided, getDebugLoc());
+                                  Reverse, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenStoreSC);
@@ -2758,10 +2799,9 @@ struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    // Widened, consecutive/strided stores only demand the first lane of their
+    // Widened, consecutive stores only demand the first lane of their
     // address, unless the same operand is also stored.
-    return Op == getAddr() && (isConsecutive() || isStrided()) &&
-           Op != getStoredValue();
+    return Op == getAddr() && isConsecutive() && Op != getStoredValue();
   }
 };
 
@@ -2772,8 +2812,7 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
   VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue &EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S.getIngredient(),
                             {S.getAddr(), S.getStoredValue(), &EVL},
-                            S.isConsecutive(), S.isReverse(), S.isStrided(),
-                            S.getDebugLoc()) {
+                            S.isConsecutive(), S.isReverse(), S.getDebugLoc()) {
     setMask(Mask);
   }
 
@@ -2806,11 +2845,10 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
       assert(getStoredValue() != Op && "unexpected store of EVL");
       return true;
     }
-    // Widened, consecutive/strided memory operations only demand the first lane
-    // of their address, unless the same operand is also stored. That latter can
+    // Widened, consecutive memory operations only demand the first lane of
+    // their address, unless the same operand is also stored. That latter can
     // happen with opaque pointers.
-    return Op == getAddr() && (isConsecutive() || isStrided()) &&
-           Op != getStoredValue();
+    return Op == getAddr() && isConsecutive() && Op != getStoredValue();
   }
 };
 
