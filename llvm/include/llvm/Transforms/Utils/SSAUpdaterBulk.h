@@ -78,29 +78,12 @@ public:
   void RewriteAllUses(DominatorTree *DT,
                       SmallVectorImpl<PHINode *> *InsertedPHIs = nullptr);
 
-  /// Rewrite all uses and simplify the inserted PHI nodes.
-  /// Use this method to preserve behavior when replacing SSAUpdater.
-  void RewriteAndSimplifyAllUses(DominatorTree *DT) {
-    SmallVector<PHINode *, 8> NewPHIs;
-    RewriteAllUses(DT, &NewPHIs);
-    simplifyPass(NewPHIs);
-  }
-
-  /// Same as previous, but return inserted PHI nodes in InsertedPHIs.
-  void RewriteAndSimplifyAllUses(DominatorTree *DT,
-                                 SmallVectorImpl<PHINode *> &InsertedPHIs) {
-    RewriteAllUses(DT, &InsertedPHIs);
-    simplifyPass(InsertedPHIs);
-    // Remove nullptrs from the worklist
-    InsertedPHIs.erase(
-        std::remove(InsertedPHIs.begin(), InsertedPHIs.end(), nullptr),
-        InsertedPHIs.end());
-  }
-
 private:
-  /// Perform a single pass of simplification over the worklist of PHIs.
-  /// Pointers to replaced phis are nulled out.
+  void createPHIsAndRewrite(DominatorTree *DT,
+                            SmallVectorImpl<PHINode *> &InsertedPHIs);
   static bool simplifyPass(SmallVectorImpl<PHINode *> &Worklist);
+  static bool deduplicatePass(const SmallVectorImpl<PHINode *> &Worklist,
+                              SmallPtrSetImpl<PHINode *> &PHIToRemove);
 };
 
 } // end namespace llvm

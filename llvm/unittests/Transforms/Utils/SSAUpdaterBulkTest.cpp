@@ -360,7 +360,7 @@ TEST(SSAUpdaterBulk, SimplifyPHIs) {
 
   SmallVector<PHINode *, 2> Inserted;
   DominatorTree DT(*F);
-  Updater.RewriteAndSimplifyAllUses(&DT, Inserted);
+  Updater.RewriteAllUses(&DT, &Inserted);
 
 #if 0 // Enable for debugging.
   Exit->dump();

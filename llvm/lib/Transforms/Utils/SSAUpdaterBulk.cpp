@@ -19,6 +19,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 
@@ -110,8 +111,8 @@ struct BBValueInfo {
 
 /// Perform all the necessary updates, including new PHI-nodes insertion and the
 /// requested uses update.
-void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
-                                    SmallVectorImpl<PHINode *> *InsertedPHIs) {
+void SSAUpdaterBulk::createPHIsAndRewrite(
+    DominatorTree *DT, SmallVectorImpl<PHINode *> &InsertedPHIs) {
   DenseMap<BasicBlock *, BBValueInfo> BBInfos;
   for (auto &R : Rewrites) {
     BBInfos.clear();
@@ -151,8 +152,7 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
       IRBuilder<> B(FrontierBB, FrontierBB->begin());
       PHINode *PN = B.CreatePHI(R.Ty, 0, R.Name);
       BBInfos[FrontierBB].LiveInValue = PN;
-      if (InsertedPHIs)
-        InsertedPHIs->push_back(PN);
+      InsertedPHIs.push_back(PN);
     }
 
     // IsLiveOut indicates whether we are computing live-out values (true) or
@@ -229,23 +229,10 @@ bool SSAUpdaterBulk::simplifyPass(SmallVectorImpl<PHINode *> &Worklist) {
   if (Worklist.empty())
     return false;
 
-  auto findEquivalentPHI = [](PHINode *PHI) -> Value * {
-    BasicBlock *BB = PHI->getParent();
-    for (auto &OtherPHI : BB->phis()) {
-      if (PHI != &OtherPHI && PHI->isIdenticalToWhenDefined(&OtherPHI))
-        return &OtherPHI;
-    }
-    return nullptr;
-  };
-
   const DataLayout &DL = Worklist.front()->getParent()->getDataLayout();
   bool Change = false;
   for (PHINode *&PHI : Worklist) {
-    Value *Replacement = simplifyInstruction(PHI, DL);
-    if (!Replacement)
-      Replacement = findEquivalentPHI(PHI);
-
-    if (Replacement) {
+    if (Value *Replacement = simplifyInstruction(PHI, DL)) {
       PHI->replaceAllUsesWith(Replacement);
       PHI->eraseFromParent();
       PHI = nullptr; // Mark as removed
@@ -253,4 +240,62 @@ bool SSAUpdaterBulk::simplifyPass(SmallVectorImpl<PHINode *> &Worklist) {
     }
   }
   return Change;
+}
+
+bool SSAUpdaterBulk::deduplicatePass(const SmallVectorImpl<PHINode *> &Worklist,
+                                     SmallPtrSetImpl<PHINode *> &PHIToRemove) {
+
+  auto FindFirstNonPHIIt = [](BasicBlock *BB) {
+    PHINode *LastPHI = nullptr;
+    for (auto &PHI : BB->phis())
+      LastPHI = &PHI;
+    assert(LastPHI);
+    return std::next(LastPHI->getIterator());
+  };
+
+  // BB -> First BB's Non-PHI iterator map
+  SmallDenseMap<BasicBlock *, BasicBlock::iterator> Blocks;
+  // Reverse Worklist to preserve the order of new phis.
+  for (PHINode *PHI : reverse(Worklist)) {
+    if (!PHI)
+      continue;
+    auto *BB = PHI->getParent();
+    auto [I, Inserted] = Blocks.try_emplace(BB);
+    if (Inserted)
+      I->second = FindFirstNonPHIIt(BB);
+
+    // Move newly inserted PHIs to the end to ensure that
+    // EliminateDuplicatePHINodes prioritizes removing the newly created PHIs
+    // over the existing ones, preserving the original PHI nodes.
+    PHI->moveBefore(I->second);
+  }
+
+  for (auto [BB, I] : Blocks)
+    EliminateDuplicatePHINodes(BB, PHIToRemove);
+
+  for (PHINode *PHI : PHIToRemove)
+    PHI->eraseFromParent();
+
+  return !PHIToRemove.empty();
+}
+
+void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
+                                    SmallVectorImpl<PHINode *> *InsertedPHIs) {
+  SmallVector<PHINode *, 4> PHIs;
+  createPHIsAndRewrite(DT, PHIs);
+  simplifyPass(PHIs);
+
+  SmallPtrSet<PHINode *, 8> PHIToRemove;
+  deduplicatePass(PHIs, PHIToRemove);
+
+  if (!InsertedPHIs)
+    return;
+
+  for (auto *&PHI : PHIs)
+    if (PHI && PHIToRemove.count(PHI))
+      PHI = nullptr; // Mark as removed.
+
+  InsertedPHIs->reserve(PHIs.size() - PHIToRemove.size());
+  std::copy_if(PHIs.begin(), PHIs.end(), std::back_inserter(*InsertedPHIs),
+               [](PHINode *PHI) { return PHI != nullptr; });
 }
