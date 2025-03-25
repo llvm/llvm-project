@@ -382,10 +382,10 @@ public:
   template <class _Kp>
     requires(__is_transparent_v<_Compare> && is_constructible_v<value_type, _Kp>)
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(_Kp&& __x) {
-    return emplace(std::forward<_Kp>(__x));
+    return __emplace(std::forward<_Kp>(__x));
   }
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, const value_type& __x) {
-    return emplace_hint(__hint, __x);
+    return __emplace_hint(__hint, __x);
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, value_type&& __x) {
@@ -395,7 +395,7 @@ public:
   template <class _Kp>
     requires(__is_transparent_v<_Compare> && is_constructible_v<value_type, _Kp>)
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, _Kp&& __x) {
-    return emplace_hint(__hint, std::forward<_Kp>(__x));
+    return __emplace_hint(__hint, std::forward<_Kp>(__x));
   }
 
   template <class _InputIterator>
