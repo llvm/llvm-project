@@ -256,13 +256,13 @@ parser = argparse.ArgumentParser(
     "The options and driver modes are parsed from Options.td."
 )
 
-default_options_td_dir = os.path.join(
-    os.path.dirname(__file__), "../include/clang/Driver"
+default_options_file = os.path.join(
+    os.path.dirname(__file__), "../include/clang/Driver/Options.td"
 )
 parser.add_argument(
-    "--options-td-dir",
-    help="Include directory for Options.td. Typically found under clang/include/clang/Driver, which is the default.",
-    default=default_options_td_dir,
+    "--options-file",
+    help="Path to Options.td. Typically found under clang/include/clang/Driver/Options.td, this is the default.",
+    default=default_options_file,
 )
 default_llvm_include_dir = os.path.join(os.path.dirname(__file__), "../../llvm/include")
 parser.add_argument(
@@ -305,7 +305,7 @@ options_json_str = subprocess.run(
         args.llvm_tblgen,
         "-I",
         args.llvm_include_dir,
-        args.options_td_dir + "/Options.td",
+        args.options_file,
         "-dump-json",
     ],
     stdout=subprocess.PIPE,
