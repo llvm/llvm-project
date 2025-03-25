@@ -274,6 +274,44 @@ define void @store_v2i32(<2 x i32> %data, ptr addrspace(8) inreg %buf) {
   ret void
 }
 
+define <2 x i32> @load_v2i32_align1(ptr addrspace(8) inreg %buf) {
+; SDAG-LABEL: load_v2i32_align1:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    buffer_load_dwordx2 v[0:1], off, s[16:19], 0
+; SDAG-NEXT:    s_waitcnt vmcnt(0)
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: load_v2i32_align1:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    buffer_load_dwordx2 v[0:1], off, s[16:19], 0
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
+  %ret = load <2 x i32>, ptr addrspace(7) %p, align 1
+  ret <2 x i32> %ret
+}
+
+define void @store_v2i32_align1(<2 x i32> %data, ptr addrspace(8) inreg %buf) {
+; SDAG-LABEL: store_v2i32_align1:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    buffer_store_dwordx2 v[0:1], off, s[16:19], 0
+; SDAG-NEXT:    s_waitcnt vmcnt(0)
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: store_v2i32_align1:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    buffer_store_dwordx2 v[0:1], off, s[16:19], 0
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
+  store <2 x i32> %data, ptr addrspace(7) %p, align 1
+  ret void
+}
+
 define <3 x i32> @load_v3i32(ptr addrspace(8) inreg %buf) {
 ; SDAG-LABEL: load_v3i32:
 ; SDAG:       ; %bb.0:
@@ -613,6 +651,56 @@ define void @store_v2f16(<2 x half> %data, ptr addrspace(8) inreg %buf) {
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
   store <2 x half> %data, ptr addrspace(7) %p
+  ret void
+}
+
+define <2 x half> @load_v2f16_align2(ptr addrspace(8) inreg %buf) {
+; SDAG-LABEL: load_v2f16_align2:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    buffer_load_ushort v0, off, s[16:19], 0
+; SDAG-NEXT:    buffer_load_ushort v1, off, s[16:19], 0 offset:2
+; SDAG-NEXT:    s_waitcnt vmcnt(1)
+; SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; SDAG-NEXT:    s_waitcnt vmcnt(0)
+; SDAG-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: load_v2f16_align2:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    buffer_load_ushort v0, off, s[16:19], 0
+; GISEL-NEXT:    buffer_load_ushort v1, off, s[16:19], 0 offset:2
+; GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
+  %ret = load <2 x half>, ptr addrspace(7) %p, align 2
+  ret <2 x half> %ret
+}
+
+define void @store_v2f16_align2(<2 x half> %data, ptr addrspace(8) inreg %buf) {
+; SDAG-LABEL: store_v2f16_align2:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    buffer_store_short v0, off, s[16:19], 0
+; SDAG-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; SDAG-NEXT:    buffer_store_short v0, off, s[16:19], 0 offset:2
+; SDAG-NEXT:    s_waitcnt vmcnt(0)
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: store_v2f16_align2:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    buffer_store_short v0, off, s[16:19], 0
+; GISEL-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GISEL-NEXT:    buffer_store_short v0, off, s[16:19], 0 offset:2
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
+  store <2 x half> %data, ptr addrspace(7) %p, align 2
   ret void
 }
 
@@ -2391,6 +2479,72 @@ define void @store_v8i8(<8 x i8> %data, ptr addrspace(8) inreg %buf) {
   ret void
 }
 
+define <8 x i8> @load_v8i8_align1(ptr addrspace(8) inreg %buf) {
+; SDAG-LABEL: load_v8i8_align1:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    buffer_load_ubyte v0, off, s[16:19], 0
+; SDAG-NEXT:    buffer_load_ubyte v1, off, s[16:19], 0 offset:1
+; SDAG-NEXT:    buffer_load_ubyte v2, off, s[16:19], 0 offset:2
+; SDAG-NEXT:    buffer_load_ubyte v3, off, s[16:19], 0 offset:3
+; SDAG-NEXT:    buffer_load_ubyte v4, off, s[16:19], 0 offset:4
+; SDAG-NEXT:    buffer_load_ubyte v5, off, s[16:19], 0 offset:5
+; SDAG-NEXT:    buffer_load_ubyte v6, off, s[16:19], 0 offset:6
+; SDAG-NEXT:    buffer_load_ubyte v7, off, s[16:19], 0 offset:7
+; SDAG-NEXT:    s_waitcnt vmcnt(0)
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: load_v8i8_align1:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    buffer_load_ubyte v0, off, s[16:19], 0
+; GISEL-NEXT:    buffer_load_ubyte v1, off, s[16:19], 0 offset:1
+; GISEL-NEXT:    buffer_load_ubyte v2, off, s[16:19], 0 offset:2
+; GISEL-NEXT:    buffer_load_ubyte v3, off, s[16:19], 0 offset:3
+; GISEL-NEXT:    buffer_load_ubyte v4, off, s[16:19], 0 offset:4
+; GISEL-NEXT:    buffer_load_ubyte v5, off, s[16:19], 0 offset:5
+; GISEL-NEXT:    buffer_load_ubyte v6, off, s[16:19], 0 offset:6
+; GISEL-NEXT:    buffer_load_ubyte v7, off, s[16:19], 0 offset:7
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
+  %ret = load <8 x i8>, ptr addrspace(7) %p, align 1
+  ret <8 x i8> %ret
+}
+
+define void @store_v8i8_align1(<8 x i8> %data, ptr addrspace(8) inreg %buf) {
+; SDAG-LABEL: store_v8i8_align1:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    buffer_store_byte v0, off, s[16:19], 0
+; SDAG-NEXT:    buffer_store_byte v1, off, s[16:19], 0 offset:1
+; SDAG-NEXT:    buffer_store_byte v2, off, s[16:19], 0 offset:2
+; SDAG-NEXT:    buffer_store_byte v3, off, s[16:19], 0 offset:3
+; SDAG-NEXT:    buffer_store_byte v4, off, s[16:19], 0 offset:4
+; SDAG-NEXT:    buffer_store_byte v5, off, s[16:19], 0 offset:5
+; SDAG-NEXT:    buffer_store_byte v6, off, s[16:19], 0 offset:6
+; SDAG-NEXT:    buffer_store_byte v7, off, s[16:19], 0 offset:7
+; SDAG-NEXT:    s_waitcnt vmcnt(0)
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: store_v8i8_align1:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    buffer_store_byte v0, off, s[16:19], 0
+; GISEL-NEXT:    buffer_store_byte v1, off, s[16:19], 0 offset:1
+; GISEL-NEXT:    buffer_store_byte v2, off, s[16:19], 0 offset:2
+; GISEL-NEXT:    buffer_store_byte v3, off, s[16:19], 0 offset:3
+; GISEL-NEXT:    buffer_store_byte v4, off, s[16:19], 0 offset:4
+; GISEL-NEXT:    buffer_store_byte v5, off, s[16:19], 0 offset:5
+; GISEL-NEXT:    buffer_store_byte v6, off, s[16:19], 0 offset:6
+; GISEL-NEXT:    buffer_store_byte v7, off, s[16:19], 0 offset:7
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
+  store <8 x i8> %data, ptr addrspace(7) %p, align 1
+  ret void
+}
+
 define <12 x i8> @load_v12i8(ptr addrspace(8) inreg %buf) {
 ; SDAG-LABEL: load_v12i8:
 ; SDAG:       ; %bb.0:
@@ -2912,12 +3066,33 @@ define [2 x half] @load_a2f16(ptr addrspace(8) inreg %buf) {
 ; SDAG-LABEL: load_a2f16:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    buffer_load_ushort v0, off, s[16:19], 0
+; SDAG-NEXT:    buffer_load_ushort v1, off, s[16:19], 0 offset:2
+; SDAG-NEXT:    s_waitcnt vmcnt(0)
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: load_a2f16:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    buffer_load_ushort v0, off, s[16:19], 0
+; GISEL-NEXT:    buffer_load_ushort v1, off, s[16:19], 0 offset:2
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
+  %ret = load [2 x half], ptr addrspace(7) %p
+  ret [2 x half] %ret
+}
+
+define [2 x half] @load_a2f16_align4(ptr addrspace(8) inreg %buf) {
+; SDAG-LABEL: load_a2f16_align4:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    buffer_load_dword v0, off, s[16:19], 0
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GISEL-LABEL: load_a2f16:
+; GISEL-LABEL: load_a2f16_align4:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    buffer_load_dword v0, off, s[16:19], 0
@@ -2925,12 +3100,33 @@ define [2 x half] @load_a2f16(ptr addrspace(8) inreg %buf) {
 ; GISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
-  %ret = load [2 x half], ptr addrspace(7) %p
+  %ret = load [2 x half], ptr addrspace(7) %p, align 4
   ret [2 x half] %ret
 }
 
 define void @store_a2f16([2 x half] %data, ptr addrspace(8) inreg %buf) {
 ; SDAG-LABEL: store_a2f16:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    buffer_store_short v0, off, s[16:19], 0
+; SDAG-NEXT:    buffer_store_short v1, off, s[16:19], 0 offset:2
+; SDAG-NEXT:    s_waitcnt vmcnt(0)
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: store_a2f16:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    buffer_store_short v0, off, s[16:19], 0
+; GISEL-NEXT:    buffer_store_short v1, off, s[16:19], 0 offset:2
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
+  store [2 x half] %data, ptr addrspace(7) %p
+  ret void
+}
+
+define void @store_a2f16_align4([2 x half] %data, ptr addrspace(8) inreg %buf) {
+; SDAG-LABEL: store_a2f16_align4:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0x5040100
@@ -2939,7 +3135,7 @@ define void @store_a2f16([2 x half] %data, ptr addrspace(8) inreg %buf) {
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GISEL-LABEL: store_a2f16:
+; GISEL-LABEL: store_a2f16_align4:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
@@ -2948,7 +3144,7 @@ define void @store_a2f16([2 x half] %data, ptr addrspace(8) inreg %buf) {
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
-  store [2 x half] %data, ptr addrspace(7) %p
+  store [2 x half] %data, ptr addrspace(7) %p, align 4
   ret void
 }
 
