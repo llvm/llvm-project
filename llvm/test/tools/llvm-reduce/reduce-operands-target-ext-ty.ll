@@ -6,8 +6,9 @@
 
 declare void @uses_ext_ty(target("sometarget.sometype"))
 
+; TODO: Should support reduce to poison
 ; CHECK-LABEL: @foo(
-; ZERO: call void @uses_ext_ty(target("sometarget.sometype") poison)
+; ZERO: call void @uses_ext_ty(target("sometarget.sometype") %arg)
 ; ONE: call void @uses_ext_ty(target("sometarget.sometype") %arg)
 define void @foo(target("sometarget.sometype") %arg) {
   call void @uses_ext_ty(target("sometarget.sometype") %arg)

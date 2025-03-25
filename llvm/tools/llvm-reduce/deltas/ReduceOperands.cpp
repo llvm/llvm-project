@@ -140,7 +140,9 @@ void llvm::reduceOperandsZeroDeltaPass(TestRunner &Test) {
         return nullptr;
       if (TET->hasProperty(TargetExtType::HasZeroInit))
         return ConstantTargetNone::get(TET);
-      return PoisonValue::get(TET);
+
+      // TODO: Poison reduction for this case
+      return nullptr;
     }
 
     // Don't replace existing zeroes.
