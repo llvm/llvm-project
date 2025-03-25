@@ -11,9 +11,9 @@
 #include <arm_sme.h>
 
 #ifdef SME_OVERLOADED_FORMS
-#define SME_ACLE_FUNC(A1,A2_UNUSED,A3) A1##A3
+#define SME_ACLE_FUNC(A1,A2_UNUSED,A3, A4_UNUSED) A1##A3
 #else
-#define SME_ACLE_FUNC(A1,A2,A3) A1##A2##A3
+#define SME_ACLE_FUNC(A1,A2,A3,A4) A1##A2##A3##A4
 #endif
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_s8_s8(
@@ -27,7 +27,7 @@
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_s8_s8(svint8_t zn, svint8_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za32,_s8_s8,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4a,_1x1,_za32,_s8_s8)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_s8_s8(
@@ -41,7 +41,7 @@ void test_svmop4a_1x1_za32_s8_s8(svint8_t zn, svint8_t zm) __arm_streaming __arm
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_s8_s8(svint8_t zn, svint8_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za32,_s8_s8,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4s,_1x1,_za32,_s8_s8)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_u8_u8(
@@ -55,7 +55,7 @@ void test_svmop4s_1x1_za32_s8_s8(svint8_t zn, svint8_t zm) __arm_streaming __arm
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_u8_u8(svuint8_t zn, svuint8_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za32,_u8_u8,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4a,_1x1,_za32,_u8_u8)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_u8_u8(
@@ -69,7 +69,7 @@ void test_svmop4a_1x1_za32_u8_u8(svuint8_t zn, svuint8_t zm) __arm_streaming __a
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_u8_u8(svuint8_t zn, svuint8_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za32,_u8_u8,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4s,_1x1,_za32,_u8_u8)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_s8_u8(
@@ -83,7 +83,7 @@ void test_svmop4s_1x1_za32_u8_u8(svuint8_t zn, svuint8_t zm) __arm_streaming __a
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_s8_u8(svint8_t zn, svuint8_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za32,_s8_u8,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4a,_1x1,_za32,_s8_u8)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_s8_u8(
@@ -97,7 +97,7 @@ void test_svmop4a_1x1_za32_s8_u8(svint8_t zn, svuint8_t zm) __arm_streaming __ar
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_s8_u8(svint8_t zn, svuint8_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za32,_s8_u8,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4s,_1x1,_za32,_s8_u8)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_u8_s8(
@@ -111,7 +111,7 @@ void test_svmop4s_1x1_za32_s8_u8(svint8_t zn, svuint8_t zm) __arm_streaming __ar
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_u8_s8(svuint8_t zn, svint8_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za32,_u8_s8,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4a,_1x1,_za32,_u8_s8)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_u8_s8(
@@ -125,7 +125,7 @@ void test_svmop4a_1x1_za32_u8_s8(svuint8_t zn, svint8_t zm) __arm_streaming __ar
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_u8_s8(svuint8_t zn, svint8_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za32,_u8_s8,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4s,_1x1,_za32,_u8_s8)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_s16_s16(
@@ -139,7 +139,7 @@ void test_svmop4s_1x1_za32_u8_s8(svuint8_t zn, svint8_t zm) __arm_streaming __ar
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_s16_s16(svint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za32,_s16_s16,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4a,_1x1,_za32,_s16_s16)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_s16_s16(
@@ -153,7 +153,7 @@ void test_svmop4a_1x1_za32_s16_s16(svint16_t zn, svint16_t zm) __arm_streaming _
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_s16_s16(svint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za32,_s16_s16,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4s,_1x1,_za32,_s16_s16)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_u16_u16(
@@ -167,7 +167,7 @@ void test_svmop4s_1x1_za32_s16_s16(svint16_t zn, svint16_t zm) __arm_streaming _
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_u16_u16(svuint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za32,_u16_u16,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4a,_1x1,_za32,_u16_u16)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_u16_u16(
@@ -181,7 +181,7 @@ void test_svmop4a_1x1_za32_u16_u16(svuint16_t zn, svuint16_t zm) __arm_streaming
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_u16_u16(svuint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za32,_u16_u16,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4s,_1x1,_za32,_u16_u16)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_f16_f16(
@@ -195,7 +195,7 @@ void test_svmop4s_1x1_za32_u16_u16(svuint16_t zn, svuint16_t zm) __arm_streaming
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_f16_f16(svfloat16_t zn, svfloat16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za32,_f16_f16,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4a,_1x1,_za32,_f16_f16)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_f16_f16(
@@ -209,7 +209,7 @@ void test_svmop4a_1x1_za32_f16_f16(svfloat16_t zn, svfloat16_t zm) __arm_streami
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_f16_f16(svfloat16_t zn, svfloat16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za32,_f16_f16,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4s,_1x1,_za32,_f16_f16)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_bf16_bf16(
@@ -223,7 +223,7 @@ void test_svmop4s_1x1_za32_f16_f16(svfloat16_t zn, svfloat16_t zm) __arm_streami
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_bf16_bf16(svbfloat16_t zn, svbfloat16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za32,_bf16_bf16,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4a,_1x1,_za32,_bf16_bf16)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_bf16_bf16(
@@ -237,7 +237,7 @@ void test_svmop4a_1x1_za32_bf16_bf16(svbfloat16_t zn, svbfloat16_t zm) __arm_str
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_bf16_bf16(svbfloat16_t zn, svbfloat16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za32,_bf16_bf16,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4s,_1x1,_za32,_bf16_bf16)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za64_s16_s16(
@@ -251,7 +251,7 @@ void test_svmop4s_1x1_za32_bf16_bf16(svbfloat16_t zn, svbfloat16_t zm) __arm_str
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za64_s16_s16(svint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za64,_s16_s16,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4a,_1x1,_za64,_s16_s16)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za64_s16_s16(
@@ -265,7 +265,7 @@ void test_svmop4a_1x1_za64_s16_s16(svint16_t zn, svint16_t zm) __arm_streaming _
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za64_s16_s16(svint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za64,_s16_s16,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4s,_1x1,_za64,_s16_s16)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za64_u16_u16(
@@ -279,7 +279,7 @@ void test_svmop4s_1x1_za64_s16_s16(svint16_t zn, svint16_t zm) __arm_streaming _
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za64_u16_u16(svuint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za64,_u16_u16,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4a,_1x1,_za64,_u16_u16)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za64_u16_u16(
@@ -293,7 +293,7 @@ void test_svmop4a_1x1_za64_u16_u16(svuint16_t zn, svuint16_t zm) __arm_streaming
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za64_u16_u16(svuint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za64,_u16_u16,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4s,_1x1,_za64,_u16_u16)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za64_s16_u16(
@@ -307,7 +307,7 @@ void test_svmop4s_1x1_za64_u16_u16(svuint16_t zn, svuint16_t zm) __arm_streaming
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za64_s16_u16(svint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za64,_s16_u16,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4a,_1x1,_za64,_s16_u16)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za64_s16_u16(
@@ -321,7 +321,7 @@ void test_svmop4a_1x1_za64_s16_u16(svint16_t zn, svuint16_t zm) __arm_streaming 
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za64_s16_u16(svint16_t zn, svuint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za64,_s16_u16,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4s,_1x1,_za64,_s16_u16)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za64_u16_s16(
@@ -335,7 +335,7 @@ void test_svmop4s_1x1_za64_s16_u16(svint16_t zn, svuint16_t zm) __arm_streaming 
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za64_u16_s16(svuint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za64,_u16_s16,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4a,_1x1,_za64,_u16_s16)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za64_u16_s16(
@@ -349,7 +349,7 @@ void test_svmop4a_1x1_za64_u16_s16(svuint16_t zn, svint16_t zm) __arm_streaming 
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za64_u16_s16(svuint16_t zn, svint16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za64,_u16_s16,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4s,_1x1,_za64,_u16_s16)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za16_f16_f16(
@@ -363,7 +363,7 @@ void test_svmop4s_1x1_za64_u16_s16(svuint16_t zn, svint16_t zm) __arm_streaming 
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za16_f16_f16(svfloat16_t zn, svfloat16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za16,_f16_f16,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4a,_1x1,_za16,_f16_f16)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za16_f16_f16(
@@ -377,7 +377,7 @@ void test_svmop4a_1x1_za16_f16_f16(svfloat16_t zn, svfloat16_t zm) __arm_streami
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za16_f16_f16(svfloat16_t zn, svfloat16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za16,_f16_f16,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4s,_1x1,_za16,_f16_f16)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za32_f32_f32(
@@ -391,7 +391,7 @@ void test_svmop4s_1x1_za16_f16_f16(svfloat16_t zn, svfloat16_t zm) __arm_streami
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_f32_f32(svfloat32_t zn, svfloat32_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za32,_f32_f32,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4a,_1x1,_za32,_f32_f32)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za32_f32_f32(
@@ -405,7 +405,7 @@ void test_svmop4a_1x1_za32_f32_f32(svfloat32_t zn, svfloat32_t zm) __arm_streami
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za32_f32_f32(svfloat32_t zn, svfloat32_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za32,_f32_f32,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4s,_1x1,_za32,_f32_f32)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za64_f64_f64(
@@ -419,7 +419,7 @@ void test_svmop4s_1x1_za32_f32_f32(svfloat32_t zn, svfloat32_t zm) __arm_streami
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za64_f64_f64(svfloat64_t zn, svfloat64_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za64,_f64_f64,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4a,_1x1,_za64,_f64_f64)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za64_f64_f64(
@@ -433,7 +433,7 @@ void test_svmop4a_1x1_za64_f64_f64(svfloat64_t zn, svfloat64_t zm) __arm_streami
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za64_f64_f64(svfloat64_t zn, svfloat64_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za64,_f64_f64,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4s,_1x1,_za64,_f64_f64)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4a_1x1_za16_bf16_bf16(
@@ -447,7 +447,7 @@ void test_svmop4s_1x1_za64_f64_f64(svfloat64_t zn, svfloat64_t zm) __arm_streami
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za16_bf16_bf16(svbfloat16_t zn, svbfloat16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4a_1x1_za16,_bf16_bf16,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4a,_1x1,_za16,_bf16_bf16)(1, zn, zm);
 }
 
 // CHECK-LABEL: @test_svmop4s_1x1_za16_bf16_bf16(
@@ -461,5 +461,5 @@ void test_svmop4a_1x1_za16_bf16_bf16(svbfloat16_t zn, svbfloat16_t zm) __arm_str
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4s_1x1_za16_bf16_bf16(svbfloat16_t zn, svbfloat16_t zm) __arm_streaming __arm_inout("za") {
-  SME_ACLE_FUNC(svmop4s_1x1_za16,_bf16_bf16,)(1, zn, zm);
+  SME_ACLE_FUNC(svmop4s,_1x1,_za16,_bf16_bf16)(1, zn, zm);
 }
