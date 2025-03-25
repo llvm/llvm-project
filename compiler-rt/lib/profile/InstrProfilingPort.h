@@ -43,8 +43,10 @@
 
 #if defined(__APPLE__)
 #define COMPILER_RT_SEG "__DATA,"
+#define COMPILER_RT_GPU_ENTRYPOINT COMPILER_RT_VISIBILITY
 #else
 #define COMPILER_RT_SEG ""
+#define COMPILER_RT_GPU_ENTRYPOINT
 #endif
 
 #ifdef _MSC_VER
