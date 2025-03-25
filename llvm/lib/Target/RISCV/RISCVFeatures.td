@@ -830,6 +830,15 @@ def HasStdExtZvqdotq : Predicate<"Subtarget->hasStdExtZvqdotq()">,
                        AssemblerPredicate<(all_of FeatureStdExtZvqdotq),
                            "'Zvqdotq' (Vector quad widening 4D Dot Product)">;
 
+// High-throughput Matrix-multiplication Computation
+
+def FeatureStdExtZvma
+    : RISCVExperimentalExtension<0, 0, "High-throughput Matrix-multiplication Computation",
+                                 [FeatureStdExtZve32x]>;
+def HasStdExtZvma : Predicate<"Subtarget->hasStdExtZvma()">,
+                    AssemblerPredicate<(all_of FeatureStdExtZvma),
+                        "'Zvma' (High-throughput Matrix-multiplication Computation)">;
+
 // Vector instruction predicates
 
 def HasVInstructions    : Predicate<"Subtarget->hasVInstructions()">,
