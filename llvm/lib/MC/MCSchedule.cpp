@@ -96,19 +96,22 @@ int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
 double
 MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
                                       const MCSchedClassDesc &SCDesc) {
-  std::optional<double> Throughput;
+  std::optional<double> MinThroughput;
   const MCSchedModel &SM = STI.getSchedModel();
   const MCWriteProcResEntry *I = STI.getWriteProcResBegin(&SCDesc);
   const MCWriteProcResEntry *E = STI.getWriteProcResEnd(&SCDesc);
   for (; I != E; ++I) {
-    if (!I->ReleaseAtCycle)
+    if (!I->ReleaseAtCycle || I->ReleaseAtCycle == I->AcquireAtCycle)
       continue;
+    assert(I->ReleaseAtCycle > I->AcquireAtCycle && "invalid resource segment");
     unsigned NumUnits = SM.getProcResource(I->ProcResourceIdx)->NumUnits;
-    double Temp = NumUnits * 1.0 / I->ReleaseAtCycle;
-    Throughput = Throughput ? std::min(*Throughput, Temp) : Temp;
+    double Throughput =
+        double(NumUnits) / double(I->ReleaseAtCycle - I->AcquireAtCycle);
+    MinThroughput =
+        MinThroughput ? std::min(*MinThroughput, Throughput) : Throughput;
   }
-  if (Throughput)
-    return 1.0 / *Throughput;
+  if (MinThroughput)
+    return 1.0 / *MinThroughput;
 
   // If no throughput value was calculated, assume that we can execute at the
   // maximum issue width scaled by number of micro-ops for the schedule class.

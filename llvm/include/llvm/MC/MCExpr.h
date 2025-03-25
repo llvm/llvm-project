@@ -197,14 +197,8 @@ public:
     VK_None,
 
     VK_GOT,
-    VK_GOTOFF,
     VK_GOTPCREL,
-    VK_GOTTPOFF,
     VK_PLT,
-    VK_TLSGD,
-    VK_TLSLD,
-    VK_TLSLDM,
-    VK_TPOFF,
     VK_TLVP,    // Mach-O thread local variable relocations
     VK_TLVPPAGE,
     VK_TLVPPAGEOFF,
@@ -537,10 +531,6 @@ public:
   virtual bool inlineAssignedExpr() const { return false; }
   virtual void visitUsedExpr(MCStreamer& Streamer) const = 0;
   virtual MCFragment *findAssociatedFragment() const = 0;
-
-  // Deprecated way to set the type of referenced ELF symbols to STT_TLS when
-  // the derived MCELFObjectTargetWriter::getRelocType does not update symbols.
-  virtual void fixELFSymbolsInTLSFixups(MCAssembler &) const {}
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;

@@ -3879,9 +3879,9 @@ static void handleIndirectSymViaGOTPCRel(AsmPrinter &AP, const MCExpr **ME,
 
   // Check for a valid base symbol
   const MCSymbol *BaseSym = AP.getSymbol(BaseGV);
-  const MCSymbolRefExpr *SymB = MV.getSymB();
+  const MCSymbol *SymB = MV.getSubSym();
 
-  if (!SymB || BaseSym != &SymB->getSymbol())
+  if (!SymB || BaseSym != SymB)
     return;
 
   // Make sure to match:

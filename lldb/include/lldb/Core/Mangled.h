@@ -276,11 +276,11 @@ public:
   void Encode(DataEncoder &encoder, ConstStringTable &strtab) const;
 
 private:
-  ///< The mangled version of the name.
+  /// The mangled version of the name.
   ConstString m_mangled;
 
-  ///< Mutable so we can get it on demand with
-  ///< a const version of this object.
+  /// Mutable so we can get it on demand with
+  /// a const version of this object.
   mutable ConstString m_demangled;
 };
 
