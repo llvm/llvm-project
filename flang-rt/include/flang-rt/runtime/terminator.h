@@ -68,7 +68,8 @@ public:
   template <typename... Args>
   RT_API_ATTRS void PrintCrashArgs(const char *message, Args... args) const {
 #if defined(RT_DEVICE_COMPILATION)
-    std::printf(message, args...);
+    // commenting out temporarily to avoid "error: cannot compile this non-scalar arg in GPU vargs function yet"
+    // std::printf(message, args...);
 #else
     std::fprintf(stderr, message, args...);
 #endif
