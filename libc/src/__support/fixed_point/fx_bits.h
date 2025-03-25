@@ -201,6 +201,34 @@ bitsfx(T f) {
   return cpp::bit_cast<XType, T>(f);
 }
 
+// divide the two fixed-point types and return an integer result
+template <typename T, typename XType>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<T>, XType>
+idivfx(T x, T y) {
+  using FXBits = FXBits<T>;
+  using FXRep = FXRep<T>;
+  using StorageType = typename FXRep::StorageType;
+
+  if (y == FXRep::ZERO()) {
+    // TODO: handle this case
+  }
+
+  constexpr FXBits x_bits(x);
+  constexpr FXBits y_bits(y);
+
+  bool out_s = x_bits.get_sign() ^ y_bits.get_sign();
+
+  x_bits.set_sign(0);
+  y_bits.set_sign(0);
+
+  XType x_int = x_bits.get_bits();
+  XType y_int = y_bits.get_bits();
+
+  // TODO: handle overflow
+  XType result = x_int / y_int;
+  return result;
+}
+
 } // namespace fixed_point
 } // namespace LIBC_NAMESPACE_DECL
 
