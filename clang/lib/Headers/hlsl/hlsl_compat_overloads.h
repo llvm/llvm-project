@@ -17,41 +17,41 @@ namespace hlsl {
 // help keep this file manageable as it grows.
 
 #define _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(fn)                                 \
-  constexpr float fn(double V) { return fn(__detail::imp_cast<float>(V)); }    \
-  constexpr float2 fn(double2 V) { return fn(__detail::imp_cast<float2>(V)); } \
-  constexpr float3 fn(double3 V) { return fn(__detail::imp_cast<float3>(V)); } \
-  constexpr float4 fn(double4 V) { return fn(__detail::imp_cast<float4>(V)); }
+  constexpr float fn(double V) { return fn((float)V); }    \
+  constexpr float2 fn(double2 V) { return fn((float2)V); } \
+  constexpr float3 fn(double3 V) { return fn((float3)V); } \
+  constexpr float4 fn(double4 V) { return fn((float4)V); }
 
 #define _DXC_COMPAT_BINARY_DOUBLE_OVERLOADS(fn)                                \
   constexpr float fn(double V1, double V2) {                                   \
-    return fn(__detail::imp_cast<float>(V1), __detail::imp_cast<float>(V2));   \
+    return fn((float)V1, (float)V2);   \
   }                                                                            \
   constexpr float2 fn(double2 V1, double2 V2) {                                \
-    return fn(__detail::imp_cast<float2>(V1), __detail::imp_cast<float2>(V2)); \
+    return fn((float2)V1, (float2)V2); \
   }                                                                            \
   constexpr float3 fn(double3 V1, double3 V2) {                                \
-    return fn(__detail::imp_cast<float3>(V1), __detail::imp_cast<float3>(V2)); \
+    return fn((float3)V1, (float3)V2); \
   }                                                                            \
   constexpr float4 fn(double4 V1, double4 V2) {                                \
-    return fn(__detail::imp_cast<float4>(V1), __detail::imp_cast<float4>(V2)); \
+    return fn((float4)V1, (float4)V2); \
   }
 
 #define _DXC_COMPAT_TERNARY_DOUBLE_OVERLOADS(fn)                               \
   constexpr float fn(double V1, double V2, double V3) {                        \
-    return fn(__detail::imp_cast<float>(V1), __detail::imp_cast<float>(V2),    \
-              __detail::imp_cast<float>(V3));                                  \
+    return fn((float)V1, (float)V2,    \
+              (float)V3);                                  \
   }                                                                            \
   constexpr float2 fn(double2 V1, double2 V2, double2 V3) {                    \
-    return fn(__detail::imp_cast<float2>(V1), __detail::imp_cast<float2>(V2),  \
-              __detail::imp_cast<float2>(V3));                                 \
+    return fn((float2)V1, (float2)V2,  \
+              (float2)V3);                                 \
   }                                                                            \
   constexpr float3 fn(double3 V1, double3 V2, double3 V3) {                    \
-    return fn(__detail::imp_cast<float3>(V1), __detail::imp_cast<float3>(V2),  \
-              __detail::imp_cast<float3>(V3));                                 \
+    return fn((float3)V1, (float3)V2,  \
+              (float3)V3);                                 \
   }                                                                            \
   constexpr float4 fn(double4 V1, double4 V2, double4 V3) {                    \
-    return fn(__detail::imp_cast<float4>(V1), __detail::imp_cast<float4>(V2),  \
-              __detail::imp_cast<float4>(V3));                                 \
+    return fn((float4)V1, (float4)V2,  \
+              (float4)V3);                                 \
   }
 
 //===----------------------------------------------------------------------===//
@@ -177,15 +177,15 @@ _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(frac)
 //===----------------------------------------------------------------------===//
 
 #if __HLSL_VERSION <= __HLSL_202x
-constexpr bool isinf(double V) { return isinf(__detail::imp_cast<float>(V)); }
+constexpr bool isinf(double V) { return isinf((float)V); }
 constexpr bool2 isinf(double2 V) {
-  return isinf(__detail::imp_cast<float2>(V));
+  return isinf((float2)V);
 }
 constexpr bool3 isinf(double3 V) {
-  return isinf(__detail::imp_cast<float3>(V));
+  return isinf((float3)V);
 }
 constexpr bool4 isinf(double4 V) {
-  return isinf(__detail::imp_cast<float4>(V));
+  return isinf((float4)V);
 }
 #endif
 
