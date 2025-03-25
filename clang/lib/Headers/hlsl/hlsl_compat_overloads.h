@@ -58,41 +58,31 @@ namespace hlsl {
 // acos builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(acos)
-#endif
 
 //===----------------------------------------------------------------------===//
 // asin builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(asin)
-#endif
 
 //===----------------------------------------------------------------------===//
 // atan builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(atan)
-#endif
 
 //===----------------------------------------------------------------------===//
 // atan2 builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_BINARY_DOUBLE_OVERLOADS(atan2)
-#endif
 
 //===----------------------------------------------------------------------===//
 // ceil builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(ceil)
-#endif
 
 //===----------------------------------------------------------------------===//
 // clamp builtins overloads
@@ -120,63 +110,48 @@ clamp(vector<T, N> p0, T p1, T p2) {
 // cos builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(cos)
-#endif
 
 //===----------------------------------------------------------------------===//
 // cosh builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(cosh)
-#endif
 
 //===----------------------------------------------------------------------===//
 // degrees builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(degrees)
-#endif
 
 //===----------------------------------------------------------------------===//
 // exp builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(exp)
-#endif
 
 //===----------------------------------------------------------------------===//
 // exp2 builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(exp2)
-#endif
 
 //===----------------------------------------------------------------------===//
 // floor builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(floor)
-#endif
 
 //===----------------------------------------------------------------------===//
 // frac builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(frac)
-#endif
 
 //===----------------------------------------------------------------------===//
 // isinf builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 constexpr bool isinf(double V) { return isinf((float)V); }
 constexpr bool2 isinf(double2 V) {
   return isinf((float2)V);
@@ -187,39 +162,30 @@ constexpr bool3 isinf(double3 V) {
 constexpr bool4 isinf(double4 V) {
   return isinf((float4)V);
 }
-#endif
 
 //===----------------------------------------------------------------------===//
 // lerp builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_TERNARY_DOUBLE_OVERLOADS(lerp)
-#endif
 
 //===----------------------------------------------------------------------===//
 // log builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(log)
-#endif
 
 //===----------------------------------------------------------------------===//
 // log10 builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(log10)
-#endif
 
 //===----------------------------------------------------------------------===//
 // log2 builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(log2)
-#endif
 
 //===----------------------------------------------------------------------===//
 // max builtins overloads
@@ -257,97 +223,73 @@ min(T p0, vector<T, N> p1) {
 // normalize builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(normalize)
-#endif
 
 //===----------------------------------------------------------------------===//
 // pow builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_BINARY_DOUBLE_OVERLOADS(pow)
-#endif
 
 //===----------------------------------------------------------------------===//
 // rsqrt builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(rsqrt)
-#endif
 
 //===----------------------------------------------------------------------===//
 // round builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(round)
-#endif
 
 //===----------------------------------------------------------------------===//
 // sin builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(sin)
-#endif
 
 //===----------------------------------------------------------------------===//
 // sinh builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(sinh)
-#endif
 
 //===----------------------------------------------------------------------===//
 // sqrt builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(sqrt)
-#endif
 
 //===----------------------------------------------------------------------===//
 // step builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_BINARY_DOUBLE_OVERLOADS(step)
-#endif
 
 //===----------------------------------------------------------------------===//
 // tan builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(tan)
-#endif
 
 //===----------------------------------------------------------------------===//
 // tanh builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(tanh)
-#endif
 
 //===----------------------------------------------------------------------===//
 // trunc builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(trunc)
-#endif
 
 //===----------------------------------------------------------------------===//
 // radians builtins overloads
 //===----------------------------------------------------------------------===//
 
-#if __HLSL_VERSION <= __HLSL_202x
 _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(radians)
-#endif
 
 } // namespace hlsl
 #endif // _HLSL_COMPAT_OVERLOADS_H_
