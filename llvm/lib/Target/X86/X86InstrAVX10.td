@@ -83,7 +83,7 @@ multiclass avx10_minmax_packed_base<string OpStr, X86VectorVTInfo VTI, SDNode Op
 }
 
 multiclass avx10_minmax_packed_sae<string OpStr, AVX512VLVectorVTInfo VTI, SDNode OpNode> {
-  let Uses = []<Register>, mayRaiseFPException = 0 in {
+  let Uses = []<Register>, mayRaiseFPException = 0 in
     defm Zrrib : AVX512_maskable<0x52, MRMSrcReg, VTI.info512, (outs VTI.info512.RC:$dst),
                                 (ins VTI.info512.RC:$src1, VTI.info512.RC:$src2, i32u8imm:$src3), OpStr,
                                 "$src3, {sae}, $src2, $src1", "$src1, $src2, {sae}, $src3",
@@ -91,15 +91,6 @@ multiclass avx10_minmax_packed_sae<string OpStr, AVX512VLVectorVTInfo VTI, SDNod
                                                         (VTI.info512.VT VTI.info512.RC:$src2),
                                                         (i32 timm:$src3)))>,
                                 EVEX, VVVV, EVEX_B, EVEX_V512, Sched<[WriteFMAX]>;
-    let hasEVEX_U = 1 in
-    defm Z256rrib : AVX512_maskable<0x52, MRMSrcReg, VTI.info256, (outs VTI.info256.RC:$dst),
-                                (ins VTI.info256.RC:$src1, VTI.info256.RC:$src2, i32u8imm:$src3), OpStr,
-                                "$src3, {sae}, $src2, $src1", "$src1, $src2, {sae}, $src3",
-                                (VTI.info256.VT (OpNode (VTI.info256.VT VTI.info256.RC:$src1),
-                                                        (VTI.info256.VT VTI.info256.RC:$src2),
-                                                        (i32 timm:$src3)))>,
-                                EVEX, VVVV, EVEX_B, EVEX_V256, Sched<[WriteFMAX]>;
-  }
 }
 
 multiclass avx10_minmax_packed<string OpStr, AVX512VLVectorVTInfo VTI, SDNode OpNode> {
@@ -219,16 +210,6 @@ multiclass avx10_sat_cvt_rc<bits<8> Opc, string OpStr, X86SchedWriteWidths sched
                                 (MaskNode (SrcInfo.info512.VT SrcInfo.info512.RC:$src),
                                           (i32 timm:$rc)))>,
                              Sched<[sched.ZMM]>, EVEX, EVEX_RC, EVEX_B;
-  let Predicates = [HasAVX10_2], hasEVEX_U = 1 in {
-  defm Z256rrb : AVX512_maskable<Opc, MRMSrcReg, DestInfo.info256,
-                                (outs DestInfo.info256.RC:$dst),
-                                (ins SrcInfo.info256.RC:$src, AVX512RC:$rc),
-                                OpStr, "$rc, $src", "$src, $rc",
-                                (DestInfo.info256.VT
-                                  (MaskNode (SrcInfo.info256.VT SrcInfo.info256.RC:$src),
-                                            (i32 timm:$rc)))>,
-                               Sched<[sched.YMM]>, EVEX, EVEX_RC, EVEX_B;
-  }
 }
 
 // Conversion with SAE
@@ -243,15 +224,6 @@ multiclass avx10_sat_cvt_sae<bits<8> Opc, string OpStr, X86SchedWriteWidths sche
                              (DestInfo.info512.VT
                                (Node (SrcInfo.info512.VT SrcInfo.info512.RC:$src)))>,
                              Sched<[sched.ZMM]>, EVEX, EVEX_B;
-  let Predicates = [HasAVX10_2], hasEVEX_U = 1 in {
-  defm Z256rrb : AVX512_maskable<Opc, MRMSrcReg, DestInfo.info256,
-                                (outs DestInfo.info256.RC:$dst),
-                                (ins SrcInfo.info256.RC:$src),
-                                OpStr, "{sae}, $src", "$src, {sae}",
-                                (DestInfo.info256.VT
-                                  (Node (SrcInfo.info256.VT SrcInfo.info256.RC:$src)))>,
-                                Sched<[sched.YMM]>, EVEX, EVEX_B;
-  }
 }
 
 multiclass avx10_sat_cvt_base<bits<8> Opc, string OpStr, X86SchedWriteWidths sched,
@@ -500,11 +472,6 @@ multiclass avx10_cvttps2dqs<bits<8> opc, string OpcodeStr, SDPatternOperator OpN
                               MaskOpNode, sched.XMM>, EVEX_V128;
     defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v8i32x_info, v8f32x_info, OpNode,
                               MaskOpNode, sched.YMM>, EVEX_V256;
-  }
-
-  let Predicates = [HasAVX10_2], hasEVEX_U=1 in {
-    defm Z256 : avx512_vcvt_fp_sae<opc, OpcodeStr, v8i32x_info, v8f32x_info,
-                                  OpNodeSAE, sched.YMM>, EVEX_V256;
   }
 }
 
@@ -770,12 +737,6 @@ multiclass avx10_cvt2ps2ph<bits<8> opc, string OpcodeStr,
                                  _SrcVTInfo.info128, _DstVTInfo.info128,
                                  _SrcVTInfo.info128>,
                 EVEX_V128, EVEX_CD8<32, CD8VF>;
-  }
-
-  let Predicates = [HasAVX10_2], hasEVEX_U = 1 in {
-    defm Z256 : avx10_cvt2ps2ph_rc<opc, OpcodeStr, sched.YMM,
-                                   _SrcVTInfo.info256, _DstVTInfo.info256,
-                                   OpNodeRnd>;
   }
 }
 

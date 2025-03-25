@@ -149,6 +149,20 @@ static bool retPrimValue(InterpState &S, CodePtr OpPC,
 #undef RET_CASE
 }
 
+static QualType getElemType(const Pointer &P) {
+  const Descriptor *Desc = P.getFieldDesc();
+  QualType T = Desc->getType();
+  if (Desc->isPrimitive())
+    return T;
+  if (T->isPointerType())
+    return T->getAs<PointerType>()->getPointeeType();
+  if (Desc->isArray())
+    return Desc->getElemQualType();
+  if (const auto *AT = T->getAsArrayTypeUnsafe())
+    return AT->getElementType();
+  return T;
+}
+
 static void diagnoseNonConstexprBuiltin(InterpState &S, CodePtr OpPC,
                                         unsigned ID) {
   auto Loc = S.Current->getSource(OpPC);
@@ -1477,6 +1491,9 @@ static bool interp__builtin_ptrauth_string_discriminator(
   const auto &Ptr = S.Stk.peek<Pointer>();
   assert(Ptr.getFieldDesc()->isPrimitiveArray());
 
+  // This should be created for a StringLiteral, so should alway shold at least
+  // one array element.
+  assert(Ptr.getFieldDesc()->getNumElems() >= 1);
   StringRef R(&Ptr.deref<char>(), Ptr.getFieldDesc()->getNumElems() - 1);
   uint64_t Result = getPointerAuthStableSipHash(R);
   pushInteger(S, Result, Call->getType());
@@ -1572,10 +1589,10 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
       return true;
     }
 
-    const Descriptor *Desc =
-        S.P.createDescriptor(NewCall, *ElemT, Descriptor::InlineDescMD,
-                             /*IsConst=*/false, /*IsTemporary=*/false,
-                             /*IsMutable=*/false);
+    const Descriptor *Desc = S.P.createDescriptor(
+        NewCall, *ElemT, ElemType.getTypePtr(), Descriptor::InlineDescMD,
+        /*IsConst=*/false, /*IsTemporary=*/false,
+        /*IsMutable=*/false);
     Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
                                   DynamicAllocator::Form::Operator);
     assert(B);
@@ -1775,19 +1792,28 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
   }
 
+  // Diagnose integral src/dest pointers specially.
+  if (SrcPtr.isIntegralPointer() || DestPtr.isIntegralPointer()) {
+    std::string DiagVal = "(void *)";
+    DiagVal += SrcPtr.isIntegralPointer()
+                   ? std::to_string(SrcPtr.getIntegerRepresentation())
+                   : std::to_string(DestPtr.getIntegerRepresentation());
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_null)
+        << Move << false << DestPtr.isIntegralPointer() << DiagVal;
+    return false;
+  }
+
   // Can't read from dummy pointers.
   if (DestPtr.isDummy() || SrcPtr.isDummy())
     return false;
 
-  QualType DestElemType;
+  QualType DestElemType = getElemType(DestPtr);
   size_t RemainingDestElems;
   if (DestPtr.getFieldDesc()->isArray()) {
-    DestElemType = DestPtr.getFieldDesc()->getElemQualType();
     RemainingDestElems = DestPtr.isUnknownSizeArray()
                              ? 0
                              : (DestPtr.getNumElems() - DestPtr.getIndex());
   } else {
-    DestElemType = DestPtr.getType();
     RemainingDestElems = 1;
   }
   unsigned DestElemSize = ASTCtx.getTypeSizeInChars(DestElemType).getQuantity();
@@ -1800,15 +1826,13 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  QualType SrcElemType;
+  QualType SrcElemType = getElemType(SrcPtr);
   size_t RemainingSrcElems;
   if (SrcPtr.getFieldDesc()->isArray()) {
-    SrcElemType = SrcPtr.getFieldDesc()->getElemQualType();
     RemainingSrcElems = SrcPtr.isUnknownSizeArray()
                             ? 0
                             : (SrcPtr.getNumElems() - SrcPtr.getIndex());
   } else {
-    SrcElemType = SrcPtr.getType();
     RemainingSrcElems = 1;
   }
   unsigned SrcElemSize = ASTCtx.getTypeSizeInChars(SrcElemType).getQuantity();
@@ -1880,16 +1904,6 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
 
   bool IsWide =
       (ID == Builtin::BIwmemcmp || ID == Builtin::BI__builtin_wmemcmp);
-
-  auto getElemType = [](const Pointer &P) -> QualType {
-    const Descriptor *Desc = P.getFieldDesc();
-    QualType T = Desc->getType();
-    if (T->isPointerType())
-      return T->getAs<PointerType>()->getPointeeType();
-    if (Desc->isArray())
-      return Desc->getElemQualType();
-    return T;
-  };
 
   const ASTContext &ASTCtx = S.getASTContext();
   QualType ElemTypeA = getElemType(PtrA);
@@ -2049,12 +2063,11 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
   }
 
   bool StopAtZero =
-      (ID == Builtin::BIstrchr || ID == Builtin::BI__builtin_strchr);
+      (ID == Builtin::BIstrchr || ID == Builtin::BI__builtin_strchr ||
+       ID == Builtin::BIwcschr || ID == Builtin::BI__builtin_wcschr);
 
   PrimType ElemT =
-      IsRawByte
-          ? PT_Sint8
-          : *S.getContext().classify(Ptr.getFieldDesc()->getElemQualType());
+      IsRawByte ? PT_Sint8 : *S.getContext().classify(getElemType(Ptr));
 
   size_t Index = Ptr.getIndex();
   size_t Step = 0;
@@ -2573,10 +2586,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_strchr:
   case Builtin::BIwmemchr:
   case Builtin::BI__builtin_wmemchr:
-#if 0
   case Builtin::BIwcschr:
   case Builtin::BI__builtin_wcschr:
-#endif
   case Builtin::BI__builtin_char_memchr:
     if (!interp__builtin_memchr(S, OpPC, Frame, F, Call))
       return false;
@@ -2754,6 +2765,18 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
         DestElem.deref<T>() = Src.atIndex(I).deref<T>();
         DestElem.initialize();
       });
+    }
+    return true;
+  }
+
+  if (DestDesc->isCompositeArray()) {
+    assert(SrcDesc->isCompositeArray());
+    assert(SrcDesc->getNumElems() == DestDesc->getNumElems());
+    for (unsigned I = 0, N = DestDesc->getNumElems(); I != N; ++I) {
+      const Pointer &SrcElem = Src.atIndex(I).narrow();
+      Pointer DestElem = Dest.atIndex(I).narrow();
+      if (!copyComposite(S, OpPC, SrcElem, DestElem, Activate))
+        return false;
     }
     return true;
   }
