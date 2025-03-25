@@ -15071,7 +15071,18 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
 
   // Set the insert point to the beginning of the basic block if the entry
   // should not be scheduled.
-  if (doesNotNeedToSchedule(E->Scalars) ||
+  const auto *It = BlocksSchedules.find(BB);
+  auto IsNotScheduledEntry = [&](const TreeEntry *E) {
+    if (E->isGather())
+      return false;
+    // Found previously that the instruction do not need to be scheduled.
+    return It == BlocksSchedules.end() || all_of(E->Scalars, [&](Value *V) {
+             if (!isa<Instruction>(V))
+               return true;
+             return It->second->getScheduleBundles(V).empty();
+           });
+  };
+  if (IsNotScheduledEntry(E) ||
       (!E->isGather() && all_of(E->Scalars, isVectorLikeInstWithConstOps))) {
     if ((E->getOpcode() == Instruction::GetElementPtr &&
          any_of(E->Scalars,
@@ -15098,12 +15109,11 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
   // scheduled, and the last instruction is VL.back(). So we start with
   // VL.back() and iterate over schedule data until we reach the end of the
   // bundle. The end of the bundle is marked by null ScheduleData.
-  if (BlocksSchedules.count(BB) && !E->isGather()) {
+  if (It != BlocksSchedules.end() && !E->isGather()) {
     Value *V = E->isOneOf(E->Scalars.back());
     if (doesNotNeedToBeScheduled(V))
       V = *find_if_not(E->Scalars, doesNotNeedToBeScheduled);
-    if (ArrayRef<ScheduleBundle *> Bundles =
-            BlocksSchedules[BB]->getScheduleBundles(V);
+    if (ArrayRef<ScheduleBundle *> Bundles = It->second->getScheduleBundles(V);
         !Bundles.empty()) {
       const auto *It = find_if(
           Bundles, [&](ScheduleBundle *B) { return B->getTreeEntry() == E; });
