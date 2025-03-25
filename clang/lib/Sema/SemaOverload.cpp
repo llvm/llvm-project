@@ -5255,12 +5255,12 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
     // FIXME: As a speculative fix to a defect introduced by CWG2352, we rank
     // a reference binding that performs a non-top-level qualification
     // conversion as a qualification conversion, not as an identity conversion.
-    ICS.Standard.Third =
-        (RefConv & Sema::ReferenceConversions::Function)
-            ? ICK_Function_Conversion
-        : (RefConv & Sema::ReferenceConversions::NestedQualification)
-            ? ICK_Qualification
-            : ICK_Identity;
+    if (RefConv & Sema::ReferenceConversions::Function)
+      ICS.Standard.Third = ICK_Function_Conversion;
+    else if (RefConv & Sema::ReferenceConversions::NestedQualification)
+      ICS.Standard.Third = ICK_Qualification;
+    else
+      ICS.Standard.Third = ICK_Identity;
     ICS.Standard.setFromType(T2);
     ICS.Standard.setToType(0, T2);
     ICS.Standard.setToType(1, T1);
