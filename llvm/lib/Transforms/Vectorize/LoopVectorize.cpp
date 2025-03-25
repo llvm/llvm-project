@@ -9772,8 +9772,12 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (CM.blockNeedsPredicationForAnyReason(BB))
         CondOp = RecipeBuilder.getBlockInMask(BB);
 
+      // Non-FP RdxDescs will have all fast math flags set, so clear them.
+      FastMathFlags FMFs = isa<FPMathOperator>(CurrentLinkI)
+                               ? RdxDesc.getFastMathFlags()
+                               : FastMathFlags();
       auto *RedRecipe = new VPReductionRecipe(
-          RdxDesc, CurrentLinkI, PreviousLink, VecOp, CondOp,
+          Kind, FMFs, CurrentLinkI, PreviousLink, VecOp, CondOp,
           CM.useOrderedReductions(RdxDesc), CurrentLinkI->getDebugLoc());
       // Append the recipe to the end of the VPBasicBlock because we need to
       // ensure that it comes after all of it's inputs, including CondOp.
