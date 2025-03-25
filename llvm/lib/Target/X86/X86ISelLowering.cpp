@@ -41323,9 +41323,9 @@ static SDValue combineX86ShufflesRecursively(
 static SDValue combineX86ShufflesRecursively(SDValue Op, SelectionDAG &DAG,
                                              const X86Subtarget &Subtarget) {
   return combineX86ShufflesRecursively(
-      {Op}, 0, Op.getOpcode(), Op.getSimpleValueType(), {0}, {}, /*Depth*/ 0,
-      X86::MaxShuffleCombineDepth, /*AllowCrossLaneVarMask*/ true,
-      /*AllowPerLaneVarMask*/ true, isMaskableNode(Op, Subtarget), DAG,
+      {Op}, 0, Op.getOpcode(), Op.getSimpleValueType(), {0}, {}, /*Depth=*/0,
+      X86::MaxShuffleCombineDepth, /*AllowCrossLaneVarMask=*/true,
+      /*AllowPerLaneVarMask=*/true, isMaskableNode(Op, Subtarget), DAG,
       SDLoc(Op), Subtarget);
 }
 
@@ -41977,9 +41977,9 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         DemandedMask[i] = i;
       if (SDValue Res = combineX86ShufflesRecursively(
               {BC}, 0, BC.getOpcode(), BC.getSimpleValueType(), DemandedMask,
-              {}, /*Depth*/ 0, X86::MaxShuffleCombineDepth,
-              /*AllowCrossLaneVarMask*/ true, /*AllowPerLaneVarMask*/ true,
-              /*IsMaskedShuffle*/ false, DAG, DL, Subtarget))
+              {}, /*Depth=*/0, X86::MaxShuffleCombineDepth,
+              /*AllowCrossLaneVarMask=*/true, /*AllowPerLaneVarMask=*/true,
+              /*IsMaskedShuffle=*/false, DAG, DL, Subtarget))
         return DAG.getNode(X86ISD::VBROADCAST, DL, VT,
                            DAG.getBitcast(SrcVT, Res));
     }
@@ -43981,8 +43981,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
 
     SDValue NewShuffle = combineX86ShufflesRecursively(
         {Op}, 0, Op.getOpcode(), Op.getSimpleValueType(), DemandedMask, {}, 0,
-        X86::MaxShuffleCombineDepth - Depth, /*AllowCrossLaneVarMask*/ true,
-        /*AllowPerLaneVarMask*/ true, isMaskableNode(Op, Subtarget), TLO.DAG,
+        X86::MaxShuffleCombineDepth - Depth, /*AllowCrossLaneVarMask=*/true,
+        /*AllowPerLaneVarMask=*/true, isMaskableNode(Op, Subtarget), TLO.DAG,
         SDLoc(Op), Subtarget);
     if (NewShuffle)
       return TLO.CombineTo(Op, NewShuffle);
@@ -51618,9 +51618,9 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
 
       if (SDValue Shuffle = combineX86ShufflesRecursively(
               {SrcVec}, 0, SrcVec.getOpcode(), SrcVec.getSimpleValueType(),
-              ShuffleMask, {}, /*Depth*/ 1, X86::MaxShuffleCombineDepth,
-              /*AllowVarCrossLaneMask*/ true, /*AllowVarPerLaneMask*/ true,
-              /*IsMaskedShuffle*/ false, DAG, SDLoc(SrcVec), Subtarget))
+              ShuffleMask, {}, /*Depth=*/1, X86::MaxShuffleCombineDepth,
+              /*AllowVarCrossLaneMask=*/true, /*AllowVarPerLaneMask=*/true,
+              /*IsMaskedShuffle=*/false, DAG, SDLoc(SrcVec), Subtarget))
         return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, VT, Shuffle,
                            N0.getOperand(1));
     }
