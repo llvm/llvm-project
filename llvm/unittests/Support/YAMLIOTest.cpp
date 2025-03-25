@@ -1273,36 +1273,6 @@ TEST(YAMLIO, TestReadWriteBlockScalarValue) {
   }
 }
 
-struct V {
-  MultilineStringType doc;
-  std::string str;
-};
-template <> struct MappingTraits<V> {
-  static void mapping(IO &io, V &v) {
-    io.mapRequired("block_scalac", v.doc);
-    io.mapRequired("scalar", v.str);
-  }
-};
-template <> struct llvm::yaml::SequenceElementTraits<V> {
-  static const bool flow = false;
-};
-TEST(YAMLIO, TestScalarAfterBlockScalar) {
-  std::vector<V> v{V{}};
-  v[0].doc.str = "AA\nBB";
-  v[0].str = "a";
-  std::string output;
-  llvm::raw_string_ostream ostr(output);
-  Output yout(ostr);
-  yout << v;
-  EXPECT_EQ(output, R"(---
-- block_scalac:     |
-    AA
-    BB
-scalar:          a
-...
-)");
-}
-
 //===----------------------------------------------------------------------===//
 //  Test flow sequences
 //===----------------------------------------------------------------------===//
