@@ -165,12 +165,6 @@ set common_cmake_flags=^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" ^
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;openmp"
 
-set common_lldb_flags=^
-  -DLLDB_RELOCATABLE_PYTHON=1 ^
-  -DLLDB_EMBED_PYTHON_HOME=OFF ^
-  -DLLDB_ENABLE_LIBXML2=OFF ^
-  -DPYTHON_HOME=%PYTHONHOME%
-
 if "%force-msvc%" == "" (
   where /q clang-cl
   if %errorlevel% EQU 0 (
@@ -188,6 +182,12 @@ if "%force-msvc%" == "" (
     )
   )
 )
+
+set common_lldb_flags=^
+  -DLLDB_RELOCATABLE_PYTHON=1 ^
+  -DLLDB_EMBED_PYTHON_HOME=OFF ^
+  -DLLDB_ENABLE_LIBXML2=OFF ^
+  -DPYTHON_HOME=%PYTHONHOME%
 
 set cmake_profile_flags=""
 
@@ -264,14 +264,8 @@ exit /b 0
 set arch=%1
 set python_dir=%2
 
-if "%arch%"=="amd64" (
-  set vs_arch=-arch=amd64
-) else (
-  set vs_arch=-arch=arm64
-)
-
 call :set_environment %python_dir% || exit /b 1
-call "%vsdevcmd%" %vs_arch% || exit /b 1
+call "%vsdevcmd%" -arch=%arch% || exit /b 1
 @echo on
 mkdir build_%arch%_stage0
 cd build_%arch%_stage0
@@ -292,8 +286,6 @@ if "%arch%"=="arm64" (
 
 cmake -GNinja %cmake_flags% ^
   -DLLVM_TARGETS_TO_BUILD=Native ^
-  -DCMAKE_C_COMPILER=clang-cl.exe ^
-  -DCMAKE_CXX_COMPILER=clang-cl.exe ^
   %llvm_src%\llvm || exit /b 1
 ninja || exit /b 1
 ninja check-llvm || exit /b 1
@@ -322,11 +314,18 @@ set cmake_flags=%all_cmake_flags:\=/%
 mkdir build_%arch%
 cd build_%arch%
 call :do_generate_profile || exit /b 1
+
+set common_lldb_flags=^
+  -DLLDB_RELOCATABLE_PYTHON=1 ^
+  -DLLDB_EMBED_PYTHON_HOME=OFF ^
+  -DLLDB_ENABLE_LIBXML2=OFF ^
+  -DPYTHON_HOME=%PYTHONHOME%
+
 cmake -GNinja %cmake_flags% ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;flang;mlir" ^
   %common_lldb_flags% ^
   %cmake_profile_flags% %llvm_src%\llvm || exit /b 1
-ninja || exit /b 1
+ninja || ninja || ninja || exit /b 1
 ninja check-llvm || exit /b 1
 ninja check-clang || exit /b 1
 ninja check-lld || exit /b 1
