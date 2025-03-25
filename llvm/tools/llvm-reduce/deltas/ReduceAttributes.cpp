@@ -44,9 +44,25 @@ namespace {
 class AttributeRemapper : public InstVisitor<AttributeRemapper> {
   Oracle &O;
   LLVMContext &Context;
+  bool HasControlledConvergence = true;
 
 public:
-  AttributeRemapper(Oracle &O, LLVMContext &C) : O(O), Context(C) {}
+  AttributeRemapper(Oracle &O, Module &M) : O(O), Context(M.getContext()) {
+
+    // Check if there are any convergence intrinsics used. We cannot remove the
+    // convergent attribute if a function uses convergencectrl bundles. As a
+    // simple filter, check if any of the intrinsics are used in the module.
+    //
+    // TODO: This could be done per-function. We should be eliminating
+    // convergent if there are no convergent token uses in a function.
+    HasControlledConvergence = any_of(
+        ArrayRef<Intrinsic::ID>{Intrinsic::experimental_convergence_anchor,
+                                Intrinsic::experimental_convergence_entry,
+                                Intrinsic::experimental_convergence_loop},
+        [&M](Intrinsic::ID ID) {
+          return Intrinsic::getDeclarationIfExists(&M, ID);
+        });
+  }
 
   void visitModule(Module &M) {
     for (GlobalVariable &GV : M.globals())
@@ -132,6 +148,13 @@ public:
           AttrsToPreserve.addAttribute(A);
           continue;
         }
+
+        // TODO: Could only remove this if there are no convergence tokens in
+        // the function.
+        if (Kind == Attribute::Convergent && HasControlledConvergence) {
+          AttrsToPreserve.addAttribute(A);
+          continue;
+        }
       }
 
       if (O.shouldKeep())
@@ -144,7 +167,7 @@ public:
 
 /// Removes out-of-chunk attributes from module.
 static void extractAttributesFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
-  AttributeRemapper R(O, WorkItem.getContext());
+  AttributeRemapper R(O, WorkItem.getModule());
   R.visit(WorkItem.getModule());
 }
 
