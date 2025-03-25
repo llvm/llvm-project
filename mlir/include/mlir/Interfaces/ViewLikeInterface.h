@@ -76,7 +76,8 @@ SliceBoundsVerificationResult verifyInBoundsSlice(
 /// returns the new result type of the op, based on the new offsets, sizes and
 /// strides. `CastOpFunc` is used to generate a cast op if the result type of
 /// the op has changed.
-template <typename OpType, typename ResultTypeFn, typename CastOpFunc>
+template <typename OpType, typename ResultTypeFn, typename CastOpFunc,
+          bool CheckInBounds = false>
 class OpWithOffsetSizesAndStridesConstantArgumentFolder final
     : public OpRewritePattern<OpType> {
 public:
@@ -94,12 +95,14 @@ public:
         failed(foldDynamicIndexList(mixedStrides)))
       return failure();
 
-    // Pattern does not apply if the produced op would not verify.
-    SliceBoundsVerificationResult sliceResult = verifyInBoundsSlice(
-        cast<ShapedType>(op.getSource().getType()).getShape(), mixedOffsets,
-        mixedSizes, mixedStrides);
-    if (!sliceResult.isValid)
-      return failure();
+    if (CheckInBounds) {
+      // Pattern does not apply if the produced op would not verify.
+      SliceBoundsVerificationResult sliceResult = verifyInBoundsSlice(
+          cast<ShapedType>(op.getSource().getType()).getShape(), mixedOffsets,
+          mixedSizes, mixedStrides);
+      if (!sliceResult.isValid)
+        return failure();
+    }
 
     // Compute the new result type.
     auto resultType =
