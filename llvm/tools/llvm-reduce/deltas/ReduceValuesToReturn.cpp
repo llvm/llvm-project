@@ -102,7 +102,8 @@ static void rewriteFuncWithReturnType(Function &OldF,
   // Adjust the callsite uses to the new return type. We pre-filtered cases
   // where the original call type was incorrectly non-void.
   for (User *U : make_early_inc_range(OldF.users())) {
-    if (auto *CB = dyn_cast<CallBase>(U)) {
+    if (auto *CB = dyn_cast<CallBase>(U);
+        CB && CB->getCalledOperand() == &OldF) {
       if (CB->getType()->isVoidTy()) {
         FunctionType *CallType = CB->getFunctionType();
 
@@ -115,7 +116,7 @@ static void rewriteFuncWithReturnType(Function &OldF,
         CB->setCalledFunction(NewCallType, NewF);
       } else {
         assert(CB->getType() == NewRetTy &&
-               "only handle exact return type match non-void returns");
+               "only handle exact return type match with non-void returns");
       }
     }
   }
