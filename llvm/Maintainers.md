@@ -407,6 +407,11 @@ i@maskray.me (email), [MaskRay](https://github.com/MaskRay) (GitHub)
 Teresa Johnson \
 tejohnson@google.com (email), [teresajohnson](https://github.com/teresajohnson) (GitHub)
 
+#### llvm-exegesis
+
+Aiden Grossman \
+agrossman154@yahoo.com (email), [boomanaiden154](https://github.com/boomanaiden154) (Github)
+
 ### Other
 
 #### Release management

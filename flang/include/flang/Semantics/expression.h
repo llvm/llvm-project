@@ -258,16 +258,16 @@ public:
   // Builds a typed Designator from an untyped DataRef
   MaybeExpr Designate(DataRef &&);
 
+  // Allows a whole assumed-size array to appear for the lifetime of
+  // the returned value.
+  common::Restorer<bool> AllowWholeAssumedSizeArray(bool yes = true) {
+    return common::ScopedSet(isWholeAssumedSizeArrayOk_, yes);
+  }
+
 protected:
   int IntegerTypeSpecKind(const parser::IntegerTypeSpec &);
 
 private:
-  // Allows a whole assumed-size array to appear for the lifetime of
-  // the returned value.
-  common::Restorer<bool> AllowWholeAssumedSizeArray() {
-    return common::ScopedSet(isWholeAssumedSizeArrayOk_, true);
-  }
-
   // Allows an Expr to be a null pointer.
   common::Restorer<bool> AllowNullPointer() {
     return common::ScopedSet(isNullPointerOk_, true);

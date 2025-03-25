@@ -34,7 +34,6 @@ define amdgpu_kernel void @sgpr_isnan_f16(ptr addrspace(1) %out, half %x) {
 ; GFX7GLISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX7GLISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7GLISEL-NEXT:    s_and_b32 s3, s3, 0x7fff
-; GFX7GLISEL-NEXT:    s_and_b32 s3, 0xffff, s3
 ; GFX7GLISEL-NEXT:    s_cmpk_gt_u32 s3, 0x7c00
 ; GFX7GLISEL-NEXT:    s_cselect_b32 s3, 1, 0
 ; GFX7GLISEL-NEXT:    s_bfe_i32 s3, s3, 0x10000

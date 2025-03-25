@@ -35,30 +35,6 @@ AST_POLYMORPHIC_MATCHER_P(
                              Builder) != Args.end();
 }
 
-bool isStdOrPosixImpl(const DeclContext *Ctx) {
-  if (!Ctx->isNamespace())
-    return false;
-
-  const auto *ND = cast<NamespaceDecl>(Ctx);
-  if (ND->isInline()) {
-    return isStdOrPosixImpl(ND->getParent());
-  }
-
-  if (!ND->getParent()->getRedeclContext()->isTranslationUnit())
-    return false;
-
-  const IdentifierInfo *II = ND->getIdentifier();
-  return II && (II->isStr("std") || II->isStr("posix"));
-}
-
-AST_MATCHER(Decl, isInStdOrPosixNS) {
-  for (const auto *Ctx = Node.getDeclContext(); Ctx; Ctx = Ctx->getParent()) {
-    if (isStdOrPosixImpl(Ctx))
-      return true;
-  }
-  return false;
-}
-
 } // namespace
 
 namespace clang::tidy::cert {
@@ -66,10 +42,12 @@ namespace clang::tidy::cert {
 void DontModifyStdNamespaceCheck::registerMatchers(MatchFinder *Finder) {
   auto HasStdParent =
       hasDeclContext(namespaceDecl(hasAnyName("std", "posix"),
-                                   unless(hasDeclContext(namespaceDecl())))
+                                   unless(hasParent(namespaceDecl())))
                          .bind("nmspc"));
-  auto UserDefinedType = qualType(hasUnqualifiedDesugaredType(
-      tagType(unless(hasDeclaration(tagDecl(isInStdOrPosixNS()))))));
+  auto UserDefinedType = qualType(
+      hasUnqualifiedDesugaredType(tagType(unless(hasDeclaration(tagDecl(
+          hasAncestor(namespaceDecl(hasAnyName("std", "posix"),
+                                    unless(hasParent(namespaceDecl()))))))))));
   auto HasNoProgramDefinedTemplateArgument = unless(
       hasAnyTemplateArgumentIncludingPack(refersToType(UserDefinedType)));
   auto InsideStdClassOrClassTemplateSpecialization = hasDeclContext(

@@ -45,6 +45,28 @@ unsigned getNumDynamicEntriesUpToIdx(ArrayRef<int64_t> staticVals,
 
 namespace mlir {
 
+/// Result for slice bounds verification;
+struct SliceBoundsVerificationResult {
+  /// If set to "true", the slice bounds verification was successful.
+  bool isValid;
+  /// An error message that can be printed during op verification.
+  std::string errorMessage;
+};
+
+/// Verify that the offsets/sizes/strides-style access into the given shape
+/// is in-bounds. Only static values are verified. If `generateErrorMessage`
+/// is set to "true", an error message is produced that can be printed by the
+///  op verifier.
+SliceBoundsVerificationResult
+verifyInBoundsSlice(ArrayRef<int64_t> shape, ArrayRef<int64_t> staticOffsets,
+                    ArrayRef<int64_t> staticSizes,
+                    ArrayRef<int64_t> staticStrides,
+                    bool generateErrorMessage = false);
+SliceBoundsVerificationResult verifyInBoundsSlice(
+    ArrayRef<int64_t> shape, ArrayRef<OpFoldResult> mixedOffsets,
+    ArrayRef<OpFoldResult> mixedSizes, ArrayRef<OpFoldResult> mixedStrides,
+    bool generateErrorMessage = false);
+
 /// Pattern to rewrite dynamic offsets/sizes/strides of view/slice-like ops as
 /// constant arguments. This pattern assumes that the op has a suitable builder
 /// that takes a result type, a "source" operand and mixed offsets, sizes and
@@ -54,7 +76,8 @@ namespace mlir {
 /// returns the new result type of the op, based on the new offsets, sizes and
 /// strides. `CastOpFunc` is used to generate a cast op if the result type of
 /// the op has changed.
-template <typename OpType, typename ResultTypeFn, typename CastOpFunc>
+template <typename OpType, typename ResultTypeFn, typename CastOpFunc,
+          bool CheckInBounds = false>
 class OpWithOffsetSizesAndStridesConstantArgumentFolder final
     : public OpRewritePattern<OpType> {
 public:
@@ -72,11 +95,22 @@ public:
         failed(foldDynamicIndexList(mixedStrides)))
       return failure();
 
-    // Create the new op in canonical form.
+    if (CheckInBounds) {
+      // Pattern does not apply if the produced op would not verify.
+      SliceBoundsVerificationResult sliceResult = verifyInBoundsSlice(
+          cast<ShapedType>(op.getSource().getType()).getShape(), mixedOffsets,
+          mixedSizes, mixedStrides);
+      if (!sliceResult.isValid)
+        return failure();
+    }
+
+    // Compute the new result type.
     auto resultType =
         ResultTypeFn()(op, mixedOffsets, mixedSizes, mixedStrides);
     if (!resultType)
       return failure();
+
+    // Create the new op in canonical form.
     auto newOp =
         rewriter.create<OpType>(op.getLoc(), resultType, op.getSource(),
                                 mixedOffsets, mixedSizes, mixedStrides);

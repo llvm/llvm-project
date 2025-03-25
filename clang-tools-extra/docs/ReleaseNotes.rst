@@ -99,6 +99,8 @@ Improvements to clang-tidy
 - :program:`clang-tidy` now supports query based custom checks by `CustomChecks`
   configuration option.
   :doc:`Query Based Custom Check Document <clang-tidy/QueryBasedCustomChecks>`
+- Improved :program:`clang-tidy-diff.py` script. Add the `-warnings-as-errors`
+  argument to treat warnings as errors.
 
 New checks
 ^^^^^^^^^^
@@ -174,6 +176,11 @@ Changes in existing checks
 - Improved :doc:`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check by updating suppress 
   warnings logic for ``nullptr`` in ``std::find``.
+
+- Improved :doc:`modernize-use-starts-ends-with
+  <clang-tidy/checks/modernize/use-starts-ends-with>` check by adding more
+  matched scenarios of ``find`` and ``rfind`` methods and fixing false
+  positives when those methods were called with 3 arguments.
 
 - Improved :doc:`modernize-use-std-numbers
   <clang-tidy/checks/modernize/use-std-numbers>` check to support math

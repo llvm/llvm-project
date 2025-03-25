@@ -82,13 +82,20 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _StorageType __trailing_mask
   return static_cast<_StorageType>(~static_cast<_StorageType>(0)) >> __clz;
 }
 
+// Creates a mask of type `_StorageType` with a specified number of trailing zeros (__ctz) and sets all remaining
+// bits to one.
+template <class _StorageType>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _StorageType __leading_mask(unsigned __ctz) {
+  static_assert(is_unsigned<_StorageType>::value, "__leading_mask only works with unsigned types");
+  return static_cast<_StorageType>(~static_cast<_StorageType>(0)) << __ctz;
+}
+
 // Creates a mask of type `_StorageType` with a specified number of leading zeros (__clz), a specified number of
 // trailing zeros (__ctz), and sets all bits in between to one.
 template <class _StorageType>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _StorageType __middle_mask(unsigned __clz, unsigned __ctz) {
   static_assert(is_unsigned<_StorageType>::value, "__middle_mask only works with unsigned types");
-  return (static_cast<_StorageType>(~static_cast<_StorageType>(0)) << __ctz) &
-         std::__trailing_mask<_StorageType>(__clz);
+  return std::__leading_mask<_StorageType>(__ctz) & std::__trailing_mask<_StorageType>(__clz);
 }
 
 // This function is designed to operate correctly even for smaller integral types like `uint8_t`, `uint16_t`,
