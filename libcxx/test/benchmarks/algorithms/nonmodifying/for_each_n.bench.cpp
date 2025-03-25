@@ -21,7 +21,7 @@
 int main(int argc, char** argv) {
   auto std_for_each_n = [](auto first, auto n, auto f) { return std::for_each_n(first, n, f); };
 
-  // std::for_each_n
+  // {std,ranges}::for_each_n
   {
     auto bm = []<class Container>(std::string name, auto for_each_n) {
       using ElemType = typename Container::value_type;
