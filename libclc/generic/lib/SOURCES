@@ -94,7 +94,6 @@ math/copysign.cl
 math/cos.cl
 math/cosh.cl
 math/cospi.cl
-math/ep_log.cl
 math/erf.cl
 math/erfc.cl
 math/exp.cl

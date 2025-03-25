@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_acosh.h>
+#if __CLC_FPSIZE == 64
 
-#undef __CLC_FUNCTION
-#define __CLC_FUNCTION acosh
-#include <clc/math/unary_builtin.inc>
+_CLC_DECL _CLC_OVERLOAD void __clc_ep_log(__CLC_GENTYPE x,
+                                          private __CLC_INTN *xexp,
+                                          private __CLC_GENTYPE *r1,
+                                          private __CLC_GENTYPE *r2);
+
+#endif

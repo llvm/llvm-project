@@ -6,13 +6,5 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcfunc.h>
-
-#ifdef cl_khr_fp64
-
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-
-_CLC_DECL void __clc_ep_log(double x, private int *xexp, private double *r1,
-                            private double *r2);
-
-#endif
+#define __CLC_BODY <clc/math/clc_ep_log.inc>
+#include <clc/math/gentype.inc>

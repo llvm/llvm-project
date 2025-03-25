@@ -6,9 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_acosh.h>
+#ifdef cl_khr_fp64
 
-#undef __CLC_FUNCTION
-#define __CLC_FUNCTION acosh
-#include <clc/math/unary_builtin.inc>
+#include <clc/clc_convert.h>
+#include <clc/internal/clc.h>
+#include <clc/math/clc_ep_log.h>
+#include <clc/math/clc_fma.h>
+#include <clc/math/math.h>
+#include <clc/math/tables.h>
+
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+
+#define __CLC_BODY <clc_ep_log.inc>
+#include <clc/math/gentype.inc>
+
+#endif
