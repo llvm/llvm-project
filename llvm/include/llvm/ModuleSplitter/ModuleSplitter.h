@@ -10,8 +10,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_MODULESPLITTER_H
-#define LLVM_SUPPORT_MODULESPLITTER_H
+#ifndef LLVM_MODULESPLITTER_MODULESPLITTER_H
+#define LLVM_MODULESPLITTER_MODULESPLITTER_H
 
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringSet.h"
