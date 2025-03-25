@@ -1792,6 +1792,17 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
   }
 
+  // Diagnose integral src/dest pointers specially.
+  if (SrcPtr.isIntegralPointer() || DestPtr.isIntegralPointer()) {
+    std::string DiagVal = "(void *)";
+    DiagVal += SrcPtr.isIntegralPointer()
+                   ? std::to_string(SrcPtr.getIntegerRepresentation())
+                   : std::to_string(DestPtr.getIntegerRepresentation());
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_null)
+        << Move << false << DestPtr.isIntegralPointer() << DiagVal;
+    return false;
+  }
+
   // Can't read from dummy pointers.
   if (DestPtr.isDummy() || SrcPtr.isDummy())
     return false;
@@ -2754,6 +2765,18 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
         DestElem.deref<T>() = Src.atIndex(I).deref<T>();
         DestElem.initialize();
       });
+    }
+    return true;
+  }
+
+  if (DestDesc->isCompositeArray()) {
+    assert(SrcDesc->isCompositeArray());
+    assert(SrcDesc->getNumElems() == DestDesc->getNumElems());
+    for (unsigned I = 0, N = DestDesc->getNumElems(); I != N; ++I) {
+      const Pointer &SrcElem = Src.atIndex(I).narrow();
+      Pointer DestElem = Dest.atIndex(I).narrow();
+      if (!copyComposite(S, OpPC, SrcElem, DestElem, Activate))
+        return false;
     }
     return true;
   }
