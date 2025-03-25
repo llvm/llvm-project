@@ -550,7 +550,7 @@ struct BubbleUpCollapseShapeThroughExtractSlice
          enumerate(collapseShapeOp.getReassociationIndices())) {
       OpFoldResult collapsedSize = collapsedSizes[groupIdx];
       OpFoldResult collapsedOffset = collapsedOffsets[groupIdx];
-      // Case #1 - size and/or offset are dynamic.
+      // CASE #1 - size and/or offset are dynamic.
       // In this case, the slice can be represented as a contiguous slice only
       // if there is a single dimension in the reassociation group that has a
       // size not equal to 1.
@@ -576,7 +576,7 @@ struct BubbleUpCollapseShapeThroughExtractSlice
         continue;
       }
 
-      // Case #2 = size and offset are static.
+      // CASE #2 = size and offset are static.
       // Verify that the slice can be represented as a contiguous slice of the
       // src of the collapse_shape.
       // Checking this is done on order of most internal dimensions first,
@@ -584,8 +584,16 @@ struct BubbleUpCollapseShapeThroughExtractSlice
       // If the expected slice shape is [1, 1, ..., 1, Sk, Ak + 1, Ak + 2,
       // ...,An] then we first find the size and offset for n...k+1 then for k
       // and then for k-1...0.
-      int64_t collapsedSizeValue = getConstantIntValue(collapsedSize).value();
-      int64_t collapsedOffsetValue =
+
+      // currentCollapsedsize and currentCollapsedOffset are initialized with
+      // the original collapsed size and offset and divided by the expanded
+      // shape size in each dimension as we go along the reassociation group.
+      // In essence we are spreading the original collapsed size and offset over
+      // the various expanded slice dimensions.
+      // The variables are used both to check the validity of the slice and to
+      // compute the expanded sizes and offsets.
+      int64_t currentCollapsedsize = getConstantIntValue(collapsedSize).value();
+      int64_t currentCollapsedOffset =
           getConstantIntValue(collapsedOffset).value();
 
       SmallVector<OpFoldResult> groupExpandedSizes, groupExpandedOffsets;
@@ -600,13 +608,13 @@ struct BubbleUpCollapseShapeThroughExtractSlice
       for (; idx < reassocGroupSize; ++idx) {
         int64_t expandedShapeSize = srcShape[reversedReassocIndices[idx]];
 
-        if (collapsedSizeValue < expandedShapeSize)
+        if (currentCollapsedsize < expandedShapeSize)
           break;
 
         // We need to make sure that the slice size can be set to the shape size
         // and the offset to 0.
-        if ((collapsedSizeValue % expandedShapeSize) != 0 ||
-            (collapsedOffsetValue % expandedShapeSize) != 0)
+        if ((currentCollapsedsize % expandedShapeSize) != 0 ||
+            (currentCollapsedOffset % expandedShapeSize) != 0)
           return rewriter.notifyMatchFailure(
               sliceOp, "unsupported: cannot be extracted as a contiguous slice "
                        "of the src of the collapse_shape");
@@ -614,35 +622,41 @@ struct BubbleUpCollapseShapeThroughExtractSlice
         groupExpandedSizes.push_back(rewriter.getIndexAttr(expandedShapeSize));
         groupExpandedOffsets.push_back(rewriter.getIndexAttr(0));
 
-        collapsedSizeValue /= expandedShapeSize;
-        collapsedOffsetValue /= expandedShapeSize;
+        currentCollapsedsize /= expandedShapeSize;
+        currentCollapsedOffset /= expandedShapeSize;
       }
 
       // Now handle the first dim where slicing occurs on (k).
       if (idx < reassocGroupSize) {
         int64_t expandedShapeSize = srcShape[reversedReassocIndices[idx]];
-        int64_t offsetInDim = collapsedOffsetValue % expandedShapeSize;
+        int64_t offsetInDim = currentCollapsedOffset % expandedShapeSize;
         // We need to make sure that the slice size in this dim + offset will
         // not exceed the shape size.
-        if ((collapsedSizeValue + offsetInDim) >= expandedShapeSize)
+        if ((currentCollapsedsize + offsetInDim) >= expandedShapeSize)
           return rewriter.notifyMatchFailure(
               sliceOp, "unsupported: slice cannot be extracted as a contiguous "
                        "slice of the src of the collapse_shape");
 
-        groupExpandedSizes.push_back(rewriter.getIndexAttr(collapsedSizeValue));
+        groupExpandedSizes.push_back(
+            rewriter.getIndexAttr(currentCollapsedsize));
         groupExpandedOffsets.push_back(rewriter.getIndexAttr(offsetInDim));
 
-        collapsedOffsetValue /= expandedShapeSize;
+        currentCollapsedOffset /= expandedShapeSize;
       }
 
       // Now handle the leading dimensions where the slice size is equal to 1
       // (k-1...0).
+      // The size for these dimensions must be 1 because of how we constructed
+      // the slice size of the expanded shape. We spread the original collapsed
+      // size over the expanded shape sizes until we reached dimension k where
+      // the remaining size was smaller than the expanded shape size, and spread
+      // the remaining size on it. So, now we are left with only 1s.
       for (idx++; idx < reassocGroupSize; ++idx) {
         int64_t expandedShapeSize = srcShape[reversedReassocIndices[idx]];
-        int64_t offsetInDim = collapsedOffsetValue % expandedShapeSize;
+        int64_t offsetInDim = currentCollapsedOffset % expandedShapeSize;
         groupExpandedSizes.push_back(rewriter.getIndexAttr(1));
         groupExpandedOffsets.push_back(rewriter.getIndexAttr(offsetInDim));
-        collapsedOffsetValue /= expandedShapeSize;
+        currentCollapsedOffset /= expandedShapeSize;
       }
 
       expandedSizes.append(groupExpandedSizes.rbegin(),
