@@ -315,7 +315,7 @@ defm MATCH_ALLP_SYNC_64 : MATCH_ALLP_SYNC<Int64Regs, "b64", int_nvvm_match_all_s
 multiclass REDUX_SYNC<string BinOp, string PTXType, Intrinsic Intrin> {
   def : NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$src, Int32Regs:$mask),
           "redux.sync." # BinOp # "." # PTXType # " $dst, $src, $mask;",
-          [(set i32:$dst, (Intrin i32:$src, Int32Regs:$mask))]>,
+          [(set i32:$dst, (Intrin i32:$mask, Int32Regs:$src))]>,
         Requires<[hasPTX<70>, hasSM<80>]>;
 }
 
