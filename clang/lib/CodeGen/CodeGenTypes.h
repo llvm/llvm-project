@@ -229,6 +229,12 @@ public:
   const CGFunctionInfo &arrangeBuiltinFunctionCall(QualType resultType,
                                                    const CallArgList &args);
 
+  /// A SYCL device kernel function is a free standing function with
+  /// spir_kernel calling convention
+  const CGFunctionInfo &
+  arrangeSYCLKernelCallerDeclaration(QualType resultType,
+                                     const FunctionArgList &args);
+
   /// Objective-C methods are C functions with some implicit parameters.
   const CGFunctionInfo &arrangeObjCMethodDeclaration(const ObjCMethodDecl *MD);
   const CGFunctionInfo &arrangeObjCMessageSendSignature(const ObjCMethodDecl *MD,
