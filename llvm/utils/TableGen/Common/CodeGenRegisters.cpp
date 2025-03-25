@@ -869,9 +869,9 @@ void CodeGenRegisterClass::inheritProperties(CodeGenRegBank &RegBank) {
   // The last super-class is the smallest one in topological order. Check for
   // allocatable super-classes and inherit from the nearest allocatable one if
   // any.
-  auto NearestAllocSCRIt = std::find_if(
-      SuperClasses.rbegin(), SuperClasses.rend(),
-      [&](const CodeGenRegisterClass *S) { return S->Allocatable; });
+  auto NearestAllocSCRIt =
+      find_if(reverse(SuperClasses),
+              [&](const CodeGenRegisterClass *S) { return S->Allocatable; });
   CodeGenRegisterClass &Super = NearestAllocSCRIt == SuperClasses.rend()
                                     ? *SuperClasses.back()
                                     : **NearestAllocSCRIt;
