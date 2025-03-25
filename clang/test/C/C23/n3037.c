@@ -254,6 +254,70 @@ struct nested { // both-note {{previous definition is here}}
   };
 };
 
+// Show that bit-field order does matter, including anonymous bit-fields.
+struct bit_field_1 { // c17-note 2 {{previous definition is here}}
+  int a : 1;
+  int : 0;           // c23-note {{field has name '' here}}
+  int b : 1;
+};
+
+struct bit_field_1 { // c17-error {{redefinition of 'bit_field_1'}}
+  int a : 1;
+  int : 0;
+  int b : 1;
+};
+
+struct bit_field_1 { // c17-error {{redefinition of 'bit_field_1'}} \
+                        c23-error {{type 'struct bit_field_1' has incompatible definitions}}
+  int a : 1;
+  int b : 1;	     // c23-note {{field has name 'b' here}}
+};
+
+struct bit_field_2 { // c17-note {{previous definition is here}}
+  int a : 1;
+  int b : 1;         // c23-note {{bit-field 'b' has bit-width 1 here}}
+};
+
+struct bit_field_2 { // c17-error {{redefinition of 'bit_field_2'}} \
+                        c23-error {{type 'struct bit_field_2' has incompatible definitions}}
+  int a : 1;
+  int b : 2;         // c23-note {{bit-field 'b' has bit-width 2 here}}
+};
+
+// Test a bit-field with an attribute.
+struct bit_field_3 { // c17-note {{previous definition is here}}
+  int a : 1;
+  int b : 1; // c23-note {{no corresponding attribute here}}
+};
+
+struct bit_field_3 { // c17-error {{redefinition of 'bit_field_3'}} \
+                        c23-error {{type 'bit_field_3' has incompatible definitions}}
+  int a : 1;
+  [[deprecated]] int b : 1; // c23-note {{attribute 'deprecated' here}}
+};
+
+struct bit_field_4 { // c17-note {{previous definition is here}}
+  int a : 1;
+  int b : 1;         // c23-note {{bit-field 'b' has bit-width 1 here}}
+};
+
+struct bit_field_4 { // c17-error {{redefinition of 'bit_field_4'}} \
+                        c23-error {{type 'struct bit_field_4' has incompatible definitions}}
+  int a : 1;
+  int b;             // c23-note {{field 'b' is not a bit-field}}
+};
+
+struct bit_field_5 { // c17-note {{previous definition is here}}
+  int a : 1;
+  int b;             // c23-note {{field 'b' is not a bit-field}}
+};
+
+struct bit_field_5 { // c17-error {{redefinition of 'bit_field_5'}} \
+                        c23-error {{type 'struct bit_field_5' has incompatible definitions}}
+  int a : 1;
+  int b : 1;         // c23-note {{bit-field 'b' has bit-width 1 here}}
+};
+
 enum E { A }; // c17-note 2 {{previous definition is here}}
 enum E { A }; // c17-error {{redefinition of 'E'}} \
                  c17-error {{redefinition of enumerator 'A'}}

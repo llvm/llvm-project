@@ -1565,6 +1565,12 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      QualType Owner2Type) {
   const auto *Owner2 = cast<Decl>(Field2->getDeclContext());
 
+  // In C23 mode, check for structural equivalence of attributes on the fields.
+  // FIXME: Should this happen in C++ as well?
+  if (Context.LangOpts.C23 &&
+      !CheckStructurallyEquivalentAttributes(Context, Field1, Field2, Owner2))
+    return false;
+
   // For anonymous structs/unions, match up the anonymous struct/union type
   // declarations directly, so that we don't go off searching for anonymous
   // types
@@ -1607,15 +1613,32 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return false;
   }
 
-  if (Field1->isBitField())
-    return IsStructurallyEquivalent(Context, Field1->getBitWidth(),
-                                    Field2->getBitWidth());
+  if ((Field1->isBitField() || Field2->isBitField()) &&
+      !IsStructurallyEquivalent(Context, Field1->getBitWidth(),
+                                Field2->getBitWidth())) {
+    auto DiagNote = [&](const FieldDecl *FD) {
+      if (FD->isBitField()) {
+        std::string Str;
+        llvm::raw_string_ostream OS(Str);
+        PrintingPolicy Policy(Context.LangOpts);
+        FD->getBitWidth()->printPretty(OS, nullptr, Policy);
 
-  // In C23 mode, check for structural equivalence of attributes on the fields.
-  // FIXME: Should this happen in C++ as well?
-  if (Context.LangOpts.C23 &&
-      !CheckStructurallyEquivalentAttributes(Context, Field1, Field2, Owner2))
+        Context.Diag2(FD->getLocation(), diag::note_odr_field_bit_width)
+            << FD->getDeclName() << OS.str();
+      } else {
+        Context.Diag2(FD->getLocation(), diag::note_odr_field_not_bit_field)
+            << FD->getDeclName();
+      }
+    };
+
+    Context.Diag2(
+        Owner2->getLocation(),
+        Context.getApplicableDiagnostic(diag::err_odr_tag_type_inconsistent))
+        << Owner2Type << (&Context.FromCtx != &Context.ToCtx);
+    DiagNote(Field2);
+    DiagNote(Field1);
     return false;
+  }
 
   return true;
 }

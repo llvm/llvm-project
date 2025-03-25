@@ -494,6 +494,8 @@ def warn_odr_tag_type_inconsistent
 def note_odr_tag_kind_here: Note<
   "%0 is a %select{struct|interface|union|class|enum}1 here">;
 def note_odr_field : Note<"field %0 has type %1 here">;
+def note_odr_field_bit_width : Note<"bit-field %0 has bit-width %1 here">;
+def note_odr_field_not_bit_field : Note<"field %0 is not a bit-field">;
 def note_odr_field_name : Note<"field has name %0 here">;
 def note_odr_missing_field : Note<"no corresponding field here">;
 def note_odr_base : Note<"class has base type %0">;
