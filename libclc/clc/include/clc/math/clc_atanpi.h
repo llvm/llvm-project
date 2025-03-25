@@ -6,9 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_atanpi.h>
+#ifndef __CLC_MATH_CLC_ATANPI_H__
+#define __CLC_MATH_CLC_ATANPI_H__
 
+#define __CLC_BODY <clc/math/unary_decl.inc>
+#define __CLC_FUNCTION __clc_atanpi
+
+#include <clc/math/gentype.inc>
+
+#undef __CLC_BODY
 #undef __CLC_FUNCTION
-#define __CLC_FUNCTION atanpi
-#include <clc/math/unary_builtin.inc>
+
+#endif // __CLC_MATH_CLC_ATANPI_H__

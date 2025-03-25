@@ -18,8 +18,11 @@ integer/clc_rotate.cl
 integer/clc_sub_sat.cl
 integer/clc_upsample.cl
 math/clc_acos.cl
+math/clc_acospi.cl
 math/clc_asin.cl
+math/clc_asinpi.cl
 math/clc_atan.cl
+math/clc_atanpi.cl
 math/clc_ceil.cl
 math/clc_copysign.cl
 math/clc_fabs.cl
