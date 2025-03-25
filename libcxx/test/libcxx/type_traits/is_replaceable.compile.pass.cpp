@@ -191,7 +191,7 @@ static_assert(std::__is_replaceable<std::deque<int, NonPropagatingStatelessCopyA
 static_assert(std::__is_replaceable<std::deque<int, NonPropagatingStatelessMoveAssignAlloc<int> > >::value, "");
 
 // exception_ptr
-static_assert(!std::__is_replaceable<std::exception_ptr>::value, "");
+static_assert(std::__is_replaceable<std::exception_ptr>::value, "");
 
 // expected
 #if TEST_STD_VER >= 23
@@ -203,7 +203,7 @@ static_assert(!std::__is_replaceable<std::expected<CustomCopyAssignment, CustomC
 
 // locale
 #ifndef TEST_HAS_NO_LOCALIZATION
-static_assert(!std::__is_replaceable<std::locale>::value, "");
+static_assert(std::__is_replaceable<std::locale>::value, "");
 #endif
 
 // optional
@@ -219,7 +219,7 @@ static_assert(!std::__is_replaceable<std::pair<int, CustomCopyAssignment> >::val
 static_assert(!std::__is_replaceable<std::pair<CustomCopyAssignment, CustomCopyAssignment> >::value, "");
 
 // shared_ptr
-static_assert(!std::__is_replaceable<std::shared_ptr<int> >::value, "");
+static_assert(std::__is_replaceable<std::shared_ptr<int> >::value, "");
 
 // tuple
 #if TEST_STD_VER >= 11
@@ -284,6 +284,6 @@ static_assert(std::__is_replaceable<std::vector<int, NonPropagatingStatelessCopy
 static_assert(std::__is_replaceable<std::vector<int, NonPropagatingStatelessMoveAssignAlloc<int> > >::value, "");
 
 // weak_ptr
-static_assert(!std::__is_replaceable<std::weak_ptr<CustomCopyAssignment> >::value, "");
+static_assert(std::__is_replaceable<std::weak_ptr<CustomCopyAssignment> >::value, "");
 
 // TODO: Mark all the replaceable STL types as such

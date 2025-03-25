@@ -21,7 +21,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// A type is replaceable if `x = std::move(y)` is equivalent to:
+// A type is replaceable if, with `x` and `y` being different objects, `x = std::move(y)` is equivalent to:
 //
 //  std::destroy_at(&x)
 //  std::construct_at(&x, std::move(y))
