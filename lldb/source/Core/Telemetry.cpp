@@ -61,7 +61,7 @@ void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {
 }
 void ClientInfo::serialize(Serializer &serializer) const {
   LLDBBaseTelemetryInfo::serialize(serializer);
-  serializer.write("request_name", request_name);
+  serializer.write("client_data", request_name);
   if (error_msg.has_value())
     serializer.write("error_msg", error_msg.value());
 }
@@ -140,12 +140,11 @@ void TelemetryManager::DispatchClientTelemetry(
 
   auto *dict = entry.GetObjectSP()->GetAsDictionary();
 
-  llvm::StringRef request_name;
-  if (dict->GetValueForKeyAsString("request_name", request_name))
-    client_info.request_name = request_name.str();
-  else
-    LLDB_LOG(GetLog(LLDBLog::Object),
-             "Cannot determine request name from client-telemetry entry");
+  llvm::StringRef client_data if (dict->GetValueForKeyAsString("client_data",
+                                                               client_data))
+      client_info.client_data = client_data.str();
+  else LLDB_LOG(GetLog(LLDBLog::Object),
+                "Cannot determine client_data from client-telemetry entry");
 
   int64_t start_time;
   if (dict->GetValueForKeyAsInteger("start_time", start_time)) {
@@ -167,9 +166,8 @@ void TelemetryManager::DispatchClientTelemetry(
   }
 
   llvm::StringRef error_msg;
-  if (dict->GetValueForKeyAsString("error", error_msg)) {
+  if (dict->GetValueForKeyAsString("error", error_msg))
     client_info.error_msg = error_msg.str();
-  }
 
   if (llvm::Error er = dispatch(&client_info))
     LLDB_LOG_ERROR(GetLog(LLDBLog::Object), std::move(er),

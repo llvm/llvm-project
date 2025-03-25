@@ -98,7 +98,7 @@ struct LLDBBaseTelemetryInfo : public llvm::telemetry::TelemetryInfo {
 };
 
 struct ClientInfo : public LLDBBaseTelemetryInfo {
-  std::string request_name;
+  std::string client_data;
   std::optional<std::string> error_msg;
 
   void serialize(llvm::telemetry::Serializer &serializer) const override;
