@@ -375,6 +375,7 @@ def get_ios_commands_dir():
         config.compiler_rt_src_root, "test", "sanitizer_common", "ios_commands"
     )
 
+
 # When cmake flag to disable path search is set, symbolizer is not allowed to search in $PATH,
 # need to specify it via XXX_SYMBOLIZER_PATH
 tool_symbolizer_path_list = [
@@ -384,7 +385,7 @@ tool_symbolizer_path_list = [
     "TSAN_SYMBOLIZER_PATH",
     "MSAN_SYMBOLIZER_PATH",
     "LSAN_SYMBOLIZER_PATH",
-    "UBSAN_SYMBOLIZER_PATH"
+    "UBSAN_SYMBOLIZER_PATH",
 ]
 
 if config.have_disable_symbolizer_path_search:
@@ -395,7 +396,9 @@ if config.have_disable_symbolizer_path_search:
             config.environment[sanitizer] = symbolizer_path
 
 env_unset_command = " ".join(f"-u {var}" for var in tool_symbolizer_path_list)
-config.substitutions.append(("%env_unset_tool_symbolizer_path", f"env {env_unset_command}"))
+config.substitutions.append(
+    ("%env_unset_tool_symbolizer_path", f"env {env_unset_command}")
+)
 
 # Allow tests to be executed on a simulator or remotely.
 if emulator:
