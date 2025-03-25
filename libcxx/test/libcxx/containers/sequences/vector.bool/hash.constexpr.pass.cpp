@@ -18,29 +18,21 @@
 #include <vector>
 
 #include "min_allocator.h"
-#include "poisoned_hash_helper.h"
+
+template <class VBType>
+constexpr void test() {
+  bool ba[]{true, false, true, true, false};
+  VBType vb(std::begin(ba), std::end(ba));
+
+  const std::hash<VBType> h{};
+  const auto hash_value = h(vb);
+  assert(hash_value == h(vb));
+  assert(hash_value != 0);
+}
 
 constexpr bool test() {
-  {
-    using VB = std::vector<bool>;
-    bool ba[]{true, false, true, true, false};
-    VB vb(std::begin(ba), std::end(ba));
-
-    const std::hash<VB> h{};
-    const auto hash_value = h(vb);
-    assert(hash_value == h(vb));
-    assert(hash_value != 0);
-  }
-  {
-    using VB  = std::vector<bool, min_allocator<bool>>;
-    bool ba[] = {true, false, true, true, false};
-    VB vb(std::begin(ba), std::end(ba));
-
-    const std::hash<VB> h{};
-    const auto hash_value = h(vb);
-    assert(hash_value == h(vb));
-    assert(hash_value != 0);
-  }
+  test<std::vector<bool>>();
+  test<std::vector<bool, min_allocator<bool>>>();
 
   return true;
 }
