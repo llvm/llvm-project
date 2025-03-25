@@ -2977,6 +2977,9 @@ static LogicalResult produceSubViewErrorMsg(SliceVerificationResult result,
 LogicalResult SubViewOp::verify() {
   MemRefType baseType = getSourceType();
   MemRefType subViewType = getType();
+  ArrayRef<int64_t> staticOffsets = getStaticOffsets();
+  ArrayRef<int64_t> staticSizes = getStaticSizes();
+  ArrayRef<int64_t> staticStrides = getStaticStrides();
 
   // The base memref and the view memref should be in the same memory space.
   if (baseType.getMemorySpace() != subViewType.getMemorySpace())
@@ -2991,7 +2994,7 @@ LogicalResult SubViewOp::verify() {
   // Compute the expected result type, assuming that there are no rank
   // reductions.
   MemRefType expectedType = SubViewOp::inferResultType(
-      baseType, getStaticOffsets(), getStaticSizes(), getStaticStrides());
+      baseType, staticOffsets, staticSizes, staticStrides);
 
   // Verify all properties of a shaped type: rank, element type and dimension
   // sizes. This takes into account potential rank reductions.
@@ -3024,6 +3027,14 @@ LogicalResult SubViewOp::verify() {
   if (!haveCompatibleStrides(expectedType, subViewType, *unusedDims))
     return produceSubViewErrorMsg(SliceVerificationResult::LayoutMismatch,
                                   *this, expectedType);
+
+  // Verify that offsets, sizes, strides do not run out-of-bounds with respect
+  // to the base memref.
+  SliceBoundsVerificationResult boundsResult =
+      verifyInBoundsSlice(baseType.getShape(), staticOffsets, staticSizes,
+                          staticStrides, /*generateErrorMessage=*/true);
+  if (!boundsResult.isValid)
+    return getOperation()->emitError(boundsResult.errorMessage);
 
   return success();
 }
