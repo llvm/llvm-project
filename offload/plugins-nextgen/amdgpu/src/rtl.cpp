@@ -846,8 +846,7 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   /// Get the HSA kernel object representing the kernel function.
   uint64_t getKernelObject() const { return KernelObject; }
 
-  /// Get the size of implicitargs based on the code object version
-  /// @return 56 for cov4 and 256 for cov5
+  /// Get the size of implicitargs based on the code object version.
   uint32_t getImplicitArgsSize() const { return ImplicitArgsSize; }
 
   /// Indicates whether or not we need to set up our own private segment size.
@@ -5145,6 +5144,17 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
         (uint64_t)AMDGPUDevice.getPreAllocatedDeviceMemoryPool();
     ImplArgs->DynamicLdsSize = KernelArgs.DynCGroupMem;
   }
+  // Set the COV5+ implicit arguments to the appropriate values.
+  ImplArgs->BlockCountX = NumBlocks[0];
+  ImplArgs->BlockCountY = NumBlocks[1];
+  ImplArgs->BlockCountZ = NumBlocks[2];
+  ImplArgs->GroupSizeX = NumThreads[0];
+  ImplArgs->GroupSizeY = NumThreads[1];
+  ImplArgs->GroupSizeZ = NumThreads[2];
+  ImplArgs->GridDims = NumBlocks[2] * NumThreads[2] > 1
+                           ? 3
+                           : 1 + (NumBlocks[1] * NumThreads[1] != 1);
+  ImplArgs->DynamicLdsSize = KernelArgs.DynCGroupMem;
 
   // Get required OMPT-related data
   auto LocalOmptEventInfo = getOrNullOmptEventInfo(AsyncInfoWrapper);
