@@ -22,12 +22,8 @@
 // SPVCHECK-LABEL: define spir_func noundef nofpclass(nan inf) half @_Z20test_smoothstep_halfDhDhDh(
 // SPVCHECK-SAME: half noundef nofpclass(nan inf) [[MIN:%.*]], half noundef nofpclass(nan inf) [[MAX:%.*]], half noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
-// SPVCHECK-NEXT:    [[CONV_I:%.*]] = fpext reassoc nnan ninf nsz arcp afn half [[MIN]] to double
-// SPVCHECK-NEXT:    [[CONV1_I:%.*]] = fpext reassoc nnan ninf nsz arcp afn half [[MAX]] to double
-// SPVCHECK-NEXT:    [[CONV2_I:%.*]] = fpext reassoc nnan ninf nsz arcp afn half [[X]] to double
-// SPVCHECK-NEXT:    [[SPV_SMOOTHSTEP_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn double @llvm.spv.smoothstep.f64(double [[CONV_I]], double [[CONV1_I]], double [[CONV2_I]])
-// SPVCHECK-NEXT:    [[CONV3_I:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn double [[SPV_SMOOTHSTEP_I]] to half
-// SPVCHECK-NEXT:    ret half [[CONV3_I]]
+// SPVCHECK-NEXT:    [[SPV_SMOOTHSTEP_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef half @llvm.spv.smoothstep.f16(half [[MIN]], half [[MAX]], half [[X]])
+// SPVCHECK-NEXT:    ret half [[SPV_SMOOTHSTEP_I]]
 //
 half test_smoothstep_half(half Min, half Max, half X) { return smoothstep(Min, Max, X); }
 
@@ -110,12 +106,8 @@ half4 test_smoothstep_half4(half4 Min, half4 Max, half4 X) { return smoothstep(M
 // SPVCHECK-LABEL: define spir_func noundef nofpclass(nan inf) float @_Z21test_smoothstep_floatfff(
 // SPVCHECK-SAME: float noundef nofpclass(nan inf) [[MIN:%.*]], float noundef nofpclass(nan inf) [[MAX:%.*]], float noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
-// SPVCHECK-NEXT:    [[CONV_I:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[MIN]] to double
-// SPVCHECK-NEXT:    [[CONV1_I:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[MAX]] to double
-// SPVCHECK-NEXT:    [[CONV2_I:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[X]] to double
-// SPVCHECK-NEXT:    [[SPV_SMOOTHSTEP_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn double @llvm.spv.smoothstep.f64(double [[CONV_I]], double [[CONV1_I]], double [[CONV2_I]])
-// SPVCHECK-NEXT:    [[CONV3_I:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn double [[SPV_SMOOTHSTEP_I]] to float
-// SPVCHECK-NEXT:    ret float [[CONV3_I]]
+// SPVCHECK-NEXT:    [[SPV_SMOOTHSTEP_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef float @llvm.spv.smoothstep.f32(float [[MIN]], float [[MAX]], float [[X]])
+// SPVCHECK-NEXT:    ret float [[SPV_SMOOTHSTEP_I]]
 //
 float test_smoothstep_float(float Min, float Max, float X) { return smoothstep(Min, Max, X); }
 

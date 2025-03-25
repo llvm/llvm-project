@@ -28,6 +28,6 @@ def SPIRVReflect : Builtin {
 
 def SPIRVSmoothStep : Builtin {
   let Spellings = ["__builtin_spirv_smoothstep"];
-  let Attributes = [NoThrow, Const];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }

@@ -9,12 +9,8 @@ typedef float float4 __attribute__((ext_vector_type(4)));
 // CHECK-LABEL: define spir_func float @test_smoothstep_float(
 // CHECK-SAME: float noundef [[MIN:%.*]], float noundef [[MAX:%.*]], float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[CONV:%.*]] = fpext float [[MIN]] to double
-// CHECK-NEXT:    [[CONV1:%.*]] = fpext float [[MAX]] to double
-// CHECK-NEXT:    [[CONV2:%.*]] = fpext float [[X]] to double
-// CHECK-NEXT:    [[SPV_SMOOTHSTEP:%.*]] = tail call double @llvm.spv.smoothstep.f64(double [[CONV]], double [[CONV1]], double [[CONV2]])
-// CHECK-NEXT:    [[CONV3:%.*]] = fptrunc double [[SPV_SMOOTHSTEP]] to float
-// CHECK-NEXT:    ret float [[CONV3]]
+// CHECK-NEXT:    [[SPV_SMOOTHSTEP:%.*]] = tail call float @llvm.spv.smoothstep.f32(float [[MIN]], float [[MAX]], float [[X]])
+// CHECK-NEXT:    ret float [[SPV_SMOOTHSTEP]]
 //
 float test_smoothstep_float(float Min, float Max, float X) { return __builtin_spirv_smoothstep(Min, Max, X); }
 
