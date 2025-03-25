@@ -34,20 +34,18 @@ static void process(mlir::ModuleOp mod, cir::FuncOp func) {
 
   // Hoist all static allocas to the entry block.
   mlir::Block &entryBlock = func.getRegion().front();
-  llvm::SmallVector<cir::AllocaOp> allocas;
-  func.getBody().walk([&](cir::AllocaOp alloca) {
+  mlir::Operation *insertPoint = &*entryBlock.begin();
+
+  // Post-order is the default, but the code below requires it, so
+  // let's not depend on the default staying that way.
+  func.getBody().walk<mlir::WalkOrder::PostOrder>([&](cir::AllocaOp alloca) {
     if (alloca->getBlock() == &entryBlock)
       return;
     // Don't hoist allocas with dynamic alloca size.
     assert(!cir::MissingFeatures::opAllocaDynAllocSize());
-    allocas.push_back(alloca);
-  });
-  if (allocas.empty())
-    return;
 
-  mlir::Operation *insertPoint = &*entryBlock.begin();
+    // Hoist allocas into the entry block.
 
-  for (cir::AllocaOp alloca : allocas) {
     // Preserving the `const` attribute on hoisted allocas can cause LLVM to
     // incorrectly introduce invariant group metadata in some circumstances.
     // The incubator performs some analysis to determine whether the attribute
@@ -59,7 +57,7 @@ static void process(mlir::ModuleOp mod, cir::FuncOp func) {
       alloca.setConstant(false);
 
     alloca->moveBefore(insertPoint);
-  }
+  });
 }
 
 void HoistAllocasPass::runOnOperation() {
@@ -71,7 +69,12 @@ void HoistAllocasPass::runOnOperation() {
   if (!mod)
     mod = op->getParentOfType<mlir::ModuleOp>();
 
-  getOperation()->walk([&](cir::FuncOp op) { process(mod, op); });
+  // If we ever introduce nested cir.function ops, we'll need to make this
+  // walk in post-order and recurse into nested functions.
+  getOperation()->walk<mlir::WalkOrder::PreOrder>([&](cir::FuncOp op) {
+    process(mod, op);
+    return mlir::WalkResult::skip();
+  });
 }
 
 } // namespace
