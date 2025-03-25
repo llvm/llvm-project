@@ -70,4 +70,49 @@ TEST_F(olMemcpyTest, SuccessDtoD) {
   ASSERT_SUCCESS(olMemFree(Device, OL_ALLOC_TYPE_DEVICE, AllocB));
 }
 
-TEST_F(olMemcpyTest, SuccessSizeZero) {}
+TEST_F(olMemcpyTest, SuccessHtoHSync) {
+  constexpr size_t Size = 1024;
+  std::vector<uint8_t> Input(Size, 42);
+  std::vector<uint8_t> Output(Size, 0);
+  ol_device_handle_t Host;
+  ASSERT_SUCCESS(olGetHostDevice(&Host));
+
+  ASSERT_SUCCESS(olMemcpy(nullptr, Output.data(), Host, Input.data(), Host,
+                          Size, nullptr));
+
+  for (uint8_t Val : Output) {
+    ASSERT_EQ(Val, 42);
+  }
+}
+
+TEST_F(olMemcpyTest, SuccessDtoHSync) {
+  constexpr size_t Size = 1024;
+  void *Alloc;
+  std::vector<uint8_t> Input(Size, 42);
+  std::vector<uint8_t> Output(Size, 0);
+  ol_device_handle_t Host;
+  ASSERT_SUCCESS(olGetHostDevice(&Host));
+
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &Alloc));
+  ASSERT_SUCCESS(
+      olMemcpy(nullptr, Alloc, Device, Input.data(), Host, Size, nullptr));
+  ASSERT_SUCCESS(
+      olMemcpy(nullptr, Output.data(), Host, Alloc, Device, Size, nullptr));
+  for (uint8_t Val : Output) {
+    ASSERT_EQ(Val, 42);
+  }
+  ASSERT_SUCCESS(olMemFree(Device, OL_ALLOC_TYPE_DEVICE, Alloc));
+}
+
+TEST_F(olMemcpyTest, SuccessSizeZero) {
+  constexpr size_t Size = 1024;
+  std::vector<uint8_t> Input(Size, 42);
+  std::vector<uint8_t> Output(Size, 0);
+  ol_device_handle_t Host;
+  ASSERT_SUCCESS(olGetHostDevice(&Host));
+
+  // As with std::memcpy, size 0 is allowed. Keep all other arguments valid even
+  // if they aren't used.
+  ASSERT_SUCCESS(
+      olMemcpy(nullptr, Output.data(), Host, Input.data(), Host, 0, nullptr));
+}

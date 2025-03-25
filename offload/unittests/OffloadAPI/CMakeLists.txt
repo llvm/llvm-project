@@ -19,12 +19,12 @@ add_libompt_unittest("offload.unittests"
     ${CMAKE_CURRENT_SOURCE_DIR}/queue/olDestroyQueue.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/memory/olMemAlloc.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/memory/olMemFree.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/enqueue/olMemcpy.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/enqueue/olLaunchKernel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/memory/olMemcpy.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/program/olCreateProgram.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/program/olDestroyProgram.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel/olCreateKernel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel/olDestroyKernel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/kernel/olLaunchKernel.cpp
     )
 add_dependencies("offload.unittests" ${PLUGINS_TEST_COMMON} LibomptUnitTestsDeviceBins)
 target_compile_definitions("offload.unittests" PRIVATE DEVICE_CODE_PATH="${OFFLOAD_TEST_DEVICE_CODE_PATH}")

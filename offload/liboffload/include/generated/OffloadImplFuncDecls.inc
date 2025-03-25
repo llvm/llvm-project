@@ -63,8 +63,9 @@ ol_impl_result_t olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
                                ol_event_handle_t *EventOut);
 
 ol_impl_result_t
-olLaunchKernel_impl(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
-                    const void *ArgumentsData, size_t ArgumentsSize,
+olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
+                    ol_kernel_handle_t Kernel, const void *ArgumentsData,
+                    size_t ArgumentsSize,
                     const ol_kernel_launch_size_args_t *LaunchSizeArgs,
                     ol_event_handle_t *EventOut);
 

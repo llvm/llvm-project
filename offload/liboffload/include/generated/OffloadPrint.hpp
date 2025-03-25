@@ -595,6 +595,9 @@ operator<<(llvm::raw_ostream &os,
   os << ".Queue = ";
   printPtr(os, *params->pQueue);
   os << ", ";
+  os << ".Device = ";
+  printPtr(os, *params->pDevice);
+  os << ", ";
   os << ".Kernel = ";
   printPtr(os, *params->pKernel);
   os << ", ";
