@@ -95,7 +95,7 @@ RootSignatureToken RootSignatureLexer::LexToken() {
 
   // Define a large string switch statement for all the keywords and enums
   auto Switch = llvm::StringSwitch<TokenKind>(TokSpelling);
-#define KEYWORD(NAME) Switch.Case(#NAME, TokenKind::kw_##NAME);
+#define KEYWORD(NAME) Switch.CaseLower(#NAME, TokenKind::kw_##NAME);
 #define ENUM(NAME, LIT) Switch.CaseLower(LIT, TokenKind::en_##NAME);
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
 
