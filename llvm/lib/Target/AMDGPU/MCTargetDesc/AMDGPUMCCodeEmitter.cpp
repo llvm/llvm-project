@@ -273,7 +273,10 @@ static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI,
                                                                       : 255;
   }
 
-  return STI.hasFeature(AMDGPU::Feature64BitLiterals) && Hi_32(Val) ? 254 : 255;
+  return STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
+                 (!isInt<32>(Val) || !isUInt<32>(Val))
+             ? 254
+             : 255;
 }
 
 std::optional<uint64_t>
