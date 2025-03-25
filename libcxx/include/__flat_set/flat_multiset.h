@@ -375,45 +375,6 @@ public:
     } else {
       return __emplace_hint(std::move(__hint), _Key(std::forward<_Args>(__args)...));
     }
-    /*
-    std::pair<key_type, mapped_type> __pair(std::forward<_Args>(__args)...);
-
-    auto __prev_larger  = __hint != cbegin() && __compare_(__pair.first, (__hint - 1)->first);
-    auto __next_smaller = __hint != cend() && __compare_(__hint->first, __pair.first);
-
-    auto __hint_distance = __hint.__key_iter_ - __containers_.keys.cbegin();
-    auto __key_iter      = __containers_.keys.begin() + __hint_distance;
-    auto __mapped_iter   = __containers_.values.begin() + __hint_distance;
-
-    if (!__prev_larger && !__next_smaller) [[likely]] {
-      // hint correct, just use exact hint iterators
-    } else if (__prev_larger && !__next_smaller) {
-      // the hint position is more to the right than the key should have been.
-      // we want to emplace the element to a position as right as possible
-      // e.g. Insert new element "2" in the following range
-      // 1, 1, 2, 2, 2, 3, 4, 6
-      //                   ^
-      //                   |
-      //                  hint
-      // We want to insert "2" after the last existing "2"
-      __key_iter    = ranges::upper_bound(__containers_.keys.begin(), __key_iter, __pair.first, __compare_);
-      __mapped_iter = __corresponding_mapped_it(*this, __key_iter);
-    } else {
-      _LIBCPP_ASSERT_INTERNAL(!__prev_larger && __next_smaller, "this means that the multiset is not sorted");
-
-      // the hint position is more to the left than the key should have been.
-      // we want to emplace the element to a position as left as possible
-      //  1, 1, 2, 2, 2, 3, 4, 6
-      //  ^
-      //  |
-      // hint
-      // We want to insert "2" before the first existing "2"
-      __key_iter    = ranges::lower_bound(__key_iter, __containers_.keys.end(), __pair.first, __compare_);
-      __mapped_iter = __corresponding_mapped_it(*this, __key_iter);
-    }
-    return __flat_map_utils::__emplace_exact_pos(
-        *this, __key_iter, __mapped_iter, std::move(__pair.first), std::move(__pair.second));
-        */
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const value_type& __x) { return emplace(__x); }
@@ -641,8 +602,8 @@ private:
       if constexpr (!_WasSorted) {
         ranges::sort(__keys_.begin() + __old_size, __keys_.end(), __compare_);
       } else {
-        _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(__is_sorted_and_unique(__keys_ | ranges::views::drop(__old_size)),
-                                            "Either the key container is not sorted or it contains duplicates");
+        _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
+            ranges::is_sorted(__keys_ | ranges::views::drop(__old_size)), "Key container is not sorted");
       }
       ranges::inplace_merge(__keys_.begin(), __keys_.begin() + __old_size, __keys_.end(), __compare_);
     }
@@ -653,6 +614,38 @@ private:
   _LIBCPP_HIDE_FROM_ABI iterator __emplace(_Kp&& __key) {
     auto __it = upper_bound(__key);
     return __flat_set_utils::__emplace_exact_pos(*this, __it, std::forward<_Kp>(__key));
+  }
+
+  template <class _Kp>
+  _LIBCPP_HIDE_FROM_ABI iterator __emplace_hint(const_iterator __hint, _Kp&& __key) {
+    auto __prev_larger  = __hint != cbegin() && __compare_(__key, *std::prev(__hint));
+    auto __next_smaller = __hint != cend() && __compare_(*__hint, __key);
+
+    if (!__prev_larger && !__next_smaller) [[likely]] {
+      // hint correct, just use exact hint iterators
+    } else if (__prev_larger && !__next_smaller) {
+      // the hint position is more to the right than the key should have been.
+      // we want to emplace the element to a position as right as possible
+      // e.g. Insert new element "2" in the following range
+      // 1, 1, 2, 2, 2, 3, 4, 6
+      //                   ^
+      //                   |
+      //                  hint
+      // We want to insert "2" after the last existing "2"
+      __hint = ranges::upper_bound(begin(), __hint, __key, __compare_);
+    } else {
+      _LIBCPP_ASSERT_INTERNAL(!__prev_larger && __next_smaller, "this means that the multiset is not sorted");
+
+      // the hint position is more to the left than the key should have been.
+      // we want to emplace the element to a position as left as possible
+      //  1, 1, 2, 2, 2, 3, 4, 6
+      //  ^
+      //  |
+      // hint
+      // We want to insert "2" before the first existing "2"
+      __hint = ranges::lower_bound(__hint, end(), __key, __compare_);
+    }
+    return __flat_set_utils::__emplace_exact_pos(*this, __hint, std::forward<_Kp>(__key));
   }
 
   template <class _Self, class _Kp>
