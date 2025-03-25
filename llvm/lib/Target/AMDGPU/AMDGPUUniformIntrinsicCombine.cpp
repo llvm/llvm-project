@@ -110,24 +110,30 @@ static bool runUniformIntrinsicCombine(Function &F, const UniformityInfo *UI) {
       Intrinsic::amdgcn_readlane, Intrinsic::amdgcn_ballot};
 
   bool IsChanged = false;
-
+  // TODO: Vector types can also be optimized, provided generic way to query
+  // getDeclarationIfExists().
+  SmallVector<Type *, 7> Tys = {
+      Type::getInt16Ty(Ctx),  // i16
+      Type::getInt32Ty(Ctx),  // i32
+      Type::getInt64Ty(Ctx),  // i64
+      Type::getHalfTy(Ctx),   // Float16
+      Type::getFloatTy(Ctx),  // float
+      Type::getDoubleTy(Ctx), // double
+      Type::getBFloatTy(Ctx)  // bfloat16
+  };
   // Iterate over each intrinsic in the list and process its uses within F.
   for (Intrinsic::ID IID : Intrinsics) {
-    // Determine the correct return type for the intrinsic.
-    // Most intrinsics return i32, but amdgcn_ballot returns i64.
-    llvm::Type *IntrinsicTy = (IID == Intrinsic::amdgcn_ballot)
-                                  ? llvm::Type::getInt64Ty(Ctx)
-                                  : llvm::Type::getInt32Ty(Ctx);
-
-    // Check if the intrinsic is declared in the module with the expected type.
-    if (Function *Intr =
-            Intrinsic::getDeclarationIfExists(M, IID, {IntrinsicTy})) {
-      // Iterate over all users of the intrinsic.
-      for (User *U : Intr->users()) {
-        // Ensure the user is an intrinsic call within function F.
-        if (auto *II = dyn_cast<IntrinsicInst>(U)) {
-          if (II->getFunction() == &F) {
-            IsChanged |= optimizeUniformIntrinsic(*II, UI);
+    for (Type *Ty : Tys) {
+      // Check if the intrinsic is declared in the module with the expected
+      // type.
+      if (Function *Intr = Intrinsic::getDeclarationIfExists(M, IID, {Ty})) {
+        // Iterate over all users of the intrinsic.
+        for (User *U : Intr->users()) {
+          // Ensure the user is an intrinsic call within function F.
+          if (auto *II = dyn_cast<IntrinsicInst>(U)) {
+            if (II->getFunction() == &F) {
+              IsChanged |= optimizeUniformIntrinsic(*II, UI);
+            }
           }
         }
       }

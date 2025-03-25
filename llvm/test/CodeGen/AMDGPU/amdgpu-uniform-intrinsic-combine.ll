@@ -586,3 +586,214 @@ define amdgpu_kernel void @readlane_expression(ptr addrspace(1) %out) {
   ret void
 }
 
+define amdgpu_kernel void @ballot_i32(i32 %v, ptr addrspace(1) %out) {
+; CURRENT-CHECK-LABEL: define amdgpu_kernel void @ballot_i32(
+; CURRENT-CHECK-SAME: i32 [[V:%.*]], ptr addrspace(1) writeonly captures(none) initializes((0, 1)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; CURRENT-CHECK-NEXT:    [[C:%.*]] = trunc i32 [[V]] to i1
+; CURRENT-CHECK-NEXT:    [[BALLOT:%.*]] = tail call i32 @llvm.amdgcn.ballot.i32(i1 [[C]])
+; CURRENT-CHECK-NEXT:    [[BALLOT_NE_ZERO:%.*]] = icmp ne i32 [[BALLOT]], 0
+; CURRENT-CHECK-NEXT:    store i1 [[BALLOT_NE_ZERO]], ptr addrspace(1) [[OUT]], align 1
+; CURRENT-CHECK-NEXT:    ret void
+;
+; PASS-CHECK-LABEL: define amdgpu_kernel void @ballot_i32(
+; PASS-CHECK-SAME: i32 [[V:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:    [[C:%.*]] = trunc i32 [[V]] to i1
+; PASS-CHECK-NEXT:    store i1 [[C]], ptr addrspace(1) [[OUT]], align 1
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define amdgpu_kernel void @ballot_i32(
+; DCE-CHECK-SAME: i32 [[V:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:    [[C:%.*]] = trunc i32 [[V]] to i1
+; DCE-CHECK-NEXT:    store i1 [[C]], ptr addrspace(1) [[OUT]], align 1
+; DCE-CHECK-NEXT:    ret void
+;
+  %c = trunc i32 %v to i1
+  %ballot = call i32 @llvm.amdgcn.ballot.i32(i1 %c)
+  %ballot_ne_zero = icmp ne i32 %ballot, 0
+  store i1 %ballot_ne_zero, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @ballot_i64(i32 %v, ptr addrspace(1) %out) {
+; CURRENT-CHECK-LABEL: define amdgpu_kernel void @ballot_i64(
+; CURRENT-CHECK-SAME: i32 [[V:%.*]], ptr addrspace(1) writeonly captures(none) initializes((0, 1)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; CURRENT-CHECK-NEXT:    [[C:%.*]] = trunc i32 [[V]] to i1
+; CURRENT-CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.amdgcn.ballot.i32(i1 [[C]])
+; CURRENT-CHECK-NEXT:    [[BALLOT_NE_ZERO:%.*]] = icmp ne i32 [[TMP1]], 0
+; CURRENT-CHECK-NEXT:    store i1 [[BALLOT_NE_ZERO]], ptr addrspace(1) [[OUT]], align 1
+; CURRENT-CHECK-NEXT:    ret void
+;
+; PASS-CHECK-LABEL: define amdgpu_kernel void @ballot_i64(
+; PASS-CHECK-SAME: i32 [[V:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:    [[C:%.*]] = trunc i32 [[V]] to i1
+; PASS-CHECK-NEXT:    store i1 [[C]], ptr addrspace(1) [[OUT]], align 1
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define amdgpu_kernel void @ballot_i64(
+; DCE-CHECK-SAME: i32 [[V:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:    [[C:%.*]] = trunc i32 [[V]] to i1
+; DCE-CHECK-NEXT:    store i1 [[C]], ptr addrspace(1) [[OUT]], align 1
+; DCE-CHECK-NEXT:    ret void
+;
+  %c = trunc i32 %v to i1
+  %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %c)
+  %ballot_ne_zero = icmp ne i64 %ballot, 0
+  store i1 %ballot_ne_zero, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @test_readlane_i16(i16 %src0, i32 %src1) {
+; CURRENT-CHECK-LABEL: define amdgpu_kernel void @test_readlane_i16(
+; CURRENT-CHECK-SAME: i16 [[SRC0:%.*]], i32 [[SRC1:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+; CURRENT-CHECK-NEXT:    [[READLANE:%.*]] = tail call i16 @llvm.amdgcn.readlane.i16(i16 [[SRC0]], i32 [[SRC1]])
+; CURRENT-CHECK-NEXT:    tail call void asm sideeffect "
+; CURRENT-CHECK-NEXT:    ret void
+;
+; PASS-CHECK-LABEL: define amdgpu_kernel void @test_readlane_i16(
+; PASS-CHECK-SAME: i16 [[SRC0:%.*]], i32 [[SRC1:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:    call void asm sideeffect "
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define amdgpu_kernel void @test_readlane_i16(
+; DCE-CHECK-SAME: i16 [[SRC0:%.*]], i32 [[SRC1:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:    call void asm sideeffect "
+; DCE-CHECK-NEXT:    ret void
+;
+  %readlane = call i16 @llvm.amdgcn.readlane.i16(i16 %src0, i32 %src1)
+  call void asm sideeffect "; use $0", "s"(i16 %readlane)
+  ret void
+}
+
+define amdgpu_kernel void @test_readlane_i64(i64 %src0, i32 %src1) {
+; CURRENT-CHECK-LABEL: define amdgpu_kernel void @test_readlane_i64(
+; CURRENT-CHECK-SAME: i64 [[SRC0:%.*]], i32 [[SRC1:%.*]]) local_unnamed_addr #[[ATTR3]] {
+; CURRENT-CHECK-NEXT:    [[READLANE:%.*]] = tail call i64 @llvm.amdgcn.readlane.i64(i64 [[SRC0]], i32 [[SRC1]])
+; CURRENT-CHECK-NEXT:    tail call void asm sideeffect "
+; CURRENT-CHECK-NEXT:    ret void
+;
+; PASS-CHECK-LABEL: define amdgpu_kernel void @test_readlane_i64(
+; PASS-CHECK-SAME: i64 [[SRC0:%.*]], i32 [[SRC1:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:    call void asm sideeffect "
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define amdgpu_kernel void @test_readlane_i64(
+; DCE-CHECK-SAME: i64 [[SRC0:%.*]], i32 [[SRC1:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:    call void asm sideeffect "
+; DCE-CHECK-NEXT:    ret void
+;
+  %readlane = call i64 @llvm.amdgcn.readlane.i64(i64 %src0, i32 %src1)
+  call void asm sideeffect "; use $0", "s"(i64 %readlane)
+  ret void
+}
+
+define amdgpu_kernel void @test_readlane_bf16(bfloat %src0, i32 %src1) {
+; CURRENT-CHECK-LABEL: define amdgpu_kernel void @test_readlane_bf16(
+; CURRENT-CHECK-SAME: bfloat [[SRC0:%.*]], i32 [[SRC1:%.*]]) local_unnamed_addr #[[ATTR3]] {
+; CURRENT-CHECK-NEXT:    [[READLANE:%.*]] = tail call bfloat @llvm.amdgcn.readlane.bf16(bfloat [[SRC0]], i32 [[SRC1]])
+; CURRENT-CHECK-NEXT:    tail call void asm sideeffect "
+; CURRENT-CHECK-NEXT:    ret void
+;
+; PASS-CHECK-LABEL: define amdgpu_kernel void @test_readlane_bf16(
+; PASS-CHECK-SAME: bfloat [[SRC0:%.*]], i32 [[SRC1:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:    call void asm sideeffect "
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define amdgpu_kernel void @test_readlane_bf16(
+; DCE-CHECK-SAME: bfloat [[SRC0:%.*]], i32 [[SRC1:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:    call void asm sideeffect "
+; DCE-CHECK-NEXT:    ret void
+;
+  %readlane = call bfloat @llvm.amdgcn.readlane.bf16(bfloat %src0, i32 %src1)
+  call void asm sideeffect "; use $0", "s"(bfloat %readlane)
+  ret void
+}
+
+define amdgpu_kernel void @test_readlane_f16(half %src0, i32 %src1) {
+; CURRENT-CHECK-LABEL: define amdgpu_kernel void @test_readlane_f16(
+; CURRENT-CHECK-SAME: half [[SRC0:%.*]], i32 [[SRC1:%.*]]) local_unnamed_addr #[[ATTR3]] {
+; CURRENT-CHECK-NEXT:    [[READLANE:%.*]] = tail call half @llvm.amdgcn.readlane.f16(half [[SRC0]], i32 [[SRC1]])
+; CURRENT-CHECK-NEXT:    tail call void asm sideeffect "
+; CURRENT-CHECK-NEXT:    ret void
+;
+; PASS-CHECK-LABEL: define amdgpu_kernel void @test_readlane_f16(
+; PASS-CHECK-SAME: half [[SRC0:%.*]], i32 [[SRC1:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:    call void asm sideeffect "
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define amdgpu_kernel void @test_readlane_f16(
+; DCE-CHECK-SAME: half [[SRC0:%.*]], i32 [[SRC1:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:    call void asm sideeffect "
+; DCE-CHECK-NEXT:    ret void
+;
+  %readlane = call half @llvm.amdgcn.readlane.f16(half %src0, i32 %src1)
+  call void asm sideeffect "; use $0", "s"(half %readlane)
+  ret void
+}
+
+define amdgpu_kernel void @test_readlane_f32(float %src0, i32 %src1) {
+; CURRENT-CHECK-LABEL: define amdgpu_kernel void @test_readlane_f32(
+; CURRENT-CHECK-SAME: float [[SRC0:%.*]], i32 [[SRC1:%.*]]) local_unnamed_addr #[[ATTR3]] {
+; CURRENT-CHECK-NEXT:    [[READLANE:%.*]] = tail call float @llvm.amdgcn.readlane.f32(float [[SRC0]], i32 [[SRC1]])
+; CURRENT-CHECK-NEXT:    tail call void asm sideeffect "
+; CURRENT-CHECK-NEXT:    ret void
+;
+; PASS-CHECK-LABEL: define amdgpu_kernel void @test_readlane_f32(
+; PASS-CHECK-SAME: float [[SRC0:%.*]], i32 [[SRC1:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:    call void asm sideeffect "
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define amdgpu_kernel void @test_readlane_f32(
+; DCE-CHECK-SAME: float [[SRC0:%.*]], i32 [[SRC1:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:    call void asm sideeffect "
+; DCE-CHECK-NEXT:    ret void
+;
+  %readlane = call float @llvm.amdgcn.readlane.f32(float %src0, i32 %src1)
+  call void asm sideeffect "; use $0", "s"(float %readlane)
+  ret void
+}
+
+define amdgpu_kernel void @test_readlane_f64(double %src0, i32 %src1) {
+; CURRENT-CHECK-LABEL: define amdgpu_kernel void @test_readlane_f64(
+; CURRENT-CHECK-SAME: double [[SRC0:%.*]], i32 [[SRC1:%.*]]) local_unnamed_addr #[[ATTR3]] {
+; CURRENT-CHECK-NEXT:    [[READLANE:%.*]] = tail call double @llvm.amdgcn.readlane.f64(double [[SRC0]], i32 [[SRC1]])
+; CURRENT-CHECK-NEXT:    tail call void asm sideeffect "
+; CURRENT-CHECK-NEXT:    ret void
+;
+; PASS-CHECK-LABEL: define amdgpu_kernel void @test_readlane_f64(
+; PASS-CHECK-SAME: double [[SRC0:%.*]], i32 [[SRC1:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:    call void asm sideeffect "
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define amdgpu_kernel void @test_readlane_f64(
+; DCE-CHECK-SAME: double [[SRC0:%.*]], i32 [[SRC1:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:    call void asm sideeffect "
+; DCE-CHECK-NEXT:    ret void
+;
+  %readlane = call double @llvm.amdgcn.readlane.f64(double %src0, i32 %src1)
+  call void asm sideeffect "; use $0", "s"(double %readlane)
+  ret void
+}
+; All such cases can be optimised, given generic way to query getDeclarationIfExists()
+define void @test_readlane_v8i16(ptr addrspace(1) %out, <8 x i16> %src, i32 %src1) {
+; CURRENT-CHECK-LABEL: define void @test_readlane_v8i16(
+; CURRENT-CHECK-SAME: ptr addrspace(1) readnone captures(none) [[OUT:%.*]], <8 x i16> [[SRC:%.*]], i32 [[SRC1:%.*]]) local_unnamed_addr #[[ATTR3]] {
+; CURRENT-CHECK-NEXT:    [[X:%.*]] = tail call <8 x i16> @llvm.amdgcn.readlane.v8i16(<8 x i16> [[SRC]], i32 [[SRC1]])
+; CURRENT-CHECK-NEXT:    tail call void asm sideeffect "
+; CURRENT-CHECK-NEXT:    ret void
+;
+; PASS-CHECK-LABEL: define void @test_readlane_v8i16(
+; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], <8 x i16> [[SRC:%.*]], i32 [[SRC1:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:    [[X:%.*]] = call <8 x i16> @llvm.amdgcn.readlane.v8i16(<8 x i16> [[SRC]], i32 [[SRC1]])
+; PASS-CHECK-NEXT:    call void asm sideeffect "
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define void @test_readlane_v8i16(
+; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], <8 x i16> [[SRC:%.*]], i32 [[SRC1:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:    [[X:%.*]] = call <8 x i16> @llvm.amdgcn.readlane.v8i16(<8 x i16> [[SRC]], i32 [[SRC1]])
+; DCE-CHECK-NEXT:    call void asm sideeffect "
+; DCE-CHECK-NEXT:    ret void
+;
+  %x = call <8 x i16> @llvm.amdgcn.readlane.v8i16(<8 x i16> %src, i32 %src1)
+  call void asm sideeffect "; use $0", "s"(<8 x i16> %x)
+  ret void
+}
