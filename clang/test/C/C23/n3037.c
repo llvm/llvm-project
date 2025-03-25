@@ -419,3 +419,38 @@ enum fixed_test_1 : int { FT1 }; // c17-error {{redefinition of 'fixed_test_1'}}
 enum fixed_test_2 : int { FT2 };                 // c17-note 2 {{previous definition is here}}
 enum fixed_test_2 : typedef_of_type_int { FT2 }; // c17-error {{redefinition of 'fixed_test_2'}} \
                                                     c17-error {{redefinition of enumerator 'FT2'}}
+
+// Test more bizarre situations in terms of where the type is declared. This
+// has always been allowed.
+struct declared_funny_1 { int x; }
+declared_funny_func(struct declared_funny_1 { int x; } arg) { // both-warning {{declaration of 'struct declared_funny_1' will not be visible outside of this function}}
+  return declared_funny_func((__typeof__(arg)){ 0 });
+}
+
+// However, this is new.
+struct Outer {
+  struct Inner { // c17-note {{previous definition is here}}
+    int x;
+  } i;
+
+  enum InnerEnum { // c17-note {{previous definition is here}}
+    IE1            // c17-note {{previous definition is here}}
+  } j;
+};
+
+struct Inner {   // c17-error {{redefinition of 'Inner'}}
+  int x;
+};
+
+enum InnerEnum { // c17-error {{redefinition of 'InnerEnum'}}
+  IE1            // c17-error {{redefinition of enumerator 'IE1'}}
+};
+
+void hidden(void) {
+  struct hidden_struct { int x; };
+}
+
+struct hidden_struct { // This is fine because the previous declaration is not visible.
+  int y;
+  int z;
+};
