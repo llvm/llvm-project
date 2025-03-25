@@ -1392,9 +1392,8 @@ define i16 @basic_smax_smin_vec_input(<2 x i16> %src) {
 ; SDAG-GFX12-TRUE16-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
 ; SDAG-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; SDAG-GFX12-TRUE16-NEXT:    v_pk_max_i16 v1, v0, 0
-; SDAG-GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
-; SDAG-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG-GFX12-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 8, v0.l
+; SDAG-GFX12-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 8, v1.h
+; SDAG-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX12-TRUE16-NEXT:    v_or_b16 v0.l, v1.l, v0.l
 ; SDAG-GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1542,9 +1541,8 @@ define i16 @basic_smax_smin_vec_input_rev(<2 x i16> %src) {
 ; SDAG-GFX12-TRUE16-NEXT:    v_pk_max_i16 v0, v0, 0
 ; SDAG-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; SDAG-GFX12-TRUE16-NEXT:    v_pk_min_i16 v1, 0xff, v0 op_sel_hi:[0,1]
-; SDAG-GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
-; SDAG-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG-GFX12-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 8, v0.l
+; SDAG-GFX12-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 8, v1.h
+; SDAG-GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX12-TRUE16-NEXT:    v_or_b16 v0.l, v1.l, v0.l
 ; SDAG-GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
