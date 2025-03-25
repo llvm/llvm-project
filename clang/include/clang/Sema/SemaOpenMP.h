@@ -851,7 +851,7 @@ public:
 
   StmtResult ActOnOpenMPCompoundRootDirective(OpenMPDirectiveKind DKind,
                                               ArrayRef<OMPClause *> Clauses,
-                                              Stmt *AStmt,
+                                              Stmt *AStmt, Stmt *UStmt,
                                               SourceLocation StartLoc,
                                               SourceLocation EndLoc);
 

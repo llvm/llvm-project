@@ -206,6 +206,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     break;
   case Stmt::OMPCompoundRootDirectiveClass:
     // Skip this node, go straight through to the associated statement.
+    // Ignore the unparse statement.
     EmitStmt(cast<OMPCompoundRootDirective>(*S).getAssociatedStmt(), Attrs);
     break;
   case Stmt::OMPOpaqueBlockDirectiveClass:

@@ -1571,6 +1571,8 @@ class OMPCompoundRootDirective final : public OMPExecutableDirective {
   friend class ASTStmtReader;
   friend class OMPExecutableDirective;
 
+  void setUnparseStmt(Stmt *S) { Data->getChildren()[0] = S; }
+
   /// Build directive with the given start and end location.
   ///
   /// \param DKind The OpenMP directive kind.
@@ -1602,7 +1604,7 @@ public:
   static OMPCompoundRootDirective *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
          OpenMPDirectiveKind DKind, ArrayRef<OMPClause *> Clauses,
-         Stmt *AssociatedStmt);
+         Stmt *AssociatedStmt, Stmt *UnparseStmt);
 
   /// Creates an empty directive with the place for \a NumClauses
   /// clauses.
@@ -1617,6 +1619,10 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPCompoundRootDirectiveClass;
+  }
+
+  Stmt *getUnparseStmt() const {
+    return cast_or_null<Stmt>(Data->getChildren()[0]);
   }
 };
 

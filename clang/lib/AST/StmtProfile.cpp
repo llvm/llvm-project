@@ -969,6 +969,7 @@ StmtProfiler::VisitOMPExecutableDirective(const OMPExecutableDirective *S) {
 
 void StmtProfiler::VisitOMPCompoundRootDirective(
     const OMPCompoundRootDirective *S) {
+  // Ignore UnparseStmt.
   VisitOMPExecutableDirective(S);
 }
 
