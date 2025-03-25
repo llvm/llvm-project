@@ -4915,6 +4915,11 @@ llvm::LogicalResult fir::DoConcurrentLoopOp::verify() {
   return mlir::success();
 }
 
+std::optional<llvm::SmallVector<mlir::Value>>
+fir::DoConcurrentLoopOp::getLoopInductionVars() {
+  return llvm::SmallVector<mlir::Value>{getBody()->getArguments()};
+}
+
 //===----------------------------------------------------------------------===//
 // FIROpsDialect
 //===----------------------------------------------------------------------===//

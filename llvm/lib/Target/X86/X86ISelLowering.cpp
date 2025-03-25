@@ -37269,7 +37269,7 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
   for (unsigned CSI = 1; CSI <= MaxCSNum; ++CSI) {
     for (auto &LP : CallSiteNumToLPad[CSI]) {
       LPadList.push_back(LP);
-      InvokeBBs.insert(LP->pred_begin(), LP->pred_end());
+      InvokeBBs.insert_range(LP->predecessors());
     }
   }
 
@@ -37430,15 +37430,15 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
       if (!II.isCall())
         continue;
 
-      DenseMap<Register, bool> DefRegs;
+      DenseSet<Register> DefRegs;
       for (auto &MOp : II.operands())
         if (MOp.isReg())
-          DefRegs[MOp.getReg()] = true;
+          DefRegs.insert(MOp.getReg());
 
       MachineInstrBuilder MIB(*MF, &II);
       for (unsigned RegIdx = 0; SavedRegs[RegIdx]; ++RegIdx) {
         Register Reg = SavedRegs[RegIdx];
-        if (!DefRegs[Reg])
+        if (!DefRegs.contains(Reg))
           MIB.addReg(Reg, RegState::ImplicitDefine | RegState::Dead);
       }
 
@@ -40892,6 +40892,7 @@ static SDValue combineX86ShufflesRecursively(
   MVT RootVT = Root.getSimpleValueType();
   assert(RootVT.isVector() && "Shuffles operate on vector types!");
   unsigned RootSizeInBits = RootVT.getSizeInBits();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // Bound the depth of our recursive combine because this is ultimately
   // quadratic in nature.
@@ -41250,9 +41251,8 @@ static SDValue combineX86ShufflesRecursively(
     APInt OpScaledDemandedElts = APIntOps::ScaleBitMask(OpDemandedElts, NumOpElts);
 
     // Can this operand be simplified any further, given it's demanded elements?
-    if (SDValue NewOp =
-            DAG.getTargetLoweringInfo().SimplifyMultipleUseDemandedVectorElts(
-                Op, OpScaledDemandedElts, DAG))
+    if (SDValue NewOp = TLI.SimplifyMultipleUseDemandedVectorElts(
+            Op, OpScaledDemandedElts, DAG))
       Op = NewOp;
   }
   // FIXME: should we rerun resolveTargetShuffleInputsAndMask() now?
@@ -58510,7 +58510,9 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                         (EltSizeInBits >= 32 || Subtarget.useBWIRegs())))) {
         SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
         SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
-        if (Concat0 || Concat1)
+        if (Concat0 || Concat1 || llvm::all_of(Ops, [](SDValue Op) {
+              return Op.getOperand(0) == Op.getOperand(1);
+            }))
           return DAG.getNode(Opcode, DL, VT,
                              Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
                              Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1));

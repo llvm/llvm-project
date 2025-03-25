@@ -47,6 +47,35 @@ template <typename T> constexpr int asint(T F) {
 }
 
 //===----------------------------------------------------------------------===//
+// asint16 builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn int16_t asint16(T X)
+/// \brief Interprets the bit pattern of \a X as an 16-bit integer.
+/// \param X The input value.
+
+#ifdef __HLSL_ENABLE_16_BIT
+
+template <typename T, int N>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+constexpr __detail::enable_if_t<__detail::is_same<int16_t, T>::value ||
+                                    __detail::is_same<uint16_t, T>::value ||
+                                    __detail::is_same<half, T>::value,
+                                vector<int16_t, N>> asint16(vector<T, N> V) {
+  return __detail::bit_cast<int16_t, T, N>(V);
+}
+
+template <typename T>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+constexpr __detail::enable_if_t<__detail::is_same<int16_t, T>::value ||
+                                    __detail::is_same<uint16_t, T>::value ||
+                                    __detail::is_same<half, T>::value,
+                                int16_t> asint16(T F) {
+  return __detail::bit_cast<int16_t, T>(F);
+}
+#endif
+
+//===----------------------------------------------------------------------===//
 // asuint builtins
 //===----------------------------------------------------------------------===//
 
@@ -87,6 +116,7 @@ void asuint(double4, out uint4, out uint4);
 /// \fn uint16_t asuint16(T X)
 /// \brief Interprets the bit pattern of \a X as an 16-bit unsigned integer.
 /// \param X The input value.
+
 #ifdef __HLSL_ENABLE_16_BIT
 
 template <typename T, int N>

@@ -477,6 +477,11 @@ math_test(
 # TODO: Add fma, fmaf, fmal, fmaf128 tests.
 
 math_test(
+    name = "fmaf16",
+    hdrs = ["FmaTest.h"],
+)
+
+math_test(
     name = "fmax",
     hdrs = ["FMaxTest.h"],
 )
