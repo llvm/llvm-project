@@ -138,10 +138,10 @@ TEST(CaptureTracking, DerivedPointerIfBasePointerCaptured) {
     declare void @bar(ptr)
 
     define void @test() {
-      %stkobj = alloca [2 x i32]
-      %derived = getelementptr inbounds [2 x i32], ptr %stkobj, i64 0, i64 1
+      %stack_obj = alloca [2 x i32]
+      %derived = getelementptr inbounds [2 x i32], ptr %stack_obj, i64 0, i64 1
       store i32 1, ptr %derived
-      call void @bar(ptr %stkobj)
+      call void @bar(ptr %stack_obj)
       ret void
     }
   )";
@@ -154,9 +154,9 @@ TEST(CaptureTracking, DerivedPointerIfBasePointerCaptured) {
   Function *F = M->getFunction("test");
   BasicBlock *BB = &F->getEntryBlock();
   Instruction *StackObj = &*BB->begin();
-  Instruction *DerviedPtr = StackObj->getNextNode();
+  Instruction *DerivedPtr = StackObj->getNextNode();
   
   // The base object and its derived pointer are both captured.
   EXPECT_TRUE(PointerMayBeCaptured(StackObj, true));
-  EXPECT_TRUE(PointerMayBeCaptured(DerviedPtr, true));
+  EXPECT_TRUE(PointerMayBeCaptured(DerivedPtr, true));
 }
