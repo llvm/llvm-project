@@ -38,9 +38,12 @@ void f7(const int* const volatile (&)[1]);
 int f7(const int* const (&)[1]);
 int i7 = f7(ap);
 
-int f8(const int* const (&)[]);           // since-cxx20-note {{candidate function}}
-int f8(const volatile int* const (&)[1]); // since-cxx20-note {{candidate function}}
-int i8 = f8(ap); // since-cxx20-error {{ambiguous}}
+int f8(const int* const (&)[]);
+int f8(const volatile int* const (&)[1]);
+int i8 = f8(ap);
+// since-cxx20-error@-1 {{ambiguous}}
+//   since-cxx20-note@-4 {{candidate function}}
+//   since-cxx20-note@-4 {{candidate function}}
 
 void f9(const volatile int* const (&)[]);
 int f9(const int* const volatile (&)[1]);
@@ -50,13 +53,19 @@ void f10(int (&)[]);
 int f10(int (&)[1]);
 int i10 = f10(a);
 
-int f11(int (&)[]);        // since-cxx20-note {{candidate function}}
-int f11(const int (&)[1]); // since-cxx20-note {{candidate function}}
-int i11 = f11(a); // since-cxx20-error {{ambiguous}}
+int f11(int (&)[]);
+int f11(const int (&)[1]);
+int i11 = f11(a);
+// since-cxx20-error@-1 {{ambiguous}}
+//   since-cxx20-note@-4 {{candidate function}}
+//   since-cxx20-note@-4 {{candidate function}}
 
-int f12(const int (&)[]);     // since-cxx20-note {{candidate function}}
-int f12(volatile int (&)[1]); // since-cxx20-note {{candidate function}}
-int i12 = f12(a); // since-cxx20-error {{ambiguous}}
+int f12(const int (&)[]);
+int f12(volatile int (&)[1]);
+int i12 = f12(a);
+// since-cxx20-error@-1 {{ambiguous}}
+//   since-cxx20-note@-4 {{candidate function}}
+//   since-cxx20-note@-4 {{candidate function}}
 
 #if __cpp_rvalue_references >= 200610
 void f13(const int* const&&);
@@ -74,8 +83,9 @@ constexpr int f15(const int (&)[1]) {
 	return 2;
 }
 constexpr int i15 = f15(static_cast<int (&&)[1]>(a));
-static_assert(i15 == 2, ""); // since-cxx20-error {{static assertion failed}}
-// since-cxx20-note@-1 {{expression evaluates to '1 == 2'}}
+static_assert(i15 == 2, "");
+// since-cxx20-error@-1 {{static assertion failed}}
+//   since-cxx20-note@-2 {{expression evaluates to '1 == 2'}}
 #endif
 
 } // namespace cwg2803

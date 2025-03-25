@@ -104,7 +104,7 @@ void test() {
   constexpr auto y = &X<false>::f;
   static_assert(__is_same(decltype(y), int(*const)(short)));
   static_assert(y(0) == 24, "");
-  
+
   constexpr auto z = &f<int>;
   static_assert(__is_same(decltype(z), int(*const)(int)));
   static_assert(z(0) == 2, "");
@@ -182,12 +182,18 @@ void f2(const volatile int* const&);
 int f2(const int*);
 int i2 = f2((int*)0);
 
-int f3(const int* const*);                // expected-note {{candidate function}}
-int f3(const volatile int* const (&)[1]); // expected-note {{candidate function}}
-int i3 = f3(ap); // expected-error {{ambiguous}}
+int f3(const int* const*);
+int f3(const volatile int* const (&)[1]);
+int i3 = f3(ap);
+// expected-error@-1 {{ambiguous}}
+//   expected-note@-4 {{candidate function}}
+//   expected-note@-4 {{candidate function}}
 
-int f4(const volatile int* const*); // expected-note {{candidate function}}
-int f4(const int* const (&)[1]);    // expected-note {{candidate function}}
-int i4 = f4(ap); // expected-error {{ambiguous}}
+int f4(const volatile int* const*);
+int f4(const int* const (&)[1]);
+int i4 = f4(ap);
+// expected-error@-1 {{ambiguous}}
+//   expected-note@-4 {{candidate function}}
+//   expected-note@-4 {{candidate function}}
 
 } // namespace cwg2958

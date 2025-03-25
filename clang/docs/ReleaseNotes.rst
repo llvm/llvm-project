@@ -111,9 +111,8 @@ Resolutions to C++ Defect Reports
   in the previous release, as described in P3310 and P3579, made this flag unnecessary.
 
 - Implemented `CWG2803 Overload resolution for reference binding of similar types <https://cplusplus.github.io/CWG/issues/2803>`_,
-  as amended by the proposed resolution of `CWG2958 Overload resolution involving lvalue transformation and qualification conversion <https://cplusplus.github.io/CWG/issues/2958>`_
-- Implemented `CWG2918 Consideration of constraints for address of overloaded `
-  `function <https://cplusplus.github.io/CWG/issues/2918.html>`_
+  as amended by the possible resolution of `CWG2958 Overload resolution involving lvalue transformation and qualification conversion <https://cplusplus.github.io/CWG/issues/2958>`_
+- Implemented `CWG2918 Consideration of constraints for address of overloaded function <https://cplusplus.github.io/CWG/issues/2918.html>`_
 
 - Bumped the ``__cpp_constexpr`` feature-test macro to ``202002L`` in C++20 mode as indicated in
   `P2493R0 <https://wg21.link/P2493R0>`_.
