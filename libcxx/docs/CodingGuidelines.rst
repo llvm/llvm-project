@@ -81,7 +81,7 @@ and then checking for ``#ifdef _LIBCPP_SOMETHING_ENABLED``.
 
 This makes it significantly easier to catch missing includes: Clang and GCC with ``-Wundef`` enabled will warn
 when using an undefined macro inside an ``#if`` statement. Some macros in libc++ don't use this style yet,
-so this guidelines only applies when introducing a new macro.
+so this guideline only applies when introducing a new macro.
 
 This is partially enforced by the clang-tidy check ``libcpp-internal-ftms``.
 
