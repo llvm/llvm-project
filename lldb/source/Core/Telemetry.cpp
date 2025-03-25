@@ -141,15 +141,13 @@ void TelemetryManager::DispatchClientTelemetry(
     LLDB_LOG(GetLog(LLDBLog::Object),
              "Cannot determine request name from client-telemetry entry");
 
-  SteadyTimePoint epoch;
   int64_t start_time;
   if (dict->GetValueForKeyAsInteger("start_time", start_time)) {
-    client_info.start_time =
-        epoch + std::chrono::nanoseconds(static_cast<size_t>(start_time));
+    client_info.start_time +=
+        std::chrono::nanoseconds(static_cast<size_t>(start_time));
   } else {
     LLDB_LOG(GetLog(LLDBLog::Object),
              "Cannot determine start-time from client-telemetry entry");
-    client_info.start_time = epoch;
   }
 
   int64_t end_time;
