@@ -98,6 +98,8 @@ public:
     return llvm::DebuggerKind::DBX;
   }
 
+  SanitizerMask getSupportedSanitizers() const override;
+
 protected:
   Tool *buildAssembler() const override;
   Tool *buildLinker() const override;
