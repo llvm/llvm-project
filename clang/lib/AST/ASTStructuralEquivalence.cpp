@@ -517,8 +517,7 @@ CheckStructurallyEquivalentAttributes(StructuralEquivalenceContext &Context,
   llvm::sort(Attrs2, Sorter);
 
   auto A2 = Attrs2.begin(), A2End = Attrs2.end();
-  const NamedDecl *DiagnoseDecl =
-      cast<NamedDecl>(PrimaryDecl ? PrimaryDecl : D2);
+  const auto *DiagnoseDecl = cast<TypeDecl>(PrimaryDecl ? PrimaryDecl : D2);
   for (auto A1 = Attrs1.begin(), A1End = Attrs1.end(); A1 != A1End;
        ++A1, ++A2) {
     if (A2 == A2End) {
@@ -526,7 +525,8 @@ CheckStructurallyEquivalentAttributes(StructuralEquivalenceContext &Context,
         Context.Diag2(DiagnoseDecl->getLocation(),
                       Context.getApplicableDiagnostic(
                           diag::err_odr_tag_type_inconsistent))
-            << DiagnoseDecl << (&Context.FromCtx != &Context.ToCtx);
+            << Context.ToCtx.getTypeDeclType(DiagnoseDecl)
+            << (&Context.FromCtx != &Context.ToCtx);
         Context.Diag1((*A1)->getLocation(), diag::note_odr_attr) << *A1;
         Context.Diag2(D2->getLocation(), diag::note_odr_attr_missing);
       }
@@ -538,7 +538,8 @@ CheckStructurallyEquivalentAttributes(StructuralEquivalenceContext &Context,
         Context.Diag2(DiagnoseDecl->getLocation(),
                       Context.getApplicableDiagnostic(
                           diag::err_odr_tag_type_inconsistent))
-            << DiagnoseDecl << (&Context.FromCtx != &Context.ToCtx);
+            << Context.ToCtx.getTypeDeclType(DiagnoseDecl)
+            << (&Context.FromCtx != &Context.ToCtx);
         Context.Diag2((*A2)->getLocation(), diag::note_odr_attr) << *A2;
         Context.Diag1((*A1)->getLocation(), diag::note_odr_attr) << *A1;
       }
@@ -551,7 +552,8 @@ CheckStructurallyEquivalentAttributes(StructuralEquivalenceContext &Context,
       Context.Diag2(
           DiagnoseDecl->getLocation(),
           Context.getApplicableDiagnostic(diag::err_odr_tag_type_inconsistent))
-          << DiagnoseDecl << (&Context.FromCtx != &Context.ToCtx);
+          << Context.ToCtx.getTypeDeclType(DiagnoseDecl)
+          << (&Context.FromCtx != &Context.ToCtx);
       Context.Diag1(D1->getLocation(), diag::note_odr_attr_missing);
       Context.Diag1((*A2)->getLocation(), diag::note_odr_attr) << *A2;
     }

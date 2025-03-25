@@ -65,7 +65,7 @@ struct [[gnu::packed]] attr_test { // c17-note {{previous definition is here}} \
 };
 
 struct attr_test { // c17-error {{redefinition of 'attr_test'}} \
-                      c23-error {{type 'attr_test' has incompatible definitions}} \
+                      c23-error {{type 'struct attr_test' has incompatible definitions}} \
                       c23-note {{no corresponding attribute here}}
   int x;
 };
@@ -76,7 +76,7 @@ struct attr_test_2 { // c17-note {{previous definition is here}} \
 };
 
 struct [[gnu::packed]] attr_test_2 { // c17-error {{redefinition of 'attr_test_2'}} \
-                                        c23-error {{type 'attr_test_2' has incompatible definitions}} \
+                                        c23-error {{type 'struct attr_test_2' has incompatible definitions}} \
                                         c23-note {{attribute 'packed' here}}
   int x;
 };
@@ -87,7 +87,7 @@ struct [[deprecated]] attr_test_3 { // c17-note {{previous definition is here}} 
 };
 
 struct [[gnu::packed]] attr_test_3 { // c17-error {{redefinition of 'attr_test_3'}} \
-                                        c23-error {{type 'attr_test_3' has incompatible definitions}} \
+                                        c23-error {{type 'struct attr_test_3' has incompatible definitions}} \
                                         c23-note {{attribute 'packed' here}}
   int x;
 };
@@ -119,7 +119,7 @@ struct [[deprecated("testing")]] attr_test_6 { // c17-note {{previous definition
 };
 
 struct [[deprecated("oh no!")]] attr_test_6 { // c17-error {{redefinition of 'attr_test_6'}} \
-                                                 c23-error {{type 'attr_test_6' has incompatible definitions}} \
+                                                 c23-error {{type 'struct attr_test_6' has incompatible definitions}} \
                                                  c23-note {{attribute 'deprecated' here}}
   int x;
 };
@@ -131,7 +131,7 @@ struct field_attr_test_1 { // c17-note {{previous definition is here}}
 };
 
 struct field_attr_test_1 { // c17-error {{redefinition of 'field_attr_test_1'}} \
-                              c23-error {{type 'field_attr_test_1' has incompatible definitions}}
+                              c23-error {{type 'struct field_attr_test_1' has incompatible definitions}}
   int x;
   int y; // c23-note {{no corresponding attribute here}}
 };
@@ -142,7 +142,7 @@ struct field_attr_test_2 { // c17-note {{previous definition is here}}
 };
 
 struct field_attr_test_2 { // c17-error {{redefinition of 'field_attr_test_2'}} \
-                              c23-error {{type 'field_attr_test_2' has incompatible definitions}}
+                              c23-error {{type 'struct field_attr_test_2' has incompatible definitions}}
   int x; // c23-note {{no corresponding attribute here}}
   int y;
 };
@@ -163,7 +163,7 @@ struct field_attr_test_4 { // c17-note {{previous definition is here}}
 };
 
 struct field_attr_test_4 { // c17-error {{redefinition of 'field_attr_test_4'}} \
-                              c23-error {{type 'field_attr_test_4' has incompatible definitions}}
+                              c23-error {{type 'struct field_attr_test_4' has incompatible definitions}}
   [[deprecated]] int x; // c23-note {{attribute 'deprecated' here}}
   int y;
 };
@@ -198,7 +198,7 @@ struct [[gnu::packed]] field_attr_test_7 { // c17-note {{previous definition is 
 };
 
 struct __attribute__((packed)) field_attr_test_7 { // c17-error {{redefinition of 'field_attr_test_7'}} \
-                                                      c23-error {{type 'field_attr_test_7' has incompatible definitions}} \
+                                                      c23-error {{type 'struct field_attr_test_7' has incompatible definitions}} \
                                                       c23-note {{attribute 'packed' here}}
   int x;
   int y;
@@ -213,7 +213,7 @@ struct [[nodiscard]] field_attr_test_8 { // c17-note {{previous definition is he
 };
 
 struct [[gnu::warn_unused_result]] field_attr_test_8 { // c17-error {{redefinition of 'field_attr_test_8'}} \
-                                                          c23-error {{type 'field_attr_test_8' has incompatible definitions}} \
+                                                          c23-error {{type 'struct field_attr_test_8' has incompatible definitions}} \
                                                           c23-note {{attribute 'warn_unused_result' here}}
   int x;
   int y;
@@ -291,7 +291,7 @@ struct bit_field_3 { // c17-note {{previous definition is here}}
 };
 
 struct bit_field_3 { // c17-error {{redefinition of 'bit_field_3'}} \
-                        c23-error {{type 'bit_field_3' has incompatible definitions}}
+                        c23-error {{type 'struct bit_field_3' has incompatible definitions}}
   int a : 1;
   [[deprecated]] int b : 1; // c23-note {{attribute 'deprecated' here}}
 };
@@ -360,7 +360,7 @@ enum [[deprecated]] enum_attr_test_2 { // c17-note {{previous definition is here
 };
 
 enum enum_attr_test_2 { // c17-error {{redefinition of 'enum_attr_test_2'}} \
-                           c23-error {{type 'enum_attr_test_2' has incompatible definition}} \
+                           c23-error {{type 'enum enum_attr_test_2' has incompatible definition}} \
                            c23-note {{no corresponding attribute here}}
   EAT2 // c17-error {{redefinition of enumerator 'EAT2'}}
 };
@@ -371,7 +371,7 @@ enum enum_attr_test_3 { // c17-note {{previous definition is here}} \
 };
 
 enum [[deprecated]] enum_attr_test_3 { // c17-error {{redefinition of 'enum_attr_test_3'}} \
-                                          c23-error {{type 'enum_attr_test_3' has incompatible definition}} \
+                                          c23-error {{type 'enum enum_attr_test_3' has incompatible definition}} \
                                           c23-note {{attribute 'deprecated' here}}
   EAT3 // c17-error {{redefinition of enumerator 'EAT3'}}
 };
@@ -382,7 +382,7 @@ enum [[clang::flag_enum]] enum_attr_test_4 { // c17-note {{previous definition i
 };
 
 enum [[deprecated]] enum_attr_test_4 { // c17-error {{redefinition of 'enum_attr_test_4'}} \
-                                          c23-error {{type 'enum_attr_test_4' has incompatible definition}} \
+                                          c23-error {{type 'enum enum_attr_test_4' has incompatible definition}} \
                                           c23-note {{attribute 'deprecated' here}}
   EAT4 // c17-error {{redefinition of enumerator 'EAT4'}}
 };
@@ -393,7 +393,7 @@ enum enum_attr_test_5 { // c17-note {{previous definition is here}}
 };
 
 enum enum_attr_test_5 { // c17-error {{redefinition of 'enum_attr_test_5'}} \
-                           c23-error {{type 'enum_attr_test_5' has incompatible definition}}
+                           c23-error {{type 'enum enum_attr_test_5' has incompatible definition}}
   EAT5 // c17-error {{redefinition of enumerator 'EAT5'}} \
           c23-note {{no corresponding attribute here}}
 };
@@ -404,7 +404,7 @@ enum enum_attr_test_6 { // c17-note {{previous definition is here}}
 };
 
 enum enum_attr_test_6 { // c17-error {{redefinition of 'enum_attr_test_6'}} \
-                           c23-error {{type 'enum_attr_test_6' has incompatible definition}}
+                           c23-error {{type 'enum enum_attr_test_6' has incompatible definition}}
   EAT6 [[deprecated]] // c17-error {{redefinition of enumerator 'EAT6'}} \
                          c23-note {{attribute 'deprecated' here}}
 };
