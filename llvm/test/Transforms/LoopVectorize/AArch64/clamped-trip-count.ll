@@ -30,8 +30,7 @@ define void @clamped_tc_8(ptr nocapture %dst, i32 %n, i64 %val) vscale_range(1,1
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 8 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 8 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP13]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = shl nuw nsw <vscale x 8 x i64> [[VEC_IND]], splat (i64 3)
 ; CHECK-NEXT:    [[TMP11:%.*]] = lshr <vscale x 8 x i64> [[BROADCAST_SPLAT]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = trunc <vscale x 8 x i64> [[TMP11]] to <vscale x 8 x i8>
@@ -116,8 +115,7 @@ define void @clamped_tc_max_8(ptr nocapture %dst, i32 %n, i64 %val) vscale_range
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 8 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 8 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP13]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = shl nuw nsw <vscale x 8 x i64> [[VEC_IND]], splat (i64 3)
 ; CHECK-NEXT:    [[TMP11:%.*]] = lshr <vscale x 8 x i64> [[BROADCAST_SPLAT]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = trunc <vscale x 8 x i64> [[TMP11]] to <vscale x 8 x i8>

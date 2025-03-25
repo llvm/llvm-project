@@ -382,6 +382,8 @@ Target Specific Changes
 AMDGPU Support
 ^^^^^^^^^^^^^^
 
+- Bump the default code object version to 6. ROCm 6.3 is required to run any program compiled with COV6.
+
 NVPTX Support
 ^^^^^^^^^^^^^^
 
@@ -423,6 +425,11 @@ RISC-V Support
 
 - Add support for `-mtune=generic-ooo` (a generic out-of-order model).
 
+- Adds support for `__attribute__((interrupt("qci-nest")))` and
+  `__attribute__((interrupt("qci-nonest")))`. These use instructions from
+  Qualcomm's `Xqciint` extension to save and restore some GPRs in interrupt
+  service routines.
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -456,11 +463,6 @@ AST Matchers
 - Ensure ``isDerivedFrom`` matches the correct base in case more than one alias exists.
 - Extend ``templateArgumentCountIs`` to support function and variable template
   specialization.
-- Move ``ast_matchers::MatchFinder::MatchFinderOptions`` to
-  ``ast_matchers::MatchFinderOptions``.
-- Add a boolean member ``SkipSystemHeaders`` to ``MatchFinderOptions``, and make
-  ``MatchASTConsumer`` receive a reference to ``MatchFinderOptions`` in the
-  constructor. This allows it to skip system headers when traversing the AST.
 
 clang-format
 ------------
@@ -523,6 +525,12 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
+- Made ``Cursor`` hashable.
+- Added ``Cursor.has_attrs``, a binding for ``clang_Cursor_hasAttrs``, to check
+  whether a cursor has any attributes.
+- Added ``Cursor.specialized_template``, a binding for
+  ``clang_getSpecializedCursorTemplate``, to retrieve the primary template that
+  the cursor is a specialization of.
 - Added ``Type.get_methods``, a binding for ``clang_visitCXXMethods``, which
   allows visiting the methods of a class.
 

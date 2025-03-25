@@ -1392,6 +1392,8 @@ def fhip_emit_relocatable : Flag<["-"], "fhip-emit-relocatable">,
   HelpText<"Compile HIP source to relocatable">;
 def fno_hip_emit_relocatable : Flag<["-"], "fno-hip-emit-relocatable">,
   HelpText<"Do not override toolchain to compile HIP source to relocatable">;
+def flto_partitions_EQ : Joined<["--"], "flto-partitions=">, Group<hip_Group>,
+  HelpText<"Number of partitions to use for parallel full LTO codegen. Use 1 to disable partitioning.">;
 }
 
 // Clang specific/exclusive options for OpenACC.
@@ -5161,12 +5163,12 @@ defm amdgpu_ieee : BoolMOption<"amdgpu-ieee",
   NegFlag<SetFalse, [], [ClangOption, CC1Option]>>;
 
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
-  HelpText<"Specify code object ABI version. Defaults to 5. (AMDGPU only)">,
+  HelpText<"Specify code object ABI version. Defaults to 6. (AMDGPU only)">,
   Visibility<[ClangOption, FlangOption, CC1Option, FC1Option]>,
   Values<"none,4,5,6">,
   NormalizedValuesScope<"llvm::CodeObjectVersionKind">,
   NormalizedValues<["COV_None", "COV_4", "COV_5", "COV_6"]>,
-  MarshallingInfoEnum<TargetOpts<"CodeObjectVersion">, "COV_5">;
+  MarshallingInfoEnum<TargetOpts<"CodeObjectVersion">, "COV_6">;
 
 defm cumode : SimpleMFlag<"cumode",
   "Specify CU wavefront", "Specify WGP wavefront",

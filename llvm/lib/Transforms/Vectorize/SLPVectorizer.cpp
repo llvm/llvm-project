@@ -599,6 +599,28 @@ static std::optional<unsigned> getElementIndex(const Value *Inst,
   return Index;
 }
 
+/// \returns true if all of the values in \p VL use the same opcode.
+/// For comparison instructions, also checks if predicates match.
+/// PoisonValues are considered matching.
+/// Interchangeable instructions are not considered.
+static bool allSameOpcode(ArrayRef<Value *> VL) {
+  auto *It = find_if(VL, IsaPred<Instruction>);
+  if (It == VL.end())
+    return true;
+  Instruction *MainOp = cast<Instruction>(*It);
+  unsigned Opcode = MainOp->getOpcode();
+  bool IsCmpOp = isa<CmpInst>(MainOp);
+  CmpInst::Predicate BasePred = IsCmpOp ? cast<CmpInst>(MainOp)->getPredicate()
+                                        : CmpInst::BAD_ICMP_PREDICATE;
+  return std::all_of(It, VL.end(), [&](Value *V) {
+    if (auto *CI = dyn_cast<CmpInst>(V))
+      return BasePred == CI->getPredicate();
+    if (auto *I = dyn_cast<Instruction>(V))
+      return I->getOpcode() == Opcode;
+    return isa<PoisonValue>(V);
+  });
+}
+
 namespace {
 /// Specifies the way the mask should be analyzed for undefs/poisonous elements
 /// in the shuffle mask.
@@ -814,6 +836,298 @@ static std::optional<unsigned> getExtractIndex(const Instruction *E) {
 }
 
 namespace {
+/// \returns true if \p Opcode is allowed as part of the main/alternate
+/// instruction for SLP vectorization.
+///
+/// Example of unsupported opcode is SDIV that can potentially cause UB if the
+/// "shuffled out" lane would result in division by zero.
+bool isValidForAlternation(unsigned Opcode) {
+  return !Instruction::isIntDivRem(Opcode);
+}
+
+/// Helper class that determines VL can use the same opcode.
+/// Alternate instruction is supported. In addition, it supports interchangeable
+/// instruction. An interchangeable instruction is an instruction that can be
+/// converted to another instruction with same semantics. For example, x << 1 is
+/// equal to x * 2. x * 1 is equal to x | 0.
+class BinOpSameOpcodeHelper {
+  using MaskType = std::uint_fast16_t;
+  /// Sort SupportedOp because it is used by binary_search.
+  constexpr static std::initializer_list<unsigned> SupportedOp = {
+      Instruction::Add,  Instruction::Sub, Instruction::Mul, Instruction::Shl,
+      Instruction::AShr, Instruction::And, Instruction::Or,  Instruction::Xor};
+  enum : MaskType {
+    ShlBIT = 0b1,
+    AShrBIT = 0b10,
+    MulBIT = 0b100,
+    AddBIT = 0b1000,
+    SubBIT = 0b10000,
+    AndBIT = 0b100000,
+    OrBIT = 0b1000000,
+    XorBIT = 0b10000000,
+    MainOpBIT = 0b100000000,
+    LLVM_MARK_AS_BITMASK_ENUM(MainOpBIT)
+  };
+  /// Return a non-nullptr if either operand of I is a ConstantInt.
+  /// The second return value represents the operand position. We check the
+  /// right-hand side first (1). If the right hand side is not a ConstantInt and
+  /// the instruction is neither Sub, Shl, nor AShr, we then check the left hand
+  /// side (0).
+  static std::pair<ConstantInt *, unsigned>
+  isBinOpWithConstantInt(Instruction *I) {
+    unsigned Opcode = I->getOpcode();
+    assert(binary_search(SupportedOp, Opcode) && "Unsupported opcode.");
+    (void)SupportedOp;
+    auto *BinOp = cast<BinaryOperator>(I);
+    if (auto *CI = dyn_cast<ConstantInt>(BinOp->getOperand(1)))
+      return {CI, 1};
+    if (Opcode == Instruction::Sub || Opcode == Instruction::Shl ||
+        Opcode == Instruction::AShr)
+      return {nullptr, 0};
+    if (auto *CI = dyn_cast<ConstantInt>(BinOp->getOperand(0)))
+      return {CI, 0};
+    return {nullptr, 0};
+  }
+  struct InterchangeableInfo {
+    Instruction *I = nullptr;
+    /// The bit it sets represents whether MainOp can be converted to.
+    MaskType Mask = MainOpBIT | XorBIT | OrBIT | AndBIT | SubBIT | AddBIT |
+                    MulBIT | AShrBIT | ShlBIT;
+    /// We cannot create an interchangeable instruction that does not exist in
+    /// VL. For example, VL [x + 0, y * 1] can be converted to [x << 0, y << 0],
+    /// but << does not exist in VL. In the end, we convert VL to [x * 1, y *
+    /// 1]. SeenBefore is used to know what operations have been seen before.
+    MaskType SeenBefore = 0;
+    InterchangeableInfo(Instruction *I) : I(I) {}
+    /// Return false allows BinOpSameOpcodeHelper to find an alternate
+    /// instruction. Directly setting the mask will destroy the mask state,
+    /// preventing us from determining which instruction it should convert to.
+    bool trySet(MaskType OpcodeInMaskForm, MaskType InterchangeableMask) {
+      if (Mask & InterchangeableMask) {
+        SeenBefore |= OpcodeInMaskForm;
+        Mask &= InterchangeableMask;
+        return true;
+      }
+      return false;
+    }
+    bool equal(unsigned Opcode) {
+      if (Opcode == I->getOpcode())
+        return trySet(MainOpBIT, MainOpBIT);
+      return false;
+    }
+    unsigned getOpcode() const {
+      MaskType Candidate = Mask & SeenBefore;
+      if (Candidate & MainOpBIT)
+        return I->getOpcode();
+      if (Candidate & ShlBIT)
+        return Instruction::Shl;
+      if (Candidate & AShrBIT)
+        return Instruction::AShr;
+      if (Candidate & MulBIT)
+        return Instruction::Mul;
+      if (Candidate & AddBIT)
+        return Instruction::Add;
+      if (Candidate & SubBIT)
+        return Instruction::Sub;
+      if (Candidate & AndBIT)
+        return Instruction::And;
+      if (Candidate & OrBIT)
+        return Instruction::Or;
+      if (Candidate & XorBIT)
+        return Instruction::Xor;
+      llvm_unreachable("Cannot find interchangeable instruction.");
+    }
+    SmallVector<Value *> getOperand(Instruction *To) const {
+      unsigned ToOpcode = To->getOpcode();
+      unsigned FromOpcode = I->getOpcode();
+      if (FromOpcode == ToOpcode)
+        return SmallVector<Value *>(I->operands());
+      assert(binary_search(SupportedOp, ToOpcode) && "Unsupported opcode.");
+      auto [CI, Pos] = isBinOpWithConstantInt(I);
+      const APInt &FromCIValue = CI->getValue();
+      unsigned FromCIValueBitWidth = FromCIValue.getBitWidth();
+      APInt ToCIValue;
+      switch (FromOpcode) {
+      case Instruction::Shl:
+        if (ToOpcode == Instruction::Mul) {
+          ToCIValue = APInt::getOneBitSet(FromCIValueBitWidth,
+                                          FromCIValue.getZExtValue());
+        } else {
+          assert(FromCIValue.isZero() && "Cannot convert the instruction.");
+          ToCIValue = ToOpcode == Instruction::And
+                          ? APInt::getAllOnes(FromCIValueBitWidth)
+                          : APInt::getZero(FromCIValueBitWidth);
+        }
+        break;
+      case Instruction::Mul:
+        assert(FromCIValue.isPowerOf2() && "Cannot convert the instruction.");
+        if (ToOpcode == Instruction::Shl) {
+          ToCIValue = APInt(FromCIValueBitWidth, FromCIValue.logBase2());
+        } else {
+          assert(FromCIValue.isOne() && "Cannot convert the instruction.");
+          ToCIValue = ToOpcode == Instruction::And
+                          ? APInt::getAllOnes(FromCIValueBitWidth)
+                          : APInt::getZero(FromCIValueBitWidth);
+        }
+        break;
+      case Instruction::Add:
+      case Instruction::Sub:
+        if (FromCIValue.isZero()) {
+          ToCIValue = APInt::getZero(FromCIValueBitWidth);
+        } else {
+          assert(is_contained({Instruction::Add, Instruction::Sub}, ToOpcode) &&
+                 "Cannot convert the instruction.");
+          ToCIValue = FromCIValue;
+          ToCIValue.negate();
+        }
+        break;
+      case Instruction::And:
+        assert(FromCIValue.isAllOnes() && "Cannot convert the instruction.");
+        ToCIValue = ToOpcode == Instruction::Mul
+                        ? APInt::getOneBitSet(FromCIValueBitWidth, 0)
+                        : APInt::getZero(FromCIValueBitWidth);
+        break;
+      default:
+        assert(FromCIValue.isZero() && "Cannot convert the instruction.");
+        ToCIValue = APInt::getZero(FromCIValueBitWidth);
+        break;
+      }
+      Value *LHS = I->getOperand(1 - Pos);
+      Constant *RHS =
+          ConstantInt::get(I->getOperand(Pos)->getType(), ToCIValue);
+      if (Pos == 1)
+        return SmallVector<Value *>({LHS, RHS});
+      return SmallVector<Value *>({RHS, LHS});
+    }
+  };
+  InterchangeableInfo MainOp;
+  InterchangeableInfo AltOp;
+  bool isValidForAlternation(Instruction *I) const {
+    return ::isValidForAlternation(MainOp.I->getOpcode()) &&
+           ::isValidForAlternation(I->getOpcode());
+  }
+  bool initializeAltOp(Instruction *I) {
+    if (AltOp.I)
+      return true;
+    if (!isValidForAlternation(I))
+      return false;
+    AltOp.I = I;
+    return true;
+  }
+
+public:
+  BinOpSameOpcodeHelper(Instruction *MainOp, Instruction *AltOp = nullptr)
+      : MainOp(MainOp), AltOp(AltOp) {
+    assert(is_sorted(SupportedOp) && "SupportedOp is not sorted.");
+  }
+  bool add(Instruction *I) {
+    assert(isa<BinaryOperator>(I) &&
+           "BinOpSameOpcodeHelper only accepts BinaryOperator.");
+    unsigned Opcode = I->getOpcode();
+    MaskType OpcodeInMaskForm;
+    // Prefer Shl, AShr, Mul, Add, Sub, And, Or and Xor over MainOp.
+    switch (Opcode) {
+    case Instruction::Shl:
+      OpcodeInMaskForm = ShlBIT;
+      break;
+    case Instruction::AShr:
+      OpcodeInMaskForm = AShrBIT;
+      break;
+    case Instruction::Mul:
+      OpcodeInMaskForm = MulBIT;
+      break;
+    case Instruction::Add:
+      OpcodeInMaskForm = AddBIT;
+      break;
+    case Instruction::Sub:
+      OpcodeInMaskForm = SubBIT;
+      break;
+    case Instruction::And:
+      OpcodeInMaskForm = AndBIT;
+      break;
+    case Instruction::Or:
+      OpcodeInMaskForm = OrBIT;
+      break;
+    case Instruction::Xor:
+      OpcodeInMaskForm = XorBIT;
+      break;
+    default:
+      return MainOp.equal(Opcode) ||
+             (initializeAltOp(I) && AltOp.equal(Opcode));
+    }
+    MaskType InterchangeableMask = OpcodeInMaskForm;
+    ConstantInt *CI = isBinOpWithConstantInt(I).first;
+    if (CI) {
+      constexpr MaskType CanBeAll =
+          XorBIT | OrBIT | AndBIT | SubBIT | AddBIT | MulBIT | AShrBIT | ShlBIT;
+      const APInt &CIValue = CI->getValue();
+      switch (Opcode) {
+      case Instruction::Shl:
+        InterchangeableMask = CIValue.isZero() ? CanBeAll : MulBIT | ShlBIT;
+        break;
+      case Instruction::Mul:
+        if (CIValue.isOne()) {
+          InterchangeableMask = CanBeAll;
+          break;
+        }
+        if (CIValue.isPowerOf2())
+          InterchangeableMask = MulBIT | ShlBIT;
+        break;
+      case Instruction::Add:
+      case Instruction::Sub:
+        InterchangeableMask = CIValue.isZero() ? CanBeAll : SubBIT | AddBIT;
+        break;
+      case Instruction::And:
+        if (CIValue.isAllOnes())
+          InterchangeableMask = CanBeAll;
+        break;
+      default:
+        if (CIValue.isZero())
+          InterchangeableMask = CanBeAll;
+        break;
+      }
+    }
+    return MainOp.trySet(OpcodeInMaskForm, InterchangeableMask) ||
+           (initializeAltOp(I) &&
+            AltOp.trySet(OpcodeInMaskForm, InterchangeableMask));
+  }
+  unsigned getMainOpcode() const { return MainOp.getOpcode(); }
+  bool hasAltOp() const { return AltOp.I; }
+  unsigned getAltOpcode() const {
+    return hasAltOp() ? AltOp.getOpcode() : getMainOpcode();
+  }
+  SmallVector<Value *> getOperand(Instruction *I) const {
+    return MainOp.getOperand(I);
+  }
+};
+
+bool isConvertible(Instruction *I, Instruction *MainOp, Instruction *AltOp) {
+  assert(MainOp && "MainOp cannot be nullptr.");
+  if (I->getOpcode() == MainOp->getOpcode())
+    return true;
+  assert(AltOp && "AltOp cannot be nullptr.");
+  if (I->getOpcode() == AltOp->getOpcode())
+    return true;
+  if (!I->isBinaryOp())
+    return false;
+  BinOpSameOpcodeHelper Converter(MainOp, AltOp);
+  return Converter.add(I) && Converter.add(MainOp) && Converter.add(AltOp);
+}
+
+std::pair<Instruction *, SmallVector<Value *>>
+convertTo(Instruction *I, Instruction *MainOp, Instruction *AltOp) {
+  assert(isConvertible(I, MainOp, AltOp) && "Cannot convert the instruction.");
+  if (I->getOpcode() == MainOp->getOpcode())
+    return std::make_pair(MainOp, SmallVector<Value *>(I->operands()));
+  // Prefer AltOp instead of interchangeable instruction of MainOp.
+  if (I->getOpcode() == AltOp->getOpcode())
+    return std::make_pair(AltOp, SmallVector<Value *>(I->operands()));
+  assert(I->isBinaryOp() && "Cannot convert the instruction.");
+  BinOpSameOpcodeHelper Converter(I);
+  if (Converter.add(I) && Converter.add(MainOp) && !Converter.hasAltOp())
+    return std::make_pair(MainOp, Converter.getOperand(MainOp));
+  return std::make_pair(AltOp, Converter.getOperand(AltOp));
+}
 
 /// Main data required for vectorization of instructions.
 class InstructionsState {
@@ -841,8 +1155,7 @@ public:
   bool isAltShuffle() const { return getMainOp() != getAltOp(); }
 
   bool isOpcodeOrAlt(Instruction *I) const {
-    unsigned CheckedOpcode = I->getOpcode();
-    return getOpcode() == CheckedOpcode || getAltOpcode() == CheckedOpcode;
+    return isConvertible(I, MainOp, AltOp);
   }
 
   /// Checks if main/alt instructions are shift operations.
@@ -886,18 +1199,6 @@ public:
 };
 
 } // end anonymous namespace
-
-/// \returns true if \p Opcode is allowed as part of the main/alternate
-/// instruction for SLP vectorization.
-///
-/// Example of unsupported opcode is SDIV that can potentially cause UB if the
-/// "shuffled out" lane would result in division by zero.
-static bool isValidForAlternation(unsigned Opcode) {
-  if (Instruction::isIntDivRem(Opcode))
-    return false;
-
-  return true;
-}
 
 static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
                                        const TargetLibraryInfo &TLI);
@@ -956,6 +1257,17 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
       (VL.size() == 2 && InstCnt < 2))
     return InstructionsState::invalid();
 
+  auto FindInstructionWithOpcode = [&](unsigned Opcode) {
+    for (Value *V : VL) {
+      if (isa<PoisonValue>(V))
+        continue;
+      auto *Inst = cast<Instruction>(V);
+      if (Inst->getOpcode() == Opcode)
+        return Inst;
+    }
+    llvm_unreachable("Opcode not found.");
+  };
+
   bool IsCastOp = isa<CastInst>(MainOp);
   bool IsBinOp = isa<BinaryOperator>(MainOp);
   bool IsCmpOp = isa<CmpInst>(MainOp);
@@ -965,6 +1277,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   unsigned Opcode = MainOp->getOpcode();
   unsigned AltOpcode = Opcode;
 
+  BinOpSameOpcodeHelper BinOpHelper(MainOp);
   bool SwappedPredsCompatible = IsCmpOp && [&]() {
     SetVector<unsigned> UniquePreds, UniqueNonSwappedPreds;
     UniquePreds.insert(BasePred);
@@ -1011,14 +1324,8 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
       return InstructionsState::invalid();
     unsigned InstOpcode = I->getOpcode();
     if (IsBinOp && isa<BinaryOperator>(I)) {
-      if (InstOpcode == Opcode || InstOpcode == AltOpcode)
+      if (BinOpHelper.add(I))
         continue;
-      if (Opcode == AltOpcode && isValidForAlternation(InstOpcode) &&
-          isValidForAlternation(Opcode)) {
-        AltOpcode = InstOpcode;
-        AltOp = I;
-        continue;
-      }
     } else if (IsCastOp && isa<CastInst>(I)) {
       Value *Op0 = MainOp->getOperand(0);
       Type *Ty0 = Op0->getType();
@@ -1119,6 +1426,12 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
     return InstructionsState::invalid();
   }
 
+  if (IsBinOp) {
+    MainOp = FindInstructionWithOpcode(BinOpHelper.getMainOpcode());
+    AltOp = FindInstructionWithOpcode(BinOpHelper.getAltOpcode());
+  }
+  assert((MainOp == AltOp || !allSameOpcode(VL)) &&
+         "Incorrect implementation of allSameOpcode.");
   return InstructionsState(MainOp, AltOp);
 }
 
@@ -2522,11 +2835,12 @@ public:
         // Since operand reordering is performed on groups of commutative
         // operations or alternating sequences (e.g., +, -), we can safely tell
         // the inverse operations by checking commutativity.
-        bool IsInverseOperation = !isCommutative(cast<Instruction>(V));
+        auto [SelectedOp, Ops] =
+            convertTo(cast<Instruction>(VL[Lane]), MainOp, S.getAltOp());
+        bool IsInverseOperation = !isCommutative(SelectedOp);
         for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx) {
           bool APO = (OpIdx == 0) ? false : IsInverseOperation;
-          OpsVec[OpIdx][Lane] = {cast<Instruction>(V)->getOperand(OpIdx), APO,
-                                 false};
+          OpsVec[OpIdx][Lane] = {Ops[OpIdx], APO, false};
         }
       }
     }
@@ -5317,12 +5631,11 @@ getShuffleCost(const TargetTransformInfo &TTI, TTI::ShuffleKind Kind,
 /// This is similar to TargetTransformInfo::getScalarizationOverhead, but if
 /// ScalarTy is a FixedVectorType, a vector will be inserted or extracted
 /// instead of a scalar.
-static InstructionCost getScalarizationOverhead(const TargetTransformInfo &TTI,
-                                                Type *ScalarTy, VectorType *Ty,
-                                                const APInt &DemandedElts,
-                                                bool Insert, bool Extract,
-                                                TTI::TargetCostKind CostKind,
-                                                ArrayRef<Value *> VL = {}) {
+static InstructionCost
+getScalarizationOverhead(const TargetTransformInfo &TTI, Type *ScalarTy,
+                         VectorType *Ty, const APInt &DemandedElts, bool Insert,
+                         bool Extract, TTI::TargetCostKind CostKind,
+                         bool ForPoisonSrc = true, ArrayRef<Value *> VL = {}) {
   assert(!isa<ScalableVectorType>(Ty) &&
          "ScalableVectorType is not supported.");
   assert(getNumElements(ScalarTy) * DemandedElts.getBitWidth() ==
@@ -5346,8 +5659,45 @@ static InstructionCost getScalarizationOverhead(const TargetTransformInfo &TTI,
     }
     return Cost;
   }
-  return TTI.getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
-                                      CostKind, VL);
+  APInt NewDemandedElts = DemandedElts;
+  InstructionCost Cost = 0;
+  if (!ForPoisonSrc && Insert) {
+    // Handle insert into non-poison vector.
+    // TODO: Need to teach getScalarizationOverhead about insert elements into
+    // non-poison input vector to better handle such cases. Currently, it is
+    // very conservative and may "pessimize" the vectorization.
+    for (unsigned I : seq(DemandedElts.getBitWidth())) {
+      if (!DemandedElts[I])
+        continue;
+      Cost += TTI.getVectorInstrCost(Instruction::InsertElement, Ty, CostKind,
+                                     I, Constant::getNullValue(Ty),
+                                     VL.empty() ? nullptr : VL[I]);
+    }
+    NewDemandedElts.clearAllBits();
+  } else if (!NewDemandedElts.isZero()) {
+    Cost += TTI.getScalarizationOverhead(Ty, NewDemandedElts, Insert, Extract,
+                                         CostKind, VL);
+  }
+  return Cost;
+}
+
+/// This is similar to TargetTransformInfo::getVectorInstrCost, but if ScalarTy
+/// is a FixedVectorType, a vector will be extracted instead of a scalar.
+static InstructionCost getVectorInstrCost(
+    const TargetTransformInfo &TTI, Type *ScalarTy, unsigned Opcode, Type *Val,
+    TTI::TargetCostKind CostKind, unsigned Index, Value *Scalar,
+    ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) {
+  if (Opcode == Instruction::ExtractElement) {
+    if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
+      assert(SLPReVec && "Only supported by REVEC.");
+      assert(isa<VectorType>(Val) && "Val must be a vector type.");
+      return getShuffleCost(TTI, TTI::SK_ExtractSubvector,
+                            cast<VectorType>(Val), {}, CostKind,
+                            Index * VecTy->getNumElements(), VecTy);
+    }
+  }
+  return TTI.getVectorInstrCost(Opcode, Val, CostKind, Index, Scalar,
+                                ScalarUserAndIdx);
 }
 
 /// Correctly creates insert_subvector, checking that the index is multiple of
@@ -5400,7 +5750,8 @@ static Value *createExtractVector(IRBuilderBase &Builder, Value *Vec,
 
 /// Builds compress-like mask for shuffles for the given \p PointerOps, ordered
 /// with \p Order.
-static void buildCompressMask(ArrayRef<Value *> PointerOps,
+/// \return true if the mask represents strided access, false - otherwise.
+static bool buildCompressMask(ArrayRef<Value *> PointerOps,
                               ArrayRef<unsigned> Order, Type *ScalarTy,
                               const DataLayout &DL, ScalarEvolution &SE,
                               SmallVectorImpl<int> &CompressMask) {
@@ -5408,12 +5759,23 @@ static void buildCompressMask(ArrayRef<Value *> PointerOps,
   CompressMask.assign(Sz, PoisonMaskElem);
   // The first element always set.
   CompressMask[0] = 0;
+  // Check if the mask represents strided access.
+  std::optional<unsigned> Stride = 0;
   Value *Ptr0 = Order.empty() ? PointerOps.front() : PointerOps[Order.front()];
   for (unsigned I : seq<unsigned>(1, Sz)) {
     Value *Ptr = Order.empty() ? PointerOps[I] : PointerOps[Order[I]];
     unsigned Pos = *getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, DL, SE);
     CompressMask[I] = Pos;
+    if (!Stride)
+      continue;
+    if (*Stride == 0) {
+      *Stride = Pos;
+      continue;
+    }
+    if (Pos != *Stride * I)
+      Stride.reset();
   }
+  return Stride.has_value();
 }
 
 /// Checks if the \p VL can be transformed to a (masked)load + compress or
@@ -5470,7 +5832,8 @@ static bool isMaskedLoadCompress(
       &TLI);
   // TODO: perform the analysis of each scalar load for better
   // safe-load-unconditionally analysis.
-  buildCompressMask(PointerOps, Order, ScalarTy, DL, SE, CompressMask);
+  bool IsStrided =
+      buildCompressMask(PointerOps, Order, ScalarTy, DL, SE, CompressMask);
   assert(CompressMask.size() >= 2 && "At least two elements are required");
   auto [ScalarGEPCost, VectorGEPCost] =
       getGEPCosts(TTI, PointerOps, PointerOps.front(),
@@ -5503,21 +5866,19 @@ static bool isMaskedLoadCompress(
   SmallVector<int> Mask;
   if (!Order.empty())
     inversePermutation(Order, Mask);
-  if (int Interval = CompressMask[1] - CompressMask[0];
-      Interval > 0 && all_of(enumerate(CompressMask), [&](const auto &D) {
-        return static_cast<unsigned>(D.value()) == D.index() * Interval;
-      })) {
+  if (IsStrided) {
     // Check for potential segmented(interleaved) loads.
-    if (TTI.isLegalInterleavedAccessType(LoadVecTy, Interval, CommonAlignment,
+    if (TTI.isLegalInterleavedAccessType(LoadVecTy, CompressMask[1],
+                                         CommonAlignment,
                                          LI->getPointerAddressSpace())) {
       InstructionCost InterleavedCost = TTI.getInterleavedMemoryOpCost(
-          Instruction::Load, LoadVecTy, Interval, std::nullopt, CommonAlignment,
-          LI->getPointerAddressSpace(), CostKind, IsMasked);
+          Instruction::Load, LoadVecTy, CompressMask[1], std::nullopt,
+          CommonAlignment, LI->getPointerAddressSpace(), CostKind, IsMasked);
       if (!Mask.empty())
         InterleavedCost += ::getShuffleCost(TTI, TTI::SK_PermuteSingleSrc,
                                             LoadVecTy, CompressMask, CostKind);
       if (InterleavedCost < GatherCost) {
-        InterleaveFactor = Interval;
+        InterleaveFactor = CompressMask[1];
         return true;
       }
     }
@@ -10919,7 +11280,9 @@ void BoUpSLP::transformNodes() {
       // same opcode and same parent block or all constants.
       if (VL.size() <= 2 || LoadEntriesToVectorize.contains(Idx) ||
           !(!E.hasState() || E.getOpcode() == Instruction::Load ||
-            E.isAltShuffle() || !allSameBlock(VL)) ||
+            // We use allSameOpcode instead of isAltShuffle because we don't
+            // want to use interchangeable instruction here.
+            !allSameOpcode(VL) || !allSameBlock(VL)) ||
           allConstant(VL) || isSplat(VL))
         continue;
       if (ForceLoadGather && E.hasState() && E.getOpcode() == Instruction::Load)
@@ -10964,7 +11327,7 @@ void BoUpSLP::transformNodes() {
             if (IsSplat)
               continue;
             InstructionsState S = getSameOpcode(Slice, *TLI);
-            if (!S || S.isAltShuffle() || !allSameBlock(Slice) ||
+            if (!S || !allSameOpcode(Slice) || !allSameBlock(Slice) ||
                 (S.getOpcode() == Instruction::Load &&
                  areKnownNonVectorizableLoads(Slice)) ||
                 (S.getOpcode() != Instruction::Load &&
@@ -11885,6 +12248,15 @@ public:
     // No need to delay the cost estimation during analysis.
     return std::nullopt;
   }
+  /// Reset the builder to handle perfect diamond match.
+  void resetForSameNode() {
+    IsFinalized = false;
+    CommonMask.clear();
+    InVectors.clear();
+    Cost = 0;
+    VectorizedVals.clear();
+    SameNodesEstimated = true;
+  }
   void add(const TreeEntry &E1, const TreeEntry &E2, ArrayRef<int> Mask) {
     if (&E1 == &E2) {
       assert(all_of(Mask,
@@ -12763,14 +13135,22 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       if (isa<PoisonValue>(UniqueValues[Idx]))
         return InstructionCost(TTI::TCC_Free);
 
-      auto *VI = cast<Instruction>(UniqueValues[Idx]);
-      unsigned OpIdx = isa<UnaryOperator>(VI) ? 0 : 1;
-      TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(VI->getOperand(0));
-      TTI::OperandValueInfo Op2Info =
-          TTI::getOperandInfo(VI->getOperand(OpIdx));
-      SmallVector<const Value *> Operands(VI->operand_values());
+      // We cannot retrieve the operand from UniqueValues[Idx] because an
+      // interchangeable instruction may be used. The order and the actual
+      // operand might differ from what is retrieved from UniqueValues[Idx].
+      Value *Op1 = E->getOperand(0)[Idx];
+      Value *Op2;
+      SmallVector<const Value *, 2> Operands(1, Op1);
+      if (isa<UnaryOperator>(UniqueValues[Idx])) {
+        Op2 = Op1;
+      } else {
+        Op2 = E->getOperand(1)[Idx];
+        Operands.push_back(Op2);
+      }
+      TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(Op1);
+      TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(Op2);
       return TTI->getArithmeticInstrCost(ShuffleOrOp, OrigScalarTy, CostKind,
-                                         Op1Info, Op2Info, Operands, VI);
+                                         Op1Info, Op2Info, Operands);
     };
     auto GetVectorCost = [=](InstructionCost CommonCost) {
       if (ShuffleOrOp == Instruction::And && It != MinBWs.end()) {
@@ -13871,12 +14251,13 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
         !ExtractCostCalculated.insert(EU.Scalar).second)
       continue;
 
-    // No extract cost for vector "scalar"
-    if (isa<FixedVectorType>(EU.Scalar->getType()))
+    // No extract cost for vector "scalar" if REVEC is disabled
+    if (!SLPReVec && isa<FixedVectorType>(EU.Scalar->getType()))
       continue;
 
     // If found user is an insertelement, do not calculate extract cost but try
     // to detect it as a final shuffled/identity match.
+    // TODO: what if a user is insertvalue when REVEC is enabled?
     if (auto *VU = dyn_cast_or_null<InsertElementInst>(EU.User);
         VU && VU->getOperand(1) == EU.Scalar) {
       if (auto *FTy = dyn_cast<FixedVectorType>(VU->getType())) {
@@ -13950,7 +14331,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
     // extend the extracted value back to the original type. Here, we account
     // for the extract and the added cost of the sign extend if needed.
     InstructionCost ExtraCost = TTI::TCC_Free;
-    auto *VecTy = getWidenedType(EU.Scalar->getType(), BundleWidth);
+    auto *ScalarTy = EU.Scalar->getType();
+    auto *VecTy = getWidenedType(ScalarTy, BundleWidth);
     const TreeEntry *Entry = &EU.E;
     auto It = MinBWs.find(Entry);
     if (It != MinBWs.end()) {
@@ -13963,8 +14345,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
                                                 VecTy, EU.Lane);
     } else {
       ExtraCost =
-          TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy, CostKind,
-                                  EU.Lane, EU.Scalar, ScalarUserAndIdx);
+          getVectorInstrCost(*TTI, ScalarTy, Instruction::ExtractElement, VecTy,
+                             CostKind, EU.Lane, EU.Scalar, ScalarUserAndIdx);
     }
     // Leave the scalar instructions as is if they are cheaper than extracts.
     if (Entry->Idx != 0 || Entry->getOpcode() == Instruction::GetElementPtr ||
@@ -15138,15 +15520,18 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
     ShuffledElements.setBit(I);
     ShuffleMask[I] = Res.first->second;
   }
-  if (!DemandedElements.isZero())
-    Cost += getScalarizationOverhead(*TTI, ScalarTy, VecTy, DemandedElements,
-                                     /*Insert=*/true,
-                                     /*Extract=*/false, CostKind, VL);
-  if (ForPoisonSrc)
+  if (ForPoisonSrc) {
     Cost = getScalarizationOverhead(*TTI, ScalarTy, VecTy,
                                     /*DemandedElts*/ ~ShuffledElements,
                                     /*Insert*/ true,
-                                    /*Extract*/ false, CostKind, VL);
+                                    /*Extract*/ false, CostKind,
+                                    /*ForPoisonSrc=*/true, VL);
+  } else if (!DemandedElements.isZero()) {
+    Cost += getScalarizationOverhead(*TTI, ScalarTy, VecTy, DemandedElements,
+                                     /*Insert=*/true,
+                                     /*Extract=*/false, CostKind,
+                                     /*ForPoisonSrc=*/false, VL);
+  }
   if (DuplicateNonConst)
     Cost += ::getShuffleCost(*TTI, TargetTransformInfo::SK_PermuteSingleSrc,
                              VecTy, ShuffleMask);
@@ -15269,7 +15654,18 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
 
   // Set the insert point to the beginning of the basic block if the entry
   // should not be scheduled.
-  if (doesNotNeedToSchedule(E->Scalars) ||
+  const auto *It = BlocksSchedules.find(BB);
+  auto IsNotScheduledEntry = [&](const TreeEntry *E) {
+    if (E->isGather())
+      return false;
+    // Found previously that the instruction do not need to be scheduled.
+    return It == BlocksSchedules.end() || all_of(E->Scalars, [&](Value *V) {
+             if (!isa<Instruction>(V))
+               return true;
+             return It->second->getScheduleBundles(V).empty();
+           });
+  };
+  if (IsNotScheduledEntry(E) ||
       (!E->isGather() && all_of(E->Scalars, isVectorLikeInstWithConstOps))) {
     if ((E->getOpcode() == Instruction::GetElementPtr &&
          any_of(E->Scalars,
@@ -15296,12 +15692,11 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
   // scheduled, and the last instruction is VL.back(). So we start with
   // VL.back() and iterate over schedule data until we reach the end of the
   // bundle. The end of the bundle is marked by null ScheduleData.
-  if (BlocksSchedules.count(BB) && !E->isGather()) {
+  if (It != BlocksSchedules.end() && !E->isGather()) {
     Value *V = E->isOneOf(E->Scalars.back());
     if (doesNotNeedToBeScheduled(V))
       V = *find_if_not(E->Scalars, doesNotNeedToBeScheduled);
-    if (ArrayRef<ScheduleBundle *> Bundles =
-            BlocksSchedules[BB]->getScheduleBundles(V);
+    if (ArrayRef<ScheduleBundle *> Bundles = It->second->getScheduleBundles(V);
         !Bundles.empty()) {
       const auto *It = find_if(
           Bundles, [&](ScheduleBundle *B) { return B->getTreeEntry() == E; });
@@ -15803,6 +16198,12 @@ public:
         ResVecTy,
         PoisonValue::get(PointerType::getUnqual(ScalarTy->getContext())),
         MaybeAlign());
+  }
+  /// Reset the builder to handle perfect diamond match.
+  void resetForSameNode() {
+    IsFinalized = false;
+    CommonMask.clear();
+    InVectors.clear();
   }
   /// Adds 2 input vectors (in form of tree entries) and the mask for their
   /// shuffling.
@@ -16359,6 +16760,9 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
             Mask[I] = FrontTE->findLaneForValue(V);
           }
         }
+        // Reset the builder(s) to correctly handle perfect diamond matched
+        // nodes.
+        ShuffleBuilder.resetForSameNode();
         ShuffleBuilder.add(*FrontTE, Mask);
         // Full matched entry found, no need to insert subvectors.
         Res = ShuffleBuilder.finalize(E->getCommonMask(), {}, {});
@@ -17281,7 +17685,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Value *V = Builder.CreateBinOp(
           static_cast<Instruction::BinaryOps>(E->getOpcode()), LHS,
           RHS);
-      propagateIRFlags(V, E->Scalars, VL0, It == MinBWs.end());
+      propagateIRFlags(V, E->Scalars, nullptr, It == MinBWs.end());
       if (auto *I = dyn_cast<Instruction>(V)) {
         V = ::propagateMetadata(I, E->Scalars);
         // Drop nuw flags for abs(sub(commutative), true).

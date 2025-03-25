@@ -16,8 +16,7 @@ define i8 @test_early_exit_max_tc_less_than_16(ptr dereferenceable(16) %A) nosyn
 ; VF8UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF1:       [[VECTOR_BODY]]:
 ; VF8UF1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF8UF1-NEXT:    [[IV:%.*]] = add i64 [[INDEX]], 0
-; VF8UF1-NEXT:    [[P_SRC:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV]]
+; VF8UF1-NEXT:    [[P_SRC:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
 ; VF8UF1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[P_SRC]], i32 0
 ; VF8UF1-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP2]], align 1
 ; VF8UF1-NEXT:    [[TMP3:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
@@ -57,8 +56,8 @@ define i8 @test_early_exit_max_tc_less_than_16(ptr dereferenceable(16) %A) nosyn
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF2:       [[VECTOR_BODY]]:
 ; VF8UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF8UF2-NEXT:    [[IV:%.*]] = add i64 [[INDEX]], 0
-; VF8UF2-NEXT:    [[P_SRC:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV]]
+; VF8UF2-NEXT:    [[TMP0:%.+]] = add i64 %index, 0
+; VF8UF2-NEXT:    [[P_SRC:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP0]]
 ; VF8UF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[P_SRC]], i32 0
 ; VF8UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP2]], align 1
 ; VF8UF2-NEXT:    [[TMP3:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
@@ -98,8 +97,7 @@ define i8 @test_early_exit_max_tc_less_than_16(ptr dereferenceable(16) %A) nosyn
 ; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF16UF1:       [[VECTOR_BODY]]:
 ; VF16UF1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF16UF1-NEXT:    [[IV:%.*]] = add i64 [[INDEX]], 0
-; VF16UF1-NEXT:    [[P_SRC:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV]]
+; VF16UF1-NEXT:    [[P_SRC:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
 ; VF16UF1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[P_SRC]], i32 0
 ; VF16UF1-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1
 ; VF16UF1-NEXT:    [[TMP3:%.*]] = icmp eq <16 x i8> [[WIDE_LOAD]], zeroinitializer
@@ -161,8 +159,7 @@ define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(ptr derefer
 ; VF8UF1:       [[VECTOR_BODY]]:
 ; VF8UF1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF8UF1-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF8UF1-NEXT:    [[IV:%.*]] = add i64 [[INDEX]], 0
-; VF8UF1-NEXT:    [[P_SRC:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV]]
+; VF8UF1-NEXT:    [[P_SRC:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
 ; VF8UF1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[P_SRC]], i32 0
 ; VF8UF1-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP2]], align 1
 ; VF8UF1-NEXT:    [[TMP3:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
@@ -252,8 +249,7 @@ define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(ptr derefer
 ; VF16UF1:       [[VECTOR_BODY]]:
 ; VF16UF1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF16UF1-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF16UF1-NEXT:    [[IV:%.*]] = add i64 [[INDEX]], 0
-; VF16UF1-NEXT:    [[P_SRC:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV]]
+; VF16UF1-NEXT:    [[P_SRC:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
 ; VF16UF1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[P_SRC]], i32 0
 ; VF16UF1-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1
 ; VF16UF1-NEXT:    [[TMP3:%.*]] = icmp eq <16 x i8> [[WIDE_LOAD]], zeroinitializer
