@@ -687,22 +687,22 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vaeskf2_vi_tu:
   case RISCVVector::BI__builtin_rvv_vaeskf2_vi:
   case RISCVVector::BI__builtin_rvv_vsm4k_vi_tu: {
-    QualType Op1Type = TheCall->getArg(0)->getType();
-    QualType Op2Type = TheCall->getArg(1)->getType();
-    return CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op1Type, 128) ||
-           CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op2Type, 128) ||
+    QualType Arg0Type = TheCall->getArg(0)->getType();
+    QualType Arg1Type = TheCall->getArg(1)->getType();
+    return CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Arg0Type, 128) ||
+           CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Arg1Type, 128) ||
            SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 31);
   }
   case RISCVVector::BI__builtin_rvv_vsm3c_vi_tu:
   case RISCVVector::BI__builtin_rvv_vsm3c_vi: {
-    QualType Op1Type = TheCall->getArg(0)->getType();
-    return CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op1Type, 256) ||
+    QualType Arg0Type = TheCall->getArg(0)->getType();
+    return CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Arg0Type, 256) ||
            SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 31);
   }
   case RISCVVector::BI__builtin_rvv_vaeskf1_vi:
   case RISCVVector::BI__builtin_rvv_vsm4k_vi: {
-    QualType Op1Type = TheCall->getArg(0)->getType();
-    return CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op1Type, 128) ||
+    QualType Arg0Type = TheCall->getArg(0)->getType();
+    return CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Arg0Type, 128) ||
            SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 31);
   }
   case RISCVVector::BI__builtin_rvv_vaesdf_vv:
@@ -727,10 +727,10 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vaesz_vs_tu:
   case RISCVVector::BI__builtin_rvv_vsm4r_vv_tu:
   case RISCVVector::BI__builtin_rvv_vsm4r_vs_tu: {
-    QualType Op1Type = TheCall->getArg(0)->getType();
-    QualType Op2Type = TheCall->getArg(1)->getType();
-    return CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op1Type, 128) ||
-           CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op2Type, 128);
+    QualType Arg0Type = TheCall->getArg(0)->getType();
+    QualType Arg1Type = TheCall->getArg(1)->getType();
+    return CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Arg0Type, 128) ||
+           CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Arg1Type, 128);
   }
   case RISCVVector::BI__builtin_rvv_vsha2ch_vv:
   case RISCVVector::BI__builtin_rvv_vsha2cl_vv:
@@ -738,22 +738,23 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vsha2ch_vv_tu:
   case RISCVVector::BI__builtin_rvv_vsha2cl_vv_tu:
   case RISCVVector::BI__builtin_rvv_vsha2ms_vv_tu: {
-    QualType Op1Type = TheCall->getArg(0)->getType();
-    QualType Op2Type = TheCall->getArg(1)->getType();
-    QualType Op3Type = TheCall->getArg(2)->getType();
+    QualType Arg0Type = TheCall->getArg(0)->getType();
+    QualType Arg1Type = TheCall->getArg(1)->getType();
+    QualType Arg2Type = TheCall->getArg(2)->getType();
     ASTContext::BuiltinVectorTypeInfo Info =
-        Context.getBuiltinVectorTypeInfo(Op1Type->castAs<BuiltinType>());
+        Context.getBuiltinVectorTypeInfo(Arg0Type->castAs<BuiltinType>());
     uint64_t ElemSize = Context.getTypeSize(Info.ElementType);
     if (ElemSize == 64 && !TI.hasFeature("zvknhb"))
       return Diag(TheCall->getBeginLoc(),
                   diag::err_riscv_builtin_requires_extension)
              << /* IsExtension */ true << TheCall->getSourceRange() << "zvknhb";
 
-    return CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op1Type,
+    return CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Arg0Type,
                                    ElemSize * 4) ||
-           CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op2Type,
+           CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Arg1Type,
                                    ElemSize * 4) ||
-           CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Op3Type, ElemSize * 4);
+           CheckInvalidVLENandLMUL(TI, TheCall, SemaRef, Arg2Type,
+                                   ElemSize * 4);
   }
 
   case RISCVVector::BI__builtin_rvv_sf_vc_i_se:

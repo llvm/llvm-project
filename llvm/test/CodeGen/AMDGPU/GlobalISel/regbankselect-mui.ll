@@ -356,7 +356,6 @@ define amdgpu_ps void @and_i1_scc(i32 inreg %a, i32 inreg %b, ptr addrspace(1) %
 ; OLD_RBS-NEXT:    s_cmp_ge_u32 s1, 20
 ; OLD_RBS-NEXT:    s_cselect_b32 s3, 1, 0
 ; OLD_RBS-NEXT:    s_and_b32 s2, s2, s3
-; OLD_RBS-NEXT:    s_and_b32 s2, s2, 1
 ; OLD_RBS-NEXT:    s_cmp_lg_u32 s2, 0
 ; OLD_RBS-NEXT:    s_cselect_b32 s0, s0, s1
 ; OLD_RBS-NEXT:    v_mov_b32_e32 v2, s0
