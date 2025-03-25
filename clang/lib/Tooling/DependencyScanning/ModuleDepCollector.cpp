@@ -31,7 +31,9 @@ void ModuleDeps::forEachFileDep(llvm::function_ref<void(StringRef)> Cb) const {
   }
 }
 
-const std::vector<std::string> &ModuleDeps::getBuildArguments() {
+const std::vector<std::string> &ModuleDeps::getBuildArguments() const {
+  // FIXME: this operation is not thread safe and is expected to be called
+  // on a single thread. Otherwise it should be protected with a lock.
   assert(!std::holds_alternative<std::monostate>(BuildInfo) &&
          "Using uninitialized ModuleDeps");
   if (const auto *CI = std::get_if<CowCompilerInvocation>(&BuildInfo))
