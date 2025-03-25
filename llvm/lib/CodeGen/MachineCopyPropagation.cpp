@@ -1201,9 +1201,23 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
     std::optional<DestSourcePair> CopyOperands =
         isCopyInstr(MI, *TII, UseCopyInstr);
     if (CopyOperands) {
-      Register DefReg = CopyOperands->Destination->getReg();
-      Register SrcReg = CopyOperands->Source->getReg();
+      bool isRISCV = (MBB.getParent()->getSubtarget().getTargetTriple().getArchName() == "riscv64" ||MBB.getParent()->getSubtarget().getTargetTriple().getArchName() == "riscv32");
+      Register DefReg;
+      Register SrcReg;
+      
+      if (isRISCV) { 
+        DefReg = CopyOperands->Destination->getReg();
+        SrcReg = CopyOperands->Source->getReg();
+        }
+       else { 
+        if (MI.getNumOperands() == 2) {   
+          DefReg = CopyOperands->Destination->getReg();
+          SrcReg = CopyOperands->Source->getReg();
+          
+         }
+       }
 
+      
       if (!TRI->regsOverlap(DefReg, SrcReg)) {
         // Unlike forward cp, we don't invoke propagateDefs here,
         // just let forward cp do COPY-to-COPY propagation.
