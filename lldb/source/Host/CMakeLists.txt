@@ -8,7 +8,6 @@ if (APPLE AND LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY)
 endif()
 
 if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
-  remove_definitions("-D_XOPEN_SOURCE=700")
   add_definitions("-D_ALL_SOURCE")
 endif()
 
