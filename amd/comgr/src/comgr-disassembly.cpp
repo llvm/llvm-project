@@ -46,7 +46,6 @@ DisassemblyInfo::create(const TargetIdentifier &Ident,
                         PrintInstructionCallback PrintInstruction,
                         PrintAddressAnnotationCallback PrintAddressAnnotation,
                         amd_comgr_disassembly_info_t *DisassemblyInfoT) {
-
   std::string TT = (Twine(Ident.Arch) + "-" + Ident.Vendor + "-" + Ident.OS +
                     "-" + Ident.Environ)
                        .str();
