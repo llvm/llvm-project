@@ -694,7 +694,8 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
       // operation type, remove the range metadata.
       if (const MDNode *MD = LD->getRanges()) {
         ConstantInt *Lower = mdconst::extract<ConstantInt>(MD->getOperand(0));
-        if (Lower->getBitWidth() != NVT.getScalarSizeInBits())
+        if (Lower->getBitWidth() != NVT.getScalarSizeInBits() ||
+            !NVT.isInteger())
           LD->getMemOperand()->clearRanges();
       }
       SDValue Res = DAG.getLoad(NVT, dl, Chain, Ptr, LD->getMemOperand());
