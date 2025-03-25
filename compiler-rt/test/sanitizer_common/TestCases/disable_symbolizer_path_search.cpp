@@ -16,6 +16,4 @@ static void Symbolize() {
   printf("%s\n", buffer);
 }
 
-int main() {
-  Symbolize();
-}
+int main() { Symbolize(); }
