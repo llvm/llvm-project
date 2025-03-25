@@ -906,9 +906,7 @@ public:
     // Note: Prefer the ArrayRef<SmallVector<Value, 1>> overload because it
     // does not copy the replacements vector.
     auto vals = llvm::map_to_vector(newValues, [](const auto &r) {
-      // Note: Create intermediate ValueRange because SmallVector<Value, 1>
-      // is not constructible from SmallVector<Value>.
-      return SmallVector<Value, 1>(ValueRange(r));
+      return SmallVector<Value, 1>(std::begin(r), std::end(r));
     });
     replaceOpWithMultiple(op, ArrayRef(vals));
   }
@@ -919,9 +917,7 @@ public:
     // Note: Prefer the ArrayRef<SmallVector<Value, 1>> overload because it
     // does not copy the replacements vector.
     auto vals = llvm::map_to_vector(newValues, [](const RangeT &r) {
-      // Note: Create intermediate ValueRange because SmallVector<Value, 1>
-      // is not constructible from SmallVector<Value>.
-      return SmallVector<Value, 1>(ValueRange(r));
+      return SmallVector<Value, 1>(std::begin(r), std::end(r));
     });
     replaceOpWithMultiple(op, ArrayRef(vals));
   }
