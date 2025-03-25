@@ -7697,6 +7697,10 @@ const ArrayType *ASTContext::getAsArrayType(QualType T) const {
 }
 
 QualType ASTContext::getAdjustedParameterType(QualType T) const {
+  if (auto *PET = T->getAs<PackExpansionType>())
+    return getPackExpansionType(getAdjustedParameterType(PET->getPattern()),
+                                PET->getNumExpansions(),
+                                /*ExpectPackInType=*/false);
   if (getLangOpts().HLSL && T->isConstantArrayType())
     return getArrayParameterType(T);
   if (T->isArrayType() || T->isFunctionType())

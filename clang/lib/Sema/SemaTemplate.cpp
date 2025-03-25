@@ -1267,7 +1267,8 @@ bool Sema::AttachTypeConstraint(AutoTypeLoc TL,
 }
 
 QualType Sema::CheckNonTypeTemplateParameterType(TypeSourceInfo *&TSI,
-                                                 SourceLocation Loc) {
+                                                 SourceLocation Loc,
+                                                 bool Diagnose) {
   if (TSI->getType()->isUndeducedType()) {
     // C++17 [temp.dep.expr]p3:
     //   An id-expression is type-dependent if it contains
@@ -1277,18 +1278,26 @@ QualType Sema::CheckNonTypeTemplateParameterType(TypeSourceInfo *&TSI,
     TSI = SubstAutoTypeSourceInfoDependent(TSI);
   }
 
-  return CheckNonTypeTemplateParameterType(TSI->getType(), Loc);
+  return CheckNonTypeTemplateParameterType(TSI->getType(), Loc, Diagnose);
 }
 
-bool Sema::RequireStructuralType(QualType T, SourceLocation Loc) {
+bool Sema::RequireStructuralType(QualType T, SourceLocation Loc,
+                                 bool Diagnose) {
   if (T->isDependentType())
     return false;
 
-  if (RequireCompleteType(Loc, T, diag::err_template_nontype_parm_incomplete))
+  if (Diagnose ? RequireCompleteType(Loc, T,
+                                     diag::err_template_nontype_parm_incomplete)
+               : !isCompleteType(Loc, T))
     return true;
 
   if (T->isStructuralType())
     return false;
+
+  // If we're not emitting diagnostics, there's no need to figure out
+  // why exactly T is not a structural type.
+  if (!Diagnose)
+    return true;
 
   // Structural types are required to be object types or lvalue references.
   if (T->isRValueReferenceType()) {
@@ -1379,15 +1388,20 @@ bool Sema::RequireStructuralType(QualType T, SourceLocation Loc) {
   return true;
 }
 
-QualType Sema::CheckNonTypeTemplateParameterType(QualType T,
-                                                 SourceLocation Loc) {
+QualType Sema::CheckNonTypeTemplateParameterType(QualType T, SourceLocation Loc,
+                                                 bool Diagnose) {
   // We don't allow variably-modified types as the type of non-type template
   // parameters.
   if (T->isVariablyModifiedType()) {
-    Diag(Loc, diag::err_variably_modified_nontype_template_param)
-      << T;
+    if (Diagnose)
+      Diag(Loc, diag::err_variably_modified_nontype_template_param) << T;
     return QualType();
   }
+
+  // C++2c [temp.param] p10:
+  //   A constant template parameter of type "array of T" or of
+  //   function type T is adjusted to be of type "pointer to T".
+  T = Context.getAdjustedParameterType(T);
 
   // C++ [temp.param]p4:
   //
@@ -1411,14 +1425,6 @@ QualType Sema::CheckNonTypeTemplateParameterType(QualType T,
     return T.getUnqualifiedType();
   }
 
-  // C++ [temp.param]p8:
-  //
-  //   A non-type template-parameter of type "array of T" or
-  //   "function returning T" is adjusted to be of type "pointer to
-  //   T" or "pointer to function returning T", respectively.
-  if (T->isArrayType() || T->isFunctionType())
-    return Context.getDecayedType(T);
-
   // If T is a dependent type, we can't do the check now, so we
   // assume that it is well-formed. Note that stripping off the
   // qualifiers here is not really correct if T turns out to be
@@ -1430,18 +1436,20 @@ QualType Sema::CheckNonTypeTemplateParameterType(QualType T,
 
   // C++20 [temp.param]p6:
   //   -- a structural type
-  if (RequireStructuralType(T, Loc))
+  if (RequireStructuralType(T, Loc, Diagnose))
     return QualType();
 
   if (!getLangOpts().CPlusPlus20) {
     // FIXME: Consider allowing structural types as an extension in C++17. (In
     // earlier language modes, the template argument evaluation rules are too
     // inflexible.)
-    Diag(Loc, diag::err_template_nontype_parm_bad_structural_type) << T;
+    if (Diagnose)
+      Diag(Loc, diag::err_template_nontype_parm_bad_structural_type) << T;
     return QualType();
   }
 
-  Diag(Loc, diag::warn_cxx17_compat_template_nontype_parm_type) << T;
+  if (Diagnose)
+    Diag(Loc, diag::warn_cxx17_compat_template_nontype_parm_type) << T;
   return T.getUnqualifiedType();
 }
 
@@ -1518,7 +1526,7 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
 
   QualType T = CheckNonTypeTemplateParameterType(TInfo, D.getIdentifierLoc());
   if (T.isNull()) {
-    T = Context.IntTy; // Recover with an 'int' type.
+    T = TInfo->getType();
     Invalid = true;
   }
 
@@ -11083,9 +11091,7 @@ bool Sema::RebuildNestedNameSpecifierInCurrentInstantiation(CXXScopeSpec &SS) {
 
 bool Sema::RebuildTemplateParamsInCurrentInstantiation(
                                                TemplateParameterList *Params) {
-  for (unsigned I = 0, N = Params->size(); I != N; ++I) {
-    Decl *Param = Params->getParam(I);
-
+  for (Decl *Param : *Params) {
     // There is nothing to rebuild in a type parameter.
     if (isa<TemplateTypeParmDecl>(Param))
       continue;
@@ -11119,8 +11125,14 @@ bool Sema::RebuildTemplateParamsInCurrentInstantiation(
     }
 
     if (NewTSI != NTTP->getTypeSourceInfo()) {
+      QualType NewT = CheckNonTypeTemplateParameterType(
+          NewTSI->getType(), NTTP->getLocation(), /*Diagnose=*/false);
+      if (NewT.isNull()) {
+        NewT = NewTSI->getType();
+        NTTP->setInvalidDecl();
+      }
       NTTP->setTypeSourceInfo(NewTSI);
-      NTTP->setType(NewTSI->getType());
+      NTTP->setType(NewT);
     }
   }
 

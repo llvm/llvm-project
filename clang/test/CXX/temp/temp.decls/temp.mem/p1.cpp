@@ -141,4 +141,71 @@ namespace OutOfLine {
   template<>
   template<typename U, A<int>::B V>
   struct A<int>::C<U&, V> { }; // expected-error {{redefinition of 'C<U &, V>'}}
+
+
+  template<class T>
+  class X { // expected-note 2 {{X defined here}}
+    using A = int;
+    template<A> void a1();
+    template<A> static int a2;
+    template<A> class a3;
+    template<OutOfLine::X<T>::A> void a4();
+    template<OutOfLine::X<T>::A> static int a5;
+    template<OutOfLine::X<T>::A> class a6;
+
+    using B = int[];
+    template<B> void b1();
+    template<B> static int b2;
+    template<B> class b3;
+    template<OutOfLine::X<T>::B> void b4();
+    template<OutOfLine::X<T>::B> static int b5;
+    template<OutOfLine::X<T>::B> class b6;
+
+    using Bad = int&&;
+    template<Bad> void bad1();                      // expected-error {{non-type template parameter has rvalue reference type}}
+    template<Bad> static int bad2;                  // expected-error {{non-type template parameter has rvalue reference type}}
+    template<Bad> class bad3;                       // expected-error {{non-type template parameter has rvalue reference type}}
+    template<OutOfLine::X<T>::Bad> void bad4();     // expected-error {{non-type template parameter has rvalue reference type}}
+    template<OutOfLine::X<T>::Bad> static int bad5; // expected-error {{non-type template parameter has rvalue reference type}}
+    template<OutOfLine::X<T>::Bad> class bad6;      // expected-error {{non-type template parameter has rvalue reference type}}
+
+    template<const T> class Q;
+    template<const T...> class Qp;
+
+    template<int> void good();
+  };
+
+  template<class T> template<X<T>::A> void X<T>::a1() {}
+  template<class T> template<X<T>::A> int X<T>::a2 = 2;
+  template<class T> template<X<T>::A> class X<T>::a3 {};
+  template<class T> template<X<T>::A> void X<T>::a4() {}
+  template<class T> template<X<T>::A> int X<T>::a5 = 5;
+  template<class T> template<X<T>::A> class X<T>::a6 {};
+
+  template<class T> template<X<T>::B> void X<T>::b1() {}
+  template<class T> template<X<T>::B> int X<T>::b2 = 2;
+  template<class T> template<X<T>::B> class X<T>::b3 {};
+  template<class T> template<X<T>::B> void X<T>::b4() {}
+  template<class T> template<X<T>::B> int X<T>::b5 = 5;
+  template<class T> template<X<T>::B> class X<T>::b6 {};
+
+  template<class T> template<X<T>::Bad> void X<T>::bad1() {}
+  template<class T> template<X<T>::Bad> int X<T>::bad2 = 2;
+  template<class T> template<X<T>::Bad> class X<T>::bad3 {};
+  template<class T> template<X<T>::Bad> void X<T>::bad4() {}
+  template<class T> template<X<T>::Bad> int X<T>::bad5 = 5;
+  template<class T> template<X<T>::Bad> class X<T>::bad6 {};
+
+  template<class T> template<const T> class X<T>::Q {};
+  template<class T> template<const T...> class X<T>::Qp {};
+
+  template<class T>
+  template<X<T>::Bad>
+  void X<T>::good() {} // expected-error {{out-of-line definition of 'good' does not match any declaration in 'X<T>'}}
+
+  template<class> using RRef = int&&;
+
+  template<class T>
+  template<RRef<T>> // expected-error {{non-type template parameter has rvalue reference type 'RRef<T>' (aka 'int &&')}}
+  void X<T>::good() {} // expected-error {{out-of-line definition of 'good' does not match any declaration in 'X<T>'}}
 }

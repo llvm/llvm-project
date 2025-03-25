@@ -48,7 +48,7 @@ void baz() {
 // CHECK2: template<> int bar<5, int>()
 
 // CHECK1-LABEL: template <typename ...T> struct A {
-// CHECK1-NEXT:    template <T ...x[3]> struct B {
+// CHECK1-NEXT:      template <T *...x> struct B {
 template <typename ...T> struct A {
   template <T ...x[3]> struct B {};
 };
@@ -3186,7 +3186,7 @@ namespace TestMemberPointerPartialSpec {
 // JSON-NEXT:          },
 // JSON-NEXT:          "name": "x",
 // JSON-NEXT:          "type": {
-// JSON-NEXT:           "qualType": "T[3]..."
+// JSON-NEXT:           "qualType": "T *..."
 // JSON-NEXT:          },
 // JSON-NEXT:          "depth": 1,
 // JSON-NEXT:          "index": 0,
