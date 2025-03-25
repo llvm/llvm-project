@@ -179,8 +179,8 @@ public:
 
   explicit NoOpTelemetryManager()
       : TelemetryManager(std::make_unique<LLDBConfig>(
-            /*EnableTelemetry*/ false, /*DetailedCommand*/ false,
-            /*ClientTelemery*/ false)) {}
+            /*EnableTelemetry=*/false, /*DetailedCommand=*/false,
+            /*ClientTelemery=*/false)) {}
 
   virtual llvm::StringRef GetInstanceName() const override {
     return "NoOpTelemetryManager";
