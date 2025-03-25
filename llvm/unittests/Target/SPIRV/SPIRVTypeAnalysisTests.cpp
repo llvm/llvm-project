@@ -70,6 +70,10 @@ protected:
   const Value *getValue(StringRef Name) {
     assert(M != nullptr && "Has runAnalysis been called before?");
 
+    llvm::GlobalValue *GV = M->getNamedValue(Name);
+    if (GV)
+      return GV;
+
     for (auto &F : *M) {
       for (Argument &A : F.args())
         if (A.getName() == Name)
@@ -773,4 +777,534 @@ TEST_F(SPIRVTypeAnalysisTest, DeduceRecursiveFromLoadingReturn) {
   EXPECT_EQ(TI.getType(getValue("val")), IntTy);
   EXPECT_EQ(TI.getType(getValue("tmp")), TypedPointerType::get(IntTy, 0));
   EXPECT_EQ(TI.getType(getValue("par")), TypedPointerType::get(IntTy, 0));
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceGlobalValue) {
+  StringRef Assembly = R"(
+    @global = external addrspace(1) global ptr addrspace(1)
+
+    define i32 @foo() {
+      %val = load i32, ptr addrspace(1) @global
+      ret i32 %val
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("val")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("global")), TypedPointerType::get(IntTy, 1));
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceGlobalValueIndirect) {
+  StringRef Assembly = R"(
+    @gptr = external addrspace(1) global ptr addrspace(1)
+    @gptrptr = addrspace(1) global ptr addrspace(1) @gptr
+
+    define i32 @foo() {
+      %ptr = load ptr addrspace(1), ptr addrspace(1) @gptrptr
+      %val = load i32, ptr addrspace(1) %ptr
+      ret i32 %val
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("val")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("gptr")), TypedPointerType::get(IntTy, 1));
+  EXPECT_EQ(TI.getType(getValue("gptrptr")), TypedPointerType::get(TypedPointerType::get(IntTy, 1), 1));
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceGlobalValueIndirectWithoutInstruction) {
+  StringRef Assembly = R"(
+    @gi32 = addrspace(1) global i32 0
+    @gptr = addrspace(1) global ptr addrspace(1) @gi32
+    @gptrptr = addrspace(1) global ptr addrspace(1) @gptr
+
+    define i32 @foo() {
+      ret i32 0
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  Type *T = TypedPointerType::get(IntTy, 1);
+  EXPECT_EQ(TI.getType(getValue("gi32")), T);
+  T = TypedPointerType::get(T, 1);
+  EXPECT_EQ(TI.getType(getValue("gptr")), T);
+  T = TypedPointerType::get(T, 1);
+  EXPECT_EQ(TI.getType(getValue("gptrptr")), T);
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceGlobalValueFromCall) {
+  StringRef Assembly = R"(
+    @gptr = external addrspace(1) global ptr addrspace(1)
+
+    define i32 @foo(ptr addrspace(1) %arg) {
+      %foo_tmp = load i32, ptr addrspace(1) %arg
+      ret i32 %foo_tmp
+    }
+
+    define i32 @bar() {
+      %bar_tmp = call i32 @foo(ptr addrspace(1) @gptr)
+      ret i32 %bar_tmp
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("foo_tmp")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("bar_tmp")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("gptr")), TypedPointerType::get(IntTy, 1));
+  EXPECT_EQ(TI.getType(getValue("arg")), TypedPointerType::get(IntTy, 1));
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceValueFromBitcast) {
+  StringRef Assembly = R"(
+    define void @foo(ptr %ptr) {
+      %val = load i32, ptr %ptr
+      %dst = bitcast i32 %val to float
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("val")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("dst")), FloatTy);
+  EXPECT_EQ(TI.getType(getValue("ptr")), TypedPointerType::get(IntTy, 0));
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceFromIntrinsicType) {
+  StringRef Assembly = R"(
+    define void @foo(<4 x float> noundef %vec) {
+      %len = call float @llvm.spv.length.f32(<4 x float> %vec)
+      ret void
+    }
+
+    declare half @llvm.spv.length.f32(<4 x float>)
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("vec")), VectorType::get(FloatTy, 4, false));
+  EXPECT_EQ(TI.getType(getValue("len")), FloatTy);
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceFromCompareXchg) {
+  StringRef Assembly = R"(
+    define void @foo(ptr %ptr, i32 %comparator) {
+      %res = cmpxchg ptr %ptr, i32 %comparator, i32 123 seq_cst acquire, align 4
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("ptr")), TypedPointerType::get(IntTy, 0));
+  EXPECT_EQ(TI.getType(getValue("comparator")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("res")), StructType::get(IntTy, IntegerType::get(M->getContext(), 1)));
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceFromCompareXchgNoInformation) {
+  StringRef Assembly = R"(
+    define void @foo(ptr %ptr, ptr %comparator) {
+      %new_value = load ptr, ptr null
+      %res = cmpxchg ptr %ptr, ptr %comparator, ptr %new_value seq_cst acquire, align 4
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  Type *PT = PointerType::get(M->getContext(), /* AS= */ 0);
+  EXPECT_EQ(TI.getType(getValue("ptr")), PT);
+  EXPECT_EQ(TI.getType(getValue("comparator")), PT);
+  EXPECT_EQ(TI.getType(getValue("res")), StructType::get(PT, IntegerType::get(M->getContext(), 1)));
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceFromCompareXchgLateInfo) {
+  StringRef Assembly = R"(
+    define void @foo(ptr %ptr, ptr %comparator) {
+      %new_value = load ptr, ptr null
+      %res = cmpxchg ptr %ptr, ptr %comparator, ptr %new_value seq_cst acquire, align 4
+      %tmp = load ptr, ptr %ptr
+      %val = load i32, ptr %tmp
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("ptr")), TypedPointerType::get(TypedPointerType::get(IntTy, 0), 0));
+  EXPECT_EQ(TI.getType(getValue("comparator")), TypedPointerType::get(TypedPointerType::get(IntTy, 0), 0));
+  EXPECT_EQ(TI.getType(getValue("new_value")), TypedPointerType::get(TypedPointerType::get(IntTy, 0), 0));
+  EXPECT_EQ(TI.getType(getValue("tmp")), TypedPointerType::get(IntTy, 0));
+  EXPECT_EQ(TI.getType(getValue("val")), IntTy);
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceFromExtractValue) {
+  StringRef Assembly = R"(
+    define void @foo(ptr %ptr, ptr %comparator) {
+      %new_value = load ptr, ptr null
+      %res = cmpxchg ptr %ptr, ptr %comparator, ptr %new_value seq_cst acquire, align 4
+      %a = extractvalue { ptr, i1 } %res, 0
+      %b = load ptr, ptr %a
+      %c = load i32, ptr %b
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("ptr")), TypedPointerType::get(TypedPointerType::get(TypedPointerType::get(IntTy, 0), 0), 0));
+  EXPECT_EQ(TI.getType(getValue("comparator")), TypedPointerType::get(TypedPointerType::get(IntTy, 0), 0));
+  EXPECT_EQ(TI.getType(getValue("new_value")), TypedPointerType::get(TypedPointerType::get(IntTy, 0), 0));
+  EXPECT_EQ(TI.getType(getValue("a")), TypedPointerType::get(TypedPointerType::get(IntTy, 0), 0));
+  EXPECT_EQ(TI.getType(getValue("b")), TypedPointerType::get(IntTy, 0));
+  EXPECT_EQ(TI.getType(getValue("c")), IntTy);
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceFromInsertValue) {
+  StringRef Assembly = R"(
+    define void @foo({ i32, i32 } %a) {
+      %b = insertvalue { i32, i32 } %a, i32 0, 0
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("a")), StructType::get(IntTy, IntTy));
+  EXPECT_EQ(TI.getType(getValue("b")), StructType::get(IntTy, IntTy));
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceFromASCastNoInfo) {
+  StringRef Assembly = R"(
+    define void @foo(ptr %ptr) {
+      %out = addrspacecast ptr %ptr to ptr addrspace(10)
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("ptr")), PointerType::get(M->getContext(), /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("out")), PointerType::get(M->getContext(), /* AS= */ 10));
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceFromASCastFromAbove) {
+  StringRef Assembly = R"(
+    define void @foo(ptr %ptr) {
+      %val = load i32, ptr %ptr
+      %out = addrspacecast ptr %ptr to ptr addrspace(10)
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("ptr")), TypedPointerType::get(IntTy, 0));
+  EXPECT_EQ(TI.getType(getValue("val")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("out")), TypedPointerType::get(IntTy, 10));
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceFromASCastFromBelow) {
+  StringRef Assembly = R"(
+    define void @foo(ptr %ptr) {
+      %out = addrspacecast ptr %ptr to ptr addrspace(10)
+      %val = load i32, ptr addrspace(10) %out
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("ptr")), TypedPointerType::get(IntTy, 0));
+  EXPECT_EQ(TI.getType(getValue("val")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("out")), TypedPointerType::get(IntTy, 10));
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceInsertElementVec) {
+  StringRef Assembly = R"(
+    define void @foo(<2 x i32> %a) {
+      %vec = insertelement <2 x i32> %a, i32 1, i32 0
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("vec")), VectorType::get(IntTy, 2, false));
+  EXPECT_EQ(TI.getType(getValue("a")), VectorType::get(IntTy, 2, false));
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceExtractElementInst) {
+  StringRef Assembly = R"(
+    define void @foo(<2 x i32> %a) {
+      %scal = extractelement <2 x i32> %a, i32 0
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("a")), VectorType::get(IntTy, 2, false));
+  EXPECT_EQ(TI.getType(getValue("scal")), IntTy);
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceSelectTypeScalar) {
+  StringRef Assembly = R"(
+    define void @foo(i32 %a, i32 %b) {
+      %c = select i1 0, i32 %a, i32 %b
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("a")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("b")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("c")), IntTy);
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceTypeFromAboveLeft) {
+  StringRef Assembly = R"(
+    define void @foo(ptr %a, ptr %b) {
+      %d = load i32, ptr %a
+      %c = select i1 0, ptr %a, ptr %b
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("d")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("a")), TypedPointerType::get(IntTy, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("b")), TypedPointerType::get(IntTy, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("c")), TypedPointerType::get(IntTy, /* AS= */ 0));
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceTypeFromAboveRight) {
+  StringRef Assembly = R"(
+    define void @foo(ptr %a, ptr %b) {
+      %d = load i32, ptr %b
+      %c = select i1 0, ptr %a, ptr %b
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("d")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("a")), TypedPointerType::get(IntTy, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("b")), TypedPointerType::get(IntTy, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("c")), TypedPointerType::get(IntTy, /* AS= */ 0));
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceTypeFromBelow) {
+  StringRef Assembly = R"(
+    define void @foo(ptr %a, ptr %b) {
+      %c = select i1 0, ptr %a, ptr %b
+      %d = load i32, ptr %c
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("d")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("a")), TypedPointerType::get(IntTy, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("b")), TypedPointerType::get(IntTy, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("c")), TypedPointerType::get(IntTy, /* AS= */ 0));
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceFromBinaryOp) {
+  StringRef Assembly = R"(
+    define void @foo(i32 %a, i32 %b) {
+      %add = add i32 %a, %b
+      %sub = sub i32 %a, %b
+      %mul = mul i32 %a, %b
+      %sdiv = sdiv i32 %a, %b
+      %shl = shl i32 %a, %b
+      %or = or i32 %a, %b
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("a")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("b")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("add")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("sub")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("mul")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("sdiv")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("shl")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("or")), IntTy);
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeducePhiNoInfo) {
+  StringRef Assembly = R"(
+    define void @foo(ptr %a, ptr %b) {
+      br i1 0, label %lhs, label %rhs
+    lhs:
+      br label %merge;
+    rhs:
+      br label %merge;
+    merge:
+      %c = phi ptr [ %a, %lhs ], [ %b, %rhs ]
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("a")), PointerType::get(M->getContext(), /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("b")), PointerType::get(M->getContext(), /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("c")), PointerType::get(M->getContext(), /* AS= */ 0));
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeducePhiScalar) {
+  StringRef Assembly = R"(
+    define void @foo(i32 %a, i32 %b) {
+      br i1 0, label %lhs, label %rhs
+    lhs:
+      br label %merge;
+    rhs:
+      br label %merge;
+    merge:
+      %c = phi i32 [ %a, %lhs ], [ %b, %rhs ]
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("a")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("b")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("c")), IntTy);
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeducePhiAbove) {
+  StringRef Assembly = R"(
+    define void @foo(ptr %a, ptr %b) {
+      br i1 0, label %lhs, label %rhs
+    lhs:
+      %val = load i32, ptr %a
+      br label %merge;
+    rhs:
+      br label %merge;
+    merge:
+      %c = phi ptr [ %a, %lhs ], [ %b, %rhs ]
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("a")), TypedPointerType::get(IntTy, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("b")), TypedPointerType::get(IntTy, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("c")), TypedPointerType::get(IntTy, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("val")), IntTy);
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeducePhiAboveRhs) {
+  StringRef Assembly = R"(
+    define void @foo(ptr %a, ptr %b) {
+      br i1 0, label %lhs, label %rhs
+    lhs:
+      br label %merge;
+    rhs:
+      %val = load i32, ptr %b
+      br label %merge;
+    merge:
+      %c = phi ptr [ %a, %lhs ], [ %b, %rhs ]
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("a")), TypedPointerType::get(IntTy, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("b")), TypedPointerType::get(IntTy, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("c")), TypedPointerType::get(IntTy, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("val")), IntTy);
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeducePhiBelow) {
+  StringRef Assembly = R"(
+    define void @foo(ptr %a, ptr %b) {
+      br i1 0, label %lhs, label %rhs
+    lhs:
+      br label %merge;
+    rhs:
+      br label %merge;
+    merge:
+      %c = phi ptr [ %a, %lhs ], [ %b, %rhs ]
+      %val = load i32, ptr %c
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("a")), TypedPointerType::get(IntTy, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("b")), TypedPointerType::get(IntTy, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("c")), TypedPointerType::get(IntTy, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("val")), IntTy);
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeducePhiBelowPtrCastConflict) {
+  StringRef Assembly = R"(
+    %st = type { i32 }
+
+    define void @foo(ptr %a, ptr %b) {
+      br i1 0, label %lhs, label %rhs
+    lhs:
+      %val1 = load %st, ptr %a
+      br label %merge;
+    rhs:
+      br label %merge;
+    merge:
+      %c = phi ptr [ %a, %lhs ], [ %b, %rhs ]
+      %val2 = load i32, ptr %c
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  auto ST = getStructType("st");
+  EXPECT_EQ(TI.getType(getValue("a")), TypedPointerType::get(ST, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("b")), TypedPointerType::get(ST, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("c")), TypedPointerType::get(ST, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("val1")), ST);
+  EXPECT_EQ(TI.getType(getValue("val2")), IntTy);
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeducePhiBelowPtrCastConflictRHS) {
+  StringRef Assembly = R"(
+    %st = type { i32 }
+
+    define void @foo(ptr %a, ptr %b) {
+      br i1 0, label %lhs, label %rhs
+    lhs:
+      br label %merge;
+    rhs:
+      %val1 = load %st, ptr %b
+      br label %merge;
+    merge:
+      %c = phi ptr [ %a, %lhs ], [ %b, %rhs ]
+      %val2 = load i32, ptr %c
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  auto ST = getStructType("st");
+  EXPECT_EQ(TI.getType(getValue("a")), TypedPointerType::get(ST, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("b")), TypedPointerType::get(ST, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("c")), TypedPointerType::get(ST, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("val1")), ST);
+  EXPECT_EQ(TI.getType(getValue("val2")), IntTy);
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeducePhiBelowPtrCastConflictBelow) {
+  StringRef Assembly = R"(
+    %st = type { i32 }
+
+    define void @foo(ptr %a, ptr %b) {
+      %val1 = load i32, ptr %a
+      br i1 0, label %lhs, label %rhs
+    lhs:
+      br label %merge;
+    rhs:
+      br label %merge;
+    merge:
+      %c = phi ptr [ %a, %lhs ], [ %b, %rhs ]
+      %val2 = load %st, ptr %c
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  auto ST = getStructType("st");
+  EXPECT_EQ(TI.getType(getValue("a")), TypedPointerType::get(ST, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("b")), TypedPointerType::get(ST, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("c")), TypedPointerType::get(ST, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("val1")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("val2")), ST);
 }

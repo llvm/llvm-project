@@ -47,7 +47,7 @@ public:
     // In some cases, type deduction is not possible from the IR. This should
     // only happen when handling opaque pointers, otherwise it means the type
     // deduction is broken.
-    assert(V->getType()->isPointerTy());
+    assert(isOpaqueType(V->getType()));
     return V->getType();
   }
 

@@ -49,6 +49,12 @@ bool TypeInfo::isOpaqueType(const Type *T) {
     return TypeInfo::isOpaqueType(AT->getElementType());
   if (const VectorType *VT = dyn_cast<VectorType>(T))
     return TypeInfo::isOpaqueType(VT->getElementType());
+  if (const StructType *ST = dyn_cast<StructType>(T)) {
+    for (Type *ET : ST->elements())
+      if (TypeInfo::isOpaqueType(ET))
+        return true;
+
+  }
 
   return false;
 }
@@ -61,12 +67,22 @@ public:
 
   TypeInfo analyze() {
     for (const Function &F : M) {
+      for (const Argument& A : F.args()) {
+          if (!deduceElementType(&A))
+            IncompleteTypeDefinition.insert(&A);
+      }
+
       for (const BasicBlock &BB : F) {
         for (const Value &V : BB) {
           if (!deduceElementType(&V))
             IncompleteTypeDefinition.insert(&V);
         }
       }
+    }
+
+    for (auto It = M.global_begin(); It != M.global_end(); ++It) {
+      if (!deduceElementType(&(*It)))
+        IncompleteTypeDefinition.insert(&(*It));
     }
 
     size_t IncompleteCount;
@@ -84,12 +100,105 @@ public:
   }
 
 private:
-  Type *getMappedType(const Value *V) {
+  Type *getDeducedType(const Value *V) {
     auto It = TypeMap->find(V);
-    if (It == TypeMap->end())
-      return nullptr;
-    return It->second;
+    return It == TypeMap->end() ? nullptr : It->second;
   }
+
+  Type* getElementType(Type *T, const ArrayRef<unsigned>& Indices) {
+    Type *Output = T;
+    for (unsigned I : Indices) {
+      if (ArrayType *AT = dyn_cast<ArrayType>(T))
+        Output = AT->getElementType();
+      else if (VectorType *VT = dyn_cast<VectorType>(T))
+        Output = VT->getElementType();
+      else if (StructType *ST = dyn_cast<StructType>(T))
+        Output = ST->getElementType(I);
+      else
+        llvm_unreachable("Cannot index into this type.");
+    }
+    return Output;
+  }
+
+  template <typename U>
+  std::vector<Type *> gatherElementTypes(Type *T, const ArrayRef<U>& Indices) {
+    std::vector<Type*> Output;
+    Output.push_back(T);
+
+    for (unsigned I : Indices) {
+      if (ArrayType *AT = dyn_cast<ArrayType>(T))
+        T = AT->getElementType();
+      else if (VectorType *VT = dyn_cast<VectorType>(T))
+        T = VT->getElementType();
+      else if (StructType *ST = dyn_cast<StructType>(T))
+        T = ST->getElementType(I);
+      else if (TypedPointerType *TP = dyn_cast<TypedPointerType>(T))
+        T = TP->getElementType();
+      else
+        break;
+      Output.push_back(T);
+    }
+
+    return Output;
+  }
+
+  template <typename U>
+  Type* deduceTypeFromChain(Type *ElementType, Type *BaseType, const ArrayRef<U>& Indices) {
+    if (!TypeInfo::isOpaqueType(BaseType))
+      return BaseType;
+
+    if (TypeInfo::isOpaqueType(ElementType))
+      return nullptr;
+
+    Type *Output = ElementType;
+    std::vector<Type*> Types = gatherElementTypes(BaseType, Indices);
+    for (unsigned I = 0; I < Indices.size(); ++I) {
+      unsigned TypeIndex = Indices.size() - I - 1;
+      // The entier chain cannot be walked (opaque pointer reached). Meaning we don't
+      // have enough info to rebuild the whole chain.
+      if (TypeIndex >= Types.size())
+        return nullptr;
+
+      Type *CT = Types[TypeIndex];
+
+      if (ArrayType *AT = dyn_cast<ArrayType>(CT)) {
+        Output = ArrayType::get(Output, AT->getNumElements());
+        continue;
+      }
+
+      if (VectorType *VT = dyn_cast<VectorType>(CT)) {
+        Output = VectorType::get(Output, VT->getElementCount());
+        continue;
+      }
+
+      if (TypedPointerType *TP = dyn_cast<TypedPointerType>(CT)) {
+        Output = TP->getElementType();
+        continue;
+      }
+
+      if (dyn_cast<PointerType>(CT))
+        return nullptr;
+
+      StructType *ST = cast<StructType>(CT);
+      if (!TypeInfo::isOpaqueType(ST)) {
+        Output = ST;
+        continue;
+      }
+
+      std::vector<Type*> ElementTypes(ST->element_begin(), ST->element_end());
+      ElementTypes[Indices[I]] = Output;
+      for (Type *ET : ElementTypes)
+        if (TypeInfo::isOpaqueType(ET))
+          return nullptr;
+      if (ST->hasName())
+        Output = StructType::create(ElementTypes, ST->getName(), ST->isPacked());
+      else
+        Output = StructType::get(ST->getContext(), ElementTypes, ST->isPacked());
+    }
+
+    return Output;
+  }
+
 
   bool typeContainsType(Type *Wrapper, Type *Needle) {
     if (Wrapper == Needle)
@@ -143,7 +252,9 @@ private:
       (*TypeMap)[V] = DeducedType;
     }
 
-    if (const Constant *C = dyn_cast<Constant>(V))
+    if (const GlobalVariable *C = dyn_cast<GlobalVariable>(V))
+      propagateTypeDetails(DeducedType, C);
+    else if (const Constant *C = dyn_cast<Constant>(V))
       propagateTypeDetails(DeducedType, C);
     else if (const Argument *C = dyn_cast<Argument>(V))
       propagateTypeDetails(DeducedType, C);
@@ -158,6 +269,22 @@ private:
     else if (const ReturnInst *C = dyn_cast<ReturnInst>(V))
       propagateTypeDetails(DeducedType, C);
     else if (const StoreInst *C = dyn_cast<StoreInst>(V))
+      propagateTypeDetails(DeducedType, C);
+    else if (const GlobalVariable *C = dyn_cast<GlobalVariable>(V))
+      propagateTypeDetails(DeducedType, C);
+    else if (const AtomicCmpXchgInst *C = dyn_cast<AtomicCmpXchgInst>(V))
+      propagateTypeDetails(DeducedType, C);
+    else if (const ExtractValueInst *C = dyn_cast<ExtractValueInst>(V))
+      propagateTypeDetails(DeducedType, C);
+    else if (const InsertValueInst *C = dyn_cast<InsertValueInst>(V))
+      propagateTypeDetails(DeducedType, C);
+    else if (const AddrSpaceCastInst *C = dyn_cast<AddrSpaceCastInst>(V))
+      propagateTypeDetails(DeducedType, C);
+    else if (const SelectInst *C = dyn_cast<SelectInst>(V))
+      propagateTypeDetails(DeducedType, C);
+    else if (const PHINode *C = dyn_cast<PHINode>(V))
+      propagateTypeDetails(DeducedType, C);
+    else if (const CastInst *C = dyn_cast<CastInst>(V))
       propagateTypeDetails(DeducedType, C);
     else
       llvm_unreachable("FIXME: unsupported instruction");
@@ -197,7 +324,7 @@ private:
 
   void propagateTypeDetails(Type *DeducedType, const LoadInst *I) {
     TypeMap->try_emplace(I, DeducedType);
-    propagateType(TypedPointerType::get(DeducedType, 0),
+    propagateType(TypedPointerType::get(DeducedType, I->getPointerAddressSpace()),
                   I->getPointerOperand());
   }
 
@@ -216,25 +343,6 @@ private:
     TypeMap->try_emplace(I, DeducedType);
   }
 
-#if 0
-  Type* walkTypeForward(const Type *T, const SmallVectorImpl<unsigned>& Indices) {
-    const Type *Output = T;
-    for (unsigned I : Indices) {
-      if (ArrayType *AT = dyn_cast<ArrayType>(T))
-        Output = AT->getElementType();
-      else if (VectorType *VT = dyn_cast<VectorType>(T))
-        Output = VT->getElementType();
-      else if (StructType *ST = dyn_cast<StructType>(T))
-        Output = ST->getElementType(I);
-      else
-        llvm_unreachable("Cannot index into this type.");
-    }
-    return Output;
-  }
-
-  Type* build
-
-#endif
   void propagateTypeDetails(Type *DeducedType, const GetElementPtrInst *GEP) {
     if (!TypeInfo::isOpaqueType(GEP->getSourceElementType())) {
       // If the source is non-opaque, the result must be non-opaque (subset of
@@ -246,45 +354,24 @@ private:
       // is wrong with this analysis.
       TypedPointerType *DeducedPtr = cast<TypedPointerType>(DeducedType);
       assert(GEP->getResultElementType() == DeducedPtr->getElementType());
-      propagateType(TypedPointerType::get(GEP->getSourceElementType(), 0),
+      propagateType(TypedPointerType::get(GEP->getSourceElementType(), GEP->getAddressSpace()),
                     GEP->getPointerOperand());
       return;
     }
 
     TypeMap->try_emplace(GEP, DeducedType);
 
-    // The source type is opaque. We might be able to deduce more info from the
-    // new result type.
-    Type *NewType = DeducedType;
-    std::vector<Type *> Types = {GEP->getSourceElementType()};
     std::vector<uint64_t> Indices;
-    for (const Use &U : GEP->indices())
-      Indices.push_back(cast<ConstantInt>(&*U)->getZExtValue());
+    // The first index of a GEP is indexing from the passed pointer. Skipping
+    // the first index for type deduction.
+    for (unsigned I = 1; I < GEP->getNumIndices(); ++I)
+      Indices.push_back(cast<ConstantInt>(&*(GEP->idx_begin() + I))->getZExtValue());
+    Type *BT = deduceTypeFromChain<uint64_t>(DeducedType, GEP->getSourceElementType(), Indices);
+    if (!BT)
+      return;
 
-    for (unsigned I = 1; I < Indices.size(); ++I)
-      Types.push_back(
-          GetElementPtrInst::getTypeAtIndex(Types[I - 1], Indices[I]));
-
-    for (unsigned I = 1; I < GEP->getNumIndices(); ++I) {
-      unsigned Index = GEP->getNumIndices() - 1 - I;
-      Type *T = Types[Index];
-      if (T->isPointerTy())
-        return;
-
-      if (ArrayType *AT = dyn_cast<ArrayType>(T))
-        NewType = ArrayType::get(NewType, AT->getNumElements());
-      else if (VectorType *VT = dyn_cast<VectorType>(T))
-        NewType = VectorType::get(NewType, VT->getElementCount());
-      else if (StructType *ST = dyn_cast<StructType>(T))
-        assert(0 && "Opaque struct types are not supported.");
-      else
-        llvm_unreachable("Unsupported aggregate type?");
-    }
-
-    // The first index of a GEP is indexing from the passed pointer. So we need
-    // to add one layer.
-    NewType = TypedPointerType::get(NewType, 0);
-
+    // Adding back the first indirection to the deduced type.
+    Type *NewType = TypedPointerType::get(BT, GEP->getAddressSpace());
     propagateType(NewType, GEP->getPointerOperand());
   }
 
@@ -316,6 +403,76 @@ private:
     propagateType(DeducedType, RV);
   }
 
+  void propagateTypeDetails(Type *DeducedType, const GlobalVariable *GV) {
+    TypeMap->try_emplace(GV, DeducedType);
+    if (!GV->hasInitializer())
+      return;
+    TypedPointerType *TP = cast<TypedPointerType>(DeducedType);
+    assert(!TypeInfo::isOpaqueType(TP));
+    propagateType(TP->getElementType(), GV->getInitializer());
+  }
+
+  void propagateTypeDetails(Type *DeducedType, const AtomicCmpXchgInst *A) {
+    StructType *ST = cast<StructType>(DeducedType);
+    TypeMap->try_emplace(A, DeducedType);
+
+    propagateType(TypedPointerType::get(ST->getElementType(0), A->getPointerAddressSpace()), A->getPointerOperand());
+    propagateType(ST->getElementType(0), A->getCompareOperand());
+    propagateType(ST->getElementType(0), A->getNewValOperand());
+  }
+
+  void propagateTypeDetails(Type *DeducedType, const ExtractValueInst *EI) {
+    TypeMap->try_emplace(EI, DeducedType);
+
+    if (getDeducedType(EI->getAggregateOperand()))
+      return;
+
+    Type *BT = deduceTypeFromChain(DeducedType, EI->getAggregateOperand()->getType(), EI->getIndices());
+    if (!BT)
+      return;
+    propagateType(BT, EI->getAggregateOperand());
+  }
+
+  void propagateTypeDetails(Type *DeducedType, const InsertValueInst *II) {
+    TypeMap->try_emplace(II, DeducedType);
+
+    // The source aggregate hasn't been deduced, we can propagate the type we now have.
+    if (!getDeducedType(II->getAggregateOperand()))
+      propagateType(DeducedType, II->getAggregateOperand());
+
+    // The value operand can be deduced from the result operand now.
+    if (!getDeducedType(II->getInsertedValueOperand()))
+      propagateType(getElementType(DeducedType, II->getIndices()), II->getInsertedValueOperand());
+  }
+
+  void propagateTypeDetails(Type *DeducedType, const AddrSpaceCastInst *ACI) {
+    TypeMap->try_emplace(ACI, DeducedType);
+
+    TypedPointerType *TPT = cast<TypedPointerType>(DeducedType);
+    Type *Result = TypedPointerType::get(TPT->getElementType(), ACI->getSrcAddressSpace());
+    propagateType(Result, ACI->getPointerOperand());
+  }
+
+  void propagateTypeDetails(Type *DeducedType, const SelectInst *SI) {
+    TypeMap->try_emplace(SI, DeducedType);
+    propagateType(DeducedType, SI->getTrueValue());
+    propagateType(DeducedType, SI->getFalseValue());
+  }
+
+  void propagateTypeDetails(Type *DeducedType, const CastInst *SI) {
+    TypeMap->try_emplace(SI, DeducedType);
+
+    if (!TypeInfo::isOpaqueType(SI->getSrcTy()))
+      propagateType(SI->getSrcTy(), SI->getOperand(0));
+  }
+
+  void propagateTypeDetails(Type *DeducedType, const PHINode *PHI) {
+    TypeMap->try_emplace(PHI, DeducedType);
+
+    for (Value *V : PHI->incoming_values())
+      propagateType(DeducedType, V);
+  }
+
   bool deduceElementType(const Value *V) {
     assert(V != nullptr);
 
@@ -327,30 +484,72 @@ private:
   if (auto *Casted = dyn_cast<Type>(Value))                                    \
     return deduceType(Casted);
 
+    X(Argument, V);
+    X(AddrSpaceCastInst, V);
     X(AllocaInst, V);
-    X(CallInst, V);
+    X(AtomicCmpXchgInst, V);
+    X(ExtractValueInst, V);
+    X(InsertValueInst, V);
     X(GetElementPtrInst, V);
     X(LoadInst, V);
     X(ReturnInst, V);
     X(StoreInst, V);
-    // TODO:  GlobalValue
-    // TODO: addrspacecast
-    // TODO: bitcast
-    // TODO: AtomicCmpXchgInst
-    // TODO: AtomicRMWInst
-    // TODO: PHINode
-    // TODO: SelectInst
-    // TODO: CallInst
+    X(InsertElementInst, V);
+    X(ExtractElementInst, V);
+    X(SelectInst, V);
+    X(PHINode, V);
+    X(ShuffleVectorInst, V);
+
+    X(BranchInst, V);
+    X(CallInst, V);
+    X(CastInst, V);
+    X(CmpInst, V);
+    X(GlobalVariable, V);
+    X(SwitchInst, V);
+    X(UnreachableInst, V);
+
+    X(BinaryOperator, V);
+    X(UnaryOperator, V);
+    // TODO: shufflevector
 #undef X
 
+    V->dump();
     llvm_unreachable("FIXME: unsupported instruction");
     return false;
+  }
+
+  bool deduceType(const Argument *A) {
+    if (TypeInfo::isOpaqueType(A->getType()))
+      return false;
+    TypeMap->try_emplace(A, A->getType());
+    return true;
   }
 
   bool deduceType(const AllocaInst *I) {
     if (TypeInfo::isOpaqueType(I->getAllocatedType()))
       return false;
-    TypeMap->try_emplace(I, TypedPointerType::get(I->getAllocatedType(), 0));
+    TypeMap->try_emplace(I, TypedPointerType::get(I->getAllocatedType(), I->getAddressSpace()));
+    return true;
+  }
+
+  bool deduceType(const BranchInst*) { return true; }
+  bool deduceType(const SwitchInst*) { return true; }
+  bool deduceType(const UnreachableInst*) { return true; }
+
+  bool deduceType(const AddrSpaceCastInst *ACI) {
+    Type *PT = getDeducedType(ACI->getPointerOperand());
+    if (!PT)
+      return false;
+
+    TypedPointerType *TPT = cast<TypedPointerType>(PT);
+    Type *Result = TypedPointerType::get(TPT->getElementType(), ACI->getDestAddressSpace());
+    TypeMap->try_emplace(ACI, Result);
+    return true;
+  }
+
+  bool deduceType(const CmpInst *CI) {
+    assert(!TypeInfo::isOpaqueType(CI->getType()));
+    TypeMap->try_emplace(CI, CI->getType());
     return true;
   }
 
@@ -358,17 +557,14 @@ private:
     // First case: the loaded type is complete: we can assign the result type.
     if (!TypeInfo::isOpaqueType(I->getType())) {
       TypeMap->try_emplace(I, I->getType());
-      propagateType(TypedPointerType::get(I->getType(), 0),
+      propagateType(TypedPointerType::get(I->getType(), I->getPointerAddressSpace()),
                     I->getPointerOperand());
       return true;
     }
 
     // The pointer operand is non-opaque, we can deduce the loaded type.
-    if (Type *PointerOperandTy = getMappedType(I->getPointerOperand())) {
-      // FIXME: only supports pointer of pointers for now.
-      Type *ElementType =
-          cast<TypedPointerType>(PointerOperandTy)->getElementType();
-      assert(!ElementType->isPointerTy());
+    if (Type *PointerOperandTy = getDeducedType(I->getPointerOperand())) {
+      Type *ElementType = cast<TypedPointerType>(PointerOperandTy)->getElementType();
       TypeMap->try_emplace(I, ElementType);
       return true;
     }
@@ -376,23 +572,62 @@ private:
     return false;
   }
 
-  Type *getDeducedType(const Value *V) {
-    auto It = TypeMap->find(V);
-    return It == TypeMap->end() ? nullptr : It->second;
+  bool deduceType(const CastInst *I) {
+    if (TypeInfo::isOpaqueType(I->getDestTy()))
+      return false;
+    TypeMap->try_emplace(I, I->getDestTy());
+    return true;
+  }
+
+  bool deduceType(const AtomicCmpXchgInst *I) {
+    Type *VT = nullptr;
+
+    if (!TypeInfo::isOpaqueType(I->getType())) {
+      // The cmpxchg instruction returns an aggregate with 2 values:
+      //  - the original value
+      //  - a bit indicating if the store occured or not.
+      StructType *ST = cast<StructType>(I->getType());
+      VT = ST->getElementType(0);
+    }
+
+    if (!VT)
+      VT = getDeducedType(I->getPointerOperand());
+
+    if (!VT)
+      VT = getDeducedType(I->getCompareOperand());
+
+    if (!VT)
+      return false;
+
+    StructType *RT = StructType::get(VT, IntegerType::getInt1Ty(I->getContext()));
+
+    TypeMap->try_emplace(I, RT);
+    propagateType(TypedPointerType::get(VT, I->getPointerAddressSpace()), I->getPointerOperand());
+    propagateType(VT, I->getNewValOperand());
+    propagateType(VT, I->getCompareOperand());
+
+    return true;
   }
 
   bool deduceType(const StoreInst *I) {
-    Type *ValueType = I->getValueOperand()->getType();
-    Type *SourceType = getDeducedType(I->getPointerOperand());
-    bool isOpaqueType = TypeInfo::isOpaqueType(ValueType);
+    Type *VT = nullptr;
+    // We can get the type from the value operand.
+    if (!TypeInfo::isOpaqueType(I->getValueOperand()->getType()))
+        VT = I->getValueOperand()->getType();
 
-    if (isOpaqueType && !SourceType)
+    // If not, we can maybe get it from the pointer operands.
+    if (!VT) {
+      Type *Source = getDeducedType(I->getPointerOperand());
+      if (Source)
+        VT = cast<TypedPointerType>(Source)->getElementType();
+    }
+
+    // Otherwise, nothing to deduce.
+    if (!VT)
       return false;
 
-    if (isOpaqueType)
-      ValueType = cast<TypedPointerType>(SourceType)->getElementType();
-    propagateType(ValueType, I->getValueOperand());
-    propagateType(TypedPointerType::get(ValueType, 0), I->getPointerOperand());
+    propagateType(VT, I->getValueOperand());
+    propagateType(TypedPointerType::get(VT, I->getPointerAddressSpace()), I->getPointerOperand());
     return true;
   }
 
@@ -415,11 +650,11 @@ private:
 
   bool deduceType(const GetElementPtrInst *I) {
     if (!TypeInfo::isOpaqueType(I->getResultElementType())) {
-      Type *T = TypedPointerType::get(I->getResultElementType(), 0);
+      Type *T = TypedPointerType::get(I->getResultElementType(), I->getAddressSpace());
       TypeMap->try_emplace(I, T);
 
       assert(!TypeInfo::isOpaqueType(I->getSourceElementType()));
-      propagateType(TypedPointerType::get(I->getSourceElementType(), 0), I->getPointerOperand());
+      propagateType(TypedPointerType::get(I->getSourceElementType(), I->getAddressSpace()), I->getPointerOperand());
       return true;
     }
 
@@ -429,34 +664,185 @@ private:
     DeducedBase = cast<TypedPointerType>(DeducedBase)->getElementType();
 
     return false;
-
-#if 0
-    Type *T = TypedPointerType::get(I->getResultElementType(), 0);
-
-    ReturnType = TypeInfo::isOpaqueType(ReturnType)
-                     ? getDeducedType(CI->getCalledFunction())
-                     : ReturnType;
-
-    // TypeMap->try_emplace(I, T);
-    propagateType(T, I);
-    return true;
-#endif
   }
 
   bool deduceType(const CallInst *CI) {
-    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI))
-      llvm_unreachable("Not implemented");
-    // return deduceType(II);
+    FunctionType *FT = CI->getFunctionType();
+    for (unsigned I = 0; I < FT->getNumParams(); ++I) {
+      Type *ParamType = FT->getParamType(I);
+      if (TypeInfo::isOpaqueType(ParamType))
+        continue;
+      // Variadic functions may have more arguments than the type defines types,
+      // so it should be OK to limit I to be FT->getNumParams() and use it to index
+      // in getArgOperand.
+      propagateType(ParamType, CI->getArgOperand(I));
+    }
 
-    Type *ReturnType = CI->getFunctionType()->getReturnType();
-    ReturnType = TypeInfo::isOpaqueType(ReturnType)
-                     ? getDeducedType(CI->getCalledFunction())
-                     : ReturnType;
-    if (nullptr == ReturnType)
+    if (!TypeInfo::isOpaqueType(CI->getType())) {
+      TypeMap->try_emplace(CI, CI->getType());
+      return true;
+    }
+
+    if (!CI->getCalledFunction())
       return false;
 
-    TypeMap->try_emplace(CI, ReturnType);
-    propagateType(ReturnType, CI->getCalledFunction());
+    Type *ReturnType = getDeducedType(CI->getCalledFunction());
+    if (ReturnType)
+      TypeMap->try_emplace(CI, ReturnType);
+    return ReturnType != nullptr;
+  }
+
+  bool deduceType(const GlobalVariable *GV) {
+    // Simple case: the global stores a non-opaque value. We can directly deduce the type.
+    if (!TypeInfo::isOpaqueType(GV->getValueType())) {
+      TypeMap->try_emplace(GV, TypedPointerType::get(GV->getValueType(), GV->getType()->getAddressSpace()));
+      return true;
+    }
+
+    // Global variable type is opaque, and has no initializer we can deduce the type with.
+    const Constant *C = GV->hasInitializer() ? GV->getInitializer() : nullptr;
+    if (C == nullptr)
+      return false;
+
+    // Type is opaque, and the initializer has no deduced type, we cannot do anything either.
+    Type *DeducedValueType = getDeducedType(C);
+    if (DeducedValueType == nullptr)
+      return false;
+
+    TypeMap->try_emplace(GV, TypedPointerType::get(DeducedValueType, GV->getType()->getAddressSpace()));
+    return true;
+  }
+
+  bool deduceType(const ExtractValueInst *I) {
+    Type *T = I->getType();
+    if (!TypeInfo::isOpaqueType(T)) {
+      TypeMap->try_emplace(I, T);
+      return true;
+    }
+
+    T = getDeducedType(I->getAggregateOperand());
+    if (!T)
+      return false;
+
+    T = getElementType(T, I->getIndices());
+    TypeMap->try_emplace(I, T);
+    return true;
+  }
+
+  bool deduceType(const InsertValueInst *I) {
+    Type *T = I->getType();
+    if (!TypeInfo::isOpaqueType(T)) {
+      TypeMap->try_emplace(I, T);
+      return true;
+    }
+
+    T = getDeducedType(I->getAggregateOperand());
+    if (!T) {
+      TypeMap->try_emplace(I, T);
+      return true;
+    }
+
+    return false;
+  }
+
+  bool deduceType(const InsertElementInst *I) {
+    assert(!TypeInfo::isOpaqueType(I->getType()));
+    TypeMap->try_emplace(I, I->getType());
+    propagateType(I->getType(), I->getOperand(0));
+    return true;
+  }
+
+  bool deduceType(const ExtractElementInst *I) {
+    assert(!TypeInfo::isOpaqueType(I->getType()));
+    TypeMap->try_emplace(I, I->getType());
+    propagateType(I->getVectorOperandType(), I->getVectorOperand());
+    return true;
+  }
+
+  bool deduceType(const ShuffleVectorInst *I) {
+    assert(!TypeInfo::isOpaqueType(I->getType()));
+    TypeMap->try_emplace(I, I->getType());
+    //propagateType(I->getType(), I->getOperand(0));
+    //propagateType(I->getType(), I->getOperand(1));
+    return true;
+  }
+
+  bool deduceType(const SelectInst *I) {
+    Type *T = nullptr;
+    if (!TypeInfo::isOpaqueType(I->getType()))
+      T = I->getType();
+    if (!T)
+      T = getDeducedType(I->getTrueValue());
+    if (!T)
+      T = getDeducedType(I->getFalseValue());
+
+    if (!T)
+      return false;
+
+    TypeMap->try_emplace(I, T);
+    propagateType(T, I->getTrueValue());
+    propagateType(T, I->getFalseValue());
+    return true;
+  }
+
+  bool deduceType(const BinaryOperator *I) {
+    DenseSet<Instruction::BinaryOps> SupportedOpcodes({
+      Instruction::BinaryOps::Add,
+      Instruction::BinaryOps::FAdd,
+      Instruction::BinaryOps::Sub,
+      Instruction::BinaryOps::FSub,
+      Instruction::BinaryOps::Mul,
+      Instruction::BinaryOps::FMul,
+      Instruction::BinaryOps::UDiv,
+      Instruction::BinaryOps::SDiv,
+      Instruction::BinaryOps::FDiv,
+      Instruction::BinaryOps::URem,
+      Instruction::BinaryOps::SRem,
+      Instruction::BinaryOps::FRem,
+      Instruction::BinaryOps::Shl,
+      Instruction::BinaryOps::LShr,
+      Instruction::BinaryOps::AShr,
+      Instruction::BinaryOps::And,
+      Instruction::BinaryOps::Or,
+      Instruction::BinaryOps::Xor
+    });
+
+    assert(SupportedOpcodes.contains(I->getOpcode()));
+    Type *T = I->getType();
+    if (TypeInfo::isOpaqueType(T))
+      return false;
+
+    TypeMap->try_emplace(I, T);
+    propagateType(T, I->getOperand(0));
+    propagateType(T, I->getOperand(1));
+    return true;
+  }
+
+  bool deduceType(const UnaryOperator *I) {
+    assert(I->getOpcode() == Instruction::UnaryOps::FNeg);
+    Type *T = I->getType();
+    if (TypeInfo::isOpaqueType(T))
+      return false;
+
+    TypeMap->try_emplace(I, T);
+    propagateType(T, I->getOperand(0));
+    return true;
+  }
+
+  bool deduceType(const PHINode *I) {
+    Type *T = TypeInfo::isOpaqueType(I->getType()) ? nullptr : I->getType();
+    for (Value *V : I->incoming_values()) {
+      if (T)
+        break;
+     T = getDeducedType(V);
+    }
+
+    if (!T)
+      return false;
+
+    TypeMap->try_emplace(I, T);
+    for (Value *V : I->incoming_values())
+      propagateType(T, V);
     return true;
   }
 
