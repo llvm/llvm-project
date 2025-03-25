@@ -44,6 +44,7 @@ public:
   const MCSymbolRefExpr *getSymA() const { return SymA; }
   const MCSymbolRefExpr *getSymB() const { return SymB; }
   uint32_t getRefKind() const { return RefKind; }
+  void setSpecifier(uint32_t S) { RefKind = S; }
 
   const MCSymbol *getAddSym() const {
     return SymA ? &SymA->getSymbol() : nullptr;
