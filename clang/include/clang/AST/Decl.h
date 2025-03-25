@@ -2198,9 +2198,7 @@ public:
     ThisDeclarationWasADefinition = true;
   }
 
-  bool wasThisDeclarationADefinition() {
-    return ThisDeclarationWasADefinition;
-  }
+  bool wasThisDeclarationADefinition() { return ThisDeclarationWasADefinition; }
 
   /// Returns whether the function has a trivial body that does not require any
   /// specific codegen.
