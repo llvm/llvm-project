@@ -22,7 +22,6 @@ namespace mca {
 
 void InstructionInfoView::getComment(raw_ostream &OS, const MCInst &MCI) const {
   StringRef S = MCI.getLoc().getPointer();
-  StringRef InstrStr;
   size_t Pos = 0, PosCmt = 0;
 
   // Recognized comments are after assembly instructions on the same line.
@@ -31,7 +30,7 @@ void InstructionInfoView::getComment(raw_ostream &OS, const MCInst &MCI) const {
   // '#' comment mark is not supported by llvm-mca
 
   if (Pos = S.find("\n"); Pos != StringRef::npos) {
-    InstrStr = S.take_front(Pos);
+    StringRef InstrStr = S.take_front(Pos);
     // C style comment
     if (((PosCmt = InstrStr.find("/*")) != StringRef::npos) &&
         ((Pos = InstrStr.find("*/")) != StringRef::npos)) {
@@ -41,10 +40,8 @@ void InstructionInfoView::getComment(raw_ostream &OS, const MCInst &MCI) const {
     // C++ style comment
     if ((PosCmt = InstrStr.find("//")) != StringRef::npos) {
       OS << InstrStr.substr(PosCmt);
-      return;
     }
   }
-  return;
 }
 
 void InstructionInfoView::printView(raw_ostream &OS) const {
