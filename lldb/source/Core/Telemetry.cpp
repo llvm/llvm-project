@@ -132,6 +132,12 @@ void TelemetryManager::DispatchClientTelemetry(
 
   ClientInfo client_info;
   client_info.debugger = debugger;
+  if (entry.GetObjectSP()->GetType() != lldb::eStructuredDataTypeDictionary) {
+    LLDB_LOG(GetLog(LLDBLog::Object), "Expected Dictionary type but got {0}.",
+             entry.GetObjectSP()->GetType());
+    return;
+  }
+
   auto *dict = entry.GetObjectSP()->GetAsDictionary();
 
   llvm::StringRef request_name;
@@ -152,12 +158,12 @@ void TelemetryManager::DispatchClientTelemetry(
 
   int64_t end_time;
   if (dict->GetValueForKeyAsInteger("end_time", end_time)) {
+    SteadyTimePoint epoch;
     client_info.end_time =
         epoch + std::chrono::nanoseconds(static_cast<size_t>(end_time));
   } else {
     LLDB_LOG(GetLog(LLDBLog::Object),
              "Cannot determine end-time from client-telemetry entry");
-    client_info.end_time = epoch;
   }
 
   llvm::StringRef error_msg;

@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <chrono>
 #include <string>
@@ -184,18 +185,12 @@ public:
     lldb::SBStructuredData telemetry_entry;
     llvm::json::Value val(std::move(m_telemetry_json));
 
-    std::string string_rep = JSONToString(val);
+    std::string string_rep = llvm::to_string(val);
     telemetry_entry.SetFromJSON(string_rep.c_str());
     debugger->DispatchClientTelemetry(telemetry_entry);
   }
 
 private:
-  static std::string JSONToString(const llvm::json::Value &json) {
-    std::string data;
-    llvm::raw_string_ostream os(data);
-    os << json;
-    return data;
-  }
   llvm::json::Object m_telemetry_json;
   lldb::SBDebugger *debugger;
 };
