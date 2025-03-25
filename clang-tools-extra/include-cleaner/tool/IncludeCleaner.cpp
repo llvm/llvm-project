@@ -91,16 +91,16 @@ cl::opt<bool> Edit{
     cl::cat(IncludeCleaner),
 };
 
-cl::opt<bool> Insert{
-    "insert",
-    cl::desc("Allow header insertions"),
-    cl::init(true),
+cl::opt<bool> DisableInsert{
+    "disable-insert",
+    cl::desc("DIsable header insertions"),
+    cl::init(false),
     cl::cat(IncludeCleaner),
 };
-cl::opt<bool> Remove{
-    "remove",
-    cl::desc("Allow header removals"),
-    cl::init(true),
+cl::opt<bool> DisableRemove{
+    "disable-remove",
+    cl::desc("Disable header removals"),
+    cl::init(false),
     cl::cat(IncludeCleaner),
 };
 
@@ -183,9 +183,9 @@ private:
     auto Results =
         analyze(AST.Roots, PP.MacroReferences, PP.Includes, &PI,
                 getCompilerInstance().getPreprocessor(), HeaderFilter);
-    if (!Insert)
+    if (DisableInsert)
       Results.Missing.clear();
-    if (!Remove)
+    if (DisableRemove)
       Results.Unused.clear();
     std::string Final = fixIncludes(Results, AbsPath, Code, getStyle(AbsPath));
 
