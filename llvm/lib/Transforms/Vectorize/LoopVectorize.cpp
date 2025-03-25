@@ -5821,7 +5821,6 @@ LoopVectorizationCostModel::getReductionPatternCost(Instruction *I,
 
   // Find the reduction this chain is a part of and calculate the basic cost of
   // the reduction on its own.
-  Instruction *LastChain = RetIIt->second;
   Instruction *ReductionPhi = LastChain;
   while (!isa<PHINode>(ReductionPhi))
     ReductionPhi = InLoopReductionImmediateChains.at(ReductionPhi);
