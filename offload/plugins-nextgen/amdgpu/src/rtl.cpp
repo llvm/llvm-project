@@ -5128,8 +5128,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     return Err;
 
   // Only COV5 implicitargs needs to be set. COV4 implicitargs are not used.
-  if (ImplArgs &&
-      getImplicitArgsSize() == sizeof(hsa_utils::AMDGPUImplicitArgsTy)) {
+  if (ImplArgs) {
     DP("Setting fields of ImplicitArgs for COV5\n");
     ImplArgs->BlockCountX = NumBlocks[0];
     ImplArgs->BlockCountY = NumBlocks[1];
@@ -5144,17 +5143,6 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
         (uint64_t)AMDGPUDevice.getPreAllocatedDeviceMemoryPool();
     ImplArgs->DynamicLdsSize = KernelArgs.DynCGroupMem;
   }
-  // Set the COV5+ implicit arguments to the appropriate values.
-  ImplArgs->BlockCountX = NumBlocks[0];
-  ImplArgs->BlockCountY = NumBlocks[1];
-  ImplArgs->BlockCountZ = NumBlocks[2];
-  ImplArgs->GroupSizeX = NumThreads[0];
-  ImplArgs->GroupSizeY = NumThreads[1];
-  ImplArgs->GroupSizeZ = NumThreads[2];
-  ImplArgs->GridDims = NumBlocks[2] * NumThreads[2] > 1
-                           ? 3
-                           : 1 + (NumBlocks[1] * NumThreads[1] != 1);
-  ImplArgs->DynamicLdsSize = KernelArgs.DynCGroupMem;
 
   // Get required OMPT-related data
   auto LocalOmptEventInfo = getOrNullOmptEventInfo(AsyncInfoWrapper);
