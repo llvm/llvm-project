@@ -1305,8 +1305,8 @@ bool AMDGPUCallLowering::lowerTailCall(
   SmallVector<std::pair<MCRegister, Register>, 12> ImplicitArgRegs;
 
   if (Info.CallConv != CallingConv::AMDGPU_Gfx &&
-      !AMDGPU::isChainCC(Info.CallConv) &&
-      Info.CallConv != CallingConv::AMDGPU_WholeWave) {
+      Info.CallConv != CallingConv::AMDGPU_Gfx_WholeWave &&
+      !AMDGPU::isChainCC(Info.CallConv)) {
     // With a fixed ABI, allocate fixed registers before user arguments.
     if (!passSpecialInputs(MIRBuilder, CCInfo, ImplicitArgRegs, Info))
       return false;
@@ -1489,7 +1489,7 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   SmallVector<std::pair<MCRegister, Register>, 12> ImplicitArgRegs;
 
   if (Info.CallConv != CallingConv::AMDGPU_Gfx &&
-      Info.CallConv != CallingConv::AMDGPU_WholeWave) {
+      Info.CallConv != CallingConv::AMDGPU_Gfx_WholeWave) {
     // With a fixed ABI, allocate fixed registers before user arguments.
     if (!passSpecialInputs(MIRBuilder, CCInfo, ImplicitArgRegs, Info))
       return false;

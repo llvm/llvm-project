@@ -42,7 +42,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
       PrivateSegmentWaveByteOffset(false), WorkItemIDX(false),
       WorkItemIDY(false), WorkItemIDZ(false), ImplicitArgPtr(false),
       GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0),
-      IsWholeWaveFunction(F.getCallingConv() == CallingConv::AMDGPU_WholeWave) {
+      IsWholeWaveFunction(F.getCallingConv() ==
+                          CallingConv::AMDGPU_Gfx_WholeWave) {
   const GCNSubtarget &ST = *static_cast<const GCNSubtarget *>(STI);
   FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(F);
   WavesPerEU = ST.getWavesPerEU(F);
@@ -84,7 +85,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
 
     ImplicitArgPtr = false;
   } else if (!isEntryFunction()) {
-    if (CC != CallingConv::AMDGPU_Gfx && CC != CallingConv::AMDGPU_WholeWave)
+    if (CC != CallingConv::AMDGPU_Gfx &&
+        CC != CallingConv::AMDGPU_Gfx_WholeWave)
       ArgInfo = AMDGPUArgumentUsageInfo::FixedABIFunctionInfo;
 
     FrameOffsetReg = AMDGPU::SGPR33;

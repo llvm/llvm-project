@@ -6,7 +6,7 @@
 ; The EXEC mask should be set to -1 for the duration of the function
 ; and restored to its original value in the epilogue.
 ; We will also need to restore the inactive lanes for any allocated VGPRs.
-define amdgpu_whole_wave i32 @basic_test(i1 %active, i32 %a, i32 %b) {
+define amdgpu_gfx_whole_wave i32 @basic_test(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-LABEL: basic_test:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -61,7 +61,7 @@ define amdgpu_whole_wave i32 @basic_test(i1 %active, i32 %a, i32 %b) {
 }
 
 ; Make sure we don't crash if %active is not used at all.
-define amdgpu_whole_wave i32 @unused_active(i1 %active, i32 %a, i32 %b) {
+define amdgpu_gfx_whole_wave i32 @unused_active(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-LABEL: unused_active:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -102,7 +102,7 @@ define amdgpu_whole_wave i32 @unused_active(i1 %active, i32 %a, i32 %b) {
 
 ; For any used VGPRs (including those used for SGPR spills), we need to restore the inactive lanes.
 ; For CSR VGPRs, we need to restore all lanes.
-define amdgpu_whole_wave i32 @csr(i1 %active, i32 %a, i32 %b) {
+define amdgpu_gfx_whole_wave i32 @csr(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-LABEL: csr:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -189,7 +189,7 @@ define amdgpu_whole_wave i32 @csr(i1 %active, i32 %a, i32 %b) {
 }
 
 ; Save and restore all lanes of v40.
-define amdgpu_whole_wave void @csr_vgpr_only(i1 %active, i32 %a, i32 %b) {
+define amdgpu_gfx_whole_wave void @csr_vgpr_only(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-LABEL: csr_vgpr_only:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -229,7 +229,7 @@ define amdgpu_whole_wave void @csr_vgpr_only(i1 %active, i32 %a, i32 %b) {
   ret void
 }
 
-define amdgpu_whole_wave void @sgpr_spill_only(i1 %active, i32 %a, i32 %b) {
+define amdgpu_gfx_whole_wave void @sgpr_spill_only(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-LABEL: sgpr_spill_only:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -279,7 +279,7 @@ define amdgpu_whole_wave void @sgpr_spill_only(i1 %active, i32 %a, i32 %b) {
   ret void
 }
 
-define amdgpu_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
+define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-LABEL: multiple_blocks:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -352,7 +352,7 @@ if.end:
   ret i32 %e
 }
 
-define amdgpu_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) {
+define amdgpu_gfx_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) {
 ; DAGISEL-LABEL: ret_64:
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0

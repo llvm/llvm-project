@@ -2129,7 +2129,8 @@ bool isShader(CallingConv::ID cc) {
 }
 
 bool isGraphics(CallingConv::ID cc) {
-  return isShader(cc) || cc == CallingConv::AMDGPU_Gfx;
+  return isShader(cc) || cc == CallingConv::AMDGPU_Gfx ||
+         cc == CallingConv::AMDGPU_Gfx_WholeWave;
 }
 
 bool isCompute(CallingConv::ID cc) {

@@ -3780,7 +3780,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, IsVarArg);
 
   if (CallConv != CallingConv::AMDGPU_Gfx && !AMDGPU::isChainCC(CallConv) &&
-      CallConv != CallingConv::AMDGPU_WholeWave) {
+      CallConv != CallingConv::AMDGPU_Gfx_WholeWave) {
     // With a fixed ABI, allocate fixed registers before user arguments.
     passSpecialInputs(CLI, CCInfo, *Info, RegsToPass, MemOpChains, Chain);
   }

@@ -376,8 +376,8 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
     break;
   case CallingConv::AMDGPU_KERNEL: Out << "amdgpu_kernel"; break;
   case CallingConv::AMDGPU_Gfx:    Out << "amdgpu_gfx"; break;
-  case CallingConv::AMDGPU_WholeWave:
-    Out << "amdgpu_whole_wave";
+  case CallingConv::AMDGPU_Gfx_WholeWave:
+    Out << "amdgpu_gfx_whole_wave";
     break;
   case CallingConv::M68k_RTD:      Out << "m68k_rtdcc"; break;
   case CallingConv::RISCV_VectorCall:
