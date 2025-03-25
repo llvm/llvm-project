@@ -12,127 +12,97 @@
 #include "sanitizer_platform.h"
 
 #if SANITIZER_AIX
+#  include <assert.h>
+#  include <stdlib.h>
 #  include <stdio.h>
+#  include <sys/procfs.h>
 
 #  include "sanitizer_common.h"
-#  include "sanitizer_file.h"
 #  include "sanitizer_procmaps.h"
+#  include "sanitizer_file.h"
 
 namespace __sanitizer {
 
-static bool IsOneOf(char c, char c1, char c2) { return c == c1 || c == c2; }
+static int qsort_comp(const void *va, const void * vb) {
+  const prmap_t *a = (const prmap_t *)va;
+  const prmap_t *b = (const prmap_t *)vb;
+
+  if (a->pr_vaddr < b->pr_vaddr)
+    return -1;
+
+  if (a->pr_vaddr > b->pr_vaddr)
+    return 1;
+
+  return 0;
+}
+
+static prmap_t *SortProcMapEntries(char *buffer) {
+  prmap_t *begin = (prmap_t*)buffer;
+  prmap_t *mapIter = begin;
+  // The AIX procmap utility detects the end of the array of `prmap`s by finding
+  // an entry where pr_size and pr_vaddr are both zero.
+  while (mapIter->pr_size != 0 || mapIter->pr_vaddr != 0)
+    ++mapIter;
+  prmap_t *end = mapIter;
+
+  size_t count = end - begin;
+  size_t elemSize = sizeof(prmap_t);
+  qsort(begin, count, elemSize, qsort_comp);
+
+  return end;
+}
 
 void ReadProcMaps(ProcSelfMapsBuff *proc_maps) {
   uptr pid = internal_getpid();
-
-  // The mapping in /proc/id/map is not ordered by address, this will hit some
-  // issue when checking stack base and size. Howevern AIX procmap can generate
-  // sorted ranges.
-  char Command[100] = {};
-
-  internal_snprintf(Command, 100, "procmap -qX %d", pid);
-  // Open pipe to file
-  __sanitizer_FILE *pipe = internal_popen(Command, "r");
-
-  if (!pipe) {
+  constexpr unsigned BUFFER_SIZE = 128;
+  char filenameBuf[BUFFER_SIZE] = {};
+  internal_snprintf(filenameBuf, BUFFER_SIZE, "/proc/%d/map", pid);
+  if (!ReadFileToBuffer(filenameBuf, &proc_maps->data, &proc_maps->mmaped_size, &proc_maps->len)) {
     proc_maps->data = nullptr;
     proc_maps->mmaped_size = 0;
     proc_maps->len = 0;
+    proc_maps->mapEnd = nullptr;
     return;
   }
 
-  char buffer[512] = {};
-
-  InternalScopedString Data;
-  while (fgets(buffer, 512, reinterpret_cast<FILE *>(pipe)) != nullptr)
-    Data.Append(buffer);
-
-  size_t MmapedSize = Data.length() * 4 / 3;
-  void *VmMap = MmapOrDie(MmapedSize, "ReadProcMaps()");
-  internal_memcpy(VmMap, Data.data(), Data.length());
-
-  proc_maps->data = (char *)VmMap;
-  proc_maps->mmaped_size = MmapedSize;
-  proc_maps->len = Data.length();
-
-  internal_pclose(pipe);
+  proc_maps->mapEnd = SortProcMapEntries(proc_maps->data);
 }
 
 bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
   if (Error())
     return false;  // simulate empty maps
-  char *last = data_.proc_self_maps.data + data_.proc_self_maps.len;
-  if (data_.current >= last)
-    return false;
-  char *next_line =
-      (char *)internal_memchr(data_.current, '\n', last - data_.current);
 
-  // Skip the first header line and the second kernel line
-  // pid : binary name
-  if (data_.current == data_.proc_self_maps.data) {
-    data_.current = next_line + 1;
-    next_line =
-        (char *)internal_memchr(next_line + 1, '\n', last - data_.current);
+  const prmap_t *mapIter = (const prmap_t *)data_.current;
 
-    data_.current = next_line + 1;
-    next_line =
-        (char *)internal_memchr(next_line + 1, '\n', last - data_.current);
-  }
-
-  if (next_line == 0)
-    next_line = last;
-
-  // Skip the last line:
-  // Total   533562K
-  if (!IsHex(*data_.current))
+  if (mapIter >= data_.proc_self_maps.mapEnd)
     return false;
 
-  // Example: 10000000  10161fd9  1415K r-x   s  MAINTEXT  151ed82  a.out
-  segment->start = ParseHex(&data_.current);
-  while (data_.current < next_line && *data_.current == ' ') data_.current++;
+  // Skip the kernel segment.
+  if ((mapIter->pr_mflags & MA_TYPE_MASK) == MA_KERNTEXT)
+    ++mapIter;
 
-  segment->end = ParseHex(&data_.current);
-  while (data_.current < next_line && *data_.current == ' ') data_.current++;
+  if (mapIter >= data_.proc_self_maps.mapEnd)
+    return false;
 
-  // Ignore the size, we can get accurate size from end and start
-  while (IsDecimal(*data_.current)) data_.current++;
-  CHECK_EQ(*data_.current++, 'K');
+  segment->start = (uptr)mapIter->pr_vaddr;
+  segment->end = segment->start + mapIter->pr_size;
 
-  while (data_.current < next_line && *data_.current == ' ') data_.current++;
   segment->protection = 0;
-
-  if (*data_.current++ == 'r')
+  uint32_t flags = mapIter->pr_mflags;
+  if (flags & MA_READ)
     segment->protection |= kProtectionRead;
-  CHECK(IsOneOf(*data_.current, '-', 'w'));
-  if (*data_.current++ == 'w')
+  if (flags & MA_WRITE)
     segment->protection |= kProtectionWrite;
-  CHECK(IsOneOf(*data_.current, '-', 'x'));
-  if (*data_.current++ == 'x')
+  if (flags & MA_EXEC)
     segment->protection |= kProtectionExecute;
 
-  // Ignore the PSIZE(s/m/L/H)
-  while (data_.current < next_line && *data_.current == ' ') data_.current++;
-  data_.current += 4;
-
-  // Get the region TYPE
-  while (data_.current < next_line && *data_.current == ' ') data_.current++;
-  char Type[16] = {};
-  uptr len = 0;
-  while (*data_.current != ' ') Type[len++] = *data_.current++;
-  Type[len] = 0;
-
-  if (!internal_strcmp(Type, "SLIBTEXT") || !internal_strcmp(Type, "PLIBDATA"))
+  // TODO FIXME why not PLIBTEXT?
+  uint32_t type = mapIter->pr_mflags & MA_TYPE_MASK;
+  if (type == MA_SLIBTEXT || type == MA_PLIBDATA)
     segment->protection |= kProtectionShared;
 
-  // Ignore the VSID
-  while (data_.current < next_line && *data_.current == ' ') data_.current++;
-  ParseHex(&data_.current);
-
-  while (data_.current < next_line && *data_.current == ' ') data_.current++;
-
-  if (segment->filename && data_.current != next_line) {
-    if (!internal_strcmp(Type, "MAINDATA") ||
-        !internal_strcmp(Type, "MAINTEXT")) {
+  if (segment->filename && mapIter->pr_pathoff) {
+    if (type == MA_MAINDATA || type == MA_MAINEXEC) {
       // AIX procmap does not print full name for the binary, however when using
       // llvm-symbolizer, it requires the binary must be with full name.
       const char *BinaryName = GetBinaryName();
@@ -143,20 +113,16 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
     } else {
       // AIX library may exist as xxx.a[yyy.o], to find the path to xxx.a,
       // the [yyy.o] part needs to be removed.
-      char *NameEnd = (char *)internal_memchr(data_.current, '[',
-                                              next_line - data_.current);
-      if (!NameEnd)
-        NameEnd = next_line - 1;
 
-      uptr len =
-          Min((uptr)(NameEnd - data_.current), segment->filename_size - 1);
-      internal_strncpy(segment->filename, data_.current, len);
+      // TODO FIXME
+      const char *pathPtr = data_.proc_self_maps.data + mapIter->pr_pathoff;
+      uptr len = Min((uptr)internal_strlen(pathPtr),
+                     segment->filename_size - 1);
+      internal_strncpy(segment->filename, pathPtr, len);
       segment->filename[len] = 0;
-
       // AIX procmap does not print full name for user's library , however when
       // use llvm-symbolizer, it requires the library must be with full name.
-      if ((!internal_strcmp(Type, "SLIBTEXT") ||
-           !internal_strcmp(Type, "PLIBDATA")) &&
+      if ((type == MA_SLIBTEXT || type == MA_PLIBDATA) &&
           segment->filename[0] != '/') {
         // First check if the library is in the directory where the binary is
         // executed. On AIX, there is no need to put library in same dir with
@@ -191,7 +157,7 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
               Min((uptr)(internal_strlen(LibName)), segment->filename_size - 1);
           internal_strncpy(segment->filename, LibName, len);
           segment->filename[len] = 0;
-          found = true;
+	  found = true;
         }
         CHECK(found);
       }
@@ -200,9 +166,11 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
     segment->filename[0] = 0;
   }
 
+  assert(mapIter->pr_off == 0 && "expect a zero offset into module.");
   segment->offset = 0;
 
-  data_.current = next_line + 1;
+  ++mapIter;
+  data_.current = (const char*)mapIter;
 
   return true;
 }
