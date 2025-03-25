@@ -2218,9 +2218,9 @@ void ModuloScheduleExpanderMVE::insertCondBranch(MachineBasicBlock &MBB,
 /// Some registers are generated during the kernel expansion. We calculate the
 /// live intervals of these registers after the expansion.
 void ModuloScheduleExpanderMVE::calculateIntervals() {
-  for (Register Reg : NoIntervalRegs)
+  for (Register Reg : NewVRegs)
     LIS.createAndComputeVirtRegInterval(Reg);
-  NoIntervalRegs.clear();
+  NewVRegs.clear();
 }
 
 /// Generate a pipelined loop that is unrolled by using MVE algorithm and any
@@ -2554,7 +2554,7 @@ void ModuloScheduleExpanderMVE::mergeRegUsesAfterPipeline(Register OrigReg,
     for (MachineOperand *MO : UsesAfterLoop)
       MO->setReg(PhiReg);
 
-    NoIntervalRegs.insert(PhiReg);
+    NewVRegs.insert(PhiReg);
   }
 
   // Merge routes from the pipelined loop and the bypassed route before the

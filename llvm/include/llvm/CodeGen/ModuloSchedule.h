@@ -406,7 +406,7 @@ private:
   int NumUnroll;
 
   /// Record the registers that need to compute live intervals.
-  SmallSet<Register, 8> NoIntervalRegs;
+  SmallSet<Register, 8> NewVRegs;
 
   void calcNumUnroll();
   void generatePipelinedLoop();
