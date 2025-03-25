@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn--amdpal -mcpu=gfx1200 -stop-after=finalize-isel -verify-machineinstrs < %s | FileCheck --check-prefix=DAGISEL %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn--amdpal -mcpu=gfx1200 -stop-after=finalize-isel -verify-machineinstrs < %s | FileCheck --check-prefix=GISEL %s
 
-define amdgpu_whole_wave i32 @basic_test(i1 %active, i32 %a, i32 %b) {
+define amdgpu_gfx_whole_wave i32 @basic_test(i1 %active, i32 %a, i32 %b) {
   ; DAGISEL-LABEL: name: basic_test
   ; DAGISEL: bb.0 (%ir-block.0):
   ; DAGISEL-NEXT:   liveins: $vgpr0, $vgpr1
@@ -42,7 +42,7 @@ define amdgpu_whole_wave i32 @basic_test(i1 %active, i32 %a, i32 %b) {
 }
 
 ; Make sure we don't crash if %active is not used at all.
-define amdgpu_whole_wave i32 @unused_active(i1 %active, i32 %a, i32 %b) {
+define amdgpu_gfx_whole_wave i32 @unused_active(i1 %active, i32 %a, i32 %b) {
   ; DAGISEL-LABEL: name: unused_active
   ; DAGISEL: bb.0 (%ir-block.0):
   ; DAGISEL-NEXT:   [[SI_WHOLE_WAVE_FUNC_SETUP:%[0-9]+]]:sreg_32 = SI_WHOLE_WAVE_FUNC_SETUP implicit-def dead $exec, implicit $exec
@@ -62,7 +62,7 @@ define amdgpu_whole_wave i32 @unused_active(i1 %active, i32 %a, i32 %b) {
   ret i32 14
 }
 
-define amdgpu_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
+define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
   ; DAGISEL-LABEL: name: multiple_blocks
   ; DAGISEL: bb.0 (%ir-block.0):
   ; DAGISEL-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -126,7 +126,7 @@ if.end:
   ret i32 %e
 }
 
-define amdgpu_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) {
+define amdgpu_gfx_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) {
   ; DAGISEL-LABEL: name: ret_64
   ; DAGISEL: bb.0 (%ir-block.0):
   ; DAGISEL-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
