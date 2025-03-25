@@ -7198,8 +7198,8 @@ bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeBVHDualIntrinsic(MachineInstr &MI,
-                                                   MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeBVHDualOrBVH8IntersectRayIntrinsic(
+    MachineInstr &MI, MachineIRBuilder &B) const {
   const LLT S32 = LLT::scalar(32);
   const LLT V2S32 = LLT::fixed_vector(2, 32);
 
@@ -7214,7 +7214,7 @@ bool AMDGPULegalizerInfo::legalizeBVHDualIntrinsic(MachineInstr &MI,
   Register Offsets = MI.getOperand(9).getReg();
   Register TDescr = MI.getOperand(10).getReg();
 
-  if (!ST.hasBVHDualInst()) {
+  if (!ST.hasBVHDualAndBVH8Insts()) {
     DiagnosticInfoUnsupported BadIntrin(B.getMF().getFunction(),
                                         "intrinsic not supported on subtarget",
                                         MI.getDebugLoc());
@@ -7222,17 +7222,21 @@ bool AMDGPULegalizerInfo::legalizeBVHDualIntrinsic(MachineInstr &MI,
     return false;
   }
 
+  bool IsBVH8 = cast<GIntrinsic>(MI).getIntrinsicID() ==
+                Intrinsic::amdgcn_image_bvh8_intersect_ray;
   const unsigned NumVDataDwords = 10;
-  const unsigned NumVAddrDwords = 12;
-  int Opcode = AMDGPU::getMIMGOpcode(AMDGPU::IMAGE_BVH_DUAL_INTERSECT_RAY,
-                                     AMDGPU::MIMGEncGfx12, NumVDataDwords,
-                                     NumVAddrDwords);
+  const unsigned NumVAddrDwords = IsBVH8 ? 11 : 12;
+  int Opcode = AMDGPU::getMIMGOpcode(
+      IsBVH8 ? AMDGPU::IMAGE_BVH8_INTERSECT_RAY
+             : AMDGPU::IMAGE_BVH_DUAL_INTERSECT_RAY,
+      AMDGPU::MIMGEncGfx12, NumVDataDwords, NumVAddrDwords);
   assert(Opcode != -1);
 
   auto RayExtentInstanceMaskVec = B.buildMergeLikeInstr(
       V2S32, {RayExtent, B.buildAnyExt(S32, InstanceMask)});
 
-  B.buildInstr(AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY)
+  B.buildInstr(IsBVH8 ? AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY
+                      : AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY)
       .addDef(DstReg)
       .addDef(DstOrigin)
       .addDef(DstDir)
@@ -7598,7 +7602,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_image_bvh_intersect_ray:
     return legalizeBVHIntersectRayIntrinsic(MI, B);
   case Intrinsic::amdgcn_image_bvh_dual_intersect_ray:
-    return legalizeBVHDualIntrinsic(MI, B);
+  case Intrinsic::amdgcn_image_bvh8_intersect_ray:
+    return legalizeBVHDualOrBVH8IntersectRayIntrinsic(MI, B);
   case Intrinsic::amdgcn_swmmac_f16_16x16x32_f16:
   case Intrinsic::amdgcn_swmmac_bf16_16x16x32_bf16:
   case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf16:

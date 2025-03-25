@@ -44,7 +44,7 @@ TEST(LlvmLibcLsearchTest, SearchNonExistent) {
   void *ret = LIBC_NAMESPACE::lsearch(&key, list, &len, sizeof(int), compar);
   ASSERT_TRUE(ret == &list[3]);
   ASSERT_EQ(key, list[3]);
-  ASSERT_EQ(len, 4UL);
+  ASSERT_EQ(len, size_t{4});
 }
 
 TEST(LlvmLibcLsearchTest, SearchExceptional) {

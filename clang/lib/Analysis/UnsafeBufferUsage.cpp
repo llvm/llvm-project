@@ -9,31 +9,34 @@
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/FormatString.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
-#include <memory>
+#include <cstddef>
 #include <optional>
 #include <queue>
+#include <set>
 #include <sstream>
 
 using namespace llvm;
 using namespace clang;
-using namespace ast_matchers;
 
 #ifndef NDEBUG
 namespace {
@@ -70,7 +73,7 @@ static std::string getDREAncestorString(const DeclRefExpr *DRE,
 
     if (StParents.size() > 1)
       return "unavailable due to multiple parents";
-    if (StParents.size() == 0)
+    if (StParents.empty())
       break;
     St = StParents.begin()->get<Stmt>();
     if (St)
@@ -78,10 +81,40 @@ static std::string getDREAncestorString(const DeclRefExpr *DRE,
   } while (St);
   return SS.str();
 }
+
 } // namespace
 #endif /* NDEBUG */
 
-namespace clang::ast_matchers {
+namespace {
+// Using a custom `FastMatcher` instead of ASTMatchers to achieve better
+// performance. FastMatcher uses simple function `matches` to find if a node
+// is a match, avoiding the dependency on the ASTMatchers framework which
+// provide a nice abstraction, but incur big performance costs.
+class FastMatcher {
+public:
+  virtual bool matches(const DynTypedNode &DynNode, ASTContext &Ctx,
+                       const UnsafeBufferUsageHandler &Handler) = 0;
+  virtual ~FastMatcher() = default;
+};
+
+class MatchResult {
+
+public:
+  template <typename T> const T *getNodeAs(StringRef ID) const {
+    auto It = Nodes.find(ID);
+    if (It == Nodes.end()) {
+      return nullptr;
+    }
+    return It->second.get<T>();
+  }
+
+  void addNode(StringRef ID, const DynTypedNode &Node) { Nodes[ID] = Node; }
+
+private:
+  llvm::StringMap<DynTypedNode> Nodes;
+};
+} // namespace
+
 // A `RecursiveASTVisitor` that traverses all descendants of a given node "n"
 // except for those belonging to a different callable of "n".
 class MatchDescendantVisitor : public DynamicRecursiveASTVisitor {
@@ -89,13 +122,12 @@ public:
   // Creates an AST visitor that matches `Matcher` on all
   // descendants of a given node "n" except for the ones
   // belonging to a different callable of "n".
-  MatchDescendantVisitor(const internal::DynTypedMatcher *Matcher,
-                         internal::ASTMatchFinder *Finder,
-                         internal::BoundNodesTreeBuilder *Builder,
-                         internal::ASTMatchFinder::BindKind Bind,
-                         const bool ignoreUnevaluatedContext)
-      : Matcher(Matcher), Finder(Finder), Builder(Builder), Bind(Bind),
-        Matches(false), ignoreUnevaluatedContext(ignoreUnevaluatedContext) {
+  MatchDescendantVisitor(ASTContext &Context, FastMatcher &Matcher,
+                         bool FindAll, bool ignoreUnevaluatedContext,
+                         const UnsafeBufferUsageHandler &NewHandler)
+      : Matcher(&Matcher), FindAll(FindAll), Matches(false),
+        ignoreUnevaluatedContext(ignoreUnevaluatedContext),
+        ActiveASTContext(&Context), Handler(&NewHandler) {
     ShouldVisitTemplateInstantiations = true;
     ShouldVisitImplicitCode = false; // TODO: let's ignore implicit code for now
   }
@@ -106,7 +138,6 @@ public:
     Matches = false;
     if (const Stmt *StmtNode = DynNode.get<Stmt>()) {
       TraverseStmt(const_cast<Stmt *>(StmtNode));
-      *Builder = ResultBindings;
       return Matches;
     }
     return false;
@@ -194,100 +225,177 @@ private:
   // Returns 'true' if traversal should continue after this function
   // returns, i.e. if no match is found or 'Bind' is 'BK_All'.
   template <typename T> bool match(const T &Node) {
-    internal::BoundNodesTreeBuilder RecursiveBuilder(*Builder);
-
-    if (Matcher->matches(DynTypedNode::create(Node), Finder,
-                         &RecursiveBuilder)) {
-      ResultBindings.addMatch(RecursiveBuilder);
+    if (Matcher->matches(DynTypedNode::create(Node), *ActiveASTContext,
+                         *Handler)) {
       Matches = true;
-      if (Bind != internal::ASTMatchFinder::BK_All)
+      if (!FindAll)
         return false; // Abort as soon as a match is found.
     }
     return true;
   }
 
-  const internal::DynTypedMatcher *const Matcher;
-  internal::ASTMatchFinder *const Finder;
-  internal::BoundNodesTreeBuilder *const Builder;
-  internal::BoundNodesTreeBuilder ResultBindings;
-  const internal::ASTMatchFinder::BindKind Bind;
+  FastMatcher *const Matcher;
+  // When true, finds all matches. When false, finds the first match and stops.
+  const bool FindAll;
   bool Matches;
   bool ignoreUnevaluatedContext;
+  ASTContext *ActiveASTContext;
+  const UnsafeBufferUsageHandler *Handler;
 };
 
 // Because we're dealing with raw pointers, let's define what we mean by that.
-static auto hasPointerType() {
-  return hasType(hasCanonicalType(pointerType()));
+static bool hasPointerType(const Expr &E) {
+  return isa<PointerType>(E.getType().getCanonicalType());
 }
 
-static auto hasArrayType() { return hasType(hasCanonicalType(arrayType())); }
-
-AST_MATCHER_P(Stmt, forEachDescendantEvaluatedStmt, internal::Matcher<Stmt>,
-              innerMatcher) {
-  const DynTypedMatcher &DTM = static_cast<DynTypedMatcher>(innerMatcher);
-
-  MatchDescendantVisitor Visitor(&DTM, Finder, Builder, ASTMatchFinder::BK_All,
-                                 true);
-  return Visitor.findMatch(DynTypedNode::create(Node));
+static bool hasArrayType(const Expr &E) {
+  return isa<ArrayType>(E.getType().getCanonicalType());
 }
 
-AST_MATCHER_P(Stmt, forEachDescendantStmt, internal::Matcher<Stmt>,
-              innerMatcher) {
-  const DynTypedMatcher &DTM = static_cast<DynTypedMatcher>(innerMatcher);
+static void
+forEachDescendantEvaluatedStmt(const Stmt *S, ASTContext &Ctx,
+                               const UnsafeBufferUsageHandler &Handler,
+                               FastMatcher &Matcher) {
+  MatchDescendantVisitor Visitor(Ctx, Matcher, /*FindAll=*/true,
+                                 /*ignoreUnevaluatedContext=*/true, Handler);
+  Visitor.findMatch(DynTypedNode::create(*S));
+}
 
-  MatchDescendantVisitor Visitor(&DTM, Finder, Builder, ASTMatchFinder::BK_All,
-                                 false);
-  return Visitor.findMatch(DynTypedNode::create(Node));
+static void forEachDescendantStmt(const Stmt *S, ASTContext &Ctx,
+                                  const UnsafeBufferUsageHandler &Handler,
+                                  FastMatcher &Matcher) {
+  MatchDescendantVisitor Visitor(Ctx, Matcher, /*FindAll=*/true,
+                                 /*ignoreUnevaluatedContext=*/false, Handler);
+  Visitor.findMatch(DynTypedNode::create(*S));
 }
 
 // Matches a `Stmt` node iff the node is in a safe-buffer opt-out region
-AST_MATCHER_P(Stmt, notInSafeBufferOptOut, const UnsafeBufferUsageHandler *,
-              Handler) {
+static bool notInSafeBufferOptOut(const Stmt &Node,
+                                  const UnsafeBufferUsageHandler *Handler) {
   return !Handler->isSafeBufferOptOut(Node.getBeginLoc());
 }
 
-AST_MATCHER_P(Stmt, ignoreUnsafeBufferInContainer,
-              const UnsafeBufferUsageHandler *, Handler) {
+static bool
+ignoreUnsafeBufferInContainer(const Stmt &Node,
+                              const UnsafeBufferUsageHandler *Handler) {
   return Handler->ignoreUnsafeBufferInContainer(Node.getBeginLoc());
 }
 
-AST_MATCHER_P(Stmt, ignoreUnsafeLibcCall, const UnsafeBufferUsageHandler *,
-              Handler) {
-  if (Finder->getASTContext().getLangOpts().CPlusPlus)
+static bool ignoreUnsafeLibcCall(const ASTContext &Ctx, const Stmt &Node,
+                                 const UnsafeBufferUsageHandler *Handler) {
+  if (Ctx.getLangOpts().CPlusPlus)
     return Handler->ignoreUnsafeBufferInLibcCall(Node.getBeginLoc());
   return true; /* Only warn about libc calls for C++ */
 }
 
-AST_MATCHER_P(CastExpr, castSubExpr, internal::Matcher<Expr>, innerMatcher) {
-  return innerMatcher.matches(*Node.getSubExpr(), Finder, Builder);
-}
-
-// Matches a `UnaryOperator` whose operator is pre-increment:
-AST_MATCHER(UnaryOperator, isPreInc) {
-  return Node.getOpcode() == UnaryOperator::Opcode::UO_PreInc;
-}
-
-// Returns a matcher that matches any expression 'e' such that `innerMatcher`
+// Finds any expression 'e' such that `OnResult`
 // matches 'e' and 'e' is in an Unspecified Lvalue Context.
-static auto isInUnspecifiedLvalueContext(internal::Matcher<Expr> innerMatcher) {
-  // clang-format off
-  return
-    expr(anyOf(
-      implicitCastExpr(
-        hasCastKind(CastKind::CK_LValueToRValue),
-        castSubExpr(innerMatcher)),
-      binaryOperator(
-        hasAnyOperatorName("="),
-        hasLHS(innerMatcher)
-      )
-    ));
-  // clang-format on
+static void findStmtsInUnspecifiedLvalueContext(
+    const Stmt *S, const llvm::function_ref<void(const Expr *)> OnResult) {
+  if (const auto *CE = dyn_cast<ImplicitCastExpr>(S);
+      CE && CE->getCastKind() == CastKind::CK_LValueToRValue)
+    OnResult(CE->getSubExpr());
+  if (const auto *BO = dyn_cast<BinaryOperator>(S);
+      BO && BO->getOpcode() == BO_Assign)
+    OnResult(BO->getLHS());
 }
 
-// Returns a matcher that matches any expression `e` such that `InnerMatcher`
-// matches `e` and `e` is in an Unspecified Pointer Context (UPC).
-static internal::Matcher<Stmt>
-isInUnspecifiedPointerContext(internal::Matcher<Stmt> InnerMatcher) {
+/// Note: Copied and modified from ASTMatchers.
+/// Matches all arguments and their respective types for a \c CallExpr.
+/// It is very similar to \c forEachArgumentWithParam but
+/// it works on calls through function pointers as well.
+///
+/// The difference is, that function pointers do not provide access to a
+/// \c ParmVarDecl, but only the \c QualType for each argument.
+///
+/// Given
+/// \code
+///   void f(int i);
+///   int y;
+///   f(y);
+///   void (*f_ptr)(int) = f;
+///   f_ptr(y);
+/// \endcode
+/// callExpr(
+///   forEachArgumentWithParamType(
+///     declRefExpr(to(varDecl(hasName("y")))),
+///     qualType(isInteger()).bind("type)
+/// ))
+///   matches f(y) and f_ptr(y)
+/// with declRefExpr(...)
+///   matching int y
+/// and qualType(...)
+///   matching int
+static void forEachArgumentWithParamType(
+    const CallExpr &Node,
+    const llvm::function_ref<void(QualType /*Param*/, const Expr * /*Arg*/)>
+        OnParamAndArg) {
+  // The first argument of an overloaded member operator is the implicit object
+  // argument of the method which should not be matched against a parameter, so
+  // we skip over it here.
+  unsigned ArgIndex = 0;
+  if (const auto *CE = dyn_cast<CXXOperatorCallExpr>(&Node)) {
+    const auto *MD = dyn_cast_or_null<CXXMethodDecl>(CE->getDirectCallee());
+    if (MD && !MD->isExplicitObjectMemberFunction()) {
+      // This is an overloaded operator call.
+      // We need to skip the first argument, which is the implicit object
+      // argument of the method which should not be matched against a
+      // parameter.
+      ++ArgIndex;
+    }
+  }
+
+  const FunctionProtoType *FProto = nullptr;
+
+  if (const auto *Call = dyn_cast<CallExpr>(&Node)) {
+    if (const auto *Value =
+            dyn_cast_or_null<ValueDecl>(Call->getCalleeDecl())) {
+      QualType QT = Value->getType().getCanonicalType();
+
+      // This does not necessarily lead to a `FunctionProtoType`,
+      // e.g. K&R functions do not have a function prototype.
+      if (QT->isFunctionPointerType())
+        FProto = QT->getPointeeType()->getAs<FunctionProtoType>();
+
+      if (QT->isMemberFunctionPointerType()) {
+        const auto *MP = QT->getAs<MemberPointerType>();
+        assert(MP && "Must be member-pointer if its a memberfunctionpointer");
+        FProto = MP->getPointeeType()->getAs<FunctionProtoType>();
+        assert(FProto &&
+               "The call must have happened through a member function "
+               "pointer");
+      }
+    }
+  }
+
+  unsigned ParamIndex = 0;
+  unsigned NumArgs = Node.getNumArgs();
+  if (FProto && FProto->isVariadic())
+    NumArgs = std::min(NumArgs, FProto->getNumParams());
+
+  const auto GetParamType =
+      [&FProto, &Node](unsigned int ParamIndex) -> std::optional<QualType> {
+    if (FProto && FProto->getNumParams() > ParamIndex) {
+      return FProto->getParamType(ParamIndex);
+    }
+    const auto *FD = Node.getDirectCallee();
+    if (FD && FD->getNumParams() > ParamIndex) {
+      return FD->getParamDecl(ParamIndex)->getType();
+    }
+    return std::nullopt;
+  };
+
+  for (; ArgIndex < NumArgs; ++ArgIndex, ++ParamIndex) {
+    auto ParamType = GetParamType(ParamIndex);
+    if (ParamType)
+      OnParamAndArg(*ParamType, Node.getArg(ArgIndex)->IgnoreParenCasts());
+  }
+}
+
+// Finds any expression `e` such that `InnerMatcher` matches `e` and
+// `e` is in an Unspecified Pointer Context (UPC).
+static void findStmtsInUnspecifiedPointerContext(
+    const Stmt *S, llvm::function_ref<void(const Stmt *)> InnerMatcher) {
   // A UPC can be
   // 1. an argument of a function call (except the callee has [[unsafe_...]]
   //    attribute), or
@@ -296,45 +404,58 @@ isInUnspecifiedPointerContext(internal::Matcher<Stmt> InnerMatcher) {
   // 4. the operand of a pointer subtraction operation
   //    (i.e., computing the distance between two pointers); or ...
 
-  // clang-format off
-  auto CallArgMatcher = callExpr(
+  if (auto *CE = dyn_cast<CallExpr>(S)) {
+    if (const auto *FnDecl = CE->getDirectCallee();
+        FnDecl && FnDecl->hasAttr<UnsafeBufferUsageAttr>())
+      return;
     forEachArgumentWithParamType(
-      InnerMatcher,
-      isAnyPointer() /* array also decays to pointer type*/),
-    unless(callee(
-      functionDecl(hasAttr(attr::UnsafeBufferUsage)))));
+        *CE, [&InnerMatcher](QualType Type, const Expr *Arg) {
+          if (Type->isAnyPointerType())
+            InnerMatcher(Arg);
+        });
+  }
 
-  auto CastOperandMatcher =
-      castExpr(anyOf(hasCastKind(CastKind::CK_PointerToIntegral),
-		     hasCastKind(CastKind::CK_PointerToBoolean)),
-	       castSubExpr(allOf(hasPointerType(), InnerMatcher)));
+  if (auto *CE = dyn_cast<CastExpr>(S)) {
+    if (CE->getCastKind() != CastKind::CK_PointerToIntegral &&
+        CE->getCastKind() != CastKind::CK_PointerToBoolean)
+      return;
+    if (!hasPointerType(*CE->getSubExpr()))
+      return;
+    InnerMatcher(CE->getSubExpr());
+  }
 
-  auto CompOperandMatcher =
-      binaryOperator(hasAnyOperatorName("!=", "==", "<", "<=", ">", ">="),
-                     eachOf(hasLHS(allOf(hasPointerType(), InnerMatcher)),
-                            hasRHS(allOf(hasPointerType(), InnerMatcher))));
+  // Pointer comparison operator.
+  if (const auto *BO = dyn_cast<BinaryOperator>(S);
+      BO && (BO->getOpcode() == BO_EQ || BO->getOpcode() == BO_NE ||
+             BO->getOpcode() == BO_LT || BO->getOpcode() == BO_LE ||
+             BO->getOpcode() == BO_GT || BO->getOpcode() == BO_GE)) {
+    auto *LHS = BO->getLHS();
+    if (hasPointerType(*LHS))
+      InnerMatcher(LHS);
 
-  // A matcher that matches pointer subtractions:
-  auto PtrSubtractionMatcher =
-      binaryOperator(hasOperatorName("-"),
-		     // Note that here we need both LHS and RHS to be
-		     // pointer. Then the inner matcher can match any of
-		     // them:
-		     allOf(hasLHS(hasPointerType()),
-			   hasRHS(hasPointerType())),
-		     eachOf(hasLHS(InnerMatcher),
-			    hasRHS(InnerMatcher)));
-  // clang-format on
+    auto *RHS = BO->getRHS();
+    if (hasPointerType(*RHS))
+      InnerMatcher(RHS);
+  }
 
-  return stmt(anyOf(CallArgMatcher, CastOperandMatcher, CompOperandMatcher,
-                    PtrSubtractionMatcher));
-  // FIXME: any more cases? (UPC excludes the RHS of an assignment.  For now we
-  // don't have to check that.)
+  // Pointer subtractions.
+  if (const auto *BO = dyn_cast<BinaryOperator>(S);
+      BO && BO->getOpcode() == BO_Sub && hasPointerType(*BO->getLHS()) &&
+      hasPointerType(*BO->getRHS())) {
+    // Note that here we need both LHS and RHS to be
+    // pointer. Then the inner matcher can match any of
+    // them:
+    InnerMatcher(BO->getLHS());
+    InnerMatcher(BO->getRHS());
+  }
+  // FIXME: any more cases? (UPC excludes the RHS of an assignment.  For now
+  // we don't have to check that.)
 }
 
-// Returns a matcher that matches any expression 'e' such that `innerMatcher`
-// matches 'e' and 'e' is in an unspecified untyped context (i.e the expression
-// 'e' isn't evaluated to an RValue). For example, consider the following code:
+// Finds statements in unspecified untyped context i.e. any expression 'e' such
+// that `InnerMatcher` matches 'e' and 'e' is in an unspecified untyped context
+// (i.e the expression 'e' isn't evaluated to an RValue). For example, consider
+// the following code:
 //    int *p = new int[4];
 //    int *q = new int[4];
 //    if ((p = q)) {}
@@ -342,17 +463,23 @@ isInUnspecifiedPointerContext(internal::Matcher<Stmt> InnerMatcher) {
 // The expression `p = q` in the conditional of the `if` statement
 // `if ((p = q))` is evaluated as an RValue, whereas the expression `p = q;`
 // in the assignment statement is in an untyped context.
-static internal::Matcher<Stmt>
-isInUnspecifiedUntypedContext(internal::Matcher<Stmt> InnerMatcher) {
+static void findStmtsInUnspecifiedUntypedContext(
+    const Stmt *S, llvm::function_ref<void(const Stmt *)> InnerMatcher) {
   // An unspecified context can be
   // 1. A compound statement,
   // 2. The body of an if statement
   // 3. Body of a loop
-  auto CompStmt = compoundStmt(forEach(InnerMatcher));
-  auto IfStmtThen = ifStmt(hasThen(InnerMatcher));
-  auto IfStmtElse = ifStmt(hasElse(InnerMatcher));
+  if (auto *CS = dyn_cast<CompoundStmt>(S)) {
+    for (auto *Child : CS->body())
+      InnerMatcher(Child);
+  }
+  if (auto *IfS = dyn_cast<IfStmt>(S)) {
+    if (IfS->getThen())
+      InnerMatcher(IfS->getThen());
+    if (IfS->getElse())
+      InnerMatcher(IfS->getElse());
+  }
   // FIXME: Handle loop bodies.
-  return stmt(anyOf(CompStmt, IfStmtThen, IfStmtElse));
 }
 
 // Returns true iff integer E1 is equivalent to integer E2.
@@ -394,8 +521,7 @@ static bool areEqualIntegers(const Expr *E1, const Expr *E2, ASTContext &Ctx) {
   Expr::EvalResult ER1, ER2;
 
   // If both are constants:
-  if (E1->EvaluateAsInt(ER1, Ctx) &&
-      E2->EvaluateAsInt(ER2, Ctx))
+  if (E1->EvaluateAsInt(ER1, Ctx) && E2->EvaluateAsInt(ER2, Ctx))
     return ER1.Val.getInt() == ER2.Val.getInt();
 
   // Otherwise, they should have identical stmt kind:
@@ -429,13 +555,12 @@ static bool areEqualIntegers(const Expr *E1, const Expr *E2, ASTContext &Ctx) {
 //       `N, M` are parameter indexes to the allocating element number and size.
 //        Sometimes, there is only one parameter index representing the total
 //        size.
-AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
+static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
+                                        ASTContext &Ctx) {
   assert(Node.getNumArgs() == 2 &&
          "expecting a two-parameter std::span constructor");
   const Expr *Arg0 = Node.getArg(0)->IgnoreParenImpCasts();
   const Expr *Arg1 = Node.getArg(1)->IgnoreParenImpCasts();
-  ASTContext &Ctx = Finder->getASTContext();
-
   auto HaveEqualConstantValues = [&Ctx](const Expr *E0, const Expr *E1) {
     if (auto E0CV = E0->getIntegerConstantExpr(Ctx))
       if (auto E1CV = E1->getIntegerConstantExpr(Ctx)) {
@@ -530,7 +655,8 @@ AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
   return false;
 }
 
-AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
+static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
+                                 const ASTContext &Ctx) {
   // FIXME: Proper solution:
   //  - refactor Sema::CheckArrayAccess
   //    - split safe/OOB/unknown decision logic from diagnostics emitting code
@@ -545,7 +671,7 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
                                           ->getType()
                                           ->getUnqualifiedDesugaredType())) {
     limit = CATy->getLimitedSize();
-  } else if (const auto *SLiteral = dyn_cast<StringLiteral>(
+  } else if (const auto *SLiteral = dyn_cast<clang::StringLiteral>(
                  Node.getBase()->IgnoreParenImpCasts())) {
     limit = SLiteral->getLength() + 1;
   } else {
@@ -555,7 +681,7 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
   Expr::EvalResult EVResult;
   const Expr *IndexExpr = Node.getIdx();
   if (!IndexExpr->isValueDependent() &&
-      IndexExpr->EvaluateAsInt(EVResult, Finder->getASTContext())) {
+      IndexExpr->EvaluateAsInt(EVResult, Ctx)) {
     llvm::APSInt ArrIdx = EVResult.Val.getInt();
     // FIXME: ArrIdx.isNegative() we could immediately emit an error as that's a
     // bug
@@ -571,10 +697,9 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
     const Expr *RHS = BE->getRHS();
 
     if ((!LHS->isValueDependent() &&
-         LHS->EvaluateAsInt(EVResult,
-                            Finder->getASTContext())) || // case: `n & e`
+         LHS->EvaluateAsInt(EVResult, Ctx)) || // case: `n & e`
         (!RHS->isValueDependent() &&
-         RHS->EvaluateAsInt(EVResult, Finder->getASTContext()))) { // `e & n`
+         RHS->EvaluateAsInt(EVResult, Ctx))) { // `e & n`
       llvm::APSInt result = EVResult.Val.getInt();
       if (result.isNonNegative() && result.getLimitedValue() < limit)
         return true;
@@ -582,10 +707,6 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
     return false;
   }
   return false;
-}
-
-AST_MATCHER_P(CallExpr, hasNumArgs, unsigned, Num) {
-  return Node.getNumArgs() == Num;
 }
 
 namespace libc_func_matchers {
@@ -636,7 +757,7 @@ struct LibcFunNamePrefixSuffixParser {
 // A pointer type expression is known to be null-terminated, if it has the
 // form: E.c_str(), for any expression E of `std::string` type.
 static bool isNullTermPointer(const Expr *Ptr) {
-  if (isa<StringLiteral>(Ptr->IgnoreParenImpCasts()))
+  if (isa<clang::StringLiteral>(Ptr->IgnoreParenImpCasts()))
     return true;
   if (isa<PredefinedExpr>(Ptr->IgnoreParenImpCasts()))
     return true;
@@ -694,7 +815,7 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
 
   const Expr *Fmt = Call->getArg(FmtArgIdx);
 
-  if (auto *SL = dyn_cast<StringLiteral>(Fmt->IgnoreParenImpCasts())) {
+  if (auto *SL = dyn_cast<clang::StringLiteral>(Fmt->IgnoreParenImpCasts())) {
     StringRef FmtStr;
 
     if (SL->getCharByteWidth() == 1)
@@ -734,7 +855,7 @@ CHECK_UNSAFE_PTR:
 //  Note: For predefined prefix and suffix, see `LibcFunNamePrefixSuffixParser`.
 //  The notation `CoreName[str/wcs]` means a new name obtained from replace
 //  string "wcs" with "str" in `CoreName`.
-AST_MATCHER(FunctionDecl, isPredefinedUnsafeLibcFunc) {
+static bool isPredefinedUnsafeLibcFunc(const FunctionDecl &Node) {
   static std::unique_ptr<std::set<StringRef>> PredefinedNames = nullptr;
   if (!PredefinedNames)
     PredefinedNames =
@@ -841,7 +962,7 @@ AST_MATCHER(FunctionDecl, isPredefinedUnsafeLibcFunc) {
 // Match a call to one of the `v*printf` functions taking `va_list`.  We cannot
 // check safety for these functions so they should be changed to their
 // non-va_list versions.
-AST_MATCHER(FunctionDecl, isUnsafeVaListPrintfFunc) {
+static bool isUnsafeVaListPrintfFunc(const FunctionDecl &Node) {
   auto *II = Node.getIdentifier();
 
   if (!II)
@@ -857,7 +978,7 @@ AST_MATCHER(FunctionDecl, isUnsafeVaListPrintfFunc) {
 
 // Matches a call to one of the `sprintf` functions as they are always unsafe
 // and should be changed to `snprintf`.
-AST_MATCHER(FunctionDecl, isUnsafeSprintfFunc) {
+static bool isUnsafeSprintfFunc(const FunctionDecl &Node) {
   auto *II = Node.getIdentifier();
 
   if (!II)
@@ -881,7 +1002,7 @@ AST_MATCHER(FunctionDecl, isUnsafeSprintfFunc) {
 // Match function declarations of `printf`, `fprintf`, `snprintf` and their wide
 // character versions.  Calls to these functions can be safe if their arguments
 // are carefully made safe.
-AST_MATCHER(FunctionDecl, isNormalPrintfFunc) {
+static bool isNormalPrintfFunc(const FunctionDecl &Node) {
   auto *II = Node.getIdentifier();
 
   if (!II)
@@ -905,9 +1026,8 @@ AST_MATCHER(FunctionDecl, isNormalPrintfFunc) {
 // Then if the format string is a string literal, this matcher matches when at
 // least one string argument is unsafe. If the format is not a string literal,
 // this matcher matches when at least one pointer type argument is unsafe.
-AST_MATCHER_P(CallExpr, hasUnsafePrintfStringArg,
-              clang::ast_matchers::internal::Matcher<Expr>,
-              UnsafeStringArgMatcher) {
+static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
+                                     MatchResult &Result, llvm::StringRef Tag) {
   // Determine what printf it is by examining formal parameters:
   const FunctionDecl *FD = Node.getDirectCallee();
 
@@ -918,7 +1038,6 @@ AST_MATCHER_P(CallExpr, hasUnsafePrintfStringArg,
   if (NumParms < 1)
     return false; // possibly some user-defined printf function
 
-  ASTContext &Ctx = Finder->getASTContext();
   QualType FirstParmTy = FD->getParamDecl(0)->getType();
 
   if (!FirstParmTy->isPointerType())
@@ -932,8 +1051,10 @@ AST_MATCHER_P(CallExpr, hasUnsafePrintfStringArg,
     // It is a fprintf:
     const Expr *UnsafeArg;
 
-    if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 1, Ctx, false))
-      return UnsafeStringArgMatcher.matches(*UnsafeArg, Finder, Builder);
+    if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 1, Ctx, false)) {
+      Result.addNode(Tag, DynTypedNode::create(*UnsafeArg));
+      return true;
+    }
     return false;
   }
 
@@ -944,8 +1065,10 @@ AST_MATCHER_P(CallExpr, hasUnsafePrintfStringArg,
 
     if (auto *II = FD->getIdentifier())
       isKprintf = II->getName() == "kprintf";
-    if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 0, Ctx, isKprintf))
-      return UnsafeStringArgMatcher.matches(*UnsafeArg, Finder, Builder);
+    if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 0, Ctx, isKprintf)) {
+      Result.addNode(Tag, DynTypedNode::create(*UnsafeArg));
+      return true;
+    }
     return false;
   }
 
@@ -957,17 +1080,20 @@ AST_MATCHER_P(CallExpr, hasUnsafePrintfStringArg,
       // second is an integer, it is a snprintf:
       const Expr *UnsafeArg;
 
-      if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 2, Ctx, false))
-        return UnsafeStringArgMatcher.matches(*UnsafeArg, Finder, Builder);
+      if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 2, Ctx, false)) {
+        Result.addNode(Tag, DynTypedNode::create(*UnsafeArg));
+        return true;
+      }
       return false;
     }
   }
   // We don't really recognize this "normal" printf, the only thing we
   // can do is to require all pointers to be null-terminated:
-  for (auto Arg : Node.arguments())
-    if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg))
-      if (UnsafeStringArgMatcher.matches(*Arg, Finder, Builder))
-        return true;
+  for (const auto *Arg : Node.arguments())
+    if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg)) {
+      Result.addNode(Tag, DynTypedNode::create(*Arg));
+      return true;
+    }
   return false;
 }
 
@@ -987,7 +1113,8 @@ AST_MATCHER_P(CallExpr, hasUnsafePrintfStringArg,
 //    ptr := Constant-Array-DRE;
 //    size:= any expression that has compile-time constant value equivalent to
 //           sizeof (Constant-Array-DRE)
-AST_MATCHER(CallExpr, hasUnsafeSnprintfBuffer) {
+static bool hasUnsafeSnprintfBuffer(const CallExpr &Node,
+                                    const ASTContext &Ctx) {
   const FunctionDecl *FD = Node.getDirectCallee();
 
   assert(FD && "It should have been checked that FD is non-null.");
@@ -1041,8 +1168,6 @@ AST_MATCHER(CallExpr, hasUnsafeSnprintfBuffer) {
 
   // Pattern 2:
   if (auto *DRE = dyn_cast<DeclRefExpr>(Buf->IgnoreParenImpCasts())) {
-    ASTContext &Ctx = Finder->getASTContext();
-
     if (auto *CAT = Ctx.getAsConstantArrayType(DRE->getType())) {
       Expr::EvalResult ER;
       // The array element type must be compatible with `char` otherwise an
@@ -1058,7 +1183,6 @@ AST_MATCHER(CallExpr, hasUnsafeSnprintfBuffer) {
   return true; // ptr and size are not in safe pattern
 }
 } // namespace libc_func_matchers
-} // namespace clang::ast_matchers
 
 namespace {
 // Because the analysis revolves around variables and their types, we'll need to
@@ -1084,11 +1208,6 @@ public:
 #define GADGET(x) x,
 #include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
   };
-
-  /// Common type of ASTMatchers used for discovering gadgets.
-  /// Useful for implementing the static matcher() methods
-  /// that are expected from all non-abstract subclasses.
-  using Matcher = decltype(stmt());
 
   Gadget(Kind K) : K(K) {}
 
@@ -1166,7 +1285,10 @@ public:
   }
 };
 
-static auto toSupportedVariable() { return to(varDecl()); }
+static bool isSupportedVariable(const DeclRefExpr &Node) {
+  const Decl *D = Node.getDecl();
+  return D != nullptr && isa<VarDecl>(D);
+}
 
 using FixableGadgetList = std::vector<std::unique_ptr<FixableGadget>>;
 using WarningGadgetList = std::vector<std::unique_ptr<WarningGadget>>;
@@ -1178,19 +1300,23 @@ class IncrementGadget : public WarningGadget {
   const UnaryOperator *Op;
 
 public:
-  IncrementGadget(const MatchFinder::MatchResult &Result)
+  IncrementGadget(const MatchResult &Result)
       : WarningGadget(Kind::Increment),
-        Op(Result.Nodes.getNodeAs<UnaryOperator>(OpTag)) {}
+        Op(Result.getNodeAs<UnaryOperator>(OpTag)) {}
 
   static bool classof(const Gadget *G) {
     return G->getKind() == Kind::Increment;
   }
 
-  static Matcher matcher() {
-    return stmt(
-        unaryOperator(hasOperatorName("++"),
-                      hasUnaryOperand(ignoringParenImpCasts(hasPointerType())))
-            .bind(OpTag));
+  static bool matches(const Stmt *S, const ASTContext &Ctx,
+                      MatchResult &Result) {
+    const auto *UO = dyn_cast<UnaryOperator>(S);
+    if (!UO || !UO->isIncrementOp())
+      return false;
+    if (!hasPointerType(*UO->getSubExpr()->IgnoreParenImpCasts()))
+      return false;
+    Result.addNode(OpTag, DynTypedNode::create(*UO));
+    return true;
   }
 
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
@@ -1218,19 +1344,23 @@ class DecrementGadget : public WarningGadget {
   const UnaryOperator *Op;
 
 public:
-  DecrementGadget(const MatchFinder::MatchResult &Result)
+  DecrementGadget(const MatchResult &Result)
       : WarningGadget(Kind::Decrement),
-        Op(Result.Nodes.getNodeAs<UnaryOperator>(OpTag)) {}
+        Op(Result.getNodeAs<UnaryOperator>(OpTag)) {}
 
   static bool classof(const Gadget *G) {
     return G->getKind() == Kind::Decrement;
   }
 
-  static Matcher matcher() {
-    return stmt(
-        unaryOperator(hasOperatorName("--"),
-                      hasUnaryOperand(ignoringParenImpCasts(hasPointerType())))
-            .bind(OpTag));
+  static bool matches(const Stmt *S, const ASTContext &Ctx,
+                      MatchResult &Result) {
+    const auto *UO = dyn_cast<UnaryOperator>(S);
+    if (!UO || !UO->isDecrementOp())
+      return false;
+    if (!hasPointerType(*UO->getSubExpr()->IgnoreParenImpCasts()))
+      return false;
+    Result.addNode(OpTag, DynTypedNode::create(*UO));
+    return true;
   }
 
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
@@ -1257,26 +1387,29 @@ class ArraySubscriptGadget : public WarningGadget {
   const ArraySubscriptExpr *ASE;
 
 public:
-  ArraySubscriptGadget(const MatchFinder::MatchResult &Result)
+  ArraySubscriptGadget(const MatchResult &Result)
       : WarningGadget(Kind::ArraySubscript),
-        ASE(Result.Nodes.getNodeAs<ArraySubscriptExpr>(ArraySubscrTag)) {}
+        ASE(Result.getNodeAs<ArraySubscriptExpr>(ArraySubscrTag)) {}
 
   static bool classof(const Gadget *G) {
     return G->getKind() == Kind::ArraySubscript;
   }
 
-  static Matcher matcher() {
-    // clang-format off
-      return stmt(arraySubscriptExpr(
-            hasBase(ignoringParenImpCasts(
-              anyOf(hasPointerType(), hasArrayType()))),
-            unless(anyOf(
-              isSafeArraySubscript(),
-              hasIndex(
-                  anyOf(integerLiteral(equals(0)), arrayInitIndexExpr())
-              )
-            ))).bind(ArraySubscrTag));
-    // clang-format on
+  static bool matches(const Stmt *S, const ASTContext &Ctx,
+                      MatchResult &Result) {
+    const auto *ASE = dyn_cast<ArraySubscriptExpr>(S);
+    if (!ASE)
+      return false;
+    const auto *const Base = ASE->getBase()->IgnoreParenImpCasts();
+    if (!hasPointerType(*Base) && !hasArrayType(*Base))
+      return false;
+    const auto *Idx = dyn_cast<IntegerLiteral>(ASE->getIdx());
+    bool IsSafeIndex = (Idx && Idx->getValue().isZero()) ||
+                       isa<ArrayInitIndexExpr>(ASE->getIdx());
+    if (IsSafeIndex || isSafeArraySubscript(*ASE, Ctx))
+      return false;
+    Result.addNode(ArraySubscrTag, DynTypedNode::create(*ASE));
+    return true;
   }
 
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
@@ -1307,29 +1440,40 @@ class PointerArithmeticGadget : public WarningGadget {
   const Expr *Ptr;          // the pointer expression in `PA`
 
 public:
-  PointerArithmeticGadget(const MatchFinder::MatchResult &Result)
+  PointerArithmeticGadget(const MatchResult &Result)
       : WarningGadget(Kind::PointerArithmetic),
-        PA(Result.Nodes.getNodeAs<BinaryOperator>(PointerArithmeticTag)),
-        Ptr(Result.Nodes.getNodeAs<Expr>(PointerArithmeticPointerTag)) {}
+        PA(Result.getNodeAs<BinaryOperator>(PointerArithmeticTag)),
+        Ptr(Result.getNodeAs<Expr>(PointerArithmeticPointerTag)) {}
 
   static bool classof(const Gadget *G) {
     return G->getKind() == Kind::PointerArithmetic;
   }
 
-  static Matcher matcher() {
-    auto HasIntegerType = anyOf(hasType(isInteger()), hasType(enumType()));
-    auto PtrAtRight =
-        allOf(hasOperatorName("+"),
-              hasRHS(expr(hasPointerType()).bind(PointerArithmeticPointerTag)),
-              hasLHS(HasIntegerType));
-    auto PtrAtLeft =
-        allOf(anyOf(hasOperatorName("+"), hasOperatorName("-"),
-                    hasOperatorName("+="), hasOperatorName("-=")),
-              hasLHS(expr(hasPointerType()).bind(PointerArithmeticPointerTag)),
-              hasRHS(HasIntegerType));
-
-    return stmt(binaryOperator(anyOf(PtrAtLeft, PtrAtRight))
-                    .bind(PointerArithmeticTag));
+  static bool matches(const Stmt *S, const ASTContext &Ctx,
+                      MatchResult &Result) {
+    const auto *BO = dyn_cast<BinaryOperator>(S);
+    if (!BO)
+      return false;
+    const auto *LHS = BO->getLHS();
+    const auto *RHS = BO->getRHS();
+    // ptr at left
+    if (BO->getOpcode() == BO_Add || BO->getOpcode() == BO_Sub ||
+        BO->getOpcode() == BO_AddAssign || BO->getOpcode() == BO_SubAssign) {
+      if (hasPointerType(*LHS) && (RHS->getType()->isIntegerType() ||
+                                   RHS->getType()->isEnumeralType())) {
+        Result.addNode(PointerArithmeticPointerTag, DynTypedNode::create(*LHS));
+        Result.addNode(PointerArithmeticTag, DynTypedNode::create(*BO));
+        return true;
+      }
+    }
+    // ptr at right
+    if (BO->getOpcode() == BO_Add && hasPointerType(*RHS) &&
+        (LHS->getType()->isIntegerType() || LHS->getType()->isEnumeralType())) {
+      Result.addNode(PointerArithmeticPointerTag, DynTypedNode::create(*RHS));
+      Result.addNode(PointerArithmeticTag, DynTypedNode::create(*BO));
+      return true;
+    }
+    return false;
   }
 
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
@@ -1356,27 +1500,35 @@ class SpanTwoParamConstructorGadget : public WarningGadget {
   const CXXConstructExpr *Ctor; // the span constructor expression
 
 public:
-  SpanTwoParamConstructorGadget(const MatchFinder::MatchResult &Result)
+  SpanTwoParamConstructorGadget(const MatchResult &Result)
       : WarningGadget(Kind::SpanTwoParamConstructor),
-        Ctor(Result.Nodes.getNodeAs<CXXConstructExpr>(
-            SpanTwoParamConstructorTag)) {}
+        Ctor(Result.getNodeAs<CXXConstructExpr>(SpanTwoParamConstructorTag)) {}
 
   static bool classof(const Gadget *G) {
     return G->getKind() == Kind::SpanTwoParamConstructor;
   }
 
-  static Matcher matcher() {
-    auto HasTwoParamSpanCtorDecl = hasDeclaration(
-        cxxConstructorDecl(hasDeclContext(isInStdNamespace()), hasName("span"),
-                           parameterCountIs(2)));
-
-    return stmt(cxxConstructExpr(HasTwoParamSpanCtorDecl,
-                                 unless(isSafeSpanTwoParamConstruct()))
-                    .bind(SpanTwoParamConstructorTag));
+  static bool matches(const Stmt *S, ASTContext &Ctx, MatchResult &Result) {
+    const auto *CE = dyn_cast<CXXConstructExpr>(S);
+    if (!CE)
+      return false;
+    const auto *CDecl = CE->getConstructor();
+    const auto *CRecordDecl = CDecl->getParent();
+    auto HasTwoParamSpanCtorDecl =
+        CRecordDecl->isInStdNamespace() &&
+        CDecl->getDeclName().getAsString() == "span" && CE->getNumArgs() == 2;
+    if (!HasTwoParamSpanCtorDecl || isSafeSpanTwoParamConstruct(*CE, Ctx))
+      return false;
+    Result.addNode(SpanTwoParamConstructorTag, DynTypedNode::create(*CE));
+    return true;
   }
 
-  static Matcher matcher(const UnsafeBufferUsageHandler *Handler) {
-    return stmt(unless(ignoreUnsafeBufferInContainer(Handler)), matcher());
+  static bool matches(const Stmt *S, ASTContext &Ctx,
+                      const UnsafeBufferUsageHandler *Handler,
+                      MatchResult &Result) {
+    if (ignoreUnsafeBufferInContainer(*S, Handler))
+      return false;
+    return matches(S, Ctx, Result);
   }
 
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
@@ -1409,23 +1561,35 @@ private:
   const DeclRefExpr *PtrInitRHS; // the RHS pointer expression in `PI`
 
 public:
-  PointerInitGadget(const MatchFinder::MatchResult &Result)
+  PointerInitGadget(const MatchResult &Result)
       : FixableGadget(Kind::PointerInit),
-        PtrInitLHS(Result.Nodes.getNodeAs<VarDecl>(PointerInitLHSTag)),
-        PtrInitRHS(Result.Nodes.getNodeAs<DeclRefExpr>(PointerInitRHSTag)) {}
+        PtrInitLHS(Result.getNodeAs<VarDecl>(PointerInitLHSTag)),
+        PtrInitRHS(Result.getNodeAs<DeclRefExpr>(PointerInitRHSTag)) {}
 
   static bool classof(const Gadget *G) {
     return G->getKind() == Kind::PointerInit;
   }
 
-  static Matcher matcher() {
-    auto PtrInitStmt = declStmt(hasSingleDecl(
-        varDecl(hasInitializer(ignoringImpCasts(
-                    declRefExpr(hasPointerType(), toSupportedVariable())
-                        .bind(PointerInitRHSTag))))
-            .bind(PointerInitLHSTag)));
-
-    return stmt(PtrInitStmt);
+  static bool matches(const Stmt *S,
+                      llvm::SmallVectorImpl<MatchResult> &Results) {
+    const DeclStmt *DS = dyn_cast<DeclStmt>(S);
+    if (!DS || !DS->isSingleDecl())
+      return false;
+    const VarDecl *VD = dyn_cast<VarDecl>(DS->getSingleDecl());
+    if (!VD)
+      return false;
+    const Expr *Init = VD->getAnyInitializer();
+    if (!Init)
+      return false;
+    const auto *DRE = dyn_cast<DeclRefExpr>(Init->IgnoreImpCasts());
+    if (!DRE || !hasPointerType(*DRE) || !isSupportedVariable(*DRE)) {
+      return false;
+    }
+    MatchResult R;
+    R.addNode(PointerInitLHSTag, DynTypedNode::create(*VD));
+    R.addNode(PointerInitRHSTag, DynTypedNode::create(*DRE));
+    Results.emplace_back(std::move(R));
+    return true;
   }
 
   virtual std::optional<FixItList>
@@ -1457,25 +1621,40 @@ private:
   const DeclRefExpr *PtrRHS; // the RHS pointer expression in `PA`
 
 public:
-  PtrToPtrAssignmentGadget(const MatchFinder::MatchResult &Result)
+  PtrToPtrAssignmentGadget(const MatchResult &Result)
       : FixableGadget(Kind::PtrToPtrAssignment),
-        PtrLHS(Result.Nodes.getNodeAs<DeclRefExpr>(PointerAssignLHSTag)),
-        PtrRHS(Result.Nodes.getNodeAs<DeclRefExpr>(PointerAssignRHSTag)) {}
+        PtrLHS(Result.getNodeAs<DeclRefExpr>(PointerAssignLHSTag)),
+        PtrRHS(Result.getNodeAs<DeclRefExpr>(PointerAssignRHSTag)) {}
 
   static bool classof(const Gadget *G) {
     return G->getKind() == Kind::PtrToPtrAssignment;
   }
 
-  static Matcher matcher() {
-    auto PtrAssignExpr = binaryOperator(
-        allOf(hasOperatorName("="),
-              hasRHS(ignoringParenImpCasts(
-                  declRefExpr(hasPointerType(), toSupportedVariable())
-                      .bind(PointerAssignRHSTag))),
-              hasLHS(declRefExpr(hasPointerType(), toSupportedVariable())
-                         .bind(PointerAssignLHSTag))));
-
-    return stmt(isInUnspecifiedUntypedContext(PtrAssignExpr));
+  static bool matches(const Stmt *S,
+                      llvm::SmallVectorImpl<MatchResult> &Results) {
+    size_t SizeBefore = Results.size();
+    findStmtsInUnspecifiedUntypedContext(S, [&Results](const Stmt *S) {
+      const auto *BO = dyn_cast<BinaryOperator>(S);
+      if (!BO || BO->getOpcode() != BO_Assign)
+        return;
+      const auto *RHS = BO->getRHS()->IgnoreParenImpCasts();
+      if (const auto *RHSRef = dyn_cast<DeclRefExpr>(RHS);
+          !RHSRef || !hasPointerType(*RHSRef) ||
+          !isSupportedVariable(*RHSRef)) {
+        return;
+      }
+      const auto *LHS = BO->getLHS();
+      if (const auto *LHSRef = dyn_cast<DeclRefExpr>(LHS);
+          !LHSRef || !hasPointerType(*LHSRef) ||
+          !isSupportedVariable(*LHSRef)) {
+        return;
+      }
+      MatchResult R;
+      R.addNode(PointerAssignLHSTag, DynTypedNode::create(*LHS));
+      R.addNode(PointerAssignRHSTag, DynTypedNode::create(*RHS));
+      Results.emplace_back(std::move(R));
+    });
+    return SizeBefore != Results.size();
   }
 
   virtual std::optional<FixItList>
@@ -1506,26 +1685,41 @@ private:
   const DeclRefExpr *PtrRHS; // the RHS pointer expression in `PA`
 
 public:
-  CArrayToPtrAssignmentGadget(const MatchFinder::MatchResult &Result)
+  CArrayToPtrAssignmentGadget(const MatchResult &Result)
       : FixableGadget(Kind::CArrayToPtrAssignment),
-        PtrLHS(Result.Nodes.getNodeAs<DeclRefExpr>(PointerAssignLHSTag)),
-        PtrRHS(Result.Nodes.getNodeAs<DeclRefExpr>(PointerAssignRHSTag)) {}
+        PtrLHS(Result.getNodeAs<DeclRefExpr>(PointerAssignLHSTag)),
+        PtrRHS(Result.getNodeAs<DeclRefExpr>(PointerAssignRHSTag)) {}
 
   static bool classof(const Gadget *G) {
     return G->getKind() == Kind::CArrayToPtrAssignment;
   }
 
-  static Matcher matcher() {
-    auto PtrAssignExpr = binaryOperator(
-        allOf(hasOperatorName("="),
-              hasRHS(ignoringParenImpCasts(
-                  declRefExpr(hasType(hasCanonicalType(constantArrayType())),
-                              toSupportedVariable())
-                      .bind(PointerAssignRHSTag))),
-              hasLHS(declRefExpr(hasPointerType(), toSupportedVariable())
-                         .bind(PointerAssignLHSTag))));
-
-    return stmt(isInUnspecifiedUntypedContext(PtrAssignExpr));
+  static bool matches(const Stmt *S,
+                      llvm::SmallVectorImpl<MatchResult> &Results) {
+    size_t SizeBefore = Results.size();
+    findStmtsInUnspecifiedUntypedContext(S, [&Results](const Stmt *S) {
+      const auto *BO = dyn_cast<BinaryOperator>(S);
+      if (!BO || BO->getOpcode() != BO_Assign)
+        return;
+      const auto *RHS = BO->getRHS()->IgnoreParenImpCasts();
+      if (const auto *RHSRef = dyn_cast<DeclRefExpr>(RHS);
+          !RHSRef ||
+          !isa<ConstantArrayType>(RHSRef->getType().getCanonicalType()) ||
+          !isSupportedVariable(*RHSRef)) {
+        return;
+      }
+      const auto *LHS = BO->getLHS();
+      if (const auto *LHSRef = dyn_cast<DeclRefExpr>(LHS);
+          !LHSRef || !hasPointerType(*LHSRef) ||
+          !isSupportedVariable(*LHSRef)) {
+        return;
+      }
+      MatchResult R;
+      R.addNode(PointerAssignLHSTag, DynTypedNode::create(*LHS));
+      R.addNode(PointerAssignRHSTag, DynTypedNode::create(*RHS));
+      Results.emplace_back(std::move(R));
+    });
+    return SizeBefore != Results.size();
   }
 
   virtual std::optional<FixItList>
@@ -1549,23 +1743,32 @@ class UnsafeBufferUsageAttrGadget : public WarningGadget {
   const Expr *Op;
 
 public:
-  UnsafeBufferUsageAttrGadget(const MatchFinder::MatchResult &Result)
+  UnsafeBufferUsageAttrGadget(const MatchResult &Result)
       : WarningGadget(Kind::UnsafeBufferUsageAttr),
-        Op(Result.Nodes.getNodeAs<Expr>(OpTag)) {}
+        Op(Result.getNodeAs<Expr>(OpTag)) {}
 
   static bool classof(const Gadget *G) {
     return G->getKind() == Kind::UnsafeBufferUsageAttr;
   }
 
-  static Matcher matcher() {
-    auto HasUnsafeFieldDecl =
-        member(fieldDecl(hasAttr(attr::UnsafeBufferUsage)));
-
-    auto HasUnsafeFnDecl =
-        callee(functionDecl(hasAttr(attr::UnsafeBufferUsage)));
-
-    return stmt(anyOf(callExpr(HasUnsafeFnDecl).bind(OpTag),
-                      memberExpr(HasUnsafeFieldDecl).bind(OpTag)));
+  static bool matches(const Stmt *S, const ASTContext &Ctx,
+                      MatchResult &Result) {
+    if (auto *CE = dyn_cast<CallExpr>(S)) {
+      if (CE->getDirectCallee() &&
+          CE->getDirectCallee()->hasAttr<UnsafeBufferUsageAttr>()) {
+        Result.addNode(OpTag, DynTypedNode::create(*CE));
+        return true;
+      }
+    }
+    if (auto *ME = dyn_cast<MemberExpr>(S)) {
+      if (!isa<FieldDecl>(ME->getMemberDecl()))
+        return false;
+      if (ME->getMemberDecl()->hasAttr<UnsafeBufferUsageAttr>()) {
+        Result.addNode(OpTag, DynTypedNode::create(*ME));
+        return true;
+      }
+    }
+    return false;
   }
 
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
@@ -1586,22 +1789,24 @@ class UnsafeBufferUsageCtorAttrGadget : public WarningGadget {
   const CXXConstructExpr *Op;
 
 public:
-  UnsafeBufferUsageCtorAttrGadget(const MatchFinder::MatchResult &Result)
+  UnsafeBufferUsageCtorAttrGadget(const MatchResult &Result)
       : WarningGadget(Kind::UnsafeBufferUsageCtorAttr),
-        Op(Result.Nodes.getNodeAs<CXXConstructExpr>(OpTag)) {}
+        Op(Result.getNodeAs<CXXConstructExpr>(OpTag)) {}
 
   static bool classof(const Gadget *G) {
     return G->getKind() == Kind::UnsafeBufferUsageCtorAttr;
   }
 
-  static Matcher matcher() {
-    auto HasUnsafeCtorDecl =
-        hasDeclaration(cxxConstructorDecl(hasAttr(attr::UnsafeBufferUsage)));
+  static bool matches(const Stmt *S, ASTContext &Ctx, MatchResult &Result) {
+    const auto *CE = dyn_cast<CXXConstructExpr>(S);
+    if (!CE || !CE->getConstructor()->hasAttr<UnsafeBufferUsageAttr>())
+      return false;
     // std::span(ptr, size) ctor is handled by SpanTwoParamConstructorGadget.
-    auto HasTwoParamSpanCtorDecl = SpanTwoParamConstructorGadget::matcher();
-    return stmt(
-        cxxConstructExpr(HasUnsafeCtorDecl, unless(HasTwoParamSpanCtorDecl))
-            .bind(OpTag));
+    MatchResult Tmp;
+    if (SpanTwoParamConstructorGadget::matches(CE, Ctx, Tmp))
+      return false;
+    Result.addNode(OpTag, DynTypedNode::create(*CE));
+    return true;
   }
 
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
@@ -1623,23 +1828,34 @@ class DataInvocationGadget : public WarningGadget {
   const ExplicitCastExpr *Op;
 
 public:
-  DataInvocationGadget(const MatchFinder::MatchResult &Result)
+  DataInvocationGadget(const MatchResult &Result)
       : WarningGadget(Kind::DataInvocation),
-        Op(Result.Nodes.getNodeAs<ExplicitCastExpr>(OpTag)) {}
+        Op(Result.getNodeAs<ExplicitCastExpr>(OpTag)) {}
 
   static bool classof(const Gadget *G) {
     return G->getKind() == Kind::DataInvocation;
   }
 
-  static Matcher matcher() {
-
-    Matcher callExpr = cxxMemberCallExpr(callee(
-        cxxMethodDecl(hasName("data"),
-                      ofClass(anyOf(hasName("std::span"), hasName("std::array"),
-                                    hasName("std::vector"))))));
-    return stmt(
-        explicitCastExpr(anyOf(has(callExpr), has(parenExpr(has(callExpr)))))
-            .bind(OpTag));
+  static bool matches(const Stmt *S, const ASTContext &Ctx,
+                      MatchResult &Result) {
+    auto *CE = dyn_cast<ExplicitCastExpr>(S);
+    if (!CE)
+      return false;
+    for (auto *Child : CE->children()) {
+      if (auto *MCE = dyn_cast<CXXMemberCallExpr>(Child);
+          MCE && isDataFunction(MCE)) {
+        Result.addNode(OpTag, DynTypedNode::create(*CE));
+        return true;
+      }
+      if (auto *Paren = dyn_cast<ParenExpr>(Child)) {
+        if (auto *MCE = dyn_cast<CXXMemberCallExpr>(Paren->getSubExpr());
+            MCE && isDataFunction(MCE)) {
+          Result.addNode(OpTag, DynTypedNode::create(*CE));
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
@@ -1650,6 +1866,23 @@ public:
   SourceLocation getSourceLoc() const override { return Op->getBeginLoc(); }
 
   DeclUseList getClaimedVarUseSites() const override { return {}; }
+
+private:
+  static bool isDataFunction(const CXXMemberCallExpr *call) {
+    if (!call)
+      return false;
+    auto *callee = call->getDirectCallee();
+    if (!callee || !isa<CXXMethodDecl>(callee))
+      return false;
+    auto *method = cast<CXXMethodDecl>(callee);
+    if (method->getNameAsString() == "data" &&
+        method->getParent()->isInStdNamespace() &&
+        (method->getParent()->getName() == "span" ||
+         method->getParent()->getName() == "array" ||
+         method->getParent()->getName() == "vector"))
+      return true;
+    return false;
+  }
 };
 
 class UnsafeLibcFunctionCallGadget : public WarningGadget {
@@ -1679,56 +1912,67 @@ class UnsafeLibcFunctionCallGadget : public WarningGadget {
   } WarnedFunKind = OTHERS;
 
 public:
-  UnsafeLibcFunctionCallGadget(const MatchFinder::MatchResult &Result)
+  UnsafeLibcFunctionCallGadget(const MatchResult &Result)
       : WarningGadget(Kind::UnsafeLibcFunctionCall),
-        Call(Result.Nodes.getNodeAs<CallExpr>(Tag)) {
-    if (Result.Nodes.getNodeAs<Decl>(UnsafeSprintfTag))
+        Call(Result.getNodeAs<CallExpr>(Tag)) {
+    if (Result.getNodeAs<Decl>(UnsafeSprintfTag))
       WarnedFunKind = SPRINTF;
-    else if (auto *E = Result.Nodes.getNodeAs<Expr>(UnsafeStringTag)) {
+    else if (auto *E = Result.getNodeAs<Expr>(UnsafeStringTag)) {
       WarnedFunKind = STRING;
       UnsafeArg = E;
-    } else if (Result.Nodes.getNodeAs<CallExpr>(UnsafeSizedByTag)) {
+    } else if (Result.getNodeAs<CallExpr>(UnsafeSizedByTag)) {
       WarnedFunKind = SIZED_BY;
       UnsafeArg = Call->getArg(0);
-    } else if (Result.Nodes.getNodeAs<Decl>(UnsafeVaListTag))
+    } else if (Result.getNodeAs<Decl>(UnsafeVaListTag))
       WarnedFunKind = VA_LIST;
   }
 
-  static Matcher matcher(const UnsafeBufferUsageHandler *Handler) {
-    return stmt(unless(ignoreUnsafeLibcCall(Handler)),
-      anyOf(
-        callExpr(
-            callee(functionDecl(anyOf(
-                // Match a predefined unsafe libc
-                // function:
-                functionDecl(libc_func_matchers::isPredefinedUnsafeLibcFunc()),
-                // Match a call to one of the `v*printf` functions
-                // taking va-list, which cannot be checked at
-                // compile-time:
-                functionDecl(libc_func_matchers::isUnsafeVaListPrintfFunc())
-                    .bind(UnsafeVaListTag),
-                // Match a call to a `sprintf` function, which is never
-                // safe:
-                functionDecl(libc_func_matchers::isUnsafeSprintfFunc())
-                    .bind(UnsafeSprintfTag)))),
-            //  (unless the call has a sole string literal argument):
-            unless(
-                allOf(hasArgument(0, expr(stringLiteral())), hasNumArgs(1)))),
-
-        // The following two cases require checking against actual
-        // arguments of the call:
-
-        // Match a call to an `snprintf` function. And first two
-        // arguments of the call (that describe a buffer) are not in
-        // safe patterns:
-        callExpr(callee(functionDecl(libc_func_matchers::isNormalPrintfFunc())),
-                 libc_func_matchers::hasUnsafeSnprintfBuffer())
-            .bind(UnsafeSizedByTag),
-        // Match a call to a `printf` function, which can be safe if
-        // all arguments are null-terminated:
-        callExpr(callee(functionDecl(libc_func_matchers::isNormalPrintfFunc())),
-                 libc_func_matchers::hasUnsafePrintfStringArg(
-                     expr().bind(UnsafeStringTag)))));
+  static bool matches(const Stmt *S, ASTContext &Ctx,
+                      const UnsafeBufferUsageHandler *Handler,
+                      MatchResult &Result) {
+    if (ignoreUnsafeLibcCall(Ctx, *S, Handler))
+      return false;
+    auto *CE = dyn_cast<CallExpr>(S);
+    if (!CE || !CE->getDirectCallee())
+      return false;
+    const auto *FD = dyn_cast<FunctionDecl>(CE->getDirectCallee());
+    if (!FD)
+      return false;
+    auto isSingleStringLiteralArg = false;
+    if (CE->getNumArgs() == 1) {
+      isSingleStringLiteralArg =
+          isa<clang::StringLiteral>(CE->getArg(0)->IgnoreParenImpCasts());
+    }
+    if (!isSingleStringLiteralArg) {
+      // (unless the call has a sole string literal argument):
+      if (libc_func_matchers::isPredefinedUnsafeLibcFunc(*FD)) {
+        Result.addNode(Tag, DynTypedNode::create(*CE));
+        return true;
+      }
+      if (libc_func_matchers::isUnsafeVaListPrintfFunc(*FD)) {
+        Result.addNode(Tag, DynTypedNode::create(*CE));
+        Result.addNode(UnsafeVaListTag, DynTypedNode::create(*FD));
+        return true;
+      }
+      if (libc_func_matchers::isUnsafeSprintfFunc(*FD)) {
+        Result.addNode(Tag, DynTypedNode::create(*CE));
+        Result.addNode(UnsafeSprintfTag, DynTypedNode::create(*FD));
+        return true;
+      }
+    }
+    if (libc_func_matchers::isNormalPrintfFunc(*FD)) {
+      if (libc_func_matchers::hasUnsafeSnprintfBuffer(*CE, Ctx)) {
+        Result.addNode(Tag, DynTypedNode::create(*CE));
+        Result.addNode(UnsafeSizedByTag, DynTypedNode::create(*CE));
+        return true;
+      }
+      if (libc_func_matchers::hasUnsafePrintfStringArg(*CE, Ctx, Result,
+                                                       UnsafeStringTag)) {
+        Result.addNode(Tag, DynTypedNode::create(*CE));
+        return true;
+      }
+    }
+    return false;
   }
 
   const Stmt *getBaseStmt() const { return Call; }
@@ -1745,7 +1989,7 @@ public:
 };
 
 // Represents expressions of the form `DRE[*]` in the Unspecified Lvalue
-// Context (see `isInUnspecifiedLvalueContext`).
+// Context (see `findStmtsInUnspecifiedLvalueContext`).
 // Note here `[]` is the built-in subscript operator.
 class ULCArraySubscriptGadget : public FixableGadget {
 private:
@@ -1754,9 +1998,9 @@ private:
   const ArraySubscriptExpr *Node;
 
 public:
-  ULCArraySubscriptGadget(const MatchFinder::MatchResult &Result)
+  ULCArraySubscriptGadget(const MatchResult &Result)
       : FixableGadget(Kind::ULCArraySubscript),
-        Node(Result.Nodes.getNodeAs<ArraySubscriptExpr>(ULCArraySubscriptTag)) {
+        Node(Result.getNodeAs<ArraySubscriptExpr>(ULCArraySubscriptTag)) {
     assert(Node != nullptr && "Expecting a non-null matching result");
   }
 
@@ -1764,14 +2008,23 @@ public:
     return G->getKind() == Kind::ULCArraySubscript;
   }
 
-  static Matcher matcher() {
-    auto ArrayOrPtr = anyOf(hasPointerType(), hasArrayType());
-    auto BaseIsArrayOrPtrDRE = hasBase(
-        ignoringParenImpCasts(declRefExpr(ArrayOrPtr, toSupportedVariable())));
-    auto Target =
-        arraySubscriptExpr(BaseIsArrayOrPtrDRE).bind(ULCArraySubscriptTag);
-
-    return expr(isInUnspecifiedLvalueContext(Target));
+  static bool matches(const Stmt *S,
+                      llvm::SmallVectorImpl<MatchResult> &Results) {
+    size_t SizeBefore = Results.size();
+    findStmtsInUnspecifiedLvalueContext(S, [&Results](const Expr *E) {
+      const auto *ASE = dyn_cast<ArraySubscriptExpr>(E);
+      if (!ASE)
+        return;
+      const auto *DRE =
+          dyn_cast<DeclRefExpr>(ASE->getBase()->IgnoreParenImpCasts());
+      if (!DRE || !(hasPointerType(*DRE) || hasArrayType(*DRE)) ||
+          !isSupportedVariable(*DRE))
+        return;
+      MatchResult R;
+      R.addNode(ULCArraySubscriptTag, DynTypedNode::create(*ASE));
+      Results.emplace_back(std::move(R));
+    });
+    return SizeBefore != Results.size();
   }
 
   virtual std::optional<FixItList>
@@ -1788,17 +2041,17 @@ public:
 };
 
 // Fixable gadget to handle stand alone pointers of the form `UPC(DRE)` in the
-// unspecified pointer context (isInUnspecifiedPointerContext). The gadget emits
-// fixit of the form `UPC(DRE.data())`.
+// unspecified pointer context (findStmtsInUnspecifiedPointerContext). The
+// gadget emits fixit of the form `UPC(DRE.data())`.
 class UPCStandalonePointerGadget : public FixableGadget {
 private:
   static constexpr const char *const DeclRefExprTag = "StandalonePointer";
   const DeclRefExpr *Node;
 
 public:
-  UPCStandalonePointerGadget(const MatchFinder::MatchResult &Result)
+  UPCStandalonePointerGadget(const MatchResult &Result)
       : FixableGadget(Kind::UPCStandalonePointer),
-        Node(Result.Nodes.getNodeAs<DeclRefExpr>(DeclRefExprTag)) {
+        Node(Result.getNodeAs<DeclRefExpr>(DeclRefExprTag)) {
     assert(Node != nullptr && "Expecting a non-null matching result");
   }
 
@@ -1806,12 +2059,22 @@ public:
     return G->getKind() == Kind::UPCStandalonePointer;
   }
 
-  static Matcher matcher() {
-    auto ArrayOrPtr = anyOf(hasPointerType(), hasArrayType());
-    auto target = expr(ignoringParenImpCasts(
-        declRefExpr(allOf(ArrayOrPtr, toSupportedVariable()))
-            .bind(DeclRefExprTag)));
-    return stmt(isInUnspecifiedPointerContext(target));
+  static bool matches(const Stmt *S,
+                      llvm::SmallVectorImpl<MatchResult> &Results) {
+    size_t SizeBefore = Results.size();
+    findStmtsInUnspecifiedPointerContext(S, [&Results](const Stmt *S) {
+      auto *E = dyn_cast<Expr>(S);
+      if (!E)
+        return;
+      const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts());
+      if (!DRE || (!hasPointerType(*DRE) && !hasArrayType(*DRE)) ||
+          !isSupportedVariable(*DRE))
+        return;
+      MatchResult R;
+      R.addNode(DeclRefExprTag, DynTypedNode::create(*DRE));
+      Results.emplace_back(std::move(R));
+    });
+    return SizeBefore != Results.size();
   }
 
   virtual std::optional<FixItList>
@@ -1829,25 +2092,35 @@ class PointerDereferenceGadget : public FixableGadget {
   const UnaryOperator *Op = nullptr;
 
 public:
-  PointerDereferenceGadget(const MatchFinder::MatchResult &Result)
+  PointerDereferenceGadget(const MatchResult &Result)
       : FixableGadget(Kind::PointerDereference),
-        BaseDeclRefExpr(
-            Result.Nodes.getNodeAs<DeclRefExpr>(BaseDeclRefExprTag)),
-        Op(Result.Nodes.getNodeAs<UnaryOperator>(OperatorTag)) {}
+        BaseDeclRefExpr(Result.getNodeAs<DeclRefExpr>(BaseDeclRefExprTag)),
+        Op(Result.getNodeAs<UnaryOperator>(OperatorTag)) {}
 
   static bool classof(const Gadget *G) {
     return G->getKind() == Kind::PointerDereference;
   }
 
-  static Matcher matcher() {
-    auto Target =
-        unaryOperator(
-            hasOperatorName("*"),
-            has(expr(ignoringParenImpCasts(
-                declRefExpr(toSupportedVariable()).bind(BaseDeclRefExprTag)))))
-            .bind(OperatorTag);
-
-    return expr(isInUnspecifiedLvalueContext(Target));
+  static bool matches(const Stmt *S,
+                      llvm::SmallVectorImpl<MatchResult> &Results) {
+    size_t SizeBefore = Results.size();
+    findStmtsInUnspecifiedLvalueContext(S, [&Results](const Stmt *S) {
+      const auto *UO = dyn_cast<UnaryOperator>(S);
+      if (!UO || UO->getOpcode() != UO_Deref)
+        return;
+      const auto *CE = dyn_cast<Expr>(UO->getSubExpr());
+      if (!CE)
+        return;
+      CE = CE->IgnoreParenImpCasts();
+      const auto *DRE = dyn_cast<DeclRefExpr>(CE);
+      if (!DRE || !isSupportedVariable(*DRE))
+        return;
+      MatchResult R;
+      R.addNode(BaseDeclRefExprTag, DynTypedNode::create(*DRE));
+      R.addNode(OperatorTag, DynTypedNode::create(*UO));
+      Results.emplace_back(std::move(R));
+    });
+    return SizeBefore != Results.size();
   }
 
   DeclUseList getClaimedVarUseSites() const override {
@@ -1860,7 +2133,7 @@ public:
 };
 
 // Represents expressions of the form `&DRE[any]` in the Unspecified Pointer
-// Context (see `isInUnspecifiedPointerContext`).
+// Context (see `findStmtsInUnspecifiedPointerContext`).
 // Note here `[]` is the built-in subscript operator.
 class UPCAddressofArraySubscriptGadget : public FixableGadget {
 private:
@@ -1869,10 +2142,9 @@ private:
   const UnaryOperator *Node; // the `&DRE[any]` node
 
 public:
-  UPCAddressofArraySubscriptGadget(const MatchFinder::MatchResult &Result)
+  UPCAddressofArraySubscriptGadget(const MatchResult &Result)
       : FixableGadget(Kind::ULCArraySubscript),
-        Node(Result.Nodes.getNodeAs<UnaryOperator>(
-            UPCAddressofArraySubscriptTag)) {
+        Node(Result.getNodeAs<UnaryOperator>(UPCAddressofArraySubscriptTag)) {
     assert(Node != nullptr && "Expecting a non-null matching result");
   }
 
@@ -1880,13 +2152,28 @@ public:
     return G->getKind() == Kind::UPCAddressofArraySubscript;
   }
 
-  static Matcher matcher() {
-    return expr(isInUnspecifiedPointerContext(expr(ignoringImpCasts(
-        unaryOperator(
-            hasOperatorName("&"),
-            hasUnaryOperand(arraySubscriptExpr(hasBase(
-                ignoringParenImpCasts(declRefExpr(toSupportedVariable()))))))
-            .bind(UPCAddressofArraySubscriptTag)))));
+  static bool matches(const Stmt *S,
+                      llvm::SmallVectorImpl<MatchResult> &Results) {
+    size_t SizeBefore = Results.size();
+    findStmtsInUnspecifiedPointerContext(S, [&Results](const Stmt *S) {
+      auto *E = dyn_cast<Expr>(S);
+      if (!E)
+        return;
+      const auto *UO = dyn_cast<UnaryOperator>(E->IgnoreImpCasts());
+      if (!UO || UO->getOpcode() != UO_AddrOf)
+        return;
+      const auto *ASE = dyn_cast<ArraySubscriptExpr>(UO->getSubExpr());
+      if (!ASE)
+        return;
+      const auto *DRE =
+          dyn_cast<DeclRefExpr>(ASE->getBase()->IgnoreParenImpCasts());
+      if (!DRE || !isSupportedVariable(*DRE))
+        return;
+      MatchResult R;
+      R.addNode(UPCAddressofArraySubscriptTag, DynTypedNode::create(*UO));
+      Results.emplace_back(std::move(R));
+    });
+    return SizeBefore != Results.size();
   }
 
   virtual std::optional<FixItList>
@@ -1977,9 +2264,9 @@ private:
   const UnaryOperator *Node; // the `++Ptr` node
 
 public:
-  UPCPreIncrementGadget(const MatchFinder::MatchResult &Result)
+  UPCPreIncrementGadget(const MatchResult &Result)
       : FixableGadget(Kind::UPCPreIncrement),
-        Node(Result.Nodes.getNodeAs<UnaryOperator>(UPCPreIncrementTag)) {
+        Node(Result.getNodeAs<UnaryOperator>(UPCPreIncrementTag)) {
     assert(Node != nullptr && "Expecting a non-null matching result");
   }
 
@@ -1987,15 +2274,28 @@ public:
     return G->getKind() == Kind::UPCPreIncrement;
   }
 
-  static Matcher matcher() {
+  static bool matches(const Stmt *S,
+                      llvm::SmallVectorImpl<MatchResult> &Results) {
     // Note here we match `++Ptr` for any expression `Ptr` of pointer type.
     // Although currently we can only provide fix-its when `Ptr` is a DRE, we
     // can have the matcher be general, so long as `getClaimedVarUseSites` does
     // things right.
-    return stmt(isInUnspecifiedPointerContext(expr(ignoringImpCasts(
-        unaryOperator(isPreInc(),
-                      hasUnaryOperand(declRefExpr(toSupportedVariable())))
-            .bind(UPCPreIncrementTag)))));
+    size_t SizeBefore = Results.size();
+    findStmtsInUnspecifiedPointerContext(S, [&Results](const Stmt *S) {
+      auto *E = dyn_cast<Expr>(S);
+      if (!E)
+        return;
+      const auto *UO = dyn_cast<UnaryOperator>(E->IgnoreImpCasts());
+      if (!UO || UO->getOpcode() != UO_PreInc)
+        return;
+      const auto *DRE = dyn_cast<DeclRefExpr>(UO->getSubExpr());
+      if (!DRE || !isSupportedVariable(*DRE))
+        return;
+      MatchResult R;
+      R.addNode(UPCPreIncrementTag, DynTypedNode::create(*UO));
+      Results.emplace_back(std::move(R));
+    });
+    return SizeBefore != Results.size();
   }
 
   virtual std::optional<FixItList>
@@ -2019,10 +2319,10 @@ private:
   const Expr *Offset = nullptr;
 
 public:
-  UUCAddAssignGadget(const MatchFinder::MatchResult &Result)
+  UUCAddAssignGadget(const MatchResult &Result)
       : FixableGadget(Kind::UUCAddAssign),
-        Node(Result.Nodes.getNodeAs<BinaryOperator>(UUCAddAssignTag)),
-        Offset(Result.Nodes.getNodeAs<Expr>(OffsetTag)) {
+        Node(Result.getNodeAs<BinaryOperator>(UUCAddAssignTag)),
+        Offset(Result.getNodeAs<Expr>(OffsetTag)) {
     assert(Node != nullptr && "Expecting a non-null matching result");
   }
 
@@ -2030,17 +2330,25 @@ public:
     return G->getKind() == Kind::UUCAddAssign;
   }
 
-  static Matcher matcher() {
-    // clang-format off
-    return stmt(isInUnspecifiedUntypedContext(expr(ignoringImpCasts(
-        binaryOperator(hasOperatorName("+="),
-                       hasLHS(
-                        declRefExpr(
-                          hasPointerType(),
-                          toSupportedVariable())),
-                       hasRHS(expr().bind(OffsetTag)))
-            .bind(UUCAddAssignTag)))));
-    // clang-format on
+  static bool matches(const Stmt *S,
+                      llvm::SmallVectorImpl<MatchResult> &Results) {
+    size_t SizeBefore = Results.size();
+    findStmtsInUnspecifiedUntypedContext(S, [&Results](const Stmt *S) {
+      const auto *E = dyn_cast<Expr>(S);
+      if (!E)
+        return;
+      const auto *BO = dyn_cast<BinaryOperator>(E->IgnoreImpCasts());
+      if (!BO || BO->getOpcode() != BO_AddAssign)
+        return;
+      const auto *DRE = dyn_cast<DeclRefExpr>(BO->getLHS());
+      if (!DRE || !hasPointerType(*DRE) || !isSupportedVariable(*DRE))
+        return;
+      MatchResult R;
+      R.addNode(UUCAddAssignTag, DynTypedNode::create(*BO));
+      R.addNode(OffsetTag, DynTypedNode::create(*BO->getRHS()));
+      Results.emplace_back(std::move(R));
+    });
+    return SizeBefore != Results.size();
   }
 
   virtual std::optional<FixItList>
@@ -2066,31 +2374,60 @@ class DerefSimplePtrArithFixableGadget : public FixableGadget {
   const IntegerLiteral *Offset = nullptr;
 
 public:
-  DerefSimplePtrArithFixableGadget(const MatchFinder::MatchResult &Result)
+  DerefSimplePtrArithFixableGadget(const MatchResult &Result)
       : FixableGadget(Kind::DerefSimplePtrArithFixable),
-        BaseDeclRefExpr(
-            Result.Nodes.getNodeAs<DeclRefExpr>(BaseDeclRefExprTag)),
-        DerefOp(Result.Nodes.getNodeAs<UnaryOperator>(DerefOpTag)),
-        AddOp(Result.Nodes.getNodeAs<BinaryOperator>(AddOpTag)),
-        Offset(Result.Nodes.getNodeAs<IntegerLiteral>(OffsetTag)) {}
+        BaseDeclRefExpr(Result.getNodeAs<DeclRefExpr>(BaseDeclRefExprTag)),
+        DerefOp(Result.getNodeAs<UnaryOperator>(DerefOpTag)),
+        AddOp(Result.getNodeAs<BinaryOperator>(AddOpTag)),
+        Offset(Result.getNodeAs<IntegerLiteral>(OffsetTag)) {}
 
-  static Matcher matcher() {
-    // clang-format off
-    auto ThePtr = expr(hasPointerType(),
-                       ignoringImpCasts(declRefExpr(toSupportedVariable()).
-                                        bind(BaseDeclRefExprTag)));
-    auto PlusOverPtrAndInteger = expr(anyOf(
-          binaryOperator(hasOperatorName("+"), hasLHS(ThePtr),
-                         hasRHS(integerLiteral().bind(OffsetTag)))
-                         .bind(AddOpTag),
-          binaryOperator(hasOperatorName("+"), hasRHS(ThePtr),
-                         hasLHS(integerLiteral().bind(OffsetTag)))
-                         .bind(AddOpTag)));
-    return isInUnspecifiedLvalueContext(unaryOperator(
-        hasOperatorName("*"),
-        hasUnaryOperand(ignoringParens(PlusOverPtrAndInteger)))
-        .bind(DerefOpTag));
-    // clang-format on
+  static bool matches(const Stmt *S,
+                      llvm::SmallVectorImpl<MatchResult> &Results) {
+    auto IsPtr = [](const Expr *E, MatchResult &R) {
+      if (!E || !hasPointerType(*E))
+        return false;
+      const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreImpCasts());
+      if (!DRE || !isSupportedVariable(*DRE))
+        return false;
+      R.addNode(BaseDeclRefExprTag, DynTypedNode::create(*DRE));
+      return true;
+    };
+    const auto IsPlusOverPtrAndInteger = [&IsPtr](const Expr *E,
+                                                  MatchResult &R) {
+      const auto *BO = dyn_cast<BinaryOperator>(E);
+      if (!BO || BO->getOpcode() != BO_Add)
+        return false;
+
+      const auto *LHS = BO->getLHS();
+      const auto *RHS = BO->getRHS();
+      if (isa<IntegerLiteral>(RHS) && IsPtr(LHS, R)) {
+        R.addNode(OffsetTag, DynTypedNode::create(*RHS));
+        R.addNode(AddOpTag, DynTypedNode::create(*BO));
+        return true;
+      }
+      if (isa<IntegerLiteral>(LHS) && IsPtr(RHS, R)) {
+        R.addNode(OffsetTag, DynTypedNode::create(*LHS));
+        R.addNode(AddOpTag, DynTypedNode::create(*BO));
+        return true;
+      }
+      return false;
+    };
+    size_t SizeBefore = Results.size();
+    const auto InnerMatcher = [&IsPlusOverPtrAndInteger,
+                               &Results](const Expr *E) {
+      const auto *UO = dyn_cast<UnaryOperator>(E);
+      if (!UO || UO->getOpcode() != UO_Deref)
+        return;
+
+      const auto *Operand = UO->getSubExpr()->IgnoreParens();
+      MatchResult R;
+      if (IsPlusOverPtrAndInteger(Operand, R)) {
+        R.addNode(DerefOpTag, DynTypedNode::create(*UO));
+        Results.emplace_back(std::move(R));
+      }
+    };
+    findStmtsInUnspecifiedLvalueContext(S, InnerMatcher);
+    return SizeBefore != Results.size();
   }
 
   virtual std::optional<FixItList>
@@ -2104,112 +2441,112 @@ public:
   }
 };
 
-/// Scan the function and return a list of gadgets found with provided kits.
+class WarningGadgetMatcher : public FastMatcher {
+
+public:
+  WarningGadgetMatcher(WarningGadgetList &WarningGadgets)
+      : WarningGadgets(WarningGadgets) {}
+
+  bool matches(const DynTypedNode &DynNode, ASTContext &Ctx,
+               const UnsafeBufferUsageHandler &Handler) override {
+    const Stmt *S = DynNode.get<Stmt>();
+    if (!S)
+      return false;
+
+    MatchResult Result;
+#define WARNING_GADGET(name)                                                   \
+  if (name##Gadget::matches(S, Ctx, Result) &&                                 \
+      notInSafeBufferOptOut(*S, &Handler)) {                                   \
+    WarningGadgets.push_back(std::make_unique<name##Gadget>(Result));          \
+    return true;                                                               \
+  }
+#define WARNING_OPTIONAL_GADGET(name)                                          \
+  if (name##Gadget::matches(S, Ctx, &Handler, Result) &&                       \
+      notInSafeBufferOptOut(*S, &Handler)) {                                   \
+    WarningGadgets.push_back(std::make_unique<name##Gadget>(Result));          \
+    return true;                                                               \
+  }
+#include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
+    return false;
+  }
+
+private:
+  WarningGadgetList &WarningGadgets;
+};
+
+class FixableGadgetMatcher : public FastMatcher {
+
+public:
+  FixableGadgetMatcher(FixableGadgetList &FixableGadgets,
+                       DeclUseTracker &Tracker)
+      : FixableGadgets(FixableGadgets), Tracker(Tracker) {}
+
+  bool matches(const DynTypedNode &DynNode, ASTContext &Ctx,
+               const UnsafeBufferUsageHandler &Handler) override {
+    bool matchFound = false;
+    const Stmt *S = DynNode.get<Stmt>();
+    if (!S) {
+      return matchFound;
+    }
+
+    llvm::SmallVector<MatchResult> Results;
+#define FIXABLE_GADGET(name)                                                   \
+  if (name##Gadget::matches(S, Results)) {                                     \
+    for (const auto &R : Results) {                                            \
+      FixableGadgets.push_back(std::make_unique<name##Gadget>(R));             \
+      matchFound = true;                                                       \
+    }                                                                          \
+    Results = {};                                                              \
+  }
+#include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
+    // In parallel, match all DeclRefExprs so that to find out
+    // whether there are any uncovered by gadgets.
+    if (auto *DRE = findDeclRefExpr(S); DRE) {
+      Tracker.discoverUse(DRE);
+      matchFound = true;
+    }
+    // Also match DeclStmts because we'll need them when fixing
+    // their underlying VarDecls that otherwise don't have
+    // any backreferences to DeclStmts.
+    if (auto *DS = findDeclStmt(S); DS) {
+      Tracker.discoverDecl(DS);
+      matchFound = true;
+    }
+    return matchFound;
+  }
+
+private:
+  const DeclRefExpr *findDeclRefExpr(const Stmt *S) {
+    const auto *DRE = dyn_cast<DeclRefExpr>(S);
+    if (!DRE || (!hasPointerType(*DRE) && !hasArrayType(*DRE)))
+      return nullptr;
+    const Decl *D = DRE->getDecl();
+    if (!D || (!isa<VarDecl>(D) && !isa<BindingDecl>(D)))
+      return nullptr;
+    return DRE;
+  }
+  const DeclStmt *findDeclStmt(const Stmt *S) {
+    const auto *DS = dyn_cast<DeclStmt>(S);
+    if (!DS)
+      return nullptr;
+    return DS;
+  }
+  FixableGadgetList &FixableGadgets;
+  DeclUseTracker &Tracker;
+};
+
+// Scan the function and return a list of gadgets found with provided kits.
 static void findGadgets(const Stmt *S, ASTContext &Ctx,
                         const UnsafeBufferUsageHandler &Handler,
                         bool EmitSuggestions, FixableGadgetList &FixableGadgets,
                         WarningGadgetList &WarningGadgets,
                         DeclUseTracker &Tracker) {
-
-  struct GadgetFinderCallback : MatchFinder::MatchCallback {
-    GadgetFinderCallback(FixableGadgetList &FixableGadgets,
-                         WarningGadgetList &WarningGadgets,
-                         DeclUseTracker &Tracker)
-        : FixableGadgets(FixableGadgets), WarningGadgets(WarningGadgets),
-          Tracker(Tracker) {}
-
-    void run(const MatchFinder::MatchResult &Result) override {
-      // In debug mode, assert that we've found exactly one gadget.
-      // This helps us avoid conflicts in .bind() tags.
-#if NDEBUG
-#define NEXT return
-#else
-      [[maybe_unused]] int numFound = 0;
-#define NEXT ++numFound
-#endif
-
-      if (const auto *DRE = Result.Nodes.getNodeAs<DeclRefExpr>("any_dre")) {
-        Tracker.discoverUse(DRE);
-        NEXT;
-      }
-
-      if (const auto *DS = Result.Nodes.getNodeAs<DeclStmt>("any_ds")) {
-        Tracker.discoverDecl(DS);
-        NEXT;
-      }
-
-      // Figure out which matcher we've found, and call the appropriate
-      // subclass constructor.
-      // FIXME: Can we do this more logarithmically?
-#define FIXABLE_GADGET(name)                                                   \
-  if (Result.Nodes.getNodeAs<Stmt>(#name)) {                                   \
-    FixableGadgets.push_back(std::make_unique<name##Gadget>(Result));          \
-    NEXT;                                                                      \
-  }
-#include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
-#define WARNING_GADGET(name)                                                   \
-  if (Result.Nodes.getNodeAs<Stmt>(#name)) {                                   \
-    WarningGadgets.push_back(std::make_unique<name##Gadget>(Result));          \
-    NEXT;                                                                      \
-  }
-#include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
-
-      assert(numFound >= 1 && "Gadgets not found in match result!");
-      assert(numFound <= 1 && "Conflicting bind tags in gadgets!");
-    }
-
-    FixableGadgetList &FixableGadgets;
-    WarningGadgetList &WarningGadgets;
-    DeclUseTracker &Tracker;
-  };
-
-  MatchFinder M;
-  GadgetFinderCallback CB{FixableGadgets, WarningGadgets, Tracker};
-
-  // clang-format off
-  M.addMatcher(
-      stmt(
-        forEachDescendantEvaluatedStmt(stmt(anyOf(
-          // Add Gadget::matcher() for every gadget in the registry.
-#define WARNING_GADGET(x)                                                      \
-          allOf(x ## Gadget::matcher().bind(#x),                               \
-                notInSafeBufferOptOut(&Handler)),
-#define WARNING_OPTIONAL_GADGET(x)                                            \
-          allOf(x ## Gadget::matcher(&Handler).bind(#x),                      \
-                notInSafeBufferOptOut(&Handler)),
-#include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
-            // Avoid a hanging comma.
-            unless(stmt())
-        )))
-    ),
-    &CB
-  );
-  // clang-format on
-
+  WarningGadgetMatcher WMatcher{WarningGadgets};
+  forEachDescendantEvaluatedStmt(S, Ctx, Handler, WMatcher);
   if (EmitSuggestions) {
-    // clang-format off
-    M.addMatcher(
-        stmt(
-          forEachDescendantStmt(stmt(eachOf(
-#define FIXABLE_GADGET(x)                                                      \
-            x ## Gadget::matcher().bind(#x),
-#include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
-            // In parallel, match all DeclRefExprs so that to find out
-            // whether there are any uncovered by gadgets.
-            declRefExpr(anyOf(hasPointerType(), hasArrayType()),
-                        to(anyOf(varDecl(), bindingDecl()))).bind("any_dre"),
-            // Also match DeclStmts because we'll need them when fixing
-            // their underlying VarDecls that otherwise don't have
-            // any backreferences to DeclStmts.
-            declStmt().bind("any_ds")
-          )))
-      ),
-      &CB
-    );
-    // clang-format on
+    FixableGadgetMatcher FMatcher{FixableGadgets, Tracker};
+    forEachDescendantStmt(S, Ctx, Handler, FMatcher);
   }
-
-  M.match(*S, Ctx);
 }
 
 // Compares AST nodes by source locations.
@@ -3755,9 +4092,11 @@ public:
   }
 };
 
-void applyGadgets(const Decl *D, FixableGadgetList FixableGadgets,
-                  WarningGadgetList WarningGadgets, DeclUseTracker Tracker,
-                  UnsafeBufferUsageHandler &Handler, bool EmitSuggestions) {
+static void applyGadgets(const Decl *D, FixableGadgetList FixableGadgets,
+                         WarningGadgetList WarningGadgets,
+                         DeclUseTracker Tracker,
+                         UnsafeBufferUsageHandler &Handler,
+                         bool EmitSuggestions) {
   if (!EmitSuggestions) {
     // Our job is very easy without suggestions. Just warn about
     // every problematic operation and consider it done. No need to deal
@@ -3769,7 +4108,7 @@ void applyGadgets(const Decl *D, FixableGadgetList FixableGadgets,
 
     // This return guarantees that most of the machine doesn't run when
     // suggestions aren't requested.
-    assert(FixableGadgets.size() == 0 &&
+    assert(FixableGadgets.empty() &&
            "Fixable gadgets found but suggestions not requested!");
     return;
   }
@@ -3868,7 +4207,7 @@ void applyGadgets(const Decl *D, FixableGadgetList FixableGadgets,
   DepMapTy DependenciesMap{};
   DepMapTy PtrAssignmentGraph{};
 
-  for (auto it : FixablesForAllVars.byVar) {
+  for (const auto &it : FixablesForAllVars.byVar) {
     for (const FixableGadget *fixable : it.second) {
       std::optional<std::pair<const VarDecl *, const VarDecl *>> ImplPair =
           fixable->getStrategyImplications();
@@ -3959,7 +4298,7 @@ void applyGadgets(const Decl *D, FixableGadgetList FixableGadgets,
           HasParm = true;
       }
       if (HasParm)
-        GrpsUnionForParms.insert(VarGroup.begin(), VarGroup.end());
+        GrpsUnionForParms.insert_range(VarGroup);
     }
   }
 

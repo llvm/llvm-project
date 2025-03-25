@@ -745,12 +745,13 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
 
   unsigned DiagID;
   if (!getLangOpts().CPlusPlus17)
-    DiagID = diag::ext_decomp_decl;
+    DiagID = diag::compat_pre_cxx17_decomp_decl;
   else if (D.getContext() == DeclaratorContext::Condition)
-    DiagID = getLangOpts().CPlusPlus26 ? diag::warn_cxx26_decomp_decl_cond
-                                       : diag::ext_decomp_decl_cond;
+    DiagID = getLangOpts().CPlusPlus26
+                 ? diag::compat_cxx26_decomp_decl_cond
+                 : diag::compat_pre_cxx26_decomp_decl_cond;
   else
-    DiagID = diag::warn_cxx14_compat_decomp_decl;
+    DiagID = diag::compat_cxx17_decomp_decl;
 
   Diag(Decomp.getLSquareLoc(), DiagID) << Decomp.getSourceRange();
 
@@ -808,8 +809,8 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
     } else if (!CPlusPlus20Specifiers.empty()) {
       auto &&Warn = Diag(CPlusPlus20SpecifierLocs.front(),
                          getLangOpts().CPlusPlus20
-                             ? diag::warn_cxx17_compat_decomp_decl_spec
-                             : diag::ext_decomp_decl_spec);
+                             ? diag::compat_cxx20_decomp_decl_spec
+                             : diag::compat_pre_cxx20_decomp_decl_spec);
       Warn << (int)CPlusPlus20Specifiers.size()
            << llvm::join(CPlusPlus20Specifiers.begin(),
                          CPlusPlus20Specifiers.end(), " ");
@@ -1681,7 +1682,7 @@ std::optional<unsigned> Sema::GetDecompositionElementCount(QualType T,
   llvm::APSInt TupleSize(Ctx.getTypeSize(Ctx.getSizeType()));
   switch (isTupleLike(*this, Loc, T, TupleSize)) {
   case IsTupleLike::Error:
-    return {};
+    return std::nullopt;
   case IsTupleLike::TupleLike:
     return TupleSize.getExtValue();
   case IsTupleLike::NotTupleLike:
@@ -1706,7 +1707,7 @@ std::optional<unsigned> Sema::GetDecompositionElementCount(QualType T,
       RD->fields(), [](FieldDecl *FD) { return !FD->isUnnamedBitField(); });
 
   if (CheckMemberDecompositionFields(*this, Loc, OrigRD, T, BasePair))
-    return true;
+    return std::nullopt;
 
   return NumFields;
 }
@@ -2041,8 +2042,8 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
         if (Kind == Sema::CheckConstexprKind::Diagnose) {
           SemaRef.Diag(DS->getBeginLoc(),
                        SemaRef.getLangOpts().CPlusPlus14
-                           ? diag::warn_cxx11_compat_constexpr_type_definition
-                           : diag::ext_constexpr_type_definition)
+                           ? diag::compat_cxx14_constexpr_type_definition
+                           : diag::compat_pre_cxx14_constexpr_type_definition)
               << isa<CXXConstructorDecl>(Dcl);
         } else if (!SemaRef.getLangOpts().CPlusPlus14) {
           return false;
@@ -2069,8 +2070,8 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
           if (Kind == Sema::CheckConstexprKind::Diagnose) {
             SemaRef.Diag(VD->getLocation(),
                          SemaRef.getLangOpts().CPlusPlus23
-                             ? diag::warn_cxx20_compat_constexpr_var
-                             : diag::ext_constexpr_static_var)
+                             ? diag::compat_cxx23_constexpr_static_var
+                             : diag::compat_pre_cxx23_constexpr_static_var)
                 << isa<CXXConstructorDecl>(Dcl)
                 << (VD->getTLSKind() == VarDecl::TLS_Dynamic);
           } else if (!SemaRef.getLangOpts().CPlusPlus23) {
@@ -2080,8 +2081,7 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
         if (SemaRef.LangOpts.CPlusPlus23) {
           CheckLiteralType(SemaRef, Kind, VD->getLocation(), VD->getType(),
                            diag::warn_cxx20_compat_constexpr_var,
-                           isa<CXXConstructorDecl>(Dcl),
-                           /*variable of non-literal type*/ 2);
+                           isa<CXXConstructorDecl>(Dcl));
         } else if (CheckLiteralType(
                        SemaRef, Kind, VD->getLocation(), VD->getType(),
                        diag::err_constexpr_local_var_non_literal_type,
@@ -2094,8 +2094,8 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
             SemaRef.Diag(
                 VD->getLocation(),
                 SemaRef.getLangOpts().CPlusPlus20
-                    ? diag::warn_cxx17_compat_constexpr_local_var_no_init
-                    : diag::ext_constexpr_local_var_no_init)
+                    ? diag::compat_cxx20_constexpr_local_var_no_init
+                    : diag::compat_pre_cxx20_constexpr_local_var_no_init)
                 << isa<CXXConstructorDecl>(Dcl);
           } else if (!SemaRef.getLangOpts().CPlusPlus20) {
             return false;
@@ -2106,9 +2106,9 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
       if (Kind == Sema::CheckConstexprKind::Diagnose) {
         SemaRef.Diag(VD->getLocation(),
                      SemaRef.getLangOpts().CPlusPlus14
-                      ? diag::warn_cxx11_compat_constexpr_local_var
-                      : diag::ext_constexpr_local_var)
-          << isa<CXXConstructorDecl>(Dcl);
+                         ? diag::compat_cxx14_constexpr_local_var
+                         : diag::compat_pre_cxx14_constexpr_local_var)
+            << isa<CXXConstructorDecl>(Dcl);
       } else if (!SemaRef.getLangOpts().CPlusPlus14) {
         return false;
       }
@@ -2179,8 +2179,8 @@ static bool CheckConstexprCtorInitializer(Sema &SemaRef,
       if (!Diagnosed) {
         SemaRef.Diag(Dcl->getLocation(),
                      SemaRef.getLangOpts().CPlusPlus20
-                         ? diag::warn_cxx17_compat_constexpr_ctor_missing_init
-                         : diag::ext_constexpr_ctor_missing_init);
+                         ? diag::compat_cxx20_constexpr_ctor_missing_init
+                         : diag::compat_pre_cxx20_constexpr_ctor_missing_init);
         Diagnosed = true;
       }
       SemaRef.Diag(Field->getLocation(),
@@ -2392,9 +2392,9 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
 
     case Sema::CheckConstexprKind::Diagnose:
       SemaRef.Diag(Body->getBeginLoc(),
-           !SemaRef.getLangOpts().CPlusPlus20
-               ? diag::ext_constexpr_function_try_block_cxx20
-               : diag::warn_cxx17_compat_constexpr_function_try_block)
+                   SemaRef.getLangOpts().CPlusPlus20
+                       ? diag::compat_cxx20_constexpr_function_try_block
+                       : diag::compat_pre_cxx20_constexpr_function_try_block)
           << isa<CXXConstructorDecl>(Dcl);
       break;
     }
@@ -2423,21 +2423,21 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
   } else if (Cxx2bLoc.isValid()) {
     SemaRef.Diag(Cxx2bLoc,
                  SemaRef.getLangOpts().CPlusPlus23
-                     ? diag::warn_cxx20_compat_constexpr_body_invalid_stmt
-                     : diag::ext_constexpr_body_invalid_stmt_cxx23)
+                     ? diag::compat_cxx23_constexpr_body_invalid_stmt
+                     : diag::compat_pre_cxx23_constexpr_body_invalid_stmt)
         << isa<CXXConstructorDecl>(Dcl);
   } else if (Cxx2aLoc.isValid()) {
     SemaRef.Diag(Cxx2aLoc,
-         SemaRef.getLangOpts().CPlusPlus20
-           ? diag::warn_cxx17_compat_constexpr_body_invalid_stmt
-           : diag::ext_constexpr_body_invalid_stmt_cxx20)
-      << isa<CXXConstructorDecl>(Dcl);
+                 SemaRef.getLangOpts().CPlusPlus20
+                     ? diag::compat_cxx20_constexpr_body_invalid_stmt
+                     : diag::compat_pre_cxx20_constexpr_body_invalid_stmt)
+        << isa<CXXConstructorDecl>(Dcl);
   } else if (Cxx1yLoc.isValid()) {
     SemaRef.Diag(Cxx1yLoc,
-         SemaRef.getLangOpts().CPlusPlus14
-           ? diag::warn_cxx11_compat_constexpr_body_invalid_stmt
-           : diag::ext_constexpr_body_invalid_stmt)
-      << isa<CXXConstructorDecl>(Dcl);
+                 SemaRef.getLangOpts().CPlusPlus14
+                     ? diag::compat_cxx14_constexpr_body_invalid_stmt
+                     : diag::compat_pre_cxx14_constexpr_body_invalid_stmt)
+        << isa<CXXConstructorDecl>(Dcl);
   }
 
   if (const CXXConstructorDecl *Constructor
@@ -2456,8 +2456,8 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
           SemaRef.Diag(
               Dcl->getLocation(),
               SemaRef.getLangOpts().CPlusPlus20
-                  ? diag::warn_cxx17_compat_constexpr_union_ctor_no_init
-                  : diag::ext_constexpr_union_ctor_no_init);
+                  ? diag::compat_cxx20_constexpr_union_ctor_no_init
+                  : diag::compat_pre_cxx20_constexpr_union_ctor_no_init);
         } else if (!SemaRef.getLangOpts().CPlusPlus20) {
           return false;
         }
@@ -2523,8 +2523,8 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
         SemaRef.Diag(
             ReturnStmts.back(),
             SemaRef.getLangOpts().CPlusPlus14
-                ? diag::warn_cxx11_compat_constexpr_body_multiple_return
-                : diag::ext_constexpr_body_multiple_return);
+                ? diag::compat_cxx14_constexpr_body_multiple_return
+                : diag::compat_pre_cxx14_constexpr_body_multiple_return);
         for (unsigned I = 0; I < ReturnStmts.size() - 1; ++I)
           SemaRef.Diag(ReturnStmts[I],
                        diag::note_constexpr_body_previous_return);
@@ -3069,48 +3069,46 @@ void Sema::ActOnBaseSpecifiers(Decl *ClassDecl,
   AttachBaseSpecifiers(cast<CXXRecordDecl>(ClassDecl), Bases);
 }
 
-bool Sema::IsDerivedFrom(SourceLocation Loc, QualType Derived, QualType Base) {
+bool Sema::IsDerivedFrom(SourceLocation Loc, CXXRecordDecl *Derived,
+                         CXXRecordDecl *Base, CXXBasePaths &Paths) {
   if (!getLangOpts().CPlusPlus)
     return false;
 
-  CXXRecordDecl *DerivedRD = Derived->getAsCXXRecordDecl();
-  if (!DerivedRD)
-    return false;
-
-  CXXRecordDecl *BaseRD = Base->getAsCXXRecordDecl();
-  if (!BaseRD)
+  if (!Base || !Derived)
     return false;
 
   // If either the base or the derived type is invalid, don't try to
   // check whether one is derived from the other.
-  if (BaseRD->isInvalidDecl() || DerivedRD->isInvalidDecl())
+  if (Base->isInvalidDecl() || Derived->isInvalidDecl())
     return false;
 
   // FIXME: In a modules build, do we need the entire path to be visible for us
   // to be able to use the inheritance relationship?
-  if (!isCompleteType(Loc, Derived) && !DerivedRD->isBeingDefined())
+  if (!isCompleteType(Loc, Context.getTypeDeclType(Derived)) &&
+      !Derived->isBeingDefined())
     return false;
 
-  return DerivedRD->isDerivedFrom(BaseRD);
+  return Derived->isDerivedFrom(Base, Paths);
+}
+
+bool Sema::IsDerivedFrom(SourceLocation Loc, CXXRecordDecl *Derived,
+                         CXXRecordDecl *Base) {
+  CXXBasePaths Paths(/*FindAmbiguities=*/false, /*RecordPaths=*/false,
+                     /*DetectVirtual=*/false);
+  return IsDerivedFrom(Loc, Derived, Base, Paths);
+}
+
+bool Sema::IsDerivedFrom(SourceLocation Loc, QualType Derived, QualType Base) {
+  CXXBasePaths Paths(/*FindAmbiguities=*/false, /*RecordPaths=*/false,
+                     /*DetectVirtual=*/false);
+  return IsDerivedFrom(Loc, Derived->getAsCXXRecordDecl(),
+                       Base->getAsCXXRecordDecl(), Paths);
 }
 
 bool Sema::IsDerivedFrom(SourceLocation Loc, QualType Derived, QualType Base,
                          CXXBasePaths &Paths) {
-  if (!getLangOpts().CPlusPlus)
-    return false;
-
-  CXXRecordDecl *DerivedRD = Derived->getAsCXXRecordDecl();
-  if (!DerivedRD)
-    return false;
-
-  CXXRecordDecl *BaseRD = Base->getAsCXXRecordDecl();
-  if (!BaseRD)
-    return false;
-
-  if (!isCompleteType(Loc, Derived) && !DerivedRD->isBeingDefined())
-    return false;
-
-  return DerivedRD->isDerivedFrom(BaseRD, Paths);
+  return IsDerivedFrom(Loc, Derived->getAsCXXRecordDecl(),
+                       Base->getAsCXXRecordDecl(), Paths);
 }
 
 static void BuildBasePathArray(const CXXBasePath &Path,
@@ -17825,8 +17823,8 @@ Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
                                         InsertionText);
     } else {
       Diag(FriendLoc, getLangOpts().CPlusPlus11
-                          ? diag::warn_cxx98_compat_nonclass_type_friend
-                          : diag::ext_nonclass_type_friend)
+                          ? diag::compat_cxx11_nonclass_type_friend
+                          : diag::compat_pre_cxx11_nonclass_type_friend)
           << T << DS.getSourceRange();
     }
   }
@@ -18922,7 +18920,7 @@ void DelegatingCycleHelper(CXXConstructorDecl* Ctor,
   // We know that beyond here, we aren't chaining into a cycle.
   if (!Target || !Target->isDelegatingConstructor() ||
       Target->isInvalidDecl() || Valid.count(TCanonical)) {
-    Valid.insert(Current.begin(), Current.end());
+    Valid.insert_range(Current);
     Current.clear();
   // We've hit a cycle.
   } else if (TCanonical == Canonical || Invalid.count(TCanonical) ||
@@ -18949,7 +18947,7 @@ void DelegatingCycleHelper(CXXConstructorDecl* Ctor,
       }
     }
 
-    Invalid.insert(Current.begin(), Current.end());
+    Invalid.insert_range(Current);
     Current.clear();
   } else {
     DelegatingCycleHelper(Target, Valid, Invalid, Current, S);

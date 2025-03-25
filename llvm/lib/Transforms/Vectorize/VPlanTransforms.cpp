@@ -33,7 +33,7 @@
 
 using namespace llvm;
 
-void VPlanTransforms::VPInstructionsToVPRecipes(
+bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlanPtr &Plan,
     function_ref<const InductionDescriptor *(PHINode *)>
         GetIntOrFpInductionDescriptor,
@@ -84,6 +84,9 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
+          Intrinsic::ID VectorID = getVectorIntrinsicIDForCall(CI, &TLI);
+          if (VectorID == Intrinsic::not_intrinsic)
+            return false;
           NewRecipe = new VPWidenIntrinsicRecipe(
               *CI, getVectorIntrinsicIDForCall(CI, &TLI),
               {Ingredient.op_begin(), Ingredient.op_end() - 1}, CI->getType(),
@@ -107,6 +110,7 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
       Ingredient.eraseFromParent();
     }
   }
+  return true;
 }
 
 static bool sinkScalarOperands(VPlan &Plan) {
@@ -579,7 +583,7 @@ static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
     if (isa<VPHeaderPHIRecipe>(Cur))
       continue;
     for (VPValue *V : Cur->definedValues())
-      Users.insert(V->user_begin(), V->user_end());
+      Users.insert_range(V->users());
   }
   return Users.takeVector();
 }
@@ -2097,7 +2101,7 @@ static void expandVPExtendedReduction(VPExtendedReductionRecipe *ExtRed) {
 
   // Generate VPreductionRecipe.
   auto *Red = new VPReductionRecipe(
-      ExtRed->getRecurrenceDescriptor(), ExtRed->getChainOp(), Ext,
+      ExtRed->getRecurrenceKind(), FastMathFlags(), ExtRed->getChainOp(), Ext,
       ExtRed->getCondOp(), ExtRed->isOrdered(), ExtRed->getDebugLoc());
   Ext->insertBefore(ExtRed);
   Red->insertBefore(ExtRed);
@@ -2110,13 +2114,12 @@ static void expandVPExtendedReduction(VPExtendedReductionRecipe *ExtRed) {
 // + VPWidenCastRecipe (optional).
 static void
 expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
-  Type *RedTy = MulAcc->getRecurrenceDescriptor().getRecurrenceType();
-
   // Generate inner VPWidenCastRecipes if necessary.
   // Note that we will drop the extend after mul which transform
   // reduce.add(ext(mul(ext, ext))) to reduce.add(mul(ext, ext)).
   VPValue *Op0, *Op1;
   if (MulAcc->isExtended()) {
+    Type *RedTy = MulAcc->getResultType();
     if (MulAcc->isZExt())
       Op0 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp0(),
                                   RedTy, MulAcc->isNonNeg(),
@@ -2155,7 +2158,7 @@ expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
 
   // Generate VPReductionRecipe.
   auto *Red = new VPReductionRecipe(
-      MulAcc->getRecurrenceDescriptor(), MulAcc->getChainOp(), Mul,
+      MulAcc->getRecurrenceKind(), FastMathFlags(), MulAcc->getChainOp(), Mul,
       MulAcc->getCondOp(), MulAcc->isOrdered(), MulAcc->getDebugLoc());
   Red->insertBefore(MulAcc);
 
@@ -2246,7 +2249,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
       ExitIRI->extractLastLaneOfOperand(MiddleBuilder);
     }
     // Add the incoming value from the early exit.
-    if (!IncomingFromEarlyExit->isLiveIn()) {
+    if (!IncomingFromEarlyExit->isLiveIn() && !Plan.hasScalarVFOnly()) {
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
           VPInstruction::FirstActiveLane, {EarlyExitTakenCond}, nullptr,
           "first.active.lane");
@@ -2284,7 +2287,6 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
 
   Type *RedTy = Ctx.Types.inferScalarType(Red);
   VPValue *VecOp = Red->getVecOp();
-  const RecurrenceDescriptor &RdxDesc = Red->getRecurrenceDescriptor();
 
   // Test if using extended-reduction is beneficial and clamp the range.
   auto IsExtendedRedValidAndClampRange = [&](unsigned Opcode, bool isZExt,
@@ -2308,7 +2310,7 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
   // Matched reduce(ext)).
   if (match(VecOp, m_ZExtOrSExt(m_VPValue(A))) &&
       IsExtendedRedValidAndClampRange(
-          RdxDesc.getOpcode(),
+          RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()),
           cast<VPWidenCastRecipe>(VecOp)->getOpcode() ==
               Instruction::CastOps::ZExt,
           Ctx.Types.inferScalarType(A)))
@@ -2360,8 +2362,8 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         Range);
   };
 
-  const RecurrenceDescriptor &RdxDesc = Red->getRecurrenceDescriptor();
-  if (RdxDesc.getOpcode() != Instruction::Add)
+  unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
+  if (Opcode != Instruction::Add)
     return nullptr;
 
   VPValue *VecOp = Red->getVecOp();
@@ -2382,7 +2384,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         IsMulAccValidAndClampRange(RecipeA->getOpcode() ==
                                        Instruction::CastOps::ZExt,
                                    Mul, RecipeA, RecipeB, nullptr))
-      return new VPMulAccumulateReductionRecipe(Red, Mul, RecipeA, RecipeB);
+      return new VPMulAccumulateReductionRecipe(Red, Mul, RecipeA, RecipeB, RecipeA->getResultType());
     // Matched reduce.add(mul)
     if (IsMulAccValidAndClampRange(true, Mul, nullptr, nullptr, nullptr))
       return new VPMulAccumulateReductionRecipe(Red, Mul);
@@ -2403,7 +2405,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         IsMulAccValidAndClampRange(Ext0->getOpcode() ==
                                        Instruction::CastOps::ZExt,
                                    Mul, Ext0, Ext1, Ext))
-      return new VPMulAccumulateReductionRecipe(Red, Mul, Ext0, Ext1);
+      return new VPMulAccumulateReductionRecipe(Red, Mul, Ext0, Ext1, Ext->getResultType());
   }
   return nullptr;
 }
@@ -2483,4 +2485,133 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
                              return Broadcast != &U && !U.usesScalars(VPV);
                            });
   }
+}
+
+/// Returns true if \p IR is a full interleave group with factor and number of
+/// members both equal to \p VF. The interleave group must also access the full
+/// vector width \p VectorRegWidth.
+static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
+                                         unsigned VF, VPTypeAnalysis &TypeInfo,
+                                         unsigned VectorRegWidth) {
+  if (!InterleaveR)
+    return false;
+
+  Type *GroupElementTy = nullptr;
+  if (InterleaveR->getStoredValues().empty()) {
+    GroupElementTy = TypeInfo.inferScalarType(InterleaveR->getVPValue(0));
+    if (!all_of(InterleaveR->definedValues(),
+                [&TypeInfo, GroupElementTy](VPValue *Op) {
+                  return TypeInfo.inferScalarType(Op) == GroupElementTy;
+                }))
+      return false;
+  } else {
+    GroupElementTy =
+        TypeInfo.inferScalarType(InterleaveR->getStoredValues()[0]);
+    if (!all_of(InterleaveR->getStoredValues(),
+                [&TypeInfo, GroupElementTy](VPValue *Op) {
+                  return TypeInfo.inferScalarType(Op) == GroupElementTy;
+                }))
+      return false;
+  }
+
+  unsigned GroupSize = GroupElementTy->getScalarSizeInBits() * VF;
+  auto IG = InterleaveR->getInterleaveGroup();
+  return IG->getFactor() == VF && IG->getNumMembers() == VF &&
+         GroupSize == VectorRegWidth;
+}
+
+void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
+                                             unsigned VectorRegWidth) {
+  using namespace llvm::VPlanPatternMatch;
+  VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
+  if (VF.isScalable() || !VectorLoop)
+    return;
+
+  VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
+  Type *CanonicalIVType = CanonicalIV->getScalarType();
+  VPTypeAnalysis TypeInfo(CanonicalIVType);
+
+  unsigned FixedVF = VF.getFixedValue();
+  SmallVector<VPInterleaveRecipe *> StoreGroups;
+  for (auto &R : *VectorLoop->getEntryBasicBlock()) {
+    if (isa<VPCanonicalIVPHIRecipe>(&R) ||
+        match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())))
+      continue;
+
+    // Bail out on recipes not supported at the moment:
+    //  * phi recipes other than the canonical induction
+    //  * recipes writing to memory except interleave groups
+    // Only support plans with a canonical induction phi.
+    if (R.isPhi())
+      return;
+
+    auto *InterleaveR = dyn_cast<VPInterleaveRecipe>(&R);
+    if (R.mayWriteToMemory() && !InterleaveR)
+      return;
+
+    if (!InterleaveR)
+      continue;
+
+    // Bail out on non-consecutive interleave groups.
+    if (!isConsecutiveInterleaveGroup(InterleaveR, FixedVF, TypeInfo,
+                                      VectorRegWidth))
+      return;
+
+    // Skip read interleave groups.
+    if (InterleaveR->getStoredValues().empty())
+      continue;
+
+    // For now, we only support full interleave groups storing load interleave
+    // groups.
+    if (!all_of(enumerate(InterleaveR->getStoredValues()), [](auto Op) {
+          VPRecipeBase *DefR = Op.value()->getDefiningRecipe();
+          if (!DefR)
+            return false;
+          auto *IR = dyn_cast<VPInterleaveRecipe>(DefR);
+          return IR &&
+                 IR->getInterleaveGroup()->getFactor() ==
+                     IR->getInterleaveGroup()->getNumMembers() &&
+                 IR->getVPValue(Op.index()) == Op.value();
+        })) {
+      return;
+    }
+    StoreGroups.push_back(InterleaveR);
+  }
+
+  if (StoreGroups.empty())
+    return;
+
+  // Convert InterleaveGroup R to a single VPWidenLoadRecipe.
+  auto NarrowOp = [](VPRecipeBase *R) -> VPValue * {
+    auto *LoadGroup = cast<VPInterleaveRecipe>(R);
+    // Narrow interleave group to wide load, as transformed VPlan will only
+    // process one original iteration.
+    auto *L = new VPWidenLoadRecipe(
+        *cast<LoadInst>(LoadGroup->getInterleaveGroup()->getInsertPos()),
+        LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true,
+        /*Reverse=*/false, LoadGroup->getDebugLoc());
+    L->insertBefore(LoadGroup);
+    return L;
+  };
+
+  // Narrow operation tree rooted at store groups.
+  for (auto *StoreGroup : StoreGroups) {
+    VPValue *Res =
+        NarrowOp(StoreGroup->getStoredValues()[0]->getDefiningRecipe());
+
+    auto *S = new VPWidenStoreRecipe(
+        *cast<StoreInst>(StoreGroup->getInterleaveGroup()->getInsertPos()),
+        StoreGroup->getAddr(), Res, nullptr, /*Consecutive=*/true,
+        /*Reverse=*/false, StoreGroup->getDebugLoc());
+    S->insertBefore(StoreGroup);
+    StoreGroup->eraseFromParent();
+  }
+
+  // Adjust induction to reflect that the transformed plan only processes one
+  // original iteration.
+  auto *CanIV = Plan.getCanonicalIV();
+  auto *Inc = cast<VPInstruction>(CanIV->getBackedgeValue());
+  Inc->setOperand(1, Plan.getOrAddLiveIn(ConstantInt::get(
+                         CanIV->getScalarType(), 1 * Plan.getUF())));
+  removeDeadRecipes(Plan);
 }

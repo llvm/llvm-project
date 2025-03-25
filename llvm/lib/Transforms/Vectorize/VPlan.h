@@ -534,7 +534,6 @@ public:
     case VPRecipeBase::VPWidenPointerInductionSC:
     case VPRecipeBase::VPReductionPHISC:
     case VPRecipeBase::VPScalarCastSC:
-    case VPRecipeBase::VPScalarPHISC:
     case VPRecipeBase::VPPartialReductionSC:
       return true;
     case VPRecipeBase::VPBranchOnMaskSC:
@@ -1295,13 +1294,13 @@ public:
       : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, DL),
         VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {
     LLVMContext &Ctx = Ty->getContext();
-    AttributeList Attrs = Intrinsic::getAttributes(Ctx, VectorIntrinsicID);
+    AttributeSet Attrs = Intrinsic::getFnAttributes(Ctx, VectorIntrinsicID);
     MemoryEffects ME = Attrs.getMemoryEffects();
     MayReadFromMemory = ME.onlyWritesMemory();
     MayWriteToMemory = ME.onlyReadsMemory();
     MayHaveSideEffects = MayWriteToMemory ||
-                         !Attrs.hasFnAttr(Attribute::NoUnwind) ||
-                         !Attrs.hasFnAttr(Attribute::WillReturn);
+                         !Attrs.hasAttribute(Attribute::NoUnwind) ||
+                         !Attrs.hasAttribute(Attribute::WillReturn);
   }
 
   ~VPWidenIntrinsicRecipe() override = default;
@@ -2271,22 +2270,19 @@ public:
 /// a vector operand into a scalar value, and adding the result to a chain.
 /// The Operands are {ChainOp, VecOp, [Condition]}.
 class VPReductionRecipe : public VPRecipeWithIRFlags {
-  /// The recurrence decriptor for the reduction in question.
-  const RecurrenceDescriptor &RdxDesc;
+  /// The recurrence kind for the reduction in question.
+  RecurKind RdxKind;
   bool IsOrdered;
   /// Whether the reduction is conditional.
   bool IsConditional = false;
 
 protected:
-  VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
-                    Instruction *I, ArrayRef<VPValue *> Operands,
-                    VPValue *CondOp, bool IsOrdered, DebugLoc DL)
-      : VPRecipeWithIRFlags(SC, Operands,
-                            isa_and_nonnull<FPMathOperator>(I)
-                                ? R.getFastMathFlags()
-                                : FastMathFlags(),
-                            DL),
-        RdxDesc(R), IsOrdered(IsOrdered) {
+  VPReductionRecipe(const unsigned char SC, RecurKind RdxKind,
+                    FastMathFlags FMFs, Instruction *I,
+                    ArrayRef<VPValue *> Operands, VPValue *CondOp,
+                    bool IsOrdered, DebugLoc DL)
+      : VPRecipeWithIRFlags(SC, Operands, FMFs, DL), RdxKind(RdxKind),
+        IsOrdered(IsOrdered) {
     if (CondOp) {
       IsConditional = true;
       addOperand(CondOp);
@@ -2296,10 +2292,10 @@ protected:
 
   /// For VPExtendedReductionRecipe.
   /// Note that IsNonNeg flag and the debug location are for extend instruction.
-  VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
+  VPReductionRecipe(const unsigned char SC, const RecurKind RdxKind,
                     ArrayRef<VPValue *> Operands, VPValue *CondOp,
                     bool IsOrdered, NonNegFlagsTy NonNeg, DebugLoc DL)
-      : VPRecipeWithIRFlags(SC, Operands, NonNeg, DL), RdxDesc(R),
+      : VPRecipeWithIRFlags(SC, Operands, NonNeg, DL), RdxKind(RdxKind),
         IsOrdered(IsOrdered), IsConditional(CondOp) {
     if (CondOp)
       addOperand(CondOp);
@@ -2307,35 +2303,36 @@ protected:
 
   /// For VPMulAccumulateReductionRecipe.
   /// Note that the NUW/NSW and DL are for mul instruction.
-  VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
+  VPReductionRecipe(const unsigned char SC, const RecurKind RdxKind,
                     ArrayRef<VPValue *> Operands, VPValue *CondOp,
                     bool IsOrdered, WrapFlagsTy WrapFlags, DebugLoc DL)
-      : VPRecipeWithIRFlags(SC, Operands, WrapFlags, DL), RdxDesc(R),
+      : VPRecipeWithIRFlags(SC, Operands, WrapFlags, DL), RdxKind(RdxKind),
         IsOrdered(IsOrdered), IsConditional(CondOp) {
     if (CondOp)
       addOperand(CondOp);
   }
 
 public:
-  VPReductionRecipe(const RecurrenceDescriptor &R, Instruction *I,
+  VPReductionRecipe(RecurKind RdxKind, FastMathFlags FMFs, Instruction *I,
                     VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
                     bool IsOrdered, DebugLoc DL = {})
-      : VPReductionRecipe(VPDef::VPReductionSC, R, I,
+      : VPReductionRecipe(VPDef::VPReductionSC, RdxKind, FMFs, I,
                           ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
                           IsOrdered, DL) {}
 
-  VPReductionRecipe(const RecurrenceDescriptor &R, VPValue *ChainOp,
+  VPReductionRecipe(const RecurKind RdxKind, FastMathFlags FMFs, VPValue *ChainOp,
                     VPValue *VecOp, VPValue *CondOp, bool IsOrdered,
                     DebugLoc DL = {})
-      : VPReductionRecipe(VPDef::VPReductionSC, R, nullptr,
+      : VPReductionRecipe(VPDef::VPReductionSC, RdxKind, FMFs, nullptr,
                           ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
                           IsOrdered, DL) {}
 
   ~VPReductionRecipe() override = default;
 
   VPReductionRecipe *clone() override {
-    return new VPReductionRecipe(RdxDesc, getUnderlyingInstr(), getChainOp(),
-                                 getVecOp(), getCondOp(), IsOrdered);
+    return new VPReductionRecipe(RdxKind, getFastMathFlags(),
+                                 getUnderlyingInstr(), getChainOp(), getVecOp(),
+                                 getCondOp(), IsOrdered, getDebugLoc());
   }
 
   static inline bool classof(const VPRecipeBase *R) {
@@ -2363,10 +2360,8 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  /// Return the recurrence decriptor for the in-loop reduction.
-  const RecurrenceDescriptor &getRecurrenceDescriptor() const {
-    return RdxDesc;
-  }
+  /// Return the recurrence kind for the in-loop reduction.
+  RecurKind getRecurrenceKind() const { return RdxKind; }
   /// Return true if the in-loop reduction is ordered.
   bool isOrdered() const { return IsOrdered; };
   /// Return true if the in-loop reduction is conditional.
@@ -2390,7 +2385,8 @@ public:
   VPReductionEVLRecipe(VPReductionRecipe &R, VPValue &EVL, VPValue *CondOp,
                        DebugLoc DL = {})
       : VPReductionRecipe(
-            VPDef::VPReductionEVLSC, R.getRecurrenceDescriptor(),
+            VPDef::VPReductionEVLSC, R.getRecurrenceKind(),
+            R.getFastMathFlags(),
             cast_or_null<Instruction>(R.getUnderlyingValue()),
             ArrayRef<VPValue *>({R.getChainOp(), R.getVecOp(), &EVL}), CondOp,
             R.isOrdered(), DL) {}
@@ -2432,21 +2428,23 @@ class VPExtendedReductionRecipe : public VPReductionRecipe {
   /// Opcode of the extend recipe will be lowered to.
   Instruction::CastOps ExtOp;
 
+  Type *ResultTy;
+
   /// For cloning VPExtendedReductionRecipe.
   VPExtendedReductionRecipe(VPExtendedReductionRecipe *ExtRed)
       : VPReductionRecipe(
-            VPDef::VPExtendedReductionSC, ExtRed->getRecurrenceDescriptor(),
-            nullptr, {ExtRed->getChainOp(), ExtRed->getVecOp()},
-            ExtRed->getCondOp(), ExtRed->isOrdered(), ExtRed->getDebugLoc()),
-        ExtOp(ExtRed->getExtOpcode()) {}
+            VPDef::VPExtendedReductionSC, ExtRed->getRecurrenceKind(),
+            {ExtRed->getChainOp(), ExtRed->getVecOp()},
+            ExtRed->getCondOp(), ExtRed->isOrdered(), NonNegFlagsTy(ExtRed->isNonNeg()), ExtRed->getDebugLoc()),
+        ExtOp(ExtRed->getExtOpcode()), ResultTy(ExtRed->getResultType()) {}
 
 public:
   VPExtendedReductionRecipe(VPReductionRecipe *R, VPWidenCastRecipe *Ext)
       : VPReductionRecipe(
-            VPDef::VPExtendedReductionSC, R->getRecurrenceDescriptor(),
+            VPDef::VPExtendedReductionSC, R->getRecurrenceKind(),
             {R->getChainOp(), Ext->getOperand(0)}, R->getCondOp(),
             R->isOrdered(), NonNegFlagsTy(Ext->isNonNeg()), Ext->getDebugLoc()),
-        ExtOp(Ext->getOpcode()) {}
+        ExtOp(Ext->getOpcode()), ResultTy(Ext->getResultType()) {}
 
   ~VPExtendedReductionRecipe() override = default;
 
@@ -2475,7 +2473,7 @@ public:
 
   /// The scalar type after extended.
   Type *getResultType() const {
-    return getRecurrenceDescriptor().getRecurrenceType();
+    return ResultTy;
   }
 
   /// Is the extend ZExt?
@@ -2497,40 +2495,42 @@ class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
   /// Non-neg flag of the extend recipe.
   bool IsNonNeg = false;
 
+  Type *ResultTy;
+
   /// For cloning VPMulAccumulateReductionRecipe.
   VPMulAccumulateReductionRecipe(VPMulAccumulateReductionRecipe *MulAcc)
       : VPReductionRecipe(
             VPDef::VPMulAccumulateReductionSC,
-            MulAcc->getRecurrenceDescriptor(), nullptr,
+            MulAcc->getRecurrenceKind(),
             {MulAcc->getChainOp(), MulAcc->getVecOp0(), MulAcc->getVecOp1()},
-            MulAcc->getCondOp(), MulAcc->isOrdered(), MulAcc->getDebugLoc()),
-        ExtOp(MulAcc->getExtOpcode()), IsNonNeg(MulAcc->isNonNeg()) {}
+            MulAcc->getCondOp(), MulAcc->isOrdered(), WrapFlagsTy(MulAcc->hasNoUnsignedWrap(), MulAcc->hasNoSignedWrap()), MulAcc->getDebugLoc()),
+        ExtOp(MulAcc->getExtOpcode()), IsNonNeg(MulAcc->isNonNeg()), ResultTy(MulAcc->getResultType()) {}
 
 public:
   VPMulAccumulateReductionRecipe(VPReductionRecipe *R, VPWidenRecipe *Mul,
                                  VPWidenCastRecipe *Ext0,
-                                 VPWidenCastRecipe *Ext1)
+                                 VPWidenCastRecipe *Ext1, Type *ResultTy)
       : VPReductionRecipe(
-            VPDef::VPMulAccumulateReductionSC, R->getRecurrenceDescriptor(),
+            VPDef::VPMulAccumulateReductionSC, R->getRecurrenceKind(),
             {R->getChainOp(), Ext0->getOperand(0), Ext1->getOperand(0)},
             R->getCondOp(), R->isOrdered(),
             WrapFlagsTy(Mul->hasNoUnsignedWrap(), Mul->hasNoSignedWrap()),
             R->getDebugLoc()),
-        ExtOp(Ext0->getOpcode()), IsNonNeg(Ext0->isNonNeg()) {
-    assert(getRecurrenceDescriptor().getOpcode() == Instruction::Add &&
+        ExtOp(Ext0->getOpcode()), IsNonNeg(Ext0->isNonNeg()), ResultTy(ResultTy) {
+    assert(RecurrenceDescriptor::getOpcode(getRecurrenceKind())== Instruction::Add &&
            "The reduction instruction in MulAccumulateteReductionRecipe must "
            "be Add");
   }
 
   VPMulAccumulateReductionRecipe(VPReductionRecipe *R, VPWidenRecipe *Mul)
       : VPReductionRecipe(
-            VPDef::VPMulAccumulateReductionSC, R->getRecurrenceDescriptor(),
+            VPDef::VPMulAccumulateReductionSC, R->getRecurrenceKind(),
             {R->getChainOp(), Mul->getOperand(0), Mul->getOperand(1)},
             R->getCondOp(), R->isOrdered(),
             WrapFlagsTy(Mul->hasNoUnsignedWrap(), Mul->hasNoSignedWrap()),
             R->getDebugLoc()),
         ExtOp(Instruction::CastOps::CastOpsEnd) {
-    assert(getRecurrenceDescriptor().getOpcode() == Instruction::Add &&
+    assert(RecurrenceDescriptor::getOpcode(getRecurrenceKind()) == Instruction::Add &&
            "The reduction instruction in MulAccumulateReductionRecipe must be "
            "Add");
   }
@@ -2560,6 +2560,11 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+  Type *getResultType() const {
+    assert(isExtended() && "Only support getResultType when this recipe contains implicit extend.");
+    return ResultTy;
+  }
 
   /// The VPValue of the vector value to be extended and reduced.
   VPValue *getVecOp0() const { return getOperand(1); }
@@ -3043,8 +3048,8 @@ public:
   VP_CLASSOF_IMPL(VPDef::VPCanonicalIVPHISC)
 
   void execute(VPTransformState &State) override {
-    llvm_unreachable(
-        "cannot execute this recipe, should be replaced by VPScalarPHIRecipe");
+    llvm_unreachable("cannot execute this recipe, should be replaced by a "
+                     "scalar phi recipe");
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3129,8 +3134,8 @@ public:
   VP_CLASSOF_IMPL(VPDef::VPEVLBasedIVPHISC)
 
   void execute(VPTransformState &State) override {
-    llvm_unreachable(
-        "cannot execute this recipe, should be replaced by VPScalarPHIRecipe");
+    llvm_unreachable("cannot execute this recipe, should be replaced by a "
+                     "scalar phi recipe");
   }
 
   /// Return the cost of this VPEVLBasedIVPHIRecipe.

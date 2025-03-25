@@ -81,7 +81,7 @@ static cl::opt<std::string> ModuleSummaryDotFile(
     cl::desc("File to emit dot graph of new summary into"));
 
 static cl::opt<bool> EnableMemProfIndirectCallSupport(
-    "enable-memprof-indirect-call-support", cl::init(false), cl::Hidden,
+    "enable-memprof-indirect-call-support", cl::init(true), cl::Hidden,
     cl::desc(
         "Enable MemProf support for summarizing and cloning indirect calls"));
 

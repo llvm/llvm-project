@@ -37,7 +37,7 @@ using TestTypes = testing::Types<bool, int8_t, uint8_t, int16_t, uint16_t,
 
 } // namespace
 
-TYPED_TEST_SUITE(PDBVariantIntegerTest, TestTypes);
+TYPED_TEST_SUITE(PDBVariantIntegerTest, TestTypes, );
 
 TYPED_TEST(PDBVariantIntegerTest, ToAPSInt) {
   for (TypeParam IntegerValue : this->getTestIntegers()) {

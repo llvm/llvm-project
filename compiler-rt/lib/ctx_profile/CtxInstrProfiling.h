@@ -10,6 +10,7 @@
 #define CTX_PROFILE_CTXINSTRPROFILING_H_
 
 #include "CtxInstrContextNode.h"
+#include "sanitizer_common/sanitizer_dense_map.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include <sanitizer/common_interface_defs.h>
 
@@ -83,6 +84,20 @@ struct ContextRoot {
   // Count the number of entries - regardless if we could take the `Taken` mutex
   ::__sanitizer::atomic_uint64_t TotalEntries = {};
 
+  // Profiles for functions we encounter when collecting a contexutal profile,
+  // that are not associated with a callsite. This is expected to happen for
+  // signal handlers, but it also - problematically - currently happens for
+  // call sites generated after profile instrumentation, primarily
+  // mem{memset|copy|move|set}.
+  // `Unhandled` serves 2 purposes:
+  //   1. identifying such cases (like the memops)
+  //   2. collecting a profile for them, which can be at least used as a flat
+  //   profile
+  ::__sanitizer::DenseMap<GUID, ContextNode *> Unhandled;
+  // Keep the unhandled contexts in a list, as we allocate them, as it makes it
+  // simpler to send to the writer when the profile is fetched.
+  ContextNode *FirstUnhandledCalleeNode = nullptr;
+
   // Taken is used to ensure only one thread traverses the contextual graph -
   // either to read it or to write it. On server side, the same entrypoint will
   // be entered by numerous threads, but over time, the profile aggregated by
@@ -127,17 +142,19 @@ struct ContextRoot {
 // The current design trades off a bit of overhead at the first time a function
 // is encountered *for flat profiling* for avoiding size penalties.
 struct FunctionData {
+#define _PTRDECL(T, N) T *N = nullptr;
+#define _VOLATILE_PTRDECL(T, N) T *volatile N = nullptr;
+#define _MUTEXDECL(N) ::__sanitizer::SpinMutex N;
+  CTXPROF_FUNCTION_DATA(_PTRDECL, _VOLATILE_PTRDECL, _MUTEXDECL)
+#undef _PTRDECL
+#undef _VOLATILE_PTRDECL
+#undef _MUTEXDECL
+
   // Constructor for test only - since this is expected to be
   // initialized by the compiler.
-  FunctionData() { Mutex.Init(); }
-
-  FunctionData *Next = nullptr;
-  ContextRoot *volatile CtxRoot = nullptr;
-  ContextNode *volatile FlatCtx = nullptr;
-
+  FunctionData() = default;
   ContextRoot *getOrAllocateContextRoot();
 
-  ::__sanitizer::StaticSpinMutex Mutex;
   // If (unlikely) StaticSpinMutex internals change, we need to modify the LLVM
   // instrumentation lowering side because it is responsible for allocating and
   // zero-initializing ContextRoots.
