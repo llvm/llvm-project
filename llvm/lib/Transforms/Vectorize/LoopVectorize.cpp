@@ -7610,7 +7610,8 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     BasicBlock *BypassBlock) {
   auto *EpiRedResult = dyn_cast<VPInstruction>(R);
   if (!EpiRedResult ||
-      EpiRedResult->getOpcode() != VPInstruction::ComputeReductionResult)
+      (EpiRedResult->getOpcode() != VPInstruction::ComputeReductionResult &&
+       EpiRedResult->getOpcode() != VPInstruction::ComputeFindLastIVResult))
     return;
 
   auto *EpiRedHeaderPhi =
@@ -7631,14 +7632,17 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
   } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
                  RdxDesc.getRecurrenceKind())) {
     using namespace llvm::PatternMatch;
-    Value *Cmp, *OrigResumeV;
+    Value *Cmp, *OrigResumeV, *CmpOp;
     bool IsExpectedPattern =
         match(MainResumeValue, m_Select(m_OneUse(m_Value(Cmp)),
                                         m_Specific(RdxDesc.getSentinelValue()),
                                         m_Value(OrigResumeV))) &&
-        match(Cmp,
-              m_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(OrigResumeV),
-                             m_Specific(RdxDesc.getRecurrenceStartValue())));
+        (match(Cmp, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(OrigResumeV),
+                                   m_Value(CmpOp))) &&
+         (match(CmpOp,
+                m_Freeze(m_Specific(RdxDesc.getRecurrenceStartValue()))) ||
+          (CmpOp == RdxDesc.getRecurrenceStartValue() &&
+           isGuaranteedNotToBeUndefOrPoison(CmpOp))));
     assert(IsExpectedPattern && "Unexpected reduction resume pattern");
     (void)IsExpectedPattern;
     MainResumeValue = OrigResumeV;
@@ -9819,8 +9823,10 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
           Builder.createSelect(Cond, OrigExitingVPV, PhiR, {}, "", FMFs);
       OrigExitingVPV->replaceUsesWithIf(NewExitingVPV, [](VPUser &U, unsigned) {
         return isa<VPInstruction>(&U) &&
-               cast<VPInstruction>(&U)->getOpcode() ==
-                   VPInstruction::ComputeReductionResult;
+               (cast<VPInstruction>(&U)->getOpcode() ==
+                    VPInstruction::ComputeReductionResult ||
+                cast<VPInstruction>(&U)->getOpcode() ==
+                    VPInstruction::ComputeFindLastIVResult);
       });
       if (CM.usePredicatedReductionSelect(
               PhiR->getRecurrenceDescriptor().getOpcode(), PhiTy))
@@ -9863,10 +9869,36 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // bc.merge.rdx phi nodes, hence it needs to be created unconditionally here
     // even for in-loop reductions, until the reduction resume value handling is
     // also modeled in VPlan.
+    VPInstruction *FinalReductionResult;
     VPBuilder::InsertPointGuard Guard(Builder);
-    Builder.setInsertPoint(MiddleVPBB, IP);
-    auto *FinalReductionResult = Builder.createNaryOp(
-        VPInstruction::ComputeReductionResult, {PhiR, NewExitingVPV}, ExitDL);
+    if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+            RdxDesc.getRecurrenceKind())) {
+      VPValue *Start = PhiR->getStartValue();
+      if (!isGuaranteedNotToBeUndefOrPoison(
+              PhiR->getStartValue()->getLiveInIRValue())) {
+        Builder.setInsertPoint(cast<VPBasicBlock>(Plan->getEntry()));
+        Start = Builder.createNaryOp(Instruction::Freeze, {Start}, {}, "fr");
+      }
+      Builder.setInsertPoint(MiddleVPBB, IP);
+      FinalReductionResult =
+          Builder.createNaryOp(VPInstruction::ComputeFindLastIVResult,
+                               {PhiR, Start, NewExitingVPV}, ExitDL);
+      // Update all users outside the vector region.
+      for (VPUser *U : to_vector(OrigExitingVPV->users())) {
+        auto *R = cast<VPRecipeBase>(U);
+        if (R->getParent() && R->getParent()->getParent())
+          continue;
+
+        for (unsigned Idx = 0; Idx != R->getNumOperands(); ++Idx) {
+          if (R->getOperand(Idx) == PhiR->getStartValue())
+            R->setOperand(Idx, Start);
+        }
+      }
+    } else {
+      Builder.setInsertPoint(MiddleVPBB, IP);
+      FinalReductionResult = Builder.createNaryOp(
+          VPInstruction::ComputeReductionResult, {PhiR, NewExitingVPV}, ExitDL);
+    }
     // Update all users outside the vector region.
     OrigExitingVPV->replaceUsesWithIf(
         FinalReductionResult, [FinalReductionResult](VPUser &User, unsigned) {
@@ -10355,24 +10387,7 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
   VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
   Header->setName("vec.epilog.vector.body");
 
-  // Re-use the trip count and steps expanded for the main loop, as
-  // skeleton creation needs it as a value that dominates both the scalar
-  // and vector epilogue loops
-  // TODO: This is a workaround needed for epilogue vectorization and it
-  // should be removed once induction resume value creation is done
-  // directly in VPlan.
-  for (auto &R : make_early_inc_range(*Plan.getEntry())) {
-    auto *ExpandR = dyn_cast<VPExpandSCEVRecipe>(&R);
-    if (!ExpandR)
-      continue;
-    auto *ExpandedVal =
-        Plan.getOrAddLiveIn(ExpandedSCEVs.find(ExpandR->getSCEV())->second);
-    ExpandR->replaceAllUsesWith(ExpandedVal);
-    if (Plan.getTripCount() == ExpandR)
-      Plan.resetTripCount(ExpandedVal);
-    ExpandR->eraseFromParent();
-  }
-
+  DenseMap<Value *, Value *> ToFrozen;
   // Ensure that the start values for all header phi recipes are updated before
   // vectorizing the epilogue loop.
   for (VPRecipeBase &R : Header->phis()) {
@@ -10438,6 +10453,10 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
         ResumeV =
             Builder.CreateICmpNE(ResumeV, RdxDesc.getRecurrenceStartValue());
       } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) {
+        ToFrozen[RdxDesc.getRecurrenceStartValue()] =
+            cast<PHINode>(ResumeV)->getIncomingValueForBlock(
+                EPI.MainLoopIterationCountCheck);
+
         // VPReductionPHIRecipe for FindLastIV reductions requires an adjustment
         // to the resume value. The resume value is adjusted to the sentinel
         // value when the final value from the main vector loop equals the start
@@ -10446,8 +10465,8 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
         // variable.
         BasicBlock *ResumeBB = cast<Instruction>(ResumeV)->getParent();
         IRBuilder<> Builder(ResumeBB, ResumeBB->getFirstNonPHIIt());
-        Value *Cmp =
-            Builder.CreateICmpEQ(ResumeV, RdxDesc.getRecurrenceStartValue());
+        Value *Cmp = Builder.CreateICmpEQ(
+            ResumeV, ToFrozen[RdxDesc.getRecurrenceStartValue()]);
         ResumeV =
             Builder.CreateSelect(Cmp, RdxDesc.getSentinelValue(), ResumeV);
       }
@@ -10462,6 +10481,31 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
     assert(ResumeV && "Must have a resume value");
     VPValue *StartVal = Plan.getOrAddLiveIn(ResumeV);
     cast<VPHeaderPHIRecipe>(&R)->setStartValue(StartVal);
+  }
+
+  // Re-use the trip count and steps expanded for the main loop, as
+  // skeleton creation needs it as a value that dominates both the scalar
+  // and vector epilogue loops
+  // TODO: This is a workaround needed for epilogue vectorization and it
+  // should be removed once induction resume value creation is done
+  // directly in VPlan.
+  for (auto &R : make_early_inc_range(*Plan.getEntry())) {
+    auto *VPI = dyn_cast<VPInstruction>(&R);
+    if (VPI) {
+      VPI->replaceAllUsesWith(Plan.getOrAddLiveIn(
+          ToFrozen[VPI->getOperand(0)->getLiveInIRValue()]));
+      continue;
+    }
+
+    auto *ExpandR = dyn_cast<VPExpandSCEVRecipe>(&R);
+    if (!ExpandR)
+      continue;
+    auto *ExpandedVal =
+        Plan.getOrAddLiveIn(ExpandedSCEVs.find(ExpandR->getSCEV())->second);
+    ExpandR->replaceAllUsesWith(ExpandedVal);
+    if (Plan.getTripCount() == ExpandR)
+      Plan.resetTripCount(ExpandedVal);
+    ExpandR->eraseFromParent();
   }
 }
 
