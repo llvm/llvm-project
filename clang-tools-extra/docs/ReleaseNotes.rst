@@ -188,6 +188,10 @@ Changes in existing checks
   excluding variables with ``thread_local`` storage class specifier from being
   matched.
 
+- Improved :doc:`modernize-avoid-c-arrays
+  <clang-tidy/checks/modernize/avoid-c-arrays>` to not diagnose array types
+  which are part of an implicit instantiation of a template.
+
 - Improved :doc:`modernize-use-default-member-init
   <clang-tidy/checks/modernize/use-default-member-init>` check by matching
   ``constexpr`` and ``static``` values on member initialization and by detecting
