@@ -531,7 +531,7 @@ SDValue LoongArchTargetLowering::lowerBITREVERSE(SDValue Op,
 // left or right with zeroable elements 'shifted in'. It handles both the
 // strictly bit-wise element shifts and the byte shfit across an entire 128-bit
 // lane.
-// This is mainly copy from X86.
+// Mostly copied from X86.
 static int matchShuffleAsShift(MVT &ShiftVT, unsigned &Opcode,
                                unsigned ScalarSizeInBits, ArrayRef<int> Mask,
                                int MaskOffset, const APInt &Zeroable) {
