@@ -2554,7 +2554,7 @@ void ModuloScheduleExpanderMVE::mergeRegUsesAfterPipeline(Register OrigReg,
     for (MachineOperand *MO : UsesAfterLoop)
       MO->setReg(PhiReg);
 
-    NewVRegs.insert(PhiReg);
+    NewVRegs.push_back(PhiReg);
   }
 
   // Merge routes from the pipelined loop and the bypassed route before the

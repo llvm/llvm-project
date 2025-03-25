@@ -60,7 +60,6 @@
 #ifndef LLVM_CODEGEN_MODULOSCHEDULE_H
 #define LLVM_CODEGEN_MODULOSCHEDULE_H
 
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopUtils.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -406,7 +405,7 @@ private:
   int NumUnroll;
 
   /// Record the registers that need to compute live intervals.
-  SmallSet<Register, 8> NewVRegs;
+  SmallVector<Register> NewVRegs;
 
   void calcNumUnroll();
   void generatePipelinedLoop();
