@@ -195,7 +195,7 @@ extern char &AMDGPURegBankSelectID;
 void initializeAMDGPURegBankLegalizePass(PassRegistry &);
 extern char &AMDGPURegBankLegalizeID;
 
-void initializeAMDGPUMarkLastScratchLoadPass(PassRegistry &);
+void initializeAMDGPUMarkLastScratchLoadLegacyPass(PassRegistry &);
 extern char &AMDGPUMarkLastScratchLoadID;
 
 void initializeSILowerSGPRSpillsLegacyPass(PassRegistry &);
@@ -371,6 +371,26 @@ public:
                         MachineFunctionAnalysisManager &AM);
 };
 
+class AMDGPUMarkLastScratchLoadPass
+    : public PassInfoMixin<AMDGPUMarkLastScratchLoadPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &AM);
+};
+
+class SIInsertWaitcntsPass : public PassInfoMixin<SIInsertWaitcntsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
+
+class SIInsertHardClausesPass : public PassInfoMixin<SIInsertHardClausesPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 FunctionPass *createAMDGPUAnnotateUniformValuesLegacy();
 
 ModulePass *createAMDGPUPrintfRuntimeBinding();
@@ -444,10 +464,10 @@ extern char &SIModeRegisterID;
 void initializeAMDGPUInsertDelayAluLegacyPass(PassRegistry &);
 extern char &AMDGPUInsertDelayAluID;
 
-void initializeSIInsertHardClausesPass(PassRegistry &);
+void initializeSIInsertHardClausesLegacyPass(PassRegistry &);
 extern char &SIInsertHardClausesID;
 
-void initializeSIInsertWaitcntsPass(PassRegistry&);
+void initializeSIInsertWaitcntsLegacyPass(PassRegistry &);
 extern char &SIInsertWaitcntsID;
 
 void initializeSIFormMemoryClausesLegacyPass(PassRegistry &);

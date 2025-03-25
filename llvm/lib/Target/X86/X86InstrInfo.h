@@ -276,7 +276,7 @@ public:
                                int &FrameIndex) const override;
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex,
-                               unsigned &MemBytes) const override;
+                               TypeSize &MemBytes) const override;
   /// isLoadFromStackSlotPostFE - Check for post-frame ptr elimination
   /// stack locations as well.  This uses a heuristic so it isn't
   /// reliable for correctness.
@@ -287,7 +287,7 @@ public:
                               int &FrameIndex) const override;
   Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex,
-                              unsigned &MemBytes) const override;
+                              TypeSize &MemBytes) const override;
   /// isStoreToStackSlotPostFE - Check for post-frame ptr elimination
   /// stack locations as well.  This uses a heuristic so it isn't
   /// reliable for correctness.
@@ -463,7 +463,7 @@ public:
       LiveIntervals *LIS = nullptr) const override;
 
   bool
-  unfoldMemoryOperand(MachineFunction &MF, MachineInstr &MI, unsigned Reg,
+  unfoldMemoryOperand(MachineFunction &MF, MachineInstr &MI, Register Reg,
                       bool UnfoldLoad, bool UnfoldStore,
                       SmallVectorImpl<MachineInstr *> &NewMIs) const override;
 
@@ -514,7 +514,7 @@ public:
   /// the global base register value. Output instructions required to
   /// initialize the register in the function entry block, if necessary.
   ///
-  unsigned getGlobalBaseReg(MachineFunction *MF) const;
+  Register getGlobalBaseReg(MachineFunction *MF) const;
 
   std::pair<uint16_t, uint16_t>
   getExecutionDomain(const MachineInstr &MI) const override;

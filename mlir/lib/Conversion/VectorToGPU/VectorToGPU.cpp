@@ -318,7 +318,7 @@ getSliceContract(Operation *op,
     // Compute and insert the backwardSlice starting from currentOp.
     backwardSlice.clear();
     getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
-    slice.insert(backwardSlice.begin(), backwardSlice.end());
+    slice.insert_range(backwardSlice);
 
     // Compute and insert the forwardSlice starting from currentOp.
     forwardSlice.clear();
@@ -334,7 +334,7 @@ getSliceContract(Operation *op,
     } else {
       getForwardSlice(currentOp, &forwardSlice, forwardSliceOptions);
     }
-    slice.insert(forwardSlice.begin(), forwardSlice.end());
+    slice.insert_range(forwardSlice);
     ++currentIndex;
   }
   return slice;
@@ -374,7 +374,7 @@ static SetVector<Operation *> getOpToConvert(mlir::Operation *op,
         }))
       return;
 
-    opToConvert.insert(dependentOps.begin(), dependentOps.end());
+    opToConvert.insert_range(dependentOps);
   });
   // Sort the operations so that we can convert them in topological order.
   return topologicalSort(opToConvert);

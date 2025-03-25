@@ -31,6 +31,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/TypeSize.h"
 #include <array>
 #include <cassert>
 #include <cstddef>
@@ -293,8 +294,8 @@ public:
   /// what the load does.
   virtual Register isLoadFromStackSlot(const MachineInstr &MI,
                                        int &FrameIndex,
-                                       unsigned &MemBytes) const {
-    MemBytes = 0;
+                                       TypeSize &MemBytes) const {
+    MemBytes = TypeSize::getZero();
     return isLoadFromStackSlot(MI, FrameIndex);
   }
 
@@ -331,8 +332,8 @@ public:
   /// what the store does.
   virtual Register isStoreToStackSlot(const MachineInstr &MI,
                                       int &FrameIndex,
-                                      unsigned &MemBytes) const {
-    MemBytes = 0;
+                                      TypeSize &MemBytes) const {
+    MemBytes = TypeSize::getZero();
     return isStoreToStackSlot(MI, FrameIndex);
   }
 
@@ -1433,7 +1434,7 @@ public:
   /// a store or a load and a store into two or more instruction. If this is
   /// possible, returns true as well as the new instructions by reference.
   virtual bool
-  unfoldMemoryOperand(MachineFunction &MF, MachineInstr &MI, unsigned Reg,
+  unfoldMemoryOperand(MachineFunction &MF, MachineInstr &MI, Register Reg,
                       bool UnfoldLoad, bool UnfoldStore,
                       SmallVectorImpl<MachineInstr *> &NewMIs) const {
     return false;

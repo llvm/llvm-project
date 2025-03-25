@@ -219,6 +219,7 @@ struct Configuration {
   llvm::StringRef csProfilePath;
   bool pgoWarnMismatch;
   bool warnThinArchiveMissingMembers;
+  bool disableVerify;
 
   bool callGraphProfileSort = false;
   llvm::StringRef printSymbolOrder;

@@ -1087,7 +1087,7 @@ void GenericOp::print(OpAsmPrinter &p) {
   auto genericAttrNames = linalgTraitAttrNames();
 
   llvm::StringSet<> genericAttrNamesSet;
-  genericAttrNamesSet.insert(genericAttrNames.begin(), genericAttrNames.end());
+  genericAttrNamesSet.insert_range(genericAttrNames);
   SmallVector<NamedAttribute, 8> genericAttrs;
   for (auto attr : (*this)->getAttrs()) {
     if (attr.getName() == getIteratorTypesAttrName()) {
@@ -2539,7 +2539,8 @@ static void createNewOperandWithStaticSizes(
     newShape.push_back(affineExprToSize[dimExpr]);
     newOperandNeeded = true;
   }
-  resultType = RankedTensorType::get(newShape, sourceType.getElementType());
+  resultType = RankedTensorType::get(newShape, sourceType.getElementType(),
+                                     sourceType.getEncoding());
   if (newOperandNeeded) {
     changeNeeded = true;
     // Get the new operand value given its size and element type by
@@ -4884,8 +4885,7 @@ static bool inferStaticShape(PackOp packOp, SmallVectorImpl<int64_t> &srcShape,
   destShape.assign(packOp.getDestType().getShape().begin(),
                    packOp.getDestType().getShape().end());
   llvm::SmallSetVector<int64_t, 4> innerDims;
-  innerDims.insert(packOp.getInnerDimsPos().begin(),
-                   packOp.getInnerDimsPos().end());
+  innerDims.insert_range(packOp.getInnerDimsPos());
   SmallVector<int64_t> inverseOuterDimsPerm;
   if (!packOp.getOuterDimsPerm().empty())
     inverseOuterDimsPerm = invertPermutationVector(packOp.getOuterDimsPerm());
@@ -5197,7 +5197,7 @@ static bool inferStaticShape(UnPackOp op, SmallVectorImpl<int64_t> &srcShape,
   destShape.assign(op.getDestType().getShape().begin(),
                    op.getDestType().getShape().end());
   llvm::SmallSetVector<int64_t, 4> innerDims;
-  innerDims.insert(op.getInnerDimsPos().begin(), op.getInnerDimsPos().end());
+  innerDims.insert_range(op.getInnerDimsPos());
   SmallVector<int64_t> inverseOuterDimsPerm;
   if (!op.getOuterDimsPerm().empty())
     inverseOuterDimsPerm = invertPermutationVector(op.getOuterDimsPerm());
