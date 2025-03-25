@@ -37,6 +37,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/TargetRegistry.h"
 
+
 using namespace llvm;
 using namespace COMGR;
 
@@ -46,6 +47,10 @@ DisassemblyInfo::create(const TargetIdentifier &Ident,
                         PrintInstructionCallback PrintInstruction,
                         PrintAddressAnnotationCallback PrintAddressAnnotation,
                         amd_comgr_disassembly_info_t *DisassemblyInfoT) {
+
+  llvm::BumpPtrAllocator Allocator;
+  llvm::StringSaver Saver = Allocator;
+
   std::string TT = (Twine(Ident.Arch) + "-" + Ident.Vendor + "-" + Ident.OS +
                     "-" + Ident.Environ)
                        .str();
@@ -54,7 +59,7 @@ DisassemblyInfo::create(const TargetIdentifier &Ident,
 
   for (auto &Feature : Ident.Features) {
     FeaturesVec.push_back(
-        Twine(Feature.take_back() + Feature.drop_back()).str());
+        Saver.save(Twine(Feature.take_back() + Feature.drop_back()).str()));
   }
 
   std::string Features = join(FeaturesVec, ",");
