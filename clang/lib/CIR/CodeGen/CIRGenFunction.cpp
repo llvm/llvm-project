@@ -138,7 +138,8 @@ mlir::Location CIRGenFunction::getLoc(mlir::Location lhs, mlir::Location rhs) {
 void CIRGenFunction::emitAndUpdateRetAlloca(QualType type, mlir::Location loc,
                                             CharUnits alignment) {
   if (!type->isVoidType()) {
-    fnRetAlloca = emitAlloca("__retval", convertType(type), loc, alignment);
+    fnRetAlloca = emitAlloca("__retval", convertType(type), loc, alignment,
+                             /*insertIntoFnEntryBlock=*/false);
   }
 }
 
@@ -293,7 +294,8 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
 
     mlir::Value addrVal =
         emitAlloca(cast<NamedDecl>(paramVar)->getName(),
-                   convertType(paramVar->getType()), paramLoc, alignment);
+                   convertType(paramVar->getType()), paramLoc, alignment,
+                   /*insertIntoFnEntryBlock=*/true);
 
     declare(addrVal, paramVar, paramVar->getType(), paramLoc, alignment,
             /*isParam=*/true);
