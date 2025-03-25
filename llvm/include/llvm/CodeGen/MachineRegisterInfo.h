@@ -731,7 +731,14 @@ public:
 
   /// recomputeRegClass - Try to find a legal super-class of Reg's register
   /// class that still satisfies the constraints from the instructions using
-  /// Reg.  Returns true if Reg was upgraded.
+  /// \p Reg. \p return the super-class TargetRegisterClass if one was found,
+  /// otherwise \p return the original TargetRegisterClass.
+  const TargetRegisterClass *
+  getLargestConstrainedSuperClass(Register Reg) const;
+
+  /// recomputeRegClass - Try to find a legal super-class of Reg's register
+  /// class that still satisfies the constraints from the instructions using
+  /// \p Reg. \p return true if Reg was upgraded.
   ///
   /// This method can be used after constraints have been removed from a
   /// virtual register, for example after removing instructions or splitting
