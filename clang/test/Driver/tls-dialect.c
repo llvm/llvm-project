@@ -10,6 +10,11 @@
 /// TLSDESC is not on by default in Linux, even on RISC-V, and is covered above
 // RUN: %clang -### --target=riscv64-android %s 2>&1 | FileCheck --check-prefix=DESC %s
 
+/// Fuchsia supports TLSDESC by default for all architectures.
+// RUN: %clang -### --target=riscv64-unknown-fuchsia %s 2>&1 | FileCheck --check-prefix=DESC %s
+// RUN: %clang -### --target=aarch64-unknown-fuchsia %s 2>&1 | FileCheck --check-prefix=DESC %s
+// RUN: %clang -### --target=x86_64-unknown-fuchsia %s 2>&1 | FileCheck --check-prefix=DESC %s
+
 /// LTO
 // RUN: %clang -### --target=loongarch64-linux -flto -mtls-dialect=desc %s 2>&1 | FileCheck --check-prefix=LTO-DESC %s
 // RUN: %clang -### --target=loongarch64-linux -flto %s 2>&1 | FileCheck --check-prefix=LTO-NODESC %s

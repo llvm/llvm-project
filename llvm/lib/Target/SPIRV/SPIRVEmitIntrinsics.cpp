@@ -57,12 +57,6 @@ void initializeSPIRVEmitIntrinsicsPass(PassRegistry &);
 
 namespace {
 
-inline MetadataAsValue *buildMD(Value *Arg) {
-  LLVMContext &Ctx = Arg->getContext();
-  return MetadataAsValue::get(
-      Ctx, MDNode::get(Ctx, ValueAsMetadata::getConstant(Arg)));
-}
-
 class SPIRVEmitIntrinsics
     : public ModulePass,
       public InstVisitor<SPIRVEmitIntrinsics, Instruction *> {
@@ -74,7 +68,9 @@ class SPIRVEmitIntrinsics
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseMap<Instruction *, Type *> AggrConstTypes;
   DenseSet<Instruction *> AggrStores;
-  SPIRV::InstructionSet::InstructionSet InstrSet;
+
+  // map of function declarations to <pointer arg index => element type>
+  DenseMap<Function *, SmallVector<std::pair<unsigned, Type *>>> FDeclPtrTys;
 
   // a register of Instructions that don't have a complete type definition
   bool CanTodoType = true;
@@ -91,7 +87,7 @@ class SPIRVEmitIntrinsics
   void eraseTodoType(Value *Op) {
     auto It = TodoType.find(Op);
     if (It != TodoType.end() && It->second) {
-      TodoType[Op] = false;
+      It->second = false;
       --TodoTypeSz;
     }
   }
@@ -133,30 +129,15 @@ class SPIRVEmitIntrinsics
 
   // deduce Types of operands of the Instruction if possible
   void deduceOperandElementType(Instruction *I,
-                                SmallPtrSet<Instruction *, 4> *UncompleteRets,
+                                SmallPtrSet<Instruction *, 4> *IncompleteRets,
                                 const SmallPtrSet<Value *, 4> *AskOps = nullptr,
                                 bool IsPostprocessing = false);
 
   void preprocessCompositeConstants(IRBuilder<> &B);
   void preprocessUndefs(IRBuilder<> &B);
 
-  CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
-                            Value *Arg, Value *Arg2, ArrayRef<Constant *> Imms,
-                            IRBuilder<> &B) {
-    SmallVector<Value *, 4> Args;
-    Args.push_back(Arg2);
-    Args.push_back(buildMD(Arg));
-    for (auto *Imm : Imms)
-      Args.push_back(Imm);
-    return B.CreateIntrinsic(IntrID, {Types}, Args);
-  }
-
   Type *reconstructType(Value *Op, bool UnknownElemTypeI8,
                         bool IsPostprocessing);
-
-  void buildAssignType(IRBuilder<> &B, Type *ElemTy, Value *Arg);
-  void buildAssignPtr(IRBuilder<> &B, Type *ElemTy, Value *Arg);
-  void updateAssignType(CallInst *AssignCI, Value *Arg, Value *OfType);
 
   void replaceMemInstrUses(Instruction *Old, Instruction *New, IRBuilder<> &B);
   void processInstrAfterVisit(Instruction *I, IRBuilder<> &B);
@@ -170,6 +151,7 @@ class SPIRVEmitIntrinsics
                                         unsigned OperandToReplace,
                                         IRBuilder<> &B);
   void insertPtrCastOrAssignTypeInstr(Instruction *I, IRBuilder<> &B);
+  bool shouldTryToAddMemAliasingDecoration(Instruction *Inst);
   void insertSpirvDecorations(Instruction *I, IRBuilder<> &B);
   void processGlobalValue(GlobalVariable &GV, IRBuilder<> &B);
   void processParamTypes(Function *F, IRBuilder<> &B);
@@ -180,10 +162,14 @@ class SPIRVEmitIntrinsics
 
   bool deduceOperandElementTypeCalledFunction(
       CallInst *CI, SmallVector<std::pair<Value *, unsigned>> &Ops,
-      Type *&KnownElemTy);
+      Type *&KnownElemTy, bool &Incomplete);
   void deduceOperandElementTypeFunctionPointer(
       CallInst *CI, SmallVector<std::pair<Value *, unsigned>> &Ops,
       Type *&KnownElemTy, bool IsPostprocessing);
+  bool deduceOperandElementTypeFunctionRet(
+      Instruction *I, SmallPtrSet<Instruction *, 4> *IncompleteRets,
+      const SmallPtrSet<Value *, 4> *AskOps, bool IsPostprocessing,
+      Type *&KnownElemTy, Value *Op, Function *F);
 
   CallInst *buildSpvPtrcast(Function *F, Value *Op, Type *ElemTy);
   void replaceUsesOfWithSpvPtrcast(Value *Op, Type *ElemTy, Instruction *I,
@@ -202,9 +188,14 @@ class SPIRVEmitIntrinsics
   void replaceAllUsesWithAndErase(IRBuilder<> &B, Instruction *Src,
                                   Instruction *Dest, bool DeleteOld = true);
 
+  void applyDemangledPtrArgTypes(IRBuilder<> &B);
+
   bool runOnFunction(Function &F);
   bool postprocessTypes(Module &M);
   bool processFunctionPointers(Module &M);
+  void parseFunDeclarations(Module &M);
+
+  void useRoundingMode(ConstrainedFPIntrinsic *FPI, IRBuilder<> &B);
 
 public:
   static char ID;
@@ -252,19 +243,14 @@ bool expectIgnoredInIRTranslation(const Instruction *I) {
   const auto *II = dyn_cast<IntrinsicInst>(I);
   if (!II)
     return false;
-  return II->getIntrinsicID() == Intrinsic::invariant_start;
-}
-
-bool allowEmitFakeUse(const Value *Arg) {
-  if (isSpvIntrinsic(Arg))
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::invariant_start:
+  case Intrinsic::spv_resource_handlefrombinding:
+  case Intrinsic::spv_resource_getpointer:
+    return true;
+  default:
     return false;
-  if (dyn_cast<AtomicCmpXchgInst>(Arg) || dyn_cast<InsertValueInst>(Arg) ||
-      dyn_cast<UndefValue>(Arg))
-    return false;
-  if (const auto *LI = dyn_cast<LoadInst>(Arg))
-    if (LI->getType()->isAggregateType())
-      return false;
-  return true;
+  }
 }
 
 } // namespace
@@ -337,10 +323,7 @@ static void emitAssignName(Instruction *I, IRBuilder<> &B) {
 
 void SPIRVEmitIntrinsics::replaceAllUsesWith(Value *Src, Value *Dest,
                                              bool DeleteOld) {
-  Src->replaceAllUsesWith(Dest);
-  // Update deduced type records
-  GR->updateIfExistDeducedElementType(Src, Dest, DeleteOld);
-  GR->updateIfExistAssignPtrTypeInstr(Src, Dest, DeleteOld);
+  GR->replaceAllUsesWith(Src, Dest, DeleteOld);
   // Update uncomplete type records if any
   if (isTodoType(Src)) {
     if (DeleteOld)
@@ -407,56 +390,6 @@ Type *SPIRVEmitIntrinsics::reconstructType(Value *Op, bool UnknownElemTypeI8,
   return nullptr;
 }
 
-void SPIRVEmitIntrinsics::buildAssignType(IRBuilder<> &B, Type *Ty,
-                                          Value *Arg) {
-  Value *OfType = PoisonValue::get(Ty);
-  CallInst *AssignCI = nullptr;
-  if (Arg->getType()->isAggregateType() && Ty->isAggregateType() &&
-      allowEmitFakeUse(Arg)) {
-    LLVMContext &Ctx = Arg->getContext();
-    SmallVector<Metadata *, 2> ArgMDs{
-        MDNode::get(Ctx, ValueAsMetadata::getConstant(OfType)),
-        MDString::get(Ctx, Arg->getName())};
-    B.CreateIntrinsic(Intrinsic::spv_value_md, {},
-                      {MetadataAsValue::get(Ctx, MDTuple::get(Ctx, ArgMDs))});
-    AssignCI = B.CreateIntrinsic(Intrinsic::fake_use, {}, {Arg});
-  } else {
-    AssignCI = buildIntrWithMD(Intrinsic::spv_assign_type, {Arg->getType()},
-                               OfType, Arg, {}, B);
-  }
-  GR->addAssignPtrTypeInstr(Arg, AssignCI);
-}
-
-void SPIRVEmitIntrinsics::buildAssignPtr(IRBuilder<> &B, Type *ElemTy,
-                                         Value *Arg) {
-  Value *OfType = PoisonValue::get(ElemTy);
-  CallInst *AssignPtrTyCI = GR->findAssignPtrTypeInstr(Arg);
-  if (AssignPtrTyCI == nullptr ||
-      AssignPtrTyCI->getParent()->getParent() != CurrF) {
-    AssignPtrTyCI = buildIntrWithMD(
-        Intrinsic::spv_assign_ptr_type, {Arg->getType()}, OfType, Arg,
-        {B.getInt32(getPointerAddressSpace(Arg->getType()))}, B);
-    GR->addDeducedElementType(AssignPtrTyCI, ElemTy);
-    GR->addDeducedElementType(Arg, ElemTy);
-    GR->addAssignPtrTypeInstr(Arg, AssignPtrTyCI);
-  } else {
-    updateAssignType(AssignPtrTyCI, Arg, OfType);
-  }
-}
-
-void SPIRVEmitIntrinsics::updateAssignType(CallInst *AssignCI, Value *Arg,
-                                           Value *OfType) {
-  AssignCI->setArgOperand(1, buildMD(OfType));
-  if (cast<IntrinsicInst>(AssignCI)->getIntrinsicID() !=
-      Intrinsic::spv_assign_ptr_type)
-    return;
-
-  // update association with the pointee type
-  Type *ElemTy = OfType->getType();
-  GR->addDeducedElementType(AssignCI, ElemTy);
-  GR->addDeducedElementType(Arg, ElemTy);
-}
-
 CallInst *SPIRVEmitIntrinsics::buildSpvPtrcast(Function *F, Value *Op,
                                                Type *ElemTy) {
   IRBuilder<> B(Op->getContext());
@@ -472,11 +405,11 @@ CallInst *SPIRVEmitIntrinsics::buildSpvPtrcast(Function *F, Value *Op,
   }
   Type *OpTy = Op->getType();
   SmallVector<Type *, 2> Types = {OpTy, OpTy};
-  SmallVector<Value *, 2> Args = {Op, buildMD(PoisonValue::get(ElemTy)),
+  SmallVector<Value *, 2> Args = {Op, buildMD(getNormalizedPoisonValue(ElemTy)),
                                   B.getInt32(getPointerAddressSpace(OpTy))};
   CallInst *PtrCasted =
       B.CreateIntrinsic(Intrinsic::spv_ptrcast, {Types}, Args);
-  buildAssignPtr(B, ElemTy, PtrCasted);
+  GR->buildAssignPtr(B, ElemTy, PtrCasted);
   return PtrCasted;
 }
 
@@ -627,6 +560,20 @@ void SPIRVEmitIntrinsics::maybeAssignPtrType(Type *&Ty, Value *Op, Type *RefTy,
   Ty = RefTy;
 }
 
+Type *getGEPType(GetElementPtrInst *Ref) {
+  Type *Ty = nullptr;
+  // TODO: not sure if GetElementPtrInst::getTypeAtIndex() does anything
+  // useful here
+  if (isNestedPointer(Ref->getSourceElementType())) {
+    Ty = Ref->getSourceElementType();
+    for (Use &U : drop_begin(Ref->indices()))
+      Ty = GetElementPtrInst::getTypeAtIndex(Ty, U.get());
+  } else {
+    Ty = Ref->getResultElementType();
+  }
+  return Ty;
+}
+
 Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
     Value *I, std::unordered_set<Value *> &Visited, bool UnknownElemTypeI8,
     bool IgnoreKnownType) {
@@ -649,15 +596,7 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
   if (auto *Ref = dyn_cast<AllocaInst>(I)) {
     maybeAssignPtrType(Ty, I, Ref->getAllocatedType(), UnknownElemTypeI8);
   } else if (auto *Ref = dyn_cast<GetElementPtrInst>(I)) {
-    // TODO: not sure if GetElementPtrInst::getTypeAtIndex() does anything
-    // useful here
-    if (isNestedPointer(Ref->getSourceElementType())) {
-      Ty = Ref->getSourceElementType();
-      for (Use &U : drop_begin(Ref->indices()))
-        Ty = GetElementPtrInst::getTypeAtIndex(Ty, U.get());
-    } else {
-      Ty = Ref->getResultElementType();
-    }
+    Ty = getGEPType(Ref);
   } else if (auto *Ref = dyn_cast<LoadInst>(I)) {
     Value *Op = Ref->getPointerOperand();
     Type *KnownTy = GR->findDeducedElementType(Op);
@@ -725,7 +664,18 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
         {"__spirv_GenericCastToPtrExplicit_ToLocal", 0},
         {"__spirv_GenericCastToPtrExplicit_ToPrivate", 0}};
     // TODO: maybe improve performance by caching demangled names
-    if (Function *CalledF = CI->getCalledFunction()) {
+
+    auto *II = dyn_cast<IntrinsicInst>(I);
+    if (II && II->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
+      auto *ImageType = cast<TargetExtType>(II->getOperand(0)->getType());
+      assert(ImageType->getTargetExtName() == "spirv.Image");
+      (void)ImageType;
+      if (II->hasOneUse()) {
+        auto *U = *II->users().begin();
+        Ty = cast<Instruction>(U)->getAccessType();
+        assert(Ty && "Unable to get type for resource pointer.");
+      }
+    } else if (Function *CalledF = CI->getCalledFunction()) {
       std::string DemangledName =
           getOclOrSpirvBuiltinDemangledName(CalledF->getName());
       if (DemangledName.length() > 0)
@@ -742,7 +692,7 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
   // remember the found relationship
   if (Ty && !IgnoreKnownType) {
     // specify nested types if needed, otherwise return unchanged
-    GR->addDeducedElementType(I, Ty);
+    GR->addDeducedElementType(I, normalizeType(Ty));
   }
 
   return Ty;
@@ -828,7 +778,7 @@ Type *SPIRVEmitIntrinsics::deduceNestedTypeHelper(
       }
       if (Ty != OpTy) {
         Type *NewTy = VectorType::get(Ty, VecTy->getElementCount());
-        GR->addDeducedCompositeType(U, NewTy);
+        GR->addDeducedCompositeType(U, normalizeType(NewTy));
         return NewTy;
       }
     }
@@ -863,7 +813,7 @@ static inline Type *getAtomicElemTy(SPIRVGlobalRegistry *GR, Instruction *I,
 // indirect function invocation, and true otherwise.
 bool SPIRVEmitIntrinsics::deduceOperandElementTypeCalledFunction(
     CallInst *CI, SmallVector<std::pair<Value *, unsigned>> &Ops,
-    Type *&KnownElemTy) {
+    Type *&KnownElemTy, bool &Incomplete) {
   Function *CalledF = CI->getCalledFunction();
   if (!CalledF)
     return false;
@@ -871,8 +821,9 @@ bool SPIRVEmitIntrinsics::deduceOperandElementTypeCalledFunction(
       getOclOrSpirvBuiltinDemangledName(CalledF->getName());
   if (DemangledName.length() > 0 &&
       !StringRef(DemangledName).starts_with("llvm.")) {
-    auto [Grp, Opcode, ExtNo] =
-        SPIRV::mapBuiltinToOpcode(DemangledName, InstrSet);
+    const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(*CalledF);
+    auto [Grp, Opcode, ExtNo] = SPIRV::mapBuiltinToOpcode(
+        DemangledName, ST.getPreferredInstructionSet());
     if (Opcode == SPIRV::OpGroupAsyncCopy) {
       for (unsigned i = 0, PtrCnt = 0; i < CI->arg_size() && PtrCnt < 2; ++i) {
         Value *Op = CI->getArgOperand(i);
@@ -884,12 +835,15 @@ bool SPIRVEmitIntrinsics::deduceOperandElementTypeCalledFunction(
         Ops.push_back(std::make_pair(Op, i));
       }
     } else if (Grp == SPIRV::Atomic || Grp == SPIRV::AtomicFloating) {
-      if (CI->arg_size() < 2)
+      if (CI->arg_size() == 0)
         return true;
       Value *Op = CI->getArgOperand(0);
       if (!isPointerTy(Op->getType()))
         return true;
       switch (Opcode) {
+      case SPIRV::OpAtomicFAddEXT:
+      case SPIRV::OpAtomicFMinEXT:
+      case SPIRV::OpAtomicFMaxEXT:
       case SPIRV::OpAtomicLoad:
       case SPIRV::OpAtomicCompareExchangeWeak:
       case SPIRV::OpAtomicCompareExchange:
@@ -903,9 +857,23 @@ bool SPIRVEmitIntrinsics::deduceOperandElementTypeCalledFunction(
       case SPIRV::OpAtomicUMax:
       case SPIRV::OpAtomicSMin:
       case SPIRV::OpAtomicSMax: {
-        KnownElemTy = getAtomicElemTy(GR, CI, Op);
+        KnownElemTy = isPointerTy(CI->getType()) ? getAtomicElemTy(GR, CI, Op)
+                                                 : CI->getType();
         if (!KnownElemTy)
           return true;
+        Incomplete = isTodoType(Op);
+        Ops.push_back(std::make_pair(Op, 0));
+      } break;
+      case SPIRV::OpAtomicStore: {
+        if (CI->arg_size() < 4)
+          return true;
+        Value *ValOp = CI->getArgOperand(3);
+        KnownElemTy = isPointerTy(ValOp->getType())
+                          ? getAtomicElemTy(GR, CI, Op)
+                          : ValOp->getType();
+        if (!KnownElemTy)
+          return true;
+        Incomplete = isTodoType(Op);
         Ops.push_back(std::make_pair(Op, 0));
       } break;
       }
@@ -923,7 +891,7 @@ void SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionPointer(
     return;
   Ops.push_back(std::make_pair(Op, std::numeric_limits<unsigned>::max()));
   FunctionType *FTy = CI->getFunctionType();
-  bool IsNewFTy = false, IsUncomplete = false;
+  bool IsNewFTy = false, IsIncomplete = false;
   SmallVector<Type *, 4> ArgTys;
   for (Value *Arg : CI->args()) {
     Type *ArgTy = Arg->getType();
@@ -932,9 +900,9 @@ void SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionPointer(
         IsNewFTy = true;
         ArgTy = getTypedPointerWrapper(ElemTy, getPointerAddressSpace(ArgTy));
         if (isTodoType(Arg))
-          IsUncomplete = true;
+          IsIncomplete = true;
       } else {
-        IsUncomplete = true;
+        IsIncomplete = true;
       }
     }
     ArgTys.push_back(ArgTy);
@@ -946,15 +914,58 @@ void SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionPointer(
       RetTy =
           getTypedPointerWrapper(ElemTy, getPointerAddressSpace(CI->getType()));
       if (isTodoType(CI))
-        IsUncomplete = true;
+        IsIncomplete = true;
     } else {
-      IsUncomplete = true;
+      IsIncomplete = true;
     }
   }
-  if (!IsPostprocessing && IsUncomplete)
+  if (!IsPostprocessing && IsIncomplete)
     insertTodoType(Op);
   KnownElemTy =
       IsNewFTy ? FunctionType::get(RetTy, ArgTys, FTy->isVarArg()) : FTy;
+}
+
+bool SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionRet(
+    Instruction *I, SmallPtrSet<Instruction *, 4> *IncompleteRets,
+    const SmallPtrSet<Value *, 4> *AskOps, bool IsPostprocessing,
+    Type *&KnownElemTy, Value *Op, Function *F) {
+  KnownElemTy = GR->findDeducedElementType(F);
+  if (KnownElemTy)
+    return false;
+  if (Type *OpElemTy = GR->findDeducedElementType(Op)) {
+    OpElemTy = normalizeType(OpElemTy);
+    GR->addDeducedElementType(F, OpElemTy);
+    GR->addReturnType(
+        F, TypedPointerType::get(OpElemTy,
+                                 getPointerAddressSpace(F->getReturnType())));
+    // non-recursive update of types in function uses
+    DenseSet<std::pair<Value *, Value *>> VisitedSubst{std::make_pair(I, Op)};
+    for (User *U : F->users()) {
+      CallInst *CI = dyn_cast<CallInst>(U);
+      if (!CI || CI->getCalledFunction() != F)
+        continue;
+      if (CallInst *AssignCI = GR->findAssignPtrTypeInstr(CI)) {
+        if (Type *PrevElemTy = GR->findDeducedElementType(CI)) {
+          GR->updateAssignType(AssignCI, CI,
+                               getNormalizedPoisonValue(OpElemTy));
+          propagateElemType(CI, PrevElemTy, VisitedSubst);
+        }
+      }
+    }
+    // Non-recursive update of types in the function uncomplete returns.
+    // This may happen just once per a function, the latch is a pair of
+    // findDeducedElementType(F) / addDeducedElementType(F, ...).
+    // With or without the latch it is a non-recursive call due to
+    // IncompleteRets set to nullptr in this call.
+    if (IncompleteRets)
+      for (Instruction *IncompleteRetI : *IncompleteRets)
+        deduceOperandElementType(IncompleteRetI, nullptr, AskOps,
+                                 IsPostprocessing);
+  } else if (IncompleteRets) {
+    IncompleteRets->insert(I);
+  }
+  TypeValidated.insert(I);
+  return true;
 }
 
 // If the Instruction has Pointer operands with unresolved types, this function
@@ -962,17 +973,17 @@ void SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionPointer(
 // types which differ from expected, this function tries to insert a bitcast to
 // resolve the issue.
 void SPIRVEmitIntrinsics::deduceOperandElementType(
-    Instruction *I, SmallPtrSet<Instruction *, 4> *UncompleteRets,
+    Instruction *I, SmallPtrSet<Instruction *, 4> *IncompleteRets,
     const SmallPtrSet<Value *, 4> *AskOps, bool IsPostprocessing) {
   SmallVector<std::pair<Value *, unsigned>> Ops;
   Type *KnownElemTy = nullptr;
-  bool Uncomplete = false;
+  bool Incomplete = false;
   // look for known basic patterns of type inference
   if (auto *Ref = dyn_cast<PHINode>(I)) {
     if (!isPointerTy(I->getType()) ||
         !(KnownElemTy = GR->findDeducedElementType(I)))
       return;
-    Uncomplete = isTodoType(I);
+    Incomplete = isTodoType(I);
     for (unsigned i = 0; i < Ref->getNumIncomingValues(); i++) {
       Value *Op = Ref->getIncomingValue(i);
       if (isPointerTy(Op->getType()))
@@ -982,7 +993,7 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
     KnownElemTy = GR->findDeducedElementType(I);
     if (!KnownElemTy)
       return;
-    Uncomplete = isTodoType(I);
+    Incomplete = isTodoType(I);
     Ops.push_back(std::make_pair(Ref->getPointerOperand(), 0));
   } else if (auto *Ref = dyn_cast<BitCastInst>(I)) {
     if (!isPointerTy(I->getType()))
@@ -990,7 +1001,7 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
     KnownElemTy = GR->findDeducedElementType(I);
     if (!KnownElemTy)
       return;
-    Uncomplete = isTodoType(I);
+    Incomplete = isTodoType(I);
     Ops.push_back(std::make_pair(Ref->getOperand(0), 0));
   } else if (auto *Ref = dyn_cast<GetElementPtrInst>(I)) {
     if (GR->findDeducedElementType(Ref->getPointerOperand()))
@@ -1017,69 +1028,44 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
     Ops.push_back(std::make_pair(Ref->getPointerOperand(),
                                  StoreInst::getPointerOperandIndex()));
   } else if (auto *Ref = dyn_cast<AtomicCmpXchgInst>(I)) {
-    KnownElemTy = getAtomicElemTy(GR, I, Ref->getPointerOperand());
+    KnownElemTy = isPointerTy(I->getType())
+                      ? getAtomicElemTy(GR, I, Ref->getPointerOperand())
+                      : I->getType();
     if (!KnownElemTy)
       return;
+    Incomplete = isTodoType(Ref->getPointerOperand());
     Ops.push_back(std::make_pair(Ref->getPointerOperand(),
                                  AtomicCmpXchgInst::getPointerOperandIndex()));
   } else if (auto *Ref = dyn_cast<AtomicRMWInst>(I)) {
-    KnownElemTy = getAtomicElemTy(GR, I, Ref->getPointerOperand());
+    KnownElemTy = isPointerTy(I->getType())
+                      ? getAtomicElemTy(GR, I, Ref->getPointerOperand())
+                      : I->getType();
     if (!KnownElemTy)
       return;
+    Incomplete = isTodoType(Ref->getPointerOperand());
     Ops.push_back(std::make_pair(Ref->getPointerOperand(),
                                  AtomicRMWInst::getPointerOperandIndex()));
   } else if (auto *Ref = dyn_cast<SelectInst>(I)) {
     if (!isPointerTy(I->getType()) ||
         !(KnownElemTy = GR->findDeducedElementType(I)))
       return;
-    Uncomplete = isTodoType(I);
+    Incomplete = isTodoType(I);
     for (unsigned i = 0; i < Ref->getNumOperands(); i++) {
       Value *Op = Ref->getOperand(i);
       if (isPointerTy(Op->getType()))
         Ops.push_back(std::make_pair(Op, i));
     }
   } else if (auto *Ref = dyn_cast<ReturnInst>(I)) {
-    Type *RetTy = CurrF->getReturnType();
-    if (!isPointerTy(RetTy))
+    if (!isPointerTy(CurrF->getReturnType()))
       return;
     Value *Op = Ref->getReturnValue();
     if (!Op)
       return;
-    if (!(KnownElemTy = GR->findDeducedElementType(CurrF))) {
-      if (Type *OpElemTy = GR->findDeducedElementType(Op)) {
-        GR->addDeducedElementType(CurrF, OpElemTy);
-        GR->addReturnType(CurrF, TypedPointerType::get(
-                                     OpElemTy, getPointerAddressSpace(RetTy)));
-        // non-recursive update of types in function uses
-        DenseSet<std::pair<Value *, Value *>> VisitedSubst{
-            std::make_pair(I, Op)};
-        for (User *U : CurrF->users()) {
-          CallInst *CI = dyn_cast<CallInst>(U);
-          if (!CI || CI->getCalledFunction() != CurrF)
-            continue;
-          if (CallInst *AssignCI = GR->findAssignPtrTypeInstr(CI)) {
-            if (Type *PrevElemTy = GR->findDeducedElementType(CI)) {
-              updateAssignType(AssignCI, CI, PoisonValue::get(OpElemTy));
-              propagateElemType(CI, PrevElemTy, VisitedSubst);
-            }
-          }
-        }
-        // Non-recursive update of types in the function uncomplete returns.
-        // This may happen just once per a function, the latch is a pair of
-        // findDeducedElementType(F) / addDeducedElementType(F, ...).
-        // With or without the latch it is a non-recursive call due to
-        // UncompleteRets set to nullptr in this call.
-        if (UncompleteRets)
-          for (Instruction *UncompleteRetI : *UncompleteRets)
-            deduceOperandElementType(UncompleteRetI, nullptr, AskOps,
-                                     IsPostprocessing);
-      } else if (UncompleteRets) {
-        UncompleteRets->insert(I);
-      }
-      TypeValidated.insert(I);
+    if (deduceOperandElementTypeFunctionRet(I, IncompleteRets, AskOps,
+                                            IsPostprocessing, KnownElemTy, Op,
+                                            CurrF))
       return;
-    }
-    Uncomplete = isTodoType(CurrF);
+    Incomplete = isTodoType(CurrF);
     Ops.push_back(std::make_pair(Op, 0));
   } else if (auto *Ref = dyn_cast<ICmpInst>(I)) {
     if (!isPointerTy(Ref->getOperand(0)->getType()))
@@ -1090,16 +1076,16 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
     Type *ElemTy1 = GR->findDeducedElementType(Op1);
     if (ElemTy0) {
       KnownElemTy = ElemTy0;
-      Uncomplete = isTodoType(Op0);
+      Incomplete = isTodoType(Op0);
       Ops.push_back(std::make_pair(Op1, 1));
     } else if (ElemTy1) {
       KnownElemTy = ElemTy1;
-      Uncomplete = isTodoType(Op1);
+      Incomplete = isTodoType(Op1);
       Ops.push_back(std::make_pair(Op0, 0));
     }
   } else if (CallInst *CI = dyn_cast<CallInst>(I)) {
     if (!CI->isIndirectCall())
-      deduceOperandElementTypeCalledFunction(CI, Ops, KnownElemTy);
+      deduceOperandElementTypeCalledFunction(CI, Ops, KnownElemTy, Incomplete);
     else if (HaveFunPtrs)
       deduceOperandElementTypeFunctionPointer(CI, Ops, KnownElemTy,
                                               IsPostprocessing);
@@ -1127,13 +1113,13 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
     Type *Ty = AskTy ? AskTy : GR->findDeducedElementType(Op);
     if (Ty == KnownElemTy)
       continue;
-    Value *OpTyVal = PoisonValue::get(KnownElemTy);
+    Value *OpTyVal = getNormalizedPoisonValue(KnownElemTy);
     Type *OpTy = Op->getType();
     if (!Ty || AskTy || isUntypedPointerTy(Ty) || isTodoType(Op)) {
       Type *PrevElemTy = GR->findDeducedElementType(Op);
-      GR->addDeducedElementType(Op, KnownElemTy);
+      GR->addDeducedElementType(Op, normalizeType(KnownElemTy));
       // check if KnownElemTy is complete
-      if (!Uncomplete)
+      if (!Incomplete)
         eraseTodoType(Op);
       else if (!IsPostprocessing)
         insertTodoType(Op);
@@ -1147,7 +1133,7 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
                             {B.getInt32(getPointerAddressSpace(OpTy))}, B);
         GR->addAssignPtrTypeInstr(Op, CI);
       } else {
-        updateAssignType(AssignCI, Op, OpTyVal);
+        GR->updateAssignType(AssignCI, Op, OpTyVal);
         DenseSet<std::pair<Value *, Value *>> VisitedSubst{
             std::make_pair(I, Op)};
         propagateElemTypeRec(Op, KnownElemTy, PrevElemTy, VisitedSubst);
@@ -1184,6 +1170,7 @@ void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
       llvm_unreachable("illegal aggregate intrinsic user");
     }
   }
+  New->copyMetadata(*Old);
   Old->eraseFromParent();
 }
 
@@ -1271,6 +1258,37 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
   }
 }
 
+static void createDecorationIntrinsic(Instruction *I, MDNode *Node,
+                                      IRBuilder<> &B) {
+  LLVMContext &Ctx = I->getContext();
+  setInsertPointAfterDef(B, I);
+  B.CreateIntrinsic(Intrinsic::spv_assign_decoration, {I->getType()},
+                    {I, MetadataAsValue::get(Ctx, MDNode::get(Ctx, {Node}))});
+}
+
+static void createRoundingModeDecoration(Instruction *I,
+                                         unsigned RoundingModeDeco,
+                                         IRBuilder<> &B) {
+  LLVMContext &Ctx = I->getContext();
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+  MDNode *RoundingModeNode = MDNode::get(
+      Ctx,
+      {ConstantAsMetadata::get(
+           ConstantInt::get(Int32Ty, SPIRV::Decoration::FPRoundingMode)),
+       ConstantAsMetadata::get(ConstantInt::get(Int32Ty, RoundingModeDeco))});
+  createDecorationIntrinsic(I, RoundingModeNode, B);
+}
+
+static void createSaturatedConversionDecoration(Instruction *I,
+                                                IRBuilder<> &B) {
+  LLVMContext &Ctx = I->getContext();
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+  MDNode *SaturatedConversionNode =
+      MDNode::get(Ctx, {ConstantAsMetadata::get(ConstantInt::get(
+                           Int32Ty, SPIRV::Decoration::SaturatedConversion))});
+  createDecorationIntrinsic(I, SaturatedConversionNode, B);
+}
+
 Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
   if (!Call.isInlineAsm())
     return &Call;
@@ -1290,6 +1308,40 @@ Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
   B.SetInsertPoint(&Call);
   B.CreateIntrinsic(Intrinsic::spv_inline_asm, {}, {Args});
   return &Call;
+}
+
+// Use a tip about rounding mode to create a decoration.
+void SPIRVEmitIntrinsics::useRoundingMode(ConstrainedFPIntrinsic *FPI,
+                                          IRBuilder<> &B) {
+  std::optional<RoundingMode> RM = FPI->getRoundingMode();
+  if (!RM.has_value())
+    return;
+  unsigned RoundingModeDeco = std::numeric_limits<unsigned>::max();
+  switch (RM.value()) {
+  default:
+    // ignore unknown rounding modes
+    break;
+  case RoundingMode::NearestTiesToEven:
+    RoundingModeDeco = SPIRV::FPRoundingMode::FPRoundingMode::RTE;
+    break;
+  case RoundingMode::TowardNegative:
+    RoundingModeDeco = SPIRV::FPRoundingMode::FPRoundingMode::RTN;
+    break;
+  case RoundingMode::TowardPositive:
+    RoundingModeDeco = SPIRV::FPRoundingMode::FPRoundingMode::RTP;
+    break;
+  case RoundingMode::TowardZero:
+    RoundingModeDeco = SPIRV::FPRoundingMode::FPRoundingMode::RTZ;
+    break;
+  case RoundingMode::Dynamic:
+  case RoundingMode::NearestTiesToAway:
+    // TODO: check if supported
+    break;
+  }
+  if (RoundingModeDeco == std::numeric_limits<unsigned>::max())
+    return;
+  // Convert the tip about rounding mode into a decoration record.
+  createRoundingModeDecoration(FPI, RoundingModeDeco, B);
 }
 
 Instruction *SPIRVEmitIntrinsics::visitSwitchInst(SwitchInst &I) {
@@ -1372,7 +1424,7 @@ void SPIRVEmitIntrinsics::insertAssignPtrTypeTargetExt(
 
   CallInst *AssignCI = GR->findAssignPtrTypeInstr(V);
   if (!AssignCI) {
-    buildAssignType(B, AssignedType, V);
+    GR->buildAssignType(B, AssignedType, V);
     return;
   }
 
@@ -1392,7 +1444,7 @@ void SPIRVEmitIntrinsics::insertAssignPtrTypeTargetExt(
 
   // Our previous guess about the type seems to be wrong, let's update
   // inferred type according to a new, more precise type information.
-  updateAssignType(AssignCI, V, PoisonValue::get(AssignedType));
+  GR->updateAssignType(AssignCI, V, getNormalizedPoisonValue(AssignedType));
 }
 
 void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
@@ -1407,7 +1459,7 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
     return;
 
   setInsertPointSkippingPhis(B, I);
-  Value *ExpectedElementVal = PoisonValue::get(ExpectedElementType);
+  Value *ExpectedElementVal = getNormalizedPoisonValue(ExpectedElementType);
   MetadataAsValue *VMD = buildMD(ExpectedElementVal);
   unsigned AddressSpace = getPointerAddressSpace(Pointer->getType());
   bool FirstPtrCastOrAssignPtrType = true;
@@ -1449,7 +1501,7 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
     if (FirstPtrCastOrAssignPtrType) {
       // If this would be the first spv_ptrcast, do not emit spv_ptrcast and
       // emit spv_assign_ptr_type instead.
-      buildAssignPtr(B, ExpectedElementType, Pointer);
+      GR->buildAssignPtr(B, ExpectedElementType, Pointer);
       return;
     } else if (isTodoType(Pointer)) {
       eraseTodoType(Pointer);
@@ -1461,10 +1513,10 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
           assert(PrevElemTy);
           DenseSet<std::pair<Value *, Value *>> VisitedSubst{
               std::make_pair(I, Pointer)};
-          updateAssignType(AssignCI, Pointer, ExpectedElementVal);
+          GR->updateAssignType(AssignCI, Pointer, ExpectedElementVal);
           propagateElemType(Pointer, PrevElemTy, VisitedSubst);
         } else {
-          buildAssignPtr(B, ExpectedElementType, Pointer);
+          GR->buildAssignPtr(B, ExpectedElementType, Pointer);
         }
         return;
       }
@@ -1477,7 +1529,7 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
   auto *PtrCastI = B.CreateIntrinsic(Intrinsic::spv_ptrcast, {Types}, Args);
   I->setOperand(OperandToReplace, PtrCastI);
   // We need to set up a pointee type for the newly created spv_ptrcast.
-  buildAssignPtr(B, ExpectedElementType, PtrCastI);
+  GR->buildAssignPtr(B, ExpectedElementType, PtrCastI);
 }
 
 void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
@@ -1553,7 +1605,7 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
       if (!ElemTy) {
         ElemTy = getPointeeTypeByCallInst(DemangledName, CalledF, OpIdx);
         if (ElemTy) {
-          GR->addDeducedElementType(CalledArg, ElemTy);
+          GR->addDeducedElementType(CalledArg, normalizeType(ElemTy));
         } else {
           for (User *U : CalledArg->users()) {
             if (Instruction *Inst = dyn_cast<Instruction>(U)) {
@@ -1604,6 +1656,11 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
 }
 
 Instruction *SPIRVEmitIntrinsics::visitInsertElementInst(InsertElementInst &I) {
+  // If it's a <1 x Type> vector type, don't modify it. It's not a legal vector
+  // type in LLT and IRTranslator will replace it by the scalar.
+  if (isVector1(I.getType()))
+    return &I;
+
   SmallVector<Type *, 4> Types = {I.getType(), I.getOperand(0)->getType(),
                                   I.getOperand(1)->getType(),
                                   I.getOperand(2)->getType()};
@@ -1617,6 +1674,11 @@ Instruction *SPIRVEmitIntrinsics::visitInsertElementInst(InsertElementInst &I) {
 
 Instruction *
 SPIRVEmitIntrinsics::visitExtractElementInst(ExtractElementInst &I) {
+  // If it's a <1 x Type> vector type, don't modify it. It's not a legal vector
+  // type in LLT and IRTranslator will replace it by the scalar.
+  if (isVector1(I.getVectorOperandType()))
+    return &I;
+
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
   SmallVector<Type *, 3> Types = {I.getType(), I.getVectorOperandType(),
@@ -1692,6 +1754,7 @@ Instruction *SPIRVEmitIntrinsics::visitStoreInst(StoreInst &I) {
       Intrinsic::spv_store, {I.getValueOperand()->getType(), PtrOp->getType()},
       {I.getValueOperand(), PtrOp, B.getInt16(Flags),
        B.getInt8(I.getAlign().value())});
+  NewI->copyMetadata(I);
   I.eraseFromParent();
   return NewI;
 }
@@ -1713,9 +1776,12 @@ Instruction *SPIRVEmitIntrinsics::visitAllocaInst(AllocaInst &I) {
   TrackConstants = false;
   Type *PtrTy = I.getType();
   auto *NewI =
-      ArraySize ? B.CreateIntrinsic(Intrinsic::spv_alloca_array,
-                                    {PtrTy, ArraySize->getType()}, {ArraySize})
-                : B.CreateIntrinsic(Intrinsic::spv_alloca, {PtrTy}, {});
+      ArraySize
+          ? B.CreateIntrinsic(Intrinsic::spv_alloca_array,
+                              {PtrTy, ArraySize->getType()},
+                              {ArraySize, B.getInt8(I.getAlign().value())})
+          : B.CreateIntrinsic(Intrinsic::spv_alloca, {PtrTy},
+                              {B.getInt8(I.getAlign().value())});
   replaceAllUsesWithAndErase(B, &I, NewI);
   return NewI;
 }
@@ -1751,20 +1817,20 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
   // Skip special artifical variable llvm.global.annotations.
   if (GV.getName() == "llvm.global.annotations")
     return;
-  if (GV.hasInitializer() && !isa<UndefValue>(GV.getInitializer())) {
+  Constant *Init = nullptr;
+  if (hasInitializer(&GV)) {
     // Deduce element type and store results in Global Registry.
     // Result is ignored, because TypedPointerType is not supported
     // by llvm IR general logic.
     deduceElementTypeHelper(&GV, false);
-    Constant *Init = GV.getInitializer();
+    Init = GV.getInitializer();
     Type *Ty = isAggrConstForceInt32(Init) ? B.getInt32Ty() : Init->getType();
     Constant *Const = isAggrConstForceInt32(Init) ? B.getInt32(1) : Init;
     auto *InitInst = B.CreateIntrinsic(Intrinsic::spv_init_global,
                                        {GV.getType(), Ty}, {&GV, Const});
     InitInst->setArgOperand(1, Init);
   }
-  if ((!GV.hasInitializer() || isa<UndefValue>(GV.getInitializer())) &&
-      GV.getNumUses() == 0)
+  if (!Init && GV.getNumUses() == 0)
     B.CreateIntrinsic(Intrinsic::spv_unref_global, GV.getType(), &GV);
 }
 
@@ -1780,7 +1846,7 @@ bool SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I,
 
   setInsertPointAfterDef(B, I);
   if (Type *ElemTy = deduceElementType(I, UnknownElemTypeI8)) {
-    buildAssignPtr(B, ElemTy, I);
+    GR->buildAssignPtr(B, ElemTy, I);
     return false;
   }
   return true;
@@ -1803,18 +1869,44 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
       Function *CalledF = CI->getCalledFunction();
       std::string DemangledName =
           getOclOrSpirvBuiltinDemangledName(CalledF->getName());
+      FPDecorationId DecorationId = FPDecorationId::NONE;
       if (DemangledName.length() > 0)
-        DemangledName = SPIRV::lookupBuiltinNameHelper(DemangledName);
+        DemangledName =
+            SPIRV::lookupBuiltinNameHelper(DemangledName, &DecorationId);
       auto ResIt = ResTypeWellKnown.find(DemangledName);
       if (ResIt != ResTypeWellKnown.end()) {
         IsKnown = true;
         setInsertPointAfterDef(B, I);
         switch (ResIt->second) {
         case WellKnownTypes::Event:
-          buildAssignType(B, TargetExtType::get(I->getContext(), "spirv.Event"),
-                          I);
+          GR->buildAssignType(
+              B, TargetExtType::get(I->getContext(), "spirv.Event"), I);
           break;
         }
+      }
+      // check if a floating rounding mode or saturation info is present
+      switch (DecorationId) {
+      default:
+        break;
+      case FPDecorationId::SAT:
+        createSaturatedConversionDecoration(CI, B);
+        break;
+      case FPDecorationId::RTE:
+        createRoundingModeDecoration(
+            CI, SPIRV::FPRoundingMode::FPRoundingMode::RTE, B);
+        break;
+      case FPDecorationId::RTZ:
+        createRoundingModeDecoration(
+            CI, SPIRV::FPRoundingMode::FPRoundingMode::RTZ, B);
+        break;
+      case FPDecorationId::RTP:
+        createRoundingModeDecoration(
+            CI, SPIRV::FPRoundingMode::FPRoundingMode::RTP, B);
+        break;
+      case FPDecorationId::RTN:
+        createRoundingModeDecoration(
+            CI, SPIRV::FPRoundingMode::FPRoundingMode::RTN, B);
+        break;
       }
     }
   }
@@ -1833,7 +1925,7 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
       }
     }
     TypeToAssign = restoreMutatedType(GR, I, TypeToAssign);
-    buildAssignType(B, TypeToAssign, I);
+    GR->buildAssignType(B, TypeToAssign, I);
   }
   for (const auto &Op : I->operands()) {
     if (isa<ConstantPointerNull>(Op) || isa<UndefValue>(Op) ||
@@ -1850,13 +1942,15 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
         Type *OpTy = Op->getType();
         Type *OpTyElem = getPointeeType(OpTy);
         if (OpTyElem) {
-          buildAssignPtr(B, OpTyElem, Op);
+          GR->buildAssignPtr(B, OpTyElem, Op);
         } else if (isPointerTy(OpTy)) {
           Type *ElemTy = GR->findDeducedElementType(Op);
-          buildAssignPtr(B, ElemTy ? ElemTy : deduceElementType(Op, true), Op);
+          GR->buildAssignPtr(B, ElemTy ? ElemTy : deduceElementType(Op, true),
+                             Op);
         } else {
-          CallInst *AssignCI = buildIntrWithMD(Intrinsic::spv_assign_type,
-                                               {OpTy}, Op, Op, {}, B);
+          CallInst *AssignCI =
+              buildIntrWithMD(Intrinsic::spv_assign_type, {OpTy},
+                              getNormalizedPoisonValue(OpTy), Op, {}, B);
           GR->addAssignPtrTypeInstr(Op, AssignCI);
         }
       }
@@ -1864,11 +1958,75 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
   }
 }
 
+bool SPIRVEmitIntrinsics::shouldTryToAddMemAliasingDecoration(
+    Instruction *Inst) {
+  const SPIRVSubtarget *STI = TM->getSubtargetImpl(*Inst->getFunction());
+  if (!STI->canUseExtension(SPIRV::Extension::SPV_INTEL_memory_access_aliasing))
+    return false;
+  // Add aliasing decorations to internal load and store intrinsics
+  // and atomic instructions, skipping atomic store as it won't have ID to
+  // attach the decoration.
+  CallInst *CI = dyn_cast<CallInst>(Inst);
+  if (!CI)
+    return false;
+  if (Function *Fun = CI->getCalledFunction()) {
+    if (Fun->isIntrinsic()) {
+      switch (Fun->getIntrinsicID()) {
+      case Intrinsic::spv_load:
+      case Intrinsic::spv_store:
+        return true;
+      default:
+        return false;
+      }
+    }
+    std::string Name = getOclOrSpirvBuiltinDemangledName(Fun->getName());
+    const std::string Prefix = "__spirv_Atomic";
+    const bool IsAtomic = Name.find(Prefix) == 0;
+
+    if (!Fun->getReturnType()->isVoidTy() && IsAtomic)
+      return true;
+  }
+  return false;
+}
+
 void SPIRVEmitIntrinsics::insertSpirvDecorations(Instruction *I,
                                                  IRBuilder<> &B) {
   if (MDNode *MD = I->getMetadata("spirv.Decorations")) {
     setInsertPointAfterDef(B, I);
     B.CreateIntrinsic(Intrinsic::spv_assign_decoration, {I->getType()},
+                      {I, MetadataAsValue::get(I->getContext(), MD)});
+  }
+  // Lower alias.scope/noalias metadata
+  {
+    auto processMemAliasingDecoration = [&](unsigned Kind) {
+      if (MDNode *AliasListMD = I->getMetadata(Kind)) {
+        if (shouldTryToAddMemAliasingDecoration(I)) {
+          uint32_t Dec = Kind == LLVMContext::MD_alias_scope
+                             ? SPIRV::Decoration::AliasScopeINTEL
+                             : SPIRV::Decoration::NoAliasINTEL;
+          SmallVector<Value *, 3> Args = {
+              I, ConstantInt::get(B.getInt32Ty(), Dec),
+              MetadataAsValue::get(I->getContext(), AliasListMD)};
+          setInsertPointAfterDef(B, I);
+          B.CreateIntrinsic(Intrinsic::spv_assign_aliasing_decoration,
+                            {I->getType()}, {Args});
+        }
+      }
+    };
+    processMemAliasingDecoration(LLVMContext::MD_alias_scope);
+    processMemAliasingDecoration(LLVMContext::MD_noalias);
+  }
+  // MD_fpmath
+  if (MDNode *MD = I->getMetadata(LLVMContext::MD_fpmath)) {
+    const SPIRVSubtarget *STI = TM->getSubtargetImpl(*I->getFunction());
+    bool AllowFPMaxError =
+        STI->canUseExtension(SPIRV::Extension::SPV_INTEL_fp_max_error);
+    if (!AllowFPMaxError)
+      return;
+
+    setInsertPointAfterDef(B, I);
+    B.CreateIntrinsic(Intrinsic::spv_assign_fpmaxerror_decoration,
+                      {I->getType()},
                       {I, MetadataAsValue::get(I->getContext(), MD)});
   }
 }
@@ -1905,7 +2063,7 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
       Type *OpTy = Op->getType();
       Value *OpTyVal = Op;
       if (OpTy->isTargetExtTy())
-        OpTyVal = PoisonValue::get(OpTy);
+        OpTyVal = getNormalizedPoisonValue(OpTy);
       CallInst *NewOp =
           buildIntrWithMD(Intrinsic::spv_track_constant,
                           {OpTy, OpTyVal->getType()}, Op, OpTyVal, {}, B);
@@ -1913,14 +2071,14 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
       if (!IsConstComposite && isPointerTy(OpTy) &&
           (OpElemTy = GR->findDeducedElementType(Op)) != nullptr &&
           OpElemTy != IntegerType::getInt8Ty(I->getContext())) {
-        buildAssignPtr(B, IntegerType::getInt8Ty(I->getContext()), NewOp);
+        GR->buildAssignPtr(B, IntegerType::getInt8Ty(I->getContext()), NewOp);
         SmallVector<Type *, 2> Types = {OpTy, OpTy};
         SmallVector<Value *, 2> Args = {
-            NewOp, buildMD(PoisonValue::get(OpElemTy)),
+            NewOp, buildMD(getNormalizedPoisonValue(OpElemTy)),
             B.getInt32(getPointerAddressSpace(OpTy))};
         CallInst *PtrCasted =
             B.CreateIntrinsic(Intrinsic::spv_ptrcast, {Types}, Args);
-        buildAssignPtr(B, OpElemTy, PtrCasted);
+        GR->buildAssignPtr(B, OpElemTy, PtrCasted);
         NewOp = PtrCasted;
       }
       I->setOperand(OpNo, NewOp);
@@ -2002,7 +2160,7 @@ void SPIRVEmitIntrinsics::processParamTypesByFunHeader(Function *F,
       continue;
     if (hasPointeeTypeAttr(Arg) &&
         (ElemTy = getPointeeTypeByAttr(Arg)) != nullptr) {
-      buildAssignPtr(B, ElemTy, Arg);
+      GR->buildAssignPtr(B, ElemTy, Arg);
       continue;
     }
     // search in function's call sites
@@ -2018,7 +2176,7 @@ void SPIRVEmitIntrinsics::processParamTypesByFunHeader(Function *F,
         break;
     }
     if (ElemTy) {
-      buildAssignPtr(B, ElemTy, Arg);
+      GR->buildAssignPtr(B, ElemTy, Arg);
       continue;
     }
     if (HaveFunPtrs) {
@@ -2030,7 +2188,7 @@ void SPIRVEmitIntrinsics::processParamTypesByFunHeader(Function *F,
           SmallVector<std::pair<Value *, unsigned>> Ops;
           deduceOperandElementTypeFunctionPointer(CI, Ops, ElemTy, false);
           if (ElemTy) {
-            buildAssignPtr(B, ElemTy, Arg);
+            GR->buildAssignPtr(B, ElemTy, Arg);
             break;
           }
         }
@@ -2049,11 +2207,11 @@ void SPIRVEmitIntrinsics::processParamTypes(Function *F, IRBuilder<> &B) {
     if (!ElemTy && (ElemTy = deduceFunParamElementType(F, OpIdx)) != nullptr) {
       if (CallInst *AssignCI = GR->findAssignPtrTypeInstr(Arg)) {
         DenseSet<std::pair<Value *, Value *>> VisitedSubst;
-        updateAssignType(AssignCI, Arg, PoisonValue::get(ElemTy));
+        GR->updateAssignType(AssignCI, Arg, getNormalizedPoisonValue(ElemTy));
         propagateElemType(Arg, IntegerType::getInt8Ty(F->getContext()),
                           VisitedSubst);
       } else {
-        buildAssignPtr(B, ElemTy, Arg);
+        GR->buildAssignPtr(B, ElemTy, Arg);
       }
     }
   }
@@ -2103,7 +2261,7 @@ bool SPIRVEmitIntrinsics::processFunctionPointers(Module &M) {
           continue;
         if (II->getIntrinsicID() == Intrinsic::spv_assign_ptr_type ||
             II->getIntrinsicID() == Intrinsic::spv_ptrcast) {
-          updateAssignType(II, &F, PoisonValue::get(FPElemTy));
+          GR->updateAssignType(II, &F, getNormalizedPoisonValue(FPElemTy));
           break;
         }
       }
@@ -2127,12 +2285,64 @@ bool SPIRVEmitIntrinsics::processFunctionPointers(Module &M) {
   for (Function *F : Worklist) {
     SmallVector<Value *> Args;
     for (const auto &Arg : F->args())
-      Args.push_back(PoisonValue::get(Arg.getType()));
+      Args.push_back(getNormalizedPoisonValue(Arg.getType()));
     IRB.CreateCall(F, Args);
   }
   IRB.CreateRetVoid();
 
   return true;
+}
+
+// Apply types parsed from demangled function declarations.
+void SPIRVEmitIntrinsics::applyDemangledPtrArgTypes(IRBuilder<> &B) {
+  DenseMap<Function *, CallInst *> Ptrcasts;
+  for (auto It : FDeclPtrTys) {
+    Function *F = It.first;
+    for (auto *U : F->users()) {
+      CallInst *CI = dyn_cast<CallInst>(U);
+      if (!CI || CI->getCalledFunction() != F)
+        continue;
+      unsigned Sz = CI->arg_size();
+      for (auto [Idx, ElemTy] : It.second) {
+        if (Idx >= Sz)
+          continue;
+        Value *Param = CI->getArgOperand(Idx);
+        if (GR->findDeducedElementType(Param) || isa<GlobalValue>(Param))
+          continue;
+        if (Argument *Arg = dyn_cast<Argument>(Param)) {
+          if (!hasPointeeTypeAttr(Arg)) {
+            B.SetInsertPointPastAllocas(Arg->getParent());
+            B.SetCurrentDebugLocation(DebugLoc());
+            GR->buildAssignPtr(B, ElemTy, Arg);
+          }
+        } else if (isa<GetElementPtrInst>(Param)) {
+          replaceUsesOfWithSpvPtrcast(Param, normalizeType(ElemTy), CI,
+                                      Ptrcasts);
+        } else if (isa<Instruction>(Param)) {
+          GR->addDeducedElementType(Param, normalizeType(ElemTy));
+          // insertAssignTypeIntrs() will complete buildAssignPtr()
+        } else {
+          B.SetInsertPoint(CI->getParent()
+                               ->getParent()
+                               ->getEntryBlock()
+                               .getFirstNonPHIOrDbgOrAlloca());
+          GR->buildAssignPtr(B, ElemTy, Param);
+        }
+        CallInst *Ref = dyn_cast<CallInst>(Param);
+        if (!Ref)
+          continue;
+        Function *RefF = Ref->getCalledFunction();
+        if (!RefF || !isPointerTy(RefF->getReturnType()) ||
+            GR->findDeducedElementType(RefF))
+          continue;
+        ElemTy = normalizeType(ElemTy);
+        GR->addDeducedElementType(RefF, ElemTy);
+        GR->addReturnType(
+            RefF, TypedPointerType::get(
+                      ElemTy, getPointerAddressSpace(RefF->getReturnType())));
+      }
+    }
+  }
 }
 
 bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
@@ -2141,8 +2351,6 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
 
   const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(Func);
   GR = ST.getSPIRVGlobalRegistry();
-  InstrSet = ST.isOpenCLEnv() ? SPIRV::InstructionSet::OpenCL_std
-                              : SPIRV::InstructionSet::GLSL_std_450;
 
   if (!CurrF)
     HaveFunPtrs =
@@ -2153,6 +2361,15 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   AggrConsts.clear();
   AggrConstTypes.clear();
   AggrStores.clear();
+
+  // fix GEP result types ahead of inference
+  for (auto &I : instructions(Func)) {
+    auto *Ref = dyn_cast<GetElementPtrInst>(&I);
+    if (!Ref || GR->findDeducedElementType(Ref))
+      continue;
+    if (Type *GepTy = getGEPType(Ref))
+      GR->addDeducedElementType(Ref, normalizeType(GepTy));
+  }
 
   processParamTypesByFunHeader(CurrF, B);
 
@@ -2177,6 +2394,8 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   for (auto &I : instructions(Func))
     Worklist.push_back(&I);
 
+  applyDemangledPtrArgTypes(B);
+
   // Pass forward: use operand to deduce instructions result.
   for (auto &I : Worklist) {
     // Don't emit intrinsincs for convergence intrinsics.
@@ -2192,13 +2411,16 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     // already, and force it to be i8 if not
     if (Postpone && !GR->findAssignPtrTypeInstr(I))
       insertAssignPtrTypeIntrs(I, B, true);
+
+    if (auto *FPI = dyn_cast<ConstrainedFPIntrinsic>(I))
+      useRoundingMode(FPI, B);
   }
 
   // Pass backward: use instructions results to specify/update/cast operands
   // where needed.
-  SmallPtrSet<Instruction *, 4> UncompleteRets;
+  SmallPtrSet<Instruction *, 4> IncompleteRets;
   for (auto &I : llvm::reverse(instructions(Func)))
-    deduceOperandElementType(&I, &UncompleteRets);
+    deduceOperandElementType(&I, &IncompleteRets);
 
   // Pass forward for PHIs only, their operands are not preceed the instruction
   // in meaning of `instructions(Func)`.
@@ -2267,7 +2489,7 @@ bool SPIRVEmitIntrinsics::postprocessTypes(Module &M) {
 
   for (auto &F : M) {
     CurrF = &F;
-    SmallPtrSet<Instruction *, 4> UncompleteRets;
+    SmallPtrSet<Instruction *, 4> IncompleteRets;
     for (auto &I : llvm::reverse(instructions(F))) {
       auto It = ToProcess.find(&I);
       if (It == ToProcess.end())
@@ -2275,7 +2497,7 @@ bool SPIRVEmitIntrinsics::postprocessTypes(Module &M) {
       It->second.remove_if([this](Value *V) { return !isTodoType(V); });
       if (It->second.size() == 0)
         continue;
-      deduceOperandElementType(&I, &UncompleteRets, &It->second, true);
+      deduceOperandElementType(&I, &IncompleteRets, &It->second, true);
       if (TodoTypeSz == 0)
         return true;
     }
@@ -2284,8 +2506,53 @@ bool SPIRVEmitIntrinsics::postprocessTypes(Module &M) {
   return SzTodo > TodoTypeSz;
 }
 
+// Parse and store argument types of function declarations where needed.
+void SPIRVEmitIntrinsics::parseFunDeclarations(Module &M) {
+  for (auto &F : M) {
+    if (!F.isDeclaration() || F.isIntrinsic())
+      continue;
+    // get the demangled name
+    std::string DemangledName = getOclOrSpirvBuiltinDemangledName(F.getName());
+    if (DemangledName.empty())
+      continue;
+    // allow only OpGroupAsyncCopy use case at the moment
+    const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(F);
+    auto [Grp, Opcode, ExtNo] = SPIRV::mapBuiltinToOpcode(
+        DemangledName, ST.getPreferredInstructionSet());
+    if (Opcode != SPIRV::OpGroupAsyncCopy)
+      continue;
+    // find pointer arguments
+    SmallVector<unsigned> Idxs;
+    for (unsigned OpIdx = 0; OpIdx < F.arg_size(); ++OpIdx) {
+      Argument *Arg = F.getArg(OpIdx);
+      if (isPointerTy(Arg->getType()) && !hasPointeeTypeAttr(Arg))
+        Idxs.push_back(OpIdx);
+    }
+    if (!Idxs.size())
+      continue;
+    // parse function arguments
+    LLVMContext &Ctx = F.getContext();
+    SmallVector<StringRef, 10> TypeStrs;
+    SPIRV::parseBuiltinTypeStr(TypeStrs, DemangledName, Ctx);
+    if (!TypeStrs.size())
+      continue;
+    // find type info for pointer arguments
+    for (unsigned Idx : Idxs) {
+      if (Idx >= TypeStrs.size())
+        continue;
+      if (Type *ElemTy =
+              SPIRV::parseBuiltinCallArgumentType(TypeStrs[Idx].trim(), Ctx))
+        if (TypedPointerType::isValidElementType(ElemTy) &&
+            !ElemTy->isTargetExtTy())
+          FDeclPtrTys[&F].push_back(std::make_pair(Idx, ElemTy));
+    }
+  }
+}
+
 bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
   bool Changed = false;
+
+  parseFunDeclarations(M);
 
   TodoType.clear();
   for (auto &F : M)

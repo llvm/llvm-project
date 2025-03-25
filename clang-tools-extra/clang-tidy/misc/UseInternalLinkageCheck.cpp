@@ -52,7 +52,7 @@ AST_MATCHER(FunctionDecl, hasBody) { return Node.hasBody(); }
 static bool isInMainFile(SourceLocation L, SourceManager &SM,
                          const FileExtensionsSet &HeaderFileExtensions) {
   for (;;) {
-    if (utils::isSpellingLocInHeaderFile(L, SM, HeaderFileExtensions))
+    if (utils::isExpansionLocInHeaderFile(L, SM, HeaderFileExtensions))
       return false;
     if (SM.isInMainFile(L))
       return true;
@@ -125,7 +125,7 @@ void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
                     exportDecl()))))));
   Finder->addMatcher(
       functionDecl(Common, hasBody(),
-                   unless(anyOf(cxxMethodDecl(),
+                   unless(anyOf(cxxMethodDecl(), isConsteval(),
                                 isAllocationOrDeallocationOverloadedFunction(),
                                 isMain())))
           .bind("fn"),

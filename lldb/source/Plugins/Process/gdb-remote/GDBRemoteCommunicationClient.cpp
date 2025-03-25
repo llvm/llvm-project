@@ -199,6 +199,18 @@ uint64_t GDBRemoteCommunicationClient::GetRemoteMaxPacketSize() {
   return m_max_packet_size;
 }
 
+bool GDBRemoteCommunicationClient::GetReverseContinueSupported() {
+  if (m_supports_reverse_continue == eLazyBoolCalculate)
+    GetRemoteQSupported();
+  return m_supports_reverse_continue == eLazyBoolYes;
+}
+
+bool GDBRemoteCommunicationClient::GetReverseStepSupported() {
+  if (m_supports_reverse_step == eLazyBoolCalculate)
+    GetRemoteQSupported();
+  return m_supports_reverse_step == eLazyBoolYes;
+}
+
 bool GDBRemoteCommunicationClient::QueryNoAckModeSupported() {
   if (m_supports_not_sending_acks == eLazyBoolCalculate) {
     m_send_acks = true;
@@ -275,7 +287,6 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_supports_vCont_s = eLazyBoolCalculate;
     m_supports_vCont_S = eLazyBoolCalculate;
     m_supports_p = eLazyBoolCalculate;
-    m_supports_x = eLazyBoolCalculate;
     m_supports_QSaveRegisterState = eLazyBoolCalculate;
     m_qHostInfo_is_valid = eLazyBoolCalculate;
     m_curr_pid_is_valid = eLazyBoolCalculate;
@@ -295,6 +306,9 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_supports_qXfer_siginfo_read = eLazyBoolCalculate;
     m_supports_augmented_libraries_svr4_read = eLazyBoolCalculate;
     m_uses_native_signals = eLazyBoolCalculate;
+    m_x_packet_state.reset();
+    m_supports_reverse_continue = eLazyBoolCalculate;
+    m_supports_reverse_step = eLazyBoolCalculate;
     m_supports_qProcessInfoPID = true;
     m_supports_qfProcessInfo = true;
     m_supports_qUserName = true;
@@ -348,6 +362,9 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   m_supports_memory_tagging = eLazyBoolNo;
   m_supports_qSaveCore = eLazyBoolNo;
   m_uses_native_signals = eLazyBoolNo;
+  m_x_packet_state.reset();
+  m_supports_reverse_continue = eLazyBoolNo;
+  m_supports_reverse_step = eLazyBoolNo;
 
   m_max_packet_size = UINT64_MAX; // It's supposed to always be there, but if
                                   // not, we assume no limit
@@ -401,6 +418,12 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_supports_qSaveCore = eLazyBoolYes;
       else if (x == "native-signals+")
         m_uses_native_signals = eLazyBoolYes;
+      else if (x == "binary-upload+")
+        m_x_packet_state = xPacketState::Prefixed;
+      else if (x == "ReverseContinue+")
+        m_supports_reverse_continue = eLazyBoolYes;
+      else if (x == "ReverseStep+")
+        m_supports_reverse_step = eLazyBoolYes;
       // Look for a list of compressions in the features list e.g.
       // qXfer:features:read+;PacketSize=20000;qEcho+;SupportedCompressions=zlib-
       // deflate,lzma
@@ -715,19 +738,20 @@ Status GDBRemoteCommunicationClient::WriteMemoryTags(
   return status;
 }
 
-bool GDBRemoteCommunicationClient::GetxPacketSupported() {
-  if (m_supports_x == eLazyBoolCalculate) {
+GDBRemoteCommunicationClient::xPacketState
+GDBRemoteCommunicationClient::GetxPacketState() {
+  if (!m_x_packet_state)
+    GetRemoteQSupported();
+  if (!m_x_packet_state) {
     StringExtractorGDBRemote response;
-    m_supports_x = eLazyBoolNo;
-    char packet[256];
-    snprintf(packet, sizeof(packet), "x0,0");
-    if (SendPacketAndWaitForResponse(packet, response) ==
+    m_x_packet_state = xPacketState::Unimplemented;
+    if (SendPacketAndWaitForResponse("x0,0", response) ==
         PacketResult::Success) {
       if (response.IsOKResponse())
-        m_supports_x = eLazyBoolYes;
+        m_x_packet_state = xPacketState::Bare;
     }
   }
-  return m_supports_x;
+  return *m_x_packet_state;
 }
 
 lldb::pid_t GDBRemoteCommunicationClient::GetCurrentProcessID(bool allow_lazy) {
@@ -1621,6 +1645,7 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
           region_info.SetName(name.c_str());
         } else if (name == "flags") {
           region_info.SetMemoryTagged(MemoryRegionInfo::eNo);
+          region_info.SetIsShadowStack(MemoryRegionInfo::eNo);
 
           llvm::StringRef flags = value;
           llvm::StringRef flag;
@@ -1629,10 +1654,10 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
             std::tie(flag, flags) = flags.split(' ');
             // To account for trailing whitespace
             if (flag.size()) {
-              if (flag == "mt") {
+              if (flag == "mt")
                 region_info.SetMemoryTagged(MemoryRegionInfo::eYes);
-                break;
-              }
+              else if (flag == "ss")
+                region_info.SetIsShadowStack(MemoryRegionInfo::eYes);
             }
           }
         } else if (name == "type") {

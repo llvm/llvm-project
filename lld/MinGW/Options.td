@@ -202,6 +202,7 @@ def _HASH_HASH_HASH : Flag<["-"], "###">,
     HelpText<"Print (but do not run) the commands to run for this compilation">;
 def appcontainer: F<"appcontainer">, HelpText<"Set the appcontainer flag in the executable">;
 defm delayload: Eq<"delayload", "DLL to load only on demand">;
+defm dependent_load_flag: EEq<"dependent-load-flag", "Override default LibraryLoad flags">;
 defm mllvm: EqNoHelp<"mllvm">;
 defm pdb: Eq<"pdb", "Output PDB debug info file, chosen implicitly if the argument is empty">;
 defm Xlink : Eq<"Xlink", "Pass <arg> to the COFF linker">, MetaVarName<"<arg>">;

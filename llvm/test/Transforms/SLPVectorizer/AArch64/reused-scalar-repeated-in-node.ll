@@ -48,12 +48,12 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP15:%.*]] = phi <8 x float> [ [[TMP17]], %[[BB77]] ], [ [[TMP36:%.*]], %[[BB78]] ]
 ; CHECK-NEXT:    [[TMP16:%.*]] = phi <2 x float> [ [[TMP31]], %[[BB77]] ], [ [[TMP37:%.*]], %[[BB78]] ]
 ; CHECK-NEXT:    [[TMP38:%.*]] = shufflevector <8 x float> [[TMP15]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 1, i32 0, i32 3, i32 1, i32 3, i32 5, i32 3, i32 1, i32 0, i32 4, i32 5, i32 5>
-; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <8 x float> [[TMP15]], <8 x float> poison, <16 x i32> <i32 2, i32 poison, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 2, i32 5, i32 4, i32 4>
+; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <8 x float> [[TMP15]], <8 x float> poison, <16 x i32> <i32 2, i32 poison, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <2 x float> [[TMP16]], <2 x float> poison, <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <16 x float> [[TMP19]], <16 x float> [[TMP20]], <16 x i32> <i32 0, i32 17, i32 2, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <16 x float> [[TMP21]], <16 x float> [[TMP20]], <16 x i32> <i32 0, i32 17, i32 2, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <8 x float> [[TMP15]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <16 x float> [[TMP21]], <16 x float> [[TMP22]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 18, i32 6, i32 7, i32 8, i32 20, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <16 x float> [[TMP23]], <16 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 1, i32 5, i32 3, i32 1, i32 3, i32 9, i32 3, i32 1, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP40:%.*]] = shufflevector <16 x float> [[TMP23]], <16 x float> [[TMP22]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 18, i32 6, i32 7, i32 8, i32 20, i32 10, i32 11, i32 12, i32 21, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <16 x float> [[TMP40]], <16 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 1, i32 5, i32 3, i32 1, i32 3, i32 9, i32 3, i32 1, i32 5, i32 13, i32 9, i32 9>
 ; CHECK-NEXT:    [[TMP18:%.*]] = fmul fast <16 x float> [[TMP24]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = fmul fast <16 x float> [[TMP38]], [[TMP25]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = fadd fast <16 x float> [[TMP26]], [[TMP18]]

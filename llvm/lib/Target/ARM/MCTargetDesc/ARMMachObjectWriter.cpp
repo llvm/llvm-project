@@ -16,8 +16,11 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCMachObjectWriter.h"
+#include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -269,20 +272,20 @@ void ARMMachObjectWriter::recordARMScatteredRelocation(
   FixedValue += SecAddr;
   uint32_t Value2 = 0;
 
-  if (const MCSymbolRefExpr *B = Target.getSymB()) {
+  if (const MCSymbol *SB = Target.getSubSym()) {
     assert(Type == MachO::ARM_RELOC_VANILLA && "invalid reloc for 2 symbols");
-    const MCSymbol *SB = &B->getSymbol();
 
     if (!SB->getFragment()) {
-      Asm.getContext().reportError(Fixup.getLoc(),
-                         "symbol '" + B->getSymbol().getName() +
-                         "' can not be undefined in a subtraction expression");
+      Asm.getContext().reportError(
+          Fixup.getLoc(),
+          "symbol '" + SB->getName() +
+              "' can not be undefined in a subtraction expression");
       return;
     }
 
     // Select the appropriate difference relocation type.
     Type = MachO::ARM_RELOC_SECTDIFF;
-    Value2 = Writer->getSymbolAddress(B->getSymbol(), Asm);
+    Value2 = Writer->getSymbolAddress(*SB, Asm);
     FixedValue -= Writer->getSectionAddress(SB->getFragment()->getParent());
   }
 
@@ -375,7 +378,7 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
   // If this is a difference or a defined symbol plus an offset, then we need a
   // scattered relocation entry.  Differences always require scattered
   // relocations.
-  if (Target.getSymB()) {
+  if (Target.getSubSym()) {
     if (RelocType == MachO::ARM_RELOC_HALF)
       return recordARMScatteredHalfRelocation(Writer, Asm, Fragment, Fixup,
                                               Target, FixedValue);
@@ -488,4 +491,24 @@ std::unique_ptr<MCObjectTargetWriter>
 llvm::createARMMachObjectWriter(bool Is64Bit, uint32_t CPUType,
                                 uint32_t CPUSubtype) {
   return std::make_unique<ARMMachObjectWriter>(Is64Bit, CPUType, CPUSubtype);
+}
+
+namespace {
+class ARMTargetMachOStreamer : public ARMTargetStreamer {
+public:
+  ARMTargetMachOStreamer(MCStreamer &S) : ARMTargetStreamer(S) {}
+  MCObjectStreamer &getStreamer() {
+    return static_cast<MCObjectStreamer &>(Streamer);
+  }
+  void emitThumbFunc(MCSymbol *Symbol) override {
+    // Remember that the function is a thumb function. Fixup and relocation
+    // values will need adjusted.
+    getStreamer().getAssembler().setIsThumbFunc(Symbol);
+    cast<MCSymbolMachO>(Symbol)->setThumbFunc();
+  }
+};
+} // namespace
+
+MCTargetStreamer *llvm::createARMObjectTargetMachOStreamer(MCStreamer &S) {
+  return new ARMTargetMachOStreamer(S);
 }

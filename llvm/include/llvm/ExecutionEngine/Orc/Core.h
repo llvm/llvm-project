@@ -51,6 +51,26 @@ enum class SymbolState : uint8_t;
 using ResourceTrackerSP = IntrusiveRefCntPtr<ResourceTracker>;
 using JITDylibSP = IntrusiveRefCntPtr<JITDylib>;
 
+/// A definition of a Symbol within a JITDylib.
+class SymbolInstance {
+public:
+  using LookupAsyncOnCompleteFn =
+      unique_function<void(Expected<ExecutorSymbolDef>)>;
+
+  SymbolInstance(JITDylibSP JD, SymbolStringPtr Name)
+      : JD(std::move(JD)), Name(std::move(Name)) {}
+
+  const JITDylib &getJITDylib() const { return *JD; }
+  const SymbolStringPtr &getName() const { return Name; }
+
+  Expected<ExecutorSymbolDef> lookup() const;
+  void lookupAsync(LookupAsyncOnCompleteFn OnComplete) const;
+
+private:
+  JITDylibSP JD;
+  SymbolStringPtr Name;
+};
+
 using ResourceKey = uintptr_t;
 
 /// API to remove / transfer ownership of JIT resources.
@@ -105,7 +125,14 @@ private:
 class ResourceManager {
 public:
   virtual ~ResourceManager();
+
+  /// This function will be called *outside* the session lock. ResourceManagers
+  /// should perform book-keeping under the session lock, and any expensive
+  /// cleanup outside the session lock.
   virtual Error handleRemoveResources(JITDylib &JD, ResourceKey K) = 0;
+
+  /// This function will be called *inside* the session lock. ResourceManagers
+  /// DO NOT need to re-lock the session.
   virtual void handleTransferResources(JITDylib &JD, ResourceKey DstK,
                                        ResourceKey SrcK) = 0;
 };
@@ -172,6 +199,11 @@ public:
   using const_iterator = UnderlyingVector::const_iterator;
 
   SymbolLookupSet() = default;
+
+  SymbolLookupSet(std::initializer_list<value_type> Elems) {
+    for (auto &E : Elems)
+      Symbols.push_back(std::move(E));
+  }
 
   explicit SymbolLookupSet(
       SymbolStringPtr Name,
@@ -549,6 +581,9 @@ public:
   ///        this asserts that all symbols being tracked have been either
   ///        emitted or notified of an error.
   ~MaterializationResponsibility();
+
+  /// Return the ResourceTracker associated with this instance.
+  const ResourceTrackerSP &getResourceTracker() const { return RT; }
 
   /// Runs the given callback under the session lock, passing in the associated
   /// ResourceKey. This is the safe way to associate resources with trackers.
@@ -1169,8 +1204,13 @@ private:
 
   JITDylib(ExecutionSession &ES, std::string Name);
 
-  std::pair<AsynchronousSymbolQuerySet, std::shared_ptr<SymbolDependenceMap>>
-  IL_removeTracker(ResourceTracker &RT);
+  struct RemoveTrackerResult {
+    AsynchronousSymbolQuerySet QueriesToFail;
+    std::shared_ptr<SymbolDependenceMap> FailedSymbols;
+    std::vector<std::unique_ptr<MaterializationUnit>> DefunctMUs;
+  };
+
+  RemoveTrackerResult IL_removeTracker(ResourceTracker &RT);
 
   void transferTracker(ResourceTracker &DstRT, ResourceTracker &SrcRT);
 
@@ -1277,6 +1317,7 @@ public:
   MaterializationTask(std::unique_ptr<MaterializationUnit> MU,
                       std::unique_ptr<MaterializationResponsibility> MR)
       : MU(std::move(MU)), MR(std::move(MR)) {}
+  ~MaterializationTask() override;
   void printDescription(raw_ostream &OS) override;
   void run() override;
 
@@ -1515,18 +1556,60 @@ public:
     EPC->getDispatcher().dispatch(std::move(T));
   }
 
-  /// Run a wrapper function in the executor.
+  /// Returns the bootstrap map.
+  const StringMap<std::vector<char>> &getBootstrapMap() const {
+    return EPC->getBootstrapMap();
+  }
+
+  /// Look up and SPS-deserialize a bootstrap map value.
+  template <typename T, typename SPSTagT>
+  Error getBootstrapMapValue(StringRef Key, std::optional<T> &Val) const {
+    return EPC->getBootstrapMapValue<T, SPSTagT>(Key, Val);
+  }
+
+  /// Returns the bootstrap symbol map.
+  const StringMap<ExecutorAddr> &getBootstrapSymbolsMap() const {
+    return EPC->getBootstrapSymbolsMap();
+  }
+
+  /// For each (ExecutorAddr&, StringRef) pair, looks up the string in the
+  /// bootstrap symbols map and writes its address to the ExecutorAddr if
+  /// found. If any symbol is not found then the function returns an error.
+  Error getBootstrapSymbols(
+      ArrayRef<std::pair<ExecutorAddr &, StringRef>> Pairs) const {
+    return EPC->getBootstrapSymbols(Pairs);
+  }
+
+  /// Run a wrapper function in the executor. The given WFRHandler will be
+  /// called on the result when it is returned.
   ///
   /// The wrapper function should be callable as:
   ///
   /// \code{.cpp}
   ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
   /// \endcode{.cpp}
-  ///
-  /// The given OnComplete function will be called to return the result.
-  template <typename... ArgTs>
-  void callWrapperAsync(ArgTs &&... Args) {
-    EPC->callWrapperAsync(std::forward<ArgTs>(Args)...);
+  void callWrapperAsync(ExecutorAddr WrapperFnAddr,
+                        ExecutorProcessControl::IncomingWFRHandler OnComplete,
+                        ArrayRef<char> ArgBuffer) {
+    EPC->callWrapperAsync(WrapperFnAddr, std::move(OnComplete), ArgBuffer);
+  }
+
+  /// Run a wrapper function in the executor using the given Runner to dispatch
+  /// OnComplete when the result is ready.
+  template <typename RunPolicyT, typename FnT>
+  void callWrapperAsync(RunPolicyT &&Runner, ExecutorAddr WrapperFnAddr,
+                        FnT &&OnComplete, ArrayRef<char> ArgBuffer) {
+    EPC->callWrapperAsync(std::forward<RunPolicyT>(Runner), WrapperFnAddr,
+                          std::forward<FnT>(OnComplete), ArgBuffer);
+  }
+
+  /// Run a wrapper function in the executor. OnComplete will be dispatched
+  /// as a GenericNamedTask using this instance's TaskDispatch object.
+  template <typename FnT>
+  void callWrapperAsync(ExecutorAddr WrapperFnAddr, FnT &&OnComplete,
+                        ArrayRef<char> ArgBuffer) {
+    EPC->callWrapperAsync(WrapperFnAddr, std::forward<FnT>(OnComplete),
+                          ArgBuffer);
   }
 
   /// Run a wrapper function in the executor. The wrapper function should be
@@ -1570,11 +1653,11 @@ public:
   /// (using registerJITDispatchHandler) and called from the executor.
   template <typename SPSSignature, typename HandlerT>
   static JITDispatchHandlerFunction wrapAsyncWithSPS(HandlerT &&H) {
-    return [H = std::forward<HandlerT>(H)](
-               SendResultFunction SendResult,
-               const char *ArgData, size_t ArgSize) mutable {
-      shared::WrapperFunction<SPSSignature>::handleAsync(ArgData, ArgSize, H,
-                                                         std::move(SendResult));
+    return [H = std::forward<HandlerT>(H)](SendResultFunction SendResult,
+                                           const char *ArgData,
+                                           size_t ArgSize) mutable {
+      shared::WrapperFunction<SPSSignature>::handleAsync(
+          ArgData, ArgSize, std::move(SendResult), H);
     };
   }
 
@@ -1747,6 +1830,10 @@ private:
   DenseMap<ExecutorAddr, std::shared_ptr<JITDispatchHandlerFunction>>
       JITDispatchHandlers;
 };
+
+inline Expected<ExecutorSymbolDef> SymbolInstance::lookup() const {
+  return JD->getExecutionSession().lookup({JD.get()}, Name);
+}
 
 template <typename Func> Error ResourceTracker::withResourceKeyDo(Func &&F) {
   return getJITDylib().getExecutionSession().runSessionLocked([&]() -> Error {

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=msp430 | grep rra | count 1
+; RUN: llc < %s -mtriple=msp430 | grep rra | count 1
 
 define i16 @lsr2u16(i16 %x.arg) nounwind {
         %retval = alloca i16

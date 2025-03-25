@@ -11,8 +11,10 @@
 
 #include "DWARFDIE.h"
 #include "DWARFDebugInfoEntry.h"
+#include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
 #include "llvm/Support/RWMutex.h"
@@ -33,12 +35,11 @@ enum DWARFProducer {
   eProducerInvalid = 0,
   eProducerClang,
   eProducerGCC,
-  eProducerLLVMGCC,
   eProducerSwift,
   eProducerOther
 };
 
-class DWARFUnit : public UserID {
+class DWARFUnit : public DWARFExpression::Delegate, public UserID {
   using die_iterator_range =
       llvm::iterator_range<DWARFDebugInfoEntry::collection::iterator>;
 
@@ -116,12 +117,14 @@ public:
   size_t GetDebugInfoSize() const;
   // Size of the CU data incl. header but without initial length.
   dw_offset_t GetLength() const { return m_header.getLength(); }
-  uint16_t GetVersion() const { return m_header.getVersion(); }
+  uint16_t GetVersion() const override { return m_header.getVersion(); }
   const llvm::DWARFAbbreviationDeclarationSet *GetAbbreviations() const;
   dw_offset_t GetAbbrevOffset() const;
-  uint8_t GetAddressByteSize() const { return m_header.getAddressByteSize(); }
+  uint8_t GetAddressByteSize() const override {
+    return m_header.getAddressByteSize();
+  }
   dw_addr_t GetAddrBase() const { return m_addr_base.value_or(0); }
-  dw_addr_t GetBaseAddress() const { return m_base_addr; }
+  dw_addr_t GetBaseAddress() const override { return m_base_addr; }
   dw_offset_t GetLineTableOffset();
   dw_addr_t GetRangesBase() const { return m_ranges_base; }
   dw_addr_t GetStrOffsetsBase() const { return m_str_offsets_base; }
@@ -131,7 +134,7 @@ public:
   void SetStrOffsetsBase(dw_offset_t str_offsets_base);
   virtual void BuildAddressRangeTable(DWARFDebugAranges *debug_aranges) = 0;
 
-  dw_addr_t ReadAddressFromDebugAddrSection(uint32_t index) const;
+  dw_addr_t ReadAddressFromDebugAddrSection(uint32_t index) const override;
 
   lldb::ByteOrder GetByteOrder() const;
 
@@ -149,6 +152,20 @@ public:
   /// parsing the entire compile unit. An empty is string is returned upon
   /// error or if the attribute is not present.
   llvm::StringRef PeekDIEName(dw_offset_t die_offset);
+
+  llvm::Expected<std::pair<uint64_t, bool>>
+  GetDIEBitSizeAndSign(uint64_t relative_die_offset) const override;
+
+  lldb::offset_t GetVendorDWARFOpcodeSize(const DataExtractor &data,
+                                          const lldb::offset_t data_offset,
+                                          const uint8_t op) const override;
+
+  bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
+                              lldb::offset_t &offset,
+                              std::vector<Value> &stack) const override;
+
+  bool ParseDWARFLocationList(const DataExtractor &data,
+                              DWARFExpressionList &loc_list) const;
 
   DWARFUnit &GetNonSkeletonUnit();
 
@@ -171,10 +188,6 @@ public:
   DWARFCompileUnit *GetSkeletonUnit();
 
   bool LinkToSkeletonUnit(DWARFUnit &skeleton_unit);
-
-  bool Supports_DW_AT_APPLE_objc_complete_type();
-
-  bool DW_AT_decl_file_attributes_are_invalid();
 
   bool Supports_unnamed_objc_bitfields();
 
@@ -213,12 +226,14 @@ public:
 
   /// Return a list of address ranges resulting from a (possibly encoded)
   /// range list starting at a given offset in the appropriate ranges section.
-  llvm::Expected<DWARFRangeList> FindRnglistFromOffset(dw_offset_t offset);
+  llvm::Expected<llvm::DWARFAddressRangesVector>
+  FindRnglistFromOffset(dw_offset_t offset);
 
   /// Return a list of address ranges retrieved from an encoded range
   /// list whose offset is found via a table lookup given an index (DWARF v5
   /// and later).
-  llvm::Expected<DWARFRangeList> FindRnglistFromIndex(uint32_t index);
+  llvm::Expected<llvm::DWARFAddressRangesVector>
+  FindRnglistFromIndex(uint32_t index);
 
   /// Return a rangelist's offset based on an index. The index designates
   /// an entry in the rangelist table's offset array and is supplied by

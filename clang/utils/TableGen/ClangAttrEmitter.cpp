@@ -108,6 +108,14 @@ GetFlattenedSpellings(const Record &Attr) {
       Ret.emplace_back("CXX11", Name, "clang", false, *Spelling);
       if (Spelling->getValueAsBit("AllowInC"))
         Ret.emplace_back("C23", Name, "clang", false, *Spelling);
+    } else if (Variety == "ClangGCC") {
+      Ret.emplace_back("GNU", Name, "", false, *Spelling);
+      Ret.emplace_back("CXX11", Name, "clang", false, *Spelling);
+      Ret.emplace_back("CXX11", Name, "gnu", false, *Spelling);
+      if (Spelling->getValueAsBit("AllowInC")) {
+        Ret.emplace_back("C23", Name, "clang", false, *Spelling);
+        Ret.emplace_back("C23", Name, "gnu", false, *Spelling);
+      }
     } else {
       Ret.push_back(FlattenedSpelling(*Spelling));
     }
@@ -3183,7 +3191,6 @@ void clang::EmitClangAttrClass(const RecordKeeper &Records, raw_ostream &OS) {
 
   OS << "#ifndef LLVM_CLANG_ATTR_CLASSES_INC\n";
   OS << "#define LLVM_CLANG_ATTR_CLASSES_INC\n";
-  OS << "#include \"clang/Support/Compiler.h\"\n\n";
 
   emitAttributes(Records, OS, true);
 
@@ -3526,6 +3533,11 @@ void EmitClangAttrPCHRead(const RecordKeeper &Records, raw_ostream &OS) {
       DelayedArgs->writePCHReadArgs(OS);
       OS << ");\n";
     }
+
+    if (Attr->getValueAsBit("HasCustomSerialization"))
+      OS << "    read" << R.getName() << "Attr(cast<" << R.getName()
+         << "Attr>(New));\n";
+
     OS << "    break;\n";
     OS << "  }\n";
   }
@@ -3556,6 +3568,10 @@ void EmitClangAttrPCHWrite(const RecordKeeper &Records, raw_ostream &OS) {
 
     for (const auto *Arg : Args)
       createArgument(*Arg, R.getName())->writePCHWrite(OS);
+
+    if (Attr->getValueAsBit("HasCustomSerialization"))
+      OS << "    Record.Add" << R.getName() << "Attr(SA);\n";
+
     OS << "    break;\n";
     OS << "  }\n";
   }
@@ -3742,6 +3758,36 @@ void EmitClangRegularKeywordAttributeInfo(const RecordKeeper &Records,
          << (HasArgs ? "true" : "false") << ", )\n";
     }
   OS << "#undef KEYWORD_ATTRIBUTE\n";
+}
+
+void EmitCXX11AttributeInfo(const RecordKeeper &Records, raw_ostream &OS) {
+  OS << "#if defined(CXX11_ATTR_ARGS_INFO)\n";
+  for (auto *R : Records.getAllDerivedDefinitions("Attr")) {
+    for (const FlattenedSpelling &SI : GetFlattenedSpellings(*R)) {
+      if (SI.variety() == "CXX11" && SI.nameSpace().empty()) {
+        unsigned RequiredArgs = 0;
+        unsigned OptionalArgs = 0;
+        for (const auto *Arg : R->getValueAsListOfDefs("Args")) {
+          if (Arg->getValueAsBit("Fake"))
+            continue;
+
+          if (Arg->getValueAsBit("Optional"))
+            OptionalArgs++;
+          else
+            RequiredArgs++;
+        }
+        OS << ".Case(\"" << SI.getSpellingRecord().getValueAsString("Name")
+           << "\","
+           << "AttributeCommonInfo::AttrArgsInfo::"
+           << (RequiredArgs   ? "Required"
+               : OptionalArgs ? "Optional"
+                              : "None")
+           << ")"
+           << "\n";
+      }
+    }
+  }
+  OS << "#endif // CXX11_ATTR_ARGS_INFO\n";
 }
 
 // Emits the list of spellings for attributes.
@@ -4895,6 +4941,9 @@ void EmitClangAttrParsedAttrKinds(const RecordKeeper &Records,
           Matches = &Pragma;
         } else if (Variety == "HLSLAnnotation") {
           Matches = &HLSLAnnotation;
+          if (RawSpelling.compare(RawSpelling.lower()) != 0)
+            PrintError(S.getSpellingRecord().getLoc(),
+                       "HLSLAnnotation Attribute must be lower case.");
         }
 
         assert(Matches && "Unsupported spelling variety found");
@@ -5178,6 +5227,9 @@ GetAttributeHeadingAndSpellings(const Record &Documentation,
 
 static void WriteDocumentation(const RecordKeeper &Records,
                                const DocumentationData &Doc, raw_ostream &OS) {
+  if (StringRef Label = Doc.Documentation->getValueAsString("Label");
+      !Label.empty())
+    OS << ".. _" << Label << ":\n\n";
   OS << Doc.Heading << "\n" << std::string(Doc.Heading.length(), '-') << "\n";
 
   // List what spelling syntaxes the attribute supports.

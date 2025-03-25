@@ -168,7 +168,7 @@ void UnrollState::unrollWidenInductionByUF(
   auto *ConstStep = ScalarStep->isLiveIn()
                         ? dyn_cast<ConstantInt>(ScalarStep->getLiveInIRValue())
                         : nullptr;
-  if (!ConstStep || ConstStep->getZExtValue() != 1) {
+  if (!ConstStep || ConstStep->getValue() != 1) {
     if (TypeInfo.inferScalarType(ScalarStep) != IVTy) {
       ScalarStep =
           Builder.createWidenCast(Instruction::Trunc, ScalarStep, IVTy);
@@ -295,8 +295,8 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       continue;
     }
     if (auto *Red = dyn_cast<VPReductionRecipe>(&R)) {
-      auto *Phi = cast<VPReductionPHIRecipe>(R.getOperand(0));
-      if (Phi->isOrdered()) {
+      auto *Phi = dyn_cast<VPReductionPHIRecipe>(R.getOperand(0));
+      if (Phi && Phi->isOrdered()) {
         auto &Parts = VPV2Parts[Phi];
         if (Part == 1) {
           Parts.clear();
@@ -311,12 +311,12 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     // Add operand indicating the part to generate code for, to recipes still
     // requiring it.
     if (isa<VPScalarIVStepsRecipe, VPWidenCanonicalIVRecipe,
-            VPVectorPointerRecipe, VPReverseVectorPointerRecipe>(Copy) ||
+            VPVectorPointerRecipe, VPVectorEndPointerRecipe>(Copy) ||
         match(Copy, m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
                         m_VPValue())))
       Copy->addOperand(getConstantVPV(Part));
 
-    if (isa<VPVectorPointerRecipe, VPReverseVectorPointerRecipe>(R))
+    if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe>(R))
       Copy->setOperand(0, R.getOperand(0));
   }
 }
@@ -411,8 +411,6 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx) {
   }
 
   UnrollState Unroller(Plan, UF, Ctx);
-
-  Unroller.unrollBlock(Plan.getPreheader());
 
   // Iterate over all blocks in the plan starting from Entry, and unroll
   // recipes inside them. This includes the vector preheader and middle blocks,

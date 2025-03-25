@@ -27,7 +27,6 @@
 /llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic
 /llvm/lib/Transforms/InstCombine/ @nikic
 
-/clang/include/clang/Sema/Sema.h @Endilll
 /clang/test/CXX/drs/ @Endilll
 /clang/www/cxx_dr_status.html @Endilll
 /clang/www/make_cxx_dr_status @Endilll
@@ -129,10 +128,10 @@
 /mlir/**/Transforms/SROA.* @moxinilian
 
 # BOLT
-/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci
+/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci @yota9
 
 # Bazel build system.
-/utils/bazel/ @rupprecht @keith
+/utils/bazel/ @rupprecht @keith @aaronmondal
 
 # InstallAPI and TextAPI
 /llvm/**/TextAPI/ @cyndyishida

@@ -73,6 +73,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  sched_macros
+  HDRS
+    sched_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.sched
+    libc.include.llvm-libc-macros.sched_macros
+)
+
+add_proxy_header_library(
   signal_macros
   HDRS
     signal_macros.h
@@ -126,19 +135,30 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.sys_stat_macros
 )
 
+add_header_library(unistd_overlay HDRS unistd_overlay.h)
 add_proxy_header_library(
   unistd_macros
   HDRS
     unistd_macros.h
+  DEPENDS
+    .unistd_overlay
   FULL_BUILD_DEPENDS
     libc.include.unistd
     libc.include.llvm-libc-macros.unistd_macros
 )
 
+if (WIN32)
+  set(windows_addtional_time_macros libc.include.llvm-libc-macros.windows.time_macros_ext)
+else()
+  set(windows_addtional_time_macros "")
+endif()
+
 add_proxy_header_library(
   time_macros
   HDRS
     time_macros.h
+  DEPENDS
+    ${windows_addtional_time_macros}
   FULL_BUILD_DEPENDS
     libc.include.time
     libc.include.llvm-libc-macros.time_macros
@@ -170,6 +190,15 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.link_macros
     libc.include.link
+)
+
+add_proxy_header_library(
+  locale_macros
+  HDRS
+    locale_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.locale_macros
+    libc.include.locale
 )
 
 add_proxy_header_library(

@@ -631,16 +631,14 @@ define double @fabs_f64(double %a) nounwind {
 ;
 ; RV32I-LABEL: fabs_f64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a2, 524288
-; RV32I-NEXT:    addi a2, a2, -1
-; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    srli a1, a1, 1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: fabs_f64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, -1
-; RV64I-NEXT:    srli a1, a1, 1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 1
+; RV64I-NEXT:    srli a0, a0, 1
 ; RV64I-NEXT:    ret
   %1 = call double @llvm.fabs.f64(double %a)
   ret double %1
@@ -715,19 +713,18 @@ define double @copysign_f64(double %a, double %b) nounwind {
 ; RV32I-LABEL: copysign_f64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a2, 524288
-; RV32I-NEXT:    addi a4, a2, -1
-; RV32I-NEXT:    and a1, a1, a4
+; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    srli a1, a1, 1
 ; RV32I-NEXT:    and a2, a3, a2
 ; RV32I-NEXT:    or a1, a1, a2
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: copysign_f64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a2, -1
-; RV64I-NEXT:    slli a3, a2, 63
-; RV64I-NEXT:    srli a2, a2, 1
-; RV64I-NEXT:    and a0, a0, a2
-; RV64I-NEXT:    and a1, a1, a3
+; RV64I-NEXT:    slli a0, a0, 1
+; RV64I-NEXT:    srli a1, a1, 63
+; RV64I-NEXT:    srli a0, a0, 1
+; RV64I-NEXT:    slli a1, a1, 63
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = call double @llvm.copysign.f64(double %a, double %b)
@@ -1039,10 +1036,9 @@ define i1 @isnan_d_fpclass(double %x) {
 ;
 ; RV32I-LABEL: isnan_d_fpclass:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a2, 524288
-; RV32I-NEXT:    addi a3, a2, -1
 ; RV32I-NEXT:    lui a2, 524032
-; RV32I-NEXT:    and a1, a1, a3
+; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    srli a1, a1, 1
 ; RV32I-NEXT:    beq a1, a2, .LBB25_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    sltu a0, a2, a1
@@ -1053,12 +1049,11 @@ define i1 @isnan_d_fpclass(double %x) {
 ;
 ; RV64I-LABEL: isnan_d_fpclass:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a1, -1
-; RV64I-NEXT:    li a2, 2047
-; RV64I-NEXT:    srli a1, a1, 1
-; RV64I-NEXT:    slli a2, a2, 52
-; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    sltu a0, a2, a0
+; RV64I-NEXT:    li a1, 2047
+; RV64I-NEXT:    slli a0, a0, 1
+; RV64I-NEXT:    slli a1, a1, 52
+; RV64I-NEXT:    srli a0, a0, 1
+; RV64I-NEXT:    sltu a0, a1, a0
 ; RV64I-NEXT:    ret
   %1 = call i1 @llvm.is.fpclass.f64(double %x, i32 3)  ; nan
   ret i1 %1

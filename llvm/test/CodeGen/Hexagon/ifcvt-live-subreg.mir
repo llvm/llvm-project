@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass if-converter -o - %s | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass if-converter -o - %s | FileCheck %s
 # Check that an implicit use is generated for a predicated instruction
 # when a subregister of the redefined register is live.
 

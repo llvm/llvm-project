@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
@@ -25,7 +26,9 @@
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::dxil;
@@ -41,6 +44,7 @@ class DXContainerGlobals : public llvm::ModulePass {
   GlobalVariable *buildSignature(Module &M, Signature &Sig, StringRef Name,
                                  StringRef SectionName);
   void addSignature(Module &M, SmallVector<GlobalValue *> &Globals);
+  void addRootSignature(Module &M, SmallVector<GlobalValue *> &Globals);
   void addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV);
   void addPipelineStateValidationInfo(Module &M,
                                       SmallVector<GlobalValue *> &Globals);
@@ -60,8 +64,10 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
     AU.addRequired<ShaderFlagsAnalysisWrapper>();
+    AU.addRequired<RootSignatureAnalysisWrapper>();
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
-    AU.addRequired<DXILResourceWrapperPass>();
+    AU.addRequired<DXILResourceTypeWrapperPass>();
+    AU.addRequired<DXILResourceBindingWrapperPass>();
   }
 };
 
@@ -72,6 +78,7 @@ bool DXContainerGlobals::runOnModule(Module &M) {
   Globals.push_back(getFeatureFlags(M));
   Globals.push_back(computeShaderHash(M));
   addSignature(M, Globals);
+  addRootSignature(M, Globals);
   addPipelineStateValidationInfo(M, Globals);
   appendToCompilerUsed(M, Globals);
   return true;
@@ -143,53 +150,107 @@ void DXContainerGlobals::addSignature(Module &M,
   Globals.emplace_back(buildSignature(M, OutputSig, "dx.osg1", "OSG1"));
 }
 
+void DXContainerGlobals::addRootSignature(Module &M,
+                                          SmallVector<GlobalValue *> &Globals) {
+
+  dxil::ModuleMetadataInfo &MMI =
+      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
+
+  // Root Signature in Library don't compile to DXContainer.
+  if (MMI.ShaderProfile == llvm::Triple::Library)
+    return;
+
+  assert(MMI.EntryPropertyVec.size() == 1);
+
+  auto &RSA = getAnalysis<RootSignatureAnalysisWrapper>();
+  const Function *EntryFunction = MMI.EntryPropertyVec[0].Entry;
+  const auto &FuncRs = RSA.find(EntryFunction);
+
+  if (FuncRs == RSA.end())
+    return;
+
+  const RootSignatureDesc &RS = FuncRs->second;
+  SmallString<256> Data;
+  raw_svector_ostream OS(Data);
+
+  RS.write(OS);
+
+  Constant *Constant =
+      ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);
+  Globals.emplace_back(buildContainerGlobal(M, Constant, "dx.rts0", "RTS0"));
+}
+
 void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
-  const DXILResourceMap &ResMap =
-      getAnalysis<DXILResourceWrapperPass>().getResourceMap();
+  const DXILBindingMap &DBM =
+      getAnalysis<DXILResourceBindingWrapperPass>().getBindingMap();
+  DXILResourceTypeMap &DRTM =
+      getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
 
-  for (const dxil::ResourceInfo &ResInfo : ResMap) {
-    const dxil::ResourceInfo::ResourceBinding &Binding = ResInfo.getBinding();
-    dxbc::PSV::v2::ResourceBindInfo BindInfo;
-    BindInfo.LowerBound = Binding.LowerBound;
-    BindInfo.UpperBound = Binding.LowerBound + Binding.Size - 1;
-    BindInfo.Space = Binding.Space;
+  auto MakeBinding =
+      [](const dxil::ResourceBindingInfo::ResourceBinding &Binding,
+         const dxbc::PSV::ResourceType Type, const dxil::ResourceKind Kind,
+         const dxbc::PSV::ResourceFlags Flags = dxbc::PSV::ResourceFlags()) {
+        dxbc::PSV::v2::ResourceBindInfo BindInfo;
+        BindInfo.Type = Type;
+        BindInfo.LowerBound = Binding.LowerBound;
+        BindInfo.UpperBound = Binding.LowerBound + Binding.Size - 1;
+        BindInfo.Space = Binding.Space;
+        BindInfo.Kind = static_cast<dxbc::PSV::ResourceKind>(Kind);
+        BindInfo.Flags = Flags;
+        return BindInfo;
+      };
 
-    dxbc::PSV::ResourceType ResType = dxbc::PSV::ResourceType::Invalid;
-    bool IsUAV = ResInfo.getResourceClass() == dxil::ResourceClass::UAV;
-    switch (ResInfo.getResourceKind()) {
-    case dxil::ResourceKind::Sampler:
-      ResType = dxbc::PSV::ResourceType::Sampler;
-      break;
-    case dxil::ResourceKind::CBuffer:
-      ResType = dxbc::PSV::ResourceType::CBV;
-      break;
-    case dxil::ResourceKind::StructuredBuffer:
-      ResType = IsUAV ? dxbc::PSV::ResourceType::UAVStructured
-                      : dxbc::PSV::ResourceType::SRVStructured;
-      if (IsUAV && ResInfo.getUAV().HasCounter)
-        ResType = dxbc::PSV::ResourceType::UAVStructuredWithCounter;
-      break;
-    case dxil::ResourceKind::RTAccelerationStructure:
+  for (const dxil::ResourceBindingInfo &RBI : DBM.cbuffers()) {
+    const dxil::ResourceBindingInfo::ResourceBinding &Binding =
+        RBI.getBinding();
+    PSV.Resources.push_back(MakeBinding(Binding, dxbc::PSV::ResourceType::CBV,
+                                        dxil::ResourceKind::CBuffer));
+  }
+  for (const dxil::ResourceBindingInfo &RBI : DBM.samplers()) {
+    const dxil::ResourceBindingInfo::ResourceBinding &Binding =
+        RBI.getBinding();
+    PSV.Resources.push_back(MakeBinding(Binding,
+                                        dxbc::PSV::ResourceType::Sampler,
+                                        dxil::ResourceKind::Sampler));
+  }
+  for (const dxil::ResourceBindingInfo &RBI : DBM.srvs()) {
+    const dxil::ResourceBindingInfo::ResourceBinding &Binding =
+        RBI.getBinding();
+
+    dxil::ResourceTypeInfo &TypeInfo = DRTM[RBI.getHandleTy()];
+    dxbc::PSV::ResourceType ResType;
+    if (TypeInfo.isStruct())
+      ResType = dxbc::PSV::ResourceType::SRVStructured;
+    else if (TypeInfo.isTyped())
+      ResType = dxbc::PSV::ResourceType::SRVTyped;
+    else
       ResType = dxbc::PSV::ResourceType::SRVRaw;
-      break;
-    case dxil::ResourceKind::RawBuffer:
-      ResType = IsUAV ? dxbc::PSV::ResourceType::UAVRaw
-                      : dxbc::PSV::ResourceType::SRVRaw;
-      break;
-    default:
-      ResType = IsUAV ? dxbc::PSV::ResourceType::UAVTyped
-                      : dxbc::PSV::ResourceType::SRVTyped;
-      break;
-    }
-    BindInfo.Type = ResType;
 
-    BindInfo.Kind =
-        static_cast<dxbc::PSV::ResourceKind>(ResInfo.getResourceKind());
+    PSV.Resources.push_back(
+        MakeBinding(Binding, ResType, TypeInfo.getResourceKind()));
+  }
+  for (const dxil::ResourceBindingInfo &RBI : DBM.uavs()) {
+    const dxil::ResourceBindingInfo::ResourceBinding &Binding =
+        RBI.getBinding();
+
+    dxil::ResourceTypeInfo &TypeInfo = DRTM[RBI.getHandleTy()];
+    dxbc::PSV::ResourceType ResType;
+    if (TypeInfo.getUAV().HasCounter)
+      ResType = dxbc::PSV::ResourceType::UAVStructuredWithCounter;
+    else if (TypeInfo.isStruct())
+      ResType = dxbc::PSV::ResourceType::UAVStructured;
+    else if (TypeInfo.isTyped())
+      ResType = dxbc::PSV::ResourceType::UAVTyped;
+    else
+      ResType = dxbc::PSV::ResourceType::UAVRaw;
+
+    dxbc::PSV::ResourceFlags Flags;
     // TODO: Add support for dxbc::PSV::ResourceFlag::UsedByAtomic64, tracking
     // with https://github.com/llvm/llvm-project/issues/104392
-    BindInfo.Flags.Flags = 0u;
+    Flags.Flags = 0u;
 
-    PSV.Resources.emplace_back(BindInfo);
+    PSV.Resources.push_back(
+        MakeBinding(Binding, ResType, TypeInfo.getResourceKind(), Flags));
   }
 }
 
@@ -240,7 +301,8 @@ INITIALIZE_PASS_BEGIN(DXContainerGlobals, "dxil-globals",
                       "DXContainer Global Emitter", false, true)
 INITIALIZE_PASS_DEPENDENCY(ShaderFlagsAnalysisWrapper)
 INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceBindingWrapperPass)
 INITIALIZE_PASS_END(DXContainerGlobals, "dxil-globals",
                     "DXContainer Global Emitter", false, true)
 

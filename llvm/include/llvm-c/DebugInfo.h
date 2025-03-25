@@ -158,6 +158,8 @@ typedef enum {
 /**
  * The kind of metadata nodes.
  */
+// NOTE: New entries should always be appended instead of matching the order
+// in Metadata.def.
 enum {
   LLVMMDStringMetadataKind,
   LLVMConstantAsMetadataMetadataKind,
@@ -195,6 +197,7 @@ enum {
   LLVMDIGenericSubrangeMetadataKind,
   LLVMDIArgListMetadataKind,
   LLVMDIAssignIDMetadataKind,
+  LLVMDISubrangeTypeMetadataKind,
 };
 typedef unsigned LLVMMetadataKind;
 
@@ -870,13 +873,16 @@ LLVMDIBuilderCreateObjCProperty(LLVMDIBuilderRef Builder,
                                 LLVMMetadataRef Ty);
 
 /**
- * Create a uniqued DIType* clone with FlagObjectPointer and FlagArtificial set.
+ * Create a uniqued DIType* clone with FlagObjectPointer. If \c Implicit
+ * is true, then also set FlagArtificial.
  * \param Builder   The DIBuilder.
  * \param Type      The underlying type to which this pointer points.
+ * \param Implicit  Indicates whether this pointer was implicitly generated
+ *                  (i.e., not spelled out in source).
  */
-LLVMMetadataRef
-LLVMDIBuilderCreateObjectPointerType(LLVMDIBuilderRef Builder,
-                                     LLVMMetadataRef Type);
+LLVMMetadataRef LLVMDIBuilderCreateObjectPointerType(LLVMDIBuilderRef Builder,
+                                                     LLVMMetadataRef Type,
+                                                     LLVMBool Implicit);
 
 /**
  * Create debugging information entry for a qualified

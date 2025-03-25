@@ -231,7 +231,7 @@ ProgramStateRef ErrnoChecker::checkRegionChanges(
 
   // Always reset errno state when the system memory space is invalidated.
   // The ErrnoRegion is not always found in the list in this case.
-  if (llvm::is_contained(Regions, ErrnoRegion->getMemorySpace()))
+  if (llvm::is_contained(Regions, ErrnoRegion->getMemorySpace(State)))
     return clearErrnoState(State);
 
   return State;

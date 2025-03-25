@@ -6,8 +6,7 @@
 ! CHECK-LABEL: func.func @_QPtest_scalar(
 ! CHECK-SAME:                            %[[VAL_0:.*]]: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>> {fir.bindc_name = "cptr"},
 ! CHECK-SAME:                            %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<f32>>> {fir.bindc_name = "fptr"}) {
-! CHECK:         %[[VAL_2:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK:         %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_2]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK:         %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_0]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         %[[VAL_4:.*]] = fir.load %[[VAL_3]] : !fir.ref<i64>
 ! CHECK:         %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (i64) -> !fir.ptr<f32>
 ! CHECK:         %[[VAL_6:.*]] = fir.embox %[[VAL_5]] : (!fir.ptr<f32>) -> !fir.box<!fir.ptr<f32>>
@@ -26,8 +25,7 @@ end
 ! CHECK-LABEL: func.func @_QPtest_array(
 ! CHECK-SAME:                           %[[VAL_0:.*]]: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>> {fir.bindc_name = "cptr"},
 ! CHECK-SAME:                           %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>> {fir.bindc_name = "fptr"}) {
-! CHECK:         %[[VAL_65:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK:         %[[VAL_66:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_65]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK:         %[[VAL_66:.*]] = fir.coordinate_of %[[VAL_0]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         %[[VAL_67:.*]] = fir.load %[[VAL_66]] : !fir.ref<i64>
 ! CHECK:         %[[VAL_68:.*]] = fir.convert %[[VAL_67]] : (i64) -> !fir.ptr<!fir.array<?x?xf32>>
 ! CHECK:         %[[VAL_69:.*]] = arith.constant 0 : index
@@ -56,8 +54,7 @@ end
 ! CHECK-LABEL: func.func @_QPtest_char(
 ! CHECK-SAME:                          %[[VAL_0:.*]]: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>> {fir.bindc_name = "cptr"},
 ! CHECK-SAME:                          %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.char<1,10>>>> {fir.bindc_name = "fptr"}) {
-! CHECK:         %[[VAL_2:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK:         %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_2]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK:         %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_0]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         %[[VAL_4:.*]] = fir.load %[[VAL_3]] : !fir.ref<i64>
 ! CHECK:         %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (i64) -> !fir.ptr<!fir.char<1,10>>
 ! CHECK:         %[[VAL_6:.*]] = fir.embox %[[VAL_5]] : (!fir.ptr<!fir.char<1,10>>) -> !fir.box<!fir.ptr<!fir.char<1,10>>>
@@ -81,8 +78,7 @@ end
 ! CHECK:         %[[VAL_8:.*]] = arith.constant 0 : i32
 ! CHECK:         %[[VAL_9:.*]] = arith.cmpi sgt, %[[VAL_7]], %[[VAL_8]] : i32
 ! CHECK:         %[[VAL_10:.*]] = arith.select %[[VAL_9]], %[[VAL_7]], %[[VAL_8]] : i32
-! CHECK:         %[[VAL_70:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK:         %[[VAL_71:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_70]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK:         %[[VAL_71:.*]] = fir.coordinate_of %[[VAL_0]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         %[[VAL_72:.*]] = fir.load %[[VAL_71]] : !fir.ref<i64>
 ! CHECK:         %[[VAL_73:.*]] = fir.convert %[[VAL_72]] : (i64) -> !fir.ptr<!fir.array<?x?x!fir.char<1,?>>>
 ! CHECK:         %[[VAL_74:.*]] = arith.constant 0 : index

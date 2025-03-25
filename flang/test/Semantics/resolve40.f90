@@ -69,8 +69,8 @@ end
 
 subroutine s9
   real :: x(2,2)
-  !ERROR: 'i' is already declared in this scoping unit
-  data ((x(i,i),i=1,2),i=1,2)/4*0.0/
+  ! Nested implied DO loops have their own scope
+  data ((x(i,j),j=1,2),(x(i,j),j=1,2),i=1,2)/8*0.0/
 end
 
 module m10

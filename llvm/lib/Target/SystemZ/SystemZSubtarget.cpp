@@ -44,9 +44,11 @@ SystemZSubtarget &SystemZSubtarget::initializeSubtargetDependencies(
   if (!HasVector) {
     HasVectorEnhancements1 = false;
     HasVectorEnhancements2 = false;
+    HasVectorEnhancements3 = false;
     HasVectorPackedDecimal = false;
     HasVectorPackedDecimalEnhancement = false;
     HasVectorPackedDecimalEnhancement2 = false;
+    HasVectorPackedDecimalEnhancement3 = false;
   }
 
   return *this;

@@ -87,13 +87,12 @@ define void @test_remat_s_getpc_b64() {
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call i64 @llvm.amdgcn.s.getpc()
   tail call void asm sideeffect "", "s"(i64 %0)
   tail call void asm sideeffect "", "~{s0},~{s1},~{s2},~{s3},~{s4},~{s5},~{s6},~{s7},~{s8},~{s9},~{s10},~{s11},~{s12},~{s13},~{s14},~{s15},~{s16},~{s17},~{s18},~{s19},~{s20},~{s21},~{s22},~{s23},~{s24},~{s25},~{s26},~{s27},~{s28},~{s29},~{s30},~{s31}"()
-  store i64 %0, ptr addrspace(1) undef
+  store i64 %0, ptr addrspace(1) poison
   ret void
 }
 

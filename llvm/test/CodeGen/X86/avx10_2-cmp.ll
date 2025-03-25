@@ -235,3 +235,44 @@ define i1 @dune_mem(ptr %xp, ptr %yp) {
     %1 = fcmp une double %x, %y
     ret i1 %1
 }
+
+define i32 @PR118606(x86_fp80 %val1) #0 {
+; X64-LABEL: PR118606:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
+; X64-NEXT:    fldz
+; X64-NEXT:    fucomi %st(1), %st
+; X64-NEXT:    fstp %st(1)
+; X64-NEXT:    fld1
+; X64-NEXT:    fcmovne %st(1), %st
+; X64-NEXT:    fcmovu %st(1), %st
+; X64-NEXT:    fucompi %st(1), %st
+; X64-NEXT:    fstp %st(0)
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: PR118606:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    fldt {{[0-9]+}}(%esp)
+; X86-NEXT:    fldz
+; X86-NEXT:    fucomi %st(1), %st
+; X86-NEXT:    fstp %st(1)
+; X86-NEXT:    fld1
+; X86-NEXT:    fcmovne %st(1), %st
+; X86-NEXT:    fcmovu %st(1), %st
+; X86-NEXT:    fucompi %st(1), %st
+; X86-NEXT:    fstp %st(0)
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    retl
+entry:
+  %cmp8 = fcmp oeq x86_fp80 %val1, 0xK00000000000000000000
+  %0 = select i1 %cmp8, x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK00000000000000000000
+  %cmp64 = fcmp ogt x86_fp80 %0, 0xK00000000000000000000
+  br i1 %cmp64, label %if.then66, label %if.end70
+
+if.then66:                                        ; preds = %entry
+  ret i32 0
+
+if.end70:                                         ; preds = %entry
+  ret i32 0
+}

@@ -136,6 +136,9 @@ enum LtoKind : uint8_t {UnifiedThin, UnifiedRegular, Default};
 // For -z gcs=
 enum class GcsPolicy { Implicit, Never, Always };
 
+// For some options that resemble -z bti-report={none,warning,error}
+enum class ReportPolicy { None, Warning, Error };
+
 struct SymbolVersion {
   llvm::StringRef name;
   bool isExternCpp;
@@ -225,10 +228,12 @@ struct Config {
   llvm::StringRef whyExtract;
   llvm::StringRef cmseInputLib;
   llvm::StringRef cmseOutputLib;
-  StringRef zBtiReport = "none";
-  StringRef zCetReport = "none";
-  StringRef zPauthReport = "none";
-  StringRef zGcsReport = "none";
+  ReportPolicy zBtiReport = ReportPolicy::None;
+  ReportPolicy zCetReport = ReportPolicy::None;
+  ReportPolicy zPauthReport = ReportPolicy::None;
+  ReportPolicy zGcsReport = ReportPolicy::None;
+  ReportPolicy zGcsReportDynamic = ReportPolicy::None;
+  ReportPolicy zExecuteOnlyReport = ReportPolicy::None;
   bool ltoBBAddrMap;
   llvm::StringRef ltoBasicBlockSections;
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
@@ -264,6 +269,12 @@ struct Config {
   bool armBe8 = false;
   BsymbolicKind bsymbolic = BsymbolicKind::None;
   CGProfileSortKind callGraphProfileSort;
+  llvm::StringRef irpgoProfilePath;
+  bool bpStartupFunctionSort = false;
+  bool bpCompressionSortStartupFunctions = false;
+  bool bpFunctionOrderForCompression = false;
+  bool bpDataOrderForCompression = false;
+  bool bpVerboseSectionOrderer = false;
   bool checkSections;
   bool checkDynamicRelocs;
   std::optional<llvm::DebugCompressionType> compressDebugSections;
@@ -292,7 +303,6 @@ struct Config {
   bool gdbIndex;
   bool gnuHash = false;
   bool gnuUnique;
-  bool hasDynSymTab;
   bool ignoreDataAddressEquality;
   bool ignoreFunctionAddressEquality;
   bool ltoCSProfileGenerate;
@@ -306,7 +316,6 @@ struct Config {
   bool mipsN32Abi = false;
   bool mmapOutputFile;
   bool nmagic;
-  bool noDynamicLinker = false;
   bool noinhibitExec;
   bool nostdlib;
   bool oFormatBinary;
@@ -320,6 +329,7 @@ struct Config {
   bool printGcSections;
   bool printIcfSections;
   bool printMemoryUsage;
+  std::optional<uint64_t> randomizeSectionPadding;
   bool rejectMismatch;
   bool relax;
   bool relaxGP;
@@ -362,6 +372,7 @@ struct Config {
   bool zInterpose;
   bool zKeepTextSectionPrefix;
   bool zLrodataAfterBss;
+  bool zNoBtCfi;
   bool zNodefaultlib;
   bool zNodelete;
   bool zNodlopen;
@@ -405,7 +416,7 @@ struct Config {
   StringRef thinLTOJobs;
   unsigned timeTraceGranularity;
   int32_t splitStackAdjustSize;
-  StringRef packageMetadata;
+  SmallVector<uint8_t, 0> packageMetadata;
 
   // The following config options do not directly correspond to any
   // particular command line options.
@@ -617,6 +628,7 @@ struct Ctx : CommonLinkerContext {
   };
   ElfSym sym{};
   std::unique_ptr<SymbolTable> symtab;
+  SmallVector<Symbol *, 0> synthesizedSymbols;
 
   SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
   SmallVector<ELFFileBase *, 0> objectFiles;
@@ -652,6 +664,8 @@ struct Ctx : CommonLinkerContext {
   std::unique_ptr<llvm::TarWriter> tar;
   // InputFile for linker created symbols with no source location.
   InputFile *internalFile = nullptr;
+  // True if symbols can be exported (isExported) or preemptible.
+  bool hasDynsym = false;
   // True if SHT_LLVM_SYMPART is used.
   std::atomic<bool> hasSympart{false};
   // True if there are TLS IE relocations. Set DF_STATIC_TLS if -shared.
@@ -737,6 +751,14 @@ uint64_t errCount(Ctx &ctx);
 ELFSyncStream InternalErr(Ctx &ctx, const uint8_t *buf);
 
 #define CHECK2(E, S) lld::check2((E), [&] { return toStr(ctx, S); })
+
+inline DiagLevel toDiagLevel(ReportPolicy policy) {
+  if (policy == ReportPolicy::Error)
+    return DiagLevel::Err;
+  else if (policy == ReportPolicy::Warning)
+    return DiagLevel::Warn;
+  return DiagLevel::None;
+}
 
 } // namespace lld::elf
 

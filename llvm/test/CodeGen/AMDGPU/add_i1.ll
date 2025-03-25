@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10 %s
 
 ; GCN-LABEL: {{^}}add_var_var_i1:
-; GFX9:  s_xor_b64
-; GFX10: s_xor_b32
+; GFX9:  v_xor_b32_e32
+; GFX10: v_xor_b32_e32
 define amdgpu_kernel void @add_var_var_i1(ptr addrspace(1) %out, ptr addrspace(1) %in0, ptr addrspace(1) %in1) {
   %a = load volatile i1, ptr addrspace(1) %in0
   %b = load volatile i1, ptr addrspace(1) %in1
@@ -14,8 +14,8 @@ define amdgpu_kernel void @add_var_var_i1(ptr addrspace(1) %out, ptr addrspace(1
 }
 
 ; GCN-LABEL: {{^}}add_var_imm_i1:
-; GFX9:  s_not_b64
-; GFX10: s_not_b32
+; GFX9:  s_xor_b64
+; GFX10: s_xor_b32
 define amdgpu_kernel void @add_var_imm_i1(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %a = load volatile i1, ptr addrspace(1) %in
   %add = add i1 %a, 1
@@ -25,8 +25,8 @@ define amdgpu_kernel void @add_var_imm_i1(ptr addrspace(1) %out, ptr addrspace(1
 
 ; GCN-LABEL: {{^}}add_i1_cf:
 ; GCN: ; %endif
-; GFX9: s_not_b64
-; GFX10: s_not_b32
+; GFX9: s_xor_b64
+; GFX10: s_xor_b32
 define amdgpu_kernel void @add_i1_cf(ptr addrspace(1) %out, ptr addrspace(1) %a, ptr addrspace(1) %b) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_ATOMIC_FLAG_H
-#define _LIBCPP___ATOMIC_ATOMIC_FLAG_H
+#ifndef _LIBCPP___CXX03___ATOMIC_ATOMIC_FLAG_H
+#define _LIBCPP___CXX03___ATOMIC_ATOMIC_FLAG_H
 
 #include <__cxx03/__atomic/atomic_sync.h>
 #include <__cxx03/__atomic/contention_t.h>
@@ -186,4 +186,4 @@ atomic_flag_notify_all(atomic_flag* __o) _NOEXCEPT {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_ATOMIC_FLAG_H
+#endif // _LIBCPP___CXX03___ATOMIC_ATOMIC_FLAG_H

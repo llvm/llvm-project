@@ -206,13 +206,6 @@ static cl::opt<std::string> PassPipeline(
 static cl::alias PassPipeline2("p", cl::aliasopt(PassPipeline),
                                cl::desc("Alias for -passes"));
 
-static cl::opt<bool> TryUseNewDbgInfoFormat(
-    "try-experimental-debuginfo-iterators",
-    cl::desc("Enable debuginfo iterator positions, if they're built in"),
-    cl::init(false), cl::Hidden);
-
-extern cl::opt<bool> UseNewDbgInfoFormat;
-
 namespace {
 
 std::vector<std::string> &getRunPassNames() {
@@ -365,13 +358,6 @@ int main(int argc, char **argv) {
               "not supported, please use `llc -passes=<pipeline>` (or the `-p` "
               "alias for a more concise version).\n";
     return 1;
-  }
-
-  // RemoveDIs debug-info transition: tests may request that we /try/ to use the
-  // new debug-info format.
-  if (TryUseNewDbgInfoFormat) {
-    // Turn the new debug-info format on.
-    UseNewDbgInfoFormat = true;
   }
 
   if (TimeTrace)
@@ -549,13 +535,13 @@ static int compileModule(char **argv, LLVMContext &Context) {
       TheTarget =
           TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
       if (!TheTarget) {
-        WithColor::error(errs(), argv[0]) << Error;
+        WithColor::error(errs(), argv[0]) << Error << "\n";
         exit(1);
       }
 
       InitializeOptions(TheTriple);
       Target = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
-          TheTriple.getTriple(), CPUStr, FeaturesStr, Options, RM, CM, OLvl));
+          TheTriple, CPUStr, FeaturesStr, Options, RM, CM, OLvl));
       assert(Target && "Could not allocate target machine!");
 
       return Target->createDataLayout().getStringRepresentation();
@@ -575,7 +561,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       return 1;
     }
     if (!TargetTriple.empty())
-      M->setTargetTriple(Triple::normalize(TargetTriple));
+      M->setTargetTriple(Triple(Triple::normalize(TargetTriple)));
 
     std::optional<CodeModel::Model> CM_IR = M->getCodeModel();
     if (!CM && CM_IR)
@@ -592,13 +578,13 @@ static int compileModule(char **argv, LLVMContext &Context) {
     TheTarget =
         TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
     if (!TheTarget) {
-      WithColor::error(errs(), argv[0]) << Error;
+      WithColor::error(errs(), argv[0]) << Error << "\n";
       return 1;
     }
 
     InitializeOptions(TheTriple);
     Target = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
-        TheTriple.getTriple(), CPUStr, FeaturesStr, Options, RM, CM, OLvl));
+        TheTriple, CPUStr, FeaturesStr, Options, RM, CM, OLvl));
     assert(Target && "Could not allocate target machine!");
 
     // If we don't have a module then just exit now. We do this down
@@ -633,7 +619,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
   }
 
   // Add an appropriate TargetLibraryInfo pass for the module's triple.
-  TargetLibraryInfoImpl TLII(Triple(M->getTargetTriple()));
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
 
   // The -disable-simplify-libcalls flag actually disables all builtin optzns.
   if (DisableSimplifyLibCalls)
@@ -692,7 +678,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
     // selection.
     if (!getRunPassNames().empty()) {
       if (!MIR) {
-        WithColor::warning(errs(), argv[0])
+        WithColor::error(errs(), argv[0])
             << "run-pass is for .mir file only.\n";
         delete MMIWP;
         return 1;
@@ -700,7 +686,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       TargetPassConfig *PTPC = Target->createPassConfig(PM);
       TargetPassConfig &TPC = *PTPC;
       if (TPC.hasLimitedCodeGenPipeline()) {
-        WithColor::warning(errs(), argv[0])
+        WithColor::error(errs(), argv[0])
             << "run-pass cannot be used with "
             << TPC.getLimitedCodeGenPipelineReason() << ".\n";
         delete PTPC;

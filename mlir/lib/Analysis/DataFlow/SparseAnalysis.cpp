@@ -34,7 +34,7 @@ void AbstractSparseLattice::onUpdate(DataFlowSolver *solver) const {
   AnalysisState::onUpdate(solver);
 
   // Push all users of the value to the queue.
-  for (Operation *user : anchor.get<Value>().getUsers())
+  for (Operation *user : cast<Value>(anchor).getUsers())
     for (DataFlowAnalysis *analysis : useDefSubscribers)
       solver->enqueue({solver->getProgramPointAfter(user), analysis});
 }

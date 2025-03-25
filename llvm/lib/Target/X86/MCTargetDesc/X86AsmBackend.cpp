@@ -9,6 +9,7 @@
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86EncodingOptimization.h"
 #include "MCTargetDesc/X86FixupKinds.h"
+#include "MCTargetDesc/X86MCExpr.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -163,17 +164,10 @@ public:
                             const MCSubtargetInfo &STI);
   void emitInstructionEnd(MCObjectStreamer &OS, const MCInst &Inst);
 
-  unsigned getNumFixupKinds() const override {
-    return X86::NumTargetFixupKinds;
-  }
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
-
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
-                             const MCSubtargetInfo *STI) override;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
@@ -183,8 +177,11 @@ public:
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override;
 
-  bool fixupNeedsRelaxation(const MCFixup &Fixup,
-                            uint64_t Value) const override;
+  bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
+                                    const MCFixup &Fixup, bool Resolved,
+                                    uint64_t Value,
+                                    const MCRelaxableFragment *DF,
+                                    const bool WasForced) const override;
 
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
@@ -364,7 +361,7 @@ static bool hasVariantSymbol(const MCInst &MI) {
       continue;
     const MCExpr &Expr = *Operand.getExpr();
     if (Expr.getKind() == MCExpr::SymbolRef &&
-        cast<MCSymbolRefExpr>(Expr).getKind() != MCSymbolRefExpr::VK_None)
+        getSpecifier(cast<MCSymbolRefExpr>(&Expr)) != X86MCExpr::VK_None)
       return true;
   }
   return false;
@@ -634,11 +631,10 @@ const MCFixupKindInfo &X86AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"reloc_riprel_4byte_relax", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"reloc_riprel_4byte_relax_rex", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"reloc_riprel_4byte_relax_rex2", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"reloc_riprel_6byte_relax", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"reloc_riprel_4byte_relax_evex", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"reloc_signed_4byte", 0, 32, 0},
       {"reloc_signed_4byte_relax", 0, 32, 0},
       {"reloc_global_offset_table", 0, 32, 0},
-      {"reloc_global_offset_table8", 0, 64, 0},
       {"reloc_branch_4byte_pcrel", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       // clang-format on
   };
@@ -651,16 +647,10 @@ const MCFixupKindInfo &X86AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+  assert(unsigned(Kind - FirstTargetFixupKind) < X86::NumTargetFixupKinds &&
          "Invalid kind!");
   assert(Infos[Kind - FirstTargetFixupKind].Name && "Empty fixup name!");
   return Infos[Kind - FirstTargetFixupKind];
-}
-
-bool X86AsmBackend::shouldForceRelocation(const MCAssembler &,
-                                          const MCFixup &Fixup, const MCValue &,
-                                          const MCSubtargetInfo *STI) {
-  return Fixup.getKind() >= FirstLiteralRelocationKind;
 }
 
 static unsigned getFixupKindSize(unsigned Kind) {
@@ -684,7 +674,7 @@ static unsigned getFixupKindSize(unsigned Kind) {
   case X86::reloc_riprel_4byte_relax_rex2:
   case X86::reloc_riprel_4byte_movq_load:
   case X86::reloc_riprel_4byte_movq_load_rex2:
-  case X86::reloc_riprel_6byte_relax:
+  case X86::reloc_riprel_4byte_relax_evex:
   case X86::reloc_signed_4byte:
   case X86::reloc_signed_4byte_relax:
   case X86::reloc_global_offset_table:
@@ -695,7 +685,6 @@ static unsigned getFixupKindSize(unsigned Kind) {
   case FK_PCRel_8:
   case FK_SecRel_8:
   case FK_Data_8:
-  case X86::reloc_global_offset_table8:
     return 8;
   }
 }
@@ -744,10 +733,24 @@ bool X86AsmBackend::mayNeedRelaxation(const MCInst &MI,
           MI.getOperand(MI.getNumOperands() - 1 - SkipOperands).isExpr());
 }
 
-bool X86AsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
-                                         uint64_t Value) const {
-  // Relax if the value is too big for a (signed) i8.
-  return !isInt<8>(Value);
+bool X86AsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
+                                                 const MCFixup &Fixup,
+                                                 bool Resolved, uint64_t Value,
+                                                 const MCRelaxableFragment *DF,
+                                                 const bool WasForced) const {
+  // If resolved, relax if the value is too big for a (signed) i8.
+  if (Resolved)
+    return !isInt<8>(Value);
+
+  // Otherwise, relax unless there is a @ABS8 specifier.
+  if (Fixup.getKind() == FK_Data_1) {
+    MCValue Target;
+    if (Fixup.getValue()->evaluateAsRelocatable(Target, &Asm) &&
+        Target.getSymA() &&
+        getSpecifier(Target.getSymA()) == X86MCExpr::VK_ABS8)
+      return false;
+  }
+  return true;
 }
 
 // FIXME: Can tblgen help at all here to verify there aren't other instructions
@@ -811,7 +814,7 @@ bool X86AsmBackend::padInstructionViaPrefix(MCRelaxableFragment &RF,
   SmallString<256> Code;
   Code.append(PrefixBytesToAdd, Prefix);
   Code.append(RF.getContents().begin(), RF.getContents().end());
-  RF.getContents() = Code;
+  RF.setContents(Code);
 
   // Adjust the fixups for the change in offsets
   for (auto &F : RF.getFixups()) {
@@ -843,7 +846,7 @@ bool X86AsmBackend::padInstructionViaRelaxation(MCRelaxableFragment &RF,
   if (Delta > RemainingSize)
     return false;
   RF.setInst(Relaxed);
-  RF.getContents() = Code;
+  RF.setContents(Code);
   RF.getFixups() = Fixups;
   RemainingSize -= Delta;
   return true;

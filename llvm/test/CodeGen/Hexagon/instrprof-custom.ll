@@ -1,5 +1,5 @@
-; RUN: llc -march=hexagon -relocation-model=pic < %s | FileCheck %s
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; CHECK-LABEL: test1:
 ; CHECK: {{call my_instrprof_handler|r0 = #999}}

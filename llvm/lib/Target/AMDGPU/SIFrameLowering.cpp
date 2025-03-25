@@ -305,6 +305,7 @@ class PrologEpilogSGPRSpillBuilder {
 
       buildEpilogRestore(ST, TRI, *FuncInfo, LiveUnits, MF, MBB, MI, DL,
                          TmpVGPR, FI, FrameReg, DwordOff);
+      MRI.constrainRegClass(SubReg, &AMDGPU::SReg_32_XM0RegClass);
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), SubReg)
           .addReg(TmpVGPR, RegState::Kill);
       DwordOff += 4;
@@ -690,17 +691,62 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   }
   assert(ScratchWaveOffsetReg || !PreloadedScratchWaveOffsetReg);
 
-  if (hasFP(MF)) {
+  unsigned Offset = FrameInfo.getStackSize() * getScratchScaleFactor(ST);
+  if (!mayReserveScratchForCWSR(MF)) {
+    if (hasFP(MF)) {
+      Register FPReg = MFI->getFrameOffsetReg();
+      assert(FPReg != AMDGPU::FP_REG);
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), FPReg).addImm(0);
+    }
+
+    if (requiresStackPointerReference(MF)) {
+      Register SPReg = MFI->getStackPtrOffsetReg();
+      assert(SPReg != AMDGPU::SP_REG);
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg).addImm(Offset);
+    }
+  } else {
+    // We need to check if we're on a compute queue - if we are, then the CWSR
+    // trap handler may need to store some VGPRs on the stack. The first VGPR
+    // block is saved separately, so we only need to allocate space for any
+    // additional VGPR blocks used. For now, we will make sure there's enough
+    // room for the theoretical maximum number of VGPRs that can be allocated.
+    // FIXME: Figure out if the shader uses fewer VGPRs in practice.
+    assert(hasFP(MF));
     Register FPReg = MFI->getFrameOffsetReg();
     assert(FPReg != AMDGPU::FP_REG);
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), FPReg).addImm(0);
-  }
+    unsigned VGPRSize =
+        llvm::alignTo((ST.getAddressableNumVGPRs() -
+                       AMDGPU::IsaInfo::getVGPRAllocGranule(&ST)) *
+                          4,
+                      FrameInfo.getMaxAlign());
+    MFI->setScratchReservedForDynamicVGPRs(VGPRSize);
 
-  if (requiresStackPointerReference(MF)) {
-    Register SPReg = MFI->getStackPtrOffsetReg();
-    assert(SPReg != AMDGPU::SP_REG);
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg)
-        .addImm(FrameInfo.getStackSize() * getScratchScaleFactor(ST));
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_GETREG_B32), FPReg)
+        .addImm(AMDGPU::Hwreg::HwregEncoding::encode(
+            AMDGPU::Hwreg::ID_HW_ID2, AMDGPU::Hwreg::OFFSET_ME_ID, 2));
+    // The MicroEngine ID is 0 for the graphics queue, and 1 or 2 for compute
+    // (3 is unused, so we ignore it). Unfortunately, S_GETREG doesn't set
+    // SCC, so we need to check for 0 manually.
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CMP_LG_U32)).addImm(0).addReg(FPReg);
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CMOVK_I32), FPReg).addImm(VGPRSize);
+    if (requiresStackPointerReference(MF)) {
+      Register SPReg = MFI->getStackPtrOffsetReg();
+      assert(SPReg != AMDGPU::SP_REG);
+
+      // If at least one of the constants can be inlined, then we can use
+      // s_cselect. Otherwise, use a mov and cmovk.
+      if (AMDGPU::isInlinableLiteral32(Offset, ST.hasInv2PiInlineImm()) ||
+          AMDGPU::isInlinableLiteral32(Offset + VGPRSize,
+                                       ST.hasInv2PiInlineImm())) {
+        BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CSELECT_B32), SPReg)
+            .addImm(Offset + VGPRSize)
+            .addImm(Offset);
+      } else {
+        BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg).addImm(Offset);
+        BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CMOVK_I32), SPReg)
+            .addImm(Offset + VGPRSize);
+      }
+    }
   }
 
   bool NeedsFlatScratchInit =
@@ -1256,6 +1302,18 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   Register FramePtrReg = FuncInfo->getFrameOffsetReg();
   bool FPSaved = FuncInfo->hasPrologEpilogSGPRSpillEntry(FramePtrReg);
 
+  if (RoundedSize != 0) {
+    if (TRI.hasBasePointer(MF)) {
+      BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::COPY), StackPtrReg)
+          .addReg(TRI.getBaseRegister())
+          .setMIFlag(MachineInstr::FrameDestroy);
+    } else if (hasFP(MF)) {
+      BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::COPY), StackPtrReg)
+          .addReg(FramePtrReg)
+          .setMIFlag(MachineInstr::FrameDestroy);
+    }
+  }
+
   Register FramePtrRegScratchCopy;
   Register SGPRForFPSaveRestoreCopy =
       FuncInfo->getScratchSGPRCopyDstReg(FramePtrReg);
@@ -1278,14 +1336,6 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
 
     emitCSRSpillRestores(MF, MBB, MBBI, DL, LiveUnits, FramePtrReg,
                          FramePtrRegScratchCopy);
-  }
-
-  if (RoundedSize != 0 && hasFP(MF)) {
-    auto Add = BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_ADD_I32), StackPtrReg)
-        .addReg(StackPtrReg)
-        .addImm(-static_cast<int64_t>(RoundedSize * getScratchScaleFactor(ST)))
-        .setMIFlag(MachineInstr::FrameDestroy);
-    Add->getOperand(3).setIsDead(); // Mark SCC as dead.
   }
 
   if (FPSaved) {
@@ -1438,7 +1488,7 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
     // second VGPR emergency frame index.
     if (HaveSGPRToVMemSpill &&
         allocateScavengingFrameIndexesNearIncomingSP(MF)) {
-      RS->addScavengingFrameIndex(MFI.CreateStackObject(4, Align(4), false));
+      RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(4, Align(4)));
     }
   }
 }
@@ -1715,11 +1765,12 @@ bool SIFrameLowering::assignCalleeSavedSpillSlots(
     NumModifiedRegs++;
 
   for (auto &CS : CSI) {
-    if (CS.getReg() == FramePtrReg && SGPRForFPSaveRestoreCopy) {
+    if (CS.getReg() == FramePtrReg.asMCReg() && SGPRForFPSaveRestoreCopy) {
       CS.setDstReg(SGPRForFPSaveRestoreCopy);
       if (--NumModifiedRegs)
         break;
-    } else if (CS.getReg() == BasePtrReg && SGPRForBPSaveRestoreCopy) {
+    } else if (CS.getReg() == BasePtrReg.asMCReg() &&
+               SGPRForBPSaveRestoreCopy) {
       CS.setDstReg(SGPRForBPSaveRestoreCopy);
       if (--NumModifiedRegs)
         break;
@@ -1825,7 +1876,15 @@ bool SIFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   return frameTriviallyRequiresSP(MFI) || MFI.isFrameAddressTaken() ||
          MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->hasStackRealignment(
              MF) ||
+         mayReserveScratchForCWSR(MF) ||
          MF.getTarget().Options.DisableFramePointerElim(MF);
+}
+
+bool SIFrameLowering::mayReserveScratchForCWSR(
+    const MachineFunction &MF) const {
+  return MF.getSubtarget<GCNSubtarget>().isDynamicVGPREnabled() &&
+         AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv()) &&
+         AMDGPU::isCompute(MF.getFunction().getCallingConv());
 }
 
 // This is essentially a reduced version of hasFP for entry functions. Since the

@@ -72,6 +72,7 @@ DECLARE_DESCRIPTOR(parser::OmpAlignModifier);
 DECLARE_DESCRIPTOR(parser::OmpAllocatorComplexModifier);
 DECLARE_DESCRIPTOR(parser::OmpAllocatorSimpleModifier);
 DECLARE_DESCRIPTOR(parser::OmpChunkModifier);
+DECLARE_DESCRIPTOR(parser::OmpContextSelector);
 DECLARE_DESCRIPTOR(parser::OmpDependenceType);
 DECLARE_DESCRIPTOR(parser::OmpDeviceModifier);
 DECLARE_DESCRIPTOR(parser::OmpDirectiveNameModifier);
@@ -87,6 +88,8 @@ DECLARE_DESCRIPTOR(parser::OmpOrderingModifier);
 DECLARE_DESCRIPTOR(parser::OmpPrescriptiveness);
 DECLARE_DESCRIPTOR(parser::OmpReductionIdentifier);
 DECLARE_DESCRIPTOR(parser::OmpReductionModifier);
+DECLARE_DESCRIPTOR(parser::OmpStepComplexModifier);
+DECLARE_DESCRIPTOR(parser::OmpStepSimpleModifier);
 DECLARE_DESCRIPTOR(parser::OmpTaskDependenceType);
 DECLARE_DESCRIPTOR(parser::OmpVariableCategory);
 

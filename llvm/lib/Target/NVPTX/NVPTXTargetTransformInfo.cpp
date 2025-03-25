@@ -8,6 +8,7 @@
 
 #include "NVPTXTargetTransformInfo.h"
 #include "NVPTXUtilities.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -20,6 +21,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <optional>
 using namespace llvm;
@@ -482,6 +484,35 @@ NVPTXTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   return std::nullopt;
 }
 
+InstructionCost
+NVPTXTTIImpl::getInstructionCost(const User *U,
+                                 ArrayRef<const Value *> Operands,
+                                 TTI::TargetCostKind CostKind) {
+  if (const auto *CI = dyn_cast<CallInst>(U))
+    if (const auto *IA = dyn_cast<InlineAsm>(CI->getCalledOperand())) {
+      // Without this implementation getCallCost() would return the number
+      // of arguments+1 as the cost. Because the cost-model assumes it is a call
+      // since it is classified as a call in the IR. A better cost model would
+      // be to return the number of asm instructions embedded in the asm
+      // string.
+      auto &AsmStr = IA->getAsmString();
+      const unsigned InstCount =
+          count_if(split(AsmStr, ';'), [](StringRef AsmInst) {
+            // Trim off scopes denoted by '{' and '}' as these can be ignored
+            AsmInst = AsmInst.trim().ltrim("{} \t\n\v\f\r");
+            // This is pretty coarse but does a reasonably good job of
+            // identifying things that look like instructions, possibly with a
+            // predicate ("@").
+            return !AsmInst.empty() &&
+                   (AsmInst[0] == '@' || isAlpha(AsmInst[0]) ||
+                    AsmInst.find(".pragma") != StringRef::npos);
+          });
+      return InstCount * TargetTransformInfo::TCC_Basic;
+    }
+
+  return BaseT::getInstructionCost(U, Operands, CostKind);
+}
+
 InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
@@ -562,4 +593,26 @@ Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   }
   }
   return nullptr;
+}
+
+unsigned NVPTXTTIImpl::getAssumedAddrSpace(const Value *V) const {
+  if (isa<AllocaInst>(V))
+    return ADDRESS_SPACE_LOCAL;
+
+  return -1;
+}
+
+void NVPTXTTIImpl::collectKernelLaunchBounds(
+    const Function &F,
+    SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
+  if (const auto Val = getMaxClusterRank(F))
+    LB.push_back({"maxclusterrank", *Val});
+
+  const auto MaxNTID = getMaxNTID(F);
+  if (MaxNTID.size() > 0)
+    LB.push_back({"maxntidx", MaxNTID[0]});
+  if (MaxNTID.size() > 1)
+    LB.push_back({"maxntidy", MaxNTID[1]});
+  if (MaxNTID.size() > 2)
+    LB.push_back({"maxntidz", MaxNTID[2]});
 }

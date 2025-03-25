@@ -1,9 +1,9 @@
-<!--===- docs/Intrinsics.md 
-  
+<!--===- docs/Intrinsics.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # A categorization of standard (2018) and extended Fortran intrinsic procedures
@@ -703,8 +703,9 @@ CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, LOC
 MALLOC, FREE
 ```
 
-### Library subroutine 
+### Library subroutine
 ```
+CALL BACKTRACE()
 CALL FDATE(TIME)
 CALL GETLOG(USRNAME)
 CALL GETENV(NAME [, VALUE, LENGTH, STATUS, TRIM_NAME, ERRMSG ])
@@ -766,10 +767,10 @@ This phase currently supports all the intrinsic procedures listed above but the 
 | Object characteristic inquiry functions | ALLOCATED, ASSOCIATED, EXTENDS_TYPE_OF, IS_CONTIGUOUS, PRESENT, RANK, SAME_TYPE, STORAGE_SIZE |
 | Type inquiry intrinsic functions | BIT_SIZE, DIGITS, EPSILON, HUGE, KIND, MAXEXPONENT, MINEXPONENT, NEW_LINE, PRECISION, RADIX, RANGE, TINY|
 | Non-standard intrinsic functions | AND, OR, XOR, SHIFT, ZEXT, IZEXT, COSD, SIND, TAND, ACOSD, ASIND, ATAND, ATAN2D, COMPL, EQV, NEQV, INT8, JINT, JNINT, KNINT, QCMPLX, DREAL, DFLOAT, QEXT, QFLOAT, QREAL, DNUM, NUM, JNUM, KNUM, QNUM, RNUM, RAN, RANF, ILEN, SIZEOF, MCLOCK, SECNDS, COTAN, IBCHNG, ISHA, ISHC, ISHL, IXOR, IARG, IARGC, NARGS, GETPID, NUMARG, BADDRESS, IADDR, CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, MALLOC, FREE, GETUID, GETGID |
-| Intrinsic subroutines |MVBITS (elemental), CPU_TIME, DATE_AND_TIME, EVENT_QUERY, EXECUTE_COMMAND_LINE, GET_COMMAND, GET_COMMAND_ARGUMENT, GET_ENVIRONMENT_VARIABLE, MOVE_ALLOC, RANDOM_INIT, RANDOM_NUMBER, RANDOM_SEED, SIGNAL, SLEEP, SYSTEM, SYSTEM_CLOCK |
+| Intrinsic subroutines |MVBITS (elemental), CHDIR, CPU_TIME, DATE_AND_TIME, EVENT_QUERY, EXECUTE_COMMAND_LINE, GET_COMMAND, GET_COMMAND_ARGUMENT, GET_ENVIRONMENT_VARIABLE, MOVE_ALLOC, RANDOM_INIT, RANDOM_NUMBER, RANDOM_SEED, SIGNAL, SLEEP, SYSTEM, SYSTEM_CLOCK |
 | Atomic intrinsic subroutines | ATOMIC_ADD |
 | Collective intrinsic subroutines | CO_REDUCE |
-| Library subroutines | FDATE, GETLOG, GETENV |
+| Library subroutines | BACKTRACE, FDATE, GETLOG, GETENV |
 
 
 ### Intrinsic Function Folding
@@ -960,7 +961,7 @@ program test_etime
     call ETIME(tarray, result)
     print *, result
     print *, tarray(1)
-    print *, tarray(2)   
+    print *, tarray(2)
     do i=1,100000000    ! Just a delay
         j = i * i - i
     end do
@@ -1001,6 +1002,38 @@ PROGRAM example_getcwd
   PRINT *, status
 END PROGRAM
 ```
+
+### Non-Standard Intrinsics: HOSTNM
+
+#### Description
+`HOSTNM(C, STATUS)` returns the host name of the system.
+
+This intrinsic is provided in both subroutine and function forms; however, only one form can be used in any given program unit.
+
+*C* and *STATUS* are `INTENT(OUT)` and provide the following:
+
+|            |                                                                                                   |
+|------------|---------------------------------------------------------------------------------------------------|
+| `C`        | The host name of the system. The type shall be `CHARACTER` and of default kind.       |
+| `STATUS`   | (Optional) Status flag. Returns 0 on success, a system specific and nonzero error code otherwise. The type shall be `INTEGER` and of a kind greater or equal to 4. |
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL HOSTNM(C, STATUS)`, `STATUS = HOSTNM(C)`
+
+#### Example
+```Fortran
+PROGRAM example_hostnm
+  CHARACTER(len=255) :: hnam
+  INTEGER :: status
+  CALL hostnm(hnam, status)
+  PRINT *, hnam
+  PRINT *, status
+END PROGRAM
+```
+
 
 ### Non-standard Intrinsics: RENAME
 `RENAME(OLD, NEW[, STATUS])` renames/moves a file on the filesystem.
@@ -1063,3 +1096,76 @@ This intrinsic is an alias for `LEN_TRIM`, without the optional KIND argument.
 - **Arguments:** `TIME` - a REAL value into which the elapsed CPU time in
                           seconds is written
 - **RETURN value:** same as TIME argument
+
+### Non-Standard Intrinsics: CHDIR
+
+#### Description
+`CHDIR(NAME[, STATUS])` Change current working directory to a specified path.
+
+This intrinsic is provided in both subroutine and function forms; however, only one form can be used in any given program unit.
+*STATUS* is `INTENT(OUT)` and provide the following:
+
+|            |                                                                                                   |
+|------------|---------------------------------------------------------------------------------------------------|
+| `NAME`     | The type shall be `CHARACTER` of default kind and shall specify a valid path within the file system.       |
+| `STATUS`   | (Optional) Status flag. Returns 0 on success, a system specific and nonzero error code otherwise. The type shall be `INTEGER` and of the default kind. |
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL CHDIR(NAME[, STATUS])` and `STATUS = CHDIR(NAME)`
+
+#### Example
+```Fortran
+program chdir_func
+  character(len=) :: path
+  integer :: status
+
+  call chdir("/tmp")
+  status = chdir("..")
+  print *, "status: ", status
+end program chdir_func
+```
+
+### Non-Standard Intrinsics: IERRNO
+
+#### Description
+`IERRNO()` returns the last system error number, as given by the C `errno` variable.
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** function
+- **Syntax:** `RESULT = IERRNO()`
+
+### Non-Standard Intrinsics: QSORT
+
+#### Description
+
+```
+SUBROUTINE QSORT(ARRAY, LEN, ISIZE, COMPAR)
+  TYPE(*) :: ARRAY(*)
+  INTEGER(4) :: LEN, ISIZE
+  INTERFACE
+    INTEGER(4) FUNCTION COMPAR(A, B)
+      TYPE(*) :: A, B
+    END FUNCTION
+  END INTERFACE
+END SUBROUTINE
+```
+
+Sort `ARRAY` in place in ascending order given the comparison function `COMPAR`.
+The array number of elements is given by `LEN` and the element byte size is given
+by `ISIZE`.
+
+`COMPAR` function takes the addresses of element `A` and `B` and must return:
+- a negative value if `A` < `B`
+- zero if `A` == `B`
+- a positive value otherwise. 
+
+#### Usage and Info
+
+- **Standard:** lib3f (section 3f of old man pages).
+- **Class:** subroutine
+- **Syntax:** `CALL QSORT(ARRAY, LEN, ISIZE, COMPAR)`

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_WCTYPE_H
-#define _LIBCPP_WCTYPE_H
+#ifndef _LIBCPP___CXX03_WCTYPE_H
+#define _LIBCPP___CXX03_WCTYPE_H
 
 /*
     wctype.h synopsis
@@ -92,4 +92,4 @@ wctrans_t wctrans(const char* property);
 
 #endif // __cplusplus
 
-#endif // _LIBCPP_WCTYPE_H
+#endif // _LIBCPP___CXX03_WCTYPE_H

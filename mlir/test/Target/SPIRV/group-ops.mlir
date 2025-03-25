@@ -103,5 +103,15 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %0 = spirv.KHR.GroupFMul <Workgroup> <Reduce> %value : f32
     spirv.ReturnValue %0: f32
   }
+}
 
+// -----
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.3, [Shader, GroupNonUniformBallot, Linkage], []> {
+  // CHECK-LABEL: @group_non_uniform_ballot_bit_count
+  spirv.func @group_non_uniform_ballot_bit_count(%value: vector<4xi32>) -> i32 "None" {
+    // CHECK: spirv.GroupNonUniformBallotBitCount <Subgroup> <Reduce> {{%.*}} : vector<4xi32> -> i32
+    %0 = spirv.GroupNonUniformBallotBitCount <Subgroup> <Reduce> %value : vector<4xi32> -> i32
+    spirv.ReturnValue %0 : i32
+  }
 }

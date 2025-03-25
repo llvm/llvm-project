@@ -343,9 +343,6 @@ private:
   /// True if the function uses ORC format for stack unwinding.
   bool HasORC{false};
 
-  /// True if the original entry point was patched.
-  bool IsPatched{false};
-
   /// True if the function contains explicit or implicit indirect branch to its
   /// split fragments, e.g., split jump table, landing pad in split fragment
   bool HasIndirectTargetToSplitFragment{false};
@@ -427,6 +424,9 @@ private:
 
   /// Function order for streaming into the destination binary.
   uint32_t Index{-1U};
+
+  /// Function is referenced by a non-control flow instruction.
+  bool HasAddressTaken{false};
 
   /// Get basic block index assuming it belongs to this function.
   unsigned getIndex(const BinaryBasicBlock *BB) const {
@@ -821,6 +821,14 @@ public:
 
     return nullptr;
   }
+
+  /// Return true if function is referenced in a non-control flow instruction.
+  /// This flag is set when the code and relocation analyses are being
+  /// performed, which occurs when safe ICF (Identical Code Folding) is enabled.
+  bool hasAddressTaken() const { return HasAddressTaken; }
+
+  /// Set whether function is referenced in a non-control flow instruction.
+  void setHasAddressTaken(bool AddressTaken) { HasAddressTaken = AddressTaken; }
 
   /// Returns the raw binary encoding of this function.
   ErrorOr<ArrayRef<uint8_t>> getData() const;
@@ -1252,7 +1260,7 @@ public:
   /// Register relocation type \p RelType at a given \p Address in the function
   /// against \p Symbol.
   /// Assert if the \p Address is not inside this function.
-  void addRelocation(uint64_t Address, MCSymbol *Symbol, uint64_t RelType,
+  void addRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t RelType,
                      uint64_t Addend, uint64_t Value);
 
   /// Return the name of the section this function originated from.
@@ -1364,9 +1372,6 @@ public:
 
   /// Return true if the function uses ORC format for stack unwinding.
   bool hasORC() const { return HasORC; }
-
-  /// Return true if the original entry point was patched.
-  bool isPatched() const { return IsPatched; }
 
   const JumpTable *getJumpTable(const MCInst &Inst) const {
     const uint64_t Address = BC.MIB->getJumpTable(Inst);
@@ -1718,8 +1723,6 @@ public:
   /// Mark function that should not be emitted.
   void setIgnored();
 
-  void setIsPatched(bool V) { IsPatched = V; }
-
   void setHasIndirectTargetToSplitFragment(bool V) {
     HasIndirectTargetToSplitFragment = V;
   }
@@ -2049,6 +2052,11 @@ public:
     return Islands ? Islands->getAlignment() : 1;
   }
 
+  /// If there is a constant island in the range [StartOffset, EndOffset),
+  /// return its address.
+  std::optional<uint64_t> getIslandInRange(uint64_t StartOffset,
+                                           uint64_t EndOffset) const;
+
   uint64_t
   estimateConstantIslandSize(const BinaryFunction *OnBehalfOf = nullptr) const {
     if (!Islands)
@@ -2134,6 +2142,9 @@ public:
   // Check for linker veneers, which lack relocations and need manual
   // adjustments.
   void handleAArch64IndirectCall(MCInst &Instruction, const uint64_t Offset);
+
+  /// Analyze instruction to identify a function reference.
+  void analyzeInstructionForFuncReference(const MCInst &Inst);
 
   /// Scan function for references to other functions. In relocation mode,
   /// add relocations for external references. In non-relocation mode, detect

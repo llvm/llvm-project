@@ -267,11 +267,11 @@ def t2addrmode_imm8_pre : T2AddrMode_Imm8 {
 }
 
 def t2am_imm8_offset : MemOperand,
-                       ComplexPattern<i32, 1, "SelectT2AddrModeImm8Offset",
-                                      [], [SDNPWantRoot]> {
+                       ComplexPattern<i32, 1, "SelectT2AddrModeImm8Offset"> {
   let PrintMethod = "printT2AddrModeImm8OffsetOperand";
   let EncoderMethod = "getT2AddrModeImm8OffsetOpValue";
   let DecoderMethod = "DecodeT2Imm8";
+  let WantsRoot = true;
 }
 
 // t2addrmode_imm8s4  := reg +/- (imm8 << 2)
@@ -1144,7 +1144,8 @@ let isCompare = 1, Defs = [CPSR] in {
    def ri : T2OneRegCmpImm<
                 (outs), (ins LHSGPR:$Rn, t2_so_imm:$imm), iii,
                 opc, ".w\t$Rn, $imm",
-                [(opnode LHSGPR:$Rn, t2_so_imm:$imm)]>, Sched<[WriteCMP]> {
+                [(set CPSR, (opnode LHSGPR:$Rn, t2_so_imm:$imm))]>,
+            Sched<[WriteCMP]> {
      let Inst{31-27} = 0b11110;
      let Inst{25} = 0;
      let Inst{24-21} = opcod;
@@ -1156,7 +1157,8 @@ let isCompare = 1, Defs = [CPSR] in {
    def rr : T2TwoRegCmp<
                 (outs), (ins LHSGPR:$Rn, rGPR:$Rm), iir,
                 opc, ".w\t$Rn, $Rm",
-                [(opnode LHSGPR:$Rn, rGPR:$Rm)]>, Sched<[WriteCMP]> {
+                [(set CPSR, (opnode LHSGPR:$Rn, rGPR:$Rm))]>,
+            Sched<[WriteCMP]> {
      let Inst{31-27} = 0b11101;
      let Inst{26-25} = 0b01;
      let Inst{24-21} = opcod;
@@ -1170,7 +1172,7 @@ let isCompare = 1, Defs = [CPSR] in {
    def rs : T2OneRegCmpShiftedReg<
                 (outs), (ins LHSGPR:$Rn, t2_so_reg:$ShiftedRm), iis,
                 opc, ".w\t$Rn, $ShiftedRm",
-                [(opnode LHSGPR:$Rn, t2_so_reg:$ShiftedRm)]>,
+                [(set CPSR, (opnode LHSGPR:$Rn, t2_so_reg:$ShiftedRm))]>,
                 Sched<[WriteCMPsi]> {
      let Inst{31-27} = 0b11101;
      let Inst{26-25} = 0b01;
@@ -1793,6 +1795,8 @@ def t2STRH_preidx: t2PseudoInst<(outs GPRnopc:$Rn_wb),
             Sched<[WriteST]>;
 }
 
+let mayStore = 1, hasSideEffects = 0 in {
+
 // F5.1.229 STR (immediate) T4
 // .w suffixes; Constraints can't be used on t2InstAlias to describe
 // "$Rn =  $Rn_wb,@earlyclobber $Rn_wb" on POST or
@@ -1847,6 +1851,8 @@ class T2IstT<bits<2> type, string opc, InstrItinClass ii>
 def t2STRT   : T2IstT<0b10, "strt", IIC_iStore_i>;
 def t2STRBT  : T2IstT<0b00, "strbt", IIC_iStore_bh_i>;
 def t2STRHT  : T2IstT<0b01, "strht", IIC_iStore_bh_i>;
+
+} // mayStore = 1, hasSideEffects = 0
 
 // ldrd / strd pre / post variants
 
@@ -3298,6 +3304,7 @@ def : Thumb2DSPPat<(ARMSmlsldx rGPR:$Rn, rGPR:$Rm, rGPR:$RLo, rGPR:$RHi),
 //  Division Instructions.
 //  Signed and unsigned division on v7-M
 //
+let TwoOperandAliasConstraint = "$Rn = $Rd" in {
 def t2SDIV : T2ThreeReg<(outs rGPR:$Rd), (ins rGPR:$Rn, rGPR:$Rm), IIC_iDIV,
                  "sdiv", "\t$Rd, $Rn, $Rm",
                  [(set rGPR:$Rd, (sdiv rGPR:$Rn, rGPR:$Rm))]>,
@@ -3320,6 +3327,7 @@ def t2UDIV : T2ThreeReg<(outs rGPR:$Rd), (ins rGPR:$Rn, rGPR:$Rm), IIC_iDIV,
   let Inst{20} = 0b1;
   let Inst{15-12} = 0b1111;
   let Inst{7-4} = 0b1111;
+}
 }
 
 //===----------------------------------------------------------------------===//
@@ -3477,7 +3485,7 @@ let isCompare = 1, Defs = [CPSR] in {
    def t2CMNri : T2OneRegCmpImm<
                 (outs), (ins GPRnopc:$Rn, t2_so_imm:$imm), IIC_iCMPi,
                 "cmn", ".w\t$Rn, $imm",
-                [(ARMcmn GPRnopc:$Rn, (ineg t2_so_imm:$imm))]>,
+                [(set CPSR, (ARMcmn GPRnopc:$Rn, (ineg t2_so_imm:$imm)))]>,
                 Sched<[WriteCMP, ReadALU]> {
      let Inst{31-27} = 0b11110;
      let Inst{25} = 0;
@@ -3490,8 +3498,9 @@ let isCompare = 1, Defs = [CPSR] in {
    def t2CMNzrr : T2TwoRegCmp<
                 (outs), (ins GPRnopc:$Rn, rGPR:$Rm), IIC_iCMPr,
                 "cmn", ".w\t$Rn, $Rm",
-                [(BinOpFrag<(ARMcmpZ node:$LHS,(ineg node:$RHS))>
-                  GPRnopc:$Rn, rGPR:$Rm)]>, Sched<[WriteCMP, ReadALU, ReadALU]> {
+                [(set CPSR, (BinOpFrag<(ARMcmpZ node:$LHS,(ineg node:$RHS))>
+                  GPRnopc:$Rn, rGPR:$Rm))]>,
+                  Sched<[WriteCMP, ReadALU, ReadALU]> {
      let Inst{31-27} = 0b11101;
      let Inst{26-25} = 0b01;
      let Inst{24-21} = 0b1000;
@@ -3505,8 +3514,8 @@ let isCompare = 1, Defs = [CPSR] in {
    def t2CMNzrs : T2OneRegCmpShiftedReg<
                 (outs), (ins GPRnopc:$Rn, t2_so_reg:$ShiftedRm), IIC_iCMPsi,
                 "cmn", ".w\t$Rn, $ShiftedRm",
-                [(BinOpFrag<(ARMcmpZ node:$LHS,(ineg node:$RHS))>
-                  GPRnopc:$Rn, t2_so_reg:$ShiftedRm)]>,
+                [(set CPSR, (BinOpFrag<(ARMcmpZ node:$LHS,(ineg node:$RHS))>
+                  GPRnopc:$Rn, t2_so_reg:$ShiftedRm))]>,
                   Sched<[WriteCMPsi, ReadALU, ReadALU]> {
      let Inst{31-27} = 0b11101;
      let Inst{26-25} = 0b01;
@@ -3542,66 +3551,83 @@ let hasSideEffects = 0 in {
 
 let isCommutable = 1, isSelect = 1 in
 def t2MOVCCr : t2PseudoInst<(outs rGPR:$Rd),
-                            (ins rGPR:$false, rGPR:$Rm, cmovpred:$p),
-                            4, IIC_iCMOVr,
-                            [(set rGPR:$Rd, (ARMcmov rGPR:$false, rGPR:$Rm,
-                                                     cmovpred:$p))]>,
+                            (ins rGPR:$false, rGPR:$Rm, pred:$p),
+                            4, IIC_iCMOVr, []>,
                RegConstraint<"$false = $Rd">, Sched<[WriteALU]>;
 
 let isMoveImm = 1 in
 def t2MOVCCi
     : t2PseudoInst<(outs rGPR:$Rd),
-                   (ins rGPR:$false, t2_so_imm:$imm, cmovpred:$p),
-                   4, IIC_iCMOVi,
-                   [(set rGPR:$Rd, (ARMcmov rGPR:$false,t2_so_imm:$imm,
-                                            cmovpred:$p))]>,
+                   (ins rGPR:$false, t2_so_imm:$imm, pred:$p),
+                   4, IIC_iCMOVi, []>,
       RegConstraint<"$false = $Rd">, Sched<[WriteALU]>;
 
 let isCodeGenOnly = 1 in {
 let isMoveImm = 1 in
 def t2MOVCCi16
     : t2PseudoInst<(outs rGPR:$Rd),
-                   (ins  rGPR:$false, imm0_65535_expr:$imm, cmovpred:$p),
-                   4, IIC_iCMOVi,
-                   [(set rGPR:$Rd, (ARMcmov rGPR:$false, imm0_65535:$imm,
-                                            cmovpred:$p))]>,
+                   (ins rGPR:$false, imm0_65535_expr:$imm, pred:$p),
+                   4, IIC_iCMOVi, []>,
       RegConstraint<"$false = $Rd">, Sched<[WriteALU]>;
 
 let isMoveImm = 1 in
 def t2MVNCCi
     : t2PseudoInst<(outs rGPR:$Rd),
-                   (ins rGPR:$false, t2_so_imm:$imm, cmovpred:$p),
-                   4, IIC_iCMOVi,
-                   [(set rGPR:$Rd,
-                         (ARMcmov rGPR:$false, t2_so_imm_not:$imm,
-                                  cmovpred:$p))]>,
+                   (ins rGPR:$false, t2_so_imm:$imm, pred:$p),
+                   4, IIC_iCMOVi, []>,
       RegConstraint<"$false = $Rd">, Sched<[WriteALU]>;
 
-class MOVCCShPseudo<SDPatternOperator opnode, Operand ty>
+class MOVCCShPseudo
     : t2PseudoInst<(outs rGPR:$Rd),
-                   (ins rGPR:$false, rGPR:$Rm, i32imm:$imm, cmovpred:$p),
-                   4, IIC_iCMOVsi,
-                   [(set rGPR:$Rd, (ARMcmov rGPR:$false,
-                                            (opnode rGPR:$Rm, (i32 ty:$imm)),
-                                            cmovpred:$p))]>,
+                   (ins rGPR:$false, rGPR:$Rm, i32imm:$imm, pred:$p),
+                   4, IIC_iCMOVsi, []>,
       RegConstraint<"$false = $Rd">, Sched<[WriteALU]>;
 
-def t2MOVCClsl : MOVCCShPseudo<shl,  imm0_31>;
-def t2MOVCClsr : MOVCCShPseudo<srl,  imm_sr>;
-def t2MOVCCasr : MOVCCShPseudo<sra,  imm_sr>;
-def t2MOVCCror : MOVCCShPseudo<rotr, imm0_31>;
+def t2MOVCClsl : MOVCCShPseudo;
+def t2MOVCClsr : MOVCCShPseudo;
+def t2MOVCCasr : MOVCCShPseudo;
+def t2MOVCCror : MOVCCShPseudo;
 
 let isMoveImm = 1 in
 def t2MOVCCi32imm
     : t2PseudoInst<(outs rGPR:$dst),
-                   (ins rGPR:$false, i32imm:$src, cmovpred:$p),
-                   8, IIC_iCMOVix2,
-                   [(set rGPR:$dst, (ARMcmov rGPR:$false, imm:$src,
-                                             cmovpred:$p))]>,
+                   (ins rGPR:$false, i32imm:$src, pred:$p),
+                   8, IIC_iCMOVix2, []>,
       RegConstraint<"$false = $dst">;
 } // isCodeGenOnly = 1
 
 } // hasSideEffects
+
+// The following patterns have to be defined out-of-line because the number
+// of instruction operands does not match the number of SDNode operands
+// (`pred` counts as one operand).
+
+def : T2Pat<(ARMcmov i32:$false, i32:$Rm, imm:$cc, CPSR),
+            (t2MOVCCr $false, $Rm, imm:$cc, CPSR)>;
+
+def : T2Pat<(ARMcmov i32:$false, t2_so_imm:$imm, imm:$cc, CPSR),
+            (t2MOVCCi $false, t2_so_imm:$imm, imm:$cc, CPSR)>;
+
+def : T2Pat<(ARMcmov i32:$false, imm0_65535:$imm, imm:$cc, CPSR),
+            (t2MOVCCi16 $false, imm0_65535:$imm, imm:$cc, CPSR)>;
+
+def : T2Pat<(ARMcmov i32:$false, t2_so_imm_not:$imm, imm:$cc, CPSR),
+            (t2MVNCCi $false, t2_so_imm_not:$imm, imm:$cc, CPSR)>;
+
+def : T2Pat<(ARMcmov i32:$false, (shl i32:$Rm, imm0_31:$imm), imm:$cc, CPSR),
+            (t2MOVCClsl $false, $Rm, imm0_31:$imm, imm:$cc, CPSR)>;
+
+def : T2Pat<(ARMcmov i32:$false, (srl i32:$Rm, imm_sr:$imm), imm:$cc, CPSR),
+            (t2MOVCClsr $false, $Rm, imm_sr:$imm, imm:$cc, CPSR)>;
+
+def : T2Pat<(ARMcmov i32:$false, (sra i32:$Rm, imm_sr:$imm), imm:$cc, CPSR),
+            (t2MOVCCasr $false, $Rm, imm_sr:$imm, imm:$cc, CPSR)>;
+
+def : T2Pat<(ARMcmov i32:$false, (rotr i32:$Rm, imm0_31:$imm), imm:$cc, CPSR),
+            (t2MOVCCror $false, $Rm, imm0_31:$imm, imm:$cc, CPSR)>;
+
+def : T2Pat<(ARMcmov i32:$false, imm:$src, imm:$cc, CPSR),
+            (t2MOVCCi32imm $false, imm:$src, imm:$cc, CPSR)>;
 
 //===----------------------------------------------------------------------===//
 // Atomic operations intrinsics
@@ -4460,15 +4486,18 @@ multiclass t2LdStCop<bits<4> op31_28, bit load, bit Dbit, string asm, list<dag> 
 }
 
 let DecoderNamespace = "Thumb2CoProc" in {
+let mayLoad = 1 in {
 defm t2LDC   : t2LdStCop<0b1110, 1, 0, "ldc", [(int_arm_ldc timm:$cop, timm:$CRd, addrmode5:$addr)]>;
 defm t2LDCL  : t2LdStCop<0b1110, 1, 1, "ldcl", [(int_arm_ldcl timm:$cop, timm:$CRd, addrmode5:$addr)]>;
 defm t2LDC2  : t2LdStCop<0b1111, 1, 0, "ldc2", [(int_arm_ldc2 timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[PreV8,IsThumb2]>;
 defm t2LDC2L : t2LdStCop<0b1111, 1, 1, "ldc2l", [(int_arm_ldc2l timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[PreV8,IsThumb2]>;
-
+}
+let mayStore = 1 in {
 defm t2STC   : t2LdStCop<0b1110, 0, 0, "stc", [(int_arm_stc timm:$cop, timm:$CRd, addrmode5:$addr)]>;
 defm t2STCL  : t2LdStCop<0b1110, 0, 1, "stcl", [(int_arm_stcl timm:$cop, timm:$CRd, addrmode5:$addr)]>;
 defm t2STC2  : t2LdStCop<0b1111, 0, 0, "stc2", [(int_arm_stc2 timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[PreV8,IsThumb2]>;
 defm t2STC2L : t2LdStCop<0b1111, 0, 1, "stc2l", [(int_arm_stc2l timm:$cop, timm:$CRd, addrmode5:$addr)]>, Requires<[PreV8,IsThumb2]>;
+}
 }
 
 
@@ -5706,51 +5735,53 @@ def t2CSINC : CS<"csinc", 0b1001>;
 def t2CSINV : CS<"csinv", 0b1010>;
 def t2CSNEG : CS<"csneg", 0b1011>;
 
-def ARMcsinc_su : PatFrag<(ops node:$lhs, node:$rhs, node:$cond),
-                          (ARMcsinc node:$lhs, node:$rhs, node:$cond), [{
+def ARMcsinc_su
+    : PatFrag<(ops node:$lhs, node:$rhs, node:$cc, node:$flags),
+              (ARMcsinc node:$lhs, node:$rhs, node:$cc, node:$flags), [{
   return N->hasOneUse();
 }]>;
 
 let Predicates = [HasV8_1MMainline] in {
   multiclass CSPats<SDNode Node, Instruction Insn> {
-    def : T2Pat<(Node GPRwithZR:$tval, GPRwithZR:$fval, imm0_31:$imm),
-                (Insn GPRwithZR:$tval, GPRwithZR:$fval, imm0_31:$imm)>;
-    def : T2Pat<(Node (i32 0), GPRwithZR:$fval, imm0_31:$imm),
-                (Insn ZR, GPRwithZR:$fval, imm0_31:$imm)>;
-    def : T2Pat<(Node GPRwithZR:$tval, (i32 0), imm0_31:$imm),
-                (Insn GPRwithZR:$tval, ZR, imm0_31:$imm)>;
-    def : T2Pat<(Node (i32 0), (i32 0), imm0_31:$imm),
-                (Insn ZR, ZR, imm0_31:$imm)>;
+    def : T2Pat<(Node GPRwithZR:$tval, GPRwithZR:$fval, imm:$cc, CPSR),
+                (Insn GPRwithZR:$tval, GPRwithZR:$fval, imm:$cc)>;
+    def : T2Pat<(Node (i32 0), GPRwithZR:$fval, imm:$cc, CPSR),
+                (Insn ZR, GPRwithZR:$fval, imm:$cc)>;
+    def : T2Pat<(Node GPRwithZR:$tval, (i32 0), imm:$cc, CPSR),
+                (Insn GPRwithZR:$tval, ZR, imm:$cc)>;
+    def : T2Pat<(Node (i32 0), (i32 0), imm:$cc, CPSR),
+                (Insn ZR, ZR, imm:$cc)>;
   }
 
   defm : CSPats<ARMcsinc, t2CSINC>;
   defm : CSPats<ARMcsinv, t2CSINV>;
   defm : CSPats<ARMcsneg, t2CSNEG>;
 
-  def : T2Pat<(ARMcmov (i32 1), (i32 0), cmovpred:$imm),
-              (t2CSINC ZR, ZR, imm0_31:$imm)>;
-  def : T2Pat<(ARMcmov (i32 -1), (i32 0), cmovpred:$imm),
-              (t2CSINV ZR, ZR, imm0_31:$imm)>;
-  def : T2Pat<(ARMcmov (i32 0), (i32 1), cmovpred:$imm),
-              (t2CSINC ZR, ZR, (inv_cond_XFORM imm:$imm))>;
-  def : T2Pat<(ARMcmov (i32 0), (i32 -1), cmovpred:$imm),
-              (t2CSINV ZR, ZR, (inv_cond_XFORM imm:$imm))>;
+  def : T2Pat<(ARMcmov (i32 1), (i32 0), imm:$cc, CPSR),
+              (t2CSINC ZR, ZR, imm:$cc)>;
+  def : T2Pat<(ARMcmov (i32 -1), (i32 0), imm:$cc, CPSR),
+              (t2CSINV ZR, ZR, imm:$cc)>;
+  def : T2Pat<(ARMcmov (i32 0), (i32 1), imm:$cc, CPSR),
+              (t2CSINC ZR, ZR, (inv_cond_XFORM imm:$cc))>;
+  def : T2Pat<(ARMcmov (i32 0), (i32 -1), imm:$cc, CPSR),
+              (t2CSINV ZR, ZR, (inv_cond_XFORM imm:$cc))>;
 
   multiclass ModifiedV8_1CSEL<Instruction Insn, dag modvalue> {
-    def : T2Pat<(ARMcmov modvalue, GPRwithZR:$tval, cmovpred:$imm),
-                (Insn GPRwithZR:$tval, GPRwithZR:$fval, imm0_31:$imm)>;
-    def : T2Pat<(ARMcmov GPRwithZR:$tval, modvalue, cmovpred:$imm),
+    def : T2Pat<(ARMcmov modvalue, GPRwithZR:$tval, imm:$cc, CPSR),
+                (Insn GPRwithZR:$tval, GPRwithZR:$fval, imm:$cc)>;
+    def : T2Pat<(ARMcmov GPRwithZR:$tval, modvalue, imm:$cc, CPSR),
                 (Insn GPRwithZR:$tval, GPRwithZR:$fval,
-                         (i32 (inv_cond_XFORM imm:$imm)))>;
+                         (i32 (inv_cond_XFORM imm:$cc)))>;
   }
   defm : ModifiedV8_1CSEL<t2CSINC, (add rGPR:$fval, 1)>;
   defm : ModifiedV8_1CSEL<t2CSINV, (xor rGPR:$fval, -1)>;
   defm : ModifiedV8_1CSEL<t2CSNEG, (sub 0, rGPR:$fval)>;
 
-  def : T2Pat<(ARMcmov (topbitsallzero32:$Rn), (i32 1), cmovpred:$imm),
-              (t2CSINC $Rn, ZR, (inv_cond_XFORM imm:$imm))>;
-  def : T2Pat<(and (topbitsallzero32:$Rn), (ARMcsinc_su (i32 0), (i32 0), cmovpred:$imm)),
-              (t2CSEL ZR, $Rn, $imm)>;
+  def : T2Pat<(ARMcmov (topbitsallzero32:$Rn), (i32 1), imm:$cc, CPSR),
+              (t2CSINC $Rn, ZR, (inv_cond_XFORM imm:$cc))>;
+  def : T2Pat<(and (topbitsallzero32:$Rn),
+                   (ARMcsinc_su (i32 0), (i32 0), imm:$cc, CPSR)),
+              (t2CSEL ZR, $Rn, imm:$cc)>;
 }
 
 // CS aliases.

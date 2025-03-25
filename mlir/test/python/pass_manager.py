@@ -342,6 +342,27 @@ def testPrintIrBeforeAndAfterAll():
         pm.run(module)
 
 
+# CHECK-LABEL: TEST: testPrintIrLargeLimitElements
+@run
+def testPrintIrLargeLimitElements():
+    with Context() as ctx:
+        module = ModuleOp.parse(
+            """
+          module {
+            func.func @main() -> tensor<3xi64> {
+              %0 = arith.constant dense<[1, 2, 3]> : tensor<3xi64>
+              return %0 : tensor<3xi64>
+            }
+          }
+        """
+        )
+        pm = PassManager.parse("builtin.module(canonicalize)")
+        ctx.enable_multithreading(False)
+        pm.enable_ir_printing(large_elements_limit=2)
+        # CHECK:     %[[CST:.*]] = arith.constant dense_resource<__elided__> : tensor<3xi64>
+        pm.run(module)
+
+
 # CHECK-LABEL: TEST: testPrintIrTree
 @run
 def testPrintIrTree():

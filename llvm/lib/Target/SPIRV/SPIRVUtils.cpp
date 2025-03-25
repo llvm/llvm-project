@@ -194,6 +194,19 @@ MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I) {
   return It;
 }
 
+MachineBasicBlock::iterator getInsertPtValidEnd(MachineBasicBlock *MBB) {
+  MachineBasicBlock::iterator I = MBB->end();
+  if (I == MBB->begin())
+    return I;
+  --I;
+  while (I->isTerminator() || I->isDebugValue()) {
+    if (I == MBB->begin())
+      break;
+    --I;
+  }
+  return I;
+}
+
 SPIRV::StorageClass::StorageClass
 addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
   switch (AddrSpace) {
@@ -447,25 +460,31 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx) {
   TypeName.consume_front("atomic_");
   if (TypeName.consume_front("void"))
     return Type::getVoidTy(Ctx);
-  else if (TypeName.consume_front("bool"))
+  else if (TypeName.consume_front("bool") || TypeName.consume_front("_Bool"))
     return Type::getIntNTy(Ctx, 1);
   else if (TypeName.consume_front("char") ||
+           TypeName.consume_front("signed char") ||
            TypeName.consume_front("unsigned char") ||
            TypeName.consume_front("uchar"))
     return Type::getInt8Ty(Ctx);
   else if (TypeName.consume_front("short") ||
+           TypeName.consume_front("signed short") ||
            TypeName.consume_front("unsigned short") ||
            TypeName.consume_front("ushort"))
     return Type::getInt16Ty(Ctx);
   else if (TypeName.consume_front("int") ||
+           TypeName.consume_front("signed int") ||
            TypeName.consume_front("unsigned int") ||
            TypeName.consume_front("uint"))
     return Type::getInt32Ty(Ctx);
   else if (TypeName.consume_front("long") ||
+           TypeName.consume_front("signed long") ||
            TypeName.consume_front("unsigned long") ||
            TypeName.consume_front("ulong"))
     return Type::getInt64Ty(Ctx);
-  else if (TypeName.consume_front("half"))
+  else if (TypeName.consume_front("half") ||
+           TypeName.consume_front("_Float16") ||
+           TypeName.consume_front("__fp16"))
     return Type::getHalfTy(Ctx);
   else if (TypeName.consume_front("float"))
     return Type::getFloatTy(Ctx);
@@ -580,8 +599,9 @@ size_t PartialOrderingVisitor::visit(BasicBlock *BB, size_t Unused) {
 
     if (!CanBeVisited(BB)) {
       ToVisit.push(BB);
-      assert(QueueIndex < ToVisit.size() &&
-             "No valid candidate in the queue. Is the graph reducible?");
+      if (QueueIndex >= ToVisit.size())
+        llvm::report_fatal_error(
+            "No valid candidate in the queue. Is the graph reducible?");
       QueueIndex++;
       continue;
     }
@@ -718,9 +738,12 @@ void setRegClassType(Register Reg, SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
 // no valid assigned class, set register LLT type and class according to the
 // SPIR-V type.
 void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
-                     MachineIRBuilder &MIRBuilder, bool Force) {
-  setRegClassType(Reg, GR->getOrCreateSPIRVType(Ty, MIRBuilder), GR,
-                  MIRBuilder.getMRI(), MIRBuilder.getMF(), Force);
+                     MachineIRBuilder &MIRBuilder,
+                     SPIRV::AccessQualifier::AccessQualifier AccessQual,
+                     bool EmitIR, bool Force) {
+  setRegClassType(Reg,
+                  GR->getOrCreateSPIRVType(Ty, MIRBuilder, AccessQual, EmitIR),
+                  GR, MIRBuilder.getMRI(), MIRBuilder.getMF(), Force);
 }
 
 // Create a virtual register and assign SPIR-V type to the register. Set
@@ -744,10 +767,23 @@ Register createVirtualRegister(SPIRVType *SpvType, SPIRVGlobalRegistry *GR,
 
 // Create a SPIR-V type, virtual register and assign SPIR-V type to the
 // register. Set register LLT type and class according to the SPIR-V type.
-Register createVirtualRegister(const Type *Ty, SPIRVGlobalRegistry *GR,
-                               MachineIRBuilder &MIRBuilder) {
-  return createVirtualRegister(GR->getOrCreateSPIRVType(Ty, MIRBuilder), GR,
-                               MIRBuilder);
+Register createVirtualRegister(
+    const Type *Ty, SPIRVGlobalRegistry *GR, MachineIRBuilder &MIRBuilder,
+    SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR) {
+  return createVirtualRegister(
+      GR->getOrCreateSPIRVType(Ty, MIRBuilder, AccessQual, EmitIR), GR,
+      MIRBuilder);
+}
+
+CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
+                          Value *Arg, Value *Arg2, ArrayRef<Constant *> Imms,
+                          IRBuilder<> &B) {
+  SmallVector<Value *, 4> Args;
+  Args.push_back(Arg2);
+  Args.push_back(buildMD(Arg));
+  for (auto *Imm : Imms)
+    Args.push_back(Imm);
+  return B.CreateIntrinsic(IntrID, {Types}, Args);
 }
 
 // Return true if there is an opaque pointer type nested in the argument.
@@ -773,6 +809,45 @@ bool isSpvIntrinsic(const Value *Arg) {
       if (F->getName().starts_with("llvm.spv."))
         return true;
   return false;
+}
+
+// Function to create continued instructions for SPV_INTEL_long_composites
+// extension
+SmallVector<MachineInstr *, 4>
+createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
+                            unsigned MinWC, unsigned ContinuedOpcode,
+                            ArrayRef<Register> Args, Register ReturnRegister,
+                            Register TypeID) {
+
+  SmallVector<MachineInstr *, 4> Instructions;
+  constexpr unsigned MaxWordCount = UINT16_MAX;
+  const size_t NumElements = Args.size();
+  size_t MaxNumElements = MaxWordCount - MinWC;
+  size_t SPIRVStructNumElements = NumElements;
+
+  if (NumElements > MaxNumElements) {
+    // Do adjustments for continued instructions which always had only one
+    // minumum word count.
+    SPIRVStructNumElements = MaxNumElements;
+    MaxNumElements = MaxWordCount - 1;
+  }
+
+  auto MIB =
+      MIRBuilder.buildInstr(Opcode).addDef(ReturnRegister).addUse(TypeID);
+
+  for (size_t I = 0; I < SPIRVStructNumElements; ++I)
+    MIB.addUse(Args[I]);
+
+  Instructions.push_back(MIB.getInstr());
+
+  for (size_t I = SPIRVStructNumElements; I < NumElements;
+       I += MaxNumElements) {
+    auto MIB = MIRBuilder.buildInstr(ContinuedOpcode);
+    for (size_t J = I; J < std::min(I + MaxNumElements, NumElements); ++J)
+      MIB.addUse(Args[J]);
+    Instructions.push_back(MIB.getInstr());
+  }
+  return Instructions;
 }
 
 } // namespace llvm

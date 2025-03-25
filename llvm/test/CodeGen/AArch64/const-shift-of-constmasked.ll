@@ -190,8 +190,7 @@ define i8 @test_i8_224_mask_ashr_6(i8 %a0) {
 define i8 @test_i8_7_mask_shl_1(i8 %a0) {
 ; CHECK-LABEL: test_i8_7_mask_shl_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0x7
-; CHECK-NEXT:    lsl w0, w8, #1
+; CHECK-NEXT:    ubfiz w0, w0, #1, #3
 ; CHECK-NEXT:    ret
   %t0 = and i8 %a0, 7
   %t1 = shl i8 %t0, 1
@@ -200,8 +199,7 @@ define i8 @test_i8_7_mask_shl_1(i8 %a0) {
 define i8 @test_i8_7_mask_shl_4(i8 %a0) {
 ; CHECK-LABEL: test_i8_7_mask_shl_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0x7
-; CHECK-NEXT:    lsl w0, w8, #4
+; CHECK-NEXT:    ubfiz w0, w0, #4, #3
 ; CHECK-NEXT:    ret
   %t0 = and i8 %a0, 7
   %t1 = shl i8 %t0, 4
@@ -229,8 +227,8 @@ define i8 @test_i8_7_mask_shl_6(i8 %a0) {
 define i8 @test_i8_28_mask_shl_1(i8 %a0) {
 ; CHECK-LABEL: test_i8_28_mask_shl_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0x1c
-; CHECK-NEXT:    lsl w0, w8, #1
+; CHECK-NEXT:    lsl w8, w0, #1
+; CHECK-NEXT:    and w0, w8, #0x38
 ; CHECK-NEXT:    ret
   %t0 = and i8 %a0, 28
   %t1 = shl i8 %t0, 1
@@ -239,8 +237,8 @@ define i8 @test_i8_28_mask_shl_1(i8 %a0) {
 define i8 @test_i8_28_mask_shl_2(i8 %a0) {
 ; CHECK-LABEL: test_i8_28_mask_shl_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0x1c
-; CHECK-NEXT:    lsl w0, w8, #2
+; CHECK-NEXT:    lsl w8, w0, #2
+; CHECK-NEXT:    and w0, w8, #0x70
 ; CHECK-NEXT:    ret
   %t0 = and i8 %a0, 28
   %t1 = shl i8 %t0, 2
@@ -249,8 +247,8 @@ define i8 @test_i8_28_mask_shl_2(i8 %a0) {
 define i8 @test_i8_28_mask_shl_3(i8 %a0) {
 ; CHECK-LABEL: test_i8_28_mask_shl_3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0x1c
-; CHECK-NEXT:    lsl w0, w8, #3
+; CHECK-NEXT:    lsl w8, w0, #3
+; CHECK-NEXT:    and w0, w8, #0xe0
 ; CHECK-NEXT:    ret
   %t0 = and i8 %a0, 28
   %t1 = shl i8 %t0, 3
@@ -259,8 +257,8 @@ define i8 @test_i8_28_mask_shl_3(i8 %a0) {
 define i8 @test_i8_28_mask_shl_4(i8 %a0) {
 ; CHECK-LABEL: test_i8_28_mask_shl_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xc
-; CHECK-NEXT:    lsl w0, w8, #4
+; CHECK-NEXT:    lsl w8, w0, #4
+; CHECK-NEXT:    and w0, w8, #0xc0
 ; CHECK-NEXT:    ret
   %t0 = and i8 %a0, 28
   %t1 = shl i8 %t0, 4
@@ -270,8 +268,8 @@ define i8 @test_i8_28_mask_shl_4(i8 %a0) {
 define i8 @test_i8_224_mask_shl_1(i8 %a0) {
 ; CHECK-LABEL: test_i8_224_mask_shl_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0x60
-; CHECK-NEXT:    lsl w0, w8, #1
+; CHECK-NEXT:    lsl w8, w0, #1
+; CHECK-NEXT:    and w0, w8, #0xc0
 ; CHECK-NEXT:    ret
   %t0 = and i8 %a0, 224
   %t1 = shl i8 %t0, 1
@@ -465,8 +463,7 @@ define i16 @test_i16_65024_mask_ashr_10(i16 %a0) {
 define i16 @test_i16_127_mask_shl_1(i16 %a0) {
 ; CHECK-LABEL: test_i16_127_mask_shl_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0x7f
-; CHECK-NEXT:    lsl w0, w8, #1
+; CHECK-NEXT:    ubfiz w0, w0, #1, #7
 ; CHECK-NEXT:    ret
   %t0 = and i16 %a0, 127
   %t1 = shl i16 %t0, 1
@@ -475,8 +472,7 @@ define i16 @test_i16_127_mask_shl_1(i16 %a0) {
 define i16 @test_i16_127_mask_shl_8(i16 %a0) {
 ; CHECK-LABEL: test_i16_127_mask_shl_8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0x7f
-; CHECK-NEXT:    lsl w0, w8, #8
+; CHECK-NEXT:    ubfiz w0, w0, #8, #7
 ; CHECK-NEXT:    ret
   %t0 = and i16 %a0, 127
   %t1 = shl i16 %t0, 8
@@ -504,8 +500,8 @@ define i16 @test_i16_127_mask_shl_10(i16 %a0) {
 define i16 @test_i16_2032_mask_shl_3(i16 %a0) {
 ; CHECK-LABEL: test_i16_2032_mask_shl_3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0x7f0
-; CHECK-NEXT:    lsl w0, w8, #3
+; CHECK-NEXT:    lsl w8, w0, #3
+; CHECK-NEXT:    and w0, w8, #0x3f80
 ; CHECK-NEXT:    ret
   %t0 = and i16 %a0, 2032
   %t1 = shl i16 %t0, 3
@@ -514,8 +510,8 @@ define i16 @test_i16_2032_mask_shl_3(i16 %a0) {
 define i16 @test_i16_2032_mask_shl_4(i16 %a0) {
 ; CHECK-LABEL: test_i16_2032_mask_shl_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0x7f0
-; CHECK-NEXT:    lsl w0, w8, #4
+; CHECK-NEXT:    lsl w8, w0, #4
+; CHECK-NEXT:    and w0, w8, #0x7f00
 ; CHECK-NEXT:    ret
   %t0 = and i16 %a0, 2032
   %t1 = shl i16 %t0, 4
@@ -524,8 +520,8 @@ define i16 @test_i16_2032_mask_shl_4(i16 %a0) {
 define i16 @test_i16_2032_mask_shl_5(i16 %a0) {
 ; CHECK-LABEL: test_i16_2032_mask_shl_5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0x7f0
-; CHECK-NEXT:    lsl w0, w8, #5
+; CHECK-NEXT:    lsl w8, w0, #5
+; CHECK-NEXT:    and w0, w8, #0xfe00
 ; CHECK-NEXT:    ret
   %t0 = and i16 %a0, 2032
   %t1 = shl i16 %t0, 5
@@ -534,8 +530,8 @@ define i16 @test_i16_2032_mask_shl_5(i16 %a0) {
 define i16 @test_i16_2032_mask_shl_6(i16 %a0) {
 ; CHECK-LABEL: test_i16_2032_mask_shl_6:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0x3f0
-; CHECK-NEXT:    lsl w0, w8, #6
+; CHECK-NEXT:    lsl w8, w0, #6
+; CHECK-NEXT:    and w0, w8, #0xfc00
 ; CHECK-NEXT:    ret
   %t0 = and i16 %a0, 2032
   %t1 = shl i16 %t0, 6
@@ -545,8 +541,8 @@ define i16 @test_i16_2032_mask_shl_6(i16 %a0) {
 define i16 @test_i16_65024_mask_shl_1(i16 %a0) {
 ; CHECK-LABEL: test_i16_65024_mask_shl_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0x7e00
-; CHECK-NEXT:    lsl w0, w8, #1
+; CHECK-NEXT:    lsl w8, w0, #1
+; CHECK-NEXT:    and w0, w8, #0xfc00
 ; CHECK-NEXT:    ret
   %t0 = and i16 %a0, 65024
   %t1 = shl i16 %t0, 1
@@ -740,8 +736,7 @@ define i32 @test_i32_4294836224_mask_ashr_18(i32 %a0) {
 define i32 @test_i32_32767_mask_shl_1(i32 %a0) {
 ; CHECK-LABEL: test_i32_32767_mask_shl_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0x7fff
-; CHECK-NEXT:    lsl w0, w8, #1
+; CHECK-NEXT:    ubfiz w0, w0, #1, #15
 ; CHECK-NEXT:    ret
   %t0 = and i32 %a0, 32767
   %t1 = shl i32 %t0, 1
@@ -750,8 +745,7 @@ define i32 @test_i32_32767_mask_shl_1(i32 %a0) {
 define i32 @test_i32_32767_mask_shl_16(i32 %a0) {
 ; CHECK-LABEL: test_i32_32767_mask_shl_16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0x7fff
-; CHECK-NEXT:    lsl w0, w8, #16
+; CHECK-NEXT:    ubfiz w0, w0, #16, #15
 ; CHECK-NEXT:    ret
   %t0 = and i32 %a0, 32767
   %t1 = shl i32 %t0, 16
@@ -779,8 +773,8 @@ define i32 @test_i32_32767_mask_shl_18(i32 %a0) {
 define i32 @test_i32_8388352_mask_shl_7(i32 %a0) {
 ; CHECK-LABEL: test_i32_8388352_mask_shl_7:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0x7fff00
-; CHECK-NEXT:    lsl w0, w8, #7
+; CHECK-NEXT:    lsl w8, w0, #7
+; CHECK-NEXT:    and w0, w8, #0x3fff8000
 ; CHECK-NEXT:    ret
   %t0 = and i32 %a0, 8388352
   %t1 = shl i32 %t0, 7
@@ -789,8 +783,8 @@ define i32 @test_i32_8388352_mask_shl_7(i32 %a0) {
 define i32 @test_i32_8388352_mask_shl_8(i32 %a0) {
 ; CHECK-LABEL: test_i32_8388352_mask_shl_8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0x7fff00
-; CHECK-NEXT:    lsl w0, w8, #8
+; CHECK-NEXT:    lsl w8, w0, #8
+; CHECK-NEXT:    and w0, w8, #0x7fff0000
 ; CHECK-NEXT:    ret
   %t0 = and i32 %a0, 8388352
   %t1 = shl i32 %t0, 8
@@ -799,8 +793,8 @@ define i32 @test_i32_8388352_mask_shl_8(i32 %a0) {
 define i32 @test_i32_8388352_mask_shl_9(i32 %a0) {
 ; CHECK-LABEL: test_i32_8388352_mask_shl_9:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0x7fff00
-; CHECK-NEXT:    lsl w0, w8, #9
+; CHECK-NEXT:    lsl w8, w0, #9
+; CHECK-NEXT:    and w0, w8, #0xfffe0000
 ; CHECK-NEXT:    ret
   %t0 = and i32 %a0, 8388352
   %t1 = shl i32 %t0, 9
@@ -809,8 +803,8 @@ define i32 @test_i32_8388352_mask_shl_9(i32 %a0) {
 define i32 @test_i32_8388352_mask_shl_10(i32 %a0) {
 ; CHECK-LABEL: test_i32_8388352_mask_shl_10:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0x3fff00
-; CHECK-NEXT:    lsl w0, w8, #10
+; CHECK-NEXT:    lsl w8, w0, #10
+; CHECK-NEXT:    and w0, w8, #0xfffc0000
 ; CHECK-NEXT:    ret
   %t0 = and i32 %a0, 8388352
   %t1 = shl i32 %t0, 10
@@ -820,8 +814,8 @@ define i32 @test_i32_8388352_mask_shl_10(i32 %a0) {
 define i32 @test_i32_4294836224_mask_shl_1(i32 %a0) {
 ; CHECK-LABEL: test_i32_4294836224_mask_shl_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0x7ffe0000
-; CHECK-NEXT:    lsl w0, w8, #1
+; CHECK-NEXT:    lsl w8, w0, #1
+; CHECK-NEXT:    and w0, w8, #0xfffc0000
 ; CHECK-NEXT:    ret
   %t0 = and i32 %a0, 4294836224
   %t1 = shl i32 %t0, 1
@@ -1015,8 +1009,7 @@ define i64 @test_i64_18446744065119617024_mask_ashr_34(i64 %a0) {
 define i64 @test_i64_2147483647_mask_shl_1(i64 %a0) {
 ; CHECK-LABEL: test_i64_2147483647_mask_shl_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and x8, x0, #0x7fffffff
-; CHECK-NEXT:    lsl x0, x8, #1
+; CHECK-NEXT:    lsl w0, w0, #1
 ; CHECK-NEXT:    ret
   %t0 = and i64 %a0, 2147483647
   %t1 = shl i64 %t0, 1
@@ -1054,8 +1047,8 @@ define i64 @test_i64_2147483647_mask_shl_34(i64 %a0) {
 define i64 @test_i64_140737488289792_mask_shl_15(i64 %a0) {
 ; CHECK-LABEL: test_i64_140737488289792_mask_shl_15:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and x8, x0, #0x7fffffff0000
-; CHECK-NEXT:    lsl x0, x8, #15
+; CHECK-NEXT:    lsl x8, x0, #15
+; CHECK-NEXT:    and x0, x8, #0x3fffffff80000000
 ; CHECK-NEXT:    ret
   %t0 = and i64 %a0, 140737488289792
   %t1 = shl i64 %t0, 15
@@ -1064,8 +1057,8 @@ define i64 @test_i64_140737488289792_mask_shl_15(i64 %a0) {
 define i64 @test_i64_140737488289792_mask_shl_16(i64 %a0) {
 ; CHECK-LABEL: test_i64_140737488289792_mask_shl_16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and x8, x0, #0x7fffffff0000
-; CHECK-NEXT:    lsl x0, x8, #16
+; CHECK-NEXT:    lsl x8, x0, #16
+; CHECK-NEXT:    and x0, x8, #0x7fffffff00000000
 ; CHECK-NEXT:    ret
   %t0 = and i64 %a0, 140737488289792
   %t1 = shl i64 %t0, 16
@@ -1074,8 +1067,8 @@ define i64 @test_i64_140737488289792_mask_shl_16(i64 %a0) {
 define i64 @test_i64_140737488289792_mask_shl_17(i64 %a0) {
 ; CHECK-LABEL: test_i64_140737488289792_mask_shl_17:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and x8, x0, #0x7fffffff0000
-; CHECK-NEXT:    lsl x0, x8, #17
+; CHECK-NEXT:    lsl x8, x0, #17
+; CHECK-NEXT:    and x0, x8, #0xfffffffe00000000
 ; CHECK-NEXT:    ret
   %t0 = and i64 %a0, 140737488289792
   %t1 = shl i64 %t0, 17
@@ -1084,8 +1077,8 @@ define i64 @test_i64_140737488289792_mask_shl_17(i64 %a0) {
 define i64 @test_i64_140737488289792_mask_shl_18(i64 %a0) {
 ; CHECK-LABEL: test_i64_140737488289792_mask_shl_18:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and x8, x0, #0x3fffffff0000
-; CHECK-NEXT:    lsl x0, x8, #18
+; CHECK-NEXT:    lsl x8, x0, #18
+; CHECK-NEXT:    and x0, x8, #0xfffffffc00000000
 ; CHECK-NEXT:    ret
   %t0 = and i64 %a0, 140737488289792
   %t1 = shl i64 %t0, 18
@@ -1095,8 +1088,8 @@ define i64 @test_i64_140737488289792_mask_shl_18(i64 %a0) {
 define i64 @test_i64_18446744065119617024_mask_shl_1(i64 %a0) {
 ; CHECK-LABEL: test_i64_18446744065119617024_mask_shl_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and x8, x0, #0x7ffffffe00000000
-; CHECK-NEXT:    lsl x0, x8, #1
+; CHECK-NEXT:    lsl x8, x0, #1
+; CHECK-NEXT:    and x0, x8, #0xfffffffc00000000
 ; CHECK-NEXT:    ret
   %t0 = and i64 %a0, 18446744065119617024
   %t1 = shl i64 %t0, 1

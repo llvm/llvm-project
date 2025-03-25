@@ -13,7 +13,7 @@ FileHeader:
   MagicNumber:     0x1F7
   NumberOfSections: 1 
   CreationTime:    000000000
-  Flags:           0x0000
+  Flags:           0x0002
 Sections:
   - Name:            .text
     Address:         0x100000438

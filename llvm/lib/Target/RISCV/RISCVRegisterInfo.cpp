@@ -56,6 +56,11 @@ RISCVRegisterInfo::RISCVRegisterInfo(unsigned HwMode)
                            /*PC*/0, HwMode) {}
 
 const MCPhysReg *
+RISCVRegisterInfo::getIPRACSRegs(const MachineFunction *MF) const {
+  return CSR_IPRA_SaveList;
+}
+
+const MCPhysReg *
 RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   auto &Subtarget = MF->getSubtarget<RISCVSubtarget>();
   if (MF->getFunction().getCallingConv() == CallingConv::GHC)
@@ -162,7 +167,7 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
 bool RISCVRegisterInfo::isAsmClobberable(const MachineFunction &MF,
                                          MCRegister PhysReg) const {
-  return !MF.getSubtarget<RISCVSubtarget>().isRegisterReservedByUser(PhysReg);
+  return !MF.getSubtarget().isRegisterReservedByUser(PhysReg);
 }
 
 const uint32_t *RISCVRegisterInfo::getNoPreservedMask() const {
@@ -189,7 +194,7 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
     if (auto VLEN = ST.getRealVLen()) {
       // 1. Multiply the number of v-slots by the (constant) length of register
       const int64_t VLENB = *VLEN / 8;
-      assert(Offset.getScalable() % (RISCV::RVVBitsPerBlock / 8) == 0 &&
+      assert(Offset.getScalable() % RISCV::RVVBytesPerBlock == 0 &&
              "Reserve the stack by the multiple of one vector size.");
       const int64_t NumOfVReg = Offset.getScalable() / 8;
       const int64_t FixedOffset = NumOfVReg * VLENB;
@@ -216,26 +221,53 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
       ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
 
     assert(ScalableValue > 0 && "There is no need to get VLEN scaled value.");
-    assert(ScalableValue % (RISCV::RVVBitsPerBlock / 8) == 0 &&
+    assert(ScalableValue % RISCV::RVVBytesPerBlock == 0 &&
            "Reserve the stack by the multiple of one vector size.");
-    assert(isInt<32>(ScalableValue / (RISCV::RVVBitsPerBlock / 8)) &&
+    assert(isInt<32>(ScalableValue / RISCV::RVVBytesPerBlock) &&
            "Expect the number of vector registers within 32-bits.");
-    uint32_t NumOfVReg = ScalableValue / (RISCV::RVVBitsPerBlock / 8);
-    BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), ScratchReg)
-        .setMIFlag(Flag);
-
-    if (ScalableAdjOpc == RISCV::ADD && ST.hasStdExtZba() &&
-        (NumOfVReg == 2 || NumOfVReg == 4 || NumOfVReg == 8)) {
-      unsigned Opc = NumOfVReg == 2 ? RISCV::SH1ADD :
-        (NumOfVReg == 4 ? RISCV::SH2ADD : RISCV::SH3ADD);
-      BuildMI(MBB, II, DL, TII->get(Opc), DestReg)
-          .addReg(ScratchReg, RegState::Kill).addReg(SrcReg)
+    uint32_t NumOfVReg = ScalableValue / RISCV::RVVBytesPerBlock;
+    // Only use vsetvli rather than vlenb if adjusting in the prologue or
+    // epilogue, otherwise it may disturb the VTYPE and VL status.
+    bool IsPrologueOrEpilogue =
+        Flag == MachineInstr::FrameSetup || Flag == MachineInstr::FrameDestroy;
+    bool UseVsetvliRatherThanVlenb =
+        IsPrologueOrEpilogue && ST.preferVsetvliOverReadVLENB();
+    if (UseVsetvliRatherThanVlenb && (NumOfVReg == 1 || NumOfVReg == 2 ||
+                                      NumOfVReg == 4 || NumOfVReg == 8)) {
+      BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENBViaVSETVLIX0),
+              ScratchReg)
+          .addImm(NumOfVReg)
+          .setMIFlag(Flag);
+      BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), DestReg)
+          .addReg(SrcReg)
+          .addReg(ScratchReg, RegState::Kill)
           .setMIFlag(Flag);
     } else {
-      TII->mulImm(MF, MBB, II, DL, ScratchReg, NumOfVReg, Flag);
-      BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), DestReg)
-          .addReg(SrcReg).addReg(ScratchReg, RegState::Kill)
-          .setMIFlag(Flag);
+      if (UseVsetvliRatherThanVlenb)
+        BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENBViaVSETVLIX0),
+                ScratchReg)
+            .addImm(1)
+            .setMIFlag(Flag);
+      else
+        BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), ScratchReg)
+            .setMIFlag(Flag);
+
+      if (ScalableAdjOpc == RISCV::ADD && ST.hasStdExtZba() &&
+          (NumOfVReg == 2 || NumOfVReg == 4 || NumOfVReg == 8)) {
+        unsigned Opc = NumOfVReg == 2
+                           ? RISCV::SH1ADD
+                           : (NumOfVReg == 4 ? RISCV::SH2ADD : RISCV::SH3ADD);
+        BuildMI(MBB, II, DL, TII->get(Opc), DestReg)
+            .addReg(ScratchReg, RegState::Kill)
+            .addReg(SrcReg)
+            .setMIFlag(Flag);
+      } else {
+        TII->mulImm(MF, MBB, II, DL, ScratchReg, NumOfVReg, Flag);
+        BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), DestReg)
+            .addReg(SrcReg)
+            .addReg(ScratchReg, RegState::Kill)
+            .setMIFlag(Flag);
+      }
     }
     SrcReg = DestReg;
     KillSrcReg = true;
@@ -281,7 +313,7 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
   // instruction.  This saves 1 instruction over the full lui/addi+add fallback
   // path.  We avoid anything which can be done with a single lui as it might
   // be compressible.  Note that the sh1add case is fully covered by the 2x addi
-  // case just above and is thus ommitted.
+  // case just above and is thus omitted.
   if (ST.hasStdExtZba() && (Val & 0xFFF) != 0) {
     unsigned Opc = 0;
     if (isShiftedInt<12, 3>(Val)) {
@@ -805,6 +837,11 @@ RISCVRegisterInfo::getRegisterCostTableIndex(const MachineFunction &MF) const {
              : 0;
 }
 
+float RISCVRegisterInfo::getSpillWeightScaleFactor(
+    const TargetRegisterClass *RC) const {
+  return getRegClassWeight(RC).RegWeight;
+}
+
 // Add two address hints to improve chances of being able to use a compressed
 // instruction.
 bool RISCVRegisterInfo::getRegAllocationHints(
@@ -924,6 +961,26 @@ bool RISCVRegisterInfo::getRegAllocationHints(
       } else if (MI.isCommutable() && OpIdx == 2 &&
                  (!NeedGPRC || isCompressibleOpnd(MI.getOperand(1)))) {
         tryAddHint(MO, MI.getOperand(0), NeedGPRC);
+      }
+    }
+
+    // Add a hint if it would allow auipc/lui+addi(w) fusion.
+    if ((MI.getOpcode() == RISCV::ADDIW || MI.getOpcode() == RISCV::ADDI) &&
+        MI.getOperand(1).isReg()) {
+      const MachineBasicBlock &MBB = *MI.getParent();
+      MachineBasicBlock::const_iterator I = MI.getIterator();
+      // Is the previous instruction a LUI or AUIPC that can be fused?
+      if (I != MBB.begin()) {
+        I = skipDebugInstructionsBackward(std::prev(I), MBB.begin());
+        if (((I->getOpcode() == RISCV::LUI && Subtarget.hasLUIADDIFusion()) ||
+             (I->getOpcode() == RISCV::AUIPC &&
+              Subtarget.hasAUIPCADDIFusion())) &&
+            I->getOperand(0).getReg() == MI.getOperand(1).getReg()) {
+          if (OpIdx == 0)
+            tryAddHint(MO, MI.getOperand(1), /*NeedGPRC=*/false);
+          else
+            tryAddHint(MO, MI.getOperand(0), /*NeedGPRC=*/false);
+        }
       }
     }
   }

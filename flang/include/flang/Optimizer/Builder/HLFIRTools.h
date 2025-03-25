@@ -60,7 +60,7 @@ public:
   bool isVariable() const { return !isValue(); }
   bool isMutableBox() const { return hlfir::isBoxAddressType(getType()); }
   bool isProcedurePointer() const {
-    return fir::isBoxProcAddressType(getType());
+    return hlfir::isFortranProcedurePointerType(getType());
   }
   bool isBoxAddressOrValue() const {
     return hlfir::isBoxAddressOrValueType(getType());
@@ -125,7 +125,7 @@ public:
   bool isSimplyContiguous() const {
     // If this can be described without a fir.box in FIR, this must
     // be contiguous.
-    if (!hlfir::isBoxAddressOrValueType(getFirBase().getType()))
+    if (!hlfir::isBoxAddressOrValueType(getFirBase().getType()) || isScalar())
       return true;
     // Otherwise, if this entity has a visible declaration in FIR,
     // or is the dereference of an allocatable or contiguous pointer
@@ -150,10 +150,7 @@ public:
     return base.getDefiningOp<fir::FortranVariableOpInterface>();
   }
 
-  bool isOptional() const {
-    auto varIface = getIfVariableInterface();
-    return varIface ? varIface.isOptional() : false;
-  }
+  bool mayBeOptional() const;
 
   bool isParameter() const {
     auto varIface = getIfVariableInterface();
@@ -210,7 +207,8 @@ public:
 using CleanupFunction = std::function<void()>;
 std::pair<fir::ExtendedValue, std::optional<CleanupFunction>>
 translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                         Entity entity, bool contiguousHint = false);
+                         Entity entity, bool contiguousHint = false,
+                         bool keepScalarOptionalBoxed = false);
 
 /// Function to translate FortranVariableOpInterface to fir::ExtendedValue.
 /// It may generates IR to unbox fir.boxchar, but has otherwise no side effects
@@ -251,8 +249,11 @@ mlir::Value genVariableBoxChar(mlir::Location loc, fir::FirOpBuilder &builder,
                                hlfir::Entity var);
 
 /// Get or create a fir.box or fir.class from a variable.
+/// A fir.box with different attributes that \p var can be created
+/// using \p forceBoxType.
 hlfir::Entity genVariableBox(mlir::Location loc, fir::FirOpBuilder &builder,
-                             hlfir::Entity var);
+                             hlfir::Entity var,
+                             fir::BaseBoxType forceBoxType = {});
 
 /// If the entity is a variable, load its value (dereference pointers and
 /// allocatables if needed). Do nothing if the entity is already a value, and
@@ -366,6 +367,10 @@ struct LoopNest {
 /// Generate a fir.do_loop nest looping from 1 to extents[i].
 /// \p isUnordered specifies whether the loops in the loop nest
 /// are unordered.
+///
+/// NOTE: genLoopNestWithReductions() should be used in favor
+/// of this method, though, it cannot generate OpenMP workshare
+/// loop constructs currently.
 LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
                      mlir::ValueRange extents, bool isUnordered = false,
                      bool emitWorkshareLoop = false);
@@ -375,6 +380,37 @@ inline LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
   return genLoopNest(loc, builder, getIndexExtents(loc, builder, shape),
                      isUnordered, emitWorkshareLoop);
 }
+
+/// The type of a callback that generates the body of a reduction
+/// loop nest. It takes a location and a builder, as usual.
+/// In addition, the first set of values are the values of the loops'
+/// induction variables. The second set of values are the values
+/// of the reductions on entry to the innermost loop.
+/// The callback must return the updated values of the reductions.
+using ReductionLoopBodyGenerator = std::function<llvm::SmallVector<mlir::Value>(
+    mlir::Location, fir::FirOpBuilder &, mlir::ValueRange, mlir::ValueRange)>;
+
+/// Generate a loop nest loopong from 1 to \p extents[i] and reducing
+/// a set of values.
+/// \p isUnordered specifies whether the loops in the loop nest
+/// are unordered.
+/// \p reductionInits are the initial values of the reductions
+/// on entry to the outermost loop.
+/// \p genBody callback is repsonsible for generating the code
+/// that updates the reduction values in the innermost loop.
+///
+/// NOTE: the implementation of this function may decide
+/// to perform the reductions on SSA or in memory.
+/// In the latter case, this function is responsible for
+/// allocating/loading/storing the reduction variables,
+/// and making sure they have proper data sharing attributes
+/// in case any parallel constructs are present around the point
+/// of the loop nest insertion, or if the function decides
+/// to use any worksharing loop constructs for the loop nest.
+llvm::SmallVector<mlir::Value> genLoopNestWithReductions(
+    mlir::Location loc, fir::FirOpBuilder &builder, mlir::ValueRange extents,
+    mlir::ValueRange reductionInits, const ReductionLoopBodyGenerator &genBody,
+    bool isUnordered = false);
 
 /// Inline the body of an hlfir.elemental at the current insertion point
 /// given a list of one based indices. This generates the computation
@@ -473,6 +509,30 @@ genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
                       hlfir::Entity source, mlir::Type toType,
                       bool preserveLowerBounds);
 
+/// A shortcut for loadTrivialScalar(getElementAt()),
+/// which designates and loads an element of an array.
+Entity loadElementAt(mlir::Location loc, fir::FirOpBuilder &builder,
+                     Entity entity, mlir::ValueRange oneBasedIndices);
+
+/// Return a vector of extents for the given entity.
+/// The function creates new operations, but tries to clean-up
+/// after itself.
+llvm::SmallVector<mlir::Value, Fortran::common::maxRank>
+genExtentsVector(mlir::Location loc, fir::FirOpBuilder &builder, Entity entity);
+
+/// Generate an hlfir.designate that produces an 1D section
+/// of \p array using \p oneBasedIndices and \p dim:
+///   i = oneBasedIndices
+///   result => array(i(1), ..., i(dim-1), :, i(dim+1), ..., i(n))
+///
+/// The caller provides the pre-computed \p lbounds, \p extents
+/// and \p typeParams of the array.
+Entity gen1DSection(mlir::Location loc, fir::FirOpBuilder &builder,
+                    Entity array, int64_t dim,
+                    mlir::ArrayRef<mlir::Value> lbounds,
+                    mlir::ArrayRef<mlir::Value> extents,
+                    mlir::ValueRange oneBasedIndices,
+                    mlir::ArrayRef<mlir::Value> typeParams);
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_HLFIRTOOLS_H

@@ -35,6 +35,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -75,21 +76,30 @@ ParseResult VoteBallotOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void VoteBallotOp::print(OpAsmPrinter &p) { printNVVMIntrinsicOp(p, *this); }
 
-// This verifier is shared across:
-// CpAsyncBulkTensorGlobalToSharedClusterOp (TMA Load) and
-// CpAsyncBulkTensorPrefetchOp (TMA Prefetch) Ops.
+//===----------------------------------------------------------------------===//
+// Verifier methods
+//===----------------------------------------------------------------------===//
+
+// This verifier is shared among the following Ops:
+// CpAsyncBulkTensorGlobalToSharedClusterOp (TMA Load)
+// CpAsyncBulkTensorPrefetchOp (TMA Prefetch)
+// CpAsyncBulkTensorReduceOp (TMA Store-Reduce)
 static LogicalResult CpAsyncBulkTensorCommonVerifier(size_t tensorDims,
+                                                     bool isIm2Col,
                                                      size_t numIm2ColOffsets,
                                                      Location loc) {
   if (tensorDims < 1 || tensorDims > 5)
     return emitError(loc, "expects coordinates between 1 to 5 dimension");
 
-  if (numIm2ColOffsets) {
+  // For Im2Col mode, there are two constraints:
+  if (isIm2Col) {
+    // 1. Tensor must always be at least 3-d.
     if (tensorDims < 3)
       return emitError(
           loc,
           "to use im2col mode, the tensor has to be at least 3-dimensional");
-    if (tensorDims != (numIm2ColOffsets + 2))
+    // 2. When there are Im2ColOffsets, they must be (Dims - 2) in number.
+    if (numIm2ColOffsets && (tensorDims != (numIm2ColOffsets + 2)))
       return emitError(
           loc, "im2col offsets must be 2 less than number of coordinates");
   }
@@ -97,8 +107,10 @@ static LogicalResult CpAsyncBulkTensorCommonVerifier(size_t tensorDims,
 }
 
 LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
-  return CpAsyncBulkTensorCommonVerifier(getCoordinates().size(),
-                                         getIm2colOffsets().size(), getLoc());
+  size_t numIm2ColOffsets = getIm2colOffsets().size();
+  bool isIm2Col = numIm2ColOffsets > 0;
+  return CpAsyncBulkTensorCommonVerifier(getCoordinates().size(), isIm2Col,
+                                         numIm2ColOffsets, getLoc());
 }
 
 LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOp::verify() {
@@ -119,8 +131,33 @@ LogicalResult CpAsyncOp::verify() {
 }
 
 LogicalResult CpAsyncBulkTensorPrefetchOp::verify() {
-  return CpAsyncBulkTensorCommonVerifier(getCoordinates().size(),
-                                         getIm2colOffsets().size(), getLoc());
+  size_t numIm2ColOffsets = getIm2colOffsets().size();
+  bool isIm2Col = numIm2ColOffsets > 0;
+  return CpAsyncBulkTensorCommonVerifier(getCoordinates().size(), isIm2Col,
+                                         numIm2ColOffsets, getLoc());
+}
+
+LogicalResult CpAsyncBulkTensorReduceOp::verify() {
+  bool isIm2Col = (getMode() == TMAStoreMode::IM2COL);
+  return CpAsyncBulkTensorCommonVerifier(getCoordinates().size(), isIm2Col, 0,
+                                         getLoc());
+}
+
+LogicalResult CvtFloatToTF32Op::verify() {
+  using RndMode = NVVM::FPRoundingMode;
+  switch (getRnd()) {
+  case RndMode::RNA:
+    if (getRelu())
+      return emitError("Relu not supported with rna rounding mode.");
+    break;
+  case RndMode::RN:
+  case RndMode::RZ:
+    break;
+  default:
+    return emitError(
+        "Only {rn,rz,rna} rounding modes supported for CvtFloatToTF32Op.");
+  }
+  return success();
 }
 
 // Given the element type of an operand and whether or not it is an accumulator,
@@ -430,8 +467,13 @@ LogicalResult MmaOp::verify() {
       expectedResult.push_back(LLVM::LLVMStructType::getLiteral(
           context, {f32Ty, f32Ty, f32Ty, f32Ty}));
       break;
-    case MMATypes::f16:
     case MMATypes::bf16:
+      kFactor = 8;
+      multiplicandFragType = i32Ty;
+      expectedResult.push_back(LLVM::LLVMStructType::getLiteral(
+          context, {f32Ty, f32Ty, f32Ty, f32Ty}));
+      break;
+    case MMATypes::f16:
       kFactor = 8;
       multiplicandFragType = f16x2Ty;
       expectedResult.push_back(f16x2x2StructTy);
@@ -895,7 +937,7 @@ LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
   // Check transpose (only available for f16/bf16)
   // Matrices A should be stored in row-major and B in column-major.
   // Only f16/bf16 matrices can be stored in either column-major or row-major
-  // by setting the tranpose value(imm-trans-a,imm-trans-b) in PTX code.
+  // by setting the transpose value(imm-trans-a,imm-trans-b) in PTX code.
   if ((typeA != WGMMATypes::f16 && typeA != WGMMATypes::bf16) &&
       (getLayoutA() == mlir::NVVM::MMALayout::col ||
        getLayoutB() == mlir::NVVM::MMALayout::row)) {
@@ -1070,6 +1112,90 @@ LogicalResult NVVM::BarrierOp::verify() {
   return success();
 }
 
+LogicalResult NVVM::Tcgen05CpOp::verify() {
+  auto mc = getMulticast();
+
+  using SH = Tcgen05CpShape;
+  using MC = Tcgen05CpMulticast;
+  switch (getShape()) {
+  case SH::SHAPE_128x256b:
+  case SH::SHAPE_128x128b:
+  case SH::SHAPE_4x256b:
+    if (mc != MC::NONE)
+      return emitError("Invalid multicast type for tcgen05.cp Op");
+    break;
+  case SH::SHAPE_64x128b:
+    if (mc != MC::WARPX2_01_23 && mc != MC::WARPX2_02_13)
+      return emitError("Shape 64x128b requires multicast warpx2_01_23 or "
+                       "warpx2_02_13 for tcgen05.cp Op");
+    break;
+  case SH::SHAPE_32x128b:
+    if (mc != MC::WARPX4)
+      return emitError(
+          "Shape 32x128b requires multicast warpx4 for tcgen05.cp Op");
+    break;
+  }
+  return success();
+}
+
+LogicalResult NVVM::MatchSyncOp::verify() {
+  if (getKind() == NVVM::MatchSyncKind::all) {
+    auto Type = llvm::dyn_cast<LLVM::LLVMStructType>(getType());
+    if (!Type || Type.getBody().size() != 2 ||
+        !Type.getBody()[0].isInteger(32) || !Type.getBody()[1].isInteger(1)) {
+      return emitOpError("match.sync 'all' returns a two element struct with "
+                         "first element as i32 and second element as i1");
+    }
+  } else {
+    if (!getType().isInteger(32)) {
+      return emitOpError("match.sync 'any' returns an i32");
+    }
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// getIntrinsicID/getIntrinsicIDAndArgs methods
+//===----------------------------------------------------------------------===//
+
+#define CP_ASYNC_ID_IMPL(mod, size, suffix)                                    \
+  llvm::Intrinsic::nvvm_cp_async_##mod##_shared_global_##size##suffix
+
+#define GET_CP_ASYNC_ID(mod, size, has_cpsize)                                 \
+  has_cpsize ? CP_ASYNC_ID_IMPL(mod, size, _s) : CP_ASYNC_ID_IMPL(mod, size, )
+
+llvm::Intrinsic::ID
+CpAsyncOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                                 llvm::SmallVector<llvm::Value *> &args) {
+  llvm::Intrinsic::ID id;
+
+  auto cpAsyncOp = cast<NVVM::CpAsyncOp>(op);
+  bool hasCpSize = cpAsyncOp.getCpSize() ? true : false;
+  switch (cpAsyncOp.getSize()) {
+  case 4:
+    id = GET_CP_ASYNC_ID(ca, 4, hasCpSize);
+    break;
+  case 8:
+    id = GET_CP_ASYNC_ID(ca, 8, hasCpSize);
+    break;
+  case 16:
+    id = (cpAsyncOp.getModifier() == NVVM::LoadCacheModifierKind::CG)
+             ? GET_CP_ASYNC_ID(cg, 16, hasCpSize)
+             : GET_CP_ASYNC_ID(ca, 16, hasCpSize);
+    break;
+  default:
+    llvm_unreachable("Invalid copy size in CpAsyncOp.");
+  }
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(cpAsyncOp.getDst()));
+  args.push_back(mt.lookupValue(cpAsyncOp.getSrc()));
+  if (hasCpSize)
+    args.push_back(mt.lookupValue(cpAsyncOp.getCpSize()));
+
+  return id;
+}
+
 llvm::Intrinsic::ID CpAsyncBulkTensorPrefetchOp::getIntrinsicID(int tensorDims,
                                                                 bool isIm2Col) {
   switch (tensorDims) {
@@ -1091,6 +1217,246 @@ llvm::Intrinsic::ID CpAsyncBulkTensorPrefetchOp::getIntrinsicID(int tensorDims,
                : llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_5d;
   default:
     llvm_unreachable("Invalid TensorDim in CpAsyncBulkTensorPrefetchOp.");
+  }
+}
+
+#define CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, dim, mode)                        \
+  llvm::Intrinsic::nvvm_cp_async_bulk_tensor_##op##_##mode##_##dim##d
+
+#define CP_ASYNC_BULK_TENSOR_REDUCE(op, dim, is_im2col)                        \
+  is_im2col ? CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, dim, im2col)                \
+            : CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, dim, tile)
+
+#define GET_CP_ASYNC_BULK_TENSOR_ID(op, dims, is_im2col)                       \
+  [&]() -> auto {                                                              \
+    switch (dims) {                                                            \
+    case 1:                                                                    \
+      return CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, 1, tile);                    \
+    case 2:                                                                    \
+      return CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, 2, tile);                    \
+    case 3:                                                                    \
+      return CP_ASYNC_BULK_TENSOR_REDUCE(op, 3, is_im2col);                    \
+    case 4:                                                                    \
+      return CP_ASYNC_BULK_TENSOR_REDUCE(op, 4, is_im2col);                    \
+    case 5:                                                                    \
+      return CP_ASYNC_BULK_TENSOR_REDUCE(op, 5, is_im2col);                    \
+    default:                                                                   \
+      llvm_unreachable("Invalid TensorDim in CpAsyncBulkTensorReduceOp.");     \
+    }                                                                          \
+  }()
+
+llvm::Intrinsic::ID CpAsyncBulkTensorReduceOp::getIntrinsicID(
+    int tensorDims, NVVM::TMAReduxKind kind, bool isIm2Col) {
+  using RedTy = NVVM::TMAReduxKind;
+  switch (kind) {
+  case RedTy::ADD:
+    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_add, tensorDims, isIm2Col);
+  case RedTy::MIN:
+    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_min, tensorDims, isIm2Col);
+  case RedTy::MAX:
+    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_max, tensorDims, isIm2Col);
+  case RedTy::INC:
+    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_inc, tensorDims, isIm2Col);
+  case RedTy::DEC:
+    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_dec, tensorDims, isIm2Col);
+  case RedTy::AND:
+    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_and, tensorDims, isIm2Col);
+  case RedTy::OR:
+    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_or, tensorDims, isIm2Col);
+  case RedTy::XOR:
+    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_xor, tensorDims, isIm2Col);
+  }
+  llvm_unreachable("Invalid Reduction Op for CpAsyncBulkTensorReduceOp");
+}
+
+#define CVT_F2TF32_ID_IMPL(rnd, relu, sf)                                      \
+  hasRelu ? llvm::Intrinsic::nvvm_f2tf32_##rnd##relu##sf                       \
+          : llvm::Intrinsic::nvvm_f2tf32_##rnd##sf
+
+#define GET_CVT_F2TF32_ID(rnd, relu, sf)                                       \
+  hasSatFinite ? CVT_F2TF32_ID_IMPL(rnd, relu, sf)                             \
+               : CVT_F2TF32_ID_IMPL(rnd, relu, )
+
+llvm::Intrinsic::ID CvtFloatToTF32Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
+                                                     NVVM::SaturationMode sat,
+                                                     bool hasRelu) {
+  using RndMode = NVVM::FPRoundingMode;
+  bool hasSatFinite = (sat == NVVM::SaturationMode::SATFINITE);
+  switch (rnd) {
+  case RndMode::RN:
+    return GET_CVT_F2TF32_ID(rn, _relu, _satfinite);
+  case RndMode::RZ:
+    return GET_CVT_F2TF32_ID(rz, _relu, _satfinite);
+  case RndMode::RNA:
+    return GET_CVT_F2TF32_ID(rna, , _satfinite);
+  default:
+    llvm_unreachable("Invalid RoundingMode for CvtFloatToTF32Op");
+  }
+}
+
+llvm::Intrinsic::ID
+Tcgen05AllocOp::getIntrinsicIDAndArgs(Operation &op,
+                                      LLVM::ModuleTranslation &mt,
+                                      llvm::SmallVector<llvm::Value *> &args) {
+  auto curOp = cast<NVVM::Tcgen05AllocOp>(op);
+  unsigned AS = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
+                    .getAddressSpace();
+  bool isShared = AS == NVVMMemorySpace::kSharedMemorySpace;
+  bool is2CTAMode = curOp.getGroup() == Tcgen05GroupKind::CTA_2;
+
+  llvm::Intrinsic::ID id;
+  if (isShared) {
+    id = is2CTAMode ? llvm::Intrinsic::nvvm_tcgen05_alloc_shared_cg2
+                    : llvm::Intrinsic::nvvm_tcgen05_alloc_shared_cg1;
+  } else {
+    id = is2CTAMode ? llvm::Intrinsic::nvvm_tcgen05_alloc_cg2
+                    : llvm::Intrinsic::nvvm_tcgen05_alloc_cg1;
+  }
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(curOp.getAddr()));
+  args.push_back(mt.lookupValue(curOp.getNCols()));
+
+  return id;
+}
+
+llvm::Intrinsic::ID Tcgen05DeallocOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt,
+    llvm::SmallVector<llvm::Value *> &args) {
+  auto curOp = cast<NVVM::Tcgen05DeallocOp>(op);
+  auto id = (curOp.getGroup() == Tcgen05GroupKind::CTA_1)
+                ? llvm::Intrinsic::nvvm_tcgen05_dealloc_cg1
+                : llvm::Intrinsic::nvvm_tcgen05_dealloc_cg2;
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(curOp.getTaddr()));
+  args.push_back(mt.lookupValue(curOp.getNCols()));
+
+  return id;
+}
+
+#define TCGEN05_COMMIT_IMPL(cg, is_shared, mc)                                 \
+  is_shared ? llvm::Intrinsic::nvvm_tcgen05_commit##mc##_shared##_##cg         \
+            : llvm::Intrinsic::nvvm_tcgen05_commit##mc##_##cg
+
+#define GET_TCGEN05_COMMIT_ID(cta_group, is_shared, has_mc)                    \
+  has_mc ? TCGEN05_COMMIT_IMPL(cta_group, is_shared, _mc)                      \
+         : TCGEN05_COMMIT_IMPL(cta_group, is_shared, )
+
+llvm::Intrinsic::ID
+Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
+                                       LLVM::ModuleTranslation &mt,
+                                       llvm::SmallVector<llvm::Value *> &args) {
+  auto curOp = cast<NVVM::Tcgen05CommitOp>(op);
+  unsigned AS = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
+                    .getAddressSpace();
+  bool isShared = AS == NVVMMemorySpace::kSharedMemorySpace;
+  bool hasMulticast = curOp.getMulticastMask() ? true : false;
+  bool is2CTAMode = curOp.getGroup() == Tcgen05GroupKind::CTA_2;
+
+  auto id = is2CTAMode ? GET_TCGEN05_COMMIT_ID(cg2, isShared, hasMulticast)
+                       : GET_TCGEN05_COMMIT_ID(cg1, isShared, hasMulticast);
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(curOp.getAddr()));
+  if (hasMulticast)
+    args.push_back(mt.lookupValue(curOp.getMulticastMask()));
+
+  return id;
+}
+
+#define TCGEN05_CP_IMPL(shape_mc, src_fmt, cg)                                 \
+  llvm::Intrinsic::nvvm_tcgen05_cp##shape_mc##src_fmt##cg
+
+#define TCGEN05_CP_2CTA(shape_mc, src_fmt, is_2cta)                            \
+  is_2cta ? TCGEN05_CP_IMPL(shape_mc, src_fmt, _cg2)                           \
+          : TCGEN05_CP_IMPL(shape_mc, src_fmt, _cg1)
+
+#define GET_TCGEN05_CP_ID(shape_mc, src_fmt, is_2cta)                          \
+  [&]() -> auto {                                                              \
+    if (src_fmt == Tcgen05CpSrcFormat::B6x16_P32)                              \
+      return TCGEN05_CP_2CTA(shape_mc, _b6x16_p32, is_2cta);                   \
+    if (src_fmt == Tcgen05CpSrcFormat::B4x16_P64)                              \
+      return TCGEN05_CP_2CTA(shape_mc, _b4x16_p64, is_2cta);                   \
+    return TCGEN05_CP_2CTA(shape_mc, , is_2cta);                               \
+  }()
+
+llvm::Intrinsic::ID Tcgen05CpOp::getIntrinsicID(Operation &op) {
+  auto curOp = cast<NVVM::Tcgen05CpOp>(op);
+  bool is2CTA = curOp.getGroup() == Tcgen05GroupKind::CTA_2;
+  auto srcFmt = curOp.getSrcFormat();
+  auto mc = curOp.getMulticast();
+
+  switch (curOp.getShape()) {
+  case Tcgen05CpShape::SHAPE_128x256b:
+    return GET_TCGEN05_CP_ID(_128x256b, srcFmt, is2CTA);
+  case Tcgen05CpShape::SHAPE_128x128b:
+    return GET_TCGEN05_CP_ID(_128x128b, srcFmt, is2CTA);
+  case Tcgen05CpShape::SHAPE_4x256b:
+    return GET_TCGEN05_CP_ID(_4x256b, srcFmt, is2CTA);
+  case Tcgen05CpShape::SHAPE_32x128b:
+    return GET_TCGEN05_CP_ID(_32x128b_warpx4, srcFmt, is2CTA);
+  case Tcgen05CpShape::SHAPE_64x128b:
+    return (mc == Tcgen05CpMulticast::WARPX2_01_23)
+               ? GET_TCGEN05_CP_ID(_64x128b_warpx2_01_23, srcFmt, is2CTA)
+               : GET_TCGEN05_CP_ID(_64x128b_warpx2_02_13, srcFmt, is2CTA);
+  }
+  llvm_unreachable("Invalid shape in tcgen05 cp Op");
+}
+
+// Returns the valid vector length for a given shape and vector length, the
+// function models the table mentioned in the tcgen05.{ld, st} Op description
+static unsigned isValidVectorLength(NVVM::Tcgen05LdStShape Shape,
+                                    unsigned VecLen) {
+  if (Shape == NVVM::Tcgen05LdStShape::SHAPE_16X128B)
+    return VecLen >= 2;
+  if (Shape == NVVM::Tcgen05LdStShape::SHAPE_16X256B)
+    return VecLen >= 4;
+  return true;
+}
+
+LogicalResult Tcgen05LdOp::verify() {
+  LogicalResult Result = success();
+  if (getShape() == NVVM::Tcgen05LdStShape::SHAPE_16X32BX2 && !getOffset())
+    Result = emitError("shape 16x32bx2 requires offset argument");
+
+  auto ResTy = getRes().getType();
+  unsigned ResLen = isa<VectorType>(ResTy)
+                        ? llvm::cast<VectorType>(ResTy).getNumElements()
+                        : 1;
+  if (!isValidVectorLength(getShape(), ResLen))
+    Result = emitError(llvm::formatv("invalid result type length {0} for shape "
+                                     "{1} in tcgen05.ld Op",
+                                     ResLen, stringifyEnum(getShape())));
+
+  return Result;
+}
+
+LogicalResult Tcgen05StOp::verify() {
+  LogicalResult Result = success();
+  if (getShape() == NVVM::Tcgen05LdStShape::SHAPE_16X32BX2 && !getOffset())
+    Result = emitError("shape 16x32bx2 requires offset argument");
+
+  auto ValTy = getVal().getType();
+  unsigned ValLen = isa<VectorType>(ValTy)
+                        ? llvm::cast<VectorType>(ValTy).getNumElements()
+                        : 1;
+  if (!isValidVectorLength(getShape(), ValLen))
+    Result = emitError(llvm::formatv("invalid input length {0} for shape "
+                                     "{1} in tcgen05.st Op",
+                                     ValLen, stringifyEnum(getShape())));
+
+  return Result;
+}
+
+/// Infer the result ranges for the NVVM SpecialRangeableRegisterOp that might
+/// have ConstantRangeAttr.
+static void nvvmInferResultRanges(Operation *op, Value result,
+                                  ArrayRef<::mlir::ConstantIntRanges> argRanges,
+                                  SetIntRangeFn setResultRanges) {
+  if (auto rangeAttr = op->getAttrOfType<LLVM::ConstantRangeAttr>("range")) {
+    setResultRanges(result, {rangeAttr.getLower(), rangeAttr.getUpper(),
+                             rangeAttr.getLower(), rangeAttr.getUpper()});
   }
 }
 

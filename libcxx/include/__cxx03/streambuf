@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STREAMBUF
-#define _LIBCPP_STREAMBUF
+#ifndef _LIBCPP___CXX03_STREAMBUF
+#define _LIBCPP___CXX03_STREAMBUF
 
 /*
     streambuf synopsis
@@ -442,4 +442,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/cstdint>
 #endif
 
-#endif // _LIBCPP_STREAMBUF
+#endif // _LIBCPP___CXX03_STREAMBUF

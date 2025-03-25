@@ -1092,7 +1092,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // is transformed to:
   //
   //   addr2 = gep float, float* p, i64 a ; inbounds removed
-  //   addr  = gep inbounds float, float* addr2, i64 5
+  //   addr  = gep float, float* addr2, i64 5 ; inbounds removed
   //
   // If a is -4, although the old index b is in bounds, the new index a is
   // off-bound. http://llvm.org/docs/LangRef.html#id181 says "if the
@@ -1103,7 +1103,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // TODO(jingyue): do some range analysis to keep as many inbounds as
   // possible. GEPs with inbounds are more friendly to alias analysis.
   // TODO(gep_nowrap): Preserve nuw at least.
-  bool GEPWasInBounds = GEP->isInBounds();
+  GEPNoWrapFlags NewGEPFlags = GEPNoWrapFlags::none();
   GEP->setNoWrapFlags(GEPNoWrapFlags::none());
 
   // Lowers a GEP to either GEPs with a single index or arithmetic operations.
@@ -1147,13 +1147,13 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   //   %new.gep = gep i8, %gep2, %offset
   //   ... %new.gep ...
   Instruction *NewGEP = GEP->clone();
-  NewGEP->insertBefore(GEP);
+  NewGEP->insertBefore(GEP->getIterator());
 
   Type *PtrIdxTy = DL->getIndexType(GEP->getType());
   IRBuilder<> Builder(GEP);
   NewGEP = cast<Instruction>(Builder.CreatePtrAdd(
       NewGEP, ConstantInt::get(PtrIdxTy, AccumulativeByteOffset, true),
-      GEP->getName(), GEPWasInBounds));
+      GEP->getName(), NewGEPFlags));
   NewGEP->copyMetadata(*GEP);
 
   GEP->replaceAllUsesWith(NewGEP);

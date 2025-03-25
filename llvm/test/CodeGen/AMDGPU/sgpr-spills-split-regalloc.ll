@@ -265,10 +265,10 @@ define void @spill_sgpr_with_no_lower_vgpr_available() #0 {
 ; GCN-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:432 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:436 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:440 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GCN-NEXT:    buffer_load_dword v255, off, s[0:3], s33 offset:452 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
-; GCN-NEXT:    s_add_i32 s32, s32, 0xffff8c00
 ; GCN-NEXT:    s_mov_b32 s33, s18
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -557,10 +557,10 @@ define void @spill_to_lowest_available_vgpr() #0 {
 ; GCN-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:428 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:432 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:436 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GCN-NEXT:    buffer_load_dword v254, off, s[0:3], s33 offset:448 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
-; GCN-NEXT:    s_add_i32 s32, s32, 0xffff8c00
 ; GCN-NEXT:    s_mov_b32 s33, s18
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -723,11 +723,14 @@ define void @spill_sgpr_with_sgpr_uses() #0 {
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s4
 ; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    s_mov_b32 s5, s4
 ; GCN-NEXT:    ; implicit-def: $vgpr254 : SGPR spill to VGPR lane
-; GCN-NEXT:    v_writelane_b32 v254, s4, 0
+; GCN-NEXT:    v_writelane_b32 v254, s5, 0
 ; GCN-NEXT:    s_or_saveexec_b64 s[8:9], -1
 ; GCN-NEXT:    buffer_store_dword v254, off, s[0:3], s32 offset:444 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[8:9]
+; GCN-NEXT:    s_mov_b32 s5, 0
+; GCN-NEXT:    s_cmp_lg_u32 s4, s5
 ; GCN-NEXT:    s_cbranch_scc1 .LBB3_2
 ; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    s_or_saveexec_b64 s[8:9], -1
@@ -886,7 +889,7 @@ define void @spill_sgpr_with_sgpr_uses() #0 {
   ,~{v250},~{v251},~{v252},~{v253}" () #0
 
   %sgpr = call i32 asm sideeffect "; def $0", "=s" () #0
-  %cmp = icmp eq i32 undef, 0
+  %cmp = icmp eq i32 %sgpr, 0
   br i1 %cmp, label %bb0, label %ret
 
 bb0:
@@ -1788,7 +1791,7 @@ define void @spill_sgpr_no_free_vgpr_ipra() #0 {
 ; GCN-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:436 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:440 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:444 ; 4-byte Folded Reload
-; GCN-NEXT:    s_add_i32 s32, s32, 0xffff8c00
+; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    s_mov_b32 s33, s18
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]

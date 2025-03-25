@@ -379,7 +379,7 @@ module attributes { transform.with_named_sequence } {
 // The core computation, at the LLVM dialect level, must correspond to five
 // immediately adjacent fma on vector<64xf32>.
 
-// CHECK:      %[[R0:.+]] = llvm.mlir.undef : !llvm.array<5 x vector<64xf32>>
+// CHECK:      %[[R0:.+]] = llvm.mlir.poison : !llvm.array<5 x vector<64xf32>>
 
 // CHECK:      %[[V:.+]] = llvm.load %{{.*}} : !llvm.ptr -> !llvm.array<5 x vector<64xf32>>
 // CHECK-NEXT: %[[LINE0:.+]] = llvm.extractvalue %[[V]][0] : !llvm.array<5 x vector<64xf32>>

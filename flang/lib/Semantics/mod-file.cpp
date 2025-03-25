@@ -47,7 +47,7 @@ struct ModHeader {
 
 static std::optional<SourceName> GetSubmoduleParent(const parser::Program &);
 static void CollectSymbols(
-    const Scope &, SymbolVector &, SymbolVector &, UnorderedSymbolSet &);
+    const Scope &, SymbolVector &, SymbolVector &, SourceOrderedSymbolSet &);
 static void PutPassName(llvm::raw_ostream &, const std::optional<SourceName> &);
 static void PutInit(llvm::raw_ostream &, const Symbol &, const MaybeExpr &,
     const parser::Expr *);
@@ -139,7 +139,7 @@ void ModFileWriter::Write(const Symbol &symbol) {
   const auto *ancestor{module.ancestor()};
   isSubmodule_ = ancestor != nullptr;
   auto ancestorName{ancestor ? ancestor->GetName().value().ToString() : ""s};
-  auto path{context_.moduleDirectory() + '/' +
+  std::string path{context_.moduleDirectory() + '/' +
       ModFileName(symbol.name(), ancestorName, context_.moduleFileSuffix())};
 
   UnorderedSymbolSet hermeticModules;
@@ -306,8 +306,10 @@ void ModFileWriter::PrepareRenamings(const Scope &scope) {
   // to their names in this scope, creating those new names when needed.
   auto &renamings{context_.moduleFileOutputRenamings()};
   for (SymbolRef s : symbolsNeeded) {
-    if (s->owner().kind() == Scope::Kind::DerivedType) {
-      continue; // component or binding: ok
+    if (s->owner().kind() != Scope::Kind::Module) {
+      // Not a USE'able name from a module's top scope;
+      // component, binding, dummy argument, &c.
+      continue;
     }
     const Scope *sMod{FindModuleContaining(s->owner())};
     if (!sMod || sMod == &scope) {
@@ -361,7 +363,7 @@ void ModFileWriter::PutSymbols(
   auto &renamings{context_.moduleFileOutputRenamings()};
   auto previousRenamings{std::move(renamings)};
   PrepareRenamings(scope);
-  UnorderedSymbolSet modules;
+  SourceOrderedSymbolSet modules;
   CollectSymbols(scope, sorted, uses, modules);
   // Write module files for dependencies first so that their
   // hashes are known.
@@ -834,22 +836,10 @@ void ModFileWriter::PutUseExtraAttr(
   }
 }
 
-static inline SourceName NameInModuleFile(const Symbol &symbol) {
-  if (const auto *use{symbol.detailsIf<UseDetails>()}) {
-    if (use->symbol().attrs().test(Attr::PRIVATE)) {
-      // Avoid the use in sorting of names created to access private
-      // specific procedures as a result of generic resolution;
-      // they're not in the cooked source.
-      return use->symbol().name();
-    }
-  }
-  return symbol.name();
-}
-
 // Collect the symbols of this scope sorted by their original order, not name.
 // Generics and namelists are exceptions: they are sorted after other symbols.
 void CollectSymbols(const Scope &scope, SymbolVector &sorted,
-    SymbolVector &uses, UnorderedSymbolSet &modules) {
+    SymbolVector &uses, SourceOrderedSymbolSet &modules) {
   SymbolVector namelist, generics;
   auto symbols{scope.GetSymbols()};
   std::size_t commonSize{scope.commonBlocks().size()};
@@ -880,13 +870,8 @@ void CollectSymbols(const Scope &scope, SymbolVector &sorted,
       sorted.push_back(symbol);
     }
   }
-  // Sort most symbols by name: use of Symbol::ReplaceName ensures the source
-  // location of a symbol's name is the first "real" use.
-  auto sorter{[](SymbolRef x, SymbolRef y) {
-    return NameInModuleFile(*x).begin() < NameInModuleFile(*y).begin();
-  }};
-  std::sort(sorted.begin(), sorted.end(), sorter);
-  std::sort(generics.begin(), generics.end(), sorter);
+  std::sort(sorted.begin(), sorted.end(), SymbolSourcePositionCompare{});
+  std::sort(generics.begin(), generics.end(), SymbolSourcePositionCompare{});
   sorted.insert(sorted.end(), generics.begin(), generics.end());
   sorted.insert(sorted.end(), namelist.begin(), namelist.end());
   for (const auto &pair : scope.commonBlocks()) {
@@ -993,11 +978,9 @@ void ModFileWriter::PutObjectEntity(
         << ") " << symbol.name() << '\n';
   }
   if (symbol.test(Fortran::semantics::Symbol::Flag::CrayPointer)) {
-    if (!symbol.owner().crayPointers().empty()) {
-      for (const auto &[pointee, pointer] : symbol.owner().crayPointers()) {
-        if (pointer == symbol) {
-          os << "pointer(" << symbol.name() << "," << pointee << ")\n";
-        }
+    for (const auto &[pointee, pointer] : symbol.owner().crayPointers()) {
+      if (pointer == symbol) {
+        os << "pointer(" << symbol.name() << "," << pointee << ")\n";
       }
     }
   }
@@ -1366,6 +1349,12 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
       name.ToString(), isIntrinsic.value_or(false))};
   if (!isIntrinsic.value_or(false) && !ancestor) {
     // Already present in the symbol table as a usable non-intrinsic module?
+    if (Scope * hermeticScope{context_.currentHermeticModuleFileScope()}) {
+      auto it{hermeticScope->find(name)};
+      if (it != hermeticScope->end()) {
+        return it->second->scope();
+      }
+    }
     auto it{context_.globalScope().find(name)};
     if (it != context_.globalScope().end()) {
       Scope *scope{it->second->scope()};
@@ -1392,7 +1381,8 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     // USE, NON_INTRINSIC global name isn't a module?
     fatalError = isIntrinsic.has_value();
   }
-  auto path{ModFileName(name, ancestorName, context_.moduleFileSuffix())};
+  std::string path{
+      ModFileName(name, ancestorName, context_.moduleFileSuffix())};
   parser::Parsing parsing{context_.allCookedSources()};
   parser::Options options;
   options.isModuleFile = true;
@@ -1468,7 +1458,7 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
       } else {
         for (auto &msg : parsing.messages().messages()) {
           std::string str{msg.ToString()};
-          Say(name, ancestorName,
+          Say("parse", name, ancestorName,
               parser::MessageFixedText{str.c_str(), str.size(), msg.severity()},
               path);
         }
@@ -1480,11 +1470,11 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   std::optional<ModuleCheckSumType> checkSum{
       VerifyHeader(sourceFile->content())};
   if (!checkSum) {
-    Say(name, ancestorName, "File has invalid checksum: %s"_err_en_US,
+    Say("use", name, ancestorName, "File has invalid checksum: %s"_err_en_US,
         sourceFile->path());
     return nullptr;
   } else if (requiredHash && *requiredHash != *checkSum) {
-    Say(name, ancestorName,
+    Say("use", name, ancestorName,
         "File is not the right module file for %s"_err_en_US,
         "'"s + name.ToString() + "': "s + sourceFile->path());
     return nullptr;
@@ -1494,7 +1484,7 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   std::optional<parser::Program> &parsedProgram{parsing.parseTree()};
   if (!parsing.messages().empty() || !parsing.consumedWholeFile() ||
       !parsedProgram) {
-    Say(name, ancestorName, "Module file is corrupt: %s"_err_en_US,
+    Say("parse", name, ancestorName, "Module file is corrupt: %s"_err_en_US,
         sourceFile->path());
     return nullptr;
   }
@@ -1543,9 +1533,26 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   // Process declarations from the module file
   auto wasModuleFileName{context_.foldingContext().moduleFileName()};
   context_.foldingContext().set_moduleFileName(name);
+  // Are there multiple modules in the module file due to it having been
+  // created under -fhermetic-module-files?  If so, process them first in
+  // their own nested scope that will be visible only to USE statements
+  // within the module file.
+  if (parseTree.v.size() > 1) {
+    parser::Program hermeticModules{std::move(parseTree.v)};
+    parseTree.v.emplace_back(std::move(hermeticModules.v.front()));
+    hermeticModules.v.pop_front();
+    Scope &hermeticScope{topScope.MakeScope(Scope::Kind::Global)};
+    context_.set_currentHermeticModuleFileScope(&hermeticScope);
+    ResolveNames(context_, hermeticModules, hermeticScope);
+    for (auto &[_, ref] : hermeticScope) {
+      CHECK(ref->has<ModuleDetails>());
+      ref->set(Symbol::Flag::ModFile);
+    }
+  }
   GetModuleDependences(context_.moduleDependences(), sourceFile->content());
   ResolveNames(context_, parseTree, topScope);
   context_.foldingContext().set_moduleFileName(wasModuleFileName);
+  context_.set_currentHermeticModuleFileScope(nullptr);
   if (!moduleSymbol) {
     // Submodule symbols' storage are owned by their parents' scopes,
     // but their names are not in their parents' dictionaries -- we
@@ -1572,10 +1579,10 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   }
 }
 
-parser::Message &ModFileReader::Say(SourceName name,
+parser::Message &ModFileReader::Say(const char *verb, SourceName name,
     const std::string &ancestor, parser::MessageFixedText &&msg,
     const std::string &arg) {
-  return context_.Say(name, "Cannot read module file for %s: %s"_err_en_US,
+  return context_.Say(name, "Cannot %s module file for %s: %s"_err_en_US, verb,
       parser::MessageFormattedText{ancestor.empty()
               ? "module '%s'"_en_US
               : "submodule '%s' of module '%s'"_en_US,
@@ -1716,6 +1723,17 @@ void SubprogramSymbolCollector::DoSymbol(
   if (!scope.IsDerivedType()) {
     need_.push_back(symbol);
   }
+  if (symbol.test(Fortran::semantics::Symbol::Flag::CrayPointer)) {
+    for (const auto &[pointee, pointer] : symbol.owner().crayPointers()) {
+      if (&*pointer == &symbol) {
+        auto iter{symbol.owner().find(pointee)};
+        CHECK(iter != symbol.owner().end());
+        DoSymbol(*iter->second);
+      }
+    }
+  } else if (symbol.test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
+    DoSymbol(GetCrayPointer(symbol));
+  }
 }
 
 void SubprogramSymbolCollector::DoType(const DeclTypeSpec *type) {
@@ -1779,8 +1797,8 @@ bool SubprogramSymbolCollector::NeedImport(
     return found->has<UseDetails>() && found->owner() != scope_;
   } else {
     // "found" can be null in the case of a use-associated derived type's
-    // parent type
-    CHECK(symbol.has<DerivedTypeDetails>());
+    // parent type, and also in the case of an object (like a dummy argument)
+    // used to define a length or bound of a nested interface.
     return false;
   }
 }

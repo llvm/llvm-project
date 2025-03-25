@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: r0 = #24
 ; CHECK: r1 =
 ; // R2 should be assigned a value from R3+.

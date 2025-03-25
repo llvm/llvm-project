@@ -2,13 +2,32 @@
 
 ! Check if finalization works with a return statement
 
-program main
+subroutine sub1
   integer, device :: a(10)
   return
 end
 
-! CHECK: func.func @_QQmain() attributes {fir.bindc_name = "main"} {
+! CHECK: func.func @_QPsub1()
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare
-! CHECK-NEXT: cuf.free %[[DECL]]#1 : !fir.ref<!fir.array<10xi32>>
-! CHECK-NEXT: return
-! CHECK-NEXT: }
+! CHECK: cuf.free %[[DECL]]#0 : !fir.ref<!fir.array<10xi32>>
+! CHECK: return
+! CHECK: }
+
+subroutine sub2
+  integer, device, allocatable :: a(:)
+  return
+end
+
+! CHECK-LABEL: func.func @_QPsub2()
+! CHECK: fir.if
+! CHECK: cuf.deallocate 
+! CHECK: cuf.free
+
+program main
+  integer, allocatable, device :: a(:)
+  return
+end
+
+! CHECK-LABEL: func.func @_QQmain() attributes {fir.bindc_name = "main"}
+! CHECK: cuf.alloc !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK-NOT: cuf.free

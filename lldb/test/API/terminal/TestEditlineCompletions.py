@@ -62,3 +62,37 @@ class EditlineCompletionsTest(PExpectTest):
             "                      kdp-remote is an abbreviation for 'process conn..."
         )
         self.child.expect("        kill       -- Terminate the current target process.")
+
+    @skipIfAsan
+    @skipIfEditlineSupportMissing
+    def test_completion_pagination(self):
+        """Test that we use the terminal height for pagination."""
+        self.launch(dimensions=(10, 30))
+        self.child.send("_regexp-\t")
+        self.child.expect("Available completions:")
+        self.child.expect("        _regexp-attach")
+        self.child.expect("        _regexp-break")
+        self.child.expect("        _regexp-bt")
+        self.child.expect("        _regexp-display")
+        self.child.expect("        _regexp-down")
+        self.child.expect("        _regexp-env")
+        self.child.expect("        _regexp-jump")
+        self.child.expect("More")
+
+    @skipIfAsan
+    @skipIfEditlineSupportMissing
+    def test_completion_multiline_pagination(self):
+        """Test that we use the terminal height for pagination and account for multi-line descriptions."""
+        self.launch(dimensions=(6, 72))
+        self.child.send("k\t")
+        self.child.expect("Available completions:")
+        self.child.expect(
+            "        kdp-remote -- Connect to a process via remote KDP server."
+        )
+        self.child.expect(
+            "                      If no UDP port is specified, port 41139 is assu..."
+        )
+        self.child.expect(
+            "                      kdp-remote is an abbreviation for 'process conn..."
+        )
+        self.child.expect("More")

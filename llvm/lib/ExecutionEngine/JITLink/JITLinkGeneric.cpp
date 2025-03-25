@@ -211,8 +211,7 @@ JITLinkContext::LookupMap JITLinkerBase::getExternalSymbolNames() const {
   for (auto *Sym : G->external_symbols()) {
     assert(!Sym->getAddress() &&
            "External has already been assigned an address");
-    assert(Sym->getName() != StringRef() && Sym->getName() != "" &&
-           "Externals must be named");
+    assert(Sym->hasName() && "Externals must be named");
     SymbolLookupFlags LookupFlags =
         Sym->isWeaklyReferenced() ? SymbolLookupFlags::WeaklyReferencedSymbol
                                   : SymbolLookupFlags::RequiredSymbol;

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_UPPER_BOUND_H
-#define _LIBCPP___ALGORITHM_UPPER_BOUND_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_UPPER_BOUND_H
+#define _LIBCPP___CXX03___ALGORITHM_UPPER_BOUND_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/half_positive.h>
@@ -65,4 +65,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_UPPER_BOUND_H
+#endif // _LIBCPP___CXX03___ALGORITHM_UPPER_BOUND_H

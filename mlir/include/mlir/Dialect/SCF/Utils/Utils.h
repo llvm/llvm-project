@@ -117,7 +117,7 @@ struct UnrolledLoopInfo {
 };
 
 /// Unrolls this for operation by the specified unroll factor. Returns the
-/// unrolled main loop and the eplilog loop, if the loop is unrolled. Otherwise
+/// unrolled main loop and the epilogue loop, if the loop is unrolled. Otherwise
 /// returns failure if the loop cannot be unrolled either due to restrictions or
 /// due to invalid unroll factors. Requires positive loop bounds and step. If
 /// specified, annotates the Ops in each unrolled iteration by applying
@@ -125,6 +125,9 @@ struct UnrolledLoopInfo {
 FailureOr<UnrolledLoopInfo> loopUnrollByFactor(
     scf::ForOp forOp, uint64_t unrollFactor,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn = nullptr);
+
+/// Unrolls this loop completely.
+LogicalResult loopUnrollFull(scf::ForOp forOp);
 
 /// Unrolls and jams this `scf.for` operation by the specified unroll factor.
 /// Returns failure if the loop cannot be unrolled either due to restrictions or

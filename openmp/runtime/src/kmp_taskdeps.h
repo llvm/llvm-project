@@ -22,12 +22,15 @@ static inline void __kmp_node_deref(kmp_info_t *thread, kmp_depnode_t *node) {
   if (!node)
     return;
 
-  kmp_int32 n = KMP_ATOMIC_DEC(&node->dn.nrefs) - 1;
+  kmp_int32 n = KMP_ATOMIC_SUB(&node->dn.nrefs, 2) - 2;
   KMP_DEBUG_ASSERT(n >= 0);
-  if (n == 0) {
+  if ((n & ~1) == 0) {
 #if USE_ITT_BUILD && USE_ITT_NOTIFY
     __itt_sync_destroy(node);
 #endif
+    // These two assertions are somewhat redundant.  The first is intended to
+    // detect if we are trying to free a depnode on the stack.
+    KMP_DEBUG_ASSERT((node->dn.nrefs & 1) == 0);
     KMP_ASSERT(node->dn.nrefs == 0);
 #if USE_FAST_MEMORY
     __kmp_fast_free(thread, node);
@@ -95,7 +98,7 @@ static inline void __kmp_release_deps(kmp_int32 gtid, kmp_taskdata_t *task) {
 
 #if OMPX_TASKGRAPH
   if (task->is_taskgraph && !(__kmp_tdg_is_recording(task->tdg->tdg_status))) {
-    kmp_node_info_t *TaskInfo = &(task->tdg->record_map[task->td_task_id]);
+    kmp_node_info_t *TaskInfo = &(task->tdg->record_map[task->td_tdg_task_id]);
 
     for (int i = 0; i < TaskInfo->nsuccessors; i++) {
       kmp_int32 successorNumber = TaskInfo->successors[i];

@@ -55,8 +55,8 @@ struct __mask_storage<_Tp, simd_abi::__vec_ext<_Np>>
 
 template <class _Tp, int _Np>
 struct __simd_operations<_Tp, simd_abi::__vec_ext<_Np>> {
-  using _SimdStorage = __simd_storage<_Tp, simd_abi::__vec_ext<_Np>>;
-  using _MaskStorage = __mask_storage<_Tp, simd_abi::__vec_ext<_Np>>;
+  using _SimdStorage _LIBCPP_NODEBUG = __simd_storage<_Tp, simd_abi::__vec_ext<_Np>>;
+  using _MaskStorage _LIBCPP_NODEBUG = __mask_storage<_Tp, simd_abi::__vec_ext<_Np>>;
 
   static _LIBCPP_HIDE_FROM_ABI _SimdStorage __broadcast(_Tp __v) noexcept {
     _SimdStorage __result;
@@ -101,7 +101,7 @@ struct __simd_operations<_Tp, simd_abi::__vec_ext<_Np>> {
 
 template <class _Tp, int _Np>
 struct __mask_operations<_Tp, simd_abi::__vec_ext<_Np>> {
-  using _MaskStorage = __mask_storage<_Tp, simd_abi::__vec_ext<_Np>>;
+  using _MaskStorage _LIBCPP_NODEBUG = __mask_storage<_Tp, simd_abi::__vec_ext<_Np>>;
 
   static _LIBCPP_HIDE_FROM_ABI _MaskStorage __broadcast(bool __v) noexcept {
     _MaskStorage __result;

@@ -677,8 +677,8 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
   std::optional<uint64_t> item_type_size =
-      pointee_or_element_compiler_type.GetByteSize(
-          exe_ctx.GetBestExecutionContextScope());
+      llvm::expectedToOptional(pointee_or_element_compiler_type.GetByteSize(
+          exe_ctx.GetBestExecutionContextScope()));
   if (!item_type_size)
     return 0;
   const uint64_t bytes = item_count * *item_type_size;
@@ -794,7 +794,7 @@ bool ValueObject::SetData(DataExtractor &data, Status &error) {
   uint64_t count = 0;
   const Encoding encoding = GetCompilerType().GetEncoding(count);
 
-  const size_t byte_size = GetByteSize().value_or(0);
+  const size_t byte_size = llvm::expectedToOptional(GetByteSize()).value_or(0);
 
   Value::ValueType value_type = m_value.GetValueType();
 
@@ -847,6 +847,22 @@ bool ValueObject::SetData(DataExtractor &data, Status &error) {
   // value.
   SetNeedsUpdate();
   return true;
+}
+
+llvm::ArrayRef<uint8_t> ValueObject::GetLocalBuffer() const {
+  if (m_value.GetValueType() != Value::ValueType::HostAddress)
+    return {};
+  auto start = m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+  if (start == LLDB_INVALID_ADDRESS)
+    return {};
+  // Does our pointer point to this value object's m_data buffer?
+  if ((uint64_t)m_data.GetDataStart() == start)
+    return m_data.GetData();
+  // Does our pointer point to the value's buffer?
+  if ((uint64_t)m_value.GetBuffer().GetBytes() == start)
+    return m_value.GetBuffer().GetData();
+  // Our pointer points to something else. We can't know what the size is.
+  return {};
 }
 
 static bool CopyStringDataToBufferSP(const StreamString &source,
@@ -1208,7 +1224,8 @@ void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error) {
   // Verify the proposed new value is the right size.
   lldb::TargetSP target = GetTargetSP();
   uint64_t byte_size = 0;
-  if (auto temp = GetCompilerType().GetByteSize(target.get()))
+  if (auto temp =
+          llvm::expectedToOptional(GetCompilerType().GetByteSize(target.get())))
     byte_size = temp.value();
   if (value.getBitWidth() != byte_size * CHAR_BIT) {
     error = Status::FromErrorString(
@@ -1271,7 +1288,8 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
     if (success) {
       lldb::TargetSP target = GetTargetSP();
       uint64_t num_bits = 0;
-      if (auto temp = new_val_sp->GetCompilerType().GetBitSize(target.get()))
+      if (auto temp = llvm::expectedToOptional(
+              new_val_sp->GetCompilerType().GetBitSize(target.get())))
         num_bits = temp.value();
       SetValueFromInteger(llvm::APInt(num_bits, int_val), error);
     } else
@@ -1663,7 +1681,7 @@ bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
   uint64_t count = 0;
   const Encoding encoding = GetCompilerType().GetEncoding(count);
 
-  const size_t byte_size = GetByteSize().value_or(0);
+  const size_t byte_size = llvm::expectedToOptional(GetByteSize()).value_or(0);
 
   Value::ValueType value_type = m_value.GetValueType();
 
@@ -1847,13 +1865,15 @@ ValueObjectSP ValueObject::GetSyntheticBitFieldChild(uint32_t from, uint32_t to,
       uint32_t bit_field_offset = from;
       if (GetDataExtractor().GetByteOrder() == eByteOrderBig)
         bit_field_offset =
-            GetByteSize().value_or(0) * 8 - bit_field_size - bit_field_offset;
+            llvm::expectedToOptional(GetByteSize()).value_or(0) * 8 -
+            bit_field_size - bit_field_offset;
       // We haven't made a synthetic array member for INDEX yet, so lets make
       // one and cache it for any future reference.
       ValueObjectChild *synthetic_child = new ValueObjectChild(
-          *this, GetCompilerType(), index_const_str, GetByteSize().value_or(0),
-          0, bit_field_size, bit_field_offset, false, false,
-          eAddressTypeInvalid, 0);
+          *this, GetCompilerType(), index_const_str,
+          llvm::expectedToOptional(GetByteSize()).value_or(0), 0,
+          bit_field_size, bit_field_offset, false, false, eAddressTypeInvalid,
+          0);
 
       // Cache the value if we got one back...
       if (synthetic_child) {
@@ -1888,8 +1908,8 @@ ValueObjectSP ValueObject::GetSyntheticChildAtOffset(
     return {};
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
-  std::optional<uint64_t> size =
-      type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+  std::optional<uint64_t> size = llvm::expectedToOptional(
+      type.GetByteSize(exe_ctx.GetBestExecutionContextScope()));
   if (!size)
     return {};
   ValueObjectChild *synthetic_child =
@@ -1930,8 +1950,8 @@ ValueObjectSP ValueObject::GetSyntheticBase(uint32_t offset,
   const bool is_base_class = true;
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
-  std::optional<uint64_t> size =
-      type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+  std::optional<uint64_t> size = llvm::expectedToOptional(
+      type.GetByteSize(exe_ctx.GetBestExecutionContextScope()));
   if (!size)
     return {};
   ValueObjectChild *synthetic_child =
@@ -2983,8 +3003,10 @@ ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
 
   ExecutionContextScope *exe_scope =
       ExecutionContext(GetExecutionContextRef()).GetBestExecutionContextScope();
-  if (compiler_type.GetByteSize(exe_scope) <=
-          GetCompilerType().GetByteSize(exe_scope) ||
+  if (llvm::expectedToOptional(compiler_type.GetByteSize(exe_scope))
+              .value_or(0) <=
+          llvm::expectedToOptional(GetCompilerType().GetByteSize(exe_scope))
+              .value_or(0) ||
       m_value.GetValueType() == Value::ValueType::LoadAddress)
     return DoCast(compiler_type);
 
@@ -3194,37 +3216,37 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
       GetCompilerType().IsPointerType() || GetCompilerType().IsNullPtrType();
   bool is_float = GetCompilerType().IsFloat();
   bool is_integer = GetCompilerType().IsInteger();
+  ExecutionContext exe_ctx(GetExecutionContextRef());
 
-  if (!type.IsScalarType()) {
-    m_error = Status::FromErrorString("target type must be a scalar");
-    return GetSP();
-  }
+  if (!type.IsScalarType())
+    return ValueObjectConstResult::Create(
+        exe_ctx.GetBestExecutionContextScope(),
+        Status::FromErrorString("target type must be a scalar"));
 
-  if (!is_scalar && !is_enum && !is_pointer) {
-    m_error =
-        Status::FromErrorString("argument must be a scalar, enum, or pointer");
-    return GetSP();
-  }
+  if (!is_scalar && !is_enum && !is_pointer)
+    return ValueObjectConstResult::Create(
+        exe_ctx.GetBestExecutionContextScope(),
+        Status::FromErrorString("argument must be a scalar, enum, or pointer"));
 
   lldb::TargetSP target = GetTargetSP();
   uint64_t type_byte_size = 0;
   uint64_t val_byte_size = 0;
-  if (auto temp = type.GetByteSize(target.get()))
+  if (auto temp = llvm::expectedToOptional(type.GetByteSize(target.get())))
     type_byte_size = temp.value();
-  if (auto temp = GetCompilerType().GetByteSize(target.get()))
+  if (auto temp =
+          llvm::expectedToOptional(GetCompilerType().GetByteSize(target.get())))
     val_byte_size = temp.value();
 
   if (is_pointer) {
-    if (!type.IsInteger() && !type.IsBoolean()) {
-      m_error =
-          Status::FromErrorString("target type must be an integer or boolean");
-      return GetSP();
-    }
-    if (!type.IsBoolean() && type_byte_size < val_byte_size) {
-      m_error = Status::FromErrorString(
-          "target type cannot be smaller than the pointer type");
-      return GetSP();
-    }
+    if (!type.IsInteger() && !type.IsBoolean())
+      return ValueObjectConstResult::Create(
+          exe_ctx.GetBestExecutionContextScope(),
+          Status::FromErrorString("target type must be an integer or boolean"));
+    if (!type.IsBoolean() && type_byte_size < val_byte_size)
+      return ValueObjectConstResult::Create(
+          exe_ctx.GetBestExecutionContextScope(),
+          Status::FromErrorString(
+              "target type cannot be smaller than the pointer type"));
   }
 
   if (type.IsBoolean()) {
@@ -3236,12 +3258,12 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
       if (float_value_or_err)
         return ValueObject::CreateValueObjectFromBool(
             target, !float_value_or_err->isZero(), "result");
-      else {
-        m_error = Status::FromErrorStringWithFormat(
-            "cannot get value as APFloat: %s",
-            llvm::toString(float_value_or_err.takeError()).c_str());
-        return GetSP();
-      }
+      else
+        return ValueObjectConstResult::Create(
+            exe_ctx.GetBestExecutionContextScope(),
+            Status::FromErrorStringWithFormat(
+                "cannot get value as APFloat: %s",
+                llvm::toString(float_value_or_err.takeError()).c_str()));
     }
   }
 
@@ -3255,13 +3277,12 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
             int_value_or_err->extOrTrunc(type_byte_size * CHAR_BIT);
         return ValueObject::CreateValueObjectFromAPInt(target, ext, type,
                                                        "result");
-      } else {
-        m_error = Status::FromErrorStringWithFormat(
-            "cannot get value as APSInt: %s",
-            llvm::toString(int_value_or_err.takeError()).c_str());
-        ;
-        return GetSP();
-      }
+      } else
+        return ValueObjectConstResult::Create(
+            exe_ctx.GetBestExecutionContextScope(),
+            Status::FromErrorStringWithFormat(
+                "cannot get value as APSInt: %s",
+                llvm::toString(int_value_or_err.takeError()).c_str()));
     } else if (is_scalar && is_float) {
       llvm::APSInt integer(type_byte_size * CHAR_BIT, !type.IsSigned());
       bool is_exact;
@@ -3273,12 +3294,12 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
 
         // Casting floating point values that are out of bounds of the target
         // type is undefined behaviour.
-        if (status & llvm::APFloatBase::opInvalidOp) {
-          m_error = Status::FromErrorStringWithFormat(
-              "invalid type cast detected: %s",
-              llvm::toString(float_value_or_err.takeError()).c_str());
-          return GetSP();
-        }
+        if (status & llvm::APFloatBase::opInvalidOp)
+          return ValueObjectConstResult::Create(
+              exe_ctx.GetBestExecutionContextScope(),
+              Status::FromErrorStringWithFormat(
+                  "invalid type cast detected: %s",
+                  llvm::toString(float_value_or_err.takeError()).c_str()));
         return ValueObject::CreateValueObjectFromAPInt(target, integer, type,
                                                        "result");
       }
@@ -3297,10 +3318,11 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
         return ValueObject::CreateValueObjectFromAPFloat(target, f, type,
                                                          "result");
       } else {
-        m_error = Status::FromErrorStringWithFormat(
-            "cannot get value as APSInt: %s",
-            llvm::toString(int_value_or_err.takeError()).c_str());
-        return GetSP();
+        return ValueObjectConstResult::Create(
+            exe_ctx.GetBestExecutionContextScope(),
+            Status::FromErrorStringWithFormat(
+                "cannot get value as APSInt: %s",
+                llvm::toString(int_value_or_err.takeError()).c_str()));
       }
     } else {
       if (is_integer) {
@@ -3312,10 +3334,11 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
           return ValueObject::CreateValueObjectFromAPFloat(target, f, type,
                                                            "result");
         } else {
-          m_error = Status::FromErrorStringWithFormat(
-              "cannot get value as APSInt: %s",
-              llvm::toString(int_value_or_err.takeError()).c_str());
-          return GetSP();
+          return ValueObjectConstResult::Create(
+              exe_ctx.GetBestExecutionContextScope(),
+              Status::FromErrorStringWithFormat(
+                  "cannot get value as APSInt: %s",
+                  llvm::toString(int_value_or_err.takeError()).c_str()));
         }
       }
       if (is_float) {
@@ -3327,38 +3350,41 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
           return ValueObject::CreateValueObjectFromAPFloat(target, f, type,
                                                            "result");
         } else {
-          m_error = Status::FromErrorStringWithFormat(
-              "cannot get value as APFloat: %s",
-              llvm::toString(float_value_or_err.takeError()).c_str());
-          return GetSP();
+          return ValueObjectConstResult::Create(
+              exe_ctx.GetBestExecutionContextScope(),
+              Status::FromErrorStringWithFormat(
+                  "cannot get value as APFloat: %s",
+                  llvm::toString(float_value_or_err.takeError()).c_str()));
         }
       }
     }
   }
 
-  m_error = Status::FromErrorString("Unable to perform requested cast");
-  return GetSP();
+  return ValueObjectConstResult::Create(
+      exe_ctx.GetBestExecutionContextScope(),
+      Status::FromErrorString("Unable to perform requested cast"));
 }
 
 lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
   bool is_enum = GetCompilerType().IsEnumerationType();
   bool is_integer = GetCompilerType().IsInteger();
   bool is_float = GetCompilerType().IsFloat();
+  ExecutionContext exe_ctx(GetExecutionContextRef());
 
-  if (!is_enum && !is_integer && !is_float) {
-    m_error = Status::FromErrorString(
-        "argument must be an integer, a float, or an enum");
-    return GetSP();
-  }
+  if (!is_enum && !is_integer && !is_float)
+    return ValueObjectConstResult::Create(
+        exe_ctx.GetBestExecutionContextScope(),
+        Status::FromErrorString(
+            "argument must be an integer, a float, or an enum"));
 
-  if (!type.IsEnumerationType()) {
-    m_error = Status::FromErrorString("target type must be an enum");
-    return GetSP();
-  }
+  if (!type.IsEnumerationType())
+    return ValueObjectConstResult::Create(
+        exe_ctx.GetBestExecutionContextScope(),
+        Status::FromErrorString("target type must be an enum"));
 
   lldb::TargetSP target = GetTargetSP();
   uint64_t byte_size = 0;
-  if (auto temp = type.GetByteSize(target.get()))
+  if (auto temp = llvm::expectedToOptional(type.GetByteSize(target.get())))
     byte_size = temp.value();
 
   if (is_float) {
@@ -3371,18 +3397,18 @@ lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
 
       // Casting floating point values that are out of bounds of the target
       // type is undefined behaviour.
-      if (status & llvm::APFloatBase::opInvalidOp) {
-        m_error = Status::FromErrorStringWithFormat(
-            "invalid type cast detected: %s",
-            llvm::toString(value_or_err.takeError()).c_str());
-        return GetSP();
-      }
+      if (status & llvm::APFloatBase::opInvalidOp)
+        return ValueObjectConstResult::Create(
+            exe_ctx.GetBestExecutionContextScope(),
+            Status::FromErrorStringWithFormat(
+                "invalid type cast detected: %s",
+                llvm::toString(value_or_err.takeError()).c_str()));
       return ValueObject::CreateValueObjectFromAPInt(target, integer, type,
                                                      "result");
-    } else {
-      m_error = Status::FromErrorString("cannot get value as APFloat");
-      return GetSP();
-    }
+    } else
+      return ValueObjectConstResult::Create(
+          exe_ctx.GetBestExecutionContextScope(),
+          Status::FromErrorString("cannot get value as APFloat"));
   } else {
     // Get the value as APSInt and extend or truncate it to the requested size.
     auto value_or_err = GetValueAsAPSInt();
@@ -3390,15 +3416,16 @@ lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
       llvm::APSInt ext = value_or_err->extOrTrunc(byte_size * CHAR_BIT);
       return ValueObject::CreateValueObjectFromAPInt(target, ext, type,
                                                      "result");
-    } else {
-      m_error = Status::FromErrorStringWithFormat(
-          "cannot get value as APSInt: %s",
-          llvm::toString(value_or_err.takeError()).c_str());
-      return GetSP();
-    }
+    } else
+      return ValueObjectConstResult::Create(
+          exe_ctx.GetBestExecutionContextScope(),
+          Status::FromErrorStringWithFormat(
+              "cannot get value as APSInt: %s",
+              llvm::toString(value_or_err.takeError()).c_str()));
   }
-  m_error = Status::FromErrorString("Cannot perform requested cast");
-  return GetSP();
+  return ValueObjectConstResult::Create(
+      exe_ctx.GetBestExecutionContextScope(),
+      Status::FromErrorString("Cannot perform requested cast"));
 }
 
 ValueObject::EvaluationPoint::EvaluationPoint() : m_mod_id(), m_exe_ctx_ref() {}
@@ -3633,7 +3660,7 @@ ValueObject::CreateValueObjectFromAPInt(lldb::TargetSP target,
                                         llvm::StringRef name) {
   ExecutionContext exe_ctx(target.get(), false);
   uint64_t byte_size = 0;
-  if (auto temp = type.GetByteSize(target.get()))
+  if (auto temp = llvm::expectedToOptional(type.GetByteSize(target.get())))
     byte_size = temp.value();
   lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
       reinterpret_cast<const void *>(v.getRawData()), byte_size,
@@ -3661,7 +3688,8 @@ ValueObject::CreateValueObjectFromBool(lldb::TargetSP target, bool value,
   }
   ExecutionContext exe_ctx(target.get(), false);
   uint64_t byte_size = 0;
-  if (auto temp = target_type.GetByteSize(target.get()))
+  if (auto temp =
+          llvm::expectedToOptional(target_type.GetByteSize(target.get())))
     byte_size = temp.value();
   lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
       reinterpret_cast<const void *>(&value), byte_size, exe_ctx.GetByteOrder(),
@@ -3679,7 +3707,7 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromNullptr(
   uintptr_t zero = 0;
   ExecutionContext exe_ctx(target.get(), false);
   uint64_t byte_size = 0;
-  if (auto temp = type.GetByteSize(target.get()))
+  if (auto temp = llvm::expectedToOptional(type.GetByteSize(target.get())))
     byte_size = temp.value();
   lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
       reinterpret_cast<const void *>(zero), byte_size, exe_ctx.GetByteOrder(),

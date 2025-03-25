@@ -1124,3 +1124,84 @@ loop:
 exit:
   ret void
 }
+
+define i1 @trunc_nuw_i1_non_zero(i8 %1) {
+; CHECK-LABEL: @trunc_nuw_i1_non_zero(
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP0:%.*]], 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
+; CHECK-NEXT:    ret i1 true
+;
+  %3 = icmp ne i8 %1, 0
+  tail call void @llvm.assume(i1 %3)
+  %ret = trunc nuw i8 %1 to i1
+  ret i1 %ret
+}
+
+define i1 @neg_trunc_nuw_i1_maybe_zero(i8 %1) {
+; CHECK-LABEL: @neg_trunc_nuw_i1_maybe_zero(
+; CHECK-NEXT:    [[RET:%.*]] = trunc nuw i8 [[TMP0:%.*]] to i1
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %ret = trunc nuw i8 %1 to i1
+  ret i1 %ret
+}
+
+define i2 @neg_trunc_nuw_i2_non_zero(i8 %1) {
+; CHECK-LABEL: @neg_trunc_nuw_i2_non_zero(
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP0:%.*]], 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
+; CHECK-NEXT:    [[RET:%.*]] = trunc nuw i8 [[TMP0]] to i2
+; CHECK-NEXT:    ret i2 [[RET]]
+;
+  %3 = icmp ne i8 %1, 0
+  tail call void @llvm.assume(i1 %3)
+  %ret = trunc nuw i8 %1 to i2
+  ret i2 %ret
+}
+
+define i1 @neg_trunc_i1_non_zero(i8 %1) {
+; CHECK-LABEL: @neg_trunc_i1_non_zero(
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP0:%.*]], 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
+; CHECK-NEXT:    [[RET:%.*]] = trunc i8 [[TMP0]] to i1
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %3 = icmp ne i8 %1, 0
+  tail call void @llvm.assume(i1 %3)
+  %ret = trunc i8 %1 to i1
+  ret i1 %ret
+}
+
+define i1 @trunc_nsw_i1_non_zero(i8 %1) {
+; CHECK-LABEL: @trunc_nsw_i1_non_zero(
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP0:%.*]], 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
+; CHECK-NEXT:    ret i1 true
+;
+  %3 = icmp ne i8 %1, 0
+  tail call void @llvm.assume(i1 %3)
+  %ret = trunc nsw i8 %1 to i1
+  ret i1 %ret
+}
+
+define i1 @neg_trunc_nsw_i1_maybe_zero(i8 %1) {
+; CHECK-LABEL: @neg_trunc_nsw_i1_maybe_zero(
+; CHECK-NEXT:    [[RET:%.*]] = trunc nsw i8 [[TMP0:%.*]] to i1
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %ret = trunc nsw i8 %1 to i1
+  ret i1 %ret
+}
+
+define i2 @neg_trunc_nsw_i2_non_zero(i8 %1) {
+; CHECK-LABEL: @neg_trunc_nsw_i2_non_zero(
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP0:%.*]], 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
+; CHECK-NEXT:    [[RET:%.*]] = trunc nsw i8 [[TMP0]] to i2
+; CHECK-NEXT:    ret i2 [[RET]]
+;
+  %3 = icmp ne i8 %1, 0
+  tail call void @llvm.assume(i1 %3)
+  %ret = trunc nsw i8 %1 to i2
+  ret i2 %ret
+}

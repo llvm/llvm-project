@@ -852,7 +852,7 @@ bool StubsManager_prev7::visitEdge(LinkGraph &G, Block *B, Edge &E) {
 
   Symbol &Target = E.getTarget();
   assert(Target.hasName() && "Edge cannot point to anonymous target");
-  auto [Slot, NewStub] = getStubMapSlot(Target.getName());
+  auto [Slot, NewStub] = getStubMapSlot(*Target.getName());
 
   if (NewStub) {
     if (!StubsSection)
@@ -874,7 +874,7 @@ bool StubsManager_prev7::visitEdge(LinkGraph &G, Block *B, Edge &E) {
   LLVM_DEBUG({
     dbgs() << "    Using " << (UseThumb ? "Thumb" : "Arm") << " entrypoint "
            << *StubEntrypoint << " in "
-           << StubEntrypoint->getBlock().getSection().getName() << "\n";
+           << StubEntrypoint->getSection().getName() << "\n";
   });
 
   E.setTarget(*StubEntrypoint);
@@ -896,7 +896,7 @@ bool StubsManager_v7::visitEdge(LinkGraph &G, Block *B, Edge &E) {
 
   Symbol &Target = E.getTarget();
   assert(Target.hasName() && "Edge cannot point to anonymous target");
-  Symbol *&StubSymbol = getStubSymbolSlot(Target.getName(), MakeThumb);
+  Symbol *&StubSymbol = getStubSymbolSlot(*Target.getName(), MakeThumb);
 
   if (!StubSymbol) {
     if (!StubsSection)
@@ -919,8 +919,8 @@ bool StubsManager_v7::visitEdge(LinkGraph &G, Block *B, Edge &E) {
          "Instruction set states of stub and relocation site should be equal");
   LLVM_DEBUG({
     dbgs() << "    Using " << (MakeThumb ? "Thumb" : "Arm") << " entry "
-           << *StubSymbol << " in "
-           << StubSymbol->getBlock().getSection().getName() << "\n";
+           << *StubSymbol << " in " << StubSymbol->getSection().getName()
+           << "\n";
   });
 
   E.setTarget(*StubSymbol);

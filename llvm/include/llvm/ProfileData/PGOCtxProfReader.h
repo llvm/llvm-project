@@ -74,6 +74,12 @@ class IndexNode {
 };
 } // namespace internal
 
+// Setting initial capacity to 1 because all contexts must have at least 1
+// counter, and then, because all contexts belonging to a function have the same
+// size, there'll be at most one other heap allocation.
+using CtxProfFlatProfile =
+    std::map<GlobalValue::GUID, SmallVector<uint64_t, 1>>;
+
 /// A node (context) in the loaded contextual profile, suitable for mutation
 /// during IPO passes. We generally expect a fraction of counters and
 /// callsites to be populated. We continue to model counters as vectors, but
@@ -92,10 +98,18 @@ private:
 
   GlobalValue::GUID GUID = 0;
   SmallVector<uint64_t, 16> Counters;
+  const std::optional<uint64_t> RootEntryCount{};
+  std::optional<CtxProfFlatProfile> Unhandled{};
   CallsiteMapTy Callsites;
 
-  PGOCtxProfContext(GlobalValue::GUID G, SmallVectorImpl<uint64_t> &&Counters)
-      : GUID(G), Counters(std::move(Counters)) {}
+  PGOCtxProfContext(
+      GlobalValue::GUID G, SmallVectorImpl<uint64_t> &&Counters,
+      std::optional<uint64_t> RootEntryCount = std::nullopt,
+      std::optional<CtxProfFlatProfile> &&Unhandled = std::nullopt)
+      : GUID(G), Counters(std::move(Counters)), RootEntryCount(RootEntryCount),
+        Unhandled(std::move(Unhandled)) {
+    assert(RootEntryCount.has_value() == Unhandled.has_value());
+  }
 
   Expected<PGOCtxProfContext &>
   getOrEmplace(uint32_t Index, GlobalValue::GUID G,
@@ -114,6 +128,11 @@ public:
   GlobalValue::GUID guid() const { return GUID; }
   const SmallVectorImpl<uint64_t> &counters() const { return Counters; }
   SmallVectorImpl<uint64_t> &counters() { return Counters; }
+
+  bool isRoot() const { return RootEntryCount.has_value(); }
+  uint64_t getTotalRootEntryCount() const { return RootEntryCount.value(); }
+
+  const CtxProfFlatProfile &getUnhandled() const { return Unhandled.value(); }
 
   uint64_t getEntrycount() const {
     assert(!Counters.empty() &&
@@ -164,24 +183,45 @@ public:
   }
 };
 
+using CtxProfContextualProfiles =
+    std::map<GlobalValue::GUID, PGOCtxProfContext>;
+struct PGOCtxProfile {
+  CtxProfContextualProfiles Contexts;
+  CtxProfFlatProfile FlatProfiles;
+
+  PGOCtxProfile() = default;
+  PGOCtxProfile(const PGOCtxProfile &) = delete;
+  PGOCtxProfile(PGOCtxProfile &&) = default;
+  PGOCtxProfile &operator=(PGOCtxProfile &&) = default;
+};
+
 class PGOCtxProfileReader final {
   StringRef Magic;
   BitstreamCursor Cursor;
   Expected<BitstreamEntry> advance();
   Error readMetadata();
-  Error wrongValue(const Twine &);
-  Error unsupported(const Twine &);
+  Error wrongValue(const Twine &Msg);
+  Error unsupported(const Twine &Msg);
 
   Expected<std::pair<std::optional<uint32_t>, PGOCtxProfContext>>
-  readContext(bool ExpectIndex);
-  bool canReadContext();
+  readProfile(PGOCtxProfileBlockIDs Kind);
+
+  bool tryGetNextKnownBlockID(PGOCtxProfileBlockIDs &ID);
+  bool canEnterBlockWithID(PGOCtxProfileBlockIDs ID);
+  Error enterBlockWithID(PGOCtxProfileBlockIDs ID);
+
+  Error loadContexts(CtxProfContextualProfiles &P);
+  Error loadFlatProfiles(CtxProfFlatProfile &P);
+  Error loadFlatProfileList(CtxProfFlatProfile &P);
 
 public:
   PGOCtxProfileReader(StringRef Buffer)
       : Magic(Buffer.substr(0, PGOCtxProfileWriter::ContainerMagic.size())),
         Cursor(Buffer.substr(PGOCtxProfileWriter::ContainerMagic.size())) {}
 
-  Expected<std::map<GlobalValue::GUID, PGOCtxProfContext>> loadContexts();
+  Expected<PGOCtxProfile> loadProfiles();
 };
+
+void convertCtxProfToYaml(raw_ostream &OS, const PGOCtxProfile &Profile);
 } // namespace llvm
 #endif

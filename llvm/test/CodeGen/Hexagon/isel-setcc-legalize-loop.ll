@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Check that we scalarize the comparison. This testcase used to loop forever
 ; due to the repeated split-widen operations in legalizing SETCC.

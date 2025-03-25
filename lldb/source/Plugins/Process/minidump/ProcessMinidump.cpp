@@ -354,6 +354,22 @@ DataExtractor ProcessMinidump::GetAuxvData() {
                        GetAddressByteSize(), GetAddressByteSize());
 }
 
+bool ProcessMinidump::IsLLDBMinidump() {
+  std::optional<llvm::ArrayRef<uint8_t>> lldb_generated_section =
+      m_minidump_parser->GetRawStream(StreamType::LLDBGenerated);
+  return lldb_generated_section.has_value();
+}
+
+DynamicLoader *ProcessMinidump::GetDynamicLoader() {
+  // This is a workaround for the dynamic loader not playing nice in issue
+  // #119598. The specific reason we use the dynamic loader is to get the TLS
+  // info sections, which we can assume are not being written to the minidump
+  // unless it's an LLDB generate minidump.
+  if (IsLLDBMinidump())
+    return PostMortemProcess::GetDynamicLoader();
+  return nullptr;
+}
+
 void ProcessMinidump::BuildMemoryRegions() {
   if (m_memory_regions)
     return;
@@ -367,12 +383,12 @@ void ProcessMinidump::BuildMemoryRegions() {
 
   MemoryRegionInfos to_add;
   ModuleList &modules = GetTarget().GetImages();
-  SectionLoadList &load_list = GetTarget().GetSectionLoadList();
+  Target &target = GetTarget();
   modules.ForEach([&](const ModuleSP &module_sp) {
     SectionList *sections = module_sp->GetSectionList();
     for (size_t i = 0; i < sections->GetSize(); ++i) {
       SectionSP section_sp = sections->GetSectionAtIndex(i);
-      addr_t load_addr = load_list.GetSectionLoadAddress(section_sp);
+      addr_t load_addr = target.GetSectionLoadAddress(section_sp);
       if (load_addr == LLDB_INVALID_ADDRESS)
         continue;
       MemoryRegionInfo::RangeType section_range(load_addr,

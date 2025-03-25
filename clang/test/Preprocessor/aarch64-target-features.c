@@ -39,6 +39,7 @@
 // CHECK-NOT: __ARM_FP_FAST 1
 // CHECK: __ARM_NEON 1
 // CHECK: __ARM_NEON_FP 0xE
+// CHECK: __ARM_NEON_SVE_BRIDGE 1
 // CHECK: __ARM_PCS_AAPCS64 1
 // CHECK-NOT: __ARM_PCS 1
 // CHECK-NOT: __ARM_PCS_VFP 1
@@ -245,7 +246,12 @@
 // CHECK-SVE2SHA3: __ARM_FEATURE_SVE2_SHA3 1
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2-sm4 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2SM4 %s
 // CHECK-SVE2SM4: __ARM_FEATURE_SVE2_SM4 1
-// RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2-bitperm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2BITPERM %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve-bitperm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVEBITPERM %s
+// CHECK-SVEBITPERM: __ARM_FEATURE_SVE2_BITPERM 1
+
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve2-bitperm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2BITPERM %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve-bitperm+sve2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2BITPERM %s
+// CHECK-SVE2BITPERM: __ARM_FEATURE_SVE2 1
 // CHECK-SVE2BITPERM: __ARM_FEATURE_SVE2_BITPERM 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2p1 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2p1 %s

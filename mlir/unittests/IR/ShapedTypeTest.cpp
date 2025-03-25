@@ -24,7 +24,7 @@ TEST(ShapedTypeTest, CloneMemref) {
   MLIRContext context;
 
   Type i32 = IntegerType::get(&context, 32);
-  Type f32 = FloatType::getF32(&context);
+  Type f32 = Float32Type::get(&context);
   Attribute memSpace = IntegerAttr::get(IntegerType::get(&context, 64), 7);
   Type memrefOriginalType = i32;
   llvm::SmallVector<int64_t> memrefOriginalShape({10, 20});
@@ -71,7 +71,7 @@ TEST(ShapedTypeTest, CloneTensor) {
   MLIRContext context;
 
   Type i32 = IntegerType::get(&context, 32);
-  Type f32 = FloatType::getF32(&context);
+  Type f32 = Float32Type::get(&context);
 
   Type tensorOriginalType = i32;
   llvm::SmallVector<int64_t> tensorOriginalShape({10, 20});
@@ -111,7 +111,7 @@ TEST(ShapedTypeTest, CloneVector) {
   MLIRContext context;
 
   Type i32 = IntegerType::get(&context, 32);
-  Type f32 = FloatType::getF32(&context);
+  Type f32 = Float32Type::get(&context);
 
   Type vectorOriginalType = i32;
   llvm::SmallVector<int64_t> vectorOriginalShape({10, 20});
@@ -134,7 +134,7 @@ TEST(ShapedTypeTest, CloneVector) {
 
 TEST(ShapedTypeTest, VectorTypeBuilder) {
   MLIRContext context;
-  Type f32 = FloatType::getF32(&context);
+  Type f32 = Float32Type::get(&context);
 
   SmallVector<int64_t> shape{2, 4, 8, 9, 1};
   SmallVector<bool> scalableDims{true, false, true, false, false};
@@ -192,7 +192,7 @@ TEST(ShapedTypeTest, VectorTypeBuilder) {
 
 TEST(ShapedTypeTest, RankedTensorTypeBuilder) {
   MLIRContext context;
-  Type f32 = FloatType::getF32(&context);
+  Type f32 = Float32Type::get(&context);
 
   SmallVector<int64_t> shape{2, 4, 8, 16, 32};
   RankedTensorType tensorType = RankedTensorType::get(shape, f32);
@@ -254,7 +254,7 @@ public:
 
 TEST(ShapedTypeTest, RankedTensorTypeView) {
   MLIRContext context;
-  Type f32 = FloatType::getF32(&context);
+  Type f32 = Float32Type::get(&context);
 
   Type noEncodingRankedTensorType = RankedTensorType::get({10, 20}, f32);
 
@@ -282,6 +282,20 @@ TEST(ShapedTypeTest, RankedTensorTypeView) {
   ASSERT_TRUE(mlir::isa<RankedTensorType>(viewCreated));
   view = mlir::cast<TensorWithString>(viewCreated);
   EXPECT_EQ(view.getName(), "bob");
+
+  // Verify encoding clone methods.
+  EXPECT_EQ(unitEncodingRankedTensorType,
+            cast<RankedTensorType>(noEncodingRankedTensorType)
+                .cloneWithEncoding(unitAttr));
+  EXPECT_EQ(stringEncodingRankedTensorType,
+            cast<RankedTensorType>(noEncodingRankedTensorType)
+                .cloneWithEncoding(stringAttr));
+  EXPECT_EQ(
+      noEncodingRankedTensorType,
+      cast<RankedTensorType>(unitEncodingRankedTensorType).dropEncoding());
+  EXPECT_EQ(
+      noEncodingRankedTensorType,
+      cast<RankedTensorType>(stringEncodingRankedTensorType).dropEncoding());
 }
 
 } // namespace

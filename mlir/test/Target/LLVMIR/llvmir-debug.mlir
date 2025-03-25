@@ -115,6 +115,9 @@ llvm.func @func_with_debug(%arg: i64) {
   // CHECK: call void @func_no_debug(), !dbg ![[FILE_LOC:[0-9]+]]
   llvm.call @func_no_debug() : () -> () loc("foo.mlir":1:2)
 
+  // CHECK: call void @func_no_debug(), !dbg ![[FILE_LOC:[0-9]+]]
+  llvm.call @func_no_debug() : () -> () loc("foo.mlir":1:2 to 5:6)
+
   // CHECK: call void @func_no_debug(), !dbg ![[NAMED_LOC:[0-9]+]]
   llvm.call @func_no_debug() : () -> () loc("named"("foo.mlir":10:10))
 
@@ -313,8 +316,8 @@ llvm.func @dbg_intrinsics_with_no_location(%arg0: i32) -> (i32) {
 
 // CHECK: @global_with_expr_1 = external global i64, !dbg {{.*}}
 // CHECK: @global_with_expr_2 = external global i64, !dbg {{.*}}
-// CHECK: !llvm.module.flags = !{{{.*}}}
-// CHECK: !llvm.dbg.cu = !{{{.*}}}
+// CHECK-DAG: !llvm.module.flags = !{{{.*}}}
+// CHECK-DAG: !llvm.dbg.cu = !{{{.*}}}
 // CHECK-DAG: ![[FILE:.*]] = !DIFile(filename: "not", directory: "existence")
 // CHECK-DAG: ![[TYPE:.*]] = !DIBasicType(name: "uint64_t", size: 64, encoding: DW_ATE_unsigned)
 // CHECK-DAG: ![[SCOPE:.*]] = distinct !DICompileUnit(language: DW_LANG_C, file: ![[FILE]], producer: "MLIR", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: ![[GVALS:.*]])
@@ -333,8 +336,8 @@ llvm.mlir.global external @global_with_expr_2() {addr_space = 0 : i32, dbg_exprs
 // -----
 
 // CHECK: @module_global = external global i64, !dbg {{.*}}
-// CHECK: !llvm.module.flags = !{{{.*}}}
-// CHECK: !llvm.dbg.cu = !{{{.*}}}
+// CHECK-DAG: !llvm.module.flags = !{{{.*}}}
+// CHECK-DAG: !llvm.dbg.cu = !{{{.*}}}
 // CHECK-DAG: ![[FILE:.*]] = !DIFile(filename: "test.f90", directory: "existence")
 // CHECK-DAG: ![[TYPE:.*]] = !DIBasicType(name: "integer", size: 64, encoding: DW_ATE_signed)
 // CHECK-DAG: ![[SCOPE:.*]] = distinct !DICompileUnit(language: DW_LANG_Fortran95, file: ![[FILE]], producer: "MLIR", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: ![[GVALS:.*]])

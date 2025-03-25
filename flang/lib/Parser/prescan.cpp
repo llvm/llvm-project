@@ -145,9 +145,8 @@ void Prescanner::Statement() {
     if (inFixedForm_) {
       CHECK(IsFixedFormCommentChar(*at_));
     } else {
-      while (int n{IsSpaceOrTab(at_)}) {
-        at_ += n, ++column_;
-      }
+      at_ += line.payloadOffset;
+      column_ += line.payloadOffset;
       CHECK(*at_ == '!');
     }
     std::optional<int> condOffset;
@@ -597,6 +596,30 @@ const char *Prescanner::SkipWhiteSpace(const char *p) {
   return p;
 }
 
+const char *Prescanner::SkipWhiteSpaceIncludingEmptyMacros(
+    const char *p) const {
+  while (true) {
+    if (int n{IsSpaceOrTab(p)}) {
+      p += n;
+    } else if (preprocessor_.AnyDefinitions() && IsLegalIdentifierStart(*p)) {
+      // Skip keyword macros with empty definitions
+      const char *q{p + 1};
+      while (IsLegalInIdentifier(*q)) {
+        ++q;
+      }
+      if (preprocessor_.IsNameDefinedEmpty(
+              CharBlock{p, static_cast<std::size_t>(q - p)})) {
+        p = q;
+      } else {
+        break;
+      }
+    } else {
+      break;
+    }
+  }
+  return p;
+}
+
 const char *Prescanner::SkipWhiteSpaceAndCComments(const char *p) const {
   while (true) {
     if (int n{IsSpaceOrTab(p)}) {
@@ -708,9 +731,10 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       EmitCharAndAdvance(tokens, *at_);
       QuotedCharacterLiteral(tokens, start);
     } else if (IsLetter(*at_) && !preventHollerith_ &&
-        parenthesisNesting_ > 0) {
+        parenthesisNesting_ > 0 &&
+        !preprocessor_.IsNameDefined(CharBlock{at_, 1})) {
       // Handles FORMAT(3I9HHOLLERITH) by skipping over the first I so that
-      // we don't misrecognize I9HOLLERITH as an identifier in the next case.
+      // we don't misrecognize I9HHOLLERITH as an identifier in the next case.
       EmitCharAndAdvance(tokens, *at_);
     }
     preventHollerith_ = false;
@@ -1289,14 +1313,18 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
     return nullptr;
   }
   p = SkipWhiteSpace(p);
-  if (InCompilerDirective()) {
-    if (*p++ != '!') {
-      return nullptr;
-    }
-    for (const char *s{directiveSentinel_}; *s != '\0'; ++p, ++s) {
-      if (*s != ToLowerCaseLetter(*p)) {
-        return nullptr;
+  if (*p == '!') {
+    ++p;
+    if (InCompilerDirective()) {
+      for (const char *s{directiveSentinel_}; *s != '\0'; ++p, ++s) {
+        if (*s != ToLowerCaseLetter(*p)) {
+          return nullptr;
+        }
       }
+    } else if (features_.IsEnabled(LanguageFeature::OpenMP) && *p == '$') {
+      ++p;
+    } else {
+      return nullptr;
     }
     p = SkipWhiteSpace(p);
     if (*p == '&') {
@@ -1427,6 +1455,21 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
     }
     *sp++ = ToLowerCaseLetter(*p);
   }
+  // A fixed form OpenMP conditional compilation sentinel must satisfy the
+  // following criteria, for initial lines:
+  // - Columns 3 through 5 must have only white space or numbers.
+  // - Column 6 must be space or zero.
+  if (column == 3 && sentinel[0] == '$') {
+    const char *q{p};
+    for (int col{3}; col < 6; ++col, ++q) {
+      if (!IsSpaceOrTab(q) && !IsDecimalDigit(*q)) {
+        return std::nullopt;
+      }
+    }
+    if (*q != ' ' && *q != '0') {
+      return std::nullopt;
+    }
+  }
   if (column == 6) {
     if (*p == '0') {
       ++p;
@@ -1443,18 +1486,18 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
   *sp = '\0';
   if (const char *ss{IsCompilerDirectiveSentinel(
           sentinel, static_cast<std::size_t>(sp - sentinel))}) {
-    std::size_t payloadOffset = p - start;
-    return {LineClassification{
-        LineClassification::Kind::CompilerDirective, payloadOffset, ss}};
+    return {
+        LineClassification{LineClassification::Kind::CompilerDirective, 0, ss}};
   }
   return std::nullopt;
 }
 
 std::optional<Prescanner::LineClassification>
 Prescanner::IsFreeFormCompilerDirectiveLine(const char *start) const {
-  if (const char *p{SkipWhiteSpace(start)}; p && *p++ == '!') {
+  if (const char *p{SkipWhiteSpaceIncludingEmptyMacros(start)};
+      p && *p++ == '!') {
     if (auto maybePair{IsCompilerDirectiveSentinel(p)}) {
-      auto offset{static_cast<std::size_t>(maybePair->second - start)};
+      auto offset{static_cast<std::size_t>(p - start - 1)};
       return {LineClassification{LineClassification::Kind::CompilerDirective,
           offset, maybePair->first}};
     }
@@ -1509,7 +1552,7 @@ Prescanner::IsCompilerDirectiveSentinel(const char *p) const {
     if (int n{*p == '&' ? 1 : IsSpaceOrTab(p)}) {
       if (j > 0) {
         sentinel[j] = '\0';
-        p = SkipWhiteSpace(p + n);
+        p = SkipWhiteSpaceIncludingEmptyMacros(p + n);
         if (*p != '!') {
           if (const char *sp{IsCompilerDirectiveSentinel(sentinel, j)}) {
             return std::make_pair(sp, p);

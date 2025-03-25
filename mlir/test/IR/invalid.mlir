@@ -675,3 +675,17 @@ func.func @error_at_end_of_line() {
 // -----
 
 @foo   // expected-error {{expected operation name in quotes}}
+
+// -----
+
+func.func @drop_references_on_block_parse_error(){
+  "test.user"(%i, %1) : (index, index) -> ()
+  "test.op_with_region"() ({
+  ^bb0(%i : index):
+    // expected-error @below{{expected operation name in quotes}}
+    %1 = "test.foo"() : () -> (index)
+    // Syntax error to abort parsing this block.
+    123
+  }) : () -> ()
+  return
+}

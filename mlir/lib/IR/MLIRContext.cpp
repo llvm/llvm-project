@@ -221,17 +221,6 @@ public:
   llvm::DenseMap<StringRef, AbstractType *> nameToType;
 
   /// Cached Type Instances.
-  Float4E2M1FNType f4E2M1FNTy;
-  Float6E2M3FNType f6E2M3FNTy;
-  Float6E3M2FNType f6E3M2FNTy;
-  Float8E5M2Type f8E5M2Ty;
-  Float8E4M3Type f8E4M3Ty;
-  Float8E4M3FNType f8E4M3FNTy;
-  Float8E5M2FNUZType f8E5M2FNUZTy;
-  Float8E4M3FNUZType f8E4M3FNUZTy;
-  Float8E4M3B11FNUZType f8E4M3B11FNUZTy;
-  Float8E3M4Type f8E3M4Ty;
-  Float8E8M0FNUType f8E8M0FNUTy;
   BFloat16Type bf16Ty;
   Float16Type f16Ty;
   FloatTF32Type tf32Ty;
@@ -279,7 +268,8 @@ public:
 
 public:
   MLIRContextImpl(bool threadingIsEnabled)
-      : threadingIsEnabled(threadingIsEnabled) {
+      : threadingIsEnabled(threadingIsEnabled),
+        distinctAttributeAllocator(threadingIsEnabled) {
     if (threadingIsEnabled) {
       ownedThreadPool = std::make_unique<llvm::DefaultThreadPool>();
       threadPool = ownedThreadPool.get();
@@ -317,17 +307,6 @@ MLIRContext::MLIRContext(const DialectRegistry &registry, Threading setting)
 
   //// Types.
   /// Floating-point Types.
-  impl->f4E2M1FNTy = TypeUniquer::get<Float4E2M1FNType>(this);
-  impl->f6E2M3FNTy = TypeUniquer::get<Float6E2M3FNType>(this);
-  impl->f6E3M2FNTy = TypeUniquer::get<Float6E3M2FNType>(this);
-  impl->f8E5M2Ty = TypeUniquer::get<Float8E5M2Type>(this);
-  impl->f8E4M3Ty = TypeUniquer::get<Float8E4M3Type>(this);
-  impl->f8E4M3FNTy = TypeUniquer::get<Float8E4M3FNType>(this);
-  impl->f8E5M2FNUZTy = TypeUniquer::get<Float8E5M2FNUZType>(this);
-  impl->f8E4M3FNUZTy = TypeUniquer::get<Float8E4M3FNUZType>(this);
-  impl->f8E4M3B11FNUZTy = TypeUniquer::get<Float8E4M3B11FNUZType>(this);
-  impl->f8E3M4Ty = TypeUniquer::get<Float8E3M4Type>(this);
-  impl->f8E8M0FNUTy = TypeUniquer::get<Float8E8M0FNUType>(this);
   impl->bf16Ty = TypeUniquer::get<BFloat16Type>(this);
   impl->f16Ty = TypeUniquer::get<Float16Type>(this);
   impl->tf32Ty = TypeUniquer::get<FloatTF32Type>(this);
@@ -618,6 +597,7 @@ void MLIRContext::disableMultithreading(bool disable) {
   // Update the threading mode for each of the uniquers.
   impl->affineUniquer.disableMultithreading(disable);
   impl->attributeUniquer.disableMultithreading(disable);
+  impl->distinctAttributeAllocator.disableMultiThreading(disable);
   impl->typeUniquer.disableMultithreading(disable);
 
   // Destroy thread pool (stop all threads) if it is no longer needed, or create
@@ -737,6 +717,10 @@ MLIRContext::getRegisteredOperationsByDialect(StringRef dialectName) {
 
 bool MLIRContext::isOperationRegistered(StringRef name) {
   return RegisteredOperationName::lookup(name, this).has_value();
+}
+
+void MLIRContext::disableThreadLocalStorage(bool disable) {
+  getImpl().distinctAttributeAllocator.disableThreadLocalStorage(disable);
 }
 
 void Dialect::addType(TypeID typeID, AbstractType &&typeInfo) {
@@ -1044,39 +1028,6 @@ AbstractType::lookup(StringRef name, MLIRContext *context) {
 /// This should not be used directly.
 StorageUniquer &MLIRContext::getTypeUniquer() { return getImpl().typeUniquer; }
 
-Float4E2M1FNType Float4E2M1FNType::get(MLIRContext *context) {
-  return context->getImpl().f4E2M1FNTy;
-}
-Float6E2M3FNType Float6E2M3FNType::get(MLIRContext *context) {
-  return context->getImpl().f6E2M3FNTy;
-}
-Float6E3M2FNType Float6E3M2FNType::get(MLIRContext *context) {
-  return context->getImpl().f6E3M2FNTy;
-}
-Float8E5M2Type Float8E5M2Type::get(MLIRContext *context) {
-  return context->getImpl().f8E5M2Ty;
-}
-Float8E4M3Type Float8E4M3Type::get(MLIRContext *context) {
-  return context->getImpl().f8E4M3Ty;
-}
-Float8E4M3FNType Float8E4M3FNType::get(MLIRContext *context) {
-  return context->getImpl().f8E4M3FNTy;
-}
-Float8E5M2FNUZType Float8E5M2FNUZType::get(MLIRContext *context) {
-  return context->getImpl().f8E5M2FNUZTy;
-}
-Float8E4M3FNUZType Float8E4M3FNUZType::get(MLIRContext *context) {
-  return context->getImpl().f8E4M3FNUZTy;
-}
-Float8E4M3B11FNUZType Float8E4M3B11FNUZType::get(MLIRContext *context) {
-  return context->getImpl().f8E4M3B11FNUZTy;
-}
-Float8E3M4Type Float8E3M4Type::get(MLIRContext *context) {
-  return context->getImpl().f8E3M4Ty;
-}
-Float8E8M0FNUType Float8E8M0FNUType::get(MLIRContext *context) {
-  return context->getImpl().f8E8M0FNUTy;
-}
 BFloat16Type BFloat16Type::get(MLIRContext *context) {
   return context->getImpl().bf16Ty;
 }

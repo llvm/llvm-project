@@ -2,8 +2,9 @@
 # UNSUPPORTED: system-windows
 # RUN: llvm-mc -triple=x86_64-unknown-linux -position-independent \
 # RUN:     -filetype=obj -o %t %s
-# RUN: llvm-jitlink -debug-only=jitlink -abs bar=0x01 \
-# RUN:     -abs _ZTIi=0x02 -noexec %t 2>&1 | FileCheck %s
+# RUN: llvm-jitlink -num-threads=0 -debug-only=jitlink -noexec \
+# RUN:              -abs bar=0x01 -abs _ZTIi=0x02 %t 2>&1 \
+# RUN:              | FileCheck %s
 #
 # FIXME: This test should run on windows. Investigate spurious
 # 'note: command had no output on stdout or stderr' errors, then re-enable.

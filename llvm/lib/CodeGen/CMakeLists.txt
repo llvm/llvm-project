@@ -50,14 +50,14 @@ add_llvm_component_library(LLVMCodeGen
   DeadMachineInstructionElim.cpp
   DetectDeadLanes.cpp
   DFAPacketizer.cpp
-  DroppedVariableStats.cpp
+  DroppedVariableStatsMIR.cpp
   DwarfEHPrepare.cpp
   EarlyIfConversion.cpp
   EdgeBundles.cpp
-  EHContGuardCatchret.cpp
+  EHContGuardTargets.cpp
   ExecutionDomainFix.cpp
   ExpandLargeDivRem.cpp
-  ExpandLargeFpConvert.cpp
+  ExpandFp.cpp
   ExpandMemCmp.cpp
   ExpandPostRAPseudos.cpp
   ExpandReductions.cpp
@@ -227,6 +227,7 @@ add_llvm_component_library(LLVMCodeGen
   StackMaps.cpp
   StackProtector.cpp
   StackSlotColoring.cpp
+  StaticDataSplitter.cpp
   SwiftErrorValueTracking.cpp
   SwitchLoweringUtils.cpp
   TailDuplication.cpp
@@ -264,6 +265,7 @@ add_llvm_component_library(LLVMCodeGen
 
   DEPENDS
   intrinsics_gen
+  vt_gen
   ${MLDeps}
 
   LINK_COMPONENTS

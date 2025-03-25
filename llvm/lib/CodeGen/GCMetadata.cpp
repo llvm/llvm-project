@@ -41,8 +41,10 @@ CollectorMetadataAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
   for (auto &F : M) {
     if (F.isDeclaration() || !F.hasGC())
       continue;
-    if (auto GCName = F.getGC(); !Map.contains(GCName))
-      Map[GCName] = getGCStrategy(GCName);
+    auto GCName = F.getGC();
+    auto [It, Inserted] = Map.try_emplace(GCName);
+    if (Inserted)
+      It->second = getGCStrategy(GCName);
   }
   return R;
 }
@@ -66,7 +68,7 @@ GCFunctionAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
 }
 
 INITIALIZE_PASS(GCModuleInfo, "collector-metadata",
-                "Create Garbage Collector Module Metadata", false, false)
+                "Create Garbage Collector Module Metadata", false, true)
 
 // -----------------------------------------------------------------------------
 

@@ -456,3 +456,25 @@ int TreeNode::recursiveWeight() {
 }
 
 } // namespace local_var_in_recursive_function
+
+namespace local_var_for_singleton {
+  RefCountable *singleton();
+  RefCountable *otherSingleton();
+  void foo() {
+    RefCountable* bar = singleton();
+    RefCountable* baz = otherSingleton();
+  }
+}
+
+namespace virtual_function {
+  struct SomeObject {
+    virtual RefCountable* provide() { return nullptr; }
+    virtual RefCountable* operator&() { return nullptr; }
+  };
+  void foo(SomeObject* obj) {
+    auto* bar = obj->provide();
+    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    auto* baz = &*obj;
+    // expected-warning@-1{{Local variable 'baz' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  }
+}

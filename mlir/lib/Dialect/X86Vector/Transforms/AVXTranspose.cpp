@@ -66,8 +66,8 @@ Value mlir::x86vector::avx2::intrin::mm256ShufflePs(ImplicitLocOpBuilder &b,
                                                     uint8_t mask) {
   uint8_t b01, b23, b45, b67;
   MaskHelper::extractShuffle(mask, b01, b23, b45, b67);
-  SmallVector<int64_t> shuffleMask{b01,     b23,     b45 + 8,     b67 + 8,
-                                   b01 + 4, b23 + 4, b45 + 8 + 4, b67 + 8 + 4};
+  SmallVector<int64_t> shuffleMask = {
+      b01, b23, b45 + 8, b67 + 8, b01 + 4, b23 + 4, b45 + 8 + 4, b67 + 8 + 4};
   return b.create<vector::ShuffleOp>(v1, v2, shuffleMask);
 }
 

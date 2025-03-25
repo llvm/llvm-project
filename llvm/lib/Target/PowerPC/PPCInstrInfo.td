@@ -686,13 +686,15 @@ def addr   : ComplexPattern<iPTR, 1, "SelectAddr",[], []>;
 def iaddroff : ComplexPattern<iPTR, 1, "SelectAddrImmOffs", [], []>;
 
 // Load and Store Instruction Selection addressing modes.
-def DForm  : ComplexPattern<iPTR, 2, "SelectDForm",    [], [SDNPWantParent]>;
-def DSForm : ComplexPattern<iPTR, 2, "SelectDSForm",   [], [SDNPWantParent]>;
-def DQForm : ComplexPattern<iPTR, 2, "SelectDQForm",   [], [SDNPWantParent]>;
-def XForm  : ComplexPattern<iPTR, 2, "SelectXForm",    [], [SDNPWantParent]>;
-def ForceXForm : ComplexPattern<iPTR, 2, "SelectForceXForm", [], [SDNPWantParent]>;
-def PCRelForm : ComplexPattern<iPTR, 2, "SelectPCRelForm", [], [SDNPWantParent]>;
-def PDForm : ComplexPattern<iPTR, 2, "SelectPDForm",   [], [SDNPWantParent]>;
+let WantsParent = true in {
+  def DForm  : ComplexPattern<iPTR, 2, "SelectDForm">;
+  def DSForm : ComplexPattern<iPTR, 2, "SelectDSForm">;
+  def DQForm : ComplexPattern<iPTR, 2, "SelectDQForm">;
+  def XForm  : ComplexPattern<iPTR, 2, "SelectXForm">;
+  def ForceXForm : ComplexPattern<iPTR, 2, "SelectForceXForm">;
+  def PCRelForm : ComplexPattern<iPTR, 2, "SelectPCRelForm">;
+  def PDForm : ComplexPattern<iPTR, 2, "SelectPDForm">;
+}
 
 //===----------------------------------------------------------------------===//
 // PowerPC Instruction Predicate Definitions.
@@ -3471,6 +3473,13 @@ class PPCAsmPseudo<string asm, dag iops>
   bits<1> MemriOp = 0;
   let TSFlags{10} = MemriOp;
 }
+
+// Mask immediates for MMA instructions (2, 4 and 8 bits).
+def Msk2Imm : ImmLeaf<i32, [{ return isUInt<2>(Imm); }]>;
+def Msk4Imm : ImmLeaf<i32, [{ return isUInt<4>(Imm); }]>;
+def Msk8Imm : ImmLeaf<i32, [{ return isUInt<8>(Imm); }]>;
+
+def MMA : Predicate<"Subtarget->hasMMA()">;
 
 // Prefixed instructions may require access to the above defs at a later
 // time so we include this after the def.

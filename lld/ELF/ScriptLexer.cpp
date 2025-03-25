@@ -105,7 +105,7 @@ void ScriptLexer::lex() {
       curBuf = buffers.pop_back_val();
       continue;
     }
-    curTokState = inExpr;
+    curTokState = lexState;
 
     // Quoted token. Note that double-quote characters are parts of a token
     // because, in a glob match context, only unquoted tokens are interpreted
@@ -142,7 +142,13 @@ void ScriptLexer::lex() {
     // C-like languages, so that you can write "file-name.cpp" as one bare
     // token.
     size_t pos;
-    if (inExpr) {
+    switch (lexState) {
+    case State::Script:
+      pos = s.find_first_not_of(
+          "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+          "0123456789_.$/\\~=+[]*?-!^:");
+      break;
+    case State::Expr:
       pos = s.find_first_not_of(
           "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
           "0123456789_.$");
@@ -150,10 +156,7 @@ void ScriptLexer::lex() {
           ((s[0] == s[1] && strchr("<>&|", s[0])) ||
            is_contained({"==", "!=", "<=", ">=", "<<", ">>"}, s.substr(0, 2))))
         pos = 2;
-    } else {
-      pos = s.find_first_not_of(
-          "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-          "0123456789_.$/\\~=+[]*?-!^:");
+      break;
     }
 
     if (pos == 0)
@@ -208,8 +211,8 @@ StringRef ScriptLexer::next() {
 }
 
 StringRef ScriptLexer::peek() {
-  // curTok is invalid if curTokState and inExpr mismatch.
-  if (curTok.size() && curTokState != inExpr) {
+  // curTok is invalid if curTokState and lexState mismatch.
+  if (curTok.size() && curTokState != lexState) {
     curBuf.s = StringRef(curTok.data(), curBuf.s.end() - curTok.data());
     curTok = {};
   }

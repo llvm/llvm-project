@@ -1,14 +1,26 @@
 # RUN: llc -mtriple=hexagon -run-pass pipeliner -debug-only=pipeliner %s -o /dev/null 2>&1 -pipeliner-experimental-cg=true | FileCheck %s
 # REQUIRES: asserts
 
-# Test that the loop carried dependence check correctly identifies a recurrence
+# Test that the loop carried dependence check correctly identifies dependences
 # when the loop variable decreases and the array index offset is negative.
 
-# CHECK: Rec NodeSet
-# CHECK: Rec NodeSet
-# CHECK: SU(3)
-# CHECK: SU(4)
-# CHECK: SU(5)
+# No dependence from the store to the load.
+# CHECK: Overlap check:
+# CHECK-NEXT:   BaseMI:   S2_storeri_io %{{[0-9]+}}:intregs, 0, %{{[0-9]+}}:intregs :: (store (s32) into %ir.lsr.iv1)
+# CHECK-NEXT:     Base + 0 + I * -4, Len: 4
+# CHECK-NEXT:   OtherMI:   %{{[0-9]+}}:intregs = L2_loadri_io %{{[0-9]+}}:intregs, -8 :: (load (s32) from %ir.cgep)
+# CHECK-NEXT:     Base + -8 + I * -4, Len: 4
+# CHECK-NEXT:   Result: No overlap
+
+# TODO: There is a loop carried dependence from the load to the store but it
+#   is not recognised. addLoopCarriedDependences() should be modified to
+#   recognise the dependence and enable the following checks.
+# CHECK-AFTER-FIX: Overlap check:
+# CHECK-AFTER-FIX-NEXT:   BaseMI:   %{{[0-9]+}}:intregs = L2_loadri_io %{{[0-9]+}}:intregs, -8 :: (load (s32) from %ir.cgep)
+# CHECK-AFTER-FIX-NEXT:     Base + -8 + I * -4, Len: 4
+# CHECK-AFTER-FIX-NEXT:   OtherMI:   S2_storeri_io %{{[0-9]+}}:intregs, 0, %{{[0-9]+}}:intregs :: (store (s32) into %ir.lsr.iv1)
+# CHECK-AFTER-FIX-NEXT:     Base + 0 + I * -4, Len: 4
+# CHECK-AFTER-FIX-NEXT:   Result: Overlap!
 
 --- |
 

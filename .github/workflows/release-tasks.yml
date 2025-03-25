@@ -12,7 +12,7 @@ on:
 jobs:
   validate-tag:
     name: Validate Tag
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.repository == 'llvm/llvm-project'
     outputs:
       release-version: ${{ steps.validate-tag.outputs.release-version }}
@@ -26,7 +26,7 @@ jobs:
 
   release-create:
     name: Create a New Release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write # For creating the release.
     needs: validate-tag
@@ -89,20 +89,10 @@ jobs:
     needs:
       - validate-tag
       - release-create
-    strategy:
-      fail-fast: false
-      matrix:
-        runs-on:
-          - ubuntu-22.04
-          - windows-2022
-          - macos-13
-          - macos-14
-
-    uses: ./.github/workflows/release-binaries.yml
+    uses: ./.github/workflows/release-binaries-all.yml
     with:
       release-version: ${{ needs.validate-tag.outputs.release-version }}
       upload: true
-      runs-on: ${{ matrix.runs-on }}
     # Called workflows don't have access to secrets by default, so we need to explicitly pass secrets that we use.
     secrets:
       RELEASE_TASKS_USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}

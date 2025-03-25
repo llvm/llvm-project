@@ -1,7 +1,5 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Exercise ways to define and extend non-type-bound generics
-! TODO: crashes compiler (infinite recursion) when build with MSVC
-! XFAIL: system-windows
 
 module m1
   type :: t1; end type

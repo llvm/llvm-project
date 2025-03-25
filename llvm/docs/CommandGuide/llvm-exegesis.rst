@@ -473,6 +473,14 @@ OPTIONS
    flag can be specified multiple times to measure multiple events. The maximum
    number of validation counters is platform dependent.
 
+.. option:: --benchmark-process-cpu=<cpu id>
+
+  This option specifies the number of the CPU that should be used to run the
+  benchmarking subprocess. When starting the subprocess,
+  :program:`llvm-exegesis` will set the affinity of the subprocess to only
+  include the specified CPU. This option only works in the subprocess execution
+  mode.
+
 EXIT STATUS
 -----------
 

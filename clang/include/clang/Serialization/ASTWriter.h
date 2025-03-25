@@ -60,7 +60,7 @@ class LangOptions;
 class MacroDefinitionRecord;
 class MacroInfo;
 class Module;
-class InMemoryModuleCache;
+class ModuleCache;
 class ModuleFileExtension;
 class ModuleFileExtensionWriter;
 class NamedDecl;
@@ -117,7 +117,7 @@ private:
   const SmallVectorImpl<char> &Buffer;
 
   /// The PCM manager which manages memory buffers for pcm files.
-  InMemoryModuleCache &ModuleCache;
+  ModuleCache &ModCache;
 
   /// The preprocessor we're writing.
   Preprocessor *PP = nullptr;
@@ -230,13 +230,12 @@ private:
   /// instead of comparing the result of `getDeclID()` or `GetDeclRef()`.
   llvm::SmallPtrSet<const Decl *, 32> PredefinedDecls;
 
-  /// Mapping from FunctionDecl ID to the list of lambda IDs inside the
-  /// function.
+  /// Mapping from the main decl to related decls inside the main decls.
   ///
-  /// These lambdas have to be loaded right after the function they belong to.
-  /// In order to have canonical declaration for lambda class from the same
-  /// module as enclosing function during deserialization.
-  llvm::DenseMap<LocalDeclID, SmallVector<LocalDeclID, 4>> FunctionToLambdasMap;
+  /// These related decls have to be loaded right after the main decl they
+  /// belong to. In order to have canonical declaration for related decls from
+  /// the same module as the main decl during deserialization.
+  llvm::DenseMap<LocalDeclID, SmallVector<LocalDeclID, 4>> RelatedDeclsMap;
 
   /// Offset of each declaration in the bitstream, indexed by
   /// the declaration's ID.
@@ -423,6 +422,13 @@ private:
   /// Only meaningful for reduced BMI.
   DeclUpdateMap DeclUpdatesFromGMF;
 
+  /// Mapping from decl templates and its new specialization in the
+  /// current TU.
+  using SpecializationUpdateMap =
+      llvm::MapVector<const NamedDecl *, SmallVector<const Decl *>>;
+  SpecializationUpdateMap SpecializationsUpdates;
+  SpecializationUpdateMap PartialSpecializationsUpdates;
+
   using FirstLatestDeclMap = llvm::DenseMap<Decl *, Decl *>;
 
   /// Map of first declarations from a chained PCH that point to the
@@ -485,6 +491,13 @@ private:
   /// The number of visible declcontexts written to the AST
   /// file.
   unsigned NumVisibleDeclContexts = 0;
+
+  /// The number of module local visible declcontexts written to the AST
+  /// file.
+  unsigned NumModuleLocalDeclContexts = 0;
+
+  /// The number of TULocal declcontexts written to the AST file.
+  unsigned NumTULocalDeclContexts = 0;
 
   /// A mapping from each known submodule to its ID number, which will
   /// be a positive integer.
@@ -558,7 +571,7 @@ private:
   std::pair<ASTFileSignature, ASTFileSignature> createSignature() const;
   ASTFileSignature createSignatureForNamedModule() const;
 
-  void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts);
+  void WriteInputFiles(SourceManager &SourceMgr);
   void WriteSourceManagerBlock(SourceManager &SourceMgr);
   void WritePreprocessor(const Preprocessor &PP, bool IsModule);
   void WriteHeaderSearch(const HeaderSearch &HS);
@@ -575,11 +588,23 @@ private:
 
   bool isLookupResultExternal(StoredDeclsList &Result, DeclContext *DC);
 
-  void GenerateNameLookupTable(ASTContext &Context, const DeclContext *DC,
-                               llvm::SmallVectorImpl<char> &LookupTable);
+  void GenerateSpecializationInfoLookupTable(
+      const NamedDecl *D, llvm::SmallVectorImpl<const Decl *> &Specializations,
+      llvm::SmallVectorImpl<char> &LookupTable, bool IsPartial);
+  uint64_t WriteSpecializationInfoLookupTable(
+      const NamedDecl *D, llvm::SmallVectorImpl<const Decl *> &Specializations,
+      bool IsPartial);
+  void
+  GenerateNameLookupTable(ASTContext &Context, const DeclContext *DC,
+                          llvm::SmallVectorImpl<char> &LookupTable,
+                          llvm::SmallVectorImpl<char> &ModuleLocalLookupTable,
+                          llvm::SmallVectorImpl<char> &TULocalLookupTable);
   uint64_t WriteDeclContextLexicalBlock(ASTContext &Context,
                                         const DeclContext *DC);
-  uint64_t WriteDeclContextVisibleBlock(ASTContext &Context, DeclContext *DC);
+  void WriteDeclContextVisibleBlock(ASTContext &Context, DeclContext *DC,
+                                    uint64_t &VisibleBlockOffset,
+                                    uint64_t &ModuleLocalBlockOffset,
+                                    uint64_t &TULocalBlockOffset);
   void WriteTypeDeclOffsets();
   void WriteFileDeclIDsMap();
   void WriteComments(ASTContext &Context);
@@ -590,6 +615,7 @@ private:
   void WriteDeclAndTypes(ASTContext &Context);
   void PrepareWritingSpecialDecls(Sema &SemaRef);
   void WriteSpecialDeclRecords(Sema &SemaRef);
+  void WriteSpecializationsUpdates(bool IsPartial);
   void WriteDeclUpdatesBlocks(ASTContext &Context,
                               RecordDataImpl &OffsetsRecord);
   void WriteDeclContextVisibleUpdate(ASTContext &Context,
@@ -611,7 +637,11 @@ private:
   unsigned DeclParmVarAbbrev = 0;
   unsigned DeclContextLexicalAbbrev = 0;
   unsigned DeclContextVisibleLookupAbbrev = 0;
+  unsigned DeclModuleLocalVisibleLookupAbbrev = 0;
+  unsigned DeclTULocalLookupAbbrev = 0;
   unsigned UpdateVisibleAbbrev = 0;
+  unsigned ModuleLocalUpdateVisibleAbbrev = 0;
+  unsigned TULocalUpdateVisibleAbbrev = 0;
   unsigned DeclRecordAbbrev = 0;
   unsigned DeclTypedefAbbrev = 0;
   unsigned DeclVarAbbrev = 0;
@@ -619,6 +649,9 @@ private:
   unsigned DeclEnumAbbrev = 0;
   unsigned DeclObjCIvarAbbrev = 0;
   unsigned DeclCXXMethodAbbrev = 0;
+  unsigned DeclSpecializationsAbbrev = 0;
+  unsigned DeclPartialSpecializationsAbbrev = 0;
+
   unsigned DeclDependentNonTemplateCXXMethodAbbrev = 0;
   unsigned DeclTemplateCXXMethodAbbrev = 0;
   unsigned DeclMemberSpecializedCXXMethodAbbrev = 0;
@@ -649,7 +682,7 @@ public:
   /// Create a new precompiled header writer that outputs to
   /// the given bitstream.
   ASTWriter(llvm::BitstreamWriter &Stream, SmallVectorImpl<char> &Buffer,
-            InMemoryModuleCache &ModuleCache,
+            ModuleCache &ModCache,
             ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
             bool IncludeTimestamps = true, bool BuildingImplicitModule = false,
             bool GeneratingReducedBMI = false);
@@ -717,9 +750,6 @@ public:
 
   /// Get the unique number used to refer to the given macro.
   serialization::MacroID getMacroRef(MacroInfo *MI, const IdentifierInfo *Name);
-
-  /// Determine the ID of an already-emitted macro.
-  serialization::MacroID getMacroID(MacroInfo *MI);
 
   uint32_t getMacroDirectivesOffset(const IdentifierInfo *Name);
 
@@ -956,9 +986,8 @@ protected:
   virtual Module *getEmittingModule(ASTContext &Ctx);
 
 public:
-  PCHGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
-               StringRef OutputFile, StringRef isysroot,
-               std::shared_ptr<PCHBuffer> Buffer,
+  PCHGenerator(Preprocessor &PP, ModuleCache &ModCache, StringRef OutputFile,
+               StringRef isysroot, std::shared_ptr<PCHBuffer> Buffer,
                ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                bool AllowASTWithErrors = false, bool IncludeTimestamps = true,
                bool BuildingImplicitModule = false,
@@ -980,14 +1009,16 @@ class CXX20ModulesGenerator : public PCHGenerator {
 protected:
   virtual Module *getEmittingModule(ASTContext &Ctx) override;
 
-  CXX20ModulesGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
-                        StringRef OutputFile, bool GeneratingReducedBMI);
+  CXX20ModulesGenerator(Preprocessor &PP, ModuleCache &ModCache,
+                        StringRef OutputFile, bool GeneratingReducedBMI,
+                        bool AllowASTWithErrors);
 
 public:
-  CXX20ModulesGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
-                        StringRef OutputFile)
-      : CXX20ModulesGenerator(PP, ModuleCache, OutputFile,
-                              /*GeneratingReducedBMI=*/false) {}
+  CXX20ModulesGenerator(Preprocessor &PP, ModuleCache &ModCache,
+                        StringRef OutputFile, bool AllowASTWithErrors = false)
+      : CXX20ModulesGenerator(PP, ModCache, OutputFile,
+                              /*GeneratingReducedBMI=*/false,
+                              AllowASTWithErrors) {}
 
   void HandleTranslationUnit(ASTContext &Ctx) override;
 };
@@ -996,10 +1027,11 @@ class ReducedBMIGenerator : public CXX20ModulesGenerator {
   void anchor() override;
 
 public:
-  ReducedBMIGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
-                      StringRef OutputFile)
-      : CXX20ModulesGenerator(PP, ModuleCache, OutputFile,
-                              /*GeneratingReducedBMI=*/true) {}
+  ReducedBMIGenerator(Preprocessor &PP, ModuleCache &ModCache,
+                      StringRef OutputFile, bool AllowASTWithErrors = false)
+      : CXX20ModulesGenerator(PP, ModCache, OutputFile,
+                              /*GeneratingReducedBMI=*/true,
+                              AllowASTWithErrors) {}
 };
 
 /// If we can elide the definition of \param D in reduced BMI.

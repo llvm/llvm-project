@@ -975,8 +975,6 @@ EnableOptionsSP ParseAutoEnableOptions(Status &error, Debugger &debugger) {
   EnableOptionsSP options_sp(new EnableOptions());
   options_sp->NotifyOptionParsingStarting(&exe_ctx);
 
-  CommandReturnObject result(debugger.GetUseColor());
-
   // Parse the arguments.
   auto options_property_sp =
       debugger.GetPropertyValue(nullptr,
@@ -1013,8 +1011,13 @@ EnableOptionsSP ParseAutoEnableOptions(Status &error, Debugger &debugger) {
     return EnableOptionsSP();
   }
 
-  if (!options_sp->VerifyOptions(result))
+  if (llvm::Error error = options_sp->VerifyOptions()) {
+    LLDB_LOG_ERROR(
+        log, std::move(error),
+        "Parsing plugin.structured-data.darwin-log.auto-enable-options value "
+        "failed: {0}");
     return EnableOptionsSP();
+  }
 
   // We successfully parsed and validated the options.
   return options_sp;

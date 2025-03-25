@@ -243,6 +243,10 @@ private:
   }
   void writeDIDerivedType(const DIDerivedType *N,
                           SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
+  void writeDISubrangeType(const DISubrangeType *N,
+                           SmallVectorImpl<uint64_t> &Record, unsigned Abbrev) {
+    llvm_unreachable("DXIL cannot contain DISubrangeType Nodes");
+  }
   void writeDICompositeType(const DICompositeType *N,
                             SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   void writeDISubroutineType(const DISubroutineType *N,
@@ -644,8 +648,6 @@ uint64_t DXILBitcodeWriter::getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NO_ALIAS;
   case Attribute::NoBuiltin:
     return bitc::ATTR_KIND_NO_BUILTIN;
-  case Attribute::NoCapture:
-    return bitc::ATTR_KIND_NO_CAPTURE;
   case Attribute::NoDuplicate:
     return bitc::ATTR_KIND_NO_DUPLICATE;
   case Attribute::NoImplicitFloat:
@@ -749,8 +751,8 @@ uint64_t DXILBitcodeWriter::getOptimizationFlags(const Value *V) {
     if (PEO->isExact())
       Flags |= 1 << bitc::PEO_EXACT;
   } else if (const auto *FPMO = dyn_cast<FPMathOperator>(V)) {
-    if (FPMO->hasAllowReassoc())
-      Flags |= bitc::AllowReassoc;
+    if (FPMO->hasAllowReassoc() || FPMO->hasAllowContract())
+      Flags |= bitc::UnsafeAlgebra;
     if (FPMO->hasNoNaNs())
       Flags |= bitc::NoNaNs;
     if (FPMO->hasNoInfs())
@@ -759,10 +761,6 @@ uint64_t DXILBitcodeWriter::getOptimizationFlags(const Value *V) {
       Flags |= bitc::NoSignedZeros;
     if (FPMO->hasAllowReciprocal())
       Flags |= bitc::AllowReciprocal;
-    if (FPMO->hasAllowContract())
-      Flags |= bitc::AllowContract;
-    if (FPMO->hasApproxFunc())
-      Flags |= bitc::ApproxFunc;
   }
 
   return Flags;
@@ -1163,8 +1161,8 @@ void DXILBitcodeWriter::writeValueSymbolTableForwardDecl() {}
 void DXILBitcodeWriter::writeModuleInfo() {
   // Emit various pieces of data attached to a module.
   if (!M.getTargetTriple().empty())
-    writeStringRecord(Stream, bitc::MODULE_CODE_TRIPLE, M.getTargetTriple(),
-                      0 /*TODO*/);
+    writeStringRecord(Stream, bitc::MODULE_CODE_TRIPLE,
+                      M.getTargetTriple().str(), 0 /*TODO*/);
   const std::string &DL = M.getDataLayoutStr();
   if (!DL.empty())
     writeStringRecord(Stream, bitc::MODULE_CODE_DATALAYOUT, DL, 0 /*TODO*/);
@@ -1394,16 +1392,16 @@ void DXILBitcodeWriter::writeDISubrange(const DISubrange *N,
 
   // TODO: Do we need to handle DIExpression here? What about cases where Count
   // isn't specified but UpperBound and such are?
-  ConstantInt *Count = N->getCount().dyn_cast<ConstantInt *>();
+  ConstantInt *Count = dyn_cast<ConstantInt *>(N->getCount());
   assert(Count && "Count is missing or not ConstantInt");
   Record.push_back(Count->getValue().getSExtValue());
 
   // TODO: Similarly, DIExpression is allowed here now
   DISubrange::BoundType LowerBound = N->getLowerBound();
-  assert((LowerBound.isNull() || LowerBound.is<ConstantInt *>()) &&
+  assert((LowerBound.isNull() || isa<ConstantInt *>(LowerBound)) &&
          "Lower bound provided but not ConstantInt");
   Record.push_back(
-      LowerBound ? rotateSign(LowerBound.get<ConstantInt *>()->getValue()) : 0);
+      LowerBound ? rotateSign(cast<ConstantInt *>(LowerBound)->getValue()) : 0);
 
   Stream.EmitRecord(bitc::METADATA_SUBRANGE, Record, Abbrev);
   Record.clear();

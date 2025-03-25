@@ -30,8 +30,7 @@ define i32 @multi_user_cmp(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF4-IC1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-VF4-IC1-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-VF4-IC1-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
-; CHECK-VF4-IC1-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-VF4-IC1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
+; CHECK-VF4-IC1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
 ; CHECK-VF4-IC1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
 ; CHECK-VF4-IC1-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-VF4-IC1-NEXT:    [[TMP3:%.*]] = fcmp olt <4 x float> [[WIDE_LOAD]], zeroinitializer
@@ -254,8 +253,7 @@ define i32 @multi_user_cmp_int(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF4-IC1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-VF4-IC1-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-VF4-IC1-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
-; CHECK-VF4-IC1-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-VF4-IC1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
+; CHECK-VF4-IC1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
 ; CHECK-VF4-IC1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
 ; CHECK-VF4-IC1-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; CHECK-VF4-IC1-NEXT:    [[TMP3:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD]], zeroinitializer
@@ -550,8 +548,8 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC1-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-VF4-IC1:       scalar.ph:
 ; CHECK-VF4-IC1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
-; CHECK-VF4-IC1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ], [ true, [[VECTOR_MEMCHECK]] ], [ true, [[ENTRY]] ]
-; CHECK-VF4-IC1-NEXT:    [[BC_MERGE_RDX10:%.*]] = phi i1 [ [[RDX_SELECT9]], [[MIDDLE_BLOCK]] ], [ false, [[VECTOR_MEMCHECK]] ], [ false, [[ENTRY]] ]
+; CHECK-VF4-IC1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ], [ true, [[ENTRY]] ], [ true, [[VECTOR_MEMCHECK]] ]
+; CHECK-VF4-IC1-NEXT:    [[BC_MERGE_RDX10:%.*]] = phi i1 [ [[RDX_SELECT9]], [[MIDDLE_BLOCK]] ], [ false, [[ENTRY]] ], [ false, [[VECTOR_MEMCHECK]] ]
 ; CHECK-VF4-IC1-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-VF4-IC1:       for.body:
 ; CHECK-VF4-IC1-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[IF_END6:%.*]] ]
@@ -712,8 +710,8 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC2-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-VF4-IC2:       scalar.ph:
 ; CHECK-VF4-IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
-; CHECK-VF4-IC2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ], [ true, [[VECTOR_MEMCHECK]] ], [ true, [[ENTRY]] ]
-; CHECK-VF4-IC2-NEXT:    [[BC_MERGE_RDX22:%.*]] = phi i1 [ [[RDX_SELECT21]], [[MIDDLE_BLOCK]] ], [ false, [[VECTOR_MEMCHECK]] ], [ false, [[ENTRY]] ]
+; CHECK-VF4-IC2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ], [ true, [[ENTRY]] ], [ true, [[VECTOR_MEMCHECK]] ]
+; CHECK-VF4-IC2-NEXT:    [[BC_MERGE_RDX22:%.*]] = phi i1 [ [[RDX_SELECT21]], [[MIDDLE_BLOCK]] ], [ false, [[ENTRY]] ], [ false, [[VECTOR_MEMCHECK]] ]
 ; CHECK-VF4-IC2-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-VF4-IC2:       for.body:
 ; CHECK-VF4-IC2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[IF_END6:%.*]] ]
@@ -809,8 +807,8 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF1-IC2-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-VF1-IC2:       scalar.ph:
 ; CHECK-VF1-IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
-; CHECK-VF1-IC2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ], [ true, [[VECTOR_MEMCHECK]] ], [ true, [[ENTRY]] ]
-; CHECK-VF1-IC2-NEXT:    [[BC_MERGE_RDX9:%.*]] = phi i1 [ [[RDX_SELECT8]], [[MIDDLE_BLOCK]] ], [ false, [[VECTOR_MEMCHECK]] ], [ false, [[ENTRY]] ]
+; CHECK-VF1-IC2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ], [ true, [[ENTRY]] ], [ true, [[VECTOR_MEMCHECK]] ]
+; CHECK-VF1-IC2-NEXT:    [[BC_MERGE_RDX9:%.*]] = phi i1 [ [[RDX_SELECT8]], [[MIDDLE_BLOCK]] ], [ false, [[ENTRY]] ], [ false, [[VECTOR_MEMCHECK]] ]
 ; CHECK-VF1-IC2-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-VF1-IC2:       for.body:
 ; CHECK-VF1-IC2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[IF_END6:%.*]] ]
@@ -899,8 +897,7 @@ define i32 @multi_user_cmp_branch_use_and_outside_bb_use(ptr readonly %a, i64 no
 ; CHECK-VF4-IC1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-VF4-IC1-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-VF4-IC1-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
-; CHECK-VF4-IC1-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-VF4-IC1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
+; CHECK-VF4-IC1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
 ; CHECK-VF4-IC1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
 ; CHECK-VF4-IC1-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-VF4-IC1-NEXT:    [[TMP3:%.*]] = fcmp olt <4 x float> [[WIDE_LOAD]], zeroinitializer

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHRONO_PARSER_STD_FORMAT_SPEC_H
-#define _LIBCPP___CHRONO_PARSER_STD_FORMAT_SPEC_H
+#ifndef _LIBCPP___CXX03___CHRONO_PARSER_STD_FORMAT_SPEC_H
+#define _LIBCPP___CXX03___CHRONO_PARSER_STD_FORMAT_SPEC_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__format/concepts.h>
@@ -413,4 +413,4 @@ private:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CHRONO_PARSER_STD_FORMAT_SPEC_H
+#endif // _LIBCPP___CXX03___CHRONO_PARSER_STD_FORMAT_SPEC_H

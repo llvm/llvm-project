@@ -48,7 +48,7 @@ private:
 
   ConstantInt *BoolTrue;
   ConstantInt *BoolFalse;
-  UndefValue *BoolUndef;
+  PoisonValue *BoolPoison;
   Constant *IntMaskZero;
 
   Function *If = nullptr;
@@ -120,7 +120,7 @@ void SIAnnotateControlFlow::initialize(const GCNSubtarget &ST) {
 
   BoolTrue = ConstantInt::getTrue(Context);
   BoolFalse = ConstantInt::getFalse(Context);
-  BoolUndef = PoisonValue::get(Boolean);
+  BoolPoison = PoisonValue::get(Boolean);
   IntMaskZero = ConstantInt::get(IntMask, 0);
 }
 
@@ -224,10 +224,15 @@ Value *SIAnnotateControlFlow::handleLoopCondition(
   if (Instruction *Inst = dyn_cast<Instruction>(Cond)) {
     BasicBlock *Parent = Inst->getParent();
     Instruction *Insert;
-    if (L->contains(Inst)) {
+    if (LI->getLoopFor(Parent) == L) {
+      // Insert IfBreak in the same BB as Cond, which can help
+      // SILowerControlFlow to know that it does not have to insert an
+      // AND with EXEC.
       Insert = Parent->getTerminator();
+    } else if (L->contains(Inst)) {
+      Insert = Term;
     } else {
-      Insert = L->getHeader()->getFirstNonPHIOrDbgOrLifetime();
+      Insert = &*L->getHeader()->getFirstNonPHIOrDbgOrLifetime();
     }
 
     return CreateBreak(Insert);
@@ -242,7 +247,7 @@ Value *SIAnnotateControlFlow::handleLoopCondition(
   }
 
   if (isa<Argument>(Cond)) {
-    Instruction *Insert = L->getHeader()->getFirstNonPHIOrDbgOrLifetime();
+    Instruction *Insert = &*L->getHeader()->getFirstNonPHIOrDbgOrLifetime();
     return CreateBreak(Insert);
   }
 

@@ -108,6 +108,9 @@ def ptrue:  PatFrag<(ops), (HexagonPTRUE)>;
 def pfalse: PatFrag<(ops), (HexagonPFALSE)>;
 def pnot:   PatFrag<(ops node:$Pu), (xor node:$Pu, ptrue)>;
 
+def: Pat<(v8i1 (HexagonPFALSE)), (C2_tfrrp (A2_tfrsi (i32 0)))>;
+def: Pat<(v8i1 (HexagonPTRUE)), (C2_tfrrp (A2_tfrsi (i32 -1)))>;
+
 def valign: PatFrag<(ops node:$Vt, node:$Vs, node:$Ru),
                     (HexagonVALIGN node:$Vt, node:$Vs, node:$Ru)>;
 def valignaddr: PatFrag<(ops node:$Addr), (HexagonVALIGNADDR node:$Addr)>;
@@ -718,11 +721,6 @@ def: OpR_RR_pat<A2_vcmpwgtu,  setugt,         v2i1, V2I32>;
 def: OpR_RR_pat<F2_sfcmpeq,   seteq,          i1, F32>;
 def: OpR_RR_pat<F2_sfcmpgt,   setgt,          i1, F32>;
 def: OpR_RR_pat<F2_sfcmpge,   setge,          i1, F32>;
-def: OpR_RR_pat<F2_sfcmpeq,   setoeq,         i1, F32>;
-def: OpR_RR_pat<F2_sfcmpgt,   setogt,         i1, F32>;
-def: OpR_RR_pat<F2_sfcmpge,   setoge,         i1, F32>;
-def: OpR_RR_pat<F2_sfcmpgt,   RevCmp<setolt>, i1, F32>;
-def: OpR_RR_pat<F2_sfcmpge,   RevCmp<setole>, i1, F32>;
 def: OpR_RR_pat<F2_sfcmpgt,   RevCmp<setlt>,  i1, F32>;
 def: OpR_RR_pat<F2_sfcmpge,   RevCmp<setle>,  i1, F32>;
 def: OpR_RR_pat<F2_sfcmpuo,   setuo,          i1, F32>;
@@ -730,11 +728,6 @@ def: OpR_RR_pat<F2_sfcmpuo,   setuo,          i1, F32>;
 def: OpR_RR_pat<F2_dfcmpeq,   seteq,          i1, F64>;
 def: OpR_RR_pat<F2_dfcmpgt,   setgt,          i1, F64>;
 def: OpR_RR_pat<F2_dfcmpge,   setge,          i1, F64>;
-def: OpR_RR_pat<F2_dfcmpeq,   setoeq,         i1, F64>;
-def: OpR_RR_pat<F2_dfcmpgt,   setogt,         i1, F64>;
-def: OpR_RR_pat<F2_dfcmpge,   setoge,         i1, F64>;
-def: OpR_RR_pat<F2_dfcmpgt,   RevCmp<setolt>, i1, F64>;
-def: OpR_RR_pat<F2_dfcmpge,   RevCmp<setole>, i1, F64>;
 def: OpR_RR_pat<F2_dfcmpgt,   RevCmp<setlt>,  i1, F64>;
 def: OpR_RR_pat<F2_dfcmpge,   RevCmp<setle>,  i1, F64>;
 def: OpR_RR_pat<F2_dfcmpuo,   setuo,          i1, F64>;
@@ -897,15 +890,35 @@ def: OpmR_RR_pat<Cmpud<F2_dfcmpge>,  RevCmp<setule>, i1, F64>;
 def: OpmR_RR_pat<Cmpud<F2_dfcmpgt>,  RevCmp<setult>, i1, F64>;
 def: OpmR_RR_pat<Cmpudn<F2_dfcmpeq>, setune,         i1, F64>;
 
-def: OpmR_RR_pat<Outn<F2_sfcmpeq>, setone, i1, F32>;
-def: OpmR_RR_pat<Outn<F2_sfcmpeq>, setne,  i1, F32>;
+class T4<InstHexagon MI1, InstHexagon MI2, InstHexagon MI3, InstHexagon MI4>
+  : OutPatFrag<(ops node:$Rs, node:$Rt),
+               (MI1 (MI2 (MI3 $Rs, $Rt), (MI4 $Rs, $Rt)))>;
 
-def: OpmR_RR_pat<Outn<F2_dfcmpeq>, setone, i1, F64>;
-def: OpmR_RR_pat<Outn<F2_dfcmpeq>, setne,  i1, F64>;
+class Cmpof<InstHexagon MI>: T3<C2_andn, MI,  F2_sfcmpuo>;
+class Cmpod<InstHexagon MI>: T3<C2_andn, MI,  F2_dfcmpuo>;
+
+class Cmpofn<InstHexagon MI>: T4<C2_not,  C2_or, MI,  F2_sfcmpuo>;
+class Cmpodn<InstHexagon MI>: T4<C2_not,  C2_or, MI,  F2_dfcmpuo>;
+
+def: OpmR_RR_pat<Cmpof<F2_sfcmpeq>,  setoeq,         i1, F32>;
+def: OpmR_RR_pat<Cmpof<F2_sfcmpge>,  setoge,         i1, F32>;
+def: OpmR_RR_pat<Cmpof<F2_sfcmpgt>,  setogt,         i1, F32>;
+def: OpmR_RR_pat<Cmpof<F2_sfcmpge>,  RevCmp<setole>, i1, F32>;
+def: OpmR_RR_pat<Cmpof<F2_sfcmpgt>,  RevCmp<setolt>, i1, F32>;
+def: OpmR_RR_pat<Cmpofn<F2_sfcmpeq>, setone,         i1, F32>;
+
+def: OpmR_RR_pat<Cmpod<F2_dfcmpeq>,  setoeq,         i1, F64>;
+def: OpmR_RR_pat<Cmpod<F2_dfcmpge>,  setoge,         i1, F64>;
+def: OpmR_RR_pat<Cmpod<F2_dfcmpgt>,  setogt,         i1, F64>;
+def: OpmR_RR_pat<Cmpod<F2_dfcmpge>,  RevCmp<setole>, i1, F64>;
+def: OpmR_RR_pat<Cmpod<F2_dfcmpgt>,  RevCmp<setolt>, i1, F64>;
+def: OpmR_RR_pat<Cmpodn<F2_dfcmpeq>, setone,         i1, F64>;
 
 def: OpmR_RR_pat<Outn<F2_sfcmpuo>, seto,   i1, F32>;
 def: OpmR_RR_pat<Outn<F2_dfcmpuo>, seto,   i1, F64>;
 
+def: OpmR_RR_pat<Outn<F2_sfcmpeq>, setne,  i1, F32>;
+def: OpmR_RR_pat<Outn<F2_dfcmpeq>, setne,  i1, F64>;
 
 // --(6) Select ----------------------------------------------------------
 //
@@ -3384,6 +3397,7 @@ def HexagonBARRIER: SDNode<"HexagonISD::BARRIER", SDTNone, [SDNPHasChain]>;
 def: Pat<(HexagonBARRIER), (Y2_barrier)>;
 
 def: Pat<(trap), (PS_crash)>;
+def: Pat<(debugtrap), (Y2_break)>;
 
 // Read cycle counter.
 def SDTInt64Leaf: SDTypeProfile<1, 0, [SDTCisVT<0, i64>]>;

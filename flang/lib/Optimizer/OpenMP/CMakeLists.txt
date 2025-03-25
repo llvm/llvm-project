@@ -20,11 +20,17 @@ add_flang_library(FlangOpenMPTransforms
   FIRDialect
   FIRDialectSupport
   FIRSupport
-  FortranCommon
+  FortranSupport
+  HLFIRDialect
+
+  MLIR_DEPS
+  ${dialect_libs}
+
+  MLIR_LIBS
   MLIRFuncDialect
   MLIROpenMPDialect
-  HLFIRDialect
   MLIRIR
   MLIRPass
   MLIRTransformUtils
+  ${dialect_libs}
 )

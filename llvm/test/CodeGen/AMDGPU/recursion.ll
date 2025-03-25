@@ -10,7 +10,7 @@
 ; V5: .set recursive.has_recursion, 1
 define void @recursive() {
   call void @recursive()
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   ret void
 }
 

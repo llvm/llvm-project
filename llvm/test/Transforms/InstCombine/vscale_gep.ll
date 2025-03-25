@@ -44,7 +44,7 @@ define void @gep_bitcast(ptr %p) {
 define i32 @gep_alloca_inbounds_vscale_zero() {
 ; CHECK-LABEL: @gep_alloca_inbounds_vscale_zero(
 ; CHECK-NEXT:    [[A:%.*]] = alloca <vscale x 4 x i32>, align 16
-; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[TMP]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;

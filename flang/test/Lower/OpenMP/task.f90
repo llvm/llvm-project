@@ -144,6 +144,18 @@ subroutine task_depend_multi_task()
   x = x + 12
   !CHECK: omp.terminator
   !$omp end task
+  !CHECK: omp.task depend(taskdependmutexinoutset -> %{{.+}} : !fir.ref<i32>)
+  !$omp task depend(mutexinoutset : x)
+  !CHECK: arith.subi
+  x = x - 12
+  !CHECK: omp.terminator
+  !$omp end task
+    !CHECK: omp.task depend(taskdependinoutset -> %{{.+}} : !fir.ref<i32>)
+  !$omp task depend(inoutset : x)
+  !CHECK: arith.subi
+  x = x - 12
+  !CHECK: omp.terminator
+  !$omp end task
 end subroutine task_depend_multi_task
 
 !===============================================================================
@@ -162,14 +174,14 @@ subroutine task_private
   integer :: int_var
   type(mytype) :: mytype_var
 
-  !CHECK: fir.call @_QPbar(%[[INT_VAR]]#1, %[[MYTYPE_VAR]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>) -> ()
+  !CHECK: fir.call @_QPbar(%[[INT_VAR]]#0, %[[MYTYPE_VAR]]#0) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>) -> ()
   call bar(int_var, mytype_var)
 
   !CHECK: omp.task private(@{{.*int_var_private.*}} %[[INT_VAR]]#0 -> %[[INT_VAR_ARG:.*]], @{{.*mytype_var_private.*}} %[[MYTYPE_VAR]]#0 -> %[[MYTYPE_VAR_ARG:.*]] : !fir.ref<i32>, !fir.ref<!fir.type<{{.*}}>) {
   !$omp task private(int_var, mytype_var)
 !CHECK: %[[INT_VAR_PRIVATE:.+]]:2 = hlfir.declare %[[INT_VAR_ARG]] {uniq_name = "_QFtask_privateEint_var"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[MYTYPE_VAR_PRIVATE:.+]]:2 = hlfir.declare %[[MYTYPE_VAR_ARG]] {uniq_name = "_QFtask_privateEmytype_var"} : (!fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>) -> (!fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>, !fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>)
-!CHECK: fir.call @_QPbar(%[[INT_VAR_PRIVATE]]#1, %[[MYTYPE_VAR_PRIVATE]]#1) fastmath<contract> : (!fir.ref<i32>, !fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>) -> ()
+!CHECK: fir.call @_QPbar(%[[INT_VAR_PRIVATE]]#0, %[[MYTYPE_VAR_PRIVATE]]#0) fastmath<contract> : (!fir.ref<i32>, !fir.ref<!fir.type<_QFtask_privateTmytype{x:i32}>>) -> ()
   call bar(int_var, mytype_var)
   !CHECK: omp.terminator
   !$omp end task
@@ -191,7 +203,7 @@ subroutine task_firstprivate
   integer :: int_var
   type(mytype) :: mytype_var
 
-!CHECK: fir.call @_QPbaz(%[[INT_VAR]]#1, %[[MYTYPE_VAR]]#1) fastmath<contract> : (!fir.ref<i32>, !fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>) -> ()
+!CHECK: fir.call @_QPbaz(%[[INT_VAR]]#0, %[[MYTYPE_VAR]]#0) fastmath<contract> : (!fir.ref<i32>, !fir.ref<!fir.type<_QFtask_firstprivateTmytype{x:i32}>>) -> ()
   call baz(int_var, mytype_var)
 
   !CHECK: omp.task private(@{{.*int_var_firstprivate.*}} %[[INT_VAR]]#0 -> %[[INT_VAR_ARG:.*]], @{{.*mytype_var_firstprivate.*}} %[[MYTYPE_VAR]]#0 -> %[[MYTYPE_VAR_ARG:.*]] : !fir.ref<i32>, !fir.ref<{{.*}}) {
@@ -235,6 +247,10 @@ subroutine task_multiple_clauses()
   !$omp end task
 end subroutine task_multiple_clauses
 
+!===============================================================================
+! `mergeable` clause
+!===============================================================================
+
 subroutine task_mergeable()
 !CHECK: omp.task mergeable {
 !CHECK: omp.terminator
@@ -242,3 +258,16 @@ subroutine task_mergeable()
  !$omp task mergeable
  !$omp end task
 end subroutine
+
+!===============================================================================
+! `untied` clause
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPomp_task_untied() {
+subroutine omp_task_untied()
+  !CHECK: omp.task untied {
+  !$omp task untied
+    call foo()
+  !CHECK: omp.terminator
+  !$omp end task
+end subroutine omp_task_untied

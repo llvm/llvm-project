@@ -98,6 +98,7 @@ set(SCUDO_HEADERS
   tsd_exclusive.h
   tsd_shared.h
   tsd.h
+  type_traits.h
   vector.h
   wrappers_c_checks.h
   wrappers_c.h

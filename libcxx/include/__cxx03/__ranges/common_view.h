@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_COMMON_VIEW_H
-#define _LIBCPP___RANGES_COMMON_VIEW_H
+#ifndef _LIBCPP___CXX03___RANGES_COMMON_VIEW_H
+#define _LIBCPP___CXX03___RANGES_COMMON_VIEW_H
 
 #include <__cxx03/__concepts/constructible.h>
 #include <__cxx03/__concepts/copyable.h>
@@ -139,4 +139,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANGES_COMMON_VIEW_H
+#endif // _LIBCPP___CXX03___RANGES_COMMON_VIEW_H

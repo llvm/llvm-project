@@ -57,7 +57,7 @@ int __attribute__((target_version("fp16fml"))) diff_type3(void) noexcept(false) 
 int __attribute__((target_version("sve2-sha3"))) diff_type3(void) noexcept(true) { return 2; }
 
 template <typename T> int __attribute__((target_version("default"))) temp(T) { return 1; }
-
+// expected-error@-1 {{attribute 'target_version' multiversioned functions do not yet support function templates}}
 template <typename T> int __attribute__((target_version("simd"))) temp1(T) { return 1; }
 // expected-error@-1 {{attribute 'target_version' multiversioned functions do not yet support function templates}}
 
@@ -68,6 +68,7 @@ int __attribute__((target_version("aes"))) extc(void) { return 1; }
 int __attribute__((target_version("lse"))) extc(void) { return 1; }
 
 auto __attribute__((target_version("default"))) ret1(void) { return 1; }
+// expected-error@-1 {{attribute 'target_version' multiversioned functions do not yet support deduced return types}}
 auto __attribute__((target_version("dpb"))) ret2(void) { return 1; }
 // expected-error@-1 {{attribute 'target_version' multiversioned functions do not yet support deduced return types}}
 auto __attribute__((target_version("dpb2"))) ret3(void) -> int { return 1; }
@@ -84,6 +85,7 @@ class Cls {
   // expected-error@-1 {{attribute 'target_version' multiversioned functions do not yet support deleted functions}}
 
   virtual void __attribute__((target_version("default"))) vfunc();
+  // expected-error@-1 {{attribute 'target_version' multiversioned functions do not yet support virtual functions}}
   virtual void __attribute__((target_version("sm4"))) vfunc1();
   // expected-error@-1 {{attribute 'target_version' multiversioned functions do not yet support virtual functions}}
 };

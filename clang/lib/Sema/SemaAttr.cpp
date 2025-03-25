@@ -14,6 +14,7 @@
 #include "CheckExprLifetime.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
@@ -219,6 +220,10 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
 void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
   if (FD->getNumParams() == 0)
     return;
+  // Skip void returning functions (except constructors). This can occur in
+  // cases like 'as_const'.
+  if (!isa<CXXConstructorDecl>(FD) && FD->getReturnType()->isVoidType())
+    return;
 
   if (unsigned BuiltinID = FD->getBuiltinID()) {
     // Add lifetime attribute to std::move, std::fowrard et al.
@@ -284,7 +289,7 @@ void Sema::inferLifetimeCaptureByAttribute(FunctionDecl *FD) {
       // We only apply the lifetime_capture_by attribute to parameters of
       // pointer-like reference types (`const T&`, `T&&`).
       if (PVD->getType()->isReferenceType() &&
-          sema::isPointerLikeType(PVD->getType().getNonReferenceType())) {
+          sema::isGLSPointerType(PVD->getType().getNonReferenceType())) {
         int CaptureByThis[] = {LifetimeCaptureByAttr::THIS};
         PVD->addAttr(
             LifetimeCaptureByAttr::CreateImplicit(Context, CaptureByThis, 1));
@@ -307,8 +312,8 @@ void Sema::inferLifetimeCaptureByAttribute(FunctionDecl *FD) {
       Annotate(MD);
     return;
   }
-  static const llvm::StringSet<> CapturingMethods{"insert", "push",
-                                                  "push_front", "push_back"};
+  static const llvm::StringSet<> CapturingMethods{
+      "insert", "insert_or_assign", "push", "push_front", "push_back"};
   if (!CapturingMethods.contains(MD->getName()))
     return;
   Annotate(MD);
@@ -537,7 +542,6 @@ bool Sema::ConstantFoldAttrArgs(const AttributeCommonInfo &CI,
         Diag(Note.first, Note.second);
       return false;
     }
-    assert(Eval.Val.hasValue());
     E = ConstantExpr::Create(Context, E, Eval.Val);
   }
 
@@ -1190,6 +1194,11 @@ void Sema::ActOnPragmaAttributePop(SourceLocation PragmaLoc,
 void Sema::AddPragmaAttributes(Scope *S, Decl *D) {
   if (PragmaAttributeStack.empty())
     return;
+
+  if (const auto *P = dyn_cast<ParmVarDecl>(D))
+    if (P->getType()->isVoidType())
+      return;
+
   for (auto &Group : PragmaAttributeStack) {
     for (auto &Entry : Group.Entries) {
       ParsedAttr *Attribute = Entry.Attribute;
@@ -1217,10 +1226,11 @@ void Sema::AddPragmaAttributes(Scope *S, Decl *D) {
   }
 }
 
-void Sema::PrintPragmaAttributeInstantiationPoint() {
+void Sema::PrintPragmaAttributeInstantiationPoint(
+    InstantiationContextDiagFuncRef DiagFunc) {
   assert(PragmaAttributeCurrentTargetDecl && "Expected an active declaration");
-  Diags.Report(PragmaAttributeCurrentTargetDecl->getBeginLoc(),
-               diag::note_pragma_attribute_applied_decl_here);
+  DiagFunc(PragmaAttributeCurrentTargetDecl->getBeginLoc(),
+           PDiag(diag::note_pragma_attribute_applied_decl_here));
 }
 
 void Sema::DiagnosePrecisionLossInComplexDivision() {
@@ -1262,7 +1272,7 @@ void Sema::ActOnPragmaMSFunction(
     return;
   }
 
-  MSFunctionNoBuiltins.insert(NoBuiltins.begin(), NoBuiltins.end());
+  MSFunctionNoBuiltins.insert_range(NoBuiltins);
 }
 
 void Sema::AddRangeBasedOptnone(FunctionDecl *FD) {
@@ -1310,6 +1320,8 @@ void Sema::AddOptnoneAttributeIfNoConflicts(FunctionDecl *FD,
 }
 
 void Sema::AddImplicitMSFunctionNoBuiltinAttr(FunctionDecl *FD) {
+  if (FD->isDeleted() || FD->isDefaulted())
+    return;
   SmallVector<StringRef> V(MSFunctionNoBuiltins.begin(),
                            MSFunctionNoBuiltins.end());
   if (!MSFunctionNoBuiltins.empty())

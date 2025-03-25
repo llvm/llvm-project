@@ -207,6 +207,7 @@ inline ::llvm::hash_code hash_value(Attribute arg) {
 class NamedAttribute {
 public:
   NamedAttribute(StringAttr name, Attribute value);
+  NamedAttribute(StringRef name, Attribute value);
 
   /// Return the name of the attribute.
   StringAttr getName() const;

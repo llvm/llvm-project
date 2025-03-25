@@ -51,7 +51,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __libcpp_unique_locale {
-  __libcpp_unique_locale(const char* nm) : __loc_(__locale::__newlocale(LC_ALL_MASK, nm, 0)) {}
+  __libcpp_unique_locale(const char* nm) : __loc_(__locale::__newlocale(_LIBCPP_ALL_MASK, nm, 0)) {}
 
   ~__libcpp_unique_locale() {
     if (__loc_)
@@ -74,7 +74,7 @@ __locale::__locale_t __cloc() {
   // In theory this could create a race condition. In practice
   // the race condition is non-fatal since it will just create
   // a little resource leak. Better approach would be appreciated.
-  static __locale::__locale_t result = __locale::__newlocale(LC_ALL_MASK, "C", 0);
+  static __locale::__locale_t result = __locale::__newlocale(_LIBCPP_ALL_MASK, "C", 0);
   return result;
 }
 #endif // __cloc_defined
@@ -482,7 +482,7 @@ void locale::__imp::install(facet* f, long id) {
 
 const locale::facet* locale::__imp::use_facet(long id) const {
   if (!has_facet(id))
-    __throw_bad_cast();
+    std::__throw_bad_cast();
   return facets_[static_cast<size_t>(id)];
 }
 
@@ -570,7 +570,7 @@ locale locale::global(const locale& loc) {
   locale r  = g;
   g         = loc;
   if (g.name() != "*")
-    setlocale(LC_ALL, g.name().c_str());
+    __locale::__setlocale(_LIBCPP_LC_ALL, g.name().c_str());
   return r;
 }
 
@@ -600,9 +600,9 @@ long locale::id::__get() {
 // template <> class collate_byname<char>
 
 collate_byname<char>::collate_byname(const char* n, size_t refs)
-    : collate<char>(refs), __l_(__locale::__newlocale(LC_ALL_MASK, n, 0)) {
+    : collate<char>(refs), __l_(__locale::__newlocale(_LIBCPP_ALL_MASK, n, 0)) {
   if (__l_ == 0)
-    __throw_runtime_error(
+    std::__throw_runtime_error(
         ("collate_byname<char>::collate_byname"
          " failed to construct for " +
          string(n))
@@ -610,9 +610,9 @@ collate_byname<char>::collate_byname(const char* n, size_t refs)
 }
 
 collate_byname<char>::collate_byname(const string& name, size_t refs)
-    : collate<char>(refs), __l_(__locale::__newlocale(LC_ALL_MASK, name.c_str(), 0)) {
+    : collate<char>(refs), __l_(__locale::__newlocale(_LIBCPP_ALL_MASK, name.c_str(), 0)) {
   if (__l_ == 0)
-    __throw_runtime_error(
+    std::__throw_runtime_error(
         ("collate_byname<char>::collate_byname"
          " failed to construct for " +
          name)
@@ -644,9 +644,9 @@ collate_byname<char>::string_type collate_byname<char>::do_transform(const char_
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
 collate_byname<wchar_t>::collate_byname(const char* n, size_t refs)
-    : collate<wchar_t>(refs), __l_(__locale::__newlocale(LC_ALL_MASK, n, 0)) {
+    : collate<wchar_t>(refs), __l_(__locale::__newlocale(_LIBCPP_ALL_MASK, n, 0)) {
   if (__l_ == 0)
-    __throw_runtime_error(
+    std::__throw_runtime_error(
         ("collate_byname<wchar_t>::collate_byname(size_t refs)"
          " failed to construct for " +
          string(n))
@@ -654,9 +654,9 @@ collate_byname<wchar_t>::collate_byname(const char* n, size_t refs)
 }
 
 collate_byname<wchar_t>::collate_byname(const string& name, size_t refs)
-    : collate<wchar_t>(refs), __l_(__locale::__newlocale(LC_ALL_MASK, name.c_str(), 0)) {
+    : collate<wchar_t>(refs), __l_(__locale::__newlocale(_LIBCPP_ALL_MASK, name.c_str(), 0)) {
   if (__l_ == 0)
-    __throw_runtime_error(
+    std::__throw_runtime_error(
         ("collate_byname<wchar_t>::collate_byname(size_t refs)"
          " failed to construct for " +
          name)
@@ -707,69 +707,70 @@ constinit locale::id ctype<wchar_t>::id;
 ctype<wchar_t>::~ctype() {}
 
 bool ctype<wchar_t>::do_is(mask m, char_type c) const {
-  return isascii(c) ? (ctype<char>::classic_table()[c] & m) != 0 : false;
+  return std::__libcpp_isascii(c) ? (ctype<char>::classic_table()[c] & m) != 0 : false;
 }
 
 const wchar_t* ctype<wchar_t>::do_is(const char_type* low, const char_type* high, mask* vec) const {
   for (; low != high; ++low, ++vec)
-    *vec = static_cast<mask>(isascii(*low) ? ctype<char>::classic_table()[*low] : 0);
+    *vec = static_cast<mask>(std::__libcpp_isascii(*low) ? ctype<char>::classic_table()[*low] : 0);
   return low;
 }
 
 const wchar_t* ctype<wchar_t>::do_scan_is(mask m, const char_type* low, const char_type* high) const {
   for (; low != high; ++low)
-    if (isascii(*low) && (ctype<char>::classic_table()[*low] & m))
+    if (std::__libcpp_isascii(*low) && (ctype<char>::classic_table()[*low] & m))
       break;
   return low;
 }
 
 const wchar_t* ctype<wchar_t>::do_scan_not(mask m, const char_type* low, const char_type* high) const {
   for (; low != high; ++low)
-    if (!(isascii(*low) && (ctype<char>::classic_table()[*low] & m)))
+    if (!(std::__libcpp_isascii(*low) && (ctype<char>::classic_table()[*low] & m)))
       break;
   return low;
 }
 
 wchar_t ctype<wchar_t>::do_toupper(char_type c) const {
 #  ifdef _LIBCPP_HAS_DEFAULTRUNELOCALE
-  return isascii(c) ? _DefaultRuneLocale.__mapupper[c] : c;
+  return std::__libcpp_isascii(c) ? _DefaultRuneLocale.__mapupper[c] : c;
 #  elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || defined(__NetBSD__) || defined(__MVS__)
-  return isascii(c) ? ctype<char>::__classic_upper_table()[c] : c;
+  return std::__libcpp_isascii(c) ? ctype<char>::__classic_upper_table()[c] : c;
 #  else
-  return (isascii(c) && __locale::__iswlower(c, _LIBCPP_GET_C_LOCALE)) ? c - L'a' + L'A' : c;
+  return (std::__libcpp_isascii(c) && __locale::__iswlower(c, _LIBCPP_GET_C_LOCALE)) ? c - L'a' + L'A' : c;
 #  endif
 }
 
 const wchar_t* ctype<wchar_t>::do_toupper(char_type* low, const char_type* high) const {
   for (; low != high; ++low)
 #  ifdef _LIBCPP_HAS_DEFAULTRUNELOCALE
-    *low = isascii(*low) ? _DefaultRuneLocale.__mapupper[*low] : *low;
+    *low = std::__libcpp_isascii(*low) ? _DefaultRuneLocale.__mapupper[*low] : *low;
 #  elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || defined(__NetBSD__) || defined(__MVS__)
-    *low = isascii(*low) ? ctype<char>::__classic_upper_table()[*low] : *low;
+    *low = std::__libcpp_isascii(*low) ? ctype<char>::__classic_upper_table()[*low] : *low;
 #  else
-    *low = (isascii(*low) && __locale::__islower(*low, _LIBCPP_GET_C_LOCALE)) ? (*low - L'a' + L'A') : *low;
+    *low =
+        (std::__libcpp_isascii(*low) && __locale::__islower(*low, _LIBCPP_GET_C_LOCALE)) ? (*low - L'a' + L'A') : *low;
 #  endif
   return low;
 }
 
 wchar_t ctype<wchar_t>::do_tolower(char_type c) const {
 #  ifdef _LIBCPP_HAS_DEFAULTRUNELOCALE
-  return isascii(c) ? _DefaultRuneLocale.__maplower[c] : c;
+  return std::__libcpp_isascii(c) ? _DefaultRuneLocale.__maplower[c] : c;
 #  elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || defined(__NetBSD__) || defined(__MVS__)
-  return isascii(c) ? ctype<char>::__classic_lower_table()[c] : c;
+  return std::__libcpp_isascii(c) ? ctype<char>::__classic_lower_table()[c] : c;
 #  else
-  return (isascii(c) && __locale::__isupper(c, _LIBCPP_GET_C_LOCALE)) ? c - L'A' + 'a' : c;
+  return (std::__libcpp_isascii(c) && __locale::__isupper(c, _LIBCPP_GET_C_LOCALE)) ? c - L'A' + 'a' : c;
 #  endif
 }
 
 const wchar_t* ctype<wchar_t>::do_tolower(char_type* low, const char_type* high) const {
   for (; low != high; ++low)
 #  ifdef _LIBCPP_HAS_DEFAULTRUNELOCALE
-    *low = isascii(*low) ? _DefaultRuneLocale.__maplower[*low] : *low;
+    *low = std::__libcpp_isascii(*low) ? _DefaultRuneLocale.__maplower[*low] : *low;
 #  elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || defined(__NetBSD__) || defined(__MVS__)
-    *low = isascii(*low) ? ctype<char>::__classic_lower_table()[*low] : *low;
+    *low = std::__libcpp_isascii(*low) ? ctype<char>::__classic_lower_table()[*low] : *low;
 #  else
-    *low = (isascii(*low) && __locale::__isupper(*low, _LIBCPP_GET_C_LOCALE)) ? *low - L'A' + L'a' : *low;
+    *low = (std::__libcpp_isascii(*low) && __locale::__isupper(*low, _LIBCPP_GET_C_LOCALE)) ? *low - L'A' + L'a' : *low;
 #  endif
   return low;
 }
@@ -783,14 +784,14 @@ const char* ctype<wchar_t>::do_widen(const char* low, const char* high, char_typ
 }
 
 char ctype<wchar_t>::do_narrow(char_type c, char dfault) const {
-  if (isascii(c))
+  if (std::__libcpp_isascii(c))
     return static_cast<char>(c);
   return dfault;
 }
 
 const wchar_t* ctype<wchar_t>::do_narrow(const char_type* low, const char_type* high, char dfault, char* dest) const {
   for (; low != high; ++low, ++dest)
-    if (isascii(*low))
+    if (std::__libcpp_isascii(*low))
       *dest = static_cast<char>(*low);
     else
       *dest = dfault;
@@ -816,52 +817,56 @@ ctype<char>::~ctype() {
 
 char ctype<char>::do_toupper(char_type c) const {
 #ifdef _LIBCPP_HAS_DEFAULTRUNELOCALE
-  return isascii(c) ? static_cast<char>(_DefaultRuneLocale.__mapupper[static_cast<ptrdiff_t>(c)]) : c;
+  return std::__libcpp_isascii(c) ? static_cast<char>(_DefaultRuneLocale.__mapupper[static_cast<ptrdiff_t>(c)]) : c;
 #elif defined(__NetBSD__)
   return static_cast<char>(__classic_upper_table()[static_cast<unsigned char>(c)]);
 #elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || defined(__MVS__)
-  return isascii(c) ? static_cast<char>(__classic_upper_table()[static_cast<unsigned char>(c)]) : c;
+  return std::__libcpp_isascii(c) ? static_cast<char>(__classic_upper_table()[static_cast<unsigned char>(c)]) : c;
 #else
-  return (isascii(c) && __locale::__islower(c, _LIBCPP_GET_C_LOCALE)) ? c - 'a' + 'A' : c;
+  return (std::__libcpp_isascii(c) && __locale::__islower(c, _LIBCPP_GET_C_LOCALE)) ? c - 'a' + 'A' : c;
 #endif
 }
 
 const char* ctype<char>::do_toupper(char_type* low, const char_type* high) const {
   for (; low != high; ++low)
 #ifdef _LIBCPP_HAS_DEFAULTRUNELOCALE
-    *low = isascii(*low) ? static_cast<char>(_DefaultRuneLocale.__mapupper[static_cast<ptrdiff_t>(*low)]) : *low;
+    *low = std::__libcpp_isascii(*low)
+             ? static_cast<char>(_DefaultRuneLocale.__mapupper[static_cast<ptrdiff_t>(*low)])
+             : *low;
 #elif defined(__NetBSD__)
     *low = static_cast<char>(__classic_upper_table()[static_cast<unsigned char>(*low)]);
 #elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || defined(__MVS__)
-    *low = isascii(*low) ? static_cast<char>(__classic_upper_table()[static_cast<size_t>(*low)]) : *low;
+    *low = std::__libcpp_isascii(*low) ? static_cast<char>(__classic_upper_table()[static_cast<size_t>(*low)]) : *low;
 #else
-    *low = (isascii(*low) && __locale::__islower(*low, _LIBCPP_GET_C_LOCALE)) ? *low - 'a' + 'A' : *low;
+    *low = (std::__libcpp_isascii(*low) && __locale::__islower(*low, _LIBCPP_GET_C_LOCALE)) ? *low - 'a' + 'A' : *low;
 #endif
   return low;
 }
 
 char ctype<char>::do_tolower(char_type c) const {
 #ifdef _LIBCPP_HAS_DEFAULTRUNELOCALE
-  return isascii(c) ? static_cast<char>(_DefaultRuneLocale.__maplower[static_cast<ptrdiff_t>(c)]) : c;
+  return std::__libcpp_isascii(c) ? static_cast<char>(_DefaultRuneLocale.__maplower[static_cast<ptrdiff_t>(c)]) : c;
 #elif defined(__NetBSD__)
   return static_cast<char>(__classic_lower_table()[static_cast<unsigned char>(c)]);
 #elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || defined(__MVS__)
-  return isascii(c) ? static_cast<char>(__classic_lower_table()[static_cast<size_t>(c)]) : c;
+  return std::__libcpp_isascii(c) ? static_cast<char>(__classic_lower_table()[static_cast<size_t>(c)]) : c;
 #else
-  return (isascii(c) && __locale::__isupper(c, _LIBCPP_GET_C_LOCALE)) ? c - 'A' + 'a' : c;
+  return (std::__libcpp_isascii(c) && __locale::__isupper(c, _LIBCPP_GET_C_LOCALE)) ? c - 'A' + 'a' : c;
 #endif
 }
 
 const char* ctype<char>::do_tolower(char_type* low, const char_type* high) const {
   for (; low != high; ++low)
 #ifdef _LIBCPP_HAS_DEFAULTRUNELOCALE
-    *low = isascii(*low) ? static_cast<char>(_DefaultRuneLocale.__maplower[static_cast<ptrdiff_t>(*low)]) : *low;
+    *low = std::__libcpp_isascii(*low)
+             ? static_cast<char>(_DefaultRuneLocale.__maplower[static_cast<ptrdiff_t>(*low)])
+             : *low;
 #elif defined(__NetBSD__)
     *low = static_cast<char>(__classic_lower_table()[static_cast<unsigned char>(*low)]);
 #elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || defined(__MVS__)
-    *low = isascii(*low) ? static_cast<char>(__classic_lower_table()[static_cast<size_t>(*low)]) : *low;
+    *low = std::__libcpp_isascii(*low) ? static_cast<char>(__classic_lower_table()[static_cast<size_t>(*low)]) : *low;
 #else
-    *low = (isascii(*low) && __locale::__isupper(*low, _LIBCPP_GET_C_LOCALE)) ? *low - 'A' + 'a' : *low;
+    *low = (std::__libcpp_isascii(*low) && __locale::__isupper(*low, _LIBCPP_GET_C_LOCALE)) ? *low - 'A' + 'a' : *low;
 #endif
   return low;
 }
@@ -875,14 +880,14 @@ const char* ctype<char>::do_widen(const char* low, const char* high, char_type* 
 }
 
 char ctype<char>::do_narrow(char_type c, char dfault) const {
-  if (isascii(c))
+  if (std::__libcpp_isascii(c))
     return static_cast<char>(c);
   return dfault;
 }
 
 const char* ctype<char>::do_narrow(const char_type* low, const char_type* high, char dfault, char* dest) const {
   for (; low != high; ++low, ++dest)
-    if (isascii(*low))
+    if (std::__libcpp_isascii(*low))
       *dest = *low;
     else
       *dest = dfault;
@@ -1042,9 +1047,9 @@ const unsigned short* ctype<char>::__classic_upper_table() _NOEXCEPT {
 // template <> class ctype_byname<char>
 
 ctype_byname<char>::ctype_byname(const char* name, size_t refs)
-    : ctype<char>(0, false, refs), __l_(__locale::__newlocale(LC_ALL_MASK, name, 0)) {
+    : ctype<char>(0, false, refs), __l_(__locale::__newlocale(_LIBCPP_ALL_MASK, name, 0)) {
   if (__l_ == 0)
-    __throw_runtime_error(
+    std::__throw_runtime_error(
         ("ctype_byname<char>::ctype_byname"
          " failed to construct for " +
          string(name))
@@ -1052,9 +1057,9 @@ ctype_byname<char>::ctype_byname(const char* name, size_t refs)
 }
 
 ctype_byname<char>::ctype_byname(const string& name, size_t refs)
-    : ctype<char>(0, false, refs), __l_(__locale::__newlocale(LC_ALL_MASK, name.c_str(), 0)) {
+    : ctype<char>(0, false, refs), __l_(__locale::__newlocale(_LIBCPP_ALL_MASK, name.c_str(), 0)) {
   if (__l_ == 0)
-    __throw_runtime_error(
+    std::__throw_runtime_error(
         ("ctype_byname<char>::ctype_byname"
          " failed to construct for " +
          name)
@@ -1087,9 +1092,9 @@ const char* ctype_byname<char>::do_tolower(char_type* low, const char_type* high
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
 ctype_byname<wchar_t>::ctype_byname(const char* name, size_t refs)
-    : ctype<wchar_t>(refs), __l_(__locale::__newlocale(LC_ALL_MASK, name, 0)) {
+    : ctype<wchar_t>(refs), __l_(__locale::__newlocale(_LIBCPP_ALL_MASK, name, 0)) {
   if (__l_ == 0)
-    __throw_runtime_error(
+    std::__throw_runtime_error(
         ("ctype_byname<wchar_t>::ctype_byname"
          " failed to construct for " +
          string(name))
@@ -1097,9 +1102,9 @@ ctype_byname<wchar_t>::ctype_byname(const char* name, size_t refs)
 }
 
 ctype_byname<wchar_t>::ctype_byname(const string& name, size_t refs)
-    : ctype<wchar_t>(refs), __l_(__locale::__newlocale(LC_ALL_MASK, name.c_str(), 0)) {
+    : ctype<wchar_t>(refs), __l_(__locale::__newlocale(_LIBCPP_ALL_MASK, name.c_str(), 0)) {
   if (__l_ == 0)
-    __throw_runtime_error(
+    std::__throw_runtime_error(
         ("ctype_byname<wchar_t>::ctype_byname"
          " failed to construct for " +
          name)
@@ -1109,11 +1114,11 @@ ctype_byname<wchar_t>::ctype_byname(const string& name, size_t refs)
 ctype_byname<wchar_t>::~ctype_byname() { __locale::__freelocale(__l_); }
 
 bool ctype_byname<wchar_t>::do_is(mask m, char_type c) const {
+  wint_t ch = static_cast<wint_t>(c);
 #  ifdef _LIBCPP_WCTYPE_IS_MASK
-  return static_cast<bool>(iswctype_l(c, m, __l_));
+  return static_cast<bool>(__locale::__iswctype(ch, m, __l_));
 #  else
   bool result = false;
-  wint_t ch   = static_cast<wint_t>(c);
   if ((m & space) == space)
     result |= (__locale::__iswspace(ch, __l_) != 0);
   if ((m & print) == print)
@@ -1140,7 +1145,7 @@ bool ctype_byname<wchar_t>::do_is(mask m, char_type c) const {
 
 const wchar_t* ctype_byname<wchar_t>::do_is(const char_type* low, const char_type* high, mask* vec) const {
   for (; low != high; ++low, ++vec) {
-    if (isascii(*low))
+    if (std::__libcpp_isascii(*low))
       *vec = static_cast<mask>(ctype<char>::classic_table()[*low]);
     else {
       *vec      = 0;
@@ -1179,7 +1184,7 @@ const wchar_t* ctype_byname<wchar_t>::do_is(const char_type* low, const char_typ
 const wchar_t* ctype_byname<wchar_t>::do_scan_is(mask m, const char_type* low, const char_type* high) const {
   for (; low != high; ++low) {
 #  ifdef _LIBCPP_WCTYPE_IS_MASK
-    if (iswctype_l(*low, m, __l_))
+    if (__locale::__iswctype(static_cast<wint_t>(*low), m, __l_))
       break;
 #  else
     wint_t ch = static_cast<wint_t>(*low);
@@ -1210,11 +1215,11 @@ const wchar_t* ctype_byname<wchar_t>::do_scan_is(mask m, const char_type* low, c
 
 const wchar_t* ctype_byname<wchar_t>::do_scan_not(mask m, const char_type* low, const char_type* high) const {
   for (; low != high; ++low) {
+    wint_t ch = static_cast<wint_t>(*low);
 #  ifdef _LIBCPP_WCTYPE_IS_MASK
-    if (!iswctype_l(*low, m, __l_))
+    if (!__locale::__iswctype(ch, m, __l_))
       break;
 #  else
-    wint_t ch = static_cast<wint_t>(*low);
     if ((m & space) == space && __locale::__iswspace(ch, __l_))
       continue;
     if ((m & print) == print && __locale::__iswprint(ch, __l_))
@@ -1337,9 +1342,9 @@ constinit locale::id codecvt<wchar_t, char, mbstate_t>::id;
 codecvt<wchar_t, char, mbstate_t>::codecvt(size_t refs) : locale::facet(refs), __l_(_LIBCPP_GET_C_LOCALE) {}
 
 codecvt<wchar_t, char, mbstate_t>::codecvt(const char* nm, size_t refs)
-    : locale::facet(refs), __l_(__locale::__newlocale(LC_ALL_MASK, nm, 0)) {
+    : locale::facet(refs), __l_(__locale::__newlocale(_LIBCPP_ALL_MASK, nm, 0)) {
   if (__l_ == 0)
-    __throw_runtime_error(
+    std::__throw_runtime_error(
         ("codecvt_byname<wchar_t, char, mbstate_t>::codecvt_byname"
          " failed to construct for " +
          string(nm))
@@ -4056,13 +4061,13 @@ void numpunct_byname<char>::__init(const char* nm) {
   if (strcmp(nm, "C") != 0) {
     __libcpp_unique_locale loc(nm);
     if (!loc)
-      __throw_runtime_error(
+      std::__throw_runtime_error(
           ("numpunct_byname<char>::numpunct_byname"
            " failed to construct for " +
            string(nm))
               .c_str());
 
-    lconv* lc = __locale::__localeconv(loc.get());
+    __locale::__lconv_t* lc = __locale::__localeconv(loc.get());
     if (!checked_string_to_char_convert(__decimal_point_, lc->decimal_point, loc.get()))
       __decimal_point_ = base::do_decimal_point();
     if (!checked_string_to_char_convert(__thousands_sep_, lc->thousands_sep, loc.get()))
@@ -4087,13 +4092,13 @@ void numpunct_byname<wchar_t>::__init(const char* nm) {
   if (strcmp(nm, "C") != 0) {
     __libcpp_unique_locale loc(nm);
     if (!loc)
-      __throw_runtime_error(
+      std::__throw_runtime_error(
           ("numpunct_byname<wchar_t>::numpunct_byname"
            " failed to construct for " +
            string(nm))
               .c_str());
 
-    lconv* lc = __locale::__localeconv(loc.get());
+    __locale::__lconv_t* lc = __locale::__localeconv(loc.get());
     checked_string_to_wchar_convert(__decimal_point_, lc->decimal_point, loc.get());
     checked_string_to_wchar_convert(__thousands_sep_, lc->thousands_sep, loc.get());
     __grouping_ = lc->grouping;
@@ -4437,14 +4442,14 @@ const wstring& __time_get_c_storage<wchar_t>::__r() const {
 
 // time_get_byname
 
-__time_get::__time_get(const char* nm) : __loc_(__locale::__newlocale(LC_ALL_MASK, nm, 0)) {
+__time_get::__time_get(const char* nm) : __loc_(__locale::__newlocale(_LIBCPP_ALL_MASK, nm, 0)) {
   if (__loc_ == 0)
-    __throw_runtime_error(("time_get_byname failed to construct for " + string(nm)).c_str());
+    std::__throw_runtime_error(("time_get_byname failed to construct for " + string(nm)).c_str());
 }
 
-__time_get::__time_get(const string& nm) : __loc_(__locale::__newlocale(LC_ALL_MASK, nm.c_str(), 0)) {
+__time_get::__time_get(const string& nm) : __loc_(__locale::__newlocale(_LIBCPP_ALL_MASK, nm.c_str(), 0)) {
   if (__loc_ == 0)
-    __throw_runtime_error(("time_get_byname failed to construct for " + nm).c_str());
+    std::__throw_runtime_error(("time_get_byname failed to construct for " + nm).c_str());
 }
 
 __time_get::~__time_get() { __locale::__freelocale(__loc_); }
@@ -4605,7 +4610,7 @@ wstring __time_get_storage<wchar_t>::__analyze(char fmt, const ctype<wchar_t>& c
   const char* bb = buf;
   size_t j       = __locale::__mbsrtowcs(wbb, &bb, countof(wbuf), &mb, __loc_);
   if (j == size_t(-1))
-    __throw_runtime_error("locale not supported");
+    std::__throw_runtime_error("locale not supported");
   wchar_t* wbe = wbb + j;
   wstring result;
   while (wbb != wbe) {
@@ -4766,7 +4771,7 @@ void __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct) {
     const char* bb = buf;
     size_t j       = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
     if (j == size_t(-1) || j == 0)
-      __throw_runtime_error("locale not supported");
+      std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
     __weeks_[i].assign(wbuf, wbe);
     __locale::__strftime(buf, countof(buf), "%a", &t, __loc_);
@@ -4774,7 +4779,7 @@ void __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct) {
     bb = buf;
     j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
     if (j == size_t(-1) || j == 0)
-      __throw_runtime_error("locale not supported");
+      std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
     __weeks_[i + 7].assign(wbuf, wbe);
   }
@@ -4786,7 +4791,7 @@ void __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct) {
     const char* bb = buf;
     size_t j       = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
     if (j == size_t(-1) || j == 0)
-      __throw_runtime_error("locale not supported");
+      std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
     __months_[i].assign(wbuf, wbe);
     __locale::__strftime(buf, countof(buf), "%b", &t, __loc_);
@@ -4794,7 +4799,7 @@ void __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct) {
     bb = buf;
     j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
     if (j == size_t(-1) || j == 0)
-      __throw_runtime_error("locale not supported");
+      std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
     __months_[i + 12].assign(wbuf, wbe);
   }
@@ -4805,7 +4810,7 @@ void __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct) {
   const char* bb = buf;
   size_t j       = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
   if (j == size_t(-1))
-    __throw_runtime_error("locale not supported");
+    std::__throw_runtime_error("locale not supported");
   wbe = wbuf + j;
   __am_pm_[0].assign(wbuf, wbe);
   t.tm_hour = 13;
@@ -4814,7 +4819,7 @@ void __time_get_storage<wchar_t>::init(const ctype<wchar_t>& ct) {
   bb = buf;
   j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, __loc_);
   if (j == size_t(-1))
-    __throw_runtime_error("locale not supported");
+    std::__throw_runtime_error("locale not supported");
   wbe = wbuf + j;
   __am_pm_[1].assign(wbuf, wbe);
   __c_ = __analyze('c', ct);
@@ -5022,14 +5027,14 @@ time_base::dateorder __time_get_storage<wchar_t>::__do_date_order() const {
 
 // time_put
 
-__time_put::__time_put(const char* nm) : __loc_(__locale::__newlocale(LC_ALL_MASK, nm, 0)) {
+__time_put::__time_put(const char* nm) : __loc_(__locale::__newlocale(_LIBCPP_ALL_MASK, nm, 0)) {
   if (__loc_ == 0)
-    __throw_runtime_error(("time_put_byname failed to construct for " + string(nm)).c_str());
+    std::__throw_runtime_error(("time_put_byname failed to construct for " + string(nm)).c_str());
 }
 
-__time_put::__time_put(const string& nm) : __loc_(__locale::__newlocale(LC_ALL_MASK, nm.c_str(), 0)) {
+__time_put::__time_put(const string& nm) : __loc_(__locale::__newlocale(_LIBCPP_ALL_MASK, nm.c_str(), 0)) {
   if (__loc_ == 0)
-    __throw_runtime_error(("time_put_byname failed to construct for " + nm).c_str());
+    std::__throw_runtime_error(("time_put_byname failed to construct for " + nm).c_str());
 }
 
 __time_put::~__time_put() {
@@ -5054,7 +5059,7 @@ void __time_put::__do_put(wchar_t* __wb, wchar_t*& __we, const tm* __tm, char __
   const char* __nb = __nar;
   size_t j         = __locale::__mbsrtowcs(__wb, &__nb, countof(__wb, __we), &mb, __loc_);
   if (j == size_t(-1))
-    __throw_runtime_error("locale not supported");
+    std::__throw_runtime_error("locale not supported");
   __we = __wb + j;
 }
 #endif // _LIBCPP_HAS_WIDE_CHARACTERS
@@ -5426,9 +5431,9 @@ void moneypunct_byname<char, false>::init(const char* nm) {
   typedef moneypunct<char, false> base;
   __libcpp_unique_locale loc(nm);
   if (!loc)
-    __throw_runtime_error(("moneypunct_byname failed to construct for " + string(nm)).c_str());
+    std::__throw_runtime_error(("moneypunct_byname failed to construct for " + string(nm)).c_str());
 
-  lconv* lc = __locale::__localeconv(loc.get());
+  __locale::__lconv_t* lc = __locale::__localeconv(loc.get());
   if (!checked_string_to_char_convert(__decimal_point_, lc->mon_decimal_point, loc.get()))
     __decimal_point_ = base::do_decimal_point();
   if (!checked_string_to_char_convert(__thousands_sep_, lc->mon_thousands_sep, loc.get()))
@@ -5461,9 +5466,9 @@ void moneypunct_byname<char, true>::init(const char* nm) {
   typedef moneypunct<char, true> base;
   __libcpp_unique_locale loc(nm);
   if (!loc)
-    __throw_runtime_error(("moneypunct_byname failed to construct for " + string(nm)).c_str());
+    std::__throw_runtime_error(("moneypunct_byname failed to construct for " + string(nm)).c_str());
 
-  lconv* lc = __locale::__localeconv(loc.get());
+  __locale::__lconv_t* lc = __locale::__localeconv(loc.get());
   if (!checked_string_to_char_convert(__decimal_point_, lc->mon_decimal_point, loc.get()))
     __decimal_point_ = base::do_decimal_point();
   if (!checked_string_to_char_convert(__thousands_sep_, lc->mon_thousands_sep, loc.get()))
@@ -5517,8 +5522,8 @@ void moneypunct_byname<wchar_t, false>::init(const char* nm) {
   typedef moneypunct<wchar_t, false> base;
   __libcpp_unique_locale loc(nm);
   if (!loc)
-    __throw_runtime_error(("moneypunct_byname failed to construct for " + string(nm)).c_str());
-  lconv* lc = __locale::__localeconv(loc.get());
+    std::__throw_runtime_error(("moneypunct_byname failed to construct for " + string(nm)).c_str());
+  __locale::__lconv_t* lc = __locale::__localeconv(loc.get());
   if (!checked_string_to_wchar_convert(__decimal_point_, lc->mon_decimal_point, loc.get()))
     __decimal_point_ = base::do_decimal_point();
   if (!checked_string_to_wchar_convert(__thousands_sep_, lc->mon_thousands_sep, loc.get()))
@@ -5529,7 +5534,7 @@ void moneypunct_byname<wchar_t, false>::init(const char* nm) {
   const char* bb = lc->currency_symbol;
   size_t j       = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, loc.get());
   if (j == size_t(-1))
-    __throw_runtime_error("locale not supported");
+    std::__throw_runtime_error("locale not supported");
   wchar_t* wbe = wbuf + j;
   __curr_symbol_.assign(wbuf, wbe);
   if (lc->frac_digits != CHAR_MAX)
@@ -5543,7 +5548,7 @@ void moneypunct_byname<wchar_t, false>::init(const char* nm) {
     bb = lc->positive_sign;
     j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, loc.get());
     if (j == size_t(-1))
-      __throw_runtime_error("locale not supported");
+      std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
     __positive_sign_.assign(wbuf, wbe);
   }
@@ -5554,7 +5559,7 @@ void moneypunct_byname<wchar_t, false>::init(const char* nm) {
     bb = lc->negative_sign;
     j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, loc.get());
     if (j == size_t(-1))
-      __throw_runtime_error("locale not supported");
+      std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
     __negative_sign_.assign(wbuf, wbe);
   }
@@ -5571,9 +5576,9 @@ void moneypunct_byname<wchar_t, true>::init(const char* nm) {
   typedef moneypunct<wchar_t, true> base;
   __libcpp_unique_locale loc(nm);
   if (!loc)
-    __throw_runtime_error(("moneypunct_byname failed to construct for " + string(nm)).c_str());
+    std::__throw_runtime_error(("moneypunct_byname failed to construct for " + string(nm)).c_str());
 
-  lconv* lc = __locale::__localeconv(loc.get());
+  __locale::__lconv_t* lc = __locale::__localeconv(loc.get());
   if (!checked_string_to_wchar_convert(__decimal_point_, lc->mon_decimal_point, loc.get()))
     __decimal_point_ = base::do_decimal_point();
   if (!checked_string_to_wchar_convert(__thousands_sep_, lc->mon_thousands_sep, loc.get()))
@@ -5584,7 +5589,7 @@ void moneypunct_byname<wchar_t, true>::init(const char* nm) {
   const char* bb = lc->int_curr_symbol;
   size_t j       = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, loc.get());
   if (j == size_t(-1))
-    __throw_runtime_error("locale not supported");
+    std::__throw_runtime_error("locale not supported");
   wchar_t* wbe = wbuf + j;
   __curr_symbol_.assign(wbuf, wbe);
   if (lc->int_frac_digits != CHAR_MAX)
@@ -5602,7 +5607,7 @@ void moneypunct_byname<wchar_t, true>::init(const char* nm) {
     bb = lc->positive_sign;
     j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, loc.get());
     if (j == size_t(-1))
-      __throw_runtime_error("locale not supported");
+      std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
     __positive_sign_.assign(wbuf, wbe);
   }
@@ -5617,7 +5622,7 @@ void moneypunct_byname<wchar_t, true>::init(const char* nm) {
     bb = lc->negative_sign;
     j  = __locale::__mbsrtowcs(wbuf, &bb, countof(wbuf), &mb, loc.get());
     if (j == size_t(-1))
-      __throw_runtime_error("locale not supported");
+      std::__throw_runtime_error("locale not supported");
     wbe = wbuf + j;
     __negative_sign_.assign(wbuf, wbe);
   }
@@ -5644,6 +5649,16 @@ void moneypunct_byname<wchar_t, true>::init(const char* nm) {
 #endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 void __do_nothing(void*) {}
+
+// Legacy ABI __num_get functions - the new ones are _LIBCPP_HIDE_FROM_ABI
+template <class _CharT>
+string __num_get<_CharT>::__stage2_int_prep(ios_base& __iob, _CharT* __atoms, _CharT& __thousands_sep) {
+  locale __loc = __iob.getloc();
+  std::use_facet<ctype<_CharT> >(__loc).widen(__src, __src + __int_chr_cnt, __atoms);
+  const numpunct<_CharT>& __np = std::use_facet<numpunct<_CharT> >(__loc);
+  __thousands_sep              = __np.thousands_sep();
+  return __np.grouping();
+}
 
 template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS collate<char>;
 _LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS collate<wchar_t>;)

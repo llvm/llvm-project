@@ -28,6 +28,7 @@ class Function;
 class LLVMContext;
 class Module;
 class AttributeList;
+class AttributeSet;
 
 /// This namespace contains an enum with a value for every intrinsic/builtin
 /// function known by LLVM. The enum values are returned by
@@ -87,6 +88,9 @@ namespace Intrinsic {
   /// Return the attributes for an intrinsic.
   AttributeList getAttributes(LLVMContext &C, ID id);
 
+  /// Return the function attributes for an intrinsic.
+  AttributeSet getFnAttributes(LLVMContext &C, ID id);
+
   /// Look up the Function declaration of the intrinsic \p id in the Module
   /// \p M. If it does not exist, add a declaration and return it. Otherwise,
   /// return the existing declaration.
@@ -111,13 +115,6 @@ namespace Intrinsic {
   /// This version supports overloaded intrinsics.
   Function *getDeclarationIfExists(Module *M, ID id, ArrayRef<Type *> Tys,
                                    FunctionType *FT = nullptr);
-
-  /// Looks up Name in NameTable via binary search. NameTable must be sorted
-  /// and all entries must start with "llvm.".  If NameTable contains an exact
-  /// match for Name or a prefix of Name followed by a dot, its index in
-  /// NameTable is returned. Otherwise, -1 is returned.
-  int lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
-                                StringRef Name, StringRef Target = "");
 
   /// Map a Clang builtin name to an intrinsic ID.
   ID getIntrinsicForClangBuiltin(StringRef TargetPrefix, StringRef BuiltinName);
@@ -155,6 +152,9 @@ namespace Intrinsic {
       ExtendArgument,
       TruncArgument,
       HalfVecArgument,
+      OneThirdVecArgument,
+      OneFifthVecArgument,
+      OneSeventhVecArgument,
       SameVecWidthArgument,
       VecOfAnyPtrsToElt,
       VecElementArgument,
@@ -166,6 +166,9 @@ namespace Intrinsic {
       AArch64Svcount,
     } Kind;
 
+    // These three have to be contiguous.
+    static_assert(OneFifthVecArgument == OneThirdVecArgument + 1 &&
+                  OneSeventhVecArgument == OneFifthVecArgument + 1);
     union {
       unsigned Integer_Width;
       unsigned Float_Width;
@@ -185,15 +188,17 @@ namespace Intrinsic {
     unsigned getArgumentNumber() const {
       assert(Kind == Argument || Kind == ExtendArgument ||
              Kind == TruncArgument || Kind == HalfVecArgument ||
-             Kind == SameVecWidthArgument || Kind == VecElementArgument ||
-             Kind == Subdivide2Argument || Kind == Subdivide4Argument ||
-             Kind == VecOfBitcastsToInt);
+             Kind == OneThirdVecArgument || Kind == OneFifthVecArgument ||
+             Kind == OneSeventhVecArgument || Kind == SameVecWidthArgument ||
+             Kind == VecElementArgument || Kind == Subdivide2Argument ||
+             Kind == Subdivide4Argument || Kind == VecOfBitcastsToInt);
       return Argument_Info >> 3;
     }
     ArgKind getArgumentKind() const {
       assert(Kind == Argument || Kind == ExtendArgument ||
              Kind == TruncArgument || Kind == HalfVecArgument ||
-             Kind == SameVecWidthArgument ||
+             Kind == OneThirdVecArgument || Kind == OneFifthVecArgument ||
+             Kind == OneSeventhVecArgument || Kind == SameVecWidthArgument ||
              Kind == VecElementArgument || Kind == Subdivide2Argument ||
              Kind == Subdivide4Argument || Kind == VecOfBitcastsToInt);
       return (ArgKind)(Argument_Info & 7);

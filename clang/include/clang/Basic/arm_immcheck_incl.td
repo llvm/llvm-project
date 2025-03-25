@@ -2,7 +2,9 @@ class ImmCheckType<int val> {
   int Value = val;
 }
 
-// These must be kept in sync with the flags in include/clang/Basic/TargetBuiltins.h
+
+// For SVE, container_size refers to the width of a vector segment (128b).
+// For NEON, container_size refers to the vector width (64b or 128b).
 def ImmCheck0_31                : ImmCheckType<0>;  // 0..31 (used for e.g. predicate patterns)
 def ImmCheck1_16                : ImmCheckType<1>;  // 1..16
 def ImmCheckExtract             : ImmCheckType<2>;  // 0..(2048/sizeinbits(elt) - 1)
@@ -10,10 +12,10 @@ def ImmCheckShiftRight          : ImmCheckType<3>;  // 1..sizeinbits(elt)
 def ImmCheckShiftRightNarrow    : ImmCheckType<4>;  // 1..sizeinbits(elt)/2
 def ImmCheckShiftLeft           : ImmCheckType<5>;  // 0..(sizeinbits(elt) - 1)
 def ImmCheck0_7                 : ImmCheckType<6>;  // 0..7
-def ImmCheckLaneIndex           : ImmCheckType<7>;  // 0..(sizeinbits(vec)/(sizeinbits(elt)) - 1)
+def ImmCheckLaneIndex           : ImmCheckType<7>;  // 0..(container_size/(sizeinbits(elt)) - 1)
 def ImmCheckCvt                 : ImmCheckType<8>;  // 1..sizeinbits(elt) (same as ShiftRight)
-def ImmCheckLaneIndexCompRotate : ImmCheckType<9>;  // 0..(sizeinbits(vec)/(2*sizeinbits(elt)) - 1)
-def ImmCheckLaneIndexDot        : ImmCheckType<10>; // 0..(sizeinbits(vec)/(4*sizeinbits(elt)) - 1)
+def ImmCheckLaneIndexCompRotate : ImmCheckType<9>;  // 0..(container_size/(2*sizeinbits(elt)) - 1)
+def ImmCheckLaneIndexDot        : ImmCheckType<10>; // 0..(container_size/(4*sizeinbits(elt)) - 1)
 def ImmCheckComplexRot90_270    : ImmCheckType<11>; // [90,270]
 def ImmCheckComplexRotAll90     : ImmCheckType<12>; // [0, 90, 180,270]
 def ImmCheck0_13                : ImmCheckType<13>; // 0..13

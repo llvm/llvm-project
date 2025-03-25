@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_DANGLING_H
-#define _LIBCPP___RANGES_DANGLING_H
+#ifndef _LIBCPP___CXX03___RANGES_DANGLING_H
+#define _LIBCPP___CXX03___RANGES_DANGLING_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__ranges/access.h>
@@ -39,4 +39,4 @@ using borrowed_iterator_t = _If<borrowed_range<_Rp>, iterator_t<_Rp>, dangling>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_DANGLING_H
+#endif // _LIBCPP___CXX03___RANGES_DANGLING_H
