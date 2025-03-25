@@ -204,12 +204,20 @@ constexpr bool test_all() {
     dangling_1st(std::ranges::stable_partition, in, unary_pred);
   }
   dangling_1st(std::ranges::sort, in);
+#if TEST_STD_VER < 26
   if (!std::is_constant_evaluated())
+#endif
+  {
     dangling_1st(std::ranges::stable_sort, in);
+  }
   dangling_1st(std::ranges::partial_sort, in, mid);
   dangling_1st(std::ranges::nth_element, in, mid);
+#if TEST_STD_VER < 26
   if (!std::is_constant_evaluated())
+#endif
+  {
     dangling_1st(std::ranges::inplace_merge, in, mid);
+  }
   dangling_1st(std::ranges::make_heap, in);
   dangling_1st(std::ranges::push_heap, in);
   dangling_1st(std::ranges::pop_heap, in);

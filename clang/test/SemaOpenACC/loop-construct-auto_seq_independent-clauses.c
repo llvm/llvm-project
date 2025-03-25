@@ -33,6 +33,19 @@ void uses() {
 #pragma acc loop independent seq
   for(unsigned i = 0; i < 5; ++i);
 
+  // expected-error@+2{{OpenACC clause 'seq' on 'loop' construct conflicts with previous data dependence clause}}
+  // expected-note@+1{{previous clause is here}}
+#pragma acc loop seq seq
+  for(unsigned i = 0; i < 5; ++i);
+  // expected-error@+2{{OpenACC clause 'independent' on 'loop' construct conflicts with previous data dependence clause}}
+  // expected-note@+1{{previous clause is here}}
+#pragma acc loop independent independent
+  for(unsigned i = 0; i < 5; ++i);
+  // expected-error@+2{{OpenACC clause 'auto' on 'loop' construct conflicts with previous data dependence clause}}
+  // expected-note@+1{{previous clause is here}}
+#pragma acc loop auto auto
+  for(unsigned i = 0; i < 5; ++i);
+
   int Var;
   int *VarPtr;
 
@@ -47,7 +60,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop auto vector
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'loop' directive}}
 #pragma acc loop auto nohost
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
@@ -137,7 +150,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop auto collapse(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'loop' directive}}
 #pragma acc loop auto bind(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'vector_length' clause is not valid on 'loop' directive}}
@@ -181,7 +194,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop vector auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'loop' directive}}
 #pragma acc loop nohost auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
@@ -271,7 +284,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop collapse(1) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'loop' directive}}
 #pragma acc loop bind(Var) auto
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'vector_length' clause is not valid on 'loop' directive}}
@@ -316,7 +329,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop independent vector
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'loop' directive}}
 #pragma acc loop independent nohost
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
@@ -406,7 +419,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop independent collapse(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'loop' directive}}
 #pragma acc loop independent bind(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'vector_length' clause is not valid on 'loop' directive}}
@@ -450,7 +463,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop vector independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'loop' directive}}
 #pragma acc loop nohost independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
@@ -540,7 +553,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop collapse(1) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'loop' directive}}
 #pragma acc loop bind(Var) independent
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'vector_length' clause is not valid on 'loop' directive}}
@@ -593,7 +606,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'loop' directive}}
 #pragma acc loop seq if_present
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'loop' directive}}
 #pragma acc loop seq nohost
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
@@ -683,7 +696,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop seq collapse(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'loop' directive}}
 #pragma acc loop seq bind(Var)
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'vector_length' clause is not valid on 'loop' directive}}
@@ -733,7 +746,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'if_present' clause is not valid on 'loop' directive}}
 #pragma acc loop if_present seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'nohost' not yet implemented}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'loop' directive}}
 #pragma acc loop nohost seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}
@@ -823,7 +836,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc loop collapse(1) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'loop' directive}}
 #pragma acc loop bind(Var) seq
   for(unsigned i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'vector_length' clause is not valid on 'loop' directive}}

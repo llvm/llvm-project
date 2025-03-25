@@ -116,8 +116,10 @@ bool LiveDebugValues::runOnMachineFunction(MachineFunction &MF) {
     TheImpl = &*InstrRefImpl;
   }
 
-  return TheImpl->ExtendRanges(MF, DomTree, TPC, InputBBLimit,
-                               InputDbgValueLimit);
+  return TheImpl->ExtendRanges(
+      MF, DomTree,
+      TPC->getTM<TargetMachine>().Options.ShouldEmitDebugEntryValues(),
+      InputBBLimit, InputDbgValueLimit);
 }
 
 bool llvm::debuginfoShouldUseDebugInstrRef(const Triple &T) {

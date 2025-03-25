@@ -1261,14 +1261,6 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
   switch (Kind) {
   default:
     break;
-  // The .odp creation emits a relocation against the symbol ".TOC." which
-  // create a R_PPC64_TOC relocation. However the relocation symbol name
-  // in final object creation should be NULL, since the symbol does not
-  // really exist, it is just the reference to TOC base for the current
-  // object file. Since the symbol is undefined, returning false results
-  // in a relocation with a null section which is the desired result.
-  case MCSymbolRefExpr::VK_PPC_TOCBASE:
-    return false;
 
   // These VariantKind cause the relocation to refer to something other than
   // the symbol itself, like a linker generated table. Since the address of
@@ -1277,18 +1269,22 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
   case MCSymbolRefExpr::VK_GOT:
   case MCSymbolRefExpr::VK_PLT:
   case MCSymbolRefExpr::VK_GOTPCREL:
-  case MCSymbolRefExpr::VK_GOTPCREL_NORELAX:
-  case MCSymbolRefExpr::VK_PPC_GOT_LO:
-  case MCSymbolRefExpr::VK_PPC_GOT_HI:
-  case MCSymbolRefExpr::VK_PPC_GOT_HA:
     return true;
   }
 
   // An undefined symbol is not in any section, so the relocation has to point
   // to the symbol itself.
   assert(Sym && "Expected a symbol");
-  if (Sym->isUndefined())
-    return true;
+  if (Sym->isUndefined()) {
+    // The .odp creation emits a relocation against the symbol ".TOC." which
+    // create a R_PPC64_TOC relocation. However the relocation symbol name
+    // in final object creation should be NULL, since the symbol does not
+    // really exist, it is just the reference to TOC base for the current
+    // object file. Since the symbol is undefined, returning false results
+    // in a relocation with a null section which is the desired result.
+    return !(Type == ELF::R_PPC64_TOC &&
+             TargetObjectWriter->getEMachine() == ELF::EM_PPC64);
+  }
 
   // For memory-tagged symbols, ensure that the relocation uses the symbol. For
   // tagged symbols, we emit an empty relocation (R_AARCH64_NONE) in a special

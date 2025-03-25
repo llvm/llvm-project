@@ -22,7 +22,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeAtomicExpandLegacyPass(Registry);
   initializeBasicBlockPathCloningPass(Registry);
   initializeBasicBlockSectionsPass(Registry);
-  initializeBranchFolderPassPass(Registry);
+  initializeBranchFolderLegacyPass(Registry);
   initializeBranchRelaxationPass(Registry);
   initializeBreakFalseDepsPass(Registry);
   initializeCallBrPreparePass(Registry);
@@ -33,17 +33,17 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeCodeGenPrepareLegacyPassPass(Registry);
   initializeDeadMachineInstructionElimPass(Registry);
   initializeDebugifyMachineModulePass(Registry);
-  initializeDetectDeadLanesPass(Registry);
+  initializeDetectDeadLanesLegacyPass(Registry);
   initializeDwarfEHPrepareLegacyPassPass(Registry);
   initializeEarlyIfConverterLegacyPass(Registry);
   initializeEarlyIfPredicatorPass(Registry);
   initializeEarlyMachineLICMPass(Registry);
   initializeEarlyTailDuplicateLegacyPass(Registry);
   initializeExpandLargeDivRemLegacyPassPass(Registry);
-  initializeExpandLargeFpConvertLegacyPassPass(Registry);
+  initializeExpandFpLegacyPassPass(Registry);
   initializeExpandMemCmpLegacyPassPass(Registry);
   initializeExpandPostRALegacyPass(Registry);
-  initializeFEntryInserterPass(Registry);
+  initializeFEntryInserterLegacyPass(Registry);
   initializeFinalizeISelPass(Registry);
   initializeFinalizeMachineBundlesPass(Registry);
   initializeFixupStatepointCallerSavedLegacyPass(Registry);
@@ -72,7 +72,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMIRNamerPass(Registry);
   initializeMIRProfileLoaderPassPass(Registry);
   initializeMachineBlockFrequencyInfoWrapperPassPass(Registry);
-  initializeMachineBlockPlacementPass(Registry);
+  initializeMachineBlockPlacementLegacyPass(Registry);
   initializeMachineBlockPlacementStatsPass(Registry);
   initializeMachineCFGPrinterPass(Registry);
   initializeMachineCSELegacyPass(Registry);
@@ -103,7 +103,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeOptimizePHIsLegacyPass(Registry);
   initializePEIPass(Registry);
   initializePHIEliminationPass(Registry);
-  initializePatchableFunctionPass(Registry);
+  initializePatchableFunctionLegacyPass(Registry);
   initializePeepholeOptimizerLegacyPass(Registry);
   initializePostMachineSchedulerLegacyPass(Registry);
   initializePostRAHazardRecognizerPass(Registry);

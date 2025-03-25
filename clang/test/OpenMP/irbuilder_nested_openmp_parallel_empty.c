@@ -16,10 +16,10 @@
 // ALL-NEXT:    br label [[OMP_PARALLEL:%.*]]
 // ALL:       omp_parallel:
 // ALL-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 0, ptr @_Z17nested_parallel_0v..omp_par.1)
-// ALL-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT12:%.*]]
-// ALL:       omp.par.outlined.exit12:
+// ALL-NEXT:    br label [[OMP_PAR_EXIT:%.*]]
+// ALL:       omp.par.exit7:
 // ALL-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-// ALL:       omp.par.exit.split:
+// ALL:       omp.par.exit.exitStub:
 // ALL-NEXT:    ret void
 //
 void nested_parallel_0(void) {
@@ -50,10 +50,8 @@ void nested_parallel_0(void) {
 // ALL-NEXT:    [[GEP_R_ADDR17:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[STRUCTARG14]], i32 0, i32 2
 // ALL-NEXT:    store ptr [[R_ADDR]], ptr [[GEP_R_ADDR17]], align 8
 // ALL-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z17nested_parallel_1Pfid..omp_par.2, ptr [[STRUCTARG14]])
-// ALL-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT13:%.*]]
-// ALL:       omp.par.outlined.exit13:
-// ALL-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-// ALL:       omp.par.exit.split:
+// ALL-NEXT:    br label [[OMP_PAR_EXIT:%.*]]
+// ALL:       omp.par.exit:
 // ALL-NEXT:    ret void
 //
 void nested_parallel_1(float *r, int a, double b) {
@@ -85,10 +83,8 @@ void nested_parallel_1(float *r, int a, double b) {
 // ALL-NEXT:    [[GEP_R_ADDR:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[STRUCTARG]], i32 0, i32 2
 // ALL-NEXT:    store ptr [[R_ADDR]], ptr [[GEP_R_ADDR]], align 8
 // ALL-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z17nested_parallel_2Pfid..omp_par.5, ptr [[STRUCTARG]])
-// ALL-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT55:%.*]]
-// ALL:       omp.par.outlined.exit55:
-// ALL-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-// ALL:       omp.par.exit.split:
+// ALL-NEXT:    br label [[OMP_PAR_EXIT:%.*]]
+// ALL:       omp.par.exit:
 // ALL-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // ALL-NEXT:    [[CONV56:%.*]] = sitofp i32 [[TMP0]] to double
 // ALL-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8

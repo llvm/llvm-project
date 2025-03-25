@@ -54,10 +54,7 @@ bool MCAsmParserExtension::parseDirectiveCGProfile(StringRef, SMLoc) {
   MCSymbol *ToSym = getContext().getOrCreateSymbol(To);
 
   getStreamer().emitCGProfileEntry(
-      MCSymbolRefExpr::create(FromSym, MCSymbolRefExpr::VK_None, getContext(),
-                              FromLoc),
-      MCSymbolRefExpr::create(ToSym, MCSymbolRefExpr::VK_None, getContext(),
-                              ToLoc),
-      Count);
+      MCSymbolRefExpr::create(FromSym, getContext(), FromLoc),
+      MCSymbolRefExpr::create(ToSym, getContext(), ToLoc), Count);
   return false;
 }

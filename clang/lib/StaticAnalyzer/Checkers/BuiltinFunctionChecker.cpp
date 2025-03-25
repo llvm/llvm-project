@@ -23,7 +23,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 
 using namespace clang;
@@ -288,25 +287,6 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
     handleOverflowBuiltin(Call, C, BO_Add,
                           getOverflowBuiltinResultType(Call, C, BI));
     return true;
-  case Builtin::BI__builtin_assume:
-  case Builtin::BI__assume: {
-    assert (Call.getNumArgs() > 0);
-    SVal Arg = Call.getArgSVal(0);
-    if (Arg.isUndef())
-      return true; // Return true to model purity.
-
-    state = state->assume(Arg.castAs<DefinedOrUnknownSVal>(), true);
-    // FIXME: do we want to warn here? Not right now. The most reports might
-    // come from infeasible paths, thus being false positives.
-    if (!state) {
-      C.generateSink(C.getState(), C.getPredecessor());
-      return true;
-    }
-
-    C.addTransition(state);
-    return true;
-  }
-
   case Builtin::BI__builtin_unpredictable:
   case Builtin::BI__builtin_expect:
   case Builtin::BI__builtin_expect_with_probability:

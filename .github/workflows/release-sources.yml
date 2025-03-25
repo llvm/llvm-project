@@ -47,7 +47,7 @@ jobs:
     outputs:
       ref: ${{ steps.inputs.outputs.ref }}
       export-args: ${{ steps.inputs.outputs.export-args }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - id: inputs
         run: |
@@ -63,7 +63,7 @@ jobs:
   release-sources:
     name: Package Release Sources
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs:
       - inputs
     permissions:

@@ -143,6 +143,9 @@ inline ObjectList makeObjects(const parser::OmpObjectList &objects,
   return makeList(objects.v, makeObjectFn(semaCtx));
 }
 
+ObjectList makeObjects(const parser::OmpArgumentList &objects,
+                       semantics::SemanticsContext &semaCtx);
+
 template <typename FuncTy, //
           typename ArgTy,  //
           typename ResultTy = std::invoke_result_t<FuncTy, ArgTy>>
@@ -286,6 +289,7 @@ using To = tomp::clause::ToT<TypeTy, IdTy, ExprTy>;
 using UnifiedAddress = tomp::clause::UnifiedAddressT<TypeTy, IdTy, ExprTy>;
 using UnifiedSharedMemory =
     tomp::clause::UnifiedSharedMemoryT<TypeTy, IdTy, ExprTy>;
+using SelfMaps = tomp::clause::SelfMapsT<TypeTy, IdTy, ExprTy>;
 using Uniform = tomp::clause::UniformT<TypeTy, IdTy, ExprTy>;
 using Unknown = tomp::clause::UnknownT<TypeTy, IdTy, ExprTy>;
 using Untied = tomp::clause::UntiedT<TypeTy, IdTy, ExprTy>;

@@ -218,7 +218,7 @@ static bool ContainsProtectableArray(Type *Ty, Module *M, unsigned SSPBufferSize
       // add stack protectors unless the array is a character array.
       // However, in strong mode any array, regardless of type and size,
       // triggers a protector.
-      if (!Strong && (InStruct || !Triple(M->getTargetTriple()).isOSDarwin()))
+      if (!Strong && (InStruct || !M->getTargetTriple().isOSDarwin()))
         return false;
     }
 

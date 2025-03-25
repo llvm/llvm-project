@@ -1478,7 +1478,7 @@ void DwarfUnit::constructSubrangeDIE(DIE &DW_Subrange, const DISubrangeType *SR,
 
   AddBoundTypeEntry(dwarf::DW_AT_upper_bound, SR->getUpperBound());
 
-  AddBoundTypeEntry(dwarf::DW_AT_byte_stride, SR->getStride());
+  AddBoundTypeEntry(dwarf::DW_AT_bit_stride, SR->getStride());
 
   AddBoundTypeEntry(dwarf::DW_AT_GNU_bias, SR->getBias());
 }
@@ -1670,7 +1670,7 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   DINodeArray Elements = CTy->getElements();
   for (DINode *E : Elements) {
     if (auto *Element = dyn_cast_or_null<DISubrangeType>(E)) {
-      DIE &TyDIE = createAndAddDIE(CTy->getTag(), Buffer, CTy);
+      DIE &TyDIE = createAndAddDIE(Element->getTag(), Buffer, CTy);
       constructSubrangeDIE(TyDIE, Element, true);
     } else if (auto *Element = dyn_cast_or_null<DISubrange>(E))
       constructSubrangeDIE(Buffer, Element);

@@ -54,4 +54,5 @@ exit:
 ;--- profile.yaml
 Contexts:
   - Guid: 1234
+    TotalRootEntryCount: 12
     Counters: [6,0,0,0]

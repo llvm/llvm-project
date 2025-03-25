@@ -142,7 +142,7 @@ void CompletionsRequestHandler::operator()(
     frame.GetThread().SetSelectedFrame(frame.GetFrameID());
   }
 
-  std::string text = GetString(arguments, "text").str();
+  std::string text = GetString(arguments, "text").value_or("").str();
   auto original_column =
       GetInteger<int64_t>(arguments, "column").value_or(text.size());
   auto original_line = GetInteger<int64_t>(arguments, "line").value_or(1);

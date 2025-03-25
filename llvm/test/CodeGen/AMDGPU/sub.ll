@@ -1068,7 +1068,7 @@ define amdgpu_ps void @sub_select_vop3(i32 inreg %s, i32 %v) {
 ; GFX12-NEXT:    s_endpgm
   %vcc = call i64 asm sideeffect "; def vcc", "={vcc}"()
   %sub = sub i32 %v, %s
-  store i32 %sub, ptr addrspace(3) undef
+  store i32 %sub, ptr addrspace(3) poison
   call void asm sideeffect "; use vcc", "{vcc}"(i64 %vcc)
   ret void
 }

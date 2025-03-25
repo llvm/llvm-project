@@ -65,7 +65,9 @@ public:
   /// parameter. For example, "MacOSX.10.14.sdk".
   XcodeSDK(std::string &&name) : m_name(std::move(name)) {}
   XcodeSDK(std::string name, FileSpec sysroot)
-      : m_name(std::move(name)), m_sysroot(std::move(sysroot)) {}
+      : m_name(std::move(name)), m_sysroot(std::move(sysroot)) {
+    assert(!m_sysroot || m_name == m_sysroot.GetFilename().GetStringRef());
+  }
   static XcodeSDK GetAnyMacOS() { return XcodeSDK("MacOSX.sdk"); }
 
   /// The merge function follows a strict order to maintain monotonicity:
