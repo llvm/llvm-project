@@ -155,7 +155,7 @@ const D &d3(c); // FIXME ill-formed
 #endif
 } // namespace cwg2267
 
-namespace cwg2273 { // cwg2273: 3.3
+namespace cwg2273 { // cwg2273: 21
 #if __cplusplus >= 201103L
 struct A {
   A(int = 0) = delete; // #cwg2273-A
@@ -169,10 +169,28 @@ B b;
 // since-cxx11-error@-1 {{call to implicitly-deleted default constructor of 'B'}}
 //   since-cxx11-note@#cwg2273-B {{default constructor of 'B' is implicitly deleted because base class 'A' has a deleted default constructor}}
 //   since-cxx11-note@#cwg2273-A {{'A' has been explicitly marked deleted here}}
+
+struct X {
+  X(float); // #cwg2273-X
+  X(void*, int = 0) = delete;
+};
+
+struct Y : X {
+  using X::X; // #cwg2273-Y1
+  Y(double); // #cwg2273-Y2
+  Y(void* const, long = 1);
+};
+
+Y y = 1;
+// since-cxx11-error@-1 {{conversion from 'int' to 'Y' is ambiguous}}
+//   since-cxx11-note@#cwg2273-X {{candidate inherited constructor}}
+//   since-cxx11-note@#cwg2273-Y1 {{constructor from base class 'X' inherited here}}
+//   since-cxx11-note@#cwg2273-Y2 {{candidate constructor}}
+Y z = nullptr;
 #endif
 } // namespace cwg2273
 
-namespace cwg2277 { // cwg2277: partial
+namespace cwg2277 { // cwg2277: 21
 #if __cplusplus >= 201103L
 struct A {
   A(int, int = 0);
@@ -188,7 +206,7 @@ struct B : A {
 
 void g() {
   B b{0};
-  b.f(0); // FIXME: this is well-formed for the same reason as initialization of 'b' above
+  b.f(0);
   // since-cxx11-error@-1 {{call to member function 'f' is ambiguous}}
   //   since-cxx11-note@#cwg2277-A-f {{candidate function}}
   //   since-cxx11-note@#cwg2277-B-f {{candidate function}}
