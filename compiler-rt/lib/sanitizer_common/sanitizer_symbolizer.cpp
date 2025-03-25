@@ -46,7 +46,10 @@ void AddressInfo::FillModuleInfo(const char *mod_name, uptr mod_offset,
 
 void AddressInfo::FillModuleInfo(const LoadedModule &mod) {
   module = internal_strdup(mod.full_name());
-  module_offset = address - mod.base_address();
+  // On some platforms, like on AIX, the first instructions does not start from
+  // 0x0, we need to addd the start back to get correct instruction offset in
+  // the objects.
+  module_offset = address - mod.base_address() + mod.get_instr_start();
   module_arch = mod.arch();
   if (mod.uuid_size())
     internal_memcpy(uuid, mod.uuid(), mod.uuid_size());

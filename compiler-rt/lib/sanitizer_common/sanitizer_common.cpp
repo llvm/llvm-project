@@ -275,6 +275,12 @@ const char *GetProcessName() {
   return process_name_cache_str;
 }
 
+const char *GetBinaryName() {
+  if (binary_name_cache_str[0] == '\0')
+    ReadBinaryName(binary_name_cache_str, sizeof(binary_name_cache_str));
+  return binary_name_cache_str;
+}
+
 static uptr ReadProcessName(/*out*/ char *buf, uptr buf_len) {
   ReadLongProcessName(buf, buf_len);
   char *s = const_cast<char *>(StripModuleName(buf));
