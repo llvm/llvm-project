@@ -106,18 +106,28 @@ static llvm::LogicalResult isSnakeCase(llvm::StringRef in, mlir::Operation *loc,
 LogicalResult DialectOp::verify() {
   if (!Dialect::isValidNamespace(getName()))
     return emitOpError("invalid dialect name");
-  if (failed(isSnakeCase(getName(), getOperation(), "dialect")))
+  if (failed(isSnakeCase(getSymName(), getOperation(), "dialect")))
     return failure();
 
   return success();
 }
 
 LogicalResult OperationOp::verify() {
-  return isSnakeCase(getName(), getOperation(), "operation");
+  return isSnakeCase(getSymName(), getOperation(), "operation");
 }
 
 LogicalResult TypeOp::verify() {
-  return isSnakeCase(getName(), getOperation(), "type");
+  auto symName = getSymName();
+  if (symName.front() == '!')
+    symName = symName.substr(1);
+  return isSnakeCase(symName, getOperation(), "type");
+}
+
+LogicalResult AttributeOp::verify() {
+  auto symName = getSymName();
+  if (symName.front() == '#')
+    symName = symName.substr(1);
+  return isSnakeCase(symName, getOperation(), "attribute");
 }
 
 LogicalResult OperationOp::verifyRegions() {

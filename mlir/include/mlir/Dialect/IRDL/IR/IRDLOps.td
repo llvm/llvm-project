@@ -127,6 +127,8 @@ def IRDL_AttributeOp : IRDL_Op<"attribute",
   let regions = (region SizedRegion<1>:$body);
   let assemblyFormat =
     "$sym_name attr-dict-with-keyword custom<SingleBlockRegion>($body)";
+
+  let hasVerifier = 1;
 }
 
 def IRDL_ParametersOp : IRDL_Op<"parameters",
