@@ -31,6 +31,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "bundle-indexed-load-store"
 
+constexpr unsigned NumSrcStagingRegs = 6;
+
 namespace {
 
 // OpInLdSt and OpInCoreMI are null if MI is CoreMI, including if V_STORE_IDX is
@@ -56,34 +58,114 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
+    AU.addRequired<AAResultsWrapperPass>();
+    AU.addRequired<MachineCycleInfoWrapperPass>();
+    AU.addPreserved<MachineCycleInfoWrapperPass>();
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 private:
   bool bundleIdxLdSt(MachineInstr *MI);
-  void recoverIdx0ForPrivateUse(const MachineRegisterInfo &MRI,
-                                SmallVector<BundleItem, 4> &Worklist,
+  bool sinkInstruction(MachineInstr &MI, bool &SawStore);
+  bool sinkLoadsAndCoreMIs(MachineFunction &MF);
+  SmallVector<std::pair<MachineBasicBlock *, MachineBasicBlock::iterator>, 4>
+  findSuccsToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB);
+  void recoverIdx0ForPrivateUse(SmallVector<BundleItem, 4> &Worklist,
                                 std::unordered_set<unsigned> &IdxList,
                                 unsigned &SrcStagingRegIdx);
-  const TargetRegisterInfo *TRI;
-  const SIInstrInfo *STI;
+  bool hasStoreBetween(MachineBasicBlock *From, MachineBasicBlock *To,
+                       MachineInstr &MI);
+  bool blockPrologueInterferes(const MachineBasicBlock *BB,
+                               MachineBasicBlock::const_iterator End,
+                               const MachineInstr &MI);
+  void findAllPaths(MachineBasicBlock *Start, MachineBasicBlock *End,
+                    SmallVector<SmallVector<MachineBasicBlock *, 8>, 8> &Paths,
+                    SmallVector<MachineBasicBlock *, 8> &CurrentPath,
+                    DenseSet<MachineBasicBlock *> &Visited);
+  SmallVector<SmallVector<MachineBasicBlock *, 8>, 8>
+  getAllPathsBetweenBlocks(MachineBasicBlock *Start, MachineBasicBlock *End);
+
+  DenseSet<Register> RegsToClearKillFlags;
+
+  DenseMap<std::pair<MachineBasicBlock *, MachineBasicBlock *>,
+           SmallVector<MachineInstr *>>
+      StoreInstrCache;
+
+  DenseMap<std::pair<MachineBasicBlock *, MachineBasicBlock *>, bool>
+      HasStoreCache;
+
+  DenseMap<std::pair<MachineBasicBlock *, MachineBasicBlock *>,
+           SmallVector<SmallVector<MachineBasicBlock *, 8>, 8>>
+      PathsCache;
+
+  const TargetRegisterInfo *TRI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  const SIInstrInfo *STI = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
+  AliasAnalysis *AA = nullptr;
+  MachineCycleInfo *CI = nullptr;
+
   bool NeedsAlignedVGPRs;
 };
 
+// Sink an instruction MI to it's position InsertPos in SuccToSinkTo.
+void performSink(MachineInstr &MI, MachineBasicBlock &SuccToSinkTo,
+                 MachineBasicBlock::iterator InsertPos) {
+  // If we cannot find a location to use (merge with), then we erase the debug
+  // location to prevent debug-info driven tools from potentially reporting
+  // wrong location information.
+  if (!SuccToSinkTo.empty() && InsertPos != SuccToSinkTo.end())
+    MI.setDebugLoc(DILocation::getMergedLocation(MI.getDebugLoc(),
+                                                 InsertPos->getDebugLoc()));
+  else
+    MI.setDebugLoc(DebugLoc());
+
+  // Move the instruction.
+  MachineBasicBlock *ParentBlock = MI.getParent();
+  SuccToSinkTo.splice(InsertPos, ParentBlock, MI,
+                      ++MachineBasicBlock::iterator(MI));
+}
 } // End anonymous namespace.
 
-char AMDGPUBundleIdxLdSt::ID = 0;
-char &llvm::AMDGPUBundleIdxLdStID = AMDGPUBundleIdxLdSt::ID;
-
-INITIALIZE_PASS(AMDGPUBundleIdxLdSt, DEBUG_TYPE,
-                "Bundle indexed load/store with uses", false, false)
-
-constexpr unsigned NumSrcStagingRegs = 6;
+// Return true if a target defined block prologue instruction interferes
+// with a sink candidate.
+bool AMDGPUBundleIdxLdSt::blockPrologueInterferes(
+    const MachineBasicBlock *BB, MachineBasicBlock::const_iterator End,
+    const MachineInstr &MI) {
+  for (MachineBasicBlock::const_iterator PI = BB->getFirstNonPHI(); PI != End;
+       ++PI) {
+    // Only check target defined prologue instructions
+    if (!TII->isBasicBlockPrologue(*PI))
+      continue;
+    for (auto &MO : MI.operands()) {
+      if (!MO.isReg())
+        continue;
+      Register Reg = MO.getReg();
+      if (!Reg)
+        continue;
+      if (MO.isUse()) {
+        if (Reg.isPhysical() &&
+            (TII->isIgnorableUse(MO) || (MRI && MRI->isConstantPhysReg(Reg))))
+          continue;
+        if (PI->modifiesRegister(Reg, TRI))
+          return true;
+      } else {
+        if (PI->readsRegister(Reg, TRI))
+          return true;
+        // Check for interference with non-dead defs
+        auto *DefOp = PI->findRegisterDefOperand(Reg, TRI, false, true);
+        if (DefOp && !DefOp->isDead())
+          return true;
+      }
+    }
+  }
+  return false;
+}
 
 void AMDGPUBundleIdxLdSt::recoverIdx0ForPrivateUse(
-    const MachineRegisterInfo &MRI, SmallVector<BundleItem, 4> &Worklist,
-    std::unordered_set<unsigned> &IdxList, unsigned &SrcStagingRegIdx) {
+    SmallVector<BundleItem, 4> &Worklist, std::unordered_set<unsigned> &IdxList,
+    unsigned &SrcStagingRegIdx) {
   // First, find the idx reg with the least V_LOAD_IDX uses
   // Second, remove the loads that use the idx from the worklist
   // and remap the staging regs to get an updated SrcStagingRegIdx
@@ -145,12 +227,358 @@ void AMDGPUBundleIdxLdSt::recoverIdx0ForPrivateUse(
   SrcStagingRegIdx = NewSrcStagingRegIdx;
 }
 
+// Find all paths between a given Start and End block.
+void AMDGPUBundleIdxLdSt::findAllPaths(
+    MachineBasicBlock *Start, MachineBasicBlock *End,
+    SmallVector<SmallVector<MachineBasicBlock *, 8>, 8> &Paths,
+    SmallVector<MachineBasicBlock *, 8> &CurrentPath,
+    DenseSet<MachineBasicBlock *> &Visited) {
+  if (Start == End) {
+    Paths.push_back(CurrentPath);
+    return;
+  }
+
+  Visited.insert(Start);
+  for (MachineBasicBlock *Succ : Start->successors()) {
+    if (Visited.count(Succ) == 0) { // Avoid loops.
+      CurrentPath.push_back(Succ);
+      findAllPaths(Succ, End, Paths, CurrentPath, Visited);
+      CurrentPath.pop_back();
+    }
+  }
+  Visited.erase(Start);
+}
+
+// Wraps the recursion and uses a cache for already seen Start/End pairs
+SmallVector<SmallVector<MachineBasicBlock *, 8>, 8>
+AMDGPUBundleIdxLdSt::getAllPathsBetweenBlocks(MachineBasicBlock *Start,
+                                              MachineBasicBlock *End) {
+
+  // Check cache to see if we've already computed these paths.
+  auto BlockPair = std::make_pair(Start, End);
+  if (auto It = PathsCache.find(BlockPair); It != PathsCache.end())
+    return It->second;
+
+  SmallVector<SmallVector<MachineBasicBlock *, 8>, 8> Paths;
+  SmallVector<MachineBasicBlock *, 8> CurrentPath;
+  DenseSet<MachineBasicBlock *> Visited;
+  CurrentPath.push_back(Start);
+  findAllPaths(Start, End, Paths, CurrentPath, Visited);
+
+  PathsCache[BlockPair] = Paths;
+
+  return Paths;
+}
+
+// Find successors to sink this instruction to, and their insertion points.
+// This function uses an all-or-nothing strategy: if we can't sink
+// to all basic blocks that have a use, then don't sink at all.
+SmallVector<std::pair<MachineBasicBlock *, MachineBasicBlock::iterator>, 4>
+AMDGPUBundleIdxLdSt::findSuccsToSinkTo(MachineInstr &MI,
+                                       MachineBasicBlock *MBB) {
+
+  SmallVector<std::pair<MachineBasicBlock *, MachineBasicBlock::iterator>, 4>
+      Candidates;
+  bool IsCoreMI = false;
+  bool IsLoadMI = MI.getOpcode() == AMDGPU::V_LOAD_IDX;
+
+  // Loop over all the Defs of the instr, and collect the candidates to sink to.
+  size_t TotalUses = 0;
+  for (auto &Def : MI.defs()) {
+    if (!Def.isReg() || Def.getReg() == 0)
+      continue;
+    Register DefReg = Def.getReg();
+
+    for (auto U = MRI->use_begin(DefReg); U != MRI->use_end(); U++) {
+      assert(U->isReg() && "Expected Use to be reg if Def was reg.");
+      TotalUses++;
+      MachineInstr *UseMI = U->getParent();
+      MachineBasicBlock *UseMBB = UseMI->getParent();
+
+      // If there's a meta/debug use, we wouldn't be able to bundle all uses.
+      // TODO-GFX13 Handle phis.
+      if (UseMI->isPHI() || UseMI->isRegSequence() || UseMI->isInsertSubreg() ||
+          UseMI->isMetaInstruction() || UseMI->isCopy() || UseMI->isBarrier() ||
+          UseMI->isDebugOrPseudoInstr() || UseMI->isFakeUse())
+        return {};
+
+      // Determine if this is CoreMI.
+      if (!IsLoadMI && UseMI->getOpcode() == AMDGPU::V_STORE_IDX &&
+          STI->getNamedOperand(*UseMI, AMDGPU::OpName::data_op)->getReg() ==
+              DefReg)
+        IsCoreMI = true;
+      assert(!(IsCoreMI && IsLoadMI) &&
+             "MI can't be both a CoreMI and V_LOAD_IDX.");
+      if (!IsLoadMI && !IsCoreMI)
+        return {};
+
+      // Check safety of sinking MI to U. If MI is not LoadMI, don't have to
+      // worry about any aliasing stores.
+      bool Store =
+          IsLoadMI ? hasStoreBetween(MI.getParent(), UseMBB, MI) : false;
+      if (!MI.isSafeToMove(Store))
+        return {};
+      if (!TII->isSafeToSink(MI, UseMBB, CI))
+        return {};
+
+      // If the instruction to move defines a dead physical register which is
+      // live when leaving the basic block, don't move it because it could turn
+      // into a "zombie" define of that phys reg.
+      for (const MachineOperand &MO : MI.all_defs()) {
+        Register Reg = MO.getReg();
+        if (Reg == 0 || !Reg.isPhysical())
+          continue;
+        if (UseMBB->isLiveIn(Reg))
+          return {};
+      }
+
+      // Don't move a CoreMI into a cycle.
+      if (IsCoreMI && CI->getCycleDepth(UseMBB) > CI->getCycleDepth(MBB)) {
+        LLVM_DEBUG(dbgs() << " *** CoreMI sinking to larger cycle depth is "
+                             "not profitable\n");
+        return {};
+      }
+
+      // Determine where to insert into. Skip phi nodes.
+      MachineBasicBlock::iterator InsertPos =
+          UseMBB->SkipPHIsAndLabels(UseMBB->begin());
+      if (blockPrologueInterferes(UseMBB, InsertPos, MI)) {
+        LLVM_DEBUG(dbgs() << " *** Not sinking: prologue interference\n");
+        return {};
+      }
+
+      auto Item = std::make_pair(UseMBB, InsertPos);
+      Candidates.push_back(Item);
+
+      // Duplicating CoreMI won't generally be profitable.
+      if (IsCoreMI && TotalUses > 1) {
+        LLVM_DEBUG(dbgs() << " *** CoreMI has multiple uses; duplicating isn't "
+                             "profitable.\n");
+        return {};
+      }
+    }
+  }
+
+  return Candidates;
+}
+
+// Check if any instruction aliases with MI between From and To. Two caches are
+// used. HasStoreCache is a coarse cache which returns true if the pair contains
+// some case we want to treat conservatively for all MI (eg. a function call),
+// and returns false if there are no stores at all. StoreInstrCache is used to
+// cache and check the store instructions against MI.
+bool AMDGPUBundleIdxLdSt::hasStoreBetween(MachineBasicBlock *From,
+                                          MachineBasicBlock *To,
+                                          MachineInstr &MI) {
+
+  auto BlockPair = std::make_pair(From, To);
+
+  if (auto It = HasStoreCache.find(BlockPair); It != HasStoreCache.end())
+    return It->second;
+
+  if (auto It = StoreInstrCache.find(BlockPair); It != StoreInstrCache.end())
+    return llvm::any_of(It->second, [&](MachineInstr *I) {
+      bool MayAlias = I->mayAlias(AA, MI, false);
+      LLVM_DEBUG(if (MayAlias) dbgs() << " *** Alias conflict with ";
+                 I->print(dbgs(), true, false, false, false));
+      return MayAlias;
+    });
+
+  unsigned int MaxBasicBlockSize = 2000;
+  unsigned int MaxPaths = 20;
+  unsigned int MaxPathLength = 20;
+  bool SawStore = false;
+  bool HasAliasedStore = false;
+  DenseSet<MachineBasicBlock *> HandledBlocks;
+
+  SmallVector<SmallVector<MachineBasicBlock *, 8>, 8> AllPaths =
+      getAllPathsBetweenBlocks(From, To);
+
+  // If there are too many paths, treat conservatively to save compile time.
+  if (AllPaths.size() > MaxPaths) {
+    HasStoreCache[BlockPair] = true;
+    return true;
+  }
+
+  // Go through all reachable blocks from From.
+  for (auto Path : AllPaths) {
+    // If any given path is too long, save compiling time.
+    if (Path.size() > MaxPathLength) {
+      HasStoreCache[BlockPair] = true;
+      return true;
+    }
+    for (auto BB : Path) {
+      // We insert the instruction at the start of block To, so no need to
+      // worry about stores inside To. Store in block From should be already
+      // considered when just enter function sinkInstruction.
+      if (BB == To || BB == From)
+        continue;
+
+      // We already handle this BB in previous iteration.
+      if (HandledBlocks.count(BB))
+        continue;
+
+      HandledBlocks.insert(BB);
+
+      // If this BB is too big stop searching to save compiling time.
+      if (BB->sizeWithoutDebugLargerThan(MaxBasicBlockSize)) {
+        HasStoreCache[BlockPair] = true;
+        return true;
+      }
+
+      for (MachineInstr &I : *BB) {
+        if (I.isCall() || I.hasOrderedMemoryRef()) {
+          HasStoreCache[BlockPair] = true;
+          return true;
+        }
+
+        if (I.mayStore()) {
+          SawStore = true;
+          // We still have chance to sink MI if all stores between are not
+          // aliased to MI.
+          // Cache all store instructions, so that we don't need to go through
+          // all From reachable blocks for next load instruction.
+          if (I.mayAlias(AA, MI, false)) {
+            LLVM_DEBUG(dbgs() << " *** Alias conflict with ";
+                       I.print(dbgs(), true, false, false, false));
+            HasAliasedStore = true;
+          }
+          StoreInstrCache[BlockPair].push_back(&I);
+        }
+      }
+    }
+  }
+  // If there is no store at all, cache the result.
+  if (!SawStore)
+    HasStoreCache[BlockPair] = false;
+  return HasAliasedStore;
+}
+
+bool AMDGPUBundleIdxLdSt::sinkInstruction(MachineInstr &MI, bool &SawStore) {
+
+  // Don't sink instructions that the target prefers not to sink.
+  if (!TII->shouldSink(MI))
+    return false;
+
+  // Check if it's safe to move the instruction.
+  if (!MI.isSafeToMove(SawStore))
+    return false;
+
+  // Convergent operations may not be made control-dependent on additional
+  // values.
+  if (MI.isConvergent())
+    return false;
+
+  MachineBasicBlock *ParentBlock = MI.getParent();
+  SmallVector<std::pair<MachineBasicBlock *, MachineBasicBlock::iterator>, 4>
+      SuccsToSinkTo = findSuccsToSinkTo(MI, ParentBlock);
+
+  size_t SinksRemaining = SuccsToSinkTo.size();
+  if (SinksRemaining == 0)
+    return false;
+
+  LLVM_DEBUG(dbgs() << " *** Found " << SinksRemaining << " use(s)\n");
+  for (auto Pair : SuccsToSinkTo) {
+    auto Succ = Pair.first;
+    auto InsertPos = Pair.second;
+    // Note that if we previously encountered Succ == MI.getParent(), we'll
+    // have an extra sink remaining, which is need for the remaining local use.
+    if (Succ == MI.getParent()) {
+      LLVM_DEBUG(
+          dbgs()
+          << " *** Use is in MI's current block. Leaving a copy in block "
+          << Succ->getNumber() << "\n");
+      continue;
+    }
+
+    if (SinksRemaining > 1) {
+      LLVM_DEBUG(dbgs() << "\t *** Duplicating MI and sinking to block "
+                        << Succ->getNumber() << "\n");
+      MachineInstr *DupLoad =
+          MI.getParent()->getParent()->CloneMachineInstr(&MI);
+      MI.getParent()->insert(MI, DupLoad);
+
+      // When we duplicate, we must assign to a new register because the
+      // bundling phase requires searching for an inst's def, of which there can
+      // only be one.
+      Register OldDefReg = DupLoad->getOperand(0).getReg();
+      auto *RC = MRI->getRegClass(OldDefReg);
+      Register NewDefReg = MRI->createVirtualRegister(RC);
+      for (auto &UseInSucc : MRI->use_nodbg_operands(OldDefReg)) {
+        if (UseInSucc.getParent()->getParent() != Succ || !UseInSucc.isReg() ||
+            UseInSucc.getReg() != OldDefReg)
+          continue;
+        UseInSucc.setReg(NewDefReg);
+      }
+      DupLoad->getOperand(0).setReg(NewDefReg);
+      performSink(*DupLoad, *Succ, InsertPos);
+    } else {
+      LLVM_DEBUG(dbgs() << "\t *** Sinking MI to block " << Succ->getNumber()
+                        << "\n");
+      performSink(MI, *Succ, InsertPos);
+    }
+    SinksRemaining--;
+  }
+
+  return true;
+}
+
+bool AMDGPUBundleIdxLdSt::sinkLoadsAndCoreMIs(MachineFunction &MF) {
+  bool MadeChange = false;
+  bool SawStore = false;
+  for (auto &MBB : ReversePostOrderTraversal<MachineFunction *>(&MF)) {
+
+    // Walk the basic block bottom-up.
+    MachineBasicBlock::iterator I = MBB->end();
+    --I;
+    bool ProcessedBegin = false;
+    SmallVector<MachineInstr *, 8> Stores;
+    do {
+      MachineInstr &MI = *I; // The instruction to sink.
+
+      // Predecrement I (if it's not begin) so that it isn't invalidated by
+      // sinking.
+      ProcessedBegin = I == MBB->begin();
+      if (!ProcessedBegin)
+        --I;
+
+      // Check if MI aliases with any of the previously seen stores in
+      // this block
+      SawStore = false;
+      for (auto Store : Stores)
+        if (MI.mayAlias(AA, *Store, false))
+          SawStore = true;
+
+      if (MI.mayStore())
+        Stores.push_back(&MI);
+
+      LLVM_DEBUG(dbgs() << "BB." << MBB->getNumber() << " :: ";
+                 MI.print(dbgs()));
+
+      if (sinkInstruction(MI, SawStore))
+        MadeChange = true;
+
+      // If we just processed the first instruction in the block, we're done.
+    } while (!ProcessedBegin);
+  }
+
+  // Now clear any kill flags for recorded registers.
+  LLVM_DEBUG(dbgs() << "\n");
+  for (auto I : RegsToClearKillFlags)
+    MRI->clearKillFlags(I);
+  RegsToClearKillFlags.clear();
+
+  return MadeChange;
+}
+
 bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
+  LLVM_DEBUG(dbgs() << "BB." << MI->getParent()->getNumber() << " :: ";
+             MI->print(dbgs()));
+
   if (MI->isMetaInstruction())
     return false;
   // Prevent cycles in data-flow from multiple defs. This check is too coarse.
-  // We could fix this with per BB analysis, but prefer to fix it later while
-  // extending the algorithm to multiple BBs.
+  // TODO-GFX13 Handle MI with multiple defs.
   if (MI->getNumExplicitDefs() > 1)
     return false;
   // TODO-GFX13 Update TwoAddressInstructionPass to handle Bundles
@@ -161,9 +589,11 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
   // skip it.
   if (MI->isCopy())
     return false;
+  // TODO-GFX13 Handle phis.
+  if (MI->isPHI())
+    return false;
 
   MachineFunction *MF = MI->getParent()->getParent();
-  MachineRegisterInfo *MRI = &MF->getRegInfo();
   MachineBasicBlock *MBB = MI->getParent();
   SmallVector<BundleItem, 4> Worklist;
   std::unordered_set<unsigned> IdxList;
@@ -185,7 +615,7 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     MachineInstr *StoreMI = UseOfMI->getParent();
     if (StoreMI->getOpcode() != AMDGPU::V_STORE_IDX)
       continue;
-    // TODO-GFX13 handle store_idx in different block.
+    // If we tried to sink it but couldn't, skip.
     if (StoreMI->getParent() != MBB)
       continue;
     if (STI->getNamedOperand(*StoreMI, AMDGPU::OpName::data_op)->getReg() !=
@@ -220,7 +650,7 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
       MachineBasicBlock::iterator I = MI->getIterator(),
                                   E = Worklist[0].MI->getIterator();
       for (++I; I != E; ++I) {
-        if (I->mayStore() && !STI->areMemAccessesTriviallyDisjoint(*MI, *I))
+        if (I->mayStore() && MI->mayAlias(AA, *I, false))
           return false;
       }
     }
@@ -254,13 +684,13 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
       const TargetRegisterClass *RegClass = MRI->getRegClass(UseReg);
       if (TRI->getCommonSubClass(RegClass, &AMDGPU::VGPR_32RegClass)) {
         if (UsesIdx0ForDynamic)
-          recoverIdx0ForPrivateUse(*MRI, Worklist, IdxList, StagingRegIdx);
+          recoverIdx0ForPrivateUse(Worklist, IdxList, StagingRegIdx);
         UsesIdx0ForPrivate = true;
         UsesIdx0ForDynamic = false;
       }
       continue;
     }
-    // TODO-GFX13 handle load_idx in different block.
+
     if (LoadMI->getParent() != MBB)
       continue;
 
@@ -297,7 +727,7 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
       } else if (IdxList.size() == 3 && UsesIdx0ForPrivate) {
         continue;
       } else if (IdxList.size() == 4) {
-        recoverIdx0ForPrivateUse(*MRI, Worklist, IdxList, StagingRegIdx);
+        recoverIdx0ForPrivateUse(Worklist, IdxList, StagingRegIdx);
         UsesIdx0ForDynamic = false;
         UsesIdx0ForPrivate = true;
         continue;
@@ -308,6 +738,7 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     // Duplicate V_LOAD_IDX with uses in multiple instructions.
     auto It = MRI->use_instr_nodbg_begin(UseReg);
     if (++It != MRI->use_instr_nodbg_end()) {
+      LLVM_DEBUG(dbgs() << " *** Duplicating "; LoadMI->print(dbgs()));
       MachineInstr *DupLoad = MF->CloneMachineInstr(LoadMI);
       MBB->insert(LoadMI, DupLoad);
       LoadMI = DupLoad;
@@ -354,6 +785,11 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     FirstMII = MachineBasicBlock::instr_iterator(CurMI);
   }
   finalizeBundle(*MBB, FirstMII, ++LastMII);
+  LLVM_DEBUG({
+    dbgs() << " *** Created bundle from \n";
+    for (auto Item : reverse(Worklist))
+      dbgs() << "\t" << *(Item.MI);
+  });
   return true;
 }
 
@@ -366,13 +802,31 @@ bool AMDGPUBundleIdxLdSt::runOnMachineFunction(MachineFunction &MF) {
 
   TRI = ST.getRegisterInfo();
   STI = ST.getInstrInfo();
+  TII = MF.getSubtarget().getInstrInfo();
+  MRI = &MF.getRegInfo();
+  if (auto *AAR = getAnalysisIfAvailable<AAResultsWrapperPass>())
+    AA = &AAR->getAAResults();
+  CI = &getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
   NeedsAlignedVGPRs = ST.needsAlignedVGPRs();
 
-  bool Changed = false;
+  LLVM_DEBUG(dbgs() << "===== AMDGPUBundleIdxLdSt :: Sinking Phase =====\n");
+  bool Changed = sinkLoadsAndCoreMIs(MF);
+
+  LLVM_DEBUG(dbgs() << "===== AMDGPUBundleIdxLdSt :: Bundling Phase =====\n");
   for (MachineBasicBlock &MBB : MF) {
-    for (auto &MI : MBB) {
+    auto Iter = make_early_inc_range(MBB);
+    for (auto &MI : Iter)
       Changed |= bundleIdxLdSt(&MI);
-    }
   }
   return Changed;
 }
+
+char AMDGPUBundleIdxLdSt::ID = 0;
+char &llvm::AMDGPUBundleIdxLdStID = AMDGPUBundleIdxLdSt::ID;
+
+INITIALIZE_PASS_BEGIN(AMDGPUBundleIdxLdSt, DEBUG_TYPE,
+                      "Bundle indexed load/store with uses", false, false)
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineCycleInfoWrapperPass)
+INITIALIZE_PASS_END(AMDGPUBundleIdxLdSt, DEBUG_TYPE,
+                    "Bundle indexed load/store with uses", false, false)
