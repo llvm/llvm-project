@@ -876,6 +876,7 @@ class BinOpSameOpcodeHelper {
   isBinOpWithConstantInt(Instruction *I) {
     unsigned Opcode = I->getOpcode();
     assert(binary_search(SupportedOp, Opcode) && "Unsupported opcode.");
+    (void)SupportedOp;
     auto *BinOp = cast<BinaryOperator>(I);
     if (auto *CI = dyn_cast<ConstantInt>(BinOp->getOperand(1)))
       return {CI, 1};
