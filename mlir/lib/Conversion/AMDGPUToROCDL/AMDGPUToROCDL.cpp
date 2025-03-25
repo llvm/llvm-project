@@ -1333,6 +1333,7 @@ struct ConvertAMDGPUToROCDLPass
   using Base::Base;
 
   void runOnOperation() override {
+    llvm::errs() << " WHEN DOES AMDGPU TO ROCDL RUN\n";
     MLIRContext *ctx = &getContext();
     FailureOr<Chipset> maybeChipset = Chipset::parse(chipset);
     if (failed(maybeChipset)) {
