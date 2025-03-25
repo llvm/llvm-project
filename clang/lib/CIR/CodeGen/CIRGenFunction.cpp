@@ -489,9 +489,7 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   // Builder.CreateMemSet. In CIR just emit a store of #cir.zero to the
   // respective address.
   // Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
-  auto zeroAttr = cir::ZeroAttr::get(builder.getContext(), convertType(ty));
-  auto zeroValue =
-      builder.create<cir::ConstantOp>(loc, convertType(ty), zeroAttr);
+  auto zeroValue = builder.getNullValue(convertType(ty), loc);
   builder.createStore(loc, zeroValue, destPtr.getPointer());
 }
 

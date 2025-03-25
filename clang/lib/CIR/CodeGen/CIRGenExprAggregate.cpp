@@ -122,8 +122,7 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
   for (uint64_t i = 0; i != numInitElements; ++i) {
     // Advance to the next element.
     if (i > 0) {
-      one = builder.create<cir::ConstantOp>(
-          loc, cgf.PtrDiffTy, cir::IntAttr::get(cgf.PtrDiffTy, i));
+      one = builder.getConstantInt(loc, cgf.PtrDiffTy, i);
       element =
           builder.create<cir::PtrStrideOp>(loc, cirElementPtrType, begin, one);
     }
@@ -146,8 +145,7 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
         cgf.getTypes().isZeroInitializable(elementType))) {
     // Advance to the start of the rest of the array.
     if (numInitElements) {
-      one = builder.create<cir::ConstantOp>(
-          loc, cgf.PtrDiffTy, cir::IntAttr::get(cgf.PtrDiffTy, 1));
+      one = builder.getConstantInt(loc, cgf.PtrDiffTy, 1);
       element = builder.create<cir::PtrStrideOp>(loc, cirElementPtrType,
                                                  element, one);
     }
@@ -173,9 +171,7 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
         emitNullInitializationToLValue(loc, elementLV);
 
       // Advance pointer and store them to temporary variable
-      one = builder.create<cir::ConstantOp>(
-          loc, cgf.PtrDiffTy, cir::IntAttr::get(cgf.PtrDiffTy, 1));
-
+      one = builder.getConstantInt(loc, cgf.PtrDiffTy, 1);
       auto nextElement = builder.create<cir::PtrStrideOp>(
           loc, cirElementPtrType, currentElement, one);
       cgf.emitStoreThroughLValue(RValue::get(nextElement), tmpLV);

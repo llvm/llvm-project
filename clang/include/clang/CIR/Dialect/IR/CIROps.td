@@ -268,9 +268,6 @@ def PtrStrideOp : CIR_Op<"ptr_stride",
       return mlir::cast<cir::PointerType>(getBase().getType()).getPointee();
     }
   }];
-
-  // SameFirstOperandAndResultType already checks all we need.
-  let hasVerifier = 0;
 }
 
 //===----------------------------------------------------------------------===//
