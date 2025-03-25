@@ -21,7 +21,7 @@ public:
   size_t size() override { return DefaultInlineOrder->size(); }
   void push(const std::pair<CallBase *, int> &Elt) override {
     // We ignore calles named "foo"
-    if (Elt.first->getCalledFunction()->getName() == "foo") {
+    if (*Elt.first->getCalledFunctionName() == "foo") {
       DefaultInlineOrder->push(Elt);
     }
   }
