@@ -718,6 +718,6 @@ void mesh::spmdizeTriviallyShardableOperation(
        llvm::zip_equal(op.getResults(), newOp->getResults(), resultShardings)) {
     newResult.setType(
         shardType(newResult.getType(),
-                  getMesh(&op, sharding.getMeshAttr(), symbolTable), sharding));
+                  getMeshOrNull(&op, sharding.getMeshAttr(), symbolTable), sharding));
   }
 }
