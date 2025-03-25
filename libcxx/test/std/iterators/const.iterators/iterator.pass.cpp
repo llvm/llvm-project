@@ -14,6 +14,7 @@
 #include <list>
 #include <memory>
 #include <ranges>
+#include <type_traits>
 #include <vector>
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -169,6 +170,11 @@ int main() {
 
     ASSERT_SAME_TYPE(std::iter_reference_t<ConstIt>, const int&);
     ASSERT_SAME_TYPE(std::iter_rvalue_reference_t<ConstIt>, const int&&);
+
+    static_assert(std::is_constructible_v<ConstIt, It>);
+    static_assert(std::is_convertible_v<It, ConstIt>);
+    static_assert(std::is_constructible_v<ConstIt, const It&> == std::is_copy_constructible_v<It>);
+    static_assert(std::is_constructible_v<const It&, ConstIt> == std::is_copy_constructible_v<It>);
   });
 
   test_p2836r1();
