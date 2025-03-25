@@ -173,7 +173,7 @@ static bool canReplaceFuncUsers(const Function &F, Type *NewRetTy) {
 /// Return true if it's worthwhile replacing the non-void return value of \p BB
 /// with \p Replacement
 static bool shouldReplaceNonVoidReturnValue(const BasicBlock &BB,
-                                            Value *Replacement) {
+                                            const Value *Replacement) {
   if (const auto *RI = dyn_cast<ReturnInst>(BB.getTerminator()))
     return RI->getReturnValue() != Replacement;
   return true;
