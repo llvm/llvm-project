@@ -8,10 +8,8 @@ define i32 @foo() {
 ; CHECK-NEXT:    [[D:%.*]] = load i32, ptr null, align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> <i32 0, i32 undef, i32 1, i32 0>, i32 [[D]], i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 1, i32 2, i32 3, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = or <8 x i32> zeroinitializer, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i32> zeroinitializer, [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    store <8 x i32> [[TMP4]], ptr getelementptr inbounds ([64 x i32], ptr null, i64 0, i64 15), align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = add <8 x i32> zeroinitializer, [[TMP1]]
+; CHECK-NEXT:    store <8 x i32> [[TMP2]], ptr getelementptr inbounds ([64 x i32], ptr null, i64 0, i64 15), align 4
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
