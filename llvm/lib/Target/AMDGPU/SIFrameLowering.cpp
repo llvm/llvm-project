@@ -1668,7 +1668,8 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (MFI->isWholeWaveFunction()) {
     // In practice, all the VGPRs are WWM registers, and we will need to save at
     // least their inactive lanes. Add them to WWMReservedRegs.
-    assert(!NeedExecCopyReservedReg && "Whole wave functions can use the reg mapped for their i1 argument");
+    assert(!NeedExecCopyReservedReg &&
+           "Whole wave functions can use the reg mapped for their i1 argument");
     for (MCRegister Reg : AMDGPU::VGPR_32RegClass)
       if (MF.getRegInfo().isPhysRegModified(Reg)) {
         MFI->reserveWWMRegister(Reg);
