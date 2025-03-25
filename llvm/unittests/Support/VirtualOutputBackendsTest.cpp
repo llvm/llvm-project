@@ -11,6 +11,8 @@
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/HashingOutputBackend.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -883,4 +885,33 @@ TEST(HashingBackendTest, HashOutput) {
             Backend.getHashValueForFile("file5"));
 }
 
+TEST(HashingBackendTest, ParallelHashOutput) {
+  const unsigned NumFile = 20;
+  DefaultThreadPool Pool;
+  HashingOutputBackend<BLAKE3> Backend;
+  auto getFileName = [](unsigned Idx) -> std::string {
+    std::string Name;
+    raw_string_ostream OS(Name);
+    OS << "file" << Idx;
+    return Name;
+  };
+  for (unsigned I = 0; I < NumFile; ++I) {
+    Pool.async(
+        [&](unsigned Idx) {
+          OutputFile O;
+          auto Name = getFileName(Idx);
+          EXPECT_THAT_ERROR(Backend.createFile(Name).moveInto(O), Succeeded());
+          O << "some data" << Idx;
+          EXPECT_THAT_ERROR(O.keep(), Succeeded());
+        },
+        I);
+  }
+  Pool.wait();
+
+  for (unsigned I = 0; I < NumFile; ++I) {
+    auto Name = getFileName(I);
+    auto Hash = Backend.getHashValueForFile(Name);
+    EXPECT_TRUE(Hash);
+  }
+}
 } // end namespace
