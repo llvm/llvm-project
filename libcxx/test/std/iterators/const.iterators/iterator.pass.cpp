@@ -93,7 +93,7 @@ constexpr void test_basic_operations() {
   static_assert(noexcept(iter_move(first)) == noexcept(std::ranges::iter_move(first.base())));
   static_assert(noexcept(std::ranges::iter_move(first)) == noexcept(std::ranges::iter_move(first.base())));
 
-  for (auto it = first; it != last; ++it) {
+  for (auto it = first; it.base() != last.base(); ++it) {
     (void)*it;
     (void)it->x;
     (void)iter_move(it);
@@ -174,7 +174,7 @@ int main() {
     static_assert(std::is_constructible_v<ConstIt, It>);
     static_assert(std::is_convertible_v<It, ConstIt>);
     static_assert(std::is_constructible_v<ConstIt, const It&> == std::is_copy_constructible_v<It>);
-    static_assert(std::is_constructible_v<const It&, ConstIt> == std::is_copy_constructible_v<It>);
+    static_assert(std::is_convertible_v<const It&, ConstIt> == std::is_copy_constructible_v<It>);
   });
 
   test_p2836r1();

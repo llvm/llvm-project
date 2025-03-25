@@ -160,7 +160,7 @@ struct __fn : __range_adaptor_closure<__fn> {
     } else if constexpr (is_lvalue_reference_v<_Type> && constant_range<const _UType> && !view<_UType>) {
       return {__strategy::__const_is_constant_range,
               noexcept(ref_view(static_cast<const _UType&>(std::declval<_Type>())))};
-    } else if (requires { as_const_view(std::declval<_Type>()); }) {
+    } else if constexpr (requires { as_const_view(std::declval<_Type>()); }) {
       return {__strategy::__otherwise, noexcept(as_const_view(std::declval<_Type>()))};
     } else {
       return {__strategy::__none, false};

@@ -42,8 +42,12 @@ concept IsImplicitlyConstructible = requires(void (&fun)(T), Args&&... args) { f
 static_assert(IsImplicitlyConstructible<std::ranges::as_const_view<DefaultConstructibleView>>);
 static_assert(!IsImplicitlyConstructible<std::ranges::as_const_view<NonDefaultConstructibleView>, int>);
 
-static_assert(std::is_constructible_v<std::ranges::as_const_view<DefaultConstructibleView>>, DefaultConstructibleView);
+static_assert(std::is_constructible_v<std::ranges::as_const_view<DefaultConstructibleView>, DefaultConstructibleView>);
+static_assert(
+    std::is_constructible_v<std::ranges::as_const_view<DefaultConstructibleView>, NonDefaultConstructibleView>);
 static_assert(!std::is_convertible_v<DefaultConstructibleView, std::ranges::as_const_view<DefaultConstructibleView>>);
+static_assert(
+    !std::is_convertible_v<DefaultConstructibleView, std::ranges::as_const_view<NonDefaultConstructibleView>>);
 
 constexpr bool test() {
   std::ranges::as_const_view<DefaultConstructibleView> view = {};
