@@ -1277,7 +1277,7 @@ struct V {
   MultilineStringType doc;
   std::string str;
 };
-template <> struct MappingTraits<V> {
+template <> struct llvm::yaml::MappingTraits<V> {
   static void mapping(IO &io, V &v) {
     io.mapRequired("block_scalac", v.doc);
     io.mapRequired("scalar", v.str);

@@ -115,6 +115,7 @@ public:
   // environment.
   LogicalResult checkProfile(Operation *op, const tosa::TargetEnv &targetEnv);
   LogicalResult checkExtension(Operation *op, const tosa::TargetEnv &targetEnv);
+  LogicalResult checkInvalid(Operation *op);
 
   template <typename T>
   LogicalResult checkProfileOrExtension(
@@ -163,6 +164,10 @@ public:
   stringifyProfile(const SmallVector<ArrayRef<T>> &profileSet);
 
 private:
+  template <typename T>
+  FailureOr<SmallVector<T>> getOperatorDefinition(Operation *op,
+                                                  CheckCondition &condition);
+
   OperationProfileComplianceMap profileComplianceMap;
   OperationExtensionComplianceMap extensionComplianceMap;
 };
