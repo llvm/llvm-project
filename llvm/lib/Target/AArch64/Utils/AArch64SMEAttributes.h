@@ -133,7 +133,8 @@ public:
   bool hasZT0State() const { return isNewZT0() || sharesZT0(); }
   bool requiresPreservingZT0(const SMEAttrs &Callee) const {
     return hasZT0State() && !Callee.sharesZT0() &&
-           !Callee.hasAgnosticZAInterface();
+           !Callee.hasAgnosticZAInterface() &&
+           !(Callee.Bitmask & SME_ABI_Routine);
   }
   bool requiresDisablingZABeforeCall(const SMEAttrs &Callee) const {
     return hasZT0State() && !hasZAState() && Callee.hasPrivateZAInterface() &&
