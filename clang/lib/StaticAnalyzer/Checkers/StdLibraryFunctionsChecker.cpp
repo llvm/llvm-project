@@ -1797,7 +1797,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   auto IsNull = [&](ArgNo ArgN) {
     return std::make_shared<NotNullConstraint>(ArgN, false);
   };
-  auto NotNullBuffer = [&](ArgNo ArgN, ArgNo SizeArg1N, ArgNo SizeArg2N) {
+  auto NotNullBuffer = [&](ArgNo ArgN, ArgNo SizeArg1N,
+                           std::optional<ArgNo> SizeArg2N = std::nullopt) {
     return std::make_shared<NotNullBufferConstraint>(ArgN, SizeArg1N,
                                                      SizeArg2N);
   };
@@ -3365,7 +3366,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
-            .ArgConstraint(NotNull(ArgNo(3)))
+            .ArgConstraint(NotNullBuffer(ArgNo(3), ArgNo(4)))
             .ArgConstraint(
                 BufferSize(/*Buffer=*/ArgNo(3), /*BufSize=*/ArgNo(4)))
             .ArgConstraint(

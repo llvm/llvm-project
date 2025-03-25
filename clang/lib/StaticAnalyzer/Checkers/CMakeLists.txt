@@ -8,6 +8,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   AnalysisOrderChecker.cpp
   AnalyzerStatsChecker.cpp
   ArrayBoundChecker.cpp
+  AssumeModeling.cpp
   BasicObjCFoundationChecks.cpp
   BitwiseShiftChecker.cpp
   BlockInCriticalSectionChecker.cpp
@@ -129,9 +130,11 @@ add_clang_library(clangStaticAnalyzerCheckers
   ValistChecker.cpp
   VirtualCallChecker.cpp
   WebKit/ASTUtils.cpp
+  WebKit/ForwardDeclChecker.cpp
   WebKit/MemoryUnsafeCastChecker.cpp
   WebKit/PtrTypesSemantics.cpp
   WebKit/RefCntblBaseVirtualDtorChecker.cpp
+  WebKit/RetainPtrCtorAdoptChecker.cpp
   WebKit/RawPtrRefCallArgsChecker.cpp
   WebKit/RawPtrRefLambdaCapturesChecker.cpp
   WebKit/RawPtrRefLocalVarsChecker.cpp

@@ -75,6 +75,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTRecordWriter.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "clang/Serialization/ModuleFile.h"
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "clang/Serialization/SerializationDiagnostic.h"
@@ -408,7 +409,7 @@ void TypeLocWriter::VisitRValueReferenceTypeLoc(RValueReferenceTypeLoc TL) {
 
 void TypeLocWriter::VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
   addSourceLocation(TL.getStarLoc());
-  Record.AddTypeSourceInfo(TL.getClassTInfo());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
 }
 
 void TypeLocWriter::VisitArrayTypeLoc(ArrayTypeLoc TL) {
@@ -1753,7 +1754,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   AddFileID(SourceMgr.getMainFileID(), Record);
   Stream.EmitRecord(ORIGINAL_FILE_ID, Record);
 
-  WriteInputFiles(SourceMgr, PP.getHeaderSearchInfo().getHeaderSearchOpts());
+  WriteInputFiles(SourceMgr);
   Stream.ExitBlock();
 }
 
@@ -1786,8 +1787,7 @@ SourceLocation ASTWriter::getAffectingIncludeLoc(const SourceManager &SourceMgr,
   return IncludeLoc;
 }
 
-void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
-                                HeaderSearchOptions &HSOpts) {
+void ASTWriter::WriteInputFiles(SourceManager &SourceMgr) {
   using namespace llvm;
 
   Stream.EnterSubblock(INPUT_FILES_BLOCK_ID, 4);
@@ -5327,12 +5327,11 @@ void ASTWriter::SetSelectorOffset(Selector Sel, uint32_t Offset) {
 }
 
 ASTWriter::ASTWriter(llvm::BitstreamWriter &Stream,
-                     SmallVectorImpl<char> &Buffer,
-                     InMemoryModuleCache &ModuleCache,
+                     SmallVectorImpl<char> &Buffer, ModuleCache &ModCache,
                      ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                      bool IncludeTimestamps, bool BuildingImplicitModule,
                      bool GeneratingReducedBMI)
-    : Stream(Stream), Buffer(Buffer), ModuleCache(ModuleCache),
+    : Stream(Stream), Buffer(Buffer), ModCache(ModCache),
       IncludeTimestamps(IncludeTimestamps),
       BuildingImplicitModule(BuildingImplicitModule),
       GeneratingReducedBMI(GeneratingReducedBMI) {
@@ -5390,9 +5389,9 @@ ASTWriter::WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
 
   if (ShouldCacheASTInMemory) {
     // Construct MemoryBuffer and update buffer manager.
-    ModuleCache.addBuiltPCM(OutputFile,
-                            llvm::MemoryBuffer::getMemBufferCopy(
-                                StringRef(Buffer.begin(), Buffer.size())));
+    ModCache.getInMemoryModuleCache().addBuiltPCM(
+        OutputFile, llvm::MemoryBuffer::getMemBufferCopy(
+                        StringRef(Buffer.begin(), Buffer.size())));
   }
   return Signature;
 }
@@ -8020,6 +8019,10 @@ void OMPClauseWriter::VisitOMPReductionClause(OMPReductionClause *C) {
     for (auto *E : C->copy_array_elems())
       Record.AddStmt(E);
   }
+  auto PrivateFlags = C->private_var_reduction_flags();
+  Record.push_back(std::distance(PrivateFlags.begin(), PrivateFlags.end()));
+  for (bool Flag : PrivateFlags)
+    Record.push_back(Flag);
 }
 
 void OMPClauseWriter::VisitOMPTaskReductionClause(OMPTaskReductionClause *C) {
@@ -8429,6 +8432,8 @@ void OMPClauseWriter::VisitOMPAtomicDefaultMemOrderClause(
   Record.AddSourceLocation(C->getLParenLoc());
   Record.AddSourceLocation(C->getAtomicDefaultMemOrderKindKwLoc());
 }
+
+void OMPClauseWriter::VisitOMPSelfMapsClause(OMPSelfMapsClause *) {}
 
 void OMPClauseWriter::VisitOMPAtClause(OMPAtClause *C) {
   Record.push_back(C->getAtKind());
@@ -8865,4 +8870,11 @@ void ASTRecordWriter::writeOpenACCClauseList(
     ArrayRef<const OpenACCClause *> Clauses) {
   for (const OpenACCClause *Clause : Clauses)
     writeOpenACCClause(Clause);
+}
+void ASTRecordWriter::AddOpenACCRoutineDeclAttr(
+    const OpenACCRoutineDeclAttr *A) {
+  // We have to write the size so that the reader can do a resize. Unlike the
+  // Decl version of this, we can't count on trailing storage to get this right.
+  writeUInt32(A->Clauses.size());
+  writeOpenACCClauseList(A->Clauses);
 }

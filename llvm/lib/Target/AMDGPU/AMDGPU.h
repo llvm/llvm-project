@@ -195,7 +195,7 @@ extern char &AMDGPURegBankSelectID;
 void initializeAMDGPURegBankLegalizePass(PassRegistry &);
 extern char &AMDGPURegBankLegalizeID;
 
-void initializeAMDGPUMarkLastScratchLoadPass(PassRegistry &);
+void initializeAMDGPUMarkLastScratchLoadLegacyPass(PassRegistry &);
 extern char &AMDGPUMarkLastScratchLoadID;
 
 void initializeSILowerSGPRSpillsLegacyPass(PassRegistry &);
@@ -358,6 +358,33 @@ public:
   PreservedAnalyses run(MachineFunction &F, MachineFunctionAnalysisManager &AM);
 };
 
+class SIMemoryLegalizerPass : public PassInfoMixin<SIMemoryLegalizerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
+
+class GCNCreateVOPDPass : public PassInfoMixin<GCNCreateVOPDPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &AM);
+};
+
+class AMDGPUMarkLastScratchLoadPass
+    : public PassInfoMixin<AMDGPUMarkLastScratchLoadPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &AM);
+};
+
+class SIInsertWaitcntsPass : public PassInfoMixin<SIInsertWaitcntsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
+
 FunctionPass *createAMDGPUAnnotateUniformValuesLegacy();
 
 ModulePass *createAMDGPUPrintfRuntimeBinding();
@@ -422,7 +449,7 @@ public:
 void initializeSIAnnotateControlFlowLegacyPass(PassRegistry &);
 extern char &SIAnnotateControlFlowLegacyPassID;
 
-void initializeSIMemoryLegalizerPass(PassRegistry&);
+void initializeSIMemoryLegalizerLegacyPass(PassRegistry &);
 extern char &SIMemoryLegalizerID;
 
 void initializeSIModeRegisterLegacyPass(PassRegistry &);
@@ -434,7 +461,7 @@ extern char &AMDGPUInsertDelayAluID;
 void initializeSIInsertHardClausesPass(PassRegistry &);
 extern char &SIInsertHardClausesID;
 
-void initializeSIInsertWaitcntsPass(PassRegistry&);
+void initializeSIInsertWaitcntsLegacyPass(PassRegistry &);
 extern char &SIInsertWaitcntsID;
 
 void initializeSIFormMemoryClausesLegacyPass(PassRegistry &);
@@ -443,7 +470,7 @@ extern char &SIFormMemoryClausesID;
 void initializeSIPostRABundlerLegacyPass(PassRegistry &);
 extern char &SIPostRABundlerLegacyID;
 
-void initializeGCNCreateVOPDPass(PassRegistry &);
+void initializeGCNCreateVOPDLegacyPass(PassRegistry &);
 extern char &GCNCreateVOPDID;
 
 void initializeAMDGPUUnifyDivergentExitNodesPass(PassRegistry&);

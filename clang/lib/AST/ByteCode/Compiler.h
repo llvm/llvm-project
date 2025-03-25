@@ -213,7 +213,7 @@ public:
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);
-  bool visitDeclStmt(const DeclStmt *DS);
+  bool visitDeclStmt(const DeclStmt *DS, bool EvaluateConditionDecl = false);
   bool visitReturnStmt(const ReturnStmt *RS);
   bool visitIfStmt(const IfStmt *IS);
   bool visitWhileStmt(const WhileStmt *S);
@@ -290,7 +290,7 @@ protected:
   VarCreationState visitDecl(const VarDecl *VD);
   /// Visit an APValue.
   bool visitAPValue(const APValue &Val, PrimType ValType, const Expr *E);
-  bool visitAPValueInitializer(const APValue &Val, const Expr *E);
+  bool visitAPValueInitializer(const APValue &Val, const Expr *E, QualType T);
   /// Visit the given decl as if we have a reference to it.
   bool visitDeclRef(const ValueDecl *D, const Expr *E);
 
@@ -389,6 +389,7 @@ private:
   bool compileUnionAssignmentOperator(const CXXMethodDecl *MD);
 
   bool checkLiteralType(const Expr *E);
+  bool maybeEmitDeferredVarInit(const VarDecl *VD);
 
 protected:
   /// Variable to storage mapping.

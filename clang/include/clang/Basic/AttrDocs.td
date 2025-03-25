@@ -1703,17 +1703,16 @@ Sample usage:
 def NoConvergentDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-This attribute prevents a function from being treated as convergent, which
-means that optimizations can only move calls to that function to
-control-equivalent blocks. If a statement is marked as ``noconvergent`` and
-contains calls, it also prevents those calls from being treated as convergent.
-In other words, those calls are not restricted to only being moved to
-control-equivalent blocks.
+This attribute prevents a function from being treated as convergent; when a
+function is marked ``noconvergent``, calls to that function are not
+automatically assumed to be convergent, unless such calls are explicitly marked
+as ``convergent``. If a statement is marked as ``noconvergent``, any calls to
+inline ``asm`` in that statement are no longer treated as convergent.
 
 In languages following SPMD/SIMT programming model, e.g., CUDA/HIP, function
-declarations and calls are treated as convergent by default for correctness.
-This ``noconvergent`` attribute is helpful for developers to prevent them from
-being treated as convergent when it's safe.
+declarations and inline asm calls are treated as convergent by default for
+correctness. This ``noconvergent`` attribute is helpful for developers to
+prevent them from being treated as convergent when it's safe.
 
 .. code-block:: c
 
@@ -1722,7 +1721,8 @@ being treated as convergent when it's safe.
 
   __device__ int example(void) {
     float x;
-    [[clang::noconvergent]] x = bar(x);
+    [[clang::noconvergent]] x = bar(x); // no effect on convergence
+    [[clang::noconvergent]] { asm volatile ("nop"); } // the asm call is non-convergent
   }
 
   }];
@@ -2883,7 +2883,7 @@ https://gcc.gnu.org/onlinedocs/gcc/RISC-V-Function-Attributes.html
 https://riscv.org/specifications/privileged-isa/
 The RISC-V Instruction Set Manual Volume II: Privileged Architecture
 Version 1.10.
-https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.6
+https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.7
   }];
 }
 

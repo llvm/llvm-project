@@ -1844,7 +1844,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
     if (const ConstantDataSequential *CDS =
           dyn_cast<ConstantDataSequential>(C)) {
       SmallVector<SDValue, 4> Ops;
-      for (unsigned i = 0, e = CDS->getNumElements(); i != e; ++i) {
+      for (uint64_t i = 0, e = CDS->getNumElements(); i != e; ++i) {
         SDNode *Val = getValue(CDS->getElementAsConstant(i)).getNode();
         // Add each leaf value from the operand to the Constants list
         // to form a flattened list of all the values.
@@ -2034,58 +2034,6 @@ void SelectionDAGBuilder::visitCleanupPad(const CleanupPadInst &CPI) {
   }
 }
 
-// In wasm EH, even though a catchpad may not catch an exception if a tag does
-// not match, it is OK to add only the first unwind destination catchpad to the
-// successors, because there will be at least one invoke instruction within the
-// catch scope that points to the next unwind destination, if one exists, so
-// CFGSort cannot mess up with BB sorting order.
-// (All catchpads with 'catch (type)' clauses have a 'llvm.rethrow' intrinsic
-// call within them, and catchpads only consisting of 'catch (...)' have a
-// '__cxa_end_catch' call within them, both of which generate invokes in case
-// the next unwind destination exists, i.e., the next unwind destination is not
-// the caller.)
-//
-// Having at most one EH pad successor is also simpler and helps later
-// transformations.
-//
-// For example,
-// current:
-//   invoke void @foo to ... unwind label %catch.dispatch
-// catch.dispatch:
-//   %0 = catchswitch within ... [label %catch.start] unwind label %next
-// catch.start:
-//   ...
-//   ... in this BB or some other child BB dominated by this BB there will be an
-//   invoke that points to 'next' BB as an unwind destination
-//
-// next: ; We don't need to add this to 'current' BB's successor
-//   ...
-static void findWasmUnwindDestinations(
-    FunctionLoweringInfo &FuncInfo, const BasicBlock *EHPadBB,
-    BranchProbability Prob,
-    SmallVectorImpl<std::pair<MachineBasicBlock *, BranchProbability>>
-        &UnwindDests) {
-  while (EHPadBB) {
-    BasicBlock::const_iterator Pad = EHPadBB->getFirstNonPHIIt();
-    if (isa<CleanupPadInst>(Pad)) {
-      // Stop on cleanup pads.
-      UnwindDests.emplace_back(FuncInfo.getMBB(EHPadBB), Prob);
-      UnwindDests.back().first->setIsEHScopeEntry();
-      break;
-    } else if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Pad)) {
-      // Add the catchpad handlers to the possible destinations. We don't
-      // continue to the unwind destination of the catchswitch for wasm.
-      for (const BasicBlock *CatchPadBB : CatchSwitch->handlers()) {
-        UnwindDests.emplace_back(FuncInfo.getMBB(CatchPadBB), Prob);
-        UnwindDests.back().first->setIsEHScopeEntry();
-      }
-      break;
-    } else {
-      continue;
-    }
-  }
-}
-
 /// When an invoke or a cleanupret unwinds to the next EH pad, there are
 /// many places it could ultimately go. In the IR, we have a single unwind
 /// destination, but in the machine CFG, we enumerate all the possible blocks.
@@ -2106,13 +2054,6 @@ static void findUnwindDestinations(
   bool IsWasmCXX = Personality == EHPersonality::Wasm_CXX;
   bool IsSEH = isAsynchronousEHPersonality(Personality);
 
-  if (IsWasmCXX) {
-    findWasmUnwindDestinations(FuncInfo, EHPadBB, Prob, UnwindDests);
-    assert(UnwindDests.size() <= 1 &&
-           "There should be at most one unwind destination for wasm");
-    return;
-  }
-
   while (EHPadBB) {
     BasicBlock::const_iterator Pad = EHPadBB->getFirstNonPHIIt();
     BasicBlock *NewEHPadBB = nullptr;
@@ -2122,10 +2063,13 @@ static void findUnwindDestinations(
       break;
     } else if (isa<CleanupPadInst>(Pad)) {
       // Stop on cleanup pads. Cleanups are always funclet entries for all known
-      // personalities.
+      // personalities except Wasm. And in Wasm this becomes a catch_all(_ref),
+      // which always catches an exception.
       UnwindDests.emplace_back(FuncInfo.getMBB(EHPadBB), Prob);
       UnwindDests.back().first->setIsEHScopeEntry();
-      UnwindDests.back().first->setIsEHFuncletEntry();
+      // In Wasm, EH scopes are not funclets
+      if (!IsWasmCXX)
+        UnwindDests.back().first->setIsEHFuncletEntry();
       break;
     } else if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Pad)) {
       // Add the catchpad handlers to the possible destinations.
@@ -3557,18 +3501,9 @@ void SelectionDAGBuilder::visitIndirectBr(const IndirectBrInst &I) {
 }
 
 void SelectionDAGBuilder::visitUnreachable(const UnreachableInst &I) {
-  if (!DAG.getTarget().Options.TrapUnreachable)
+  if (!I.shouldLowerToTrap(DAG.getTarget().Options.TrapUnreachable,
+                           DAG.getTarget().Options.NoTrapAfterNoreturn))
     return;
-
-  // We may be able to ignore unreachable behind a noreturn call.
-  if (const CallInst *Call = dyn_cast_or_null<CallInst>(I.getPrevNode());
-      Call && Call->doesNotReturn()) {
-    if (DAG.getTarget().Options.NoTrapAfterNoreturn)
-      return;
-    // Do not emit an additional trap instruction.
-    if (Call->isNonContinuableTrap())
-      return;
-  }
 
   DAG.setRoot(DAG.getNode(ISD::TRAP, getCurSDLoc(), MVT::Other, DAG.getRoot()));
 }
@@ -4846,8 +4781,8 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
   const auto &TTI =
       TLI.getTargetMachine().getTargetTransformInfo(*I.getFunction());
   SDValue StoreNode =
-      !IsCompressing &&
-              TTI.hasConditionalLoadStoreForType(I.getArgOperand(0)->getType())
+      !IsCompressing && TTI.hasConditionalLoadStoreForType(
+                            I.getArgOperand(0)->getType(), /*IsStore=*/true)
           ? TLI.visitMaskedStore(DAG, sdl, getMemoryRoot(), MMO, Ptr, Src0,
                                  Mask)
           : DAG.getMaskedStore(getMemoryRoot(), sdl, Src0, Ptr, Offset, Mask,
@@ -5032,8 +4967,8 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   // variables.
   SDValue Load;
   SDValue Res;
-  if (!IsExpanding &&
-      TTI.hasConditionalLoadStoreForType(Src0Operand->getType()))
+  if (!IsExpanding && TTI.hasConditionalLoadStoreForType(Src0Operand->getType(),
+                                                         /*IsStore=*/false))
     Res = TLI.visitMaskedLoad(DAG, sdl, InChain, MMO, Load, Ptr, Src0, Mask);
   else
     Res = Load =
@@ -8002,10 +7937,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::amdgcn_cs_chain: {
-    assert(I.arg_size() == 5 && "Additional args not supported yet");
-    assert(cast<ConstantInt>(I.getOperand(4))->isZero() &&
-           "Non-zero flags not supported yet");
-
     // At this point we don't care if it's amdgpu_cs_chain or
     // amdgpu_cs_chain_preserve.
     CallingConv::ID CC = CallingConv::AMDGPU_CS_Chain;
@@ -8031,6 +7962,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     assert(Args[0].IsInReg && "SGPR args should be marked inreg");
     assert(!Args[1].IsInReg && "VGPR args should not be marked inreg");
     Args[2].IsInReg = true; // EXEC should be inreg
+
+    // Forward the flags and any additional arguments.
+    for (unsigned Idx = 4; Idx < I.arg_size(); ++Idx) {
+      TargetLowering::ArgListEntry Arg;
+      Arg.Node = getValue(I.getOperand(Idx));
+      Arg.Ty = I.getOperand(Idx)->getType();
+      Arg.setAttributes(&I, Idx);
+      Args.push_back(Arg);
+    }
 
     TargetLowering::CallLoweringInfo CLI(DAG);
     CLI.setDebugLoc(getCurSDLoc())

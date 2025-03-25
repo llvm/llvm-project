@@ -84,10 +84,9 @@ materializeBinaryNanCheckIfRequired(OpTy op, PatternRewriter &rewriter,
 
 template <typename T>
 static arith::ConstantOp
-createConstFromIntAttribute(Operation *op, const std::string &attrName,
-                            Type requiredAttrType, OpBuilder &rewriter) {
-  auto castedN = static_cast<T>(
-      cast<IntegerAttr>(op->getAttr(attrName)).getValue().getSExtValue());
+createConstOpFromZpVal(Operation *op, const int64_t &zp, Type requiredAttrType,
+                       OpBuilder &rewriter) {
+  auto castedN = static_cast<T>(zp);
   return rewriter.create<arith::ConstantOp>(
       op->getLoc(), IntegerAttr::get(requiredAttrType, castedN));
 }
@@ -137,14 +136,14 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
   // tosa::MulOp
   if (isa<tosa::MulOp>(op)) {
-    auto shift_val = cast<tosa::MulOp>(op).getShift();
-    DenseElementsAttr shift_elem;
-    if (!shift_val.getImpl() ||
-        !matchPattern(shift_val, m_Constant(&shift_elem))) {
+    auto shiftVal = cast<tosa::MulOp>(op).getShift();
+    DenseElementsAttr shiftElem;
+    if (!matchPattern(shiftVal, m_Constant(&shiftElem))) {
       (void)rewriter.notifyMatchFailure(op, "shift value of mul not found");
+      return nullptr;
     }
 
-    int32_t shift = shift_elem.getValues<IntegerAttr>()[0].getInt();
+    int32_t shift = shiftElem.getValues<IntegerAttr>()[0].getInt();
 
     if (isa<FloatType>(elementTy)) {
       if (shift != 0) {
@@ -1177,8 +1176,11 @@ template <typename OpTy>
 static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
                                                  PatternRewriter &rewriter) {
   auto loc = op->getLoc();
-  auto inputTy = cast<ShapedType>(op->getOperand(0).getType());
-  auto resultTy = cast<ShapedType>(op->getResult(0).getType());
+  auto inputTy = dyn_cast<RankedTensorType>(op->getOperand(0).getType());
+  auto resultTy = dyn_cast<RankedTensorType>(op->getResult(0).getType());
+  if (!inputTy || !resultTy)
+    return rewriter.notifyMatchFailure(op, "unranked tensors not supported");
+
   auto elementTy = resultTy.getElementType();
   Value input = op->getOperand(0);
 
@@ -1510,11 +1512,26 @@ public:
           // later.
           int32_t inBitwidth = valueTy.getIntOrFloatBitWidth() > 32 ? 48 : 32;
 
-          auto inputZp = createConstFromIntAttribute<int32_t>(
-              op, "input_zp", nestedBuilder.getIntegerType(inBitwidth),
+          FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
+          if (failed(maybeIZp)) {
+            (void)rewriter.notifyMatchFailure(
+                op, "input zero point cannot be statically determined");
+            return;
+          }
+
+          auto inputZp = createConstOpFromZpVal<int32_t>(
+              op, *maybeIZp, nestedBuilder.getIntegerType(inBitwidth),
               nestedBuilder);
-          auto outputZp = createConstFromIntAttribute<int32_t>(
-              op, "output_zp", nestedBuilder.getI32Type(), nestedBuilder);
+
+          FailureOr<int64_t> maybeOZp = op.getOutputZeroPoint();
+          if (failed(maybeOZp)) {
+            (void)rewriter.notifyMatchFailure(
+                op, "output zero point cannot be statically determined");
+            return;
+          };
+
+          auto outputZp = createConstOpFromZpVal<int32_t>(
+              op, *maybeOZp, nestedBuilder.getI32Type(), nestedBuilder);
 
           Value multiplier = multiplierConstant ? multiplierConstant
                                                 : blockArgs[multiplierArg];
@@ -2366,11 +2383,9 @@ public:
     auto input = adaptor.getOperands()[0];
     auto indices = adaptor.getOperands()[1];
 
-    auto valuesTy =
-        dyn_cast_or_null<RankedTensorType>(op.getValues().getType());
-    auto resultTy = cast<ShapedType>(op.getType());
-
-    if (!valuesTy)
+    auto valuesTy = dyn_cast<RankedTensorType>(op.getValues().getType());
+    auto resultTy = dyn_cast<RankedTensorType>(op.getType());
+    if (!valuesTy || !resultTy)
       return rewriter.notifyMatchFailure(op, "unranked tensors not supported");
 
     auto dynamicDims = inferDynamicDimsForGather(

@@ -883,7 +883,7 @@ class NestedTupleOf<list<Type> allowedTypes> :
 // Type constraint for types that are "like" some type or set of types T, that is
 // they're either a T or a mapable container of Ts.
 class TypeOrValueSemanticsContainer<Type allowedType, string name>
-    : TypeConstraint<Or<[
+    : Type<Or<[
   allowedType.predicate,
   ValueSemanticsContainerOf<[allowedType]>.predicate]>,
   name>;

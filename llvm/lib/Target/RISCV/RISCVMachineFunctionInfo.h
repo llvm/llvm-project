@@ -166,6 +166,12 @@ public:
   unsigned getQCIInterruptStackSize() const { return QCIInterruptStackSize; }
   void setQCIInterruptStackSize(unsigned Size) { QCIInterruptStackSize = Size; }
 
+  // Some Stack Management Variants automatically update FP in a frame-pointer
+  // convention compatible way - which means we don't need to manually update
+  // the FP, but we still need to emit the correct CFI information for
+  // calculating the CFA based on FP.
+  bool hasImplicitFPUpdates(const MachineFunction &MF) const;
+
   void initializeBaseYamlFields(const yaml::RISCVMachineFunctionInfo &YamlMFI);
 
   void addSExt32Register(Register Reg);
