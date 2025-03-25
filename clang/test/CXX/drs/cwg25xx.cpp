@@ -32,7 +32,7 @@ enum E2 : S<E2>::I { e };
 #endif
 } // namespace cwg2516
 
-namespace cwg2517 { // cwg2517: 23
+namespace cwg2517 { // cwg2517: 21
 #if __cplusplus >= 202302L
 template<typename ArrayType>
 concept LargeArray = requires (ArrayType my_array) {
