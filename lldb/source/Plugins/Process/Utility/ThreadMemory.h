@@ -13,14 +13,16 @@
 
 #include "lldb/Target/Thread.h"
 
+/// A memory thread with its own ID, optionally backed by a real thread.
+/// Most methods of this class dispatch to the real thread if it is not null.
+/// Notable exceptions are the methods calculating the StopInfo and
+/// RegisterContext of the thread, those may query the OS plugin that created
+/// the thread.
 class ThreadMemory : public lldb_private::Thread {
 public:
   ThreadMemory(lldb_private::Process &process, lldb::tid_t tid,
-               const lldb::ValueObjectSP &thread_info_valobj_sp);
-
-  ThreadMemory(lldb_private::Process &process, lldb::tid_t tid,
-               llvm::StringRef name, llvm::StringRef queue,
-               lldb::addr_t register_data_addr);
+               lldb::addr_t register_data_addr)
+      : Thread(process, tid), m_register_data_addr(register_data_addr) {}
 
   ~ThreadMemory() override;
 
@@ -38,16 +40,12 @@ public:
   }
 
   const char *GetName() override {
-    if (!m_name.empty())
-      return m_name.c_str();
     if (m_backing_thread_sp)
       return m_backing_thread_sp->GetName();
     return nullptr;
   }
 
   const char *GetQueueName() override {
-    if (!m_queue.empty())
-      return m_queue.c_str();
     if (m_backing_thread_sp)
       return m_backing_thread_sp->GetQueueName();
     return nullptr;
@@ -68,8 +66,6 @@ public:
 
   void RefreshStateAfterStop() override;
 
-  lldb::ValueObjectSP &GetValueObject() { return m_thread_info_valobj_sp; }
-
   void ClearStackFrames() override;
 
   void ClearBackingThread() override {
@@ -79,34 +75,76 @@ public:
   }
 
   bool SetBackingThread(const lldb::ThreadSP &thread_sp) override {
-    // printf ("Thread 0x%llx is being backed by thread 0x%llx\n", GetID(),
-    // thread_sp->GetID());
     m_backing_thread_sp = thread_sp;
     thread_sp->SetBackedThread(*this);
-    return (bool)thread_sp;
+    return thread_sp.get();
   }
 
   lldb::ThreadSP GetBackingThread() const override {
     return m_backing_thread_sp;
   }
 
-protected:
   bool IsOperatingSystemPluginThread() const override { return true; }
 
-  // If this memory thread is actually represented by a thread from the
-  // lldb_private::Process subclass, then fill in the thread here and
-  // all APIs will be routed through this thread object. If m_backing_thread_sp
-  // is empty, then this thread is simply in memory with no representation
-  // through the process plug-in.
-  lldb::ThreadSP m_backing_thread_sp;
-  lldb::ValueObjectSP m_thread_info_valobj_sp;
-  std::string m_name;
-  std::string m_queue;
-  lldb::addr_t m_register_data_addr;
-
 private:
+  lldb::addr_t m_register_data_addr;
+  lldb::ThreadSP m_backing_thread_sp;
+
   ThreadMemory(const ThreadMemory &) = delete;
   const ThreadMemory &operator=(const ThreadMemory &) = delete;
+};
+
+/// A ThreadMemory that optionally overrides the thread name.
+class ThreadMemoryProvidingName : public ThreadMemory {
+public:
+  ThreadMemoryProvidingName(lldb_private::Process &process, lldb::tid_t tid,
+                            lldb::addr_t register_data_addr,
+                            llvm::StringRef name)
+      : ThreadMemory(process, tid, register_data_addr), m_name(name) {}
+
+  const char *GetName() override {
+    if (!m_name.empty())
+      return m_name.c_str();
+    return ThreadMemory::GetName();
+  }
+
+  ~ThreadMemoryProvidingName() override = default;
+
+private:
+  std::string m_name;
+};
+
+/// A ThreadMemoryProvidingName that optionally overrides queue information.
+class ThreadMemoryProvidingNameAndQueue : public ThreadMemoryProvidingName {
+public:
+  ThreadMemoryProvidingNameAndQueue(
+      lldb_private::Process &process, lldb::tid_t tid,
+      const lldb::ValueObjectSP &thread_info_valobj_sp);
+
+  ThreadMemoryProvidingNameAndQueue(lldb_private::Process &process,
+                                    lldb::tid_t tid, llvm::StringRef name,
+                                    llvm::StringRef queue,
+                                    lldb::addr_t register_data_addr);
+
+  ~ThreadMemoryProvidingNameAndQueue() override = default;
+
+  const char *GetQueueName() override {
+    if (!m_queue.empty())
+      return m_queue.c_str();
+    return ThreadMemory::GetQueueName();
+  }
+
+  lldb::ValueObjectSP &GetValueObject() { return m_thread_info_valobj_sp; }
+
+protected:
+  lldb::ValueObjectSP m_thread_info_valobj_sp;
+  std::string m_queue;
+
+private:
+  ThreadMemoryProvidingNameAndQueue(const ThreadMemoryProvidingNameAndQueue &) =
+      delete;
+  const ThreadMemoryProvidingNameAndQueue &
+  operator=(const ThreadMemoryProvidingNameAndQueue &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_THREADMEMORY_H
