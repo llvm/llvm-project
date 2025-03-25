@@ -664,6 +664,7 @@ cc_library(
         "//clang:driver",
         "//lldb/source/Plugins:PluginCPlusPlusLanguageHeaders",
         "//lldb/source/Plugins:PluginObjCLanguageHeaders",
+        "//llvm:BinaryFormat",
         "//llvm:Demangle",
         "//llvm:Support",
         "//llvm:TargetParser",
