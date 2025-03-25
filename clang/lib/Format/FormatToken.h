@@ -1830,9 +1830,12 @@ struct AdditionalKeywords {
   /// Returns whether \p Tok is a Verilog keyword that opens a block.
   bool isVerilogBegin(const FormatToken &Tok) const {
     // `table` is not included since it needs to be treated specially.
-    return !Tok.endsSequence(kw_fork, kw_disable) &&
-           !Tok.endsSequence(kw_fork, kw_wait) &&
-           Tok.isOneOf(kw_begin, kw_fork, kw_generate, kw_specify);
+    if (Tok.isOneOf(kw_begin, kw_generate, kw_specify))
+      return true;
+    if (Tok.isNot(kw_fork))
+      return false;
+    const auto *Prev = Tok.getPreviousNonComment();
+    return !(Prev && Prev->isOneOf(kw_disable, kw_wait));
   }
 
   /// Returns whether \p Tok is a Verilog keyword that closes a block.
