@@ -59,9 +59,10 @@ void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {
   if (end_time.has_value())
     serializer.write("end_time", ToNanosec(end_time.value()));
 }
+
 void ClientInfo::serialize(Serializer &serializer) const {
   LLDBBaseTelemetryInfo::serialize(serializer);
-  serializer.write("client_data", request_name);
+  serializer.write("client_data", client_data);
   if (error_msg.has_value())
     serializer.write("error_msg", error_msg.value());
 }
@@ -140,11 +141,12 @@ void TelemetryManager::DispatchClientTelemetry(
 
   auto *dict = entry.GetObjectSP()->GetAsDictionary();
 
-  llvm::StringRef client_data if (dict->GetValueForKeyAsString("client_data",
-                                                               client_data))
-      client_info.client_data = client_data.str();
-  else LLDB_LOG(GetLog(LLDBLog::Object),
-                "Cannot determine client_data from client-telemetry entry");
+  llvm::StringRef client_data;
+  if (dict->GetValueForKeyAsString("client_data", client_data))
+    client_info.client_data = client_data.str();
+  else
+    LLDB_LOG(GetLog(LLDBLog::Object),
+             "Cannot determine client_data from client-telemetry entry");
 
   int64_t start_time;
   if (dict->GetValueForKeyAsInteger("start_time", start_time)) {

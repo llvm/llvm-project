@@ -676,7 +676,7 @@ bool DAP::HandleObject(const protocol::Message &M) {
   if (const auto *req = std::get_if<protocol::Request>(&M)) {
     auto handler_pos = request_handlers.find(req->command);
     dispatcher.Set("client_data",
-                   llvm::Twine("request_command:", req->command));
+                   llvm::Twine("request_command:", req->command).str());
     if (handler_pos != request_handlers.end()) {
       (*handler_pos->second)(*req);
       return true; // Success
@@ -707,8 +707,8 @@ bool DAP::HandleObject(const protocol::Message &M) {
     // Result should be given, use null if not.
     if (resp->success) {
       (*response_handler)(resp->body);
-      dispatch.set("client_data",
-                   llvm::Twine("response_command:", resp->command));
+      dispatcher.Set("client_data",
+                     llvm::Twine("response_command:", resp->command).str());
     } else {
       llvm::StringRef message = "Unknown error, response failed";
       if (resp->message) {
@@ -728,7 +728,7 @@ bool DAP::HandleObject(const protocol::Message &M) {
                            }),
                        *resp->message);
       }
-      dispatcher.set("error", message);
+      dispatcher.Set("error", message.str());
 
       (*response_handler)(llvm::createStringError(
           std::error_code(-1, std::generic_category()), message));
@@ -737,7 +737,7 @@ bool DAP::HandleObject(const protocol::Message &M) {
     return true;
   }
 
-  dispatcher.set("error", "Unsupported protocol message");
+  dispatcher.Set("error", "Unsupported protocol message");
   DAP_LOG(log, "Unsupported protocol message");
 
   return false;
