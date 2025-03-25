@@ -58,7 +58,7 @@ Libc++ provides implementations of some experimental features. Experimental feat
 are either Technical Specifications (TSes) or official features that were voted to
 the C++ standard but whose implementation is not complete or stable yet in libc++.
 Those are disabled by default because they are neither API nor ABI stable. However,
-users can define the ``-fexperimental-library`` compiler flag to turn those features on.
+users can use the ``-fexperimental-library`` compiler flag to turn those features on.
 
 On compilers that do not support the ``-fexperimental-library`` flag (such as GCC),
 users can define the ``_LIBCPP_ENABLE_EXPERIMENTAL`` macro and manually link against
