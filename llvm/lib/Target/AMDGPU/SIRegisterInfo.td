@@ -547,8 +547,12 @@ class RegisterTypes<list<ValueType> reg_types> {
 }
 
 def Reg16Types : RegisterTypes<[i16, f16, bf16]>;
-def Reg32Types : RegisterTypes<[i32, f32, v2i16, v2f16, v2bf16, p2, p3, p5, p6]>;
-def Reg64Types : RegisterTypes<[i64, f64, v2i32, v2f32, p0, p1, p4, v4i16, v4f16, v4bf16]>;
+def Reg32DataTypes: RegisterTypes<[i32, f32, v2i16, v2f16, v2bf16]>;
+def Reg32PtrTypes: RegisterTypes<[p2, p3, p5, p6]>;
+def Reg32Types : RegisterTypes<!listconcat(Reg32DataTypes.types, Reg32PtrTypes.types)>;
+def Reg64DataTypes: RegisterTypes<[i64, f64, v2i32, v2f32, v4i16, v4f16, v4bf16]>;
+def Reg64PtrTypes: RegisterTypes<[p0, p1, p4]>;
+def Reg64Types : RegisterTypes<!listconcat(Reg64DataTypes.types, Reg64PtrTypes.types)>;
 def Reg96Types : RegisterTypes<[v3i32, v3f32]>;
 def Reg128Types : RegisterTypes<[v4i32, v4f32, v2i64, v2f64, v8i16, v8f16, v8bf16]>;
 
@@ -940,8 +944,7 @@ multiclass VRegClass<int numRegs, list<ValueType> regTypes, dag regList> {
   }
 }
 
-defm VReg_64 : VRegClass<2, [i64, f64, v2i32, v2f32, v4f16, v4bf16, v4i16, p0, p1, p4],
-                                (add VGPR_64)>;
+defm VReg_64 : VRegClass<2, Reg64Types.types, (add VGPR_64)>;
 defm VReg_96 : VRegClass<3, Reg96Types.types, (add VGPR_96)>;
 defm VReg_128 : VRegClass<4, Reg128Types.types, (add VGPR_128)>;
 defm VReg_160 : VRegClass<5, [v5i32, v5f32], (add VGPR_160)>;
