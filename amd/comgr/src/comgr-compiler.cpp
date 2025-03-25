@@ -1922,7 +1922,6 @@ static inline const std::unordered_set<std::string_view> ValidSpirvFlags{
     "-fno-signed-zeros",
     "-fno-threadsafe-statics",
     "-freciprocal-math",
-    "-fskip-odr-check-in-gmf",
     "-funsafe-math-optimizations",
     "-fvisibility=hidden",
     "-gheterogeneous-dwarf=diexpression",

@@ -16,7 +16,7 @@
 // CHECK: SPIR-V Translation: amd-llvm-spirv -r --spirv-target-env=CL2.0 {{.*}}
 
 // COM: Check that SPIR-V flags are correctly extracted
-// CHECK: Driver Job Args: {{.*}} "-fno-rounding-math" "-O3" "-fno-autolink" "-fvisibility=hidden" "-fexceptions" "-fcolor-diagnostics" "-mcode-object-version=5"
+// CHECK: Driver Job Args: {{.*}} "-fno-rounding-math" "-fno-threadsafe-statics" "-O3" "-fno-autolink" "-fvisibility=hidden" "-fexceptions" "-fcolor-diagnostics" "-mcode-object-version=5"
 
 // COM: ----
 // COM: Generate a debuginfo SPIR-V file from a HIP kernel
@@ -30,7 +30,6 @@
 
 // COM: Check that debuginfo SPIR-V flags are correctly extracted
 // CHECK-DBG: Driver Job Args: {{.*}} "-gheterogeneous-dwarf=diexpression" "-mllvm -amdgpu-spill-cfi-saved-regs"
-
 
 #include <cstdlib>
 
