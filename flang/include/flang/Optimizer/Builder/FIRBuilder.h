@@ -630,6 +630,15 @@ public:
     return result;
   }
 
+  /// Compare two pointer-like values using the given predicate.
+  mlir::Value genPtrCompare(mlir::Location loc,
+                            mlir::arith::CmpIPredicate predicate,
+                            mlir::Value ptr1, mlir::Value ptr2) {
+    ptr1 = createConvert(loc, getIndexType(), ptr1);
+    ptr2 = createConvert(loc, getIndexType(), ptr2);
+    return create<mlir::arith::CmpIOp>(loc, predicate, ptr1, ptr2);
+  }
+
 private:
   /// Set attributes (e.g. FastMathAttr) to \p op operation
   /// based on the current attributes setting.

@@ -284,14 +284,11 @@ UnpackArrayConversion::matchAndRewrite(fir::UnpackArrayOp op,
         fir::HeapType::get(fir::extractSequenceType(tempBox.getType()));
     mlir::Value tempAddr =
         builder.create<fir::BoxAddrOp>(loc, addrType, tempBox);
-    mlir::Value tempAddrAsIndex =
-        builder.createConvert(loc, indexType, tempAddr);
     mlir::Value originalAddr =
         builder.create<fir::BoxAddrOp>(loc, addrType, originalBox);
-    originalAddr = builder.createConvert(loc, indexType, originalAddr);
 
-    auto isNotSame = builder.create<mlir::arith::CmpIOp>(
-        loc, mlir::arith::CmpIPredicate::ne, tempAddrAsIndex, originalAddr);
+    auto isNotSame = builder.genPtrCompare(loc, mlir::arith::CmpIPredicate::ne,
+                                           tempAddr, originalAddr);
     builder.genIfThen(loc, isNotSame).genThen([&]() {});
     // Copy from temporary to the original.
     if (!op.getNoCopy())
