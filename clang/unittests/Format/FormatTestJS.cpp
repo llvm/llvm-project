@@ -834,6 +834,11 @@ TEST_F(FormatTestJS, AsyncFunctions) {
                "}",
                "async function hello(myparamnameiswaytooloooong) {}",
                getGoogleJSStyleWithColumns(10));
+  verifyFormat("async function\n"
+               "union(\n"
+               "    myparamnameiswaytooloooong) {\n"
+               "}",
+               getGoogleJSStyleWithColumns(10));
   verifyFormat("class C {\n"
                "  async hello(\n"
                "      myparamnameiswaytooloooong) {\n"
@@ -1369,6 +1374,7 @@ TEST_F(FormatTestJS, WrapRespectsAutomaticSemicolonInsertion) {
                getGoogleJSStyleWithColumns(10));
   verifyFormat("await theReckoning;", getGoogleJSStyleWithColumns(10));
   verifyFormat("some['a']['b']", getGoogleJSStyleWithColumns(10));
+  verifyFormat("union['a']['b']", getGoogleJSStyleWithColumns(10));
   verifyFormat("x = (a['a']\n"
                "      ['b']);",
                getGoogleJSStyleWithColumns(10));
@@ -2500,6 +2506,10 @@ TEST_F(FormatTestJS, NonNullAssertionOperator) {
 TEST_F(FormatTestJS, CppKeywords) {
   // Make sure we don't mess stuff up because of C++ keywords.
   verifyFormat("return operator && (aa);");
+  verifyFormat("enum operator {\n"
+               "  A = 1,\n"
+               "  B\n"
+               "}");
   // .. or QT ones.
   verifyFormat("const slots: Slot[];");
   // use the "!" assertion operator to validate that clang-format understands
