@@ -36,6 +36,7 @@ protected:
   Tool *buildStaticLibTool() const override;
 
 public:
+  bool hasValidGCCInstallation() const { return GCCInstallation.isValid(); }
   bool isBareMetal() const override { return true; }
   bool isCrossCompiling() const override { return true; }
   bool HasNativeLLVMSupport() const override { return true; }
@@ -59,8 +60,6 @@ public:
   CXXStdlibType GetDefaultCXXStdlibType() const override {
     return ToolChain::CST_Libcxx;
   }
-
-  const char *getDefaultLinker() const override { return "ld.lld"; }
 
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
