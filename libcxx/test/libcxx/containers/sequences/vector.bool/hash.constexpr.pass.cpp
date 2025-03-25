@@ -15,6 +15,7 @@
 // libc++ makes the operator() of this partial specialization constexpr since C++20, which is a conforming extension.
 
 #include <cassert>
+#include <functional>
 #include <vector>
 
 #include "min_allocator.h"
