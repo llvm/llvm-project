@@ -4006,13 +4006,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     } else if (Op.getResNo() == 0) {
       unsigned ScalarMemorySize = LD->getMemoryVT().getScalarSizeInBits();
       KnownBits KnownScalarMemory(ScalarMemorySize);
-      if (const MDNode *MD = LD->getRanges()) {
-        ConstantInt *Lower = mdconst::extract<ConstantInt>(MD->getOperand(0));
-        KnownBits KnownMetadata(Lower->getBitWidth());
-
-        computeKnownBitsFromRangeMetadata(*MD, KnownMetadata);
-        KnownScalarMemory = KnownMetadata.anyextOrTrunc(ScalarMemorySize);
-      }
+      if (const MDNode *MD = LD->getRanges())
+        computeKnownBitsFromRangeMetadata(*MD, KnownScalarMemory);
 
       // Extend the Known bits from memory to the size of the scalar result.
       if (ISD::isZEXTLoad(Op.getNode()))
