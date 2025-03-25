@@ -1022,6 +1022,12 @@ public:
 
   /// Returns the symbolic name assigned to the VPInstruction.
   StringRef getName() const { return Name; }
+
+  /// Return true if \p U is a cast.
+  static bool isCast(const VPUser *U) {
+    auto *VPI = dyn_cast<VPInstruction>(U);
+    return VPI && Instruction::isCast(VPI->getOpcode());
+  }
 };
 
 /// A specialization of VPInstruction augmenting it with a dedicated result
@@ -1036,10 +1042,7 @@ public:
                         Type *ResultTy, DebugLoc DL, const Twine &Name = "")
       : VPInstruction(Opcode, Operands, DL, Name), ResultTy(ResultTy) {}
 
-  static inline bool classof(const VPRecipeBase *R) {
-    auto *VPI = dyn_cast<VPInstruction>(R);
-    return VPI && Instruction::isCast(VPI->getOpcode());
-  }
+  static inline bool classof(const VPRecipeBase *R) { return isCast(R); }
 
   static inline bool classof(const VPUser *R) {
     return isa<VPInstructionWithType>(cast<VPRecipeBase>(R));
