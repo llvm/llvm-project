@@ -58617,10 +58617,13 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           APInt Mask = getBLENDIBlendMask(Ops[0]).zext(NumElts);
           for (unsigned I = 1; I != NumOps; ++I)
             Mask.insertBits(getBLENDIBlendMask(Ops[I]), I * (NumElts / NumOps));
-          MVT MaskSVT = MVT::getIntegerVT(NumElts);
-          MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
+          unsigned NumMaskBits = NumElts >= 8 ? NumElts : 8;
+          Mask = Mask.zextOrTrunc(NumMaskBits);
+          MVT MaskSVT = MVT::getIntegerVT(NumMaskBits);
+          MVT MaskVT = MVT::getVectorVT(MVT::i1, NumMaskBits);
           SDValue Sel =
               DAG.getBitcast(MaskVT, DAG.getConstant(Mask, DL, MaskSVT));
+          Sel = extractSubVector(Sel, 0, DAG, DL, NumElts);
           Concat0 = Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0);
           Concat1 = Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1);
           return DAG.getSelect(DL, VT, Sel, Concat1, Concat0);
