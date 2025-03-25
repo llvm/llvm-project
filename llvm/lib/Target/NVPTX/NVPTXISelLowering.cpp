@@ -4950,7 +4950,9 @@ PerformFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
   if (N0.getOpcode() == ISD::FMUL) {
     const auto *TLI = static_cast<const NVPTXTargetLowering *>(
         &DCI.DAG.getTargetLoweringInfo());
-    if (!TLI->allowFMA(DCI.DAG.getMachineFunction(), OptLevel))
+    if (!(TLI->allowFMA(DCI.DAG.getMachineFunction(), OptLevel) ||
+          (N->getFlags().hasAllowContract() &&
+           N0->getFlags().hasAllowContract())))
       return SDValue();
 
     // For floating point:
