@@ -90,14 +90,14 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
   // Add a new OpTypeXXX instruction without checking for duplicates.
   SPIRVType *createSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
                              SPIRV::AccessQualifier::AccessQualifier AQ,
-                             bool EmitIR);
+                             bool ExplicitLayoutRequired, bool EmitIR);
   SPIRVType *findSPIRVType(const Type *Ty, MachineIRBuilder &MIRBuilder,
                            SPIRV::AccessQualifier::AccessQualifier accessQual,
-                           bool EmitIR);
+                           bool ExplicitLayoutRequired, bool EmitIR);
   SPIRVType *
   restOfCreateSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
                         SPIRV::AccessQualifier::AccessQualifier AccessQual,
-                        bool EmitIR);
+                        bool ExplicitLayoutRequired, bool EmitIR);
 
   // Internal function creating the an OpType at the correct position in the
   // function by tweaking the passed "MIRBuilder" insertion point and restoring
@@ -298,10 +298,19 @@ public:
   // EmitIR controls if we emit GMIR or SPV constants (e.g. for array sizes)
   // because this method may be called from InstructionSelector and we don't
   // want to emit extra IR instructions there.
+  SPIRVType *getOrCreateSPIRVType(const Type *Type, MachineInstr &I,
+                                  SPIRV::AccessQualifier::AccessQualifier AQ,
+                                  bool EmitIR) {
+    MachineIRBuilder MIRBuilder(I);
+    return getOrCreateSPIRVType(Type, MIRBuilder, AQ, EmitIR);
+  }
+
   SPIRVType *getOrCreateSPIRVType(const Type *Type,
                                   MachineIRBuilder &MIRBuilder,
                                   SPIRV::AccessQualifier::AccessQualifier AQ,
-                                  bool EmitIR);
+                                  bool EmitIR) {
+    return getOrCreateSPIRVType(Type, MIRBuilder, AQ, false, EmitIR);
+  }
 
   const Type *getTypeForSPIRVType(const SPIRVType *Ty) const {
     auto Res = SPIRVToLLVMType.find(Ty);
@@ -414,6 +423,11 @@ private:
   const Type *adjustIntTypeByWidth(const Type *Ty) const;
   unsigned adjustOpTypeIntWidth(unsigned Width) const;
 
+  SPIRVType *getOrCreateSPIRVType(const Type *Type,
+                                  MachineIRBuilder &MIRBuilder,
+                                  SPIRV::AccessQualifier::AccessQualifier AQ,
+                                  bool ExplicitLayoutRequired, bool EmitIR);
+
   SPIRVType *getOpTypeInt(unsigned Width, MachineIRBuilder &MIRBuilder,
                           bool IsSigned = false);
 
@@ -425,14 +439,15 @@ private:
                              MachineIRBuilder &MIRBuilder);
 
   SPIRVType *getOpTypeArray(uint32_t NumElems, SPIRVType *ElemType,
-                            MachineIRBuilder &MIRBuilder, bool EmitIR);
+                            MachineIRBuilder &MIRBuilder,
+                            bool ExplicitLayoutRequired, bool EmitIR);
 
   SPIRVType *getOpTypeOpaque(const StructType *Ty,
                              MachineIRBuilder &MIRBuilder);
 
   SPIRVType *getOpTypeStruct(const StructType *Ty, MachineIRBuilder &MIRBuilder,
                              SPIRV::AccessQualifier::AccessQualifier AccQual,
-                             bool EmitIR);
+                             bool ExplicitLayoutRequired, bool EmitIR);
 
   SPIRVType *getOpTypePointer(SPIRV::StorageClass::StorageClass SC,
                               SPIRVType *ElemType, MachineIRBuilder &MIRBuilder,
@@ -474,6 +489,11 @@ private:
   getOrCreateSPIRVPointerTypeInternal(SPIRVType *BaseType,
                                       MachineIRBuilder &MIRBuilder,
                                       SPIRV::StorageClass::StorageClass SC);
+
+  void addStructOffsetDecorations(Register Reg, StructType *Ty,
+                                  MachineIRBuilder &MIRBuilder);
+  void addArrayStrideDecorations(Register Reg, Type *ElementType,
+                                 MachineIRBuilder &MIRBuilder);
 
 public:
   Register buildConstantInt(uint64_t Val, MachineIRBuilder &MIRBuilder,
@@ -545,9 +565,6 @@ public:
   SPIRVType *getOrCreateSPIRVVectorType(SPIRVType *BaseType,
                                         unsigned NumElements, MachineInstr &I,
                                         const SPIRVInstrInfo &TII);
-  SPIRVType *getOrCreateSPIRVArrayType(SPIRVType *BaseType,
-                                       unsigned NumElements, MachineInstr &I,
-                                       const SPIRVInstrInfo &TII);
 
   // Returns a pointer to a SPIR-V pointer type with the given base type and
   // storage class. The base type will be translated to a SPIR-V type, and the
