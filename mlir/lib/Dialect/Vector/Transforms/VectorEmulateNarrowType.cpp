@@ -247,8 +247,8 @@ static Value staticallyExtractSubvector(OpBuilder &rewriter, Location loc,
 ///     {offsets = [%offset], strides [1]}
 static Value staticallyInsertSubvector(OpBuilder &rewriter, Location loc,
                                        Value src, Value dest, int64_t offset) {
-  auto srcVecTy = cast<VectorType>(src.getType());
-  auto destVecTy = cast<VectorType>(dest.getType());
+  [[maybe_unused]] auto srcVecTy = cast<VectorType>(src.getType());
+  [[maybe_unused]] auto destVecTy = cast<VectorType>(dest.getType());
   assert(srcVecTy.getRank() == 1 && destVecTy.getRank() == 1 &&
          "expected source and dest to be rank-1 vector types");
 
