@@ -2811,6 +2811,17 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
             BF16Tbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
       return AdjustCost(Entry->Cost);
 
+  // Symbolic constants for the SVE sitofp/uitofp entries in the table below
+  // The cost of unpacking twice is artificially increased for now in order
+  // to avoid regressions against NEON, which will use tbl instructions directly
+  // instead of multiple layers of [s|u]unpk[lo|hi].
+  // We use the unpacks in cases where the destination type is illegal and
+  // requires splitting of the input, even if the input type itself is legal.
+  const unsigned int SVE_EXT_COST = 1;
+  const unsigned int SVE_FCVT_COST = 1;
+  const unsigned int SVE_UNPACK_ONCE = 4;
+  const unsigned int SVE_UNPACK_TWICE = 16;
+
   static const TypeConversionCostTblEntry ConversionTbl[] = {
       {ISD::TRUNCATE, MVT::v2i8, MVT::v2i64, 1},    // xtn
       {ISD::TRUNCATE, MVT::v2i16, MVT::v2i64, 1},   // xtn
@@ -2936,6 +2947,42 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i32, 1},
       {ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i64, 1},
 
+      // SVE: to nxv2f16
+      {ISD::SINT_TO_FP, MVT::nxv2f16, MVT::nxv2i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f16, MVT::nxv2i16, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f16, MVT::nxv2i32, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f16, MVT::nxv2i64, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f16, MVT::nxv2i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f16, MVT::nxv2i16, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f16, MVT::nxv2i32, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f16, MVT::nxv2i64, SVE_FCVT_COST},
+
+      // SVE: to nxv4f16
+      {ISD::SINT_TO_FP, MVT::nxv4f16, MVT::nxv4i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv4f16, MVT::nxv4i16, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv4f16, MVT::nxv4i32, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f16, MVT::nxv4i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f16, MVT::nxv4i16, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f16, MVT::nxv4i32, SVE_FCVT_COST},
+
+      // SVE: to nxv8f16
+      {ISD::SINT_TO_FP, MVT::nxv8f16, MVT::nxv8i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv8f16, MVT::nxv8i16, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv8f16, MVT::nxv8i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv8f16, MVT::nxv8i16, SVE_FCVT_COST},
+
+      // SVE: to nxv16f16
+      {ISD::SINT_TO_FP, MVT::nxv16f16, MVT::nxv16i8,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv16f16, MVT::nxv16i8,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+
       // Complex: to v2f32
       {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i8, 3},
       {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i16, 3},
@@ -2944,17 +2991,55 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i16, 3},
       {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i64, 2},
 
+      // SVE: to nxv2f32
+      {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i16, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i32, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i64, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f32, MVT::nxv2i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f32, MVT::nxv2i16, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f32, MVT::nxv2i32, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f32, MVT::nxv2i64, SVE_FCVT_COST},
+
       // Complex: to v4f32
       {ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i8, 4},
       {ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i16, 2},
       {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i8, 3},
       {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i16, 2},
 
+      // SVE: to nxv4f32
+      {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i16, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i32, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f32, MVT::nxv4i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f32, MVT::nxv4i16, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i32, SVE_FCVT_COST},
+
       // Complex: to v8f32
       {ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
       {ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i16, 4},
       {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
       {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i16, 4},
+
+      // SVE: to nxv8f32
+      {ISD::SINT_TO_FP, MVT::nxv8f32, MVT::nxv8i8,
+       SVE_EXT_COST + SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv8f32, MVT::nxv8i16,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv8f32, MVT::nxv8i8,
+       SVE_EXT_COST + SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv8f32, MVT::nxv8i16,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+
+      // SVE: to nxv16f32
+      {ISD::SINT_TO_FP, MVT::nxv16f32, MVT::nxv16i8,
+       SVE_UNPACK_TWICE + 4 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv16f32, MVT::nxv16i8,
+       SVE_UNPACK_TWICE + 4 * SVE_FCVT_COST},
 
       // Complex: to v16f32
       {ISD::SINT_TO_FP, MVT::v16f32, MVT::v16i8, 21},
@@ -2968,9 +3053,45 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i16, 4},
       {ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i32, 2},
 
+      // SVE: to nxv2f64
+      {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i16, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i32, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i64, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i16, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i32, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i64, SVE_FCVT_COST},
+
       // Complex: to v4f64
       {ISD::SINT_TO_FP, MVT::v4f64, MVT::v4i32, 4},
       {ISD::UINT_TO_FP, MVT::v4f64, MVT::v4i32, 4},
+
+      // SVE: to nxv4f64
+      {ISD::SINT_TO_FP, MVT::nxv4f64, MVT::nxv4i8,
+       SVE_EXT_COST + SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv4f64, MVT::nxv4i16,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv4f64, MVT::nxv4i32,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f64, MVT::nxv4i8,
+       SVE_EXT_COST + SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f64, MVT::nxv4i16,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f64, MVT::nxv4i32,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+
+      // SVE: to nxv8f64
+      {ISD::SINT_TO_FP, MVT::nxv8f64, MVT::nxv8i8,
+       SVE_EXT_COST + SVE_UNPACK_TWICE + 4 * SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv8f64, MVT::nxv8i16,
+       SVE_UNPACK_TWICE + 4 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv8f64, MVT::nxv8i8,
+       SVE_EXT_COST + SVE_UNPACK_TWICE + 4 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv8f64, MVT::nxv8i16,
+       SVE_UNPACK_TWICE + 4 * SVE_FCVT_COST},
 
       // LowerVectorFP_TO_INT
       {ISD::FP_TO_SINT, MVT::v2i32, MVT::v2f32, 1},

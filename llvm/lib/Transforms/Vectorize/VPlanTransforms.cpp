@@ -582,7 +582,7 @@ static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
     if (isa<VPHeaderPHIRecipe>(Cur))
       continue;
     for (VPValue *V : Cur->definedValues())
-      Users.insert(V->user_begin(), V->user_end());
+      Users.insert_range(V->users());
   }
   return Users.takeVector();
 }
@@ -922,6 +922,17 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
         cast<VPInstruction>(OldMask)->eraseFromParent();
     }
     return;
+  }
+
+  // VPScalarIVSteps can only be simplified after unrolling. VPScalarIVSteps for
+  // part 0 can be replaced by their start value, if only the first lane is
+  // demanded.
+  if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(&R)) {
+    if (Steps->getParent()->getPlan()->isUnrolled() && Steps->isPart0() &&
+        vputils::onlyFirstLaneUsed(Steps)) {
+      Steps->replaceAllUsesWith(Steps->getOperand(0));
+      return;
+    }
   }
 
   VPValue *A;
@@ -2162,7 +2173,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
       ExitIRI->extractLastLaneOfOperand(MiddleBuilder);
     }
     // Add the incoming value from the early exit.
-    if (!IncomingFromEarlyExit->isLiveIn()) {
+    if (!IncomingFromEarlyExit->isLiveIn() && !Plan.hasScalarVFOnly()) {
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
           VPInstruction::FirstActiveLane, {EarlyExitTakenCond}, nullptr,
           "first.active.lane");
