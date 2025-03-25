@@ -1,9 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -O2 \
 // RUN:    -Wno-coroutine-missing-unhandled-exception -emit-llvm %s -o - -disable-llvm-passes \
 // RUN:   | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -O2 \
-// RUN:    -Wno-coroutine-missing-unhandled-exception -emit-llvm %s -o - -disable-llvm-passes -fcxx-type-aware-allocators \
-// RUN:   | FileCheck %s
 
 namespace std {
 template <typename... T>

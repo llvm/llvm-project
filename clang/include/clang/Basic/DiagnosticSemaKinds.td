@@ -9842,8 +9842,6 @@ def err_destroying_operator_delete_not_usual : Error<
 
 def err_type_aware_destroying_operator_delete : Error<
   "type aware destroying delete is not permitted in C++26">;
-def err_unsupported_type_aware_allocator : Error<
-  "type aware allocation operators are disabled, enable with '-fcxx-type-aware-allocators'">;
 
 def ext_cxx26_type_aware_allocators : ExtWarn<
   "type aware allocators are a C++2c extension">, InGroup<CXX26>;

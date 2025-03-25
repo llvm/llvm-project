@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fmodules -verify %s
-// RUN: %clang_cc1 -fmodules -fcxx-type-aware-allocators -verify %s
 // RUN: %clang_cc1 -fmodules -std=c++26 -verify %s
 // expected-no-diagnostics
 

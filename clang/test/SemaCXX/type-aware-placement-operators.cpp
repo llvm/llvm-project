@@ -1,15 +1,13 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s        -std=c++26 -fcxx-type-aware-allocators -fexceptions -fcxx-exceptions    -fsized-deallocation    -faligned-allocation
-// RUN: %clang_cc1 -fsyntax-only -verify %s        -std=c++26 -fcxx-type-aware-allocators -fexceptions -fcxx-exceptions -fno-sized-deallocation    -faligned-allocation
-// RUN: %clang_cc1 -fsyntax-only -verify %s        -std=c++26 -fcxx-type-aware-allocators -fexceptions -fcxx-exceptions -fno-sized-deallocation -fno-aligned-allocation
-// RUN: %clang_cc1 -fsyntax-only -verify %s        -std=c++26 -fcxx-type-aware-allocators -fexceptions -fcxx-exceptions    -fsized-deallocation -fno-aligned-allocation
+// RUN: %clang_cc1 -fsyntax-only -verify %s        -std=c++26 -fexceptions -fcxx-exceptions    -fsized-deallocation    -faligned-allocation
+// RUN: %clang_cc1 -fsyntax-only -verify %s        -std=c++26 -fexceptions -fcxx-exceptions -fno-sized-deallocation    -faligned-allocation
+// RUN: %clang_cc1 -fsyntax-only -verify %s        -std=c++26 -fexceptions -fcxx-exceptions -fno-sized-deallocation -fno-aligned-allocation
+// RUN: %clang_cc1 -fsyntax-only -verify %s        -std=c++26 -fexceptions -fcxx-exceptions    -fsized-deallocation -fno-aligned-allocation
 
 namespace std {
   template <class T> struct type_identity {};
   enum class align_val_t : __SIZE_TYPE__ {};
   struct destroying_delete_t { explicit destroying_delete_t() = default; };
 }
-
-static_assert(__has_feature(cxx_type_aware_allocators));
 
 using size_t = __SIZE_TYPE__;
 struct Context;

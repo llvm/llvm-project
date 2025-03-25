@@ -774,8 +774,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   Builder.defineMacro("__cpp_impl_destroying_delete", "201806L");
 
   // TODO: Final number?
-  if (LangOpts.TypeAwareAllocators)
-    Builder.defineMacro("__cpp_type_aware_allocators", "202500L");
+  Builder.defineMacro("__cpp_type_aware_allocators", "202500L");
 }
 
 /// InitializeOpenCLFeatureTestMacros - Define OpenCL macros based on target

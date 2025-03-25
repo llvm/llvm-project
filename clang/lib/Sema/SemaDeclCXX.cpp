@@ -7280,70 +7280,68 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
       checkCUDADeviceBuiltinTextureClassTemplate(*this, Record);
   }
 
-  if (getLangOpts().TypeAwareAllocators) {
-    llvm::SmallVector<const FunctionDecl *, 2> TypeAwareNewDecls;
-    llvm::SmallVector<const FunctionDecl *, 2> TypeAwareDeleteDecls;
-    llvm::SmallVector<const FunctionDecl *, 2> TypeAwareArrayNewDecls;
-    llvm::SmallVector<const FunctionDecl *, 2> TypeAwareArrayDeleteDecls;
+  llvm::SmallVector<const FunctionDecl *, 2> TypeAwareNewDecls;
+  llvm::SmallVector<const FunctionDecl *, 2> TypeAwareDeleteDecls;
+  llvm::SmallVector<const FunctionDecl *, 2> TypeAwareArrayNewDecls;
+  llvm::SmallVector<const FunctionDecl *, 2> TypeAwareArrayDeleteDecls;
 
-    for (auto *D : Record->decls()) {
-      const FunctionDecl *FnDecl = nullptr;
-      if (auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
-        FnDecl = FTD->getTemplatedDecl();
-      else if (auto *FD = dyn_cast<FunctionDecl>(D))
-        FnDecl = FD;
-      if (!FnDecl || !FnDecl->isTypeAwareOperatorNewOrDelete())
-        continue;
-      switch (FnDecl->getOverloadedOperator()) {
-      case OO_New:
-        TypeAwareNewDecls.push_back(FnDecl);
-        break;
-      case OO_Array_New:
-        TypeAwareArrayNewDecls.push_back(FnDecl);
-        break;
-      case OO_Delete:
-        TypeAwareDeleteDecls.push_back(FnDecl);
-        break;
-      case OO_Array_Delete:
-        TypeAwareArrayDeleteDecls.push_back(FnDecl);
-        break;
-      default:
-        continue;
-      }
+  for (auto *D : Record->decls()) {
+    const FunctionDecl *FnDecl = nullptr;
+    if (auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
+      FnDecl = FTD->getTemplatedDecl();
+    else if (auto *FD = dyn_cast<FunctionDecl>(D))
+      FnDecl = FD;
+    if (!FnDecl || !FnDecl->isTypeAwareOperatorNewOrDelete())
+      continue;
+    switch (FnDecl->getOverloadedOperator()) {
+    case OO_New:
+      TypeAwareNewDecls.push_back(FnDecl);
+      break;
+    case OO_Array_New:
+      TypeAwareArrayNewDecls.push_back(FnDecl);
+      break;
+    case OO_Delete:
+      TypeAwareDeleteDecls.push_back(FnDecl);
+      break;
+    case OO_Array_Delete:
+      TypeAwareArrayDeleteDecls.push_back(FnDecl);
+      break;
+    default:
+      continue;
     }
-    auto CheckMismatchedTypeAwareAllocators =
-        [this, Record](
-            OverloadedOperatorKind NewKind,
-            const llvm::SmallVector<const FunctionDecl *, 2> &NewDecls,
-            OverloadedOperatorKind DeleteKind,
-            const llvm::SmallVector<const FunctionDecl *, 2> &DeleteDecls) {
-          if (NewDecls.empty() == DeleteDecls.empty())
-            return;
-          DeclarationName FoundOperator =
-              Context.DeclarationNames.getCXXOperatorName(
-                  NewDecls.empty() ? DeleteKind : NewKind);
-          DeclarationName MissingOperator =
-              Context.DeclarationNames.getCXXOperatorName(
-                  NewDecls.empty() ? NewKind : DeleteKind);
-          Diag(Record->getLocation(),
-               diag::err_type_aware_allocator_missing_matching_operator)
-              << FoundOperator << Context.getRecordType(Record)
-              << MissingOperator;
-          for (auto MD : NewDecls)
-            Diag(MD->getLocation(),
-                 diag::note_unmatched_type_aware_allocator_declared)
-                << MD;
-          for (auto MD : DeleteDecls)
-            Diag(MD->getLocation(),
-                 diag::note_unmatched_type_aware_allocator_declared)
-                << MD;
-        };
-    CheckMismatchedTypeAwareAllocators(OO_New, TypeAwareNewDecls, OO_Delete,
-                                       TypeAwareDeleteDecls);
-    CheckMismatchedTypeAwareAllocators(OO_Array_New, TypeAwareArrayNewDecls,
-                                       OO_Array_Delete,
-                                       TypeAwareArrayDeleteDecls);
   }
+  auto CheckMismatchedTypeAwareAllocators =
+      [this,
+       Record](OverloadedOperatorKind NewKind,
+               const llvm::SmallVector<const FunctionDecl *, 2> &NewDecls,
+               OverloadedOperatorKind DeleteKind,
+               const llvm::SmallVector<const FunctionDecl *, 2> &DeleteDecls) {
+        if (NewDecls.empty() == DeleteDecls.empty())
+          return;
+        DeclarationName FoundOperator =
+            Context.DeclarationNames.getCXXOperatorName(
+                NewDecls.empty() ? DeleteKind : NewKind);
+        DeclarationName MissingOperator =
+            Context.DeclarationNames.getCXXOperatorName(
+                NewDecls.empty() ? NewKind : DeleteKind);
+        Diag(Record->getLocation(),
+             diag::err_type_aware_allocator_missing_matching_operator)
+            << FoundOperator << Context.getRecordType(Record)
+            << MissingOperator;
+        for (auto MD : NewDecls)
+          Diag(MD->getLocation(),
+               diag::note_unmatched_type_aware_allocator_declared)
+              << MD;
+        for (auto MD : DeleteDecls)
+          Diag(MD->getLocation(),
+               diag::note_unmatched_type_aware_allocator_declared)
+              << MD;
+      };
+  CheckMismatchedTypeAwareAllocators(OO_New, TypeAwareNewDecls, OO_Delete,
+                                     TypeAwareDeleteDecls);
+  CheckMismatchedTypeAwareAllocators(OO_Array_New, TypeAwareArrayNewDecls,
+                                     OO_Array_Delete,
+                                     TypeAwareArrayDeleteDecls);
 }
 
 /// Look up the special member function that would be called by a special
@@ -9876,9 +9874,8 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD,
     DeclarationName Name =
       Context.DeclarationNames.getCXXOperatorName(OO_Delete);
     ImplicitDeallocationParameters IDP = {
-        DeallocType,
-        typeAwareAllocationModeFromBool(getLangOpts().TypeAwareAllocators),
-        AlignedAllocationMode::No, SizedDeallocationMode::No};
+        DeallocType, TypeAwareAllocationMode::Yes, AlignedAllocationMode::No,
+        SizedDeallocationMode::No};
     if (FindDeallocationFunction(MD->getLocation(), MD->getParent(), Name,
                                  OperatorDelete, IDP,
                                  /*Diagnose*/ false)) {
@@ -16337,7 +16334,7 @@ bool Sema::isTypeAwareOperatorNewOrDelete(const NamedDecl *ND) const {
 FunctionDecl *
 Sema::BuildTypeAwareUsualDelete(FunctionTemplateDecl *FnTemplateDecl,
                                 QualType DeallocType, SourceLocation Loc) {
-  if (!getLangOpts().TypeAwareAllocators || DeallocType.isNull())
+  if (DeallocType.isNull())
     return nullptr;
 
   FunctionDecl *FnDecl = FnTemplateDecl->getTemplatedDecl();
@@ -16441,9 +16438,6 @@ static inline bool CheckOperatorNewDeleteTypes(
   unsigned MinimumMandatoryArgumentCount = 1;
   unsigned SizeParameterIndex = 0;
   if (IsPotentiallyTypeAware) {
-    if (!SemaRef.getLangOpts().TypeAwareAllocators)
-      return SemaRef.Diag(FnDecl->getLocation(),
-                          diag::err_unsupported_type_aware_allocator);
     if (!FnDecl->isTemplateInstantiation()) {
       unsigned DiagID = SemaRef.getLangOpts().CPlusPlus26
                             ? diag::warn_cxx26_type_aware_allocators
@@ -16557,7 +16551,6 @@ CheckOperatorNewDeclaration(Sema &SemaRef, const FunctionDecl *FnDecl) {
   CanQualType SizeTy =
     SemaRef.Context.getCanonicalType(SemaRef.Context.getSizeType());
 
-  unsigned MinimumNonDefaultArgs = 0;
   // C++ [basic.stc.dynamic.allocation]p1:
   //  The return type shall be void*. The first parameter shall have type
   //  std::size_t.

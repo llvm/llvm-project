@@ -9,7 +9,6 @@ namespace std {
   struct destroying_delete_t { explicit destroying_delete_t() = default; };
 }
 
-static_assert(__has_feature(cxx_type_aware_allocators));
 #if defined(__cpp_aligned_new)
 #define ALLOCATION_ALIGNMENT , std::align_val_t
 #else

@@ -1,14 +1,12 @@
-// RUN: %clang_cc1 %s -triple arm64-apple-macosx -fcxx-type-aware-allocators -emit-llvm -fcxx-exceptions -fexceptions -std=c++23    -fsized-deallocation    -faligned-allocation -o - | FileCheck %s
-// RUN: %clang_cc1 %s -triple arm64-apple-macosx -fcxx-type-aware-allocators -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -fno-sized-deallocation    -faligned-allocation -o - | FileCheck %s
-// RUN: %clang_cc1 %s -triple arm64-apple-macosx -fcxx-type-aware-allocators -emit-llvm -fcxx-exceptions -fexceptions -std=c++23    -fsized-deallocation -fno-aligned-allocation -o - | FileCheck %s
-// RUN: %clang_cc1 %s -triple arm64-apple-macosx -fcxx-type-aware-allocators -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -fno-aligned-allocation -fno-sized-deallocation -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx -emit-llvm -fcxx-exceptions -fexceptions -std=c++23    -fsized-deallocation    -faligned-allocation -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -fno-sized-deallocation    -faligned-allocation -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx -emit-llvm -fcxx-exceptions -fexceptions -std=c++23    -fsized-deallocation -fno-aligned-allocation -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -fno-aligned-allocation -fno-sized-deallocation -o - | FileCheck %s
 
 namespace std {
   template <class T> struct type_identity {};
   enum class align_val_t : __SIZE_TYPE__ {};
 }
-
-static_assert(__has_feature(cxx_type_aware_allocators));
 
 using size_t = __SIZE_TYPE__;
 struct Context;

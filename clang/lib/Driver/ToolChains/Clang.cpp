@@ -7188,14 +7188,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       types::isCXX(InputType))
     CmdArgs.push_back("-fcoro-aligned-allocation");
 
-  if (Arg *A = Args.getLastArg(options::OPT_fcxx_type_aware_allocators,
-                               options::OPT_fno_cxx_type_aware_allocators)) {
-    if (A->getOption().matches(options::OPT_fno_cxx_type_aware_allocators))
-      CmdArgs.push_back("-fno-cxx-type-aware-allocators");
-    else
-      CmdArgs.push_back("-fcxx-type-aware-allocators");
-  }
-
   Args.AddLastArg(CmdArgs, options::OPT_fdouble_square_bracket_attributes,
                   options::OPT_fno_double_square_bracket_attributes);
 

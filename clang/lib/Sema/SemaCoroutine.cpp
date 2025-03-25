@@ -1104,8 +1104,6 @@ static bool DiagnoseTypeAwareAllocators(Sema &S, SourceLocation Loc,
                                         unsigned DiagnosticID,
                                         DeclarationName Name,
                                         QualType PromiseType) {
-  if (!S.getLangOpts().TypeAwareAllocators)
-    return false;
   assert(PromiseType->isRecordType());
 
   LookupResult R(S, Name, Loc, Sema::LookupOrdinaryName);
@@ -1121,6 +1119,7 @@ static bool DiagnoseTypeAwareAllocators(Sema &S, SourceLocation Loc,
     S.Diag(Decl->getLocation(), diag::note_type_aware_operator_declared)
         << /* isTypeAware */ 1 << Decl;
   }
+  R.suppressDiagnostics();
   return HaveIssuedWarning;
 }
 

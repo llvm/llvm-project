@@ -1753,8 +1753,7 @@ static bool isNonPlacementDeallocationFunction(Sema &S, FunctionDecl *FD) {
       FD->getOverloadedOperator() != OO_Array_Delete)
     return false;
 
-  if (S.getLangOpts().TypeAwareAllocators &&
-      FD->isTypeAwareOperatorNewOrDelete())
+  if (FD->isTypeAwareOperatorNewOrDelete())
     return FunctionDecl::RequiredTypeAwareDeleteParameterCount ==
            FD->getNumParams();
 
@@ -1801,8 +1800,7 @@ namespace {
         FD = InstantiatedDecl;
       }
       unsigned NumBaseParams = 1;
-      if (S.getLangOpts().TypeAwareAllocators &&
-          FD->isTypeAwareOperatorNewOrDelete()) {
+      if (FD->isTypeAwareOperatorNewOrDelete()) {
         if (AllocType.isNull()) {
           FD = nullptr;
           return;
@@ -2441,8 +2439,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       AllocType->isDependentType() ? 0 : Context.getTypeAlign(AllocType);
   unsigned NewAlignment = Context.getTargetInfo().getNewAlign();
   ImplicitAllocationParameters IAP = {
-      AllocType,
-      typeAwareAllocationModeFromBool(getLangOpts().TypeAwareAllocators),
+      AllocType, TypeAwareAllocationMode::Yes,
       alignedAllocationModeFromBool(getLangOpts().AlignedAllocation &&
                                     Alignment > NewAlignment)};
 
@@ -2851,7 +2848,7 @@ static bool resolveAllocationOverloadInterior(
   llvm_unreachable("Unreachable, bad result from BestViableFunction");
 }
 
-enum class DeallocLookupMode { Untyped, OptionallyTyped, RequireTyped };
+enum class DeallocLookupMode { Untyped, OptionallyTyped };
 
 static void LookupGlobalDeallocationFunctions(Sema &S, SourceLocation Loc,
                                               LookupResult &FoundDelete,
@@ -3550,11 +3547,8 @@ Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
   DeclareGlobalNewDelete();
 
   LookupResult FoundDelete(*this, Name, StartLoc, LookupOrdinaryName);
-  DeallocLookupMode LookupMode = getLangOpts().TypeAwareAllocators
-                                     ? DeallocLookupMode::OptionallyTyped
-                                     : DeallocLookupMode::Untyped;
-  LookupGlobalDeallocationFunctions(*this, StartLoc, FoundDelete, LookupMode,
-                                    Name);
+  LookupGlobalDeallocationFunctions(*this, StartLoc, FoundDelete,
+                                    DeallocLookupMode::OptionallyTyped, Name);
 
   // FIXME: It's possible for this to result in ambiguity, through a
   // user-declared variadic operator delete or the enable_if attribute. We
@@ -3580,9 +3574,8 @@ FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
   FunctionDecl *OperatorDelete = nullptr;
   QualType DeallocType = Context.getRecordType(RD);
   ImplicitDeallocationParameters IDP = {
-      DeallocType,
-      typeAwareAllocationModeFromBool(getLangOpts().TypeAwareAllocators),
-      AlignedAllocationMode::No, SizedDeallocationMode::No};
+      DeallocType, TypeAwareAllocationMode::Yes, AlignedAllocationMode::No,
+      SizedDeallocationMode::No};
 
   if (FindDeallocationFunction(Loc, RD, Name, OperatorDelete, IDP))
     return nullptr;
@@ -4053,9 +4046,8 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
     if (PointeeRD) {
       ImplicitDeallocationParameters IDP = {
-          Pointee,
-          typeAwareAllocationModeFromBool(getLangOpts().TypeAwareAllocators),
-          AlignedAllocationMode::No, SizedDeallocationMode::No};
+          Pointee, TypeAwareAllocationMode::Yes, AlignedAllocationMode::No,
+          SizedDeallocationMode::No};
       if (!UseGlobal &&
           FindDeallocationFunction(StartLoc, PointeeRD, DeleteName,
                                    OperatorDelete, IDP))
@@ -4111,8 +4103,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
       // Look for a global declaration.
       ImplicitDeallocationParameters IDP = {
-          Pointee,
-          typeAwareAllocationModeFromBool(getLangOpts().TypeAwareAllocators),
+          Pointee, TypeAwareAllocationMode::Yes,
           alignedAllocationModeFromBool(Overaligned),
           sizedDeallocationModeFromBool(CanProvideSize)};
       OperatorDelete = FindUsualDeallocationFunction(StartLoc, IDP, DeleteName);

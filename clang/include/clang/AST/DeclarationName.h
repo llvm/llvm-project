@@ -502,17 +502,7 @@ public:
   }
 
   bool isOperatorNewOrDelete() const {
-    if (getNameKind() != DeclarationName::CXXOperatorName)
-      return false;
-    switch (getCXXOverloadedOperator()) {
-    case OO_New:
-    case OO_Array_New:
-    case OO_Delete:
-    case OO_Array_Delete:
-      return true;
-    default:
-      return false;
-    }
+    return isOperatorNew() || isOperatorDelete();
   }
 
   /// If this name is the name of a literal operator,

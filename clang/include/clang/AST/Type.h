@@ -2637,7 +2637,6 @@ public:
   bool isTypedefNameType() const;               // typedef or alias template
 
   bool isTypeIdentitySpecialization() const; // std::type_identity<X> for any X
-  bool isDestroyingDeleteT() const;
 
   /// If this type is a template specialization return the TemplateDecl
   /// that was specialized. It this is not a template specialization,
