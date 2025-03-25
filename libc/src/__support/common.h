@@ -63,7 +63,6 @@
 #define LLVM_LIBC_ALIAS(name, func)                                            \
   decltype(LIBC_NAMESPACE::name) LIBC_NAMESPACE::name                          \
       [[gnu::alias("__" #func "_impl__")]];                                    \
-  asm(#name " = __" #func "_impl__");                                          \
   static_assert(true, "Require semicolon")
 #endif // LIBC_COPT_PUBLIC_PACKAGING
 
