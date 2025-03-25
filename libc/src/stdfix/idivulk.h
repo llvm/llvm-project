@@ -14,7 +14,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-unsigned long int idivlk(unsigned long accum x, unsigned long accum y);
+unsigned long int idivulk(unsigned long accum x, unsigned long accum y);
 
 } // namespace LIBC_NAMESPACE_DECL
 
