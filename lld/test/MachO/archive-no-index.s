@@ -6,6 +6,10 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos -o %t/lib2.o %t/lib2.s
 # RUN: llvm-ar crST %t/lib.a %t/lib.o %t/lib2.o
 # RUN: %lld %t/main.o %t/lib.a -o %t/out
+# RUN: llvm-nm %t/out | FileCheck %s
+
+# CHECK-NOT: T _bar
+# CHECK:     T _foo
 
 ## Test that every kind of eager load mechanism still works.
 # RUN: %lld %t/main.o %t/lib.a -all_load -o %t/all_load
