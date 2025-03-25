@@ -7138,8 +7138,8 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
     Res = createASTForDirective(SemaRef, Kind, Clauses, AStmt, StartLoc, EndLoc,
                                 DirName, CancelRegion, VarsWithInheritedDSA,
                                 DSAStack);
-    Res = ActOnOpenMPCompoundRootDirective(Kind, Clauses, Res.get(), StartLoc,
-                                           EndLoc);
+    Res = ActOnOpenMPCompoundRootDirective(Kind, Clauses, Res.get(),
+                                           getRawStmt(AStmt), StartLoc, EndLoc);
   } else {
     if (getDirectiveAssociation(Kind) == Association::Loop) {
       Res = ActOnOpenMPOpaqueLoopDirective(Kind, Clauses, AStmt, StartLoc,
