@@ -158,6 +158,14 @@ subroutine task_depend_multi_task()
   !$omp end task
 end subroutine task_depend_multi_task
 
+subroutine task_depend_box(array)
+  integer :: array(:)
+  !CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %{{.*}} : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
+  !CHECK: omp.task depend(taskdependin -> %[[BOX_ADDR]] : !fir.ref<!fir.array<?xi32>>)
+  !$omp task depend(in: array)
+  !$omp end task
+end subroutine
+
 !===============================================================================
 ! `private` clause
 !===============================================================================
