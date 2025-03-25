@@ -195,6 +195,43 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 }
 
+; Trip count of 8 - does get vectorized
+; CHECK-LABEL: tripcount8
+; CHECK: LV: Selecting VF: 4
+define void @tripcount8(ptr nocapture readonly %in, ptr nocapture %out, ptr nocapture readonly %consts, i32 %n) #0 {
+entry:
+  %out.promoted = load i32, ptr %out, align 4
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  store i32 %add12, ptr %out, align 4
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %hop.0236 = phi i32 [ 0, %entry ], [ %add139, %for.body ]
+  %add12220235 = phi i32 [ %out.promoted, %entry ], [ %add12, %for.body ]
+  %arrayidx = getelementptr inbounds i16, ptr %in, i32 %hop.0236
+  %0 = load i16, ptr %arrayidx, align 2
+  %conv = sext i16 %0 to i32
+  %arrayidx1 = getelementptr inbounds i16, ptr %consts, i32 %hop.0236
+  %1 = load i16, ptr %arrayidx1, align 2
+  %conv2 = sext i16 %1 to i32
+  %mul = mul nsw i32 %conv2, %conv
+  %add = add nsw i32 %mul, %add12220235
+  %add4 = or i32 %hop.0236, 1
+  %arrayidx5 = getelementptr inbounds i16, ptr %in, i32 %add4
+  %2 = load i16, ptr %arrayidx5, align 2
+  %conv6 = sext i16 %2 to i32
+  %arrayidx8 = getelementptr inbounds i16, ptr %consts, i32 %add4
+  %3 = load i16, ptr %arrayidx8, align 2
+  %conv9 = sext i16 %3 to i32
+  %mul10 = mul nsw i32 %conv9, %conv6
+  %add12 = add nsw i32 %mul10, %add
+  %add139 = add nuw nsw i32 %hop.0236, 16
+  %cmp = icmp ult i32 %hop.0236, 112
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+}
+
 ; Larger example with predication that should also not be vectorized
 ; CHECK-LABEL: predicated_test
 ; CHECK: LV: Selecting VF: 1
