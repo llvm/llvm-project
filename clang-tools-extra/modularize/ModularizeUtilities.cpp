@@ -55,9 +55,8 @@ ModularizeUtilities::ModularizeUtilities(std::vector<std::string> &InputPaths,
       TargetOpts(new ModuleMapTargetOptions()),
       Target(TargetInfo::CreateTargetInfo(*Diagnostics, TargetOpts)),
       FileMgr(new FileManager(FileSystemOpts)),
-      SourceMgr(new SourceManager(*Diagnostics, *FileMgr, false)),
-      HeaderInfo(new HeaderSearch(std::make_shared<HeaderSearchOptions>(),
-                                  *SourceMgr, *Diagnostics, *LangOpts,
+      SourceMgr(new SourceManager(*Diagnostics, *FileMgr, false)), HSOpts(),
+      HeaderInfo(new HeaderSearch(HSOpts, *SourceMgr, *Diagnostics, *LangOpts,
                                   Target.get())) {}
 
 // Create instance of ModularizeUtilities, to simplify setting up
