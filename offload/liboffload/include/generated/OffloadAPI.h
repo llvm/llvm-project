@@ -656,7 +656,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olWaitEvent(
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
 ///         + `NULL == DstPtr`
 ///         + `NULL == SrcPtr`
-OL_APIEXPORT ol_result_t OL_APICALL olEnqueueMemcpy(
+OL_APIEXPORT ol_result_t OL_APICALL olMemcpy(
     // [in] handle of the queue
     ol_queue_handle_t Queue,
     // [in] pointer to copy to
@@ -699,7 +699,7 @@ typedef struct ol_kernel_launch_size_args_t {
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
 ///         + `NULL == ArgumentsData`
 ///         + `NULL == LaunchSizeArgs`
-OL_APIEXPORT ol_result_t OL_APICALL olEnqueueKernelLaunch(
+OL_APIEXPORT ol_result_t OL_APICALL olLaunchKernel(
     // [in] handle of the queue
     ol_queue_handle_t Queue,
     // [in] handle of the kernel
@@ -926,9 +926,9 @@ typedef struct ol_wait_event_params_t {
 } ol_wait_event_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olEnqueueMemcpy
+/// @brief Function parameters for olMemcpy
 /// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_enqueue_memcpy_params_t {
+typedef struct ol_memcpy_params_t {
   ol_queue_handle_t *pQueue;
   void **pDstPtr;
   ol_device_handle_t *pDstDevice;
@@ -936,19 +936,19 @@ typedef struct ol_enqueue_memcpy_params_t {
   ol_device_handle_t *pSrcDevice;
   size_t *pSize;
   ol_event_handle_t **pEventOut;
-} ol_enqueue_memcpy_params_t;
+} ol_memcpy_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olEnqueueKernelLaunch
+/// @brief Function parameters for olLaunchKernel
 /// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_enqueue_kernel_launch_params_t {
+typedef struct ol_launch_kernel_params_t {
   ol_queue_handle_t *pQueue;
   ol_kernel_handle_t *pKernel;
   const void **pArgumentsData;
   size_t *pArgumentsSize;
   const ol_kernel_launch_size_args_t **pLaunchSizeArgs;
   ol_event_handle_t **pEventOut;
-} ol_enqueue_kernel_launch_params_t;
+} ol_launch_kernel_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for olCreateProgram
@@ -1116,19 +1116,18 @@ OL_APIEXPORT ol_result_t OL_APICALL olWaitEventWithCodeLoc(
     ol_event_handle_t Event, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olEnqueueMemcpy that also sets source code location
-/// information
-/// @details See also ::olEnqueueMemcpy
-OL_APIEXPORT ol_result_t OL_APICALL olEnqueueMemcpyWithCodeLoc(
+/// @brief Variant of olMemcpy that also sets source code location information
+/// @details See also ::olMemcpy
+OL_APIEXPORT ol_result_t OL_APICALL olMemcpyWithCodeLoc(
     ol_queue_handle_t Queue, void *DstPtr, ol_device_handle_t DstDevice,
     void *SrcPtr, ol_device_handle_t SrcDevice, size_t Size,
     ol_event_handle_t *EventOut, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olEnqueueKernelLaunch that also sets source code location
+/// @brief Variant of olLaunchKernel that also sets source code location
 /// information
-/// @details See also ::olEnqueueKernelLaunch
-OL_APIEXPORT ol_result_t OL_APICALL olEnqueueKernelLaunchWithCodeLoc(
+/// @details See also ::olLaunchKernel
+OL_APIEXPORT ol_result_t OL_APICALL olLaunchKernelWithCodeLoc(
     ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
     const void *ArgumentsData, size_t ArgumentsSize,
     const ol_kernel_launch_size_args_t *LaunchSizeArgs,

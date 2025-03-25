@@ -398,11 +398,10 @@ ol_event_handle_t makeEvent(ol_queue_handle_t Queue) {
   return EventImpl.release();
 }
 
-ol_impl_result_t olEnqueueMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
-                                      ol_device_handle_t DstDevice,
-                                      void *SrcPtr,
-                                      ol_device_handle_t SrcDevice, size_t Size,
-                                      ol_event_handle_t *EventOut) {
+ol_impl_result_t olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
+                               ol_device_handle_t DstDevice, void *SrcPtr,
+                               ol_device_handle_t SrcDevice, size_t Size,
+                               ol_event_handle_t *EventOut) {
   if (DstDevice == HostDevice() && SrcDevice == HostDevice()) {
     // TODO: We could actually handle this with a plain memcpy but we currently
     // have no way of synchronizing this with the queue
@@ -491,10 +490,10 @@ ol_impl_result_t olDestroyKernel_impl(ol_kernel_handle_t Kernel) {
 }
 
 ol_impl_result_t
-olEnqueueKernelLaunch_impl(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
-                           const void *ArgumentsData, size_t ArgumentsSize,
-                           const ol_kernel_launch_size_args_t *LaunchSizeArgs,
-                           ol_event_handle_t *EventOut) {
+olLaunchKernel_impl(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
+                    const void *ArgumentsData, size_t ArgumentsSize,
+                    const ol_kernel_launch_size_args_t *LaunchSizeArgs,
+                    ol_event_handle_t *EventOut) {
   auto *DeviceImpl = Queue->Device->Device;
 
   AsyncInfoWrapperTy AsyncInfoWrapper(*DeviceImpl, Queue->AsyncInfo);

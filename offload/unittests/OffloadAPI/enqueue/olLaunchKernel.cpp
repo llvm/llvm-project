@@ -1,4 +1,4 @@
-//===------- Offload API tests - olEnqueueKernelLaunch --------------------===//
+//===------- Offload API tests - olLaunchKernel --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
-struct olEnqueueKernelLaunchTest : OffloadQueueTest {
+struct olLaunchKernelTest : OffloadQueueTest {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
     ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Platform, DeviceBin));
@@ -35,7 +35,7 @@ struct olEnqueueKernelLaunchTest : OffloadQueueTest {
   ol_kernel_handle_t Kernel = nullptr;
 };
 
-TEST_F(olEnqueueKernelLaunchTest, Success) {
+TEST_F(olLaunchKernelTest, Success) {
   void *Mem;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_SHARED, 64, &Mem));
   ol_kernel_launch_size_args_t LaunchArgs{};
@@ -52,8 +52,8 @@ TEST_F(olEnqueueKernelLaunchTest, Success) {
     void *Mem;
   } Args{Mem};
 
-  ASSERT_SUCCESS(olEnqueueKernelLaunch(Queue, Kernel, &Args, sizeof(Args),
-                                       &LaunchArgs, nullptr));
+  ASSERT_SUCCESS(
+      olLaunchKernel(Queue, Kernel, &Args, sizeof(Args), &LaunchArgs, nullptr));
 
   ASSERT_SUCCESS(olWaitQueue(Queue));
 
