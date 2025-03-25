@@ -1095,11 +1095,8 @@ public:
   unsigned getAltOpcode() const {
     return hasAltOp() ? AltOp.getOpcode() : getMainOpcode();
   }
-  SmallVector<Value *> getMainOperand(Instruction *I) const {
+  SmallVector<Value *> getOperand(Instruction *I) const {
     return MainOp.getOperand(I);
-  }
-  SmallVector<Value *> getAltOperand(Instruction *I) const {
-    return AltOp.getOperand(I);
   }
 };
 
@@ -1127,8 +1124,8 @@ convertTo(Instruction *I, Instruction *MainOp, Instruction *AltOp) {
   assert(I->isBinaryOp() && "Cannot convert the instruction.");
   BinOpSameOpcodeHelper Converter(I);
   if (Converter.add(I) && Converter.add(MainOp) && !Converter.hasAltOp())
-    return std::make_pair(MainOp, Converter.getMainOperand(MainOp));
-  return std::make_pair(AltOp, Converter.getAltOperand(AltOp));
+    return std::make_pair(MainOp, Converter.getOperand(MainOp));
+  return std::make_pair(AltOp, Converter.getOperand(AltOp));
 }
 
 /// Main data required for vectorization of instructions.
