@@ -42,8 +42,6 @@
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #endif
 
-#include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
-
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
@@ -664,7 +662,7 @@ static llvm::Expected<Value> SwiftAsyncEvaluate_DW_OP_entry_value(
 #endif // LLDB_ENABLE_SWIFT
 
 static llvm::Error
-Evaluate_DW_OP_entry_value(std::vector<Value> &stack, const DWARFUnit *dwarf_cu,
+Evaluate_DW_OP_entry_value(std::vector<Value> &stack, const DWARFExpression::Delegate* dwarf_cu,
                            ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
                            const DataExtractor &opcodes,
                            lldb::offset_t &opcode_offset, Log *log) {
