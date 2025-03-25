@@ -23,6 +23,58 @@ bool fromJSON(const json::Value &Params, DisconnectArguments &DA,
          O.mapOptional("suspendDebuggee", DA.suspendDebuggee);
 }
 
+bool fromJSON(const llvm::json::Value &Params,
+              InitializeRequestArguments::PathFormat &PF, llvm::json::Path P) {
+  auto rawPathFormat = Params.getAsString();
+  if (!rawPathFormat) {
+    P.report("expected a string");
+    return false;
+  }
+
+  std::optional<InitializeRequestArguments::PathFormat> pathFormat =
+      StringSwitch<std::optional<InitializeRequestArguments::PathFormat>>(
+          *rawPathFormat)
+          .Case("path", InitializeRequestArguments::PathFormat::path)
+          .Case("uri", InitializeRequestArguments::PathFormat::uri)
+          .Default(std::nullopt);
+  if (!pathFormat) {
+    P.report("unexpected value, expected 'path' or 'uri'");
+    return false;
+  }
+
+  PF = *pathFormat;
+  return true;
+}
+
+bool fromJSON(const llvm::json::Value &Params, InitializeRequestArguments &IRA,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.mapOptional("adatperID", IRA.adatperID) &&
+         O.mapOptional("clientID", IRA.clientID) &&
+         O.mapOptional("clientName", IRA.clientName) &&
+         O.mapOptional("locale", IRA.locale) &&
+         O.mapOptional("linesStartAt1", IRA.linesStartAt1) &&
+         O.mapOptional("columnsStartAt1", IRA.columnsStartAt1) &&
+         O.mapOptional("pathFormat", IRA.pathFormat) &&
+         O.mapOptional("supportsVariableType", IRA.supportsVariableType) &&
+         O.mapOptional("supportsVariablePaging", IRA.supportsVariablePaging) &&
+         O.mapOptional("supportsRunInTerminalRequest",
+                       IRA.supportsRunInTerminalRequest) &&
+         O.mapOptional("supportsMemoryReferences",
+                       IRA.supportsMemoryReferences) &&
+         O.mapOptional("supportsProgressReporting",
+                       IRA.supportsProgressReporting) &&
+         O.mapOptional("supportsInvalidatedEvent",
+                       IRA.supportsInvalidatedEvent) &&
+         O.mapOptional("supportsMemoryEvent", IRA.supportsMemoryEvent) &&
+         O.mapOptional("supportsArgsCanBeInterpretedByShell",
+                       IRA.supportsArgsCanBeInterpretedByShell) &&
+         O.mapOptional("supportsStartDebuggingRequest",
+                       IRA.supportsStartDebuggingRequest) &&
+         O.mapOptional("supportsANSIStyling", IRA.supportsANSIStyling) &&
+         O.mapOptional("$__lldb_sourceInitFile", IRA.sourceInitFile);
+}
+
 bool fromJSON(const json::Value &Params, SourceArguments &SA, json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.mapOptional("source", SA.source) &&

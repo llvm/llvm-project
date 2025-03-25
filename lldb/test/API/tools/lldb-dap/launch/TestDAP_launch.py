@@ -524,8 +524,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
 
         # The first line is the prompt line like "(lldb) version", so we skip it.
         version_eval_output_without_prompt_line = version_eval_output.splitlines()[1:]
-        lldb_json = self.dap_server.get_initialize_value("__lldb")
-        version_string = lldb_json["version"]
+        version_string = self.dap_server.get_initialize_value("$__lldb_version")
         self.assertEqual(
             version_eval_output_without_prompt_line,
             version_string.splitlines(),

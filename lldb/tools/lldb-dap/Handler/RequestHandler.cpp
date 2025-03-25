@@ -201,6 +201,7 @@ BaseRequestHandler::LaunchProcess(const llvm::json::Object &request) const {
   const auto timeout_seconds =
       GetInteger<uint64_t>(arguments, "timeout").value_or(30);
 
+  // FIXME: Check dap.supports_run_in_terminal_request.
   if (GetBoolean(arguments, "runInTerminal").value_or(false)) {
     if (llvm::Error err = RunInTerminal(dap, request, timeout_seconds))
       error.SetErrorString(llvm::toString(std::move(err)).c_str());

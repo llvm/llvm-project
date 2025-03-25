@@ -16,6 +16,7 @@
 #include "OutputRedirector.h"
 #include "ProgressEvent.h"
 #include "Protocol/ProtocolBase.h"
+#include "Protocol/ProtocolTypes.h"
 #include "SourceBreakpoint.h"
 #include "Transport.h"
 #include "lldb/API/SBBroadcaster.h"
@@ -180,6 +181,7 @@ struct DAP {
   bool enable_auto_variable_summaries;
   bool enable_synthetic_child_debugging;
   bool display_extended_backtrace;
+  bool supports_run_in_terminal_request;
   // The process event thread normally responds to process exited events by
   // shutting down the entire adapter. When we're restarting, we keep the id of
   // the old process here so we can detect this case and keep running.
@@ -363,8 +365,8 @@ struct DAP {
     request_handlers[Handler::GetCommand()] = std::make_unique<Handler>(*this);
   }
 
-  /// Return a key-value list of capabilities.
-  llvm::StringMap<bool> GetCapabilities();
+  /// The set of capablities supported by this adapter.
+  protocol::Capabilities GetCapabilities();
 
   /// Debuggee will continue from stopped state.
   void WillContinue() { variables.Clear(); }

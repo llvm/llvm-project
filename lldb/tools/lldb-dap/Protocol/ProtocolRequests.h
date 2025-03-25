@@ -54,6 +54,75 @@ bool fromJSON(const llvm::json::Value &, DisconnectArguments &,
 /// body field is required.
 using DisconnectResponse = VoidResponse;
 
+/// Arguments for `initialize` request.
+struct InitializeRequestArguments {
+  /// The ID of the debug adapter.
+  std::string adatperID;
+
+  /// The ID of the client using this adapter.
+  std::optional<std::string> clientID;
+
+  /// The human-readable name of the client using this adapter.
+  std::optional<std::string> clientName;
+
+  /// The ISO-639 locale of the client using this adapter, e.g. en-US or de-CH.
+  std::optional<std::string> locale;
+
+  /// If true all line numbers are 1-based (default).
+  std::optional<bool> linesStartAt1;
+
+  /// If true all column numbers are 1-based (default).
+  std::optional<bool> columnsStartAt1;
+
+  enum class PathFormat { path, uri };
+
+  /// Determines in what format paths are specified. The default is `path`,
+  /// which is the native format.
+  std::optional<PathFormat> pathFormat = PathFormat::path;
+
+  /// Client supports the `type` attribute for variables.
+  std::optional<bool> supportsVariableType;
+
+  /// Client supports the paging of variables.
+  std::optional<bool> supportsVariablePaging;
+
+  /// Client supports the `runInTerminal` request.
+  std::optional<bool> supportsRunInTerminalRequest;
+
+  /// Client supports memory references.
+  std::optional<bool> supportsMemoryReferences;
+
+  /// Client supports progress reporting.
+  std::optional<bool> supportsProgressReporting;
+
+  /// Client supports the `invalidated` event.
+  std::optional<bool> supportsInvalidatedEvent;
+
+  /// Client supports the `memory` event.
+  std::optional<bool> supportsMemoryEvent;
+
+  /// Client supports the `argsCanBeInterpretedByShell` attribute on the
+  /// `runInTerminal` request.
+  std::optional<bool> supportsArgsCanBeInterpretedByShell;
+
+  /// Client supports the `startDebugging` request.
+  std::optional<bool> supportsStartDebuggingRequest;
+
+  /// The client will interpret ANSI escape sequences in the display of
+  /// `OutputEvent.output` and `Variable.value` fields when
+  /// `Capabilities.supportsANSIStyling` is also enabled.
+  std::optional<bool> supportsANSIStyling;
+
+  /// lldb-dap Extensions
+  /// Source init files when initializing lldb::SBDebugger.
+  std::optional<bool> sourceInitFile;
+};
+bool fromJSON(const llvm::json::Value &, InitializeRequestArguments &,
+              llvm::json::Path);
+
+/// Response to `initialize` request. The capabilities of this debug adapter.
+using InitializeResponseBody = std::optional<Capabilities>;
+
 /// Arguments for `source` request.
 struct SourceArguments {
   /// Specifies the source content to load. Either `source.path` or
