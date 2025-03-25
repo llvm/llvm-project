@@ -24,6 +24,7 @@ math/clc_asin.cl
 math/clc_asinh.cl
 math/clc_asinpi.cl
 math/clc_atan.cl
+math/clc_atanh.cl
 math/clc_atanpi.cl
 math/clc_ceil.cl
 math/clc_copysign.cl
