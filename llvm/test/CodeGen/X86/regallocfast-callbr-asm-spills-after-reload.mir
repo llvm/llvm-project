@@ -54,10 +54,8 @@ body:             |
   bb.3 (machine-block-address-taken, inlineasm-br-indirect-target):
     successors: %bb.2(0x80000000)
 
-    ; FIXME: This is a miscompilation, as, despite spilling the value modified by the inlineasm_br,
-    ; the reload emitted still reads from an uninitialized stack slot.
-    ; CHECK:      $ecx = MOV32rm %stack.2, 1, $noreg, 0, $noreg :: (load (s32) from %stack.2)
-    ; CHECK-NEXT: MOV32mr %stack.2, 1, $noreg, 0, $noreg, $eax :: (store (s32) into %stack.2)
+    ; CHECK:      MOV32mr %stack.2, 1, $noreg, 0, $noreg, $eax :: (store (s32) into %stack.2)
+    ; CHECK-NEXT: $ecx = MOV32rm %stack.2, 1, $noreg, 0, $noreg :: (load (s32) from %stack.2)
     ; CHECK-NEXT: $rax = MOV64rm %stack.3, 1, $noreg, 0, $noreg :: (load (s64) from %stack.3)
     ; CHECK-NEXT: MOV32mr renamable $rax, 1, $noreg, 0, $noreg, killed renamable $ecx :: (store (s32))
     ; CHECK-NEXT: JMP_1 %bb.2
