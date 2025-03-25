@@ -145,10 +145,10 @@ func.func @bubble_up_extract_slice_through_collapse_shape_single_reassoc_group(%
 }
 
 // CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_multiple_reassoc_group(
-// CHECK-SAME:                      %[[VAL_0:.*]]: tensor<6x5x3x10xf32>) -> tensor<15x10xf32> {
-// CHECK:           %[[VAL_1:.*]] = tensor.extract_slice %[[VAL_0]][1, 0, 1, 0] [3, 5, 1, 10] [1, 1, 1, 1]
-// CHECK:           %[[VAL_2:.*]] = tensor.collapse_shape %[[VAL_1]] {{\[\[}}0, 1], [2, 3]]
-// CHECK:           return %[[VAL_2]]
+// CHECK-SAME:                      %[[SRC:.*]]: tensor<6x5x3x10xf32>) -> tensor<15x10xf32> {
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]][1, 0, 1, 0] [3, 5, 1, 10] [1, 1, 1, 1]
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape %[[EXTRACT]] {{\[\[}}0, 1], [2, 3]]
+// CHECK:           return %[[COLLAPSE]]
 func.func @bubble_up_extract_slice_through_collapse_shape_multiple_reassoc_group(%src: tensor<6x5x3x10xf32>) -> tensor<15x10xf32> {
   %collapse = tensor.collapse_shape %src [[0, 1], [2, 3]] : tensor<6x5x3x10xf32> into tensor<30x30xf32>
   %extract = tensor.extract_slice %collapse[5, 10][15, 10][1, 1] : tensor<30x30xf32> to tensor<15x10xf32>
@@ -156,10 +156,10 @@ func.func @bubble_up_extract_slice_through_collapse_shape_multiple_reassoc_group
 }
 
 // CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_offset_on_leading_dim(
-// CHECK-SAME:                         %[[VAL_0:.*]]: tensor<6x5x2xf32>) -> tensor<4xf32> {
-// CHECK:           %[[VAL_1:.*]] = tensor.extract_slice %[[VAL_0]][2, 0, 0] [1, 2, 2] [1, 1, 1] 
-// CHECK:           %[[VAL_2:.*]] = tensor.collapse_shape %[[VAL_1]] {{\[\[}}0, 1, 2]]
-// CHECK:           return %[[VAL_2]]
+// CHECK-SAME:                         %[[SRC:.*]]: tensor<6x5x2xf32>) -> tensor<4xf32> {
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]][2, 0, 0] [1, 2, 2] [1, 1, 1] 
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape %[[EXTRACT]] {{\[\[}}0, 1, 2]]
+// CHECK:           return %[[COLLAPSE]]
 func.func @bubble_up_extract_slice_through_collapse_shape_offset_on_leading_dim(%src: tensor<6x5x2xf32>) -> tensor<4xf32> {
   %collapse = tensor.collapse_shape %src [[0, 1, 2]] : tensor<6x5x2xf32> into tensor<60xf32>
   %extract = tensor.extract_slice %collapse[20][4][1] : tensor<60xf32> to tensor<4xf32>
