@@ -697,8 +697,9 @@ class LegalizeBufferContentTypesVisitor
 
   /// Convert a vector or scalar type that can't be operated on by buffer
   /// intrinsics to one that would be legal through bitcasts and/or truncation.
-  /// Uses the wider of i32, i16, or i8 where possible.
-  Type *legalNonAggregateFor(Type *T);
+  /// Uses the wider of i32, i16, or i8 where possible, accounting for the
+  /// alignment of the load or store.
+  Type *legalNonAggregateFor(Type *T, Align A);
   Value *makeLegalNonAggregate(Value *V, Type *TargetType, const Twine &Name);
   Value *makeIllegalNonAggregate(Value *V, Type *OrigType, const Twine &Name);
 
@@ -712,8 +713,10 @@ class LegalizeBufferContentTypesVisitor
   /// Return the [index, length] pairs into which `T` needs to be cut to form
   /// legal buffer load or store operations. Clears `Slices`. Creates an empty
   /// `Slices` for non-vector inputs and creates one slice if no slicing will be
-  /// needed.
-  void getVecSlices(Type *T, SmallVectorImpl<VecSlice> &Slices);
+  /// needed. If `T` is a vector of sub-word type (i8, half, etc.) and `align`
+  /// is less than 4, splits the load into scalar loads so that reading off the
+  /// end of a byte buffer doesn't lose data.
+  void getVecSlices(Type *T, Align A, SmallVectorImpl<VecSlice> &Slices);
 
   Value *extractSlice(Value *Vec, VecSlice S, const Twine &Name);
   Value *insertSlice(Value *Whole, Value *Part, VecSlice S, const Twine &Name);
@@ -790,7 +793,8 @@ Value *LegalizeBufferContentTypesVisitor::vectorToArray(Value *V,
   return ArrayRes;
 }
 
-Type *LegalizeBufferContentTypesVisitor::legalNonAggregateFor(Type *T) {
+Type *LegalizeBufferContentTypesVisitor::legalNonAggregateFor(Type *T,
+                                                              Align A) {
   TypeSize Size = DL.getTypeStoreSizeInBits(T);
   // Implicitly zero-extend to the next byte if needed
   if (!DL.typeSizeEqualsStoreSize(T))
@@ -802,15 +806,18 @@ Type *LegalizeBufferContentTypesVisitor::legalNonAggregateFor(Type *T) {
     return T;
   }
   unsigned ElemSize = DL.getTypeSizeInBits(ElemTy).getFixedValue();
-  if (isPowerOf2_32(ElemSize) && ElemSize >= 16 && ElemSize <= 128) {
+  bool IsUnaligned16BitVector = ElemSize == 16 && Size > ElemSize && A < 4;
+  if (isPowerOf2_32(ElemSize) && ElemSize >= 16 && ElemSize <= 128 &&
+      !IsUnaligned16BitVector) {
     // [vectors of] anything that's 16/32/64/128 bits can be cast and split into
-    // legal buffer operations.
+    // legal buffer operations, except that unaligned 16-bit vectors need to be
+    // split.
     return T;
   }
   Type *BestVectorElemType = nullptr;
-  if (Size.isKnownMultipleOf(32))
+  if (Size.isKnownMultipleOf(32) && A >= Align(4))
     BestVectorElemType = IRB.getInt32Ty();
-  else if (Size.isKnownMultipleOf(16))
+  else if (Size.isKnownMultipleOf(16) && A >= Align(2))
     BestVectorElemType = IRB.getInt16Ty();
   else
     BestVectorElemType = IRB.getInt8Ty();
@@ -883,7 +890,7 @@ Type *LegalizeBufferContentTypesVisitor::intrinsicTypeFor(Type *LegalType) {
 }
 
 void LegalizeBufferContentTypesVisitor::getVecSlices(
-    Type *T, SmallVectorImpl<VecSlice> &Slices) {
+    Type *T, Align A, SmallVectorImpl<VecSlice> &Slices) {
   Slices.clear();
   auto *VT = dyn_cast<FixedVectorType>(T);
   if (!VT)
@@ -902,6 +909,16 @@ void LegalizeBufferContentTypesVisitor::getVecSlices(
   // example, <3 x i64>, since that's not slicing.
   uint64_t ElemsPer3Words = ElemsPerWord * 3;
 
+  if (ElemBitWidth < 32 && A < Align(4)) {
+    // Don't use wide loads when loading unaligned vectors of 16- or 8-bit
+    // types, as that can cause something like a load of <4 x half>
+    // from %base + 6 with numRecords = 8 bytes to not load the last element
+    // as one might expect.
+    ElemsPer4Words = ElemsPer3Words = ElemsPer2Words = ElemsPerWord = 0;
+    if (ElemBitWidth < 16 && A < Align(2)) {
+      ElemsPerShort = 0;
+    }
+  }
   uint64_t TotalElems = VT->getNumElements();
   uint64_t Index = 0;
   auto TrySlice = [&](unsigned MaybeLen) {
@@ -1003,11 +1020,12 @@ bool LegalizeBufferContentTypesVisitor::visitLoadImpl(
 
   // Typical case
 
+  Align PartAlign = commonAlignment(OrigLI.getAlign(), AggByteOff);
   Type *ArrayAsVecType = scalarArrayTypeAsVector(PartType);
-  Type *LegalType = legalNonAggregateFor(ArrayAsVecType);
+  Type *LegalType = legalNonAggregateFor(ArrayAsVecType, PartAlign);
 
   SmallVector<VecSlice> Slices;
-  getVecSlices(LegalType, Slices);
+  getVecSlices(LegalType, PartAlign, Slices);
   bool HasSlices = Slices.size() > 1;
   bool IsAggPart = !AggIdxs.empty();
   Value *LoadsRes;
@@ -1133,13 +1151,14 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
     NewData = arrayToVector(NewData, ArrayAsVecType, Name);
   }
 
-  Type *LegalType = legalNonAggregateFor(ArrayAsVecType);
+  Align PartAlign = commonAlignment(OrigSI.getAlign(), AggByteOff);
+  Type *LegalType = legalNonAggregateFor(ArrayAsVecType, PartAlign);
   if (LegalType != ArrayAsVecType) {
     NewData = makeLegalNonAggregate(NewData, LegalType, Name);
   }
 
   SmallVector<VecSlice> Slices;
-  getVecSlices(LegalType, Slices);
+  getVecSlices(LegalType, PartAlign, Slices);
   bool NeedToSplit = Slices.size() > 1 || IsAggPart;
   if (!NeedToSplit) {
     Type *StorableType = intrinsicTypeFor(LegalType);

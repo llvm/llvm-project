@@ -165,6 +165,28 @@ define void @store_v2i32(<2 x i32> %data, ptr addrspace(8) inreg %buf) {
   ret void
 }
 
+define <2 x i32> @load_v2i32_align1(ptr addrspace(8) inreg %buf) {
+; CHECK-LABEL: define <2 x i32> @load_v2i32_align1(
+; CHECK-SAME: ptr addrspace(8) inreg [[BUF:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RET:%.*]] = call <2 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v2i32(ptr addrspace(8) align 1 [[BUF]], i32 0, i32 0, i32 0)
+; CHECK-NEXT:    ret <2 x i32> [[RET]]
+;
+  %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
+  %ret = load <2 x i32>, ptr addrspace(7) %p, align 1
+  ret <2 x i32> %ret
+}
+
+define void @store_v2i32_align1(<2 x i32> %data, ptr addrspace(8) inreg %buf) {
+; CHECK-LABEL: define void @store_v2i32_align1(
+; CHECK-SAME: <2 x i32> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> [[DATA]], ptr addrspace(8) align 1 [[BUF]], i32 0, i32 0, i32 0)
+; CHECK-NEXT:    ret void
+;
+  %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
+  store <2 x i32> %data, ptr addrspace(7) %p, align 1
+  ret void
+}
+
 define <3 x i32> @load_v3i32(ptr addrspace(8) inreg %buf) {
 ; CHECK-LABEL: define <3 x i32> @load_v3i32(
 ; CHECK-SAME: ptr addrspace(8) inreg [[BUF:%.*]]) #[[ATTR0]] {
@@ -360,6 +382,36 @@ define void @store_v2f16(<2 x half> %data, ptr addrspace(8) inreg %buf) {
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
   store <2 x half> %data, ptr addrspace(7) %p
+  ret void
+}
+
+define <2 x half> @load_v2f16_align2(ptr addrspace(8) inreg %buf) {
+; CHECK-LABEL: define <2 x half> @load_v2f16_align2(
+; CHECK-SAME: ptr addrspace(8) inreg [[BUF:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RET_OFF_0:%.*]] = call i16 @llvm.amdgcn.raw.ptr.buffer.load.i16(ptr addrspace(8) align 2 [[BUF]], i32 0, i32 0, i32 0)
+; CHECK-NEXT:    [[RET_SLICE_0:%.*]] = insertelement <2 x i16> poison, i16 [[RET_OFF_0]], i64 0
+; CHECK-NEXT:    [[RET_OFF_2:%.*]] = call i16 @llvm.amdgcn.raw.ptr.buffer.load.i16(ptr addrspace(8) align 2 [[BUF]], i32 2, i32 0, i32 0)
+; CHECK-NEXT:    [[RET_SLICE_1:%.*]] = insertelement <2 x i16> [[RET_SLICE_0]], i16 [[RET_OFF_2]], i64 1
+; CHECK-NEXT:    [[RET:%.*]] = bitcast <2 x i16> [[RET_SLICE_1]] to <2 x half>
+; CHECK-NEXT:    ret <2 x half> [[RET]]
+;
+  %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
+  %ret = load <2 x half>, ptr addrspace(7) %p, align 2
+  ret <2 x half> %ret
+}
+
+define void @store_v2f16_align2(<2 x half> %data, ptr addrspace(8) inreg %buf) {
+; CHECK-LABEL: define void @store_v2f16_align2(
+; CHECK-SAME: <2 x half> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <2 x half> [[DATA]] to <2 x i16>
+; CHECK-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <2 x i16> [[DATA_LEGAL]], i64 0
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 0, i32 0, i32 0)
+; CHECK-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <2 x i16> [[DATA_LEGAL]], i64 1
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 2, i32 0, i32 0)
+; CHECK-NEXT:    ret void
+;
+  %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
+  store <2 x half> %data, ptr addrspace(7) %p, align 2
   ret void
 }
 
@@ -1400,6 +1452,58 @@ define void @store_v8i8(<8 x i8> %data, ptr addrspace(8) inreg %buf) {
   ret void
 }
 
+define <8 x i8> @load_v8i8_align1(ptr addrspace(8) inreg %buf) {
+; CHECK-LABEL: define <8 x i8> @load_v8i8_align1(
+; CHECK-SAME: ptr addrspace(8) inreg [[BUF:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RET_OFF_0:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[BUF]], i32 0, i32 0, i32 0)
+; CHECK-NEXT:    [[RET_SLICE_0:%.*]] = insertelement <8 x i8> poison, i8 [[RET_OFF_0]], i64 0
+; CHECK-NEXT:    [[RET_OFF_1:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[BUF]], i32 1, i32 0, i32 0)
+; CHECK-NEXT:    [[RET_SLICE_1:%.*]] = insertelement <8 x i8> [[RET_SLICE_0]], i8 [[RET_OFF_1]], i64 1
+; CHECK-NEXT:    [[RET_OFF_2:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[BUF]], i32 2, i32 0, i32 0)
+; CHECK-NEXT:    [[RET_SLICE_2:%.*]] = insertelement <8 x i8> [[RET_SLICE_1]], i8 [[RET_OFF_2]], i64 2
+; CHECK-NEXT:    [[RET_OFF_3:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[BUF]], i32 3, i32 0, i32 0)
+; CHECK-NEXT:    [[RET_SLICE_3:%.*]] = insertelement <8 x i8> [[RET_SLICE_2]], i8 [[RET_OFF_3]], i64 3
+; CHECK-NEXT:    [[RET_OFF_4:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[BUF]], i32 4, i32 0, i32 0)
+; CHECK-NEXT:    [[RET_SLICE_4:%.*]] = insertelement <8 x i8> [[RET_SLICE_3]], i8 [[RET_OFF_4]], i64 4
+; CHECK-NEXT:    [[RET_OFF_5:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[BUF]], i32 5, i32 0, i32 0)
+; CHECK-NEXT:    [[RET_SLICE_5:%.*]] = insertelement <8 x i8> [[RET_SLICE_4]], i8 [[RET_OFF_5]], i64 5
+; CHECK-NEXT:    [[RET_OFF_6:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[BUF]], i32 6, i32 0, i32 0)
+; CHECK-NEXT:    [[RET_SLICE_6:%.*]] = insertelement <8 x i8> [[RET_SLICE_5]], i8 [[RET_OFF_6]], i64 6
+; CHECK-NEXT:    [[RET_OFF_7:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[BUF]], i32 7, i32 0, i32 0)
+; CHECK-NEXT:    [[RET:%.*]] = insertelement <8 x i8> [[RET_SLICE_6]], i8 [[RET_OFF_7]], i64 7
+; CHECK-NEXT:    ret <8 x i8> [[RET]]
+;
+  %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
+  %ret = load <8 x i8>, ptr addrspace(7) %p, align 1
+  ret <8 x i8> %ret
+}
+
+define void @store_v8i8_align1(<8 x i8> %data, ptr addrspace(8) inreg %buf) {
+; CHECK-LABEL: define void @store_v8i8_align1(
+; CHECK-SAME: <8 x i8> [[DATA:%.*]], ptr addrspace(8) inreg [[BUF:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <8 x i8> [[DATA]], i64 0
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_0]], ptr addrspace(8) align 1 [[BUF]], i32 0, i32 0, i32 0)
+; CHECK-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <8 x i8> [[DATA]], i64 1
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_1]], ptr addrspace(8) align 1 [[BUF]], i32 1, i32 0, i32 0)
+; CHECK-NEXT:    [[DATA_SLICE_2:%.*]] = extractelement <8 x i8> [[DATA]], i64 2
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_2]], ptr addrspace(8) align 1 [[BUF]], i32 2, i32 0, i32 0)
+; CHECK-NEXT:    [[DATA_SLICE_3:%.*]] = extractelement <8 x i8> [[DATA]], i64 3
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_3]], ptr addrspace(8) align 1 [[BUF]], i32 3, i32 0, i32 0)
+; CHECK-NEXT:    [[DATA_SLICE_4:%.*]] = extractelement <8 x i8> [[DATA]], i64 4
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_4]], ptr addrspace(8) align 1 [[BUF]], i32 4, i32 0, i32 0)
+; CHECK-NEXT:    [[DATA_SLICE_5:%.*]] = extractelement <8 x i8> [[DATA]], i64 5
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_5]], ptr addrspace(8) align 1 [[BUF]], i32 5, i32 0, i32 0)
+; CHECK-NEXT:    [[DATA_SLICE_6:%.*]] = extractelement <8 x i8> [[DATA]], i64 6
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_6]], ptr addrspace(8) align 1 [[BUF]], i32 6, i32 0, i32 0)
+; CHECK-NEXT:    [[DATA_SLICE_7:%.*]] = extractelement <8 x i8> [[DATA]], i64 7
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_SLICE_7]], ptr addrspace(8) align 1 [[BUF]], i32 7, i32 0, i32 0)
+; CHECK-NEXT:    ret void
+;
+  %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
+  store <8 x i8> %data, ptr addrspace(7) %p, align 1
+  ret void
+}
+
 define <12 x i8> @load_v12i8(ptr addrspace(8) inreg %buf) {
 ; CHECK-LABEL: define <12 x i8> @load_v12i8(
 ; CHECK-SAME: ptr addrspace(8) inreg [[BUF:%.*]]) #[[ATTR0]] {
@@ -1543,7 +1647,11 @@ define void @store_a2i32([2 x i32] %data, ptr addrspace(8) inreg %buf) {
 define [2 x half] @load_a2f16(ptr addrspace(8) inreg %buf) {
 ; CHECK-LABEL: define [2 x half] @load_a2f16(
 ; CHECK-SAME: ptr addrspace(8) inreg [[BUF:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RET_LOADABLE:%.*]] = call <2 x half> @llvm.amdgcn.raw.ptr.buffer.load.v2f16(ptr addrspace(8) align 2 [[BUF]], i32 0, i32 0, i32 0)
+; CHECK-NEXT:    [[RET_OFF_0:%.*]] = call i16 @llvm.amdgcn.raw.ptr.buffer.load.i16(ptr addrspace(8) align 2 [[BUF]], i32 0, i32 0, i32 0)
+; CHECK-NEXT:    [[RET_SLICE_0:%.*]] = insertelement <2 x i16> poison, i16 [[RET_OFF_0]], i64 0
+; CHECK-NEXT:    [[RET_OFF_2:%.*]] = call i16 @llvm.amdgcn.raw.ptr.buffer.load.i16(ptr addrspace(8) align 2 [[BUF]], i32 2, i32 0, i32 0)
+; CHECK-NEXT:    [[RET_SLICE_1:%.*]] = insertelement <2 x i16> [[RET_SLICE_0]], i16 [[RET_OFF_2]], i64 1
+; CHECK-NEXT:    [[RET_LOADABLE:%.*]] = bitcast <2 x i16> [[RET_SLICE_1]] to <2 x half>
 ; CHECK-NEXT:    [[RET_ELEM_0:%.*]] = extractelement <2 x half> [[RET_LOADABLE]], i64 0
 ; CHECK-NEXT:    [[RET_AS_ARRAY_0:%.*]] = insertvalue [2 x half] poison, half [[RET_ELEM_0]], 0
 ; CHECK-NEXT:    [[RET_ELEM_1:%.*]] = extractelement <2 x half> [[RET_LOADABLE]], i64 1
@@ -1562,7 +1670,11 @@ define void @store_a2f16([2 x half] %data, ptr addrspace(8) inreg %buf) {
 ; CHECK-NEXT:    [[DATA_AS_VEC_0:%.*]] = insertelement <2 x half> poison, half [[DATA_ELEM_0]], i64 0
 ; CHECK-NEXT:    [[DATA_ELEM_1:%.*]] = extractvalue [2 x half] [[DATA]], 1
 ; CHECK-NEXT:    [[DATA_AS_VEC_1:%.*]] = insertelement <2 x half> [[DATA_AS_VEC_0]], half [[DATA_ELEM_1]], i64 1
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v2f16(<2 x half> [[DATA_AS_VEC_1]], ptr addrspace(8) align 2 [[BUF]], i32 0, i32 0, i32 0)
+; CHECK-NEXT:    [[DATA_LEGAL:%.*]] = bitcast <2 x half> [[DATA_AS_VEC_1]] to <2 x i16>
+; CHECK-NEXT:    [[DATA_SLICE_0:%.*]] = extractelement <2 x i16> [[DATA_LEGAL]], i64 0
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_0]], ptr addrspace(8) align 2 [[BUF]], i32 0, i32 0, i32 0)
+; CHECK-NEXT:    [[DATA_SLICE_1:%.*]] = extractelement <2 x i16> [[DATA_LEGAL]], i64 1
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i16(i16 [[DATA_SLICE_1]], ptr addrspace(8) align 2 [[BUF]], i32 2, i32 0, i32 0)
 ; CHECK-NEXT:    ret void
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
