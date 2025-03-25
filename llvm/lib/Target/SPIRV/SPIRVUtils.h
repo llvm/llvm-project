@@ -405,6 +405,16 @@ inline PoisonValue *getNormalizedPoisonValue(Type *Ty) {
   return PoisonValue::get(normalizeType(Ty));
 }
 
+inline MetadataAsValue *buildMD(Value *Arg) {
+  LLVMContext &Ctx = Arg->getContext();
+  return MetadataAsValue::get(
+      Ctx, MDNode::get(Ctx, ValueAsMetadata::getConstant(Arg)));
+}
+
+CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
+                          Value *Arg, Value *Arg2, ArrayRef<Constant *> Imms,
+                          IRBuilder<> &B);
+
 MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
 
 #define SPIRV_BACKEND_SERVICE_FUN_NAME "__spirv_backend_service_fun"
@@ -444,10 +454,11 @@ inline FPDecorationId demangledPostfixToDecorationId(const std::string &S) {
   return It == Mapping.end() ? FPDecorationId::NONE : It->second;
 }
 
-void createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
-                                 unsigned MinWC, unsigned ContinuedOpcode,
-                                 ArrayRef<Register> Args,
-                                 Register ReturnRegister, Register TypeID);
+SmallVector<MachineInstr *, 4>
+createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
+                            unsigned MinWC, unsigned ContinuedOpcode,
+                            ArrayRef<Register> Args, Register ReturnRegister,
+                            Register TypeID);
 
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

@@ -1531,7 +1531,10 @@ enum DeclCode {
   // An OpenACCDeclareDecl record.
   DECL_OPENACC_DECLARE,
 
-  DECL_LAST = DECL_OPENACC_DECLARE
+  // An OpenACCRoutineDecl record.
+  DECL_OPENACC_ROUTINE,
+
+  DECL_LAST = DECL_OPENACC_ROUTINE
 };
 
 /// Record codes for each kind of statement or expression.
@@ -2049,6 +2052,7 @@ enum StmtCode {
   STMT_OPENACC_SET_CONSTRUCT,
   STMT_OPENACC_UPDATE_CONSTRUCT,
   STMT_OPENACC_ATOMIC_CONSTRUCT,
+  STMT_OPENACC_CACHE_CONSTRUCT,
 
   // HLSL Constructs
   EXPR_HLSL_OUT_ARG,

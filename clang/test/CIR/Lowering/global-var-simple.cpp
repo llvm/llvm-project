@@ -62,6 +62,9 @@ _BitInt(20) sb20;
 unsigned _BitInt(48) ub48;
 // CHECK: @ub48 = external dso_local global i48
 
+bool boolfalse = false;
+// CHECK: @boolfalse = dso_local global i8 0
+
 _Float16 f16;
 // CHECK: @f16 = external dso_local global half
 

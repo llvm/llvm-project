@@ -775,6 +775,17 @@ Register createVirtualRegister(
       MIRBuilder);
 }
 
+CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
+                          Value *Arg, Value *Arg2, ArrayRef<Constant *> Imms,
+                          IRBuilder<> &B) {
+  SmallVector<Value *, 4> Args;
+  Args.push_back(Arg2);
+  Args.push_back(buildMD(Arg));
+  for (auto *Imm : Imms)
+    Args.push_back(Imm);
+  return B.CreateIntrinsic(IntrID, {Types}, Args);
+}
+
 // Return true if there is an opaque pointer type nested in the argument.
 bool isNestedPointer(const Type *Ty) {
   if (Ty->isPtrOrPtrVectorTy())
@@ -802,10 +813,13 @@ bool isSpvIntrinsic(const Value *Arg) {
 
 // Function to create continued instructions for SPV_INTEL_long_composites
 // extension
-void createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
-                                 unsigned MinWC, unsigned ContinuedOpcode,
-                                 ArrayRef<Register> Args,
-                                 Register ReturnRegister, Register TypeID) {
+SmallVector<MachineInstr *, 4>
+createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
+                            unsigned MinWC, unsigned ContinuedOpcode,
+                            ArrayRef<Register> Args, Register ReturnRegister,
+                            Register TypeID) {
+
+  SmallVector<MachineInstr *, 4> Instructions;
   constexpr unsigned MaxWordCount = UINT16_MAX;
   const size_t NumElements = Args.size();
   size_t MaxNumElements = MaxWordCount - MinWC;
@@ -824,12 +838,16 @@ void createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
   for (size_t I = 0; I < SPIRVStructNumElements; ++I)
     MIB.addUse(Args[I]);
 
+  Instructions.push_back(MIB.getInstr());
+
   for (size_t I = SPIRVStructNumElements; I < NumElements;
        I += MaxNumElements) {
     auto MIB = MIRBuilder.buildInstr(ContinuedOpcode);
     for (size_t J = I; J < std::min(I + MaxNumElements, NumElements); ++J)
       MIB.addUse(Args[J]);
+    Instructions.push_back(MIB.getInstr());
   }
+  return Instructions;
 }
 
 } // namespace llvm

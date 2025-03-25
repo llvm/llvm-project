@@ -260,8 +260,8 @@ define amdgpu_kernel void @test_call_void_func_void_clobber_vcc(ptr addrspace(1)
 ; FLATSCR-NEXT:    s_endpgm
   %vcc = call i64 asm sideeffect "; def $0", "={vcc}"()
   call void @void_func_void_clobber_vcc()
-  %val0 = load volatile i32, ptr addrspace(1) undef
-  %val1 = load volatile i32, ptr addrspace(1) undef
+  %val0 = load volatile i32, ptr addrspace(1) poison
+  %val1 = load volatile i32, ptr addrspace(1) poison
   call void asm sideeffect "; use $0", "{vcc}"(i64 %vcc)
   ret void
 }
@@ -528,15 +528,16 @@ define void @callee_saved_sgpr_func() #2 {
 ; MUBUF-NEXT:    s_getpc_b64 s[4:5]
 ; MUBUF-NEXT:    s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
 ; MUBUF-NEXT:    s_addc_u32 s5, s5, external_void_func_void@rel32@hi+12
-; MUBUF-NEXT:    v_writelane_b32 v40, s40, 2
+; MUBUF-NEXT:    v_writelane_b32 v40, s34, 2
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ; def s40
 ; MUBUF-NEXT:    ;;#ASMEND
+; MUBUF-NEXT:    s_mov_b32 s34, s40
 ; MUBUF-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; MUBUF-NEXT:    ;;#ASMSTART
-; MUBUF-NEXT:    ; use s40
+; MUBUF-NEXT:    ; use s34
 ; MUBUF-NEXT:    ;;#ASMEND
-; MUBUF-NEXT:    v_readlane_b32 s40, v40, 2
+; MUBUF-NEXT:    v_readlane_b32 s34, v40, 2
 ; MUBUF-NEXT:    v_readlane_b32 s31, v40, 1
 ; MUBUF-NEXT:    v_readlane_b32 s30, v40, 0
 ; MUBUF-NEXT:    s_mov_b32 s32, s33
@@ -563,15 +564,16 @@ define void @callee_saved_sgpr_func() #2 {
 ; FLATSCR-NEXT:    s_getpc_b64 s[0:1]
 ; FLATSCR-NEXT:    s_add_u32 s0, s0, external_void_func_void@rel32@lo+4
 ; FLATSCR-NEXT:    s_addc_u32 s1, s1, external_void_func_void@rel32@hi+12
-; FLATSCR-NEXT:    v_writelane_b32 v40, s40, 2
+; FLATSCR-NEXT:    v_writelane_b32 v40, s34, 2
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; def s40
 ; FLATSCR-NEXT:    ;;#ASMEND
+; FLATSCR-NEXT:    s_mov_b32 s34, s40
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; FLATSCR-NEXT:    ;;#ASMSTART
-; FLATSCR-NEXT:    ; use s40
+; FLATSCR-NEXT:    ; use s34
 ; FLATSCR-NEXT:    ;;#ASMEND
-; FLATSCR-NEXT:    v_readlane_b32 s40, v40, 2
+; FLATSCR-NEXT:    v_readlane_b32 s34, v40, 2
 ; FLATSCR-NEXT:    v_readlane_b32 s31, v40, 1
 ; FLATSCR-NEXT:    v_readlane_b32 s30, v40, 0
 ; FLATSCR-NEXT:    s_mov_b32 s32, s33
@@ -600,9 +602,10 @@ define amdgpu_kernel void @callee_saved_sgpr_kernel() #2 {
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; def s40
 ; FLATSCR-NEXT:    ;;#ASMEND
+; FLATSCR-NEXT:    s_mov_b32 s33, s40
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; FLATSCR-NEXT:    ;;#ASMSTART
-; FLATSCR-NEXT:    ; use s40
+; FLATSCR-NEXT:    ; use s33
 ; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    s_endpgm
   %s40 = call i32 asm sideeffect "; def s40", "={s40}"() #0
@@ -629,22 +632,23 @@ define void @callee_saved_sgpr_vgpr_func() #2 {
 ; MUBUF-NEXT:    s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
 ; MUBUF-NEXT:    s_addc_u32 s5, s5, external_void_func_void@rel32@hi+12
 ; MUBUF-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
-; MUBUF-NEXT:    v_writelane_b32 v41, s40, 2
+; MUBUF-NEXT:    v_writelane_b32 v41, s34, 2
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ; def s40
 ; MUBUF-NEXT:    ;;#ASMEND
+; MUBUF-NEXT:    s_mov_b32 s34, s40
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ; def v40
 ; MUBUF-NEXT:    ;;#ASMEND
 ; MUBUF-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; MUBUF-NEXT:    ;;#ASMSTART
-; MUBUF-NEXT:    ; use s40
+; MUBUF-NEXT:    ; use s34
 ; MUBUF-NEXT:    ;;#ASMEND
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ; use v40
 ; MUBUF-NEXT:    ;;#ASMEND
 ; MUBUF-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
-; MUBUF-NEXT:    v_readlane_b32 s40, v41, 2
+; MUBUF-NEXT:    v_readlane_b32 s34, v41, 2
 ; MUBUF-NEXT:    v_readlane_b32 s31, v41, 1
 ; MUBUF-NEXT:    v_readlane_b32 s30, v41, 0
 ; MUBUF-NEXT:    s_mov_b32 s32, s33
@@ -672,22 +676,23 @@ define void @callee_saved_sgpr_vgpr_func() #2 {
 ; FLATSCR-NEXT:    s_add_u32 s0, s0, external_void_func_void@rel32@lo+4
 ; FLATSCR-NEXT:    s_addc_u32 s1, s1, external_void_func_void@rel32@hi+12
 ; FLATSCR-NEXT:    scratch_store_dword off, v40, s33 ; 4-byte Folded Spill
-; FLATSCR-NEXT:    v_writelane_b32 v41, s40, 2
+; FLATSCR-NEXT:    v_writelane_b32 v41, s34, 2
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; def s40
 ; FLATSCR-NEXT:    ;;#ASMEND
+; FLATSCR-NEXT:    s_mov_b32 s34, s40
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; def v40
 ; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; FLATSCR-NEXT:    ;;#ASMSTART
-; FLATSCR-NEXT:    ; use s40
+; FLATSCR-NEXT:    ; use s34
 ; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; use v40
 ; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    scratch_load_dword v40, off, s33 ; 4-byte Folded Reload
-; FLATSCR-NEXT:    v_readlane_b32 s40, v41, 2
+; FLATSCR-NEXT:    v_readlane_b32 s34, v41, 2
 ; FLATSCR-NEXT:    v_readlane_b32 s31, v41, 1
 ; FLATSCR-NEXT:    v_readlane_b32 s30, v41, 0
 ; FLATSCR-NEXT:    s_mov_b32 s32, s33
@@ -718,13 +723,14 @@ define amdgpu_kernel void @callee_saved_sgpr_vgpr_kernel() #2 {
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; def s40
 ; FLATSCR-NEXT:    ;;#ASMEND
+; FLATSCR-NEXT:    s_mov_b32 s33, s40
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; def v32
 ; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    v_mov_b32_e32 v40, v32
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; FLATSCR-NEXT:    ;;#ASMSTART
-; FLATSCR-NEXT:    ; use s40
+; FLATSCR-NEXT:    ; use s33
 ; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; use v40

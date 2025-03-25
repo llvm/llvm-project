@@ -550,6 +550,19 @@ func.func @mapa(%a: !llvm.ptr, %a_shared: !llvm.ptr<3>, %b : i32) {
   return
 }
 
+// CHECK-LABEL: @match_sync
+func.func @match_sync(%val32: i32, %val64: i64, %thread_mask: i32) {
+  // CHECK: nvvm.match.sync any %{{.*}}, %{{.*}} : i32 -> i32
+  %0 = nvvm.match.sync any %thread_mask, %val32 : i32 -> i32
+  // CHECK: nvvm.match.sync all %{{.*}}, %{{.*}} : i32 -> !llvm.struct<(i32, i1)>
+  %1 = nvvm.match.sync all %thread_mask, %val32 : i32 -> !llvm.struct<(i32, i1)>
+  // CHECK: nvvm.match.sync any %{{.*}}, %{{.*}} : i64 -> i32
+  %2 = nvvm.match.sync any %thread_mask, %val64 : i64 -> i32
+  // CHECK: nvvm.match.sync all %{{.*}}, %{{.*}} : i64 -> !llvm.struct<(i32, i1)>
+  %3 = nvvm.match.sync all %thread_mask, %val64 : i64 -> !llvm.struct<(i32, i1)>
+  return 
+}
+
 // -----
 
 // Just check these don't emit errors.

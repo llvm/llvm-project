@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_QSORT_PIVOT_H
 #define LLVM_LIBC_SRC_STDLIB_QSORT_PIVOT_H
 
+#include "src/__support/macros/attributes.h"
+
 #include <stddef.h> // For size_t
 
 namespace LIBC_NAMESPACE_DECL {

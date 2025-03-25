@@ -428,10 +428,10 @@ define void @test_blend_feeding_replicated_store_3(ptr noalias %src.1, ptr noali
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[L_1:%.*]] = load i8, ptr [[SRC_1]], align 1
-; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[L_1]] to i32
+; CHECK-NEXT:    [[L_3:%.*]] = load i8, ptr [[SRC_1]], align 1
+; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[L_3]] to i32
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X]], [[EXT]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[MUL]], 255
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[MUL]], [[EXT]]
 ; CHECK-NEXT:    [[L_2:%.*]] = load i8, ptr [[SRC_2]], align 1
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i8 [[L_2]], 0
 ; CHECK-NEXT:    br i1 [[C_1]], label %[[THEN:.*]], label %[[ELSE_1:.*]]
@@ -459,7 +459,7 @@ loop.header:
   %l.1 = load i8, ptr %src.1, align 1
   %ext = zext i8 %l.1 to i32
   %mul = mul i32 %x, %ext
-  %div = sdiv i32 %mul, 255
+  %div = sdiv i32 %mul, %ext
   %l.2 = load i8, ptr %src.2, align 1
   %c.1 = icmp eq i8 %l.2, 0
   br i1 %c.1, label %then, label %else.1

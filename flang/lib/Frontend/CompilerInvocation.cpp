@@ -476,6 +476,10 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
       opts.EnableAIXExtendedAltivecABI = false;
     }
   }
+
+  opts.asmVerbose =
+      args.hasFlag(clang::driver::options::OPT_fverbose_asm,
+                   clang::driver::options::OPT_fno_verbose_asm, false);
 }
 // Tweak the frontend configuration based on the frontend action
 static void setUpFrontendBasedOnAction(FrontendOptions &opts) {
@@ -863,6 +867,12 @@ static void parsePreprocessorArgs(Fortran::frontend::PreprocessorOptions &opts,
         (currentArg->getOption().matches(clang::driver::options::OPT_cpp))
             ? PPMacrosFlag::Include
             : PPMacrosFlag::Exclude;
+  // Enable -cpp based on -x unless explicitly disabled with -nocpp
+  if (opts.macrosFlag != PPMacrosFlag::Exclude)
+    if (const auto *dashX = args.getLastArg(clang::driver::options::OPT_x))
+      opts.macrosFlag = llvm::StringSwitch<PPMacrosFlag>(dashX->getValue())
+                            .Case("f95-cpp-input", PPMacrosFlag::Include)
+                            .Default(opts.macrosFlag);
 
   opts.noReformat = args.hasArg(clang::driver::options::OPT_fno_reformat);
   opts.preprocessIncludeLines =
@@ -1164,8 +1174,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
           !(tt.getArch() == llvm::Triple::aarch64 || tt.isPPC() ||
             tt.getArch() == llvm::Triple::systemz ||
             tt.getArch() == llvm::Triple::nvptx ||
-            tt.getArch() == llvm::Triple::nvptx64 ||
-            tt.getArch() == llvm::Triple::amdgcn ||
+            tt.getArch() == llvm::Triple::nvptx64 || tt.isAMDGCN() ||
             tt.getArch() == llvm::Triple::x86 ||
             tt.getArch() == llvm::Triple::x86_64))
         diags.Report(clang::diag::err_drv_invalid_omp_target)

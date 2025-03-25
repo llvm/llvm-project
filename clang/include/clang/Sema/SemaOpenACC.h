@@ -31,6 +31,7 @@
 namespace clang {
 class IdentifierInfo;
 class OpenACCClause;
+class Scope;
 
 class SemaOpenACC : public SemaBase {
 public:
@@ -167,6 +168,14 @@ private:
   // contexts, we can just store the declaration and location of the reference.
   llvm::DenseMap<const clang::DeclaratorDecl *, SourceLocation>
       DeclareVarReferences;
+  // The 'routine' construct disallows magic-statics in a function referred to
+  // by a 'routine' directive.  So record any of these that we see so we can
+  // check them later.
+  llvm::SmallDenseMap<const clang::FunctionDecl *, SourceLocation>
+      MagicStaticLocs;
+  OpenACCRoutineDecl *LastRoutineDecl = nullptr;
+
+  void CheckLastRoutineDeclNameConflict(const NamedDecl *ND);
 
 public:
   ComputeConstructInfo &getActiveComputeConstructInfo() {
@@ -256,10 +265,14 @@ public:
       SmallVector<OpenACCGangKind> GangKinds;
       SmallVector<Expr *> IntExprs;
     };
+    struct BindDetails {
+      std::variant<std::monostate, clang::StringLiteral *, IdentifierInfo *>
+          Argument;
+    };
 
     std::variant<std::monostate, DefaultDetails, ConditionDetails,
                  IntExprDetails, VarListDetails, WaitDetails, DeviceTypeDetails,
-                 ReductionDetails, CollapseDetails, GangDetails>
+                 ReductionDetails, CollapseDetails, GangDetails, BindDetails>
         Details = std::monostate{};
 
   public:
@@ -463,6 +476,13 @@ public:
       return std::get<DeviceTypeDetails>(Details).Archs;
     }
 
+    std::variant<std::monostate, clang::StringLiteral *, IdentifierInfo *>
+    getBindDetails() const {
+      assert(ClauseKind == OpenACCClauseKind::Bind &&
+             "Only 'bind' has bind details");
+      return std::get<BindDetails>(Details).Argument;
+    }
+
     void setLParenLoc(SourceLocation EndLoc) { LParenLoc = EndLoc; }
     void setEndLoc(SourceLocation EndLoc) { ClauseRange.setEnd(EndLoc); }
 
@@ -647,6 +667,14 @@ public:
              "Only 'collapse' has collapse details");
       Details = CollapseDetails{IsForce, LoopCount};
     }
+
+    void setBindDetails(
+        std::variant<std::monostate, clang::StringLiteral *, IdentifierInfo *>
+            Arg) {
+      assert(ClauseKind == OpenACCClauseKind::Bind &&
+             "Only 'bind' has bind details");
+      Details = BindDetails{Arg};
+    }
   };
 
   SemaOpenACC(Sema &S);
@@ -693,7 +721,8 @@ public:
   /// parsing has consumed the 'annot_pragma_openacc_end' token. This DOES
   /// happen before any associated declarations or statements have been parsed.
   /// This function is only called when we are parsing a 'Decl' context.
-  bool ActOnStartDeclDirective(OpenACCDirectiveKind K, SourceLocation StartLoc);
+  bool ActOnStartDeclDirective(OpenACCDirectiveKind K, SourceLocation StartLoc,
+                               ArrayRef<const OpenACCClause *> Clauses);
   /// Called when we encounter an associated statement for our construct, this
   /// should check legality of the statement as it appertains to this Construct.
   StmtResult ActOnAssociatedStmt(SourceLocation DirectiveLoc,
@@ -723,6 +752,7 @@ public:
   /// MiscLoc: First misc location, if necessary (not all constructs).
   /// Exprs: List of expressions on the construct itself, if necessary (not all
   /// constructs).
+  /// FuncRef: used only for Routine, this is the function being referenced.
   /// AK: The atomic kind of the directive, if necessary (atomic only)
   /// RParenLoc: Location of the right paren, if it exists (not on all
   /// constructs).
@@ -735,23 +765,39 @@ public:
       OpenACCAtomicKind AK, SourceLocation RParenLoc, SourceLocation EndLoc,
       ArrayRef<OpenACCClause *> Clauses, StmtResult AssocStmt);
 
-  StmtResult ActOnEndStmtDirective(
-      OpenACCDirectiveKind K, SourceLocation StartLoc, SourceLocation DirLoc,
-      SourceLocation LParenLoc, SourceLocation MiscLoc, ArrayRef<Expr *> Exprs,
-      SourceLocation RParenLoc, SourceLocation EndLoc,
-      ArrayRef<OpenACCClause *> Clauses, StmtResult AssocStmt) {
-    return ActOnEndStmtDirective(K, StartLoc, DirLoc, LParenLoc, MiscLoc, Exprs,
-                                 OpenACCAtomicKind::None, RParenLoc, EndLoc,
-                                 Clauses, AssocStmt);
-  }
-
   /// Called after the directive has been completely parsed, including the
   /// declaration group or associated statement.
-  DeclGroupRef ActOnEndDeclDirective(OpenACCDirectiveKind K,
-                                     SourceLocation StartLoc,
-                                     SourceLocation DirLoc,
-                                     SourceLocation EndLoc,
-                                     ArrayRef<OpenACCClause *> Clauses);
+  DeclGroupRef
+  ActOnEndDeclDirective(OpenACCDirectiveKind K, SourceLocation StartLoc,
+                        SourceLocation DirLoc, SourceLocation LParenLoc,
+                        SourceLocation RParenLoc, SourceLocation EndLoc,
+                        ArrayRef<OpenACCClause *> Clauses);
+
+  // Helper functions for ActOnEndRoutine*Directive, which does all the checking
+  // given the proper list of declarations.
+  void CheckRoutineDecl(SourceLocation DirLoc,
+                        ArrayRef<const OpenACCClause *> Clauses,
+                        Decl *NextParsedDecl);
+  OpenACCRoutineDecl *CheckRoutineDecl(SourceLocation StartLoc,
+                                       SourceLocation DirLoc,
+                                       SourceLocation LParenLoc, Expr *FuncRef,
+                                       SourceLocation RParenLoc,
+                                       ArrayRef<const OpenACCClause *> Clauses,
+                                       SourceLocation EndLoc);
+  OpenACCRoutineDeclAttr *
+  mergeRoutineDeclAttr(const OpenACCRoutineDeclAttr &Old);
+  DeclGroupRef
+  ActOnEndRoutineDeclDirective(SourceLocation StartLoc, SourceLocation DirLoc,
+                               SourceLocation LParenLoc, Expr *ReferencedFunc,
+                               SourceLocation RParenLoc,
+                               ArrayRef<const OpenACCClause *> Clauses,
+                               SourceLocation EndLoc, DeclGroupPtrTy NextDecl);
+  StmtResult
+  ActOnEndRoutineStmtDirective(SourceLocation StartLoc, SourceLocation DirLoc,
+                               SourceLocation LParenLoc, Expr *ReferencedFunc,
+                               SourceLocation RParenLoc,
+                               ArrayRef<const OpenACCClause *> Clauses,
+                               SourceLocation EndLoc, Stmt *NextStmt);
 
   /// Called when encountering an 'int-expr' for OpenACC, and manages
   /// conversions and diagnostics to 'int'.
@@ -762,6 +808,17 @@ public:
   /// declaration reference to a variable of the correct type.
   ExprResult ActOnVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                       Expr *VarExpr);
+  /// Helper function called by ActonVar that is used to check a 'cache' var.
+  ExprResult ActOnCacheVar(Expr *VarExpr);
+  /// Function called when a variable declarator is created, which lets us
+  /// implement the 'routine' 'function static variables' restriction.
+  void ActOnVariableDeclarator(VarDecl *VD);
+  /// Called when a function decl is created, which lets us implement the
+  /// 'routine' 'doesn't match next thing' warning.
+  void ActOnFunctionDeclarator(FunctionDecl *FD);
+  /// Called when a variable is initialized, so we can implement the 'routine
+  /// 'doesn't match the next thing' warning for lambda init.
+  void ActOnVariableInit(VarDecl *VD, QualType InitType);
 
   // Called after 'ActOnVar' specifically for a 'link' clause, which has to do
   // some minor additional checks.
@@ -770,6 +827,8 @@ public:
   // Checking for the arguments specific to the declare-clause that need to be
   // checked during both phases of template translation.
   bool CheckDeclareClause(SemaOpenACC::OpenACCParsedClause &Clause);
+
+  ExprResult ActOnRoutineName(Expr *RoutineName);
 
   /// Called while semantically analyzing the reduction clause, ensuring the var
   /// is the correct kind of reference.

@@ -1197,6 +1197,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   if (getIsaVersion(getGlobalSTI()->getCPU()).Major >= 10) {
     ProgInfo.WgpMode = STM.isCuModeEnabled() ? 0 : 1;
     ProgInfo.MemOrdered = 1;
+    ProgInfo.FwdProgress = 1;
   }
 
   // 0 = X, 1 = XY, 2 = XYZ
@@ -1230,18 +1231,18 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.LdsSize = STM.isAmdHsaOS() ? 0 : ProgInfo.LDSBlocks;
   ProgInfo.EXCPEnable = 0;
 
-  if (STM.hasGFX90AInsts()) {
-    // return ((Dst & ~Mask) | (Value << Shift))
-    auto SetBits = [&Ctx](const MCExpr *Dst, const MCExpr *Value, uint32_t Mask,
-                          uint32_t Shift) {
-      const auto *Shft = MCConstantExpr::create(Shift, Ctx);
-      const auto *Msk = MCConstantExpr::create(Mask, Ctx);
-      Dst = MCBinaryExpr::createAnd(Dst, MCUnaryExpr::createNot(Msk, Ctx), Ctx);
-      Dst = MCBinaryExpr::createOr(
-          Dst, MCBinaryExpr::createShl(Value, Shft, Ctx), Ctx);
-      return Dst;
-    };
+  // return ((Dst & ~Mask) | (Value << Shift))
+  auto SetBits = [&Ctx](const MCExpr *Dst, const MCExpr *Value, uint32_t Mask,
+                        uint32_t Shift) {
+    const auto *Shft = MCConstantExpr::create(Shift, Ctx);
+    const auto *Msk = MCConstantExpr::create(Mask, Ctx);
+    Dst = MCBinaryExpr::createAnd(Dst, MCUnaryExpr::createNot(Msk, Ctx), Ctx);
+    Dst = MCBinaryExpr::createOr(Dst, MCBinaryExpr::createShl(Value, Shft, Ctx),
+                                 Ctx);
+    return Dst;
+  };
 
+  if (STM.hasGFX90AInsts()) {
     ProgInfo.ComputePGMRSrc3 =
         SetBits(ProgInfo.ComputePGMRSrc3, ProgInfo.AccumOffset,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET,
@@ -1267,6 +1268,26 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
             F.getName() + "': desired occupancy was " + Twine(MinWEU) +
             ", final occupancy is " + Twine(Occupancy));
     F.getContext().diagnose(Diag);
+  }
+
+  if (isGFX11Plus(STM)) {
+    uint32_t CodeSizeInBytes = (uint32_t)std::min(
+        ProgInfo.getFunctionCodeSize(MF, true /* IsLowerBound */),
+        (uint64_t)std::numeric_limits<uint32_t>::max());
+    uint32_t CodeSizeInLines = divideCeil(CodeSizeInBytes, 128);
+    uint32_t Field, Shift, Width;
+    if (isGFX11(STM)) {
+      Field = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE;
+      Shift = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_SHIFT;
+      Width = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_WIDTH;
+    } else {
+      Field = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE;
+      Shift = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_SHIFT;
+      Width = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_WIDTH;
+    }
+    uint64_t InstPrefSize = std::min(CodeSizeInLines, (1u << Width) - 1);
+    ProgInfo.ComputePGMRSrc3 = SetBits(ProgInfo.ComputePGMRSrc3,
+                                       CreateExpr(InstPrefSize), Field, Shift);
   }
 }
 
@@ -1394,6 +1415,9 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
     MD->setHwStage(CC, ".trap_present",
                    (bool)CurrentProgramInfo.TrapHandlerEnable);
     MD->setHwStage(CC, ".excp_en", CurrentProgramInfo.EXCPEnable);
+
+    if (ST.isDynamicVGPREnabled())
+      MD->setComputeRegisters(".dynamic_vgpr_en", true);
   }
 
   MD->setHwStage(CC, ".lds_size",
@@ -1416,8 +1440,15 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
   MD->setEntryPoint(CC, MF.getFunction().getName());
   MD->setNumUsedVgprs(CC, CurrentProgramInfo.NumVGPRsForWavesPerEU, Ctx);
 
-  // Only set AGPRs for supported devices
+  // For targets that support dynamic VGPRs, set the number of saved dynamic
+  // VGPRs (if any) in the PAL metadata.
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
+  if (STM.isDynamicVGPREnabled() &&
+      MFI->getScratchReservedForDynamicVGPRs() > 0)
+    MD->setHwStage(CC, ".dynamic_vgpr_saved_count",
+                   MFI->getScratchReservedForDynamicVGPRs() / 4);
+
+  // Only set AGPRs for supported devices
   if (STM.hasMAIInsts()) {
     MD->setNumUsedAgprs(CC, CurrentProgramInfo.NumAccVGPR);
   }

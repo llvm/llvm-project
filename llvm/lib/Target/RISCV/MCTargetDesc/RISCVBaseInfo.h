@@ -296,7 +296,10 @@ enum OperandType : unsigned {
   OPERAND_UIMM5,
   OPERAND_UIMM5_NONZERO,
   OPERAND_UIMM5_GT3,
+  OPERAND_UIMM5_PLUS1,
+  OPERAND_UIMM5_GE6_PLUS1,
   OPERAND_UIMM5_LSB0,
+  OPERAND_UIMM5_SLIST,
   OPERAND_UIMM6,
   OPERAND_UIMM6_LSB0,
   OPERAND_UIMM7,
@@ -312,6 +315,7 @@ enum OperandType : unsigned {
   OPERAND_UIMM11,
   OPERAND_UIMM12,
   OPERAND_UIMM16,
+  OPERAND_UIMM16_NONZERO,
   OPERAND_UIMM20,
   OPERAND_UIMMLOG2XLEN,
   OPERAND_UIMMLOG2XLEN_NONZERO,
@@ -320,12 +324,16 @@ enum OperandType : unsigned {
   OPERAND_UIMM64,
   OPERAND_ZERO,
   OPERAND_SIMM5,
+  OPERAND_SIMM5_NONZERO,
   OPERAND_SIMM5_PLUS1,
   OPERAND_SIMM6,
   OPERAND_SIMM6_NONZERO,
   OPERAND_SIMM10_LSB0000_NONZERO,
+  OPERAND_SIMM11,
   OPERAND_SIMM12,
   OPERAND_SIMM12_LSB00000,
+  OPERAND_SIMM16_NONZERO,
+  OPERAND_SIMM20,
   OPERAND_SIMM26,
   OPERAND_SIMM32,
   OPERAND_CLUI_IMM,
@@ -622,6 +630,15 @@ inline unsigned encodeRlist(MCRegister EndReg, bool IsRV32E = false) {
   default:
     llvm_unreachable("Undefined input.");
   }
+}
+
+inline static unsigned encodeRlistNumRegs(unsigned NumRegs) {
+  assert(NumRegs > 0 && NumRegs < 14 && NumRegs != 12 &&
+         "Unexpected number of registers");
+  if (NumRegs == 13)
+    return RLISTENCODE::RA_S0_S11;
+
+  return RLISTENCODE::RA + (NumRegs - 1);
 }
 
 inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64) {

@@ -919,7 +919,7 @@ bool MachineSinking::run(MachineFunction &MF) {
             continue;
 
           if (!aggressivelySinkIntoCycle(Cycle, *I, SunkInstrs))
-            break;
+            continue;
           EverMadeChange = true;
           ++NumCycleSunk;
         }

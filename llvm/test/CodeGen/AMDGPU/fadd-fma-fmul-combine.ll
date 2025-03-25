@@ -71,15 +71,15 @@ define amdgpu_kernel void @fast_add_fmuladd_fmul() #0 {
 ; GCN-SLOWFMA-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-SLOWFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SLOWFMA-NEXT:    s_endpgm
-  %x = load volatile float, ptr addrspace(1) undef
-  %y = load volatile float, ptr addrspace(1) undef
-  %z = load volatile float, ptr addrspace(1) undef
-  %u = load volatile float, ptr addrspace(1) undef
-  %v = load volatile float, ptr addrspace(1) undef
+  %x = load volatile float, ptr addrspace(1) poison
+  %y = load volatile float, ptr addrspace(1) poison
+  %z = load volatile float, ptr addrspace(1) poison
+  %u = load volatile float, ptr addrspace(1) poison
+  %v = load volatile float, ptr addrspace(1) poison
   %mul.u.v = fmul fast float %u, %v
   %fma = call fast float @llvm.fmuladd.f32(float %x, float %y, float %mul.u.v)
   %add = fadd fast float %fma, %z
-  store volatile float %add, ptr addrspace(1) undef
+  store volatile float %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -145,15 +145,15 @@ define amdgpu_kernel void @fast_sub_fmuladd_fmul() #0 {
 ; GCN-SLOWFMA-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-SLOWFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SLOWFMA-NEXT:    s_endpgm
-  %x = load volatile float, ptr addrspace(1) undef
-  %y = load volatile float, ptr addrspace(1) undef
-  %z = load volatile float, ptr addrspace(1) undef
-  %u = load volatile float, ptr addrspace(1) undef
-  %v = load volatile float, ptr addrspace(1) undef
+  %x = load volatile float, ptr addrspace(1) poison
+  %y = load volatile float, ptr addrspace(1) poison
+  %z = load volatile float, ptr addrspace(1) poison
+  %u = load volatile float, ptr addrspace(1) poison
+  %v = load volatile float, ptr addrspace(1) poison
   %mul.u.v = fmul fast float %u, %v
   %fma = call fast float @llvm.fmuladd.f32(float %x, float %y, float %mul.u.v)
   %add = fsub fast float %fma, %z
-  store volatile float %add, ptr addrspace(1) undef
+  store volatile float %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -227,16 +227,16 @@ define amdgpu_kernel void @fast_add_fmuladd_fmul_multi_use_mul() #0 {
 ; GCN-SLOWFMA-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-SLOWFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SLOWFMA-NEXT:    s_endpgm
-  %x = load volatile float, ptr addrspace(1) undef
-  %y = load volatile float, ptr addrspace(1) undef
-  %z = load volatile float, ptr addrspace(1) undef
-  %u = load volatile float, ptr addrspace(1) undef
-  %v = load volatile float, ptr addrspace(1) undef
+  %x = load volatile float, ptr addrspace(1) poison
+  %y = load volatile float, ptr addrspace(1) poison
+  %z = load volatile float, ptr addrspace(1) poison
+  %u = load volatile float, ptr addrspace(1) poison
+  %v = load volatile float, ptr addrspace(1) poison
   %mul.u.v = fmul fast float %u, %v
-  store volatile float %mul.u.v, ptr addrspace(1) undef
+  store volatile float %mul.u.v, ptr addrspace(1) poison
   %fma = call fast float @llvm.fmuladd.f32(float %x, float %y, float %mul.u.v)
   %add = fadd fast float %fma, %z
-  store volatile float %add, ptr addrspace(1) undef
+  store volatile float %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -310,16 +310,16 @@ define amdgpu_kernel void @fast_add_fmuladd_fmul_multi_use_mul_commute() #0 {
 ; GCN-SLOWFMA-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-SLOWFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SLOWFMA-NEXT:    s_endpgm
-  %x = load volatile float, ptr addrspace(1) undef
-  %y = load volatile float, ptr addrspace(1) undef
-  %z = load volatile float, ptr addrspace(1) undef
-  %u = load volatile float, ptr addrspace(1) undef
-  %v = load volatile float, ptr addrspace(1) undef
+  %x = load volatile float, ptr addrspace(1) poison
+  %y = load volatile float, ptr addrspace(1) poison
+  %z = load volatile float, ptr addrspace(1) poison
+  %u = load volatile float, ptr addrspace(1) poison
+  %v = load volatile float, ptr addrspace(1) poison
   %mul.u.v = fmul fast float %u, %v
-  store volatile float %mul.u.v, ptr addrspace(1) undef
+  store volatile float %mul.u.v, ptr addrspace(1) poison
   %fma = call fast float @llvm.fmuladd.f32(float %x, float %y, float %mul.u.v)
   %add = fadd fast float %z, %fma
-  store volatile float %add, ptr addrspace(1) undef
+  store volatile float %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -393,16 +393,16 @@ define amdgpu_kernel void @fast_add_fmuladd_fmul_multi_use_fmuladd() #0 {
 ; GCN-SLOWFMA-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-SLOWFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SLOWFMA-NEXT:    s_endpgm
-  %x = load volatile float, ptr addrspace(1) undef
-  %y = load volatile float, ptr addrspace(1) undef
-  %z = load volatile float, ptr addrspace(1) undef
-  %u = load volatile float, ptr addrspace(1) undef
-  %v = load volatile float, ptr addrspace(1) undef
+  %x = load volatile float, ptr addrspace(1) poison
+  %y = load volatile float, ptr addrspace(1) poison
+  %z = load volatile float, ptr addrspace(1) poison
+  %u = load volatile float, ptr addrspace(1) poison
+  %v = load volatile float, ptr addrspace(1) poison
   %mul.u.v = fmul fast float %u, %v
   %fma = call fast float @llvm.fmuladd.f32(float %x, float %y, float %mul.u.v)
-  store volatile float %fma, ptr addrspace(1) undef
+  store volatile float %fma, ptr addrspace(1) poison
   %add = fadd fast float %fma, %z
-  store volatile float %add, ptr addrspace(1) undef
+  store volatile float %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -476,16 +476,16 @@ define amdgpu_kernel void @fast_add_fmuladd_fmul_multi_use_fmuladd_commute() #0 
 ; GCN-SLOWFMA-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-SLOWFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SLOWFMA-NEXT:    s_endpgm
-  %x = load volatile float, ptr addrspace(1) undef
-  %y = load volatile float, ptr addrspace(1) undef
-  %z = load volatile float, ptr addrspace(1) undef
-  %u = load volatile float, ptr addrspace(1) undef
-  %v = load volatile float, ptr addrspace(1) undef
+  %x = load volatile float, ptr addrspace(1) poison
+  %y = load volatile float, ptr addrspace(1) poison
+  %z = load volatile float, ptr addrspace(1) poison
+  %u = load volatile float, ptr addrspace(1) poison
+  %v = load volatile float, ptr addrspace(1) poison
   %mul.u.v = fmul fast float %u, %v
   %fma = call fast float @llvm.fmuladd.f32(float %x, float %y, float %mul.u.v)
-  store volatile float %fma, ptr addrspace(1) undef
+  store volatile float %fma, ptr addrspace(1) poison
   %add = fadd fast float %z, %fma
-  store volatile float %add, ptr addrspace(1) undef
+  store volatile float %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -559,16 +559,16 @@ define amdgpu_kernel void @fast_sub_fmuladd_fmul_multi_use_mul() #0 {
 ; GCN-SLOWFMA-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-SLOWFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SLOWFMA-NEXT:    s_endpgm
-  %x = load volatile float, ptr addrspace(1) undef
-  %y = load volatile float, ptr addrspace(1) undef
-  %z = load volatile float, ptr addrspace(1) undef
-  %u = load volatile float, ptr addrspace(1) undef
-  %v = load volatile float, ptr addrspace(1) undef
+  %x = load volatile float, ptr addrspace(1) poison
+  %y = load volatile float, ptr addrspace(1) poison
+  %z = load volatile float, ptr addrspace(1) poison
+  %u = load volatile float, ptr addrspace(1) poison
+  %v = load volatile float, ptr addrspace(1) poison
   %mul.u.v = fmul fast float %u, %v
   %fma = call fast float @llvm.fmuladd.f32(float %x, float %y, float %mul.u.v)
   %sub = fsub fast float %fma, %z
-  store volatile float %mul.u.v, ptr addrspace(1) undef
-  store volatile float %sub, ptr addrspace(1) undef
+  store volatile float %mul.u.v, ptr addrspace(1) poison
+  store volatile float %sub, ptr addrspace(1) poison
   ret void
 }
 
@@ -642,16 +642,16 @@ define amdgpu_kernel void @fast_sub_fmuladd_fmul_multi_use_fmuladd_lhs() #0 {
 ; GCN-SLOWFMA-NEXT:    buffer_store_dword v1, off, s[0:3], 0
 ; GCN-SLOWFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SLOWFMA-NEXT:    s_endpgm
-  %x = load volatile float, ptr addrspace(1) undef
-  %y = load volatile float, ptr addrspace(1) undef
-  %z = load volatile float, ptr addrspace(1) undef
-  %u = load volatile float, ptr addrspace(1) undef
-  %v = load volatile float, ptr addrspace(1) undef
+  %x = load volatile float, ptr addrspace(1) poison
+  %y = load volatile float, ptr addrspace(1) poison
+  %z = load volatile float, ptr addrspace(1) poison
+  %u = load volatile float, ptr addrspace(1) poison
+  %v = load volatile float, ptr addrspace(1) poison
   %mul.u.v = fmul fast float %u, %v
   %fma = call fast float @llvm.fmuladd.f32(float %x, float %y, float %mul.u.v)
   %add = fsub fast float %fma, %z
-  store volatile float %fma, ptr addrspace(1) undef
-  store volatile float %add, ptr addrspace(1) undef
+  store volatile float %fma, ptr addrspace(1) poison
+  store volatile float %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -725,16 +725,16 @@ define amdgpu_kernel void @fast_sub_fmuladd_fmul_multi_use_fmuladd_rhs() #0 {
 ; GCN-SLOWFMA-NEXT:    buffer_store_dword v1, off, s[0:3], 0
 ; GCN-SLOWFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SLOWFMA-NEXT:    s_endpgm
-  %x = load volatile float, ptr addrspace(1) undef
-  %y = load volatile float, ptr addrspace(1) undef
-  %z = load volatile float, ptr addrspace(1) undef
-  %u = load volatile float, ptr addrspace(1) undef
-  %v = load volatile float, ptr addrspace(1) undef
+  %x = load volatile float, ptr addrspace(1) poison
+  %y = load volatile float, ptr addrspace(1) poison
+  %z = load volatile float, ptr addrspace(1) poison
+  %u = load volatile float, ptr addrspace(1) poison
+  %v = load volatile float, ptr addrspace(1) poison
   %mul.u.v = fmul fast float %u, %v
   %fma = call fast float @llvm.fmuladd.f32(float %x, float %y, float %mul.u.v)
   %add = fsub fast float %z, %fma
-  store volatile float %fma, ptr addrspace(1) undef
-  store volatile float %add, ptr addrspace(1) undef
+  store volatile float %fma, ptr addrspace(1) poison
+  store volatile float %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -814,17 +814,17 @@ define amdgpu_kernel void @fast_sub_fmuladd_fpext_fmul_multi_use_fmuladd_lhs() #
 ; GCN-SLOWFMA-NEXT:    buffer_store_dword v1, off, s[0:3], 0
 ; GCN-SLOWFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SLOWFMA-NEXT:    s_endpgm
-  %x = load volatile float, ptr addrspace(1) undef
-  %y = load volatile float, ptr addrspace(1) undef
-  %z = load volatile float, ptr addrspace(1) undef
-  %u = load volatile half, ptr addrspace(1) undef
-  %v = load volatile half, ptr addrspace(1) undef
+  %x = load volatile float, ptr addrspace(1) poison
+  %y = load volatile float, ptr addrspace(1) poison
+  %z = load volatile float, ptr addrspace(1) poison
+  %u = load volatile half, ptr addrspace(1) poison
+  %v = load volatile half, ptr addrspace(1) poison
   %mul.u.v.half = fmul fast half %u, %v
   %mul.u.v = fpext half %mul.u.v.half to float
   %fma = call fast float @llvm.fmuladd.f32(float %x, float %y, float %mul.u.v)
   %add = fsub fast float %fma, %z
-  store volatile float %fma, ptr addrspace(1) undef
-  store volatile float %add, ptr addrspace(1) undef
+  store volatile float %fma, ptr addrspace(1) poison
+  store volatile float %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -904,17 +904,17 @@ define amdgpu_kernel void @fast_sub_fmuladd_fpext_fmul_multi_use_fmuladd_rhs() #
 ; GCN-SLOWFMA-NEXT:    buffer_store_dword v1, off, s[0:3], 0
 ; GCN-SLOWFMA-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SLOWFMA-NEXT:    s_endpgm
-  %x = load volatile float, ptr addrspace(1) undef
-  %y = load volatile float, ptr addrspace(1) undef
-  %z = load volatile float, ptr addrspace(1) undef
-  %u = load volatile half, ptr addrspace(1) undef
-  %v = load volatile half, ptr addrspace(1) undef
+  %x = load volatile float, ptr addrspace(1) poison
+  %y = load volatile float, ptr addrspace(1) poison
+  %z = load volatile float, ptr addrspace(1) poison
+  %u = load volatile half, ptr addrspace(1) poison
+  %v = load volatile half, ptr addrspace(1) poison
   %mul.u.v.half = fmul fast half %u, %v
   %mul.u.v = fpext half %mul.u.v.half to float
   %fma = call fast float @llvm.fmuladd.f32(float %x, float %y, float %mul.u.v)
   %add = fsub fast float %z, %fma
-  store volatile float %fma, ptr addrspace(1) undef
-  store volatile float %add, ptr addrspace(1) undef
+  store volatile float %fma, ptr addrspace(1) poison
+  store volatile float %add, ptr addrspace(1) poison
   ret void
 }
 

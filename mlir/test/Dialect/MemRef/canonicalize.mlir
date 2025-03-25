@@ -635,9 +635,9 @@ func.func @fold_no_op_subview(%arg0 : memref<20x42xf32>) -> memref<20x42xf32, st
 
 // -----
 
-func.func @no_fold_subview_with_non_zero_offset(%arg0 : memref<20x42xf32>) -> memref<20x42xf32, strided<[42, 1], offset: 1>> {
-  %0 = memref.subview %arg0[0, 1] [20, 42] [1, 1] : memref<20x42xf32> to memref<20x42xf32, strided<[42, 1], offset: 1>>
-  return %0 : memref<20x42xf32, strided<[42, 1], offset: 1>>
+func.func @no_fold_subview_with_non_zero_offset(%arg0 : memref<20x42xf32>) -> memref<20x41xf32, strided<[42, 1], offset: 1>> {
+  %0 = memref.subview %arg0[0, 1] [20, 41] [1, 1] : memref<20x42xf32> to memref<20x41xf32, strided<[42, 1], offset: 1>>
+  return %0 : memref<20x41xf32, strided<[42, 1], offset: 1>>
 }
 // CHECK-LABEL: func @no_fold_subview_with_non_zero_offset(
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview
@@ -645,13 +645,23 @@ func.func @no_fold_subview_with_non_zero_offset(%arg0 : memref<20x42xf32>) -> me
 
 // -----
 
-func.func @no_fold_subview_with_non_unit_stride(%arg0 : memref<20x42xf32>) -> memref<20x42xf32, strided<[42, 2]>> {
-  %0 = memref.subview %arg0[0, 0] [20, 42] [1, 2] : memref<20x42xf32> to memref<20x42xf32, strided<[42, 2]>>
-  return %0 : memref<20x42xf32, strided<[42, 2]>>
+func.func @no_fold_subview_with_non_unit_stride(%arg0 : memref<20x42xf32>) -> memref<20x5xf32, strided<[42, 2]>> {
+  %0 = memref.subview %arg0[0, 0] [20, 5] [1, 2] : memref<20x42xf32> to memref<20x5xf32, strided<[42, 2]>>
+  return %0 : memref<20x5xf32, strided<[42, 2]>>
 }
 // CHECK-LABEL: func @no_fold_subview_with_non_unit_stride(
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview
 //       CHECK:    return %[[SUBVIEW]]
+
+// -----
+
+// CHECK-LABEL: func @no_fold_invalid_dynamic_slice
+//       CHECK:   memref.subview %arg0[2] [%{{.*}}] [1] : memref<10xf32> to memref<?xf32, strided<[1], offset: 2>>
+func.func @no_fold_invalid_dynamic_slice(%arg0: memref<10xf32>) -> memref<?xf32, strided<[1], offset: 2>> {
+  %c11 = arith.constant 11 : index
+  %0 = memref.subview %arg0 [2][%c11][1] : memref<10xf32> to memref<?xf32, strided<[1], offset: 2>>
+  func.return %0 : memref<?xf32, strided<[1], offset: 2>>
+}
 
 // -----
 

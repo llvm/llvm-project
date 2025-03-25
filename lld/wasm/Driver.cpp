@@ -643,7 +643,10 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.maxMemory = args::getInteger(args, OPT_max_memory, 0);
   ctx.arg.noGrowableMemory = args.hasArg(OPT_no_growable_memory);
   ctx.arg.zStackSize =
-      args::getZOptionValue(args, OPT_z, "stack-size", WasmPageSize);
+      args::getZOptionValue(args, OPT_z, "stack-size", WasmDefaultPageSize);
+  ctx.arg.pageSize = args::getInteger(args, OPT_page_size, WasmDefaultPageSize);
+  if (ctx.arg.pageSize != 1 && ctx.arg.pageSize != WasmDefaultPageSize)
+    error("--page_size=N must be either 1 or 65536");
 
   // -Bdynamic by default if -pie or -shared is specified.
   if (ctx.arg.pie || ctx.arg.shared)
@@ -999,6 +1002,11 @@ static void createOptionalSymbols() {
     WasmSym::definedMemoryBase = symtab->addOptionalDataSymbol("__memory_base");
     WasmSym::definedTableBase = symtab->addOptionalDataSymbol("__table_base");
   }
+
+  WasmSym::firstPageEnd =
+      symtab->addOptionalDataSymbol("__wasm_first_page_end");
+  if (WasmSym::firstPageEnd)
+    WasmSym::firstPageEnd->setVA(ctx.arg.pageSize);
 
   // For non-shared memory programs we still need to define __tls_base since we
   // allow object files built with TLS to be linked into single threaded

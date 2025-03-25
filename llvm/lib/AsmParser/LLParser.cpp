@@ -522,7 +522,7 @@ bool LLParser::parseTargetDefinitions(DataLayoutCallbackTy DataLayoutCallback) {
   // Run the override callback to potentially change the data layout string, and
   // parse the data layout string.
   if (auto LayoutOverride =
-          DataLayoutCallback(M->getTargetTriple(), TentativeDLStr)) {
+          DataLayoutCallback(M->getTargetTriple().str(), TentativeDLStr)) {
     TentativeDLStr = *LayoutOverride;
     DLStrLoc = {};
   }
@@ -646,7 +646,7 @@ bool LLParser::parseTargetDefinition(std::string &TentativeDLStr,
     if (parseToken(lltok::equal, "expected '=' after target triple") ||
         parseStringConstant(Str))
       return true;
-    M->setTargetTriple(Str);
+    M->setTargetTriple(Triple(Str));
     return false;
   case lltok::kw_datalayout:
     Lex.Lex();
@@ -942,7 +942,8 @@ bool LLParser::parseMDNodeID(MDNode *&Result) {
     return true;
 
   // If not a forward reference, just return it now.
-  if (auto It = NumberedMetadata.find(MID); It != NumberedMetadata.end()) {
+  auto [It, Inserted] = NumberedMetadata.try_emplace(MID);
+  if (!Inserted) {
     Result = It->second;
     return false;
   }
@@ -952,7 +953,7 @@ bool LLParser::parseMDNodeID(MDNode *&Result) {
   FwdRef = std::make_pair(MDTuple::getTemporary(Context, {}), IDLoc);
 
   Result = FwdRef.first.get();
-  NumberedMetadata[MID].reset(Result);
+  It->second.reset(Result);
   return false;
 }
 

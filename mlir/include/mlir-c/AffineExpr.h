@@ -92,6 +92,18 @@ MLIR_CAPI_EXPORTED bool mlirAffineExprIsFunctionOfDim(MlirAffineExpr affineExpr,
 MLIR_CAPI_EXPORTED MlirAffineExpr mlirAffineExprCompose(
     MlirAffineExpr affineExpr, struct MlirAffineMap affineMap);
 
+/// Replace dims[offset ... numDims)
+/// by dims[offset + shift ... shift + numDims).
+MLIR_CAPI_EXPORTED MlirAffineExpr
+mlirAffineExprShiftDims(MlirAffineExpr affineExpr, uint32_t numDims,
+                        uint32_t shift, uint32_t offset);
+
+/// Replace symbols[offset ... numSymbols)
+/// by symbols[offset + shift ... shift + numSymbols).
+MLIR_CAPI_EXPORTED MlirAffineExpr
+mlirAffineExprShiftSymbols(MlirAffineExpr affineExpr, uint32_t numSymbols,
+                           uint32_t shift, uint32_t offset);
+
 //===----------------------------------------------------------------------===//
 // Affine Dimension Expression.
 //===----------------------------------------------------------------------===//

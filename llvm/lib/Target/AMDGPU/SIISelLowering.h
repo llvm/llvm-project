@@ -303,8 +303,10 @@ public:
   bool isShuffleMaskLegal(ArrayRef<int> /*Mask*/, EVT /*VT*/) const override;
 
   // While address space 7 should never make it to codegen, it still needs to
-  // have a MVT to prevent some analyses that query this function from breaking,
-  // so, to work around the lack of i160, map it to v5i32.
+  // have a MVT to prevent some analyses that query this function from breaking.
+  // We use the custum MVT::amdgpuBufferFatPointer and
+  // amdgpu::amdgpuBufferStridedPointer for this, though we use v8i32 for the
+  // memory type (which is probably unused).
   MVT getPointerTy(const DataLayout &DL, unsigned AS) const override;
   MVT getPointerMemTy(const DataLayout &DL, unsigned AS) const override;
 
