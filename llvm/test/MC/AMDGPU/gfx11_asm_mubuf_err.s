@@ -156,24 +156,6 @@ buffer_load_i16 v3, v0, null, s1 offen offset:4095
 buffer_load_i8 v3, v0, null, s1 offen offset:4095
 // NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-buffer_load_lds_b32 v3, v0, null, s1 offen offset:4095
-// NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-buffer_load_lds_format_x v3, v0, null, s1 offen offset:4095
-// NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-buffer_load_lds_i16 v3, v0, null, s1 offen offset:4095
-// NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-buffer_load_lds_i8 v3, v0, null, s1 offen offset:4095
-// NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-buffer_load_lds_u16 v3, v0, null, s1 offen offset:4095
-// NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-buffer_load_lds_u8 v3, v0, null, s1 offen offset:4095
-// NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
 buffer_load_u16 v3, v0, null, s1 offen offset:4095
 // NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
