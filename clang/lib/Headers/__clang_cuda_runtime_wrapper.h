@@ -386,6 +386,7 @@ __host__ __device__ void __nv_tex_surf_handler(const char *name, T *ptr,
 #endif // __cplusplus >= 201103L && CUDA_VERSION >= 9000
 #include "texture_fetch_functions.h"
 #include "texture_indirect_functions.h"
+#include "surface_indirect_functions.h"
 
 // Restore state of __CUDA_ARCH__ and __THROW we had on entry.
 #pragma pop_macro("__CUDA_ARCH__")
