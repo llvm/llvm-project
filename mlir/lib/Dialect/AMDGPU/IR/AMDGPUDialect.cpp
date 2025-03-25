@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
@@ -24,6 +25,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/Metadata.h"
 
 #include <limits>
 #include <optional>
@@ -456,6 +458,34 @@ LogicalResult DPPOp::verify() {
     break;
   }
   }
+  return success();
+}
+
+LogicalResult GlobalLoadLDSOp::verify() {
+  MemRefType srcType = cast<MemRefType>(getSrc().getType());
+  MemRefType dstType = cast<MemRefType>(getDst().getType());
+
+  if (!memref::isStaticShapeAndContiguousRowMajor(srcType) ||
+      !memref::isStaticShapeAndContiguousRowMajor(dstType))
+    return emitOpError(
+        "source and destination types must have static shape  and contiguous");
+
+  // Check $src and $dst element types are the same.
+  if (srcType.getElementType() != dstType.getElementType())
+    return emitOpError("source and destination element types must match");
+
+  // Check $src and $dst memory spaces.
+  auto srcAddrSpace = llvm::dyn_cast<IntegerAttr>(srcType.getMemorySpace());
+  auto dstAddrSpace = llvm::dyn_cast<IntegerAttr>(dstType.getMemorySpace());
+  if (!srcAddrSpace || srcAddrSpace.getInt() != 1)
+    return emitOpError("source memory address space must be Global");
+  if (dstAddrSpace.getInt() != 3)
+    return emitOpError("destination memory address space must be Workgroup");
+
+  // Check chunk size compatible with element type.
+  // TODO
+  auto dstChunkSize = dstType.getShape();
+
   return success();
 }
 

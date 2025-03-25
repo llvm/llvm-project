@@ -792,7 +792,7 @@ def AMDGPU_GlobalLoadLDSOp :
 
   }];
   let assemblyFormat = [{
-    $src `[` $srcIndices `]` $dst `[` $dstIndices `]` attr-dict `:` `,` type($src) `,` type($dst)
+    $src `[` $srcIndices `]` $dst `[` $dstIndices `]` attr-dict `:` type($src) `,` type($dst)
   }];
   let hasVerifier = 1;
 }
