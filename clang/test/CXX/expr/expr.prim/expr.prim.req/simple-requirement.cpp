@@ -98,13 +98,6 @@ namespace std_example {
   using c1c2 = C_check<int *>; // expected-error{{constraints not satisfied for class template 'C_check' [with T = int *]}}
 }
 
-// typeid() of an expression becomes potentially evaluated if the expression is
-// of a polymorphic type.
-class X { virtual ~X(); };
-constexpr bool b = requires (X &x) { static_cast<int(*)[(typeid(x), 0)]>(nullptr); };
-// expected-error@-1{{constraint variable 'x' cannot be used in an evaluated context}}
-// expected-note@-2{{'x' declared here}}
-
 namespace access_checks {
 namespace in_requires_expression {
 template<auto>

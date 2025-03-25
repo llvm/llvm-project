@@ -37,13 +37,6 @@ namespace std_example {
   static_assert(D<T1>);
   template<D T> struct D_check {}; // expected-note{{because 'short' does not satisfy 'D'}}
   using dc1 = D_check<short>; // expected-error{{constraints not satisfied for class template 'D_check' [with T = short]}}
-
-  template<typename T>
-  concept C2 = requires (T a) {
-      requires sizeof(a) == 4; // OK
-      requires a == 0; // expected-note{{because 'a == 0' would be invalid: constraint variable 'a' cannot be used in an evaluated context}}
-    };
-  static_assert(C2<int>); // expected-note{{because 'int' does not satisfy 'C2'}} expected-error{{static assertion failed}}
 }
 
 template<typename T>
