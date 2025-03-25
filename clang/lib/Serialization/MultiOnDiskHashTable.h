@@ -127,7 +127,7 @@ private:
 
   void removeOverriddenTables() {
     llvm::DenseSet<file_type> Files;
-    Files.insert(PendingOverrides.begin(), PendingOverrides.end());
+    Files.insert_range(PendingOverrides);
     // Explicitly capture Files to work around an MSVC 2015 rejects-valid bug.
     auto ShouldRemove = [&Files](void *T) -> bool {
       auto *ODT = llvm::cast<OnDiskTable *>(Table::getFromOpaqueValue(T));

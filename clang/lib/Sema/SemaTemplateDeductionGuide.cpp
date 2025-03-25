@@ -21,7 +21,6 @@
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/OperationKinds.h"
@@ -377,12 +376,10 @@ struct ConvertConstructorToDeductionGuideTransform {
         if (NestedPattern)
           Args.addOuterRetainedLevels(NestedPattern->getTemplateDepth());
         auto [Depth, Index] = getDepthAndIndex(Param);
-        // Depth can still be 0 if FTD belongs to an explicit class template
-        // specialization with an empty template parameter list. In that case,
-        // we don't want the NewDepth to overflow, and it should remain 0.
-        assert(Depth ||
-               cast<ClassTemplateSpecializationDecl>(FTD->getDeclContext())
-                   ->isExplicitSpecialization());
+        // Depth can be 0 if FTD belongs to a non-template class/a class
+        // template specialization with an empty template parameter list. In
+        // that case, we don't want the NewDepth to overflow, and it should
+        // remain 0.
         NamedDecl *NewParam = transformTemplateParameter(
             SemaRef, DC, Param, Args, Index + Depth1IndexAdjustment,
             Depth ? Depth - 1 : 0);
@@ -681,54 +678,16 @@ private:
 // Find all template parameters that appear in the given DeducedArgs.
 // Return the indices of the template parameters in the TemplateParams.
 SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
-    const TemplateParameterList *TemplateParamsList,
+    Sema &SemaRef, const TemplateParameterList *TemplateParamsList,
     ArrayRef<TemplateArgument> DeducedArgs) {
-  struct TemplateParamsReferencedFinder : DynamicRecursiveASTVisitor {
-    const TemplateParameterList *TemplateParamList;
-    llvm::BitVector ReferencedTemplateParams;
 
-    TemplateParamsReferencedFinder(
-        const TemplateParameterList *TemplateParamList)
-        : TemplateParamList(TemplateParamList),
-          ReferencedTemplateParams(TemplateParamList->size()) {}
-
-    bool VisitTemplateTypeParmType(TemplateTypeParmType *TTP) override {
-      // We use the index and depth to retrieve the corresponding template
-      // parameter from the parameter list, which is more robost.
-      Mark(TTP->getDepth(), TTP->getIndex());
-      return true;
-    }
-
-    bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
-      MarkAppeared(DRE->getFoundDecl());
-      return true;
-    }
-
-    bool TraverseTemplateName(TemplateName Template) override {
-      if (auto *TD = Template.getAsTemplateDecl())
-        MarkAppeared(TD);
-      return DynamicRecursiveASTVisitor::TraverseTemplateName(Template);
-    }
-
-    void MarkAppeared(NamedDecl *ND) {
-      if (llvm::isa<NonTypeTemplateParmDecl, TemplateTypeParmDecl,
-                    TemplateTemplateParmDecl>(ND)) {
-        auto [Depth, Index] = getDepthAndIndex(ND);
-        Mark(Depth, Index);
-      }
-    }
-    void Mark(unsigned Depth, unsigned Index) {
-      if (Index < TemplateParamList->size() &&
-          TemplateParamList->getParam(Index)->getTemplateDepth() == Depth)
-        ReferencedTemplateParams.set(Index);
-    }
-  };
-  TemplateParamsReferencedFinder Finder(TemplateParamsList);
-  Finder.TraverseTemplateArguments(DeducedArgs);
+  llvm::SmallBitVector ReferencedTemplateParams(TemplateParamsList->size());
+  SemaRef.MarkUsedTemplateParameters(
+      DeducedArgs, TemplateParamsList->getDepth(), ReferencedTemplateParams);
 
   SmallVector<unsigned> Results;
   for (unsigned Index = 0; Index < TemplateParamsList->size(); ++Index) {
-    if (Finder.ReferencedTemplateParams[Index])
+    if (ReferencedTemplateParams[Index])
       Results.push_back(Index);
   }
   return Results;
@@ -1009,6 +968,19 @@ getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate) {
   return {Template, AliasRhsTemplateArgs};
 }
 
+bool IsNonDeducedArgument(const TemplateArgument &TA) {
+  // The following cases indicate the template argument is non-deducible:
+  //   1. The result is null. E.g. When it comes from a default template
+  //   argument that doesn't appear in the alias declaration.
+  //   2. The template parameter is a pack and that cannot be deduced from
+  //   the arguments within the alias declaration.
+  // Non-deducible template parameters will persist in the transformed
+  // deduction guide.
+  return TA.isNull() ||
+         (TA.getKind() == TemplateArgument::Pack &&
+          llvm::any_of(TA.pack_elements(), IsNonDeducedArgument));
+}
+
 // Build deduction guides for a type alias template from the given underlying
 // deduction guide F.
 FunctionTemplateDecl *
@@ -1077,14 +1049,15 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   // !!NOTE: DeduceResults respects the sequence of template parameters of
   // the deduction guide f.
   for (unsigned Index = 0; Index < DeduceResults.size(); ++Index) {
-    if (const auto &D = DeduceResults[Index]; !D.isNull()) // Deduced
+    const auto &D = DeduceResults[Index];
+    if (!IsNonDeducedArgument(D))
       DeducedArgs.push_back(D);
     else
       NonDeducedTemplateParamsInFIndex.push_back(Index);
   }
   auto DeducedAliasTemplateParams =
       TemplateParamsReferencedInTemplateArgumentList(
-          AliasTemplate->getTemplateParameters(), DeducedArgs);
+          SemaRef, AliasTemplate->getTemplateParameters(), DeducedArgs);
   // All template arguments null by default.
   SmallVector<TemplateArgument> TemplateArgsForBuildingFPrime(
       F->getTemplateParameters()->size());
@@ -1141,7 +1114,7 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   Args.addOuterTemplateArguments(TransformedDeducedAliasArgs);
   for (unsigned Index = 0; Index < DeduceResults.size(); ++Index) {
     const auto &D = DeduceResults[Index];
-    if (D.isNull()) {
+    if (IsNonDeducedArgument(D)) {
       // 2): Non-deduced template parameters would be substituted later.
       continue;
     }

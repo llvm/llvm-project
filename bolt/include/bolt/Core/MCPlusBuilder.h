@@ -473,7 +473,7 @@ public:
   ///
   /// For X86, they might be used in scanExternalRefs when we want to skip
   /// a function but still patch references inside it.
-  virtual bool shouldRecordCodeRelocation(uint64_t RelType) const {
+  virtual bool shouldRecordCodeRelocation(uint32_t RelType) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -633,6 +633,16 @@ public:
   }
 
   virtual bool isADR(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isAddXri(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isMOVW(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1074,7 +1084,7 @@ public:
   /// MCExpr referencing \p Symbol + \p Addend.
   virtual bool setOperandToSymbolRef(MCInst &Inst, int OpNum,
                                      const MCSymbol *Symbol, int64_t Addend,
-                                     MCContext *Ctx, uint64_t RelType) const;
+                                     MCContext *Ctx, uint32_t RelType) const;
 
   /// Replace an immediate operand in the instruction \p Inst with a reference
   /// of the passed \p Symbol plus \p Addend. If the instruction does not have
@@ -1082,7 +1092,7 @@ public:
   /// return true.
   virtual bool replaceImmWithSymbolRef(MCInst &Inst, const MCSymbol *Symbol,
                                        int64_t Addend, MCContext *Ctx,
-                                       int64_t &Value, uint64_t RelType) const {
+                                       int64_t &Value, uint32_t RelType) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1287,7 +1297,7 @@ public:
   /// Return the MCExpr used for absolute references in this target
   virtual const MCExpr *getTargetExprFor(MCInst &Inst, const MCExpr *Expr,
                                          MCContext &Ctx,
-                                         uint64_t RelType) const {
+                                         uint32_t RelType) const {
     return Expr;
   }
 

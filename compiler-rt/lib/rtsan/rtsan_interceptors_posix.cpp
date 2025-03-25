@@ -30,6 +30,12 @@
 extern "C" {
 typedef int32_t OSSpinLock;
 void OSSpinLockLock(volatile OSSpinLock *__lock);
+// A pointer to this type is in the interface for `_os_nospin_lock_lock`, but
+// it's an internal implementation detail of `os/lock.c` on Darwin, and
+// therefore not available in any headers. As a workaround, we forward declare
+// it here, which is enough to facilitate interception of _os_nospin_lock_lock.
+struct _os_nospin_lock_s;
+using _os_nospin_lock_t = _os_nospin_lock_s *;
 }
 #endif // TARGET_OS_MAC
 
@@ -196,7 +202,11 @@ INTERCEPTOR(int, fcntl, int filedes, int cmd, ...) {
   return REAL(fcntl)(filedes, cmd, arg);
 }
 
+#if SANITIZER_MUSL
+INTERCEPTOR(int, ioctl, int filedes, int request, ...) {
+#else
 INTERCEPTOR(int, ioctl, int filedes, unsigned long request, ...) {
+#endif
   __rtsan_notify_intercepted_call("ioctl");
 
   // See fcntl for discussion on why we use intptr_t
@@ -711,6 +721,11 @@ INTERCEPTOR(void, os_unfair_lock_lock, os_unfair_lock_t lock) {
   __rtsan_notify_intercepted_call("os_unfair_lock_lock");
   return REAL(os_unfair_lock_lock)(lock);
 }
+
+INTERCEPTOR(void, _os_nospin_lock_lock, _os_nospin_lock_t lock) {
+  __rtsan_notify_intercepted_call("_os_nospin_lock_lock");
+  return REAL(_os_nospin_lock_lock)(lock);
+}
 #define RTSAN_MAYBE_INTERCEPT_OS_UNFAIR_LOCK_LOCK                              \
   INTERCEPT_FUNCTION(os_unfair_lock_lock)
 #else
@@ -1015,6 +1030,17 @@ INTERCEPTOR(int, shm_unlink, const char *name) {
   __rtsan_notify_intercepted_call("shm_unlink");
   return REAL(shm_unlink)(name);
 }
+
+#if !SANITIZER_APPLE
+// is supported by freebsd too
+INTERCEPTOR(int, memfd_create, const char *path, unsigned int flags) {
+  __rtsan_notify_intercepted_call("memfd_create");
+  return REAL(memfd_create)(path, flags);
+}
+#define RTSAN_MAYBE_INTERCEPT_MEMFD_CREATE INTERCEPT_FUNCTION(memfd_create)
+#else
+#define RTSAN_MAYBE_INTERCEPT_MEMFD_CREATE
+#endif
 
 // Sockets
 INTERCEPTOR(int, getaddrinfo, const char *node, const char *service,
@@ -1450,6 +1476,7 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(mincore);
   INTERCEPT_FUNCTION(shm_open);
   INTERCEPT_FUNCTION(shm_unlink);
+  RTSAN_MAYBE_INTERCEPT_MEMFD_CREATE;
   RTSAN_MAYBE_INTERCEPT_MEMALIGN;
   RTSAN_MAYBE_INTERCEPT_PVALLOC;
 

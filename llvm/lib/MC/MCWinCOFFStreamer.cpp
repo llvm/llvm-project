@@ -66,8 +66,8 @@ public:
     SectionSymbol.print(OS, MAI);
   }
 
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCFixup *Fixup) const override {
+  bool evaluateAsRelocatableImpl(MCValue &Res,
+                                 const MCAssembler *Asm) const override {
     auto sectionNumber = Writer.getSectionNumber(SectionSymbol.getSection());
     assert(sectionNumber != 0 &&
            "Containing section was not assigned a number");
@@ -81,10 +81,6 @@ public:
 
   MCFragment *findAssociatedFragment() const override {
     return SectionSymbol.getFragment();
-  }
-
-  void fixELFSymbolsInTLSFixups(MCAssembler &) const override {
-    llvm_unreachable("Not supported for ELF");
   }
 };
 
@@ -106,8 +102,8 @@ public:
     Symbol.print(OS, MAI);
   }
 
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCFixup *Fixup) const override {
+  bool evaluateAsRelocatableImpl(MCValue &Res,
+                                 const MCAssembler *Asm) const override {
     uint64_t CallsiteOffset = 0;
     if (!Asm->getSymbolOffset(Symbol, CallsiteOffset)) {
       return true;
@@ -122,10 +118,6 @@ public:
 
   MCFragment *findAssociatedFragment() const override {
     return Symbol.getFragment();
-  }
-
-  void fixELFSymbolsInTLSFixups(MCAssembler &) const override {
-    llvm_unreachable("Not supported for ELF");
   }
 };
 

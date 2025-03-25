@@ -51,7 +51,7 @@
 ; IR: br i1 %15, label %exit1, label %Flow2
 
 ; IR: exit1:
-; IR: store volatile i32 17, ptr addrspace(3) undef
+; IR: store volatile i32 17, ptr addrspace(3) poison
 ; IR:  br label %Flow2
 
 ; IR: UnifiedReturnBlock:
@@ -135,7 +135,7 @@ exit0:                                     ; preds = %LeafBlock, %LeafBlock1
   ret void
 
 exit1:                                     ; preds = %LeafBlock, %LeafBlock1
-  store volatile i32 17, ptr addrspace(3) undef
+  store volatile i32 17, ptr addrspace(3) poison
   ret void
 }
 
@@ -190,7 +190,7 @@ exit0:                                     ; preds = %LeafBlock, %LeafBlock1
   unreachable
 
 exit1:                                     ; preds = %LeafBlock, %LeafBlock1
-  store volatile i32 17, ptr addrspace(3) undef
+  store volatile i32 17, ptr addrspace(3) poison
   unreachable
 }
 
@@ -233,7 +233,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; IR: br i1 %15, label %exit1, label %Flow2
 
 ; IR: exit1:
-; IR: store volatile i32 17, ptr addrspace(3) undef
+; IR: store volatile i32 17, ptr addrspace(3) poison
 ; IR: br label %Flow2
 
 ; IR: UnifiedReturnBlock:
@@ -271,7 +271,7 @@ exit0:                                     ; preds = %LeafBlock, %LeafBlock1
   ret void
 
 exit1:                                     ; preds = %LeafBlock, %LeafBlock1
-  store volatile i32 17, ptr addrspace(3) undef
+  store volatile i32 17, ptr addrspace(3) poison
   ret void
 }
 
@@ -320,7 +320,7 @@ exit0:                                     ; preds = %LeafBlock, %LeafBlock1
   ret void
 
 exit1:                                     ; preds = %LeafBlock, %LeafBlock1
-  store volatile i32 17, ptr addrspace(3) undef
+  store volatile i32 17, ptr addrspace(3) poison
   ret void
 }
 
@@ -351,7 +351,7 @@ exit0:                                     ; preds = %LeafBlock, %LeafBlock1
   ret float 1.0
 
 exit1:                                     ; preds = %LeafBlock, %LeafBlock1
-  store i32 17, ptr addrspace(3) undef
+  store i32 17, ptr addrspace(3) poison
   ret float 2.0
 }
 
@@ -393,7 +393,7 @@ exit0:                                     ; preds = %LeafBlock, %LeafBlock1
   ret float 1.0
 
 exit1:                                     ; preds = %LeafBlock, %LeafBlock1
-  store i32 17, ptr addrspace(3) undef
+  store i32 17, ptr addrspace(3) poison
   ret float 2.0
 }
 
@@ -412,7 +412,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; IR: br i1 %10, label %exit0, label %UnifiedReturnBlock
 
 ; IR: exit0:
-; IR-NEXT: store volatile i32 17, ptr addrspace(3) undef
+; IR-NEXT: store volatile i32 17, ptr addrspace(3) poison
 ; IR-NEXT: br label %UnifiedReturnBlock
 
 ; IR: Flow1:
@@ -460,7 +460,7 @@ LeafBlock1:                                       ; preds = %entry
   br i1 %SwitchLeaf2, label %exit0, label %exit1
 
 exit0:                                     ; preds = %LeafBlock, %LeafBlock1
-  store volatile i32 17, ptr addrspace(3) undef
+  store volatile i32 17, ptr addrspace(3) poison
   ret void
 
 exit1:                                     ; preds = %LeafBlock, %LeafBlock1
@@ -474,7 +474,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; IR-LABEL: @indirect_multi_divergent_region_exit_ret_unreachable(
 
 ; IR: exit0:                                            ; preds = %Flow2
-; IR-NEXT: store volatile i32 17, ptr addrspace(3) undef
+; IR-NEXT: store volatile i32 17, ptr addrspace(3) poison
 ; IR-NEXT: br label %UnifiedReturnBlock
 
 
@@ -516,7 +516,7 @@ LeafBlock1:                                       ; preds = %entry
   br i1 %SwitchLeaf2, label %exit0, label %indirect.exit1
 
 exit0:                                     ; preds = %LeafBlock, %LeafBlock1
-  store volatile i32 17, ptr addrspace(3) undef
+  store volatile i32 17, ptr addrspace(3) poison
   ret void
 
 indirect.exit1:
@@ -560,7 +560,7 @@ LeafBlock1:                                       ; preds = %entry
   br i1 %SwitchLeaf2, label %exit0, label %exit1
 
 exit0:                                     ; preds = %LeafBlock, %LeafBlock1
-  store volatile i32 17, ptr addrspace(3) undef
+  store volatile i32 17, ptr addrspace(3) poison
   ret void
 
 exit1:                                     ; preds = %LeafBlock, %LeafBlock1
@@ -580,11 +580,11 @@ divergent.multi.exit.region:
   br i1 %divergent.cond0, label %divergent.ret0, label %divergent.ret1
 
 divergent.ret0:
-  store volatile i32 11, ptr addrspace(3) undef
+  store volatile i32 11, ptr addrspace(3) poison
   ret void
 
 divergent.ret1:
-  store volatile i32 42, ptr addrspace(3) undef
+  store volatile i32 42, ptr addrspace(3) poison
   ret void
 
 uniform.ret:
@@ -619,11 +619,11 @@ divergent.endif:
   br label %divergent.ret0
 
 divergent.ret0:
-  store volatile i32 11, ptr addrspace(3) undef
+  store volatile i32 11, ptr addrspace(3) poison
   ret void
 
 divergent.ret1:
-  store volatile i32 42, ptr addrspace(3) undef
+  store volatile i32 42, ptr addrspace(3) poison
   ret void
 
 uniform.ret:
@@ -654,12 +654,12 @@ uniform.multi.exit.region:
   br i1 %uniform.cond0, label %uniform.if, label %uniform.ret1
 
 uniform.if:
-  %sgpr0 = load volatile i32, ptr addrspace(4) undef
+  %sgpr0 = load volatile i32, ptr addrspace(4) poison
   %uniform.cond1 = icmp slt i32 %sgpr0, 1
   br i1 %uniform.cond1, label %uniform.then, label %uniform.endif
 
 uniform.then:
-  %sgpr1 = load volatile i32, ptr addrspace(4) undef
+  %sgpr1 = load volatile i32, ptr addrspace(4) poison
   %uniform.cond2 = icmp sge i32 %sgpr1, 4
   store volatile i32 33, ptr addrspace(1) poison
   br i1 %uniform.cond2, label %uniform.ret0, label %uniform.endif
@@ -669,11 +669,11 @@ uniform.endif:
   br label %uniform.ret0
 
 uniform.ret0:
-  store volatile i32 11, ptr addrspace(3) undef
+  store volatile i32 11, ptr addrspace(3) poison
   ret void
 
 uniform.ret1:
-  store volatile i32 42, ptr addrspace(3) undef
+  store volatile i32 42, ptr addrspace(3) poison
   ret void
 
 divergent.ret:
@@ -689,7 +689,7 @@ divergent.ret:
 ; IR: UnifiedReturnBlock:
 ; IR-NEXT: call void @llvm.amdgcn.end.cf.i64(i64
 ; IR-NEXT: ret void
-define amdgpu_kernel void @multi_divergent_unreachable_exit() #0 {
+define amdgpu_kernel void @multi_divergent_unreachable_exit(i32 %switch) #0 {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   switch i32 %tmp, label %bb3 [
@@ -704,7 +704,7 @@ bb2:                                              ; preds = %bb
   unreachable
 
 bb3:                                              ; preds = %bb
-  switch i32 undef, label %bb5 [
+  switch i32 %switch, label %bb5 [
     i32 2, label %bb4
   ]
 

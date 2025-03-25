@@ -69,7 +69,7 @@ STATISTIC(NumNFsConvertedTo, "Number of NF instructions converted to");
 namespace {
 
 // Convenient array type for storing registers associated with each condition.
-using CondRegArray = std::array<unsigned, X86::LAST_VALID_COND + 1>;
+using CondRegArray = std::array<Register, X86::LAST_VALID_COND + 1>;
 
 class X86FlagsCopyLoweringPass : public MachineFunctionPass {
 public:
@@ -96,11 +96,11 @@ private:
   Register promoteCondToReg(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator TestPos,
                             const DebugLoc &TestLoc, X86::CondCode Cond);
-  std::pair<unsigned, bool> getCondOrInverseInReg(
+  std::pair<Register, bool> getCondOrInverseInReg(
       MachineBasicBlock &TestMBB, MachineBasicBlock::iterator TestPos,
       const DebugLoc &TestLoc, X86::CondCode Cond, CondRegArray &CondRegs);
   void insertTest(MachineBasicBlock &MBB, MachineBasicBlock::iterator Pos,
-                  const DebugLoc &Loc, unsigned Reg);
+                  const DebugLoc &Loc, Register Reg);
 
   void rewriteSetCC(MachineBasicBlock &MBB, MachineBasicBlock::iterator Pos,
                     const DebugLoc &Loc, MachineInstr &MI,
@@ -744,11 +744,11 @@ Register X86FlagsCopyLoweringPass::promoteCondToReg(
   return Reg;
 }
 
-std::pair<unsigned, bool> X86FlagsCopyLoweringPass::getCondOrInverseInReg(
+std::pair<Register, bool> X86FlagsCopyLoweringPass::getCondOrInverseInReg(
     MachineBasicBlock &TestMBB, MachineBasicBlock::iterator TestPos,
     const DebugLoc &TestLoc, X86::CondCode Cond, CondRegArray &CondRegs) {
-  unsigned &CondReg = CondRegs[Cond];
-  unsigned &InvCondReg = CondRegs[X86::GetOppositeBranchCondition(Cond)];
+  Register &CondReg = CondRegs[Cond];
+  Register &InvCondReg = CondRegs[X86::GetOppositeBranchCondition(Cond)];
   if (!CondReg && !InvCondReg)
     CondReg = promoteCondToReg(TestMBB, TestPos, TestLoc, Cond);
 
@@ -760,7 +760,7 @@ std::pair<unsigned, bool> X86FlagsCopyLoweringPass::getCondOrInverseInReg(
 
 void X86FlagsCopyLoweringPass::insertTest(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator Pos,
-                                          const DebugLoc &Loc, unsigned Reg) {
+                                          const DebugLoc &Loc, Register Reg) {
   auto TestI =
       BuildMI(MBB, Pos, Loc, TII->get(X86::TEST8rr)).addReg(Reg).addReg(Reg);
   (void)TestI;
@@ -777,7 +777,7 @@ void X86FlagsCopyLoweringPass::rewriteSetCC(MachineBasicBlock &MBB,
   // Note that we can't usefully rewrite this to the inverse without complex
   // analysis of the users of the setCC. Largely we rely on duplicates which
   // could have been avoided already being avoided here.
-  unsigned &CondReg = CondRegs[Cond];
+  Register &CondReg = CondRegs[Cond];
   if (!CondReg)
     CondReg = promoteCondToReg(MBB, Pos, Loc, Cond);
 
@@ -843,7 +843,7 @@ void X86FlagsCopyLoweringPass::rewriteArithmetic(
   // Now get a register that contains the value of the flag input to the
   // arithmetic. We require exactly this flag to simplify the arithmetic
   // required to materialize it back into the flag.
-  unsigned &CondReg = CondRegs[Cond];
+  Register &CondReg = CondRegs[Cond];
   if (!CondReg)
     CondReg = promoteCondToReg(MBB, Pos, Loc, Cond);
 
@@ -917,7 +917,7 @@ void X86FlagsCopyLoweringPass::rewriteMI(MachineBasicBlock &MBB,
     IsImplicitCC = true;
   }
   assert(CC != X86::COND_INVALID && "Unknown EFLAG user!");
-  unsigned CondReg;
+  Register CondReg;
   bool Inverted;
   std::tie(CondReg, Inverted) =
       getCondOrInverseInReg(MBB, Pos, Loc, CC, CondRegs);

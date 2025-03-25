@@ -694,15 +694,11 @@ def MoveChecker: Checker<"Move">,
   ]>,
   Documentation<HasDocumentation>;
 
-def VirtualCallModeling : Checker<"VirtualCallModeling">,
-  HelpText<"Auxiliary modeling for the virtual method call checkers">,
-  Documentation<NotDocumented>,
-  Hidden;
-
-def PureVirtualCallChecker : Checker<"PureVirtualCall">,
-  HelpText<"Check pure virtual function calls during construction/destruction">,
-  Dependencies<[VirtualCallModeling]>,
-  Documentation<HasDocumentation>;
+def PureVirtualCallChecker
+    : Checker<"PureVirtualCall">,
+      HelpText<
+          "Check pure virtual function calls during construction/destruction">,
+      Documentation<HasDocumentation>;
 } // end: "cplusplus"
 
 let ParentPackage = CplusplusOptIn in {
@@ -750,24 +746,13 @@ def UninitializedObjectChecker: Checker<"UninitializedObject">,
   ]>,
   Documentation<HasDocumentation>;
 
-def VirtualCallChecker : Checker<"VirtualCall">,
-  HelpText<"Check virtual function calls during construction/destruction">,
-  CheckerOptions<[
-    CmdLineOption<Boolean,
-                  "ShowFixIts",
-                  "Enable fix-it hints for this checker",
-                  "false",
-                  InAlpha>,
-    CmdLineOption<Boolean,
-                  "PureOnly",
-                  "Disables the checker. Keeps cplusplus.PureVirtualCall "
-                  "enabled. This option is only provided for backwards "
-                  "compatibility.",
-                  "false",
-                  InAlpha>
-  ]>,
-  Dependencies<[VirtualCallModeling]>,
-  Documentation<HasDocumentation>;
+def VirtualCallChecker
+    : Checker<"VirtualCall">,
+      HelpText<"Check virtual function calls during construction/destruction">,
+      CheckerOptions<[CmdLineOption<Boolean, "ShowFixIts",
+                                    "Enable fix-it hints for this checker",
+                                    "false", InAlpha>]>,
+      Documentation<HasDocumentation>;
 
 } // end: "optin.cplusplus"
 
@@ -1760,6 +1745,10 @@ def UncountedLambdaCapturesChecker : Checker<"UncountedLambdaCapturesChecker">,
 } // end webkit
 
 let ParentPackage = WebKitAlpha in {
+
+def ForwardDeclChecker : Checker<"ForwardDeclChecker">,
+  HelpText<"Check for forward declared local or member variables and function arguments">,
+  Documentation<HasDocumentation>;
 
 def MemoryUnsafeCastChecker : Checker<"MemoryUnsafeCastChecker">,
   HelpText<"Check for memory unsafe casts from base type to derived type.">,

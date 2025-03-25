@@ -6,11 +6,12 @@
 
 ; GCN-LABEL: {{^}}split_smrd_add_worklist:
 ; GCN: image_sample v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] dmask:0x1
-define amdgpu_ps void @split_smrd_add_worklist(ptr addrspace(4) inreg %arg) #0 {
+define amdgpu_ps void @split_smrd_add_worklist(ptr addrspace(4) inreg %arg, i32 inreg %cond.arg) #0 {
 bb:
   %tmp = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> poison, i32 96, i32 0)
   %tmp1 = bitcast float %tmp to i32
-  br i1 undef, label %bb2, label %bb3
+  %scc = icmp eq i32 %cond.arg, 0
+  br i1 %scc, label %bb2, label %bb3
 
 bb2:                                              ; preds = %bb
   unreachable
@@ -23,8 +24,8 @@ bb3:                                              ; preds = %bb
   %tmp8 = load <8 x i32>, ptr addrspace(4) %tmp7, align 32, !tbaa !0
   %tmp9 = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float bitcast (i32 1061158912 to float), float bitcast (i32 1048576000 to float), <8 x i32> %tmp8, <4 x i32> poison, i1 0, i32 0, i32 0)
   %tmp10 = extractelement <4 x float> %tmp9, i32 0
-  %tmp12 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %tmp10, float undef)
-  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %tmp12, <2 x half> undef, i1 true, i1 true) #0
+  %tmp12 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %tmp10, float poison)
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %tmp12, <2 x half> poison, i1 true, i1 true) #0
   ret void
 }
 

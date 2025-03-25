@@ -7,17 +7,17 @@
 ; ALL: SGPRBlocks: 1
 ; ALL: NumSGPRsForWavesPerEU: 10
 define amdgpu_kernel void @max_10_sgprs() #0 {
-  %one = load volatile i32, ptr addrspace(4) undef
-  %two = load volatile i32, ptr addrspace(4) undef
-  %three = load volatile i32, ptr addrspace(4) undef
-  %four = load volatile i32, ptr addrspace(4) undef
-  %five = load volatile i32, ptr addrspace(4) undef
-  %six = load volatile i32, ptr addrspace(4) undef
-  %seven = load volatile i32, ptr addrspace(4) undef
-  %eight = load volatile i32, ptr addrspace(4) undef
-  %nine = load volatile i32, ptr addrspace(4) undef
-  %ten = load volatile i32, ptr addrspace(4) undef
-  %eleven = load volatile i32, ptr addrspace(4) undef
+  %one = load volatile i32, ptr addrspace(4) poison
+  %two = load volatile i32, ptr addrspace(4) poison
+  %three = load volatile i32, ptr addrspace(4) poison
+  %four = load volatile i32, ptr addrspace(4) poison
+  %five = load volatile i32, ptr addrspace(4) poison
+  %six = load volatile i32, ptr addrspace(4) poison
+  %seven = load volatile i32, ptr addrspace(4) poison
+  %eight = load volatile i32, ptr addrspace(4) poison
+  %nine = load volatile i32, ptr addrspace(4) poison
+  %ten = load volatile i32, ptr addrspace(4) poison
+  %eleven = load volatile i32, ptr addrspace(4) poison
   call void asm sideeffect "", "s,s,s,s,s,s,s,s,s,s"(i32 %one, i32 %two, i32 %three, i32 %four, i32 %five, i32 %six, i32 %seven, i32 %eight, i32 %nine, i32 %ten)
   store volatile i32 %one, ptr addrspace(1) poison
   store volatile i32 %two, ptr addrspace(1) poison
@@ -68,7 +68,7 @@ define amdgpu_kernel void @max_10_sgprs() #0 {
 ;  %x.3 = call i64 @llvm.amdgcn.dispatch.id()
 ;  %x.4 = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 ;  %x.5 = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
-;  store volatile i32 0, ptr undef
+;  store volatile i32 0, ptr poison
 ;  br label %stores
 ;
 ;stores:
@@ -99,7 +99,7 @@ define amdgpu_kernel void @max_10_sgprs() #0 {
 ;                                        ptr addrspace(1) %out3,
 ;                                        ptr addrspace(1) %out4,
 ;                                        i32 %one, i32 %two, i32 %three, i32 %four) #2 {
-;  store volatile i32 0, ptr undef
+;  store volatile i32 0, ptr poison
 ;  %x.0 = call i32 @llvm.amdgcn.workgroup.id.x()
 ;  store volatile i32 %x.0, ptr addrspace(1) poison
 ;  %x.1 = call i32 @llvm.amdgcn.workgroup.id.y()

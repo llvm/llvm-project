@@ -104,7 +104,7 @@ RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+  assert(unsigned(Kind - FirstTargetFixupKind) < RISCV::NumTargetFixupKinds &&
          "Invalid kind!");
   return Infos[Kind - FirstTargetFixupKind];
 }
@@ -115,10 +115,7 @@ RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                             const MCFixup &Fixup,
                                             const MCValue &Target,
-                                            const uint64_t,
                                             const MCSubtargetInfo *STI) {
-  if (Fixup.getKind() >= FirstLiteralRelocationKind)
-    return true;
   switch (Fixup.getTargetKind()) {
   default:
     break;
@@ -548,18 +545,18 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
     // MCAssembler::evaluateFixup will emit an error for this case when it sees
     // the %pcrel_hi, so don't duplicate it when also seeing the %pcrel_lo.
     const MCExpr *AUIPCExpr = AUIPCFixup->getValue();
-    if (!AUIPCExpr->evaluateAsRelocatable(AUIPCTarget, &Asm, AUIPCFixup))
+    if (!AUIPCExpr->evaluateAsRelocatable(AUIPCTarget, &Asm))
       return true;
     break;
   }
   }
 
-  if (!AUIPCTarget.getSymA() || AUIPCTarget.getSymB())
+  if (!AUIPCTarget.getSymA() || AUIPCTarget.getSubSym())
     return false;
 
   const MCSymbolRefExpr *A = AUIPCTarget.getSymA();
   const MCSymbolELF &SA = cast<MCSymbolELF>(A->getSymbol());
-  if (A->getKind() != MCSymbolRefExpr::VK_None || SA.isUndefined())
+  if (getSpecifier(A) != RISCVMCExpr::VK_None || SA.isUndefined())
     return false;
 
   bool IsResolved = &SA.getSection() == AUIPCDF->getParent() &&
@@ -571,7 +568,7 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
   Value = Asm.getSymbolOffset(SA) + AUIPCTarget.getConstant();
   Value -= Asm.getFragmentOffset(*AUIPCDF) + AUIPCFixup->getOffset();
 
-  if (shouldForceRelocation(Asm, *AUIPCFixup, AUIPCTarget, Value, STI)) {
+  if (shouldForceRelocation(Asm, *AUIPCFixup, AUIPCTarget, STI)) {
     WasForced = true;
     return false;
   }

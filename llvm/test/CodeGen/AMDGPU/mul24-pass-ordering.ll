@@ -45,7 +45,7 @@ bb23:                                             ; preds = %bb23, %bb
   %tmp31 = add i32 %tmp30, %arg16
   %tmp37 = icmp ult i32 %tmp31, %arg13
   %tmp44 = load float, ptr addrspace(1) poison, align 4
-  store float %tmp44, ptr addrspace(3) undef, align 4
+  store float %tmp44, ptr addrspace(3) poison, align 4
   %tmp47 = add i32 %tmp24, %arg2
   br i1 %tmp37, label %bb23, label %.loopexit
 }
