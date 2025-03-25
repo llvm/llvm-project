@@ -112,7 +112,7 @@ constexpr void test_basic_operations() {
     {
       std::same_as<decltype(first)> auto& it_ref = --first;
       assert(std::addressof(it_ref) == std::addressof(first));
-      assert(--first == It{arr + 0});
+      assert(it_ref == It{arr + 0});
     }
     assert(first++ == It{arr + 0});
     assert(first-- == It{arr + 1});

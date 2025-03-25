@@ -44,10 +44,10 @@ static_assert(!IsImplicitlyConstructible<std::ranges::as_const_view<NonDefaultCo
 
 static_assert(std::is_constructible_v<std::ranges::as_const_view<DefaultConstructibleView>, DefaultConstructibleView>);
 static_assert(
-    std::is_constructible_v<std::ranges::as_const_view<DefaultConstructibleView>, NonDefaultConstructibleView>);
+    std::is_constructible_v<std::ranges::as_const_view<NonDefaultConstructibleView>, NonDefaultConstructibleView>);
 static_assert(!std::is_convertible_v<DefaultConstructibleView, std::ranges::as_const_view<DefaultConstructibleView>>);
 static_assert(
-    !std::is_convertible_v<DefaultConstructibleView, std::ranges::as_const_view<NonDefaultConstructibleView>>);
+    !std::is_convertible_v<NonDefaultConstructibleView, std::ranges::as_const_view<NonDefaultConstructibleView>>);
 
 constexpr bool test() {
   std::ranges::as_const_view<DefaultConstructibleView> view = {};
