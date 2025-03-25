@@ -1,4 +1,4 @@
-//===-- extensible_rtti_test.cpp ------------------------------------------===//
+//===-- rtti_test.cpp -----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "extensible_rtti.h"
+#include "rtti.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;
