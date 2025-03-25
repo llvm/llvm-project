@@ -79,6 +79,9 @@ struct MissingFeatures {
   static bool opUnarySignedOverflow() { return false; }
   static bool opUnaryPromotionType() { return false; }
 
+  // Clang early optimizations or things defered to LLVM lowering.
+  static bool mayHaveIntegerOverflow() { return false; }
+
   // Misc
   static bool cxxABI() { return false; }
   static bool tryEmitAsConstant() { return false; }
@@ -93,16 +96,19 @@ struct MissingFeatures {
   static bool stackSaveOp() { return false; }
   static bool aggValueSlot() { return false; }
   static bool generateDebugInfo() { return false; }
+  static bool pointerOverflowSanitizer() { return false; }
   static bool fpConstraints() { return false; }
   static bool sanitizers() { return false; }
   static bool addHeapAllocSiteMetadata() { return false; }
   static bool targetCodeGenInfoGetNullPointer() { return false; }
-  static bool CGFPOptionsRAII() { return false; }
   static bool loopInfoStack() { return false; }
   static bool requiresCleanups() { return false; }
   static bool createProfileWeightsForLoop() { return false; }
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
   static bool pgoUse() { return false; }
+  static bool cgFPOptionsRAII() { return false; }
+  static bool metaDataNode() { return false; }
+  static bool fastMathFlags() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
@@ -111,6 +117,8 @@ struct MissingFeatures {
   static bool scalableVectors() { return false; }
   static bool unsizedTypes() { return false; }
   static bool vectorType() { return false; }
+  static bool complexType() { return false; }
+  static bool fixedPointType() { return false; }
 
   // Future CIR operations
   static bool awaitOp() { return false; }
@@ -127,6 +135,8 @@ struct MissingFeatures {
   static bool ternaryOp() { return false; }
   static bool tryOp() { return false; }
   static bool zextOp() { return false; }
+  static bool ptrStrideOp() { return false; }
+  static bool ptrDiffOp() { return false; }
 };
 
 } // namespace cir
