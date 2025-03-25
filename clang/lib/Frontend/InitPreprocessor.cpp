@@ -430,6 +430,9 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
       unsigned Minor = Version.getMinor().value_or(0);
       Builder.defineMacro("__SHADER_TARGET_MINOR", Twine(Minor));
     }
+    if (TI.getTriple().isSPIRV()) {
+      Builder.defineMacro("__spirv__");
+    }
     return;
   }
   // C++ [cpp.predefined]p1:
