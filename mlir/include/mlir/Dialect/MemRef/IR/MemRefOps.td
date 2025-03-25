@@ -1891,15 +1891,6 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     Example 1:
 
     ```mlir
-    // Subview of static memref with identity layout at dynamic offsets, sizes
-    // and strides.
-    %1 = memref.subview %0[%off0, %off1][%sz0, %sz1][%str0, %str1]
-        : memref<64x4xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
-    ```
-
-    Example 2:
-
-    ```mlir
     // Subview of static memref with strided layout at static offsets, sizes
     // and strides.
     %1 = memref.subview %0[4, 2][8, 2][3, 2]
@@ -1907,7 +1898,16 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
           memref<8x2xf32, strided<[21, 18], offset: 137>>
     ```
 
-    Example 4:
+    Example 2:
+
+    ```mlir
+    // Subview of static memref with identity layout at dynamic offsets, sizes
+    // and strides.
+    %1 = memref.subview %0[%off0, %off1][%sz0, %sz1][%str0, %str1]
+        : memref<64x4xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+    ```
+
+    Example 3:
 
     ```mlir
     // Subview of dynamic memref with strided layout at dynamic offsets and
@@ -1917,7 +1917,7 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
           memref<4x4xf32, strided<[?, ?], offset: ?>>
     ```
 
-    Example 5:
+    Example 4:
 
     ```mlir
     // Rank-reducing subviews.
@@ -1927,8 +1927,8 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
         : memref<8x16x4xf32> to memref<6x3xf32, strided<[4, 1], offset: 210>>
     ```
 
-    Example 6:
-    
+    Example 5:
+
     ```mlir
     // Identity subview. The subview is the full source memref.
     %1 = memref.subview %0[0, 0, 0] [8, 16, 4] [1, 1, 1]
