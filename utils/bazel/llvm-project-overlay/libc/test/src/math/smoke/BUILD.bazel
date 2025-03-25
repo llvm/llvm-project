@@ -205,21 +205,6 @@ math_test(
 )
 
 math_test(
-    name = "f16fma",
-    hdrs = ["FmaTest.h"],
-)
-
-math_test(
-    name = "f16fmaf",
-    hdrs = ["FmaTest.h"],
-)
-
-math_test(
-    name = "f16fmal",
-    hdrs = ["FmaTest.h"],
-)
-
-math_test(
     name = "dmull",
     hdrs = ["MulTest.h"],
 )
@@ -475,11 +460,6 @@ math_test(
 )
 
 # TODO: Add fma, fmaf, fmal, fmaf128 tests.
-
-math_test(
-    name = "fmaf16",
-    hdrs = ["FmaTest.h"],
-)
 
 math_test(
     name = "fmax",
