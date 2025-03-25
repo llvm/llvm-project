@@ -1657,6 +1657,8 @@ bool isArgPassedInSGPR(const Argument *Arg);
 
 bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo);
 
+LLVM_READONLY bool isPackedFP32Inst(unsigned Opc);
+
 LLVM_READONLY
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
                                       int64_t EncodedOffset);
