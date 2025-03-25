@@ -84,19 +84,17 @@ static llvm::LogicalResult isSnakeCase(llvm::StringRef in, mlir::Operation *loc,
     if (elem == '_') {
       if (!allowUnderscore)
         return loc->emitError("name of ")
-               << label << " \"" << in
-               << "\" should not contain leading or double underscores";
+               << label << " should not contain leading or double underscores";
     } else {
       if (!isalnum(elem))
         return loc->emitError("name of ")
-               << label << " \"" << in
-               << "\" must contain only lowercase letters, digits and "
+               << label
+               << " must contain only lowercase letters, digits and "
                   "underscores";
 
       if (llvm::isUpper(elem))
         return loc->emitError("name of ")
-               << label << " \"" << in
-               << "\" should not contain uppercase letters";
+               << label << " should not contain uppercase letters";
     }
 
     allowUnderscore = elem != '_';
@@ -174,7 +172,8 @@ static LogicalResult verifyNames(Operation *op, StringRef kindName,
   DenseMap<StringRef, size_t> nameMap;
   for (auto [i, name] : llvm::enumerate(names)) {
     StringRef nameRef = llvm::cast<StringAttr>(name).getValue();
-    auto verifyNameRef = isSnakeCase(nameRef, op, kindName);
+    auto verifyNameRef =
+        isSnakeCase(nameRef, op, Twine(kindName) + " #" + Twine(i));
     if (failed(verifyNameRef))
       return verifyNameRef;
 
