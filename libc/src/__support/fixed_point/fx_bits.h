@@ -207,20 +207,20 @@ LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<T>, XType>
 idiv(T x, T y) {
   using FXBits = FXBits<T>;
   using FXRep = FXRep<T>;
-  using BitType = typename FXRep::StorageType;
-
-  // TODO: add negative check
+  using CompType = typename FXRep::CompType;
 
   if (y == FXRep::ZERO()) {
-    // TODO: handle divide by zero
+    // If the value of the second operand of the / operator is zero, the
+    // behavior is undefined. Ref: ISO/IEC TR 18037:2008(E) p.g. 16
+    return static_cast<XType>(0);
   }
 
-  FXBits x_bits(x);
-  FXBits y_bits(y);
+  CompType x_comp = static_cast<CompType>(FXBits(x).get_bits());
+  CompType y_comp = static_cast<CompType>(FXBits(y).get_bits());
 
-  BitType result = x_bits.get_bits() / y_bits.get_bits();
-
-  // TODO: handle integer overflow
+  // If an integer result of one of these functions overflows, the behavior is
+  // undefined. Ref: ISO/IEC TR 18037:2008(E) p.g. 16
+  CompType result = x_comp / y_comp;
 
   return static_cast<XType>(result);
 }
