@@ -231,13 +231,8 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
   if (Type *CachedTy = CachedTypes.lookup(V))
     return CachedTy;
 
-  if (V->isLiveIn()) {
-    if (auto *IRValue = V->getLiveInIRValue())
-      return IRValue->getType();
-    // All VPValues without any underlying IR value (like the vector trip count
-    // or the backedge-taken count) have the same type as the canonical IV.
-    return CanonicalIVTy;
-  }
+  if (V->isLiveIn())
+    return V->getType();
 
   Type *ResultTy =
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
