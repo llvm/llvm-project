@@ -203,7 +203,7 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
 /// Given the input rank-1 source vector, extracts `numElemsToExtract` elements
 /// from `src`, starting at `offset`. The result is also a rank-1 vector:
 ///
-///   vector<numElemsToExtract x !elType>
+///   vector<numElemsToExtract x !elemType>
 ///
 /// (`!elType` is the element type of the source vector). As `offset` is a known
 /// _static_ value, this helper hook emits `vector.extract_strided_slice`.
