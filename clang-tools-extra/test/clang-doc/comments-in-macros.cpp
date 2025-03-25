@@ -3,6 +3,7 @@
 // RUN: clang-doc --format=md --doxygen --output=%t --executor=standalone %s
 // RUN: FileCheck %s < %t/GlobalNamespace/MyClass.md --check-prefix=MD-MYCLASS-LINE
 // RUN: FileCheck %s < %t/GlobalNamespace/MyClass.md --check-prefix=MD-MYCLASS
+
 // RUN: clang-doc --format=html --doxygen --output=%t --executor=standalone %s
 // RUN: FileCheck %s < %t/GlobalNamespace/MyClass.html --check-prefix=HTML-MYCLASS-LINE
 // RUN: FileCheck %s < %t/GlobalNamespace/MyClass.html --check-prefix=HTML-MYCLASS
@@ -11,8 +12,7 @@
     /**   							  \
      * @brief Declare a method to calculate the sum of two numbers\
      */                                                           \
-    int Add(int a, int b)                                         \
-    {                                                             \
+    int Add(int a, int b) {                                       \
         return a + b;                                             \
     }
 
