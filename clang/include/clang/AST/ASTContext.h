@@ -2999,9 +2999,6 @@ public:
   /// 6.3.1.1p2, assuming that \p PromotableType is a promotable integer type.
   QualType getPromotedIntegerType(QualType PromotableType) const;
 
-  /// If \p E is a widened promoted integer, get its base (unpromoted) type.
-  std::optional<QualType> getUnwidenedIntegerType(const Expr *E) const;
-
   /// Recurses in pointer/array types until it finds an Objective-C
   /// retainable type and returns its ownership.
   Qualifiers::ObjCLifetime getInnerObjCOwnership(QualType T) const;

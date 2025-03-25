@@ -1045,8 +1045,9 @@ mlir::LogicalResult CIRToLLVMBinOpLowering::matchAndRewrite(
       }
       rewriter.replaceOpWithNewOp<mlir::LLVM::AddOp>(op, llvmTy, lhs, rhs,
                                                      getIntOverflowFlag(op));
-    } else
+    } else {
       rewriter.replaceOpWithNewOp<mlir::LLVM::FAddOp>(op, lhs, rhs);
+    }
     break;
   case cir::BinOpKind::Sub:
     if (mlir::isa<mlir::IntegerType>(llvmEltTy)) {
@@ -1060,8 +1061,9 @@ mlir::LogicalResult CIRToLLVMBinOpLowering::matchAndRewrite(
       }
       rewriter.replaceOpWithNewOp<mlir::LLVM::SubOp>(op, llvmTy, lhs, rhs,
                                                      getIntOverflowFlag(op));
-    } else
+    } else {
       rewriter.replaceOpWithNewOp<mlir::LLVM::FSubOp>(op, lhs, rhs);
+    }
     break;
   case cir::BinOpKind::Mul:
     if (mlir::isa<mlir::IntegerType>(llvmEltTy))
@@ -1077,8 +1079,9 @@ mlir::LogicalResult CIRToLLVMBinOpLowering::matchAndRewrite(
         rewriter.replaceOpWithNewOp<mlir::LLVM::UDivOp>(op, lhs, rhs);
       else
         rewriter.replaceOpWithNewOp<mlir::LLVM::SDivOp>(op, lhs, rhs);
-    } else
+    } else {
       rewriter.replaceOpWithNewOp<mlir::LLVM::FDivOp>(op, lhs, rhs);
+    }
     break;
   case cir::BinOpKind::Rem:
     if (mlir::isa<mlir::IntegerType>(llvmEltTy)) {
@@ -1087,8 +1090,9 @@ mlir::LogicalResult CIRToLLVMBinOpLowering::matchAndRewrite(
         rewriter.replaceOpWithNewOp<mlir::LLVM::URemOp>(op, lhs, rhs);
       else
         rewriter.replaceOpWithNewOp<mlir::LLVM::SRemOp>(op, lhs, rhs);
-    } else
+    } else {
       rewriter.replaceOpWithNewOp<mlir::LLVM::FRemOp>(op, lhs, rhs);
+    }
     break;
   case cir::BinOpKind::And:
     rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(op, lhs, rhs);
@@ -1251,8 +1255,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                                             dl);
   patterns.add<
       // clang-format off
-               CIRToLLVMBrCondOpLowering,
                CIRToLLVMBinOpLowering,
+               CIRToLLVMBrCondOpLowering,
                CIRToLLVMBrOpLowering,
                CIRToLLVMFuncOpLowering,
                CIRToLLVMTrapOpLowering,

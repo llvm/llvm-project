@@ -89,12 +89,12 @@ public:
 
   mlir::Value emitPromotedValue(mlir::Value result, QualType promotionType) {
     cgf.cgm.errorNYI(result.getLoc(), "floating cast for promoted value");
-    return nullptr;
+    return {};
   }
 
   mlir::Value emitUnPromotedValue(mlir::Value result, QualType exprType) {
     cgf.cgm.errorNYI(result.getLoc(), "floating cast for unpromoted value");
-    return nullptr;
+    return {};
   }
 
   mlir::Value emitPromoted(const Expr *e, QualType promotionType);
@@ -867,10 +867,25 @@ mlir::Value CIRGenFunction::emitPromotedScalarExpr(const Expr *e,
   return e->getType()->isNullPtrType();
 }
 
+/// If \p e is a widened promoted integer, get its base (unpromoted) type.
+static std::optional<QualType>
+getUnwidenedIntegerType(const ASTContext &astContext, const Expr *e) {
+  const Expr *base = e->IgnoreImpCasts();
+  if (e == base)
+    return std::nullopt;
+
+  QualType baseTy = base->getType();
+  if (!astContext.isPromotableIntegerType(baseTy) ||
+      astContext.getTypeSize(baseTy) >= astContext.getTypeSize(e->getType()))
+    return std::nullopt;
+
+  return baseTy;
+}
+
 /// Check if \p e is a widened promoted integer.
 [[maybe_unused]] static bool isWidenedIntegerOp(const ASTContext &astContext,
                                                 const Expr *e) {
-  return astContext.getUnwidenedIntegerType(e).has_value();
+  return getUnwidenedIntegerType(astContext, e).has_value();
 }
 
 /// Check if we can skip the overflow check for \p Op.
@@ -892,12 +907,12 @@ mlir::Value CIRGenFunction::emitPromotedScalarExpr(const Expr *e,
   // Multiplication with promoted unsigned operands is a special case.
   const auto *bo = cast<BinaryOperator>(op.e);
   std::optional<QualType> optionalLHSTy =
-      astContext.getUnwidenedIntegerType(bo->getLHS());
+      getUnwidenedIntegerType(astContext, bo->getLHS());
   if (!optionalLHSTy)
     return false;
 
   std::optional<QualType> optionalRHSTy =
-      astContext.getUnwidenedIntegerType(bo->getRHS());
+      getUnwidenedIntegerType(astContext, bo->getRHS());
   if (!optionalRHSTy)
     return false;
 

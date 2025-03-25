@@ -7998,22 +7998,6 @@ QualType ASTContext::getPromotedIntegerType(QualType Promotable) const {
   return (PromotableSize != IntSize) ? IntTy : UnsignedIntTy;
 }
 
-/// getUnwidenedIntegerType - If \p E is a widened promoted integer, get its
-/// base (unpromoted) type.
-std::optional<QualType>
-ASTContext::getUnwidenedIntegerType(const Expr *E) const {
-  const Expr *Base = E->IgnoreImpCasts();
-  if (E == Base)
-    return std::nullopt;
-
-  QualType BaseTy = Base->getType();
-  if (!isPromotableIntegerType(BaseTy) ||
-      getTypeSize(BaseTy) >= getTypeSize(E->getType()))
-    return std::nullopt;
-
-  return BaseTy;
-}
-
 /// Recurses in pointer/array types until it finds an objc retainable
 /// type and returns its ownership.
 Qualifiers::ObjCLifetime ASTContext::getInnerObjCOwnership(QualType T) const {
