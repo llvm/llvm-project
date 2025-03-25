@@ -610,6 +610,17 @@ Value *VPInstruction::generate(VPTransformState &State) {
         State.VF, State.get(getOperand(0), /*IsScalar*/ true), "broadcast");
   }
   case VPInstruction::ComputeFindLastIVResult: {
+    // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
+    // and will be removed by breaking up the recipe further.
+    auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
+    // Get its reduction variable descriptor.
+    const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
+    RecurKind RK = RdxDesc.getRecurrenceKind();
+    assert(RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK) &&
+           "Unexpected reduction kind");
+    assert(!PhiR->isInLoop() &&
+           "In-loop FindLastIV reduction is not supported yet");
+
     // The recipe's operands are the reduction phi, followed by one operand for
     // each part of the reduction.
     unsigned UF = getNumOperands() - 1;
@@ -619,15 +630,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
                                       State.get(getOperand(1 + Part)));
     }
 
-    // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
-    // and will be removed by breaking up the recipe further.
-    auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
-    // Get its reduction variable descriptor.
-    const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
-    RecurKind RK = RdxDesc.getRecurrenceKind();
-
-    assert(RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK));
-    assert(!PhiR->isInLoop());
     return createFindLastIVReduction(Builder, ReducedPartRdx, RdxDesc);
   }
   case VPInstruction::ComputeReductionResult: {
