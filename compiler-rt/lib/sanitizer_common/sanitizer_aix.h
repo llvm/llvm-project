@@ -18,6 +18,9 @@
 #  include "sanitizer_common.h"
 #  include "sanitizer_posix.h"
 
+struct prmap;
+ typedef struct prmap prmap_t;
+
 namespace __sanitizer {
 
 #  if SANITIZER_WORDSIZE == 32
@@ -30,6 +33,7 @@ struct ProcSelfMapsBuff {
   char *data;
   uptr mmaped_size;
   uptr len;
+  prmap_t *mapEnd;
 };
 
 struct MemoryMappingLayoutData {
