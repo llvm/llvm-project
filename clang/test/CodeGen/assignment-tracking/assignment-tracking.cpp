@@ -20,16 +20,16 @@ Large L;
 void zeroInit() { int Z[3] = {0, 0, 0}; }
 // CHECK-LABEL: define dso_local void @_Z8zeroInitv
 // CHECK:       %Z = alloca [3 x i32], align 4, !DIAssignID ![[ID_0:[0-9]+]]
-// CHECK-NEXT:  #dbg_assign(i1 undef, ![[VAR_0:[0-9]+]], !DIExpression(), ![[ID_0]], ptr %Z, !DIExpression(),
+// CHECK-NEXT:  #dbg_assign(i1 poison, ![[VAR_0:[0-9]+]], !DIExpression(), ![[ID_0]], ptr %Z, !DIExpression(),
 // CHECK:        @llvm.memset{{.*}}, !DIAssignID ![[ID_1:[0-9]+]]
 // CHECK-NEXT:   #dbg_assign(i8 0, ![[VAR_0]], !DIExpression(), ![[ID_1]], ptr %Z, !DIExpression(),
 
 void memcpyInit() { int A[4] = {0, 1, 2, 3}; }
 // CHECK-LABEL: define dso_local void @_Z10memcpyInitv
 // CHECK:       %A = alloca [4 x i32], align 16, !DIAssignID ![[ID_2:[0-9]+]]
-// CHECK-NEXT:  #dbg_assign(i1 undef, ![[VAR_1:[0-9]+]], !DIExpression(), ![[ID_2]], ptr %A, !DIExpression(),
+// CHECK-NEXT:  #dbg_assign(i1 poison, ![[VAR_1:[0-9]+]], !DIExpression(), ![[ID_2]], ptr %A, !DIExpression(),
 // CHECK:        @llvm.memcpy{{.*}}, !DIAssignID ![[ID_3:[0-9]+]]
-// CHECK-NEXT:   #dbg_assign(i1 undef, ![[VAR_1]], !DIExpression(), ![[ID_3]], ptr %A, !DIExpression(),
+// CHECK-NEXT:   #dbg_assign(i1 poison, ![[VAR_1]], !DIExpression(), ![[ID_3]], ptr %A, !DIExpression(),
 
 void setField() {
   Outer O;
@@ -37,7 +37,7 @@ void setField() {
 }
 // CHECK-LABEL: define dso_local void @_Z8setFieldv
 // CHECK:       %O = alloca %struct.Outer, align 4, !DIAssignID ![[ID_4:[0-9]+]]
-// CHECK-NEXT:  #dbg_assign(i1 undef, ![[VAR_2:[0-9]+]], !DIExpression(), ![[ID_4]], ptr %O, !DIExpression(),
+// CHECK-NEXT:  #dbg_assign(i1 poison, ![[VAR_2:[0-9]+]], !DIExpression(), ![[ID_4]], ptr %O, !DIExpression(),
 // CHECK:       store i32 %0, ptr %B, align 4,{{.*}}!DIAssignID ![[ID_5:[0-9]+]]
 // CHECK-NEXT:  #dbg_assign(i32 %0, ![[VAR_2]], !DIExpression(DW_OP_LLVM_fragment, 32, 32), ![[ID_5]], ptr %B, !DIExpression(),
 
@@ -47,7 +47,7 @@ void unknownOffset() {
 }
 // CHECK-LABEL: define dso_local void @_Z13unknownOffsetv
 // CHECK:       %A = alloca [2 x i32], align 4, !DIAssignID ![[ID_6:[0-9]+]]
-// CHECK-NEXT:  #dbg_assign(i1 undef, ![[VAR_3:[0-9]+]], !DIExpression(), ![[ID_6]], ptr %A, !DIExpression(),
+// CHECK-NEXT:  #dbg_assign(i1 poison, ![[VAR_3:[0-9]+]], !DIExpression(), ![[ID_6]], ptr %A, !DIExpression(),
 
 Inner sharedAlloca() {
   if (Cond) {
@@ -60,16 +60,16 @@ Inner sharedAlloca() {
 }
 // CHECK-LABEL: define dso_local i64 @_Z12sharedAllocav
 // CHECK:       %retval = alloca %struct.Inner, align 4, !DIAssignID ![[ID_7:[0-9]+]]
-// CHECK-NEXT:  #dbg_assign(i1 undef, ![[VAR_4:[0-9]+]], !DIExpression(), ![[ID_7]], ptr %retval, !DIExpression(),
-// CHECK-NEXT:  #dbg_assign(i1 undef, ![[VAR_5:[0-9]+]], !DIExpression(), ![[ID_7]], ptr %retval, !DIExpression(),
+// CHECK-NEXT:  #dbg_assign(i1 poison, ![[VAR_4:[0-9]+]], !DIExpression(), ![[ID_7]], ptr %retval, !DIExpression(),
+// CHECK-NEXT:  #dbg_assign(i1 poison, ![[VAR_5:[0-9]+]], !DIExpression(), ![[ID_7]], ptr %retval, !DIExpression(),
 // CHECK:     if.then:
 // CHECK:       call void @llvm.memcpy{{.*}}, !DIAssignID ![[ID_8:[0-9]+]]
-// CHECK-NEXT:  #dbg_assign(i1 undef, ![[VAR_4]], !DIExpression(), ![[ID_8]], ptr %retval, !DIExpression(),
-// CHECK-NEXT:  #dbg_assign(i1 undef, ![[VAR_5]], !DIExpression(), ![[ID_8]], ptr %retval, !DIExpression(),
+// CHECK-NEXT:  #dbg_assign(i1 poison, ![[VAR_4]], !DIExpression(), ![[ID_8]], ptr %retval, !DIExpression(),
+// CHECK-NEXT:  #dbg_assign(i1 poison, ![[VAR_5]], !DIExpression(), ![[ID_8]], ptr %retval, !DIExpression(),
 // CHECK:     if.else:
 // CHECK:       call void @llvm.memcpy{{.*}}, !DIAssignID ![[ID_9:[0-9]+]]
-// CHECK-NEXT:  #dbg_assign(i1 undef, ![[VAR_4]], !DIExpression(), ![[ID_9]], ptr %retval, !DIExpression(),
-// CHECK-NEXT:  #dbg_assign(i1 undef, ![[VAR_5]], !DIExpression(), ![[ID_9]], ptr %retval, !DIExpression(),
+// CHECK-NEXT:  #dbg_assign(i1 poison, ![[VAR_4]], !DIExpression(), ![[ID_9]], ptr %retval, !DIExpression(),
+// CHECK-NEXT:  #dbg_assign(i1 poison, ![[VAR_5]], !DIExpression(), ![[ID_9]], ptr %retval, !DIExpression(),
 
 Large sret() {
   Large X = L;

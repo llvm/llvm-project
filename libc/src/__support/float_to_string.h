@@ -287,7 +287,7 @@ LIBC_INLINE UInt<MID_INT_SIZE> get_table_negative(int exponent, size_t i) {
   size_t ten_blocks = i;
   size_t five_blocks = 0;
   if (shift_amount < 0) {
-    int block_shifts = (-shift_amount) / BLOCK_SIZE;
+    int block_shifts = (-shift_amount) / static_cast<int>(BLOCK_SIZE);
     if (block_shifts < static_cast<int>(ten_blocks)) {
       ten_blocks = ten_blocks - block_shifts;
       five_blocks = block_shifts;

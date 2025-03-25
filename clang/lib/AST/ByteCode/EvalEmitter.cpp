@@ -127,6 +127,33 @@ bool EvalEmitter::fallthrough(const LabelTy &Label) {
   return true;
 }
 
+bool EvalEmitter::speculate(const CallExpr *E, const LabelTy &EndLabel) {
+  size_t StackSizeBefore = S.Stk.size();
+  const Expr *Arg = E->getArg(0);
+  if (!this->visit(Arg)) {
+    S.Stk.clearTo(StackSizeBefore);
+
+    if (S.inConstantContext() || Arg->HasSideEffects(S.getASTContext()))
+      return this->emitBool(false, E);
+    return Invalid(S, OpPC);
+  }
+
+  PrimType T = Ctx.classify(Arg->getType()).value_or(PT_Ptr);
+  if (T == PT_Ptr) {
+    const auto &Ptr = S.Stk.pop<Pointer>();
+    return this->emitBool(CheckBCPResult(S, Ptr), E);
+  } else if (T == PT_FnPtr) {
+    S.Stk.discard<FunctionPointer>();
+    // Never accepted
+    return this->emitBool(false, E);
+  }
+
+  // Otherwise, this is fine!
+  if (!this->emitPop(T, E))
+    return false;
+  return this->emitBool(true, E);
+}
+
 template <PrimType OpType> bool EvalEmitter::emitRet(const SourceInfo &Info) {
   if (!isActive())
     return true;

@@ -223,7 +223,8 @@ public:
   /// `ns::SomeTemplate<int, MyClass>` instead of
   /// `ns::SomeTemplate<Container::value_type, T>`.
   void print(raw_ostream &OS, const PrintingPolicy &Policy,
-             bool ResolveTemplateArguments = false) const;
+             bool ResolveTemplateArguments = false,
+             bool PrintFinalScopeResOp = true) const;
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
     ID.AddPointer(Prefix.getOpaqueValue());

@@ -11,50 +11,45 @@
 //===----------------------------------------------------------------------===//
 
 // VIS Instruction Format.
-class VISInstFormat<bits<9> opfval, dag outs, dag ins, string asmstr,
-        list<dag> pattern = []>
-      : F3_3<0b10, 0b110110, opfval, outs, ins, asmstr, pattern>;
+class VISInstFormat<bits<9> opfval, dag outs, dag ins, string asmstr>
+      : F3_3<0b10, 0b110110, opfval, outs, ins, asmstr, []>;
 
-class VISInst<bits<9> opfval, string OpcStr, RegisterClass RC = DFPRegs,
-        list<dag> pattern = []>
+class VISInst<bits<9> opfval, string OpcStr, RegisterClass RC = DFPRegs>
        : VISInstFormat<opfval,
         (outs RC:$rd), (ins RC:$rs1, RC:$rs2),
-        !strconcat(OpcStr, " $rs1, $rs2, $rd"), pattern>;
+        !strconcat(OpcStr, " $rs1, $rs2, $rd")>;
 
 // VIS Instruction with integer destination register.
-class VISInstID<bits<9> opfval, string OpcStr, list<dag> pattern = []>
+class VISInstID<bits<9> opfval, string OpcStr>
        : VISInstFormat<opfval,
         (outs I64Regs:$rd), (ins DFPRegs:$rs1, DFPRegs:$rs2),
-        !strconcat(OpcStr, " $rs1, $rs2, $rd"), pattern>;
+        !strconcat(OpcStr, " $rs1, $rs2, $rd")>;
 
 // For VIS Instructions with no operand.
 let rd = 0, rs1 = 0, rs2 = 0 in
-class VISInst0<bits<9> opfval, string asmstr, list<dag> pattern = []>
-       : VISInstFormat<opfval, (outs), (ins), asmstr, pattern>;
+class VISInst0<bits<9> opfval, string asmstr>
+       : VISInstFormat<opfval, (outs), (ins), asmstr>;
 
 // For VIS Instructions with only rs1, rd operands.
 let rs2 = 0 in
-class VISInst1<bits<9> opfval, string OpcStr, RegisterClass RC = DFPRegs,
-        list<dag> pattern = []>
+class VISInst1<bits<9> opfval, string OpcStr, RegisterClass RC = DFPRegs>
        : VISInstFormat<opfval,
         (outs RC:$rd), (ins RC:$rs1),
-        !strconcat(OpcStr, " $rs1, $rd"), pattern>;
+        !strconcat(OpcStr, " $rs1, $rd")>;
 
 // For VIS Instructions with only rs2, rd operands.
 let rs1 = 0 in
-class VISInst2<bits<9> opfval, string OpcStr, RegisterClass RC = DFPRegs,
-        list<dag> pattern = []>
+class VISInst2<bits<9> opfval, string OpcStr, RegisterClass RC = DFPRegs>
        : VISInstFormat<opfval,
         (outs RC:$rd), (ins RC:$rs2),
-        !strconcat(OpcStr, " $rs2, $rd"), pattern>;
+        !strconcat(OpcStr, " $rs2, $rd")>;
 
 // For VIS Instructions with only rd operand.
 let Constraints = "$rd = $f", rs1 = 0, rs2 = 0 in
-class VISInstD<bits<9> opfval, string OpcStr, RegisterClass RC = DFPRegs,
-        list<dag> pattern = []>
+class VISInstD<bits<9> opfval, string OpcStr, RegisterClass RC = DFPRegs>
        : VISInstFormat<opfval,
         (outs RC:$rd), (ins RC:$f),
-        !strconcat(OpcStr, " $rd"), pattern>;
+        !strconcat(OpcStr, " $rd")>;
 
 // VIS 1 Instructions
 let Predicates = [HasVIS] in {
@@ -194,11 +189,11 @@ def ADDXCCC : VISInst<0b000010011, "addxccc", I64Regs>;
 
 let rd = 0, rs1 = 0 in {
 def CMASK8  : VISInstFormat<0b000011011, (outs), (ins I64Regs:$rs2),
-              "cmask8 $rs2", []>;
+              "cmask8 $rs2">;
 def CMASK16  : VISInstFormat<0b000011101, (outs), (ins I64Regs:$rs2),
-              "cmask16 $rs2", []>;
+              "cmask16 $rs2">;
 def CMASK32  : VISInstFormat<0b000011111, (outs), (ins I64Regs:$rs2),
-              "cmask32 $rs2", []>;
+              "cmask32 $rs2">;
 
 }
 
@@ -218,10 +213,10 @@ def FHSUBD   : F3_3<0b10, 0b110100, 0b001100110,
                     "fhsubd $rs1, $rs2, $rd", []>;
 def FLCMPS   : VISInstFormat<0b101010001, (outs FCCRegs:$rd),
                      (ins FPRegs:$rs1, FPRegs:$rs2),
-                     "flcmps $rd, $rs1, $rs2", []>;
+                     "flcmps $rd, $rs1, $rs2">;
 def FLCMPD   : VISInstFormat<0b101010010, (outs FCCRegs:$rd),
                      (ins DFPRegs:$rs1, DFPRegs:$rs2),
-                     "flcmpd $rd, $rs1, $rs2", []>;
+                     "flcmpd $rd, $rs1, $rs2">;
 
 def FMEAN16  : VISInst<0b001000000, "fmean16">;
 
@@ -261,19 +256,19 @@ def FSRA32    : VISInst<0b000101111, "fsra32">;
 
 let rs1 = 0 in
 def LZCNT     : VISInstFormat<0b000010111, (outs I64Regs:$rd),
-                   (ins I64Regs:$rs2), "lzcnt $rs2, $rd", []>;
+                   (ins I64Regs:$rs2), "lzcnt $rs2, $rd">;
 
 let rs1 = 0 in {
 def MOVSTOSW : VISInstFormat<0b100010011, (outs I64Regs:$rd),
-                   (ins DFPRegs:$rs2), "movstosw $rs2, $rd", []>;
+                   (ins DFPRegs:$rs2), "movstosw $rs2, $rd">;
 def MOVSTOUW : VISInstFormat<0b100010001, (outs I64Regs:$rd),
-                   (ins DFPRegs:$rs2), "movstouw $rs2, $rd", []>;
+                   (ins DFPRegs:$rs2), "movstouw $rs2, $rd">;
 def MOVDTOX  : VISInstFormat<0b100010000, (outs I64Regs:$rd),
-                   (ins DFPRegs:$rs2), "movdtox $rs2, $rd", []>;
+                   (ins DFPRegs:$rs2), "movdtox $rs2, $rd">;
 def MOVWTOS  :  VISInstFormat<0b100011001, (outs DFPRegs:$rd),
-                   (ins I64Regs:$rs2), "movwtos $rs2, $rd", []>;
+                   (ins I64Regs:$rs2), "movwtos $rs2, $rd">;
 def MOVXTOD  :  VISInstFormat<0b100011000, (outs DFPRegs:$rd),
-                   (ins I64Regs:$rs2), "movxtod $rs2, $rd", []>;
+                   (ins I64Regs:$rs2), "movxtod $rs2, $rd">;
 }
 
 def PDISTN   : VISInstID<0b000111111, "pdistn">;

@@ -133,7 +133,7 @@ define amdgpu_kernel void @s_cvt_pkrtz_undef_undef(ptr addrspace(1) %out) #0 {
 ; GFX11-LABEL: s_cvt_pkrtz_undef_undef:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_endpgm
-  %result = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float undef, float undef)
+  %result = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float poison, float poison)
   store <2 x half> %result, ptr addrspace(1) %out
   ret void
 }

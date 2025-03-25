@@ -47,8 +47,6 @@ public:
 
 private:
   void initLaneMaskIntrinsics(MachineFunction &MF);
-  // This will not be needed when we turn off LCSSA for global-isel.
-  void findLCSSAPhi(Register Reg);
 };
 
 void buildReadAnyLane(MachineIRBuilder &B, Register SgprDst, Register VgprSrc,

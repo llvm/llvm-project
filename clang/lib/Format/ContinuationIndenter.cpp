@@ -629,7 +629,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       !Style.isJavaScript() && Previous.isNot(tok::kw_template) &&
       CurrentState.BreakBeforeParameter) {
     for (const auto *Tok = &Previous; Tok; Tok = Tok->Previous)
-      if (Tok->FirstAfterPPDirectiveLine || Tok->is(TT_LineComment))
+      if (Tok->FirstAfterPPLine || Tok->is(TT_LineComment))
         return false;
 
     return true;
