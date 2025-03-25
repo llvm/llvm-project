@@ -3316,8 +3316,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *S0 = getShadow(&I, 0);
 
     /// For scalars:
-    /// Since they are converting from floating-point to integer (or
-    /// vice-versa), the output is
+    /// Since they are converting to and/or from floating-point, the output is:
     /// - fully uninitialized if *any* bit of the input is uninitialized
     /// - fully ininitialized if all bits of the input are ininitialized
     /// We apply the same principle on a per-field basis for vectors.
@@ -4676,6 +4675,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     }
 
+    case Intrinsic::x86_sse2_cvtpd2ps:
     case Intrinsic::x86_sse2_cvtps2dq:
     case Intrinsic::x86_sse2_cvtpd2dq:
     case Intrinsic::x86_sse2_cvttps2dq:
