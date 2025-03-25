@@ -602,9 +602,9 @@ private:
   mutable uint32_t m_pound_line_line = 0;
   bool m_prepare_playground_stub_functions = true;
 
-  ///< During expression evaluation, any SymbolContext in this list will be
-  ///< used for symbol/function lookup before any other context (except for
-  ///< the module corresponding to the current frame).
+  /// During expression evaluation, any SymbolContext in this list will be
+  /// used for symbol/function lookup before any other context (except for
+  /// the module corresponding to the current frame).
   SymbolContextList m_preferred_lookup_contexts;
 };
 
