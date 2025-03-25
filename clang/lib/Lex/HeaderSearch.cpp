@@ -1783,7 +1783,7 @@ HeaderSearch::loadModuleMapFileImpl(FileEntryRef File, bool IsSystem,
   if (!AddResult.second)
     return AddResult.first->second ? LMM_AlreadyLoaded : LMM_InvalidModuleMap;
 
-  if (ModMap.parseModuleMapFile(File, IsSystem, Dir, ID, Offset)) {
+  if (ModMap.loadModuleMapFile(File, IsSystem, Dir, ID, Offset)) {
     LoadedModuleMaps[File] = false;
     return LMM_InvalidModuleMap;
   }
@@ -1791,7 +1791,7 @@ HeaderSearch::loadModuleMapFileImpl(FileEntryRef File, bool IsSystem,
   // Try to load a corresponding private module map.
   if (OptionalFileEntryRef PMMFile =
           getPrivateModuleMap(File, FileMgr, Diags)) {
-    if (ModMap.parseModuleMapFile(*PMMFile, IsSystem, Dir)) {
+    if (ModMap.loadModuleMapFile(*PMMFile, IsSystem, Dir)) {
       LoadedModuleMaps[File] = false;
       return LMM_InvalidModuleMap;
     }
