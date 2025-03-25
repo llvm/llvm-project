@@ -2069,7 +2069,7 @@ FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC) {
 
   FormulaType Left, Right;
   SemaRef.runWithSufficientStackSpace(SourceLocation(), [&] {
-    Left  = Normalize<FormulaType>(NC.getLHS());
+    Left = Normalize<FormulaType>(NC.getLHS());
     Right = Normalize<FormulaType>(NC.getRHS());
   });
 

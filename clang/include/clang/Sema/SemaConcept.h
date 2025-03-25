@@ -230,8 +230,7 @@ private:
   DNFFormula DNF(const NormalizedConstraint &C);
 
   template <typename FormulaType>
-  FormulaType
-  Normalize(const NormalizedConstraint &C);
+  FormulaType Normalize(const NormalizedConstraint &C);
   void AddUniqueClauseToFormula(Formula &F, Clause C);
 
   Literal find(AtomicConstraint *);
