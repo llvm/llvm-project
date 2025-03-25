@@ -144,7 +144,7 @@ enable or disable extended libc++ behavior.
   When this macro is defined, the standard library headers will adhere to a
   stricter policy regarding the (transitive) inclusion of other standard library
   headers, only guaranteeing to provide those definitions explicitly mandated by
-  the standard. Please notice that defining this macro might break existing codebasesgit
+  the standard. Please notice that defining this macro might break existing codebases
   that implicitly rely on standard headers providing definitions not explicitly
   required by the standard.
 
