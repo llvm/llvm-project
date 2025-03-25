@@ -1,4 +1,4 @@
-//===-- Unittests for memalignment ---------------------------------------===//
+//===-- Unittests for memalignment ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -81,4 +81,3 @@ TEST(LlvmLibcMemAlignmentTest, AlignasSpecifiedAlignment) {
   EXPECT_GE(LIBC_NAMESPACE::memalignment(&aligned_256),
             static_cast<size_t>(256));
 }
-
