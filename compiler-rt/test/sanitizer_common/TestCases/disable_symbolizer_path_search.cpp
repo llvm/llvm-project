@@ -6,8 +6,6 @@
 
 // CHECK: Symbolizer path search is disabled in the runtime build configuration
 
-// REQUIRES: shell
-
 #include <sanitizer/common_interface_defs.h>
 #include <stdio.h>
 

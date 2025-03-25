@@ -375,7 +375,7 @@ def get_ios_commands_dir():
         config.compiler_rt_src_root, "test", "sanitizer_common", "ios_commands"
     )
 
-# When cmake flag to disable path search is set, symbolizer is not allowed to search in $PATH, 
+# When cmake flag to disable path search is set, symbolizer is not allowed to search in $PATH,
 # need to specify it via XXX_SYMBOLIZER_PATH
 tool_symbolizer_path_list = [
     "ASAN_SYMBOLIZER_PATH",
