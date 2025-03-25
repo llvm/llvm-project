@@ -998,7 +998,6 @@ static RISCVCC::CondCode getCondFromBranchOpc(unsigned Opc) {
   }
 }
 
-
 static bool evaluateCondBranch(unsigned CC, int64_t C0, int64_t C1) {
   switch (CC) {
   default:
@@ -1351,7 +1350,7 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   int64_t C0, C1;
   if (isFromLoadImm(Cond[1], C0) && isFromLoadImm(Cond[2], C1)) {
     unsigned NewCC =
-      evaluateCondBranch(CC, C0, C1) ? RISCVCC::COND_EQ : RISCVCC::COND_NE;
+        evaluateCondBranch(CC, C0, C1) ? RISCVCC::COND_EQ : RISCVCC::COND_NE;
     Cond[0] = MachineOperand::CreateImm(NewCC);
     Cond[1] = Cond[2] = MachineOperand::CreateReg(RISCV::X0, /*isDef=*/false);
     modifyBranch();
