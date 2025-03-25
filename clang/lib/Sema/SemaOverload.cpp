@@ -5229,7 +5229,7 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
       S.CompareReferenceRelationship(DeclLoc, T1, T2, &RefConv);
 
   auto SetAsReferenceBinding = [&](bool BindsDirectly) {
-    // C++2c [over.ics.ref] p1:
+    // C++26 [over.ics.ref] p1 (per CWG2803 and CWG2815):
     //   When a parameter of type "reference to cv T" binds directly
     //   to an argument expression:
     //   * If the argument expression has a type that is a derived class
