@@ -5815,7 +5815,7 @@ LoopVectorizationCostModel::getReductionPatternCost(Instruction *I,
 
   // Test if the found instruction is a reduction, and if not return an invalid
   // cost specifying the parent to use the original cost modelling.
-  Instruction *LastChain  = InLoopReductionImmediateChains.lookup(RetI);
+  Instruction *LastChain = InLoopReductionImmediateChains.lookup(RetI);
   if (!LastChain)
     return std::nullopt;
 
