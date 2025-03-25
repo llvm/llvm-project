@@ -10,8 +10,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MCLINKER_H
-#define LLVM_MCLINKER_H
+#ifndef LLVM_MCLINKER_MCLINKER_H
+#define LLVM_MCLINKER_MCLINKER_H
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -79,7 +79,6 @@ struct MCInfo {
   std::optional<int> SplitIdx;
 };
 
-
 //==============================================================================
 // SymbolAndMCInfo
 //==============================================================================
@@ -109,8 +108,9 @@ public:
            llvm::StringMap<llvm::GlobalValue::LinkageTypes> SymbolLinkageTypes);
 
   /// Link multiple MC results and AsmPrint into one .o file.
-  ErrorOr<std::unique_ptr<WritableMemoryBuffer>>
-  linkAndPrint(StringRef ModuleName);
+  Expected<std::unique_ptr<WritableMemoryBuffer>>
+  linkAndPrint(StringRef ModuleName, llvm::CodeGenFileType CodegenType,
+               bool VerboseOutput);
 
 private:
   SmallVectorImpl<SymbolAndMCInfo *> &SymbolAndMCInfos;

@@ -8,11 +8,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "llvm/MCLinker/MCLinker.h"
+#include "MCLinkerUtils.h"
+#include "llvm/MCLinker/MCPipeline.h"
 
+#include "MCLinkerUtils.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/Linker/Linker.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 #define DEBUG_TYPE "mclinker"
@@ -22,16 +30,16 @@ using namespace llvm;
 //==============================================================================
 
 MCInfo::MCInfo(std::unique_ptr<llvm::MachineModuleInfo> &&MachineModuleInfo,
-         LLVMModuleAndContext &&ModuleAndContext,
-         llvm::StringMap<const llvm::Function *> &FnNameToFnPtr,
-         std::unique_ptr<llvm::TargetMachine> &&TgtMachine,
-         std::unique_ptr<llvm::MCContext> &&McContext,
-         std::optional<int> SplitIdx)
-      : ModuleAndContext(std::move(ModuleAndContext)),
-        McContext(std::move(McContext)),
-        MachineModuleInfo(std::move(MachineModuleInfo)),
-        FnNameToFnPtr(std::move(FnNameToFnPtr)),
-        TgtMachine(std::move(TgtMachine)), SplitIdx(SplitIdx){
+               LLVMModuleAndContext &&ModuleAndContext,
+               llvm::StringMap<const llvm::Function *> &FnNameToFnPtr,
+               std::unique_ptr<llvm::TargetMachine> &&TgtMachine,
+               std::unique_ptr<llvm::MCContext> &&McContext,
+               std::optional<int> SplitIdx)
+    : ModuleAndContext(std::move(ModuleAndContext)),
+      McContext(std::move(McContext)),
+      MachineModuleInfo(std::move(MachineModuleInfo)),
+      FnNameToFnPtr(std::move(FnNameToFnPtr)),
+      TgtMachine(std::move(TgtMachine)), SplitIdx(SplitIdx) {
   std::string BufStr;
   llvm::raw_string_ostream BufOS(BufStr);
   llvm::WriteBitcodeToFile(*ModuleAndContext, BufOS);
@@ -62,274 +70,204 @@ MCLinker::MCLinker(
   llvm::TargetMachine &LLVMTgtMachine =
       static_cast<llvm::TargetMachine &>(TgtMachine);
 
-  MachineModInfoPass =
-      new llvm::MachineModuleInfoWrapperPass(&LLVMTgtMachine);
+  MachineModInfoPass = new llvm::MachineModuleInfoWrapperPass(&LLVMTgtMachine);
 }
 
-
 Expected<bool> MCLinker::linkLLVMModules(StringRef moduleName) {
-  Expected<bool> createModuleResult =
+  Expected<bool> CreateModuleOr =
       LinkedModule.create([&](llvm::LLVMContext &ctx) {
         return std::make_unique<llvm::Module>(moduleName, ctx);
       });
 
-  if (createModuleResult.isError())
-    return Error("failed to create an empty LLVMModule for MCLinker");
+  if (!CreateModuleOr) {
+    return make_error<StringError>(
+        "failed to create an empty LLVMModule for MCLinker",
+        inconvertibleErrorCode());
+  }
 
-  llvm::Linker linker(*linkedModule);
+  llvm::Linker ModuleLinker(*LinkedModule);
 
-  for (auto [i, smcInfos] : llvm::enumerate(symbolAndMCInfos)) {
-    for (auto &[key, value] : smcInfos->symbolLinkageTypes)
-      symbolLinkageTypes.insert({key, value});
+  for (auto [i, SmcInfos] : llvm::enumerate(SymbolAndMCInfos)) {
+    for (auto &[key, value] : SmcInfos->SymbolLinkageTypes)
+      SymbolLinkageTypes.insert({key, value});
 
-    for (auto [j, mcInfo] : llvm::enumerate(smcInfos->mcInfos)) {
-      mcInfos.push_back(mcInfo.get());
+    for (auto [j, McInfo] : llvm::enumerate(SmcInfos->McInfos)) {
+      McInfos.push_back(McInfo.get());
 
       // Modules have to be in the same LLVMContext to be linked.
-      llvm::Expected<std::unique_ptr<llvm::Module>> moduleOr =
+      llvm::Expected<std::unique_ptr<llvm::Module>> ModuleOr =
           llvm::parseBitcodeFile(
               llvm::MemoryBufferRef(
-                  StringRef(mcInfo->moduleBuf->getBufferStart(),
-                            mcInfo->moduleBuf->getBufferSize()),
+                  StringRef(McInfo->ModuleBuf->getBufferStart(),
+                            McInfo->ModuleBuf->getBufferSize()),
                   ""),
-              linkedModule->getContext());
-      if (!moduleOr)
-        return Error("failed to serialize post-llc modules");
+              LinkedModule->getContext());
+      if (!ModuleOr) {
+        return make_error<StringError>("failed to serialize post-llc modules",
+                                       inconvertibleErrorCode());
+      }
 
-      std::unique_ptr<llvm::Module> module = std::move(moduleOr.get());
-      if (linker.linkInModule(std::move(module)))
-        return Error("failed to link post-llc modules");
-      mcInfo->mcContext->setUseNamesOnTempLabels(true);
+      std::unique_ptr<llvm::Module> M = std::move(ModuleOr.get());
+
+      if (ModuleLinker.linkInModule(std::move(M))) {
+        return make_error<StringError>("failed to link post-llc modules",
+                                       inconvertibleErrorCode());
+      }
+
+      McInfo->McContext->setUseNamesOnTempLabels(true);
     }
   }
 
-  // Restore linkage type.
-  for (llvm::GlobalValue &global : linkedModule->globals()) {
-    if (!global.hasWeakLinkage())
+  // Restore linkage type!
+  for (llvm::GlobalValue &G : LinkedModule->globals()) {
+    if (!G.hasWeakLinkage())
       continue;
-    auto iter = symbolLinkageTypes.find(global.getName().str());
-    if (iter == symbolLinkageTypes.end())
+    auto Iter = SymbolLinkageTypes.find(G.getName().str());
+    if (Iter == SymbolLinkageTypes.end())
       continue;
 
-    global.setLinkage(iter->second);
-    global.setDSOLocal(true);
+    G.setLinkage(Iter->second);
+    G.setDSOLocal(true);
   }
 
-  for (llvm::Function &fn : linkedModule->functions()) {
-    if (!fn.hasWeakLinkage())
+  for (llvm::Function &F : LinkedModule->functions()) {
+    if (!F.hasWeakLinkage())
       continue;
 
-    auto iter = symbolLinkageTypes.find(fn.getName().str());
-    if (iter == symbolLinkageTypes.end())
+    auto Iter = SymbolLinkageTypes.find(F.getName().str());
+    if (Iter == SymbolLinkageTypes.end())
       continue;
 
-    fn.setLinkage(iter->second);
-    fn.setDSOLocal(true);
+    F.setLinkage(Iter->second);
+    F.setDSOLocal(true);
   }
 
-  return {};
+  return true;
 }
 
 void MCLinker::prepareMachineModuleInfo(
     llvm::TargetMachine &llvmTargetMachine) {
-  for (auto [i, smcInfos] : llvm::enumerate(symbolAndMCInfos)) {
-    for (auto [j, mcInfo] : llvm::enumerate(smcInfos->mcInfos)) {
+  for (auto [i, SmcInfos] : llvm::enumerate(SymbolAndMCInfos)) {
+    for (auto [j, McInfo] : llvm::enumerate(SmcInfos->McInfos)) {
       // Move MachineFunctions from each split's codegen result
       // into machineModInfoPass to print out together in one .o
       llvm::DenseMap<const llvm::Function *,
                      std::unique_ptr<llvm::MachineFunction>> &machineFunctions =
-          getMachineFunctionsFromMachineModuleInfo(*mcInfo->machineModuleInfo);
+          llvm::mclinker::getMachineFunctionsFromMachineModuleInfo(
+              *McInfo->MachineModuleInfo);
 
-      llvm::StringMap<const llvm::Function *> &fnNameToFnPtr =
-          mcInfo->fnNameToFnPtr;
+      llvm::StringMap<const llvm::Function *> &FnNameToFnPtr =
+          McInfo->FnNameToFnPtr;
 
-      mcInfo->machineModuleInfo->getContext().setObjectFileInfo(
-          llvmTargetMachine.getObjFileLowering());
+      McInfo->MachineModuleInfo->getContext().setObjectFileInfo(
+          TgtMachine.getObjFileLowering());
 
-      for (auto &fn : linkedModule->functions()) {
-        if (fn.isDeclaration())
+      for (auto &Fn : LinkedModule->functions()) {
+        if (Fn.isDeclaration())
           continue;
-        if (machineModInfoPass->getMMI().getMachineFunction(fn))
-          continue;
-
-        auto fnPtrIter = fnNameToFnPtr.find(fn.getName().str());
-        if (fnPtrIter == fnNameToFnPtr.end())
-          continue;
-        auto mfPtrIter = machineFunctions.find(fnPtrIter->second);
-        if (mfPtrIter == machineFunctions.end())
+        if (MachineModInfoPass->getMMI().getMachineFunction(Fn))
           continue;
 
-        llvm::Function &origFn = mfPtrIter->second->getFunction();
+        auto FnPtrIter = FnNameToFnPtr.find(Fn.getName().str());
+        if (FnPtrIter == FnNameToFnPtr.end())
+          continue;
+        auto MfPtrIter = machineFunctions.find(FnPtrIter->second);
+        if (MfPtrIter == machineFunctions.end())
+          continue;
 
-        machineModInfoPass->getMMI().insertFunction(
-            fn, std::move(mfPtrIter->second));
+        llvm::Function &OrigFn = MfPtrIter->second->getFunction();
+
+        MachineModInfoPass->getMMI().insertFunction(
+            Fn, std::move(MfPtrIter->second));
 
         // Restore function linkage types.
-        if (!origFn.hasWeakLinkage())
+        if (!OrigFn.hasWeakLinkage())
           continue;
 
-        auto iter = symbolLinkageTypes.find(fn.getName().str());
-        if (iter == symbolLinkageTypes.end())
+        auto Iter = SymbolLinkageTypes.find(Fn.getName().str());
+        if (Iter == SymbolLinkageTypes.end())
           continue;
 
-        origFn.setLinkage(iter->second);
-        origFn.setDSOLocal(true);
+        OrigFn.setLinkage(Iter->second);
+        OrigFn.setDSOLocal(true);
       }
 
       // Restore global variable linkage types.
-      for (auto &global : mcInfo->moduleAndContext->globals()) {
-        if (!global.hasWeakLinkage())
+      for (auto &G : McInfo->ModuleAndContext->globals()) {
+        if (!G.hasWeakLinkage())
           continue;
-        auto iter = symbolLinkageTypes.find(global.getName().str());
-        if (iter == symbolLinkageTypes.end())
+        auto Iter = SymbolLinkageTypes.find(G.getName().str());
+        if (Iter == SymbolLinkageTypes.end())
           continue;
 
-        global.setLinkage(iter->second);
-        global.setDSOLocal(true);
+        G.setLinkage(Iter->second);
+        G.setDSOLocal(true);
       }
 
       // Release memory as soon as possible to reduce peak memory footprint.
-      mcInfo->machineModuleInfo.reset();
-      mcInfo->fnNameToFnPtr.clear();
-      mcInfo->moduleBuf.reset();
+      McInfo->MachineModuleInfo.reset();
+      McInfo->FnNameToFnPtr.clear();
+      McInfo->ModuleBuf.reset();
     }
   }
 }
 
-llvm::Module *
-MCLinker::getModuleToPrintOneSplit(llvm::TargetMachine &llvmTargetMachine) {
-  auto &mcInfo = symbolAndMCInfos[0]->mcInfos[0];
+Expected<std::unique_ptr<WritableMemoryBuffer>>
+MCLinker::linkAndPrint(StringRef ModuleName, llvm::CodeGenFileType CodegenType,
+                       bool VerboseOutput) {
 
-  llvm::DenseMap<const llvm::Function *, std::unique_ptr<llvm::MachineFunction>>
-      &machineFunctions =
-          getMachineFunctionsFromMachineModuleInfo(*mcInfo->machineModuleInfo);
+  llvm::TargetMachine &LLVMTgtMachine =
+      static_cast<llvm::TargetMachine &>(TgtMachine);
 
-  mcInfo->machineModuleInfo->getContext().setObjectFileInfo(
-      llvmTargetMachine.getObjFileLowering());
+  LLVMTgtMachine.Options.MCOptions.AsmVerbose = VerboseOutput;
+  LLVMTgtMachine.Options.MCOptions.PreserveAsmComments = VerboseOutput;
 
-  for (auto &fn : mcInfo->moduleAndContext->functions()) {
-    if (fn.isDeclaration())
-      continue;
+  // link at llvm::Module level.
+  Expected<bool> LMResultOr = linkLLVMModules(ModuleName);
+  if (!LMResultOr)
+    return LMResultOr.takeError();
 
-    auto mfPtrIter = machineFunctions.find(&fn);
-    if (mfPtrIter == machineFunctions.end())
-      continue;
-
-    machineModInfoPass->getMMI().insertFunction(fn,
-                                                std::move(mfPtrIter->second));
-  }
-
-  mcInfo->mcContext->setUseNamesOnTempLabels(true);
-  // Release memory as soon as possible to reduce peak memory footprint.
-  mcInfo->machineModuleInfo.reset();
-  mcInfo->fnNameToFnPtr.clear();
-  mcInfo->moduleBuf.reset();
-  return &(*mcInfo->moduleAndContext);
-}
-
-ErrorOr<WriteableBufferRef> MCLinker::linkAndPrint(StringRef moduleName,
-                                                   bool emitAssembly) {
-
-  llvm::TargetMachine &llvmTargetMachine =
-      static_cast<llvm::TargetMachine &>(targetMachine);
-
-  llvmTargetMachine.Options.MCOptions.AsmVerbose = options.verboseOutput;
-  llvmTargetMachine.Options.MCOptions.PreserveAsmComments =
-      options.verboseOutput;
-
-  bool hasOneSplit =
-      symbolAndMCInfos.size() == 1 && symbolAndMCInfos[0]->mcInfos.size() == 1;
-
-  llvm::Module *oneSplitModule = nullptr;
-
-  if (!hasOneSplit) {
-    if (isNVPTXBackend(options)) {
-      // For NVPTX backend to avoid false hit
-      // with its stale AnnotationCache which is populated during both
-      // llvm-opt and llc pipeline passes but is only cleared at the end of
-      // codegen in AsmPrint. We need to make sure that llvm-opt and llc
-      // are using the sname llvm::Module to that the cache can be properly
-      // cleaned. We currently achieve this by keeping only one split for NVPTX
-      // compilation.
-      return Error("NVPTX compilation should have multiple splits.");
-    }
-
-    // link at llvm::Module level.
-    ErrorOrSuccess lmResult = linkLLVMModules(moduleName);
-    if (lmResult.isError())
-      return Error(lmResult.getError());
-
-    prepareMachineModuleInfo(llvmTargetMachine);
-
-    // Function ordering may be changed in the linkedModule due to Linker,
-    // but the original order matters for NVPTX backend to generate function
-    // declaration properly to avoid use before def/decl illegal instructions.
-    // Sort the linkedModule's functions back to to its original order
-    // (only definition matter, declaration doesn't).
-    if (isNVPTXBackend(options)) {
-      linkedModule->getFunctionList().sort(
-          [&](const auto &lhs, const auto &rhs) {
-            if (lhs.isDeclaration() && rhs.isDeclaration())
-              return true;
-
-            if (lhs.isDeclaration())
-              return false;
-
-            if (rhs.isDeclaration())
-              return true;
-
-            auto iter1 = originalFnOrdering.find(lhs.getName());
-            if (iter1 == originalFnOrdering.end())
-              return true;
-            auto iter2 = originalFnOrdering.find(rhs.getName());
-            if (iter2 == originalFnOrdering.end())
-              return true;
-
-            return iter1->second < iter2->second;
-          });
-    }
-  } else {
-    oneSplitModule = getModuleToPrintOneSplit(llvmTargetMachine);
-    oneSplitModule->setModuleIdentifier(moduleName);
-  }
+  prepareMachineModuleInfo(LLVMTgtMachine);
 
   // Prepare AsmPrint pipeline.
-  WriteableBufferRef linkedObj = WriteableBuffer::get();
-
-  llvm::legacy::PassManager passMgr;
+  llvm::legacy::PassManager PassMgr;
+  SmallString<1024> Buf;
+  raw_svector_ostream BufOS(Buf);
   // Add an appropriate TargetLibraryInfo pass for the module's triple.
-  llvm::TargetLibraryInfoImpl targetLibInfo(llvm::Triple(options.targetTriple));
+  llvm::TargetLibraryInfoImpl TargetLibInfo(TgtMachine.getTargetTriple());
 
   // Add AsmPrint pass and run the pass manager.
-  passMgr.add(new llvm::TargetLibraryInfoWrapperPass(targetLibInfo));
-  if (KGEN::addPassesToAsmPrint(options, llvmTargetMachine, passMgr, *linkedObj,
-                                emitAssembly
-                                    ? llvm::CodeGenFileType::AssemblyFile
-                                    : llvm::CodeGenFileType::ObjectFile,
-                                true, machineModInfoPass, mcInfos)) {
+  PassMgr.add(new llvm::TargetLibraryInfoWrapperPass(TargetLibInfo));
+  if (llvm::mclinker::addPassesToAsmPrint(LLVMTgtMachine, PassMgr, BufOS,
+                                          CodegenType, true, MachineModInfoPass,
+                                          McInfos)) {
     // Release some of the AsyncValue memory to avoid
     // wrong version of LLVMContext destructor being called due to
     // multiple LLVM being statically linked in dylibs that have
     // access to this code path.
-    for (SymbolAndMCInfo *smcInfo : symbolAndMCInfos)
-      smcInfo->clear();
+    for (SymbolAndMCInfo *SmcInfo : SymbolAndMCInfos)
+      SmcInfo->clear();
 
-    return Error("failed to add to ObjectFile Print pass");
+    return make_error<StringError>("failed to add to ObjectFile Print pass",
+                                   inconvertibleErrorCode());
   }
 
-  const_cast<llvm::TargetLoweringObjectFile *>(
-      llvmTargetMachine.getObjFileLowering())
-      ->Initialize(machineModInfoPass->getMMI().getContext(), targetMachine);
+  std::unique_ptr<WritableMemoryBuffer> LinkedObj =
+      WritableMemoryBuffer::getNewUninitMemBuffer(Buf.size());
+  memcpy(LinkedObj->getBufferStart(), Buf.c_str(), Buf.size());
 
-  llvm::Module &moduleToRun = hasOneSplit ? *oneSplitModule : *linkedModule;
-  passMgr.run(moduleToRun);
+  const_cast<llvm::TargetLoweringObjectFile *>(
+      LLVMTgtMachine.getObjFileLowering())
+      ->Initialize(MachineModInfoPass->getMMI().getContext(), TgtMachine);
+
+  PassMgr.run(*LinkedModule);
 
   // Release some of the AsyncValue memory to avoid
   // wrong version of LLVMContext destructor being called due to
   // multiple LLVM being statically linked in dylibs that have
   // access to this code path.
-  for (SymbolAndMCInfo *smcInfo : symbolAndMCInfos)
-    smcInfo->clear();
+  for (SymbolAndMCInfo *SmcInfo : SymbolAndMCInfos)
+    SmcInfo->clear();
 
-  return linkedObj;
+  return LinkedObj;
 }
