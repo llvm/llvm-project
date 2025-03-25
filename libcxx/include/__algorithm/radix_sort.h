@@ -302,7 +302,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __shift_to_unsigned(_Ip __n) {
 }
 
 template <size_t _Size>
-struct __unsigned_integer_of_size {};
+struct __unsigned_integer_of_size;
 
 template <>
 struct __unsigned_integer_of_size<1> {
@@ -324,12 +324,12 @@ struct __unsigned_integer_of_size<8> {
   using type = uint64_t;
 };
 
+#  if _LIBCPP_HAS_INT128
 template <>
 struct __unsigned_integer_of_size<16> {
-#  if _LIBCPP_HAS_INT128
   using type = __int128;
-#  endif
 };
+#  endif
 
 template <size_t _Size>
 using __unsigned_integer_of_size_t _LIBCPP_NODEBUG = typename __unsigned_integer_of_size<_Size>::type;
