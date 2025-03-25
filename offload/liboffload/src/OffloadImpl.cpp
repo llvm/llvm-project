@@ -403,25 +403,30 @@ ol_impl_result_t olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
                                ol_device_handle_t SrcDevice, size_t Size,
                                ol_event_handle_t *EventOut) {
   if (DstDevice == HostDevice() && SrcDevice == HostDevice()) {
-    // TODO: We could actually handle this with a plain memcpy but we currently
-    // have no way of synchronizing this with the queue
-    return {OL_ERRC_INVALID_ARGUMENT,
-            "One of DstDevice and SrcDevice must be a non-host device"};
+    if (!Queue) {
+      std::memcpy(DstPtr, SrcPtr, Size);
+      return OL_SUCCESS;
+    } else {
+      return {OL_ERRC_INVALID_ARGUMENT,
+              "One of DstDevice and SrcDevice must be a non-host device if "
+              "Queue is specified"};
+    }
   }
 
+  // If no queue is given the memcpy will be synchronous
+  auto QueueImpl = Queue ? Queue->AsyncInfo : nullptr;
+
   if (DstDevice == HostDevice()) {
-    auto Res =
-        SrcDevice->Device->dataRetrieve(DstPtr, SrcPtr, Size, Queue->AsyncInfo);
+    auto Res = SrcDevice->Device->dataRetrieve(DstPtr, SrcPtr, Size, QueueImpl);
     if (Res)
       return {OL_ERRC_UNKNOWN, "The data retrieve operation failed"};
   } else if (SrcDevice == HostDevice()) {
-    auto Res =
-        DstDevice->Device->dataSubmit(DstPtr, SrcPtr, Size, Queue->AsyncInfo);
+    auto Res = DstDevice->Device->dataSubmit(DstPtr, SrcPtr, Size, QueueImpl);
     if (Res)
       return {OL_ERRC_UNKNOWN, "The data submit operation failed"};
   } else {
     auto Res = SrcDevice->Device->dataExchange(SrcPtr, *DstDevice->Device,
-                                               DstPtr, Size, Queue->AsyncInfo);
+                                               DstPtr, Size, QueueImpl);
     if (Res)
       return {OL_ERRC_UNKNOWN, "The data exchange operation failed"};
   }
@@ -490,14 +495,19 @@ ol_impl_result_t olDestroyKernel_impl(ol_kernel_handle_t Kernel) {
 }
 
 ol_impl_result_t
-olLaunchKernel_impl(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
-                    const void *ArgumentsData, size_t ArgumentsSize,
+olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
+                    ol_kernel_handle_t Kernel, const void *ArgumentsData,
+                    size_t ArgumentsSize,
                     const ol_kernel_launch_size_args_t *LaunchSizeArgs,
                     ol_event_handle_t *EventOut) {
-  auto *DeviceImpl = Queue->Device->Device;
+  auto *DeviceImpl = Device->Device;
+  if (Queue && Device != Queue->Device) {
+    return {OL_ERRC_INVALID_DEVICE,
+            "Device specified does not match the device of the given queue"};
+  }
 
-  AsyncInfoWrapperTy AsyncInfoWrapper(*DeviceImpl, Queue->AsyncInfo);
-
+  auto *QueueImpl = Queue ? Queue->AsyncInfo : nullptr;
+  AsyncInfoWrapperTy AsyncInfoWrapper(*DeviceImpl, QueueImpl);
   KernelArgsTy LaunchArgs{};
   LaunchArgs.NumTeams[0] = LaunchSizeArgs->NumGroupsX;
   LaunchArgs.NumTeams[1] = LaunchSizeArgs->NumGroupsY;

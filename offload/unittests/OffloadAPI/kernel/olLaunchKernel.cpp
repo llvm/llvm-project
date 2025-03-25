@@ -18,6 +18,14 @@ struct olLaunchKernelTest : OffloadQueueTest {
     ASSERT_SUCCESS(olCreateProgram(Device, DeviceBin->getBufferStart(),
                                    DeviceBin->getBufferSize(), &Program));
     ASSERT_SUCCESS(olCreateKernel(Program, "foo", &Kernel));
+    LaunchArgs.Dimensions = 1;
+    LaunchArgs.GroupSizeX = 64;
+    LaunchArgs.GroupSizeY = 1;
+    LaunchArgs.GroupSizeZ = 1;
+
+    LaunchArgs.NumGroupsX = 1;
+    LaunchArgs.NumGroupsY = 1;
+    LaunchArgs.NumGroupsZ = 1;
   }
 
   void TearDown() override {
@@ -33,29 +41,39 @@ struct olLaunchKernelTest : OffloadQueueTest {
   std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
   ol_program_handle_t Program = nullptr;
   ol_kernel_handle_t Kernel = nullptr;
+  ol_kernel_launch_size_args_t LaunchArgs{};
 };
 
 TEST_F(olLaunchKernelTest, Success) {
   void *Mem;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_SHARED, 64, &Mem));
-  ol_kernel_launch_size_args_t LaunchArgs{};
-  LaunchArgs.Dimensions = 1;
-  LaunchArgs.GroupSizeX = 64;
-  LaunchArgs.GroupSizeY = 1;
-  LaunchArgs.GroupSizeZ = 1;
+  struct {
+    void *Mem;
+  } Args{Mem};
 
-  LaunchArgs.NumGroupsX = 1;
-  LaunchArgs.NumGroupsY = 1;
-  LaunchArgs.NumGroupsZ = 1;
+  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
+                                &LaunchArgs, nullptr));
+
+  ASSERT_SUCCESS(olWaitQueue(Queue));
+
+  int *Data = (int *)Mem;
+  for (int i = 0; i < 64; i++) {
+    ASSERT_EQ(Data[i], i);
+  }
+
+  ASSERT_SUCCESS(olMemFree(Device, OL_ALLOC_TYPE_SHARED, Mem));
+}
+
+TEST_F(olLaunchKernelTest, SuccessSynchronous) {
+  void *Mem;
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_SHARED, 64, &Mem));
 
   struct {
     void *Mem;
   } Args{Mem};
 
-  ASSERT_SUCCESS(
-      olLaunchKernel(Queue, Kernel, &Args, sizeof(Args), &LaunchArgs, nullptr));
-
-  ASSERT_SUCCESS(olWaitQueue(Queue));
+  ASSERT_SUCCESS(olLaunchKernel(nullptr, Device, Kernel, &Args, sizeof(Args),
+                                &LaunchArgs, nullptr));
 
   int *Data = (int *)Mem;
   for (int i = 0; i < 64; i++) {

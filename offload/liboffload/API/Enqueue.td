@@ -15,10 +15,11 @@ def : Function {
     let desc = "Enqueue a memcpy operation.";
     let details = [
         "For host pointers, use the device returned by olGetHostDevice",
-        "At least one device must be a non-host device"
+        "If a queue is specified, at least one device must be a non-host device",
+        "If a queue is not specified, the memcpy happens synchronously"
     ];
     let params = [
-        Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
+        Param<"ol_queue_handle_t", "Queue", "handle of the queue.", PARAM_IN_OPTIONAL>,
         Param<"void*", "DstPtr", "pointer to copy to", PARAM_IN>,
         Param<"ol_device_handle_t", "DstDevice", "device that DstPtr belongs to", PARAM_IN>,
         Param<"void*", "SrcPtr", "pointer to copy from", PARAM_IN>,
@@ -27,7 +28,7 @@ def : Function {
         Param<"ol_event_handle_t*", "EventOut", "optional recorded event for the enqueued operation", PARAM_OUT_OPTIONAL>
     ];
     let returns = [
-        Return<"OL_ERRC_INVALID_SIZE", ["`Size == 0`"]>
+        Return<"OL_ERRC_INVALID_ARGUMENT", ["`Queue == NULL && EventOut != NULL`"]>
     ];
 }
 
@@ -48,14 +49,20 @@ def : Struct {
 def : Function {
     let name = "olLaunchKernel";
     let desc = "Enqueue a kernel launch with the specified size and parameters.";
-    let details = [];
+    let details = [
+        "If a queue is not specified, kernel execution happens synchronously"
+    ];
     let params = [
-        Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
+        Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN_OPTIONAL>,
+        Param<"ol_device_handle_t", "Device", "handle of the device to execute on", PARAM_IN>,
         Param<"ol_kernel_handle_t", "Kernel", "handle of the kernel", PARAM_IN>,
         Param<"const void*", "ArgumentsData", "pointer to the kernel argument struct", PARAM_IN>,
         Param<"size_t", "ArgumentsSize", "size of the kernel argument struct", PARAM_IN>,
         Param<"const ol_kernel_launch_size_args_t*", "LaunchSizeArgs", "pointer to the struct containing launch size parameters", PARAM_IN>,
         Param<"ol_event_handle_t*", "EventOut", "optional recorded event for the enqueued operation", PARAM_OUT_OPTIONAL>
     ];
-    let returns = [];
+    let returns = [
+        Return<"OL_ERRC_INVALID_ARGUMENT", ["`Queue == NULL && EventOut != NULL`"]>,
+        Return<"OL_ERRC_INVALID_DEVICE", ["If Queue is non-null but does not belong to Device"]>,
+    ];
 }

@@ -641,23 +641,23 @@ OL_APIEXPORT ol_result_t OL_APICALL olWaitEvent(
 ///
 /// @details
 ///    - For host pointers, use the device returned by olGetHostDevice
-///    - At least one device must be a non-host device
+///    - If a queue is specified, at least one device must be a non-host device
+///    - If a queue is not specified, the memcpy happens synchronously
 ///
 /// @returns
 ///     - ::OL_RESULT_SUCCESS
 ///     - ::OL_ERRC_UNINITIALIZED
 ///     - ::OL_ERRC_DEVICE_LOST
-///     - ::OL_ERRC_INVALID_SIZE
-///         + `Size == 0`
+///     - ::OL_ERRC_INVALID_ARGUMENT
+///         + `Queue == NULL && EventOut != NULL`
 ///     - ::OL_ERRC_INVALID_NULL_HANDLE
-///         + `NULL == Queue`
 ///         + `NULL == DstDevice`
 ///         + `NULL == SrcDevice`
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
 ///         + `NULL == DstPtr`
 ///         + `NULL == SrcPtr`
 OL_APIEXPORT ol_result_t OL_APICALL olMemcpy(
-    // [in] handle of the queue
+    // [in][optional] handle of the queue.
     ol_queue_handle_t Queue,
     // [in] pointer to copy to
     void *DstPtr,
@@ -688,20 +688,27 @@ typedef struct ol_kernel_launch_size_args_t {
 /// @brief Enqueue a kernel launch with the specified size and parameters.
 ///
 /// @details
+///    - If a queue is not specified, kernel execution happens synchronously
 ///
 /// @returns
 ///     - ::OL_RESULT_SUCCESS
 ///     - ::OL_ERRC_UNINITIALIZED
 ///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_ARGUMENT
+///         + `Queue == NULL && EventOut != NULL`
+///     - ::OL_ERRC_INVALID_DEVICE
+///         + If Queue is non-null but does not belong to Device
 ///     - ::OL_ERRC_INVALID_NULL_HANDLE
-///         + `NULL == Queue`
+///         + `NULL == Device`
 ///         + `NULL == Kernel`
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
 ///         + `NULL == ArgumentsData`
 ///         + `NULL == LaunchSizeArgs`
 OL_APIEXPORT ol_result_t OL_APICALL olLaunchKernel(
-    // [in] handle of the queue
+    // [in][optional] handle of the queue
     ol_queue_handle_t Queue,
+    // [in] handle of the device to execute on
+    ol_device_handle_t Device,
     // [in] handle of the kernel
     ol_kernel_handle_t Kernel,
     // [in] pointer to the kernel argument struct
@@ -943,6 +950,7 @@ typedef struct ol_memcpy_params_t {
 /// @details Each entry is a pointer to the parameter passed to the function;
 typedef struct ol_launch_kernel_params_t {
   ol_queue_handle_t *pQueue;
+  ol_device_handle_t *pDevice;
   ol_kernel_handle_t *pKernel;
   const void **pArgumentsData;
   size_t *pArgumentsSize;
@@ -1128,8 +1136,8 @@ OL_APIEXPORT ol_result_t OL_APICALL olMemcpyWithCodeLoc(
 /// information
 /// @details See also ::olLaunchKernel
 OL_APIEXPORT ol_result_t OL_APICALL olLaunchKernelWithCodeLoc(
-    ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
-    const void *ArgumentsData, size_t ArgumentsSize,
+    ol_queue_handle_t Queue, ol_device_handle_t Device,
+    ol_kernel_handle_t Kernel, const void *ArgumentsData, size_t ArgumentsSize,
     const ol_kernel_launch_size_args_t *LaunchSizeArgs,
     ol_event_handle_t *EventOut, ol_code_location_t *CodeLocation);
 
