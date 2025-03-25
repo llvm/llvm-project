@@ -2258,7 +2258,7 @@ TEST(CrossFileRenameTests, adjustRenameRanges) {
     SCOPED_TRACE(T.DraftCode);
     Annotations Draft(T.DraftCode);
     auto ActualRanges = adjustRenameRanges(
-        Draft.code(), tooling::SymbolName("x", /*IsObjectiveCSelector=*/false),
+        Draft.code(), RenameSymbolName(ArrayRef<std::string>{"x"}),
         Annotations(T.IndexedCode).ranges(), LangOpts);
     if (!ActualRanges)
        EXPECT_THAT(Draft.ranges(), testing::IsEmpty());

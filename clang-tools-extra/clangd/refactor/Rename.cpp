@@ -18,9 +18,11 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DeclarationName.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/CharInfo.h"
@@ -599,11 +601,12 @@ bool isMatchingSelectorName(const syntax::Token &Cur, const syntax::Token &Next,
 // The search will terminate upon seeing Terminator or a ; at the top level.
 std::optional<SymbolRange>
 findAllSelectorPieces(llvm::ArrayRef<syntax::Token> Tokens,
-                      const SourceManager &SM, const SymbolName &Name,
+                      const SourceManager &SM, const RenameSymbolName &Name,
                       tok::TokenKind Terminator) {
   assert(!Tokens.empty());
 
-  unsigned NumArgs = Name.getNamePieces().size();
+  ArrayRef<std::string> NamePieces = Name.getNamePieces();
+  unsigned NumArgs = NamePieces.size();
   llvm::SmallVector<tok::TokenKind, 8> Closes;
   std::vector<Range> SelectorPieces;
   for (unsigned Index = 0, Last = Tokens.size(); Index < Last - 1; ++Index) {
@@ -613,12 +616,12 @@ findAllSelectorPieces(llvm::ArrayRef<syntax::Token> Tokens,
       auto PieceCount = SelectorPieces.size();
       if (PieceCount < NumArgs &&
           isMatchingSelectorName(Tok, Tokens[Index + 1], SM,
-                                 Name.getNamePieces()[PieceCount])) {
+                                 NamePieces[PieceCount])) {
         // If 'foo:' instead of ':' (empty selector), we need to skip the ':'
         // token after the name. We don't currently properly support empty
         // selectors since we may lex them improperly due to ternary statements
         // as well as don't properly support storing their ranges for edits.
-        if (!Name.getNamePieces()[PieceCount].empty())
+        if (!NamePieces[PieceCount].empty())
           ++Index;
         SelectorPieces.push_back(
             halfOpenToRange(SM, Tok.range(SM).toCharRange(SM)));
@@ -674,7 +677,7 @@ findAllSelectorPieces(llvm::ArrayRef<syntax::Token> Tokens,
 /// source code in order to identify all selector fragments (e.g. in method
 /// exprs/decls) since they are non-contiguous.
 std::vector<SymbolRange>
-collectRenameIdentifierRanges(const tooling::SymbolName &Name,
+collectRenameIdentifierRanges(const RenameSymbolName &Name,
                               llvm::StringRef Content,
                               const LangOptions &LangOpts) {
   std::vector<SymbolRange> Ranges;
@@ -782,7 +785,7 @@ renameObjCMethodWithinFile(ParsedAST &AST, const ObjCMethodDecl *MD,
     Ranges.push_back(tokenRangeForLoc(AST, Loc, SM, LangOpts));
   auto FilePath = AST.tuPath();
   auto RenameRanges = collectRenameIdentifierRanges(
-      SymbolName(MD->getDeclName()), Code, LangOpts);
+      RenameSymbolName(MD->getDeclName()), Code, LangOpts);
   auto RenameEdit = buildRenameEdit(FilePath, Code, RenameRanges, NewNames);
   if (!RenameEdit)
     return error("failed to rename in file {0}: {1}", FilePath,
@@ -944,7 +947,7 @@ renameOutsideFile(const NamedDecl &RenameDecl, llvm::StringRef MainFilePath,
            ExpBuffer.getError().message());
       continue;
     }
-    SymbolName RenameName(RenameDecl.getDeclName());
+    RenameSymbolName RenameName(RenameDecl.getDeclName());
     llvm::SmallVector<llvm::StringRef, 8> NewNames;
     NewName.split(NewNames, ":");
 
@@ -1012,6 +1015,50 @@ void findNearMiss(
 
 } // namespace
 
+RenameSymbolName::RenameSymbolName() : NamePieces({}) {}
+
+namespace {
+std::vector<std::string> extractNamePieces(const DeclarationName &DeclName) {
+  if (DeclName.getNameKind() ==
+          DeclarationName::NameKind::ObjCMultiArgSelector ||
+      DeclName.getNameKind() == DeclarationName::NameKind::ObjCOneArgSelector) {
+    const Selector &Sel = DeclName.getObjCSelector();
+    std::vector<std::string> Result;
+    for (unsigned Slot = 0; Slot < Sel.getNumArgs(); ++Slot) {
+      Result.push_back(Sel.getNameForSlot(Slot).str());
+    }
+    return Result;
+  }
+  return {DeclName.getAsString()};
+}
+} // namespace
+
+RenameSymbolName::RenameSymbolName(const DeclarationName &DeclName)
+    : RenameSymbolName(extractNamePieces(DeclName)) {}
+
+RenameSymbolName::RenameSymbolName(ArrayRef<std::string> NamePieces) {
+  for (const auto &Piece : NamePieces)
+    this->NamePieces.push_back(Piece);
+}
+
+std::optional<std::string> RenameSymbolName::getSinglePiece() const {
+  if (getNamePieces().size() == 1) {
+    return NamePieces.front();
+  }
+  return std::nullopt;
+}
+
+std::string RenameSymbolName::getAsString() const {
+  std::string Result;
+  llvm::raw_string_ostream OS(Result);
+  this->print(OS);
+  return Result;
+}
+
+void RenameSymbolName::print(raw_ostream &OS) const {
+  llvm::interleave(NamePieces, OS, ":");
+}
+
 SymbolRange::SymbolRange(Range R) : Ranges({R}) {}
 
 SymbolRange::SymbolRange(std::vector<Range> Ranges)
@@ -1047,8 +1094,9 @@ editsForLocations(const llvm::StringMap<std::vector<Range>> &Ranges,
     llvm::SmallVector<llvm::StringRef, 8> NewNames(NewName.getNamePieces());
 
     auto AffectedFileCode = (*ExpBuffer)->getBuffer();
+    auto OldNameRenameSymbolName = RenameSymbolName(OldName.getNamePieces());
     auto RenameRanges =
-        adjustRenameRanges(AffectedFileCode, OldName,
+        adjustRenameRanges(AffectedFileCode, OldNameRenameSymbolName,
                            std::move(FileAndOccurrences.second), LangOpts);
     if (!RenameRanges) {
       // Our heuristics fails to adjust rename ranges to the current state of
@@ -1279,7 +1327,7 @@ llvm::Expected<Edit> buildRenameEdit(llvm::StringRef AbsFilePath,
 //          were inserted). If such a "near miss" is found, the rename is still
 //          possible
 std::optional<std::vector<SymbolRange>>
-adjustRenameRanges(llvm::StringRef DraftCode, const tooling::SymbolName &Name,
+adjustRenameRanges(llvm::StringRef DraftCode, const RenameSymbolName &Name,
                    std::vector<Range> Indexed, const LangOptions &LangOpts) {
   trace::Span Tracer("AdjustRenameRanges");
   assert(!Indexed.empty());
