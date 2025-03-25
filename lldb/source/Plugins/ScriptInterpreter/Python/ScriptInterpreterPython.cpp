@@ -1267,8 +1267,8 @@ Status ScriptInterpreterPythonImpl::ExportFunctionDefinitionToInterpreter(
     StringList &function_def) {
   // Convert StringList to one long, newline delimited, const char *.
   std::string function_def_string(function_def.CopyList());
-  LLDB_LOG(GetLog(LLDBLog::Script), "Added Function:\n%s\n", 
-      function_def_string.c_str());
+  LLDB_LOG(GetLog(LLDBLog::Script), "Added Function:\n%s\n",
+           function_def_string.c_str());
 
   Status error = ExecuteMultipleLines(
       function_def_string.c_str(), ExecuteScriptOptions().SetEnableIO(false));

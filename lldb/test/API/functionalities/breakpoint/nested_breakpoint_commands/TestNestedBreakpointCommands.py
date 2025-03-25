@@ -25,8 +25,7 @@ class TestNestedBreakpointCommands(TestBase):
         )
 
         outer_bkpt = target.BreakpointCreateBySourceRegex(
-            "Set outer breakpoint here",
-            self.main_source_file
+            "Set outer breakpoint here", self.main_source_file
         )
         cmd_file_path = os.path.join(self.getSourceDir(), f"{self.callback_module}.py")
         self.runCmd(f"command script import {cmd_file_path}")
@@ -34,7 +33,9 @@ class TestNestedBreakpointCommands(TestBase):
 
         process.Continue()
 
-        self.assertEqual(thread.stop_reason, lldb.eStopReasonBreakpoint, "Right stop reason")
+        self.assertEqual(
+            thread.stop_reason, lldb.eStopReasonBreakpoint, "Right stop reason"
+        )
 
         bkpt_no = thread.stop_reason_data[0]
 
