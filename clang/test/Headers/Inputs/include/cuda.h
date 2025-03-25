@@ -120,10 +120,17 @@ struct double4 {
 };
 
 typedef unsigned long long cudaTextureObject_t;
+typedef unsigned long long cudaSurfaceObject_t;
 
 enum cudaTextureReadMode {
   cudaReadModeNormalizedFloat,
   cudaReadModeElementType
+};
+
+enum cudaSurfaceBoundaryMode {
+  cudaBoundaryModeZero,
+  cudaBoundaryModeClamp,
+  cudaBoundaryModeTrap
 };
 
 enum {
