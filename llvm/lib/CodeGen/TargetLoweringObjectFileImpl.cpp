@@ -2289,25 +2289,6 @@ bool TargetLoweringObjectFileWasm::shouldPutJumpTableInFunctionSection(
   return false;
 }
 
-const MCExpr *TargetLoweringObjectFileWasm::lowerRelativeReference(
-    const GlobalValue *LHS, const GlobalValue *RHS,
-    const TargetMachine &TM) const {
-  // We may only use a PLT-relative relocation to refer to unnamed_addr
-  // functions.
-  if (!LHS->hasGlobalUnnamedAddr() || !LHS->getValueType()->isFunctionTy())
-    return nullptr;
-
-  // Basic correctness checks.
-  if (LHS->getType()->getPointerAddressSpace() != 0 ||
-      RHS->getType()->getPointerAddressSpace() != 0 || LHS->isThreadLocal() ||
-      RHS->isThreadLocal())
-    return nullptr;
-
-  return MCBinaryExpr::createSub(
-      MCSymbolRefExpr::create(TM.getSymbol(LHS), getContext()),
-      MCSymbolRefExpr::create(TM.getSymbol(RHS), getContext()), getContext());
-}
-
 void TargetLoweringObjectFileWasm::InitializeWasm() {
   StaticCtorSection =
       getContext().getWasmSection(".init_array", SectionKind::getData());
@@ -2633,13 +2614,6 @@ MCSection *TargetLoweringObjectFileXCOFF::getStaticCtorSection(
 MCSection *TargetLoweringObjectFileXCOFF::getStaticDtorSection(
 	unsigned Priority, const MCSymbol *KeySym) const {
   report_fatal_error("no static destructor section on AIX");
-}
-
-const MCExpr *TargetLoweringObjectFileXCOFF::lowerRelativeReference(
-    const GlobalValue *LHS, const GlobalValue *RHS,
-    const TargetMachine &TM) const {
-  /* Not implemented yet, but don't crash, return nullptr. */
-  return nullptr;
 }
 
 XCOFF::StorageClass

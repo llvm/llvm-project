@@ -4078,6 +4078,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
   }
 
   bool InFunctionDecl = Line.MightBeFunctionDecl;
+  bool InParameterList = false;
   for (auto *Current = First->Next; Current; Current = Current->Next) {
     const FormatToken *Prev = Current->Previous;
     if (Current->is(TT_LineComment)) {
@@ -4132,6 +4133,19 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
 
     Current->CanBreakBefore =
         Current->MustBreakBefore || canBreakBefore(Line, *Current);
+
+    if (Current->is(TT_FunctionDeclarationLParen)) {
+      InParameterList = true;
+    } else if (Current->is(tok::r_paren)) {
+      const auto *LParen = Current->MatchingParen;
+      if (LParen && LParen->is(TT_FunctionDeclarationLParen))
+        InParameterList = false;
+    } else if (InParameterList &&
+               Current->endsSequence(TT_AttributeMacro,
+                                     TT_PointerOrReference)) {
+      Current->CanBreakBefore = false;
+    }
+
     unsigned ChildSize = 0;
     if (Prev->Children.size() == 1) {
       FormatToken &LastOfChild = *Prev->Children[0]->Last;

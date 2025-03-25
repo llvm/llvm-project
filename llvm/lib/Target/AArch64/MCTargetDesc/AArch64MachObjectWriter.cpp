@@ -222,7 +222,6 @@ void AArch64MachObjectWriter::recordRelocation(
     // Ltmp0:
     //    ... _foo@got - Ltmp0
     if (Target.getSymA()->getKind() == MCSymbolRefExpr::VK_GOT &&
-        Target.getSymB()->getKind() == MCSymbolRefExpr::VK_None &&
         Asm.getSymbolOffset(*B) ==
             Asm.getFragmentOffset(*Fragment) + Fixup.getOffset()) {
       // SymB is the PC, so use a PC-rel pointer-to-GOT relocation.
@@ -233,8 +232,7 @@ void AArch64MachObjectWriter::recordRelocation(
       MRE.r_word1 = (IsPCRel << 24) | (Log2Size << 25) | (Type << 28);
       Writer->addRelocation(A_Base, Fragment->getParent(), MRE);
       return;
-    } else if (Target.getSymA()->getKind() != MCSymbolRefExpr::VK_None ||
-               Target.getSymB()->getKind() != MCSymbolRefExpr::VK_None) {
+    } else if (Target.getSymA()->getKind() != MCSymbolRefExpr::VK_None) {
       // Otherwise, neither symbol can be modified.
       Asm.getContext().reportError(Fixup.getLoc(),
                                    "unsupported relocation of modified symbol");
@@ -411,7 +409,7 @@ void AArch64MachObjectWriter::recordRelocation(
       return;
     }
 
-    if (Target.getSymB()) {
+    if (Target.getSubSym()) {
       Asm.getContext().reportError(
           Fixup.getLoc(),
           "invalid auth relocation, can't reference two symbols");

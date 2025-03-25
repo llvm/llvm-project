@@ -5310,12 +5310,11 @@ getShuffleCost(const TargetTransformInfo &TTI, TTI::ShuffleKind Kind,
 /// This is similar to TargetTransformInfo::getScalarizationOverhead, but if
 /// ScalarTy is a FixedVectorType, a vector will be inserted or extracted
 /// instead of a scalar.
-static InstructionCost getScalarizationOverhead(const TargetTransformInfo &TTI,
-                                                Type *ScalarTy, VectorType *Ty,
-                                                const APInt &DemandedElts,
-                                                bool Insert, bool Extract,
-                                                TTI::TargetCostKind CostKind,
-                                                ArrayRef<Value *> VL = {}) {
+static InstructionCost
+getScalarizationOverhead(const TargetTransformInfo &TTI, Type *ScalarTy,
+                         VectorType *Ty, const APInt &DemandedElts, bool Insert,
+                         bool Extract, TTI::TargetCostKind CostKind,
+                         bool ForPoisonSrc = true, ArrayRef<Value *> VL = {}) {
   assert(!isa<ScalableVectorType>(Ty) &&
          "ScalableVectorType is not supported.");
   assert(getNumElements(ScalarTy) * DemandedElts.getBitWidth() ==
@@ -5339,8 +5338,26 @@ static InstructionCost getScalarizationOverhead(const TargetTransformInfo &TTI,
     }
     return Cost;
   }
-  return TTI.getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
-                                      CostKind, VL);
+  APInt NewDemandedElts = DemandedElts;
+  InstructionCost Cost = 0;
+  if (!ForPoisonSrc && Insert) {
+    // Handle insert into non-poison vector.
+    // TODO: Need to teach getScalarizationOverhead about insert elements into
+    // non-poison input vector to better handle such cases. Currently, it is
+    // very conservative and may "pessimize" the vectorization.
+    for (unsigned I : seq(DemandedElts.getBitWidth())) {
+      if (!DemandedElts[I])
+        continue;
+      Cost += TTI.getVectorInstrCost(Instruction::InsertElement, Ty, CostKind,
+                                     I, Constant::getNullValue(Ty),
+                                     VL.empty() ? nullptr : VL[I]);
+    }
+    NewDemandedElts.clearAllBits();
+  } else if (!NewDemandedElts.isZero()) {
+    Cost += TTI.getScalarizationOverhead(Ty, NewDemandedElts, Insert, Extract,
+                                         CostKind, VL);
+  }
+  return Cost;
 }
 
 /// Correctly creates insert_subvector, checking that the index is multiple of
@@ -11684,6 +11701,15 @@ public:
     // No need to delay the cost estimation during analysis.
     return std::nullopt;
   }
+  /// Reset the builder to handle perfect diamond match.
+  void resetForSameNode() {
+    IsFinalized = false;
+    CommonMask.clear();
+    InVectors.clear();
+    Cost = 0;
+    VectorizedVals.clear();
+    SameNodesEstimated = true;
+  }
   void add(const TreeEntry &E1, const TreeEntry &E2, ArrayRef<int> Mask) {
     if (&E1 == &E2) {
       assert(all_of(Mask,
@@ -14890,15 +14916,18 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
     ShuffledElements.setBit(I);
     ShuffleMask[I] = Res.first->second;
   }
-  if (!DemandedElements.isZero())
-    Cost += getScalarizationOverhead(*TTI, ScalarTy, VecTy, DemandedElements,
-                                     /*Insert=*/true,
-                                     /*Extract=*/false, CostKind, VL);
-  if (ForPoisonSrc)
+  if (ForPoisonSrc) {
     Cost = getScalarizationOverhead(*TTI, ScalarTy, VecTy,
                                     /*DemandedElts*/ ~ShuffledElements,
                                     /*Insert*/ true,
-                                    /*Extract*/ false, CostKind, VL);
+                                    /*Extract*/ false, CostKind,
+                                    /*ForPoisonSrc=*/true, VL);
+  } else if (!DemandedElements.isZero()) {
+    Cost += getScalarizationOverhead(*TTI, ScalarTy, VecTy, DemandedElements,
+                                     /*Insert=*/true,
+                                     /*Extract=*/false, CostKind,
+                                     /*ForPoisonSrc=*/false, VL);
+  }
   if (DuplicateNonConst)
     Cost += ::getShuffleCost(*TTI, TargetTransformInfo::SK_PermuteSingleSrc,
                              VecTy, ShuffleMask);
@@ -15556,6 +15585,12 @@ public:
         PoisonValue::get(PointerType::getUnqual(ScalarTy->getContext())),
         MaybeAlign());
   }
+  /// Reset the builder to handle perfect diamond match.
+  void resetForSameNode() {
+    IsFinalized = false;
+    CommonMask.clear();
+    InVectors.clear();
+  }
   /// Adds 2 input vectors (in form of tree entries) and the mask for their
   /// shuffling.
   void add(const TreeEntry &E1, const TreeEntry &E2, ArrayRef<int> Mask) {
@@ -16111,6 +16146,9 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
             Mask[I] = FrontTE->findLaneForValue(V);
           }
         }
+        // Reset the builder(s) to correctly handle perfect diamond matched
+        // nodes.
+        ShuffleBuilder.resetForSameNode();
         ShuffleBuilder.add(*FrontTE, Mask);
         // Full matched entry found, no need to insert subvectors.
         Res = ShuffleBuilder.finalize(E->getCommonMask(), {}, {});

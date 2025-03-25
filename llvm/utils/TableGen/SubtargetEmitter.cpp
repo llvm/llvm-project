@@ -1245,7 +1245,7 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
             PrintFatalError(
                 WriteRes->getLoc(),
                 Twine("Inconsistent resource cycles: AcquireAtCycles "
-                      "< ReleaseAtCycles must hold."));
+                      "<= ReleaseAtCycles must hold."));
           }
           if (AcquireAtCycles[PRIdx] < 0) {
             PrintFatalError(WriteRes->getLoc(),

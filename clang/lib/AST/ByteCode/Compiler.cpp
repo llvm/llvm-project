@@ -4033,6 +4033,9 @@ template <class Emitter> bool Compiler<Emitter>::visitBool(const Expr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
                                              const Expr *E) {
+  if (const auto *AT = QT->getAs<AtomicType>())
+    QT = AT->getValueType();
+
   switch (T) {
   case PT_Bool:
     return this->emitZeroBool(E);

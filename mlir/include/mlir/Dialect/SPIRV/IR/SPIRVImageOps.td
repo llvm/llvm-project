@@ -15,6 +15,7 @@
 #define MLIR_DIALECT_SPIRV_IR_IMAGE_OPS
 
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
+include "mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // -----
@@ -48,14 +49,19 @@ class SPIRV_DimIsNot<string operand, list<string> values, string transform="$_se
 
 class SPIRV_NoneOrElementMatchImage<string operand, string image, string transform="$_self"> : PredOpTrait<
   "the " # operand # " component type must match the image sampled type",
-  CPred<"::llvm::isa<NoneType>(cast<ImageType>(" # !subst("$_self", "$" # image # ".getType()", transform) # ").getElementType()) ||"
+  CPred<"::llvm::isa<NoneType>(cast<::mlir::spirv::ImageType>(" # !subst("$_self", "$" # image # ".getType()", transform) # ").getElementType()) ||"
         "(getElementTypeOrSelf($" # operand # ")"
           "=="
-        "cast<ImageType>(" # !subst("$_self", "$" # image # ".getType()", transform) # ").getElementType())"
+        "cast<::mlir::spirv::ImageType>(" # !subst("$_self", "$" # image # ".getType()", transform) # ").getElementType())"
   >
 >;
 
-def SPIRV_SampledImageTransform : StrFunc<"llvm::cast<spirv::SampledImageType>($_self).getImageType()">;
+class SPIRV_ImageOperandIsPresent<string operand, list<string> values> : PredOpTrait<
+  "either " # !interleave(values, " or ") # " image operands must be present",
+  CPred<"::mlir::spirv::bitEnumContainsAny($" # operand # ", " # "::mlir::spirv::ImageOperands::" # !interleave(values, " | ::mlir::spirv::ImageOperands::") # ")">
+>;
+
+def SPIRV_SampledImageTransform : StrFunc<"llvm::cast<::mlir::spirv::SampledImageType>($_self).getImageType()">;
 
 // -----
 
@@ -89,7 +95,7 @@ def SPIRV_ImageDrefGatherOp : SPIRV_Op<"ImageDrefGather",
 
     ```mlir
     %0 = spirv.ImageDrefGather %1, %2, %3 : !spirv.sampled_image<!spirv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, vector<4xf32>, f32 -> vector<4xi32>
-    %0 = spirv.ImageDrefGather %1, %2, %3 : !spirv.sampled_image<!spirv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, vector<4xf32>, f32 ["NonPrivateTexel"] -> vector<4xi32>
+    %0 = spirv.ImageDrefGather %1, %2, %3 ["NonPrivateTexel"] : !spirv.sampled_image<!spirv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, vector<4xf32>, f32 -> vector<4xi32>
     ```
   }];
 
@@ -114,8 +120,8 @@ def SPIRV_ImageDrefGatherOp : SPIRV_Op<"ImageDrefGather",
 
 
   let assemblyFormat = [{
-    $sampled_image `,` $coordinate `,` $dref custom<ImageOperands>($image_operands) ( `(` $operand_arguments^ `)` )? attr-dict 
-    `:` type($sampled_image) `,` type($coordinate) `,` type($dref) ( `(` type($operand_arguments)^ `)` )?
+    $sampled_image `,` $coordinate `,` $dref custom<ImageOperands>($image_operands) ( `,` $operand_arguments^ )? attr-dict
+    `:` type($sampled_image) `,` type($coordinate) `,` type($dref) ( `,` type($operand_arguments)^ )?
     `->` type($result) 
   }];
 
@@ -226,8 +232,8 @@ def SPIRV_ImageWriteOp : SPIRV_Op<"ImageWrite",
   let results = (outs);
 
   let assemblyFormat = [{
-    $image `,` $coordinate `,` $texel custom<ImageOperands>($image_operands) ( `(` $operand_arguments^ `)`)? attr-dict
-    `:` type($image) `,` type($coordinate) `,` type($texel) ( `(` type($operand_arguments)^ `)`)?
+    $image `,` $coordinate `,` $texel custom<ImageOperands>($image_operands) ( `,` $operand_arguments^ )? attr-dict
+    `:` type($image) `,` type($coordinate) `,` type($texel) ( `,` type($operand_arguments)^ )?
   }];
 }
 
@@ -268,4 +274,214 @@ def SPIRV_ImageOp : SPIRV_Op<"Image",
   let hasVerifier = 0;
 }
 
-#endif // MLIR_DIALECT_SPIRV_IR_GL_OPS
+// -----
+
+def SPIRV_ImageSampleExplicitLodOp : SPIRV_Op<"ImageSampleExplicitLod",
+    [SPIRV_DimIsNot<"sampled_image", ["Buffer"], SPIRV_SampledImageTransform.result>,
+     SPIRV_MSOperandIs<"sampled_image", ["SingleSampled"], SPIRV_SampledImageTransform.result>,
+     SPIRV_NoneOrElementMatchImage<"result", "sampled_image", SPIRV_SampledImageTransform.result>,
+     SPIRV_ImageOperandIsPresent<"image_operands", ["Lod", "Grad"]>,
+     DeclareOpInterfaceMethods<SPIRV_ExplicitLodOpInterface>]> {
+  let summary = "Sample an image using an explicit level of detail.";
+
+  let description = [{
+    Result Type must be a vector of four components of floating-point type
+    or integer type. Its components must be the same as Sampled Type of the
+    underlying OpTypeImage (unless that underlying Sampled Type is
+    OpTypeVoid).
+
+    Sampled Image must be an object whose type is OpTypeSampledImage. Its
+    OpTypeImage must not have a Dim of Buffer. The MS operand of the
+    underlying OpTypeImage must be 0.
+
+    Coordinate must be a scalar or vector of floating-point type or integer
+    type. It contains (u[, v] ... [, array layer]) as needed by the
+    definition of Sampled Image. Unless the Kernel capability is declared,
+    it must be floating point. It may be a vector larger than needed, but
+    all unused components appear after all used components.
+
+    Image Operands encodes what operands follow, as per Image Operands.
+    Either Lod or Grad image operands must be present.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %result = spirv.ImageSampleExplicitLod %image, %coord ["Lod"](%lod) :
+      !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>>,
+      vector<2xf32> (f32) -> vector<4xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_AnySampledImage:$sampled_image,
+    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>]>:$coordinate,
+    SPIRV_ImageOperandsAttr:$image_operands,
+    Variadic<SPIRV_Type>:$operand_arguments
+  );
+
+  let results = (outs
+    AnyTypeOf<[SPIRV_Vec4<SPIRV_Integer>, SPIRV_Vec4<SPIRV_Float>]>:$result
+  );
+
+  let assemblyFormat = [{
+    $sampled_image `,` $coordinate custom<ImageOperands>($image_operands) ( `,` $operand_arguments^ )? attr-dict
+      `:` type($sampled_image) `,` type($coordinate) ( `,` type($operand_arguments)^ )?
+      `->` type($result)
+  }];
+}
+
+// -----
+
+def SPIRV_ImageSampleImplicitLodOp : SPIRV_Op<"ImageSampleImplicitLod",
+    [SPIRV_DimIsNot<"sampled_image", ["Buffer"], SPIRV_SampledImageTransform.result>,
+     SPIRV_MSOperandIs<"sampled_image", ["SingleSampled"], SPIRV_SampledImageTransform.result>,
+     SPIRV_NoneOrElementMatchImage<"result", "sampled_image", SPIRV_SampledImageTransform.result>,
+     DeclareOpInterfaceMethods<SPIRV_ImplicitLodOpInterface>]> {
+  let summary = "Sample an image with an implicit level of detail.";
+
+  let description = [{
+    An invocation will not execute a dynamic instance of this instruction
+    (X') until all invocations in its derivative group have executed all
+    dynamic instances that are program-ordered before X'.
+
+    Result Type must be a vector of four components of floating-point type
+    or integer type. Its components must be the same as Sampled Type of the
+    underlying OpTypeImage (unless that underlying Sampled Type is
+    OpTypeVoid).
+
+    Sampled Image must be an object whose type is OpTypeSampledImage. Its
+    OpTypeImage must not have a Dim of Buffer. The MS operand of the
+    underlying OpTypeImage must be 0.
+
+    Coordinate must be a scalar or vector of floating-point type. It
+    contains (u[, v] ... [, array layer]) as needed by the definition of
+    Sampled Image. It may be a vector larger than needed, but all unused
+    components appear after all used components.
+
+    Image Operands encodes what operands follow, as per Image Operands.
+
+    This instruction is only valid in the Fragment Execution Model. In
+    addition, it consumes an implicit derivative that can be affected by
+    code motion.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %result = spirv.ImageSampleImplicitLod %image, %coord :
+      !spirv.sampled_image<!spirv.image<f32, Cube, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>>,
+      vector<3xf32> -> vector<4xf32>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Shader]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnySampledImage:$sampled_image,
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$coordinate,
+    OptionalAttr<SPIRV_ImageOperandsAttr>:$image_operands,
+    Variadic<SPIRV_Type>:$operand_arguments
+  );
+
+  let results = (outs
+    AnyTypeOf<[SPIRV_Vec4<SPIRV_Integer>, SPIRV_Vec4<SPIRV_Float>]>:$result
+  );
+
+  let assemblyFormat = [{
+    $sampled_image `,` $coordinate custom<ImageOperands>($image_operands) ( `,` $operand_arguments^ )? attr-dict
+      `:` type($sampled_image) `,` type($coordinate) ( `,` type($operand_arguments)^ )?
+      `->` type($result)
+  }];
+}
+
+// -----
+
+def SPIRV_ImageSampleProjDrefImplicitLodOp : SPIRV_Op<"ImageSampleProjDrefImplicitLod",
+    [SPIRV_DimIsNot<"sampled_image", ["Buffer"], SPIRV_SampledImageTransform.result>,
+     SPIRV_MSOperandIs<"sampled_image", ["SingleSampled"], SPIRV_SampledImageTransform.result>,
+     TypesMatchWith<"type of 'result' matches image type of 'sampled_image'",
+                    "sampled_image", "result",
+                    "::llvm::cast<::mlir::spirv::ImageType>(::llvm::cast<spirv::SampledImageType>($_self).getImageType()).getElementType()">,
+     DeclareOpInterfaceMethods<SPIRV_ImplicitLodOpInterface>]> {
+
+  let summary = [{
+    Sample an image with a project coordinate, doing depth-comparison, with
+    an implicit level of detail.
+  }];
+
+  let description = [{
+    An invocation will not execute a dynamic instance of this instruction
+    (X') until all invocations in its derivative group have executed all
+    dynamic instances that are program-ordered before X'.
+
+    Result Type must be a scalar of integer type or floating-point type. It
+    must be the same as Sampled Type of the underlying OpTypeImage.
+
+    Sampled Image must be an object whose type is OpTypeSampledImage. The
+    Dim operand of the underlying OpTypeImage must be 1D, 2D, 3D, or Rect,
+    and the Arrayed and MS operands must be 0.
+
+    Coordinate must be a vector of floating-point type. It contains (u[,
+    v] [, w], q), as needed by the definition of Sampled Image, with the q
+    component consumed for the projective division. That is, the actual
+    sample coordinate is (u/q [, v/q] [, w/q]), as needed by the definition
+    of Sampled Image. It may be a vector larger than needed, but all unused
+    components appear after all used components.
+
+    Dref/q is the depth-comparison reference value. Dref must be a 32-bit
+    floating-point type scalar.
+
+    Image Operands encodes what operands follow, as per Image Operands.
+
+    This instruction is only valid in the Fragment Execution Model. In
+    addition, it consumes an implicit derivative that can be affected by
+    code motion.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %result = spirv.ImageSampleProjDrefImplicitLod %image, %coord, %dref :
+      !spirv.sampled_image<!spirv.image<f32, Dim2D, IsDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>>,
+      vector<4xf16>, f32 -> f32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Shader]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnySampledImage:$sampled_image,
+    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>]>:$coordinate,
+    SPIRV_Float32:$dref,
+    OptionalAttr<SPIRV_ImageOperandsAttr>:$image_operands,
+    Variadic<SPIRV_Type>:$operand_arguments
+  );
+
+  let results = (outs
+    AnyTypeOf<[SPIRV_Integer, SPIRV_Float]>:$result
+  );
+
+  let assemblyFormat = [{
+    $sampled_image `,` $coordinate `,` $dref custom<ImageOperands>($image_operands) ( `,` $operand_arguments^ )? attr-dict
+      `:` type($sampled_image) `,` type($coordinate) `,` type($dref) ( `,` type($operand_arguments)^ )?
+      `->` type($result)
+  }];
+}
+
+// -----
+
+#endif // MLIR_DIALECT_SPIRV_IR_IMAGE_OPS

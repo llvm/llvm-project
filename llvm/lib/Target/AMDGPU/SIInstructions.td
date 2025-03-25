@@ -245,6 +245,12 @@ def S_INVERSE_BALLOT_U64 : SPseudoInstSI<
 >;
 } // End usesCustomInserter = 1
 
+let WaveSizePredicate = isWave32 in
+  def : GCNPat <
+    (i1 (int_amdgcn_inverse_ballot i64:$src)),
+    (S_INVERSE_BALLOT_U32 (i32 (EXTRACT_SUBREG SReg_64:$src, sub0)))
+>;
+
 // Pseudo instructions used for @llvm.fptrunc.round. The final codegen is done
 // in the ModeRegister pass.
 let Uses = [MODE, EXEC] in {

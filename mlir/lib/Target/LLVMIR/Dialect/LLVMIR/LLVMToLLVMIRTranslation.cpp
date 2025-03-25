@@ -526,6 +526,31 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     return success();
   }
 
+  // Emit dso_local_equivalent. We need to look up the global value referenced
+  // by the operation and store it in the MLIR-to-LLVM value mapping.
+  if (auto dsoLocalEquivalentOp =
+          dyn_cast<LLVM::DSOLocalEquivalentOp>(opInst)) {
+    LLVM::LLVMFuncOp function =
+        dsoLocalEquivalentOp.getFunction(moduleTranslation.symbolTable());
+    LLVM::AliasOp alias =
+        dsoLocalEquivalentOp.getAlias(moduleTranslation.symbolTable());
+
+    // The verifier should not have allowed this.
+    assert((function || alias) &&
+           "referencing an undefined function, or alias");
+
+    llvm::Value *llvmValue = nullptr;
+    if (alias)
+      llvmValue = moduleTranslation.lookupAlias(alias);
+    else
+      llvmValue = moduleTranslation.lookupFunction(function.getName());
+
+    moduleTranslation.mapValue(
+        dsoLocalEquivalentOp.getResult(),
+        llvm::DSOLocalEquivalent::get(cast<llvm::GlobalValue>(llvmValue)));
+    return success();
+  }
+
   return failure();
 }
 

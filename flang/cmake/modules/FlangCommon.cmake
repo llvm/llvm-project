@@ -37,11 +37,3 @@ check_c_source_compiles(
    int main() { return 0; }
   "
   HAVE_LDBL_MANT_DIG_113)
-
-include(TestBigEndian)
-test_big_endian(IS_BIGENDIAN)
-if (IS_BIGENDIAN)
-  add_compile_definitions(FLANG_BIG_ENDIAN=1)
-else ()
-  add_compile_definitions(FLANG_LITTLE_ENDIAN=1)
-endif ()

@@ -9,6 +9,7 @@
 #ifndef FORTRAN_EVALUATE_COMMON_H_
 #define FORTRAN_EVALUATE_COMMON_H_
 
+#include "flang/Common/api-attrs.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"

@@ -197,14 +197,8 @@ public:
     VK_None,
 
     VK_GOT,
-    VK_GOTOFF,
     VK_GOTPCREL,
-    VK_GOTTPOFF,
     VK_PLT,
-    VK_TLSGD,
-    VK_TLSLD,
-    VK_TLSLDM,
-    VK_TPOFF,
     VK_TLVP,    // Mach-O thread local variable relocations
     VK_TLVPPAGE,
     VK_TLVPPAGEOFF,
