@@ -456,6 +456,30 @@ static bool isSplitEdge(const MachineBasicBlock *MBB) {
   return true;
 }
 
+static const TargetRegisterClass *
+getLargestLegalRegClass(Register Reg, const MachineFunction *MF,
+                        const MachineRegisterInfo &MRI) {
+  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+  const TargetRegisterClass *OldRC = MRI.getRegClass(Reg);
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+  const TargetRegisterClass *NewRC = TRI->getLargestLegalSuperClass(OldRC, *MF);
+  // Stop early if there is no room to grow.
+  if (NewRC == OldRC)
+    return OldRC;
+
+  // Accumulate constraints from all uses.
+  for (MachineOperand &MO : MRI.reg_nodbg_operands(Reg)) {
+    // Apply the effect of the given operand to NewRC.
+    MachineInstr *MI = MO.getParent();
+    unsigned OpNo = &MO - &MI->getOperand(0);
+    NewRC = MI->getRegClassConstraintEffect(OpNo, NewRC, TII, TRI);
+    if (!NewRC || NewRC == OldRC) {
+      return OldRC;
+    }
+  }
+  return NewRC;
+}
+
 bool CoalescerPair::setRegisters(const MachineInstr *MI) {
   SrcReg = DstReg = Register();
   SrcIdx = DstIdx = 0;
@@ -477,7 +501,9 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
     Flipped = true;
   }
 
-  const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+  const MachineFunction *MF = MI->getMF();
+
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
   const TargetRegisterClass *SrcRC = MRI.getRegClass(Src);
 
   if (Dst.isPhysical()) {
@@ -509,19 +535,41 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
 
       NewRC = TRI.getCommonSuperRegClass(SrcRC, SrcSub, DstRC, DstSub, SrcIdx,
                                          DstIdx);
-      if (!NewRC)
-        return false;
+      if (!NewRC) {
+        auto SuperDstRC = getLargestLegalRegClass(Dst, MF, MRI);
+        if (SuperDstRC != DstRC)
+          NewRC = TRI.getCommonSuperRegClass(SrcRC, SrcSub, SuperDstRC, DstSub,
+                                             SrcIdx, DstIdx);
+        if (!NewRC)
+          return false;
+      }
     } else if (DstSub) {
       // SrcReg will be merged with a sub-register of DstReg.
       SrcIdx = DstSub;
       NewRC = TRI.getMatchingSuperRegClass(DstRC, SrcRC, DstSub);
+      if (!NewRC) {
+        auto SuperDstRC = getLargestLegalRegClass(Dst, MF, MRI);
+        if (SuperDstRC != DstRC)
+          NewRC = TRI.getMatchingSuperRegClass(SuperDstRC, SrcRC, DstSub);
+      }
     } else if (SrcSub) {
       // DstReg will be merged with a sub-register of SrcReg.
       DstIdx = SrcSub;
       NewRC = TRI.getMatchingSuperRegClass(SrcRC, DstRC, SrcSub);
+      if (!NewRC) {
+        auto SuperDstRC = getLargestLegalRegClass(Dst, MF, MRI);
+        if (SuperDstRC != DstRC)
+          NewRC = TRI.getMatchingSuperRegClass(SrcRC, SuperDstRC, SrcSub);
+      }
+
     } else {
       // This is a straight copy without sub-registers.
       NewRC = TRI.getCommonSubClass(DstRC, SrcRC);
+      if (!NewRC) {
+        auto SuperDstRC = getLargestLegalRegClass(Dst, MF, MRI);
+        if (SuperDstRC != DstRC)
+          NewRC = TRI.getCommonSubClass(SuperDstRC, SrcRC);
+      }
     }
 
     // The combined constraint may be impossible to satisfy.
