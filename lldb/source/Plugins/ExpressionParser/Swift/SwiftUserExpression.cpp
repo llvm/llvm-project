@@ -157,7 +157,7 @@ findSwiftSelf(StackFrame &frame, lldb::VariableSP self_var_sp) {
   // 2) If (1) fails, try finding the type of `self` from its Variable.
   if (!info.type.IsValid())
     if (Type *self_lldb_type = self_var_sp->GetType())
-      info.type = self_var_sp->GetType()->GetForwardCompilerType();
+      info.type = self_lldb_type->GetForwardCompilerType();
 
   // 3) If (1) and (2) fail, give up.
   if (!info.type.IsValid())
