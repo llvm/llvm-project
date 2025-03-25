@@ -149,8 +149,8 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
     Address addr = Address::invalid();
 
     // The variable should generally be present in the local decl map.
-    auto iter = LocalDeclMap.find(vd);
-    if (iter != LocalDeclMap.end()) {
+    auto iter = localDeclMap.find(vd);
+    if (iter != localDeclMap.end()) {
       addr = iter->second;
     } else {
       // Otherwise, it might be static local we haven't emitted yet for some
@@ -176,7 +176,7 @@ mlir::Value CIRGenFunction::evaluateExprAsBool(const Expr *e) {
     return createDummyValue(getLoc(loc), boolTy);
   }
 
-  assert(!cir::MissingFeatures::CGFPOptionsRAII());
+  assert(!cir::MissingFeatures::cgFPOptionsRAII());
   if (!e->getType()->isAnyComplexType())
     return emitScalarConversion(emitScalarExpr(e), e->getType(), boolTy, loc);
 
@@ -210,7 +210,7 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
 
     if (e->getType()->isAnyComplexType()) {
       cgm.errorNYI(e->getSourceRange(), "UnaryOp complex inc/dec");
-      return LValue();
+      lv = LValue();
     } else {
       emitScalarPrePostIncDec(e, lv, isInc, /*isPre=*/true);
     }
@@ -230,6 +230,62 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
     llvm_unreachable("UnaryOperator of non-lvalue kind!");
   }
   llvm_unreachable("Unknown unary operator kind!");
+}
+
+LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
+  // Comma expressions just emit their LHS then their RHS as an l-value.
+  if (e->getOpcode() == BO_Comma) {
+    emitIgnoredExpr(e->getLHS());
+    return emitLValue(e->getRHS());
+  }
+
+  if (e->getOpcode() == BO_PtrMemD || e->getOpcode() == BO_PtrMemI) {
+    cgm.errorNYI(e->getSourceRange(), "member pointers");
+    return {};
+  }
+
+  assert(e->getOpcode() == BO_Assign && "unexpected binary l-value");
+
+  // Note that in all of these cases, __block variables need the RHS
+  // evaluated first just in case the variable gets moved by the RHS.
+
+  switch (CIRGenFunction::getEvaluationKind(e->getType())) {
+  case cir::TEK_Scalar: {
+    assert(!cir::MissingFeatures::objCLifetime());
+    if (e->getLHS()->getType().getObjCLifetime() !=
+        clang::Qualifiers::ObjCLifetime::OCL_None) {
+      cgm.errorNYI(e->getSourceRange(), "objc lifetimes");
+      return {};
+    }
+
+    RValue rv = emitAnyExpr(e->getRHS());
+    LValue lv = emitLValue(e->getLHS());
+
+    SourceLocRAIIObject loc{*this, getLoc(e->getSourceRange())};
+    if (lv.isBitField()) {
+      cgm.errorNYI(e->getSourceRange(), "bitfields");
+      return {};
+    }
+    emitStoreThroughLValue(rv, lv);
+
+    if (getLangOpts().OpenMP) {
+      cgm.errorNYI(e->getSourceRange(), "openmp");
+      return {};
+    }
+
+    return lv;
+  }
+
+  case cir::TEK_Complex: {
+    assert(!cir::MissingFeatures::complexType());
+    cgm.errorNYI(e->getSourceRange(), "complex l-values");
+    return {};
+  }
+  case cir::TEK_Aggregate:
+    cgm.errorNYI(e->getSourceRange(), "aggregate lvalues");
+    return {};
+  }
+  llvm_unreachable("bad evaluation kind");
 }
 
 /// Emit code to compute the specified expression which

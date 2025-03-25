@@ -44,7 +44,7 @@
 # !14 = !DILocation(line: 7, column: 1, scope: !5)
 
 
-# RUN: llvm-mc -filetype=obj %s -o %t
+# RUN: llvm-mc --filetype=obj --triple x86_64-pc-linux %s -o %t
 # RUN: llvm-symbolizer --obj=%t 0xd | FileCheck %s
 # RUN: llvm-symbolizer --inlining=false --obj=%t 0xd | FileCheck %s
 # CHECK:      foo
