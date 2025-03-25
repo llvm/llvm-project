@@ -42,8 +42,10 @@ CollectorMetadataAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
       continue;
     StringRef GCName = F.getGC();
     auto [It, Inserted] = StrategyMap.try_emplace(GCName);
-    if (Inserted)
+    if (Inserted) {
       It->second = getGCStrategy(GCName);
+      It->second->Name = GCName;
+    }
   }
   return StrategyMap;
 }
@@ -61,7 +63,7 @@ GCFunctionAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
       "This pass need module analysis `collector-metadata`!");
   auto &Map =
       *MAMProxy.getCachedResult<CollectorMetadataAnalysis>(*F.getParent());
-  GCFunctionInfo Info(F, *Map[F.getGC()]);
+  GCFunctionInfo Info(F, Map[F.getGC()]);
   return Info;
 }
 
