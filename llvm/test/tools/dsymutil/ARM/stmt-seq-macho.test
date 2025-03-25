@@ -41,12 +41,21 @@ ATTRIB int function2_copy2(int a) {
     int result = a - 22;
     return result;
 }
+
+struct logic_error {
+    logic_error(const char* s) {}
+};
+ 
+struct length_error : public logic_error {
+    __attribute__((noinline)) explicit length_error(const char* s) : logic_error(s) {}
+};
  
 int main() {
     int sum = 0;
     sum += function2_copy2(3);
     sum += function3_copy2(41);
     sum += function2_copy1(11);
+    length_error e("test");
     return sum;
 }
 EOF
