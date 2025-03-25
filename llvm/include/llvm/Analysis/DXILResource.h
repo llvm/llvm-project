@@ -597,13 +597,10 @@ public:
         CounterDirections, Info,
         [](const auto &LHS, const auto &RHS) { return LHS.first < RHS; });
 
-    if (Lower == CounterDirections.end()) {
+    if (Lower == CounterDirections.end())
       return ResourceCounterDirection::Unknown;
-    }
-
-    if (Lower->first != Info) {
+    if (Lower->first != Info)
       return ResourceCounterDirection::Unknown;
-    }
 
     return Lower->second;
   }
