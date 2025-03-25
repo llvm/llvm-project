@@ -12,6 +12,7 @@
 
 #include <iterator>
 #include <list>
+#include <memory>
 #include <ranges>
 #include <vector>
 #include "test_macros.h"
@@ -95,12 +96,23 @@ constexpr void test_basic_operations() {
     (void)*it;
     (void)it->x;
     (void)iter_move(it);
+
+    std::same_as<decltype(it)> auto& it_ref = ++it;
+    assert(std::addressof(it_ref) == std::addressof(it));
   }
   static_assert(!std::is_invocable_v<decltype(std::ranges::iter_swap), decltype(first), decltype(first)>);
 
   if constexpr (std::bidirectional_iterator<It>) {
-    assert(++first == It{arr + 1});
-    assert(--first == It{arr + 0});
+    {
+      std::same_as<decltype(first)> auto& it_ref = ++first;
+      assert(std::addressof(it_ref) == std::addressof(first));
+      assert(it_ref == It{arr + 1});
+    }
+    {
+      std::same_as<decltype(first)> auto& it_ref = --first;
+      assert(std::addressof(it_ref) == std::addressof(first));
+      assert(--first == It{arr + 0});
+    }
     assert(first++ == It{arr + 0});
     assert(first-- == It{arr + 1});
   }
@@ -109,10 +121,16 @@ constexpr void test_basic_operations() {
     assert(first + 3 == It{arr + 3});
     assert(last - 1 == It{arr + 9});
 
-    first += 3;
-    assert(first == It{arr + 3});
-    first -= 2;
-    assert(first == It{arr + 1});
+    {
+      std::same_as<decltype(first)> auto& it_ref = first += 3;
+      assert(std::addressof(it_ref) == std::addressof(first));
+      assert(first == It{arr + 3});
+    }
+    {
+      std::same_as<decltype(first)> auto& it_ref = first -= 2;
+      assert(std::addressof(it_ref) == std::addressof(first));
+      assert(first == It{arr + 1});
+    }
     --first;
 
     assert(first < last);
@@ -135,6 +153,7 @@ constexpr void test_basic_operations() {
 
 constexpr bool test_basic_operations() {
   test_basic_operations<S*>();
+  test_basic_operations<cpp17_input_iterator<S*>>();
   test_basic_operations<forward_iterator<S*>>();
   test_basic_operations<bidirectional_iterator<S*>>();
   test_basic_operations<random_access_iterator<S*>>();
