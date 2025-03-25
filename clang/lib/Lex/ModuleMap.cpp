@@ -354,7 +354,6 @@ ModuleMap::ModuleMap(SourceManager &SourceMgr, DiagnosticsEngine &Diags,
                      HeaderSearch &HeaderInfo)
     : SourceMgr(SourceMgr), Diags(Diags), LangOpts(LangOpts), Target(Target),
       HeaderInfo(HeaderInfo) {
-  MMapLangOpts.LineComment = true;
 }
 
 ModuleMap::~ModuleMap() = default;
