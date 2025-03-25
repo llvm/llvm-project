@@ -78,7 +78,7 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
       ASSERT_EQ(Bindings.size(), 1u)
           << "Handle should resolve into one resource";
 
-      auto Binding = Bindings[0].getBinding();
+      auto Binding = Bindings[0]->getBinding();
       EXPECT_EQ(0u, Binding.RecordID);
       EXPECT_EQ(1u, Binding.Space);
       EXPECT_EQ(2u, Binding.LowerBound);
@@ -127,7 +127,7 @@ declare target("dx.RawBuffer", float, 1, 0) @ind.func(target("dx.RawBuffer", flo
       ASSERT_EQ(Bindings.size(), 1u)
           << "Handle should resolve into one resource";
 
-      auto Binding = Bindings[0].getBinding();
+      auto Binding = Bindings[0]->getBinding();
       EXPECT_EQ(0u, Binding.RecordID);
       EXPECT_EQ(1u, Binding.Space);
       EXPECT_EQ(2u, Binding.LowerBound);
@@ -179,25 +179,25 @@ declare target("dx.RawBuffer", float, 1, 0) @ind.func(target("dx.RawBuffer", flo
       ASSERT_EQ(Bindings.size(), 4u)
           << "Handle should resolve into four resources";
 
-      auto Binding = Bindings[0].getBinding();
+      auto Binding = Bindings[0]->getBinding();
       EXPECT_EQ(0u, Binding.RecordID);
       EXPECT_EQ(1u, Binding.Space);
       EXPECT_EQ(1u, Binding.LowerBound);
       EXPECT_EQ(1u, Binding.Size);
 
-      Binding = Bindings[1].getBinding();
+      Binding = Bindings[1]->getBinding();
       EXPECT_EQ(1u, Binding.RecordID);
       EXPECT_EQ(2u, Binding.Space);
       EXPECT_EQ(2u, Binding.LowerBound);
       EXPECT_EQ(2u, Binding.Size);
 
-      Binding = Bindings[2].getBinding();
+      Binding = Bindings[2]->getBinding();
       EXPECT_EQ(2u, Binding.RecordID);
       EXPECT_EQ(3u, Binding.Space);
       EXPECT_EQ(3u, Binding.LowerBound);
       EXPECT_EQ(3u, Binding.Size);
 
-      Binding = Bindings[3].getBinding();
+      Binding = Bindings[3]->getBinding();
       EXPECT_EQ(3u, Binding.RecordID);
       EXPECT_EQ(4u, Binding.Space);
       EXPECT_EQ(4u, Binding.LowerBound);
@@ -258,13 +258,13 @@ declare target("dx.RawBuffer", float, 1, 0) @ind.func(target("dx.RawBuffer", flo
       ASSERT_EQ(Bindings.size(), 2u)
           << "Handle should resolve into four resources";
 
-      auto Binding = Bindings[0].getBinding();
+      auto Binding = Bindings[0]->getBinding();
       EXPECT_EQ(0u, Binding.RecordID);
       EXPECT_EQ(1u, Binding.Space);
       EXPECT_EQ(1u, Binding.LowerBound);
       EXPECT_EQ(1u, Binding.Size);
 
-      Binding = Bindings[1].getBinding();
+      Binding = Bindings[1]->getBinding();
       EXPECT_EQ(1u, Binding.RecordID);
       EXPECT_EQ(4u, Binding.Space);
       EXPECT_EQ(4u, Binding.LowerBound);

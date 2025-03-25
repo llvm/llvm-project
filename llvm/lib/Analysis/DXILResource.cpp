@@ -786,10 +786,10 @@ void DXILBindingMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
   }
 }
 
-SmallVector<dxil::ResourceBindingInfo>
+SmallVector<const dxil::ResourceBindingInfo *>
 DXILBindingMap::findByUse(const Value *Key) const {
   if (const PHINode *Phi = dyn_cast<PHINode>(Key)) {
-    SmallVector<dxil::ResourceBindingInfo> Children;
+    SmallVector<const dxil::ResourceBindingInfo *> Children;
     for (const Value *V : Phi->operands()) {
       Children.append(findByUse(V));
     }
@@ -805,7 +805,7 @@ DXILBindingMap::findByUse(const Value *Key) const {
   case Intrinsic::dx_resource_handlefrombinding: {
     const auto *It = find(CI);
     assert(It != Infos.end() && "HandleFromBinding must be in resource map");
-    return {*It};
+    return {It};
   }
   default:
     break;
@@ -814,7 +814,7 @@ DXILBindingMap::findByUse(const Value *Key) const {
   // Check if any of the parameters are the resource we are following. If so
   // keep searching. If none of them are return an empty list
   const Type *UseType = CI->getType();
-  SmallVector<dxil::ResourceBindingInfo> Children;
+  SmallVector<const dxil::ResourceBindingInfo *> Children;
   for (const Value *V : CI->args()) {
     if (V->getType() != UseType)
       continue;
@@ -832,8 +832,9 @@ static bool isUpdateCounterIntrinsic(Function &F) {
 }
 
 void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
-  SmallVector<std::tuple<dxil::ResourceBindingInfo, ResourceCounterDirection,
-                         const Function *, const CallInst *>>
+  SmallVector<
+      std::tuple<const dxil::ResourceBindingInfo *, ResourceCounterDirection,
+                 const Function *, const CallInst *>>
       DiagCounterDirs;
 
   for (Function &F : M.functions()) {
@@ -859,8 +860,9 @@ void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
 
       // Collect all potential creation points for the handle arg
       Value *HandleArg = CI->getArgOperand(0);
-      SmallVector<dxil::ResourceBindingInfo> RBInfos = DBM.findByUse(HandleArg);
-      for (const dxil::ResourceBindingInfo RBInfo : RBInfos)
+      SmallVector<const dxil::ResourceBindingInfo *> RBInfos =
+          DBM.findByUse(HandleArg);
+      for (const dxil::ResourceBindingInfo *RBInfo : RBInfos)
         DiagCounterDirs.emplace_back(RBInfo, Direction, &F, CI);
     }
   }
@@ -868,12 +870,12 @@ void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
   // Sort by the Binding and Direction for fast lookup
   std::stable_sort(DiagCounterDirs.begin(), DiagCounterDirs.end(),
                    [](const auto &LHS, const auto &RHS) {
-                     const auto L =
-                         std::pair{std::get<dxil::ResourceBindingInfo>(LHS),
-                                   std::get<ResourceCounterDirection>(LHS)};
-                     const auto R =
-                         std::pair{std::get<dxil::ResourceBindingInfo>(RHS),
-                                   std::get<ResourceCounterDirection>(RHS)};
+                     const auto L = std::pair{
+                         std::get<const dxil::ResourceBindingInfo *>(LHS),
+                         std::get<ResourceCounterDirection>(LHS)};
+                     const auto R = std::pair{
+                         std::get<const dxil::ResourceBindingInfo *>(RHS),
+                         std::get<ResourceCounterDirection>(RHS)};
                      return L < R;
                    });
 
@@ -882,10 +884,12 @@ void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
   auto *const UniqueEnd = std::unique(
       DiagCounterDirs.begin(), DiagCounterDirs.end(),
       [](const auto &LHS, const auto &RHS) {
-        const auto L = std::pair{std::get<dxil::ResourceBindingInfo>(LHS),
-                                 std::get<ResourceCounterDirection>(LHS)};
-        const auto R = std::pair{std::get<dxil::ResourceBindingInfo>(RHS),
-                                 std::get<ResourceCounterDirection>(RHS)};
+        const auto L =
+            std::pair{std::get<const dxil::ResourceBindingInfo *>(LHS),
+                      std::get<ResourceCounterDirection>(LHS)};
+        const auto R =
+            std::pair{std::get<const dxil::ResourceBindingInfo *>(RHS),
+                      std::get<ResourceCounterDirection>(RHS)};
         return L == R;
       });
 
@@ -900,8 +904,8 @@ void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
     auto *DupNext = DupFirst + 1;
     auto *DupLast = DiagCounterDirs.end();
     for (; DupFirst < DupLast && DupNext < DupLast; ++DupFirst, ++DupNext) {
-      if (std::get<dxil::ResourceBindingInfo>(*DupFirst) ==
-          std::get<dxil::ResourceBindingInfo>(*DupNext)) {
+      if (std::get<const dxil::ResourceBindingInfo *>(*DupFirst) ==
+          std::get<const dxil::ResourceBindingInfo *>(*DupNext)) {
         std::get<ResourceCounterDirection>(*DupFirst) =
             ResourceCounterDirection::Invalid;
         std::get<ResourceCounterDirection>(*DupNext) =
@@ -930,8 +934,9 @@ void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
   CounterDirections.reserve(DiagCounterDirs.size());
   std::transform(DiagCounterDirs.begin(), DiagCounterDirs.end(),
                  std::back_inserter(CounterDirections), [](const auto &Item) {
-                   return std::pair{std::get<dxil::ResourceBindingInfo>(Item),
-                                    std::get<ResourceCounterDirection>(Item)};
+                   return std::pair{
+                       std::get<const dxil::ResourceBindingInfo *>(Item),
+                       std::get<ResourceCounterDirection>(Item)};
                  });
 }
 

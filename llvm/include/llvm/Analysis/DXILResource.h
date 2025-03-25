@@ -474,7 +474,8 @@ public:
   /// ambiguous so multiple creation instructions may be returned. The resulting
   /// ResourceBindingInfo can be used to depuplicate unique handles that
   /// reference the same resource
-  SmallVector<dxil::ResourceBindingInfo> findByUse(const Value *Key) const;
+  SmallVector<const dxil::ResourceBindingInfo *>
+  findByUse(const Value *Key) const;
 
   const_iterator find(const CallInst *Key) const {
     auto Pos = CallMap.find(Key);
@@ -585,7 +586,8 @@ enum class ResourceCounterDirection {
 };
 
 class DXILResourceCounterDirectionMap {
-  std::vector<std::pair<dxil::ResourceBindingInfo, ResourceCounterDirection>>
+  std::vector<
+      std::pair<const dxil::ResourceBindingInfo *, ResourceCounterDirection>>
       CounterDirections;
 
 public:
@@ -595,11 +597,11 @@ public:
   operator[](const dxil::ResourceBindingInfo &Info) const {
     auto Lower = llvm::lower_bound(
         CounterDirections, Info,
-        [](const auto &LHS, const auto &RHS) { return LHS.first < RHS; });
+        [](const auto &LHS, const auto &RHS) { return *LHS.first < RHS; });
 
     if (Lower == CounterDirections.end())
       return ResourceCounterDirection::Unknown;
-    if (Lower->first != Info)
+    if (*Lower->first != Info)
       return ResourceCounterDirection::Unknown;
 
     return Lower->second;
