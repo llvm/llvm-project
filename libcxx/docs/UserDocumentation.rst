@@ -39,8 +39,8 @@ Usually, libc++ is packaged and shipped by a vendor through some delivery vehicl
 (operating system distribution, SDK, toolchain, etc) and users don't need to do
 anything special in order to use the library.
 
-However, on systems where libc++ is provided but is not the default, we can envoke
-Clang with the flag ``-stdlib=`` to decide which standard library is used.
+However, on systems where libc++ is provided but is not the default, Clang can be invoked
+with the ``-stdlib=`` flag to select which standard library is used.
 Using ``-stdlib=libc++`` will select libc++:
 
 .. code-block:: bash
