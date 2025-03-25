@@ -192,11 +192,20 @@ Stmt::determineLikelihoodConflict(const Stmt *Then, const Stmt *Else) {
 
 /// Skip no-op (attributed, compound) container stmts and skip captured
 /// stmt at the top, if \a IgnoreCaptured is true.
-Stmt *Stmt::IgnoreContainers(bool IgnoreCaptured) {
+Stmt *Stmt::stripContainers(int NumCaptured) {
   Stmt *S = this;
-  if (IgnoreCaptured)
-    if (auto CapS = dyn_cast_or_null<CapturedStmt>(S))
+  if (NumCaptured >= 0) {
+    // If the number of captured statements to skip is non-negative,
+    // then try to skip that exact number of them.
+    while (NumCaptured--)
+      if (auto CapS = dyn_cast_or_null<CapturedStmt>(S))
+        S = CapS->getCapturedStmt();
+  } else {
+    // If the number of captured statements to skip is negative,
+    // then skip all of them.
+    while (auto CapS = dyn_cast_or_null<CapturedStmt>(S))
       S = CapS->getCapturedStmt();
+  }
   while (true) {
     if (auto AS = dyn_cast_or_null<AttributedStmt>(S))
       S = AS->getSubStmt();

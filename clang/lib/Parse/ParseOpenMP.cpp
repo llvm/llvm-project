@@ -2404,15 +2404,10 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
     bool ReadDirectiveWithinMetadirective) {
   assert(isOpenMPExecutableDirective(DKind) && "Unexpected directive category");
 
-  bool HasAssociatedStatement = true;
-  Association Assoc = getDirectiveAssociation(DKind);
+  bool HasAssociatedStatement =
+      isOpenMPDirectiveWithStatement(DKind, /*OrderedIsStandalone=*/false);
 
-  // OMPD_ordered has None as association, but it comes in two variants,
-  // the second of which is associated with a block.
-  // OMPD_scan and OMPD_section are both "separating", but section is treated
-  // as if it was associated with a statement, while scan is not.
-  if (DKind != OMPD_ordered && DKind != OMPD_section &&
-      (Assoc == Association::None || Assoc == Association::Separating)) {
+  if (!HasAssociatedStatement) {
     if ((StmtCtx & ParsedStmtContext::AllowStandaloneOpenMPDirectives) ==
         ParsedStmtContext()) {
       Diag(Tok, diag::err_omp_immediate_directive)
@@ -2422,7 +2417,6 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
         return StmtError();
       }
     }
-    HasAssociatedStatement = false;
   }
 
   SourceLocation EndLoc;
@@ -2539,9 +2533,17 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
   }
 
   StmtResult AssociatedStmt;
-  if (HasAssociatedStatement) {
+  Actions.OpenMP().ActOnOpenMPRegionStart(DKind, getCurScope(),
+                                          HasAssociatedStatement);
+  // These directives do have an associated statement in clang, but they
+  // are standalone in the source.
+  if (DKind == OMPD_target_update || DKind == OMPD_target_enter_data ||
+      DKind == OMPD_target_exit_data) {
+    AssociatedStmt = (Sema::CompoundScopeRAII(Actions),
+                      Actions.ActOnCompoundStmt(Loc, Loc, std::nullopt,
+                                                /*isStmtExpr=*/false));
+  } else if (HasAssociatedStatement) {
     // The body is a block scope like in Lambdas and Blocks.
-    Actions.OpenMP().ActOnOpenMPRegionStart(DKind, getCurScope());
     // FIXME: We create a bogus CompoundStmt scope to hold the contents of
     // the captured region. Code elsewhere assumes that any FunctionScopeInfo
     // should have at least one compound statement scope within it.
@@ -2555,18 +2557,10 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
         AssociatedStmt =
             Actions.OpenMP().ActOnOpenMPLoopnest(AssociatedStmt.get());
     }
-    AssociatedStmt =
-        Actions.OpenMP().ActOnOpenMPRegionEnd(AssociatedStmt, Clauses);
-  } else if (DKind == OMPD_target_update || DKind == OMPD_target_enter_data ||
-             DKind == OMPD_target_exit_data) {
-    Actions.OpenMP().ActOnOpenMPRegionStart(DKind, getCurScope());
-    AssociatedStmt = (Sema::CompoundScopeRAII(Actions),
-                      Actions.ActOnCompoundStmt(Loc, Loc, {},
-                                                /*isStmtExpr=*/false));
-    AssociatedStmt =
-        Actions.OpenMP().ActOnOpenMPRegionEnd(AssociatedStmt, Clauses);
   }
 
+  AssociatedStmt =
+      Actions.OpenMP().ActOnOpenMPRegionEnd(AssociatedStmt, Clauses);
   StmtResult Directive = Actions.OpenMP().ActOnOpenMPExecutableDirective(
       DKind, DirName, CancelRegion, Clauses, AssociatedStmt.get(), Loc, EndLoc);
 
@@ -2621,17 +2615,18 @@ StmtResult Parser::ParseOpenMPInformationalDirective(
   ConsumeAnnotationToken();
 
   StmtResult AssociatedStmt;
+  Actions.OpenMP().ActOnOpenMPRegionStart(DKind, getCurScope(),
+                                          HasAssociatedStatement);
   if (HasAssociatedStatement) {
-    Actions.OpenMP().ActOnOpenMPRegionStart(DKind, getCurScope());
     ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
     {
       Sema::CompoundScopeRAII Scope(Actions);
       AssociatedStmt = ParseStatement();
     }
-    AssociatedStmt =
-        Actions.OpenMP().ActOnOpenMPRegionEnd(AssociatedStmt, Clauses);
   }
 
+  AssociatedStmt =
+      Actions.OpenMP().ActOnOpenMPRegionEnd(AssociatedStmt, Clauses);
   StmtResult Directive = Actions.OpenMP().ActOnOpenMPInformationalDirective(
       DKind, DirName, Clauses, AssociatedStmt.get(), Loc, EndLoc);
 

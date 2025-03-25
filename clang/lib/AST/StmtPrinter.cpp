@@ -53,6 +53,7 @@
 #include <cassert>
 #include <optional>
 #include <string>
+#include <tuple>
 
 using namespace clang;
 

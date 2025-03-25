@@ -9291,32 +9291,31 @@ StmtResult TreeTransform<Derived>::TransformOMPExecutableDirective(
     }
   }
   StmtResult AssociatedStmt;
-  if (D->hasAssociatedStmt() && D->getAssociatedStmt()) {
-    getDerived().getSema().OpenMP().ActOnOpenMPRegionStart(
-        D->getDirectiveKind(),
-        /*CurScope=*/nullptr);
-    StmtResult Body;
-    {
-      Sema::CompoundScopeRAII CompoundScope(getSema());
-      Stmt *CS;
-      if (D->getDirectiveKind() == OMPD_atomic ||
-          D->getDirectiveKind() == OMPD_critical ||
-          D->getDirectiveKind() == OMPD_section ||
-          D->getDirectiveKind() == OMPD_master)
-        CS = D->getAssociatedStmt();
-      else
-        CS = D->getRawStmt();
-      Body = getDerived().TransformStmt(CS);
-      if (Body.isUsable() && isOpenMPLoopDirective(D->getDirectiveKind()) &&
-          getSema().getLangOpts().OpenMPIRBuilder)
-        Body = getDerived().RebuildOMPCanonicalLoop(Body.get());
-    }
-    AssociatedStmt =
-        getDerived().getSema().OpenMP().ActOnOpenMPRegionEnd(Body, TClauses);
-    if (AssociatedStmt.isInvalid()) {
-      return StmtError();
-    }
+  bool HasAssociatedStatement =
+      D->hasAssociatedStmt() && D->getAssociatedStmt();
+  getDerived().getSema().OpenMP().ActOnOpenMPRegionStart(
+      D->getDirectiveKind(), /*CurScope=*/nullptr, HasAssociatedStatement);
+  if (HasAssociatedStatement) {
+    Sema::CompoundScopeRAII CompoundScope(getSema());
+    Stmt *CS;
+    if (D->getDirectiveKind() == OMPD_atomic ||
+        D->getDirectiveKind() == OMPD_critical ||
+        D->getDirectiveKind() == OMPD_section ||
+        D->getDirectiveKind() == OMPD_master)
+      CS = D->getAssociatedStmt();
+    else
+      CS = D->getRawStmt();
+    AssociatedStmt = getDerived().TransformStmt(CS);
+    if (AssociatedStmt.isUsable() &&
+        isOpenMPLoopDirective(D->getDirectiveKind()) &&
+        getSema().getLangOpts().OpenMPIRBuilder)
+      AssociatedStmt =
+          getDerived().RebuildOMPCanonicalLoop(AssociatedStmt.get());
   }
+  AssociatedStmt = getDerived().getSema().OpenMP().ActOnOpenMPRegionEnd(
+      AssociatedStmt, TClauses);
+  if (AssociatedStmt.isInvalid())
+    return StmtError();
   if (TClauses.size() != Clauses.size()) {
     return StmtError();
   }
@@ -9379,23 +9378,21 @@ StmtResult TreeTransform<Derived>::TransformOMPInformationalDirective(
     }
   }
   StmtResult AssociatedStmt;
-  if (D->hasAssociatedStmt() && D->getAssociatedStmt()) {
-    getDerived().getSema().OpenMP().ActOnOpenMPRegionStart(
-        D->getDirectiveKind(),
-        /*CurScope=*/nullptr);
-    StmtResult Body;
-    {
-      Sema::CompoundScopeRAII CompoundScope(getSema());
-      assert(D->getDirectiveKind() == OMPD_assume &&
-             "Unexpected informational directive");
-      Stmt *CS = D->getAssociatedStmt();
-      Body = getDerived().TransformStmt(CS);
-    }
-    AssociatedStmt =
-        getDerived().getSema().OpenMP().ActOnOpenMPRegionEnd(Body, TClauses);
-    if (AssociatedStmt.isInvalid())
-      return StmtError();
+  bool HasAssociatedStatement =
+      D->hasAssociatedStmt() && D->getAssociatedStmt();
+  getDerived().getSema().OpenMP().ActOnOpenMPRegionStart(
+      D->getDirectiveKind(), /*CurScope=*/nullptr, HasAssociatedStatement);
+  if (HasAssociatedStatement) {
+    Sema::CompoundScopeRAII CompoundScope(getSema());
+    assert(D->getDirectiveKind() == OMPD_assume &&
+           "Unexpected informational directive");
+    Stmt *CS = D->getAssociatedStmt();
+    AssociatedStmt = getDerived().TransformStmt(CS);
   }
+  AssociatedStmt = getDerived().getSema().OpenMP().ActOnOpenMPRegionEnd(
+      AssociatedStmt, TClauses);
+  if (AssociatedStmt.isInvalid())
+    return StmtError();
   if (TClauses.size() != Clauses.size())
     return StmtError();
 

@@ -75,10 +75,11 @@ namespace tomp {
 // HelperType - A class that implements two member functions:
 //
 //   // Return the base object of the given object, if any.
-//   std::optional<Object> getBaseObject(const Object &object) const
+// - std::optional<Object> getBaseObject(const Object &object) const
 //   // Return the iteration variable of the outermost loop associated
 //   // with the construct being worked on, if any.
-//   std::optional<Object> getLoopIterVar() const
+// - std::optional<Object> getLoopIterVar() const
+//
 template <typename ClauseType, typename HelperType>
 struct ConstructDecompositionT {
   using ClauseTy = ClauseType;
@@ -93,8 +94,9 @@ struct ConstructDecompositionT {
 
   ConstructDecompositionT(uint32_t ver, HelperType &helper,
                           llvm::omp::Directive dir,
-                          llvm::ArrayRef<ClauseTy> clauses)
-      : version(ver), construct(dir), helper(helper) {
+                          llvm::ArrayRef<ClauseTy> clauses,
+                          bool makeImplicit = true)
+      : version(ver), construct(dir), makeImplicit(makeImplicit), helper(helper) {
     for (const ClauseTy &clause : clauses)
       nodes.push_back(&clause);
 
@@ -113,6 +115,15 @@ struct ConstructDecompositionT {
         out.clauses.push_back(*c);
     }
   }
+
+  // Apply a clause to the prior split.
+  // Note that in some cases the order in which clauses are processed
+  // is important (e.g. linear, allocate). This function will simply process
+  // the clause as per OpenMP rules for clauses on compound constructs.
+  // NOTE: In order for this function to work, the caller must keep alive
+  // the original clauses (passed to the constructor as `clauses`), and any
+  // clauses passed to prior calls to postApply.
+  bool postApply(const ClauseTy &clause);
 
   tomp::ListT<DirectiveWithClauses<ClauseType>> output;
 
@@ -242,6 +253,7 @@ private:
 
   uint32_t version;
   llvm::omp::Directive construct;
+  bool makeImplicit;   // Whether to create implicit clauses.
   HelperType &helper;
   ListT<LeafReprInternal> leafs;
   tomp::ListT<const ClauseTy *> nodes;
@@ -539,7 +551,7 @@ bool ConstructDecompositionT<C, H>::applyClause(
     dirDistribute->clauses.push_back(node);
     applied = true;
     // [5.2:340:17]
-    if (dirTeams != nullptr) {
+    if (makeImplicit && dirTeams != nullptr) {
       auto *shared = makeClause(
           llvm::omp::Clause::OMPC_shared,
           tomp::clause::SharedT<TypeTy, IdTy, ExprTy>{/*List=*/clause.v});
@@ -580,7 +592,7 @@ bool ConstructDecompositionT<C, H>::applyClause(
     if (dirTaskloop == nullptr && dirWorksharing == nullptr) {
       dirParallel->clauses.push_back(node);
       applied = true;
-    } else {
+    } else if (makeImplicit) {
       // [5.2:340:15]
       auto *shared = makeClause(
           llvm::omp::Clause::OMPC_shared,
@@ -607,10 +619,17 @@ bool ConstructDecompositionT<C, H>::applyClause(
           return !inLastprivate(object) && !mapBases.count(object.id());
         });
     if (!objects.empty()) {
-      auto *firstp = makeClause(
-          llvm::omp::Clause::OMPC_firstprivate,
-          tomp::clause::FirstprivateT<TypeTy, IdTy, ExprTy>{/*List=*/objects});
-      dirTarget->clauses.push_back(firstp);
+      if (objects.size() == clause.v.size()) {
+        // If copied everything, then just add the original clause.
+        dirTarget->clauses.push_back(node);
+      } else {
+        auto *firstp =
+            makeClause(llvm::omp::Clause::OMPC_firstprivate,
+                       tomp::clause::FirstprivateT<TypeTy, IdTy, ExprTy>{
+                           /*List=*/objects});
+        addClauseSymsToMap(objects, firstp);
+        dirTarget->clauses.push_back(firstp);
+      }
       applied = true;
     }
   }
@@ -654,6 +673,9 @@ bool ConstructDecompositionT<C, H>::applyClause(
   if (!applied)
     return false;
 
+  if (!makeImplicit)
+    return applied;
+
   auto inFirstprivate = [&](const ObjectTy &object) {
     if (ClauseSet *set = findClausesWith(object)) {
       return llvm::find_if(*set, [](const ClauseTy *c) {
@@ -678,7 +700,6 @@ bool ConstructDecompositionT<C, H>::applyClause(
           llvm::omp::Clause::OMPC_shared,
           tomp::clause::SharedT<TypeTy, IdTy, ExprTy>{/*List=*/sharedObjects});
       dirParallel->clauses.push_back(shared);
-      applied = true;
     }
 
     // [5.2:340:24]
@@ -687,7 +708,6 @@ bool ConstructDecompositionT<C, H>::applyClause(
           llvm::omp::Clause::OMPC_shared,
           tomp::clause::SharedT<TypeTy, IdTy, ExprTy>{/*List=*/sharedObjects});
       dirTeams->clauses.push_back(shared);
-      applied = true;
     }
   }
 
@@ -707,9 +727,9 @@ bool ConstructDecompositionT<C, H>::applyClause(
                          {/*MapType=*/MapType::Tofrom,
                           /*MapTypeModifier=*/std::nullopt,
                           /*Mapper=*/std::nullopt, /*Iterator=*/std::nullopt,
-                          /*LocatorList=*/std::move(tofrom)}});
+                          /*LocatorList=*/tofrom}});
+      addClauseSymsToMap(tofrom, map);
       dirTarget->clauses.push_back(map);
-      applied = true;
     }
   }
 
@@ -793,7 +813,7 @@ bool ConstructDecompositionT<C, H>::applyClause(
   // assigned to which leaf constructs.
 
   // [5.2:340:33]
-  auto canMakePrivateCopy = [](llvm::omp::Clause id) {
+  auto hasPrivatizationProperty = [](llvm::omp::Clause id) {
     switch (id) {
     // Clauses with "privatization" property:
     case llvm::omp::Clause::OMPC_firstprivate:
@@ -809,9 +829,20 @@ bool ConstructDecompositionT<C, H>::applyClause(
     }
   };
 
+  using Allocate = tomp::clause::AllocateT<TypeTy, IdTy, ExprTy>;
+  auto &objects = std::get<typename Allocate::List>(clause.t);
+
   bool applied = applyIf(node, [&](const auto &leaf) {
     return llvm::any_of(leaf.clauses, [&](const ClauseTy *n) {
-      return canMakePrivateCopy(n->id);
+      if (!hasPrivatizationProperty(n->id))
+        return false;
+      for (auto &object : objects) {
+        if (auto *clauses = findClausesWith(object)) {
+          if (clauses->count(n))
+            return true;
+        }
+      }
+      return false;
     });
   });
 
@@ -909,12 +940,13 @@ bool ConstructDecompositionT<C, H>::applyClause(
     llvm_unreachable("Unexpected modifier");
   };
 
-  auto *unmodified = makeClause(
+  auto *demodified = makeClause(
       llvm::omp::Clause::OMPC_reduction,
       ReductionTy{
           {/*ReductionModifier=*/std::nullopt,
            /*ReductionIdentifiers=*/std::get<ReductionIdentifiers>(clause.t),
            /*List=*/objects}});
+  addClauseSymsToMap(objects, demodified);
 
   ReductionModifier effective = modifier.value_or(ReductionModifier::Default);
   bool effectiveApplied = false;
@@ -934,14 +966,14 @@ bool ConstructDecompositionT<C, H>::applyClause(
       effectiveApplied = true;
     } else {
       // Apply clause without modifier.
-      leaf.clauses.push_back(unmodified);
+      leaf.clauses.push_back(demodified);
     }
     // The modifier must be applied to some construct.
     applied = effectiveApplied;
   }
 
-  if (!applied)
-    return false;
+  if (!applied || !makeImplicit)
+    return applied;
 
   tomp::ObjectListT<IdTy, ExprTy> sharedObjects;
   llvm::transform(objects, std::back_inserter(sharedObjects),
@@ -984,8 +1016,8 @@ bool ConstructDecompositionT<C, H>::applyClause(
           tomp::clause::MapT<TypeTy, IdTy, ExprTy>{
               {/*MapType=*/MapType::Tofrom, /*MapTypeModifier=*/std::nullopt,
                /*Mapper=*/std::nullopt, /*Iterator=*/std::nullopt,
-               /*LocatorList=*/std::move(tofrom)}});
-
+               /*LocatorList=*/tofrom}});
+      addClauseSymsToMap(tofrom, map);
       dirTarget->clauses.push_back(map);
       applied = true;
     }
@@ -1016,14 +1048,16 @@ bool ConstructDecompositionT<C, H>::applyClause(
 
   if (modifier) {
     llvm::omp::Directive dirId = *modifier;
-    auto *unmodified =
+    if (!isAllowedClauseForDirective(dirId, node->id, version))
+      return false;
+    auto *demodified =
         makeClause(llvm::omp::Clause::OMPC_if,
                    tomp::clause::IfT<TypeTy, IdTy, ExprTy>{
                        {/*DirectiveNameModifier=*/std::nullopt,
                         /*IfExpression=*/std::get<IfExpression>(clause.t)}});
 
     if (auto *hasDir = findDirective(dirId)) {
-      hasDir->clauses.push_back(unmodified);
+      hasDir->clauses.push_back(demodified);
       return true;
     }
     return false;
@@ -1056,6 +1090,8 @@ bool ConstructDecompositionT<C, H>::applyClause(
   // [5.2:341:15.1]
   if (!applyToInnermost(node))
     return false;
+  if (!makeImplicit)
+    return true;
 
   // [5.2:341:15.2], [5.2:341:19]
   auto dirSimd = findDirective(llvm::omp::Directive::OMPD_simd);
@@ -1175,6 +1211,28 @@ template <typename C, typename H> bool ConstructDecompositionT<C, H>::split() {
   return success;
 }
 
+template <typename C, typename H>
+bool ConstructDecompositionT<C, H>::postApply(const ClauseTy &clause) {
+  nodes.push_back(&clause);
+  addClauseSymsToMap(clause, &clause);
+  if (output.size() == 0)
+    return false;
+
+  bool success =
+      std::visit([&](auto &&s) { return applyClause(s, &clause); }, clause.u);
+
+  // Transfer the updates to the clause lists to the output.
+  assert(output.size() == leafs.size() && "Internal lists differ in lengths");
+  for (size_t i = 0, e = output.size(); i != e; ++i) {
+    auto &leaf = leafs[i];
+    auto &out = output[i];
+    assert(leaf.clauses.size() >= out.clauses.size() &&
+           "Output longer than internal worklist");
+    for (size_t j = out.clauses.size(), f = leaf.clauses.size(); j != f; ++j)
+      out.clauses.push_back(*leaf.clauses[j]);
+  }
+  return success;
+}
 } // namespace tomp
 
 #endif // LLVM_FRONTEND_OPENMP_CONSTRUCTDECOMPOSITIONT_H

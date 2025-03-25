@@ -1448,9 +1448,15 @@ public:
 
   /// Skip no-op (attributed, compound) container stmts and skip captured
   /// stmt at the top, if \a IgnoreCaptured is true.
-  Stmt *IgnoreContainers(bool IgnoreCaptured = false);
+  Stmt *IgnoreContainers(bool IgnoreCaptured = false) {
+    return stripContainers(static_cast<int>(IgnoreCaptured));
+  }
   const Stmt *IgnoreContainers(bool IgnoreCaptured = false) const {
-    return const_cast<Stmt *>(this)->IgnoreContainers(IgnoreCaptured);
+    return stripContainers(static_cast<int>(IgnoreCaptured));
+  }
+  Stmt *stripContainers(int NumCaptured = 0);
+  const Stmt *stripContainers(int NumCaptured = 0) const {
+    return const_cast<Stmt *>(this)->stripContainers(NumCaptured);
   }
 
   const Stmt *stripLabelLikeStatements() const;

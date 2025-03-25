@@ -32,6 +32,8 @@ bool isLeafConstruct(Directive D);
 bool isCompositeConstruct(Directive D);
 bool isCombinedConstruct(Directive D);
 
+bool isUniqueClause(Clause C);
+
 /// Can clause C have an iterator-modifier.
 static constexpr inline bool canHaveIterator(Clause C) {
   // [5.2:67:5]

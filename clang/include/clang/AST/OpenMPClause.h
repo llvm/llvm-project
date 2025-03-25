@@ -388,6 +388,13 @@ public:
         NumKinds);
   }
 
+  ArrayRef<OpenMPDirectiveKind> getDirectiveKinds() const {
+    return ArrayRef<OpenMPDirectiveKind>(
+        static_cast<const T *>(this)
+            ->template getTrailingObjects<OpenMPDirectiveKind>(),
+        NumKinds);
+  }
+
   void setDirectiveKinds(ArrayRef<OpenMPDirectiveKind> DK) {
     assert(
         DK.size() == NumKinds &&
@@ -6408,7 +6415,7 @@ public:
                                    const OMPMappableExprListSizeTy &Sizes);
 
   /// Fetches Expr * of iterator modifier.
-  Expr *getIteratorModifier() {
+  Expr *getIteratorModifier() const {
     return getTrailingObjects<Expr *>()[2 * varlist_size()];
   }
 
