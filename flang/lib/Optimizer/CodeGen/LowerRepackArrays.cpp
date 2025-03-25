@@ -271,7 +271,6 @@ UnpackArrayConversion::matchAndRewrite(fir::UnpackArrayOp op,
   mlir::Location loc = op.getLoc();
   fir::FirOpBuilder builder(rewriter, op.getOperation());
   mlir::Type predicateType = builder.getI1Type();
-  mlir::Type indexType = builder.getIndexType();
   mlir::Value tempBox = op.getTemp();
   mlir::Value originalBox = op.getOriginal();
 
