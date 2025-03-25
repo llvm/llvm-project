@@ -89,6 +89,8 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   const auto ConstReference = hasType(references(isConstQualified()));
   const auto RValueReference = hasType(
       referenceType(anyOf(rValueReferenceType(), unless(isSpelledAsLValue()))));
+  const auto ConstArrayType =
+      hasType(arrayType(hasElementType(isConstQualified())));
 
   const auto TemplateType = anyOf(
       hasType(hasCanonicalType(templateTypeParmType())),
@@ -115,7 +117,7 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   // Example: `int i = 10` would match `int i`.
   const auto LocalValDecl = varDecl(
       isLocal(), hasInitializer(anything()),
-      unless(anyOf(ConstType, ConstReference, TemplateType,
+      unless(anyOf(ConstType, ConstReference, ConstArrayType, TemplateType,
                    hasInitializer(isInstantiationDependent()), AutoTemplateType,
                    RValueReference, FunctionPointerRef,
                    hasType(cxxRecordDecl(isLambda())), isImplicit(),
@@ -161,6 +163,7 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
 
   VariableCategory VC = VariableCategory::Value;
   const QualType VT = Variable->getType();
+  VT->dump();
   if (VT->isReferenceType()) {
     VC = VariableCategory::Reference;
   } else if (VT->isPointerType()) {
@@ -169,6 +172,7 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     if (ArrayT->getElementType()->isPointerType())
       VC = VariableCategory::Pointer;
   }
+  llvm::errs() << (int)VC << "\n";
 
   auto CheckValue = [&]() {
     // The scope is only registered if the analysis shall be run.
