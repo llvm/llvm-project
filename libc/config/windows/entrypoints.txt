@@ -79,6 +79,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
+    libc.src.stdlib.memalignment
     libc.src.stdlib.qsort
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
@@ -90,7 +91,6 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # stdlib.h external entrypoints
     libc.src.stdlib.malloc
-    libc.src.stdlib.memalignment
     libc.src.stdlib.calloc
     libc.src.stdlib.realloc
     libc.src.stdlib.aligned_alloc
