@@ -26,22 +26,24 @@
 #include "test_macros.h"
 
 struct MoveOnly {
-  int i;
+  int value;
 
-  TEST_CONSTEXPR_CXX14 explicit MoveOnly(int i) : i(i) {}
+  TEST_CONSTEXPR_CXX14 explicit MoveOnly(int i) : value(i) {}
 
   MoveOnly(MoveOnly const&)            = delete;
   MoveOnly& operator=(MoveOnly const&) = delete;
 
-  TEST_CONSTEXPR_CXX14 MoveOnly(MoveOnly&& other) noexcept : i(other.i) { other.i = -1; }
+  TEST_CONSTEXPR_CXX14 MoveOnly(MoveOnly&& other) TEST_NOEXCEPT : value(other.value) { other.value = -1; }
 
-  TEST_CONSTEXPR_CXX14 MoveOnly& operator=(MoveOnly&& other) noexcept {
-    i       = other.i;
-    other.i = -1;
+  TEST_CONSTEXPR_CXX14 MoveOnly& operator=(MoveOnly&& other) TEST_NOEXCEPT {
+    value       = other.value;
+    other.value = -1;
     return *this;
   }
 
-  TEST_CONSTEXPR_CXX14 friend bool operator==(MoveOnly const& lhs, MoveOnly const& rhs) { return lhs.i == rhs.i; }
+  TEST_CONSTEXPR_CXX14 friend bool operator==(MoveOnly const& lhs, MoveOnly const& rhs) {
+    return lhs.value == rhs.value;
+  }
 };
 
 template <class T>
