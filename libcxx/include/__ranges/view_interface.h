@@ -20,6 +20,7 @@
 #include <__memory/pointer_traits.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
+#include <__ranges/const_access.h>
 #include <__ranges/empty.h>
 #include <__ranges/size.h>
 #include <__type_traits/is_class.h>
@@ -70,6 +71,27 @@ public:
     } else {
       return ranges::begin(__derived()) == ranges::end(__derived());
     }
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr auto cbegin()
+    requires input_range<_Derived>
+  {
+    return ranges::cbegin(__derived());
+  }
+  _LIBCPP_HIDE_FROM_ABI constexpr auto cbegin() const
+    requires input_range<const _Derived>
+  {
+    return ranges::cbegin(__derived());
+  }
+  _LIBCPP_HIDE_FROM_ABI constexpr auto cend()
+    requires input_range<_Derived>
+  {
+    return ranges::cend(__derived());
+  }
+  _LIBCPP_HIDE_FROM_ABI constexpr auto cend() const
+    requires input_range<const _Derived>
+  {
+    return ranges::cend(__derived());
   }
 
   template <class _D2 = _Derived>

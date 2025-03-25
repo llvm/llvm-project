@@ -34,6 +34,14 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
+template <ranges::bidirectional_range _Range>
+_LIBCPP_HIDE_FROM_ABI constexpr ranges::subrange<reverse_iterator<ranges::iterator_t<_Range>>,
+                                                 reverse_iterator<ranges::iterator_t<_Range>>>
+__reverse_range(_Range&& __range) {
+  auto __first = ranges::begin(__range);
+  return {std::make_reverse_iterator(ranges::next(__first, ranges::end(__range))), std::make_reverse_iterator(__first)};
+}
+
 template <class _InIter, class _OutIter>
 using reverse_copy_result = in_out_result<_InIter, _OutIter>;
 
@@ -49,7 +57,7 @@ struct __reverse_copy {
     requires indirectly_copyable<iterator_t<_Range>, _OutIter>
   _LIBCPP_HIDE_FROM_ABI constexpr reverse_copy_result<borrowed_iterator_t<_Range>, _OutIter>
   operator()(_Range&& __range, _OutIter __result) const {
-    auto __ret = ranges::copy(std::__reverse_range(__range), std::move(__result));
+    auto __ret = ranges::copy(ranges::__reverse_range(__range), std::move(__result));
     return {ranges::next(ranges::begin(__range), ranges::end(__range)), std::move(__ret.out)};
   }
 };

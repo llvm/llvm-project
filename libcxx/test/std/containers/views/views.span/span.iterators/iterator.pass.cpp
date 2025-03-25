@@ -26,20 +26,17 @@ constexpr void test_type() {
   using C = std::span<T>;
   typename C::iterator ii1{}, ii2{};
   typename C::iterator ii4 = ii1;
-  // TODO Test against C++23 after implementing
-  //  P2278R4 cbegin should always return a constant iterator
-  // The means adjusting the #ifdef to guard against C++23.
-#ifdef __cpp_lib_ranges_as_const
+#if TEST_STD_VER >= 23
   typename C::const_iterator cii{};
 #endif
   assert(ii1 == ii2);
   assert(ii1 == ii4);
-#ifdef __cpp_lib_ranges_as_const
+#if TEST_STD_VER >= 23
   assert(ii1 == cii);
 #endif
 
   assert(!(ii1 != ii2));
-#ifdef __cpp_lib_ranges_as_const
+#if TEST_STD_VER >= 23
   assert(!(ii1 != cii));
 #endif
 
@@ -47,21 +44,21 @@ constexpr void test_type() {
   C c{&v, 1};
   assert(c.begin() == std::begin(c));
   assert(c.rbegin() == std::rbegin(c));
-#ifdef __cpp_lib_ranges_as_const
+#if TEST_STD_VER >= 23
   assert(c.cbegin() == std::cbegin(c));
   assert(c.crbegin() == std::crbegin(c));
 #endif
 
   assert(c.end() == std::end(c));
   assert(c.rend() == std::rend(c));
-#ifdef __cpp_lib_ranges_as_const
+#if TEST_STD_VER >= 23
   assert(c.cend() == std::cend(c));
   assert(c.crend() == std::crend(c));
 #endif
 
   assert(std::begin(c) != std::end(c));
   assert(std::rbegin(c) != std::rend(c));
-#ifdef __cpp_lib_ranges_as_const
+#if TEST_STD_VER >= 23
   assert(std::cbegin(c) != std::cend(c));
   assert(std::crbegin(c) != std::crend(c));
 #endif
@@ -70,7 +67,7 @@ constexpr void test_type() {
   std::same_as<std::strong_ordering> decltype(auto) r1 = ii1 <=> ii2;
   assert(r1 == std::strong_ordering::equal);
 
-#ifdef __cpp_lib_ranges_as_const
+#if TEST_STD_VER >= 23
   std::same_as<std::strong_ordering> decltype(auto) r2 = cii <=> ii2;
   assert(r2 == std::strong_ordering::equal);
 #endif

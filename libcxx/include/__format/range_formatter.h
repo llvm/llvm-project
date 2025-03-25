@@ -26,8 +26,8 @@
 #include <__format/formatter_output.h>
 #include <__format/parser_std_format_spec.h>
 #include <__iterator/back_insert_iterator.h>
+#include <__ranges/access.h>
 #include <__ranges/concepts.h>
-#include <__ranges/data.h>
 #include <__ranges/from_range.h>
 #include <__ranges/size.h>
 #include <__type_traits/remove_cvref.h>

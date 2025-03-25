@@ -10,7 +10,7 @@
 // <span>
 
 // constexpr       iterator  end() const noexcept;
-// constexpr const_iterator cend() const noexcept;
+// constexpr const_iterator cend() const noexcept; // since C++23
 
 #include <span>
 #include <cassert>
@@ -18,34 +18,31 @@
 
 #include "test_macros.h"
 
-template <class Span>
-constexpr bool testConstexprSpan(Span s) {
-  bool ret                  = true;
-  typename Span::iterator e = s.end();
+template <class Span, class Iter>
+constexpr void testSpanImpl(Span s, Iter last) {
   if (s.empty()) {
-    ret = ret && (e == s.begin());
+    assert(last == s.begin());
   } else {
-    typename Span::const_pointer last = &*(s.begin() + s.size() - 1);
-    ret                               = ret && (e != s.begin());
-    ret                               = ret && (&*(e - 1) == last);
+    assert(last != s.begin());
+    assert(&*(last - 1) == s.data() + s.size() - 1);
   }
-
-  ret = ret && (static_cast<std::size_t>(e - s.begin()) == s.size());
-  return ret;
+  assert(static_cast<size_t>(last - s.begin()) == s.size());
 }
 
-template <class Span>
-void testRuntimeSpan(Span s) {
-  typename Span::iterator e = s.end();
-  if (s.empty()) {
-    assert(e == s.begin());
-  } else {
-    typename Span::const_pointer last = &*(s.begin() + s.size() - 1);
-    assert(e != s.begin());
-    assert(&*(e - 1) == last);
-  }
+template <class EType, size_t Extent, class... Args>
+constexpr void testSpan(Args&&... args) {
+  auto s1 = std::span<EType>(std::forward<Args>(args)...);
 
-  assert(static_cast<std::size_t>(e - s.begin()) == s.size());
+  testSpanImpl(s1, s1.end());
+#if TEST_STD_VER >= 23
+  testSpanImpl(s1, s1.cend());
+#endif
+
+  auto s2 = std::span<EType, Extent>(std::forward<Args>(args)...);
+  testSpanImpl(s2, s2.end());
+#if TEST_STD_VER >= 23
+  testSpanImpl(s2, s2.cend());
+#endif
 }
 
 struct A {};
@@ -54,46 +51,39 @@ bool operator==(A, A) { return true; }
 constexpr int iArr1[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 int iArr2[]           = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
 
+constexpr bool test_runtime_and_constexpr() {
+  testSpan<int, 0>();
+  testSpan<long, 0>();
+  testSpan<double, 0>();
+  testSpan<A, 0>();
+  testSpan<std::string, 0>();
+
+  testSpan<const int, 1>(iArr1, 1);
+  testSpan<const int, 2>(iArr1, 2);
+  testSpan<const int, 3>(iArr1, 3);
+  testSpan<const int, 4>(iArr1, 4);
+  testSpan<const int, 5>(iArr1, 5);
+
+  const std::string s2;
+  testSpan<const std::string, 0>(&s2, static_cast<size_t>(0));
+  testSpan<const std::string, 1>(&s2, 1);
+
+  return true;
+}
+
 int main(int, char**) {
-  static_assert(testConstexprSpan(std::span<int>()), "");
-  static_assert(testConstexprSpan(std::span<long>()), "");
-  static_assert(testConstexprSpan(std::span<double>()), "");
-  static_assert(testConstexprSpan(std::span<A>()), "");
-  static_assert(testConstexprSpan(std::span<std::string>()), "");
+  test_runtime_and_constexpr();
+  static_assert(test_runtime_and_constexpr());
 
-  static_assert(testConstexprSpan(std::span<int, 0>()), "");
-  static_assert(testConstexprSpan(std::span<long, 0>()), "");
-  static_assert(testConstexprSpan(std::span<double, 0>()), "");
-  static_assert(testConstexprSpan(std::span<A, 0>()), "");
-  static_assert(testConstexprSpan(std::span<std::string, 0>()), "");
+  testSpan<int, 1>(iArr2, 1);
+  testSpan<int, 2>(iArr2, 2);
+  testSpan<int, 3>(iArr2, 3);
+  testSpan<int, 4>(iArr2, 4);
+  testSpan<int, 5>(iArr2, 5);
 
-  static_assert(testConstexprSpan(std::span<const int>(iArr1, 1)), "");
-  static_assert(testConstexprSpan(std::span<const int>(iArr1, 2)), "");
-  static_assert(testConstexprSpan(std::span<const int>(iArr1, 3)), "");
-  static_assert(testConstexprSpan(std::span<const int>(iArr1, 4)), "");
-  static_assert(testConstexprSpan(std::span<const int>(iArr1, 5)), "");
-
-  testRuntimeSpan(std::span<int>());
-  testRuntimeSpan(std::span<long>());
-  testRuntimeSpan(std::span<double>());
-  testRuntimeSpan(std::span<A>());
-  testRuntimeSpan(std::span<std::string>());
-
-  testRuntimeSpan(std::span<int, 0>());
-  testRuntimeSpan(std::span<long, 0>());
-  testRuntimeSpan(std::span<double, 0>());
-  testRuntimeSpan(std::span<A, 0>());
-  testRuntimeSpan(std::span<std::string, 0>());
-
-  testRuntimeSpan(std::span<int>(iArr2, 1));
-  testRuntimeSpan(std::span<int>(iArr2, 2));
-  testRuntimeSpan(std::span<int>(iArr2, 3));
-  testRuntimeSpan(std::span<int>(iArr2, 4));
-  testRuntimeSpan(std::span<int>(iArr2, 5));
-
-  std::string s;
-  testRuntimeSpan(std::span<std::string>(&s, (std::size_t)0));
-  testRuntimeSpan(std::span<std::string>(&s, 1));
+  std::string s1;
+  testSpan<std::string, 0>(&s1, static_cast<size_t>(0));
+  testSpan<std::string, 1>(&s1, 1);
 
   return 0;
 }

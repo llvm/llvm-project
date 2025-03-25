@@ -1478,6 +1478,7 @@ module std [system] {
       header "__iterator/concepts.h"
       export std_core.type_traits.common_reference
     }
+    module const_iterator             { header "__iterator/const_iterator.h" }
     module counted_iterator           { header "__iterator/counted_iterator.h" }
     module cpp17_iterator_concepts    { header "__iterator/cpp17_iterator_concepts.h" }
     module data                       { header "__iterator/data.h" }
@@ -1816,12 +1817,14 @@ module std [system] {
   module ranges {
     module access                         { header "__ranges/access.h" }
     module all                            { header "__ranges/all.h" }
+    module as_const_view                  { header "__ranges/as_const_view.h" }
     module as_rvalue_view                 { header "__ranges/as_rvalue_view.h" }
     module chunk_by_view {
       header "__ranges/chunk_by_view.h"
       export std.functional.bind_back
     }
     module common_view                    { header "__ranges/common_view.h" }
+    module const_access                   { header "__ranges/const_access.h" }
     module concepts                       { header "__ranges/concepts.h" }
     module container_compatible_range     { header "__ranges/container_compatible_range.h" }
     module counted {
@@ -1831,9 +1834,6 @@ module std [system] {
     }
     module dangling {
       header "__ranges/dangling.h"
-    }
-    module data {
-      header "__ranges/data.h"
     }
     module drop_view {
       header "__ranges/drop_view.h"
