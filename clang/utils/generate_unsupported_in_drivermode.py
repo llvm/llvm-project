@@ -40,10 +40,6 @@ VISIBILITY_DEFAULT = "DefaultVis"
 VISIBILITY_FC1 = "FC1Option"
 VISIBILITY_FLANG = "FlangOption"
 
-# Lit test prefix strings
-SLASH_SLASH = "// "
-EXCLAMATION = "! "
-
 exceptions_sequence = [
     # Invalid usage of the driver options below causes unique output, so skip testing
     "cc1",
@@ -92,6 +88,7 @@ class DriverData:
     visibility_str: str
     lit_cmd_end: str
     check_str: str
+    check_prefix: str
     supported_joined_option_sequence: list[DriverOption] = dataclasses.field(
         default_factory=list
     )
@@ -148,11 +145,9 @@ def get_visibility(option):
             visibility_set.add(visibility["def"])
 
     # Check for the option's group's visibility
-    group_set = collect_transitive_groups(option, options_dictionary)
-    if group_set:
-        for group_name in group_set:
-            for visibility in options_dictionary[group_name]["Visibility"]:
-                visibility_set.add(visibility["def"])
+    for group_name in collect_transitive_groups(option, options_dictionary):
+        for visibility in options_dictionary[group_name]["Visibility"]:
+            visibility_set.add(visibility["def"])
 
     return visibility_set
 
@@ -162,7 +157,7 @@ def get_lit_test_note(test_visibility):
     test_visibility: Any VISIBILITY_* variable. VISIBILITY_DEFAULT will return the .c formatted test note.
     All other will return the .f90 formatted test note
     """
-    test_prefix = SLASH_SLASH if test_visibility == VISIBILITY_DEFAULT else EXCLAMATION
+    test_prefix = "// " if test_visibility == VISIBILITY_DEFAULT else "! "
 
     return (
         f"{test_prefix}NOTE: This lit test was automatically generated to validate "
@@ -196,13 +191,10 @@ def write_lit_test(test_path, test_visibility):
         ):
             continue
 
-        comment_str = EXCLAMATION if is_flang_pair else SLASH_SLASH
+        comment_str = "! " if is_flang_pair else "// "
 
-        unflattened_option_data = list(
-            itertools.batched(driver_data.test_option_sequence, batch_size)
-        )
-
-        for i, batch in enumerate(unflattened_option_data):
+        batched = itertools.batched(driver_data.test_option_sequence, batch_size)
+        for i, batch in enumerate(batched):
             # Example run line: "// RUN: not %clang -cc1 -A ... -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CC1OptionCHECK0 %s"
             run_cmd = (
                 f"\n{comment_str}RUN: not " + driver_data.lit_cmd_prefix
@@ -224,17 +216,17 @@ def write_lit_test(test_path, test_visibility):
             lit_file.write(run_cmd)
 
             for option_str in batch:
-                # Example check line: "// CC1OptionCHECK0: {{(unknown argument).*-A}}"
+                # Example check line: "// CHECK_CC1_0: {{(unknown argument).*}}-A"
                 check_cmd = (
                     comment_str  # "//
-                    + visibility  # "CC1Option"
-                    + "CHECK"
+                    + driver_data.check_prefix  # "CHECK_CC1_"
                     + str(i)  # "0"
                     + ": {{("
                     + driver_data.check_str  # "unknown argument"
                     + ").*"
-                    + option_str.replace("+", "\\+")  # "-A"
-                    + "}}\n"
+                    + "}}"
+                    + option_str  # "-A"
+                    + "\n"
                 )
                 lit_file.write(check_cmd)
 
@@ -317,50 +309,57 @@ driver_cc1as = DriverData(
     "%clang -cc1as ",
     "",
     VISIBILITY_CC1AS,
-    f" - < /dev/null 2>&1 | FileCheck -check-prefix={VISIBILITY_CC1AS}CHECK",
+    f" - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1AS_",
     "unknown argument",
+    "CHECK_CC1AS_",
 )
 driver_cc1 = DriverData(
     "%clang -cc1 ",
     " -x c++",
     VISIBILITY_CC1,
-    f" - < /dev/null 2>&1 | FileCheck -check-prefix={VISIBILITY_CC1}CHECK",
+    f" - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CC1_",
     "unknown argument",
+    "CHECK_CC1_",
 )
 driver_cl = DriverData(
     "%clang_cl ",
     " -### /c /WX -Werror",
     VISIBILITY_CL,
-    f" 2>&1 | FileCheck -check-prefix={VISIBILITY_CL}CHECK",
+    f" 2>&1 | FileCheck -check-prefix=CHECK_CL_",
     "unknown argument ignored in clang-cl",
+    "CHECK_CL_",
 )
 driver_dxc = DriverData(
     "%clang_dxc ",
     " -### /T lib_6_7",
     VISIBILITY_DXC,
-    f" 2>&1 | FileCheck -check-prefix={VISIBILITY_DXC}CHECK",
+    f" 2>&1 | FileCheck -check-prefix=CHECK_DXC_",
     "unknown argument",
+    "CHECK_DXC_",
 )
 driver_default = DriverData(
     "%clang ",
     " -### -x c++ -c",
     VISIBILITY_DEFAULT,
-    f" - < /dev/null 2>&1 | FileCheck -check-prefix={VISIBILITY_DEFAULT}CHECK",
+    f" - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_CLANG_",
     "unknown argument",
+    "CHECK_CLANG_",
 )
 driver_fc1 = DriverData(
     "%flang_fc1 ",
     "",
     VISIBILITY_FC1,
-    f" - < /dev/null 2>&1 | FileCheck -check-prefix={VISIBILITY_FC1}CHECK",
+    f" - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FC1_",
     "unknown argument",
+    "CHECK_FC1_",
 )
 driver_flang = DriverData(
     "%clang --driver-mode=flang ",
     " -### -x c++ -c",
     VISIBILITY_FLANG,
-    f" - < /dev/null 2>&1 | FileCheck -check-prefix={VISIBILITY_FLANG}CHECK",
+    f" - < /dev/null 2>&1 | FileCheck -check-prefix=CHECK_FLANG_",
     "unknown argument",
+    "CHECK_FLANG_",
 )
 
 driver_data_dict = {
