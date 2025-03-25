@@ -64,7 +64,9 @@ AST_MATCHER(CXXRecordDecl, correctHandleCaptureThisLambda) {
 
 constexpr const char *DefaultFunctionWrapperTypes =
     "::std::function;::std::move_only_function;::boost::function";
-constexpr const char *DefaultBindFunctions = "::std::bind;::boost::bind";
+constexpr const char *DefaultBindFunctions =
+    "::std::bind;::boost::bind;::std::bind_front;::std::bind_back;"
+    "::boost::compat::bind_front;::boost::compat::bind_back";
 
 CapturingThisInMemberVariableCheck::CapturingThisInMemberVariableCheck(
     StringRef Name, ClangTidyContext *Context)
