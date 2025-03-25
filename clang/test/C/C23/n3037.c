@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c23 -verify=both,c23 %s
-// RUN: %clang_cc1 -fsyntax-only -std=c17 -verify=both,c17 %s
+// RUN: %clang_cc1 -fsyntax-only -std=c23 -pedantic -Wall -Wno-comment -verify=both,c23 %s
+// RUN: %clang_cc1 -fsyntax-only -std=c17 -pedantic -Wall -Wno-comment -Wno-c23-extensions -verify=both,c17 %s
 
 /* WG14 N3037:
  * Improved tag compatibility
@@ -13,7 +13,7 @@ struct foo { int a; } p;
 void baz(struct foo f); // c17-note {{passing argument to parameter 'f' here}}
 
 void bar(void) {
-  struct foo { int a; } q;
+  struct foo { int a; } q = {};
   baz(q); // c17-error {{passing 'struct foo' to parameter of incompatible type 'struct foo'}}
 }
 
@@ -415,3 +415,7 @@ enum enum_attr_test_6 { // c17-error {{redefinition of 'enum_attr_test_6'}} \
 enum fixed_test_1 : int { FT1 }; // c17-note 2 {{previous definition is here}}
 enum fixed_test_1 : int { FT1 }; // c17-error {{redefinition of 'fixed_test_1'}} \
                                     c17-error {{redefinition of enumerator 'FT1'}}
+
+enum fixed_test_2 : int { FT2 };                 // c17-note 2 {{previous definition is here}}
+enum fixed_test_2 : typedef_of_type_int { FT2 }; // c17-error {{redefinition of 'fixed_test_2'}} \
+                                                    c17-error {{redefinition of enumerator 'FT2'}}
