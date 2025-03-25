@@ -52,7 +52,7 @@ static void writeHeader(const Twine &Text, unsigned int Num, raw_ostream &OS) {
   OS << std::string(Num, '#') + " " + Text << "\n\n";
 }
 
-static void writeFileDefinition(const ClangDocContext &CDCtx, const Location &L,
+static void writeSourceFileRef(const ClangDocContext &CDCtx, const Location &L,
                                 raw_ostream &OS) {
 
   if (!CDCtx.RepositoryUrl) {
@@ -67,11 +67,11 @@ static void writeFileDefinition(const ClangDocContext &CDCtx, const Location &L,
   OS << "\n\n";
 }
 
-static void createFileDefinition(llvm::raw_ostream &OS,
+static void maybeWriteSourceFileRef(llvm::raw_ostream &OS,
                                  const ClangDocContext &CDCtx,
                                  const std::optional<Location> &DefLoc) {
   if (DefLoc)
-    writeFileDefinition(CDCtx, *DefLoc, OS);
+    writeSourceFileRef(CDCtx, *DefLoc, OS);
 }
 
 static void writeDescription(const CommentInfo &I, raw_ostream &OS) {
@@ -151,7 +151,7 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
       Members << "| " << N.Name << " |\n";
   writeLine(Members.str(), OS);
 
-  createFileDefinition(OS, CDCtx, I.DefLoc);
+  maybeWriteSourceFileRef(OS, CDCtx, I.DefLoc);
 
   for (const auto &C : I.Description)
     writeDescription(C, OS);
@@ -179,7 +179,7 @@ static void genMarkdown(const ClangDocContext &CDCtx, const FunctionInfo &I,
                         Stream.str() + ")"),
               OS);
 
-  createFileDefinition(OS, CDCtx, I.DefLoc);
+  maybeWriteSourceFileRef(OS, CDCtx, I.DefLoc);
 
   for (const auto &C : I.Description)
     writeDescription(C, OS);
@@ -239,7 +239,7 @@ static void genMarkdown(const ClangDocContext &CDCtx, const RecordInfo &I,
                         llvm::raw_ostream &OS) {
   writeHeader(getTagType(I.TagType) + " " + I.Name, 1, OS);
 
-  createFileDefinition(OS, CDCtx, I.DefLoc);
+  maybeWriteSourceFileRef(OS, CDCtx, I.DefLoc);
 
   if (!I.Description.empty()) {
     for (const auto &C : I.Description)
