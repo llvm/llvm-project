@@ -358,7 +358,7 @@ Bug Fixes to C++ Support
 - Fixed a Clang regression in C++20 mode where unresolved dependent call expressions were created inside non-dependent contexts (#GH122892)
 - Clang now emits the ``-Wunused-variable`` warning when some structured bindings are unused
   and the ``[[maybe_unused]]`` attribute is not applied. (#GH125810)
-- Clang no longer crash when establishing subsumption between some constraint expressions. (#GH122581)
+- Clang no longer crashes when establishing subsumption between some constraint expressions. (#GH122581)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

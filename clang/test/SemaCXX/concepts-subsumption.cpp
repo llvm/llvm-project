@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
-
+// expected-no-diagnostics
 namespace A {
 template <typename T>
 concept C = true;
@@ -98,6 +98,10 @@ static_assert(foo(0) == 30);
 }
 
 namespace WAT{
+// user-provided formula that is misshandled by clang 20,
+// and some other compilers. There is no particular meaning
+// to it except to stress-test the compiler.
+
 template<typename T>
 concept Z0 = true;
 
@@ -186,9 +190,7 @@ concept X =
 template<typename T>
 concept Y = Z0<T> && X<T>;
 
-constexpr int foo(X auto x) { return 1; } // expected-note{{candidate function}}
-
-constexpr int foo(Y auto y) { return 2; } // expected-note{{candidate function}}
-
-static_assert(foo(0) == 3); // expected-error {{call to 'foo' is ambiguous}}
+constexpr int foo(X auto x) { return 1; }
+constexpr int foo(Y auto y) { return 2; }
+static_assert(foo(0) == 2);
 }

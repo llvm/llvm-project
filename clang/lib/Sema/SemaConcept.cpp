@@ -1935,26 +1935,24 @@ NormalizedConstraint::getFoldExpandedConstraint() const {
 
 //
 //
-// -------------------------------------------------------------------------
+// ------------------------ Subsumption -----------------------------------
 //
 //
-
-/// \name Subsumption
 
 template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
 
   static FoldingSetNodeID getEmptyKey() {
-    FoldingSetNodeID id;
-    id.AddInteger(std::numeric_limits<unsigned>::max());
-    return id;
+    FoldingSetNodeID ID;
+    ID.AddInteger(std::numeric_limits<unsigned>::max());
+    return ID;
   }
 
   static FoldingSetNodeID getTombstoneKey() {
-    FoldingSetNodeID id;
-    for (size_t i = 0; i < sizeof(id) / sizeof(unsigned); ++i) {
-      id.AddInteger(std::numeric_limits<unsigned>::max());
+    FoldingSetNodeID ID;
+    for (unsigned I = 0; I < sizeof(ID) / sizeof(unsigned); ++I) {
+      ID.AddInteger(std::numeric_limits<unsigned>::max());
     }
-    return id;
+    return ID;
   }
 
   static unsigned getHashValue(const FoldingSetNodeID &Val) {
@@ -1971,7 +1969,7 @@ SubsumptionChecker::SubsumptionChecker(Sema &SemaRef,
                                        SubsumptionCallable Callable)
     : SemaRef(SemaRef), Callable(Callable), NextID(1) {}
 
-auto SubsumptionChecker::getNewId() -> uint16_t {
+uint16_t SubsumptionChecker::getNewLiteralId() {
   assert((unsigned(NextID) + 1 < std::numeric_limits<uint16_t>::max()) &&
          "too many constraints!");
   return NextID++;
@@ -2007,7 +2005,7 @@ auto SubsumptionChecker::find(AtomicConstraint *Ori) -> Literal {
   if (It == Elems.end()) {
     It =
         Elems
-            .insert({ID, MappedAtomicConstraint{Ori, Literal{getNewId(),
+            .insert({ID, MappedAtomicConstraint{Ori, Literal{getNewLiteralId(),
                                                              Literal::Atomic}}})
             .first;
     ReverseMap[It->second.ID.Value] = Ori;
@@ -2025,7 +2023,7 @@ auto SubsumptionChecker::find(FoldExpandedConstraint *Ori) -> Literal {
     return K.Kind == Other.Kind;
   });
   if (It == Elems.end()) {
-    K.ID = {getNewId(), Literal::FoldExpanded};
+    K.ID = {getNewLiteralId(), Literal::FoldExpanded};
     It = Elems.insert(Elems.end(), std::move(K));
     ReverseMap[It->ID.Value] = Ori;
   }
@@ -2033,10 +2031,10 @@ auto SubsumptionChecker::find(FoldExpandedConstraint *Ori) -> Literal {
 }
 
 auto SubsumptionChecker::CNF(const NormalizedConstraint &C) -> CNFFormula {
-  return SubsumptionChecker::Normalize<CNFFormula>(C);
+  return SubsumptionChecker::Normalize<CNFFormula>(C, DNFFormula::Kind);
 }
 auto SubsumptionChecker::DNF(const NormalizedConstraint &C) -> DNFFormula {
-  return SubsumptionChecker::Normalize<DNFFormula>(C);
+  return SubsumptionChecker::Normalize<DNFFormula>(C, DNFFormula::Kind);
 }
 
 ///
@@ -2055,19 +2053,26 @@ auto SubsumptionChecker::DNF(const NormalizedConstraint &C) -> DNFFormula {
 /// Redundant clauses (ie clauses that are fully subsumed) by other
 /// clauses in the same formula are removed.
 template <typename FormulaType>
-FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC) {
+FormulaType SubsumptionChecker::Normalize(
+    const NormalizedConstraint &NC,
+    NormalizedConstraint::CompoundConstraintKind ParentKind) {
   FormulaType Res;
 
-  auto Add = [&Res, this](Clause C, bool RemoveRedundantClause) {
+  bool ParentWillDoCrossProduct = ParentKind != FormulaType::Kind;
+
+  auto Add = [&, this](Clause C, bool RemoveRedundantClause) {
     // Sort each clause and remove duplicates for faster comparision
     // Both AddClauseToFormula and IsSuperSet require sorted, uniqued literals.
     std::sort(C.begin(), C.end());
     C.erase(std::unique(C.begin(), C.end()), C.end());
 
-    if (RemoveRedundantClause)
-      AddClauseToFormula(Res, std::move(C));
+    // Because the caller may produce the cross product of the clauses
+    // we need to be careful not to remove clauses that could be
+    // combined by the parent.
+    if (!ParentWillDoCrossProduct && RemoveRedundantClause)
+      AddNonRedundantClauseToFormula(Res, std::move(C));
     else
-      Res.push_back(std::move(C));
+      AddUniqueClauseToFormula(Res, std::move(C));
   };
 
   if (NC.isAtomic())
@@ -2078,8 +2083,8 @@ FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC) {
 
   FormulaType Left, Right;
   SemaRef.runWithSufficientStackSpace(SourceLocation(), [&] {
-    Left = Normalize<FormulaType>(NC.getLHS());
-    Right = Normalize<FormulaType>(NC.getRHS());
+    Left = Normalize<FormulaType>(NC.getLHS(), NC.getCompoundKind());
+    Right = Normalize<FormulaType>(NC.getRHS(), NC.getCompoundKind());
   });
 
   if (NC.getCompoundKind() == FormulaType::Kind) {
@@ -2113,7 +2118,7 @@ FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC) {
 // Remove redundant clauses.
 // This is fairly crude, but we expect the number of clauses to be
 // small-ish and the number of literals to be small
-void SubsumptionChecker::AddClauseToFormula(Formula &F, Clause C) {
+void SubsumptionChecker::AddNonRedundantClauseToFormula(Formula &F, Clause C) {
   bool Added = false;
   for (auto &Other : F) {
     // Forward subsume: nothing to do
@@ -2127,6 +2132,14 @@ void SubsumptionChecker::AddClauseToFormula(Formula &F, Clause C) {
   }
   if (!Added)
     F.push_back(C);
+}
+
+void SubsumptionChecker::AddUniqueClauseToFormula(Formula &F, Clause C) {
+  for (auto &Other : F) {
+    if (llvm::equal(C, Other))
+      return;
+  }
+  F.push_back(C);
 }
 
 bool SubsumptionChecker::IsSuperSet(const Clause &A, const Clause &B) {
@@ -2201,17 +2214,18 @@ bool SubsumptionChecker::Subsumes(const FoldExpandedConstraint *A,
                                   const FoldExpandedConstraint *B) {
   std::pair<const FoldExpandedConstraint *, const FoldExpandedConstraint *> Key{
       A, B};
+
   auto It = FoldSubsumptionCache.find(Key);
   if (It == FoldSubsumptionCache.end()) {
     // C++ [temp.constr.order]
     // a fold expanded constraint A subsumes another fold expanded
-    // constraint Bif they are compatible for subsumption, have the same
+    // constraint B if they are compatible for subsumption, have the same
     // fold-operator, and the constraint of A subsumes that of B.
-    bool DoesSubsumes =
+    bool DoesSubsume =
         A->Kind == B->Kind &&
         FoldExpandedConstraint::AreCompatibleForSubsumption(*A, *B) &&
         Subsumes(&A->Constraint, &B->Constraint);
-    It = FoldSubsumptionCache.try_emplace(std::move(Key), DoesSubsumes).first;
+    It = FoldSubsumptionCache.try_emplace(std::move(Key), DoesSubsume).first;
   }
   return It->second;
 }
