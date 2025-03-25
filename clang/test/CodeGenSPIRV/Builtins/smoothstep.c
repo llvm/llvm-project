@@ -41,11 +41,3 @@ float3 test_smoothstep_float3(float3 Min, float3 Max, float3 X) { return __built
 // CHECK-NEXT:    ret <4 x float> [[SPV_SMOOTHSTEP]]
 //
 float4 test_smoothstep_float4(float4 Min, float4 Max, float4 X) { return __builtin_spirv_smoothstep(Min, Max, X); }
-
-// CHECK-LABEL: define spir_func double @test_smoothstep_double(
-// CHECK-SAME: double noundef [[MIN:%.*]], double noundef [[MAX:%.*]], double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[SPV_SMOOTHSTEP:%.*]] = tail call double @llvm.spv.smoothstep.f64(double [[MIN]], double [[MAX]], double [[X]])
-// CHECK-NEXT:    ret double [[SPV_SMOOTHSTEP]]
-//
-double test_smoothstep_double(double Min, double Max, double X) { return __builtin_spirv_smoothstep(Min, Max, X); }
