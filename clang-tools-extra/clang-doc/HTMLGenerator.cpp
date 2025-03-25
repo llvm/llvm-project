@@ -490,8 +490,8 @@ genReferencesBlock(const std::vector<Reference> &References,
   }
   return Out;
 }
-static std::unique_ptr<TagNode>
-writeSourceFileRef(const ClangDocContext &CDCtx, const Location &L) {
+static std::unique_ptr<TagNode> writeSourceFileRef(const ClangDocContext &CDCtx,
+                                                   const Location &L) {
 
   if (!L.IsFileInRootDir && !CDCtx.RepositoryUrl)
     return std::make_unique<TagNode>(
@@ -529,8 +529,8 @@ writeSourceFileRef(const ClangDocContext &CDCtx, const Location &L) {
 }
 
 static void maybeWriteSourceFileRef(std::vector<std::unique_ptr<TagNode>> &Out,
-                                 const ClangDocContext &CDCtx,
-                                 const std::optional<Location> &DefLoc) {
+                                    const ClangDocContext &CDCtx,
+                                    const std::optional<Location> &DefLoc) {
   if (DefLoc)
     Out.emplace_back(writeSourceFileRef(CDCtx, *DefLoc));
 }

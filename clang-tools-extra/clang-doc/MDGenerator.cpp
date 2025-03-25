@@ -53,7 +53,7 @@ static void writeHeader(const Twine &Text, unsigned int Num, raw_ostream &OS) {
 }
 
 static void writeSourceFileRef(const ClangDocContext &CDCtx, const Location &L,
-                                raw_ostream &OS) {
+                               raw_ostream &OS) {
 
   if (!CDCtx.RepositoryUrl) {
     OS << "*Defined at " << L.Filename << "#" << std::to_string(L.LineNumber)
@@ -68,8 +68,8 @@ static void writeSourceFileRef(const ClangDocContext &CDCtx, const Location &L,
 }
 
 static void maybeWriteSourceFileRef(llvm::raw_ostream &OS,
-                                 const ClangDocContext &CDCtx,
-                                 const std::optional<Location> &DefLoc) {
+                                    const ClangDocContext &CDCtx,
+                                    const std::optional<Location> &DefLoc) {
   if (DefLoc)
     writeSourceFileRef(CDCtx, *DefLoc, OS);
 }
