@@ -10,6 +10,7 @@
 // RUN: mlir-capi-quant-test 2>&1 | FileCheck %s
 
 #include "mlir-c/Dialect/Quant.h"
+#include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/IR.h"
 
@@ -203,6 +204,130 @@ void testUniformPerAxisType(MlirContext ctx) {
   fprintf(stderr, "\n\n");
 }
 
+// CHECK-LABEL: testUniformSubChannelType
+void testUniformSubChannelType(MlirContext ctx) {
+  fprintf(stderr, "testUniformSubChannelType\n");
+
+  MlirType subChannelParsed =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString(
+                                "!quant.uniform<i8:f32:{0:1, 1:2}, "
+                                "{{2.0:10, 3.0:20}, {4.0:30, 5.0:40}}>"));
+
+  MlirType i8 = mlirIntegerTypeGet(ctx, 8);
+  MlirType f32 = mlirF32TypeGet(ctx);
+
+  // block-size information
+  int32_t quantizedDimensions[] = {0, 1};
+  int64_t blockSizes[] = {1, 2};
+  int64_t numBlockSizes = 2;
+
+  // quantization parameters
+  int64_t quantParamShape[] = {2, 2};
+  int64_t quantParamRank = 2;
+  int64_t numQuantizationParams = 4;
+  MlirAttribute scales[] = {mlirFloatAttrDoubleGet(ctx, f32, 2.0),
+                            mlirFloatAttrDoubleGet(ctx, f32, 3.0),
+                            mlirFloatAttrDoubleGet(ctx, f32, 4.0),
+                            mlirFloatAttrDoubleGet(ctx, f32, 5.0)};
+  MlirAttribute zeroPoints[] = {
+      mlirIntegerAttrGet(i8, 10), mlirIntegerAttrGet(i8, 20),
+      mlirIntegerAttrGet(i8, 30), mlirIntegerAttrGet(i8, 40)};
+
+  MlirType scalesType =
+      mlirRankedTensorTypeGet(quantParamRank, quantParamShape, f32,
+                              /*encoding=*/mlirAttributeGetNull());
+  MlirType zeroPointsType = mlirRankedTensorTypeGet(
+      quantParamRank, quantParamShape, i8, /*encoding=*/mlirAttributeGetNull());
+  MlirAttribute denseScalesAttr =
+      mlirDenseElementsAttrGet(scalesType, numQuantizationParams, scales);
+  MlirAttribute denseZeroPointsAttr = mlirDenseElementsAttrGet(
+      zeroPointsType, numQuantizationParams, zeroPoints);
+
+  MlirType subChannel = mlirUniformQuantizedSubChannelTypeGet(
+      mlirQuantizedTypeGetSignedFlag(), i8, f32, denseScalesAttr,
+      denseZeroPointsAttr, numBlockSizes, quantizedDimensions, blockSizes,
+      mlirQuantizedTypeGetDefaultMinimumForInteger(/*isSigned=*/true,
+                                                   /*integralWidth=*/8),
+      mlirQuantizedTypeGetDefaultMaximumForInteger(/*isSigned=*/true,
+                                                   /*integralWidth=*/8));
+
+  MlirAttribute arrayScalesAttr =
+      mlirArrayAttrGet(ctx, numQuantizationParams, scales);
+  MlirAttribute arrayZeroPointsAttr =
+      mlirArrayAttrGet(ctx, numQuantizationParams, zeroPoints);
+  MlirType illegalSubChannel = mlirUniformQuantizedSubChannelTypeGet(
+      mlirQuantizedTypeGetSignedFlag(), i8, f32, arrayScalesAttr,
+      arrayZeroPointsAttr, numBlockSizes, quantizedDimensions, blockSizes,
+      mlirQuantizedTypeGetDefaultMinimumForInteger(/*isSigned=*/true,
+                                                   /*integralWidth=*/8),
+      mlirQuantizedTypeGetDefaultMaximumForInteger(/*isSigned=*/true,
+                                                   /*integralWidth=*/8));
+
+  // CHECK: is null sub-channel type: 1
+  fprintf(stderr, "is null sub-channel type: %d\n",
+          mlirTypeIsNull(illegalSubChannel));
+
+  // CHECK: num dims: 2
+  fprintf(stderr, "num dims: %" PRId64 "\n",
+          mlirUniformQuantizedSubChannelTypeGetNumBlockSizes(subChannel));
+
+  // CHECK: axis-block-size-pair[0]: 0:1
+  fprintf(
+      stderr, "axis-block-size-pair[0]: %" PRId32 ":%" PRId64 "\n",
+      mlirUniformQuantizedSubChannelTypeGetQuantizedDimension(subChannel, 0),
+      mlirUniformQuantizedSubChannelTypeGetBlockSize(subChannel, 0));
+
+  // CHECK: axis-block-size-pair[1]: 1:2
+  fprintf(
+      stderr, "axis-block-size-pair[1]: %" PRId32 ":%" PRId64 "\n",
+      mlirUniformQuantizedSubChannelTypeGetQuantizedDimension(subChannel, 1),
+      mlirUniformQuantizedSubChannelTypeGetBlockSize(subChannel, 1));
+
+  denseScalesAttr = mlirUniformQuantizedSubChannelTypeGetScales(subChannel);
+  denseZeroPointsAttr =
+      mlirUniformQuantizedSubChannelTypeGetZeroPoints(subChannel);
+  scalesType = mlirAttributeGetType(denseScalesAttr);
+  zeroPointsType = mlirAttributeGetType(denseZeroPointsAttr);
+
+  // CHECK: tensor<2x2xf32>
+  mlirTypeDump(scalesType);
+  // CHECK: tensor<2x2xi8>
+  mlirTypeDump(zeroPointsType);
+
+  // CHECK: number of quantization parameters: 4
+  fprintf(stderr, "number of quantization parameters: %" PRId64 "\n",
+          mlirElementsAttrGetNumElements(denseScalesAttr));
+
+  // CHECK: quantization-parameter[0]: 2.000000:10
+  fprintf(stderr, "quantization-parameter[0]: %lf:%" PRId8 "\n",
+          mlirDenseElementsAttrGetFloatValue(denseScalesAttr, 0),
+          mlirDenseElementsAttrGetInt8Value(denseZeroPointsAttr, 0));
+
+  // CHECK: quantization-parameter[1]: 3.000000:20
+  fprintf(stderr, "quantization-parameter[1]: %lf:%" PRId8 "\n",
+          mlirDenseElementsAttrGetFloatValue(denseScalesAttr, 1),
+          mlirDenseElementsAttrGetInt8Value(denseZeroPointsAttr, 1));
+
+  // CHECK: quantization-parameter[2]: 4.000000:30
+  fprintf(stderr, "quantization-parameter[2]: %lf:%" PRId8 "\n",
+          mlirDenseElementsAttrGetFloatValue(denseScalesAttr, 2),
+          mlirDenseElementsAttrGetInt8Value(denseZeroPointsAttr, 2));
+
+  // CHECK: quantization-parameter[3]: 5.000000:40
+  fprintf(stderr, "quantization-parameter[3]: %lf:%" PRId8 "\n",
+          mlirDenseElementsAttrGetFloatValue(denseScalesAttr, 3),
+          mlirDenseElementsAttrGetInt8Value(denseZeroPointsAttr, 3));
+
+  // CHECK: equal: 1
+  fprintf(stderr, "equal: %d\n", mlirTypeEqual(subChannel, subChannelParsed));
+
+  // CHECK: !quant.uniform<i8:f32:{0:1, 1:2},
+  // {{.*}}2.000000e+00:10, 3.000000e+00:20},
+  // {4.000000e+00:30, 5.000000e+00:40{{.*}}}}>
+  mlirTypeDump(subChannel);
+  fprintf(stderr, "\n\n");
+}
+
 // CHECK-LABEL: testCalibratedType
 void testCalibratedType(MlirContext ctx) {
   fprintf(stderr, "testCalibratedType\n");
@@ -233,6 +358,7 @@ int main(void) {
   testAnyQuantizedType(ctx);
   testUniformType(ctx);
   testUniformPerAxisType(ctx);
+  testUniformSubChannelType(ctx);
   testCalibratedType(ctx);
   mlirContextDestroy(ctx);
   return EXIT_SUCCESS;
