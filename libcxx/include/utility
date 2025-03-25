@@ -267,7 +267,6 @@ template <class T>
 #  if _LIBCPP_STD_VER >= 17
 #    include <__utility/as_const.h>
 #    include <__utility/in_place.h>
-#    include <__variant/monostate.h>
 #  endif
 
 #  if _LIBCPP_STD_VER >= 20
@@ -278,6 +277,10 @@ template <class T>
 #    include <__utility/forward_like.h>
 #    include <__utility/to_underlying.h>
 #    include <__utility/unreachable.h>
+#  endif
+
+#  if _LIBCPP_STD_VER >= 26
+#    include <__variant/monostate.h>
 #  endif
 
 #  include <version>

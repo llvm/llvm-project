@@ -640,7 +640,6 @@ experimental/utility compare
 experimental/utility cstddef
 experimental/utility cstdint
 experimental/utility cstdlib
-experimental/utility cstring
 experimental/utility initializer_list
 experimental/utility iosfwd
 experimental/utility limits
@@ -2390,7 +2389,6 @@ tuple compare
 tuple cstddef
 tuple cstdint
 tuple cstdlib
-tuple cstring
 tuple exception
 tuple initializer_list
 tuple iosfwd
@@ -2407,7 +2405,6 @@ typeindex compare
 typeindex cstddef
 typeindex cstdint
 typeindex cstdlib
-typeindex cstring
 typeindex initializer_list
 typeindex iosfwd
 typeindex limits
@@ -2504,7 +2501,6 @@ utility compare
 utility cstddef
 utility cstdint
 utility cstdlib
-utility cstring
 utility initializer_list
 utility iosfwd
 utility limits
