@@ -346,6 +346,52 @@ Register SystemZInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return isSimpleMove(MI, FrameIndex, SystemZII::SimpleBDXStore);
 }
 
+Register SystemZInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
+                                                     int &FrameIndex) const {
+  // if this is not a simple load from memory, it's not a load from stack slot
+  // either.
+  const MCInstrDesc &MCID = MI.getDesc();
+  if (!(MCID.TSFlags & SystemZII::SimpleBDXLoad))
+    return 0;
+
+  // This version of isLoadFromStackSlot should only be used post frame-index
+  // elimination.
+  assert(!MI.getOperand(1).isFI());
+
+  // Now attempt to derive frame index from MachineMemOperands.
+  SmallVector<const MachineMemOperand *, 1> Accesses;
+  if (hasLoadFromStackSlot(MI, Accesses)) {
+    FrameIndex =
+        cast<FixedStackPseudoSourceValue>(Accesses.front()->getPseudoValue())
+            ->getFrameIndex();
+    return MI.getOperand(0).getReg();
+  }
+  return 0;
+}
+
+Register SystemZInstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
+                                                    int &FrameIndex) const {
+  // if this is not a simple store to memory, it's not a store to stack slot
+  // either.
+  const MCInstrDesc &MCID = MI.getDesc();
+  if (!(MCID.TSFlags & SystemZII::SimpleBDXStore))
+    return 0;
+
+  // This version of isStoreToStackSlot should only be used post frame-index
+  // elimination.
+  assert(!MI.getOperand(1).isFI());
+
+  // Now attempt to derive frame index from MachineMemOperands.
+  SmallVector<const MachineMemOperand *, 1> Accesses;
+  if (hasStoreToStackSlot(MI, Accesses)) {
+    FrameIndex =
+        cast<FixedStackPseudoSourceValue>(Accesses.front()->getPseudoValue())
+            ->getFrameIndex();
+    return MI.getOperand(0).getReg();
+  }
+  return 0;
+}
+
 bool SystemZInstrInfo::isStackSlotCopy(const MachineInstr &MI,
                                        int &DestFrameIndex,
                                        int &SrcFrameIndex) const {
