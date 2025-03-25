@@ -453,4 +453,27 @@ def ApplyVectorReductionToContractPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplySinkVectorPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.sink_ops",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Patterns that remove redundant Vector Ops by re-ordering them with
+    e.g. elementwise Ops:
+    ```
+    %at = vector.transpose %a, [1, 0]: vector<4x2xf32> to vector<2x4xf32>
+    %bt = vector.transpose %b, [1, 0]: vector<4x2xf32> to vector<2x4xf32>
+    %r = arith.addf %at, %bt : vector<2x4xf32>
+    ```
+    gets converted to:
+    ```
+    %0 = arith.addf %a, %b : vector<4x2xf32>
+    %r = vector.transpose %0, [1, 0] : vector<2x4xf32>
+    ```
+    At the moment, these patterns are limited to vector.broadcast and
+    vector.transpose.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 #endif // VECTOR_TRANSFORM_OPS
