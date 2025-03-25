@@ -420,7 +420,7 @@ ClangTidyASTConsumerFactory::createASTConsumer(
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks =
       CheckFactories->createChecksForLanguage(&Context);
 
-  ast_matchers::MatchFinderOptions FinderOptions;
+  ast_matchers::MatchFinder::MatchFinderOptions FinderOptions;
 
   std::unique_ptr<ClangTidyProfiling> Profiling;
   if (Context.getEnableProfiling()) {
@@ -428,10 +428,6 @@ ClangTidyASTConsumerFactory::createASTConsumer(
         Context.getProfileStorageParams());
     FinderOptions.CheckProfiling.emplace(Profiling->Records);
   }
-
-  // Avoid processing system headers, unless the user explicitly requests it
-  if (!Context.getOptions().SystemHeaders.value_or(false))
-    FinderOptions.SkipSystemHeaders = true;
 
   std::unique_ptr<ast_matchers::MatchFinder> Finder(
       new ast_matchers::MatchFinder(std::move(FinderOptions)));

@@ -210,7 +210,8 @@ DEFAULT_PARAMETERS = [
         choices=["none", "clang", "clang-lsv"],
         type=str,
         help="Whether to build the test suite with modules enabled. "
-             "Select `clang` for Clang modules, and 'clang-lsv' for Clang modules with Local Submodule Visibility.",
+             "Select `clang` for Clang modules, and 'clang-lsv' for Clang modules with Local Submodule Visibility. "
+             "Note that in recent versions of Clang, using Clang modules with -std=c++20 and later implies LSV.",
         default="none",
         actions=lambda modules: filter(None, [
             AddFeature("clang-modules-build")           if modules in ("clang", "clang-lsv") else None,

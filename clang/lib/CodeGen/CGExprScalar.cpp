@@ -724,7 +724,12 @@ public:
   }
 
   Value *VisitTypeTraitExpr(const TypeTraitExpr *E) {
-    return llvm::ConstantInt::get(ConvertType(E->getType()), E->getValue());
+    if (E->isStoredAsBoolean())
+      return llvm::ConstantInt::get(ConvertType(E->getType()),
+                                    E->getBoolValue());
+    assert(E->getAPValue().isInt() && "APValue type not supported");
+    return llvm::ConstantInt::get(ConvertType(E->getType()),
+                                  E->getAPValue().getInt());
   }
 
   Value *VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E) {
