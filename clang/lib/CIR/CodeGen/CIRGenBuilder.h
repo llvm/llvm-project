@@ -163,7 +163,7 @@ public:
   mlir::Value createFSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
     assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::foldBinOpFMF());
+    assert(!cir::MissingFeatures::fastMathFlags());
 
     return create<cir::BinOp>(loc, cir::BinOpKind::Sub, lhs, rhs);
   }
@@ -171,21 +171,21 @@ public:
   mlir::Value createFAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
     assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::foldBinOpFMF());
+    assert(!cir::MissingFeatures::fastMathFlags());
 
     return create<cir::BinOp>(loc, cir::BinOpKind::Add, lhs, rhs);
   }
   mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
     assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::foldBinOpFMF());
+    assert(!cir::MissingFeatures::fastMathFlags());
 
     return create<cir::BinOp>(loc, cir::BinOpKind::Mul, lhs, rhs);
   }
   mlir::Value createFDiv(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
     assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::foldBinOpFMF());
+    assert(!cir::MissingFeatures::fastMathFlags());
 
     return create<cir::BinOp>(loc, cir::BinOpKind::Div, lhs, rhs);
   }

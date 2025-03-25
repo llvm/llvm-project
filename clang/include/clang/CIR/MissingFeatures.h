@@ -108,7 +108,7 @@ struct MissingFeatures {
   static bool pgoUse() { return false; }
   static bool cgFPOptionsRAII() { return false; }
   static bool metaDataNode() { return false; }
-  static bool foldBinOpFMF() { return false; }
+  static bool fastMathFlags() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
