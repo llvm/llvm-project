@@ -14,6 +14,10 @@
 namespace lldb_private {
 
 lldb::ModuleSP GetPreferredAsanModule(const Target &target) {
+  // Currently only supported on Darwin.
+  if (!target.GetArchitecture().GetTriple().isOSDarwin())
+    return nullptr;
+
   lldb::ModuleSP module;
   llvm::Regex pattern(R"(libclang_rt\.asan_.*_dynamic\.dylib)");
   target.GetImages().ForEach([&](const lldb::ModuleSP &m) {
