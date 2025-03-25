@@ -1913,15 +1913,19 @@ static inline const std::unordered_set<std::string_view> ValidSpirvFlags{
     "-ffinite-math-only",
     "-ffp-contract=fast",
     "-ffp-contract=fast-honor-pragmas",
+    "-ffp-contract=on",
     "-fgpu-rdc",
     "-finline-functions",
-    "-fno-signed-zeros",
-    "-fno-rounding-math",
-    "-fno-experimental-relative-c++-abi-vtables",
     "-fno-autolink",
+    "-fno-experimental-relative-c++-abi-vtables",
+    "-fno-rounding-math",
+    "-fno-signed-zeros",
+    "-fno-threadsafe-statics",
     "-freciprocal-math",
+    "-fskip-odr-check-in-gmf",
     "-funsafe-math-optimizations",
     "-fvisibility=hidden",
+    "-gheterogeneous-dwarf=diexpression",
     "-O0",
     "-O1",
     "-O2",
@@ -1967,6 +1971,9 @@ amd_comgr_status_t AMDGPUCompiler::extractSpirvFlags(DataSet *BcSet) {
         if (Tmp == "--hipstdpar" || Tmp == "-amdgpu-enable-hipstdpar") {
           Bc->SpirvFlags.push_back("-mllvm");
           Bc->SpirvFlags.push_back("-amdgpu-enable-hipstdpar");
+        } else if (Tmp == "-amdgpu-spill-cfi-saved-regs") {
+          Bc->SpirvFlags.push_back("-mllvm");
+          Bc->SpirvFlags.push_back("-amdgpu-spill-cfi-saved-regs");
         } else if (ValidSpirvFlags.count(Tmp)) {
           Bc->SpirvFlags.push_back(Saver.save(Tmp.c_str()).data());
         }
