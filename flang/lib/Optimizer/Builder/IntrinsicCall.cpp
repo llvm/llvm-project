@@ -480,6 +480,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"getgid", &I::genGetGID},
     {"getpid", &I::genGetPID},
     {"getuid", &I::genGetUID},
+    {"hostnm",
+     &I::genHostnm,
+     {{{"c", asBox}, {"status", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"iachar", &I::genIchar},
     {"iall",
      &I::genIall,
@@ -4315,6 +4319,37 @@ void IntrinsicLibrary::genGetEnvironmentVariable(
         .genThen([&]() { builder.createStoreWithConvert(loc, stat, statAddr); })
         .end();
   }
+}
+
+// HOSTNM
+fir::ExtendedValue
+IntrinsicLibrary::genHostnm(std::optional<mlir::Type> resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert((args.size() == 1 && resultType.has_value()) ||
+         (args.size() >= 1 && !resultType.has_value()));
+
+  mlir::Value res = fir::getBase(args[0]);
+  mlir::Value statusValue = fir::runtime::genHostnm(builder, loc, res);
+
+  if (resultType.has_value()) {
+    // Function form, return status.
+    return builder.createConvert(loc, *resultType, statusValue);
+  }
+
+  // Subroutine form, store status and return none.
+  const fir::ExtendedValue &status = args[1];
+  if (!isStaticallyAbsent(status)) {
+    mlir::Value statusAddr = fir::getBase(status);
+    mlir::Value statusIsPresentAtRuntime =
+        builder.genIsNotNullAddr(loc, statusAddr);
+    builder.genIfThen(loc, statusIsPresentAtRuntime)
+        .genThen([&]() {
+          builder.createStoreWithConvert(loc, statusValue, statusAddr);
+        })
+        .end();
+  }
+
+  return {};
 }
 
 /// Process calls to Maxval, Minval, Product, Sum intrinsic functions that
