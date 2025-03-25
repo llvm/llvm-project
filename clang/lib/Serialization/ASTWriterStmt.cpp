@@ -2409,6 +2409,13 @@ void ASTStmtWriter::VisitOMPLoopDirective(OMPLoopDirective *D) {
   VisitOMPLoopBasedDirective(D);
 }
 
+void ASTStmtWriter::VisitOMPCompoundRootDirective(OMPCompoundRootDirective *D) {
+  VisitStmt(D);
+  Record.writeUInt32(static_cast<unsigned>(D->getDirectiveKind()));
+  VisitOMPExecutableDirective(D);
+  Code = serialization::STMT_OMP_COMPOUND_ROOT_DIRECTIVE;
+}
+
 void ASTStmtWriter::VisitOMPOpaqueBlockDirective(OMPOpaqueBlockDirective *D) {
   VisitStmt(D);
   Record.writeUInt32(static_cast<unsigned>(D->getDirectiveKind()));

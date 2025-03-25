@@ -225,6 +225,7 @@ def OMPExecutableDirective : StmtNode<Stmt, 1>;
 def OMPMetaDirective : StmtNode<OMPExecutableDirective>;
 def OMPLoopBasedDirective : StmtNode<OMPExecutableDirective, 1>;
 def OMPLoopDirective : StmtNode<OMPLoopBasedDirective, 1>;
+def OMPCompoundRootDirective : StmtNode<OMPExecutableDirective>;
 def OMPOpaqueBlockDirective : StmtNode<OMPExecutableDirective>;
 def OMPOpaqueLoopDirective : StmtNode<OMPLoopDirective>;
 def OMPParallelDirective : StmtNode<OMPExecutableDirective>;

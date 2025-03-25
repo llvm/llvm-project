@@ -2372,6 +2372,13 @@ void TextNodeDumper::VisitOMPExecutableDirective(
     OS << " openmp_standalone_directive";
 }
 
+void TextNodeDumper::VisitOMPCompoundRootDirective(
+    const OMPCompoundRootDirective *D) {
+  VisitOMPExecutableDirective(D);
+  OpenMPDirectiveKind DKind = D->getDirectiveKind();
+  OS << " '" << llvm::omp::getOpenMPDirectiveName(DKind) << '\'';
+}
+
 void TextNodeDumper::VisitOMPOpaqueBlockDirective(
     const OMPOpaqueBlockDirective *D) {
   VisitOMPExecutableDirective(D);

@@ -204,6 +204,11 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::SEHTryStmtClass:
     EmitSEHTryStmt(cast<SEHTryStmt>(*S));
     break;
+  case Stmt::OMPCompoundRootDirectiveClass:
+    // Skip this node, go straight through to the associated statement.
+    // Ignore the unparse statement.
+    EmitStmt(cast<OMPCompoundRootDirective>(*S).getAssociatedStmt(), Attrs);
+    break;
   case Stmt::OMPOpaqueBlockDirectiveClass:
   case Stmt::OMPOpaqueLoopDirectiveClass:
     // These are catch-all nodes for executable OpenMP directives in templates.

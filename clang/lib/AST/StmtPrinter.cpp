@@ -735,6 +735,23 @@ void StmtPrinter::PrintOMPExecutableDirective(OMPExecutableDirective *S,
     PrintStmt(S->getRawStmt());
 }
 
+void StmtPrinter::VisitOMPCompoundRootDirective(
+    OMPCompoundRootDirective *Node) {
+  llvm::omp::Directive CompKind = Node->getDirectiveKind();
+
+  Indent() << "#pragma omp " << llvm::omp::getOpenMPDirectiveName(CompKind);
+  OMPClausePrinter Printer(OS, Policy);
+  for (auto *Clause : Node->clauses()) {
+    if (Clause && !Clause->isImplicit()) {
+      OS << ' ';
+      Printer.Visit(Clause);
+    }
+  }
+  OS << NL;
+
+  PrintStmt(Node->getUnparseStmt(), /*ForceNoStmt=*/false);
+}
+
 void StmtPrinter::VisitOMPOpaqueBlockDirective(OMPOpaqueBlockDirective *Node) {
   OpenMPDirectiveKind DKind = Node->getDirectiveKind();
   bool ForceNoStmt = false;

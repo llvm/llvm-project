@@ -1416,6 +1416,9 @@ class CursorKind(BaseEnumeration):
     # OpenMP opaque loop-associated directive.
     OMP_OPAQUE_LOOP_DIRECTIVE = 311
 
+    # OpenMP compound root directive.
+    OMP_COMPOUND_ROOT_DIRECTIVE = 312
+
     # OpenACC Compute Construct.
     OPEN_ACC_COMPUTE_DIRECTIVE = 320
 
