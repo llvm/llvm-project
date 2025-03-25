@@ -3181,11 +3181,11 @@ bool tools::shouldEnableVectorizerAtOLevel(const ArgList &Args, bool isSlpVec) {
 /// Enable -fvectorize based on the optimization level selected.
 void tools::handleVectorizeLoopsArgs(const ArgList &Args,
                                      ArgStringList &CmdArgs) {
-  bool enableVec = shouldEnableVectorizerAtOLevel(Args, false);
+  bool EnableVec = shouldEnableVectorizerAtOLevel(Args, false);
   OptSpecifier vectorizeAliasOption =
-      enableVec ? options::OPT_O_Group : options::OPT_fvectorize;
+      EnableVec ? options::OPT_O_Group : options::OPT_fvectorize;
   if (Args.hasFlag(options::OPT_fvectorize, vectorizeAliasOption,
-                   options::OPT_fno_vectorize, enableVec))
+                   options::OPT_fno_vectorize, EnableVec))
     CmdArgs.push_back("-vectorize-loops");
 }
 
