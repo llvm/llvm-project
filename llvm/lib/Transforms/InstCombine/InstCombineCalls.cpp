@@ -1554,7 +1554,11 @@ static bool leftDistributesOverRight(Instruction::BinaryOps LOp, bool HasNUW,
   switch (ROp) {
   case Intrinsic::umax:
   case Intrinsic::umin:
-    return HasNUW && LOp == Instruction::Add;
+    if (HasNUW && LOp == Instruction::Add)
+      return true;
+    if (HasNUW && LOp == Instruction::Shl)
+      return true;
+    return false;
   case Intrinsic::smax:
   case Intrinsic::smin:
     return HasNSW && LOp == Instruction::Add;
@@ -1592,29 +1596,37 @@ foldIntrinsicUsingDistributiveLaws(IntrinsicInst *II,
   if (!leftDistributesOverRight(InnerOpcode, HasNUW, HasNSW, TopLevelOpcode))
     return nullptr;
 
-  assert(II->isCommutative() && Op0->isCommutative() &&
-         "Only inner and outer commutative op codes are supported.");
-
   Value *A = Op0->getOperand(0);
   Value *B = Op0->getOperand(1);
   Value *C = Op1->getOperand(0);
   Value *D = Op1->getOperand(1);
 
-  // Attempts to swap variables such that A always equals C
-  if (A != C && A != D)
-    std::swap(A, B);
-  if (A == C || A == D) {
-    if (A != C)
+  // Attempts to swap variables such that A equals C or B equals D,
+  // if the inner operation is commutative.
+  if (Op0->isCommutative() && A != C && B != D) {
+    if (A == D || B == C)
       std::swap(C, D);
-    Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, B, D);
-    BinaryOperator *NewBinop =
-        cast<BinaryOperator>(Builder.CreateBinOp(InnerOpcode, NewIntrinsic, A));
-    NewBinop->setHasNoSignedWrap(HasNSW);
-    NewBinop->setHasNoUnsignedWrap(HasNUW);
-    return NewBinop;
+    else
+      return nullptr;
   }
 
-  return nullptr;
+  BinaryOperator *NewBinop;
+  if (A == C) {
+    Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, B, D);
+    NewBinop =
+        cast<BinaryOperator>(Builder.CreateBinOp(InnerOpcode, A, NewIntrinsic));
+  } else if (B == D) {
+    Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, A, C);
+    NewBinop =
+        cast<BinaryOperator>(Builder.CreateBinOp(InnerOpcode, NewIntrinsic, B));
+  } else {
+    return nullptr;
+  }
+
+  NewBinop->setHasNoUnsignedWrap(HasNUW);
+  NewBinop->setHasNoSignedWrap(HasNSW);
+
+  return NewBinop;
 }
 
 /// CallInst simplification. This mostly only handles folding of intrinsic
@@ -1887,6 +1899,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (Instruction *I = foldMaxMulShift(I1, I0))
         return I;
     }
+
     // If both operands of unsigned min/max are sign-extended, it is still ok
     // to narrow the operation.
     [[fallthrough]];

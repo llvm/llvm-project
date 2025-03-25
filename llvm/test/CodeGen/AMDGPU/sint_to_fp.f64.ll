@@ -196,8 +196,7 @@ define amdgpu_kernel void @s_sint_to_fp_i8_to_f64(ptr addrspace(1) %out, i8 %in)
 ; VI-NEXT:    s_load_dword s2, s[8:9], 0x8
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_bfe_i32 s2, s2, 0x80000
-; VI-NEXT:    s_sext_i32_i16 s2, s2
+; VI-NEXT:    s_sext_i32_i8 s2, s2
 ; VI-NEXT:    v_cvt_f64_i32_e32 v[0:1], s2
 ; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0

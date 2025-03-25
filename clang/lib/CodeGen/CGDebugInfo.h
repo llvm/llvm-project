@@ -640,8 +640,8 @@ public:
   ///
   /// This is used to indiciate instructions that come from compiler
   /// instrumentation.
-  llvm::DILocation *CreateSyntheticInline(llvm::DebugLoc Location,
-                                          StringRef FuncName);
+  llvm::DILocation *CreateSyntheticInlineAt(llvm::DebugLoc Location,
+                                            StringRef FuncName);
 
 private:
   /// Emit call to llvm.dbg.declare for a variable declaration.

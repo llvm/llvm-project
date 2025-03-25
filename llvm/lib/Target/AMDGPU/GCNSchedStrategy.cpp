@@ -760,6 +760,10 @@ GCNScheduleDAGMILive::GCNScheduleDAGMILive(
       StartingOccupancy(MFI.getOccupancy()), MinOccupancy(StartingOccupancy),
       RegionLiveOuts(this, /*IsLiveOut=*/true) {
 
+  // We want regions with a single MI to be scheduled so that we can reason
+  // about them correctly during scheduling stages that move MIs between regions
+  // (e.g., rematerialization).
+  ScheduleSingleMIRegions = true;
   LLVM_DEBUG(dbgs() << "Starting occupancy is " << StartingOccupancy << ".\n");
   if (RelaxedOcc) {
     MinOccupancy = std::min(MFI.getMinAllowedOccupancy(), StartingOccupancy);
@@ -869,6 +873,8 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
       Pressure[CurRegion] = RPTracker.moveMaxPressure();
       if (CurRegion-- == RegionIdx)
         break;
+      auto &Rgn = Regions[CurRegion];
+      NonDbgMI = &*skipDebugInstructionsForward(Rgn.first, Rgn.second);
     }
     RPTracker.advanceToNext();
     RPTracker.advanceBeforeNext();
@@ -1448,6 +1454,16 @@ bool GCNSchedStage::shouldRevertScheduling(unsigned WavesAfter) {
   if (WavesAfter < DAG.MinOccupancy)
     return true;
 
+  // For dynamic VGPR mode, we don't want to waste any VGPR blocks.
+  if (ST.isDynamicVGPREnabled()) {
+    unsigned BlocksBefore = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
+        &ST, PressureBefore.getVGPRNum(false));
+    unsigned BlocksAfter = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
+        &ST, PressureAfter.getVGPRNum(false));
+    if (BlocksAfter > BlocksBefore)
+      return true;
+  }
+
   return false;
 }
 
@@ -1563,8 +1579,7 @@ void GCNSchedStage::revertScheduling() {
     }
 
     if (MI->getIterator() != DAG.RegionEnd) {
-      DAG.BB->remove(MI);
-      DAG.BB->insert(DAG.RegionEnd, MI);
+      DAG.BB->splice(DAG.RegionEnd, DAG.BB, MI);
       if (!MI->isDebugInstr())
         DAG.LIS->handleMove(*MI, true);
     }
@@ -1780,7 +1795,7 @@ bool PreRARematStage::sinkTriviallyRematInsts(const GCNSubtarget &ST,
   // Collect only regions that has a rematerializable def as a live-in.
   SmallSet<unsigned, 16> ImpactedRegions;
   for (const auto &It : RematDefToLiveInRegions)
-    ImpactedRegions.insert(It.second.begin(), It.second.end());
+    ImpactedRegions.insert_range(It.second);
 
   // Make copies of register pressure and live-ins cache that will be updated
   // as we rematerialize.

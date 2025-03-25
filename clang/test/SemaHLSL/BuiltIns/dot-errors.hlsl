@@ -106,7 +106,7 @@ float test_builtin_dot_int_vect_to_float_vec_promotion(int2 p0, float p1) {
 
 int test_builtin_dot_bool_type_promotion(bool p0, bool p1) {
   return __builtin_hlsl_dot(p0, p1);
-  // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was 'bool')}}
+  // expected-error@-1 {{1st argument must be a vector, integer or floating-point type (was 'bool')}}
 }
 
 double test_dot_double(double2 p0, double2 p1) {

@@ -64,7 +64,7 @@ void Region::setAux(ArrayRef<Instruction *> Aux) {
   auto &LLVMCtx = Ctx.LLVMCtx;
   for (auto [Idx, I] : enumerate(Aux)) {
     llvm::ConstantInt *IdxC =
-        llvm::ConstantInt::get(LLVMCtx, llvm::APInt(32, Idx, false));
+        llvm::ConstantInt::get(llvm::Type::getInt32Ty(LLVMCtx), Idx, false);
     assert(cast<llvm::Instruction>(I->Val)->getMetadata(AuxMDKind) == nullptr &&
            "Instruction already in Aux!");
     cast<llvm::Instruction>(I->Val)->setMetadata(

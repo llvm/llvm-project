@@ -1602,14 +1602,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
   SmallVector<BasicBlock *, 32> Blocks;
   OI.collectBlocks(ParallelRegionBlockSet, Blocks);
 
-  // Ensure a single exit node for the outlined region by creating one.
-  // We might have multiple incoming edges to the exit now due to finalizations,
-  // e.g., cancel calls that cause the control flow to leave the region.
-  BasicBlock *PRegOutlinedExitBB = PRegExitBB;
-  PRegExitBB = SplitBlock(PRegExitBB, &*PRegExitBB->getFirstInsertionPt());
-  PRegOutlinedExitBB->setName("omp.par.outlined.exit");
-  Blocks.push_back(PRegOutlinedExitBB);
-
   CodeExtractorAnalysisCache CEAC(*OuterFn);
   CodeExtractor Extractor(Blocks, /* DominatorTree */ nullptr,
                           /* AggregateArgs */ false,
@@ -1852,6 +1844,8 @@ static Value *emitTaskDependencies(
   Type *DepArrayTy = ArrayType::get(DependInfo, Dependencies.size());
   DepArray = Builder.CreateAlloca(DepArrayTy, nullptr, ".dep.arr.addr");
 
+  Builder.restoreIP(OldIP);
+
   for (const auto &[DepIdx, Dep] : enumerate(Dependencies)) {
     Value *Base =
         Builder.CreateConstInBoundsGEP2_64(DepArrayTy, DepArray, 0, DepIdx);
@@ -1876,7 +1870,6 @@ static Value *emitTaskDependencies(
                          static_cast<unsigned int>(Dep.DepKind)),
         Flags);
   }
-  Builder.restoreIP(OldIP);
   return DepArray;
 }
 
@@ -2055,46 +2048,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
       Builder.CreateStore(Priority, CmplrData);
     }
 
-    Value *DepArray = nullptr;
-    if (Dependencies.size()) {
-      InsertPointTy OldIP = Builder.saveIP();
-      Builder.SetInsertPoint(
-          &OldIP.getBlock()->getParent()->getEntryBlock().back());
-
-      Type *DepArrayTy = ArrayType::get(DependInfo, Dependencies.size());
-      DepArray = Builder.CreateAlloca(DepArrayTy, nullptr, ".dep.arr.addr");
-
-      unsigned P = 0;
-      for (const DependData &Dep : Dependencies) {
-        Value *Base =
-            Builder.CreateConstInBoundsGEP2_64(DepArrayTy, DepArray, 0, P);
-        // Store the pointer to the variable
-        Value *Addr = Builder.CreateStructGEP(
-            DependInfo, Base,
-            static_cast<unsigned int>(RTLDependInfoFields::BaseAddr));
-        Value *DepValPtr =
-            Builder.CreatePtrToInt(Dep.DepVal, Builder.getInt64Ty());
-        Builder.CreateStore(DepValPtr, Addr);
-        // Store the size of the variable
-        Value *Size = Builder.CreateStructGEP(
-            DependInfo, Base,
-            static_cast<unsigned int>(RTLDependInfoFields::Len));
-        Builder.CreateStore(Builder.getInt64(M.getDataLayout().getTypeStoreSize(
-                                Dep.DepValueType)),
-                            Size);
-        // Store the dependency kind
-        Value *Flags = Builder.CreateStructGEP(
-            DependInfo, Base,
-            static_cast<unsigned int>(RTLDependInfoFields::Flags));
-        Builder.CreateStore(
-            ConstantInt::get(Builder.getInt8Ty(),
-                             static_cast<unsigned int>(Dep.DepKind)),
-            Flags);
-        ++P;
-      }
-
-      Builder.restoreIP(OldIP);
-    }
+    Value *DepArray = emitTaskDependencies(*this, Dependencies);
 
     // In the presence of the `if` clause, the following IR is generated:
     //    ...
@@ -3779,6 +3733,8 @@ OpenMPIRBuilder::createReductions(const LocationDescription &Loc,
 
   // Emit a call to the runtime function that orchestrates the reduction.
   // Declare the reduction function in the process.
+  Type *IndexTy = Builder.getIndexTy(
+      M.getDataLayout(), M.getDataLayout().getDefaultGlobalsAddressSpace());
   Function *Func = Builder.GetInsertBlock()->getParent();
   Module *Module = Func->getParent();
   uint32_t SrcLocStrSize;
@@ -3794,7 +3750,7 @@ OpenMPIRBuilder::createReductions(const LocationDescription &Loc,
   Constant *NumVariables = Builder.getInt32(NumReductions);
   const DataLayout &DL = Module->getDataLayout();
   unsigned RedArrayByteSize = DL.getTypeStoreSize(RedArrayTy);
-  Constant *RedArraySize = Builder.getInt64(RedArrayByteSize);
+  Constant *RedArraySize = ConstantInt::get(IndexTy, RedArrayByteSize);
   Function *ReductionFunc = getFreshReductionFunc(*Module);
   Value *Lock = getOMPCriticalRegionLock(".reduction");
   Function *ReduceFunc = getOrCreateRuntimeFunctionPtr(
@@ -5511,7 +5467,7 @@ createTargetMachine(Function *F, CodeGenOptLevel OptLevel) {
 
   StringRef CPU = F->getFnAttribute("target-cpu").getValueAsString();
   StringRef Features = F->getFnAttribute("target-features").getValueAsString();
-  const std::string &Triple = M->getTargetTriple();
+  const llvm::Triple &Triple = M->getTargetTriple();
 
   std::string Error;
   const llvm::Target *TheTarget = TargetRegistry::lookupTarget(Triple, Error);
@@ -6406,45 +6362,13 @@ void OpenMPIRBuilder::createTargetDeinit(const LocationDescription &Loc,
   KernelEnvironmentGV->setInitializer(NewInitializer);
 }
 
-static MDNode *getNVPTXMDNode(Function &Kernel, StringRef Name) {
-  Module &M = *Kernel.getParent();
-  NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
-  for (auto *Op : MD->operands()) {
-    if (Op->getNumOperands() != 3)
-      continue;
-    auto *KernelOp = dyn_cast<ConstantAsMetadata>(Op->getOperand(0));
-    if (!KernelOp || KernelOp->getValue() != &Kernel)
-      continue;
-    auto *Prop = dyn_cast<MDString>(Op->getOperand(1));
-    if (!Prop || Prop->getString() != Name)
-      continue;
-    return Op;
+static void updateNVPTXAttr(Function &Kernel, StringRef Name, int32_t Value,
+                            bool Min) {
+  if (Kernel.hasFnAttribute(Name)) {
+    int32_t OldLimit = Kernel.getFnAttributeAsParsedInteger(Name);
+    Value = Min ? std::min(OldLimit, Value) : std::max(OldLimit, Value);
   }
-  return nullptr;
-}
-
-static void updateNVPTXMetadata(Function &Kernel, StringRef Name, int32_t Value,
-                                bool Min) {
-  // Update the "maxntidx" metadata for NVIDIA, or add it.
-  MDNode *ExistingOp = getNVPTXMDNode(Kernel, Name);
-  if (ExistingOp) {
-    auto *OldVal = cast<ConstantAsMetadata>(ExistingOp->getOperand(2));
-    int32_t OldLimit = cast<ConstantInt>(OldVal->getValue())->getZExtValue();
-    ExistingOp->replaceOperandWith(
-        2, ConstantAsMetadata::get(ConstantInt::get(
-               OldVal->getValue()->getType(),
-               Min ? std::min(OldLimit, Value) : std::max(OldLimit, Value))));
-  } else {
-    LLVMContext &Ctx = Kernel.getContext();
-    Metadata *MDVals[] = {ConstantAsMetadata::get(&Kernel),
-                          MDString::get(Ctx, Name),
-                          ConstantAsMetadata::get(
-                              ConstantInt::get(Type::getInt32Ty(Ctx), Value))};
-    // Append metadata to nvvm.annotations
-    Module &M = *Kernel.getParent();
-    NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
-    MD->addOperand(MDNode::get(Ctx, MDVals));
-  }
+  Kernel.addFnAttr(Name, llvm::utostr(Value));
 }
 
 std::pair<int32_t, int32_t>
@@ -6466,9 +6390,8 @@ OpenMPIRBuilder::readThreadBoundsForKernel(const Triple &T, Function &Kernel) {
     return {LB, UB};
   }
 
-  if (MDNode *ExistingOp = getNVPTXMDNode(Kernel, "maxntidx")) {
-    auto *OldVal = cast<ConstantAsMetadata>(ExistingOp->getOperand(2));
-    int32_t UB = cast<ConstantInt>(OldVal->getValue())->getZExtValue();
+  if (Kernel.hasFnAttribute("nvvm.maxntid")) {
+    int32_t UB = Kernel.getFnAttributeAsParsedInteger("nvvm.maxntid");
     return {0, ThreadLimit ? std::min(ThreadLimit, UB) : UB};
   }
   return {0, ThreadLimit};
@@ -6485,7 +6408,7 @@ void OpenMPIRBuilder::writeThreadBoundsForKernel(const Triple &T,
     return;
   }
 
-  updateNVPTXMetadata(Kernel, "maxntidx", UB, true);
+  updateNVPTXAttr(Kernel, "nvvm.maxntid", UB, true);
 }
 
 std::pair<int32_t, int32_t>
@@ -7795,7 +7718,7 @@ OpenMPIRBuilder::getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
     // variable for possibly changing that to internal or private, or maybe
     // create different versions of the function for different OMP internal
     // variables.
-    auto Linkage = this->M.getTargetTriple().rfind("wasm32") == 0
+    auto Linkage = this->M.getTargetTriple().getArch() == Triple::wasm32
                        ? GlobalValue::InternalLinkage
                        : GlobalValue::CommonLinkage;
     auto *GV = new GlobalVariable(M, Ty, /*IsConstant=*/false, Linkage,

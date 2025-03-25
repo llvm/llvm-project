@@ -13,6 +13,8 @@
 #ifndef MLIR_DIALECT_RELAYOUTOPINTERFACE_H_
 #define MLIR_DIALECT_RELAYOUTOPINTERFACE_H_
 
+#include "mlir/IR/OpDefinition.h"
+
 #include "mlir/Dialect/Linalg/IR/RelayoutOpInterface.h.inc"
 
 #endif // MLIR_DIALECT_RELAYOUTOPINTERFACE_H_

@@ -2116,8 +2116,11 @@ static bool generateSelectInst(const SPIRV::IncomingCall *Call,
 static bool generateConstructInst(const SPIRV::IncomingCall *Call,
                                   MachineIRBuilder &MIRBuilder,
                                   SPIRVGlobalRegistry *GR) {
-  return buildOpFromWrapper(MIRBuilder, SPIRV::OpCompositeConstruct, Call,
-                            GR->getSPIRVTypeID(Call->ReturnType));
+  createContinuedInstructions(MIRBuilder, SPIRV::OpCompositeConstruct, 3,
+                              SPIRV::OpCompositeConstructContinuedINTEL,
+                              Call->Arguments, Call->ReturnRegister,
+                              GR->getSPIRVTypeID(Call->ReturnType));
+  return true;
 }
 
 static bool generateCoopMatrInst(const SPIRV::IncomingCall *Call,
@@ -2230,11 +2233,10 @@ static bool generateSpecConstantInst(const SPIRV::IncomingCall *Call,
     return true;
   }
   case SPIRV::OpSpecConstantComposite: {
-    auto MIB = MIRBuilder.buildInstr(Opcode)
-                   .addDef(Call->ReturnRegister)
-                   .addUse(GR->getSPIRVTypeID(Call->ReturnType));
-    for (unsigned i = 0; i < Call->Arguments.size(); i++)
-      MIB.addUse(Call->Arguments[i]);
+    createContinuedInstructions(MIRBuilder, Opcode, 3,
+                                SPIRV::OpSpecConstantCompositeContinuedINTEL,
+                                Call->Arguments, Call->ReturnRegister,
+                                GR->getSPIRVTypeID(Call->ReturnType));
     return true;
   }
   default:
@@ -3039,6 +3041,57 @@ static SPIRVType *getSampledImageType(const TargetExtType *OpaqueType,
   return GR->getOrCreateOpTypeSampledImage(OpaqueImageType, MIRBuilder);
 }
 
+static SPIRVType *getInlineSpirvType(const TargetExtType *ExtensionType,
+                                     MachineIRBuilder &MIRBuilder,
+                                     SPIRVGlobalRegistry *GR) {
+  assert(ExtensionType->getNumIntParameters() == 3 &&
+         "Inline SPIR-V type builtin takes an opcode, size, and alignment "
+         "parameter");
+  auto Opcode = ExtensionType->getIntParameter(0);
+
+  SmallVector<MCOperand> Operands;
+  for (llvm::Type *Param : ExtensionType->type_params()) {
+    if (const TargetExtType *ParamEType = dyn_cast<TargetExtType>(Param)) {
+      if (ParamEType->getName() == "spirv.IntegralConstant") {
+        assert(ParamEType->getNumTypeParameters() == 1 &&
+               "Inline SPIR-V integral constant builtin must have a type "
+               "parameter");
+        assert(ParamEType->getNumIntParameters() == 1 &&
+               "Inline SPIR-V integral constant builtin must have a "
+               "value parameter");
+
+        auto OperandValue = ParamEType->getIntParameter(0);
+        auto *OperandType = ParamEType->getTypeParameter(0);
+
+        const SPIRVType *OperandSPIRVType = GR->getOrCreateSPIRVType(
+            OperandType, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
+
+        Operands.push_back(MCOperand::createReg(GR->buildConstantInt(
+            OperandValue, MIRBuilder, OperandSPIRVType, true)));
+        continue;
+      } else if (ParamEType->getName() == "spirv.Literal") {
+        assert(ParamEType->getNumTypeParameters() == 0 &&
+               "Inline SPIR-V literal builtin does not take type "
+               "parameters");
+        assert(ParamEType->getNumIntParameters() == 1 &&
+               "Inline SPIR-V literal builtin must have an integer "
+               "parameter");
+
+        auto OperandValue = ParamEType->getIntParameter(0);
+
+        Operands.push_back(MCOperand::createImm(OperandValue));
+        continue;
+      }
+    }
+    const SPIRVType *TypeOperand = GR->getOrCreateSPIRVType(
+        Param, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
+    Operands.push_back(MCOperand::createReg(GR->getSPIRVTypeID(TypeOperand)));
+  }
+
+  return GR->getOrCreateUnknownType(ExtensionType, MIRBuilder, Opcode,
+                                    Operands);
+}
+
 namespace SPIRV {
 TargetExtType *parseBuiltinTypeNameToTargetExtType(std::string TypeName,
                                                    LLVMContext &Context) {
@@ -3111,39 +3164,45 @@ SPIRVType *lowerBuiltinType(const Type *OpaqueType,
   const StringRef Name = BuiltinType->getName();
   LLVM_DEBUG(dbgs() << "Lowering builtin type: " << Name << "\n");
 
-  // Lookup the demangled builtin type in the TableGen records.
-  const SPIRV::BuiltinType *TypeRecord = SPIRV::lookupBuiltinType(Name);
-  if (!TypeRecord)
-    report_fatal_error("Missing TableGen record for builtin type: " + Name);
-
-  // "Lower" the BuiltinType into TargetType. The following get<...>Type methods
-  // use the implementation details from TableGen records or TargetExtType
-  // parameters to either create a new OpType<...> machine instruction or get an
-  // existing equivalent SPIRVType from GlobalRegistry.
   SPIRVType *TargetType;
-  switch (TypeRecord->Opcode) {
-  case SPIRV::OpTypeImage:
-    TargetType = getImageType(BuiltinType, AccessQual, MIRBuilder, GR);
-    break;
-  case SPIRV::OpTypePipe:
-    TargetType = getPipeType(BuiltinType, MIRBuilder, GR);
-    break;
-  case SPIRV::OpTypeDeviceEvent:
-    TargetType = GR->getOrCreateOpTypeDeviceEvent(MIRBuilder);
-    break;
-  case SPIRV::OpTypeSampler:
-    TargetType = getSamplerType(MIRBuilder, GR);
-    break;
-  case SPIRV::OpTypeSampledImage:
-    TargetType = getSampledImageType(BuiltinType, MIRBuilder, GR);
-    break;
-  case SPIRV::OpTypeCooperativeMatrixKHR:
-    TargetType = getCoopMatrType(BuiltinType, MIRBuilder, GR);
-    break;
-  default:
-    TargetType =
-        getNonParameterizedType(BuiltinType, TypeRecord, MIRBuilder, GR);
-    break;
+  if (Name == "spirv.Type") {
+    TargetType = getInlineSpirvType(BuiltinType, MIRBuilder, GR);
+  } else {
+    // Lookup the demangled builtin type in the TableGen records.
+    const SPIRV::BuiltinType *TypeRecord = SPIRV::lookupBuiltinType(Name);
+    if (!TypeRecord)
+      report_fatal_error("Missing TableGen record for builtin type: " + Name);
+
+    // "Lower" the BuiltinType into TargetType. The following get<...>Type
+    // methods use the implementation details from TableGen records or
+    // TargetExtType parameters to either create a new OpType<...> machine
+    // instruction or get an existing equivalent SPIRVType from
+    // GlobalRegistry.
+
+    switch (TypeRecord->Opcode) {
+    case SPIRV::OpTypeImage:
+      TargetType = getImageType(BuiltinType, AccessQual, MIRBuilder, GR);
+      break;
+    case SPIRV::OpTypePipe:
+      TargetType = getPipeType(BuiltinType, MIRBuilder, GR);
+      break;
+    case SPIRV::OpTypeDeviceEvent:
+      TargetType = GR->getOrCreateOpTypeDeviceEvent(MIRBuilder);
+      break;
+    case SPIRV::OpTypeSampler:
+      TargetType = getSamplerType(MIRBuilder, GR);
+      break;
+    case SPIRV::OpTypeSampledImage:
+      TargetType = getSampledImageType(BuiltinType, MIRBuilder, GR);
+      break;
+    case SPIRV::OpTypeCooperativeMatrixKHR:
+      TargetType = getCoopMatrType(BuiltinType, MIRBuilder, GR);
+      break;
+    default:
+      TargetType =
+          getNonParameterizedType(BuiltinType, TypeRecord, MIRBuilder, GR);
+      break;
+    }
   }
 
   // Emit OpName instruction if a new OpType<...> instruction was added

@@ -695,6 +695,20 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       return false;
     MIB.addUse(Arg.Regs[0]);
   }
+
+  if (ST->canUseExtension(SPIRV::Extension::SPV_INTEL_memory_access_aliasing)) {
+    // Process aliasing metadata.
+    const CallBase *CI = Info.CB;
+    if (CI && CI->hasMetadata()) {
+      if (MDNode *MD = CI->getMetadata(LLVMContext::MD_alias_scope))
+        GR->buildMemAliasingOpDecorate(ResVReg, MIRBuilder,
+                                       SPIRV::Decoration::AliasScopeINTEL, MD);
+      if (MDNode *MD = CI->getMetadata(LLVMContext::MD_noalias))
+        GR->buildMemAliasingOpDecorate(ResVReg, MIRBuilder,
+                                       SPIRV::Decoration::NoAliasINTEL, MD);
+    }
+  }
+
   return MIB.constrainAllUses(MIRBuilder.getTII(), *ST->getRegisterInfo(),
                               *ST->getRegBankInfo());
 }

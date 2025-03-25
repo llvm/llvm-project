@@ -19,18 +19,18 @@ define i32 @iv_live_out_wide(ptr %dst) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP4]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[TMP5]], 2
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[STEP_2]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul <vscale x 2 x i32> [[TMP7]], splat (i32 1)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i32> zeroinitializer, [[TMP8]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[TMP5]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[STEP_2]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[TMP5]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i32> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <vscale x 2 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <vscale x 2 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i16, ptr [[TMP10]], i32 0
@@ -39,9 +39,9 @@ define i32 @iv_live_out_wide(ptr %dst) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i16, ptr [[TMP10]], i64 [[TMP13]]
 ; CHECK-NEXT:    store <vscale x 2 x i16> zeroinitializer, ptr [[TMP11]], align 2
 ; CHECK-NEXT:    store <vscale x 2 x i16> zeroinitializer, ptr [[TMP14]], align 2
-; CHECK-NEXT:    [[TMP15:%.*]] = add <vscale x 2 x i32> [[BROADCAST_SPLAT2]], [[STEP_ADD]]
+; CHECK-NEXT:    [[TMP15:%.*]] = add <vscale x 2 x i32> [[BROADCAST_SPLAT]], [[STEP_ADD]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP6]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i32> [[STEP_ADD]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i32> [[STEP_ADD]], [[BROADCAST_SPLAT2]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

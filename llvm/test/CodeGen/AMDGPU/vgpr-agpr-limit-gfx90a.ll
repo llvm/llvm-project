@@ -518,7 +518,7 @@ define internal void @use256vgprs() {
   ret void
 }
 
-define internal void @use256vgprs_no_agpr() "amdgpu-no-agpr" {
+define internal void @use256vgprs_no_agpr() "amdgpu-agpr-alloc"="0" {
   %v0 = call i32 asm sideeffect "; def $0", "=v"()
   %v1 = call i32 asm sideeffect "; def $0", "=v"()
   %v2 = call i32 asm sideeffect "; def $0", "=v"()
@@ -1082,7 +1082,7 @@ define amdgpu_kernel void @k256_w8_no_agprs() #2569 {
 }
 
 attributes #2568 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="8" }
-attributes #2569 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="8" "amdgpu-no-agpr" }
+attributes #2569 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="8" "amdgpu-agpr-alloc"="0" }
 
 ; GCN-LABEL: {{^}}k256_w4:
 ; GFX90A: NumVgprs: 64
@@ -1104,7 +1104,7 @@ define amdgpu_kernel void @k256_w4_no_agprs() #2565 {
 }
 
 attributes #2564 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="4" }
-attributes #2565 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="4" "amdgpu-no-agpr" }
+attributes #2565 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="4" "amdgpu-agpr-alloc"="0" }
 
 ; GCN-LABEL: {{^}}k256_w2:
 ; GFX90A: NumVgprs: 128
@@ -1126,7 +1126,7 @@ define amdgpu_kernel void @k256_w2_no_agprs() #2563 {
 }
 
 attributes #2562 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="2" }
-attributes #2563 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="2" "amdgpu-no-agpr" }
+attributes #2563 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="2" "amdgpu-agpr-alloc"="0" }
 
 ; GCN-LABEL: {{^}}k256_w1:
 ; GFX90A: NumVgprs: 256
@@ -1213,7 +1213,7 @@ define void @f512_no_agpr_ub() #513 {
 }
 
 attributes #512 = { nounwind "amdgpu-flat-work-group-size"="512,512" }
-attributes #513 = { nounwind "amdgpu-flat-work-group-size"="512,512" "amdgpu-no-agpr" }
+attributes #513 = { nounwind "amdgpu-flat-work-group-size"="512,512" "amdgpu-agpr-alloc"="0" }
 
 ; GCN-LABEL: {{^}}k1024:
 ; GFX90A: NumVgprs: 64
@@ -1300,4 +1300,4 @@ define void @f1024_call_no_agprs_ub() #1025 {
 }
 
 attributes #1024 = { nounwind "amdgpu-flat-work-group-size"="1024,1024" }
-attributes #1025 = { nounwind "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-no-agpr" }
+attributes #1025 = { nounwind "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-agpr-alloc"="0" }

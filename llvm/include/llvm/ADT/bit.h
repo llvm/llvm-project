@@ -15,6 +15,7 @@
 #define LLVM_ADT_BIT_H
 
 #include "llvm/Support/Compiler.h"
+#include <cstddef> // for std::size_t
 #include <cstdint>
 #include <limits>
 #include <type_traits>

@@ -14,7 +14,7 @@ def fzf_history(debugger, cmdstr, ctx, result, _):
     if not os.path.exists(history_file):
         result.SetError("history file does not exist")
         return
-    history = _load_history(history_file)
+    history = _load_history(debugger, history_file)
 
     if sys.platform != "darwin":
         # The ability to integrate fzf's result into lldb uses copy and paste.
@@ -79,16 +79,49 @@ def _handle_command(debugger, command):
         debugger.HandleCommand(command)
 
 
-def _load_history(history_file):
-    """Load, decode, parse, and prepare an lldb history file for fzf."""
+# `session history` example formatting:
+#    1: first command
+#    2: penultimate command
+#    3: latest command
+_HISTORY_PREFIX = re.compile(r"^\s+\d+:\s+")
+
+
+def _load_session_history(debugger):
+    """Load and parse lldb session history."""
+    result = lldb.SBCommandReturnObject()
+    interp = debugger.GetCommandInterpreter()
+    interp.HandleCommand("session history", result)
+    history = result.GetOutput()
+    commands = []
+    for line in history.splitlines():
+        # Strip the prefix.
+        command = _HISTORY_PREFIX.sub("", line)
+        commands.append(command)
+    return commands
+
+
+def _load_persisted_history(history_file):
+    """Load and decode lldb persisted history."""
     with open(history_file) as f:
         history_contents = f.read()
 
+    # Some characters (ex spaces and newlines) are encoded as octal values, but
+    # as _characters_ (not bytes). Space is the string r"\\040".
     history_decoded = re.sub(r"\\0([0-7][0-7])", _decode_char, history_contents)
     history_lines = history_decoded.splitlines()
 
     # Skip the header line (_HiStOrY_V2_)
     del history_lines[0]
+    return history_lines
+
+
+def _load_history(debugger, history_file):
+    """Load, decode, parse, and prepare lldb history for fzf."""
+    # Persisted history is older (earlier).
+    history_lines = _load_persisted_history(history_file)
+    # Session history is newer (later).
+    history_lines.extend(_load_session_history(debugger))
+
     # Reverse to show latest first.
     history_lines.reverse()
 

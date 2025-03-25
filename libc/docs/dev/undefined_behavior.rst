@@ -81,6 +81,7 @@ The C standard does not specify behavior for ``printf("%s", NULL)``. We will
 print the string literal ``(null)`` unless using the
 ``LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS`` option described in :ref:`printf
 behavior<printf_behavior>`.
+TODO: Move this to printf_behavior.
 
 Unknown Math Rounding Direction
 -------------------------------
@@ -143,3 +144,15 @@ More specific flags take precedence over less specific flags (i.e. '+' takes pre
 Any conversion with a minimum width is padded with the padding character until it is at least as long as the minimum width.
 Modifiers are applied, then the result is padded if necessary.
 Any composite conversion will pass along all flags to the component conversions.
+
+a64l and l64a
+-------------
+These functions convert to and from a posix-specified base64 encoding. There are
+a few cases left undefined. For a64l, the behavior is undefined if the input
+pointer (s) is a null pointer. For LLVM-libc this will cause a null pointer
+dereference. It's also undefined if the input pointer to a64l wasn't generated
+by l64a. For LLVM-libc, if the user passes a valid base 64 string, it will be
+parsed as normal. For l64a it's unspecified what happens if the input value is
+negative. For LLVM-libc, all inputs to l64a are treated as unsigned 32 bit ints.
+Additionally, the return of l64a is in a thread-local buffer that's overwritten
+on each call.

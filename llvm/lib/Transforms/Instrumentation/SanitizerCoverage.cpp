@@ -400,7 +400,7 @@ bool ModuleSanitizerCoverage::instrumentModule() {
   DL = &M.getDataLayout();
   CurModule = &M;
   CurModuleUniqueId = getUniqueModuleId(CurModule);
-  TargetTriple = Triple(M.getTargetTriple());
+  TargetTriple = M.getTargetTriple();
   FunctionGuardArray = nullptr;
   Function8bitCounterArray = nullptr;
   FunctionBoolArray = nullptr;
@@ -745,7 +745,7 @@ GlobalVariable *ModuleSanitizerCoverage::CreateFunctionLocalArrayInSection(
       Constant::getNullValue(ArrayTy), "__sancov_gen_");
 
   if (TargetTriple.supportsCOMDAT() &&
-      (TargetTriple.isOSBinFormatELF() || !F.isInterposable()))
+      (F.hasComdat() || TargetTriple.isOSBinFormatELF() || !F.isInterposable()))
     if (auto Comdat = getOrCreateFunctionComdat(F, TargetTriple))
       Array->setComdat(Comdat);
   Array->setSection(getSectionName(Section));
