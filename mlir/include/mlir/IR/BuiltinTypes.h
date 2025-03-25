@@ -43,108 +43,6 @@ template <typename ConcreteType>
 class ValueSemantics
     : public TypeTrait::TraitBase<ConcreteType, ValueSemantics> {};
 
-//===----------------------------------------------------------------------===//
-// TensorType
-//===----------------------------------------------------------------------===//
-
-/// Tensor types represent multi-dimensional arrays, and have two variants:
-/// RankedTensorType and UnrankedTensorType.
-/// Note: This class attaches the ShapedType trait to act as a mixin to
-///       provide many useful utility functions. This inheritance has no effect
-///       on derived tensor types.
-class TensorType : public Type, public ShapedType::Trait<TensorType> {
-public:
-  using Type::Type;
-
-  /// Returns the element type of this tensor type.
-  Type getElementType() const;
-
-  /// Returns if this type is ranked, i.e. it has a known number of dimensions.
-  bool hasRank() const;
-
-  /// Returns the shape of this tensor type.
-  ArrayRef<int64_t> getShape() const;
-
-  /// Clone this type with the given shape and element type. If the
-  /// provided shape is `std::nullopt`, the current shape of the type is used.
-  TensorType cloneWith(std::optional<ArrayRef<int64_t>> shape,
-                       Type elementType) const;
-
-  // Make sure that base class overloads are visible.
-  using ShapedType::Trait<TensorType>::clone;
-
-  /// Return a clone of this type with the given new shape and element type.
-  /// The returned type is ranked, even if this type is unranked.
-  RankedTensorType clone(ArrayRef<int64_t> shape, Type elementType) const;
-
-  /// Return a clone of this type with the given new shape. The returned type
-  /// is ranked, even if this type is unranked.
-  RankedTensorType clone(ArrayRef<int64_t> shape) const;
-
-  /// Return true if the specified element type is ok in a tensor.
-  static bool isValidElementType(Type type);
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool classof(Type type);
-
-  /// Allow implicit conversion to ShapedType.
-  operator ShapedType() const { return llvm::cast<ShapedType>(*this); }
-};
-
-//===----------------------------------------------------------------------===//
-// BaseMemRefType
-//===----------------------------------------------------------------------===//
-
-/// This class provides a shared interface for ranked and unranked memref types.
-/// Note: This class attaches the ShapedType trait to act as a mixin to
-///       provide many useful utility functions. This inheritance has no effect
-///       on derived memref types.
-class BaseMemRefType : public Type, public ShapedType::Trait<BaseMemRefType> {
-public:
-  using Type::Type;
-
-  /// Returns the element type of this memref type.
-  Type getElementType() const;
-
-  /// Returns if this type is ranked, i.e. it has a known number of dimensions.
-  bool hasRank() const;
-
-  /// Returns the shape of this memref type.
-  ArrayRef<int64_t> getShape() const;
-
-  /// Clone this type with the given shape and element type. If the
-  /// provided shape is `std::nullopt`, the current shape of the type is used.
-  BaseMemRefType cloneWith(std::optional<ArrayRef<int64_t>> shape,
-                           Type elementType) const;
-
-  // Make sure that base class overloads are visible.
-  using ShapedType::Trait<BaseMemRefType>::clone;
-
-  /// Return a clone of this type with the given new shape and element type.
-  /// The returned type is ranked, even if this type is unranked.
-  MemRefType clone(ArrayRef<int64_t> shape, Type elementType) const;
-
-  /// Return a clone of this type with the given new shape. The returned type
-  /// is ranked, even if this type is unranked.
-  MemRefType clone(ArrayRef<int64_t> shape) const;
-
-  /// Return true if the specified element type is ok in a memref.
-  static bool isValidElementType(Type type);
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool classof(Type type);
-
-  /// Returns the memory space in which data referred to by this memref resides.
-  Attribute getMemorySpace() const;
-
-  /// [deprecated] Returns the memory space in old raw integer representation.
-  /// New `Attribute getMemorySpace()` method should be used instead.
-  unsigned getMemorySpaceAsInt() const;
-
-  /// Allow implicit conversion to ShapedType.
-  operator ShapedType() const { return llvm::cast<ShapedType>(*this); }
-};
-
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//
@@ -390,19 +288,11 @@ public:
 // Deferred Method Definitions
 //===----------------------------------------------------------------------===//
 
-inline bool BaseMemRefType::classof(Type type) {
-  return llvm::isa<MemRefType, UnrankedMemRefType>(type);
-}
-
 inline bool BaseMemRefType::isValidElementType(Type type) {
   return type.isIntOrIndexOrFloat() ||
          llvm::isa<ComplexType, MemRefType, VectorType, UnrankedMemRefType>(
              type) ||
          llvm::isa<MemRefElementTypeInterface>(type);
-}
-
-inline bool TensorType::classof(Type type) {
-  return llvm::isa<RankedTensorType, UnrankedTensorType>(type);
 }
 
 //===----------------------------------------------------------------------===//

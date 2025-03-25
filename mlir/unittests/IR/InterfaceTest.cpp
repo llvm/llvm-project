@@ -9,6 +9,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OwningOpRef.h"
 #include "gtest/gtest.h"
@@ -83,4 +84,37 @@ TEST(InterfaceTest, TestImplicitConversion) {
   typeB = TestType::get(&context);
   typeA = typeB;
   EXPECT_EQ(typeA, typeB);
+}
+
+TEST(InterfaceTest, TestCustomTensorIsTensorType) {
+  MLIRContext context;
+  context.loadDialect<test::TestDialect>();
+
+  auto customTensorType = test::TestTensorType::get(
+      &context, {1, 2, 3}, mlir::IntegerType::get(&context, 32));
+  EXPECT_TRUE(mlir::isa<mlir::TensorType>(customTensorType));
+
+  auto customCloneType = customTensorType.clone({3, 4, 5});
+  EXPECT_EQ(customTensorType.getElementType(),
+            customCloneType.getElementType());
+  EXPECT_TRUE(mlir::isa<mlir::TensorType>(customCloneType));
+  EXPECT_TRUE(mlir::isa<test::TestTensorType>(customCloneType));
+}
+
+TEST(InterfaceTest, TestCustomMemrefIsBaseMemref) {
+  MLIRContext context;
+  context.loadDialect<test::TestDialect>();
+
+  auto customMemrefType = test::TestMemrefType::get(
+      &context, {1, 2, 3}, mlir::IntegerType::get(&context, 32),
+      mlir::StringAttr::get(&context, "some_memspace"));
+  EXPECT_TRUE(mlir::isa<mlir::BaseMemRefType>(customMemrefType));
+
+  auto customCloneType = customMemrefType.clone({3, 4, 5});
+  EXPECT_EQ(customMemrefType.getElementType(),
+            customCloneType.getElementType());
+  EXPECT_TRUE(mlir::isa<mlir::BaseMemRefType>(customCloneType));
+  EXPECT_TRUE(mlir::isa<test::TestMemrefType>(customCloneType));
+  EXPECT_EQ(customMemrefType.getMemorySpace(),
+            mlir::cast<test::TestMemrefType>(customCloneType).getMemorySpace());
 }

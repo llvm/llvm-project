@@ -12,6 +12,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/TensorEncoding.h"
@@ -256,45 +257,6 @@ VectorType VectorType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
 // TensorType
 //===----------------------------------------------------------------------===//
 
-Type TensorType::getElementType() const {
-  return llvm::TypeSwitch<TensorType, Type>(*this)
-      .Case<RankedTensorType, UnrankedTensorType>(
-          [](auto type) { return type.getElementType(); });
-}
-
-bool TensorType::hasRank() const {
-  return !llvm::isa<UnrankedTensorType>(*this);
-}
-
-ArrayRef<int64_t> TensorType::getShape() const {
-  return llvm::cast<RankedTensorType>(*this).getShape();
-}
-
-TensorType TensorType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
-                                 Type elementType) const {
-  if (llvm::dyn_cast<UnrankedTensorType>(*this)) {
-    if (shape)
-      return RankedTensorType::get(*shape, elementType);
-    return UnrankedTensorType::get(elementType);
-  }
-
-  auto rankedTy = llvm::cast<RankedTensorType>(*this);
-  if (!shape)
-    return RankedTensorType::get(rankedTy.getShape(), elementType,
-                                 rankedTy.getEncoding());
-  return RankedTensorType::get(shape.value_or(rankedTy.getShape()), elementType,
-                               rankedTy.getEncoding());
-}
-
-RankedTensorType TensorType::clone(::llvm::ArrayRef<int64_t> shape,
-                                   Type elementType) const {
-  return ::llvm::cast<RankedTensorType>(cloneWith(shape, elementType));
-}
-
-RankedTensorType TensorType::clone(::llvm::ArrayRef<int64_t> shape) const {
-  return ::llvm::cast<RankedTensorType>(cloneWith(shape, getElementType()));
-}
-
 // Check if "elementType" can be an element type of a tensor.
 static LogicalResult
 checkTensorElementType(function_ref<InFlightDiagnostic()> emitError,
@@ -317,6 +279,12 @@ bool TensorType::isValidElementType(Type type) {
 //===----------------------------------------------------------------------===//
 // RankedTensorType
 //===----------------------------------------------------------------------===//
+RankedTensorType
+RankedTensorType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
+                            Type elementType) const {
+  return RankedTensorType::get(shape.value_or(this->getShape()), elementType,
+                               this->getEncoding());
+}
 
 LogicalResult
 RankedTensorType::verify(function_ref<InFlightDiagnostic()> emitError,
@@ -335,6 +303,13 @@ RankedTensorType::verify(function_ref<InFlightDiagnostic()> emitError,
 // UnrankedTensorType
 //===----------------------------------------------------------------------===//
 
+TensorType UnrankedTensorType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
+                                         Type elementType) const {
+  if (shape)
+    return RankedTensorType::get(*shape, elementType);
+  return UnrankedTensorType::get(elementType);
+}
+
 LogicalResult
 UnrankedTensorType::verify(function_ref<InFlightDiagnostic()> emitError,
                            Type elementType) {
@@ -342,64 +317,17 @@ UnrankedTensorType::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
-// BaseMemRefType
+// MemRefType
 //===----------------------------------------------------------------------===//
 
-Type BaseMemRefType::getElementType() const {
-  return llvm::TypeSwitch<BaseMemRefType, Type>(*this)
-      .Case<MemRefType, UnrankedMemRefType>(
-          [](auto type) { return type.getElementType(); });
-}
-
-bool BaseMemRefType::hasRank() const {
-  return !llvm::isa<UnrankedMemRefType>(*this);
-}
-
-ArrayRef<int64_t> BaseMemRefType::getShape() const {
-  return llvm::cast<MemRefType>(*this).getShape();
-}
-
-BaseMemRefType BaseMemRefType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
-                                         Type elementType) const {
-  if (llvm::dyn_cast<UnrankedMemRefType>(*this)) {
-    if (!shape)
-      return UnrankedMemRefType::get(elementType, getMemorySpace());
-    MemRefType::Builder builder(*shape, elementType);
-    builder.setMemorySpace(getMemorySpace());
-    return builder;
-  }
-
-  MemRefType::Builder builder(llvm::cast<MemRefType>(*this));
+MemRefType MemRefType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
+                                 Type elementType) const {
+  MemRefType::Builder builder(*this);
   if (shape)
     builder.setShape(*shape);
   builder.setElementType(elementType);
-  return builder;
+  return MemRefType(builder);
 }
-
-MemRefType BaseMemRefType::clone(::llvm::ArrayRef<int64_t> shape,
-                                 Type elementType) const {
-  return ::llvm::cast<MemRefType>(cloneWith(shape, elementType));
-}
-
-MemRefType BaseMemRefType::clone(::llvm::ArrayRef<int64_t> shape) const {
-  return ::llvm::cast<MemRefType>(cloneWith(shape, getElementType()));
-}
-
-Attribute BaseMemRefType::getMemorySpace() const {
-  if (auto rankedMemRefTy = llvm::dyn_cast<MemRefType>(*this))
-    return rankedMemRefTy.getMemorySpace();
-  return llvm::cast<UnrankedMemRefType>(*this).getMemorySpace();
-}
-
-unsigned BaseMemRefType::getMemorySpaceAsInt() const {
-  if (auto rankedMemRefTy = llvm::dyn_cast<MemRefType>(*this))
-    return rankedMemRefTy.getMemorySpaceAsInt();
-  return llvm::cast<UnrankedMemRefType>(*this).getMemorySpaceAsInt();
-}
-
-//===----------------------------------------------------------------------===//
-// MemRefType
-//===----------------------------------------------------------------------===//
 
 std::optional<llvm::SmallDenseSet<unsigned>>
 mlir::computeRankReductionMask(ArrayRef<int64_t> originalShape,
@@ -887,6 +815,17 @@ bool MemRefType::isLastDimUnitStride() {
 //===----------------------------------------------------------------------===//
 // UnrankedMemRefType
 //===----------------------------------------------------------------------===//
+
+BaseMemRefType
+UnrankedMemRefType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
+                              Type elementType) const {
+  if (!shape)
+    return UnrankedMemRefType::get(elementType, getMemorySpace());
+
+  MemRefType::Builder builder(*shape, elementType);
+  builder.setMemorySpace(getMemorySpace());
+  return MemRefType(builder);
+}
 
 unsigned UnrankedMemRefType::getMemorySpaceAsInt() const {
   return detail::getMemorySpaceAsInt(getMemorySpace());
