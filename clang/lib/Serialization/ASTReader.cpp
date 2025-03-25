@@ -10432,6 +10432,7 @@ void ASTReader::finishPendingActions() {
       if (!getContext().getLangOpts().Modules || !FD->hasBody(Defn)) {
         FD->setLazyBody(PB->second);
       } else {
+        FD->setThisDeclarationWasADefinition();
         auto *NonConstDefn = const_cast<FunctionDecl*>(Defn);
         mergeDefinitionVisibility(NonConstDefn, FD);
 
