@@ -8,12 +8,33 @@
 
 // REQUIRES: std-at-least-c++23
 
-// std::const_iterator
+// template<input_iterator I>
+//   using const_iterator = see below;
+// template<semiregular S>
+//   using const_sentinel = see below;
 
 #include <iterator>
 #include <list>
 #include <ranges>
 #include "test_macros.h"
+
+template <class T>
+concept UsableForConstIterator = requires { typename std::const_iterator<T>; };
+
+static_assert(UsableForConstIterator<int*>);
+static_assert(UsableForConstIterator<const int*>);
+static_assert(!UsableForConstIterator<int>);
+static_assert(!UsableForConstIterator<int&>);
+static_assert(!UsableForConstIterator<void>);
+
+template <class T>
+concept UsableForConstSentinel = requires { typename std::const_sentinel<T>; };
+
+static_assert(UsableForConstSentinel<int*>);
+static_assert(UsableForConstSentinel<const int*>);
+static_assert(UsableForConstSentinel<int>);
+static_assert(!UsableForConstSentinel<int&>);
+static_assert(!UsableForConstSentinel<void>);
 
 ASSERT_SAME_TYPE(std::const_iterator<int*>, std::basic_const_iterator<int*>);
 ASSERT_SAME_TYPE(std::const_iterator<const int*>, const int*);
@@ -28,5 +49,3 @@ ASSERT_SAME_TYPE(std::const_iterator<list_iterator>, std::basic_const_iterator<l
 ASSERT_SAME_TYPE(std::const_iterator<list_const_iterator>, list_const_iterator);
 ASSERT_SAME_TYPE(std::const_sentinel<list_iterator>, std::basic_const_iterator<list_iterator>);
 ASSERT_SAME_TYPE(std::const_sentinel<list_const_iterator>, list_const_iterator);
-
-int main() { return 0; }
