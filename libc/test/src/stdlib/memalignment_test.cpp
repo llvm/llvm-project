@@ -81,4 +81,4 @@ TEST(LlvmLibcMemAlignmentTest, AlignasSpecifiedAlignment) {
   EXPECT_GE(LIBC_NAMESPACE::memalignment(&aligned_256),
             static_cast<size_t>(256));
 }
- 
+
