@@ -216,7 +216,7 @@ public:
     return MaxSafeVectorWidthInBits;
   }
 
-  /// Return true if there is store-load forwarding dependencies.
+  /// Return true if there are no store-load forwarding dependencies.
   bool isSafeForAnyStoreLoadForwardDistances() const {
     return MaxStoreLoadForwardSafeDistanceInBits ==
            std::numeric_limits<uint64_t>::max();

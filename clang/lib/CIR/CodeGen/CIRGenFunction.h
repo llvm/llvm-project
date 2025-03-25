@@ -49,11 +49,15 @@ private:
   CIRGenBuilderTy &builder;
 
 public:
-  clang::QualType fnRetTy;
+  /// The GlobalDecl for the current function being compiled or the global
+  /// variable currently being initialized.
+  clang::GlobalDecl curGD;
 
-  /// This is the current function or global initializer that is generated code
-  /// for.
-  mlir::Operation *curFn = nullptr;
+  /// The compiler-generated variable that holds the return value.
+  std::optional<mlir::Value> fnRetAlloca;
+
+  /// The function for which code is currently being generated.
+  cir::FuncOp curFn;
 
   using DeclMapTy = llvm::DenseMap<const clang::Decl *, Address>;
   /// This keeps track of the CIR allocas or globals for local C
@@ -67,11 +71,14 @@ public:
   CIRGenModule &getCIRGenModule() { return cgm; }
   const CIRGenModule &getCIRGenModule() const { return cgm; }
 
-  mlir::Block *getCurFunctionEntryBlock() {
-    auto fn = mlir::dyn_cast<cir::FuncOp>(curFn);
-    assert(fn && "other callables NYI");
-    return &fn.getRegion().front();
-  }
+  mlir::Block *getCurFunctionEntryBlock() { return &curFn.getRegion().front(); }
+
+  /// Sanitizers enabled for this function.
+  clang::SanitizerSet sanOpts;
+
+  /// Whether or not a Microsoft-style asm block has been processed within
+  /// this fuction. These can potentially set the return value.
+  bool sawAsmBlock = false;
 
   mlir::Type convertTypeForMem(QualType T);
 
@@ -106,6 +113,8 @@ public:
   mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
                          mlir::Location loc, clang::CharUnits alignment);
 
+  mlir::Value createDummyValue(mlir::Location loc, clang::QualType qt);
+
 private:
   // Track current variable initialization (if there's one)
   const clang::VarDecl *currVarDecl = nullptr;
@@ -125,6 +134,9 @@ private:
     void restore() { p.currVarDecl = oldVal; }
     ~VarDeclContext() { restore(); }
   };
+
+  void emitAndUpdateRetAlloca(clang::QualType type, mlir::Location loc,
+                              clang::CharUnits alignment);
 
 public:
   /// Use to track source locations across nested visitor traversals.
@@ -163,6 +175,9 @@ public:
   void finishFunction(SourceLocation endLoc);
   mlir::LogicalResult emitFunctionBody(const clang::Stmt *body);
 
+  /// Build a debug stoppoint if we are emitting debug info.
+  void emitStopPoint(const Stmt *s);
+
   // Build CIR for a statement. useCurrentScope should be true if no
   // new scopes need be created when finding a compound statement.
   mlir::LogicalResult
@@ -171,6 +186,8 @@ public:
 
   mlir::LogicalResult emitSimpleStmt(const clang::Stmt *s,
                                      bool useCurrentScope);
+
+  mlir::LogicalResult emitForStmt(const clang::ForStmt &S);
 
   void emitCompoundStmt(const clang::CompoundStmt &s);
 
@@ -206,6 +223,7 @@ public:
                       LValue lvalue, bool capturedByInit = false);
 
   LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
+  LValue emitUnaryOpLValue(const clang::UnaryOperator *e);
 
   /// Determine whether the given initializer is trivial in the sense
   /// that it requires no code to be generated.
@@ -298,12 +316,19 @@ public:
   /// inside a function, including static vars etc.
   void emitVarDecl(const clang::VarDecl &d);
 
+  /// Perform the usual unary conversions on the specified expression and
+  /// compare the result against zero, returning an Int1Ty value.
+  mlir::Value evaluateExprAsBool(const clang::Expr *e);
+
   /// Set the address of a local variable.
   void setAddrOfLocalVar(const clang::VarDecl *vd, Address addr) {
     assert(!LocalDeclMap.count(vd) && "Decl already exists in LocalDeclMap!");
     LocalDeclMap.insert({vd, addr});
     // TODO: Add symbol table support
   }
+
+  mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv,
+                                      bool isInc, bool isPre);
 
   /// Emit the computation of the specified expression of scalar type.
   mlir::Value emitScalarExpr(const clang::Expr *e);
@@ -321,9 +346,146 @@ public:
                      FunctionArgList args, clang::SourceLocation loc,
                      clang::SourceLocation startLoc);
 
+  /// Emit a conversion from the specified type to the specified destination
+  /// type, both of which are CIR scalar types.
+  mlir::Value emitScalarConversion(mlir::Value src, clang::QualType srcType,
+                                   clang::QualType dstType,
+                                   clang::SourceLocation loc);
+
+  /// Represents a scope, including function bodies, compound statements, and
+  /// the substatements of if/while/do/for/switch/try statements.  This class
+  /// handles any automatic cleanup, along with the return value.
+  struct LexicalScope {
+  private:
+    // TODO(CIR): This will live in the base class RunCleanupScope once that
+    // class is upstreamed.
+    CIRGenFunction &cgf;
+
+    // Block containing cleanup code for things initialized in this lexical
+    // context (scope).
+    mlir::Block *cleanupBlock = nullptr;
+
+    // Points to the scope entry block. This is useful, for instance, for
+    // helping to insert allocas before finalizing any recursive CodeGen from
+    // switches.
+    mlir::Block *entryBlock;
+
+    LexicalScope *parentScope = nullptr;
+
+    // Only Regular is used at the moment. Support for other kinds will be
+    // added as the relevant statements/expressions are upstreamed.
+    enum Kind {
+      Regular,   // cir.if, cir.scope, if_regions
+      Ternary,   // cir.ternary
+      Switch,    // cir.switch
+      Try,       // cir.try
+      GlobalInit // cir.global initialization code
+    };
+    Kind scopeKind = Kind::Regular;
+
+    // The scope return value.
+    mlir::Value retVal = nullptr;
+
+    mlir::Location beginLoc;
+    mlir::Location endLoc;
+
+  public:
+    unsigned depth = 0;
+
+    LexicalScope(CIRGenFunction &cgf, mlir::Location loc, mlir::Block *eb)
+        : cgf(cgf), entryBlock(eb), parentScope(cgf.curLexScope), beginLoc(loc),
+          endLoc(loc) {
+
+      assert(entryBlock && "LexicalScope requires an entry block");
+      cgf.curLexScope = this;
+      if (parentScope)
+        ++depth;
+
+      if (const auto fusedLoc = mlir::dyn_cast<mlir::FusedLoc>(loc)) {
+        assert(fusedLoc.getLocations().size() == 2 && "too many locations");
+        beginLoc = fusedLoc.getLocations()[0];
+        endLoc = fusedLoc.getLocations()[1];
+      }
+    }
+
+    void setRetVal(mlir::Value v) { retVal = v; }
+
+    void cleanup();
+    void restore() { cgf.curLexScope = parentScope; }
+
+    ~LexicalScope() {
+      assert(!cir::MissingFeatures::generateDebugInfo());
+      cleanup();
+      restore();
+    }
+
+    // ---
+    // Kind
+    // ---
+    bool isGlobalInit() { return scopeKind == Kind::GlobalInit; }
+    bool isRegular() { return scopeKind == Kind::Regular; }
+    bool isSwitch() { return scopeKind == Kind::Switch; }
+    bool isTernary() { return scopeKind == Kind::Ternary; }
+    bool isTry() { return scopeKind == Kind::Try; }
+
+    void setAsGlobalInit() { scopeKind = Kind::GlobalInit; }
+    void setAsSwitch() { scopeKind = Kind::Switch; }
+    void setAsTernary() { scopeKind = Kind::Ternary; }
+
+    // ---
+    // Return handling.
+    // ---
+
+  private:
+    // `returnBlock`, `returnLoc`, and all the functions that deal with them
+    // will change and become more complicated when `switch` statements are
+    // upstreamed.  `case` statements within the `switch` are in the same scope
+    // but have their own regions.  Therefore the LexicalScope will need to
+    // keep track of multiple return blocks.
+    mlir::Block *returnBlock = nullptr;
+    std::optional<mlir::Location> returnLoc;
+
+    // See the comment on `getOrCreateRetBlock`.
+    mlir::Block *createRetBlock(CIRGenFunction &cgf, mlir::Location loc) {
+      assert(returnBlock == nullptr && "only one return block per scope");
+      // Create the cleanup block but don't hook it up just yet.
+      mlir::OpBuilder::InsertionGuard guard(cgf.builder);
+      returnBlock =
+          cgf.builder.createBlock(cgf.builder.getBlock()->getParent());
+      updateRetLoc(returnBlock, loc);
+      return returnBlock;
+    }
+
+    cir::ReturnOp emitReturn(mlir::Location loc);
+    void emitImplicitReturn();
+
+  public:
+    mlir::Block *getRetBlock() { return returnBlock; }
+    mlir::Location getRetLoc(mlir::Block *b) { return *returnLoc; }
+    void updateRetLoc(mlir::Block *b, mlir::Location loc) { returnLoc = loc; }
+
+    // Create the return block for this scope, or return the existing one.
+    // This get-or-create logic is necessary to handle multiple return
+    // statements within the same scope, which can happen if some of them are
+    // dead code or if there is a `goto` into the middle of the scope.
+    mlir::Block *getOrCreateRetBlock(CIRGenFunction &cgf, mlir::Location loc) {
+      if (returnBlock == nullptr) {
+        returnBlock = createRetBlock(cgf, loc);
+        return returnBlock;
+      }
+      updateRetLoc(returnBlock, loc);
+      return returnBlock;
+    }
+
+    mlir::Block *getEntryBlock() { return entryBlock; }
+  };
+
+  LexicalScope *curLexScope = nullptr;
+
   Address createTempAlloca(mlir::Type ty, CharUnits align, mlir::Location loc,
                            const Twine &name = "tmp");
 };
+
 } // namespace clang::CIRGen
 
 #endif

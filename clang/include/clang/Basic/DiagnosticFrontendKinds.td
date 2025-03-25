@@ -266,7 +266,7 @@ def err_test_module_file_extension_version : Error<
   "(%3.%4)">;
 
 def warn_eagerly_load_for_standard_cplusplus_modules : Warning<
-  "the form '-fmodule-file=<BMI-path>' is deprecated for standard C++ named modules;"
+  "the form '-fmodule-file=<BMI-path>' is deprecated for standard C++ named modules; "
   "consider to use '-fmodule-file=<module-name>=<BMI-path>' instead">,
   InGroup<DiagGroup<"eager-load-cxx-named-modules">>;
 
@@ -386,4 +386,12 @@ def warn_hlsl_langstd_minimal :
   Warning<"support for HLSL language version %0 is incomplete, "
           "recommend using %1 instead">,
   InGroup<HLSLDXCCompat>;
+
+// ClangIR frontend errors
+def err_cir_to_cir_transform_failed : Error<
+    "CIR-to-CIR transformation failed">, DefaultFatal;
+
+def err_cir_verification_failed_pre_passes : Error<
+    "CIR module verification error before running CIR-to-CIR passes">,
+    DefaultFatal;
 }

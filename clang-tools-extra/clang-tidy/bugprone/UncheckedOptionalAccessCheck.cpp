@@ -19,6 +19,7 @@
 namespace clang::tidy::bugprone {
 using ast_matchers::MatchFinder;
 using dataflow::UncheckedOptionalAccessDiagnoser;
+using dataflow::UncheckedOptionalAccessDiagnostic;
 using dataflow::UncheckedOptionalAccessModel;
 
 static constexpr llvm::StringLiteral FuncID("fun");
@@ -52,14 +53,16 @@ void UncheckedOptionalAccessCheck::check(
   UncheckedOptionalAccessDiagnoser Diagnoser(ModelOptions);
   // FIXME: Allow user to set the (defaulted) SAT iterations max for
   // `diagnoseFunction` with config options.
-  if (llvm::Expected<llvm::SmallVector<SourceLocation>> Locs =
-          dataflow::diagnoseFunction<UncheckedOptionalAccessModel,
-                                     SourceLocation>(*FuncDecl, *Result.Context,
-                                                     Diagnoser))
-    for (const SourceLocation &Loc : *Locs)
-      diag(Loc, "unchecked access to optional value");
+  if (llvm::Expected<llvm::SmallVector<UncheckedOptionalAccessDiagnostic>>
+          Diags = dataflow::diagnoseFunction<UncheckedOptionalAccessModel,
+                                             UncheckedOptionalAccessDiagnostic>(
+              *FuncDecl, *Result.Context, Diagnoser))
+    for (const UncheckedOptionalAccessDiagnostic &Diag : *Diags) {
+      diag(Diag.Range.getBegin(), "unchecked access to optional value")
+          << Diag.Range;
+    }
   else
-    llvm::consumeError(Locs.takeError());
+    llvm::consumeError(Diags.takeError());
 }
 
 } // namespace clang::tidy::bugprone

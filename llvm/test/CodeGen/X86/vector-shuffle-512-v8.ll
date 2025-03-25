@@ -1678,11 +1678,10 @@ define <8 x double> @concat_shuffle_v8f64_v2f64_10325476(<2 x double> %a0, <2 x 
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512F-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; AVX512F-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
-; AVX512F-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm1
-; AVX512F-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[1,0,3,2]
-; AVX512F-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512F-NEXT:    vshufpd {{.*#+}} zmm0 = zmm0[1,0,3,2,5,4,7,6]
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512F-32-LABEL: concat_shuffle_v8f64_v2f64_10325476:
@@ -1691,10 +1690,9 @@ define <8 x double> @concat_shuffle_v8f64_v2f64_10325476(<2 x double> %a0, <2 x 
 ; AVX512F-32-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
 ; AVX512F-32-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512F-32-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX512F-32-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1,0,3,2]
 ; AVX512F-32-NEXT:    vinsertf128 $1, {{[0-9]+}}(%esp), %ymm2, %ymm1
-; AVX512F-32-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[1,0,3,2]
 ; AVX512F-32-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512F-32-NEXT:    vshufpd {{.*#+}} zmm0 = zmm0[1,0,3,2,5,4,7,6]
 ; AVX512F-32-NEXT:    addl $12, %esp
 ; AVX512F-32-NEXT:    retl
   %s0 = shufflevector <2 x double> %a0, <2 x double> poison, <2 x i32> <i32 1, i32 0>
