@@ -204,7 +204,7 @@ bitsfx(T f) {
 // divide the two fixed-point types and return an integer result
 template <typename T, typename XType>
 LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<T>, XType>
-idivfx(T x, T y) {
+idiv(T x, T y) {
   using FXBits = FXBits<T>;
   using FXRep = FXRep<T>;
   using BitType = typename FXRep::StorageType;

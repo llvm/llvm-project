@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(unsigned int, idivur, (unsigned fract x, unsigned fract y)) {
-  return fixed_point::idivfx<unsigned fract, unsigned int>(x, y);
+  return fixed_point::idiv<unsigned fract, unsigned int>(x, y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
