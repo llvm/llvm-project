@@ -284,7 +284,7 @@ std::int32_t RTNAME(Hostnm)(
 
   // Note: Winsock has gethostname(), but use Win32 API GetComputerNameEx(),
   // in order to avoid adding dependency on Winsock.
-  if (!GetComputerNameEx(ComputerNameDnsHostname, buf, &dwSize)) {
+  if (!GetComputerNameExA(ComputerNameDnsHostname, buf, &dwSize)) {
     status = GetLastError();
   }
 
