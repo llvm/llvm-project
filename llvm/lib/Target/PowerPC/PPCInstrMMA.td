@@ -1047,19 +1047,18 @@ let Predicates = [MMA, PrefixInstrs, IsISAFuture] in {
 }
 
 def ConcatsMMA {
-  dag VecsToVecPair0 =
-    (v256i1 (INSERT_SUBREG
-      (INSERT_SUBREG (IMPLICIT_DEF), $vs0, sub_vsx1),
-      $vs1, sub_vsx0));
-  dag VecsToVecPair1 =
-    (v256i1 (INSERT_SUBREG
-      (INSERT_SUBREG (IMPLICIT_DEF), $vs2, sub_vsx1),
-      $vs3, sub_vsx0));
-  dag VecsToVecQuad =
-    (BUILD_UACC (INSERT_SUBREG
-                  (INSERT_SUBREG (v512i1 (IMPLICIT_DEF)),
-                                 (KILL_PAIR VecsToVecPair0), sub_pair0),
-                  (KILL_PAIR VecsToVecPair1), sub_pair1));
+   dag VecsToVecPair0 =
+          (v256i1 (INSERT_SUBREG
+                    (INSERT_SUBREG (IMPLICIT_DEF), $vs0, sub_vsx1),
+                    $vs1, sub_vsx0));
+   dag VecsToVecPair1 =
+          (v256i1 (INSERT_SUBREG
+                    (INSERT_SUBREG (IMPLICIT_DEF), $vs2, sub_vsx1),
+                    $vs3, sub_vsx0));
+  dag VecsToVecQuad = (BUILD_UACC
+          (v512i1 (REG_SEQUENCE UACCRC,
+                                (KILL_PAIR VecsToVecPair0), sub_pair0,
+                                (KILL_PAIR VecsToVecPair1), sub_pair1)));
 }
 
 def Extracts {

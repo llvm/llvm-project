@@ -165,6 +165,25 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
   return LValue();
 }
 
+mlir::Value CIRGenFunction::evaluateExprAsBool(const Expr *e) {
+  QualType boolTy = getContext().BoolTy;
+  SourceLocation loc = e->getExprLoc();
+
+  assert(!cir::MissingFeatures::pgoUse());
+  if (const MemberPointerType *MPT = e->getType()->getAs<MemberPointerType>()) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "evaluateExprAsBool: member pointer type");
+    return createDummyValue(getLoc(loc), boolTy);
+  }
+
+  assert(!cir::MissingFeatures::CGFPOptionsRAII());
+  if (!e->getType()->isAnyComplexType())
+    return emitScalarConversion(emitScalarExpr(e), e->getType(), boolTy, loc);
+
+  cgm.errorNYI(e->getSourceRange(), "evaluateExprAsBool: complex type");
+  return createDummyValue(getLoc(loc), boolTy);
+}
+
 LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
   UnaryOperatorKind op = e->getOpcode();
 
@@ -262,6 +281,13 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
     assert(!cir::MissingFeatures::astVarDeclInterface());
   }
   return addr;
+}
+
+mlir::Value CIRGenFunction::createDummyValue(mlir::Location loc,
+                                             clang::QualType qt) {
+  mlir::Type t = convertType(qt);
+  CharUnits alignment = getContext().getTypeAlignInChars(qt);
+  return builder.createDummyValue(loc, t, alignment);
 }
 
 /// This creates an alloca and inserts it  at the current insertion point of the

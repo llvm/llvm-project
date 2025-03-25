@@ -556,14 +556,22 @@ define i1 @andn_snez_i64(i64 %a, i64 %b) nounwind {
 }
 
 define i32 @and_hoisted_not_i32(i32 %x, i32 %m, i1 zeroext %cond) {
-; CHECK-LABEL: and_hoisted_not_i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    beqz a2, .LBB32_2
-; CHECK-NEXT:  # %bb.1: # %mask
-; CHECK-NEXT:    not a1, a1
-; CHECK-NEXT:    and a0, a1, a0
-; CHECK-NEXT:  .LBB32_2: # %identity
-; CHECK-NEXT:    ret
+; RV64I-LABEL: and_hoisted_not_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    beqz a2, .LBB32_2
+; RV64I-NEXT:  # %bb.1: # %mask
+; RV64I-NEXT:    not a1, a1
+; RV64I-NEXT:    and a0, a1, a0
+; RV64I-NEXT:  .LBB32_2: # %identity
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-ZBKB-LABEL: and_hoisted_not_i32:
+; RV64ZBB-ZBKB:       # %bb.0:
+; RV64ZBB-ZBKB-NEXT:    beqz a2, .LBB32_2
+; RV64ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV64ZBB-ZBKB-NEXT:    andn a0, a0, a1
+; RV64ZBB-ZBKB-NEXT:  .LBB32_2: # %identity
+; RV64ZBB-ZBKB-NEXT:    ret
   %a = xor i32 %m, -1
   br i1 %cond, label %mask, label %identity
 
@@ -576,14 +584,22 @@ identity:
 }
 
 define i32 @and_hoisted_not_i32_swapped(i32 %x, i32 %m, i1 zeroext %cond) {
-; CHECK-LABEL: and_hoisted_not_i32_swapped:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    beqz a2, .LBB33_2
-; CHECK-NEXT:  # %bb.1: # %mask
-; CHECK-NEXT:    not a1, a1
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:  .LBB33_2: # %identity
-; CHECK-NEXT:    ret
+; RV64I-LABEL: and_hoisted_not_i32_swapped:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    beqz a2, .LBB33_2
+; RV64I-NEXT:  # %bb.1: # %mask
+; RV64I-NEXT:    not a1, a1
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:  .LBB33_2: # %identity
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-ZBKB-LABEL: and_hoisted_not_i32_swapped:
+; RV64ZBB-ZBKB:       # %bb.0:
+; RV64ZBB-ZBKB-NEXT:    beqz a2, .LBB33_2
+; RV64ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV64ZBB-ZBKB-NEXT:    andn a0, a0, a1
+; RV64ZBB-ZBKB-NEXT:  .LBB33_2: # %identity
+; RV64ZBB-ZBKB-NEXT:    ret
   %a = xor i32 %m, -1
   br i1 %cond, label %mask, label %identity
 
@@ -596,14 +612,22 @@ identity:
 }
 
 define i64 @and_hoisted_not_i64(i64 %x, i64 %m, i1 zeroext %cond) {
-; CHECK-LABEL: and_hoisted_not_i64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    beqz a2, .LBB34_2
-; CHECK-NEXT:  # %bb.1: # %mask
-; CHECK-NEXT:    not a1, a1
-; CHECK-NEXT:    and a0, a1, a0
-; CHECK-NEXT:  .LBB34_2: # %identity
-; CHECK-NEXT:    ret
+; RV64I-LABEL: and_hoisted_not_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    beqz a2, .LBB34_2
+; RV64I-NEXT:  # %bb.1: # %mask
+; RV64I-NEXT:    not a1, a1
+; RV64I-NEXT:    and a0, a1, a0
+; RV64I-NEXT:  .LBB34_2: # %identity
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-ZBKB-LABEL: and_hoisted_not_i64:
+; RV64ZBB-ZBKB:       # %bb.0:
+; RV64ZBB-ZBKB-NEXT:    beqz a2, .LBB34_2
+; RV64ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV64ZBB-ZBKB-NEXT:    andn a0, a0, a1
+; RV64ZBB-ZBKB-NEXT:  .LBB34_2: # %identity
+; RV64ZBB-ZBKB-NEXT:    ret
   %a = xor i64 %m, -1
   br i1 %cond, label %mask, label %identity
 
@@ -616,14 +640,22 @@ identity:
 }
 
 define i64 @and_hoisted_not_i64_swapped(i64 %x, i64 %m, i1 zeroext %cond) {
-; CHECK-LABEL: and_hoisted_not_i64_swapped:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    beqz a2, .LBB35_2
-; CHECK-NEXT:  # %bb.1: # %mask
-; CHECK-NEXT:    not a1, a1
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:  .LBB35_2: # %identity
-; CHECK-NEXT:    ret
+; RV64I-LABEL: and_hoisted_not_i64_swapped:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    beqz a2, .LBB35_2
+; RV64I-NEXT:  # %bb.1: # %mask
+; RV64I-NEXT:    not a1, a1
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:  .LBB35_2: # %identity
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-ZBKB-LABEL: and_hoisted_not_i64_swapped:
+; RV64ZBB-ZBKB:       # %bb.0:
+; RV64ZBB-ZBKB-NEXT:    beqz a2, .LBB35_2
+; RV64ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV64ZBB-ZBKB-NEXT:    andn a0, a0, a1
+; RV64ZBB-ZBKB-NEXT:  .LBB35_2: # %identity
+; RV64ZBB-ZBKB-NEXT:    ret
   %a = xor i64 %m, -1
   br i1 %cond, label %mask, label %identity
 
@@ -636,14 +668,22 @@ identity:
 }
 
 define i32 @or_hoisted_not_i32(i32 %x, i32 %m, i1 zeroext %cond) {
-; CHECK-LABEL: or_hoisted_not_i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    beqz a2, .LBB36_2
-; CHECK-NEXT:  # %bb.1: # %mask
-; CHECK-NEXT:    not a1, a1
-; CHECK-NEXT:    or a0, a1, a0
-; CHECK-NEXT:  .LBB36_2: # %identity
-; CHECK-NEXT:    ret
+; RV64I-LABEL: or_hoisted_not_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    beqz a2, .LBB36_2
+; RV64I-NEXT:  # %bb.1: # %mask
+; RV64I-NEXT:    not a1, a1
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:  .LBB36_2: # %identity
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-ZBKB-LABEL: or_hoisted_not_i32:
+; RV64ZBB-ZBKB:       # %bb.0:
+; RV64ZBB-ZBKB-NEXT:    beqz a2, .LBB36_2
+; RV64ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV64ZBB-ZBKB-NEXT:    orn a0, a0, a1
+; RV64ZBB-ZBKB-NEXT:  .LBB36_2: # %identity
+; RV64ZBB-ZBKB-NEXT:    ret
   %a = xor i32 %m, -1
   br i1 %cond, label %mask, label %identity
 
@@ -656,14 +696,22 @@ identity:
 }
 
 define i32 @or_hoisted_not_i32_swapped(i32 %x, i32 %m, i1 zeroext %cond) {
-; CHECK-LABEL: or_hoisted_not_i32_swapped:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    beqz a2, .LBB37_2
-; CHECK-NEXT:  # %bb.1: # %mask
-; CHECK-NEXT:    not a1, a1
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:  .LBB37_2: # %identity
-; CHECK-NEXT:    ret
+; RV64I-LABEL: or_hoisted_not_i32_swapped:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    beqz a2, .LBB37_2
+; RV64I-NEXT:  # %bb.1: # %mask
+; RV64I-NEXT:    not a1, a1
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:  .LBB37_2: # %identity
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-ZBKB-LABEL: or_hoisted_not_i32_swapped:
+; RV64ZBB-ZBKB:       # %bb.0:
+; RV64ZBB-ZBKB-NEXT:    beqz a2, .LBB37_2
+; RV64ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV64ZBB-ZBKB-NEXT:    orn a0, a0, a1
+; RV64ZBB-ZBKB-NEXT:  .LBB37_2: # %identity
+; RV64ZBB-ZBKB-NEXT:    ret
   %a = xor i32 %m, -1
   br i1 %cond, label %mask, label %identity
 
@@ -676,14 +724,22 @@ identity:
 }
 
 define i64 @or_hoisted_not_i64(i64 %x, i64 %m, i1 zeroext %cond) {
-; CHECK-LABEL: or_hoisted_not_i64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    beqz a2, .LBB38_2
-; CHECK-NEXT:  # %bb.1: # %mask
-; CHECK-NEXT:    not a1, a1
-; CHECK-NEXT:    or a0, a1, a0
-; CHECK-NEXT:  .LBB38_2: # %identity
-; CHECK-NEXT:    ret
+; RV64I-LABEL: or_hoisted_not_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    beqz a2, .LBB38_2
+; RV64I-NEXT:  # %bb.1: # %mask
+; RV64I-NEXT:    not a1, a1
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:  .LBB38_2: # %identity
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-ZBKB-LABEL: or_hoisted_not_i64:
+; RV64ZBB-ZBKB:       # %bb.0:
+; RV64ZBB-ZBKB-NEXT:    beqz a2, .LBB38_2
+; RV64ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV64ZBB-ZBKB-NEXT:    orn a0, a0, a1
+; RV64ZBB-ZBKB-NEXT:  .LBB38_2: # %identity
+; RV64ZBB-ZBKB-NEXT:    ret
   %a = xor i64 %m, -1
   br i1 %cond, label %mask, label %identity
 
@@ -696,14 +752,22 @@ identity:
 }
 
 define i64 @or_hoisted_not_i64_swapped(i64 %x, i64 %m, i1 zeroext %cond) {
-; CHECK-LABEL: or_hoisted_not_i64_swapped:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    beqz a2, .LBB39_2
-; CHECK-NEXT:  # %bb.1: # %mask
-; CHECK-NEXT:    not a1, a1
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:  .LBB39_2: # %identity
-; CHECK-NEXT:    ret
+; RV64I-LABEL: or_hoisted_not_i64_swapped:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    beqz a2, .LBB39_2
+; RV64I-NEXT:  # %bb.1: # %mask
+; RV64I-NEXT:    not a1, a1
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:  .LBB39_2: # %identity
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-ZBKB-LABEL: or_hoisted_not_i64_swapped:
+; RV64ZBB-ZBKB:       # %bb.0:
+; RV64ZBB-ZBKB-NEXT:    beqz a2, .LBB39_2
+; RV64ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV64ZBB-ZBKB-NEXT:    orn a0, a0, a1
+; RV64ZBB-ZBKB-NEXT:  .LBB39_2: # %identity
+; RV64ZBB-ZBKB-NEXT:    ret
   %a = xor i64 %m, -1
   br i1 %cond, label %mask, label %identity
 
@@ -716,14 +780,22 @@ identity:
 }
 
 define i32 @xor_hoisted_not_i32(i32 %x, i32 %m, i1 zeroext %cond) {
-; CHECK-LABEL: xor_hoisted_not_i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    beqz a2, .LBB40_2
-; CHECK-NEXT:  # %bb.1: # %mask
-; CHECK-NEXT:    not a1, a1
-; CHECK-NEXT:    xor a0, a1, a0
-; CHECK-NEXT:  .LBB40_2: # %identity
-; CHECK-NEXT:    ret
+; RV64I-LABEL: xor_hoisted_not_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    beqz a2, .LBB40_2
+; RV64I-NEXT:  # %bb.1: # %mask
+; RV64I-NEXT:    not a1, a1
+; RV64I-NEXT:    xor a0, a1, a0
+; RV64I-NEXT:  .LBB40_2: # %identity
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-ZBKB-LABEL: xor_hoisted_not_i32:
+; RV64ZBB-ZBKB:       # %bb.0:
+; RV64ZBB-ZBKB-NEXT:    beqz a2, .LBB40_2
+; RV64ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV64ZBB-ZBKB-NEXT:    xnor a0, a1, a0
+; RV64ZBB-ZBKB-NEXT:  .LBB40_2: # %identity
+; RV64ZBB-ZBKB-NEXT:    ret
   %a = xor i32 %m, -1
   br i1 %cond, label %mask, label %identity
 
@@ -736,14 +808,22 @@ identity:
 }
 
 define i32 @xor_hoisted_not_i32_swapped(i32 %x, i32 %m, i1 zeroext %cond) {
-; CHECK-LABEL: xor_hoisted_not_i32_swapped:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    beqz a2, .LBB41_2
-; CHECK-NEXT:  # %bb.1: # %mask
-; CHECK-NEXT:    not a1, a1
-; CHECK-NEXT:    xor a0, a0, a1
-; CHECK-NEXT:  .LBB41_2: # %identity
-; CHECK-NEXT:    ret
+; RV64I-LABEL: xor_hoisted_not_i32_swapped:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    beqz a2, .LBB41_2
+; RV64I-NEXT:  # %bb.1: # %mask
+; RV64I-NEXT:    not a1, a1
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:  .LBB41_2: # %identity
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-ZBKB-LABEL: xor_hoisted_not_i32_swapped:
+; RV64ZBB-ZBKB:       # %bb.0:
+; RV64ZBB-ZBKB-NEXT:    beqz a2, .LBB41_2
+; RV64ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV64ZBB-ZBKB-NEXT:    xnor a0, a1, a0
+; RV64ZBB-ZBKB-NEXT:  .LBB41_2: # %identity
+; RV64ZBB-ZBKB-NEXT:    ret
   %a = xor i32 %m, -1
   br i1 %cond, label %mask, label %identity
 
@@ -756,14 +836,22 @@ identity:
 }
 
 define i64 @xor_hoisted_not_i64(i64 %x, i64 %m, i1 zeroext %cond) {
-; CHECK-LABEL: xor_hoisted_not_i64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    beqz a2, .LBB42_2
-; CHECK-NEXT:  # %bb.1: # %mask
-; CHECK-NEXT:    not a1, a1
-; CHECK-NEXT:    xor a0, a1, a0
-; CHECK-NEXT:  .LBB42_2: # %identity
-; CHECK-NEXT:    ret
+; RV64I-LABEL: xor_hoisted_not_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    beqz a2, .LBB42_2
+; RV64I-NEXT:  # %bb.1: # %mask
+; RV64I-NEXT:    not a1, a1
+; RV64I-NEXT:    xor a0, a1, a0
+; RV64I-NEXT:  .LBB42_2: # %identity
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-ZBKB-LABEL: xor_hoisted_not_i64:
+; RV64ZBB-ZBKB:       # %bb.0:
+; RV64ZBB-ZBKB-NEXT:    beqz a2, .LBB42_2
+; RV64ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV64ZBB-ZBKB-NEXT:    xnor a0, a1, a0
+; RV64ZBB-ZBKB-NEXT:  .LBB42_2: # %identity
+; RV64ZBB-ZBKB-NEXT:    ret
   %a = xor i64 %m, -1
   br i1 %cond, label %mask, label %identity
 
@@ -776,14 +864,22 @@ identity:
 }
 
 define i64 @xor_hoisted_not_i64_swapped(i64 %x, i64 %m, i1 zeroext %cond) {
-; CHECK-LABEL: xor_hoisted_not_i64_swapped:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    beqz a2, .LBB43_2
-; CHECK-NEXT:  # %bb.1: # %mask
-; CHECK-NEXT:    not a1, a1
-; CHECK-NEXT:    xor a0, a0, a1
-; CHECK-NEXT:  .LBB43_2: # %identity
-; CHECK-NEXT:    ret
+; RV64I-LABEL: xor_hoisted_not_i64_swapped:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    beqz a2, .LBB43_2
+; RV64I-NEXT:  # %bb.1: # %mask
+; RV64I-NEXT:    not a1, a1
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:  .LBB43_2: # %identity
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-ZBKB-LABEL: xor_hoisted_not_i64_swapped:
+; RV64ZBB-ZBKB:       # %bb.0:
+; RV64ZBB-ZBKB-NEXT:    beqz a2, .LBB43_2
+; RV64ZBB-ZBKB-NEXT:  # %bb.1: # %mask
+; RV64ZBB-ZBKB-NEXT:    xnor a0, a1, a0
+; RV64ZBB-ZBKB-NEXT:  .LBB43_2: # %identity
+; RV64ZBB-ZBKB-NEXT:    ret
   %a = xor i64 %m, -1
   br i1 %cond, label %mask, label %identity
 

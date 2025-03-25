@@ -1244,12 +1244,16 @@ ASTNodeImporter::VisitMemberPointerType(const MemberPointerType *T) {
   if (!ToPointeeTypeOrErr)
     return ToPointeeTypeOrErr.takeError();
 
-  ExpectedTypePtr ClassTypeOrErr = import(T->getClass());
-  if (!ClassTypeOrErr)
-    return ClassTypeOrErr.takeError();
+  auto QualifierOrErr = import(T->getQualifier());
+  if (!QualifierOrErr)
+    return QualifierOrErr.takeError();
 
-  return Importer.getToContext().getMemberPointerType(*ToPointeeTypeOrErr,
-                                                      *ClassTypeOrErr);
+  auto ClsOrErr = import(T->getMostRecentCXXRecordDecl());
+  if (!ClsOrErr)
+    return ClsOrErr.takeError();
+
+  return Importer.getToContext().getMemberPointerType(
+      *ToPointeeTypeOrErr, *QualifierOrErr, *ClsOrErr);
 }
 
 ExpectedType
@@ -8955,13 +8959,16 @@ ExpectedStmt ASTNodeImporter::VisitTypeTraitExpr(TypeTraitExpr *E) {
   if (Error Err = ImportContainerChecked(E->getArgs(), ToArgs))
     return std::move(Err);
 
-  // According to Sema::BuildTypeTrait(), if E is value-dependent,
-  // Value is always false.
-  bool ToValue = (E->isValueDependent() ? false : E->getValue());
-
-  return TypeTraitExpr::Create(
-      Importer.getToContext(), ToType, ToBeginLoc, E->getTrait(), ToArgs,
-      ToEndLoc, ToValue);
+  if (E->isStoredAsBoolean()) {
+    // According to Sema::BuildTypeTrait(), if E is value-dependent,
+    // Value is always false.
+    bool ToValue = (E->isValueDependent() ? false : E->getBoolValue());
+    return TypeTraitExpr::Create(Importer.getToContext(), ToType, ToBeginLoc,
+                                 E->getTrait(), ToArgs, ToEndLoc, ToValue);
+  }
+  return TypeTraitExpr::Create(Importer.getToContext(), ToType, ToBeginLoc,
+                               E->getTrait(), ToArgs, ToEndLoc,
+                               E->getAPValue());
 }
 
 ExpectedStmt ASTNodeImporter::VisitCXXTypeidExpr(CXXTypeidExpr *E) {
