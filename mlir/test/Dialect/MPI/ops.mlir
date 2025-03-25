@@ -49,10 +49,10 @@ func.func @mpi_test(%ref : memref<100xf32>) -> () {
     %err7 = mpi.barrier : !mpi.retval
 
     // CHECK-NEXT: mpi.allreduce(%arg0, %arg0, <MPI_SUM>) : memref<100xf32>, memref<100xf32>
-    mpi.allreduce(%ref, %ref, <MPI_SUM>) : memref<100xf32>, memref<100xf32>
+    mpi.allreduce(%ref, %ref, MPI_SUM) : memref<100xf32>, memref<100xf32>
 
     // CHECK-NEXT: mpi.allreduce(%arg0, %arg0, <MPI_SUM>) : memref<100xf32>, memref<100xf32> -> !mpi.retval
-    %err8 = mpi.allreduce(%ref, %ref, <MPI_SUM>) : memref<100xf32>, memref<100xf32> -> !mpi.retval
+    %err8 = mpi.allreduce(%ref, %ref, MPI_SUM) : memref<100xf32>, memref<100xf32> -> !mpi.retval
 
     // CHECK-NEXT: %7 = mpi.finalize : !mpi.retval
     %rval = mpi.finalize : !mpi.retval
