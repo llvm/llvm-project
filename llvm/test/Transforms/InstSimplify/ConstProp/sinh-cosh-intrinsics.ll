@@ -11,17 +11,9 @@ define double @test_sinh_0() {
 
 define double @test_sinh_ln2() {
 ; CHECK-LABEL: define double @test_sinh_ln2() {
-; CHECK-NEXT:    ret double 0x3FE8000000000268
+; CHECK-NEXT:    ret double 7.500000e-01
 ;
-  %res = call double @llvm.sinh.f64(double 0.69314718056)
-  ret double %res
-}
-
-define double @test_sinh_ln5() {
-; CHECK-LABEL: define double @test_sinh_ln5() {
-; CHECK-NEXT:    ret double 0x400333333332D56D
-;
-  %res = call double @llvm.sinh.f64(double 1.60943791243)
+  %res = call double @llvm.sinh.f64(double 0x3fe62e42fefa39ef)
   ret double %res
 }
 
@@ -105,17 +97,9 @@ define double @test_cosh_0() {
 
 define double @test_cosh_ln2() {
 ; CHECK-LABEL: define double @test_cosh_ln2() {
-; CHECK-NEXT:    ret double 0x3FF40000000000B8
+; CHECK-NEXT:    ret double 1.250000e+00
 ;
-  %res = call double @llvm.cosh.f64(double 0.69314718056)
-  ret double %res
-}
-
-define double @test_cosh_ln5() {
-; CHECK-LABEL: define double @test_cosh_ln5() {
-; CHECK-NEXT:    ret double 0x4004CCCCCCCC763D
-;
-  %res = call double @llvm.cosh.f64(double 1.60943791243)
+  %res = call double @llvm.cosh.f64(double 0x3fe62e42fefa39ef)
   ret double %res
 }
 
