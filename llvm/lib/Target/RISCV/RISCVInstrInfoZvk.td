@@ -737,7 +737,7 @@ foreach vti = AllIntegerVectors in {
                                GetVTypePredicates<vti>.Predicates) in {
     def : Pat<(vti.Vector (riscv_and_vl (riscv_xor_vl
                                            (vti.Vector vti.RegClass:$rs1),
-                                           (riscv_splat_vector -1),
+                                           (riscv_splat_vector !cast<ImmLeaf>("allonessew"#vti.SEW)),
                                            (vti.Vector vti.RegClass:$passthru),
                                            (vti.Mask VMV0:$vm),
                                            VLOpFrag),

@@ -17,8 +17,7 @@ define <8 x i8> @not_signbit_mask_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-ZVKB:       # %bb.0:
 ; CHECK-ZVKB-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-ZVKB-NEXT:    vsra.vi v8, v8, 7
-; CHECK-ZVKB-NEXT:    vnot.v v8, v8
-; CHECK-ZVKB-NEXT:    vand.vv v8, v8, v9
+; CHECK-ZVKB-NEXT:    vandn.vv v8, v9, v8
 ; CHECK-ZVKB-NEXT:    ret
   %cond = icmp sgt <8 x i8> %a, splat (i8 -1)
   %r = select <8 x i1> %cond, <8 x i8> %b, <8 x i8> zeroinitializer
@@ -38,8 +37,7 @@ define <4 x i16> @not_signbit_mask_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-ZVKB:       # %bb.0:
 ; CHECK-ZVKB-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-ZVKB-NEXT:    vsra.vi v8, v8, 15
-; CHECK-ZVKB-NEXT:    vnot.v v8, v8
-; CHECK-ZVKB-NEXT:    vand.vv v8, v8, v9
+; CHECK-ZVKB-NEXT:    vandn.vv v8, v9, v8
 ; CHECK-ZVKB-NEXT:    ret
   %cond = icmp sgt <4 x i16> %a, splat (i16 -1)
   %r = select <4 x i1> %cond, <4 x i16> %b, <4 x i16> zeroinitializer
