@@ -1365,6 +1365,23 @@ public:
                                                const SrcOp &Elt,
                                                const SrcOp &Idx);
 
+  /// Build and insert \p Res = G_INSERT_VECTOR_ELT \p Val, \p Elt, \p Idx
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with scalar type.
+  /// \pre \p Val must be a generic virtual register with vector type.
+  /// \pre \p Elt must be a generic virtual register with scalar type.
+  ///
+  /// \return The newly created instruction.
+  MachineInstrBuilder buildInsertVectorElementConstant(const DstOp &Res,
+                                                       const SrcOp &Val,
+                                                       const SrcOp &Elt,
+                                                       const int Idx) {
+    const TargetLowering *TLI = getMF().getSubtarget().getTargetLowering();
+    LLT IdxTy = TLI->getVectorIdxLLT(getDataLayout());
+    return buildInsertVectorElement(Res, Val, Elt, buildConstant(IdxTy, Idx));
+  }
+
   /// Build and insert \p Res = G_EXTRACT_VECTOR_ELT \p Val, \p Idx
   ///
   /// \pre setBasicBlock or setMI must have been called.
