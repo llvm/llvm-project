@@ -179,7 +179,6 @@ struct ThrowOnMoveContainer : std::vector<T> {
 
 #endif
 
-#if 0
 template <class F>
 void test_emplace_exception_guarantee([[maybe_unused]] F&& emplace_function) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
@@ -193,7 +192,7 @@ void test_emplace_exception_guarantee([[maybe_unused]] F&& emplace_function) {
 
     test_allocator_statistics stats;
 
-    KeyContainer a({1, 2, 3, 4}, test_allocator<int>{&stats});
+    KeyContainer a({1, 1, 2, 2, 3, 4}, test_allocator<int>{&stats});
     [[maybe_unused]] auto expected_keys = a;
     M m(std::sorted_equivalent, std::move(a));
 
@@ -204,7 +203,7 @@ void test_emplace_exception_guarantee([[maybe_unused]] F&& emplace_function) {
     } catch (const std::bad_alloc&) {
       check_invariant(m);
       // In libc++, the flat_multiset is unchanged
-      LIBCPP_ASSERT(m.size() == 4);
+      LIBCPP_ASSERT(m.size() == 6);
       LIBCPP_ASSERT(std::ranges::equal(m, expected_keys));
     }
   }
@@ -214,7 +213,7 @@ void test_emplace_exception_guarantee([[maybe_unused]] F&& emplace_function) {
     using M            = std::flat_multiset<int, C, KeyContainer>;
 
     LIBCPP_STATIC_ASSERT(!std::__container_traits<KeyContainer>::__emplacement_has_strong_exception_safety_guarantee);
-    KeyContainer a = {1, 2, 3, 4};
+    KeyContainer a = {1, 1, 2, 2, 3, 4};
     M m(std::sorted_equivalent, std::move(a));
     try {
       emplace_function(m, 0);
@@ -299,5 +298,4 @@ public:
   bool moved() const { return int_ == -1; }
 };
 
-#endif // 0 
 #endif // SUPPORT_flat_multiset_HELPERS_H

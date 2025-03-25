@@ -54,8 +54,7 @@ void test() {
     assert(std::move(vm[0]).extract().get_allocator().resource() == &mr);
   }
   {
-    // flat_multiset(const key_container_type& key_cont, const mapped_container_type& mapped_cont,
-    //          const Allocator& a);
+    // flat_multiset(const container_type& key_cont, const Allocator& a);
     using M = std::flat_multiset<int, std::less<int>, std::pmr::vector<int>>;
     std::pmr::monotonic_buffer_resource mr;
     std::pmr::vector<M> vm(&mr);
