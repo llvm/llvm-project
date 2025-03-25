@@ -207,26 +207,22 @@ LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<T>, XType>
 idivfx(T x, T y) {
   using FXBits = FXBits<T>;
   using FXRep = FXRep<T>;
-  using StorageType = typename FXRep::StorageType;
+  using BitType = typename FXRep::StorageType;
+
+  // TODO: add negative check
 
   if (y == FXRep::ZERO()) {
-    // TODO: handle this case
+    // TODO: handle divide by zero
   }
 
-  constexpr FXBits x_bits(x);
-  constexpr FXBits y_bits(y);
+  FXBits x_bits(x);
+  FXBits y_bits(y);
 
-  bool out_s = x_bits.get_sign() ^ y_bits.get_sign();
+  BitType result = x_bits.get_bits() / y_bits.get_bits();
 
-  x_bits.set_sign(0);
-  y_bits.set_sign(0);
+  // TODO: handle integer overflow
 
-  XType x_int = x_bits.get_bits();
-  XType y_int = y_bits.get_bits();
-
-  // TODO: handle overflow
-  XType result = x_int / y_int;
-  return result;
+  return static_cast<XType>(result);
 }
 
 } // namespace fixed_point
