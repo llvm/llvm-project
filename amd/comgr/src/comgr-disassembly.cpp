@@ -47,18 +47,15 @@ DisassemblyInfo::create(const TargetIdentifier &Ident,
                         PrintAddressAnnotationCallback PrintAddressAnnotation,
                         amd_comgr_disassembly_info_t *DisassemblyInfoT) {
 
-  llvm::BumpPtrAllocator Allocator;
-  llvm::StringSaver Saver = Allocator;
-
   std::string TT = (Twine(Ident.Arch) + "-" + Ident.Vendor + "-" + Ident.OS +
                     "-" + Ident.Environ)
                        .str();
   std::string Isa = TT + Twine("-" + Ident.Processor).str();
-  SmallVector<StringRef, 2> FeaturesVec;
+  SmallVector<std::string, 2> FeaturesVec;
 
   for (auto &Feature : Ident.Features) {
     FeaturesVec.push_back(
-        Saver.save(Twine(Feature.take_back() + Feature.drop_back()).str()));
+        Twine(Feature.take_back() + Feature.drop_back()).str());
   }
 
   std::string Features = join(FeaturesVec, ",");
