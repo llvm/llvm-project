@@ -223,7 +223,7 @@ static LLVMModuleAndContext readAndMaterializeDependencies(
                                          /*ShouldLazyLoadMetadata=*/false));
         });
     if (!CreateOr)
-      LLVMModuleAndContext();
+      return LLVMModuleAndContext();
 
     Result->setModuleInlineAsm("");
   }
