@@ -12,8 +12,7 @@ template <typename T>
 requires C<T> && true
 void f() {}
 
-template <>
-void f<int>();
+void test() { f<int>(); };
 }
 
 namespace B {
@@ -125,7 +124,7 @@ concept Majority8 =
 template <typename T>concept Y = C0<T> || Majority8<T>;
 template <typename T>concept Z = Majority8<T> && C1<T>;
 
-constexpr int foo(X auto x) { return 10; }
+constexpr int foo(Majority8 auto x) { return 10; }
 constexpr int foo(Y auto y) { return 20; }
 constexpr int foo(Z auto y) { return 30; }
 static_assert(foo(0) == 30);
