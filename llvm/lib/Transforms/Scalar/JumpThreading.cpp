@@ -1995,6 +1995,14 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
   }
 }
 
+static void remapSourceAtoms(ValueToValueMapTy &VM, BasicBlock::iterator Begin,
+                             BasicBlock::iterator End) {
+  if (VM.AtomMap.empty())
+    return;
+  for (auto It = Begin; It != End; ++It)
+    RemapSourceAtom(&*It, VM);
+}
+
 /// Clone instructions in range [BI, BE) to NewBB.  For PHI nodes, we only clone
 /// arguments that come from PredBB.  Return the map from the variables in the
 /// source basic block to the variables in the newly created basic block.
@@ -2059,6 +2067,8 @@ void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
     PHINode *NewPN = PHINode::Create(PN->getType(), 1, PN->getName(), NewBB);
     NewPN->addIncoming(PN->getIncomingValueForBlock(PredBB), PredBB);
     ValueMapping[PN] = NewPN;
+    if (const DebugLoc &DL = PN->getDebugLoc())
+      mapAtomInstance(DL, ValueMapping);
   }
 
   // Clone noalias scope declarations in the threaded block. When threading a
@@ -2087,8 +2097,10 @@ void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
     adaptNoAliasScopes(New, ClonedScopes, Context);
 
     CloneAndRemapDbgInfo(New, &*BI);
+    if (const DebugLoc &DL = New->getDebugLoc())
+      mapAtomInstance(DL, ValueMapping);
 
-    if (RetargetDbgValueIfPossible(New))
+      if (RetargetDbgValueIfPossible(New))
       continue;
 
     // Remap operands to patch up intra-block references.
@@ -2314,6 +2326,7 @@ void JumpThreadingPass::threadThroughTwoBasicBlocks(BasicBlock *PredPredBB,
        {DominatorTree::Insert, PredPredBB, NewBB},
        {DominatorTree::Delete, PredPredBB, PredBB}});
 
+  remapSourceAtoms(ValueMapping, NewBB->begin(), NewBB->end());
   updateSSA(PredBB, NewBB, ValueMapping);
 
   // Clean up things like PHI nodes with single operands, dead instructions,
