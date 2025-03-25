@@ -14,6 +14,7 @@
 
 #include "mlir/IR/DialectImplementation.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 //===----------------------------------------------------------------------===//
@@ -272,6 +273,15 @@ LongDoubleType::verify(function_ref<InFlightDiagnostic()> emitError,
 bool cir::isAnyFloatingPointType(mlir::Type t) {
   return isa<cir::SingleType, cir::DoubleType, cir::LongDoubleType,
              cir::FP80Type, cir::BF16Type, cir::FP16Type, cir::FP128Type>(t);
+}
+
+//===----------------------------------------------------------------------===//
+// Floating-point and Float-point Vector type helpers
+//===----------------------------------------------------------------------===//
+
+bool cir::isFPOrFPVectorTy(mlir::Type t) {
+  assert(!cir::MissingFeatures::vectorType());
+  return isAnyFloatingPointType(t);
 }
 
 //===----------------------------------------------------------------------===//
