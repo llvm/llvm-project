@@ -94,7 +94,7 @@
 "`P1928R15 <https://wg21.link/P1928R15>`__","``std::simd`` — merge data-parallel types from the Parallelism TS 2","2024-11 (Wrocław)","","",""
 "`P3325R5 <https://wg21.link/P3325R5>`__","A Utility for Creating Execution Environments","2024-11 (Wrocław)","","",""
 "`P3068R6 <https://wg21.link/P3068R6>`__","Allowing exception throwing in constant-evaluation","2024-11 (Wrocław)","","",""
-"`P3247R2 <https://wg21.link/P3247R2>`__","Deprecate the notion of trivial types","2024-11 (Wrocław)","","",""
+"`P3247R2 <https://wg21.link/P3247R2>`__","Deprecate the notion of trivial types","2024-11 (Wrocław)","|Complete|","21",""
 "","","","","",""
 "`P3074R7 <https://wg21.link/P3074R7>`__","trivial unions (was ``std::uninitialized``)","2025-02 (Hagenberg)","","",""
 "`P1494R5 <https://wg21.link/P1494R5>`__","Partial program correctness","2025-02 (Hagenberg)","","",""
