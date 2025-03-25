@@ -454,3 +454,19 @@ struct hidden_struct { // This is fine because the previous declaration is not v
   int y;
   int z;
 };
+
+struct array { int y; int x[]; };    // c17-note {{previous definition is here}} \
+                                        c23-note {{field 'x' has type 'int[]' here}}
+struct array { int y; int x[0]; };   // c17-error {{redefinition of 'array'}} \
+                                        c23-error {{type 'struct array' has incompatible definitions}} \
+                                        c23-note {{field 'x' has type 'int[0]' here}} \
+                                        both-warning {{zero size arrays are an extension}}
+
+struct alignment { // c17-note {{previous definition is here}}
+  _Alignas(int) int x; // c23-note {{attribute '_Alignas' here}}
+};
+
+struct alignment { // c17-error {{redefinition of 'alignment'}} \
+                      c23-error {{type 'struct alignment' has incompatible definition}}
+  int x;           // c23-note {{no corresponding attribute here}}
+};
