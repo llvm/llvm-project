@@ -2031,10 +2031,10 @@ auto SubsumptionChecker::find(FoldExpandedConstraint *Ori) -> Literal {
 }
 
 auto SubsumptionChecker::CNF(const NormalizedConstraint &C) -> CNFFormula {
-  return SubsumptionChecker::Normalize<CNFFormula>(C, DNFFormula::Kind);
+  return SubsumptionChecker::Normalize<CNFFormula>(C, /*ParentWillDoCrossProduct=*/false);
 }
 auto SubsumptionChecker::DNF(const NormalizedConstraint &C) -> DNFFormula {
-  return SubsumptionChecker::Normalize<DNFFormula>(C, DNFFormula::Kind);
+  return SubsumptionChecker::Normalize<DNFFormula>(C, /*ParentWillDoCrossProduct=*/false);
 }
 
 ///
@@ -2053,12 +2053,9 @@ auto SubsumptionChecker::DNF(const NormalizedConstraint &C) -> DNFFormula {
 /// Redundant clauses (ie clauses that are fully subsumed) by other
 /// clauses in the same formula are removed.
 template <typename FormulaType>
-FormulaType SubsumptionChecker::Normalize(
-    const NormalizedConstraint &NC,
-    NormalizedConstraint::CompoundConstraintKind ParentKind) {
+FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC,
+                                          bool ParentWillDoCrossProduct) {
   FormulaType Res;
-
-  bool ParentWillDoCrossProduct = ParentKind != FormulaType::Kind;
 
   auto Add = [&, this](Clause C, bool RemoveRedundantClause) {
     // Sort each clause and remove duplicates for faster comparision
@@ -2083,8 +2080,8 @@ FormulaType SubsumptionChecker::Normalize(
 
   FormulaType Left, Right;
   SemaRef.runWithSufficientStackSpace(SourceLocation(), [&] {
-    Left = Normalize<FormulaType>(NC.getLHS(), NC.getCompoundKind());
-    Right = Normalize<FormulaType>(NC.getRHS(), NC.getCompoundKind());
+    Left  = Normalize<FormulaType>(NC.getLHS(), ParentWillDoCrossProduct || NC.getCompoundKind() != FormulaType::Kind);
+    Right = Normalize<FormulaType>(NC.getRHS(), ParentWillDoCrossProduct || NC.getCompoundKind() != FormulaType::Kind);
   });
 
   if (NC.getCompoundKind() == FormulaType::Kind) {

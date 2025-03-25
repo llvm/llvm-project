@@ -232,7 +232,7 @@ private:
   template <typename FormulaType>
   FormulaType
   Normalize(const NormalizedConstraint &C,
-            NormalizedConstraint::CompoundConstraintKind ParentKind);
+            bool ParentWillDoCrossProduct);
   void AddNonRedundantClauseToFormula(Formula &F, Clause C);
   void AddUniqueClauseToFormula(Formula &F, Clause C);
   bool IsSuperSet(const Clause &A, const Clause &B);
