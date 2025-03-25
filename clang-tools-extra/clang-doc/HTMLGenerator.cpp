@@ -517,10 +517,8 @@ writeFileDefinition(const ClangDocContext &CDCtx, const Location &L) {
   // The links to a specific line in the source code use the github /
   // googlesource notation so it won't work for all hosting pages.
   LocNumberNode->Attributes.emplace_back(
-      "href",
-      (FileURL + formatv("#{0}{1}", CDCtx.RepositoryLinePrefix.value_or(""),
-                         L.LineNumber))
-          .str());
+      "href", formatv("{0}#{1}{2}", FileURL,
+                      CDCtx.RepositoryLinePrefix.value_or(""), L.LineNumber));
   Node->Children.emplace_back(std::move(LocNumberNode));
   Node->Children.emplace_back(std::make_unique<TextNode>(" of file "));
   auto LocFileNode = std::make_unique<TagNode>(
