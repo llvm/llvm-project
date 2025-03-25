@@ -2031,12 +2031,10 @@ auto SubsumptionChecker::find(FoldExpandedConstraint *Ori) -> Literal {
 }
 
 auto SubsumptionChecker::CNF(const NormalizedConstraint &C) -> CNFFormula {
-  return SubsumptionChecker::Normalize<CNFFormula>(
-      C, /*ParentWillDoCrossProduct=*/false);
+  return SubsumptionChecker::Normalize<CNFFormula>(C);
 }
 auto SubsumptionChecker::DNF(const NormalizedConstraint &C) -> DNFFormula {
-  return SubsumptionChecker::Normalize<DNFFormula>(
-      C, /*ParentWillDoCrossProduct=*/false);
+  return SubsumptionChecker::Normalize<DNFFormula>(C);
 }
 
 ///
@@ -2052,26 +2050,15 @@ auto SubsumptionChecker::DNF(const NormalizedConstraint &C) -> DNFFormula {
 /// constraints subsumes each other (same constraint and mapping),
 /// they are represented by the same literal.
 ///
-/// Redundant clauses (ie clauses that are fully subsumed) by other
-/// clauses in the same formula are removed.
 template <typename FormulaType>
-FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC,
-                                          bool ParentWillDoCrossProduct) {
+FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC) {
   FormulaType Res;
 
-  auto Add = [&, this](Clause C, bool RemoveRedundantClause) {
-    // Sort each clause and remove duplicates for faster comparision
-    // Both AddClauseToFormula and IsSuperSet require sorted, uniqued literals.
+  auto Add = [&, this](Clause C) {
+    // Sort each clause and remove duplicates for faster comparisons
     std::sort(C.begin(), C.end());
     C.erase(std::unique(C.begin(), C.end()), C.end());
-
-    // Because the caller may produce the cross product of the clauses
-    // we need to be careful not to remove clauses that could be
-    // combined by the parent.
-    if (!ParentWillDoCrossProduct && RemoveRedundantClause)
-      AddNonRedundantClauseToFormula(Res, std::move(C));
-    else
-      AddUniqueClauseToFormula(Res, std::move(C));
+    AddUniqueClauseToFormula(Res, std::move(C));
   };
 
   if (NC.isAtomic())
@@ -2082,23 +2069,15 @@ FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC,
 
   FormulaType Left, Right;
   SemaRef.runWithSufficientStackSpace(SourceLocation(), [&] {
-    Left = Normalize<FormulaType>(NC.getLHS(), ParentWillDoCrossProduct ||
-                                                   NC.getCompoundKind() !=
-                                                       FormulaType::Kind);
-    Right = Normalize<FormulaType>(NC.getRHS(), ParentWillDoCrossProduct ||
-                                                    NC.getCompoundKind() !=
-                                                        FormulaType::Kind);
+    Left  = Normalize<FormulaType>(NC.getLHS());
+    Right = Normalize<FormulaType>(NC.getRHS());
   });
 
   if (NC.getCompoundKind() == FormulaType::Kind) {
     Res = std::move(Left);
     Res.reserve(Left.size() + Right.size());
     std::for_each(std::make_move_iterator(Right.begin()),
-                  std::make_move_iterator(Right.end()), [&](Clause C) {
-                    Add(std::move(C),
-                        FormulaType::Kind ==
-                            NormalizedConstraint::CCK_Disjunction);
-                  });
+                  std::make_move_iterator(Right.end()), Add);
     return Res;
   }
 
@@ -2111,30 +2090,10 @@ FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC,
                 std::back_inserter(Combined));
       std::copy(RTransform.begin(), RTransform.end(),
                 std::back_inserter(Combined));
-      Add(std::move(Combined),
-          FormulaType::Kind == NormalizedConstraint::CCK_Conjunction);
+      Add(std::move(Combined));
     }
   }
   return Res;
-}
-
-// Remove redundant clauses.
-// This is fairly crude, but we expect the number of clauses to be
-// small-ish and the number of literals to be small
-void SubsumptionChecker::AddNonRedundantClauseToFormula(Formula &F, Clause C) {
-  bool Added = false;
-  for (auto &Other : F) {
-    // Forward subsume: nothing to do
-    if (IsSuperSet(Other, C))
-      return;
-    // Backward subsume: replace other clauses
-    if (IsSuperSet(C, Other)) {
-      Other = C;
-      Added = true;
-    }
-  }
-  if (!Added)
-    F.push_back(C);
 }
 
 void SubsumptionChecker::AddUniqueClauseToFormula(Formula &F, Clause C) {
@@ -2143,26 +2102,6 @@ void SubsumptionChecker::AddUniqueClauseToFormula(Formula &F, Clause C) {
       return;
   }
   F.push_back(C);
-}
-
-bool SubsumptionChecker::IsSuperSet(const Clause &A, const Clause &B) {
-  if (B.size() > A.size())
-    return false;
-  Clause::const_iterator At = A.begin();
-  Clause::const_iterator Bt = B.begin();
-  while (At != A.end() && Bt != B.end()) {
-    if (At->Value == Bt->Value) {
-      At++;
-      Bt++;
-      continue;
-    }
-    if (At->Value < Bt->Value) {
-      At++;
-      continue;
-    }
-    return false;
-  }
-  return Bt == B.end();
 }
 
 std::optional<bool> SubsumptionChecker::Subsumes(NamedDecl *DP,

@@ -230,11 +230,9 @@ private:
   DNFFormula DNF(const NormalizedConstraint &C);
 
   template <typename FormulaType>
-  FormulaType Normalize(const NormalizedConstraint &C,
-                        bool ParentWillDoCrossProduct);
-  void AddNonRedundantClauseToFormula(Formula &F, Clause C);
+  FormulaType
+  Normalize(const NormalizedConstraint &C);
   void AddUniqueClauseToFormula(Formula &F, Clause C);
-  bool IsSuperSet(const Clause &A, const Clause &B);
 
   Literal find(AtomicConstraint *);
   Literal find(FoldExpandedConstraint *);
