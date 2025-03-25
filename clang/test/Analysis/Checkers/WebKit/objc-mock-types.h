@@ -21,6 +21,11 @@ typedef struct CF_BRIDGED_MUTABLE_TYPE(CFRunLoopRef) __CFRunLoop * CFRunLoopRef;
 
 extern const CFAllocatorRef kCFAllocatorDefault;
 typedef struct _NSZone NSZone;
+typedef unsigned long CFTypeID;
+
+CFTypeID CFGetTypeID(CFTypeRef cf);
+
+CFTypeID CFArrayGetTypeID(void);
 CFMutableArrayRef CFArrayCreateMutable(CFAllocatorRef allocator, CFIndex capacity);
 extern void CFArrayAppendValue(CFMutableArrayRef theArray, const void *value);
 CFArrayRef CFArrayCreate(CFAllocatorRef allocator, const void **values, CFIndex numValues);
@@ -29,6 +34,7 @@ CFIndex CFArrayGetCount(CFArrayRef theArray);
 typedef const struct CF_BRIDGED_TYPE(NSDictionary) __CFDictionary * CFDictionaryRef;
 typedef struct CF_BRIDGED_MUTABLE_TYPE(NSMutableDictionary) __CFDictionary * CFMutableDictionaryRef;
 
+CFTypeID CFDictionaryGetTypeID(void);
 CFDictionaryRef CFDictionaryCreate(CFAllocatorRef allocator, const void **keys, const void **values, CFIndex numValues);
 CFDictionaryRef CFDictionaryCreateCopy(CFAllocatorRef allocator, CFDictionaryRef theDict);
 CFDictionaryRef CFDictionaryCreateMutableCopy(CFAllocatorRef allocator, CFIndex capacity, CFDictionaryRef theDict);
@@ -134,6 +140,8 @@ __attribute__((objc_root_class))
 @end
 
 namespace WTF {
+
+void WTFCrash(void);
 
 template<typename T> class RetainPtr;
 template<typename T> RetainPtr<T> adoptNS(T*);
@@ -265,15 +273,73 @@ template<typename T> inline RetainPtr<T> retainPtr(T* ptr)
 
 inline NSObject *bridge_cast(CFTypeRef object)
 {
-    return (__bridge NSObject *)object;
+  return (__bridge NSObject *)object;
 }
 
 inline CFTypeRef bridge_cast(NSObject *object)
 {
-    return (__bridge CFTypeRef)object;
+  return (__bridge CFTypeRef)object;
 }
 
+template <typename> struct CFTypeTrait;
+
+// Use dynamic_cf_cast<> instead of checked_cf_cast<> when actively checking CF types,
+// similar to dynamic_cast<> in C++. Be sure to include a nullptr check.
+
+template<typename T> T dynamic_cf_cast(CFTypeRef object)
+{
+  if (!object)
+    return nullptr;
+
+  if (CFGetTypeID(object) != CFTypeTrait<T>::typeID())
+    return nullptr;
+
+  return static_cast<T>(const_cast<CF_BRIDGED_TYPE(id) void*>(object));
 }
+
+template<typename T, typename U> RetainPtr<T> dynamic_cf_cast(RetainPtr<U>&& object)
+{
+  if (!object)
+    return nullptr;
+
+  if (CFGetTypeID(object.get()) != CFTypeTrait<T>::typeID())
+    return nullptr;
+
+  return adoptCF(static_cast<T>(const_cast<CF_BRIDGED_TYPE(id) void*>(object.leakRef())));
+}
+
+// Use checked_cf_cast<> instead of dynamic_cf_cast<> when a specific CF type is required.
+
+template<typename T> T checked_cf_cast(CFTypeRef object)
+{
+  if (!object)
+    return nullptr;
+
+  if (CFGetTypeID(object) != CFTypeTrait<T>::typeID())
+    WTFCrash();
+
+  return static_cast<T>(const_cast<CF_BRIDGED_TYPE(id) void*>(object));
+}
+
+} // namespace WTF
+
+#define WTF_DECLARE_CF_TYPE_TRAIT(ClassName) \
+template <> \
+struct WTF::CFTypeTrait<ClassName##Ref> { \
+    static inline CFTypeID typeID(void) { return ClassName##GetTypeID(); } \
+};
+
+WTF_DECLARE_CF_TYPE_TRAIT(CFArray);
+WTF_DECLARE_CF_TYPE_TRAIT(CFDictionary);
+
+#define WTF_DECLARE_CF_MUTABLE_TYPE_TRAIT(ClassName, MutableClassName) \
+template <> \
+struct WTF::CFTypeTrait<MutableClassName##Ref> { \
+    static inline CFTypeID typeID(void) { return ClassName##GetTypeID(); } \
+};
+
+WTF_DECLARE_CF_MUTABLE_TYPE_TRAIT(CFArray, CFMutableArray);
+WTF_DECLARE_CF_MUTABLE_TYPE_TRAIT(CFDictionary, CFMutableDictionary);
 
 using WTF::RetainPtr;
 using WTF::adoptNS;
@@ -281,3 +347,5 @@ using WTF::adoptCF;
 using WTF::retainPtr;
 using WTF::downcast;
 using WTF::bridge_cast;
+using WTF::dynamic_cf_cast;
+using WTF::checked_cf_cast;
