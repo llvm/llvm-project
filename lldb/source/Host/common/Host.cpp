@@ -17,6 +17,7 @@
 #include <grp.h>
 #include <netdb.h>
 #include <pwd.h>
+#include <spawn.h>
 #include <sys/stat.h>
 
 #ifndef _AIX
@@ -25,7 +26,6 @@
 #endif
 
 #include <unistd.h>
-#include <spawn.h>
 #endif
 
 #if defined(__APPLE__)
@@ -198,8 +198,8 @@ MonitorChildProcessThreadFunction(::pid_t pid,
 
     const ::pid_t wait_pid = ::waitpid(pid, &status, 0);
 
-    LLDB_LOG(log, "::waitpid({0}, &status, 0) => pid = {1}, status = {2:x}", pid,
-             wait_pid, status);
+    LLDB_LOG(log, "::waitpid({0}, &status, 0) => pid = {1}, status = {2:x}",
+             pid, wait_pid, status);
 
     if (CheckForMonitorCancellation())
       return nullptr;
@@ -786,7 +786,7 @@ void llvm::format_provider<WaitStatus>::format(const WaitStatus &WS,
 
   assert(Options.empty());
   const char *desc;
-  switch(WS.type) {
+  switch (WS.type) {
   case WaitStatus::Exit:
     desc = "Exited with status";
     break;
