@@ -2144,7 +2144,7 @@ bool SubsumptionChecker::IsSuperSet(const Clause &A, const Clause &B) {
     return false;
   Clause::const_iterator At = A.begin();
   Clause::const_iterator Bt = B.begin();
-  for (; At != A.end() && Bt != B.end();) {
+  while (At != A.end() && Bt != B.end()) {
     if (At->Value == Bt->Value) {
       At++;
       Bt++;
