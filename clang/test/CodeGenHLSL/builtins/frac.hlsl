@@ -62,3 +62,20 @@ float3 test_frac_float3(float3 p0) { return frac(p0); }
 // CHECK: %hlsl.frac = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.[[TARGET]].frac.v4f32
 // CHECK: ret <4 x float> %hlsl.frac
 float4 test_frac_float4(float4 p0) { return frac(p0); }
+
+// CHECK: define [[FNATTRS]] float @
+// CHECK: %hlsl.frac = call reassoc nnan ninf nsz arcp afn float @llvm.[[TARGET]].frac.f32(
+// CHECK: ret float %hlsl.frac
+float test_frac_double(double p0) { return frac(p0); }
+// CHECK: define [[FNATTRS]] <2 x float> @
+// CHECK: %hlsl.frac = call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.[[TARGET]].frac.v2f32
+// CHECK: ret <2 x float> %hlsl.frac
+float2 test_frac_double2(double2 p0) { return frac(p0); }
+// CHECK: define [[FNATTRS]] <3 x float> @
+// CHECK: %hlsl.frac = call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.[[TARGET]].frac.v3f32
+// CHECK: ret <3 x float> %hlsl.frac
+float3 test_frac_double3(double3 p0) { return frac(p0); }
+// CHECK: define [[FNATTRS]] <4 x float> @
+// CHECK: %hlsl.frac = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.[[TARGET]].frac.v4f32
+// CHECK: ret <4 x float> %hlsl.frac
+float4 test_frac_double4(double4 p0) { return frac(p0); }
