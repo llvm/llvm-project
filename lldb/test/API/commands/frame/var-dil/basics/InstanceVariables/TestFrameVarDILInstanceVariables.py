@@ -26,5 +26,4 @@ class TestFrameVarDILInstanceVariables(TestBase):
 
         self.runCmd("settings set target.experimental.use-DIL true")
         self.expect_var_path("this", type="TestMethods *")
-        self.expect_var_path("c", children=[ValueCheck(name="field_",
-                                                       value="-1")])
+        self.expect_var_path("c", children=[ValueCheck(name="field_", value="-1")])

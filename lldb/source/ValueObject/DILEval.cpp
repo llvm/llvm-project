@@ -213,7 +213,6 @@ Interpreter::DILEvalNode(const ASTNode *node) {
   return node->Accept(this);
 }
 
-
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const IdentifierNode *node) {
   lldb::DynamicValueType use_dynamic = m_default_dynamic;
@@ -227,9 +226,9 @@ Interpreter::Visit(const IdentifierNode *node) {
   if (!identifier) {
     std::string errMsg =
         llvm::formatv("use of undeclared identifier '{0}'", node->GetName());
-    Status error = GetStatusError(DILDiagnosticError(
-        ErrorCode::kUndeclaredIdentifier, m_expr, errMsg, node->GetLocation(),
-        node->GetName().size()));
+    Status error = GetStatusError(
+        DILDiagnosticError(ErrorCode::kUndeclaredIdentifier, m_expr, errMsg,
+                           node->GetLocation(), node->GetName().size()));
     return error.ToError();
   }
 
