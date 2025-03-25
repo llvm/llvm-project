@@ -14,8 +14,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, idivlk, (long accum x, long accum y)) {
-  return fixed_point::idivfx<long accum, int>(x, y);
+LLVM_LIBC_FUNCTION(long int, idivlk, (long accum x, long accum y)) {
+  return fixed_point::idivfx<long accum, long int>(x, y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
