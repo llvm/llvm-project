@@ -1842,6 +1842,9 @@ and non-0 as true.
     will be included. The format of *regex* is ERE (Extended POSIX Regular
     Expressions).
 
+    If ``!instances`` is in a class/multiclass/foreach, only these records of
+    *type* that have been instantiated will be considered.
+
 ``!interleave(``\ *list*\ ``,`` *delim*\ ``)``
     This operator concatenates the items in the *list*, interleaving the
     *delim* string between each pair, and produces the resulting string.

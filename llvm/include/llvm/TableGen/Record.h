@@ -1217,7 +1217,7 @@ public:
 
   void Profile(FoldingSetNodeID &ID) const;
 
-  const Init *Fold() const;
+  const Init *Fold(const Record *CurRec, bool IsFinal = false) const;
 
   bool isComplete() const override { return false; }
 
@@ -2018,6 +2018,9 @@ public:
     bool Ins = Defs.try_emplace(std::string(R->getName()), std::move(R)).second;
     (void)Ins;
     assert(Ins && "Record already exists");
+    // Clear cache
+    if (!Cache.empty())
+      Cache.clear();
   }
 
   void addExtraGlobal(StringRef Name, const Init *I) {

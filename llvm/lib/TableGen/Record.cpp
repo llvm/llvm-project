@@ -2249,7 +2249,10 @@ void InstancesOpInit::Profile(FoldingSetNodeID &ID) const {
   ProfileInstancesOpInit(ID, Type, Regex);
 }
 
-const Init *InstancesOpInit::Fold() const {
+const Init *InstancesOpInit::Fold(const Record *CurRec, bool IsFinal) const {
+  if (CurRec && !IsFinal)
+    return this;
+
   const auto *RegexInit = dyn_cast<StringInit>(Regex);
   if (!RegexInit)
     return this;
@@ -2270,8 +2273,8 @@ const Init *InstancesOpInit::Fold() const {
 
 const Init *InstancesOpInit::resolveReferences(Resolver &R) const {
   const Init *NewRegex = Regex->resolveReferences(R);
-  if (Regex != NewRegex)
-    return get(Type, NewRegex)->Fold();
+  if (Regex != NewRegex || R.isFinal())
+    return get(Type, NewRegex)->Fold(R.getCurrentRecord(), R.isFinal());
   return this;
 }
 

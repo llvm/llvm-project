@@ -1495,7 +1495,7 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
       return nullptr;
     }
 
-    return InstancesOpInit::get(Type, Regex)->Fold();
+    return InstancesOpInit::get(Type, Regex)->Fold(CurRec);
   }
 
   case tgtok::XConcat:
