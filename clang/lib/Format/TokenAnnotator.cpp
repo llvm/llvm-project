@@ -253,8 +253,7 @@ private:
       // FIXME: This is getting out of hand, write a decent parser.
       if (MaybeAngles && InExpr && !Line.startsWith(tok::kw_template) &&
           Prev.is(TT_BinaryOperator) &&
-          (Prev.isOneOf(tok::pipepipe, tok::ampamp) ||
-           Prev.getPrecedence() == prec::Equality)) {
+          Prev.isOneOf(tok::pipepipe, tok::ampamp)) {
         MaybeAngles = false;
       }
       if (Prev.isOneOf(tok::question, tok::colon) && !Style.isProto())
