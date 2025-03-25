@@ -1882,8 +1882,16 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     A `subview` operation may additionally reduce the rank of the resulting
     view by removing dimensions that are statically known to be of size 1.
 
-    The offsets, sizes and strides must be in-bounds with respect to the source
-    memref. When possible, the static operation verifier will detect
+    In the absence of rank reductions, the resulting memref type is computed
+    as follows:
+    ```
+    result_offset = src_offset + dot_product(offset_operands, src_strides)
+    result_sizes[i] = size_operands[i]
+    result_strides[i] = src_strides[i] * stride_operands[i]
+    ```
+
+    The offset, size and stride operands must be in-bounds with respect to the
+    source memref. When possible, the static operation verifier will detect
     out-of-bounds subviews. Subviews that cannot be confirmed to be in-bounds
     or out-of-bounds based on compile-time information are valid. However,
     performing an out-of-bounds subview at runtime is undefined behavior.
