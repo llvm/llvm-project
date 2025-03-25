@@ -753,12 +753,12 @@ def QC_C_MILEAVERET   : QCIRVInst16CI_NONE<0b10100, "qc.c.mileaveret">;
 let Predicates = [HasVendorXqciio, IsRV32] in {
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
   def QC_OUTW : RVInstI<0b100, OPC_CUSTOM_0, (outs),
-                        (ins GPR:$rs3, GPR:$rs1, uimm14lsb00:$imm14),
-                        "qc.outw", "$rs3, ${imm14}(${rs1})"> {
-    bits<5> rs3;
+                        (ins GPR:$rs2, GPR:$rs1, uimm14lsb00:$imm14),
+                        "qc.outw", "$rs2, ${imm14}(${rs1})"> {
+    bits<5> rs2;
     bits<14> imm14;
 
-    let rd = rs3;
+    let rd = rs2;
     let imm12 = imm14{13-2};
   }
 
@@ -888,6 +888,15 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in {
 //===----------------------------------------------------------------------===//
 // Aliases
 //===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXqciio, IsRV32] in {
+let EmitPriority = 0 in {
+  def : InstAlias<"qc.outw $rs2, (${rs1})",
+                  (QC_OUTW GPR:$rs2, GPR:$rs1, 0)>;
+  def : InstAlias<"qc.inw $rd, (${rs1})",
+                  (QC_INW GPRNoX0:$rd, GPR:$rs1, 0)>;
+} // EmitPriority = 0
+} // Predicates = [HasVendorXqciio, IsRV32]
 
 let Predicates = [HasVendorXqcilsm, IsRV32] in {
 let EmitPriority = 0 in {
