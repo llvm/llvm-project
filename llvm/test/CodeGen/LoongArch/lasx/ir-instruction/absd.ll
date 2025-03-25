@@ -6,7 +6,7 @@
 ;
 ; XVABDS_[B/H/W/D]
 ;
-define <32 x i8> @xvabsd_b(<32 x i8> %a, <32 x i8> %b) #0 {
+define <32 x i8> @xvabsd_b(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-LABEL: xvabsd_b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvmin.b $xr2, $xr0, $xr1
@@ -21,7 +21,7 @@ define <32 x i8> @xvabsd_b(<32 x i8> %a, <32 x i8> %b) #0 {
   ret <32 x i8> %trunc
 }
 
-define <16 x i16> @xvabsd_h(<16 x i16> %a, <16 x i16> %b) #0 {
+define <16 x i16> @xvabsd_h(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-LABEL: xvabsd_h:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvmin.h $xr2, $xr0, $xr1
@@ -36,7 +36,7 @@ define <16 x i16> @xvabsd_h(<16 x i16> %a, <16 x i16> %b) #0 {
   ret <16 x i16> %trunc
 }
 
-define <8 x i32> @xvabsd_w(<8 x i32> %a, <8 x i32> %b) #0 {
+define <8 x i32> @xvabsd_w(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-LABEL: xvabsd_w:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvmin.w $xr2, $xr0, $xr1
@@ -51,7 +51,7 @@ define <8 x i32> @xvabsd_w(<8 x i32> %a, <8 x i32> %b) #0 {
   ret <8 x i32> %trunc
 }
 
-define <4 x i64> @xvabsd_d(<4 x i64> %a, <4 x i64> %b) #0 {
+define <4 x i64> @xvabsd_d(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: xvabsd_d:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvmin.d $xr2, $xr0, $xr1
@@ -70,7 +70,7 @@ define <4 x i64> @xvabsd_d(<4 x i64> %a, <4 x i64> %b) #0 {
 ; XVABSD_[B/H/W/D]U
 ;
 
-define <32 x i8> @xvabsd_bu(<32 x i8> %a, <32 x i8> %b) #0 {
+define <32 x i8> @xvabsd_bu(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-LABEL: xvabsd_bu:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvmin.bu $xr2, $xr0, $xr1
@@ -85,7 +85,7 @@ define <32 x i8> @xvabsd_bu(<32 x i8> %a, <32 x i8> %b) #0 {
   ret <32 x i8> %trunc
 }
 
-define <16 x i16> @xvabsd_hu(<16 x i16> %a, <16 x i16> %b) #0 {
+define <16 x i16> @xvabsd_hu(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-LABEL: xvabsd_hu:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvmin.hu $xr2, $xr0, $xr1
@@ -100,7 +100,7 @@ define <16 x i16> @xvabsd_hu(<16 x i16> %a, <16 x i16> %b) #0 {
   ret <16 x i16> %trunc
 }
 
-define <8 x i32> @xvabsd_wu(<8 x i32> %a, <8 x i32> %b) #0 {
+define <8 x i32> @xvabsd_wu(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-LABEL: xvabsd_wu:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvmin.wu $xr2, $xr0, $xr1
@@ -115,7 +115,7 @@ define <8 x i32> @xvabsd_wu(<8 x i32> %a, <8 x i32> %b) #0 {
   ret <8 x i32> %trunc
 }
 
-define <4 x i64> @xvabsd_du(<4 x i64> %a, <4 x i64> %b) #0 {
+define <4 x i64> @xvabsd_du(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: xvabsd_du:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvmin.du $xr2, $xr0, $xr1
@@ -130,7 +130,7 @@ define <4 x i64> @xvabsd_du(<4 x i64> %a, <4 x i64> %b) #0 {
   ret <4 x i64> %trunc
 }
 
-define <32 x i8> @xvabsd_v32i8_nsw(<32 x i8> %a, <32 x i8> %b) #0 {
+define <32 x i8> @xvabsd_v32i8_nsw(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-LABEL: xvabsd_v32i8_nsw:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvsub.b $xr0, $xr0, $xr1
@@ -142,7 +142,7 @@ define <32 x i8> @xvabsd_v32i8_nsw(<32 x i8> %a, <32 x i8> %b) #0 {
   ret <32 x i8> %abs
 }
 
-define <16 x i16> @xvabsd_v16i16_nsw(<16 x i16> %a, <16 x i16> %b) #0 {
+define <16 x i16> @xvabsd_v16i16_nsw(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-LABEL: xvabsd_v16i16_nsw:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvsub.h $xr0, $xr0, $xr1
@@ -154,7 +154,7 @@ define <16 x i16> @xvabsd_v16i16_nsw(<16 x i16> %a, <16 x i16> %b) #0 {
   ret <16 x i16> %abs
 }
 
-define <8 x i32> @xvabsd_v8i32_nsw(<8 x i32> %a, <8 x i32> %b) #0 {
+define <8 x i32> @xvabsd_v8i32_nsw(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-LABEL: xvabsd_v8i32_nsw:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvsub.w $xr0, $xr0, $xr1
@@ -166,7 +166,7 @@ define <8 x i32> @xvabsd_v8i32_nsw(<8 x i32> %a, <8 x i32> %b) #0 {
   ret <8 x i32> %abs
 }
 
-define <4 x i64> @xvabsd_v4i64_nsw(<4 x i64> %a, <4 x i64> %b) #0 {
+define <4 x i64> @xvabsd_v4i64_nsw(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: xvabsd_v4i64_nsw:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvsub.d $xr0, $xr0, $xr1
