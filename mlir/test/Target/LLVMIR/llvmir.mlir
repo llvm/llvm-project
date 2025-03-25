@@ -2774,11 +2774,71 @@ module {
                      #llvm.mlir.module_flag<max, "frame-pointer", 1>]
 }
 
-// CHECK: !llvm.module.flags = !{![[#DBG:]], ![[#WCHAR:]], ![[#PIC:]], ![[#PIE:]], ![[#UWTABLE:]], ![[#FrameP:]]}
+// CHECK: !llvm.module.flags = !{![[#WCHAR:]], ![[#PIC:]], ![[#PIE:]], ![[#UWTABLE:]], ![[#FrameP:]], ![[#DBG:]]}
 
-// CHECK: ![[#DBG]] = !{i32 2, !"Debug Info Version", i32 3}
 // CHECK: ![[#WCHAR]] = !{i32 1, !"wchar_size", i32 4}
 // CHECK: ![[#PIC]] = !{i32 8, !"PIC Level", i32 2}
 // CHECK: ![[#PIE]] = !{i32 7, !"PIE Level", i32 2}
 // CHECK: ![[#UWTABLE]] = !{i32 7, !"uwtable", i32 2}
 // CHECK: ![[#FrameP]] = !{i32 7, !"frame-pointer", i32 1}
+// CHECK: ![[#DBG]] = !{i32 2, !"Debug Info Version", i32 3}
+
+// -----
+
+// Verifies that the debug info version is not added twice, if it's already present initially.
+
+module {
+  llvm.module_flags [#llvm.mlir.module_flag<warning, "Debug Info Version", 3>]
+}
+
+// CHECK: !llvm.module.flags = !{![[#DBG:]]}
+// CHECK: ![[#DBG]] = !{i32 2, !"Debug Info Version", i32 3}
+
+// -----
+
+llvm.mlir.global external constant @const() {addr_space = 0 : i32, dso_local} : i32 {
+  %0 = llvm.mlir.addressof @const : !llvm.ptr
+  %1 = llvm.ptrtoint %0 : !llvm.ptr to i64
+  %2 = llvm.dso_local_equivalent @extern_func : !llvm.ptr
+  %3 = llvm.ptrtoint %2 : !llvm.ptr to i64
+  %4 = llvm.sub %3, %1 : i64
+  %5 = llvm.trunc %4 : i64 to i32
+  llvm.return %5 : i32
+}
+
+llvm.func @extern_func()
+
+// CHECK: @const = dso_local constant i32 trunc
+// CHECK-SAME: (i64 sub (i64 ptrtoint
+// CHECK-SAME: (ptr dso_local_equivalent @extern_func to i64),
+// CHECK-SAME: i64 ptrtoint (ptr @const to i64)) to i32)
+
+// -----
+
+llvm.func @extern_func() -> i32
+llvm.func @call_extern_func() {
+  %0 = llvm.dso_local_equivalent @extern_func : !llvm.ptr
+  %1 = llvm.call %0() : !llvm.ptr, () -> (i32 {llvm.noundef})
+  llvm.return
+}
+
+// CHECK-LABEL: @call_extern_func()
+// CHECK: call noundef i32 dso_local_equivalent @extern_func()
+
+// -----
+
+llvm.mlir.alias external @alias_func : !llvm.func<void ()> {
+  %0 = llvm.mlir.addressof @aliasee_func : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+llvm.func @aliasee_func() {
+  llvm.return
+}
+llvm.func @call_alias_func() {
+  %0 = llvm.dso_local_equivalent @alias_func : !llvm.ptr
+  llvm.call %0() : !llvm.ptr, () -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: @call_alias_func
+// CHECK: call void dso_local_equivalent @alias_func()

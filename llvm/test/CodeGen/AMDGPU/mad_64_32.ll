@@ -1900,10 +1900,13 @@ define amdgpu_ps i64 @lshr_mad_i64_sgpr(i64 inreg %arg0) #0 {
 ; SI-NEXT:    v_mov_b32_e32 v0, 0xffff1c18
 ; SI-NEXT:    v_mul_hi_u32 v0, s1, v0
 ; SI-NEXT:    s_mul_i32 s2, s1, 0xffff1c18
-; SI-NEXT:    v_readfirstlane_b32 s3, v0
-; SI-NEXT:    s_sub_i32 s3, s3, s1
-; SI-NEXT:    s_add_u32 s0, s2, s0
-; SI-NEXT:    s_addc_u32 s1, s3, s1
+; SI-NEXT:    v_mov_b32_e32 v1, s2
+; SI-NEXT:    v_mov_b32_e32 v2, s1
+; SI-NEXT:    v_subrev_i32_e32 v0, vcc, s1, v0
+; SI-NEXT:    v_add_i32_e32 v1, vcc, s0, v1
+; SI-NEXT:    v_addc_u32_e32 v0, vcc, v0, v2, vcc
+; SI-NEXT:    v_readfirstlane_b32 s0, v1
+; SI-NEXT:    v_readfirstlane_b32 s1, v0
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: lshr_mad_i64_sgpr:

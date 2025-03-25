@@ -225,6 +225,7 @@ private:
   std::optional<IterTy> FindDuplicate(RangeTy &&);
 
   const Symbol *GetObjectSymbol(const parser::OmpObject &object);
+  const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument);
   std::optional<parser::CharBlock> GetObjectSource(
       const parser::OmpObject &object);
   void CheckDependList(const parser::DataRef &);
@@ -277,7 +278,7 @@ private:
   void CheckTaskDependenceType(const parser::OmpTaskDependenceType::Value &x);
   std::optional<llvm::omp::Directive> GetCancelType(
       llvm::omp::Directive cancelDir, const parser::CharBlock &cancelSource,
-      const parser::OmpClauseList &clauses);
+      const std::optional<parser::OmpClauseList> &maybeClauses);
   void CheckCancellationNest(
       const parser::CharBlock &source, llvm::omp::Directive type);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
@@ -288,6 +289,7 @@ private:
   void CheckReductionObjectTypes(const parser::OmpObjectList &objects,
       const parser::OmpReductionIdentifier &ident);
   void CheckReductionModifier(const parser::OmpReductionModifier &);
+  void CheckLastprivateModifier(const parser::OmpLastprivateModifier &);
   void CheckMasterNesting(const parser::OpenMPBlockConstruct &x);
   void ChecksOnOrderedAsBlock();
   void CheckBarrierNesting(const parser::OpenMPSimpleStandaloneConstruct &x);

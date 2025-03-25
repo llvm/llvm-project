@@ -1051,30 +1051,52 @@ static bool memsetCanRewire(MemsetIntr op, const DestructurableMemorySlot &slot,
 template <class MemsetIntr>
 static Value memsetGetStored(MemsetIntr op, const MemorySlot &slot,
                              OpBuilder &builder) {
-  // TODO: Support non-integer types.
+  /// Returns an integer value that is `width` bits wide representing the value
+  /// assigned to the slot by memset.
+  auto buildMemsetValue = [&](unsigned width) -> Value {
+    assert(width % 8 == 0);
+    auto intType = IntegerType::get(op.getContext(), width);
+
+    // If we know the pattern at compile time, we can compute and assign a
+    // constant directly.
+    IntegerAttr constantPattern;
+    if (matchPattern(op.getVal(), m_Constant(&constantPattern))) {
+      assert(constantPattern.getValue().getBitWidth() == 8);
+      APInt memsetVal(/*numBits=*/width, /*val=*/0);
+      for (unsigned loBit = 0; loBit < width; loBit += 8)
+        memsetVal.insertBits(constantPattern.getValue(), loBit);
+      return builder.create<LLVM::ConstantOp>(
+          op.getLoc(), IntegerAttr::get(intType, memsetVal));
+    }
+
+    // If the output is a single byte, we can return the pattern directly.
+    if (width == 8)
+      return op.getVal();
+
+    // Otherwise build the memset integer at runtime by repeatedly shifting the
+    // value and or-ing it with the previous value.
+    uint64_t coveredBits = 8;
+    Value currentValue =
+        builder.create<LLVM::ZExtOp>(op.getLoc(), intType, op.getVal());
+    while (coveredBits < width) {
+      Value shiftBy =
+          builder.create<LLVM::ConstantOp>(op.getLoc(), intType, coveredBits);
+      Value shifted =
+          builder.create<LLVM::ShlOp>(op.getLoc(), currentValue, shiftBy);
+      currentValue =
+          builder.create<LLVM::OrOp>(op.getLoc(), currentValue, shifted);
+      coveredBits *= 2;
+    }
+
+    return currentValue;
+  };
   return TypeSwitch<Type, Value>(slot.elemType)
-      .Case([&](IntegerType intType) -> Value {
-        if (intType.getWidth() == 8)
-          return op.getVal();
-
-        assert(intType.getWidth() % 8 == 0);
-
-        // Build the memset integer by repeatedly shifting the value and
-        // or-ing it with the previous value.
-        uint64_t coveredBits = 8;
-        Value currentValue =
-            builder.create<LLVM::ZExtOp>(op.getLoc(), intType, op.getVal());
-        while (coveredBits < intType.getWidth()) {
-          Value shiftBy = builder.create<LLVM::ConstantOp>(op.getLoc(), intType,
-                                                           coveredBits);
-          Value shifted =
-              builder.create<LLVM::ShlOp>(op.getLoc(), currentValue, shiftBy);
-          currentValue =
-              builder.create<LLVM::OrOp>(op.getLoc(), currentValue, shifted);
-          coveredBits *= 2;
-        }
-
-        return currentValue;
+      .Case([&](IntegerType type) -> Value {
+        return buildMemsetValue(type.getWidth());
+      })
+      .Case([&](FloatType type) -> Value {
+        Value intVal = buildMemsetValue(type.getWidth());
+        return builder.create<LLVM::BitcastOp>(op.getLoc(), type, intVal);
       })
       .Default([](Type) -> Value {
         llvm_unreachable(
@@ -1088,11 +1110,10 @@ memsetCanUsesBeRemoved(MemsetIntr op, const MemorySlot &slot,
                        const SmallPtrSetImpl<OpOperand *> &blockingUses,
                        SmallVectorImpl<OpOperand *> &newBlockingUses,
                        const DataLayout &dataLayout) {
-  // TODO: Support non-integer types.
   bool canConvertType =
       TypeSwitch<Type, bool>(slot.elemType)
-          .Case([](IntegerType intType) {
-            return intType.getWidth() % 8 == 0 && intType.getWidth() > 0;
+          .Case<IntegerType, FloatType>([](auto type) {
+            return type.getWidth() % 8 == 0 && type.getWidth() > 0;
           })
           .Default([](Type) { return false; });
   if (!canConvertType)

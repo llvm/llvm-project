@@ -65,7 +65,6 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D CMAKE_CXX_FLAGS=-gmlt \
       -D LLVM_CCACHE_BUILD=ON \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
-      -D FLANG_ENABLE_FLANG_RT=OFF \
       -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
 
 echo "--- ninja"
@@ -91,35 +90,12 @@ if [[ "${runtimes}" != "" ]]; then
   INSTALL_DIR="${BUILD_DIR}/install"
   mkdir -p ${RUNTIMES_BUILD_DIR}
 
-  echo "--- cmake runtimes C++03"
-
-  cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
-      -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
-      -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
-      -D CMAKE_Fortran_COMPILER="${BUILD_DIR}/bin/flang" \
-      -D CMAKE_Fortran_COMPILER_WORKS=ON \
-      -D LLVM_BINARY_DIR="${BUILD_DIR}" \
-      -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
-      -D LIBCXX_CXX_ABI=libcxxabi \
-      -D CMAKE_BUILD_TYPE=RelWithDebInfo \
-      -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-      -D LIBCXX_TEST_PARAMS="std=c++03" \
-      -D LIBCXXABI_TEST_PARAMS="std=c++03" \
-      -D LLVM_LIT_ARGS="${lit_args}"
-
-  echo "--- ninja runtimes C++03"
-
-  ninja -vC "${RUNTIMES_BUILD_DIR}" ${runtime_targets}
-
   echo "--- cmake runtimes C++26"
 
   rm -rf "${RUNTIMES_BUILD_DIR}"
   cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
       -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
       -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
-      -D CMAKE_Fortran_COMPILER="${BUILD_DIR}/bin/flang" \
-      -D CMAKE_Fortran_COMPILER_WORKS=ON \
-      -D LLVM_BINARY_DIR="${BUILD_DIR}" \
       -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
       -D LIBCXX_CXX_ABI=libcxxabi \
       -D CMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -138,9 +114,6 @@ if [[ "${runtimes}" != "" ]]; then
   cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
       -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
       -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
-      -D CMAKE_Fortran_COMPILER="${BUILD_DIR}/bin/flang" \
-      -D CMAKE_Fortran_COMPILER_WORKS=ON \
-      -D LLVM_BINARY_DIR="${BUILD_DIR}" \
       -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
       -D LIBCXX_CXX_ABI=libcxxabi \
       -D CMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -150,6 +123,6 @@ if [[ "${runtimes}" != "" ]]; then
       -D LLVM_LIT_ARGS="${lit_args}"
 
   echo "--- ninja runtimes clang modules"
-  
+
   ninja -vC "${RUNTIMES_BUILD_DIR}" ${runtime_targets}
 fi
