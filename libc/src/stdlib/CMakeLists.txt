@@ -345,11 +345,6 @@ add_entrypoint_object(
     .rand_util
 )
 
-add_entrypoint_external(
-  memalignment
-  DEPENDS
-    ${SCUDO_DEPS}
-)
 add_entrypoint_object(
   memalignment
   SRCS
