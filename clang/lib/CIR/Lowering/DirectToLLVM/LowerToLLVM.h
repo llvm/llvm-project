@@ -189,28 +189,6 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
-class CIRToLLVMBinOpOverflowOpLowering
-    : public mlir::OpConversionPattern<cir::BinOpOverflowOp> {
-public:
-  using mlir::OpConversionPattern<cir::BinOpOverflowOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::BinOpOverflowOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-
-private:
-  static std::string getLLVMIntrinName(cir::BinOpOverflowKind opKind,
-                                       bool isSigned, unsigned width);
-
-  struct EncompassedTypeInfo {
-    bool sign;
-    unsigned width;
-  };
-
-  static EncompassedTypeInfo computeEncompassedTypeWidth(cir::IntType operandTy,
-                                                         cir::IntType resultTy);
-};
-
 class CIRToLLVMBrOpLowering : public mlir::OpConversionPattern<cir::BrOp> {
 public:
   using mlir::OpConversionPattern<cir::BrOp>::OpConversionPattern;

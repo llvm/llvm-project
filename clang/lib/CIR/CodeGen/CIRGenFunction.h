@@ -217,16 +217,6 @@ public:
 
   void emitDecl(const clang::Decl &d);
 
-  /// Same as IRBuilder::CreateInBoundsGEP, but additionally emits a check to
-  /// detect undefined behavior when the pointer overflow sanitizer is enabled.
-  /// \p SignedIndices indicates whether any of the GEP indices are signed.
-  /// \p IsSubtraction indicates whether the expression used to form the GEP
-  /// is a subtraction.
-  mlir::Value emitCheckedInBoundsGEP(mlir::Type elemTy, mlir::Value ptr,
-                                     llvm::ArrayRef<mlir::Value> idxList,
-                                     bool signedIndices, bool isSubtraction,
-                                     SourceLocation loc);
-
   void emitScalarInit(const clang::Expr *init, mlir::Location loc,
                       LValue lvalue, bool capturedByInit = false);
 

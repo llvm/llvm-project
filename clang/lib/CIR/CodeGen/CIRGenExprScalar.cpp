@@ -921,102 +921,8 @@ mlir::Value CIRGenFunction::emitPromotedScalarExpr(const Expr *e,
 static mlir::Value emitPointerArithmetic(CIRGenFunction &cgf,
                                          const BinOpInfo &op,
                                          bool isSubtraction) {
-  // Must have binary (not unary) expr here.  Unary pointer
-  // increment/decrement doesn't use this path.
-  const BinaryOperator *expr = cast<BinaryOperator>(op.e);
-
-  mlir::Value pointer = op.lhs;
-  Expr *pointerOperand = expr->getLHS();
-  mlir::Value index = op.rhs;
-  Expr *indexOperand = expr->getRHS();
-
-  // In a subtraction, the LHS is always the pointer.
-  if (!isSubtraction && !mlir::isa<cir::PointerType>(pointer.getType())) {
-    std::swap(pointer, index);
-    std::swap(pointerOperand, indexOperand);
-  }
-
-  bool isSigned = indexOperand->getType()->isSignedIntegerOrEnumerationType();
-
-  // Some versions of glibc and gcc use idioms (particularly in their malloc
-  // routines) that add a pointer-sized integer (known to be a pointer value)
-  // to a null pointer in order to cast the value back to an integer or as
-  // part of a pointer alignment algorithm.  This is undefined behavior, but
-  // we'd like to be able to compile programs that use it.
-  //
-  // Normally, we'd generate a GEP with a null-pointer base here in response
-  // to that code, but it's also UB to dereference a pointer created that
-  // way.  Instead (as an acknowledged hack to tolerate the idiom) we will
-  // generate a direct cast of the integer value to a pointer.
-  //
-  // The idiom (p = nullptr + N) is not met if any of the following are true:
-  //
-  //   The operation is subtraction.
-  //   The index is not pointer-sized.
-  //   The pointer type is not byte-sized.
-  //
-  if (BinaryOperator::isNullPointerArithmeticExtension(
-          cgf.getContext(), op.opcode, expr->getLHS(), expr->getRHS()))
-    return cgf.getBuilder().createIntToPtr(index, pointer.getType());
-
-  // Differently from LLVM codegen, ABI bits for index sizes is handled during
-  // LLVM lowering.
-
-  // If this is subtraction, negate the index.
-  if (isSubtraction)
-    index = cgf.getBuilder().createNeg(index);
-
-  if (cgf.sanOpts.has(SanitizerKind::ArrayBounds))
-    cgf.cgm.errorNYI("array bounds sanitizer");
-
-  const PointerType *pointerType =
-      pointerOperand->getType()->getAs<PointerType>();
-  if (!pointerType)
-    cgf.cgm.errorNYI("ObjC");
-
-  QualType elementType = pointerType->getPointeeType();
-  if (const VariableArrayType *vla =
-          cgf.getContext().getAsVariableArrayType(elementType)) {
-
-    // The element count here is the total number of non-VLA elements.
-    mlir::Value numElements = nullptr; // cgf.getVLASize(vla).NumElts;
-
-    // GEP indexes are signed, and scaling an index isn't permitted to
-    // signed-overflow, so we use the same semantics for our explicit
-    // multiply.  We suppress this if overflow is not undefined behavior.
-    mlir::Type elemTy = cgf.convertTypeForMem(vla->getElementType());
-
-    index = cgf.getBuilder().createCast(cir::CastKind::integral, index,
-                                        numElements.getType());
-    index = cgf.getBuilder().createMul(index.getLoc(), index, numElements);
-
-    if (cgf.getLangOpts().isSignedOverflowDefined()) {
-      assert(!cir::MissingFeatures::ptrStrideOp());
-      cgf.cgm.errorNYI("pointer stride");
-    } else {
-      pointer = cgf.emitCheckedInBoundsGEP(elemTy, pointer, index, isSigned,
-                                           isSubtraction, op.e->getExprLoc());
-    }
-
-    return pointer;
-  }
-  // Explicitly handle GNU void* and function pointer arithmetic extensions. The
-  // GNU void* casts amount to no-ops since our void* type is i8*, but this is
-  // future proof.
-  mlir::Type elemTy;
-  if (elementType->isVoidType() || elementType->isFunctionType())
-    elemTy = cgf.UInt8Ty;
-  else
-    elemTy = cgf.convertTypeForMem(elementType);
-
-  if (cgf.getLangOpts().isSignedOverflowDefined()) {
-    assert(!cir::MissingFeatures::ptrStrideOp());
-    cgf.cgm.errorNYI("pointer stride");
-    return pointer;
-  }
-
-  return cgf.emitCheckedInBoundsGEP(elemTy, pointer, index, isSigned,
-                                    isSubtraction, op.e->getExprLoc());
+  cgf.cgm.errorNYI(op.loc, "pointer arithmetic");
+  return {};
 }
 
 mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
@@ -1480,21 +1386,4 @@ mlir::Value CIRGenFunction::emitScalarPrePostIncDec(const UnaryOperator *e,
                                                     bool isPre) {
   return ScalarExprEmitter(*this, builder)
       .emitScalarPrePostIncDec(e, lv, isInc, isPre);
-}
-
-mlir::Value CIRGenFunction::emitCheckedInBoundsGEP(
-    mlir::Type elemTy, mlir::Value ptr, ArrayRef<mlir::Value> idxList,
-    bool signedIndices, bool isSubtraction, SourceLocation loc) {
-  assert(!cir::MissingFeatures::ptrStrideOp());
-  if (idxList.size() != 1)
-    cgm.errorNYI("multi-index ptr arithmetic");
-  mlir::Value gepVal = nullptr;
-
-  // If the pointer overflow sanitizer isn't enabled, do nothing.
-  if (!sanOpts.has(SanitizerKind::PointerOverflow))
-    return gepVal;
-
-  assert(!cir::MissingFeatures::pointerOverflowSanitizer());
-  cgm.errorNYI("pointer overflow sanitizer");
-  return nullptr;
 }
