@@ -4822,6 +4822,9 @@ bool areTilesAndTiledDimsAllConstant(OpTy op) {
 }
 
 Speculation::Speculatability PackOp::getSpeculatability() {
+  if (!hasPureTensorSemantics())
+    return Speculation::NotSpeculatable;
+
   if (getPaddingValue())
     return Speculation::Speculatable;
 
@@ -5122,6 +5125,9 @@ LogicalResult UnPackOp::verify() {
 }
 
 Speculation::Speculatability UnPackOp::getSpeculatability() {
+  if (!hasPureTensorSemantics())
+    return Speculation::NotSpeculatable;
+
   // See PackOp::getSpeculatability.
   if (!areTilesAndTiledDimsAllConstant(*this))
     return Speculation::NotSpeculatable;

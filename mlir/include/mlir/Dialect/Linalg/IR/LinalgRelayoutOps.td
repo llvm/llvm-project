@@ -34,7 +34,7 @@ class Linalg_RelayoutOp<string mnemonic, list<Trait> traits = []> :
       Op<Linalg_Dialect, mnemonic, !listconcat(traits, [
         DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
         DestinationStyleOpInterface, LinalgRelayoutOpInterface,
-        ConditionallySpeculatable, NoMemoryEffect,
+        ConditionallySpeculatable, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
         DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
         TypesMatchWith<"result type matches type of dest",
                    "dest", "result",
@@ -76,6 +76,13 @@ class Linalg_RelayoutOp<string mnemonic, list<Trait> traits = []> :
     /// have been tiled. Also, the order of the output dimensions is consistent
     /// with `inner_dims_pos` rather than the packed tensor.
     SmallVector<int64_t> getTiledOuterDims();
+
+         void $cppClass::getEffects(
+         SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+             &effects) {
+       getGenericEffectsImpl(effects, cast<LinalgOp>(getOperation()));
+     }
+
   }];
 
   let hasVerifier = 1;

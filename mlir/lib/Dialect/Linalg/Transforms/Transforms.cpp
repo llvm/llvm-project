@@ -17,7 +17,6 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/IR/TensorTilingInterfaceImpl.h"
@@ -360,7 +359,7 @@ linalg::lowerUnPack(RewriterBase &rewriter, linalg::UnPackOp unPackOp,
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(unPackOp);
 
-  ShapedType packedTensorType = unPackOp.getSourceType();
+  RankedTensorType packedTensorType = unPackOp.getSourceType();
   int64_t packedRank = packedTensorType.getRank();
 
   OpFoldResult zero = rewriter.getIndexAttr(0), one = rewriter.getIndexAttr(1);
@@ -397,22 +396,10 @@ linalg::lowerUnPack(RewriterBase &rewriter, linalg::UnPackOp unPackOp,
   applyPermutationToVector(stripMinedShape, packedToStripMinedShapePerm);
 
   // 3. Transpose packedShape to stripMinedShape.
-  ShapedType stripMinedType;
-  if (auto tensorType = packedTensorType.dyn_cast<TensorType>()) {
-    stripMinedType =
-        RankedTensorType::get(stripMinedShape, tensorType.getElementType());
-  } else if (auto memrefType = packedTensorType.dyn_cast<MemRefType>()) {
-    stripMinedType =
-        MemRefType::get(stripMinedShape, memrefType.getElementType());
-  }
-  ShapedType collapsedType;
-  if (stripMinedType.isa<TensorType>()) {
-    collapsedType = tensor::CollapseShapeOp::inferCollapsedType(
-        cast<RankedTensorType>(stripMinedType), packingMetadata.reassociations);
-  } else if (stripMinedType.isa<MemRefType>()) {
-    collapsedType = memref::CollapseShapeOp::computeCollapsedType(
-        cast<MemRefType>(stripMinedType), packingMetadata.reassociations);
-  }
+  RankedTensorType stripMinedTensorType =
+      RankedTensorType::Builder(packedTensorType).setShape(stripMinedShape);
+  RankedTensorType collapsedType = tensor::CollapseShapeOp::inferCollapsedType(
+      stripMinedTensorType, packingMetadata.reassociations);
 
   // Get dynamic dims from input tensor based on packedToStripMinedShapePerm
   // permutation.
@@ -420,7 +407,7 @@ linalg::lowerUnPack(RewriterBase &rewriter, linalg::UnPackOp unPackOp,
       tensor::getMixedSizes(rewriter, loc, unPackOp.getSource());
   applyPermutationToVector(dims, packedToStripMinedShapePerm);
   auto emptyOp = rewriter.create<tensor::EmptyOp>(
-      loc, dims, stripMinedType.getElementType());
+      loc, dims, stripMinedTensorType.getElementType());
   auto transposeOp = rewriter.create<linalg::TransposeOp>(
       loc, unPackOp.getSource(), emptyOp, packedToStripMinedShapePerm);
 
