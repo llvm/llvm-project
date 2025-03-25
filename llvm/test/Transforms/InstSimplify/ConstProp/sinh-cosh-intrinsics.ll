@@ -3,8 +3,7 @@
 
 define double @test_sinh() {
 ; CHECK-LABEL: define double @test_sinh() {
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.sinh.f64(double 0.000000e+00)
-; CHECK-NEXT:    ret double [[RESULT]]
+; CHECK-NEXT:    ret double 0.000000e+00
 ;
   %result = call double @llvm.sinh.f64(double 0.0)
   ret double %result
@@ -12,8 +11,7 @@ define double @test_sinh() {
 
 define <2 x double> @test_sinh_v2() {
 ; CHECK-LABEL: define <2 x double> @test_sinh_v2() {
-; CHECK-NEXT:    [[RESULT:%.*]] = call <2 x double> @llvm.sinh.v2f64(<2 x double> zeroinitializer)
-; CHECK-NEXT:    ret <2 x double> [[RESULT]]
+; CHECK-NEXT:    ret <2 x double> zeroinitializer
 ;
   %result = call <2 x double> @llvm.sinh.v2f64(<2 x double> zeroinitializer)
   ret <2 x double> %result
@@ -21,8 +19,7 @@ define <2 x double> @test_sinh_v2() {
 
 define double @test_cosh() {
 ; CHECK-LABEL: define double @test_cosh() {
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.cosh.f64(double 0.000000e+00)
-; CHECK-NEXT:    ret double [[RESULT]]
+; CHECK-NEXT:    ret double 1.000000e+00
 ;
   %result = call double @llvm.cosh.f64(double 0.0)
   ret double %result
@@ -30,8 +27,7 @@ define double @test_cosh() {
 
 define <2 x double> @test_cosh_v2() {
 ; CHECK-LABEL: define <2 x double> @test_cosh_v2() {
-; CHECK-NEXT:    [[RESULT:%.*]] = call <2 x double> @llvm.cosh.v2f64(<2 x double> zeroinitializer)
-; CHECK-NEXT:    ret <2 x double> [[RESULT]]
+; CHECK-NEXT:    ret <2 x double> splat (double 1.000000e+00)
 ;
   %result = call <2 x double> @llvm.cosh.v2f64(<2 x double> zeroinitializer)
   ret <2 x double> %result
