@@ -1676,13 +1676,20 @@ SmallVector<std::unique_ptr<PhdrEntry>, 0> LinkerScript::createPhdrs() {
 
   // Add output sections to program headers.
   for (OutputSection *sec : ctx.outputSections) {
-    // Assign headers specified by linker script
+    // Assign headers specified by linker script.
     for (size_t id : getPhdrIndices(sec)) {
       ret[id]->add(sec);
       if (!phdrsCommands[id].flags)
         ret[id]->p_flags |= sec->getPhdrFlags();
     }
   }
+
+  // LLD forces the p_align to 1 for implicitly created PT_GNU_RELRO headers.
+  // Ensure this also happens when the PT_GNU_RELRO phdr is explicitly created
+  // via a linker script PHDRS command.
+  for (auto &phdr : ret)
+    if (phdr->p_type == PT_GNU_RELRO)
+      phdr->p_align = 1;
   return ret;
 }
 

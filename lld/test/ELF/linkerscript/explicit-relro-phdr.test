@@ -1,0 +1,21 @@
+## Test that a PT_GNU_RELRO phdr explicitly specified via a linker script
+## PHDRS command has the expected flags and alignment.
+
+# REQUIRES: x86
+# RUN: rm -rf %t && split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %t/relro.s -o %t.o
+
+# RUN: ld.lld %t.o -T %t/test.script -o %t.elf
+# RUN: llvm-readelf -l %t.elf | FileCheck %s
+
+##       Type      Offset  VirtAddr PhysAddr FileSiz MemSiz  Flg Align
+# CHECK: GNU_RELRO 0x[[#]] 0x[[#]]  0x[[#]]  0x[[#]] 0x[[#]] R   0x1
+
+#--- relro.s
+.section .data.rel.ro.test, "aw"
+.align 8
+.quad 0
+
+#--- test.script
+PHDRS { ph_gnu_relro PT_GNU_RELRO FLAGS (0x4); }
+SECTIONS { .data.rel.ro : { *(.data.rel.ro.*) } : ph_gnu_relro }
