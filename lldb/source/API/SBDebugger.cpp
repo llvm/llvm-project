@@ -967,8 +967,8 @@ SBTarget SBDebugger::GetDummyTarget() {
 
 void SBDebugger::DispatchClientTelemetry(const lldb::SBStructuredData &entry) {
   LLDB_INSTRUMENT_VA(this);
-  if (lldb_private::Debugger *debugger = this->get()) {
-    debugger->DispatchClientTelemetry(*(entry.m_impl_up.get()));
+  if (m_opaque_sp) {
+    m_opaque_sp->DispatchClientTelemetry(*entry.m_impl_up));
   } else {
     Log *log = GetLog(LLDBLog::API);
     LLDB_LOGF(log,
