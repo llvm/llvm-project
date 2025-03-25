@@ -1885,9 +1885,9 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     In the absence of rank reductions, the resulting memref type is computed
     as follows:
     ```
-    result_offset = src_offset + dot_product(offset_operands, src_strides)
     result_sizes[i] = size_operands[i]
     result_strides[i] = src_strides[i] * stride_operands[i]
+    result_offset = src_offset + dot_product(offset_operands, src_strides)
     ```
 
     The offset, size and stride operands must be in-bounds with respect to the
