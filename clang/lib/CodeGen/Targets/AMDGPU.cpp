@@ -430,6 +430,9 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     OS << X << ',' << Y << ',' << Z;
     F->addFnAttr("amdgpu-cluster-dims", AttrVal.str());
   }
+
+  if (FD->getAttr<CUDANoClusterAttr>())
+    F->addFnAttr("amdgpu-cluster-dims", "0,0,0");
 }
 
 /// Emits control constants used to change per-architecture behaviour in the

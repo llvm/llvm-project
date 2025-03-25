@@ -4709,6 +4709,8 @@ public:
                                              Expr *X, Expr *Y, Expr *Z);
   void addClusterDimsAttr(Decl *D, const AttributeCommonInfo &CI, Expr *X,
                           Expr *Y, Expr *Z);
+  /// Add a no_cluster attribute to a particular declaration.
+  void addNoClusterAttr(Decl *D, const AttributeCommonInfo &CI);
 
   enum class RetainOwnershipKind { NS, CF, OS };
 
