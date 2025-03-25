@@ -6,10 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/clcmacro.h>
-#include <clc/math/clc_acos.h>
+#ifndef __CLC_MATH_CLC_ATAN_H__
+#define __CLC_MATH_CLC_ATAN_H__
 
+#define __CLC_BODY <clc/math/unary_decl.inc>
+#define __CLC_FUNCTION __clc_atan
+
+#include <clc/math/gentype.inc>
+
+#undef __CLC_BODY
 #undef __CLC_FUNCTION
-#define __CLC_FUNCTION acos
-#include <clc/math/unary_builtin.inc>
+
+#endif // __CLC_MATH_CLC_ATAN_H__
