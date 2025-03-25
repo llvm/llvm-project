@@ -4571,8 +4571,8 @@ void IntrinsicLibrary::genRaiseExcept(int excepts, mlir::Value cond) {
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   }
   mlir::Type i32Ty = builder.getIntegerType(32);
-  genRuntimeCall(
-      "feraiseexcept", i32Ty,
+  fir::runtime::genFeraiseexcept(
+      builder, loc,
       fir::runtime::genMapExcept(
           builder, loc, builder.createIntegerConstant(loc, i32Ty, excepts)));
   if (cond)
@@ -4939,8 +4939,8 @@ void IntrinsicLibrary::genIeeeGetFlag(llvm::ArrayRef<fir::ExtendedValue> args) {
   mlir::Value zero = builder.createIntegerConstant(loc, i32Ty, 0);
   auto [fieldRef, ignore] = getFieldRef(builder, loc, flag);
   mlir::Value field = builder.create<fir::LoadOp>(loc, fieldRef);
-  mlir::Value excepts = IntrinsicLibrary::genRuntimeCall(
-      "fetestexcept", i32Ty,
+  mlir::Value excepts = fir::runtime::genFetestexcept(
+      builder, loc,
       fir::runtime::genMapExcept(
           builder, loc, builder.create<fir::ConvertOp>(loc, i32Ty, field)));
   mlir::Value logicalResult = builder.create<fir::ConvertOp>(
@@ -4963,8 +4963,7 @@ void IntrinsicLibrary::genIeeeGetHaltingMode(
   mlir::Value zero = builder.createIntegerConstant(loc, i32Ty, 0);
   auto [fieldRef, ignore] = getFieldRef(builder, loc, flag);
   mlir::Value field = builder.create<fir::LoadOp>(loc, fieldRef);
-  mlir::Value haltSet =
-      IntrinsicLibrary::genRuntimeCall("fegetexcept", i32Ty, {});
+  mlir::Value haltSet = fir::runtime::genFegetexcept(builder, loc);
   mlir::Value intResult = builder.create<mlir::arith::AndIOp>(
       loc, haltSet,
       fir::runtime::genMapExcept(
@@ -5712,9 +5711,11 @@ void IntrinsicLibrary::genIeeeSetFlagOrHaltingMode(
       loc, builder.create<fir::ConvertOp>(loc, i1Ty, getBase(args[1])),
       /*withElseRegion=*/true);
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-  genRuntimeCall(isFlag ? "feraiseexcept" : "feenableexcept", i32Ty, except);
+  (isFlag ? fir::runtime::genFeraiseexcept : fir::runtime::genFeenableexcept)(
+      builder, loc, builder.create<fir::ConvertOp>(loc, i32Ty, except));
   builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-  genRuntimeCall(isFlag ? "feclearexcept" : "fedisableexcept", i32Ty, except);
+  (isFlag ? fir::runtime::genFeclearexcept : fir::runtime::genFedisableexcept)(
+      builder, loc, builder.create<fir::ConvertOp>(loc, i32Ty, except));
   builder.setInsertionPointAfter(ifOp);
 }
 
@@ -5805,24 +5806,61 @@ mlir::Value IntrinsicLibrary::genIeeeSignbit(mlir::Type resultType,
 fir::ExtendedValue
 IntrinsicLibrary::genIeeeSupportFlag(mlir::Type resultType,
                                      llvm::ArrayRef<fir::ExtendedValue> args) {
-  // Check if a floating point exception flag is supported. A flag is
-  // supported either for all type kinds or none. An optional kind argument X
-  // is therefore ignored. Standard flags are all supported. The nonstandard
-  // DENORM extension is not supported, at least for now.
+  // Check if a floating point exception flag is supported.
   assert(args.size() == 1 || args.size() == 2);
+  mlir::Type i1Ty = builder.getI1Type();
+  mlir::Type i32Ty = builder.getIntegerType(32);
   auto [fieldRef, fieldTy] = getFieldRef(builder, loc, getBase(args[0]));
   mlir::Value flag = builder.create<fir::LoadOp>(loc, fieldRef);
-  mlir::Value mask = builder.createIntegerConstant( // values are powers of 2
+  mlir::Value standardFlagMask = builder.createIntegerConstant(
       loc, fieldTy,
       _FORTRAN_RUNTIME_IEEE_INVALID | _FORTRAN_RUNTIME_IEEE_DIVIDE_BY_ZERO |
           _FORTRAN_RUNTIME_IEEE_OVERFLOW | _FORTRAN_RUNTIME_IEEE_UNDERFLOW |
           _FORTRAN_RUNTIME_IEEE_INEXACT);
-  return builder.createConvert(
-      loc, resultType,
-      builder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::ne,
-          builder.create<mlir::arith::AndIOp>(loc, flag, mask),
-          builder.createIntegerConstant(loc, fieldTy, 0)));
+  mlir::Value isStandardFlag = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::ne,
+      builder.create<mlir::arith::AndIOp>(loc, flag, standardFlagMask),
+      builder.createIntegerConstant(loc, fieldTy, 0));
+  fir::IfOp ifOp = builder.create<fir::IfOp>(loc, i1Ty, isStandardFlag,
+                                             /*withElseRegion=*/true);
+  // Standard flags are supported.
+  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+  builder.create<fir::ResultOp>(loc, builder.createBool(loc, true));
+
+  // TargetCharacteristics information for the nonstandard ieee_denorm flag
+  // is not available here. So use a runtime check restricted to possibly
+  // supported kinds.
+  builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+  bool mayBeSupported = false;
+  if (mlir::Value arg1 = getBase(args[1])) {
+    mlir::Type arg1Ty = arg1.getType();
+    if (fir::ReferenceType refTy = mlir::dyn_cast<fir::ReferenceType>(arg1Ty))
+      arg1Ty = refTy.getEleTy();
+    switch (mlir::dyn_cast<mlir::FloatType>(arg1Ty).getWidth()) {
+    case 16:
+      mayBeSupported = arg1Ty.isBF16(); // kind=3
+      break;
+    case 32: // kind=4
+    case 64: // kind=8
+      mayBeSupported = true;
+      break;
+    }
+  }
+  if (mayBeSupported) {
+    mlir::Value isDenorm = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::eq, flag,
+        builder.createIntegerConstant(loc, fieldTy,
+                                      _FORTRAN_RUNTIME_IEEE_DENORM));
+    mlir::Value result = builder.create<mlir::arith::AndIOp>(
+        loc, isDenorm,
+        fir::runtime::genSupportHalting(
+            builder, loc, builder.create<fir::ConvertOp>(loc, i32Ty, flag)));
+    builder.create<fir::ResultOp>(loc, result);
+  } else {
+    builder.create<fir::ResultOp>(loc, builder.createBool(loc, false));
+  }
+  builder.setInsertionPointAfter(ifOp);
+  return builder.createConvert(loc, resultType, ifOp.getResult(0));
 }
 
 // IEEE_SUPPORT_HALTING
@@ -5838,7 +5876,7 @@ fir::ExtendedValue IntrinsicLibrary::genIeeeSupportHalting(
   return builder.createConvert(
       loc, resultType,
       fir::runtime::genSupportHalting(
-          builder, loc, {builder.create<fir::ConvertOp>(loc, i32Ty, field)}));
+          builder, loc, builder.create<fir::ConvertOp>(loc, i32Ty, field)));
 }
 
 // IEEE_SUPPORT_ROUNDING
@@ -5874,10 +5912,10 @@ fir::ExtendedValue IntrinsicLibrary::genIeeeSupportStandard(
   // if halting control is supported, as that is the only support component
   // that may not be available.
   assert(args.size() <= 1);
-  mlir::Value nearest = builder.createIntegerConstant(
-      loc, builder.getIntegerType(32), _FORTRAN_RUNTIME_IEEE_NEAREST);
+  mlir::Value overflow = builder.createIntegerConstant(
+      loc, builder.getIntegerType(32), _FORTRAN_RUNTIME_IEEE_OVERFLOW);
   return builder.createConvert(
-      loc, resultType, fir::runtime::genSupportHalting(builder, loc, nearest));
+      loc, resultType, fir::runtime::genSupportHalting(builder, loc, overflow));
 }
 
 // IEEE_UNORDERED
