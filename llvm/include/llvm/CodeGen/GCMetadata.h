@@ -154,7 +154,7 @@ public:
 
 class GCStrategyMap {
   using MapT =
-      MapVector<std::string, std::unique_ptr<GCStrategy>, StringMap<unsigned>>;
+      MapVector<StringRef, std::unique_ptr<GCStrategy>, StringMap<unsigned>>;
   MapT Strategies;
 
 public:
@@ -182,15 +182,13 @@ public:
 
   bool empty() const { return Strategies.empty(); }
 
-  std::unique_ptr<GCStrategy> &operator[](const std::string &GCName) {
-    return Strategies[GCName];
-  }
+  GCStrategy &operator[](StringRef GCName) { return *Strategies[GCName]; }
 
-  std::pair<iterator, bool> try_emplace(const std::string &GCName) {
+  std::pair<iterator, bool> try_emplace(StringRef GCName) {
     return Strategies.try_emplace(GCName);
   }
 
-  bool contains(const std::string &GCName) const {
+  bool contains(StringRef GCName) const {
     return Strategies.find(GCName) != Strategies.end();
   }
 };
