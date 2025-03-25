@@ -1,0 +1,364 @@
+; ModuleID = 'LLVMDialectModule'
+source_filename = "LLVMDialectModule"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+%struct.ident_t = type { i32, i32, i32, i32, ptr }
+
+@_QFEa = internal global [100 x i32] zeroinitializer
+@_QFEb = internal global [100 x i32] zeroinitializer
+@_QFECn = internal constant i32 100
+@0 = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00", align 1
+@1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @0 }, align 8
+@2 = private unnamed_addr constant %struct.ident_t { i32 0, i32 34, i32 0, i32 22, ptr @0 }, align 8
+@3 = private unnamed_addr constant %struct.ident_t { i32 0, i32 66, i32 0, i32 22, ptr @0 }, align 8
+
+define void @_QQmain() {
+  %structArg = alloca { ptr }, align 8
+  %1 = alloca i32, i64 1, align 4
+  %2 = alloca i32, i64 1, align 4
+  %3 = alloca i32, i64 1, align 4
+  %4 = alloca i32, i64 1, align 4
+  store i32 0, ptr %3, align 4
+  br label %5
+
+5:                                                ; preds = %9, %0
+  %6 = phi i32 [ %18, %9 ], [ 1, %0 ]
+  %7 = phi i64 [ %19, %9 ], [ 100, %0 ]
+  %8 = icmp sgt i64 %7, 0
+  br i1 %8, label %9, label %20
+
+9:                                                ; preds = %5
+  store i32 %6, ptr %4, align 4
+  %10 = load i32, ptr %4, align 4
+  %11 = sext i32 %10 to i64
+  %12 = sub nsw i64 %11, 1
+  %13 = mul nsw i64 %12, 1
+  %14 = mul nsw i64 %13, 1
+  %15 = add nsw i64 %14, 0
+  %16 = getelementptr i32, ptr @_QFEa, i64 %15
+  store i32 %10, ptr %16, align 4
+  %17 = load i32, ptr %4, align 4
+  %18 = add i32 %17, 1
+  %19 = sub i64 %7, 1
+  br label %5
+
+20:                                               ; preds = %5
+  store i32 %6, ptr %4, align 4
+  %omp_global_thread_num = call i32 @__kmpc_global_thread_num(ptr @1)
+  br label %omp_parallel
+
+omp_parallel:                                     ; preds = %20
+  %gep_ = getelementptr { ptr }, ptr %structArg, i32 0, i32 0
+  store ptr %3, ptr %gep_, align 8
+  call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @1, i32 1, ptr @_QQmain..omp_par, ptr %structArg)
+  br label %omp.par.exit
+
+omp.par.exit:                                     ; preds = %omp_parallel
+  ret void
+}
+
+; Function Attrs: nounwind
+define internal void @_QQmain..omp_par(ptr noalias %tid.addr, ptr noalias %zero.addr, ptr %0) #0 {
+omp.par.entry:
+  %gep_ = getelementptr { ptr }, ptr %0, i32 0, i32 0
+  %loadgep_ = load ptr, ptr %gep_, align 8
+  %p.lastiter28 = alloca i32, align 4
+  %p.lowerbound29 = alloca i32, align 4
+  %p.upperbound30 = alloca i32, align 4
+  %p.stride31 = alloca i32, align 4
+  %p.lastiter = alloca i32, align 4
+  %p.lowerbound = alloca i32, align 4
+  %p.upperbound = alloca i32, align 4
+  %p.stride = alloca i32, align 4
+  %tid.addr.local = alloca i32, align 4
+  %1 = load i32, ptr %tid.addr, align 4
+  store i32 %1, ptr %tid.addr.local, align 4
+  %tid = load i32, ptr %tid.addr.local, align 4
+  %2 = alloca i32, align 4
+  br label %omp.region.after_alloca2
+
+omp.region.after_alloca2:                         ; preds = %omp.par.entry
+  %vla = alloca i32, i32 100, align 4
+  br label %omp.region.after_alloca
+
+omp.region.after_alloca:                          ; preds = %omp.region.after_alloca2
+  br label %omp.par.region
+
+omp.par.region:                                   ; preds = %omp.region.after_alloca
+  br label %omp.par.region1
+
+omp.par.region1:                                  ; preds = %omp.par.region
+  %3 = alloca i32, i64 1, align 4
+  br label %omp.reduction.init
+
+omp.reduction.init:                               ; preds = %omp.par.region1
+  store i32 0, ptr %2, align 4
+  br label %omp.wsloop.region
+
+omp.wsloop.region:                                ; preds = %omp.reduction.init
+  br label %omp_loop.preheader
+
+omp_loop.preheader:                               ; preds = %omp.wsloop.region
+  store i32 0, ptr %p.lowerbound, align 4
+  store i32 99, ptr %p.upperbound, align 4
+  store i32 1, ptr %p.stride, align 4
+  %omp_global_thread_num26 = call i32 @__kmpc_global_thread_num(ptr @1)
+  call void @__kmpc_for_static_init_4u(ptr @1, i32 %omp_global_thread_num26, i32 34, ptr %p.lastiter, ptr %p.lowerbound, ptr %p.upperbound, ptr %p.stride, i32 1, i32 0)
+  %4 = load i32, ptr %p.lowerbound, align 4
+  %5 = load i32, ptr %p.upperbound, align 4
+  %6 = sub i32 %5, %4
+  %7 = add i32 %6, 1
+  br label %omp_loop.header
+
+omp_loop.header:                                  ; preds = %omp_loop.inc, %omp_loop.preheader
+  %omp_loop.iv = phi i32 [ 0, %omp_loop.preheader ], [ %omp_loop.next, %omp_loop.inc ]
+  br label %omp_loop.cond
+
+omp_loop.cond:                                    ; preds = %omp_loop.header
+  %omp_loop.cmp = icmp ult i32 %omp_loop.iv, %7
+  br i1 %omp_loop.cmp, label %omp_loop.body, label %omp_loop.exit
+
+omp_loop.exit:                                    ; preds = %omp_loop.cond
+  call void @__kmpc_for_static_fini(ptr @1, i32 %omp_global_thread_num26)
+  %omp_global_thread_num27 = call i32 @__kmpc_global_thread_num(ptr @1)
+  call void @__kmpc_barrier(ptr @3, i32 %omp_global_thread_num27)
+  br label %omp_loop.after
+
+omp_loop.after:                                   ; preds = %omp_loop.exit
+  %8 = call double @llvm.log2.f64(double 1.000000e+02) #0
+  %9 = call double @llvm.ceil.f64(double %8) #0
+  %10 = fptoui double %9 to i32
+  br label %omp.outer.log.scan.body
+
+omp.outer.log.scan.body:                          ; preds = %omp.inner.log.scan.exit, %omp_loop.after
+  %11 = phi i32 [ 0, %omp_loop.after ], [ %14, %omp.inner.log.scan.exit ]
+  %12 = phi i32 [ 1, %omp_loop.after ], [ %15, %omp.inner.log.scan.exit ]
+  %13 = icmp uge i32 99, %12
+  br i1 %13, label %omp.inner.log.scan.body, label %omp.inner.log.scan.exit
+
+omp.inner.log.scan.exit:                          ; preds = %omp.inner.log.scan.body, %omp.outer.log.scan.body
+  %14 = add nuw i32 %11, 1
+  %15 = shl nuw i32 %12, 1
+  %16 = icmp ne i32 %14, %10
+  br i1 %16, label %omp.outer.log.scan.body, label %omp.outer.log.scan.exit
+
+omp.outer.log.scan.exit:                          ; preds = %omp.inner.log.scan.exit
+  %omp_global_thread_num24 = call i32 @__kmpc_global_thread_num(ptr @1)
+  call void @__kmpc_barrier(ptr @2, i32 %omp_global_thread_num24)
+  br label %omp.scan.loop.cont
+
+omp.scan.loop.cont:                               ; preds = %omp.outer.log.scan.exit
+  br label %omp_loop.preheader5
+
+omp_loop.preheader5:                              ; preds = %omp.scan.loop.cont
+  store i32 0, ptr %p.lowerbound29, align 4
+  store i32 99, ptr %p.upperbound30, align 4
+  store i32 1, ptr %p.stride31, align 4
+  %omp_global_thread_num32 = call i32 @__kmpc_global_thread_num(ptr @1)
+  call void @__kmpc_for_static_init_4u(ptr @1, i32 %omp_global_thread_num32, i32 34, ptr %p.lastiter28, ptr %p.lowerbound29, ptr %p.upperbound30, ptr %p.stride31, i32 1, i32 0)
+  %17 = load i32, ptr %p.lowerbound29, align 4
+  %18 = load i32, ptr %p.upperbound30, align 4
+  %19 = sub i32 %18, %17
+  %20 = add i32 %19, 1
+  br label %omp_loop.header6
+
+omp_loop.header6:                                 ; preds = %omp_loop.inc9, %omp_loop.preheader5
+  %omp_loop.iv12 = phi i32 [ 0, %omp_loop.preheader5 ], [ %omp_loop.next14, %omp_loop.inc9 ]
+  br label %omp_loop.cond7
+
+omp_loop.cond7:                                   ; preds = %omp_loop.header6
+  %omp_loop.cmp13 = icmp ult i32 %omp_loop.iv12, %20
+  br i1 %omp_loop.cmp13, label %omp_loop.body8, label %omp_loop.exit10
+
+omp_loop.exit10:                                  ; preds = %omp_loop.cond7
+  call void @__kmpc_for_static_fini(ptr @1, i32 %omp_global_thread_num32)
+  %omp_global_thread_num33 = call i32 @__kmpc_global_thread_num(ptr @1)
+  call void @__kmpc_barrier(ptr @3, i32 %omp_global_thread_num33)
+  br label %omp_loop.after11
+
+omp_loop.after11:                                 ; preds = %omp_loop.exit10
+  %arrayOffset25 = getelementptr inbounds i32, ptr %vla, i32 100
+  %21 = load i32, ptr %arrayOffset25, align 4
+  store i32 %21, ptr %loadgep_, align 4
+  br label %omp.region.cont3
+
+omp.region.cont3:                                 ; preds = %omp_loop.after11
+  br label %omp.region.cont
+
+omp.region.cont:                                  ; preds = %omp.region.cont3
+  br label %omp.par.pre_finalize
+
+omp.par.pre_finalize:                             ; preds = %omp.region.cont
+  br label %omp.par.exit.exitStub
+
+omp_loop.body8:                                   ; preds = %omp_loop.cond7
+  %22 = add i32 %omp_loop.iv12, %17
+  %23 = mul i32 %22, 1
+  %24 = add i32 %23, 1
+  br label %omp.inscan.dispatch17
+
+omp.inscan.dispatch17:                            ; preds = %omp_loop.body8
+  store i32 0, ptr %2, align 4
+  %arrayOffset20 = getelementptr inbounds i32, ptr %vla, i32 %24
+  %25 = load i32, ptr %arrayOffset20, align 4
+  store i32 %25, ptr %2, align 4
+  br i1 true, label %omp.after.scan.bb21, label %omp.before.scan.bb15
+
+omp.before.scan.bb15:                             ; preds = %omp.inscan.dispatch17
+  br label %omp.loop_nest.region19
+
+omp.loop_nest.region19:                           ; preds = %omp.before.scan.bb15
+  store i32 %24, ptr %3, align 4
+  %26 = load i32, ptr %2, align 4
+  %27 = load i32, ptr %3, align 4
+  %28 = sext i32 %27 to i64
+  %29 = sub nsw i64 %28, 1
+  %30 = mul nsw i64 %29, 1
+  %31 = mul nsw i64 %30, 1
+  %32 = add nsw i64 %31, 0
+  %33 = getelementptr i32, ptr @_QFEa, i64 %32
+  %34 = load i32, ptr %33, align 4
+  %35 = add i32 %26, %34
+  store i32 %35, ptr %2, align 4
+  br label %omp.scan.loop.exit16
+
+omp.scan.loop.exit16:                             ; preds = %omp.loop_nest.region19, %omp.region.cont18
+  br label %omp_loop.inc9
+
+omp_loop.inc9:                                    ; preds = %omp.scan.loop.exit16
+  %omp_loop.next14 = add nuw i32 %omp_loop.iv12, 1
+  br label %omp_loop.header6
+
+omp.after.scan.bb21:                              ; preds = %omp.inscan.dispatch17
+  store i32 %24, ptr %3, align 4
+  %36 = load i32, ptr %2, align 4
+  %37 = load i32, ptr %3, align 4
+  %38 = sext i32 %37 to i64
+  %39 = sub nsw i64 %38, 1
+  %40 = mul nsw i64 %39, 1
+  %41 = mul nsw i64 %40, 1
+  %42 = add nsw i64 %41, 0
+  %43 = getelementptr i32, ptr @_QFEb, i64 %42
+  store i32 %36, ptr %43, align 4
+  br label %omp.region.cont18
+
+omp.region.cont18:                                ; preds = %omp.after.scan.bb21
+  br label %omp.scan.loop.exit16
+
+omp.inner.log.scan.body:                          ; preds = %omp.inner.log.scan.body, %omp.outer.log.scan.body
+  %44 = phi i32 [ 99, %omp.outer.log.scan.body ], [ %50, %omp.inner.log.scan.body ]
+  %45 = add i32 %44, 1
+  %arrayOffset22 = getelementptr inbounds i32, ptr %vla, i32 %45
+  %46 = sub nuw i32 %45, %12
+  %arrayOffset23 = getelementptr inbounds i32, ptr %vla, i32 %46
+  %47 = load i32, ptr %arrayOffset22, align 4
+  %48 = load i32, ptr %arrayOffset23, align 4
+  %49 = add i32 %47, %48
+  store i32 %49, ptr %arrayOffset22, align 4
+  %50 = sub nuw i32 %44, 1
+  %51 = icmp uge i32 %50, %12
+  br i1 %51, label %omp.inner.log.scan.body, label %omp.inner.log.scan.exit
+
+omp_loop.body:                                    ; preds = %omp_loop.cond
+  %52 = add i32 %omp_loop.iv, %4
+  %53 = mul i32 %52, 1
+  %54 = add i32 %53, 1
+  br label %omp.inscan.dispatch
+
+omp.inscan.dispatch:                              ; preds = %omp_loop.body
+  store i32 0, ptr %2, align 4
+  br i1 true, label %omp.before.scan.bb, label %omp.after.scan.bb
+
+omp.after.scan.bb:                                ; preds = %omp.inscan.dispatch
+  store i32 %54, ptr %3, align 4
+  %55 = load i32, ptr %2, align 4
+  %56 = load i32, ptr %3, align 4
+  %57 = sext i32 %56 to i64
+  %58 = sub nsw i64 %57, 1
+  %59 = mul nsw i64 %58, 1
+  %60 = mul nsw i64 %59, 1
+  %61 = add nsw i64 %60, 0
+  %62 = getelementptr i32, ptr @_QFEb, i64 %61
+  store i32 %55, ptr %62, align 4
+  br label %omp.region.cont4
+
+omp.region.cont4:                                 ; preds = %omp.after.scan.bb
+  br label %omp.scan.loop.exit
+
+omp.scan.loop.exit:                               ; preds = %omp.loop_nest.region, %omp.region.cont4
+  br label %omp_loop.inc
+
+omp_loop.inc:                                     ; preds = %omp.scan.loop.exit
+  %omp_loop.next = add nuw i32 %omp_loop.iv, 1
+  br label %omp_loop.header
+
+omp.before.scan.bb:                               ; preds = %omp.inscan.dispatch
+  br label %omp.loop_nest.region
+
+omp.loop_nest.region:                             ; preds = %omp.before.scan.bb
+  store i32 %54, ptr %3, align 4
+  %63 = load i32, ptr %2, align 4
+  %64 = load i32, ptr %3, align 4
+  %65 = sext i32 %64 to i64
+  %66 = sub nsw i64 %65, 1
+  %67 = mul nsw i64 %66, 1
+  %68 = mul nsw i64 %67, 1
+  %69 = add nsw i64 %68, 0
+  %70 = getelementptr i32, ptr @_QFEa, i64 %69
+  %71 = load i32, ptr %70, align 4
+  %72 = add i32 %63, %71
+  store i32 %72, ptr %2, align 4
+  %arrayOffset = getelementptr inbounds i32, ptr %vla, i32 %54
+  %73 = load i32, ptr %2, align 4
+  store i32 %73, ptr %arrayOffset, align 4
+  br label %omp.scan.loop.exit
+
+omp.par.exit.exitStub:                            ; preds = %omp.par.pre_finalize
+  ret void
+}
+
+declare void @_FortranAProgramStart(i32, ptr, ptr, ptr)
+
+declare void @_FortranAProgramEndStatement()
+
+define i32 @main(i32 %0, ptr %1, ptr %2) {
+  call void @_FortranAProgramStart(i32 %0, ptr %1, ptr %2, ptr null)
+  call void @_QQmain()
+  call void @_FortranAProgramEndStatement()
+  ret i32 0
+}
+
+; Function Attrs: nounwind
+declare i32 @__kmpc_global_thread_num(ptr) #0
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare double @llvm.log2.f64(double) #1
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare double @llvm.ceil.f64(double) #1
+
+; Function Attrs: convergent nounwind
+declare void @__kmpc_barrier(ptr, i32) #2
+
+; Function Attrs: nounwind
+declare void @__kmpc_for_static_init_4u(ptr, i32, i32, ptr, ptr, ptr, ptr, i32, i32) #0
+
+; Function Attrs: nounwind
+declare void @__kmpc_for_static_fini(ptr, i32) #0
+
+; Function Attrs: nounwind
+declare !callback !3 void @__kmpc_fork_call(ptr, i32, ptr, ...) #0
+
+attributes #0 = { nounwind }
+attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #2 = { convergent nounwind }
+
+!llvm.module.flags = !{!0, !1}
+!llvm.ident = !{!2}
+
+!0 = !{i32 7, !"openmp", i32 11}
+!1 = !{i32 2, !"Debug Info Version", i32 3}
+!2 = !{!"flang version 20.0.0 (git@github.com:anchuraj/llvm-project.git aedc369685b22e2b8f7413557d292a78637f563b)"}
+!3 = !{!4}
+!4 = !{i64 2, i64 -1, i64 -1, i1 true}
