@@ -75,7 +75,7 @@ namespace PR8629 {
     template<class U> void g()
     {
       typedef Inner<U> Init;
-      X0<Init::template VeryInner>::apply();
+      X0<Init::template VeryInner>::apply(); // expected-warning{{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
     }
     template<int N> void f ()
     {
