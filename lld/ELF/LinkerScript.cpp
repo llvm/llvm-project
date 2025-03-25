@@ -182,7 +182,18 @@ void LinkerScript::expandMemoryRegions(uint64_t size) {
 
 void LinkerScript::expandOutputSection(uint64_t size) {
   state->outSec->size += size;
-  expandMemoryRegions(size);
+  size_t regionSize = size;
+  if (state->outSec->inOverlay) {
+    // Expand the overlay if necessary, and expand the region by the
+    // corresponding amount.
+    if (state->outSec->size > state->overlaySize) {
+      regionSize = state->outSec->size - state->overlaySize;
+      state->overlaySize = state->outSec->size;
+    } else {
+      regionSize = 0;
+    }
+  }
+  expandMemoryRegions(regionSize);
 }
 
 void LinkerScript::setDot(Expr e, const Twine &loc, bool inSec) {
@@ -1273,6 +1284,8 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
     // NOBITS TLS sections are similar. Additionally save the end address.
     state->tbssAddr = dot;
     dot = savedDot;
+  } else if (sec->lastInOverlay) {
+    state->overlaySize = 0;
   }
   return addressChanged;
 }
