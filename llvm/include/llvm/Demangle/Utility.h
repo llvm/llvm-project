@@ -27,6 +27,22 @@
 
 DEMANGLE_NAMESPACE_BEGIN
 
+template <class T> class ScopedOverride {
+  T &Loc;
+  T Original;
+
+public:
+  ScopedOverride(T &Loc_) : ScopedOverride(Loc_, Loc_) {}
+
+  ScopedOverride(T &Loc_, T NewVal) : Loc(Loc_), Original(Loc_) {
+    Loc_ = std::move(NewVal);
+  }
+  ~ScopedOverride() { Loc = std::move(Original); }
+
+  ScopedOverride(const ScopedOverride &) = delete;
+  ScopedOverride &operator=(const ScopedOverride &) = delete;
+};
+
 // Stream that AST nodes write their string representation into after the AST
 // has been parsed.
 class OutputBuffer {
@@ -83,6 +99,127 @@ public:
     return std::string_view(Buffer, CurrentPosition);
   }
 
+  // Stores information about parts of a demangled function name.
+  struct FunctionNameInfo {
+    ///< A [start, end) pair for the function basename.
+    ///< The basename is the name without scope qualifiers
+    ///< and without template parameters. E.g.,
+    ///< \code{.cpp}
+    ///<    void foo::bar<int>::someFunc<float>(int) const &&
+    ///<                        ^       ^
+    ///<                      Start    End
+    ///< \endcode
+    std::pair<size_t, size_t> BasenameLocs;
+
+    ///< A [start, end) pair for the function scope qualifiers.
+    ///< E.g., for
+    ///< \code{.cpp}
+    ///<    void foo::bar<int>::qux<float>(int) const &&
+    ///<         ^              ^
+    ///<       Start           End
+    ///< \endcode
+    std::pair<size_t, size_t> ScopeLocs;
+
+    ///< Indicates the [start, end) of the function argument lits.
+    ///< E.g.,
+    ///< \code{.cpp}
+    ///<    int (*getFunc<float>(float, double))(int, int)
+    ///<                        ^              ^
+    ///<                      start           end
+    ///< \endcode
+    std::pair<size_t, size_t> ArgumentLocs;
+
+    bool startedPrintingArguments() const { return ArgumentLocs.first > 0; }
+
+    bool shouldTrack(OutputBuffer &OB) const {
+      if (OB.isPrintingNestedFunctionType())
+        return false;
+
+      if (OB.isGtInsideTemplateArgs())
+        return false;
+
+      if (startedPrintingArguments())
+        return false;
+
+      return true;
+    }
+
+    bool canFinalize(OutputBuffer &OB) const {
+      if (OB.isPrintingNestedFunctionType())
+        return false;
+
+      if (OB.isGtInsideTemplateArgs())
+        return false;
+
+      if (!startedPrintingArguments())
+        return false;
+
+      return true;
+    }
+
+    void updateBasenameEnd(OutputBuffer &OB) {
+      if (!shouldTrack(OB))
+        return;
+
+      BasenameLocs.second = OB.getCurrentPosition();
+    }
+
+    void updateScopeStart(OutputBuffer &OB) {
+      if (!shouldTrack(OB))
+        return;
+
+      ScopeLocs.first = OB.getCurrentPosition();
+    }
+
+    void updateScopeEnd(OutputBuffer &OB) {
+      if (!shouldTrack(OB))
+        return;
+
+      ScopeLocs.second = OB.getCurrentPosition();
+    }
+
+    void finalizeArgumentEnd(OutputBuffer &OB) {
+      if (!canFinalize(OB))
+        return;
+
+      OB.FunctionInfo.ArgumentLocs.second = OB.getCurrentPosition();
+    }
+
+    void finalizeStart(OutputBuffer &OB) {
+      if (!shouldTrack(OB))
+        return;
+
+      OB.FunctionInfo.ArgumentLocs.first = OB.getCurrentPosition();
+
+      // If nothing has set the end of the basename yet (for example when
+      // printing templates), then the beginning of the arguments is the end of
+      // the basename.
+      if (BasenameLocs.second == 0)
+        OB.FunctionInfo.BasenameLocs.second = OB.getCurrentPosition();
+
+      DEMANGLE_ASSERT(!shouldTrack(OB), "");
+      DEMANGLE_ASSERT(canFinalize(OB), "");
+    }
+
+    void finalizeEnd(OutputBuffer &OB) {
+      if (!canFinalize(OB))
+        return;
+
+      if (ScopeLocs.first > OB.FunctionInfo.ScopeLocs.second)
+        ScopeLocs.second = OB.FunctionInfo.ScopeLocs.first;
+      BasenameLocs.first = OB.FunctionInfo.ScopeLocs.second;
+    }
+
+    ScopedOverride<unsigned> enterFunctionTypePrinting(OutputBuffer &OB) {
+      return {OB.FunctionPrintingDepth, OB.FunctionPrintingDepth + 1};
+    }
+
+    bool hasBasename() const {
+      return BasenameLocs.first != BasenameLocs.second &&
+             BasenameLocs.second > 0;
+    }
+  };
+
   /// If a ParameterPackExpansion (or similar type) is encountered, the offset
   /// into the pack that we're currently printing.
   unsigned CurrentPackIndex = std::numeric_limits<unsigned>::max();
@@ -92,7 +229,17 @@ public:
   /// Use a counter so we can simply increment inside parentheses.
   unsigned GtIsGt = 1;
 
+  ///< When a function type is being printed this value is incremented.
+  ///< When printing of the type is finished the value is decremented.
+  unsigned FunctionPrintingDepth = 0;
+
+  FunctionNameInfo FunctionInfo;
+
   bool isGtInsideTemplateArgs() const { return GtIsGt == 0; }
+
+  bool isPrintingNestedFunctionType() const {
+    return FunctionPrintingDepth != 1;
+  }
 
   void printOpen(char Open = '(') {
     GtIsGt++;
@@ -180,22 +327,6 @@ public:
   char *getBuffer() { return Buffer; }
   char *getBufferEnd() { return Buffer + CurrentPosition - 1; }
   size_t getBufferCapacity() const { return BufferCapacity; }
-};
-
-template <class T> class ScopedOverride {
-  T &Loc;
-  T Original;
-
-public:
-  ScopedOverride(T &Loc_) : ScopedOverride(Loc_, Loc_) {}
-
-  ScopedOverride(T &Loc_, T NewVal) : Loc(Loc_), Original(Loc_) {
-    Loc_ = std::move(NewVal);
-  }
-  ~ScopedOverride() { Loc = std::move(Original); }
-
-  ScopedOverride(const ScopedOverride &) = delete;
-  ScopedOverride &operator=(const ScopedOverride &) = delete;
 };
 
 DEMANGLE_NAMESPACE_END

@@ -534,6 +534,8 @@ public:
 
   ConstString GetDisplayName() const;
 
+  Mangled::DemangledInfo GetDemangledInfo() const;
+
   const Mangled &GetMangled() const { return m_mangled; }
 
   /// Get the DeclContext for this function, if available.
