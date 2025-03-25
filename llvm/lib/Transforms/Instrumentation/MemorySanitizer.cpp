@@ -4680,6 +4680,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_sse2_cvtpd2dq:
     case Intrinsic::x86_sse2_cvttps2dq:
     case Intrinsic::x86_sse2_cvttpd2dq:
+    case Intrinsic::x86_avx_cvt_pd2_ps_256:
     case Intrinsic::x86_avx_cvt_ps2dq_256:
     case Intrinsic::x86_avx_cvt_pd2dq_256:
     case Intrinsic::x86_avx_cvtt_ps2dq_256:

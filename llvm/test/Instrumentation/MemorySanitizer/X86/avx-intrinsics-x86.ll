@@ -2,7 +2,6 @@
 ; RUN: opt %s -S -passes=msan 2>&1 | FileCheck %s
 ;
 ; Handled strictly:
-; - <4 x float> @llvm.x86.avx.cvt.pd2.ps.256(<4 x double> %a0)
 ; - i32 @llvm.x86.avx.movmsk.pd.256(<4 x double> %a0)
 ; - i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %a0)
 ; - <2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double> %a0, <2 x i64> %a1)
@@ -316,15 +315,10 @@ define <4 x float> @test_x86_avx_cvt_pd2_ps_256(<4 x double> %a0) #0 {
 ; CHECK-LABEL: @test_x86_avx_cvt_pd2_ps_256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[TMP1]] to i256
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn()
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.avx.cvt.pd2.ps.256(<4 x double> [[A0:%.*]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
 ;
   %res = call <4 x float> @llvm.x86.avx.cvt.pd2.ps.256(<4 x double> %a0) ; <<4 x float>> [#uses=1]
@@ -504,7 +498,7 @@ define <32 x i8> @test_x86_avx_ldu_dq_256(ptr %a0) #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <32 x i8>, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       5:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn()
 ; CHECK-NEXT:    unreachable
