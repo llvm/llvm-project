@@ -386,6 +386,9 @@ public:
 
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
+
+  std::optional<DestSourcePair>
+  isCopyInstrImpl(const MachineInstr &MI) const override;
 };
 
 } // end namespace llvm
