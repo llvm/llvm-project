@@ -282,9 +282,7 @@ public:
   Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
                                  AtomicOrdering Ord) const override;
 
-  bool preferPromoteFPToCustomSINTOverCustomUINT() const override {
-    return false;
-  }
+  unsigned getFPToXIntOpcode(unsigned Op, EVT FromVT, EVT ToVT) const override;
 
 private:
   const NVPTXSubtarget &STI; // cache the subtarget here

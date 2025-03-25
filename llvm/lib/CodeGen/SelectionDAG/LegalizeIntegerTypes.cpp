@@ -848,42 +848,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_VECTOR_ELT(SDNode *N) {
 
 SDValue DAGTypeLegalizer::PromoteIntRes_FP_TO_XINT(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  unsigned NewOpc = N->getOpcode();
+  unsigned NewOpc =
+      TLI.getFPToXIntOpcode(N->getOpcode(), N->getValueType(0), NVT);
   SDLoc dl(N);
-
-  // If we're promoting a UINT to a larger size and the larger FP_TO_UINT is
-  // not Legal, check to see if we can use FP_TO_SINT instead.  (If both UINT
-  // and SINT conversions are Custom, we use a TLI call to check which is
-  // preferable.)
-  if (N->getOpcode() == ISD::FP_TO_UINT &&
-      !TLI.isOperationLegal(ISD::FP_TO_UINT, NVT) &&
-      (TLI.isOperationLegal(ISD::FP_TO_SINT, NVT) ||
-       (!TLI.isOperationCustom(ISD::FP_TO_UINT, NVT) &&
-        TLI.isOperationCustom(ISD::FP_TO_SINT, NVT)) ||
-       (TLI.isOperationCustom(ISD::FP_TO_SINT, NVT) &&
-        TLI.isOperationCustom(ISD::FP_TO_UINT, NVT) &&
-        TLI.preferPromoteFPToCustomSINTOverCustomUINT())))
-    NewOpc = ISD::FP_TO_SINT;
-
-  if (N->getOpcode() == ISD::STRICT_FP_TO_UINT &&
-      !TLI.isOperationLegal(ISD::STRICT_FP_TO_UINT, NVT) &&
-      (TLI.isOperationLegal(ISD::STRICT_FP_TO_SINT, NVT) ||
-       (!TLI.isOperationCustom(ISD::STRICT_FP_TO_UINT, NVT) &&
-        TLI.isOperationCustom(ISD::STRICT_FP_TO_SINT, NVT)) ||
-       (TLI.isOperationCustom(ISD::STRICT_FP_TO_SINT, NVT) &&
-        TLI.isOperationCustom(ISD::STRICT_FP_TO_UINT, NVT) &&
-        TLI.preferPromoteFPToCustomSINTOverCustomUINT())))
-    NewOpc = ISD::STRICT_FP_TO_SINT;
-
-  if (N->getOpcode() == ISD::VP_FP_TO_UINT &&
-      !TLI.isOperationLegal(ISD::VP_FP_TO_UINT, NVT) &&
-      (TLI.isOperationLegal(ISD::VP_FP_TO_SINT, NVT) ||
-       (!TLI.isOperationCustom(ISD::VP_FP_TO_UINT, NVT) &&
-        TLI.isOperationCustom(ISD::VP_FP_TO_SINT, NVT)) ||
-       (TLI.isOperationCustom(ISD::VP_FP_TO_SINT, NVT) &&
-        TLI.isOperationCustom(ISD::VP_FP_TO_UINT, NVT) &&
-        TLI.preferPromoteFPToCustomSINTOverCustomUINT())))
-    NewOpc = ISD::VP_FP_TO_SINT;
 
   SDValue Res;
   if (N->isStrictFPOpcode()) {
