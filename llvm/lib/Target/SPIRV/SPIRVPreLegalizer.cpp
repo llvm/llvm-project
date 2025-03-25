@@ -251,10 +251,8 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       Register Def = MI.getOperand(0).getReg();
       Register Source = MI.getOperand(2).getReg();
       Type *ElemTy = getMDOperandAsType(MI.getOperand(3).getMetadata(), 0);
-      SPIRVType *BaseTy = GR->getOrCreateSPIRVType(
-          ElemTy, MIB, SPIRV::AccessQualifier::ReadWrite, true);
       SPIRVType *AssignedPtrType = GR->getOrCreateSPIRVPointerType(
-          BaseTy, MI, *MF.getSubtarget<SPIRVSubtarget>().getInstrInfo(),
+          ElemTy, MI,
           addressSpaceToStorageClass(MI.getOperand(4).getImm(), *ST));
 
       // If the ptrcast would be redundant, replace all uses with the source
@@ -366,9 +364,8 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
                 RegType.getAddressSpace()) {
           const SPIRVSubtarget &ST =
               MI->getParent()->getParent()->getSubtarget<SPIRVSubtarget>();
-          SpvType = GR->getOrCreateSPIRVPointerType(
-              GR->getPointeeType(SpvType), *MI, *ST.getInstrInfo(),
-              addressSpaceToStorageClass(RegType.getAddressSpace(), ST));
+          auto TSC = addressSpaceToStorageClass(RegType.getAddressSpace(), ST);
+          SpvType = GR->changePointerStorageClass(SpvType, TSC, *MI);
         }
         GR->assignSPIRVTypeToVReg(SpvType, Reg, MIB.getMF());
       }
@@ -518,10 +515,8 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         Register Reg = MI.getOperand(1).getReg();
         MIB.setInsertPt(*MI.getParent(), MI.getIterator());
         Type *ElementTy = getMDOperandAsType(MI.getOperand(2).getMetadata(), 0);
-        SPIRVType *BaseTy = GR->getOrCreateSPIRVType(
-            ElementTy, MIB, SPIRV::AccessQualifier::ReadWrite, true);
         SPIRVType *AssignedPtrType = GR->getOrCreateSPIRVPointerType(
-            BaseTy, MI, *MF.getSubtarget<SPIRVSubtarget>().getInstrInfo(),
+            ElementTy, MI,
             addressSpaceToStorageClass(MI.getOperand(3).getImm(), *ST));
         MachineInstr *Def = MRI.getVRegDef(Reg);
         assert(Def && "Expecting an instruction that defines the register");
