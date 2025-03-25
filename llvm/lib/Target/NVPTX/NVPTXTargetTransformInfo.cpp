@@ -496,16 +496,17 @@ NVPTXTTIImpl::getInstructionCost(const User *U,
       // be to return the number of asm instructions embedded in the asm
       // string.
       auto &AsmStr = IA->getAsmString();
-      SmallVector<StringRef, 4> AsmPieces;
-      SplitString(AsmStr, AsmPieces, ";\n");
-
-      const unsigned InstCount = count_if(AsmPieces, [](StringRef AsmInst) {
-        AsmInst = AsmInst.trim();
-        // This is pretty course but does a reasonably good job of identifying
-        // things that look like instructions, possibly with a predicate ("@").
-        return !AsmInst.empty() && (AsmInst[0] == '@' || isAlpha(AsmInst[0]) ||
-                                    AsmInst.find(".pragma") != StringRef::npos);
-      });
+      const unsigned InstCount =
+          count_if(split(AsmStr, ';'), [](StringRef AsmInst) {
+            // Trim off scopes denoted by '{' and '}' as these can be ignored
+            AsmInst = AsmInst.trim().ltrim("{} \t\n\v\f\r");
+            // This is pretty coarse but does a reasonably good job of
+            // identifying things that look like instructions, possibly with a
+            // predicate ("@").
+            return !AsmInst.empty() &&
+                   (AsmInst[0] == '@' || isAlpha(AsmInst[0]) ||
+                    AsmInst.find(".pragma") != StringRef::npos);
+          });
       return InstCount * TargetTransformInfo::TCC_Basic;
     }
 

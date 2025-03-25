@@ -132,11 +132,10 @@ MemoryEffects NVPTXAAResult::getMemoryEffects(const CallBase *Call,
         return MemoryEffects::unknown();
 
       // Memory clobbers prevent optimization.
-      if (!(Constraint.Type & InlineAsm::ConstraintPrefix::isClobber))
-        continue;
-      for (const std::string &Code : Constraint.Codes)
-        if (Code == "{memory}")
-          return MemoryEffects::unknown();
+      if ((Constraint.Type & InlineAsm::ConstraintPrefix::isClobber) &&
+          any_of(Constraint.Codes,
+                 [](const auto &Code) { return Code == "{memory}"; }))
+        return MemoryEffects::unknown();
     }
     return MemoryEffects::none();
   }
