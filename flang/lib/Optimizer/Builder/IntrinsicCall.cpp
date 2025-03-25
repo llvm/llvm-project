@@ -5847,12 +5847,12 @@ IntrinsicLibrary::genIeeeSupportFlag(mlir::Type resultType,
     }
   }
   if (mayBeSupported) {
+    mlir::Value isDenorm = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::eq, flag,
+        builder.createIntegerConstant(loc, fieldTy,
+                                      _FORTRAN_RUNTIME_IEEE_DENORM));
     mlir::Value result = builder.create<mlir::arith::AndIOp>(
-        loc,
-        builder.create<mlir::arith::CmpIOp>(
-            loc, mlir::arith::CmpIPredicate::eq, flag,
-            builder.createIntegerConstant(loc, fieldTy,
-                                          _FORTRAN_RUNTIME_IEEE_DENORM)),
+        loc, isDenorm,
         fir::runtime::genSupportHalting(
             builder, loc, builder.create<fir::ConvertOp>(loc, i32Ty, flag)));
     builder.create<fir::ResultOp>(loc, result);

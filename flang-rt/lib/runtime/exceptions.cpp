@@ -101,25 +101,30 @@ uint32_t RTNAME(fetestexcept)(uint32_t excepts) {
 #endif
 }
 void RTNAME(fedisableexcept)(uint32_t excepts) {
-  extern int fedisableexcept(int);
+#ifdef __USE_GNU
   fedisableexcept(excepts);
+#endif
 #if defined(_MM_EXCEPT_DENORM)
   _mm_setcsr(_mm_getcsr() | ((excepts & _MM_EXCEPT_MASK) << 7));
 #endif
 }
 void RTNAME(feenableexcept)(uint32_t excepts) {
-  extern int feenableexcept(int);
+#ifdef __USE_GNU
   feenableexcept(excepts);
+#endif
 #if defined(_MM_EXCEPT_DENORM)
   _mm_setcsr(_mm_getcsr() & ~((excepts & _MM_EXCEPT_MASK) << 7));
 #endif
 }
 uint32_t RTNAME(fegetexcept)() {
-  extern int fegetexcept(void);
+  uint32_t excepts = 0;
+#ifdef __USE_GNU
+  excepts = fegetexcept();
+#endif
 #if defined(_MM_EXCEPT_DENORM)
-  return (63 - ((_mm_getcsr() >> 7) & _MM_EXCEPT_MASK)) | fegetexcept();
+  return (63 - ((_mm_getcsr() >> 7) & _MM_EXCEPT_MASK)) | excepts;
 #else
-  return fegetexcept();
+  return excepts;
 #endif
 }
 
