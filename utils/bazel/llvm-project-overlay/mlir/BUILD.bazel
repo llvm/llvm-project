@@ -7439,13 +7439,8 @@ cc_library(
     hdrs = ["include/mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.h"],
     includes = ["include"],
     deps = [
-        ":CallOpInterfaces",
-        ":ControlFlowInterfaces",
-        ":FunctionInterfaces",
         ":IR",
-        ":InferTypeOpInterface",
         ":SPIRVImageInterfacesIncGen",
-        ":SideEffectInterfaces",
         "//llvm:Support",
     ],
 )
