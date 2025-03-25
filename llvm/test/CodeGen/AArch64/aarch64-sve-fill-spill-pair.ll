@@ -4,28 +4,25 @@
 ; RUN: llc -verify-machineinstrs -mtriple=aarch64-linux-gnu -mattr=+sve,stp-aligned-only -aarch64-sve-vector-bits-min=128 -aarch64-sve-vector-bits-max=128 < %s | FileCheck %s --check-prefixes=CHECK-STPALIGNEDONLY
 ; RUN: llc -verify-machineinstrs -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s --check-prefixes=CHECK-OFF
 ; RUN: llc -verify-machineinstrs -mtriple=aarch64-linux-gnu -mattr=+sve -aarch64-sve-vector-bits-min=256 -aarch64-sve-vector-bits-max=256 < %s | FileCheck %s --check-prefixes=CHECK-OFF
+; RUN: llc -verify-machineinstrs -mtriple=aarch64-linux-gnu -mattr=+sve -aarch64-sve-vector-bits-min=128 -aarch64-sve-vector-bits-max=128 -aarch64-sve-fill-spill-pairing=0 < %s | FileCheck %s --check-prefixes=CHECK-OFF
 
 define void @nxv16i8(ptr %ldptr, ptr %stptr) {
 ; CHECK-LABEL: nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    ldr z1, [x0, #1, mul vl]
-; CHECK-NEXT:    str z0, [x1]
-; CHECK-NEXT:    str z1, [x1, #1, mul vl]
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    stp q0, q1, [x1]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-LDPALIGNEDONLY-LABEL: nxv16i8:
 ; CHECK-LDPALIGNEDONLY:       // %bb.0:
 ; CHECK-LDPALIGNEDONLY-NEXT:    ldr z0, [x0]
 ; CHECK-LDPALIGNEDONLY-NEXT:    ldr z1, [x0, #1, mul vl]
-; CHECK-LDPALIGNEDONLY-NEXT:    str z0, [x1]
-; CHECK-LDPALIGNEDONLY-NEXT:    str z1, [x1, #1, mul vl]
+; CHECK-LDPALIGNEDONLY-NEXT:    stp q0, q1, [x1]
 ; CHECK-LDPALIGNEDONLY-NEXT:    ret
 ;
 ; CHECK-STPALIGNEDONLY-LABEL: nxv16i8:
 ; CHECK-STPALIGNEDONLY:       // %bb.0:
-; CHECK-STPALIGNEDONLY-NEXT:    ldr z0, [x0]
-; CHECK-STPALIGNEDONLY-NEXT:    ldr z1, [x0, #1, mul vl]
+; CHECK-STPALIGNEDONLY-NEXT:    ldp q0, q1, [x0]
 ; CHECK-STPALIGNEDONLY-NEXT:    str z0, [x1]
 ; CHECK-STPALIGNEDONLY-NEXT:    str z1, [x1, #1, mul vl]
 ; CHECK-STPALIGNEDONLY-NEXT:    ret
@@ -51,24 +48,20 @@ define void @nxv16i8(ptr %ldptr, ptr %stptr) {
 define void @nxv16i8_max_range(ptr %ldptr, ptr %stptr) {
 ; CHECK-LABEL: nxv16i8_max_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr z0, [x0, #-64, mul vl]
-; CHECK-NEXT:    ldr z1, [x0, #-63, mul vl]
-; CHECK-NEXT:    str z0, [x1, #63, mul vl]
-; CHECK-NEXT:    str z1, [x1, #64, mul vl]
+; CHECK-NEXT:    ldp q0, q1, [x0, #-1024]
+; CHECK-NEXT:    stp q0, q1, [x1, #1008]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-LDPALIGNEDONLY-LABEL: nxv16i8_max_range:
 ; CHECK-LDPALIGNEDONLY:       // %bb.0:
 ; CHECK-LDPALIGNEDONLY-NEXT:    ldr z0, [x0, #-64, mul vl]
 ; CHECK-LDPALIGNEDONLY-NEXT:    ldr z1, [x0, #-63, mul vl]
-; CHECK-LDPALIGNEDONLY-NEXT:    str z0, [x1, #63, mul vl]
-; CHECK-LDPALIGNEDONLY-NEXT:    str z1, [x1, #64, mul vl]
+; CHECK-LDPALIGNEDONLY-NEXT:    stp q0, q1, [x1, #1008]
 ; CHECK-LDPALIGNEDONLY-NEXT:    ret
 ;
 ; CHECK-STPALIGNEDONLY-LABEL: nxv16i8_max_range:
 ; CHECK-STPALIGNEDONLY:       // %bb.0:
-; CHECK-STPALIGNEDONLY-NEXT:    ldr z0, [x0, #-64, mul vl]
-; CHECK-STPALIGNEDONLY-NEXT:    ldr z1, [x0, #-63, mul vl]
+; CHECK-STPALIGNEDONLY-NEXT:    ldp q0, q1, [x0, #-1024]
 ; CHECK-STPALIGNEDONLY-NEXT:    str z0, [x1, #63, mul vl]
 ; CHECK-STPALIGNEDONLY-NEXT:    str z1, [x1, #64, mul vl]
 ; CHECK-STPALIGNEDONLY-NEXT:    ret
@@ -190,26 +183,20 @@ define void @nxv16i8_2vl_stride(ptr %ldptr, ptr %stptr) {
 define void @nxv2f64_32b_aligned(ptr %ldptr, ptr %stptr) {
 ; CHECK-LABEL: nxv2f64_32b_aligned:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    ldr z1, [x0, #1, mul vl]
-; CHECK-NEXT:    str z0, [x1]
-; CHECK-NEXT:    str z1, [x1, #1, mul vl]
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    stp q0, q1, [x1]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-LDPALIGNEDONLY-LABEL: nxv2f64_32b_aligned:
 ; CHECK-LDPALIGNEDONLY:       // %bb.0:
-; CHECK-LDPALIGNEDONLY-NEXT:    ldr z0, [x0]
-; CHECK-LDPALIGNEDONLY-NEXT:    ldr z1, [x0, #1, mul vl]
-; CHECK-LDPALIGNEDONLY-NEXT:    str z0, [x1]
-; CHECK-LDPALIGNEDONLY-NEXT:    str z1, [x1, #1, mul vl]
+; CHECK-LDPALIGNEDONLY-NEXT:    ldp q0, q1, [x0]
+; CHECK-LDPALIGNEDONLY-NEXT:    stp q0, q1, [x1]
 ; CHECK-LDPALIGNEDONLY-NEXT:    ret
 ;
 ; CHECK-STPALIGNEDONLY-LABEL: nxv2f64_32b_aligned:
 ; CHECK-STPALIGNEDONLY:       // %bb.0:
-; CHECK-STPALIGNEDONLY-NEXT:    ldr z0, [x0]
-; CHECK-STPALIGNEDONLY-NEXT:    ldr z1, [x0, #1, mul vl]
-; CHECK-STPALIGNEDONLY-NEXT:    str z0, [x1]
-; CHECK-STPALIGNEDONLY-NEXT:    str z1, [x1, #1, mul vl]
+; CHECK-STPALIGNEDONLY-NEXT:    ldp q0, q1, [x0]
+; CHECK-STPALIGNEDONLY-NEXT:    stp q0, q1, [x1]
 ; CHECK-STPALIGNEDONLY-NEXT:    ret
 ;
 ; CHECK-OFF-LABEL: nxv2f64_32b_aligned:
