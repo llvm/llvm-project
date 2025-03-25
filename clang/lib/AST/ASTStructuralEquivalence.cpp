@@ -1618,27 +1618,32 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   if ((Field1->isBitField() || Field2->isBitField()) &&
       !IsStructurallyEquivalent(Context, Field1->getBitWidth(),
                                 Field2->getBitWidth())) {
-    auto DiagNote = [&](const FieldDecl *FD) {
-      if (FD->isBitField()) {
-        std::string Str;
-        llvm::raw_string_ostream OS(Str);
-        PrintingPolicy Policy(Context.LangOpts);
-        FD->getBitWidth()->printPretty(OS, nullptr, Policy);
+    if (Context.Complain) {
+      auto DiagNote = [&](const FieldDecl *FD,
+                          DiagnosticBuilder (
+                              StructuralEquivalenceContext::*Diag)(
+                              SourceLocation, unsigned)) {
+        if (FD->isBitField()) {
+          std::string Str;
+          llvm::raw_string_ostream OS(Str);
+          PrintingPolicy Policy(Context.LangOpts);
+          FD->getBitWidth()->printPretty(OS, nullptr, Policy);
 
-        Context.Diag2(FD->getLocation(), diag::note_odr_field_bit_width)
-            << FD->getDeclName() << OS.str();
-      } else {
-        Context.Diag2(FD->getLocation(), diag::note_odr_field_not_bit_field)
-            << FD->getDeclName();
-      }
-    };
+          (Context.*Diag)(FD->getLocation(), diag::note_odr_field_bit_width)
+              << FD->getDeclName() << OS.str();
+        } else {
+          (Context.*Diag)(FD->getLocation(), diag::note_odr_field_not_bit_field)
+              << FD->getDeclName();
+        }
+      };
 
-    Context.Diag2(
-        Owner2->getLocation(),
-        Context.getApplicableDiagnostic(diag::err_odr_tag_type_inconsistent))
-        << Owner2Type << (&Context.FromCtx != &Context.ToCtx);
-    DiagNote(Field2);
-    DiagNote(Field1);
+      Context.Diag2(
+          Owner2->getLocation(),
+          Context.getApplicableDiagnostic(diag::err_odr_tag_type_inconsistent))
+          << Owner2Type << (&Context.FromCtx != &Context.ToCtx);
+      DiagNote(Field2, &StructuralEquivalenceContext::Diag2);
+      DiagNote(Field1, &StructuralEquivalenceContext::Diag1);
+    }
     return false;
   }
 
