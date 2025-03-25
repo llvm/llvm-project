@@ -585,7 +585,7 @@ public:
     auto newCall = rewriter.create<func::CallOp>(
         loc, op.getCallee(), finalRetTy, flattenValues(adaptor.getOperands()));
     // (2) Gather sparse tensor returns.
-    SmallVector<SmallVector<Value>> packedResultVals;
+    SmallVector<SmallVector<Value, 1>> packedResultVals;
     // Tracks the offset of current return value (of the original call)
     // relative to the new call (after sparse tensor flattening);
     unsigned retOffset = 0;
@@ -752,7 +752,7 @@ public:
     if (op.getCopy()) {
       auto desc = getDescriptorFromTensorTuple(
           adaptor.getCopy(), cast<RankedTensorType>(op.getCopy().getType()));
-      SmallVector<Value> fields;
+      SmallVector<Value, 1> fields;
       fields.reserve(desc.getNumFields());
       // Memcpy on memref fields.
       for (auto field : desc.getMemRefFields()) {
@@ -823,7 +823,7 @@ public:
                    /*dimSizesValues=*/lvlSizesValues);
     // Construct allocation for each field.
     Value sizeHint; // none
-    SmallVector<Value> fields;
+    SmallVector<Value, 1> fields;
     createAllocFields(rewriter, loc, resType, enableBufferInitialization,
                       sizeHint, lvlSizesValues, fields);
 
@@ -1176,7 +1176,7 @@ public:
     Location loc = op.getLoc();
     auto srcDesc = getDescriptorFromTensorTuple(adaptor.getSource(),
                                                 op.getSource().getType());
-    SmallVector<Value> fields;
+    SmallVector<Value, 1> fields;
     foreachFieldAndTypeInSparseTensor(
         SparseTensorType(cast<RankedTensorType>(op.getResult().getType())),
         [&rewriter, &fields, srcDesc,

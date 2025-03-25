@@ -1284,7 +1284,8 @@ public:
     ConversionPatternRewriter &rewriter, Operation *op, ArrayRef<ValueRange> r1,
     SmallVector<ValueRange> r2, ArrayRef<SmallVector<Value>> r3,
     SmallVector<SmallVector<Value>> r4, ArrayRef<ArrayRef<Value>> r5,
-    SmallVector<ArrayRef<Value>> r6, Value v, ValueRange vr,
+    SmallVector<ArrayRef<Value>> r6, SmallVector<SmallVector<Value, 1>> r7,
+    ArrayRef<SmallVector<Value, 1>> r8, Value v, ValueRange vr,
     ArrayRef<Value> ar) {
   rewriter.replaceOpWithMultiple(op, r1);
   rewriter.replaceOpWithMultiple(op, r2);
@@ -1292,6 +1293,8 @@ public:
   rewriter.replaceOpWithMultiple(op, r4);
   rewriter.replaceOpWithMultiple(op, r5);
   rewriter.replaceOpWithMultiple(op, r6);
+  rewriter.replaceOpWithMultiple(op, r7);
+  rewriter.replaceOpWithMultiple(op, r8);
   rewriter.replaceOpWithMultiple(op, {vr});
   rewriter.replaceOpWithMultiple(op, {ar});
   rewriter.replaceOpWithMultiple(op, {{v}});

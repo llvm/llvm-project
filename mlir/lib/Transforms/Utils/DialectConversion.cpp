@@ -947,7 +947,7 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
                                OpBuilder::InsertPoint previous) override;
 
   /// Notifies that an op is about to be replaced with the given values.
-  void notifyOpReplaced(Operation *op, ArrayRef<ValueRange> newValues);
+  void notifyOpReplaced(Operation *op, ArrayRef<ValueVector> newValues);
 
   /// Notifies that a block is about to be erased.
   void notifyBlockIsBeingErased(Block *block);
@@ -1520,7 +1520,7 @@ void ConversionPatternRewriterImpl::notifyOperationInserted(
 }
 
 void ConversionPatternRewriterImpl::notifyOpReplaced(
-    Operation *op, ArrayRef<ValueRange> newValues) {
+    Operation *op, ArrayRef<ValueVector> newValues) {
   assert(newValues.size() == op->getNumResults());
   assert(!ignoredOps.contains(op) && "operation was already replaced");
 
@@ -1640,19 +1640,15 @@ void ConversionPatternRewriter::replaceOp(Operation *op, ValueRange newValues) {
     impl->logger.startLine()
         << "** Replace : '" << op->getName() << "'(" << op << ")\n";
   });
-  SmallVector<ValueRange> newVals;
-  for (size_t i = 0; i < newValues.size(); ++i) {
-    if (newValues[i]) {
-      newVals.push_back(newValues.slice(i, 1));
-    } else {
-      newVals.push_back(ValueRange());
-    }
-  }
+  SmallVector<ValueVector> newVals =
+      llvm::map_to_vector(newValues, [](Value v) -> ValueVector {
+        return v ? ValueVector{v} : ValueVector();
+      });
   impl->notifyOpReplaced(op, newVals);
 }
 
 void ConversionPatternRewriter::replaceOpWithMultiple(
-    Operation *op, ArrayRef<ValueRange> newValues) {
+    Operation *op, ArrayRef<SmallVector<Value, 1>> newValues) {
   assert(op->getNumResults() == newValues.size() &&
          "incorrect # of replacement values");
   LLVM_DEBUG({
@@ -1667,7 +1663,7 @@ void ConversionPatternRewriter::eraseOp(Operation *op) {
     impl->logger.startLine()
         << "** Erase   : '" << op->getName() << "'(" << op << ")\n";
   });
-  SmallVector<ValueRange> nullRepls(op->getNumResults(), {});
+  SmallVector<ValueVector> nullRepls(op->getNumResults(), ValueVector());
   impl->notifyOpReplaced(op, nullRepls);
 }
 

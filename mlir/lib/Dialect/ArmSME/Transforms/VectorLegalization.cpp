@@ -192,7 +192,7 @@ struct LegalizeArithConstantOpsByDecomposition
     auto tileCount = getNumberOfSMETilesForVectorType(vectorType);
     auto tileSplat = rewriter.create<arith::ConstantOp>(
         constantOp.getLoc(), denseAttr.resizeSplat(smeTileType));
-    SmallVector<Value> repl(tileCount, tileSplat);
+    SmallVector<Value, 1> repl(tileCount, tileSplat);
     rewriter.replaceOpWithMultiple(constantOp, {repl});
 
     return success();
@@ -232,7 +232,7 @@ struct LegalizeVectorOuterProductOpsByDecomposition
     auto smeTileType = getSMETileTypeForElement(vectorType.getElementType());
     VectorType sliceType = VectorType::Builder(smeTileType).dropDim(0);
 
-    SmallVector<Value> resultSMETiles;
+    SmallVector<Value, 1> resultSMETiles;
     for (auto [index, smeTile] : llvm::enumerate(
              decomposeToSMETiles(rewriter, vectorType, smeTileType))) {
 
@@ -310,7 +310,7 @@ struct LegalizeTransferReadOpsByDecomposition
     auto loc = readOp.getLoc();
     auto smeTileType = getSMETileTypeForElement(vectorType.getElementType());
 
-    SmallVector<Value> resultSMETiles;
+    SmallVector<Value, 1> resultSMETiles;
     for (SMESubTile smeTile :
          decomposeToSMETiles(rewriter, vectorType, smeTileType, transposed)) {
       auto smeMask = extractSMEMask(rewriter, loc, mask, smeTile);
