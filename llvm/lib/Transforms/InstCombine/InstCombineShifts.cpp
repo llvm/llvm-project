@@ -994,7 +994,6 @@ static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
       I.setIsExact();
       return true;
     }
- 
   }
 
   // Compute what we know about shift count.
