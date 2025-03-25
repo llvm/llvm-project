@@ -93,3 +93,25 @@ func.func @_QPtest_float(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a
 // CHECK-NEXT:    hlfir.assign %[[V6]] to %3#0 : f32, !fir.ref<f32>
 // CHECK-NEXT:    return
 // CHECK-NEXT:  }
+
+// Verify that lower bounds of designator are applied in the indexing inside
+// the generated loop (hlfir.designate takes indices relative to the base lower
+// bounds).
+func.func @component_lower_bounds(%arg0: !fir.ref<!fir.type<sometype{i:!fir.array<10xi32>}>>) -> i32 {
+  %c10 = arith.constant 10 : index
+  %c101 = arith.constant 101 : index
+  %4 = fir.shape_shift %c101, %c10 : (index, index) -> !fir.shapeshift<1>
+  %5 = hlfir.designate %arg0{"i"}   shape %4 : (!fir.ref<!fir.type<sometype{i:!fir.array<10xi32>}>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<10xi32>>
+  %6 = hlfir.maxval %5 : (!fir.box<!fir.array<10xi32>>) -> i32
+  return %6 : i32
+}
+// CHECK-LABEL:   func.func @component_lower_bounds(
+// CHECK:  %[[VAL_1:.*]] = arith.constant 100 : index
+// CHECK:  %[[VAL_2:.*]] = arith.constant 1 : index
+// CHECK:  %[[VAL_4:.*]] = arith.constant 10 : index
+// CHECK:  %[[VAL_5:.*]] = arith.constant 101 : index
+// CHECK:  %[[VAL_6:.*]] = fir.shape_shift %[[VAL_5]], %[[VAL_4]] : (index, index) -> !fir.shapeshift<1>
+// CHECK:  %[[VAL_7:.*]] = hlfir.designate %{{.*}}{"i"}   shape %[[VAL_6]] : (!fir.ref<!fir.type<sometype{i:!fir.array<10xi32>}>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<10xi32>>
+// CHECK:  %[[VAL_8:.*]] = fir.do_loop %[[VAL_9:.*]] = %[[VAL_2]] to %[[VAL_4]] {{.*}}
+// CHECK:    %[[VAL_11:.*]] = arith.addi %[[VAL_9]], %[[VAL_1]] : index
+// CHECK:    hlfir.designate %[[VAL_7]] (%[[VAL_11]])  : (!fir.box<!fir.array<10xi32>>, index) -> !fir.ref<i32>

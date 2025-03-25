@@ -64,7 +64,7 @@ static size_t serializedSizeV2(const IndexedMemProfRecord &Record,
   // The number of callsites we have information for.
   Result += sizeof(uint64_t);
   // The CallStackId
-  Result += Record.CallSiteIds.size() * sizeof(CallStackId);
+  Result += Record.CallSites.size() * sizeof(CallStackId);
   return Result;
 }
 
@@ -78,7 +78,7 @@ static size_t serializedSizeV3(const IndexedMemProfRecord &Record,
   // The number of callsites we have information for.
   Result += sizeof(uint64_t);
   // The linear call stack ID.
-  Result += Record.CallSiteIds.size() * sizeof(LinearCallStackId);
+  Result += Record.CallSites.size() * sizeof(LinearCallStackId);
   return Result;
 }
 
@@ -106,9 +106,9 @@ static void serializeV2(const IndexedMemProfRecord &Record,
   }
 
   // Related contexts.
-  LE.write<uint64_t>(Record.CallSiteIds.size());
-  for (const auto &CSId : Record.CallSiteIds)
-    LE.write<CallStackId>(CSId);
+  LE.write<uint64_t>(Record.CallSites.size());
+  for (const auto &CS : Record.CallSites)
+    LE.write<CallStackId>(CS.CSId);
 }
 
 static void serializeV3(
@@ -127,10 +127,10 @@ static void serializeV3(
   }
 
   // Related contexts.
-  LE.write<uint64_t>(Record.CallSiteIds.size());
-  for (const auto &CSId : Record.CallSiteIds) {
-    assert(MemProfCallStackIndexes.contains(CSId));
-    LE.write<LinearCallStackId>(MemProfCallStackIndexes[CSId]);
+  LE.write<uint64_t>(Record.CallSites.size());
+  for (const auto &CS : Record.CallSites) {
+    assert(MemProfCallStackIndexes.contains(CS.CSId));
+    LE.write<LinearCallStackId>(MemProfCallStackIndexes[CS.CSId]);
   }
 }
 
@@ -170,11 +170,11 @@ static IndexedMemProfRecord deserializeV2(const MemProfSchema &Schema,
   // Read the callsite information.
   const uint64_t NumCtxs =
       endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-  Record.CallSiteIds.reserve(NumCtxs);
+  Record.CallSites.reserve(NumCtxs);
   for (uint64_t J = 0; J < NumCtxs; J++) {
     CallStackId CSId =
         endian::readNext<CallStackId, llvm::endianness::little>(Ptr);
-    Record.CallSiteIds.push_back(CSId);
+    Record.CallSites.emplace_back(CSId);
   }
 
   return Record;
@@ -202,7 +202,7 @@ static IndexedMemProfRecord deserializeV3(const MemProfSchema &Schema,
   // Read the callsite information.
   const uint64_t NumCtxs =
       endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-  Record.CallSiteIds.reserve(NumCtxs);
+  Record.CallSites.reserve(NumCtxs);
   for (uint64_t J = 0; J < NumCtxs; J++) {
     // We are storing LinearCallStackId in CallSiteIds, which is a vector of
     // CallStackId.  Assert that CallStackId is no smaller than
@@ -210,7 +210,7 @@ static IndexedMemProfRecord deserializeV3(const MemProfSchema &Schema,
     static_assert(sizeof(LinearCallStackId) <= sizeof(CallStackId));
     LinearCallStackId CSId =
         endian::readNext<LinearCallStackId, llvm::endianness::little>(Ptr);
-    Record.CallSiteIds.push_back(CSId);
+    Record.CallSites.emplace_back(CSId);
   }
 
   return Record;
@@ -241,9 +241,11 @@ MemProfRecord IndexedMemProfRecord::toMemProfRecord(
     Record.AllocSites.push_back(std::move(AI));
   }
 
-  Record.CallSites.reserve(CallSiteIds.size());
-  for (CallStackId CSId : CallSiteIds)
-    Record.CallSites.push_back(Callback(CSId));
+  Record.CallSites.reserve(CallSites.size());
+  for (const IndexedCallSiteInfo &CS : CallSites) {
+    std::vector<Frame> Frames = Callback(CS.CSId);
+    Record.CallSites.emplace_back(std::move(Frames), CS.CalleeGuids);
+  }
 
   return Record;
 }

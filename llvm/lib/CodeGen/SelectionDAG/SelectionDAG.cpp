@@ -2635,22 +2635,6 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
     Results.push_back(LoadResult);
   }
 
-  if (CallRetResNo && !Node->hasAnyUseOfValue(*CallRetResNo)) {
-    // FIXME: Find a way to avoid updating the root. This is needed for x86,
-    // which uses a floating-point stack. If (for example) the node to be
-    // expanded has two results one floating-point which is returned by the
-    // call, and one integer result, returned via an output pointer. If only the
-    // integer result is used then the `CopyFromReg` for the FP result may be
-    // optimized out. This prevents an FP stack pop from being emitted for it.
-    // Setting the root like this ensures there will be a use of the
-    // `CopyFromReg` chain, and ensures the FP pop will be emitted.
-    SDValue NewRoot =
-        getNode(ISD::TokenFactor, DL, MVT::Other, getRoot(), CallChain);
-    setRoot(NewRoot);
-    // Ensure the new root is reachable from the results.
-    Results[0] = getMergeValues({Results[0], NewRoot}, DL);
-  }
-
   return true;
 }
 
@@ -5506,6 +5490,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::FREEZE:
   case ISD::CONCAT_VECTORS:
   case ISD::INSERT_SUBVECTOR:
+  case ISD::EXTRACT_SUBVECTOR:
   case ISD::SADDSAT:
   case ISD::UADDSAT:
   case ISD::SSUBSAT:
@@ -5739,7 +5724,8 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
     return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1) &&
            isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1);
   }
-  case ISD::EXTRACT_VECTOR_ELT: {
+  case ISD::EXTRACT_VECTOR_ELT:
+  case ISD::EXTRACT_SUBVECTOR: {
     return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1);
   }
   case ISD::BUILD_VECTOR: {
@@ -7564,7 +7550,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                 N1VT.getVectorMinNumElements()) &&
            "Extract subvector overflow!");
     assert(N2C->getAPIntValue().getBitWidth() ==
-               TLI->getVectorIdxTy(getDataLayout()).getFixedSizeInBits() &&
+               TLI->getVectorIdxWidth(getDataLayout()) &&
            "Constant index for EXTRACT_SUBVECTOR has an invalid size");
 
     // Trivial extraction.
@@ -7798,7 +7784,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                 VT.getVectorMinNumElements()) &&
            "Insert subvector overflow!");
     assert(N3->getAsAPIntVal().getBitWidth() ==
-               TLI->getVectorIdxTy(getDataLayout()).getFixedSizeInBits() &&
+               TLI->getVectorIdxWidth(getDataLayout()) &&
            "Constant index for INSERT_SUBVECTOR has an invalid size");
 
     // Trivial insertion.
@@ -11345,7 +11331,7 @@ SDDbgValue *SelectionDAG::getFrameIndexDbgValue(DIVariable *Var,
 
 /// VReg
 SDDbgValue *SelectionDAG::getVRegDbgValue(DIVariable *Var, DIExpression *Expr,
-                                          unsigned VReg, bool IsIndirect,
+                                          Register VReg, bool IsIndirect,
                                           const DebugLoc &DL, unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");

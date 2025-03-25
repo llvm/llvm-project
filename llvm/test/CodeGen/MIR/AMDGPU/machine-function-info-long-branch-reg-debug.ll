@@ -44,6 +44,7 @@
 ; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT: longBranchReservedReg: '$sgpr2_sgpr3'
 ; CHECK-NEXT: hasInitWholeWave: false
+; CHECK-NEXT: scratchReservedForDynamicVGPRs: 0
 ; CHECK-NEXT: body:
   define amdgpu_kernel void @uniform_long_forward_branch_debug(ptr addrspace(1) %arg, i32 %arg1) #0 !dbg !5 {
   bb0:
@@ -59,7 +60,7 @@
     br i1 %0, label %bb2, label %bb4, !dbg !12, !amdgpu.uniform !7
 
   bb2:                                              ; preds = %Flow
-    store volatile i32 17, ptr addrspace(1) undef, align 4, !dbg !13
+    store volatile i32 17, ptr addrspace(1) poison, align 4, !dbg !13
     br label %bb4, !dbg !14, !amdgpu.uniform !7
 
   bb3:                                              ; preds = %bb0

@@ -44,9 +44,10 @@ void DroppedVariableStats::calculateDroppedStatsAndPrint(
   unsigned DroppedCount = 0;
   DenseSet<VarID> &DebugVariablesBeforeSet = DbgVariables.DebugVariablesBefore;
   DenseSet<VarID> &DebugVariablesAfterSet = DbgVariables.DebugVariablesAfter;
-  if (InlinedAts.back().find(FuncName) == InlinedAts.back().end())
+  auto It = InlinedAts.back().find(FuncName);
+  if (It == InlinedAts.back().end())
     return;
-  DenseMap<VarID, DILocation *> &InlinedAtsMap = InlinedAts.back()[FuncName];
+  DenseMap<VarID, DILocation *> &InlinedAtsMap = It->second;
   // Find an Instruction that shares the same scope as the dropped #dbg_value
   // or has a scope that is the child of the scope of the #dbg_value, and has
   // an inlinedAt equal to the inlinedAt of the #dbg_value or it's inlinedAt

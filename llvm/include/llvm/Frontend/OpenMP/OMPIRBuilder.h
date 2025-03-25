@@ -479,7 +479,7 @@ public:
   /// not have an effect on \p M (see initialize)
   OpenMPIRBuilder(Module &M)
       : M(M), Builder(M.getContext()), OffloadInfoManager(this),
-        T(Triple(M.getTargetTriple())) {}
+        T(M.getTargetTriple()) {}
   ~OpenMPIRBuilder();
 
   class AtomicInfo : public llvm::AtomicInfo {

@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
@@ -185,7 +186,7 @@ public:
 
 TailFoldingOption TailFoldingOptionLoc;
 
-cl::opt<TailFoldingOption, true, cl::parser<std::string>> SVETailFolding(
+static cl::opt<TailFoldingOption, true, cl::parser<std::string>> SVETailFolding(
     "sve-tail-folding",
     cl::desc(
         "Control the use of vectorisation using tail-folding for SVE where the"
@@ -884,12 +885,11 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
     const auto LegalisationCost = getTypeLegalizationCost(RetTy);
     if (OpInfoZ.isUniform()) {
-      // FIXME: The costs could be lower if the codegen is better.
       static const CostTblEntry FshlTbl[] = {
-          {Intrinsic::fshl, MVT::v4i32, 3}, // ushr + shl + orr
-          {Intrinsic::fshl, MVT::v2i64, 3}, {Intrinsic::fshl, MVT::v16i8, 4},
-          {Intrinsic::fshl, MVT::v8i16, 4}, {Intrinsic::fshl, MVT::v2i32, 3},
-          {Intrinsic::fshl, MVT::v8i8, 4},  {Intrinsic::fshl, MVT::v4i16, 4}};
+          {Intrinsic::fshl, MVT::v4i32, 2}, // shl + usra
+          {Intrinsic::fshl, MVT::v2i64, 2}, {Intrinsic::fshl, MVT::v16i8, 2},
+          {Intrinsic::fshl, MVT::v8i16, 2}, {Intrinsic::fshl, MVT::v2i32, 2},
+          {Intrinsic::fshl, MVT::v8i8, 2},  {Intrinsic::fshl, MVT::v4i16, 2}};
       // Costs for both fshl & fshr are the same, so just pass Intrinsic::fshl
       // to avoid having to duplicate the costs.
       const auto *Entry =
@@ -2811,6 +2811,17 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
             BF16Tbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
       return AdjustCost(Entry->Cost);
 
+  // Symbolic constants for the SVE sitofp/uitofp entries in the table below
+  // The cost of unpacking twice is artificially increased for now in order
+  // to avoid regressions against NEON, which will use tbl instructions directly
+  // instead of multiple layers of [s|u]unpk[lo|hi].
+  // We use the unpacks in cases where the destination type is illegal and
+  // requires splitting of the input, even if the input type itself is legal.
+  const unsigned int SVE_EXT_COST = 1;
+  const unsigned int SVE_FCVT_COST = 1;
+  const unsigned int SVE_UNPACK_ONCE = 4;
+  const unsigned int SVE_UNPACK_TWICE = 16;
+
   static const TypeConversionCostTblEntry ConversionTbl[] = {
       {ISD::TRUNCATE, MVT::v2i8, MVT::v2i64, 1},    // xtn
       {ISD::TRUNCATE, MVT::v2i16, MVT::v2i64, 1},   // xtn
@@ -2936,6 +2947,42 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i32, 1},
       {ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i64, 1},
 
+      // SVE: to nxv2f16
+      {ISD::SINT_TO_FP, MVT::nxv2f16, MVT::nxv2i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f16, MVT::nxv2i16, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f16, MVT::nxv2i32, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f16, MVT::nxv2i64, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f16, MVT::nxv2i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f16, MVT::nxv2i16, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f16, MVT::nxv2i32, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f16, MVT::nxv2i64, SVE_FCVT_COST},
+
+      // SVE: to nxv4f16
+      {ISD::SINT_TO_FP, MVT::nxv4f16, MVT::nxv4i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv4f16, MVT::nxv4i16, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv4f16, MVT::nxv4i32, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f16, MVT::nxv4i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f16, MVT::nxv4i16, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f16, MVT::nxv4i32, SVE_FCVT_COST},
+
+      // SVE: to nxv8f16
+      {ISD::SINT_TO_FP, MVT::nxv8f16, MVT::nxv8i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv8f16, MVT::nxv8i16, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv8f16, MVT::nxv8i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv8f16, MVT::nxv8i16, SVE_FCVT_COST},
+
+      // SVE: to nxv16f16
+      {ISD::SINT_TO_FP, MVT::nxv16f16, MVT::nxv16i8,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv16f16, MVT::nxv16i8,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+
       // Complex: to v2f32
       {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i8, 3},
       {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i16, 3},
@@ -2944,17 +2991,55 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i16, 3},
       {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i64, 2},
 
+      // SVE: to nxv2f32
+      {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i16, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i32, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i64, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f32, MVT::nxv2i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f32, MVT::nxv2i16, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f32, MVT::nxv2i32, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f32, MVT::nxv2i64, SVE_FCVT_COST},
+
       // Complex: to v4f32
       {ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i8, 4},
       {ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i16, 2},
       {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i8, 3},
       {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i16, 2},
 
+      // SVE: to nxv4f32
+      {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i16, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i32, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f32, MVT::nxv4i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f32, MVT::nxv4i16, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i32, SVE_FCVT_COST},
+
       // Complex: to v8f32
       {ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
       {ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i16, 4},
       {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
       {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i16, 4},
+
+      // SVE: to nxv8f32
+      {ISD::SINT_TO_FP, MVT::nxv8f32, MVT::nxv8i8,
+       SVE_EXT_COST + SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv8f32, MVT::nxv8i16,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv8f32, MVT::nxv8i8,
+       SVE_EXT_COST + SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv8f32, MVT::nxv8i16,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+
+      // SVE: to nxv16f32
+      {ISD::SINT_TO_FP, MVT::nxv16f32, MVT::nxv16i8,
+       SVE_UNPACK_TWICE + 4 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv16f32, MVT::nxv16i8,
+       SVE_UNPACK_TWICE + 4 * SVE_FCVT_COST},
 
       // Complex: to v16f32
       {ISD::SINT_TO_FP, MVT::v16f32, MVT::v16i8, 21},
@@ -2968,9 +3053,45 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i16, 4},
       {ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i32, 2},
 
+      // SVE: to nxv2f64
+      {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i16, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i32, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i64, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i16, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i32, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i64, SVE_FCVT_COST},
+
       // Complex: to v4f64
       {ISD::SINT_TO_FP, MVT::v4f64, MVT::v4i32, 4},
       {ISD::UINT_TO_FP, MVT::v4f64, MVT::v4i32, 4},
+
+      // SVE: to nxv4f64
+      {ISD::SINT_TO_FP, MVT::nxv4f64, MVT::nxv4i8,
+       SVE_EXT_COST + SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv4f64, MVT::nxv4i16,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv4f64, MVT::nxv4i32,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f64, MVT::nxv4i8,
+       SVE_EXT_COST + SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f64, MVT::nxv4i16,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f64, MVT::nxv4i32,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+
+      // SVE: to nxv8f64
+      {ISD::SINT_TO_FP, MVT::nxv8f64, MVT::nxv8i8,
+       SVE_EXT_COST + SVE_UNPACK_TWICE + 4 * SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv8f64, MVT::nxv8i16,
+       SVE_UNPACK_TWICE + 4 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv8f64, MVT::nxv8i8,
+       SVE_EXT_COST + SVE_UNPACK_TWICE + 4 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv8f64, MVT::nxv8i16,
+       SVE_UNPACK_TWICE + 4 * SVE_FCVT_COST},
 
       // LowerVectorFP_TO_INT
       {ISD::FP_TO_SINT, MVT::v2i32, MVT::v2f32, 1},
@@ -3017,20 +3138,24 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_TO_SINT, MVT::nxv2i32, MVT::nxv2f64, 1},
       {ISD::FP_TO_SINT, MVT::nxv2i16, MVT::nxv2f64, 1},
       {ISD::FP_TO_SINT, MVT::nxv2i8, MVT::nxv2f64, 1},
+      {ISD::FP_TO_SINT, MVT::nxv2i1, MVT::nxv2f64, 1},
       {ISD::FP_TO_UINT, MVT::nxv2i64, MVT::nxv2f64, 1},
       {ISD::FP_TO_UINT, MVT::nxv2i32, MVT::nxv2f64, 1},
       {ISD::FP_TO_UINT, MVT::nxv2i16, MVT::nxv2f64, 1},
       {ISD::FP_TO_UINT, MVT::nxv2i8, MVT::nxv2f64, 1},
+      {ISD::FP_TO_UINT, MVT::nxv2i1, MVT::nxv2f64, 1},
 
       // Complex, from nxv4f32.
       {ISD::FP_TO_SINT, MVT::nxv4i64, MVT::nxv4f32, 4},
       {ISD::FP_TO_SINT, MVT::nxv4i32, MVT::nxv4f32, 1},
       {ISD::FP_TO_SINT, MVT::nxv4i16, MVT::nxv4f32, 1},
       {ISD::FP_TO_SINT, MVT::nxv4i8, MVT::nxv4f32, 1},
+      {ISD::FP_TO_SINT, MVT::nxv4i1, MVT::nxv4f32, 1},
       {ISD::FP_TO_UINT, MVT::nxv4i64, MVT::nxv4f32, 4},
       {ISD::FP_TO_UINT, MVT::nxv4i32, MVT::nxv4f32, 1},
       {ISD::FP_TO_UINT, MVT::nxv4i16, MVT::nxv4f32, 1},
       {ISD::FP_TO_UINT, MVT::nxv4i8, MVT::nxv4f32, 1},
+      {ISD::FP_TO_UINT, MVT::nxv4i1, MVT::nxv4f32, 1},
 
       // Complex, from nxv8f64. Illegal -> illegal conversions not required.
       {ISD::FP_TO_SINT, MVT::nxv8i16, MVT::nxv8f64, 7},
@@ -3057,10 +3182,12 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_TO_SINT, MVT::nxv8i32, MVT::nxv8f16, 4},
       {ISD::FP_TO_SINT, MVT::nxv8i16, MVT::nxv8f16, 1},
       {ISD::FP_TO_SINT, MVT::nxv8i8, MVT::nxv8f16, 1},
+      {ISD::FP_TO_SINT, MVT::nxv8i1, MVT::nxv8f16, 1},
       {ISD::FP_TO_UINT, MVT::nxv8i64, MVT::nxv8f16, 10},
       {ISD::FP_TO_UINT, MVT::nxv8i32, MVT::nxv8f16, 4},
       {ISD::FP_TO_UINT, MVT::nxv8i16, MVT::nxv8f16, 1},
       {ISD::FP_TO_UINT, MVT::nxv8i8, MVT::nxv8f16, 1},
+      {ISD::FP_TO_UINT, MVT::nxv8i1, MVT::nxv8f16, 1},
 
       // Complex, from nxv4f16.
       {ISD::FP_TO_SINT, MVT::nxv4i64, MVT::nxv4f16, 4},
@@ -3526,23 +3653,111 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   default:
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
                                          Op2Info);
+  case ISD::SREM:
   case ISD::SDIV:
-    if (Op2Info.isConstant() && Op2Info.isUniform() && Op2Info.isPowerOf2()) {
-      // On AArch64, scalar signed division by constants power-of-two are
-      // normally expanded to the sequence ADD + CMP + SELECT + SRA.
-      // The OperandValue properties many not be same as that of previous
-      // operation; conservatively assume OP_None.
-      InstructionCost Cost = getArithmeticInstrCost(
-          Instruction::Add, Ty, CostKind,
-          Op1Info.getNoProps(), Op2Info.getNoProps());
-      Cost += getArithmeticInstrCost(Instruction::Sub, Ty, CostKind,
-                                     Op1Info.getNoProps(), Op2Info.getNoProps());
-      Cost += getArithmeticInstrCost(
-          Instruction::Select, Ty, CostKind,
-          Op1Info.getNoProps(), Op2Info.getNoProps());
-      Cost += getArithmeticInstrCost(Instruction::AShr, Ty, CostKind,
-                                     Op1Info.getNoProps(), Op2Info.getNoProps());
-      return Cost;
+    /*
+    Notes for sdiv/srem specific costs:
+    1. This only considers the cases where the divisor is constant, uniform and
+    (pow-of-2/non-pow-of-2). Other cases are not important since they either
+    result in some form of (ldr + adrp), corresponding to constant vectors, or
+    scalarization of the division operation.
+    2. Constant divisors, either negative in whole or partially, don't result in
+    significantly different codegen as compared to positive constant divisors.
+    So, we don't consider negative divisors seperately.
+    3. If the codegen is significantly different with SVE, it has been indicated
+    using comments at appropriate places.
+
+    sdiv specific cases:
+    -----------------------------------------------------------------------
+    codegen                       | pow-of-2               | Type
+    -----------------------------------------------------------------------
+    add + cmp + csel + asr        | Y                      | i64
+    add + cmp + csel + asr        | Y                      | i32
+    -----------------------------------------------------------------------
+
+    srem specific cases:
+    -----------------------------------------------------------------------
+    codegen                       | pow-of-2               | Type
+    -----------------------------------------------------------------------
+    negs + and + and + csneg      | Y                      | i64
+    negs + and + and + csneg      | Y                      | i32
+    -----------------------------------------------------------------------
+
+    other sdiv/srem cases:
+    -------------------------------------------------------------------------
+    commom codegen            | + srem     | + sdiv     | pow-of-2  | Type
+    -------------------------------------------------------------------------
+    smulh + asr + add + add   | -          | -          | N         | i64
+    smull + lsr + add + add   | -          | -          | N         | i32
+    usra                      | and + sub  | sshr       | Y         | <2 x i64>
+    2 * (scalar code)         | -          | -          | N         | <2 x i64>
+    usra                      | bic + sub  | sshr + neg | Y         | <4 x i32>
+    smull2 + smull + uzp2     | mls        | -          | N         | <4 x i32>
+           + sshr  + usra     |            |            |           |
+    -------------------------------------------------------------------------
+    */
+    if (Op2Info.isConstant() && Op2Info.isUniform()) {
+      InstructionCost AddCost =
+          getArithmeticInstrCost(Instruction::Add, Ty, CostKind,
+                                 Op1Info.getNoProps(), Op2Info.getNoProps());
+      InstructionCost AsrCost =
+          getArithmeticInstrCost(Instruction::AShr, Ty, CostKind,
+                                 Op1Info.getNoProps(), Op2Info.getNoProps());
+      InstructionCost MulCost =
+          getArithmeticInstrCost(Instruction::Mul, Ty, CostKind,
+                                 Op1Info.getNoProps(), Op2Info.getNoProps());
+      // add/cmp/csel/csneg should have similar cost while asr/negs/and should
+      // have similar cost.
+      auto VT = TLI->getValueType(DL, Ty);
+      if (LT.second.isScalarInteger() && VT.getSizeInBits() <= 64) {
+        if (Op2Info.isPowerOf2()) {
+          return ISD == ISD::SDIV ? (3 * AddCost + AsrCost)
+                                  : (3 * AsrCost + AddCost);
+        } else {
+          return MulCost + AsrCost + 2 * AddCost;
+        }
+      } else if (VT.isVector()) {
+        InstructionCost UsraCost = 2 * AsrCost;
+        if (Op2Info.isPowerOf2()) {
+          // Division with scalable types corresponds to native 'asrd'
+          // instruction when SVE is available.
+          // e.g. %1 = sdiv <vscale x 4 x i32> %a, splat (i32 8)
+          if (Ty->isScalableTy() && ST->hasSVE())
+            return 2 * AsrCost;
+          return UsraCost +
+                 (ISD == ISD::SDIV
+                      ? (LT.second.getScalarType() == MVT::i64 ? 1 : 2) *
+                            AsrCost
+                      : 2 * AddCost);
+        } else if (LT.second == MVT::v2i64) {
+          return VT.getVectorNumElements() *
+                 getArithmeticInstrCost(Opcode, Ty->getScalarType(), CostKind,
+                                        Op1Info.getNoProps(),
+                                        Op2Info.getNoProps());
+        } else {
+          // When SVE is available, we get:
+          // smulh + lsr + add/sub + asr + add/sub.
+          if (Ty->isScalableTy() && ST->hasSVE())
+            return MulCost /*smulh cost*/ + 2 * AddCost + 2 * AsrCost;
+          return 2 * MulCost + AddCost /*uzp2 cost*/ + AsrCost + UsraCost;
+        }
+      }
+    }
+    if (Op2Info.isConstant() && !Op2Info.isUniform() &&
+        LT.second.isFixedLengthVector()) {
+      // FIXME: When the constant vector is non-uniform, this may result in
+      // loading the vector from constant pool or in some cases, may also result
+      // in scalarization. For now, we are approximating this with the
+      // scalarization cost.
+      auto ExtractCost = 2 * getVectorInstrCost(Instruction::ExtractElement, Ty,
+                                                CostKind, -1, nullptr, nullptr);
+      auto InsertCost = getVectorInstrCost(Instruction::InsertElement, Ty,
+                                           CostKind, -1, nullptr, nullptr);
+      unsigned NElts = cast<FixedVectorType>(Ty)->getNumElements();
+      return ExtractCost + InsertCost +
+             NElts * getArithmeticInstrCost(Opcode, Ty->getScalarType(),
+                                            CostKind, Op1Info.getNoProps(),
+                                            Op2Info.getNoProps());
     }
     [[fallthrough]];
   case ISD::UDIV:
@@ -3581,23 +3796,6 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
                                   (HasMULH ? 0 : ShrCost) +      // UMULL shift
                                   AddCost * 2 + ShrCost;
         return DivCost + (ISD == ISD::UREM ? MulCost + AddCost : 0);
-      }
-
-      // TODO: Fix SDIV and SREM costs, similar to the above.
-      if (TLI->isOperationLegalOrCustom(ISD::MULHU, VT) &&
-          Op2Info.isUniform() && !VT.isScalableVector()) {
-        // Vector signed division by constant are expanded to the
-        // sequence MULHS + ADD/SUB + SRA + SRL + ADD.
-        InstructionCost MulCost =
-            getArithmeticInstrCost(Instruction::Mul, Ty, CostKind,
-                                   Op1Info.getNoProps(), Op2Info.getNoProps());
-        InstructionCost AddCost =
-            getArithmeticInstrCost(Instruction::Add, Ty, CostKind,
-                                   Op1Info.getNoProps(), Op2Info.getNoProps());
-        InstructionCost ShrCost =
-            getArithmeticInstrCost(Instruction::AShr, Ty, CostKind,
-                                   Op1Info.getNoProps(), Op2Info.getNoProps());
-        return MulCost * 2 + AddCost * 2 + ShrCost * 2 + 1;
       }
     }
 
@@ -4167,15 +4365,14 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
                                  TargetTransformInfo::UnrollingPreferences &UP,
                                  AArch64TTIImpl &TTI) {
   // Limit loops with structure that is highly likely to benefit from runtime
-  // unrolling; that is we exclude outer loops, loops with multiple exits and
-  // many blocks (i.e. likely with complex control flow). Note that the
-  // heuristics here may be overly conservative and we err on the side of
-  // avoiding runtime unrolling rather than unroll excessively. They are all
-  // subject to further refinement.
-  if (!L->isInnermost() || !L->getExitBlock() || L->getNumBlocks() > 8)
+  // unrolling; that is we exclude outer loops and loops with many blocks (i.e.
+  // likely with complex control flow). Note that the heuristics here may be
+  // overly conservative and we err on the side of avoiding runtime unrolling
+  // rather than unroll excessively. They are all subject to further refinement.
+  if (!L->isInnermost() || L->getNumBlocks() > 8)
     return;
 
-  const SCEV *BTC = SE.getBackedgeTakenCount(L);
+  const SCEV *BTC = SE.getSymbolicMaxBackedgeTakenCount(L);
   if (isa<SCEVConstant>(BTC) || isa<SCEVCouldNotCompute>(BTC) ||
       (SE.getSmallConstantMaxTripCount(L) > 0 &&
        SE.getSmallConstantMaxTripCount(L) <= 32))
@@ -4193,6 +4390,28 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
           *TTI.getInstructionCost(&I, Operands, TTI::TCK_CodeSize).getValue();
     }
   }
+
+  // Small search loops with multiple exits can be highly beneficial to unroll.
+  if (!L->getExitBlock()) {
+    if (L->getNumBlocks() == 2 && Size < 6 &&
+        all_of(
+            L->getBlocks(),
+            [](BasicBlock *BB) {
+              return isa<BranchInst>(BB->getTerminator());
+            })) {
+      UP.RuntimeUnrollMultiExit = true;
+      UP.Runtime = true;
+      // Limit unroll count.
+      UP.DefaultUnrollRuntimeCount = 4;
+      // Allow slightly more costly trip-count expansion to catch search loops
+      // with pointer inductions.
+      UP.SCEVExpansionBudget = 5;
+    }
+    return;
+  }
+
+  if (SE.getSymbolicMaxBackedgeTakenCount(L) != SE.getBackedgeTakenCount(L))
+    return;
 
   // Limit to loops with trip counts that are cheap to expand.
   UP.SCEVExpansionBudget = 1;
@@ -4676,7 +4895,7 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
 InstructionCost AArch64TTIImpl::getExtendedReductionCost(
     unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *VecTy,
-    FastMathFlags FMF, TTI::TargetCostKind CostKind) {
+    std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) {
   EVT VecVT = TLI->getValueType(DL, VecTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
@@ -5244,7 +5463,7 @@ AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
     // Scale represents reg2 * scale, thus account for 1 if
     // it is not equal to 0 or 1.
     return AM.Scale != 0 && AM.Scale != 1;
-  return -1;
+  return InstructionCost::getInvalid();
 }
 
 bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(const Instruction *I) {

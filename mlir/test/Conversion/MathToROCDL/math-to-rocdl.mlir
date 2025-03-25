@@ -463,6 +463,24 @@ module @test_module {
 // -----
 
 module @test_module {
+  // CHECK: llvm.func @__ocml_erfc_f16(f16) -> f16
+  // CHECK: llvm.func @__ocml_erfc_f32(f32) -> f32
+  // CHECK: llvm.func @__ocml_erfc_f64(f64) -> f64
+  // CHECK-LABEL: func @math_erfc
+  func.func @math_erfc(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64) -> (f16, f32, f64) {
+    %result16 = math.erfc %arg_f16 : f16
+    // CHECK: llvm.call @__ocml_erfc_f16(%{{.*}}) : (f16) -> f16
+    %result32 = math.erfc %arg_f32 : f32
+    // CHECK: llvm.call @__ocml_erfc_f32(%{{.*}}) : (f32) -> f32
+    %result64 = math.erfc %arg_f64 : f64
+    // CHECK: llvm.call @__ocml_erfc_f64(%{{.*}}) : (f64) -> f64
+    func.return %result16, %result32, %result64 : f16, f32, f64
+  }
+}
+
+// -----
+
+module @test_module {
   // CHECK: llvm.func @__ocml_sin_f16(f16) -> f16
   // CHECK: llvm.func @__ocml_sin_f32(f32) -> f32
   // CHECK: llvm.func @__ocml_sin_f64(f64) -> f64

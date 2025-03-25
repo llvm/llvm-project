@@ -15,6 +15,7 @@
 #include "flang/Frontend/FrontendActions.h"
 #include "flang/Frontend/FrontendOptions.h"
 #include "flang/Frontend/FrontendPluginRegistry.h"
+#include "flang/Parser/parsing.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/VirtualFileSystem.h"

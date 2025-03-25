@@ -652,21 +652,18 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
   if (name == "all") {
     return FoldAllAnyParity(
         context, std::move(funcRef), &Scalar<T>::AND, Scalar<T>{true});
+  } else if (name == "allocated") {
+    if (IsNullAllocatable(args[0]->UnwrapExpr())) {
+      return Expr<T>{false};
+    }
   } else if (name == "any") {
     return FoldAllAnyParity(
         context, std::move(funcRef), &Scalar<T>::OR, Scalar<T>{false});
   } else if (name == "associated") {
-    bool gotConstant{true};
-    const Expr<SomeType> *firstArgExpr{args[0]->UnwrapExpr()};
-    if (!firstArgExpr || !IsNullPointer(*firstArgExpr)) {
-      gotConstant = false;
-    } else if (args[1]) { // There's a second argument
-      const Expr<SomeType> *secondArgExpr{args[1]->UnwrapExpr()};
-      if (!secondArgExpr || !IsNullPointer(*secondArgExpr)) {
-        gotConstant = false;
-      }
+    if (IsNullPointer(args[0]->UnwrapExpr()) ||
+        (args[1] && IsNullPointer(args[1]->UnwrapExpr()))) {
+      return Expr<T>{false};
     }
-    return gotConstant ? Expr<T>{false} : Expr<T>{std::move(funcRef)};
   } else if (name == "bge" || name == "bgt" || name == "ble" || name == "blt") {
     static_assert(std::is_same_v<Scalar<LargestInt>, BOZLiteralConstant>);
 
@@ -882,7 +879,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
         IeeeFeature::Flags)};
   } else if (name == "__builtin_ieee_support_halting") {
     if (!context.targetCharacteristics()
-             .haltingSupportIsUnknownAtCompileTime()) {
+            .haltingSupportIsUnknownAtCompileTime()) {
       return Expr<T>{context.targetCharacteristics().ieeeFeatures().test(
           IeeeFeature::Halting)};
     }
@@ -906,8 +903,12 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     return Expr<T>{
         context.targetCharacteristics().ieeeFeatures().test(IeeeFeature::Sqrt)};
   } else if (name == "__builtin_ieee_support_standard") {
-    return Expr<T>{context.targetCharacteristics().ieeeFeatures().test(
-        IeeeFeature::Standard)};
+    // ieee_support_standard depends in part on ieee_support_halting.
+    if (!context.targetCharacteristics()
+            .haltingSupportIsUnknownAtCompileTime()) {
+      return Expr<T>{context.targetCharacteristics().ieeeFeatures().test(
+          IeeeFeature::Standard)};
+    }
   } else if (name == "__builtin_ieee_support_subnormal") {
     return Expr<T>{context.targetCharacteristics().ieeeFeatures().test(
         IeeeFeature::Subnormal)};

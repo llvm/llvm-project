@@ -57,12 +57,6 @@ public:
     addDirectiveHandler<&ELFAsmParser::parseSectionDirectiveRoData>(".rodata");
     addDirectiveHandler<&ELFAsmParser::parseSectionDirectiveTData>(".tdata");
     addDirectiveHandler<&ELFAsmParser::parseSectionDirectiveTBSS>(".tbss");
-    addDirectiveHandler<
-      &ELFAsmParser::parseSectionDirectiveDataRel>(".data.rel");
-    addDirectiveHandler<
-      &ELFAsmParser::parseSectionDirectiveDataRelRo>(".data.rel.ro");
-    addDirectiveHandler<
-      &ELFAsmParser::parseSectionDirectiveEhFrame>(".eh_frame");
     addDirectiveHandler<&ELFAsmParser::parseDirectiveSection>(".section");
     addDirectiveHandler<
       &ELFAsmParser::parseDirectivePushSection>(".pushsection");
@@ -119,22 +113,6 @@ public:
                               ELF::SHF_ALLOC |
                               ELF::SHF_TLS | ELF::SHF_WRITE,
                               SectionKind::getThreadBSS());
-  }
-  bool parseSectionDirectiveDataRel(StringRef, SMLoc) {
-    return parseSectionSwitch(".data.rel", ELF::SHT_PROGBITS,
-                              ELF::SHF_ALLOC | ELF::SHF_WRITE,
-                              SectionKind::getData());
-  }
-  bool parseSectionDirectiveDataRelRo(StringRef, SMLoc) {
-    return parseSectionSwitch(".data.rel.ro", ELF::SHT_PROGBITS,
-                              ELF::SHF_ALLOC |
-                              ELF::SHF_WRITE,
-                              SectionKind::getReadOnlyWithRel());
-  }
-  bool parseSectionDirectiveEhFrame(StringRef, SMLoc) {
-    return parseSectionSwitch(".eh_frame", ELF::SHT_PROGBITS,
-                              ELF::SHF_ALLOC | ELF::SHF_WRITE,
-                              SectionKind::getData());
   }
   bool parseDirectivePushSection(StringRef, SMLoc);
   bool parseDirectivePopSection(StringRef, SMLoc);

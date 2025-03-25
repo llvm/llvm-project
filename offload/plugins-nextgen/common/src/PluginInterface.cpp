@@ -1711,7 +1711,7 @@ Expected<bool> GenericPluginTy::checkBitcodeImage(StringRef Image) const {
     return ModuleOrErr.takeError();
   Module &M = **ModuleOrErr;
 
-  return Triple(M.getTargetTriple()).getArch() == getTripleArch();
+  return M.getTargetTriple().getArch() == getTripleArch();
 }
 
 int32_t GenericPluginTy::is_initialized() const { return Initialized; }

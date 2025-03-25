@@ -132,6 +132,7 @@ template <size_t N> struct hash<std::bitset<N>>;
 #  include <__algorithm/copy.h>
 #  include <__algorithm/copy_backward.h>
 #  include <__algorithm/count.h>
+#  include <__algorithm/equal.h>
 #  include <__algorithm/fill.h>
 #  include <__algorithm/fill_n.h>
 #  include <__algorithm/find.h>
@@ -732,7 +733,6 @@ private:
       _CharT __c   = __str[__mp - 1 - __i];
       (*this)[__i] = _Traits::eq(__c, __one);
     }
-    std::fill(__base::__make_iter(__i), __base::__make_iter(_Size), false);
   }
 
   _LIBCPP_HIDE_FROM_ABI size_t __hash_code() const _NOEXCEPT { return __base::__hash_code(); }

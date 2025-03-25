@@ -25,19 +25,15 @@ if (FLANG_RUNTIME_F128_MATH_LIB)
 endif()
 
 # Check if 128-bit float computations can be done via long double
-check_cxx_source_compiles(
-  "#include <cfloat>
+# Note that '-nostdinc++' might be implied when this code kicks in
+# (see 'runtimes/CMakeLists.txt'), so we cannot use 'cfloat' C++ header
+# file in the test below.
+# Compile it as C.
+check_c_source_compiles(
+  "#include <float.h>
    #if LDBL_MANT_DIG != 113
    #error LDBL_MANT_DIG != 113
    #endif
    int main() { return 0; }
   "
   HAVE_LDBL_MANT_DIG_113)
-
-include(TestBigEndian)
-test_big_endian(IS_BIGENDIAN)
-if (IS_BIGENDIAN)
-  add_compile_definitions(FLANG_BIG_ENDIAN=1)
-else ()
-  add_compile_definitions(FLANG_LITTLE_ENDIAN=1)
-endif ()

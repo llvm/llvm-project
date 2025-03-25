@@ -35,7 +35,7 @@ define void @test1_2(ptr %x1_2, ptr %y1_2, ptr %z1_2) {
 define ptr @test2(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none)
 ; FNATTRS-LABEL: define {{[^@]+}}@test2
-; FNATTRS-SAME: (ptr readnone returned [[P:%.*]]) #[[ATTR0:[0-9]+]] {
+; FNATTRS-SAME: (ptr readnone returned captures(ret: address, provenance) [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FNATTRS-NEXT:    store i32 0, ptr @x, align 4
 ; FNATTRS-NEXT:    ret ptr [[P]]
 ;
@@ -58,7 +58,7 @@ define ptr @test2(ptr %p) {
 define i1 @test3(ptr %p, ptr %q) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; FNATTRS-LABEL: define {{[^@]+}}@test3
-; FNATTRS-SAME: (ptr readnone [[P:%.*]], ptr readnone [[Q:%.*]]) #[[ATTR1:[0-9]+]] {
+; FNATTRS-SAME: (ptr readnone captures(address) [[P:%.*]], ptr readnone captures(address) [[Q:%.*]]) #[[ATTR1:[0-9]+]] {
 ; FNATTRS-NEXT:    [[A:%.*]] = icmp ult ptr [[P]], [[Q]]
 ; FNATTRS-NEXT:    ret i1 [[A]]
 ;
@@ -197,7 +197,7 @@ define void @test7_2(ptr preallocated(i32) %a) {
 define ptr @test8_1(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; FNATTRS-LABEL: define {{[^@]+}}@test8_1
-; FNATTRS-SAME: (ptr readnone returned [[P:%.*]]) #[[ATTR1]] {
+; FNATTRS-SAME: (ptr readnone returned captures(ret: address, provenance) [[P:%.*]]) #[[ATTR1]] {
 ; FNATTRS-NEXT:  entry:
 ; FNATTRS-NEXT:    ret ptr [[P]]
 ;
@@ -220,7 +220,7 @@ entry:
 define void @test8_2(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; FNATTRS-LABEL: define {{[^@]+}}@test8_2
-; FNATTRS-SAME: (ptr writeonly [[P:%.*]]) #[[ATTR4]] {
+; FNATTRS-SAME: (ptr writeonly captures(none) [[P:%.*]]) #[[ATTR4]] {
 ; FNATTRS-NEXT:  entry:
 ; FNATTRS-NEXT:    [[CALL:%.*]] = call ptr @test8_1(ptr [[P]])
 ; FNATTRS-NEXT:    store i32 10, ptr [[CALL]], align 4
