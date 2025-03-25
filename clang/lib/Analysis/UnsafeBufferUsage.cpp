@@ -34,8 +34,9 @@
 #include <algorithm>
 #include <cstddef>
 #include <optional>
-#include <sstream>
+#include <queue>
 #include <set>
+#include <sstream>
 
 using namespace llvm;
 using namespace clang;
