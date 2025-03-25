@@ -23,6 +23,6 @@ LLVM_LIBC_FUNCTION(float128, copysignf128, (float128 x, float128 y)) {
     defined(LIBC_ALIAS_LONG_DOUBLE)
 #include "src/math/copysignl.h"
 
-LLVM_LIBC_ALIASING_FUNCTION(copysignl, copysignf128);
+LLVM_LIBC_ALIAS(copysignl, copysignf128);
 
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128
