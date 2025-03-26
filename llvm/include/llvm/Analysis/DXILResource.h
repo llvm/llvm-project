@@ -595,8 +595,6 @@ public:
 
   ResourceCounterDirection
   operator[](const dxil::ResourceBindingInfo &Info) const;
-
-  void print(raw_ostream &OS) const;
 };
 
 class DXILResourceCounterDirectionAnalysis
@@ -635,9 +633,6 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnModule(Module &M) override;
   void releaseMemory() override;
-
-  void print(raw_ostream &OS, const Module *M) const override;
-  void dump() const;
 };
 
 ModulePass *createDXILResourceCounterDirectionWrapperPassPass();
