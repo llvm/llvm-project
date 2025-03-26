@@ -25,42 +25,52 @@ target triple = "x86_64-grtev4-linux-gnu"
 ; RUN:     -unique-section-names=false \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --dump-input=always
 
-; CHECK:     .section	.rodata.cst8.hot,"aM",@progbits,8
-; CHECK: .LCPI0_0:
-; CHECK:	   .quad	0x3fe5c28f5c28f5c3              # double 0.68000000000000005
-; CHECK: 	   .section	.rodata.cst8.unlikely,"aM",@progbits,8
-; CHECK: .LCPI0_1:
-; CHECK:	   .quad	0x3eb0000000000000              # double 9.5367431640625E-7
+;; For function @cold_func
+; CHECK:       .section	.rodata.cst8.hot,"aM",@progbits,8
+; CHECK-NEXT:      .p2align 
+; CHECK-NEXT:    .LCPI0_0:
+; CHECK-NEXT:	     .quad	0x3fe5c28f5c28f5c3              # double 0.68000000000000005
+; CHECK-NEXT:  .section	.rodata.cst8.unlikely,"aM",@progbits,8
+; CHECK-NEXT:      .p2align
+; CHECK-NEXT:    .LCPI0_1:
+; CHECK-NEXT:	     .quad	0x3eb0000000000000              # double 9.5367431640625E-7
+; CHECK-NEXT:  .section        .rodata.cst8,"aM",@progbits,8
+; CHECK-NEXT:      .p2align
+; CHECK-NEXT:    .LCPI0_2:
+; CHECK-NEXT:      .quad  0x3fc0000000000000              # double 0.125
 
-; CHECK:     .section        .rodata.cst8,"aM",@progbits,8
-; CHECK: .LCPI0_2:
-; CHECK:     .quad  0x3fc0000000000000              # double 0.125
+;; For function @unprofiled_func_double
+; CHECK:       .section        .rodata.cst8,"aM",@progbits,8
+; CHECK-NEXT:      .p2align       
+; CHECK-NEXT:    .LCPI1_0:
+; CHECK-NEXT:     .quad   0x3fc0000000000000              # double 0.125
 
-; CHECK:     .section        .rodata.cst8,"aM",@progbits,8
-; CHECK: .LCPI1_0:
-; CHECK:     .quad   0x3fc0000000000000              # double 0.125
+;; For function @unprofiled_func_float
+; CHECK:       .section        .rodata.cst4,"aM",@progbits,4
+; CHECK-NEXT:      .p2align
+; CHECK-NEXT:    .LCPI2_0:
+; CHECK-NEXT:     .long   0x3e000000              # float 0.125
 
-; CHECK:     .section        .rodata.cst4,"aM",@progbits,4
-; CHECK: .LCPI2_0:
-; CHECK:     .long   0x3e000000              # float 0.125
+;; For function @hot_func
+; CHECK:	     .section	.rodata.cst8.hot,"aM",@progbits,8
+; CHECK-NEXT:      .p2align
+; CHECK-NEXT:    .LCPI3_0:
+; CHECK-NEXT:     .quad	0x3fe5c28f5c28f5c3              # double 0.68000000000000005
+; CHECK-NEXT:  .section        .rodata.cst16.hot,"aM",@progbits,16
+; CHECK-NEXT:      .p2align
+; CHECK-NEXT:    .LCPI3_1:
+; CHECK-NEXT:      .long   2147483648                      # 0x80000000
+; CHECK-NEXT:      .long   2147483648                      # 0x80000000
+; CHECK-NEXT:      .long   2147483648                      # 0x80000000
+; CHECK-NEXT:      .long   2147483648                      # 0x80000000
+; CHECK-NEXT:    .LCPI3_2:
+; CHECK-NEXT:      .long   2147484090                      # 0x800001ba
+; CHECK-NEXT:      .long   2147483748                      # 0x80000064
+; CHECK-NEXT:      .long   2147483648                      # 0x80000000
+; CHECK-NEXT:      .long   2147483648                      # 0x80000000
 
-; CHECK:	   .section	.rodata.cst8.hot,"aM",@progbits,8
-; CHECK: .LCPI3_0:
-; CHECK:     .quad	0x3fe5c28f5c28f5c3              # double 0.68000000000000005
-; CHECK:     .section        .rodata.cst16.hot,"aM",@progbits,16
-; CHECK: .LCPI3_1:
-; CHECK:     .long   2147483648                      # 0x80000000
-; CHECK:     .long   2147483648                      # 0x80000000
-; CHECK:     .long   2147483648                      # 0x80000000
-; CHECK:     .long   2147483648                      # 0x80000000
-; CHECK: .LCPI3_2:
-; CHECK:     .long   2147484090                      # 0x800001ba
-; CHECK:     .long   2147483748                      # 0x80000064
-; CHECK:     .long   2147483648                      # 0x80000000
-; CHECK:     .long   2147483648                      # 0x80000000
-
-; CHECK:    .section	.rodata.cst32,"aM",@progbits,32
-; CHECK:    .globl	val
+; CHECK:       .section	.rodata.cst32,"aM",@progbits,32
+; CHECK-NEXT:  .globl	val
 
 define double @cold_func(double %x) !prof !16 {
   %2 = tail call i32 (...) @func_taking_arbitrary_param(double 6.800000e-01)
@@ -78,7 +88,6 @@ define float @unprofiled_func_float(float %x) {
   %z = fmul float %x, 0x3fc0000000000000
   ret float %z
 }
-
 
 define <4 x i1> @hot_func(i32 %0, <4 x i32> %a) !prof !17 {
   %2 = tail call i32 (...) @func_taking_arbitrary_param(double 6.800000e-01)
@@ -98,14 +107,15 @@ define i32 @main(i32 %0, ptr %1) !prof !16 {
 
 7:                                                ; preds = %7, %2
   %8 = phi i32 [ 0, %2 ], [ %10, %7 ]
-  %9 = call i32 @rand()
+  %seed_val = load i256, ptr @val
+  %9 = call i32 @seed(i256 %seed_val)
   call void @hot_func(i32 %9)
   %10 = add i32 %8, 1
   %11 = icmp eq i32 %10, 100000
   br i1 %11, label %5, label %7, !prof !18
 }
 
-declare i32 @rand()
+declare i32 @seed(i256)
 declare double @double_func()
 declare i32 @func_taking_arbitrary_param(...)
 
