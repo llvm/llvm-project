@@ -1650,10 +1650,8 @@ public:
            "getPartialReduceMLAAction types aren't valid");
     auto AccI = AccSVT.SimpleTy;
     auto InputI = InputSVT.SimpleTy;
-    PartialReduceActionTypes TypeHash = std::make_pair(AccI, InputI);
-    if (PartialReduceMLAActions.contains(TypeHash))
-      return PartialReduceMLAActions.at(TypeHash);
-    return Expand;
+    PartialReduceActionTypes TypePair = std::make_pair(AccI, InputI);
+    return PartialReduceMLAActions.lookup(TypePair);
   }
 
   /// Return true if a PARTIAL_REDUCE_U/SMLA node with the specified types is
@@ -2746,8 +2744,8 @@ protected:
            "setPartialReduceMLAAction types aren't valid");
     auto AccI = AccVT.SimpleTy;
     auto InputI = InputVT.SimpleTy;
-    PartialReduceActionTypes TypeHash = std::make_pair(AccI, InputI);
-    PartialReduceMLAActions[TypeHash] = Action;
+    PartialReduceActionTypes TypePair = std::make_pair(AccI, InputI);
+    PartialReduceMLAActions[TypePair] = Action;
   }
 
   /// If Opc/OrigVT is specified as being promoted, the promotion code defaults
@@ -3701,8 +3699,6 @@ private:
   /// For each result type and input type for the ISD::PARTIAL_REDUCE_U/SMLA
   /// nodes, keep a LegalizeAction which indicates how instruction selection
   /// should deal with this operation.
-  /// If no entry exists for a given key, Expand is assumed as this
-  /// is the most common action.
   DenseMap<PartialReduceActionTypes, LegalizeAction> PartialReduceMLAActions;
 
   ValueTypeActionImpl ValueTypeActions;
