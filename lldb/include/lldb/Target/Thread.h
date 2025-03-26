@@ -433,6 +433,10 @@ public:
     return GetStackFrameList()->GetFrameAtIndex(idx);
   }
 
+  virtual void ResetSuggestedStackFrameIndex() {
+    return GetStackFrameList()->ResetSuggestedStackFrameIndex();
+  }
+
   virtual lldb::StackFrameSP
   GetFrameWithConcreteFrameIndex(uint32_t unwind_idx);
 
