@@ -153,7 +153,7 @@ test_local:
 
 ## Globs match multiple cases. Multiple --why-live flags union.
 
-# RUN: ld.lld a.o a.so --gc-sections --why-live=test_se* --why-live=test_se* | FileCheck %s --check-prefix=MULTIPLE
+# RUN: ld.lld a.o a.so --gc-sections --why-live="test_se*" --why-live="test_se*" | FileCheck %s --check-prefix=MULTIPLE
 # RUN: ld.lld a.o a.so --gc-sections --why-live=test_section_offset --why-live=test_section_offset_within_symbol | FileCheck %s --check-prefix=MULTIPLE
 
 # MULTIPLE-DAG: live symbol: a.o:(test_section_offset)
