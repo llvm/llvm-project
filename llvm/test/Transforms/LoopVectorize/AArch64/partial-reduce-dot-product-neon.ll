@@ -798,9 +798,9 @@ define i32 @dotp_unrolled(i32 %num_out, i64 %num_in, ptr %a, ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP9]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP9]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 0
-; CHECK-INTERLEAVED-NEXT:    [[TMP54:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 16
+; CHECK-INTERLEAVED-NEXT:    [[TMP56:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 16
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP12]], align 1
-; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD8:%.*]] = load <16 x i8>, ptr [[TMP54]], align 1
+; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD8:%.*]] = load <16 x i8>, ptr [[TMP56]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP13:%.*]] = sext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP14:%.*]] = sext <16 x i8> [[WIDE_LOAD8]] to <16 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 0
@@ -869,10 +869,10 @@ define i32 @dotp_unrolled(i32 %num_out, i64 %num_in, ptr %a, ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP52:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
 ; CHECK-INTERLEAVED-NEXT:    [[BIN_RDX30:%.*]] = add <4 x i32> [[PARTIAL_REDUCE]], [[PARTIAL_REDUCE7]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP53:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX30]])
-; CHECK-INTERLEAVED-NEXT:    [[BIN_RDX32:%.*]] = add <4 x i32> [[PARTIAL_REDUCE17]], [[PARTIAL_REDUCE16]]
+; CHECK-INTERLEAVED-NEXT:    [[BIN_RDX31:%.*]] = add <4 x i32> [[PARTIAL_REDUCE17]], [[PARTIAL_REDUCE16]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP54:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX31]])
+; CHECK-INTERLEAVED-NEXT:    [[BIN_RDX32:%.*]] = add <4 x i32> [[PARTIAL_REDUCE11]], [[PARTIAL_REDUCE1]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP55:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX32]])
-; CHECK-INTERLEAVED-NEXT:    [[BIN_RDX33:%.*]] = add <4 x i32> [[PARTIAL_REDUCE11]], [[PARTIAL_REDUCE1]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP56:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX33]])
 ; CHECK-INTERLEAVED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[NUM_IN]], [[N_VEC]]
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-INTERLEAVED:       scalar.ph:
