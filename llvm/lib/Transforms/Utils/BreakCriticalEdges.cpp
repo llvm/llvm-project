@@ -345,8 +345,7 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
   SmallSetVector<BasicBlock *, 16> Targets;
   for (auto &BB : F) {
     if (isa<IndirectBrInst>(BB.getTerminator()))
-      for (BasicBlock *Succ : successors(&BB))
-        Targets.insert(Succ);
+      Targets.insert_range(successors(&BB));
   }
 
   if (Targets.empty())

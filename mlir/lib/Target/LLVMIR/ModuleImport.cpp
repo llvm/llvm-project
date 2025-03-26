@@ -1248,6 +1248,18 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     return builder.create<UndefOp>(loc, type).getResult();
   }
 
+  // Convert dso_local_equivalent.
+  if (auto *dsoLocalEquivalent = dyn_cast<llvm::DSOLocalEquivalent>(constant)) {
+    Type type = convertType(dsoLocalEquivalent->getType());
+    return builder
+        .create<DSOLocalEquivalentOp>(
+            loc, type,
+            FlatSymbolRefAttr::get(
+                builder.getContext(),
+                dsoLocalEquivalent->getGlobalValue()->getName()))
+        .getResult();
+  }
+
   // Convert global variable accesses.
   if (auto *globalObj = dyn_cast<llvm::GlobalObject>(constant)) {
     Type type = convertType(globalObj->getType());
@@ -1346,6 +1358,15 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
   StringRef error = "";
   if (isa<llvm::BlockAddress>(constant))
     error = " since blockaddress(...) is unsupported";
+
+  if (isa<llvm::ConstantPtrAuth>(constant))
+    error = " since ptrauth(...) is unsupported";
+
+  if (isa<llvm::NoCFIValue>(constant))
+    error = " since no_cfi is unsupported";
+
+  if (isa<llvm::GlobalValue>(constant))
+    error = " since global value is unsupported";
 
   return emitError(loc) << "unhandled constant: " << diag(*constant) << error;
 }

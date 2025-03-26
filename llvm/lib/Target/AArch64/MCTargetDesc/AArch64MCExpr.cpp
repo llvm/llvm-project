@@ -112,10 +112,7 @@ bool AArch64MCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                               const MCAssembler *Asm) const {
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
-
-  Res = MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(),
-                     getSpecifier());
-
+  Res.setSpecifier(getSpecifier());
   return true;
 }
 
@@ -154,10 +151,6 @@ bool AArch64AuthMCExpr::evaluateAsRelocatableImpl(
     MCValue &Res, const MCAssembler *Asm) const {
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
-
-  if (Res.getSymB())
-    report_fatal_error("Auth relocation can't reference two symbols");
-
-  Res = MCValue::get(Res.getSymA(), nullptr, Res.getConstant(), getSpecifier());
+  Res.setSpecifier(getSpecifier());
   return true;
 }
