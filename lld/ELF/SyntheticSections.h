@@ -138,7 +138,11 @@ protected:
   };
   SmallVector<AuthEntryInfo, 0> authEntries;
 
-  // To track GOT entries for symbols that may have been ICFed
+  // Map of GOT entries keyed by section, offset, and type. The purpose is to
+  // reuse GOT entries when multiple same-type, foldable symbols refer to the
+  // image location. In general, this is a GOT-size optimization, but it is
+  // also required for some cases involving multi-instruction GOT access
+  // patterns and ICF.
   llvm::DenseMap<std::tuple<SectionBase *, uint64_t, unsigned char>, uint32_t>
       gotEntries;
 };
