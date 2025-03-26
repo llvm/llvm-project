@@ -1595,15 +1595,8 @@ foreach Index = 0-31 in {
 foreach vt = Reg16Types.types in {
   foreach st = Reg16Types.types in {
     if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, VGPR_32>;
-    }
-  }
-}
-
-foreach vt = Reg16Types.types in {
-  foreach st = Reg16Types.types in {
-    if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, SReg_32>;
+      def : BitConvert <vt, st, VGPR_32>;
+      def : BitConvert <vt, st, SReg_32>;
     }
   }
 }
@@ -1612,15 +1605,8 @@ foreach vt = Reg16Types.types in {
 foreach vt = Reg32DataTypes.types in {
   foreach st = Reg32DataTypes.types in {
     if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, VGPR_32>;
-    }
-  }
-}
-
-foreach vt = Reg32DataTypes.types in {
-  foreach st = Reg32DataTypes.types in {
-    if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, SReg_32>;
+      def : BitConvert <vt, st, VGPR_32>;
+      def : BitConvert <vt, st, SReg_32>;
     }
   }
 }
@@ -1630,7 +1616,7 @@ foreach vt = Reg32DataTypes.types in {
 foreach vt = Reg64DataTypes.types in {
   foreach st = Reg64DataTypes.types in {
     if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, VReg_64>;
+      def : BitConvert <vt, st, VReg_64>;
     }
   }
 }
@@ -1640,7 +1626,7 @@ foreach vt = Reg64DataTypes.types in {
 foreach vt = SGPR_96.RegTypes in {
   foreach st = SGPR_96.RegTypes in {
     if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, SGPR_96>;
+      def : BitConvert <vt, st, SGPR_96>;
     }
   }
 }
@@ -1650,15 +1636,8 @@ foreach vt = SGPR_96.RegTypes in {
 foreach vt = VReg_128.RegTypes in {
   foreach st = VReg_128.RegTypes in {
     if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, VReg_128>;
-    }
-  }
-}
-
-foreach vt = SReg_128.RegTypes in {
-  foreach st = SReg_128.RegTypes in {
-    if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, SReg_128>;
+      def : BitConvert <vt, st, VReg_128>;
+      def : BitConvert <vt, st, SReg_128>;
     }
   }
 }
@@ -1668,15 +1647,8 @@ foreach vt = SReg_128.RegTypes in {
 foreach vt = VReg_160.RegTypes in {
   foreach st = VReg_160.RegTypes in {
     if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, VReg_160>;
-    }
-  }
-}
-
-foreach vt = SReg_160.RegTypes in {
-  foreach st = SReg_160.RegTypes in {
-    if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, SReg_160>;
+      def : BitConvert <vt, st, VReg_160>;
+      def : BitConvert <vt, st, SReg_160>;
     }
   }
 }
@@ -1685,15 +1657,8 @@ foreach vt = SReg_160.RegTypes in {
 foreach vt = VReg_192.RegTypes in {
   foreach st = VReg_192.RegTypes in {
     if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, VReg_192>;
-    }
-  }
-}
-
-foreach vt = SReg_192.RegTypes in {
-  foreach st = SReg_192.RegTypes in {
-    if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, SReg_192>;
+      def : BitConvert <vt, st, VReg_192>;
+      def : BitConvert <vt, st, SReg_192>;
     }
   }
 }
@@ -1702,15 +1667,8 @@ foreach vt = SReg_192.RegTypes in {
 foreach vt = VReg_224.RegTypes in {
   foreach st = VReg_224.RegTypes in {
     if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, VReg_224>;
-    }
-  }
-}
-
-foreach vt = SReg_224.RegTypes in {
-  foreach st = SReg_224.RegTypes in {
-    if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, SReg_224>;
+      def : BitConvert <vt, st, VReg_224>;
+      def : BitConvert <vt, st, SReg_224>;
     }
   }
 }
@@ -1720,15 +1678,8 @@ foreach vt = SReg_224.RegTypes in {
 foreach vt = VReg_256.RegTypes in {
   foreach st = VReg_256.RegTypes in {
     if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, VReg_256>;
-    }
-  }
-}
-
-foreach vt = SReg_256.RegTypes in {
-  foreach st = SReg_256.RegTypes in {
-    if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, SReg_256>;
+      def : BitConvert <vt, st, VReg_256>;
+      def : BitConvert <vt, st, SReg_256>;
     }
   }
 }
@@ -1738,15 +1689,8 @@ foreach vt = SReg_256.RegTypes in {
 foreach vt = VReg_288.RegTypes in {
   foreach st = VReg_288.RegTypes in {
     if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, VReg_288>;
-    }
-  }
-}
-
-foreach vt = SReg_288.RegTypes in {
-  foreach st = SReg_288.RegTypes in {
-    if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, SReg_288>;
+      def : BitConvert <vt, st, VReg_288>;
+      def : BitConvert <vt, st, SReg_288>;
     }
   }
 }
@@ -1755,15 +1699,8 @@ foreach vt = SReg_288.RegTypes in {
 foreach vt = VReg_320.RegTypes in {
   foreach st = VReg_320.RegTypes in {
     if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, VReg_320>;
-    }
-  }
-}
-
-foreach vt = SReg_320.RegTypes in {
-  foreach st = SReg_320.RegTypes in {
-    if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, SReg_320>;
+      def : BitConvert <vt, st, VReg_320>;
+      def : BitConvert <vt, st, SReg_320>;
     }
   }
 }
@@ -1772,15 +1709,8 @@ foreach vt = SReg_320.RegTypes in {
 foreach vt = VReg_352.RegTypes in {
   foreach st = VReg_352.RegTypes in {
     if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, VReg_352>;
-    }
-  }
-}
-
-foreach vt = SReg_352.RegTypes in {
-  foreach st = SReg_352.RegTypes in {
-    if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, SReg_352>;
+      def : BitConvert <vt, st, VReg_352>;
+      def : BitConvert <vt, st, SReg_352>;
     }
   }
 }
@@ -1789,15 +1719,8 @@ foreach vt = SReg_352.RegTypes in {
 foreach vt = VReg_384.RegTypes in {
   foreach st = VReg_384.RegTypes in {
     if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, VReg_384>;
-    }
-  }
-}
-
-foreach vt = SReg_384.RegTypes in {
-  foreach st = SReg_384.RegTypes in {
-    if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, SReg_384>;
+      def : BitConvert <vt, st, VReg_384>;
+      def : BitConvert <vt, st, SReg_384>;
     }
   }
 }
@@ -1806,32 +1729,19 @@ foreach vt = SReg_384.RegTypes in {
 foreach vt = VReg_512.RegTypes in {
   foreach st = VReg_512.RegTypes in {
     if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, VReg_512>;
+      def : BitConvert <vt, st, VReg_512>;
+      def : BitConvert <vt, st, SReg_512>;
     }
   }
 }
 
-foreach vt = SReg_512.RegTypes in {
-  foreach st = SReg_512.RegTypes in {
-    if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, SReg_512>;
-    }
-  }
-}
 
 // 1024-bit bitcast
 foreach vt = VReg_1024.RegTypes in {
   foreach st = VReg_1024.RegTypes in {
     if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, VReg_1024>;
-    }
-  }
-}
-
-foreach vt = SReg_1024.RegTypes in {
-  foreach st = SReg_1024.RegTypes in {
-    if !not(!eq (vt, st)) then {
-        def : BitConvert <vt, st, SReg_1024>;
+      def : BitConvert <vt, st, VReg_1024>;
+      def : BitConvert <vt, st, SReg_1024>;
     }
   }
 }
