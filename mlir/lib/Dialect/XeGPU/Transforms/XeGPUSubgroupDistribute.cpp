@@ -21,6 +21,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeRange.h"
@@ -908,8 +909,9 @@ struct SubgroupOpDpas final : public gpu::WarpDistributionPattern {
 /// | 32x16                 | [1, 16]   | 32x1                     |
 /// | 32x16                 | [2, 8]    | 16x2                     |
 /// | 2x32x16               | [1, 16]   | 2x32x1                   |
-FailureOr<VectorType> getDistributedVectorType(xegpu::SGMapAttr sgMap,
-                                               VectorType originalType) {
+FailureOr<VectorType>
+getDistributedVecTypeBasedOnWiLayout(xegpu::SGMapAttr sgMap,
+                                     VectorType originalType) {
   llvm::SmallVector<int64_t, 2> distributedShape;
   if (!sgMap)
     return failure();
@@ -936,14 +938,30 @@ FailureOr<VectorType> getDistributedVectorType(xegpu::SGMapAttr sgMap,
   return newVectorType;
 }
 
-/// An operation can be sinked out of WarpExecuteOnLane0 if all ops in its
-/// use-def chain are already sinked.
-static bool canBeSinked(Operation *op) {
-  DenseSet<Operation *> visited;
-  visited.insert(op);
-  while (!visited.empty()) {
-  }
-  return true;
+static VectorType getDistributedVectorType(xegpu::SGMapAttr sgMap,
+                                           VectorType originalType) {
+  auto shape = originalType.getShape();
+  auto distVecTyOrFailure =
+      xegpu::TensorDescType::get(shape, originalType.getElementType(),
+                                 /*array_length=*/1, /*boundary_check=*/true,
+                                 /*memory_space=*/xegpu::MemorySpace::Global,
+                                 sgMap)
+          .getDistributedVectorType();
+  assert(llvm::succeeded(distVecTyOrFailure) &&
+         "Failed to compute distributed vector type for the given vector type");
+  return distVecTyOrFailure.value();
+}
+
+static Value reconcileDistribtedVecType(Value orig, VectorType expected,
+                                        PatternRewriter &rewriter) {
+  assert(isa<VectorType>(orig.getType()) && "expecting vector type");
+  auto origVecType = cast<VectorType>(orig.getType());
+  /// No need to reconcile if the types are the same.
+  if (origVecType == expected)
+    return orig;
+  auto castOp = rewriter.create<UnrealizedConversionCastOp>(orig.getLoc(),
+                                                            expected, orig);
+  return castOp.getResult(0);
 }
 
 LogicalResult MoveFuncBodyToWarpExecuteOnLane0::matchAndRewrite(
@@ -1004,40 +1022,51 @@ SubgroupOpStoreNd::matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
   if (storeOp.getTensorDescType().getShape().size() != 2)
     return rewriter.notifyMatchFailure(storeOp, "unsupported shape");
 
-  auto distributedTypeOrFailure =
-      getDistributedVectorType(sgMap, storeOp.getValueType());
-  if (failed(distributedTypeOrFailure))
+  auto distriburtedTypeByWarpOp =
+      getDistributedVecTypeBasedOnWiLayout(sgMap, storeOp.getValueType());
+  if (failed(distriburtedTypeByWarpOp))
     return rewriter.notifyMatchFailure(storeOp,
                                        "Failed to distribute the type");
-  VectorType newVectorType = distributedTypeOrFailure.value();
+  VectorType distributedTypeByWarpOp = distriburtedTypeByWarpOp.value();
 
   SmallVector<size_t> newRetIndices;
   gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
       rewriter, subgroupOp,
       /* new yielded values = */
-      ValueRange{storeOp.getTensorDesc(), storeOp.getValue()},
+      ValueRange{storeOp.getValue(), storeOp.getTensorDesc()},
       /* new yielded types = */
-      TypeRange{storeOp.getTensorDescType(), newVectorType}, newRetIndices);
-
-  // Create a new store op outside the warp op with the distributed vector type.
-  // Tensor descriptor is not distributed.
+      TypeRange{distributedTypeByWarpOp, storeOp.getTensorDescType()},
+      newRetIndices);
+  /// Create a new store op outside the warp op with the distributed vector
+  /// type. Tensor descriptor is not distributed.
   rewriter.setInsertionPointAfter(newWarpOp);
-  auto newStoreOp =
-      cast<xegpu::StoreNdOp>(rewriter.clone(*storeOp.getOperation()));
-  rewriter.eraseOp(storeOp);
-  newStoreOp.getTensorDescMutable().assign(
-      newWarpOp.getResult(newRetIndices[0]));
-  newStoreOp.getValueMutable().assign(newWarpOp.getResult(newRetIndices[1]));
+  SmallVector<Value> newStoreOperands;
 
+  /// For the value operand, there can be a conflict between the vector type
+  /// distributed by the warp op and (xegpu-specific) distributed type supported
+  /// by the store op. We reconcile these mismatches by inserting a cast. These
+  /// gets cancelled out later.
+  auto storeNdDistributedValueTyOrFailure =
+      storeOp.getTensorDescType().getDistributedVectorType();
+  if (failed(storeNdDistributedValueTyOrFailure))
+    return rewriter.notifyMatchFailure(
+        storeOp, "Failed to get distributed vector type for the store op");
+  newStoreOperands.push_back(reconcileDistribtedVecType(
+      newWarpOp.getResult(newRetIndices[0]),
+      storeNdDistributedValueTyOrFailure.value(), rewriter));
+  newStoreOperands.push_back(newWarpOp.getResult(newRetIndices[1]));
+
+  rewriter.create<xegpu::StoreNdOp>(newWarpOp.getLoc(), TypeRange{},
+                                    newStoreOperands, storeOp->getAttrs());
+  rewriter.eraseOp(storeOp);
   return success();
 }
 
 LogicalResult
 SubgroupOpLoadNd::matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
                                   PatternRewriter &rewriter) const {
-  OpOperand *operand = getWarpResult(subgroupOp, [](Operation *op) {
-    return isa<xegpu::LoadNdOp>(op) && op->hasOneUse();
-  });
+  OpOperand *operand =
+      getWarpResult(subgroupOp, llvm::IsaPred<xegpu::LoadNdOp>);
   if (!operand)
     return rewriter.notifyMatchFailure(subgroupOp,
                                        "warp result is not a xegpu::LoadNd op");
@@ -1049,29 +1078,31 @@ SubgroupOpLoadNd::matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
     return rewriter.notifyMatchFailure(
         loadOp, "the source tensor descriptor lacks sg_map attribute");
 
-  auto tensorDecShape = tensorDescTy.getShape();
-  if (tensorDecShape.size() != 2)
-    return rewriter.notifyMatchFailure(loadOp,
-                                       "unsupported tensor descriptor shape");
-
-  auto distributedTypeOrFailure =
-      getDistributedVectorType(sgMap, loadOp.getType());
-  if (failed(distributedTypeOrFailure))
-    return rewriter.notifyMatchFailure(loadOp, "Failed to distribute the type");
-  VectorType newVectorType = distributedTypeOrFailure.value();
-
   unsigned operandIdx = operand->getOperandNumber();
+  VectorType distributedTypeByWarpOp =
+      cast<VectorType>(subgroupOp.getResult(operandIdx).getType());
+
   SmallVector<size_t> newRetIndices;
   gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
       rewriter, subgroupOp, /* new yielded values = */ loadOp.getTensorDesc(),
       /* new yielded types = */ tensorDescTy, newRetIndices);
 
-  // Create a new load op outside the warp op with the distributed vector type.
+  /// Create a new load op outside the warp op with the distributed vector type.
   rewriter.setInsertionPointAfter(newWarpOp);
-  auto newLoadOp = rewriter.create<xegpu::LoadNdOp>(
-      newWarpOp.getLoc(), newVectorType, newWarpOp->getResults()[0],
-      loadOp->getAttrs());
+  auto loadNdDistValueTyOrFailure =
+      loadOp.getTensorDescType().getDistributedVectorType();
+  if (failed(loadNdDistValueTyOrFailure))
+    return rewriter.notifyMatchFailure(
+        loadOp, "Failed to get distributed vector type for the load op");
+  Value newLoadOp = rewriter.create<xegpu::LoadNdOp>(
+      newWarpOp.getLoc(), loadNdDistValueTyOrFailure.value(),
+      newWarpOp->getResult(newRetIndices[0]), loadOp->getAttrs());
   Value distributedVal = newWarpOp.getResult(operandIdx);
+  /// There can be a conflict between the vector type distributed by the warp op
+  /// and (xegpu-specific) distributed type supported by the load op. We
+  /// reconcile these mismatches by inserting a cast.
+  newLoadOp =
+      reconcileDistribtedVecType(newLoadOp, distributedTypeByWarpOp, rewriter);
   rewriter.replaceAllUsesWith(distributedVal, newLoadOp);
   return success();
 }
@@ -1079,10 +1110,8 @@ SubgroupOpLoadNd::matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
 LogicalResult
 SubgroupOpTensorDescOp::matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
                                         PatternRewriter &rewriter) const {
-  OpOperand *operand = getWarpResult(subgroupOp, [](Operation *op) {
-    return isa<xegpu::CreateNdDescOp>(op) && op->hasOneUse();
-  });
-
+  OpOperand *operand =
+      getWarpResult(subgroupOp, llvm::IsaPred<xegpu::CreateNdDescOp>);
   if (!operand)
     return rewriter.notifyMatchFailure(
         subgroupOp, "warp result is not a xegpu::CreateNdDesc op");
@@ -1131,10 +1160,7 @@ SubgroupOpTensorDescOp::matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
 LogicalResult
 SubgroupOpDpas::matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
                                 PatternRewriter &rewriter) const {
-  OpOperand *operand = getWarpResult(subgroupOp, [](Operation *op) {
-    return isa<xegpu::DpasOp>(op) && op->hasOneUse();
-  });
-
+  OpOperand *operand = getWarpResult(subgroupOp, llvm::IsaPred<xegpu::DpasOp>);
   if (!operand)
     return rewriter.notifyMatchFailure(subgroupOp,
                                        "warp result is not a xegpu::Dpas op");
@@ -1148,28 +1174,29 @@ SubgroupOpDpas::matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
     return rewriter.notifyMatchFailure(
         dpasOp, "the xegpu::Dpas op lacks sg_map attribute for A, B or output");
 
-  auto distributedLhsTypeOrFailure =
-      getDistributedVectorType(sgMapA, dpasOp.getLhsType());
-  auto distributedRhsTypeOrFailure =
-      getDistributedVectorType(sgMapB, dpasOp.getRhsType());
-  auto distributedResultTypeOrFailure =
-      getDistributedVectorType(sgMapOut, dpasOp.getResultType());
-  if (failed(distributedLhsTypeOrFailure) ||
-      failed(distributedRhsTypeOrFailure) ||
-      failed(distributedResultTypeOrFailure))
+  auto distLhsTypeByWarpOpOrFailure =
+      getDistributedVecTypeBasedOnWiLayout(sgMapA, dpasOp.getLhsType());
+  auto distRhsTypeByWarpOpOrFailure =
+      getDistributedVecTypeBasedOnWiLayout(sgMapB, dpasOp.getRhsType());
+  auto distResultTypeByWarpOpOrFailure =
+      getDistributedVecTypeBasedOnWiLayout(sgMapOut, dpasOp.getResultType());
+  if (failed(distLhsTypeByWarpOpOrFailure) ||
+      failed(distRhsTypeByWarpOpOrFailure) ||
+      failed(distResultTypeByWarpOpOrFailure))
     return rewriter.notifyMatchFailure(
         dpasOp,
         "Failed to distribute the A, B or output types in xegpu::Dpas op");
 
   llvm::SmallVector<Value, 3> newYieldValues{dpasOp.getLhs(), dpasOp.getRhs()};
-  llvm::SmallVector<Type, 3> newYieldTypes{distributedLhsTypeOrFailure.value(),
-                                           distributedRhsTypeOrFailure.value()};
-  // Dpas acc operand is optional.
+  llvm::SmallVector<Type, 3> newYieldTypes{
+      distLhsTypeByWarpOpOrFailure.value(),
+      distRhsTypeByWarpOpOrFailure.value()};
+  /// Dpas acc operand is optional.
   if (dpasOp.getAcc()) {
     newYieldValues.push_back(dpasOp.getAcc());
-    newYieldTypes.push_back(distributedResultTypeOrFailure.value());
+    newYieldTypes.push_back(distResultTypeByWarpOpOrFailure.value());
   }
-  // Create a new warp op without the dpas.
+  /// Create a new warp op without the dpas.
   SmallVector<size_t> newRetIndices;
   gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
       rewriter, subgroupOp, newYieldValues, newYieldTypes, newRetIndices);
@@ -1177,13 +1204,30 @@ SubgroupOpDpas::matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
   // Create a new dpas op outside the warp op.
   rewriter.setInsertionPointAfter(newWarpOp);
   SmallVector<Value> newDpasOperands;
+  SmallVector<VectorType> newDpasOperandExpectedTypes;
+  /// Reconcile the distributed types with the original types.
+  newDpasOperandExpectedTypes.push_back(
+      getDistributedVectorType(sgMapA, dpasOp.getLhsType()));
+  newDpasOperandExpectedTypes.push_back(
+      getDistributedVectorType(sgMapB, dpasOp.getRhsType()));
+  if (dpasOp.getAcc()) {
+    newDpasOperandExpectedTypes.push_back(
+        getDistributedVectorType(sgMapOut, dpasOp.getResultType()));
+  }
+
   for (auto i : newRetIndices) {
-    newDpasOperands.push_back(newWarpOp.getResult(i));
+    newDpasOperands.push_back(reconcileDistribtedVecType(
+        newWarpOp.getResult(i),
+        newDpasOperandExpectedTypes[newDpasOperands.size()], rewriter));
   }
   auto newDpasOp = rewriter.create<xegpu::DpasOp>(
-      newWarpOp->getLoc(), distributedResultTypeOrFailure.value(),
+      newWarpOp->getLoc(), distResultTypeByWarpOpOrFailure.value(),
       newDpasOperands, dpasOp->getAttrs());
   Value disributedVal = newWarpOp.getResult(operandIdx);
+  /// Reconile the output type.
+  disributedVal = reconcileDistribtedVecType(
+      disributedVal, getDistributedVectorType(sgMapOut, dpasOp.getResultType()),
+      rewriter);
   rewriter.replaceAllUsesWith(disributedVal, newDpasOp);
   return success();
 }
@@ -1235,31 +1279,6 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
   /// Finally, do the SIMD to SIMT distribution.
   RewritePatternSet patterns(&getContext());
   xegpu::populateXeGPUSubgroupDistributePatterns(patterns);
-  auto distributionFn = [](Value val) {
-    // Create an identity dim map of the same rank as the vector.
-    VectorType vecType = dyn_cast<VectorType>(val.getType());
-    int64_t vecRank = vecType ? vecType.getRank() : 0;
-    OpBuilder builder(val.getContext());
-    if (vecRank == 0)
-      return AffineMap::get(val.getContext());
-    return AffineMap::getMultiDimIdentityMap(vecRank, val.getContext());
-  };
-  auto shuffleFn = [](Location loc, OpBuilder &builder, Value val, Value srcIdx,
-                      int64_t warpSz) {
-    assert((val.getType().isF32() || val.getType().isInteger(32)) &&
-           "unsupported shuffle type");
-    Type i32Type = builder.getIntegerType(32);
-    Value srcIdxI32 = builder.create<arith::IndexCastOp>(loc, i32Type, srcIdx);
-    Value warpSzI32 = builder.create<arith::ConstantOp>(
-        loc, builder.getIntegerAttr(i32Type, warpSz));
-    Value result = builder
-                       .create<gpu::ShuffleOp>(loc, val, srcIdxI32, warpSzI32,
-                                               gpu::ShuffleMode::IDX)
-                       .getResult(0);
-    return result;
-  };
-  vector::populatePropagateWarpVectorDistributionPatterns(
-      patterns, distributionFn, shuffleFn);
-  llvm::errs() << AffineMap::getMultiDimIdentityMap(2, &getContext()) << "\n";
-  // (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  vector::populateWarpSimplificationPatterns(patterns);
+  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
 }
