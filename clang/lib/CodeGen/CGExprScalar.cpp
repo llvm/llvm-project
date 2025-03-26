@@ -3477,7 +3477,7 @@ ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
                               const UnaryExprOrTypeTraitExpr *E) {
   QualType TypeToSize = E->getTypeOfArgument();
   if (auto Kind = E->getKind();
-      Kind == UETT_SizeOf || Kind == UETT_DataSizeOf) {
+      Kind == UETT_SizeOf || Kind == UETT_DataSizeOf || Kind == UETT_CountOf) {
     if (const VariableArrayType *VAT =
             CGF.getContext().getAsVariableArrayType(TypeToSize)) {
       if (E->isArgumentType()) {
@@ -3492,10 +3492,15 @@ ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
       auto VlaSize = CGF.getVLASize(VAT);
       llvm::Value *size = VlaSize.NumElts;
 
-      // Scale the number of non-VLA elements by the non-VLA element size.
-      CharUnits eltSize = CGF.getContext().getTypeSizeInChars(VlaSize.Type);
-      if (!eltSize.isOne())
-        size = CGF.Builder.CreateNUWMul(CGF.CGM.getSize(eltSize), size);
+      // For sizeof and __datasizeof, we need to scale the number of elements
+      // by the size of the array element type. For _Countof, we just want to
+      // return the size directly.
+      if (Kind != UETT_CountOf) {
+        // Scale the number of non-VLA elements by the non-VLA element size.
+        CharUnits eltSize = CGF.getContext().getTypeSizeInChars(VlaSize.Type);
+        if (!eltSize.isOne())
+          size = CGF.Builder.CreateNUWMul(CGF.CGM.getSize(eltSize), size);
+      }
 
       return size;
     }

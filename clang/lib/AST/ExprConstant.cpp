@@ -14926,6 +14926,23 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
 
     return false;
   }
+  case UETT_CountOf: {
+    QualType Ty = E->getTypeOfArgument();
+    assert(Ty->isArrayType());
+
+    // We don't need to worry about array element qualifiers, so getting the
+    // unsafe array type is fine.
+    if (const auto *CAT =
+            dyn_cast<ConstantArrayType>(Ty->getAsArrayTypeUnsafe())) {
+      return Success(CAT->getSize(), E);
+    }
+
+    // If it wasn't a constant array, it's not a valid constant expression.
+    assert(!Ty->isConstantSizeType());
+    // FIXME: Better diagnostic.
+    Info.FFDiag(E->getBeginLoc());
+    return false;
+  }
   }
 
   llvm_unreachable("unknown expr/type trait");
@@ -17425,7 +17442,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   }
   case Expr::UnaryExprOrTypeTraitExprClass: {
     const UnaryExprOrTypeTraitExpr *Exp = cast<UnaryExprOrTypeTraitExpr>(E);
-    if ((Exp->getKind() ==  UETT_SizeOf) &&
+    if ((Exp->getKind() ==  UETT_SizeOf || Exp->getKind() == UETT_CountOf) &&
         Exp->getTypeOfArgument()->isVariableArrayType())
       return ICEDiag(IK_NotICE, E->getBeginLoc());
     return NoDiag();
