@@ -3701,8 +3701,6 @@ private:
   /// For each result type and input type for the ISD::PARTIAL_REDUCE_U/SMLA
   /// nodes, keep a LegalizeAction which indicates how instruction selection
   /// should deal with this operation.
-  /// The key is made up of the accumulator type (AccTy) and the input type
-  /// (InTy) in the format of `(AccTy << 16) + InTy`.
   /// If no entry exists for a given key, Expand is assumed as this
   /// is the most common action.
   DenseMap<PartialReduceActionTypes, LegalizeAction> PartialReduceMLAActions;
