@@ -3915,8 +3915,9 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   auto ToEndLoc = importChecked(Err, D->getEndLoc());
   auto ToDefaultLoc = importChecked(Err, D->getDefaultLoc());
   auto ToQualifierLoc = importChecked(Err, D->getQualifierLoc());
-  auto TrailingRequiresClause =
-      importChecked(Err, D->getTrailingRequiresClause());
+  AssociatedConstraint TrailingRequiresClause = D->getTrailingRequiresClause();
+  TrailingRequiresClause.ConstraintExpr =
+      importChecked(Err, TrailingRequiresClause.ConstraintExpr);
   if (Err)
     return std::move(Err);
 

@@ -928,10 +928,8 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
       ForOverloadResolution);
 
   return CheckConstraintSatisfaction(
-      FD,
-      AssociatedConstraint(FD->getTrailingRequiresClause(),
-                           ArgumentPackSubstitutionIndex),
-      *MLTAL, SourceRange(UsageLoc.isValid() ? UsageLoc : FD->getLocation()),
+      FD, FD->getTrailingRequiresClause(), *MLTAL,
+      SourceRange(UsageLoc.isValid() ? UsageLoc : FD->getLocation()),
       Satisfaction);
 }
 
