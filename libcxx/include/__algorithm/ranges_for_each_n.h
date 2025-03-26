@@ -18,6 +18,7 @@
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/next.h>
 #include <__iterator/projected.h>
 #include <__ranges/concepts.h>
 #include <__utility/move.h>
@@ -42,8 +43,8 @@ struct __for_each_n {
   template <input_iterator _Iter, class _Proj = identity, indirectly_unary_invocable<projected<_Iter, _Proj>> _Func>
   _LIBCPP_HIDE_FROM_ABI constexpr for_each_n_result<_Iter, _Func>
   operator()(_Iter __first, iter_difference_t<_Iter> __count, _Func __func, _Proj __proj = {}) const {
-    if constexpr (random_access_iterator<_Iter>) {
-      auto __last = __first + __count;
+    if constexpr (forward_iterator<_Iter>) {
+      auto __last = std::ranges::next(__first, __count);
       auto __f    = [&](auto&& __val) { std::invoke(__func, std::invoke(__proj, __val)); };
       std::__for_each<_RangeAlgPolicy>(__first, __last, __f);
       return {std::move(__last), std::move(__func)};
