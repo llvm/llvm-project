@@ -670,9 +670,8 @@ void MemorySSAUpdater::updateForClonedLoop(const LoopBlocksRPO &LoopBlocks,
                                            ArrayRef<BasicBlock *> ExitBlocks,
                                            const ValueToValueMapTy &VMap,
                                            bool IgnoreIncomingWithNoClones) {
-  SmallSetVector<BasicBlock *, 16> Blocks;
-  for (BasicBlock *BB : concat<BasicBlock *const>(LoopBlocks, ExitBlocks))
-    Blocks.insert(BB);
+  SmallSetVector<BasicBlock *, 16> Blocks(
+      llvm::from_range, concat<BasicBlock *const>(LoopBlocks, ExitBlocks));
 
   auto IsInClonedRegion = [&](BasicBlock *BB) { return Blocks.contains(BB); };
 

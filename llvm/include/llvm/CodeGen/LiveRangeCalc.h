@@ -147,7 +147,7 @@ class LiveRangeCalc {
   ///
   /// PhysReg, when set, is used to verify live-in lists on basic blocks.
   bool findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB, SlotIndex Use,
-                        unsigned PhysReg, ArrayRef<SlotIndex> Undefs);
+                        Register PhysReg, ArrayRef<SlotIndex> Undefs);
 
   /// updateSSA - Compute the values that will be live in to all requested
   /// blocks in LiveIn.  Create PHI-def values as required to preserve SSA form.
@@ -204,7 +204,7 @@ public:
   /// inserted as required to preserve SSA form.
   ///
   /// PhysReg, when set, is used to verify live-in lists on basic blocks.
-  void extend(LiveRange &LR, SlotIndex Use, unsigned PhysReg,
+  void extend(LiveRange &LR, SlotIndex Use, Register PhysReg,
               ArrayRef<SlotIndex> Undefs);
 
   //===--------------------------------------------------------------------===//

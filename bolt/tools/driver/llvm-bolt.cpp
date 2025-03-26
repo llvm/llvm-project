@@ -63,7 +63,7 @@ BoltProfile("b",
   cl::aliasopt(InputDataFilename),
   cl::cat(BoltCategory));
 
-cl::opt<std::string>
+static cl::opt<std::string>
     LogFile("log-file",
             cl::desc("redirect journaling to a file instead of stdout/stderr"),
             cl::Hidden, cl::cat(BoltCategory));

@@ -5463,7 +5463,7 @@ bool AMDGPUAsmParser::ParseAsAbsoluteExpression(uint32_t &Ret) {
 }
 
 bool AMDGPUAsmParser::ParseDirectiveAMDGCNTarget() {
-  if (getSTI().getTargetTriple().getArch() != Triple::amdgcn)
+  if (!getSTI().getTargetTriple().isAMDGCN())
     return TokError("directive only supported for amdgcn architecture");
 
   std::string TargetIDDirective;
@@ -5550,7 +5550,7 @@ bool AMDGPUAsmParser::calculateGPRBlocks(
 }
 
 bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
-  if (getSTI().getTargetTriple().getArch() != Triple::amdgcn)
+  if (!getSTI().getTargetTriple().isAMDGCN())
     return TokError("directive only supported for amdgcn architecture");
 
   if (!isHsaAbi(getSTI()))
@@ -6142,7 +6142,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUHsaKernel() {
 }
 
 bool AMDGPUAsmParser::ParseDirectiveISAVersion() {
-  if (getSTI().getTargetTriple().getArch() != Triple::amdgcn) {
+  if (!getSTI().getTargetTriple().isAMDGCN()) {
     return Error(getLoc(),
                  ".amd_amdgpu_isa directive is not available on non-amdgcn "
                  "architectures");

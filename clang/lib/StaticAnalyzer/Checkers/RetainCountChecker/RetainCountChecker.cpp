@@ -501,13 +501,13 @@ static bool isSmartPtrField(const MemRegion *MR) {
 /// assigned to a struct field, unless it is a known smart pointer
 /// implementation, about which we know that it is inlined.
 /// FIXME: This could definitely be improved upon.
-static bool shouldEscapeRegion(const MemRegion *R) {
+static bool shouldEscapeRegion(ProgramStateRef State, const MemRegion *R) {
   if (isSmartPtrField(R))
     return false;
 
   const auto *VR = dyn_cast<VarRegion>(R);
 
-  if (!R->hasStackStorage() || !VR)
+  if (!R->hasMemorySpace<StackSpaceRegion>(State) || !VR)
     return true;
 
   const VarDecl *VD = VR->getDecl();
@@ -561,7 +561,7 @@ updateOutParameters(ProgramStateRef State, const RetainSummary &Summ,
     if (!Pointee)
       continue;
 
-    if (shouldEscapeRegion(ArgRegion))
+    if (shouldEscapeRegion(State, ArgRegion))
       continue;
 
     auto makeNotOwnedParameter = [&](ProgramStateRef St) {
@@ -1141,7 +1141,7 @@ void RetainCountChecker::checkBind(SVal loc, SVal val, const Stmt *S,
 
   // Find all symbols referenced by 'val' that we are tracking
   // and stop tracking them.
-  if (MR && shouldEscapeRegion(MR)) {
+  if (MR && shouldEscapeRegion(state, MR)) {
     state = state->scanReachableSymbols<StopTrackingCallback>(val).getState();
     C.addTransition(state);
   }

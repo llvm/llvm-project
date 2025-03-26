@@ -1267,6 +1267,8 @@ Status ScriptInterpreterPythonImpl::ExportFunctionDefinitionToInterpreter(
     StringList &function_def) {
   // Convert StringList to one long, newline delimited, const char *.
   std::string function_def_string(function_def.CopyList());
+  LLDB_LOG(GetLog(LLDBLog::Script), "Added Function:\n%s\n",
+           function_def_string.c_str());
 
   Status error = ExecuteMultipleLines(
       function_def_string.c_str(), ExecuteScriptOptions().SetEnableIO(false));
@@ -1336,13 +1338,15 @@ Status ScriptInterpreterPythonImpl::GenerateFunction(const char *signature,
       "    for key in new_keys:"); // Iterate over all the keys from session
                                    // dict
   auto_generated_function.AppendString(
-      "        internal_dict[key] = global_dict[key]"); // Update session dict
-                                                        // values
+      "        if key in old_keys:"); // If key was originally in
+                                      // global dict
   auto_generated_function.AppendString(
-      "        if key not in old_keys:"); // If key was not originally in
-                                          // global dict
+      "            internal_dict[key] = global_dict[key]"); // Update it
   auto_generated_function.AppendString(
-      "            del global_dict[key]"); //  ...then remove key/value from
+      "        elif key in global_dict:"); // Then if it is still in the
+                                           // global dict
+  auto_generated_function.AppendString(
+      "            del global_dict[key]"); //  remove key/value from the
                                            //  global dict
   auto_generated_function.AppendString(
       "    return __return_val"); //  Return the user callback return value.

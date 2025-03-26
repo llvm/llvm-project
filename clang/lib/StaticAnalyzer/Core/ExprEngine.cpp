@@ -49,6 +49,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CoreEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/EntryPointStats.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/LoopUnrolling.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/LoopWidening.h"
@@ -67,7 +68,6 @@
 #include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
@@ -90,16 +90,18 @@ using namespace ento;
 
 #define DEBUG_TYPE "ExprEngine"
 
-STATISTIC(NumRemoveDeadBindings,
-            "The # of times RemoveDeadBindings is called");
-STATISTIC(NumMaxBlockCountReached,
-            "The # of aborted paths due to reaching the maximum block count in "
-            "a top level function");
-STATISTIC(NumMaxBlockCountReachedInInlined,
-            "The # of aborted paths due to reaching the maximum block count in "
-            "an inlined function");
-STATISTIC(NumTimesRetriedWithoutInlining,
-            "The # of times we re-evaluated a call without inlining");
+STAT_COUNTER(NumRemoveDeadBindings,
+             "The # of times RemoveDeadBindings is called");
+STAT_COUNTER(
+    NumMaxBlockCountReached,
+    "The # of aborted paths due to reaching the maximum block count in "
+    "a top level function");
+STAT_COUNTER(
+    NumMaxBlockCountReachedInInlined,
+    "The # of aborted paths due to reaching the maximum block count in "
+    "an inlined function");
+STAT_COUNTER(NumTimesRetriedWithoutInlining,
+             "The # of times we re-evaluated a call without inlining");
 
 //===----------------------------------------------------------------------===//
 // Internal program state traits.
@@ -1834,6 +1836,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OpenACCExitDataConstructClass:
     case Stmt::OpenACCHostDataConstructClass:
     case Stmt::OpenACCWaitConstructClass:
+    case Stmt::OpenACCCacheConstructClass:
     case Stmt::OpenACCInitConstructClass:
     case Stmt::OpenACCShutdownConstructClass:
     case Stmt::OpenACCSetConstructClass:
@@ -1950,7 +1953,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     // to be explicitly evaluated.
     case Stmt::PredefinedExprClass:
     case Stmt::AddrLabelExprClass:
-    case Stmt::AttributedStmtClass:
     case Stmt::IntegerLiteralClass:
     case Stmt::FixedPointLiteralClass:
     case Stmt::CharacterLiteralClass:
@@ -1981,6 +1983,13 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       break;
     }
 
+    case Stmt::AttributedStmtClass: {
+      Bldr.takeNodes(Pred);
+      VisitAttributedStmt(cast<AttributedStmt>(S), Pred, Dst);
+      Bldr.addNodes(Dst);
+      break;
+    }
+
     case Stmt::CXXDefaultArgExprClass:
     case Stmt::CXXDefaultInitExprClass: {
       Bldr.takeNodes(Pred);
@@ -1990,45 +1999,33 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       ExplodedNodeSet Tmp;
       StmtNodeBuilder Bldr2(PreVisit, Tmp, *currBldrCtx);
 
-      bool HasRebuiltInit = false;
-      const Expr *ArgE = nullptr;
-      if (const auto *DefE = dyn_cast<CXXDefaultArgExpr>(S)) {
+      const Expr *ArgE;
+      if (const auto *DefE = dyn_cast<CXXDefaultArgExpr>(S))
         ArgE = DefE->getExpr();
-        HasRebuiltInit = DefE->hasRewrittenInit();
-      } else if (const auto *DefE = dyn_cast<CXXDefaultInitExpr>(S)) {
+      else if (const auto *DefE = dyn_cast<CXXDefaultInitExpr>(S))
         ArgE = DefE->getExpr();
-        HasRebuiltInit = DefE->hasRewrittenInit();
-      } else
+      else
         llvm_unreachable("unknown constant wrapper kind");
 
-      if (HasRebuiltInit) {
-        for (auto *N : PreVisit) {
-          ProgramStateRef state = N->getState();
-          const LocationContext *LCtx = N->getLocationContext();
-          state = state->BindExpr(S, LCtx, state->getSVal(ArgE, LCtx));
-          Bldr2.generateNode(S, N, state);
-        }
-      } else {
-        // If it's not rewritten, the contents of these expressions are not
-        // actually part of the current function, so we fall back to constant
-        // evaluation.
-        bool IsTemporary = false;
-        if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(ArgE)) {
-          ArgE = MTE->getSubExpr();
-          IsTemporary = true;
-        }
+      bool IsTemporary = false;
+      if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(ArgE)) {
+        ArgE = MTE->getSubExpr();
+        IsTemporary = true;
+      }
 
-        std::optional<SVal> ConstantVal = svalBuilder.getConstantVal(ArgE);
-        const LocationContext *LCtx = Pred->getLocationContext();
-        for (auto *I : PreVisit) {
-          ProgramStateRef State = I->getState();
-          State = State->BindExpr(S, LCtx, ConstantVal.value_or(UnknownVal()));
-          if (IsTemporary)
-            State = createTemporaryRegionIfNeeded(State, LCtx, cast<Expr>(S),
-                                                  cast<Expr>(S));
+      std::optional<SVal> ConstantVal = svalBuilder.getConstantVal(ArgE);
+      if (!ConstantVal)
+        ConstantVal = UnknownVal();
 
-          Bldr2.generateNode(S, I, State);
-        }
+      const LocationContext *LCtx = Pred->getLocationContext();
+      for (const auto I : PreVisit) {
+        ProgramStateRef State = I->getState();
+        State = State->BindExpr(S, LCtx, *ConstantVal);
+        if (IsTemporary)
+          State = createTemporaryRegionIfNeeded(State, LCtx,
+                                                cast<Expr>(S),
+                                                cast<Expr>(S));
+        Bldr2.generateNode(S, I, State);
       }
 
       getCheckerManager().runCheckersForPostStmt(Dst, Tmp, S, *this);
@@ -3553,15 +3550,16 @@ ProgramStateRef ExprEngine::processPointerEscapedOnBind(
   for (const std::pair<SVal, SVal> &LocAndVal : LocAndVals) {
     // Cases (1) and (2).
     const MemRegion *MR = LocAndVal.first.getAsRegion();
-    if (!MR ||
-        !isa<StackSpaceRegion, StaticGlobalSpaceRegion>(MR->getMemorySpace())) {
+    const MemSpaceRegion *Space = MR ? MR->getMemorySpace(State) : nullptr;
+    if (!MR || !isa<StackSpaceRegion, StaticGlobalSpaceRegion>(Space)) {
       Escaped.push_back(LocAndVal.second);
       continue;
     }
 
     // Case (3).
     if (const auto *VR = dyn_cast<VarRegion>(MR->getBaseRegion()))
-      if (VR->hasStackParametersStorage() && VR->getStackFrame()->inTopFrame())
+      if (isa<StackArgumentsSpaceRegion>(Space) &&
+          VR->getStackFrame()->inTopFrame())
         if (const auto *RD = VR->getValueType()->getAsCXXRecordDecl())
           if (!RD->hasTrivialDestructor()) {
             Escaped.push_back(LocAndVal.second);

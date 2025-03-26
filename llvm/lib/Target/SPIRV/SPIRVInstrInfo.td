@@ -25,6 +25,9 @@ let isCodeGenOnly=1 in {
   def GET_vpID: Pseudo<(outs vpID:$dst_id), (ins vpID:$src)>;
 }
 
+def UNKNOWN_type
+    : UnknownOp<(outs TYPE:$type), (ins i32imm:$opcode, variable_ops), " ">;
+
 def SPVTypeBin : SDTypeProfile<1, 2, []>;
 
 def assigntype : SDNode<"SPIRVISD::AssignType", SPVTypeBin>;
@@ -188,6 +191,8 @@ def OpTypeArray: Op<28, (outs TYPE:$type), (ins TYPE:$elementType, ID:$length),
 def OpTypeRuntimeArray: Op<29, (outs TYPE:$type), (ins TYPE:$elementType),
                   "$type = OpTypeRuntimeArray $elementType">;
 def OpTypeStruct: Op<30, (outs TYPE:$res), (ins variable_ops), "$res = OpTypeStruct">;
+def OpTypeStructContinuedINTEL: Op<6090, (outs), (ins variable_ops),
+                  "OpTypeStructContinuedINTEL">;
 def OpTypeOpaque: Op<31, (outs TYPE:$res), (ins StringImm:$name, variable_ops),
                   "$res = OpTypeOpaque $name">;
 def OpTypePointer: Op<32, (outs TYPE:$res), (ins StorageClass:$storage, TYPE:$type),
@@ -252,6 +257,9 @@ defm OpConstant: IntFPImm<43, "OpConstant">;
 
 def OpConstantComposite: Op<44, (outs ID:$res), (ins TYPE:$type, variable_ops),
                   "$res = OpConstantComposite $type">;
+def OpConstantCompositeContinuedINTEL: Op<6091, (outs), (ins variable_ops),
+                  "OpConstantCompositeContinuedINTEL">;
+
 def OpConstantSampler: Op<45, (outs ID:$res),
                   (ins TYPE:$t, SamplerAddressingMode:$s, i32imm:$p, SamplerFilterMode:$f),
                   "$res = OpConstantSampler $t $s $p $f">;
@@ -263,6 +271,8 @@ def OpSpecConstant: Op<50, (outs ID:$res), (ins TYPE:$type, i32imm:$imm, variabl
                   "$res = OpSpecConstant $type $imm">;
 def OpSpecConstantComposite: Op<51, (outs ID:$res), (ins TYPE:$type, variable_ops),
                   "$res = OpSpecConstantComposite $type">;
+def OpSpecConstantCompositeContinuedINTEL: Op<6092, (outs), (ins variable_ops),
+                  "OpSpecConstantCompositeContinuedINTEL">;
 def OpSpecConstantOp: Op<52, (outs ID:$res), (ins TYPE:$t, i32imm:$c, ID:$o, variable_ops),
                   "$res = OpSpecConstantOp $t $c $o">;
 
@@ -476,6 +486,8 @@ def OpVectorShuffle: Op<79, (outs ID:$res), (ins TYPE:$ty, ID:$v1, ID:$v2, varia
                   "$res = OpVectorShuffle $ty $v1 $v2">;
 def OpCompositeConstruct: Op<80, (outs ID:$res), (ins TYPE:$type, variable_ops),
                   "$res = OpCompositeConstruct $type">;
+def OpCompositeConstructContinuedINTEL: Op<6096, (outs), (ins variable_ops),
+                  "OpCompositeConstructContinuedINTEL">;
 def OpCompositeExtract: Op<81, (outs ID:$res), (ins TYPE:$type, ID:$base, variable_ops),
                   "$res = OpCompositeExtract $type $base">;
 def OpCompositeInsert: Op<82, (outs ID:$r), (ins TYPE:$ty, ID:$obj, ID:$base, variable_ops),
@@ -931,3 +943,19 @@ def OpCooperativeMatrixPrefetchINTEL: Op<6449, (outs),
 // SPV_EXT_arithmetic_fence
 def OpArithmeticFenceEXT: Op<6145, (outs ID:$res), (ins TYPE:$type, ID:$target),
                   "$res = OpArithmeticFenceEXT $type $target">;
+
+// SPV_INTEL_bindless_images
+def OpConvertHandleToImageINTEL: Op<6529, (outs ID:$res), (ins TYPE:$type, ID:$operand),
+                  "$res = OpConvertHandleToImageINTEL $type $operand">;
+def OpConvertHandleToSamplerINTEL: Op<6530, (outs ID:$res), (ins TYPE:$type, ID:$operand),
+                  "$res = OpConvertHandleToSamplerINTEL $type $operand">;
+def OpConvertHandleToSampledImageINTEL: Op<6531, (outs ID:$res), (ins TYPE:$type, ID:$operand),
+                  "$res = OpConvertHandleToSampledImageINTEL $type $operand">;
+
+// SPV_INTEL_memory_access_aliasing
+def OpAliasDomainDeclINTEL: Op<5911, (outs ID:$res), (ins variable_ops),
+                  "$res = OpAliasDomainDeclINTEL">;
+def OpAliasScopeDeclINTEL: Op<5912, (outs ID:$res), (ins ID:$AliasDomain, variable_ops),
+                  "$res = OpAliasScopeDeclINTEL $AliasDomain">;
+def OpAliasScopeListDeclINTEL: Op<5913, (outs ID:$res), (ins variable_ops),
+                  "$res = OpAliasScopeListDeclINTEL">;

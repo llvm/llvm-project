@@ -1593,6 +1593,21 @@ static unsigned getDwarfCC(CallingConv CC) {
     return llvm::dwarf::DW_CC_LLVM_PreserveNone;
   case CC_RISCVVectorCall:
     return llvm::dwarf::DW_CC_LLVM_RISCVVectorCall;
+#define CC_VLS_CASE(ABI_VLEN) case CC_RISCVVLSCall_##ABI_VLEN:
+    CC_VLS_CASE(32)
+    CC_VLS_CASE(64)
+    CC_VLS_CASE(128)
+    CC_VLS_CASE(256)
+    CC_VLS_CASE(512)
+    CC_VLS_CASE(1024)
+    CC_VLS_CASE(2048)
+    CC_VLS_CASE(4096)
+    CC_VLS_CASE(8192)
+    CC_VLS_CASE(16384)
+    CC_VLS_CASE(32768)
+    CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
+    return llvm::dwarf::DW_CC_LLVM_RISCVVLSCall;
   }
   return 0;
 }
@@ -1776,7 +1791,7 @@ CGDebugInfo::createInlinedTrapSubprogram(StringRef FuncName,
   // We are caching the subprogram because we don't want to duplicate
   // subprograms with the same message. Note that `SPFlagDefinition` prevents
   // subprograms from being uniqued.
-  llvm::DISubprogram *&SP = InlinedTrapFuncMap[FuncName];
+  llvm::DISubprogram *&SP = InlinedSubprogramMap[FuncName];
 
   if (!SP) {
     llvm::DISubroutineType *DIFnTy = DBuilder.createSubroutineType(nullptr);
@@ -3292,7 +3307,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
 
 llvm::DIType *CGDebugInfo::CreateType(const VectorType *Ty,
                                       llvm::DIFile *Unit) {
-  if (Ty->isExtVectorBoolType()) {
+  if (Ty->isPackedVectorBoolType(CGM.getContext())) {
     // Boolean ext_vector_type(N) are special because their real element type
     // (bits of bit size) is not their Clang element type (_Bool of size byte).
     // For now, we pretend the boolean vector were actually a vector of bytes
@@ -3475,7 +3490,8 @@ llvm::DIType *CGDebugInfo::CreateType(const MemberPointerType *Ty,
     }
   }
 
-  llvm::DIType *ClassType = getOrCreateType(QualType(Ty->getClass(), 0), U);
+  llvm::DIType *ClassType = getOrCreateType(
+      QualType(Ty->getMostRecentCXXRecordDecl()->getTypeForDecl(), 0), U);
   if (Ty->isMemberDataPointerType())
     return DBuilder.createMemberPointerType(
         getOrCreateType(Ty->getPointeeType(), U), ClassType, Size, /*Align=*/0,

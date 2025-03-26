@@ -13,7 +13,7 @@ define void @foo() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[X0:%.*]] = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[IDXPROM_I:%.*]] = zext i32 [[X0]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr [[STRUCT_S:%.*]], ptr addrspacecast (ptr addrspace(3) @g1 to ptr), i64 0, i32 0, i64 [[IDXPROM_I]]
-; CHECK-NEXT:    tail call void @f1(ptr [[ARRAYIDX_I]], i32 undef) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    tail call void @f1(ptr [[ARRAYIDX_I]], i32 poison) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[X1:%.*]] = load i32, ptr addrspace(3) @g1, align 4
 ; CHECK-NEXT:    [[L_SROA_0_0_INSERT_EXT_I:%.*]] = zext i32 [[X1]] to i64
 ; CHECK-NEXT:    tail call void @f2(ptr null, i64 [[L_SROA_0_0_INSERT_EXT_I]]) #[[ATTR0]]
@@ -23,7 +23,7 @@ entry:
   %x0 = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x() #2
   %idxprom.i = zext i32 %x0 to i64
   %arrayidx.i = getelementptr %struct.S, ptr addrspacecast (ptr addrspace(3) @g1 to ptr), i64 0, i32 0, i64 %idxprom.i
-  tail call void @f1(ptr %arrayidx.i, i32 undef) #0
+  tail call void @f1(ptr %arrayidx.i, i32 poison) #0
   %x1 = load i32, ptr addrspacecast (ptr addrspace(3) @g1 to ptr), align 4
   %L.sroa.0.0.insert.ext.i = zext i32 %x1 to i64
   tail call void @f2(ptr null, i64 %L.sroa.0.0.insert.ext.i) #0
@@ -36,7 +36,7 @@ declare i32 @llvm.nvvm.read.ptx.sreg.tid.x() #1
 
 ; Make sure we can clone GEP which uses complex constant expressions as indices.
 ; https://bugs.llvm.org/show_bug.cgi?id=51099
-@g2 = internal addrspace(3) global [128 x i8] undef, align 1
+@g2 = internal addrspace(3) global [128 x i8] poison, align 1
 
 define float @complex_ce(ptr nocapture readnone %a, ptr nocapture readnone %b, ptr nocapture readnone %c) local_unnamed_addr #0 {
 ; CHECK-LABEL: @complex_ce(

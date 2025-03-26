@@ -21,7 +21,6 @@
 #include "flang/Lower/ConvertProcedureDesignator.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
-#include "flang/Lower/DumpEvaluateExpr.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Complex.h"

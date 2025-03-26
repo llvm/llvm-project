@@ -122,10 +122,13 @@ public:
                              const AddressRanges &LinkedRanges) = 0;
 
   /// Emit specified \p LineTable into .debug_line table.
-  virtual void emitLineTableForUnit(const DWARFDebugLine::LineTable &LineTable,
-                                    const CompileUnit &Unit,
-                                    OffsetsStringPool &DebugStrPool,
-                                    OffsetsStringPool &DebugLineStrPool) = 0;
+  /// The optional parameter RowOffsets, if provided, will be populated with the
+  /// offsets of each line table row in the output .debug_line section.
+  virtual void
+  emitLineTableForUnit(const DWARFDebugLine::LineTable &LineTable,
+                       const CompileUnit &Unit, OffsetsStringPool &DebugStrPool,
+                       OffsetsStringPool &DebugLineStrPool,
+                       std::vector<uint64_t> *RowOffsets = nullptr) = 0;
 
   /// Emit the .debug_pubnames contribution for \p Unit.
   virtual void emitPubNamesForUnit(const CompileUnit &Unit) = 0;

@@ -784,14 +784,14 @@ protected:
 
       if (sc.block == nullptr) {
         // Not an inlined function
-        sc.function->GetStartLineSourceInfo(start_file, start_line);
-        if (start_line == 0) {
-          result.AppendErrorWithFormat("Could not find line information for "
-                                       "start of function: \"%s\".\n",
-                                       source_info.function.GetCString());
+        auto expected_info = sc.function->GetSourceInfo();
+        if (!expected_info) {
+          result.AppendError(llvm::toString(expected_info.takeError()));
           return 0;
         }
-        sc.function->GetEndLineSourceInfo(end_file, end_line);
+        start_file = expected_info->first;
+        start_line = expected_info->second.GetRangeBase();
+        end_line = expected_info->second.GetRangeEnd();
       } else {
         // We have an inlined function
         start_file = source_info.line_entry.file_sp;

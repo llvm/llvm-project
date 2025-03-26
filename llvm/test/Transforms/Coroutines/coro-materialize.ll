@@ -28,7 +28,7 @@ entry:
 resume1:
   %inc2 = add i32 %inc1, 1
   %sp2 = call i8 @llvm.coro.suspend(token none, i1 false)
-  switch i8 %sp1, label %suspend [i8 0, label %resume2
+  switch i8 %sp2, label %suspend [i8 0, label %resume2
                                   i8 1, label %cleanup]
 
 resume2:
@@ -60,7 +60,7 @@ entry:
 resume1:
   %inc2 = add i32 %inc1, 1
   %sp2 = call i8 @llvm.coro.suspend(token none, i1 false)
-  switch i8 %sp1, label %suspend [i8 0, label %resume2
+  switch i8 %sp2, label %suspend [i8 0, label %resume2
                                   i8 1, label %cleanup]
 
 resume2:
@@ -96,7 +96,7 @@ entry:
 resume1:
   %inc7 = add i32 %inc6, 1
   %sp2 = call i8 @llvm.coro.suspend(token none, i1 false)
-  switch i8 %sp1, label %suspend [i8 0, label %resume2
+  switch i8 %sp2, label %suspend [i8 0, label %resume2
                                   i8 1, label %cleanup]
 
 resume2:
@@ -132,7 +132,7 @@ entry:
 resume1:
   %inc7 = add i32 %inc6, 1
   %sp2 = call i8 @llvm.coro.suspend(token none, i1 false)
-  switch i8 %sp1, label %suspend [i8 0, label %resume2
+  switch i8 %sp2, label %suspend [i8 0, label %resume2
                                   i8 1, label %cleanup]
 
 resume2:
@@ -173,7 +173,7 @@ entry:
 resume1:
   %inc12 = add i32 %inc7, 1
   %sp2 = call i8 @llvm.coro.suspend(token none, i1 false)
-  switch i8 %sp1, label %suspend [i8 0, label %resume2
+  switch i8 %sp2, label %suspend [i8 0, label %resume2
                                   i8 1, label %cleanup]
 
 resume2:

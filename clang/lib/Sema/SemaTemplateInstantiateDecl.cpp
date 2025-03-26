@@ -572,6 +572,32 @@ static void instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
   S.AMDGPU().addAMDGPUFlatWorkGroupSizeAttr(New, Attr, MinExpr, MaxExpr);
 }
 
+static void instantiateDependentReqdWorkGroupSizeAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const ReqdWorkGroupSizeAttr &Attr, Decl *New) {
+  // Both min and max expression are constant expressions.
+  EnterExpressionEvaluationContext Unevaluated(
+      S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+
+  ExprResult Result = S.SubstExpr(Attr.getXDim(), TemplateArgs);
+  if (Result.isInvalid())
+    return;
+  Expr *X = Result.getAs<Expr>();
+
+  Result = S.SubstExpr(Attr.getYDim(), TemplateArgs);
+  if (Result.isInvalid())
+    return;
+  Expr *Y = Result.getAs<Expr>();
+
+  Result = S.SubstExpr(Attr.getZDim(), TemplateArgs);
+  if (Result.isInvalid())
+    return;
+  Expr *Z = Result.getAs<Expr>();
+
+  ASTContext &Context = S.getASTContext();
+  New->addAttr(::new (Context) ReqdWorkGroupSizeAttr(Context, Attr, X, Y, Z));
+}
+
 ExplicitSpecifier Sema::instantiateExplicitSpecifier(
     const MultiLevelTemplateArgumentList &TemplateArgs, ExplicitSpecifier ES) {
   if (!ES.getExpr())
@@ -743,6 +769,11 @@ attrToRetainOwnershipKind(const Attr *A) {
   }
 }
 
+// Implementation is down with the rest of the OpenACC Decl instantiations.
+static void instantiateDependentOpenACCRoutineDeclAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const OpenACCRoutineDeclAttr *OldAttr, const Decl *Old, Decl *New);
+
 void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
                             const Decl *Tmpl, Decl *New,
                             LateInstantiatedAttrVec *LateAttrs,
@@ -812,6 +843,12 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
       continue;
     }
 
+    if (const auto *ReqdWorkGroupSize =
+            dyn_cast<ReqdWorkGroupSizeAttr>(TmplAttr)) {
+      instantiateDependentReqdWorkGroupSizeAttr(*this, TemplateArgs,
+                                                *ReqdWorkGroupSize, New);
+    }
+
     if (const auto *AMDGPUFlatWorkGroupSize =
             dyn_cast<AMDGPUFlatWorkGroupSizeAttr>(TmplAttr)) {
       instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
@@ -833,6 +870,12 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
     if (const auto *ParamAttr = dyn_cast<HLSLParamModifierAttr>(TmplAttr)) {
       instantiateDependentHLSLParamModifierAttr(*this, TemplateArgs, ParamAttr,
                                                 New);
+      continue;
+    }
+
+    if (const auto *RoutineAttr = dyn_cast<OpenACCRoutineDeclAttr>(TmplAttr)) {
+      instantiateDependentOpenACCRoutineDeclAttr(*this, TemplateArgs,
+                                                 RoutineAttr, Tmpl, New);
       continue;
     }
 
@@ -997,6 +1040,362 @@ TemplateDeclInstantiator::VisitLabelDecl(LabelDecl *D) {
 Decl *
 TemplateDeclInstantiator::VisitNamespaceDecl(NamespaceDecl *D) {
   llvm_unreachable("Namespaces cannot be instantiated");
+}
+
+namespace {
+class OpenACCDeclClauseInstantiator final
+    : public OpenACCClauseVisitor<OpenACCDeclClauseInstantiator> {
+  Sema &SemaRef;
+  const MultiLevelTemplateArgumentList &MLTAL;
+  ArrayRef<OpenACCClause *> ExistingClauses;
+  SemaOpenACC::OpenACCParsedClause &ParsedClause;
+  OpenACCClause *NewClause = nullptr;
+
+public:
+  OpenACCDeclClauseInstantiator(Sema &S,
+                                const MultiLevelTemplateArgumentList &MLTAL,
+                                ArrayRef<OpenACCClause *> ExistingClauses,
+                                SemaOpenACC::OpenACCParsedClause &ParsedClause)
+      : SemaRef(S), MLTAL(MLTAL), ExistingClauses(ExistingClauses),
+        ParsedClause(ParsedClause) {}
+
+  OpenACCClause *CreatedClause() { return NewClause; }
+#define VISIT_CLAUSE(CLAUSE_NAME)                                              \
+  void Visit##CLAUSE_NAME##Clause(const OpenACC##CLAUSE_NAME##Clause &Clause);
+#include "clang/Basic/OpenACCClauses.def"
+
+  llvm::SmallVector<Expr *> VisitVarList(ArrayRef<Expr *> VarList) {
+    llvm::SmallVector<Expr *> InstantiatedVarList;
+    for (Expr *CurVar : VarList) {
+      ExprResult Res = SemaRef.SubstExpr(CurVar, MLTAL);
+
+      if (!Res.isUsable())
+        continue;
+
+      Res = SemaRef.OpenACC().ActOnVar(ParsedClause.getDirectiveKind(),
+                                       ParsedClause.getClauseKind(), Res.get());
+
+      if (Res.isUsable())
+        InstantiatedVarList.push_back(Res.get());
+    }
+    return InstantiatedVarList;
+  }
+};
+
+#define CLAUSE_NOT_ON_DECLS(CLAUSE_NAME)                                       \
+  void OpenACCDeclClauseInstantiator::Visit##CLAUSE_NAME##Clause(              \
+      const OpenACC##CLAUSE_NAME##Clause &) {                                  \
+    llvm_unreachable("Clause type invalid on declaration construct, or "       \
+                     "instantiation not implemented");                         \
+  }
+
+CLAUSE_NOT_ON_DECLS(Auto)
+CLAUSE_NOT_ON_DECLS(Async)
+CLAUSE_NOT_ON_DECLS(Attach)
+CLAUSE_NOT_ON_DECLS(Collapse)
+CLAUSE_NOT_ON_DECLS(Default)
+CLAUSE_NOT_ON_DECLS(DefaultAsync)
+CLAUSE_NOT_ON_DECLS(Delete)
+CLAUSE_NOT_ON_DECLS(Detach)
+CLAUSE_NOT_ON_DECLS(Device)
+CLAUSE_NOT_ON_DECLS(DeviceNum)
+CLAUSE_NOT_ON_DECLS(Finalize)
+CLAUSE_NOT_ON_DECLS(FirstPrivate)
+CLAUSE_NOT_ON_DECLS(Host)
+CLAUSE_NOT_ON_DECLS(If)
+CLAUSE_NOT_ON_DECLS(IfPresent)
+CLAUSE_NOT_ON_DECLS(Independent)
+CLAUSE_NOT_ON_DECLS(NoCreate)
+CLAUSE_NOT_ON_DECLS(NumGangs)
+CLAUSE_NOT_ON_DECLS(NumWorkers)
+CLAUSE_NOT_ON_DECLS(Private)
+CLAUSE_NOT_ON_DECLS(Reduction)
+CLAUSE_NOT_ON_DECLS(Self)
+CLAUSE_NOT_ON_DECLS(Tile)
+CLAUSE_NOT_ON_DECLS(UseDevice)
+CLAUSE_NOT_ON_DECLS(VectorLength)
+CLAUSE_NOT_ON_DECLS(Wait)
+#undef CLAUSE_NOT_ON_DECLS
+
+void OpenACCDeclClauseInstantiator::VisitGangClause(
+    const OpenACCGangClause &C) {
+  llvm::SmallVector<OpenACCGangKind> TransformedGangKinds;
+  llvm::SmallVector<Expr *> TransformedIntExprs;
+  assert(C.getNumExprs() <= 1 &&
+         "Only 1 expression allowed on gang clause in routine");
+
+  if (C.getNumExprs() > 0) {
+    assert(C.getExpr(0).first == OpenACCGangKind::Dim &&
+           "Only dim allowed on routine");
+    ExprResult ER =
+        SemaRef.SubstExpr(const_cast<Expr *>(C.getExpr(0).second), MLTAL);
+    if (ER.isUsable()) {
+      ER = SemaRef.OpenACC().CheckGangExpr(ExistingClauses,
+                                           ParsedClause.getDirectiveKind(),
+                                           C.getExpr(0).first, ER.get());
+      if (ER.isUsable()) {
+        TransformedGangKinds.push_back(OpenACCGangKind::Dim);
+        TransformedIntExprs.push_back(ER.get());
+      }
+    }
+  }
+
+  NewClause = SemaRef.OpenACC().CheckGangClause(
+      ParsedClause.getDirectiveKind(), ExistingClauses,
+      ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
+      TransformedGangKinds, TransformedIntExprs, ParsedClause.getEndLoc());
+}
+
+void OpenACCDeclClauseInstantiator::VisitSeqClause(const OpenACCSeqClause &C) {
+  NewClause = OpenACCSeqClause::Create(SemaRef.getASTContext(),
+                                       ParsedClause.getBeginLoc(),
+                                       ParsedClause.getEndLoc());
+}
+void OpenACCDeclClauseInstantiator::VisitNoHostClause(
+    const OpenACCNoHostClause &C) {
+  NewClause = OpenACCNoHostClause::Create(SemaRef.getASTContext(),
+                                          ParsedClause.getBeginLoc(),
+                                          ParsedClause.getEndLoc());
+}
+
+void OpenACCDeclClauseInstantiator::VisitDeviceTypeClause(
+    const OpenACCDeviceTypeClause &C) {
+  // Nothing to transform here, just create a new version of 'C'.
+  NewClause = OpenACCDeviceTypeClause::Create(
+      SemaRef.getASTContext(), C.getClauseKind(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), C.getArchitectures(),
+      ParsedClause.getEndLoc());
+}
+
+void OpenACCDeclClauseInstantiator::VisitWorkerClause(
+    const OpenACCWorkerClause &C) {
+  assert(!C.hasIntExpr() && "Int Expr not allowed on routine 'worker' clause");
+  NewClause = OpenACCWorkerClause::Create(SemaRef.getASTContext(),
+                                          ParsedClause.getBeginLoc(), {},
+                                          nullptr, ParsedClause.getEndLoc());
+}
+
+void OpenACCDeclClauseInstantiator::VisitVectorClause(
+    const OpenACCVectorClause &C) {
+  assert(!C.hasIntExpr() && "Int Expr not allowed on routine 'vector' clause");
+  NewClause = OpenACCVectorClause::Create(SemaRef.getASTContext(),
+                                          ParsedClause.getBeginLoc(), {},
+                                          nullptr, ParsedClause.getEndLoc());
+}
+
+void OpenACCDeclClauseInstantiator::VisitCopyClause(
+    const OpenACCCopyClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+    return;
+  NewClause = OpenACCCopyClause::Create(
+      SemaRef.getASTContext(), ParsedClause.getClauseKind(),
+      ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
+      ParsedClause.getVarList(), ParsedClause.getEndLoc());
+}
+
+void OpenACCDeclClauseInstantiator::VisitLinkClause(
+    const OpenACCLinkClause &C) {
+  ParsedClause.setVarListDetails(
+      SemaRef.OpenACC().CheckLinkClauseVarList(VisitVarList(C.getVarList())),
+      /*IsReadOnly=*/false, /*IsZero=*/false);
+
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+    return;
+
+  NewClause = OpenACCLinkClause::Create(
+      SemaRef.getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
+void OpenACCDeclClauseInstantiator::VisitDeviceResidentClause(
+    const OpenACCDeviceResidentClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+    return;
+  NewClause = OpenACCDeviceResidentClause::Create(
+      SemaRef.getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
+void OpenACCDeclClauseInstantiator::VisitCopyInClause(
+    const OpenACCCopyInClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()), C.isReadOnly(),
+                                 /*IsZero=*/false);
+
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+    return;
+  NewClause = OpenACCCopyInClause::Create(
+      SemaRef.getASTContext(), ParsedClause.getClauseKind(),
+      ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
+      ParsedClause.isReadOnly(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+void OpenACCDeclClauseInstantiator::VisitCopyOutClause(
+    const OpenACCCopyOutClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 /*IsReadOnly=*/false, C.isZero());
+
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+    return;
+  NewClause = OpenACCCopyOutClause::Create(
+      SemaRef.getASTContext(), ParsedClause.getClauseKind(),
+      ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
+      ParsedClause.isZero(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+void OpenACCDeclClauseInstantiator::VisitCreateClause(
+    const OpenACCCreateClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 /*IsReadOnly=*/false, C.isZero());
+
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+    return;
+  NewClause = OpenACCCreateClause::Create(
+      SemaRef.getASTContext(), ParsedClause.getClauseKind(),
+      ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
+      ParsedClause.isZero(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+void OpenACCDeclClauseInstantiator::VisitPresentClause(
+    const OpenACCPresentClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+    return;
+  NewClause = OpenACCPresentClause::Create(
+      SemaRef.getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+void OpenACCDeclClauseInstantiator::VisitDevicePtrClause(
+    const OpenACCDevicePtrClause &C) {
+  llvm::SmallVector<Expr *> VarList = VisitVarList(C.getVarList());
+  // Ensure each var is a pointer type.
+  VarList.erase(std::remove_if(VarList.begin(), VarList.end(),
+                               [&](Expr *E) {
+                                 return SemaRef.OpenACC().CheckVarIsPointerType(
+                                     OpenACCClauseKind::DevicePtr, E);
+                               }),
+                VarList.end());
+  ParsedClause.setVarListDetails(VarList,
+                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+    return;
+  NewClause = OpenACCDevicePtrClause::Create(
+      SemaRef.getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
+void OpenACCDeclClauseInstantiator::VisitBindClause(
+    const OpenACCBindClause &C) {
+  // Nothing to instantiate, we support only string literal or identifier.
+  if (C.isStringArgument())
+    NewClause = OpenACCBindClause::Create(
+        SemaRef.getASTContext(), ParsedClause.getBeginLoc(),
+        ParsedClause.getLParenLoc(), C.getStringArgument(),
+        ParsedClause.getEndLoc());
+  else
+    NewClause = OpenACCBindClause::Create(
+        SemaRef.getASTContext(), ParsedClause.getBeginLoc(),
+        ParsedClause.getLParenLoc(), C.getIdentifierArgument(),
+        ParsedClause.getEndLoc());
+}
+
+llvm::SmallVector<OpenACCClause *> InstantiateOpenACCClauseList(
+    Sema &S, const MultiLevelTemplateArgumentList &MLTAL,
+    OpenACCDirectiveKind DK, ArrayRef<const OpenACCClause *> ClauseList) {
+  llvm::SmallVector<OpenACCClause *> TransformedClauses;
+
+  for (const auto *Clause : ClauseList) {
+    SemaOpenACC::OpenACCParsedClause ParsedClause(DK, Clause->getClauseKind(),
+                                                  Clause->getBeginLoc());
+    ParsedClause.setEndLoc(Clause->getEndLoc());
+    if (const auto *WithParms = dyn_cast<OpenACCClauseWithParams>(Clause))
+      ParsedClause.setLParenLoc(WithParms->getLParenLoc());
+
+    OpenACCDeclClauseInstantiator Instantiator{S, MLTAL, TransformedClauses,
+                                               ParsedClause};
+    Instantiator.Visit(Clause);
+    if (Instantiator.CreatedClause())
+      TransformedClauses.push_back(Instantiator.CreatedClause());
+  }
+  return TransformedClauses;
+}
+
+} // namespace
+
+static void instantiateDependentOpenACCRoutineDeclAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const OpenACCRoutineDeclAttr *OldAttr, const Decl *OldDecl, Decl *NewDecl) {
+  OpenACCRoutineDeclAttr *A =
+      OpenACCRoutineDeclAttr::Create(S.getASTContext(), OldAttr->getLocation());
+
+  if (!OldAttr->Clauses.empty()) {
+    llvm::SmallVector<OpenACCClause *> TransformedClauses =
+        InstantiateOpenACCClauseList(
+            S, TemplateArgs, OpenACCDirectiveKind::Routine, OldAttr->Clauses);
+    A->Clauses.assign(TransformedClauses.begin(), TransformedClauses.end());
+  }
+
+  // We don't end up having to do any magic-static or bind checking here, since
+  // the first phase should have caught this, since we always apply to the
+  // functiondecl.
+  NewDecl->addAttr(A);
+}
+
+Decl *TemplateDeclInstantiator::VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D) {
+  SemaRef.OpenACC().ActOnConstruct(D->getDirectiveKind(), D->getBeginLoc());
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      InstantiateOpenACCClauseList(SemaRef, TemplateArgs, D->getDirectiveKind(),
+                                   D->clauses());
+
+  if (SemaRef.OpenACC().ActOnStartDeclDirective(
+          D->getDirectiveKind(), D->getBeginLoc(), TransformedClauses))
+    return nullptr;
+
+  DeclGroupRef Res = SemaRef.OpenACC().ActOnEndDeclDirective(
+      D->getDirectiveKind(), D->getBeginLoc(), D->getDirectiveLoc(), {}, {},
+      D->getEndLoc(), TransformedClauses);
+
+  if (Res.isNull())
+    return nullptr;
+
+  return Res.getSingleDecl();
+}
+
+Decl *TemplateDeclInstantiator::VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D) {
+  SemaRef.OpenACC().ActOnConstruct(D->getDirectiveKind(), D->getBeginLoc());
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      InstantiateOpenACCClauseList(SemaRef, TemplateArgs, D->getDirectiveKind(),
+                                   D->clauses());
+
+  ExprResult FuncRef;
+  if (D->getFunctionReference()) {
+    FuncRef = SemaRef.SubstCXXIdExpr(D->getFunctionReference(), TemplateArgs);
+    if (FuncRef.isUsable())
+      FuncRef = SemaRef.OpenACC().ActOnRoutineName(FuncRef.get());
+    // We don't return early here, we leave the construct in the AST, even if
+    // the function decl is empty.
+  }
+
+  if (SemaRef.OpenACC().ActOnStartDeclDirective(
+          D->getDirectiveKind(), D->getBeginLoc(), TransformedClauses))
+    return nullptr;
+
+  DeclGroupRef Res = SemaRef.OpenACC().ActOnEndRoutineDeclDirective(
+      D->getBeginLoc(), D->getDirectiveLoc(), D->getLParenLoc(), FuncRef.get(),
+      D->getRParenLoc(), TransformedClauses, D->getEndLoc(), nullptr);
+
+  if (Res.isNull())
+    return nullptr;
+
+  return Res.getSingleDecl();
 }
 
 Decl *
@@ -1300,6 +1699,9 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
 
   if (Var->getTLSKind())
     SemaRef.CheckThreadLocalForLargeAlignment(Var);
+
+  if (SemaRef.getLangOpts().OpenACC)
+    SemaRef.OpenACC().ActOnVariableDeclarator(Var);
 
   return Var;
 }
@@ -1853,7 +2255,7 @@ Decl *TemplateDeclInstantiator::VisitClassTemplateDecl(ClassTemplateDecl *D) {
       // Do some additional validation, then merge default arguments
       // from the existing declarations.
       if (SemaRef.CheckTemplateParameterList(InstParams, PrevParams,
-                                             Sema::TPC_ClassTemplate))
+                                             Sema::TPC_Other))
         return nullptr;
 
       Inst->setAccess(PrevClassTemplate->getAccess());
@@ -2134,7 +2536,8 @@ Decl *TemplateDeclInstantiator::VisitCXXRecordDecl(CXXRecordDecl *D) {
   // DR1484 clarifies that the members of a local class are instantiated as part
   // of the instantiation of their enclosing entity.
   if (D->isCompleteDefinition() && D->isLocalClass()) {
-    Sema::LocalEagerInstantiationScope LocalInstantiations(SemaRef);
+    Sema::LocalEagerInstantiationScope LocalInstantiations(SemaRef,
+                                                           /*AtEndOfTU=*/false);
 
     SemaRef.InstantiateClass(D->getLocation(), Record, D, TemplateArgs,
                              TSK_ImplicitInstantiation,
@@ -5047,12 +5450,15 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
       PatternDef = nullptr;
   }
 
+  // True is the template definition is unreachable, otherwise false.
+  bool Unreachable = false;
   // FIXME: We need to track the instantiation stack in order to know which
   // definitions should be visible within this instantiation.
-  if (DiagnoseUninstantiableTemplate(PointOfInstantiation, Function,
-                                Function->getInstantiatedFromMemberFunction(),
-                                     PatternDecl, PatternDef, TSK,
-                                     /*Complain*/DefinitionRequired)) {
+  if (DiagnoseUninstantiableTemplate(
+          PointOfInstantiation, Function,
+          Function->getInstantiatedFromMemberFunction(), PatternDecl,
+          PatternDef, TSK,
+          /*Complain*/ DefinitionRequired, &Unreachable)) {
     if (DefinitionRequired)
       Function->setInvalidDecl();
     else if (TSK == TSK_ExplicitInstantiationDefinition ||
@@ -5077,11 +5483,18 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
       if (AtEndOfTU && !getDiagnostics().hasErrorOccurred() &&
           !getSourceManager().isInSystemHeader(PatternDecl->getBeginLoc())) {
         Diag(PointOfInstantiation, diag::warn_func_template_missing)
-          << Function;
-        Diag(PatternDecl->getLocation(), diag::note_forward_template_decl);
-        if (getLangOpts().CPlusPlus11)
-          Diag(PointOfInstantiation, diag::note_inst_declaration_hint)
-              << Function;
+            << Function;
+        if (Unreachable) {
+          // FIXME: would be nice to mention which module the function template
+          // comes from.
+          Diag(PatternDecl->getLocation(),
+               diag::note_unreachable_template_decl);
+        } else {
+          Diag(PatternDecl->getLocation(), diag::note_forward_template_decl);
+          if (getLangOpts().CPlusPlus11)
+            Diag(PointOfInstantiation, diag::note_inst_declaration_hint)
+                << Function;
+        }
       }
     }
 
@@ -5116,8 +5529,10 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   // This has to happen before LateTemplateParser below is called, so that
   // it marks vtables used in late parsed templates as used.
   GlobalEagerInstantiationScope GlobalInstantiations(*this,
-                                                     /*Enabled=*/Recursive);
-  LocalEagerInstantiationScope LocalInstantiations(*this);
+                                                     /*Enabled=*/Recursive,
+                                                     /*AtEndOfTU=*/AtEndOfTU);
+  LocalEagerInstantiationScope LocalInstantiations(*this,
+                                                   /*AtEndOfTU=*/AtEndOfTU);
 
   // Call the LateTemplateParser callback if there is a need to late parse
   // a templated function definition.
@@ -5691,10 +6106,12 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
       // If we're performing recursive template instantiation, create our own
       // queue of pending implicit instantiations that we will instantiate
       // later, while we're still within our own instantiation context.
-      GlobalEagerInstantiationScope GlobalInstantiations(*this,
-                                                         /*Enabled=*/Recursive);
+      GlobalEagerInstantiationScope GlobalInstantiations(
+          *this,
+          /*Enabled=*/Recursive, /*AtEndOfTU=*/AtEndOfTU);
       LocalInstantiationScope Local(*this);
-      LocalEagerInstantiationScope LocalInstantiations(*this);
+      LocalEagerInstantiationScope LocalInstantiations(*this,
+                                                       /*AtEndOfTU=*/AtEndOfTU);
 
       // Enter the scope of this instantiation. We don't use
       // PushDeclContext because we don't have a scope.
@@ -5791,14 +6208,16 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
   // queue of pending implicit instantiations that we will instantiate later,
   // while we're still within our own instantiation context.
   GlobalEagerInstantiationScope GlobalInstantiations(*this,
-                                                     /*Enabled=*/Recursive);
+                                                     /*Enabled=*/Recursive,
+                                                     /*AtEndOfTU=*/AtEndOfTU);
 
   // Enter the scope of this instantiation. We don't use
   // PushDeclContext because we don't have a scope.
   ContextRAII PreviousContext(*this, Var->getDeclContext());
   LocalInstantiationScope Local(*this);
 
-  LocalEagerInstantiationScope LocalInstantiations(*this);
+  LocalEagerInstantiationScope LocalInstantiations(*this,
+                                                   /*AtEndOfTU=*/AtEndOfTU);
 
   VarDecl *OldVar = Var;
   if (Def->isStaticDataMember() && !Def->isOutOfLine()) {
@@ -6546,18 +6965,20 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
   return D;
 }
 
-void Sema::PerformPendingInstantiations(bool LocalOnly) {
-  std::deque<PendingImplicitInstantiation> delayedPCHInstantiations;
+void Sema::PerformPendingInstantiations(bool LocalOnly, bool AtEndOfTU) {
+  std::deque<PendingImplicitInstantiation> DelayedImplicitInstantiations;
   while (!PendingLocalImplicitInstantiations.empty() ||
          (!LocalOnly && !PendingInstantiations.empty())) {
     PendingImplicitInstantiation Inst;
 
+    bool LocalInstantiation = false;
     if (PendingLocalImplicitInstantiations.empty()) {
       Inst = PendingInstantiations.front();
       PendingInstantiations.pop_front();
     } else {
       Inst = PendingLocalImplicitInstantiations.front();
       PendingLocalImplicitInstantiations.pop_front();
+      LocalInstantiation = true;
     }
 
     // Instantiate function definitions
@@ -6566,22 +6987,26 @@ void Sema::PerformPendingInstantiations(bool LocalOnly) {
                                 TSK_ExplicitInstantiationDefinition;
       if (Function->isMultiVersion()) {
         getASTContext().forEachMultiversionedFunctionVersion(
-            Function, [this, Inst, DefinitionRequired](FunctionDecl *CurFD) {
+            Function,
+            [this, Inst, DefinitionRequired, AtEndOfTU](FunctionDecl *CurFD) {
               InstantiateFunctionDefinition(/*FIXME:*/ Inst.second, CurFD, true,
-                                            DefinitionRequired, true);
+                                            DefinitionRequired, AtEndOfTU);
               if (CurFD->isDefined())
                 CurFD->setInstantiationIsPending(false);
             });
       } else {
         InstantiateFunctionDefinition(/*FIXME:*/ Inst.second, Function, true,
-                                      DefinitionRequired, true);
+                                      DefinitionRequired, AtEndOfTU);
         if (Function->isDefined())
           Function->setInstantiationIsPending(false);
       }
       // Definition of a PCH-ed template declaration may be available only in the TU.
       if (!LocalOnly && LangOpts.PCHInstantiateTemplates &&
           TUKind == TU_Prefix && Function->instantiationIsPending())
-        delayedPCHInstantiations.push_back(Inst);
+        DelayedImplicitInstantiations.push_back(Inst);
+      else if (!AtEndOfTU && Function->instantiationIsPending() &&
+               !LocalInstantiation)
+        DelayedImplicitInstantiations.push_back(Inst);
       continue;
     }
 
@@ -6625,11 +7050,11 @@ void Sema::PerformPendingInstantiations(bool LocalOnly) {
     // Instantiate static data member definitions or variable template
     // specializations.
     InstantiateVariableDefinition(/*FIXME:*/ Inst.second, Var, true,
-                                  DefinitionRequired, true);
+                                  DefinitionRequired, AtEndOfTU);
   }
 
-  if (!LocalOnly && LangOpts.PCHInstantiateTemplates)
-    PendingInstantiations.swap(delayedPCHInstantiations);
+  if (!DelayedImplicitInstantiations.empty())
+    PendingInstantiations.swap(DelayedImplicitInstantiations);
 }
 
 void Sema::PerformDependentDiagnostics(const DeclContext *Pattern,

@@ -101,8 +101,10 @@ void SystemZPostRewrite::selectSELRMux(MachineBasicBlock &MBB,
                                        unsigned LowOpcode,
                                        unsigned HighOpcode) {
   Register DestReg = MBBI->getOperand(0).getReg();
-  Register Src1Reg = MBBI->getOperand(1).getReg();
-  Register Src2Reg = MBBI->getOperand(2).getReg();
+  MachineOperand &Src1MO = MBBI->getOperand(1);
+  MachineOperand &Src2MO = MBBI->getOperand(2);
+  Register Src1Reg = Src1MO.getReg();
+  Register Src2Reg = Src2MO.getReg();
   bool DestIsHigh = SystemZ::isHighReg(DestReg);
   bool Src1IsHigh = SystemZ::isHighReg(Src1Reg);
   bool Src2IsHigh = SystemZ::isHighReg(Src2Reg);
@@ -114,7 +116,7 @@ void SystemZPostRewrite::selectSELRMux(MachineBasicBlock &MBB,
   if (Src1Reg == Src2Reg) {
     BuildMI(*MBBI->getParent(), MBBI, MBBI->getDebugLoc(),
             TII->get(SystemZ::COPY), DestReg)
-        .addReg(MBBI->getOperand(1).getReg(), getRegState(MBBI->getOperand(1)));
+        .addReg(Src1Reg, getRegState(Src1MO) & getRegState(Src2MO));
     MBBI->eraseFromParent();
     return;
   }
@@ -126,15 +128,15 @@ void SystemZPostRewrite::selectSELRMux(MachineBasicBlock &MBB,
     if (DestIsHigh != Src1IsHigh) {
       BuildMI(*MBBI->getParent(), MBBI, MBBI->getDebugLoc(),
               TII->get(SystemZ::COPY), DestReg)
-        .addReg(MBBI->getOperand(1).getReg(), getRegState(MBBI->getOperand(1)));
-      MBBI->getOperand(1).setReg(DestReg);
+          .addReg(Src1Reg, getRegState(Src1MO));
+      Src1MO.setReg(DestReg);
       Src1Reg = DestReg;
       Src1IsHigh = DestIsHigh;
     } else if (DestIsHigh != Src2IsHigh) {
       BuildMI(*MBBI->getParent(), MBBI, MBBI->getDebugLoc(),
               TII->get(SystemZ::COPY), DestReg)
-        .addReg(MBBI->getOperand(2).getReg(), getRegState(MBBI->getOperand(2)));
-      MBBI->getOperand(2).setReg(DestReg);
+          .addReg(Src2Reg, getRegState(Src2MO));
+      Src2MO.setReg(DestReg);
       Src2Reg = DestReg;
       Src2IsHigh = DestIsHigh;
     }

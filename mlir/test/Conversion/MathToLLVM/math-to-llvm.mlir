@@ -263,6 +263,26 @@ func.func @ctpop_scalable_vector(%arg0 : vector<[4]xi32>) -> vector<[4]xi32> {
 
 // -----
 
+// CHECK-LABEL: func @isnan_double(
+// CHECK-SAME: f64
+func.func @isnan_double(%arg0 : f64) {
+  // CHECK: "llvm.intr.is.fpclass"(%arg0) <{bit = 3 : i32}> : (f64) -> i1
+  %0 = math.isnan %arg0 : f64
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @isfinite_double(
+// CHECK-SAME: f64
+func.func @isfinite_double(%arg0 : f64) {
+  // CHECK: "llvm.intr.is.fpclass"(%arg0) <{bit = 504 : i32}> : (f64) -> i1
+  %0 = math.isfinite %arg0 : f64
+  func.return
+}
+
+// -----
+
 // CHECK-LABEL: func @rsqrt_double(
 // CHECK-SAME: f64
 func.func @rsqrt_double(%arg0 : f64) {

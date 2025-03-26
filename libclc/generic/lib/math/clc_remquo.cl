@@ -1,30 +1,17 @@
-/*
- * Copyright (c) 2014 Advanced Micro Devices, Inc.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 
 #include <clc/clc.h>
 #include <clc/clc_convert.h>
 #include <clc/clcmacro.h>
 #include <clc/integer/clc_clz.h>
 #include <clc/math/clc_floor.h>
+#include <clc/math/clc_fma.h>
 #include <clc/math/clc_subnormal_config.h>
 #include <clc/math/clc_trunc.h>
 #include <clc/math/math.h>
@@ -176,7 +163,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_remquo(double x, double y,
 
     // Compute w * t in quad precision
     p = w * t;
-    pp = fma(w, t, -p);
+    pp = __clc_fma(w, t, -p);
 
     // Subtract w * t from dx
     v = dx - p;
@@ -196,7 +183,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_remquo(double x, double y,
   int todd = lt & 1;
 
   p = w * t;
-  pp = fma(w, t, -p);
+  pp = __clc_fma(w, t, -p);
   v = dx - p;
   dx = v + (((dx - v) - p) - pp);
   i = dx < 0.0;
@@ -242,7 +229,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_remquo(double x, double y,
   quo = c ? qsgn : quo;
   // we could use a conversion here instead since qsgn = +-1
   p = qsgn == 1 ? -1.0 : 1.0;
-  t = fma(y, p, x);
+  t = __clc_fma(y, p, x);
   ret = c ? t : ret;
 
   // We don't need anything special for |x| == 0

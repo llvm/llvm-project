@@ -54,6 +54,9 @@ uid_t RTNAME(GetUID)();
 // GNU extension subroutine GETLOG(C).
 void FORTRAN_PROCEDURE_NAME(getlog)(char *name, std::int64_t length);
 
+// GNU extension subroutine HOSTNM(C)
+void FORTRAN_PROCEDURE_NAME(hostnm)(char *name, std::int64_t length);
+
 std::intptr_t RTNAME(Malloc)(std::size_t size);
 
 // GNU extension function STATUS = SIGNAL(number, handler)

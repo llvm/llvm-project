@@ -152,14 +152,10 @@ bool ConstantFPSDNode::isValueValidForType(EVT VT,
 
 bool ISD::isConstantSplatVector(const SDNode *N, APInt &SplatVal) {
   if (N->getOpcode() == ISD::SPLAT_VECTOR) {
-    unsigned EltSize =
-        N->getValueType(0).getVectorElementType().getSizeInBits();
-    if (auto *Op0 = dyn_cast<ConstantSDNode>(N->getOperand(0))) {
-      SplatVal = Op0->getAPIntValue().trunc(EltSize);
-      return true;
-    }
-    if (auto *Op0 = dyn_cast<ConstantFPSDNode>(N->getOperand(0))) {
-      SplatVal = Op0->getValueAPF().bitcastToAPInt().trunc(EltSize);
+    if (auto OptAPInt = N->getOperand(0)->bitcastToAPInt()) {
+      unsigned EltSize =
+          N->getValueType(0).getVectorElementType().getSizeInBits();
+      SplatVal = OptAPInt->trunc(EltSize);
       return true;
     }
   }
@@ -215,12 +211,9 @@ bool ISD::isConstantSplatVectorAllOnes(const SDNode *N, bool BuildVectorOnly) {
   // we care if the resultant vector is all ones, not whether the individual
   // constants are.
   SDValue NotZero = N->getOperand(i);
-  unsigned EltSize = N->getValueType(0).getScalarSizeInBits();
-  if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(NotZero)) {
-    if (CN->getAPIntValue().countr_one() < EltSize)
-      return false;
-  } else if (ConstantFPSDNode *CFPN = dyn_cast<ConstantFPSDNode>(NotZero)) {
-    if (CFPN->getValueAPF().bitcastToAPInt().countr_one() < EltSize)
+  if (auto OptAPInt = NotZero->bitcastToAPInt()) {
+    unsigned EltSize = N->getValueType(0).getScalarSizeInBits();
+    if (OptAPInt->countr_one() < EltSize)
       return false;
   } else
     return false;
@@ -259,12 +252,9 @@ bool ISD::isConstantSplatVectorAllZeros(const SDNode *N, bool BuildVectorOnly) {
     // We only want to check enough bits to cover the vector elements, because
     // we care if the resultant vector is all zeros, not whether the individual
     // constants are.
-    unsigned EltSize = N->getValueType(0).getScalarSizeInBits();
-    if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Op)) {
-      if (CN->getAPIntValue().countr_zero() < EltSize)
-        return false;
-    } else if (ConstantFPSDNode *CFPN = dyn_cast<ConstantFPSDNode>(Op)) {
-      if (CFPN->getValueAPF().bitcastToAPInt().countr_zero() < EltSize)
+    if (auto OptAPInt = Op->bitcastToAPInt()) {
+      unsigned EltSize = N->getValueType(0).getScalarSizeInBits();
+      if (OptAPInt->countr_zero() < EltSize)
         return false;
     } else
       return false;
@@ -2645,22 +2635,6 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
     Results.push_back(LoadResult);
   }
 
-  if (CallRetResNo && !Node->hasAnyUseOfValue(*CallRetResNo)) {
-    // FIXME: Find a way to avoid updating the root. This is needed for x86,
-    // which uses a floating-point stack. If (for example) the node to be
-    // expanded has two results one floating-point which is returned by the
-    // call, and one integer result, returned via an output pointer. If only the
-    // integer result is used then the `CopyFromReg` for the FP result may be
-    // optimized out. This prevents an FP stack pop from being emitted for it.
-    // Setting the root like this ensures there will be a use of the
-    // `CopyFromReg` chain, and ensures the FP pop will be emitted.
-    SDValue NewRoot =
-        getNode(ISD::TokenFactor, DL, MVT::Other, getRoot(), CallChain);
-    setRoot(NewRoot);
-    // Ensure the new root is reachable from the results.
-    Results[0] = getMergeValues({Results[0], NewRoot}, DL);
-  }
-
   return true;
 }
 
@@ -3405,13 +3379,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
   KnownBits Known(BitWidth);   // Don't know anything.
 
-  if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
+  if (auto OptAPInt = Op->bitcastToAPInt()) {
     // We know all of the bits for a constant!
-    return KnownBits::makeConstant(C->getAPIntValue());
-  }
-  if (auto *C = dyn_cast<ConstantFPSDNode>(Op)) {
-    // We know all of the bits for a constant fp!
-    return KnownBits::makeConstant(C->getValueAPF().bitcastToAPInt());
+    return KnownBits::makeConstant(*std::move(OptAPInt));
   }
 
   if (Depth >= MaxRecursionDepth)
@@ -4034,39 +4004,20 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
         }
       }
     } else if (Op.getResNo() == 0) {
-      KnownBits Known0(!LD->getMemoryVT().isScalableVT()
-                           ? LD->getMemoryVT().getFixedSizeInBits()
-                           : BitWidth);
-      EVT VT = Op.getValueType();
-      // Fill in any known bits from range information. There are 3 types being
-      // used. The results VT (same vector elt size as BitWidth), the loaded
-      // MemoryVT (which may or may not be vector) and the range VTs original
-      // type. The range matadata needs the full range (i.e
-      // MemoryVT().getSizeInBits()), which is truncated to the correct elt size
-      // if it is know. These are then extended to the original VT sizes below.
-      if (const MDNode *MD = LD->getRanges()) {
-        computeKnownBitsFromRangeMetadata(*MD, Known0);
-        if (VT.isVector()) {
-          // Handle truncation to the first demanded element.
-          // TODO: Figure out which demanded elements are covered
-          if (DemandedElts != 1 || !getDataLayout().isLittleEndian())
-            break;
-          Known0 = Known0.trunc(BitWidth);
-        }
-      }
+      unsigned ScalarMemorySize = LD->getMemoryVT().getScalarSizeInBits();
+      KnownBits KnownScalarMemory(ScalarMemorySize);
+      if (const MDNode *MD = LD->getRanges())
+        computeKnownBitsFromRangeMetadata(*MD, KnownScalarMemory);
 
-      if (LD->getMemoryVT().isVector())
-        Known0 = Known0.trunc(LD->getMemoryVT().getScalarSizeInBits());
-
-      // Extend the Known bits from memory to the size of the result.
+      // Extend the Known bits from memory to the size of the scalar result.
       if (ISD::isZEXTLoad(Op.getNode()))
-        Known = Known0.zext(BitWidth);
+        Known = KnownScalarMemory.zext(BitWidth);
       else if (ISD::isSEXTLoad(Op.getNode()))
-        Known = Known0.sext(BitWidth);
+        Known = KnownScalarMemory.sext(BitWidth);
       else if (ISD::isEXTLoad(Op.getNode()))
-        Known = Known0.anyext(BitWidth);
+        Known = KnownScalarMemory.anyext(BitWidth);
       else
-        Known = Known0;
+        Known = KnownScalarMemory;
       assert(Known.getBitWidth() == BitWidth);
       return Known;
     }
@@ -5520,6 +5471,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::FREEZE:
   case ISD::CONCAT_VECTORS:
   case ISD::INSERT_SUBVECTOR:
+  case ISD::EXTRACT_SUBVECTOR:
   case ISD::SADDSAT:
   case ISD::UADDSAT:
   case ISD::SSUBSAT:
@@ -5753,7 +5705,8 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
     return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1) &&
            isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1);
   }
-  case ISD::EXTRACT_VECTOR_ELT: {
+  case ISD::EXTRACT_VECTOR_ELT:
+  case ISD::EXTRACT_SUBVECTOR: {
     return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1);
   }
   case ISD::BUILD_VECTOR: {
@@ -7578,7 +7531,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                 N1VT.getVectorMinNumElements()) &&
            "Extract subvector overflow!");
     assert(N2C->getAPIntValue().getBitWidth() ==
-               TLI->getVectorIdxTy(getDataLayout()).getFixedSizeInBits() &&
+               TLI->getVectorIdxWidth(getDataLayout()) &&
            "Constant index for EXTRACT_SUBVECTOR has an invalid size");
 
     // Trivial extraction.
@@ -7812,7 +7765,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                 VT.getVectorMinNumElements()) &&
            "Insert subvector overflow!");
     assert(N3->getAsAPIntVal().getBitWidth() ==
-               TLI->getVectorIdxTy(getDataLayout()).getFixedSizeInBits() &&
+               TLI->getVectorIdxWidth(getDataLayout()) &&
            "Constant index for INSERT_SUBVECTOR has an invalid size");
 
     // Trivial insertion.
@@ -11359,7 +11312,7 @@ SDDbgValue *SelectionDAG::getFrameIndexDbgValue(DIVariable *Var,
 
 /// VReg
 SDDbgValue *SelectionDAG::getVRegDbgValue(DIVariable *Var, DIExpression *Expr,
-                                          unsigned VReg, bool IsIndirect,
+                                          Register VReg, bool IsIndirect,
                                           const DebugLoc &DL, unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
@@ -12456,25 +12409,6 @@ const EVT *SDNode::getValueTypeList(MVT VT) {
 
   assert(VT < MVT::VALUETYPE_SIZE && "Value type out of range!");
   return &SimpleVTArray.VTs[VT.SimpleTy];
-}
-
-/// hasNUsesOfValue - Return true if there are exactly NUSES uses of the
-/// indicated value.  This method ignores uses of other values defined by this
-/// operation.
-bool SDNode::hasNUsesOfValue(unsigned NUses, unsigned Value) const {
-  assert(Value < getNumValues() && "Bad value!");
-
-  // TODO: Only iterate over uses of a given value of the node
-  for (SDUse &U : uses()) {
-    if (U.getResNo() == Value) {
-      if (NUses == 0)
-        return false;
-      --NUses;
-    }
-  }
-
-  // Found exactly the right number of uses?
-  return NUses == 0;
 }
 
 /// hasAnyUseOfValue - Return true if there are any use of the indicated

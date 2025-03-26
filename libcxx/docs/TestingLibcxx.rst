@@ -470,12 +470,9 @@ removed from the Standard. These tests should be written like:
 Benchmarks
 ==========
 
-Libc++ contains benchmark tests separately from the test of the test suite.
-The benchmarks are written using the `Google Benchmark`_ library, a copy of which
-is stored in the libc++ repository.
-
-For more information about using the Google Benchmark library, see the
-`official documentation <https://github.com/google/benchmark>`_.
+Libc++'s test suite also contains benchmarks. The benchmarks are written using the `Google Benchmark`_
+library, a copy of which is stored in the LLVM monorepo. For more information about using the Google
+Benchmark library, see the `official documentation <https://github.com/google/benchmark>`_.
 
 The benchmarks are located under ``libcxx/test/benchmarks``. Running a benchmark
 works in the same way as running a test. Both the benchmarks and the tests share

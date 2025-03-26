@@ -20,7 +20,7 @@ define void @test1(i32 %n) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[EXT_WIDE1:%.*]] = zext nneg i32 [[A]] to i64
 ; CHECK-NEXT:    call void @use64(i64 [[EXT_WIDE1]])
-; CHECK-NEXT:    [[EXT]] = trunc i64 [[EXT_WIDE1]] to i32
+; CHECK-NEXT:    [[EXT]] = trunc nuw nsw i64 [[EXT_WIDE1]] to i32
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -55,7 +55,7 @@ define void @test2(i32 %n) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[EXT_WIDE:%.*]] = sext i32 [[A]] to i64
 ; CHECK-NEXT:    call void @use64(i64 [[EXT_WIDE]])
-; CHECK-NEXT:    [[EXT]] = trunc i64 [[EXT_WIDE]] to i32
+; CHECK-NEXT:    [[EXT]] = trunc nsw i64 [[EXT_WIDE]] to i32
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -87,7 +87,7 @@ define void @test3(i32 %n) {
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[EXT_WIDE1:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    call void @use64(i64 [[EXT_WIDE1]])
-; CHECK-NEXT:    [[EXT:%.*]] = trunc i64 [[EXT_WIDE1]] to i32
+; CHECK-NEXT:    [[EXT:%.*]] = trunc nuw nsw i64 [[EXT_WIDE1]] to i32
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -115,7 +115,7 @@ define void @test4(i32 %n) {
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[EXT_WIDE:%.*]] = sext i32 [[N]] to i64
 ; CHECK-NEXT:    call void @use64(i64 [[EXT_WIDE]])
-; CHECK-NEXT:    [[EXT:%.*]] = trunc i64 [[EXT_WIDE]] to i32
+; CHECK-NEXT:    [[EXT:%.*]] = trunc nsw i64 [[EXT_WIDE]] to i32
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

@@ -141,6 +141,7 @@ LLVM_LIBC_FUNCTION(float, erff, (float x)) {
     return ONE[sign] + SMALL[sign];
   }
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   // Exceptional mask = common 0 bits of 2 exceptional values.
   constexpr uint32_t EXCEPT_MASK = 0x809a'6184U;
 
@@ -155,6 +156,7 @@ LLVM_LIBC_FUNCTION(float, erff, (float x)) {
     if (x_abs == 0U)
       return x;
   }
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // Polynomial approximation:
   //   erf(x) ~ x * (c0 + c1 * x^2 + c2 * x^4 + ... + c7 * x^14)

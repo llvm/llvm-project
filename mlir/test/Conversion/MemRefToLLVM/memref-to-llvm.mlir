@@ -654,3 +654,14 @@ func.func @store_non_temporal(%input : memref<32xf32, affine_map<(d0) -> (d0)>>,
   memref.store %2, %output[%1] {nontemporal = true} : memref<32xf32, affine_map<(d0) -> (d0)>>
   func.return
 }
+
+// -----
+
+// Ensure unconvertable memory space not cause a crash
+
+// CHECK-LABEL: @alloca_unconvertable_memory_space
+func.func @alloca_unconvertable_memory_space() {
+  // CHECK: memref.alloca
+  %alloca = memref.alloca() : memref<1x32x33xi32, #spirv.storage_class<StorageBuffer>>
+  func.return
+}

@@ -7275,11 +7275,26 @@ static EVT getPackedVectorTypeFromPredicateType(LLVMContext &Ctx, EVT PredVT,
 /// Return the EVT of the data associated to a memory operation in \p
 /// Root. If such EVT cannot be retrived, it returns an invalid EVT.
 static EVT getMemVTFromNode(LLVMContext &Ctx, SDNode *Root) {
-  if (isa<MemSDNode>(Root))
-    return cast<MemSDNode>(Root)->getMemoryVT();
+  if (auto *MemIntr = dyn_cast<MemIntrinsicSDNode>(Root))
+    return MemIntr->getMemoryVT();
 
-  if (isa<MemIntrinsicSDNode>(Root))
-    return cast<MemIntrinsicSDNode>(Root)->getMemoryVT();
+  if (isa<MemSDNode>(Root)) {
+    EVT MemVT = cast<MemSDNode>(Root)->getMemoryVT();
+
+    EVT DataVT;
+    if (auto *Load = dyn_cast<LoadSDNode>(Root))
+      DataVT = Load->getValueType(0);
+    else if (auto *Load = dyn_cast<MaskedLoadSDNode>(Root))
+      DataVT = Load->getValueType(0);
+    else if (auto *Store = dyn_cast<StoreSDNode>(Root))
+      DataVT = Store->getValue().getValueType();
+    else if (auto *Store = dyn_cast<MaskedStoreSDNode>(Root))
+      DataVT = Store->getValue().getValueType();
+    else
+      llvm_unreachable("Unexpected MemSDNode!");
+
+    return DataVT.changeVectorElementType(MemVT.getVectorElementType());
+  }
 
   const unsigned Opcode = Root->getOpcode();
   // For custom ISD nodes, we have to look at them individually to extract the
@@ -7380,12 +7395,23 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedSVE(SDNode *Root, SDValue N,
     return false;
 
   SDValue VScale = N.getOperand(1);
-  if (VScale.getOpcode() != ISD::VSCALE)
+  int64_t MulImm = std::numeric_limits<int64_t>::max();
+  if (VScale.getOpcode() == ISD::VSCALE) {
+    MulImm = cast<ConstantSDNode>(VScale.getOperand(0))->getSExtValue();
+  } else if (auto C = dyn_cast<ConstantSDNode>(VScale)) {
+    int64_t ByteOffset = C->getSExtValue();
+    const auto KnownVScale =
+        Subtarget->getSVEVectorSizeInBits() / AArch64::SVEBitsPerBlock;
+
+    if (!KnownVScale || ByteOffset % KnownVScale != 0)
+      return false;
+
+    MulImm = ByteOffset / KnownVScale;
+  } else
     return false;
 
   TypeSize TS = MemVT.getSizeInBits();
   int64_t MemWidthBytes = static_cast<int64_t>(TS.getKnownMinValue()) / 8;
-  int64_t MulImm = cast<ConstantSDNode>(VScale.getOperand(0))->getSExtValue();
 
   if ((MulImm % MemWidthBytes) != 0)
     return false;

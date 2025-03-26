@@ -10,9 +10,9 @@
 ; VI-NEXT: v_add_f16_e32
 define half @reduction_fadd_v4f16(<4 x half> %vec4) {
 entry:
-  %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
   %bin.rdx = fadd <4 x half> %vec4, %rdx.shuf
-  %rdx.shuf1 = shufflevector <4 x half> %bin.rdx, <4 x half> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf1 = shufflevector <4 x half> %bin.rdx, <4 x half> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
   %bin.rdx2 = fadd <4 x half> %bin.rdx, %rdx.shuf1
   %res = extractelement <4 x half> %bin.rdx2, i32 0
   ret half %res
@@ -30,9 +30,9 @@ entry:
 ; VI-NEXT: s_setpc_b64
 define half @reduction_fsub_v4f16(<4 x half> %vec4) {
 entry:
-  %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
   %bin.rdx = fsub <4 x half> %vec4, %rdx.shuf
-  %rdx.shuf1 = shufflevector <4 x half> %bin.rdx, <4 x half> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf1 = shufflevector <4 x half> %bin.rdx, <4 x half> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
   %bin.rdx2 = fsub <4 x half> %bin.rdx, %rdx.shuf1
   %res = extractelement <4 x half> %bin.rdx2, i32 0
   ret half %res
@@ -52,9 +52,9 @@ entry:
 ; VI-NEXT: s_setpc_b64
 define half @reduction_fsub_v4f16_preserve_fmf(<4 x half> %vec4) {
 entry:
-  %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
   %bin.rdx = fsub nsz <4 x half> %vec4, %rdx.shuf
-  %rdx.shuf1 = shufflevector <4 x half> %bin.rdx, <4 x half> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf1 = shufflevector <4 x half> %bin.rdx, <4 x half> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
   %bin.rdx2 = fsub nsz <4 x half> %bin.rdx, %rdx.shuf1
   %res = extractelement <4 x half> %bin.rdx2, i32 0
   %neg.res = fsub half -0.0, %res
@@ -70,9 +70,9 @@ entry:
 ; VI-NEXT: v_mul_f16_e32
 define half @reduction_fmul_half4(<4 x half> %vec4) {
 entry:
-  %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
   %bin.rdx = fmul <4 x half> %vec4, %rdx.shuf
-  %rdx.shuf1 = shufflevector <4 x half> %bin.rdx, <4 x half> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf1 = shufflevector <4 x half> %bin.rdx, <4 x half> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
   %bin.rdx2 = fmul <4 x half> %bin.rdx, %rdx.shuf1
   %res = extractelement <4 x half> %bin.rdx2, i32 0
   ret half %res
@@ -87,9 +87,9 @@ entry:
 ; VI-NEXT: v_add_u16_e32
 define i16 @reduction_v4i16(<4 x i16> %vec4) {
 entry:
-  %rdx.shuf = shufflevector <4 x i16> %vec4, <4 x i16> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %rdx.shuf = shufflevector <4 x i16> %vec4, <4 x i16> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
   %bin.rdx = add <4 x i16> %vec4, %rdx.shuf
-  %rdx.shuf1 = shufflevector <4 x i16> %bin.rdx, <4 x i16> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf1 = shufflevector <4 x i16> %bin.rdx, <4 x i16> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
   %bin.rdx2 = add <4 x i16> %bin.rdx, %rdx.shuf1
   %res = extractelement <4 x i16> %bin.rdx2, i32 0
   ret i16 %res
@@ -111,11 +111,11 @@ entry:
 
 define half @reduction_half8(<8 x half> %vec8) {
 entry:
-  %rdx.shuf = shufflevector <8 x half> %vec8, <8 x half> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf = shufflevector <8 x half> %vec8, <8 x half> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
   %bin.rdx = fadd <8 x half> %vec8, %rdx.shuf
-  %rdx.shuf1 = shufflevector <8 x half> %bin.rdx, <8 x half> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf1 = shufflevector <8 x half> %bin.rdx, <8 x half> poison, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %bin.rdx2 = fadd <8 x half> %bin.rdx, %rdx.shuf1
-  %rdx.shuf3 = shufflevector <8 x half> %bin.rdx2, <8 x half> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf3 = shufflevector <8 x half> %bin.rdx2, <8 x half> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %bin.rdx4 = fadd <8 x half> %bin.rdx2, %rdx.shuf3
   %res = extractelement <8 x half> %bin.rdx4, i32 0
   ret half %res
@@ -137,11 +137,11 @@ entry:
 
 define i16 @reduction_v8i16(<8 x i16> %vec8) {
 entry:
-  %rdx.shuf = shufflevector <8 x i16> %vec8, <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf = shufflevector <8 x i16> %vec8, <8 x i16> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
   %bin.rdx = add <8 x i16> %vec8, %rdx.shuf
-  %rdx.shuf1 = shufflevector <8 x i16> %bin.rdx, <8 x i16> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf1 = shufflevector <8 x i16> %bin.rdx, <8 x i16> poison, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %bin.rdx2 = add <8 x i16> %bin.rdx, %rdx.shuf1
-  %rdx.shuf3 = shufflevector <8 x i16> %bin.rdx2, <8 x i16> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf3 = shufflevector <8 x i16> %bin.rdx2, <8 x i16> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %bin.rdx4 = add <8 x i16> %bin.rdx2, %rdx.shuf3
   %res = extractelement <8 x i16> %bin.rdx4, i32 0
   ret i16 %res
@@ -175,13 +175,13 @@ entry:
 
 define half @reduction_half16(<16 x half> %vec16) {
 entry:
-  %rdx.shuf = shufflevector <16 x half> %vec16, <16 x half> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf = shufflevector <16 x half> %vec16, <16 x half> poison, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %bin.rdx = fadd <16 x half> %vec16, %rdx.shuf
-  %rdx.shuf1 = shufflevector <16 x half> %bin.rdx, <16 x half> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf1 = shufflevector <16 x half> %bin.rdx, <16 x half> poison, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %bin.rdx2 = fadd <16 x half> %bin.rdx, %rdx.shuf1
-  %rdx.shuf3 = shufflevector <16 x half> %bin.rdx2, <16 x half> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf3 = shufflevector <16 x half> %bin.rdx2, <16 x half> poison, <16 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %bin.rdx4 = fadd <16 x half> %bin.rdx2, %rdx.shuf3
-  %rdx.shuf5 = shufflevector <16 x half> %bin.rdx4, <16 x half> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf5 = shufflevector <16 x half> %bin.rdx4, <16 x half> poison, <16 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %bin.rdx6 = fadd <16 x half> %bin.rdx4, %rdx.shuf5
   %res = extractelement <16 x half> %bin.rdx6, i32 0
   ret half %res
@@ -196,10 +196,10 @@ entry:
 ; VI-NEXT: v_min_u16_e32
 define i16 @reduction_min_v4i16(<4 x i16> %vec4) {
 entry:
-  %rdx.shuf = shufflevector <4 x i16> %vec4, <4 x i16> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %rdx.shuf = shufflevector <4 x i16> %vec4, <4 x i16> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
   %rdx.minmax.cmp = icmp ult <4 x i16> %vec4, %rdx.shuf
   %rdx.minmax.select = select <4 x i1> %rdx.minmax.cmp, <4 x i16> %vec4, <4 x i16> %rdx.shuf
-  %rdx.shuf1 = shufflevector <4 x i16> %rdx.minmax.select, <4 x i16> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf1 = shufflevector <4 x i16> %rdx.minmax.select, <4 x i16> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
   %rdx.minmax.cmp2 = icmp ult <4 x i16> %rdx.minmax.select, %rdx.shuf1
   %rdx.minmax.select3 = select <4 x i1> %rdx.minmax.cmp2, <4 x i16> %rdx.minmax.select, <4 x i16> %rdx.shuf1
   %res = extractelement <4 x i16> %rdx.minmax.select3, i32 0
@@ -221,13 +221,13 @@ entry:
 ; VI-NEXT: v_min_u16_e32
 define i16 @reduction_umin_v8i16(<8 x i16> %vec8) {
 entry:
-  %rdx.shuf = shufflevector <8 x i16> %vec8, <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf = shufflevector <8 x i16> %vec8, <8 x i16> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
   %rdx.minmax.cmp = icmp ult <8 x i16> %vec8, %rdx.shuf
   %rdx.minmax.select = select <8 x i1> %rdx.minmax.cmp, <8 x i16> %vec8, <8 x i16> %rdx.shuf
-  %rdx.shuf1 = shufflevector <8 x i16> %rdx.minmax.select, <8 x i16> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf1 = shufflevector <8 x i16> %rdx.minmax.select, <8 x i16> poison, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %rdx.minmax.cmp2 = icmp ult <8 x i16> %rdx.minmax.select, %rdx.shuf1
   %rdx.minmax.select3 = select <8 x i1> %rdx.minmax.cmp2, <8 x i16> %rdx.minmax.select, <8 x i16> %rdx.shuf1
-  %rdx.shuf4 = shufflevector <8 x i16> %rdx.minmax.select3, <8 x i16> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf4 = shufflevector <8 x i16> %rdx.minmax.select3, <8 x i16> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %rdx.minmax.cmp5 = icmp ult <8 x i16> %rdx.minmax.select3, %rdx.shuf4
   %rdx.minmax.select6 = select <8 x i1> %rdx.minmax.cmp5, <8 x i16> %rdx.minmax.select3, <8 x i16> %rdx.shuf4
   %res = extractelement <8 x i16> %rdx.minmax.select6, i32 0
@@ -301,16 +301,16 @@ entry:
 ; VI-NEXT: v_min_i16_e32
 define i16 @reduction_smin_v16i16(<16 x i16> %vec16) {
 entry:
-  %rdx.shuf = shufflevector <16 x i16> %vec16, <16 x i16> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf = shufflevector <16 x i16> %vec16, <16 x i16> poison, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %rdx.minmax.cmp = icmp slt <16 x i16> %vec16, %rdx.shuf
   %rdx.minmax.select = select <16 x i1> %rdx.minmax.cmp, <16 x i16> %vec16, <16 x i16> %rdx.shuf
-  %rdx.shuf1 = shufflevector <16 x i16> %rdx.minmax.select, <16 x i16> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf1 = shufflevector <16 x i16> %rdx.minmax.select, <16 x i16> poison, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %rdx.minmax.cmp2 = icmp slt <16 x i16> %rdx.minmax.select, %rdx.shuf1
   %rdx.minmax.select3 = select <16 x i1> %rdx.minmax.cmp2, <16 x i16> %rdx.minmax.select, <16 x i16> %rdx.shuf1
-  %rdx.shuf4 = shufflevector <16 x i16> %rdx.minmax.select3, <16 x i16> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf4 = shufflevector <16 x i16> %rdx.minmax.select3, <16 x i16> poison, <16 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %rdx.minmax.cmp5 = icmp slt <16 x i16> %rdx.minmax.select3, %rdx.shuf4
   %rdx.minmax.select6 = select <16 x i1> %rdx.minmax.cmp5, <16 x i16> %rdx.minmax.select3, <16 x i16> %rdx.shuf4
-  %rdx.shuf7 = shufflevector <16 x i16> %rdx.minmax.select6, <16 x i16> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf7 = shufflevector <16 x i16> %rdx.minmax.select6, <16 x i16> poison, <16 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %rdx.minmax.cmp8 = icmp slt <16 x i16> %rdx.minmax.select6, %rdx.shuf7
   %rdx.minmax.select9 = select <16 x i1> %rdx.minmax.cmp8, <16 x i16> %rdx.minmax.select6, <16 x i16> %rdx.shuf7
   %res = extractelement <16 x i16> %rdx.minmax.select9, i32 0
@@ -404,10 +404,10 @@ entry:
 ; VI-NEXT: v_max_u16_e32
 define i16 @reduction_umax_v4i16(<4 x i16> %vec4) {
 entry:
-  %rdx.shuf = shufflevector <4 x i16> %vec4, <4 x i16> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %rdx.shuf = shufflevector <4 x i16> %vec4, <4 x i16> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
   %rdx.minmax.cmp = icmp ugt <4 x i16> %vec4, %rdx.shuf
   %rdx.minmax.select = select <4 x i1> %rdx.minmax.cmp, <4 x i16> %vec4, <4 x i16> %rdx.shuf
-  %rdx.shuf1 = shufflevector <4 x i16> %rdx.minmax.select, <4 x i16> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf1 = shufflevector <4 x i16> %rdx.minmax.select, <4 x i16> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
   %rdx.minmax.cmp2 = icmp ugt <4 x i16> %rdx.minmax.select, %rdx.shuf1
   %rdx.minmax.select3 = select <4 x i1> %rdx.minmax.cmp2, <4 x i16> %rdx.minmax.select, <4 x i16> %rdx.shuf1
   %res = extractelement <4 x i16> %rdx.minmax.select3, i32 0
@@ -423,10 +423,10 @@ entry:
 ; VI-NEXT: v_max_i16_e32
 define i16 @reduction_smax_v4i16(<4 x i16> %vec4) #0 {
 entry:
-  %rdx.shuf = shufflevector <4 x i16> %vec4, <4 x i16> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %rdx.shuf = shufflevector <4 x i16> %vec4, <4 x i16> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
   %rdx.minmax.cmp = icmp sgt <4 x i16> %vec4, %rdx.shuf
   %rdx.minmax.select = select <4 x i1> %rdx.minmax.cmp, <4 x i16> %vec4, <4 x i16> %rdx.shuf
-  %rdx.shuf1 = shufflevector <4 x i16> %rdx.minmax.select, <4 x i16> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf1 = shufflevector <4 x i16> %rdx.minmax.select, <4 x i16> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
   %rdx.minmax.cmp2 = icmp sgt <4 x i16> %rdx.minmax.select, %rdx.shuf1
   %rdx.minmax.select3 = select <4 x i1> %rdx.minmax.cmp2, <4 x i16> %rdx.minmax.select, <4 x i16> %rdx.shuf1
   %res = extractelement <4 x i16> %rdx.minmax.select3, i32 0
@@ -451,9 +451,9 @@ entry:
 ; VI: v_max_f16_e32 v0, [[MAX1]], [[MAX0]]
 define half @reduction_maxnum_v4f16(<4 x half> %vec4) {
 entry:
-  %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
   %rdx.minmax = call <4 x half> @llvm.maxnum.v4f16(<4 x half> %vec4, <4 x half> %rdx.shuf)
-  %rdx.shuf1 = shufflevector <4 x half> %rdx.minmax, <4 x half> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf1 = shufflevector <4 x half> %rdx.minmax, <4 x half> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
   %rdx.minmax3 = call <4 x half> @llvm.maxnum.v4f16(<4 x half> %rdx.minmax, <4 x half> %rdx.shuf1)
   %res = extractelement <4 x half> %rdx.minmax3, i32 0
   ret half %res
@@ -476,9 +476,9 @@ entry:
 ; VI: v_min_f16_e32 v0, [[MAX1]], [[MAX0]]
 define half @reduction_minnum_v4f16(<4 x half> %vec4) {
 entry:
-  %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
   %rdx.minmax = call <4 x half> @llvm.minnum.v4f16(<4 x half> %vec4, <4 x half> %rdx.shuf)
-  %rdx.shuf1 = shufflevector <4 x half> %rdx.minmax, <4 x half> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf1 = shufflevector <4 x half> %rdx.minmax, <4 x half> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
   %rdx.minmax3 = call <4 x half> @llvm.minnum.v4f16(<4 x half> %rdx.minmax, <4 x half> %rdx.shuf1)
   %res = extractelement <4 x half> %rdx.minmax3, i32 0
   ret half %res
@@ -513,10 +513,10 @@ entry:
 ; VI: v_max_f16_e32 v0, [[MAX1]], [[MAX0]]
 define half @reduction_fast_max_pattern_v4f16(<4 x half> %vec4) {
 entry:
-  %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
   %rdx.minmax.cmp = fcmp nnan nsz ogt <4 x half> %vec4, %rdx.shuf
   %rdx.minmax.select = select <4 x i1> %rdx.minmax.cmp, <4 x half> %vec4, <4 x half> %rdx.shuf
-  %rdx.shuf1 = shufflevector <4 x half> %rdx.minmax.select, <4 x half> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf1 = shufflevector <4 x half> %rdx.minmax.select, <4 x half> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
   %rdx.minmax.cmp2 = fcmp nnan nsz ogt <4 x half> %rdx.minmax.select, %rdx.shuf1
   %rdx.minmax.select3 = select <4 x i1> %rdx.minmax.cmp2, <4 x half> %rdx.minmax.select, <4 x half> %rdx.shuf1
   %res = extractelement <4 x half> %rdx.minmax.select3, i32 0
@@ -552,10 +552,10 @@ entry:
 ; VI: v_min_f16_e32 v0, [[MAX1]], [[MAX0]]
 define half @reduction_fast_min_pattern_v4f16(<4 x half> %vec4) {
 entry:
-  %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
   %rdx.minmax.cmp = fcmp nnan nsz olt <4 x half> %vec4, %rdx.shuf
   %rdx.minmax.select = select <4 x i1> %rdx.minmax.cmp, <4 x half> %vec4, <4 x half> %rdx.shuf
-  %rdx.shuf1 = shufflevector <4 x half> %rdx.minmax.select, <4 x half> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %rdx.shuf1 = shufflevector <4 x half> %rdx.minmax.select, <4 x half> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
   %rdx.minmax.cmp2 = fcmp nnan nsz olt <4 x half> %rdx.minmax.select, %rdx.shuf1
   %rdx.minmax.select3 = select <4 x i1> %rdx.minmax.cmp2, <4 x half> %rdx.minmax.select, <4 x half> %rdx.shuf1
   %res = extractelement <4 x half> %rdx.minmax.select3, i32 0

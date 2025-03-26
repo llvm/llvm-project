@@ -67,7 +67,7 @@ cc_library(
         "lib/orc/error.h",
         "lib/orc/executor_address.h",
         "lib/orc/executor_symbol_def.h",
-        "lib/orc/extensible_rtti.h",
+        "lib/orc/rtti.h",
         "lib/orc/interval_map.h",
         "lib/orc/interval_set.h",
         "lib/orc/jit_dispatch.h",
@@ -75,6 +75,7 @@ cc_library(
         "lib/orc/simple_packed_serialization.h",
         "lib/orc/stl_extras.h",
         "lib/orc/string_pool.h",
+        "lib/orc/unique_function.h",
         "lib/orc/wrapper_function_utils.h",
     ],
     strip_include_prefix = "lib/orc",
@@ -85,7 +86,7 @@ cc_library(
     srcs = [
         "lib/orc/debug.cpp",
         "lib/orc/dlfcn_wrapper.cpp",
-        "lib/orc/extensible_rtti.cpp",
+        "lib/orc/rtti.cpp",
         "lib/orc/log_error_to_stderr.cpp",
         "lib/orc/run_program_wrapper.cpp",
     ] + select({

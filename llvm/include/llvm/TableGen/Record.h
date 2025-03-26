@@ -910,6 +910,7 @@ public:
     STRCONCAT,
     INTERLEAVE,
     CONCAT,
+    MATCH,
     EQ,
     NE,
     LE,
@@ -1967,7 +1968,7 @@ public:
   }
 
   void saveInputFilename(std::string Filename) {
-    InputFilename = Filename;
+    InputFilename = std::move(Filename);
   }
 
   void addClass(std::unique_ptr<Record> R) {

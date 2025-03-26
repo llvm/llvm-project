@@ -19,6 +19,7 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -125,6 +126,19 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
   assert((!Target.getSymB() ||
           Target.getSymB()->getKind() == MCSymbolRefExpr::VK_None) &&
          "Should only be expression-level modifiers here");
+
+  switch (SymLoc) {
+  case AArch64MCExpr::VK_DTPREL:
+  case AArch64MCExpr::VK_GOTTPREL:
+  case AArch64MCExpr::VK_TPREL:
+  case AArch64MCExpr::VK_TLSDESC:
+  case AArch64MCExpr::VK_TLSDESC_AUTH:
+    if (auto *S = Target.getSymA())
+      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    break;
+  default:
+    break;
+  }
 
   if (IsPCRel) {
     switch (Kind) {
@@ -530,7 +544,19 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
 bool AArch64ELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
                                                      const MCSymbol &,
                                                      unsigned) const {
-  return (Val.getRefKind() & AArch64MCExpr::VK_GOT) == AArch64MCExpr::VK_GOT;
+  // For memory-tagged symbols, ensure that the relocation uses the symbol. For
+  // tagged symbols, we emit an empty relocation (R_AARCH64_NONE) in a special
+  // section (SHT_AARCH64_MEMTAG_GLOBALS_STATIC) to indicate to the linker that
+  // this global needs to be tagged. In addition, the linker needs to know
+  // whether to emit a special addend when relocating `end` symbols, and this
+  // can only be determined by the attributes of the symbol itself.
+  if (Val.getAddSym() && cast<MCSymbolELF>(Val.getAddSym())->isMemtag())
+    return true;
+
+  if ((Val.getRefKind() & AArch64MCExpr::VK_GOT) == AArch64MCExpr::VK_GOT)
+    return true;
+  return is_contained({MCSymbolRefExpr::VK_GOTPCREL, MCSymbolRefExpr::VK_PLT},
+                      Val.getAccessVariant());
 }
 
 std::unique_ptr<MCObjectTargetWriter>

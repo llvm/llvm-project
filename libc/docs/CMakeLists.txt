@@ -39,10 +39,12 @@ if (SPHINX_FOUND)
       assert
       cpio
       ctype
+      dirent
       endian
       errno
       fenv
       float
+      glob
       inttypes
       locale
       net/if
@@ -61,6 +63,7 @@ if (SPHINX_FOUND)
       sys/stat
       sys/statvfs
       sys/time
+      sys/utsname
       sys/wait
       termios
       threads

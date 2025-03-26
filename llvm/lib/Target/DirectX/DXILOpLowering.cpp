@@ -10,7 +10,6 @@
 #include "DXILConstants.h"
 #include "DXILIntrinsicExpansion.h"
 #include "DXILOpBuilder.h"
-#include "DXILResourceAnalysis.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
@@ -120,6 +119,30 @@ public:
     int Value;
   };
 
+  /// Replaces uses of a struct with uses of an equivalent named struct.
+  ///
+  /// DXIL operations that return structs give them well known names, so we need
+  /// to update uses when we switch from an LLVM intrinsic to an op.
+  Error replaceNamedStructUses(CallInst *Intrin, CallInst *DXILOp) {
+    auto *IntrinTy = cast<StructType>(Intrin->getType());
+    auto *DXILOpTy = cast<StructType>(DXILOp->getType());
+    if (!IntrinTy->isLayoutIdentical(DXILOpTy))
+      return make_error<StringError>(
+          "Type mismatch between intrinsic and DXIL op",
+          inconvertibleErrorCode());
+
+    for (Use &U : make_early_inc_range(Intrin->uses()))
+      if (auto *EVI = dyn_cast<ExtractValueInst>(U.getUser()))
+        EVI->setOperand(0, DXILOp);
+      else if (auto *IVI = dyn_cast<InsertValueInst>(U.getUser()))
+        IVI->setOperand(0, DXILOp);
+      else
+        return make_error<StringError>("DXIL ops that return structs may only "
+                                       "be used by insert- and extractvalue",
+                                       inconvertibleErrorCode());
+    return Error::success();
+  }
+
   [[nodiscard]] bool
   replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
                         ArrayRef<IntrinArgSelect> ArgSelects) {
@@ -154,32 +177,13 @@ public:
       if (Error E = OpCall.takeError())
         return E;
 
-      CI->replaceAllUsesWith(*OpCall);
-      CI->eraseFromParent();
-      return Error::success();
-    });
-  }
-
-  [[nodiscard]] bool replaceFunctionWithNamedStructOp(
-      Function &F, dxil::OpCode DXILOp, Type *NewRetTy,
-      llvm::function_ref<Error(CallInst *CI, CallInst *Op)> ReplaceUses) {
-    bool IsVectorArgExpansion = isVectorArgExpansion(F);
-    return replaceFunction(F, [&](CallInst *CI) -> Error {
-      SmallVector<Value *> Args;
-      OpBuilder.getIRB().SetInsertPoint(CI);
-      if (IsVectorArgExpansion) {
-        SmallVector<Value *> NewArgs = argVectorFlatten(CI, OpBuilder.getIRB());
-        Args.append(NewArgs.begin(), NewArgs.end());
+      if (isa<StructType>(CI->getType())) {
+        if (Error E = replaceNamedStructUses(CI, *OpCall))
+          return E;
       } else
-        Args.append(CI->arg_begin(), CI->arg_end());
+        CI->replaceAllUsesWith(*OpCall);
 
-      Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), NewRetTy);
-      if (Error E = OpCall.takeError())
-        return E;
-      if (Error E = ReplaceUses(CI, *OpCall))
-        return E;
-
+      CI->eraseFromParent();
       return Error::success();
     });
   }
@@ -353,30 +357,10 @@ public:
   /// model and taking into account binding information from
   /// DXILResourceBindingAnalysis.
   bool lowerHandleFromBinding(Function &F) {
-    Triple TT(Triple(M.getTargetTriple()));
+    const Triple &TT = M.getTargetTriple();
     if (TT.getDXILVersion() < VersionTuple(1, 6))
       return lowerToCreateHandle(F);
     return lowerToBindAndAnnotateHandle(F);
-  }
-
-  Error replaceSplitDoubleCallUsages(CallInst *Intrin, CallInst *Op) {
-    for (Use &U : make_early_inc_range(Intrin->uses())) {
-      if (auto *EVI = dyn_cast<ExtractValueInst>(U.getUser())) {
-
-        if (EVI->getNumIndices() != 1)
-          return createStringError(std::errc::invalid_argument,
-                                   "Splitdouble has only 2 elements");
-        EVI->setOperand(0, Op);
-      } else {
-        return make_error<StringError>(
-            "Splitdouble use is not ExtractValueInst",
-            inconvertibleErrorCode());
-      }
-    }
-
-    Intrin->eraseFromParent();
-
-    return Error::success();
   }
 
   /// Replace uses of \c Intrin with the values in the `dx.ResRet` of \c Op.
@@ -498,7 +482,7 @@ public:
         if (!Extracts[I])
           Extracts[I] = IRB.CreateExtractValue(Op, I);
 
-      Value *Vec = UndefValue::get(OldTy);
+      Value *Vec = PoisonValue::get(OldTy);
       for (int I = 0, E = N; I != E; ++I)
         Vec = IRB.CreateInsertElement(Vec, Extracts[I], I);
       OldResult->replaceAllUsesWith(Vec);
@@ -543,7 +527,7 @@ public:
   }
 
   [[nodiscard]] bool lowerRawBufferLoad(Function &F) {
-    Triple TT(Triple(M.getTargetTriple()));
+    const Triple &TT = M.getTargetTriple();
     VersionTuple DXILVersion = TT.getDXILVersion();
     const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();
@@ -584,6 +568,32 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerCBufferLoad(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Type *OldTy = cast<StructType>(CI->getType())->getElementType(0);
+      Type *ScalarTy = OldTy->getScalarType();
+      Type *NewRetTy = OpBuilder.getCBufRetType(ScalarTy);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Index = CI->getArgOperand(1);
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::CBufferLoadLegacy, {Handle, Index}, CI->getName(), NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = replaceNamedStructUses(CI, *OpCall))
+        return E;
+
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerUpdateCounter(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
@@ -617,7 +627,7 @@ public:
   }
 
   [[nodiscard]] bool lowerBufferStore(Function &F, bool IsRaw) {
-    Triple TT(Triple(M.getTargetTriple()));
+    const Triple &TT = M.getTargetTriple();
     VersionTuple DXILVersion = TT.getDXILVersion();
     const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();
@@ -638,16 +648,13 @@ public:
 
       uint64_t NumElements =
           DL.getTypeSizeInBits(DataTy) / DL.getTypeSizeInBits(ScalarTy);
-      Value *Mask = ConstantInt::get(Int8Ty, ~(~0U << NumElements));
+      Value *Mask =
+          ConstantInt::get(Int8Ty, IsRaw ? ~(~0U << NumElements) : 15U);
 
       // TODO: check that we only have vector or scalar...
-      if (!IsRaw && NumElements != 4)
+      if (NumElements > 4)
         return make_error<StringError>(
-            "typedBufferStore data must be a vector of 4 elements",
-            inconvertibleErrorCode());
-      else if (NumElements > 4)
-        return make_error<StringError>(
-            "rawBufferStore data must have at most 4 elements",
+            "Buffer store data must have at most 4 elements",
             inconvertibleErrorCode());
 
       std::array<Value *, 4> DataElements{nullptr, nullptr, nullptr, nullptr};
@@ -676,10 +683,13 @@ public:
         if (DataElements[I] == nullptr)
           DataElements[I] =
               IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, I));
-      // For any elements beyond the length of the vector, fill up with undef.
+
+      // For any elements beyond the length of the vector, we should fill it up
+      // with undef - however, for typed buffers we repeat the first element to
+      // match DXC.
       for (int I = NumElements, E = 4; I < E; ++I)
         if (DataElements[I] == nullptr)
-          DataElements[I] = UndefValue::get(ScalarTy);
+          DataElements[I] = IsRaw ? UndefValue::get(ScalarTy) : DataElements[0];
 
       dxil::OpCode Op = OpCode::BufferStore;
       SmallVector<Value *, 9> Args{
@@ -785,8 +795,20 @@ public:
         continue;
       Intrinsic::ID ID = F.getIntrinsicID();
       switch (ID) {
-      default:
+      // NOTE: Skip dx_resource_casthandle here. They are
+      // resolved after this loop in cleanupHandleCasts.
+      case Intrinsic::dx_resource_casthandle:
+      // NOTE: llvm.dbg.value is supported as is in DXIL.
+      case Intrinsic::dbg_value:
+      case Intrinsic::not_intrinsic:
         continue;
+      default: {
+        DiagnosticInfoUnsupported Diag(
+            F, "Unsupported intrinsic for DXIL lowering");
+        M.getContext().diagnose(Diag);
+        HasErrors |= true;
+        break;
+      }
 #define DXIL_OP_INTRINSIC(OpCode, Intrin, ...)                                 \
   case Intrin:                                                                 \
     HasErrors |= replaceFunctionWithOp(                                        \
@@ -811,18 +833,13 @@ public:
       case Intrinsic::dx_resource_store_rawbuffer:
         HasErrors |= lowerBufferStore(F, /*IsRaw=*/true);
         break;
+      case Intrinsic::dx_resource_load_cbufferrow_2:
+      case Intrinsic::dx_resource_load_cbufferrow_4:
+      case Intrinsic::dx_resource_load_cbufferrow_8:
+        HasErrors |= lowerCBufferLoad(F);
+        break;
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);
-        break;
-      // TODO: this can be removed when
-      // https://github.com/llvm/llvm-project/issues/113192 is fixed
-      case Intrinsic::dx_splitdouble:
-        HasErrors |= replaceFunctionWithNamedStructOp(
-            F, OpCode::SplitDouble,
-            OpBuilder.getSplitDoubleType(M.getContext()),
-            [&](CallInst *CI, CallInst *Op) {
-              return replaceSplitDoubleCallUsages(CI, Op);
-            });
         break;
       case Intrinsic::ctpop:
         HasErrors |= lowerCtpopToCountBits(F);
@@ -871,7 +888,6 @@ public:
     AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addRequired<DXILResourceBindingWrapperPass>();
     AU.addPreserved<DXILResourceBindingWrapperPass>();
-    AU.addPreserved<DXILResourceMDWrapper>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
   }

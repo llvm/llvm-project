@@ -72,27 +72,27 @@ define void @dependency_check_and_runtime_checks_needed_gepb_not_inbounds_iv2_st
 ; CHECK-NEXT:        Comparing group ([[GRP4:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
 ; CHECK-NEXT:        Against group ([[GRP5:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
+; CHECK-NEXT:          %gep.b = getelementptr i8, ptr %b, i64 %iv2
 ; CHECK-NEXT:      Check 1:
 ; CHECK-NEXT:        Comparing group ([[GRP4]]):
 ; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
 ; CHECK-NEXT:        Against group ([[GRP6:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %gep.b = getelementptr i8, ptr %b, i64 %iv2
+; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
 ; CHECK-NEXT:      Check 2:
 ; CHECK-NEXT:        Comparing group ([[GRP5]]):
-; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
-; CHECK-NEXT:        Against group ([[GRP6]]):
 ; CHECK-NEXT:          %gep.b = getelementptr i8, ptr %b, i64 %iv2
+; CHECK-NEXT:        Against group ([[GRP6]]):
+; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP4]]:
 ; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
 ; CHECK-NEXT:        Group [[GRP5]]:
-; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
-; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
-; CHECK-NEXT:        Group [[GRP6]]:
 ; CHECK-NEXT:          (Low: %b High: (-1 + (5 * %n) + %b))
 ; CHECK-NEXT:            Member: {%b,+,5}<%loop>
+; CHECK-NEXT:        Group [[GRP6]]:
+; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
+; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -265,27 +265,27 @@ define void @dependency_check_and_runtime_checks_needed_gepb_may_wrap(ptr %a, pt
 ; CHECK-NEXT:        Comparing group ([[GRP13:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
 ; CHECK-NEXT:        Against group ([[GRP14:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
+; CHECK-NEXT:          %gep.b = getelementptr float, ptr %b, i64 %iv2
 ; CHECK-NEXT:      Check 1:
 ; CHECK-NEXT:        Comparing group ([[GRP13]]):
 ; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
 ; CHECK-NEXT:        Against group ([[GRP15:0x[0-9a-f]+]]):
-; CHECK-NEXT:          %gep.b = getelementptr float, ptr %b, i64 %iv2
+; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
 ; CHECK-NEXT:      Check 2:
 ; CHECK-NEXT:        Comparing group ([[GRP14]]):
-; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
-; CHECK-NEXT:        Against group ([[GRP15]]):
 ; CHECK-NEXT:          %gep.b = getelementptr float, ptr %b, i64 %iv2
+; CHECK-NEXT:        Against group ([[GRP15]]):
+; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP13]]:
 ; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
 ; CHECK-NEXT:        Group [[GRP14]]:
-; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
-; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
-; CHECK-NEXT:        Group [[GRP15]]:
 ; CHECK-NEXT:          (Low: %b High: (-4 + (8 * %n) + %b))
 ; CHECK-NEXT:            Member: {%b,+,8}<%loop>
+; CHECK-NEXT:        Group [[GRP15]]:
+; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
+; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:

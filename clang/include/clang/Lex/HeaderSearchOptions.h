@@ -235,6 +235,7 @@ public:
 
   /// Whether to entirely skip writing diagnostic options.
   /// Primarily used to speed up deserialization during dependency scanning.
+  /// FIXME: Consider moving these into separate `SerializationOptions` class.
   LLVM_PREFERRED_TYPE(bool)
   unsigned ModulesSkipDiagnosticOptions : 1;
 

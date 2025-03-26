@@ -120,6 +120,11 @@ void transform::ApplyReassociativeReshapeFoldingPatternsOp::populatePatterns(
   tensor::populateReassociativeReshapeFoldingPatterns(patterns);
 }
 
+void transform::ApplyBubbleUpExtractSlicePatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  tensor::populateBubbleUpExtractSliceOpPatterns(patterns);
+}
+
 void transform::ApplyRewriteTensorOpsAsConstantPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   ControlFoldFn defaultControlFn = [](OpOperand *fusedOperand) {

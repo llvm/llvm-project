@@ -141,7 +141,7 @@ struct VerifierSupport {
   raw_ostream *OS;
   const Module &M;
   ModuleSlotTracker MST;
-  Triple TT;
+  const Triple &TT;
   const DataLayout &DL;
   LLVMContext &Context;
 
@@ -153,8 +153,8 @@ struct VerifierSupport {
   bool TreatBrokenDebugInfoAsError = true;
 
   explicit VerifierSupport(raw_ostream *OS, const Module &M)
-      : OS(OS), M(M), MST(&M), TT(Triple::normalize(M.getTargetTriple())),
-        DL(M.getDataLayout()), Context(M.getContext()) {}
+      : OS(OS), M(M), MST(&M), TT(M.getTargetTriple()), DL(M.getDataLayout()),
+        Context(M.getContext()) {}
 
 private:
   void Write(const Module *M) {
@@ -1152,6 +1152,30 @@ void Verifier::visitGenericDINode(const GenericDINode &N) {
 void Verifier::visitDIScope(const DIScope &N) {
   if (auto *F = N.getRawFile())
     CheckDI(isa<DIFile>(F), "invalid file", &N, F);
+}
+
+void Verifier::visitDISubrangeType(const DISubrangeType &N) {
+  CheckDI(N.getTag() == dwarf::DW_TAG_subrange_type, "invalid tag", &N);
+  auto *BaseType = N.getRawBaseType();
+  CheckDI(!BaseType || isType(BaseType), "BaseType must be a type");
+  auto *LBound = N.getRawLowerBound();
+  CheckDI(!LBound || isa<ConstantAsMetadata>(LBound) ||
+              isa<DIVariable>(LBound) || isa<DIExpression>(LBound),
+          "LowerBound must be signed constant or DIVariable or DIExpression",
+          &N);
+  auto *UBound = N.getRawUpperBound();
+  CheckDI(!UBound || isa<ConstantAsMetadata>(UBound) ||
+              isa<DIVariable>(UBound) || isa<DIExpression>(UBound),
+          "UpperBound must be signed constant or DIVariable or DIExpression",
+          &N);
+  auto *Stride = N.getRawStride();
+  CheckDI(!Stride || isa<ConstantAsMetadata>(Stride) ||
+              isa<DIVariable>(Stride) || isa<DIExpression>(Stride),
+          "Stride must be signed constant or DIVariable or DIExpression", &N);
+  auto *Bias = N.getRawBias();
+  CheckDI(!Bias || isa<ConstantAsMetadata>(Bias) || isa<DIVariable>(Bias) ||
+              isa<DIExpression>(Bias),
+          "Bias must be signed constant or DIVariable or DIExpression", &N);
 }
 
 void Verifier::visitDISubrange(const DISubrange &N) {
@@ -5203,10 +5227,12 @@ void Verifier::visitInstruction(Instruction &I) {
                 F->getIntrinsicID() == Intrinsic::experimental_patchpoint ||
                 F->getIntrinsicID() == Intrinsic::fake_use ||
                 F->getIntrinsicID() == Intrinsic::experimental_gc_statepoint ||
+                F->getIntrinsicID() == Intrinsic::wasm_throw ||
                 F->getIntrinsicID() == Intrinsic::wasm_rethrow ||
                 IsAttachedCallOperand(F, CBI, i),
             "Cannot invoke an intrinsic other than donothing, patchpoint, "
-            "statepoint, coro_resume, coro_destroy or clang.arc.attachedcall",
+            "statepoint, coro_resume, coro_destroy, clang.arc.attachedcall or "
+            "wasm.(re)throw",
             &I);
       Check(F->getParent() == &M, "Referencing function in another module!", &I,
             &M, F, F->getParent());
@@ -5557,7 +5583,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::memmove:
   case Intrinsic::memset:
   case Intrinsic::memset_inline:
+    break;
   case Intrinsic::experimental_memset_pattern: {
+    const auto Memset = cast<MemSetPatternInst>(&Call);
+    Check(Memset->getValue()->getType()->isSized(),
+          "unsized types cannot be used as memset patterns", Call);
     break;
   }
   case Intrinsic::memcpy_element_unordered_atomic:
@@ -6367,6 +6397,16 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "SGPR arguments must have the `inreg` attribute", &Call);
     Check(!Call.paramHasAttr(3, Attribute::InReg),
           "VGPR arguments must not have the `inreg` attribute", &Call);
+    Check(isa_and_present<UnreachableInst>(Call.getNextNode()),
+          "llvm.amdgcn.cs.chain must be followed by unreachable", &Call);
+    break;
+  }
+  case Intrinsic::amdgcn_init_exec_from_input: {
+    const Argument *Arg = dyn_cast<Argument>(Call.getOperand(0));
+    Check(Arg && Arg->hasInRegAttr(),
+          "only inreg arguments to the parent function are valid as inputs to "
+          "this intrinsic",
+          &Call);
     break;
   }
   case Intrinsic::amdgcn_set_inactive_chain_arg: {
@@ -7175,7 +7215,7 @@ void Verifier::verifyCompileUnits() {
   auto *CUs = M.getNamedMetadata("llvm.dbg.cu");
   SmallPtrSet<const Metadata *, 2> Listed;
   if (CUs)
-    Listed.insert(CUs->op_begin(), CUs->op_end());
+    Listed.insert_range(CUs->operands());
   for (const auto *CU : CUVisited)
     CheckDI(Listed.count(CU), "DICompileUnit not listed in llvm.dbg.cu", CU);
   CUVisited.clear();

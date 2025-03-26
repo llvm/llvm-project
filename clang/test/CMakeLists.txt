@@ -9,6 +9,7 @@ llvm_canonicalize_cmake_booleans(
   CLANG_PLUGIN_SUPPORT
   CLANG_SPAWN_CC1
   CLANG_ENABLE_CIR
+  CLANG_ENABLE_OBJC_REWRITER
   ENABLE_BACKTRACES
   LLVM_BUILD_EXAMPLES
   LLVM_BYE_LINK_INTO_TOOLS
@@ -84,7 +85,14 @@ list(APPEND CLANG_TEST_DEPS
   diagtool
   hmaptool
   )
-  
+
+if(CLANG_ENABLE_CIR)
+  list(APPEND CLANG_TEST_DEPS
+    cir-opt
+    cir-translate
+    )
+endif()
+
 if(CLANG_ENABLE_STATIC_ANALYZER)
   list(APPEND CLANG_TEST_DEPS
     clang-check
@@ -129,6 +137,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-dis
     llvm-dwarfdump
     llvm-ifs
+    llvm-link
     llvm-lto2
     llvm-mc
     llvm-modextract

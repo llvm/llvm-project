@@ -288,7 +288,7 @@ MultilibSet::expandFlags(const Multilib::flags_list &InFlags) const {
     assert(Regex.isValid());
     if (llvm::any_of(InFlags,
                      [&Regex](StringRef F) { return Regex.match(F); })) {
-      Result.insert(M.Flags.begin(), M.Flags.end());
+      Result.insert_range(M.Flags);
     }
   }
   return Result;

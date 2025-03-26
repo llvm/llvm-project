@@ -128,7 +128,7 @@ define amdgpu_kernel void @global_atomic_inc_noret_i32_offset_addr64(ptr addrspa
   ret void
 }
 
-@lds0 = addrspace(3) global [512 x i32] undef, align 4
+@lds0 = addrspace(3) global [512 x i32] poison, align 4
 
 ; GCN-LABEL: {{^}}atomic_inc_shl_base_lds_0_i32:
 ; GCN: v_lshlrev_b32_e32 [[PTR:v[0-9]+]], 2, {{v[0-9]+}}
@@ -326,7 +326,7 @@ define amdgpu_kernel void @flat_atomic_inc_noret_i32_offset_addr64(ptr %ptr) #0 
   ret void
 }
 
-@lds1 = addrspace(3) global [512 x i64] undef, align 8
+@lds1 = addrspace(3) global [512 x i64] poison, align 8
 
 ; GCN-LABEL: {{^}}atomic_inc_shl_base_lds_0_i64:
 ; GCN: v_lshlrev_b32_e32 [[PTR:v[0-9]+]], 3, {{v[0-9]+}}

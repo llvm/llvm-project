@@ -601,10 +601,21 @@ DIBuilder::createArrayType(uint64_t Size, uint32_t AlignInBits, DIType *Ty,
                            PointerUnion<DIExpression *, DIVariable *> AS,
                            PointerUnion<DIExpression *, DIVariable *> AL,
                            PointerUnion<DIExpression *, DIVariable *> RK) {
+  return createArrayType(nullptr, StringRef(), nullptr, 0, Size, AlignInBits,
+                         Ty, Subscripts, DL, AS, AL, RK);
+}
+
+DICompositeType *DIBuilder::createArrayType(
+    DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
+    uint64_t Size, uint32_t AlignInBits, DIType *Ty, DINodeArray Subscripts,
+    PointerUnion<DIExpression *, DIVariable *> DL,
+    PointerUnion<DIExpression *, DIVariable *> AS,
+    PointerUnion<DIExpression *, DIVariable *> AL,
+    PointerUnion<DIExpression *, DIVariable *> RK, Metadata *BitStride) {
   auto *R = DICompositeType::get(
-      VMContext, dwarf::DW_TAG_array_type, "", nullptr, 0, nullptr, Ty, Size,
-      AlignInBits, 0, DINode::FlagZero, Subscripts, 0,
-      /*EnumKind=*/std::nullopt, nullptr, nullptr, "", nullptr,
+      VMContext, dwarf::DW_TAG_array_type, Name, File, LineNumber,
+      getNonCompileUnitScope(Scope), Ty, Size, AlignInBits, 0, DINode::FlagZero,
+      Subscripts, 0, /*EnumKind=*/std::nullopt, nullptr, nullptr, "", nullptr,
       isa<DIExpression *>(DL) ? (Metadata *)cast<DIExpression *>(DL)
                               : (Metadata *)cast<DIVariable *>(DL),
       isa<DIExpression *>(AS) ? (Metadata *)cast<DIExpression *>(AS)
@@ -612,7 +623,8 @@ DIBuilder::createArrayType(uint64_t Size, uint32_t AlignInBits, DIType *Ty,
       isa<DIExpression *>(AL) ? (Metadata *)cast<DIExpression *>(AL)
                               : (Metadata *)cast<DIVariable *>(AL),
       isa<DIExpression *>(RK) ? (Metadata *)cast<DIExpression *>(RK)
-                              : (Metadata *)cast<DIVariable *>(RK));
+                              : (Metadata *)cast<DIVariable *>(RK),
+      nullptr, nullptr, 0, BitStride);
   trackIfUnresolved(R);
   return R;
 }
@@ -747,6 +759,16 @@ DIGenericSubrange *DIBuilder::getOrCreateGenericSubrange(
   return DIGenericSubrange::get(VMContext, ConvToMetadata(CountNode),
                                 ConvToMetadata(LB), ConvToMetadata(UB),
                                 ConvToMetadata(Stride));
+}
+
+DISubrangeType *DIBuilder::createSubrangeType(
+    StringRef Name, DIFile *File, unsigned LineNo, DIScope *Scope,
+    uint64_t SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
+    DIType *Ty, Metadata *LowerBound, Metadata *UpperBound, Metadata *Stride,
+    Metadata *Bias) {
+  return DISubrangeType::get(VMContext, Name, File, LineNo, Scope, SizeInBits,
+                             AlignInBits, Flags, Ty, LowerBound, UpperBound,
+                             Stride, Bias);
 }
 
 static void checkGlobalVariableScope(DIScope *Context) {

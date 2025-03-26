@@ -515,8 +515,12 @@ Warning flags
   + ``-Wthread-safety-analysis``: The core analysis.
   + ``-Wthread-safety-precise``: Requires that mutex expressions match precisely.
        This warning can be disabled for code which has a lot of aliases.
-  + ``-Wthread-safety-reference``: Checks when guarded members are passed by reference.
+  + ``-Wthread-safety-reference``: Checks when guarded members are passed or
+    returned by reference.
 
+* ``-Wthread-safety-pointer``: Checks when passing or returning pointers to
+  guarded variables, or pointers to guarded data, as function argument or
+  return value respectively.
 
 :ref:`negative` are an experimental feature, which are enabled with:
 

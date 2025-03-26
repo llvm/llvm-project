@@ -166,9 +166,6 @@ DECLARE_TSAN_FUNCTION(AnnotateNewMemory, const char *, int,
                       const volatile void *, size_t)
 DECLARE_TSAN_FUNCTION(__tsan_func_entry, const void *)
 DECLARE_TSAN_FUNCTION(__tsan_func_exit)
-
-// RunningOnValgrind is used to detect absence of TSan and must intentionally be a nullptr.
-static int (*RunningOnValgrind)(void);
 }
 
 // This marker is used to define a happens-before arc. The race detector will
@@ -1252,13 +1249,15 @@ ompt_start_tool(unsigned int omp_version, const char *runtime_version) {
 
   // The OMPT start-up code uses dlopen with RTLD_LAZY. Therefore, we cannot
   // rely on dlopen to fail if TSan is missing, but would get a runtime error
-  // for the first TSan call. We use RunningOnValgrind to detect whether
+  // for the first TSan call. We use __tsan_init to detect whether
   // an implementation of the Annotation interface is available in the
   // execution or disable the tool (by returning NULL).
 
-  findTsanFunctionSilent(RunningOnValgrind, (int (*)(void)));
-  if (!RunningOnValgrind) // if we are not running on TSAN, give a different
-                          // tool the chance to be loaded
+  void (*__tsan_init)(void) = nullptr;
+
+  findTsanFunctionSilent(__tsan_init, (void (*)(void)));
+  if (!__tsan_init) // if we are not running on TSAN, give a different
+                    // tool the chance to be loaded
   {
     if (archer_flags->verbose)
       std::cout << "Archer detected OpenMP application without TSan; "

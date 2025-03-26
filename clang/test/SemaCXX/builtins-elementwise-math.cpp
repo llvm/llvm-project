@@ -134,6 +134,13 @@ void test_builtin_elementwise_exp2() {
   static_assert(!is_const<decltype(__builtin_elementwise_exp2(b))>::value);
 }
 
+void test_builtin_elementwise_exp10() {
+  const float a = 42.0;
+  float b = 42.3;
+  static_assert(!is_const<decltype(__builtin_elementwise_exp10(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_exp10(b))>::value);
+}
+
 void test_builtin_elementwise_asin() {
   const float a = 42.0;
   float b = 42.3;

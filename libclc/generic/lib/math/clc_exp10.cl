@@ -1,28 +1,15 @@
-/*
- * Copyright (c) 2014 Advanced Micro Devices, Inc.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 
 #include <clc/clc.h>
 #include <clc/clc_convert.h>
 #include <clc/clcmacro.h>
+#include <clc/math/clc_fma.h>
 #include <clc/math/clc_mad.h>
 #include <clc/math/clc_subnormal_config.h>
 #include <clc/math/math.h>
@@ -123,23 +110,25 @@ _CLC_DEF _CLC_OVERLOAD double __clc_exp10(double x) {
   int j = n & 0x3f;
   int m = n >> 6;
 
-  double r =
-      R_LN10 * fma(-R_LOG10_2_BY_64_TL, dn, fma(-R_LOG10_2_BY_64_LD, dn, x));
+  double r = R_LN10 * __clc_fma(-R_LOG10_2_BY_64_TL, dn,
+                                __clc_fma(-R_LOG10_2_BY_64_LD, dn, x));
 
   // 6 term tail of Taylor expansion of e^r
   double z2 =
-      r *
-      fma(r,
-          fma(r,
-              fma(r,
-                  fma(r, fma(r, 0x1.6c16c16c16c17p-10, 0x1.1111111111111p-7),
-                      0x1.5555555555555p-5),
-                  0x1.5555555555555p-3),
-              0x1.0000000000000p-1),
-          1.0);
+      r * __clc_fma(
+              r,
+              __clc_fma(r,
+                        __clc_fma(r,
+                                  __clc_fma(r,
+                                            __clc_fma(r, 0x1.6c16c16c16c17p-10,
+                                                      0x1.1111111111111p-7),
+                                            0x1.5555555555555p-5),
+                                  0x1.5555555555555p-3),
+                        0x1.0000000000000p-1),
+              1.0);
 
   double2 tv = USE_TABLE(two_to_jby64_ep_tbl, j);
-  z2 = fma(tv.s0 + tv.s1, z2, tv.s1) + tv.s0;
+  z2 = __clc_fma(tv.s0 + tv.s1, z2, tv.s1) + tv.s0;
 
   int small_value = (m < -1022) || ((m == -1022) && (z2 < 1.0));
 

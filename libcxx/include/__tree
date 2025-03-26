@@ -13,6 +13,8 @@
 #include <__algorithm/min.h>
 #include <__assert>
 #include <__config>
+#include <__fwd/map.h>
+#include <__fwd/set.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
@@ -47,15 +49,6 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-template <class, class, class, class>
-class _LIBCPP_TEMPLATE_VIS map;
-template <class, class, class, class>
-class _LIBCPP_TEMPLATE_VIS multimap;
-template <class, class, class>
-class _LIBCPP_TEMPLATE_VIS set;
-template <class, class, class>
-class _LIBCPP_TEMPLATE_VIS multiset;
 
 template <class _Tp, class _Compare, class _Allocator>
 class __tree;

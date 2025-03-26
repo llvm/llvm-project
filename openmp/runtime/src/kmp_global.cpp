@@ -487,8 +487,6 @@ KMP_BOOTSTRAP_LOCK_INIT(__kmp_tp_cached_lock);
 
 KMP_ALIGN_CACHE_INTERNODE
 KMP_LOCK_INIT(__kmp_global_lock); /* Control OS/global access */
-KMP_ALIGN_CACHE_INTERNODE
-KMP_LOCK_INIT(__kmp_debug_lock); /* Control I/O access for KMP_DEBUG */
 #else
 KMP_ALIGN_CACHE
 
@@ -505,8 +503,6 @@ KMP_BOOTSTRAP_LOCK_INIT(__kmp_tp_cached_lock);
 
 KMP_ALIGN(128)
 KMP_LOCK_INIT(__kmp_global_lock); /* Control OS/global access */
-KMP_ALIGN(128)
-KMP_LOCK_INIT(__kmp_debug_lock); /* Control I/O access for KMP_DEBUG */
 #endif
 
 /* ----------------------------------------------- */
