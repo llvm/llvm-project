@@ -79,8 +79,17 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
                                                 StringRef ABIName) {
   // Determine default and user-specified characteristics
   bool Is64Bit = TT.isArch64Bit();
-  if (CPU.empty() || CPU == "generic")
-    CPU = Is64Bit ? "generic-rv64" : "generic-rv32";
+  if (CPU.empty() || CPU == "generic") {
+    if (Is64Bit) {
+      if (TT.getVendor() == llvm::Triple::MipsTechnologies) {
+        CPU = "p8700";
+      } else {
+        CPU = "generic-rv64";
+      }
+    } else {
+      CPU = "generic-rv32";
+    }
+  }
 
   if (TuneCPU.empty())
     TuneCPU = CPU;
