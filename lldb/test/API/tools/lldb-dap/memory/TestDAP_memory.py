@@ -127,18 +127,18 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         )
         self.continue_to_next_stop()
 
-        # Get the 'not_a_ptr' writable variablle reference address.
+        # Get the 'not_a_ptr' writable variable reference address.
         ptr_deref = self.dap_server.request_evaluate("not_a_ptr")["body"]
         memref = ptr_deref["memoryReference"]
 
         # Write the Base64-encoded string "Mg==", which decodes to binary 0x32
-        # which is decimal 50 and corresponds to the SCII character '2'.
+        # which is decimal 50 and corresponds to the ASCII character '2'.
         mem_response = self.dap_server.request_writeMemory(memref, 0, "Mg==")
         self.assertEqual(mem_response["success"], True)
         self.assertEqual(mem_response["body"]["bytesWritten"], 1)
 
         # Read back the modified memory and verify that the written data matches
-        # the expecte result.
+        # the expected result.
         mem_response = self.dap_server.request_readMemory(memref, 0, 1)
         self.assertEqual(mem_response["success"], True)
         self.assertEqual(mem_response["body"]["data"], "Mg==")
@@ -157,3 +157,7 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         # Writing to non-writable region should return an appropriate error.
         mem_response = self.dap_server.request_writeMemory(memref, 0, "Mg==", False)
         self.assertEqual(mem_response["success"], False)
+        self.assertRegex(
+            mem_response["message"],
+            r"Memory "+memref+" region is not writable",
+        )
