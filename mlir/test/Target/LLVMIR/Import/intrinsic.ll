@@ -1034,6 +1034,23 @@ define void @experimental_constrained_fptrunc(double %s, <4 x double> %v) {
   ret void
 }
 
+; CHECK-LABEL: experimental_constrained_sitofp
+define void @experimental_constrained_sitofp(i32 %s, <4 x i32> %v) {
+  ; CHECK: llvm.intr.experimental.constrained.sitofp %{{.*}} towardzero ignore : i32 to f32
+  %1 = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %s, metadata !"round.towardzero", metadata !"fpexcept.ignore")
+  ; CHECK: llvm.intr.experimental.constrained.sitofp %{{.*}} tonearest maytrap : i32 to f32
+  %2 = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %s, metadata !"round.tonearest", metadata !"fpexcept.maytrap")
+  ; CHECK: llvm.intr.experimental.constrained.sitofp %{{.*}} upward strict : i32 to f32
+  %3 = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %s, metadata !"round.upward", metadata !"fpexcept.strict")
+  ; CHECK: llvm.intr.experimental.constrained.sitofp %{{.*}} downward ignore : i32 to f32
+  %4 = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %s, metadata !"round.downward", metadata !"fpexcept.ignore")
+  ; CHECK: llvm.intr.experimental.constrained.sitofp %{{.*}} tonearestaway ignore : i32 to f32
+  %5 = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %s, metadata !"round.tonearestaway", metadata !"fpexcept.ignore")
+  ; CHECK: llvm.intr.experimental.constrained.sitofp %{{.*}} tonearestaway ignore : vector<4xi32> to vector<4xf32>
+  %6 = call <4 x float> @llvm.experimental.constrained.sitofp.v4f32.v4i32(<4 x i32> %v, metadata !"round.tonearestaway", metadata !"fpexcept.ignore")
+  ret void
+}
+
 ; CHECK-LABEL: experimental_constrained_fpext
 define void @experimental_constrained_fpext(float %s, <4 x float> %v) {
   ; CHECK: llvm.intr.experimental.constrained.fpext %{{.*}} ignore : f32 to f64
@@ -1289,6 +1306,8 @@ declare ptr @llvm.ptrmask.p0.i64(ptr, i64)
 declare <8 x ptr> @llvm.ptrmask.v8p0.v8i64(<8 x ptr>, <8 x i64>)
 declare <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float>, <4 x float>, i64)
 declare <4 x float> @llvm.vector.extract.v4f32.nxv4f32(<vscale x 4 x float>, i64)
+declare <4 x float> @llvm.experimental.constrained.fptrunc.v4f32.v4i32(<4 x i32>, metadata, metadata)
+declare float @llvm.experimental.constrained.fptrunc.f32.i32(i32, metadata, metadata)
 declare <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f64(<4 x double>, metadata, metadata)
 declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(<4 x float>, metadata)
