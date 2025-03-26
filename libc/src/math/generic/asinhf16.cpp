@@ -9,6 +9,9 @@
 #include "src/math/asinhf16.h"
 #include "explogxf.h"
 #include "hdr/fenv_macros.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
@@ -73,7 +76,6 @@ LLVM_LIBC_FUNCTION(float16, asinhf16, (float16 x)) {
 
   // |x| <= 0.25
   if (LIBC_UNLIKELY(x_abs <= 0x3400)) {
-
     // when |x| < 0x1.718p-5, asinhf16(x) = x. Adjust by 1 ULP for certain
     // rounding types.
     if (LIBC_UNLIKELY(x_abs < 0x29c6)) {

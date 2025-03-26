@@ -2175,7 +2175,6 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
-
 add_fp_unittest(
   asinhf16_test
   NEED_MPFR
