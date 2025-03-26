@@ -8,7 +8,6 @@
 
 #include "RISCVAsmBackend.h"
 #include "RISCVMCExpr.h"
-#include "RISCVMCTargetDesc.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"

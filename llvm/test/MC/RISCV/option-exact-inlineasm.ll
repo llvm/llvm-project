@@ -18,4 +18,3 @@ entry:
   .option noexact", "=^cr,^cr"(ptr %f)
   ret i32 %0
 }
-
