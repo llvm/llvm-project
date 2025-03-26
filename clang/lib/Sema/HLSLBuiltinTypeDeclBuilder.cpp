@@ -67,20 +67,21 @@ struct TemplateParameterListBuilder {
   BuiltinTypeDeclBuilder &finalizeTemplateArgs(ConceptDecl *CD = nullptr);
 };
 
-// Builder for methods of builtin types. Allows adding methods to builtin types
-// using the builder pattern like this:
+// Builder for methods or constructors of builtin types. Allows creating methods
+// or constructors of builtin types using the builder pattern like this:
 //
 //   BuiltinTypeMethodBuilder(RecordBuilder, "MethodName", ReturnType)
 //       .addParam("param_name", Type, InOutModifier)
 //       .callBuiltin("builtin_name", BuiltinParams...)
 //       .finalize();
 //
-// The builder needs to have all of the method parameters before it can create
-// a CXXMethodDecl. It collects them in addParam calls and when a first
-// method that builds the body is called or when access to 'this` is needed it
-// creates the CXXMethodDecl and ParmVarDecls instances. These can then be
-// referenced from the body building methods. Destructor or an explicit call to
-// finalize() will complete the method definition.
+// The builder needs to have all of the parameters before it can create
+// a CXXMethodDecl or CXXConstructorDecl. It collects them in addParam calls and
+// when a first method that builds the body is called or when access to 'this`
+// is needed it creates the CXXMethodDecl/CXXConstructorDecl and ParmVarDecls
+// instances. These can then be referenced from the body building methods.
+// Destructor or an explicit call to finalize() will complete the method
+// definition.
 //
 // The callBuiltin helper method accepts constants via `Expr *` or placeholder
 // value arguments to indicate which function arguments to forward to the
@@ -104,11 +105,11 @@ private:
   BuiltinTypeDeclBuilder &DeclBuilder;
   DeclarationName Name;
   QualType ReturnTy;
-  // method or constructor declaration (CXXConstructorDecl derives from
-  // CXXMethodDecl)
+  // method or constructor declaration
+  // (CXXConstructorDecl derives from CXXMethodDecl)
   CXXMethodDecl *Method;
   bool IsConst;
-  bool IsConstructor;
+  bool IsCtor;
   llvm::SmallVector<Param> Params;
   llvm::SmallVector<Stmt *> StmtsList;
 
@@ -129,13 +130,13 @@ public:
 
   BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB, DeclarationName &Name,
                            QualType ReturnTy, bool IsConst = false,
-                           bool IsConstructor = false)
+                           bool IsCtor = false)
       : DeclBuilder(DB), Name(Name), ReturnTy(ReturnTy), Method(nullptr),
-        IsConst(IsConst), IsConstructor(IsConstructor) {}
+        IsConst(IsConst), IsCtor(IsCtor) {}
 
   BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB, StringRef NameStr,
                            QualType ReturnTy, bool IsConst = false,
-                           bool IsConstructor = false);
+                           bool IsCtor = false);
   BuiltinTypeMethodBuilder(const BuiltinTypeMethodBuilder &Other) = delete;
 
   ~BuiltinTypeMethodBuilder() { finalize(); }
@@ -159,7 +160,7 @@ private:
   void createDecl();
 
   // Makes sure the declaration is created; should be called before any
-  // statement added or when access to 'this' is needed.
+  // statement added to the body or when access to 'this' is needed.
   void ensureCompleteDecl() {
     if (!Method)
       createDecl();
@@ -340,17 +341,15 @@ Expr *BuiltinTypeMethodBuilder::convertPlaceholder(PlaceHolder PH) {
 BuiltinTypeMethodBuilder::BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB,
                                                    StringRef NameStr,
                                                    QualType ReturnTy,
-                                                   bool IsConst,
-                                                   bool IsConstructor)
+                                                   bool IsConst, bool IsCtor)
     : DeclBuilder(DB), ReturnTy(ReturnTy), Method(nullptr), IsConst(IsConst),
-      IsConstructor(IsConstructor) {
+      IsCtor(IsCtor) {
 
-  assert((!NameStr.empty() || IsConstructor) && "method needs a name");
-  assert(((IsConstructor && !IsConst) || !IsConstructor) &&
-         "constructor cannot be const");
+  assert((!NameStr.empty() || IsCtor) && "method needs a name");
+  assert(((IsCtor && !IsConst) || !IsCtor) && "constructor cannot be const");
 
   ASTContext &AST = DB.SemaRef.getASTContext();
-  if (IsConstructor) {
+  if (IsCtor) {
     Name = AST.DeclarationNames.getCXXConstructorName(
         DB.Record->getTypeForDecl()->getCanonicalTypeUnqualified());
   } else {
@@ -383,20 +382,20 @@ void BuiltinTypeMethodBuilder::createDecl() {
   if (IsConst)
     ExtInfo.TypeQuals.addConst();
 
-  QualType MethodTy = AST.getFunctionType(ReturnTy, ParamTypes, ExtInfo);
+  QualType FuncTy = AST.getFunctionType(ReturnTy, ParamTypes, ExtInfo);
 
   // create method or constructor decl
-  auto *TSInfo = AST.getTrivialTypeSourceInfo(MethodTy, SourceLocation());
+  auto *TSInfo = AST.getTrivialTypeSourceInfo(FuncTy, SourceLocation());
   DeclarationNameInfo NameInfo = DeclarationNameInfo(Name, SourceLocation());
-  if (IsConstructor)
+  if (IsCtor)
     Method = CXXConstructorDecl::Create(
-        AST, DeclBuilder.Record, SourceLocation(), NameInfo, MethodTy, TSInfo,
+        AST, DeclBuilder.Record, SourceLocation(), NameInfo, FuncTy, TSInfo,
         ExplicitSpecifier(), false, true, false,
         ConstexprSpecKind::Unspecified);
   else
     Method =
         CXXMethodDecl::Create(AST, DeclBuilder.Record, SourceLocation(),
-                              NameInfo, MethodTy, TSInfo, SC_None, false, false,
+                              NameInfo, FuncTy, TSInfo, SC_None, false, false,
                               ConstexprSpecKind::Unspecified, SourceLocation());
 
   // create params & set them to the function prototype
