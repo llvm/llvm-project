@@ -251,9 +251,8 @@ llvm::Expected<protocol::InitializeResponseBody> InitializeRequestHandler::Run(
 
   auto interp = dap.debugger.GetCommandInterpreter();
 
-  // sourceInitFile option is not from formal DAP specification. It is only
-  // used by unit tests to prevent sourcing .lldbinit files from environment
-  // which may affect the outcome of tests.
+  // The sourceInitFile option is not part of the DAP specification. It is an extension
+  // used by the test suite to prevent sourcing `.lldbinit` and changing its behavior .
   if (arguments.lldbExtSourceInitFile.value_or(true)) {
     dap.debugger.SkipLLDBInitFiles(false);
     dap.debugger.SkipAppInitFiles(false);

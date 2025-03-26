@@ -85,7 +85,7 @@ llvm::json::Value toJSON(const ColumnDescriptor &);
 
 /// Names of checksum algorithms that may be supported by a debug adapter.
 /// Values: ‘MD5’, ‘SHA1’, ‘SHA256’, ‘timestamp’.
-enum class ChecksumAlgorithm { md5, sha1, sha256, timestamp };
+enum class ChecksumAlgorithm { MD5, SHA1, SHA256, timestamp };
 llvm::json::Value toJSON(const ChecksumAlgorithm &);
 
 /// Describes one or more type of breakpoint a BreakpointMode applies to. This
