@@ -699,7 +699,7 @@ class LegalizeBufferContentTypesVisitor
   /// intrinsics to one that would be legal through bitcasts and/or truncation.
   /// Uses the wider of i32, i16, or i8 where possible, accounting for the
   /// alignment of the load or store.
-  Type *legalNonAggregateFor(Type *T, Align A);
+  Type *legalNonAggregateForMemOp(Type *T, Align A);
   Value *makeLegalNonAggregate(Value *V, Type *TargetType, const Twine &Name);
   Value *makeIllegalNonAggregate(Value *V, Type *OrigType, const Twine &Name);
 
@@ -793,8 +793,8 @@ Value *LegalizeBufferContentTypesVisitor::vectorToArray(Value *V,
   return ArrayRes;
 }
 
-Type *LegalizeBufferContentTypesVisitor::legalNonAggregateFor(Type *T,
-                                                              Align A) {
+Type *LegalizeBufferContentTypesVisitor::legalNonAggregateForMemOp(Type *T,
+                                                                   Align A) {
   TypeSize Size = DL.getTypeStoreSizeInBits(T);
   // Implicitly zero-extend to the next byte if needed
   if (!DL.typeSizeEqualsStoreSize(T))
@@ -1022,7 +1022,7 @@ bool LegalizeBufferContentTypesVisitor::visitLoadImpl(
 
   Align PartAlign = commonAlignment(OrigLI.getAlign(), AggByteOff);
   Type *ArrayAsVecType = scalarArrayTypeAsVector(PartType);
-  Type *LegalType = legalNonAggregateFor(ArrayAsVecType, PartAlign);
+  Type *LegalType = legalNonAggregateForMemOp(ArrayAsVecType, PartAlign);
 
   SmallVector<VecSlice> Slices;
   getVecSlices(LegalType, PartAlign, Slices);
@@ -1152,7 +1152,7 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
   }
 
   Align PartAlign = commonAlignment(OrigSI.getAlign(), AggByteOff);
-  Type *LegalType = legalNonAggregateFor(ArrayAsVecType, PartAlign);
+  Type *LegalType = legalNonAggregateForMemOp(ArrayAsVecType, PartAlign);
   if (LegalType != ArrayAsVecType) {
     NewData = makeLegalNonAggregate(NewData, LegalType, Name);
   }
