@@ -126,9 +126,9 @@ static const MCPhysReg FixedCSRFIMap[] = {
 static constexpr uint64_t QCIInterruptPushAmount = 96;
 
 static const std::pair<MCPhysReg, int8_t> FixedCSRFIQCIInterruptMap[] = {
-    /* -1 is a gap for mepc/qc.mnepc */
+    /* -1 is a gap for mepc/mnepc */
     {/*fp*/ FPReg, -2},
-    /* -3 is a gap for mcause */
+    /* -3 is a gap for qc.mcause */
     {/*ra*/ RAReg, -4},
     /* -5 is reserved */
     {/*t0*/ RISCV::X5, -6},
