@@ -36,6 +36,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -13434,6 +13435,11 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     F->insert(It, copy0MBB);
     F->insert(It, sinkMBB);
 
+    if (isPhysRegLiveAfter(PPC::CARRY, MI.getIterator())) {
+      copy0MBB->addLiveIn(PPC::CARRY);
+      sinkMBB->addLiveIn(PPC::CARRY);
+    }
+
     // Set the call frame size on entry to the new basic blocks.
     // See https://reviews.llvm.org/D156113.
     unsigned CallFrameSize = TII->getCallFrameSizeAt(MI);
@@ -18445,7 +18451,7 @@ static SDValue combineADDToADDZE(SDNode *N, SelectionDAG &DAG,
     SDValue AddOrZ = NegConstant != 0 ? Add : Z;
     SDValue Addc =
         DAG.getNode(ISD::UADDO_CARRY, DL, DAG.getVTList(MVT::i64, CarryType),
-                    AddOrZ, DAG.getConstant(-1ULL, DL, MVT::i64),
+                    AddOrZ, DAG.getAllOnesConstant(DL, MVT::i64),
                     DAG.getConstant(0, DL, CarryType));
     return DAG.getNode(ISD::UADDO_CARRY, DL, VTs, LHS,
                        DAG.getConstant(0, DL, MVT::i64),
