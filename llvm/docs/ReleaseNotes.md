@@ -150,6 +150,8 @@ Changes to the RISC-V Backend
 * Adds Support for Qualcomm's `qci-nest` and `qci-nonest` interrupt types, which
   use instructions from `Xqciint` to save and restore some GPRs during interrupt
   handlers.
+* When the experimental extension `Xqcili` is enabled, `qc.e.li` and `qc.li` may
+  now be used to materialize immediates.
 
 Changes to the WebAssembly Backend
 ----------------------------------

@@ -355,3 +355,13 @@ namespace GH132401 {
   };
   template struct CallableHelper<void (QIODevice::*)()>;
 } // namespace GH132401
+
+namespace adl_dependent_class {
+  struct A {
+    template <class T> A(T);
+  };
+  struct C;
+  template <class T> void d(void (T::*)());
+  void f(A);
+  void g() { f(d<C>); }
+} // namespace adl_dependent_class
