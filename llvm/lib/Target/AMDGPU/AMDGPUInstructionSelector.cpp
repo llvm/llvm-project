@@ -4370,7 +4370,7 @@ static bool isShlHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
   return false;
 }
 
-std::optional<std::pair<const MachineOperand *, SrcStatus>>
+static std::optional<std::pair<const MachineOperand *, SrcStatus>>
 retOpStat(const MachineOperand *Op, SrcStatus Stat,
           std::pair<const MachineOperand *, SrcStatus> &Curr) {
   if (Stat != SrcStatus::INVALID &&
@@ -4397,8 +4397,8 @@ static TypeClass isVectorOfTwoOrScalar(const MachineOperand *Op,
   return TypeClass::NON_OF_LISTED;
 }
 
-SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
-                       const MachineRegisterInfo &MRI) {
+static SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
+                              const MachineRegisterInfo &MRI) {
   TypeClass NegType = isVectorOfTwoOrScalar(Op, MRI);
   if (NegType != TypeClass::VECTOR_OF_TWO && NegType != TypeClass::SCALAR)
     return SrcStatus::INVALID;
@@ -4544,7 +4544,7 @@ SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
   llvm_unreachable("unexpected SrcStatus");
 }
 
-std::optional<std::pair<const MachineOperand *, SrcStatus>>
+static std::optional<std::pair<const MachineOperand *, SrcStatus>>
 calcNextStatus(std::pair<const MachineOperand *, SrcStatus> Curr,
                const MachineRegisterInfo &MRI) {
   if (!Curr.first->isReg())
@@ -4632,26 +4632,26 @@ static bool checkOptions(SrcStatus Stat) {
   return true;
 }
 
-void setUpOptions(const MachineOperand *RootOp,
-                  const MachineRegisterInfo &MRI) {
+static void setUpOptions(const MachineOperand *RootOp,
+                         const MachineRegisterInfo &MRI) {
   const MachineInstr *MI = RootOp->getParent();
   unsigned Opc = MI->getOpcode();
 
   if (Opc < TargetOpcode::GENERIC_OP_END) {
     // Keep same for gerneric op
-    StatOptions.HasNeg = 1;
+    StatOptions.HasNeg = true;
   } else if (Opc == TargetOpcode::G_INTRINSIC) {
     Intrinsic::ID IntrinsicID = cast<GIntrinsic>(*MI).getIntrinsicID();
     // Only float point intrinsic has neg & neg_hi bits
     if (IntrinsicID == Intrinsic::amdgcn_fdot2)
-      StatOptions.HasNeg = 1;
+      StatOptions.HasNeg = true;
     else
-      StatOptions.HasNeg = 0;
+      StatOptions.HasNeg = false;
   } else
-    StatOptions.HasNeg = 0;
+    StatOptions.HasNeg = false;
 
   // Assume all complex pattern of VOP3P has opsel
-  StatOptions.HasOpsel = 1;
+  StatOptions.HasOpsel = true;
 }
 
 static SmallVector<std::pair<const MachineOperand *, SrcStatus>>
@@ -4715,7 +4715,7 @@ static bool isSameOperand(const MachineOperand *Op1,
   return Op1->isIdenticalTo(*Op2);
 }
 
-unsigned updateMods(SrcStatus HiStat, SrcStatus LoStat, unsigned Mods) {
+static unsigned updateMods(SrcStatus HiStat, SrcStatus LoStat, unsigned Mods) {
   // SrcStatus::IS_LOWER_HALF remain 0.
   if (HiStat == SrcStatus::IS_UPPER_HALF_NEG) {
     Mods ^= SISrcMods::NEG_HI;
@@ -4732,7 +4732,7 @@ unsigned updateMods(SrcStatus HiStat, SrcStatus LoStat, unsigned Mods) {
     Mods |= SISrcMods::OP_SEL_0;
   } else if (LoStat == SrcStatus::IS_UPPER_HALF)
     Mods |= SISrcMods::OP_SEL_0;
-  else if (LoStat == SrcStatus::IS_UPPER_HALF_NEG)
+  else if (LoStat == SrcStatus::IS_LOWER_HALF_NEG)
     Mods |= SISrcMods::NEG;
   else if (LoStat == SrcStatus::IS_HI_NEG)
     Mods ^= SISrcMods::NEG;
@@ -4741,28 +4741,22 @@ unsigned updateMods(SrcStatus HiStat, SrcStatus LoStat, unsigned Mods) {
 }
 
 static bool isValidToPack(SrcStatus HiStat, SrcStatus LoStat,
-                          unsigned int &Mods, const MachineOperand *NewOp,
+                          const MachineOperand *NewOp,
                           const MachineOperand *RootOp, const SIInstrInfo &TII,
                           const MachineRegisterInfo &MRI) {
   if (NewOp->isReg()) {
-    if (isSameBitWidth(NewOp, RootOp, MRI) &&
-        (HiStat == SrcStatus::IS_UPPER_HALF ||
-         HiStat == SrcStatus::IS_UPPER_HALF_NEG ||
-         HiStat == SrcStatus::IS_LOWER_HALF ||
-         HiStat == SrcStatus::IS_LOWER_HALF_NEG) &&
-        (LoStat == SrcStatus::IS_UPPER_HALF ||
-         LoStat == SrcStatus::IS_UPPER_HALF_NEG ||
-         LoStat == SrcStatus::IS_LOWER_HALF ||
-         LoStat == SrcStatus::IS_LOWER_HALF_NEG)) {
-      return true;
-    }
-  } else {
-    if ((HiStat == SrcStatus::IS_SAME || HiStat == SrcStatus::IS_HI_NEG) &&
-        (LoStat == SrcStatus::IS_SAME || LoStat == SrcStatus::IS_HI_NEG) &&
-        isInlinableFPConstant(*NewOp, TII)) {
-      return true;
-    }
-  }
+    auto IsHalfState = [](SrcStatus S) {
+      return S == SrcStatus::IS_UPPER_HALF ||
+             S == SrcStatus::IS_UPPER_HALF_NEG ||
+             S == SrcStatus::IS_LOWER_HALF || S == SrcStatus::IS_LOWER_HALF_NEG;
+    };
+    return isSameBitWidth(NewOp, RootOp, MRI) && IsHalfState(LoStat) &&
+           IsHalfState(HiStat);
+  } else
+    return ((HiStat == SrcStatus::IS_SAME || HiStat == SrcStatus::IS_HI_NEG) &&
+            (LoStat == SrcStatus::IS_SAME || LoStat == SrcStatus::IS_HI_NEG) &&
+            isInlinableFPConstant(*NewOp, TII));
+
   return false;
 }
 
@@ -4820,7 +4814,7 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *RootOp,
   for (int i = StatlistHi.size() - 1; i >= 0; i--) {
     for (int j = StatlistLo.size() - 1; j >= 0; j--) {
       if (isSameOperand(StatlistHi[i].first, StatlistLo[j].first) &&
-          isValidToPack(StatlistHi[i].second, StatlistLo[j].second, Mods,
+          isValidToPack(StatlistHi[i].second, StatlistLo[j].second,
                         StatlistHi[i].first, RootOp, TII, MRI))
         return {StatlistHi[i].first,
                 updateMods(StatlistHi[i].second, StatlistLo[j].second, Mods)};
