@@ -19127,7 +19127,7 @@ void BoUpSLP::BlockScheduling::resetSchedule() {
       SD->setScheduled(/*Scheduled=*/false);
       SD->resetUnscheduledDeps();
     }
-    for (ScheduleBundle *Bundle: getScheduleBundles(I)) {
+    for (ScheduleBundle *Bundle : getScheduleBundles(I)) {
       assert(isInSchedulingRegion(*Bundle) &&
              "ScheduleBundle not in scheduling region");
       Bundle->setScheduled(/*Scheduled=*/false);
