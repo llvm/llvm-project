@@ -35,6 +35,10 @@ ELF Improvements
   not provided in the command line by the user and cannot be inferred from
   inputs.
 
+* ``--why-live=<glob>`` prints for each symbol matching ``<glob>`` a chain of
+  items that kept it live during garbage collection. This is inspired by the
+  Mach-O LLD feature of the same name.
+
 Breaking changes
 ----------------
 

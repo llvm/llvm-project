@@ -58,8 +58,7 @@ AArch64ELFObjectWriter::AArch64ELFObjectWriter(uint8_t OSABI, bool IsILP32)
 
 // assumes IsILP32 is true
 static bool isNonILP32reloc(const MCFixup &Fixup,
-                            AArch64MCExpr::VariantKind RefKind,
-                            MCContext &Ctx) {
+                            AArch64MCExpr::Specifier RefKind, MCContext &Ctx) {
   if (Fixup.getTargetKind() != AArch64::fixup_aarch64_movw)
     return false;
   switch (RefKind) {
@@ -112,9 +111,9 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
   unsigned Kind = Fixup.getTargetKind();
   if (Kind >= FirstLiteralRelocationKind)
     return Kind - FirstLiteralRelocationKind;
-  AArch64MCExpr::VariantKind RefKind =
-      static_cast<AArch64MCExpr::VariantKind>(Target.getRefKind());
-  AArch64MCExpr::VariantKind SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
+  AArch64MCExpr::Specifier RefKind =
+      static_cast<AArch64MCExpr::Specifier>(Target.getRefKind());
+  AArch64MCExpr::Specifier SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
   bool IsNC = AArch64MCExpr::isNotChecked(RefKind);
 
   assert((!Target.getSymA() ||
@@ -403,7 +402,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       if ((SymLoc == AArch64MCExpr::VK_GOT ||
            SymLoc == AArch64MCExpr::VK_GOT_AUTH) &&
           IsNC) {
-        AArch64MCExpr::VariantKind AddressLoc =
+        AArch64MCExpr::Specifier AddressLoc =
             AArch64MCExpr::getAddressFrag(RefKind);
         bool IsAuth = (SymLoc == AArch64MCExpr::VK_GOT_AUTH);
         if (!IsILP32) {
