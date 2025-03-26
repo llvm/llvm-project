@@ -38,6 +38,7 @@
 #include "flang/Semantics/type.h"
 #include "flang/Support/Fortran.h"
 #include "flang/Support/default-kinds.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 #include <list>
 #include <map>
@@ -1827,23 +1828,13 @@ parser::CharBlock MakeNameFromOperator(
 }
 
 parser::CharBlock MangleSpecialFunctions(const parser::CharBlock name) {
-  if (name == "max") {
-    return parser::CharBlock{"op.max", 6};
-  }
-  if (name == "min") {
-    return parser::CharBlock{"op.min", 6};
-  }
-  if (name == "iand") {
-    return parser::CharBlock{"op.iand", 7};
-  }
-  if (name == "ior") {
-    return parser::CharBlock{"op.ior", 6};
-  }
-  if (name == "ieor") {
-    return parser::CharBlock{"op.ieor", 7};
-  }
-  // All other names: return as is.
-  return name;
+  return llvm::StringSwitch<parser::CharBlock>(name.ToString())
+      .Case("max", {"op.max", 6})
+      .Case("min", {"op.min", 6})
+      .Case("iand", {"op.iand", 7})
+      .Case("ior", {"op.ior", 6})
+      .Case("ieor", {"op.ieor", 7})
+      .Default(name);
 }
 
 void OmpVisitor::ProcessReductionSpecifier(
@@ -1866,7 +1857,7 @@ void OmpVisitor::ProcessReductionSpecifier(
   }
 
   // Use reductionDetailsTemp if we can't find the symbol (this is
-  // the first, or only, instance with this name). The detaiols then
+  // the first, or only, instance with this name). The details then
   // gets stored in the symbol when it's created.
   UserReductionDetails *reductionDetails{&reductionDetailsTemp};
   Symbol *symbol{FindSymbol(mangledName)};
