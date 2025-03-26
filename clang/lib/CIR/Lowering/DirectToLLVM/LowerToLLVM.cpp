@@ -20,6 +20,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Types.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
@@ -1120,16 +1121,18 @@ mlir::LogicalResult CIRToLLVMBinOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMBinOpOverflowOpLowering::matchAndRewrite(
     cir::BinOpOverflowOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  auto loc = op.getLoc();
-  auto arithKind = op.getKind();
-  auto operandTy = op.getLhs().getType();
-  auto resultTy = op.getResult().getType();
+  mlir::Location loc = op.getLoc();
+  BinOpOverflowKind arithKind = op.getKind();
+  IntType operandTy = op.getLhs().getType();
+  IntType resultTy = op.getResult().getType();
 
-  auto encompassedTyInfo = computeEncompassedTypeWidth(operandTy, resultTy);
-  auto encompassedLLVMTy = rewriter.getIntegerType(encompassedTyInfo.width);
+  EncompassedTypeInfo encompassedTyInfo =
+      computeEncompassedTypeWidth(operandTy, resultTy);
+  mlir::IntegerType encompassedLLVMTy =
+      rewriter.getIntegerType(encompassedTyInfo.width);
 
-  auto lhs = adaptor.getLhs();
-  auto rhs = adaptor.getRhs();
+  mlir::Value lhs = adaptor.getLhs();
+  mlir::Value rhs = adaptor.getRhs();
   if (operandTy.getWidth() < encompassedTyInfo.width) {
     if (operandTy.isSigned()) {
       lhs = rewriter.create<mlir::LLVM::SExtOp>(loc, encompassedLLVMTy, lhs);
@@ -1140,29 +1143,29 @@ mlir::LogicalResult CIRToLLVMBinOpOverflowOpLowering::matchAndRewrite(
     }
   }
 
-  auto intrinName = getLLVMIntrinName(arithKind, encompassedTyInfo.sign,
-                                      encompassedTyInfo.width);
+  std::string intrinName = getLLVMIntrinName(arithKind, encompassedTyInfo.sign,
+                                             encompassedTyInfo.width);
   auto intrinNameAttr = mlir::StringAttr::get(op.getContext(), intrinName);
 
-  auto overflowLLVMTy = rewriter.getI1Type();
+  mlir::IntegerType overflowLLVMTy = rewriter.getI1Type();
   auto intrinRetTy = mlir::LLVM::LLVMStructType::getLiteral(
       rewriter.getContext(), {encompassedLLVMTy, overflowLLVMTy});
 
   auto callLLVMIntrinOp = rewriter.create<mlir::LLVM::CallIntrinsicOp>(
       loc, intrinRetTy, intrinNameAttr, mlir::ValueRange{lhs, rhs});
-  auto intrinRet = callLLVMIntrinOp.getResult(0);
+  mlir::Value intrinRet = callLLVMIntrinOp.getResult(0);
 
-  auto result = rewriter
-                    .create<mlir::LLVM::ExtractValueOp>(loc, intrinRet,
-                                                        ArrayRef<int64_t>{0})
-                    .getResult();
-  auto overflow = rewriter
-                      .create<mlir::LLVM::ExtractValueOp>(loc, intrinRet,
-                                                          ArrayRef<int64_t>{1})
-                      .getResult();
+  mlir::Value result = rewriter
+                           .create<mlir::LLVM::ExtractValueOp>(
+                               loc, intrinRet, ArrayRef<int64_t>{0})
+                           .getResult();
+  mlir::Value overflow = rewriter
+                             .create<mlir::LLVM::ExtractValueOp>(
+                                 loc, intrinRet, ArrayRef<int64_t>{1})
+                             .getResult();
 
   if (resultTy.getWidth() < encompassedTyInfo.width) {
-    auto resultLLVMTy = getTypeConverter()->convertType(resultTy);
+    mlir::Type resultLLVMTy = getTypeConverter()->convertType(resultTy);
     auto truncResult =
         rewriter.create<mlir::LLVM::TruncOp>(loc, resultLLVMTy, result);
 
@@ -1182,7 +1185,8 @@ mlir::LogicalResult CIRToLLVMBinOpOverflowOpLowering::matchAndRewrite(
     overflow = rewriter.create<mlir::LLVM::OrOp>(loc, overflow, truncOverflow);
   }
 
-  auto boolLLVMTy = getTypeConverter()->convertType(op.getOverflow().getType());
+  mlir::Type boolLLVMTy =
+      getTypeConverter()->convertType(op.getOverflow().getType());
   if (boolLLVMTy != rewriter.getI1Type())
     overflow = rewriter.create<mlir::LLVM::ZExtOp>(loc, boolLLVMTy, overflow);
 
@@ -1223,9 +1227,10 @@ std::string CIRToLLVMBinOpOverflowOpLowering::getLLVMIntrinName(
 CIRToLLVMBinOpOverflowOpLowering::EncompassedTypeInfo
 CIRToLLVMBinOpOverflowOpLowering::computeEncompassedTypeWidth(
     cir::IntType operandTy, cir::IntType resultTy) {
-  auto sign = operandTy.getIsSigned() || resultTy.getIsSigned();
-  auto width = std::max(operandTy.getWidth() + (sign && operandTy.isUnsigned()),
-                        resultTy.getWidth() + (sign && resultTy.isUnsigned()));
+  bool sign = operandTy.getIsSigned() || resultTy.getIsSigned();
+  unsigned width =
+      std::max(operandTy.getWidth() + (sign && operandTy.isUnsigned()),
+               resultTy.getWidth() + (sign && resultTy.isUnsigned()));
   return {sign, width};
 }
 

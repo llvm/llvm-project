@@ -986,15 +986,20 @@ static mlir::Value emitPointerArithmetic(CIRGenFunction &cgf,
 
   const PointerType *pointerType =
       pointerOperand->getType()->getAs<PointerType>();
-  if (!pointerType)
+  if (!pointerType) {
     cgf.cgm.errorNYI("ObjC");
+    return {};
+  }
 
   QualType elementType = pointerType->getPointeeType();
   if (const VariableArrayType *vla =
           cgf.getContext().getAsVariableArrayType(elementType)) {
 
     // The element count here is the total number of non-VLA elements.
-    mlir::Value numElements = nullptr; // cgf.getVLASize(vla).NumElts;
+    // TODO(cir): Get correct VLA size here
+    assert(!cir::MissingFeatures::vlas());
+    mlir::Value numElements = cgf.getBuilder().getConstAPInt(
+        cgf.getLoc(op.loc), cgf.getBuilder().getUInt64Ty(), llvm::APInt(64, 0));
 
     // GEP indexes are signed, and scaling an index isn't permitted to
     // signed-overflow, so we use the same semantics for our explicit
@@ -1200,7 +1205,7 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
   // See more in `EmitSub` in CGExprScalar.cpp.
   assert(!cir::MissingFeatures::ptrDiffOp());
   cgf.cgm.errorNYI("ptrdiff");
-  return {};
+  return cgf.createDummyValue(loc, ops.fullType);
 }
 
 mlir::Value ScalarExprEmitter::emitShl(const BinOpInfo &ops) {
@@ -1503,7 +1508,10 @@ mlir::Value CIRGenFunction::emitCheckedInBoundsGEP(
   assert(!cir::MissingFeatures::ptrStrideOp());
   if (idxList.size() != 1)
     cgm.errorNYI("multi-index ptr arithmetic");
-  mlir::Value gepVal = nullptr;
+
+  // TODO(cir): This should be a PtrStrideOp. For now we simply return the base
+  // pointer
+  mlir::Value gepVal = ptr;
 
   // If the pointer overflow sanitizer isn't enabled, do nothing.
   if (!sanOpts.has(SanitizerKind::PointerOverflow))
@@ -1511,5 +1519,5 @@ mlir::Value CIRGenFunction::emitCheckedInBoundsGEP(
 
   assert(!cir::MissingFeatures::pointerOverflowSanitizer());
   cgm.errorNYI("pointer overflow sanitizer");
-  return nullptr;
+  return gepVal;
 }
