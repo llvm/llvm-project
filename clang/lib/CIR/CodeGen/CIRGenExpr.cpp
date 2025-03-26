@@ -317,10 +317,27 @@ void CIRGenFunction::emitIgnoredExpr(const Expr *e) {
 }
 
 mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
-                                       mlir::Location loc,
-                                       CharUnits alignment) {
-  mlir::Block *entryBlock = getCurFunctionEntryBlock();
+                                       mlir::Location loc, CharUnits alignment,
+                                       bool insertIntoFnEntryBlock,
+                                       mlir::Value arraySize) {
+  mlir::Block *entryBlock = insertIntoFnEntryBlock
+                                ? getCurFunctionEntryBlock()
+                                : curLexScope->getEntryBlock();
 
+  // If this is an alloca in the entry basic block of a cir.try and there's
+  // a surrounding cir.scope, make sure the alloca ends up in the surrounding
+  // scope instead. This is necessary in order to guarantee all SSA values are
+  // reachable during cleanups.
+  assert(!cir::MissingFeatures::tryOp());
+
+  return emitAlloca(name, ty, loc, alignment,
+                    builder.getBestAllocaInsertPoint(entryBlock), arraySize);
+}
+
+mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
+                                       mlir::Location loc, CharUnits alignment,
+                                       mlir::OpBuilder::InsertPoint ip,
+                                       mlir::Value arraySize) {
   // CIR uses its own alloca address space rather than follow the target data
   // layout like original CodeGen. The data layout awareness should be done in
   // the lowering pass instead.
@@ -331,7 +348,7 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
   mlir::Value addr;
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.restoreInsertionPoint(builder.getBestAllocaInsertPoint(entryBlock));
+    builder.restoreInsertionPoint(ip);
     addr = builder.createAlloca(loc, /*addr type*/ localVarPtrTy,
                                 /*var type*/ ty, name, alignIntAttr);
     assert(!cir::MissingFeatures::astVarDeclInterface());
@@ -346,11 +363,13 @@ mlir::Value CIRGenFunction::createDummyValue(mlir::Location loc,
   return builder.createDummyValue(loc, t, alignment);
 }
 
-/// This creates an alloca and inserts it  at the current insertion point of the
-/// builder.
+/// This creates an alloca and inserts it into the entry block if
+/// \p insertIntoFnEntryBlock is true, otherwise it inserts it at the current
+/// insertion point of the builder.
 Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
-                                         mlir::Location loc,
-                                         const Twine &name) {
-  mlir::Value alloca = emitAlloca(name.str(), ty, loc, align);
+                                         mlir::Location loc, const Twine &name,
+                                         bool insertIntoFnEntryBlock) {
+  mlir::Value alloca =
+      emitAlloca(name.str(), ty, loc, align, insertIntoFnEntryBlock);
   return Address(alloca, ty, align);
 }
