@@ -3178,7 +3178,6 @@ bool tools::shouldEnableVectorizerAtOLevel(const ArgList &Args, bool isSlpVec) {
   return false;
 }
 
-/// Enable -fvectorize based on the optimization level selected.
 void tools::handleVectorizeLoopsArgs(const ArgList &Args,
                                      ArgStringList &CmdArgs) {
   bool EnableVec = shouldEnableVectorizerAtOLevel(Args, false);
@@ -3189,7 +3188,6 @@ void tools::handleVectorizeLoopsArgs(const ArgList &Args,
     CmdArgs.push_back("-vectorize-loops");
 }
 
-/// Enable -fslp-vectorize based on the optimization level selected.
 void tools::handleVectorizeSLPArgs(const ArgList &Args,
                                    ArgStringList &CmdArgs) {
   bool EnableSLPVec = shouldEnableVectorizerAtOLevel(Args, true);
