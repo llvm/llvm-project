@@ -623,7 +623,7 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
   uint32_t code_align = cie->code_align;
   int32_t data_align = cie->data_align;
 
-  unwind_plan.SetPlanValidAddressRange(range);
+  unwind_plan.SetPlanValidAddressRanges({range});
   UnwindPlan::Row row = cie->initial_row;
 
   unwind_plan.SetRegisterKind(GetRegisterKind());

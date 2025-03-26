@@ -152,7 +152,7 @@ getTopologicallySortedBlocks(ArrayRef<llvm::BasicBlock *> basicBlocks) {
   for (llvm::BasicBlock *basicBlock : basicBlocks) {
     if (!blocks.contains(basicBlock)) {
       llvm::ReversePostOrderTraversal<llvm::BasicBlock *> traversal(basicBlock);
-      blocks.insert(traversal.begin(), traversal.end());
+      blocks.insert_range(traversal);
     }
   }
   assert(blocks.size() == basicBlocks.size() && "some blocks are not sorted");
@@ -1248,6 +1248,18 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     return builder.create<UndefOp>(loc, type).getResult();
   }
 
+  // Convert dso_local_equivalent.
+  if (auto *dsoLocalEquivalent = dyn_cast<llvm::DSOLocalEquivalent>(constant)) {
+    Type type = convertType(dsoLocalEquivalent->getType());
+    return builder
+        .create<DSOLocalEquivalentOp>(
+            loc, type,
+            FlatSymbolRefAttr::get(
+                builder.getContext(),
+                dsoLocalEquivalent->getGlobalValue()->getName()))
+        .getResult();
+  }
+
   // Convert global variable accesses.
   if (auto *globalObj = dyn_cast<llvm::GlobalObject>(constant)) {
     Type type = convertType(globalObj->getType());
@@ -1346,6 +1358,15 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
   StringRef error = "";
   if (isa<llvm::BlockAddress>(constant))
     error = " since blockaddress(...) is unsupported";
+
+  if (isa<llvm::ConstantPtrAuth>(constant))
+    error = " since ptrauth(...) is unsupported";
+
+  if (isa<llvm::NoCFIValue>(constant))
+    error = " since no_cfi is unsupported";
+
+  if (isa<llvm::GlobalValue>(constant))
+    error = " since global value is unsupported";
 
   return emitError(loc) << "unhandled constant: " << diag(*constant) << error;
 }
@@ -2491,7 +2512,19 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
     Block *dominatedBlock = (*dominatedBlocks.begin())->getBlock();
     builder.setInsertionPoint(dominatedBlock->getTerminator());
   } else {
-    builder.setInsertionPointAfterValue(*argOperand);
+    Value insertPt = *argOperand;
+    if (auto blockArg = dyn_cast<BlockArgument>(*argOperand)) {
+      // The value might be coming from a phi node and is now a block argument,
+      // which means the insertion point is set to the start of the block. If
+      // this block is a target destination of an invoke, the insertion point
+      // must happen after the landing pad operation.
+      Block *insertionBlock = argOperand->getParentBlock();
+      if (!insertionBlock->empty() &&
+          isa<LandingpadOp>(insertionBlock->front()))
+        insertPt = cast<LandingpadOp>(insertionBlock->front()).getRes();
+    }
+
+    builder.setInsertionPointAfterValue(insertPt);
   }
   auto locationExprAttr =
       debugImporter->translateExpression(dbgIntr->getExpression());

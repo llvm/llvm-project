@@ -1794,8 +1794,8 @@ public:
         AArch64MCRegisterClasses[AArch64::GPR64RegClassID].contains(getReg()));
 
     const MCRegisterInfo *RI = Ctx.getRegisterInfo();
-    uint32_t Reg = RI->getRegClass(AArch64::GPR32RegClassID).getRegister(
-        RI->getEncodingValue(getReg()));
+    MCRegister Reg = RI->getRegClass(AArch64::GPR32RegClassID)
+                         .getRegister(RI->getEncodingValue(getReg()));
 
     Inst.addOperand(MCOperand::createReg(Reg));
   }
@@ -1806,8 +1806,8 @@ public:
         AArch64MCRegisterClasses[AArch64::GPR32RegClassID].contains(getReg()));
 
     const MCRegisterInfo *RI = Ctx.getRegisterInfo();
-    uint32_t Reg = RI->getRegClass(AArch64::GPR64RegClassID).getRegister(
-        RI->getEncodingValue(getReg()));
+    MCRegister Reg = RI->getRegClass(AArch64::GPR64RegClassID)
+                         .getRegister(RI->getEncodingValue(getReg()));
 
     Inst.addOperand(MCOperand::createReg(Reg));
   }
@@ -2227,8 +2227,8 @@ public:
       return;
 
     const MCRegisterInfo *RI = Ctx.getRegisterInfo();
-    uint32_t Reg = RI->getRegClass(AArch64::GPR64RegClassID)
-                       .getRegister(RI->getEncodingValue(getReg()));
+    MCRegister Reg = RI->getRegClass(AArch64::GPR64RegClassID)
+                         .getRegister(RI->getEncodingValue(getReg()));
     if (Reg != AArch64::XZR)
       llvm_unreachable("wrong register");
 
@@ -2412,8 +2412,7 @@ public:
     else {
       std::vector<unsigned> Regs = RegMap[std::make_pair(ElementWidth, Reg)];
       assert(!Regs.empty() && "Invalid tile or element width!");
-      for (auto OutReg : Regs)
-        OutRegs.insert(OutReg);
+      OutRegs.insert_range(Regs);
     }
   }
 
