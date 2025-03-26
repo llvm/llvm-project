@@ -1818,7 +1818,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     for (const Expr *Init : Inits) {
       // Skip unnamed bitfields.
       while (InitIndex < R->getNumFields() &&
-             R->getField(InitIndex)->Decl->isUnnamedBitField())
+             R->getField(InitIndex)->isUnnamedBitField())
         ++InitIndex;
 
       if (std::optional<PrimType> T = classify(Init)) {
@@ -4084,7 +4084,7 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
   assert(R);
   // Fields
   for (const Record::Field &Field : R->fields()) {
-    if (Field.Decl->isUnnamedBitField())
+    if (Field.isUnnamedBitField())
       continue;
 
     const Descriptor *D = Field.Desc;

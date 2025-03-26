@@ -43,11 +43,6 @@ using namespace llvm;
 
 using VectorParts = SmallVector<Value *, 2>;
 
-namespace llvm {
-extern cl::opt<bool> EnableVPlanNativePath;
-}
-extern cl::opt<unsigned> ForceTargetInstructionCost;
-
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
 
@@ -392,6 +387,10 @@ unsigned VPUnrollPartAccessor<PartOpIdx>::getUnrollPart(VPUser &U) const {
   if (auto *UnrollPartOp = getUnrollPartOperand(U))
     return cast<ConstantInt>(UnrollPartOp->getLiveInIRValue())->getZExtValue();
   return 0;
+}
+
+namespace llvm {
+template class VPUnrollPartAccessor<2>;
 }
 
 VPInstruction::VPInstruction(unsigned Opcode, CmpInst::Predicate Pred,
