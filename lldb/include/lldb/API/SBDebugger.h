@@ -252,6 +252,8 @@ public:
 
   // Dispatch telemery from client to server if client-telemetry is enabled
   // (by vendor), otherwise the data is ignored.
+  // Note: Invoking this from python client (with SWIG) is not supported
+  // and data will be ignored.
   void DispatchClientTelemetry(const lldb::SBStructuredData &data);
 
   // Return true if target is deleted from the target list of the debugger.
