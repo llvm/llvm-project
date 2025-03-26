@@ -106,36 +106,26 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(unsigned BuiltinID,
       return true;
 
     // check if the all arguments have floating representation
-    ExprResult A = TheCall->getArg(0);
-    QualType ArgTyA = A.get()->getType();
-    if (!ArgTyA->hasFloatingRepresentation()) {
-      SemaRef.Diag(A.get()->getBeginLoc(),
-                   diag::err_typecheck_convert_incompatible)
-          << ArgTyA << SemaRef.Context.FloatTy << 1 << 0 << 0;
-      return true;
-    }
-
-    ExprResult B = TheCall->getArg(1);
-    QualType ArgTyB = B.get()->getType();
-    if (!ArgTyB->hasFloatingRepresentation()) {
-      SemaRef.Diag(A.get()->getBeginLoc(),
-                   diag::err_typecheck_convert_incompatible)
-          << ArgTyB << SemaRef.Context.FloatTy << 1 << 0 << 0;
-      return true;
-    }
-
-    ExprResult C = TheCall->getArg(2);
-    QualType ArgTyC = C.get()->getType();
-    if (!ArgTyC->hasFloatingRepresentation()) {
-      SemaRef.Diag(A.get()->getBeginLoc(),
-                   diag::err_typecheck_convert_incompatible)
-          << ArgTyC << SemaRef.Context.FloatTy << 1 << 0 << 0;
-      return true;
+    for (unsigned i = 0; i < TheCall->getNumArgs(); ++i) {
+      ExprResult Arg = TheCall->getArg(i);
+      QualType ArgTy = Arg.get()->getType();
+      if (!ArgTy->hasFloatingRepresentation()) {
+        SemaRef.Diag(Arg.get()->getBeginLoc(),
+                     diag::err_builtin_invalid_arg_type)
+            << i + 1 << /* scalar or vector */ 5 << /* no int */ 0 << /* fp */ 1
+            << ArgTy;
+        return true;
+      }
     }
 
     // check if all arguments are of the same type
-    if (!(SemaRef.getASTContext().hasSameUnqualifiedType(ArgTyA, ArgTyB) &&
-          SemaRef.getASTContext().hasSameUnqualifiedType(ArgTyA, ArgTyC))) {
+    ExprResult A = TheCall->getArg(0);
+    ExprResult B = TheCall->getArg(1);
+    ExprResult C = TheCall->getArg(2);
+    if (!(SemaRef.getASTContext().hasSameUnqualifiedType(A.get()->getType(),
+                                                         B.get()->getType()) &&
+          SemaRef.getASTContext().hasSameUnqualifiedType(A.get()->getType(),
+                                                         C.get()->getType()))) {
       SemaRef.Diag(TheCall->getBeginLoc(),
                    diag::err_vec_builtin_incompatible_vector)
           << TheCall->getDirectCallee() << /*useAllTerminology*/ true
@@ -143,7 +133,7 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(unsigned BuiltinID,
       return true;
     }
 
-    QualType RetTy = ArgTyA;
+    QualType RetTy = A.get()->getType();
     TheCall->setType(RetTy);
     break;
   }

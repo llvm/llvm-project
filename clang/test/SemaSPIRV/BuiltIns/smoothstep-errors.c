@@ -20,7 +20,17 @@ float2 test_too_many_arg(float2 p0) {
 
 int test_int_scalar_inputs(int p0) {
   return __builtin_spirv_smoothstep(p0, p0, p0);
-  //  expected-error@-1 {{passing 'int' to parameter of incompatible type 'float'}}
+  //  expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'int')}}
+}
+
+float test_int_scalar_inputs2(float p0, int p1) {
+  return __builtin_spirv_smoothstep(p0, p1, p1);
+  //  expected-error@-1 {{2nd argument must be a scalar or vector of floating-point types (was 'int')}}
+}
+
+float test_int_scalar_inputs3(float p0, int p1) {
+  return __builtin_spirv_smoothstep(p0, p0, p1);
+  //  expected-error@-1 {{3rd argument must be a scalar or vector of floating-point types (was 'int')}}
 }
 
 float test_mismatched_arg(float p0, float2 p1) {
