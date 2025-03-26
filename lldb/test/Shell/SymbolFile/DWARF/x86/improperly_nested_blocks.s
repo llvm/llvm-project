@@ -8,7 +8,7 @@
 # RUN:   -o "image lookup -v -s look_me_up2" -o exit 2>&1 | FileCheck %s
 
 # CHECK-LABEL: image lookup -v -s look_me_up1
-# CHECK: warning: {{.*}} block 0x55 has a range [0x2, 0x4) which is not contained in the parent block 0x44
+# CHECK: warning: {{.*}} block 0x55 has a range [0x00000002-0x00000004) which is not contained in the parent block 0x44 whose ranges are [0x00000001-0x00000003)
 # CHECK:    Function: id = {0x00000030}, name = "fn", range = [0x0000000000000000-0x0000000000000005)
 # CHECK:      Blocks: id = {0x00000030}, range = [0x00000000-0x00000005)
 # CHECK-NEXT:         id = {0x00000044}, range = [0x00000001-0x00000003)
@@ -90,6 +90,9 @@ look_me_up2:
         .byte   3                       # Abbrev DW_TAG_lexical_block
         .quad   .Lblock1_begin          # DW_AT_low_pc
         .quad   .Lblock1_end            # DW_AT_high_pc
+        # Incorrect DWARF here: block 2 is contained within block 1, but
+        # [block2_begin, block2_end) is not a subrange of
+        # [block1_begin, block1_end)
         .byte   3                       # Abbrev DW_TAG_lexical_block
         .quad   .Lblock2_begin          # DW_AT_low_pc
         .quad   .Lblock2_end            # DW_AT_high_pc

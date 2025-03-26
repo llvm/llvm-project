@@ -15,6 +15,8 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/StreamString.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <memory>
 
@@ -333,11 +335,20 @@ void Block::FinalizeRanges() {
 void Block::AddRange(const Range &range) {
   Block *parent_block = GetParent();
   if (parent_block && !parent_block->Contains(range)) {
-    m_parent_scope.CalculateSymbolContextModule()->ReportWarning(
-        "block {0:x} has a range [{1:x}, {2:x}) which is not contained in the "
-        "parent block {3:x}",
-        GetID(), range.GetRangeBase(), range.GetRangeEnd(),
+    addr_t base_addr =
+        CalculateSymbolContextFunction()->GetAddress().GetFileAddress();
+
+    StreamString warning;
+    warning.AsRawOstream() << llvm::formatv("block {0:x} has a range ",
+                                            GetID());
+    DumpAddressRange(warning.AsRawOstream(), base_addr + range.GetRangeBase(),
+                     base_addr + range.GetRangeEnd(), 4);
+    warning.AsRawOstream() << llvm::formatv(
+        " which is not contained in the parent block {0:x} whose ranges are ",
         parent_block->GetID());
+    parent_block->DumpAddressRanges(&warning, base_addr);
+    m_parent_scope.CalculateSymbolContextModule()->ReportWarning(
+        warning.GetData());
   }
   m_ranges.Append(range);
 }
