@@ -129,11 +129,6 @@ static cl::opt<bool> IgnoreNonBitcode(
     cl::desc("Do not report an error for non-bitcode files in archives"),
     cl::Hidden);
 
-static cl::opt<bool> TryUseNewDbgInfoFormat(
-    "try-experimental-debuginfo-iterators",
-    cl::desc("Enable debuginfo iterator positions, if they're built in"),
-    cl::init(false));
-
 extern cl::opt<bool> UseNewDbgInfoFormat;
 extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
 extern cl::opt<bool> WriteNewDbgInfoFormat;
@@ -330,8 +325,8 @@ static bool importFunctions(const char *argv0, Module &DestModule) {
 
   auto ModuleLoader = [&DestModule](const char *argv0,
                                     const std::string &Identifier) {
-    std::unique_ptr<MemoryBuffer> Buffer =
-        ExitOnErr(errorOrToExpected(MemoryBuffer::getFileOrSTDIN(Identifier)));
+    std::unique_ptr<MemoryBuffer> Buffer = ExitOnErr(errorOrToExpected(
+        MemoryBuffer::getFileOrSTDIN(Identifier, /*IsText=*/true)));
     return loadFile(argv0, std::move(Buffer), DestModule.getContext(), false);
   };
 
@@ -402,7 +397,7 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
   // Similar to some flags, internalization doesn't apply to the first file.
   bool InternalizeLinkedSymbols = false;
   for (const auto &File : Files) {
-    auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(File);
+    auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(File, /*IsText=*/true);
 
     // When we encounter a missing file, make sure we expose its name.
     if (auto EC = BufferOrErr.getError())
@@ -449,9 +444,8 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
       }
 
       // Promotion
-      if (renameModuleForThinLTO(*M, *Index,
-                                 /*ClearDSOLocalOnDeclarations=*/false))
-        return true;
+      renameModuleForThinLTO(*M, *Index,
+                             /*ClearDSOLocalOnDeclarations=*/false);
     }
 
     if (Verbose)

@@ -43,8 +43,6 @@ struct LanaiRegisterInfo : public LanaiGenRegisterInfo {
   Register getFrameRegister(const MachineFunction &MF) const override;
   Register getBaseRegister() const;
   bool hasBasePointer(const MachineFunction &MF) const;
-
-  int getDwarfRegNum(unsigned RegNum, bool IsEH) const;
 };
 
 } // end namespace llvm

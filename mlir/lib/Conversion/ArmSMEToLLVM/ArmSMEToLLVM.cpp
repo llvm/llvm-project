@@ -81,6 +81,7 @@ static Operation *createLoadTileSliceIntrinsic(
       break;
     }
   }
+  llvm_unreachable("unknown type in createLoadTileSliceIntrinsic");
 }
 
 /// Helper to create an arm_sme.intr.st1*.(horiz|vert)' intrinsic.
@@ -125,6 +126,7 @@ static Operation *createStoreTileSliceIntrinsic(
           loc, maskOp, ptr, tileId, tileSliceI32);
     }
   }
+  llvm_unreachable("unknown type in createStoreTileSliceIntrinsic");
 }
 
 IntegerAttr getTileIdOrError(arm_sme::ArmSMETileOpInterface op) {
@@ -315,7 +317,7 @@ struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
     auto allTruePredicate = rewriter.create<arith::ConstantOp>(
         loc, DenseElementsAttr::get(predicateType, true));
     // Create padding vector (never used due to all-true predicate).
-    auto padVector = rewriter.create<LLVM::UndefOp>(loc, sliceType);
+    auto padVector = rewriter.create<LLVM::PoisonOp>(loc, sliceType);
     // Get a pointer to the current slice.
     auto slicePtr =
         getInMemoryTileSlicePtr(rewriter, loc, tileAlloca, sliceIndex);
@@ -850,6 +852,7 @@ struct StreamingVLOpConversion
       case arm_sme::TypeSize::Double:
         return rewriter.create<arm_sme::aarch64_sme_cntsd>(loc, i64Type);
       }
+      llvm_unreachable("unknown type size in StreamingVLOpConversion");
     }();
     rewriter.replaceOpWithNewOp<arith::IndexCastOp>(
         streamingVlOp, rewriter.getIndexType(), intrOp->getResult(0));

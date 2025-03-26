@@ -29,6 +29,13 @@ endfunction()
 # cache file to CMake via -C. e.g.
 #
 # cmake -D LLVM_RELEASE_ENABLE_PGO=ON -C Release.cmake
+
+set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra;polly;mlir;flang")
+# bolt only supports ELF, so only enable it for Linux.
+if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
+  list(APPEND DEFAULT_PROJECTS "bolt")
+endif()
+
 set (DEFAULT_RUNTIMES "compiler-rt;libcxx")
 if (NOT WIN32)
   list(APPEND DEFAULT_RUNTIMES "libcxxabi" "libunwind")
@@ -36,7 +43,7 @@ endif()
 set(LLVM_RELEASE_ENABLE_LTO THIN CACHE STRING "")
 set(LLVM_RELEASE_ENABLE_PGO ON CACHE BOOL "")
 set(LLVM_RELEASE_ENABLE_RUNTIMES ${DEFAULT_RUNTIMES} CACHE STRING "")
-set(LLVM_RELEASE_ENABLE_PROJECTS "clang;lld;lldb;clang-tools-extra;bolt;polly;mlir;flang" CACHE STRING "")
+set(LLVM_RELEASE_ENABLE_PROJECTS ${DEFAULT_PROJECTS} CACHE STRING "")
 # Note we don't need to add install here, since it is one of the pre-defined
 # steps.
 set(LLVM_RELEASE_FINAL_STAGE_TARGETS "clang;package;check-all;check-llvm;check-clang" CACHE STRING "")
@@ -48,10 +55,8 @@ set(CLANG_ENABLE_BOOTSTRAP ON CACHE BOOL "")
 
 set(STAGE1_PROJECTS "clang")
 
-# Building Flang on Windows requires compiler-rt, so we need to build it in
-# stage1.  compiler-rt is also required for building the Flang tests on
-# macOS.
-set(STAGE1_RUNTIMES "compiler-rt")
+# Build all runtimes so we can statically link them into the stage2 compiler.
+set(STAGE1_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind")
 
 if (LLVM_RELEASE_ENABLE_PGO)
   list(APPEND STAGE1_PROJECTS "lld")
@@ -90,9 +95,20 @@ else()
   set(CLANG_BOOTSTRAP_TARGETS ${LLVM_RELEASE_FINAL_STAGE_TARGETS} CACHE STRING "")
 endif()
 
+if (LLVM_RELEASE_ENABLE_LTO)
+  # Enable LTO for the runtimes.  We need to configure stage1 clang to default
+  # to using lld as the linker because the stage1 toolchain will be used to
+  # build and link the runtimes.
+  # FIXME: We can't use LLVM_ENABLE_LTO=Thin here, because it causes the CMake
+  # step for the libcxx build to fail.  CMAKE_INTERPROCEDURAL_OPTIMIZATION does
+  # enable ThinLTO, though.
+  set(RUNTIMES_CMAKE_ARGS "-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON -DLLVM_ENABLE_LLD=ON" CACHE STRING "")
+endif()
+
 # Stage 1 Common Config
 set(LLVM_ENABLE_RUNTIMES ${STAGE1_RUNTIMES} CACHE STRING "")
 set(LLVM_ENABLE_PROJECTS ${STAGE1_PROJECTS} CACHE STRING "")
+set(LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY ON CACHE STRING "")
 
 # stage2-instrumented and Final Stage Config:
 # Options that need to be set in both the instrumented stage (if we are doing
@@ -102,10 +118,29 @@ set_instrument_and_final_stage_var(LLVM_ENABLE_LTO "${LLVM_RELEASE_ENABLE_LTO}" 
 if (LLVM_RELEASE_ENABLE_LTO)
   set_instrument_and_final_stage_var(LLVM_ENABLE_LLD "ON" BOOL)
 endif()
+set_instrument_and_final_stage_var(LLVM_ENABLE_LIBCXX "ON" BOOL)
+set_instrument_and_final_stage_var(LLVM_STATIC_LINK_CXX_STDLIB "ON" BOOL)
+set(RELEASE_LINKER_FLAGS "-rtlib=compiler-rt --unwindlib=libunwind")
+if(NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Darwin")
+  set(RELEASE_LINKER_FLAGS "${RELEASE_LINKER_FLAGS} -static-libgcc")
+endif()
+
+# Set flags for bolt
+if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
+  set(RELEASE_LINKER_FLAGS "${RELEASE_LINKER_FLAGS} -Wl,--emit-relocs,-znow")
+endif()
+
+set_instrument_and_final_stage_var(CMAKE_EXE_LINKER_FLAGS ${RELEASE_LINKER_FLAGS} STRING)
+set_instrument_and_final_stage_var(CMAKE_SHARED_LINKER_FLAGS ${RELEASE_LINKER_FLAGS} STRING)
+set_instrument_and_final_stage_var(CMAKE_MODULE_LINKER_FLAGS ${RELEASE_LINKER_FLAGS} STRING)
 
 # Final Stage Config (stage2)
 set_final_stage_var(LLVM_ENABLE_RUNTIMES "${LLVM_RELEASE_ENABLE_RUNTIMES}" STRING)
 set_final_stage_var(LLVM_ENABLE_PROJECTS "${LLVM_RELEASE_ENABLE_PROJECTS}" STRING)
+if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
+  set_final_stage_var(CLANG_BOLT "INSTRUMENT" STRING)
+endif()
 set_final_stage_var(CPACK_GENERATOR "TXZ" STRING)
 set_final_stage_var(CPACK_ARCHIVE_THREADS "0" STRING)
 
+set_final_stage_var(LLVM_USE_STATIC_ZSTD "ON" BOOL)

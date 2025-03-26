@@ -169,8 +169,9 @@ struct ConvertMemRefAllocation final : OpConversionPattern<OpTy> {
                       std::is_same<OpTy, memref::AllocaOp>(),
                   "expected only memref::AllocOp or memref::AllocaOp");
     auto currentType = cast<MemRefType>(op.getMemref().getType());
-    auto newResultType = dyn_cast<MemRefType>(
-        this->getTypeConverter()->convertType(op.getType()));
+    auto newResultType =
+        this->getTypeConverter()->template convertType<MemRefType>(
+            op.getType());
     if (!newResultType) {
       return rewriter.notifyMatchFailure(
           op->getLoc(),
@@ -378,7 +379,7 @@ struct ConvertMemRefReinterpretCast final
   matchAndRewrite(memref::ReinterpretCastOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     MemRefType newTy =
-        dyn_cast<MemRefType>(getTypeConverter()->convertType(op.getType()));
+        getTypeConverter()->convertType<MemRefType>(op.getType());
     if (!newTy) {
       return rewriter.notifyMatchFailure(
           op->getLoc(),
@@ -466,8 +467,8 @@ struct ConvertMemRefSubview final : OpConversionPattern<memref::SubViewOp> {
   LogicalResult
   matchAndRewrite(memref::SubViewOp subViewOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    MemRefType newTy = dyn_cast<MemRefType>(
-        getTypeConverter()->convertType(subViewOp.getType()));
+    MemRefType newTy =
+        getTypeConverter()->convertType<MemRefType>(subViewOp.getType());
     if (!newTy) {
       return rewriter.notifyMatchFailure(
           subViewOp->getLoc(),
@@ -583,7 +584,7 @@ struct ConvertMemRefExpandShape final
 //===----------------------------------------------------------------------===//
 
 void memref::populateMemRefNarrowTypeEmulationPatterns(
-    arith::NarrowTypeEmulationConverter &typeConverter,
+    const arith::NarrowTypeEmulationConverter &typeConverter,
     RewritePatternSet &patterns) {
 
   // Populate `memref.*` conversion patterns.
@@ -631,15 +632,15 @@ void memref::populateMemRefNarrowTypeEmulationConversions(
         // Currently only handle innermost stride being 1, checking
         SmallVector<int64_t> strides;
         int64_t offset;
-        if (failed(getStridesAndOffset(ty, strides, offset)))
-          return std::nullopt;
+        if (failed(ty.getStridesAndOffset(strides, offset)))
+          return nullptr;
         if (!strides.empty() && strides.back() != 1)
-          return std::nullopt;
+          return nullptr;
 
         auto newElemTy = IntegerType::get(ty.getContext(), loadStoreWidth,
                                           intTy.getSignedness());
         if (!newElemTy)
-          return std::nullopt;
+          return nullptr;
 
         StridedLayoutAttr layoutAttr;
         // If the offset is 0, we do not need a strided layout as the stride is

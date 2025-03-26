@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=sparc | FileCheck %s
+; RUN: llc < %s -mtriple=sparc | FileCheck %s
 
 define i32 @test0(i32 %X) {
 	%tmp.1 = add i32 %X, 1

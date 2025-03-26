@@ -246,6 +246,10 @@ private:
     return opBuilder.getStringAttr(attrName);
   }
 
+  // Move a conditional branch into a separate basic block to avoid sinking
+  // defs that are required outside a selection region.
+  LogicalResult splitConditionalBlocks();
+
   //===--------------------------------------------------------------------===//
   // Type
   //===--------------------------------------------------------------------===//

@@ -1,5 +1,6 @@
 import os
 import time
+import subprocess
 
 import dap_server
 from lldbsuite.test.lldbtest import *
@@ -10,25 +11,26 @@ import lldbgdbserverutils
 class DAPTestCaseBase(TestBase):
     # set timeout based on whether ASAN was enabled or not. Increase
     # timeout by a factor of 10 if ASAN is enabled.
-    timeoutval = 10 * (10 if ('ASAN_OPTIONS' in os.environ) else 1)
+    timeoutval = 10 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
     NO_DEBUG_INFO_TESTCASE = True
 
-    def create_debug_adaptor(self, lldbDAPEnv=None):
-        """Create the Visual Studio Code debug adaptor"""
+    def create_debug_adapter(self, lldbDAPEnv=None, connection=None):
+        """Create the Visual Studio Code debug adapter"""
         self.assertTrue(
             is_exe(self.lldbDAPExec), "lldb-dap must exist and be executable"
         )
         log_file_path = self.getBuildArtifact("dap.txt")
-        self.dap_server = dap_server.DebugAdaptorServer(
+        self.dap_server = dap_server.DebugAdapterServer(
             executable=self.lldbDAPExec,
+            connection=connection,
             init_commands=self.setUpCommands(),
             log_file=log_file_path,
             env=lldbDAPEnv,
         )
 
-    def build_and_create_debug_adaptor(self, lldbDAPEnv=None):
+    def build_and_create_debug_adapter(self, lldbDAPEnv=None):
         self.build()
-        self.create_debug_adaptor(lldbDAPEnv)
+        self.create_debug_adapter(lldbDAPEnv)
 
     def set_source_breakpoints(self, source_path, lines, data=None):
         """Sets source breakpoints and returns an array of strings containing
@@ -103,13 +105,14 @@ class DAPTestCaseBase(TestBase):
                         return
         self.assertTrue(False, "breakpoint not hit")
 
-    def verify_stop_exception_info(self, expected_description):
+    def verify_stop_exception_info(self, expected_description, timeout=timeoutval):
         """Wait for the process we are debugging to stop, and verify the stop
         reason is 'exception' and that the description matches
         'expected_description'
         """
-        stopped_events = self.dap_server.wait_for_stopped()
+        stopped_events = self.dap_server.wait_for_stopped(timeout=timeout)
         for stopped_event in stopped_events:
+            print("stopped_event", stopped_event)
             if "body" in stopped_event:
                 body = stopped_event["body"]
                 if "reason" not in body:
@@ -180,6 +183,10 @@ class DAPTestCaseBase(TestBase):
         )
         return stackFrames
 
+    def get_exceptionInfo(self, threadId=None):
+        response = self.dap_server.request_exceptionInfo(threadId=threadId)
+        return self.get_dict_value(response, ["body"])
+
     def get_source_and_line(self, threadId=None, frameIndex=0):
         stackFrames = self.get_stackFrames(
             threadId=threadId, startFrame=frameIndex, levels=1
@@ -233,9 +240,10 @@ class DAPTestCaseBase(TestBase):
     def stepIn(
         self, threadId=None, targetId=None, waitForStop=True, granularity="statement"
     ):
-        self.dap_server.request_stepIn(
+        response = self.dap_server.request_stepIn(
             threadId=threadId, targetId=targetId, granularity=granularity
         )
+        self.assertTrue(response["success"])
         if waitForStop:
             return self.dap_server.wait_for_stopped()
         return None
@@ -316,11 +324,11 @@ class DAPTestCaseBase(TestBase):
         gdbRemotePort=None,
         gdbRemoteHostname=None,
     ):
-        """Build the default Makefile target, create the DAP debug adaptor,
+        """Build the default Makefile target, create the DAP debug adapter,
         and attach to the process.
         """
 
-        # Make sure we disconnect and terminate the DAP debug adaptor even
+        # Make sure we disconnect and terminate the DAP debug adapter even
         # if we throw an exception during the test case.
         def cleanup():
             if disconnectAutomatically:
@@ -362,7 +370,7 @@ class DAPTestCaseBase(TestBase):
         cwd=None,
         env=None,
         stopOnEntry=False,
-        disableASLR=True,
+        disableASLR=False,
         disableSTDIO=False,
         shellExpandArguments=False,
         trace=False,
@@ -381,6 +389,7 @@ class DAPTestCaseBase(TestBase):
         expectFailure=False,
         postRunCommands=None,
         enableAutoVariableSummaries=False,
+        displayExtendedBacktrace=False,
         enableSyntheticChildDebugging=False,
         commandEscapePrefix=None,
         customFrameFormat=None,
@@ -422,6 +431,7 @@ class DAPTestCaseBase(TestBase):
             runInTerminal=runInTerminal,
             postRunCommands=postRunCommands,
             enableAutoVariableSummaries=enableAutoVariableSummaries,
+            displayExtendedBacktrace=displayExtendedBacktrace,
             enableSyntheticChildDebugging=enableSyntheticChildDebugging,
             commandEscapePrefix=commandEscapePrefix,
             customFrameFormat=customFrameFormat,
@@ -444,7 +454,7 @@ class DAPTestCaseBase(TestBase):
         cwd=None,
         env=None,
         stopOnEntry=False,
-        disableASLR=True,
+        disableASLR=False,
         disableSTDIO=False,
         shellExpandArguments=False,
         trace=False,
@@ -461,6 +471,7 @@ class DAPTestCaseBase(TestBase):
         postRunCommands=None,
         lldbDAPEnv=None,
         enableAutoVariableSummaries=False,
+        displayExtendedBacktrace=False,
         enableSyntheticChildDebugging=False,
         commandEscapePrefix=None,
         customFrameFormat=None,
@@ -468,10 +479,10 @@ class DAPTestCaseBase(TestBase):
         launchCommands=None,
         expectFailure=False,
     ):
-        """Build the default Makefile target, create the DAP debug adaptor,
+        """Build the default Makefile target, create the DAP debug adapter,
         and launch the process.
         """
-        self.build_and_create_debug_adaptor(lldbDAPEnv)
+        self.build_and_create_debug_adapter(lldbDAPEnv)
         self.assertTrue(os.path.exists(program), "executable must exist")
 
         return self.launch(
@@ -497,6 +508,7 @@ class DAPTestCaseBase(TestBase):
             postRunCommands=postRunCommands,
             enableAutoVariableSummaries=enableAutoVariableSummaries,
             enableSyntheticChildDebugging=enableSyntheticChildDebugging,
+            displayExtendedBacktrace=displayExtendedBacktrace,
             commandEscapePrefix=commandEscapePrefix,
             customFrameFormat=customFrameFormat,
             customThreadFormat=customThreadFormat,

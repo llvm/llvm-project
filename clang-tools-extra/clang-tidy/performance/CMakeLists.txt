@@ -3,7 +3,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_clang_library(clangTidyPerformanceModule
+add_clang_library(clangTidyPerformanceModule STATIC
   AvoidEndlCheck.cpp
   EnumSizeCheck.cpp
   FasterStringFindCheck.cpp

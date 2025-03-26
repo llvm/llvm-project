@@ -1,4 +1,4 @@
-; RUN: llc -mattr=mul,movw < %s -march=avr | FileCheck %s
+; RUN: llc -mattr=mul,movw < %s -mtriple=avr | FileCheck %s
 
 ; Unsigned 8-bit division
 define i8 @udiv8(i8 %a, i8 %b) {

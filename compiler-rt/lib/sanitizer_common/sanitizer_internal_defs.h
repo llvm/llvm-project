@@ -139,8 +139,14 @@
 namespace __sanitizer {
 
 #if defined(__UINTPTR_TYPE__)
+#  if defined(__arm__) && defined(__linux__)
+// Linux Arm headers redefine __UINTPTR_TYPE__ and disagree with clang/gcc.
+typedef unsigned int uptr;
+typedef int sptr;
+#  else
 typedef __UINTPTR_TYPE__ uptr;
 typedef __INTPTR_TYPE__ sptr;
+#  endif
 #elif defined(_WIN64)
 // 64-bit Windows uses LLP64 data model.
 typedef unsigned long long uptr;
@@ -195,6 +201,12 @@ typedef u64  OFF64_T;
 typedef __SIZE_TYPE__ usize;
 #else
 typedef uptr usize;
+#endif
+
+#if defined(__s390__) && !defined(__s390x__)
+typedef long ssize;
+#else
+typedef sptr ssize;
 #endif
 
 typedef u64 tid_t;

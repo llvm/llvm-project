@@ -1,10 +1,12 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -o - %s | FileCheck -check-prefixes=CHECK,NODEBUG,DARWIN %s
+// RUN: %clang_cc1 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++17 -O1 -disable-llvm-passes -o - %s | FileCheck -check-prefixes=CHECK,NODEBUG,DARWIN,CXX17 %s
 // RUN: %clang_cc1 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -debug-info-kind=limited -o - %s | FileCheck -check-prefixes=CHECK,DARWIN %s
 // RUN: %clang_cc1 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 1 -o - %s | FileCheck %s -check-prefix=STACK-PROT
 // RUN: %clang_cc1 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 2 -o - %s | FileCheck %s -check-prefix=STACK-PROT
 // RUN: %clang_cc1 -triple arm64-apple-ios   -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 3 -o - %s | FileCheck %s -check-prefix=STACK-PROT
 
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -o - %s | FileCheck -check-prefixes=CHECK,NODEBUG,ELF %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++17 -O1 -disable-llvm-passes -o - %s | FileCheck -check-prefixes=CHECK,NODEBUG,ELF,CXX17 %s
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -debug-info-kind=limited -o - %s | FileCheck -check-prefixes=CHECK,ELF %s
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 1 -o - %s | FileCheck %s -check-prefix=STACK-PROT
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -emit-llvm -std=c++11 -O1 -disable-llvm-passes -stack-protector 2 -o - %s | FileCheck %s -check-prefix=STACK-PROT
@@ -19,6 +21,10 @@
 // CHECK: @__const._Z13testArrayInitv.p1 = private unnamed_addr constant [1 x { i64, i64 }] [{ i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN5Base08virtual1Ev_vfpthunk_, i32 0, i64 35591) to i64), i64 0 }], align 8
 // CHECK: @__const._Z13testArrayInitv.c0 = private unnamed_addr constant %struct.Class0 { { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN5Base011nonvirtual0Ev, i32 0, i64 35591) to i64), i64 0 } }, align 8
 // CHECK: @__const._Z13testArrayInitv.c1 = private unnamed_addr constant %struct.Class0 { { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN5Base08virtual1Ev_vfpthunk_, i32 0, i64 35591) to i64), i64 0 } }, align 8
+
+// CHECK: @_ZN22testNoexceptConversion6mfptr1E = global { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN22testNoexceptConversion1S19nonvirtual_noexceptEv, i32 0, i64 [[TYPEDISC3:.*]]) to i64), i64 0 },
+// CHECK: @_ZN22testNoexceptConversion6mfptr2E = global { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN22testNoexceptConversion1S16virtual_noexceptEv_vfpthunk_, i32 0, i64 [[TYPEDISC3]]) to i64), i64 0 },
+// CHECK: @_ZN22testNoexceptConversion15mfptr3_noexceptE = global { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN22testNoexceptConversion1S19nonvirtual_noexceptEv, i32 0, i64 [[TYPEDISC3]]) to i64), i64 0 },
 
 // CHECK: @_ZTV5Base0 = unnamed_addr constant { [5 x ptr] } { [5 x ptr] [ptr null, ptr @_ZTI5Base0,
 // CHECK-SAME: ptr ptrauth (ptr @_ZN5Base08virtual1Ev, i32 0, i64 55600, ptr getelementptr inbounds ({ [5 x ptr] }, ptr @_ZTV5Base0, i32 0, i32 0, i32 2)),
@@ -77,6 +83,9 @@ struct Derived1 : Base0, Base1 {
 };
 
 typedef void (Base0::*MethodTy0)();
+#if __cplusplus >= 201703L
+typedef void (Base0::*NoExceptMethodTy0)() noexcept;
+#endif
 typedef void (Base0::*VariadicMethodTy0)(int, ...);
 typedef void (Derived0::*MethodTy1)();
 
@@ -293,6 +302,16 @@ void test1(Base0 *a0, MethodTy0 a1) {
   (a0->*a1)();
 }
 
+// CXX17: define{{.*}} void @_Z14test1_noexceptP5Base0MS_DoFvvE(
+// CXX17: %[[V14:.*]] = phi ptr [ %{{.*}}, {{.*}} ], [ %{{.*}}, {{.*}} ]
+// CXX17: %[[V15:.*]] = phi i64 [ 0, {{.*}} ], [ [[TYPEDISC0]], {{.*}} ]
+// CXX17: call void %[[V14]](ptr noundef nonnull align {{[0-9]+}} dereferenceable(8) %{{.*}}) {{.*}}[ "ptrauth"(i32 0, i64 %[[V15]]) ]
+#if __cplusplus >= 201703L
+void test1_noexcept(Base0 *a0, NoExceptMethodTy0 a1) {
+  (a0->*a1)();
+}
+#endif
+
 // CHECK: define{{.*}} void @_Z15testConversion0M5Base0FvvEM8Derived0FvvE([2 x i64] %[[METHOD0_COERCE:.*]], [2 x i64] %[[METHOD1_COERCE:.*]])
 // CHECK: %[[METHOD0:.*]] = alloca { i64, i64 }, align 8
 // CHECK: %[[METHOD1:.*]] = alloca { i64, i64 }, align 8
@@ -437,4 +456,48 @@ void testArrayInit() {
 
 void testConvertNull() {
   VariadicMethodTy0 t = (VariadicMethodTy0)(MethodTy0{});
+}
+
+namespace testNoexceptConversion {
+
+// CHECK-LABEL: define internal void @__cxx_global_var_init()
+// CHECK: %[[V0:.*]] = load { i64, i64 }, ptr @_ZN22testNoexceptConversion15mfptr0_noexceptE, align 8
+// CHECK: store { i64, i64 } %[[V0]], ptr @_ZN22testNoexceptConversion6mfptr4E, align 8
+
+// CHECK: define {{.*}}void @_ZN22testNoexceptConversion5test0Ev()
+// CHECK: %[[P0:.*]] = alloca { i64, i64 }, align 8
+// CHECK: store { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN22testNoexceptConversion1S19nonvirtual_noexceptEv, i32 0, i64 [[TYPEDISC3]]) to i64), i64 0 }, ptr %[[P0]], align 8,
+
+// CHECK: define {{.*}}void @_ZN22testNoexceptConversion5test1Ev()
+// CHECK: %[[P0:.*]] = alloca { i64, i64 }, align 8
+// CHECK: store { i64, i64 } { i64 ptrtoint (ptr ptrauth (ptr @_ZN22testNoexceptConversion1S16virtual_noexceptEv_vfpthunk_, i32 0, i64 [[TYPEDISC3]]) to i64), i64 0 }, ptr %[[P0]], align 8,
+
+// CHECK: define {{.*}}void @_ZN22testNoexceptConversion5test2Ev()
+// CHECK: %[[P0:.*]] = alloca { i64, i64 }, align 8
+// CHECK: %[[V0:.*]] = load { i64, i64 }, ptr @_ZN22testNoexceptConversion15mfptr0_noexceptE, align 8
+// CHECK: store { i64, i64 } %[[V0]], ptr %[[P0]], align 8,
+
+struct S {
+  void nonvirtual_noexcept() noexcept;
+  virtual void virtual_noexcept() noexcept;
+};
+
+void (S::*mfptr0_noexcept)() noexcept;
+void (S::*mfptr1)() = &S::nonvirtual_noexcept;
+void (S::*mfptr2)() = &S::virtual_noexcept;
+void (S::*mfptr3_noexcept)() noexcept = &S::nonvirtual_noexcept;
+void (S::*mfptr4)() = mfptr0_noexcept;
+
+void test0() {
+  void (S::*p0)() = &S::nonvirtual_noexcept;
+}
+
+void test1() {
+  void (S::*p0)() = &S::virtual_noexcept;
+}
+
+void test2() {
+  void (S::*p0)() = mfptr0_noexcept;
+}
+
 }

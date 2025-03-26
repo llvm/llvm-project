@@ -54,7 +54,7 @@ class UnwindPlan {
 public:
   class Row {
   public:
-    class RegisterLocation {
+    class AbstractRegisterLocation {
     public:
       enum RestoreType {
         unspecified,       // not specified, we may be able to assume this
@@ -72,11 +72,11 @@ public:
         isConstant         // reg = constant
       };
 
-      RegisterLocation() : m_location() {}
+      AbstractRegisterLocation() : m_location() {}
 
-      bool operator==(const RegisterLocation &rhs) const;
+      bool operator==(const AbstractRegisterLocation &rhs) const;
 
-      bool operator!=(const RegisterLocation &rhs) const {
+      bool operator!=(const AbstractRegisterLocation &rhs) const {
         return !(*this == rhs);
       }
 
@@ -175,13 +175,13 @@ public:
 
       void SetIsDWARFExpression(const uint8_t *opcodes, uint32_t len);
 
-      const uint8_t *GetDWARFExpressionBytes() {
+      const uint8_t *GetDWARFExpressionBytes() const {
         if (m_type == atDWARFExpression || m_type == isDWARFExpression)
           return m_location.expr.opcodes;
         return nullptr;
       }
 
-      int GetDWARFExpressionLength() {
+      int GetDWARFExpressionLength() const {
         if (m_type == atDWARFExpression || m_type == isDWARFExpression)
           return m_location.expr.length;
         return 0;
@@ -215,6 +215,7 @@ public:
         isRegisterDereferenced, // FA = [reg]
         isDWARFExpression,      // FA = eval(dwarf_expr)
         isRaSearch,             // FA = SP + offset + ???
+        isConstant,             // FA = constant
       };
 
       FAValue() : m_value() {}
@@ -259,6 +260,15 @@ public:
         m_value.expr.length = len;
       }
 
+      bool IsConstant() const { return m_type == isConstant; }
+
+      void SetIsConstant(uint64_t constant) {
+        m_type = isConstant;
+        m_value.constant = constant;
+      }
+
+      uint64_t GetConstant() const { return m_value.constant; }
+
       uint32_t GetRegisterNumber() const {
         if (m_type == isRegisterDereferenced || m_type == isRegisterPlusOffset)
           return m_value.reg.reg_num;
@@ -298,13 +308,13 @@ public:
         }
       }
 
-      const uint8_t *GetDWARFExpressionBytes() {
+      const uint8_t *GetDWARFExpressionBytes() const {
         if (m_type == isDWARFExpression)
           return m_value.expr.opcodes;
         return nullptr;
       }
 
-      int GetDWARFExpressionLength() {
+      int GetDWARFExpressionLength() const {
         if (m_type == isDWARFExpression)
           return m_value.expr.length;
         return 0;
@@ -329,6 +339,8 @@ public:
         } expr;
         // For m_type == isRaSearch
         int32_t ra_search_offset;
+        // For m_type = isConstant
+        uint64_t constant;
       } m_value;
     }; // class FAValue
 
@@ -337,10 +349,10 @@ public:
     bool operator==(const Row &rhs) const;
 
     bool GetRegisterInfo(uint32_t reg_num,
-                         RegisterLocation &register_location) const;
+                         AbstractRegisterLocation &register_location) const;
 
     void SetRegisterInfo(uint32_t reg_num,
-                         const RegisterLocation register_location);
+                         const AbstractRegisterLocation register_location);
 
     void RemoveRegisterInfo(uint32_t reg_num);
 
@@ -350,8 +362,10 @@ public:
 
     void SlideOffset(lldb::addr_t offset) { m_offset += offset; }
 
+    const FAValue &GetCFAValue() const { return m_cfa_value; }
     FAValue &GetCFAValue() { return m_cfa_value; }
 
+    const FAValue &GetAFAValue() const { return m_afa_value; }
     FAValue &GetAFAValue() { return m_afa_value; }
 
     bool SetRegisterLocationToAtCFAPlusOffset(uint32_t reg_num, int32_t offset,
@@ -369,6 +383,13 @@ public:
                                        bool can_replace);
 
     bool SetRegisterLocationToSame(uint32_t reg_num, bool must_replace);
+
+    /// This method does not make a copy of the \a opcodes memory, it is
+    /// assumed to have the same lifetime as the Module this UnwindPlan will
+    /// be registered in.
+    bool SetRegisterLocationToIsDWARFExpression(uint32_t reg_num,
+                                                const uint8_t *opcodes,
+                                                uint32_t len, bool can_replace);
 
     bool SetRegisterLocationToIsConstant(uint32_t reg_num, uint64_t constant,
                                          bool can_replace);
@@ -398,7 +419,7 @@ public:
               lldb::addr_t base_addr) const;
 
   protected:
-    typedef std::map<uint32_t, RegisterLocation> collection;
+    typedef std::map<uint32_t, AbstractRegisterLocation> collection;
     lldb::addr_t m_offset = 0; // Offset into the function for this row
 
     FAValue m_cfa_value;
@@ -417,7 +438,7 @@ public:
 
   // Performs a deep copy of the plan, including all the rows (expensive).
   UnwindPlan(const UnwindPlan &rhs)
-      : m_plan_valid_address_range(rhs.m_plan_valid_address_range),
+      : m_plan_valid_ranges(rhs.m_plan_valid_ranges),
         m_register_kind(rhs.m_register_kind),
         m_return_addr_register(rhs.m_return_addr_register),
         m_source_name(rhs.m_source_name),
@@ -431,21 +452,26 @@ public:
     for (const RowSP &row_sp : rhs.m_row_list)
       m_row_list.emplace_back(new Row(*row_sp));
   }
+  UnwindPlan(UnwindPlan &&rhs) = default;
+  UnwindPlan &operator=(const UnwindPlan &rhs) {
+    return *this = UnwindPlan(rhs); // NB: moving from a temporary (deep) copy
+  }
+  UnwindPlan &operator=(UnwindPlan &&) = default;
 
   ~UnwindPlan() = default;
 
   void Dump(Stream &s, Thread *thread, lldb::addr_t base_addr) const;
 
-  void AppendRow(const RowSP &row_sp);
+  void AppendRow(Row row);
 
-  void InsertRow(const RowSP &row_sp, bool replace_existing = false);
+  void InsertRow(Row row, bool replace_existing = false);
 
   // Returns a pointer to the best row for the given offset into the function's
   // instructions. If offset is -1 it indicates that the function start is
   // unknown - the final row in the UnwindPlan is returned. In practice, the
   // UnwindPlan for a function with no known start address will be the
   // architectural default UnwindPlan which will only have one row.
-  UnwindPlan::RowSP GetRowForFunctionOffset(int offset) const;
+  const UnwindPlan::Row *GetRowForFunctionOffset(int offset) const;
 
   lldb::RegisterKind GetRegisterKind() const { return m_register_kind; }
 
@@ -466,19 +492,17 @@ public:
   // This UnwindPlan may not be valid at every address of the function span.
   // For instance, a FastUnwindPlan will not be valid at the prologue setup
   // instructions - only in the body of the function.
-  void SetPlanValidAddressRange(const AddressRange &range);
-
-  const AddressRange &GetAddressRange() const {
-    return m_plan_valid_address_range;
+  void SetPlanValidAddressRanges(std::vector<AddressRange> ranges) {
+    m_plan_valid_ranges = std::move(ranges);
   }
 
   bool PlanValidAtAddress(Address addr);
 
   bool IsValidRowIndex(uint32_t idx) const;
 
-  const UnwindPlan::RowSP GetRowAtIndex(uint32_t idx) const;
+  const UnwindPlan::Row *GetRowAtIndex(uint32_t idx) const;
 
-  const UnwindPlan::RowSP GetLastRow() const;
+  const UnwindPlan::Row *GetLastRow() const;
 
   lldb_private::ConstString GetSourceName() const;
 
@@ -518,11 +542,11 @@ public:
     m_plan_is_for_signal_trap = is_for_signal_trap;
   }
 
-  int GetRowCount() const;
+  int GetRowCount() const { return m_row_list.size(); }
 
   void Clear() {
     m_row_list.clear();
-    m_plan_valid_address_range.Clear();
+    m_plan_valid_ranges.clear();
     m_register_kind = lldb::eRegisterKindDWARF;
     m_source_name.Clear();
     m_plan_is_sourced_from_compiler = eLazyBoolCalculate;
@@ -545,9 +569,8 @@ public:
   }
 
 private:
-  typedef std::vector<RowSP> collection;
-  collection m_row_list;
-  AddressRange m_plan_valid_address_range;
+  std::vector<RowSP> m_row_list;
+  std::vector<AddressRange> m_plan_valid_ranges;
   lldb::RegisterKind m_register_kind; // The RegisterKind these register numbers
                                       // are in terms of - will need to be
   // translated to lldb native reg nums at unwind time

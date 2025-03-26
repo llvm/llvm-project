@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <__type_traits/datasizeof.h>
 #include <cstdint>
 #include <type_traits>
@@ -25,6 +27,10 @@ static_assert(std::__datasizeof_v<NonStandardLayout> == sizeof(void*), "");
 struct Empty {};
 
 static_assert(std::__datasizeof_v<Empty> == 0, "");
+
+struct FinalEmpty final {};
+
+static_assert(std::__datasizeof_v<FinalEmpty> == 0, "");
 
 struct OneBytePadding final {
   OneBytePadding() {}

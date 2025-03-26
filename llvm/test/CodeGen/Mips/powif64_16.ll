@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -relocation-model=static < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -relocation-model=static < %s | FileCheck %s
 
 declare float     @llvm.powi.f32.i32(float  %Val, i32 %power)
 declare double    @llvm.powi.f64.i32(double %Val, i32 %power)

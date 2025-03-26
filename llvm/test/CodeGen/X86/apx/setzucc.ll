@@ -53,18 +53,18 @@ define i32 @flags_copy_lowering() nounwind {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB4_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    addl %edx, 0
 ; CHECK-NEXT:    setb %sil
 ; CHECK-NEXT:    adcl $0, %ecx
 ; CHECK-NEXT:    testb %sil, %sil
-; CHECK-NEXT:    setzune %dl
-; CHECK-NEXT:    testb %sil, %sil
 ; CHECK-NEXT:    je .LBB4_3
 ; CHECK-NEXT:  # %bb.2: # %bb1
 ; CHECK-NEXT:    # in Loop: Header=BB4_1 Depth=1
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    movb %sil, %dl
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB4_1
 ; CHECK-NEXT:  .LBB4_3: # %bb2

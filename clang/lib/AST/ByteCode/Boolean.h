@@ -30,6 +30,7 @@ private:
 public:
   /// Zero-initializes a boolean.
   Boolean() : V(false) {}
+  Boolean(const llvm::APSInt &I) : V(!I.isZero()) {}
   explicit Boolean(bool V) : V(V) {}
 
   bool operator<(Boolean RHS) const { return V < RHS.V; }
@@ -79,6 +80,14 @@ public:
   unsigned countLeadingZeros() const { return V ? 0 : 1; }
 
   Boolean truncate(unsigned TruncBits) const { return *this; }
+
+  static Boolean bitcastFromMemory(const std::byte *Buff, unsigned BitWidth) {
+    // Just load the first byte.
+    bool Val = static_cast<bool>(*Buff);
+    return Boolean(Val);
+  }
+
+  void bitcastToMemory(std::byte *Buff) { std::memcpy(Buff, &V, sizeof(V)); }
 
   void print(llvm::raw_ostream &OS) const { OS << (V ? "true" : "false"); }
   std::string toDiagnosticString(const ASTContext &Ctx) const {

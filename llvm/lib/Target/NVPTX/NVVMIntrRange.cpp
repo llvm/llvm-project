@@ -19,7 +19,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/CommandLine.h"
 #include <cstdint>
 
 using namespace llvm;
@@ -68,8 +67,8 @@ static bool runNVVMIntrRange(Function &F) {
     unsigned x, y, z;
   } MaxBlockSize, MaxGridSize;
 
-  const unsigned MetadataNTID = getReqNTID(F).value_or(
-      getMaxNTID(F).value_or(std::numeric_limits<unsigned>::max()));
+  const unsigned MetadataNTID = getOverallReqNTID(F).value_or(
+      getOverallMaxNTID(F).value_or(std::numeric_limits<unsigned>::max()));
 
   MaxBlockSize.x = std::min(1024u, MetadataNTID);
   MaxBlockSize.y = std::min(1024u, MetadataNTID);

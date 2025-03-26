@@ -167,7 +167,7 @@ public:
 // Formats textual output.  `Fmt` is a string consisting of one or more
 // replacement sequences with the following grammar:
 //
-// rep_field ::= "{" index ["," layout] [":" format] "}"
+// rep_field ::= "{" [index] ["," layout] [":" format] "}"
 // index     ::= <non-negative integer>
 // layout    ::= [[[char]loc]width]
 // format    ::= <any string not containing "{" or "}">
@@ -175,8 +175,12 @@ public:
 // loc       ::= "-" | "=" | "+"
 // width     ::= <positive integer>
 //
-// index   - A non-negative integer specifying the index of the item in the
-//           parameter pack to print.  Any other value is invalid.
+// index   - An optional non-negative integer specifying the index of the item
+//           in the parameter pack to print. Any other value is invalid. If its
+//           not specified, it will be automatically assigned a value based on
+//           the order of rep_field seen in the format string. Note that mixing
+//           automatic and explicit index in the same call is an error and will
+//           fail validation in assert-enabled builds.
 // layout  - A string controlling how the field is laid out within the available
 //           space.
 // format  - A type-dependent string used to provide additional options to

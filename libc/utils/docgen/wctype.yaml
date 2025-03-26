@@ -1,0 +1,36 @@
+functions:
+  iswalnum:
+    c-definition: 7.32.2.1.1
+  iswalpha:
+    c-definition: 7.32.2.1.2
+  iswblank:
+    c-definition: 7.32.2.1.4
+  iswctype:
+    c-definition: 7.32.2.2.1
+  iswdigit:
+    c-definition: 7.32.2.1.5
+  iswgraph:
+    c-definition: 7.32.2.1.6
+  iswlower:
+    c-definition: 7.32.2.1.7
+  iswprint:
+    c-definition: 7.32.2.1.8
+  iswpunct:
+    c-definition: 7.32.2.1.9
+  iswspace:
+    c-definition: 7.32.2.1.10
+  iswupper:
+    c-definition: 7.32.2.1.11
+  iswxdigit:
+    c-definition: 7.32.2.1.12
+  towctrans:
+    c-definition: 7.32.3.2.1
+  towlower:
+    c-definition: 7.32.3.1.1
+  towupper:
+    c-definition: 7.32.3.1.2
+  wctrans:
+    c-definition: 7.32.3.2.2
+  wctype:
+    c-definition: 7.32.2.2.2
+

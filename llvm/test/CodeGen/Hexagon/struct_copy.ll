@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-small-data-threshold=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-small-data-threshold=0 < %s | FileCheck %s
 ; Disable small-data, or otherwise g3 will end up in .sdata. While that is
 ; not a problem, this test was originally written with the g3 not being in
 ; there, so keep it that way.

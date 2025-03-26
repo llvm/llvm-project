@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=nvptx64 | FileCheck %s
+; RUN: llc < %s -mtriple=nvptx64 | FileCheck %s
 
 %st = type { i8, i8, i16 }
 

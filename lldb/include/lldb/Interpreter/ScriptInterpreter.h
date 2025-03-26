@@ -14,6 +14,7 @@
 #include "lldb/API/SBData.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBEvent.h"
+#include "lldb/API/SBExecutionContext.h"
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBStream.h"
@@ -115,8 +116,12 @@ public:
   ~ScriptInterpreterIORedirect();
 
   lldb::FileSP GetInputFile() const { return m_input_file_sp; }
-  lldb::FileSP GetOutputFile() const { return m_output_file_sp->GetFileSP(); }
-  lldb::FileSP GetErrorFile() const { return m_error_file_sp->GetFileSP(); }
+  lldb::FileSP GetOutputFile() const {
+    return m_output_file_sp->GetUnlockedFileSP();
+  }
+  lldb::FileSP GetErrorFile() const {
+    return m_error_file_sp->GetUnlockedFileSP();
+  }
 
   /// Flush our output and error file handles.
   void Flush();
@@ -127,8 +132,9 @@ private:
   ScriptInterpreterIORedirect(Debugger &debugger, CommandReturnObject *result);
 
   lldb::FileSP m_input_file_sp;
-  lldb::StreamFileSP m_output_file_sp;
-  lldb::StreamFileSP m_error_file_sp;
+  lldb::LockableStreamFileSP m_output_file_sp;
+  lldb::LockableStreamFileSP m_error_file_sp;
+  LockableStreamFile::Mutex m_output_mutex;
   ThreadedCommunication m_communication;
   bool m_disconnect;
 };
@@ -269,24 +275,6 @@ public:
   ScriptedBreakpointResolverSearchDepth(StructuredData::GenericSP implementor_sp)
   {
     return lldb::eSearchDepthModule;
-  }
-
-  virtual StructuredData::GenericSP
-  CreateScriptedStopHook(lldb::TargetSP target_sp, const char *class_name,
-                         const StructuredDataImpl &args_data, Status &error) {
-    error =
-        Status::FromErrorString("Creating scripted stop-hooks with the current "
-                                "script interpreter is not supported.");
-    return StructuredData::GenericSP();
-  }
-
-  // This dispatches to the handle_stop method of the stop-hook class.  It
-  // returns a "should_stop" bool.
-  virtual bool
-  ScriptedStopHookHandleStop(StructuredData::GenericSP implementor_sp,
-                             ExecutionContext &exc_ctx,
-                             lldb::StreamSP stream_sp) {
-    return true;
   }
 
   virtual StructuredData::ObjectSP
@@ -437,6 +425,20 @@ public:
     return std::nullopt;
   }
 
+  virtual StructuredData::DictionarySP
+  HandleArgumentCompletionForScriptedCommand(
+      StructuredData::GenericSP impl_obj_sp, std::vector<llvm::StringRef> &args,
+      size_t args_pos, size_t char_in_arg) {
+    return {};
+  }
+
+  virtual StructuredData::DictionarySP
+  HandleOptionArgumentCompletionForScriptedCommand(
+      StructuredData::GenericSP impl_obj_sp, llvm::StringRef &long_name,
+      size_t char_in_arg) {
+    return {};
+  }
+
   virtual bool RunScriptFormatKeyword(const char *impl_function,
                                       Process *process, std::string &output,
                                       Status &error) {
@@ -481,7 +483,7 @@ public:
     dest.clear();
     return false;
   }
-  
+
   virtual StructuredData::ObjectSP
   GetOptionsForCommandObject(StructuredData::GenericSP cmd_obj_sp) {
     return {};
@@ -491,9 +493,9 @@ public:
   GetArgumentsForCommandObject(StructuredData::GenericSP cmd_obj_sp) {
     return {};
   }
-  
+
   virtual bool SetOptionValueForCommandObject(
-      StructuredData::GenericSP cmd_obj_sp, ExecutionContext *exe_ctx, 
+      StructuredData::GenericSP cmd_obj_sp, ExecutionContext *exe_ctx,
       llvm::StringRef long_option, llvm::StringRef value) {
     return false;
   }
@@ -561,6 +563,10 @@ public:
     return {};
   }
 
+  virtual lldb::ScriptedStopHookInterfaceSP CreateScriptedStopHookInterface() {
+    return {};
+  }
+
   virtual StructuredData::ObjectSP
   CreateStructuredDataFromScriptObject(ScriptObject obj) {
     return {};
@@ -586,6 +592,9 @@ public:
 
   std::optional<MemoryRegionInfo> GetOpaqueTypeFromSBMemoryRegionInfo(
       const lldb::SBMemoryRegionInfo &mem_region) const;
+
+  lldb::ExecutionContextRefSP GetOpaqueTypeFromSBExecutionContext(
+      const lldb::SBExecutionContext &exe_ctx) const;
 
 protected:
   Debugger &m_debugger;

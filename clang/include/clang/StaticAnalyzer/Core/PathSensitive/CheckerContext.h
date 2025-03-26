@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 //  This file defines CheckerContext that provides contextual info for
-// path-sensitive checkers.
+//  path-sensitive checkers.
 //
 //===----------------------------------------------------------------------===//
 
@@ -69,6 +69,7 @@ public:
   /// the state of the program before the checker ran. Note, checkers should
   /// not retain the node in their state since the nodes might get invalidated.
   ExplodedNode *getPredecessor() { return Pred; }
+  const ProgramPoint getLocation() const { return Location; }
   const ProgramStateRef &getState() const { return Pred->getState(); }
 
   /// Check if the checker changed the state of the execution; ex: added
@@ -151,7 +152,7 @@ public:
   }
 
   /// Returns true if the value of \p E is greater than or equal to \p
-  /// Val under unsigned comparison
+  /// Val under unsigned comparison.
   bool isGreaterOrEqual(const Expr *E, unsigned long long Val);
 
   /// Returns true if the value of \p E is negative.
@@ -391,7 +392,7 @@ public:
   /// hardened variant that's not yet covered by it.
   static bool isHardenedVariantOf(const FunctionDecl *FD, StringRef Name);
 
-  /// Depending on wither the location corresponds to a macro, return
+  /// Depending on whether the location corresponds to a macro, return
   /// either the macro name or the token spelling.
   ///
   /// This could be useful when checkers' logic depends on whether a function

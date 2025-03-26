@@ -145,7 +145,7 @@ TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
 template <typename TosaOp, typename... Args>
 TosaOp CreateOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
                              Args &&...args) {
-  if (TosaOp::template hasTrait<OpTrait::SameOperandsAndResultRank>()) {
+  if (TosaOp::template hasTrait<::mlir::OpTrait::SameOperandsAndResultRank>()) {
     // op requires same ranks for tensor operands
     if constexpr (sizeof...(Args) == 2) {
       auto argX = std::get<0>(std::tie(args...));
@@ -216,6 +216,33 @@ TosaOp CreateOpAndInferShape(PatternRewriter &rewriter, Location loc,
   return CreateOpAndInferShape<TosaOp>(builder, resultTy, args...);
 }
 
+// Apply an int32_t permutation to some input, that should be of the same
+// size as perms. Perms should contain some permutation of 0 - perms.size() - 1.
+template <typename T>
+SmallVector<T> applyTOSAPermutation(ArrayRef<T> input,
+                                    ArrayRef<int32_t> perms) {
+  SmallVector<T> permuted;
+  size_t N = input.size();
+  permuted.resize_for_overwrite(N);
+  for (size_t i = 0; i < N; i++)
+    permuted[i] = input[perms[i]];
+  return permuted;
+}
+
+// Computes shape value using tosa const_shape op.
+Value getTosaConstShape(ImplicitLocOpBuilder &builder,
+                        llvm::ArrayRef<int64_t> shape);
+Value getTosaConstShape(PatternRewriter &rewriter, Location loc,
+                        llvm::ArrayRef<int64_t> shape);
+
+SmallVector<int64_t> convertFromMlirShape(ArrayRef<int64_t> shape);
+
+bool getConstShapeValues(Operation *op,
+                         llvm::SmallVector<int64_t> &result_shape);
+
+// returns a small vector of int64_t values that attr contains
+SmallVector<int64_t> convertFromIntAttr(const DenseElementsAttr &attr,
+                                        const int rank);
 } // namespace tosa
 } // namespace mlir
 

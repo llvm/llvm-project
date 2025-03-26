@@ -10,7 +10,7 @@ typedef struct {
 int test_int(OneInt input, va_list *mylist) {
 // CHECK-LABEL: define{{.*}} i32 @test_int(i32 %input
 // CHECK: [[START:%.*]] = load ptr, ptr %mylist
-// CHECK: [[NEXT:%.*]] = getelementptr inbounds i8, ptr [[START]], i32 4
+// CHECK: [[NEXT:%.*]] = getelementptr inbounds nuw i8, ptr [[START]], i32 4
 // CHECK: store ptr [[NEXT]], ptr %mylist
 
 // CHECK: [[RES:%.*]] = load i32, ptr [[START]]
@@ -28,9 +28,9 @@ typedef struct {
 long long test_longlong(OneLongLong input, va_list *mylist) {
   // CHECK-LABEL: define{{.*}} i64 @test_longlong(i64 %input
   // CHECK: [[STARTPTR:%.*]] = load ptr, ptr %mylist
-  // CHECK: [[ALIGN_TMP:%.+]] = getelementptr inbounds i8, ptr [[STARTPTR]], i32 7
+  // CHECK: [[ALIGN_TMP:%.+]] = getelementptr inbounds nuw i8, ptr [[STARTPTR]], i32 7
   // CHECK: [[ALIGNED_ADDR:%.+]] = tail call align 8 ptr @llvm.ptrmask.p0.i32(ptr nonnull [[ALIGN_TMP]], i32 -8)
-  // CHECK: [[NEXT:%.*]] = getelementptr inbounds i8, ptr [[ALIGNED_ADDR]], i32 8
+  // CHECK: [[NEXT:%.*]] = getelementptr inbounds nuw i8, ptr [[ALIGNED_ADDR]], i32 8
   // CHECK: store ptr [[NEXT]], ptr %mylist
 
   // CHECK: [[RES:%.*]] = load i64, ptr [[ALIGNED_ADDR]]
@@ -49,7 +49,7 @@ float test_hfa(va_list *mylist) {
 // CHECK-LABEL: define{{.*}} float @test_hfa
 // CHECK: [[START:%.*]] = load ptr, ptr %mylist
 
-// CHECK: [[NEXT:%.*]] = getelementptr inbounds i8, ptr [[START]], i32 16
+// CHECK: [[NEXT:%.*]] = getelementptr inbounds nuw i8, ptr [[START]], i32 16
 // CHECK: store ptr [[NEXT]], ptr %mylist
 
 // CHECK: [[RES:%.*]] = load float, ptr [[START]]
@@ -76,7 +76,7 @@ typedef struct {
 long long test_bigstruct(BigStruct input, va_list *mylist) {
 // CHECK-LABEL: define{{.*}} i64 @test_bigstruct(ptr
 // CHECK: [[START:%.*]] = load ptr, ptr %mylist
-// CHECK: [[NEXT:%.*]] = getelementptr inbounds i8, ptr [[START]], i32 4
+// CHECK: [[NEXT:%.*]] = getelementptr inbounds nuw i8, ptr [[START]], i32 4
 // CHECK: store ptr [[NEXT]], ptr %mylist
 
 // CHECK: [[ADDR:%.*]] = load ptr, ptr [[START]]
@@ -97,7 +97,7 @@ short test_threeshorts(ThreeShorts input, va_list *mylist) {
 // CHECK-LABEL: define{{.*}} signext i16 @test_threeshorts([2 x i32] %input
 
 // CHECK: [[START:%.*]] = load ptr, ptr %mylist
-// CHECK: [[NEXT:%.*]] = getelementptr inbounds i8, ptr [[START]], i32 8
+// CHECK: [[NEXT:%.*]] = getelementptr inbounds nuw i8, ptr [[START]], i32 8
 // CHECK: store ptr [[NEXT]], ptr %mylist
 
 // CHECK: [[RES:%.*]] = load i16, ptr [[START]]

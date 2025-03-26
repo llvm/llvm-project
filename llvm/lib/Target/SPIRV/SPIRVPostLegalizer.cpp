@@ -24,7 +24,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
-#include "llvm/Target/TargetIntrinsicInfo.h"
 #include <stack>
 
 #define DEBUG_TYPE "spirv-postlegalizer"
@@ -42,24 +41,15 @@ public:
 };
 } // namespace
 
-// Defined in SPIRVLegalizerInfo.cpp.
-extern bool isTypeFoldingSupported(unsigned Opcode);
-
 namespace llvm {
 //  Defined in SPIRVPreLegalizer.cpp.
-extern Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
-                                  SPIRVGlobalRegistry *GR,
-                                  MachineIRBuilder &MIB,
-                                  MachineRegisterInfo &MRI);
+extern void insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
+                              SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
+                              MachineRegisterInfo &MRI);
 extern void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
-                         MachineRegisterInfo &MRI, SPIRVGlobalRegistry *GR);
+                         MachineRegisterInfo &MRI, SPIRVGlobalRegistry *GR,
+                         SPIRVType *KnownResType);
 } // namespace llvm
-
-static bool isMetaInstrGET(unsigned Opcode) {
-  return Opcode == SPIRV::GET_ID || Opcode == SPIRV::GET_fID ||
-         Opcode == SPIRV::GET_pID || Opcode == SPIRV::GET_vID ||
-         Opcode == SPIRV::GET_vfID || Opcode == SPIRV::GET_vpID;
-}
 
 static bool mayBeInserted(unsigned Opcode) {
   switch (Opcode) {
@@ -102,10 +92,7 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           if (!ResType) {
             // There was no "assign type" actions, let's fix this now
             ResType = ScalarType;
-            MRI.setRegClass(ResVReg, &SPIRV::iIDRegClass);
-            MRI.setType(ResVReg,
-                        LLT::scalar(GR->getScalarOrVectorBitWidth(ResType)));
-            GR->assignSPIRVTypeToVReg(ResType, ResVReg, *GR->CurMF);
+            setRegClassType(ResVReg, ResType, GR, &MRI, *GR->CurMF, true);
           }
         }
       } else if (mayBeInserted(Opcode) && I.getNumDefs() == 1 &&
@@ -114,31 +101,27 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         // registers, we must decorate them as if they were introduced in a
         // non-automatic way
         Register ResVReg = I.getOperand(0).getReg();
-        SPIRVType *ResVType = GR->getSPIRVTypeForVReg(ResVReg);
         // Check if the register defined by the instruction is newly generated
         // or already processed
-        if (!ResVType) {
-          // Set type of the defined register
-          ResVType = GR->getSPIRVTypeForVReg(I.getOperand(1).getReg());
-          // Check if we have type defined for operands of the new instruction
-          if (!ResVType)
-            continue;
-          // Set type & class
-          MRI.setRegClass(ResVReg, GR->getRegClass(ResVType));
-          MRI.setType(ResVReg, GR->getRegType(ResVType));
-          GR->assignSPIRVTypeToVReg(ResVType, ResVReg, *GR->CurMF);
-        }
+        // Check if we have type defined for operands of the new instruction
+        bool IsKnownReg = MRI.getRegClassOrNull(ResVReg);
+        SPIRVType *ResVType = GR->getSPIRVTypeForVReg(
+            IsKnownReg ? ResVReg : I.getOperand(1).getReg());
+        if (!ResVType)
+          continue;
+        // Set type & class
+        if (!IsKnownReg)
+          setRegClassType(ResVReg, ResVType, GR, &MRI, *GR->CurMF, true);
         // If this is a simple operation that is to be reduced by TableGen
         // definition we must apply some of pre-legalizer rules here
         if (isTypeFoldingSupported(Opcode)) {
-          // Check if the instruction newly generated or already processed
-          MachineInstr *NextMI = I.getNextNode();
-          if (NextMI && isMetaInstrGET(NextMI->getOpcode()))
-            continue;
-          // Restore usual instructions pattern for the newly inserted
-          // instruction
+          processInstr(I, MIB, MRI, GR, GR->getSPIRVTypeForVReg(ResVReg));
+          if (IsKnownReg && MRI.hasOneUse(ResVReg)) {
+            MachineInstr &UseMI = *MRI.use_instr_begin(ResVReg);
+            if (UseMI.getOpcode() == SPIRV::ASSIGN_TYPE)
+              continue;
+          }
           insertAssignInstr(ResVReg, nullptr, ResVType, GR, MIB, MRI);
-          processInstr(I, MIB, MRI, GR);
         }
       }
     }
@@ -175,23 +158,6 @@ void visit(MachineFunction &MF, std::function<void(MachineBasicBlock *)> op) {
   visit(MF, *MF.begin(), op);
 }
 
-// Sorts basic blocks by dominance to respect the SPIR-V spec.
-void sortBlocks(MachineFunction &MF) {
-  MachineDominatorTree MDT(MF);
-
-  std::unordered_map<MachineBasicBlock *, size_t> Order;
-  Order.reserve(MF.size());
-
-  size_t Index = 0;
-  visit(MF, [&Order, &Index](MachineBasicBlock *MBB) { Order[MBB] = Index++; });
-
-  auto Comparator = [&Order](MachineBasicBlock &LHS, MachineBasicBlock &RHS) {
-    return Order[&LHS] < Order[&RHS];
-  };
-
-  MF.sort(Comparator);
-}
-
 bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {
   // Initialize the type registry.
   const SPIRVSubtarget &ST = MF.getSubtarget<SPIRVSubtarget>();
@@ -200,7 +166,6 @@ bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {
   MachineIRBuilder MIB(MF);
 
   processNewInstrs(MF, GR, MIB);
-  sortBlocks(MF);
 
   return true;
 }

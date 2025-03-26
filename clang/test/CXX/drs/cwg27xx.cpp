@@ -2,9 +2,9 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -pedantic-errors -verify=expected %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++14 -pedantic-errors -verify=expected %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -pedantic-errors -verify=expected,since-cxx23 %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++2c -pedantic-errors -verify=expected,since-cxx23,since-cxx26 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -pedantic-errors -verify=expected,since-cxx20 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -pedantic-errors -verify=expected,since-cxx20,since-cxx23 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++2c -pedantic-errors -verify=expected,since-cxx20,since-cxx23,since-cxx26 %s
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -28,6 +28,35 @@ namespace std {
       strong_ordering::equal{0}, strong_ordering::greater{1};
 #endif
 } // namespace std
+
+namespace cwg2707 { // cwg2707: 20
+
+#if __cplusplus >= 202002L
+
+template <class T, unsigned N> struct A { // #cwg2707-A
+  T value[N];
+};
+
+template <typename... T>
+A(T...) -> A<int, sizeof...(T)> requires (sizeof...(T) == 2); // #cwg2707-guide-A
+
+// Brace elision is not allowed for synthesized CTAD guides if the array size
+// is value-dependent.
+// So this should pick up our explicit deduction guide.
+A a = {1, 2};
+
+A b = {3, 4, 5};
+// since-cxx20-error@-1 {{no viable constructor or deduction guide}}
+//   since-cxx20-note@#cwg2707-A {{candidate function template not viable}}
+//   since-cxx20-note@#cwg2707-A {{implicit deduction guide}}
+//   since-cxx20-note@#cwg2707-guide-A {{constraints not satisfied}}
+//   since-cxx20-note@#cwg2707-guide-A {{because 'sizeof...(T) == 2' (3 == 2) evaluated to false}}
+//   since-cxx20-note@#cwg2707-A {{candidate function template not viable}}
+//   since-cxx20-note@#cwg2707-A {{implicit deduction guide}}
+
+#endif
+
+} // namespace cwg2707
 
 namespace cwg2718 { // cwg2718: 2.7
 struct B {};
@@ -175,7 +204,7 @@ void test() {
     //   since-cxx23-note@#cwg2789-g2 {{candidate function}}
 }
 #endif
-}
+} // namespace cwg2789
 
 namespace cwg2798 { // cwg2798: 17
 #if __cplusplus > 202302L
@@ -200,4 +229,3 @@ static_assert(false, f().s);
 // since-cxx26-error@-1 {{static assertion failed: Hello}}
 #endif
 } // namespace cwg2798
-

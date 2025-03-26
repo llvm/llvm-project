@@ -528,7 +528,7 @@ void StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
         // dso_preemptable aliases or aliases with interposable linkage.
         const GlobalValue *Callee =
             dyn_cast<GlobalValue>(CB.getCalledOperand()->stripPointerCasts());
-        if (!Callee) {
+        if (!Callee || isa<GlobalIFunc>(Callee)) {
           US.addRange(I, UnknownRange, /*IsSafe=*/false);
           break;
         }
@@ -672,8 +672,7 @@ void StackSafetyDataFlowAnalysis<CalleeTy>::updateOneNode(
                       << (UpdateToFullSet ? ", full-set" : "") << "] " << &FS
                       << "\n");
     // Callers of this function may need updating.
-    for (auto &CallerID : Callers[Callee])
-      WorkList.insert(CallerID);
+    WorkList.insert_range(Callers[Callee]);
 
     ++FS.UpdateCount;
   }

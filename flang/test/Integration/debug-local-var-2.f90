@@ -27,7 +27,7 @@
 ! BOTH-LABEL: }
 
 ! BOTH-LABEL: define {{.*}}i64 @_QFPfn1
-! BOTH-SAME: (ptr %[[ARG1:.*]], ptr %[[ARG2:.*]], ptr %[[ARG3:.*]])
+! BOTH-SAME: (ptr captures(none) %[[ARG1:.*]], ptr captures(none) %[[ARG2:.*]], ptr captures(none) %[[ARG3:.*]])
 ! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[ARG1]], metadata ![[A1:.*]], metadata !DIExpression())
 ! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[ARG2]], metadata ![[B1:.*]], metadata !DIExpression())
 ! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[ARG3]], metadata ![[C1:.*]], metadata !DIExpression())
@@ -40,7 +40,7 @@
 ! BOTH-LABEL: }
 
 ! BOTH-LABEL: define {{.*}}i32 @_QFPfn2
-! BOTH-SAME: (ptr %[[FN2ARG1:.*]], ptr %[[FN2ARG2:.*]], ptr %[[FN2ARG3:.*]])
+! BOTH-SAME: (ptr captures(none) %[[FN2ARG1:.*]], ptr captures(none) %[[FN2ARG2:.*]], ptr captures(none) %[[FN2ARG3:.*]])
 ! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[FN2ARG1]], metadata ![[A2:.*]], metadata !DIExpression())
 ! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[FN2ARG2]], metadata ![[B2:.*]], metadata !DIExpression())
 ! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[FN2ARG3]], metadata ![[C2:.*]], metadata !DIExpression())
@@ -53,7 +53,7 @@
 ! BOTH-LABEL: }
 
 program mn
-! BOTH-DAG: ![[MAIN:.*]] = distinct !DISubprogram(name: "_QQmain", {{.*}})
+! BOTH-DAG: ![[MAIN:.*]] = distinct !DISubprogram(name: "mn", {{.*}})
 
 ! BOTH-DAG: ![[TYI32:.*]] = !DIBasicType(name: "integer", size: 32, encoding: DW_ATE_signed)
 ! BOTH-DAG: ![[TYI64:.*]] = !DIBasicType(name: "integer", size: 64, encoding: DW_ATE_signed)
@@ -107,4 +107,4 @@ contains
   end function
 end program
 
-LINEONLY-NOT: DILocalVariable
+! LINEONLY-NOT: DILocalVariable

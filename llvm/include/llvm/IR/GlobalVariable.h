@@ -39,6 +39,8 @@ class DIGlobalVariableExpression;
 class GlobalVariable : public GlobalObject, public ilist_node<GlobalVariable> {
   friend class SymbolTableListTraits<GlobalVariable>;
 
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
+
   AttributeSet Attrs;
 
   // Is this a global constant?
@@ -70,24 +72,31 @@ public:
   GlobalVariable(const GlobalVariable &) = delete;
   GlobalVariable &operator=(const GlobalVariable &) = delete;
 
+private:
+  /// Set the number of operands on a GlobalVariable.
+  ///
+  /// GlobalVariable always allocates space for a single operands, but
+  /// doesn't always use it.
+  void setGlobalVariableNumOperands(unsigned NumOps) {
+    assert(NumOps <= 1 && "GlobalVariable can only have 0 or 1 operands");
+    NumUserOperands = NumOps;
+  }
+
+public:
   ~GlobalVariable() {
     dropAllReferences();
+
+    // Number of operands can be set to 0 after construction and initialization.
+    // Make sure that number of operands is reset to 1, as this is needed in
+    // User::operator delete
+    setGlobalVariableNumOperands(1);
   }
 
   // allocate space for exactly one operand
-  void *operator new(size_t s) {
-    return User::operator new(s, 1);
-  }
+  void *operator new(size_t s) { return User::operator new(s, AllocMarker); }
 
   // delete space for exactly one operand as created in the corresponding new operator
-  void operator delete(void *ptr){
-    assert(ptr != nullptr && "must not be nullptr");
-    User *Obj = static_cast<User *>(ptr);
-    // Number of operands can be set to 0 after construction and initialization. Make sure
-    // that number of operands is reset to 1, as this is needed in User::operator delete
-    Obj->setGlobalVariableNumOperands(1);
-    User::operator delete(Obj);
-  }
+  void operator delete(void *ptr) { User::operator delete(ptr); }
 
   /// Provide fast operand accessors
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);

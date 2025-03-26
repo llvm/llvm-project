@@ -33,9 +33,9 @@ int main(int argc, char** argv) {
 }
 
 // Check for an empty kernel (IR level)
-// FIRST:       define weak_odr {{.*}} void @__omp_offloading_{{.*}}_main
+// FIRST:       define weak_odr {{.*}} void @__omp_offloading_{{.*}}_main{{.*}}
 // FIRST-NEXT:    ret void
 
 // Check for two empty kernels (IR level)
-// SECOND:      define weak_odr {{.*}} void @__omp_offloading_{{.*}}_main
+// SECOND:      define weak_odr {{.*}} void @__omp_offloading_{{.*}}_main{{.*}}
 // SECOND-NEXT:   ret void

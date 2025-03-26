@@ -47,11 +47,11 @@ public:
   AnalyzerOptions &options;
 
   AnalysisManager(ASTContext &ctx, Preprocessor &PP,
-                  const PathDiagnosticConsumers &Consumers,
+                  PathDiagnosticConsumers Consumers,
                   StoreManagerCreator storemgr,
                   ConstraintManagerCreator constraintmgr,
                   CheckerManager *checkerMgr, AnalyzerOptions &Options,
-                  CodeInjector *injector = nullptr);
+                  std::unique_ptr<CodeInjector> injector = nullptr);
 
   ~AnalysisManager() override;
 
@@ -91,7 +91,8 @@ public:
     return LangOpts;
   }
 
-  ArrayRef<PathDiagnosticConsumer*> getPathDiagnosticConsumers() override {
+  ArrayRef<std::unique_ptr<PathDiagnosticConsumer>>
+  getPathDiagnosticConsumers() override {
     return PathConsumers;
   }
 

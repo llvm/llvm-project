@@ -206,7 +206,9 @@ def AnyRegion : Region<CPred<"true">, "any region">;
 // A region with the given number of blocks.
 class SizedRegion<int numBlocks> : Region<
   CPred<"::llvm::hasNItems($_self, " # numBlocks # ")">,
-  "region with " # numBlocks # " blocks">;
+  "region with " # numBlocks # " blocks"> {
+  int blocks = numBlocks;
+}
 
 // A region with at least the given number of blocks.
 class MinSizedRegion<int numBlocks> : Region<
@@ -399,7 +401,7 @@ class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
   // an additional `LogicalResult verify()` declaration will be generated on the
   // operation class. The operation should implement this method and verify the
   // additional necessary invariants. This verifier shouldn't access any nested
-  // operations because those operations may ill-formed. Use the
+  // operations because those operations may be ill-formed. Use the
   // `hasRegionVerifier` below instead.
   bit hasVerifier = 0;
 

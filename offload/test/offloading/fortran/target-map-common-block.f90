@@ -1,6 +1,5 @@
-! Offloading test checking interaction of
-! mapping a full common block in a target
-! region
+! Offloading test checking interaction of mapping a full common block in a
+! target region
 ! REQUIRES: flang, amdgcn-amd-amdhsa
 ! UNSUPPORTED: nvptx64-nvidia-cuda
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO

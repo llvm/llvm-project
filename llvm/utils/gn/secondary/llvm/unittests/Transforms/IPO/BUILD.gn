@@ -12,6 +12,7 @@ unittest("IPOTests") {
     "FunctionSpecializationTest.cpp",
     "ImportIDTableTests.cpp",
     "LowerTypeTests.cpp",
+    "MergeFunctionsTest.cpp",
     "WholeProgramDevirt.cpp",
   ]
 }

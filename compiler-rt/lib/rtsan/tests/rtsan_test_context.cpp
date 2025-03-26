@@ -15,61 +15,84 @@
 
 #include <gtest/gtest.h>
 
-class TestRtsanContext : public ::testing::Test {
+using namespace __rtsan;
+using namespace ::testing;
+
+class TestRtsanContext : public Test {
 protected:
   void SetUp() override { __rtsan_ensure_initialized(); }
 };
 
-TEST_F(TestRtsanContext, ExpectNotRealtimeDoesNotDieBeforeRealtimePush) {
-  __rtsan::Context context{};
-  ExpectNotRealtime(context, "do_some_stuff");
+TEST_F(TestRtsanContext, IsNotRealtimeAfterDefaultConstruction) {
+  Context context{};
+  EXPECT_THAT(context.InRealtimeContext(), Eq(false));
 }
 
-TEST_F(TestRtsanContext, ExpectNotRealtimeDoesNotDieAfterPushAndPop) {
-  __rtsan::Context context{};
+TEST_F(TestRtsanContext, IsRealtimeAfterRealtimePush) {
+  Context context{};
   context.RealtimePush();
+  EXPECT_THAT(context.InRealtimeContext(), Eq(true));
+}
+
+TEST_F(TestRtsanContext, IsNotRealtimeAfterRealtimePushAndPop) {
+  Context context{};
+  context.RealtimePush();
+  ASSERT_THAT(context.InRealtimeContext(), Eq(true));
   context.RealtimePop();
-  ExpectNotRealtime(context, "do_some_stuff");
+  EXPECT_THAT(context.InRealtimeContext(), Eq(false));
 }
 
-TEST_F(TestRtsanContext, ExpectNotRealtimeDiesAfterRealtimePush) {
-  __rtsan::Context context{};
-
-  context.RealtimePush();
-  EXPECT_DEATH(ExpectNotRealtime(context, "do_some_stuff"), "");
+TEST_F(TestRtsanContext, RealtimeContextStateIsStatefullyTracked) {
+  Context context{};
+  auto const ExpectRealtime = [&context](bool is_rt) {
+    EXPECT_THAT(context.InRealtimeContext(), Eq(is_rt));
+  };
+  ExpectRealtime(false);
+  context.RealtimePush(); // depth 1
+  ExpectRealtime(true);
+  context.RealtimePush(); // depth 2
+  ExpectRealtime(true);
+  context.RealtimePop(); // depth 1
+  ExpectRealtime(true);
+  context.RealtimePush(); // depth 2
+  ExpectRealtime(true);
+  context.RealtimePop(); // depth 1
+  ExpectRealtime(true);
+  context.RealtimePop(); // depth 0
+  ExpectRealtime(false);
+  context.RealtimePush(); // depth 1
+  ExpectRealtime(true);
 }
 
-TEST_F(TestRtsanContext,
-       ExpectNotRealtimeDiesAfterRealtimeAfterMorePushesThanPops) {
-  __rtsan::Context context{};
-
-  context.RealtimePush();
-  context.RealtimePush();
-  context.RealtimePush();
-  context.RealtimePop();
-  context.RealtimePop();
-  EXPECT_DEATH(ExpectNotRealtime(context, "do_some_stuff"), "");
+TEST_F(TestRtsanContext, IsNotBypassedAfterDefaultConstruction) {
+  Context context{};
+  EXPECT_THAT(context.IsBypassed(), Eq(false));
 }
 
-TEST_F(TestRtsanContext, ExpectNotRealtimeDoesNotDieAfterBypassPush) {
-  __rtsan::Context context{};
-
-  context.RealtimePush();
+TEST_F(TestRtsanContext, IsBypassedAfterBypassPush) {
+  Context context{};
   context.BypassPush();
-  ExpectNotRealtime(context, "do_some_stuff");
+  EXPECT_THAT(context.IsBypassed(), Eq(true));
 }
 
-TEST_F(TestRtsanContext,
-       ExpectNotRealtimeDoesNotDieIfBypassDepthIsGreaterThanZero) {
-  __rtsan::Context context{};
-
-  context.RealtimePush();
-  context.BypassPush();
-  context.BypassPush();
-  context.BypassPush();
-  context.BypassPop();
-  context.BypassPop();
-  ExpectNotRealtime(context, "do_some_stuff");
-  context.BypassPop();
-  EXPECT_DEATH(ExpectNotRealtime(context, "do_some_stuff"), "");
+TEST_F(TestRtsanContext, BypassedStateIsStatefullyTracked) {
+  Context context{};
+  auto const ExpectBypassed = [&context](bool is_bypassed) {
+    EXPECT_THAT(context.IsBypassed(), Eq(is_bypassed));
+  };
+  ExpectBypassed(false);
+  context.BypassPush(); // depth 1
+  ExpectBypassed(true);
+  context.BypassPush(); // depth 2
+  ExpectBypassed(true);
+  context.BypassPop(); // depth 1
+  ExpectBypassed(true);
+  context.BypassPush(); // depth 2
+  ExpectBypassed(true);
+  context.BypassPop(); // depth 1
+  ExpectBypassed(true);
+  context.BypassPop(); // depth 0
+  ExpectBypassed(false);
+  context.BypassPush(); // depth 1
+  ExpectBypassed(true);
 }

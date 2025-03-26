@@ -1013,11 +1013,21 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
                                       cl::desc("Show directory coverage"),
                                       cl::cat(ViewCategory));
 
+  cl::opt<bool> ShowCreatedTime("show-created-time", cl::Optional,
+                                cl::desc("Show created time for each page."),
+                                cl::init(true), cl::cat(ViewCategory));
+
   cl::opt<std::string> ShowOutputDirectory(
       "output-dir", cl::init(""),
       cl::desc("Directory in which coverage information is written out"));
   cl::alias ShowOutputDirectoryA("o", cl::desc("Alias for --output-dir"),
                                  cl::aliasopt(ShowOutputDirectory));
+
+  cl::opt<bool> BinaryCounters(
+      "binary-counters", cl::Optional,
+      cl::desc("Show binary counters (1/0) in lines and branches instead of "
+               "integer execution counts"),
+      cl::cat(ViewCategory));
 
   cl::opt<uint32_t> TabSize(
       "tab-size", cl::init(2),
@@ -1096,6 +1106,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   ViewOpts.ShowFunctionInstantiations = ShowInstantiations;
   ViewOpts.ShowDirectoryCoverage = ShowDirectoryCoverage;
   ViewOpts.ShowOutputDirectory = ShowOutputDirectory;
+  ViewOpts.BinaryCounters = BinaryCounters;
   ViewOpts.TabSize = TabSize;
   ViewOpts.ProjectTitle = ProjectTitle;
 
@@ -1112,12 +1123,15 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
     return 1;
   }
 
-  auto ModifiedTime = Status.getLastModificationTime();
-  std::string ModifiedTimeStr = to_string(ModifiedTime);
-  size_t found = ModifiedTimeStr.rfind(':');
-  ViewOpts.CreatedTimeStr = (found != std::string::npos)
-                                ? "Created: " + ModifiedTimeStr.substr(0, found)
-                                : "Created: " + ModifiedTimeStr;
+  if (ShowCreatedTime) {
+    auto ModifiedTime = Status.getLastModificationTime();
+    std::string ModifiedTimeStr = to_string(ModifiedTime);
+    size_t found = ModifiedTimeStr.rfind(':');
+    ViewOpts.CreatedTimeStr =
+        (found != std::string::npos)
+            ? "Created: " + ModifiedTimeStr.substr(0, found)
+            : "Created: " + ModifiedTimeStr;
+  }
 
   auto Coverage = load();
   if (!Coverage)

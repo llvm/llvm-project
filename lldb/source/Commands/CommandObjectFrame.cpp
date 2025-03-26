@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 #include "CommandObjectFrame.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Host/Config.h"
@@ -30,6 +29,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include <memory>
 #include <optional>
@@ -152,6 +152,7 @@ protected:
       return;
     }
 
+    result.GetValueObjectList().Append(valobj_sp);
     DumpValueObjectOptions::DeclPrintingHelper helper =
         [&valobj_sp](ConstString type, ConstString var,
                      const DumpValueObjectOptions &opts,
@@ -317,10 +318,10 @@ protected:
       } else if (*m_options.relative_frame_offset > 0) {
         // I don't want "up 20" where "20" takes you past the top of the stack
         // to produce an error, but rather to just go to the top.  OTOH, start
-        // by seeing if the requested frame exists, in which case we can avoid 
+        // by seeing if the requested frame exists, in which case we can avoid
         // counting the stack here...
-        const uint32_t frame_requested = frame_idx 
-            + *m_options.relative_frame_offset;
+        const uint32_t frame_requested =
+            frame_idx + *m_options.relative_frame_offset;
         StackFrameSP frame_sp = thread->GetStackFrameAtIndex(frame_requested);
         if (frame_sp)
           frame_idx = frame_requested;
@@ -515,8 +516,8 @@ protected:
 
     if (error.Fail() && (!variable_list || variable_list->GetSize() == 0)) {
       result.AppendError(error.AsCString());
-
     }
+
     ValueObjectSP valobj_sp;
 
     TypeSummaryImplSP summary_format_sp;
@@ -564,6 +565,8 @@ protected:
                 valobj_sp = frame->GetValueObjectForFrameVariable(
                     var_sp, m_varobj_options.use_dynamic);
                 if (valobj_sp) {
+                  result.GetValueObjectList().Append(valobj_sp);
+
                   std::string scope_string;
                   if (m_option_variable.show_scope)
                     scope_string = GetScopeString(var_sp).str();
@@ -604,6 +607,8 @@ protected:
                 entry.ref(), m_varobj_options.use_dynamic, expr_path_options,
                 var_sp, error);
             if (valobj_sp) {
+              result.GetValueObjectList().Append(valobj_sp);
+
               std::string scope_string;
               if (m_option_variable.show_scope)
                 scope_string = GetScopeString(var_sp).str();
@@ -653,6 +658,8 @@ protected:
             valobj_sp = frame->GetValueObjectForFrameVariable(
                 var_sp, m_varobj_options.use_dynamic);
             if (valobj_sp) {
+              result.GetValueObjectList().Append(valobj_sp);
+
               // When dumping all variables, don't print any variables that are
               // not in scope to avoid extra unneeded output
               if (valobj_sp->IsInScope()) {
@@ -694,6 +701,7 @@ protected:
             recognized_frame->GetRecognizedArguments();
         if (recognized_arg_list) {
           for (auto &rec_value_sp : recognized_arg_list->GetObjects()) {
+            result.GetValueObjectList().Append(rec_value_sp);
             options.SetFormat(m_option_format.GetFormat());
             options.SetVariableFormatDisplayLanguage(
                 rec_value_sp->GetPreferredDisplayLanguage());
@@ -930,10 +938,13 @@ protected:
 };
 
 static void
-PrintRecognizerDetails(Stream &strm, const std::string &name,
+PrintRecognizerDetails(Stream &strm, const std::string &name, bool enabled,
                        const std::string &module,
                        llvm::ArrayRef<lldb_private::ConstString> symbols,
                        Mangled::NamePreference symbol_mangling, bool regexp) {
+  if (!enabled)
+    strm << "[disabled] ";
+
   strm << name << ", ";
 
   if (!module.empty())
@@ -957,16 +968,17 @@ PrintRecognizerDetails(Stream &strm, const std::string &name,
   llvm::interleaveComma(symbols, strm);
 }
 
-class CommandObjectFrameRecognizerDelete : public CommandObjectParsed {
+// Base class for commands which accept a single frame recognizer as an argument
+class CommandObjectWithFrameRecognizerArg : public CommandObjectParsed {
 public:
-  CommandObjectFrameRecognizerDelete(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "frame recognizer delete",
-                            "Delete an existing frame recognizer by id.",
-                            nullptr) {
+  CommandObjectWithFrameRecognizerArg(CommandInterpreter &interpreter,
+                                      const char *name,
+                                      const char *help = nullptr,
+                                      const char *syntax = nullptr,
+                                      uint32_t flags = 0)
+      : CommandObjectParsed(interpreter, name, help, syntax, flags) {
     AddSimpleArgumentList(eArgTypeRecognizerID);
   }
-
-  ~CommandObjectFrameRecognizerDelete() override = default;
 
   void
   HandleArgumentCompletion(CompletionRequest &request,
@@ -975,41 +987,25 @@ public:
       return;
 
     GetTarget().GetFrameRecognizerManager().ForEach(
-        [&request](uint32_t rid, std::string rname, std::string module,
+        [&request](uint32_t rid, bool enabled, std::string rname,
+                   std::string module,
                    llvm::ArrayRef<lldb_private::ConstString> symbols,
                    Mangled::NamePreference symbol_mangling, bool regexp) {
           StreamString strm;
           if (rname.empty())
             rname = "(internal)";
 
-          PrintRecognizerDetails(strm, rname, module, symbols, symbol_mangling,
-                                 regexp);
+          PrintRecognizerDetails(strm, rname, enabled, module, symbols,
+                                 symbol_mangling, regexp);
 
           request.TryCompleteCurrentArg(std::to_string(rid), strm.GetString());
         });
   }
 
-protected:
+  virtual void DoExecuteWithId(CommandReturnObject &result,
+                               uint32_t recognizer_id) = 0;
+
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    if (command.GetArgumentCount() == 0) {
-      if (!m_interpreter.Confirm(
-              "About to delete all frame recognizers, do you want to do that?",
-              true)) {
-        result.AppendMessage("Operation cancelled...");
-        return;
-      }
-
-      GetTarget().GetFrameRecognizerManager().RemoveAllRecognizers();
-      result.SetStatus(eReturnStatusSuccessFinishResult);
-      return;
-    }
-
-    if (command.GetArgumentCount() != 1) {
-      result.AppendErrorWithFormat("'%s' takes zero or one arguments.\n",
-                                   m_cmd_name.c_str());
-      return;
-    }
-
     uint32_t recognizer_id;
     if (!llvm::to_integer(command.GetArgumentAtIndex(0), recognizer_id)) {
       result.AppendErrorWithFormat("'%s' is not a valid recognizer id.\n",
@@ -1017,10 +1013,79 @@ protected:
       return;
     }
 
-    if (!GetTarget().GetFrameRecognizerManager().RemoveRecognizerWithID(
-            recognizer_id)) {
-      result.AppendErrorWithFormat("'%s' is not a valid recognizer id.\n",
-                                   command.GetArgumentAtIndex(0));
+    DoExecuteWithId(result, recognizer_id);
+  }
+};
+
+class CommandObjectFrameRecognizerEnable
+    : public CommandObjectWithFrameRecognizerArg {
+public:
+  CommandObjectFrameRecognizerEnable(CommandInterpreter &interpreter)
+      : CommandObjectWithFrameRecognizerArg(
+            interpreter, "frame recognizer enable",
+            "Enable a frame recognizer by id.", nullptr) {
+    AddSimpleArgumentList(eArgTypeRecognizerID);
+  }
+
+  ~CommandObjectFrameRecognizerEnable() override = default;
+
+protected:
+  void DoExecuteWithId(CommandReturnObject &result,
+                       uint32_t recognizer_id) override {
+    auto &recognizer_mgr = GetTarget().GetFrameRecognizerManager();
+    if (!recognizer_mgr.SetEnabledForID(recognizer_id, true)) {
+      result.AppendErrorWithFormat("'%u' is not a valid recognizer id.\n",
+                                   recognizer_id);
+      return;
+    }
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+
+class CommandObjectFrameRecognizerDisable
+    : public CommandObjectWithFrameRecognizerArg {
+public:
+  CommandObjectFrameRecognizerDisable(CommandInterpreter &interpreter)
+      : CommandObjectWithFrameRecognizerArg(
+            interpreter, "frame recognizer disable",
+            "Disable a frame recognizer by id.", nullptr) {
+    AddSimpleArgumentList(eArgTypeRecognizerID);
+  }
+
+  ~CommandObjectFrameRecognizerDisable() override = default;
+
+protected:
+  void DoExecuteWithId(CommandReturnObject &result,
+                       uint32_t recognizer_id) override {
+    auto &recognizer_mgr = GetTarget().GetFrameRecognizerManager();
+    if (!recognizer_mgr.SetEnabledForID(recognizer_id, false)) {
+      result.AppendErrorWithFormat("'%u' is not a valid recognizer id.\n",
+                                   recognizer_id);
+      return;
+    }
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+
+class CommandObjectFrameRecognizerDelete
+    : public CommandObjectWithFrameRecognizerArg {
+public:
+  CommandObjectFrameRecognizerDelete(CommandInterpreter &interpreter)
+      : CommandObjectWithFrameRecognizerArg(
+            interpreter, "frame recognizer delete",
+            "Delete an existing frame recognizer by id.", nullptr) {
+    AddSimpleArgumentList(eArgTypeRecognizerID);
+  }
+
+  ~CommandObjectFrameRecognizerDelete() override = default;
+
+protected:
+  void DoExecuteWithId(CommandReturnObject &result,
+                       uint32_t recognizer_id) override {
+    auto &recognizer_mgr = GetTarget().GetFrameRecognizerManager();
+    if (!recognizer_mgr.RemoveRecognizerWithID(recognizer_id)) {
+      result.AppendErrorWithFormat("'%u' is not a valid recognizer id.\n",
+                                   recognizer_id);
       return;
     }
     result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -1041,7 +1106,7 @@ protected:
     bool any_printed = false;
     GetTarget().GetFrameRecognizerManager().ForEach(
         [&result,
-         &any_printed](uint32_t recognizer_id, std::string name,
+         &any_printed](uint32_t recognizer_id, bool enabled, std::string name,
                        std::string module, llvm::ArrayRef<ConstString> symbols,
                        Mangled::NamePreference symbol_mangling, bool regexp) {
           Stream &stream = result.GetOutputStream();
@@ -1050,8 +1115,8 @@ protected:
             name = "(internal)";
 
           stream << std::to_string(recognizer_id) << ": ";
-          PrintRecognizerDetails(stream, name, module, symbols, symbol_mangling,
-                                 regexp);
+          PrintRecognizerDetails(stream, name, enabled, module, symbols,
+                                 symbol_mangling, regexp);
 
           stream.EOL();
           stream.Flush();
@@ -1135,18 +1200,24 @@ public:
             interpreter, "frame recognizer",
             "Commands for editing and viewing frame recognizers.",
             "frame recognizer [<sub-command-options>] ") {
+    LoadSubCommand("info", CommandObjectSP(new CommandObjectFrameRecognizerInfo(
+                               interpreter)));
+    LoadSubCommand("list", CommandObjectSP(new CommandObjectFrameRecognizerList(
+                               interpreter)));
     LoadSubCommand("add", CommandObjectSP(new CommandObjectFrameRecognizerAdd(
                               interpreter)));
     LoadSubCommand(
-        "clear",
-        CommandObjectSP(new CommandObjectFrameRecognizerClear(interpreter)));
+        "enable",
+        CommandObjectSP(new CommandObjectFrameRecognizerEnable(interpreter)));
+    LoadSubCommand(
+        "disable",
+        CommandObjectSP(new CommandObjectFrameRecognizerDisable(interpreter)));
     LoadSubCommand(
         "delete",
         CommandObjectSP(new CommandObjectFrameRecognizerDelete(interpreter)));
-    LoadSubCommand("list", CommandObjectSP(new CommandObjectFrameRecognizerList(
-                               interpreter)));
-    LoadSubCommand("info", CommandObjectSP(new CommandObjectFrameRecognizerInfo(
-                               interpreter)));
+    LoadSubCommand(
+        "clear",
+        CommandObjectSP(new CommandObjectFrameRecognizerClear(interpreter)));
   }
 
   ~CommandObjectFrameRecognizer() override = default;
@@ -1160,7 +1231,7 @@ CommandObjectMultiwordFrame::CommandObjectMultiwordFrame(
     CommandInterpreter &interpreter)
     : CommandObjectMultiword(interpreter, "frame",
                              "Commands for selecting and "
-                             "examing the current "
+                             "examining the current "
                              "thread's stack frames.",
                              "frame <subcommand> [<subcommand-options>]") {
   LoadSubCommand("diagnose",

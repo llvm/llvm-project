@@ -502,7 +502,7 @@ def killProcessAndChildrenIsSupported():
         otherwise is contains a string describing why the function is
         not supported.
     """
-    if platform.system() == "AIX":
+    if platform.system() == "AIX" or platform.system() == "OS/390":
         return (True, "")
     try:
         import psutil  # noqa: F401
@@ -528,6 +528,9 @@ def killProcessAndChildren(pid):
     """
     if platform.system() == "AIX":
         subprocess.call("kill -kill $(ps -o pid= -L{})".format(pid), shell=True)
+    elif platform.system() == "OS/390":
+        # FIXME: Only the process is killed.
+        subprocess.call("kill -KILL $(ps -s {} -o pid=)".format(pid), shell=True)
     else:
         import psutil
 

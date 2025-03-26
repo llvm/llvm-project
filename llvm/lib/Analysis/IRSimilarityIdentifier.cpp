@@ -36,7 +36,7 @@ cl::opt<bool>
                          cl::ReallyHidden,
                          cl::desc("disable outlining indirect calls."));
 
-cl::opt<bool>
+static cl::opt<bool>
     MatchCallsByName("ir-sim-calls-by-name", cl::init(false), cl::ReallyHidden,
                      cl::desc("only allow matching call instructions if the "
                               "name and type signature match."));
@@ -728,11 +728,10 @@ bool IRSimilarityCandidate::compareAssignmentMapping(
     for (unsigned OtherVal : ValueMappingIt->second) {
       if (OtherVal == InstValB)
         continue;
-      if (!ValueNumberMappingA.contains(OtherVal))
+      auto OtherValIt = ValueNumberMappingA.find(OtherVal);
+      if (OtherValIt == ValueNumberMappingA.end())
         continue;
-      if (!ValueNumberMappingA[OtherVal].contains(InstValA))
-        continue;
-      ValueNumberMappingA[OtherVal].erase(InstValA);
+      OtherValIt->second.erase(InstValA);
     }
     ValueNumberMappingA.erase(ValueMappingIt);
     std::tie(ValueMappingIt, WasInserted) = ValueNumberMappingA.insert(
@@ -1420,16 +1419,8 @@ void IRSimilarityIdentifier::findCandidates(
         // IRSimilarityCandidates that include that instruction.
         for (IRSimilarityCandidate &IRCand : SimilarityCandidates->back()) {
           for (unsigned Idx = IRCand.getStartIdx(), Edx = IRCand.getEndIdx();
-               Idx <= Edx; ++Idx) {
-            DenseMap<unsigned, DenseSet<IRSimilarityCandidate *>>::iterator
-                IdIt;
-            IdIt = IndexToIncludedCand.find(Idx);
-            bool Inserted = false;
-            if (IdIt == IndexToIncludedCand.end())
-              std::tie(IdIt, Inserted) = IndexToIncludedCand.insert(
-                  std::make_pair(Idx, DenseSet<IRSimilarityCandidate *>()));
-            IdIt->second.insert(&IRCand);
-          }
+               Idx <= Edx; ++Idx)
+            IndexToIncludedCand[Idx].insert(&IRCand);
           // Add mapping of candidate to the overall similarity group number.
           CandToGroup.insert(
               std::make_pair(&IRCand, SimilarityCandidates->size() - 1));

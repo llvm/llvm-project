@@ -21,13 +21,12 @@ define dso_local void @flag_overrules_hint(ptr noalias nocapture %A, ptr noalias
 ; PREDFLAG-LABEL: flag_overrules_hint(
 ; PREDFLAG:  vector.body:
 ; PREDFLAG:  %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; PREDFLAG:  %[[ELEM0:.*]] = add i64 %index, 0
-; PREDFLAG:  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %[[ELEM0]], i64 430)
+; PREDFLAG:  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %index, i64 430)
 ; PREDFLAG:  %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0({{.*}}, <4 x i1> %active.lane.mask
 ; PREDFLAG:  %wide.masked.load1 = call <4 x i32> @llvm.masked.load.v4i32.p0({{.*}}, <4 x i1> %active.lane.mask
 ; PREDFLAG:  %{{.*}} = add nsw <4 x i32> %wide.masked.load1, %wide.masked.load
 ; PREDFLAG:  call void @llvm.masked.store.v4i32.p0({{.*}}, <4 x i1> %active.lane.mask
-; PREDFLAG:  %index.next = add i64 %index, 4
+; PREDFLAG:  %index.next = add nuw i64 %index, 4
 ; PREDFLAG:  %[[CMP:.*]] = icmp eq i64 %index.next, 432
 ; PREDFLAG:  br i1 %[[CMP]], label %middle.block, label %vector.body, !llvm.loop !0
 entry:

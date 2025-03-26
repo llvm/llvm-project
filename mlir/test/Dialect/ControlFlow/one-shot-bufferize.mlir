@@ -3,7 +3,7 @@
 
 // CHECK-NO-FUNC-LABEL: func @br(
 //  CHECK-NO-FUNC-SAME:     %[[t:.*]]: tensor<5xf32>)
-//       CHECK-NO-FUNC:   %[[m:.*]] = bufferization.to_memref %[[t]] : memref<5xf32, strided<[?], offset: ?>>
+//       CHECK-NO-FUNC:   %[[m:.*]] = bufferization.to_memref %[[t]] : tensor<5xf32> to memref<5xf32, strided<[?], offset: ?>>
 //       CHECK-NO-FUNC:   %[[r:.*]] = scf.execute_region -> memref<5xf32, strided<[?], offset: ?>> {
 //       CHECK-NO-FUNC:     cf.br ^[[block:.*]](%[[m]]
 //       CHECK-NO-FUNC:   ^[[block]](%[[arg1:.*]]: memref<5xf32, strided<[?], offset: ?>>):
@@ -23,7 +23,7 @@ func.func @br(%t: tensor<5xf32>) {
 
 // CHECK-NO-FUNC-LABEL: func @cond_br(
 //  CHECK-NO-FUNC-SAME:     %[[t1:.*]]: tensor<5xf32>,
-//       CHECK-NO-FUNC:   %[[m1:.*]] = bufferization.to_memref %[[t1]] : memref<5xf32, strided<[?], offset: ?>>
+//       CHECK-NO-FUNC:   %[[m1:.*]] = bufferization.to_memref %[[t1]] : tensor<5xf32> to memref<5xf32, strided<[?], offset: ?>>
 //       CHECK-NO-FUNC:   %[[alloc:.*]] = memref.alloc() {{.*}} : memref<5xf32>
 //       CHECK-NO-FUNC:   %[[r:.*]] = scf.execute_region -> memref<5xf32, strided<[?], offset: ?>> {
 //       CHECK-NO-FUNC:     cf.cond_br %{{.*}}, ^[[block1:.*]](%[[m1]] : {{.*}}), ^[[block2:.*]](%[[alloc]] : {{.*}})

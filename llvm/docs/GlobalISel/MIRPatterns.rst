@@ -601,7 +601,7 @@ Gallery
 =======
 
 We should use precise patterns that state our intentions. Please avoid
-using wip_match_opcode in patterns.
+using wip_match_opcode in patterns. It can lead to imprecise patterns.
 
 .. code-block:: text
   :caption: Example fold zext(trunc:nuw)
@@ -630,3 +630,20 @@ using wip_match_opcode in patterns.
            (G_ZEXT $root, $src),
     [{ return Helper.matchZextOfTrunc(${root}, ${matchinfo}); }]),
     (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+
+  // Precise: lists all combine combinations
+  class ext_of_ext_opcodes<Instruction ext1Opcode, Instruction ext2Opcode> : GICombineRule <
+    (defs root:$root, build_fn_matchinfo:$matchinfo),
+    (match (ext2Opcode $second, $src):$Second,
+           (ext1Opcode $root, $second):$First,
+           [{ return Helper.matchExtOfExt(*${First}, *${Second}, ${matchinfo}); }]),
+    (apply [{ Helper.applyBuildFn(*${First}, ${matchinfo}); }])>;
+
+  def zext_of_zext : ext_of_ext_opcodes<G_ZEXT, G_ZEXT>;
+  def zext_of_anyext : ext_of_ext_opcodes<G_ZEXT, G_ANYEXT>;
+  def sext_of_sext : ext_of_ext_opcodes<G_SEXT, G_SEXT>;
+  def sext_of_anyext : ext_of_ext_opcodes<G_SEXT, G_ANYEXT>;
+  def anyext_of_anyext : ext_of_ext_opcodes<G_ANYEXT, G_ANYEXT>;
+  def anyext_of_zext : ext_of_ext_opcodes<G_ANYEXT, G_ZEXT>;
+  def anyext_of_sext : ext_of_ext_opcodes<G_ANYEXT, G_SEXT>;

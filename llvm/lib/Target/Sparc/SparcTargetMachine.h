@@ -15,12 +15,13 @@
 
 #include "SparcInstrInfo.h"
 #include "SparcSubtarget.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
 
 namespace llvm {
 
-class SparcTargetMachine : public LLVMTargetMachine {
+class SparcTargetMachine : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   bool is64Bit;
   mutable StringMap<std::unique_ptr<SparcSubtarget>> SubtargetMap;

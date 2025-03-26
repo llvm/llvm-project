@@ -43,7 +43,7 @@
 // CHECK-SAME: "-plugin-opt=-mattr=-sramecc,+xnack"
 
 // CHECK: {{"[^"]*clang-offload-bundler[^"]*"}}
-// CHECK-SAME: "-targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx908:sramecc+:xnack+,hipv4-amdgcn-amd-amdhsa--gfx908:sramecc-:xnack+"
+// CHECK-SAME: "-targets=host-x86_64-unknown-linux-gnu,hipv4-amdgcn-amd-amdhsa--gfx908:sramecc+:xnack+,hipv4-amdgcn-amd-amdhsa--gfx908:sramecc-:xnack+"
 
 // Check canonicalization and repeating of target ID.
 
@@ -54,7 +54,7 @@
 // RUN:   --offload-arch=fiji \
 // RUN:   --no-offload-new-driver --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=FIJI %s
-// FIJI: "-targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx803"
+// FIJI: "-targets=host-x86_64-unknown-linux-gnu,hipv4-amdgcn-amd-amdhsa--gfx803"
 
 // RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip \
@@ -65,4 +65,4 @@
 // RUN:   --offload-arch=gfx906 \
 // RUN:   --no-offload-new-driver --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=MULTI %s
-// MULTI: "-targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx900:xnack+,hipv4-amdgcn-amd-amdhsa--gfx900:xnack-,hipv4-amdgcn-amd-amdhsa--gfx906,hipv4-amdgcn-amd-amdhsa--gfx908:sramecc+,hipv4-amdgcn-amd-amdhsa--gfx908:sramecc-"
+// MULTI: "-targets=host-x86_64-unknown-linux-gnu,hipv4-amdgcn-amd-amdhsa--gfx900:xnack+,hipv4-amdgcn-amd-amdhsa--gfx900:xnack-,hipv4-amdgcn-amd-amdhsa--gfx906,hipv4-amdgcn-amd-amdhsa--gfx908:sramecc+,hipv4-amdgcn-amd-amdhsa--gfx908:sramecc-"

@@ -1,4 +1,5 @@
 ; REQUIRES: x86, shell
+; UNSUPPORTED: main-run-twice
 
 ; RUN: opt -module-hash -module-summary %s -o %t.o
 ; RUN: opt -module-hash -module-summary %p/Inputs/cache.ll -o %t2.o

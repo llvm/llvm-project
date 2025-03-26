@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-affine-reify-value-bounds -verify-diagnostics \
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(test-affine-reify-value-bounds))' -verify-diagnostics \
 // RUN:     -split-input-file | FileCheck %s
 
 func.func @unknown_op() -> index {
@@ -40,6 +40,17 @@ func.func @dim(%t: tensor<?xf32>) -> index {
   %0 = tensor.dim %t, %c0 : tensor<?xf32>
   %1 = "test.reify_bound"(%0) : (index) -> (index)
   return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @dim_all_positive(
+func.func @dim_all_positive(%t: tensor<?xf32>, %x: index) {
+  %c0 = arith.constant 0 : index
+  %0 = tensor.dim %t, %x : tensor<?xf32>
+  // expected-remark @below{{true}}
+  "test.compare"(%0, %c0) {cmp = "GE" } : (index, index) -> ()
+  return
 }
 
 // -----

@@ -10,9 +10,10 @@
 #define SUPPORT_OPERATOR_HIJACKER_H
 
 #include <cstddef>
-#include <memory>
 #include <functional>
+#include <memory>
 #include <string>
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -22,6 +23,7 @@
 struct operator_hijacker {
   TEST_CONSTEXPR bool operator<(const operator_hijacker&) const { return true; }
   TEST_CONSTEXPR bool operator==(const operator_hijacker&) const { return true; }
+  TEST_CONSTEXPR int operator()() const { return 42; }
 
   template <typename T>
   friend void operator&(T&&) = delete;

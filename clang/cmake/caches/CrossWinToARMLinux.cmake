@@ -96,7 +96,11 @@ endif()
 if (NOT DEFINED TOOLCHAIN_SHARED_LIBS)
   set(TOOLCHAIN_SHARED_LIBS OFF)
 endif()
- 
+# Enable usage of the static libunwind and libc++abi libraries.
+if (NOT DEFINED TOOLCHAIN_USE_STATIC_LIBS)
+  set(TOOLCHAIN_USE_STATIC_LIBS ON)
+endif()
+
 if (NOT DEFINED LLVM_TARGETS_TO_BUILD)
   if ("${TOOLCHAIN_TARGET_TRIPLE}" MATCHES "^(armv|arm32)+")
     set(LLVM_TARGETS_TO_BUILD "ARM" CACHE STRING "")
@@ -119,7 +123,6 @@ if (NOT DEFINED CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "")
 endif()
 
-set(CMAKE_CROSSCOMPILING                    ON CACHE BOOL "")
 set(CMAKE_CL_SHOWINCLUDES_PREFIX            "Note: including file: " CACHE STRING "")
 # Required if COMPILER_RT_DEFAULT_TARGET_ONLY is ON
 set(CMAKE_C_COMPILER_TARGET                 "${TOOLCHAIN_TARGET_TRIPLE}" CACHE STRING "")
@@ -207,7 +210,7 @@ set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBUNWIND_USE_COMPILER_RT               
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBUNWIND_ENABLE_SHARED                   ${TOOLCHAIN_SHARED_LIBS} CACHE BOOL "")
 
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXXABI_USE_LLVM_UNWINDER               ON CACHE BOOL "")
-set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXXABI_ENABLE_STATIC_UNWINDER          ON CACHE BOOL "")
+set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXXABI_ENABLE_STATIC_UNWINDER          ${TOOLCHAIN_USE_STATIC_LIBS} CACHE BOOL "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXXABI_USE_COMPILER_RT                 ON CACHE BOOL "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS   OFF CACHE BOOL "")
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXXABI_ENABLE_SHARED                   ${TOOLCHAIN_SHARED_LIBS} CACHE BOOL "")
@@ -218,7 +221,12 @@ set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_ABI_VERSION                      
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_CXX_ABI                            "libcxxabi" CACHE STRING "")    #!!!
 set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS      ON CACHE BOOL "")
 # Merge libc++ and libc++abi libraries into the single libc++ library file.
-set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_ENABLE_STATIC_ABI_LIBRARY          ON CACHE BOOL "")
+set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_ENABLE_STATIC_ABI_LIBRARY          ${TOOLCHAIN_USE_STATIC_LIBS} CACHE BOOL "")
+# Forcely disable the libc++ benchmarks on Windows build hosts
+# (current benchmark test configuration does not support the cross builds there).
+if (WIN32)
+  set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBCXX_INCLUDE_BENCHMARKS               OFF CACHE BOOL "")
+endif(WIN32)
 
 # Avoid searching for the python3 interpreter during the runtimes configuration for the cross builds.
 # It starts searching the python3 package using the target's sysroot path, that usually is not compatible with the build host.

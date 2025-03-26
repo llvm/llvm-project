@@ -35,10 +35,10 @@ rdrand   %rax
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 17.30  27.30  1.00   1.00    -     14.30  11.30   -      -      -     1.80   1.00    -
+# CHECK-NEXT: 17.30  27.30  1.00   1.00    -     14.30  11.30   -      -      -     1.00   1.80    -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
-# CHECK-NEXT: 5.77   9.10   0.33   0.33    -     4.77   3.77    -      -      -     0.60   0.33    -     rdrandw	%ax
-# CHECK-NEXT: 5.77   9.10   0.33   0.33    -     4.77   3.77    -      -      -     0.60   0.33    -     rdrandl	%eax
-# CHECK-NEXT: 5.77   9.10   0.33   0.33    -     4.77   3.77    -      -      -     0.60   0.33    -     rdrandq	%rax
+# CHECK-NEXT: 5.77   9.10   0.33   0.33    -     4.77   3.77    -      -      -     0.33   0.60    -     rdrandw	%ax
+# CHECK-NEXT: 5.77   9.10   0.33   0.33    -     4.77   3.77    -      -      -     0.33   0.60    -     rdrandl	%eax
+# CHECK-NEXT: 5.77   9.10   0.33   0.33    -     4.77   3.77    -      -      -     0.33   0.60    -     rdrandq	%rax

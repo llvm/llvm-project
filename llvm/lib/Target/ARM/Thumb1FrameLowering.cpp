@@ -39,10 +39,11 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <iterator>
 #include <vector>
+
+#define DEBUG_TYPE "arm-frame-lowering"
 
 using namespace llvm;
 
@@ -160,6 +161,8 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   assert(NumBytes >= ArgRegsSaveSize &&
          "ArgRegsSaveSize is included in NumBytes");
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
+  assert(STI.getPushPopSplitVariation(MF) == ARMSubtarget::SplitR7 &&
+         "Must use R7 spilt for Thumb1");
 
   // Debug location must be unknown since the first debug location is used
   // to determine the end of the prologue.
@@ -207,9 +210,9 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   bool HasFrameRecordArea = hasFP(MF) && ARM::hGPRRegClass.contains(FramePtr);
 
   for (const CalleeSavedInfo &I : CSI) {
-    Register Reg = I.getReg();
+    MCRegister Reg = I.getReg();
     int FI = I.getFrameIdx();
-    if (Reg == FramePtr)
+    if (Reg == FramePtr.asMCReg())
       FramePtrSpillFI = FI;
     switch (Reg) {
     case ARM::R11:
@@ -221,11 +224,8 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     case ARM::R8:
     case ARM::R9:
     case ARM::R10:
-      if (STI.splitFramePushPop(MF)) {
-        GPRCS2Size += 4;
-        break;
-      }
-      [[fallthrough]];
+      GPRCS2Size += 4;
+      break;
     case ARM::LR:
       if (HasFrameRecordArea) {
         FRSize += 4;
@@ -279,6 +279,20 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     }
   }
 
+  // Skip past this code sequence, which is emitted to restore the LR if it is
+  // live-in and clobbered by the frame record setup code:
+  //   ldr rX, [sp, #Y]
+  //   mov lr, rX
+  if (MBBI != MBB.end() && MBBI->getOpcode() == ARM::tLDRspi &&
+      MBBI->getFlag(MachineInstr::FrameSetup)) {
+    ++MBBI;
+    if (MBBI != MBB.end() && MBBI->getOpcode() == ARM::tMOVr &&
+        MBBI->getOperand(0).getReg() == ARM::LR &&
+        MBBI->getFlag(MachineInstr::FrameSetup)) {
+      ++MBBI;
+    }
+  }
+
   // Determine starting offsets of spill areas.
   unsigned DPRCSOffset = NumBytes - ArgRegsSaveSize -
                          (FRSize + GPRCS1Size + GPRCS2Size + DPRCSSize);
@@ -292,7 +306,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     AFI->setFrameRecordSavedAreaSize(FRSize);
   AFI->setGPRCalleeSavedArea1Offset(GPRCS1Offset);
   AFI->setGPRCalleeSavedArea2Offset(GPRCS2Offset);
-  AFI->setDPRCalleeSavedAreaOffset(DPRCSOffset);
+  AFI->setDPRCalleeSavedArea1Offset(DPRCSOffset);
   NumBytes = DPRCSOffset;
 
   int FramePtrOffsetInBlock = 0;
@@ -357,7 +371,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
           .setMIFlags(MachineInstr::FrameSetup);
     }
     for (const CalleeSavedInfo &I : CSI) {
-      Register Reg = I.getReg();
+      MCRegister Reg = I.getReg();
       int FI = I.getFrameIdx();
       switch (Reg) {
       case ARM::R8:
@@ -365,9 +379,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
       case ARM::R10:
       case ARM::R11:
       case ARM::R12:
-        if (STI.splitFramePushPop(MF))
-          break;
-        [[fallthrough]];
+        break;
       case ARM::R0:
       case ARM::R1:
       case ARM::R2:
@@ -391,7 +403,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   if (GPRCS2Size > 0) {
     MachineBasicBlock::iterator Pos = std::next(GPRCS2Push);
     for (auto &I : CSI) {
-      Register Reg = I.getReg();
+      MCRegister Reg = I.getReg();
       int FI = I.getFrameIdx();
       switch (Reg) {
       case ARM::R8:
@@ -420,8 +432,8 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     // at this point in the prologue, so pick one.
     unsigned ScratchRegister = ARM::NoRegister;
     for (auto &I : CSI) {
-      Register Reg = I.getReg();
-      if (isARMLowRegister(Reg) && !(HasFP && Reg == FramePtr)) {
+      MCRegister Reg = I.getReg();
+      if (isARMLowRegister(Reg) && !(HasFP && Reg == FramePtr.asMCReg())) {
         ScratchRegister = Reg;
         break;
       }
@@ -444,7 +456,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
 
   AFI->setGPRCalleeSavedArea1Size(GPRCS1Size);
   AFI->setGPRCalleeSavedArea2Size(GPRCS2Size);
-  AFI->setDPRCalleeSavedAreaSize(DPRCSSize);
+  AFI->setDPRCalleeSavedArea1Size(DPRCSSize);
 
   if (RegInfo->hasStackRealignment(MF)) {
     const unsigned NrBitsToZero = Log2(MFI.getMaxAlign());
@@ -530,19 +542,18 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
     }
 
     // Move SP to start of FP callee save spill area.
-    NumBytes -= (AFI->getFrameRecordSavedAreaSize() +
-                 AFI->getGPRCalleeSavedArea1Size() +
-                 AFI->getGPRCalleeSavedArea2Size() +
-                 AFI->getDPRCalleeSavedAreaSize() +
-                 ArgRegsSaveSize);
+    NumBytes -=
+        (AFI->getFrameRecordSavedAreaSize() +
+         AFI->getGPRCalleeSavedArea1Size() + AFI->getGPRCalleeSavedArea2Size() +
+         AFI->getDPRCalleeSavedArea1Size() + ArgRegsSaveSize);
 
     // We are likely to need a scratch register and we know all callee-save
     // registers are free at this point in the epilogue, so pick one.
     unsigned ScratchRegister = ARM::NoRegister;
     bool HasFP = hasFP(MF);
     for (auto &I : MFI.getCalleeSavedInfo()) {
-      Register Reg = I.getReg();
-      if (isARMLowRegister(Reg) && !(HasFP && Reg == FramePtr)) {
+      MCRegister Reg = I.getReg();
+      if (isARMLowRegister(Reg) && !(HasFP && Reg == FramePtr.asMCReg())) {
         ScratchRegister = Reg;
         break;
       }
@@ -862,7 +873,8 @@ static void pushRegsToStack(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI,
                             const TargetInstrInfo &TII,
                             const std::set<Register> &RegsToSave,
-                            const std::set<Register> &CopyRegs) {
+                            const std::set<Register> &CopyRegs,
+                            bool &UsedLRAsTemp) {
   MachineFunction &MF = *MBB.getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   DebugLoc DL;
@@ -919,6 +931,8 @@ static void pushRegsToStack(MachineBasicBlock &MBB,
         bool isKill = !MRI.isLiveIn(*HiRegToSave);
         if (isKill && !MRI.isReserved(*HiRegToSave))
           MBB.addLiveIn(*HiRegToSave);
+        if (*CopyRegIt == ARM::LR)
+          UsedLRAsTemp = true;
 
         // Emit a MOV from the high reg to the low reg.
         BuildMI(MBB, MI, DL, TII.get(ARM::tMOVr))
@@ -1098,18 +1112,35 @@ bool Thumb1FrameLowering::spillCalleeSavedRegisters(
   // In case FP is a high reg, we need a separate push sequence to generate
   // a correct Frame Record
   bool NeedsFrameRecordPush = hasFP(MF) && ARM::hGPRRegClass.contains(FPReg);
+  bool LRLiveIn = MF.getRegInfo().isLiveIn(ARM::LR);
+  bool UsedLRAsTemp = false;
 
   std::set<Register> FrameRecord;
   std::set<Register> SpilledGPRs;
   for (const CalleeSavedInfo &I : CSI) {
-    Register Reg = I.getReg();
-    if (NeedsFrameRecordPush && (Reg == FPReg || Reg == ARM::LR))
+    MCRegister Reg = I.getReg();
+    if (NeedsFrameRecordPush && (Reg == FPReg.asMCReg() || Reg == ARM::LR))
       FrameRecord.insert(Reg);
     else
       SpilledGPRs.insert(Reg);
   }
 
-  pushRegsToStack(MBB, MI, TII, FrameRecord, {ARM::LR});
+  // Determine intermediate registers which can be used for pushing the frame
+  // record:
+  // - Unused argument registers
+  // - LR: This is possible because the first PUSH will save it on the stack,
+  //       so it is free to be used as a temporary for the second. However, it
+  //       is possible for LR to be live-in to the function, in which case we
+  //       will need to restore it later in the prologue, so we only use this
+  //       if there are no free argument registers.
+  std::set<Register> FrameRecordCopyRegs;
+  for (unsigned ArgReg : {ARM::R0, ARM::R1, ARM::R2, ARM::R3})
+    if (!MF.getRegInfo().isLiveIn(ArgReg))
+      FrameRecordCopyRegs.insert(ArgReg);
+  if (FrameRecordCopyRegs.empty())
+    FrameRecordCopyRegs.insert(ARM::LR);
+
+  pushRegsToStack(MBB, MI, TII, FrameRecord, FrameRecordCopyRegs, UsedLRAsTemp);
 
   // Determine intermediate registers which can be used for pushing high regs:
   // - Spilled low regs
@@ -1123,7 +1154,33 @@ bool Thumb1FrameLowering::spillCalleeSavedRegisters(
     if (!MF.getRegInfo().isLiveIn(ArgReg))
       CopyRegs.insert(ArgReg);
 
-  pushRegsToStack(MBB, MI, TII, SpilledGPRs, CopyRegs);
+  pushRegsToStack(MBB, MI, TII, SpilledGPRs, CopyRegs, UsedLRAsTemp);
+
+  // If the push sequence used LR as a temporary, and LR is live-in (for
+  // example because it is used by the llvm.returnaddress intrinsic), then we
+  // need to reload it from the stack. Thumb1 does not have a load instruction
+  // which can use LR, so we need to load into a temporary low register and
+  // copy to LR.
+  if (LRLiveIn && UsedLRAsTemp) {
+    auto CopyRegIt = getNextOrderedReg(OrderedCopyRegs.rbegin(),
+                                       OrderedCopyRegs.rend(), CopyRegs);
+    assert(CopyRegIt != OrderedCopyRegs.rend());
+    unsigned NumRegsPushed = FrameRecord.size() + SpilledGPRs.size();
+    LLVM_DEBUG(
+        dbgs() << "LR is live-in but clobbered in prologue, restoring via "
+               << RegInfo->getName(*CopyRegIt) << "\n");
+
+    BuildMI(MBB, MI, DebugLoc(), TII.get(ARM::tLDRspi), *CopyRegIt)
+        .addReg(ARM::SP)
+        .addImm(NumRegsPushed - 1)
+        .add(predOps(ARMCC::AL))
+        .setMIFlags(MachineInstr::FrameSetup);
+
+    BuildMI(MBB, MI, DebugLoc(), TII.get(ARM::tMOVr), ARM::LR)
+        .addReg(*CopyRegIt)
+        .add(predOps(ARMCC::AL))
+        .setMIFlags(MachineInstr::FrameSetup);
+  }
 
   return true;
 }
@@ -1149,8 +1206,8 @@ bool Thumb1FrameLowering::restoreCalleeSavedRegisters(
   std::set<Register> FrameRecord;
   std::set<Register> SpilledGPRs;
   for (CalleeSavedInfo &I : CSI) {
-    Register Reg = I.getReg();
-    if (NeedsFrameRecordPop && (Reg == FPReg || Reg == ARM::LR))
+    MCRegister Reg = I.getReg();
+    if (NeedsFrameRecordPop && (Reg == FPReg.asMCReg() || Reg == ARM::LR))
       FrameRecord.insert(Reg);
     else
       SpilledGPRs.insert(Reg);

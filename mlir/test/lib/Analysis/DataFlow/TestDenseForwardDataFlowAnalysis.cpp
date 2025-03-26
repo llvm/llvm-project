@@ -117,7 +117,8 @@ LogicalResult LastModifiedAnalysis::visitOperation(
     std::optional<Value> underlyingValue =
         UnderlyingValueAnalysis::getMostUnderlyingValue(
             value, [&](Value value) {
-              return getOrCreateFor<UnderlyingValueLattice>(op, value);
+              return getOrCreateFor<UnderlyingValueLattice>(
+                  getProgramPointAfter(op), value);
             });
 
     // If the underlying value is not yet known, don't propagate yet.
@@ -157,7 +158,7 @@ void LastModifiedAnalysis::visitCallControlFlowTransfer(
           UnderlyingValueAnalysis::getMostUnderlyingValue(
               operand, [&](Value value) {
                 return getOrCreateFor<UnderlyingValueLattice>(
-                    call.getOperation(), value);
+                    getProgramPointAfter(call.getOperation()), value);
               });
       if (!underlyingValue)
         return;
@@ -243,7 +244,7 @@ struct TestLastModifiedPass
         return;
       os << "test_tag: " << tag.getValue() << ":\n";
       const LastModification *lastMods =
-          solver.lookupState<LastModification>(op);
+          solver.lookupState<LastModification>(solver.getProgramPointAfter(op));
       assert(lastMods && "expected a dense lattice");
       for (auto [index, operand] : llvm::enumerate(op->getOperands())) {
         os << " operand #" << index << "\n";

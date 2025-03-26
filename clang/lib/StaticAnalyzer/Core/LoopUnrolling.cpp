@@ -265,8 +265,8 @@ static bool isPossiblyEscaped(ExplodedNode *N, const DeclRefExpr *DR) {
   llvm_unreachable("Reached root without finding the declaration of VD");
 }
 
-bool shouldCompletelyUnroll(const Stmt *LoopStmt, ASTContext &ASTCtx,
-                            ExplodedNode *Pred, unsigned &maxStep) {
+static bool shouldCompletelyUnroll(const Stmt *LoopStmt, ASTContext &ASTCtx,
+                                   ExplodedNode *Pred, unsigned &maxStep) {
 
   if (!isLoopStmt(LoopStmt))
     return false;
@@ -283,10 +283,10 @@ bool shouldCompletelyUnroll(const Stmt *LoopStmt, ASTContext &ASTCtx,
   llvm::APInt InitNum =
       Matches[0].getNodeAs<IntegerLiteral>("initNum")->getValue();
   auto CondOp = Matches[0].getNodeAs<BinaryOperator>("conditionOperator");
-  if (InitNum.getBitWidth() != BoundNum.getBitWidth()) {
-    InitNum = InitNum.zext(BoundNum.getBitWidth());
-    BoundNum = BoundNum.zext(InitNum.getBitWidth());
-  }
+  unsigned MaxWidth = std::max(InitNum.getBitWidth(), BoundNum.getBitWidth());
+
+  InitNum = InitNum.zext(MaxWidth);
+  BoundNum = BoundNum.zext(MaxWidth);
 
   if (CondOp->getOpcode() == BO_GE || CondOp->getOpcode() == BO_LE)
     maxStep = (BoundNum - InitNum + 1).abs().getZExtValue();
@@ -297,7 +297,7 @@ bool shouldCompletelyUnroll(const Stmt *LoopStmt, ASTContext &ASTCtx,
   return !isPossiblyEscaped(Pred, CounterVarRef);
 }
 
-bool madeNewBranch(ExplodedNode *N, const Stmt *LoopStmt) {
+static bool madeNewBranch(ExplodedNode *N, const Stmt *LoopStmt) {
   const Stmt *S = nullptr;
   while (!N->pred_empty()) {
     if (N->succ_size() > 1)

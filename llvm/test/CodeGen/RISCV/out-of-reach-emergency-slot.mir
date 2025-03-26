@@ -41,10 +41,7 @@
   ; CHECK-NEXT:    sd a0, -8(a1)
   ; CHECK-NEXT:    ld a1, 0(sp)
   ; CHECK-NEXT:    call foo
-  ; CHECK-NEXT:    lui a0, 2
-  ; CHECK-NEXT:    sub sp, s0, a0
-  ; CHECK-NEXT:    addiw a0, a0, -2032
-  ; CHECK-NEXT:    add sp, sp, a0
+  ; CHECK-NEXT:    addi sp, s0, -2032
   ; CHECK-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
   ; CHECK-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
   ; CHECK-NEXT:    addi sp, sp, 2032

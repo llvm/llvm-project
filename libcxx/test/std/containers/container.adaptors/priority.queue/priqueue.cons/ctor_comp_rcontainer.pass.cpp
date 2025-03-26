@@ -21,25 +21,22 @@
 #include "test_convertible.h"
 
 template <class C>
-C
-make(int n)
-{
-    C c;
-    for (int i = 0; i < n; ++i)
-        c.push_back(MoveOnly(i));
-    return c;
+C make(int n) {
+  C c;
+  for (int i = 0; i < n; ++i)
+    c.push_back(MoveOnly(i));
+  return c;
 }
 
-int main(int, char**)
-{
-    typedef std::vector<MoveOnly> Container;
-    typedef std::less<MoveOnly> Compare;
-    typedef std::priority_queue<MoveOnly> Q;
-    Q q(Compare(), make<Container>(5));
-    assert(q.size() == 5);
-    assert(q.top() == MoveOnly(4));
+int main(int, char**) {
+  typedef std::vector<MoveOnly> Container;
+  typedef std::less<MoveOnly> Compare;
+  typedef std::priority_queue<MoveOnly> Q;
+  Q q(Compare(), make<Container>(5));
+  assert(q.size() == 5);
+  assert(q.top() == MoveOnly(4));
 
-    static_assert(test_convertible<Q, const Compare&, Container&&>(), "");
+  static_assert(test_convertible<Q, const Compare&, Container&&>(), "");
 
-    return 0;
+  return 0;
 }

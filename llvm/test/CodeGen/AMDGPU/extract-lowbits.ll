@@ -99,12 +99,36 @@ define i32 @bzhi32_b4_commutative(i32 %val, i32 %numlowbits) nounwind {
 ; ---------------------------------------------------------------------------- ;
 
 define i32 @bzhi32_c0(i32 %val, i32 %numlowbits) nounwind {
-; GCN-LABEL: bzhi32_c0:
+; SI-LABEL: bzhi32_c0:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_sub_i32_e32 v1, vcc, 32, v1
+; SI-NEXT:    v_lshr_b32_e32 v1, -1, v1
+; SI-NEXT:    v_and_b32_e32 v0, v1, v0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: bzhi32_c0:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_sub_u32_e32 v1, vcc, 32, v1
+; VI-NEXT:    v_lshrrev_b32_e64 v1, v1, -1
+; VI-NEXT:    v_and_b32_e32 v0, v1, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %numhighbits = sub i32 32, %numlowbits
+  %mask = lshr i32 -1, %numhighbits
+  %masked = and i32 %mask, %val
+  ret i32 %masked
+}
+
+define i32 @bzhi32_c0_clamp(i32 %val, i32 %numlowbits) nounwind {
+; GCN-LABEL: bzhi32_c0_clamp:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 31, v1
 ; GCN-NEXT:    v_bfe_u32 v0, v0, 0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %numhighbits = sub i32 32, %numlowbits
+  %low5bits = and i32 %numlowbits, 31
+  %numhighbits = sub i32 32, %low5bits
   %mask = lshr i32 -1, %numhighbits
   %masked = and i32 %mask, %val
   ret i32 %masked
@@ -134,11 +158,21 @@ define i32 @bzhi32_c1_indexzext(i32 %val, i8 %numlowbits) nounwind {
 }
 
 define i32 @bzhi32_c4_commutative(i32 %val, i32 %numlowbits) nounwind {
-; GCN-LABEL: bzhi32_c4_commutative:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_bfe_u32 v0, v0, 0, v1
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: bzhi32_c4_commutative:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_sub_i32_e32 v1, vcc, 32, v1
+; SI-NEXT:    v_lshr_b32_e32 v1, -1, v1
+; SI-NEXT:    v_and_b32_e32 v0, v0, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: bzhi32_c4_commutative:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_sub_u32_e32 v1, vcc, 32, v1
+; VI-NEXT:    v_lshrrev_b32_e64 v1, v1, -1
+; VI-NEXT:    v_and_b32_e32 v0, v0, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %numhighbits = sub i32 32, %numlowbits
   %mask = lshr i32 -1, %numhighbits
   %masked = and i32 %val, %mask ; swapped order
@@ -150,12 +184,47 @@ define i32 @bzhi32_c4_commutative(i32 %val, i32 %numlowbits) nounwind {
 ; ---------------------------------------------------------------------------- ;
 
 define i32 @bzhi32_d0(i32 %val, i32 %numlowbits) nounwind {
-; GCN-LABEL: bzhi32_d0:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_bfe_u32 v0, v0, 0, v1
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: bzhi32_d0:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_sub_i32_e32 v1, vcc, 32, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v0, v1, v0
+; SI-NEXT:    v_lshrrev_b32_e32 v0, v1, v0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: bzhi32_d0:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_sub_u32_e32 v1, vcc, 32, v1
+; VI-NEXT:    v_lshlrev_b32_e32 v0, v1, v0
+; VI-NEXT:    v_lshrrev_b32_e32 v0, v1, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %numhighbits = sub i32 32, %numlowbits
+  %highbitscleared = shl i32 %val, %numhighbits
+  %masked = lshr i32 %highbitscleared, %numhighbits
+  ret i32 %masked
+}
+
+define i32 @bzhi32_d0_5bits(i32 %val, i32 %numlowbits) nounwind {
+; SI-LABEL: bzhi32_d0_5bits:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_and_b32_e32 v1, 31, v1
+; SI-NEXT:    v_sub_i32_e32 v1, vcc, 32, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v0, v1, v0
+; SI-NEXT:    v_lshrrev_b32_e32 v0, v1, v0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: bzhi32_d0_5bits:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_and_b32_e32 v1, 31, v1
+; VI-NEXT:    v_sub_u32_e32 v1, vcc, 32, v1
+; VI-NEXT:    v_lshlrev_b32_e32 v0, v1, v0
+; VI-NEXT:    v_lshrrev_b32_e32 v0, v1, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %numlow5bits = and i32 %numlowbits, 31
+  %numhighbits = sub i32 32, %numlow5bits
   %highbitscleared = shl i32 %val, %numhighbits
   %masked = lshr i32 %highbitscleared, %numhighbits
   ret i32 %masked

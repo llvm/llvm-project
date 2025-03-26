@@ -1,11 +1,9 @@
 // RUN: mlir-opt %s -generate-runtime-verification \
+// RUN:     -test-cf-assert \
 // RUN:     -expand-strided-metadata \
 // RUN:     -lower-affine \
-// RUN:     -finalize-memref-to-llvm \
-// RUN:     -test-cf-assert \
-// RUN:     -convert-func-to-llvm \
-// RUN:     -reconcile-unrealized-casts | \
-// RUN: mlir-cpu-runner -e main -entry-point-result=void \
+// RUN:     -convert-to-llvm | \
+// RUN: mlir-runner -e main -entry-point-result=void \
 // RUN:     -shared-libs=%mlir_runner_utils 2>&1 | \
 // RUN: FileCheck %s
 

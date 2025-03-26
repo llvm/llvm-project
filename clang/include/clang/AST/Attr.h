@@ -24,6 +24,7 @@
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -37,6 +38,7 @@ class ASTContext;
 class AttributeCommonInfo;
 class FunctionDecl;
 class OMPTraitInfo;
+class OpenACCClause;
 
 /// Attr - This represents one attribute.
 class Attr : public AttributeCommonInfo {
@@ -194,6 +196,23 @@ public:
   static bool classof(const Attr *A) {
     return A->getKind() >= attr::FirstInheritableParamAttr &&
            A->getKind() <= attr::LastInheritableParamAttr;
+  }
+};
+
+class InheritableParamOrStmtAttr : public InheritableParamAttr {
+protected:
+  InheritableParamOrStmtAttr(ASTContext &Context,
+                             const AttributeCommonInfo &CommonInfo,
+                             attr::Kind AK, bool IsLateParsed,
+                             bool InheritEvenIfAlreadyPresent)
+      : InheritableParamAttr(Context, CommonInfo, AK, IsLateParsed,
+                             InheritEvenIfAlreadyPresent) {}
+
+public:
+  // Implement isa/cast/dyncast/etc.
+  static bool classof(const Attr *A) {
+    return A->getKind() >= attr::FirstInheritableParamOrStmtAttr &&
+           A->getKind() <= attr::LastInheritableParamOrStmtAttr;
   }
 };
 

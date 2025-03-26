@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=mips -mcpu=mips2 | FileCheck %s -check-prefix=ALL
+; RUN: llc < %s -mtriple=mips -mcpu=mips2 | FileCheck %s -check-prefix=ALL
 
 ; This test triggered a bug in the vector splitting where the type legalizer
 ; attempted to extract the element with by storing the vector, then reading

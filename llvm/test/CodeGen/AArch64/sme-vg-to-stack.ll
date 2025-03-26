@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -mattr=+sme2 -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -mattr=+sme2 -frame-pointer=non-leaf -verify-machineinstrs < %s | FileCheck %s --check-prefix=FP-CHECK
+; RUN: llc -mtriple=aarch64-linux-gnu -aarch64-streaming-hazard-size=0 -mattr=+sve -mattr=+sme2 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -aarch64-streaming-hazard-size=0 -mattr=+sve -mattr=+sme2 -frame-pointer=non-leaf -verify-machineinstrs < %s | FileCheck %s --check-prefix=FP-CHECK
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme2 -frame-pointer=non-leaf -verify-machineinstrs < %s | FileCheck %s --check-prefix=NO-SVE-CHECK
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -mattr=+sme2 -verify-machineinstrs -enable-machine-outliner < %s | FileCheck %s --check-prefix=OUTLINER-CHECK
+; RUN: llc -mtriple=aarch64-linux-gnu -aarch64-streaming-hazard-size=0 -mattr=+sve -mattr=+sme2 -verify-machineinstrs -enable-machine-outliner < %s | FileCheck %s --check-prefix=OUTLINER-CHECK
 
 declare void @callee();
 declare void @fixed_callee(<4 x i32>);
@@ -1065,6 +1065,44 @@ define void @streaming_compatible_no_sve(i32 noundef %x) #4 {
   call void @streaming_callee_with_arg(i32 %x)
   ret void
 }
+
+; The algorithm that fixes up the offsets of the callee-save/restore
+; instructions must jump over the instructions that instantiate the current
+; 'VG' value. We must make sure that it doesn't consider any RDSVL in
+; user-code as if it is part of the frame-setup when doing so.
+define void @test_rdsvl_right_after_prologue(i64 %x0) nounwind {
+; NO-SVE-CHECK-LABEL: test_rdsvl_right_after_prologue:
+; NO-SVE-CHECK:     // %bb.0:
+; NO-SVE-CHECK-NEXT: stp     d15, d14, [sp, #-96]!           // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT: stp     d13, d12, [sp, #16]             // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT: mov     x9, x0
+; NO-SVE-CHECK-NEXT: stp     d11, d10, [sp, #32]             // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT: stp     d9, d8, [sp, #48]               // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT: stp     x29, x30, [sp, #64]             // 16-byte Folded Spill
+; NO-SVE-CHECK-NEXT: bl      __arm_get_current_vg
+; NO-SVE-CHECK-NEXT: str     x0, [sp, #80]                   // 8-byte Folded Spill
+; NO-SVE-CHECK-NEXT: mov     x0, x9
+; NO-SVE-CHECK-NEXT: rdsvl   x8, #1
+; NO-SVE-CHECK-NEXT: add     x29, sp, #64
+; NO-SVE-CHECK-NEXT: lsr     x8, x8, #3
+; NO-SVE-CHECK-NEXT: mov     x1, x0
+; NO-SVE-CHECK-NEXT: smstart sm
+; NO-SVE-CHECK-NEXT: mov     x0, x8
+; NO-SVE-CHECK-NEXT: bl      bar
+; NO-SVE-CHECK-NEXT: smstop  sm
+; NO-SVE-CHECK-NEXT: ldp     x29, x30, [sp, #64]             // 16-byte Folded Reload
+; NO-SVE-CHECK-NEXT: ldp     d9, d8, [sp, #48]               // 16-byte Folded Reload
+; NO-SVE-CHECK-NEXT: ldp     d11, d10, [sp, #32]             // 16-byte Folded Reload
+; NO-SVE-CHECK-NEXT: ldp     d13, d12, [sp, #16]             // 16-byte Folded Reload
+; NO-SVE-CHECK-NEXT: ldp     d15, d14, [sp], #96             // 16-byte Folded Reload
+; NO-SVE-CHECK-NEXT: ret
+  %some_alloc = alloca i64, align 8
+  %rdsvl = tail call i64 @llvm.aarch64.sme.cntsd()
+  call void @bar(i64 %rdsvl, i64 %x0) "aarch64_pstate_sm_enabled"
+  ret void
+}
+
+declare void @bar(i64, i64)
 
 ; Ensure we still emit async unwind information with -fno-asynchronous-unwind-tables
 ; if the function contains a streaming-mode change.

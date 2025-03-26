@@ -42,7 +42,7 @@ define i32 @test_s_wqm_constant_undef_i32() {
 ; GFX11-NEXT:    s_wqm_b32 s0, s0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %br = call i32 @llvm.amdgcn.s.wqm.i32(i32 undef)
+  %br = call i32 @llvm.amdgcn.s.wqm.i32(i32 poison)
   ret i32 %br
 }
 
@@ -64,8 +64,6 @@ define amdgpu_cs void @test_s_wqm_sgpr_i32(i32 inreg %mask, ptr addrspace(1) %ou
 ; GFX11-NEXT:    s_wqm_b32 s0, s0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %br = call i32 @llvm.amdgcn.s.wqm.i32(i32 %mask)
@@ -145,8 +143,6 @@ define amdgpu_cs void @test_s_wqm_sgpr_i64(i64 inreg %mask, ptr addrspace(1) %ou
 ; GFX11-NEXT:    s_wqm_b64 s[0:1], s[0:1]
 ; GFX11-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %br = call i64 @llvm.amdgcn.s.wqm.i64(i64 %mask)

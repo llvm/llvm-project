@@ -20,8 +20,8 @@
 #include "min_allocator.h"
 
 TEST_CONSTEXPR_CXX20 bool test() {
-  test_hash_enabled_for_type<std::vector<bool> >();
-  test_hash_enabled_for_type<std::vector<bool, min_allocator<bool>>>();
+  test_hash_enabled<std::vector<bool> >();
+  test_hash_enabled<std::vector<bool, min_allocator<bool>>>();
 
   return true;
 }
@@ -30,7 +30,7 @@ int main(int, char**) {
   test_library_hash_specializations_available();
   test();
 #if TEST_STD_VER > 17
-    static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

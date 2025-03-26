@@ -40,7 +40,7 @@ class AMDGPUInst <dag outs, dag ins, string asm = "",
   // instructions to not match without killing the whole decode process. It is
   // mainly used for ARM, but Tablegen expects this field to exist or it fails
   // to build the decode table.
-  field bits<96> SoftFail = 0;
+  field bits<128> SoftFail = 0; // FIXME: If this is smaller than largest instruction, DecodeEmitter crashes
 
   let DecoderNamespace = Namespace;
 
@@ -504,23 +504,36 @@ def zextloadi16_#as : PatFrag<(ops node:$ptr), (zextloadi16 node:$ptr)> {
 
 def atomic_load_8_#as : PatFrag<(ops node:$ptr), (atomic_load_8 node:$ptr)> {
   let IsAtomic = 1;
-  let MemoryVT = i8;
 }
 
 def atomic_load_16_#as : PatFrag<(ops node:$ptr), (atomic_load_16 node:$ptr)> {
   let IsAtomic = 1;
-  let MemoryVT = i16;
 }
 
 def atomic_load_32_#as : PatFrag<(ops node:$ptr), (atomic_load_32 node:$ptr)> {
   let IsAtomic = 1;
-  let MemoryVT = i32;
 }
 
 def atomic_load_64_#as : PatFrag<(ops node:$ptr), (atomic_load_64 node:$ptr)> {
   let IsAtomic = 1;
-  let MemoryVT = i64;
 }
+
+def atomic_load_zext_8_#as : PatFrag<(ops node:$ptr), (atomic_load_zext_8 node:$ptr)> {
+  let IsAtomic = 1;
+}
+
+def atomic_load_sext_8_#as : PatFrag<(ops node:$ptr), (atomic_load_sext_8 node:$ptr)> {
+  let IsAtomic = 1;
+}
+
+def atomic_load_zext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_zext_16 node:$ptr)> {
+  let IsAtomic = 1;
+}
+
+def atomic_load_sext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_sext_16 node:$ptr)> {
+  let IsAtomic = 1;
+}
+
 } // End let AddressSpaces
 } // End foreach as
 
@@ -618,10 +631,6 @@ multiclass local_addr_space_atomic_op {
     }
 }
 
-defm int_amdgcn_flat_atomic_fmin : noret_op;
-defm int_amdgcn_flat_atomic_fmax : noret_op;
-defm int_amdgcn_global_atomic_fmin : noret_op;
-defm int_amdgcn_global_atomic_fmax : noret_op;
 defm int_amdgcn_global_atomic_csub : noret_op;
 defm int_amdgcn_global_atomic_ordered_add_b64 : noret_op;
 defm int_amdgcn_flat_atomic_fmin_num : noret_op;
