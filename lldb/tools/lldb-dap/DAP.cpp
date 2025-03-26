@@ -842,25 +842,18 @@ lldb::SBError DAP::WaitForProcessToStop(uint32_t seconds) {
 }
 
 std::optional<lldb::SBLineEntry> Gotos::GetLineEntry(uint64_t id) const {
-  const auto iter = line_entries.find(id);
-  if (iter != line_entries.end())
-    return iter->second;
+  if (id > line_entries.size())
+    return std::nullopt;
 
-  return std::nullopt;
+  return line_entries[id - 1]; // id starts at one.
 }
 
 uint64_t Gotos::InsertLineEntry(lldb::SBLineEntry line_entry) {
-  const auto spec_id = this->NewSpecID();
-  line_entries.insert(std::make_pair(spec_id, line_entry));
-  return spec_id;
+  line_entries.emplace_back(line_entry);
+  return line_entries.size();
 }
 
-void Gotos::Clear() {
-  new_id = 0;
-  line_entries.clear();
-}
-
-uint64_t Gotos::NewSpecID() { return new_id++; }
+void Gotos::Clear() { line_entries.clear(); }
 
 void Variables::Clear() {
   locals.Clear();

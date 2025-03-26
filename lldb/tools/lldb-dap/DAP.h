@@ -92,10 +92,7 @@ public:
   void Clear();
 
 private:
-  uint64_t NewSpecID();
-
-  llvm::DenseMap<uint64_t, lldb::SBLineEntry> line_entries;
-  uint64_t new_id = 0;
+  std::vector<lldb::SBLineEntry> line_entries;
 };
 
 struct Variables {
