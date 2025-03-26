@@ -690,6 +690,14 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
       assert(NVT.getSizeInBits() == VT.getSizeInBits() &&
              "Can only promote loads to same size type");
 
+      // If the range metadata type does not match the legalized memory
+      // operation type, remove the range metadata.
+      if (const MDNode *MD = LD->getRanges()) {
+        ConstantInt *Lower = mdconst::extract<ConstantInt>(MD->getOperand(0));
+        if (Lower->getBitWidth() != NVT.getScalarSizeInBits() ||
+            !NVT.isInteger())
+          LD->getMemOperand()->clearRanges();
+      }
       SDValue Res = DAG.getLoad(NVT, dl, Chain, Ptr, LD->getMemOperand());
       RVal = DAG.getNode(ISD::BITCAST, dl, VT, Res);
       RChain = Res.getValue(1);
@@ -5113,7 +5121,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                           DAG.getConstant(NVT.getSizeInBits() -
                                           OVT.getSizeInBits(), dl, NVT));
     }
-    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1));
+    Results.push_back(
+        DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1, SDNodeFlags::NoWrap));
     break;
   }
   case ISD::CTLZ_ZERO_UNDEF: {

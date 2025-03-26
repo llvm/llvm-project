@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #define _CLC_VLOAD_DECL(SUFFIX, MEM_TYPE, VEC_TYPE, WIDTH, ADDR_SPACE) \
   _CLC_OVERLOAD _CLC_DECL VEC_TYPE vload##SUFFIX##WIDTH(size_t offset, const ADDR_SPACE MEM_TYPE *x);
 

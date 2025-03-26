@@ -238,7 +238,7 @@ void MCStreamer::emitCFIMTETaggedFrame() {
 void MCStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                        unsigned Column, unsigned Flags,
                                        unsigned Isa, unsigned Discriminator,
-                                       StringRef FileName) {
+                                       StringRef FileName, StringRef Comment) {
   getContext().setCurrentDwarfLoc(FileNo, Line, Column, Flags, Isa,
                                   Discriminator);
 }

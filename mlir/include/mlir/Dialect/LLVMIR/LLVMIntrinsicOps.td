@@ -86,7 +86,7 @@ class LLVM_TernarySameArgsIntrOpF<string func, list<Trait> traits = []> :
 
 class LLVM_CountZerosIntrOp<string func, list<Trait> traits = []> :
     LLVM_OneResultIntrOp<func, [], [0],
-           !listconcat([Pure], traits),
+           !listconcat([Pure, SameOperandsAndResultType], traits),
             /*requiresFastmath=*/0,
             /*immArgPositions=*/[1], /*immArgAttrNames=*/["is_zero_poison"]> {
   let arguments = (ins LLVM_ScalarOrVectorOf<AnySignlessInteger>:$in,
@@ -109,6 +109,7 @@ def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure],
 def LLVM_CopySignOp : LLVM_BinarySameArgsIntrOpF<"copysign">;
 def LLVM_ExpOp : LLVM_UnaryIntrOpF<"exp">;
 def LLVM_Exp2Op : LLVM_UnaryIntrOpF<"exp2">;
+def LLVM_Exp10Op : LLVM_UnaryIntrOpF<"exp10">;
 def LLVM_FAbsOp : LLVM_UnaryIntrOpF<"fabs">;
 def LLVM_FCeilOp : LLVM_UnaryIntrOpF<"ceil">;
 def LLVM_FFloorOp : LLVM_UnaryIntrOpF<"floor">;
@@ -464,6 +465,15 @@ def LLVM_ConstrainedFPTruncIntr
         /*hasRoundingMode=*/1> {
   let assemblyFormat = [{
     $arg_0 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0) `to` type(results)
+  }];
+}
+
+def LLVM_ConstrainedFPExtIntr
+    : LLVM_ConstrainedIntr<"fpext", /*numArgs=*/1,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[0],
+        /*hasRoundingMode=*/0> {
+  let assemblyFormat = [{
+    $arg_0 $fpExceptionBehavior attr-dict `:` type($arg_0) `to` type(results)
   }];
 }
 

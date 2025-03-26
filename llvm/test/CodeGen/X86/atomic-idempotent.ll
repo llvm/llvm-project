@@ -14,7 +14,7 @@
 define i8 @add8(ptr %p) #0 {
 ; X64-LABEL: add8:
 ; X64:       # %bb.0:
-; X64-NEXT:    mfence
+; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl (%rdi), %eax
 ; X64-NEXT:    retq
 ;
@@ -47,7 +47,7 @@ define i8 @add8(ptr %p) #0 {
 define i16 @or16(ptr %p) #0 {
 ; X64-LABEL: or16:
 ; X64:       # %bb.0:
-; X64-NEXT:    mfence
+; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzwl (%rdi), %eax
 ; X64-NEXT:    retq
 ;
@@ -80,7 +80,7 @@ define i16 @or16(ptr %p) #0 {
 define i32 @xor32(ptr %p) #0 {
 ; X64-LABEL: xor32:
 ; X64:       # %bb.0:
-; X64-NEXT:    mfence
+; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    retq
 ;
@@ -113,7 +113,7 @@ define i32 @xor32(ptr %p) #0 {
 define i64 @sub64(ptr %p) #0 {
 ; X64-LABEL: sub64:
 ; X64:       # %bb.0:
-; X64-NEXT:    mfence
+; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movq (%rdi), %rax
 ; X64-NEXT:    retq
 ;
@@ -265,7 +265,7 @@ define i128 @or128(ptr %p) #0 {
 define i32 @and32 (ptr %p) #0 {
 ; X64-LABEL: and32:
 ; X64:       # %bb.0:
-; X64-NEXT:    mfence
+; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    retq
 ;

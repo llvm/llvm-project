@@ -553,6 +553,10 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"getgid", {}, DefaultInt},
     {"getpid", {}, DefaultInt},
     {"getuid", {}, DefaultInt},
+    {"hostnm",
+        {{"c", DefaultChar, Rank::scalar, Optionality::required,
+            common::Intent::Out}},
+        TypePattern{IntType, KindCode::greaterOrEqualToKind, 4}},
     {"huge",
         {{"x", SameIntUnsignedOrReal, Rank::anyOrAssumedRank,
             Optionality::required, common::Intent::In,
@@ -1540,6 +1544,12 @@ static const IntrinsicInterface intrinsicSubroutine[]{
                 common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"getcwd",
+        {{"c", DefaultChar, Rank::scalar, Optionality::required,
+             common::Intent::Out},
+            {"status", TypePattern{IntType, KindCode::greaterOrEqualToKind, 4},
+                Rank::scalar, Optionality::optional, common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"hostnm",
         {{"c", DefaultChar, Rank::scalar, Optionality::required,
              common::Intent::Out},
             {"status", TypePattern{IntType, KindCode::greaterOrEqualToKind, 4},
@@ -2765,7 +2775,7 @@ bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
   // Collection for some intrinsics with function and subroutine form,
   // in order to pass the semantic check.
   static const std::string dualIntrinsic[]{{"chdir"s}, {"etime"s}, {"getcwd"s},
-      {"rename"s}, {"second"s}, {"system"s}};
+      {"hostnm"s}, {"rename"s}, {"second"s}, {"system"s}};
 
   return llvm::is_contained(dualIntrinsic, name);
 }

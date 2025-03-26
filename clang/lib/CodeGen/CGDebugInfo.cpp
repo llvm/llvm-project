@@ -1791,7 +1791,7 @@ CGDebugInfo::createInlinedTrapSubprogram(StringRef FuncName,
   // We are caching the subprogram because we don't want to duplicate
   // subprograms with the same message. Note that `SPFlagDefinition` prevents
   // subprograms from being uniqued.
-  llvm::DISubprogram *&SP = InlinedTrapFuncMap[FuncName];
+  llvm::DISubprogram *&SP = InlinedSubprogramMap[FuncName];
 
   if (!SP) {
     llvm::DISubroutineType *DIFnTy = DBuilder.createSubroutineType(nullptr);
@@ -2119,8 +2119,7 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
       // Emit MS ABI vftable information.  There is only one entry for the
       // deleting dtor.
       const auto *DD = dyn_cast<CXXDestructorDecl>(Method);
-      GlobalDecl GD =
-          DD ? GlobalDecl(DD, Dtor_VectorDeleting) : GlobalDecl(Method);
+      GlobalDecl GD = DD ? GlobalDecl(DD, Dtor_Deleting) : GlobalDecl(Method);
       MethodVFTableLocation ML =
           CGM.getMicrosoftVTableContext().getMethodVFTableLocation(GD);
       VIndex = ML.Index;
@@ -3308,7 +3307,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
 
 llvm::DIType *CGDebugInfo::CreateType(const VectorType *Ty,
                                       llvm::DIFile *Unit) {
-  if (Ty->isExtVectorBoolType()) {
+  if (Ty->isPackedVectorBoolType(CGM.getContext())) {
     // Boolean ext_vector_type(N) are special because their real element type
     // (bits of bit size) is not their Clang element type (_Bool of size byte).
     // For now, we pretend the boolean vector were actually a vector of bytes
@@ -3491,7 +3490,8 @@ llvm::DIType *CGDebugInfo::CreateType(const MemberPointerType *Ty,
     }
   }
 
-  llvm::DIType *ClassType = getOrCreateType(QualType(Ty->getClass(), 0), U);
+  llvm::DIType *ClassType = getOrCreateType(
+      QualType(Ty->getMostRecentCXXRecordDecl()->getTypeForDecl(), 0), U);
   if (Ty->isMemberDataPointerType())
     return DBuilder.createMemberPointerType(
         getOrCreateType(Ty->getPointeeType(), U), ClassType, Size, /*Align=*/0,
