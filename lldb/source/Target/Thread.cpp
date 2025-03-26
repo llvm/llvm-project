@@ -1356,13 +1356,14 @@ ThreadPlanSP Thread::QueueThreadPlanForStepOut(
 ThreadPlanSP Thread::QueueThreadPlanForStepOutNoShouldStop(
     bool abort_other_plans, SymbolContext *addr_context, bool first_insn,
     bool stop_other_threads, Vote report_stop_vote, Vote report_run_vote,
-    uint32_t frame_idx, Status &status, bool continue_to_next_branch) {
+    uint32_t frame_idx, Status &status, bool continue_to_next_branch,
+    const Flags *flags) {
   const bool calculate_return_value =
       false; // No need to calculate the return value here.
   ThreadPlanSP thread_plan_sp(new ThreadPlanStepOut(
       *this, addr_context, first_insn, stop_other_threads, report_stop_vote,
       report_run_vote, frame_idx, eLazyBoolNo, continue_to_next_branch,
-      calculate_return_value));
+      calculate_return_value, flags));
 
   ThreadPlanStepOut *new_plan =
       static_cast<ThreadPlanStepOut *>(thread_plan_sp.get());
