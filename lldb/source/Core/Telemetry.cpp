@@ -63,6 +63,7 @@ void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {
 void ClientInfo::serialize(Serializer &serializer) const {
   LLDBBaseTelemetryInfo::serialize(serializer);
   serializer.write("client_data", client_data);
+  serializer.write("client_name", client_name);
   if (error_msg.has_value())
     serializer.write("error_msg", error_msg.value());
 }
@@ -140,6 +141,13 @@ void TelemetryManager::DispatchClientTelemetry(
   }
 
   auto *dict = entry.GetObjectSP()->GetAsDictionary();
+
+  llvm::StringRef client_name;
+  if (dict->GetValueForKeyAsString("client_name", client_name))
+    client_info.client_name = client_name.str();
+  else
+    LLDB_LOG(GetLog(LLDBLog::Object),
+             "Cannot determine client_name from client-telemetry entry");
 
   llvm::StringRef client_data;
   if (dict->GetValueForKeyAsString("client_data", client_data))

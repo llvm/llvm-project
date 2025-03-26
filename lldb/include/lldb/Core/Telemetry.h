@@ -98,6 +98,7 @@ struct LLDBBaseTelemetryInfo : public llvm::telemetry::TelemetryInfo {
 };
 
 struct ClientInfo : public LLDBBaseTelemetryInfo {
+  std::string client_name;
   std::string client_data;
   std::optional<std::string> error_msg;
 
