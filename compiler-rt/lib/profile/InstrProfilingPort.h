@@ -45,7 +45,6 @@
 #define COMPILER_RT_SEG "__DATA,"
 #else
 #define COMPILER_RT_SEG ""
-#define COMPILER_RT_GPU_ENTRYPOINT
 #endif
 
 #ifdef _MSC_VER

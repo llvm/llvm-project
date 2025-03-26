@@ -1273,7 +1273,7 @@ COMPILER_RT_VISIBILITY int __llvm_profile_set_file_object(FILE *File,
   return 0;
 }
 
-#ifdef COMPILER_RT_GPU_ENTRYPOINT
+#ifndef __APPLE__
 int __llvm_write_custom_profile(const char *Target,
                                 const __llvm_profile_data *DataBegin,
                                 const __llvm_profile_data *DataEnd,
