@@ -15,7 +15,6 @@
 #include <__config>
 #include <__iterator/segmented_iterator.h>
 #include <__type_traits/enable_if.h>
-#include <__utility/in_place.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -53,7 +52,7 @@ template <class,
           class _SegmentedIterator,
           class _Function,
           __enable_if_t<__is_segmented_iterator<_SegmentedIterator>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI constexpr _Function
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Function
 __for_each(_SegmentedIterator __first, _SegmentedIterator __last, _Function& __func) {
   std::__for_each_segment(__first, __last, _ForeachSegment<_SegmentedIterator, _Function>(__func));
   return std::move(__func);
