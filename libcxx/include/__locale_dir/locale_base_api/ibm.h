@@ -28,13 +28,13 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 #ifdef __MVS__
-#define _LIBCPP_CLOC std::__c_locale()
-#ifndef _LIBCPP_LC_GLOBAL_LOCALE
-#define _LIBCPP_LC_GLOBAL_LOCALE ((locale_t) -1)
-#endif
+#  define _LIBCPP_CLOC std::__c_locale()
+#  ifndef _LIBCPP_LC_GLOBAL_LOCALE
+#    define _LIBCPP_LC_GLOBAL_LOCALE ((locale_t) -1)
+#  endif
 #else
 extern locale_t __cloc();
-#define _LIBCPP_CLOC std::__cloc()
+#  define _LIBCPP_CLOC std::__cloc()
 #endif
 _LIBCPP_END_NAMESPACE_STD
 
@@ -53,9 +53,7 @@ struct __setAndRestore {
     }
   }
 
-  ~__setAndRestore() {
-    std::uselocale(__stored);
-  }
+  ~__setAndRestore() { std::uselocale(__stored); }
 
 private:
   locale_t __stored = (locale_t)0;
@@ -101,11 +99,11 @@ _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 2, 0) int vasprintf(char** strp, const char
   va_list ap_copy;
   // va_copy may not be provided by the C library in C++03 mode.
 #if defined(_LIBCPP_CXX03_LANG) && __has_builtin(__builtin_va_copy)
-#if defined(__MVS__) && !defined(_VARARG_EXT_)
+#  if defined(__MVS__) && !defined(_VARARG_EXT_)
   __builtin_zos_va_copy(ap_copy, ap);
-#else
+#  else
   __builtin_va_copy(ap_copy, ap);
-#endif
+#  endif
 #else
   va_copy(ap_copy, ap);
 #endif
