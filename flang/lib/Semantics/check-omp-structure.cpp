@@ -3518,7 +3518,10 @@ static bool IsReductionAllowedForType(
       case parser::DefinedOperator::IntrinsicOperator::OR:
       case parser::DefinedOperator::IntrinsicOperator::EQV:
       case parser::DefinedOperator::IntrinsicOperator::NEQV:
-        return isLogical(type);
+        if (isLogical(type)) {
+          return true;
+        }
+        break;
 
       // Reduction identifier is not in OMP5.2 Table 5.2
       default:
@@ -3535,7 +3538,7 @@ static bool IsReductionAllowedForType(
       }
       return false;
     }
-    assert(0 && "Intrinsic Operator not found - parsing gone wrong?");
+    DIE("Intrinsic Operator not found - parsing gone wrong?");
     return false; // Reject everything else.
   }};
 
@@ -3573,7 +3576,7 @@ static bool IsReductionAllowedForType(
 
       // We also need to check for mangled names (max, min, iand, ieor and ior)
       // and then check if the type is there.
-      parser::CharBlock mangledName = MangleSpecialFunctions(name->source);
+      parser::CharBlock mangledName{MangleSpecialFunctions(name->source)};
       if (const auto &symbol{scope.FindSymbol(mangledName)}) {
         if (const auto *reductionDetails{
                 symbol->detailsIf<UserReductionDetails>()}) {
@@ -3583,7 +3586,7 @@ static bool IsReductionAllowedForType(
       // Everything else is "not matching type".
       return false;
     }
-    assert(0 && "name and name->symbol should be set here...");
+    DIE("name and name->symbol should be set here...");
     return false;
   }};
 
