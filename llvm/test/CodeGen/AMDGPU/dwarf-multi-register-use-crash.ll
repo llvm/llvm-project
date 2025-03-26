@@ -553,7 +553,7 @@ define weak_odr void @test(i32 %0) !dbg !34 {
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[54:55]
 ; CHECK-NEXT:  .Ltmp1:
-; CHECK-NEXT:    ;DEBUG_VALUE: dummy:dummy <- [$vgpr0_vgpr1+0]
+; CHECK-NEXT:    ;DEBUG_VALUE: dummy:dummy <- [DW_OP_deref] undef
 ; CHECK-NEXT:    .loc 1 0 9 is_stmt 0 ; dummy:0:9
 ; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0

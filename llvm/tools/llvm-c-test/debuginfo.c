@@ -68,9 +68,9 @@ int llvm_test_dibuilder(void) {
   LLVMMetadataRef ClassTy = declare_objc_class(DIB, File);
   LLVMMetadataRef GlobalClassValueExpr =
       LLVMDIBuilderCreateConstantValueExpression(DIB, 0);
-  LLVMDIBuilderCreateGlobalVariableExpression(
-      DIB, Module, "globalClass", 11, "", 0, File, 1, ClassTy, true,
-      GlobalClassValueExpr, NULL, 0);
+  LLVMDIBuilderCreateGlobalVariableExpression(DIB, Module, "globalClass", 11,
+                                              "", 0, File, 1, ClassTy, true,
+                                              GlobalClassValueExpr, NULL, 0, 0);
 
   LLVMMetadataRef Int64Ty =
       LLVMDIBuilderCreateBasicType(DIB, "Int64", 5, 64, 0, LLVMDIFlagZero);
@@ -79,9 +79,9 @@ int llvm_test_dibuilder(void) {
 
   LLVMMetadataRef GlobalVarValueExpr =
       LLVMDIBuilderCreateConstantValueExpression(DIB, 0);
-  LLVMDIBuilderCreateGlobalVariableExpression(
-      DIB, Module, "global", 6, "", 0, File, 1, Int64TypeDef, true,
-      GlobalVarValueExpr, NULL, 0);
+  LLVMDIBuilderCreateGlobalVariableExpression(DIB, Module, "global", 6, "", 0,
+                                              File, 1, Int64TypeDef, true,
+                                              GlobalVarValueExpr, NULL, 0, 0);
 
   LLVMMetadataRef NameSpace =
       LLVMDIBuilderCreateNameSpace(DIB, Module, "NameSpace", 9, false);
@@ -93,7 +93,7 @@ int llvm_test_dibuilder(void) {
     LLVMDWARFSourceLanguageC, NULL, "MyStruct", 8);
 
   LLVMMetadataRef StructDbgPtrTy =
-    LLVMDIBuilderCreatePointerType(DIB, StructDbgTy, 192, 0, 0, "", 0);
+      LLVMDIBuilderCreatePointerType(DIB, StructDbgTy, 192, 0, 0, 0, "", 0);
 
   LLVMAddNamedMetadataOperand(M, "FooType",
     LLVMMetadataAsValue(LLVMGetModuleContext(M), StructDbgPtrTy));
@@ -175,9 +175,8 @@ int llvm_test_dibuilder(void) {
   LLVMMetadataRef FooVarsLocation =
     LLVMDIBuilderCreateDebugLocation(LLVMGetGlobalContext(), 43, 0,
                                      FunctionMetadata, NULL);
-  LLVMMetadataRef FooVar1 =
-    LLVMDIBuilderCreateAutoVariable(DIB, FooLexicalBlock, "d", 1, File,
-                                    43, Int64Ty, true, 0, 0);
+  LLVMMetadataRef FooVar1 = LLVMDIBuilderCreateAutoVariable(
+      DIB, FooLexicalBlock, "d", 1, File, 43, Int64Ty, true, 0, 0, 0);
   LLVMValueRef FooVal1 = LLVMConstInt(LLVMInt64Type(), 0, false);
   LLVMMetadataRef FooVarValueExpr1 =
       LLVMDIBuilderCreateConstantValueExpression(DIB, 0);
@@ -186,7 +185,7 @@ int llvm_test_dibuilder(void) {
       DIB, FooVal1, FooVar1, FooVarValueExpr1, FooVarsLocation, FooVarBlock);
 
   LLVMMetadataRef FooVar2 = LLVMDIBuilderCreateAutoVariable(
-      DIB, FooLexicalBlock, "e", 1, File, 44, Int64Ty, true, 0, 0);
+      DIB, FooLexicalBlock, "e", 1, File, 44, Int64Ty, true, 0, 0, 0);
   LLVMValueRef FooVal2 = LLVMConstInt(LLVMInt64Type(), 1, false);
   LLVMMetadataRef FooVarValueExpr2 =
       LLVMDIBuilderCreateConstantValueExpression(DIB, 1);

@@ -148,6 +148,7 @@ enum LocationAtom {
   DW_OP_LLVM_arg = 0x1005,               ///< Only used in LLVM metadata.
   DW_OP_LLVM_extract_bits_sext = 0x1006, ///< Only used in LLVM metadata.
   DW_OP_LLVM_extract_bits_zext = 0x1007, ///< Only used in LLVM metadata.
+  DW_OP_LLVM_poisoned = 0x1008,          ///< Only used in LLVM metadata.
 };
 
 enum LlvmUserLocationAtom {
