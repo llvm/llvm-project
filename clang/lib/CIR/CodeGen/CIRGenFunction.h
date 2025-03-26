@@ -434,7 +434,7 @@ public:
   mlir::LogicalResult emitSimpleStmt(const clang::Stmt *s,
                                      bool useCurrentScope);
 
-  mlir::LogicalResult emitForStmt(const clang::ForStmt &S);
+  mlir::LogicalResult emitForStmt(const clang::ForStmt &s);
 
   void emitCompoundStmt(const clang::CompoundStmt &s);
 
@@ -483,13 +483,13 @@ public:
   /// Store the specified rvalue into the specified
   /// lvalue, where both are guaranteed to the have the same type, and that type
   /// is 'Ty'.
-  void emitStoreThroughLValue(RValue Src, LValue Dst, bool isInit = false);
+  void emitStoreThroughLValue(RValue src, LValue dst, bool isInit = false);
 
   /// Given a value and its clang type, returns the value casted to its memory
   /// representation.
   /// Note: CIR defers most of the special casting to the final lowering passes
   /// to conserve the high level information.
-  mlir::Value emitToMemory(mlir::Value Value, clang::QualType Ty);
+  mlir::Value emitToMemory(mlir::Value value, clang::QualType ty);
 
   LValue emitUnaryOpLValue(const clang::UnaryOperator *e);
 
