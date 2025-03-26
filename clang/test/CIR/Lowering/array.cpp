@@ -1,16 +1,16 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - 2>&1 | FileCheck %s
 
 int a[10];
-// CHECK: @a = external dso_local global [10 x i32]
+// CHECK: @a = dso_local global [10 x i32] zeroinitializer
 
 int aa[10][5];
-// CHECK: @aa = external dso_local global [10 x [5 x i32]]
+// CHECK: @aa = dso_local global [10 x [5 x i32]] zeroinitializer
 
 extern int b[10];
-// CHECK: @b = external dso_local global [10 x i32]
+// CHECK: @b = dso_local global [10 x i32] zeroinitializer
 
 extern int bb[10][5];
-// CHECK: @bb = external dso_local global [10 x [5 x i32]]
+// CHECK: @bb = dso_local global [10 x [5 x i32]] zeroinitializer
 
 int c[10] = {};
 // CHECK: @c = dso_local global [10 x i32] zeroinitializer
