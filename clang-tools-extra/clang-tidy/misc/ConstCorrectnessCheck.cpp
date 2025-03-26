@@ -163,7 +163,6 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
 
   VariableCategory VC = VariableCategory::Value;
   const QualType VT = Variable->getType();
-  VT->dump();
   if (VT->isReferenceType()) {
     VC = VariableCategory::Reference;
   } else if (VT->isPointerType()) {
