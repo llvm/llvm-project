@@ -3083,6 +3083,9 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
       static_cast<unsigned char>(DeductionCandidate::Normal);
   FunctionDeclBits.HasODRHash = false;
   FunctionDeclBits.FriendConstraintRefersToEnclosingTemplate = false;
+  FunctionDeclBits.IsDestroyingOperatorDelete = false;
+  FunctionDeclBits.IsTypeAwareOperatorNewOrDelete = false;
+
   if (TrailingRequiresClause)
     setTrailingRequiresClause(TrailingRequiresClause);
 }
@@ -3368,10 +3371,11 @@ bool FunctionDecl::isReservedGlobalPlacementOperator() const {
   if (!getDeclContext()->getRedeclContext()->isTranslationUnit())
     return false;
 
+  if (isTypeAwareOperatorNewOrDelete())
+    return false;
+
   const auto *proto = getType()->castAs<FunctionProtoType>();
   if (proto->getNumParams() != 2 || proto->isVariadic())
-    return false;
-  if (proto->getParamType(0)->isTypeIdentitySpecialization())
     return false;
 
   const ASTContext &Context =
@@ -3507,34 +3511,6 @@ bool FunctionDecl::isInlineBuiltinDeclaration() const {
     return true;
   }
   llvm_unreachable("Unknown GVALinkage");
-}
-
-bool FunctionDecl::isDestroyingOperatorDelete() const {
-  // C++ P0722:
-  //   Within a class C, a single object deallocation function with signature
-  //     (T, std::destroying_delete_t, <more params>)
-  //   is a destroying operator delete.
-  if (!isa<CXXMethodDecl>(this) || getOverloadedOperator() != OO_Delete ||
-      getNumParams() < 2)
-    return false;
-
-  if (isTypeAwareOperatorNewOrDelete())
-    return false;
-
-  return getParamDecl(1)->getType()->isDestroyingDeleteT();
-}
-
-bool FunctionDecl::isTypeAwareOperatorNewOrDelete() const {
-  if (getDeclName().isOperatorNew()) {
-    if (getNumParams() < FunctionDecl::RequiredTypeAwareNewParameterCount)
-      return false;
-  } else if (getDeclName().isOperatorDelete()) {
-    if (getNumParams() < FunctionDecl::RequiredTypeAwareDeleteParameterCount)
-      return false;
-  } else
-    return false;
-
-  return getParamDecl(0)->getType()->isTypeIdentitySpecialization();
 }
 
 LanguageLinkage FunctionDecl::getLanguageLinkage() const {

@@ -1072,6 +1072,7 @@ public:
     UnderlyingValue |= Value << CurrentBitIndex;
     CurrentBitIndex += BitsWidth;
   }
+  uint32_t currentBitCount() const { return CurrentBitIndex; }
 
   operator uint32_t() { return UnderlyingValue; }
 

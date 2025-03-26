@@ -2875,7 +2875,7 @@ static bool resolveAllocationOverload(
     OverloadCandidateSet *AlignedCandidates, Expr *AlignArg, bool Diagnose) {
   Operator = nullptr;
   if (isTypeAwareAllocation(IAP.PassTypeIdentity)) {
-    assert(Args[0]->getType()->isTypeIdentitySpecialization());
+    assert(S.isStdTypeIdentity(Args[0]->getType(), nullptr));
     // The internal overload resolution work mutates the argument list
     // in accordance with the spec. We may want to change that in future,
     // but for now we deal with this by making a copy of the non-type-identity
@@ -2906,7 +2906,7 @@ static bool resolveAllocationOverload(
     IAP.PassAlignment = InitialAlignmentMode;
     Args = UntypedParameters;
   }
-  assert(!Args[0]->getType()->isTypeIdentitySpecialization());
+  assert(!S.isStdTypeIdentity(Args[0]->getType(), nullptr));
   return resolveAllocationOverloadInterior(
       S, R, Range, ResolveMode::Untyped, Args, IAP.PassAlignment, Operator,
       AlignedCandidates, AlignArg, Diagnose);

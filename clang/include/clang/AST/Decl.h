@@ -2560,7 +2560,12 @@ public:
   bool isInlineBuiltinDeclaration() const;
 
   /// Determine whether this is a destroying operator delete.
-  bool isDestroyingOperatorDelete() const;
+  bool isDestroyingOperatorDelete() const {
+    return FunctionDeclBits.IsDestroyingOperatorDelete;
+  }
+  void setIsDestroyingOperatorDelete(bool IsDestroyingDelete) {
+    FunctionDeclBits.IsDestroyingOperatorDelete = IsDestroyingDelete;
+  }
 
   /// Count of mandatory parameters for type aware operator new
   static constexpr unsigned RequiredTypeAwareNewParameterCount =
@@ -2572,7 +2577,12 @@ public:
       /* alignment */ 1;
 
   /// Determine whether this is a type aware operator new or delete.
-  bool isTypeAwareOperatorNewOrDelete() const;
+  bool isTypeAwareOperatorNewOrDelete() const {
+    return FunctionDeclBits.IsTypeAwareOperatorNewOrDelete;
+  }
+  void setIsTypeAwareOperatorNewOrDelete(bool IsTypeAwareOperator = true) {
+    FunctionDeclBits.IsTypeAwareOperatorNewOrDelete = IsTypeAwareOperator;
+  }
 
   /// Compute the language linkage.
   LanguageLinkage getLanguageLinkage() const;

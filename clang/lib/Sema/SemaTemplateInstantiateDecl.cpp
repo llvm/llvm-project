@@ -2733,6 +2733,9 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     LexicalDC = SemaRef.CurContext;
   }
 
+  Function->setIsDestroyingOperatorDelete(D->isDestroyingOperatorDelete());
+  Function->setIsTypeAwareOperatorNewOrDelete(
+      D->isTypeAwareOperatorNewOrDelete());
   Function->setLexicalDeclContext(LexicalDC);
 
   // Attach the parameters

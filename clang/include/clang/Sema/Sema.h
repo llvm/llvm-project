@@ -4913,6 +4913,8 @@ public:
   /// it is and Element is not NULL, assigns the element type to Element.
   bool isStdInitializerList(QualType Ty, QualType *Element);
 
+  bool isStdTypeIdentity(QualType Ty, QualType *TypeArgument);
+
   /// Looks for the std::initializer_list template and instantiates it
   /// with Element, or emits an error if it's not found.
   ///

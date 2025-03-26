@@ -4051,6 +4051,9 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   ToFunction->setDeletedAsWritten(D->isDeletedAsWritten());
   ToFunction->setFriendConstraintRefersToEnclosingTemplate(
       D->FriendConstraintRefersToEnclosingTemplate());
+  ToFunction->setIsDestroyingOperatorDelete(D->isDestroyingOperatorDelete());
+  ToFunction->setIsTypeAwareOperatorNewOrDelete(
+      D->isTypeAwareOperatorNewOrDelete());
   ToFunction->setRangeEnd(ToEndLoc);
   ToFunction->setDefaultLoc(ToDefaultLoc);
 

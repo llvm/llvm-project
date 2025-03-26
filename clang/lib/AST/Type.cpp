@@ -3150,14 +3150,6 @@ TemplateDecl *Type::getSpecializedTemplateDecl() const {
   return nullptr;
 }
 
-bool Type::isTypeIdentitySpecialization() const {
-  const TemplateDecl *STDecl = getSpecializedTemplateDecl();
-  if (!STDecl)
-    return false;
-  IdentifierInfo *II = STDecl->getIdentifier();
-  return STDecl->isInStdNamespace() && II->isStr("type_identity");
-}
-
 bool Type::isSpecifierType() const {
   // Note that this intentionally does not use the canonical type.
   switch (getTypeClass()) {

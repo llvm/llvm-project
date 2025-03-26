@@ -44,8 +44,6 @@ struct S4 {
 };
 
 struct S5 {
-  // expected-error@-1 {{declaration of type aware 'operator delete' in 'S5' must have matching type aware 'operator new'}}
-  // expected-note@#10 {{unmatched type aware 'operator delete' declared here}}
   template <typename T> void operator delete(std::type_identity<T>, T *, size_t, std::align_val_t); // #10
   // expected-error@#10 {{type aware 'operator delete' cannot take a dependent type as its second parameter}}
   // precxx26-warning@#10 {{type aware allocators are a C++2c extension}}
