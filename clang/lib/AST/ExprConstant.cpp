@@ -17442,7 +17442,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   }
   case Expr::UnaryExprOrTypeTraitExprClass: {
     const UnaryExprOrTypeTraitExpr *Exp = cast<UnaryExprOrTypeTraitExpr>(E);
-    if ((Exp->getKind() ==  UETT_SizeOf || Exp->getKind() == UETT_CountOf) &&
+    if ((Exp->getKind() == UETT_SizeOf || Exp->getKind() == UETT_CountOf) &&
         Exp->getTypeOfArgument()->isVariableArrayType())
       return ICEDiag(IK_NotICE, E->getBeginLoc());
     return NoDiag();
