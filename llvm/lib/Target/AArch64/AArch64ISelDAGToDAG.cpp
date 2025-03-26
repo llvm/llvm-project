@@ -507,6 +507,8 @@ private:
 
   bool SelectAllActivePredicate(SDValue N);
   bool SelectAnyPredicate(SDValue N);
+
+  bool SelectCmpBranchUImm6Operand(SDNode *P, SDValue N, SDValue &Imm);
 };
 
 class AArch64DAGToDAGISelLegacy : public SelectionDAGISelLegacy {
@@ -7273,11 +7275,26 @@ static EVT getPackedVectorTypeFromPredicateType(LLVMContext &Ctx, EVT PredVT,
 /// Return the EVT of the data associated to a memory operation in \p
 /// Root. If such EVT cannot be retrived, it returns an invalid EVT.
 static EVT getMemVTFromNode(LLVMContext &Ctx, SDNode *Root) {
-  if (isa<MemSDNode>(Root))
-    return cast<MemSDNode>(Root)->getMemoryVT();
+  if (auto *MemIntr = dyn_cast<MemIntrinsicSDNode>(Root))
+    return MemIntr->getMemoryVT();
 
-  if (isa<MemIntrinsicSDNode>(Root))
-    return cast<MemIntrinsicSDNode>(Root)->getMemoryVT();
+  if (isa<MemSDNode>(Root)) {
+    EVT MemVT = cast<MemSDNode>(Root)->getMemoryVT();
+
+    EVT DataVT;
+    if (auto *Load = dyn_cast<LoadSDNode>(Root))
+      DataVT = Load->getValueType(0);
+    else if (auto *Load = dyn_cast<MaskedLoadSDNode>(Root))
+      DataVT = Load->getValueType(0);
+    else if (auto *Store = dyn_cast<StoreSDNode>(Root))
+      DataVT = Store->getValue().getValueType();
+    else if (auto *Store = dyn_cast<MaskedStoreSDNode>(Root))
+      DataVT = Store->getValue().getValueType();
+    else
+      llvm_unreachable("Unexpected MemSDNode!");
+
+    return DataVT.changeVectorElementType(MemVT.getVectorElementType());
+  }
 
   const unsigned Opcode = Root->getOpcode();
   // For custom ISD nodes, we have to look at them individually to extract the
@@ -7378,12 +7395,23 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedSVE(SDNode *Root, SDValue N,
     return false;
 
   SDValue VScale = N.getOperand(1);
-  if (VScale.getOpcode() != ISD::VSCALE)
+  int64_t MulImm = std::numeric_limits<int64_t>::max();
+  if (VScale.getOpcode() == ISD::VSCALE) {
+    MulImm = cast<ConstantSDNode>(VScale.getOperand(0))->getSExtValue();
+  } else if (auto C = dyn_cast<ConstantSDNode>(VScale)) {
+    int64_t ByteOffset = C->getSExtValue();
+    const auto KnownVScale =
+        Subtarget->getSVEVectorSizeInBits() / AArch64::SVEBitsPerBlock;
+
+    if (!KnownVScale || ByteOffset % KnownVScale != 0)
+      return false;
+
+    MulImm = ByteOffset / KnownVScale;
+  } else
     return false;
 
   TypeSize TS = MemVT.getSizeInBits();
   int64_t MemWidthBytes = static_cast<int64_t>(TS.getKnownMinValue()) / 8;
-  int64_t MulImm = cast<ConstantSDNode>(VScale.getOperand(0))->getSExtValue();
 
   if ((MulImm % MemWidthBytes) != 0)
     return false;
@@ -7488,4 +7516,53 @@ bool AArch64DAGToDAGISel::SelectSMETileSlice(SDValue N, unsigned MaxSize,
   Base = N;
   Offset = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i64);
   return true;
+}
+
+bool AArch64DAGToDAGISel::SelectCmpBranchUImm6Operand(SDNode *P, SDValue N,
+                                                      SDValue &Imm) {
+  AArch64CC::CondCode CC =
+      static_cast<AArch64CC::CondCode>(P->getConstantOperandVal(1));
+  if (auto *CN = dyn_cast<ConstantSDNode>(N)) {
+    // Check conservatively if the immediate fits the valid range [0, 64).
+    // Immediate variants for GE and HS definitely need to be decremented
+    // when lowering the pseudos later, so an immediate of 1 would become 0.
+    // For the inverse conditions LT and LO we don't know for sure if they
+    // will need a decrement but should the decision be made to reverse the
+    // branch condition, we again end up with the need to decrement.
+    // The same argument holds for LE, LS, GT and HI and possibly
+    // incremented immediates. This can lead to slightly less optimal
+    // codegen, e.g. we never codegen the legal case
+    //    cblt w0, #63, A
+    // because we could end up with the illegal case
+    //    cbge w0, #64, B
+    // should the decision to reverse the branch direction be made. For the
+    // lower bound cases this is no problem since we can express comparisons
+    // against 0 with either tbz/tnbz or using wzr/xzr.
+    uint64_t LowerBound = 0, UpperBound = 64;
+    switch (CC) {
+    case AArch64CC::GE:
+    case AArch64CC::HS:
+    case AArch64CC::LT:
+    case AArch64CC::LO:
+      LowerBound = 1;
+      break;
+    case AArch64CC::LE:
+    case AArch64CC::LS:
+    case AArch64CC::GT:
+    case AArch64CC::HI:
+      UpperBound = 63;
+      break;
+    default:
+      break;
+    }
+
+    if (CN->getAPIntValue().uge(LowerBound) &&
+        CN->getAPIntValue().ult(UpperBound)) {
+      SDLoc DL(N);
+      Imm = CurDAG->getTargetConstant(CN->getZExtValue(), DL, N.getValueType());
+      return true;
+    }
+  }
+
+  return false;
 }

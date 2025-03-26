@@ -16,13 +16,12 @@ define void @pr77468(ptr noalias %src, ptr noalias %dst, i1 %x) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
-; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[SRC]], i16 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[SRC]], i16 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i32> [[WIDE_LOAD]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <4 x i16> [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i16, ptr [[DST]], i16 [[TMP0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i16, ptr [[DST]], i16 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i16, ptr [[TMP6]], i32 0
 ; CHECK-NEXT:    store <4 x i16> [[TMP5]], ptr [[TMP7]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4

@@ -54,16 +54,18 @@ void checkMemoryTaggingMaybe(AllocatorT *Allocator, void *P, scudo::uptr Size,
                              scudo::uptr Alignment) {
   const scudo::uptr MinAlignment = 1UL << SCUDO_MIN_ALIGNMENT_LOG;
   Size = scudo::roundUp(Size, MinAlignment);
-  if (Allocator->useMemoryTaggingTestOnly())
+  if (Allocator->useMemoryTaggingTestOnly()) {
     EXPECT_DEATH(
         {
           disableDebuggerdMaybe();
           reinterpret_cast<char *>(P)[-1] = 'A';
         },
         "");
+  }
   if (isPrimaryAllocation<AllocatorT>(Size, Alignment)
           ? Allocator->useMemoryTaggingTestOnly()
-          : Alignment == MinAlignment) {
+          : Alignment == MinAlignment &&
+                AllocatorT::SecondaryT::getGuardPageSize() > 0) {
     EXPECT_DEATH(
         {
           disableDebuggerdMaybe();

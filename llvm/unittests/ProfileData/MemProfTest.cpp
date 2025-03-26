@@ -210,8 +210,10 @@ TEST(MemProf, FillsValue) {
               FrameContains("abc", 5U, 30U, false));
 
   EXPECT_THAT(Bar.CallSites,
-              ElementsAre(ElementsAre(FrameContains("foo", 5U, 30U, true),
-                                      FrameContains("bar", 51U, 20U, false))));
+              ElementsAre(testing::Field(
+                  &CallSiteInfo::Frames,
+                  ElementsAre(FrameContains("foo", 5U, 30U, true),
+                              FrameContains("bar", 51U, 20U, false)))));
 
   // Check the memprof record for xyz.
   const llvm::GlobalValue::GUID XyzId = IndexedMemProfRecord::getGUID("xyz");
@@ -220,8 +222,10 @@ TEST(MemProf, FillsValue) {
   // Expect the entire frame even though in practice we only need the first
   // entry here.
   EXPECT_THAT(Xyz.CallSites,
-              ElementsAre(ElementsAre(FrameContains("xyz", 5U, 30U, true),
-                                      FrameContains("abc", 5U, 30U, false))));
+              ElementsAre(testing::Field(
+                  &CallSiteInfo::Frames,
+                  ElementsAre(FrameContains("xyz", 5U, 30U, true),
+                              FrameContains("abc", 5U, 30U, false)))));
 
   // Check the memprof record for abc.
   const llvm::GlobalValue::GUID AbcId = IndexedMemProfRecord::getGUID("abc");
@@ -229,8 +233,10 @@ TEST(MemProf, FillsValue) {
   const MemProfRecord &Abc = Records[AbcId];
   EXPECT_TRUE(Abc.AllocSites.empty());
   EXPECT_THAT(Abc.CallSites,
-              ElementsAre(ElementsAre(FrameContains("xyz", 5U, 30U, true),
-                                      FrameContains("abc", 5U, 30U, false))));
+              ElementsAre(testing::Field(
+                  &CallSiteInfo::Frames,
+                  ElementsAre(FrameContains("xyz", 5U, 30U, true),
+                              FrameContains("abc", 5U, 30U, false)))));
 }
 
 TEST(MemProf, PortableWrapper) {
@@ -273,7 +279,8 @@ TEST(MemProf, RecordSerializationRoundTripVerion2) {
     // Use the same info block for both allocation sites.
     Record.AllocSites.emplace_back(CSId, Info);
   }
-  Record.CallSiteIds.assign(CallSiteIds);
+  for (auto CSId : CallSiteIds)
+    Record.CallSites.push_back(IndexedCallSiteInfo(CSId));
 
   std::string Buffer;
   llvm::raw_string_ostream OS(Buffer);
@@ -303,7 +310,8 @@ TEST(MemProf, RecordSerializationRoundTripVersion2HotColdSchema) {
     // Use the same info block for both allocation sites.
     Record.AllocSites.emplace_back(CSId, Info, Schema);
   }
-  Record.CallSiteIds.assign(CallSiteIds);
+  for (auto CSId : CallSiteIds)
+    Record.CallSites.push_back(IndexedCallSiteInfo(CSId));
 
   std::bitset<llvm::to_underlying(Meta::Size)> SchemaBitSet;
   for (auto Id : Schema)
@@ -498,8 +506,8 @@ TEST(MemProf, IndexedMemProfRecordToMemProfRecord) {
   IndexedRecord.AllocSites.push_back(AI);
   AI.CSId = CS2Id;
   IndexedRecord.AllocSites.push_back(AI);
-  IndexedRecord.CallSiteIds.push_back(CS3Id);
-  IndexedRecord.CallSiteIds.push_back(CS4Id);
+  IndexedRecord.CallSites.push_back(IndexedCallSiteInfo(CS3Id));
+  IndexedRecord.CallSites.push_back(IndexedCallSiteInfo(CS4Id));
 
   IndexedCallstackIdConveter CSIdConv(MemProfData);
 
@@ -513,8 +521,9 @@ TEST(MemProf, IndexedMemProfRecordToMemProfRecord) {
   ASSERT_THAT(Record.AllocSites, SizeIs(2));
   EXPECT_THAT(Record.AllocSites[0].CallStack, ElementsAre(F1, F2));
   EXPECT_THAT(Record.AllocSites[1].CallStack, ElementsAre(F1, F3));
-  EXPECT_THAT(Record.CallSites,
-              ElementsAre(ElementsAre(F2, F3), ElementsAre(F2, F4)));
+  ASSERT_THAT(Record.CallSites, SizeIs(2));
+  EXPECT_THAT(Record.CallSites[0].Frames, ElementsAre(F2, F3));
+  EXPECT_THAT(Record.CallSites[1].Frames, ElementsAre(F2, F4));
 }
 
 // Populate those fields returned by getHotColdSchema.
@@ -690,10 +699,14 @@ HeapProfileRecords:
       AllocCount: 666
       TotalSize: 555
   CallSites:
-  - - {Function: 0x500, LineOffset: 55, Column: 50, IsInlineFrame: true}
+  - Frames:
+    - {Function: 0x500, LineOffset: 55, Column: 50, IsInlineFrame: true}
     - {Function: 0x600, LineOffset: 66, Column: 60, IsInlineFrame: false}
-  - - {Function: 0x700, LineOffset: 77, Column: 70, IsInlineFrame: true}
+    CalleeGuids: [0x1000, 0x2000]
+  - Frames:
+    - {Function: 0x700, LineOffset: 77, Column: 70, IsInlineFrame: true}
     - {Function: 0x800, LineOffset: 88, Column: 80, IsInlineFrame: false}
+    CalleeGuids: [0x3000]
 )YAML";
 
   YAMLMemProfReader YAMLReader;
@@ -719,11 +732,19 @@ HeapProfileRecords:
       ElementsAre(Frame(0x300, 33, 30, false), Frame(0x400, 44, 40, true)));
   EXPECT_EQ(Record.AllocSites[1].Info.getAllocCount(), 666U);
   EXPECT_EQ(Record.AllocSites[1].Info.getTotalSize(), 555U);
-  EXPECT_THAT(Record.CallSites,
-              ElementsAre(ElementsAre(Frame(0x500, 55, 50, true),
-                                      Frame(0x600, 66, 60, false)),
-                          ElementsAre(Frame(0x700, 77, 70, true),
-                                      Frame(0x800, 88, 80, false))));
+  EXPECT_THAT(
+      Record.CallSites,
+      ElementsAre(
+          AllOf(testing::Field(&CallSiteInfo::Frames,
+                               ElementsAre(Frame(0x500, 55, 50, true),
+                                           Frame(0x600, 66, 60, false))),
+                testing::Field(&CallSiteInfo::CalleeGuids,
+                               ElementsAre(0x1000, 0x2000))),
+          AllOf(testing::Field(&CallSiteInfo::Frames,
+                               ElementsAre(Frame(0x700, 77, 70, true),
+                                           Frame(0x800, 88, 80, false))),
+                testing::Field(&CallSiteInfo::CalleeGuids,
+                               ElementsAre(0x3000)))));
 }
 
 // Verify that the YAML parser accepts a GUID expressed as a function name.

@@ -42,7 +42,8 @@ bool hasSmartPointerClassShape(const CXXRecordDecl &RD, bool &HasGet,
         HasStar = true;
         StarReturnType = MD->getReturnType()
                              .getNonReferenceType()
-                             ->getCanonicalTypeUnqualified();
+                             ->getCanonicalTypeUnqualified()
+                             .getUnqualifiedType();
       }
       break;
     case OO_Arrow:
@@ -50,7 +51,8 @@ bool hasSmartPointerClassShape(const CXXRecordDecl &RD, bool &HasGet,
         HasArrow = true;
         ArrowReturnType = MD->getReturnType()
                               ->getPointeeType()
-                              ->getCanonicalTypeUnqualified();
+                              ->getCanonicalTypeUnqualified()
+                              .getUnqualifiedType();
       }
       break;
     case OO_None: {
@@ -62,14 +64,16 @@ bool hasSmartPointerClassShape(const CXXRecordDecl &RD, bool &HasGet,
           HasGet = true;
           GetReturnType = MD->getReturnType()
                               ->getPointeeType()
-                              ->getCanonicalTypeUnqualified();
+                              ->getCanonicalTypeUnqualified()
+                              .getUnqualifiedType();
         }
       } else if (II->isStr("value")) {
         if (MD->getReturnType()->isReferenceType()) {
           HasValue = true;
           ValueReturnType = MD->getReturnType()
                                 .getNonReferenceType()
-                                ->getCanonicalTypeUnqualified();
+                                ->getCanonicalTypeUnqualified()
+                                .getUnqualifiedType();
         }
       }
     } break;
@@ -116,6 +120,14 @@ AST_MATCHER(clang::CXXRecordDecl, smartPointerClassWithGetOrValue) {
   return HasStarAndArrow && (HasGet || HasValue);
 }
 
+AST_MATCHER(clang::CXXRecordDecl, pointerClass) {
+  bool HasGet = false;
+  bool HasValue = false;
+  bool HasStarAndArrow =
+      clang::dataflow::hasSmartPointerClassShape(Node, HasGet, HasValue);
+  return HasStarAndArrow;
+}
+
 } // namespace
 
 namespace clang::dataflow {
@@ -134,6 +146,22 @@ ast_matchers::StatementMatcher isSmartPointerLikeOperatorArrow() {
       callee(cxxMethodDecl(parameterCountIs(0),
                            returns(hasCanonicalType(pointerType())),
                            ofClass(smartPointerClassWithGetOrValue()))));
+}
+
+ast_matchers::StatementMatcher isPointerLikeOperatorStar() {
+  return cxxOperatorCallExpr(
+      hasOverloadedOperatorName("*"),
+      callee(cxxMethodDecl(parameterCountIs(0),
+                           returns(hasCanonicalType(referenceType())),
+                           ofClass(pointerClass()))));
+}
+
+ast_matchers::StatementMatcher isPointerLikeOperatorArrow() {
+  return cxxOperatorCallExpr(
+      hasOverloadedOperatorName("->"),
+      callee(cxxMethodDecl(parameterCountIs(0),
+                           returns(hasCanonicalType(pointerType())),
+                           ofClass(pointerClass()))));
 }
 
 ast_matchers::StatementMatcher isSmartPointerLikeValueMethodCall() {

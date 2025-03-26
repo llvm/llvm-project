@@ -3,7 +3,7 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX906 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX908 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX90A %s
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX940 %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX942 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX10 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX11 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX12 %s
@@ -129,10 +129,10 @@ define float @test_atomicrmw_fadd_f32_global_agent(ptr addrspace(1) %ptr, float 
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret float [[RES]]
+; GFX942-LABEL: define float @test_atomicrmw_fadd_f32_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -246,10 +246,10 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memor
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    ret float [[RES]]
+; GFX942-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -351,10 +351,10 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_remote_memory(ptr 
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret float [[RES]]
+; GFX942-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -468,10 +468,10 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memor
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret float [[RES]]
+; GFX942-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -573,10 +573,10 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memor
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret float [[RES]]
+; GFX942-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
@@ -678,10 +678,10 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memor
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2:[0-9]+]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret float [[RES]]
+; GFX942-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2:[0-9]+]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2:[0-9]+]] {
@@ -783,10 +783,10 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode(
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.ignore.denormal.mode [[META0]]
-; GFX940-NEXT:    ret float [[RES]]
+; GFX942-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -888,10 +888,10 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode_
 ; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
-; GFX940-NEXT:    ret float [[RES]]
+; GFX942-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -993,10 +993,10 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode_
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
-; GFX940-NEXT:    ret float [[RES]]
+; GFX942-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1098,10 +1098,10 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode_
 ; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
-; GFX940-NEXT:    ret float [[RES]]
+; GFX942-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1191,10 +1191,10 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode_
 ; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
-; GFX940-NEXT:    ret float [[RES]]
+; GFX942-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
@@ -1284,10 +1284,10 @@ define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode_
 ; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret float [[TMP5]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
-; GFX940-NEXT:    ret float [[RES]]
+; GFX942-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret float [[RES]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fadd_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
@@ -1393,10 +1393,10 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent(ptr addrspace(1) %ptr, f
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1510,10 +1510,10 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1615,10 +1615,10 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_remote_memory
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1732,10 +1732,10 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1837,10 +1837,10 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_daz(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
@@ -1942,10 +1942,10 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f32_dynamic(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
@@ -2047,10 +2047,10 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.ignore.denormal.mode [[META0]]
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -2140,10 +2140,10 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -2245,10 +2245,10 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -2338,10 +2338,10 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -2419,10 +2419,10 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR1]] {
@@ -2500,10 +2500,10 @@ define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
 ; GFX90A-NEXT:    ret void
 ;
-; GFX940-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
-; GFX940-NEXT:    ret void
+; GFX942-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], float [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @test_atomicrmw_fadd_noret_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR2]] {
@@ -2789,22 +2789,22 @@ define float @test_atomicrmw_fmax_f32_global_agent(ptr addrspace(1) %ptr, float 
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP6]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fmax_f32_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret float [[TMP6]]
+; GFX942-LABEL: define float @test_atomicrmw_fmax_f32_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX942:       atomicrmw.start:
+; GFX942-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX942-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX942-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX942-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX942-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX942-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX942-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX942-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX942-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX942:       atomicrmw.end:
+; GFX942-NEXT:    ret float [[TMP6]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fmax_f32_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -2918,22 +2918,22 @@ define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_no_fine_grained_memor
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP6]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_no_fine_grained_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret float [[TMP6]]
+; GFX942-LABEL: define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_no_fine_grained_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX942:       atomicrmw.start:
+; GFX942-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX942-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX942-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX942-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX942-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX942-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX942-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX942-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX942:       atomicrmw.end:
+; GFX942-NEXT:    ret float [[TMP6]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_no_fine_grained_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -3023,22 +3023,22 @@ define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_no_remote_memory(ptr 
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP6]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret float [[TMP6]]
+; GFX942-LABEL: define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX942:       atomicrmw.start:
+; GFX942-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX942-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX942-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX942-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX942-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX942-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX942-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX942-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX942:       atomicrmw.end:
+; GFX942-NEXT:    ret float [[TMP6]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -3152,22 +3152,22 @@ define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_no_fine_grained_memor
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP6]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret float [[TMP6]]
+; GFX942-LABEL: define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX942:       atomicrmw.start:
+; GFX942-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX942-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX942-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX942-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX942-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX942-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX942-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX942-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX942:       atomicrmw.end:
+; GFX942-NEXT:    ret float [[TMP6]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -3257,22 +3257,22 @@ define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_ignore_denormal_mode(
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP6]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_ignore_denormal_mode(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret float [[TMP6]]
+; GFX942-LABEL: define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_ignore_denormal_mode(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX942:       atomicrmw.start:
+; GFX942-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX942-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX942-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX942-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX942-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX942-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX942-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX942-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX942-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX942:       atomicrmw.end:
+; GFX942-NEXT:    ret float [[TMP6]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_ignore_denormal_mode(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -3386,22 +3386,22 @@ define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_ignore_denormal_mode_
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP6]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret float [[TMP6]]
+; GFX942-LABEL: define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX942:       atomicrmw.start:
+; GFX942-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX942-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX942-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX942-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX942-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX942-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX942-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX942-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX942:       atomicrmw.end:
+; GFX942-NEXT:    ret float [[TMP6]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -3491,22 +3491,22 @@ define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_ignore_denormal_mode_
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP6]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret float [[TMP6]]
+; GFX942-LABEL: define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX942:       atomicrmw.start:
+; GFX942-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX942-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX942-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX942-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX942-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX942-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX942-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX942-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX942:       atomicrmw.end:
+; GFX942-NEXT:    ret float [[TMP6]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -3620,22 +3620,22 @@ define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_ignore_denormal_mode_
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP6]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret float [[TMP6]]
+; GFX942-LABEL: define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX942:       atomicrmw.start:
+; GFX942-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX942-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX942-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX942-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX942-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX942-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX942-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX942-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX942:       atomicrmw.end:
+; GFX942-NEXT:    ret float [[TMP6]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -3729,22 +3729,22 @@ define float @test_atomicrmw_fmin_f32_global_agent(ptr addrspace(1) %ptr, float 
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP6]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fmin_f32_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret float [[TMP6]]
+; GFX942-LABEL: define float @test_atomicrmw_fmin_f32_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX942:       atomicrmw.start:
+; GFX942-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX942-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX942-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX942-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX942-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX942-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX942-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX942-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX942-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX942:       atomicrmw.end:
+; GFX942-NEXT:    ret float [[TMP6]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fmin_f32_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -3858,22 +3858,22 @@ define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_no_fine_grained_memor
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP6]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_no_fine_grained_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret float [[TMP6]]
+; GFX942-LABEL: define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_no_fine_grained_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX942:       atomicrmw.start:
+; GFX942-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX942-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX942-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX942-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX942-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX942-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX942-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX942-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX942:       atomicrmw.end:
+; GFX942-NEXT:    ret float [[TMP6]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_no_fine_grained_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -3963,22 +3963,22 @@ define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_no_remote_memory(ptr 
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP6]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret float [[TMP6]]
+; GFX942-LABEL: define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX942:       atomicrmw.start:
+; GFX942-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX942-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX942-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX942-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX942-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX942-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX942-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX942-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX942:       atomicrmw.end:
+; GFX942-NEXT:    ret float [[TMP6]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -4092,22 +4092,22 @@ define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_no_fine_grained_memor
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP6]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret float [[TMP6]]
+; GFX942-LABEL: define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX942:       atomicrmw.start:
+; GFX942-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX942-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX942-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX942-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX942-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX942-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX942-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX942-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX942:       atomicrmw.end:
+; GFX942-NEXT:    ret float [[TMP6]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -4197,22 +4197,22 @@ define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_ignore_denormal_mode(
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP6]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_ignore_denormal_mode(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret float [[TMP6]]
+; GFX942-LABEL: define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_ignore_denormal_mode(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX942:       atomicrmw.start:
+; GFX942-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX942-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX942-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX942-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX942-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX942-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX942-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX942-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX942-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX942:       atomicrmw.end:
+; GFX942-NEXT:    ret float [[TMP6]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_ignore_denormal_mode(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -4326,22 +4326,22 @@ define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_ignore_denormal_mode_
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP6]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret float [[TMP6]]
+; GFX942-LABEL: define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX942:       atomicrmw.start:
+; GFX942-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX942-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX942-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX942-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX942-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX942-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX942-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX942-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX942:       atomicrmw.end:
+; GFX942-NEXT:    ret float [[TMP6]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -4431,22 +4431,22 @@ define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_ignore_denormal_mode_
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP6]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret float [[TMP6]]
+; GFX942-LABEL: define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX942:       atomicrmw.start:
+; GFX942-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX942-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX942-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX942-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX942-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX942-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX942-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX942-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX942:       atomicrmw.end:
+; GFX942-NEXT:    ret float [[TMP6]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -4560,22 +4560,22 @@ define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_ignore_denormal_mode_
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret float [[TMP6]]
 ;
-; GFX940-LABEL: define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
-; GFX940-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX940:       atomicrmw.start:
-; GFX940-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; GFX940-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
-; GFX940-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
-; GFX940-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX940-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX940-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX940-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; GFX940-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX940:       atomicrmw.end:
-; GFX940-NEXT:    ret float [[TMP6]]
+; GFX942-LABEL: define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
+; GFX942-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX942:       atomicrmw.start:
+; GFX942-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX942-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
+; GFX942-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; GFX942-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; GFX942-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; GFX942-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; GFX942-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GFX942-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX942:       atomicrmw.end:
+; GFX942-NEXT:    ret float [[TMP6]]
 ;
 ; GFX10-LABEL: define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], float [[VALUE:%.*]]) #[[ATTR0]] {
@@ -4609,7 +4609,7 @@ attributes #1 = { "denormal-fp-mode-f32"="dynamic,dynamic" }
 ;.
 ; GFX90A: [[META0]] = !{}
 ;.
-; GFX940: [[META0]] = !{}
+; GFX942: [[META0]] = !{}
 ;.
 ; GFX10: [[META0]] = !{}
 ;.

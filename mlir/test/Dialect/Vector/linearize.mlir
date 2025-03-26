@@ -32,6 +32,22 @@ func.func @test_linearize(%arg0: vector<2x2xf32>) -> vector<2x2xf32> {
 
 // -----
 
+// ALL-LABEL: test_linearize_poison
+func.func @test_linearize_poison() -> vector<2x2xf32> {
+  // DEFAULT: %[[POISON:.*]] = ub.poison : vector<4xf32>
+  // DEFAULT: %[[RES:.*]] = vector.shape_cast %[[POISON]] : vector<4xf32> to vector<2x2xf32>
+
+  // BW-128: %[[POISON:.*]] = ub.poison : vector<4xf32>
+  // BW-128: %[[RES:.*]] = vector.shape_cast %[[POISON]] : vector<4xf32> to vector<2x2xf32>
+
+  // BW-0: %[[RES:.*]] = ub.poison : vector<2x2xf32>
+  %0 = ub.poison : vector<2x2xf32>
+  // ALL: return %[[RES]] : vector<2x2xf32>
+  return %0 : vector<2x2xf32>
+}
+
+// -----
+
 // ALL-LABEL: test_partial_linearize
 // ALL-SAME: (%[[ORIG_ARG:.*]]: vector<2x2xf32>, %[[ORIG_ARG2:.*]]: vector<4x4xf32>)
 func.func @test_partial_linearize(%arg0: vector<2x2xf32>, %arg1: vector<4x4xf32>) -> vector<2x2xf32> {
@@ -310,12 +326,12 @@ func.func @test_vector_insert_scalable(%arg0: vector<2x8x[4]xf32>, %arg1: vector
 // -----
 
 // ALL-LABEL: test_vector_extract_scalar
-func.func @test_vector_extract_scalar() {
+func.func @test_vector_extract_scalar(%idx : index) {
   %cst = arith.constant dense<[1, 2, 3, 4]> : vector<4xi32>
   // ALL-NOT: vector.shuffle
   // ALL:     vector.extract
   // ALL-NOT: vector.shuffle
-  %0 = vector.extract %cst[0] : i32 from vector<4xi32>
+  %0 = vector.extract %cst[%idx] : i32 from vector<4xi32>
   return
 }
 

@@ -1960,6 +1960,8 @@ public:
 
   bool hasStrictPackMatch() const { return StrictPackMatch; }
 
+  void setStrictPackMatch(bool Val) { StrictPackMatch = Val; }
+
   /// Get the point of instantiation (if any), or null if none.
   SourceLocation getPointOfInstantiation() const {
     return PointOfInstantiation;
@@ -3390,7 +3392,7 @@ inline std::optional<unsigned> getExpandedPackSize(const NamedDecl *Param) {
 
 /// Internal helper used by Subst* nodes to retrieve the parameter list
 /// for their AssociatedDecl.
-TemplateParameterList *getReplacedTemplateParameterList(Decl *D);
+TemplateParameterList *getReplacedTemplateParameterList(const Decl *D);
 
 } // namespace clang
 

@@ -1,15 +1,36 @@
 add_custom_target(libc_sys_uio_unittests)
+
 add_libc_unittest(
   writev_test
   SUITE
-  libc_sys_uio_unittests
+    libc_sys_uio_unittests
   SRCS
     writev_test.cpp
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.types.struct_iovec
     libc.src.__support.common
+    libc.src.errno.errno
+    libc.src.fcntl.open
     libc.src.sys.uio.writev
     libc.src.unistd.close
+    libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  readv_test
+  SUITE
+    libc_sys_uio_unittests
+  SRCS
+    readv_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_iovec
+    libc.src.__support.common
+    libc.src.errno.errno
     libc.src.fcntl.open
+    libc.src.sys.uio.readv
+    libc.src.unistd.close
+    libc.src.unistd.unlink
+    libc.src.unistd.write
     libc.test.UnitTest.ErrnoSetterMatcher
 )

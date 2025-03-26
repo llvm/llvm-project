@@ -14,6 +14,7 @@
 // CHECK: apple-a15
 // CHECK: apple-a16
 // CHECK: apple-a17
+// CHECK: apple-a18
 // CHECK: apple-a7
 // CHECK: apple-a8
 // CHECK: apple-a9
@@ -21,7 +22,12 @@
 // CHECK: apple-m2
 // CHECK: apple-m3
 // CHECK: apple-m4
+// CHECK: apple-s10
 // CHECK: apple-s4
 // CHECK: apple-s5
+// CHECK: apple-s6
+// CHECK: apple-s7
+// CHECK: apple-s8
+// CHECK: apple-s9
 
 // CHECK: Use -mcpu or -mtune to specify the target's processor.

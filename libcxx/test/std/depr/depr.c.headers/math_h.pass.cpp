@@ -12,6 +12,9 @@
 
 // <math.h>
 
+// GCC warns about signbit comparing `bool_v < 0`, which we're testing
+// ADDITIONAL_COMPILE_FLAGS(gcc): -Wno-bool-compare
+
 #include <math.h>
 #include <type_traits>
 #include <cassert>

@@ -18,14 +18,12 @@ using namespace clang;
 using namespace clang::interp;
 
 unsigned Program::getOrCreateNativePointer(const void *Ptr) {
-  auto It = NativePointerIndices.find(Ptr);
-  if (It != NativePointerIndices.end())
-    return It->second;
+  auto [It, Inserted] =
+      NativePointerIndices.try_emplace(Ptr, NativePointers.size());
+  if (Inserted)
+    NativePointers.push_back(Ptr);
 
-  unsigned Idx = NativePointers.size();
-  NativePointers.push_back(Ptr);
-  NativePointerIndices[Ptr] = Idx;
-  return Idx;
+  return It->second;
 }
 
 const void *Program::getNativePointer(unsigned Idx) {
@@ -168,7 +166,7 @@ unsigned Program::getOrCreateDummy(const DeclTy &D) {
 
   Descriptor *Desc;
   if (std::optional<PrimType> T = Ctx.classify(QT))
-    Desc = createDescriptor(D, *T, std::nullopt, /*IsTemporary=*/true,
+    Desc = createDescriptor(D, *T, nullptr, std::nullopt, /*IsTemporary=*/true,
                             /*IsMutable=*/false);
   else
     Desc = createDescriptor(D, QT.getTypePtr(), std::nullopt,
@@ -215,12 +213,12 @@ std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
   if (auto Idx =
           createGlobal(VD, VD->getType(), IsStatic, IsExtern, IsWeak, Init)) {
     for (const Decl *P = VD; P; P = P->getPreviousDecl()) {
+      unsigned &PIdx = GlobalIndices[P];
       if (P != VD) {
-        unsigned PIdx = GlobalIndices[P];
         if (Globals[PIdx]->block()->isExtern())
           Globals[PIdx] = Globals[*Idx];
       }
-      GlobalIndices[P] = *Idx;
+      PIdx = *Idx;
     }
     return *Idx;
   }
@@ -246,7 +244,8 @@ std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
   const bool IsConst = Ty.isConstQualified();
   const bool IsTemporary = D.dyn_cast<const Expr *>();
   if (std::optional<PrimType> T = Ctx.classify(Ty))
-    Desc = createDescriptor(D, *T, Descriptor::GlobalMD, IsConst, IsTemporary);
+    Desc = createDescriptor(D, *T, nullptr, Descriptor::GlobalMD, IsConst,
+                            IsTemporary);
   else
     Desc = createDescriptor(D, Ty.getTypePtr(), Descriptor::GlobalMD, IsConst,
                             IsTemporary);
@@ -367,7 +366,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     const bool IsMutable = FD->isMutable();
     const Descriptor *Desc;
     if (std::optional<PrimType> T = Ctx.classify(FT)) {
-      Desc = createDescriptor(FD, *T, std::nullopt, IsConst,
+      Desc = createDescriptor(FD, *T, nullptr, std::nullopt, IsConst,
                               /*isTemporary=*/false, IsMutable);
     } else {
       Desc = createDescriptor(FD, FT.getTypePtr(), std::nullopt, IsConst,
@@ -395,6 +394,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
     if (const auto *Record = getOrCreateRecord(RT->getDecl()))
       return allocateDescriptor(D, Record, MDSize, IsConst, IsTemporary,
                                 IsMutable);
+    return allocateDescriptor(D, MDSize);
   }
 
   // Arrays.
@@ -421,7 +421,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
         unsigned ElemSize = ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
         if (std::numeric_limits<unsigned>::max() / ElemSize <= NumElems)
           return {};
-        return allocateDescriptor(D, ElemDesc, MDSize, NumElems, IsConst,
+        return allocateDescriptor(D, Ty, ElemDesc, MDSize, NumElems, IsConst,
                                   IsTemporary, IsMutable);
       }
     }
@@ -434,8 +434,8 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
         return allocateDescriptor(D, *T, MDSize, IsTemporary,
                                   Descriptor::UnknownSize{});
       } else {
-        const Descriptor *Desc = createDescriptor(D, ElemTy.getTypePtr(),
-                                                  MDSize, IsConst, IsTemporary);
+        const Descriptor *Desc = createDescriptor(
+            D, ElemTy.getTypePtr(), std::nullopt, IsConst, IsTemporary);
         if (!Desc)
           return nullptr;
         return allocateDescriptor(D, Desc, MDSize, IsTemporary,

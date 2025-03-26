@@ -113,7 +113,7 @@ struct DigitsOutput {
 // enough that for any binary exponent in the range of float128 it will give
 // the correct value of floor(log10(2^n)).
 LIBC_INLINE int estimate_log10(int exponent_of_2) {
-  return (exponent_of_2 * 1292913986LL) >> 32;
+  return static_cast<int>((exponent_of_2 * 1292913986LL) >> 32);
 }
 
 // Calculate the actual digits of a decimal representation of an FP number.
@@ -189,7 +189,7 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
   // overflow _after_ the multiplication and retry. So if even the smaller
   // number of possible output digits is too many, we might as well change our
   // mind right now and switch into E mode.
-  if (log10_input_max - log10_low_digit + 1 > MAX_DIGITS) {
+  if (log10_input_max - log10_low_digit + 1 > int(MAX_DIGITS)) {
     precision = MAX_DIGITS;
     e_mode = true;
     log10_low_digit = log10_input_min + 1 - precision;
@@ -362,8 +362,8 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
       // we made it from and doing the decimal conversion all over again.)
       for (size_t i = output.ndigits; i-- > 0;) {
         if (output.digits[i] != '9') {
-          output.digits[i] = internal::int_to_b36_char(
-              internal::b36_char_to_int(output.digits[i]) + 1);
+          output.digits[i] = static_cast<char>(internal::int_to_b36_char(
+              internal::b36_char_to_int(output.digits[i]) + 1));
           break;
         } else {
           output.digits[i] = '0';
@@ -375,11 +375,11 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
   return output;
 }
 
-LIBC_INLINE int convert_float_inner(Writer *writer,
-                                    const FormatSection &to_conv,
-                                    int32_t fraction_len, int exponent,
-                                    StorageType mantissa, Sign sign,
-                                    ConversionType ctype) {
+template <WriteMode write_mode>
+LIBC_INLINE int
+convert_float_inner(Writer<write_mode> *writer, const FormatSection &to_conv,
+                    int32_t fraction_len, int exponent, StorageType mantissa,
+                    Sign sign, ConversionType ctype) {
   // If to_conv doesn't specify a precision, the precision defaults to 6.
   unsigned precision = to_conv.precision < 0 ? 6 : to_conv.precision;
 
@@ -617,9 +617,10 @@ LIBC_INLINE int convert_float_inner(Writer *writer,
   return WRITE_OK;
 }
 
-template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
+template <typename T, WriteMode write_mode,
+          cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE int
-convert_float_typed(Writer *writer, const FormatSection &to_conv,
+convert_float_typed(Writer<write_mode> *writer, const FormatSection &to_conv,
                     fputil::FPBits<T> float_bits, ConversionType ctype) {
   return convert_float_inner(writer, to_conv, float_bits.FRACTION_LEN,
                              float_bits.get_explicit_exponent(),
@@ -627,7 +628,8 @@ convert_float_typed(Writer *writer, const FormatSection &to_conv,
                              float_bits.sign(), ctype);
 }
 
-LIBC_INLINE int convert_float_outer(Writer *writer,
+template <WriteMode write_mode>
+LIBC_INLINE int convert_float_outer(Writer<write_mode> *writer,
                                     const FormatSection &to_conv,
                                     ConversionType ctype) {
   if (to_conv.length_modifier == LengthModifier::L) {
@@ -649,38 +651,44 @@ LIBC_INLINE int convert_float_outer(Writer *writer,
   return convert_inf_nan(writer, to_conv);
 }
 
-template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
+template <typename T, WriteMode write_mode,
+          cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
+LIBC_INLINE int convert_float_decimal_typed(Writer<write_mode> *writer,
                                             const FormatSection &to_conv,
                                             fputil::FPBits<T> float_bits) {
   return convert_float_typed<T>(writer, to_conv, float_bits, ConversionType::F);
 }
 
-template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
+template <typename T, WriteMode write_mode,
+          cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
+LIBC_INLINE int convert_float_dec_exp_typed(Writer<write_mode> *writer,
                                             const FormatSection &to_conv,
                                             fputil::FPBits<T> float_bits) {
   return convert_float_typed<T>(writer, to_conv, float_bits, ConversionType::E);
 }
 
-template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
+template <typename T, WriteMode write_mode,
+          cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
+LIBC_INLINE int convert_float_dec_auto_typed(Writer<write_mode> *writer,
                                              const FormatSection &to_conv,
                                              fputil::FPBits<T> float_bits) {
   return convert_float_typed<T>(writer, to_conv, float_bits, ConversionType::G);
 }
 
-LIBC_INLINE int convert_float_decimal(Writer *writer,
+template <WriteMode write_mode>
+LIBC_INLINE int convert_float_decimal(Writer<write_mode> *writer,
                                       const FormatSection &to_conv) {
   return convert_float_outer(writer, to_conv, ConversionType::F);
 }
 
-LIBC_INLINE int convert_float_dec_exp(Writer *writer,
+template <WriteMode write_mode>
+LIBC_INLINE int convert_float_dec_exp(Writer<write_mode> *writer,
                                       const FormatSection &to_conv) {
   return convert_float_outer(writer, to_conv, ConversionType::E);
 }
 
-LIBC_INLINE int convert_float_dec_auto(Writer *writer,
+template <WriteMode write_mode>
+LIBC_INLINE int convert_float_dec_auto(Writer<write_mode> *writer,
                                        const FormatSection &to_conv) {
   return convert_float_outer(writer, to_conv, ConversionType::G);
 }

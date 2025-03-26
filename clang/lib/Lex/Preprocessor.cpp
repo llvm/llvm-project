@@ -1331,9 +1331,10 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
   return true;
 }
 
-void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc) {
+void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc,
+                                     bool IncludeExports) {
   CurSubmoduleState->VisibleModules.setVisible(
-      M, Loc, [](Module *) {},
+      M, Loc, IncludeExports, [](Module *) {},
       [&](ArrayRef<Module *> Path, Module *Conflict, StringRef Message) {
         // FIXME: Include the path in the diagnostic.
         // FIXME: Include the import location for the conflicting module.

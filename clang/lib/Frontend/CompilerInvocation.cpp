@@ -1665,6 +1665,11 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   else if (!Opts.UnrollLoops && Opts.OptimizationLevel > 1)
     GenerateArg(Consumer, OPT_fno_unroll_loops);
 
+  if (Opts.InterchangeLoops)
+    GenerateArg(Consumer, OPT_floop_interchange);
+  else
+    GenerateArg(Consumer, OPT_fno_loop_interchange);
+
   if (!Opts.BinutilsVersion.empty())
     GenerateArg(Consumer, OPT_fbinutils_version_EQ, Opts.BinutilsVersion);
 
@@ -1843,6 +1848,9 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
     GenerateArg(Consumer, OPT_fno_finite_loops);
     break;
   }
+
+  if (Opts.StaticClosure)
+    GenerateArg(Consumer, OPT_static_libclosure);
 }
 
 bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
@@ -1968,6 +1976,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   Opts.UnrollLoops =
       Args.hasFlag(OPT_funroll_loops, OPT_fno_unroll_loops,
                    (Opts.OptimizationLevel > 1));
+  Opts.InterchangeLoops =
+      Args.hasFlag(OPT_floop_interchange, OPT_fno_loop_interchange, false);
   Opts.BinutilsVersion =
       std::string(Args.getLastArgValue(OPT_fbinutils_version_EQ));
 
@@ -2329,6 +2339,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       options::OPT_mamdgpu_ieee, options::OPT_mno_amdgpu_ieee, true);
   if (!Opts.EmitIEEENaNCompliantInsts && !LangOptsRef.NoHonorNaNs)
     Diags.Report(diag::err_drv_amdgpu_ieee_without_no_honor_nans);
+
+  Opts.StaticClosure = Args.hasArg(options::OPT_static_libclosure);
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }
@@ -3092,6 +3104,14 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
                                                            << "-emit-module";
   if (Args.hasArg(OPT_fclangir) || Args.hasArg(OPT_emit_cir))
     Opts.UseClangIRPipeline = true;
+
+#if CLANG_ENABLE_CIR
+  if (Args.hasArg(OPT_clangir_disable_passes))
+    Opts.ClangIRDisablePasses = true;
+
+  if (Args.hasArg(OPT_clangir_disable_verifier))
+    Opts.ClangIRDisableCIRVerifier = true;
+#endif // CLANG_ENABLE_CIR
 
   if (Args.hasArg(OPT_aux_target_cpu))
     Opts.AuxTargetCPU = std::string(Args.getLastArgValue(OPT_aux_target_cpu));
@@ -4036,8 +4056,13 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   if (const Arg *A = Args.getLastArg(OPT_fcf_protection_EQ)) {
     StringRef Name = A->getValue();
-    if (Name == "full" || Name == "branch") {
+    if (Name == "full") {
       Opts.CFProtectionBranch = 1;
+      Opts.CFProtectionReturn = 1;
+    } else if (Name == "branch") {
+      Opts.CFProtectionBranch = 1;
+    } else if (Name == "return") {
+      Opts.CFProtectionReturn = 1;
     }
   }
 
@@ -4305,8 +4330,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
             TT.getArch() == llvm::Triple::systemz ||
             TT.getArch() == llvm::Triple::loongarch64 ||
             TT.getArch() == llvm::Triple::nvptx ||
-            TT.getArch() == llvm::Triple::nvptx64 ||
-            TT.getArch() == llvm::Triple::amdgcn ||
+            TT.getArch() == llvm::Triple::nvptx64 || TT.isAMDGCN() ||
             TT.getArch() == llvm::Triple::x86 ||
             TT.getArch() == llvm::Triple::x86_64))
         Diags.Report(diag::err_drv_invalid_omp_target) << A->getValue(i);
@@ -4759,17 +4783,6 @@ static bool ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
     }
   }
 
-  // Add the __CET__ macro if a CFProtection option is set.
-  if (const Arg *A = Args.getLastArg(OPT_fcf_protection_EQ)) {
-    StringRef Name = A->getValue();
-    if (Name == "branch")
-      Opts.addMacroDef("__CET__=1");
-    else if (Name == "return")
-      Opts.addMacroDef("__CET__=2");
-    else if (Name == "full")
-      Opts.addMacroDef("__CET__=3");
-  }
-
   // Add macros from the command line.
   for (const auto *A : Args.filtered(OPT_D, OPT_U)) {
     if (A->getOption().matches(OPT_D))
@@ -4958,6 +4971,14 @@ bool CompilerInvocation::CreateFromArgsImpl(
   llvm::Triple T(Res.getTargetOpts().Triple);
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
                         Res.getFileSystemOpts().WorkingDir);
+  if (Res.getFrontendOpts().GenReducedBMI ||
+      Res.getFrontendOpts().ProgramAction ==
+          frontend::GenerateReducedModuleInterface ||
+      Res.getFrontendOpts().ProgramAction ==
+          frontend::GenerateModuleInterface) {
+    Res.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = true;
+    Res.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
+  }
   ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
 
   ParsePointerAuthArgs(LangOpts, Args, Diags);

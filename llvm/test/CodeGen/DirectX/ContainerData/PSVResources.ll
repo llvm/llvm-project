@@ -6,6 +6,17 @@ target triple = "dxil-unknown-shadermodel6.0-compute"
 
 define void @main() #0 {
 
+  ; cbuffer : register(b2, space3) { float x; }
+; CHECK:        - Type:            CBV
+; CHECK:          Space:           3
+; CHECK:          LowerBound:      2
+; CHECK:          UpperBound:      2
+; CHECK:          Kind:            CBuffer
+; CHECK:          Flags:
+; CHECK:            UsedByAtomic64:  false
+  %cbuf = call target("dx.CBuffer", target("dx.Layout", {float}, 4, 0))
+      @llvm.dx.resource.handlefrombinding(i32 3, i32 2, i32 1, i32 0, i1 false)
+
   ; ByteAddressBuffer Buf : register(t8, space1)
 ; CHECK:        - Type:            SRVRaw
 ; CHECK:          Space:           1

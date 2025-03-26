@@ -335,7 +335,7 @@ template <size_t Bits> struct DyadicFloat {
                  .get_val();
 
     MantissaType round_mask =
-        shift > MantissaType::BITS ? 0 : MantissaType(1) << (shift - 1);
+        shift - 1 >= MantissaType::BITS ? 0 : MantissaType(1) << (shift - 1);
     MantissaType sticky_mask = round_mask - MantissaType(1);
 
     bool round_bit = !(mantissa & round_mask).is_zero();
@@ -455,7 +455,11 @@ template <size_t Bits> struct DyadicFloat {
       if (exponent > 0) {
         new_mant <<= exponent;
       } else if (exponent < 0) {
-        size_t shift = -exponent;
+        // Cast the exponent to size_t before negating it, rather than after,
+        // to avoid undefined behavior negating INT_MIN as an integer (although
+        // exponents coming in to this function _shouldn't_ be that large). The
+        // result should always end up as a positive size_t.
+        size_t shift = -static_cast<size_t>(exponent);
         new_mant >>= shift;
         round_dir = rounding_direction(mantissa, shift, sign);
         if (round_dir > 0)
@@ -604,7 +608,7 @@ approx_reciprocal(const DyadicFloat<Bits> &a) {
   // of correct bits in x' is double the number in x.
 
   // An initial approximation to the reciprocal
-  DyadicFloat<Bits> x(Sign::POS, -32 - a.exponent - Bits,
+  DyadicFloat<Bits> x(Sign::POS, -32 - a.exponent - int(Bits),
                       uint64_t(0xFFFFFFFFFFFFFFFF) /
                           static_cast<uint64_t>(a.mantissa >> (Bits - 32)));
 

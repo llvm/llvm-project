@@ -1172,7 +1172,9 @@ bool MicrosoftCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
 
   if (isIndirectReturn) {
     CharUnits Align = CGM.getContext().getTypeAlignInChars(FI.getReturnType());
-    FI.getReturnInfo() = ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+    FI.getReturnInfo() = ABIArgInfo::getIndirect(
+        Align, /*AddrSpace=*/CGM.getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/false);
 
     // MSVC always passes `this` before the `sret` parameter.
     FI.getReturnInfo().setSRetAfterThis(FI.isInstanceMethod());
@@ -2926,9 +2928,9 @@ llvm::Constant *MicrosoftCXXABI::EmitMemberPointer(const APValue &MP,
 
   if (!MemberPointerPath.empty()) {
     const CXXRecordDecl *SrcRD = cast<CXXRecordDecl>(MPD->getDeclContext());
-    const Type *SrcRecTy = Ctx.getTypeDeclType(SrcRD).getTypePtr();
     const MemberPointerType *SrcTy =
-        Ctx.getMemberPointerType(DstTy->getPointeeType(), SrcRecTy)
+        Ctx.getMemberPointerType(DstTy->getPointeeType(), /*Qualifier=*/nullptr,
+                                 SrcRD)
             ->castAs<MemberPointerType>();
 
     bool DerivedMember = MP.isMemberPointerToDerivedMember();
@@ -3943,7 +3945,8 @@ static QualType decomposeTypeForEH(ASTContext &Context, QualType T,
   // for "int A::*" and separately storing the const qualifier.
   if (const auto *MPTy = T->getAs<MemberPointerType>())
     T = Context.getMemberPointerType(PointeeType.getUnqualifiedType(),
-                                     MPTy->getClass());
+                                     MPTy->getQualifier(),
+                                     MPTy->getMostRecentCXXRecordDecl());
 
   // Pointer types like "const int * const *" are represented by having RTTI
   // for "const int **" and separately storing the const qualifier.

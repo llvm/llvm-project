@@ -630,8 +630,11 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
   if (C.getDriver().isUsingLTO()) {
-    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
-                  C.getDriver().getLTOMode() == LTOK_Thin);
+    const bool ThinLTO = (C.getDriver().getLTOMode() == LTOK_Thin);
+    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0], ThinLTO);
+
+    if (!ThinLTO)
+      addFullLTOPartitionOption(C.getDriver(), Args, CmdArgs);
   } else if (Args.hasArg(options::OPT_mcpu_EQ)) {
     CmdArgs.push_back(Args.MakeArgString(
         "-plugin-opt=mcpu=" +
@@ -706,6 +709,33 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
 
   handleTargetFeaturesGroup(D, Triple, Args, Features,
                             options::OPT_m_amdgpu_Features_Group);
+}
+
+static unsigned getFullLTOPartitions(const Driver &D, const ArgList &Args) {
+  const Arg *A = Args.getLastArg(options::OPT_flto_partitions_EQ);
+  // In the absence of an option, use 8 as the default.
+  if (!A)
+    return 8;
+  int Value = 0;
+  if (StringRef(A->getValue()).getAsInteger(10, Value) || (Value < 1)) {
+    D.Diag(diag::err_drv_invalid_int_value)
+        << A->getAsString(Args) << A->getValue();
+    return 1;
+  }
+
+  return Value;
+}
+
+void amdgpu::addFullLTOPartitionOption(const Driver &D,
+                                       const llvm::opt::ArgList &Args,
+                                       llvm::opt::ArgStringList &CmdArgs) {
+  // TODO: Should this be restricted to fgpu-rdc only ? Currently we'll
+  //       also do it for non gpu-rdc LTO
+
+  if (unsigned NumParts = getFullLTOPartitions(D, Args); NumParts > 1) {
+    CmdArgs.push_back(
+        Args.MakeArgString("--lto-partitions=" + Twine(NumParts)));
+  }
 }
 
 /// AMDGPU Toolchain
@@ -936,7 +966,8 @@ void ROCMToolChain::addClangTargetOptions(
       DriverArgs.hasArg(options::OPT_nostdlib))
     return;
 
-  if (DriverArgs.hasArg(options::OPT_nogpulib))
+  if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                          true))
     return;
 
   // Get the device name and canonicalize it
@@ -950,13 +981,7 @@ void ROCMToolChain::addClangTargetOptions(
                                                 ABIVer))
     return;
 
-  std::tuple<bool, const SanitizerArgs> GPUSan(
-      DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                         options::OPT_fno_gpu_sanitize, true),
-      getSanitizerArgs(DriverArgs));
-
   bool Wave64 = isWave64(DriverArgs, Kind);
-
   // TODO: There are way too many flags that change this. Do we need to check
   // them all?
   bool DAZ = DriverArgs.hasArg(options::OPT_cl_denorms_are_zero) ||
@@ -968,6 +993,12 @@ void ROCMToolChain::addClangTargetOptions(
   bool FastRelaxedMath = DriverArgs.hasArg(options::OPT_cl_fast_relaxed_math);
   bool CorrectSqrt =
       DriverArgs.hasArg(options::OPT_cl_fp32_correctly_rounded_divide_sqrt);
+
+  // GPU Sanitizer currently only supports ASan and is enabled through host
+  // ASan.
+  bool GPUSan = DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
+                                   options::OPT_fno_gpu_sanitize, true) &&
+                getSanitizerArgs(DriverArgs).needsAsanRt();
 
   // Add the OpenCL specific bitcode library.
   llvm::SmallVector<BitCodeLibraryInfo, 12> BCLibs;
@@ -1009,30 +1040,25 @@ llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 RocmInstallationDetector::getCommonBitcodeLibs(
     const llvm::opt::ArgList &DriverArgs, StringRef LibDeviceFile, bool Wave64,
     bool DAZ, bool FiniteOnly, bool UnsafeMathOpt, bool FastRelaxedMath,
-    bool CorrectSqrt, DeviceLibABIVersion ABIVer,
-    const std::tuple<bool, const SanitizerArgs> &GPUSan,
-    bool isOpenMP = false) const {
+    bool CorrectSqrt, DeviceLibABIVersion ABIVer, bool GPUSan,
+    bool isOpenMP) const {
   llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> BCLibs;
 
-  auto GPUSanEnabled = [GPUSan]() { return std::get<bool>(GPUSan); };
   auto AddBCLib = [&](ToolChain::BitCodeLibraryInfo BCLib,
                       bool Internalize = true) {
     BCLib.ShouldInternalize = Internalize;
     BCLibs.emplace_back(BCLib);
   };
   auto AddSanBCLibs = [&]() {
-    if (GPUSanEnabled()) {
-      auto SanArgs = std::get<const SanitizerArgs>(GPUSan);
-      if (SanArgs.needsAsanRt())
-        AddBCLib(getAsanRTLPath(), false);
-    }
+    if (GPUSan)
+      AddBCLib(getAsanRTLPath(), false);
   };
 
   AddSanBCLibs();
   AddBCLib(getOCMLPath());
   if (!isOpenMP)
     AddBCLib(getOCKLPath());
-  else if (GPUSanEnabled() && isOpenMP)
+  else if (GPUSan && isOpenMP)
     AddBCLib(getOCKLPath(), false);
   AddBCLib(getDenormalsAreZeroPath(DAZ));
   AddBCLib(getUnsafeMathPath(UnsafeMathOpt || FastRelaxedMath));
@@ -1064,10 +1090,6 @@ ROCMToolChain::getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
   // If --hip-device-lib is not set, add the default bitcode libraries.
   // TODO: There are way too many flags that change this. Do we need to check
   // them all?
-  std::tuple<bool, const SanitizerArgs> GPUSan(
-      DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                         options::OPT_fno_gpu_sanitize, true),
-      getSanitizerArgs(DriverArgs));
   bool DAZ = DriverArgs.hasFlag(options::OPT_fgpu_flush_denormals_to_zero,
                                 options::OPT_fno_gpu_flush_denormals_to_zero,
                                 getDefaultDenormsAreZeroForTarget(Kind));
@@ -1083,6 +1105,12 @@ ROCMToolChain::getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
       options::OPT_fno_hip_fp32_correctly_rounded_divide_sqrt, true);
   bool Wave64 = isWave64(DriverArgs, Kind);
 
+  // GPU Sanitizer currently only supports ASan and is enabled through host
+  // ASan.
+  bool GPUSan = DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
+                                   options::OPT_fno_gpu_sanitize, true) &&
+                getSanitizerArgs(DriverArgs).needsAsanRt();
+
   return RocmInstallation->getCommonBitcodeLibs(
       DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
       FastRelaxedMath, CorrectSqrt, ABIVer, GPUSan, isOpenMP);
@@ -1095,6 +1123,7 @@ bool AMDGPUToolChain::shouldSkipSanitizeOption(
   if (TargetID.empty())
     return false;
   Option O = A->getOption();
+
   if (!O.matches(options::OPT_fsanitize_EQ))
     return false;
 

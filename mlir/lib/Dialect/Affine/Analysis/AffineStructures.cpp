@@ -34,28 +34,37 @@ using namespace mlir;
 using namespace affine;
 using namespace presburger;
 
-
-void FlatAffineValueConstraints::addInductionVarOrTerminalSymbol(Value val) {
+LogicalResult
+FlatAffineValueConstraints::addInductionVarOrTerminalSymbol(Value val) {
   if (containsVar(val))
-    return;
+    return success();
 
   // Caller is expected to fully compose map/operands if necessary.
-  assert((isTopLevelValue(val) || isAffineInductionVar(val)) &&
-         "non-terminal symbol / loop IV expected");
+  if (val.getDefiningOp<affine::AffineApplyOp>() ||
+      (!isValidSymbol(val) && !isAffineInductionVar(val))) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "only valid terminal symbols and affine IVs supported\n");
+    return failure();
+  }
   // Outer loop IVs could be used in forOp's bounds.
   if (auto loop = getForInductionVarOwner(val)) {
     appendDimVar(val);
-    if (failed(this->addAffineForOpDomain(loop)))
+    if (failed(this->addAffineForOpDomain(loop))) {
       LLVM_DEBUG(
           loop.emitWarning("failed to add domain info to constraint system"));
-    return;
+      return failure();
+    }
+    return success();
   }
+
   if (auto parallel = getAffineParallelInductionVarOwner(val)) {
     appendDimVar(parallel.getIVs());
-    if (failed(this->addAffineParallelOpDomain(parallel)))
+    if (failed(this->addAffineParallelOpDomain(parallel))) {
       LLVM_DEBUG(parallel.emitWarning(
           "failed to add domain info to constraint system"));
-    return;
+      return failure();
+    }
+    return success();
   }
 
   // Add top level symbol.
@@ -63,6 +72,7 @@ void FlatAffineValueConstraints::addInductionVarOrTerminalSymbol(Value val) {
   // Check if the symbol is a constant.
   if (std::optional<int64_t> constOp = getConstantIntValue(val))
     addBound(BoundType::EQ, val, constOp.value());
+  return success();
 }
 
 LogicalResult
@@ -222,8 +232,10 @@ LogicalResult FlatAffineValueConstraints::addBound(BoundType type, unsigned pos,
   fullyComposeAffineMapAndOperands(&map, &operands);
   map = simplifyAffineMap(map);
   canonicalizeMapAndOperands(&map, &operands);
-  for (auto operand : operands)
-    addInductionVarOrTerminalSymbol(operand);
+  for (Value operand : operands) {
+    if (failed(addInductionVarOrTerminalSymbol(operand)))
+      return failure();
+  }
   return addBound(type, pos, computeAlignedMap(map, operands));
 }
 

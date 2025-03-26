@@ -35,7 +35,7 @@ bool TargetFrameLowering::enableCalleeSaveSkip(const MachineFunction &MF) const 
   return false;
 }
 
-bool TargetFrameLowering::enableCFIFixup(MachineFunction &MF) const {
+bool TargetFrameLowering::enableCFIFixup(const MachineFunction &MF) const {
   return MF.needsFrameMoves() &&
          !MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
 }
@@ -180,5 +180,5 @@ TargetFrameLowering::getInitialCFARegister(const MachineFunction &MF) const {
 TargetFrameLowering::DwarfFrameBase
 TargetFrameLowering::getDwarfFrameBase(const MachineFunction &MF) const {
   const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
-  return DwarfFrameBase{DwarfFrameBase::Register, {RI->getFrameRegister(MF)}};
+  return DwarfFrameBase{DwarfFrameBase::Register, {RI->getFrameRegister(MF).id()}};
 }

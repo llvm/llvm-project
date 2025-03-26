@@ -2190,6 +2190,7 @@ public:
   void VisitOpenACCExitDataConstruct(const OpenACCExitDataConstruct *D);
   void VisitOpenACCHostDataConstruct(const OpenACCHostDataConstruct *D);
   void VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *D);
+  void VisitOpenACCCacheConstruct(const OpenACCCacheConstruct *D);
   void VisitOpenACCInitConstruct(const OpenACCInitConstruct *D);
   void VisitOpenACCShutdownConstruct(const OpenACCShutdownConstruct *D);
   void VisitOpenACCSetConstruct(const OpenACCSetConstruct *D);
@@ -2203,6 +2204,7 @@ public:
   void
   VisitOMPLoopTransformationDirective(const OMPLoopTransformationDirective *D);
   void VisitOMPTileDirective(const OMPTileDirective *D);
+  void VisitOMPStripeDirective(const OMPStripeDirective *D);
   void VisitOMPUnrollDirective(const OMPUnrollDirective *D);
   void VisitOMPReverseDirective(const OMPReverseDirective *D);
   void VisitOMPInterchangeDirective(const OMPInterchangeDirective *D);
@@ -2465,6 +2467,9 @@ void OMPClauseEnqueue::VisitOMPNoOpenMPClause(const OMPNoOpenMPClause *) {}
 void OMPClauseEnqueue::VisitOMPNoOpenMPRoutinesClause(
     const OMPNoOpenMPRoutinesClause *) {}
 
+void OMPClauseEnqueue::VisitOMPNoOpenMPConstructsClause(
+    const OMPNoOpenMPConstructsClause *) {}
+
 void OMPClauseEnqueue::VisitOMPNoParallelismClause(
     const OMPNoParallelismClause *) {}
 
@@ -2530,6 +2535,8 @@ void OMPClauseEnqueue::VisitOMPDynamicAllocatorsClause(
 
 void OMPClauseEnqueue::VisitOMPAtomicDefaultMemOrderClause(
     const OMPAtomicDefaultMemOrderClause *) {}
+
+void OMPClauseEnqueue::VisitOMPSelfMapsClause(const OMPSelfMapsClause *) {}
 
 void OMPClauseEnqueue::VisitOMPAtClause(const OMPAtClause *) {}
 
@@ -2901,6 +2908,13 @@ void OpenACCClauseEnqueue::VisitNoCreateClause(const OpenACCNoCreateClause &C) {
 void OpenACCClauseEnqueue::VisitCopyClause(const OpenACCCopyClause &C) {
   VisitVarList(C);
 }
+void OpenACCClauseEnqueue::VisitLinkClause(const OpenACCLinkClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitDeviceResidentClause(
+    const OpenACCDeviceResidentClause &C) {
+  VisitVarList(C);
+}
 void OpenACCClauseEnqueue::VisitCopyInClause(const OpenACCCopyInClause &C) {
   VisitVarList(C);
 }
@@ -2961,6 +2975,10 @@ void OpenACCClauseEnqueue::VisitAutoClause(const OpenACCAutoClause &C) {}
 void OpenACCClauseEnqueue::VisitIndependentClause(
     const OpenACCIndependentClause &C) {}
 void OpenACCClauseEnqueue::VisitSeqClause(const OpenACCSeqClause &C) {}
+void OpenACCClauseEnqueue::VisitNoHostClause(const OpenACCNoHostClause &C) {}
+void OpenACCClauseEnqueue::VisitBindClause(const OpenACCBindClause &C) {
+  assert(false && "TODO ERICH");
+}
 void OpenACCClauseEnqueue::VisitFinalizeClause(const OpenACCFinalizeClause &C) {
 }
 void OpenACCClauseEnqueue::VisitIfPresentClause(
@@ -3331,6 +3349,10 @@ void EnqueueVisitor::VisitOMPTileDirective(const OMPTileDirective *D) {
   VisitOMPLoopTransformationDirective(D);
 }
 
+void EnqueueVisitor::VisitOMPStripeDirective(const OMPStripeDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+}
+
 void EnqueueVisitor::VisitOMPUnrollDirective(const OMPUnrollDirective *D) {
   VisitOMPLoopTransformationDirective(D);
 }
@@ -3663,6 +3685,11 @@ void EnqueueVisitor::VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *C) {
   EnqueueChildren(C);
   for (auto *Clause : C->clauses())
     EnqueueChildren(Clause);
+}
+
+void EnqueueVisitor::VisitOpenACCCacheConstruct(
+    const OpenACCCacheConstruct *C) {
+  EnqueueChildren(C);
 }
 
 void EnqueueVisitor::VisitOpenACCInitConstruct(const OpenACCInitConstruct *C) {
@@ -6283,6 +6310,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPSimdDirective");
   case CXCursor_OMPTileDirective:
     return cxstring::createRef("OMPTileDirective");
+  case CXCursor_OMPStripeDirective:
+    return cxstring::createRef("OMPStripeDirective");
   case CXCursor_OMPUnrollDirective:
     return cxstring::createRef("OMPUnrollDirective");
   case CXCursor_OMPReverseDirective:
@@ -6460,6 +6489,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OpenACCHostDataConstruct");
   case CXCursor_OpenACCWaitConstruct:
     return cxstring::createRef("OpenACCWaitConstruct");
+  case CXCursor_OpenACCCacheConstruct:
+    return cxstring::createRef("OpenACCCacheConstruct");
   case CXCursor_OpenACCInitConstruct:
     return cxstring::createRef("OpenACCInitConstruct");
   case CXCursor_OpenACCShutdownConstruct:
@@ -7239,6 +7270,8 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::LifetimeExtendedTemporary:
   case Decl::RequiresExprBody:
   case Decl::UnresolvedUsingIfExists:
+  case Decl::OpenACCDeclare:
+  case Decl::OpenACCRoutine:
     return C;
 
   // Declaration kinds that don't make any sense here, but are

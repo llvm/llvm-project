@@ -12,6 +12,7 @@
 @.str4 = private unnamed_addr constant [18 x i8] c"DHRYSTONE PROGR  \00", align 1
 @.str5 = private unnamed_addr constant [7 x i8] c"DHRYST\00", align 1
 @.str6 = private unnamed_addr constant [14 x i8] c"/tmp/rmXXXXXX\00", align 1
+@empty = private unnamed_addr constant [31 x i8] zeroinitializer, align 1
 @spool.splbuf = internal global [512 x i8] zeroinitializer, align 16
 
 define i32 @t0() {
@@ -279,6 +280,32 @@ define void @t7(ptr nocapture %a, ptr nocapture %b) nounwind {
 ; CHECK-T1-NEXT:    bx lr
 entry:
   tail call void @llvm.memcpy.p0.p0.i32(ptr align 4 %a, ptr align 4 %b, i32 16, i1 false)
+  ret void
+}
+
+define void @copy_from_zero_constant(ptr nocapture %C) nounwind {
+; CHECK-LABEL: copy_from_zero_constant:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i32 q8, #0x0
+; CHECK-NEXT:    movs r1, #15
+; CHECK-NEXT:    vst1.8 {d16, d17}, [r0], r1
+; CHECK-NEXT:    vst1.8 {d16, d17}, [r0]
+; CHECK-NEXT:    bx lr
+;
+; CHECK-T1-LABEL: copy_from_zero_constant:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    .save {r7, lr}
+; CHECK-T1-NEXT:    push {r7, lr}
+; CHECK-T1-NEXT:    ldr r1, .LCPI8_0
+; CHECK-T1-NEXT:    movs r2, #31
+; CHECK-T1-NEXT:    bl __aeabi_memcpy
+; CHECK-T1-NEXT:    pop {r7, pc}
+; CHECK-T1-NEXT:    .p2align 2
+; CHECK-T1-NEXT:  @ %bb.1:
+; CHECK-T1-NEXT:  .LCPI8_0:
+; CHECK-T1-NEXT:    .long .Lempty
+entry:
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %C, ptr @empty, i64 31, i1 false)
   ret void
 }
 

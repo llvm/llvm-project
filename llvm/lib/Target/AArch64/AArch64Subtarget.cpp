@@ -130,7 +130,12 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   // this in the future so we can specify it together with the subtarget
   // features.
   switch (ARMProcFamily) {
-  case Others:
+  case Generic:
+    // Using TuneCPU=generic we avoid ldapur instructions to line up with the
+    // cpus that use the AvoidLDAPUR feature. We don't want this to be on
+    // forever, so it is enabled between armv8.4 and armv8.7/armv9.2.
+    if (hasV8_4aOps() && !hasV8_8aOps())
+      AvoidLDAPUR = true;
     break;
   case Carmel:
     CacheLineSize = 64;
@@ -344,6 +349,15 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
     break;
+  case Olympus:
+    EpilogueVectorizationMinVF = 8;
+    MaxInterleaveFactor = 4;
+    ScatterOverhead = 13;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(32);
+    MaxBytesForLoopAlignment = 16;
+    VScaleForTuning = 1;
+    break;
   }
 
   if (AArch64MinimumJumpTableEntries.getNumOccurrences() > 0 || !HasMinSize)
@@ -389,8 +403,7 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
   RegBankInfo.reset(RBI);
 
   auto TRI = getRegisterInfo();
-  StringSet<> ReservedRegNames;
-  ReservedRegNames.insert(ReservedRegsForRA.begin(), ReservedRegsForRA.end());
+  StringSet<> ReservedRegNames(llvm::from_range, ReservedRegsForRA);
   for (unsigned i = 0; i < 29; ++i) {
     if (ReservedRegNames.count(TRI->getName(AArch64::X0 + i)))
       ReserveXRegisterForRA.set(i);

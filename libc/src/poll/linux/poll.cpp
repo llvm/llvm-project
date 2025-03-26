@@ -21,9 +21,10 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, poll, (pollfd * fds, nfds_t nfds, int timeout)) {
+  int ret = 0;
 
 #ifdef SYS_poll
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_poll, fds, nfds, timeout);
+  ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_poll, fds, nfds, timeout);
 #elif defined(SYS_ppoll)
   timespec ts, *tsp;
   if (timeout >= 0) {
@@ -33,9 +34,10 @@ LLVM_LIBC_FUNCTION(int, poll, (pollfd * fds, nfds_t nfds, int timeout)) {
   } else {
     tsp = nullptr;
   }
-  int ret =
+  ret =
       LIBC_NAMESPACE::syscall_impl<int>(SYS_ppoll, fds, nfds, tsp, nullptr, 0);
 #else
+// TODO: https://github.com/llvm/llvm-project/issues/125940
 #error "SYS_ppoll_time64?"
 #endif
 

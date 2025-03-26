@@ -81,6 +81,15 @@ add_mlir_upstream_c_api_library(MLIRCAPIGPU
   MLIRPass
 )
 
+add_mlir_upstream_c_api_library(MLIRCAPIIndex
+  Index.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRIndexDialect
+)
+
 add_mlir_upstream_c_api_library(MLIRCAPIIRDL
   IRDL.cpp
 

@@ -116,7 +116,7 @@ class ExtInfo<string suffix, string space, list<Predicate> predicates,
 
 def FExt       : ExtInfo<"", "", [HasStdExtF], f32, FPR32, FPR32, ?, ?>;
 
-def ZfinxExt   : ExtInfo<"_INX", "RVZfinx", [HasStdExtZfinx], f32, FPR32INX, FPR32INX, ?, ?>;
+def ZfinxExt   : ExtInfo<"_INX", "Zfinx", [HasStdExtZfinx], f32, FPR32INX, FPR32INX, ?, ?>;
 
 defvar FExts   = [FExt, ZfinxExt];
 
@@ -425,11 +425,9 @@ def : InstAlias<"frcsr $rd",      (CSRRS GPR:$rd, SysRegFCSR.Encoding, X0), 2>;
 def : InstAlias<"fscsr $rd, $rs", (CSRRW GPR:$rd, SysRegFCSR.Encoding, GPR:$rs)>;
 def : InstAlias<"fscsr $rs",      (CSRRW      X0, SysRegFCSR.Encoding, GPR:$rs), 2>;
 
-// frsr, fssr are obsolete aliases replaced by frcsr, fscsr, so give them
-// zero weight.
-def : InstAlias<"frsr $rd",       (CSRRS GPR:$rd, SysRegFCSR.Encoding, X0), 0>;
-def : InstAlias<"fssr $rd, $rs",  (CSRRW GPR:$rd, SysRegFCSR.Encoding, GPR:$rs), 0>;
-def : InstAlias<"fssr $rs",       (CSRRW      X0, SysRegFCSR.Encoding, GPR:$rs), 0>;
+// frsr, fssr are obsolete aliases replaced by frcsr, fscsr.
+def : MnemonicAlias<"frsr", "frcsr">;
+def : MnemonicAlias<"fssr", "fscsr">;
 
 def : InstAlias<"frrm $rd",        (CSRRS  GPR:$rd, SysRegFRM.Encoding, X0), 2>;
 def : InstAlias<"fsrm $rd, $rs",   (CSRRW  GPR:$rd, SysRegFRM.Encoding, GPR:$rs)>;
@@ -503,13 +501,13 @@ def fpimm0    : PatLeaf<(fpimm), [{ return N->isExactlyValue(+0.0); }]>;
 
 /// Generic pattern classes
 class PatSetCC<DAGOperand Ty, SDPatternOperator OpNode, CondCode Cond,
-               RVInst Inst, ValueType vt>
+               RVInstCommon Inst, ValueType vt>
     : Pat<(XLenVT (OpNode (vt Ty:$rs1), Ty:$rs2, Cond)), (Inst $rs1, $rs2)>;
 multiclass PatSetCC_m<SDPatternOperator OpNode, CondCode Cond,
-                      RVInst Inst, ExtInfo Ext> {
+                      RVInstCommon Inst, ExtInfo Ext> {
   let Predicates = Ext.Predicates in
   def Ext.Suffix : PatSetCC<Ext.PrimaryTy, OpNode, Cond,
-                            !cast<RVInst>(Inst#Ext.Suffix), Ext.PrimaryVT>;
+                            !cast<RVInstCommon>(Inst#Ext.Suffix), Ext.PrimaryVT>;
 }
 
 class PatFprFpr<SDPatternOperator OpNode, RVInstR Inst,

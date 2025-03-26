@@ -66,7 +66,7 @@ class LLVM_LIBRARY_VISIBILITY AggressiveAntiDepState {
     std::vector<unsigned> GroupNodeIndices;
 
     /// Map registers to all their references within a live range.
-    std::multimap<unsigned, RegisterReference> RegRefs;
+    std::multimap<MCRegister, RegisterReference> RegRefs;
 
     /// The index of the most recent kill (proceeding bottom-up),
     /// or ~0u if the register is not live.
@@ -86,31 +86,32 @@ class LLVM_LIBRARY_VISIBILITY AggressiveAntiDepState {
     std::vector<unsigned> &GetDefIndices() { return DefIndices; }
 
     /// Return the RegRefs map.
-    std::multimap<unsigned, RegisterReference>& GetRegRefs() { return RegRefs; }
+    std::multimap<MCRegister, RegisterReference> &GetRegRefs() {
+      return RegRefs;
+    }
 
     // Get the group for a register. The returned value is
     // the index of the GroupNode representing the group.
-    unsigned GetGroup(unsigned Reg);
+    unsigned GetGroup(MCRegister Reg);
 
     // Return a vector of the registers belonging to a group.
     // If RegRefs is non-NULL then only included referenced registers.
     void GetGroupRegs(
-       unsigned Group,
-       std::vector<unsigned> &Regs,
-       std::multimap<unsigned,
-         AggressiveAntiDepState::RegisterReference> *RegRefs);
+        unsigned Group, std::vector<MCRegister> &Regs,
+        std::multimap<MCRegister, AggressiveAntiDepState::RegisterReference>
+            *RegRefs);
 
     // Union Reg1's and Reg2's groups to form a new group.
     // Return the index of the GroupNode representing the group.
-    unsigned UnionGroups(unsigned Reg1, unsigned Reg2);
+    unsigned UnionGroups(MCRegister Reg1, MCRegister Reg2);
 
     // Remove a register from its current group and place
     // it alone in its own group. Return the index of the GroupNode
     // representing the registers new group.
-    unsigned LeaveGroup(unsigned Reg);
+    unsigned LeaveGroup(MCRegister Reg);
 
     /// Return true if Reg is live.
-    bool IsLive(unsigned Reg);
+    bool IsLive(MCRegister Reg);
   };
 
   class LLVM_LIBRARY_VISIBILITY AggressiveAntiDepBreaker
@@ -166,20 +167,20 @@ class LLVM_LIBRARY_VISIBILITY AggressiveAntiDepState {
 
     /// If MI implicitly def/uses a register, then
     /// return that register and all subregisters.
-    void GetPassthruRegs(MachineInstr &MI, std::set<unsigned> &PassthruRegs);
+    void GetPassthruRegs(MachineInstr &MI, std::set<MCRegister> &PassthruRegs);
 
-    void HandleLastUse(unsigned Reg, unsigned KillIdx, const char *tag,
+    void HandleLastUse(MCRegister Reg, unsigned KillIdx, const char *tag,
                        const char *header = nullptr,
                        const char *footer = nullptr);
 
     void PrescanInstruction(MachineInstr &MI, unsigned Count,
-                            std::set<unsigned> &PassthruRegs);
+                            const std::set<MCRegister> &PassthruRegs);
     void ScanInstruction(MachineInstr &MI, unsigned Count);
-    BitVector GetRenameRegisters(unsigned Reg);
-    bool FindSuitableFreeRegisters(unsigned SuperReg,
+    BitVector GetRenameRegisters(MCRegister Reg);
+    bool FindSuitableFreeRegisters(MCRegister SuperReg,
                                    unsigned AntiDepGroupIndex,
                                    RenameOrderType &RenameOrder,
-                                   std::map<unsigned, unsigned> &RenameMap);
+                                   std::map<MCRegister, MCRegister> &RenameMap);
   };
 
 } // end namespace llvm

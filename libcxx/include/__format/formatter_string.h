@@ -125,6 +125,19 @@ struct _LIBCPP_TEMPLATE_VIS formatter<basic_string_view<_CharT, _Traits>, _CharT
   }
 };
 
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
+template <>
+struct formatter<char*, wchar_t> : __disabled_formatter {};
+template <>
+struct formatter<const char*, wchar_t> : __disabled_formatter {};
+template <size_t _Size>
+struct formatter<char[_Size], wchar_t> : __disabled_formatter {};
+template <class _Traits, class _Allocator>
+struct formatter<basic_string<char, _Traits, _Allocator>, wchar_t> : __disabled_formatter {};
+template <class _Traits>
+struct formatter<basic_string_view<char, _Traits>, wchar_t> : __disabled_formatter {};
+#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
+
 #  if _LIBCPP_STD_VER >= 23
 template <>
 inline constexpr bool enable_nonlocking_formatter_optimization<char*> = true;

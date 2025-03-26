@@ -14,8 +14,8 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/Z3CrosscheckVisitor.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/EntryPointStats.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/SMTAPI.h"
 #include "llvm/Support/Timer.h"
 
@@ -25,20 +25,21 @@
 // Multiple `check()` calls might be called on the same query if previous
 // attempts of the same query resulted in UNSAT for any reason. Each query is
 // only counted once for these statistics, the retries are not accounted for.
-STATISTIC(NumZ3QueriesDone, "Number of Z3 queries done");
-STATISTIC(NumTimesZ3TimedOut, "Number of times Z3 query timed out");
-STATISTIC(NumTimesZ3ExhaustedRLimit,
-          "Number of times Z3 query exhausted the rlimit");
-STATISTIC(NumTimesZ3SpendsTooMuchTimeOnASingleEQClass,
-          "Number of times report equivalenece class was cut because it spent "
-          "too much time in Z3");
+STAT_COUNTER(NumZ3QueriesDone, "Number of Z3 queries done");
+STAT_COUNTER(NumTimesZ3TimedOut, "Number of times Z3 query timed out");
+STAT_COUNTER(NumTimesZ3ExhaustedRLimit,
+             "Number of times Z3 query exhausted the rlimit");
+STAT_COUNTER(
+    NumTimesZ3SpendsTooMuchTimeOnASingleEQClass,
+    "Number of times report equivalenece class was cut because it spent "
+    "too much time in Z3");
 
-STATISTIC(NumTimesZ3QueryAcceptsReport,
-          "Number of Z3 queries accepting a report");
-STATISTIC(NumTimesZ3QueryRejectReport,
-          "Number of Z3 queries rejecting a report");
-STATISTIC(NumTimesZ3QueryRejectEQClass,
-          "Number of times rejecting an report equivalenece class");
+STAT_COUNTER(NumTimesZ3QueryAcceptsReport,
+             "Number of Z3 queries accepting a report");
+STAT_COUNTER(NumTimesZ3QueryRejectReport,
+             "Number of Z3 queries rejecting a report");
+STAT_COUNTER(NumTimesZ3QueryRejectEQClass,
+             "Number of times rejecting an report equivalenece class");
 
 using namespace clang;
 using namespace ento;

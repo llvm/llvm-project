@@ -6,6 +6,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.dirent
     libc.include.dlfcn
     libc.include.elf
+    libc.include.endian
     libc.include.errno
     libc.include.fcntl
     libc.include.features
@@ -49,6 +50,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_types
     libc.include.sys_utsname
     libc.include.sys_wait
+    libc.include.sysexits
     libc.include.termios
     libc.include.threads
     libc.include.time

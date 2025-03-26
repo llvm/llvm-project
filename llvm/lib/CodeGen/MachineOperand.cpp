@@ -27,7 +27,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
 
@@ -450,14 +449,11 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
   llvm_unreachable("Invalid machine operand type");
 }
 
-// Try to crawl up to the machine function and get TRI and IntrinsicInfo from
-// it.
+// Try to crawl up to the machine function and get TRI from it.
 static void tryToGetTargetInfo(const MachineOperand &MO,
-                               const TargetRegisterInfo *&TRI,
-                               const TargetIntrinsicInfo *&IntrinsicInfo) {
+                               const TargetRegisterInfo *&TRI) {
   if (const MachineFunction *MF = getMFIfAvailable(MO)) {
     TRI = MF->getSubtarget().getRegisterInfo();
-    IntrinsicInfo = MF->getTarget().getIntrinsicInfo();
   }
 }
 
@@ -781,20 +777,19 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
   }
 }
 
-void MachineOperand::print(raw_ostream &OS, const TargetRegisterInfo *TRI,
-                           const TargetIntrinsicInfo *IntrinsicInfo) const {
-  print(OS, LLT{}, TRI, IntrinsicInfo);
+void MachineOperand::print(raw_ostream &OS,
+                           const TargetRegisterInfo *TRI) const {
+  print(OS, LLT{}, TRI);
 }
 
 void MachineOperand::print(raw_ostream &OS, LLT TypeToPrint,
-                           const TargetRegisterInfo *TRI,
-                           const TargetIntrinsicInfo *IntrinsicInfo) const {
-  tryToGetTargetInfo(*this, TRI, IntrinsicInfo);
+                           const TargetRegisterInfo *TRI) const {
+  tryToGetTargetInfo(*this, TRI);
   ModuleSlotTracker DummyMST(nullptr);
   print(OS, DummyMST, TypeToPrint, std::nullopt, /*PrintDef=*/false,
         /*IsStandalone=*/true,
         /*ShouldPrintRegisterTies=*/true,
-        /*TiedOperandIdx=*/0, TRI, IntrinsicInfo);
+        /*TiedOperandIdx=*/0, TRI);
 }
 
 void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
@@ -802,8 +797,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
                            bool PrintDef, bool IsStandalone,
                            bool ShouldPrintRegisterTies,
                            unsigned TiedOperandIdx,
-                           const TargetRegisterInfo *TRI,
-                           const TargetIntrinsicInfo *IntrinsicInfo) const {
+                           const TargetRegisterInfo *TRI) const {
   printTargetFlags(OS, *this);
   switch (getType()) {
   case MachineOperand::MO_Register: {
@@ -1004,8 +998,6 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     Intrinsic::ID ID = getIntrinsicID();
     if (ID < Intrinsic::num_intrinsics)
       OS << "intrinsic(@" << Intrinsic::getBaseName(ID) << ')';
-    else if (IntrinsicInfo)
-      OS << "intrinsic(@" << IntrinsicInfo->getName(ID) << ')';
     else
       OS << "intrinsic(" << ID << ')';
     break;

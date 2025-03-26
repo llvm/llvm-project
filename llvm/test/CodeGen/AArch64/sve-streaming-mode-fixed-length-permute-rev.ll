@@ -85,7 +85,7 @@ define void @test_revbv16i16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %tmp1 = load <32 x i8>, ptr %a
-  %tmp2 = shufflevector <32 x i8> %tmp1, <32 x i8> undef, <32 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14, i32 17, i32 16, i32 19, i32 18, i32 21, i32 20, i32 23, i32 22, i32 undef, i32 24, i32 27, i32 undef, i32 29, i32 28, i32 undef, i32 undef>
+  %tmp2 = shufflevector <32 x i8> %tmp1, <32 x i8> poison, <32 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14, i32 17, i32 16, i32 19, i32 18, i32 21, i32 20, i32 23, i32 22, i32 poison, i32 24, i32 27, i32 poison, i32 29, i32 28, i32 poison, i32 poison>
   store <32 x i8> %tmp2, ptr %a
   ret void
 }
@@ -169,7 +169,7 @@ define void @test_revbv8i32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %tmp1 = load <32 x i8>, ptr %a
-  %tmp2 = shufflevector <32 x i8> %tmp1, <32 x i8> undef, <32 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12, i32 19, i32 18, i32 17, i32 16, i32 23, i32 22, i32 21, i32 20, i32 27, i32 undef, i32 undef, i32 undef, i32 31, i32 30, i32 29, i32 undef>
+  %tmp2 = shufflevector <32 x i8> %tmp1, <32 x i8> poison, <32 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12, i32 19, i32 18, i32 17, i32 16, i32 23, i32 22, i32 21, i32 20, i32 27, i32 poison, i32 poison, i32 poison, i32 31, i32 30, i32 29, i32 poison>
   store <32 x i8> %tmp2, ptr %a
   ret void
 }
@@ -253,7 +253,7 @@ define void @test_revbv4i64(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %tmp1 = load <32 x i8>, ptr %a
-  %tmp2 = shufflevector <32 x i8> %tmp1, <32 x i8> undef, <32 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 31, i32 30, i32 29, i32 undef, i32 27, i32 undef, i32 undef, i32 undef>
+  %tmp2 = shufflevector <32 x i8> %tmp1, <32 x i8> poison, <32 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 31, i32 30, i32 29, i32 poison, i32 27, i32 poison, i32 poison, i32 poison>
   store <32 x i8> %tmp2, ptr %a
   ret void
 }
@@ -301,7 +301,7 @@ define void @test_revhv8i32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %tmp1 = load <16 x i16>, ptr %a
-  %tmp2 = shufflevector <16 x i16> %tmp1, <16 x i16> undef, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
+  %tmp2 = shufflevector <16 x i16> %tmp1, <16 x i16> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
   store <16 x i16> %tmp2, ptr %a
   ret void
 }
@@ -349,7 +349,7 @@ define void @test_revhv8f32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %tmp1 = load <16 x half>, ptr %a
-  %tmp2 = shufflevector <16 x half> %tmp1, <16 x half> undef, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
+  %tmp2 = shufflevector <16 x half> %tmp1, <16 x half> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
   store <16 x half> %tmp2, ptr %a
   ret void
 }
@@ -397,7 +397,7 @@ define void @test_revhv4i64(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %tmp1 = load <16 x i16>, ptr %a
-  %tmp2 = shufflevector <16 x i16> %tmp1, <16 x i16> undef, <16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
+  %tmp2 = shufflevector <16 x i16> %tmp1, <16 x i16> poison, <16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
   store <16 x i16> %tmp2, ptr %a
   ret void
 }
@@ -433,7 +433,7 @@ define void @test_revwv4i64(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %tmp1 = load <8 x i32>, ptr %a
-  %tmp2 = shufflevector <8 x i32> %tmp1, <8 x i32> undef, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+  %tmp2 = shufflevector <8 x i32> %tmp1, <8 x i32> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
   store <8 x i32> %tmp2, ptr %a
   ret void
 }
@@ -469,7 +469,7 @@ define void @test_revwv4f64(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %tmp1 = load <8 x float>, ptr %a
-  %tmp2 = shufflevector <8 x float> %tmp1, <8 x float> undef, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+  %tmp2 = shufflevector <8 x float> %tmp1, <8 x float> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
   store <8 x float> %tmp2, ptr %a
   ret void
 }
@@ -524,7 +524,7 @@ define <16 x i8> @test_revv16i8(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #32
 ; NONEON-NOSVE-NEXT:    ret
   %tmp1 = load <16 x i8>, ptr %a
-  %tmp2 = shufflevector <16 x i8> %tmp1, <16 x i8> undef, <16 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8>
+  %tmp2 = shufflevector <16 x i8> %tmp1, <16 x i8> poison, <16 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8>
   ret <16 x i8> %tmp2
 }
 
@@ -635,7 +635,7 @@ define void @test_revhv32i16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #128
 ; NONEON-NOSVE-NEXT:    ret
   %tmp1 = load <32 x i16>, ptr %a
-  %tmp2 = shufflevector <32 x i16> %tmp1, <32 x i16> undef, <32 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12, i32 19, i32 18, i32 17, i32 16, i32 23, i32 22, i32 21, i32 20, i32 27, i32 undef, i32 undef, i32 undef, i32 31, i32 30, i32 29, i32 undef>
+  %tmp2 = shufflevector <32 x i16> %tmp1, <32 x i16> poison, <32 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12, i32 19, i32 18, i32 17, i32 16, i32 23, i32 22, i32 21, i32 20, i32 27, i32 poison, i32 poison, i32 poison, i32 31, i32 30, i32 29, i32 poison>
   store <32 x i16> %tmp2, ptr %a
   ret void
 }
@@ -666,7 +666,7 @@ define void @test_rev_elts_fail(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %tmp1 = load <4 x i64>, ptr %a
-  %tmp2 = shufflevector <4 x i64> %tmp1, <4 x i64> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  %tmp2 = shufflevector <4 x i64> %tmp1, <4 x i64> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
   store <4 x i64> %tmp2, ptr %a
   ret void
 }
@@ -692,7 +692,7 @@ define void @test_revdv4i64_sve2p1(ptr %a) #1 {
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x0]
 ; NONEON-NOSVE-NEXT:    ret
   %tmp1 = load <4 x i64>, ptr %a
-  %tmp2 = shufflevector <4 x i64> %tmp1, <4 x i64> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  %tmp2 = shufflevector <4 x i64> %tmp1, <4 x i64> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
   store <4 x i64> %tmp2, ptr %a
   ret void
 }
@@ -716,7 +716,7 @@ define void @test_revdv4f64_sve2p1(ptr %a) #1 {
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x0]
 ; NONEON-NOSVE-NEXT:    ret
   %tmp1 = load <4 x double>, ptr %a
-  %tmp2 = shufflevector <4 x double> %tmp1, <4 x double> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  %tmp2 = shufflevector <4 x double> %tmp1, <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
   store <4 x double> %tmp2, ptr %a
   ret void
 }
@@ -752,7 +752,7 @@ define void @test_revv8i32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %tmp1 = load <8 x i32>, ptr %a
-  %tmp2 = shufflevector <8 x i32> %tmp1, <8 x i32> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  %tmp2 = shufflevector <8 x i32> %tmp1, <8 x i32> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   store <8 x i32> %tmp2, ptr %a
   ret void
 }

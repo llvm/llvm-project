@@ -15,8 +15,9 @@ define void @bar(ptr %A, i32 signext %n) {
 ; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: LoongArch::GPRRC, 1 registers
 ; CHECK-SCALAR-NEXT: LV: The target has 30 registers of LoongArch::GPRRC register class
 ; CHECK-SCALAR-NEXT: LV: The target has 32 registers of LoongArch::FPRRC register class
-; CHECK-VECTOR:      LV(REG): Found max usage: 1 item
+; CHECK-VECTOR:      LV(REG): Found max usage: 2 item
 ; CHECK-VECTOR-NEXT: LV(REG): RegisterClass: LoongArch::VRRC, 3 registers
+; CHECK-VECTOR-NEXT: LV(REG): RegisterClass: LoongArch::GPRRC, 1 registers
 ; CHECK-VECTOR-NEXT: LV(REG): Found invariant usage: 1 item
 ; CHECK-VECTOR-NEXT: LV(REG): RegisterClass: LoongArch::GPRRC, 1 registers
 ; CHECK-VECTOR-NEXT: LV: The target has 32 registers of LoongArch::VRRC register class

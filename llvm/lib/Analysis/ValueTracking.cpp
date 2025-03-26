@@ -797,10 +797,31 @@ static void computeKnownBitsFromCond(const Value *V, Value *Cond,
     else
       Known2 = Known2.intersectWith(Known3);
     Known = Known.unionWith(Known2);
+    return;
   }
 
-  if (auto *Cmp = dyn_cast<ICmpInst>(Cond))
+  if (auto *Cmp = dyn_cast<ICmpInst>(Cond)) {
     computeKnownBitsFromICmpCond(V, Cmp, Known, SQ, Invert);
+    return;
+  }
+
+  if (match(Cond, m_Trunc(m_Specific(V)))) {
+    KnownBits DstKnown(1);
+    if (Invert) {
+      DstKnown.setAllZero();
+    } else {
+      DstKnown.setAllOnes();
+    }
+    if (cast<TruncInst>(Cond)->hasNoUnsignedWrap()) {
+      Known = Known.unionWith(DstKnown.zext(Known.getBitWidth()));
+      return;
+    }
+    Known = Known.unionWith(DstKnown.anyext(Known.getBitWidth()));
+    return;
+  }
+
+  if (Depth < MaxAnalysisRecursionDepth && match(Cond, m_Not(m_Value(A))))
+    computeKnownBitsFromCond(V, A, Known, Depth + 1, SQ, !Invert);
 }
 
 void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
@@ -1963,7 +1984,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         const ConstantRange Range = getVScaleRange(II->getFunction(), BitWidth);
         uint64_t SEW = RISCVVType::decodeVSEW(
             cast<ConstantInt>(II->getArgOperand(HasAVL))->getZExtValue());
-        RISCVII::VLMUL VLMUL = static_cast<RISCVII::VLMUL>(
+        RISCVVType::VLMUL VLMUL = static_cast<RISCVVType::VLMUL>(
             cast<ConstantInt>(II->getArgOperand(1 + HasAVL))->getZExtValue());
         uint64_t MaxVLEN =
             Range.getUnsignedMax().getZExtValue() * RISCV::RVVBitsPerBlock;
@@ -3836,6 +3857,50 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2,
       match(V2, m_PtrToIntSameSize(Q.DL, m_Value(B))))
     return isKnownNonEqual(A, B, DemandedElts, Depth + 1, Q);
 
+  if (!Q.CxtI)
+    return false;
+
+  // Try to infer NonEqual based on information from dominating conditions.
+  if (Q.DC && Q.DT) {
+    for (BranchInst *BI : Q.DC->conditionsFor(V1)) {
+      Value *Cond = BI->getCondition();
+      BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
+      if (Q.DT->dominates(Edge0, Q.CxtI->getParent()) &&
+          isImpliedCondition(Cond, ICmpInst::ICMP_NE, V1, V2, Q.DL,
+                             /*LHSIsTrue=*/true, Depth)
+              .value_or(false))
+        return true;
+
+      BasicBlockEdge Edge1(BI->getParent(), BI->getSuccessor(1));
+      if (Q.DT->dominates(Edge1, Q.CxtI->getParent()) &&
+          isImpliedCondition(Cond, ICmpInst::ICMP_NE, V1, V2, Q.DL,
+                             /*LHSIsTrue=*/false, Depth)
+              .value_or(false))
+        return true;
+    }
+  }
+
+  if (!Q.AC)
+    return false;
+
+  // Try to infer NonEqual based on information from assumptions.
+  for (auto &AssumeVH : Q.AC->assumptionsFor(V1)) {
+    if (!AssumeVH)
+      continue;
+    CallInst *I = cast<CallInst>(AssumeVH);
+
+    assert(I->getFunction() == Q.CxtI->getFunction() &&
+           "Got assumption for the wrong function!");
+    assert(I->getIntrinsicID() == Intrinsic::assume &&
+           "must be an assume intrinsic");
+
+    if (isImpliedCondition(I->getArgOperand(0), ICmpInst::ICMP_NE, V1, V2, Q.DL,
+                           /*LHSIsTrue=*/true, Depth)
+            .value_or(false) &&
+        isValidAssumeForContext(I, Q.CxtI, Q.DT))
+      return true;
+  }
+
   return false;
 }
 
@@ -3922,6 +3987,31 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
   if (auto *U = dyn_cast<Operator>(V)) {
     switch (Operator::getOpcode(V)) {
     default: break;
+    case Instruction::BitCast: {
+      Value *Src = U->getOperand(0);
+      Type *SrcTy = Src->getType();
+
+      // Skip if the source type is not an integer or integer vector type
+      // This ensures we only process integer-like types
+      if (!SrcTy->isIntOrIntVectorTy())
+        break;
+
+      unsigned SrcBits = SrcTy->getScalarSizeInBits();
+
+      // Bitcast 'large element' scalar/vector to 'small element' vector.
+      if ((SrcBits % TyBits) != 0)
+        break;
+
+      // Only proceed if the destination type is a fixed-size vector
+      if (isa<FixedVectorType>(Ty)) {
+        // Fast case - sign splat can be simply split across the small elements.
+        // This works for both vector and scalar sources
+        Tmp = ComputeNumSignBits(Src, Depth + 1, Q);
+        if (Tmp == SrcBits)
+          return TyBits;
+      }
+      break;
+    }
     case Instruction::SExt:
       Tmp = TyBits - U->getOperand(0)->getType()->getScalarSizeInBits();
       return ComputeNumSignBits(U->getOperand(0), DemandedElts, Depth + 1, Q) +
@@ -4931,6 +5021,11 @@ static void computeKnownFPClassFromCond(const Value *V, Value *Cond,
     computeKnownFPClassFromCond(V, A, Depth + 1, CondIsTrue, CxtI,
                                 KnownFromContext);
     computeKnownFPClassFromCond(V, B, Depth + 1, CondIsTrue, CxtI,
+                                KnownFromContext);
+    return;
+  }
+  if (Depth < MaxAnalysisRecursionDepth && match(Cond, m_Not(m_Value(A)))) {
+    computeKnownFPClassFromCond(V, A, Depth + 1, !CondIsTrue, CxtI,
                                 KnownFromContext);
     return;
   }
@@ -6113,13 +6208,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     else if (Bits.isNegative())
       Known.signBitMustBeOne();
 
-    if (Ty->isIEEE()) {
+    if (Ty->isIEEELikeFPTy()) {
       // IEEE floats are NaN when all bits of the exponent plus at least one of
       // the fraction bits are 1. This means:
       //   - If we assume unknown bits are 0 and the value is NaN, it will
       //     always be NaN
       //   - If we assume unknown bits are 1 and the value is not NaN, it can
       //     never be NaN
+      // Note: They do not hold for x86_fp80 format.
       if (APFloat(Ty->getFltSemantics(), Bits.One).isNaN())
         Known.KnownFPClasses = fcNan;
       else if (!APFloat(Ty->getFltSemantics(), ~Bits.Zero).isNaN())
@@ -6259,7 +6355,7 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
 
   if (ConstantDataSequential *CA = dyn_cast<ConstantDataSequential>(C)) {
     Value *Val = UndefInt8;
-    for (unsigned I = 0, E = CA->getNumElements(); I != E; ++I)
+    for (uint64_t I = 0, E = CA->getNumElements(); I != E; ++I)
       if (!(Val = Merge(Val, isBytewiseValue(CA->getElementAsConstant(I), DL))))
         return nullptr;
     return Val;
@@ -7754,6 +7850,8 @@ static bool isGuaranteedNotToBeUndefOrPoison(
       unsigned Num = PN->getNumIncomingValues();
       bool IsWellDefined = true;
       for (unsigned i = 0; i < Num; ++i) {
+        if (PN == PN->getIncomingValue(i))
+          continue;
         auto *TI = PN->getIncomingBlock(i)->getTerminator();
         if (!isGuaranteedNotToBeUndefOrPoison(PN->getIncomingValue(i), AC, TI,
                                               DT, Depth + 1, Kind)) {
@@ -8105,14 +8203,6 @@ static bool handleGuaranteedWellDefinedOps(const Instruction *I,
   return false;
 }
 
-void llvm::getGuaranteedWellDefinedOps(
-    const Instruction *I, SmallVectorImpl<const Value *> &Operands) {
-  handleGuaranteedWellDefinedOps(I, [&](const Value *V) {
-    Operands.push_back(V);
-    return false;
-  });
-}
-
 /// Enumerates all operands of \p I that are guaranteed to not be poison.
 template <typename CallableT>
 static bool handleGuaranteedNonPoisonOps(const Instruction *I,
@@ -8129,14 +8219,6 @@ static bool handleGuaranteedNonPoisonOps(const Instruction *I,
   default:
     return false;
   }
-}
-
-void llvm::getGuaranteedNonPoisonOps(const Instruction *I,
-                                     SmallVectorImpl<const Value *> &Operands) {
-  handleGuaranteedNonPoisonOps(I, [&](const Value *V) {
-    Operands.push_back(V);
-    return false;
-  });
 }
 
 bool llvm::mustTriggerUB(const Instruction *I,
@@ -8599,7 +8681,7 @@ bool llvm::isKnownInversion(const Value *X, const Value *Y) {
     return false;
 
   // They must both have samesign flag or not.
-  if (cast<ICmpInst>(X)->hasSameSign() != cast<ICmpInst>(Y)->hasSameSign())
+  if (Pred1.hasSameSign() != Pred2.hasSameSign())
     return false;
 
   if (B == C)
@@ -8611,8 +8693,7 @@ bool llvm::isKnownInversion(const Value *X, const Value *Y) {
     return false;
 
   // Sign bits of two RHSCs should match.
-  if (cast<ICmpInst>(X)->hasSameSign() &&
-      RHSC1->isNonNegative() != RHSC2->isNonNegative())
+  if (Pred1.hasSameSign() && RHSC1->isNonNegative() != RHSC2->isNonNegative())
     return false;
 
   const auto CR1 = ConstantRange::makeExactICmpRegion(Pred1, *RHSC1);
@@ -10206,10 +10287,10 @@ void llvm::findValuesAffectedByCondition(
         Worklist.push_back(B);
       }
     } else if (match(V, m_ICmp(Pred, m_Value(A), m_Value(B)))) {
-      AddCmpOperands(A, B);
-
       bool HasRHSC = match(B, m_ConstantInt());
       if (ICmpInst::isEquality(Pred)) {
+        AddAffected(A);
+        AddAffected(B);
         if (HasRHSC) {
           Value *Y;
           // (X & C) or (X | C).
@@ -10223,6 +10304,7 @@ void llvm::findValuesAffectedByCondition(
           }
         }
       } else {
+        AddCmpOperands(A, B);
         if (HasRHSC) {
           // Handle (A + C1) u< C2, which is the canonical form of
           // A > C3 && A < C4.
@@ -10273,6 +10355,13 @@ void llvm::findValuesAffectedByCondition(
                                                            m_Value()))) {
       // Handle patterns that computeKnownFPClass() support.
       AddAffected(A);
+    } else if (!IsAssume && match(V, m_Trunc(m_Value(X)))) {
+      // Assume is checked here as X is already added above for assumes in
+      // addValueAffectedByCondition
+      AddAffected(X);
+    } else if (!IsAssume && match(V, m_Not(m_Value(X)))) {
+      // Assume is checked here to avoid issues with ephemeral values
+      Worklist.push_back(X);
     }
   }
 }
