@@ -11,6 +11,7 @@
 
 #include <__algorithm/for_each.h>
 #include <__algorithm/in_fun_result.h>
+#include <__algorithm/iterator_operations.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__functional/invoke.h>
@@ -43,7 +44,8 @@ struct __for_each_n {
   operator()(_Iter __first, iter_difference_t<_Iter> __count, _Func __func, _Proj __proj = {}) const {
     if constexpr (random_access_iterator<_Iter>) {
       auto __last = __first + __count;
-      std::for_each(__first, __last, [&](auto&& __val) { std::invoke(__func, std::invoke(__proj, __val)); });
+      auto __f    = [&](auto&& __val) { std::invoke(__func, std::invoke(__proj, __val)); };
+      std::__for_each<_RangeAlgPolicy>(__first, __last, __f);
       return {std::move(__last), std::move(__func)};
     } else {
       while (__count-- > 0) {
