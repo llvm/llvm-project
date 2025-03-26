@@ -62,6 +62,14 @@ private:
     return static_cast<int>(mem_scope);
   }
 
+  LIBC_INLINE static constexpr int infer_failure_order(MemoryOrder mem_ord) {
+    if (mem_ord == MemoryOrder::RELEASE)
+      return order(MemoryOrder::RELAXED);
+    if (mem_ord == MemoryOrder::ACQ_REL)
+      return order(MemoryOrder::ACQUIRE);
+    return order(mem_ord);
+  }
+
   LIBC_INLINE static T *addressof(T &ref) { return __builtin_addressof(ref); }
 
   // Require types that are 1, 2, 4, 8, or 16 bytes in length to be aligned to
@@ -129,7 +137,7 @@ public:
       [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
     return __atomic_compare_exchange(addressof(val), addressof(expected),
                                      addressof(desired), false, order(mem_ord),
-                                     order(mem_ord));
+                                     infer_failure_order(mem_ord));
   }
 
   // Atomic compare exchange (separate success and failure memory orders)
@@ -148,7 +156,7 @@ public:
       [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
     return __atomic_compare_exchange(addressof(val), addressof(expected),
                                      addressof(desired), true, order(mem_ord),
-                                     order(mem_ord));
+                                     infer_failure_order(mem_ord));
   }
 
   // Atomic compare exchange (weak version with separate success and failure
@@ -252,6 +260,14 @@ private:
     return static_cast<int>(mem_scope);
   }
 
+  LIBC_INLINE static constexpr int infer_failure_order(MemoryOrder mem_ord) {
+    if (mem_ord == MemoryOrder::RELEASE)
+      return order(MemoryOrder::RELAXED);
+    if (mem_ord == MemoryOrder::ACQ_REL)
+      return order(MemoryOrder::ACQUIRE);
+    return order(mem_ord);
+  }
+
 public:
   // Constructor from T reference
   LIBC_INLINE explicit constexpr AtomicRef(T &obj) : ptr(&obj) {}
@@ -298,7 +314,8 @@ public:
       T &expected, T desired, MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
       [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) const {
     return __atomic_compare_exchange(ptr, &expected, &desired, false,
-                                     order(mem_ord), order(mem_ord));
+                                     order(mem_ord),
+                                     infer_failure_order(mem_ord));
   }
 
   // Atomic compare exchange (strong, separate success/failure memory orders)
