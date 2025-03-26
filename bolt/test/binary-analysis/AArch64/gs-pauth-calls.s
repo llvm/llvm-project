@@ -201,7 +201,7 @@ good_indirect_call_mem_chain_of_auts:
         mov     x29, sp
 
         ldr     x16, [x0]
-        autia   x16, x1
+        autda   x16, x1
         ldr     x16, [x16]
         autia   x16, x0
         blr     x16
@@ -223,7 +223,7 @@ bad_indirect_call_mem_chain_of_auts:
 // CHECK-NEXT:  {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
 // CHECK-NEXT:  {{[0-9a-f]+}}:   mov     x29, sp
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ldr     x16, [x0]
-// CHECK-NEXT:  {{[0-9a-f]+}}:   autia   x16, x1
+// CHECK-NEXT:  {{[0-9a-f]+}}:   autda   x16, x1
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ldr     x16, [x16]
 // CHECK-NEXT:  {{[0-9a-f]+}}:   blr     x16
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
@@ -234,7 +234,7 @@ bad_indirect_call_mem_chain_of_auts:
         mov     x29, sp
 
         ldr     x16, [x0]
-        autia   x16, x1
+        autda   x16, x1
         ldr     x16, [x16]
         // Missing AUT of x16. The fact that x16 was authenticated above has nothing to do with it.
         blr     x16
@@ -386,7 +386,7 @@ good_indirect_call_mem_chain_of_auts_multi_bb:
         mov     x29, sp
 
         ldr     x16, [x0]
-        autia   x16, x1
+        autda   x16, x1
         ldr     x16, [x16]
         autia   x16, x0
         cbz     x2, 1f
@@ -411,7 +411,7 @@ bad_indirect_call_mem_chain_of_auts_multi_bb:
         mov     x29, sp
 
         ldr     x16, [x0]
-        autia   x16, x1
+        autda   x16, x1
         ldr     x16, [x16]
         cbz     x2, 1f
         autia   x16, x0
@@ -492,11 +492,11 @@ bad_indirect_tailcall_mem_chain_of_auts:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      ldr     x16, [x16]
 // CHECK-NEXT:  This happens in the following basic block:
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ldr     x16, [x0]
-// CHECK-NEXT:  {{[0-9a-f]+}}:   autia   x16, x1
+// CHECK-NEXT:  {{[0-9a-f]+}}:   autda   x16, x1
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ldr     x16, [x16]
 // CHECK-NEXT:  {{[0-9a-f]+}}:   br      x16
         ldr     x16, [x0]
-        autia   x16, x1
+        autda   x16, x1
         ldr     x16, [x16]
         // Missing AUT of x16. The fact that x16 was authenticated above has nothing to do with it.
         br      x16

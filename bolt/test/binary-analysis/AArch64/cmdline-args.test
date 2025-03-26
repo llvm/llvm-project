@@ -33,7 +33,7 @@ HELP-EMPTY:
 HELP-NEXT:  BinaryAnalysis options:
 HELP-EMPTY:
 HELP-NEXT:   --scanners=<value> - which gadget scanners to run
-HELP-NEXT:   =pacret - Return address protection (subset of "pauth")
+HELP-NEXT:   =pacret - pac-ret: return address protection (subset of "pauth")
 HELP-NEXT:   =pauth - All Pointer Authentication scanners
 HELP-NEXT:   =all - All implemented scanners
 HELP-EMPTY:
