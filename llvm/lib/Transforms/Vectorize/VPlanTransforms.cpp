@@ -36,6 +36,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
+#include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
@@ -4521,6 +4522,72 @@ void VPlanTransforms::addExitUsersForFirstOrderRecurrences(VPlan &Plan,
           VPInstruction::ExtractPenultimateElement, {FOR->getBackedgeValue()},
           {}, "vector.recur.extract.for.phi");
       cast<VPInstruction>(U)->replaceAllUsesWith(PenultimateElement);
+    }
+  }
+}
+
+/// Change CSA reductions to save the appropriate state.
+void VPlanTransforms::convertFindLastRecurrences(
+    VPlan &Plan, VPRecipeBuilder &RecipeBuilder,
+    LoopVectorizationLegality *Legal) {
+  assert(Legal && "Need valid LoopVecLegality");
+
+  // May need to do something better than this?
+  if (Plan.hasScalarVFOnly())
+    return;
+
+  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars()) {
+    if (RecurrenceDescriptor::isFindLastRecurrenceKind(
+            RdxDesc.getRecurrenceKind())) {
+      VPRecipeBase *PhiR = RecipeBuilder.getRecipe(Phi);
+      VPBuilder Builder = VPBuilder::getToInsertAfter(PhiR);
+
+      // Add mask phi...
+      VPValue *False =
+          Plan.getOrAddLiveIn(ConstantInt::getFalse(Phi->getContext()));
+      // FIXME: Either come up with a new phi recipe or make an existing one
+      //        more generic. There's only supposed to be one ALM PHI.
+      VPActiveLaneMaskPHIRecipe *MaskPHI =
+          new VPActiveLaneMaskPHIRecipe(False, DebugLoc());
+      Builder.insert(MaskPHI);
+
+      SelectInst *Select = cast<SelectInst>(RdxDesc.getLoopExitInstr());
+      auto *SR = cast<VPWidenSelectRecipe>(RecipeBuilder.getRecipe(Select));
+
+      // Add select for mask...
+      VPValue *Cond = SR->getCond();
+      Builder.setInsertPoint(SR);
+      VPInstruction *AnyOf = Builder.createNaryOp(VPInstruction::AnyOf, {Cond});
+      auto *MaskSelect = new VPWidenSelectVectorRecipe({AnyOf, Cond, MaskPHI});
+      Builder.insert(MaskSelect);
+      MaskPHI->addOperand(MaskSelect);
+
+      // Create new select for data...
+      auto *DataSelect = new VPWidenSelectVectorRecipe(
+          {AnyOf, SR->getOperand(1), SR->getOperand(2)});
+      Builder.insert(DataSelect);
+      SR->replaceAllUsesWith(DataSelect);
+      SR->eraseFromParent();
+
+      // FIXME: I initially tried to replace the reduction calculation in
+      //        the middle block here. However, it appears that the Def-Use
+      //        graph is somewhat broken. Calling replaceAllUsesWith on the
+      //        extract-from-end replaced the one use it knew about in
+      //        ir-bb<loop>, but not a second reference in ir-bb<exit.loopexit>
+      //        Both references were pending extra operands to phi nodes.
+
+      // I could either just replace the compute-reduction-result node alone,
+      // or (as I have done) plant the extract-last-active instead. But we
+      // now need to add the other operands to extract-last-active.
+      VPValue *Default = RecipeBuilder.getVPValueOrAddLiveIn(
+          RdxDesc.getRecurrenceStartValue());
+      for (VPUser *U : DataSelect->users()) {
+        VPInstruction *I = dyn_cast<VPInstruction>(U);
+        if (I && I->getOpcode() == VPInstruction::ExtractLastActive) {
+          I->addOperand(MaskSelect);
+          I->addOperand(Default);
+        }
+      }
     }
   }
 }
