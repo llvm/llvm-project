@@ -20,7 +20,6 @@
 #include <spawn.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-#endif
 
 #include <unistd.h>
 #endif
