@@ -428,6 +428,8 @@ bool X86InstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_BRCOND:
     return selectCondBranch(I, MRI, MF);
   case TargetOpcode::G_IMPLICIT_DEF:
+  case TargetOpcode::G_POISON:
+
   case TargetOpcode::G_PHI:
     return selectImplicitDefOrPHI(I, MRI);
   case TargetOpcode::G_MUL:
@@ -1588,6 +1590,7 @@ bool X86InstructionSelector::materializeFP(MachineInstr &I,
 bool X86InstructionSelector::selectImplicitDefOrPHI(
     MachineInstr &I, MachineRegisterInfo &MRI) const {
   assert((I.getOpcode() == TargetOpcode::G_IMPLICIT_DEF ||
+          I.getOpcode() == TargetOpcode::G_POISON ||
           I.getOpcode() == TargetOpcode::G_PHI) &&
          "unexpected instruction");
 
@@ -1604,7 +1607,8 @@ bool X86InstructionSelector::selectImplicitDefOrPHI(
     }
   }
 
-  if (I.getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
+  if (I.getOpcode() == TargetOpcode::G_POISON ||
+    I.getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
     I.setDesc(TII.get(X86::IMPLICIT_DEF));
   else
     I.setDesc(TII.get(X86::PHI));
