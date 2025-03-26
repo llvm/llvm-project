@@ -1,9 +1,9 @@
-<!--===- docs/Intrinsics.md 
-  
+<!--===- docs/Intrinsics.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # A categorization of standard (2018) and extended Fortran intrinsic procedures
@@ -703,7 +703,7 @@ CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, LOC
 MALLOC, FREE
 ```
 
-### Library subroutine 
+### Library subroutine
 ```
 CALL BACKTRACE()
 CALL FDATE(TIME)
@@ -961,7 +961,7 @@ program test_etime
     call ETIME(tarray, result)
     print *, result
     print *, tarray(1)
-    print *, tarray(2)   
+    print *, tarray(2)
     do i=1,100000000    ! Just a delay
         j = i * i - i
     end do
@@ -1002,6 +1002,38 @@ PROGRAM example_getcwd
   PRINT *, status
 END PROGRAM
 ```
+
+### Non-Standard Intrinsics: HOSTNM
+
+#### Description
+`HOSTNM(C, STATUS)` returns the host name of the system.
+
+This intrinsic is provided in both subroutine and function forms; however, only one form can be used in any given program unit.
+
+*C* and *STATUS* are `INTENT(OUT)` and provide the following:
+
+|            |                                                                                                   |
+|------------|---------------------------------------------------------------------------------------------------|
+| `C`        | The host name of the system. The type shall be `CHARACTER` and of default kind.       |
+| `STATUS`   | (Optional) Status flag. Returns 0 on success, a system specific and nonzero error code otherwise. The type shall be `INTEGER` and of a kind greater or equal to 4. |
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL HOSTNM(C, STATUS)`, `STATUS = HOSTNM(C)`
+
+#### Example
+```Fortran
+PROGRAM example_hostnm
+  CHARACTER(len=255) :: hnam
+  INTEGER :: status
+  CALL hostnm(hnam, status)
+  PRINT *, hnam
+  PRINT *, status
+END PROGRAM
+```
+
 
 ### Non-standard Intrinsics: RENAME
 `RENAME(OLD, NEW[, STATUS])` renames/moves a file on the filesystem.
@@ -1088,7 +1120,7 @@ This intrinsic is provided in both subroutine and function forms; however, only 
 ```Fortran
 program chdir_func
   character(len=) :: path
-  integer :: status 
+  integer :: status
 
   call chdir("/tmp")
   status = chdir("..")

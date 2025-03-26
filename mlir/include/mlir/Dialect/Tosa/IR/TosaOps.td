@@ -1728,8 +1728,7 @@ def Tosa_ReduceMaxOp : Tosa_InferTensorTypeOp<"reduce_max"> {
 
     /// Return the max of the two integer operands
     static inline APInt calcOneElement(APInt leftOperand, APInt rightOperand) {
-      const llvm::APInt subtractRes = leftOperand - rightOperand;
-      return (!subtractRes.isNegative()) ? leftOperand : rightOperand;
+      return (leftOperand.sge(rightOperand)) ? leftOperand : rightOperand;
     }
   }];
 }
@@ -1769,8 +1768,7 @@ def Tosa_ReduceMinOp : Tosa_InferTensorTypeOp<"reduce_min"> {
 
     /// Return the min of the two integer operands
     static inline APInt calcOneElement(APInt leftOperand, APInt rightOperand) {
-      const llvm::APInt subtractRes = leftOperand - rightOperand;
-      return (!subtractRes.isNegative()) ? rightOperand : leftOperand;
+      return (leftOperand.sle(rightOperand)) ? leftOperand : rightOperand;
     }
   }];
 }

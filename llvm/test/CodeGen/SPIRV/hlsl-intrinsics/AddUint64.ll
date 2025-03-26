@@ -7,10 +7,10 @@
 ; CHECK-DAG: %[[#int_32:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#vec2_int_32:]] = OpTypeVector %[[#int_32]] 2
 ; CHECK-DAG: %[[#bool:]] = OpTypeBool
-; CHECK-DAG: %[[#const_i32_1:]] = OpConstant %[[#int_32]] 1
+; CHECK-DAG: %[[#const_i32_1:]] = OpConstant %[[#int_32]] 1{{$}}
 ; CHECK-DAG: %[[#struct_i32_i32:]] = OpTypeStruct %[[#int_32]] %[[#int_32]]
 ; CHECK-DAG: %[[#func_v2i32_v2i32_v2i32:]] = OpTypeFunction %[[#vec2_int_32]] %[[#vec2_int_32]] %[[#vec2_int_32]]
-; CHECK-DAG: %[[#const_i32_0:]] = OpConstant %[[#int_32]] 0
+; CHECK-DAG: %[[#const_i32_0:]] = OpConstant %[[#int_32]] 0{{$}}
 ; CHECK-DAG: %[[#undef_v2i32:]] = OpUndef %[[#vec2_int_32]]
 ; CHECK-DAG: %[[#vec4_int_32:]] = OpTypeVector %[[#int_32]] 4
 ; CHECK-DAG: %[[#vec2_bool:]] = OpTypeVector %[[#bool]] 2
