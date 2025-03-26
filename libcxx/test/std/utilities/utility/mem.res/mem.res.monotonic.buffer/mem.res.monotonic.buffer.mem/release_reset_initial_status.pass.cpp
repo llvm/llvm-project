@@ -13,6 +13,8 @@
 
 // class monotonic_buffer_resource
 
+// This test checks the behavior required by LWG3120.
+
 #include <memory_resource>
 #include <cassert>
 
