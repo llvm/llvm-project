@@ -37,9 +37,9 @@ using namespace llvm;
 
 MCOperand ARMAsmPrinter::GetSymbolRef(const MachineOperand &MO,
                                       const MCSymbol *Symbol) {
-  MCSymbolRefExpr::VariantKind Specifier = MCSymbolRefExpr::VK_None;
+  auto Specifier = ARMMCExpr::VK_None;
   if (MO.getTargetFlags() & ARMII::MO_SBREL)
-    Specifier = MCSymbolRefExpr::VK_ARM_SBREL;
+    Specifier = ARMMCExpr::VK_SBREL;
 
   const MCExpr *Expr = MCSymbolRefExpr::create(Symbol, Specifier, OutContext);
   switch (MO.getTargetFlags() & ARMII::MO_OPTION_MASK) {

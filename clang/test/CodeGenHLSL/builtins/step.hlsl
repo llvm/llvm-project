@@ -82,3 +82,32 @@ float4 test_step_float4(float4 p0, float4 p1)
 {
     return step(p0, p1);
 }
+
+// CHECK: define [[FNATTRS]] float @
+// CHECK: call reassoc nnan ninf nsz arcp afn float @llvm.[[TARGET]].step.f32(float
+// CHECK: ret float
+float test_step_double(double p0, double p1)
+{
+    return step(p0, p1);
+}
+// CHECK: define [[FNATTRS]] <2 x float> @
+// CHECK: %hlsl.step = call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.[[TARGET]].step.v2f32(
+// CHECK: ret <2 x float> %hlsl.step
+float2 test_step_double2(double2 p0, double2 p1)
+{
+    return step(p0, p1);
+}
+// CHECK: define [[FNATTRS]] <3 x float> @
+// CHECK: %hlsl.step = call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.[[TARGET]].step.v3f32(
+// CHECK: ret <3 x float> %hlsl.step
+float3 test_step_double3(double3 p0, double3 p1)
+{
+    return step(p0, p1);
+}
+// CHECK: define [[FNATTRS]] <4 x float> @
+// CHECK: %hlsl.step = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.[[TARGET]].step.v4f32(
+// CHECK: ret <4 x float> %hlsl.step
+float4 test_step_double4(double4 p0, double4 p1)
+{
+    return step(p0, p1);
+}

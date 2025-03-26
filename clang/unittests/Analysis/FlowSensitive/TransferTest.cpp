@@ -4974,6 +4974,41 @@ TEST(TransferTest, IntegerLiteralEquality) {
       });
 }
 
+TEST(TransferTest, UnsupportedValueEquality) {
+  std::string Code = R"(
+    // An explicitly unsupported type by the framework.
+    enum class EC {
+      A,
+      B
+    };
+  
+    void target() {
+      EC ec = EC::A;
+
+      bool unsupported_eq_same = (EC::A == EC::A);
+      bool unsupported_eq_other = (EC::A == EC::B);
+      bool unsupported_eq_var = (ec == EC::B);
+
+      (void)0; // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        // We do not model the values of unsupported types, so this
+        // seemingly-trivial case will not be true either.
+        EXPECT_TRUE(isa<AtomicBoolValue>(
+            getValueForDecl<BoolValue>(ASTCtx, Env, "unsupported_eq_same")));
+        EXPECT_TRUE(isa<AtomicBoolValue>(
+            getValueForDecl<BoolValue>(ASTCtx, Env, "unsupported_eq_other")));
+        EXPECT_TRUE(isa<AtomicBoolValue>(
+            getValueForDecl<BoolValue>(ASTCtx, Env, "unsupported_eq_var")));
+      });
+}
+
 TEST(TransferTest, CorrelatedBranches) {
   std::string Code = R"(
     void target(bool B, bool C) {

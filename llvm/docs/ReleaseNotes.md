@@ -104,6 +104,10 @@ Changes to the DirectX Backend
 Changes to the Hexagon Backend
 ------------------------------
 
+* The default Hexagon architecture version in ELF object files produced by
+  the tools such as llvm-mc is changed to v68. This version will be set if
+  the user does not provide the CPU version in the command line.
+
 Changes to the LoongArch Backend
 --------------------------------
 
@@ -136,11 +140,18 @@ Changes to the RISC-V Backend
 * Added non-quadratic ``log-vrgather`` cost model for ``vrgather.vv`` instruction
 * Adds experimental assembler support for the Qualcomm uC 'Xqcisim` (Simulation Hint)
   extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcisync` (Sync Delay)
+  extension.
 * Adds assembler support for the 'Zilsd` (Load/Store Pair Instructions)
   extension.
 * Adds assembler support for the 'Zclsd` (Compressed Load/Store Pair Instructions)
   extension.
 * Adds experimental assembler support for Zvqdotq.
+* Adds Support for Qualcomm's `qci-nest` and `qci-nonest` interrupt types, which
+  use instructions from `Xqciint` to save and restore some GPRs during interrupt
+  handlers.
+* When the experimental extension `Xqcili` is enabled, `qc.e.li` and `qc.li` may
+  now be used to materialize immediates.
 
 Changes to the WebAssembly Backend
 ----------------------------------
