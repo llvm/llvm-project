@@ -73,8 +73,8 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
       // Supported
       break;
     default:
-      Ctx.reportError(Fixup.getLoc(), "relocation variant " +
-                                          A64E->getVariantKindName() +
+      Ctx.reportError(Fixup.getLoc(), "relocation specifier " +
+                                          A64E->getSpecifierName() +
                                           " unsupported on COFF targets");
       return COFF::IMAGE_REL_ARM64_ABSOLUTE; // Dummy return value
     }
@@ -83,8 +83,8 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
   switch (FixupKind) {
   default: {
     if (const AArch64MCExpr *A64E = dyn_cast<AArch64MCExpr>(Expr)) {
-      Ctx.reportError(Fixup.getLoc(), "relocation type " +
-                                          A64E->getVariantKindName() +
+      Ctx.reportError(Fixup.getLoc(), "relocation specifier " +
+                                          A64E->getSpecifierName() +
                                           " unsupported on COFF targets");
     } else {
       const MCFixupKindInfo &Info = MAB.getFixupKindInfo(Fixup.getKind());

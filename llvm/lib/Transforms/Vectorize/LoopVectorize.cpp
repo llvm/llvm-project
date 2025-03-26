@@ -5391,12 +5391,12 @@ void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
           ScalarCostsVF.insert(ScalarCosts.begin(), ScalarCosts.end());
           // Check if we decided to scalarize a call. If so, update the widening
           // decision of the call to CM_Scalarize with the computed scalar cost.
-          for (const auto &[I, _] : ScalarCosts) {
+          for (const auto &[I, Cost] : ScalarCosts) {
             auto *CI = dyn_cast<CallInst>(I);
             if (!CI || !CallWideningDecisions.contains({CI, VF}))
               continue;
             CallWideningDecisions[{CI, VF}].Kind = CM_Scalarize;
-            CallWideningDecisions[{CI, VF}].Cost = ScalarCosts[CI];
+            CallWideningDecisions[{CI, VF}].Cost = Cost;
           }
         }
         // Remember that BB will remain after vectorization.
@@ -5813,12 +5813,12 @@ LoopVectorizationCostModel::getReductionPatternCost(Instruction *I,
 
   // Test if the found instruction is a reduction, and if not return an invalid
   // cost specifying the parent to use the original cost modelling.
-  if (!InLoopReductionImmediateChains.count(RetI))
+  Instruction *LastChain = InLoopReductionImmediateChains.lookup(RetI);
+  if (!LastChain)
     return std::nullopt;
 
   // Find the reduction this chain is a part of and calculate the basic cost of
   // the reduction on its own.
-  Instruction *LastChain = InLoopReductionImmediateChains.at(RetI);
   Instruction *ReductionPhi = LastChain;
   while (!isa<PHINode>(ReductionPhi))
     ReductionPhi = InLoopReductionImmediateChains.at(ReductionPhi);

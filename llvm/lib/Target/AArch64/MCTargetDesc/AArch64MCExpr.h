@@ -23,7 +23,7 @@ namespace llvm {
 
 class AArch64MCExpr : public MCTargetExpr {
 public:
-  enum Specifier {
+  enum Specifier : uint16_t {
     // clang-format off
     // Symbol locations specifying (roughly speaking) what calculation should be
     // performed to construct the final address for the relocated
@@ -165,9 +165,9 @@ public:
 
   /// @}
 
-  /// Convert the variant kind into an ELF-appropriate modifier
+  /// Return the string representation of the ELF relocation specifier
   /// (e.g. ":got:", ":lo12:").
-  StringRef getVariantKindName() const;
+  StringRef getSpecifierName() const;
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
 

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the implementation of the assembly expression modifiers
+// This file contains the implementation of the relocation specifiers
 // accepted by the AArch64 architecture (e.g. ":lo12:", ":gottprel_g1:", ...).
 //
 //===----------------------------------------------------------------------===//
@@ -29,7 +29,7 @@ const AArch64MCExpr *AArch64MCExpr::create(const MCExpr *Expr, Specifier S,
   return new (Ctx) AArch64MCExpr(Expr, S);
 }
 
-StringRef AArch64MCExpr::getVariantKindName() const {
+StringRef AArch64MCExpr::getSpecifierName() const {
   // clang-format off
   switch (static_cast<uint32_t>(getSpecifier())) {
   case VK_CALL:                return "";
@@ -90,13 +90,13 @@ StringRef AArch64MCExpr::getVariantKindName() const {
   case VK_GOT_AUTH_PAGE:       return ":got_auth:";
   case VK_GOT_AUTH_LO12:       return ":got_auth_lo12:";
   default:
-    llvm_unreachable("Invalid ELF symbol kind");
+    llvm_unreachable("Invalid relocation specifier");
   }
   // clang-format on
 }
 
 void AArch64MCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
-  OS << getVariantKindName();
+  OS << getSpecifierName();
   Expr->print(OS, MAI);
 }
 
@@ -145,12 +145,4 @@ void AArch64AuthMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
 
 MCFragment *AArch64AuthMCExpr::findAssociatedFragment() const {
   llvm_unreachable("FIXME: what goes here?");
-}
-
-bool AArch64AuthMCExpr::evaluateAsRelocatableImpl(
-    MCValue &Res, const MCAssembler *Asm) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
-    return false;
-  Res.setSpecifier(getSpecifier());
-  return true;
 }
