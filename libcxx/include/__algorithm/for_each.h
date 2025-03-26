@@ -11,6 +11,7 @@
 #define _LIBCPP___ALGORITHM_FOR_EACH_H
 
 #include <__algorithm/for_each_segment.h>
+#include <__algorithm/iterator_operations.h>
 #include <__config>
 #include <__iterator/segmented_iterator.h>
 #include <__ranges/movable_box.h>
@@ -26,20 +27,20 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _InputIterator, class _Function>
+template <class, class _InputIterator, class _Function>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Function
-for_each(_InputIterator __first, _InputIterator __last, _Function __f) {
+__for_each(_InputIterator __first, _InputIterator __last, _Function& __f) {
   for (; __first != __last; ++__first)
     __f(*__first);
-  return __f;
+  return std::move(__f);
 }
 
 // __movable_box is available in C++20, but is actually a copyable-box, so optimization is only correct in C++23
 #if _LIBCPP_STD_VER >= 23
-template <class _SegmentedIterator, class _Function>
+template <class, class _SegmentedIterator, class _Function>
   requires __is_segmented_iterator<_SegmentedIterator>::value
 _LIBCPP_HIDE_FROM_ABI constexpr _Function
-for_each(_SegmentedIterator __first, _SegmentedIterator __last, _Function __func) {
+for_each(_SegmentedIterator __first, _SegmentedIterator __last, _Function& __func) {
   ranges::__movable_box<_Function> __wrapped_func(in_place, std::move(__func));
   std::__for_each_segment(__first, __last, [&](auto __lfirst, auto __llast) {
     __wrapped_func =
@@ -48,6 +49,12 @@ for_each(_SegmentedIterator __first, _SegmentedIterator __last, _Function __func
   return std::move(*__wrapped_func);
 }
 #endif // _LIBCPP_STD_VER >= 23
+
+template <class _InputIterator, class _Function>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Function
+for_each(_InputIterator __first, _InputIterator __last, _Function __f) {
+  return __for_each<_ClassicAlgPolicy>(__first, __last, __f);
+}
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -11,6 +11,7 @@
 #define _LIBCPP___ALGORITHM_FOR_EACH_N_H
 
 #include <__algorithm/for_each.h>
+#include <__algorithm/iterator_operations.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/segmented_iterator.h>
@@ -53,7 +54,7 @@ template <class _InputIterator,
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
 for_each_n(_InputIterator __first, _Size __orig_n, _Function __f) {
   _InputIterator __last = __first + __orig_n;
-  std::for_each(__first, __last, __f);
+  std::__for_each<_ClassicAlgPolicy>(__first, __last, __f);
   return __last;
 }
 
