@@ -974,8 +974,9 @@ bool PPCTTIImpl::shouldBuildRelLookupTables() const {
   return BaseT::shouldBuildRelLookupTables();
 }
 
-bool PPCTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
-                                    MemIntrinsicInfo &Info) {
+bool PPCTTIImpl::getTgtMemIntrinsic(
+    IntrinsicInst *Inst, MemIntrinsicInfo &Info,
+    SmallVectorImpl<InterestingMemoryOperand> *Interesting) {
   switch (Inst->getIntrinsicID()) {
   case Intrinsic::ppc_altivec_lvx:
   case Intrinsic::ppc_altivec_lvxl:

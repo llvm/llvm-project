@@ -494,8 +494,9 @@ unsigned GCNTTIImpl::getMaxInterleaveFactor(ElementCount VF) {
   return 8;
 }
 
-bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
-                                       MemIntrinsicInfo &Info) const {
+bool GCNTTIImpl::getTgtMemIntrinsic(
+    IntrinsicInst *Inst, MemIntrinsicInfo &Info,
+    SmallVectorImpl<InterestingMemoryOperand> *Interesting) const {
   switch (Inst->getIntrinsicID()) {
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap: {
