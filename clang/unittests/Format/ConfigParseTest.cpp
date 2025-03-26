@@ -1234,6 +1234,20 @@ TEST(ConfigParseTest, AllowCppForC) {
   FormatStyle Style = {};
   Style.Language = FormatStyle::LK_C;
   EXPECT_EQ(parseConfiguration("Language: Cpp", &Style), ParseError::Success);
+
+  CHECK_PARSE("---\n"
+              "IndentWidth: 4\n"
+              "---\n"
+              "Language: Cpp\n"
+              "IndentWidth: 8\n",
+              IndentWidth, 8u);
+
+  EXPECT_EQ(parseConfiguration("---\n"
+                               "Language: ObjC\n"
+                               "---\n"
+                               "Language: Cpp\n",
+                               &Style),
+            ParseError::Success);
 }
 
 TEST(ConfigParseTest, UsesLanguageForBasedOnStyle) {
