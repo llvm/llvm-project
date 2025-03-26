@@ -8,8 +8,8 @@
 define void @vec_load(i64 %N, ptr nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-LABEL: @vec_load
 ; CHECK: vector.body:
-; CHECK: %[[WIDE_LOAD:.*]] = load <vscale x 2 x double>, ptr
-; CHECK: call <vscale x 2 x double> @foo_vec(<vscale x 2 x double> %[[WIDE_LOAD]])
+; CHECK: %[[LOAD:.*]] = load <vscale x 2 x double>, ptr
+; CHECK: call <vscale x 2 x double> @foo_vec(<vscale x 2 x double> %[[LOAD]])
 entry:
   %cmp7 = icmp sgt i64 %N, 0
   br i1 %cmp7, label %for.body, label %for.end
