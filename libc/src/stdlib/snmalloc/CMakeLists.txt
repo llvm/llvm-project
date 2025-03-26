@@ -42,6 +42,8 @@ set(SNMALLOC_DEPS
   libc.src.errno.errno
   libc.src.fcntl.open
   libc.src.pthread.pthread_atfork
+  libc.src.pthread.pthread_setspecific
+  libc.src.pthread.pthread_key_create
   libc.src.stdlib.abort
   libc.src.string.memset
   libc.src.string.strlen
@@ -54,8 +56,6 @@ set(SNMALLOC_DEPS
   libc.src.unistd.fsync
   libc.src.unistd.getentropy
   libc.src.unistd.read
-  libc.src.pthread.pthread_setspecific
-  libc.src.pthread.pthread_key_create
 )
 
 add_entrypoint_object(
