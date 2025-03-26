@@ -504,6 +504,10 @@ Analysis::findGadgets(BinaryFunction &BF,
 
       if (auto Report = shouldReportReturnGadget(BC, Inst, S))
         Result.Diagnostics.push_back(Report);
+
+      if (PacRetGadgetsOnly)
+        continue;
+
       if (auto Report = shouldReportCallGadget(BC, Inst, S))
         Result.Diagnostics.push_back(Report);
     }

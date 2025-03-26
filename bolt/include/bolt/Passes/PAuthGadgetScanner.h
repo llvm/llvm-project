@@ -248,6 +248,9 @@ struct FunctionAnalysisResult {
 };
 
 class Analysis : public BinaryFunctionPass {
+  /// Only search for pac-ret violations.
+  bool PacRetGadgetsOnly;
+
   void runOnFunction(BinaryFunction &Function,
                      MCPlusBuilder::AllocatorIdTy AllocatorId);
   FunctionAnalysisResult findGadgets(BinaryFunction &BF,
@@ -261,7 +264,8 @@ class Analysis : public BinaryFunctionPass {
   std::mutex AnalysisResultsMutex;
 
 public:
-  explicit Analysis() : BinaryFunctionPass(false) {}
+  explicit Analysis(bool PacRetGadgetsOnly)
+      : BinaryFunctionPass(false), PacRetGadgetsOnly(PacRetGadgetsOnly) {}
 
   const char *getName() const override { return "pauth-gadget-scanner"; }
 

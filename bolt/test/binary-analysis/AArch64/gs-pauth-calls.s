@@ -1,5 +1,8 @@
 // RUN: %clang %cflags -march=armv8.3-a %s -o %t.exe
-// RUN: llvm-bolt-binary-analysis --scanners=pacret %t.exe 2>&1 | FileCheck %s
+// RUN: llvm-bolt-binary-analysis --scanners=pacret %t.exe 2>&1 | FileCheck -check-prefix=PACRET %s
+// RUN: llvm-bolt-binary-analysis --scanners=pauth %t.exe 2>&1 | FileCheck %s
+
+// PACRET-NOT: non-protected call found in function
 
 // FIXME In the below test cases, LR is usually not spilled as needed, as it is
 //       not checked by BOLT.
