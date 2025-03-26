@@ -1209,6 +1209,7 @@ public:
     CanonicalIVIncrementForPart,
     BranchOnCount,
     BranchOnCond,
+    ComputeFindLastIVResult,
     ComputeReductionResult,
     // Takes the VPValue to extract from as first operand and the lane or part
     // to extract as second operand, counting from the end starting with 1 for
