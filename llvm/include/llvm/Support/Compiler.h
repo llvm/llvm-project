@@ -224,12 +224,16 @@
 #define LLVM_PREFETCH(addr, rw, locality)
 #endif
 
-#if __has_attribute(used) && __has_attribute(retain)
-#define LLVM_ATTRIBUTE_USED __attribute__((__used__, __retain__))
-#elif __has_attribute(used)
+#if __has_attribute(used)
 #define LLVM_ATTRIBUTE_USED __attribute__((__used__))
 #else
 #define LLVM_ATTRIBUTE_USED
+#endif
+
+#if __has_attribute(retain)
+#define LLVM_ATTRIBUTE_RETAIN __attribute__((__retain__))
+#else
+#define LLVM_ATTRIBUTE_RETAIN
 #endif
 
 #if defined(__clang__)
@@ -621,7 +625,8 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 /// get stripped in release builds.
 // FIXME: Move this to a private config.h as it's not usable in public headers.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-#define LLVM_DUMP_METHOD LLVM_ATTRIBUTE_NOINLINE LLVM_ATTRIBUTE_USED
+#define LLVM_DUMP_METHOD                                                       \
+  LLVM_ATTRIBUTE_NOINLINE LLVM_ATTRIBUTE_USED LLVM_ATTRIBUTE_RETAIN
 #else
 #define LLVM_DUMP_METHOD LLVM_ATTRIBUTE_NOINLINE
 #endif
