@@ -4472,7 +4472,7 @@ void ASTWriter::GenerateSpecializationInfoLookupTable(
       Generator;
   LazySpecializationInfoLookupTrait Trait(*this);
 
-  llvm::DenseMap<unsigned, llvm::SmallVector<const NamedDecl *, 4>>
+  llvm::MapVector<unsigned, llvm::SmallVector<const NamedDecl *, 4>>
       SpecializationMaps;
 
   for (auto *Specialization : Specializations) {
