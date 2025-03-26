@@ -59,7 +59,7 @@
 // Test PLT section parsing on thumb.
 
 // RUN: %clang --target=thumbv8.1m.main-none-linux-eabi \
-// RUN:   -nostdlib -nostdinc -c %s -o %t4.o
+// RUN:   -c %s -o %t4.o
 // RUN: ld.lld --shared %t4.o -o %t4
 // RUN: llvm-objdump --no-show-raw-insn --no-print-imm-hex \
 // RUN:   -d %t4 | FileCheck %s --check-prefixes=THUMB,LE
@@ -67,7 +67,7 @@
 // Test PLT section parsing on thumbeb.
 
 // RUN: %clang --target=thumbebv8.1m.main-none-linux-eabi \
-// RUN:   -nostdlib -nostdinc -c %s -o %t5.o
+// RUN:   -c %s -o %t5.o
 // RUN: ld.lld --shared %t5.o -o %t5
 // RUN: llvm-objdump --no-show-raw-insn --no-print-imm-hex \
 // RUN:   -d %t5 | FileCheck %s --check-prefixes=THUMB,BE
@@ -76,7 +76,7 @@
 // Test PLT section parsing on thumbeb with be8.
 
 // RUN: %clang --target=thumbebv8.1m.main-none-linux-eabi \
-// RUN:   -nostdlib -nostdinc -c %s -o %t6.o
+// RUN:   -c %s -o %t6.o
 // RUN: ld.lld --shared --be8 %t6.o -o %t6
 // RUN: llvm-objdump --no-show-raw-insn --no-print-imm-hex \
 // RUN:   -d %t6 | FileCheck %s --check-prefixes=THUMB,BE
