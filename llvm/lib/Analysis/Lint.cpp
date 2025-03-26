@@ -750,8 +750,7 @@ PreservedAnalyses LintPass::run(Function &F, FunctionAnalysisManager &AM) {
 
 void LintPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
-  static_cast<PassInfoMixin<LintPass> *>(this)->printPipeline(
-      OS, MapClassName2PassName);
+  PassInfoMixin<LintPass>::printPipeline(OS, MapClassName2PassName);
   if (AbortOnError)
     OS << "<abort-on-error>";
 }
