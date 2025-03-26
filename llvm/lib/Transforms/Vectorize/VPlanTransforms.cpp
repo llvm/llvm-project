@@ -772,10 +772,13 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
   DebugLoc DL = cast<VPInstruction>(Op)->getDebugLoc();
   VPValue *FirstActiveLane =
       B.createNaryOp(VPInstruction::FirstActiveLane, Mask, DL);
-  if (CanonicalIVType != TypeInfo.inferScalarType(FirstActiveLane)) {
-    Instruction::CastOps CastOp = CanonicalIVType->getScalarSizeInBits() < 64
-                                      ? Instruction::Trunc
-                                      : Instruction::ZExt;
+  Type *FirstActiveLaneType = TypeInfo.inferScalarType(FirstActiveLane);
+  if (CanonicalIVType != FirstActiveLaneType) {
+    Instruction::CastOps CastOp =
+        CanonicalIVType->getScalarSizeInBits() <
+                FirstActiveLaneType->getScalarSizeInBits()
+            ? Instruction::Trunc
+            : Instruction::ZExt;
     FirstActiveLane =
         B.createScalarCast(CastOp, FirstActiveLane, CanonicalIVType, DL);
   }
