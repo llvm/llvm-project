@@ -2033,8 +2033,6 @@ public:
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
 
-  unsigned getVFScaleFactor() const { return VFScaleFactor; }
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -2065,19 +2063,17 @@ public:
 /// scalar value.
 class VPPartialReductionRecipe : public VPSingleDefRecipe {
   unsigned Opcode;
-  unsigned ScaleFactor;
 
 public:
   VPPartialReductionRecipe(Instruction *ReductionInst, VPValue *Op0,
-                           VPValue *Op1, unsigned ScaleFactor)
+                           VPValue *Op1)
       : VPPartialReductionRecipe(ReductionInst->getOpcode(), Op0, Op1,
-                                 ScaleFactor, ReductionInst) {}
+                                 ReductionInst) {}
   VPPartialReductionRecipe(unsigned Opcode, VPValue *Op0, VPValue *Op1,
-                           unsigned ScaleFactor,
                            Instruction *ReductionInst = nullptr)
       : VPSingleDefRecipe(VPDef::VPPartialReductionSC,
                           ArrayRef<VPValue *>({Op0, Op1}), ReductionInst),
-        Opcode(Opcode), ScaleFactor(ScaleFactor) {
+        Opcode(Opcode) {
     [[maybe_unused]] auto *AccumulatorRecipe =
         getOperand(1)->getDefiningRecipe();
     assert((isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
@@ -2088,7 +2084,7 @@ public:
 
   VPPartialReductionRecipe *clone() override {
     return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1),
-                                        ScaleFactor, getUnderlyingInstr());
+                                        getUnderlyingInstr());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPPartialReductionSC)
@@ -2102,8 +2098,6 @@ public:
 
   /// Get the binary op's opcode.
   unsigned getOpcode() const { return Opcode; }
-
-  unsigned getScaleFactor() const { return ScaleFactor; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.

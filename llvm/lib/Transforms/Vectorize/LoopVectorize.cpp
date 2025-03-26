@@ -5019,23 +5019,10 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
             // even in the scalar case.
             RegUsage[ClassID] += 1;
           } else {
-            // The output from scaled phis and scaled reductions actually have
-            // fewer lanes than the VF.
-            auto VF = VFs[J];
-            if (auto *ReductionR = dyn_cast<VPReductionPHIRecipe>(R))
-              VF = VF.divideCoefficientBy(ReductionR->getVFScaleFactor());
-            else if (auto *PartialReductionR =
-                         dyn_cast<VPPartialReductionRecipe>(R))
-              VF = VF.divideCoefficientBy(PartialReductionR->getScaleFactor());
-            if (VF != VFs[J])
-              LLVM_DEBUG(dbgs() << "LV(REG): Scaled down VF from " << VFs[J]
-                                << " to " << VF << " for ";
-                         R->dump(););
-
             for (VPValue *DefV : R->definedValues()) {
               Type *ScalarTy = TypeInfo.inferScalarType(DefV);
               unsigned ClassID = TTI.getRegisterClassForType(true, ScalarTy);
-              RegUsage[ClassID] += GetRegUsage(ScalarTy, VF);
+              RegUsage[ClassID] += GetRegUsage(ScalarTy, VFs[J]);
             }
           }
         }
@@ -8964,8 +8951,8 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(
   if (isa<LoadInst>(Instr) || isa<StoreInst>(Instr))
     return tryToWidenMemory(Instr, Operands, Range);
 
-  if (auto ScaleFactor = getScalingForReduction(Instr))
-    return tryToCreatePartialReduction(Instr, Operands, ScaleFactor.value());
+  if (getScalingForReduction(Instr))
+    return tryToCreatePartialReduction(Instr, Operands);
 
   if (!shouldWiden(Instr, Range))
     return nullptr;
@@ -8989,8 +8976,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(
 
 VPRecipeBase *
 VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
-                                             ArrayRef<VPValue *> Operands,
-                                             unsigned ScaleFactor) {
+                                             ArrayRef<VPValue *> Operands) {
   assert(Operands.size() == 2 &&
          "Unexpected number of operands for partial reduction");
 
@@ -9023,7 +9009,7 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
     BinOp = Builder.createSelect(Mask, BinOp, Zero, Reduction->getDebugLoc());
   }
   return new VPPartialReductionRecipe(ReductionOpcode, BinOp, Accumulator,
-                                      ScaleFactor, Reduction);
+                                      Reduction);
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
