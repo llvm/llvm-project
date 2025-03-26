@@ -11444,8 +11444,8 @@ QualType ASTContext::mergeTagTypes(QualType LHS, QualType RHS) {
   StructuralEquivalenceContext::NonEquivalentDeclSet NonEquivalentDecls;
   StructuralEquivalenceContext Ctx(
       getLangOpts(), *this, *this, NonEquivalentDecls,
-      StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/ false,
-      /*Complain=*/ false, /*ErrorOnTagTypeMismatch=*/ true);
+      StructuralEquivalenceKind::Default, /*StrictTypeSpelling=*/false,
+      /*Complain=*/false, /*ErrorOnTagTypeMismatch=*/true);
   return Ctx.IsEquivalent(LHS, RHS) ? LHS : QualType{};
 }
 
