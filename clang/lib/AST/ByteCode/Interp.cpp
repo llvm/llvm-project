@@ -602,8 +602,18 @@ bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   // In C++14 onwards, it is permitted to read a mutable member whose
   // lifetime began within the evaluation.
   if (S.getLangOpts().CPlusPlus14 &&
-      Ptr.block()->getEvalID() == S.Ctx.getEvalID())
+      Ptr.block()->getEvalID() == S.Ctx.getEvalID()) {
+    // FIXME: This check is necessary because (of the way) we revisit
+    // variables in Compiler.cpp:visitDeclRef. Revisiting a so far
+    // unknown variable will get the same EvalID and we end up allowing
+    // reads from mutable members of it.
+    if (!S.inConstantContext()) {
+      if (const VarDecl *VD = Ptr.block()->getDescriptor()->asVarDecl();
+          VD && VD->hasLocalStorage())
+        return false;
+    }
     return true;
+  }
 
   const SourceInfo &Loc = S.Current->getSource(OpPC);
   const FieldDecl *Field = Ptr.getField();
