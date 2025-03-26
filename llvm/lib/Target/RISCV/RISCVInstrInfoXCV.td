@@ -287,8 +287,8 @@ class CVLoad_rr_inc<bits<7> funct7, bits<3> funct3, string opcodestr>
 
 class CVLoad_rr<bits<7> funct7, bits<3> funct3, string opcodestr>
     : RVInstR<funct7, funct3, OPC_CUSTOM_1, (outs GPR:$rd),
-              (ins (CVrr $rs2, $rs1):$cvrr),
-              opcodestr, "$rd, $cvrr">;
+              (ins (CVrr $rs2, $rs1):$addr),
+              opcodestr, "$rd, $addr">;
 } // hasSideEffects = 0, mayLoad = 1, mayStore = 0
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
@@ -317,8 +317,8 @@ class CVStore_rr_inc<bits<3> funct3, bits<7> funct7, string opcodestr>
 
 
 class CVStore_rr<bits<3> funct3, bits<7> funct7, string opcodestr>
-    : RVInst<(outs), (ins GPR:$rs2, (CVrr $rs3, $rs1):$cvrr), opcodestr,
-             "$rs2, $cvrr", [], InstFormatOther> {
+    : RVInst<(outs), (ins GPR:$rs2, (CVrr $rs3, $rs1):$addr), opcodestr,
+             "$rs2, $addr", [], InstFormatOther> {
   bits<5> rs1;
   bits<5> rs2;
   bits<5> rs3;
