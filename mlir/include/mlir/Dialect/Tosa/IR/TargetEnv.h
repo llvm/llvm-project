@@ -27,11 +27,9 @@ public:
   TargetEnv() {}
   explicit TargetEnv(const SmallVectorImpl<Profile> &profiles,
                      const SmallVectorImpl<Extension> &extensions) {
-    for (Profile prof : profiles)
-      enabledProfiles.insert(prof);
+    enabledProfiles.insert_range(profiles);
 
-    for (Extension ext : extensions)
-      enabledExtensions.insert(ext);
+    enabledExtensions.insert_range(extensions);
   }
 
   void addProfile(Profile p) { enabledProfiles.insert(p); }

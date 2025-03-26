@@ -951,8 +951,8 @@ public:
     /// names we are looking for
     lldb::FunctionNameType m_name_type_mask = lldb::eFunctionNameTypeNone;
 
-    ///< If \b true, then demangled names that match will need to contain
-    ///< "m_name" in order to be considered a match
+    /// If \b true, then demangled names that match will need to contain
+    /// "m_name" in order to be considered a match
     bool m_match_name_after_lookup = false;
   };
 
