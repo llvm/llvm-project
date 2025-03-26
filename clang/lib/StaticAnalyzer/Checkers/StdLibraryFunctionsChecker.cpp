@@ -585,7 +585,7 @@ class StdLibraryFunctionsChecker
                           CheckerContext &C) const override {
       SValBuilder &SVB = C.getSValBuilder();
       NonLoc ErrnoSVal =
-          SVB.conjureSymbolVal(&Tag, Call.getOriginExpr(),
+          SVB.conjureSymbolVal(&Tag, Call.getCFGElementRef(),
                                C.getLocationContext(), C.getASTContext().IntTy,
                                C.blockCount())
               .castAs<NonLoc>();
@@ -621,7 +621,7 @@ class StdLibraryFunctionsChecker
                           const Summary &Summary,
                           CheckerContext &C) const override {
       return errno_modeling::setErrnoStdMustBeChecked(State, C,
-                                                      Call.getOriginExpr());
+                                                      Call.getCFGElementRef());
     }
 
     const std::string describe(CheckerContext &C) const override {
@@ -1482,7 +1482,8 @@ bool StdLibraryFunctionsChecker::evalCall(const CallEvent &Call,
     const LocationContext *LC = C.getLocationContext();
     const auto *CE = cast<CallExpr>(Call.getOriginExpr());
     SVal V = C.getSValBuilder().conjureSymbolVal(
-        CE, LC, CE->getType().getCanonicalType(), C.blockCount());
+        Call.getCFGElementRef(), LC, CE->getType().getCanonicalType(),
+        C.blockCount());
     State = State->BindExpr(CE, LC, V);
 
     C.addTransition(State);
