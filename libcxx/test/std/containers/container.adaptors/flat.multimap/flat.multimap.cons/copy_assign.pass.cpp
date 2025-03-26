@@ -26,12 +26,10 @@ int main(int, char**) {
     // test_allocator is not propagated
     using C = test_less<int>;
     std::vector<int, test_allocator<int>> ks({1, 1, 3, 3, 5}, test_allocator<int>(6));
-    std::vector<char, test_allocator<char>> vs({1, 2, 3, 4, 5}, test_allocator<char>(7));
+    std::vector<char, test_allocator<char>> vs({'1', '2', '3', '4', '5'}, test_allocator<char>(7));
     using M = std::flat_multimap<int, char, C, decltype(ks), decltype(vs)>;
     auto mo = M(ks, vs, C(5));
-    auto m  = M({{3, static_cast<char>(3)}, {4, static_cast<char>(4)}, {5, static_cast<char>(5)}},
-               C(3),
-               test_allocator<int>(2));
+    auto m  = M({{3, '3'}, {4, '4'}, {5, '5'}}, C(3), test_allocator<int>(2));
     m       = mo;
 
     assert(m.key_comp() == C(5));
@@ -53,12 +51,10 @@ int main(int, char**) {
     using Ks = std::vector<int, other_allocator<int>>;
     using Vs = std::vector<char, other_allocator<char>>;
     auto ks  = Ks({1, 1, 3, 3, 5}, other_allocator<int>(6));
-    auto vs  = Vs({2, 1, 3, 2, 1}, other_allocator<char>(7));
+    auto vs  = Vs({'2', '1', '3', '2', '1'}, other_allocator<char>(7));
     using M  = std::flat_multimap<int, char, C, Ks, Vs>;
     auto mo  = M(Ks(ks, other_allocator<int>(6)), Vs(vs, other_allocator<int>(7)), C(5));
-    auto m   = M({{3, static_cast<char>(3)}, {4, static_cast<char>(4)}, {5, static_cast<char>(5)}},
-               C(3),
-               other_allocator<int>(2));
+    auto m   = M({{3, '3'}, {4, '4'}, {5, '5'}}, C(3), other_allocator<int>(2));
     m        = mo;
 
     assert(m.key_comp() == C(5));

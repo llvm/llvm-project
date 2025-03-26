@@ -32,7 +32,7 @@ int main(int, char**) {
     using A1 = test_allocator<int>;
     using A2 = test_allocator<char>;
     using M  = std::flat_multimap<int, char, C, std::vector<int, A1>, std::vector<char, A2>>;
-    M mo     = M({{1, static_cast<char>(1)}, {1, static_cast<char>(3)}, {3, static_cast<char>(2)}}, C(5), A1(7));
+    M mo     = M({{1, '1'}, {1, '3')}, {3, '2'}}, C(5), A1(7));
     M m      = M({}, C(3), A1(7));
     m        = std::move(mo);
     assert((m == M{{1, 1}, {1, 3}, {3, 2}}));
@@ -47,13 +47,8 @@ int main(int, char**) {
     using A1 = other_allocator<int>;
     using A2 = other_allocator<char>;
     using M  = std::flat_multimap<int, char, C, std::deque<int, A1>, std::deque<char, A2>>;
-    M mo     = M({{4, static_cast<char>(5)}, {4, static_cast<char>(4)}}, C(5), A1(7));
-    M m      = M({{1, static_cast<char>(1)}, //
-                  {1, static_cast<char>(2)},
-                  {1, static_cast<char>(3)},
-                  {4, static_cast<char>(4)}},
-            C(3),
-            A1(7));
+    M mo     = M({{4, '5'}, {4, '4'}}, C(5), A1(7));
+    M m      = M({{1, '1'}, {1, '2'}, {1, '3'}, {4, '4'}}, C(3), A1(7));
     m        = std::move(mo);
     assert((m == M{{4, 5}, {4, 4}}));
     assert(m.key_comp() == C(5));
@@ -65,12 +60,8 @@ int main(int, char**) {
   {
     using A = min_allocator<int>;
     using M = std::flat_multimap<int, int, std::greater<int>, std::vector<int, A>, std::vector<int, A>>;
-    M mo    = M({{5, static_cast<char>(1)}, {5, static_cast<char>(2)}, {3, static_cast<char>(3)}}, A());
-    M m     = M({{4, static_cast<char>(4)}, //
-                 {4, static_cast<char>(3)},
-                 {4, static_cast<char>(2)},
-                 {1, static_cast<char>(1)}},
-            A());
+    M mo    = M({{5, 1}, {5, 2}, {3, 3}}, A());
+    M m     = M({{4, 4}, {4, 3}, {4, 2}, {1, 1}}, A());
     m       = std::move(mo);
     assert((m == M{{5, 1}, {5, 2}, {3, 3}}));
     auto [ks, vs] = std::move(m).extract();
