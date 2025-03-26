@@ -27,6 +27,10 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+template <class _InputIterator, class _Function>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Function
+for_each(_InputIterator __first, _InputIterator __last, _Function __f);
+
 template <class, class _InputIterator, class _Function>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Function
 __for_each(_InputIterator __first, _InputIterator __last, _Function& __f) {
@@ -53,7 +57,7 @@ for_each(_SegmentedIterator __first, _SegmentedIterator __last, _Function& __fun
 template <class _InputIterator, class _Function>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Function
 for_each(_InputIterator __first, _InputIterator __last, _Function __f) {
-  return __for_each<_ClassicAlgPolicy>(__first, __last, __f);
+  return std::__for_each<_ClassicAlgPolicy>(__first, __last, __f);
 }
 
 _LIBCPP_END_NAMESPACE_STD
