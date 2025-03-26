@@ -16,6 +16,7 @@
 #include "include/atomic_support.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_ABI_SENSITIVE
 
 // If dispatch_once_f ever handles C++ exceptions, and if one can get to it
 // without illegal macros (unexpected macros not beginning with _UpperCase or
@@ -67,4 +68,5 @@ void __call_once(volatile once_flag::_State_type& flag, void* arg, void (*func)(
 #endif // !_LIBCPP_HAS_THREADS
 }
 
+_LIBCPP_END_ABI_SENSITIVE
 _LIBCPP_END_NAMESPACE_STD

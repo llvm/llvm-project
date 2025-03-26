@@ -149,8 +149,8 @@ _LIBCPP_HARDENING_MODE_DEBUG
 
 // } HARDENING
 
-#  define _LIBCPP_TOSTRING2(x) #x
-#  define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
+#  define _LIBCPP_TOSTRING2(...) #__VA_ARGS__
+#  define _LIBCPP_TOSTRING(...) _LIBCPP_TOSTRING2(__VA_ARGS__)
 
 // NOLINTNEXTLINE(libcpp-cpp-version-check)
 #  if __cplusplus < 201103L
@@ -577,12 +577,25 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_POP_EXTENSION_DIAGNOSTICS
 #  endif
 
-// Inline namespaces are available in Clang/GCC/MSVC regardless of C++ dialect.
 // clang-format off
-#  define _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_PUSH_EXTENSION_DIAGNOSTICS                                               \
-                                      namespace _LIBCPP_TYPE_VISIBILITY_DEFAULT std {                                  \
+#  define _LIBCPP_BEGIN_HIDE_FROM_ABI                                                                                  \
+    _LIBCPP_DIAGNOSTIC_PUSH                                                                                            \
+    _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wpragma-clang-attribute")                                                       \
+    _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wignored-attributes")                                                           \
+    _Pragma(_LIBCPP_TOSTRING(clang attribute _LibcxxHideFromABI.push(__attribute__((                                   \
+                __exclude_from_explicit_instantiation__, __abi_tag__(_LIBCPP_TOSTRING(_LIBCPP_ODR_SIGNATURE)))),       \
+            apply_to = function)))                                                                                     \
+    _LIBCPP_DIAGNOSTIC_POP
+#  define _LIBCPP_END_HIDE_FROM_ABI _Pragma("clang attribute _LibcxxHideFromABI.pop")
+
+#  define _LIBCPP_BEGIN_ABI_SENSITIVE _LIBCPP_END_HIDE_FROM_ABI
+#  define _LIBCPP_END_ABI_SENSITIVE _LIBCPP_BEGIN_HIDE_FROM_ABI
+
+// Inline namespaces are available in Clang/GCC/MSVC regardless of C++ dialect.
+#  define _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_PUSH_EXTENSION_DIAGNOSTICS _LIBCPP_BEGIN_HIDE_FROM_ABI                   \
+                                      namespace _LIBCPP_TYPE_VISIBILITY_DEFAULT _LIBCPP_HIDDEN std {                   \
                                inline namespace _LIBCPP_ABI_NAMESPACE {
-#  define _LIBCPP_END_NAMESPACE_STD }} _LIBCPP_POP_EXTENSION_DIAGNOSTICS
+#  define _LIBCPP_END_NAMESPACE_STD }} _LIBCPP_END_HIDE_FROM_ABI _LIBCPP_POP_EXTENSION_DIAGNOSTICS
 
 #define _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL namespace std { namespace experimental {
 #define _LIBCPP_END_NAMESPACE_EXPERIMENTAL }}

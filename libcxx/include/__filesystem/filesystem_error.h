@@ -26,6 +26,7 @@
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
+_LIBCPP_BEGIN_ABI_SENSITIVE
 
 class _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_EXPORTED_FROM_ABI filesystem_error : public system_error {
 public:
@@ -81,6 +82,7 @@ __throw_filesystem_error(_Args&&...) {
 }
 #  endif
 
+_LIBCPP_END_ABI_SENSITIVE
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 #endif // _LIBCPP_STD_VER >= 17

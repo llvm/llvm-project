@@ -19,6 +19,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_ABI_SENSITIVE
 
 namespace chrono {
 
@@ -37,6 +38,7 @@ public:
 
 } // namespace chrono
 
+_LIBCPP_END_ABI_SENSITIVE
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___CHRONO_STEADY_CLOCK_H

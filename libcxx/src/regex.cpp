@@ -11,6 +11,7 @@
 #include <regex>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_ABI_SENSITIVE
 
 static const char* make_error_type_string(regex_constants::error_type ecode) {
   switch (ecode) {
@@ -396,4 +397,5 @@ void __match_any_but_newline<wchar_t>::__exec(__state& __s) const {
   }
 }
 
+_LIBCPP_END_ABI_SENSITIVE
 _LIBCPP_END_NAMESPACE_STD

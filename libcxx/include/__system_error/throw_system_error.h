@@ -18,7 +18,9 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+_LIBCPP_BEGIN_ABI_SENSITIVE
 [[__noreturn__]] _LIBCPP_EXPORTED_FROM_ABI void __throw_system_error(int __ev, const char* __what_arg);
+_LIBCPP_END_ABI_SENSITIVE
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -9,6 +9,7 @@
 #include <vector>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_ABI_SENSITIVE
 
 #ifndef _LIBCPP_ABI_DO_NOT_EXPORT_VECTOR_BASE_COMMON
 
@@ -27,4 +28,5 @@ void __vector_base_common<true>::__throw_out_of_range() const { std::__throw_out
 
 #endif // _LIBCPP_ABI_DO_NOT_EXPORT_VECTOR_BASE_COMMON
 
+_LIBCPP_END_ABI_SENSITIVE
 _LIBCPP_END_NAMESPACE_STD

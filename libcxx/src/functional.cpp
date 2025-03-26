@@ -9,6 +9,7 @@
 #include <functional>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_ABI_SENSITIVE
 
 bad_function_call::~bad_function_call() noexcept {}
 
@@ -16,4 +17,5 @@ bad_function_call::~bad_function_call() noexcept {}
 const char* bad_function_call::what() const noexcept { return "std::bad_function_call"; }
 #endif
 
+_LIBCPP_END_ABI_SENSITIVE
 _LIBCPP_END_NAMESPACE_STD

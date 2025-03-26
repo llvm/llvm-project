@@ -15,6 +15,7 @@
 #define ABI_NAMESPACE_STR _LIBCPP_TOSTRING(_LIBCPP_ABI_NAMESPACE)
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_ABI_SENSITIVE
 
 template <class StreamT, class BufferT>
 union stream_data {
@@ -135,4 +136,5 @@ ios_base::Init::Init() {
 
 ios_base::Init::~Init() {}
 
+_LIBCPP_END_ABI_SENSITIVE
 _LIBCPP_END_NAMESPACE_STD

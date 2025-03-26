@@ -22,6 +22,7 @@ extern "C" void android_set_abort_message(const char* msg);
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_ABI_SENSITIVE
 
 _LIBCPP_WEAK void __libcpp_verbose_abort(char const* format, ...) _LIBCPP_VERBOSE_ABORT_NOEXCEPT {
   // Write message to stderr. We do this before formatting into a
@@ -62,4 +63,5 @@ _LIBCPP_WEAK void __libcpp_verbose_abort(char const* format, ...) _LIBCPP_VERBOS
   std::abort();
 }
 
+_LIBCPP_END_ABI_SENSITIVE
 _LIBCPP_END_NAMESPACE_STD

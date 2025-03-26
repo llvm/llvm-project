@@ -247,6 +247,7 @@ _LIBCPP_PUSH_MACROS
 #    include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_ABI_SENSITIVE
 
 typedef ptrdiff_t streamsize;
 
@@ -871,6 +872,7 @@ _LIBCPP_HIDE_FROM_ABI inline ios_base& defaultfloat(ios_base& __str) {
   return __str;
 }
 
+_LIBCPP_END_ABI_SENSITIVE
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
