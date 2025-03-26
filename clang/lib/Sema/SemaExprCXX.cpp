@@ -60,30 +60,10 @@ ParsedType Sema::getInheritingConstructorName(CXXScopeSpec &SS,
                                               SourceLocation NameLoc,
                                               const IdentifierInfo &Name) {
   NestedNameSpecifier *NNS = SS.getScopeRep();
+  if (const IdentifierInfo *II = NNS->getAsIdentifier())
+    assert(II == &Name && "not a constructor name");
 
-  // Convert the nested-name-specifier into a type.
-  QualType Type;
-  switch (NNS->getKind()) {
-  case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
-    Type = QualType(NNS->getAsType(), 0);
-    break;
-
-  case NestedNameSpecifier::Identifier:
-    // Strip off the last layer of the nested-name-specifier and build a
-    // typename type for it.
-    assert(NNS->getAsIdentifier() == &Name && "not a constructor name");
-    Type = Context.getDependentNameType(
-        ElaboratedTypeKeyword::None, NNS->getPrefix(), NNS->getAsIdentifier());
-    break;
-
-  case NestedNameSpecifier::Global:
-  case NestedNameSpecifier::Super:
-  case NestedNameSpecifier::Namespace:
-  case NestedNameSpecifier::NamespaceAlias:
-    llvm_unreachable("Nested name specifier is not a type for inheriting ctor");
-  }
-
+  QualType Type(NNS->translateToType(Context), 0);
   // This reference to the type is located entirely at the location of the
   // final identifier in the qualified-id.
   return CreateParsedType(Type,
