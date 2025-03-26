@@ -23,8 +23,7 @@ class DefInit;
 class Record;
 } // namespace llvm
 
-namespace mlir {
-namespace tblgen {
+namespace mlir::tblgen {
 
 // Wrapper class providing around enum cases defined in TableGen.
 class EnumCase {
@@ -129,7 +128,6 @@ protected:
   const llvm::Record *def;
 };
 
-} // namespace tblgen
-} // namespace mlir
+} // namespace mlir::tblgen
 
 #endif
