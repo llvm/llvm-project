@@ -23,7 +23,7 @@ define <32 x i8> @xvabsd_b(<32 x i8> %a, <32 x i8> %b) {
   %a.sext = sext <32 x i8> %a to <32 x i16>
   %b.sext = sext <32 x i8> %b to <32 x i16>
   %sub = sub <32 x i16> %a.sext, %b.sext
-  %abs = call <32 x i16> @llvm.abs.v16i16(<32 x i16> %sub, i1 true)
+  %abs = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %sub, i1 true)
   %trunc = trunc <32 x i16> %abs to <32 x i8>
   ret <32 x i8> %trunc
 }
@@ -38,7 +38,7 @@ define <16 x i16> @xvabsd_h(<16 x i16> %a, <16 x i16> %b) {
   %a.sext = sext <16 x i16> %a to <16 x i32>
   %b.sext = sext <16 x i16> %b to <16 x i32>
   %sub = sub <16 x i32> %a.sext, %b.sext
-  %abs = call <16 x i32> @llvm.abs.v8i32(<16 x i32> %sub, i1 true)
+  %abs = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %sub, i1 true)
   %trunc = trunc <16 x i32> %abs to <16 x i16>
   ret <16 x i16> %trunc
 }
@@ -53,7 +53,7 @@ define <8 x i32> @xvabsd_w(<8 x i32> %a, <8 x i32> %b) {
   %a.sext = sext <8 x i32> %a to <8 x i64>
   %b.sext = sext <8 x i32> %b to <8 x i64>
   %sub = sub <8 x i64> %a.sext, %b.sext
-  %abs = call <8 x i64> @llvm.abs.v4i64(<8 x i64> %sub, i1 true)
+  %abs = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %sub, i1 true)
   %trunc = trunc <8 x i64> %abs to <8 x i32>
   ret <8 x i32> %trunc
 }
@@ -68,7 +68,7 @@ define <4 x i64> @xvabsd_d(<4 x i64> %a, <4 x i64> %b) {
   %a.sext = sext <4 x i64> %a to <4 x i128>
   %b.sext = sext <4 x i64> %b to <4 x i128>
   %sub = sub <4 x i128> %a.sext, %b.sext
-  %abs = call <4 x i128> @llvm.abs.v2i128(<4 x i128> %sub, i1 true)
+  %abs = call <4 x i128> @llvm.abs.v4i128(<4 x i128> %sub, i1 true)
   %trunc = trunc <4 x i128> %abs to <4 x i64>
   ret <4 x i64> %trunc
 }
@@ -83,7 +83,7 @@ define <32 x i8> @xvabsd_bu(<32 x i8> %a, <32 x i8> %b) {
   %a.zext = zext <32 x i8> %a to <32 x i16>
   %b.zext = zext <32 x i8> %b to <32 x i16>
   %sub = sub <32 x i16> %a.zext, %b.zext
-  %abs = call <32 x i16> @llvm.abs.v16i16(<32 x i16> %sub, i1 true)
+  %abs = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %sub, i1 true)
   %trunc = trunc <32 x i16> %abs to <32 x i8>
   ret <32 x i8> %trunc
 }
@@ -98,7 +98,7 @@ define <16 x i16> @xvabsd_hu(<16 x i16> %a, <16 x i16> %b) {
   %a.zext = zext <16 x i16> %a to <16 x i32>
   %b.zext = zext <16 x i16> %b to <16 x i32>
   %sub = sub <16 x i32> %a.zext, %b.zext
-  %abs = call <16 x i32> @llvm.abs.v8i32(<16 x i32> %sub, i1 true)
+  %abs = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %sub, i1 true)
   %trunc = trunc <16 x i32> %abs to <16 x i16>
   ret <16 x i16> %trunc
 }
@@ -113,7 +113,7 @@ define <8 x i32> @xvabsd_wu(<8 x i32> %a, <8 x i32> %b) {
   %a.zext = zext <8 x i32> %a to <8 x i64>
   %b.zext = zext <8 x i32> %b to <8 x i64>
   %sub = sub <8 x i64> %a.zext, %b.zext
-  %abs = call <8 x i64> @llvm.abs.v4i64(<8 x i64> %sub, i1 true)
+  %abs = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %sub, i1 true)
   %trunc = trunc <8 x i64> %abs to <8 x i32>
   ret <8 x i32> %trunc
 }
@@ -128,7 +128,7 @@ define <4 x i64> @xvabsd_du(<4 x i64> %a, <4 x i64> %b) {
   %a.zext = zext <4 x i64> %a to <4 x i128>
   %b.zext = zext <4 x i64> %b to <4 x i128>
   %sub = sub <4 x i128> %a.zext, %b.zext
-  %abs = call <4 x i128> @llvm.abs.v2i128(<4 x i128> %sub, i1 true)
+  %abs = call <4 x i128> @llvm.abs.v4i128(<4 x i128> %sub, i1 true)
   %trunc = trunc <4 x i128> %abs to <4 x i64>
   ret <4 x i64> %trunc
 }
@@ -142,7 +142,7 @@ define <32 x i8> @xvabsd_b_nsw(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-NEXT:    xvmax.b $xr0, $xr0, $xr1
 ; CHECK-NEXT:    ret
   %sub = sub nsw <32 x i8> %a, %b
-  %abs = call <32 x i8> @llvm.abs.v16i8(<32 x i8> %sub, i1 true)
+  %abs = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %sub, i1 true)
   ret <32 x i8> %abs
 }
 
@@ -154,7 +154,7 @@ define <16 x i16> @xvabsd_h_nsw(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-NEXT:    xvmax.h $xr0, $xr0, $xr1
 ; CHECK-NEXT:    ret
   %sub = sub nsw <16 x i16> %a, %b
-  %abs = call <16 x i16> @llvm.abs.v8i16(<16 x i16> %sub, i1 true)
+  %abs = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %sub, i1 true)
   ret <16 x i16> %abs
 }
 
@@ -166,7 +166,7 @@ define <8 x i32> @xvabsd_w_nsw(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-NEXT:    xvmax.w $xr0, $xr0, $xr1
 ; CHECK-NEXT:    ret
   %sub = sub nsw <8 x i32> %a, %b
-  %abs = call <8 x i32> @llvm.abs.v4i32(<8 x i32> %sub, i1 true)
+  %abs = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %sub, i1 true)
   ret <8 x i32> %abs
 }
 
@@ -178,7 +178,7 @@ define <4 x i64> @xvabsd_d_nsw(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-NEXT:    xvmax.d $xr0, $xr0, $xr1
 ; CHECK-NEXT:    ret
   %sub = sub nsw <4 x i64> %a, %b
-  %abs = call <4 x i64> @llvm.abs.v2i64(<4 x i64> %sub, i1 true)
+  %abs = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %sub, i1 true)
   ret <4 x i64> %abs
 }
 
@@ -190,8 +190,8 @@ define <32 x i8> @maxmin_b(<32 x i8> %0, <32 x i8> %1) {
 ; CHECK-NEXT:    xvmax.b $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvsub.b $xr0, $xr0, $xr2
 ; CHECK-NEXT:    ret
-  %a = tail call <32 x i8> @llvm.smax.v16i8(<32 x i8> %0, <32 x i8> %1)
-  %b = tail call <32 x i8> @llvm.smin.v16i8(<32 x i8> %0, <32 x i8> %1)
+  %a = tail call <32 x i8> @llvm.smax.v32i8(<32 x i8> %0, <32 x i8> %1)
+  %b = tail call <32 x i8> @llvm.smin.v32i8(<32 x i8> %0, <32 x i8> %1)
   %sub = sub <32 x i8> %a, %b
   ret <32 x i8> %sub
 }
@@ -203,8 +203,8 @@ define <16 x i16> @maxmin_h(<16 x i16> %0, <16 x i16> %1) {
 ; CHECK-NEXT:    xvmax.h $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvsub.h $xr0, $xr0, $xr2
 ; CHECK-NEXT:    ret
-  %a = tail call <16 x i16> @llvm.smax.v8i16(<16 x i16> %0, <16 x i16> %1)
-  %b = tail call <16 x i16> @llvm.smin.v8i16(<16 x i16> %0, <16 x i16> %1)
+  %a = tail call <16 x i16> @llvm.smax.v16i16(<16 x i16> %0, <16 x i16> %1)
+  %b = tail call <16 x i16> @llvm.smin.v16i16(<16 x i16> %0, <16 x i16> %1)
   %sub = sub <16 x i16> %a, %b
   ret <16 x i16> %sub
 }
@@ -216,8 +216,8 @@ define <8 x i32> @maxmin_w(<8 x i32> %0, <8 x i32> %1) {
 ; CHECK-NEXT:    xvmax.w $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvsub.w $xr0, $xr0, $xr2
 ; CHECK-NEXT:    ret
-  %a = tail call <8 x i32> @llvm.smax.v4i32(<8 x i32> %0, <8 x i32> %1)
-  %b = tail call <8 x i32> @llvm.smin.v4i32(<8 x i32> %0, <8 x i32> %1)
+  %a = tail call <8 x i32> @llvm.smax.v8i32(<8 x i32> %0, <8 x i32> %1)
+  %b = tail call <8 x i32> @llvm.smin.v8i32(<8 x i32> %0, <8 x i32> %1)
   %sub = sub <8 x i32> %a, %b
   ret <8 x i32> %sub
 }
@@ -229,8 +229,8 @@ define <4 x i64> @maxmin_d(<4 x i64> %0, <4 x i64> %1) {
 ; CHECK-NEXT:    xvmax.d $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvsub.d $xr0, $xr0, $xr2
 ; CHECK-NEXT:    ret
-  %a = tail call <4 x i64> @llvm.smax.v2i64(<4 x i64> %0, <4 x i64> %1)
-  %b = tail call <4 x i64> @llvm.smin.v2i64(<4 x i64> %0, <4 x i64> %1)
+  %a = tail call <4 x i64> @llvm.smax.v4i64(<4 x i64> %0, <4 x i64> %1)
+  %b = tail call <4 x i64> @llvm.smin.v4i64(<4 x i64> %0, <4 x i64> %1)
   %sub = sub <4 x i64> %a, %b
   ret <4 x i64> %sub
 }
@@ -242,8 +242,8 @@ define <32 x i8> @maxmin_bu(<32 x i8> %0, <32 x i8> %1) {
 ; CHECK-NEXT:    xvmax.bu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvsub.b $xr0, $xr0, $xr2
 ; CHECK-NEXT:    ret
-  %a = tail call <32 x i8> @llvm.umax.v16i8(<32 x i8> %0, <32 x i8> %1)
-  %b = tail call <32 x i8> @llvm.umin.v16i8(<32 x i8> %0, <32 x i8> %1)
+  %a = tail call <32 x i8> @llvm.umax.v32i8(<32 x i8> %0, <32 x i8> %1)
+  %b = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> %0, <32 x i8> %1)
   %sub = sub <32 x i8> %a, %b
   ret <32 x i8> %sub
 }
@@ -255,8 +255,8 @@ define <16 x i16> @maxmin_hu(<16 x i16> %0, <16 x i16> %1) {
 ; CHECK-NEXT:    xvmax.hu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvsub.h $xr0, $xr0, $xr2
 ; CHECK-NEXT:    ret
-  %a = tail call <16 x i16> @llvm.umax.v8i16(<16 x i16> %0, <16 x i16> %1)
-  %b = tail call <16 x i16> @llvm.umin.v8i16(<16 x i16> %0, <16 x i16> %1)
+  %a = tail call <16 x i16> @llvm.umax.v16i16(<16 x i16> %0, <16 x i16> %1)
+  %b = tail call <16 x i16> @llvm.umin.v16i16(<16 x i16> %0, <16 x i16> %1)
   %sub = sub <16 x i16> %a, %b
   ret <16 x i16> %sub
 }
@@ -268,8 +268,8 @@ define <8 x i32> @maxmin_wu(<8 x i32> %0, <8 x i32> %1) {
 ; CHECK-NEXT:    xvmax.wu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvsub.w $xr0, $xr0, $xr2
 ; CHECK-NEXT:    ret
-  %a = tail call <8 x i32> @llvm.umax.v4i32(<8 x i32> %0, <8 x i32> %1)
-  %b = tail call <8 x i32> @llvm.umin.v4i32(<8 x i32> %0, <8 x i32> %1)
+  %a = tail call <8 x i32> @llvm.umax.v8i32(<8 x i32> %0, <8 x i32> %1)
+  %b = tail call <8 x i32> @llvm.umin.v8i32(<8 x i32> %0, <8 x i32> %1)
   %sub = sub <8 x i32> %a, %b
   ret <8 x i32> %sub
 }
@@ -281,8 +281,8 @@ define <4 x i64> @maxmin_du(<4 x i64> %0, <4 x i64> %1) {
 ; CHECK-NEXT:    xvmax.du $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvsub.d $xr0, $xr0, $xr2
 ; CHECK-NEXT:    ret
-  %a = tail call <4 x i64> @llvm.umax.v2i64(<4 x i64> %0, <4 x i64> %1)
-  %b = tail call <4 x i64> @llvm.umin.v2i64(<4 x i64> %0, <4 x i64> %1)
+  %a = tail call <4 x i64> @llvm.umax.v4i64(<4 x i64> %0, <4 x i64> %1)
+  %b = tail call <4 x i64> @llvm.umin.v4i64(<4 x i64> %0, <4 x i64> %1)
   %sub = sub <4 x i64> %a, %b
   ret <4 x i64> %sub
 }
@@ -294,8 +294,8 @@ define <32 x i8> @maxmin_bu_com1(<32 x i8> %0, <32 x i8> %1) {
 ; CHECK-NEXT:    xvmax.bu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvsub.b $xr0, $xr0, $xr2
 ; CHECK-NEXT:    ret
-  %a = tail call <32 x i8> @llvm.umax.v16i8(<32 x i8> %0, <32 x i8> %1)
-  %b = tail call <32 x i8> @llvm.umin.v16i8(<32 x i8> %1, <32 x i8> %0)
+  %a = tail call <32 x i8> @llvm.umax.v32i8(<32 x i8> %0, <32 x i8> %1)
+  %b = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> %1, <32 x i8> %0)
   %sub = sub <32 x i8> %a, %b
   ret <32 x i8> %sub
 }
@@ -526,32 +526,32 @@ define <4 x i64> @xvabsd_du_select(<4 x i64> %a, <4 x i64> %b) nounwind {
   ret <4 x i64> %sub
 }
 
-declare <32 x i8> @llvm.abs.v16i8(<32 x i8>, i1)
+declare <32 x i8> @llvm.abs.v32i8(<32 x i8>, i1)
 
-declare <16 x i16> @llvm.abs.v8i16(<16 x i16>, i1)
-declare <32 x i16> @llvm.abs.v16i16(<32 x i16>, i1)
+declare <16 x i16> @llvm.abs.v16i16(<16 x i16>, i1)
+declare <32 x i16> @llvm.abs.v32i16(<32 x i16>, i1)
 
-declare <8 x i32> @llvm.abs.v4i32(<8 x i32>, i1)
-declare <16 x i32> @llvm.abs.v8i32(<16 x i32>, i1)
+declare <8 x i32> @llvm.abs.v8i32(<8 x i32>, i1)
+declare <16 x i32> @llvm.abs.v16i32(<16 x i32>, i1)
 
-declare <4 x i64> @llvm.abs.v2i64(<4 x i64>, i1)
-declare <8 x i64> @llvm.abs.v4i64(<8 x i64>, i1)
+declare <4 x i64> @llvm.abs.v4i64(<4 x i64>, i1)
+declare <8 x i64> @llvm.abs.v8i64(<8 x i64>, i1)
 
-declare <4 x i128> @llvm.abs.v2i128(<4 x i128>, i1)
+declare <4 x i128> @llvm.abs.v4i128(<4 x i128>, i1)
 
-declare <32 x i8> @llvm.smax.v16i8(<32 x i8>, <32 x i8>)
-declare <16 x i16> @llvm.smax.v8i16(<16 x i16>, <16 x i16>)
-declare <8 x i32> @llvm.smax.v4i32(<8 x i32>, <8 x i32>)
-declare <4 x i64> @llvm.smax.v2i64(<4 x i64>, <4 x i64>)
-declare <32 x i8> @llvm.smin.v16i8(<32 x i8>, <32 x i8>)
-declare <16 x i16> @llvm.smin.v8i16(<16 x i16>, <16 x i16>)
-declare <8 x i32> @llvm.smin.v4i32(<8 x i32>, <8 x i32>)
-declare <4 x i64> @llvm.smin.v2i64(<4 x i64>, <4 x i64>)
-declare <32 x i8> @llvm.umax.v16i8(<32 x i8>, <32 x i8>)
-declare <16 x i16> @llvm.umax.v8i16(<16 x i16>, <16 x i16>)
-declare <8 x i32> @llvm.umax.v4i32(<8 x i32>, <8 x i32>)
-declare <4 x i64> @llvm.umax.v2i64(<4 x i64>, <4 x i64>)
-declare <32 x i8> @llvm.umin.v16i8(<32 x i8>, <32 x i8>)
-declare <16 x i16> @llvm.umin.v8i16(<16 x i16>, <16 x i16>)
-declare <8 x i32> @llvm.umin.v4i32(<8 x i32>, <8 x i32>)
-declare <4 x i64> @llvm.umin.v2i64(<4 x i64>, <4 x i64>)
+declare <32 x i8> @llvm.smax.v32i8(<32 x i8>, <32 x i8>)
+declare <16 x i16> @llvm.smax.v16i16(<16 x i16>, <16 x i16>)
+declare <8 x i32> @llvm.smax.v8i32(<8 x i32>, <8 x i32>)
+declare <4 x i64> @llvm.smax.v4i64(<4 x i64>, <4 x i64>)
+declare <32 x i8> @llvm.smin.v32i8(<32 x i8>, <32 x i8>)
+declare <16 x i16> @llvm.smin.v16i16(<16 x i16>, <16 x i16>)
+declare <8 x i32> @llvm.smin.v8i32(<8 x i32>, <8 x i32>)
+declare <4 x i64> @llvm.smin.v4i64(<4 x i64>, <4 x i64>)
+declare <32 x i8> @llvm.umax.v32i8(<32 x i8>, <32 x i8>)
+declare <16 x i16> @llvm.umax.v16i16(<16 x i16>, <16 x i16>)
+declare <8 x i32> @llvm.umax.v8i32(<8 x i32>, <8 x i32>)
+declare <4 x i64> @llvm.umax.v4i64(<4 x i64>, <4 x i64>)
+declare <32 x i8> @llvm.umin.v32i8(<32 x i8>, <32 x i8>)
+declare <16 x i16> @llvm.umin.v16i16(<16 x i16>, <16 x i16>)
+declare <8 x i32> @llvm.umin.v8i32(<8 x i32>, <8 x i32>)
+declare <4 x i64> @llvm.umin.v4i64(<4 x i64>, <4 x i64>)
