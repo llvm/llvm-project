@@ -1380,21 +1380,7 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
   Attributor A(Functions, InfoCache, AC);
 
   LLVM_DEBUG({
-    auto PhaseToString = [](ThinOrFullLTOPhase LTOPhase) -> StringRef {
-      switch (LTOPhase) {
-      case ThinOrFullLTOPhase::None:
-        return "None";
-      case ThinOrFullLTOPhase::ThinLTOPreLink:
-        return "ThinLTOPreLink";
-      case ThinOrFullLTOPhase::ThinLTOPostLink:
-        return "ThinLTOPostLink";
-      case ThinOrFullLTOPhase::FullLTOPreLink:
-        return "FullLTOPreLink";
-      case ThinOrFullLTOPhase::FullLTOPostLink:
-        return "FullLTOPostLink";
-      }
-    };
-    StringRef LTOPhaseStr = PhaseToString(LTOPhase);
+    StringRef LTOPhaseStr = to_string(LTOPhase);
     dbgs() << "[AMDGPUAttributor] Running at phase " << LTOPhaseStr << '\n'
            << "[AMDGPUAttributor] Module " << M.getName() << " is "
            << (AC.IsClosedWorldModule ? "" : "not ")
