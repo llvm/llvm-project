@@ -1004,6 +1004,13 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::experimental_vector_extract_last_active:
+    if (ST->isSVEAvailable()) {
+      auto [LegalCost, _] = getTypeLegalizationCost(ICA.getArgTypes()[0]);
+      // This should turn into chained clastb instructions.
+      return LegalCost;
+    }
+    break;
   default:
     break;
   }
@@ -5325,6 +5332,7 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
   case RecurKind::FMax:
   case RecurKind::FMulAdd:
   case RecurKind::AnyOf:
+  case RecurKind::FindLast:
     return true;
   default:
     return false;

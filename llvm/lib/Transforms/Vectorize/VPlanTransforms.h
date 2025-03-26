@@ -23,6 +23,7 @@ namespace llvm {
 
 class InductionDescriptor;
 class Instruction;
+class LoopVectorizationLegality;
 class PHINode;
 class ScalarEvolution;
 class PredicatedScalarEvolution;
@@ -356,6 +357,12 @@ struct VPlanTransforms {
   static void
   addBranchWeightToMiddleTerminator(VPlan &Plan, ElementCount VF,
                                     std::optional<unsigned> VScaleForTuning);
+
+  /// Change FindLast reductions to save the appropriate state using selects
+  /// for entire vectors for both the data and the mask..
+  static void convertFindLastRecurrences(VPlan &Plan,
+                                         VPRecipeBuilder &RecipeBuilder,
+                                         LoopVectorizationLegality *Legal);
 };
 
 } // namespace llvm

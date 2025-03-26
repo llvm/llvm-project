@@ -86,7 +86,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPWidenLoadSC:
   case VPWidenPHISC:
   case VPWidenSC:
-  case VPWidenSelectSC: {
+  case VPWidenSelectSC:
+  case VPWidenSelectVectorSC: {
     const Instruction *I =
         dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
     (void)I;
@@ -134,7 +135,8 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenIntOrFpInductionSC:
   case VPWidenPHISC:
   case VPWidenSC:
-  case VPWidenSelectSC: {
+  case VPWidenSelectSC:
+  case VPWidenSelectVectorSC: {
     const Instruction *I =
         dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
     (void)I;
@@ -177,7 +179,8 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPWidenPHISC:
   case VPWidenPointerInductionSC:
   case VPWidenSC:
-  case VPWidenSelectSC: {
+  case VPWidenSelectSC:
+  case VPWidenSelectVectorSC: {
     const Instruction *I =
         dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
     (void)I;
@@ -522,6 +525,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ComputeAnyOfResult:
   case VPInstruction::ReductionStartVector:
+  case VPInstruction::ExtractLastActive:
     return 3;
   case VPInstruction::ComputeFindIVResult:
     return 4;
@@ -983,6 +987,17 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case VPInstruction::ResumeForEpilogue:
     return State.get(getOperand(0), true);
+  case VPInstruction::ExtractLastActive: {
+    Value *Data = State.get(getOperand(0));
+    Value *Mask = State.get(getOperand(1));
+    Value *Default = State.get(getOperand(2), /*IsScalar=*/true);
+    Type *VTy = Data->getType();
+
+    Module *M = State.Builder.GetInsertBlock()->getModule();
+    Function *ExtractLast = Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::experimental_vector_extract_last_active, {VTy});
+    return Builder.CreateCall(ExtractLast, {Data, Mask, Default});
+  }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -1119,6 +1134,14 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                   {PredTy, Type::getInt1Ty(Ctx.LLVMCtx)});
     return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
   }
+  case VPInstruction::ExtractLastActive: {
+    Type *ScalarTy = Ctx.Types.inferScalarType(this);
+    Type *VecTy = toVectorTy(ScalarTy, VF);
+    Type *MaskTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF);
+    IntrinsicCostAttributes ICA(Intrinsic::experimental_vector_extract_last_active,
+                                ScalarTy, {VecTy, MaskTy, ScalarTy});
+    return Ctx.TTI.getIntrinsicInstrCost(ICA, Ctx.CostKind);
+  }
   case VPInstruction::FirstOrderRecurrenceSplice: {
     assert(VF.isVector() && "Scalar FirstOrderRecurrenceSplice?");
     SmallVector<int> Mask(VF.getKnownMinValue());
@@ -1174,6 +1197,7 @@ bool VPInstruction::isVectorToScalar() const {
          getOpcode() == VPInstruction::FirstActiveLane ||
          getOpcode() == VPInstruction::ComputeAnyOfResult ||
          getOpcode() == VPInstruction::ComputeFindIVResult ||
+         getOpcode() == VPInstruction::ExtractLastActive ||
          getOpcode() == VPInstruction::ComputeReductionResult ||
          getOpcode() == VPInstruction::AnyOf;
 }
@@ -1243,6 +1267,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ExtractLastElement:
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::FirstActiveLane:
+  case VPInstruction::ExtractLastActive:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::Not:
@@ -1413,6 +1438,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ResumeForEpilogue:
     O << "resume-for-epilogue";
+    break;
+  case VPInstruction::ExtractLastActive:
+    O << "extract-last-active";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
@@ -1927,7 +1955,9 @@ void VPHistogramRecipe::print(raw_ostream &O, const Twine &Indent,
     Mask->printAsOperand(O, SlotTracker);
   }
 }
+#endif
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
                                 VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-SELECT ";
@@ -2000,6 +2030,42 @@ InstructionCost VPWidenSelectRecipe::computeCost(ElementCount VF,
   return Ctx.TTI.getCmpSelInstrCost(
       Instruction::Select, VectorTy, CondTy, Pred, Ctx.CostKind,
       {TTI::OK_AnyValue, TTI::OP_None}, {TTI::OK_AnyValue, TTI::OP_None}, SI);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPWidenSelectVectorRecipe::print(raw_ostream &O, const Twine &Indent,
+                                      VPSlotTracker &SlotTracker) const {
+  O << Indent << "WIDEN-SELECT-VECTOR ";
+  printAsOperand(O, SlotTracker);
+  O << " = select ";
+  printFlags(O);
+  getOperand(0)->printAsOperand(O, SlotTracker);
+  O << ", ";
+  getOperand(1)->printAsOperand(O, SlotTracker);
+  O << ", ";
+  getOperand(2)->printAsOperand(O, SlotTracker);
+  O << (isInvariantCond() ? " (condition is loop invariant)" : "");
+}
+#endif
+
+void VPWidenSelectVectorRecipe::execute(VPTransformState &State) {
+  State.setDebugLocFrom(getDebugLoc());
+
+  Value *Cond = State.get(getCond(), /*IsScalar=*/true);
+  Value *Op0 = State.get(getOperand(1));
+  Value *Op1 = State.get(getOperand(2));
+  Value *Sel = State.Builder.CreateSelect(Cond, Op0, Op1);
+  State.set(this, Sel);
+}
+
+InstructionCost
+VPWidenSelectVectorRecipe::computeCost(ElementCount VF,
+                                       VPCostContext &Ctx) const {
+  // Return a number for now; can tune later. This is likely to be expensive
+  // on some targets, as whole-vector selects may require branching to
+  // accomplish.
+  // FIXME: Check current cost model, specifically getCmpSelInstrCost.
+  return 5;
 }
 
 VPIRFlags::FastMathFlagsTy::FastMathFlagsTy(const FastMathFlags &FMF) {
