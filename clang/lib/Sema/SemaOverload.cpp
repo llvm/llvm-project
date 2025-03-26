@@ -5419,7 +5419,7 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
   //   the argument expression. Any difference in top-level
   //   cv-qualification is subsumed by the initialization itself
   //   and does not constitute a conversion.
-  ICS = TryImplicitConversion(S, Init, DeclType, SuppressUserConversions,
+  ICS = TryImplicitConversion(S, Init, T1, SuppressUserConversions,
                               AllowedExplicit::None,
                               /*InOverloadResolution=*/false,
                               /*CStyle=*/false,
@@ -5446,6 +5446,11 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
     //   lvalue.
     // Note that the function case is not possible here.
     if (isRValRef && LValRefType) {
+      ICS.setBad(BadConversionSequence::no_conversion, Init, DeclType);
+      return ICS;
+    }
+
+    if (isRValRef && ICS.UserDefined.ConversionFunction->getReturnType().isConstQualified()) {
       ICS.setBad(BadConversionSequence::no_conversion, Init, DeclType);
       return ICS;
     }
