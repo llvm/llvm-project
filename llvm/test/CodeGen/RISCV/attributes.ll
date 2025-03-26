@@ -6,6 +6,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+zmmul %s -o - | FileCheck --check-prefixes=CHECK,RV32MZMMUL %s
 ; RUN: llc -mtriple=riscv32 -mattr=+a %s -o - | FileCheck --check-prefixes=CHECK,RV32A %s
 ; RUN: llc -mtriple=riscv32 -mattr=+b %s -o - | FileCheck --check-prefixes=CHECK,RV32B %s
+; RUN: llc -mtriple=riscv32 -mattr=+zba,+zbb,+zbs %s -o - | FileCheck --check-prefixes=CHECK,RV32COMBINEINTOB %s
 ; RUN: llc -mtriple=riscv32 -mattr=+f %s -o - | FileCheck --check-prefixes=CHECK,RV32F %s
 ; RUN: llc -mtriple=riscv32 -mattr=+d %s -o - | FileCheck --check-prefixes=CHECK,RV32D %s
 ; RUN: llc -mtriple=riscv32 -mattr=+c %s -o - | FileCheck --check-prefixes=CHECK,RV32C %s
@@ -173,6 +174,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+a --riscv-abi-attributes %s -o - | FileCheck --check-prefixes=CHECK,RV64A,A6S %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a,experimental-zalasr --riscv-abi-attributes %s -o - | FileCheck --check-prefixes=CHECK,RV64ZALASRA,A7 %s
 ; RUN: llc -mtriple=riscv64 -mattr=+b %s -o - | FileCheck --check-prefixes=CHECK,RV64B %s
+; RUN: llc -mtriple=riscv64 -mattr=+zba,+zbb,+zbs %s -o - | FileCheck --check-prefixes=CHECK,RV64COMBINEINTOB %s
 ; RUN: llc -mtriple=riscv64 -mattr=+f %s -o - | FileCheck --check-prefixes=CHECK,RV64F %s
 ; RUN: llc -mtriple=riscv64 -mattr=+d %s -o - | FileCheck --check-prefixes=CHECK,RV64D %s
 ; RUN: llc -mtriple=riscv64 -mattr=+c %s -o - | FileCheck --check-prefixes=CHECK,RV64C %s
@@ -341,6 +343,7 @@
 ; RV32MZMMUL: .attribute 5, "rv32i2p1_m2p0_zmmul1p0"
 ; RV32A: .attribute 5, "rv32i2p1_a2p1_zaamo1p0_zalrsc1p0"
 ; RV32B: .attribute 5, "rv32i2p1_b1p0_zba1p0_zbb1p0_zbs1p0"
+; RV32COMBINEINTOB: .attribute 5, "rv32i2p1_b1p0_zba1p0_zbb1p0_zbs1p0"
 ; RV32F: .attribute 5, "rv32i2p1_f2p2_zicsr2p0"
 ; RV32D: .attribute 5, "rv32i2p1_f2p2_d2p2_zicsr2p0"
 ; RV32C: .attribute 5, "rv32i2p1_c2p0_zca1p0"
@@ -505,6 +508,7 @@
 ; RV64MZMMUL: .attribute 5, "rv64i2p1_m2p0_zmmul1p0"
 ; RV64A: .attribute 5, "rv64i2p1_a2p1_zaamo1p0_zalrsc1p0"
 ; RV64B: .attribute 5, "rv64i2p1_b1p0_zba1p0_zbb1p0_zbs1p0"
+; RV64COMBINEINTOB: .attribute 5, "rv64i2p1_b1p0_zba1p0_zbb1p0_zbs1p0"
 ; RV64F: .attribute 5, "rv64i2p1_f2p2_zicsr2p0"
 ; RV64D: .attribute 5, "rv64i2p1_f2p2_d2p2_zicsr2p0"
 ; RV64C: .attribute 5, "rv64i2p1_c2p0_zca1p0"
