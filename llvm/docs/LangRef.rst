@@ -3971,8 +3971,9 @@ output, given the original flags.
    for places where this can apply to LLVM's intrinsic math functions.
 
 ``reassoc``
-   Allow reassociation transformations for floating-point instructions.
-   This may dramatically change results in floating-point.
+   Allow algebraically equivalent transformations for floating-point
+   instructions such as reassociation transformations. This may dramatically
+   change results in floating-point.
 
 .. _uselistorder:
 
