@@ -51887,6 +51887,11 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // Match pattern to identify a shift-left combined with
+  // a bitwise AND
+  //   (B << ShiftConst) | (A & MaskConst)
+  //
+  // only if the SHLD instruction is not slow on this subtarget.
   if (!Subtarget.isSHLDSlow()) {
     using namespace llvm::SDPatternMatch;
     APInt MaskConst, ShlConst;
@@ -51894,10 +51899,14 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     if (sd_match(N, m_Or(m_Shl(m_Value(B), m_ConstInt(ShlConst)),
                          m_And(m_Value(A), m_ConstInt(MaskConst))))) {
       uint64_t ShiftValue = ShlConst.getZExtValue();
+      // Check if the mask is a valid bit mask of the given shift value and both
+      // inputs come from registers
       if (MaskConst.isMask(ShiftValue) && (A.getOpcode() == ISD::CopyFromReg) &&
           (B.getOpcode() == ISD::CopyFromReg)) {
         unsigned NumBits = B.getScalarValueSizeInBits();
         unsigned NewShift = NumBits - ShiftValue;
+        // Prefers `LEA` instead of `SHL` for power-of-2 shifts, so only
+        // transform non-power-of-2 shifts
         if (ShiftValue > 4 && ShiftValue != 8 && ShiftValue != 16 &&
             ShiftValue != 32 && ShiftValue != 64) {
           SDValue NewSHL =
@@ -51908,6 +51917,8 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
           return R;
         }
       }
+
+      // Handle the case where A and B are truncated values from registers
       if (MaskConst.isMask(ShiftValue) &&
           (A.getOpcode() == ISD::TRUNCATE &&
            A.getOperand(0).getOpcode() == ISD::CopyFromReg) &&
