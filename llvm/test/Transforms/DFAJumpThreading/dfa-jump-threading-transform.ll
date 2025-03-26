@@ -41,14 +41,14 @@ define i32 @test1(i32 %num) {
 ; CHECK-NEXT:    [[CMP_EXIT:%.*]] = icmp slt i32 [[INC]], [[NUM:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP_EXIT]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.inc.jt2:
-; CHECK-NEXT:    [[COUNT4:%.*]] = phi i32 [ [[COUNT1]], [[SEL_SI_UNFOLD_FALSE_JT2]] ], [ [[COUNT2]], [[CASE1]] ]
 ; CHECK-NEXT:    [[STATE_NEXT_JT2]] = phi i32 [ 2, [[CASE1]] ], [ [[DOTSI_UNFOLD_PHI_JT2]], [[SEL_SI_UNFOLD_FALSE_JT2]] ]
+; CHECK-NEXT:    [[COUNT4:%.*]] = phi i32 [ [[COUNT1]], [[SEL_SI_UNFOLD_FALSE_JT2]] ], [ [[COUNT2]], [[CASE1]] ]
 ; CHECK-NEXT:    [[INC_JT2]] = add nsw i32 [[COUNT4]], 1
 ; CHECK-NEXT:    [[CMP_EXIT_JT2:%.*]] = icmp slt i32 [[INC_JT2]], [[NUM]]
 ; CHECK-NEXT:    br i1 [[CMP_EXIT_JT2]], label [[FOR_BODY_JT2]], label [[FOR_END]]
 ; CHECK:       for.inc.jt1:
-; CHECK-NEXT:    [[COUNT3:%.*]] = phi i32 [ [[COUNT]], [[FOR_BODY]] ], [ [[COUNT1]], [[CASE2]] ]
 ; CHECK-NEXT:    [[STATE_NEXT_JT1]] = phi i32 [ 1, [[CASE2]] ], [ 1, [[FOR_BODY]] ]
+; CHECK-NEXT:    [[COUNT3:%.*]] = phi i32 [ [[COUNT]], [[FOR_BODY]] ], [ [[COUNT1]], [[CASE2]] ]
 ; CHECK-NEXT:    [[INC_JT1]] = add nsw i32 [[COUNT3]], 1
 ; CHECK-NEXT:    [[CMP_EXIT_JT1:%.*]] = icmp slt i32 [[INC_JT1]], [[NUM]]
 ; CHECK-NEXT:    br i1 [[CMP_EXIT_JT1]], label [[FOR_BODY_JT1]], label [[FOR_END]]
