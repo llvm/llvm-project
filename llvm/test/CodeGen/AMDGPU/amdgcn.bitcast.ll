@@ -2114,14 +2114,17 @@ define amdgpu_kernel void @v2f32_to_v4i16(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX13-LABEL: v2f32_to_v4i16:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX13-NEXT:    s_mov_b64 s[4:5], lit64(0x4080000040000000)
-; GFX13-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
+; GFX13-NEXT:    v_mov_b32_e32 v0, 2.0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_pk_add_f32 v[0:1], s[2:3], s[4:5]
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_dual_mov_b32 v1, 4.0 :: v_dual_mov_b32 v2, s2
+; GFX13-NEXT:    v_mov_b32_e32 v3, s3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_pk_add_f32 v[0:1], v[2:3], v[0:1]
+; GFX13-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13-NEXT:    v_pk_add_u16 v1, 0x40003, v1
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX13-NEXT:    v_pk_sub_u16 v0, v0, -2 op_sel:[0,1] op_sel_hi:[1,0]
 ; GFX13-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX13-NEXT:    s_endpgm
@@ -2221,14 +2224,17 @@ define amdgpu_kernel void @v2f32_to_v4f16(ptr addrspace(1) %out, ptr addrspace(1
 ; GFX13-LABEL: v2f32_to_v4f16:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX13-NEXT:    s_mov_b64 s[4:5], lit64(0x4080000040000000)
-; GFX13-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
+; GFX13-NEXT:    v_mov_b32_e32 v0, 2.0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_pk_add_f32 v[0:1], s[2:3], s[4:5]
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_dual_mov_b32 v1, 4.0 :: v_dual_mov_b32 v2, s2
+; GFX13-NEXT:    v_mov_b32_e32 v3, s3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_pk_add_f32 v[0:1], v[2:3], v[0:1]
+; GFX13-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13-NEXT:    v_pk_add_f16 v1, 0x48004400, v1
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX13-NEXT:    v_pk_add_f16 v0, 0x40003c00, v0
 ; GFX13-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX13-NEXT:    s_endpgm
