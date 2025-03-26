@@ -291,10 +291,10 @@ public:
 
     auto context = rewriter.getContext();
     // get external opaque struct pointer type
-    auto commStructT =
+    auto typeStructT =
         LLVM::LLVMStructType::getOpaque("ompi_predefined_datatype_t", context);
     // make sure global op definition exists
-    getOrDefineExternalStruct(loc, rewriter, mtype, commStructT);
+    getOrDefineExternalStruct(loc, rewriter, mtype, typeStructT);
     // get address of symbol
     return rewriter.create<LLVM::AddressOfOp>(
         loc, LLVM::LLVMPointerType::get(context),
@@ -303,8 +303,61 @@ public:
 
   Value getMPIOp(const Location loc, ConversionPatternRewriter &rewriter,
                  mpi::MPI_OpClassEnum opAttr) override {
-    llvm_unreachable("getMPIOp not implemented for OpenMPI");
-    return Value();
+    StringRef op;
+    switch (opAttr) {
+    case mpi::MPI_OpClassEnum::MPI_OP_NULL:
+      op = "ompi_mpi_no_op";
+      break;
+    case mpi::MPI_OpClassEnum::MPI_MAX:
+      op = "ompi_mpi_max";
+      break;
+    case mpi::MPI_OpClassEnum::MPI_MIN:
+      op = "ompi_mpi_min";
+      break;
+    case mpi::MPI_OpClassEnum::MPI_SUM:
+      op = "ompi_mpi_sum";
+      break;
+    case mpi::MPI_OpClassEnum::MPI_PROD:
+      op = "ompi_mpi_prod";
+      break;
+    case mpi::MPI_OpClassEnum::MPI_LAND:
+      op = "ompi_mpi_land";
+      break;
+    case mpi::MPI_OpClassEnum::MPI_BAND:
+      op = "ompi_mpi_band";
+      break;
+    case mpi::MPI_OpClassEnum::MPI_LOR:
+      op = "ompi_mpi_lor";
+      break;
+    case mpi::MPI_OpClassEnum::MPI_BOR:
+      op = "ompi_mpi_bor";
+      break;
+    case mpi::MPI_OpClassEnum::MPI_LXOR:
+      op = "ompi_mpi_lxor";
+      break;
+    case mpi::MPI_OpClassEnum::MPI_BXOR:
+      op = "ompi_mpi_bxor";
+      break;
+    case mpi::MPI_OpClassEnum::MPI_MINLOC:
+      op = "ompi_mpi_minloc";
+      break;
+    case mpi::MPI_OpClassEnum::MPI_MAXLOC:
+      op = "ompi_mpi_maxloc";
+      break;
+    case mpi::MPI_OpClassEnum::MPI_REPLACE:
+      op = "ompi_mpi_replace";
+      break;
+    }
+    auto context = rewriter.getContext();
+    // get external opaque struct pointer type
+    auto opStructT =
+        LLVM::LLVMStructType::getOpaque("ompi_predefined_op_t", context);
+    // make sure global op definition exists
+    getOrDefineExternalStruct(loc, rewriter, op, opStructT);
+    // get address of symbol
+    return rewriter.create<LLVM::AddressOfOp>(
+        loc, LLVM::LLVMPointerType::get(context),
+        SymbolRefAttr::get(context, op));
   }
 };
 
