@@ -90,3 +90,27 @@ int test5(int n) {
   int y = _Countof(*array);
   return x + y;
 }
+
+// CHECK-LABEL: define dso_local void @test6(
+// CHECK-SAME: i32 noundef [[N:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[X:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[Y:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
+// CHECK-NEXT:    store i32 7, ptr [[X]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[N_ADDR]], align 4
+// CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP0]], 1
+// CHECK-NEXT:    store i32 [[INC]], ptr [[N_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
+// CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[TMP1]] to i32
+// CHECK-NEXT:    store i32 [[CONV]], ptr [[Y]], align 4
+// CHECK-NEXT:    ret void
+//
+void test6(int n) {
+  // n should not be evaluated in this case because the operator does not need
+  // to evaluate it to know the result is 7.
+  int x = _Countof(int[7][n++]);
+  // n should be evaluated in this case, however.
+  int y = _Countof(int[n++][7]);
+}

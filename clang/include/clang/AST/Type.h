@@ -3812,6 +3812,19 @@ public:
 ///   ++x;
 ///   int Z[x];
 /// }
+///
+/// FIXME: Even constant array types might be represented by a
+/// VariableArrayType, as in:
+///
+///   void func(int n) {
+///     int array[7][n];
+///   }
+///
+/// Even though 'array' is a constant-size array of seven elements of type
+/// variable-length array of size 'n', it will be represented as a
+/// VariableArrayType whose 'SizeExpr' is an IntegerLiteral whose value is 7.
+/// Instead, this should be a ConstantArrayType whose element is a
+/// VariableArrayType, which models the type better.
 class VariableArrayType : public ArrayType {
   friend class ASTContext; // ASTContext creates these.
 

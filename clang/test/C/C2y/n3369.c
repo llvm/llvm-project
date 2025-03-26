@@ -47,11 +47,18 @@ void test_constant_expression_behavior(int n) {
   int another_array[n][7];
   static_assert(_Countof(another_array)); // expected-error {{static assertion expression is not an integral constant expression}}
   static_assert(_Countof(*another_array) == 7);
+
+  // Only the first dimension is needed for constant evaluation; other
+  // dimensions can be ignored.
+  int yet_another_array[7][n];
+  static_assert(_Countof(yet_another_array) == 7);
+  static_assert(_Countof(*yet_another_array)); // expected-error {{static assertion expression is not an integral constant expression}}
 }
 
-void test_with_function_param(int array[12], int (*array_ptr)[12]) {
+void test_with_function_param(int array[12], int (*array_ptr)[12], int static_array[static 12]) {
   (void)_Countof(array); // expected-error {{'_Countof' requires an argument of array type; 'int *' invalid}}
   static_assert(_Countof(*array_ptr) == 12);
+  (void)_Countof(static_array); // expected-error {{'_Countof' requires an argument of array type; 'int *' invalid}}
 }
 
 void test_multidimensional_arrays() {

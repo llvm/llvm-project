@@ -14937,8 +14937,27 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
       return Success(CAT->getSize(), E);
     }
 
-    // If it wasn't a constant array, it's not a valid constant expression.
     assert(!Ty->isConstantSizeType());
+
+    // If it's a variable-length array type, we need to check whether it is a
+    // multidimensional array. If so, we need to check the size expression of
+    // the VLA to see if it's a constant size. If so, we can return that value.
+    const auto *VAT = Info.Ctx.getAsVariableArrayType(Ty);
+    assert(VAT);
+    if (VAT->getElementType()->isArrayType()) {
+      std::optional<APSInt> Res =
+          VAT->getSizeExpr()->getIntegerConstantExpr(Info.Ctx);
+      if (Res) {
+        // The resulting value always has type size_t, so we need to make the
+        // returned APInt have the correct sign and bit-width.
+        APInt Val{
+            static_cast<unsigned>(Info.Ctx.getTypeSize(Info.Ctx.getSizeType())),
+            Res->getZExtValue()};
+        return Success(Val, E);
+      }
+    }
+
+    // Definitely a variable-length type, which is not an ICE.
     // FIXME: Better diagnostic.
     Info.FFDiag(E->getBeginLoc());
     return false;
@@ -17442,9 +17461,23 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   }
   case Expr::UnaryExprOrTypeTraitExprClass: {
     const UnaryExprOrTypeTraitExpr *Exp = cast<UnaryExprOrTypeTraitExpr>(E);
-    if ((Exp->getKind() == UETT_SizeOf || Exp->getKind() == UETT_CountOf) &&
+    if ((Exp->getKind() ==  UETT_SizeOf) &&
         Exp->getTypeOfArgument()->isVariableArrayType())
       return ICEDiag(IK_NotICE, E->getBeginLoc());
+    if (Exp->getKind() == UETT_CountOf) {
+      QualType ArgTy = Exp->getTypeOfArgument();
+      if (ArgTy->isVariableArrayType()) {
+        // We need to look whether the array is multidimensional. If it is,
+        // then we want to check the size expression manually to see whether
+        // it is an ICE or not.
+        const auto *VAT = Ctx.getAsVariableArrayType(ArgTy);
+        if (VAT->getElementType()->isArrayType())
+          return CheckICE(VAT->getSizeExpr(), Ctx);
+
+        // Otherwise, this is a regular VLA, which is definitely not an ICE.
+        return ICEDiag(IK_NotICE, E->getBeginLoc());
+      }
+    }
     return NoDiag();
   }
   case Expr::BinaryOperatorClass: {
