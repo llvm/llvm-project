@@ -75,7 +75,7 @@ when ``-fexperimental-library`` is passed:
 .. note::
   Experimental libraries are experimental.
     * The contents of the ``<experimental/...>`` headers and the associated static
-      library will generally not remain compatible between versions.
+      library may not remain compatible between versions.
     * No guarantees of API or ABI stability are provided.
     * When the standardized version of an experimental feature is implemented,
       the experimental feature is removed two releases after the non-experimental
