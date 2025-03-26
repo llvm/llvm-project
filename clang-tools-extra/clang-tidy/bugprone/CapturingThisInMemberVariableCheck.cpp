@@ -122,21 +122,19 @@ void CapturingThisInMemberVariableCheck::registerMatchers(MatchFinder *Finder) {
 }
 void CapturingThisInMemberVariableCheck::check(
     const MatchFinder::MatchResult &Result) {
-  const auto EmitDiag = [this](const SourceLocation &Location,
-                               const FunctionDecl *Bind) {
-    const std::string BindName = Bind ? Bind->getQualifiedNameAsString() : "";
-    diag(Location, "'this' captured by a %select{lambda|'%1' call}0 and "
-                   "stored in a class member variable; disable implicit class "
-                   "copying/moving to prevent potential use-after-free")
-        << (Bind ? 1 : 0) << BindName;
-  };
-
   if (const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("lambda")) {
-    EmitDiag(Lambda->getBeginLoc(), nullptr);
+    diag(Lambda->getBeginLoc(),
+         "'this' captured by a lambda and stored in a class member variable; "
+         "disable implicit class copying/moving to prevent potential "
+         "use-after-free");
   } else if (const auto *Bind = Result.Nodes.getNodeAs<CallExpr>("bind")) {
     const auto *Callee = Result.Nodes.getNodeAs<FunctionDecl>("callee");
     assert(Callee);
-    EmitDiag(Bind->getBeginLoc(), Callee);
+    diag(Bind->getBeginLoc(),
+         "'this' captured by a '%0' call and stored in a class member "
+         "variable; disable implicit class copying/moving to prevent potential "
+         "use-after-free")
+        << Callee->getQualifiedNameAsString();
   }
 
   const auto *Field = Result.Nodes.getNodeAs<FieldDecl>("field");
