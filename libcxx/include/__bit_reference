@@ -455,7 +455,7 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit __bit_iterator(__storage_pointer __s, unsigned __ctz) _NOEXCEPT
       : __seg_(__s),
         __ctz_(__ctz) {
-    _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+    _LIBCPP_ASSERT_INTERNAL(
         __ctz_ < __bits_per_word, "__bit_iterator initialized with an invalid number of trailing zeros.");
   }
 
