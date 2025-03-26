@@ -899,4 +899,5 @@ void test_set_fpenv(unsigned long env) {
 
 // CHECK-DAG: [[$GRID_RANGE]] = !{i32 1, i32 0}
 // CHECK-DAG: [[$WS_RANGE]] = !{i16 1, i16 1025}
-// CHECK-DAG: attributes #[[$NOUNWIND_READONLY]] = { convergent mustprogress nocallback nofree nounwind willreturn memory(none) }
+// CHECK-SPIRV-DAG: attributes #[[$NOUNWIND_READONLY]] = { convergent mustprogress nocallback nofree nounwind willreturn memory(none) }
+// CHECK-AMDGCN-DAG: attributes #[[$NOUNWIND_READONLY]] = { convergent mustprogress nocallback nofree nounwind willreturn memory(none) "amdgpu-waves-per-eu"="4,10" }
