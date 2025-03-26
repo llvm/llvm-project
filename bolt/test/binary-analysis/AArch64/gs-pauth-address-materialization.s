@@ -6,7 +6,7 @@
 //
 // Note that while "instructions that write to the affected registers"
 // section of the report is still technically correct, it does not necessarily
-// mentions the instructions that are used incorrectly.
+// mention the instructions that are used incorrectly.
 //
 // FIXME: Switch to PAC* instructions instead of indirect tail call for testing
 //        if a register is considered safe when detection of signing oracles is
@@ -91,7 +91,8 @@ bad_split_adrp:
         br      x0
         .size   bad_split_adrp, .-bad_split_adrp
 
-// Materialization of absolute addresses is not expected.
+// Materialization of absolute addresses is not handled, as it is not expected
+// to be used by real-world code, but can be supported if needed.
 
         .globl  bad_immediate_constant
         .type   bad_immediate_constant,@function
@@ -138,6 +139,15 @@ good_many_offsets:
         add     x2, x1, :lo12:sym
         br      x2
         .size   good_many_offsets, .-good_many_offsets
+
+        .globl  good_negative_offset
+        .type   good_negative_offset,@function
+good_negative_offset:
+// CHECK-NOT: good_negative_offset
+        adr     x0, sym
+        sub     x1, x0, #8
+        br      x1
+        .size   good_negative_offset, .-good_negative_offset
 
 // MOV Xd, Xm (which is an alias of ORR Xd, XZR, Xm) is handled as part of
 // support for address arithmetics, but ORR in general is not.
