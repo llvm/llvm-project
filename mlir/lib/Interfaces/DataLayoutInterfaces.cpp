@@ -246,6 +246,16 @@ Attribute mlir::detail::getDefaultEndianness(DataLayoutEntryInterface entry) {
   return entry.getValue();
 }
 
+// Returns the default memory space if specified in the given entry. If the
+// entry is empty the default memory space represented by an empty attribute is
+// returned.
+Attribute mlir::detail::getDefaultMemorySpace(DataLayoutEntryInterface entry) {
+  if (!entry)
+    return Attribute();
+
+  return entry.getValue();
+}
+
 // Returns the memory space used for alloca operations if specified in the
 // given entry. If the entry is empty the default memory space represented by
 // an empty attribute is returned.
@@ -603,6 +613,22 @@ mlir::Attribute mlir::DataLayout::getEndianness() const {
   else
     endianness = detail::getDefaultEndianness(entry);
   return *endianness;
+}
+
+mlir::Attribute mlir::DataLayout::getDefaultMemorySpace() const {
+  checkValid();
+  if (defaultMemorySpace)
+    return *defaultMemorySpace;
+  DataLayoutEntryInterface entry;
+  if (originalLayout)
+    entry = originalLayout.getSpecForIdentifier(
+        originalLayout.getDefaultMemorySpaceIdentifier(
+            originalLayout.getContext()));
+  if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+    defaultMemorySpace = iface.getDefaultMemorySpace(entry);
+  else
+    defaultMemorySpace = detail::getDefaultMemorySpace(entry);
+  return *defaultMemorySpace;
 }
 
 mlir::Attribute mlir::DataLayout::getAllocaMemorySpace() const {

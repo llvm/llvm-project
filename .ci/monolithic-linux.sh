@@ -90,23 +90,6 @@ if [[ "${runtimes}" != "" ]]; then
   INSTALL_DIR="${BUILD_DIR}/install"
   mkdir -p ${RUNTIMES_BUILD_DIR}
 
-  echo "--- cmake runtimes C++03"
-
-  cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
-      -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
-      -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
-      -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
-      -D LIBCXX_CXX_ABI=libcxxabi \
-      -D CMAKE_BUILD_TYPE=RelWithDebInfo \
-      -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-      -D LIBCXX_TEST_PARAMS="std=c++03" \
-      -D LIBCXXABI_TEST_PARAMS="std=c++03" \
-      -D LLVM_LIT_ARGS="${lit_args}"
-
-  echo "--- ninja runtimes C++03"
-
-  ninja -vC "${RUNTIMES_BUILD_DIR}" ${runtime_targets}
-
   echo "--- cmake runtimes C++26"
 
   rm -rf "${RUNTIMES_BUILD_DIR}"
@@ -127,7 +110,11 @@ if [[ "${runtimes}" != "" ]]; then
 
   echo "--- cmake runtimes clang modules"
 
-  rm -rf "${RUNTIMES_BUILD_DIR}"
+  # We don't need to do a clean build of runtimes, because LIBCXX_TEST_PARAMS
+  # and LIBCXXABI_TEST_PARAMS only affect lit configuration, which successfully
+  # propagates without a clean build. Other that those two variables, builds
+  # are supposed to be the same.
+
   cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
       -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
       -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
@@ -140,6 +127,6 @@ if [[ "${runtimes}" != "" ]]; then
       -D LLVM_LIT_ARGS="${lit_args}"
 
   echo "--- ninja runtimes clang modules"
-  
+
   ninja -vC "${RUNTIMES_BUILD_DIR}" ${runtime_targets}
 fi

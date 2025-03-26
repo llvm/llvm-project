@@ -949,6 +949,28 @@ func.func @transpose_invalid_permutation(%input: tensor<16x32x64xf32>,
 
 // -----
 
+func.func @transpose_out_of_range_permutation(%input: tensor<16x32x64xf32>,
+    %init: tensor<32x64x16xf32>) -> tensor<32x64x16xf32> {
+  // expected-error @+1 {{'linalg.transpose' op permutation is not valid}}
+  %transpose = linalg.transpose
+      ins(%input:tensor<16x32x64xf32>)
+      outs(%init:tensor<32x64x16xf32>)
+      permutation = [1, 2, 3]
+  func.return %transpose : tensor<32x64x16xf32>
+}
+
+// -----
+
+func.func @transpose_negative_permutation(%input: tensor<16x32x64xf32>,
+    %init: tensor<32x64x16xf32>) -> tensor<32x64x16xf32> {
+  // expected-error @+1 {{'linalg.transpose' op permutation is not valid}}
+  %transpose = linalg.transpose
+      ins(%input:tensor<16x32x64xf32>)
+      outs(%init:tensor<32x64x16xf32>)
+      permutation = [1, 2, -1]
+  func.return %transpose : tensor<32x64x16xf32>
+}
+// -----
 func.func @transpose_permutated_dims_mismatch(%input: tensor<16x32x64xf32>,
     %init: tensor<32x64x16xf32>) -> tensor<32x64x16xf32> {
   // expected-error @+1 {{'linalg.transpose' op dim(result, 0) = 32 doesn't match dim(input, permutation[0]) = 16}}

@@ -1884,6 +1884,7 @@ cc_library(
         ":BitReader",
         ":BitWriter",
         ":Core",
+        ":Demangle",
         ":FrontendOpenMP",
         ":IRPrinter",
         ":IRReader",
@@ -5114,6 +5115,11 @@ llvm_driver_cc_binary(
     name = "llvm-ml",
     stamp = 0,
     deps = [":llvm-ml-lib"],
+)
+
+binary_alias(
+    name = "llvm-ml64",
+    binary = ":llvm-ml",
 )
 
 cc_binary(

@@ -1,5 +1,6 @@
-// REQUIRES: x86-registered-target
 // RUN: fir-opt --split-input-file --target-rewrite="target=x86_64-unknown-linux-gnu" %s | FileCheck %s
+
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
 
 gpu.module @testmod {
   gpu.func @_QPvcpowdk(%arg0: !fir.ref<complex<f64>> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "a"}) attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
@@ -15,22 +16,25 @@ gpu.module @testmod {
 // CHECK-LABEL: gpu.func @_QPvcpowdk
 // CHECK: %{{.*}} = fir.call @_FortranAzpowk(%{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, i64) -> tuple<f64, f64>
 // CHECK: func.func private @_FortranAzpowk(f64, f64, i64) -> tuple<f64, f64> attributes {fir.bindc_name = "_FortranAzpowk", fir.runtime}
+}
 
 // -----
+
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
 
 gpu.module @testmod {
   gpu.func @_QPtest(%arg0: complex<f64>) -> (complex<f64>) {
     gpu.return %arg0 : complex<f64>
   }
 }
+}
 
 // CHECK-LABEL: gpu.func @_QPtest
 // CHECK-SAME: (%arg0: f64, %arg1: f64) -> tuple<f64, f64> {
 // CHECK: gpu.return %{{.*}} : tuple<f64, f64>
 
-
 // -----
-module attributes {gpu.container_module} {
+module attributes {gpu.container_module, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
 
 gpu.module @testmod {
   gpu.func @_QPtest(%arg0: complex<f64>) -> () kernel {

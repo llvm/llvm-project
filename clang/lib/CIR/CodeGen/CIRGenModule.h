@@ -91,6 +91,8 @@ public:
 
   void emitTopLevelDecl(clang::Decl *decl);
 
+  bool verifyModule() const;
+
   /// Return the address of the given function. If funcType is non-null, then
   /// this function will use the specified type if it has to create it.
   // TODO: this is a bit weird as `GetAddr` given we give back a FuncOp?

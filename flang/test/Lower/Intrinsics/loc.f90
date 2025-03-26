@@ -10,7 +10,7 @@ subroutine loc_scalar()
   p = loc(x)
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]]  {{.*}}Ep
 ! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2:[a-z0-9]*]]  {{.*}}Ex
-! CHECK:  %[[VAL_4:.*]] = fir.embox %[[VAL_3]]#1 : (!fir.ref<i32>) -> !fir.box<i32>
+! CHECK:  %[[VAL_4:.*]] = fir.embox %[[VAL_3]]#0 : (!fir.ref<i32>) -> !fir.box<i32>
 ! CHECK:  %[[VAL_5:.*]] = fir.box_addr %[[VAL_4]] : (!fir.box<i32>) -> !fir.ref<i32>
 ! CHECK:  %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (!fir.ref<i32>) -> i64
 ! CHECK:  hlfir.assign %[[VAL_6]] to %[[VAL_1]]#0 : i64, !fir.ref<i64>
@@ -23,7 +23,7 @@ subroutine loc_char()
   p = loc(x)
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]]  {{.*}}Ep
 ! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_2:[a-z0-9]*]] typeparams %[[VAL_3:[a-z0-9]*]]  {{.*}}Ex
-! CHECK:  %[[VAL_5:.*]] = fir.embox %[[VAL_4]]#1 : (!fir.ref<!fir.char<1,5>>) -> !fir.box<!fir.char<1,5>>
+! CHECK:  %[[VAL_5:.*]] = fir.embox %[[VAL_4]]#0 : (!fir.ref<!fir.char<1,5>>) -> !fir.box<!fir.char<1,5>>
 ! CHECK:  %[[VAL_6:.*]] = fir.box_addr %[[VAL_5]] : (!fir.box<!fir.char<1,5>>) -> !fir.ref<!fir.char<1,5>>
 ! CHECK:  %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<!fir.char<1,5>>) -> i64
 ! CHECK:  hlfir.assign %[[VAL_7]] to %[[VAL_1]]#0 : i64, !fir.ref<i64>
@@ -53,7 +53,7 @@ subroutine loc_array
   p = loc(x)
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]]  {{.*}}Ep
 ! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_3:[a-z0-9]*]](%[[VAL_4:[a-z0-9]*]])  {{.*}}Ex
-! CHECK:  %[[VAL_7:.*]] = fir.embox %[[VAL_5]]#1(%{{.*}}) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
+! CHECK:  %[[VAL_7:.*]] = fir.embox %[[VAL_5]]#0(%{{.*}}) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
 ! CHECK:  %[[VAL_8:.*]] = fir.box_addr %[[VAL_7]] : (!fir.box<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>>
 ! CHECK:  %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.array<10xi32>>) -> i64
 ! CHECK:  hlfir.assign %[[VAL_9]] to %[[VAL_1]]#0 : i64, !fir.ref<i64>
@@ -66,7 +66,7 @@ subroutine loc_chararray()
   p = loc(x)
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]]  {{.*}}Ep
 ! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_4:[a-z0-9]*]](%[[VAL_5:[a-z0-9]*]]) typeparams %[[VAL_2:[a-z0-9]*]]  {{.*}}Ex
-! CHECK:  %[[VAL_8:.*]] = fir.embox %[[VAL_6]]#1(%{{.*}}) : (!fir.ref<!fir.array<2x!fir.char<1,5>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.char<1,5>>>
+! CHECK:  %[[VAL_8:.*]] = fir.embox %[[VAL_6]]#0(%{{.*}}) : (!fir.ref<!fir.array<2x!fir.char<1,5>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.char<1,5>>>
 ! CHECK:  %[[VAL_9:.*]] = fir.box_addr %[[VAL_8]] : (!fir.box<!fir.array<2x!fir.char<1,5>>>) -> !fir.ref<!fir.array<2x!fir.char<1,5>>>
 ! CHECK:  %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (!fir.ref<!fir.array<2x!fir.char<1,5>>>) -> i64
 ! CHECK:  hlfir.assign %[[VAL_10]] to %[[VAL_1]]#0 : i64, !fir.ref<i64>
@@ -113,9 +113,9 @@ subroutine loc_non_save_pointer_scalar()
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]]  {{.*}}Ep
 ! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2:[a-z0-9]*]]  {{.*}}Et
 ! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_4:[a-z0-9]*]]  {{.*}}Ex
-! CHECK:  %[[VAL_8:.*]] = fir.embox %[[VAL_3]]#1 : (!fir.ref<f32>) -> !fir.box<!fir.ptr<f32>>
-! CHECK:  fir.store %[[VAL_8]] to %[[VAL_7]]#1 : !fir.ref<!fir.box<!fir.ptr<f32>>>
-! CHECK:  %[[VAL_9:.*]] = fir.load %[[VAL_7]]#1 : !fir.ref<!fir.box<!fir.ptr<f32>>>
+! CHECK:  %[[VAL_8:.*]] = fir.embox %[[VAL_3]]#0 : (!fir.ref<f32>) -> !fir.box<!fir.ptr<f32>>
+! CHECK:  fir.store %[[VAL_8]] to %[[VAL_7]]#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>
+! CHECK:  %[[VAL_9:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>
 ! CHECK:  %[[VAL_10:.*]] = fir.box_addr %[[VAL_9]] : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
 ! CHECK:  %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (!fir.ptr<f32>) -> i64
 ! CHECK:  hlfir.assign %[[VAL_11]] to %[[VAL_1]]#0 : i64, !fir.ref<i64>
@@ -128,7 +128,7 @@ subroutine loc_save_pointer_scalar()
   p = loc(x)
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]]  {{.*}}Ep
 ! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2:[a-z0-9]*]]  {{.*}}Ex
-! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]]#1 : !fir.ref<!fir.box<!fir.ptr<f32>>>
+! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>
 ! CHECK:  %[[VAL_5:.*]] = fir.box_addr %[[VAL_4]] : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
 ! CHECK:  %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (!fir.ptr<f32>) -> i64
 ! CHECK:  %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (i64) -> i32
@@ -145,7 +145,7 @@ subroutine loc_derived_type
   p = loc(xdt)
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]]  {{.*}}Ep
 ! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2:[a-z0-9]*]]  {{.*}}Exdt
-! CHECK:  %[[VAL_4:.*]] = fir.embox %[[VAL_3]]#1 : (!fir.ref<!fir.type<_QFloc_derived_typeTdt{i:i32}>>) -> !fir.box<!fir.type<_QFloc_derived_typeTdt{i:i32}>>
+! CHECK:  %[[VAL_4:.*]] = fir.embox %[[VAL_3]]#0 : (!fir.ref<!fir.type<_QFloc_derived_typeTdt{i:i32}>>) -> !fir.box<!fir.type<_QFloc_derived_typeTdt{i:i32}>>
 ! CHECK:  %[[VAL_5:.*]] = fir.box_addr %[[VAL_4]] : (!fir.box<!fir.type<_QFloc_derived_typeTdt{i:i32}>>) -> !fir.ref<!fir.type<_QFloc_derived_typeTdt{i:i32}>>
 ! CHECK:  %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (!fir.ref<!fir.type<_QFloc_derived_typeTdt{i:i32}>>) -> i64
 ! CHECK:  hlfir.assign %[[VAL_6]] to %[[VAL_1]]#0 : i64, !fir.ref<i64>
@@ -158,7 +158,7 @@ subroutine loc_pointer_array
   p = loc(x)
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]]  {{.*}}Ep
 ! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_2:[a-z0-9]*]]  {{.*}}Ex
-! CHECK:  %[[VAL_8:.*]] = fir.load %[[VAL_7]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:  %[[VAL_8:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:  %[[VAL_9:.*]] = fir.box_addr %[[VAL_8]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>
 ! CHECK:  %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (!fir.ptr<!fir.array<?xi32>>) -> i64
 ! CHECK:  hlfir.assign %[[VAL_10]] to %[[VAL_1]]#0 : i64, !fir.ref<i64>
@@ -171,7 +171,7 @@ subroutine loc_allocatable_array
   p = loc(x)
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]]  {{.*}}Ep
 ! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_2:[a-z0-9]*]]  {{.*}}Ex
-! CHECK:  %[[VAL_8:.*]] = fir.load %[[VAL_7]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:  %[[VAL_8:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:  %[[VAL_9:.*]] = fir.box_addr %[[VAL_8]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
 ! CHECK:  %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (!fir.heap<!fir.array<?xi32>>) -> i64
 ! CHECK:  hlfir.assign %[[VAL_10]] to %[[VAL_1]]#0 : i64, !fir.ref<i64>
