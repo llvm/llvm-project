@@ -295,6 +295,7 @@ add_llvm_component_library(LLVMSupport
   Path.cpp
   Process.cpp
   Program.cpp
+  ProgramStack.cpp
   RWMutex.cpp
   Signals.cpp
   Threading.cpp
