@@ -303,6 +303,10 @@ public:
     // doubles the exponent of SmallerType.LargestFiniteVal)
     if (llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 <=
         llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) {
+      if (!Ctx.getTargetInfo().hasLongDoubleType() &&
+          HigherElementType.getCanonicalType().getUnqualifiedType() ==
+              Ctx.LongDoubleTy)
+        return QualType();
       FPHasBeenPromoted = true;
       return Ctx.getComplexType(HigherElementType);
     } else {
