@@ -24,6 +24,7 @@
 #include "SwiftUserExpression.h"
 
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -50,6 +51,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
@@ -1697,6 +1699,17 @@ RedirectCallFromSinkToTrampolineFunction(llvm::Module &module,
   return true;
 }
 
+static bool ContainsUB(llvm::Module &module) {
+  for (llvm::Function &function : module)
+    for (llvm::BasicBlock &bb : function)
+      for (llvm::Instruction &i : bb)
+        if (auto *memcpy = llvm::dyn_cast<llvm::MemCpyInst>(&i))
+          if (llvm::isa<llvm::UndefValue>(memcpy->getOperand(0)) ||
+              llvm::isa<llvm::UndefValue>(memcpy->getOperand(1)))
+            return true;
+  return false;
+}
+
 /// Add additional context that is otherwise hard to convey.
 static void AnnotateDiagnostics(DiagnosticManager &diagnostic_manager) {
   bool append_missing_library_note = false;
@@ -2085,6 +2098,17 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     m_llvm_context.reset(ContextAndModule.first);
     m_module.reset(ContextAndModule.second);
   }
+
+  // In rare cases missing type information results in IRGen lowering
+  // values into SILUndef. This may be for a variable that isn't even
+  // used in the expression, so just warn about it. This is reported
+  // as an out-of-band warning, because LLDB suppresses warnings on
+  // successful expressions.
+  if (m_sc.target_sp && m_module && ContainsUB(*m_module))
+    Debugger::ReportWarning(
+        "Expression contains undefined behavior. Expression results may be "
+        "incorrect. This may be due to incomplete Swift type information.",
+        m_sc.target_sp->GetDebugger().GetID());
 
   // If IRGen failed without errors, the root cause may be a fatal
   // Clang diagnostic.
