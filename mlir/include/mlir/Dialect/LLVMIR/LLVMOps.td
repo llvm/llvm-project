@@ -1448,18 +1448,18 @@ def LLVM_GlobalCtorsOp : LLVM_Op<"mlir.global_ctors", [
     of priority (i.e. lowest first) when the module is loaded. The order of
     functions with the same priority is not defined. This operation is
     translated to LLVM's global_ctors global variable. The initializer
-    functions are run at load time. However, if the associated data is not `#llvm.zero`,
-    functions only run if the data is not discarded.
+    functions are run at load time. However, if the associated data is not
+    `#llvm.zero`, functions only run if the data is not discarded.
 
     Examples:
 
     ```mlir
-    llvm.mlir.global_ctors {ctors = [@ctor], data = [#llvm.zero],
-                            priorities = [0]}
     llvm.func @ctor() {
       ...
       llvm.return
     }
+    llvm.mlir.global_ctors ctors = [@ctor], priorities = [0],
+                                   data = [#llvm.zero]
     ```
 
   }];
@@ -1482,12 +1482,12 @@ def LLVM_GlobalDtorsOp : LLVM_Op<"mlir.global_dtors", [
   let summary = "LLVM dialect global_dtors.";
   let description = [{
     Specifies a list of destructor functions and priorities. The functions
-    referenced by this array will be called in descending order of priority (i.e.
-    highest first) when the module is unloaded. The order of functions with the
-    same priority is not defined. This operation is translated to LLVM's
-    global_dtors global variable. The destruction functions are run at load time.
-    However, if the associated data is not `#llvm.zero`, functions only run if the data
-    is not discarded.
+    referenced by this array will be called in descending order of priority
+    (i.e. highest first) when the module is unloaded. The order of functions
+    with the same priority is not defined. This operation is translated to
+    LLVM's global_dtors global variable. The destruction functions are run at
+    load time. However, if the associated data is not `#llvm.zero`, functions
+    only run if the data is not discarded.
 
     Examples:
 
@@ -1495,8 +1495,8 @@ def LLVM_GlobalDtorsOp : LLVM_Op<"mlir.global_dtors", [
     llvm.func @dtor() {
       llvm.return
     }
-    llvm.mlir.global_dtors {dtors = [@dtor], data = [#llvm.zero],
-                            priorities = [0]}
+    llvm.mlir.global_dtors dtors = [@dtor], priorities = [0],
+                                   data = [#llvm.zero]
     ```
   }];
   let assemblyFormat = [{
