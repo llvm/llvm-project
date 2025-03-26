@@ -44,7 +44,6 @@ using namespace lld;
 using namespace lld::elf;
 
 namespace {
-
 using SecOffset = std::pair<InputSectionBase *, unsigned>;
 
 // Something that can have an independent reason for being live.
