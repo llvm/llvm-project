@@ -170,7 +170,7 @@ mlir::Value CIRGenFunction::evaluateExprAsBool(const Expr *e) {
   SourceLocation loc = e->getExprLoc();
 
   assert(!cir::MissingFeatures::pgoUse());
-  if (const MemberPointerType *MPT = e->getType()->getAs<MemberPointerType>()) {
+  if (e->getType()->getAs<MemberPointerType>()) {
     cgm.errorNYI(e->getSourceRange(),
                  "evaluateExprAsBool: member pointer type");
     return createDummyValue(getLoc(loc), boolTy);
