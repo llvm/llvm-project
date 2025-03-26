@@ -23,6 +23,7 @@ namespace llvm {
 
 class InductionDescriptor;
 class Instruction;
+class LoopVectorizationLegality;
 class PHINode;
 class ScalarEvolution;
 class PredicatedScalarEvolution;
@@ -377,6 +378,13 @@ struct VPlanTransforms {
   /// users in the original exit block using the VPIRInstruction wrapping to the
   /// LCSSA phi.
   static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range);
+
+  /// Change FindLast reductions to save the appropriate state using selects
+  /// for entire vectors for both the latest mask containing at least one active
+  /// element and the corresponding data vector.
+  static void convertFindLastRecurrences(VPlan &Plan,
+                                         VPRecipeBuilder &RecipeBuilder,
+                                         LoopVectorizationLegality *Legal);
 };
 
 } // namespace llvm

@@ -56,6 +56,8 @@ bool RecurrenceDescriptor::isIntegerRecurrenceKind(RecurKind Kind) {
   case RecurKind::FindFirstIVUMin:
   case RecurKind::FindLastIVSMax:
   case RecurKind::FindLastIVUMax:
+  // TODO: Make type-agnostic.
+  case RecurKind::FindLast:
     return true;
   }
   return false;
@@ -691,9 +693,9 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
 // value of the data type or a non-constant value by using mask and multiple
 // reduction operations.
 RecurrenceDescriptor::InstDesc
-RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
-                                      PHINode *OrigPhi, Instruction *I,
-                                      ScalarEvolution &SE) {
+RecurrenceDescriptor::isFindPattern(RecurKind Kind, Loop *TheLoop,
+                                    PHINode *OrigPhi, Instruction *I,
+                                    ScalarEvolution &SE) {
   // TODO: Support the vectorization of FindLastIV when the reduction phi is
   // used by more than one select instruction. This vectorization is only
   // performed when the SCEV of each increasing induction variable used by the
@@ -702,8 +704,10 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
     return InstDesc(false, I);
 
   // We are looking for selects of the form:
-  //   select(cmp(), phi, loop_induction) or
-  //   select(cmp(), loop_induction, phi)
+  //   select(cmp(), phi, value) or
+  //   select(cmp(), value, phi)
+  // where 'value' might be a loop induction variable
+  // (for FindFirstIV/FindLastIV) or an arbitrary value (for FindLast).
   // TODO: Match selects with multi-use cmp conditions.
   Value *NonRdxPhi = nullptr;
   if (!match(I, m_CombineOr(m_Select(m_OneUse(m_Cmp()), m_Value(NonRdxPhi),
@@ -711,6 +715,25 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
                             m_Select(m_OneUse(m_Cmp()), m_Specific(OrigPhi),
                                      m_Value(NonRdxPhi)))))
     return InstDesc(false, I);
+
+  if (isFindLastRecurrenceKind(Kind)) {
+    // Must be an integer scalar.
+    Type *Type = OrigPhi->getType();
+    if (!Type->isIntegerTy() && !Type->isPointerTy())
+      return InstDesc(false, I);
+
+    // FIXME: Support more complex patterns, including multiple selects.
+    // The Select must be used only outside the loop and by the PHI.
+    for (User *U : I->users()) {
+      if (U == OrigPhi)
+        continue;
+      if (auto *UI = dyn_cast<Instruction>(U); UI && !TheLoop->contains(UI))
+        continue;
+      return InstDesc(false, I);
+    }
+
+    return InstDesc(I, RecurKind::FindLast);
+  }
 
   // Returns either FindFirstIV/FindLastIV, if such a pattern is found, or
   // std::nullopt.
@@ -920,8 +943,8 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
         Kind == RecurKind::Add || Kind == RecurKind::Mul ||
         Kind == RecurKind::Sub || Kind == RecurKind::AddChainWithSubs)
       return isConditionalRdxPattern(I);
-    if (isFindIVRecurrenceKind(Kind) && SE)
-      return isFindIVPattern(Kind, L, OrigPhi, I, *SE);
+    if ((isFindIVRecurrenceKind(Kind) || isFindLastRecurrenceKind(Kind)) && SE)
+      return isFindPattern(Kind, L, OrigPhi, I, *SE);
     [[fallthrough]];
   case Instruction::FCmp:
   case Instruction::ICmp:
@@ -1118,7 +1141,11 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
                       << "\n");
     return true;
   }
-
+  if (AddReductionVar(Phi, RecurKind::FindLast, TheLoop, FMF, RedDes, DB, AC,
+                      DT, SE)) {
+    LLVM_DEBUG(dbgs() << "Found a FindLast reduction PHI." << *Phi << "\n");
+    return true;
+  }
   // Not a reduction of known type.
   return false;
 }
@@ -1248,6 +1275,8 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::FMaximumNum:
   case RecurKind::FMinimumNum:
     return Instruction::FCmp;
+  case RecurKind::FindLast:
+    return Instruction::Select;
   default:
     llvm_unreachable("Unknown recurrence operation");
   }

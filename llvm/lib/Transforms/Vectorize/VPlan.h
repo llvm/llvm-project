@@ -1067,6 +1067,8 @@ public:
     /// Returns the value for vscale.
     VScale,
     OpsEnd = VScale,
+    /// Extracts the last active lane based on a predicate vector operand.
+    ExtractLastActive,
   };
 
   /// Returns true if this VPInstruction generates scalar values for all lanes.
