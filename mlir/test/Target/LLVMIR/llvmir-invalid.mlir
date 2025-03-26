@@ -147,7 +147,7 @@ llvm.func @ternary_float_intr_wrong_type(%arg0 : f32, %arg1 : f32, %arg2 : i32) 
 // -----
 
 llvm.func @powi_intr_wrong_type(%arg0 : f32, %arg1 : f32) -> f32 {
-  // expected-error @below{{op operand #1 must be integer, but got 'f32'}}
+  // expected-error @below{{op operand #1 must be signless integer, but got 'f32'}}
   %0 = "llvm.intr.powi"(%arg0, %arg1) : (f32, f32) -> f32
   llvm.return %0 : f32
 }

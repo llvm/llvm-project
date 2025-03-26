@@ -111,7 +111,7 @@ class LLVM_PowFI<string func> :
         [Pure], /*requiresFastmath=*/1> {
     let arguments =
         (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
-            AnyInteger:$power,
+            AnySignlessInteger:$power,
             DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
     let assemblyFormat = "`(` operands `)` attr-dict `:` "
             "functional-type(operands, results)";
