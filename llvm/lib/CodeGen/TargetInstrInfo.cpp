@@ -214,6 +214,7 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
       Reg1.isPhysical() ? MI.getOperand(Idx1).isRenamable() : false;
   bool Reg2IsRenamable =
       Reg2.isPhysical() ? MI.getOperand(Idx2).isRenamable() : false;
+
   // If destination is tied to either of the commuted source register, then
   // it must be updated.
   if (HasDef && Reg0 == Reg1 &&
@@ -228,6 +229,24 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
     SubReg0 = SubReg1;
   }
 
+  // For a case like this:
+  //   %0.sub = INST %0.sub(tied), %1.sub, implicit-def %0
+  // we need to update the implicit-def after commuting to result in:
+  //   %1.sub = INST %1.sub(tied), %0.sub, implicit-def %1
+  SmallVector<unsigned> UpdateImplicitDefIdx;
+  if (HasDef && MI.hasImplicitDef() && MI.getOperand(0).getReg() != Reg0) {
+    const TargetRegisterInfo *TRI =
+        MI.getMF()->getSubtarget().getRegisterInfo();
+    Register OrigReg0 = MI.getOperand(0).getReg();
+    for (auto [OpNo, MO] : llvm::enumerate(MI.implicit_operands())) {
+      Register ImplReg = MO.getReg();
+      if ((ImplReg.isVirtual() && ImplReg == OrigReg0) ||
+          (ImplReg.isPhysical() && OrigReg0.isPhysical() &&
+           TRI->isSubRegisterEq(ImplReg, OrigReg0)))
+        UpdateImplicitDefIdx.push_back(OpNo + MI.getNumExplicitOperands());
+    }
+  }
+
   MachineInstr *CommutedMI = nullptr;
   if (NewMI) {
     // Create a new instruction.
@@ -240,6 +259,8 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   if (HasDef) {
     CommutedMI->getOperand(0).setReg(Reg0);
     CommutedMI->getOperand(0).setSubReg(SubReg0);
+    for (unsigned Idx : UpdateImplicitDefIdx)
+      CommutedMI->getOperand(Idx).setReg(Reg0);
   }
   CommutedMI->getOperand(Idx2).setReg(Reg1);
   CommutedMI->getOperand(Idx1).setReg(Reg2);
