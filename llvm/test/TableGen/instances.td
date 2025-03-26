@@ -94,27 +94,26 @@ multiclass MultiClassTest {
 defm test6_in_multiclass_def_ : MultiClassTest;
 
 //-----------------------------------------------------------------------------//
-// Default argument will be considered as well.
+// Default argument/temporary actual parameter will be considered as well.
+class D<int n>;
 
-class TestArgument<B b = B<>> {
-  list<B> instances_B = !instances<B>();
+class TestArgument<D d = D<0>> {
+  list<D> instances_D = !instances<D>();
 }
 
 // CHECK-LABEL: def test7_default_arg {
-// CHECK-NEXT:    list<B> instances_B = [anonymous_0, b0, b1, b2, b3];
+// CHECK-NEXT:    list<D> instances_D = [anonymous_0];
 // CHECK-NEXT:  }
 def test7_default_arg : TestArgument;
 
-// Temporary actual parameter won't be considered.
-
 // CHECK-LABEL: def test8_anonymous0_arg {
-// CHECK-NEXT:    list<B> instances_B = [anonymous_0, b0, b1, b2, b3];
+// CHECK-NEXT:    list<D> instances_D = [anonymous_0, anonymous_1];
 // CHECK-NEXT:  }
 // CHECK-LABEL: def test8_anonymous1_arg {
-// CHECK-NEXT:    list<B> instances_B = [anonymous_0, b0, b1, b2, b3];
+// CHECK-NEXT:    list<D> instances_D = [anonymous_0, anonymous_1, anonymous_2];
 // CHECK-NEXT:  }
-def test8_anonymous0_arg : TestArgument<B<>>;
-def test8_anonymous1_arg : TestArgument<B<>>;
+def test8_anonymous0_arg : TestArgument<D<1>>;
+def test8_anonymous1_arg : TestArgument<D<2>>;
 
 //-----------------------------------------------------------------------------//
 
