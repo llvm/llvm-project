@@ -127,8 +127,33 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         )
         self.continue_to_next_stop()
 
+        # Get the 'not_a_ptr' writable variablle reference address.
         ptr_deref = self.dap_server.request_evaluate("not_a_ptr")["body"]
         memref = ptr_deref["memoryReference"]
 
-        mem = self.dap_server.request_writeMemory(memref, 0, "0x11")["body"]
-        self.assertEqual(mem["bytesWritten"], 8)
+        # Write the Base64-encoded string "Mg==", which decodes to binary 0x32
+        # which is decimal 50 and corresponds to the SCII character '2'.
+        mem_response = self.dap_server.request_writeMemory(memref, 0, "Mg==")
+        self.assertEqual(mem_response["success"], True)
+        self.assertEqual(mem_response["body"]["bytesWritten"], 1)
+
+        # Read back the modified memory and verify that the written data matches
+        # the expecte result.
+        mem_response = self.dap_server.request_readMemory(memref, 0, 1)
+        self.assertEqual(mem_response["success"], True)
+        self.assertEqual(mem_response["body"]["data"], "Mg==")
+
+        # Memory write failed for 0x0.
+        mem_response = self.dap_server.request_writeMemory("0x0", 0, "Mg==")
+        self.assertEqual(mem_response["success"], False)
+
+        # Malformed memory reference.
+        mem_response = self.dap_server.request_writeMemory("12345", 0, "Mg==")
+        self.assertEqual(mem_response["success"], False)
+
+        ptr_deref = self.dap_server.request_evaluate("nonWritable")["body"]
+        memref = ptr_deref["memoryReference"]
+
+        # Writing to non-writable region should return an appropriate error.
+        mem_response = self.dap_server.request_writeMemory(memref, 0, "Mg==", False)
+        self.assertEqual(mem_response["success"], False)

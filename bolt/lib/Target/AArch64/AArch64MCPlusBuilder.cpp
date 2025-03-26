@@ -191,6 +191,10 @@ public:
     return false;
   }
 
+  SmallVector<MCPhysReg> getTrustedLiveInRegs() const override {
+    return {AArch64::LR};
+  }
+
   ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case AArch64::AUTIAZ:

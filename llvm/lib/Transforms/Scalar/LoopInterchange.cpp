@@ -1146,17 +1146,15 @@ LoopInterchangeProfitability::isProfitablePerLoopCacheAnalysis(
   if (OuterLoopIt == CostMap.end())
     return std::nullopt;
 
+  if (CC->getLoopCost(*OuterLoop) == CC->getLoopCost(*InnerLoop))
+    return std::nullopt;
   unsigned InnerIndex = InnerLoopIt->second;
   unsigned OuterIndex = OuterLoopIt->second;
   LLVM_DEBUG(dbgs() << "InnerIndex = " << InnerIndex
                     << ", OuterIndex = " << OuterIndex << "\n");
-  if (InnerIndex < OuterIndex)
-    return std::optional<bool>(true);
   assert(InnerIndex != OuterIndex && "CostMap should assign unique "
                                      "numbers to each loop");
-  if (CC->getLoopCost(*OuterLoop) == CC->getLoopCost(*InnerLoop))
-    return std::nullopt;
-  return std::optional<bool>(false);
+  return std::optional<bool>(InnerIndex < OuterIndex);
 }
 
 std::optional<bool>

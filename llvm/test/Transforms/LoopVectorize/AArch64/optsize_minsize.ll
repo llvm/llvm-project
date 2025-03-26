@@ -710,7 +710,6 @@ define void @sve_tail_predicate_without_minsize(ptr %p, i8 %a, i8 %b, i8 %c, i32
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i8> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; DEFAULT-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX]], 0
 ; DEFAULT-NEXT:    [[TMP15:%.*]] = mul <vscale x 16 x i8> [[BROADCAST_SPLAT]], [[VEC_IND]]
 ; DEFAULT-NEXT:    [[TMP16:%.*]] = lshr <vscale x 16 x i8> [[VEC_IND]], splat (i8 1)
 ; DEFAULT-NEXT:    [[TMP17:%.*]] = mul <vscale x 16 x i8> [[TMP16]], [[BROADCAST_SPLAT2]]
@@ -718,7 +717,7 @@ define void @sve_tail_predicate_without_minsize(ptr %p, i8 %a, i8 %b, i8 %c, i32
 ; DEFAULT-NEXT:    [[TMP19:%.*]] = lshr <vscale x 16 x i8> [[VEC_IND]], splat (i8 2)
 ; DEFAULT-NEXT:    [[TMP20:%.*]] = mul <vscale x 16 x i8> [[TMP19]], [[BROADCAST_SPLAT4]]
 ; DEFAULT-NEXT:    [[TMP21:%.*]] = add <vscale x 16 x i8> [[TMP18]], [[TMP20]]
-; DEFAULT-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP14]]
+; DEFAULT-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[INDEX]]
 ; DEFAULT-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr [[TMP22]], i32 0
 ; DEFAULT-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP21]], ptr [[TMP23]], i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
@@ -787,7 +786,6 @@ define void @sve_tail_predicate_without_minsize(ptr %p, i8 %a, i8 %b, i8 %c, i32
 ; OPTSIZE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; OPTSIZE-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; OPTSIZE-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i8> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; OPTSIZE-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX]], 0
 ; OPTSIZE-NEXT:    [[TMP15:%.*]] = mul <vscale x 16 x i8> [[BROADCAST_SPLAT]], [[VEC_IND]]
 ; OPTSIZE-NEXT:    [[TMP16:%.*]] = lshr <vscale x 16 x i8> [[VEC_IND]], splat (i8 1)
 ; OPTSIZE-NEXT:    [[TMP17:%.*]] = mul <vscale x 16 x i8> [[TMP16]], [[BROADCAST_SPLAT2]]
@@ -795,7 +793,7 @@ define void @sve_tail_predicate_without_minsize(ptr %p, i8 %a, i8 %b, i8 %c, i32
 ; OPTSIZE-NEXT:    [[TMP19:%.*]] = lshr <vscale x 16 x i8> [[VEC_IND]], splat (i8 2)
 ; OPTSIZE-NEXT:    [[TMP20:%.*]] = mul <vscale x 16 x i8> [[TMP19]], [[BROADCAST_SPLAT4]]
 ; OPTSIZE-NEXT:    [[TMP21:%.*]] = add <vscale x 16 x i8> [[TMP18]], [[TMP20]]
-; OPTSIZE-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP14]]
+; OPTSIZE-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[INDEX]]
 ; OPTSIZE-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr [[TMP22]], i32 0
 ; OPTSIZE-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP21]], ptr [[TMP23]], i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
 ; OPTSIZE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
@@ -864,7 +862,6 @@ define void @sve_tail_predicate_without_minsize(ptr %p, i8 %a, i8 %b, i8 %c, i32
 ; MINSIZE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; MINSIZE-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; MINSIZE-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i8> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; MINSIZE-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX]], 0
 ; MINSIZE-NEXT:    [[TMP15:%.*]] = mul <vscale x 16 x i8> [[BROADCAST_SPLAT]], [[VEC_IND]]
 ; MINSIZE-NEXT:    [[TMP16:%.*]] = lshr <vscale x 16 x i8> [[VEC_IND]], splat (i8 1)
 ; MINSIZE-NEXT:    [[TMP17:%.*]] = mul <vscale x 16 x i8> [[TMP16]], [[BROADCAST_SPLAT2]]
@@ -872,7 +869,7 @@ define void @sve_tail_predicate_without_minsize(ptr %p, i8 %a, i8 %b, i8 %c, i32
 ; MINSIZE-NEXT:    [[TMP19:%.*]] = lshr <vscale x 16 x i8> [[VEC_IND]], splat (i8 2)
 ; MINSIZE-NEXT:    [[TMP20:%.*]] = mul <vscale x 16 x i8> [[TMP19]], [[BROADCAST_SPLAT4]]
 ; MINSIZE-NEXT:    [[TMP21:%.*]] = add <vscale x 16 x i8> [[TMP18]], [[TMP20]]
-; MINSIZE-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP14]]
+; MINSIZE-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[INDEX]]
 ; MINSIZE-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr [[TMP22]], i32 0
 ; MINSIZE-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP21]], ptr [[TMP23]], i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
 ; MINSIZE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
@@ -998,15 +995,14 @@ define void @dont_vectorize_with_minsize() {
 ; OPTSIZE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; OPTSIZE:       [[VECTOR_BODY]]:
 ; OPTSIZE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; OPTSIZE-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; OPTSIZE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[TMP0]]
+; OPTSIZE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[INDEX]]
 ; OPTSIZE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 0
 ; OPTSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP2]], align 4
-; OPTSIZE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[TMP0]]
+; OPTSIZE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[INDEX]]
 ; OPTSIZE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP3]], i32 0
 ; OPTSIZE-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i32>, ptr [[TMP4]], align 4
 ; OPTSIZE-NEXT:    [[TMP5:%.*]] = mul nsw <8 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
-; OPTSIZE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[TMP0]]
+; OPTSIZE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[INDEX]]
 ; OPTSIZE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP6]], i32 0
 ; OPTSIZE-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x i16>, ptr [[TMP7]], align 2
 ; OPTSIZE-NEXT:    [[TMP8:%.*]] = trunc <8 x i32> [[TMP5]] to <8 x i16>
@@ -1046,15 +1042,14 @@ define void @dont_vectorize_with_minsize() {
 ; MINSIZE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; MINSIZE:       [[VECTOR_BODY]]:
 ; MINSIZE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; MINSIZE-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; MINSIZE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[TMP0]]
+; MINSIZE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[INDEX]]
 ; MINSIZE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 0
 ; MINSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP2]], align 4
-; MINSIZE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[TMP0]]
+; MINSIZE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[INDEX]]
 ; MINSIZE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP3]], i32 0
 ; MINSIZE-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4
 ; MINSIZE-NEXT:    [[TMP5:%.*]] = mul nsw <2 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
-; MINSIZE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[TMP0]]
+; MINSIZE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[INDEX]]
 ; MINSIZE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP6]], i32 0
 ; MINSIZE-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i16>, ptr [[TMP7]], align 2
 ; MINSIZE-NEXT:    [[TMP8:%.*]] = trunc <2 x i32> [[TMP5]] to <2 x i16>
@@ -1180,15 +1175,14 @@ define void @vectorization_forced_minsize_reduce_width() {
 ; OPTSIZE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; OPTSIZE:       [[VECTOR_BODY]]:
 ; OPTSIZE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; OPTSIZE-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; OPTSIZE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[TMP0]]
+; OPTSIZE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[INDEX]]
 ; OPTSIZE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 0
 ; OPTSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP2]], align 4
-; OPTSIZE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[TMP0]]
+; OPTSIZE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[INDEX]]
 ; OPTSIZE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP3]], i32 0
 ; OPTSIZE-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i32>, ptr [[TMP4]], align 4
 ; OPTSIZE-NEXT:    [[TMP5:%.*]] = mul nsw <8 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
-; OPTSIZE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[TMP0]]
+; OPTSIZE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[INDEX]]
 ; OPTSIZE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP6]], i32 0
 ; OPTSIZE-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x i16>, ptr [[TMP7]], align 2
 ; OPTSIZE-NEXT:    [[TMP8:%.*]] = trunc <8 x i32> [[TMP5]] to <8 x i16>
@@ -1228,15 +1222,14 @@ define void @vectorization_forced_minsize_reduce_width() {
 ; MINSIZE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; MINSIZE:       [[VECTOR_BODY]]:
 ; MINSIZE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; MINSIZE-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; MINSIZE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[TMP0]]
+; MINSIZE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 [[INDEX]]
 ; MINSIZE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 0
 ; MINSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP2]], align 4
-; MINSIZE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[TMP0]]
+; MINSIZE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 [[INDEX]]
 ; MINSIZE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP3]], i32 0
 ; MINSIZE-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4
 ; MINSIZE-NEXT:    [[TMP5:%.*]] = mul nsw <2 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
-; MINSIZE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[TMP0]]
+; MINSIZE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 [[INDEX]]
 ; MINSIZE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP6]], i32 0
 ; MINSIZE-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i16>, ptr [[TMP7]], align 2
 ; MINSIZE-NEXT:    [[TMP8:%.*]] = trunc <2 x i32> [[TMP5]] to <2 x i16>

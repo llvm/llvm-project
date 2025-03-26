@@ -1068,7 +1068,8 @@ public:
     if (pointeeType.getAsOpaquePtr() == T->getPointeeType().getAsOpaquePtr())
       return QualType(T, 0);
 
-    return Ctx.getMemberPointerType(pointeeType, T->getClass());
+    return Ctx.getMemberPointerType(pointeeType, T->getQualifier(),
+                                    T->getMostRecentCXXRecordDecl());
   }
 
   QualType VisitConstantArrayType(const ConstantArrayType *T) {
@@ -2446,19 +2447,17 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
     // Member pointers in the MS ABI have special behavior in
     // RequireCompleteType: they attach a MSInheritanceAttr to the CXXRecordDecl
     // to indicate which inheritance model to use.
-    auto *MPTy = cast<MemberPointerType>(CanonicalType);
-    const Type *ClassTy = MPTy->getClass();
+    // The inheritance attribute might only be present on the most recent
+    // CXXRecordDecl.
+    const CXXRecordDecl *RD =
+        cast<MemberPointerType>(CanonicalType)->getMostRecentCXXRecordDecl();
     // Member pointers with dependent class types don't get special treatment.
-    if (ClassTy->isDependentType())
+    if (!RD || RD->isDependentType())
       return false;
-    const CXXRecordDecl *RD = ClassTy->getAsCXXRecordDecl();
     ASTContext &Context = RD->getASTContext();
     // Member pointers not in the MS ABI don't get special treatment.
     if (!Context.getTargetInfo().getCXXABI().isMicrosoft())
       return false;
-    // The inheritance attribute might only be present on the most recent
-    // CXXRecordDecl, use that one.
-    RD = RD->getMostRecentNonInjectedDecl();
     // Nothing interesting to do if the inheritance attribute is already set.
     if (RD->hasAttr<MSInheritanceAttr>())
       return false;
@@ -4623,8 +4622,15 @@ static CachedProperties computeCachedProperties(const Type *T) {
     return Cache::get(cast<ReferenceType>(T)->getPointeeType());
   case Type::MemberPointer: {
     const auto *MPT = cast<MemberPointerType>(T);
-    return merge(Cache::get(MPT->getClass()),
-                 Cache::get(MPT->getPointeeType()));
+    CachedProperties Cls = [&] {
+      if (auto *RD = MPT->getMostRecentCXXRecordDecl())
+        return Cache::get(QualType(RD->getTypeForDecl(), 0));
+      if (const Type *T = MPT->getQualifier()->getAsType())
+        return Cache::get(T);
+      // Treat as a dependent type.
+      return CachedProperties(Linkage::External, false);
+    }();
+    return merge(Cls, Cache::get(MPT->getPointeeType()));
   }
   case Type::ConstantArray:
   case Type::IncompleteArray:
@@ -4713,7 +4719,8 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
     return computeTypeLinkageInfo(cast<ReferenceType>(T)->getPointeeType());
   case Type::MemberPointer: {
     const auto *MPT = cast<MemberPointerType>(T);
-    LinkageInfo LV = computeTypeLinkageInfo(MPT->getClass());
+    LinkageInfo LV =
+        getDeclLinkageAndVisibility(MPT->getMostRecentCXXRecordDecl());
     LV.merge(computeTypeLinkageInfo(MPT->getPointeeType()));
     return LV;
   }
@@ -5178,8 +5185,29 @@ QualType::DestructionKind QualType::isDestructedTypeImpl(QualType type) {
   return DK_none;
 }
 
+bool MemberPointerType::isSugared() const {
+  CXXRecordDecl *D1 = getMostRecentCXXRecordDecl(),
+                *D2 = getQualifier()->getAsRecordDecl();
+  assert(!D1 == !D2);
+  return D1 != D2 && D1->getCanonicalDecl() != D2->getCanonicalDecl();
+}
+
+void MemberPointerType::Profile(llvm::FoldingSetNodeID &ID, QualType Pointee,
+                                const NestedNameSpecifier *Qualifier,
+                                const CXXRecordDecl *Cls) {
+  ID.AddPointer(Pointee.getAsOpaquePtr());
+  ID.AddPointer(Qualifier);
+  if (Cls)
+    ID.AddPointer(Cls->getCanonicalDecl());
+}
+
 CXXRecordDecl *MemberPointerType::getMostRecentCXXRecordDecl() const {
-  return getClass()->getAsCXXRecordDecl()->getMostRecentNonInjectedDecl();
+  auto *RD = dyn_cast<MemberPointerType>(getCanonicalTypeInternal())
+                 ->getQualifier()
+                 ->getAsRecordDecl();
+  if (!RD)
+    return nullptr;
+  return RD->getMostRecentNonInjectedDecl();
 }
 
 void clang::FixedPointValueToString(SmallVectorImpl<char> &Str,

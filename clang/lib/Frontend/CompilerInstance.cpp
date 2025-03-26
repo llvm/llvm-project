@@ -451,7 +451,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 
   // Create the Preprocessor.
   HeaderSearch *HeaderInfo =
-      new HeaderSearch(getHeaderSearchOptsPtr(), getSourceManager(),
+      new HeaderSearch(getHeaderSearchOpts(), getSourceManager(),
                        getDiagnostics(), getLangOpts(), &getTarget());
   PP = std::make_shared<Preprocessor>(Invocation->getPreprocessorOptsPtr(),
                                       getDiagnostics(), getLangOpts(),
@@ -631,7 +631,8 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
     ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
     void *DeserializationListener, bool OwnDeserializationListener,
     bool Preamble, bool UseGlobalModuleIndex) {
-  HeaderSearchOptions &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
+  const HeaderSearchOptions &HSOpts =
+      PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
   IntrusiveRefCntPtr<ASTReader> Reader(new ASTReader(
       PP, ModCache, &Context, PCHContainerRdr, Extensions,

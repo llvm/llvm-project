@@ -718,6 +718,8 @@ def Vector_ExtractOp :
   let results = (outs AnyType:$result);
 
   let builders = [
+    // Builder to extract a scalar from a rank-0 vector.
+    OpBuilder<(ins "Value":$source)>,
     OpBuilder<(ins "Value":$source, "int64_t":$position)>,
     OpBuilder<(ins "Value":$source, "OpFoldResult":$position)>,
     OpBuilder<(ins "Value":$source, "ArrayRef<int64_t>":$position)>,
@@ -913,6 +915,8 @@ def Vector_InsertOp :
   let results = (outs AnyVectorOfAnyRank:$result);
 
   let builders = [
+    // Builder to insert a scalar/rank-0 vector into a rank-0 vector.
+    OpBuilder<(ins "Value":$source, "Value":$dest)>,
     OpBuilder<(ins "Value":$source, "Value":$dest, "int64_t":$position)>,
     OpBuilder<(ins "Value":$source, "Value":$dest, "OpFoldResult":$position)>,
     OpBuilder<(ins "Value":$source, "Value":$dest, "ArrayRef<int64_t>":$position)>,
@@ -2034,9 +2038,9 @@ def Vector_ScatterOp :
   Vector_Op<"scatter">,
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
-               VectorOfRankAndType<[1], [AnyInteger, Index]>:$index_vec,
-               VectorOfRankAndType<[1], [I1]>:$mask,
-               VectorOfRank<[1]>:$valueToStore)> {
+               VectorOfNonZeroRankOf<[AnyInteger, Index]>:$index_vec,
+               VectorOfNonZeroRankOf<[I1]>:$mask,
+               AnyVectorOfNonZeroRank:$valueToStore)> {
 
   let summary = [{
     scatters elements from a vector into memory as defined by an index vector
@@ -2044,9 +2048,9 @@ def Vector_ScatterOp :
   }];
 
   let description = [{
-    The scatter operation stores elements from a 1-D vector into memory as
-    defined by a base with indices and an additional 1-D index vector, but
-    only if the corresponding bit in a 1-D mask vector is set. Otherwise, no
+    The scatter operation stores elements from a n-D vector into memory as
+    defined by a base with indices and an additional n-D index vector, but
+    only if the corresponding bit in a n-D mask vector is set. Otherwise, no
     action is taken for that element. Informally the semantics are:
     ```
     if (mask[0]) base[index[0]] = value[0]

@@ -23,6 +23,8 @@
 struct Dummy1 {};
 struct Dummy2 {};
 struct Dummy3 {};
+struct Dummy4 {};
+struct Dummy5 {};
 
 template <>
 struct std::tuple_size<Dummy1> {
@@ -39,6 +41,16 @@ public:
 template <>
 struct std::tuple_size<Dummy3> {};
 
+template <>
+struct std::tuple_size<Dummy4> {
+  void value();
+};
+
+template <>
+struct std::tuple_size<Dummy5> {
+  size_t value;
+};
+
 void f() {
   // Test that tuple_size<const T> is not incomplete when tuple_size<T>::value
   // is well-formed but not a constant expression.
@@ -53,9 +65,21 @@ void f() {
     (void)std::tuple_size<const Dummy2>::value; // expected-note {{here}}
   }
   // Test that tuple_size<const T> generates an error when tuple_size<T> is
-  // complete but ::value isn't a constant expression convertible to size_t.
+  // complete but has no ::value member.
   {
-    // expected-error@*:* 1 {{no member named 'value'}}
-    (void)std::tuple_size<const Dummy3>::value; // expected-note {{here}}
+    // expected-error@*:* 1 {{implicit instantiation of undefined template}}
+    (void)std::tuple_size<const Dummy3>::value;
+  }
+  // Test that tuple_size<const T> generates an error when tuple_size<T> has
+  // the ::value member but tuple_size<T>::value is ill-formed.
+  {
+    // expected-error@*:* 1 {{implicit instantiation of undefined template}}
+    (void)std::tuple_size<const Dummy4>::value;
+  }
+  // Test that tuple_size<const T> generates an error when tuple_size<T> has
+  // the ::value member which is non-static.
+  {
+    // expected-error@*:* 1 {{invalid use of non-static data member 'value'}}
+    (void)std::tuple_size<const Dummy5>::value; // expected-note {{here}}
   }
 }

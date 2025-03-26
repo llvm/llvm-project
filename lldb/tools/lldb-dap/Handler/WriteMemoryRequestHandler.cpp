@@ -1,4 +1,4 @@
-//===-- WriteMemoryRequestHandler.cpp --------------------------------------===//
+//===-- WriteMemoryRequestHandler.cpp -------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,6 +9,8 @@
 #include "DAP.h"
 #include "JSONUtils.h"
 #include "RequestHandler.h"
+#include "lldb/API/SBMemoryRegionInfo.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Base64.h"
 
 namespace lldb_dap {
@@ -112,14 +114,45 @@ void WriteMemoryRequestHandler::operator()(
 
   llvm::StringRef data64 = GetString(arguments, "data").value_or("");
 
+  // The VSCode IDE or other DAP clients send memory data as a Base64 string.
+  // This function decodes it into raw binary before writing it to the target
+  // process memory.
+  std::vector<char> output;
+  auto decodeError = llvm::decodeBase64(data64, output);
+
+  if (decodeError) {
+    response["success"] = false;
+    EmplaceSafeString(response, "message",
+                      llvm::toString(std::move(decodeError)).c_str());
+    dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+
+  bool allowPartial = GetBoolean(arguments, "allowPartial").value_or(true);
   lldb::SBError writeError;
   uint64_t bytes_written = 0;
-
-  std::string output = llvm::encodeBase64(data64);
 
   // Write the memory
   if (!output.empty()) {
     lldb::SBProcess process = dap.target.GetProcess();
+    // If 'allowPartial' is false or missing, a debug adapter should attempt to
+    // verify the region is writable before writing, and fail the response if it
+    // is not.
+    if (allowPartial == false) {
+
+      lldb::SBMemoryRegionInfo region_info;
+      lldb::SBError error =
+          process.GetMemoryRegionInfo(address_offset, region_info);
+      if (!error.Success() || !region_info.IsWritable()) {
+        response["success"] = false;
+        EmplaceSafeString(response, "message",
+                          "Memory 0x" + llvm::utohexstr(address_offset) +
+                              " region is not writable");
+        dap.SendJSON(llvm::json::Value(std::move(response)));
+        return;
+      }
+    }
+
     bytes_written =
         process.WriteMemory(address_offset, static_cast<void *>(output.data()),
                             output.size(), writeError);

@@ -11,10 +11,10 @@ cv.lb 0, (0), t2
 # CHECK-ERROR: :[[@LINE-1]]:7: error: invalid operand for instruction
 
 cv.lb t0, (t1), -2049
-# CHECK-ERROR: :[[@LINE-1]]:17: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
+# CHECK-ERROR: :[[@LINE-1]]:17: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 cv.lb t0, (t1), 2048
-# CHECK-ERROR: :[[@LINE-1]]:17: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
+# CHECK-ERROR: :[[@LINE-1]]:17: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 cv.lb t0, (0), t1
 # CHECK-ERROR: :[[@LINE-1]]:11: error: operands must be register and register
@@ -41,10 +41,10 @@ cv.lbu 0, (0), t0
 # CHECK-ERROR: :[[@LINE-1]]:8: error: invalid operand for instruction
 
 cv.lbu t0, (t1), -2049
-# CHECK-ERROR: :[[@LINE-1]]:18: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
+# CHECK-ERROR: :[[@LINE-1]]:18: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 cv.lbu t0, (t1), 2048
-# CHECK-ERROR: :[[@LINE-1]]:18: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
+# CHECK-ERROR: :[[@LINE-1]]:18: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 cv.lbu t0, (0), t1
 # CHECK-ERROR: :[[@LINE-1]]:12: error: operands must be register and register
@@ -71,10 +71,10 @@ cv.lh 0, (0), t2
 # CHECK-ERROR: :[[@LINE-1]]:7: error: invalid operand for instruction
 
 cv.lh t0, (t1), -2049
-# CHECK-ERROR: :[[@LINE-1]]:17: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
+# CHECK-ERROR: :[[@LINE-1]]:17: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 cv.lh t0, (t1), 2048
-# CHECK-ERROR: :[[@LINE-1]]:17: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
+# CHECK-ERROR: :[[@LINE-1]]:17: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 cv.lh t0, (0), t1
 # CHECK-ERROR: :[[@LINE-1]]:11: error: operands must be register and register
@@ -104,10 +104,10 @@ cv.lhu 0, 0(t1)
 # CHECK-ERROR: :[[@LINE-1]]:8: error: invalid operand for instruction
 
 cv.lhu t0, (t1), -2049
-# CHECK-ERROR: :[[@LINE-1]]:18: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
+# CHECK-ERROR: :[[@LINE-1]]:18: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 cv.lhu t0, (t1), 2048
-# CHECK-ERROR: :[[@LINE-1]]:18: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
+# CHECK-ERROR: :[[@LINE-1]]:18: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 cv.lhu t0, (0), t1
 # CHECK-ERROR: :[[@LINE-1]]:12: error: operands must be register and register 
@@ -137,10 +137,10 @@ cv.lw 0, (0), t2
 # CHECK-ERROR: :[[@LINE-1]]:7: error: invalid operand for instruction
 
 cv.lw t0, (t1), -2049
-# CHECK-ERROR: :[[@LINE-1]]:17: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
+# CHECK-ERROR: :[[@LINE-1]]:17: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 cv.lw t0, (t1), 2048
-# CHECK-ERROR: :[[@LINE-1]]:17: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
+# CHECK-ERROR: :[[@LINE-1]]:17: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 cv.lw t0, (0), t1
 # CHECK-ERROR: :[[@LINE-1]]:11: error: operands must be register and register
@@ -170,7 +170,7 @@ cv.sb t0, 0(t1)
 # CHECK-ERROR: :[[@LINE-1]]:11: error: operands must be register and register
 
 cv.sb t0, (t1), 2048
-# CHECK-ERROR: :[[@LINE-1]]:17: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
+# CHECK-ERROR: :[[@LINE-1]]:17: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 cv.sb t0, (0), t1
 # CHECK-ERROR: :[[@LINE-1]]:11: error: operands must be register and register
@@ -191,7 +191,7 @@ cv.sh t0, 0(t1)
 # CHECK-ERROR: :[[@LINE-1]]:11: error: operands must be register and register
 
 cv.sh t0, (t1), 2048
-# CHECK-ERROR: :[[@LINE-1]]:17: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
+# CHECK-ERROR: :[[@LINE-1]]:17: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 cv.sh t0, (0), t1
 # CHECK-ERROR: :[[@LINE-1]]:11: error: operands must be register and register
@@ -212,7 +212,7 @@ cv.sw t0, 0(t1)
 # CHECK-ERROR: :[[@LINE-1]]:11: error: operands must be register and register
 
 cv.sw t0, (t1), 2048
-# CHECK-ERROR: :[[@LINE-1]]:17: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
+# CHECK-ERROR: :[[@LINE-1]]:17: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 
 cv.sw t0, (0), t1
 # CHECK-ERROR: :[[@LINE-1]]:11: error: operands must be register and register
