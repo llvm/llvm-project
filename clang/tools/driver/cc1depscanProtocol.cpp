@@ -17,6 +17,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/StringSaver.h"
+#include <cstdlib>
 
 #if LLVM_ON_UNIX
 #include <sys/socket.h> // FIXME: Unix-only. Not portable.
@@ -186,10 +187,19 @@ Expected<ScanDaemon> ScanDaemon::launchDaemon(StringRef BasePath,
     return llvm::errorCodeToError(std::error_code(EC, std::generic_category()));
 #endif
 
+  static constexpr const char *PassThroughEnv[] = {
+    "LLVM_CAS_LOG",
+  };
+  SmallVector<const char *> EnvP;
+  for (const char *Name : PassThroughEnv)
+    if (const char *Value = getenv(Name))
+      EnvP.push_back(Saver.save(llvm::Twine(Name) + "=" + Value).data());
+  EnvP.push_back(nullptr);
+
   ::pid_t Pid;
   int EC = ::posix_spawn(&Pid, Args[0], /*file_actions=*/nullptr, &Attrs,
                          const_cast<char **>(LaunchArgs.data()),
-                         /*envp=*/nullptr);
+                         const_cast<char **>(EnvP.data()));
   if (EC)
     return llvm::errorCodeToError(std::error_code(EC, std::generic_category()));
 
