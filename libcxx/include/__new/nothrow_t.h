@@ -20,7 +20,7 @@
 #else
 // purposefully not using versioning namespace
 namespace std {
-struct _LIBCPP_EXPORTED_FROM_ABI nothrow_t {
+struct nothrow_t {
   explicit nothrow_t() = default;
 };
 extern _LIBCPP_EXPORTED_FROM_ABI const nothrow_t nothrow;

@@ -862,7 +862,7 @@ public:
   }
 
   // iterators
-  class _LIBCPP_EXPORTED_FROM_ABI iterator;
+  class iterator;
   typedef iterator const_iterator;
 
   iterator begin() const;

@@ -23,7 +23,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-class _LIBCPP_EXPORTED_FROM_ABI path::iterator {
+class path::iterator {
 public:
   enum _ParserState : unsigned char {
     _Singular,
