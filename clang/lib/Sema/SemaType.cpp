@@ -9091,8 +9091,8 @@ bool Sema::hasStructuralCompatLayout(Decl *D, Decl *Suggested) {
   StructuralEquivalenceContext Ctx(
       getLangOpts(), D->getASTContext(), Suggested->getASTContext(),
       NonEquivalentDecls, StructuralEquivalenceKind::Default,
-      false /*StrictTypeSpelling*/, true /*Complain*/,
-      true /*ErrorOnTagTypeMismatch*/);
+      /*StrictTypeSpelling=*/false, /*Complain=*/true,
+      /*ErrorOnTagTypeMismatch=*/true);
   return Ctx.IsEquivalent(D, Suggested);
 }
 

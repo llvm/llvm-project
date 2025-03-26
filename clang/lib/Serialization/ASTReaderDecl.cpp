@@ -4570,9 +4570,9 @@ namespace {
               Reader.getContext().getLangOpts(), Cat->getASTContext(),
               Existing->getASTContext(), NonEquivalentDecls,
               StructuralEquivalenceKind::Default,
-              /*StrictTypeSpelling =*/false,
-              /*Complain =*/false,
-              /*ErrorOnTagTypeMismatch =*/true);
+              /*StrictTypeSpelling=*/false,
+              /*Complain=*/false,
+              /*ErrorOnTagTypeMismatch=*/true);
           if (!Ctx.IsEquivalent(Cat, Existing)) {
             // Warn only if the categories with the same name are different.
             Reader.Diag(Cat->getLocation(), diag::warn_dup_category_def)
