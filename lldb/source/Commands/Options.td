@@ -744,6 +744,10 @@ let Command = "process continue" in {
     Arg<"BreakpointIDRange">, Desc<"Specify a breakpoint to continue to, temporarily "
     "ignoring other breakpoints.  Can be specified more than once.  "
     "The continue action will be done synchronously if this option is specified.">;
+  def thread_continue_forward : Option<"forward", "F">, Group<3>,
+    Desc<"Execute in forward direction">;
+  def thread_continue_reverse : Option<"reverse", "R">, Group<3>,
+    Desc<"Execute in forward direction">;
 }
 
 let Command = "process detach" in {
