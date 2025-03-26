@@ -389,6 +389,10 @@ unsigned VPUnrollPartAccessor<PartOpIdx>::getUnrollPart(VPUser &U) const {
   return 0;
 }
 
+namespace llvm {
+template class VPUnrollPartAccessor<2>;
+}
+
 VPInstruction::VPInstruction(unsigned Opcode, CmpInst::Predicate Pred,
                              VPValue *A, VPValue *B, DebugLoc DL,
                              const Twine &Name)
