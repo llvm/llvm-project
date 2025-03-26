@@ -228,11 +228,14 @@ void dependencies::resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
 
 bool dependencies::isPathInStableDir(const ArrayRef<StringRef> Directories,
                                      const StringRef Input) {
+  using namespace llvm::sys;
+
+  if (!path::is_absolute(Input))
+    return false;
+
   auto PathStartsWith = [](StringRef Prefix, StringRef Path) {
-    auto PrefixIt = llvm::sys::path::begin(Prefix),
-         PrefixEnd = llvm::sys::path::end(Prefix);
-    for (auto PathIt = llvm::sys::path::begin(Path),
-              PathEnd = llvm::sys::path::end(Path);
+    auto PrefixIt = path::begin(Prefix), PrefixEnd = path::end(Prefix);
+    for (auto PathIt = path::begin(Path), PathEnd = path::end(Path);
          PrefixIt != PrefixEnd && PathIt != PathEnd; ++PrefixIt, ++PathIt) {
       if (*PrefixIt != *PathIt)
         return false;

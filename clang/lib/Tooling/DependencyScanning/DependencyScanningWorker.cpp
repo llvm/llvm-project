@@ -136,11 +136,8 @@ public:
         !PrebuiltModulesASTMap[CurrentFile].isInStableDir())
       return false;
 
-    const StringRef FileToUse =
-        ExternalFilename.empty() ? FilenameAsRequested : ExternalFilename;
-
     PrebuiltModulesASTMap[CurrentFile].setInStableDir(
-        isPathInStableDir(StableDirs, FileToUse));
+        isPathInStableDir(StableDirs, ExternalFilename));
     return PrebuiltModulesASTMap[CurrentFile].isInStableDir();
   }
 

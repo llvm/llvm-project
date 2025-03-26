@@ -242,9 +242,9 @@ public:
   /// paths, for example when deserializing input files from AST files.
   ///
   /// \returns true to continue receiving the next input file, false to stop.
-  virtual bool visitInputFile(StringRef FilenameAsRequested, StringRef Filename,
-                              bool isSystem, bool isOverridden,
-                              bool isExplicitModule) {
+  virtual bool visitInputFile(StringRef FilenameAsRequested,
+                              StringRef ExternalFilename, bool isSystem,
+                              bool isOverridden, bool isExplicitModule) {
     return true;
   }
 
