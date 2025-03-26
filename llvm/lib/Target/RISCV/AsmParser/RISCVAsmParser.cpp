@@ -1048,8 +1048,7 @@ public:
     RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
     int64_t Imm;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    return IsConstantImm &&
-           isInt<16>(fixImmediateForRV32(Imm, isRV64Imm())) &&
+    return IsConstantImm && isInt<16>(fixImmediateForRV32(Imm, isRV64Imm())) &&
            VK == RISCVMCExpr::VK_None;
   }
 
@@ -1772,7 +1771,8 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         Operands, ErrorInfo, -(1 << 12), (1 << 12) - 2,
         "immediate must be a multiple of 2 bytes in the range");
   case Match_InvalidSImm16:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 15), (1 << 15) - 1);
+    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 15),
+                                      (1 << 15) - 1);
   case Match_InvalidSImm16NonZero:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 15), (1 << 15) - 1,
