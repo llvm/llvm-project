@@ -27,6 +27,13 @@ functions:
     return_type: float
     arguments:
       - type: float
+    name: acoshf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: asin
     standards:
       - stdc
@@ -52,6 +59,12 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: atan
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: double
   - name: atan2
     standards:
       - stdc
@@ -736,6 +749,15 @@ functions:
       - type: float
       - type: float
       - type: float
+  - name: fmaf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: _Float16
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: fmax
     standards:
       - stdc

@@ -646,7 +646,7 @@ void GCPtrTracker::recalculateBBsStates() {
     transferBlock(BB, *BBS, ContributionChanged);
     if (OldOutCount != BBS->AvailableOut.size()) {
       assert(OldOutCount > BBS->AvailableOut.size() && "invariant!");
-      Worklist.insert(succ_begin(BB), succ_end(BB));
+      Worklist.insert_range(successors(BB));
     }
   }
 }

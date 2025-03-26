@@ -1,3 +1,11 @@
+;;===----------------------------------------------------------------------===;;
+;
+; Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+; See https://llvm.org/LICENSE.txt for license information.
+; SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+;
+;;===----------------------------------------------------------------------===;;
+
 define void @__clc_vstore_half_float_helper__private(float %data, half addrspace(0)* nocapture %ptr) nounwind alwaysinline {
   %res = fptrunc float %data to half
   store half %res, half addrspace(0)* %ptr
