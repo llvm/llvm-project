@@ -302,6 +302,14 @@ TEST(TestRtsanInterceptors, ShmUnlinkDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+#if !SANITIZER_APPLE
+TEST(TestRtsanInterceptors, MemfdCreateDiesWhenRealtime) {
+  auto Func = []() { memfd_create("/rtsan_test_memfd_create", MFD_CLOEXEC); };
+  ExpectRealtimeDeath(Func, "memfd_create");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 /*
     Sleeping
 */
