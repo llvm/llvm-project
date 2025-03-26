@@ -33,7 +33,8 @@ RISCVTargetStreamer::RISCVTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
 void RISCVTargetStreamer::finish() { finishAttributeSection(); }
 void RISCVTargetStreamer::reset() {}
 
-void RISCVTargetStreamer::emitDirectiveOptionArch(ArrayRef<RISCVOptionArchArg> Args) {}
+void RISCVTargetStreamer::emitDirectiveOptionArch(
+    ArrayRef<RISCVOptionArchArg> Args) {}
 void RISCVTargetStreamer::emitDirectiveOptionExact() {}
 void RISCVTargetStreamer::emitDirectiveOptionNoExact() {}
 void RISCVTargetStreamer::emitDirectiveOptionPIC() {}
