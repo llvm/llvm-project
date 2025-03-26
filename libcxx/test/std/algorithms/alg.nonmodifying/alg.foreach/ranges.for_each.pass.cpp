@@ -125,8 +125,8 @@ struct deque_test {
   }
 };
 
-/*TEST_CONSTEXPR_CXX23*/
-void test_segmented_deque_iterator() { // TODO: Mark as TEST_CONSTEXPR_CXX23 once std::deque is constexpr
+/*TEST_CONSTEXPR_CXX26*/
+void test_segmented_deque_iterator() { // TODO: Mark as TEST_CONSTEXPR_CXX26 once std::deque is constexpr
   // check that segmented deque iterators work properly
   int sizes[] = {0, 1, 2, 1023, 1024, 1025, 2047, 2048, 2049};
   for (const int size : sizes) {
@@ -173,7 +173,7 @@ constexpr bool test() {
     }
   }
 
-  if (!TEST_IS_CONSTANT_EVALUATED) // TODO: Use TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED when std::deque is made constexpr
+  if (!TEST_IS_CONSTANT_EVALUATED) // TODO: Use TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED when std::deque is made constexpr
     test_segmented_deque_iterator();
 
   {
