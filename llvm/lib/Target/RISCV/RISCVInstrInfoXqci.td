@@ -442,7 +442,7 @@ class QCIRVInstESBase<bits<3> funct3, bits<2> funct2, dag outs,
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class QCIRVInstESStore<bits<3> funct3, bits<2> funct2, string opcodestr>
     : QCIRVInstESBase<funct3, funct2, (outs),
-                      (ins GPRMem:$rs2, GPR:$rs1, simm26:$imm),
+                      (ins GPR:$rs2, GPRMem:$rs1, simm26:$imm),
                       opcodestr, "$rs2, ${imm}(${rs1})">;
 
 class QCIRVInstEAI<bits<3> funct3, bits<1> funct1, string opcodestr>
