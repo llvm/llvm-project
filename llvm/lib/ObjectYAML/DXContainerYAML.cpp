@@ -14,6 +14,7 @@
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 namespace llvm {
@@ -35,9 +36,27 @@ DXContainerYAML::RootSignatureYamlDesc::RootSignatureYamlDesc(
       NumStaticSamplers(Data.getNumStaticSamplers()),
       StaticSamplersOffset(Data.getStaticSamplersOffset()) {
   uint32_t Flags = Data.getFlags();
-  for (auto const &P : Data.params()) {
+  for (auto P : Data.params()) {
+    if (!P)
+      llvm_unreachable("Parameters are validated on read.");
 
-    Parameters.push_back(RootParameterYamlDesc(P));
+    auto NewP = RootParameterYamlDesc();
+    NewP.Offset = P->Header.ParameterOffset;
+    NewP.Type = P->Header.ParameterType;
+    NewP.Visibility = P->Header.ShaderVisibility;
+
+    switch (NewP.Type) {
+
+    case dxbc::RootParameterType::Constants32Bit:
+      NewP.Constants.NumOfConstants = P->Constants.NumOfConstants;
+      NewP.Constants.Register = P->Constants.Register;
+      NewP.Constants.Space = P->Constants.Space;
+      break;
+    case dxbc::RootParameterType::Empty:
+      llvm_unreachable("Invalid RootParameterType");
+      break;
+    }
+    Parameters.push_back(NewP);
   }
 #define ROOT_ELEMENT_FLAG(Num, Val)                                            \
   Val = (Flags & (uint32_t)dxbc::RootElementFlag::Val) > 0;

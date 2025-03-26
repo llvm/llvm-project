@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Object/Error.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
@@ -122,7 +123,107 @@ struct RootParameter {
   union {
     dxbc::RootConstants Constants;
   };
+
+  RootParameter() = default;
 };
+
+struct ViewRootParameter {
+  ViewArray<dxbc::RootParameterHeader> HeaderView;
+  StringRef Data;
+
+  ViewRootParameter() = default;
+  ViewRootParameter(ViewArray<dxbc::RootParameterHeader> HV, StringRef D)
+      : HeaderView(HV), Data(D) {}
+
+  using value_type = DirectX::RootParameter;
+  struct iterator {
+    const ViewArray<dxbc::RootParameterHeader> HeaderView;
+    ViewArray<dxbc::RootParameterHeader>::iterator Current;
+    StringRef Data;
+
+    iterator(const ViewRootParameter &VRP,
+             ViewArray<dxbc::RootParameterHeader>::iterator C)
+        : HeaderView(VRP.HeaderView), Current(C), Data(VRP.Data) {}
+    iterator(const iterator &) = default;
+
+    template <typename T>
+    static Error readParameter(StringRef Buffer, const char *Src, T &Struct) {
+      // Don't read before the beginning or past the end of the file
+      if (Src < Buffer.begin() || Src + sizeof(T) > Buffer.end())
+        return make_error<GenericBinaryError>(
+            "Reading structure out of file bounds", object_error::parse_failed);
+
+      memcpy(&Struct, Src, sizeof(T));
+      // DXContainer is always little endian
+      if (sys::IsBigEndianHost)
+        Struct.swapBytes();
+      return Error::success();
+    }
+
+    static Error validationFailed(const Twine &Msg) {
+      return make_error<StringError>(Msg.str(), inconvertibleErrorCode());
+    }
+
+    llvm::Expected<value_type> operator*() {
+      value_type Parameter;
+      std::memset(&Parameter.Header, 0, sizeof(dxbc::RootParameterHeader));
+      memcpy(&Parameter.Header, Current.Current,
+             sizeof(dxbc::RootParameterHeader));
+
+      switch (Parameter.Header.ParameterType) {
+      case dxbc::RootParameterType::Constants32Bit:
+        std::memset(&Parameter.Constants, 0, sizeof(dxbc::RootConstants));
+        if (Error Err = readParameter(
+                Data, Data.begin() + Parameter.Header.ParameterOffset,
+                Parameter.Constants))
+          return Err;
+        break;
+      case dxbc::RootParameterType::Empty:
+        break;
+      }
+
+      return Parameter;
+    }
+
+    iterator operator++() {
+      if (Current != HeaderView.end())
+        Current++;
+      return *this;
+    }
+
+    iterator operator++(int I) {
+      iterator Tmp = *this;
+      for (; I > 0; I--)
+        ++Tmp;
+      return Tmp;
+    }
+
+    iterator operator--() {
+      if (Current != HeaderView.begin())
+        Current--;
+      return *this;
+    }
+
+    iterator operator--(int I) {
+      iterator Tmp = *this;
+      for (; I > 0; I--)
+        --Tmp;
+      return Tmp;
+    }
+
+    bool operator==(iterator I) { return I.Current == Current; }
+    bool operator!=(const iterator I) { return !(*this == I); }
+  };
+
+  iterator begin() const { return iterator(*this, this->HeaderView.begin()); }
+
+  iterator end() const { return iterator(*this, this->HeaderView.end()); }
+
+  size_t size() const { return HeaderView.size(); }
+
+  bool isEmpty() const { return HeaderView.isEmpty(); }
+};
+
 class RootSignature {
 private:
   uint32_t Version = 2;
@@ -132,9 +233,9 @@ private:
   uint32_t StaticSamplersOffset = 0;
   uint32_t Flags = 0;
 
-  SmallVector<DirectX::RootParameter> Parameters;
+  ViewRootParameter Parameters;
 
-  using param_iterator = SmallVector<DirectX::RootParameter>::iterator;
+  using param_iterator = ViewRootParameter::iterator;
 
 public:
   RootSignature() {}
@@ -145,7 +246,7 @@ public:
   uint32_t getRootParametersOffset() const { return RootParametersOffset; }
   uint32_t getNumStaticSamplers() const { return NumStaticSamplers; }
   uint32_t getStaticSamplersOffset() const { return StaticSamplersOffset; }
-  llvm::iterator_range<const RootParameter *> params() const {
+  llvm::iterator_range<param_iterator> params() const {
     return llvm::make_range(Parameters.begin(), Parameters.end());
   }
   param_iterator param_begin() { return Parameters.begin(); }

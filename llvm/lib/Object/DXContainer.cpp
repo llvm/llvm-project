@@ -305,58 +305,26 @@ Error DirectX::RootSignature::parse(StringRef Data) {
   Flags = FValue;
 
   assert(Current == Begin + RootParametersOffset);
-  for (uint32_t I = 0; I < NumParameters; I++) {
-    DirectX::RootParameter NewParam;
 
-    uint32_t MaybeParamType =
-        support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Parameters.HeaderView.Data = Data.substr(
+      RootParametersOffset, NumParameters * sizeof(dxbc::RootParameterHeader));
+  Parameters.Data = Data;
 
-    if (Error Err =
-            safeConvertEnum(MaybeParamType, NewParam.Header.ParameterType))
-      return Err;
+  for (auto P : params()) {
+    if (!P)
+      return P.takeError();
 
     if (!dxbc::RootSignatureValidations::isValidParameterType(
-            NewParam.Header.ParameterType))
-      return validationFailed(
-          "unsupported parameter type value read: " +
-          llvm::Twine((uint32_t)NewParam.Header.ParameterType));
-
-    Current += sizeof(dxbc::RootParameterType);
-
-    uint32_t MaybeVisibility =
-        support::endian::read<uint32_t, llvm::endianness::little>(Current);
-
-    if (Error Err =
-            safeConvertEnum(MaybeVisibility, NewParam.Header.ShaderVisibility))
-      return Err;
+            P->Header.ParameterType))
+      return validationFailed("unsupported parameter type value read: " +
+                              llvm::Twine((uint32_t)P->Header.ParameterType));
 
     if (!dxbc::RootSignatureValidations::isValidShaderVisibility(
-            NewParam.Header.ShaderVisibility))
+            P->Header.ShaderVisibility))
       return validationFailed(
           "unsupported shader visility flag value read: " +
-          llvm::Twine((uint32_t)NewParam.Header.ShaderVisibility));
-
-    Current += sizeof(dxbc::ShaderVisibility);
-
-    NewParam.Header.ParameterOffset =
-        support::endian::read<uint32_t, llvm::endianness::little>(Current);
-    Current += sizeof(uint32_t);
-
-    switch (NewParam.Header.ParameterType) {
-
-    case dxbc::RootParameterType::Constants32Bit:
-      if (Error Err = readStruct(Data, Begin + NewParam.Header.ParameterOffset,
-                                 NewParam.Constants))
-        return Err;
-      break;
-    case dxbc::RootParameterType::Empty:
-      // unreachable  because it was validated and assigned before this point.
-      llvm_unreachable("Invalid value for RootParameterType");
-    }
-
-    Parameters.push_back(NewParam);
+          llvm::Twine((uint32_t)P->Header.ShaderVisibility));
   }
-
   return Error::success();
 }
 

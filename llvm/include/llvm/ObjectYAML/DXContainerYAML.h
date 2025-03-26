@@ -87,24 +87,7 @@ struct RootParameterYamlDesc {
   uint32_t Offset;
 
   RootParameterYamlDesc() = default;
-  RootParameterYamlDesc(const object::DirectX::RootParameter &Parameter) {
 
-    Type = Parameter.Header.ParameterType;
-    Visibility = Parameter.Header.ShaderVisibility;
-    Offset = Parameter.Header.ParameterOffset;
-    switch (Parameter.Header.ParameterType) {
-
-    case dxbc::RootParameterType::Constants32Bit:
-      Constants.NumOfConstants = Parameter.Constants.NumOfConstants;
-      Constants.Space = Parameter.Constants.Space;
-      Constants.Register = Parameter.Constants.Register;
-      break;
-    case dxbc::RootParameterType::Empty:
-      llvm_unreachable("Invalid Root Parameter Type. It should be verified "
-                       "before reaching here.");
-      break;
-    }
-  }
   union {
     RootConstantsYaml Constants;
   };
