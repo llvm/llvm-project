@@ -16,14 +16,12 @@ mlir::DenseElementsAttr
 convertStringAttrToDenseElementsAttr(cir::ConstArrayAttr attr,
                                      mlir::Type type) {
   auto values = llvm::SmallVector<mlir::APInt, 8>{};
-  const auto stringAttr = mlir::dyn_cast<mlir::StringAttr>(attr.getElts());
-  assert(stringAttr && "expected string attribute here");
+  const auto stringAttr = mlir::cast<mlir::StringAttr>(attr.getElts());
 
-  for (auto element : stringAttr)
+  for (const char element : stringAttr)
     values.push_back({8, (uint64_t)element});
 
-  const auto arrayTy = mlir::dyn_cast<cir::ArrayType>(attr.getType());
-  assert(arrayTy && "String attribute must have an array type");
+  const auto arrayTy = mlir::cast<cir::ArrayType>(attr.getType());
   if (arrayTy.getSize() != stringAttr.size())
     llvm_unreachable("array type of the length not equal to that of the string "
                      "attribute is not supported yet");

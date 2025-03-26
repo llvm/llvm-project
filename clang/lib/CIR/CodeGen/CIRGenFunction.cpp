@@ -461,7 +461,7 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
 
   // Cast the dest ptr to the appropriate i8 pointer type.
   if (builder.isInt8Ty(destPtr.getElementType())) {
-    llvm_unreachable("NYI");
+    cgm.errorNYI(loc, "Cast the dest ptr to the appropriate i8 pointer type");
   }
 
   // Get size and alignment info for this aggregate.
@@ -489,7 +489,7 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   // Builder.CreateMemSet. In CIR just emit a store of #cir.zero to the
   // respective address.
   // Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
-  auto zeroValue = builder.getNullValue(convertType(ty), loc);
+  const mlir::Value zeroValue = builder.getNullValue(convertType(ty), loc);
   builder.createStore(loc, zeroValue, destPtr.getPointer());
 }
 

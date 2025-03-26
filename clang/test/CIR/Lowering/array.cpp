@@ -102,10 +102,23 @@ void func6() {
 // CHECK:  %[[ELE_1:.*]] = getelementptr i32, ptr %[[ELE_0]], i64 1
 // CHECK:  store i32 5, ptr %[[ELE_1]], align 4
 
-void func7(int p[10]) {}
-// CHECK: define void @func7(ptr {{%.*}})
+void func7() {
+  int* arr[1] = {};
+}
+// CHECK: define void @func7()
+// CHECK:  %[[ARR:.*]] = alloca [1 x ptr], i64 1, align 8
+// CHECK:  %[[ALLOCA:.*]] = alloca ptr, i64 1, align 8
+// CHECK:  %[[ELE_PTR:.*]] = getelementptr ptr, ptr %[[ARR]], i32 0
+// CHECK:  store ptr %[[ELE_PTR]], ptr %[[ALLOCA]], align 8
+// CHECK:  %[[TMP:.*]] = load ptr, ptr %[[ALLOCA]], align 8
+// CHECK:  store ptr null, ptr %[[TMP]], align 8
+// CHECK:  %[[ELE:.*]] = getelementptr ptr, ptr %[[TMP]], i64 1
+// CHECK:  store ptr %[[ELE]], ptr %[[ALLOCA]], align 8
+
+void func8(int p[10]) {}
+// CHECK: define void @func8(ptr {{%.*}})
 // CHECK-NEXT: alloca ptr, i64 1, align 8
 
-void func8(int pp[10][5]) {}
-// CHECK: define void @func8(ptr {{%.*}})
+void func9(int pp[10][5]) {}
+// CHECK: define void @func9(ptr {{%.*}})
 // CHECK-NEXT: alloca ptr, i64 1, align 8

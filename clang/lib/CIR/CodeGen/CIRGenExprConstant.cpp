@@ -421,17 +421,16 @@ mlir::Value CIRGenModule::emitNullConstant(QualType t, mlir::Location loc) {
   if (getTypes().isZeroInitializable(t))
     return builder.getNullValue(getTypes().convertTypeForMem(t), loc);
 
-  if (const ConstantArrayType *cat =
-          getASTContext().getAsConstantArrayType(t)) {
-    llvm_unreachable("NYI");
+  if (getASTContext().getAsConstantArrayType(t)) {
+    errorNYI("CIRGenModule::emitNullConstant ConstantArrayType");
   }
 
-  if (const RecordType *rt = t->getAs<RecordType>())
-    llvm_unreachable("NYI");
+  if (t->getAs<RecordType>())
+    errorNYI("CIRGenModule::emitNullConstant RecordType");
 
   assert(t->isMemberDataPointerType() &&
          "Should only see pointers to data members here!");
 
-  llvm_unreachable("NYI");
+  errorNYI("CIRGenModule::emitNullConstant unsupported type");
   return {};
 }

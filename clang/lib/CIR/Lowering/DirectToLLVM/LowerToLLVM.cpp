@@ -546,8 +546,6 @@ mlir::LogicalResult CIRToLLVMPtrStrideOpLowering::matchAndRewrite(
     cir::PtrStrideOp ptrStrideOp, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
 
-  const mlir::DataLayout llvmLayout(
-      ptrStrideOp->getParentOfType<mlir::ModuleOp>());
   const mlir::TypeConverter *tc = getTypeConverter();
   const mlir::Type resultTy = tc->convertType(ptrStrideOp.getType());
 
@@ -566,9 +564,9 @@ mlir::LogicalResult CIRToLLVMPtrStrideOpLowering::matchAndRewrite(
   const unsigned width =
       mlir::cast<mlir::IntegerType>(index.getType()).getWidth();
   const std::optional<std::uint64_t> layoutWidth =
-      llvmLayout.getTypeIndexBitwidth(adaptor.getBase().getType());
+      dataLayout.getTypeIndexBitwidth(adaptor.getBase().getType());
 
-  const auto indexOp = index.getDefiningOp();
+  mlir::Operation *indexOp = index.getDefiningOp();
   if (indexOp && layoutWidth && width != *layoutWidth) {
     // If the index comes from a subtraction, make sure the extension happens
     // before it. To achieve that, look at unary minus, which already got
@@ -691,7 +689,7 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
                                 const mlir::TypeConverter *converter,
                                 mlir::DataLayout const &dataLayout) {
   CIRAttrToValue valueConverter(parentOp, rewriter, converter);
-  auto value = valueConverter.visit(attr);
+  const mlir::Value value = valueConverter.visit(attr);
   if (!value)
     llvm_unreachable("unhandled attribute type");
   return value;
@@ -751,16 +749,16 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
 
     std::optional<mlir::Attribute> denseAttr;
     if (constArr && hasTrailingZeros(constArr)) {
-      auto newOp = lowerCirAttrAsValue(op, constArr, rewriter,
-                                       getTypeConverter(), dataLayout);
+      const mlir::Value newOp = lowerCirAttrAsValue(
+          op, constArr, rewriter, getTypeConverter(), dataLayout);
       rewriter.replaceOp(op, newOp);
       return mlir::success();
     } else if (constArr &&
                (denseAttr = lowerConstArrayAttr(constArr, typeConverter))) {
       attr = denseAttr.value();
     } else {
-      auto initVal = lowerCirAttrAsValue(op, op.getValue(), rewriter,
-                                         typeConverter, dataLayout);
+      const mlir::Value initVal = lowerCirAttrAsValue(
+          op, op.getValue(), rewriter, typeConverter, dataLayout);
       rewriter.replaceAllUsesWith(op, initVal);
       rewriter.eraseOp(op);
       return mlir::success();

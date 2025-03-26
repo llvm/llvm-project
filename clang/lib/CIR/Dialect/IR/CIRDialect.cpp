@@ -246,8 +246,8 @@ OpFoldResult cir::ConstantOp::fold(FoldAdaptor /*adaptor*/) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::CastOp::verify() {
-  const auto resType = getResult().getType();
-  const auto srcType = getSrc().getType();
+  const mlir::Type resType = getResult().getType();
+  const mlir::Type srcType = getSrc().getType();
 
   switch (getKind()) {
   case cir::CastKind::int_to_bool: {

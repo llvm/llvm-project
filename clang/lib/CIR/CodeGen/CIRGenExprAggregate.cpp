@@ -159,7 +159,8 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
 
     // TODO:Replace this part later with cir::DoWhileOp
     for (unsigned i = numInitElements; i != numArrayElements; ++i) {
-      auto currentElement = builder.createLoad(loc, tmpAddr.getPointer());
+      cir::LoadOp currentElement =
+          builder.createLoad(loc, tmpAddr.getPointer());
 
       // Emit the actual filler expression.
       const LValue elementLV = LValue::makeAddr(
@@ -183,22 +184,21 @@ void AggExprEmitter::emitInitializationToLValue(Expr *e, LValue lv) {
   const QualType type = lv.getType();
 
   if (isa<ImplicitValueInitExpr, CXXScalarValueInitExpr>(e)) {
-    const auto loc = e->getSourceRange().isValid()
-                         ? cgf.getLoc(e->getSourceRange())
-                         : *cgf.currSrcLoc;
+    const mlir::Location loc = e->getSourceRange().isValid()
+                                   ? cgf.getLoc(e->getSourceRange())
+                                   : *cgf.currSrcLoc;
     return emitNullInitializationToLValue(loc, lv);
   }
 
   if (isa<NoInitExpr>(e))
     return;
 
-  if (type->isReferenceType()) {
-    llvm_unreachable("NTI");
-  }
+  if (type->isReferenceType())
+    cgf.cgm.errorNYI("emitInitializationToLValue ReferenceType");
 
   switch (cgf.getEvaluationKind(type)) {
   case cir::TEK_Complex:
-    llvm_unreachable("TEK_Complex NYI");
+    cgf.cgm.errorNYI("emitInitializationToLValue TEK_Complex");
     break;
   case cir::TEK_Aggregate:
     cgf.emitAggExpr(e, AggValueSlot::forLValue(lv));
@@ -229,7 +229,7 @@ void AggExprEmitter::emitNullInitializationToLValue(mlir::Location loc,
       return;
     }
 
-    llvm_unreachable("emitStoreThroughBitfieldLValue NYI");
+    cgf.cgm.errorNYI("emitStoreThroughBitfieldLValue");
     return;
   }
 
@@ -265,7 +265,8 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
     return;
   }
 
-  llvm_unreachable("NYI");
+  cgf.cgm.errorNYI(
+      "visitCXXParenListOrInitListExpr Record or VariableSizeArray type");
 }
 
 void CIRGenFunction::emitAggExpr(const Expr *e, AggValueSlot slot) {

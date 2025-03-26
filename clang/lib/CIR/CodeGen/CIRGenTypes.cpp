@@ -268,13 +268,16 @@ bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
         return true;
   }
 
-  if (const RecordType *rt = t->getAs<RecordType>()) {
+  if (t->getAs<RecordType>()) {
     cgm.errorNYI(SourceLocation(), "isZeroInitializable for RecordType", t);
+    return false;
   }
 
-  if (const MemberPointerType *mpt = t->getAs<MemberPointerType>())
+  if (t->getAs<MemberPointerType>()) {
     cgm.errorNYI(SourceLocation(), "isZeroInitializable for MemberPointerType",
                  t);
+    return false;
+  }
 
   return true;
 }

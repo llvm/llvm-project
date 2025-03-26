@@ -117,10 +117,25 @@ void func6() {
   // CHECK: cir.store %[[V1]], %[[ELE_PTR]] : !s32i, !cir.ptr<!s32i>
 }
 
-void func7(int p[10]) {}
-// CHECK: cir.func @func7(%arg0: !cir.ptr<!s32i>
+void func7() {
+  int* arr[1] = {};
+
+  // CHECK: %[[ARR:.*]] = cir.alloca !cir.array<!cir.ptr<!s32i> x 1>, !cir.ptr<!cir.array<!cir.ptr<!s32i> x 1>>, ["arr", init]
+  // CHECK: %[[ARR_TMP:.*]] = cir.alloca !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, ["arrayinit.temp", init]
+  // CHECK: %[[ARR_PTR:.*]] = cir.cast(array_to_ptrdecay, %[[ARR]] : !cir.ptr<!cir.array<!cir.ptr<!s32i> x 1>>), !cir.ptr<!cir.ptr<!s32i>>
+  // CHECK: cir.store %[[ARR_PTR]], %[[ARR_TMP]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+  // CHECK: %[[TMP:.*]] = cir.load %[[ARR_TMP]] : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, !cir.ptr<!cir.ptr<!s32i>>
+  // CHECK: %[[NULL_PTR:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>
+  // CHECK: cir.store %[[NULL_PTR]], %[[TMP]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  // CHECK: %[[OFFSET:.*]] = cir.const #cir.int<1> : !s64i
+  // CHECK: %[[ELE_PTR:.*]] = cir.ptr_stride(%[[TMP]] : !cir.ptr<!cir.ptr<!s32i>>, %[[OFFSET]] : !s64i), !cir.ptr<!cir.ptr<!s32i>>
+  // CHECK: cir.store %[[ELE_PTR]], %[[ARR_TMP]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+}
+
+void func8(int p[10]) {}
+// CHECK: cir.func @func8(%arg0: !cir.ptr<!s32i>
 // CHECK: cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["p", init]
 
-void func8(int pp[10][5]) {}
-// CHECK: cir.func @func8(%arg0: !cir.ptr<!cir.array<!s32i x 5>>
+void func9(int pp[10][5]) {}
+// CHECK: cir.func @func9(%arg0: !cir.ptr<!cir.array<!s32i x 5>>
 // CHECK: cir.alloca !cir.ptr<!cir.array<!s32i x 5>>, !cir.ptr<!cir.ptr<!cir.array<!s32i x 5>>>
