@@ -15964,6 +15964,15 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
 
     if (TLI.isLoadBitCastBeneficial(N0.getValueType(), VT, DAG,
                                     *LN0->getMemOperand())) {
+      // If the range metadata type does not match the new memory
+      // operation type, remove the range metadata.
+      if (const MDNode *MD = LN0->getRanges()) {
+        ConstantInt *Lower = mdconst::extract<ConstantInt>(MD->getOperand(0));
+        if (Lower->getBitWidth() != VT.getScalarSizeInBits() ||
+            !VT.isInteger()) {
+          LN0->getMemOperand()->clearRanges();
+        }
+      }
       SDValue Load =
           DAG.getLoad(VT, SDLoc(N), LN0->getChain(), LN0->getBasePtr(),
                       LN0->getMemOperand());
