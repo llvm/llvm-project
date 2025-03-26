@@ -4370,16 +4370,17 @@ static bool isShlHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
   return false;
 }
 
-static bool retOpStat(const MachineOperand *Op, SrcStatus Stat,
-                      std::pair<const MachineOperand *, SrcStatus> &Curr) {
+std::optional<std::pair<const MachineOperand *, SrcStatus>>
+retOpStat(const MachineOperand *Op, SrcStatus Stat,
+          std::pair<const MachineOperand *, SrcStatus> &Curr) {
   if (Stat != SrcStatus::INVALID &&
       ((Op->isReg() && !(Op->getReg().isPhysical())) || Op->isImm() ||
        Op->isCImm() || Op->isFPImm())) {
-    Curr = {Op, Stat};
-    return true;
+    return std::optional<std::pair<const MachineOperand *, SrcStatus>>(
+        {Op, Stat});
   }
 
-  return false;
+  return std::nullopt;
 }
 
 enum class TypeClass { VECTOR_OF_TWO, SCALAR, NON_OF_LISTED };
@@ -4543,10 +4544,11 @@ SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
   llvm_unreachable("unexpected SrcStatus");
 }
 
-static bool calcNextStatus(std::pair<const MachineOperand *, SrcStatus> &Curr,
-                           const MachineRegisterInfo &MRI) {
+std::optional<std::pair<const MachineOperand *, SrcStatus>>
+calcNextStatus(std::pair<const MachineOperand *, SrcStatus> Curr,
+               const MachineRegisterInfo &MRI) {
   if (!Curr.first->isReg())
-    return false;
+    return std::nullopt;
 
   const MachineInstr *MI = nullptr;
 
@@ -4556,7 +4558,7 @@ static bool calcNextStatus(std::pair<const MachineOperand *, SrcStatus> &Curr,
     MI = Curr.first->getParent();
 
   if (!MI)
-    return false;
+    return std::nullopt;
 
   unsigned Opc = MI->getOpcode();
 
@@ -4610,7 +4612,7 @@ static bool calcNextStatus(std::pair<const MachineOperand *, SrcStatus> &Curr,
   default:
     break;
   }
-  return false;
+  return std::nullopt;
 }
 
 struct {
@@ -4656,14 +4658,15 @@ static SmallVector<std::pair<const MachineOperand *, SrcStatus>>
 getSrcStats(const MachineOperand *Op, const MachineRegisterInfo &MRI,
             int MaxDepth = 6) {
   int Depth = 0;
-  std::pair<const MachineOperand *, SrcStatus> Curr = {Op, SrcStatus::IS_SAME};
+  auto Curr = calcNextStatus({Op, SrcStatus::IS_SAME}, MRI);
   SmallVector<std::pair<const MachineOperand *, SrcStatus>, 4> Statlist;
 
-  while (Depth <= MaxDepth && calcNextStatus(Curr, MRI)) {
+  while (Depth <= MaxDepth && Curr.has_value()) {
     Depth++;
-    if (checkOptions(Curr.second)) {
-      Statlist.push_back(Curr);
+    if (checkOptions(Curr.value().second)) {
+      Statlist.push_back(Curr.value());
     }
+    Curr = calcNextStatus(Curr.value(), MRI);
   }
 
   return Statlist;
@@ -4673,25 +4676,27 @@ static std::pair<const MachineOperand *, SrcStatus>
 getLastSameOrNeg(const MachineOperand *Op, const MachineRegisterInfo &MRI,
                  int MaxDepth = 6) {
   int Depth = 0;
-  std::pair<const MachineOperand *, SrcStatus> Curr = {Op, SrcStatus::IS_SAME};
-  std::pair<const MachineOperand *, SrcStatus> LastSameOrNeg = Curr;
+  std::pair<const MachineOperand *, SrcStatus> LastSameOrNeg = {
+      Op, SrcStatus::IS_SAME};
+  auto Curr = calcNextStatus(LastSameOrNeg, MRI);
 
-  while (Depth <= MaxDepth && calcNextStatus(Curr, MRI)) {
+  while (Depth <= MaxDepth && Curr.has_value()) {
     Depth++;
-    if (checkOptions(Curr.second)) {
-      if (Curr.second == SrcStatus::IS_SAME ||
-          Curr.second == SrcStatus::IS_HI_NEG ||
-          Curr.second == SrcStatus::IS_LO_NEG ||
-          Curr.second == SrcStatus::IS_BOTH_NEG)
-        LastSameOrNeg = Curr;
+    if (checkOptions(Curr.value().second)) {
+      if (Curr.value().second == SrcStatus::IS_SAME ||
+          Curr.value().second == SrcStatus::IS_HI_NEG ||
+          Curr.value().second == SrcStatus::IS_LO_NEG ||
+          Curr.value().second == SrcStatus::IS_BOTH_NEG)
+        LastSameOrNeg = Curr.value();
     }
+    Curr = calcNextStatus(Curr.value(), MRI);
   }
 
   return LastSameOrNeg;
 }
 
-static bool isInlinableConstant(const MachineOperand &Op,
-                                const SIInstrInfo &TII) {
+static bool isInlinableFPConstant(const MachineOperand &Op,
+                                  const SIInstrInfo &TII) {
   return Op.isFPImm() && TII.isInlineConstant(Op.getFPImm()->getValueAPF());
 }
 
@@ -4754,7 +4759,7 @@ static bool isValidToPack(SrcStatus HiStat, SrcStatus LoStat,
   } else {
     if ((HiStat == SrcStatus::IS_SAME || HiStat == SrcStatus::IS_HI_NEG) &&
         (LoStat == SrcStatus::IS_SAME || LoStat == SrcStatus::IS_HI_NEG) &&
-        isInlinableConstant(*NewOp, TII)) {
+        isInlinableFPConstant(*NewOp, TII)) {
       return true;
     }
   }
