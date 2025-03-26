@@ -1836,8 +1836,8 @@ def PseudoZEXT_W : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.w", "$rd, $rs
 /// Loads
 
 class LdPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT>
-    : Pat<(vt (LoadOp (AddrRegImm (XLenVT GPR:$rs1), simm12:$imm12))),
-          (Inst GPR:$rs1, simm12:$imm12)>;
+    : Pat<(vt (LoadOp (AddrRegImm (XLenVT GPRMem:$rs1), simm12:$imm12))),
+          (Inst GPRMem:$rs1, simm12:$imm12)>;
 
 def : LdPat<sextloadi8, LB>;
 def : LdPat<extloadi8, LBU>; // Prefer unsigned due to no c.lb in Zcb.
@@ -1851,9 +1851,9 @@ def : LdPat<zextloadi16, LHU>;
 
 class StPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
             ValueType vt>
-    : Pat<(StoreOp (vt StTy:$rs2), (AddrRegImm (XLenVT GPR:$rs1),
+    : Pat<(StoreOp (vt StTy:$rs2), (AddrRegImm (XLenVT GPRMem:$rs1),
                    simm12:$imm12)),
-          (Inst StTy:$rs2, GPR:$rs1, simm12:$imm12)>;
+          (Inst StTy:$rs2, GPRMem:$rs1, simm12:$imm12)>;
 
 def : StPat<truncstorei8, SB, GPR, XLenVT>;
 def : StPat<truncstorei16, SH, GPR, XLenVT>;
