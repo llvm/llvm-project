@@ -163,7 +163,7 @@ To setup ``SnMalloc``, use the following ``cmake`` configuration instead:
 
 .. note::
    LLVM's libc does not vendor ``SnMalloc``. The commit known to work is
-   ``e3e558472de805b2408e2ee24a055ef0b7c38423``.
+   ``80bdcd999f1881fd26463a6f5b5aca21600907de``.
 
 Build and install
 =================

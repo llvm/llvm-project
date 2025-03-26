@@ -6,14 +6,16 @@ set(SNMALLOC_HEADER_ONLY_LIBRARY ON CACHE BOOL "use snmalloc as header only libr
 macro (install)
 endmacro ()
 
+set(CMAKE_DISABLE_FIND_PACKAGE_Backtrace ON)
+
 add_subdirectory(${LIBC_INCLUDE_SNMALLOC} ${CMAKE_CURRENT_BINARY_DIR}/snmalloc EXCLUDE_FROM_ALL)
 
 target_compile_options(
-  snmalloc 
-  INTERFACE 
+  snmalloc
+  INTERFACE
     -ffreestanding
-    -nostdinc 
-    -Wno-newline-eof 
+    -nostdinc
+    -Wno-newline-eof
     -Wno-extra-semi
     -Wno-unused-command-line-argument
     -Wno-ctad-maybe-unsupported
@@ -28,6 +30,7 @@ set(SNMALLOC_DEPS
   libc.include.errno
   libc.include.fcntl
   libc.include.limits
+  libc.include.pthread
   libc.include.stdio
   libc.include.stdint
   libc.include.stdlib
@@ -42,6 +45,7 @@ set(SNMALLOC_DEPS
   # symbols
   libc.src.errno.errno
   libc.src.fcntl.open
+  libc.src.pthread.pthread_atfork
   libc.src.stdlib.abort
   libc.src.string.memset
   libc.src.string.strlen
