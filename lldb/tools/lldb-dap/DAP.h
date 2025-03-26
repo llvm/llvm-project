@@ -92,7 +92,7 @@ public:
   void Clear();
 
 private:
-  std::vector<lldb::SBLineEntry> line_entries;
+  llvm::SmallVector<lldb::SBLineEntry> line_entries;
 };
 
 struct Variables {
