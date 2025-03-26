@@ -22,31 +22,41 @@
 
 #if defined(__MVS__)
 #  include <wctype.h>
-// POSIX routines
-#  include <__support/xlocale/__posix_l_fallback.h>
 #endif // defined(__MVS__)
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+#ifdef __MVS__
+#define _LIBCPP_CLOC std::__c_locale()
+#ifndef _LIBCPP_LC_GLOBAL_LOCALE
+#define _LIBCPP_LC_GLOBAL_LOCALE ((locale_t) -1)
+#endif
+#else
+extern locale_t __cloc();
+#define _LIBCPP_CLOC std::__cloc()
+#endif
+_LIBCPP_END_NAMESPACE_STD
+
+#ifdef __MVS__
+_LIBCPP_BEGIN_NAMESPACE_STD
+#endif
 
 namespace {
 
 struct __setAndRestore {
-  explicit __setAndRestore(locale_t locale) {
-    if (locale == (locale_t)0) {
-      __cloc   = newlocale(LC_ALL_MASK, "C", /* base */ (locale_t)0);
-      __stored = uselocale(__cloc);
+  explicit __setAndRestore(locale_t __l) {
+    if (__l == (locale_t)0) {
+      __stored = std::uselocale(_LIBCPP_CLOC);
     } else {
-      __stored = uselocale(locale);
+      __stored = std::uselocale(__l);
     }
   }
 
   ~__setAndRestore() {
-    uselocale(__stored);
-    if (__cloc)
-      freelocale(__cloc);
+    std::uselocale(__stored);
   }
 
 private:
   locale_t __stored = (locale_t)0;
-  locale_t __cloc   = (locale_t)0;
 };
 
 } // namespace
@@ -89,7 +99,11 @@ _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 2, 0) int vasprintf(char** strp, const char
   va_list ap_copy;
   // va_copy may not be provided by the C library in C++03 mode.
 #if defined(_LIBCPP_CXX03_LANG) && __has_builtin(__builtin_va_copy)
+#if defined(__MVS__) && !defined(_VARARG_EXT_)
+  __builtin_zos_va_copy(ap_copy, ap);
+#else
   __builtin_va_copy(ap_copy, ap);
+#endif
 #else
   va_copy(ap_copy, ap);
 #endif
@@ -104,5 +118,9 @@ _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 2, 0) int vasprintf(char** strp, const char
   }
   return str_size;
 }
+
+#ifdef __MVS__
+_LIBCPP_END_NAMESPACE_STD
+#endif
 
 #endif // _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_IBM_H

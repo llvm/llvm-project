@@ -194,9 +194,15 @@ inline _LIBCPP_HIDE_FROM_ABI int __libcpp_thread_detach(__libcpp_thread_t* __t) 
 inline _LIBCPP_HIDE_FROM_ABI void __libcpp_thread_yield() { sched_yield(); }
 
 inline _LIBCPP_HIDE_FROM_ABI void __libcpp_thread_sleep_for(const chrono::nanoseconds& __ns) {
+#ifdef __MVS__
+  #define __LIBCPP_NS __ibm::
+#else
+  #define __LIBCPP_NS
+#endif
   __libcpp_timespec_t __ts = std::__convert_to_timespec<__libcpp_timespec_t>(__ns);
-  while (nanosleep(&__ts, &__ts) == -1 && errno == EINTR)
+  while (__LIBCPP_NS nanosleep(&__ts, &__ts) == -1 && errno == EINTR)
     ;
+#undef __LIBCPP_NS
 }
 
 //
