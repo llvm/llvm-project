@@ -461,7 +461,7 @@ static bool AsanInitInternal() {
     // re-exec without ASLR, which solves most shadow mapping compatibility
     // issues.
   }
-#endif
+#endif  // SANITIZER_POSIX
 
   InitializeShadowMemory();
 
