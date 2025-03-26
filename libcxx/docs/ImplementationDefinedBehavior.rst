@@ -5,7 +5,7 @@ Implementation-defined behavior
 ===============================
 
 This document contains the implementation details of the implementation-defined behavior in libc++.
-The C++ standard mandates that implementation-defined behavior be documented.
+The C++ standard mandates that implementation-defined behavior is documented.
 
 .. note:
    This page is far from complete.
