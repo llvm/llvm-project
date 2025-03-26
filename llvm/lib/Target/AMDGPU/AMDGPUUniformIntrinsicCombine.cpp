@@ -103,38 +103,22 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
 /// Iterates over the Intrinsics use in the function to optimise.
 static bool runUniformIntrinsicCombine(Function &F, const UniformityInfo *UI) {
   Module *M = F.getParent();
-  llvm::LLVMContext &Ctx = M->getContext();
   // List of AMDGPU intrinsics to optimize if their arguments are uniform.
   std::vector<Intrinsic::ID> Intrinsics = {
       Intrinsic::amdgcn_permlane64, Intrinsic::amdgcn_readfirstlane,
       Intrinsic::amdgcn_readlane, Intrinsic::amdgcn_ballot};
 
   bool IsChanged = false;
-  // TODO: Vector types can also be optimized, provided generic way to query
-  // getDeclarationIfExists().
-  SmallVector<Type *, 7> Tys = {
-      Type::getInt16Ty(Ctx),  // i16
-      Type::getInt32Ty(Ctx),  // i32
-      Type::getInt64Ty(Ctx),  // i64
-      Type::getHalfTy(Ctx),   // Float16
-      Type::getFloatTy(Ctx),  // float
-      Type::getDoubleTy(Ctx), // double
-      Type::getBFloatTy(Ctx)  // bfloat16
-  };
-  // Iterate over each intrinsic in the list and process its uses within F.
-  for (Intrinsic::ID IID : Intrinsics) {
-    for (Type *Ty : Tys) {
-      // Check if the intrinsic is declared in the module with the expected
-      // type.
-      if (Function *Intr = Intrinsic::getDeclarationIfExists(M, IID, {Ty})) {
-        // Iterate over all users of the intrinsic.
-        for (User *U : Intr->users()) {
-          // Ensure the user is an intrinsic call within function F.
-          if (auto *II = dyn_cast<IntrinsicInst>(U)) {
-            if (II->getFunction() == &F) {
-              IsChanged |= optimizeUniformIntrinsic(*II, UI);
-            }
-          }
+  for (Function &Func : M->functions()) {
+    // Continue if intrinsic doesn't exists or not in the intrinsic list.
+    Intrinsic::ID IID = Func.getIntrinsicID();
+    if (IID == Intrinsic::not_intrinsic || !llvm::is_contained(Intrinsics, IID))
+      continue;
+
+    for (User *U : Func.users()) {
+      if (auto *II = dyn_cast<IntrinsicInst>(U)) {
+        if (II->getFunction() == &F) {
+          IsChanged |= optimizeUniformIntrinsic(*II, UI);
         }
       }
     }
@@ -151,9 +135,6 @@ public:
   }
   bool runOnFunction(Function &F) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<UniformityInfoWrapperPass>();
-    AU.addRequired<TargetPassConfig>();
     AU.addPreserved<UniformityInfoWrapperPass>();
   }
 };
