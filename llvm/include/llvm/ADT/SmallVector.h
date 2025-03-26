@@ -1238,6 +1238,11 @@ public:
       SmallVectorImpl<T>::operator=(RHS);
   }
 
+  SmallVector(const SmallVectorImpl<T> &RHS) : SmallVectorImpl<T>(N) {
+    if (!RHS.empty())
+      SmallVectorImpl<T>::operator=(RHS);
+  }
+
   SmallVector &operator=(const SmallVector &RHS) {
     SmallVectorImpl<T>::operator=(RHS);
     return *this;
