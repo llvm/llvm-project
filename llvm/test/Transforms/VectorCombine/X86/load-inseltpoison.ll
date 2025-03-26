@@ -252,8 +252,7 @@ define <4 x i32> @unsafe_load_i32_insert_v4i32_addrspace(ptr align 16 dereferenc
 define <8 x i16> @gep01_load_i16_insert_v8i16(ptr align 16 dereferenceable(18) %p) nofree nosync {
 ; CHECK-LABEL: @gep01_load_i16_insert_v8i16(
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i64 0, i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[GEP]], align 2
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[R:%.*]] = load <8 x i16>, ptr [[GEP]], align 2
 ; CHECK-NEXT:    ret <8 x i16> [[R]]
 ;
   %gep = getelementptr inbounds <8 x i16>, ptr %p, i64 0, i64 1
@@ -341,8 +340,7 @@ define <4 x i32> @gep013_bitcast_load_i32_insert_v4i32(ptr align 1 dereferenceab
 define <8 x i16> @gep10_load_i16_insert_v8i16(ptr align 16 dereferenceable(32) %p) nofree nosync {
 ; CHECK-LABEL: @gep10_load_i16_insert_v8i16(
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i64 1, i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[GEP]], align 16
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[R:%.*]] = load <8 x i16>, ptr [[GEP]], align 16
 ; CHECK-NEXT:    ret <8 x i16> [[R]]
 ;
   %gep = getelementptr inbounds <8 x i16>, ptr %p, i64 1, i64 0
@@ -577,8 +575,8 @@ define <8 x i32> @load_v1i32_extract_insert_v8i32_extra_use(ptr align 16 derefer
 ; CHECK-LABEL: @load_v1i32_extract_insert_v8i32_extra_use(
 ; CHECK-NEXT:    [[L:%.*]] = load <1 x i32>, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    store <1 x i32> [[L]], ptr [[STORE_PTR:%.*]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x i32>, ptr [[P]], align 4
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <1 x i32> [[TMP1]], <1 x i32> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <1 x i32> [[L]], <1 x i32> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <8 x i32> [[R]]
 ;
   %l = load <1 x i32>, ptr %p, align 4
