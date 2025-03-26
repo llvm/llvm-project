@@ -239,7 +239,7 @@ Mapping between the hardening modes and the assertion categories
 
 .. note::
 
-  The categories enabled by each mode are subject to change: users should not
+  The categories enabled by each mode are subject to change. Users should not
   rely on the precise assertions enabled by a mode at a given point in time.
   However, the library does guarantee to keep the hardening modes stable and
   to fulfill the semantics documented here.
