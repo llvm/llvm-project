@@ -239,10 +239,12 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpOperand &consumerOpOperand) {
 
 /// Create tensor.collapse_shape to drop dimensions in `dropDims` in tensor
 /// `from`.
-static tensor::CollapseShapeOp collapseTo(OpBuilder &b, Location loc, Value from,
-                                          const llvm::SmallBitVector &dropDims) {
+static tensor::CollapseShapeOp
+collapseTo(OpBuilder &b, Location loc, Value from,
+           const llvm::SmallBitVector &dropDims) {
   auto fromType = cast<ShapedType>(from.getType());
-  assert(fromType.getRank() == dropDims.size() && "dropDims dimension does not match from tensor rank");
+  assert(fromType.getRank() == dropDims.size() &&
+         "dropDims dimension does not match from tensor rank");
   // Computed reassociation map for the corresponding tensor.collapse_shape.
   SmallVector<ReassociationIndices, 2> reassocIdxsVec;
   // Current reassociation indices to add dropped dimension to.
