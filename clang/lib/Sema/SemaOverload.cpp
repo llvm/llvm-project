@@ -5419,7 +5419,7 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
   //   the argument expression. Any difference in top-level
   //   cv-qualification is subsumed by the initialization itself
   //   and does not constitute a conversion.
-  ICS = TryImplicitConversion(S, Init, T1, SuppressUserConversions,
+  ICS = TryImplicitConversion(S, Init, DeclType, SuppressUserConversions,
                               AllowedExplicit::None,
                               /*InOverloadResolution=*/false,
                               /*CStyle=*/false,
