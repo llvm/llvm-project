@@ -173,6 +173,9 @@ void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
   CmdArgs.push_back("-X");
 
+  if (ToolChain.getTriple().getVendor() == llvm::Triple::MipsTechnologies)
+    CmdArgs.push_back("-EL");
+
   std::string Linker = getToolChain().GetLinkerPath();
 
   bool WantCRTs =
@@ -229,4 +232,5 @@ void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       JA, *this, ResponseFileSupport::AtFileCurCP(), Args.MakeArgString(Linker),
       CmdArgs, Inputs, Output));
 }
+
 // RISCV tools end.

@@ -402,6 +402,11 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Arch == llvm::Triple::aarch64_be ? "-EB" : "-EL");
   }
 
+  if (Triple.isRISCV() &&
+      Triple.getVendor() == llvm::Triple::MipsTechnologies) {
+    CmdArgs.push_back("-EL");
+  }
+
   // Most Android ARM64 targets should enable the linker fix for erratum
   // 843419. Only non-Cortex-A53 devices are allowed to skip this flag.
   if (Arch == llvm::Triple::aarch64 && (isAndroid || isOHOSFamily)) {
@@ -765,7 +770,8 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
   }
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64: {
-    StringRef ABIName = riscv::getRISCVABI(Args, getToolChain().getTriple());
+    const llvm::Triple &Triple = getToolChain().getTriple();
+    StringRef ABIName = riscv::getRISCVABI(Args, Triple);
     CmdArgs.push_back("-mabi");
     CmdArgs.push_back(ABIName.data());
     std::string MArchName =
@@ -774,6 +780,10 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
     CmdArgs.push_back(Args.MakeArgString(MArchName));
     if (!Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax, true))
       Args.addOptOutFlag(CmdArgs, options::OPT_mrelax, options::OPT_mno_relax);
+
+    if (Triple.getVendor() == llvm::Triple::MipsTechnologies)
+      CmdArgs.push_back("-EL");
+
     break;
   }
   case llvm::Triple::sparc:
@@ -1824,9 +1834,19 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
             .flag(Twine("-march=", Element.march).str())
             .flag(Twine("-mabi=", Element.mabi).str()));
   }
+  SmallVector<MultilibBuilder, 2> Endian;
+  bool IsMIPS = TargetTriple.getVendor() == llvm::Triple::MipsTechnologies;
+  if (IsMIPS) {
+    Endian.push_back(
+        MultilibBuilder("/riscv").flag("-EL").flag("-EB", /*Disallow=*/true));
+    Endian.push_back(
+        MultilibBuilder("/riscveb").flag("-EB").flag("-EL", /*Disallow=*/true));
+  }
   MultilibSet RISCVMultilibs =
       MultilibSetBuilder()
           .Either(Ms)
+          .Either(Endian)
+          .Either(ArrayRef<MultilibBuilder>(Ms))
           .makeMultilibSet()
           .FilterOut(NonExistent)
           .setFilePathsCallback([](const Multilib &M) {
@@ -1849,6 +1869,8 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
                       Twine("-mabi=", Element.mabi).str().c_str(), Flags);
     }
   }
+
+  addMultilibFlag(IsMIPS, "-EL", Flags);
 
   if (selectRISCVMultilib(D, RISCVMultilibs, MArch, Flags,
                           Result.SelectedMultilibs))
@@ -1874,8 +1896,18 @@ static void findRISCVMultilibs(const Driver &D,
       MultilibBuilder("lib64/lp64f").flag("-m64").flag("-mabi=lp64f");
   MultilibBuilder Lp64d =
       MultilibBuilder("lib64/lp64d").flag("-m64").flag("-mabi=lp64d");
+
+  SmallVector<MultilibBuilder, 2> Endian;
+  if (TargetTriple.getVendor() == llvm::Triple::MipsTechnologies) {
+    Endian.push_back(
+        MultilibBuilder("/riscv").flag("-EL").flag("-EB", /*Disallow=*/true));
+    Endian.push_back(
+        MultilibBuilder("/riscveb").flag("-EB").flag("-EL", /*Disallow=*/true));
+  }
+
   MultilibSet RISCVMultilibs =
       MultilibSetBuilder()
+          .Either(Endian)
           .Either({Ilp32, Ilp32f, Ilp32d, Lp64, Lp64f, Lp64d})
           .makeMultilibSet()
           .FilterOut(NonExistent);
@@ -1883,6 +1915,7 @@ static void findRISCVMultilibs(const Driver &D,
   Multilib::flags_list Flags;
   bool IsRV64 = TargetTriple.getArch() == llvm::Triple::riscv64;
   StringRef ABIName = tools::riscv::getRISCVABI(Args, TargetTriple);
+  bool IsMIPS = TargetTriple.getVendor() == llvm::Triple::MipsTechnologies;
 
   addMultilibFlag(!IsRV64, "-m32", Flags);
   addMultilibFlag(IsRV64, "-m64", Flags);
@@ -1892,6 +1925,7 @@ static void findRISCVMultilibs(const Driver &D,
   addMultilibFlag(ABIName == "lp64", "-mabi=lp64", Flags);
   addMultilibFlag(ABIName == "lp64f", "-mabi=lp64f", Flags);
   addMultilibFlag(ABIName == "lp64d", "-mabi=lp64d", Flags);
+  addMultilibFlag(IsMIPS, "-EL", Flags);
 
   if (RISCVMultilibs.select(D, Flags, Result.SelectedMultilibs))
     Result.Multilibs = RISCVMultilibs;
@@ -2516,8 +2550,8 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
   static const char *const RISCV32Triples[] = {"riscv32-unknown-linux-gnu",
                                                "riscv32-unknown-elf"};
   static const char *const RISCV64LibDirs[] = {"/lib64", "/lib"};
-  static const char *const RISCV64Triples[] = {"riscv64-unknown-linux-gnu",
-                                               "riscv64-unknown-elf"};
+  static const char *const RISCV64Triples[] = {
+      "riscv64-unknown-linux-gnu", "riscv64-unknown-elf", "riscv64-mti-elf"};
 
   static const char *const SPARCv8LibDirs[] = {"/lib32", "/lib"};
   static const char *const SPARCv8Triples[] = {"sparc-linux-gnu",
