@@ -30,6 +30,7 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/InstructionCost.h"
+#include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
 #include <functional>
 #include <optional>
 #include <utility>
@@ -1664,6 +1665,9 @@ public:
   /// if false is returned.
   bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info) const;
 
+  /// \Overload function of getTgtMemIntrinsic for Asan instrumentation.
+  bool getTgtMemIntrinsicOperand(IntrinsicInst *Inst, SmallVectorImpl<InterestingMemoryOperand> &Interesting) const; 
+
   /// \returns The maximum element size, in bytes, for an element
   /// unordered-atomic memory intrinsic.
   unsigned getAtomicMemIntrinsicMaxElementSize() const;
@@ -2285,6 +2289,8 @@ public:
   getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) = 0;
   virtual bool getTgtMemIntrinsic(IntrinsicInst *Inst,
                                   MemIntrinsicInfo &Info) = 0;
+  virtual bool getTgtMemIntrinsicOperand(IntrinsicInst *Inst,
+                                  SmallVectorImpl<InterestingMemoryOperand> &Interesting) = 0;
   virtual unsigned getAtomicMemIntrinsicMaxElementSize() const = 0;
   virtual Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
                                                    Type *ExpectedType) = 0;
@@ -3055,6 +3061,10 @@ public:
   bool getTgtMemIntrinsic(IntrinsicInst *Inst,
                           MemIntrinsicInfo &Info) override {
     return Impl.getTgtMemIntrinsic(Inst, Info);
+  }
+  bool getTgtMemIntrinsicOperand(IntrinsicInst *Inst,
+                          SmallVectorImpl<InterestingMemoryOperand> &Interesting) override {
+    return Impl.getTgtMemIntrinsicOperand(Inst, Interesting);
   }
   unsigned getAtomicMemIntrinsicMaxElementSize() const override {
     return Impl.getAtomicMemIntrinsicMaxElementSize();

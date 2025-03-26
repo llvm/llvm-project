@@ -1273,6 +1273,11 @@ bool TargetTransformInfo::getTgtMemIntrinsic(IntrinsicInst *Inst,
   return TTIImpl->getTgtMemIntrinsic(Inst, Info);
 }
 
+bool TargetTransformInfo::getTgtMemIntrinsicOperand(IntrinsicInst *Inst,
+                                             SmallVectorImpl<InterestingMemoryOperand> &Interesting) const {
+  return TTIImpl->getTgtMemIntrinsicOperand(Inst, Interesting);
+}
+
 unsigned TargetTransformInfo::getAtomicMemIntrinsicMaxElementSize() const {
   return TTIImpl->getAtomicMemIntrinsicMaxElementSize();
 }
