@@ -23,7 +23,7 @@ bool already_moved = false;
 
 template <class It, class ItTraits = It >
 class ThrowOnMoveIterator {
-  typedef std::iterator_traits<ItTraits> Traits;
+  using Traits = std::iterator_traits<ItTraits>;
   It it_;
   support::double_move_tracker tracker_;
 
@@ -31,11 +31,11 @@ class ThrowOnMoveIterator {
   friend class ThrowOnMoveIterator;
 
 public:
-  typedef std::input_iterator_tag iterator_category;
-  typedef typename Traits::value_type value_type;
-  typedef typename Traits::difference_type difference_type;
-  typedef It pointer;
-  typedef typename Traits::reference reference;
+  using iterator_category = std::input_iterator_tag;
+  using value_type        = typename Traits::value_type;
+  using difference_type   = typename Traits::difference_type;
+  using pointer           = It;
+  using eference          = typename Traits::reference;
 
   constexpr ThrowOnMoveIterator() {}
 
