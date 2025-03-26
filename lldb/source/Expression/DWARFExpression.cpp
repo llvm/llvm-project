@@ -614,8 +614,8 @@ static bool IsAsyncRegCtxExpr(DataExtractor &opcodes,
 /// CFA of the frame.
 static llvm::Expected<Value> SwiftAsyncEvaluate_DW_OP_entry_value(
     ExecutionContext &exe_ctx, StackFrame &current_frame,
-    const DWARFUnit *dwarf_cu, Function &func, const DataExtractor &opcodes,
-    offset_t &current_offset) {
+    const DWARFExpression::Delegate *dwarf_cu, Function &func,
+    const DataExtractor &opcodes, offset_t &current_offset) {
   auto func_name = func.GetMangled().GetMangledName();
   if (!SwiftLanguageRuntime::IsAnySwiftAsyncFunctionSymbol(func_name))
     return llvm::createStringError(
@@ -661,11 +661,10 @@ static llvm::Expected<Value> SwiftAsyncEvaluate_DW_OP_entry_value(
 }
 #endif // LLDB_ENABLE_SWIFT
 
-static llvm::Error
-Evaluate_DW_OP_entry_value(std::vector<Value> &stack, const DWARFExpression::Delegate* dwarf_cu,
-                           ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
-                           const DataExtractor &opcodes,
-                           lldb::offset_t &opcode_offset, Log *log) {
+static llvm::Error Evaluate_DW_OP_entry_value(
+    std::vector<Value> &stack, const DWARFExpression::Delegate *dwarf_cu,
+    ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
+    const DataExtractor &opcodes, lldb::offset_t &opcode_offset, Log *log) {
   // DW_OP_entry_value(sub-expr) describes the location a variable had upon
   // function entry: this variable location is presumed to be optimized out at
   // the current PC value.  The caller of the function may have call site
