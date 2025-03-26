@@ -31,3 +31,13 @@ void testFloatingPointBinOps(float a, float b) {
   a - b;
   // CHECK: cir.binop(sub, %{{.+}}, %{{.+}}) : !cir.float
 }
+
+void testPointerArith(int *a, int *b, int c) {
+  auto add = a + c;
+  // CHECK: cir.load %{{.+}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  // CHECK: cir.store %{{.+}}, %{{.+}} : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+
+  auto sub = a - c;
+  // CHECK: cir.load %{{.+}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+  // CHECK: cir.store %{{.+}}, %{{.+}} : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+}
