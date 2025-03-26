@@ -89,7 +89,7 @@ int main(int, char**) {
     m = M(std::sorted_equivalent, std::move(ks), std::move(vs));
     assert(ks.empty()); // it was moved-from
     assert(vs.empty()); // it was moved-from
-    assert((m == M{{1, 2}, {1, 3}, {1, 4}, {10, 1}}));
+    assert((m == M{{1, '2'}, {1, '3'}, {1, '4'}, {10, '1'}}));
   }
   {
     // flat_multimap(sorted_equivalent_t, key_container_type , mapped_container_type)
