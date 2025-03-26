@@ -137,15 +137,14 @@ TEST_F(SPIRVTypeAnalysisTest, ScalarAllocaFloat) {
 
 TEST_F(SPIRVTypeAnalysisTest, AllocaArray) {
   StringRef Assembly = R"(
-    define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
+    define void @foo() {
       %test = alloca [5 x i32]
       ret void
     }
   )";
 
   auto TI = runAnalysis(Assembly);
-  EXPECT_EQ(TI.getType(getValue("test")),
-            TypedPointerType::get(ArrayType::get(IntTy, 5), 0));
+  EXPECT_EQ(TI.getType(getValue("test")), ArrayType::get(IntTy, 5));
 }
 
 TEST_F(SPIRVTypeAnalysisTest, AllocaArrayArray) {
@@ -158,8 +157,7 @@ TEST_F(SPIRVTypeAnalysisTest, AllocaArrayArray) {
 
   auto TI = runAnalysis(Assembly);
   EXPECT_EQ(
-      TI.getType(getValue("test")),
-      TypedPointerType::get(ArrayType::get(ArrayType::get(IntTy, 10), 5), 0));
+      TI.getType(getValue("test")), ArrayType::get(ArrayType::get(IntTy, 10), 5));
 }
 
 TEST_F(SPIRVTypeAnalysisTest, AllocaVector) {
@@ -184,14 +182,12 @@ TEST_F(SPIRVTypeAnalysisTest, AllocaArrayVector) {
   )";
 
   auto TI = runAnalysis(Assembly);
-  EXPECT_EQ(TI.getType(getValue("test")),
-            TypedPointerType::get(
-                ArrayType::get(VectorType::get(IntTy, 4, false), 5), 0));
+  EXPECT_EQ(TI.getType(getValue("test")), ArrayType::get(VectorType::get(IntTy, 4, false), 5));
 }
 
 TEST_F(SPIRVTypeAnalysisTest, AllocaLoad) {
   StringRef Assembly = R"(
-    define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
+    define void @foo() {
       %test = alloca [5 x <4 x i32>]
       %v = load <4 x i32>, ptr %test
       ret void
@@ -201,29 +197,29 @@ TEST_F(SPIRVTypeAnalysisTest, AllocaLoad) {
   auto TI = runAnalysis(Assembly);
   auto VT = VectorType::get(IntegerType::get(M->getContext(), 32), 4,
                             /* scalable= */ false);
-  EXPECT_EQ(TI.getType(getValue("test")),
-            TypedPointerType::get(ArrayType::get(VT, 5), 0));
+  EXPECT_EQ(TI.getType(getValue("test")), ArrayType::get(VT, 5));
   EXPECT_EQ(TI.getType(getValue("v")), VT);
 }
 
 TEST_F(SPIRVTypeAnalysisTest, AllocaPtrIndirectDeduction) {
   StringRef Assembly = R"(
-    define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
-      %v = alloca ptr
-      %l = load i32, ptr %v
+    define void @foo() {
+      %a = alloca ptr
+      %b = load ptr, ptr %a
+      %c = load i32, ptr %b
       ret void
     }
   )";
 
   auto TI = runAnalysis(Assembly);
-  EXPECT_EQ(TI.getType(getValue("v")),
-            TypedPointerType::get(IntTy, /* AS= */ 0));
-  EXPECT_EQ(TI.getType(getValue("l")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("a")), TypedPointerType::get(TypedPointerType::get(IntTy, /* AS= */ 0), /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("b")), TypedPointerType::get(IntTy, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("c")), IntTy);
 }
 
 TEST_F(SPIRVTypeAnalysisTest, AllocaPtrNestedIndirectDeduction) {
   StringRef Assembly = R"(
-    define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
+    define void @foo() {
       %v = alloca ptr
       %l1 = load ptr, ptr %v
       %l2 = load ptr, ptr %l1
@@ -249,7 +245,7 @@ TEST_F(SPIRVTypeAnalysisTest, AllocaPtrNestedIndirectDeduction) {
 
 TEST_F(SPIRVTypeAnalysisTest, AllocaLoadArrayPtr) {
   StringRef Assembly = R"(
-    define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
+    define void @foo() {
       ; %ptr_array = alloca [5 x *i32]
       %ptr_array = alloca [5 x ptr]
       %l1 = load ptr, ptr %ptr_array
@@ -262,16 +258,46 @@ TEST_F(SPIRVTypeAnalysisTest, AllocaLoadArrayPtr) {
 
   EXPECT_EQ(TI.getType(getValue("ptr_array")),
             ArrayType::get(TypedPointerType::get(IntTy, /* AS= */ 0), 5));
-  EXPECT_EQ(TI.getType(getValue("l1")),
-            TypedPointerType::get(IntTy, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("l1")), TypedPointerType::get(IntTy, /* AS= */ 0));
   EXPECT_EQ(TI.getType(getValue("l2")), IntTy);
 }
 
 TEST_F(SPIRVTypeAnalysisTest, AllocaStruct) {
   StringRef Assembly = R"(
+    define void @foo() {
+      %a = alloca {i32, i32}
+      %b = load i32, ptr %a
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+
+  EXPECT_EQ(TI.getType(getValue("a")), TypedPointerType::get(StructType::get(IntTy, IntTy), /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("b")), IntTy);
+}
+
+TEST_F(SPIRVTypeAnalysisTest, AllocaStructPartiallyOpaque) {
+  StringRef Assembly = R"(
+    define void @foo() {
+      %a = alloca {ptr, i32}
+      %b = load ptr, ptr %a
+      %c = load i32, ptr %b
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+
+  EXPECT_EQ(TI.getType(getValue("a")), TypedPointerType::get(StructType::get(TypedPointerType::get(IntTy, /* AS= */ 0), IntTy), /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("b")), TypedPointerType::get(IntTy, /* AS= */ 0));
+}
+
+TEST_F(SPIRVTypeAnalysisTest, AllocaNamedStruct) {
+  StringRef Assembly = R"(
     %st = type { i32 }
 
-    define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
+    define void @foo() {
       %var = alloca %st
       %l = load %st, ptr %var
       ret void
