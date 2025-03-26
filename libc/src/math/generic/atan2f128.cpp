@@ -93,12 +93,14 @@ static constexpr Float128 CONST_ADJ[2][2][2] = {
 // For the accurate pass, we use the addition formula:
 //   atan( n/d ) - atan( idx/64 ) = atan( (n/d - idx/64)/(1 + (n*idx)/(64*d)) )
 //                                = atan( (n - d*(idx/64))/(d + n*(idx/64)) )
-// And for the fast pass, we use degree-9 Taylor polynomial to compute the RHS:
-//   atan(u) ~ P(u) = u - u^3/3 + u^5/5 - u^7/7 + u^9/9
+// And for the fast pass, we use degree-13 minimax polynomial to compute the
+// RHS:
+//   atan(u) ~ P(u) = u - c_3 * u^3 + c_5 * u^5 - c_7 * u^7 + c_9 *u^9 -
+//                    - c_11 * u^11 + c_13 * u^13
 // with absolute errors bounded by:
-//   |atan(u) - P(u)| < |u|^11 / 11 < 2^-80
+//   |atan(u) - P(u)| < 2^-121
 // and relative errors bounded by:
-//   |(atan(u) - P(u)) / P(u)| < u^10 / 11 < 2^-73.
+//   |(atan(u) - P(u)) / P(u)| < 2^-114.
 
 LLVM_LIBC_FUNCTION(float128, atan2f128, (float128 y, float128 x)) {
   using FPBits = fputil::FPBits<float128>;
