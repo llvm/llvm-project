@@ -106,7 +106,7 @@ TEST(OnDiskCASLoggerTest, MultiThread) {
                     Succeeded());
 
   for (int I = 0; I < 10; ++I) {
-    Pool.async([&] {
+    Pool.async([I, &SharedLogger, &Dir] {
       std::unique_ptr<OnDiskCASLogger> OwnedLogger;
       OnDiskCASLogger *Logger;
       // Mix using a shared instance and opening new instances in the same log.
