@@ -338,7 +338,7 @@ public:
   bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) override;
 
   static bool classifySymbolRef(const MCExpr *Expr,
-                                AArch64MCExpr::VariantKind &ELFRefKind,
+                                AArch64MCExpr::Specifier &ELFSpec,
                                 MCSymbolRefExpr::VariantKind &DarwinRefKind,
                                 int64_t &Addend);
 };
@@ -888,30 +888,26 @@ public:
   }
 
   bool isSymbolicUImm12Offset(const MCExpr *Expr) const {
-    AArch64MCExpr::VariantKind ELFRefKind;
+    AArch64MCExpr::Specifier ELFSpec;
     MCSymbolRefExpr::VariantKind DarwinRefKind;
     int64_t Addend;
-    if (!AArch64AsmParser::classifySymbolRef(Expr, ELFRefKind, DarwinRefKind,
-                                           Addend)) {
+    if (!AArch64AsmParser::classifySymbolRef(Expr, ELFSpec, DarwinRefKind,
+                                             Addend)) {
       // If we don't understand the expression, assume the best and
       // let the fixup and relocation code deal with it.
       return true;
     }
 
     if (DarwinRefKind == MCSymbolRefExpr::VK_PAGEOFF ||
-        ELFRefKind == AArch64MCExpr::VK_LO12 ||
-        ELFRefKind == AArch64MCExpr::VK_GOT_LO12 ||
-        ELFRefKind == AArch64MCExpr::VK_GOT_AUTH_LO12 ||
-        ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12 ||
-        ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12_NC ||
-        ELFRefKind == AArch64MCExpr::VK_TPREL_LO12 ||
-        ELFRefKind == AArch64MCExpr::VK_TPREL_LO12_NC ||
-        ELFRefKind == AArch64MCExpr::VK_GOTTPREL_LO12_NC ||
-        ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12 ||
-        ELFRefKind == AArch64MCExpr::VK_TLSDESC_AUTH_LO12 ||
-        ELFRefKind == AArch64MCExpr::VK_SECREL_LO12 ||
-        ELFRefKind == AArch64MCExpr::VK_SECREL_HI12 ||
-        ELFRefKind == AArch64MCExpr::VK_GOT_PAGE_LO15) {
+        llvm::is_contained(
+            {AArch64MCExpr::VK_LO12, AArch64MCExpr::VK_GOT_LO12,
+             AArch64MCExpr::VK_GOT_AUTH_LO12, AArch64MCExpr::VK_DTPREL_LO12,
+             AArch64MCExpr::VK_DTPREL_LO12_NC, AArch64MCExpr::VK_TPREL_LO12,
+             AArch64MCExpr::VK_TPREL_LO12_NC,
+             AArch64MCExpr::VK_GOTTPREL_LO12_NC, AArch64MCExpr::VK_TLSDESC_LO12,
+             AArch64MCExpr::VK_TLSDESC_AUTH_LO12, AArch64MCExpr::VK_SECREL_LO12,
+             AArch64MCExpr::VK_SECREL_HI12, AArch64MCExpr::VK_GOT_PAGE_LO15},
+            ELFSpec)) {
       // Note that we don't range-check the addend. It's adjusted modulo page
       // size when converted, so there is no "out of range" condition when using
       // @pageoff.
@@ -1009,26 +1005,24 @@ public:
       Expr = getImm();
     }
 
-    AArch64MCExpr::VariantKind ELFRefKind;
+    AArch64MCExpr::Specifier ELFSpec;
     MCSymbolRefExpr::VariantKind DarwinRefKind;
     int64_t Addend;
-    if (AArch64AsmParser::classifySymbolRef(Expr, ELFRefKind,
-                                          DarwinRefKind, Addend)) {
+    if (AArch64AsmParser::classifySymbolRef(Expr, ELFSpec, DarwinRefKind,
+                                            Addend)) {
       return DarwinRefKind == MCSymbolRefExpr::VK_PAGEOFF ||
              DarwinRefKind == MCSymbolRefExpr::VK_TLVPPAGEOFF ||
              (DarwinRefKind == MCSymbolRefExpr::VK_GOTPAGEOFF && Addend == 0) ||
-             ELFRefKind == AArch64MCExpr::VK_LO12 ||
-             ELFRefKind == AArch64MCExpr::VK_GOT_AUTH_LO12 ||
-             ELFRefKind == AArch64MCExpr::VK_DTPREL_HI12 ||
-             ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12 ||
-             ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12_NC ||
-             ELFRefKind == AArch64MCExpr::VK_TPREL_HI12 ||
-             ELFRefKind == AArch64MCExpr::VK_TPREL_LO12 ||
-             ELFRefKind == AArch64MCExpr::VK_TPREL_LO12_NC ||
-             ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12 ||
-             ELFRefKind == AArch64MCExpr::VK_TLSDESC_AUTH_LO12 ||
-             ELFRefKind == AArch64MCExpr::VK_SECREL_HI12 ||
-             ELFRefKind == AArch64MCExpr::VK_SECREL_LO12;
+             llvm::is_contained(
+                 {AArch64MCExpr::VK_LO12, AArch64MCExpr::VK_GOT_AUTH_LO12,
+                  AArch64MCExpr::VK_DTPREL_HI12, AArch64MCExpr::VK_DTPREL_LO12,
+                  AArch64MCExpr::VK_DTPREL_LO12_NC,
+                  AArch64MCExpr::VK_TPREL_HI12, AArch64MCExpr::VK_TPREL_LO12,
+                  AArch64MCExpr::VK_TPREL_LO12_NC,
+                  AArch64MCExpr::VK_TLSDESC_LO12,
+                  AArch64MCExpr::VK_TLSDESC_AUTH_LO12,
+                  AArch64MCExpr::VK_SECREL_HI12, AArch64MCExpr::VK_SECREL_LO12},
+                 ELFSpec);
     }
 
     // If it's a constant, it should be a real immediate in range.
@@ -1121,22 +1115,21 @@ public:
     return (Val >= -((1<<(N-1)) << 2) && Val <= (((1<<(N-1))-1) << 2));
   }
 
-  bool
-  isMovWSymbol(ArrayRef<AArch64MCExpr::VariantKind> AllowedModifiers) const {
+  bool isMovWSymbol(ArrayRef<AArch64MCExpr::Specifier> AllowedModifiers) const {
     if (!isImm())
       return false;
 
-    AArch64MCExpr::VariantKind ELFRefKind;
+    AArch64MCExpr::Specifier ELFSpec;
     MCSymbolRefExpr::VariantKind DarwinRefKind;
     int64_t Addend;
-    if (!AArch64AsmParser::classifySymbolRef(getImm(), ELFRefKind,
-                                             DarwinRefKind, Addend)) {
+    if (!AArch64AsmParser::classifySymbolRef(getImm(), ELFSpec, DarwinRefKind,
+                                             Addend)) {
       return false;
     }
     if (DarwinRefKind != MCSymbolRefExpr::VK_None)
       return false;
 
-    return llvm::is_contained(AllowedModifiers, ELFRefKind);
+    return llvm::is_contained(AllowedModifiers, ELFSpec);
   }
 
   bool isMovWSymbolG3() const {
@@ -3303,12 +3296,12 @@ ParseStatus AArch64AsmParser::tryParseAdrpLabel(OperandVector &Operands) {
   if (parseSymbolicImmVal(Expr))
     return ParseStatus::Failure;
 
-  AArch64MCExpr::VariantKind ELFRefKind;
+  AArch64MCExpr::Specifier ELFSpec;
   MCSymbolRefExpr::VariantKind DarwinRefKind;
   int64_t Addend;
-  if (classifySymbolRef(Expr, ELFRefKind, DarwinRefKind, Addend)) {
+  if (classifySymbolRef(Expr, ELFSpec, DarwinRefKind, Addend)) {
     if (DarwinRefKind == MCSymbolRefExpr::VK_None &&
-        ELFRefKind == AArch64MCExpr::VK_INVALID) {
+        ELFSpec == AArch64MCExpr::VK_INVALID) {
       // No modifier was specified at all; this is the syntax for an ELF basic
       // ADRP relocation (unfortunately).
       Expr =
@@ -3320,13 +3313,13 @@ ParseStatus AArch64AsmParser::tryParseAdrpLabel(OperandVector &Operands) {
     } else if (DarwinRefKind != MCSymbolRefExpr::VK_PAGE &&
                DarwinRefKind != MCSymbolRefExpr::VK_GOTPAGE &&
                DarwinRefKind != MCSymbolRefExpr::VK_TLVPPAGE &&
-               ELFRefKind != AArch64MCExpr::VK_ABS_PAGE_NC &&
-               ELFRefKind != AArch64MCExpr::VK_GOT_PAGE &&
-               ELFRefKind != AArch64MCExpr::VK_GOT_AUTH_PAGE &&
-               ELFRefKind != AArch64MCExpr::VK_GOT_PAGE_LO15 &&
-               ELFRefKind != AArch64MCExpr::VK_GOTTPREL_PAGE &&
-               ELFRefKind != AArch64MCExpr::VK_TLSDESC_PAGE &&
-               ELFRefKind != AArch64MCExpr::VK_TLSDESC_AUTH_PAGE) {
+               ELFSpec != AArch64MCExpr::VK_ABS_PAGE_NC &&
+               ELFSpec != AArch64MCExpr::VK_GOT_PAGE &&
+               ELFSpec != AArch64MCExpr::VK_GOT_AUTH_PAGE &&
+               ELFSpec != AArch64MCExpr::VK_GOT_PAGE_LO15 &&
+               ELFSpec != AArch64MCExpr::VK_GOTTPREL_PAGE &&
+               ELFSpec != AArch64MCExpr::VK_TLSDESC_PAGE &&
+               ELFSpec != AArch64MCExpr::VK_TLSDESC_AUTH_PAGE) {
       // The operand must be an @page or @gotpage qualified symbolref.
       return Error(S, "page or gotpage label reference expected");
     }
@@ -3357,16 +3350,16 @@ ParseStatus AArch64AsmParser::tryParseAdrLabel(OperandVector &Operands) {
   if (parseSymbolicImmVal(Expr))
     return ParseStatus::Failure;
 
-  AArch64MCExpr::VariantKind ELFRefKind;
+  AArch64MCExpr::Specifier ELFSpec;
   MCSymbolRefExpr::VariantKind DarwinRefKind;
   int64_t Addend;
-  if (classifySymbolRef(Expr, ELFRefKind, DarwinRefKind, Addend)) {
+  if (classifySymbolRef(Expr, ELFSpec, DarwinRefKind, Addend)) {
     if (DarwinRefKind == MCSymbolRefExpr::VK_None &&
-        ELFRefKind == AArch64MCExpr::VK_INVALID) {
+        ELFSpec == AArch64MCExpr::VK_INVALID) {
       // No modifier was specified at all; this is the syntax for an ELF basic
       // ADR relocation (unfortunately).
       Expr = AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS, getContext());
-    } else if (ELFRefKind != AArch64MCExpr::VK_GOT_AUTH_PAGE) {
+    } else if (ELFSpec != AArch64MCExpr::VK_GOT_AUTH_PAGE) {
       // For tiny code model, we use :got_auth: operator to fill 21-bit imm of
       // adr. It's not actually GOT entry page address but the GOT address
       // itself - we just share the same variant kind with :got_auth: operator
@@ -4407,7 +4400,7 @@ bool AArch64AsmParser::parseRegister(OperandVector &Operands) {
 
 bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
   bool HasELFModifier = false;
-  AArch64MCExpr::VariantKind RefKind;
+  AArch64MCExpr::Specifier RefKind;
 
   if (parseOptionalToken(AsmToken::Colon)) {
     HasELFModifier = true;
@@ -4417,7 +4410,7 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
 
     std::string LowerCase = getTok().getIdentifier().lower();
     RefKind =
-        StringSwitch<AArch64MCExpr::VariantKind>(LowerCase)
+        StringSwitch<AArch64MCExpr::Specifier>(LowerCase)
             .Case("lo12", AArch64MCExpr::VK_LO12)
             .Case("abs_g3", AArch64MCExpr::VK_ABS_G3)
             .Case("abs_g2", AArch64MCExpr::VK_ABS_G2)
@@ -5823,10 +5816,10 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
     // some slight duplication here.
     if (Inst.getOperand(2).isExpr()) {
       const MCExpr *Expr = Inst.getOperand(2).getExpr();
-      AArch64MCExpr::VariantKind ELFRefKind;
+      AArch64MCExpr::Specifier ELFSpec;
       MCSymbolRefExpr::VariantKind DarwinRefKind;
       int64_t Addend;
-      if (classifySymbolRef(Expr, ELFRefKind, DarwinRefKind, Addend)) {
+      if (classifySymbolRef(Expr, ELFSpec, DarwinRefKind, Addend)) {
 
         // Only allow these with ADDXri.
         if ((DarwinRefKind == MCSymbolRefExpr::VK_PAGEOFF ||
@@ -5835,18 +5828,15 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
           return false;
 
         // Only allow these with ADDXri/ADDWri
-        if ((ELFRefKind == AArch64MCExpr::VK_LO12 ||
-             ELFRefKind == AArch64MCExpr::VK_GOT_AUTH_LO12 ||
-             ELFRefKind == AArch64MCExpr::VK_DTPREL_HI12 ||
-             ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12 ||
-             ELFRefKind == AArch64MCExpr::VK_DTPREL_LO12_NC ||
-             ELFRefKind == AArch64MCExpr::VK_TPREL_HI12 ||
-             ELFRefKind == AArch64MCExpr::VK_TPREL_LO12 ||
-             ELFRefKind == AArch64MCExpr::VK_TPREL_LO12_NC ||
-             ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12 ||
-             ELFRefKind == AArch64MCExpr::VK_TLSDESC_AUTH_LO12 ||
-             ELFRefKind == AArch64MCExpr::VK_SECREL_LO12 ||
-             ELFRefKind == AArch64MCExpr::VK_SECREL_HI12) &&
+        if (llvm::is_contained(
+                {AArch64MCExpr::VK_LO12, AArch64MCExpr::VK_GOT_AUTH_LO12,
+                 AArch64MCExpr::VK_DTPREL_HI12, AArch64MCExpr::VK_DTPREL_LO12,
+                 AArch64MCExpr::VK_DTPREL_LO12_NC, AArch64MCExpr::VK_TPREL_HI12,
+                 AArch64MCExpr::VK_TPREL_LO12, AArch64MCExpr::VK_TPREL_LO12_NC,
+                 AArch64MCExpr::VK_TLSDESC_LO12,
+                 AArch64MCExpr::VK_TLSDESC_AUTH_LO12,
+                 AArch64MCExpr::VK_SECREL_LO12, AArch64MCExpr::VK_SECREL_HI12},
+                ELFSpec) &&
             (Inst.getOpcode() == AArch64::ADDXri ||
              Inst.getOpcode() == AArch64::ADDWri))
           return false;
@@ -8202,17 +8192,15 @@ bool AArch64AsmParser::parseAuthExpr(const MCExpr *&Res, SMLoc &EndLoc) {
   return false;
 }
 
-bool
-AArch64AsmParser::classifySymbolRef(const MCExpr *Expr,
-                                    AArch64MCExpr::VariantKind &ELFRefKind,
-                                    MCSymbolRefExpr::VariantKind &DarwinRefKind,
-                                    int64_t &Addend) {
-  ELFRefKind = AArch64MCExpr::VK_INVALID;
+bool AArch64AsmParser::classifySymbolRef(
+    const MCExpr *Expr, AArch64MCExpr::Specifier &ELFSpec,
+    MCSymbolRefExpr::VariantKind &DarwinRefKind, int64_t &Addend) {
+  ELFSpec = AArch64MCExpr::VK_INVALID;
   DarwinRefKind = MCSymbolRefExpr::VK_None;
   Addend = 0;
 
   if (const AArch64MCExpr *AE = dyn_cast<AArch64MCExpr>(Expr)) {
-    ELFRefKind = AE->getKind();
+    ELFSpec = AE->getSpecifier();
     Expr = AE->getSubExpr();
   }
 
@@ -8229,9 +8217,9 @@ AArch64AsmParser::classifySymbolRef(const MCExpr *Expr,
   if (!Relocatable || Res.getSymB())
     return false;
 
-  // Treat expressions with an ELFRefKind (like ":abs_g1:3", or
+  // Treat expressions with an ELFSpec (like ":abs_g1:3", or
   // ":abs_g1:x" where x is constant) as symbolic even if there is no symbol.
-  if (!Res.getSymA() && ELFRefKind == AArch64MCExpr::VK_INVALID)
+  if (!Res.getSymA() && ELFSpec == AArch64MCExpr::VK_INVALID)
     return false;
 
   if (Res.getSymA())
@@ -8240,7 +8228,7 @@ AArch64AsmParser::classifySymbolRef(const MCExpr *Expr,
 
   // It's some symbol reference + a constant addend, but really
   // shouldn't use both Darwin and ELF syntax.
-  return ELFRefKind == AArch64MCExpr::VK_INVALID ||
+  return ELFSpec == AArch64MCExpr::VK_INVALID ||
          DarwinRefKind == MCSymbolRefExpr::VK_None;
 }
 
