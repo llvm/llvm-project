@@ -5452,8 +5452,8 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
 
     if (isRValRef && ICS.UserDefined.ConversionFunction->getReturnType()
                          .isConstQualified()) {
-       ICS.setBad(BadConversionSequence::no_conversion, Init, DeclType);
-       return ICS;
+      ICS.setBad(BadConversionSequence::no_conversion, Init, DeclType);
+      return ICS;
      }
 
     ICS.UserDefined.After.ReferenceBinding = true;
