@@ -165,13 +165,13 @@ void top() {
 
 namespace format_attribute {
 __attribute__((__format__ (__printf__, 1, 2)))
-void log_nonmethod(const char *fmt, ...);
+void log_freefunc(const char *fmt, ...);
 
-void test_format_attribute_nonmethod() {
+void test_format_attribute_freefunc() {
   int n;
   fscanf(stdin, "%d", &n); // Get a tainted value.
                            
-  log_nonmethod("This number is suspicious: %d\n", n); // no-warning
+  log_freefunc("This number is suspicious: %d\n", n); // no-warning
 }
 
 struct Foo {
