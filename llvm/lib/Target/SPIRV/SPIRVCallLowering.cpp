@@ -398,8 +398,6 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   auto MRI = MIRBuilder.getMRI();
   Register FuncVReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
   MRI->setRegClass(FuncVReg, &SPIRV::iIDRegClass);
-  if (F.isDeclaration())
-    GR->add(&F, &MIRBuilder.getMF(), FuncVReg);
   FunctionType *FTy = getOriginalFunctionType(F);
   Type *FRetTy = FTy->getReturnType();
   if (isUntypedPointerTy(FRetTy)) {
@@ -425,6 +423,8 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                .addUse(GR->getSPIRVTypeID(FuncTy));
   GR->recordFunctionDefinition(&F, &MB.getInstr()->getOperand(0));
   GR->addGlobalObject(&F, &MIRBuilder.getMF(), FuncVReg);
+  if (F.isDeclaration())
+    GR->add(&F, MB);
 
   // Add OpFunctionParameter instructions
   int i = 0;
@@ -433,11 +433,11 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     Register ArgReg = VRegs[i][0];
     MRI->setRegClass(ArgReg, GR->getRegClass(ArgTypeVRegs[i]));
     MRI->setType(ArgReg, GR->getRegType(ArgTypeVRegs[i]));
-    MIRBuilder.buildInstr(SPIRV::OpFunctionParameter)
-        .addDef(ArgReg)
-        .addUse(GR->getSPIRVTypeID(ArgTypeVRegs[i]));
+    auto MIB = MIRBuilder.buildInstr(SPIRV::OpFunctionParameter)
+                   .addDef(ArgReg)
+                   .addUse(GR->getSPIRVTypeID(ArgTypeVRegs[i]));
     if (F.isDeclaration())
-      GR->add(&Arg, &MIRBuilder.getMF(), ArgReg);
+      GR->add(&Arg, MIB);
     GR->addGlobalObject(&Arg, &MIRBuilder.getMF(), ArgReg);
     i++;
   }

@@ -2127,19 +2127,29 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
               /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
           Result != TemplateDeductionResult::Success)
         return Result;
-      const Type *QP = MPP->getQualifier()->getAsType(),
-                 *QA = MPA->getQualifier()->getAsType();
-      CXXRecordDecl *ClsP = MPP->getMostRecentCXXRecordDecl(),
-                    *ClsA = MPA->getMostRecentCXXRecordDecl();
-      // FIXME: Don't drop the rest of the prefixes here.
-      QualType P = !ClsP || declaresSameEntity(QP->getAsCXXRecordDecl(), ClsP)
-                       ? QualType(QP, 0)
-                       : S.Context.getTypeDeclType(ClsP);
-      QualType A = !ClsA || declaresSameEntity(QA->getAsCXXRecordDecl(), ClsA)
-                       ? QualType(QA, 0)
-                       : S.Context.getTypeDeclType(ClsA);
+
+      QualType TP;
+      if (MPP->isSugared()) {
+        TP = S.Context.getTypeDeclType(MPP->getMostRecentCXXRecordDecl());
+      } else {
+        NestedNameSpecifier *QP = MPP->getQualifier();
+        if (QP->getKind() == NestedNameSpecifier::Identifier)
+          // Skip translation if it's a non-deduced context anyway.
+          return TemplateDeductionResult::Success;
+        TP = QualType(QP->translateToType(S.Context), 0);
+      }
+      assert(!TP.isNull() && "member pointer with non-type class");
+
+      QualType TA;
+      if (MPA->isSugared()) {
+        TA = S.Context.getTypeDeclType(MPA->getMostRecentCXXRecordDecl());
+      } else {
+        NestedNameSpecifier *QA = MPA->getQualifier();
+        TA = QualType(QA->translateToType(S.Context), 0);
+      }
+      assert(!TA.isNull() && "member pointer with non-type class");
       return DeduceTemplateArgumentsByTypeMatch(
-          S, TemplateParams, P, A, Info, Deduced, SubTDF,
+          S, TemplateParams, TP, TA, Info, Deduced, SubTDF,
           degradeCallPartialOrderingKind(POK),
           /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
     }

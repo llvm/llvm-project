@@ -245,6 +245,52 @@ bool NestedNameSpecifier::containsErrors() const {
   return getDependence() & NestedNameSpecifierDependence::Error;
 }
 
+const Type *
+NestedNameSpecifier::translateToType(const ASTContext &Context) const {
+  NestedNameSpecifier *Prefix = getPrefix();
+  switch (getKind()) {
+  case SpecifierKind::Identifier:
+    return Context
+        .getDependentNameType(ElaboratedTypeKeyword::None, Prefix,
+                              getAsIdentifier())
+        .getTypePtr();
+  case SpecifierKind::TypeSpec:
+  case SpecifierKind::TypeSpecWithTemplate: {
+    const Type *T = getAsType();
+    switch (T->getTypeClass()) {
+    case Type::DependentTemplateSpecialization: {
+      const auto *DT = cast<DependentTemplateSpecializationType>(T);
+      // FIXME: The type node can't represent the template keyword.
+      return Context
+          .getDependentTemplateSpecializationType(ElaboratedTypeKeyword::None,
+                                                  Prefix, DT->getIdentifier(),
+                                                  DT->template_arguments())
+          .getTypePtr();
+    }
+    case Type::Record:
+    case Type::TemplateSpecialization:
+    case Type::Using:
+    case Type::Enum:
+    case Type::Typedef:
+    case Type::UnresolvedUsing:
+      return Context
+          .getElaboratedType(ElaboratedTypeKeyword::None, Prefix,
+                             QualType(T, 0))
+          .getTypePtr();
+    default:
+      assert(Prefix == nullptr && "unexpected type with elaboration");
+      return T;
+    }
+  }
+  case SpecifierKind::Global:
+  case SpecifierKind::Namespace:
+  case SpecifierKind::NamespaceAlias:
+  case SpecifierKind::Super:
+    // These are not representable as types.
+    return nullptr;
+  }
+}
+
 /// Print this nested name specifier to the given output
 /// stream.
 void NestedNameSpecifier::print(raw_ostream &OS, const PrintingPolicy &Policy,
