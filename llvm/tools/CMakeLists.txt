@@ -9,7 +9,7 @@
 # traversing each directory.
 create_llvm_tool_options()
 
-if(NOT LLVM_COMPILER_IS_GCC_COMPATIBLE)
+if(NOT LLVM_COMPILER_IS_GCC_COMPATIBLE OR NOT TARGET llvm-libc-common-utilities)
   set(LLVM_TOOL_LLVM_GPU_LOADER_BUILD OFF)
 endif()
 
