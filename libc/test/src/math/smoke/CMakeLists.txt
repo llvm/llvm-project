@@ -4061,6 +4061,16 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  atan2f128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    atan2f128_test.cpp
+  DEPENDS
+    libc.src.math.atan2f128
+)
+
+add_fp_unittest(
   scalbln_test
   SUITE
     libc-math-smoke-tests
