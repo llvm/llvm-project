@@ -216,6 +216,44 @@
 // RUN: %clang -### -Werror -target x86_64 -ffp-model=strict -fno-fast-math \
 // RUN: -c %s 2>&1 | FileCheck --check-prefixes=FULL %s
 
+// RUN: %clang -### -target x86_64 -fno-fast-math -fcx-limited-range \
+// RUN: -c %s 2>&1 | FileCheck --check-prefixes=BASIC,WARN26 %s
+
+// RUN: %clang -### -target x86_64 -fno-fast-math -fno-cx-limited-range \
+// RUN: -c %s 2>&1 | FileCheck --check-prefixes=FULL %s
+
+// RUN: %clang -### -target x86_64 -fno-fast-math -fcx-fortran-rules \
+// RUN: -c %s 2>&1 | FileCheck --check-prefixes=IMPRVD,WARN27 %s
+
+// RUN: %clang -### -target x86_64 -fno-fast-math -fno-cx-fortran-rules \
+// RUN: -c %s 2>&1 | FileCheck --check-prefixes=FULL %s
+
+// RUN: %clang -### -Werror -target x86_64 -fno-fast-math -ffast-math \
+// RUN: -c %s 2>&1 | FileCheck --check-prefixes=BASIC %s
+
+// RUN: %clang -### -target x86_64 -fno-fast-math -fcomplex-arithmetic=basic \
+// RUN: -c %s 2>&1 | FileCheck --check-prefixes=BASIC %s
+
+// RUN: %clang -### -target x86_64 -fno-fast-math -fcomplex-arithmetic=promoted \
+// RUN: -c %s 2>&1 | FileCheck --check-prefixes=PRMTD %s
+
+// RUN: %clang -### -target x86_64 -fno-fast-math -fcomplex-arithmetic=improved \
+// RUN: -c %s 2>&1 | FileCheck --check-prefixes=IMPRVD %s
+
+// RUN: %clang -### -Werror -target x86_64 -fno-fast-math -fcomplex-arithmetic=full \
+// RUN: -c %s 2>&1 | FileCheck --check-prefixes=FULL %s
+
+// RUN: %clang -### -target x86_64 -fno-fast-math -ffp-model=aggressive \
+// RUN: -c %s 2>&1 | FileCheck --check-prefixes=BASIC %s
+
+// RUN: %clang -### -target x86_64 -fno-fast-math -ffp-model=fast \
+// RUN: -c %s 2>&1 | FileCheck --check-prefixes=PRMTD,WARN31 %s
+
+// RUN: %clang -### -Werror -target x86_64 -fno-fast-math -ffp-model=precise \
+// RUN: -c %s 2>&1 | FileCheck --check-prefixes=FULL %s
+
+// RUN: %clang -### -Werror -target x86_64 -fno-fast-math -ffp-model=strict \
+// RUN: -c %s 2>&1 | FileCheck --check-prefixes=FULL %s
 
 // WARN1: warning: overriding '-fcx-limited-range' option with '-fcx-fortran-rules' [-Woverriding-option]
 // WARN2: warning: overriding '-fno-cx-limited-range' option with '-fcx-fortran-rules' [-Woverriding-option]
@@ -232,6 +270,12 @@
 // WARN23: warning: overriding '-fcomplex-arithmetic=basic' option with '-fcomplex-arithmetic=full' [-Woverriding-option]
 // WARN24: warning: overriding '-fcomplex-arithmetic=promoted' option with '-fcomplex-arithmetic=full' [-Woverriding-option]
 // WARN25: warning: overriding '-fcomplex-arithmetic=improved' option with '-fcomplex-arithmetic=full' [-Woverriding-option]
+// WARN26: warning: overriding '-complex-range=full' option with '-fcx-limited-range' [-Woverriding-option]
+// WARN27: warning: overriding '-complex-range=full' option with '-fcx-fortran-rules' [-Woverriding-option]
+// WARN28: warning: overriding '-complex-range=full' option with '-fcomplex-arithmetic=basic' [-Woverriding-option]
+// WARN29: warning: overriding '-complex-range=full' option with '-fcomplex-arithmetic=promoted' [-Woverriding-option]
+// WARN30: warning: overriding '-complex-range=full' option with '-fcomplex-arithmetic=improved' [-Woverriding-option]
+// WARN31: warning: overriding '-fcomplex-arithmetic=full' option with '-fcomplex-arithmetic=promoted' [-Woverriding-option]
 
 // BASIC: -complex-range=basic
 // FULL: -complex-range=full
