@@ -117,14 +117,11 @@ mlir::DenseElementsAttr convertToDenseElementsAttr(
 std::optional<mlir::Attribute>
 lowerConstArrayAttr(cir::ConstArrayAttr constArr,
                     const mlir::TypeConverter *converter) {
-
   // Ensure ConstArrayAttr has a type.
-  auto typedConstArr = mlir::dyn_cast<mlir::TypedAttr>(constArr);
-  assert(typedConstArr && "cir::ConstArrayAttr is not a mlir::TypedAttr");
+  const auto typedConstArr = mlir::cast<mlir::TypedAttr>(constArr);
 
   // Ensure ConstArrayAttr type is a ArrayType.
-  auto cirArrayType = mlir::dyn_cast<cir::ArrayType>(typedConstArr.getType());
-  assert(cirArrayType && "cir::ConstArrayAttr is not a cir::ArrayType");
+  const auto cirArrayType = mlir::cast<cir::ArrayType>(typedConstArr.getType());
 
   // Is a ConstArrayAttr with an cir::ArrayType: fetch element type.
   mlir::Type type = cirArrayType;
@@ -140,6 +137,7 @@ lowerConstArrayAttr(cir::ConstArrayAttr constArr,
   if (mlir::isa<cir::IntType>(type))
     return convertToDenseElementsAttr<cir::IntAttr, mlir::APInt>(
         constArr, dims, type, converter->convertType(type));
+
   if (mlir::isa<cir::CIRFPTypeInterface>(type))
     return convertToDenseElementsAttr<cir::FPAttr, mlir::APFloat>(
         constArr, dims, type, converter->convertType(type));

@@ -682,19 +682,6 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
-/// Switches on the type of attribute and calls the appropriate conversion.
-mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
-                                const mlir::Attribute attr,
-                                mlir::ConversionPatternRewriter &rewriter,
-                                const mlir::TypeConverter *converter,
-                                mlir::DataLayout const &dataLayout) {
-  CIRAttrToValue valueConverter(parentOp, rewriter, converter);
-  const mlir::Value value = valueConverter.visit(attr);
-  if (!value)
-    llvm_unreachable("unhandled attribute type");
-  return value;
-}
-
 bool hasTrailingZeros(cir::ConstArrayAttr attr) {
   auto array = mlir::dyn_cast<mlir::ArrayAttr>(attr.getElts());
   return attr.hasTrailingZeros() ||
@@ -749,16 +736,16 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
 
     std::optional<mlir::Attribute> denseAttr;
     if (constArr && hasTrailingZeros(constArr)) {
-      const mlir::Value newOp = lowerCirAttrAsValue(
-          op, constArr, rewriter, getTypeConverter(), dataLayout);
+      const mlir::Value newOp =
+          lowerCirAttrAsValue(op, constArr, rewriter, getTypeConverter());
       rewriter.replaceOp(op, newOp);
       return mlir::success();
     } else if (constArr &&
                (denseAttr = lowerConstArrayAttr(constArr, typeConverter))) {
       attr = denseAttr.value();
     } else {
-      const mlir::Value initVal = lowerCirAttrAsValue(
-          op, op.getValue(), rewriter, typeConverter, dataLayout);
+      const mlir::Value initVal =
+          lowerCirAttrAsValue(op, op.getValue(), rewriter, typeConverter);
       rewriter.replaceAllUsesWith(op, initVal);
       rewriter.eraseOp(op);
       return mlir::success();
