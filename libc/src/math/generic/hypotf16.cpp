@@ -51,12 +51,12 @@ LLVM_LIBC_FUNCTION(float16, hypotf16, (float16 x, float16 y)) {
                                           << FPBits::FRACTION_LEN)))
     return x_abs.get_val() + y_abs.get_val();
 
-  float ad = fputil::cast<float>(a_bits.get_val());
-  float bd = fputil::cast<float>(b_bits.get_val());
+  float af = fputil::cast<float>(a_bits.get_val());
+  float bf = fputil::cast<float>(b_bits.get_val());
 
   // These squares are exact.
-  float a_sq = ad * ad;
-  float sum_sq = fputil::multiply_add(bd, bd, a_sq);
+  float a_sq = af * af;
+  float sum_sq = fputil::multiply_add(bf, bf, a_sq);
 
   FloatBits result(fputil::sqrt<float>(sum_sq));
   uint32_t r_u = result.uintval();
@@ -67,7 +67,7 @@ LLVM_LIBC_FUNCTION(float16, hypotf16, (float16 x, float16 y)) {
     float r_d = result.get_val();
 
     // Perform rounding correction.
-    float sum_sq_lo = fputil::multiply_add(bd, bd, a_sq - sum_sq);
+    float sum_sq_lo = fputil::multiply_add(bf, bf, a_sq - sum_sq);
     float err = sum_sq_lo - fputil::multiply_add(r_d, r_d, -sum_sq);
 
     if (err > 0) {
@@ -83,4 +83,5 @@ LLVM_LIBC_FUNCTION(float16, hypotf16, (float16 x, float16 y)) {
 
   return fputil::cast<float16>(result.get_val());
 }
+
 } // namespace LIBC_NAMESPACE_DECL

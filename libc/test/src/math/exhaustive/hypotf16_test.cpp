@@ -51,7 +51,7 @@ struct Hypotf16Checker : public virtual LIBC_NAMESPACE::testing::Test {
 };
 
 using LlvmLibcHypotf16ExhaustiveTest =
-    LlvmLibcExhaustiveMathTest<Hypotf16Checker>;
+    LlvmLibcExhaustiveMathTest<Hypotf16Checker, 1 << 2>;
 
 TEST_F(LlvmLibcHypotf16ExhaustiveTest, PositiveRange) {
   test_full_range_all_roundings(START, STOP);
