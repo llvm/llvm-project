@@ -500,12 +500,8 @@ CheckStructurallyEquivalentAttributes(StructuralEquivalenceContext &Context,
   // orders. This means that __attribute__((foo, bar)) is equivalent to
   // __attribute__((bar, foo)).
   llvm::SmallVector<const Attr *, 2> Attrs1, Attrs2;
-  auto CopyAttrs = [](auto &&Range, llvm::SmallVectorImpl<const Attr *> &Cont) {
-    for (const Attr *A : Range)
-      Cont.push_back(A);
-  };
-  CopyAttrs(D1->attrs(), Attrs1);
-  CopyAttrs(D2->attrs(), Attrs2);
+  llvm::copy(D1->attrs(), std::back_inserter(Attrs1));
+  llvm::copy(D2->attrs(), std::back_inserter(Attrs2));
 
   auto Sorter = [](const Attr *LHS, const Attr *RHS) {
     const IdentifierInfo *II1 = LHS->getAttrName(), *II2 = RHS->getAttrName();
