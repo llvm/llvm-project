@@ -4052,9 +4052,7 @@ struct WhileRemoveDuplicatedResults : public OpRewritePattern<WhileOp> {
     ConditionOp condOp = op.getConditionOp();
     ValueRange condOpArgs = condOp.getArgs();
 
-    llvm::SmallPtrSet<Value, 8> argsSet;
-    for (Value arg : condOpArgs)
-      argsSet.insert(arg);
+    llvm::SmallPtrSet<Value, 8> argsSet(llvm::from_range, condOpArgs);
 
     if (argsSet.size() == condOpArgs.size())
       return rewriter.notifyMatchFailure(op, "No results to remove");
