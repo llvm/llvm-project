@@ -4018,9 +4018,9 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
 
     // Set the max VF to the largest viable vectorization factor less than or
     // equal to the max vector element count.
-    for (ElementCount VS = MaxVectorElementCount * 2;
-         ElementCount::isKnownLE(VS, MaxVectorElementCountMaxBW); VS *= 2)
-      MaxVF = VS;
+    if (ElementCount::isKnownLE(MaxVectorElementCount,
+                                MaxVectorElementCountMaxBW))
+      MaxVF = MaxVectorElementCountMaxBW;
 
     if (ElementCount MinVF =
             TTI.getMinimumVF(SmallestType, ComputeScalableMaxVF)) {
