@@ -4382,37 +4382,36 @@ static bool retOpStat(const MachineOperand *Op, SrcStatus Stat,
   return false;
 }
 
-// 0  = Vector of 2,
-// 1  = Scalar
-// -1 = non of them
-static int isVectorOfTwoOrScalar(const MachineOperand *Op,
-                                 const MachineRegisterInfo &MRI) {
+enum class TypeClass { VECTOR_OF_TWO, SCALAR, NON_OF_LISTED };
+
+static TypeClass isVectorOfTwoOrScalar(const MachineOperand *Op,
+                                       const MachineRegisterInfo &MRI) {
   if (!Op->isReg() || Op->getReg().isPhysical())
-    return -1;
+    return TypeClass::NON_OF_LISTED;
   LLT OpTy = MRI.getType(Op->getReg());
   if (OpTy.isScalar())
-    return 1;
+    return TypeClass::SCALAR;
   if (OpTy.isVector() && OpTy.getNumElements() == 2)
-    return 0;
-  return -1;
+    return TypeClass::VECTOR_OF_TWO;
+  return TypeClass::NON_OF_LISTED;
 }
 
 SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
                        const MachineRegisterInfo &MRI) {
-  int NegType = isVectorOfTwoOrScalar(Op, MRI);
-  if (NegType != 0 && NegType != 1)
+  TypeClass NegType = isVectorOfTwoOrScalar(Op, MRI);
+  if (NegType != TypeClass::VECTOR_OF_TWO && NegType != TypeClass::SCALAR)
     return SrcStatus::INVALID;
 
   switch (S) {
   case SrcStatus::IS_SAME:
-    if (NegType == 0) {
+    if (NegType == TypeClass::VECTOR_OF_TWO) {
       // Vector of 2:
       // [SrcHi, SrcLo]   = [CurrHi, CurrLo]
       // [CurrHi, CurrLo] = neg [OpHi, OpLo](2 x Type)
       // [CurrHi, CurrLo] = [-OpHi, -OpLo](2 x Type)
       // [SrcHi, SrcLo]   = [-OpHi, -OpLo]
       return SrcStatus::IS_BOTH_NEG;
-    } else if (NegType == 1) {
+    } else if (NegType == TypeClass::SCALAR) {
       // Scalar:
       // [SrcHi, SrcLo]   = [CurrHi, CurrLo]
       // [CurrHi, CurrLo] = neg [OpHi, OpLo](Type)
@@ -4422,14 +4421,14 @@ SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
     }
     break;
   case SrcStatus::IS_HI_NEG:
-    if (NegType == 0) {
+    if (NegType == TypeClass::VECTOR_OF_TWO) {
       // Vector of 2:
       // [SrcHi, SrcLo]   = [-CurrHi, CurrLo]
       // [CurrHi, CurrLo] = neg [OpHi, OpLo](2 x Type)
       // [CurrHi, CurrLo] = [-OpHi, -OpLo](2 x Type)
       // [SrcHi, SrcLo]   = [-(-OpHi), -OpLo] = [OpHi, -OpLo]
       return SrcStatus::IS_LO_NEG;
-    } else if (NegType == 1) {
+    } else if (NegType == TypeClass::SCALAR) {
       // Scalar:
       // [SrcHi, SrcLo]   = [-CurrHi, CurrLo]
       // [CurrHi, CurrLo] = neg [OpHi, OpLo](Type)
@@ -4439,14 +4438,14 @@ SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
     }
     break;
   case SrcStatus::IS_LO_NEG:
-    if (NegType == 0) {
+    if (NegType == TypeClass::VECTOR_OF_TWO) {
       // Vector of 2:
       // [SrcHi, SrcLo]   = [CurrHi, -CurrLo]
       // [CurrHi, CurrLo] = fneg [OpHi, OpLo](2 x Type)
       // [CurrHi, CurrLo] = [-OpHi, -OpLo](2 x Type)
       // [SrcHi, SrcLo]   = [-OpHi, -(-OpLo)] = [-OpHi, OpLo]
       return SrcStatus::IS_HI_NEG;
-    } else if (NegType == 1) {
+    } else if (NegType == TypeClass::SCALAR) {
       // Scalar:
       // [SrcHi, SrcLo]   = [CurrHi, -CurrLo]
       // [CurrHi, CurrLo] = fneg [OpHi, OpLo](Type)
@@ -4456,14 +4455,14 @@ SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
     }
     break;
   case SrcStatus::IS_BOTH_NEG:
-    if (NegType == 0) {
+    if (NegType == TypeClass::VECTOR_OF_TWO) {
       // Vector of 2:
       // [SrcHi, SrcLo]   = [-CurrHi, -CurrLo]
       // [CurrHi, CurrLo] = fneg [OpHi, OpLo](2 x Type)
       // [CurrHi, CurrLo] = [-OpHi, -OpLo](2 x Type)
       // [SrcHi, SrcLo]   = [OpHi, OpLo]
       return SrcStatus::IS_SAME;
-    } else if (NegType == 1) {
+    } else if (NegType == TypeClass::SCALAR) {
       // Scalar:
       // [SrcHi, SrcLo]   = [-CurrHi, -CurrLo]
       // [CurrHi, CurrLo] = fneg [OpHi, OpLo](Type)
@@ -4488,7 +4487,7 @@ SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
     // Src = -OpUpper
     return SrcStatus::IS_UPPER_HALF_NEG;
   case SrcStatus::IS_LOWER_HALF:
-    if (NegType == 0) {
+    if (NegType == TypeClass::VECTOR_OF_TWO) {
       // Vector of 2:
       // Src = CurrLower
       // Curr = [CurrUpper, CurrLower]
@@ -4496,7 +4495,7 @@ SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
       // [CurrUpper, CurrLower] = [-OpUpper, -OpLower](2 x Type)
       // Src = -OpLower
       return SrcStatus::IS_LOWER_HALF_NEG;
-    } else if (NegType == 1) {
+    } else if (NegType == TypeClass::SCALAR) {
       // Scalar:
       // Src = CurrLower
       // Curr = [CurrUpper, CurrLower]
@@ -4522,7 +4521,7 @@ SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
     // Src = -(-OpUpper) = OpUpper
     return SrcStatus::IS_UPPER_HALF;
   case SrcStatus::IS_LOWER_HALF_NEG:
-    if (NegType == 0) {
+    if (NegType == TypeClass::VECTOR_OF_TWO) {
       // Vector of 2:
       // Src = -CurrLower
       // Curr = [CurrUpper, CurrLower]
@@ -4530,7 +4529,7 @@ SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
       // [CurrUpper, CurrLower] = [-OpUpper, -OpLower](2 x Type)
       // Src = -(-OpLower) = OpLower
       return SrcStatus::IS_LOWER_HALF;
-    } else if (NegType == 1) {
+    } else if (NegType == TypeClass::SCALAR) {
       // Scalar:
       // Src = -CurrLower
       // Curr = [CurrUpper, CurrLower]
@@ -4615,8 +4614,8 @@ static bool calcNextStatus(std::pair<const MachineOperand *, SrcStatus> &Curr,
 }
 
 struct {
-  unsigned int HasNeg : 1;
-  unsigned int HasOpsel : 1;
+  bool HasNeg;
+  bool HasOpsel;
 } StatOptions;
 
 static bool checkOptions(SrcStatus Stat) {
@@ -4653,31 +4652,42 @@ void setUpOptions(const MachineOperand *RootOp,
   StatOptions.HasOpsel = 1;
 }
 
-SmallVector<std::pair<const MachineOperand *, SrcStatus>>
+static SmallVector<std::pair<const MachineOperand *, SrcStatus>>
 getSrcStats(const MachineOperand *Op, const MachineRegisterInfo &MRI,
-            bool OnlyLastSameOrNeg = false, int MaxDepth = 6) {
+            int MaxDepth = 6) {
   int Depth = 0;
   std::pair<const MachineOperand *, SrcStatus> Curr = {Op, SrcStatus::IS_SAME};
   SmallVector<std::pair<const MachineOperand *, SrcStatus>, 4> Statlist;
 
-  if (OnlyLastSameOrNeg)
-    Statlist.push_back(Curr);
-
   while (Depth <= MaxDepth && calcNextStatus(Curr, MRI)) {
     Depth++;
     if (checkOptions(Curr.second)) {
-      if (OnlyLastSameOrNeg && (Curr.second == SrcStatus::IS_SAME ||
-                                Curr.second == SrcStatus::IS_HI_NEG ||
-                                Curr.second == SrcStatus::IS_LO_NEG ||
-                                Curr.second == SrcStatus::IS_BOTH_NEG))
-        Statlist[0] = Curr;
-
-      if (!OnlyLastSameOrNeg)
-        Statlist.push_back(Curr);
+      Statlist.push_back(Curr);
     }
   }
 
   return Statlist;
+}
+
+static std::pair<const MachineOperand *, SrcStatus>
+getLastSameOrNeg(const MachineOperand *Op, const MachineRegisterInfo &MRI,
+                 int MaxDepth = 6) {
+  int Depth = 0;
+  std::pair<const MachineOperand *, SrcStatus> Curr = {Op, SrcStatus::IS_SAME};
+  std::pair<const MachineOperand *, SrcStatus> LastSameOrNeg = Curr;
+
+  while (Depth <= MaxDepth && calcNextStatus(Curr, MRI)) {
+    Depth++;
+    if (checkOptions(Curr.second)) {
+      if (Curr.second == SrcStatus::IS_SAME ||
+          Curr.second == SrcStatus::IS_HI_NEG ||
+          Curr.second == SrcStatus::IS_LO_NEG ||
+          Curr.second == SrcStatus::IS_BOTH_NEG)
+        LastSameOrNeg = Curr;
+    }
+  }
+
+  return LastSameOrNeg;
 }
 
 static bool isInlinableConstant(const MachineOperand &Op,
@@ -4700,41 +4710,51 @@ static bool isSameOperand(const MachineOperand *Op1,
   return Op1->isIdenticalTo(*Op2);
 }
 
+unsigned updateMods(SrcStatus HiStat, SrcStatus LoStat, unsigned Mods) {
+  // SrcStatus::IS_LOWER_HALF remain 0.
+  if (HiStat == SrcStatus::IS_UPPER_HALF_NEG) {
+    Mods ^= SISrcMods::NEG_HI;
+    Mods |= SISrcMods::OP_SEL_1;
+  } else if (HiStat == SrcStatus::IS_UPPER_HALF)
+    Mods |= SISrcMods::OP_SEL_1;
+  else if (HiStat == SrcStatus::IS_LOWER_HALF_NEG)
+    Mods ^= SISrcMods::NEG_HI;
+  else if (HiStat == SrcStatus::IS_HI_NEG)
+    Mods ^= SISrcMods::NEG_HI;
+
+  if (LoStat == SrcStatus::IS_UPPER_HALF_NEG) {
+    Mods ^= SISrcMods::NEG;
+    Mods |= SISrcMods::OP_SEL_0;
+  } else if (LoStat == SrcStatus::IS_UPPER_HALF)
+    Mods |= SISrcMods::OP_SEL_0;
+  else if (LoStat == SrcStatus::IS_UPPER_HALF_NEG)
+    Mods |= SISrcMods::NEG;
+  else if (LoStat == SrcStatus::IS_HI_NEG)
+    Mods ^= SISrcMods::NEG;
+
+  return Mods;
+}
+
 static bool isValidToPack(SrcStatus HiStat, SrcStatus LoStat,
                           unsigned int &Mods, const MachineOperand *NewOp,
                           const MachineOperand *RootOp, const SIInstrInfo &TII,
                           const MachineRegisterInfo &MRI) {
   if (NewOp->isReg()) {
-    if (isSameBitWidth(NewOp, RootOp, MRI)) {
-      // SrcStatus::IS_LOWER_HALF remain 0.
-      if (HiStat == SrcStatus::IS_UPPER_HALF_NEG) {
-        Mods ^= SISrcMods::NEG_HI;
-        Mods |= SISrcMods::OP_SEL_1;
-      } else if (HiStat == SrcStatus::IS_UPPER_HALF) {
-        Mods |= SISrcMods::OP_SEL_1;
-      } else if (HiStat == SrcStatus::IS_LOWER_HALF_NEG) {
-        Mods ^= SISrcMods::NEG_HI;
-      }
-      if (LoStat == SrcStatus::IS_UPPER_HALF_NEG) {
-        Mods ^= SISrcMods::NEG;
-        Mods |= SISrcMods::OP_SEL_0;
-      } else if (LoStat == SrcStatus::IS_UPPER_HALF) {
-        Mods |= SISrcMods::OP_SEL_0;
-      } else if (LoStat == SrcStatus::IS_UPPER_HALF_NEG) {
-        Mods |= SISrcMods::NEG;
-      }
+    if (isSameBitWidth(NewOp, RootOp, MRI) &&
+        (HiStat == SrcStatus::IS_UPPER_HALF ||
+         HiStat == SrcStatus::IS_UPPER_HALF_NEG ||
+         HiStat == SrcStatus::IS_LOWER_HALF ||
+         HiStat == SrcStatus::IS_LOWER_HALF_NEG) &&
+        (LoStat == SrcStatus::IS_UPPER_HALF ||
+         LoStat == SrcStatus::IS_UPPER_HALF_NEG ||
+         LoStat == SrcStatus::IS_LOWER_HALF ||
+         LoStat == SrcStatus::IS_LOWER_HALF_NEG)) {
       return true;
     }
   } else {
     if ((HiStat == SrcStatus::IS_SAME || HiStat == SrcStatus::IS_HI_NEG) &&
         (LoStat == SrcStatus::IS_SAME || LoStat == SrcStatus::IS_HI_NEG) &&
         isInlinableConstant(*NewOp, TII)) {
-      if (HiStat == SrcStatus::IS_HI_NEG)
-        Mods ^= SISrcMods::NEG_HI;
-      if (LoStat == SrcStatus::IS_HI_NEG)
-        Mods ^= SISrcMods::NEG;
-      // opsel = opsel_hi = 0, since the upper half and lower half both
-      // the same as the target inlinable constant.
       return true;
     }
   }
@@ -4742,21 +4762,20 @@ static bool isValidToPack(SrcStatus HiStat, SrcStatus LoStat,
 }
 
 std::pair<const MachineOperand *, unsigned>
-AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *Op,
+AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *RootOp,
                                                const MachineRegisterInfo &MRI,
                                                bool IsDOT) const {
   unsigned Mods = 0;
+  const MachineOperand *Op = RootOp;
   // No modification if Root type is not form of <2 x Type>
-  if (isVectorOfTwoOrScalar(Op, MRI) != 0) {
+  if (isVectorOfTwoOrScalar(Op, MRI) != TypeClass::VECTOR_OF_TWO) {
     Mods |= SISrcMods::OP_SEL_1;
     return {Op, Mods};
   }
 
   setUpOptions(Op, MRI);
 
-  const MachineOperand *RootOp = Op;
-  std::pair<const MachineOperand *, SrcStatus> Stat =
-      getSrcStats(Op, MRI, true)[0];
+  std::pair<const MachineOperand *, SrcStatus> Stat = getLastSameOrNeg(Op, MRI);
   if (!Stat.first->isReg()) {
     Mods |= SISrcMods::OP_SEL_1;
     return {Op, Mods};
@@ -4777,16 +4796,16 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *Op,
     return {Op, Mods};
   }
 
-  SmallVector<std::pair<const MachineOperand *, SrcStatus>> StatlistHi;
-  StatlistHi = getSrcStats(&MI->getOperand(2), MRI);
+  SmallVector<std::pair<const MachineOperand *, SrcStatus>> StatlistHi =
+      getSrcStats(&MI->getOperand(2), MRI);
 
   if (StatlistHi.size() == 0) {
     Mods |= SISrcMods::OP_SEL_1;
     return {Op, Mods};
   }
 
-  SmallVector<std::pair<const MachineOperand *, SrcStatus>> StatlistLo;
-  StatlistLo = getSrcStats(&MI->getOperand(1), MRI);
+  SmallVector<std::pair<const MachineOperand *, SrcStatus>> StatlistLo =
+      getSrcStats(&MI->getOperand(1), MRI);
 
   if (StatlistLo.size() == 0) {
     Mods |= SISrcMods::OP_SEL_1;
@@ -4798,7 +4817,8 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *Op,
       if (isSameOperand(StatlistHi[i].first, StatlistLo[j].first) &&
           isValidToPack(StatlistHi[i].second, StatlistLo[j].second, Mods,
                         StatlistHi[i].first, RootOp, TII, MRI))
-        return {StatlistHi[i].first, Mods};
+        return {StatlistHi[i].first,
+                updateMods(StatlistHi[i].second, StatlistLo[j].second, Mods)};
     }
   }
   // Packed instructions do not have abs modifiers.
@@ -4863,18 +4883,17 @@ AMDGPUInstructionSelector::selectVOP3PMods(MachineOperand &Root) const {
   MachineRegisterInfo &MRI
     = Root.getParent()->getParent()->getParent()->getRegInfo();
 
-  std::pair<const MachineOperand *, unsigned> Res =
-      selectVOP3PModsImpl(&Root, MRI);
-  if (!(Res.first->isReg()))
+  auto [Op, Mods] = selectVOP3PModsImpl(&Root, MRI);
+  if (!(Op->isReg()))
     return {{
-        [=](MachineInstrBuilder &MIB) { MIB.addImm(getAllKindImm(Res.first)); },
-        [=](MachineInstrBuilder &MIB) { MIB.addImm(Res.second); } // src_mods
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(getAllKindImm(Op)); },
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
     }};
 
-  Res.first = getVReg(Res.first, &Root, RBI, MRI, TRI, TII);
+  Op = getVReg(Op, &Root, RBI, MRI, TRI, TII);
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Res.first->getReg()); },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(Res.second); } // src_mods
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(Op->getReg()); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
   }};
 }
 
@@ -4883,18 +4902,17 @@ AMDGPUInstructionSelector::selectVOP3PModsDOT(MachineOperand &Root) const {
   MachineRegisterInfo &MRI
     = Root.getParent()->getParent()->getParent()->getRegInfo();
 
-  std::pair<const MachineOperand *, unsigned> Res =
-      selectVOP3PModsImpl(&Root, MRI, true);
-  if (!(Res.first->isReg()))
+  auto [Op, Mods] = selectVOP3PModsImpl(&Root, MRI, true);
+  if (!(Op->isReg()))
     return {{
-        [=](MachineInstrBuilder &MIB) { MIB.addImm(getAllKindImm(Res.first)); },
-        [=](MachineInstrBuilder &MIB) { MIB.addImm(Res.second); } // src_mods
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(getAllKindImm(Op)); },
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
     }};
 
-  Res.first = getVReg(Res.first, &Root, RBI, MRI, TRI, TII);
+  Op = getVReg(Op, &Root, RBI, MRI, TRI, TII);
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Res.first->getReg()); },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(Res.second); } // src_mods
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(Op->getReg()); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
   }};
 }
 
