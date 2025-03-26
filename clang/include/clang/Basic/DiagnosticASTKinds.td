@@ -478,10 +478,6 @@ def warn_odr_function_type_inconsistent : Warning<
   "external function %0 declared with incompatible types in different "
   "translation units (%1 vs. %2)">,
   InGroup<ODR>;
-def err_odr_attr_inconsistent : Error<
-  "attribute %0 is incompatible%select{| in different translation units}1">;
-def warn_odr_attr_inconsistent : Warning<
-  err_odr_attr_inconsistent.Summary>, InGroup<ODR>;
 def note_odr_attr : Note<"attribute %0 here">;
 def note_odr_attr_missing : Note<"no corresponding attribute here">;
 def err_odr_tag_type_inconsistent

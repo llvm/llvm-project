@@ -2609,8 +2609,6 @@ unsigned StructuralEquivalenceContext::getApplicableDiagnostic(
     return ErrorDiagnostic;
 
   switch (ErrorDiagnostic) {
-  case diag::err_odr_attr_inconsistent:
-    return diag::warn_odr_attr_inconsistent;
   case diag::err_odr_variable_type_inconsistent:
     return diag::warn_odr_variable_type_inconsistent;
   case diag::err_odr_variable_multiple_def:
