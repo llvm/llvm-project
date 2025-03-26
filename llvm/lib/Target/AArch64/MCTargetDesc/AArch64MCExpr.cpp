@@ -109,14 +109,10 @@ MCFragment *AArch64MCExpr::findAssociatedFragment() const {
 }
 
 bool AArch64MCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                              const MCAssembler *Asm,
-                                              const MCFixup *Fixup) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup))
+                                              const MCAssembler *Asm) const {
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
-
-  Res =
-      MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), getKind());
-
+  Res.setSpecifier(getSpecifier());
   return true;
 }
 
@@ -151,14 +147,10 @@ MCFragment *AArch64AuthMCExpr::findAssociatedFragment() const {
   llvm_unreachable("FIXME: what goes here?");
 }
 
-bool AArch64AuthMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                                  const MCAssembler *Asm,
-                                                  const MCFixup *Fixup) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup))
+bool AArch64AuthMCExpr::evaluateAsRelocatableImpl(
+    MCValue &Res, const MCAssembler *Asm) const {
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
-
-  if (Res.getSymB())
-    report_fatal_error("Auth relocation can't reference two symbols");
 
   Res = MCValue::get(Res.getSymA(), nullptr, Res.getConstant(), getKind());
   return true;

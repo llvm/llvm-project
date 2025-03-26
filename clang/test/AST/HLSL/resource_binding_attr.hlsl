@@ -1,17 +1,15 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -ast-dump -o - %s | FileCheck %s
 
-// CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 5]]:9 cbuffer CB
+// CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 4]]:9 cbuffer CB
 // CHECK-NEXT: HLSLResourceClassAttr {{.*}} Implicit CBuffer
-// CHECK-NEXT: HLSLResourceAttr {{.*}} Implicit CBuffer
 // CHECK-NEXT: HLSLResourceBindingAttr {{.*}} "b3" "space2"
 // CHECK-NEXT: VarDecl {{.*}} used a 'hlsl_constant float'
 cbuffer CB : register(b3, space2) {
   float a;
 }
 
-// CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 5]]:9 tbuffer TB
+// CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 4]]:9 tbuffer TB
 // CHECK-NEXT: HLSLResourceClassAttr {{.*}} Implicit SRV
-// CHECK-NEXT: HLSLResourceAttr {{.*}} Implicit TBuffer
 // CHECK-NEXT: HLSLResourceBindingAttr {{.*}} "t2" "space1"
 // CHECK-NEXT: VarDecl {{.*}} used b 'hlsl_constant float'
 tbuffer TB : register(t2, space1) {

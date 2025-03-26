@@ -3213,8 +3213,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   MachineBasicBlock *AddedBlocks[] = {PrevStackMBB, McrMBB, GetMBB, AllocMBB,
                                       PostStackMBB};
 
-  for (MachineBasicBlock *B : AddedBlocks)
-    BeforePrologueRegion.insert(B);
+  BeforePrologueRegion.insert_range(AddedBlocks);
 
   for (const auto &LI : PrologueMBB.liveins()) {
     for (MachineBasicBlock *PredBB : BeforePrologueRegion)

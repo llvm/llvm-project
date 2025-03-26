@@ -55,7 +55,7 @@ define <2 x i32> @select_sdiv_lhs_const_v2i32(i1 %cond) {
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0x594
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %select = select i1 %cond, <2 x i32> <i32 5, i32 undef>, <2 x i32> <i32 6, i32 7>
+  %select = select i1 %cond, <2 x i32> <i32 5, i32 poison>, <2 x i32> <i32 6, i32 7>
   %op = sdiv <2 x i32> <i32 3333, i32 9999>, %select
   ret <2 x i32> %op
 }

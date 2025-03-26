@@ -454,8 +454,8 @@ define <vscale x 2 x double> @vuitofp_nxv2f64_nxv2i32(<vscale x 2 x i32> %va, <v
 ; CHECK-LABEL: vuitofp_nxv2f64_nxv2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.f.xu.v v10, v8, v0.t
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vfwcvt.f.xu.v v8, v10, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x double> @llvm.vp.uitofp.nxv2f64.nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x double> %v
@@ -465,8 +465,8 @@ define <vscale x 2 x double> @vuitofp_nxv2f64_nxv2i32_unmasked(<vscale x 2 x i32
 ; CHECK-LABEL: vuitofp_nxv2f64_nxv2i32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.f.xu.v v10, v8
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vfwcvt.f.xu.v v8, v10
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x double> @llvm.vp.uitofp.nxv2f64.nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x double> %v
@@ -500,8 +500,7 @@ define <vscale x 32 x half> @vuitofp_nxv32f16_nxv32i32(<vscale x 32 x i32> %va, 
 ; ZVFH-LABEL: vuitofp_nxv32f16_nxv32i32:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
-; ZVFH-NEXT:    vmv1r.v v7, v0
-; ZVFH-NEXT:    vmv8r.v v24, v16
+; ZVFH-NEXT:    vmv1r.v v24, v0
 ; ZVFH-NEXT:    csrr a1, vlenb
 ; ZVFH-NEXT:    srli a2, a1, 2
 ; ZVFH-NEXT:    slli a1, a1, 1
@@ -511,15 +510,15 @@ define <vscale x 32 x half> @vuitofp_nxv32f16_nxv32i32(<vscale x 32 x i32> %va, 
 ; ZVFH-NEXT:    addi a3, a3, -1
 ; ZVFH-NEXT:    and a2, a3, a2
 ; ZVFH-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
-; ZVFH-NEXT:    vfncvt.f.xu.w v20, v24, v0.t
+; ZVFH-NEXT:    vfncvt.f.xu.w v28, v16, v0.t
 ; ZVFH-NEXT:    bltu a0, a1, .LBB34_2
 ; ZVFH-NEXT:  # %bb.1:
 ; ZVFH-NEXT:    mv a0, a1
 ; ZVFH-NEXT:  .LBB34_2:
-; ZVFH-NEXT:    vmv1r.v v0, v7
+; ZVFH-NEXT:    vmv1r.v v0, v24
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; ZVFH-NEXT:    vfncvt.f.xu.w v16, v8, v0.t
-; ZVFH-NEXT:    vmv8r.v v8, v16
+; ZVFH-NEXT:    vfncvt.f.xu.w v24, v8, v0.t
+; ZVFH-NEXT:    vmv8r.v v8, v24
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vuitofp_nxv32f16_nxv32i32:

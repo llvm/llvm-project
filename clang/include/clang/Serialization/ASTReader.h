@@ -1176,11 +1176,11 @@ private:
   /// Number of Decl/types that are currently deserializing.
   unsigned NumCurrentElementsDeserializing = 0;
 
-  /// Set true while we are in the process of passing deserialized
-  /// "interesting" decls to consumer inside FinishedDeserializing().
-  /// This is used as a guard to avoid recursively repeating the process of
+  /// Set false while we are in a state where we cannot safely pass deserialized
+  /// "interesting" decls to the consumer inside FinishedDeserializing().
+  /// This is used as a guard to avoid recursively entering the process of
   /// passing decls to consumer.
-  bool PassingDeclsToConsumer = false;
+  bool CanPassDeclsToConsumer = true;
 
   /// The set of identifiers that were read while the AST reader was
   /// (recursively) loading declarations.

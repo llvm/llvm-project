@@ -105,7 +105,7 @@ bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
           auto NewInsts = expandUser(BI, C);
           for (auto *NI : NewInsts)
             NI->setDebugLoc(Loc);
-          InstructionWorklist.insert(NewInsts.begin(), NewInsts.end());
+          InstructionWorklist.insert_range(NewInsts);
           U.set(NewInsts.back());
         }
       }
