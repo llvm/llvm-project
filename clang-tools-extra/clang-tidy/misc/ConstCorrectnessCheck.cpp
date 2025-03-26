@@ -172,7 +172,6 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     if (ArrayT->getElementType()->isPointerType())
       VC = VariableCategory::Pointer;
   }
-  llvm::errs() << (int)VC << "\n";
 
   auto CheckValue = [&]() {
     // The scope is only registered if the analysis shall be run.
