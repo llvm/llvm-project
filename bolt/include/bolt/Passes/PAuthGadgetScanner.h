@@ -212,7 +212,7 @@ struct GadgetReport : public Report {
   // The particular kind of gadget that is detected.
   const GadgetKind &Kind;
   // The set of registers related to this gadget report (possibly empty).
-  SmallVector<MCPhysReg> AffectedRegisters;
+  SmallVector<MCPhysReg, 1> AffectedRegisters;
   // The instructions that clobber the affected registers.
   // There is no one-to-one correspondence with AffectedRegisters: for example,
   // the same register can be overwritten by different instructions in different
@@ -220,9 +220,8 @@ struct GadgetReport : public Report {
   SmallVector<MCInstReference> OverwritingInstrs;
 
   GadgetReport(const GadgetKind &Kind, MCInstReference Location,
-               const BitVector &AffectedRegisters)
-      : Report(Location), Kind(Kind),
-        AffectedRegisters(AffectedRegisters.set_bits()) {}
+               MCPhysReg AffectedRegister)
+      : Report(Location), Kind(Kind), AffectedRegisters({AffectedRegister}) {}
 
   void generateReport(raw_ostream &OS, const BinaryContext &BC) const override;
 
