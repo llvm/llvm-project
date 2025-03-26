@@ -9384,6 +9384,24 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
                                  const InputInfoList &Inputs,
                                  const ArgList &Args,
                                  const char *LinkingOutput) const {
+  bool isAMDGPU = false;
+  auto offloadTC = C.getOffloadToolChains(Action::OFK_OpenMP);
+  const auto OpenMPTCs = llvm::make_range(offloadTC.first, offloadTC.second);
+  const ToolChain *OTC;
+  for (auto &I : OpenMPTCs) {
+    OTC = I.second;
+    if (OTC->getTriple().isAMDGPU()) {
+      isAMDGPU = true;
+      break;
+    }
+  }
+  if (isAMDGPU && Args.hasFlag(options::OPT_opaque_offload_linker,
+                               options::OPT_no_opaque_offload_linker, true)) {
+    ConstructOpaqueJob(C, JA, Output, Inputs, Args, OTC->getTriple(),
+                       LinkingOutput);
+    return;
+  }
+
   using namespace options;
 
   // A list of permitted options that will be forwarded to the embedded device
