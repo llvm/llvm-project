@@ -22,7 +22,7 @@ entry:
 
 define <vscale x 1 x i8> @constant_splat_trunc() {
 ; CHECK-LABEL: @constant_splat_trunc(
-; CHECK-NEXT:    ret <vscale x 1 x i8> trunc (<vscale x 1 x i64> splat (i64 1) to <vscale x 1 x i8>)
+; CHECK-NEXT:    ret <vscale x 1 x i8> splat (i8 1)
 ;
   %1 = trunc <vscale x 1 x i64> splat (i64 1) to <vscale x 1 x i8>
   ret <vscale x 1 x i8> %1
@@ -30,7 +30,7 @@ define <vscale x 1 x i8> @constant_splat_trunc() {
 
 define <vscale x 1 x i8> @constant_splat_trunc_constantexpr() {
 ; CHECK-LABEL: @constant_splat_trunc_constantexpr(
-; CHECK-NEXT:    ret <vscale x 1 x i8> trunc (<vscale x 1 x i64> splat (i64 1) to <vscale x 1 x i8>)
+; CHECK-NEXT:    ret <vscale x 1 x i8> splat (i8 1)
 ;
   ret <vscale x 1 x i8> trunc (<vscale x 1 x i64> splat (i64 1) to <vscale x 1 x i8>)
 }
