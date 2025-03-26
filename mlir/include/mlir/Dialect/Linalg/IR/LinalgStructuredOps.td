@@ -601,7 +601,18 @@ def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
       [{
         buildStructuredOp($_builder, $_state, std::nullopt, inputs, outputs,
           attributes, ElementwiseOp::getRegionBuilder());
-      }]>
+      }]>,
+
+     OpBuilder<(ins "ValueRange":$inputs, "ValueRange":$outputs,
+          "ElementwiseKindAttr":$kind,
+          "ArrayAttr":$indexingMaps,
+          CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        $_state.addAttribute("kind", kind);
+        $_state.addAttribute("indexing_maps", indexingMaps);
+        buildStructuredOp($_builder, $_state, std::nullopt, inputs, outputs,
+                          attributes, ElementwiseOp::getRegionBuilder());
+       }]>
     ];
 
   let hasCustomAssemblyFormat = 1;

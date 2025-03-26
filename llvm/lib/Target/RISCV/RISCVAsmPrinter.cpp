@@ -622,7 +622,7 @@ void RISCVAsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
     Sym = OutContext.getOrCreateSymbol(SymName);
   }
   auto Res = MCSymbolRefExpr::create(Sym, OutContext);
-  auto Expr = RISCVMCExpr::create(Res, RISCVMCExpr::VK_RISCV_CALL, OutContext);
+  auto Expr = RISCVMCExpr::create(Res, RISCVMCExpr::VK_CALL, OutContext);
 
   EmitToStreamer(*OutStreamer, MCInstBuilder(RISCV::PseudoCALL).addExpr(Expr));
 }
@@ -733,8 +733,8 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 
   const MCSymbolRefExpr *HwasanTagMismatchV2Ref =
       MCSymbolRefExpr::create(HwasanTagMismatchV2Sym, OutContext);
-  auto Expr = RISCVMCExpr::create(HwasanTagMismatchV2Ref,
-                                  RISCVMCExpr::VK_RISCV_CALL, OutContext);
+  auto Expr = RISCVMCExpr::create(HwasanTagMismatchV2Ref, RISCVMCExpr::VK_CALL,
+                                  OutContext);
 
   for (auto &P : HwasanMemaccessSymbols) {
     unsigned Reg = std::get<0>(P.first);
@@ -940,58 +940,58 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
                                     const AsmPrinter &AP) {
   MCContext &Ctx = AP.OutContext;
-  RISCVMCExpr::VariantKind Kind;
+  RISCVMCExpr::Specifier Kind;
 
   switch (MO.getTargetFlags()) {
   default:
     llvm_unreachable("Unknown target flag on GV operand");
   case RISCVII::MO_None:
-    Kind = RISCVMCExpr::VK_RISCV_None;
+    Kind = RISCVMCExpr::VK_None;
     break;
   case RISCVII::MO_CALL:
-    Kind = RISCVMCExpr::VK_RISCV_CALL_PLT;
+    Kind = RISCVMCExpr::VK_CALL_PLT;
     break;
   case RISCVII::MO_LO:
-    Kind = RISCVMCExpr::VK_RISCV_LO;
+    Kind = RISCVMCExpr::VK_LO;
     break;
   case RISCVII::MO_HI:
-    Kind = RISCVMCExpr::VK_RISCV_HI;
+    Kind = RISCVMCExpr::VK_HI;
     break;
   case RISCVII::MO_PCREL_LO:
-    Kind = RISCVMCExpr::VK_RISCV_PCREL_LO;
+    Kind = RISCVMCExpr::VK_PCREL_LO;
     break;
   case RISCVII::MO_PCREL_HI:
-    Kind = RISCVMCExpr::VK_RISCV_PCREL_HI;
+    Kind = RISCVMCExpr::VK_PCREL_HI;
     break;
   case RISCVII::MO_GOT_HI:
-    Kind = RISCVMCExpr::VK_RISCV_GOT_HI;
+    Kind = RISCVMCExpr::VK_GOT_HI;
     break;
   case RISCVII::MO_TPREL_LO:
-    Kind = RISCVMCExpr::VK_RISCV_TPREL_LO;
+    Kind = RISCVMCExpr::VK_TPREL_LO;
     break;
   case RISCVII::MO_TPREL_HI:
-    Kind = RISCVMCExpr::VK_RISCV_TPREL_HI;
+    Kind = RISCVMCExpr::VK_TPREL_HI;
     break;
   case RISCVII::MO_TPREL_ADD:
-    Kind = RISCVMCExpr::VK_RISCV_TPREL_ADD;
+    Kind = RISCVMCExpr::VK_TPREL_ADD;
     break;
   case RISCVII::MO_TLS_GOT_HI:
-    Kind = RISCVMCExpr::VK_RISCV_TLS_GOT_HI;
+    Kind = RISCVMCExpr::VK_TLS_GOT_HI;
     break;
   case RISCVII::MO_TLS_GD_HI:
-    Kind = RISCVMCExpr::VK_RISCV_TLS_GD_HI;
+    Kind = RISCVMCExpr::VK_TLS_GD_HI;
     break;
   case RISCVII::MO_TLSDESC_HI:
-    Kind = RISCVMCExpr::VK_RISCV_TLSDESC_HI;
+    Kind = RISCVMCExpr::VK_TLSDESC_HI;
     break;
   case RISCVII::MO_TLSDESC_LOAD_LO:
-    Kind = RISCVMCExpr::VK_RISCV_TLSDESC_LOAD_LO;
+    Kind = RISCVMCExpr::VK_TLSDESC_LOAD_LO;
     break;
   case RISCVII::MO_TLSDESC_ADD_LO:
-    Kind = RISCVMCExpr::VK_RISCV_TLSDESC_ADD_LO;
+    Kind = RISCVMCExpr::VK_TLSDESC_ADD_LO;
     break;
   case RISCVII::MO_TLSDESC_CALL:
-    Kind = RISCVMCExpr::VK_RISCV_TLSDESC_CALL;
+    Kind = RISCVMCExpr::VK_TLSDESC_CALL;
     break;
   }
 
@@ -1001,7 +1001,7 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     ME = MCBinaryExpr::createAdd(
         ME, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
 
-  if (Kind != RISCVMCExpr::VK_RISCV_None)
+  if (Kind != RISCVMCExpr::VK_None)
     ME = RISCVMCExpr::create(ME, Kind, Ctx);
   return MCOperand::createExpr(ME);
 }

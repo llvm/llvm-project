@@ -19,9 +19,9 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/EntryPointStats.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -32,14 +32,14 @@ using namespace ento;
 
 #define DEBUG_TYPE "ExprEngine"
 
-STATISTIC(NumOfDynamicDispatchPathSplits,
-  "The # of times we split the path due to imprecise dynamic dispatch info");
+STAT_COUNTER(
+    NumOfDynamicDispatchPathSplits,
+    "The # of times we split the path due to imprecise dynamic dispatch info");
 
-STATISTIC(NumInlinedCalls,
-  "The # of times we inlined a call");
+STAT_COUNTER(NumInlinedCalls, "The # of times we inlined a call");
 
-STATISTIC(NumReachedInlineCountMax,
-  "The # of times we reached inline count maximum");
+STAT_COUNTER(NumReachedInlineCountMax,
+             "The # of times we reached inline count maximum");
 
 void ExprEngine::processCallEnter(NodeBuilderContext& BC, CallEnter CE,
                                   ExplodedNode *Pred) {

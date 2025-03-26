@@ -2437,10 +2437,7 @@ void HexagonDAGToDAGISel::rebalanceAddressTrees() {
         continue;
 
       // This root node has already been processed
-      if (RootWeights.count(N))
-        continue;
-
-      RootWeights[N] = -1;
+      RootWeights.try_emplace(N, -1);
     }
 
     // Balance node itself

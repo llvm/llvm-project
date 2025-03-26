@@ -91,14 +91,23 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- Improved :program:`clang-tidy-diff.py` script. Add the `-warnings-as-errors`
+  argument to treat warnings as errors.
+
 New checks
 ^^^^^^^^^^
+
+- New :doc:`bugprone-capturing-this-in-member-variable
+  <clang-tidy/checks/bugprone/capturing-this-in-member-variable>` check.
+
+  Finds lambda captures that capture the ``this`` pointer and store it as class
+  members without handle the copy and move constructors and the assignments.
 
 - New :doc:`bugprone-unintended-char-ostream-output
   <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.
 
-  Finds unintended character output from ``unsigned char`` and ``signed char`` to an
-  ``ostream``.
+  Finds unintended character output from ``unsigned char`` and ``signed char``
+  to an ``ostream``.
 
 - New :doc:`readability-ambiguous-smartptr-reset-call
   <clang-tidy/checks/readability/ambiguous-smartptr-reset-call>` check.
@@ -136,19 +145,16 @@ Changes in existing checks
   <clang-tidy/checks/misc/const-correctness>` check by adding the option
   `AllowedTypes`, that excludes specified types from const-correctness
   checking and fixing false positives when modifying variant by ``operator[]``
-  with template in parameters.
+  with template in parameters and supporting to check pointee mutation by
+  `AnalyzePointers` option.
 
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` check by providing additional
   examples and fixing some macro related false positives.
-  
-- Improved :doc:`modernize-use-ranges
-  <clang-tidy/checks/modernize/use-ranges>` check by updating suppress 
-  warnings logic for ``nullptr`` in ``std::find``.
 
-- Improved :doc:`modernize-use-std-numbers
-  <clang-tidy/checks/modernize/use-std-numbers>` check to support math
-  functions of different precisions.
+- Improved :doc:`misc-unused-using-decls
+  <clang-tidy/checks/misc/unused-using-decls>` check by fixing false positives
+  on ``operator""`` with template parameters.
 
 - Improved :doc:`misc-use-internal-linkage
   <clang-tidy/checks/misc/use-internal-linkage>` check by fix false positives
@@ -156,20 +162,30 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-default-member-init
   <clang-tidy/checks/modernize/use-default-member-init>` check by matching
-  ``constexpr`` and ``static`` values on member initialization.
+  ``constexpr`` and ``static``` values on member initialization and by detecting
+  explicit casting of built-in types within member list initialization.
 
-- Improved :doc:`performance/unnecessary-value-param
+- Improved :doc:`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` check by updating suppress 
+  warnings logic for ``nullptr`` in ``std::find``.
+
+- Improved :doc:`modernize-use-starts-ends-with
+  <clang-tidy/checks/modernize/use-starts-ends-with>` check by adding more
+  matched scenarios of ``find`` and ``rfind`` methods and fixing false
+  positives when those methods were called with 3 arguments.
+
+- Improved :doc:`modernize-use-std-numbers
+  <clang-tidy/checks/modernize/use-std-numbers>` check to support math
+  functions of different precisions.
+
+- Improved :doc:`performance-move-const-arg
+  <clang-tidy/checks/performance/move-const-arg>` check by fixing false
+  negatives on ternary operators calling ``std::move``.
+
+- Improved :doc:`performance-unnecessary-value-param
   <clang-tidy/checks/performance/unnecessary-value-param>` check performance by
   tolerating fix-it breaking compilation when functions is used as pointers
   to avoid matching usage of functions within the current compilation unit.
-
-- Improved :doc:`performance-move-const-arg
-  <clang-tidy/checks/performance/move-const-arg>` check by fixing false negatives
-  on ternary operators calling ``std::move``.
-
-- Improved :doc:`misc-unused-using-decls
-  <clang-tidy/checks/misc/unused-using-decls>` check by fixing false positives
-  on ``operator""`` with template parameters.
 
 Removed checks
 ^^^^^^^^^^^^^^

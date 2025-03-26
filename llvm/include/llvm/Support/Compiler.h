@@ -203,7 +203,7 @@
 #define LLVM_TEMPLATE_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #define LLVM_EXPORT_TEMPLATE
 #define LLVM_ABI_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
-#elif defined(__MACH__) || defined(__WASM__)
+#elif defined(__MACH__) || defined(__WASM__) || defined(__EMSCRIPTEN__)
 #define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #define LLVM_TEMPLATE_ABI
 #define LLVM_EXPORT_TEMPLATE
@@ -228,6 +228,12 @@
 #define LLVM_ATTRIBUTE_USED __attribute__((__used__))
 #else
 #define LLVM_ATTRIBUTE_USED
+#endif
+
+#if __has_attribute(retain)
+#define LLVM_ATTRIBUTE_RETAIN __attribute__((__retain__))
+#else
+#define LLVM_ATTRIBUTE_RETAIN
 #endif
 
 #if defined(__clang__)
@@ -619,7 +625,8 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 /// get stripped in release builds.
 // FIXME: Move this to a private config.h as it's not usable in public headers.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-#define LLVM_DUMP_METHOD LLVM_ATTRIBUTE_NOINLINE LLVM_ATTRIBUTE_USED
+#define LLVM_DUMP_METHOD                                                       \
+  LLVM_ATTRIBUTE_NOINLINE LLVM_ATTRIBUTE_USED LLVM_ATTRIBUTE_RETAIN
 #else
 #define LLVM_DUMP_METHOD LLVM_ATTRIBUTE_NOINLINE
 #endif

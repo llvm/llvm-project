@@ -3416,4 +3416,140 @@ def fir_UnpackArrayOp
   let hasVerifier = 1;
 }
 
+def fir_IsContiguousBoxOp : fir_Op<"is_contiguous_box", [NoMemoryEffect]> {
+  let summary = "Returns true if the boxed entity is contiguous";
+  let description = [{
+    Returns true iff the boxed entity is contiguous:
+      * in the leading dimension (if `innermost` attribute is set),
+      * in all dimensions (if `innermost` attribute is not set).
+
+    The input box cannot be absent.
+  }];
+  let arguments = (ins AnyBoxLike:$box, UnitAttr:$innermost);
+  let results = (outs I1);
+
+  let assemblyFormat = [{
+    $box (`innermost` $innermost^):(`whole`)? attr-dict `:` functional-type(operands, results)
+  }];
+  let hasCanonicalizer = 1;
+}
+
+def fir_BoxTotalElementsOp
+    : fir_SimpleOneResultOp<"box_total_elements", [NoMemoryEffect]> {
+  let summary = "Returns the boxed entity's total size in elements";
+  let description = [{
+    Returns the boxed entity's total size in elements.
+    The input box cannot be absent.
+  }];
+  let arguments = (ins AnyBoxLike:$box);
+  let results = (outs AnyIntegerLike);
+  let hasCanonicalizer = 1;
+}
+
+def fir_DoConcurrentOp : fir_Op<"do_concurrent",
+    [SingleBlock, AutomaticAllocationScope]> {
+  let summary = "do concurrent loop wrapper";
+
+  let description = [{
+    A wrapper operation for the actual op modeling `do concurrent` loops:
+    `fir.do_concurrent.loop` (see op declaration below for more info about it).
+
+    The `fir.do_concurrent` wrapper op consists of one single-block region with
+    the following properties:
+    - The first ops in the region are responsible for allocating storage for the
+      loop's iteration variables. This is property is **not** enforced by the op
+      verifier, but expected to be respected when building the op.
+    - The terminator of the region is an instance of `fir.do_concurrent.loop`.
+
+    For example, a 2D loop nest would be represented as follows:
+    ```
+    fir.do_concurrent {
+      %i = fir.alloca i32
+      %j = fir.alloca i32
+      fir.do_concurrent.loop ...
+    }
+    ```
+  }];
+
+  let regions = (region SizedRegion<1>:$region);
+
+  let assemblyFormat = "$region attr-dict";
+  let hasVerifier = 1;
+}
+
+def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
+    [AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopLikeOpInterface,
+                                                         ["getLoopInductionVars"]>,
+     Terminator, NoTerminator, SingleBlock, ParentOneOf<["DoConcurrentOp"]>]> {
+  let summary = "do concurrent loop";
+
+  let description = [{
+    An operation that models a Fortran `do concurrent` loop's header and block.
+    This is a single-region single-block terminator op that is expected to
+    terminate the region of a `omp.do_concurrent` wrapper op.
+
+    This op borrows from both `scf.parallel` and `fir.do_loop` ops. Similar to
+    `scf.parallel`, a loop nest takes 3 groups of SSA values as operands that
+    represent the lower bounds, upper bounds, and steps. Similar to `fir.do_loop`
+    the op takes one additional group of SSA values to represent reductions.
+
+    The body region **does not** have a terminator.
+
+    For example, a 2D loop nest with 2 reductions (sum and max) would be
+    represented as follows:
+    ```
+    // The wrapper of the loop
+    fir.do_concurrent {
+      %i = fir.alloca i32
+      %j = fir.alloca i32
+
+      // The actual `do concurrent` loop
+      fir.do_concurrent.loop
+        (%i_iv, %j_iv) = (%i_lb, %j_lb) to (%i_ub, %j_ub) step (%i_st, %j_st)
+        reduce(#fir.reduce_attr<add> -> %sum : !fir.ref<i32>,
+               #fir.reduce_attr<max> -> %max : !fir.ref<f32>) {
+
+        %0 = fir.convert %i_iv : (index) -> i32
+        fir.store %0 to %i : !fir.ref<i32>
+
+        %1 = fir.convert %j_iv : (index) -> i32
+        fir.store %1 to %j : !fir.ref<i32>
+
+        // ... loop body goes here ...
+      }
+    }
+    ```
+
+    Description of arguments:
+    - `lowerBound`: The group of SSA values for the nest's lower bounds.
+    - `upperBound`: The group of SSA values for the nest's upper bounds.
+    - `step`: The group of SSA values for the nest's steps.
+    - `reduceOperands`: The reduction SSA values, if any.
+    - `reduceAttrs`: Attributes to store reduction operations, if any.
+    - `loopAnnotation`: Loop metadata to be passed down the compiler pipeline to
+      LLVM.
+  }];
+
+  let arguments = (ins
+    Variadic<Index>:$lowerBound,
+    Variadic<Index>:$upperBound,
+    Variadic<Index>:$step,
+    Variadic<AnyType>:$reduceOperands,
+    OptionalAttr<ArrayAttr>:$reduceAttrs,
+    OptionalAttr<LoopAnnotationAttr>:$loopAnnotation
+  );
+
+  let regions = (region SizedRegion<1>:$region);
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    // Get Number of reduction operands
+    unsigned getNumReduceOperands() {
+      return getReduceOperands().size();
+    }
+  }];
+}
+
 #endif

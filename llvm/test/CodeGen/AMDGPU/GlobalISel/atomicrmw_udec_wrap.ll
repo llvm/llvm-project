@@ -8,8 +8,8 @@
 ; FIXME: Merge with other test. DS offset folding doesn't work due to
 ; register bank copies, and no return optimization is missing.
 
-@lds0 = internal addrspace(3) global [512 x i32] undef
-@lds1 = internal addrspace(3) global [512 x i64] undef, align 8
+@lds0 = internal addrspace(3) global [512 x i32] poison
+@lds1 = internal addrspace(3) global [512 x i64] poison, align 8
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 

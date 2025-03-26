@@ -396,16 +396,13 @@ private:
 
         for (auto *FB : BI.AnonEdges) {
           auto &FBI = BlockInfos[FB];
-          for (auto *BB : BI.AnonBackEdges)
-            FBI.AnonBackEdges.insert(BB);
+          FBI.AnonBackEdges.insert_range(BI.AnonBackEdges);
         }
 
         for (auto *BB : BI.AnonBackEdges) {
           auto &BBI = BlockInfos[BB];
-          for (auto *SD : BI.SymbolDeps)
-            BBI.SymbolDeps.insert(SD);
-          for (auto *FB : BI.AnonEdges)
-            BBI.AnonEdges.insert(FB);
+          BBI.SymbolDeps.insert_range(BI.SymbolDeps);
+          BBI.AnonEdges.insert_range(BI.AnonEdges);
         }
       }
 
