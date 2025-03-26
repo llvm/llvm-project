@@ -834,6 +834,7 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
     auto &taskDep = std::get<Depend::TaskDep>(clause.u);
     auto depType = std::get<clause::DependenceType>(taskDep.t);
     auto &objects = std::get<omp::ObjectList>(taskDep.t);
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
     if (std::get<std::optional<omp::clause::Iterator>>(taskDep.t)) {
       TODO(converter.getCurrentLocation(),
@@ -865,17 +866,25 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
         dependVar = converter.getSymbolAddress(*sym);
       }
 
+      // If we pass a mutable box e.g. !fir.ref<!fir.box<!fir.heap<...>>> then
+      // the runtime will use the addres of the box not the address of the data.
+      // Flang generates a lot of memcpys between different box allocations so
+      // this is not a reliable way to identify the dependency.
+      if (auto ref = mlir::dyn_cast<fir::ReferenceType>(dependVar.getType()))
+        if (fir::isa_box_type(ref.getElementType()))
+          dependVar = builder.create<fir::LoadOp>(
+              converter.getCurrentLocation(), dependVar);
+
       // The openmp dialect doesn't know what to do with boxes (and it would
       // break layering to teach it about them). The dependency variable can be
       // a box because it was an array section or because the original symbol
       // was mapped to a box.
       // Getting the address of the box data is okay because all the runtime
       // ultimately cares about is the base address of the array.
-      if (fir::isa_box_type(dependVar.getType())) {
-        fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+      if (fir::isa_box_type(dependVar.getType()))
         dependVar = builder.create<fir::BoxAddrOp>(
             converter.getCurrentLocation(), dependVar);
-      }
+
       result.dependVars.push_back(dependVar);
     }
   };
