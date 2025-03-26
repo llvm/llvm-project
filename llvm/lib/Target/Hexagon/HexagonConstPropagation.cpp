@@ -779,8 +779,7 @@ void MachineConstPropagator::visitBranchesFrom(const MachineInstr &BrI) {
     Targets.clear();
     LLVM_DEBUG(dbgs() << "  failed to evaluate a branch...adding all CFG "
                          "successors\n");
-    for (const MachineBasicBlock *SB : B.successors())
-      Targets.insert(SB);
+    Targets.insert_range(B.successors());
   }
 
   for (const MachineBasicBlock *TB : Targets) {
