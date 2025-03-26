@@ -772,6 +772,10 @@ class Base(unittest.TestCase):
             'settings set symbols.clang-modules-cache-path "{}"'.format(
                 configuration.lldb_module_cache_dir
             ),
+            # Disable colors by default.
+            "settings set use-color false",
+            # Disable the statusline by default.
+            "settings set show-statusline false",
             # Enable the swift metadata cache in order to speed up tests.
             "settings set symbols.enable-swift-metadata-cache true",
             'settings set symbols.swift-metadata-cache-path "{}"'.format(
@@ -780,7 +784,6 @@ class Base(unittest.TestCase):
             # Enable expensive validations in TypeSystemSwiftTypeRef.
             "settings set symbols.swift-validate-typesystem true",
             "settings set symbols.swift-typesystem-compiler-fallback true",
-            "settings set use-color false",
         ]
 
         # Set any user-overridden settings.
