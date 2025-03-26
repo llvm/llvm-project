@@ -147,5 +147,43 @@ void InitializeAArch64ExegesisTarget() {
   ExegesisTarget::registerTarget(getTheExegesisAArch64Target());
 }
 
+bool isPointerAuth(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return false;
+
+  // FIXME: Pointer Authentication instructions.
+  // We would like to measure these instructions, but they can behave differently on
+  // different platforms, and maybe the snippets need to look different for these instructions,
+  // so let's disable this for now. 
+  case AArch64::AUTDA:
+  case AArch64::AUTDB:
+  case AArch64::AUTDZA:
+  case AArch64::AUTDZB:
+  case AArch64::AUTIA:
+  case AArch64::AUTIA1716:
+  case AArch64::AUTIASP:
+  case AArch64::AUTIAZ:
+  case AArch64::AUTIB:
+  case AArch64::AUTIB1716:
+  case AArch64::AUTIBSP:
+  case AArch64::AUTIBZ:
+  case AArch64::AUTIZA:
+  case AArch64::AUTIZB:
+    return true;
+  }
+}
+
+bool isLoadTagMultiple(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return false;
+
+  // Load tag multiple instruction
+  case AArch64::LDGM:
+    return true;
+  }
+}
+
 } // namespace exegesis
 } // namespace llvm
