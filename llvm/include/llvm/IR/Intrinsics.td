@@ -877,7 +877,7 @@ def int_localrecover : DefaultAttrsIntrinsic<[llvm_ptr_ty],
 //
 // Calls to this intrinsic need to be musttail, but don't follow the other ABI
 // requirements for musttail calls, since this is really annotating the ret.
-def int_ret_popless : DefaultAttrsIntrinsic<[], [], [IntrNoMem]>;
+def int_ret_popless : DefaultAttrsIntrinsic<[], [], [IntrInaccessibleMemOnly]>;
 
 // Given the frame pointer passed into an SEH filter function, returns a
 // pointer to the local variable area suitable for use with llvm.localrecover.

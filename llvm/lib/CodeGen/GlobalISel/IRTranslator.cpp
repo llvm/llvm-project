@@ -2431,6 +2431,13 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                           {getOrCreateVReg(*CI.getArgOperand(0))});
     return true;
   }
+  case Intrinsic::ret_popless: {
+    // The ret.popless intrin call itself is only annotating the following ret.
+    // To achieve that, it does need to be musttail and reachable from the ret.
+    assert(CI.getParent()->getTerminatingMustTailCall() == &CI &&
+           "llvm.ret.popless not in musttail position");
+    return true;
+  }
   case Intrinsic::cttz:
   case Intrinsic::ctlz: {
     ConstantInt *Cst = cast<ConstantInt>(CI.getArgOperand(1));

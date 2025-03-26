@@ -8039,7 +8039,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   }
 
   case Intrinsic::ret_popless:
-    // We're handling this on the associated ret itself.
+    // The ret.popless intrin call itself is only annotating the following ret.
+    // To achieve that, it does need to be musttail and reachable from the ret.
+    assert(I.getParent()->getTerminatingMustTailCall() == &I &&
+           "llvm.ret.popless not in musttail position");
     return;
 
   case Intrinsic::threadlocal_address: {
