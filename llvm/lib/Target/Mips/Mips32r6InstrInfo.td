@@ -984,7 +984,7 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def SDC2_R6 : SDC2_R6_ENC, SDC2_R6_DESC, ISA_MIPS32R6;
   def SWC2_R6 : SWC2_R6_ENC, SWC2_R6_DESC, ISA_MIPS32R6;
   
-  let hasNoSchedulingInfo = 1 in {
+  let hasNoSchedulingInfo = true in {
     def SIGRIE : SIGRIE_ENC, SIGRIE_DESC, ISA_MIPS32R6;
   }
 }
@@ -999,7 +999,7 @@ let AdditionalPredicates = [NotInMicroMips] in {
 }
 
 let AdditionalPredicates = [NotInMicroMips] in {
-  let hasNoSchedulingInfo = 1 in {
+  let hasNoSchedulingInfo = true in {
     def GINVI : R6MMR6Rel, GINVI_ENC, GINVI_DESC, ISA_MIPS32R6, ASE_GINV;
     def GINVT : R6MMR6Rel, GINVT_ENC, GINVT_DESC, ISA_MIPS32R6, ASE_GINV;
   }

@@ -8,7 +8,7 @@
 
 def MipsI6400Model : SchedMachineModel {
   int IssueWidth = 2;         // 2x dispatched per cycle
-  int MicroOpBufferSize = 48; // min(48, 48, 64)
+  int MicroOpBufferSize = 0;
   int LoadLatency = 3;
   int MispredictPenalty = 8;
 
@@ -26,17 +26,17 @@ let SchedModel = MipsI6400Model in {
 
   // AGEN Pipelines
   // ==============
-  def I6400AGEN : ProcResource<1> { let BufferSize = 16; }
+  def I6400AGEN : ProcResource<1> { let BufferSize = 0; }
   def I6400IssueLSU : ProcResource<1> { let Super = I6400AGEN; }
   def I6400IssueALU1 : ProcResource<1> { let Super = I6400AGEN; }
 
-  def I6400WriteLSUStore : SchedWriteRes<[I6400IssueLSU]> { let Latency = 1; }
+  def I6400WriteLSUStore : SchedWriteRes<[I6400IssueLSU]>;
   def I6400WriteLSUStore2 : SchedWriteRes<[I6400IssueLSU]> {
     let Latency = 8;
     let ReleaseAtCycles = [5];
   }
   def I6400WriteLSULoad : SchedWriteRes<[I6400IssueLSU]> { let Latency = 3; }
-  def I6400WriteLSUPref : SchedWriteRes<[I6400IssueLSU]> { let Latency = 1; }
+  def I6400WriteLSUPref : SchedWriteRes<[I6400IssueLSU]>;
   def I6400WriteLSUOther : SchedWriteRes<[I6400IssueLSU]> {
     let Latency = 6;
     let ReleaseAtCycles = [5];
@@ -60,13 +60,13 @@ let SchedModel = MipsI6400Model in {
 
   // CONTROL Pipelines
   // =================
-  def I6400CTRL : ProcResource<1> { let BufferSize = 16; }
+  def I6400CTRL : ProcResource<1> { let BufferSize = 0; }
   def I6400IssueCTU : ProcResource<1> { let Super = I6400CTRL; }
   def I6400IssueALU0 : ProcResource<1> { let Super = I6400CTRL; }
 
-  def I6400WriteALU0 : SchedWriteRes<[I6400IssueALU0]> { let Latency = 1; }
-  def I6400WriteALU1 : SchedWriteRes<[I6400IssueALU1]> { let Latency = 1; }
-  def I6400WriteCTU : SchedWriteRes<[I6400IssueCTU]> { let Latency = 1; }
+  def I6400WriteALU0 : SchedWriteRes<[I6400IssueALU0]>;
+  def I6400WriteALU1 : SchedWriteRes<[I6400IssueALU1]>;
+  def I6400WriteCTU : SchedWriteRes<[I6400IssueCTU]>;
 
   // CTU pipelines
   // =============
@@ -92,9 +92,7 @@ let SchedModel = MipsI6400Model in {
   // Either ALU0 or ALU1 pipelines
   // =============================
   def I6400IssueEitherALU : ProcResGroup<[I6400IssueALU0, I6400IssueALU1]>;
-  def I6400WriteEitherALU : SchedWriteRes<[I6400IssueEitherALU]> {
-    let Latency = 1;
-  }
+  def I6400WriteEitherALU : SchedWriteRes<[I6400IssueEitherALU]>;
 
   def : InstRW<[I6400WriteEitherALU],
                (instrs ADD, ADDiu, ADDIUPC, ADDu, ALIGN, ALUIPC, AND, ANDi, AUI,
@@ -134,13 +132,13 @@ let SchedModel = MipsI6400Model in {
 
   // FPU pipelines
   // =============
-  def I6400FPU : ProcResource<3> { let BufferSize = 16; }
+  def I6400FPU : ProcResource<3> { let BufferSize = 0; }
   def I6400FPUShort : ProcResource<1> { let Super = I6400FPU; }
   def I6400FPULong : ProcResource<1> { let Super = I6400FPU; }
   def I6400FPUApu : ProcResource<1>;
   def I6400FPUFloatL : ProcResource<1>;
 
-  def I6400FPUFabs : SchedWriteRes<[I6400FPUShort]> { let Latency = 1; }
+  def I6400FPUFabs : SchedWriteRes<[I6400FPUShort]>;
   def : InstRW<[I6400FPUFabs], (instrs FABS_S, FNEG_S, FMOV_S,
 				FMOV_D32, FMOV_D64,
 				FNEG_D32, FNEG_D64, CLASS_S, CLASS_D)>;
@@ -245,7 +243,6 @@ let SchedModel = MipsI6400Model in {
                    SHF_H, SHF_W)>;
 
   def I6400MSAShortLogic : SchedWriteRes<[I6400FPUShort]> {
-    let Latency = 1;
     let ReleaseAtCycles = [2];
   }
   def : InstRW<[I6400MSAShortLogic],
@@ -268,7 +265,7 @@ let SchedModel = MipsI6400Model in {
   def : InstRW<[I6400MSAShortLogic], (instregex "^SPLAT_(B|H|W|D)$")>;
   def : InstRW<[I6400MSAShortLogic], (instregex "^SPLATI_(B|H|W|D)$")>;
 
-  def I6400MSAShortLogic4 : SchedWriteRes<[I6400FPUShort]> { let Latency = 1; }
+  def I6400MSAShortLogic4 : SchedWriteRes<[I6400FPUShort]>;
   def : InstRW<[I6400MSAShortLogic4],
                (instrs CTCMSA, CFCMSA, COPY_S_B, COPY_S_H, COPY_S_W, COPY_S_D,
                    COPY_U_B, COPY_U_H, COPY_U_W, BNZ_B, BNZ_H, BNZ_W, BNZ_D,
@@ -281,7 +278,6 @@ let SchedModel = MipsI6400Model in {
   def : InstRW<[I6400MSAMove], (instrs LD_B, LD_H, LD_W, LD_D)>;
 
   def I6400MSAMove2 : SchedWriteRes<[I6400FPUShort]> {
-    let Latency = 1;
     let ReleaseAtCycles = [2];
   }
   def : InstRW<[I6400MSAMove2], (instrs LDI_B, LDI_H, LDI_W, LDI_D, MOVE_V)>;
@@ -343,7 +339,6 @@ let SchedModel = MipsI6400Model in {
 		   CEIL_W_D32, CEIL_W_D64)>;
 
   def I6400MSALongLogic1 : SchedWriteRes<[I6400FPULong]> {
-    let Latency = 1;
     let ReleaseAtCycles = [2];
   }
   def : InstRW<[I6400MSALongLogic1], (instrs BMZ_V, BMZI_B, BMNZ_V, BMNZI_B,
@@ -439,7 +434,7 @@ let SchedModel = MipsI6400Model in {
   // attach it to the Atomic2OpsPostRA, AtomicCmpSwapPostRA, ...
   // classes. Then just define resources for the `WriteAtomic` in each
   // machine models.
-  def I6400Atomic : ProcResource<1> { let BufferSize = 1; }
+  def I6400Atomic : ProcResource<1> { let BufferSize = 0; }
   def I6400WriteAtomic : SchedWriteRes<[I6400Atomic]> { let Latency = 2; }
 
   def : InstRW<[I6400WriteAtomic],
