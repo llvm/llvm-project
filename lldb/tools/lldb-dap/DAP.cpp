@@ -1145,122 +1145,27 @@ lldb::SBValue Variables::FindVariable(uint64_t variablesReference,
   return variable;
 }
 
-static void mergeCapabilities(protocol::Capabilities &into,
-                              const protocol::Capabilities &from) {
-  if (from.supportsConfigurationDoneRequest)
-    into.supportsConfigurationDoneRequest =
-        *from.supportsConfigurationDoneRequest;
-  if (from.supportsFunctionBreakpoints)
-    into.supportsFunctionBreakpoints = *from.supportsFunctionBreakpoints;
-  if (from.supportsConditionalBreakpoints)
-    into.supportsConditionalBreakpoints = *from.supportsConditionalBreakpoints;
-  if (from.supportsHitConditionalBreakpoints)
-    into.supportsHitConditionalBreakpoints =
-        *from.supportsHitConditionalBreakpoints;
-  if (from.supportsEvaluateForHovers)
-    into.supportsEvaluateForHovers = *from.supportsEvaluateForHovers;
-  if (from.exceptionBreakpointFilters)
-    into.exceptionBreakpointFilters = *from.exceptionBreakpointFilters;
-  if (from.supportsStepBack)
-    into.supportsStepBack = *from.supportsStepBack;
-  if (from.supportsSetVariable)
-    into.supportsSetVariable = *from.supportsSetVariable;
-  if (from.supportsRestartFrame)
-    into.supportsRestartFrame = *from.supportsRestartFrame;
-  if (from.supportsGotoTargetsRequest)
-    into.supportsGotoTargetsRequest = *from.supportsGotoTargetsRequest;
-  if (from.supportsStepInTargetsRequest)
-    into.supportsStepInTargetsRequest = *from.supportsStepInTargetsRequest;
-  if (from.supportsCompletionsRequest)
-    into.supportsCompletionsRequest = *from.supportsCompletionsRequest;
-  if (from.completionTriggerCharacters)
-    into.completionTriggerCharacters = *from.completionTriggerCharacters;
-  if (from.supportsModulesRequest)
-    into.supportsModulesRequest = *from.supportsModulesRequest;
-  if (from.additionalModuleColumns)
-    into.additionalModuleColumns = *from.additionalModuleColumns;
-  if (from.supportedChecksumAlgorithms)
-    into.supportedChecksumAlgorithms = *from.supportedChecksumAlgorithms;
-  if (from.supportsRestartRequest)
-    into.supportsRestartRequest = *from.supportsRestartRequest;
-  if (from.supportsExceptionOptions)
-    into.supportsExceptionOptions = *from.supportsExceptionOptions;
-  if (from.supportsValueFormattingOptions)
-    into.supportsValueFormattingOptions = *from.supportsValueFormattingOptions;
-  if (from.supportsExceptionInfoRequest)
-    into.supportsExceptionInfoRequest = *from.supportsExceptionInfoRequest;
-  if (from.supportTerminateDebuggee)
-    into.supportTerminateDebuggee = *from.supportTerminateDebuggee;
-  if (from.supportSuspendDebuggee)
-    into.supportSuspendDebuggee = *from.supportSuspendDebuggee;
-  if (from.supportsDelayedStackTraceLoading)
-    into.supportsDelayedStackTraceLoading =
-        *from.supportsDelayedStackTraceLoading;
-  if (from.supportsLoadedSourcesRequest)
-    into.supportsLoadedSourcesRequest = *from.supportsLoadedSourcesRequest;
-  if (from.supportsLogPoints)
-    into.supportsLogPoints = *from.supportsLogPoints;
-  if (from.supportsTerminateThreadsRequest)
-    into.supportsTerminateThreadsRequest =
-        *from.supportsTerminateThreadsRequest;
-  if (from.supportsSetExpression)
-    into.supportsSetExpression = *from.supportsSetExpression;
-  if (from.supportsTerminateRequest)
-    into.supportsTerminateRequest = *from.supportsTerminateRequest;
-  if (from.supportsDataBreakpoints)
-    into.supportsDataBreakpoints = *from.supportsDataBreakpoints;
-  if (from.supportsReadMemoryRequest)
-    into.supportsReadMemoryRequest = *from.supportsReadMemoryRequest;
-  if (from.supportsWriteMemoryRequest)
-    into.supportsWriteMemoryRequest = *from.supportsWriteMemoryRequest;
-  if (from.supportsDisassembleRequest)
-    into.supportsDisassembleRequest = *from.supportsDisassembleRequest;
-  if (from.supportsCancelRequest)
-    into.supportsCancelRequest = *from.supportsCancelRequest;
-  if (from.supportsBreakpointLocationsRequest)
-    into.supportsBreakpointLocationsRequest =
-        *from.supportsBreakpointLocationsRequest;
-  if (from.supportsClipboardContext)
-    into.supportsClipboardContext = *from.supportsClipboardContext;
-  if (from.supportsSteppingGranularity)
-    into.supportsSteppingGranularity = *from.supportsSteppingGranularity;
-  if (from.supportsInstructionBreakpoints)
-    into.supportsInstructionBreakpoints = *from.supportsInstructionBreakpoints;
-  if (from.supportsExceptionFilterOptions)
-    into.supportsExceptionFilterOptions = *from.supportsExceptionFilterOptions;
-  if (from.supportsSingleThreadExecutionRequests)
-    into.supportsSingleThreadExecutionRequests =
-        *from.supportsSingleThreadExecutionRequests;
-  if (from.supportsDataBreakpointBytes)
-    into.supportsDataBreakpointBytes = *from.supportsDataBreakpointBytes;
-  if (from.breakpointModes)
-    into.breakpointModes = *from.breakpointModes;
-  if (from.supportsANSIStyling)
-    into.supportsANSIStyling = *from.supportsANSIStyling;
+bool DAP::isSupported(ClientFeature feature) {
+  return clientFeatures.find(feature) != clientFeatures.end();
 }
 
 protocol::Capabilities DAP::GetCapabilities() {
   protocol::Capabilities capabilities;
 
-  // Supported capabilities.
-  capabilities.supportTerminateDebuggee = true;
-  capabilities.supportsDataBreakpoints = true;
-  capabilities.supportsDelayedStackTraceLoading = true;
-  capabilities.supportsEvaluateForHovers = true;
-  capabilities.supportsExceptionOptions = true;
-  capabilities.supportsLogPoints = true;
-  capabilities.supportsSteppingGranularity = true;
-  capabilities.supportsValueFormattingOptions = true;
+  // Supported capabilities that are not specific to a single request.
+  capabilities.supportedFeatures = {
+      AdapterFeature::supportsLogPoints,
+      AdapterFeature::supportsSteppingGranularity,
+      AdapterFeature::supportsValueFormattingOptions,
+  };
 
   // Unsupported capabilities.
-  capabilities.supportsGotoTargetsRequest = false;
-  capabilities.supportsLoadedSourcesRequest = false;
-  capabilities.supportsRestartFrame = false;
-  capabilities.supportsStepBack = false;
+  // supportsGotoTargetsRequest, supportsLoadedSourcesRequest,
+  // supportsRestartFrame, supportsStepBack
 
   // Capabilities associated with specific requests.
   for (auto &kv : request_handlers)
-    mergeCapabilities(capabilities, kv.second->GetCapabilities());
+    capabilities.supportedFeatures.merge(kv.second->GetSupportedFeatures());
 
   // Available filters or options for the setExceptionBreakpoints request.
   std::vector<protocol::ExceptionBreakpointsFilter> filters;
@@ -1268,14 +1173,17 @@ protocol::Capabilities DAP::GetCapabilities() {
     filters.emplace_back(CreateExceptionBreakpointFilter(exc_bp));
   capabilities.exceptionBreakpointFilters = std::move(filters);
 
+  // FIXME: This should be registered based on the supported languages?
   std::vector<std::string> completion_characters;
   completion_characters.emplace_back(".");
+  // FIXME: I wonder if we should remove this key... its very aggressive
+  // triggering and accepting completions.
   completion_characters.emplace_back(" ");
   completion_characters.emplace_back("\t");
   capabilities.completionTriggerCharacters = std::move(completion_characters);
 
   // Put in non-DAP specification lldb specific information.
-  capabilities.lldbVersion = debugger.GetVersionString();
+  capabilities.lldbExtVersion = debugger.GetVersionString();
 
   return capabilities;
 }

@@ -12,6 +12,7 @@
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "RunInTerminal.h"
+#include "llvm/Support/Error.h"
 
 #if !defined(_WIN32)
 #include <unistd.h>
@@ -97,6 +98,10 @@ void BaseRequestHandler::SetSourceMapFromArguments(
 static llvm::Error RunInTerminal(DAP &dap,
                                  const llvm::json::Object &launch_request,
                                  const uint64_t timeout_seconds) {
+  if (!dap.isSupported(ClientFeature::supportsRunInTerminalRequest))
+    return llvm::make_error<DAPError>("Cannot use runInTerminal, feature is "
+                                      "not supported by the connected client");
+
   dap.is_attach = true;
   lldb::SBAttachInfo attach_info;
 
@@ -201,7 +206,6 @@ BaseRequestHandler::LaunchProcess(const llvm::json::Object &request) const {
   const auto timeout_seconds =
       GetInteger<uint64_t>(arguments, "timeout").value_or(30);
 
-  // FIXME: Check dap.supports_run_in_terminal_request.
   if (GetBoolean(arguments, "runInTerminal").value_or(false)) {
     if (llvm::Error err = RunInTerminal(dap, request, timeout_seconds))
       error.SetErrorString(llvm::toString(std::move(err)).c_str());

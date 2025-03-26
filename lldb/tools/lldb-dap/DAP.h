@@ -16,6 +16,7 @@
 #include "OutputRedirector.h"
 #include "ProgressEvent.h"
 #include "Protocol/ProtocolBase.h"
+#include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "SourceBreakpoint.h"
 #include "Transport.h"
@@ -58,6 +59,9 @@ typedef llvm::DenseMap<std::pair<uint32_t, uint32_t>, SourceBreakpoint>
 typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
 typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
     InstructionBreakpointMap;
+
+using AdapterFeature = protocol::Capabilities::Feature;
+using ClientFeature = protocol::InitializeRequestArguments::Feature;
 
 enum class OutputType { Console, Stdout, Stderr, Telemetry };
 
@@ -181,7 +185,6 @@ struct DAP {
   bool enable_auto_variable_summaries;
   bool enable_synthetic_child_debugging;
   bool display_extended_backtrace;
-  bool supports_run_in_terminal_request;
   // The process event thread normally responds to process exited events by
   // shutting down the entire adapter. When we're restarting, we keep the id of
   // the old process here so we can detect this case and keep running.
@@ -207,6 +210,8 @@ struct DAP {
   // empty; if the previous expression was a variable expression, this string
   // will contain that expression.
   std::string last_nonempty_var_expression;
+  /// The set of features supported by the connected client.
+  std::set<ClientFeature> clientFeatures;
 
   /// Creates a new DAP sessions.
   ///
@@ -367,6 +372,9 @@ struct DAP {
 
   /// The set of capablities supported by this adapter.
   protocol::Capabilities GetCapabilities();
+
+  /// Returns true if the connected client supports the given feature.
+  bool isSupported(ClientFeature);
 
   /// Debuggee will continue from stopped state.
   void WillContinue() { variables.Clear(); }

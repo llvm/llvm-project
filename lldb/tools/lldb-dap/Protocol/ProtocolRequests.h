@@ -68,54 +68,58 @@ struct InitializeRequestArguments {
   /// The ISO-639 locale of the client using this adapter, e.g. en-US or de-CH.
   std::optional<std::string> locale;
 
-  /// If true all line numbers are 1-based (default).
-  std::optional<bool> linesStartAt1;
-
-  /// If true all column numbers are 1-based (default).
-  std::optional<bool> columnsStartAt1;
-
   enum class PathFormat { path, uri };
 
   /// Determines in what format paths are specified. The default is `path`,
   /// which is the native format.
   std::optional<PathFormat> pathFormat = PathFormat::path;
 
-  /// Client supports the `type` attribute for variables.
-  std::optional<bool> supportsVariableType;
+  /// If true all line numbers are 1-based (default).
+  std::optional<bool> linesStartAt1;
 
-  /// Client supports the paging of variables.
-  std::optional<bool> supportsVariablePaging;
+  /// If true all column numbers are 1-based (default).
+  std::optional<bool> columnsStartAt1;
 
-  /// Client supports the `runInTerminal` request.
-  std::optional<bool> supportsRunInTerminalRequest;
+  enum class Feature {
+    /// Client supports the `type` attribute for variables.
+    supportsVariableType,
+    /// Client supports the paging of variables.
+    supportsVariablePaging,
+    /// Client supports the `runInTerminal` request.
+    supportsRunInTerminalRequest,
+    /// Client supports memory references.
+    supportsMemoryReferences,
+    /// Client supports progress reporting.
+    supportsProgressReporting,
+    /// Client supports the `invalidated` event.
+    supportsInvalidatedEvent,
+    /// Client supports the `memory` event.
+    supportsMemoryEvent,
+    /// Client supports the `argsCanBeInterpretedByShell` attribute on the
+    /// `runInTerminal` request.
+    supportsArgsCanBeInterpretedByShell,
+    /// Client supports the `startDebugging` request.
+    supportsStartDebuggingRequest,
+    /// The client will interpret ANSI escape sequences in the display of
+    /// `OutputEvent.output` and `Variable.value` fields when
+    /// `Capabilities.supportsANSIStyling` is also enabled.
+    supportsANSIStyling,
+  };
 
-  /// Client supports memory references.
-  std::optional<bool> supportsMemoryReferences;
+  /// The set of supported features reported by the client.
+  std::set<Feature> supportedFeatures;
 
-  /// Client supports progress reporting.
-  std::optional<bool> supportsProgressReporting;
-
-  /// Client supports the `invalidated` event.
-  std::optional<bool> supportsInvalidatedEvent;
-
-  /// Client supports the `memory` event.
-  std::optional<bool> supportsMemoryEvent;
-
-  /// Client supports the `argsCanBeInterpretedByShell` attribute on the
-  /// `runInTerminal` request.
-  std::optional<bool> supportsArgsCanBeInterpretedByShell;
-
-  /// Client supports the `startDebugging` request.
-  std::optional<bool> supportsStartDebuggingRequest;
-
-  /// The client will interpret ANSI escape sequences in the display of
-  /// `OutputEvent.output` and `Variable.value` fields when
-  /// `Capabilities.supportsANSIStyling` is also enabled.
-  std::optional<bool> supportsANSIStyling;
+  bool isSupported(Feature feature) const {
+    return supportedFeatures.find(feature) != supportedFeatures.end();
+  }
 
   /// lldb-dap Extensions
+  /// @{
+
   /// Source init files when initializing lldb::SBDebugger.
-  std::optional<bool> sourceInitFile;
+  std::optional<bool> lldbExtSourceInitFile;
+
+  /// @}
 };
 bool fromJSON(const llvm::json::Value &, InitializeRequestArguments &,
               llvm::json::Path);

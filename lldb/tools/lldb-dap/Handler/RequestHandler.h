@@ -48,7 +48,7 @@ public:
 
   virtual void operator()(const protocol::Request &request) const = 0;
 
-  virtual protocol::Capabilities GetCapabilities() const { return {}; }
+  virtual std::set<AdapterFeature> GetSupportedFeatures() const { return {}; }
 
 protected:
   /// Helpers used by multiple request handlers.
@@ -176,10 +176,8 @@ class BreakpointLocationsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "breakpointLocations"; }
-  protocol::Capabilities GetCapabilities() const override {
-    protocol::Capabilities capabilities;
-    capabilities.supportsBreakpointLocationsRequest = true;
-    return capabilities;
+  std::set<AdapterFeature> GetSupportedFeatures() const override {
+    return {AdapterFeature::supportsBreakpointLocationsRequest};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -188,10 +186,8 @@ class CompletionsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "completions"; }
-  protocol::Capabilities GetCapabilities() const override {
-    protocol::Capabilities capabilities;
-    capabilities.supportsCompletionsRequest = true;
-    return capabilities;
+  std::set<AdapterFeature> GetSupportedFeatures() const override {
+    return {AdapterFeature::supportsCompletionsRequest};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -207,10 +203,8 @@ class ConfigurationDoneRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "configurationDone"; }
-  protocol::Capabilities GetCapabilities() const override {
-    protocol::Capabilities capabilities;
-    capabilities.supportsConfigurationDoneRequest = true;
-    return capabilities;
+  std::set<AdapterFeature> GetSupportedFeatures() const override {
+    return {AdapterFeature::supportsConfigurationDoneRequest};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -221,6 +215,9 @@ class DisconnectRequestHandler
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "disconnect"; }
+  std::set<AdapterFeature> GetSupportedFeatures() const override {
+    return {AdapterFeature::supportTerminateDebuggee};
+  }
   llvm::Expected<protocol::DisconnectResponse>
   Run(const std::optional<protocol::DisconnectArguments> &args) const override;
 };
@@ -230,16 +227,17 @@ public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "evaluate"; }
   void operator()(const llvm::json::Object &request) const override;
+  std::set<AdapterFeature> GetSupportedFeatures() const override {
+    return {AdapterFeature::supportsEvaluateForHovers};
+  }
 };
 
 class ExceptionInfoRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "exceptionInfo"; }
-  protocol::Capabilities GetCapabilities() const override {
-    protocol::Capabilities capabilities;
-    capabilities.supportsExceptionInfoRequest = true;
-    return capabilities;
+  std::set<AdapterFeature> GetSupportedFeatures() const override {
+    return {AdapterFeature::supportsExceptionInfoRequest};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -265,10 +263,8 @@ class RestartRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "restart"; }
-  protocol::Capabilities GetCapabilities() const override {
-    protocol::Capabilities capabilities;
-    capabilities.supportsRestartRequest = true;
-    return capabilities;
+  std::set<AdapterFeature> GetSupportedFeatures() const override {
+    return {AdapterFeature::supportsRestartRequest};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -291,10 +287,8 @@ class StepInTargetsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "stepInTargets"; }
-  protocol::Capabilities GetCapabilities() const override {
-    protocol::Capabilities capabilities;
-    capabilities.supportsStepInTargetsRequest = true;
-    return capabilities;
+  std::set<AdapterFeature> GetSupportedFeatures() const override {
+    return {AdapterFeature::supportsStepInTargetsRequest};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -310,11 +304,9 @@ class SetBreakpointsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "setBreakpoints"; }
-  protocol::Capabilities GetCapabilities() const override {
-    protocol::Capabilities capabilities;
-    capabilities.supportsConditionalBreakpoints = true;
-    capabilities.supportsHitConditionalBreakpoints = true;
-    return capabilities;
+  std::set<AdapterFeature> GetSupportedFeatures() const override {
+    return {AdapterFeature::supportsConditionalBreakpoints,
+            AdapterFeature::supportsHitConditionalBreakpoints};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -323,6 +315,9 @@ class SetExceptionBreakpointsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "setExceptionBreakpoints"; }
+  std::set<AdapterFeature> GetSupportedFeatures() const override {
+    return {AdapterFeature::supportsExceptionOptions};
+  }
   void operator()(const llvm::json::Object &request) const override;
 };
 
@@ -330,10 +325,8 @@ class SetFunctionBreakpointsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "setFunctionBreakpoints"; }
-  protocol::Capabilities GetCapabilities() const override {
-    protocol::Capabilities capabilities;
-    capabilities.supportsFunctionBreakpoints = true;
-    return capabilities;
+  std::set<AdapterFeature> GetSupportedFeatures() const override {
+    return {AdapterFeature::supportsFunctionBreakpoints};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -350,6 +343,9 @@ public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "setDataBreakpoints"; }
   void operator()(const llvm::json::Object &request) const override;
+  std::set<AdapterFeature> GetSupportedFeatures() const override {
+    return {AdapterFeature::supportsDataBreakpoints};
+  }
 };
 
 class SetInstructionBreakpointsRequestHandler : public LegacyRequestHandler {
@@ -359,6 +355,9 @@ public:
     return "setInstructionBreakpoints";
   }
   void operator()(const llvm::json::Object &request) const override;
+  std::set<AdapterFeature> GetSupportedFeatures() const override {
+    return {AdapterFeature::supportsInstructionBreakpoints};
+  }
 };
 
 class CompileUnitsRequestHandler : public LegacyRequestHandler {
@@ -372,10 +371,8 @@ class ModulesRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "modules"; }
-  protocol::Capabilities GetCapabilities() const override {
-    protocol::Capabilities capabilities;
-    capabilities.supportsModulesRequest = true;
-    return capabilities;
+  std::set<AdapterFeature> GetSupportedFeatures() const override {
+    return {AdapterFeature::supportsModulesRequest};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -398,10 +395,8 @@ class SetVariableRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "setVariable"; }
-  protocol::Capabilities GetCapabilities() const override {
-    protocol::Capabilities capabilities;
-    capabilities.supportsSetVariable = true;
-    return capabilities;
+  std::set<AdapterFeature> GetSupportedFeatures() const override {
+    return {AdapterFeature::supportsSetVariable};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -421,6 +416,9 @@ public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "stackTrace"; }
   void operator()(const llvm::json::Object &request) const override;
+  std::set<AdapterFeature> GetSupportedFeatures() const override {
+    return {AdapterFeature::supportsDelayedStackTraceLoading};
+  }
 };
 
 class ThreadsRequestHandler : public LegacyRequestHandler {
@@ -448,10 +446,8 @@ class DisassembleRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "disassemble"; }
-  protocol::Capabilities GetCapabilities() const override {
-    protocol::Capabilities capabilities;
-    capabilities.supportsDisassembleRequest = true;
-    return capabilities;
+  std::set<AdapterFeature> GetSupportedFeatures() const override {
+    return {AdapterFeature::supportsDisassembleRequest};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -460,10 +456,8 @@ class ReadMemoryRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "readMemory"; }
-  protocol::Capabilities GetCapabilities() const override {
-    protocol::Capabilities capabilities;
-    capabilities.supportsReadMemoryRequest = true;
-    return capabilities;
+  std::set<AdapterFeature> GetSupportedFeatures() const override {
+    return {AdapterFeature::supportsReadMemoryRequest};
   }
   void operator()(const llvm::json::Object &request) const override;
 };

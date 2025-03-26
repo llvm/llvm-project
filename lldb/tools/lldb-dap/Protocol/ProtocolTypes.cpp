@@ -50,7 +50,7 @@ json::Value toJSON(const ExceptionBreakpointsFilter &EBF) {
   if (EBF.description)
     result.insert({"description", *EBF.description});
   if (EBF.defaultState)
-    result.insert({"defaultState", *EBF.defaultState});
+    result.insert({"default", *EBF.defaultState});
   if (EBF.supportsCondition)
     result.insert({"supportsCondition", *EBF.supportsCondition});
   if (EBF.conditionDescription)
@@ -127,118 +127,138 @@ json::Value toJSON(const BreakpointMode &BM) {
 json::Value toJSON(const Capabilities &C) {
   json::Object result;
 
-  if (C.supportsConfigurationDoneRequest && *C.supportsConfigurationDoneRequest)
-    result.insert({"supportsConfigurationDoneRequest",
-                   *C.supportsConfigurationDoneRequest});
-  if (C.supportsFunctionBreakpoints && *C.supportsFunctionBreakpoints)
-    result.insert(
-        {"supportsFunctionBreakpoints", *C.supportsFunctionBreakpoints});
-  if (C.supportsConditionalBreakpoints && *C.supportsConditionalBreakpoints)
-    result.insert(
-        {"supportsConditionalBreakpoints", *C.supportsConditionalBreakpoints});
-  if (C.supportsHitConditionalBreakpoints &&
-      *C.supportsHitConditionalBreakpoints)
-    result.insert({"supportsHitConditionalBreakpoints",
-                   *C.supportsHitConditionalBreakpoints});
-  if (C.supportsEvaluateForHovers && *C.supportsEvaluateForHovers)
-    result.insert({"supportsEvaluateForHovers", *C.supportsEvaluateForHovers});
+  for (const auto &feature : C.supportedFeatures)
+    switch (feature) {
+    case Capabilities::Feature::supportsANSIStyling:
+      result.insert({"supportsANSIStyling", true});
+      break;
+    case Capabilities::Feature::supportsBreakpointLocationsRequest:
+      result.insert({"supportsBreakpointLocationsRequest", true});
+      break;
+    case Capabilities::Feature::supportsCancelRequest:
+      result.insert({"supportsCancelRequest", true});
+      break;
+    case Capabilities::Feature::supportsClipboardContext:
+      result.insert({"supportsClipboardContext", true});
+      break;
+    case Capabilities::Feature::supportsCompletionsRequest:
+      result.insert({"supportsCompletionsRequest", true});
+      break;
+    case Capabilities::Feature::supportsConditionalBreakpoints:
+      result.insert({"supportsConditionalBreakpoints", true});
+      break;
+    case Capabilities::Feature::supportsConfigurationDoneRequest:
+      result.insert({"supportsConfigurationDoneRequest", true});
+      break;
+    case Capabilities::Feature::supportsDataBreakpointBytes:
+      result.insert({"supportsDataBreakpointBytes", true});
+      break;
+    case Capabilities::Feature::supportsDataBreakpoints:
+      result.insert({"supportsDataBreakpoints", true});
+      break;
+    case Capabilities::Feature::supportsDelayedStackTraceLoading:
+      result.insert({"supportsDelayedStackTraceLoading", true});
+      break;
+    case Capabilities::Feature::supportsDisassembleRequest:
+      result.insert({"supportsDisassembleRequest", true});
+      break;
+    case Capabilities::Feature::supportsEvaluateForHovers:
+      result.insert({"supportsEvaluateForHovers", true});
+      break;
+    case Capabilities::Feature::supportsExceptionFilterOptions:
+      result.insert({"supportsExceptionFilterOptions", true});
+      break;
+    case Capabilities::Feature::supportsExceptionInfoRequest:
+      result.insert({"supportsExceptionInfoRequest", true});
+      break;
+    case Capabilities::Feature::supportsExceptionOptions:
+      result.insert({"supportsExceptionOptions", true});
+      break;
+    case Capabilities::Feature::supportsFunctionBreakpoints:
+      result.insert({"supportsFunctionBreakpoints", true});
+      break;
+    case Capabilities::Feature::supportsGotoTargetsRequest:
+      result.insert({"supportsGotoTargetsRequest", true});
+      break;
+    case Capabilities::Feature::supportsHitConditionalBreakpoints:
+      result.insert({"supportsHitConditionalBreakpoints", true});
+      break;
+    case Capabilities::Feature::supportsInstructionBreakpoints:
+      result.insert({"supportsInstructionBreakpoints", true});
+      break;
+    case Capabilities::Feature::supportsLoadedSourcesRequest:
+      result.insert({"supportsLoadedSourcesRequest", true});
+      break;
+    case Capabilities::Feature::supportsLogPoints:
+      result.insert({"supportsLogPoints", true});
+      break;
+    case Capabilities::Feature::supportsModulesRequest:
+      result.insert({"supportsModulesRequest", true});
+      break;
+    case Capabilities::Feature::supportsReadMemoryRequest:
+      result.insert({"supportsReadMemoryRequest", true});
+      break;
+    case Capabilities::Feature::supportsRestartFrame:
+      result.insert({"supportsRestartFrame", true});
+      break;
+    case Capabilities::Feature::supportsRestartRequest:
+      result.insert({"supportsRestartRequest", true});
+      break;
+    case Capabilities::Feature::supportsSetExpression:
+      result.insert({"supportsSetExpression", true});
+      break;
+    case Capabilities::Feature::supportsSetVariable:
+      result.insert({"supportsSetVariable", true});
+      break;
+    case Capabilities::Feature::supportsSingleThreadExecutionRequests:
+      result.insert({"supportsSingleThreadExecutionRequests", true});
+      break;
+    case Capabilities::Feature::supportsStepBack:
+      result.insert({"supportsStepBack", true});
+      break;
+    case Capabilities::Feature::supportsStepInTargetsRequest:
+      result.insert({"supportsStepInTargetsRequest", true});
+      break;
+    case Capabilities::Feature::supportsSteppingGranularity:
+      result.insert({"supportsSteppingGranularity", true});
+      break;
+    case Capabilities::Feature::supportsTerminateRequest:
+      result.insert({"supportsTerminateRequest", true});
+      break;
+    case Capabilities::Feature::supportsTerminateThreadsRequest:
+      result.insert({"supportsTerminateThreadsRequest", true});
+      break;
+    case Capabilities::Feature::supportSuspendDebuggee:
+      result.insert({"supportSuspendDebuggee", true});
+      break;
+    case Capabilities::Feature::supportsValueFormattingOptions:
+      result.insert({"supportsValueFormattingOptions", true});
+      break;
+    case Capabilities::Feature::supportsWriteMemoryRequest:
+      result.insert({"supportsWriteMemoryRequest", true});
+      break;
+    case Capabilities::Feature::supportTerminateDebuggee:
+      result.insert({"supportTerminateDebuggee", true});
+      break;
+    }
+
   if (C.exceptionBreakpointFilters && !C.exceptionBreakpointFilters->empty())
     result.insert(
         {"exceptionBreakpointFilters", *C.exceptionBreakpointFilters});
-  if (C.supportsStepBack && *C.supportsStepBack)
-    result.insert({"supportsStepBack", *C.supportsStepBack});
-  if (C.supportsSetVariable && *C.supportsSetVariable)
-    result.insert({"supportsSetVariable", *C.supportsSetVariable});
-  if (C.supportsRestartFrame && *C.supportsRestartFrame)
-    result.insert({"supportsRestartFrame", *C.supportsRestartFrame});
-  if (C.supportsGotoTargetsRequest && *C.supportsGotoTargetsRequest)
-    result.insert(
-        {"supportsGotoTargetsRequest", *C.supportsGotoTargetsRequest});
-  if (C.supportsStepInTargetsRequest && *C.supportsStepInTargetsRequest)
-    result.insert(
-        {"supportsStepInTargetsRequest", *C.supportsStepInTargetsRequest});
-  if (C.supportsCompletionsRequest && *C.supportsCompletionsRequest)
-    result.insert(
-        {"supportsCompletionsRequest", *C.supportsCompletionsRequest});
   if (C.completionTriggerCharacters && !C.completionTriggerCharacters->empty())
     result.insert(
         {"completionTriggerCharacters", *C.completionTriggerCharacters});
-  if (C.supportsModulesRequest && *C.supportsModulesRequest)
-    result.insert({"supportsModulesRequest", *C.supportsModulesRequest});
   if (C.additionalModuleColumns && !C.additionalModuleColumns->empty())
     result.insert({"additionalModuleColumns", *C.additionalModuleColumns});
   if (C.supportedChecksumAlgorithms && !C.supportedChecksumAlgorithms->empty())
     result.insert(
         {"supportedChecksumAlgorithms", *C.supportedChecksumAlgorithms});
-  if (C.supportsRestartRequest && *C.supportsRestartRequest)
-    result.insert({"supportsRestartRequest", *C.supportsRestartRequest});
-  if (C.supportsExceptionOptions && *C.supportsExceptionOptions)
-    result.insert({"supportsExceptionOptions", *C.supportsExceptionOptions});
-  if (C.supportsValueFormattingOptions && *C.supportsValueFormattingOptions)
-    result.insert(
-        {"supportsValueFormattingOptions", *C.supportsValueFormattingOptions});
-  if (C.supportsExceptionInfoRequest && *C.supportsExceptionInfoRequest)
-    result.insert(
-        {"supportsExceptionInfoRequest", *C.supportsExceptionInfoRequest});
-  if (C.supportTerminateDebuggee && *C.supportTerminateDebuggee)
-    result.insert({"supportTerminateDebuggee", *C.supportTerminateDebuggee});
-  if (C.supportSuspendDebuggee && *C.supportSuspendDebuggee)
-    result.insert({"supportSuspendDebuggee", *C.supportSuspendDebuggee});
-  if (C.supportsDelayedStackTraceLoading && *C.supportsDelayedStackTraceLoading)
-    result.insert({"supportsDelayedStackTraceLoading",
-                   *C.supportsDelayedStackTraceLoading});
-  if (C.supportsLoadedSourcesRequest && *C.supportsLoadedSourcesRequest)
-    result.insert(
-        {"supportsLoadedSourcesRequest", *C.supportsLoadedSourcesRequest});
-  if (C.supportsLogPoints && *C.supportsLogPoints)
-    result.insert({"supportsLogPoints", *C.supportsLogPoints});
-  if (C.supportsTerminateThreadsRequest && *C.supportsTerminateThreadsRequest)
-    result.insert({"supportsTerminateThreadsRequest",
-                   *C.supportsTerminateThreadsRequest});
-  if (C.supportsSetExpression && *C.supportsSetExpression)
-    result.insert({"supportsSetExpression", *C.supportsSetExpression});
-  if (C.supportsTerminateRequest && *C.supportsTerminateRequest)
-    result.insert({"supportsTerminateRequest", *C.supportsTerminateRequest});
-  if (C.supportsDataBreakpoints && *C.supportsDataBreakpoints)
-    result.insert({"supportsDataBreakpoints", *C.supportsDataBreakpoints});
-  if (C.supportsReadMemoryRequest && *C.supportsReadMemoryRequest)
-    result.insert({"supportsReadMemoryRequest", *C.supportsReadMemoryRequest});
-  if (C.supportsWriteMemoryRequest && *C.supportsWriteMemoryRequest)
-    result.insert(
-        {"supportsWriteMemoryRequest", *C.supportsWriteMemoryRequest});
-  if (C.supportsDisassembleRequest && *C.supportsDisassembleRequest)
-    result.insert(
-        {"supportsDisassembleRequest", *C.supportsDisassembleRequest});
-  if (C.supportsCancelRequest && *C.supportsCancelRequest)
-    result.insert({"supportsCancelRequest", *C.supportsCancelRequest});
-  if (C.supportsBreakpointLocationsRequest &&
-      *C.supportsBreakpointLocationsRequest)
-    result.insert({"supportsBreakpointLocationsRequest",
-                   *C.supportsBreakpointLocationsRequest});
-  if (C.supportsClipboardContext && *C.supportsClipboardContext)
-    result.insert({"supportsClipboardContext", *C.supportsClipboardContext});
-  if (C.supportsSteppingGranularity && *C.supportsSteppingGranularity)
-    result.insert(
-        {"supportsSteppingGranularity", *C.supportsSteppingGranularity});
-  if (C.supportsInstructionBreakpoints && *C.supportsInstructionBreakpoints)
-    result.insert(
-        {"supportsInstructionBreakpoints", *C.supportsInstructionBreakpoints});
-  if (C.supportsExceptionFilterOptions && *C.supportsExceptionFilterOptions)
-    result.insert(
-        {"supportsExceptionFilterOptions", *C.supportsExceptionFilterOptions});
-  if (C.supportsSingleThreadExecutionRequests &&
-      *C.supportsSingleThreadExecutionRequests)
-    result.insert({"supportsSingleThreadExecutionRequests",
-                   *C.supportsSingleThreadExecutionRequests});
-  if (C.supportsDataBreakpointBytes && *C.supportsDataBreakpointBytes)
-    result.insert(
-        {"supportsDataBreakpointBytes", *C.supportsDataBreakpointBytes});
   if (C.breakpointModes && !C.breakpointModes->empty())
     result.insert({"breakpointModes", *C.breakpointModes});
-  if (C.supportsANSIStyling && *C.supportsANSIStyling)
-    result.insert({"supportsANSIStyling", *C.supportsANSIStyling});
-  if (C.lldbVersion && !C.lldbVersion->empty())
-    result.insert({"$__lldb_version", *C.lldbVersion});
+
+  // lldb-dap extensions
+  if (C.lldbExtVersion && !C.lldbExtVersion->empty())
+    result.insert({"$__lldb_version", *C.lldbExtVersion});
 
   return result;
 }

@@ -233,6 +233,8 @@ static void EventThreadFunction(DAP &dap) {
 /// Initialize request; value of command field is 'initialize'.
 llvm::Expected<protocol::InitializeResponseBody> InitializeRequestHandler::Run(
     const protocol::InitializeRequestArguments &arguments) const {
+  dap.clientFeatures = arguments.supportedFeatures;
+
   // Do not source init files until in/out/err are configured.
   dap.debugger = lldb::SBDebugger::Create(false);
   dap.debugger.SetInputFile(dap.in);
@@ -252,7 +254,7 @@ llvm::Expected<protocol::InitializeResponseBody> InitializeRequestHandler::Run(
   // sourceInitFile option is not from formal DAP specification. It is only
   // used by unit tests to prevent sourcing .lldbinit files from environment
   // which may affect the outcome of tests.
-  if (arguments.sourceInitFile.value_or(true)) {
+  if (arguments.lldbExtSourceInitFile.value_or(true)) {
     dap.debugger.SkipLLDBInitFiles(false);
     dap.debugger.SkipAppInitFiles(false);
     lldb::SBCommandReturnObject init;
@@ -266,21 +268,19 @@ llvm::Expected<protocol::InitializeResponseBody> InitializeRequestHandler::Run(
   dap.PopulateExceptionBreakpoints();
   auto cmd = dap.debugger.GetCommandInterpreter().AddMultiwordCommand(
       "lldb-dap", "Commands for managing lldb-dap.");
-  if (arguments.supportsStartDebuggingRequest.value_or(false)) {
+  if (arguments.isSupported(ClientFeature::supportsStartDebuggingRequest)) {
     cmd.AddCommand(
         "start-debugging", new StartDebuggingRequestHandler(dap),
         "Sends a startDebugging request from the debug adapter to the client "
         "to start a child debug session of the same type as the caller.");
   }
-  dap.supports_run_in_terminal_request =
-      arguments.supportsRunInTerminalRequest.value_or(false);
   cmd.AddCommand(
       "repl-mode", new ReplModeRequestHandler(dap),
       "Get or set the repl behavior of lldb-dap evaluation requests.");
   cmd.AddCommand("send-event", new SendEventRequestHandler(dap),
                  "Sends an DAP event to the client.");
 
-  if (arguments.supportsProgressReporting)
+  if (arguments.isSupported(ClientFeature::supportsProgressReporting))
     dap.progress_event_thread =
         std::thread(ProgressEventThreadFunction, std::ref(dap));
 
