@@ -1015,7 +1015,7 @@ def ProcessorFeatures {
                                        FeatureCCIDX,
                                        FeatureSVE, FeatureSVE2, FeatureSSBS, FeatureFullFP16, FeatureDotProd,
                                        FeatureComplxNum, FeatureCRC, FeatureFPARMv8, FeatureJS, FeatureLSE,
-                                       FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM];
+                                       FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM, FeatureFPAC];
   list<SubtargetFeature> NeoverseV3 = [HasV9_2aOps, FeatureETE, FeatureFP16FML,
                                       FeatureFullFP16, FeatureLS64, FeatureMTE,
                                       FeaturePerfMon, FeatureRandGen, FeatureSPE,
