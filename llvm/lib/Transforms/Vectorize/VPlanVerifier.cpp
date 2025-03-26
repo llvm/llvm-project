@@ -208,10 +208,9 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
       for (const VPUser *U : V->users()) {
         auto *UI = cast<VPRecipeBase>(U);
         // TODO: check dominance of incoming values for phis properly.
-        if (!UI || isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe,
-                       VPIRPhi>(UI))
         if (!UI ||
-            isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe>, VPIRPhi(UI) ||
+            isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe,
+                VPIRPhi>(UI) ||
             (isa<VPInstruction>(UI) &&
              cast<VPInstruction>(UI)->getOpcode() == Instruction::PHI))
           continue;
