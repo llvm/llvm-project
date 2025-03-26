@@ -4,27 +4,20 @@
 ; Ensure that when a bitcast is folded into a load, range metadata is invalidated
 ; if it does not match the new type.
 
-target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
-
-define void @fold_bitcast_range_metadata() {
+define i1 @fold_bitcast_range_metadata(ptr %valptr) {
 ; CHECK-LABEL: fold_bitcast_range_metadata:
 ; CHECK:       ## %bb.0: ## %start
-; CHECK-NEXT:    movaps 0, %xmm0
+; CHECK-NEXT:    movaps (%rdi), %xmm0
 ; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [1,0,0,0]
 ; CHECK-NEXT:    pcmpeqb %xmm1, %xmm0
 ; CHECK-NEXT:    pmovmskb %xmm0, %eax
 ; CHECK-NEXT:    subl $65535, %eax ## imm = 0xFFFF
-; CHECK-NEXT:    jne LBB0_1
-; CHECK-NEXT:    jmp LBB0_1
-; CHECK-NEXT:  LBB0_1: ## %bb1
+; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
 start:
-  %0 = load i128, ptr null, align 16, !range !0, !noundef !1
-  %1 = icmp eq i128 %0, 1
-  br i1 %1, label %bb1, label %bb1
-
-bb1:                                              ; preds = %start, %start
-  ret void
+  %val = load i128, ptr %valptr, align 16, !range !0, !noundef !1
+  %bool = icmp eq i128 %val, 1
+  ret i1 %bool
 }
 
 !0 = !{i128 0, i128 3}
