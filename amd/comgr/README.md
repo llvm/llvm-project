@@ -80,6 +80,13 @@ may be enabled during development via `-DADDRESS_SANITIZER=On` during the Comgr
 Comgr can be built as a static library by passing
 `-DCOMGR_BUILD_SHARED_LIBS=OFF` during the Comgr `cmake` step.
 
+To enable SPIRV support, checkout
+[SPIRV-LLVM-Translator](https://github.com/ROCm/SPIRV-LLVM-Translator) in
+`llvm/projects` or `llvm/tools` and build using the above instructions, with the
+exception that the `-DCMAKE_PREFIX_PATH` for llvm-project must be an install
+path (specified with `-DCMAKE_INSTALL_PREFIX=/path/to/install/dir` and populated
+with `make install`) rather than the build path.
+
 Comgr SPIRV-related APIs can be disabled by passing
 `-DCOMGR_DISABLE_SPIRV=1` during the Comgr `cmake` step. This removes any
 dependency on LLVM SPIRV libraries or the llvm-spirv tool.
