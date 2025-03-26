@@ -146,6 +146,7 @@ func.func @main() {
     %c16384 = arith.constant 16384 : index
     %c49152 = arith.constant 49152 : index
     %c57344 = arith.constant 57344 : index
+    %c40960 = arith.constant 40960 : index
 
     %tidx = gpu.thread_id  x
     %dynamicMem = memref.get_global @dynamicShmem : memref<0xf16, 3>
@@ -169,8 +170,8 @@ func.func @main() {
     scf.if %cnd {
       %pipe = arith.constant 0 : index
       %lhsSlice = memref.view %dynsmem[%c0][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<128x64xf16, #gpu.address_space<workgroup>>
-      %halfFirst = memref.view %dynsmem[%c16384][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<64x64xf16, #gpu.address_space<workgroup>>
-      %halfSecond = memref.view %dynsmem[%c24576][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<64x64xf16, #gpu.address_space<workgroup>>
+      %halfFirst = memref.view %dynsmem[%c32768][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<64x64xf16, #gpu.address_space<workgroup>>
+      %halfSecond = memref.view %dynsmem[%c40960][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<64x64xf16, #gpu.address_space<workgroup>>
       nvgpu.mbarrier.arrive.expect_tx %barrier[%pipe], %txcount : !barrierType        
       %dim = arith.muli %pipe, %c64 : index
       nvgpu.tma.async.load %descA[%dim, %c0], %barrier[%pipe] to %lhsSlice : !lhsTensorMap, !barrierType ->  memref<128x64xf16, #gpu.address_space<workgroup>>
@@ -180,7 +181,7 @@ func.func @main() {
     // Step 4.2 [GPU] TMA Load Pipeline 2
     scf.if %cnd {
       %pipe = arith.constant 1 : index
-      %lhsSlice = memref.view %dynsmem[%c32768][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<128x64xf16, #gpu.address_space<workgroup>>
+      %lhsSlice = memref.view %dynsmem[%c16384][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<128x64xf16, #gpu.address_space<workgroup>>
       %halfFirst = memref.view %dynsmem[%c49152][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<64x64xf16, #gpu.address_space<workgroup>>
       %halfSecond = memref.view %dynsmem[%c57344][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<64x64xf16, #gpu.address_space<workgroup>>
       nvgpu.mbarrier.arrive.expect_tx %barrier[%pipe], %txcount : !barrierType
