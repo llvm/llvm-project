@@ -23,6 +23,7 @@ if (LLVM_ENABLE_EH)
 endif()
 
 set(FLANG_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(FLANG_RT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../flang-rt")
 
 # Python is needed for symbol extracting tool
 set(LLVM_MINIMUM_PYTHON_VERSION 3.8)
@@ -258,10 +259,24 @@ else()
   include_directories(SYSTEM ${MLIR_TABLEGEN_OUTPUT_DIR})
 endif()
 
-if (FLANG_STANDALONE_BUILD)
-  message(STATUS "Not building Flang-RT. For a usable Fortran toolchain, compile a standalone Flang-RT.")
-elseif (NOT "flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-  message(STATUS "Not building Flang-RT. For a usable Fortran toolchain, either set FLANG_ENABLE_FLANG_RT=ON, add LLVM_ENABLE_RUNTIMES=flang-rt, or compile a standalone Flang-RT.")
+set(FLANG_INCLUDE_RUNTIME_default ON)
+if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+  set(FLANG_INCLUDE_RUNTIME_default OFF)
+endif ()
+option(FLANG_INCLUDE_RUNTIME "Build the runtime in-tree (deprecated; to be replaced with LLVM_ENABLE_RUNTIMES=flang-rt)" ${FLANG_INCLUDE_RUNTIME_default})
+if (FLANG_INCLUDE_RUNTIME)
+  if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+    message(WARNING "Building Flang-RT using LLVM_ENABLE_RUNTIMES. FLANG_INCLUDE_RUNTIME=${FLANG_INCLUDE_RUNTIME} ignored.")
+    set(FLANG_INCLUDE_RUNTIME OFF)
+  else ()
+     message(STATUS "Building Flang-RT in-tree")
+  endif ()
+else ()
+  if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+    message(STATUS "Building Flang-RT using LLVM_ENABLE_RUNTIMES")
+  else ()
+    message(STATUS "Not building Flang-RT. For a usable Fortran toolchain, either add LLVM_ENABLE_RUNTIMES=flang-rt, or compile a standalone Flang-RT.")
+  endif ()
 endif ()
 
 set(FLANG_TOOLS_INSTALL_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
@@ -486,6 +501,12 @@ if (FLANG_INCLUDE_TESTS)
   add_compile_definitions(FLANG_INCLUDE_TESTS=1)
 endif()
 
+option(FLANG_CUF_RUNTIME
+  "Compile CUDA Fortran runtime sources" OFF)
+if (FLANG_CUF_RUNTIME)
+  find_package(CUDAToolkit REQUIRED)
+endif()
+
 add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(cmake/modules)
@@ -495,6 +516,10 @@ option(FLANG_BUILD_TOOLS
 if (FLANG_BUILD_TOOLS)
   add_subdirectory(tools)
 endif()
+
+if (FLANG_INCLUDE_RUNTIME)
+  add_subdirectory(runtime)
+endif ()
 
 if (LLVM_INCLUDE_EXAMPLES)
   add_subdirectory(examples)
