@@ -250,6 +250,7 @@ int main(int, char**) {
   test<int>();
   test_floating<float>();
   test_floating<double>();
+  test_floating<long double>();
   test_enum();
 #if TEST_STD_VER >= 26
   static_assert(test<int>());

@@ -31,7 +31,6 @@
 #include <__algorithm/move.h>
 #include <__bit/bit_cast.h>
 #include <__bit/bit_log2.h>
-#include <__bit/countl.h>
 #include <__config>
 #include <__cstddef/size_t.h>
 #include <__functional/identity.h>
@@ -44,12 +43,15 @@
 #include <__numeric/partial_sum.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/enable_if.h>
+#include <__type_traits/integral_constant.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_enum.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_unsigned.h>
 #include <__type_traits/make_unsigned.h>
+#include <__type_traits/void_t.h>
+#include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/move.h>
@@ -378,6 +380,20 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __to_ordered_integral(_Floating __f) {
 // There may exist user-defined comparison for enum, so we cannot compare enums just like integers.
 template <class _Enum, enable_if_t< is_enum<_Enum>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr auto __to_ordered_integral(_Enum __e) = delete;
+
+// `long double` varies significantly across platforms and compilers, making it practically
+// impossible to determine its actual bit width for conversion to an ordered integer.
+inline _LIBCPP_HIDE_FROM_ABI constexpr auto __to_ordered_integral(long double) = delete;
+
+template <class _Tp, class = void>
+struct __is_ordered_integer_representable : false_type {};
+
+template <class _Tp>
+struct __is_ordered_integer_representable<_Tp, __void_t<decltype(std::__to_ordered_integral(std::declval<_Tp>()))>>
+    : true_type {};
+
+template <class _Tp>
+inline constexpr auto __is_ordered_integer_representable_v = __is_ordered_integer_representable<_Tp>::value;
 
 struct __low_byte_fn {
   template <class _Ip>
