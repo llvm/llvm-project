@@ -18,10 +18,10 @@ body:             |
 ...
 
 ---
-name:            s_xor_b32
+name:            s_or_b32
 body:             |
   bb.0:
-    ; GCN-LABEL: name: s_xor_b32
+    ; GCN-LABEL: name: s_or_b32
     ; GCN: [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
     ; GCN-NEXT: [[V_CVT_F16_U16_t16_e64_:%[0-9]+]]:vgpr_16 = V_CVT_F16_U16_t16_e64 0, [[DEF]], 0, 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:vgpr_32 = SUBREG_TO_REG 0, [[V_CVT_F16_U16_t16_e64_]], %subreg.lo16

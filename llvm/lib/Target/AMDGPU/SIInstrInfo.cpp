@@ -7745,7 +7745,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
       return;
     }
 
-    // in true16 mode, if this is a v2s copy src between vgpr16 and sgpr32,
+    // If this is a v2s copy src from vgpr16 to sgpr32,
     // replace vgpr copy to subreg_to_reg
     if (ST.useRealTrue16Insts() && Inst.isCopy() &&
         Inst.getOperand(1).getReg().isVirtual() &&
