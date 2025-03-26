@@ -83,3 +83,33 @@ float4 test_length_float4(float4 p0)
 {
     return normalize(p0);
 }
+
+// CHECK: define [[FNATTRS]] float @
+// CHECK: call reassoc nnan ninf nsz arcp afn float @llvm.[[TARGET]].normalize.f32(float
+// CHECK: ret float
+float test_normalize_double(double p0)
+{
+    return normalize(p0);
+}
+// CHECK: define [[FNATTRS]] <2 x float> @
+// CHECK: %hlsl.normalize = call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.[[TARGET]].normalize.v2f32(<2 x float>
+
+// CHECK: ret <2 x float> %hlsl.normalize
+float2 test_normalize_double2(double2 p0)
+{
+    return normalize(p0);
+}
+// CHECK: define [[FNATTRS]] <3 x float> @
+// CHECK: %hlsl.normalize = call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.[[TARGET]].normalize.v3f32(
+// CHECK: ret <3 x float> %hlsl.normalize
+float3 test_normalize_double3(double3 p0)
+{
+    return normalize(p0);
+}
+// CHECK: define [[FNATTRS]] <4 x float> @
+// CHECK: %hlsl.normalize = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.[[TARGET]].normalize.v4f32(
+// CHECK: ret <4 x float> %hlsl.normalize
+float4 test_length_double4(double4 p0)
+{
+    return normalize(p0);
+}

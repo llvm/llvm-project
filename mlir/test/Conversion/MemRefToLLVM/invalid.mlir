@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -finalize-memref-to-llvm 2>&1 | FileCheck %s
 // Since the error is at an unknown location, we use FileCheck instead of
-// -veri-y-diagnostics here
+// -verify-diagnostics here
 
 // CHECK: redefinition of reserved function 'malloc' of different type '!llvm.func<void (i64)>' is prohibited
 llvm.func @malloc(i64)
