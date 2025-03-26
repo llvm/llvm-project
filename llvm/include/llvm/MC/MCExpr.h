@@ -211,13 +211,6 @@ public:
 
     VK_COFF_IMGREL32, // symbol@imgrel (image-relative)
 
-    VK_WASM_TYPEINDEX, // Reference to a symbol's type (signature)
-    VK_WASM_TLSREL,    // Memory address relative to __tls_base
-    VK_WASM_MBREL,     // Memory address relative to __memory_base
-    VK_WASM_TBREL,     // Table index relative to __table_base
-    VK_WASM_GOT_TLS,   // Wasm global index of TLS symbol.
-    VK_WASM_FUNCINDEX, // Wasm function index.
-
     VK_AMDGPU_GOTPCREL32_LO, // symbol@gotpcrel32@lo
     VK_AMDGPU_GOTPCREL32_HI, // symbol@gotpcrel32@hi
     VK_AMDGPU_REL32_LO,      // symbol@rel32@lo
