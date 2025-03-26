@@ -506,10 +506,9 @@ Error DLLImportDefinitionGenerator::tryToGenerate(
     if (Deinterned.starts_with(getImpPrefix()))
       Deinterned = Deinterned.drop_front(StringRef(getImpPrefix()).size());
     // Don't degrade the required state
-    if (ToLookUpSymbols.count(Deinterned) &&
-        ToLookUpSymbols[Deinterned] == SymbolLookupFlags::RequiredSymbol)
-      continue;
-    ToLookUpSymbols[Deinterned] = KV.second;
+    auto [It, Inserted] = ToLookUpSymbols.try_emplace(Deinterned);
+    if (Inserted || It->second != SymbolLookupFlags::RequiredSymbol)
+      It->second = KV.second;
   }
 
   for (auto &KV : ToLookUpSymbols)

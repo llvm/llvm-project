@@ -35,13 +35,12 @@ public:
   // the Layout is the size followed by offsets for each struct element.
   llvm::TargetExtType *
   createLayoutType(const RecordType *StructType,
-                   const llvm::SmallVector<unsigned> *Packoffsets = nullptr);
+                   const llvm::SmallVector<int32_t> *Packoffsets = nullptr);
 
 private:
   bool layoutField(const clang::FieldDecl *FD, unsigned &EndOffset,
-                   llvm::SmallVector<unsigned> &Layout,
-                   llvm::SmallVector<llvm::Type *> &LayoutElements,
-                   int Packoffset);
+                   unsigned &FieldOffset, llvm::Type *&FieldType,
+                   int Packoffset = -1);
 };
 
 } // namespace CodeGen

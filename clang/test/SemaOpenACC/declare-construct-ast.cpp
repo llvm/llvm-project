@@ -18,6 +18,17 @@ int GlobalArray[5];
 // CHECK-NEXT: copyin clause
 // CHECK-NEXT: DeclRefExpr{{.*}}'GlobalArray' 'int[5]'
 
+int *Global1;
+// CHECK-NEXT: VarDecl{{.*}}Global1 'int *'
+int GlobalArray1[5];
+// CHECK-NEXT: VarDecl{{.*}}GlobalArray1 'int[5]'
+_Pragma("acc declare deviceptr(Global1), copyin(GlobalArray1)")
+// CHECK-NEXT: OpenACCDeclareDecl
+// CHECK-NEXT: deviceptr clause
+// CHECK-NEXT: DeclRefExpr{{.*}}'Global1' 'int *'
+// CHECK-NEXT: copyin clause
+// CHECK-NEXT: DeclRefExpr{{.*}}'GlobalArray1' 'int[5]'
+
 int *Global2;
 // CHECK: VarDecl{{.*}}Global2 'int *'
 int GlobalArray2[5];
