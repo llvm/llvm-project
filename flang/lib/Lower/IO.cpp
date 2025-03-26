@@ -34,7 +34,7 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Parser/parse-tree.h"
-#include "flang/Runtime/io-api-consts.h"
+#include "flang/Runtime/io-api.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
