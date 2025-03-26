@@ -637,7 +637,7 @@ Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
   StringRef CPU = "";
   StringRef Features = "";
   std::unique_ptr<TargetMachine> TM(
-      T->createTargetMachine(M.getTargetTriple().str(), CPU, Features, Options,
+      T->createTargetMachine(M.getTargetTriple(), CPU, Features, Options,
                              Reloc::PIC_, M.getCodeModel()));
 
   if (M.getDataLayout().isDefault())

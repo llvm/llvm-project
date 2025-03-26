@@ -324,8 +324,8 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
     // when it refers to an empty line sequence. In such cases, the DWARF linker
     // will exclude the empty sequence from the final output and assign
     // `UINT64_MAX` to the `DW_AT_LLVM_stmt_sequence` attribute.
-    auto StmtSeqVal = dwarf::toSectionOffset(StmtSeqAttr, UINT64_MAX);
-    if (StmtSeqVal != UINT32_MAX)
+    uint64_t StmtSeqVal = dwarf::toSectionOffset(StmtSeqAttr, UINT64_MAX);
+    if (StmtSeqVal != UINT64_MAX)
       StmtSeqOffset = StmtSeqVal;
   }
 
@@ -741,7 +741,7 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath,
       uint32_t NumDwarfInlineInfos = DwarfInlineInfos.getNumberOfFrames();
       if (NumDwarfInlineInfos == 0) {
         DwarfInlineInfos.addFrame(
-            DICtx.getLineInfoForAddress(SectAddr, DLIS));
+            DICtx.getLineInfoForAddress(SectAddr, DLIS).value_or(DILineInfo()));
       }
 
       // Check for 1 entry that has no file and line info

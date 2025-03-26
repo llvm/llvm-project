@@ -621,6 +621,11 @@ public:
                                        MachineIRBuilder &MIRBuilder,
                                        unsigned Opcode);
 
+  SPIRVType *getOrCreateUnknownType(const Type *Ty,
+                                    MachineIRBuilder &MIRBuilder,
+                                    unsigned Opcode,
+                                    const ArrayRef<MCOperand> Operands);
+
   const TargetRegisterClass *getRegClass(SPIRVType *SpvType) const;
   LLT getRegType(SPIRVType *SpvType) const;
 

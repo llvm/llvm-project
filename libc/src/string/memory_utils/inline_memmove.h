@@ -11,7 +11,7 @@
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
-#include <stddef.h> // size_t, ptrdiff_t
+#include <stddef.h>                          // size_t, ptrdiff_t
 
 #if defined(LIBC_TARGET_ARCH_IS_X86)
 #include "src/string/memory_utils/x86_64/inline_memmove.h"
@@ -29,19 +29,17 @@
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_SMALL_SIZE                        \
   inline_memmove_no_small_size
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_FOLLOW_UP inline_memmove_riscv
-#elif defined(LIBC_TARGET_ARCH_IS_ARM)
-#include "src/string/memory_utils/generic/byte_per_byte.h"
-#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_SMALL_SIZE                        \
-  inline_memmove_no_small_size
-#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_FOLLOW_UP                         \
-  inline_memmove_byte_per_byte
 #elif defined(LIBC_TARGET_ARCH_IS_GPU)
 #include "src/string/memory_utils/generic/builtin.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_SMALL_SIZE                        \
   inline_memmove_no_small_size
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_FOLLOW_UP inline_memmove_builtin
 #else
-#error "Unsupported architecture"
+#include "src/string/memory_utils/generic/byte_per_byte.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_SMALL_SIZE                        \
+  inline_memmove_no_small_size
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_FOLLOW_UP                         \
+  inline_memmove_byte_per_byte
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
