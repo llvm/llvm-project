@@ -14,6 +14,7 @@
 #include <__algorithm/for_each_n_segment.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/next.h>
 #include <__iterator/segmented_iterator.h>
 #include <__type_traits/disjunction.h>
 #include <__type_traits/enable_if.h>
