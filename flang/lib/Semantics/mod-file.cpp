@@ -348,7 +348,7 @@ void ModFileWriter::PrepareRenamings(const Scope &scope) {
     uses_ << DEREF(sMod->symbol()).name() << ",only:";
     if (rename != s->name()) {
       uses_ << rename << "=>";
-      renamings.emplace(&*s, rename);
+      renamings.emplace(&s->GetUltimate(), rename);
     }
     uses_ << s->name() << '\n';
     useExtraAttrs_ << "private::" << rename << '\n';
