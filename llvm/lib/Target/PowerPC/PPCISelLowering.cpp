@@ -12197,7 +12197,7 @@ SDValue PPCTargetLowering::LowerADDSUBO(SDValue Op, SelectionDAG &DAG) const {
                                                DAG, Subtarget);
   if (!IsAdd)
     Carry = DAG.getNode(ISD::XOR, DL, CarryType, Carry,
-                        DAG.getAllOnesConstant(DL, CarryType));
+                        DAG.getConstant(1UL, DL, CarryType));
   return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Sum, Carry);
 }
 
@@ -12221,7 +12221,7 @@ SDValue PPCTargetLowering::LowerADDSUBO_CARRY(SDValue Op,
                                          Subtarget);
   if (!IsAdd)
     CarryOp = DAG.getNode(ISD::XOR, DL, CarryOp.getValueType(), CarryOp,
-                          DAG.getAllOnesConstant(DL, CarryOp.getValueType()));
+                          DAG.getConstant(1UL, DL, CarryOp.getValueType()));
   return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Sum, CarryOp);
 }
 
@@ -18472,7 +18472,7 @@ static SDValue combineADDToADDZE(SDNode *N, SelectionDAG &DAG,
                     DAG.getConstant(0, DL, MVT::i64), AddOrZ,
                     DAG.getConstant(0, DL, CarryType));
     SDValue Invert = DAG.getNode(ISD::XOR, DL, CarryType, Subc.getValue(1),
-                                 DAG.getAllOnesConstant(DL, CarryType));
+                                 DAG.getConstant(1UL, DL, CarryType));
     return DAG.getNode(ISD::UADDO_CARRY, DL, VTs, LHS,
                        DAG.getConstant(0, DL, MVT::i64), Invert);
   }
