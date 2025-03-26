@@ -46,6 +46,9 @@ public:
   /// Mark a stack frame as the currently selected frame and return its index.
   uint32_t SetSelectedFrame(lldb_private::StackFrame *frame);
 
+  /// Resets the selected frame index of this object.
+  void ClearSelectedFrameIndex();
+
   /// Get the currently selected frame index.
   /// We should only call SelectMostRelevantFrame if (a) the user hasn't already
   /// selected a frame, and (b) if this really is a user facing
