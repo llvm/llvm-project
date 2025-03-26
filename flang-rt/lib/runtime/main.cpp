@@ -12,6 +12,7 @@
 #include <cfenv>
 #include <cstdio>
 #include <cstdlib>
+#include <thread>
 
 static void ConfigureFloatingPoint() {
 #ifdef feclearexcept // a macro in some environments; omit std::
@@ -26,7 +27,10 @@ static void ConfigureFloatingPoint() {
 #endif
 }
 
+std::thread::id _main_thread_id = std::this_thread::get_id();
 extern "C" {
+std::thread::id RTNAME(GetMainThreadId)() { return _main_thread_id; }
+
 void RTNAME(ProgramStart)(int argc, const char *argv[], const char *envp[],
     const EnvironmentDefaultList *envDefaults) {
   std::atexit(Fortran::runtime::NotifyOtherImagesOfNormalEnd);

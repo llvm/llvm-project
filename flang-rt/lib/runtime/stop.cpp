@@ -13,9 +13,11 @@
 #include "flang-rt/runtime/file.h"
 #include "flang-rt/runtime/io-error.h"
 #include "flang-rt/runtime/terminator.h"
+#include "flang/Runtime/main.h"
 #include <cfenv>
 #include <cstdio>
 #include <cstdlib>
+#include <thread>
 
 #ifdef HAVE_BACKTRACE
 #include BACKTRACE_HEADER
@@ -79,6 +81,8 @@ static void CloseAllExternalUnits(const char *why) {
     std::fputc('\n', stderr);
     DescribeIEEESignaledExceptions();
   }
+  if (RTNAME(GetMainThreadId)() != std::this_thread::get_id())
+    std::abort();
   std::exit(code);
 }
 
@@ -94,6 +98,8 @@ static void CloseAllExternalUnits(const char *why) {
     }
     DescribeIEEESignaledExceptions();
   }
+  if (RTNAME(GetMainThreadId)() != std::this_thread::get_id())
+    std::abort();
   if (isErrorStop) {
     std::exit(EXIT_FAILURE);
   } else {
