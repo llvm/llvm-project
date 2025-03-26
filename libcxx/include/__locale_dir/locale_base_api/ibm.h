@@ -22,6 +22,8 @@
 
 #if defined(__MVS__)
 #  include <wctype.h>
+// POSIX routines
+#  include <__support/xlocale/__posix_l_fallback.h>
 #endif // defined(__MVS__)
 
 _LIBCPP_BEGIN_NAMESPACE_STD
