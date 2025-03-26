@@ -594,18 +594,9 @@ public:
   void populate(Module &M, DXILBindingMap &DBM);
 
   ResourceCounterDirection
-  operator[](const dxil::ResourceBindingInfo &Info) const {
-    auto Lower = llvm::lower_bound(
-        CounterDirections, Info,
-        [](const auto &LHS, const auto &RHS) { return *LHS.first < RHS; });
+  operator[](const dxil::ResourceBindingInfo &Info) const;
 
-    if (Lower == CounterDirections.end())
-      return ResourceCounterDirection::Unknown;
-    if (*Lower->first != Info)
-      return ResourceCounterDirection::Unknown;
-
-    return Lower->second;
-  }
+  void print(raw_ostream &OS) const;
 };
 
 class DXILResourceCounterDirectionAnalysis
@@ -646,6 +637,7 @@ public:
   void releaseMemory() override;
 
   void print(raw_ostream &OS, const Module *M) const override;
+  void dump() const;
 };
 
 ModulePass *createDXILResourceCounterDirectionWrapperPassPass();

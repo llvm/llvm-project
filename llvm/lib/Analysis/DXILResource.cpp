@@ -940,6 +940,46 @@ void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
                  });
 }
 
+ResourceCounterDirection DXILResourceCounterDirectionMap::operator[](
+    const dxil::ResourceBindingInfo &Info) const {
+  auto Lower = llvm::lower_bound(
+      CounterDirections, Info,
+      [](const auto &LHS, const auto &RHS) { return *LHS.first < RHS; });
+
+  if (Lower == CounterDirections.end())
+    return ResourceCounterDirection::Unknown;
+  if (*Lower->first != Info)
+    return ResourceCounterDirection::Unknown;
+
+  return Lower->second;
+}
+
+void DXILResourceCounterDirectionMap::print(raw_ostream &OS) const {
+  OS << "Counter Directions:\n";
+  for (const auto &Dir : CounterDirections) {
+    const dxil::ResourceBindingInfo::ResourceBinding &RB =
+        Dir.first->getBinding();
+
+    OS << "  Binding(" << RB.RecordID << ", " << RB.Size << ", "
+       << RB.LowerBound << ", " << RB.Size << ", " << ")'s counter is ";
+
+    switch (Dir.second) {
+    case ResourceCounterDirection::Increment:
+      OS << "incremented\n";
+      break;
+    case ResourceCounterDirection::Decrement:
+      OS << "decremented\n";
+      break;
+    case ResourceCounterDirection::Unknown:
+      OS << "unknown\n";
+      break;
+    case ResourceCounterDirection::Invalid:
+      OS << "invalid\n";
+      break;
+    }
+  }
+}
+
 void DXILResourceCounterDirectionWrapperPass::getAnalysisUsage(
     AnalysisUsage &AU) const {
   AU.addRequiredTransitive<DXILResourceBindingWrapperPass>();
@@ -963,13 +1003,17 @@ void DXILResourceCounterDirectionWrapperPass::print(raw_ostream &OS,
     OS << "No resource directions have been built!\n";
     return;
   }
-  // Map->print(OS, *DRTM, M->getDataLayout());
+
+  Map->print(OS);
 }
 
-// #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-// LLVM_DUMP_METHOD
-// void DXILResourceCounterDirectionWrapperPass::dump() const { print(dbgs(),
-// nullptr); } #endif
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
+void DXILResourceCounterDirectionWrapperPass::dump() const {
+  print(dbgs(), nullptr);
+}
+#endif
+
 //===----------------------------------------------------------------------===//
 
 AnalysisKey DXILResourceTypeAnalysis::Key;
