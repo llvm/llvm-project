@@ -3,6 +3,7 @@ add_llvm_component_library(LLVMWebAssemblyDesc
   WebAssemblyInstPrinter.cpp
   WebAssemblyMCAsmInfo.cpp
   WebAssemblyMCCodeEmitter.cpp
+  WebAssemblyMCExpr.cpp
   WebAssemblyMCTargetDesc.cpp
   WebAssemblyMCTypeUtilities.cpp
   WebAssemblyTargetStreamer.cpp

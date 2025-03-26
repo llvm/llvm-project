@@ -67,10 +67,7 @@ public:
   void finishImpl() override;
 
 private:
-  void emitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &) override;
   void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &) override;
-
-  void fixSymbolsInTLSFixups(const MCExpr *expr);
 
   bool SeenIdent;
 };
