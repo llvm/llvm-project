@@ -711,9 +711,32 @@ bool Sema::addInstantiatedCapturesToScope(
 
   unsigned Instantiated = 0;
 
+  // FIXME: This is a workaround for not having deferred lambda body
+  // instantiation.
+  // When transforming a lambda's body, if we encounter another call to a
+  // nested lambda that contains a constraint expression, we add all of the
+  // outer lambda's instantiated captures to the current instantiation scope to
+  // facilitate constraint evaluation. However, these captures don't appear in
+  // the CXXRecordDecl until after the lambda expression is rebuilt, so we
+  // pull them out from the corresponding LSI.
+  LambdaScopeInfo *InstantiatingScope = nullptr;
+  if (LambdaPattern->capture_size() && !LambdaClass->capture_size()) {
+    for (FunctionScopeInfo *Scope : llvm::reverse(FunctionScopes)) {
+      auto *LSI = dyn_cast<LambdaScopeInfo>(Scope);
+      if (!LSI ||
+          LSI->CallOperator->getTemplateInstantiationPattern() != PatternDecl)
+        continue;
+      InstantiatingScope = LSI;
+      break;
+    }
+    assert(InstantiatingScope);
+  }
+
   auto AddSingleCapture = [&](const ValueDecl *CapturedPattern,
                               unsigned Index) {
-    ValueDecl *CapturedVar = LambdaClass->getCapture(Index)->getCapturedVar();
+    ValueDecl *CapturedVar =
+        InstantiatingScope ? InstantiatingScope->Captures[Index].getVariable()
+                           : LambdaClass->getCapture(Index)->getCapturedVar();
     assert(CapturedVar->isInitCapture());
     Scope.InstantiatedLocal(CapturedPattern, CapturedVar);
   };
@@ -1773,6 +1796,7 @@ bool Sema::IsAtLeastAsConstrained(NamedDecl *D1,
                                   NamedDecl *D2,
                                   MutableArrayRef<const Expr *> AC2,
                                   bool &Result) {
+#ifndef NDEBUG
   if (const auto *FD1 = dyn_cast<FunctionDecl>(D1)) {
     auto IsExpectedEntity = [](const FunctionDecl *FD) {
       FunctionDecl::TemplatedKind Kind = FD->getTemplatedKind();
@@ -1780,13 +1804,11 @@ bool Sema::IsAtLeastAsConstrained(NamedDecl *D1,
              Kind == FunctionDecl::TK_FunctionTemplate;
     };
     const auto *FD2 = dyn_cast<FunctionDecl>(D2);
-    (void)IsExpectedEntity;
-    (void)FD1;
-    (void)FD2;
     assert(IsExpectedEntity(FD1) && FD2 && IsExpectedEntity(FD2) &&
            "use non-instantiated function declaration for constraints partial "
            "ordering");
   }
+#endif
 
   if (AC1.empty()) {
     Result = AC2.empty();

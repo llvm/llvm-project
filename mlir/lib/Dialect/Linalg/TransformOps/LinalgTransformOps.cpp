@@ -592,6 +592,7 @@ transform::FuseOp::apply(transform::TransformRewriter &rewriter,
     RewritePatternSet patterns(context);
     tensor::ExtractSliceOp::getCanonicalizationPatterns(patterns, context);
     tensor::populateMergeConsecutiveInsertExtractSlicePatterns(patterns);
+    tensor::populateBubbleUpExtractSliceOpPatterns(patterns);
     tileAndFuseOptions.cleanupPatterns = std::move(patterns);
   }
 
@@ -1250,8 +1251,7 @@ transform::MatchOp::apply(transform::TransformRewriter &rewriter,
                           transform::TransformState &state) {
   llvm::StringSet<> strs;
   if (getOps().has_value())
-    strs.insert(getOps()->getAsValueRange<StringAttr>().begin(),
-                getOps()->getAsValueRange<StringAttr>().end());
+    strs.insert_range(getOps()->getAsValueRange<StringAttr>());
 
   auto payloadOps = state.getPayloadOps(getTarget());
   if (!llvm::hasSingleElement(payloadOps)) {

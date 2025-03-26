@@ -1449,8 +1449,8 @@ serializeSanitizerMetadata(const GlobalValue::SanitizerMetadata &Meta) {
 void ModuleBitcodeWriter::writeModuleInfo() {
   // Emit various pieces of data attached to a module.
   if (!M.getTargetTriple().empty())
-    writeStringRecord(Stream, bitc::MODULE_CODE_TRIPLE, M.getTargetTriple(),
-                      0 /*TODO*/);
+    writeStringRecord(Stream, bitc::MODULE_CODE_TRIPLE,
+                      M.getTargetTriple().str(), 0 /*TODO*/);
   const std::string &DL = M.getDataLayoutStr();
   if (!DL.empty())
     writeStringRecord(Stream, bitc::MODULE_CODE_DATALAYOUT, DL, 0 /*TODO*/);
@@ -1990,6 +1990,7 @@ void ModuleBitcodeWriter::writeDICompositeType(
   Record.push_back(VE.getMetadataOrNullID(N->getRawSpecification()));
   Record.push_back(
       N->getEnumKind().value_or(dwarf::DW_APPLE_ENUM_KIND_invalid));
+  Record.push_back(VE.getMetadataOrNullID(N->getRawBitStride()));
 
   Stream.EmitRecord(bitc::METADATA_COMPOSITE_TYPE, Record, Abbrev);
   Record.clear();
@@ -2803,7 +2804,7 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
                cast<ConstantDataSequential>(C)->isString()) {
       const ConstantDataSequential *Str = cast<ConstantDataSequential>(C);
       // Emit constant strings specially.
-      unsigned NumElts = Str->getNumElements();
+      uint64_t NumElts = Str->getNumElements();
       // If this is a null-terminated string, use the denser CSTRING encoding.
       if (Str->isCString()) {
         Code = bitc::CST_CODE_CSTRING;
@@ -2814,7 +2815,7 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
       }
       bool isCStr7 = Code == bitc::CST_CODE_CSTRING;
       bool isCStrChar6 = Code == bitc::CST_CODE_CSTRING;
-      for (unsigned i = 0; i != NumElts; ++i) {
+      for (uint64_t i = 0; i != NumElts; ++i) {
         unsigned char V = Str->getElementAsInteger(i);
         Record.push_back(V);
         isCStr7 &= (V & 128) == 0;
@@ -2831,10 +2832,10 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
       Code = bitc::CST_CODE_DATA;
       Type *EltTy = CDS->getElementType();
       if (isa<IntegerType>(EltTy)) {
-        for (unsigned i = 0, e = CDS->getNumElements(); i != e; ++i)
+        for (uint64_t i = 0, e = CDS->getNumElements(); i != e; ++i)
           Record.push_back(CDS->getElementAsInteger(i));
       } else {
-        for (unsigned i = 0, e = CDS->getNumElements(); i != e; ++i)
+        for (uint64_t i = 0, e = CDS->getNumElements(); i != e; ++i)
           Record.push_back(
               CDS->getElementAsAPFloat(i).bitcastToAPInt().getLimitedValue());
       }
@@ -5064,33 +5065,29 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
       getReferencedTypeIds(FS, ReferencedTypeIds);
   }
 
-  if (!Index.cfiFunctionDefs().empty()) {
-    for (auto &S : Index.cfiFunctionDefs()) {
-      if (DefOrUseGUIDs.contains(
-              GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S)))) {
-        NameVals.push_back(StrtabBuilder.add(S));
-        NameVals.push_back(S.size());
-      }
+  SmallVector<StringRef, 4> Functions;
+  auto EmitCfiFunctions = [&](const CfiFunctionIndex &CfiIndex,
+                              bitc::GlobalValueSummarySymtabCodes Code) {
+    if (CfiIndex.empty())
+      return;
+    for (GlobalValue::GUID GUID : DefOrUseGUIDs) {
+      auto Defs = CfiIndex.forGuid(GUID);
+      Functions.insert(Functions.end(), Defs.begin(), Defs.end());
     }
-    if (!NameVals.empty()) {
-      Stream.EmitRecord(bitc::FS_CFI_FUNCTION_DEFS, NameVals);
-      NameVals.clear();
+    if (Functions.empty())
+      return;
+    llvm::sort(Functions);
+    for (const auto &S : Functions) {
+      NameVals.push_back(StrtabBuilder.add(S));
+      NameVals.push_back(S.size());
     }
-  }
+    Stream.EmitRecord(Code, NameVals);
+    NameVals.clear();
+    Functions.clear();
+  };
 
-  if (!Index.cfiFunctionDecls().empty()) {
-    for (auto &S : Index.cfiFunctionDecls()) {
-      if (DefOrUseGUIDs.contains(
-              GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S)))) {
-        NameVals.push_back(StrtabBuilder.add(S));
-        NameVals.push_back(S.size());
-      }
-    }
-    if (!NameVals.empty()) {
-      Stream.EmitRecord(bitc::FS_CFI_FUNCTION_DECLS, NameVals);
-      NameVals.clear();
-    }
-  }
+  EmitCfiFunctions(Index.cfiFunctionDefs(), bitc::FS_CFI_FUNCTION_DEFS);
+  EmitCfiFunctions(Index.cfiFunctionDecls(), bitc::FS_CFI_FUNCTION_DECLS);
 
   // Walk the GUIDs that were referenced, and write the
   // corresponding type id records.
@@ -5331,7 +5328,7 @@ void BitcodeWriter::writeSymtab() {
 
     std::string Err;
     const Triple TT(M->getTargetTriple());
-    const Target *T = TargetRegistry::lookupTarget(TT.str(), Err);
+    const Target *T = TargetRegistry::lookupTarget(TT, Err);
     if (!T || !T->hasMCAsmParser())
       return;
   }

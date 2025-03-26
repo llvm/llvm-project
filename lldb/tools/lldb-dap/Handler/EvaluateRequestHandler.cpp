@@ -138,14 +138,16 @@ namespace lldb_dap {
 //      "required": [ "body" ]
 //    }]
 //  }
-void EvaluateRequestHandler::operator()(const llvm::json::Object &request) {
+void EvaluateRequestHandler::operator()(
+    const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Object body;
   const auto *arguments = request.getObject("arguments");
   lldb::SBFrame frame = dap.GetLLDBFrame(*arguments);
-  std::string expression = GetString(arguments, "expression").str();
-  llvm::StringRef context = GetString(arguments, "context");
+  std::string expression =
+      GetString(arguments, "expression").value_or("").str();
+  const llvm::StringRef context = GetString(arguments, "context").value_or("");
   bool repeat_last_command =
       expression.empty() && dap.last_nonempty_var_expression.empty();
 

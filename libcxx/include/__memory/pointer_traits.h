@@ -259,20 +259,20 @@ struct __pointer_of {};
 template <class _Tp>
   requires(__has_pointer<_Tp>::value)
 struct __pointer_of<_Tp> {
-  using type = typename _Tp::pointer;
+  using type _LIBCPP_NODEBUG = typename _Tp::pointer;
 };
 
 template <class _Tp>
   requires(!__has_pointer<_Tp>::value && __has_element_type<_Tp>::value)
 struct __pointer_of<_Tp> {
-  using type = typename _Tp::element_type*;
+  using type _LIBCPP_NODEBUG = typename _Tp::element_type*;
 };
 
 template <class _Tp>
   requires(!__has_pointer<_Tp>::value && !__has_element_type<_Tp>::value &&
            __has_element_type<pointer_traits<_Tp>>::value)
 struct __pointer_of<_Tp> {
-  using type = typename pointer_traits<_Tp>::element_type*;
+  using type _LIBCPP_NODEBUG = typename pointer_traits<_Tp>::element_type*;
 };
 
 template <typename _Tp>

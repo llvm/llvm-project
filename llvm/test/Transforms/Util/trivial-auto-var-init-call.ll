@@ -1,5 +1,4 @@
 ; RUN: opt -passes=annotation-remarks -o /dev/null -S -pass-remarks-output=%t.opt.yaml %s -pass-remarks-missed=annotation-remarks 2>&1 | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators -passes=annotation-remarks -o /dev/null -S -pass-remarks-output=%t.opt.yaml %s -pass-remarks-missed=annotation-remarks 2>&1 | FileCheck %s
 ; RUN: cat %t.opt.yaml | FileCheck -check-prefix=YAML %s
 
 ; Emit remarks for memcpy, memmove, memset, bzero.

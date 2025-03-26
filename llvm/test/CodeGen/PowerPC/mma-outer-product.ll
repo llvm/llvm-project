@@ -16,9 +16,9 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-NEXT:    vmr v0, v2
 ; CHECK-NEXT:    xxlor vs3, v5, v5
 ; CHECK-NEXT:    ld r3, 96(r1)
+; CHECK-NEXT:    xxlor vs2, v4, v4
 ; CHECK-NEXT:    xxlor vs0, v0, v0
 ; CHECK-NEXT:    xxlor vs1, v1, v1
-; CHECK-NEXT:    xxlor vs2, v4, v4
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvi4ger8pp acc0, v2, v3
 ; CHECK-NEXT:    xvf16ger2pp acc0, v2, v1
@@ -40,9 +40,9 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-BE-NEXT:    vmr v0, v2
 ; CHECK-BE-NEXT:    xxlor vs3, v5, v5
 ; CHECK-BE-NEXT:    ld r3, 112(r1)
+; CHECK-BE-NEXT:    xxlor vs2, v4, v4
 ; CHECK-BE-NEXT:    xxlor vs0, v0, v0
 ; CHECK-BE-NEXT:    xxlor vs1, v1, v1
-; CHECK-BE-NEXT:    xxlor vs2, v4, v4
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvi4ger8pp acc0, v2, v3
 ; CHECK-BE-NEXT:    xvf16ger2pp acc0, v2, v1
@@ -75,9 +75,9 @@ define void @intrinsics2(ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr %ptr4, ptr %ptr) {
 ; CHECK-NEXT:    xxlor vs0, v2, v2
 ; CHECK-NEXT:    lxv v4, 0(r5)
 ; CHECK-NEXT:    lxv v5, 0(r6)
-; CHECK-NEXT:    xxlor vs1, v3, v3
 ; CHECK-NEXT:    xxlor vs2, v4, v4
 ; CHECK-NEXT:    xxlor vs3, v5, v5
+; CHECK-NEXT:    xxlor vs1, v3, v3
 ; CHECK-NEXT:    vmr v1, v2
 ; CHECK-NEXT:    vmr v0, v5
 ; CHECK-NEXT:    xxmtacc acc0
@@ -99,9 +99,9 @@ define void @intrinsics2(ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr %ptr4, ptr %ptr) {
 ; CHECK-BE-NEXT:    xxlor vs0, v2, v2
 ; CHECK-BE-NEXT:    lxv v4, 0(r5)
 ; CHECK-BE-NEXT:    lxv v5, 0(r6)
-; CHECK-BE-NEXT:    xxlor vs1, v3, v3
 ; CHECK-BE-NEXT:    xxlor vs2, v4, v4
 ; CHECK-BE-NEXT:    xxlor vs3, v5, v5
+; CHECK-BE-NEXT:    xxlor vs1, v3, v3
 ; CHECK-BE-NEXT:    vmr v1, v2
 ; CHECK-BE-NEXT:    vmr v0, v5
 ; CHECK-BE-NEXT:    xxmtacc acc0
@@ -169,10 +169,10 @@ declare <512 x i1> @llvm.ppc.mma.xvi4ger8(<16 x i8>, <16 x i8>)
 define void @test2(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvi4ger8pp acc0, v2, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -184,10 +184,10 @@ define void @test2(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test2:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvi4ger8pp acc0, v2, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -238,10 +238,10 @@ declare <512 x i1> @llvm.ppc.mma.pmxvi4ger8(<16 x i8>, <16 x i8>, i32, i32, i32)
 define void @test4(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    pmxvi4ger8pp acc0, v2, v2, 0, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -253,10 +253,10 @@ define void @test4(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test4:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    pmxvi4ger8pp acc0, v2, v2, 0, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -307,10 +307,10 @@ declare <512 x i1> @llvm.ppc.mma.xvi8ger4(<16 x i8>, <16 x i8>)
 define void @test6(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvi8ger4pp acc0, v2, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -322,10 +322,10 @@ define void @test6(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test6:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvi8ger4pp acc0, v2, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -376,10 +376,10 @@ declare <512 x i1> @llvm.ppc.mma.pmxvi8ger4(<16 x i8>, <16 x i8>, i32, i32, i32)
 define void @test8(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    pmxvi8ger4pp acc0, v2, v2, 0, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -391,10 +391,10 @@ define void @test8(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test8:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    pmxvi8ger4pp acc0, v2, v2, 0, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -445,10 +445,10 @@ declare <512 x i1> @llvm.ppc.mma.xvi16ger2s(<16 x i8>, <16 x i8>)
 define void @test10(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test10:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvi16ger2spp acc0, v2, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -460,10 +460,10 @@ define void @test10(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test10:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvi16ger2spp acc0, v2, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -514,10 +514,10 @@ declare <512 x i1> @llvm.ppc.mma.pmxvi16ger2s(<16 x i8>, <16 x i8>, i32, i32, i3
 define void @test12(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test12:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    pmxvi16ger2spp acc0, v2, v2, 0, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -529,10 +529,10 @@ define void @test12(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test12:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    pmxvi16ger2spp acc0, v2, v2, 0, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -583,10 +583,10 @@ declare <512 x i1> @llvm.ppc.mma.xvf16ger2(<16 x i8>, <16 x i8>)
 define void @test14(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test14:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvf16ger2pp acc0, v2, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -598,10 +598,10 @@ define void @test14(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test14:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvf16ger2pp acc0, v2, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -623,10 +623,10 @@ declare <512 x i1> @llvm.ppc.mma.xvf16ger2pp(<512 x i1>, <16 x i8>, <16 x i8>)
 define void @test15(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test15:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvf16ger2pn acc0, v2, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -638,10 +638,10 @@ define void @test15(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test15:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvf16ger2pn acc0, v2, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -663,10 +663,10 @@ declare <512 x i1> @llvm.ppc.mma.xvf16ger2pn(<512 x i1>, <16 x i8>, <16 x i8>)
 define void @test16(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvf16ger2np acc0, v2, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -678,10 +678,10 @@ define void @test16(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test16:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvf16ger2np acc0, v2, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -703,10 +703,10 @@ declare <512 x i1> @llvm.ppc.mma.xvf16ger2np(<512 x i1>, <16 x i8>, <16 x i8>)
 define void @test17(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test17:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvf16ger2nn acc0, v2, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -718,10 +718,10 @@ define void @test17(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test17:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvf16ger2nn acc0, v2, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -772,10 +772,10 @@ declare <512 x i1> @llvm.ppc.mma.pmxvf16ger2(<16 x i8>, <16 x i8>, i32, i32, i32
 define void @test19(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test19:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    pmxvf16ger2pp acc0, v2, v2, 0, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -787,10 +787,10 @@ define void @test19(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test19:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    pmxvf16ger2pp acc0, v2, v2, 0, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -812,10 +812,10 @@ declare <512 x i1> @llvm.ppc.mma.pmxvf16ger2pp(<512 x i1>, <16 x i8>, <16 x i8>,
 define void @test20(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test20:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    pmxvf16ger2pn acc0, v2, v2, 0, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -827,10 +827,10 @@ define void @test20(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test20:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    pmxvf16ger2pn acc0, v2, v2, 0, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -852,10 +852,10 @@ declare <512 x i1> @llvm.ppc.mma.pmxvf16ger2pn(<512 x i1>, <16 x i8>, <16 x i8>,
 define void @test21(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test21:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    pmxvf16ger2np acc0, v2, v2, 0, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -867,10 +867,10 @@ define void @test21(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test21:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    pmxvf16ger2np acc0, v2, v2, 0, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -892,10 +892,10 @@ declare <512 x i1> @llvm.ppc.mma.pmxvf16ger2np(<512 x i1>, <16 x i8>, <16 x i8>,
 define void @test22(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test22:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    pmxvf16ger2nn acc0, v2, v2, 0, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -907,10 +907,10 @@ define void @test22(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test22:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    pmxvf16ger2nn acc0, v2, v2, 0, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -961,10 +961,10 @@ declare <512 x i1> @llvm.ppc.mma.xvf32ger(<16 x i8>, <16 x i8>)
 define void @test24(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test24:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvf32gerpp acc0, v2, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -976,10 +976,10 @@ define void @test24(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test24:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvf32gerpp acc0, v2, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -1001,10 +1001,10 @@ declare <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1>, <16 x i8>, <16 x i8>)
 define void @test25(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test25:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvf32gerpn acc0, v2, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -1016,10 +1016,10 @@ define void @test25(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test25:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvf32gerpn acc0, v2, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -1041,10 +1041,10 @@ declare <512 x i1> @llvm.ppc.mma.xvf32gerpn(<512 x i1>, <16 x i8>, <16 x i8>)
 define void @test26(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test26:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvf32gernp acc0, v2, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -1056,10 +1056,10 @@ define void @test26(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test26:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvf32gernp acc0, v2, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -1081,10 +1081,10 @@ declare <512 x i1> @llvm.ppc.mma.xvf32gernp(<512 x i1>, <16 x i8>, <16 x i8>)
 define void @test27(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test27:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    xvf32gernn acc0, v2, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -1096,10 +1096,10 @@ define void @test27(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test27:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    xvf32gernn acc0, v2, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -1150,10 +1150,10 @@ declare <512 x i1> @llvm.ppc.mma.pmxvf32ger(<16 x i8>, <16 x i8>, i32, i32)
 define void @test29(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test29:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    pmxvf32gerpp acc0, v2, v2, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -1165,10 +1165,10 @@ define void @test29(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test29:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    pmxvf32gerpp acc0, v2, v2, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -1190,10 +1190,10 @@ declare <512 x i1> @llvm.ppc.mma.pmxvf32gerpp(<512 x i1>, <16 x i8>, <16 x i8>, 
 define void @test30(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test30:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    pmxvf32gerpn acc0, v2, v2, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -1205,10 +1205,10 @@ define void @test30(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test30:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    pmxvf32gerpn acc0, v2, v2, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -1230,10 +1230,10 @@ declare <512 x i1> @llvm.ppc.mma.pmxvf32gerpn(<512 x i1>, <16 x i8>, <16 x i8>, 
 define void @test31(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test31:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    pmxvf32gernp acc0, v2, v2, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -1245,10 +1245,10 @@ define void @test31(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test31:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    pmxvf32gernp acc0, v2, v2, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -1270,10 +1270,10 @@ declare <512 x i1> @llvm.ppc.mma.pmxvf32gernp(<512 x i1>, <16 x i8>, <16 x i8>, 
 define void @test32(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    pmxvf32gernn acc0, v2, v2, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -1285,10 +1285,10 @@ define void @test32(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test32:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    pmxvf32gernn acc0, v2, v2, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -1310,8 +1310,8 @@ declare <512 x i1> @llvm.ppc.mma.pmxvf32gernn(<512 x i1>, <16 x i8>, <16 x i8>, 
 define void @test33(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test33:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv v5, 0(r4)
 ; CHECK-NEXT:    lxv v4, 16(r4)
+; CHECK-NEXT:    lxv v5, 0(r4)
 ; CHECK-NEXT:    xvf64ger acc0, vsp36, v2
 ; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxv vs0, 48(r7)
@@ -1322,8 +1322,8 @@ define void @test33(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test33:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv v5, 16(r4)
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
+; CHECK-BE-NEXT:    lxv v5, 16(r4)
 ; CHECK-BE-NEXT:    xvf64ger acc0, vsp36, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r7)
@@ -1344,13 +1344,13 @@ declare <512 x i1> @llvm.ppc.mma.xvf64ger(<256 x i1>, <16 x i8>)
 define void @test34(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test34:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
-; CHECK-NEXT:    lxv v5, 0(r4)
-; CHECK-NEXT:    xxmtacc acc0
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv v4, 16(r4)
+; CHECK-NEXT:    xxmtacc acc0
+; CHECK-NEXT:    lxv v5, 0(r4)
 ; CHECK-NEXT:    xvf64gerpp acc0, vsp36, v2
 ; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxv vs0, 48(r7)
@@ -1361,13 +1361,13 @@ define void @test34(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test34:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
-; CHECK-BE-NEXT:    lxv v5, 16(r4)
-; CHECK-BE-NEXT:    xxmtacc acc0
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
+; CHECK-BE-NEXT:    xxmtacc acc0
+; CHECK-BE-NEXT:    lxv v5, 16(r4)
 ; CHECK-BE-NEXT:    xvf64gerpp acc0, vsp36, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r7)
@@ -1389,13 +1389,13 @@ declare <512 x i1> @llvm.ppc.mma.xvf64gerpp(<512 x i1>, <256 x i1>, <16 x i8>)
 define void @test35(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test35:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
-; CHECK-NEXT:    lxv v5, 0(r4)
-; CHECK-NEXT:    xxmtacc acc0
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv v4, 16(r4)
+; CHECK-NEXT:    xxmtacc acc0
+; CHECK-NEXT:    lxv v5, 0(r4)
 ; CHECK-NEXT:    xvf64gerpn acc0, vsp36, v2
 ; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxv vs0, 48(r7)
@@ -1406,13 +1406,13 @@ define void @test35(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test35:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
-; CHECK-BE-NEXT:    lxv v5, 16(r4)
-; CHECK-BE-NEXT:    xxmtacc acc0
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
+; CHECK-BE-NEXT:    xxmtacc acc0
+; CHECK-BE-NEXT:    lxv v5, 16(r4)
 ; CHECK-BE-NEXT:    xvf64gerpn acc0, vsp36, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r7)
@@ -1434,13 +1434,13 @@ declare <512 x i1> @llvm.ppc.mma.xvf64gerpn(<512 x i1>, <256 x i1>, <16 x i8>)
 define void @test36(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test36:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
-; CHECK-NEXT:    lxv v5, 0(r4)
-; CHECK-NEXT:    xxmtacc acc0
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv v4, 16(r4)
+; CHECK-NEXT:    xxmtacc acc0
+; CHECK-NEXT:    lxv v5, 0(r4)
 ; CHECK-NEXT:    xvf64gernp acc0, vsp36, v2
 ; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxv vs0, 48(r7)
@@ -1451,13 +1451,13 @@ define void @test36(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test36:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
-; CHECK-BE-NEXT:    lxv v5, 16(r4)
-; CHECK-BE-NEXT:    xxmtacc acc0
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
+; CHECK-BE-NEXT:    xxmtacc acc0
+; CHECK-BE-NEXT:    lxv v5, 16(r4)
 ; CHECK-BE-NEXT:    xvf64gernp acc0, vsp36, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r7)
@@ -1479,13 +1479,13 @@ declare <512 x i1> @llvm.ppc.mma.xvf64gernp(<512 x i1>, <256 x i1>, <16 x i8>)
 define void @test37(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test37:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
-; CHECK-NEXT:    lxv v5, 0(r4)
-; CHECK-NEXT:    xxmtacc acc0
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv v4, 16(r4)
+; CHECK-NEXT:    xxmtacc acc0
+; CHECK-NEXT:    lxv v5, 0(r4)
 ; CHECK-NEXT:    xvf64gernn acc0, vsp36, v2
 ; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxv vs0, 48(r7)
@@ -1496,13 +1496,13 @@ define void @test37(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test37:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
-; CHECK-BE-NEXT:    lxv v5, 16(r4)
-; CHECK-BE-NEXT:    xxmtacc acc0
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
+; CHECK-BE-NEXT:    xxmtacc acc0
+; CHECK-BE-NEXT:    lxv v5, 16(r4)
 ; CHECK-BE-NEXT:    xvf64gernn acc0, vsp36, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r7)
@@ -1524,8 +1524,8 @@ declare <512 x i1> @llvm.ppc.mma.xvf64gernn(<512 x i1>, <256 x i1>, <16 x i8>)
 define void @test38(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test38:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv v5, 0(r4)
 ; CHECK-NEXT:    lxv v4, 16(r4)
+; CHECK-NEXT:    lxv v5, 0(r4)
 ; CHECK-NEXT:    pmxvf64ger acc0, vsp36, v2, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxv vs0, 48(r7)
@@ -1536,8 +1536,8 @@ define void @test38(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test38:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv v5, 16(r4)
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
+; CHECK-BE-NEXT:    lxv v5, 16(r4)
 ; CHECK-BE-NEXT:    pmxvf64ger acc0, vsp36, v2, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r7)
@@ -1558,13 +1558,13 @@ declare <512 x i1> @llvm.ppc.mma.pmxvf64ger(<256 x i1>, <16 x i8>, i32, i32)
 define void @test39(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test39:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
-; CHECK-NEXT:    lxv v5, 0(r4)
-; CHECK-NEXT:    xxmtacc acc0
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv v4, 16(r4)
+; CHECK-NEXT:    xxmtacc acc0
+; CHECK-NEXT:    lxv v5, 0(r4)
 ; CHECK-NEXT:    pmxvf64gerpp acc0, vsp36, v2, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxv vs0, 48(r7)
@@ -1575,13 +1575,13 @@ define void @test39(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test39:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
-; CHECK-BE-NEXT:    lxv v5, 16(r4)
-; CHECK-BE-NEXT:    xxmtacc acc0
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
+; CHECK-BE-NEXT:    xxmtacc acc0
+; CHECK-BE-NEXT:    lxv v5, 16(r4)
 ; CHECK-BE-NEXT:    pmxvf64gerpp acc0, vsp36, v2, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r7)
@@ -1603,13 +1603,13 @@ declare <512 x i1> @llvm.ppc.mma.pmxvf64gerpp(<512 x i1>, <256 x i1>, <16 x i8>,
 define void @test40(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test40:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
-; CHECK-NEXT:    lxv v5, 0(r4)
-; CHECK-NEXT:    xxmtacc acc0
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv v4, 16(r4)
+; CHECK-NEXT:    xxmtacc acc0
+; CHECK-NEXT:    lxv v5, 0(r4)
 ; CHECK-NEXT:    pmxvf64gerpn acc0, vsp36, v2, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxv vs0, 48(r7)
@@ -1620,13 +1620,13 @@ define void @test40(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test40:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
-; CHECK-BE-NEXT:    lxv v5, 16(r4)
-; CHECK-BE-NEXT:    xxmtacc acc0
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
+; CHECK-BE-NEXT:    xxmtacc acc0
+; CHECK-BE-NEXT:    lxv v5, 16(r4)
 ; CHECK-BE-NEXT:    pmxvf64gerpn acc0, vsp36, v2, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r7)
@@ -1648,13 +1648,13 @@ declare <512 x i1> @llvm.ppc.mma.pmxvf64gerpn(<512 x i1>, <256 x i1>, <16 x i8>,
 define void @test41(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test41:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
-; CHECK-NEXT:    lxv v5, 0(r4)
-; CHECK-NEXT:    xxmtacc acc0
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv v4, 16(r4)
+; CHECK-NEXT:    xxmtacc acc0
+; CHECK-NEXT:    lxv v5, 0(r4)
 ; CHECK-NEXT:    pmxvf64gernp acc0, vsp36, v2, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxv vs0, 48(r7)
@@ -1665,13 +1665,13 @@ define void @test41(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test41:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
-; CHECK-BE-NEXT:    lxv v5, 16(r4)
-; CHECK-BE-NEXT:    xxmtacc acc0
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
+; CHECK-BE-NEXT:    xxmtacc acc0
+; CHECK-BE-NEXT:    lxv v5, 16(r4)
 ; CHECK-BE-NEXT:    pmxvf64gernp acc0, vsp36, v2, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r7)
@@ -1693,13 +1693,13 @@ declare <512 x i1> @llvm.ppc.mma.pmxvf64gernp(<512 x i1>, <256 x i1>, <16 x i8>,
 define void @test42(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-LABEL: test42:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv vs1, 32(r3)
-; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
-; CHECK-NEXT:    lxv v5, 0(r4)
-; CHECK-NEXT:    xxmtacc acc0
+; CHECK-NEXT:    lxv vs1, 32(r3)
+; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv v4, 16(r4)
+; CHECK-NEXT:    xxmtacc acc0
+; CHECK-NEXT:    lxv v5, 0(r4)
 ; CHECK-NEXT:    pmxvf64gernn acc0, vsp36, v2, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxv vs0, 48(r7)
@@ -1710,13 +1710,13 @@ define void @test42(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ;
 ; CHECK-BE-LABEL: test42:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lxv vs1, 16(r3)
-; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
-; CHECK-BE-NEXT:    lxv v5, 16(r4)
-; CHECK-BE-NEXT:    xxmtacc acc0
+; CHECK-BE-NEXT:    lxv vs1, 16(r3)
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
+; CHECK-BE-NEXT:    xxmtacc acc0
+; CHECK-BE-NEXT:    lxv v5, 16(r4)
 ; CHECK-BE-NEXT:    pmxvf64gernn acc0, vsp36, v2, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r7)

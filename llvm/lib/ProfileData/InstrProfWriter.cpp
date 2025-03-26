@@ -230,7 +230,8 @@ void InstrProfWriter::overlapRecord(NamedInstrProfRecord &&Other,
   auto Name = Other.Name;
   auto Hash = Other.Hash;
   Other.accumulateCounts(FuncLevelOverlap.Test);
-  if (!FunctionData.contains(Name)) {
+  auto It = FunctionData.find(Name);
+  if (It == FunctionData.end()) {
     Overlap.addOneUnique(FuncLevelOverlap.Test);
     return;
   }
@@ -238,7 +239,7 @@ void InstrProfWriter::overlapRecord(NamedInstrProfRecord &&Other,
     Overlap.Overlap.NumEntries += 1;
     return;
   }
-  auto &ProfileDataMap = FunctionData[Name];
+  auto &ProfileDataMap = It->second;
   bool NewFunc;
   ProfilingData::iterator Where;
   std::tie(Where, NewFunc) =

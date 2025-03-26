@@ -184,6 +184,7 @@ but the following example shows how it can be used by a standard user.
 
   #include <shared/rpc.h>
   #include <shared/rpc_opcodes.h>
+  #include <shared/rpc_server.h>
 
   [[noreturn]] void handle_error(cudaError_t err) {
     fprintf(stderr, "CUDA error: %s\n", cudaGetErrorString(err));
@@ -230,10 +231,10 @@ but the following example shows how it can be used by a standard user.
     // Requires non-blocking CUDA kernels but avoids a separate thread.
     do {
       auto port = server.try_open(warp_size, /*index=*/0);
-      // From libllvmlibc_rpc_server.a in the installation.
       if (!port)
         continue;
 
+      // Only available in-tree from the 'libc' sources.
       handle_libc_opcodes(*port, warp_size);
       port->close();
     } while (cudaStreamQuery(stream) == cudaErrorNotReady);
@@ -242,14 +243,16 @@ but the following example shows how it can be used by a standard user.
 The above code must be compiled in CUDA's relocatable device code mode and with
 the advanced offloading driver to link in the library. Currently this can be
 done with the following invocation. Using LTO avoids the overhead normally
-associated with relocatable device code linking. The C library for GPUs is
-linked in by forwarding the static library to the device-side link job.
+associated with relocatable device code linking. The C library for GPU's
+handling is included through the ``shared/`` directory. This is not currently
+installed as it does not use a stable interface.
+
 
 .. code-block:: sh
 
   $> clang++ -x cuda rpc.cpp --offload-arch=native -fgpu-rdc -lcudart \
-       -I<install-path>include -L<install-path>/lib -lllvmlibc_rpc_server \
-       -Xoffload-linker -lc -O3 -foffload-lto -o hello
+       -I<install-path>include -L<install-path>/lib -Xoffload-linker -lc \
+       -O3 -foffload-lto -o hello
   $> ./hello
   Hello world!
 

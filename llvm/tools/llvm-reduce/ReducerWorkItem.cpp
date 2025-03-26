@@ -267,7 +267,7 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
 
     DstMBB->setIsEHPad(SrcMBB.isEHPad());
     DstMBB->setIsEHScopeEntry(SrcMBB.isEHScopeEntry());
-    DstMBB->setIsEHCatchretTarget(SrcMBB.isEHCatchretTarget());
+    DstMBB->setIsEHContTarget(SrcMBB.isEHContTarget());
     DstMBB->setIsEHFuncletEntry(SrcMBB.isEHFuncletEntry());
 
     // FIXME: These are not serialized
@@ -343,11 +343,9 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
     }
   }
 
-  DenseSet<const uint32_t *> ConstRegisterMasks;
-
   // Track predefined/named regmasks which we ignore.
-  for (const uint32_t *Mask : TRI->getRegMasks())
-    ConstRegisterMasks.insert(Mask);
+  DenseSet<const uint32_t *> ConstRegisterMasks(llvm::from_range,
+                                                TRI->getRegMasks());
 
   // Clone instructions.
   for (auto &SrcMBB : *SrcMF) {
@@ -394,13 +392,12 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
   DstMF->getProperties().reset().set(SrcMF->getProperties());
 
   if (!SrcMF->getFrameInstructions().empty() ||
-      !SrcMF->getLongjmpTargets().empty() ||
-      !SrcMF->getCatchretTargets().empty())
+      !SrcMF->getLongjmpTargets().empty() || !SrcMF->getEHContTargets().empty())
     report_fatal_error("cloning not implemented for machine function property");
 
   DstMF->setCallsEHReturn(SrcMF->callsEHReturn());
   DstMF->setCallsUnwindInit(SrcMF->callsUnwindInit());
-  DstMF->setHasEHCatchret(SrcMF->hasEHCatchret());
+  DstMF->setHasEHContTarget(SrcMF->hasEHContTarget());
   DstMF->setHasEHScopes(SrcMF->hasEHScopes());
   DstMF->setHasEHFunclets(SrcMF->hasEHFunclets());
   DstMF->setHasFakeUses(SrcMF->hasFakeUses());

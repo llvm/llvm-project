@@ -6,10 +6,10 @@
 ; GCN: flat_load_dword
 ; GCN-NOT: s_load_dword s
 define amdgpu_kernel void @private_load_maybe_divergent(ptr addrspace(4) %k, ptr %flat) {
-  %load = load volatile i32, ptr addrspace(5) undef, align 4
+  %load = load volatile i32, ptr addrspace(5) poison, align 4
   %gep = getelementptr inbounds i32, ptr addrspace(4) %k, i32 %load
   %maybe.not.uniform.load = load i32, ptr addrspace(4) %gep, align 4
-  store i32 %maybe.not.uniform.load, ptr addrspace(1) undef
+  store i32 %maybe.not.uniform.load, ptr addrspace(1) poison
   ret void
 }
 
@@ -25,7 +25,7 @@ define amdgpu_kernel void @flat_load_maybe_divergent(ptr addrspace(4) %k, ptr %f
   %load = load i32, ptr %flat, align 4
   %gep = getelementptr inbounds i32, ptr addrspace(4) %k, i32 %load
   %maybe.not.uniform.load = load i32, ptr addrspace(4) %gep, align 4
-  store i32 %maybe.not.uniform.load, ptr addrspace(1) undef
+  store i32 %maybe.not.uniform.load, ptr addrspace(1) poison
   ret void
 }
 
@@ -37,8 +37,8 @@ define amdgpu_kernel void @flat_load_maybe_divergent(ptr addrspace(4) %k, ptr %f
 ; GCN-LABEL: {{^}}wide_carry_divergence_error:
 ; GCN: v_sub_u32_e32
 ; GCN: v_subb_u32_e32
-; GCN: v_subbrev_u32_e32
-; GCN: v_subbrev_u32_e32
+; GCN: v_subb_u32_e32
+; GCN: v_subb_u32_e32
 define <2 x i128> @wide_carry_divergence_error(i128 %arg) {
   %i = call i128 @llvm.ctlz.i128(i128 %arg, i1 false)
   %i1 = sub i128 0, %i

@@ -1,7 +1,6 @@
 ; RUN: llc %s -stop-after=finalize-isel -o - | FileCheck %s
 
 
-; RUN: llc --try-experimental-debuginfo-iterators %s -stop-after=finalize-isel -o - | FileCheck %s
 
 ;; Local variable has global storage. Check AssignmentTrackingAnalysis doesn't
 ;; crash/assert.

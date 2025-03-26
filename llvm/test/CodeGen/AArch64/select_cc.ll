@@ -6,8 +6,8 @@ define i64 @select_ogt_float(float %a, float %b) {
 ; CHECK-SD-LABEL: select_ogt_float:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    fcmp s0, s1
-; CHECK-SD-NEXT:    cset w8, gt
-; CHECK-SD-NEXT:    ubfiz x0, x8, #2, #32
+; CHECK-SD-NEXT:    mov w8, #4 // =0x4
+; CHECK-SD-NEXT:    csel x0, x8, xzr, gt
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: select_ogt_float:
@@ -26,8 +26,8 @@ define i64 @select_ule_float_inverse(float %a, float %b) {
 ; CHECK-SD-LABEL: select_ule_float_inverse:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    fcmp s0, s1
-; CHECK-SD-NEXT:    cset w8, gt
-; CHECK-SD-NEXT:    ubfiz x0, x8, #2, #32
+; CHECK-SD-NEXT:    mov w8, #4 // =0x4
+; CHECK-SD-NEXT:    csel x0, xzr, x8, le
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: select_ule_float_inverse:
@@ -45,9 +45,9 @@ entry:
 define i64 @select_eq_i32(i32 %a, i32 %b) {
 ; CHECK-SD-LABEL: select_eq_i32:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w8, #4 // =0x4
 ; CHECK-SD-NEXT:    cmp w0, w1
-; CHECK-SD-NEXT:    cset w8, eq
-; CHECK-SD-NEXT:    ubfiz x0, x8, #2, #32
+; CHECK-SD-NEXT:    csel x0, x8, xzr, eq
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: select_eq_i32:
@@ -65,9 +65,9 @@ entry:
 define i64 @select_ne_i32_inverse(i32 %a, i32 %b) {
 ; CHECK-SD-LABEL: select_ne_i32_inverse:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w8, #4 // =0x4
 ; CHECK-SD-NEXT:    cmp w0, w1
-; CHECK-SD-NEXT:    cset w8, eq
-; CHECK-SD-NEXT:    ubfiz x0, x8, #2, #32
+; CHECK-SD-NEXT:    csel x0, xzr, x8, ne
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: select_ne_i32_inverse:

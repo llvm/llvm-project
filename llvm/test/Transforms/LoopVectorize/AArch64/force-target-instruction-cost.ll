@@ -105,8 +105,7 @@ define void @test_iv_cost(ptr %ptr.start, i8 %a, i64 %b) {
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT10:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[TMP0]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
 ; CHECK-NEXT:    store <4 x i8> zeroinitializer, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT10]] = add nuw i64 [[INDEX]], 4
@@ -205,16 +204,15 @@ define void @test_exit_branch_cost(ptr %dst, ptr noalias %x.ptr, ptr noalias %y.
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT40:%.*]] = insertelement <2 x i1> poison, i1 [[C_3]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT41:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT40]], <2 x i1> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[C_4]], <2 x i1> [[BROADCAST_SPLAT41]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = xor <2 x i1> [[TMP2]], splat (i1 true)
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT56:%.*]] = insertelement <2 x i1> poison, i1 [[C_4]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT57:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT56]], <2 x i1> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C_4]], <2 x i1> [[BROADCAST_SPLAT41]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = xor <2 x i1> [[TMP1]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP33:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT57]], splat (i1 true)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE55:.*]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[X_PTR]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[X_PTR]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[TMP4]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[TMP47:%.*]] = icmp eq <2 x i64> [[WIDE_LOAD]], zeroinitializer

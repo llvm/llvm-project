@@ -128,7 +128,8 @@ namespace lldb_dap {
 //   "interface", "module", "property", "unit", "value", "enum", "keyword",
 //   "snippet", "text", "color", "file", "reference", "customcolor" ]
 // }
-void CompletionsRequestHandler::operator()(const llvm::json::Object &request) {
+void CompletionsRequestHandler::operator()(
+    const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Object body;
@@ -141,9 +142,10 @@ void CompletionsRequestHandler::operator()(const llvm::json::Object &request) {
     frame.GetThread().SetSelectedFrame(frame.GetFrameID());
   }
 
-  std::string text = GetString(arguments, "text").str();
-  auto original_column = GetSigned(arguments, "column", text.size());
-  auto original_line = GetSigned(arguments, "line", 1);
+  std::string text = GetString(arguments, "text").value_or("").str();
+  auto original_column =
+      GetInteger<int64_t>(arguments, "column").value_or(text.size());
+  auto original_line = GetInteger<int64_t>(arguments, "line").value_or(1);
   auto offset = original_column - 1;
   if (original_line > 1) {
     llvm::SmallVector<::llvm::StringRef, 2> lines;

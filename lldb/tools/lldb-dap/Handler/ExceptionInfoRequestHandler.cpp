@@ -112,7 +112,7 @@ namespace lldb_dap {
 //   }
 // },
 void ExceptionInfoRequestHandler::operator()(
-    const llvm::json::Object &request) {
+    const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);
   const auto *arguments = request.getObject("arguments");

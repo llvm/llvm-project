@@ -590,33 +590,24 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 2
   llvm.return
 }
 
-// CHECK: define ptx_kernel void @kernel_func
-// CHECK:     !nvvm.annotations =
-// CHECK:     {ptr @kernel_func, !"maxntidx", i32 1}
-// CHECK:     {ptr @kernel_func, !"maxntidy", i32 23}
-// CHECK:     {ptr @kernel_func, !"maxntidz", i32 32}
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.maxntid"="1,23,32" }
 // -----
 
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = array<i32: 1, 23, 32>} {
   llvm.return
 }
 
-// CHECK: define ptx_kernel void @kernel_func
-// CHECK:     !nvvm.annotations =
-// CHECK:     {ptr @kernel_func, !"reqntidx", i32 1}
-// CHECK:     {ptr @kernel_func, !"reqntidy", i32 23}
-// CHECK:     {ptr @kernel_func, !"reqntidz", i32 32}
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.reqntid"="1,23,32" }
 // -----
 
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.cluster_dim = array<i32: 3, 5, 7>} {
   llvm.return
 }
 
-// CHECK: define ptx_kernel void @kernel_func
-// CHECK:     !nvvm.annotations =
-// CHECK:     {ptr @kernel_func, !"cluster_dim_x", i32 3}
-// CHECK:     {ptr @kernel_func, !"cluster_dim_y", i32 5}
-// CHECK:     {ptr @kernel_func, !"cluster_dim_z", i32 7}
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.cluster_dim"="3,5,7" }
 // -----
 
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.cluster_max_blocks = 8} {
@@ -650,17 +641,13 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 2
 }
 
 // CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
-// CHECK: attributes #[[ATTR0]] = { "nvvm.maxnreg"="32" "nvvm.minctasm"="16" }
-// CHECK:     !nvvm.annotations =
-// CHECK:     {ptr @kernel_func, !"maxntidx", i32 1}
-// CHECK:     {ptr @kernel_func, !"maxntidy", i32 23}
-// CHECK:     {ptr @kernel_func, !"maxntidz", i32 32}
+// CHECK: attributes #[[ATTR0]] = { "nvvm.maxnreg"="32" "nvvm.maxntid"="1,23,32" "nvvm.minctasm"="16" }
 
 // -----
 // CHECK: define ptx_kernel void @kernel_func
 // CHECK: !nvvm.annotations =
-// CHECK: !1 = !{ptr @kernel_func, !"grid_constant", !2}
-// CHECK: !2 = !{i32 1}
+// CHECK: !{{.*}} = !{ptr @kernel_func, !"grid_constant", ![[ID:[[:alnum:]]+]]}
+// CHECK: ![[ID]] = !{i32 1}
 llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}) attributes {nvvm.kernel} {
   llvm.return
 }
@@ -668,8 +655,8 @@ llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}) 
 // -----
 // CHECK: define ptx_kernel void @kernel_func
 // CHECK: !nvvm.annotations =
-// CHECK: !1 = !{ptr @kernel_func, !"grid_constant", !2}
-// CHECK: !2 = !{i32 1, i32 3}
+// CHECK: !{{.*}} = !{ptr @kernel_func, !"grid_constant", ![[ID:[[:alnum:]]+]]}
+// CHECK: ![[ID]] = !{i32 1, i32 3}
 llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}, %arg1: f32, %arg2: !llvm.ptr {llvm.byval = f32, nvvm.grid_constant}) attributes {nvvm.kernel} {
   llvm.return
 }
@@ -821,5 +808,33 @@ llvm.func @nvvm_redux_sync_f32(%value: f32, %offset: i32) {
   %6 = nvvm.redux.sync fmax %value, %offset {nan = true}: f32 -> f32
   // CHECK: call float @llvm.nvvm.redux.sync.fmax.abs.NaN(float %{{.*}}, i32 %{{.*}})
   %7 = nvvm.redux.sync fmax %value, %offset {abs = true, nan = true}: f32 -> f32
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_match_sync
+llvm.func @nvvm_match_sync(%mask: i32, %val32: i32, %val64: i64) {
+  // CHECK: call i32 @llvm.nvvm.match.any.sync.i32(i32 %{{.*}}, i32 %{{.*}})
+  %0 = nvvm.match.sync any %mask, %val32 : i32 -> i32
+  // CHECK: call { i32, i1 } @llvm.nvvm.match.all.sync.i32p(i32 %{{.*}}, i32 %{{.*}})
+  %1 = nvvm.match.sync all %mask, %val32 : i32 -> !llvm.struct<(i32, i1)>
+  // CHECK: call i32 @llvm.nvvm.match.any.sync.i64(i32 %{{.*}}, i64 %{{.*}})
+  %2 = nvvm.match.sync any %mask, %val64 : i64 -> i32
+  // CHECK: call { i32, i1 } @llvm.nvvm.match.all.sync.i64p(i32 %{{.*}}, i64 %{{.*}})
+  %3 = nvvm.match.sync all %mask, %val64 : i64 -> !llvm.struct<(i32, i1)>
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_st_bulk
+llvm.func @nvvm_st_bulk(%addr_gen: !llvm.ptr, %addr_shared: !llvm.ptr<3>, %size: i64) {
+  // CHECK: call void @llvm.nvvm.st.bulk(ptr %{{.*}}, i64 %{{.*}}, i64 0)
+  nvvm.st.bulk %addr_gen, size = %size : !llvm.ptr
+  // CHECK: call void @llvm.nvvm.st.bulk.shared.cta(ptr addrspace(3) %{{.*}}, i64 %{{.*}}, i64 0)
+  nvvm.st.bulk %addr_shared, size = %size: !llvm.ptr<3>
+  // CHECK: call void @llvm.nvvm.st.bulk(ptr %{{.*}}, i64 %{{.*}}, i64 0)
+  nvvm.st.bulk %addr_gen, size = %size, init = 0 : !llvm.ptr
+  // CHECK: call void @llvm.nvvm.st.bulk.shared.cta(ptr addrspace(3) %{{.*}}, i64 %{{.*}}, i64 0)
+  nvvm.st.bulk %addr_shared, size = %size, init = 0: !llvm.ptr<3>
   llvm.return
 }
