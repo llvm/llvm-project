@@ -49,7 +49,7 @@ jobs:
         run: |
           git config --global --add safe.directory '*'
 
-          source <(git diff --name-only HEAD~2..HEAD | python3 .ci/compute_projects.py)
+          source <(git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py)
 
           if [[ "${projects_to_build}" == "" ]]; then
             echo "No projects to build"
@@ -88,7 +88,7 @@ jobs:
       - name: Compute Projects
         id: vars
         run: |
-          source <(git diff --name-only HEAD~2..HEAD | python3 .ci/compute_projects.py)
+          source <(git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py)
 
           if [[ "${projects_to_build}" == "" ]]; then
             echo "No projects to build"

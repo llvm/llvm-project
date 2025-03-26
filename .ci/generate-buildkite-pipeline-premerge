@@ -71,13 +71,13 @@ fi
 # needs while letting them run on the infrastructure provided by LLVM.
 
 # Figure out which projects need to be built on each platform
-source <(git diff --name-only HEAD~2..HEAD | python3 .ci/compute_projects.py Linux)
+source <(git diff --name-only origin/${BUILDKITE_PULL_REQUEST_BASE_BRANCH}...HEAD | python3 .ci/compute_projects.py Linux)
 linux_projects=${projects_to_build}
 linux_check_targets=${project_check_targets}
 linux_runtimes=${runtimes_to_build}
 linux_runtime_check_targets=${runtimes_check_targets}
 
-source <(git diff --name-only HEAD~2..HEAD | python3 .ci/compute_projects.py Windows)
+source <(git diff --name-only origin/${BUILDKITE_PULL_REQUEST_BASE_BRANCH}...HEAD | python3 .ci/compute_projects.py Windows)
 windows_projects=${projects_to_build}
 windows_check_targets=${project_check_targets}
 
