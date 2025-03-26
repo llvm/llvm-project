@@ -57,3 +57,27 @@ float3 test_acos_float3 ( float3 p0 ) {
 float4 test_acos_float4 ( float4 p0 ) {
   return acos ( p0 );
 }
+
+// CHECK-LABEL: test_acos_double
+// CHECK: call reassoc nnan ninf nsz arcp afn float @llvm.acos.f32
+float test_acos_double ( double p0 ) {
+  return acos ( p0 );
+}
+
+// CHECK-LABEL: test_acos_double2
+// CHECK: call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.acos.v2f32
+float2 test_acos_double2 ( double2 p0 ) {
+  return acos ( p0 );
+}
+
+// CHECK-LABEL: test_acos_double3
+// CHECK: call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.acos.v3f32
+float3 test_acos_double3 ( double3 p0 ) {
+  return acos ( p0 );
+}
+
+// CHECK-LABEL: test_acos_double4
+// CHECK: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.acos.v4f32
+float4 test_acos_double4 ( double4 p0 ) {
+  return acos ( p0 );
+}

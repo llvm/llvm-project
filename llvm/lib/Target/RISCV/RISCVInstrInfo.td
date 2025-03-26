@@ -365,8 +365,8 @@ def TPRelAddSymbol : AsmOperandClass {
   let Name = "TPRelAddSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidTPRelAddSymbol";
-  let DiagnosticString = "operand must be a symbol with %tprel_add modifier";
-  let ParserMethod = "parseOperandWithModifier";
+  let DiagnosticString = "operand must be a symbol with %tprel_add specifier";
+  let ParserMethod = "parseOperandWithSpecifier";
 }
 
 // A bare symbol with the %tprel_add variant.
@@ -1792,8 +1792,8 @@ def TLSDESCCallSymbol : AsmOperandClass {
   let Name = "TLSDESCCallSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidTLSDESCCallSymbol";
-  let DiagnosticString = "operand must be a symbol with %tlsdesc_call modifier";
-  let ParserMethod = "parseOperandWithModifier";
+  let DiagnosticString = "operand must be a symbol with %tlsdesc_call specifier";
+  let ParserMethod = "parseOperandWithSpecifier";
 }
 
 // A bare symbol with the %tlsdesc_call variant.
@@ -2138,6 +2138,7 @@ include "RISCVInstrInfoZk.td"
 // Vector
 include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvk.td"
+include "RISCVInstrInfoZvqdotq.td"
 
 // Integer
 include "RISCVInstrInfoZimop.td"
@@ -2152,6 +2153,9 @@ include "RISCVInstrInfoZc.td"
 include "RISCVInstrInfoZcmop.td"
 include "RISCVInstrInfoZclsd.td"
 
+// Short Forward Branch
+include "RISCVInstrInfoSFB.td"
+
 //===----------------------------------------------------------------------===//
 // Vendor extensions
 //===----------------------------------------------------------------------===//
@@ -2159,7 +2163,6 @@ include "RISCVInstrInfoZclsd.td"
 include "RISCVInstrInfoXVentana.td"
 include "RISCVInstrInfoXTHead.td"
 include "RISCVInstrInfoXSf.td"
-include "RISCVInstrInfoSFB.td"
 include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
 include "RISCVInstrInfoXqci.td"

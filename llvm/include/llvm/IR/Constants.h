@@ -617,34 +617,34 @@ public:
 
   /// If this is a sequential container of integers (of any size), return the
   /// specified element in the low bits of a uint64_t.
-  uint64_t getElementAsInteger(unsigned i) const;
+  uint64_t getElementAsInteger(uint64_t i) const;
 
   /// If this is a sequential container of integers (of any size), return the
   /// specified element as an APInt.
-  APInt getElementAsAPInt(unsigned i) const;
+  APInt getElementAsAPInt(uint64_t i) const;
 
   /// If this is a sequential container of floating point type, return the
   /// specified element as an APFloat.
-  APFloat getElementAsAPFloat(unsigned i) const;
+  APFloat getElementAsAPFloat(uint64_t i) const;
 
   /// If this is an sequential container of floats, return the specified element
   /// as a float.
-  float getElementAsFloat(unsigned i) const;
+  float getElementAsFloat(uint64_t i) const;
 
   /// If this is an sequential container of doubles, return the specified
   /// element as a double.
-  double getElementAsDouble(unsigned i) const;
+  double getElementAsDouble(uint64_t i) const;
 
   /// Return a Constant for a specified index's element.
   /// Note that this has to compute a new constant to return, so it isn't as
   /// efficient as getElementAsInteger/Float/Double.
-  Constant *getElementAsConstant(unsigned i) const;
+  Constant *getElementAsConstant(uint64_t i) const;
 
   /// Return the element type of the array/vector.
   Type *getElementType() const;
 
   /// Return the number of elements in the array or vector.
-  unsigned getNumElements() const;
+  uint64_t getNumElements() const;
 
   /// Return the size (in bytes) of each element in the array/vector.
   /// The size of the elements is known to be a multiple of one byte.
@@ -684,7 +684,7 @@ public:
   }
 
 private:
-  const char *getElementPointer(unsigned Elt) const;
+  const char *getElementPointer(uint64_t Elt) const;
 };
 
 //===----------------------------------------------------------------------===//

@@ -413,6 +413,24 @@ TEST(DIBuilder, CreateFortranArrayTypeWithAttributes) {
   DIVariable::deleteTemporary(DataLocation);
 }
 
+TEST(DIBuilder, CreateArrayWithBitStride) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M(new Module("MyModule", Ctx));
+  DIBuilder DIB(*M);
+
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+  Constant *Ci = ConstantInt::get(Int32Ty, 7);
+  Metadata *CM = ConstantAsMetadata::get(Ci);
+
+  StringRef ArrayNameExp = "AnArray";
+  DICompositeType *NamedArray =
+      DIB.createArrayType(nullptr, ArrayNameExp, nullptr, 0, 8, 8, nullptr, {},
+                          nullptr, nullptr, nullptr, nullptr, CM);
+  EXPECT_EQ(NamedArray->getTag(), dwarf::DW_TAG_array_type);
+  EXPECT_EQ(NamedArray->getRawBitStride(), CM);
+  EXPECT_EQ(NamedArray->getBitStrideConst(), Ci);
+}
+
 TEST(DIBuilder, CreateSetType) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M(new Module("MyModule", Ctx));

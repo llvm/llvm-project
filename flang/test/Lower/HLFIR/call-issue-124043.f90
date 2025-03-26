@@ -11,5 +11,5 @@ end
 ! CHECK-LABEL:   func.func @_QPrepro(
 ! CHECK:           %[[VAL_11:.*]] = hlfir.elemental
 ! CHECK:           %[[VAL_16:.*]]:3 = hlfir.associate %[[VAL_11]]
-! CHECK:           %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_16]]#1
-! CHECK:           fir.call @_QPbar(%[[VAL_18]]#1)
+! CHECK:           %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_16]]#0
+! CHECK:           fir.call @_QPbar(%[[VAL_18]]#0)

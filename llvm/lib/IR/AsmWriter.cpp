@@ -1679,7 +1679,7 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     WriterCtx.TypePrinter->print(ETy, Out);
     Out << ' ';
     WriteAsOperandInternal(Out, CA->getElementAsConstant(0), WriterCtx);
-    for (unsigned i = 1, e = CA->getNumElements(); i != e; ++i) {
+    for (uint64_t i = 1, e = CA->getNumElements(); i != e; ++i) {
       Out << ", ";
       WriterCtx.TypePrinter->print(ETy, Out);
       Out << ' ';
@@ -2308,6 +2308,7 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
     Printer.printDwarfEnum("enumKind", *EnumKind, dwarf::EnumKindString,
                            /*ShouldSkipZero=*/false);
 
+  Printer.printMetadata("bitStride", N->getRawBitStride());
   Out << ")";
 }
 

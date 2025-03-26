@@ -29,8 +29,6 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"
 
-#include "llvm/ADT/ScopedHashTable.h"
-
 namespace {
 class ScalarExprEmitter;
 } // namespace
@@ -62,7 +60,7 @@ public:
   using DeclMapTy = llvm::DenseMap<const clang::Decl *, Address>;
   /// This keeps track of the CIR allocas or globals for local C
   /// declarations.
-  DeclMapTy LocalDeclMap;
+  DeclMapTy localDeclMap;
 
   clang::ASTContext &getContext() const { return cgm.getASTContext(); }
 
@@ -80,11 +78,11 @@ public:
   /// this fuction. These can potentially set the return value.
   bool sawAsmBlock = false;
 
-  mlir::Type convertTypeForMem(QualType T);
+  mlir::Type convertTypeForMem(QualType t);
 
-  mlir::Type convertType(clang::QualType T);
-  mlir::Type convertType(const TypeDecl *T) {
-    return convertType(getContext().getTypeDeclType(T));
+  mlir::Type convertType(clang::QualType t);
+  mlir::Type convertType(const TypeDecl *t) {
+    return convertType(getContext().getTypeDeclType(t));
   }
 
   ///  Return the cir::TypeEvaluationKind of QualType \c type.
@@ -111,7 +109,13 @@ private:
 
 public:
   mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
-                         mlir::Location loc, clang::CharUnits alignment);
+                         mlir::Location loc, clang::CharUnits alignment,
+                         bool insertIntoFnEntryBlock,
+                         mlir::Value arraySize = nullptr);
+  mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
+                         mlir::Location loc, clang::CharUnits alignment,
+                         mlir::OpBuilder::InsertPoint ip,
+                         mlir::Value arraySize = nullptr);
 
   mlir::Value createDummyValue(mlir::Location loc, clang::QualType qt);
 
@@ -175,6 +179,9 @@ public:
   void finishFunction(SourceLocation endLoc);
   mlir::LogicalResult emitFunctionBody(const clang::Stmt *body);
 
+  /// Build a debug stoppoint if we are emitting debug info.
+  void emitStopPoint(const Stmt *s);
+
   // Build CIR for a statement. useCurrentScope should be true if no
   // new scopes need be created when finding a compound statement.
   mlir::LogicalResult
@@ -183,6 +190,8 @@ public:
 
   mlir::LogicalResult emitSimpleStmt(const clang::Stmt *s,
                                      bool useCurrentScope);
+
+  mlir::LogicalResult emitForStmt(const clang::ForStmt &S);
 
   void emitCompoundStmt(const clang::CompoundStmt &s);
 
@@ -219,6 +228,7 @@ public:
 
   LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
   LValue emitUnaryOpLValue(const clang::UnaryOperator *e);
+  LValue emitBinaryOperatorLValue(const BinaryOperator *e);
 
   /// Determine whether the given initializer is trivial in the sense
   /// that it requires no code to be generated.
@@ -311,10 +321,14 @@ public:
   /// inside a function, including static vars etc.
   void emitVarDecl(const clang::VarDecl &d);
 
+  /// Perform the usual unary conversions on the specified expression and
+  /// compare the result against zero, returning an Int1Ty value.
+  mlir::Value evaluateExprAsBool(const clang::Expr *e);
+
   /// Set the address of a local variable.
   void setAddrOfLocalVar(const clang::VarDecl *vd, Address addr) {
-    assert(!LocalDeclMap.count(vd) && "Decl already exists in LocalDeclMap!");
-    LocalDeclMap.insert({vd, addr});
+    assert(!localDeclMap.count(vd) && "Decl already exists in LocalDeclMap!");
+    localDeclMap.insert({vd, addr});
     // TODO: Add symbol table support
   }
 
@@ -323,6 +337,7 @@ public:
 
   /// Emit the computation of the specified expression of scalar type.
   mlir::Value emitScalarExpr(const clang::Expr *e);
+  mlir::Value emitPromotedScalarExpr(const Expr *e, QualType promotionType);
   cir::FuncOp generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                            cir::FuncType funcType);
 
@@ -332,10 +347,16 @@ public:
   /// Emit code for the start of a function.
   /// \param loc       The location to be associated with the function.
   /// \param startLoc  The location of the function body.
-  void startFunction(clang::GlobalDecl gd, clang::QualType retTy,
+  void startFunction(clang::GlobalDecl gd, clang::QualType returnType,
                      cir::FuncOp fn, cir::FuncType funcType,
                      FunctionArgList args, clang::SourceLocation loc,
                      clang::SourceLocation startLoc);
+
+  /// Emit a conversion from the specified type to the specified destination
+  /// type, both of which are CIR scalar types.
+  mlir::Value emitScalarConversion(mlir::Value src, clang::QualType srcType,
+                                   clang::QualType dstType,
+                                   clang::SourceLocation loc);
 
   /// Represents a scope, including function bodies, compound statements, and
   /// the substatements of if/while/do/for/switch/try statements.  This class
@@ -468,7 +489,7 @@ public:
   LexicalScope *curLexScope = nullptr;
 
   Address createTempAlloca(mlir::Type ty, CharUnits align, mlir::Location loc,
-                           const Twine &name = "tmp");
+                           const Twine &name, bool insertIntoFnEntryBlock);
 };
 
 } // namespace clang::CIRGen
