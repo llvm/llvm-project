@@ -52,7 +52,7 @@ GotoRequestHandler::Run(const protocol::GotoArguments &args) const {
       current_thread.JumpToLine(file_spec, line_entry->GetLine());
 
   if (error.Fail()) {
-    return llvm::createStringError(error.GetCString());
+    return llvm::make_error<DAPError>(error.GetCString());
   }
 
   SendThreadGotoEvent(dap, thread_id);

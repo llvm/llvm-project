@@ -20,11 +20,6 @@ namespace lldb_dap {
 
 static llvm::SmallVector<lldb::SBLineEntry>
 GetLineValidEntry(DAP &dap, const lldb::SBFileSpec &file_spec, uint32_t line) {
-  // Disable breakpoint listeners so they do not send events to the DAP client.
-  lldb::SBListener listener = dap.debugger.GetListener();
-  const lldb::SBBroadcaster broadcaster = dap.target.GetBroadcaster();
-  constexpr auto event_mask = lldb::SBTarget::eBroadcastBitBreakpointChanged;
-  listener.StopListeningForEvents(broadcaster, event_mask);
 
   // Create a breakpoint to resolve the line if it is on an empty line.
   lldb::SBBreakpoint goto_bp =
@@ -52,7 +47,6 @@ GetLineValidEntry(DAP &dap, const lldb::SBFileSpec &file_spec, uint32_t line) {
 
   // clean up;
   dap.target.BreakpointDelete(goto_bp.GetID());
-  listener.StartListeningForEvents(broadcaster, event_mask);
 
   return entry_locations;
 }
@@ -68,7 +62,7 @@ GotoTargetsRequestHandler::Run(
       GetLineValidEntry(dap, file_spec, goto_line);
 
   if (goto_locations.empty())
-    return llvm::createStringError("Invalid jump location");
+    return llvm::make_error<DAPError>("Invalid jump location");
 
   protocol::GotoTargetsResponseBody body{};
 
