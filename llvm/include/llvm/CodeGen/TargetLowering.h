@@ -1648,9 +1648,9 @@ public:
     auto InputSVT = InputVT.getSimpleVT();
     assert(AccSVT.isValid() && InputSVT.isValid() &&
            "getPartialReduceMLAAction types aren't valid");
-    uint16_t AccI = AccSVT.SimpleTy;
-    uint16_t InputI = InputSVT.SimpleTy;
-    uint32_t TypeHash = (AccI << 16) + InputI;
+    auto AccI = AccSVT.SimpleTy;
+    auto InputI = InputSVT.SimpleTy;
+    PartialReduceActionTypes TypeHash = std::make_pair(AccI, InputI);
     if (PartialReduceMLAActions.contains(TypeHash))
       return PartialReduceMLAActions.at(TypeHash);
     return Expand;
@@ -2744,9 +2744,9 @@ protected:
                                  LegalizeAction Action) {
     assert(AccVT.isValid() && InputVT.isValid() &&
            "setPartialReduceMLAAction types aren't valid");
-    uint16_t AccI = AccVT.SimpleTy;
-    uint16_t InputI = InputVT.SimpleTy;
-    uint32_t TypeHash = (AccI << 16) + InputI;
+    auto AccI = AccVT.SimpleTy;
+    auto InputI = InputVT.SimpleTy;
+    PartialReduceActionTypes TypeHash = std::make_pair(AccI, InputI);
     PartialReduceMLAActions[TypeHash] = Action;
   }
 
@@ -3696,6 +3696,8 @@ private:
   /// up the MVT::VALUETYPE_SIZE value to the next multiple of 8.
   uint32_t CondCodeActions[ISD::SETCC_INVALID][(MVT::VALUETYPE_SIZE + 7) / 8];
 
+  using PartialReduceActionTypes =
+      std::pair<MVT::SimpleValueType, MVT::SimpleValueType>;
   /// For each result type and input type for the ISD::PARTIAL_REDUCE_U/SMLA
   /// nodes, keep a LegalizeAction which indicates how instruction selection
   /// should deal with this operation.
@@ -3703,7 +3705,7 @@ private:
   /// (InTy) in the format of `(AccTy << 16) + InTy`.
   /// If no entry exists for a given key, Expand is assumed as this
   /// is the most common action.
-  DenseMap<uint32_t, LegalizeAction> PartialReduceMLAActions;
+  DenseMap<PartialReduceActionTypes, LegalizeAction> PartialReduceMLAActions;
 
   ValueTypeActionImpl ValueTypeActions;
 
