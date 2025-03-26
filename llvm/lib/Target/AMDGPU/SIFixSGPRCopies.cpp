@@ -908,7 +908,7 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
       ArrayRef<int16_t> SrcIndices = TRI->getRegSplitParts(SRC, 4);
       ArrayRef<int16_t> DstIndices = TRI->getRegSplitParts(DRC, 4);
       assert(SrcIndices.size() == DstIndices.size() &&
-             "Register triples should match");
+             "Register tuple should match");
       MachineInstr *FirstMI = nullptr, *LastMI = nullptr;
       // If SrcReg is virtual register can we get the sub reg? one way to handle
       // this If def is copy fold the def src. This should not work in case of
@@ -916,7 +916,7 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
       MachineInstr *DefMI = MRI->getVRegDef(SrcReg);
       // Get the def SrcReg
       Register DefSrcReg = DefMI->getOperand(1).getReg();
-      // If not a register triple replace the opcode itself.
+      // If not a register tuple replace the opcode itself.
       if (SrcIndices.size() == 1) {
         MI.setDesc(TII->get(AMDGPU::V_READFIRSTLANE_B32));
         MI.addOperand(*MI.getParent()->getParent(),
