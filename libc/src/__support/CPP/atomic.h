@@ -256,22 +256,6 @@ template <typename T> struct AtomicRef {
 private:
   T *ptr;
 
-  LIBC_INLINE static int order(MemoryOrder mem_ord) {
-    return static_cast<int>(mem_ord);
-  }
-
-  LIBC_INLINE static int scope(MemoryScope mem_scope) {
-    return static_cast<int>(mem_scope);
-  }
-
-  LIBC_INLINE static constexpr int infer_failure_order(MemoryOrder mem_ord) {
-    if (mem_ord == MemoryOrder::RELEASE)
-      return order(MemoryOrder::RELAXED);
-    if (mem_ord == MemoryOrder::ACQ_REL)
-      return order(MemoryOrder::ACQUIRE);
-    return order(mem_ord);
-  }
-
 public:
   // Constructor from T reference
   LIBC_INLINE explicit constexpr AtomicRef(T &obj) : ptr(&obj) {}
