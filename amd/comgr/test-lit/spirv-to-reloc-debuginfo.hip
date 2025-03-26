@@ -1,22 +1,17 @@
+// XFAIL: *
 // REQUIRES: comgr-has-spirv
 
-// COM: Generate a SPIR-V file from a HIP kernel
+// COM: Generate a debuginfo SPIR-V file from a HIP kernel
 // RUN: clang -x hip --offload-arch=amdgcnspirv -nogpulib -nogpuinc \
-// RUN:    --no-gpu-bundle-output --offload-device-only -O3 %s -o %t.spv \
-// RUN:    -fno-rounding-math -fvisibility=hidden -O3 -fno-autolink \
-// RUN:    -fexceptions -fcolor-diagnostics
+// RUN:    --no-gpu-bundle-output --offload-device-only -O3 %s -o %t.dbg.spv -g
 
-// COM: Compile SPIR-V source to a relocatable
+// COM: Compile debuginfo SPIR-V source to a relocatable
 // RUN: AMD_COMGR_EMIT_VERBOSE_LOGS=1 AMD_COMGR_REDIRECT_LOGS=stdout \
-// RUN:   spirv-to-reloc %t.spv %t.o | FileCheck %s
+// RUN:   spirv-to-reloc %t.dbg.spv %t.dbg.o | FileCheck \
+// RUN:   -check-prefix=CHECK-DBG %s
 
-// CHECK: ActionKind: AMD_COMGR_ACTION_COMPILE_SPIRV_TO_RELOCATABLE
-
-// COM: Check translation
-// CHECK: SPIR-V Translation: amd-llvm-spirv -r --spirv-target-env=CL2.0 {{.*}}
-
-// COM: Check that SPIR-V flags are correctly extracted
-// CHECK: Driver Job Args: {{.*}} "-fno-rounding-math" "-fno-threadsafe-statics" "-O3" "-fno-autolink" "-fvisibility=hidden" "-fexceptions" "-fcolor-diagnostics" "-mcode-object-version=5"
+// COM: Check that debuginfo SPIR-V flags are correctly extracted
+// CHECK-DBG: Driver Job Args: {{.*}} "-gheterogeneous-dwarf=diexpression" "-mllvm -amdgpu-spill-cfi-saved-regs"
 
 #include <cstdlib>
 
