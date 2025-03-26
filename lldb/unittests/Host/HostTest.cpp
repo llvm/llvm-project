@@ -7,11 +7,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/Host.h"
+#include "TestingSupport/SubsystemRAII.h"
+#include "lldb/Host/FileSystem.h"
+#include "lldb/Host/Pipe.h"
+#include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Utility/ProcessInfo.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+
+// From TestMain.cpp.
+extern const char *TestMainArgv0;
 
 using namespace lldb_private;
 using namespace llvm;
+
+static cl::opt<uint64_t> test_arg("test-arg");
 
 TEST(Host, WaitStatusFormat) {
   EXPECT_EQ("W01", formatv("{0:g}", WaitStatus{WaitStatus::Exit, 1}).str());
@@ -46,3 +58,44 @@ TEST(Host, ProcessInstanceInfoCumulativeSystemTimeIsValid) {
   info.SetCumulativeSystemTime(ProcessInstanceInfo::timespec{1, 0});
   EXPECT_TRUE(info.CumulativeSystemTimeIsValid());
 }
+
+#ifdef LLVM_ON_UNIX
+TEST(Host, LaunchProcessDuplicatesHandle) {
+  static constexpr llvm::StringLiteral test_msg("Hello subprocess!");
+
+  SubsystemRAII<FileSystem> subsystems;
+
+  if (test_arg) {
+    Pipe pipe(LLDB_INVALID_PIPE, test_arg);
+    size_t bytes_written;
+    if (pipe.WriteWithTimeout(test_msg.data(), test_msg.size(),
+                              std::chrono::microseconds(0), bytes_written)
+            .Success() &&
+        bytes_written == test_msg.size())
+      exit(0);
+    exit(1);
+  }
+  Pipe pipe;
+  ASSERT_THAT_ERROR(pipe.CreateNew(/*child_process_inherit=*/false).takeError(),
+                    llvm::Succeeded());
+  ProcessLaunchInfo info;
+  info.SetExecutableFile(FileSpec(TestMainArgv0),
+                         /*add_exe_file_as_first_arg=*/true);
+  info.GetArguments().AppendArgument(
+      "--gtest_filter=Host.LaunchProcessDuplicatesHandle");
+  info.GetArguments().AppendArgument(
+      ("--test-arg=" + llvm::Twine::utohexstr(pipe.GetWritePipe())).str());
+  info.AppendDuplicateFileAction(pipe.GetWritePipe(), pipe.GetWritePipe());
+  info.SetMonitorProcessCallback(&ProcessLaunchInfo::NoOpMonitorCallback);
+  ASSERT_THAT_ERROR(Host::LaunchProcess(info).takeError(), llvm::Succeeded());
+  pipe.CloseWriteFileDescriptor();
+
+  char msg[100];
+  size_t bytes_read;
+  ASSERT_THAT_ERROR(pipe.ReadWithTimeout(msg, sizeof(msg),
+                                         std::chrono::seconds(10), bytes_read)
+                        .takeError(),
+                    llvm::Succeeded());
+  ASSERT_EQ(llvm::StringRef(msg, bytes_read), test_msg);
+}
+#endif
