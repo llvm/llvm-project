@@ -3,25 +3,25 @@
 // REQUIRES: ld.lld
 
 // RUN: %clang --target=armv6a-none-linux-gnueabi -fuse-ld=lld \
-// RUN:   -nostdlib -nostdinc -shared %s -o %t1
+// RUN:   -nostdlib -nostdinc -shared %s -o %t.v6a
 // RUN: llvm-objdump --no-show-raw-insn --no-print-imm-hex \
-// RUN:   -d %t1 | FileCheck %s --check-prefixes=CHECK,LE
+// RUN:   -d %t.v6a | FileCheck %s --check-prefixes=CHECK,LE
 
 // Test PLT section parsing on armeb.
 
 // RUN: %clang --target=armv6aeb-none-linux-gnueabi -fuse-ld=lld \
-// RUN:   -nostdlib -nostdinc -shared %s -o %t2
+// RUN:   -nostdlib -nostdinc -shared %s -o %t.v6aeb
 // RUN: llvm-objdump --no-show-raw-insn --no-print-imm-hex \
-// RUN:   -d %t2 | FileCheck %s --check-prefixes=CHECK,BE
-// RUN: obj2yaml %t2 | FileCheck %s --check-prefixes=NOBE8
+// RUN:   -d %t.v6aeb | FileCheck %s --check-prefixes=CHECK,BE
+// RUN: obj2yaml %t.v6aeb | FileCheck %s --check-prefixes=NOBE8
 
 // Test PLT section parsing on armeb with be8.
 
 // RUN: %clang --target=armv7aeb-none-linux-gnueabi -fuse-ld=lld \
-// RUN:   -nostdlib -nostdinc -shared %s -o %t3
+// RUN:   -nostdlib -nostdinc -shared %s -o %t.v7aeb
 // RUN: llvm-objdump --no-show-raw-insn --no-print-imm-hex \
-// RUN:   -d %t3 | FileCheck %s --check-prefixes=CHECK,BE
-// RUN: obj2yaml %t3 | FileCheck %s --check-prefixes=BE8
+// RUN:   -d %t.v7aeb | FileCheck %s --check-prefixes=CHECK,BE
+// RUN: obj2yaml %t.v7aeb | FileCheck %s --check-prefixes=BE8
 
 // LE: file format elf32-littlearm
 // BE: file format elf32-bigarm
@@ -59,28 +59,28 @@
 // Test PLT section parsing on thumb.
 
 // RUN: %clang --target=thumbv8.1m.main-none-linux-eabi \
-// RUN:   -c %s -o %t4.o
-// RUN: ld.lld --shared %t4.o -o %t4
+// RUN:   -c %s -o %t.v8.o
+// RUN: ld.lld --shared %t.v8.o -o %t.v8
 // RUN: llvm-objdump --no-show-raw-insn --no-print-imm-hex \
-// RUN:   -d %t4 | FileCheck %s --check-prefixes=THUMB,LE
+// RUN:   -d %t.v8 | FileCheck %s --check-prefixes=THUMB,LE
 
 // Test PLT section parsing on thumbeb.
 
 // RUN: %clang --target=thumbebv8.1m.main-none-linux-eabi \
-// RUN:   -c %s -o %t5.o
-// RUN: ld.lld --shared %t5.o -o %t5
+// RUN:   -c %s -o %t.v8eb.o
+// RUN: ld.lld --shared %t.v8eb.o -o %t.v8eb
 // RUN: llvm-objdump --no-show-raw-insn --no-print-imm-hex \
-// RUN:   -d %t5 | FileCheck %s --check-prefixes=THUMB,BE
-// RUN: obj2yaml %t5 | FileCheck %s --check-prefixes=NOBE8
+// RUN:   -d %t.v8eb | FileCheck %s --check-prefixes=THUMB,BE
+// RUN: obj2yaml %t.v8eb | FileCheck %s --check-prefixes=NOBE8
 
 // Test PLT section parsing on thumbeb with be8.
 
 // RUN: %clang --target=thumbebv8.1m.main-none-linux-eabi \
-// RUN:   -c %s -o %t6.o
-// RUN: ld.lld --shared --be8 %t6.o -o %t6
+// RUN:   -c %s -o %t.v8eb.be8.o
+// RUN: ld.lld --shared --be8 %t.v8eb.be8.o -o %t.v8eb.be8
 // RUN: llvm-objdump --no-show-raw-insn --no-print-imm-hex \
-// RUN:   -d %t6 | FileCheck %s --check-prefixes=THUMB,BE
-// RUN: obj2yaml %t6 | FileCheck %s --check-prefixes=BE8
+// RUN:   -d %t.v8eb.be8 | FileCheck %s --check-prefixes=THUMB,BE
+// RUN: obj2yaml %t.v8eb.be8 | FileCheck %s --check-prefixes=BE8
 
 // THUMB: Disassembly of section .text:
 // THUMB-EMPTY:
@@ -124,27 +124,27 @@
 
 // RUN: %clang --target=armv6a-none-linux-gnueabi -fuse-ld=lld \
 // RUN:   -Xlinker --script=%t.long.script -nostdlib -nostdinc \
-// RUN:   -shared %s -o %t7
+// RUN:   -shared %s -o %t.v6a.long
 // RUN: llvm-objdump --no-show-raw-insn --no-print-imm-hex \
-// RUN:   -d %t7 | FileCheck %s --check-prefixes=CHECKLONG,LE
+// RUN:   -d %t.v6a.long | FileCheck %s --check-prefixes=CHECKLONG,LE
 
 // Test PLT section with long entries parsing on armeb.
 
 // RUN: %clang --target=armv6aeb-none-linux-gnueabi -fuse-ld=lld \
 // RUN:   -Xlinker --script=%t.long.script -nostdlib -nostdinc \
-// RUN:   -shared %s -o %t8
+// RUN:   -shared %s -o %t.v6aeb.long
 // RUN: llvm-objdump --no-show-raw-insn --no-print-imm-hex \
-// RUN:   -d %t8 | FileCheck %s --check-prefixes=CHECKLONG,BE
-// RUN: obj2yaml %t8 | FileCheck %s --check-prefixes=NOBE8
+// RUN:   -d %t.v6aeb.long | FileCheck %s --check-prefixes=CHECKLONG,BE
+// RUN: obj2yaml %t.v6aeb.long | FileCheck %s --check-prefixes=NOBE8
 
 // Test PLT section with long entries parsing on armeb with be8.
 
 // RUN: %clang --target=armv7aeb-none-linux-gnueabi -fuse-ld=lld \
 // RUN:   -Xlinker --script=%t.long.script -nostdlib -nostdinc \
-// RUN:   -shared %s -o %t9
+// RUN:   -shared %s -o %t.v7aeb.long
 // RUN: llvm-objdump --no-show-raw-insn --no-print-imm-hex \
-// RUN:   -d %t9 | FileCheck %s --check-prefixes=CHECKLONG,BE
-// RUN: obj2yaml %t9 | FileCheck %s --check-prefixes=BE8
+// RUN:   -d %t.v7aeb.long | FileCheck %s --check-prefixes=CHECKLONG,BE
+// RUN: obj2yaml %t.v7aeb.long | FileCheck %s --check-prefixes=BE8
 
 // CHECKLONG:       Disassembly of section .text:
 // CHECKLONG-EMPTY:
@@ -184,27 +184,27 @@
 
 // RUN: %clang --target=armv6a-none-linux-gnueabi -fuse-ld=lld \
 // RUN:   -Xlinker --script=%t.mix.script -nostdlib -nostdinc \
-// RUN:   -shared %s -o %t10
+// RUN:   -shared %s -o %t.v6a.mix
 // RUN: llvm-objdump --no-show-raw-insn --no-print-imm-hex \
-// RUN:   -d %t10 | FileCheck %s --check-prefixes=CHECKMIX,LE
+// RUN:   -d %t.v6a.mix | FileCheck %s --check-prefixes=CHECKMIX,LE
 
 // Test PLT section with mixed long and short entries parsing on armeb.
 
 // RUN: %clang --target=armv6aeb-none-linux-gnueabi -fuse-ld=lld \
 // RUN:   -Xlinker --script=%t.mix.script -nostdlib -nostdinc \
-// RUN:   -shared %s -o %t11
+// RUN:   -shared %s -o %t.v6aeb.mix
 // RUN: llvm-objdump --no-show-raw-insn --no-print-imm-hex \
-// RUN:   -d %t11 | FileCheck %s --check-prefixes=CHECKMIX,BE
-// RUN: obj2yaml %t11 | FileCheck %s --check-prefixes=NOBE8
+// RUN:   -d %t.v6aeb.mix | FileCheck %s --check-prefixes=CHECKMIX,BE
+// RUN: obj2yaml %t.v6aeb.mix | FileCheck %s --check-prefixes=NOBE8
 
 // Test PLT section with mixed long and short entries parsing on armeb with be8.
 
 // RUN: %clang --target=armv7aeb-none-linux-gnueabi -fuse-ld=lld \
 // RUN:   -Xlinker --script=%t.mix.script -nostdlib -nostdinc \
-// RUN:   -shared %s -o %t12
+// RUN:   -shared %s -o %t.v7aeb.mix
 // RUN: llvm-objdump --no-show-raw-insn --no-print-imm-hex \
-// RUN:   -d %t12 | FileCheck %s --check-prefixes=CHECKMIX,BE
-// RUN: obj2yaml %t12 | FileCheck %s --check-prefixes=BE8
+// RUN:   -d %t.v7aeb.mix | FileCheck %s --check-prefixes=CHECKMIX,BE
+// RUN: obj2yaml %t.v7aeb.mix | FileCheck %s --check-prefixes=BE8
 
 // CHECKMIX:        Disassembly of section .text:
 // CHECKMIX-EMPTY:
