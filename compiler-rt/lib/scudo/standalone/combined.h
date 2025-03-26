@@ -633,20 +633,20 @@ public:
   // sizing purposes.
   uptr getStats(char *Buffer, uptr Size) {
     ScopedString Str;
-    const uptr Length = getStats(&Str) + 1;
-    if (Length < Size)
-      Size = Length;
-    if (Buffer && Size) {
-      memcpy(Buffer, Str.data(), Size);
-      Buffer[Size - 1] = '\0';
-    }
-    return Length;
+    getStats(&Str);
+    return Str.copyToBuffer(Buffer, Size);
   }
 
   void printStats() {
     ScopedString Str;
     getStats(&Str);
     Str.output();
+  }
+
+  uptr getFragmentationInfo(char *Buffer, uptr Size) {
+    ScopedString Str;
+    Primary.getFragmentationInfo(&Str);
+    return Str.copyToBuffer(Buffer, Size);
   }
 
   void printFragmentationInfo() {
@@ -1632,12 +1632,11 @@ private:
     }
   }
 
-  uptr getStats(ScopedString *Str) {
+  void getStats(ScopedString *Str) {
     Primary.getStats(Str);
     Secondary.getStats(Str);
     Quarantine.getStats(Str);
     TSDRegistry.getStats(Str);
-    return Str->length();
   }
 
   static typename AllocationRingBuffer::Entry *
