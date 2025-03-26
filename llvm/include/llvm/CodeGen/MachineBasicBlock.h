@@ -313,6 +313,8 @@ public:
   const MachineFunction *getParent() const { return xParent; }
   MachineFunction *getParent() { return xParent; }
 
+  /// Returns true if the original IR terminator is an `indirectbr`. This
+  /// typically corresponds to a `goto` in C, rather than jump tables.
   bool terminatorIsComputedGoto() const {
     return back().isIndirectBranch() &&
            llvm::all_of(successors(), [](const MachineBasicBlock *Succ) {
