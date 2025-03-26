@@ -249,11 +249,11 @@ static cl::opt<bool> WriteBoltInfoSection(
 
 cl::bits<GadgetScannerKind> GadgetScannersToRun(
     "scanners", cl::desc("which gadget scanners to run"),
-    cl::values(clEnumValN(GS_PACRET, "pacret",
-                          "pac-ret: return address protection (subset of \"pauth\")"),
-               clEnumValN(GS_PAUTH, "pauth",
-                          "All Pointer Authentication scanners"),
-               clEnumValN(GS_ALL, "all", "All implemented scanners")),
+    cl::values(
+        clEnumValN(GS_PACRET, "pacret",
+                   "pac-ret: return address protection (subset of \"pauth\")"),
+        clEnumValN(GS_PAUTH, "pauth", "All Pointer Authentication scanners"),
+        clEnumValN(GS_ALL, "all", "All implemented scanners")),
     cl::ZeroOrMore, cl::CommaSeparated, cl::cat(BinaryAnalysisCategory));
 
 } // namespace opts
