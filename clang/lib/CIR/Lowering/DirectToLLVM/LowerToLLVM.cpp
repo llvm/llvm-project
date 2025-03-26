@@ -383,13 +383,13 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
     break;
   }
   case cir::CastKind::int_to_bool: {
-    assert(!cir::MissingFeatures::opCmp());
-    mlir::Type dstType = castOp.getResult().getType();
-    mlir::Type llvmDstType = getTypeConverter()->convertType(dstType);
-    auto zeroBool = rewriter.create<mlir::LLVM::ConstantOp>(
-        castOp.getLoc(), llvmDstType, mlir::BoolAttr::get(getContext(), false));
-    rewriter.replaceOp(castOp, zeroBool);
-    return castOp.emitError() << "NYI int_to_bool cast";
+    mlir::Value llvmSrcVal = adaptor.getOperands().front();
+    mlir::Value zeroInt = rewriter.create<mlir::LLVM::ConstantOp>(
+        castOp.getLoc(), llvmSrcVal.getType(),
+        mlir::IntegerAttr::get(llvmSrcVal.getType(), 0));
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
+        castOp, mlir::LLVM::ICmpPredicate::ne, llvmSrcVal, zeroInt);
+    break;
   }
   case cir::CastKind::integral: {
     mlir::Type srcType = castOp.getSrc().getType();
