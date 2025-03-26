@@ -4615,55 +4615,53 @@ calcNextStatus(std::pair<const MachineOperand *, SrcStatus> Curr,
   return std::nullopt;
 }
 
-struct {
+class statOptions {
+private:
   bool HasNeg;
   bool HasOpsel;
-} StatOptions;
 
-static bool checkOptions(SrcStatus Stat) {
-  if (!StatOptions.HasNeg &&
-      (Stat >= SrcStatus::NEG_START || Stat <= SrcStatus::NEG_END)) {
-    return false;
+public:
+  statOptions(const MachineOperand *RootOp, const MachineRegisterInfo &MRI) {
+    const MachineInstr *MI = RootOp->getParent();
+    unsigned Opc = MI->getOpcode();
+    HasNeg = false;
+    HasOpsel = false;
+    if (Opc < TargetOpcode::GENERIC_OP_END) {
+      // Keep same for gerneric op
+      HasNeg = true;
+    } else if (Opc == TargetOpcode::G_INTRINSIC) {
+      Intrinsic::ID IntrinsicID = cast<GIntrinsic>(*MI).getIntrinsicID();
+      // Only float point intrinsic has neg & neg_hi bits
+      if (IntrinsicID == Intrinsic::amdgcn_fdot2)
+        HasNeg = true;
+    }
+
+    // Assume all complex pattern of VOP3P has opsel
+    HasOpsel = true;
   }
-  if (!StatOptions.HasOpsel &&
-      (Stat >= SrcStatus::HALF_START || Stat >= SrcStatus::HALF_END)) {
-    return false;
+  bool checkOptions(SrcStatus Stat) const {
+    if (!HasNeg &&
+        (Stat >= SrcStatus::NEG_START || Stat <= SrcStatus::NEG_END)) {
+      return false;
+    }
+    if (!HasOpsel &&
+        (Stat >= SrcStatus::HALF_START || Stat >= SrcStatus::HALF_END)) {
+      return false;
+    }
+    return true;
   }
-  return true;
-}
-
-static void setUpOptions(const MachineOperand *RootOp,
-                         const MachineRegisterInfo &MRI) {
-  const MachineInstr *MI = RootOp->getParent();
-  unsigned Opc = MI->getOpcode();
-
-  if (Opc < TargetOpcode::GENERIC_OP_END) {
-    // Keep same for gerneric op
-    StatOptions.HasNeg = true;
-  } else if (Opc == TargetOpcode::G_INTRINSIC) {
-    Intrinsic::ID IntrinsicID = cast<GIntrinsic>(*MI).getIntrinsicID();
-    // Only float point intrinsic has neg & neg_hi bits
-    if (IntrinsicID == Intrinsic::amdgcn_fdot2)
-      StatOptions.HasNeg = true;
-    else
-      StatOptions.HasNeg = false;
-  } else
-    StatOptions.HasNeg = false;
-
-  // Assume all complex pattern of VOP3P has opsel
-  StatOptions.HasOpsel = true;
-}
+};
 
 static SmallVector<std::pair<const MachineOperand *, SrcStatus>>
 getSrcStats(const MachineOperand *Op, const MachineRegisterInfo &MRI,
-            int MaxDepth = 6) {
+            statOptions StatOptions, int MaxDepth = 6) {
   int Depth = 0;
   auto Curr = calcNextStatus({Op, SrcStatus::IS_SAME}, MRI);
   SmallVector<std::pair<const MachineOperand *, SrcStatus>, 4> Statlist;
 
   while (Depth <= MaxDepth && Curr.has_value()) {
     Depth++;
-    if (checkOptions(Curr.value().second)) {
+    if (StatOptions.checkOptions(Curr.value().second)) {
       Statlist.push_back(Curr.value());
     }
     Curr = calcNextStatus(Curr.value(), MRI);
@@ -4674,7 +4672,7 @@ getSrcStats(const MachineOperand *Op, const MachineRegisterInfo &MRI,
 
 static std::pair<const MachineOperand *, SrcStatus>
 getLastSameOrNeg(const MachineOperand *Op, const MachineRegisterInfo &MRI,
-                 int MaxDepth = 6) {
+                 statOptions StatOptions, int MaxDepth = 6) {
   int Depth = 0;
   std::pair<const MachineOperand *, SrcStatus> LastSameOrNeg = {
       Op, SrcStatus::IS_SAME};
@@ -4682,7 +4680,7 @@ getLastSameOrNeg(const MachineOperand *Op, const MachineRegisterInfo &MRI,
 
   while (Depth <= MaxDepth && Curr.has_value()) {
     Depth++;
-    if (checkOptions(Curr.value().second)) {
+    if (StatOptions.checkOptions(Curr.value().second)) {
       if (Curr.value().second == SrcStatus::IS_SAME ||
           Curr.value().second == SrcStatus::IS_HI_NEG ||
           Curr.value().second == SrcStatus::IS_LO_NEG ||
@@ -4772,9 +4770,10 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *RootOp,
     return {Op, Mods};
   }
 
-  setUpOptions(Op, MRI);
+  statOptions StatOptions(Op, MRI);
 
-  std::pair<const MachineOperand *, SrcStatus> Stat = getLastSameOrNeg(Op, MRI);
+  std::pair<const MachineOperand *, SrcStatus> Stat =
+      getLastSameOrNeg(Op, MRI, StatOptions);
   if (!Stat.first->isReg()) {
     Mods |= SISrcMods::OP_SEL_1;
     return {Op, Mods};
@@ -4796,7 +4795,7 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *RootOp,
   }
 
   SmallVector<std::pair<const MachineOperand *, SrcStatus>> StatlistHi =
-      getSrcStats(&MI->getOperand(2), MRI);
+      getSrcStats(&MI->getOperand(2), MRI, StatOptions);
 
   if (StatlistHi.size() == 0) {
     Mods |= SISrcMods::OP_SEL_1;
@@ -4804,7 +4803,7 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *RootOp,
   }
 
   SmallVector<std::pair<const MachineOperand *, SrcStatus>> StatlistLo =
-      getSrcStats(&MI->getOperand(1), MRI);
+      getSrcStats(&MI->getOperand(1), MRI, StatOptions);
 
   if (StatlistLo.size() == 0) {
     Mods |= SISrcMods::OP_SEL_1;
