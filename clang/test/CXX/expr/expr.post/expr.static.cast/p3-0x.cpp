@@ -23,6 +23,8 @@ void test(A &a, B &b) {
   const A &&ar11 = static_cast<const A&&>(xvalue<B>());
 }
 
+namespace GH121429 {
+
 struct C : private A { // expected-note 4 {{declared private here}}
     C&& that();
 
@@ -85,3 +87,5 @@ auto s(U u = {}) -> decltype(static_cast<T&&>(u)); // expected-note 2 {{substitu
 
 int i = s<A, C>(); // expected-error {{no matching function}}
 int j = s<A, D>(); // expected-error {{no matching function}}
+
+}
