@@ -184,8 +184,6 @@ namespace {
 
       // OptFor[Min]Size are used in pattern predicates that isel is matching.
       OptForMinSize = MF.getFunction().hasMinSize();
-      assert((!OptForMinSize || MF.getFunction().hasOptSize()) &&
-             "OptForMinSize implies OptForSize");
       return SelectionDAGISel::runOnMachineFunction(MF);
     }
 
