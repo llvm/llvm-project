@@ -165,13 +165,17 @@
 // Check --flto-partitions
 
 // RUN: %clang -### -fgpu-rdc --offload-arch=gfx90a -nogpulib -nogpuinc \
-// RUN:   -L. -flto --flto-partitions=42 %s 2>&1 | FileCheck -check-prefix=LTO_PARTS %s
+// RUN:   -L. -foffload-lto %s 2>&1 | FileCheck -check-prefix=LTO_DEFAULT %s
+// LTO_DEFAULT: lld{{.*}}"--lto-partitions=8"
+
+// RUN: %clang -### -fgpu-rdc --offload-arch=gfx90a -nogpulib -nogpuinc \
+// RUN:   -L. -foffload-lto --flto-partitions=42 %s 2>&1 | FileCheck -check-prefix=LTO_PARTS %s
 // LTO_PARTS: lld{{.*}}"--lto-partitions=42"
 
 // RUN: not %clang -### -fgpu-rdc --offload-arch=gfx90a -nogpulib -nogpuinc \
-// RUN:   -L. -flto --flto-partitions=a %s 2>&1 | FileCheck -check-prefix=LTO_PARTS_INV0 %s
+// RUN:   -L. -foffload-lto --flto-partitions=a %s 2>&1 | FileCheck -check-prefix=LTO_PARTS_INV0 %s
 // LTO_PARTS_INV0: clang: error: invalid integral value 'a' in '--flto-partitions=a'
 
 // RUN: not %clang -### -fgpu-rdc --offload-arch=gfx90a -nogpulib -nogpuinc \
-// RUN:   -L. -flto --flto-partitions=0 %s 2>&1 | FileCheck -check-prefix=LTO_PARTS_INV1 %s
+// RUN:   -L. -foffload-lto --flto-partitions=0 %s 2>&1 | FileCheck -check-prefix=LTO_PARTS_INV1 %s
 // LTO_PARTS_INV1: clang: error: invalid integral value '0' in '--flto-partitions=0'
