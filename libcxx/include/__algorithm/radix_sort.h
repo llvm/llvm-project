@@ -327,7 +327,7 @@ struct __unsigned_integer_of_size<8> {
 #  if _LIBCPP_HAS_INT128
 template <>
 struct __unsigned_integer_of_size<16> {
-  using type _LIBCPP_NODEBUG = __int128;
+  using type _LIBCPP_NODEBUG = unsigned __int128;
 };
 #  endif
 
