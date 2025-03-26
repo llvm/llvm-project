@@ -199,7 +199,6 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
-
 class CIRToLLVMBrOpLowering : public mlir::OpConversionPattern<cir::BrOp> {
 public:
   using mlir::OpConversionPattern<cir::BrOp>::OpConversionPattern;
