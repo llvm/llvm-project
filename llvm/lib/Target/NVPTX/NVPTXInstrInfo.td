@@ -150,9 +150,6 @@ def doRsqrtOpt : Predicate<"doRsqrtOpt()">;
 
 def doMulWide      : Predicate<"doMulWide">;
 
-def allowUnsafeFPMath : Predicate<"allowUnsafeFPMath()">;
-def noUnsafeFPMath : Predicate<"!allowUnsafeFPMath()">;
-
 def do_DIVF32_APPROX : Predicate<"getDivF32Level()==0">;
 def do_DIVF32_FULL : Predicate<"getDivF32Level()==1">;
 
@@ -210,6 +207,12 @@ class ValueToRegClass<ValueType T> {
 //===----------------------------------------------------------------------===//
 // Some Common Instruction Class Templates
 //===----------------------------------------------------------------------===//
+
+class OneUse1<SDPatternOperator operator>
+    : PatFrag<(ops node:$A), (operator node:$A), [{ return N->hasOneUse(); }]>;
+
+class fpimm_pos_inf<ValueType vt>
+    : FPImmLeaf<vt, [{ return Imm.isPosInfinity(); }]>;
 
 // Utility class to wrap up information about a register and DAG type for more
 // convenient iteration and parameterization
@@ -442,7 +445,7 @@ multiclass F3<string op_str, SDPatternOperator op_pat> {
 class BinOpAllowsFMA<SDPatternOperator operator>
     : PatFrag<(ops node:$A, node:$B),
               (operator node:$A, node:$B), [{
-  return allowFMA() || N->getFlags().hasAllowContract();;
+  return allowFMA() || N->getFlags().hasAllowContract();
 }]>;
 
 multiclass F3_fma_component<string op_str, SDNode op_node> {
@@ -693,10 +696,7 @@ let hasSideEffects = false in {
   defm CVT_to_tf32_rz_relu_satf  : CVT_TO_TF32<"rz.relu.satfinite", [hasPTX<86>, hasSM<100>]>;
 }
 
-def fpround_oneuse : PatFrag<(ops node:$a), (fpround node:$a), [{
-  return N->hasOneUse();
-}]>;
-
+def fpround_oneuse : OneUse1<fpround>;
 def : Pat<(v2bf16 (build_vector (bf16 (fpround_oneuse f32:$lo)),
                                 (bf16 (fpround_oneuse f32:$hi)))),
           (CVT_bf16x2_f32 $hi, $lo, CvtRN)>,
@@ -786,18 +786,14 @@ def : Pat<(vt (select i1:$p, vt:$a, vt:$b)),
 // Test Instructions
 //-----------------------------------
 
+def fabs_oneuse : OneUse1<fabs>;
+
 def TESTINF_f32r : NVPTXInst<(outs Int1Regs:$p), (ins Float32Regs:$a),
                              "testp.infinite.f32 \t$p, $a;",
-                             []>;
-def TESTINF_f32i : NVPTXInst<(outs Int1Regs:$p), (ins f32imm:$a),
-                             "testp.infinite.f32 \t$p, $a;",
-                             []>;
+                             [(set i1:$p, (seteq (fabs_oneuse f32:$a), fpimm_pos_inf<f32>))]>;
 def TESTINF_f64r : NVPTXInst<(outs Int1Regs:$p), (ins Float64Regs:$a),
                              "testp.infinite.f64 \t$p, $a;",
-                             []>;
-def TESTINF_f64i : NVPTXInst<(outs Int1Regs:$p), (ins f64imm:$a),
-                             "testp.infinite.f64 \t$p, $a;",
-                             []>;
+                             [(set i1:$p, (seteq (fabs_oneuse f64:$a), fpimm_pos_inf<f64>))]>;
 
 //-----------------------------------
 // Integer Arithmetic
@@ -1362,99 +1358,19 @@ defm FMA32        : FMA<"fma.rn.f32", Float32Regs, f32imm, True>;
 defm FMA64        : FMA<"fma.rn.f64", Float64Regs, f64imm, True>;
 
 // sin/cos
+
+class UnaryOpAllowsApproxFn<SDPatternOperator operator>
+    : PatFrag<(ops node:$A),
+              (operator node:$A), [{
+  return allowUnsafeFPMath() || N->getFlags().hasApproximateFuncs();
+}]>;
+
 def SINF:  NVPTXInst<(outs Float32Regs:$dst), (ins Float32Regs:$src),
                       "sin.approx.f32 \t$dst, $src;",
-                      [(set f32:$dst, (fsin f32:$src))]>,
-                      Requires<[allowUnsafeFPMath]>;
+                      [(set f32:$dst, (UnaryOpAllowsApproxFn<fsin> f32:$src))]>;
 def COSF:  NVPTXInst<(outs Float32Regs:$dst), (ins Float32Regs:$src),
                       "cos.approx.f32 \t$dst, $src;",
-                      [(set f32:$dst, (fcos f32:$src))]>,
-                      Requires<[allowUnsafeFPMath]>;
-
-// Lower (frem x, y) into (sub x, (mul (ftrunc (div x, y)) y)),
-// i.e. "poor man's fmod()". When y is infinite, x is returned. This matches the
-// semantics of LLVM's frem.
-
-// frem - f32 FTZ
-def : Pat<(frem f32:$x, f32:$y),
-          (FSUBf32rr_ftz $x, (FMULf32rr_ftz (CVT_f32_f32
-            (FDIV32rr_prec_ftz $x, $y), CvtRZI_FTZ),
-             $y))>,
-          Requires<[doF32FTZ, allowUnsafeFPMath]>;
-def : Pat<(frem f32:$x, fpimm:$y),
-          (FSUBf32rr_ftz $x, (FMULf32ri_ftz (CVT_f32_f32
-            (FDIV32ri_prec_ftz $x, fpimm:$y), CvtRZI_FTZ),
-             fpimm:$y))>,
-          Requires<[doF32FTZ, allowUnsafeFPMath]>;
-
-def : Pat<(frem f32:$x, f32:$y),
-          (SELP_f32rr $x,
-            (FSUBf32rr_ftz $x, (FMULf32rr_ftz (CVT_f32_f32
-              (FDIV32rr_prec_ftz $x, $y), CvtRZI_FTZ),
-              $y)),
-            (TESTINF_f32r $y))>,
-          Requires<[doF32FTZ, noUnsafeFPMath]>;
-def : Pat<(frem f32:$x, fpimm:$y),
-          (SELP_f32rr $x,
-            (FSUBf32rr_ftz $x, (FMULf32ri_ftz (CVT_f32_f32
-              (FDIV32ri_prec_ftz $x, fpimm:$y), CvtRZI_FTZ),
-              fpimm:$y)),
-            (TESTINF_f32i fpimm:$y))>,
-          Requires<[doF32FTZ, noUnsafeFPMath]>;
-
-// frem - f32
-def : Pat<(frem f32:$x, f32:$y),
-          (FSUBf32rr $x, (FMULf32rr (CVT_f32_f32
-            (FDIV32rr_prec $x, $y), CvtRZI),
-             $y))>,
-          Requires<[allowUnsafeFPMath]>;
-def : Pat<(frem f32:$x, fpimm:$y),
-          (FSUBf32rr $x, (FMULf32ri (CVT_f32_f32
-            (FDIV32ri_prec $x, fpimm:$y), CvtRZI),
-             fpimm:$y))>,
-          Requires<[allowUnsafeFPMath]>;
-
-def : Pat<(frem f32:$x, f32:$y),
-          (SELP_f32rr $x,
-            (FSUBf32rr $x, (FMULf32rr (CVT_f32_f32
-              (FDIV32rr_prec $x, $y), CvtRZI),
-              $y)),
-            (TESTINF_f32r Float32Regs:$y))>,
-          Requires<[noUnsafeFPMath]>;
-def : Pat<(frem f32:$x, fpimm:$y),
-          (SELP_f32rr $x,
-            (FSUBf32rr $x, (FMULf32ri (CVT_f32_f32
-              (FDIV32ri_prec $x, fpimm:$y), CvtRZI),
-              fpimm:$y)),
-            (TESTINF_f32i fpimm:$y))>,
-          Requires<[noUnsafeFPMath]>;
-
-// frem - f64
-def : Pat<(frem f64:$x, f64:$y),
-          (FSUBf64rr $x, (FMULf64rr (CVT_f64_f64
-            (FDIV64rr $x, $y), CvtRZI),
-             $y))>,
-          Requires<[allowUnsafeFPMath]>;
-def : Pat<(frem f64:$x, fpimm:$y),
-          (FSUBf64rr $x, (FMULf64ri (CVT_f64_f64
-            (FDIV64ri $x, fpimm:$y), CvtRZI),
-             fpimm:$y))>,
-          Requires<[allowUnsafeFPMath]>;
-
-def : Pat<(frem f64:$x, f64:$y),
-          (SELP_f64rr $x,
-            (FSUBf64rr $x, (FMULf64rr (CVT_f64_f64
-              (FDIV64rr $x, $y), CvtRZI),
-               $y)),
-            (TESTINF_f64r Float64Regs:$y))>,
-          Requires<[noUnsafeFPMath]>;
-def : Pat<(frem f64:$x, fpimm:$y),
-          (SELP_f64rr $x,
-            (FSUBf64rr $x, (FMULf64ri (CVT_f64_f64
-              (FDIV64ri $x, fpimm:$y), CvtRZI),
-              fpimm:$y)),
-            (TESTINF_f64r $y))>,
-          Requires<[noUnsafeFPMath]>;
+                      [(set f32:$dst, (UnaryOpAllowsApproxFn<fcos> f32:$src))]>;
 
 //-----------------------------------
 // Bitwise operations

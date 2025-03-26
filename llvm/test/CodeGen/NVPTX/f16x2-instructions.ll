@@ -362,8 +362,8 @@ define <2 x half> @test_frem(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NEXT:    cvt.f32.f16 %f2, %rs4;
 ; CHECK-NEXT:    div.rn.f32 %f3, %f2, %f1;
 ; CHECK-NEXT:    cvt.rzi.f32.f32 %f4, %f3;
-; CHECK-NEXT:    mul.f32 %f5, %f4, %f1;
-; CHECK-NEXT:    sub.f32 %f6, %f2, %f5;
+; CHECK-NEXT:    neg.f32 %f5, %f4;
+; CHECK-NEXT:    fma.rn.f32 %f6, %f5, %f1, %f2;
 ; CHECK-NEXT:    testp.infinite.f32 %p1, %f1;
 ; CHECK-NEXT:    selp.f32 %f7, %f2, %f6, %p1;
 ; CHECK-NEXT:    cvt.rn.f16.f32 %rs5, %f7;
@@ -371,8 +371,8 @@ define <2 x half> @test_frem(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NEXT:    cvt.f32.f16 %f9, %rs3;
 ; CHECK-NEXT:    div.rn.f32 %f10, %f9, %f8;
 ; CHECK-NEXT:    cvt.rzi.f32.f32 %f11, %f10;
-; CHECK-NEXT:    mul.f32 %f12, %f11, %f8;
-; CHECK-NEXT:    sub.f32 %f13, %f9, %f12;
+; CHECK-NEXT:    neg.f32 %f12, %f11;
+; CHECK-NEXT:    fma.rn.f32 %f13, %f12, %f8, %f9;
 ; CHECK-NEXT:    testp.infinite.f32 %p2, %f8;
 ; CHECK-NEXT:    selp.f32 %f14, %f9, %f13, %p2;
 ; CHECK-NEXT:    cvt.rn.f16.f32 %rs6, %f14;
