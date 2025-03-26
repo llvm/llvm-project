@@ -1697,8 +1697,7 @@ void ThinLTOCodeGenerator::run() {
   std::map<ValueInfo, std::vector<VTableSlotSummary>> LocalWPDTargetsMap;
   std::set<GlobalValue::GUID> ExportedGUIDs;
   runWholeProgramDevirtOnIndex(*Index, ExportedGUIDs, LocalWPDTargetsMap);
-  for (auto GUID : ExportedGUIDs)
-    GUIDPreservedSymbols.insert(GUID);
+  GUIDPreservedSymbols.insert_range(ExportedGUIDs);
 
   // Compute prevailing symbols
   DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
