@@ -998,12 +998,6 @@ public:
     SmallMapVector<unsigned, unsigned, 4> MaxLocalUsers;
   };
 
-  /// \return Returns information about the register usages of the loop for the
-  /// given plan and vectorization factors.
-  SmallVector<LoopVectorizationCostModel::RegisterUsage, 8>
-  calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
-                         const TargetTransformInfo &TTI);
-
   /// Collect values we want to ignore in the cost model.
   void collectValuesToIgnore();
 
