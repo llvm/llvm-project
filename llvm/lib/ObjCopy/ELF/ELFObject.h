@@ -61,7 +61,7 @@ public:
   iterator end() const { return iterator(Sections.data() + Sections.size()); }
   size_t size() const { return Sections.size(); }
 
-  Expected<SectionBase *> getSection(uint32_t Index, Twine ErrMsg);
+  Expected<SectionBase *> getSection(uint32_t Index, const Twine &ErrMsg);
 
   template <class T>
   Expected<T *> getSectionOfType(uint32_t Index, Twine IndexErrMsg,
@@ -825,7 +825,7 @@ protected:
 public:
   SymbolTableSection() { Type = OriginalType = ELF::SHT_SYMTAB; }
 
-  void addSymbol(Twine Name, uint8_t Bind, uint8_t Type, SectionBase *DefinedIn,
+  void addSymbol(const Twine &Name, uint8_t Bind, uint8_t Type, SectionBase *DefinedIn,
                  uint64_t Value, uint8_t Visibility, uint16_t Shndx,
                  uint64_t SymbolSize);
   void prepareForLayout();
