@@ -12,6 +12,7 @@
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
@@ -76,13 +77,10 @@ LLVM_LIBC_FUNCTION(float16, asinhf16, (float16 x)) {
     // when |x| < 0x1.718p-5, asinhf16(x) = x. Adjust by 1 ULP for certain
     // rounding types.
     if (LIBC_UNLIKELY(x_abs < 0x29c6)) {
-      if (((fputil::get_round() == FE_UPWARD) ||
-           (fputil::get_round() == FE_TOWARDZERO)) &&
-          xf < 0)
+      int rounding = fputil::quick_get_round();
+      if ((rounding == FE_UPWARD || rounding == FE_TOWARDZERO) && xf < 0)
         return fputil::cast<float16>(xf + 0x1p-24f);
-      if (((fputil::get_round() == FE_DOWNWARD) ||
-           (fputil::get_round() == FE_TOWARDZERO)) &&
-          xf > 0)
+      if ((rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO) && xf > 0)
         return fputil::cast<float16>(xf - 0x1p-24f);
       return fputil::cast<float16>(xf);
     }
@@ -103,4 +101,5 @@ LLVM_LIBC_FUNCTION(float16, asinhf16, (float16 x)) {
   return fputil::cast<float16>(
       x_sign * log_eval(fputil::multiply_add(xf, x_sign, sqrt_term)));
 }
+
 } // namespace LIBC_NAMESPACE_DECL
