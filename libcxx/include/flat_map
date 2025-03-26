@@ -35,6 +35,25 @@ namespace std {
            class Predicate>
     typename flat_map<Key, T, Compare, KeyContainer, MappedContainer>::size_type
       erase_if(flat_map<Key, T, Compare, KeyContainer, MappedContainer>& c, Predicate pred);
+
+  // [flat.multimap], class template flat_multimap
+  template<class Key, class T, class Compare = less<Key>,
+           class KeyContainer = vector<Key>, class MappedContainer = vector<T>>
+    class flat_multimap;
+
+  struct sorted_equivalent_t { explicit sorted_equivalent_t() = default; };
+  inline constexpr sorted_equivalent_t sorted_equivalent{};
+
+  template<class Key, class T, class Compare, class KeyContainer, class MappedContainer,
+           class Allocator>
+    struct uses_allocator<flat_multimap<Key, T, Compare, KeyContainer, MappedContainer>,
+                          Allocator>;
+
+  // [flat.multimap.erasure], erasure for flat_multimap
+  template<class Key, class T, class Compare, class KeyContainer, class MappedContainer,
+           class Predicate>
+    typename flat_multimap<Key, T, Compare, KeyContainer, MappedContainer>::size_type
+      erase_if(flat_multimap<Key, T, Compare, KeyContainer, MappedContainer>& c, Predicate pred);
 */
 
 #if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
@@ -44,6 +63,8 @@ namespace std {
 
 #  if _LIBCPP_STD_VER >= 23
 #    include <__flat_map/flat_map.h>
+#    include <__flat_map/flat_multimap.h>
+#    include <__flat_map/sorted_equivalent.h>
 #    include <__flat_map/sorted_unique.h>
 #  endif
 

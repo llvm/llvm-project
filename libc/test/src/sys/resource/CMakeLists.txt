@@ -11,7 +11,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.fcntl
     libc.include.sys_resource
-    libc.src.errno.errno 
+    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.sys.resource.getrlimit
     libc.src.sys.resource.setrlimit

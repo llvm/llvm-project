@@ -62,7 +62,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;
@@ -99,7 +99,8 @@ public:
                  const std::vector<std::string> &FeaturesVec) const override;
 
   std::optional<std::pair<unsigned, unsigned>>
-  getVScaleRange(const LangOptions &LangOpts) const override;
+  getVScaleRange(const LangOptions &LangOpts,
+                 bool IsArmStreamingFunction) const override;
 
   bool hasFeature(StringRef Feature) const override;
 

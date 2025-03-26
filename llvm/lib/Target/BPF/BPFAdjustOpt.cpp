@@ -128,7 +128,7 @@ bool BPFAdjustOptImpl::adjustICmpToBuiltin() {
         Function *Fn = Intrinsic::getOrInsertDeclaration(
             M, Intrinsic::bpf_compare, {Op0->getType(), ConstOp1->getType()});
         auto *NewInst = CallInst::Create(Fn, {Opcode, Op0, ConstOp1});
-        NewInst->insertBefore(&I);
+        NewInst->insertBefore(I.getIterator());
         Icmp->replaceAllUsesWith(NewInst);
         Changed = true;
         ToBeDeleted = Icmp;
@@ -222,7 +222,7 @@ bool BPFAdjustOptImpl::serializeICMPCrossBB(BasicBlock &BB) {
   if (!BI || !BI->isConditional())
     return false;
   auto *Cond = dyn_cast<ICmpInst>(BI->getCondition());
-  if (!Cond || B2->getFirstNonPHI() != Cond)
+  if (!Cond || &*B2->getFirstNonPHIIt() != Cond)
     return false;
   Value *B2Op0 = Cond->getOperand(0);
   auto Cond2Op = Cond->getPredicate();

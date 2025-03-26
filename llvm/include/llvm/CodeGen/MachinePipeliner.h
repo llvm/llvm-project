@@ -269,7 +269,7 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
   using InstrMapTy = DenseMap<MachineInstr *, MachineInstr *>;
 
   /// Instructions to change when emitting the final schedule.
-  DenseMap<SUnit *, std::pair<unsigned, int64_t>> InstrChanges;
+  DenseMap<SUnit *, std::pair<Register, int64_t>> InstrChanges;
 
   /// We may create a new instruction, so remember it because it
   /// must be deleted when the pass is finished.
@@ -374,12 +374,12 @@ public:
 
   /// Return the new base register that was stored away for the changed
   /// instruction.
-  unsigned getInstrBaseReg(SUnit *SU) const {
-    DenseMap<SUnit *, std::pair<unsigned, int64_t>>::const_iterator It =
+  Register getInstrBaseReg(SUnit *SU) const {
+    DenseMap<SUnit *, std::pair<Register, int64_t>>::const_iterator It =
         InstrChanges.find(SU);
     if (It != InstrChanges.end())
       return It->second.first;
-    return 0;
+    return Register();
   }
 
   void addMutation(std::unique_ptr<ScheduleDAGMutation> Mutation) {
@@ -389,6 +389,9 @@ public:
   static bool classof(const ScheduleDAGInstrs *DAG) { return true; }
 
   const SwingSchedulerDDG *getDDG() const { return DDG.get(); }
+
+  bool mayOverlapInLaterIter(const MachineInstr *BaseMI,
+                             const MachineInstr *OtherMI) const;
 
 private:
   void addLoopCarriedDependences(AAResults *AA);
@@ -409,10 +412,10 @@ private:
   void computeNodeOrder(NodeSetType &NodeSets);
   void checkValidNodeOrder(const NodeSetType &Circuits) const;
   bool schedulePipeline(SMSchedule &Schedule);
-  bool computeDelta(MachineInstr &MI, unsigned &Delta) const;
+  bool computeDelta(const MachineInstr &MI, int &Delta) const;
   MachineInstr *findDefInLoop(Register Reg);
   bool canUseLastOffsetValue(MachineInstr *MI, unsigned &BasePos,
-                             unsigned &OffsetPos, unsigned &NewBase,
+                             unsigned &OffsetPos, Register &NewBase,
                              int64_t &NewOffset);
   void postProcessDAG();
   /// Set the Minimum Initiation Interval for this schedule attempt.
@@ -465,9 +468,10 @@ public:
         SUnit *SuccSUnit = Succ.getDst();
         if (V != SuccSUnit)
           continue;
-        if (SUnitToDistance[U] + Succ.getLatency() > SUnitToDistance[V]) {
-          SUnitToDistance[V] = SUnitToDistance[U] + Succ.getLatency();
-        }
+        unsigned &DU = SUnitToDistance[U];
+        unsigned &DV = SUnitToDistance[V];
+        if (DU + Succ.getLatency() > DV)
+          DV = DU + Succ.getLatency();
       }
     }
     // Handle a back-edge in loop carried dependencies
@@ -482,8 +486,9 @@ public:
       if (PI.getSrc() != FirstNode || !PI.isOrderDep() ||
           !DAG->isLoopCarriedDep(PI))
         continue;
-      SUnitToDistance[FirstNode] =
-          std::max(SUnitToDistance[FirstNode], SUnitToDistance[LastNode] + 1);
+      unsigned &First = SUnitToDistance[FirstNode];
+      unsigned Last = SUnitToDistance[LastNode];
+      First = std::max(First, Last + 1);
     }
 
     // The latency is the distance from the source node to itself.

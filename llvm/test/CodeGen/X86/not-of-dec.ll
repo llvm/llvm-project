@@ -57,18 +57,17 @@ define i32 @t2_extrause(i32 %alignment, ptr %mask_storage) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    leal -1(%eax), %edx
-; X86-NEXT:    movl %edx, (%ecx)
-; X86-NEXT:    negl %eax
+; X86-NEXT:    decl %eax
+; X86-NEXT:    movl %eax, (%ecx)
+; X86-NEXT:    notl %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t2_extrause:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    leal -1(%rax), %ecx
-; X64-NEXT:    movl %ecx, (%rsi)
-; X64-NEXT:    negl %eax
-; X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal -1(%rdi), %eax
+; X64-NEXT:    movl %eax, (%rsi)
+; X64-NEXT:    notl %eax
 ; X64-NEXT:    retq
   %mask = add i32 %alignment, -1
   store i32 %mask, ptr %mask_storage

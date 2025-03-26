@@ -220,6 +220,7 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   UP.UnrollAndJamInnerLoopThreshold = 60;
   UP.MaxIterationsCountToAnalyze = UnrollMaxIterationsCountToAnalyze;
   UP.SCEVExpansionBudget = SCEVCheapExpansionBudget;
+  UP.RuntimeUnrollMultiExit = false;
 
   // Override with any target specific settings
   TTI.getUnrollingPreferences(L, SE, UP, &ORE);
@@ -1352,6 +1353,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   ULO.ForgetAllSCEV = ForgetAllSCEV;
   ULO.Heart = getLoopConvergenceHeart(L);
   ULO.SCEVExpansionBudget = UP.SCEVExpansionBudget;
+  ULO.RuntimeUnrollMultiExit = UP.RuntimeUnrollMultiExit;
   LoopUnrollResult UnrollResult = UnrollLoop(
       L, ULO, LI, &SE, &DT, &AC, &TTI, &ORE, PreserveLCSSA, &RemainderLoop, AA);
   if (UnrollResult == LoopUnrollResult::Unmodified)
@@ -1515,9 +1517,9 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
   Loop *ParentL = L.getParentLoop();
   SmallPtrSet<Loop *, 4> OldLoops;
   if (ParentL)
-    OldLoops.insert(ParentL->begin(), ParentL->end());
+    OldLoops.insert_range(*ParentL);
   else
-    OldLoops.insert(AR.LI.begin(), AR.LI.end());
+    OldLoops.insert_range(AR.LI);
 
   std::string LoopName = std::string(L.getName());
 

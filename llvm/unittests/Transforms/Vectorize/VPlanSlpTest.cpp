@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../lib/Transforms/Vectorize/VPlanSLP.h"
 #include "../lib/Transforms/Vectorize/VPlan.h"
 #include "../lib/Transforms/Vectorize/VPlanHCFGBuilder.h"
 #include "VPlanTestBase.h"
@@ -94,7 +95,7 @@ TEST_F(VPlanSlpTest, testSlpSimple_2) {
 
   Function *F = M.getFunction("add_x2");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
   auto VPIAI = getInterleavedAccessInfo(*F, LI->getLoopFor(LoopHeader), *Plan);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
@@ -167,7 +168,7 @@ TEST_F(VPlanSlpTest, testSlpSimple_3) {
 
   Function *F = M.getFunction("add_x2");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
@@ -238,7 +239,7 @@ TEST_F(VPlanSlpTest, testSlpReuse_1) {
 
   Function *F = M.getFunction("add_x2");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
   auto VPIAI = getInterleavedAccessInfo(*F, LI->getLoopFor(LoopHeader), *Plan);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
@@ -302,7 +303,7 @@ TEST_F(VPlanSlpTest, testSlpReuse_2) {
 
   Function *F = M.getFunction("add_x2");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
   auto VPIAI = getInterleavedAccessInfo(*F, LI->getLoopFor(LoopHeader), *Plan);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
@@ -440,7 +441,7 @@ TEST_F(VPlanSlpTest, testSlpReorder_1) {
 
   Function *F = M.getFunction("add_x3");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
@@ -512,7 +513,7 @@ TEST_F(VPlanSlpTest, testSlpReorder_2) {
 
   Function *F = M.getFunction("add_x3");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
@@ -584,7 +585,7 @@ TEST_F(VPlanSlpTest, testSlpReorder_3) {
 
   Function *F = M.getFunction("add_x3");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
@@ -660,7 +661,7 @@ TEST_F(VPlanSlpTest, testSlpReorder_4) {
 
   Function *F = M.getFunction("add_x3");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
@@ -720,7 +721,7 @@ TEST_F(VPlanSlpTest, testInstrsInDifferentBBs) {
 
   Function *F = M.getFunction("add_x2");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
   auto VPIAI = getInterleavedAccessInfo(*F, LI->getLoopFor(LoopHeader), *Plan);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
@@ -783,7 +784,7 @@ TEST_F(VPlanSlpTest, testInstrsInDifferentBBs2) {
 
   Function *F = M.getFunction("add_x2");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
   auto VPIAI = getInterleavedAccessInfo(*F, LI->getLoopFor(LoopHeader), *Plan);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
@@ -843,7 +844,7 @@ TEST_F(VPlanSlpTest, testSlpAtomicLoad) {
 
   Function *F = M.getFunction("add_x2");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
   auto VPIAI = getInterleavedAccessInfo(*F, LI->getLoopFor(LoopHeader), *Plan);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
@@ -902,7 +903,7 @@ TEST_F(VPlanSlpTest, testSlpAtomicStore) {
 
   Function *F = M.getFunction("add_x2");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildHCFG(LoopHeader);
+  auto Plan = buildVPlan(LoopHeader);
   auto VPIAI = getInterleavedAccessInfo(*F, LI->getLoopFor(LoopHeader), *Plan);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();

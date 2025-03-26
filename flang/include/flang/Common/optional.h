@@ -26,7 +26,7 @@
 #ifndef FORTRAN_COMMON_OPTIONAL_H
 #define FORTRAN_COMMON_OPTIONAL_H
 
-#include "flang/Common/api-attrs.h"
+#include "api-attrs.h"
 #include <optional>
 #include <type_traits>
 

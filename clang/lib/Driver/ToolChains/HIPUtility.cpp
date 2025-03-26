@@ -45,7 +45,7 @@ static std::string normalizeForBundler(const llvm::Triple &T,
   return HasTargetID ? (T.getArchName() + "-" + T.getVendorName() + "-" +
                         T.getOSName() + "-" + T.getEnvironmentName())
                            .str()
-                     : T.normalize();
+                     : T.normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
 }
 
 // Collect undefined __hip_fatbin* and __hip_gpubin_handle* symbols from all
@@ -466,11 +466,11 @@ void HIP::constructGenerateObjFileFromHIPFatBinary(
 
   Objf << ObjBuffer;
 
-  ArgStringList McArgs{"-target", Args.MakeArgString(HostTriple.normalize()),
+  ArgStringList ClangArgs{"-target", Args.MakeArgString(HostTriple.normalize()),
                        "-o",      Output.getFilename(),
                        "-x",      "assembler",
                        ObjinFile, "-c"};
   C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
-                                         D.getClangProgramPath(), McArgs,
+                                         D.getClangProgramPath(), ClangArgs,
                                          Inputs, Output, D.getPrependArg()));
 }

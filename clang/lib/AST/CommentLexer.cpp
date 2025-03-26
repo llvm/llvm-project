@@ -196,6 +196,15 @@ const char *skipWhitespace(const char *BufferPtr, const char *BufferEnd) {
   return BufferEnd;
 }
 
+const char *skipHorizontalWhitespace(const char *BufferPtr,
+                                     const char *BufferEnd) {
+  for (; BufferPtr != BufferEnd; ++BufferPtr) {
+    if (!isHorizontalWhitespace(*BufferPtr))
+      return BufferPtr;
+  }
+  return BufferEnd;
+}
+
 bool isWhitespace(const char *BufferPtr, const char *BufferEnd) {
   return skipWhitespace(BufferPtr, BufferEnd) == BufferEnd;
 }
@@ -637,16 +646,40 @@ void Lexer::setupAndLexHTMLStartTag(Token &T) {
   formTokenWithChars(T, TagNameEnd, tok::html_start_tag);
   T.setHTMLTagStartName(Name);
 
-  BufferPtr = skipWhitespace(BufferPtr, CommentEnd);
+  BufferPtr = skipHorizontalWhitespace(BufferPtr, CommentEnd);
+  if (BufferPtr == CommentEnd) { // in BCPL comments
+    State = LS_HTMLStartTag;
+    return;
+  }
 
   const char C = *BufferPtr;
   if (BufferPtr != CommentEnd &&
-      (C == '>' || C == '/' || isHTMLIdentifierStartingCharacter(C)))
+      (C == '>' || C == '/' || isVerticalWhitespace(C) ||
+       isHTMLIdentifierStartingCharacter(C)))
     State = LS_HTMLStartTag;
 }
 
 void Lexer::lexHTMLStartTag(Token &T) {
   assert(State == LS_HTMLStartTag);
+
+  // Skip leading whitespace and comment decorations
+  while (isVerticalWhitespace(*BufferPtr)) {
+    BufferPtr = skipNewline(BufferPtr, CommentEnd);
+
+    if (CommentState == LCS_InsideCComment)
+      skipLineStartingDecorations();
+
+    BufferPtr = skipHorizontalWhitespace(BufferPtr, CommentEnd);
+    if (BufferPtr == CommentEnd) {
+      // HTML starting tags must be defined in a single comment block.
+      // It's likely a user-error where they forgot to terminate the comment.
+      State = LS_Normal;
+      // Since at least one newline was skipped and one token needs to be lexed,
+      // return a newline.
+      formTokenWithChars(T, BufferPtr, tok::newline);
+      return;
+    }
+  }
 
   const char *TokenPtr = BufferPtr;
   char C = *TokenPtr;
@@ -693,14 +726,13 @@ void Lexer::lexHTMLStartTag(Token &T) {
 
   // Now look ahead and return to normal state if we don't see any HTML tokens
   // ahead.
-  BufferPtr = skipWhitespace(BufferPtr, CommentEnd);
+  BufferPtr = skipHorizontalWhitespace(BufferPtr, CommentEnd);
   if (BufferPtr == CommentEnd) {
-    State = LS_Normal;
     return;
   }
 
   C = *BufferPtr;
-  if (!isHTMLIdentifierStartingCharacter(C) &&
+  if (!isHTMLIdentifierStartingCharacter(C) && !isVerticalWhitespace(C) &&
       C != '=' && C != '\"' && C != '\'' && C != '>' && C != '/') {
     State = LS_Normal;
     return;
@@ -774,8 +806,17 @@ again:
         BufferPtr++;
 
       CommentState = LCS_InsideBCPLComment;
-      if (State != LS_VerbatimBlockBody && State != LS_VerbatimBlockFirstLine)
+      switch (State) {
+      case LS_VerbatimBlockFirstLine:
+      case LS_VerbatimBlockBody:
+        break;
+      case LS_HTMLStartTag:
+        BufferPtr = skipHorizontalWhitespace(BufferPtr, BufferEnd);
+        break;
+      default:
         State = LS_Normal;
+        break;
+      }
       CommentEnd = findBCPLCommentEnd(BufferPtr, BufferEnd);
       goto again;
     }
@@ -807,6 +848,14 @@ again:
     while(EndWhitespace != BufferEnd && *EndWhitespace != '/')
       EndWhitespace++;
 
+    // When lexing the start of an HTML tag (i.e. going through the attributes)
+    // there won't be any newlines generated.
+    if (State == LS_HTMLStartTag && EndWhitespace != BufferEnd) {
+      CommentState = LCS_BeforeComment;
+      BufferPtr = EndWhitespace;
+      goto again;
+    }
+
     // Turn any whitespace between comments (and there is only whitespace
     // between them -- guaranteed by comment extraction) into a newline.  We
     // have two newlines between C comments in total (first one was synthesized
@@ -828,6 +877,14 @@ again:
         assert(BufferPtr[0] == '*' && BufferPtr[1] == '/');
         BufferPtr += 2;
         assert(BufferPtr <= BufferEnd);
+
+        // When lexing the start of an HTML tag (i.e. going through the
+        // attributes) there won't be any newlines generated - whitespace still
+        // needs to be skipped.
+        if (State == LS_HTMLStartTag && BufferPtr != BufferEnd) {
+          CommentState = LCS_BetweenComments;
+          goto again;
+        }
 
         // Synthenize newline just after the C comment, regardless if there is
         // actually a newline.

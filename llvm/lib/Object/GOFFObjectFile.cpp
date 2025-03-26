@@ -190,8 +190,8 @@ const uint8_t *GOFFObjectFile::getSymbolEsdRecord(DataRefImpl Symb) const {
 }
 
 Expected<StringRef> GOFFObjectFile::getSymbolName(DataRefImpl Symb) const {
-  if (EsdNamesCache.count(Symb.d.a)) {
-    auto &StrPtr = EsdNamesCache[Symb.d.a];
+  if (auto It = EsdNamesCache.find(Symb.d.a); It != EsdNamesCache.end()) {
+    auto &StrPtr = It->second;
     return StringRef(StrPtr.second.get(), StrPtr.first);
   }
 
@@ -459,8 +459,8 @@ uint64_t GOFFObjectFile::getSectionSize(DataRefImpl Sec) const {
 // a contiguous sequence of bytes.
 Expected<ArrayRef<uint8_t>>
 GOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
-  if (SectionDataCache.count(Sec.d.a)) {
-    auto &Buf = SectionDataCache[Sec.d.a];
+  if (auto It = SectionDataCache.find(Sec.d.a); It != SectionDataCache.end()) {
+    auto &Buf = It->second;
     return ArrayRef<uint8_t>(Buf);
   }
   uint64_t SectionSize = getSectionSize(Sec);
@@ -503,8 +503,9 @@ GOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
     std::copy(CompleteData.data(), CompleteData.data() + TxtDataSize,
               Data.begin() + TxtDataOffset);
   }
-  SectionDataCache[Sec.d.a] = Data;
-  return ArrayRef<uint8_t>(SectionDataCache[Sec.d.a]);
+  auto &Cache = SectionDataCache[Sec.d.a];
+  Cache = Data;
+  return ArrayRef<uint8_t>(Cache);
 }
 
 uint64_t GOFFObjectFile::getSectionAlignment(DataRefImpl Sec) const {
@@ -564,8 +565,7 @@ section_iterator GOFFObjectFile::section_end() const {
 
 void GOFFObjectFile::moveSymbolNext(DataRefImpl &Symb) const {
   for (uint32_t I = Symb.d.a + 1, E = EsdPtrs.size(); I < E; ++I) {
-    if (EsdPtrs[I]) {
-      const uint8_t *EsdRecord = EsdPtrs[I];
+    if (const uint8_t *EsdRecord = EsdPtrs[I]) {
       GOFF::ESDSymbolType SymbolType;
       ESDRecord::getSymbolType(EsdRecord, SymbolType);
       // Skip EDs - i.e. section symbols.

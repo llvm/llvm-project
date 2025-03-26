@@ -39,8 +39,8 @@ MCInst LoongArchInstrInfo::getNop() const {
 
 void LoongArchInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI,
-                                     const DebugLoc &DL, MCRegister DstReg,
-                                     MCRegister SrcReg, bool KillSrc,
+                                     const DebugLoc &DL, Register DstReg,
+                                     Register SrcReg, bool KillSrc,
                                      bool RenamableDest,
                                      bool RenamableSrc) const {
   if (LoongArch::GPRRegClass.contains(DstReg, SrcReg)) {
@@ -113,7 +113,8 @@ void LoongArchInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 void LoongArchInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register SrcReg,
     bool IsKill, int FI, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    const TargetRegisterInfo *TRI, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
 
@@ -146,12 +147,10 @@ void LoongArchInstrInfo::storeRegToStackSlot(
       .addMemOperand(MMO);
 }
 
-void LoongArchInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                              MachineBasicBlock::iterator I,
-                                              Register DstReg, int FI,
-                                              const TargetRegisterClass *RC,
-                                              const TargetRegisterInfo *TRI,
-                                              Register VReg) const {
+void LoongArchInstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DstReg,
+    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    Register VReg, MachineInstr::MIFlag Flags) const {
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
   DebugLoc DL;
@@ -455,6 +454,83 @@ bool LoongArchInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
     break;
   }
 
+  const auto &STI = MF.getSubtarget<LoongArchSubtarget>();
+  if (STI.hasFeature(LoongArch::FeatureRelax)) {
+    // When linker relaxation enabled, the following instruction patterns are
+    // prohibited from being reordered:
+    //
+    // * pcalau12i $a0, %pc_hi20(s)
+    //   addi.w/d $a0, $a0, %pc_lo12(s)
+    //
+    // * pcalau12i $a0, %got_pc_hi20(s)
+    //   ld.w/d $a0, $a0, %got_pc_lo12(s)
+    //
+    // * pcalau12i $a0, %ld_pc_hi20(s) | %gd_pc_hi20(s)
+    //   addi.w/d $a0, $a0, %got_pc_lo12(s)
+    //
+    // * pcalau12i $a0, %desc_pc_hi20(s)
+    //   addi.w/d  $a0, $a0, %desc_pc_lo12(s)
+    //   ld.w/d    $ra, $a0, %desc_ld(s)
+    //   jirl      $ra, $ra, %desc_call(s)
+    unsigned AddiOp = STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
+    unsigned LdOp = STI.is64Bit() ? LoongArch::LD_D : LoongArch::LD_W;
+    switch (MI.getOpcode()) {
+    case LoongArch::PCALAU12I: {
+      auto MO0 = LoongArchII::getDirectFlags(MI.getOperand(1));
+      auto SecondOp = std::next(MII);
+      if (MO0 == LoongArchII::MO_DESC_PC_HI) {
+        if (SecondOp == MIE || SecondOp->getOpcode() != AddiOp)
+          break;
+        auto Ld = std::next(SecondOp);
+        if (Ld == MIE || Ld->getOpcode() != LdOp)
+          break;
+        auto MO1 = LoongArchII::getDirectFlags(SecondOp->getOperand(2));
+        auto MO2 = LoongArchII::getDirectFlags(Ld->getOperand(2));
+        if (MO1 == LoongArchII::MO_DESC_PC_LO && MO2 == LoongArchII::MO_DESC_LD)
+          return true;
+        break;
+      }
+      if (SecondOp == MIE ||
+          (SecondOp->getOpcode() != AddiOp && SecondOp->getOpcode() != LdOp))
+        break;
+      auto MO1 = LoongArchII::getDirectFlags(SecondOp->getOperand(2));
+      if (MO0 == LoongArchII::MO_PCREL_HI && SecondOp->getOpcode() == AddiOp &&
+          MO1 == LoongArchII::MO_PCREL_LO)
+        return true;
+      if (MO0 == LoongArchII::MO_GOT_PC_HI && SecondOp->getOpcode() == LdOp &&
+          MO1 == LoongArchII::MO_GOT_PC_LO)
+        return true;
+      if ((MO0 == LoongArchII::MO_LD_PC_HI ||
+           MO0 == LoongArchII::MO_GD_PC_HI) &&
+          SecondOp->getOpcode() == AddiOp && MO1 == LoongArchII::MO_GOT_PC_LO)
+        return true;
+      break;
+    }
+    case LoongArch::ADDI_W:
+    case LoongArch::ADDI_D: {
+      auto MO = LoongArchII::getDirectFlags(MI.getOperand(2));
+      if (MO == LoongArchII::MO_PCREL_LO || MO == LoongArchII::MO_GOT_PC_LO)
+        return true;
+      break;
+    }
+    case LoongArch::LD_W:
+    case LoongArch::LD_D: {
+      auto MO = LoongArchII::getDirectFlags(MI.getOperand(2));
+      if (MO == LoongArchII::MO_GOT_PC_LO)
+        return true;
+      break;
+    }
+    case LoongArch::PseudoDESC_CALL: {
+      auto MO = LoongArchII::getDirectFlags(MI.getOperand(2));
+      if (MO == LoongArchII::MO_DESC_CALL)
+        return true;
+      break;
+    }
+    default:
+      break;
+    }
+  }
+
   return false;
 }
 
@@ -630,7 +706,8 @@ bool LoongArchInstrInfo::reverseBranchCondition(
 
 std::pair<unsigned, unsigned>
 LoongArchInstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {
-  return std::make_pair(TF, 0u);
+  const unsigned Mask = LoongArchII::MO_DIRECT_FLAG_MASK;
+  return std::make_pair(TF & Mask, TF & ~Mask);
 }
 
 ArrayRef<std::pair<unsigned, const char *>>
@@ -656,17 +733,26 @@ LoongArchInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_IE_PC_LO, "loongarch-ie-pc-lo"},
       {MO_IE_PC64_LO, "loongarch-ie-pc64-lo"},
       {MO_IE_PC64_HI, "loongarch-ie-pc64-hi"},
+      {MO_LD_PC_HI, "loongarch-ld-pc-hi"},
+      {MO_GD_PC_HI, "loongarch-gd-pc-hi"},
+      {MO_CALL36, "loongarch-call36"},
       {MO_DESC_PC_HI, "loongarch-desc-pc-hi"},
       {MO_DESC_PC_LO, "loongarch-desc-pc-lo"},
       {MO_DESC64_PC_LO, "loongarch-desc64-pc-lo"},
       {MO_DESC64_PC_HI, "loongarch-desc64-pc-hi"},
       {MO_DESC_LD, "loongarch-desc-ld"},
       {MO_DESC_CALL, "loongarch-desc-call"},
-      {MO_LD_PC_HI, "loongarch-ld-pc-hi"},
-      {MO_GD_PC_HI, "loongarch-gd-pc-hi"},
       {MO_LE_HI_R, "loongarch-le-hi-r"},
       {MO_LE_ADD_R, "loongarch-le-add-r"},
       {MO_LE_LO_R, "loongarch-le-lo-r"}};
+  return ArrayRef(TargetFlags);
+}
+
+ArrayRef<std::pair<unsigned, const char *>>
+LoongArchInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
+  using namespace LoongArchII;
+  static const std::pair<unsigned, const char *> TargetFlags[] = {
+      {MO_RELAX, "loongarch-relax"}};
   return ArrayRef(TargetFlags);
 }
 

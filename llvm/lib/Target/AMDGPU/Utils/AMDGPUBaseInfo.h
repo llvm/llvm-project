@@ -19,6 +19,10 @@
 #include <functional>
 #include <utility>
 
+// Pull in OpName enum definition and getNamedOperandIdx() declaration.
+#define GET_INSTRINFO_OPERAND_ENUM
+#include "AMDGPUGenInstrInfo.inc"
+
 struct amd_kernel_code_t;
 
 namespace llvm {
@@ -109,6 +113,12 @@ struct CvtScaleF32_F32F16ToF8F4_Info {
   unsigned Opcode;
 };
 
+struct True16D16Info {
+  unsigned T16Op;
+  unsigned HiOp;
+  unsigned LoOp;
+};
+
 #define GET_MIMGBaseOpcode_DECL
 #define GET_MIMGDim_DECL
 #define GET_MIMGEncoding_DECL
@@ -116,9 +126,9 @@ struct CvtScaleF32_F32F16ToF8F4_Info {
 #define GET_MIMGMIPMapping_DECL
 #define GET_MIMGBiASMapping_DECL
 #define GET_MAIInstInfoTable_DECL
-#define GET_MAIInstInfoTable_DECL
 #define GET_isMFMA_F8F6F4Table_DECL
 #define GET_isCvtScaleF32_F32F16ToF8F4Table_DECL
+#define GET_True16D16Table_DECL
 #include "AMDGPUGenSearchableTables.inc"
 
 namespace IsaInfo {
@@ -394,10 +404,7 @@ template <typename... Fields> struct EncodingFields {
 };
 
 LLVM_READONLY
-int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIdx);
-
-LLVM_READONLY
-inline bool hasNamedOperand(uint64_t Opcode, uint64_t NamedIdx) {
+inline bool hasNamedOperand(uint64_t Opcode, OpName NamedIdx) {
   return getNamedOperandIdx(Opcode, NamedIdx) != -1;
 }
 
@@ -976,8 +983,7 @@ struct Waitcnt {
   Waitcnt() = default;
   // Pre-gfx12 constructor.
   Waitcnt(unsigned VmCnt, unsigned ExpCnt, unsigned LgkmCnt, unsigned VsCnt)
-      : LoadCnt(VmCnt), ExpCnt(ExpCnt), DsCnt(LgkmCnt), StoreCnt(VsCnt),
-        SampleCnt(~0u), BvhCnt(~0u), KmCnt(~0u) {}
+      : LoadCnt(VmCnt), ExpCnt(ExpCnt), DsCnt(LgkmCnt), StoreCnt(VsCnt) {}
 
   // gfx12+ constructor.
   Waitcnt(unsigned LoadCnt, unsigned ExpCnt, unsigned DsCnt, unsigned StoreCnt,
@@ -1168,6 +1174,18 @@ unsigned decodeFieldVmVsrc(unsigned Encoded);
 /// \returns Decoded SaSdst from given immediate \p Encoded.
 unsigned decodeFieldSaSdst(unsigned Encoded);
 
+/// \returns Decoded VaSdst from given immediate \p Encoded.
+unsigned decodeFieldVaSdst(unsigned Encoded);
+
+/// \returns Decoded VaVcc from given immediate \p Encoded.
+unsigned decodeFieldVaVcc(unsigned Encoded);
+
+/// \returns Decoded SaSrc from given immediate \p Encoded.
+unsigned decodeFieldVaSsrc(unsigned Encoded);
+
+/// \returns Decoded HoldCnt from given immediate \p Encoded.
+unsigned decodeFieldHoldCnt(unsigned Encoded);
+
 /// \returns \p VmVsrc as an encoded Depctr immediate.
 unsigned encodeFieldVmVsrc(unsigned VmVsrc);
 
@@ -1185,6 +1203,30 @@ unsigned encodeFieldSaSdst(unsigned SaSdst);
 
 /// \returns \p Encoded combined with encoded \p SaSdst.
 unsigned encodeFieldSaSdst(unsigned Encoded, unsigned SaSdst);
+
+/// \returns \p VaSdst as an encoded Depctr immediate.
+unsigned encodeFieldVaSdst(unsigned VaSdst);
+
+/// \returns \p Encoded combined with encoded \p VaSdst.
+unsigned encodeFieldVaSdst(unsigned Encoded, unsigned VaSdst);
+
+/// \returns \p VaVcc as an encoded Depctr immediate.
+unsigned encodeFieldVaVcc(unsigned VaVcc);
+
+/// \returns \p Encoded combined with encoded \p VaVcc.
+unsigned encodeFieldVaVcc(unsigned Encoded, unsigned VaVcc);
+
+/// \returns \p HoldCnt as an encoded Depctr immediate.
+unsigned encodeFieldHoldCnt(unsigned HoldCnt);
+
+/// \returns \p Encoded combined with encoded \p HoldCnt.
+unsigned encodeFieldHoldCnt(unsigned HoldCnt, unsigned Encoded);
+
+/// \returns \p VaSsrc as an encoded Depctr immediate.
+unsigned encodeFieldVaSsrc(unsigned VaSsrc);
+
+/// \returns \p Encoded combined with encoded \p VaSsrc.
+unsigned encodeFieldVaSsrc(unsigned Encoded, unsigned VaSsrc);
 
 } // namespace DepCtr
 

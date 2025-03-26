@@ -350,3 +350,12 @@ auto bad36 = [] [[clang::sycl_kernel_entry_point(BADKN<36>)]] static {};
 // expected-error@+1 {{'sycl_kernel_entry_point' attribute cannot be applied to a coroutine}}
 auto bad37 = [] [[clang::sycl_kernel_entry_point(BADKN<37>)]] static -> void { co_return; };
 #endif
+
+// expected-error@+1 {{'sycl_kernel_entry_point' attribute cannot be applied to a function defined with a function try block}}
+[[clang::sycl_kernel_entry_point(BADKN<38>)]]
+void bad38() try {} catch(...) {}
+
+// expected-error@+2 {{'sycl_kernel_entry_point' attribute cannot be applied to a function defined with a function try block}}
+template<typename>
+[[clang::sycl_kernel_entry_point(BADKN<39>)]]
+void bad39() try {} catch(...) {}

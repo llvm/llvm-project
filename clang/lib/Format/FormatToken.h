@@ -44,6 +44,8 @@ namespace format {
   TYPE(CaseLabelColon)                                                         \
   TYPE(CastRParen)                                                             \
   TYPE(ClassLBrace)                                                            \
+  /* Name of class/struct/union/interface definition. */                       \
+  TYPE(ClassHeadName)                                                          \
   TYPE(ClassRBrace)                                                            \
   TYPE(CompoundRequirementLBrace)                                              \
   /* ternary ?: expression */                                                  \
@@ -592,6 +594,9 @@ public:
   /// Has "\n\f\n" or "\n\f\r\n" before TokenText.
   bool HasFormFeedBefore = false;
 
+  /// Is the first token after a preprocessor line.
+  bool FirstAfterPPLine = false;
+
   /// Number of optional braces to be inserted after this token:
   ///   -1: a single left brace
   ///    0: no braces
@@ -741,27 +746,8 @@ public:
     return isOneOf(tok::star, tok::amp, tok::ampamp);
   }
 
-  bool isCppAlternativeOperatorKeyword() const {
-    assert(!TokenText.empty());
-    if (!isalpha(TokenText[0]))
-      return false;
-
-    switch (Tok.getKind()) {
-    case tok::ampamp:
-    case tok::ampequal:
-    case tok::amp:
-    case tok::pipe:
-    case tok::tilde:
-    case tok::exclaim:
-    case tok::exclaimequal:
-    case tok::pipepipe:
-    case tok::pipeequal:
-    case tok::caret:
-    case tok::caretequal:
-      return true;
-    default:
-      return false;
-    }
+  bool isPlacementOperator() const {
+    return isOneOf(tok::kw_new, tok::kw_delete);
   }
 
   bool isUnaryOperator() const {

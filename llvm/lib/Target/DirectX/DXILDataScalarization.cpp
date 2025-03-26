@@ -91,7 +91,7 @@ bool DataScalarizerVisitor::visitLoadInst(LoadInst &LI) {
     if (CE && CE->getOpcode() == Instruction::GetElementPtr) {
       GetElementPtrInst *OldGEP =
           cast<GetElementPtrInst>(CE->getAsInstruction());
-      OldGEP->insertBefore(&LI);
+      OldGEP->insertBefore(LI.getIterator());
       IRBuilder<> Builder(&LI);
       LoadInst *NewLoad =
           Builder.CreateLoad(LI.getType(), OldGEP, LI.getName());
@@ -115,7 +115,7 @@ bool DataScalarizerVisitor::visitStoreInst(StoreInst &SI) {
     if (CE && CE->getOpcode() == Instruction::GetElementPtr) {
       GetElementPtrInst *OldGEP =
           cast<GetElementPtrInst>(CE->getAsInstruction());
-      OldGEP->insertBefore(&SI);
+      OldGEP->insertBefore(SI.getIterator());
       IRBuilder<> Builder(&SI);
       StoreInst *NewStore = Builder.CreateStore(SI.getValueOperand(), OldGEP);
       NewStore->setAlignment(SI.getAlign());

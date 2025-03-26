@@ -42,6 +42,15 @@ define void @exp2_test(float %0, <8 x float> %1) {
   ret void
 }
 
+; CHECK-LABEL:  llvm.func @exp10_test
+define void @exp10_test(float %0, <8 x float> %1) {
+  ; CHECK:  llvm.intr.exp10(%{{.*}}) : (f32) -> f32
+  %3 = call float @llvm.exp10.f32(float %0)
+  ; CHECK:  llvm.intr.exp10(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  %4 = call <8 x float> @llvm.exp10.v8f32(<8 x float> %1)
+  ret void
+}
+
 ; CHECK-LABEL:  llvm.func @log_test
 define void @log_test(float %0, <8 x float> %1) {
   ; CHECK:  llvm.intr.log(%{{.*}}) : (f32) -> f32
@@ -101,12 +110,50 @@ define void @floor_test(float %0, <8 x float> %1) {
   %4 = call <8 x float> @llvm.floor.v8f32(<8 x float> %1)
   ret void
 }
-; CHECK-LABEL:  llvm.func @cos_test
-define void @cos_test(float %0, <8 x float> %1) {
+; CHECK-LABEL:  llvm.func @trig_test
+define void @trig_test(float %0, <8 x float> %1) {
+  ; CHECK: llvm.intr.sin(%{{.*}}) : (f32) -> f32
+  %3 = call float @llvm.sin.f32(float %0)
+  ; CHECK: llvm.intr.sin(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  %4 = call <8 x float> @llvm.sin.v8f32(<8 x float> %1)
+
   ; CHECK: llvm.intr.cos(%{{.*}}) : (f32) -> f32
-  %3 = call float @llvm.cos.f32(float %0)
+  %5 = call float @llvm.cos.f32(float %0)
   ; CHECK: llvm.intr.cos(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
-  %4 = call <8 x float> @llvm.cos.v8f32(<8 x float> %1)
+  %6 = call <8 x float> @llvm.cos.v8f32(<8 x float> %1)
+
+  ; CHECK: llvm.intr.tan(%{{.*}}) : (f32) -> f32
+  %7 = call float @llvm.tan.f32(float %0)
+  ; CHECK: llvm.intr.tan(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  %8 = call <8 x float> @llvm.tan.v8f32(<8 x float> %1)
+
+  ret void
+}
+; CHECK-LABEL:  llvm.func @inv_trig_test
+define void @inv_trig_test(float %0, <8 x float> %1) {
+  ; CHECK: llvm.intr.asin(%{{.*}}) : (f32) -> f32
+  %3 = call float @llvm.asin.f32(float %0)
+  ; CHECK: llvm.intr.asin(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  %4 = call <8 x float> @llvm.asin.v8f32(<8 x float> %1)
+
+  ; CHECK: llvm.intr.acos(%{{.*}}) : (f32) -> f32
+  %5 = call float @llvm.acos.f32(float %0)
+  ; CHECK: llvm.intr.acos(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  %6 = call <8 x float> @llvm.acos.v8f32(<8 x float> %1)
+
+  ; CHECK: llvm.intr.atan(%{{.*}}) : (f32) -> f32
+  %7 = call float @llvm.atan.f32(float %0)
+  ; CHECK: llvm.intr.atan(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  %8 = call <8 x float> @llvm.atan.v8f32(<8 x float> %1)
+
+  ret void
+}
+; CHECK-LABEL:  llvm.func @atan2_test
+define void @atan2_test(float %0, float %1, <8 x float> %2, <8 x float> %3) {
+  ; CHECK:  llvm.intr.atan2(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  %5 = call float @llvm.atan2.f32(float %0, float %1)
+  ; CHECK:  llvm.intr.atan2(%{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  %6 = call <8 x float> @llvm.atan2.v8f32(<8 x float> %2, <8 x float> %3)
   ret void
 }
 ; CHECK-LABEL:  llvm.func @hyperbolic_trig_test
@@ -956,6 +1003,20 @@ define float @ssa_copy(float %0) {
   ret float %2
 }
 
+; CHECK-LABEL:  llvm.func @ptrmask
+define ptr @ptrmask(ptr %0, i64 %1) {
+  ; CHECK: %{{.*}} = llvm.intr.ptrmask %{{.*}} : (!llvm.ptr, i64) -> !llvm.ptr
+  %3 = call ptr @llvm.ptrmask.p0.i64(ptr %0, i64 %1)
+  ret ptr %3
+}
+
+; CHECK-LABEL:  llvm.func @vector_ptrmask
+define <8 x ptr> @vector_ptrmask(<8 x ptr> %0, <8 x i64> %1) {
+  ; CHECK: %{{.*}} = llvm.intr.ptrmask %{{.*}} : (!llvm.vec<8 x ptr>, vector<8xi64>) -> !llvm.vec<8 x ptr>
+  %3 = call <8 x ptr> @llvm.ptrmask.v8p0.v8i64(<8 x ptr> %0, <8 x i64> %1)
+  ret <8 x ptr> %3
+}
+
 ; CHECK-LABEL: experimental_constrained_fptrunc
 define void @experimental_constrained_fptrunc(double %s, <4 x double> %v) {
   ; CHECK: llvm.intr.experimental.constrained.fptrunc %{{.*}} towardzero ignore : f64 to f32
@@ -973,6 +1034,19 @@ define void @experimental_constrained_fptrunc(double %s, <4 x double> %v) {
   ret void
 }
 
+; CHECK-LABEL: experimental_constrained_fpext
+define void @experimental_constrained_fpext(float %s, <4 x float> %v) {
+  ; CHECK: llvm.intr.experimental.constrained.fpext %{{.*}} ignore : f32 to f64
+  %1 = call double @llvm.experimental.constrained.fpext.f64.f32(float %s, metadata !"fpexcept.ignore")
+  ; CHECK: llvm.intr.experimental.constrained.fpext %{{.*}} maytrap : f32 to f64
+  %2 = call double @llvm.experimental.constrained.fpext.f64.f32(float %s, metadata !"fpexcept.maytrap")
+  ; CHECK: llvm.intr.experimental.constrained.fpext %{{.*}} strict : f32 to f64
+  %3 = call double @llvm.experimental.constrained.fpext.f64.f32(float %s, metadata !"fpexcept.strict")
+  ; CHECK: llvm.intr.experimental.constrained.fpext %{{.*}} ignore : vector<4xf32> to vector<4xf64>
+  %6 = call <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(<4 x float> %v, metadata !"fpexcept.ignore")
+  ret void
+}
+
 declare float @llvm.fmuladd.f32(float, float, float)
 declare <8 x float> @llvm.fmuladd.v8f32(<8 x float>, <8 x float>, <8 x float>)
 declare float @llvm.fma.f32(float, float, float)
@@ -984,6 +1058,8 @@ declare float @llvm.exp.f32(float)
 declare <8 x float> @llvm.exp.v8f32(<8 x float>)
 declare float @llvm.exp2.f32(float)
 declare <8 x float> @llvm.exp2.v8f32(<8 x float>)
+declare float @llvm.exp10.f32(float)
+declare <8 x float> @llvm.exp10.v8f32(<8 x float>)
 declare float @llvm.log.f32(float)
 declare <8 x float> @llvm.log.v8f32(<8 x float>)
 declare float @llvm.log10.f32(float)
@@ -1209,7 +1285,11 @@ declare ptr @llvm.strip.invariant.group.p0(ptr nocapture)
 
 declare void @llvm.assume(i1)
 declare float @llvm.ssa.copy.f32(float returned)
+declare ptr @llvm.ptrmask.p0.i64(ptr, i64)
+declare <8 x ptr> @llvm.ptrmask.v8p0.v8i64(<8 x ptr>, <8 x i64>)
 declare <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float>, <4 x float>, i64)
 declare <4 x float> @llvm.vector.extract.v4f32.nxv4f32(<vscale x 4 x float>, i64)
 declare <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f64(<4 x double>, metadata, metadata)
 declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
+declare <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(<4 x float>, metadata)
+declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)

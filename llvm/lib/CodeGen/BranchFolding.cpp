@@ -24,6 +24,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/MBFIWrapper.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -88,38 +89,62 @@ TailMergeSize("tail-merge-size",
 namespace {
 
   /// BranchFolderPass - Wrap branch folder in a machine function pass.
-  class BranchFolderPass : public MachineFunctionPass {
-  public:
-    static char ID;
+class BranchFolderLegacy : public MachineFunctionPass {
+public:
+  static char ID;
 
-    explicit BranchFolderPass(): MachineFunctionPass(ID) {}
+  explicit BranchFolderLegacy() : MachineFunctionPass(ID) {}
 
-    bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-      AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
-      AU.addRequired<ProfileSummaryInfoWrapperPass>();
-      AU.addRequired<TargetPassConfig>();
-      MachineFunctionPass::getAnalysisUsage(AU);
-    }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+    AU.addRequired<ProfileSummaryInfoWrapperPass>();
+    AU.addRequired<TargetPassConfig>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
-    MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoPHIs);
-    }
-  };
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::NoPHIs);
+  }
+};
 
 } // end anonymous namespace
 
-char BranchFolderPass::ID = 0;
+char BranchFolderLegacy::ID = 0;
 
-char &llvm::BranchFolderPassID = BranchFolderPass::ID;
+char &llvm::BranchFolderPassID = BranchFolderLegacy::ID;
 
-INITIALIZE_PASS(BranchFolderPass, DEBUG_TYPE,
-                "Control Flow Optimizer", false, false)
+INITIALIZE_PASS(BranchFolderLegacy, DEBUG_TYPE, "Control Flow Optimizer", false,
+                false)
 
-bool BranchFolderPass::runOnMachineFunction(MachineFunction &MF) {
+PreservedAnalyses BranchFolderPass::run(MachineFunction &MF,
+                                        MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  bool EnableTailMerge =
+      !MF.getTarget().requiresStructuredCFG() && this->EnableTailMerge;
+
+  auto &MBPI = MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
+  auto *PSI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+                  .getCachedResult<ProfileSummaryAnalysis>(
+                      *MF.getFunction().getParent());
+  if (!PSI)
+    report_fatal_error(
+        "ProfileSummaryAnalysis is required for BranchFoldingPass", false);
+
+  auto &MBFI = MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+  MBFIWrapper MBBFreqInfo(MBFI);
+  BranchFolder Folder(EnableTailMerge, /*CommonHoist=*/true, MBBFreqInfo, MBPI,
+                      PSI);
+  if (!Folder.OptimizeFunction(MF, MF.getSubtarget().getInstrInfo(),
+                               MF.getSubtarget().getRegisterInfo()))
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses();
+}
+
+bool BranchFolderLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
@@ -264,7 +289,7 @@ static unsigned HashMachineInstr(const MachineInstr &MI) {
     unsigned OperandHash = 0;
     switch (Op.getType()) {
     case MachineOperand::MO_Register:
-      OperandHash = Op.getReg();
+      OperandHash = Op.getReg().id();
       break;
     case MachineOperand::MO_Immediate:
       OperandHash = Op.getImm();
@@ -381,7 +406,7 @@ void BranchFolder::replaceTailWithBranchTo(MachineBasicBlock::iterator OldInst,
       // full registers:
       assert(P.LaneMask == LaneBitmask::getAll() &&
              "Can only handle full register.");
-      MCPhysReg Reg = P.PhysReg;
+      MCRegister Reg = P.PhysReg;
       if (!LiveRegs.available(*MRI, Reg))
         continue;
       DebugLoc DL;
@@ -1268,15 +1293,6 @@ static bool IsBetterFallthrough(MachineBasicBlock *MBB1,
   return MBB2I->isCall() && !MBB1I->isCall();
 }
 
-/// getBranchDebugLoc - Find and return, if any, the DebugLoc of the branch
-/// instructions on the block.
-static DebugLoc getBranchDebugLoc(MachineBasicBlock &MBB) {
-  MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
-  if (I != MBB.end() && I->isBranch())
-    return I->getDebugLoc();
-  return DebugLoc();
-}
-
 static void copyDebugInfoToPredecessor(const TargetInstrInfo *TII,
                                        MachineBasicBlock &MBB,
                                        MachineBasicBlock &PredMBB) {
@@ -1403,11 +1419,11 @@ ReoptimizeBlock:
     // destination, remove the branch, replacing it with an unconditional one or
     // a fall-through.
     if (PriorTBB && PriorTBB == PriorFBB) {
-      DebugLoc dl = getBranchDebugLoc(PrevBB);
+      DebugLoc Dl = PrevBB.findBranchDebugLoc();
       TII->removeBranch(PrevBB);
       PriorCond.clear();
       if (PriorTBB != MBB)
-        TII->insertBranch(PrevBB, PriorTBB, nullptr, PriorCond, dl);
+        TII->insertBranch(PrevBB, PriorTBB, nullptr, PriorCond, Dl);
       MadeChange = true;
       ++NumBranchOpts;
       goto ReoptimizeBlock;
@@ -1461,9 +1477,9 @@ ReoptimizeBlock:
     // If the prior block branches somewhere else on the condition and here if
     // the condition is false, remove the uncond second branch.
     if (PriorFBB == MBB) {
-      DebugLoc dl = getBranchDebugLoc(PrevBB);
+      DebugLoc Dl = PrevBB.findBranchDebugLoc();
       TII->removeBranch(PrevBB);
-      TII->insertBranch(PrevBB, PriorTBB, nullptr, PriorCond, dl);
+      TII->insertBranch(PrevBB, PriorTBB, nullptr, PriorCond, Dl);
       MadeChange = true;
       ++NumBranchOpts;
       goto ReoptimizeBlock;
@@ -1475,9 +1491,9 @@ ReoptimizeBlock:
     if (PriorTBB == MBB) {
       SmallVector<MachineOperand, 4> NewPriorCond(PriorCond);
       if (!TII->reverseBranchCondition(NewPriorCond)) {
-        DebugLoc dl = getBranchDebugLoc(PrevBB);
+        DebugLoc Dl = PrevBB.findBranchDebugLoc();
         TII->removeBranch(PrevBB);
-        TII->insertBranch(PrevBB, PriorFBB, nullptr, NewPriorCond, dl);
+        TII->insertBranch(PrevBB, PriorFBB, nullptr, NewPriorCond, Dl);
         MadeChange = true;
         ++NumBranchOpts;
         goto ReoptimizeBlock;
@@ -1513,9 +1529,9 @@ ReoptimizeBlock:
           LLVM_DEBUG(dbgs() << "\nMoving MBB: " << *MBB
                             << "To make fallthrough to: " << *PriorTBB << "\n");
 
-          DebugLoc dl = getBranchDebugLoc(PrevBB);
+          DebugLoc Dl = PrevBB.findBranchDebugLoc();
           TII->removeBranch(PrevBB);
-          TII->insertBranch(PrevBB, MBB, nullptr, NewPriorCond, dl);
+          TII->insertBranch(PrevBB, MBB, nullptr, NewPriorCond, Dl);
 
           // Move this block to the end of the function.
           MBB->moveAfter(&MF.back());
@@ -1576,9 +1592,9 @@ ReoptimizeBlock:
     if (CurTBB && CurFBB && CurFBB == MBB && CurTBB != MBB) {
       SmallVector<MachineOperand, 4> NewCond(CurCond);
       if (!TII->reverseBranchCondition(NewCond)) {
-        DebugLoc dl = getBranchDebugLoc(*MBB);
+        DebugLoc Dl = MBB->findBranchDebugLoc();
         TII->removeBranch(*MBB);
-        TII->insertBranch(*MBB, CurFBB, CurTBB, NewCond, dl);
+        TII->insertBranch(*MBB, CurFBB, CurTBB, NewCond, Dl);
         MadeChange = true;
         ++NumBranchOpts;
         goto ReoptimizeBlock;
@@ -1590,7 +1606,7 @@ ReoptimizeBlock:
     if (CurTBB && CurCond.empty() && !CurFBB &&
         IsBranchOnlyBlock(MBB) && CurTBB != MBB &&
         !MBB->hasAddressTaken() && !MBB->isEHPad()) {
-      DebugLoc dl = getBranchDebugLoc(*MBB);
+      DebugLoc Dl = MBB->findBranchDebugLoc();
       // This block may contain just an unconditional branch.  Because there can
       // be 'non-branch terminators' in the block, try removing the branch and
       // then seeing if the block is empty.
@@ -1624,9 +1640,9 @@ ReoptimizeBlock:
               assert(!PriorFBB && "Machine CFG out of date!");
               PriorFBB = MBB;
             }
-            DebugLoc pdl = getBranchDebugLoc(PrevBB);
+            DebugLoc PrevDl = PrevBB.findBranchDebugLoc();
             TII->removeBranch(PrevBB);
-            TII->insertBranch(PrevBB, PriorTBB, PriorFBB, PriorCond, pdl);
+            TII->insertBranch(PrevBB, PriorTBB, PriorFBB, PriorCond, PrevDl);
           }
 
           // Iterate through all the predecessors, revectoring each in-turn.
@@ -1659,10 +1675,11 @@ ReoptimizeBlock:
               bool NewCurUnAnalyzable = TII->analyzeBranch(
                   *PMBB, NewCurTBB, NewCurFBB, NewCurCond, true);
               if (!NewCurUnAnalyzable && NewCurTBB && NewCurTBB == NewCurFBB) {
-                DebugLoc pdl = getBranchDebugLoc(*PMBB);
+                DebugLoc PrevDl = PMBB->findBranchDebugLoc();
                 TII->removeBranch(*PMBB);
                 NewCurCond.clear();
-                TII->insertBranch(*PMBB, NewCurTBB, nullptr, NewCurCond, pdl);
+                TII->insertBranch(*PMBB, NewCurTBB, nullptr, NewCurCond,
+                                  PrevDl);
                 MadeChange = true;
                 ++NumBranchOpts;
               }
@@ -1681,7 +1698,7 @@ ReoptimizeBlock:
       }
 
       // Add the branch back if the block is more than just an uncond branch.
-      TII->insertBranch(*MBB, CurTBB, nullptr, CurCond, dl);
+      TII->insertBranch(*MBB, CurTBB, nullptr, CurCond, Dl);
     }
   }
 

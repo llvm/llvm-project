@@ -23,10 +23,10 @@ target triple = "x86_64-apple-macosx"
 
 @images = external hidden global %0, align 8
 
-define hidden fastcc void @Mode_Decision_for_4x4IntraBlocks() nounwind uwtable ssp {
+define hidden fastcc void @Mode_Decision_for_4x4IntraBlocks(i1 %arg) nounwind uwtable ssp {
 bb4:
   %tmp = or i208 undef, 0
-  br i1 undef, label %bb35, label %bb5
+  br i1 %arg, label %bb35, label %bb5
 
 bb5:
   %tmp6 = add i32 0, 2

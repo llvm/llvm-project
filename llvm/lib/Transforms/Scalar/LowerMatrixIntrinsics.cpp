@@ -1972,14 +1972,14 @@ public:
         if (CurrI->mayHaveSideEffects() || CurrI->mayReadFromMemory())
           return;
         ToHoist.push_back(CurrI);
-        WorkList.insert(CurrI->op_begin(), CurrI->op_end());
+        WorkList.insert_range(CurrI->operands());
       }
 
       sort(ToHoist, [this](Instruction *A, Instruction *B) {
         return DT->dominates(A, B);
       });
       for (Instruction *I : ToHoist)
-        I->moveBefore(MatMul);
+        I->moveBefore(MatMul->getIterator());
 
       // Deal with lifetime.end calls that might be between Load0/Load1 and the
       // store. To avoid introducing loads to dead objects (i.e. after the

@@ -94,7 +94,8 @@ namespace {
 
 class CommonOptTable : public opt::GenericOptTable {
 public:
-  CommonOptTable(const char *StrTable, ArrayRef<unsigned> PrefixesTable,
+  CommonOptTable(const StringTable &StrTable,
+                 ArrayRef<StringTable::Offset> PrefixesTable,
                  ArrayRef<Info> OptionInfos, const char *Usage,
                  const char *Description)
       : opt::GenericOptTable(StrTable, PrefixesTable, OptionInfos),
@@ -359,7 +360,7 @@ static StringRef ToolName;
 
 std::unique_ptr<BuildIDFetcher> BIDFetcher;
 
-Dumper::Dumper(const object::ObjectFile &O) : O(O) {
+Dumper::Dumper(const object::ObjectFile &O) : O(O), OS(outs()) {
   WarningHandler = [this](const Twine &Msg) {
     if (Warnings.insert(Msg.str()).second)
       reportWarning(Msg, this->O.getFileName());
@@ -1232,7 +1233,7 @@ addMissingWasmCodeSymbols(const WasmObjectFile &Obj,
   }
 }
 
-static void addPltEntries(const ObjectFile &Obj,
+static void addPltEntries(const MCSubtargetInfo &STI, const ObjectFile &Obj,
                           std::map<SectionRef, SectionSymbolsTy> &AllSymbols,
                           StringSaver &Saver) {
   auto *ElfObj = dyn_cast<ELFObjectFileBase>(&Obj);
@@ -1247,7 +1248,7 @@ static void addPltEntries(const ObjectFile &Obj,
     }
     Sections[*SecNameOrErr] = Section;
   }
-  for (auto Plt : ElfObj->getPltEntries()) {
+  for (auto Plt : ElfObj->getPltEntries(STI)) {
     if (Plt.Symbol) {
       SymbolRef Symbol(*Plt.Symbol, ElfObj);
       uint8_t SymbolType = getElfSymbolType(Obj, Symbol);
@@ -1771,7 +1772,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
 
   BumpPtrAllocator A;
   StringSaver Saver(A);
-  addPltEntries(Obj, AllSymbols, Saver);
+  addPltEntries(*DT->SubtargetInfo, Obj, AllSymbols, Saver);
 
   // Create a mapping from virtual address to section. An empty section can
   // cause more than one section at the same address. Sort such sections to be
@@ -3742,7 +3743,7 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
     return 2;
   }
 
-  DisasmSymbolSet.insert(DisassembleSymbols.begin(), DisassembleSymbols.end());
+  DisasmSymbolSet.insert_range(DisassembleSymbols);
 
   llvm::for_each(InputFilenames, dumpInput);
 

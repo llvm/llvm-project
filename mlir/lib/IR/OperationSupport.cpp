@@ -62,11 +62,6 @@ DictionaryAttr NamedAttrList::getDictionary(MLIRContext *context) const {
   return llvm::cast<DictionaryAttr>(dictionarySorted.getPointer());
 }
 
-/// Add an attribute with the specified name.
-void NamedAttrList::append(StringRef name, Attribute attr) {
-  append(StringAttr::get(attr.getContext(), name), attr);
-}
-
 /// Replaces the attributes with new list of attributes.
 void NamedAttrList::assign(const_iterator inStart, const_iterator inEnd) {
   DictionaryAttr::sort(ArrayRef<NamedAttribute>{inStart, inEnd}, attrs);
@@ -653,15 +648,6 @@ ValueRange::ValueRange(ResultRange values)
 /// See `llvm::detail::indexed_accessor_range_base` for details.
 ValueRange::OwnerT ValueRange::offset_base(const OwnerT &owner,
                                            ptrdiff_t index) {
-  if (llvm::isa_and_nonnull<Value>(owner)) {
-    // Prevent out-of-bounds indexing for single values.
-    // Note that we do allow an index of 1 as is required by 'slice'ing that
-    // returns an empty range. This also matches the usual rules of C++ of being
-    // allowed to index past the last element of an array.
-    assert(index <= 1 && "out-of-bound offset into single-value 'ValueRange'");
-    // Return nullptr to quickly cause segmentation faults on misuse.
-    return index == 0 ? owner : nullptr;
-  }
   if (const auto *value = llvm::dyn_cast_if_present<const Value *>(owner))
     return {value + index};
   if (auto *operand = llvm::dyn_cast_if_present<OpOperand *>(owner))
@@ -670,10 +656,6 @@ ValueRange::OwnerT ValueRange::offset_base(const OwnerT &owner,
 }
 /// See `llvm::detail::indexed_accessor_range_base` for details.
 Value ValueRange::dereference_iterator(const OwnerT &owner, ptrdiff_t index) {
-  if (auto value = llvm::dyn_cast_if_present<Value>(owner)) {
-    assert(index == 0 && "cannot offset into single-value 'ValueRange'");
-    return value;
-  }
   if (const auto *value = llvm::dyn_cast_if_present<const Value *>(owner))
     return value[index];
   if (auto *operand = llvm::dyn_cast_if_present<OpOperand *>(owner))

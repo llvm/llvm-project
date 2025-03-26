@@ -85,7 +85,7 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
     Env = IsMachO;
     break;
   case Triple::COFF:
-    if (!TheTriple.isOSWindows() && !TheTriple.isUEFI())
+    if (!TheTriple.isOSWindowsOrUEFI())
       report_fatal_error(
           "Cannot initialize MC for non-Windows COFF object files.");
 
@@ -636,7 +636,7 @@ void MCContext::recordELFMergeableSectionInfo(StringRef SectionName,
                                               unsigned Flags, unsigned UniqueID,
                                               unsigned EntrySize) {
   bool IsMergeable = Flags & ELF::SHF_MERGE;
-  if (UniqueID == GenericSectionID) {
+  if (UniqueID == MCSection::NonUniqueID) {
     ELFSeenGenericMergeableSections.insert(SectionName);
     // Minor performance optimization: avoid hash map lookup in
     // isELFGenericMergeableSection, which will return true for SectionName.
@@ -727,14 +727,15 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
 
 MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
                                          unsigned Characteristics) {
-  return getCOFFSection(Section, Characteristics, "", 0, GenericSectionID);
+  return getCOFFSection(Section, Characteristics, "", 0,
+                        MCSection::NonUniqueID);
 }
 
 MCSectionCOFF *MCContext::getAssociativeCOFFSection(MCSectionCOFF *Sec,
                                                     const MCSymbol *KeySym,
                                                     unsigned UniqueID) {
   // Return the normal section if we don't have to be associative or unique.
-  if (!KeySym && UniqueID == GenericSectionID)
+  if (!KeySym && UniqueID == MCSection::NonUniqueID)
     return Sec;
 
   // If we have a key symbol, make an associative section with the same name and

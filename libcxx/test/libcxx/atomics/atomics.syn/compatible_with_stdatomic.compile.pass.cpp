@@ -7,15 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-threads
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+// This test verifies that <stdatomic.h> redirects to <atomic>.
 
-// This test verifies that <stdatomic.h> redirects to <atomic>. As an extension,
-// libc++ enables this redirection even before C++23.
-
-// Ordinarily, <stdatomic.h> can be included after <atomic>, but including it
-// first doesn't work because its macros break <atomic>. Verify that
-// <stdatomic.h> can be included first.
+// Before C++23, <stdatomic.h> can be included after <atomic>, but including it
+// first doesn't work because its macros break <atomic>. Fixing that is the point
+// of the C++23 change that added <stdatomic.h> to C++. Thus, this test verifies
+// that <stdatomic.h> can be included first.
 #include <stdatomic.h>
 #include <atomic>
 

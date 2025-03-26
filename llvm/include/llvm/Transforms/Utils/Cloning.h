@@ -193,7 +193,8 @@ void CloneFunctionAttributesInto(Function *NewFunc, const Function *OldFunc,
 void CloneFunctionMetadataInto(Function &NewFunc, const Function &OldFunc,
                                ValueToValueMapTy &VMap, RemapFlags RemapFlag,
                                ValueMapTypeRemapper *TypeMapper = nullptr,
-                               ValueMaterializer *Materializer = nullptr);
+                               ValueMaterializer *Materializer = nullptr,
+                               const MetadataPredicate *IdentityMD = nullptr);
 
 /// Clone OldFunc's body into NewFunc.
 void CloneFunctionBodyInto(Function &NewFunc, const Function &OldFunc,
@@ -202,7 +203,8 @@ void CloneFunctionBodyInto(Function &NewFunc, const Function &OldFunc,
                            const char *NameSuffix = "",
                            ClonedCodeInfo *CodeInfo = nullptr,
                            ValueMapTypeRemapper *TypeMapper = nullptr,
-                           ValueMaterializer *Materializer = nullptr);
+                           ValueMaterializer *Materializer = nullptr,
+                           const MetadataPredicate *IdentityMD = nullptr);
 
 void CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
                                const Instruction *StartingInst,
@@ -227,28 +229,6 @@ void CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
                                SmallVectorImpl<ReturnInst*> &Returns,
                                const char *NameSuffix = "",
                                ClonedCodeInfo *CodeInfo = nullptr);
-
-/// Collect debug information such as types, compile units, and other
-/// subprograms that are reachable from \p F and can be considered global for
-/// the purposes of cloning (and hence not needing to be cloned).
-///
-/// What debug information should be processed depends on \p Changes: when
-/// cloning into the same module we process \p F's subprogram and instructions;
-/// when into a cloned module, neither of those.
-///
-/// Returns DISubprogram of the cloned function when cloning into the same
-/// module or nullptr otherwise.
-DISubprogram *CollectDebugInfoForCloning(const Function &F,
-                                         CloneFunctionChangeType Changes,
-                                         DebugInfoFinder &DIFinder);
-
-/// Build a map of debug info to use during Metadata cloning.
-/// Returns true if cloning would need module level changes and false if there
-/// would only be local changes.
-bool BuildDebugInfoMDMap(DenseMap<const Metadata *, TrackingMDRef> &MD,
-                         CloneFunctionChangeType Changes,
-                         DebugInfoFinder &DIFinder,
-                         DISubprogram *SPClonedWithinModule);
 
 /// This class captures the data input to the InlineFunction call, and records
 /// the auxiliary results produced by it.

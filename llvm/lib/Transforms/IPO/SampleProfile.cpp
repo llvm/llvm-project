@@ -629,7 +629,8 @@ inline void SampleProfileInference<Function>::findUnlikelyJumps(
     const Instruction *TI = BB->getTerminator();
     // Check if a block ends with InvokeInst and mark non-taken branch unlikely.
     // In that case block Succ should be a landing pad
-    if (Successors[BB].size() == 2 && Successors[BB].back() == Succ) {
+    const auto &Succs = Successors[BB];
+    if (Succs.size() == 2 && Succs.back() == Succ) {
       if (isa<InvokeInst>(TI)) {
         Jump.IsUnlikely = true;
       }
@@ -1747,7 +1748,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
       if (Weight != 0) {
         if (Weight > MaxWeight) {
           MaxWeight = Weight;
-          MaxDestInst = Succ->getFirstNonPHIOrDbgOrLifetime();
+          MaxDestInst = &*Succ->getFirstNonPHIOrDbgOrLifetime();
         }
       }
     }
@@ -2045,9 +2046,11 @@ bool SampleProfileLoader::doInitialization(Module &M,
     // which is currently only available for pseudo-probe mode. Removing the
     // checksum check could cause regressions for some cases, so further tuning
     // might be needed if we want to enable it for all cases.
-    if (Reader->profileIsProbeBased() &&
-        !SalvageStaleProfile.getNumOccurrences()) {
-      SalvageStaleProfile = true;
+    if (Reader->profileIsProbeBased()) {
+      if (!SalvageStaleProfile.getNumOccurrences())
+        SalvageStaleProfile = true;
+      if (!SalvageUnusedProfile.getNumOccurrences())
+        SalvageUnusedProfile = true;
     }
 
     if (!Reader->profileIsCS()) {

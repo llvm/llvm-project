@@ -79,13 +79,12 @@ template <>
 void llvm::GenericUniformityAnalysisImpl<
     SSAContext>::propagateTemporalDivergence(const Instruction &I,
                                              const Cycle &DefCycle) {
-  if (isDivergent(I))
-    return;
   for (auto *User : I.users()) {
     auto *UserInstr = cast<Instruction>(User);
     if (DefCycle.contains(UserInstr->getParent()))
       continue;
     markDivergent(*UserInstr);
+    recordTemporalDivergence(&I, UserInstr, &DefCycle);
   }
 }
 

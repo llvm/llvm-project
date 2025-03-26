@@ -91,9 +91,12 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
 // CHECK:         %[[VAL_14:.*]] = alloca [1 x ptr], align 8
 // CHECK:         br label %[[VAL_15:.*]]
 
-// CHECK:       omp.par.region:                                   ; preds = %[[PAR_ENTRY]]
+// CHECK:       [[VAL_15]]:
+// CHECK:         br label %[[PAR_REG:omp.par.region]]
+
+// CHECK:       [[PAR_REG]]:                                   ; preds = %[[VAL_15]]
 // CHECK:         br label %[[VAL_18:.*]]
-// CHECK:       omp.par.region1:                                  ; preds = %[[VAL_15]]
+// CHECK:       omp.par.region1:                                  ; preds = %[[PAR_REG]]
 // CHECK:         %[[VAL_19:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i64 1, align 8
 // CHECK:         br label %[[VAL_22:.*]]
 
@@ -216,5 +219,5 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
 // CHECK:       omp_section_loop.inc:                             ; preds = %[[VAL_69]]
 // CHECK:         %[[VAL_31]] = add nuw i32 %[[VAL_30]], 1
 // CHECK:         br label %[[VAL_28]]
-// CHECK:       omp.par.outlined.exit.exitStub:                   ; preds = %[[VAL_64]]
+// CHECK:       omp.par.exit.exitStub:                            ; preds = %[[VAL_64]]
 // CHECK:         ret void

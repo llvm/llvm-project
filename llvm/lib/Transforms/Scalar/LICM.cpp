@@ -140,7 +140,7 @@ static cl::opt<unsigned> FPAssociationUpperLimit(
         "Set upper limit for the number of transformations performed "
         "during a single round of hoisting the reassociated expressions."));
 
-cl::opt<unsigned> IntAssociationUpperLimit(
+static cl::opt<unsigned> IntAssociationUpperLimit(
     "licm-max-num-int-reassociations", cl::init(5U), cl::Hidden,
     cl::desc(
         "Set upper limit for the number of transformations performed "
@@ -688,9 +688,10 @@ public:
     // intersection of their successors is non-empty.
     // TODO: This could be expanded to allowing branches where both ends
     // eventually converge to a single block.
-    SmallPtrSet<BasicBlock *, 4> TrueDestSucc, FalseDestSucc;
-    TrueDestSucc.insert(succ_begin(TrueDest), succ_end(TrueDest));
-    FalseDestSucc.insert(succ_begin(FalseDest), succ_end(FalseDest));
+    SmallPtrSet<BasicBlock *, 4> TrueDestSucc(llvm::from_range,
+                                              successors(TrueDest));
+    SmallPtrSet<BasicBlock *, 4> FalseDestSucc(llvm::from_range,
+                                               successors(FalseDest));
     BasicBlock *CommonSucc = nullptr;
     if (TrueDestSucc.count(FalseDest)) {
       CommonSucc = FalseDest;
@@ -730,10 +731,9 @@ public:
       return false;
     // We can hoist phis if the block they are in is the target of hoistable
     // branches which cover all of the predecessors of the block.
-    SmallPtrSet<BasicBlock *, 8> PredecessorBlocks;
     BasicBlock *BB = PN->getParent();
-    for (BasicBlock *PredBB : predecessors(BB))
-      PredecessorBlocks.insert(PredBB);
+    SmallPtrSet<BasicBlock *, 8> PredecessorBlocks(llvm::from_range,
+                                                   predecessors(BB));
     // If we have less predecessor blocks than predecessors then the phi will
     // have more than one incoming value for the same block which we can't
     // handle.
@@ -766,8 +766,8 @@ public:
     if (!ControlFlowHoisting)
       return CurLoop->getLoopPreheader();
     // If BB has already been hoisted, return that
-    if (HoistDestinationMap.count(BB))
-      return HoistDestinationMap[BB];
+    if (auto It = HoistDestinationMap.find(BB); It != HoistDestinationMap.end())
+      return It->second;
 
     // Check if this block is conditional based on a pending branch
     auto HasBBAsSuccessor =
@@ -800,11 +800,12 @@ public:
 
     // Create hoisted versions of blocks that currently don't have them
     auto CreateHoistedBlock = [&](BasicBlock *Orig) {
-      if (HoistDestinationMap.count(Orig))
-        return HoistDestinationMap[Orig];
+      auto [It, Inserted] = HoistDestinationMap.try_emplace(Orig);
+      if (!Inserted)
+        return It->second;
       BasicBlock *New =
           BasicBlock::Create(C, Orig->getName() + ".licm", Orig->getParent());
-      HoistDestinationMap[Orig] = New;
+      It->second = New;
       DT->addNewBlock(New, HoistTarget);
       if (CurLoop->getParentLoop())
         CurLoop->getParentLoop()->addBasicBlockToLoop(New, *LI);
@@ -933,14 +934,14 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
         auto ReciprocalDivisor = BinaryOperator::CreateFDiv(One, Divisor);
         ReciprocalDivisor->setFastMathFlags(I.getFastMathFlags());
         SafetyInfo->insertInstructionTo(ReciprocalDivisor, I.getParent());
-        ReciprocalDivisor->insertBefore(&I);
+        ReciprocalDivisor->insertBefore(I.getIterator());
         ReciprocalDivisor->setDebugLoc(I.getDebugLoc());
 
         auto Product =
             BinaryOperator::CreateFMul(I.getOperand(0), ReciprocalDivisor);
         Product->setFastMathFlags(I.getFastMathFlags());
         SafetyInfo->insertInstructionTo(Product, I.getParent());
-        Product->insertAfter(&I);
+        Product->insertAfter(I.getIterator());
         Product->setDebugLoc(I.getDebugLoc());
         I.replaceAllUsesWith(Product);
         eraseInstruction(I, *SafetyInfo, MSSAU);
@@ -1448,9 +1449,9 @@ static Instruction *cloneInstructionInExitBlock(
       const ColorVector &CV = BlockColors.find(&ExitBlock)->second;
       assert(CV.size() == 1 && "non-unique color for exit block!");
       BasicBlock *BBColor = CV.front();
-      Instruction *EHPad = BBColor->getFirstNonPHI();
+      BasicBlock::iterator EHPad = BBColor->getFirstNonPHIIt();
       if (EHPad->isEHPad())
-        OpBundles.emplace_back("funclet", EHPad);
+        OpBundles.emplace_back("funclet", &*EHPad);
     }
 
     New = CallInst::Create(CI, OpBundles);
@@ -1531,14 +1532,11 @@ static Instruction *sinkThroughTriviallyReplaceablePHI(
   assert(isTriviallyReplaceablePHI(*TPN, *I) &&
          "Expect only trivially replaceable PHI");
   BasicBlock *ExitBlock = TPN->getParent();
-  Instruction *New;
-  auto It = SunkCopies.find(ExitBlock);
-  if (It != SunkCopies.end())
-    New = It->second;
-  else
-    New = SunkCopies[ExitBlock] = cloneInstructionInExitBlock(
-        *I, *ExitBlock, *TPN, LI, SafetyInfo, MSSAU);
-  return New;
+  auto [It, Inserted] = SunkCopies.try_emplace(ExitBlock);
+  if (Inserted)
+    It->second = cloneInstructionInExitBlock(*I, *ExitBlock, *TPN, LI,
+                                             SafetyInfo, MSSAU);
+  return It->second;
 }
 
 static bool canSplitPredecessors(PHINode *PN, LoopSafetyInfo *SafetyInfo) {
@@ -1549,7 +1547,8 @@ static bool canSplitPredecessors(PHINode *PN, LoopSafetyInfo *SafetyInfo) {
   // it require updating BlockColors for all offspring blocks accordingly. By
   // skipping such corner case, we can make updating BlockColors after splitting
   // predecessor fairly simple.
-  if (!SafetyInfo->getBlockColors().empty() && BB->getFirstNonPHI()->isEHPad())
+  if (!SafetyInfo->getBlockColors().empty() &&
+      BB->getFirstNonPHIIt()->isEHPad())
     return false;
   for (BasicBlock *BBPred : predecessors(BB)) {
     if (isa<IndirectBrInst>(BBPred->getTerminator()))
@@ -1934,7 +1933,6 @@ bool isNotCapturedBeforeOrInLoop(const Value *V, const Loop *L,
   // the loop.
   // TODO: ReturnCaptures=true shouldn't be necessary here.
   return !PointerMayBeCapturedBefore(V, /* ReturnCaptures */ true,
-                                     /* StoreCaptures */ true,
                                      L->getHeader()->getTerminator(), DT);
 }
 

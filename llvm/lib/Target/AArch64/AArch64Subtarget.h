@@ -38,7 +38,7 @@ class Triple;
 class AArch64Subtarget final : public AArch64GenSubtargetInfo {
 public:
   enum ARMProcFamilyEnum : uint8_t {
-    Others,
+    Generic,
 #define ARM_PROCESSOR_FAMILY(ENUM) ENUM,
 #include "llvm/TargetParser/AArch64TargetParserDef.inc"
 #undef ARM_PROCESSOR_FAMILY
@@ -46,7 +46,7 @@ public:
 
 protected:
   /// ARMProcFamily - ARM processor family: Cortex-A53, Cortex-A57, and others.
-  ARMProcFamilyEnum ARMProcFamily = Others;
+  ARMProcFamilyEnum ARMProcFamily = Generic;
 
   // Enable 64-bit vectorization in SLP.
   unsigned MinVectorRegisterBitWidth = 64;
@@ -85,7 +85,7 @@ protected:
 
   bool IsStreaming;
   bool IsStreamingCompatible;
-  unsigned StreamingHazardSize;
+  std::optional<unsigned> StreamingHazardSize;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
   unsigned VScaleForTuning = 1;
@@ -129,6 +129,8 @@ public:
                    unsigned MaxSVEVectorSizeInBitsOverride = 0,
                    bool IsStreaming = false, bool IsStreamingCompatible = false,
                    bool HasMinSize = false);
+
+  virtual unsigned getHwModeSet() const override;
 
 // Getters for SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
@@ -179,7 +181,10 @@ public:
 
   /// Returns the size of memory region that if accessed by both the CPU and
   /// the SME unit could result in a hazard. 0 = disabled.
-  unsigned getStreamingHazardSize() const { return StreamingHazardSize; }
+  unsigned getStreamingHazardSize() const {
+    return StreamingHazardSize.value_or(
+        !hasSMEFA64() && hasSME() && hasSVE() ? 1024 : 0);
+  }
 
   /// Returns true if the target has NEON and the function at runtime is known
   /// to have NEON enabled (e.g. the function is known not to be in streaming-SVE
@@ -386,7 +391,7 @@ public:
   void mirFileLoaded(MachineFunction &MF) const override;
 
   // Return the known range for the bit length of SVE data registers. A value
-  // of 0 means nothing is known about that particular limit beyong what's
+  // of 0 means nothing is known about that particular limit beyond what's
   // implied by the architecture.
   unsigned getMaxSVEVectorSizeInBits() const {
     assert(isSVEorStreamingSVEAvailable() &&
@@ -398,6 +403,16 @@ public:
     assert(isSVEorStreamingSVEAvailable() &&
            "Tried to get SVE vector length without SVE support!");
     return MinSVEVectorSizeInBits;
+  }
+
+  // Return the known bit length of SVE data registers. A value of 0 means the
+  // length is unkown beyond what's implied by the architecture.
+  unsigned getSVEVectorSizeInBits() const {
+    assert(isSVEorStreamingSVEAvailable() &&
+           "Tried to get SVE vector length without SVE support!");
+    if (MinSVEVectorSizeInBits == MaxSVEVectorSizeInBits)
+      return MaxSVEVectorSizeInBits;
+    return 0;
   }
 
   bool useSVEForFixedLengthVectors() const {

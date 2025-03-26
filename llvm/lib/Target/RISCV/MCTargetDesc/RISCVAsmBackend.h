@@ -74,9 +74,6 @@ public:
                                     const MCRelaxableFragment *DF,
                                     const bool WasForced) const override;
 
-  unsigned getNumFixupKinds() const override {
-    return RISCV::NumTargetFixupKinds;
-  }
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 

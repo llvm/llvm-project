@@ -27,32 +27,6 @@ using namespace mlir;
 using namespace mlir::arith;
 using namespace mlir::dataflow;
 
-/// Succeeds when a value is statically non-negative in that it has a lower
-/// bound on its value (if it is treated as signed) and that bound is
-/// non-negative.
-// TODO: IntegerRangeAnalysis internally assumes index is 64bit and this pattern
-// relies on this. These transformations may not be valid for 32bit index,
-// need more investigation.
-static LogicalResult staticallyNonNegative(DataFlowSolver &solver, Value v) {
-  auto *result = solver.lookupState<IntegerValueRangeLattice>(v);
-  if (!result || result->getValue().isUninitialized())
-    return failure();
-  const ConstantIntRanges &range = result->getValue().getValue();
-  return success(range.smin().isNonNegative());
-}
-
-/// Succeeds if an op can be converted to its unsigned equivalent without
-/// changing its semantics. This is the case when none of its openands or
-/// results can be below 0 when analyzed from a signed perspective.
-static LogicalResult staticallyNonNegative(DataFlowSolver &solver,
-                                           Operation *op) {
-  auto nonNegativePred = [&solver](Value v) -> bool {
-    return succeeded(staticallyNonNegative(solver, v));
-  };
-  return success(llvm::all_of(op->getOperands(), nonNegativePred) &&
-                 llvm::all_of(op->getResults(), nonNegativePred));
-}
-
 /// Succeeds when the comparison predicate is a signed operation and all the
 /// operands are non-negative, indicating that the cmpi operation `op` can have
 /// its predicate changed to an unsigned equivalent.
@@ -102,6 +76,10 @@ protected:
 
   DataFlowSolver &s;
 };
+
+// TODO: IntegerRangeAnalysis internally assumes index is 64bit and this pattern
+// (via staticallyNonNegative) relies on this. These transformations may not be
+// valid for 32bit index, need more investigation.
 
 template <typename Signed, typename Unsigned>
 struct ConvertOpToUnsigned final : OpRewritePattern<Signed> {

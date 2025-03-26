@@ -109,14 +109,14 @@ Printable printReg(Register Reg, const TargetRegisterInfo *TRI,
   return Printable([Reg, TRI, SubIdx, MRI](raw_ostream &OS) {
     if (!Reg)
       OS << "$noreg";
-    else if (Register::isStackSlot(Reg))
-      OS << "SS#" << Register::stackSlot2Index(Reg);
+    else if (Reg.isStack())
+      OS << "SS#" << Reg.stackSlotIndex();
     else if (Reg.isVirtual()) {
       StringRef Name = MRI ? MRI->getVRegName(Reg) : "";
       if (Name != "") {
         OS << '%' << Name;
       } else {
-        OS << '%' << Register::virtReg2Index(Reg);
+        OS << '%' << Reg.virtRegIndex();
       }
     } else if (!TRI)
       OS << '$' << "physreg" << Reg.id();
@@ -161,7 +161,7 @@ Printable printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI) {
 Printable printVRegOrUnit(unsigned Unit, const TargetRegisterInfo *TRI) {
   return Printable([Unit, TRI](raw_ostream &OS) {
     if (Register::isVirtualRegister(Unit)) {
-      OS << '%' << Register::virtReg2Index(Unit);
+      OS << '%' << Register(Unit).virtRegIndex();
     } else {
       OS << printRegUnit(Unit, TRI);
     }
@@ -206,8 +206,7 @@ static const TargetRegisterClass *
 getMinimalPhysRegClass(const TargetRegisterInfo *TRI, MCRegister Reg,
                        TypeT Ty) {
   static_assert(std::is_same_v<TypeT, MVT> || std::is_same_v<TypeT, LLT>);
-  assert(Register::isPhysicalRegister(Reg) &&
-         "reg must be a physical register");
+  assert(Reg.isPhysical() && "reg must be a physical register");
 
   bool IsDefault = [&]() {
     if constexpr (std::is_same_v<TypeT, MVT>)
@@ -235,8 +234,7 @@ static const TargetRegisterClass *
 getCommonMinimalPhysRegClass(const TargetRegisterInfo *TRI, MCRegister Reg1,
                              MCRegister Reg2, TypeT Ty) {
   static_assert(std::is_same_v<TypeT, MVT> || std::is_same_v<TypeT, LLT>);
-  assert(Register::isPhysicalRegister(Reg1) &&
-         Register::isPhysicalRegister(Reg2) &&
+  assert(Reg1.isPhysical() && Reg2.isPhysical() &&
          "Reg1/Reg2 must be a physical register");
 
   bool IsDefault = [&]() {
@@ -422,7 +420,10 @@ static bool shareSameRegisterFile(const TargetRegisterInfo &TRI,
                                   const TargetRegisterClass *SrcRC,
                                   unsigned SrcSubReg) {
   // Same register class.
-  if (DefRC == SrcRC)
+  //
+  // When processing uncoalescable copies / bitcasts, it is possible we reach
+  // here with the same register class, but mismatched subregister indices.
+  if (DefRC == SrcRC && DefSubReg == SrcSubReg)
     return true;
 
   // Both operands are sub registers. Check if they share a register class.
@@ -453,6 +454,11 @@ bool TargetRegisterInfo::shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
                                               unsigned SrcSubReg) const {
   // If this source does not incur a cross register bank copy, use it.
   return shareSameRegisterFile(*this, DefRC, DefSubReg, SrcRC, SrcSubReg);
+}
+
+float TargetRegisterInfo::getSpillWeightScaleFactor(
+    const TargetRegisterClass *RC) const {
+  return 1.0;
 }
 
 // Compute target-independent register allocator hints to help eliminate copies.
@@ -497,21 +503,20 @@ bool TargetRegisterInfo::getRegAllocationHints(
       continue;
 
     // All clear, tell the register allocator to prefer this register.
-    Hints.push_back(Phys);
+    Hints.push_back(Phys.id());
   }
   return false;
 }
 
 bool TargetRegisterInfo::isCalleeSavedPhysReg(
     MCRegister PhysReg, const MachineFunction &MF) const {
-  if (PhysReg == 0)
+  if (!PhysReg)
     return false;
   const uint32_t *callerPreservedRegs =
       getCallPreservedMask(MF, MF.getFunction().getCallingConv());
   if (callerPreservedRegs) {
-    assert(Register::isPhysicalRegister(PhysReg) &&
-           "Expected physical register");
-    return (callerPreservedRegs[PhysReg / 32] >> PhysReg % 32) & 1;
+    assert(PhysReg.isPhysical() && "Expected physical register");
+    return (callerPreservedRegs[PhysReg.id() / 32] >> PhysReg.id() % 32) & 1;
   }
   return false;
 }

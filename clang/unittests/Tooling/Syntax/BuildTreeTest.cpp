@@ -4604,7 +4604,7 @@ TEST_P(BuildSyntaxTreeTest, ConstructorCall_DefaultArguments) {
 struct X {
   X(int i = 1, char c = '2');
 };
-X test() {
+void test() {
   auto x0 = [[X()]];
   auto x1 = [[X(1)]];
   auto x2 = [[X(1, '2')]];

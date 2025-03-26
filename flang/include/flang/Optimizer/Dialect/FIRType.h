@@ -53,6 +53,9 @@ public:
   /// Is this the box for an assumed rank?
   bool isAssumedRank() const;
 
+  /// Is this a box for a pointer?
+  bool isPointer() const;
+
   /// Return the same type, except for the shape, that is taken the shape
   /// of shapeMold.
   BaseBoxType getBoxTypeWithNewShape(mlir::Type shapeMold) const;
@@ -136,6 +139,13 @@ inline bool isa_builtin_cptr_type(mlir::Type t) {
   if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(t))
     return recTy.getName().ends_with("T__builtin_c_ptr") ||
            recTy.getName().ends_with("T__builtin_c_funptr");
+  return false;
+}
+
+// Is `t` type(c_devptr)?
+inline bool isa_builtin_c_devptr_type(mlir::Type t) {
+  if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(t))
+    return recTy.getName().ends_with("T__builtin_c_devptr");
   return false;
 }
 
@@ -268,6 +278,13 @@ inline mlir::Type unwrapPassByRefType(mlir::Type t) {
     return eleTy;
   return t;
 }
+
+/// Extracts the innermost type, T, **potentially** wrapped inside:
+///   <fir.[ref|ptr|heap] <fir.[ref|ptr|heap|box] <fir.array<T>>>
+///
+/// Any element absent from the above pattern does not affect the returned
+/// value: T.
+mlir::Type getFortranElementType(mlir::Type ty);
 
 /// Unwrap either a sequence or a boxed sequence type, returning the element
 /// type of the sequence type.
@@ -439,7 +456,7 @@ inline mlir::Type wrapInClassOrBoxType(mlir::Type eleTy,
 /// Return the elementType where intrinsic types are replaced with none for
 /// unlimited polymorphic entities.
 ///
-/// i32 -> none
+/// i32 -> ()
 /// !fir.array<2xf32> -> !fir.array<2xnone>
 /// !fir.heap<!fir.array<2xf32>> -> !fir.heap<!fir.array<2xnone>>
 inline mlir::Type updateTypeForUnlimitedPolymorphic(mlir::Type ty) {
@@ -479,6 +496,13 @@ inline bool isBoxAddressOrValue(mlir::Type t) {
 inline bool isBoxProcAddressType(mlir::Type t) {
   t = fir::dyn_cast_ptrEleTy(t);
   return t && mlir::isa<fir::BoxProcType>(t);
+}
+
+inline bool isRefOfConstantSizeAggregateType(mlir::Type t) {
+  t = fir::dyn_cast_ptrEleTy(t);
+  return t &&
+         mlir::isa<fir::CharacterType, fir::RecordType, fir::SequenceType>(t) &&
+         !hasDynamicSize(t);
 }
 
 /// Return a string representation of `ty`.

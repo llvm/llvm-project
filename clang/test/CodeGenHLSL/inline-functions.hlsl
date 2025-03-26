@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,NOINLINE
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -O0 -o - | FileCheck %s --check-prefixes=CHECK,INLINE
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -O1 -o - | FileCheck %s --check-prefixes=CHECK,INLINE
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,NOINLINE,OPT_ATTR
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -O0 -o - | FileCheck %s --check-prefixes=CHECK,INLINE,OPT_ATTR
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -O1 -o - | FileCheck %s --check-prefixes=CHECK,INLINE,NOOPT_ATTR
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,NOINLINE
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute %s -emit-llvm -O0 -o - | FileCheck %s --check-prefixes=CHECK,INLINE
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute %s -emit-llvm -O1 -o - | FileCheck %s --check-prefixes=CHECK,INLINE
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute %s -emit-llvm -O0 -o - | FileCheck %s --check-prefixes=CHECK,INLINE,OPT_ATTR
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute %s -emit-llvm -O1 -o - | FileCheck %s --check-prefixes=CHECK,INLINE,NOOPT_ATTR
 
 // Tests that user functions will always be inlined.
 // This includes exported functions and mangled entry point implementation functions.
@@ -43,7 +43,7 @@ void BubbleSort(unsigned Buf[MAX], unsigned size) {
 
 // Note ExtAttr is the inlined export set of attribs
 // CHECK: Function Attrs: alwaysinline
-// CHECK: define noundef i32 @_Z11RemoveDupesA100_jj(ptr {{[a-z_ ]*}}noundef byval([100 x i32]) align 4 %Buf, i32 noundef %size) {{[a-z_ ]*}}[[ExtAttr:\#[0-9]+]]
+// CHECK: define noundef i32 @_Z11RemoveDupesA100_jj(ptr {{[a-z_ ]*}}noundef byval([100 x i32]) align 4 {{.*}}%Buf, i32 noundef %size) {{[a-z_ ]*}}[[ExtAttr:\#[0-9]+]]
 // CHECK: ret i32
 // Sort Buf and remove any duplicate values
 // returns the number of values left
@@ -71,7 +71,8 @@ RWBuffer<unsigned> Indices;
 // NOINLINE: ret void
 
 // The unmangled version is not inlined, EntryAttr reflects that
-// CHECK: Function Attrs: {{.*}}noinline
+// OPT_ATTR: Function Attrs: {{.*}}optnone
+// NOOPT_ATTR-NOT: Function Attrs: {{.*}}optnone
 // CHECK: define void @main() {{[a-z_ ]*}}[[EntryAttr:\#[0-9]+]]
 // Make sure function calls are inlined when AlwaysInline is run
 // This only leaves calls to llvm. intrinsics
@@ -98,7 +99,8 @@ void main(unsigned int GI : SV_GroupIndex) {
 // NOINLINE: ret void
 
 // The unmangled version is not inlined, EntryAttr reflects that
-// CHECK: Function Attrs: {{.*}}noinline
+// OPT_ATTR: Function Attrs: {{.*}}optnone
+// NOOPT_ATTR-NOT: Function Attrs: {{.*}}optnone
 // CHECK: define void @main10() {{[a-z_ ]*}}[[EntryAttr]]
 // Make sure function calls are inlined when AlwaysInline is run
 // This only leaves calls to llvm. intrinsics

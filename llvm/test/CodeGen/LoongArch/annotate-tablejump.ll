@@ -57,7 +57,7 @@ define void @switch_4_arms(i32 %in, ptr %out) nounwind {
 ; LA64-JT-NEXT:    slli.d $a3, $a3, 3
 ; LA64-JT-NEXT:    pcalau12i $a4, %pc_hi20(.LJTI0_0)
 ; LA64-JT-NEXT:    addi.d $a4, $a4, %pc_lo12(.LJTI0_0)
-; LA64-JT-NEXT:    ldx.d $a3, $a3, $a4
+; LA64-JT-NEXT:    ldx.d $a3, $a4, $a3
 ; LA64-JT-NEXT:  .Ljrtb_0:
 ; LA64-JT-NEXT:    jr $a3
 ; LA64-JT-NEXT:  .LBB0_2: # %bb1
@@ -80,7 +80,7 @@ define void @switch_4_arms(i32 %in, ptr %out) nounwind {
 ; LA64-JT-NEXT:    slli.d $a3, $a3, 3
 ; LA64-JT-NEXT:    pcalau12i $a4, %pc_hi20(.LJTI0_1)
 ; LA64-JT-NEXT:    addi.d $a4, $a4, %pc_lo12(.LJTI0_1)
-; LA64-JT-NEXT:    ldx.d $a3, $a3, $a4
+; LA64-JT-NEXT:    ldx.d $a3, $a4, $a3
 ; LA64-JT-NEXT:  .Ljrtb_1:
 ; LA64-JT-NEXT:    jr $a3
 ; LA64-JT-NEXT:  .LBB0_9: # %exit2

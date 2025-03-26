@@ -432,6 +432,23 @@ bool CallBase::paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
   }
 }
 
+bool CallBase::paramHasNonNullAttr(unsigned ArgNo,
+                                   bool AllowUndefOrPoison) const {
+  assert(getArgOperand(ArgNo)->getType()->isPointerTy() &&
+         "Argument must be a pointer");
+  if (paramHasAttr(ArgNo, Attribute::NonNull) &&
+      (AllowUndefOrPoison || paramHasAttr(ArgNo, Attribute::NoUndef)))
+    return true;
+
+  if (getParamDereferenceableBytes(ArgNo) > 0 &&
+      !NullPointerIsDefined(
+          getCaller(),
+          getArgOperand(ArgNo)->getType()->getPointerAddressSpace()))
+    return true;
+
+  return false;
+}
+
 bool CallBase::hasFnAttrOnCalledFunction(Attribute::AttrKind Kind) const {
   if (auto *F = dyn_cast<Function>(getCalledOperand()))
     return F->getAttributes().hasFnAttr(Kind);
@@ -592,15 +609,17 @@ bool CallBase::hasReadingOperandBundles() const {
   // Implementation note: this is a conservative implementation of operand
   // bundle semantics, where *any* non-assume operand bundle (other than
   // ptrauth) forces a callsite to be at least readonly.
-  return hasOperandBundlesOtherThan(
-             {LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi}) &&
+  return hasOperandBundlesOtherThan({LLVMContext::OB_ptrauth,
+                                     LLVMContext::OB_kcfi,
+                                     LLVMContext::OB_convergencectrl}) &&
          getIntrinsicID() != Intrinsic::assume;
 }
 
 bool CallBase::hasClobberingOperandBundles() const {
   return hasOperandBundlesOtherThan(
              {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
-              LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi}) &&
+              LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi,
+              LLVMContext::OB_convergencectrl}) &&
          getIntrinsicID() != Intrinsic::assume;
 }
 
@@ -673,6 +692,39 @@ bool CallBase::onlyAccessesInaccessibleMemOrArgMem() const {
 void CallBase::setOnlyAccessesInaccessibleMemOrArgMem() {
   setMemoryEffects(getMemoryEffects() &
                    MemoryEffects::inaccessibleOrArgMemOnly());
+}
+
+CaptureInfo CallBase::getCaptureInfo(unsigned OpNo) const {
+  if (OpNo < arg_size()) {
+    // If the argument is passed byval, the callee does not have access to the
+    // original pointer and thus cannot capture it.
+    if (isByValArgument(OpNo))
+      return CaptureInfo::none();
+
+    CaptureInfo CI = getParamAttributes(OpNo).getCaptureInfo();
+    if (auto *Fn = dyn_cast<Function>(getCalledOperand()))
+      CI &= Fn->getAttributes().getParamAttrs(OpNo).getCaptureInfo();
+    return CI;
+  }
+
+  // deopt operand bundles are captures(none)
+  auto &BOI = getBundleOpInfoForOperand(OpNo);
+  auto OBU = operandBundleFromBundleOpInfo(BOI);
+  return OBU.isDeoptOperandBundle() ? CaptureInfo::none() : CaptureInfo::all();
+}
+
+bool CallBase::hasArgumentWithAdditionalReturnCaptureComponents() const {
+  for (unsigned I = 0, E = arg_size(); I < E; ++I) {
+    if (!getArgOperand(I)->getType()->isPointerTy())
+      continue;
+
+    CaptureInfo CI = getParamAttributes(I).getCaptureInfo();
+    if (auto *Fn = dyn_cast<Function>(getCalledOperand()))
+      CI &= Fn->getAttributes().getParamAttrs(I).getCaptureInfo();
+    if (capturesAnything(CI.getRetComponents() & ~CI.getOtherComponents()))
+      return true;
+  }
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -832,7 +884,7 @@ InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
 }
 
 LandingPadInst *InvokeInst::getLandingPadInst() const {
-  return cast<LandingPadInst>(getUnwindDest()->getFirstNonPHI());
+  return cast<LandingPadInst>(getUnwindDest()->getFirstNonPHIIt());
 }
 
 void InvokeInst::updateProfWeight(uint64_t S, uint64_t T) {
@@ -1214,7 +1266,7 @@ AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
 AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
                        Align Align, const Twine &Name,
                        InsertPosition InsertBefore)
-    : UnaryInstruction(PointerType::get(Ty, AddrSpace), Alloca,
+    : UnaryInstruction(PointerType::get(Ty->getContext(), AddrSpace), Alloca,
                        getAISize(Ty->getContext(), ArraySize), InsertBefore),
       AllocatedType(Ty) {
   setAlignment(Align);
@@ -2666,8 +2718,7 @@ BinaryOperator *BinaryOperator::CreateNot(Value *Op, const Twine &Name,
 
 // Exchange the two operands to this instruction. This instruction is safe to
 // use on any binary instruction and does not modify the semantics of the
-// instruction. If the instruction is order-dependent (SetLT f.e.), the opcode
-// is changed.
+// instruction.
 bool BinaryOperator::swapOperands() {
   if (!isCommutative())
     return true; // Can't commute operands
@@ -4476,6 +4527,27 @@ FuncletPadInst *FuncletPadInst::cloneImpl() const {
 UnreachableInst *UnreachableInst::cloneImpl() const {
   LLVMContext &Context = getContext();
   return new UnreachableInst(Context);
+}
+
+bool UnreachableInst::shouldLowerToTrap(bool TrapUnreachable,
+                                        bool NoTrapAfterNoreturn) const {
+  if (!TrapUnreachable)
+    return false;
+
+  // We may be able to ignore unreachable behind a noreturn call.
+  if (const CallInst *Call = dyn_cast_or_null<CallInst>(getPrevNode());
+      Call && Call->doesNotReturn()) {
+    if (NoTrapAfterNoreturn)
+      return false;
+    // Do not emit an additional trap instruction.
+    if (Call->isNonContinuableTrap())
+      return false;
+  }
+
+  if (getFunction()->hasFnAttribute(Attribute::Naked))
+    return false;
+
+  return true;
 }
 
 FreezeInst *FreezeInst::cloneImpl() const {

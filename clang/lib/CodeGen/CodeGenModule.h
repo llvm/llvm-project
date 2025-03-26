@@ -647,6 +647,9 @@ private:
   /// void @llvm.lifetime.end(i64 %size, i8* nocapture <ptr>)
   llvm::Function *LifetimeEndFn = nullptr;
 
+  /// void @llvm.fake.use(...)
+  llvm::Function *FakeUseFn = nullptr;
+
   std::unique_ptr<SanitizerMetadata> SanitizerMD;
 
   llvm::MapVector<const Decl *, bool> DeferredEmptyCoverageMappingDecls;
@@ -673,6 +676,8 @@ private:
   std::optional<PointerAuthQualifier>
   computeVTPointerAuthentication(const CXXRecordDecl *ThisClass);
 
+  AtomicOptions AtomicOpts;
+
 public:
   CodeGenModule(ASTContext &C, IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                 const HeaderSearchOptions &headersearchopts,
@@ -687,6 +692,12 @@ public:
 
   /// Finalize LLVM code generation.
   void Release();
+
+  /// Get the current Atomic options.
+  AtomicOptions getAtomicOpts() { return AtomicOpts; }
+
+  /// Set the current Atomic options.
+  void setAtomicOpts(AtomicOptions AO) { AtomicOpts = AO; }
 
   /// Return true if we should emit location information for expressions.
   bool getExpressionLocationsEnabled() const;
@@ -1064,7 +1075,8 @@ public:
   bool shouldEmitRTTI(bool ForEH = false) {
     return (ForEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&
            !(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
-             (getTriple().isNVPTX() || getTriple().isAMDGPU()));
+             (getTriple().isNVPTX() || getTriple().isAMDGPU() ||
+              getTriple().isSPIRV()));
   }
 
   /// Get the address of the RTTI descriptor for the given type.
@@ -1226,6 +1238,8 @@ public:
 
   llvm::Function *getIntrinsic(unsigned IID, ArrayRef<llvm::Type *> Tys = {});
 
+  void AddCXXGlobalInit(llvm::Function *F) { CXXGlobalInits.push_back(F); }
+
   /// Emit code for a single top level declaration.
   void EmitTopLevelDecl(Decl *D);
 
@@ -1324,6 +1338,7 @@ public:
 
   llvm::Function *getLLVMLifetimeStartFn();
   llvm::Function *getLLVMLifetimeEndFn();
+  llvm::Function *getLLVMFakeUseFn();
 
   // Make sure that this type is translated.
   void UpdateCompletedType(const TagDecl *TD);
@@ -1553,6 +1568,13 @@ public:
   /// Emit a code for declare mapper construct.
   void EmitOMPDeclareMapper(const OMPDeclareMapperDecl *D,
                             CodeGenFunction *CGF = nullptr);
+
+  // Emit code for the OpenACC Declare declaration.
+  void EmitOpenACCDeclare(const OpenACCDeclareDecl *D,
+                          CodeGenFunction *CGF = nullptr);
+  // Emit code for the OpenACC Routine declaration.
+  void EmitOpenACCRoutine(const OpenACCRoutineDecl *D,
+                          CodeGenFunction *CGF = nullptr);
 
   /// Emit a code for requires directive.
   /// \param D Requires declaration

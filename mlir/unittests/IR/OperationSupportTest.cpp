@@ -230,6 +230,26 @@ TEST(OperationFormatPrintTest, CanUseVariadicFormat) {
   op->destroy();
 }
 
+TEST(OperationFormatPrintTest, CanPrintNameAsPrefix) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  context.allowUnregisteredDialects();
+  Operation *op = Operation::create(
+      NameLoc::get(StringAttr::get(&context, "my_named_loc")),
+      OperationName("t.op", &context), builder.getIntegerType(16), std::nullopt,
+      std::nullopt, nullptr, std::nullopt, 0);
+
+  std::string str;
+  OpPrintingFlags flags;
+  flags.printNameLocAsPrefix(true);
+  llvm::raw_string_ostream os(str);
+  op->print(os, flags);
+  ASSERT_STREQ(str.c_str(), "%my_named_loc = \"t.op\"() : () -> i16\n");
+
+  op->destroy();
+}
+
 TEST(NamedAttrListTest, TestAppendAssign) {
   MLIRContext ctx;
   NamedAttrList attrs;
@@ -311,23 +331,6 @@ TEST(OperationEquivalenceTest, HashWorksWithFlags) {
             getHash(op2, OperationEquivalence::None));
   op1->destroy();
   op2->destroy();
-}
-
-TEST(ValueRangeTest, ValueConstructable) {
-  MLIRContext context;
-  Builder builder(&context);
-
-  Operation *useOp =
-      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
-  // Valid construction despite a temporary 'OpResult'.
-  ValueRange operands = useOp->getResult(0);
-
-  useOp->setOperands(operands);
-  EXPECT_EQ(useOp->getNumOperands(), 1u);
-  EXPECT_EQ(useOp->getOperand(0), useOp->getResult(0));
-
-  useOp->dropAllUses();
-  useOp->destroy();
 }
 
 } // namespace

@@ -490,9 +490,8 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
   MCContext &Ctx = Asm.getContext();
   bool IsLocRel = false;
 
-  if (const MCSymbolRefExpr *RefB = Target.getSymB()) {
-
-    const auto &SymB = cast<MCSymbolWasm>(RefB->getSymbol());
+  if (const auto *RefB = Target.getSubSym()) {
+    const auto &SymB = cast<MCSymbolWasm>(*RefB);
 
     if (FixupSection.isText()) {
       Ctx.reportError(Fixup.getLoc(),
@@ -746,10 +745,11 @@ static void addData(SmallVectorImpl<char> &DataBytes,
 uint32_t
 WasmObjectWriter::getRelocationIndexValue(const WasmRelocationEntry &RelEntry) {
   if (RelEntry.Type == wasm::R_WASM_TYPE_INDEX_LEB) {
-    if (!TypeIndices.count(RelEntry.Symbol))
+    auto It = TypeIndices.find(RelEntry.Symbol);
+    if (It == TypeIndices.end())
       report_fatal_error("symbol not found in type index space: " +
                          RelEntry.Symbol->getName());
-    return TypeIndices[RelEntry.Symbol];
+    return It->second;
   }
 
   return RelEntry.Symbol->getIndex();
@@ -844,7 +844,8 @@ void WasmObjectWriter::writeImportSection(ArrayRef<wasm::WasmImport> Imports,
   if (Imports.empty())
     return;
 
-  uint64_t NumPages = (DataSize + wasm::WasmPageSize - 1) / wasm::WasmPageSize;
+  uint64_t NumPages =
+      (DataSize + wasm::WasmDefaultPageSize - 1) / wasm::WasmDefaultPageSize;
 
   SectionBookkeeping Section;
   startSection(Section, wasm::WASM_SEC_IMPORT);
@@ -1019,7 +1020,7 @@ void WasmObjectWriter::writeElemSection(
   encodeSLEB128(InitialTableOffset, W->OS);
   W->OS << char(wasm::WASM_OPCODE_END);
 
-  if (Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND) {
+  if (Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_DESC) {
     // We only write active function table initializers, for which the elem kind
     // is specified to be written as 0x00 and interpreted to mean "funcref".
     const uint8_t ElemKind = 0;

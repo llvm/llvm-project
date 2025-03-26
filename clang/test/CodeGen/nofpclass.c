@@ -920,7 +920,7 @@ _Complex _Float16 defined_complex_func_f16_ret(_Complex _Float16 c) {
 //
 // CLFINITEONLY: Function Attrs: convergent norecurse nounwind
 // CLFINITEONLY-LABEL: define dso_local nofpclass(nan inf) float @call_variadic
-// CLFINITEONLY-SAME: (float noundef nofpclass(nan inf) [[F32:%.*]], double noundef nofpclass(nan inf) [[F64:%.*]], half noundef nofpclass(nan inf) [[F16:%.*]], double noundef nofpclass(nan inf) [[V2F32_COERCE:%.*]], <2 x double> noundef nofpclass(nan inf) [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef nofpclass(nan inf) [[CF32_COERCE:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE0:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE1:%.*]], ptr nocapture noundef readonly byval({ half, half }) align 8 [[CF16:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// CLFINITEONLY-SAME: (float noundef nofpclass(nan inf) [[F32:%.*]], double noundef nofpclass(nan inf) [[F64:%.*]], half noundef nofpclass(nan inf) [[F16:%.*]], double noundef nofpclass(nan inf) [[V2F32_COERCE:%.*]], <2 x double> noundef nofpclass(nan inf) [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef nofpclass(nan inf) [[CF32_COERCE:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE0:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE1:%.*]], ptr noundef readonly byval({ half, half }) align 8 captures(none) [[CF16:%.*]]) local_unnamed_addr #[[ATTR5]] {
 // CLFINITEONLY-NEXT:  entry:
 // CLFINITEONLY-NEXT:    [[BYVAL_TEMP:%.*]] = alloca { double, double }, align 8
 // CLFINITEONLY-NEXT:    [[CONV:%.*]] = fpext nnan ninf float [[F32]] to double
@@ -1173,7 +1173,7 @@ float call_variadic(float f32, double f64, _Float16 f16,
 //
 // CLFINITEONLY: Function Attrs: convergent norecurse nounwind
 // CLFINITEONLY-LABEL: define dso_local nofpclass(nan inf) float @call_variadic_indirect
-// CLFINITEONLY-SAME: (ptr nocapture noundef readonly [[FPTR:%.*]], float noundef nofpclass(nan inf) [[F32:%.*]], double noundef nofpclass(nan inf) [[F64:%.*]], half noundef nofpclass(nan inf) [[F16:%.*]], double noundef nofpclass(nan inf) [[V2F32_COERCE:%.*]], <2 x double> noundef nofpclass(nan inf) [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef nofpclass(nan inf) [[CF32_COERCE:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE0:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE1:%.*]], ptr nocapture noundef readonly byval({ half, half }) align 8 [[CF16:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// CLFINITEONLY-SAME: (ptr noundef readonly captures(none) [[FPTR:%.*]], float noundef nofpclass(nan inf) [[F32:%.*]], double noundef nofpclass(nan inf) [[F64:%.*]], half noundef nofpclass(nan inf) [[F16:%.*]], double noundef nofpclass(nan inf) [[V2F32_COERCE:%.*]], <2 x double> noundef nofpclass(nan inf) [[V2F64:%.*]], i32 noundef [[V2F16_COERCE:%.*]], <2 x float> noundef nofpclass(nan inf) [[CF32_COERCE:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE0:%.*]], double noundef nofpclass(nan inf) [[CF64_COERCE1:%.*]], ptr noundef readonly byval({ half, half }) align 8 captures(none) [[CF16:%.*]]) local_unnamed_addr #[[ATTR5]] {
 // CLFINITEONLY-NEXT:  entry:
 // CLFINITEONLY-NEXT:    [[BYVAL_TEMP:%.*]] = alloca { double, double }, align 8
 // CLFINITEONLY-NEXT:    [[CONV:%.*]] = fpext nnan ninf float [[F32]] to double

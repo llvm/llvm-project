@@ -34,7 +34,7 @@ void fS65(void) { enum E9 e = s65.a; }
 typedef union{
   unsigned char x[65536];
 } q;
-int qfunc(void) {q buf; unsigned char* x = buf.x;}
+void qfunc(void) {q buf; unsigned char* x = buf.x;}
 
 union RR {_Bool a : 1;} RRU;
 int RRF(void) {return RRU.a;}

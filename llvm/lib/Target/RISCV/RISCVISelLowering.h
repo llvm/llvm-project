@@ -33,6 +33,7 @@ enum NodeType : unsigned {
   RET_GLUE,
   SRET_GLUE,
   MRET_GLUE,
+  QC_C_MILEAVERET_GLUE,
   CALL,
   TAIL,
   /// Select with condition operator - This selects between a true value and
@@ -461,6 +462,10 @@ enum NodeType : unsigned {
   SF_VC_V_VVW_SE,
   SF_VC_V_FVW_SE,
 
+  // To avoid stack clash, allocation is performed by block and each block is
+  // probed.
+  PROBED_ALLOCA,
+
   // RISC-V vector tuple type version of INSERT_SUBVECTOR/EXTRACT_SUBVECTOR.
   TUPLE_INSERT,
   TUPLE_EXTRACT,
@@ -530,6 +535,7 @@ public:
   bool isCheapToSpeculateCtlz(Type *Ty) const override;
   bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
   bool hasAndNotCompare(SDValue Y) const override;
+  bool hasAndNot(SDValue Y) const override;
   bool hasBitTest(SDValue X, SDValue Y) const override;
   bool shouldProduceAndByConstByHoistingConstFromShiftsLHSOfAnd(
       SDValue X, ConstantSDNode *XC, ConstantSDNode *CC, SDValue Y,
@@ -762,7 +768,7 @@ public:
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      LLVMContext &Context) const override;
+                      LLVMContext &Context, const Type *RetTy) const override;
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
@@ -819,7 +825,7 @@ public:
   // Return the value of VLMax for the given vector type (i.e. SEW and LMUL)
   SDValue computeVLMax(MVT VecVT, const SDLoc &DL, SelectionDAG &DAG) const;
 
-  static RISCVII::VLMUL getLMUL(MVT VT);
+  static RISCVVType::VLMUL getLMUL(MVT VT);
   inline static unsigned computeVLMAX(unsigned VectorBits, unsigned EltSize,
                                       unsigned MinSize) {
     // Original equation:
@@ -835,7 +841,7 @@ public:
   static std::pair<unsigned, unsigned>
   computeVLMAXBounds(MVT ContainerVT, const RISCVSubtarget &Subtarget);
 
-  static unsigned getRegClassIDForLMUL(RISCVII::VLMUL LMul);
+  static unsigned getRegClassIDForLMUL(RISCVVType::VLMUL LMul);
   static unsigned getSubregIndexByMVT(MVT VT, unsigned Index);
   static unsigned getRegClassIDForVecVT(MVT VT);
   static std::pair<unsigned, unsigned>
@@ -901,12 +907,18 @@ public:
                              unsigned Factor) const override;
 
   bool lowerDeinterleaveIntrinsicToLoad(
-      IntrinsicInst *II, LoadInst *LI,
-      SmallVectorImpl<Instruction *> &DeadInsts) const override;
+      LoadInst *LI, ArrayRef<Value *> DeinterleaveValues) const override;
 
   bool lowerInterleaveIntrinsicToStore(
-      IntrinsicInst *II, StoreInst *SI,
-      SmallVectorImpl<Instruction *> &DeadInsts) const override;
+      StoreInst *SI, ArrayRef<Value *> InterleaveValues) const override;
+
+  bool lowerDeinterleavedIntrinsicToVPLoad(
+      VPIntrinsic *Load, Value *Mask,
+      ArrayRef<Value *> DeinterleaveRes) const override;
+
+  bool lowerInterleavedIntrinsicToVPStore(
+      VPIntrinsic *Store, Value *Mask,
+      ArrayRef<Value *> InterleaveOps) const override;
 
   bool supportKCFIBundles() const override { return true; }
 
@@ -921,6 +933,9 @@ public:
   bool hasInlineStackProbe(const MachineFunction &MF) const override;
 
   unsigned getStackProbeSize(const MachineFunction &MF, Align StackAlign) const;
+
+  MachineBasicBlock *emitDynamicProbedAlloc(MachineInstr &MI,
+                                            MachineBasicBlock *MBB) const;
 
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
@@ -1015,6 +1030,8 @@ private:
 
   SDValue lowerVectorStrictFSetcc(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue expandUnalignedRVVLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue expandUnalignedRVVStore(SDValue Op, SelectionDAG &DAG) const;
 
@@ -1052,6 +1069,13 @@ private:
   /// RISC-V doesn't have flags so it's better to perform the and/or in a GPR.
   bool shouldNormalizeToSelectSequence(LLVMContext &, EVT) const override {
     return false;
+  }
+
+  /// Disables storing and loading vectors by default when there are function
+  /// calls between the load and store, since these are more expensive than just
+  /// using scalars
+  bool shouldMergeStoreOfLoadsOverCall(EVT SrcVT, EVT MergedVT) const override {
+    return !MergedVT.isVector() || SrcVT.isVector();
   }
 
   /// For available scheduling models FDIV + two independent FMULs are much

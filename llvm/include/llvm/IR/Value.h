@@ -710,6 +710,10 @@ public:
   /// For example, for a value \p ExternalAnalysis might try to calculate a
   /// lower bound. If \p ExternalAnalysis is successful, it should return true.
   ///
+  /// If \p LookThroughIntToPtr is true then this method also looks through
+  /// IntToPtr and PtrToInt constant expressions. The returned pointer may not
+  /// have the same provenance as this value.
+  ///
   /// If this is called on a non-pointer value, it returns 'this' and the
   /// \p Offset is not modified.
   ///
@@ -722,17 +726,19 @@ public:
       const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
       bool AllowInvariantGroup = false,
       function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis =
-          nullptr) const;
+          nullptr,
+      bool LookThroughIntToPtr = false) const;
 
   Value *stripAndAccumulateConstantOffsets(
       const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
       bool AllowInvariantGroup = false,
       function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis =
-          nullptr) {
+          nullptr,
+      bool LookThroughIntToPtr = false) {
     return const_cast<Value *>(
         static_cast<const Value *>(this)->stripAndAccumulateConstantOffsets(
-            DL, Offset, AllowNonInbounds, AllowInvariantGroup,
-            ExternalAnalysis));
+            DL, Offset, AllowNonInbounds, AllowInvariantGroup, ExternalAnalysis,
+            LookThroughIntToPtr));
   }
 
   /// This is a wrapper around stripAndAccumulateConstantOffsets with the

@@ -34,7 +34,7 @@
 
 static llvm::cl::opt<unsigned> DefaultAMDHSACodeObjectVersion(
     "amdhsa-code-object-version", llvm::cl::Hidden,
-    llvm::cl::init(llvm::AMDGPU::AMDHSA_COV5),
+    llvm::cl::init(llvm::AMDGPU::AMDHSA_COV6),
     llvm::cl::desc("Set default AMDHSA Code Object Version (module flag "
                    "or asm directive still take priority if present)"));
 
@@ -134,6 +134,12 @@ unsigned getLoadcntStorecntBitShift(unsigned VersionMajor) {
   return VersionMajor >= 12 ? 8 : 0;
 }
 
+/// \returns VaSdst bit width
+inline unsigned getVaSdstBitWidth() { return 3; }
+
+/// \returns VaSdst bit shift
+inline unsigned getVaSdstBitShift() { return 9; }
+
 /// \returns VmVsrc bit width
 inline unsigned getVmVsrcBitWidth() { return 3; }
 
@@ -146,11 +152,29 @@ inline unsigned getVaVdstBitWidth() { return 4; }
 /// \returns VaVdst bit shift
 inline unsigned getVaVdstBitShift() { return 12; }
 
+/// \returns VaVcc bit width
+inline unsigned getVaVccBitWidth() { return 1; }
+
+/// \returns VaVcc bit shift
+inline unsigned getVaVccBitShift() { return 1; }
+
 /// \returns SaSdst bit width
 inline unsigned getSaSdstBitWidth() { return 1; }
 
 /// \returns SaSdst bit shift
 inline unsigned getSaSdstBitShift() { return 0; }
+
+/// \returns VaSsrc width
+inline unsigned getVaSsrcBitWidth() { return 1; }
+
+/// \returns VaSsrc bit shift
+inline unsigned getVaSsrcBitShift() { return 8; }
+
+/// \returns HoldCnt bit shift
+inline unsigned getHoldCntWidth() { return 1; }
+
+/// \returns HoldCnt bit shift
+inline unsigned getHoldCntBitShift() { return 7; }
 
 } // end anonymous namespace
 
@@ -418,6 +442,7 @@ struct FP4FP8DstByteSelInfo {
 #define GET_VOPDPairs_IMPL
 #define GET_VOPTrue16Table_DECL
 #define GET_VOPTrue16Table_IMPL
+#define GET_True16D16Table_IMPL
 #define GET_WMMAOpcode2AddrMappingTable_DECL
 #define GET_WMMAOpcode2AddrMappingTable_IMPL
 #define GET_WMMAOpcode3AddrMappingTable_DECL
@@ -446,17 +471,17 @@ int getMTBUFElements(unsigned Opc) {
 
 bool getMTBUFHasVAddr(unsigned Opc) {
   const MTBUFInfo *Info = getMTBUFOpcodeHelper(Opc);
-  return Info ? Info->has_vaddr : false;
+  return Info && Info->has_vaddr;
 }
 
 bool getMTBUFHasSrsrc(unsigned Opc) {
   const MTBUFInfo *Info = getMTBUFOpcodeHelper(Opc);
-  return Info ? Info->has_srsrc : false;
+  return Info && Info->has_srsrc;
 }
 
 bool getMTBUFHasSoffset(unsigned Opc) {
   const MTBUFInfo *Info = getMTBUFOpcodeHelper(Opc);
-  return Info ? Info->has_soffset : false;
+  return Info && Info->has_soffset;
 }
 
 int getMUBUFBaseOpcode(unsigned Opc) {
@@ -476,47 +501,47 @@ int getMUBUFElements(unsigned Opc) {
 
 bool getMUBUFHasVAddr(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
-  return Info ? Info->has_vaddr : false;
+  return Info && Info->has_vaddr;
 }
 
 bool getMUBUFHasSrsrc(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
-  return Info ? Info->has_srsrc : false;
+  return Info && Info->has_srsrc;
 }
 
 bool getMUBUFHasSoffset(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
-  return Info ? Info->has_soffset : false;
+  return Info && Info->has_soffset;
 }
 
 bool getMUBUFIsBufferInv(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
-  return Info ? Info->IsBufferInv : false;
+  return Info && Info->IsBufferInv;
 }
 
 bool getMUBUFTfe(unsigned Opc) {
   const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
-  return Info ? Info->tfe : false;
+  return Info && Info->tfe;
 }
 
 bool getSMEMIsBuffer(unsigned Opc) {
   const SMInfo *Info = getSMEMOpcodeHelper(Opc);
-  return Info ? Info->IsBuffer : false;
+  return Info && Info->IsBuffer;
 }
 
 bool getVOP1IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP1OpcodeHelper(Opc);
-  return Info ? Info->IsSingle : true;
+  return !Info || Info->IsSingle;
 }
 
 bool getVOP2IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP2OpcodeHelper(Opc);
-  return Info ? Info->IsSingle : true;
+  return !Info || Info->IsSingle;
 }
 
 bool getVOP3IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP3OpcodeHelper(Opc);
-  return Info ? Info->IsSingle : true;
+  return !Info || Info->IsSingle;
 }
 
 bool isVOPC64DPP(unsigned Opc) {
@@ -527,12 +552,12 @@ bool isVOPCAsmOnly(unsigned Opc) { return isVOPCAsmOnlyOpcodeHelper(Opc); }
 
 bool getMAIIsDGEMM(unsigned Opc) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
-  return Info ? Info->is_dgemm : false;
+  return Info && Info->is_dgemm;
 }
 
 bool getMAIIsGFX940XDL(unsigned Opc) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
-  return Info ? Info->is_gfx940_xdl : false;
+  return Info && Info->is_gfx940_xdl;
 }
 
 uint8_t mfmaScaleF8F6F4FormatToNumRegs(unsigned EncodingVal) {
@@ -653,7 +678,7 @@ bool isGenericAtomic(unsigned Opc) {
 
 bool isTrue16Inst(unsigned Opc) {
   const VOPTrue16Info *Info = getTrue16OpcodeHelper(Opc);
-  return Info ? Info->IsTrue16 : false;
+  return Info && Info->IsTrue16;
 }
 
 FPType getFPDstSelType(unsigned Opc) {
@@ -979,7 +1004,7 @@ unsigned getEUsPerCU(const MCSubtargetInfo *STI) {
 unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo *STI,
                                unsigned FlatWorkGroupSize) {
   assert(FlatWorkGroupSize != 0);
-  if (STI->getTargetTriple().getArch() != Triple::amdgcn)
+  if (!STI->getTargetTriple().isAMDGCN())
     return 8;
   unsigned MaxWaves = getMaxWavesPerEU(STI) * getEUsPerCU(STI);
   unsigned N = getWavesPerWorkGroup(STI, FlatWorkGroupSize);
@@ -1141,6 +1166,9 @@ unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 8;
 
+  if (STI->getFeatureBits().test(FeatureDynamicVGPR))
+    return STI->getFeatureBits().test(FeatureDynamicVGPRBlockSize32) ? 32 : 16;
+
   bool IsWave32 = EnableWavefrontSize32 ?
       *EnableWavefrontSize32 :
       STI->getFeatureBits().test(FeatureWavefrontSize32);
@@ -1182,6 +1210,9 @@ unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) { return 256; }
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 512;
+  if (STI->getFeatureBits().test(FeatureDynamicVGPR))
+    // On GFX12 we can allocate at most 8 blocks of VGPRs.
+    return 8 * getVGPRAllocGranule(STI);
   return getAddressableNumArchVGPRs(STI);
 }
 
@@ -1306,7 +1337,7 @@ void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &KernelCode,
   if (Version.Major >= 10) {
     KernelCode.compute_pgm_resource_registers |=
         S_00B848_WGP_MODE(STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1) |
-        S_00B848_MEM_ORDERED(1);
+        S_00B848_MEM_ORDERED(1) | S_00B848_FWD_PROGRESS(1);
   }
 }
 
@@ -1719,6 +1750,22 @@ unsigned decodeFieldSaSdst(unsigned Encoded) {
   return unpackBits(Encoded, getSaSdstBitShift(), getSaSdstBitWidth());
 }
 
+unsigned decodeFieldVaSdst(unsigned Encoded) {
+  return unpackBits(Encoded, getVaSdstBitShift(), getVaSdstBitWidth());
+}
+
+unsigned decodeFieldVaVcc(unsigned Encoded) {
+  return unpackBits(Encoded, getVaVccBitShift(), getVaVccBitWidth());
+}
+
+unsigned decodeFieldVaSsrc(unsigned Encoded) {
+  return unpackBits(Encoded, getVaSsrcBitShift(), getVaSsrcBitWidth());
+}
+
+unsigned decodeFieldHoldCnt(unsigned Encoded) {
+  return unpackBits(Encoded, getHoldCntBitShift(), getHoldCntWidth());
+}
+
 unsigned encodeFieldVmVsrc(unsigned Encoded, unsigned VmVsrc) {
   return packBits(VmVsrc, Encoded, getVmVsrcBitShift(), getVmVsrcBitWidth());
 }
@@ -1741,6 +1788,38 @@ unsigned encodeFieldSaSdst(unsigned Encoded, unsigned SaSdst) {
 
 unsigned encodeFieldSaSdst(unsigned SaSdst) {
   return encodeFieldSaSdst(0xffff, SaSdst);
+}
+
+unsigned encodeFieldVaSdst(unsigned Encoded, unsigned VaSdst) {
+  return packBits(VaSdst, Encoded, getVaSdstBitShift(), getVaSdstBitWidth());
+}
+
+unsigned encodeFieldVaSdst(unsigned VaSdst) {
+  return encodeFieldVaSdst(0xffff, VaSdst);
+}
+
+unsigned encodeFieldVaVcc(unsigned Encoded, unsigned VaVcc) {
+  return packBits(VaVcc, Encoded, getVaVccBitShift(), getVaVccBitWidth());
+}
+
+unsigned encodeFieldVaVcc(unsigned VaVcc) {
+  return encodeFieldVaVcc(0xffff, VaVcc);
+}
+
+unsigned encodeFieldVaSsrc(unsigned Encoded, unsigned VaSsrc) {
+  return packBits(VaSsrc, Encoded, getVaSsrcBitShift(), getVaSsrcBitWidth());
+}
+
+unsigned encodeFieldVaSsrc(unsigned VaSsrc) {
+  return encodeFieldVaSsrc(0xffff, VaSsrc);
+}
+
+unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt) {
+  return packBits(HoldCnt, Encoded, getHoldCntBitShift(), getHoldCntWidth());
+}
+
+unsigned encodeFieldHoldCnt(unsigned HoldCnt) {
+  return encodeFieldHoldCnt(0xffff, HoldCnt);
 }
 
 } // namespace DepCtr
@@ -2446,6 +2525,8 @@ bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo) {
 // (move from MC* level to Target* level). Return size in bits.
 unsigned getRegBitWidth(unsigned RCID) {
   switch (RCID) {
+  case AMDGPU::VGPR_16RegClassID:
+  case AMDGPU::VGPR_16_Lo128RegClassID:
   case AMDGPU::SGPR_LO16RegClassID:
   case AMDGPU::AGPR_LO16RegClassID:
     return 16;
@@ -2487,6 +2568,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_128_Align2RegClassID:
   case AMDGPU::AV_128RegClassID:
   case AMDGPU::AV_128_Align2RegClassID:
+  case AMDGPU::SReg_128_XNULLRegClassID:
     return 128;
   case AMDGPU::SGPR_160RegClassID:
   case AMDGPU::SReg_160RegClassID:
@@ -2523,6 +2605,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AReg_256_Align2RegClassID:
   case AMDGPU::AV_256RegClassID:
   case AMDGPU::AV_256_Align2RegClassID:
+  case AMDGPU::SReg_256_XNULLRegClassID:
     return 256;
   case AMDGPU::SGPR_288RegClassID:
   case AMDGPU::SReg_288RegClassID:

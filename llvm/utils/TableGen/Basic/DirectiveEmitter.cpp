@@ -495,7 +495,7 @@ static void emitLeafTable(const DirectiveLanguage &DirLang, raw_ostream &OS,
   DenseMap<const Record *, int> DirId; // Record * -> llvm::omp::Directive
 
   for (auto [Idx, Rec] : enumerate(Directives))
-    DirId.insert(std::make_pair(Rec, Idx));
+    DirId.try_emplace(Rec, Idx);
 
   using LeafList = std::vector<int>;
   int MaxLeafCount = getMaxLeafCount(DirLang);
@@ -675,7 +675,7 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
                       D.getAssociation()->getName() + "'");
     }
     if (AS != Association::FromLeaves) {
-      AsMap.insert(std::make_pair(R, AS));
+      AsMap.try_emplace(R, AS);
       return AS;
     }
     // Compute the association from leaf constructs.
@@ -701,7 +701,7 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
 
     assert(Result != Association::Invalid);
     assert(Result != Association::FromLeaves);
-    AsMap.insert(std::make_pair(R, Result));
+    AsMap.try_emplace(R, Result);
     return Result;
   };
 

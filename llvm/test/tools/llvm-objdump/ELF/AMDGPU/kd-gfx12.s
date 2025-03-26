@@ -12,7 +12,7 @@
 ; CHECK-NEXT: .amdhsa_group_segment_fixed_size 0
 ; CHECK-NEXT: .amdhsa_private_segment_fixed_size 0
 ; CHECK-NEXT: .amdhsa_kernarg_size 0
-; CHECK-NEXT: ; INST_PREF_SIZE 0
+; CHECK-NEXT: .amdhsa_inst_pref_size 0
 ; CHECK-NEXT: ; GLG_EN 0
 ; CHECK-NEXT: ; IMAGE_OP 0
 ; CHECK-NEXT: .amdhsa_next_free_vgpr 32
@@ -26,7 +26,7 @@
 ; CHECK-NEXT: .amdhsa_fp16_overflow 0
 ; CHECK-NEXT: .amdhsa_workgroup_processor_mode 1
 ; CHECK-NEXT: .amdhsa_memory_ordered 1
-; CHECK-NEXT: .amdhsa_forward_progress 0
+; CHECK-NEXT: .amdhsa_forward_progress 1
 ; CHECK-NEXT: .amdhsa_round_robin_scheduling 0
 ; CHECK-NEXT: .amdhsa_enable_private_segment 0
 ; CHECK-NEXT: .amdhsa_system_sgpr_workgroup_id_x 1
@@ -66,7 +66,7 @@
 ; CHECK-NEXT: .amdhsa_group_segment_fixed_size 0
 ; CHECK-NEXT: .amdhsa_private_segment_fixed_size 0
 ; CHECK-NEXT: .amdhsa_kernarg_size 0
-; CHECK-NEXT: ; INST_PREF_SIZE 0
+; CHECK-NEXT: .amdhsa_inst_pref_size 255
 ; CHECK-NEXT: ; GLG_EN 0
 ; CHECK-NEXT: ; IMAGE_OP 0
 ; CHECK-NEXT: .amdhsa_next_free_vgpr 32
@@ -80,7 +80,7 @@
 ; CHECK-NEXT: .amdhsa_fp16_overflow 0
 ; CHECK-NEXT: .amdhsa_workgroup_processor_mode 1
 ; CHECK-NEXT: .amdhsa_memory_ordered 1
-; CHECK-NEXT: .amdhsa_forward_progress 0
+; CHECK-NEXT: .amdhsa_forward_progress 1
 ; CHECK-NEXT: .amdhsa_round_robin_scheduling 0
 ; CHECK-NEXT: .amdhsa_enable_private_segment 0
 ; CHECK-NEXT: .amdhsa_system_sgpr_workgroup_id_x 1
@@ -108,4 +108,5 @@
   .amdhsa_next_free_vgpr 32
   .amdhsa_next_free_sgpr 32
   .amdhsa_wavefront_size32 0
+  .amdhsa_inst_pref_size 255
 .end_amdhsa_kernel

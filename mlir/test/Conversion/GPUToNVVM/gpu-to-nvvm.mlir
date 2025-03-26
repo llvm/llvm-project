@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -convert-gpu-to-nvvm='has-redux=1' -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-gpu-to-nvvm='has-redux=1 allowed-dialects=func,arith,cf' -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -convert-gpu-to-nvvm='has-redux=1 use-bare-ptr-memref-call-conv=1' -split-input-file | FileCheck %s --check-prefix=CHECK-BARE
 // RUN: mlir-opt %s -transform-interpreter | FileCheck %s
 
@@ -569,7 +570,7 @@ gpu.module @test_module_27 {
   // CHECK-LABEL: func @gpu_unroll
   func.func @gpu_unroll(%arg0 : vector<4xf32>) -> vector<4xf32> {
     %result = math.exp %arg0 : vector<4xf32>
-    // CHECK: %[[V0:.+]] = llvm.mlir.undef : vector<4xf32>
+    // CHECK: %[[V0:.+]] = llvm.mlir.poison : vector<4xf32>
     // CHECK: %[[CL:.+]] = llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
     // CHECK: %[[V1:.+]] = llvm.insertelement %[[CL]], %[[V0]]
     // CHECK: %[[CL:.+]] = llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
@@ -729,13 +730,13 @@ gpu.module @test_module_33 {
 gpu.module @test_module_34 {
   // CHECK-LABEL: llvm.func @memref_signature(
   //  CHECK-SAME:     %{{.*}}: !llvm.ptr, %{{.*}}: !llvm.ptr, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: i64, %{{.*}}: f32) -> !llvm.struct<(struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, f32)>
-  //       CHECK:   llvm.mlir.undef
+  //       CHECK:   llvm.mlir.poison
   //       CHECK:   llvm.insertvalue
   //       CHECK:   llvm.insertvalue
   //       CHECK:   llvm.insertvalue
   //       CHECK:   llvm.insertvalue
   //       CHECK:   llvm.insertvalue
-  //       CHECK:   llvm.mlir.undef
+  //       CHECK:   llvm.mlir.poison
   //       CHECK:   llvm.insertvalue
   //       CHECK:   llvm.insertvalue
   //       CHECK:   llvm.return
@@ -1013,7 +1014,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_conversion_patterns.vector.vector_to_llvm
       transform.apply_conversion_patterns.func.func_to_llvm
       transform.apply_conversion_patterns.dialect_to_llvm "memref"
-      transform.apply_conversion_patterns.gpu.gpu_to_nvvm
+      transform.apply_conversion_patterns.gpu.gpu_to_nvvm {benefit = 10 : i16}
       transform.apply_conversion_patterns.gpu.gpu_wmma_to_nvvm
       transform.apply_conversion_patterns.gpu.gpu_subgroup_reduce_to_nvvm
       transform.apply_conversion_patterns.nvgpu.nvgpu_to_nvvm
@@ -1031,5 +1032,80 @@ module attributes {transform.with_named_sequence} {
       partial_conversion
     } : !transform.any_op
     transform.yield
+  }
+}
+
+
+gpu.module @test_module_52 {
+  // CHECK: llvm.func @__nv_abs(i32) -> i32
+  // CHECK-LABEL: func @gpu_abs
+  func.func @gpu_abs(%arg_i32 : i32) -> (i32) {
+    %result32 = math.absi %arg_i32 : i32
+    // CHECK: llvm.call @__nv_abs(%{{.*}}) : (i32) -> i32
+    func.return %result32 : i32
+  }
+}
+
+gpu.module @test_module_53 {
+  // CHECK: llvm.func @__nv_powif(f32, i32) -> f32
+  // CHECK: llvm.func @__nv_powi(f64, i32) -> f64
+  // CHECK-LABEL: func @gpu_powi
+  func.func @gpu_powi(%arg_f32 : f32, %arg_f64 : f64, %arg_i32 : i32) -> (f32, f64) {
+    %result32 = math.fpowi %arg_f32, %arg_i32 : f32, i32
+    // CHECK: llvm.call @__nv_powif(%{{.*}}, %{{.*}}) : (f32, i32) -> f32
+    %result64 = math.fpowi %arg_f64, %arg_i32 : f64, i32
+    // CHECK: llvm.call @__nv_powi(%{{.*}}, %{{.*}}) : (f64, i32) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
+
+gpu.module @test_module_54 {
+  // CHECK: llvm.func @__nv_isinff(f32) -> i32
+  // CHECK: llvm.func @__nv_isinfd(f64) -> i32
+  // CHECK: llvm.func @__nv_isnanf(f32) -> i32
+  // CHECK: llvm.func @__nv_isnand(f64) -> i32
+  // CHECK: llvm.func @__nv_finitef(f32) -> i32
+  // CHECK: llvm.func @__nv_isfinited(f64) -> i32
+  // CHECK-LABEL: @fpclassify
+  func.func @fpclassify(%f32: f32, %f64: f64) -> (i1, i1, i1, i1, i1, i1) {
+    // CHECK: %[[INFF:.+]] = llvm.call @__nv_isinff(%{{.*}}) : (f32) -> i32
+    // CHECK: %[[ZERO:.+]] = llvm.mlir.constant(0 : i32) : i32
+    // CHECK: %[[R0:.+]] = llvm.icmp "ne" %[[INFF]], %[[ZERO]]
+    %0 = math.isinf %f32 : f32
+    // CHECK: llvm.call @__nv_isinfd(%{{.*}}) : (f64) -> i32
+    // CHECK: llvm.mlir.constant(0
+    // CHECK: llvm.icmp "ne"
+    %1 = math.isinf %f64 : f64
+    // CHECK: llvm.call @__nv_isnanf(%{{.*}}) : (f32) -> i32
+    // CHECK: llvm.mlir.constant(0
+    // CHECK: llvm.icmp "ne"
+    %2 = math.isnan %f32 : f32
+    // CHECK: llvm.call @__nv_isnand(%{{.*}}) : (f64) -> i32
+    // CHECK: llvm.mlir.constant(0
+    // CHECK: llvm.icmp "ne"
+    %3 = math.isnan %f64 : f64
+    // CHECK: llvm.call @__nv_finitef(%{{.*}}) : (f32) -> i32
+    // CHECK: llvm.mlir.constant(0
+    // CHECK: llvm.icmp "ne"
+    %4 = math.isfinite %f32 : f32
+    // CHECK: llvm.call @__nv_isfinited(%{{.*}}) : (f64) -> i32
+    // CHECK: llvm.mlir.constant(0
+    // CHECK: llvm.icmp "ne"
+    %5 = math.isfinite %f64 : f64
+    // CHECK: llvm.return %[[R0]]
+    return %0, %1, %2, %3, %4, %5 : i1, i1, i1, i1, i1, i1
+  }
+}
+
+gpu.module @test_module_55 {
+  // CHECK: llvm.func @__nv_erfcf(f32) -> f32
+  // CHECK: llvm.func @__nv_erfc(f64) -> f64
+  // CHECK-LABEL: func @gpu_erf
+  func.func @gpu_erfc(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = math.erfc %arg_f32 : f32
+    // CHECK: llvm.call @__nv_erfcf(%{{.*}}) : (f32) -> f32
+    %result64 = math.erfc %arg_f64 : f64
+    // CHECK: llvm.call @__nv_erfc(%{{.*}}) : (f64) -> f64
+    func.return %result32, %result64 : f32, f64
   }
 }

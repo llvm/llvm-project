@@ -158,8 +158,8 @@ public:
       ConstStmtVisitor<Derived>::Visit(S);
 
       // Some statements have custom mechanisms for dumping their children.
-      if (isa<DeclStmt>(S) || isa<GenericSelectionExpr>(S) ||
-          isa<RequiresExpr>(S) || isa<OpenACCWaitConstruct>(S))
+      if (isa<DeclStmt, GenericSelectionExpr, RequiresExpr,
+              OpenACCWaitConstruct, SYCLKernelCallStmt>(S))
         return;
 
       if (Traversal == TK_IgnoreUnlessSpelledInSource &&
@@ -393,7 +393,9 @@ public:
     Visit(T->getPointeeType());
   }
   void VisitMemberPointerType(const MemberPointerType *T) {
-    Visit(T->getClass());
+    // FIXME: Provide a NestedNameSpecifier visitor.
+    Visit(T->getQualifier()->getAsType());
+    Visit(T->getMostRecentCXXRecordDecl());
     Visit(T->getPointeeType());
   }
   void VisitArrayType(const ArrayType *T) { Visit(T->getElementType()); }
@@ -485,7 +487,8 @@ public:
     }
   }
   void VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
-    Visit(TL.getClassTInfo()->getTypeLoc());
+    // FIXME: Provide NestedNamespecifierLoc visitor.
+    Visit(TL.getQualifierLoc().getTypeLoc());
   }
   void VisitVariableArrayTypeLoc(VariableArrayTypeLoc TL) {
     Visit(TL.getSizeExpr());
@@ -584,6 +587,12 @@ public:
   }
 
   void VisitTopLevelStmtDecl(const TopLevelStmtDecl *D) { Visit(D->getStmt()); }
+
+  void VisitOutlinedFunctionDecl(const OutlinedFunctionDecl *D) {
+    for (const ImplicitParamDecl *Parameter : D->parameters())
+      Visit(Parameter);
+    Visit(D->getBody());
+  }
 
   void VisitCapturedDecl(const CapturedDecl *D) { Visit(D->getBody()); }
 
@@ -813,6 +822,12 @@ public:
 
   void VisitCapturedStmt(const CapturedStmt *Node) {
     Visit(Node->getCapturedDecl());
+  }
+
+  void VisitSYCLKernelCallStmt(const SYCLKernelCallStmt *Node) {
+    Visit(Node->getOriginalStmt());
+    if (Traversal != TK_IgnoreUnlessSpelledInSource)
+      Visit(Node->getOutlinedFunctionDecl());
   }
 
   void VisitOMPExecutableDirective(const OMPExecutableDirective *Node) {

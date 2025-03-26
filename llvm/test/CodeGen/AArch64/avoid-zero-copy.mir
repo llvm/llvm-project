@@ -1,6 +1,8 @@
 # Check that we can remove the redundant save of constant registers such as $wzr
 # RUN: llc -mtriple=aarch64-unknown-linux %s -verify-machineinstrs -start-before=machine-cp -o - | FileCheck %s --check-prefix ASM
 # RUN: llc -mtriple=aarch64-unknown-linux %s -verify-machineinstrs -run-pass=machine-cp -o - | FileCheck %s
+
+# RUN: llc -mtriple=aarch64-unknown-linux %s -passes=machine-cp -o - | FileCheck %s
 --- |
   target triple = "aarch64-unknown-linux"
   declare i32 @bar(i32) nounwind

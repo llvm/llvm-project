@@ -14,6 +14,7 @@
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBThread.h"
+#include "lldb/API/SBThreadCollection.h"
 
 namespace lldb {
 
@@ -53,7 +54,7 @@ public:
   /// Set the output file path
   ///
   /// \param
-  ///   output_file a \class SBFileSpec object that describes the output file.
+  ///   output_file a \ref SBFileSpec object that describes the output file.
   void SetOutputFile(SBFileSpec output_file);
 
   /// Get the output file spec
@@ -111,11 +112,19 @@ public:
   ///   style specific regions.
   SBError AddMemoryRegionToSave(const SBMemoryRegionInfo &region);
 
+  /// Get an unsorted copy of all threads to save
+  ///
+  /// \returns
+  ///   An unsorted copy of all threads to save. If no process is specified
+  ///   an empty collection will be returned.
+  SBThreadCollection GetThreadsToSave() const;
+
   /// Reset all options.
   void Clear();
 
 protected:
   friend class SBProcess;
+  friend class SBThreadCollection;
   lldb_private::SaveCoreOptions &ref() const;
 
 private:

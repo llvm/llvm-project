@@ -18,7 +18,7 @@ namespace orc {
 StringRef MachODataCommonSectionName = "__DATA,__common";
 StringRef MachODataDataSectionName = "__DATA,__data";
 StringRef MachOEHFrameSectionName = "__TEXT,__eh_frame";
-StringRef MachOCompactUnwindInfoSectionName = "__TEXT,__unwind_info";
+StringRef MachOCompactUnwindSectionName = "__LD,__compact_unwind";
 StringRef MachOCStringSectionName = "__TEXT,__cstring";
 StringRef MachOModInitFuncSectionName = "__DATA,__mod_init_func";
 StringRef MachOObjCCatListSectionName = "__DATA,__objc_catlist";
@@ -46,6 +46,7 @@ StringRef MachOTextTextSectionName = "__TEXT,__text";
 StringRef MachOThreadBSSSectionName = "__DATA,__thread_bss";
 StringRef MachOThreadDataSectionName = "__DATA,__thread_data";
 StringRef MachOThreadVarsSectionName = "__DATA,__thread_vars";
+StringRef MachOUnwindInfoSectionName = "__TEXT,__unwind_info";
 
 StringRef MachOInitSectionNames[22] = {
     MachOModInitFuncSectionName,         MachOObjCCatListSectionName,

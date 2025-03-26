@@ -32,8 +32,8 @@ LanaiInstrInfo::LanaiInstrInfo()
 void LanaiInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator Position,
                                  const DebugLoc &DL,
-                                 MCRegister DestinationRegister,
-                                 MCRegister SourceRegister, bool KillSource,
+                                 Register DestinationRegister,
+                                 Register SourceRegister, bool KillSource,
                                  bool RenamableDest, bool RenamableSrc) const {
   if (!Lanai::GPRRegClass.contains(DestinationRegister, SourceRegister)) {
     llvm_unreachable("Impossible reg-to-reg copy");
@@ -48,7 +48,8 @@ void LanaiInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
     Register SourceRegister, bool IsKill, int FrameIndex,
     const TargetRegisterClass *RegisterClass,
-    const TargetRegisterInfo * /*RegisterInfo*/, Register /*VReg*/) const {
+    const TargetRegisterInfo * /*RegisterInfo*/, Register /*VReg*/,
+    MachineInstr::MIFlag /*Flags*/) const {
   DebugLoc DL;
   if (Position != MBB.end()) {
     DL = Position->getDebugLoc();
@@ -68,7 +69,8 @@ void LanaiInstrInfo::loadRegFromStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
     Register DestinationRegister, int FrameIndex,
     const TargetRegisterClass *RegisterClass,
-    const TargetRegisterInfo * /*RegisterInfo*/, Register /*VReg*/) const {
+    const TargetRegisterInfo * /*RegisterInfo*/, Register /*VReg*/,
+    MachineInstr::MIFlag /*Flags*/) const {
   DebugLoc DL;
   if (Position != MBB.end()) {
     DL = Position->getDebugLoc();

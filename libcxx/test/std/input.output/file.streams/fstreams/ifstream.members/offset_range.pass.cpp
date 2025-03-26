@@ -11,12 +11,6 @@
 // Test that we can seek using offsets larger than 32 bit, and that we can
 // retrieve file offsets larger than 32 bit.
 
-// On MSVC targets, we only use the 32 bit fseek/ftell functions. For MinGW
-// targets, we use fseeko/ftello, but the user needs to define
-// _FILE_OFFSET_BITS=64 to make them 64 bit.
-//
-// XFAIL: target={{.*}}-windows{{.*}}
-
 // On 32 bit Android platforms, off_t is 32 bit by default. By defining
 // _FILE_OFFSET_BITS=64, one gets a 64 bit off_t, but the corresponding
 // 64 bit ftello/fseeko functions are only available since Android API 24 (7.0).
@@ -27,6 +21,11 @@
 // Writing the >4 GB test file fails on 32 bit AIX.
 //
 // XFAIL: target=powerpc-{{.+}}-aix{{.*}}
+
+// By default, off_t is typically a 32-bit integer on ARMv7 Linux systems,
+// meaning it can represent file sizes up to 2GB (2^31 bytes) only.
+//
+// UNSUPPORTED: target=armv7-unknown-linux-gnueabihf
 
 #include <fstream>
 #include <iostream>
@@ -47,7 +46,7 @@ void test_tellg(std::streamoff total_size) {
     ofs.open(p, std::ios::out | std::ios::binary);
     assert(ofs.is_open());
     for (std::streamoff size = 0; size < total_size;) {
-      std::size_t n = std::min(static_cast<std::streamoff>(data.size()), total_size - size);
+      std::streamoff n = std::min(static_cast<std::streamoff>(data.size()), total_size - size);
       ofs.write(data.data(), n);
       size += n;
     }

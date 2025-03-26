@@ -1219,14 +1219,14 @@ body:             |
     %84:vgpr_32 = COPY %3347
     %86:vgpr_32 = COPY %3347:vgpr_32
     IGLP_OPT 2
-    %593:sreg_32 = V_READFIRSTLANE_B32 %11:vgpr_32, implicit $exec
-    %595:vgpr_32 = V_LSHL_ADD_U32_e64 %593:sreg_32, 4, %3329:vgpr_32, implicit $exec
+    %593:sreg_32_xm0 = V_READFIRSTLANE_B32 %11:vgpr_32, implicit $exec
+    %595:vgpr_32 = V_LSHL_ADD_U32_e64 %593:sreg_32_xm0, 4, %3329:vgpr_32, implicit $exec
     %597:vgpr_32 = nsw V_MUL_LO_U32_e64 %595:vgpr_32, %1.sub6:sgpr_512, implicit $exec
     %599:vgpr_32 = V_ADD_LSHL_U32_e64 %597:vgpr_32, %16:vgpr_32, 1, implicit $exec
     %601:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFEN %599:vgpr_32, %443:sgpr_128, 0, 0, 0, 0, implicit $exec
     %602:vgpr_32 = V_ADD_U32_e32 %18:sreg_32, %599:vgpr_32, implicit $exec
     %603:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFEN %602:vgpr_32, %443:sgpr_128, 0, 0, 0, 0, implicit $exec
-    %605:sreg_32 = S_LSHL_B32 %593:sreg_32, 7, implicit-def dead $scc
+    %605:sreg_32 = S_LSHL_B32 %593:sreg_32_xm0, 7, implicit-def dead $scc
     %606:vgpr_32 = V_ADD_LSHL_U32_e64 %25:vgpr_32, %605:sreg_32, 1, implicit $exec
     DS_WRITE_B128_gfx9 %606:vgpr_32, %601:vreg_128_align2, 0, 0, implicit $exec
     DS_WRITE_B128_gfx9 %606:vgpr_32, %603:vreg_128_align2, 1024, 0, implicit $exec
@@ -1732,7 +1732,7 @@ body:             |
     undef %2978.sub0:vreg_64_align2 = V_PERM_B32_e64 %805.sub1:vreg_64_align2, %803.sub1:vreg_64_align2, %1424:sreg_32, implicit $exec
     %3005.sub1:vreg_64_align2 = V_PERM_B32_e64 %809.sub1:vreg_64_align2, %807.sub1:vreg_64_align2, %1422:sreg_32, implicit $exec
     %2978.sub1:vreg_64_align2 = V_PERM_B32_e64 %809.sub1:vreg_64_align2, %807.sub1:vreg_64_align2, %1424:sreg_32, implicit $exec
-    %1442:vgpr_32 = V_ADD_U32_e32 %593:sreg_32, %15:vgpr_32, implicit $exec
+    %1442:vgpr_32 = V_ADD_U32_e32 %593:sreg_32_xm0, %15:vgpr_32, implicit $exec
     %1444:vgpr_32 = V_AND_B32_e32 536870911, %1442:vgpr_32, implicit $exec
     %1446:vgpr_32 = nsw V_MUL_LO_U32_e64 %1444:vgpr_32, %494:sreg_32, implicit $exec
     %1447:vgpr_32 = V_ADD_LSHL_U32_e64 %47:vgpr_32, %1446:vgpr_32, 1, implicit $exec

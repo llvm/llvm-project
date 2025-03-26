@@ -126,6 +126,7 @@ enum TokKind {
   XInterleave,
   XSubstr,
   XFind,
+  XMatch,
   XCast,
   XSubst,
   XForEach,
@@ -234,7 +235,7 @@ public:
   std::pair<int64_t, unsigned> getCurBinaryIntVal() const {
     assert(CurCode == tgtok::BinaryIntVal &&
            "This token isn't a binary integer");
-    return std::make_pair(CurIntVal, (CurPtr - TokStart)-2);
+    return {CurIntVal, (CurPtr - TokStart) - 2};
   }
 
   SMLoc getLoc() const;

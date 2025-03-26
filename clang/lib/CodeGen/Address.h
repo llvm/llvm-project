@@ -197,10 +197,7 @@ public:
 
   /// Return the type of the pointer value.
   llvm::PointerType *getType() const {
-    return llvm::PointerType::get(
-        ElementType,
-        llvm::cast<llvm::PointerType>(Pointer.getPointer()->getType())
-            ->getAddressSpace());
+    return llvm::cast<llvm::PointerType>(Pointer.getPointer()->getType());
   }
 
   /// Return the type of the values stored in this address.

@@ -16,12 +16,17 @@
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/message.h"
+#include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include <functional>
 
 using namespace std::placeholders; // _1, _2, &c. for std::bind()
 
 namespace Fortran::evaluate {
+
+FoldingContext &GetFoldingContextFrom(const Symbol &symbol) {
+  return symbol.owner().context().foldingContext();
+}
 
 bool IsImpliedShape(const Symbol &original) {
   const Symbol &symbol{ResolveAssociations(original)};
@@ -483,7 +488,7 @@ static MaybeExtentExpr GetAssociatedExtent(
     const Symbol &symbol, int dimension) {
   if (const auto *assoc{symbol.detailsIf<semantics::AssocEntityDetails>()};
       assoc && !assoc->rank()) { // not SELECT RANK case
-    if (auto shape{GetShape(assoc->expr())};
+    if (auto shape{GetShape(GetFoldingContextFrom(symbol), assoc->expr())};
         shape && dimension < static_cast<int>(shape->size())) {
       if (auto &extent{shape->at(dimension)};
           // Don't return a non-constant extent, as the variables that
@@ -519,7 +524,8 @@ MaybeExtentExpr GetExtent(
   }
   if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
     if (IsImpliedShape(symbol) && details->init()) {
-      if (auto shape{GetShape(symbol, invariantOnly)}) {
+      if (auto shape{
+              GetShape(GetFoldingContextFrom(symbol), symbol, invariantOnly)}) {
         if (dimension < static_cast<int>(shape->size())) {
           return std::move(shape->at(dimension));
         }
@@ -568,7 +574,8 @@ MaybeExtentExpr GetExtent(const Subscript &subscript, const NamedEntity &base,
                 MaybeExtentExpr{triplet.stride()});
           },
           [&](const IndirectSubscriptIntegerExpr &subs) -> MaybeExtentExpr {
-            if (auto shape{GetShape(subs.value())};
+            if (auto shape{GetShape(
+                    GetFoldingContextFrom(base.GetLastSymbol()), subs.value())};
                 shape && GetRank(*shape) == 1) {
               // vector-valued subscript
               return std::move(shape->at(0));
@@ -1166,8 +1173,10 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
       if (call.arguments().size() >= 2) {
         return (*this)(call.arguments()[1]); // MASK=
       }
-    } else if (intrinsic->characteristics.value().attrs.test(characteristics::
-                       Procedure::Attr::NullPointer)) { // NULL(MOLD=)
+    } else if (intrinsic->characteristics.value().attrs.test(
+                   characteristics::Procedure::Attr::NullPointer) ||
+        intrinsic->characteristics.value().attrs.test(
+            characteristics::Procedure::Attr::NullAllocatable)) { // NULL(MOLD=)
       return (*this)(call.arguments());
     } else {
       // TODO: shapes of other non-elemental intrinsic results

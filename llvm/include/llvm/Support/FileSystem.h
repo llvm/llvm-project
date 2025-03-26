@@ -44,8 +44,6 @@
 #include <system_error>
 #include <vector>
 
-#include <sys/stat.h>
-
 namespace llvm {
 namespace sys {
 namespace fs {

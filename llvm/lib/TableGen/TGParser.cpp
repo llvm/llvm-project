@@ -286,11 +286,13 @@ bool TGParser::SetValue(Record *CurRec, SMLoc Loc, const Init *ValName,
       InitType = (Twine("' of type bit initializer with length ") +
                   Twine(BI->getNumBits())).str();
     else if (const auto *TI = dyn_cast<TypedInit>(V))
-      InitType = (Twine("' of type '") + TI->getType()->getAsString()).str();
+      InitType =
+          (Twine("' of type '") + TI->getType()->getAsString() + "'").str();
+
     return Error(Loc, "Field '" + ValName->getAsUnquotedString() +
                           "' of type '" + RV->getType()->getAsString() +
-                          "' is incompatible with value '" +
-                          V->getAsString() + InitType + "'");
+                          "' is incompatible with value '" + V->getAsString() +
+                          InitType);
   }
   return false;
 }
@@ -1454,6 +1456,7 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
   }
 
   case tgtok::XConcat:
+  case tgtok::XMatch:
   case tgtok::XADD:
   case tgtok::XSUB:
   case tgtok::XMUL:
@@ -1486,6 +1489,9 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
     switch (OpTok) {
     default: llvm_unreachable("Unhandled code!");
     case tgtok::XConcat: Code = BinOpInit::CONCAT; break;
+    case tgtok::XMatch:
+      Code = BinOpInit::MATCH;
+      break;
     case tgtok::XADD:    Code = BinOpInit::ADD; break;
     case tgtok::XSUB:    Code = BinOpInit::SUB; break;
     case tgtok::XMUL:    Code = BinOpInit::MUL; break;
@@ -1523,6 +1529,10 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
     switch (OpTok) {
     default:
       llvm_unreachable("Unhandled code!");
+    case tgtok::XMatch:
+      Type = BitRecTy::get(Records);
+      ArgType = StringRecTy::get(Records);
+      break;
     case tgtok::XConcat:
     case tgtok::XSetDagOp:
       Type = DagRecTy::get(Records);
@@ -3162,7 +3172,7 @@ void TGParser::ParseDagArgList(
         Lex.Lex();  // eat the VarName.
       }
 
-      Result.push_back(std::make_pair(Val, VarName));
+      Result.emplace_back(Val, VarName);
     }
     if (!consume(tgtok::comma))
       break;
@@ -4152,9 +4162,8 @@ bool TGParser::ParseMultiClass() {
     return TokError("expected identifier after multiclass for name");
   std::string Name = Lex.getCurStrVal();
 
-  auto Result =
-    MultiClasses.insert(std::make_pair(Name,
-                    std::make_unique<MultiClass>(Name, Lex.getLoc(),Records)));
+  auto Result = MultiClasses.try_emplace(
+      Name, std::make_unique<MultiClass>(Name, Lex.getLoc(), Records));
 
   if (!Result.second)
     return TokError("multiclass '" + Name + "' already defined");

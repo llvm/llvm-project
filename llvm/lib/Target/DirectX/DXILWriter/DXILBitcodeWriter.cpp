@@ -243,6 +243,10 @@ private:
   }
   void writeDIDerivedType(const DIDerivedType *N,
                           SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
+  void writeDISubrangeType(const DISubrangeType *N,
+                           SmallVectorImpl<uint64_t> &Record, unsigned Abbrev) {
+    llvm_unreachable("DXIL cannot contain DISubrangeType Nodes");
+  }
   void writeDICompositeType(const DICompositeType *N,
                             SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   void writeDISubroutineType(const DISubroutineType *N,
@@ -644,8 +648,6 @@ uint64_t DXILBitcodeWriter::getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NO_ALIAS;
   case Attribute::NoBuiltin:
     return bitc::ATTR_KIND_NO_BUILTIN;
-  case Attribute::NoCapture:
-    return bitc::ATTR_KIND_NO_CAPTURE;
   case Attribute::NoDuplicate:
     return bitc::ATTR_KIND_NO_DUPLICATE;
   case Attribute::NoImplicitFloat:
@@ -1159,8 +1161,8 @@ void DXILBitcodeWriter::writeValueSymbolTableForwardDecl() {}
 void DXILBitcodeWriter::writeModuleInfo() {
   // Emit various pieces of data attached to a module.
   if (!M.getTargetTriple().empty())
-    writeStringRecord(Stream, bitc::MODULE_CODE_TRIPLE, M.getTargetTriple(),
-                      0 /*TODO*/);
+    writeStringRecord(Stream, bitc::MODULE_CODE_TRIPLE,
+                      M.getTargetTriple().str(), 0 /*TODO*/);
   const std::string &DL = M.getDataLayoutStr();
   if (!DL.empty())
     writeStringRecord(Stream, bitc::MODULE_CODE_DATALAYOUT, DL, 0 /*TODO*/);

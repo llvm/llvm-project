@@ -12,7 +12,6 @@ add_flang_library(FIRDialect
 
   DEPENDS
   CanonicalizationPatternsIncGen
-  MLIRIR
   FIROpsIncGen
   CUFAttrsIncGen
   intrinsics_gen
@@ -20,14 +19,19 @@ add_flang_library(FIRDialect
   LINK_LIBS
   CUFAttrs
   FIRDialectSupport
-  MLIRArithDialect
-  MLIRBuiltinToLLVMIRTranslation
-  MLIROpenMPToLLVM
-  MLIRLLVMToLLVMIRTranslation
-  MLIRTargetLLVMIRExport
 
   LINK_COMPONENTS
   AsmParser
   AsmPrinter
   Remarks
+
+  MLIR_DEPS
+  MLIRIR
+
+  MLIR_LIBS
+  MLIRArithDialect
+  MLIRBuiltinToLLVMIRTranslation
+  MLIROpenMPToLLVM
+  MLIRLLVMToLLVMIRTranslation
+  MLIRTargetLLVMIRExport
 )

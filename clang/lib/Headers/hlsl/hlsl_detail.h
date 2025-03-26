@@ -1,4 +1,4 @@
-//===----- detail.h - HLSL definitions for intrinsics ----------===//
+//===----- hlsl_detail.h - HLSL definitions for intrinsics ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -41,44 +41,14 @@ constexpr enable_if_t<sizeof(U) == sizeof(T), U> bit_cast(T F) {
   return __builtin_bit_cast(U, F);
 }
 
-constexpr vector<uint, 4> d3d_color_to_ubyte4_impl(vector<float, 4> V) {
-  // Use the same scaling factor used by FXC, and DXC for DXIL
-  // (i.e., 255.001953)
-  // https://github.com/microsoft/DirectXShaderCompiler/blob/070d0d5a2beacef9eeb51037a9b04665716fd6f3/lib/HLSL/HLOperationLower.cpp#L666C1-L697C2
-  // The DXC implementation refers to a comment on the following stackoverflow
-  // discussion to justify the scaling factor: "Built-in rounding, necessary
-  // because of truncation. 0.001953 * 256 = 0.5"
-  // https://stackoverflow.com/questions/52103720/why-does-d3dcolortoubyte4-multiplies-components-by-255-001953f
-  return V.zyxw * 255.001953f;
-}
-
-template <typename T>
-constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
-length_impl(T X) {
-  return __builtin_elementwise_abs(X);
-}
+template <typename T> struct is_arithmetic {
+  static const bool Value = __is_arithmetic(T);
+};
 
 template <typename T, int N>
-constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
-length_vec_impl(vector<T, N> X) {
-  return __builtin_elementwise_sqrt(__builtin_hlsl_dot(X, X));
-}
+using HLSL_FIXED_VECTOR =
+    vector<__detail::enable_if_t<(N > 1 && N <= 4), T>, N>;
 
-template <typename T>
-constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
-distance_impl(T X, T Y) {
-  return length_impl(X - Y);
-}
-
-template <typename T, int N>
-constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
-distance_vec_impl(vector<T, N> X, vector<T, N> Y) {
-#if (__has_builtin(__builtin_spirv_distance))
-  return __builtin_spirv_distance(X, Y);
-#else
-  return length_vec_impl(X - Y);
-#endif
-}
 } // namespace __detail
 } // namespace hlsl
 #endif //_HLSL_HLSL_DETAILS_H_

@@ -183,7 +183,7 @@ void LegalizerHelper::insertParts(Register DstReg,
   // Merge sub-vectors with different number of elements and insert into DstReg.
   if (ResultTy.isVector()) {
     assert(LeftoverRegs.size() == 1 && "Expected one leftover register");
-    SmallVector<Register, 8> AllRegs(PartRegs.begin(), PartRegs.end());
+    SmallVector<Register, 8> AllRegs(PartRegs);
     AllRegs.append(LeftoverRegs.begin(), LeftoverRegs.end());
     return mergeMixedSubvectors(DstReg, AllRegs);
   }
@@ -411,6 +411,10 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
   } while (0)
 
   switch (Opcode) {
+  case TargetOpcode::G_LROUND:
+    RTLIBCASE(LROUND_F);
+  case TargetOpcode::G_LLROUND:
+    RTLIBCASE(LLROUND_F);
   case TargetOpcode::G_MUL:
     RTLIBCASE_INT(MUL_I);
   case TargetOpcode::G_SDIV:
@@ -1267,6 +1271,8 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
       return Status;
     break;
   }
+  case TargetOpcode::G_LROUND:
+  case TargetOpcode::G_LLROUND:
   case TargetOpcode::G_INTRINSIC_LRINT:
   case TargetOpcode::G_INTRINSIC_LLRINT: {
     LLT LLTy = MRI.getType(MI.getOperand(1).getReg());
@@ -3342,6 +3348,15 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
   }
+  case TargetOpcode::G_VECREDUCE_ADD: {
+    if (TypeIdx != 1)
+      return UnableToLegalize;
+    Observer.changingInstr(MI);
+    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);
+    widenScalarDst(MI, WideTy.getScalarType(), 0, TargetOpcode::G_TRUNC);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
   case TargetOpcode::G_VECREDUCE_FADD:
   case TargetOpcode::G_VECREDUCE_FMUL:
   case TargetOpcode::G_VECREDUCE_FMIN:
@@ -4214,7 +4229,7 @@ LegalizerHelper::scalarizeVectorBooleanStore(GStore &StoreMI) {
     unsigned NumBits = MemTy.getSizeInBits();
     LLT IntTy = LLT::scalar(NumBits);
     auto CurrVal = MIRBuilder.buildConstant(IntTy, 0);
-    LLT IdxTy = getLLTForMVT(TLI.getVectorIdxTy(MF.getDataLayout()));
+    LLT IdxTy = TLI.getVectorIdxLLT(MF.getDataLayout());
 
     for (unsigned I = 0, E = MemTy.getNumElements(); I < E; ++I) {
       auto Elt = MIRBuilder.buildExtractVectorElement(
@@ -6124,6 +6139,8 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_FCANONICALIZE:
   case TargetOpcode::G_SEXT_INREG:
   case TargetOpcode::G_ABS:
+  case TargetOpcode::G_CTLZ:
+  case TargetOpcode::G_CTPOP:
     if (TypeIdx != 0)
       return UnableToLegalize;
     Observer.changingInstr(MI);
@@ -6262,7 +6279,7 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     auto NeutralElement = getNeutralElementForVecReduce(
         MI.getOpcode(), MIRBuilder, MoreTy.getElementType());
 
-    LLT IdxTy(TLI.getVectorIdxTy(MIRBuilder.getDataLayout()));
+    LLT IdxTy(TLI.getVectorIdxLLT(MIRBuilder.getDataLayout()));
     for (size_t i = OrigTy.getNumElements(), e = MoreTy.getNumElements();
          i != e; i++) {
       auto Idx = MIRBuilder.buildConstant(IdxTy, i);
@@ -6406,7 +6423,7 @@ void LegalizerHelper::multiplyRegisters(SmallVectorImpl<Register> &DstRegs,
       B.buildMul(NarrowTy, Src1Regs[DstIdx], Src2Regs[DstIdx]).getReg(0);
   DstRegs[DstIdx] = FactorSum;
 
-  unsigned CarrySumPrevDstIdx;
+  Register CarrySumPrevDstIdx;
   SmallVector<Register, 4> Factors;
 
   for (DstIdx = 1; DstIdx < DstParts; DstIdx++) {
@@ -7255,7 +7272,7 @@ LegalizerHelper::lowerFunnelShiftAsShifts(MachineInstr &MI) {
     }
   }
 
-  MIRBuilder.buildOr(Dst, ShX, ShY);
+  MIRBuilder.buildOr(Dst, ShX, ShY, MachineInstr::Disjoint);
   MI.eraseFromParent();
   return Legalized;
 }
@@ -7801,13 +7818,13 @@ LegalizerHelper::lowerFPTOINT_SAT(MachineInstr &MI) {
   if (AreExactFloatBounds) {
     // Clamp Src by MinFloat from below. If Src is NaN the result is MinFloat.
     auto MaxC = MIRBuilder.buildFConstant(SrcTy, MinFloat);
-    auto MaxP = MIRBuilder.buildFCmp(CmpInst::FCMP_ULT,
+    auto MaxP = MIRBuilder.buildFCmp(CmpInst::FCMP_OGT,
                                      SrcTy.changeElementSize(1), Src, MaxC);
     auto Max = MIRBuilder.buildSelect(SrcTy, MaxP, Src, MaxC);
     // Clamp by MaxFloat from above. NaN cannot occur.
     auto MinC = MIRBuilder.buildFConstant(SrcTy, MaxFloat);
     auto MinP =
-        MIRBuilder.buildFCmp(CmpInst::FCMP_OGT, SrcTy.changeElementSize(1), Max,
+        MIRBuilder.buildFCmp(CmpInst::FCMP_OLT, SrcTy.changeElementSize(1), Max,
                              MinC, MachineInstr::FmNoNans);
     auto Min =
         MIRBuilder.buildSelect(SrcTy, MinP, Max, MinC, MachineInstr::FmNoNans);

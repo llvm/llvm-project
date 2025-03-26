@@ -99,16 +99,29 @@ ShouldDiagnoseAvailabilityOfDecl(Sema &S, const NamedDecl *D,
   // For typedefs, if the typedef declaration appears available look
   // to the underlying type to see if it is more restrictive.
   while (const auto *TD = dyn_cast<TypedefNameDecl>(D)) {
-    if (Result == AR_Available) {
-      if (const auto *TT = TD->getUnderlyingType()->getAs<TagType>()) {
+    if (Result != AR_Available)
+      break;
+    for (const Type *T = TD->getUnderlyingType().getTypePtr(); /**/; /**/) {
+      if (auto *TT = dyn_cast<TagType>(T)) {
         D = TT->getDecl();
-        Result = D->getAvailability(Message);
+      } else if (isa<SubstTemplateTypeParmType>(T)) {
+        // A Subst* node represents a use through a template.
+        // Any uses of the underlying declaration happened through it's template
+        // specialization.
+        goto done;
+      } else {
+        const Type *NextT =
+            T->getLocallyUnqualifiedSingleStepDesugaredType().getTypePtr();
+        if (NextT == T)
+          goto done;
+        T = NextT;
         continue;
       }
+      Result = D->getAvailability(Message);
+      break;
     }
-    break;
   }
-
+done:
   // For alias templates, get the underlying declaration.
   if (const auto *ADecl = dyn_cast<TypeAliasTemplateDecl>(D)) {
     D = ADecl->getTemplatedDecl();

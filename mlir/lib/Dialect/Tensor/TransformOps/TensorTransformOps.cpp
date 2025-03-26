@@ -100,11 +100,6 @@ void transform::ApplyFoldTensorEmptyPatternsOp::populatePatterns(
   tensor::populateFoldTensorEmptyPatterns(patterns, getFoldSingleUseOnly());
 }
 
-void transform::ApplyFoldIntoPackAndUnpackPatternsOp::populatePatterns(
-    RewritePatternSet &patterns) {
-  tensor::populateFoldIntoPackAndUnpackPatterns(patterns);
-}
-
 void transform::ApplyFoldTensorSubsetOpsPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   tensor::populateFoldTensorSubsetOpPatterns(patterns);
@@ -123,6 +118,11 @@ void transform::ApplyMergeConsecutiveInsertExtractSlicePatternsOp::
 void transform::ApplyReassociativeReshapeFoldingPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   tensor::populateReassociativeReshapeFoldingPatterns(patterns);
+}
+
+void transform::ApplyBubbleUpExtractSlicePatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  tensor::populateBubbleUpExtractSliceOpPatterns(patterns);
 }
 
 void transform::ApplyRewriteTensorOpsAsConstantPatternsOp::populatePatterns(

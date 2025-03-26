@@ -1,11 +1,20 @@
 function(add_fp_unittest name)
   cmake_parse_arguments(
     "MATH_UNITTEST"
-    "NEED_MPFR;UNIT_TEST_ONLY;HERMETIC_TEST_ONLY" # Optional arguments
+    "NEED_MPFR;NEED_MPC;UNIT_TEST_ONLY;HERMETIC_TEST_ONLY" # Optional arguments
     "" # Single value arguments
     "LINK_LIBRARIES;DEPENDS" # Multi-value arguments
     ${ARGN}
   )
+
+  if(MATH_UNITTEST_NEED_MPC)
+    set(MATH_UNITTEST_NEED_MPFR TRUE)
+    if(NOT LIBC_TESTS_CAN_USE_MPC)
+      message(VERBOSE "Complex test ${name} will be skipped as MPC library is not available.")
+      return()
+    endif()
+    list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPCWrapper)
+  endif()
 
   if(MATH_UNITTEST_NEED_MPFR)
     if(NOT LIBC_TESTS_CAN_USE_MPFR)
@@ -68,6 +77,7 @@ add_subdirectory(inttypes)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(fcntl)
+  add_subdirectory(poll)
   add_subdirectory(sched)
   add_subdirectory(sys)
   add_subdirectory(termios)

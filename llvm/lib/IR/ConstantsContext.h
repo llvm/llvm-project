@@ -380,7 +380,7 @@ struct InlineAsmKeyType {
   using TypeClass = ConstantInfo<InlineAsm>::TypeClass;
 
   InlineAsm *create(TypeClass *Ty) const {
-    assert(PointerType::getUnqual(FTy) == Ty);
+    assert(PointerType::getUnqual(FTy->getContext()) == Ty);
     return new InlineAsm(FTy, std::string(AsmString), std::string(Constraints),
                          HasSideEffects, IsAlignStack, AsmDialect, CanThrow);
   }

@@ -47,6 +47,6 @@ end subroutine
 ! CHECK:             %[[VAL_26:.*]] = fir.alloca !fir.type<_QFtest_default_initTt{i:i32}> {bindc_name = "a", pinned, uniq_name = "_QFtest_default_initEa"}
 ! CHECK:             %[[VAL_27:.*]] = fir.embox %[[VAL_26]] : (!fir.ref<!fir.type<_QFtest_default_initTt{i:i32}>>) -> !fir.box<!fir.type<_QFtest_default_initTt{i:i32}>>
 ! CHECK:             %[[VAL_30:.*]] = fir.convert %[[VAL_27]] : (!fir.box<!fir.type<_QFtest_default_initTt{i:i32}>>) -> !fir.box<none>
-! CHECK:             %[[VAL_32:.*]] = fir.call @_FortranAInitialize(%[[VAL_30]], {{.*}}
+! CHECK:             fir.call @_FortranAInitialize(%[[VAL_30]], {{.*}}
 ! CHECK:             %[[VAL_33:.*]]:2 = hlfir.declare %[[VAL_26]] {uniq_name = "_QFtest_default_initEa"} : (!fir.ref<!fir.type<_QFtest_default_initTt{i:i32}>>) -> (!fir.ref<!fir.type<_QFtest_default_initTt{i:i32}>>, !fir.ref<!fir.type<_QFtest_default_initTt{i:i32}>>)
 ! CHECK:           }

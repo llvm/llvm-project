@@ -13,7 +13,8 @@ RUN apt-get update && \
     ninja-build \
     python3 \
     git \
-    curl
+    curl \
+    zlib1g-dev
 
 RUN curl -O -L https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-$LLVM_VERSION.tar.gz && tar -xf llvmorg-$LLVM_VERSION.tar.gz
 
@@ -38,8 +39,8 @@ RUN cmake -B ./build -G Ninja ./llvm \
 
 RUN ninja -C ./build stage2-clang-bolt stage2-install-distribution && ninja -C ./build install-distribution
 
-FROM base
-    
+FROM base as ci-container
+
 COPY --from=stage1-toolchain $LLVM_SYSROOT $LLVM_SYSROOT
 
 # Need to install curl for hendrikmuhs/ccache-action
@@ -48,7 +49,7 @@ COPY --from=stage1-toolchain $LLVM_SYSROOT $LLVM_SYSROOT
 # Need git for SPIRV-Tools tests.
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    binutils \ 
+    binutils \
     cmake \
     curl \
     git \
@@ -58,7 +59,6 @@ RUN apt-get update && \
     perl-modules \
     python3-psutil \
     sudo \
-
     # These are needed by the premerge pipeline. Pip is used to install
     # dependent python packages and ccache is used for build caching. File and
     # tzdata are used for tests.
@@ -91,4 +91,15 @@ RUN adduser gha sudo
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 USER gha
+WORKDIR /home/gha
+
+FROM ci-container as ci-container-agent
+
+ENV GITHUB_RUNNER_VERSION=2.322.0
+
+RUN mkdir actions-runner && \
+    cd actions-runner && \
+    curl -O -L https://github.com/actions/runner/releases/download/v$GITHUB_RUNNER_VERSION/actions-runner-linux-x64-$GITHUB_RUNNER_VERSION.tar.gz && \
+    tar xzf ./actions-runner-linux-x64-$GITHUB_RUNNER_VERSION.tar.gz && \
+    rm ./actions-runner-linux-x64-$GITHUB_RUNNER_VERSION.tar.gz
 

@@ -21,6 +21,7 @@
 #include "NVPTXTargetObjectFile.h"
 #include "NVPTXTargetTransformInfo.h"
 #include "TargetInfo/NVPTXTargetInfo.h"
+#include "llvm/Analysis/KernelInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -97,8 +98,9 @@ void initializeNVPTXLowerAggrCopiesPass(PassRegistry &);
 void initializeNVPTXLowerAllocaPass(PassRegistry &);
 void initializeNVPTXLowerUnreachablePass(PassRegistry &);
 void initializeNVPTXCtorDtorLoweringLegacyPass(PassRegistry &);
-void initializeNVPTXLowerArgsPass(PassRegistry &);
+void initializeNVPTXLowerArgsLegacyPassPass(PassRegistry &);
 void initializeNVPTXProxyRegErasurePass(PassRegistry &);
+void initializeNVPTXForwardParamsPassPass(PassRegistry &);
 void initializeNVVMIntrRangePass(PassRegistry &);
 void initializeNVVMReflectPass(PassRegistry &);
 void initializeNVPTXAAWrapperPassPass(PassRegistry &);
@@ -120,12 +122,13 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXAllocaHoistingPass(PR);
   initializeNVPTXAssignValidGlobalNamesPass(PR);
   initializeNVPTXAtomicLowerPass(PR);
-  initializeNVPTXLowerArgsPass(PR);
+  initializeNVPTXLowerArgsLegacyPassPass(PR);
   initializeNVPTXLowerAllocaPass(PR);
   initializeNVPTXLowerUnreachablePass(PR);
   initializeNVPTXCtorDtorLoweringLegacyPass(PR);
   initializeNVPTXLowerAggrCopiesPass(PR);
   initializeNVPTXProxyRegErasurePass(PR);
+  initializeNVPTXForwardParamsPassPass(PR);
   initializeNVPTXDAGToDAGISelLegacyPass(PR);
   initializeNVPTXAAWrapperPassPass(PR);
   initializeNVPTXExternalAAWrapperPass(PR);
@@ -138,6 +141,9 @@ static std::string computeDataLayout(bool is64Bit, bool UseShortPointers) {
     Ret += "-p:32:32";
   else if (UseShortPointers)
     Ret += "-p3:32:32-p4:32:32-p5:32:32";
+
+  // Tensor Memory (addrspace:6) is always 32-bits.
+  Ret += "-p6:32:32";
 
   Ret += "-i64:64-i128:128-v16:16-v32:32-n16:32:64";
 
@@ -266,6 +272,15 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           FPM.addPass(NVPTXCopyByValArgsPass());
         PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       });
+
+  if (!NoKernelInfoEndLTO) {
+    PB.registerFullLinkTimeOptimizationLastEPCallback(
+        [this](ModulePassManager &PM, OptimizationLevel Level) {
+          FunctionPassManager FPM;
+          FPM.addPass(KernelInfoPrinter(this));
+          PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+        });
+  }
 }
 
 TargetTransformInfo
@@ -416,6 +431,7 @@ bool NVPTXPassConfig::addInstSelector() {
 }
 
 void NVPTXPassConfig::addPreRegAlloc() {
+  addPass(createNVPTXForwardParamsPass());
   // Remove Proxy Register pseudo instructions used to keep `callseq_end` alive.
   addPass(createNVPTXProxyRegErasurePass());
 }
@@ -493,7 +509,7 @@ void NVPTXPassConfig::addMachineSSAOptimization() {
   addPass(&EarlyMachineLICMID);
   addPass(&MachineCSELegacyID);
 
-  addPass(&MachineSinkingID);
+  addPass(&MachineSinkingLegacyID);
   printAndVerify("After Machine LICM, CSE and Sinking passes");
 
   addPass(&PeepholeOptimizerLegacyID);

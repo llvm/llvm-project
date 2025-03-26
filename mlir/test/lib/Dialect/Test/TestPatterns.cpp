@@ -1193,22 +1193,31 @@ public:
   }
 };
 
-/// This pattern matches a test.duplicate_block_args op and duplicates all
-/// block arguments.
-class TestDuplicateBlockArgs
-    : public OpConversionPattern<DuplicateBlockArgsOp> {
-  using OpConversionPattern<DuplicateBlockArgsOp>::OpConversionPattern;
+/// This pattern matches a test.convert_block_args op. It either:
+/// a) Duplicates all block arguments,
+/// b) or: drops all block arguments and replaces each with 2x the first
+///    operand.
+class TestConvertBlockArgs : public OpConversionPattern<ConvertBlockArgsOp> {
+  using OpConversionPattern<ConvertBlockArgsOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(DuplicateBlockArgsOp op, OpAdaptor adaptor,
+  matchAndRewrite(ConvertBlockArgsOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     if (op.getIsLegal())
       return failure();
-    rewriter.startOpModification(op);
     Block *body = &op.getBody().front();
     TypeConverter::SignatureConversion result(body->getNumArguments());
-    for (auto it : llvm::enumerate(body->getArgumentTypes()))
-      result.addInputs(it.index(), {it.value(), it.value()});
+    for (auto it : llvm::enumerate(body->getArgumentTypes())) {
+      if (op.getReplaceWithOperand()) {
+        result.remapInput(it.index(), {adaptor.getVal(), adaptor.getVal()});
+      } else if (op.getDuplicate()) {
+        result.addInputs(it.index(), {it.value(), it.value()});
+      } else {
+        // No action specified. Pattern does not apply.
+        return failure();
+      }
+    }
+    rewriter.startOpModification(op);
     rewriter.applySignatureConversion(body, result, getTypeConverter());
     op.setIsLegal(true);
     rewriter.finalizeOpModification(op);
@@ -1286,7 +1295,7 @@ struct TestTypeConverter : public TypeConverter {
 
     // Convert I64 to F64.
     if (t.isSignlessInteger(64)) {
-      results.push_back(FloatType::getF64(t.getContext()));
+      results.push_back(Float64Type::get(t.getContext()));
       return success();
     }
 
@@ -1298,7 +1307,7 @@ struct TestTypeConverter : public TypeConverter {
 
     // Split F32 into F16,F16.
     if (t.isF32()) {
-      results.assign(2, FloatType::getF16(t.getContext()));
+      results.assign(2, Float16Type::get(t.getContext()));
       return success();
     }
 
@@ -1355,7 +1364,7 @@ struct TestLegalizePatternDriver
     patterns.add<TestDropOpSignatureConversion, TestDropAndReplaceInvalidOp,
                  TestPassthroughInvalidOp, TestMultiple1ToNReplacement>(
         &getContext(), converter);
-    patterns.add<TestDuplicateBlockArgs>(converter, &getContext());
+    patterns.add<TestConvertBlockArgs>(converter, &getContext());
     mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(patterns,
                                                               converter);
     mlir::populateCallOpTypeConversionPattern(patterns, converter);
@@ -1406,8 +1415,8 @@ struct TestLegalizePatternDriver
     target.addDynamicallyLegalOp<TestOpInPlaceSelfFold>(
         [](TestOpInPlaceSelfFold op) { return op.getFolded(); });
 
-    target.addDynamicallyLegalOp<DuplicateBlockArgsOp>(
-        [](DuplicateBlockArgsOp op) { return op.getIsLegal(); });
+    target.addDynamicallyLegalOp<ConvertBlockArgsOp>(
+        [](ConvertBlockArgsOp op) { return op.getIsLegal(); });
 
     // Handle a partial conversion.
     if (mode == ConversionMode::Partial) {
@@ -1826,7 +1835,7 @@ struct TestTypeConversionDriver
         return type;
       // Allow converting BF16/F16/F32 to F64.
       if (type.isBF16() || type.isF16() || type.isF32())
-        return FloatType::getF64(type.getContext());
+        return Float64Type::get(type.getContext());
       // Otherwise, the type is illegal.
       return nullptr;
     });

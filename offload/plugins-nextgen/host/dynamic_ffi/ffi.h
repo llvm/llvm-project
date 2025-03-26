@@ -38,8 +38,8 @@ typedef enum {
   FFI_BAD_ARGTYPE
 } ffi_status;
 
-// These are target depenent so we set them manually for each ABI by referencing
-// the FFI source.
+// These are target dependent so we set them manually for each ABI by
+// referencing the FFI source.
 typedef enum ffi_abi {
 #if (defined(_M_X64) || defined(__x86_64__))
   FFI_DEFAULT_ABI = 2, // FFI_UNIX64.
@@ -53,6 +53,16 @@ typedef enum ffi_abi {
 #else
 #error "Unknown ABI"
 #endif
+} ffi_abi;
+
+typedef struct {
+  ffi_abi abi;
+  unsigned nargs;
+  ffi_type **arg_types;
+  ffi_type *rtype;
+  unsigned bytes;
+  unsigned flags;
+  long long extra_fields; // Longest extra field defined in the FFI sources
 } ffi_cif;
 
 #ifdef __cplusplus

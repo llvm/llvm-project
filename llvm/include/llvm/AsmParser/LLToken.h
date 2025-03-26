@@ -185,6 +185,7 @@ enum Kind {
   kw_m68k_rtdcc,
   kw_graalcc,
   kw_riscv_vector_cc,
+  kw_riscv_vls_cc,
 
   // Attributes:
   kw_attributes,
@@ -201,11 +202,13 @@ enum Kind {
   kw_readwrite,
   kw_argmem,
   kw_inaccessiblemem,
+  kw_errnomem,
 
-  // Legacy memory attributes:
+  // Legacy attributes:
   kw_argmemonly,
   kw_inaccessiblememonly,
   kw_inaccessiblemem_or_argmemonly,
+  kw_nocapture,
 
   // Captures attribute:
   kw_address,
@@ -497,6 +500,7 @@ enum Kind {
   DwarfMacinfo,     // DW_MACINFO_foo
   ChecksumKind,     // CSK_foo
   DbgRecordType,    // dbg_foo
+  DwarfEnumKind,    // DW_APPLE_ENUM_KIND_foo
 
   // Type valued tokens (TyVal).
   Type,

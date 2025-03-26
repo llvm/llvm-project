@@ -46,7 +46,6 @@ public:
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitAssemblerFlag(MCAssemblerFlag Flag) override;
-  void emitThumbFunc(MCSymbol *Func) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
   void beginCOFFSymbolDef(MCSymbol const *Symbol) override;
