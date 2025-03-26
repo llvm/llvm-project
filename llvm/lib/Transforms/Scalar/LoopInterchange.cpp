@@ -14,6 +14,7 @@
 
 #include "llvm/Transforms/Scalar/LoopInterchange.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -72,6 +73,13 @@ using LoopVector = SmallVector<Loop *, 8>;
 // TODO: Check if we can use a sparse matrix here.
 using CharMatrix = std::vector<std::vector<char>>;
 
+/// Types of rules used in profitability check.
+enum class RuleTy {
+  PerLoopCacheAnalysis,
+  PerInstrOrderCost,
+  ForVectorization,
+};
+
 } // end anonymous namespace
 
 // Minimum loop depth supported.
@@ -84,12 +92,31 @@ static cl::opt<unsigned int> MaxLoopNestDepth(
     "loop-interchange-max-loop-nest-depth", cl::init(10), cl::Hidden,
     cl::desc("Maximum depth of loop nest considered for the transform"));
 
-static cl::opt<bool> PrioritizeVectorization(
-    "loop-interchange-prioritize-vectorization", cl::init(false), cl::Hidden,
-    cl::desc("Prioritize increasing vectorization opportunity over cache cost "
-             "when determining profitability"));
+// We prefer cache cost to vectorization by default.
+static cl::list<RuleTy> Profitabilities(
+    "loop-interchange-profitabilities", cl::ZeroOrMore,
+    cl::MiscFlags::CommaSeparated, cl::Hidden,
+    cl::desc("List of profitability heuristics to be used. They are applied in "
+             "the given order"),
+    cl::list_init<RuleTy>({RuleTy::PerLoopCacheAnalysis,
+                           RuleTy::PerInstrOrderCost,
+                           RuleTy::ForVectorization}),
+    cl::values(clEnumValN(RuleTy::PerLoopCacheAnalysis, "cache",
+                          "Prioritize loop cache cost"),
+               clEnumValN(RuleTy::PerInstrOrderCost, "instorder",
+                          "Prioritize the IVs order of each instruction"),
+               clEnumValN(RuleTy::ForVectorization, "vectorize",
+                          "Prioritize vectorization")));
 
 #ifndef NDEBUG
+static bool noDuplicateRules(ArrayRef<RuleTy> Rules) {
+  SmallSet<RuleTy, 4> Set;
+  for (RuleTy Rule : Rules)
+    if (!Set.insert(Rule).second)
+      return false;
+  return true;
+}
+
 static void printDepMatrix(CharMatrix &DepMatrix) {
   for (auto &Row : DepMatrix) {
     for (auto D : Row)
@@ -1204,26 +1231,9 @@ bool LoopInterchangeProfitability::isProfitable(
   // second highest priority rule (isProfitablePerInstrOrderCost by default).
   // Likewise, if it failed to analysis the profitability then only, the last
   // rule (isProfitableForVectorization by default) will decide.
-  enum class RuleTy {
-    PerLoopCacheAnalysis,
-    PerInstrOrderCost,
-    ForVectorization,
-  };
-
-  // We prefer cache cost to vectorization by default.
-  RuleTy RuleOrder[3] = {RuleTy::PerLoopCacheAnalysis,
-                         RuleTy::PerInstrOrderCost, RuleTy::ForVectorization};
-
-  // If we prefer vectorization to cache cost, change the order of application
-  // of each rule.
-  if (PrioritizeVectorization) {
-    RuleOrder[0] = RuleTy::ForVectorization;
-    RuleOrder[1] = RuleTy::PerLoopCacheAnalysis;
-    RuleOrder[2] = RuleTy::PerInstrOrderCost;
-  }
-
+  assert(noDuplicateRules(Profitabilities) && "Detect duplicate rules");
   std::optional<bool> shouldInterchange;
-  for (RuleTy RT : RuleOrder) {
+  for (RuleTy RT : Profitabilities) {
     switch (RT) {
     case RuleTy::PerLoopCacheAnalysis:
       shouldInterchange = isProfitablePerLoopCacheAnalysis(CostMap, CC);
