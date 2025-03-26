@@ -11,6 +11,7 @@
 
 #include <__algorithm/for_each.h>
 #include <__algorithm/in_fun_result.h>
+#include <__algorithm/iterator_operations.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__functional/invoke.h>
@@ -45,7 +46,8 @@ private:
     if constexpr (random_access_iterator<_Iter> && sized_sentinel_for<_Sent, _Iter>) {
       auto __n   = __last - __first;
       auto __end = __first + __n;
-      std::for_each(__first, __end, [&](auto&& __val) { std::invoke(__func, std::invoke(__proj, __val)); });
+      auto __f   = [&](auto&& __val) { std::invoke(__func, std::invoke(__proj, __val)); };
+      std::__for_each<_RangeAlgPolicy>(__first, __end, __f);
       return {std::move(__end), std::move(__func)};
     } else {
       for (; __first != __last; ++__first)

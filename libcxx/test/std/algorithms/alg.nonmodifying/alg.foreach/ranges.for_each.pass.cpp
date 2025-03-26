@@ -127,7 +127,7 @@ struct deque_test {
 
 /*TEST_CONSTEXPR_CXX23*/
 void test_segmented_deque_iterator() { // TODO: Mark as TEST_CONSTEXPR_CXX23 once std::deque is constexpr
-  // check that segmented iterators work properly
+  // check that segmented deque iterators work properly
   int sizes[] = {0, 1, 2, 1023, 1024, 1025, 2047, 2048, 2049};
   for (const int size : sizes) {
     std::deque<int> d(size);
