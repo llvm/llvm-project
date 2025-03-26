@@ -728,7 +728,10 @@ private:
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const GenericDetails &);
 
-class UserReductionDetails : public WithBindName {
+// Used for OpenMP DECLARE REDUCTION, it holds the information
+// needed to resolve which declaration (there could be multiple
+// with the same name) to use for a given type.
+class UserReductionDetails {
 public:
   using TypeVector = std::vector<const DeclTypeSpec *>;
   UserReductionDetails() = default;
@@ -737,10 +740,7 @@ public:
   const TypeVector &GetTypeList() const { return typeList_; }
 
   bool SupportsType(const DeclTypeSpec *type) const {
-    for (auto t : typeList_)
-      if (t == type)
-        return true;
-    return false;
+    return llvm::is_contained(typeList_, type);
   }
 
 private:
