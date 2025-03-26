@@ -5834,12 +5834,13 @@ bool ASTReader::readASTFileControlBlock(
           break;
         case INPUT_FILE:
           bool Overridden = static_cast<bool>(Record[3]);
-          size_t FilenameLen = ModuleDir.size() + Record[7] + 1;
-          auto Filename = ResolveImportedPath(PathBuf, Blob, ModuleDir);
-          StringRef FilenameAsRequested = Filename->substr(0, FilenameLen);
-          StringRef ExternalFilename = Filename->substr(FilenameLen);
+          const size_t FilenameAsRequestedLength = Record[7] + 1;
+          auto ResolvedFilenameAsRequested = ResolveImportedPath(
+              PathBuf, Blob.substr(0, FilenameAsRequestedLength), ModuleDir);
+          StringRef ExternalFilename = Blob.substr(FilenameAsRequestedLength);
           shouldContinue = Listener.visitInputFile(
-              FilenameAsRequested, ExternalFilename, isSystemFile, Overridden,
+              ResolvedFilenameAsRequested->str(), ExternalFilename,
+              isSystemFile, Overridden,
               /*IsExplicitModule=*/false);
           break;
         }
