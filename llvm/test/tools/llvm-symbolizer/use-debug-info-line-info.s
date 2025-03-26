@@ -1,3 +1,4 @@
+# REQUIRES: x86-registered-target
 # Test llvm-symbolizer always uses line info from debug info if present.
 
 # It's produced by the following steps.
