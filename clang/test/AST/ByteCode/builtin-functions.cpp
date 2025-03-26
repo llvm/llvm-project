@@ -21,6 +21,9 @@ extern "C" {
   extern void *memchr(const void *s, int c, size_t n);
   extern char *strchr(const char *s, int c);
   extern wchar_t *wmemchr(const wchar_t *s, wchar_t c, size_t n);
+  extern wchar_t *wcschr(const wchar_t *s, wchar_t c);
+  extern int wcscmp(const wchar_t *s1, const wchar_t *s2);
+  extern int wcsncmp(const wchar_t *s1, const wchar_t *s2, size_t n);
 }
 
 namespace strcmp {
@@ -63,6 +66,50 @@ namespace strcmp {
   static_assert(__builtin_strncmp("abaa", "abba", 0) == 0);
   static_assert(__builtin_strncmp(0, 0, 0) == 0);
   static_assert(__builtin_strncmp("abab\0banana", "abab\0canada", 100) == 0);
+}
+
+namespace WcsCmp {
+  constexpr wchar_t kFoobar[6] = {L'f',L'o',L'o',L'b',L'a',L'r'};
+  constexpr wchar_t kFoobazfoobar[12] = {L'f',L'o',L'o',L'b',L'a',L'z',L'f',L'o',L'o',L'b',L'a',L'r'};
+
+  static_assert(__builtin_wcscmp(L"abab", L"abab") == 0);
+  static_assert(__builtin_wcscmp(L"abab", L"abba") == -1);
+  static_assert(__builtin_wcscmp(L"abab", L"abaa") == 1);
+  static_assert(__builtin_wcscmp(L"ababa", L"abab") == 1);
+  static_assert(__builtin_wcscmp(L"abab", L"ababa") == -1);
+  static_assert(__builtin_wcscmp(L"abab\0banana", L"abab") == 0);
+  static_assert(__builtin_wcscmp(L"abab", L"abab\0banana") == 0);
+  static_assert(__builtin_wcscmp(L"abab\0banana", L"abab\0canada") == 0);
+#if __WCHAR_WIDTH__ == 32
+  static_assert(__builtin_wcscmp(L"a\x83838383", L"a") == (wchar_t)-1U >> 31);
+#endif
+  static_assert(__builtin_wcscmp(0, L"abab") == 0); // both-error {{not an integral constant}} \
+                                                    // both-note {{dereferenced null}}
+  static_assert(__builtin_wcscmp(L"abab", 0) == 0); // both-error {{not an integral constant}} \
+                                                    // both-note {{dereferenced null}}
+
+  static_assert(__builtin_wcscmp(kFoobar, kFoobazfoobar) == -1);
+  static_assert(__builtin_wcscmp(kFoobar, kFoobazfoobar + 6) == 0); // both-error {{not an integral constant}} \
+                                                                    // both-note {{dereferenced one-past-the-end}}
+
+  static_assert(__builtin_wcsncmp(L"abaa", L"abba", 5) == -1);
+  static_assert(__builtin_wcsncmp(L"abaa", L"abba", 4) == -1);
+  static_assert(__builtin_wcsncmp(L"abaa", L"abba", 3) == -1);
+  static_assert(__builtin_wcsncmp(L"abaa", L"abba", 2) == 0);
+  static_assert(__builtin_wcsncmp(L"abaa", L"abba", 1) == 0);
+  static_assert(__builtin_wcsncmp(L"abaa", L"abba", 0) == 0);
+  static_assert(__builtin_wcsncmp(0, 0, 0) == 0);
+  static_assert(__builtin_wcsncmp(L"abab\0banana", L"abab\0canada", 100) == 0);
+#if __WCHAR_WIDTH__ == 32
+  static_assert(__builtin_wcsncmp(L"a\x83838383", L"aa", 2) ==
+                (wchar_t)-1U >> 31);
+#endif
+
+  static_assert(__builtin_wcsncmp(kFoobar, kFoobazfoobar, 6) == -1);
+  static_assert(__builtin_wcsncmp(kFoobar, kFoobazfoobar, 7) == -1);
+  static_assert(__builtin_wcsncmp(kFoobar, kFoobazfoobar + 6, 6) == 0);
+  static_assert(__builtin_wcsncmp(kFoobar, kFoobazfoobar + 6, 7) == 0); // both-error {{not an integral constant}} \
+                                                                        // both-note {{dereferenced one-past-the-end}}
 }
 
 /// Copied from constant-expression-cxx11.cpp
@@ -1289,6 +1336,12 @@ namespace BuiltinMemcpy {
     return Result1 && Result2;
   }
   static_assert(memmoveOverlapping());
+
+#define fold(x) (__builtin_constant_p(0) ? (x) : (x))
+  static_assert(__builtin_memcpy(&global, fold((wchar_t*)123), sizeof(wchar_t))); // both-error {{not an integral constant expression}} \
+                                                                                  // both-note {{source of 'memcpy' is (void *)123}}
+  static_assert(__builtin_memcpy(fold(reinterpret_cast<wchar_t*>(123)), &global, sizeof(wchar_t))); // both-error {{not an integral constant expression}} \
+                                                                                                    // both-note {{destination of 'memcpy' is (void *)123}}
 }
 
 namespace Memcmp {
@@ -1511,4 +1564,24 @@ namespace WMemChr {
 
   constexpr wchar_t kStr2[] = {L'f', L'o', L'\xffff', L'o'};
   static_assert(__builtin_wmemchr(kStr2, L'\xffff', 4) == kStr2 + 2);
+
+
+  static_assert(__builtin_wcschr(kStr, L'a') == kStr);
+  static_assert(__builtin_wcschr(kStr, L'b') == kStr + 1);
+  static_assert(__builtin_wcschr(kStr, L'c') == kStr + 2);
+  static_assert(__builtin_wcschr(kStr, L'd') == nullptr);
+  static_assert(__builtin_wcschr(kStr, L'e') == nullptr);
+  static_assert(__builtin_wcschr(kStr, L'\0') == kStr + 5);
+  static_assert(__builtin_wcschr(kStr, L'a' + 256) == nullptr);
+  static_assert(__builtin_wcschr(kStr, L'a' - 256) == nullptr);
+  static_assert(__builtin_wcschr(kStr, L'\xffff') == kStr + 4);
+  static_assert(__builtin_wcschr(kFoo, L'o') == kFoo + 1);
+  static_assert(__builtin_wcschr(kFoo, L'x') == nullptr); // both-error {{not an integral constant}} \
+                                                          // both-note {{dereferenced one-past-the-end}}
+  static_assert(__builtin_wcschr(nullptr, L'x') == nullptr); // both-error {{not an integral constant}} \
+                                                             // both-note {{dereferenced null}}
+
+
+  constexpr bool c = !wcschr(L"hello", L'h'); // both-error {{constant expression}} \
+                                              // both-note {{non-constexpr function 'wcschr' cannot be used in a constant expression}}
 }

@@ -212,11 +212,13 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   const Pointer &A = getParam<Pointer>(Frame, 0);
   const Pointer &B = getParam<Pointer>(Frame, 1);
 
-  if (ID == Builtin::BIstrcmp || ID == Builtin::BIstrncmp)
+  if (ID == Builtin::BIstrcmp || ID == Builtin::BIstrncmp ||
+      ID == Builtin::BIwcscmp || ID == Builtin::BIwcsncmp)
     diagnoseNonConstexprBuiltin(S, OpPC, ID);
 
   uint64_t Limit = ~static_cast<uint64_t>(0);
-  if (ID == Builtin::BIstrncmp || ID == Builtin::BI__builtin_strncmp)
+  if (ID == Builtin::BIstrncmp || ID == Builtin::BI__builtin_strncmp ||
+      ID == Builtin::BIwcsncmp || ID == Builtin::BI__builtin_wcsncmp)
     Limit = peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)))
                 .getZExtValue();
 
@@ -231,6 +233,9 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   if (A.isDummy() || B.isDummy())
     return false;
 
+  bool IsWide = ID == Builtin::BIwcscmp || ID == Builtin::BIwcsncmp ||
+                ID == Builtin::BI__builtin_wcscmp ||
+                ID == Builtin::BI__builtin_wcsncmp;
   assert(A.getFieldDesc()->isPrimitiveArray());
   assert(B.getFieldDesc()->isPrimitiveArray());
 
@@ -248,6 +253,21 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
         !CheckRange(S, OpPC, PB, AK_Read)) {
       return false;
     }
+
+    if (IsWide)
+      INT_TYPE_SWITCH(
+          *S.getContext().classify(S.getASTContext().getWCharType()), {
+            T A = PA.deref<T>();
+            T B = PB.deref<T>();
+            if (A < B) {
+              pushInteger(S, -1, Call->getType());
+              return true;
+            } else if (A > B) {
+              pushInteger(S, 1, Call->getType());
+              return true;
+            }
+          });
+
     uint8_t CA = PA.deref<uint8_t>();
     uint8_t CB = PB.deref<uint8_t>();
 
@@ -1792,6 +1812,17 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
   }
 
+  // Diagnose integral src/dest pointers specially.
+  if (SrcPtr.isIntegralPointer() || DestPtr.isIntegralPointer()) {
+    std::string DiagVal = "(void *)";
+    DiagVal += SrcPtr.isIntegralPointer()
+                   ? std::to_string(SrcPtr.getIntegerRepresentation())
+                   : std::to_string(DestPtr.getIntegerRepresentation());
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_null)
+        << Move << false << DestPtr.isIntegralPointer() << DiagVal;
+    return false;
+  }
+
   // Can't read from dummy pointers.
   if (DestPtr.isDummy() || SrcPtr.isDummy())
     return false;
@@ -2052,7 +2083,8 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
   }
 
   bool StopAtZero =
-      (ID == Builtin::BIstrchr || ID == Builtin::BI__builtin_strchr);
+      (ID == Builtin::BIstrchr || ID == Builtin::BI__builtin_strchr ||
+       ID == Builtin::BIwcschr || ID == Builtin::BI__builtin_wcschr);
 
   PrimType ElemT =
       IsRawByte ? PT_Sint8 : *S.getContext().classify(getElemType(Ptr));
@@ -2108,6 +2140,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BIstrcmp:
   case Builtin::BI__builtin_strncmp:
   case Builtin::BIstrncmp:
+  case Builtin::BI__builtin_wcsncmp:
+  case Builtin::BIwcsncmp:
+  case Builtin::BI__builtin_wcscmp:
+  case Builtin::BIwcscmp:
     if (!interp__builtin_strcmp(S, OpPC, Frame, F, Call))
       return false;
     break;
@@ -2574,10 +2610,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_strchr:
   case Builtin::BIwmemchr:
   case Builtin::BI__builtin_wmemchr:
-#if 0
   case Builtin::BIwcschr:
   case Builtin::BI__builtin_wcschr:
-#endif
   case Builtin::BI__builtin_char_memchr:
     if (!interp__builtin_memchr(S, OpPC, Frame, F, Call))
       return false;
