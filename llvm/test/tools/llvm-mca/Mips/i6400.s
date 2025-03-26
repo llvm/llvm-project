@@ -19,7 +19,7 @@ i6400:
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      7
-# CHECK-NEXT: Total Cycles:      41
+# CHECK-NEXT: Total Cycles:      42
 # CHECK-NEXT: Total uOps:        7
 
 # CHECK:      Dispatch Width:    2
@@ -77,15 +77,14 @@ i6400:
 
 # CHECK:	Timeline view:
 # CHECK-NEXT:	                    0123456789          0123456789
-# CHECK-NEXT:	Index     0123456789          0123456789          0
-
-# CHECK:	[0,0]     DeeeER    .    .    .    .    .    .    .   lw        $1, 0($sp)
-# CHECK-NEXT:	[0,1]     D=eeeER   .    .    .    .    .    .    .   lw        $2, 8($sp)
-# CHECK-NEXT:	[0,2]     .D==eER   .    .    .    .    .    .    .   move      $3, $1
-# CHECK-NEXT:	[0,3]     .D===eeeeER    .    .    .    .    .    .   mul       $3, $2, $3
-# CHECK-NEXT:	[0,4]     . D======eER   .    .    .    .    .    .   sw        $3, 8($sp)
-# CHECK-NEXT:	[0,5]     . D===eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeER.   div       $2, $1
-# CHECK-NEXT:	[0,6]     .  D==================================eER   sw        $2, 0($sp)
+# CHECK-NEXT:	Index     0123456789          0123456789          01
+# CHECK:	[0,0]     DeeE .    .    .    .    .    .    .    ..   lw       $1, 0($sp)
+# CHECK-NEXT:	[0,1]     .DeeE.    .    .    .    .    .    .    ..   lw       $2, 8($sp)
+# CHECK-NEXT:	[0,2]     .  DE.    .    .    .    .    .    .    ..   move     $3, $1
+# CHECK-NEXT:	[0,3]     .   DeeeE .    .    .    .    .    .    ..   mul      $3, $2, $3
+# CHECK-NEXT:	[0,4]     .    .  DE.    .    .    .    .    .    ..   sw       $3, 8($sp)
+# CHECK-NEXT:	[0,5]     .    .  DeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeE.   div      $2, $1
+# CHECK-NEXT:	[0,6]     .    .    .    .    .    .    .    .    DE   sw       $2, 0($sp)
 
 # CHECK:	Average Wait times (based on the timeline view):
 # CHECK-NEXT:	[0]: Executions
@@ -94,12 +93,12 @@ i6400:
 # CHECK-NEXT:	[3]: Average time elapsed from WB until retire stage
 
 # CHECK:	      [0]    [1]    [2]    [3]
-# CHECK-NEXT:	0.     1     1.0    1.0    0.0       lw $1, 0($sp)
-# CHECK-NEXT:	1.     1     2.0    2.0    0.0       lw $2, 8($sp)
-# CHECK-NEXT:	2.     1     3.0    0.0    0.0       move       $3, $1
-# CHECK-NEXT:	3.     1     4.0    0.0    0.0       mul        $3, $2, $3
-# CHECK-NEXT:	4.     1     7.0    0.0    0.0       sw $3, 8($sp)
-# CHECK-NEXT:	5.     1     4.0    1.0    0.0       div        $2, $1
-# CHECK-NEXT:	6.     1     35.0   0.0    0.0       sw $2, 0($sp)
-# CHECK-NEXT:	       1     8.0    0.6    0.0       <total>
+# CHECK-NEXT:	0.     1     0.0    0.0    0.0       lw $1, 0($sp)
+# CHECK-NEXT:	1.     1     0.0    0.0    0.0       lw $2, 8($sp)
+# CHECK-NEXT:	2.     1     0.0    0.0    0.0       move       $3, $1
+# CHECK-NEXT:	3.     1     0.0    0.0    0.0       mul        $3, $2, $3
+# CHECK-NEXT:	4.     1     0.0    0.0    0.0       sw $3, 8($sp)
+# CHECK-NEXT:	5.     1     0.0    0.0    0.0       div        $2, $1
+# CHECK-NEXT:	6.     1     0.0    0.0    0.0       sw $2, 0($sp)
+# CHECK-NEXT:	       1     0.0    0.0    0.0       <total>
 
