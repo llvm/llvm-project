@@ -5617,7 +5617,8 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(rank, MDSignedOrMDField, );                                         \
   OPTIONAL(annotations, MDField, );                                            \
   OPTIONAL(num_extra_inhabitants, MDUnsignedField, (0, UINT32_MAX));           \
-  OPTIONAL(specification, MDField, );
+  OPTIONAL(specification, MDField, );                                          \
+  OPTIONAL(bitStride, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -5640,7 +5641,8 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
             specification.Val, num_extra_inhabitants.Val, flags.Val,
             elements.Val, runtimeLang.Val, EnumKind, vtableHolder.Val,
             templateParams.Val, discriminator.Val, dataLocation.Val,
-            associated.Val, allocated.Val, Rank, annotations.Val)) {
+            associated.Val, allocated.Val, Rank, annotations.Val,
+            bitStride.Val)) {
       Result = CT;
       return false;
     }
@@ -5654,7 +5656,7 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
        runtimeLang.Val, EnumKind, vtableHolder.Val, templateParams.Val,
        identifier.Val, discriminator.Val, dataLocation.Val, associated.Val,
        allocated.Val, Rank, annotations.Val, specification.Val,
-       num_extra_inhabitants.Val));
+       num_extra_inhabitants.Val, bitStride.Val));
   return false;
 }
 
