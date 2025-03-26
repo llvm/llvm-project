@@ -846,8 +846,7 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   /// Get the HSA kernel object representing the kernel function.
   uint64_t getKernelObject() const { return KernelObject; }
 
-  /// Get the size of implicitargs based on the code object version
-  /// @return 56 for cov4 and 256 for cov5
+  /// Get the size of implicitargs based on the code object version.
   uint32_t getImplicitArgsSize() const { return ImplicitArgsSize; }
 
   /// Indicates whether or not we need to set up our own private segment size.
@@ -5129,8 +5128,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     return Err;
 
   // Only COV5 implicitargs needs to be set. COV4 implicitargs are not used.
-  if (ImplArgs &&
-      getImplicitArgsSize() == sizeof(hsa_utils::AMDGPUImplicitArgsTy)) {
+  if (ImplArgs) {
     DP("Setting fields of ImplicitArgs for COV5\n");
     ImplArgs->BlockCountX = NumBlocks[0];
     ImplArgs->BlockCountY = NumBlocks[1];
