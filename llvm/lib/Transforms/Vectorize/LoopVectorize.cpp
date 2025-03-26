@@ -4603,8 +4603,31 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
         continue;
 
       InstructionCost C = CM.expectedCost(VF);
-      VectorizationFactor Candidate(VF, C, ScalarCost.ScalarCost);
 
+      // Add on other costs that are modelled in VPlan, but not in the legacy
+      // cost model.
+      VPCostContext CostCtx(CM.TTI, *CM.TLI, CM.Legal->getWidestInductionType(),
+                            CM, CM.CostKind);
+      VPRegionBlock *VectorRegion = P->getVectorLoopRegion();
+      assert(VectorRegion && "Expected to have a vector region!");
+      for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+               vp_depth_first_shallow(VectorRegion->getEntry()))) {
+        for (VPRecipeBase &R : *VPBB) {
+          auto *VPI = dyn_cast<VPInstruction>(&R);
+          if (!VPI)
+            continue;
+          switch (VPI->getOpcode()) {
+          case VPInstruction::ActiveLaneMask:
+          case VPInstruction::ExplicitVectorLength:
+            C += VPI->cost(VF, CostCtx);
+            break;
+          default:
+            break;
+          }
+        }
+      }
+
+      VectorizationFactor Candidate(VF, C, ScalarCost.ScalarCost);
       unsigned Width =
           getEstimatedRuntimeVF(Candidate.Width, CM.getVScaleForTuning());
       LLVM_DEBUG(dbgs() << "LV: Vector loop of width " << VF
@@ -7720,6 +7743,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::materializeBroadcasts(BestVPlan);
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
   VPlanTransforms::simplifyRecipes(BestVPlan, *Legal->getWidestInductionType());
+  VPlanTransforms::narrowInterleaveGroups(
+      BestVPlan, BestVF,
+      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector));
   VPlanTransforms::removeDeadRecipes(BestVPlan);
   VPlanTransforms::convertToConcreteRecipes(BestVPlan);
 

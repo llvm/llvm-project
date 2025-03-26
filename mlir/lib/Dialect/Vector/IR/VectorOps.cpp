@@ -838,7 +838,7 @@ void ContractionOp::print(OpAsmPrinter &p) {
   // TODO: Unify printing code with linalg ops.
   auto attrNames = getTraitAttrNames();
   llvm::StringSet<> traitAttrsSet;
-  traitAttrsSet.insert(attrNames.begin(), attrNames.end());
+  traitAttrsSet.insert_range(attrNames);
   SmallVector<NamedAttribute, 8> attrs;
   for (auto attr : (*this)->getAttrs()) {
     if (attr.getName() == getIteratorTypesAttrName()) {

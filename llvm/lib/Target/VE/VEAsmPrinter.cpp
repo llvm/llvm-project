@@ -65,14 +65,14 @@ public:
 };
 } // end of anonymous namespace
 
-static MCOperand createVEMCOperand(VEMCExpr::VariantKind Kind, MCSymbol *Sym,
+static MCOperand createVEMCOperand(VEMCExpr::Specifier Kind, MCSymbol *Sym,
                                    MCContext &OutContext) {
   const MCSymbolRefExpr *MCSym = MCSymbolRefExpr::create(Sym, OutContext);
   const VEMCExpr *expr = VEMCExpr::create(Kind, MCSym, OutContext);
   return MCOperand::createExpr(expr);
 }
 
-static MCOperand createGOTRelExprOp(VEMCExpr::VariantKind Kind,
+static MCOperand createGOTRelExprOp(VEMCExpr::Specifier Kind,
                                     MCSymbol *GOTLabel, MCContext &OutContext) {
   const MCSymbolRefExpr *GOT = MCSymbolRefExpr::create(GOTLabel, OutContext);
   const VEMCExpr *expr = VEMCExpr::create(Kind, GOT, OutContext);
@@ -164,7 +164,7 @@ static void emitANDrm(MCStreamer &OutStreamer, MCOperand &RS1, MCOperand &Imm,
 }
 
 static void emitHiLo(MCStreamer &OutStreamer, MCSymbol *GOTSym,
-                     VEMCExpr::VariantKind HiKind, VEMCExpr::VariantKind LoKind,
+                     VEMCExpr::Specifier HiKind, VEMCExpr::Specifier LoKind,
                      MCOperand &RD, MCContext &OutContext,
                      const MCSubtargetInfo &STI) {
 
