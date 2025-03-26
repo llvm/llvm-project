@@ -2492,10 +2492,12 @@ template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
     return Val.computeHash();
   }
 
+#ifndef __swift__
   static bool isEqual(const ScalarEvolution::FoldID &LHS,
                       const ScalarEvolution::FoldID &RHS) {
     return LHS == RHS;
   }
+#endif
 };
 
 } // end namespace llvm
