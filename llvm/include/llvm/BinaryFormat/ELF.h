@@ -907,38 +907,47 @@ enum {
 #include "ELFRelocs/AMDGPU.def"
 };
 
-// NVPTX specific e_flags.
+// CUDA specific st_other
+enum : unsigned {
+  STO_CUDA_ENTRY    = 0x10,  // entry function
+  STO_CUDA_GLOBAL   = 0x20,
+  STO_CUDA_SHARED   = 0x40,
+  STO_CUDA_LOCAL    = 0x60,
+  STO_CUDA_CONSTANT = 0x80
+};
+
+// CUDA specific e_flags.
 enum : unsigned {
   // Processor selection mask for EF_CUDA_SM* values.
   EF_CUDA_SM = 0xff,
 
   // SM based processor values.
-  EF_CUDA_SM20 = 0x14,
-  EF_CUDA_SM21 = 0x15,
-  EF_CUDA_SM30 = 0x1e,
-  EF_CUDA_SM32 = 0x20,
-  EF_CUDA_SM35 = 0x23,
-  EF_CUDA_SM37 = 0x25,
-  EF_CUDA_SM50 = 0x32,
-  EF_CUDA_SM52 = 0x34,
-  EF_CUDA_SM53 = 0x35,
-  EF_CUDA_SM60 = 0x3c,
-  EF_CUDA_SM61 = 0x3d,
-  EF_CUDA_SM62 = 0x3e,
-  EF_CUDA_SM70 = 0x46,
-  EF_CUDA_SM72 = 0x48,
-  EF_CUDA_SM75 = 0x4b,
-  EF_CUDA_SM80 = 0x50,
-  EF_CUDA_SM86 = 0x56,
-  EF_CUDA_SM87 = 0x57,
-  EF_CUDA_SM89 = 0x59,
+  EF_CUDA_SM20 = 20,
+  EF_CUDA_SM21 = 21,
+  EF_CUDA_SM30 = 30,
+  EF_CUDA_SM32 = 32,
+  EF_CUDA_SM35 = 35,
+  EF_CUDA_SM37 = 37,
+  EF_CUDA_SM50 = 50,
+  EF_CUDA_SM52 = 52,
+  EF_CUDA_SM53 = 53,
+  EF_CUDA_SM60 = 60,
+  EF_CUDA_SM61 = 61,
+  EF_CUDA_SM62 = 62,
+  EF_CUDA_SM70 = 70,
+  EF_CUDA_SM72 = 72,
+  EF_CUDA_SM75 = 75,
+  EF_CUDA_SM80 = 80,
+  EF_CUDA_SM86 = 86,
+  EF_CUDA_SM87 = 87,
+  EF_CUDA_SM89 = 89,
   // The sm_90a variant uses the same machine flag.
-  EF_CUDA_SM90 = 0x5a,
+  EF_CUDA_SM90 = 90,
 
   // Unified texture binding is enabled.
   EF_CUDA_TEXMODE_UNIFIED = 0x100,
   // Independent texture binding is enabled.
-  EF_CUDA_TEXMODE_INDEPENDANT = 0x200,
+  EF_CUDA_TEXMODE_INDEPENDENT = 0x200,
   // The target is using 64-bit addressing.
   EF_CUDA_64BIT_ADDRESS = 0x400,
   // Set when using the sm_90a processor.
@@ -948,6 +957,11 @@ enum : unsigned {
 
   // Virtual processor selection mask for EF_CUDA_VIRTUAL_SM* values.
   EF_CUDA_VIRTUAL_SM = 0xff0000,
+};
+
+// ELF Relocation types for CUDA
+enum {
+#include "ELFRelocs/CUDA.def"
 };
 
 // ELF Relocation types for BPF

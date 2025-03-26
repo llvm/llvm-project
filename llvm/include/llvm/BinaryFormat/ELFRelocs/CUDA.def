@@ -1,0 +1,130 @@
+#ifndef ELF_RELOC
+#error "ELF_RELOC must be defined"
+#endif
+
+ELF_RELOC(R_CUDA_NONE,                   0)    // no relocation
+ELF_RELOC(R_CUDA_32,                     1)    // 32bit specific address
+ELF_RELOC(R_CUDA_64,                     2)    // 64bit specific address
+ELF_RELOC(R_CUDA_G32,                    3)    // 32bit generic address
+ELF_RELOC(R_CUDA_G64,                    4)    // 64bit generic address
+ELF_RELOC(R_CUDA_ABS32_26,               5)    // absolute_address(sym) -> bits 26-57
+ELF_RELOC(R_CUDA_TEX_HEADER_INDEX,       6)    // header_index(tex) -> bits 0-19
+ELF_RELOC(R_CUDA_SAMP_HEADER_INDEX,      7)    // header_index(samp) -> bits 20-31
+ELF_RELOC(R_CUDA_SURF_HW_DESC,           8)    // hw_descriptor(surf) -> 32 bytes
+ELF_RELOC(R_CUDA_SURF_HW_SW_DESC,        9)    // hw and sw descriptor(surf) -> 32 + size computed from EIATTR_QUERY_NUMATTTRIB
+ELF_RELOC(R_CUDA_ABS32_LO_26,            10)   // lower 32bits of 64bit absolute_address(sym) -> bits 26-57
+ELF_RELOC(R_CUDA_ABS32_HI_26,            11)   // upper 32bits of 64bit absolute_address(sym) -> bits 26-57
+ELF_RELOC(R_CUDA_ABS32_23,               12)   // absolute_address(sym) -> bits 23-54
+ELF_RELOC(R_CUDA_ABS32_LO_23,            13)   // lower 32bits of 64bit absolute_address(sym) -> bits 23-54
+ELF_RELOC(R_CUDA_ABS32_HI_23,            14)   // upper 32bits of 64bit absolute_address(sym) -> bits 23-54
+ELF_RELOC(R_CUDA_ABS24_26,               15)   // 24bit absolute_address(sym) -> bits 26-49
+ELF_RELOC(R_CUDA_ABS24_23,               16)   // 24bit absolute_address(sym) -> bits 23-46
+ELF_RELOC(R_CUDA_ABS16_26,               17)   // 16bit absolute_address(sym) -> bits 26-41
+ELF_RELOC(R_CUDA_ABS16_23,               18)   // 16bit absolute_address(sym) -> bits 23-38
+ELF_RELOC(R_CUDA_TEX_SLOT,               19)   // 8bit slot of tex sym  -> bits 32-39
+ELF_RELOC(R_CUDA_SAMP_SLOT,              20)   // 5bit slot of samp sym -> bits 40-44
+ELF_RELOC(R_CUDA_SURF_SLOT,              21)   // 6bit slot of surf sym -> bits 26-31
+ELF_RELOC(R_CUDA_TEX_BINDLESSOFF13_32,   22)   // 13 bit (bindless offset allocated to tex sym >> 2) -> bits 32-44
+ELF_RELOC(R_CUDA_TEX_BINDLESSOFF13_47,   23)   // 13 bit (bindless offset allocated to tex sym >> 2) -> bits 47-59
+ELF_RELOC(R_CUDA_CONST_FIELD19_28,       24)   // 14 bit (((offset of sym + addend) & 0xffffU) >> 2) -> bits 28-41
+                                               // 4bit (constant bank for sym & 0xF) -> bits 42-45
+                                               // 1bit (constant bank for sym >> 4) & 0x1 -> bit 26-26
+ELF_RELOC(R_CUDA_CONST_FIELD19_23,       25)   // 14 bit (((offset of sym + addend) & 0xffffU) >> 2) -> bits 23-36
+                                               // 5 bit (constant bank for sym & 0x1F) -> bits 37-41
+ELF_RELOC(R_CUDA_TEX_SLOT9_49,           26)   // 9bit slot of tex sym -> bits 49-57
+ELF_RELOC(R_CUDA_6_31,                   27)   // 6bit sym value -> bits 31-36
+ELF_RELOC(R_CUDA_2_47,                   28)   // 2bit sym value -> bits 47-48
+ELF_RELOC(R_CUDA_TEX_BINDLESSOFF13_41,   29)   // 13 bit (bindless offset allocated to tex sym >> 2) -> bits 41-53
+ELF_RELOC(R_CUDA_TEX_BINDLESSOFF13_45,   30)   // 13 bit (bindless offset allocated to tex sym >> 2) -> bits 45-57
+ELF_RELOC(R_CUDA_FUNC_DESC32_23,         31)   // 32 bit function descriptor of entry function -> bits 23-54
+ELF_RELOC(R_CUDA_FUNC_DESC32_LO_23,      32)   // lower 32bits of 64bit function descriptor of entry function -> bits 23-54
+ELF_RELOC(R_CUDA_FUNC_DESC32_HI_23,      33)   // upper 32bits of 64bit function descriptor of entry function -> bits 23-54
+ELF_RELOC(R_CUDA_FUNC_DESC_32,           34)   // 32bit address of function descriptor of entry function
+ELF_RELOC(R_CUDA_FUNC_DESC_64,           35)   // 64bit address of function descriptor of entry function
+ELF_RELOC(R_CUDA_CONST_FIELD21_26,       36)   // 16bit ((offset of sym + addend) & 0xffffU) -> bits 26-41
+                                               // 5bit (constant bank for sym & 0x1F) -> bits 42-46
+ELF_RELOC(R_CUDA_QUERY_DESC21_37,        37)   // 16 bit offset of query descriptor -> bits 37-52
+                                               // 5 bit bank used for query descriptor -> bits 53-57
+ELF_RELOC(R_CUDA_CONST_FIELD19_26,       38)   // 14 bit (((offset of sym + addend) & 0xffffU) >> 2) -> bits 26-39
+                                               // 5 bit (constant bank for sym & 0x1F) -> bits 40-44
+ELF_RELOC(R_CUDA_CONST_FIELD21_23,       39)   // 16 bit ((offset of sym + addend) & 0xffffU) -> bits 23-38
+                                               // 5 bit (constant bank for sym & 0x1F) -> bits 39-43
+ELF_RELOC(R_CUDA_PCREL_IMM24_26,         40)   // 24 bit PC relative branch offset -> bits 26-49
+ELF_RELOC(R_CUDA_PCREL_IMM24_23,         41)   // 24 bit PC relative branch offset -> bits 23-46
+ELF_RELOC(R_CUDA_ABS32_20,               42)   // absolute_address(sym) -> bits 20-51
+ELF_RELOC(R_CUDA_ABS32_LO_20,            43)   // lower 32bits of 64bit absolute_address(sym) -> bits 20-51
+ELF_RELOC(R_CUDA_ABS32_HI_20,            44)   // upper 32bits of 64bit absolute_address(sym) -> bits 20-51
+ELF_RELOC(R_CUDA_ABS24_20,               45)   // 24bit absolute_address(sym) -> bits 20-43
+ELF_RELOC(R_CUDA_ABS16_20,               46)   // 16bit absolute_address(sym) -> bits 20-35
+ELF_RELOC(R_CUDA_FUNC_DESC32_20,         47)   // 32 bit function descriptor of entry function -> bits 20-51
+ELF_RELOC(R_CUDA_FUNC_DESC32_LO_20,      48)   // lower 32bits of 64bit function descriptor of entry function -> bits 20-51
+ELF_RELOC(R_CUDA_FUNC_DESC32_HI_20,      49)   // upper 32bits of 64bit function descriptor of entry function -> bits 20-51
+ELF_RELOC(R_CUDA_CONST_FIELD19_20,       50)   // 14 bit (((offset of sym + addend) & 0xffffU) >> 2) -> bits 20-33
+                                               // 5 bit (constant bank for sym & 0x1F) -> bits 34-38
+ELF_RELOC(R_CUDA_BINDLESSOFF13_36,       51)   // 13 bit (bindless offset allocated to tex/surf sym >> 2) -> bits 36-48
+ELF_RELOC(R_CUDA_SURF_HEADER_INDEX,      52)   // header_index(surf) -> bits 0-19
+ELF_RELOC(R_CUDA_INSTRUCTION64,          53)   // replace 64bits of instruction
+ELF_RELOC(R_CUDA_CONST_FIELD21_20,       54)   // 16 bit ((offset of sym + addend) & 0xffffU) -> bits 20-35
+                                               // 5 bit (constant bank for sym & 0x1F) -> bits 36-40
+ELF_RELOC(R_CUDA_ABS32_32,               55)   // 32bit absolute_address(sym) -> bits 32-63
+ELF_RELOC(R_CUDA_ABS32_LO_32,            56)   // lower 32bit of 64bit absolute_address(sym) -> bits 32-63
+ELF_RELOC(R_CUDA_ABS32_HI_32,            57)   // upper 32bit of 64bit absolute_address(sym) -> bits 32-63  
+ELF_RELOC(R_CUDA_ABS47_34,               58)   // 47bit (absolute_address(sym) >> 2) -> bits 34-80. Lower 2bits are assumed 0
+ELF_RELOC(R_CUDA_ABS16_32,               59)   // 16bit absolute_address(sym) -> bits 32-47 
+ELF_RELOC(R_CUDA_ABS24_32,               60)   // 24bit absolute_address(sym) -> bits 32-55 
+ELF_RELOC(R_CUDA_FUNC_DESC32_32,         61)   // 32 bit function descriptor of entry function -> bits 32-63
+ELF_RELOC(R_CUDA_FUNC_DESC32_LO_32,      62)   // lower 32bits of 64bit function descriptor of entry function -> bits 32-63
+ELF_RELOC(R_CUDA_FUNC_DESC32_HI_32,      63)   // upper 32bits of 64bit function descriptor of entry function -> bits 32-64
+ELF_RELOC(R_CUDA_CONST_FIELD19_40,       64)   // 14 bit (((offset of sym + addend) & 0xffffU) >> 2) -> bits 40-53
+                                               // 5 bit (constant bank for sym & 0x1F) -> bits 54-58
+ELF_RELOC(R_CUDA_BINDLESSOFF14_40,       65)   // 14 bit (bindless offset allocated to tex/surf sym >> 2) -> bits 40-53 
+ELF_RELOC(R_CUDA_CONST_FIELD21_38,       66)   // 16 bit ((offset of sym + addend) & 0xffffU) -> bits 38-53
+                                               // 5 bit (constant bank for sym & 0x1F) -> bits 54-58
+ELF_RELOC(R_CUDA_INSTRUCTION128,         67)   // replace 128bits of instruction
+ELF_RELOC(R_CUDA_YIELD_OPCODE9_0,        68)   // 9 bits addend -> bits 0-8. Sym is NULL and only addend will be used.
+ELF_RELOC(R_CUDA_YIELD_CLEAR_PRED4_87,   69)   // Clear 4 bits -> bits 87-90. Sym is NULL and addend is 0
+ELF_RELOC(R_CUDA_32_LO,                  70)   // lower 32bit of 64bit absolute_address(sym) -> bits 0-32
+ELF_RELOC(R_CUDA_32_HI,                  71)   // upper 32bit of 64bit absolute_address(sym) -> bits 0-32  
+ELF_RELOC(R_CUDA_UNUSED_CLEAR32,         72)   // clear 32bits if Sym deleted
+ELF_RELOC(R_CUDA_UNUSED_CLEAR64,         73)   // clear 64bits if Sym deleted
+ELF_RELOC(R_CUDA_ABS24_40,               74)   // 24bit absolute_address(sym) -> bits 40-63
+ELF_RELOC(R_CUDA_ABS55_16_34,            75)   // 55bit (absolute_address(sym) >> 2) -> bits 16-23 and 34-80
+ELF_RELOC(R_CUDA_8_0,                    76)   // Bits 0-7 from specific address
+ELF_RELOC(R_CUDA_8_8,                    77)   // Bits 8-15 from specific address
+ELF_RELOC(R_CUDA_8_16,                   78)   // Bits 16-23 from specific address
+ELF_RELOC(R_CUDA_8_24,                   79)   // Bits 24-31 from specific address
+ELF_RELOC(R_CUDA_8_32,                   80)   // Bits 32-39 from specific address
+ELF_RELOC(R_CUDA_8_40,                   81)   // Bits 40-47 from specific address
+ELF_RELOC(R_CUDA_8_48,                   82)   // Bits 48-55 from specific address
+ELF_RELOC(R_CUDA_8_56,                   83)   // Bits 56-63 from specific address
+ELF_RELOC(R_CUDA_G8_0,                   84)   // Bits 0-7 from generic address
+ELF_RELOC(R_CUDA_G8_8,                   85)   // Bits 8-15 from generic address
+ELF_RELOC(R_CUDA_G8_16,                  86)   // Bits 16-23 from generic address
+ELF_RELOC(R_CUDA_G8_24,                  87)   // Bits 24-31 from generic address
+ELF_RELOC(R_CUDA_G8_32,                  88)   // Bits 32-39 from generic address
+ELF_RELOC(R_CUDA_G8_40,                  89)   // Bits 40-47 from generic address
+ELF_RELOC(R_CUDA_G8_48,                  90)   // Bits 48-55 from generic address
+ELF_RELOC(R_CUDA_G8_56,                  91)   // Bits 56-63 from generic address
+ELF_RELOC(R_CUDA_FUNC_DESC_8_0,          92)   // Bits 0-7 of function descriptor of entry function
+ELF_RELOC(R_CUDA_FUNC_DESC_8_8,          93)   // Bits 8-15 of function descriptor of entry function
+ELF_RELOC(R_CUDA_FUNC_DESC_8_16,         94)   // Bits 16-23 of function descriptor of entry function
+ELF_RELOC(R_CUDA_FUNC_DESC_8_24,         95)   // Bits 24-31 of function descriptor of entry function
+ELF_RELOC(R_CUDA_FUNC_DESC_8_32,         96)   // Bits 32-39 of function descriptor of entry function
+ELF_RELOC(R_CUDA_FUNC_DESC_8_40,         97)   // Bits 40-47 of function descriptor of entry function
+ELF_RELOC(R_CUDA_FUNC_DESC_8_48,         98)   // Bits 48-55 of function descriptor of entry function
+ELF_RELOC(R_CUDA_FUNC_DESC_8_56,         99)   // Bits 56-63 of function descriptor of entry function
+ELF_RELOC(R_CUDA_ABS20_44,               100)  // Bits 44-63 of function descriptor of entry function
+ELF_RELOC(R_CUDA_SAMP_HEADER_INDEX_0,    101)  // header_index(samp) -> bits 0-11
+ELF_RELOC(R_CUDA_UNIFIED,                102)  // 64bit unified address of symbol
+ELF_RELOC(R_CUDA_UNIFIED_32,             103)  // 32bit unified address of symbol
+ELF_RELOC(R_CUDA_UNIFIED_8_0,            104)  // Bits 0-7 from unified address of symbol
+ELF_RELOC(R_CUDA_UNIFIED_8_8,            105)  // Bits 8-15 from unified address of symbol
+ELF_RELOC(R_CUDA_UNIFIED_8_16,           106)  // Bits 16-23 from unified address of symbol
+ELF_RELOC(R_CUDA_UNIFIED_8_24,           107)  // Bits 24-31 from unified address of symbol
+ELF_RELOC(R_CUDA_UNIFIED_8_32,           108)  // Bits 32-39 from unified address of symbol
+ELF_RELOC(R_CUDA_UNIFIED_8_40,           109)  // Bits 40-47 from unified address of symbol
+ELF_RELOC(R_CUDA_UNIFIED_8_48,           110)  // Bits 48-55 from unified address of symbol
+ELF_RELOC(R_CUDA_UNIFIED_8_56,           111)  // Bits 56-63 from unified address of symbol
+ELF_RELOC(R_CUDA_UNIFIED32_LO_32,        112)  // Lower 32bits of unified address of symbol
+ELF_RELOC(R_CUDA_UNIFIED32_HI_32,        113)  // Higher 32bits of unified address of symbol
+ELF_RELOC(R_CUDA_NONE_LAST,              114)
