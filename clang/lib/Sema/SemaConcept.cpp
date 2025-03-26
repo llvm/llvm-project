@@ -1995,9 +1995,9 @@ auto SubsumptionChecker::find(AtomicConstraint *Ori) -> Literal {
   const auto &Mapping = Ori->ParameterMapping;
   ID.AddBoolean(Mapping.has_value());
   if (Mapping) {
-    for (unsigned I = 0, S = Mapping->size(); I < S; ++I) {
+    for (const TemplateArgumentLoc & TAL : *Mapping) {
       SemaRef.getASTContext()
-          .getCanonicalTemplateArgument((*Mapping)[I].getArgument())
+          .getCanonicalTemplateArgument(TAL.getArgument())
           .Profile(ID, SemaRef.getASTContext());
     }
   }
@@ -2056,8 +2056,8 @@ FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC) {
 
   auto Add = [&, this](Clause C) {
     // Sort each clause and remove duplicates for faster comparisons
-    std::sort(C.begin(), C.end());
-    C.erase(std::unique(C.begin(), C.end()), C.end());
+    llvm::sort(C);
+    C.erase(llvm::unique(C), C.end());
     AddUniqueClauseToFormula(Res, std::move(C));
   };
 
@@ -2086,10 +2086,8 @@ FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC) {
     for (const auto &RTransform : Right) {
       Clause Combined;
       Combined.reserve(LTransform.size() + RTransform.size());
-      std::copy(LTransform.begin(), LTransform.end(),
-                std::back_inserter(Combined));
-      std::copy(RTransform.begin(), RTransform.end(),
-                std::back_inserter(Combined));
+      llvm::copy(LTransform, std::back_inserter(Combined));
+      llvm::copy(RTransform, std::back_inserter(Combined));
       Add(std::move(Combined));
     }
   }
