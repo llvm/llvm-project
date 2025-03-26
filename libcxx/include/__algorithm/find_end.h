@@ -37,9 +37,9 @@ _LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter1, _Iter1> 
     _Sent1 __last1,
     _Iter2 __first2,
     _Sent2 __last2,
-    _Pred& __pred,
-    _Proj1& __proj1,
-    _Proj2& __proj2,
+    _Pred&& __pred,
+    _Proj1&& __proj1,
+    _Proj2&& __proj2,
     forward_iterator_tag,
     forward_iterator_tag) {
   // modeled after search algorithm

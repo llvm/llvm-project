@@ -44,7 +44,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // generic implementation
 template <class _Iter, class _Sent, class _Tp, class _Proj>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iter
-__find(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
+__find(_Iter __first, _Sent __last, const _Tp& __value, _Proj&& __proj) {
   for (; __first != __last; ++__first)
     if (std::__invoke(__proj, *__first) == __value)
       break;
@@ -88,7 +88,7 @@ template <class _Tp,
                             is_signed<_Tp>::value == is_signed<_Up>::value,
                         int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp*
-__find(_Tp* __first, _Tp* __last, const _Up& __value, _Proj& __proj) {
+__find(_Tp* __first, _Tp* __last, const _Up& __value, _Proj&& __proj) {
   if (__value < numeric_limits<_Tp>::min() || __value > numeric_limits<_Tp>::max())
     return __last;
   return std::__find(__first, __last, _Tp(__value), __proj);
@@ -151,7 +151,7 @@ template <class _SegmentedIterator,
           class _Proj,
           __enable_if_t<__is_segmented_iterator<_SegmentedIterator>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _SegmentedIterator
-__find(_SegmentedIterator __first, _SegmentedIterator __last, const _Tp& __value, _Proj& __proj) {
+__find(_SegmentedIterator __first, _SegmentedIterator __last, const _Tp& __value, _Proj&& __proj) {
   return std::__find_segment_if(std::move(__first), std::move(__last), __find_segment<_Tp>(__value), __proj);
 }
 

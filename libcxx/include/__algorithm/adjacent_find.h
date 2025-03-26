@@ -27,7 +27,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Iter, class _Sent, class _Pred, class _Proj>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter
-__adjacent_find(_Iter __first, _Sent __last, _Pred& __pred, _Proj& __proj) {
+__adjacent_find(_Iter __first, _Sent __last, _Pred&& __pred, _Proj&& __proj) {
   if (__first == __last)
     return __first;
 

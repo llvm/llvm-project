@@ -38,7 +38,7 @@ namespace ranges {
 struct __is_heap_until {
   template <class _Iter, class _Sent, class _Proj, class _Comp>
   _LIBCPP_HIDE_FROM_ABI constexpr static _Iter
-  __is_heap_until_fn_impl(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj) {
+  __is_heap_until_fn_impl(_Iter __first, _Sent __last, _Comp&& __comp, _Proj&& __proj) {
     auto __last_iter        = ranges::next(__first, __last);
     auto&& __projected_comp = std::__make_projected(__comp, __proj);
 

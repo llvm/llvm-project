@@ -33,7 +33,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy, class _Pred, class _Iter, class _Sent, class _SizeT, class _Type, class _Proj>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter> __search_n_forward_impl(
-    _Iter __first, _Sent __last, _SizeT __count, const _Type& __value, _Pred& __pred, _Proj& __proj) {
+    _Iter __first, _Sent __last, _SizeT __count, const _Type& __value, _Pred&& __pred, _Proj&& __proj) {
   if (__count <= 0)
     return std::make_pair(__first, __first);
   while (true) {
@@ -70,7 +70,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter> __search_
 
 template <class _AlgPolicy, class _Pred, class _Iter, class _Sent, class _SizeT, class _Type, class _Proj, class _DiffT>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 std::pair<_Iter, _Iter> __search_n_random_access_impl(
-    _Iter __first, _Sent __last, _SizeT __count, const _Type& __value, _Pred& __pred, _Proj& __proj, _DiffT __size1) {
+    _Iter __first, _Sent __last, _SizeT __count, const _Type& __value, _Pred&& __pred, _Proj&& __proj, _DiffT __size1) {
   using difference_type = typename iterator_traits<_Iter>::difference_type;
   if (__count == 0)
     return std::make_pair(__first, __first);
@@ -117,7 +117,7 @@ template <class _Iter,
           class _Proj,
           __enable_if_t<__has_random_access_iterator_category<_Iter>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter>
-__search_n_impl(_Iter __first, _Sent __last, _DiffT __count, const _Type& __value, _Pred& __pred, _Proj& __proj) {
+__search_n_impl(_Iter __first, _Sent __last, _DiffT __count, const _Type& __value, _Pred&& __pred, _Proj&& __proj) {
   return std::__search_n_random_access_impl<_ClassicAlgPolicy>(
       __first, __last, __count, __value, __pred, __proj, __last - __first);
 }
@@ -132,7 +132,7 @@ template <class _Iter1,
                             !__has_random_access_iterator_category<_Iter1>::value,
                         int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter1, _Iter1>
-__search_n_impl(_Iter1 __first, _Sent1 __last, _DiffT __count, const _Type& __value, _Pred& __pred, _Proj& __proj) {
+__search_n_impl(_Iter1 __first, _Sent1 __last, _DiffT __count, const _Type& __value, _Pred&& __pred, _Proj&& __proj) {
   return std::__search_n_forward_impl<_ClassicAlgPolicy>(__first, __last, __count, __value, __pred, __proj);
 }
 

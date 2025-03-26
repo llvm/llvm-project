@@ -40,9 +40,9 @@ struct __is_permutation {
       _Sent1 __last1,
       _Iter2 __first2,
       _Sent2 __last2,
-      _Pred& __pred,
-      _Proj1& __proj1,
-      _Proj2& __proj2) {
+      _Pred&& __pred,
+      _Proj1&& __proj1,
+      _Proj2&& __proj2) {
     return std::__is_permutation<_RangeAlgPolicy>(
         std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), __pred, __proj1, __proj2);
   }

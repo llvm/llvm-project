@@ -208,7 +208,13 @@ equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first
 
 template <class _Iter1, class _Sent1, class _Iter2, class _Sent2, class _Pred, class _Proj1, class _Proj2>
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __equal_impl(
-    _Iter1 __first1, _Sent1 __last1, _Iter2 __first2, _Sent2 __last2, _Pred& __comp, _Proj1& __proj1, _Proj2& __proj2) {
+    _Iter1 __first1,
+    _Sent1 __last1,
+    _Iter2 __first2,
+    _Sent2 __last2,
+    _Pred&& __comp,
+    _Proj1&& __proj1,
+    _Proj2&& __proj2) {
   while (__first1 != __last1 && __first2 != __last2) {
     if (!std::__invoke(__comp, std::__invoke(__proj1, *__first1), std::__invoke(__proj2, *__first2)))
       return false;
@@ -228,7 +234,7 @@ template <class _Tp,
                             __libcpp_is_trivially_equality_comparable<_Tp, _Up>::value,
                         int> = 0>
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
-__equal_impl(_Tp* __first1, _Tp* __last1, _Up* __first2, _Up*, _Pred&, _Proj1&, _Proj2&) {
+__equal_impl(_Tp* __first1, _Tp* __last1, _Up* __first2, _Up*, _Pred&, _Proj1&&, _Proj2&&) {
   return std::__constexpr_memcmp_equal(__first1, __first2, __element_count(__last1 - __first1));
 }
 

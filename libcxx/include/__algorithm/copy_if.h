@@ -26,7 +26,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InIter, class _Sent, class _OutIter, class _Proj, class _Pred>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
-__copy_if(_InIter __first, _Sent __last, _OutIter __result, _Pred& __pred, _Proj& __proj) {
+__copy_if(_InIter __first, _Sent __last, _OutIter __result, _Pred&& __pred, _Proj&& __proj) {
   for (; __first != __last; ++__first) {
     if (std::__invoke(__pred, std::__invoke(__proj, *__first))) {
       *__result = *__first;

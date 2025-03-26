@@ -34,7 +34,7 @@ namespace ranges {
 struct __is_partitioned {
   template <class _Iter, class _Sent, class _Proj, class _Pred>
   _LIBCPP_HIDE_FROM_ABI constexpr static bool
-  __is_partitioned_impl(_Iter __first, _Sent __last, _Pred& __pred, _Proj& __proj) {
+  __is_partitioned_impl(_Iter __first, _Sent __last, _Pred&& __pred, _Proj&& __proj) {
     for (; __first != __last; ++__first) {
       if (!std::invoke(__pred, std::invoke(__proj, *__first)))
         break;

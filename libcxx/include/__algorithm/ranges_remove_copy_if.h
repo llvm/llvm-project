@@ -43,7 +43,7 @@ using remove_copy_if_result = in_out_result<_InIter, _OutIter>;
 
 template <class _InIter, class _Sent, class _OutIter, class _Proj, class _Pred>
 _LIBCPP_HIDE_FROM_ABI constexpr in_out_result<_InIter, _OutIter>
-__remove_copy_if_impl(_InIter __first, _Sent __last, _OutIter __result, _Pred& __pred, _Proj& __proj) {
+__remove_copy_if_impl(_InIter __first, _Sent __last, _OutIter __result, _Pred&& __pred, _Proj&& __proj) {
   for (; __first != __last; ++__first) {
     if (!std::invoke(__pred, std::invoke(__proj, *__first))) {
       *__result = *__first;

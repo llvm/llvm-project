@@ -40,9 +40,9 @@ struct __search {
       _Sent1 __last1,
       _Iter2 __first2,
       _Sent2 __last2,
-      _Pred& __pred,
-      _Proj1& __proj1,
-      _Proj2& __proj2) {
+      _Pred&& __pred,
+      _Proj1&& __proj1,
+      _Proj2&& __proj2) {
     if constexpr (sized_sentinel_for<_Sent2, _Iter2>) {
       auto __size2 = ranges::distance(__first2, __last2);
       if (__size2 == 0)
