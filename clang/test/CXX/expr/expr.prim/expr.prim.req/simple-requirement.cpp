@@ -98,6 +98,15 @@ namespace std_example {
   using c1c2 = C_check<int *>; // expected-error{{constraints not satisfied for class template 'C_check' [with T = int *]}}
 }
 
+// typeid() of an expression becomes potentially evaluated if the expression is
+// of a polymorphic type.
+class X { virtual ~X(); };
+constexpr bool b = requires (X &x) { static_cast<int(*)[(typeid(x), 0)]>(nullptr); };
+// expected-warning@-1 {{left operand of comma operator has no effect}}
+// expected-warning@-2 {{variable length arrays in C++ are a Clang extension}}
+// expected-note@-3{{function parameter 'x' with unknown value cannot be used in a constant expression}}
+// expected-note@-4{{declared here}}
+
 namespace access_checks {
 namespace in_requires_expression {
 template<auto>
