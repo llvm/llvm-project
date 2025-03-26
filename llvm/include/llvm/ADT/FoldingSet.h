@@ -509,7 +509,7 @@ public:
 
   /// InsertNode - Insert the specified node into the folding set, knowing that
   /// it is not already in the folding set.  InsertPos must be obtained from
-  /// FindNodeOrInsertPos. //what is the folding set? 
+  /// FindNodeOrInsertPos.
   void InsertNode(T *N, void *InsertPos) {
     FoldingSetBase::InsertNode(N, InsertPos, Derived::getFoldingSetInfo());
   }

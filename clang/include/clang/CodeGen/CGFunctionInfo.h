@@ -721,7 +721,7 @@ public:
   }
 
   /// getCallingConvention - Return the user specified calling
-  /// convention, which has been translated into an LLVM CC. //this is important, that clang/ast calling convention has been translated into an llvm (target specific?) calling convention.
+  /// convention, which has been translated into an LLVM CC.
   unsigned getCallingConvention() const { return CallingConvention; }
 
   /// getEffectiveCallingConvention - Return the actual calling convention to

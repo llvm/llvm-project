@@ -642,7 +642,7 @@ bool Parser::ParseFirstTopLevelDecl(DeclGroupPtrTy &Result,
 bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
                                Sema::ModuleImportState &ImportState) {
   DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(*this);
-// to parseTopLevelDecl, we get the first token from the lexer. and then based on the kind of that token, we do some special handling if needed, otherwise we just return. 
+
   Result = nullptr;
   switch (Tok.getKind()) {
   case tok::annot_pragma_unused:

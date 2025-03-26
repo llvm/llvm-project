@@ -185,7 +185,7 @@ namespace {
 
       HandlingTopLevelDeclRAII HandlingDecl(*this);
 
-      // Make sure to emit all elements of a Decl. //What is a Decl really, what components does it have? what are we looping over? are we looping over its children?
+      // Make sure to emit all elements of a Decl.
       for (DeclGroupRef::iterator I = DG.begin(), E = DG.end(); I != E; ++I)
         Builder->EmitTopLevelDecl(*I);
 

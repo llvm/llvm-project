@@ -47,7 +47,6 @@ using namespace clang;
 using namespace CodeGen;
 
 /***/
-// clang and llvm have different calling conventions? what is it used for? what does it do? 
 unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
   switch (CC) {
   default: return llvm::CallingConv::C;
@@ -222,7 +221,7 @@ arrangeLLVMFunctionInfo(CodeGenTypes &CGT, bool instanceMethod,
 using CanQualTypeList = SmallVector<CanQualType, 16>;
 
 /// Arrange the argument and result information for a value of the
-/// given freestanding function type. // what does this mean??
+/// given freestanding function type.
 const CGFunctionInfo &
 CodeGenTypes::arrangeFreeFunctionType(CanQual<FunctionProtoType> FTP) {
   CanQualTypeList argTypes;
@@ -817,7 +816,7 @@ void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI);
 
 /// Arrange the argument and result information for an abstract value
 /// of a given function type.  This is the method which all of the
-/// above functions ultimately defer to. // this is important, what is this? what does it mean?
+/// above functions ultimately defer to.
 const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
     CanQualType resultType, FnInfoOpts opts, ArrayRef<CanQualType> argTypes,
     FunctionType::ExtInfo info,
@@ -825,6 +824,29 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
     RequiredArgs required) {
   assert(llvm::all_of(argTypes,
                       [](CanQualType T) { return T.isCanonicalAsParam(); }));
+
+// first convert each of these types into ABI::types. -> info, paramInfos, required, resultType, argTypes
+// then in the library, create abi::functionInfo type, same as how CGFunctionInfo is created. 
+// then in the library, lower abi::functionInfo to abi::x_86_abiArgInfo
+// then return that. then the frontend has to lower that to llvm-ir.
+// so clang will have to map that to clang::CGFunctionInfo.
+  ABIType resultTypeABI = getABIType(resultType);
+
+  std::vector<ABIType> abiTypes;
+  abiTypes.reserve(canQualTypes.size());  
+
+  for (const llvm::CanQualType &element : argTypes) {
+    abiTypes.push_back(getABIType(element));
+  }
+  llvm::ArrayRef<ABIType> argTypesABI = llvm::ArrayRef<ABIType>(abiTypes);
+
+  ABIFunctionInfo *ABIFI = ABIFunctionInfo::create(CC, isInstanceMethod, isChainCall, isDelegateCall,
+                              info, paramInfos, resultType, argTypes, required);
+  
+  // TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() ;
+  ABIInfo::computeFunctionInfo(CodeGenModule::getTargetCodeGenInfo(), ABIFI);
+
+  CGFunctionInfo *FI = mapABIFunctionInfoToCGFunctionInfo(ABIFI);
 
   // Lookup or create unique function info.
   llvm::FoldingSetNodeID ID;
@@ -845,15 +867,15 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
   unsigned CC = ClangCallConvToLLVMCallConv(info.getCC());
 
   // Construct the function info.  We co-allocate the ArgInfos.
-  FI = CGFunctionInfo::create(CC, isInstanceMethod, isChainCall, isDelegateCall,
-                              info, paramInfos, resultType, argTypes, required);
-  FunctionInfos.InsertNode(FI, insertPos); //what is this inserting? is it inserting a function call node in the IR module? 
+  // FI = CGFunctionInfo::create(CC, isInstanceMethod, isChainCall, isDelegateCall,
+  //                             info, paramInfos, resultType, argTypes, required);
+  FunctionInfos.InsertNode(FI, insertPos);
 
   bool inserted = FunctionsBeingProcessed.insert(FI).second;
   (void)inserted;
   assert(inserted && "Recursively being processed?");
 
-  // Compute ABI information. //why do we need the ABI info at this point? is it that first we add the positino of the funciton call in the IR module? and then before putting any of the parameters or any of the inputs or anything, we need to use the abi info. 
+  // Compute ABI information.
   if (CC == llvm::CallingConv::SPIR_KERNEL) {
     // Force target independent argument handling for the host visible
     // kernel functions.
@@ -861,7 +883,7 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
   } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
   } else {
-    CGM.getABIInfo().computeInfo(*FI); //this is going into compute info. but what is it doing there? is it just setting up the information needed for lowering, or is it actually doing the lowering? 
+    CGM.getABIInfo().computeInfo(*FI);
   }
 
   // Loop over all of the computed argument and return value info.  If any of
@@ -880,7 +902,7 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
 
   return *FI;
 }
-// this is important. this object seems to hold both information about the clang calling convention as well as the llvm calling convention. maybe its a mapping between the two. also it has an AST field.
+
 CGFunctionInfo *CGFunctionInfo::create(unsigned llvmCC, bool instanceMethod,
                                        bool chainCall, bool delegateCall,
                                        const FunctionType::ExtInfo &info,
@@ -5216,7 +5238,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     ArgMemory = RawAddress(AI, ArgStruct, Align);
   }
 
-  ClangToLLVMArgMapping IRFunctionArgs(CGM.getContext(), CallInfo); // --> this seems imp
+  ClangToLLVMArgMapping IRFunctionArgs(CGM.getContext(), CallInfo);
   SmallVector<llvm::Value *, 16> IRCallArgs(IRFunctionArgs.totalIRArgs());
 
   // If the call returns a temporary with struct return, create a temporary
@@ -5280,7 +5302,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
          "Mismatch between function signature & arguments.");
   unsigned ArgNo = 0;
   CGFunctionInfo::const_arg_iterator info_it = CallInfo.arg_begin();
-  for (CallArgList::const_iterator I = CallArgs.begin(), E = CallArgs.end(); // -> for all the function parameters, handle it based on abi info.
+  for (CallArgList::const_iterator I = CallArgs.begin(), E = CallArgs.end();
        I != E; ++I, ++info_it, ++ArgNo) {
     const ABIArgInfo &ArgInfo = info_it->info;
 

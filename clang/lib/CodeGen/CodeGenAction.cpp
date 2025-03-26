@@ -163,7 +163,7 @@ bool BackendConsumer::HandleTopLevelDecl(DeclGroupRef D) {
                                  Context->getSourceManager(),
                                  "LLVM IR generation of declaration");
 
-  // Recurse. //if we are starting ir generation, then we stop the frontend timer and start the ir gen timer. 
+  // Recurse.
   if (TimerIsEnabled && !LLVMIRGenerationRefCount++)
     CI.getFrontendTimer().yieldTo(LLVMIRGeneration);
 

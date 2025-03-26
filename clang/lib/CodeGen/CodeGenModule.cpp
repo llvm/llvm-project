@@ -103,7 +103,7 @@ static CGCXXABI *createCXXABI(CodeGenModule &CGM) {
 
   llvm_unreachable("invalid C++ ABI kind");
 }
-// this is importatnt!! this is the start of the abi info part. 
+
 static std::unique_ptr<TargetCodeGenInfo>
 createTargetCodeGenInfo(CodeGenModule &CGM) {
   const TargetInfo &Target = CGM.getTarget();
@@ -3920,7 +3920,7 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     }
   }
 
-  // Ignore declarations, they will be emitted on their first use. //If we have just declared a function, dont parse it now, that will be handled when it is first used. 
+  // Ignore declarations, they will be emitted on their first use.
   if (const auto *FD = dyn_cast<FunctionDecl>(Global)) {
     if (FD->hasAttr<OpenCLKernelAttr>() && FD->doesThisDeclarationHaveABody())
       addDeferredDeclToEmit(GlobalDecl(FD, KernelReferenceKind::Stub));
@@ -6142,7 +6142,7 @@ void CodeGenModule::HandleCXXStaticMemberVarInstantiation(VarDecl *VD) {
 void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
                                                  llvm::GlobalValue *GV) {
   const auto *D = cast<FunctionDecl>(GD.getDecl());
-// THIS IS THE PLACE!!
+
   // Compute the function info and LLVM type.
   const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
   llvm::FunctionType *Ty = getTypes().GetFunctionType(FI);
