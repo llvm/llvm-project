@@ -536,13 +536,13 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIAnnotateControlFlowLegacyPass(*PR);
   initializeAMDGPUInsertDelayAluLegacyPass(*PR);
   initializeAMDGPULowerVGPREncodingPass(*PR);
-  initializeSIInsertHardClausesPass(*PR);
+  initializeSIInsertHardClausesLegacyPass(*PR);
   initializeSIInsertWaitcntsLegacyPass(*PR);
   initializeSIModeRegisterLegacyPass(*PR);
   initializeSIWholeQuadModeLegacyPass(*PR);
   initializeSILowerControlFlowLegacyPass(*PR);
   initializeSIPreEmitPeepholePass(*PR);
-  initializeSILateBranchLoweringPass(*PR);
+  initializeSILateBranchLoweringLegacyPass(*PR);
   initializeSIMemoryLegalizerLegacyPass(*PR);
   initializeSIOptimizeExecMaskingLegacyPass(*PR);
   initializeSIPreAllocateWWMRegsLegacyPass(*PR);
@@ -2169,7 +2169,8 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(AddMachinePass &addPass) const {
     // TODO: addPass(SIInsertHardClausesPass());
   }
 
-  // addPass(SILateBranchLoweringPass());
+  addPass(SILateBranchLoweringPass());
+
   if (isPassEnabled(EnableSetWavePriority, CodeGenOptLevel::Less)) {
     // TODO: addPass(AMDGPUSetWavePriorityPass());
   }

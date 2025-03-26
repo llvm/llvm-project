@@ -272,20 +272,20 @@ void ARMMachObjectWriter::recordARMScatteredRelocation(
   FixedValue += SecAddr;
   uint32_t Value2 = 0;
 
-  if (const MCSymbolRefExpr *B = Target.getSymB()) {
+  if (const MCSymbol *SB = Target.getSubSym()) {
     assert(Type == MachO::ARM_RELOC_VANILLA && "invalid reloc for 2 symbols");
-    const MCSymbol *SB = &B->getSymbol();
 
     if (!SB->getFragment()) {
-      Asm.getContext().reportError(Fixup.getLoc(),
-                         "symbol '" + B->getSymbol().getName() +
-                         "' can not be undefined in a subtraction expression");
+      Asm.getContext().reportError(
+          Fixup.getLoc(),
+          "symbol '" + SB->getName() +
+              "' can not be undefined in a subtraction expression");
       return;
     }
 
     // Select the appropriate difference relocation type.
     Type = MachO::ARM_RELOC_SECTDIFF;
-    Value2 = Writer->getSymbolAddress(B->getSymbol(), Asm);
+    Value2 = Writer->getSymbolAddress(*SB, Asm);
     FixedValue -= Writer->getSectionAddress(SB->getFragment()->getParent());
   }
 
