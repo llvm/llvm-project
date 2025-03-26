@@ -65,9 +65,9 @@ TEST_F(PPMemoryAllocationsTest, PPMacroDefinesAllocations) {
       llvm::MemoryBuffer::getMemBuffer(Source);
   SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
 
+  HeaderSearchOptions HSOpts;
   TrivialModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                          Diags, LangOpts, Target.get());
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
   Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
                   SourceMgr, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,
