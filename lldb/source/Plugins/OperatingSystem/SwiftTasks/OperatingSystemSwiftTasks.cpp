@@ -93,10 +93,9 @@ OperatingSystemSwiftTasks::FindOrCreateSwiftThread(ThreadList &old_thread_list,
     return old_thread;
 
   std::string name = llvm::formatv("Swift Task {0}", task_id);
-  llvm::StringRef queue_name = "";
-  return std::make_shared<ThreadMemory>(*m_process, masked_task_id, name,
-                                        queue_name,
-                                        /*register_data_addr*/ 0);
+  return std::make_shared<ThreadMemoryProvidingName>(*m_process, masked_task_id,
+                                                     /*register_data_addr*/ 0,
+                                                     name);
 }
 
 bool OperatingSystemSwiftTasks::UpdateThreadList(ThreadList &old_thread_list,
