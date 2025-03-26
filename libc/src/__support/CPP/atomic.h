@@ -49,6 +49,7 @@ LIBC_INLINE constexpr int order(MemoryOrder mem_ord) {
 LIBC_INLINE constexpr int scope(MemoryScope mem_scope) {
   return static_cast<int>(mem_scope);
 }
+
 template <class T> LIBC_INLINE T *addressof(T &ref) {
   return __builtin_addressof(ref);
 }
