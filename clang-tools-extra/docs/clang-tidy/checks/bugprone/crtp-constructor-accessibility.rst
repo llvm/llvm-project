@@ -65,7 +65,8 @@ Example:
 To ensure that no accidental instantiation happens, the best practice is to 
 make the constructor private and declare the derived class as friend. Note
 that as a tradeoff, this also gives the derived class access to every other
-private members of the CRTP.
+private members of the CRTP. However, constructors can still be public or
+protected if they are deleted.
 
 Example:
 
