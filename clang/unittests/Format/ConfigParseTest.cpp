@@ -1230,6 +1230,12 @@ TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {
               IndentWidth, 56u);
 }
 
+TEST(ConfigParseTest, AllowCppForC) {
+  FormatStyle Style = {};
+  Style.Language = FormatStyle::LK_C;
+  EXPECT_EQ(parseConfiguration("Language: Cpp", &Style), ParseError::Success);
+}
+
 TEST(ConfigParseTest, UsesLanguageForBasedOnStyle) {
   FormatStyle Style = {};
   Style.Language = FormatStyle::LK_JavaScript;

@@ -2129,10 +2129,17 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
       LanguageFound = true;
   }
   if (!LanguageFound) {
-    if (Styles.empty() || Styles[0].Language != FormatStyle::LK_None)
+    if (Styles.empty())
       return make_error_code(ParseError::Unsuitable);
-    FormatStyle DefaultStyle = Styles[0];
-    DefaultStyle.Language = Language;
+    auto DefaultStyle = Styles[0];
+    auto &DefaultLanguage = DefaultStyle.Language;
+    if (DefaultLanguage != FormatStyle::LK_None &&
+        // For backward compatibility.
+        !(DefaultLanguage == FormatStyle::LK_Cpp &&
+          Language == FormatStyle::LK_C)) {
+      return make_error_code(ParseError::Unsuitable);
+    }
+    DefaultLanguage = Language;
     StyleSet.Add(std::move(DefaultStyle));
   }
   *Style = *StyleSet.Get(Language);
