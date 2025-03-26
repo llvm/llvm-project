@@ -5716,47 +5716,6 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   return true;
 }
 
-/// Try to remove the load by folding it to a register
-/// operand at the use. We fold the load instructions if load defines a virtual
-/// register, the virtual register is used once in the same BB, and the
-/// instructions in-between do not load or store, and have no side effects.
-MachineInstr *X86InstrInfo::optimizeLoadInstr(MachineInstr &MI,
-                                              const MachineRegisterInfo *MRI,
-                                              Register &FoldAsLoadDefReg,
-                                              MachineInstr *&DefMI) const {
-  // Check whether we can move DefMI here.
-  DefMI = MRI->getVRegDef(FoldAsLoadDefReg);
-  assert(DefMI);
-  bool SawStore = false;
-  if (!DefMI->isSafeToMove(SawStore))
-    return nullptr;
-
-  // Collect information about virtual register operands of MI.
-  SmallVector<unsigned, 1> SrcOperandIds;
-  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-    MachineOperand &MO = MI.getOperand(i);
-    if (!MO.isReg())
-      continue;
-    Register Reg = MO.getReg();
-    if (Reg != FoldAsLoadDefReg)
-      continue;
-    // Do not fold if we have a subreg use or a def.
-    if (MO.getSubReg() || MO.isDef())
-      return nullptr;
-    SrcOperandIds.push_back(i);
-  }
-  if (SrcOperandIds.empty())
-    return nullptr;
-
-  // Check whether we can fold the def into SrcOperandId.
-  if (MachineInstr *FoldMI = foldMemoryOperand(MI, SrcOperandIds, *DefMI)) {
-    FoldAsLoadDefReg = 0;
-    return FoldMI;
-  }
-
-  return nullptr;
-}
-
 /// \returns true if the instruction can be changed to COPY when imm is 0.
 static bool canConvert2Copy(unsigned Opc) {
   switch (Opc) {
@@ -6793,19 +6752,37 @@ static bool hasPartialRegUpdate(unsigned Opcode, const X86Subtarget &Subtarget,
 unsigned X86InstrInfo::getPartialRegUpdateClearance(
     const MachineInstr &MI, unsigned OpNum,
     const TargetRegisterInfo *TRI) const {
-  if (OpNum != 0 || !hasPartialRegUpdate(MI.getOpcode(), Subtarget))
+
+  if (OpNum != 0)
     return 0;
 
-  // If MI is marked as reading Reg, the partial register update is wanted.
+  // NDD ops with 8/16b results may appear to be partial register
+  // updates after register allocation.
+  bool HasNDDPartialWrite = false;
+  if (X86II::hasNewDataDest(MI.getDesc().TSFlags)) {
+    Register Reg = MI.getOperand(0).getReg();
+    if (!Reg.isVirtual())
+      HasNDDPartialWrite =
+          X86::GR8RegClass.contains(Reg) || X86::GR16RegClass.contains(Reg);
+  }
+
+  if (!(HasNDDPartialWrite || hasPartialRegUpdate(MI.getOpcode(), Subtarget)))
+    return 0;
+
+  // Check if the result register is also used as a source.
+  // For non-NDD ops, this means a partial update is wanted, hence we return 0.
+  // For NDD ops, this means it is possible to compress the instruction
+  // to a legacy form in CompressEVEX, which would create an unwanted partial
+  // update, so we return the clearance.
   const MachineOperand &MO = MI.getOperand(0);
   Register Reg = MO.getReg();
-  if (Reg.isVirtual()) {
-    if (MO.readsReg() || MI.readsVirtualRegister(Reg))
-      return 0;
-  } else {
-    if (MI.readsRegister(Reg, TRI))
-      return 0;
-  }
+  bool ReadsReg = false;
+  if (Reg.isVirtual())
+    ReadsReg = (MO.readsReg() || MI.readsVirtualRegister(Reg));
+  else
+    ReadsReg = MI.readsRegister(Reg, TRI);
+  if (ReadsReg != HasNDDPartialWrite)
+    return 0;
 
   // If any instructions in the clearance range are reading Reg, insert a
   // dependency breaking instruction, which is inexpensive and is likely to
@@ -7229,6 +7206,17 @@ void X86InstrInfo::breakPartialRegDependency(
         .addReg(Reg, RegState::Undef)
         .addReg(Reg, RegState::Undef);
     MI.addRegisterKilled(Reg, TRI, true);
+  } else if ((X86::GR16RegClass.contains(Reg) ||
+              X86::GR8RegClass.contains(Reg)) &&
+             X86II::hasNewDataDest(MI.getDesc().TSFlags)) {
+    // This case is only expected for NDD ops which appear to be partial
+    // writes, but are not due to the zeroing of the upper part. Here
+    // we add an implicit def of the superegister, which prevents
+    // CompressEVEX from converting this to a legacy form.
+    Register SuperReg = getX86SubSuperRegister(Reg, 64);
+    MachineInstrBuilder BuildMI(*MI.getParent()->getParent(), &MI);
+    if (!MI.definesRegister(SuperReg, /*TRI=*/nullptr))
+      BuildMI.addReg(SuperReg, RegState::ImplicitDefine);
   }
 }
 

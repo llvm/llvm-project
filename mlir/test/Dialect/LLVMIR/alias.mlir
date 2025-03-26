@@ -26,23 +26,23 @@ llvm.mlir.alias external @_ZTV1D : !llvm.struct<(array<3 x ptr>)> {
 
 // -----
 
-llvm.mlir.global external @zed(42 : i32) : i32
+llvm.mlir.global weak_odr @zed(42 : i32) : i32
 
-llvm.mlir.alias external @foo : i32 {
+llvm.mlir.alias weak_odr @foo : i32 {
   %0 = llvm.mlir.addressof @zed : !llvm.ptr
   llvm.return %0 : !llvm.ptr
 }
 
-llvm.mlir.alias external @foo2 : i16 {
+llvm.mlir.alias weak_odr @foo2 : i16 {
   %0 = llvm.mlir.addressof @zed : !llvm.ptr
   llvm.return %0 : !llvm.ptr
 }
 
-// CHECK: llvm.mlir.alias external @foo : i32 {
+// CHECK: llvm.mlir.alias weak_odr @foo : i32 {
 // CHECK:   %[[ADDR:.*]] = llvm.mlir.addressof @zed : !llvm.ptr
 // CHECK:   llvm.return %[[ADDR]] : !llvm.ptr
 // CHECK: }
-// CHECK: llvm.mlir.alias external @foo2 : i16 {
+// CHECK: llvm.mlir.alias weak_odr @foo2 : i16 {
 // CHECK:   %[[ADDR:.*]] = llvm.mlir.addressof @zed : !llvm.ptr
 // CHECK:   llvm.return %[[ADDR]] : !llvm.ptr
 // CHECK: }

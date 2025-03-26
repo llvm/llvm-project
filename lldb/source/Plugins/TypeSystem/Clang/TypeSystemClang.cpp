@@ -1217,10 +1217,11 @@ TypeSystemClang::GetOrCreateClangModule(llvm::StringRef name,
 
   // Lazily initialize the module map.
   if (!m_header_search_up) {
-    auto HSOpts = std::make_shared<clang::HeaderSearchOptions>();
+    m_header_search_opts_up = std::make_unique<clang::HeaderSearchOptions>();
     m_header_search_up = std::make_unique<clang::HeaderSearch>(
-        HSOpts, *m_source_manager_up, *m_diagnostics_engine_up,
-        *m_language_options_up, m_target_info_up.get());
+        *m_header_search_opts_up, *m_source_manager_up,
+        *m_diagnostics_engine_up, *m_language_options_up,
+        m_target_info_up.get());
     m_module_map_up = std::make_unique<clang::ModuleMap>(
         *m_source_manager_up, *m_diagnostics_engine_up, *m_language_options_up,
         m_target_info_up.get(), *m_header_search_up);
@@ -2772,8 +2773,8 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
     // is a member.
     if (ast->getTargetInfo().getCXXABI().isMicrosoft()) {
       auto *MPT = qual_type.getTypePtr()->castAs<clang::MemberPointerType>();
-      if (MPT->getClass()->isRecordType())
-        GetCompleteRecordType(ast, clang::QualType(MPT->getClass(), 0),
+      if (auto *RD = MPT->getMostRecentCXXRecordDecl())
+        GetCompleteRecordType(ast, QualType(RD->getTypeForDecl(), 0),
                               allow_completion);
 
       return !qual_type.getTypePtr()->isIncompleteType();
@@ -8611,7 +8612,8 @@ TypeSystemClang::CreateMemberPointerType(const CompilerType &type,
       return CompilerType();
     return ast->GetType(ast->getASTContext().getMemberPointerType(
         ClangUtil::GetQualType(pointee_type),
-        ClangUtil::GetQualType(type).getTypePtr()));
+        /*Qualifier=*/nullptr,
+        ClangUtil::GetQualType(type)->getAsCXXRecordDecl()));
   }
   return CompilerType();
 }

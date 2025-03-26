@@ -5106,6 +5106,29 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
   uint64_t VTSize = VT.getFixedSizeInBits();
   uint64_t InVTSize = InVT.getFixedSizeInBits();
   if (VTSize < InVTSize) {
+    // AArch64 doesn't have a direct vector instruction to convert
+    // fixed point to floating point AND narrow it at the same time.
+    // Additional rounding when the target is f32/f64 causes double
+    // rounding issues. Conversion to f16 is fine due to narrow width.
+    bool IsTargetf32 = VT.getVectorElementType() == MVT::f32;
+    bool IsTargetf16 = false;
+    if (Op.hasOneUse() &&
+        Op->user_begin()->getOpcode() == ISD::CONCAT_VECTORS) {
+      // Some vector types are split during legalization into half, followed by
+      // concatenation, followed by rounding to the original vector type. If we
+      // end up resolving to f16 type, we shouldn't worry about rounding errors.
+      SDNode *U = *Op->user_begin();
+      if (U->hasOneUse() && U->user_begin()->getOpcode() == ISD::FP_ROUND) {
+        EVT TmpVT = U->user_begin()->getValueType(0);
+        if (TmpVT.getScalarType() == MVT::f16)
+          IsTargetf16 = true;
+      }
+    }
+
+    if (IsTargetf32 && !IsTargetf16) {
+      return !IsStrict ? DAG.UnrollVectorOp(Op.getNode()) : SDValue();
+    }
+
     MVT CastVT =
         MVT::getVectorVT(MVT::getFloatingPointVT(InVT.getScalarSizeInBits()),
                          InVT.getVectorNumElements());
@@ -8241,7 +8264,10 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   }
 
   // varargs
-  if (isVarArg) {
+  // Note that IsWin64 part is required to prevent odd miscompilations on arm64
+  // windows platforms. For more info refer to GH#126780 PR comments.
+  if (isVarArg &&
+      (DAG.getMachineFunction().getFrameInfo().hasVAStart() || IsWin64)) {
     if (!Subtarget->isTargetDarwin() || IsWin64) {
       // The AAPCS variadic function ABI is identical to the non-variadic
       // one. As a result there may be more arguments in registers and we should
@@ -17651,8 +17677,7 @@ bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
         Builder.CreateVectorSplat(StTy->getElementCount(), Builder.getTrue());
 
   auto ExtractedValues = InterleavedValues;
-  SmallVector<Value *, 4> StoreOperands(InterleavedValues.begin(),
-                                        InterleavedValues.end());
+  SmallVector<Value *, 4> StoreOperands(InterleavedValues);
   if (UseScalable)
     StoreOperands.push_back(Pred);
   StoreOperands.push_back(BaseAddr);

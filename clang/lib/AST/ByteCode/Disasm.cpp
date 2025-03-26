@@ -383,11 +383,19 @@ LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
   for (const Pointer *P = Pointers; P; P = P->Next) {
     ++NPointers;
   }
+  OS << "  EvalID: " << EvalID << '\n';
+  OS << "  DeclID: ";
+  if (DeclID)
+    OS << *DeclID << '\n';
+  else
+    OS << "-\n";
   OS << "  Pointers: " << NPointers << "\n";
   OS << "  Dead: " << IsDead << "\n";
   OS << "  Static: " << IsStatic << "\n";
   OS << "  Extern: " << IsExtern << "\n";
   OS << "  Initialized: " << IsInitialized << "\n";
+  OS << "  Weak: " << IsWeak << "\n";
+  OS << "  Dynamic: " << IsDynamic << "\n";
 }
 
 LLVM_DUMP_METHOD void EvaluationResult::dump() const {

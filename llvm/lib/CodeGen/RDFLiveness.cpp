@@ -763,7 +763,7 @@ void Liveness::computeLiveIns() {
     for (unsigned i = 0; i < IDFB.size(); ++i) {
       auto F2 = MDF.find(IDFB[i]);
       if (F2 != MDF.end())
-        IDFB.insert(F2->second.begin(), F2->second.end());
+        IDFB.insert_range(F2->second);
     }
     // Add B to the IDF(B). This will put B in the IIDF(B).
     IDFB.insert(&B);

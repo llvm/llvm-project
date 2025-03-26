@@ -13,7 +13,7 @@
 !CHECK:      omp.wsloop private(@{{.*}} %{{.*}} -> %[[I_MEM:.*]] : !fir.ref<i32>) {
 !CHECK-NEXT:   omp.loop_nest (%[[IV:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
 !CHECK:          %[[I:.*]]:2 = hlfir.declare %[[I_MEM]] {uniq_name = "_QFlastprivate_iv_incEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:          hlfir.assign %[[IV]] to %[[I]]#1 : i32, !fir.ref<i32>
+!CHECK:          hlfir.assign %[[IV]] to %[[I]]#0 : i32, !fir.ref<i32>
 !CHECK:          %[[UB_2:.*]] = arith.constant 10 : i32
 !CHECK:          %[[STEP_2:.*]]  = arith.constant 3 : i32
 !CHECK:          %[[V:.*]] = arith.addi %[[IV]], %[[STEP_2]] : i32
@@ -23,7 +23,7 @@
 !CHECK:          %[[V_GT:.*]] = arith.cmpi sgt, %[[V]], %[[UB_2]] : i32
 !CHECK:          %[[CMP:.*]] = arith.select %[[STEP_NEG]], %[[V_LT]], %[[V_GT]] : i1
 !CHECK:          fir.if %[[CMP]] {
-!CHECK:            hlfir.assign %[[V]] to %[[I]]#1 : i32, !fir.ref<i32>
+!CHECK:            hlfir.assign %[[V]] to %[[I]]#0 : i32, !fir.ref<i32>
 !CHECK:            %[[I_VAL:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
 !CHECK:            hlfir.assign %[[I_VAL]] to %[[I2]]#0 : i32, !fir.ref<i32>
 !CHECK:          }
@@ -49,7 +49,7 @@ end subroutine
 !CHECK:      omp.wsloop private(@{{.*}} %{{.*}} -> %[[I_MEM:.*]] : !fir.ref<i32>) {
 !CHECK-NEXT:   omp.loop_nest (%[[IV:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
 !CHECK:          %[[I:.*]]:2 = hlfir.declare %[[I_MEM]] {uniq_name = "_QFlastprivate_iv_decEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:          hlfir.assign %[[IV]] to %[[I]]#1 : i32, !fir.ref<i32>
+!CHECK:          hlfir.assign %[[IV]] to %[[I]]#0 : i32, !fir.ref<i32>
 !CHECK:          %[[UB_2:.*]] = arith.constant 1 : i32
 !CHECK:          %[[STEP_2:.*]]  = arith.constant -3 : i32
 !CHECK:          %[[V:.*]] = arith.addi %[[IV]], %[[STEP_2]] : i32
@@ -59,7 +59,7 @@ end subroutine
 !CHECK:          %[[V_GT:.*]] = arith.cmpi sgt, %[[V]], %[[UB_2]] : i32
 !CHECK:          %[[CMP:.*]] = arith.select %[[STEP_NEG]], %[[V_LT]], %[[V_GT]] : i1
 !CHECK:          fir.if %[[CMP]] {
-!CHECK:            hlfir.assign %[[V]] to %[[I]]#1 : i32, !fir.ref<i32>
+!CHECK:            hlfir.assign %[[V]] to %[[I]]#0 : i32, !fir.ref<i32>
 !CHECK:            %[[I_VAL:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
 !CHECK:            hlfir.assign %[[I_VAL]] to %[[I2]]#0 : i32, !fir.ref<i32>
 !CHECK:          }
@@ -83,7 +83,7 @@ subroutine lastprivate_iv_i1
 !CHECK:    omp.wsloop private({{.*}})
 !CHECK:      omp.loop_nest
 !CHECK:        fir.if %{{.*}} {
-!CHECK:          hlfir.assign %{{.*}} to %[[IV:.*]]#1 : i32, !fir.ref<i8>
+!CHECK:          hlfir.assign %{{.*}} to %[[IV:.*]]#0 : i32, !fir.ref<i8>
 !CHECK:          %[[IV_VAL:.*]] = fir.load %[[IV]]#0 : !fir.ref<i8>
 !CHECK:          hlfir.assign %[[IV_VAL]] to %{{.*}}#0 : i8, !fir.ref<i8>
 !CHECK:        }
@@ -100,7 +100,7 @@ end subroutine
 !CHECK:        %[[PRIVATE_IV_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_IV]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFlastprivate_iv_pointerEi"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 !CHECK:        %[[LOOP_INDEX_INCR:.*]] = arith.addi %[[LOOP_INDEX]], %{{.*}} : i64
 !CHECK:        fir.if %{{.*}} {
-!CHECK:          %[[PRIVATE_IV_BOX:.*]] = fir.load %[[PRIVATE_IV_DECL]]#1 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+!CHECK:          %[[PRIVATE_IV_BOX:.*]] = fir.load %[[PRIVATE_IV_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 !CHECK:          %[[PRIVATE_IV_ADDR:.*]] = fir.box_addr %[[PRIVATE_IV_BOX]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 !CHECK:          hlfir.assign %[[LOOP_INDEX_INCR]] to %[[PRIVATE_IV_ADDR]] : i64, !fir.ptr<i32>
 !CHECK:        }
