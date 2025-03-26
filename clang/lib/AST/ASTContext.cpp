@@ -13650,7 +13650,11 @@ static QualType getCommonArrayElementType(ASTContext &Ctx, const T *X,
   QualType EX = X->getElementType(), EY = Y->getElementType();
   QualType R = Ctx.getCommonSugaredType(EX, EY,
                                         /*Unqualified=*/true);
+  // Qualifiers common to both element types.
   Qualifiers RQ = R.getQualifiers();
+  // For each side, move to the top level any qualifiers which are not common to
+  // both element types. The caller must assume top level qualifiers might
+  // be different, even if they are the same type, and can be treated as sugar.
   QX += EX.getQualifiers() - RQ;
   QY += EY.getQualifiers() - RQ;
   return R;
@@ -14371,6 +14375,22 @@ QualType ASTContext::getCommonSugaredType(QualType X, QualType Y,
   // necessarily canonical types, as they may still have sugared properties.
   // QX and QY will store the sum of all qualifiers in Xs and Ys respectively.
   auto Xs = ::unwrapSugar(SX, QX), Ys = ::unwrapSugar(SY, QY);
+
+  // If this is an ArrayType, the element qualifiers are interchangeable with
+  // the top level qualifiers.
+  // * In case the canonical nodes are the same, the elements types are already
+  // the same.
+  // * Otherwise, the element types will be made the same, and any different
+  // element qualifiers will be moved up to the top level qualifiers, per
+  // 'getCommonArrayElementType'.
+  // In both cases, this means there may be top level qualifiers which differ
+  // between X and Y. If so, these differing qualifiers are redundant with the
+  // element qualifiers, and can be removed without changing the canonical type.
+  // The desired behaviour is the same as for the 'Unqualified' case here:
+  // treat the redundant qualifiers as sugar, remove the ones which are not
+  // common to both sides.
+  bool KeepCommonQualifiers = Unqualified || isa<ArrayType>(SX.Ty);
+
   if (SX.Ty != SY.Ty) {
     // The canonical nodes differ. Build a common canonical node out of the two,
     // unifying their sugar. This may recurse back here.
@@ -14386,7 +14406,7 @@ QualType ASTContext::getCommonSugaredType(QualType X, QualType Y,
       SY = Ys.pop_back_val();
     }
   }
-  if (Unqualified)
+  if (KeepCommonQualifiers)
     QX = Qualifiers::removeCommonQualifiers(QX, QY);
   else
     assert(QX == QY);

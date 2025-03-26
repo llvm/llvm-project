@@ -3139,9 +3139,8 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
   // Sometimes, no register matches all of these conditions, so we can't do a
   // tail-call.
   if (!isa<GlobalAddressSDNode>(Callee.getNode()) || isIndirect) {
-    SmallSet<MCPhysReg, 5> AddressRegisters;
-    for (Register R : {ARM::R0, ARM::R1, ARM::R2, ARM::R3})
-      AddressRegisters.insert(R);
+    SmallSet<MCPhysReg, 5> AddressRegisters = {ARM::R0, ARM::R1, ARM::R2,
+                                               ARM::R3};
     if (!(Subtarget->isThumb1Only() ||
           MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress(true)))
       AddressRegisters.insert(ARM::R12);
@@ -11045,7 +11044,7 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
     SmallVectorImpl<MachineBasicBlock*> &MBBList = CallSiteNumToLPad[I];
     for (MachineBasicBlock *MBB : MBBList) {
       LPadList.push_back(MBB);
-      InvokeBBs.insert(MBB->pred_begin(), MBB->pred_end());
+      InvokeBBs.insert_range(MBB->predecessors());
     }
   }
 

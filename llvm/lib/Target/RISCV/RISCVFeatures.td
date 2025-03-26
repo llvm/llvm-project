@@ -358,14 +358,6 @@ def HasStdExtZhinx : Predicate<"Subtarget->hasStdExtZhinx()">,
 def NoStdExtZhinx : Predicate<"!Subtarget->hasStdExtZhinx()">;
 
 // Compressed Extensions
-
-def FeatureStdExtC
-    : RISCVExtension<2, 0, "Compressed Instructions">,
-      RISCVExtensionBitmask<0, 2>;
-def HasStdExtC : Predicate<"Subtarget->hasStdExtC()">,
-                 AssemblerPredicate<(all_of FeatureStdExtC),
-                                    "'C' (Compressed Instructions)">;
-
 def FeatureNoRVCHints
     : SubtargetFeature<"no-rvc-hints", "EnableRVCHintInstrs", "false",
                        "Disable RVC Hint Instructions.">;
@@ -377,6 +369,14 @@ def FeatureStdExtZca
     : RISCVExtension<1, 0,
                      "part of the C extension, excluding compressed "
                      "floating point loads/stores">;
+
+def FeatureStdExtC
+    : RISCVExtension<2, 0, "Compressed Instructions", [FeatureStdExtZca]>,
+      RISCVExtensionBitmask<0, 2>;
+def HasStdExtC : Predicate<"Subtarget->hasStdExtC()">,
+                 AssemblerPredicate<(all_of FeatureStdExtC),
+                                    "'C' (Compressed Instructions)">;
+
 
 def HasStdExtCOrZca
     : Predicate<"Subtarget->hasStdExtCOrZca()">,
@@ -869,9 +869,9 @@ def HasStdExtH : Predicate<"Subtarget->hasStdExtH()">,
 
 // Supervisor extensions
 
-def FeatureStdExtSdext : RISCVExperimentalExtension<1, 0, "External debugger">;
+def FeatureStdExtSdext : RISCVExtension<1, 0, "External debugger">;
 
-def FeatureStdExtSdtrig : RISCVExperimentalExtension<1, 0, "Debugger triggers">;
+def FeatureStdExtSdtrig : RISCVExtension<1, 0, "Debugger triggers">;
 
 def FeatureStdExtShgatpa
     : RISCVExtension<1, 0,
@@ -1543,7 +1543,7 @@ foreach nf = {2-8} in
   def TuneOptimizedNF#nf#SegmentLoadStore :
       SubtargetFeature<"optimized-nf"#nf#"-segment-load-store",
                        "HasOptimizedNF"#nf#"SegmentLoadStore",
-                       "true", "vlseg"#nf#"eN.v and vsseg"#nf#"eN.v are"
+                       "true", "vlseg"#nf#"eN.v and vsseg"#nf#"eN.v are "
                        "implemented as a wide memory op and shuffle">;
 
 def Experimental
