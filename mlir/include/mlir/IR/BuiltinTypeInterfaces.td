@@ -246,6 +246,12 @@ def TensorTypeInterface : TypeInterface<"TensorType", [ShapedTypeInterface]> {
     static bool isValidElementType(::mlir::Type type);
   }];
 
+  // Note: in trait to apply to derived types.
+  let extraTraitClassDeclaration = [{
+    operator ShapedType() const { return llvm::cast<ShapedType>($_type); }
+    operator TensorType() const { return llvm::cast<TensorType>($_type); }
+  }];
+
   let extraClassOf = [{
     return $_type.hasTrait<::mlir::TensorType::Trait>();
   }];
@@ -280,6 +286,12 @@ def BaseMemRefTypeInterface : TypeInterface<"BaseMemRefType", [ShapedTypeInterfa
   let extraClassDeclaration = [{
     /// Return true if the specified element type is ok in a memref.
     static bool isValidElementType(::mlir::Type type);
+  }];
+
+  // Note: in trait to apply to derived types.
+  let extraTraitClassDeclaration = [{
+    operator ShapedType() const { return llvm::cast<ShapedType>($_type); }
+    operator BaseMemRefType() const { return llvm::cast<BaseMemRefType>($_type); }
   }];
 
   let extraClassOf = [{

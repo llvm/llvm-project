@@ -99,6 +99,13 @@ TEST(InterfaceTest, TestCustomTensorIsTensorType) {
             customCloneType.getElementType());
   EXPECT_TRUE(mlir::isa<mlir::TensorType>(customCloneType));
   EXPECT_TRUE(mlir::isa<test::TestTensorType>(customCloneType));
+
+  // user-specified conversions
+  TensorType baseCopy = customTensorType;
+  std::ignore = baseCopy;
+
+  ShapedType shapedBaseCopy = customTensorType;
+  std::ignore = shapedBaseCopy;
 }
 
 TEST(InterfaceTest, TestCustomMemrefIsBaseMemref) {
@@ -117,4 +124,11 @@ TEST(InterfaceTest, TestCustomMemrefIsBaseMemref) {
   EXPECT_TRUE(mlir::isa<test::TestMemrefType>(customCloneType));
   EXPECT_EQ(customMemrefType.getMemorySpace(),
             mlir::cast<test::TestMemrefType>(customCloneType).getMemorySpace());
+
+  // user-specified conversions
+  BaseMemRefType baseCopy = customMemrefType;
+  std::ignore = baseCopy;
+
+  ShapedType shapedBaseCopy = customMemrefType;
+  std::ignore = shapedBaseCopy;
 }
