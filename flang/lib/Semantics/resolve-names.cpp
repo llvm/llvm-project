@@ -1821,7 +1821,7 @@ parser::CharBlock MakeNameFromOperator(
     return parser::CharBlock{"op.NEQV", 8};
 
   default:
-    assert(0 && "Unsupported operator...");
+    DIE("Unsupported operator...");
     return parser::CharBlock{"op.?", 4};
   }
 }
@@ -1850,8 +1850,8 @@ void OmpVisitor::ProcessReductionSpecifier(
     const parser::OmpReductionSpecifier &spec,
     const std::optional<parser::OmpClauseList> &clauses) {
   const parser::Name *name{nullptr};
-  parser::Name mangledName{};
-  UserReductionDetails reductionDetailsTemp{};
+  parser::Name mangledName;
+  UserReductionDetails reductionDetailsTemp;
   const auto &id{std::get<parser::OmpReductionIdentifier>(spec.t)};
   if (auto procDes{std::get_if<parser::ProcedureDesignator>(&id.u)}) {
     name = std::get_if<parser::Name>(&procDes->u);
@@ -1865,11 +1865,22 @@ void OmpVisitor::ProcessReductionSpecifier(
     name = &mangledName;
   }
 
+  // Use reductionDetailsTemp if we can't find the symbol (this is
+  // the first, or only, instance with this name). The detaiols then
+  // gets stored in the symbol when it's created.
   UserReductionDetails *reductionDetails{&reductionDetailsTemp};
-  Symbol *symbol{name ? name->symbol : nullptr};
-  symbol = FindSymbol(mangledName);
+  Symbol *symbol{FindSymbol(mangledName)};
   if (symbol) {
+    // If we found a symbol, we append the type info to the
+    // existing reductionDetails.
     reductionDetails = symbol->detailsIf<UserReductionDetails>();
+
+    if (!reductionDetails) {
+      context().Say(name->source,
+          "Duplicate defineition of '%s' in !$OMP DECLARE REDUCTION"_err_en_US,
+          name->source);
+      return;
+    }
   }
 
   auto &typeList{std::get<parser::OmpTypeNameList>(spec.t)};
@@ -1898,17 +1909,16 @@ void OmpVisitor::ProcessReductionSpecifier(
     // We need to walk t.u because Walk(t) does it's own BeginDeclTypeSpec.
     Walk(t.u);
 
-    const DeclTypeSpec *typeSpec{GetDeclTypeSpec()};
-    assert(typeSpec && "We should have a type here");
-
-    if (reductionDetails) {
+    // Only process types we can find. There will be an error later on when
+    // a type isn't found.
+    if (const DeclTypeSpec * typeSpec{GetDeclTypeSpec()}) {
       reductionDetails->AddType(typeSpec);
-    }
 
-    for (auto &nm : ompVarNames) {
-      ObjectEntityDetails details{};
-      details.set_type(*typeSpec);
-      MakeSymbol(nm, Attrs{}, std::move(details));
+      for (auto &nm : ompVarNames) {
+        ObjectEntityDetails details{};
+        details.set_type(*typeSpec);
+        MakeSymbol(nm, Attrs{}, std::move(details));
+      }
     }
     EndDeclTypeSpec();
     Walk(std::get<std::optional<parser::OmpReductionCombiner>>(spec.t));
