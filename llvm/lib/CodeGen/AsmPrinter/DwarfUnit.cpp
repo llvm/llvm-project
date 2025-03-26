@@ -1686,6 +1686,10 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     addBlock(Buffer, dwarf::DW_AT_rank, DwarfExpr.finalize());
   }
 
+  if (auto *BitStride = CTy->getBitStrideConst()) {
+    addUInt(Buffer, dwarf::DW_AT_bit_stride, {}, BitStride->getZExtValue());
+  }
+
   // Emit the element type.
   addType(Buffer, CTy->getBaseType());
 
