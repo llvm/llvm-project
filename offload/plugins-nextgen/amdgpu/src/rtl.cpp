@@ -856,6 +856,10 @@ struct AMDGPUKernelTy : public GenericKernelTy {
     return BlockSize <= ConstWGSize;
   }
 
+  uint32_t getKernelLaunchId() const { return KernelLaunchId; }
+
+  void setKernelLaunchId(uint32_t Id) const { KernelLaunchId = Id; }
+
   /// Envar to enable occupancy-based optimization for SPMD kernel.
   BoolEnvar OMPX_SPMDOccupancyBasedOpt;
 
@@ -886,6 +890,8 @@ private:
   std::optional<offloading::amdgpu::AMDGPUKernelMetaData> KernelInfo;
   /// CodeGen generate WGSize
   uint16_t ConstWGSize;
+
+  static thread_local uint32_t KernelLaunchId;
 
   /// Lower number of threads if tripcount is low. This should produce
   /// a larger number of teams if allowed by other constraints.
@@ -1338,6 +1344,8 @@ private:
                                     uint64_t numTeams) const override;
 };
 
+thread_local uint32_t AMDGPUKernelTy::KernelLaunchId = 0;
+
 /// Class representing an HSA signal. Signals are used to define dependencies
 /// between asynchronous operations: kernel launches and memory transfers.
 struct AMDGPUSignalTy {
@@ -1696,6 +1704,20 @@ private:
           NumThreads(0), KernelRunRecords(nullptr) {}
   };
 
+  struct KernelDurationTracingArgsTy {
+    hsa_agent_t Agent;
+    AMDGPUSignalTy *Signal;
+    double TicksToTime;
+    int32_t DeviceId;
+    uint32_t LaunchId;
+    uint32_t NumTeams;
+    uint32_t NumThreads;
+
+    KernelDurationTracingArgsTy()
+        : Agent{0}, Signal(nullptr), TicksToTime(setTicksToTime()), DeviceId(0),
+          LaunchId(0), NumTeams(0), NumThreads(0) {}
+  };
+
   using AMDGPUStreamCallbackTy = Error(void *Data);
 
   /// The stream is composed of N stream's slots. The struct below represents
@@ -1896,6 +1918,9 @@ private:
   /// Arguments for the callback function.
   PostKernelRunProcessingArgsTy PostKernelRunProcessingArgs;
 
+  /// Arguments for callback function to collect kernel duration.
+  KernelDurationTracingArgsTy KernelDurationTracingArgs;
+
   /// Return the current number of asynchronous operations on the stream.
   uint32_t size() const { return NextSlot; }
 
@@ -2056,9 +2081,9 @@ private:
     return Plugin::success();
   }
 
-  static uint64_t getKernelDuration(PostKernelRunProcessingArgsTy *Args) {
+  template <typename Ty> static uint64_t getKernelDuration(Ty *Args) {
     assert(Args->Signal &&
-           "Invalid AMDGPUSignal Pointer in post kernel run processing");
+           "Invalid AMDGPUSignal Pointer for obtaining kernel duration");
     hsa_amd_profiling_dispatch_time_t TimeRec;
     hsa_amd_profiling_get_dispatch_time(Args->Agent, Args->Signal->get(),
                                         &TimeRec);
@@ -2078,7 +2103,8 @@ private:
     KernelRunRecordTy *KernelRecord = Args->KernelRunRecords;
     assert(KernelRecord && "KernelRunRecord is null!");
 
-    uint64_t KernelDuration = getKernelDuration(Args);
+    uint64_t KernelDuration =
+        getKernelDuration<PostKernelRunProcessingArgsTy>(Args);
     KernelRecord->addEntry(Args->KernelName, Args->NumTeams, Args->NumThreads,
                            KernelDuration);
 
@@ -2089,6 +2115,24 @@ private:
               Args->KernelName.c_str(), Args->NumTeams, Args->NumThreads,
               KernelDuration);
     }
+    return Plugin::success();
+  }
+
+  /// Callback function to generate traces for kernel runtime.
+  static Error KernelDurationTracingAction(void *Data) {
+    assert(Data && "Invalid data pointer for tracing kernel duration");
+    KernelDurationTracingArgsTy *Args =
+        reinterpret_cast<KernelDurationTracingArgsTy *>(Data);
+
+    uint64_t KernelDuration =
+        getKernelDuration<KernelDurationTracingArgsTy>(Args);
+
+    fprintf(
+        stderr,
+        "DeviceID: %2d LaunchID: %2d TeamsXthrds:(%4uX%4d) Duration(ns): %lu\n",
+        Args->DeviceId, Args->LaunchId, Args->NumTeams, Args->NumThreads,
+        KernelDuration);
+
     return Plugin::success();
   }
 
@@ -2189,6 +2233,21 @@ public:
                                                  &PostKernelRunProcessingArgs))
           return Err;
       }
+    }
+
+    // When LIBOMPTARGET_EXE_TIME is set, register the callback function to get
+    // the kernel duration.
+    if (Device.enableKernelDurationTracing()) {
+      KernelDurationTracingArgs.Agent = Agent;
+      KernelDurationTracingArgs.Signal = OutputSignal;
+      KernelDurationTracingArgs.DeviceId = Device.getDeviceId();
+      KernelDurationTracingArgs.LaunchId = Kernel.getKernelLaunchId();
+      KernelDurationTracingArgs.NumTeams = NumBlocks[0];
+      KernelDurationTracingArgs.NumThreads = NumThreads[0];
+
+      if (auto Err = Slots[Curr].schedCallback(KernelDurationTracingAction,
+                                               &KernelDurationTracingArgs))
+        return Err;
     }
 
     // Push the kernel with the output signal and an input signal (optional)
@@ -2630,9 +2689,10 @@ struct AMDGPUStreamManagerTy final
         OMPX_EnableQueueProfiling("LIBOMPTARGET_AMDGPU_ENABLE_QUEUE_PROFILING",
                                   false),
         NextQueue(0), Agent(HSAAgent) {
-    // If OMPX_ENABLE_RUNTIME_AUTOTUNING is enabled,
+    // If OMPX_ENABLE_RUNTIME_AUTOTUNING or LIBOMPTARGET_EXE_TIME is enabled,
     // set queue profiling to true.
-    if (Device.enableRuntimeAutotuning()) {
+    if (Device.enableRuntimeAutotuning() ||
+        Device.enableKernelDurationTracing()) {
       OMPX_EnableQueueProfiling = true;
     }
   }
@@ -5164,19 +5224,42 @@ void AMDGPUKernelTy::printAMDOneLineKernelTrace(GenericDeviceTy &GenericDevice,
   auto VGPRSpillCount = (*KernelInfo).VGPRSpillCount;
   // auto MaxFlatWorkgroupSize = (*KernelInfo).MaxFlatWorkgroupSize;
 
-  // This line should print exactly as the one in the old plugin.
-  fprintf(
-      stderr,
-      "DEVID: %2d SGN:%d ConstWGSize:%-4d args:%2d teamsXthrds:(%4uX%4d) "
-      "reqd:(%4dX%4d) lds_usage:%uB sgpr_count:%u vgpr_count:%u agpr_count:%u "
-      "sgpr_spill_count:%u vgpr_spill_count:%u tripcount:%lu rpc:%d "
-      "md:%d md_LB:%ld md_UB:%ld Max Occupancy: %u Achieved Occupancy: "
-      "%d%% n:%s\n",
-      GenericDevice.getDeviceId(), getExecutionModeFlags(), ConstWGSize,
-      KernelArgs.NumArgs, NumBlocks[0], NumThreads[0], 0, 0, GroupSegmentSize,
-      SGPRCount, VGPRCount, AGPRCount, SGPRSpillCount, VGPRSpillCount,
-      KernelArgs.Tripcount, HasRPC, isMultiDeviceKernel(), MultiDeviceLB,
-      MultiDeviceUB, MaxOccupancy, AchievedOccupancy, getName());
+  if (GenericDevice.enableKernelDurationTracing()) {
+    uint32_t LaunchId = GenericDevice.getAndIncrementLaunchId();
+    setKernelLaunchId(LaunchId);
+
+    // Print Launch Id after Device Id.
+    fprintf(stderr,
+            "DEVID: %2d LaunchId: %u SGN:%d ConstWGSize:%-4d args:%2d "
+            "teamsXthrds:(%4uX%4d) "
+            "reqd:(%4dX%4d) lds_usage:%uB sgpr_count:%u vgpr_count:%u "
+            "agpr_count:%u "
+            "sgpr_spill_count:%u vgpr_spill_count:%u tripcount:%lu rpc:%d "
+            "md:%d md_LB:%ld md_UB:%ld Max Occupancy: %u Achieved Occupancy: "
+            "%d%% n:%s\n",
+            GenericDevice.getDeviceId(), LaunchId, getExecutionModeFlags(),
+            ConstWGSize, KernelArgs.NumArgs, NumBlocks[0], NumThreads[0], 0, 0,
+            GroupSegmentSize, SGPRCount, VGPRCount, AGPRCount, SGPRSpillCount,
+            VGPRSpillCount, KernelArgs.Tripcount, HasRPC, isMultiDeviceKernel(),
+            MultiDeviceLB, MultiDeviceUB, MaxOccupancy, AchievedOccupancy,
+            getName());
+  } else {
+
+    // This line should print exactly as the one in the old plugin.
+    fprintf(stderr,
+            "DEVID: %2d SGN:%d ConstWGSize:%-4d args:%2d teamsXthrds:(%4uX%4d) "
+            "reqd:(%4dX%4d) lds_usage:%uB sgpr_count:%u vgpr_count:%u "
+            "agpr_count:%u "
+            "sgpr_spill_count:%u vgpr_spill_count:%u tripcount:%lu rpc:%d "
+            "md:%d md_LB:%ld md_UB:%ld Max Occupancy: %u Achieved Occupancy: "
+            "%d%% n:%s\n",
+            GenericDevice.getDeviceId(), getExecutionModeFlags(), ConstWGSize,
+            KernelArgs.NumArgs, NumBlocks[0], NumThreads[0], 0, 0,
+            GroupSegmentSize, SGPRCount, VGPRCount, AGPRCount, SGPRSpillCount,
+            VGPRSpillCount, KernelArgs.Tripcount, HasRPC, isMultiDeviceKernel(),
+            MultiDeviceLB, MultiDeviceUB, MaxOccupancy, AchievedOccupancy,
+            getName());
+  }
 }
 
 Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
@@ -5188,7 +5271,8 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
   // When LIBOMPTARGET_KERNEL_TRACE is set, print the single-line kernel trace
   // info present in the old ASO plugin, and continue with the upstream 2-line
   // info, should LIBOMPTARGET_INFO be a meaningful value, otherwise return.
-  if (getInfoLevel() & OMP_INFOTYPE_AMD_KERNEL_TRACE)
+  if ((getInfoLevel() & OMP_INFOTYPE_AMD_KERNEL_TRACE) ||
+      GenericDevice.enableKernelDurationTracing())
     printAMDOneLineKernelTrace(GenericDevice, KernelArgs, NumThreads, NumBlocks,
                                MultiDeviceLB, MultiDeviceUB);
 

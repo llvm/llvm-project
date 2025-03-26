@@ -1192,6 +1192,12 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Destroy Argbufs and clear the cache. Used as part of device destructor
   void clear_ArgBufs();
 
+  bool enableKernelDurationTracing() const {
+    return OMPX_KernelDurationTracing;
+  }
+
+  uint32_t getAndIncrementLaunchId() { return LaunchId.fetch_add(1); }
+
 private:
   /// Get and set the stack size and heap size for the device. If not used, the
   /// plugin can implement the setters as no-op and setting the output
@@ -1239,6 +1245,9 @@ private:
   BoolEnvar OMPX_ReuseBlocksForHighTripCount =
       BoolEnvar("LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT", true);
 
+  /// Variable to track kernel launch for a device.
+  std::atomic<uint32_t> LaunchId = 0;
+
 protected:
   /// Environment variables defined by the LLVM OpenMP implementation
   /// regarding the initial number of streams and events.
@@ -1285,6 +1294,9 @@ protected:
 
   /// Structs for functions and data used in runtime autotuning.
   KernelRunRecordTy *KernelRunRecords;
+
+  /// Variable to enable kernel duration tracing.
+  BoolEnvar OMPX_KernelDurationTracing;
 
 private:
 #ifdef OMPT_SUPPORT
