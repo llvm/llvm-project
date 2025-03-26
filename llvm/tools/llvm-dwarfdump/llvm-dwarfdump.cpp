@@ -289,7 +289,8 @@ static opt<bool> Verify("verify", desc("Verify the DWARF debug info."),
 static opt<unsigned> VerifyNumThreads(
     "verify-num-threads", init(1),
     desc("Number of threads to use for --verify. Single threaded verification "
-         "is the default unless this option is specified. This can cause the "
+         "is the default unless this option is specified. If 0 is specified, "
+         "maximum hardware threads will be used. This can cause the "
          "output to be non determinisitic, but can speed up verification and "
          "is useful when running with the summary only or JSON summary modes."),
     cat(DwarfDumpCategory));
@@ -916,7 +917,11 @@ int main(int argc, char **argv) {
 
   bool Success = true;
   if (Verify) {
-    parallel::strategy = hardware_concurrency(VerifyNumThreads);
+    if (!VerifyNumThreads)
+      parallel::strategy =
+          hardware_concurrency(hardware_concurrency().compute_thread_count());
+    else
+      parallel::strategy = hardware_concurrency(VerifyNumThreads);
     for (StringRef Object : Objects)
       Success &= handleFile(Object, verifyObjectFile, OutputFile.os());
   } else if (Statistics) {
