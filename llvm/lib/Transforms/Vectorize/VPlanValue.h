@@ -374,6 +374,7 @@ public:
     // VPHeaderPHIRecipe need to be kept together.
     VPCanonicalIVPHISC,
     VPActiveLaneMaskPHISC,
+    VPLastActiveMaskPHISC,
     VPEVLBasedIVPHISC,
     VPFirstOrderRecurrencePHISC,
     VPWidenIntOrFpInductionSC,

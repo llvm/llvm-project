@@ -48,7 +48,7 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
 }
 
 bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
-  if (isa<VPActiveLaneMaskPHIRecipe>(V))
+  if (isa<VPActiveLaneMaskPHIRecipe, VPLastActiveMaskPHIRecipe>(V))
     return true;
 
   auto IsWideCanonicalIV = [](VPValue *A) {

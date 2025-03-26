@@ -41,6 +41,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
+#include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
@@ -4899,6 +4900,83 @@ void VPlanTransforms::addExitUsersForFirstOrderRecurrences(VPlan &Plan,
           VPInstruction::ExtractPenultimateElement, {FOR->getBackedgeValue()},
           {}, "vector.recur.extract.for.phi");
       cast<VPInstruction>(U)->replaceAllUsesWith(PenultimateElement);
+    }
+  }
+}
+
+void VPlanTransforms::convertFindLastRecurrences(
+    VPlan &Plan, VPRecipeBuilder &RecipeBuilder,
+    LoopVectorizationLegality *Legal) {
+  assert(Legal && "Need valid LoopVecLegality");
+
+  // May need to do something better than this?
+  if (Plan.hasScalarVFOnly())
+    return;
+
+  // We want to create the following nodes:
+  // vec.body:
+  //   mask.phi = phi <VF x i1> [ all.false, vec.ph ], [ new.mask, vec.body ]
+  //   ...data.phi already exists, but needs updating...
+  //   data.phi = phi <VF x Ty> [ default.val, vec.ph ], [ new.data, vec.body ]
+  //
+  //   ...'data' and 'compare' created by existing nodes...
+  //
+  //   any_active = i1 any_of_reduction(compare)
+  //   new.mask = select any_active, compare, mask.phi
+  //   new.data = select any_active, data, data.phi
+  //
+  // middle.block:
+  //   result = extract-last-active new.data, new.mask, default.val
+
+  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars()) {
+    if (RecurrenceDescriptor::isFindLastRecurrenceKind(
+            RdxDesc.getRecurrenceKind())) {
+      VPRecipeBase *PhiR = RecipeBuilder.getRecipe(Phi);
+      VPBuilder Builder = VPBuilder::getToInsertAfter(PhiR);
+
+      // Add mask phi
+      VPValue *False =
+          Plan.getOrAddLiveIn(ConstantInt::getFalse(Phi->getContext()));
+      auto *MaskPHI = new VPLastActiveMaskPHIRecipe(False, DebugLoc());
+      Builder.insert(MaskPHI);
+
+      // Find the condition for the select
+      SelectInst *Select = cast<SelectInst>(RdxDesc.getLoopExitInstr());
+      auto *SR = cast<VPWidenSelectRecipe>(RecipeBuilder.getRecipe(Select));
+      VPValue *Cond = SR->getCond();
+
+      // Add select for mask
+      Builder.setInsertPoint(SR);
+      VPValue *AnyOf = Builder.createNaryOp(VPInstruction::AnyOf, {Cond});
+      VPValue *MaskSelect = Builder.createSelect(AnyOf, Cond, MaskPHI);
+      MaskPHI->addOperand(MaskSelect);
+
+      // Replace select for data
+      VPValue *DataSelect = Builder.createSelect(
+          AnyOf, SR->getOperand(1), SR->getOperand(2), SR->getDebugLoc());
+      SR->replaceAllUsesWith(DataSelect);
+      SR->eraseFromParent();
+
+      // Find final reduction and replace it with an
+      // extract.last.active intrinsic.
+      VPInstruction *RdxResult = nullptr;
+      for (VPUser *U : DataSelect->users()) {
+        VPInstruction *I = dyn_cast<VPInstruction>(U);
+        if (I && I->getOpcode() == VPInstruction::ComputeReductionResult) {
+          RdxResult = I;
+          break;
+        }
+      }
+
+      assert(RdxResult);
+      Builder.setInsertPoint(RdxResult);
+      VPValue *Default = RecipeBuilder.getVPValueOrAddLiveIn(
+          RdxDesc.getRecurrenceStartValue());
+      auto *ExtractLastActive = Builder.createNaryOp(
+          VPInstruction::ExtractLastActive, {DataSelect, MaskSelect, Default},
+          RdxResult->getDebugLoc());
+      RdxResult->replaceAllUsesWith(ExtractLastActive);
+      RdxResult->eraseFromParent();
     }
   }
 }

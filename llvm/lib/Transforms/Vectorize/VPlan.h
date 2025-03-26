@@ -561,6 +561,7 @@ public:
     case VPRecipeBase::VPPredInstPHISC:
     case VPRecipeBase::VPCanonicalIVPHISC:
     case VPRecipeBase::VPActiveLaneMaskPHISC:
+    case VPRecipeBase::VPLastActiveMaskPHISC:
     case VPRecipeBase::VPFirstOrderRecurrencePHISC:
     case VPRecipeBase::VPWidenPHISC:
     case VPRecipeBase::VPWidenIntOrFpInductionSC:
@@ -1121,6 +1122,8 @@ public:
     /// Returns the value for vscale.
     VScale,
     OpsEnd = VScale,
+    /// Extracts the last active lane based on a predicate vector operand.
+    ExtractLastActive,
   };
 
   /// Returns true if this VPInstruction generates scalar values for all lanes.
@@ -3636,6 +3639,40 @@ protected:
   /// Print the recipe.
   void printRecipe(raw_ostream &O, const Twine &Indent,
                    VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
+// TODO: Can we unify the PHI recipe hierarchy a bit? VPPredInstPHISC is close
+//       to this (just a PHI of a predicate), but isn't a header phi so can't
+//       be used for the mask of FindLastActive reductions.
+//
+// This is basically a clone of VPActiveLaneMaskPHIRecipe, but won't run into
+// problems with transforms that expect there to only be a single ALM PHI, and
+// can be ignored by other code looking for a (non-existent) underlying value.
+class VPLastActiveMaskPHIRecipe : public VPHeaderPHIRecipe {
+public:
+  VPLastActiveMaskPHIRecipe(VPValue *StartMask, DebugLoc DL)
+      : VPHeaderPHIRecipe(VPDef::VPLastActiveMaskPHISC, nullptr, StartMask,
+                          DL) {}
+
+  ~VPLastActiveMaskPHIRecipe() override = default;
+
+  VPLastActiveMaskPHIRecipe *clone() override {
+    auto *R = new VPLastActiveMaskPHIRecipe(getOperand(0), getDebugLoc());
+    if (getNumOperands() == 2)
+      R->addOperand(getOperand(1));
+    return R;
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPLastActiveMaskPHISC);
+
+  /// Generate the mask phi
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
 #endif
 };
 

@@ -25381,6 +25381,7 @@ private:
         case RecurKind::FindFirstIVUMin:
         case RecurKind::FindLastIVSMax:
         case RecurKind::FindLastIVUMax:
+        case RecurKind::FindLast:
         case RecurKind::FMaxNum:
         case RecurKind::FMinNum:
         case RecurKind::FMaximumNum:
@@ -25522,6 +25523,7 @@ private:
     case RecurKind::FindFirstIVUMin:
     case RecurKind::FindLastIVSMax:
     case RecurKind::FindLastIVUMax:
+    case RecurKind::FindLast:
     case RecurKind::FMaxNum:
     case RecurKind::FMinNum:
     case RecurKind::FMaximumNum:
@@ -25628,6 +25630,7 @@ private:
     case RecurKind::FindFirstIVUMin:
     case RecurKind::FindLastIVSMax:
     case RecurKind::FindLastIVUMax:
+    case RecurKind::FindLast:
     case RecurKind::FMaxNum:
     case RecurKind::FMinNum:
     case RecurKind::FMaximumNum:
