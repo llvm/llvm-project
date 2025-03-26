@@ -819,92 +819,87 @@ void RISCVInstrInfo::loadRegFromStackSlot(
         .setMIFlag(Flags);
   }
 }
+std::optional<unsigned> getFoldedOpcode(MachineFunction &MF, MachineInstr &MI,
+                                        ArrayRef<unsigned> Ops,
+                                        const RISCVSubtarget &ST) {
 
-MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
-    MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, int FrameIndex, LiveIntervals *LIS,
-    VirtRegMap *VRM) const {
   // The below optimizations narrow the load so they are only valid for little
   // endian.
   // TODO: Support big endian by adding an offset into the frame object?
   if (MF.getDataLayout().isBigEndian())
-    return nullptr;
+    return std::nullopt;
 
   // Fold load from stack followed by sext.b/sext.h/sext.w/zext.b/zext.h/zext.w.
   if (Ops.size() != 1 || Ops[0] != 1)
-   return nullptr;
+    return std::nullopt;
 
-  unsigned LoadOpc;
   switch (MI.getOpcode()) {
   default:
-    if (RISCV::isSEXT_W(MI)) {
-      LoadOpc = RISCV::LW;
-      break;
-    }
-    if (RISCV::isZEXT_W(MI)) {
-      LoadOpc = RISCV::LWU;
-      break;
-    }
-    if (RISCV::isZEXT_B(MI)) {
-      LoadOpc = RISCV::LBU;
-      break;
-    }
-    if (RISCV::getRVVMCOpcode(MI.getOpcode()) == RISCV::VMV_X_S) {
-      unsigned Log2SEW =
-          MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
-      if (STI.getXLen() < (1U << Log2SEW))
-        return nullptr;
-      switch (Log2SEW) {
-      case 3:
-        LoadOpc = RISCV::LB;
-        break;
-      case 4:
-        LoadOpc = RISCV::LH;
-        break;
-      case 5:
-        LoadOpc = RISCV::LW;
-        break;
-      case 6:
-        LoadOpc = RISCV::LD;
-        break;
-      default:
-        llvm_unreachable("Unexpected SEW");
-      }
-      break;
-    }
-    if (RISCV::getRVVMCOpcode(MI.getOpcode()) == RISCV::VFMV_F_S) {
-      unsigned Log2SEW =
-          MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
-      switch (Log2SEW) {
-      case 4:
-        LoadOpc = RISCV::FLH;
-        break;
-      case 5:
-        LoadOpc = RISCV::FLW;
-        break;
-      case 6:
-        LoadOpc = RISCV::FLD;
-        break;
-      default:
-        llvm_unreachable("Unexpected SEW");
-      }
-      break;
-    }
-    return nullptr;
+    if (RISCV::isSEXT_W(MI))
+      return RISCV::LW;
+    if (RISCV::isZEXT_W(MI))
+      return RISCV::LWU;
+    if (RISCV::isZEXT_B(MI))
+      return RISCV::LBU;
+    break;
   case RISCV::SEXT_H:
-    LoadOpc = RISCV::LH;
-    break;
+    return RISCV::LH;
   case RISCV::SEXT_B:
-    LoadOpc = RISCV::LB;
-    break;
+    return RISCV::LB;
   case RISCV::ZEXT_H_RV32:
   case RISCV::ZEXT_H_RV64:
-    LoadOpc = RISCV::LHU;
-    break;
+    return RISCV::LHU;
   }
 
+  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
+  default:
+    return std::nullopt;
+  case RISCV::VMV_X_S: {
+    unsigned Log2SEW =
+        MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
+    if (ST.getXLen() < (1U << Log2SEW))
+      return std::nullopt;
+    switch (Log2SEW) {
+    case 3:
+      return RISCV::LB;
+    case 4:
+      return RISCV::LH;
+    case 5:
+      return RISCV::LW;
+    case 6:
+      return RISCV::LD;
+    default:
+      llvm_unreachable("Unexpected SEW");
+    }
+  }
+  case RISCV::VFMV_F_S: {
+    unsigned Log2SEW =
+        MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
+    switch (Log2SEW) {
+    case 4:
+      return RISCV::FLH;
+    case 5:
+      return RISCV::FLW;
+    case 6:
+      return RISCV::FLD;
+    default:
+      llvm_unreachable("Unexpected SEW");
+    }
+  }
+  }
+}
+
+// This is the version used during inline spilling
+MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
+    MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
+    MachineBasicBlock::iterator InsertPt, int FrameIndex, LiveIntervals *LIS,
+    VirtRegMap *VRM) const {
+
+  std::optional<unsigned> LoadOpc = getFoldedOpcode(MF, MI, Ops, STI);
+  if (!LoadOpc)
+    return nullptr;
   Register DstReg = MI.getOperand(0).getReg();
-  return BuildMI(*MI.getParent(), InsertPt, MI.getDebugLoc(), get(LoadOpc),
+  return BuildMI(*MI.getParent(), InsertPt, MI.getDebugLoc(), get(*LoadOpc),
                  DstReg)
       .addFrameIndex(FrameIndex)
       .addImm(0);
