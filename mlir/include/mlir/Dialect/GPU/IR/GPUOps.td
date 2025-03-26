@@ -351,6 +351,23 @@ def GPU_OptionalDimSizeHintAttr : ConfinedAttr<OptionalAttr<DenseI32ArrayAttr>,
   [AttrConstraint<Or<[IsNullAttr.predicate, DenseArrayCount<3>.predicate]>,
     "with 3 elements (if present)">]>;
 
+// Source language of the gpu.func or gpu.launc_func operations.
+def GPU_KernelSourceLangOpenACC : I32EnumAttrCase<"OpenACC", 0, "openacc">;
+def GPU_KernelSourceLangOpenMP : I32EnumAttrCase<"OpenMP", 1, "openmp">;
+def GPU_KernelSourceLangCUDAFortran
+    : I32EnumAttrCase<"CUDAFortran", 2, "cuda_fortran">;
+
+def GPU_KernelSourceLang
+    : I32EnumAttr<"KernelSourceLang", "Source language of a kernel",
+                  [GPU_KernelSourceLangOpenACC, GPU_KernelSourceLangOpenMP,
+                   GPU_KernelSourceLangCUDAFortran,
+]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::gpu";
+}
+def GPU_KernelSourceLangAttr
+    : EnumAttr<GPU_Dialect, GPU_KernelSourceLang, "kernel_source_lang">;
+
 def GPU_GPUFuncOp : GPU_Op<"func", [
     HasParent<"GPUModuleOp">, AutomaticAllocationScope, FunctionOpInterface,
     IsolatedFromAbove, AffineScope
@@ -426,12 +443,13 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
   }];
 
   let arguments = (ins TypeAttrOf<FunctionType>:$function_type,
-                       OptionalAttr<DictArrayAttr>:$arg_attrs,
-                       OptionalAttr<DictArrayAttr>:$res_attrs,
-                       OptionalAttr<DictArrayAttr>:$workgroup_attrib_attrs,
-                       OptionalAttr<DictArrayAttr>:$private_attrib_attrs,
-                       GPU_OptionalDimSizeHintAttr:$known_block_size,
-                       GPU_OptionalDimSizeHintAttr:$known_grid_size);
+      OptionalAttr<DictArrayAttr>:$arg_attrs,
+      OptionalAttr<DictArrayAttr>:$res_attrs,
+      OptionalAttr<DictArrayAttr>:$workgroup_attrib_attrs,
+      OptionalAttr<DictArrayAttr>:$private_attrib_attrs,
+      GPU_OptionalDimSizeHintAttr:$known_block_size,
+      GPU_OptionalDimSizeHintAttr:$known_grid_size,
+      OptionalAttr<GPU_KernelSourceLangAttr>:$kernel_source_lang);
   let regions = (region AnyRegion:$body);
 
   let skipDefaultBuilders = 1;
@@ -793,20 +811,21 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
   let hasVerifier = 1;
 }
 
-def GPU_LaunchOp : GPU_Op<"launch", [
-      AffineScope, AutomaticAllocationScope, AttrSizedOperandSegments,
-      DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
-      GPU_AsyncOpInterface, RecursiveMemoryEffects]>,
-    Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
-               Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
-               Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
-               Optional<Index>:$clusterSizeX,
-               Optional<Index>:$clusterSizeY,
-               Optional<Index>:$clusterSizeZ,
-               Optional<I32>:$dynamicSharedMemorySize,
-               OptionalAttr<SymbolRefAttr>:$kernelFunc,
-               OptionalAttr<SymbolRefAttr>:$kernelModule)>,
-    Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
+def GPU_LaunchOp
+    : GPU_Op<"launch", [AffineScope, AutomaticAllocationScope,
+                        AttrSizedOperandSegments,
+                        DeclareOpInterfaceMethods<
+                            InferIntRangeInterface, ["inferResultRanges"]>,
+                        GPU_AsyncOpInterface, RecursiveMemoryEffects]>,
+      Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
+          Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
+          Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
+          Optional<Index>:$clusterSizeX, Optional<Index>:$clusterSizeY,
+          Optional<Index>:$clusterSizeZ, Optional<I32>:$dynamicSharedMemorySize,
+          OptionalAttr<SymbolRefAttr>:$kernelFunc,
+          OptionalAttr<SymbolRefAttr>:$kernelModule,
+          OptionalAttr<GPU_KernelSourceLangAttr>:$kernelSourceLang)>,
+      Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
   let summary = "GPU kernel launch operation";
 
   let description = [{
@@ -840,7 +859,10 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     -   a variadic number of Private memory attributions.
 
     The `kernelFunc` and `kernelModule` attributes are optional and specifies
-    the kernel name and a module in which the kernel should be outlined. 
+    the kernel name and a module in which the kernel should be outlined.
+
+    The optional `kernelSourceLang` attribute can be set to specify the Source
+    language of the kernel.
 
     Syntax:
 

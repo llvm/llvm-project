@@ -202,6 +202,7 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
       TypeRange(ValueRange(launchOp.getPrivateAttributions())));
   outlinedFunc->setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
                         builder.getUnitAttr());
+  outlinedFunc.setKernelSourceLangAttr(launchOp.getKernelSourceLangAttr());
 
   // If we can infer bounds on the grid and/or block sizes from the arguments
   // to the launch op, propagate them to the generated kernel. This is safe

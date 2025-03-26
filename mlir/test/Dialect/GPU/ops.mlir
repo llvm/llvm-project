@@ -14,6 +14,13 @@ module attributes {gpu.container_module} {
       // CHECK: gpu.terminator
       gpu.terminator
     }
+    // CHECK: gpu.launch
+    gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %sz, %grid_y = %sz, %grid_z = %sz)
+               threads(%tx, %ty, %tz) in (%block_x = %sz, %block_y = %sz, %block_z = %sz) {
+      // CHECK: gpu.terminator
+      gpu.terminator
+    // CHECK: } {kernelSourceLang = #gpu<kernel_source_lang openmp>}
+    } {kernelSourceLang = #gpu<kernel_source_lang openmp>}
     return
   }
 
@@ -277,6 +284,12 @@ module attributes {gpu.container_module} {
     // CHECK-LABEL: @empty_attribution
     // CHECK:       {
     gpu.func @empty_attribution(%arg0: f32) workgroup() private() {
+      gpu.return
+    }
+
+    // CHECK-LABEL: gpu.func @source_lang(%{{.*}}: f32) kernel attributes {kernel_source_lang = #gpu<kernel_source_lang openacc>}
+    // CHECK: {
+    gpu.func @source_lang(%arg0: f32) kernel attributes {kernel_source_lang = #gpu<kernel_source_lang openacc>} {
       gpu.return
     }
   }

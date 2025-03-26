@@ -630,3 +630,28 @@ func.func @testNoAttributes() {
   }
   return
 }
+
+// -----
+
+// This test tests that the kernelSourceLang is propagated to the gpu.func.
+
+// CHECK-LABEL: func.func @testKernelFuncOnly()
+// CHECK: gpu.launch_func  @testKernelFuncOnly_kernel::@testKernelFuncOnly_kernel
+
+// CHECK: gpu.module @testKernelFuncOnly_kernel
+// CHECK: gpu.func @testKernelFuncOnly_kernel() kernel attributes {kernel_source_lang = #gpu<kernel_source_lang openacc>
+func.func @testKernelFuncOnly() {
+  %gDimX = arith.constant 8 : index
+  %gDimY = arith.constant 12 : index
+  %gDimZ = arith.constant 16 : index
+  %bDimX = arith.constant 32 : index
+  %bDimY = arith.constant 16 : index
+  %bDimZ = arith.constant 8 : index
+
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY, %grid_z = %gDimZ)
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ) {
+    "some_op"(%bx, %tx) : (index, index) -> ()
+    gpu.terminator
+  } {kernelSourceLang = #gpu<kernel_source_lang openacc>}
+  return
+}
