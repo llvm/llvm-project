@@ -462,6 +462,9 @@ define i32 @store_with_pointer_phi_in_same_bb_use_other_phi(ptr %A, ptr %B, ptr 
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP10:0x[0-9a-f]+]]:
+; CHECK-NEXT:          (Low: %A High: (256000 + %A))
+; CHECK-NEXT:            Member: {%A,+,8}<nuw><%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -503,36 +506,36 @@ define void @phi_load_store_memdep_check(i1 %c, ptr %A, ptr %B, ptr %C) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP10:0x[0-9a-f]+]]):
-; CHECK-NEXT:        ptr %A
-; CHECK-NEXT:        ptr %A
-; CHECK-NEXT:        Against group ([[GRP11:0x[0-9a-f]+]]):
-; CHECK-NEXT:        ptr %C
-; CHECK-NEXT:        ptr %C
-; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP10]]):
+; CHECK-NEXT:        Comparing group ([[GRP11:0x[0-9a-f]+]]):
 ; CHECK-NEXT:        ptr %A
 ; CHECK-NEXT:        ptr %A
 ; CHECK-NEXT:        Against group ([[GRP12:0x[0-9a-f]+]]):
+; CHECK-NEXT:        ptr %C
+; CHECK-NEXT:        ptr %C
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group ([[GRP11]]):
+; CHECK-NEXT:        ptr %A
+; CHECK-NEXT:        ptr %A
+; CHECK-NEXT:        Against group ([[GRP13:0x[0-9a-f]+]]):
 ; CHECK-NEXT:        ptr %B
 ; CHECK-NEXT:        ptr %B
 ; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group ([[GRP11]]):
+; CHECK-NEXT:        Comparing group ([[GRP12]]):
 ; CHECK-NEXT:        ptr %C
 ; CHECK-NEXT:        ptr %C
-; CHECK-NEXT:        Against group ([[GRP12]]):
+; CHECK-NEXT:        Against group ([[GRP13]]):
 ; CHECK-NEXT:        ptr %B
 ; CHECK-NEXT:        ptr %B
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP10]]:
+; CHECK-NEXT:        Group [[GRP11]]:
 ; CHECK-NEXT:          (Low: %A High: (2 + %A))
 ; CHECK-NEXT:            Member: %A
 ; CHECK-NEXT:            Member: %A
-; CHECK-NEXT:        Group [[GRP11]]:
+; CHECK-NEXT:        Group [[GRP12]]:
 ; CHECK-NEXT:          (Low: %C High: (2 + %C))
 ; CHECK-NEXT:            Member: %C
 ; CHECK-NEXT:            Member: %C
-; CHECK-NEXT:        Group [[GRP12]]:
+; CHECK-NEXT:        Group [[GRP13]]:
 ; CHECK-NEXT:          (Low: %B High: (2 + %B))
 ; CHECK-NEXT:            Member: %B
 ; CHECK-NEXT:            Member: %B

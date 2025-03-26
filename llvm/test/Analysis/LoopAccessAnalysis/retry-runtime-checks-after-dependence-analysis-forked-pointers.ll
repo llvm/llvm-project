@@ -167,6 +167,13 @@ define void @dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs_m
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP9:0x[0-9a-f]+]]:
+; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
+; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
+; CHECK-NEXT:        Group [[GRP10:0x[0-9a-f]+]]:
+; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
+; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
+; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -208,6 +215,13 @@ define void @dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs_m
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP11:0x[0-9a-f]+]]:
+; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
+; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
+; CHECK-NEXT:        Group [[GRP12:0x[0-9a-f]+]]:
+; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
+; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
+; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:

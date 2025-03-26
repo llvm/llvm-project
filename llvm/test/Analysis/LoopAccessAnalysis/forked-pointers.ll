@@ -633,7 +633,18 @@ define dso_local void @forked_ptrs_same_base_different_offset(ptr nocapture read
 ; CHECK-NEXT:      Report: cannot identify array bounds
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP47:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:        Against group ([[GRP48:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP47]]:
+; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
+; CHECK-NEXT:        Group [[GRP48]]:
+; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -645,7 +656,18 @@ define dso_local void @forked_ptrs_same_base_different_offset(ptr nocapture read
 ; RECURSE-NEXT:      Report: cannot identify array bounds
 ; RECURSE-NEXT:      Dependences:
 ; RECURSE-NEXT:      Run-time memory checks:
+; RECURSE-NEXT:      Check 0:
+; RECURSE-NEXT:        Comparing group ([[GRP49:0x[0-9a-f]+]]):
+; RECURSE-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; RECURSE-NEXT:        Against group ([[GRP50:0x[0-9a-f]+]]):
+; RECURSE-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; RECURSE-NEXT:      Grouped accesses:
+; RECURSE-NEXT:        Group [[GRP49]]:
+; RECURSE-NEXT:          (Low: %Dest High: (400 + %Dest))
+; RECURSE-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
+; RECURSE-NEXT:        Group [[GRP50]]:
+; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
+; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:
@@ -684,24 +706,24 @@ define dso_local void @forked_ptrs_add_to_offset(ptr nocapture readonly %Base, p
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP47:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group ([[GRP51:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP48:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group ([[GRP52:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP47]]):
+; CHECK-NEXT:        Comparing group ([[GRP51]]):
 ; CHECK-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP49:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group ([[GRP53:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; CHECK-NEXT:          %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP47]]:
+; CHECK-NEXT:        Group [[GRP51]]:
 ; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
-; CHECK-NEXT:        Group [[GRP48]]:
+; CHECK-NEXT:        Group [[GRP52]]:
 ; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
-; CHECK-NEXT:        Group [[GRP49]]:
+; CHECK-NEXT:        Group [[GRP53]]:
 ; CHECK-NEXT:          (Low: ((4 * %extra_offset) + %Base) High: (404 + (4 * %extra_offset) + %Base))
 ; CHECK-NEXT:            Member: {(4 + (4 * %extra_offset) + %Base),+,4}<%for.body>
 ; CHECK-NEXT:            Member: {((4 * %extra_offset) + %Base),+,4}<%for.body>
@@ -716,7 +738,18 @@ define dso_local void @forked_ptrs_add_to_offset(ptr nocapture readonly %Base, p
 ; RECURSE-NEXT:      Report: cannot identify array bounds
 ; RECURSE-NEXT:      Dependences:
 ; RECURSE-NEXT:      Run-time memory checks:
+; RECURSE-NEXT:      Check 0:
+; RECURSE-NEXT:        Comparing group ([[GRP54:0x[0-9a-f]+]]):
+; RECURSE-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; RECURSE-NEXT:        Against group ([[GRP55:0x[0-9a-f]+]]):
+; RECURSE-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; RECURSE-NEXT:      Grouped accesses:
+; RECURSE-NEXT:        Group [[GRP54]]:
+; RECURSE-NEXT:          (Low: %Dest High: (400 + %Dest))
+; RECURSE-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
+; RECURSE-NEXT:        Group [[GRP55]]:
+; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
+; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:
@@ -752,24 +785,24 @@ define dso_local void @forked_ptrs_sub_from_offset(ptr nocapture readonly %Base,
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP50:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group ([[GRP56:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP51:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group ([[GRP57:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP50]]):
+; CHECK-NEXT:        Comparing group ([[GRP56]]):
 ; CHECK-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP52:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group ([[GRP58:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; CHECK-NEXT:          %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP50]]:
+; CHECK-NEXT:        Group [[GRP56]]:
 ; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
-; CHECK-NEXT:        Group [[GRP51]]:
+; CHECK-NEXT:        Group [[GRP57]]:
 ; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
-; CHECK-NEXT:        Group [[GRP52]]:
+; CHECK-NEXT:        Group [[GRP58]]:
 ; CHECK-NEXT:          (Low: ((-4 * %extra_offset) + %Base) High: (404 + (-4 * %extra_offset) + %Base))
 ; CHECK-NEXT:            Member: {(4 + (-4 * %extra_offset) + %Base),+,4}<%for.body>
 ; CHECK-NEXT:            Member: {((-4 * %extra_offset) + %Base),+,4}<%for.body>
@@ -784,7 +817,18 @@ define dso_local void @forked_ptrs_sub_from_offset(ptr nocapture readonly %Base,
 ; RECURSE-NEXT:      Report: cannot identify array bounds
 ; RECURSE-NEXT:      Dependences:
 ; RECURSE-NEXT:      Run-time memory checks:
+; RECURSE-NEXT:      Check 0:
+; RECURSE-NEXT:        Comparing group ([[GRP59:0x[0-9a-f]+]]):
+; RECURSE-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; RECURSE-NEXT:        Against group ([[GRP60:0x[0-9a-f]+]]):
+; RECURSE-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; RECURSE-NEXT:      Grouped accesses:
+; RECURSE-NEXT:        Group [[GRP59]]:
+; RECURSE-NEXT:          (Low: %Dest High: (400 + %Dest))
+; RECURSE-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
+; RECURSE-NEXT:        Group [[GRP60]]:
+; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
+; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:
@@ -820,24 +864,24 @@ define dso_local void @forked_ptrs_add_sub_offset(ptr nocapture readonly %Base, 
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP53:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group ([[GRP61:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP54:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group ([[GRP62:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP53]]):
+; CHECK-NEXT:        Comparing group ([[GRP61]]):
 ; CHECK-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP55:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group ([[GRP63:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; CHECK-NEXT:          %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP53]]:
+; CHECK-NEXT:        Group [[GRP61]]:
 ; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
-; CHECK-NEXT:        Group [[GRP54]]:
+; CHECK-NEXT:        Group [[GRP62]]:
 ; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
-; CHECK-NEXT:        Group [[GRP55]]:
+; CHECK-NEXT:        Group [[GRP63]]:
 ; CHECK-NEXT:          (Low: ((4 * %to_add) + (-4 * %to_sub) + %Base) High: (404 + (4 * %to_add) + (-4 * %to_sub) + %Base))
 ; CHECK-NEXT:            Member: {(4 + (4 * %to_add) + (-4 * %to_sub) + %Base),+,4}<%for.body>
 ; CHECK-NEXT:            Member: {((4 * %to_add) + (-4 * %to_sub) + %Base),+,4}<%for.body>
@@ -852,7 +896,18 @@ define dso_local void @forked_ptrs_add_sub_offset(ptr nocapture readonly %Base, 
 ; RECURSE-NEXT:      Report: cannot identify array bounds
 ; RECURSE-NEXT:      Dependences:
 ; RECURSE-NEXT:      Run-time memory checks:
+; RECURSE-NEXT:      Check 0:
+; RECURSE-NEXT:        Comparing group ([[GRP64:0x[0-9a-f]+]]):
+; RECURSE-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; RECURSE-NEXT:        Against group ([[GRP65:0x[0-9a-f]+]]):
+; RECURSE-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; RECURSE-NEXT:      Grouped accesses:
+; RECURSE-NEXT:        Group [[GRP64]]:
+; RECURSE-NEXT:          (Low: %Dest High: (400 + %Dest))
+; RECURSE-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
+; RECURSE-NEXT:        Group [[GRP65]]:
+; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
+; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:
@@ -890,7 +945,18 @@ define dso_local void @forked_ptrs_mul_by_offset(ptr nocapture readonly %Base, p
 ; CHECK-NEXT:      Report: cannot identify array bounds
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP66:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:        Against group ([[GRP67:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP66]]:
+; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
+; CHECK-NEXT:        Group [[GRP67]]:
+; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -902,7 +968,18 @@ define dso_local void @forked_ptrs_mul_by_offset(ptr nocapture readonly %Base, p
 ; RECURSE-NEXT:      Report: cannot identify array bounds
 ; RECURSE-NEXT:      Dependences:
 ; RECURSE-NEXT:      Run-time memory checks:
+; RECURSE-NEXT:      Check 0:
+; RECURSE-NEXT:        Comparing group ([[GRP68:0x[0-9a-f]+]]):
+; RECURSE-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; RECURSE-NEXT:        Against group ([[GRP69:0x[0-9a-f]+]]):
+; RECURSE-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; RECURSE-NEXT:      Grouped accesses:
+; RECURSE-NEXT:        Group [[GRP68]]:
+; RECURSE-NEXT:          (Low: %Dest High: (400 + %Dest))
+; RECURSE-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
+; RECURSE-NEXT:        Group [[GRP69]]:
+; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
+; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:
@@ -940,7 +1017,18 @@ define dso_local void @forked_ptrs_uniform_and_strided_forks(ptr nocapture reado
 ; CHECK-NEXT:      Report: cannot identify array bounds
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP70:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:        Against group ([[GRP71:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP70]]:
+; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
+; CHECK-NEXT:        Group [[GRP71]]:
+; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -952,7 +1040,18 @@ define dso_local void @forked_ptrs_uniform_and_strided_forks(ptr nocapture reado
 ; RECURSE-NEXT:      Report: cannot identify array bounds
 ; RECURSE-NEXT:      Dependences:
 ; RECURSE-NEXT:      Run-time memory checks:
+; RECURSE-NEXT:      Check 0:
+; RECURSE-NEXT:        Comparing group ([[GRP72:0x[0-9a-f]+]]):
+; RECURSE-NEXT:          %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; RECURSE-NEXT:        Against group ([[GRP73:0x[0-9a-f]+]]):
+; RECURSE-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; RECURSE-NEXT:      Grouped accesses:
+; RECURSE-NEXT:        Group [[GRP72]]:
+; RECURSE-NEXT:          (Low: %Dest High: (400 + %Dest))
+; RECURSE-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
+; RECURSE-NEXT:        Group [[GRP73]]:
+; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
+; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:
@@ -995,7 +1094,18 @@ define dso_local void @forked_ptrs_gather_and_contiguous_forks(ptr nocapture rea
 ; CHECK-NEXT:      Report: cannot identify array bounds
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP74:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %1 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:        Against group ([[GRP75:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP74]]:
+; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
+; CHECK-NEXT:        Group [[GRP75]]:
+; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -1007,7 +1117,18 @@ define dso_local void @forked_ptrs_gather_and_contiguous_forks(ptr nocapture rea
 ; RECURSE-NEXT:      Report: cannot identify array bounds
 ; RECURSE-NEXT:      Dependences:
 ; RECURSE-NEXT:      Run-time memory checks:
+; RECURSE-NEXT:      Check 0:
+; RECURSE-NEXT:        Comparing group ([[GRP76:0x[0-9a-f]+]]):
+; RECURSE-NEXT:          %1 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; RECURSE-NEXT:        Against group ([[GRP77:0x[0-9a-f]+]]):
+; RECURSE-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; RECURSE-NEXT:      Grouped accesses:
+; RECURSE-NEXT:        Group [[GRP76]]:
+; RECURSE-NEXT:          (Low: %Dest High: (400 + %Dest))
+; RECURSE-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
+; RECURSE-NEXT:        Group [[GRP77]]:
+; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
+; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:
@@ -1046,7 +1167,18 @@ define dso_local void @forked_ptrs_two_forks_gep(ptr nocapture readonly %Base1, 
 ; CHECK-NEXT:      Report: cannot identify array bounds
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP78:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %1 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:        Against group ([[GRP79:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP78]]:
+; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
+; CHECK-NEXT:        Group [[GRP79]]:
+; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -1058,7 +1190,18 @@ define dso_local void @forked_ptrs_two_forks_gep(ptr nocapture readonly %Base1, 
 ; RECURSE-NEXT:      Report: cannot identify array bounds
 ; RECURSE-NEXT:      Dependences:
 ; RECURSE-NEXT:      Run-time memory checks:
+; RECURSE-NEXT:      Check 0:
+; RECURSE-NEXT:        Comparing group ([[GRP80:0x[0-9a-f]+]]):
+; RECURSE-NEXT:          %1 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; RECURSE-NEXT:        Against group ([[GRP81:0x[0-9a-f]+]]):
+; RECURSE-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; RECURSE-NEXT:      Grouped accesses:
+; RECURSE-NEXT:        Group [[GRP80]]:
+; RECURSE-NEXT:          (Low: %Dest High: (400 + %Dest))
+; RECURSE-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
+; RECURSE-NEXT:        Group [[GRP81]]:
+; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
+; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:
@@ -1096,6 +1239,10 @@ define void @forked_ptrs_two_select(ptr nocapture readonly %Base1, ptr nocapture
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP82:0x[0-9a-f]+]]:
+; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
+; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -1108,6 +1255,10 @@ define void @forked_ptrs_two_select(ptr nocapture readonly %Base1, ptr nocapture
 ; RECURSE-NEXT:      Dependences:
 ; RECURSE-NEXT:      Run-time memory checks:
 ; RECURSE-NEXT:      Grouped accesses:
+; RECURSE-NEXT:        Group [[GRP83:0x[0-9a-f]+]]:
+; RECURSE-NEXT:          (Low: %Dest High: (400 + %Dest))
+; RECURSE-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
+; RECURSE-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:
@@ -1146,7 +1297,18 @@ define void @forked_ptrs_too_many_gep_ops(ptr nocapture readonly %Base1, ptr noc
 ; CHECK-NEXT:      Report: cannot identify array bounds
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP84:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %1 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:        Against group ([[GRP85:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP84]]:
+; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
+; CHECK-NEXT:        Group [[GRP85]]:
+; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -1158,7 +1320,18 @@ define void @forked_ptrs_too_many_gep_ops(ptr nocapture readonly %Base1, ptr noc
 ; RECURSE-NEXT:      Report: cannot identify array bounds
 ; RECURSE-NEXT:      Dependences:
 ; RECURSE-NEXT:      Run-time memory checks:
+; RECURSE-NEXT:      Check 0:
+; RECURSE-NEXT:        Comparing group ([[GRP86:0x[0-9a-f]+]]):
+; RECURSE-NEXT:          %1 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
+; RECURSE-NEXT:        Against group ([[GRP87:0x[0-9a-f]+]]):
+; RECURSE-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; RECURSE-NEXT:      Grouped accesses:
+; RECURSE-NEXT:        Group [[GRP86]]:
+; RECURSE-NEXT:          (Low: %Dest High: (400 + %Dest))
+; RECURSE-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
+; RECURSE-NEXT:        Group [[GRP87]]:
+; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
+; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:
@@ -1194,7 +1367,18 @@ define void @forked_ptrs_vector_gep(ptr nocapture readonly %Base1, ptr nocapture
 ; CHECK-NEXT:      Report: cannot identify array bounds
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP88:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %1 = getelementptr inbounds <4 x float>, ptr %Dest, i64 %indvars.iv
+; CHECK-NEXT:        Against group ([[GRP89:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP88]]:
+; CHECK-NEXT:          (Low: %Dest High: (1552 + %Dest))
+; CHECK-NEXT:            Member: {%Dest,+,64}<nuw><%for.body>
+; CHECK-NEXT:        Group [[GRP89]]:
+; CHECK-NEXT:          (Low: %Preds High: (388 + %Preds))
+; CHECK-NEXT:            Member: {%Preds,+,16}<nuw><%for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -1206,7 +1390,18 @@ define void @forked_ptrs_vector_gep(ptr nocapture readonly %Base1, ptr nocapture
 ; RECURSE-NEXT:      Report: cannot identify array bounds
 ; RECURSE-NEXT:      Dependences:
 ; RECURSE-NEXT:      Run-time memory checks:
+; RECURSE-NEXT:      Check 0:
+; RECURSE-NEXT:        Comparing group ([[GRP90:0x[0-9a-f]+]]):
+; RECURSE-NEXT:          %1 = getelementptr inbounds <4 x float>, ptr %Dest, i64 %indvars.iv
+; RECURSE-NEXT:        Against group ([[GRP91:0x[0-9a-f]+]]):
+; RECURSE-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; RECURSE-NEXT:      Grouped accesses:
+; RECURSE-NEXT:        Group [[GRP90]]:
+; RECURSE-NEXT:          (Low: %Dest High: (1552 + %Dest))
+; RECURSE-NEXT:            Member: {%Dest,+,64}<nuw><%for.body>
+; RECURSE-NEXT:        Group [[GRP91]]:
+; RECURSE-NEXT:          (Low: %Preds High: (388 + %Preds))
+; RECURSE-NEXT:            Member: {%Preds,+,16}<nuw><%for.body>
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:
@@ -1250,15 +1445,15 @@ define void @sc_add_expr_ice(ptr %Base1, ptr %Base2, i64 %N) {
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP56:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group ([[GRP92:0x[0-9a-f]+]]):
 ; CHECK-NEXT:        ptr %Base1
-; CHECK-NEXT:        Against group ([[GRP57:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group ([[GRP93:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %fptr = getelementptr inbounds double, ptr %Base2, i64 %sel
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP56]]:
+; CHECK-NEXT:        Group [[GRP92]]:
 ; CHECK-NEXT:          (Low: %Base1 High: (8 + %Base1))
 ; CHECK-NEXT:            Member: %Base1
-; CHECK-NEXT:        Group [[GRP57]]:
+; CHECK-NEXT:        Group [[GRP93]]:
 ; CHECK-NEXT:          (Low: %Base2 High: ((8 * %N) + %Base2))
 ; CHECK-NEXT:            Member: {%Base2,+,8}<%for.body>
 ; CHECK-EMPTY:
@@ -1277,15 +1472,15 @@ define void @sc_add_expr_ice(ptr %Base1, ptr %Base2, i64 %N) {
 ; RECURSE-NEXT:      Dependences:
 ; RECURSE-NEXT:      Run-time memory checks:
 ; RECURSE-NEXT:      Check 0:
-; RECURSE-NEXT:        Comparing group ([[GRP58:0x[0-9a-f]+]]):
+; RECURSE-NEXT:        Comparing group ([[GRP94:0x[0-9a-f]+]]):
 ; RECURSE-NEXT:        ptr %Base1
-; RECURSE-NEXT:        Against group ([[GRP59:0x[0-9a-f]+]]):
+; RECURSE-NEXT:        Against group ([[GRP95:0x[0-9a-f]+]]):
 ; RECURSE-NEXT:          %fptr = getelementptr inbounds double, ptr %Base2, i64 %sel
 ; RECURSE-NEXT:      Grouped accesses:
-; RECURSE-NEXT:        Group [[GRP58]]:
+; RECURSE-NEXT:        Group [[GRP94]]:
 ; RECURSE-NEXT:          (Low: %Base1 High: (8 + %Base1))
 ; RECURSE-NEXT:            Member: %Base1
-; RECURSE-NEXT:        Group [[GRP59]]:
+; RECURSE-NEXT:        Group [[GRP95]]:
 ; RECURSE-NEXT:          (Low: %Base2 High: ((8 * %N) + %Base2))
 ; RECURSE-NEXT:            Member: {%Base2,+,8}<%for.body>
 ; RECURSE-EMPTY:
@@ -1324,36 +1519,36 @@ define void @forked_ptrs_with_different_base(ptr nocapture readonly %Preds, ptr 
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP60:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group ([[GRP96:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %arrayidx7 = getelementptr inbounds double, ptr %.sink, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP61:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group ([[GRP97:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP60]]):
+; CHECK-NEXT:        Comparing group ([[GRP96]]):
 ; CHECK-NEXT:          %arrayidx7 = getelementptr inbounds double, ptr %.sink, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP62:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group ([[GRP98:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %arrayidx5 = getelementptr inbounds double, ptr %0, i64 %indvars.iv
 ; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group ([[GRP63:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group ([[GRP99:0x[0-9a-f]+]]):
 ; CHECK-NEXT:          %arrayidx7 = getelementptr inbounds double, ptr %.sink, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP61]]):
+; CHECK-NEXT:        Against group ([[GRP97]]):
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; CHECK-NEXT:      Check 3:
-; CHECK-NEXT:        Comparing group ([[GRP63]]):
+; CHECK-NEXT:        Comparing group ([[GRP99]]):
 ; CHECK-NEXT:          %arrayidx7 = getelementptr inbounds double, ptr %.sink, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP62]]):
+; CHECK-NEXT:        Against group ([[GRP98]]):
 ; CHECK-NEXT:          %arrayidx5 = getelementptr inbounds double, ptr %0, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP60]]:
+; CHECK-NEXT:        Group [[GRP96]]:
 ; CHECK-NEXT:          (Low: %1 High: (63992 + %1))
 ; CHECK-NEXT:            Member: {%1,+,8}<nw><%for.body>
-; CHECK-NEXT:        Group [[GRP63]]:
+; CHECK-NEXT:        Group [[GRP99]]:
 ; CHECK-NEXT:          (Low: %2 High: (63992 + %2))
 ; CHECK-NEXT:            Member: {%2,+,8}<nw><%for.body>
-; CHECK-NEXT:        Group [[GRP61]]:
+; CHECK-NEXT:        Group [[GRP97]]:
 ; CHECK-NEXT:          (Low: %Preds High: (31996 + %Preds))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
-; CHECK-NEXT:        Group [[GRP62]]:
+; CHECK-NEXT:        Group [[GRP98]]:
 ; CHECK-NEXT:          (Low: %0 High: (63992 + %0))
 ; CHECK-NEXT:            Member: {%0,+,8}<nw><%for.body>
 ; CHECK-EMPTY:
@@ -1368,36 +1563,36 @@ define void @forked_ptrs_with_different_base(ptr nocapture readonly %Preds, ptr 
 ; RECURSE-NEXT:      Dependences:
 ; RECURSE-NEXT:      Run-time memory checks:
 ; RECURSE-NEXT:      Check 0:
-; RECURSE-NEXT:        Comparing group ([[GRP64:0x[0-9a-f]+]]):
+; RECURSE-NEXT:        Comparing group ([[GRP100:0x[0-9a-f]+]]):
 ; RECURSE-NEXT:          %arrayidx7 = getelementptr inbounds double, ptr %.sink, i64 %indvars.iv
-; RECURSE-NEXT:        Against group ([[GRP65:0x[0-9a-f]+]]):
+; RECURSE-NEXT:        Against group ([[GRP101:0x[0-9a-f]+]]):
 ; RECURSE-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; RECURSE-NEXT:      Check 1:
-; RECURSE-NEXT:        Comparing group ([[GRP64]]):
+; RECURSE-NEXT:        Comparing group ([[GRP100]]):
 ; RECURSE-NEXT:          %arrayidx7 = getelementptr inbounds double, ptr %.sink, i64 %indvars.iv
-; RECURSE-NEXT:        Against group ([[GRP66:0x[0-9a-f]+]]):
+; RECURSE-NEXT:        Against group ([[GRP102:0x[0-9a-f]+]]):
 ; RECURSE-NEXT:          %arrayidx5 = getelementptr inbounds double, ptr %0, i64 %indvars.iv
 ; RECURSE-NEXT:      Check 2:
-; RECURSE-NEXT:        Comparing group ([[GRP67:0x[0-9a-f]+]]):
+; RECURSE-NEXT:        Comparing group ([[GRP103:0x[0-9a-f]+]]):
 ; RECURSE-NEXT:          %arrayidx7 = getelementptr inbounds double, ptr %.sink, i64 %indvars.iv
-; RECURSE-NEXT:        Against group ([[GRP65]]):
+; RECURSE-NEXT:        Against group ([[GRP101]]):
 ; RECURSE-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; RECURSE-NEXT:      Check 3:
-; RECURSE-NEXT:        Comparing group ([[GRP67]]):
+; RECURSE-NEXT:        Comparing group ([[GRP103]]):
 ; RECURSE-NEXT:          %arrayidx7 = getelementptr inbounds double, ptr %.sink, i64 %indvars.iv
-; RECURSE-NEXT:        Against group ([[GRP66]]):
+; RECURSE-NEXT:        Against group ([[GRP102]]):
 ; RECURSE-NEXT:          %arrayidx5 = getelementptr inbounds double, ptr %0, i64 %indvars.iv
 ; RECURSE-NEXT:      Grouped accesses:
-; RECURSE-NEXT:        Group [[GRP64]]:
+; RECURSE-NEXT:        Group [[GRP100]]:
 ; RECURSE-NEXT:          (Low: %1 High: (63992 + %1))
 ; RECURSE-NEXT:            Member: {%1,+,8}<nw><%for.body>
-; RECURSE-NEXT:        Group [[GRP67]]:
+; RECURSE-NEXT:        Group [[GRP103]]:
 ; RECURSE-NEXT:          (Low: %2 High: (63992 + %2))
 ; RECURSE-NEXT:            Member: {%2,+,8}<nw><%for.body>
-; RECURSE-NEXT:        Group [[GRP65]]:
+; RECURSE-NEXT:        Group [[GRP101]]:
 ; RECURSE-NEXT:          (Low: %Preds High: (31996 + %Preds))
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
-; RECURSE-NEXT:        Group [[GRP66]]:
+; RECURSE-NEXT:        Group [[GRP102]]:
 ; RECURSE-NEXT:          (Low: %0 High: (63992 + %0))
 ; RECURSE-NEXT:            Member: {%0,+,8}<nw><%for.body>
 ; RECURSE-EMPTY:
@@ -1452,6 +1647,9 @@ define void @forked_ptrs_with_different_base3(ptr nocapture readonly %Preds, ptr
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP104:0x[0-9a-f]+]]:
+; CHECK-NEXT:          (Low: %Preds High: (31996 + %Preds))
+; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -1464,6 +1662,9 @@ define void @forked_ptrs_with_different_base3(ptr nocapture readonly %Preds, ptr
 ; RECURSE-NEXT:      Dependences:
 ; RECURSE-NEXT:      Run-time memory checks:
 ; RECURSE-NEXT:      Grouped accesses:
+; RECURSE-NEXT:        Group [[GRP105:0x[0-9a-f]+]]:
+; RECURSE-NEXT:          (Low: %Preds High: (31996 + %Preds))
+; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; RECURSE-NEXT:      SCEV assumptions:

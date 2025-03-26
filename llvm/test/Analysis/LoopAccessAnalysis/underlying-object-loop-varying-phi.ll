@@ -80,6 +80,9 @@ define void @indirect_ptr_recurrences_read_write_may_alias_no_tbaa(ptr %A, ptr %
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP1:0x[0-9a-f]+]]:
+; CHECK-NEXT:          (Low: (8 + %B)<nuw> High: (40 + %B))
+; CHECK-NEXT:            Member: {(8 + %B)<nuw>,+,8}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -111,7 +114,18 @@ define void @indirect_ptr_recurrences_read_write_may_alias_different_obj(ptr %A,
 ; CHECK-NEXT:      Report: cannot identify array bounds
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %gep.C = getelementptr inbounds ptr, ptr %C, i64 %iv
+; CHECK-NEXT:        Against group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %gep.B = getelementptr inbounds ptr, ptr %B, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:          (Low: (8 + %C)<nuw> High: (36 + %C))
+; CHECK-NEXT:            Member: {(8 + %C)<nuw>,+,8}<nuw><%loop>
+; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:          (Low: (8 + %B)<nuw> High: (40 + %B))
+; CHECK-NEXT:            Member: {(8 + %B)<nuw>,+,8}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:

@@ -529,8 +529,10 @@ void RuntimePointerChecking::groupChecks(
     // equivalence class, the iteration order is deterministic.
     for (auto M : DepCands.members(Access)) {
       auto PointerI = PositionMap.find(M.getPointer());
-      assert(PointerI != PositionMap.end() &&
-             "pointer in equivalence class not found in PositionMap");
+      // If we can't find the pointer in PositionMap that means we can't
+      // generate a memcheck for it.
+      if (PointerI == PositionMap.end())
+        continue;
       for (unsigned Pointer : PointerI->second) {
         bool Merged = false;
         // Mark this pointer as seen.
@@ -682,7 +684,9 @@ public:
   /// non-intersection.
   ///
   /// Returns true if we need no check or if we do and we can generate them
-  /// (i.e. the pointers have computable bounds).
+  /// (i.e. the pointers have computable bounds). A return value of false means
+  /// we couldn't analyze and generate runtime checks for all pointers in the
+  /// loop, but we will have checks for those pointers we could analyze.
   bool canCheckPtrAtRT(RuntimePointerChecking &RtCheck, ScalarEvolution *SE,
                        Loop *TheLoop,
                        const DenseMap<Value *, const SCEV *> &Strides,
@@ -1273,7 +1277,6 @@ bool AccessAnalysis::canCheckPtrAtRT(
                                   /*Assume=*/true)) {
           CanDoAliasSetRT = false;
           UncomputablePtr = Access.getPointer();
-          break;
         }
       }
     }
@@ -1313,7 +1316,7 @@ bool AccessAnalysis::canCheckPtrAtRT(
     }
   }
 
-  if (MayNeedRTCheck && CanDoRT)
+  if (MayNeedRTCheck)
     RtCheck.generateChecks(DepCands, IsDepCheckNeeded);
 
   LLVM_DEBUG(dbgs() << "LAA: We need to do " << RtCheck.getNumberOfChecks()
@@ -1323,11 +1326,7 @@ bool AccessAnalysis::canCheckPtrAtRT(
   // are needed. This can happen when all pointers point to the same underlying
   // object for example.
   RtCheck.Need = CanDoRT ? RtCheck.getNumberOfChecks() != 0 : MayNeedRTCheck;
-
-  bool CanDoRTIfNeeded = !RtCheck.Need || CanDoRT;
-  if (!CanDoRTIfNeeded)
-    RtCheck.reset();
-  return CanDoRTIfNeeded;
+  return !RtCheck.Need || CanDoRT;
 }
 
 void AccessAnalysis::processMemAccesses() {

@@ -237,6 +237,9 @@ define void @different_non_constant_strides_known_backward_via_assume(ptr %A, i6
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP1:0x[0-9a-f]+]]:
+; CHECK-NEXT:          (Low: %A High: (1024 + %A))
+; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -271,6 +274,9 @@ define void @different_non_constant_strides_known_backward_via_assume_distance_l
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP2:0x[0-9a-f]+]]:
+; CHECK-NEXT:          (Low: %A High: (1024 + %A)<nuw>)
+; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -306,6 +312,9 @@ define void @different_non_constant_strides_known_backward_via_assume_min_distan
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP3:0x[0-9a-f]+]]:
+; CHECK-NEXT:          (Low: %A High: (1024 + %A))
+; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -341,6 +350,9 @@ define void @different_non_constant_strides_not_known_backward(ptr %A, i64 %scal
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP4:0x[0-9a-f]+]]:
+; CHECK-NEXT:          (Low: %A High: (1024 + %A))
+; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
