@@ -130,13 +130,16 @@ struct MissingFeatures {
   static bool continueOp() { return false; }
   static bool ifOp() { return false; }
   static bool labelOp() { return false; }
+  static bool ptrDiffOp() { return false; }
+  static bool ptrStrideOp() { return false; }
   static bool selectOp() { return false; }
   static bool switchOp() { return false; }
   static bool ternaryOp() { return false; }
   static bool tryOp() { return false; }
   static bool zextOp() { return false; }
-  static bool ptrStrideOp() { return false; }
-  static bool ptrDiffOp() { return false; }
+
+  // Future CIR attributes
+  static bool optInfoAttr() { return false; }
 };
 
 } // namespace cir
