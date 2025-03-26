@@ -35,7 +35,7 @@ public:
   using value_type        = typename Traits::value_type;
   using difference_type   = typename Traits::difference_type;
   using pointer           = It;
-  using eference          = typename Traits::reference;
+  using reference          = typename Traits::reference;
 
   constexpr ThrowOnMoveIterator() {}
 
