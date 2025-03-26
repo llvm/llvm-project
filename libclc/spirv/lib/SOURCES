@@ -72,7 +72,6 @@ math/fma.cl
 ../../generic/lib/math/clc_tan.cl
 ../../generic/lib/math/tan.cl
 ../../generic/lib/math/tanh.cl
-../../generic/lib/math/clc_tanpi.cl
 ../../generic/lib/math/tanpi.cl
 ../../generic/lib/math/tgamma.cl
 ../../generic/lib/shared/vload.cl
