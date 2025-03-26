@@ -352,6 +352,27 @@ performance. You can find more information at
 of the LLVM project is hosted at [http://lnt.llvm.org](http://lnt.llvm.org).
 
 
+Included Test Suites
+--------------------
+
+The LLVM Test Suite repository includes a number of test suites that we have
+copied into the repository from external sources, and hand-written CMake files
+to hook into the LLVM Test Suite system. For example, these include GCC's C
+and Fortran Torture test suites.
+
+In some cases, these external tests have a different license to other code in
+the llvm-test-suite repository, which must be documented in `LICENSE.TXT` in the
+root of the test suite repository, under the heading "Software from third
+parties included in the LLVM Project".
+
+The only changes we can accept to the tests in these suites are where we bring
+in all the changes from the external sources. Users should not make individual
+downstream changes to these tests.
+
+We do accept changes to the CMake integration files for these tests, and where a
+test is wrong/broken, we should have the ability to exclude the test from our
+integration with the suite.
+
 External Suites
 ---------------
 
