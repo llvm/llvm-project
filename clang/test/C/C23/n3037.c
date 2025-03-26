@@ -318,6 +318,14 @@ struct bit_field_5 { // c17-error {{redefinition of 'bit_field_5'}} \
   int b : 1;         // c23-note {{bit-field 'b' has bit-width 1 here}}
 };
 
+struct bit_field_6 { // c17-note {{previous definition is here}}
+  int a : 2;
+};
+
+struct bit_field_6 { // c17-error {{redefinition of 'bit_field_6'}}
+  int a : 1 + 1;
+};
+
 enum E { A }; // c17-note 2 {{previous definition is here}}
 enum E { A }; // c17-error {{redefinition of 'E'}} \
                  c17-error {{redefinition of enumerator 'A'}}
@@ -461,6 +469,11 @@ struct array { int y; int x[0]; };   // c17-error {{redefinition of 'array'}} \
                                         c23-error {{type 'struct array' has incompatible definitions}} \
                                         c23-note {{field 'x' has type 'int[0]' here}} \
                                         both-warning {{zero size arrays are an extension}}
+
+// So long as the bounds are the same value, everything is fine. They do not
+// have to be token equivalent.
+struct array_2 { int y; int x[3]; };         // c17-note {{previous definition is here}}
+struct array_2 { int y; int x[1 + 1 + 1]; }; // c17-error {{redefinition of 'array_2'}}
 
 struct alignment { // c17-note {{previous definition is here}}
   _Alignas(int) int x; // c23-note {{attribute '_Alignas' here}}

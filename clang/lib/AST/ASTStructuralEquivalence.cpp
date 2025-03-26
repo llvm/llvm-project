@@ -1618,19 +1618,21 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   if ((Field1->isBitField() || Field2->isBitField()) &&
       !IsStructurallyEquivalent(Context, Field1->getBitWidth(),
                                 Field2->getBitWidth())) {
-    if (Context.Complain) {
+    // Two bit-fields can be structurally unequivalent but still be okay for
+    // the purposes of C where they simply need to have the same values, not
+    // the same token sequences.
+    bool Diagnose = true;
+    if (Context.LangOpts.C23 && Field1->isBitField() && Field2->isBitField())
+      Diagnose = Field1->getBitWidthValue() != Field2->getBitWidthValue();
+
+    if (Diagnose && Context.Complain) {
       auto DiagNote = [&](const FieldDecl *FD,
                           DiagnosticBuilder (
                               StructuralEquivalenceContext::*Diag)(
                               SourceLocation, unsigned)) {
         if (FD->isBitField()) {
-          std::string Str;
-          llvm::raw_string_ostream OS(Str);
-          PrintingPolicy Policy(Context.LangOpts);
-          FD->getBitWidth()->printPretty(OS, nullptr, Policy);
-
           (Context.*Diag)(FD->getLocation(), diag::note_odr_field_bit_width)
-              << FD->getDeclName() << OS.str();
+              << FD->getDeclName() << FD->getBitWidthValue();
         } else {
           (Context.*Diag)(FD->getLocation(), diag::note_odr_field_not_bit_field)
               << FD->getDeclName();
