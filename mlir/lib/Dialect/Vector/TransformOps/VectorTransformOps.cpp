@@ -67,6 +67,9 @@ void transform::ApplyFoldElementwiseToVectorPatternsOp::populatePatterns(
 void transform::ApplyVectorReductionToContractPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorReductionToContractPatterns(patterns);
+
+  // TODO: As we now have a dedicated transform for
+  // `populateSinkVectorOpsPatterns` we can remove it from here.
   vector::populateSinkVectorOpsPatterns(patterns);
 }
 
@@ -202,6 +205,11 @@ void transform::ApplyTransferToScfPatternsOp::populatePatterns(
           .enableFullUnroll(getFullUnroll())
           .setTargetRank(getMaxTransferRank());
   populateVectorToSCFConversionPatterns(patterns, vectorTransferToSCFOptions);
+}
+
+void transform::ApplySinkVectorPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateSinkVectorOpsPatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//

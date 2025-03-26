@@ -263,4 +263,48 @@ std::int32_t RTNAME(GetCwd)(
   return status;
 }
 
+std::int32_t RTNAME(Hostnm)(
+    const Descriptor &res, const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+
+  RUNTIME_CHECK(terminator, IsValidCharDescriptor(&res));
+
+  char buf[256];
+  std::int32_t status{0};
+
+  // Fill the output with spaces. Upon success, CopyCharsToDescriptor()
+  // will overwrite part of the string with the result, so we'll end up
+  // with a padded string. If we fail to obtain the host name, we return
+  // the string of all spaces, which is the original gfortran behavior.
+  FillWithSpaces(res);
+
+#ifdef _WIN32
+
+  DWORD dwSize{sizeof(buf)};
+
+  // Note: Winsock has gethostname(), but use Win32 API GetComputerNameEx(),
+  // in order to avoid adding dependency on Winsock.
+  if (!GetComputerNameExA(ComputerNameDnsHostname, buf, &dwSize)) {
+    status = GetLastError();
+  }
+
+#else
+
+  if (gethostname(buf, sizeof(buf)) < 0) {
+    status = errno;
+  }
+
+#endif
+
+  if (status == 0) {
+    std::int64_t strLen{StringLength(buf)};
+    status = CopyCharsToDescriptor(res, buf, strLen);
+
+    // Note: if the result string is too short, then we'll return partial
+    // host name with "too short" error status.
+  }
+
+  return status;
+}
+
 } // namespace Fortran::runtime

@@ -23,8 +23,7 @@ define void @switch_default_to_latch_common_dest(ptr %start, ptr %end) {
 ; COST:       [[VECTOR_BODY]]:
 ; COST-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; COST-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
-; COST-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 0
-; COST-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP5]]
+; COST-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
 ; COST-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 0
 ; COST-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP6]], align 1
 ; COST-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 -12)
@@ -162,8 +161,7 @@ define void @switch_default_to_latch_common_dest_using_branches(ptr %start, ptr 
 ; COST:       [[VECTOR_BODY]]:
 ; COST-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; COST-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
-; COST-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 0
-; COST-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP5]]
+; COST-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
 ; COST-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 0
 ; COST-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP6]], align 1
 ; COST-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 -12)
@@ -464,8 +462,7 @@ define void @switch_all_dests_distinct_variant_using_branches(ptr %start, ptr %e
 ; COST:       [[VECTOR_BODY]]:
 ; COST-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; COST-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
-; COST-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 0
-; COST-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP5]]
+; COST-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
 ; COST-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 0
 ; COST-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP6]], align 1
 ; COST-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD]], splat (i64 -12)
@@ -960,8 +957,7 @@ define void @switch_under_br_default_common_dest_with_case(ptr %start, ptr %end,
 ; COST:       [[VECTOR_BODY]]:
 ; COST-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; COST-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
-; COST-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 0
-; COST-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP5]]
+; COST-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
 ; COST-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i32 0
 ; COST-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP6]], align 1
 ; COST-NEXT:    [[TMP7:%.*]] = icmp ule <4 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
