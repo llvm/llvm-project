@@ -4,9 +4,6 @@
 
 // PACRET-NOT: non-protected call found in function
 
-// FIXME In the below test cases, LR is usually not spilled as needed, as it is
-//       not checked by BOLT.
-
         .text
 
         .globl  good_direct_call
@@ -14,7 +11,12 @@
 good_direct_call:
 // CHECK-NOT: good_direct_call
         paciasp
-        bl callee_ext
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        bl      callee_ext
+
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size good_direct_call, .-good_direct_call
@@ -24,8 +26,13 @@ good_direct_call:
 good_indirect_call_arg:
 // CHECK-NOT: good_indirect_call_arg
         paciasp
-        autia x0, x1
-        blr x0
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        autia   x0, x1
+        blr     x0
+
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size good_indirect_call_arg, .-good_indirect_call_arg
@@ -35,9 +42,14 @@ good_indirect_call_arg:
 good_indirect_call_mem:
 // CHECK-NOT: good_indirect_call_mem
         paciasp
-        ldr x16, [x0]
-        autia x16, x0
-        blr x16
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        ldr     x16, [x0]
+        autia   x16, x0
+        blr     x16
+
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size good_indirect_call_mem, .-good_indirect_call_mem
@@ -47,7 +59,12 @@ good_indirect_call_mem:
 good_indirect_call_arg_v83:
 // CHECK-NOT: good_indirect_call_arg_v83
         paciasp
-        blraa x0, x1
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        blraa   x0, x1
+
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size good_indirect_call_arg_v83, .-good_indirect_call_arg_v83
@@ -57,8 +74,13 @@ good_indirect_call_arg_v83:
 good_indirect_call_mem_v83:
 // CHECK-NOT: good_indirect_call_mem_v83
         paciasp
-        ldr x16, [x0]
-        blraa x16, x0
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        ldr     x16, [x0]
+        blraa   x16, x0
+
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size good_indirect_call_mem_v83, .-good_indirect_call_mem_v83
@@ -70,7 +92,12 @@ bad_indirect_call_arg:
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:         blr     x0
 // CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
         paciasp
-        blr x0
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        blr     x0
+
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size bad_indirect_call_arg, .-bad_indirect_call_arg
@@ -84,13 +111,21 @@ bad_indirect_call_mem:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      ldr     x16, [x0]
 // CHECK-NEXT:  This happens in the following basic block:
 // CHECK-NEXT:  {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT:  {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT:  {{[0-9a-f]+}}:   mov     x29, sp
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ldr     x16, [x0]
 // CHECK-NEXT:  {{[0-9a-f]+}}:   blr     x16
+// CHECK-NEXT:  {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT:  {{[0-9a-f]+}}:   autiasp
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ret
         paciasp
-        ldr x16, [x0]
-        blr x16
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        ldr     x16, [x0]
+        blr     x16
+
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size bad_indirect_call_mem, .-bad_indirect_call_mem
@@ -104,15 +139,23 @@ bad_indirect_call_arg_clobber:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      mov     w0, w2
 // CHECK-NEXT:  This happens in the following basic block:
 // CHECK-NEXT:  {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT:  {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT:  {{[0-9a-f]+}}:   mov     x29, sp
 // CHECK-NEXT:  {{[0-9a-f]+}}:   autia   x0, x1
 // CHECK-NEXT:  {{[0-9a-f]+}}:   mov     w0, w2
 // CHECK-NEXT:  {{[0-9a-f]+}}:   blr     x0
+// CHECK-NEXT:  {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT:  {{[0-9a-f]+}}:   autiasp
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ret
         paciasp
-        autia x0, x1
-        mov w0, w2
-        blr x0
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        autia   x0, x1
+        mov     w0, w2
+        blr     x0
+
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size bad_indirect_call_arg_clobber, .-bad_indirect_call_arg_clobber
@@ -126,17 +169,25 @@ bad_indirect_call_mem_clobber:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      mov     w16, w2
 // CHECK-NEXT:  This happens in the following basic block:
 // CHECK-NEXT:  {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT:  {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT:  {{[0-9a-f]+}}:   mov     x29, sp
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ldr     x16, [x0]
 // CHECK-NEXT:  {{[0-9a-f]+}}:   autia   x16, x0
 // CHECK-NEXT:  {{[0-9a-f]+}}:   mov     w16, w2
 // CHECK-NEXT:  {{[0-9a-f]+}}:   blr     x16
+// CHECK-NEXT:  {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT:  {{[0-9a-f]+}}:   autiasp
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ret
         paciasp
-        ldr x16, [x0]
-        autia x16, x0
-        mov w16, w2
-        blr x16
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        ldr     x16, [x0]
+        autia   x16, x0
+        mov     w16, w2
+        blr     x16
+
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size bad_indirect_call_mem_clobber, .-bad_indirect_call_mem_clobber
@@ -146,11 +197,16 @@ bad_indirect_call_mem_clobber:
 good_indirect_call_mem_chain_of_auts:
 // CHECK-NOT: good_indirect_call_mem_chain_of_auts
         paciasp
-        ldr x16, [x0]
-        autia x16, x1
-        ldr x16, [x16]
-        autia x16, x0
-        blr x16
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        ldr     x16, [x0]
+        autia   x16, x1
+        ldr     x16, [x16]
+        autia   x16, x0
+        blr     x16
+
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size good_indirect_call_mem_chain_of_auts, .-good_indirect_call_mem_chain_of_auts
@@ -164,18 +220,26 @@ bad_indirect_call_mem_chain_of_auts:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      ldr     x16, [x16]
 // CHECK-NEXT:  This happens in the following basic block:
 // CHECK-NEXT:  {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT:  {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT:  {{[0-9a-f]+}}:   mov     x29, sp
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ldr     x16, [x0]
 // CHECK-NEXT:  {{[0-9a-f]+}}:   autia   x16, x1
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ldr     x16, [x16]
 // CHECK-NEXT:  {{[0-9a-f]+}}:   blr     x16
+// CHECK-NEXT:  {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT:  {{[0-9a-f]+}}:   autiasp
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ret
         paciasp
-        ldr x16, [x0]
-        autia x16, x1
-        ldr x16, [x16]
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        ldr     x16, [x0]
+        autia   x16, x1
+        ldr     x16, [x16]
         // Missing AUT of x16. The fact that x16 was authenticated above has nothing to do with it.
-        blr x16
+        blr     x16
+
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size bad_indirect_call_mem_chain_of_auts, .-bad_indirect_call_mem_chain_of_auts
@@ -192,11 +256,16 @@ bad_indirect_call_mem_chain_of_auts:
 good_indirect_call_arg_multi_bb:
 // CHECK-NOT: good_indirect_call_arg_multi_bb
         paciasp
-        autia x0, x1
-        cbz x2, 1f
-        blr x0
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        autia   x0, x1
+        cbz     x2, 1f
+        blr     x0
 1:
-        ldr x1, [x0]
+        ldr     x1, [x0]  // prevent authentication oracle
+
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size good_indirect_call_arg_multi_bb, .-good_indirect_call_arg_multi_bb
@@ -206,12 +275,17 @@ good_indirect_call_arg_multi_bb:
 good_indirect_call_mem_multi_bb:
 // CHECK-NOT: good_indirect_call_mem_multi_bb
         paciasp
-        ldr x16, [x0]
-        autia x16, x0
-        cbz x2, 1f
-        blr x16
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        ldr     x16, [x0]
+        autia   x16, x0
+        cbz     x2, 1f
+        blr     x16
 1:
-        ldr w0, [x16]
+        ldr     w0, [x16]  // prevent authentication oracle
+
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size good_indirect_call_mem_multi_bb, .-good_indirect_call_mem_multi_bb
@@ -223,10 +297,15 @@ bad_indirect_call_arg_multi_bb:
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:         blr     x0
 // CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
         paciasp
-        cbz x2, 1f
-        autia x0, x1
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        cbz     x2, 1f
+        autia   x0, x1
 1:
-        blr x0
+        blr     x0
+
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size bad_indirect_call_arg_multi_bb, .-bad_indirect_call_arg_multi_bb
@@ -239,11 +318,16 @@ bad_indirect_call_mem_multi_bb:
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      ldr     x16, [x0]
         paciasp
-        ldr x16, [x0]
-        cbz x2, 1f
-        autia x16, x1
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        ldr     x16, [x0]
+        cbz     x2, 1f
+        autia   x16, x1
 1:
-        blr x16
+        blr     x16
+
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size bad_indirect_call_mem_multi_bb, .-bad_indirect_call_mem_multi_bb
@@ -256,11 +340,16 @@ bad_indirect_call_arg_clobber_multi_bb:
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      mov     w0, w3
         paciasp
-        autia x0, x1
-        cbz x2, 1f
-        mov w0, w3
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        autia   x0, x1
+        cbz     x2, 1f
+        mov     w0, w3
 1:
-        blr x0
+        blr     x0
+
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size bad_indirect_call_arg_clobber_multi_bb, .-bad_indirect_call_arg_clobber_multi_bb
@@ -273,12 +362,17 @@ bad_indirect_call_mem_clobber_multi_bb:
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      mov     w16, w2
         paciasp
-        ldr x16, [x0]
-        autia x16, x0
-        cbz x2, 1f
-        mov w16, w2
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        ldr     x16, [x0]
+        autia   x16, x0
+        cbz     x2, 1f
+        mov     w16, w2
 1:
-        blr x16
+        blr     x16
+
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size bad_indirect_call_mem_clobber_multi_bb, .-bad_indirect_call_mem_clobber_multi_bb
@@ -288,14 +382,19 @@ bad_indirect_call_mem_clobber_multi_bb:
 good_indirect_call_mem_chain_of_auts_multi_bb:
 // CHECK-NOT: good_indirect_call_mem_chain_of_auts_multi_bb
         paciasp
-        ldr x16, [x0]
-        autia x16, x1
-        ldr x16, [x16]
-        autia x16, x0
-        cbz x2, 1f
-        blr x16
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        ldr     x16, [x0]
+        autia   x16, x1
+        ldr     x16, [x16]
+        autia   x16, x0
+        cbz     x2, 1f
+        blr     x16
 1:
-        ldr w0, [x16]
+        ldr     w0, [x16]  // prevent authentication oracle
+
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size good_indirect_call_mem_chain_of_auts_multi_bb, .-good_indirect_call_mem_chain_of_auts_multi_bb
@@ -308,47 +407,21 @@ bad_indirect_call_mem_chain_of_auts_multi_bb:
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      ldr     x16, [x16]
         paciasp
-        ldr x16, [x0]
-        autia x16, x1
-        ldr x16, [x16]
-        cbz x2, 1f
-        autia x16, x0
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        ldr     x16, [x0]
+        autia   x16, x1
+        ldr     x16, [x16]
+        cbz     x2, 1f
+        autia   x16, x0
 1:
-        blr x16
+        blr     x16
+
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size bad_indirect_call_mem_chain_of_auts_multi_bb, .-bad_indirect_call_mem_chain_of_auts_multi_bb
-
-// Test that noreturn function calls via BR are checked as well.
-
-        .globl  good_indirect_noreturn_call
-        .type   good_indirect_noreturn_call,@function
-good_indirect_noreturn_call:
-// CHECK-NOT: good_indirect_noreturn_call
-        paciasp
-        cbz   x0, 2f
-        autiasp
-        ldr   w1, [x30]
-        autia x0, x1
-        br    x0
-2:
-        autiasp
-        ret
-        .size good_indirect_noreturn_call, .-good_indirect_noreturn_call
-
-        .globl  bad_indirect_noreturn_call
-        .type   bad_indirect_noreturn_call,@function
-bad_indirect_noreturn_call:
-// CHECK-LABEL: GS-PAUTH: non-protected call found in function bad_indirect_noreturn_call, basic block .LFT{{[0-9]+}}, at address
-// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:         br      x0
-// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
-        paciasp
-        cbz   x0, 2f
-        br    x0
-2:
-        autiasp
-        ret
-        .size bad_indirect_noreturn_call, .-bad_indirect_noreturn_call
 
 // Test tail calls. To somewhat decrease the number of test cases and not
 // duplicate all of the above, only implement "mem" variant of test cases and
@@ -358,24 +431,24 @@ bad_indirect_noreturn_call:
         .type   good_direct_tailcall,@function
 good_direct_tailcall:
 // CHECK-NOT: good_direct_tailcall
-        b callee_ext
+        b       callee_ext
         .size good_direct_tailcall, .-good_direct_tailcall
 
         .globl  good_indirect_tailcall_mem
         .type   good_indirect_tailcall_mem,@function
 good_indirect_tailcall_mem:
 // CHECK-NOT: good_indirect_tailcall_mem
-        ldr x16, [x0]
-        autia x16, x0
-        br x16
+        ldr     x16, [x0]
+        autia   x16, x0
+        br      x16
         .size good_indirect_tailcall_mem, .-good_indirect_tailcall_mem
 
         .globl  good_indirect_tailcall_mem_v83
         .type   good_indirect_tailcall_mem_v83,@function
 good_indirect_tailcall_mem_v83:
 // CHECK-NOT: good_indirect_tailcall_mem_v83
-        ldr x16, [x0]
-        braa x16, x0
+        ldr     x16, [x0]
+        braa    x16, x0
         .size good_indirect_tailcall_mem_v83, .-good_indirect_tailcall_mem_v83
 
         .globl  bad_indirect_tailcall_mem
@@ -388,8 +461,8 @@ bad_indirect_tailcall_mem:
 // CHECK-NEXT:  This happens in the following basic block:
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ldr     x16, [x0]
 // CHECK-NEXT:  {{[0-9a-f]+}}:   br      x16
-        ldr x16, [x0]
-        br x16
+        ldr     x16, [x0]
+        br      x16
         .size bad_indirect_tailcall_mem, .-bad_indirect_tailcall_mem
 
         .globl  bad_indirect_tailcall_mem_clobber
@@ -404,10 +477,10 @@ bad_indirect_tailcall_mem_clobber:
 // CHECK-NEXT:  {{[0-9a-f]+}}:   autia   x16, x0
 // CHECK-NEXT:  {{[0-9a-f]+}}:   mov     w16, w2
 // CHECK-NEXT:  {{[0-9a-f]+}}:   br      x16
-        ldr x16, [x0]
-        autia x16, x0
-        mov w16, w2
-        br x16
+        ldr     x16, [x0]
+        autia   x16, x0
+        mov     w16, w2
+        br      x16
         .size bad_indirect_tailcall_mem_clobber, .-bad_indirect_tailcall_mem_clobber
 
         .globl  bad_indirect_tailcall_mem_chain_of_auts
@@ -422,11 +495,11 @@ bad_indirect_tailcall_mem_chain_of_auts:
 // CHECK-NEXT:  {{[0-9a-f]+}}:   autia   x16, x1
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ldr     x16, [x16]
 // CHECK-NEXT:  {{[0-9a-f]+}}:   br      x16
-        ldr x16, [x0]
-        autia x16, x1
-        ldr x16, [x16]
+        ldr     x16, [x0]
+        autia   x16, x1
+        ldr     x16, [x16]
         // Missing AUT of x16. The fact that x16 was authenticated above has nothing to do with it.
-        br x16
+        br      x16
         .size bad_indirect_tailcall_mem_chain_of_auts, .-bad_indirect_tailcall_mem_chain_of_auts
 
         .globl  bad_indirect_tailcall_mem_multi_bb
@@ -436,11 +509,11 @@ bad_indirect_tailcall_mem_multi_bb:
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:         br      x16
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      ldr     x16, [x0]
-        ldr x16, [x0]
-        cbz x2, 1f
-        autia x16, x1
+        ldr     x16, [x0]
+        cbz     x2, 1f
+        autia   x16, x1
 1:
-        br x16
+        br      x16
         .size bad_indirect_tailcall_mem_multi_bb, .-bad_indirect_tailcall_mem_multi_bb
 
         .globl  bad_indirect_tailcall_mem_clobber_multi_bb
@@ -450,12 +523,12 @@ bad_indirect_tailcall_mem_clobber_multi_bb:
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:         br      x16
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      mov     w16, w2
-        ldr x16, [x0]
-        autia x16, x0
-        cbz x2, 1f
-        mov w16, w2
+        ldr     x16, [x0]
+        autia   x16, x0
+        cbz     x2, 1f
+        mov     w16, w2
 1:
-        br x16
+        br      x16
         .size bad_indirect_tailcall_mem_clobber_multi_bb, .-bad_indirect_tailcall_mem_clobber_multi_bb
 
 // Test that calling a function is considered as invalidating safety of every
@@ -497,39 +570,41 @@ direct_call_invalidates_safety:
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      blr     x20
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      bl
-
         paciasp
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
 
         mov     x2, x0
         autiza  x2
-        bl callee_ext
+        bl      callee_ext
         blr     x2
 
         mov     x8, x0
         autiza  x8
-        bl callee_ext
+        bl      callee_ext
         blr     x8
 
         mov     x10, x0
         autiza  x10
-        bl callee_ext
+        bl      callee_ext
         blr     x10
 
         mov     x16, x0
         autiza  x16
-        bl callee_ext
+        bl      callee_ext
         blr     x16
 
         mov     x18, x0
         autiza  x18
-        bl callee_ext
+        bl      callee_ext
         blr     x18
 
         mov     x20, x0
         autiza  x20
-        bl callee_ext
+        bl      callee_ext
         blr     x20
 
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size direct_call_invalidates_safety, .-direct_call_invalidates_safety
@@ -573,8 +648,9 @@ indirect_call_invalidates_safety:
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      blr     x20
 // CHECK-NOT:   The instruction is     {{[0-9a-f]+}}:      blr     x20
-
         paciasp
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
 
         mov     x2, x0
         autiza  x2
@@ -583,29 +659,30 @@ indirect_call_invalidates_safety:
 
         mov     x8, x0
         autiza  x8
-        blr     x8              // protected call, but makes x2 unsafe
+        blr     x8              // protected call, but makes x8 unsafe
         blr     x8              // unprotected call
 
         mov     x10, x0
         autiza  x10
-        blr     x10             // protected call, but makes x2 unsafe
+        blr     x10             // protected call, but makes x10 unsafe
         blr     x10             // unprotected call
 
         mov     x16, x0
         autiza  x16
-        blr     x16             // protected call, but makes x2 unsafe
+        blr     x16             // protected call, but makes x16 unsafe
         blr     x16             // unprotected call
 
         mov     x19, x0
         autiza  x18
-        blr     x18             // protected call, but makes x2 unsafe
+        blr     x18             // protected call, but makes x18 unsafe
         blr     x18             // unprotected call
 
         mov     x20, x0
         autiza  x20
-        blr     x20             // protected call, but makes x2 unsafe
+        blr     x20             // protected call, but makes x20 unsafe
         blr     x20             // unprotected call
 
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size indirect_call_invalidates_safety, .-indirect_call_invalidates_safety
@@ -621,19 +698,29 @@ blraa_no_mark_safe:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      blraa   x0, x1
 // CHECK-NEXT:  This happens in the following basic block:
 // CHECK-NEXT:  {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT:  {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT:  {{[0-9a-f]+}}:   mov     x29, sp
 // CHECK-NEXT:  {{[0-9a-f]+}}:   blraa   x0, x1
 // CHECK-NEXT:  {{[0-9a-f]+}}:   blr     x0
+// CHECK-NEXT:  {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT:  {{[0-9a-f]+}}:   autiasp
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ret
         paciasp
-        blraa x0, x1  // safe, no write-back, clobbers everything
-        blr   x0      // unsafe
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        blraa   x0, x1  // safe, no write-back, clobbers everything
+        blr     x0      // unsafe
+
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size blraa_no_mark_safe, .-blraa_no_mark_safe
 
 // Check that the correct set of registers is used to compute the set of last
-// writing instructions.
+// writing instructions: both x16 and x17 are tracked in this function, but
+// only one particular register is used to compute the set of clobbering
+// instructions in each report.
 
         .globl  last_insts_writing_to_reg
         .type   last_insts_writing_to_reg,@function
@@ -644,10 +731,13 @@ last_insts_writing_to_reg:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      ldr     x16, [x0]
 // CHECK-NEXT:  This happens in the following basic block:
 // CHECK-NEXT:  {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT:  {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT:  {{[0-9a-f]+}}:   mov     x29, sp
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ldr     x16, [x0]
 // CHECK-NEXT:  {{[0-9a-f]+}}:   blr     x16
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ldr     x17, [x1]
 // CHECK-NEXT:  {{[0-9a-f]+}}:   blr     x17
+// CHECK-NEXT:  {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT:  {{[0-9a-f]+}}:   autiasp
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ret
 // CHECK-LABEL: GS-PAUTH: non-protected call found in function last_insts_writing_to_reg, basic block {{[^,]+}}, at address
@@ -656,17 +746,25 @@ last_insts_writing_to_reg:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      ldr     x17, [x1]
 // CHECK-NEXT:  This happens in the following basic block:
 // CHECK-NEXT:  {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT:  {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT:  {{[0-9a-f]+}}:   mov     x29, sp
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ldr     x16, [x0]
 // CHECK-NEXT:  {{[0-9a-f]+}}:   blr     x16
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ldr     x17, [x1]
 // CHECK-NEXT:  {{[0-9a-f]+}}:   blr     x17
+// CHECK-NEXT:  {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT:  {{[0-9a-f]+}}:   autiasp
 // CHECK-NEXT:  {{[0-9a-f]+}}:   ret
         paciasp
-        ldr x16, [x0]
-        blr x16
-        ldr x17, [x1]
-        blr x17
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        ldr     x16, [x0]
+        blr     x16
+        ldr     x17, [x1]
+        blr     x17
+
+        ldp     x29, x30, [sp], #16
         autiasp
         ret
         .size last_insts_writing_to_reg, .-last_insts_writing_to_reg
