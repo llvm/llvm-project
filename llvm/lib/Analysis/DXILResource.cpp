@@ -910,23 +910,21 @@ void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
             ResourceCounterDirection::Invalid;
         std::get<ResourceCounterDirection>(*DupNext) =
             ResourceCounterDirection::Invalid;
+
+        // Raise an error for every invalid entry
+        StringRef Message =
+            "RWStructuredBuffers may increment or decrement their "
+            "counters, but not both.";
+        const Function *FFirst = std::get<const Function *>(*DupFirst);
+        const CallInst *CIFirst = std::get<const CallInst *>(*DupFirst);
+        const Function *FNext = std::get<const Function *>(*DupNext);
+        const CallInst *CINext = std::get<const CallInst *>(*DupNext);
+        M.getContext().diagnose(DiagnosticInfoGenericWithLoc(
+            Message, *FFirst, CIFirst->getDebugLoc()));
+        M.getContext().diagnose(DiagnosticInfoGenericWithLoc(
+            Message, *FNext, CINext->getDebugLoc()));
       }
     }
-  }
-
-  // Raise an error for every invalid entry
-  for (const auto &Entry : DiagCounterDirs) {
-    ResourceCounterDirection Dir = std::get<ResourceCounterDirection>(Entry);
-    const Function *F = std::get<const Function *>(Entry);
-    const CallInst *CI = std::get<const CallInst *>(Entry);
-
-    if (Dir != ResourceCounterDirection::Invalid)
-      continue;
-
-    StringRef Message = "RWStructuredBuffers may increment or decrement their "
-                        "counters, but not both.";
-    M.getContext().diagnose(
-        DiagnosticInfoGenericWithLoc(Message, *F, CI->getDebugLoc()));
   }
 
   // Copy the results into the final vec
