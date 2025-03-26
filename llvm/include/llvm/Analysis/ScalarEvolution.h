@@ -1388,9 +1388,11 @@ public:
                                       reinterpret_cast<uintptr_t>(Ty)));
     }
 
+#ifndef __swift__
     bool operator==(const FoldID &RHS) const {
       return std::tie(Op, Ty, C) == std::tie(RHS.Op, RHS.Ty, RHS.C);
     }
+#endif
   };
 
 private:
