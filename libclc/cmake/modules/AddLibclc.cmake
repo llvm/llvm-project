@@ -260,12 +260,21 @@ function(add_libclc_builtin_set)
     endif()
 
     get_filename_component( file_dir ${file} DIRECTORY )
+    get_filename_component( input_filename ${file} NAME_WE )
+
+    # If this is a 'native' function (as judged by its filename beginning with
+    # "(clc_)?native_") then pass extra args.
+    set( native_flag )
+    string( REGEX MATCH "^(clc_)?native_" is_native "${input_filename}" )
+    if( NOT "${is_native}" STREQUAL "" )
+      set( native_flag -fapprox-func )
+    endif()
 
     compile_to_bc(
       TRIPLE ${ARG_TRIPLE}
       INPUT ${input_file}
       OUTPUT ${output_file}
-      EXTRA_OPTS -fno-builtin -nostdlib
+      EXTRA_OPTS -fno-builtin -nostdlib ${native_flag}
         "${ARG_COMPILE_FLAGS}" -I${CMAKE_CURRENT_SOURCE_DIR}/${file_dir}
       DEPENDENCIES ${input_file_dep}
     )
