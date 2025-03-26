@@ -4965,10 +4965,16 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
   renderDwarfFormat(D, T, Args, CmdArgs, EffectiveDWARFVersion);
   RenderDebugInfoCompressionArgs(Args, CmdArgs, D, TC);
 
-  bool EmitDwarfForAMDGCN = EmitDwarf && T.isAMDGCN();
+  bool EmitDwarfForAMDGCN =
+      EmitDwarf &&
+      (T.isAMDGCN() || (T.isSPIRV() && T.getVendor() == llvm::Triple::AMD));
   if (EmitDwarfForAMDGCN)
     CmdArgs.append({"-mllvm", "-amdgpu-spill-cfi-saved-regs"});
   if (Arg *A = Args.getLastArg(options::OPT_gheterogeneous_dwarf_EQ)) {
+    if (StringRef(A->getValue()) == "diexpr" && T.isSPIRV() &&
+        T.getVendor() == llvm::Triple::AMD)
+      D.Diag(clang::diag::err_drv_unsupported_opt_with_suggestion)
+          << A->getAsString(Args) << "-gheterogeneous-dwarf=diexpression";
     A->render(Args, CmdArgs);
   } else if (EmitDwarfForAMDGCN) {
 #ifndef NDEBUG
