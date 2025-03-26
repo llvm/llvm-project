@@ -22,6 +22,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -58,7 +59,7 @@ class ModuleManager {
   SmallVector<ModuleFile *, 2> Roots;
 
   /// All loaded modules, indexed by name.
-  llvm::DenseMap<const FileEntry *, ModuleFile *> Modules;
+  llvm::StringMap<ModuleFile *> Modules;
 
   /// FileManager that handles translating between filenames and
   /// FileEntry *.
@@ -179,7 +180,7 @@ public:
   ModuleFile *lookupByModuleName(StringRef ModName) const;
 
   /// Returns the module associated with the given module file.
-  ModuleFile *lookup(const FileEntry *File) const;
+  ModuleFile *lookup(FileEntryRef File) const;
 
   /// Returns the in-memory (virtual file) buffer with the given name
   std::unique_ptr<llvm::MemoryBuffer> lookupBuffer(StringRef Name);
@@ -282,26 +283,6 @@ public:
   /// manager that is *not* in this set can be skipped.
   void visit(llvm::function_ref<bool(ModuleFile &M)> Visitor,
              llvm::SmallPtrSetImpl<ModuleFile *> *ModuleFilesHit = nullptr);
-
-  /// Attempt to resolve the given module file name to a file entry.
-  ///
-  /// \param FileName The name of the module file.
-  ///
-  /// \param ExpectedSize The size that the module file is expected to have.
-  /// If the actual size differs, the resolver should return \c true.
-  ///
-  /// \param ExpectedModTime The modification time that the module file is
-  /// expected to have. If the actual modification time differs, the resolver
-  /// should return \c true.
-  ///
-  /// \param File Will be set to the file if there is one, or null
-  /// otherwise.
-  ///
-  /// \returns True if a file exists but does not meet the size/
-  /// modification time criteria, false if the file is either available and
-  /// suitable, or is missing.
-  bool lookupModuleFile(StringRef FileName, off_t ExpectedSize,
-                        time_t ExpectedModTime, OptionalFileEntryRef &File);
 
   /// View the graphviz representation of the module graph.
   void viewGraph();
