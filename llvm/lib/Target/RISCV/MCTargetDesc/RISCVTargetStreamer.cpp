@@ -33,18 +33,17 @@ RISCVTargetStreamer::RISCVTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
 void RISCVTargetStreamer::finish() { finishAttributeSection(); }
 void RISCVTargetStreamer::reset() {}
 
-void RISCVTargetStreamer::emitDirectiveOptionPush() {}
-void RISCVTargetStreamer::emitDirectiveOptionPop() {}
-void RISCVTargetStreamer::emitDirectiveOptionPIC() {}
-void RISCVTargetStreamer::emitDirectiveOptionNoPIC() {}
-void RISCVTargetStreamer::emitDirectiveOptionRVC() {}
-void RISCVTargetStreamer::emitDirectiveOptionNoRVC() {}
+void RISCVTargetStreamer::emitDirectiveOptionArch(ArrayRef<RISCVOptionArchArg> Args) {}
 void RISCVTargetStreamer::emitDirectiveOptionExact() {}
 void RISCVTargetStreamer::emitDirectiveOptionNoExact() {}
+void RISCVTargetStreamer::emitDirectiveOptionPIC() {}
+void RISCVTargetStreamer::emitDirectiveOptionNoPIC() {}
+void RISCVTargetStreamer::emitDirectiveOptionPop() {}
+void RISCVTargetStreamer::emitDirectiveOptionPush() {}
 void RISCVTargetStreamer::emitDirectiveOptionRelax() {}
 void RISCVTargetStreamer::emitDirectiveOptionNoRelax() {}
-void RISCVTargetStreamer::emitDirectiveOptionArch(
-    ArrayRef<RISCVOptionArchArg> Args) {}
+void RISCVTargetStreamer::emitDirectiveOptionRVC() {}
+void RISCVTargetStreamer::emitDirectiveOptionNoRVC() {}
 void RISCVTargetStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {}
 void RISCVTargetStreamer::emitAttribute(unsigned Attribute, unsigned Value) {}
 void RISCVTargetStreamer::finishAttributeSection() {}
