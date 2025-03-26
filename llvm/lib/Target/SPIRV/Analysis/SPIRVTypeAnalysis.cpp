@@ -266,6 +266,8 @@ private:
       propagateTypeDetails(DeducedType, C);
     else if (const LoadInst *C = dyn_cast<LoadInst>(V))
       propagateTypeDetails(DeducedType, C);
+    else if (const FreezeInst *C = dyn_cast<FreezeInst>(V))
+      propagateTypeDetails(DeducedType, C);
     else if (const ReturnInst *C = dyn_cast<ReturnInst>(V))
       propagateTypeDetails(DeducedType, C);
     else if (const StoreInst *C = dyn_cast<StoreInst>(V))
@@ -273,6 +275,8 @@ private:
     else if (const GlobalVariable *C = dyn_cast<GlobalVariable>(V))
       propagateTypeDetails(DeducedType, C);
     else if (const AtomicCmpXchgInst *C = dyn_cast<AtomicCmpXchgInst>(V))
+      propagateTypeDetails(DeducedType, C);
+    else if (const AtomicRMWInst *C = dyn_cast<AtomicRMWInst>(V))
       propagateTypeDetails(DeducedType, C);
     else if (const ExtractValueInst *C = dyn_cast<ExtractValueInst>(V))
       propagateTypeDetails(DeducedType, C);
@@ -286,26 +290,10 @@ private:
       propagateTypeDetails(DeducedType, C);
     else if (const CastInst *C = dyn_cast<CastInst>(V))
       propagateTypeDetails(DeducedType, C);
+    else if (const BinaryOperator *C = dyn_cast<BinaryOperator>(V))
+      propagateTypeDetails(DeducedType, C);
     else
       llvm_unreachable("FIXME: unsupported instruction");
-
-    // for (const User *U : V->users())
-    //   if (TypeMap->find(U) == TypeMap->end())
-    //     deduceElementType(U);
-
-    // X(CallInst, V);
-    // X(GetElementPtrInst, V);
-    // X(LoadInst, V);
-    // X(ReturnInst, V);
-    // X(StoreInst, V);
-    //  TODO:  GlobalValue
-    //  TODO: addrspacecast
-    //  TODO: bitcast
-    //  TODO: AtomicCmpXchgInst
-    //  TODO: AtomicRMWInst
-    //  TODO: PHINode
-    //  TODO: SelectInst
-    //  TODO: CallInst
   }
 
   void propagateTypeDetails(Type *DeducedType, const Constant *C) {
@@ -473,6 +461,22 @@ private:
       propagateType(DeducedType, V);
   }
 
+  void propagateTypeDetails(Type *DeducedType, const AtomicRMWInst *I) {
+    TypeMap->try_emplace(I, DeducedType);
+    propagateType(TypedPointerType::get(DeducedType, I->getPointerAddressSpace()), I->getPointerOperand());
+  }
+
+  void propagateTypeDetails(Type *DeducedType, const BinaryOperator *I) {
+    TypeMap->try_emplace(I, DeducedType);
+    propagateType(DeducedType, I->getOperand(0));
+    propagateType(DeducedType, I->getOperand(1));
+  }
+
+  void propagateTypeDetails(Type *DeducedType, const FreezeInst *I) {
+    TypeMap->try_emplace(I, DeducedType);
+    propagateType(DeducedType, I->getOperand(0));
+  }
+
   bool deduceElementType(const Value *V) {
     assert(V != nullptr);
 
@@ -499,6 +503,9 @@ private:
     X(SelectInst, V);
     X(PHINode, V);
     X(ShuffleVectorInst, V);
+    X(AtomicRMWInst, V);
+    X(FreezeInst, V);
+    X(FenceInst, V);
 
     X(BranchInst, V);
     X(CallInst, V);
@@ -532,9 +539,33 @@ private:
     return true;
   }
 
-  bool deduceType(const BranchInst*) { return true; }
-  bool deduceType(const SwitchInst*) { return true; }
-  bool deduceType(const UnreachableInst*) { return true; }
+  bool deduceType(const AtomicRMWInst *I) {
+    Type *VT = I->getValOperand()->getType();
+    assert(!TypeInfo::isOpaqueType(VT));
+    TypeMap->try_emplace(I, VT);
+    propagateType(TypedPointerType::get(VT, I->getPointerAddressSpace()), I->getPointerOperand());
+    return true;
+  }
+
+  bool deduceType(const BranchInst *I) {
+    TypeMap->try_emplace(I, Type::getVoidTy(I->getContext()));
+    return true;
+  }
+
+  bool deduceType(const SwitchInst *I) {
+    TypeMap->try_emplace(I, Type::getVoidTy(I->getContext()));
+    return true;
+  }
+
+  bool deduceType(const UnreachableInst *I) {
+    TypeMap->try_emplace(I, Type::getVoidTy(I->getContext()));
+    return true;
+  }
+
+  bool deduceType(const FenceInst *I) {
+    TypeMap->try_emplace(I, Type::getVoidTy(I->getContext()));
+    return true;
+  }
 
   bool deduceType(const AddrSpaceCastInst *ACI) {
     Type *PT = getDeducedType(ACI->getPointerOperand());
@@ -562,7 +593,7 @@ private:
       return true;
     }
 
-    // The pointer operand is non-opaque, we can deduce the loaded type.
+    // The pointer operand is non-opaque, we can geduce the loaded type.
     if (Type *PointerOperandTy = getDeducedType(I->getPointerOperand())) {
       Type *ElementType = cast<TypedPointerType>(PointerOperandTy)->getElementType();
       TypeMap->try_emplace(I, ElementType);
@@ -843,6 +874,19 @@ private:
     TypeMap->try_emplace(I, T);
     for (Value *V : I->incoming_values())
       propagateType(T, V);
+    return true;
+  }
+
+  bool deduceType(const FreezeInst *I) {
+    Type *T = I->getType();
+    if (TypeInfo::isOpaqueType(T))
+      T = getDeducedType(I);
+
+    if (!T)
+      return false;
+
+    TypeMap->try_emplace(I, T);
+    propagateType(T, I->getOperand(0));
     return true;
   }
 

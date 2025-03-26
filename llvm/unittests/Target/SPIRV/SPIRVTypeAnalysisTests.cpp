@@ -1296,15 +1296,97 @@ TEST_F(SPIRVTypeAnalysisTest, DeducePhiBelowPtrCastConflictBelow) {
     merge:
       %c = phi ptr [ %a, %lhs ], [ %b, %rhs ]
       %val2 = load %st, ptr %c
-      ret void
-    }
-  )";
+     ret void
+   }
+ )";
 
-  auto TI = runAnalysis(Assembly);
+   auto TI = runAnalysis(Assembly);
   auto ST = getStructType("st");
   EXPECT_EQ(TI.getType(getValue("a")), TypedPointerType::get(ST, /* AS= */ 0));
   EXPECT_EQ(TI.getType(getValue("b")), TypedPointerType::get(ST, /* AS= */ 0));
   EXPECT_EQ(TI.getType(getValue("c")), TypedPointerType::get(ST, /* AS= */ 0));
   EXPECT_EQ(TI.getType(getValue("val1")), IntTy);
   EXPECT_EQ(TI.getType(getValue("val2")), ST);
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceAtomicRMW) {
+  StringRef Assembly = R"(
+    define void @foo(ptr %a) {
+      %old = atomicrmw xchg ptr %a, i32 0 acq_rel, align 4
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("a")), TypedPointerType::get(IntTy, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("old")), IntTy);
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceAtomicRMWAddressSpace) {
+  StringRef Assembly = R"(
+    define void @foo(ptr addrspace(2) %a) {
+      %old = atomicrmw xchg ptr addrspace(2) %a, i32 0 acq_rel, align 4
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("a")), TypedPointerType::get(IntTy, /* AS= */ 2));
+  EXPECT_EQ(TI.getType(getValue("old")), IntTy);
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceSupportsFence) {
+  StringRef Assembly = R"(
+    define void @foo() {
+      fence acquire
+      ret void
+    }
+  )";
+
+  runAnalysis(Assembly);
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceFreeze) {
+  StringRef Assembly = R"(
+    define void @foo(ptr %a) {
+      %b = freeze ptr %a
+      %c = load i32, ptr %b
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("a")), TypedPointerType::get(IntTy, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("b")), TypedPointerType::get(IntTy, /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("c")), IntTy);
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceFreezeAddressSpace) {
+  StringRef Assembly = R"(
+    define void @foo(ptr addrspace(2) %a) {
+      %b = freeze ptr addrspace(2) %a
+      %c = load i32, ptr addrspace(2) %b
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("a")), TypedPointerType::get(IntTy, /* AS= */ 2));
+  EXPECT_EQ(TI.getType(getValue("b")), TypedPointerType::get(IntTy, /* AS= */ 2));
+  EXPECT_EQ(TI.getType(getValue("c")), IntTy);
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceFreezeTopDown) {
+  StringRef Assembly = R"(
+    define void @foo(ptr addrspace(2) %a) {
+      %b = load i32, ptr addrspace(2) %a
+      %c = freeze ptr addrspace(2) %a
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("a")), TypedPointerType::get(IntTy, /* AS= */ 2));
+  EXPECT_EQ(TI.getType(getValue("b")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("c")), TypedPointerType::get(IntTy, /* AS= */ 2));
 }
