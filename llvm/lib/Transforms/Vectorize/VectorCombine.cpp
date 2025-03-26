@@ -3722,7 +3722,7 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
       if (!Shuffle->hasNUsesOrMore(1u))
         continue;
 
-      // Ensure second operand is a poison/undef value.
+      // Ensure second operand is a poison value.
       auto *Op0 = Shuffle->getOperand(0);
       auto *Op1 = Shuffle->getOperand(1);
       if (!isa<PoisonValue>(Op1) && !isa<UndefValue>(Op1))
