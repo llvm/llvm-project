@@ -251,8 +251,8 @@ other integral types, by supporting them notably in:
 * ``<charconv>``
 * ``<functional>``
 * ``<format>``
-* ``<type_traits>``
 * ``<random>``
+* ``<type_traits>``
 
 Additional types supported in random distributions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
