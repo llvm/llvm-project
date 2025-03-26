@@ -2111,6 +2111,28 @@ SDValue NVPTXTargetLowering::LowerSTACKSAVE(SDValue Op,
   return DAG.getMergeValues({ASC, SDValue(SS.getNode(), 1)}, DL);
 }
 
+// By default CONCAT_VECTORS is lowered by ExpandVectorBuildThroughStack()
+// (see LegalizeDAG.cpp). This is slow and uses local memory.
+// We use extract/insert/build vector just as what LegalizeOp() does in llvm 2.5
+SDValue
+NVPTXTargetLowering::LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const {
+  SDNode *Node = Op.getNode();
+  SDLoc dl(Node);
+  SmallVector<SDValue, 8> Ops;
+  unsigned NumOperands = Node->getNumOperands();
+  for (unsigned i = 0; i < NumOperands; ++i) {
+    SDValue SubOp = Node->getOperand(i);
+    EVT VVT = SubOp.getNode()->getValueType(0);
+    EVT EltVT = VVT.getVectorElementType();
+    unsigned NumSubElem = VVT.getVectorNumElements();
+    for (unsigned j = 0; j < NumSubElem; ++j) {
+      Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT, SubOp,
+                                DAG.getIntPtrConstant(j, dl)));
+    }
+  }
+  return DAG.getBuildVector(Node->getValueType(0), dl, Ops);
+}
+
 SDValue NVPTXTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
   // Handle bitcasting from v2i8 without hitting the default promotion
   // strategy which goes through stack memory.
@@ -2824,6 +2846,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerINSERT_VECTOR_ELT(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return LowerVECTOR_SHUFFLE(Op, DAG);
+  case ISD::CONCAT_VECTORS:
+    return LowerCONCAT_VECTORS(Op, DAG);
   case ISD::STORE:
     return LowerSTORE(Op, DAG);
   case ISD::LOAD:
