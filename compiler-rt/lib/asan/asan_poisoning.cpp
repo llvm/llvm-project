@@ -147,13 +147,12 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
 
   u32 poison_magic = kAsanUserPoisonedMemoryMagic;
 
-  GET_CALLER_PC_BP;
-  GET_STORE_STACK_TRACE_PC_BP(pc, bp);
-  // TODO: garbage collect stacks once they fall off the ring buffer?
-  // StackDepot doesn't currently have a way to delete stacks.
-  u32 stack_id = StackDepotPut(stack);
-
   if (flags()->track_poison > 0) {
+    GET_STACK_TRACE(/*max_size=*/ 16, /*fast=*/ false);
+    // TODO: garbage collect stacks once they fall off the ring buffer?
+    // StackDepot doesn't currently have a way to delete stacks.
+    u32 stack_id = StackDepotPut(stack);
+
     u32 current_tid = GetCurrentTidOrInvalid();
     u32 poison_index = ((stack_id * 151157) ^ (current_tid * 733123)) %
                        NumPoisonTrackingMagicValues;
@@ -162,7 +161,7 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
                         .thread_id = current_tid,
                         .begin = beg_addr,
                         .end = end_addr};
-    // This is racy: with concurrent writes, some records may be lost,
+    // This is a data race: with concurrent writes, some records may be lost,
     // but it's a sacrifice I am willing to make for speed.
     // The sharding across PoisonRecords reduces the likelihood of
     // concurrent writes.

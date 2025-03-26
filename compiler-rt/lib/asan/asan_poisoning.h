@@ -23,21 +23,6 @@
 #include "sanitizer_common/sanitizer_platform.h"
 #include "sanitizer_common/sanitizer_ring_buffer.h"
 
-// For platforms which support slow unwinder only, we restrict the store context
-// size to 1, basically only storing the current pc. We do this because the slow
-// unwinder which is based on libunwind is not async signal safe and causes
-// random freezes in forking applications as well as in signal handlers.
-#define GET_STORE_STACK_TRACE_PC_BP(pc, bp)                            \
-  UNINITIALIZED BufferedStackTrace stack;                              \
-  int max_stack = 16;                                                  \
-  if (!SANITIZER_CAN_FAST_UNWIND)                                      \
-    max_stack = Min(max_stack, 1);                                     \
-  stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_malloc, \
-               max_stack);
-
-#define GET_STORE_STACK_TRACE \
-  GET_STORE_STACK_TRACE_PC_BP(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME())
-
 namespace __asan {
 
 // These need to be negative chars (i.e., in the range [0x80 .. 0xff]) for
