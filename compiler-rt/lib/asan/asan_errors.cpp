@@ -12,8 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "asan_errors.h"
+
 #include "asan_descriptions.h"
 #include "asan_mapping.h"
+#include "asan_poisoning.h"
 #include "asan_report.h"
 #include "asan_stack.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
@@ -505,6 +507,19 @@ ErrorGeneric::ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
           far_from_bounds = AdjacentShadowValuesAreFullyPoisoned(shadow_addr);
           break;
       }
+
+      if (flags()->track_poison > 0 && IsPoisonTrackingMagic(shadow_val)) {
+        if (internal_strcmp(bug_descr, "unknown-crash") != 0) {
+          Printf(
+              "ERROR: use-after-poison tracking magic values overlap with "
+              "other constants.\n");
+          Printf("Please file a bug.\n");
+        } else {
+          bug_descr = "use-after-poison";
+          bug_type_score = 20;
+        }
+      }
+
       scariness.Scare(bug_type_score + read_after_free_bonus, bug_descr);
       if (far_from_bounds) scariness.Scare(10, "far-from-bounds");
     }
@@ -550,8 +565,12 @@ static void PrintLegend(InternalScopedString *str) {
   PrintShadowByte(str, "  Global redzone:          ", kAsanGlobalRedzoneMagic);
   PrintShadowByte(str, "  Global init order:       ",
                   kAsanInitializationOrderMagic);
-  PrintShadowByte(str, "  Poisoned by user:        ",
-                  kAsanUserPoisonedMemoryMagic);
+  // TODO: sync description with PoisonTrackingMagicValues
+  PrintShadowByte(
+      str, "  Poisoned by user:        ", kAsanUserPoisonedMemoryMagic,
+      flags()->track_poison > 0 ? " with detailed tracking using {0x80-0x8F, "
+                                  "0x90-0x9F, 0xD0-0xDF, 0xE0-0xEF}\n"
+                                : "\n");
   PrintShadowByte(str, "  Container overflow:      ",
                   kAsanContiguousContainerOOBMagic);
   PrintShadowByte(str, "  Array cookie:            ",
@@ -600,6 +619,44 @@ static void PrintShadowMemoryForAddress(uptr addr) {
   Printf("%s", str.data());
 }
 
+static void CheckPoisonRecords(uptr addr) {
+  if (!AddrIsInMem(addr))
+    return;
+  uptr shadow_addr = MemToShadow(addr);
+  unsigned char poison_magic = *(reinterpret_cast<u8 *>(shadow_addr));
+  int poison_index = PoisonTrackingMagicToIndex[poison_magic];
+
+  if (poison_index < 0 || poison_index >= NumPoisonTrackingMagicValues)
+    return;
+
+  PoisonRecordRingBuffer *PoisonRecord =
+      reinterpret_cast<PoisonRecordRingBuffer *>(PoisonRecords[poison_index]);
+  if (PoisonRecord) {
+    bool FoundMatch = false;
+
+    for (unsigned int i = 0; i < PoisonRecord->size(); i++) {
+      struct PoisonRecord Record = (*PoisonRecord)[i];
+      if (Record.begin <= addr && addr <= Record.end) {
+        FoundMatch = true;
+
+        StackTrace poison_stack = StackDepotGet(Record.stack_id);
+
+        Printf("\n");
+        Printf("Memory was manually poisoned by thread T%u:\n",
+               Record.thread_id);
+        poison_stack.Print();
+
+        break;
+      }
+    }
+
+    if (!FoundMatch) {
+      Printf("ERROR: no matching poison tracking record found.\n");
+      Printf("Try setting a larger track_poison value.\n");
+    }
+  }
+}
+
 void ErrorGeneric::Print() {
   Decorator d;
   Printf("%s", d.Error());
@@ -623,6 +680,11 @@ void ErrorGeneric::Print() {
     PrintContainerOverflowHint();
   ReportErrorSummary(bug_descr, &stack);
   PrintShadowMemoryForAddress(addr);
+
+  // This uses a range of shadow values, hence it is not convenient to make a
+  // specific error handler.
+  if (flags()->track_poison > 0)
+    CheckPoisonRecords(addr);
 }
 
 }  // namespace __asan

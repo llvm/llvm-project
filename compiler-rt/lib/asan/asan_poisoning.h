@@ -10,6 +10,8 @@
 //
 // Shadow memory poisoning by ASan RTL and by user application.
 //===----------------------------------------------------------------------===//
+#ifndef ASAN_POISONING_H
+#define ASAN_POISONING_H
 
 #ifndef ASAN_POISONING_H
 #define ASAN_POISONING_H
@@ -19,8 +21,55 @@
 #include "asan_mapping.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_platform.h"
+#include "sanitizer_common/sanitizer_ring_buffer.h"
+
+// For platforms which support slow unwinder only, we restrict the store context
+// size to 1, basically only storing the current pc. We do this because the slow
+// unwinder which is based on libunwind is not async signal safe and causes
+// random freezes in forking applications as well as in signal handlers.
+#define GET_STORE_STACK_TRACE_PC_BP(pc, bp)                            \
+  UNINITIALIZED BufferedStackTrace stack;                              \
+  int max_stack = 16;                                                  \
+  if (!SANITIZER_CAN_FAST_UNWIND)                                      \
+    max_stack = Min(max_stack, 1);                                     \
+  stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_malloc, \
+               max_stack);
+
+#define GET_STORE_STACK_TRACE \
+  GET_STORE_STACK_TRACE_PC_BP(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME())
 
 namespace __asan {
+
+// These need to be negative chars (i.e., in the range [0x80 .. 0xff]) for
+// AddressIsPoisoned calculations.
+static const int PoisonTrackingIndexToMagic[] = {
+    0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8a,
+    0x8b, 0x8c, 0x8d, 0x8e, 0x8f, 0x90, 0x91, 0x92, 0x93, 0x94, 0x95,
+    0x96, 0x97, 0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f, 0xd0,
+    0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8, 0xd9, 0xda, 0xdb,
+    0xdc, 0xdd, 0xde, 0xdf, 0xe0, 0xe1, 0xe2, 0xe3, 0xe4, 0xe5, 0xe6,
+    0xe7, 0xe8, 0xe9, 0xea, 0xeb, 0xec, 0xed, 0xee, 0xef,
+};
+static const int NumPoisonTrackingMagicValues =
+    sizeof(PoisonTrackingIndexToMagic) / sizeof(int);
+
+extern int PoisonTrackingMagicToIndex[256];
+
+struct PoisonRecord {
+  unsigned int stack_id;
+  unsigned int thread_id;
+  uptr begin;
+  uptr end;
+};
+
+typedef RingBuffer<struct PoisonRecord> PoisonRecordRingBuffer;
+extern PoisonRecordRingBuffer* PoisonRecords[NumPoisonTrackingMagicValues];
+
+// Set up data structures for track_poison.
+void InitializePoisonTracking();
+
+// Is this number a magic value used for poison tracking?
+bool IsPoisonTrackingMagic(int byte);
 
 // Enable/disable memory poisoning.
 void SetCanPoisonMemory(bool value);

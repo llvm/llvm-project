@@ -15,6 +15,7 @@
 #define ASAN_DESCRIPTIONS_H
 
 #include "asan_allocator.h"
+#include "asan_poisoning.h"
 #include "asan_thread.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
@@ -46,6 +47,9 @@ class Decorator : public __sanitizer::SanitizerCommonDecorator {
   const char *Allocation() { return Magenta(); }
 
   const char *ShadowByte(u8 byte) {
+    if (IsPoisonTrackingMagic(byte))
+      return Blue();
+
     switch (byte) {
       case kAsanHeapLeftRedzoneMagic:
       case kAsanArrayCookieMagic:

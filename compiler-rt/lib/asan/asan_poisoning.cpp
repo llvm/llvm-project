@@ -20,10 +20,47 @@
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_interface_internal.h"
 #include "sanitizer_common/sanitizer_libc.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 
 namespace __asan {
 
 static atomic_uint8_t can_poison_memory;
+
+PoisonRecordRingBuffer *PoisonRecords[NumPoisonTrackingMagicValues] = {0};
+int PoisonTrackingMagicToIndex[256] = {-1};
+
+void InitializePoisonTracking() {
+  if (flags()->track_poison <= 0)
+    return;
+
+  for (unsigned int i = 0; i < sizeof(PoisonTrackingMagicToIndex) / sizeof(int);
+       i++) {
+    PoisonTrackingMagicToIndex[i] = -1;
+  }
+
+  for (unsigned int i = 0; i < NumPoisonTrackingMagicValues; i++) {
+    int magic = PoisonTrackingIndexToMagic[i];
+    CHECK(magic > 0);
+    CHECK((unsigned int)magic <
+          sizeof(PoisonTrackingMagicToIndex) / sizeof(int));
+
+    // Necessary for AddressIsPoisoned calculations
+    CHECK((char)magic < 0);
+
+    PoisonTrackingMagicToIndex[magic] = i;
+
+    PoisonRecords[i] = PoisonRecordRingBuffer::New(flags()->track_poison);
+  }
+}
+
+bool IsPoisonTrackingMagic(int byte) {
+  return (byte >= 0 &&
+          (unsigned long)byte <
+              (sizeof(PoisonTrackingMagicToIndex) / sizeof(int)) &&
+          PoisonTrackingMagicToIndex[byte] >= 0 &&
+          PoisonTrackingMagicToIndex[byte] < NumPoisonTrackingMagicValues &&
+          PoisonTrackingIndexToMagic[PoisonTrackingMagicToIndex[byte]] == byte);
+}
 
 void SetCanPoisonMemory(bool value) {
   atomic_store(&can_poison_memory, value, memory_order_release);
@@ -107,6 +144,31 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
   uptr end_addr = beg_addr + size;
   VPrintf(3, "Trying to poison memory region [%p, %p)\n", (void *)beg_addr,
           (void *)end_addr);
+
+  u32 poison_magic = kAsanUserPoisonedMemoryMagic;
+
+  GET_CALLER_PC_BP;
+  GET_STORE_STACK_TRACE_PC_BP(pc, bp);
+  // TODO: garbage collect stacks once they fall off the ring buffer?
+  // StackDepot doesn't currently have a way to delete stacks.
+  u32 stack_id = StackDepotPut(stack);
+
+  if (flags()->track_poison > 0) {
+    u32 current_tid = GetCurrentTidOrInvalid();
+    u32 poison_index = ((stack_id * 151157) ^ (current_tid * 733123)) %
+                       NumPoisonTrackingMagicValues;
+    poison_magic = PoisonTrackingIndexToMagic[poison_index];
+    PoisonRecord record{.stack_id = stack_id,
+                        .thread_id = current_tid,
+                        .begin = beg_addr,
+                        .end = end_addr};
+    // This is racy: with concurrent writes, some records may be lost,
+    // but it's a sacrifice I am willing to make for speed.
+    // The sharding across PoisonRecords reduces the likelihood of
+    // concurrent writes.
+    PoisonRecords[poison_index]->push(record);
+  }
+
   ShadowSegmentEndpoint beg(beg_addr);
   ShadowSegmentEndpoint end(end_addr);
   if (beg.chunk == end.chunk) {
@@ -119,7 +181,7 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
       if (beg.offset > 0) {
         *beg.chunk = Min(value, beg.offset);
       } else {
-        *beg.chunk = kAsanUserPoisonedMemoryMagic;
+        *beg.chunk = poison_magic;
       }
     }
     return;
@@ -134,10 +196,11 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
     }
     beg.chunk++;
   }
-  REAL(memset)(beg.chunk, kAsanUserPoisonedMemoryMagic, end.chunk - beg.chunk);
+
+  REAL(memset)(beg.chunk, poison_magic, end.chunk - beg.chunk);
   // Poison if byte in end.offset is unaddressable.
   if (end.value > 0 && end.value <= end.offset) {
-    *end.chunk = kAsanUserPoisonedMemoryMagic;
+    *end.chunk = poison_magic;
   }
 }
 
@@ -147,6 +210,11 @@ void __asan_unpoison_memory_region(void const volatile *addr, uptr size) {
   uptr end_addr = beg_addr + size;
   VPrintf(3, "Trying to unpoison memory region [%p, %p)\n", (void *)beg_addr,
           (void *)end_addr);
+
+  // Note: we don't need to update the poison tracking here. Since the shadow
+  // memory will be unpoisoned, the poison tracking ring buffer entries will be
+  // ignored.
+
   ShadowSegmentEndpoint beg(beg_addr);
   ShadowSegmentEndpoint end(end_addr);
   if (beg.chunk == end.chunk) {
