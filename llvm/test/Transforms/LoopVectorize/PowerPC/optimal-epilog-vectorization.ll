@@ -333,9 +333,9 @@ define dso_local signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n)
 ; VF-TWO-CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF-TWO-CHECK:       vector.body:
 ; VF-TWO-CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF-TWO-CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 0
 ; VF-TWO-CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i64 [[INDEX]] to i32
 ; VF-TWO-CHECK-NEXT:    [[TMP16:%.*]] = add i32 [[OFFSET_IDX]], 0
+; VF-TWO-CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 0
 ; VF-TWO-CHECK-NEXT:    [[TMP24:%.*]] = xor i32 [[TMP16]], -1
 ; VF-TWO-CHECK-NEXT:    [[TMP32:%.*]] = add i32 [[TMP24]], [[N]]
 ; VF-TWO-CHECK-NEXT:    [[TMP40:%.*]] = sext i32 [[TMP32]] to i64
@@ -416,9 +416,9 @@ define dso_local signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n)
 ; VF-TWO-CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; VF-TWO-CHECK:       vec.epilog.vector.body:
 ; VF-TWO-CHECK-NEXT:    [[INDEX21:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT25:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; VF-TWO-CHECK-NEXT:    [[TMP97:%.*]] = add i64 [[INDEX21]], 0
 ; VF-TWO-CHECK-NEXT:    [[OFFSET_IDX22:%.*]] = trunc i64 [[INDEX21]] to i32
 ; VF-TWO-CHECK-NEXT:    [[TMP98:%.*]] = add i32 [[OFFSET_IDX22]], 0
+; VF-TWO-CHECK-NEXT:    [[TMP97:%.*]] = add i64 [[INDEX21]], 0
 ; VF-TWO-CHECK-NEXT:    [[TMP99:%.*]] = xor i32 [[TMP98]], -1
 ; VF-TWO-CHECK-NEXT:    [[TMP100:%.*]] = add i32 [[TMP99]], [[N]]
 ; VF-TWO-CHECK-NEXT:    [[TMP101:%.*]] = sext i32 [[TMP100]] to i64
@@ -492,9 +492,9 @@ define dso_local signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n)
 ; VF-FOUR-CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF-FOUR-CHECK:       vector.body:
 ; VF-FOUR-CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF-FOUR-CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 0
 ; VF-FOUR-CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i64 [[INDEX]] to i32
 ; VF-FOUR-CHECK-NEXT:    [[TMP16:%.*]] = add i32 [[OFFSET_IDX]], 0
+; VF-FOUR-CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 0
 ; VF-FOUR-CHECK-NEXT:    [[TMP24:%.*]] = xor i32 [[TMP16]], -1
 ; VF-FOUR-CHECK-NEXT:    [[TMP32:%.*]] = add i32 [[TMP24]], [[N]]
 ; VF-FOUR-CHECK-NEXT:    [[TMP40:%.*]] = sext i32 [[TMP32]] to i64
@@ -575,9 +575,9 @@ define dso_local signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n)
 ; VF-FOUR-CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; VF-FOUR-CHECK:       vec.epilog.vector.body:
 ; VF-FOUR-CHECK-NEXT:    [[INDEX21:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT25:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; VF-FOUR-CHECK-NEXT:    [[TMP97:%.*]] = add i64 [[INDEX21]], 0
 ; VF-FOUR-CHECK-NEXT:    [[OFFSET_IDX22:%.*]] = trunc i64 [[INDEX21]] to i32
 ; VF-FOUR-CHECK-NEXT:    [[TMP98:%.*]] = add i32 [[OFFSET_IDX22]], 0
+; VF-FOUR-CHECK-NEXT:    [[TMP97:%.*]] = add i64 [[INDEX21]], 0
 ; VF-FOUR-CHECK-NEXT:    [[TMP99:%.*]] = xor i32 [[TMP98]], -1
 ; VF-FOUR-CHECK-NEXT:    [[TMP100:%.*]] = add i32 [[TMP99]], [[N]]
 ; VF-FOUR-CHECK-NEXT:    [[TMP101:%.*]] = sext i32 [[TMP100]] to i64

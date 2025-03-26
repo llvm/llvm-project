@@ -283,8 +283,8 @@ define void @example3(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP3]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i8, ptr [[Q:%.*]], i64 [[OFFSET_IDX6]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[OFFSET_IDX6]]
+; CHECK-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i8, ptr [[Q:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[NEXT_GEP7]], align 16
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr [[NEXT_GEP]], align 16
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
@@ -292,9 +292,9 @@ define void @example3(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP3]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[PRED_STORE_IF11:%.*]], label [[PRED_STORE_CONTINUE12:%.*]]
 ; CHECK:       pred.store.if11:
-; CHECK-NEXT:    [[TMP7:%.*]] = or disjoint i64 [[OFFSET_IDX]], 4
+; CHECK-NEXT:    [[TMP7:%.*]] = or disjoint i64 [[OFFSET_IDX6]], 4
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = or disjoint i64 [[OFFSET_IDX6]], 4
+; CHECK-NEXT:    [[TMP8:%.*]] = or disjoint i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[NEXT_GEP8]], align 16
 ; CHECK-NEXT:    store i32 [[TMP9]], ptr [[NEXT_GEP3]], align 16
@@ -303,9 +303,9 @@ define void @example3(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP3]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[PRED_STORE_IF13:%.*]], label [[PRED_STORE_CONTINUE14:%.*]]
 ; CHECK:       pred.store.if13:
-; CHECK-NEXT:    [[TMP11:%.*]] = or disjoint i64 [[OFFSET_IDX]], 8
+; CHECK-NEXT:    [[TMP11:%.*]] = or disjoint i64 [[OFFSET_IDX6]], 8
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP11]]
-; CHECK-NEXT:    [[TMP12:%.*]] = or disjoint i64 [[OFFSET_IDX6]], 8
+; CHECK-NEXT:    [[TMP12:%.*]] = or disjoint i64 [[OFFSET_IDX]], 8
 ; CHECK-NEXT:    [[NEXT_GEP9:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[NEXT_GEP9]], align 16
 ; CHECK-NEXT:    store i32 [[TMP13]], ptr [[NEXT_GEP4]], align 16
@@ -314,9 +314,9 @@ define void @example3(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP3]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[PRED_STORE_IF15:%.*]], label [[PRED_STORE_CONTINUE16]]
 ; CHECK:       pred.store.if15:
-; CHECK-NEXT:    [[TMP15:%.*]] = or disjoint i64 [[OFFSET_IDX]], 12
+; CHECK-NEXT:    [[TMP15:%.*]] = or disjoint i64 [[OFFSET_IDX6]], 12
 ; CHECK-NEXT:    [[NEXT_GEP5:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP15]]
-; CHECK-NEXT:    [[TMP16:%.*]] = or disjoint i64 [[OFFSET_IDX6]], 12
+; CHECK-NEXT:    [[TMP16:%.*]] = or disjoint i64 [[OFFSET_IDX]], 12
 ; CHECK-NEXT:    [[NEXT_GEP10:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[NEXT_GEP10]], align 16
 ; CHECK-NEXT:    store i32 [[TMP17]], ptr [[NEXT_GEP5]], align 16
@@ -404,10 +404,10 @@ define void @example23b(ptr noalias nocapture %src, ptr noalias nocapture %dst) 
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[OFFSET_IDX2:%.*]] = shl i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 [[OFFSET_IDX2]]
+; CHECK-NEXT:    [[OFFSET_IDX1:%.*]] = shl i64 [[INDEX]], 1
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 [[OFFSET_IDX1]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[NEXT_GEP]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i16> [[WIDE_LOAD]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw <4 x i32> [[TMP1]], splat (i32 7)
@@ -452,8 +452,8 @@ define void @example23c(ptr noalias nocapture %src, ptr noalias nocapture %dst) 
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE15:%.*]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[OFFSET_IDX5:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = or disjoint <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>

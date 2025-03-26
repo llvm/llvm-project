@@ -174,10 +174,10 @@ define i64 @not_dotp_i8_to_i64_has_neon_dotprod(ptr readonly %a, ptr readonly %b
 ; CHECK-INTERLEAVE1:       vector.body:
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVE1-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVE1-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0
-; CHECK-INTERLEAVE1-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-INTERLEAVE1-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP3]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP19:%.*]] = add i64 [[INDEX]], 0
+; CHECK-INTERLEAVE1-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP19]]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
 ; CHECK-INTERLEAVE1-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i8>, ptr [[TMP4]], align 1
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP11:%.*]] = zext <vscale x 2 x i8> [[WIDE_LOAD]] to <vscale x 2 x i64>
@@ -215,10 +215,10 @@ define i64 @not_dotp_i8_to_i64_has_neon_dotprod(ptr readonly %a, ptr readonly %b
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP24:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 2 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP25:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0
-; CHECK-INTERLEAVED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-INTERLEAVED-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP3]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP29:%.*]] = add i64 [[INDEX]], 0
+; CHECK-INTERLEAVED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP29]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
 ; CHECK-INTERLEAVED-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = mul i64 [[TMP11]], 2
@@ -268,10 +268,10 @@ define i64 @not_dotp_i8_to_i64_has_neon_dotprod(ptr readonly %a, ptr readonly %b
 ; CHECK-MAXBW:       vector.body:
 ; CHECK-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 8 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
-; CHECK-MAXBW-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 0
-; CHECK-MAXBW-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP8]]
 ; CHECK-MAXBW-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-MAXBW-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP9]]
+; CHECK-MAXBW-NEXT:    [[TMP18:%.*]] = add i64 [[INDEX]], 0
+; CHECK-MAXBW-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP18]]
 ; CHECK-MAXBW-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
 ; CHECK-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP10]], align 1
 ; CHECK-MAXBW-NEXT:    [[TMP11:%.*]] = zext <vscale x 8 x i8> [[WIDE_LOAD]] to <vscale x 8 x i64>
@@ -337,10 +337,10 @@ define i64 @not_dotp_i16_to_i64_has_neon_dotprod(ptr readonly %a, ptr readonly %
 ; CHECK-INTERLEAVE1-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVE1-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-INTERLEAVE1-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
+; CHECK-INTERLEAVE1-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP2]]
 ; CHECK-INTERLEAVE1-NEXT:    [[OFFSET_IDX1:%.*]] = mul i64 [[INDEX]], 2
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX1]], 0
-; CHECK-INTERLEAVE1-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP3]]
+; CHECK-INTERLEAVE1-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP3]]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP4:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i32 0
 ; CHECK-INTERLEAVE1-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i16>, ptr [[TMP4]], align 2
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP13:%.*]] = zext <vscale x 2 x i16> [[WIDE_LOAD]] to <vscale x 2 x i64>
@@ -382,10 +382,10 @@ define i64 @not_dotp_i16_to_i64_has_neon_dotprod(ptr readonly %a, ptr readonly %
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 2 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP27:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
 ; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-INTERLEAVED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
+; CHECK-INTERLEAVED-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP2]]
 ; CHECK-INTERLEAVED-NEXT:    [[OFFSET_IDX2:%.*]] = mul i64 [[INDEX]], 2
 ; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX2]], 0
-; CHECK-INTERLEAVED-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP3]]
+; CHECK-INTERLEAVED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP3]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i32 0
 ; CHECK-INTERLEAVED-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-INTERLEAVED-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP13]], 2
@@ -439,10 +439,10 @@ define i64 @not_dotp_i16_to_i64_has_neon_dotprod(ptr readonly %a, ptr readonly %
 ; CHECK-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-MAXBW-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
 ; CHECK-MAXBW-NEXT:    [[TMP10:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-MAXBW-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP10]]
+; CHECK-MAXBW-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP10]]
 ; CHECK-MAXBW-NEXT:    [[OFFSET_IDX1:%.*]] = mul i64 [[INDEX]], 2
 ; CHECK-MAXBW-NEXT:    [[TMP11:%.*]] = add i64 [[OFFSET_IDX1]], 0
-; CHECK-MAXBW-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP11]]
+; CHECK-MAXBW-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP11]]
 ; CHECK-MAXBW-NEXT:    [[TMP12:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i32 0
 ; CHECK-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i16>, ptr [[TMP12]], align 2
 ; CHECK-MAXBW-NEXT:    [[TMP13:%.*]] = zext <vscale x 4 x i16> [[WIDE_LOAD]] to <vscale x 4 x i64>
@@ -2499,10 +2499,10 @@ define dso_local i32 @not_dotp_vscale1(ptr %a, ptr %b, i32 %n, i64 %cost) #0 {
 ; CHECK-INTERLEAVE1:       vector.body:
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVE1-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[TMP10]], [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVE1-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 0
-; CHECK-INTERLEAVE1-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP11]]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-INTERLEAVE1-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP12]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX]], 0
+; CHECK-INTERLEAVE1-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP21]]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
 ; CHECK-INTERLEAVE1-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i8>, ptr [[TMP13]], align 1
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP14:%.*]] = zext <vscale x 2 x i8> [[WIDE_LOAD]] to <vscale x 2 x i64>
@@ -2547,10 +2547,10 @@ define dso_local i32 @not_dotp_vscale1(ptr %a, ptr %b, i32 %n, i64 %cost) #0 {
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ [[TMP10]], [[VECTOR_PH]] ], [ [[TMP27:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 2 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP28:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 0
-; CHECK-INTERLEAVED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP11]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-INTERLEAVED-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP12]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP31:%.*]] = add i64 [[INDEX]], 0
+; CHECK-INTERLEAVED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP31]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
 ; CHECK-INTERLEAVED-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-INTERLEAVED-NEXT:    [[TMP15:%.*]] = mul i64 [[TMP14]], 2
@@ -2607,10 +2607,10 @@ define dso_local i32 @not_dotp_vscale1(ptr %a, ptr %b, i32 %n, i64 %cost) #0 {
 ; CHECK-MAXBW:       vector.body:
 ; CHECK-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 8 x i64> [ [[TMP10]], [[VECTOR_PH]] ], [ [[TMP20:%.*]], [[VECTOR_BODY]] ]
-; CHECK-MAXBW-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 0
-; CHECK-MAXBW-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP11]]
 ; CHECK-MAXBW-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-MAXBW-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP12]]
+; CHECK-MAXBW-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX]], 0
+; CHECK-MAXBW-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP21]]
 ; CHECK-MAXBW-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
 ; CHECK-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP13]], align 1
 ; CHECK-MAXBW-NEXT:    [[TMP14:%.*]] = zext <vscale x 8 x i8> [[WIDE_LOAD]] to <vscale x 8 x i64>

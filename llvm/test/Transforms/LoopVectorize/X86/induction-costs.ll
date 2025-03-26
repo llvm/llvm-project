@@ -261,6 +261,10 @@ define void @multiple_pointer_ivs_with_scalar_uses_only(ptr %A, ptr %B) #0 {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <16 x i32> [ <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 2048>, [[VECTOR_PH]] ], [ [[TMP22:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[NEXT_GEP23:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[NEXT_GEP22:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP17]]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
@@ -294,10 +298,6 @@ define void @multiple_pointer_ivs_with_scalar_uses_only(ptr %A, ptr %B) #0 {
 ; CHECK-NEXT:    [[NEXT_GEP19:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[NEXT_GEP20:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[NEXT_GEP21:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP15]]
-; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[NEXT_GEP22:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP16]]
-; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[NEXT_GEP23:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP17]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[NEXT_GEP23]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP18]], align 1, !alias.scope [[META14:![0-9]+]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>

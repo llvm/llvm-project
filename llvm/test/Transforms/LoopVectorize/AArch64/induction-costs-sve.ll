@@ -392,14 +392,14 @@ define void @trunc_ivs_and_store(i32 %x, ptr %dst, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[TMP16:%.*]] = trunc i64 [[INDEX]] to i32
 ; DEFAULT-NEXT:    [[TMP17:%.*]] = add i32 [[TMP16]], 0
 ; DEFAULT-NEXT:    [[TMP18:%.*]] = add i32 [[TMP16]], 1
-; DEFAULT-NEXT:    [[TMP19:%.*]] = mul i32 [[MUL]], [[TMP17]]
-; DEFAULT-NEXT:    [[TMP20:%.*]] = mul i32 [[MUL]], [[TMP18]]
+; DEFAULT-NEXT:    [[TMP19:%.*]] = mul i32 [[MUL]], [[TMP14]]
+; DEFAULT-NEXT:    [[TMP20:%.*]] = mul i32 [[MUL]], [[TMP15]]
 ; DEFAULT-NEXT:    [[TMP21:%.*]] = zext i32 [[TMP19]] to i64
 ; DEFAULT-NEXT:    [[TMP22:%.*]] = zext i32 [[TMP20]] to i64
 ; DEFAULT-NEXT:    [[TMP23:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP21]]
 ; DEFAULT-NEXT:    [[TMP24:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP22]]
-; DEFAULT-NEXT:    store i32 [[TMP14]], ptr [[TMP23]], align 4
-; DEFAULT-NEXT:    store i32 [[TMP15]], ptr [[TMP24]], align 4
+; DEFAULT-NEXT:    store i32 [[TMP17]], ptr [[TMP23]], align 4
+; DEFAULT-NEXT:    store i32 [[TMP18]], ptr [[TMP24]], align 4
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; DEFAULT-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -590,14 +590,14 @@ define void @ivs_trunc_and_ext(i32 %x, ptr %dst, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[TMP15:%.*]] = trunc i64 [[INDEX]] to i32
 ; DEFAULT-NEXT:    [[TMP16:%.*]] = add i32 [[TMP15]], 0
 ; DEFAULT-NEXT:    [[TMP17:%.*]] = add i32 [[TMP15]], 1
-; DEFAULT-NEXT:    [[TMP18:%.*]] = mul i32 [[ADD]], [[TMP16]]
-; DEFAULT-NEXT:    [[TMP19:%.*]] = mul i32 [[ADD]], [[TMP17]]
+; DEFAULT-NEXT:    [[TMP18:%.*]] = mul i32 [[ADD]], [[TMP13]]
+; DEFAULT-NEXT:    [[TMP19:%.*]] = mul i32 [[ADD]], [[TMP14]]
 ; DEFAULT-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP18]] to i64
 ; DEFAULT-NEXT:    [[TMP21:%.*]] = zext i32 [[TMP19]] to i64
 ; DEFAULT-NEXT:    [[TMP22:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP20]]
 ; DEFAULT-NEXT:    [[TMP23:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP21]]
-; DEFAULT-NEXT:    store i32 [[TMP13]], ptr [[TMP22]], align 4
-; DEFAULT-NEXT:    store i32 [[TMP14]], ptr [[TMP23]], align 4
+; DEFAULT-NEXT:    store i32 [[TMP16]], ptr [[TMP22]], align 4
+; DEFAULT-NEXT:    store i32 [[TMP17]], ptr [[TMP23]], align 4
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; DEFAULT-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]

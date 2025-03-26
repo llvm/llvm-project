@@ -248,15 +248,15 @@ define void @test_versioned_with_different_uses(i32 %offset, ptr noalias %dst.1,
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[INDEX]], [[OFFSET_EXT]]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[IV_1]], [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 0, [[OFFSET_EXT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], [[TMP2]]
 ; CHECK-NEXT:    [[OFFSET_IDX2:%.*]] = trunc i64 [[INDEX]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[OFFSET_IDX2]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[OFFSET_IDX2]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[OFFSET_IDX2]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[OFFSET_IDX2]], 3
+; CHECK-NEXT:    [[TMP14:%.*]] = mul i64 [[INDEX]], [[OFFSET_EXT]]
+; CHECK-NEXT:    [[OFFSET_IDX1:%.*]] = add i64 [[IV_1]], [[TMP14]]
+; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 0, [[OFFSET_EXT]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX1]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP4]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP5]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP6]]

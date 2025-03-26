@@ -31,9 +31,9 @@ define float @test(ptr nocapture readonly %pA, ptr nocapture readonly %pB, i32 %
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PREDPHI:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i32 [[INDEX]], 2
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PA]], i32 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[PB]], i32 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[OFFSET_IDX5:%.*]] = shl i32 [[INDEX]], 2
-; CHECK-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[PB]], i32 [[OFFSET_IDX5]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PA]], i32 [[OFFSET_IDX5]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[NEXT_GEP]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x float>, ptr [[NEXT_GEP6]], align 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = fcmp fast une <4 x float> [[WIDE_LOAD]], zeroinitializer

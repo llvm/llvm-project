@@ -12,9 +12,9 @@ define void @gep_for_first_member_does_not_dominate_insert_point(ptr %str, ptr n
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[STR]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP3]], i32 -1

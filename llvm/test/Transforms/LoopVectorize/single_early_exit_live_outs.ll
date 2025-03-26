@@ -1219,13 +1219,13 @@ define i64 @diff_exit_block_post_inc_use3(i64 %start) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT4:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[OFFSET_IDX2:%.*]] = add i64 [[START]], [[INDEX1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX2]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX2]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX2]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX2]], 3
+; CHECK-NEXT:    [[OFFSET_IDX3:%.*]] = add i64 3, [[INDEX1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX3]], 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP4]], 1

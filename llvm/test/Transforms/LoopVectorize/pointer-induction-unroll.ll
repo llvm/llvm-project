@@ -32,12 +32,6 @@ define void @non_constant_scalar_expansion(i32 %0, ptr %call) {
 ; STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; STRIDED:       vector.body:
 ; STRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; STRIDED-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[INDEX]] to i32
-; STRIDED-NEXT:    [[OFFSET_IDX:%.*]] = add i32 30, [[DOTCAST]]
-; STRIDED-NEXT:    [[TMP3:%.*]] = add i32 [[OFFSET_IDX]], 0
-; STRIDED-NEXT:    [[TMP4:%.*]] = add i32 [[OFFSET_IDX]], 1
-; STRIDED-NEXT:    [[TMP5:%.*]] = add i32 [[OFFSET_IDX]], 2
-; STRIDED-NEXT:    [[TMP6:%.*]] = add i32 [[OFFSET_IDX]], 3
 ; STRIDED-NEXT:    [[OFFSET_IDX2:%.*]] = mul i64 [[INDEX]], [[TMP1]]
 ; STRIDED-NEXT:    [[TMP7:%.*]] = mul i64 0, [[TMP1]]
 ; STRIDED-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX2]], [[TMP7]]
@@ -51,6 +45,12 @@ define void @non_constant_scalar_expansion(i32 %0, ptr %call) {
 ; STRIDED-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr null, i64 [[TMP10]]
 ; STRIDED-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr null, i64 [[TMP12]]
 ; STRIDED-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr null, i64 [[TMP14]]
+; STRIDED-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[INDEX]] to i32
+; STRIDED-NEXT:    [[OFFSET_IDX4:%.*]] = add i32 30, [[DOTCAST]]
+; STRIDED-NEXT:    [[TMP3:%.*]] = add i32 [[OFFSET_IDX4]], 0
+; STRIDED-NEXT:    [[TMP4:%.*]] = add i32 [[OFFSET_IDX4]], 1
+; STRIDED-NEXT:    [[TMP5:%.*]] = add i32 [[OFFSET_IDX4]], 2
+; STRIDED-NEXT:    [[TMP6:%.*]] = add i32 [[OFFSET_IDX4]], 3
 ; STRIDED-NEXT:    [[TMP19:%.*]] = getelementptr ptr, ptr [[CALL:%.*]], i32 [[TMP3]]
 ; STRIDED-NEXT:    [[TMP20:%.*]] = getelementptr ptr, ptr [[CALL]], i32 [[TMP4]]
 ; STRIDED-NEXT:    [[TMP21:%.*]] = getelementptr ptr, ptr [[CALL]], i32 [[TMP5]]

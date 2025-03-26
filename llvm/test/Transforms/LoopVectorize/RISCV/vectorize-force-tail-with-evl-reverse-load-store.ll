@@ -131,10 +131,10 @@ define void @reverse_load_store_masked(i64 %startval, ptr noalias %ptr, ptr noal
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[AVL:%.*]] = sub i64 1024, [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
-; IF-EVL-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[STARTVAL]], [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; IF-EVL-NEXT:    [[OFFSET_IDX3:%.*]] = trunc i64 [[EVL_BASED_IV]] to i32
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = add i32 [[OFFSET_IDX3]], 0
+; IF-EVL-NEXT:    [[OFFSET_IDX1:%.*]] = sub i64 [[STARTVAL]], [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX1]], 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[EVL_BASED_IV]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; IF-EVL-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()

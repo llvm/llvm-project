@@ -25,8 +25,8 @@ define void @arm_abs_q7(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[INDEX]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[NEXT_GEP]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <16 x i8> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <16 x i8> [[WIDE_LOAD]], splat (i8 -128)
@@ -119,9 +119,9 @@ define void @arm_abs_q15(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i32 [[INDEX]], 1
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[OFFSET_IDX7:%.*]] = shl i32 [[INDEX]], 1
-; CHECK-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[OFFSET_IDX7]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[OFFSET_IDX7]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[NEXT_GEP]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <8 x i16> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD]], splat (i16 -32768)
@@ -214,9 +214,9 @@ define void @arm_abs_q31(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i32 [[INDEX]], 2
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[OFFSET_IDX7:%.*]] = shl i32 [[INDEX]], 2
-; CHECK-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[OFFSET_IDX7]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[OFFSET_IDX7]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[NEXT_GEP]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 -2147483648)
