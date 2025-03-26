@@ -132,6 +132,9 @@ Changes to the RISC-V Backend
   extension.
 * Adds assembler support for the 'Zclsd` (Compressed Load/Store Pair Instructions)
   extension.
+* Adds assembler support for ``.option exact``, which disables automatic compression,
+  and branch and linker relaxation. This can be disabled with ``.option noexact``,
+  which is also the default.
 
 Changes to the WebAssembly Backend
 ----------------------------------
