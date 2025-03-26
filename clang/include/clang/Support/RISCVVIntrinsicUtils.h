@@ -483,7 +483,7 @@ public:
 
 // RVVRequire should be sync'ed with target features, but only
 // required features used in riscv_vector.td.
-enum RVVRequire : uint32_t {
+enum RVVRequire {
   RVV_REQ_RV64,
   RVV_REQ_Zvfhmin,
   RVV_REQ_Xsfvcp,
