@@ -1,5 +1,7 @@
 // Test PLT section parsing on arm.
 
+// REQUIRES: ld.lld
+
 // RUN: %clang --target=armv6a-none-linux-gnueabi -fuse-ld=lld \
 // RUN:   -nostdlib -nostdinc -shared %s -o %t1
 // RUN: llvm-objdump --no-show-raw-insn --no-print-imm-hex \
