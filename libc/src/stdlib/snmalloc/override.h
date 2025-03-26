@@ -28,7 +28,7 @@
 
 // TODO: define this in stdio.h
 #define STDERR_FILENO 2
-#define SNMALLOC_USE_THREAD_CLEANUP
+#define SNMALLOC_USE_PTHREAD_DESTRUCTORS
 
 // Enforce internal errno implementation
 #include "hdr/errno_macros.h"

@@ -2,10 +2,6 @@ set(SNMALLOC_USE_SELF_VENDORED_STL ON CACHE BOOL "use freestanding snmalloc setu
 set(SNMALLOC_BUILD_TESTING OFF CACHE BOOL "disable snmalloc tests" FORCE)
 set(SNMALLOC_HEADER_ONLY_LIBRARY ON CACHE BOOL "use snmalloc as header only library" FORCE)
 
-# Disable installation
-macro (install)
-endmacro ()
-
 set(CMAKE_DISABLE_FIND_PACKAGE_Backtrace ON)
 
 add_subdirectory(${LIBC_INCLUDE_SNMALLOC} ${CMAKE_CURRENT_BINARY_DIR}/snmalloc EXCLUDE_FROM_ALL)
@@ -58,6 +54,8 @@ set(SNMALLOC_DEPS
   libc.src.unistd.fsync
   libc.src.unistd.getentropy
   libc.src.unistd.read
+  libc.src.pthread.pthread_setspecific
+  libc.src.pthread.pthread_key_create
 )
 
 add_entrypoint_object(
