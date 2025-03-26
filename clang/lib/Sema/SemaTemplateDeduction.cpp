@@ -2133,7 +2133,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
         TP = S.Context.getTypeDeclType(MPP->getMostRecentCXXRecordDecl());
       } else {
         NestedNameSpecifier *QP = MPP->getQualifier();
-        if (QP->getKind() == clang::NestedNameSpecifier::Identifier)
+        if (QP->getKind() == NestedNameSpecifier::Identifier)
           // Skip translation if it's a non-deduced context anyway.
           return TemplateDeductionResult::Success;
         TP = QualType(QP->translateToType(S.Context), 0);
