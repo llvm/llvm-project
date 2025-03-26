@@ -296,6 +296,11 @@ Retry:
     goto Retry;
   }
 
+  case tok::kw_alignas: {
+    ParseAlignmentSpecifier(CXX11Attrs);
+    goto Retry;
+  }
+
   case tok::kw_template: {
     SourceLocation DeclEnd;
     ParseTemplateDeclarationOrSpecialization(DeclaratorContext::Block, DeclEnd,
