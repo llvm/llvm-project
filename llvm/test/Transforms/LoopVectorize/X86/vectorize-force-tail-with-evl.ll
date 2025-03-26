@@ -73,8 +73,7 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; NO-VP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NO-VP:       vector.body:
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; NO-VP-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; NO-VP-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[TMP0]]
+; NO-VP-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDEX]]
 ; NO-VP-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 0
 ; NO-VP-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 16
 ; NO-VP-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 32
@@ -83,7 +82,7 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; NO-VP-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i32>, ptr [[TMP9]], align 4
 ; NO-VP-NEXT:    [[WIDE_LOAD3:%.*]] = load <16 x i32>, ptr [[TMP10]], align 4
 ; NO-VP-NEXT:    [[WIDE_LOAD4:%.*]] = load <16 x i32>, ptr [[TMP11]], align 4
-; NO-VP-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[TMP0]]
+; NO-VP-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[INDEX]]
 ; NO-VP-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[TMP12]], i32 0
 ; NO-VP-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP12]], i32 16
 ; NO-VP-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[TMP12]], i32 32
@@ -96,7 +95,7 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; NO-VP-NEXT:    [[TMP21:%.*]] = add nsw <16 x i32> [[WIDE_LOAD6]], [[WIDE_LOAD2]]
 ; NO-VP-NEXT:    [[TMP22:%.*]] = add nsw <16 x i32> [[WIDE_LOAD7]], [[WIDE_LOAD3]]
 ; NO-VP-NEXT:    [[TMP23:%.*]] = add nsw <16 x i32> [[WIDE_LOAD8]], [[WIDE_LOAD4]]
-; NO-VP-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP0]]
+; NO-VP-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; NO-VP-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i32, ptr [[TMP24]], i32 0
 ; NO-VP-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i32, ptr [[TMP24]], i32 16
 ; NO-VP-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, ptr [[TMP24]], i32 32

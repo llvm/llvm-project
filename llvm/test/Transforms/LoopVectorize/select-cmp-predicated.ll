@@ -90,9 +90,8 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF1IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE3:.*]] ]
 ; CHECK-VF1IC2-NEXT:    [[VEC_PHI:%.*]] = phi i1 [ false, %[[VECTOR_PH]] ], [ [[PREDPHI:%.*]], %[[PRED_LOAD_CONTINUE3]] ]
 ; CHECK-VF1IC2-NEXT:    [[VEC_PHI2:%.*]] = phi i1 [ false, %[[VECTOR_PH]] ], [ [[PREDPHI5:%.*]], %[[PRED_LOAD_CONTINUE3]] ]
-; CHECK-VF1IC2-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-VF1IC2-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], 1
-; CHECK-VF1IC2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[SRC1]], i64 [[TMP16]]
+; CHECK-VF1IC2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[SRC1]], i64 [[INDEX]]
 ; CHECK-VF1IC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[SRC1]], i64 [[TMP17]]
 ; CHECK-VF1IC2-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-VF1IC2-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP1]], align 4
@@ -100,7 +99,7 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF1IC2-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[TMP3]], 35
 ; CHECK-VF1IC2-NEXT:    br i1 [[TMP4]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK-VF1IC2:       [[PRED_LOAD_IF]]:
-; CHECK-VF1IC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[SRC2]], i64 [[TMP16]]
+; CHECK-VF1IC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[SRC2]], i64 [[INDEX]]
 ; CHECK-VF1IC2-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
 ; CHECK-VF1IC2-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; CHECK-VF1IC2:       [[PRED_LOAD_CONTINUE]]:
