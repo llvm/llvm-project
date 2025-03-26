@@ -940,7 +940,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             OptionalDIM, // unless array is assumed-size
             SizeDefaultKIND},
         KINDInt, Rank::scalar, IntrinsicClass::inquiryFunction},
-    {"sizeof", {{"a", AnyData, Rank::anyOrAssumedRank}}, SubscriptInt,
+    {"sizeof", {{"x", AnyData, Rank::anyOrAssumedRank}}, SubscriptInt,
         Rank::scalar, IntrinsicClass::inquiryFunction},
     {"spacing", {{"x", SameReal}}, SameReal},
     {"spread",
