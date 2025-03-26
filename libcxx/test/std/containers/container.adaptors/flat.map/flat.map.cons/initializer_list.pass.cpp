@@ -82,18 +82,12 @@ int main(int, char**) {
         !std::is_constructible_v<M, std::initializer_list<std::pair<const int, const short>>, std::allocator<int>>);
   }
 
-  std::pair<int, short> expected[] = {
-      {1, static_cast<short>(1)}, {2, static_cast<short>(2)}, {3, static_cast<short>(3)}, {5, static_cast<short>(2)}};
+  std::pair<int, short> expected[] = {{1, short{1}}, {2, short{2}}, {3, short{3}}, {5, short{2}}};
   {
     // flat_map(initializer_list<value_type>);
     using M                                         = std::flat_map<int, short>;
     std::initializer_list<std::pair<int, short>> il = {
-        {5, static_cast<short>(2)},
-        {2, static_cast<short>(2)},
-        {2, static_cast<short>(2)},
-        {3, static_cast<short>(3)},
-        {1, static_cast<short>(1)},
-        {3, static_cast<short>(3)}};
+        {5, short{2}}, {2, short{2}}, {2, short{2}}, {3, short{3}}, {1, short{1}}, {3, short{3}}};
     M m(il);
     assert(std::equal(m.begin(), m.end(), expected, expected + 4));
   }
@@ -101,23 +95,13 @@ int main(int, char**) {
     // flat_map(initializer_list<value_type>);
     // explicit(false)
     using M = std::flat_map<int, short>;
-    M m     = {{5, static_cast<short>(2)},
-               {2, static_cast<short>(2)},
-               {2, static_cast<short>(2)},
-               {3, static_cast<short>(3)},
-               {1, static_cast<short>(1)},
-               {3, static_cast<short>(3)}};
+    M m     = {{5, short{2}}, {2, short{2}}, {2, short{2}}, {3, short{3}}, {1, short{1}}, {3, short{3}}};
     assert(std::equal(m.begin(), m.end(), expected, expected + 4));
   }
   {
     // flat_map(initializer_list<value_type>);
     using M = std::flat_map<int, short, std::greater<int>, std::deque<int, min_allocator<int>>>;
-    M m     = {{5, static_cast<short>(2)},
-               {2, static_cast<short>(2)},
-               {2, static_cast<short>(2)},
-               {3, static_cast<short>(3)},
-               {1, static_cast<short>(1)},
-               {3, static_cast<short>(3)}};
+    M m     = {{5, short{2}}, {2, short{2}}, {2, short{2}}, {3, short{3}}, {1, short{1}}, {3, short{3}}};
     assert(std::equal(m.rbegin(), m.rend(), expected, expected + 4));
   }
   {
@@ -144,25 +128,12 @@ int main(int, char**) {
     // flat_map(initializer_list<value_type>, const key_compare&);
     using C = test_less<int>;
     using M = std::flat_map<int, short, C>;
-    auto m =
-        M({{5, static_cast<short>(2)},
-           {2, static_cast<short>(2)},
-           {2, static_cast<short>(2)},
-           {3, static_cast<short>(3)},
-           {1, static_cast<short>(1)},
-           {3, static_cast<short>(3)}},
-          C(10));
+    auto m  = M({{5, short{2}}, {2, short{2}}, {2, short{2}}, {3, short{3}}, {1, short{1}}, {3, short{3}}}, C(10));
     assert(std::equal(m.begin(), m.end(), expected, expected + 4));
     assert(m.key_comp() == C(10));
 
     // explicit(false)
-    M m2 = {{{5, static_cast<short>(2)},
-             {2, static_cast<short>(2)},
-             {2, static_cast<short>(2)},
-             {3, static_cast<short>(3)},
-             {1, static_cast<short>(1)},
-             {3, static_cast<short>(3)}},
-            C(10)};
+    M m2 = {{{5, short{2}}, {2, short{2}}, {2, short{2}}, {3, short{3}}, {1, short{1}}, {3, short{3}}}, C(10)};
     assert(m2 == m);
     assert(m2.key_comp() == C(10));
   }
@@ -170,14 +141,8 @@ int main(int, char**) {
     // flat_map(initializer_list<value_type>, const key_compare&);
     // Sorting uses the comparator that was passed in
     using M = std::flat_map<int, short, std::function<bool(int, int)>, std::deque<int, min_allocator<int>>>;
-    auto m =
-        M({{5, static_cast<short>(2)},
-           {2, static_cast<short>(2)},
-           {2, static_cast<short>(2)},
-           {3, static_cast<short>(3)},
-           {1, static_cast<short>(1)},
-           {3, static_cast<short>(3)}},
-          std::greater<int>());
+    auto m  = M({{5, short{2}}, {2, short{2}}, {2, short{2}}, {3, short{3}}, {1, short{1}}, {3, short{3}}},
+               std::greater<int>());
     assert(std::equal(m.rbegin(), m.rend(), expected, expected + 4));
     assert(m.key_comp()(2, 1) == true);
   }

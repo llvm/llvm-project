@@ -31,21 +31,19 @@ using PC = std::pair<const int, long>;
 
 void test_copy() {
   {
-    std::flat_multimap<long, short> source = {{1, static_cast<short>(2)}, {1, static_cast<short>(3)}};
+    std::flat_multimap<long, short> source = {{1, short{2}}, {1, short{3}}};
     std::flat_multimap s(source);
     ASSERT_SAME_TYPE(decltype(s), decltype(source));
     assert(s == source);
   }
   {
-    std::flat_multimap<long, short, std::greater<long>> source = {
-        {1, static_cast<short>(2)}, {1, static_cast<short>(3)}};
+    std::flat_multimap<long, short, std::greater<long>> source = {{1, short{2}}, {1, short{3}}};
     std::flat_multimap s{source}; // braces instead of parens
     ASSERT_SAME_TYPE(decltype(s), decltype(source));
     assert(s == source);
   }
   {
-    std::flat_multimap<long, short, std::greater<long>> source = {
-        {1, static_cast<short>(2)}, {1, static_cast<short>(3)}};
+    std::flat_multimap<long, short, std::greater<long>> source = {{1, short{2}}, {1, short{3}}};
     std::flat_multimap s(source, std::allocator<int>());
     ASSERT_SAME_TYPE(decltype(s), decltype(source));
     assert(s == source);
@@ -58,13 +56,7 @@ void test_containers() {
   std::deque<int, test_allocator<int>> sorted_ks({1, 1, 2, 2, 2, 3, INT_MAX}, test_allocator<int>(0, 42));
   std::deque<short, test_allocator<short>> sorted_vs({1, 3, 2, 4, 5, 4, 3}, test_allocator<int>(0, 43));
   const std::pair<int, short> expected[] = {
-      {1, static_cast<short>(1)},
-      {1, static_cast<short>(3)},
-      {2, static_cast<short>(2)},
-      {2, static_cast<short>(4)},
-      {2, static_cast<short>(5)},
-      {3, static_cast<short>(4)},
-      {INT_MAX, static_cast<short>(3)}};
+      {1, short{1}}, {1, short{3}}, {2, short{2}}, {2, short{4}}, {2, short{5}}, {3, short{4}}, {INT_MAX, short{3}}};
   {
     std::flat_multimap s(ks, vs);
 
@@ -105,13 +97,7 @@ void test_containers_compare() {
   std::deque<int, test_allocator<int>> sorted_ks({INT_MAX, 3, 2, 2, 2, 1, 1}, test_allocator<int>(0, 42));
   std::deque<short, test_allocator<short>> sorted_vs({3, 4, 2, 4, 5, 1, 3}, test_allocator<int>(0, 43));
   const std::pair<int, short> expected[] = {
-      {INT_MAX, static_cast<short>(3)},
-      {3, static_cast<short>(4)},
-      {2, static_cast<short>(2)},
-      {2, static_cast<short>(4)},
-      {2, static_cast<short>(5)},
-      {1, static_cast<short>(1)},
-      {1, static_cast<short>(3)}};
+      {INT_MAX, short{3}}, {3, short{4}}, {2, short{2}}, {2, short{4}}, {2, short{5}}, {1, short{1}}, {1, short{3}}};
   {
     std::flat_multimap s(ks, vs, std::greater<int>());
 
@@ -297,17 +283,9 @@ void test_initializer_list_compare() {
 
 void test_from_range() {
   std::list<std::pair<int, short>> r = {
-      {1, static_cast<short>(1)},
-      {2, static_cast<short>(2)},
-      {1, static_cast<short>(1)},
-      {INT_MAX, static_cast<short>(4)},
-      {3, static_cast<short>(5)}};
+      {1, short{1}}, {2, short{2}}, {1, short{1}}, {INT_MAX, short{4}}, {3, short{5}}};
   const std::pair<int, short> expected[] = {
-      {1, static_cast<short>(1)},
-      {1, static_cast<short>(1)},
-      {2, static_cast<short>(2)},
-      {3, static_cast<short>(5)},
-      {INT_MAX, static_cast<short>(4)}};
+      {1, short{1}}, {1, short{1}}, {2, short{2}}, {3, short{5}}, {INT_MAX, short{4}}};
   {
     std::flat_multimap s(std::from_range, r);
     ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, short, std::less<int>>);
@@ -330,17 +308,9 @@ void test_from_range() {
 
 void test_from_range_compare() {
   std::list<std::pair<int, short>> r = {
-      {1, static_cast<short>(1)},
-      {2, static_cast<short>(2)},
-      {1, static_cast<short>(1)},
-      {INT_MAX, static_cast<short>(4)},
-      {3, static_cast<short>(5)}};
+      {1, short{1}}, {2, short{2}}, {1, short{1}}, {INT_MAX, short{4}}, {3, short{5}}};
   const std::pair<int, short> expected[] = {
-      {INT_MAX, static_cast<short>(4)},
-      {3, static_cast<short>(5)},
-      {2, static_cast<short>(2)},
-      {1, static_cast<short>(1)},
-      {1, static_cast<short>(1)}};
+      {INT_MAX, short{4}}, {3, short{5}}, {2, short{2}}, {1, short{1}}, {1, short{1}}};
   {
     std::flat_multimap s(std::from_range, r, std::greater<int>());
     ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, short, std::greater<int>>);

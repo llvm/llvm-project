@@ -130,8 +130,7 @@ int main(int, char**) {
     using P       = std::pair<int, int>;
     P ar[]        = {{2, 1}, {2, 2}, {4, 4}, {5, 5}};
     auto m        = M(std::sorted_equivalent, ar, ar + 4, A1(5));
-    auto expected = M{
-        {2, static_cast<short>(1)}, {2, static_cast<short>(2)}, {4, static_cast<short>(4)}, {5, static_cast<short>(5)}};
+    auto expected = M{{2, short{1}}, {2, short{2}}, {4, short{4}}, {5, short{5}}};
     assert(m == expected);
     assert(m.keys().get_allocator() == A1(5));
     assert(m.values().get_allocator() == A2(5));
@@ -151,10 +150,7 @@ int main(int, char**) {
     using P  = std::pair<int, int>;
     P ar[]   = {{1, 1}, {1, 2}, {1, 4}, {1, 5}};
     auto m   = M(std::sorted_equivalent, ar, ar + 4, C(3), A1(5));
-    assert((m == M{{1, static_cast<short>(1)},
-                   {1, static_cast<short>(2)},
-                   {1, static_cast<short>(4)},
-                   {1, static_cast<short>(5)}}));
+    assert((m == M{{1, short{1}}, {1, short{2}}, {1, short{4}}, {1, short{5}}}));
     assert(m.key_comp() == C(3));
     assert(m.keys().get_allocator() == A1(5));
     assert(m.values().get_allocator() == A2(5));
@@ -165,11 +161,10 @@ int main(int, char**) {
     using A1 = test_allocator<short>;
     using A2 = test_allocator<int>;
     using M  = std::flat_multimap<short, int, std::less<int>, std::deque<short, A1>, std::vector<int, A2>>;
-    using P  = std::pair<int, int>;
-    P ar[]   = {
-        {static_cast<short>(1), 1}, {static_cast<short>(1), 2}, {static_cast<short>(1), 4}, {static_cast<short>(1), 5}};
-    M m = {std::sorted_equivalent, ar, ar + 4, {}, A1(5)}; // implicit ctor
-    assert((m == M{{1, 1}, {1, 2}, {1, 4}, {1, 5}}));
+    using P  = std::pair<short, int>;
+    P ar[]   = {{short{1}, 1}, {short{1}, 2}, {short{1}, 4}, {short{1}, 5}};
+    M m      = {std::sorted_equivalent, ar, ar + 4, {}, A1(5)}; // implicit ctor
+    assert((m == M{{short{1}, 1}, {short{1}, 2}, {short{1}, 4}, {short{1}, 5}}));
     assert(m.keys().get_allocator() == A1(5));
     assert(m.values().get_allocator() == A2(5));
   }

@@ -31,11 +31,7 @@
 #include "../../../test_compare.h"
 
 template <class T, class U>
-std::initializer_list<std::pair<T, U>> il = {
-    {static_cast<T>(1), static_cast<U>(1)},
-    {static_cast<T>(2), static_cast<U>(2)},
-    {static_cast<T>(4), static_cast<U>(4)},
-    {static_cast<T>(5), static_cast<U>(5)}};
+std::initializer_list<std::pair<T, U>> il = {{T{1}, U{1}}, {T{2}, U{2}}, {T{4}, U{4}}, {T{5}, U{5}}};
 
 const auto il1 = il<int, int>;
 const auto il2 = il<int, short>;
@@ -144,8 +140,7 @@ int main(int, char**) {
     using A2      = test_allocator<short>;
     using M       = std::flat_map<int, short, std::less<int>, std::vector<int, A1>, std::deque<short, A2>>;
     auto m        = M(std::sorted_unique, il2, A1(5));
-    auto expected = M{
-        {1, static_cast<short>(1)}, {2, static_cast<short>(2)}, {4, static_cast<short>(4)}, {5, static_cast<short>(5)}};
+    auto expected = M{{1, short{1}}, {2, short{2}}, {4, short{4}}, {5, short{5}}};
     assert(m == expected);
     assert(m.keys().get_allocator() == A1(5));
     assert(m.values().get_allocator() == A2(5));
@@ -163,10 +158,7 @@ int main(int, char**) {
     using A2 = test_allocator<short>;
     using M  = std::flat_map<int, short, C, std::vector<int, A1>, std::deque<short, A2>>;
     auto m   = M(std::sorted_unique, il2, C(3), A1(5));
-    assert((m == M{{1, static_cast<short>(1)},
-                   {2, static_cast<short>(2)},
-                   {4, static_cast<short>(4)},
-                   {5, static_cast<short>(5)}}));
+    assert((m == M{{1, short{1}}, {2, short{2}}, {4, short{4}}, {5, short{5}}}));
     assert(m.key_comp() == C(3));
     assert(m.keys().get_allocator() == A1(5));
     assert(m.values().get_allocator() == A2(5));
@@ -178,10 +170,7 @@ int main(int, char**) {
     using A2 = test_allocator<int>;
     using M  = std::flat_map<short, int, std::less<int>, std::deque<short, A1>, std::vector<int, A2>>;
     M m      = {std::sorted_unique, il3, {}, A1(5)}; // implicit ctor
-    assert((m == M{{static_cast<short>(1), 1},
-                   {static_cast<short>(2), 2},
-                   {static_cast<short>(4), 4},
-                   {static_cast<short>(5), 5}}));
+    assert((m == M{{short{1}, 1}, {short{2}, 2}, {short{4}, 4}, {short{5}, 5}}));
     assert(m.keys().get_allocator() == A1(5));
     assert(m.values().get_allocator() == A2(5));
   }
