@@ -30,7 +30,7 @@ using namespace mlir;
 /// Parses the memory buffer.  If successfully, run a series of passes against
 /// it and print the result.
 static LogicalResult
-processBuffer(llvm::ToolOutputFile *output,
+processBuffer(llvm::raw_ostream &os,
               std::unique_ptr<llvm::MemoryBuffer> ownedBuffer,
               bool verifyDiagnostics, llvm::ThreadPoolInterface *threadPool) {
   // Tell sourceMgr about this buffer, which is what the parser will pick up.
@@ -43,36 +43,35 @@ processBuffer(llvm::ToolOutputFile *output,
 
   ctx.printOpOnDiagnostic(!verifyDiagnostics);
 
-  if (!verifyDiagnostics) {
-    ParserConfig parseConfig(&ctx);
-    OwningOpRef<Operation *> op =
-        parseSourceFileForTool(sourceMgr, parseConfig, true);
-    if (!op)
-      return failure();
+  std::variant<std::monostate, SourceMgrDiagnosticHandler,
+               SourceMgrDiagnosticVerifierHandler>
+      sourceMgrHandler;
+  if (verifyDiagnostics)
+    sourceMgrHandler.emplace<SourceMgrDiagnosticVerifierHandler>(*sourceMgr,
+                                                                 &ctx);
+  else
+    sourceMgrHandler.emplace<SourceMgrDiagnosticHandler>(*sourceMgr, &ctx);
+  auto *sourceMgrVerifierHandler =
+      std::get_if<SourceMgrDiagnosticVerifierHandler>(&sourceMgrHandler);
 
-    auto moduleOp = llvm::cast<ModuleOp>(*op);
-    llvm::SmallVector<irdl::DialectOp> dialects{
-        moduleOp.getOps<irdl::DialectOp>()};
-    SourceMgrDiagnosticHandler sourceMgrHandler(*sourceMgr, &ctx);
-    if (failed(irdl::translateIRDLDialectToCpp(dialects, output->os())))
-      return failure();
-
-    output->keep();
-    return success();
-  }
-
-  SourceMgrDiagnosticVerifierHandler sourceMgrHandler(*sourceMgr, &ctx);
   ParserConfig parseConfig(&ctx);
   OwningOpRef<Operation *> op =
       parseSourceFileForTool(sourceMgr, parseConfig, true);
   if (!op)
-    return sourceMgrHandler.verify();
+    return sourceMgrVerifierHandler ? sourceMgrVerifierHandler->verify()
+                                    : failure();
 
   auto moduleOp = llvm::cast<ModuleOp>(*op);
   llvm::SmallVector<irdl::DialectOp> dialects{
-      moduleOp.getOps<irdl::DialectOp>()};
-  ((void)irdl::translateIRDLDialectToCpp(dialects, output->os()));
-  return sourceMgrHandler.verify();
+      moduleOp.getOps<irdl::DialectOp>(),
+  };
+
+  if (failed(irdl::translateIRDLDialectToCpp(dialects, os)))
+    return sourceMgrVerifierHandler ? sourceMgrVerifierHandler->verify()
+                                    : failure();
+
+  return sourceMgrVerifierHandler ? sourceMgrVerifierHandler->verify()
+                                  : success();
 }
 
 static LogicalResult translateIRDLToCpp(int argc, char **argv) {
@@ -122,6 +121,7 @@ static LogicalResult translateIRDLToCpp(int argc, char **argv) {
 
   std::unique_ptr<llvm::ToolOutputFile> output =
       openOutputFile(outputFilename, &errorMessage);
+
   if (!output) {
     llvm::errs() << errorMessage << "\n";
     return failure();
@@ -129,15 +129,21 @@ static LogicalResult translateIRDLToCpp(int argc, char **argv) {
 
   auto chunkFn = [&](std::unique_ptr<llvm::MemoryBuffer> chunkBuffer,
                      raw_ostream &os) {
-    return processBuffer(output.get(), std::move(chunkBuffer),
+    return processBuffer(output->os(), std::move(chunkBuffer),
                          verifyDiagnostics, nullptr);
   };
+
   if (splitInputFileFlag.size()) {
     return splitAndProcessBuffer(std::move(input), chunkFn, output->os(),
-                                 "// -----", "// -----");
+                                 splitInputFileFlag, splitInputFileFlag);
   }
-  return processBuffer(output.get(), std::move(input), verifyDiagnostics,
-                       nullptr);
+
+  if (failed(chunkFn(std::move(input), output->os())))
+    return failure();
+
+  if (!verifyDiagnosticsFlag)
+    output->keep();
+  return success();
 }
 
 int main(int argc, char **argv) {
