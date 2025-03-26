@@ -40,6 +40,27 @@ enum class MemoryScope : int {
 #endif
 };
 
+namespace atomic {
+
+LIBC_INLINE constexpr int order(MemoryOrder mem_ord) {
+  return static_cast<int>(mem_ord);
+}
+
+LIBC_INLINE constexpr int scope(MemoryScope mem_scope) {
+  return static_cast<int>(mem_scope);
+}
+template <class T> LIBC_INLINE T *addressof(T &ref) {
+  return __builtin_addressof(ref);
+}
+
+LIBC_INLINE constexpr int infer_failure_order(MemoryOrder mem_ord) {
+  if (mem_ord == MemoryOrder::RELEASE)
+    return order(MemoryOrder::RELAXED);
+  if (mem_ord == MemoryOrder::ACQ_REL)
+    return order(MemoryOrder::ACQUIRE);
+  return order(mem_ord);
+}
+
 template <typename T> struct Atomic {
   static_assert(is_trivially_copyable_v<T> && is_copy_constructible_v<T> &&
                     is_move_constructible_v<T> && is_copy_assignable_v<T> &&
@@ -54,23 +75,6 @@ template <typename T> struct Atomic {
 
 private:
   // type conversion helper to avoid long c++ style casts
-  LIBC_INLINE static int order(MemoryOrder mem_ord) {
-    return static_cast<int>(mem_ord);
-  }
-
-  LIBC_INLINE static int scope(MemoryScope mem_scope) {
-    return static_cast<int>(mem_scope);
-  }
-
-  LIBC_INLINE static constexpr int infer_failure_order(MemoryOrder mem_ord) {
-    if (mem_ord == MemoryOrder::RELEASE)
-      return order(MemoryOrder::RELAXED);
-    if (mem_ord == MemoryOrder::ACQ_REL)
-      return order(MemoryOrder::ACQUIRE);
-    return order(mem_ord);
-  }
-
-  LIBC_INLINE static T *addressof(T &ref) { return __builtin_addressof(ref); }
 
   // Require types that are 1, 2, 4, 8, or 16 bytes in length to be aligned to
   // at least their size to be potentially used lock-free.
@@ -419,6 +423,10 @@ LIBC_INLINE void atomic_signal_fence([[maybe_unused]] MemoryOrder mem_ord) {
   asm volatile("" ::: "memory");
 #endif
 }
+} // namespace atomic
+
+using atomic::Atomic;
+using atomic::AtomicRef;
 
 } // namespace cpp
 } // namespace LIBC_NAMESPACE_DECL
