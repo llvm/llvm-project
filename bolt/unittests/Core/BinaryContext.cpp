@@ -177,8 +177,9 @@ TEST_P(BinaryContextTester,
   // Create symbol 'Func0x4'
   MCSymbol *RelSymbol = BC->getOrCreateGlobalSymbol(4, "Func");
   ASSERT_TRUE(RelSymbol);
-  BS.addPendingRelocation(Relocation{8, RelSymbol, ELF::R_AARCH64_CALL26, 0, 0},
-                          /*Optional*/ true);
+  Relocation Reloc{8, RelSymbol, ELF::R_AARCH64_CALL26, 0, 0};
+  Reloc.setOptional();
+  BS.addPendingRelocation(Reloc);
 
   SmallVector<char> Vect;
   raw_svector_ostream OS(Vect);
@@ -201,29 +202,26 @@ TEST_P(BinaryContextTester,
   // relocations that cannot be encoded, given that PatchEntries runs.
   opts::ForcePatch = true;
 
-  bool DebugFlagPrev = ::llvm::DebugFlag;
-  ::llvm::DebugFlag = true;
-  testing::internal::CaptureStderr();
+  opts::Verbosity = 1;
+  testing::internal::CaptureStdout();
 
   BinarySection &BS = BC->registerOrUpdateSection(
       ".text", ELF::SHT_PROGBITS, ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
   MCSymbol *RelSymbol = BC->getOrCreateGlobalSymbol(4, "Func");
   ASSERT_TRUE(RelSymbol);
-  BS.addPendingRelocation(Relocation{8, RelSymbol, ELF::R_AARCH64_CALL26, 0, 0},
-                          /*Optional*/ true);
+  Relocation Reloc{8, RelSymbol, ELF::R_AARCH64_CALL26, 0, 0};
+  Reloc.setOptional();
+  BS.addPendingRelocation(Reloc);
 
   SmallVector<char> Vect;
   raw_svector_ostream OS(Vect);
 
   // Resolve relocation symbol to a high value so encoding will be out of range.
   BS.flushPendingRelocations(OS, [&](const MCSymbol *S) { return 0x800000F; });
-
-  std::string CapturedStdErr = testing::internal::GetCapturedStderr();
-  EXPECT_TRUE(CapturedStdErr.find("BOLT-INFO: Skipped 1 pending relocations as "
-                                  "they were out of range") !=
-              std::string::npos);
-
-  ::llvm::DebugFlag = DebugFlagPrev;
+  outs().flush();
+  std::string CapturedStdOut = testing::internal::GetCapturedStdout();
+  EXPECT_EQ(CapturedStdOut,
+            "BOLT-INFO: skipped 1 out-of-range optional relocations\n");
 }
 
 #endif

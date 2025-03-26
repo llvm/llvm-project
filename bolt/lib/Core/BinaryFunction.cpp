@@ -1795,6 +1795,8 @@ bool BinaryFunction::scanExternalRefs() {
     // Create relocation for every fixup.
     for (const MCFixup &Fixup : Fixups) {
       std::optional<Relocation> Rel = BC.MIB->createRelocation(Fixup, *BC.MAB);
+      // Can be skipped under the right circumstances.
+      Rel->setOptional();
       if (!Rel) {
         Success = false;
         continue;
@@ -1824,7 +1826,7 @@ bool BinaryFunction::scanExternalRefs() {
   // Add relocations unless disassembly failed for this function.
   if (!DisassemblyFailed)
     for (Relocation &Rel : FunctionRelocations)
-      getOriginSection()->addPendingRelocation(Rel, /*Optional*/ true);
+      getOriginSection()->addPendingRelocation(Rel);
 
   // Add patches grouping them together.
   if (!InstructionPatches.empty()) {

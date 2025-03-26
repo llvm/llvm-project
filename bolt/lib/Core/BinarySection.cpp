@@ -176,15 +176,15 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
               SectionFileOffset + Patch.Offset);
 
   uint64_t SkippedPendingRelocations = 0;
-  for (auto &[Reloc, Optional] : PendingRelocations) {
+  for (Relocation &Reloc : PendingRelocations) {
     uint64_t Value = Reloc.Addend;
     if (Reloc.Symbol)
       Value += Resolver(Reloc.Symbol);
 
-    // Safely skip any pending relocation that cannot be encoded and was added
-    // as part of an optimization.
-    if (Optional && !Relocation::canEncodeValue(
-                        Reloc.Type, Value, SectionAddress + Reloc.Offset)) {
+    // Safely skip any optional pending relocation that cannot be encoded.
+    if (Reloc.isOptional() &&
+        !Relocation::canEncodeValue(Reloc.Type, Value,
+                                    SectionAddress + Reloc.Offset)) {
 
       // A successful run of 'scanExternalRefs' means that all pending
       // relocations are flushed. Otherwise, PatchEntries should run.
@@ -219,9 +219,10 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
 
   clearList(PendingRelocations);
 
-  if (SkippedPendingRelocations > 0)
-    LLVM_DEBUG(dbgs() << "BOLT-INFO: Skipped " << SkippedPendingRelocations
-                      << " pending relocations as they were out of range\n");
+  if (SkippedPendingRelocations > 0 && opts::Verbosity >= 1) {
+    BC.outs() << "BOLT-INFO: skipped " << SkippedPendingRelocations
+              << " out-of-range optional relocations\n";
+  }
 }
 
 BinarySection::~BinarySection() { updateContents(nullptr, 0); }

@@ -66,10 +66,8 @@ class BinarySection {
   // from the original section address.
   RelocationSetType DynamicRelocations;
 
-  /// Pending relocations for this section and whether they are optional, i.e.,
-  /// added as part of an optimization. In that case they can be safely omitted
-  /// if flushPendingRelocations discovers they cannot be encoded.
-  std::vector<std::pair<Relocation, bool>> PendingRelocations;
+  // Pending relocations for this section.
+  std::vector<Relocation> PendingRelocations;
 
   struct BinaryPatch {
     uint64_t Offset;
@@ -377,10 +375,9 @@ public:
     DynamicRelocations.emplace(Reloc);
   }
 
-  /// Add relocation against the original contents of this section. When added
-  /// as part of an optimization it is marked as \p Optional.
-  void addPendingRelocation(const Relocation &Rel, bool Optional = false) {
-    PendingRelocations.push_back({Rel, Optional});
+  /// Add relocation against the original contents of this section.
+  void addPendingRelocation(const Relocation &Rel) {
+    PendingRelocations.push_back(Rel);
   }
 
   /// Add patch to the input contents of this section.
