@@ -58,10 +58,9 @@ class StaticDataSplitter : public MachineFunctionPass {
   // .data.rel.ro} sections.
   bool inStaticDataSection(const GlobalVariable *GV, const TargetMachine &TM);
 
-    // Returns the constant if the operand refers to a global variable or constant
+  // Returns the constant if the operand refers to a global variable or constant
   // that gets lowered to static data sections. Otherwise, return nullptr.
-  const Constant *getConstant(const MachineOperand &Op,
-                              const TargetMachine &TM,
+  const Constant *getConstant(const MachineOperand &Op, const TargetMachine &TM,
                               const MachineConstantPool *MCP);
 
   // Use profiles to partition static data.
@@ -247,7 +246,8 @@ void StaticDataSplitter::annotateStaticDataWithoutProfiles(
   for (const auto &MBB : MF)
     for (const MachineInstr &I : MBB)
       for (const MachineOperand &Op : I.operands())
-        if (const Constant *C = getConstant(Op, MF.getTarget(), MF.getConstantPool()))
+        if (const Constant *C =
+                getConstant(Op, MF.getTarget(), MF.getConstantPool()))
           SDPI->addConstantProfileCount(C, std::nullopt);
 }
 
