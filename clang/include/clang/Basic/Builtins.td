@@ -521,6 +521,12 @@ def TruncF16F128 : Builtin, F16F128MathTemplate {
   let Prototype = "T(T)";
 }
 
+def Sincospi : Builtin, FPMathTemplate {
+  let Spellings = ["__builtin_sincospi"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
+  let Prototype = "void(T, T*, T*)";
+}
+
 // Access to floating point environment.
 def BuiltinFltRounds : Builtin {
   let Spellings = ["__builtin_flt_rounds"];
@@ -823,6 +829,12 @@ def BuiltinNSStringMakeConstantString : Builtin {
 
 def BuiltinVaStart : Builtin {
   let Spellings = ["__builtin_va_start"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(__builtin_va_list_ref, ...)";
+}
+
+def BuiltinC23VaStart : LangBuiltin<"C23_LANG"> {
+  let Spellings = ["__builtin_c23_va_start"];
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(__builtin_va_list_ref, ...)";
 }
@@ -1330,6 +1342,12 @@ def ElementwiseExp : Builtin {
 
 def ElementwiseExp2 : Builtin {
   let Spellings = ["__builtin_elementwise_exp2"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseExp10 : Builtin {
+  let Spellings = ["__builtin_elementwise_exp10"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -4759,6 +4777,12 @@ def GetDeviceSideMangledName : LangBuiltin<"CUDA_LANG"> {
 }
 
 // HLSL
+def HLSLAddUint64: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_adduint64"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLResourceGetPointer : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_getpointer"];
   let Attributes = [NoThrow];
@@ -4773,6 +4797,12 @@ def HLSLAll : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLAnd : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_and"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLOr : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_or"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

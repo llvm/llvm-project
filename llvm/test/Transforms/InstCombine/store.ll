@@ -387,6 +387,18 @@ define void @store_select_with_unknown(i1 %cond, ptr %p, ptr %p2) {
   ret void
 }
 
+define void @store_select_with_null_gep(i1 %cond, ptr %p, i64 %off) {
+; CHECK-LABEL: @store_select_with_null_gep(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[SEL:%.*]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    store i32 0, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret void
+;
+  %sel = select i1 %cond, ptr %p, ptr null
+  %gep = getelementptr i8, ptr %sel, i64 %off
+  store i32 0, ptr %gep, align 4
+  ret void
+}
+
 !0 = !{!4, !4, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}

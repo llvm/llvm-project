@@ -308,7 +308,7 @@ public:
   RecurrenceSet &getFixedOrderRecurrences() { return FixedOrderRecurrences; }
 
   /// Returns the widest induction type.
-  Type *getWidestInductionType() { return WidestIndTy; }
+  IntegerType *getWidestInductionType() { return WidestIndTy; }
 
   /// Returns True if given store is a final invariant store of one of the
   /// reductions found in the loop.
@@ -595,7 +595,7 @@ private:
   RecurrenceSet FixedOrderRecurrences;
 
   /// Holds the widest induction type encountered.
-  Type *WidestIndTy = nullptr;
+  IntegerType *WidestIndTy = nullptr;
 
   /// Allowed outside users. This holds the variables that can be accessed from
   /// outside the loop.

@@ -410,8 +410,11 @@ def ROCDL_wmma_bf16_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.bf16.16x16x16.bf16",
 def ROCDL_wmma_i32_16x16x16_iu8 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu8", [1]>;
 def ROCDL_wmma_i32_16x16x16_iu4 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu4", [1]>;
 // Available from gfx12
-def ROCDL_wmma_f32_16x16x16_fp8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.fp8_fp8", [1]>;
-def ROCDL_wmma_f32_16x16x16_bf8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf8_bf8", [1]>;
+def ROCDL_wmma_f32_16x16x16_fp8_fp8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.fp8_fp8", [1]>;
+def ROCDL_wmma_f32_16x16x16_fp8_bf8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.fp8_bf8", [1]>;
+def ROCDL_wmma_f32_16x16x16_bf8_bf8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf8_bf8", [1]>;
+def ROCDL_wmma_f32_16x16x16_bf8_fp8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf8_fp8", [1]>;
+def ROCDL_wmma_i32_16x16x32_iu4 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x32.iu4", [1]>;
 
 //===---------------------------------------------------------------------===//
 // LDS transpose intrinsics (available in GFX950)
@@ -470,7 +473,25 @@ def ROCDL_RawPtrBufferLoadOp :
   let assemblyFormat = "operands attr-dict `:` type($res)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
-      return {getRes()};
+      return {getRsrc()};
+    }
+  }];
+}
+
+def ROCDL_RawPtrBufferLoadLdsOp :
+  ROCDL_IntrOp<"raw.ptr.buffer.load.lds", [], [], [], 0, 0, 1> {
+  dag args = (ins Arg<ROCDLBufferRsrc, "", [MemRead]>:$rsrc,
+                  Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
+                  I32:$size,
+                  I32:$voffset,
+                  I32:$soffset,
+                  I32:$offset,
+                  I32:$aux);
+  let arguments = !con(args, aliasAttrs);
+  let assemblyFormat = "operands attr-dict";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getRsrc(), getLdsPtr()};
     }
   }];
 }
@@ -631,6 +652,20 @@ def ROCDL_DPPUpdateOp : ROCDL_IntrOp<"update.dpp", [], [0],
   }];
 }
 
+def ROCDL_V2I16Type : FixedVectorOfLengthAndType<[2], [I16]>,
+                        BuildableType<"::mlir::VectorType::get("
+                          "{2},$_builder.getI16Type())">;
+
+def ROCDL_V2F16Type : FixedVectorOfLengthAndType<[2], [F16]>,
+                        BuildableType<"::mlir::VectorType::get("
+                          "{2},$_builder.getF16Type())">;
+
+def ROCDL_V2BF16Type : FixedVectorOfLengthAndType<[2], [BF16]>,
+                        BuildableType<"::mlir::VectorType::get("
+                          "{2},$_builder.getBF16Type())">;
+
+// TODO: The word and byte selectors are immarg in LLVM 
+// update to be attributes in MLIR
 //===---------------------------------------------------------------------===//
 // 16-bit float intrinsics
 //===---------------------------------------------------------------------===//
@@ -646,28 +681,212 @@ def ROCDL_CvtPkRtz:
   }];
 }
 
-//===---------------------------------------------------------------------===//
-// 32-bit float intrinsics
-//===---------------------------------------------------------------------===//
-def ROCDL_CvtScalePkF32Fp8 :
-    ROCDL_IntrOp<"cvt.scalef32.pk.f32.fp8", [], [], [Pure], 1>,
+def ROCDL_CvtScaleF32PkFp8F16Op :
+    ROCDL_IntrOp<"cvt.scalef32.pk.fp8.f16", [], [], [Pure], 1>,
+    Arguments<(ins ROCDL_V2I16Type: $old, ROCDL_V2F16Type: $src, F32: $scale, I1:$wordSel)> {
+    let summary = "Scale and convert f16 to packed fp8";
+    let description = [{
+    Scale `src` by the exponent in `scale`, then convert to packed fp8.
+    Store the result in low/high word of `old` based on $wordSel, preserving the other word.
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `,` $scale `->` $old `[` $wordSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtScaleF32PkFp8Bf16Op :
+    ROCDL_IntrOp<"cvt.scalef32.pk.fp8.bf16", [], [], [Pure], 1>,
+    Arguments<(ins ROCDL_V2I16Type: $old, ROCDL_V2BF16Type: $src, F32: $scale, I1:$wordSel)> {
+    let summary = "Scale and convert packed bf16 to packed fp8";
+    let description = [{
+    Scale `src` by the exponent in `scale`, then convert to packed fp8.
+    Store the result in low/high word of `old` based on $wordSel, preserving the other word.
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `,` $scale `->` $old `[` $wordSel `]` `:` type($res)
+  }];
+}
+
+
+def ROCDL_CvtScaleF32PkBf8F16Op :
+    ROCDL_IntrOp<"cvt.scalef32.pk.bf8.f16", [], [], [Pure], 1>,
+    Arguments<(ins ROCDL_V2I16Type: $old, ROCDL_V2F16Type: $src, F32: $scale, I1:$wordSel)> {
+    let summary = "Scale and convert f16 to packed bf8";
+    let description = [{
+    Scale `src` by the exponent in `scale`, then convert to packed bf8.
+    Store the result in low/high word of `old` based on $wordSel, preserving the other word.
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `,` $scale `->` $old `[` $wordSel `]` `:` type($res)
+  }];
+}
+
+
+def ROCDL_CvtScaleF32PkBf8Bf16Op :
+    ROCDL_IntrOp<"cvt.scalef32.pk.bf8.bf16", [], [], [Pure], 1>,
+    Arguments<(ins ROCDL_V2I16Type: $old, ROCDL_V2BF16Type: $src, F32: $scale, I1:$wordSel)> {
+    let summary = "Scale and convert bf16 to packed bf8";
+    let description = [{
+    Scale `src` by the exponent in `scale`, then convert to packed bf8.
+    Store the result in low/high word of `old` based on $wordSel, preserving the other word.
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `,` $scale `->` $old `[` $wordSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtScaleF32SrFp8F16Op :
+    ROCDL_IntrOp<"cvt.scalef32.sr.fp8.f16", [], [], [Pure], 1>,
+    Arguments<(ins I32:$old, F16:$src, I32:$seed, F32: $scale, I32:$byteSel)> {
+    let summary = "Scale and convert f16 to packed fp8 using stochastic rounding";
+    let description = [{
+    Scale `src` by the exponent in `scale`, then convert to packed p8 with stochastic rounding
+    using seed data in `seed`. Store into the `byteSel`th byte of `old`, preserving the others.
+
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `,` $seed `,` $scale `->` $old `[` $byteSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtScaleF32SrBf8F16Op :
+    ROCDL_IntrOp<"cvt.scalef32.sr.bf8.f16", [], [], [Pure], 1>,
+    Arguments<(ins I32:$old, F16:$src, I32:$seed, F32: $scale, I32:$byteSel)> {
+    let summary = "Scale and convert f16 to packed bf8 using stochastic rounding";
+    let description = [{
+    Scale `src` by the exponent in `scale`, then convert to packed bf8 with stochastic rounding
+    using seed data in `seed`. Store into the `byteSel`th byte of `old`, preserving the others.
+
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `,` $seed `,` $scale `->` $old `[` $byteSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtScaleF32SrFp8Bf16Op :
+    ROCDL_IntrOp<"cvt.scalef32.sr.fp8.bf16", [], [], [Pure], 1>,
+    Arguments<(ins I32:$old, BF16:$src, I32:$seed, F32: $scale, I32:$byteSel)> {
+    let summary = "Scale and convert packed bf16 to packed fp8 using stochastic rounding";
+    let description = [{
+    Scale `src` by the exponent in `scale`, then convert to packed fp8 with stochastic rounding
+    using seed data in `seed`. Store into the `byteSel`th byte of `old`, preserving the others.
+
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `,` $seed `,` $scale `->` $old `[` $byteSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtScaleF32SrBf8Bf16Op :
+    ROCDL_IntrOp<"cvt.scalef32.sr.bf8.bf16", [], [], [Pure], 1>,
+    Arguments<(ins I32:$old, BF16:$src, I32:$seed, F32: $scale, I32:$byteSel)> {
+    let summary = "Scale and convert bf16 to packed fp8 using stochastic rounding";
+    let description = [{
+    Scale `src` by the exponent in `scale`, then convert to packed p8 with stochastic rounding
+    using seed data in `seed`. Store into the `byteSel`th byte of `old`, preserving the others.
+
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `,` $seed `,` $scale `->` $old `[` $byteSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtScaleF32PkF16Fp8Op :
+    ROCDL_IntrOp<"cvt.scalef32.pk.f16.fp8", [], [], [Pure], 1>,
     Arguments<(ins I32:$src, F32: $scale, I1:$wordSel)> {
-  let summary = "Scale and convert packed fp8 to packed f32";
-  let description = [{
-    Scale `src` by the exponent in `scale` then convert to packed fp32.
-    Store the result in low/high word based on $wordSel, preserving the other word.
+    let summary = "Convert fp8 to packed f16 and scale";
+    let description = [{ Convert `src` based on $wordSel to packed f16, then scale
+    the packed values by the exponent in `scale`.
   }];
   let assemblyFormat = [{
     attr-dict $src `[` $wordSel `]` `,` $scale `:` type($res)
   }];
 }
-def ROCDL_CvtScalePkF32Bf8 :
+
+def ROCDL_CvtScaleF32PkF16Bf8Op :
+    ROCDL_IntrOp<"cvt.scalef32.pk.f16.bf8", [], [], [Pure], 1>,
+    Arguments<(ins I32:$src, F32: $scale, I1:$wordSel)> {
+    let summary = "convert bf8 to packed f16 and scale";
+    let description = [{ Convert `src` based on $wordSel to packed f16, then scale
+    the packed values by exponent in `scale`.
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `[` $wordSel `]` `,` $scale `:` type($res)
+  }];
+}
+
+def ROCDL_CvtScaleF32PkBf16Fp8Op :
+    ROCDL_IntrOp<"cvt.scalef32.pk.bf16.fp8", [], [], [Pure], 1>,
+    Arguments<(ins I32:$src, F32: $scale, I1:$wordSel)> {
+    let summary = "Convert fp8 to packed bf16 and scale";
+    let description = [{ Convert `src` based on $wordSel to packed bf16, then scale
+    the packed values by the exponent in `scale`.
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `[` $wordSel `]` `,` $scale `:` type($res)
+  }];
+}
+
+def ROCDL_CvtScaleF32PkBf16Bf8Op :
+    ROCDL_IntrOp<"cvt.scalef32.pk.bf16.bf8", [], [], [Pure], 1>,
+    Arguments<(ins I32:$src, F32: $scale, I1:$wordSel)> {
+    let summary = "Convert bf8 to packed bf16 and scale";
+    let description = [{ Convert `src` based on $wordSel to packed bf16, then scale
+    the packed values by the exponent in `scale`.
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `[` $wordSel `]` `,` $scale `:` type($res)
+  }];
+}
+
+def ROCDL_CvtScaleF16Fp8Op :
+    ROCDL_IntrOp<"cvt.scalef32.f16.fp8", [], [], [Pure], 1>,
+    Arguments<(ins ROCDL_V2F16Type:$old, I32:$src, F32: $scale, I32:$byteSel, I1:$wordSel)> {
+    let summary = "Scale and convert fp8 to f16";
+    let description = [{ Convert `src` based on $wordSel to f16, then scale the value
+    by the exponent in `scale`. Store the result into the `byteSel`th byte of `old`,
+    preserving the others.
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `[` $wordSel `]` `,` $scale `->` $old `[` $byteSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtScaleF16Bf8Op :
+    ROCDL_IntrOp<"cvt.scalef32.f16.bf8", [], [], [Pure], 1>,
+    Arguments<(ins ROCDL_V2F16Type:$old, I32:$src, F32: $scale, I32:$byteSel, I1:$wordSel)> {
+    let summary = "Scale and convert fp8 to f16";
+    let description = [{ Convert `src` based on $wordSel to f16, then scale the value
+    by the exponent in `scale`. Store the result into the `byteSel`th byte of `old`,
+    preserving the others.
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `[` $wordSel `]` `,` $scale `->` $old `[` $byteSel `]` `:` type($res)
+  }];
+}
+
+//===---------------------------------------------------------------------===//
+// 32-bit float intrinsics
+//===---------------------------------------------------------------------===//
+def ROCDL_CvtScaleF32PkF32Fp8Op :
+    ROCDL_IntrOp<"cvt.scalef32.pk.f32.fp8", [], [], [Pure], 1>,
+    Arguments<(ins I32:$src, F32: $scale, I1:$wordSel)> {
+  let summary = "Scale and convert packed fp8 to packed f32";
+  let description = [{
+    Convert `src` based on $wordSel to packed fp32, then scale the packed values by
+    the exponent in `scale`. Store the result in a vector.
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `[` $wordSel `]` `,` $scale `:` type($res)
+  }];
+}
+def ROCDL_CvtScaleF32PkF32Bf8Op :
     ROCDL_IntrOp<"cvt.scalef32.pk.f32.bf8", [], [], [Pure], 1>,
     Arguments<(ins I32:$src, F32: $scale, I1:$wordSel)> {
   let summary = "Scale and convert packed bf8 to packed f32";
   let description = [{
-    Scale `src` by the exponent in `scale` then convert to packed fp32.
-    Store the result in low/high word based on $wordSel, preserving the other word.
+    Convert `src` based on $wordSel to packed fp32, then scale the packed values by
+    the exponent in `scale`. Store the result in a vector.
   }];
   let assemblyFormat = [{
     attr-dict $src `[` $wordSel `]` `,` $scale `:` type($res)
@@ -676,11 +895,7 @@ def ROCDL_CvtScalePkF32Bf8 :
 //===---------------------------------------------------------------------===//
 // 8-bit float scale intrinsics
 //===---------------------------------------------------------------------===//
-def ROCDL_V2I16Type : FixedVectorOfLengthAndType<[2], [I16]>,
-                        BuildableType<"::mlir::VectorType::get("
-                          "{2},$_builder.getI16Type())">;
-
-def ROCDL_CvtScaleF32PkFp8F32:
+def ROCDL_CvtScaleF32PkFp8F32Op :
     ROCDL_IntrOp<"cvt.scalef32.pk.fp8.f32", [], [], [Pure], 1>,
     Arguments<(ins ROCDL_V2I16Type:$old, F32:$srcA, F32:$srcB, F32:$scale, I1:$wordSel)> {
   let summary = "Scale and convert two f32's to packed fp8";
@@ -692,8 +907,8 @@ def ROCDL_CvtScaleF32PkFp8F32:
     attr-dict $srcA `,` $srcB `,` $scale `->` $old `[` $wordSel `]` `:` type($res)
   }];
 }
-    
-def ROCDL_CvtScaleF32PkBf8F32:
+
+def ROCDL_CvtScaleF32PkBf8F32Op :
     ROCDL_IntrOp<"cvt.scalef32.pk.bf8.f32", [], [], [Pure], 1>,
     Arguments<(ins ROCDL_V2I16Type:$old, F32:$srcA, F32:$srcB, F32: $scale, I1:$wordSel)> {
   let summary = "Scale and convert two f32's to packed bf8";
@@ -706,7 +921,7 @@ def ROCDL_CvtScaleF32PkBf8F32:
   }];
 }
 
-def ROCDL_CvtScaleF32SrFp8F32:
+def ROCDL_CvtScaleF32SrFp8F32Op :
     ROCDL_IntrOp<"cvt.scalef32.sr.fp8.f32", [], [], [Pure], 1>,
     Arguments<(ins I32:$old, F32:$src, I32:$seed, F32: $scale, I32:$byteSel)> {
     let summary = "Scale and convert f32 to fp8 using stochastic rounding";
@@ -720,7 +935,7 @@ def ROCDL_CvtScaleF32SrFp8F32:
 }
 
 
-def ROCDL_CvtScaleF32SrBf8F32:
+def ROCDL_CvtScaleF32SrBf8F32Op :
     ROCDL_IntrOp<"cvt.scalef32.sr.bf8.f32", [], [], [Pure], 1>,
     Arguments<(ins I32:$old, F32:$src, I32:$seed, F32: $scale, I32:$byteSel)> {
     let summary = "Scale and convert f32 to bf8 using stochastic rounding";
@@ -753,7 +968,7 @@ def ROCDL_CvtScaleF32Bf8Op :
     Arguments<(ins I32:$src, F32: $scale, I32:$byteSel)> {
   let summary = "Scale and convert bf8 to f32";
   let description = [{
-    Scale `src` by the exponent in `scale` then convert 8-bit bf8 value 
+    Scale `src` by the exponent in `scale` then convert 8-bit bf8 value
     from the `byteSel`th bit of `src` to fp32.
   }];
   let assemblyFormat = [{
@@ -789,6 +1004,29 @@ def ROCDL_CvtScaleF32Fp8Op :
   }];
 }
 
+def ROCDL_CvtPkF32Fp8Op :
+    ROCDL_IntrOp<"cvt.pk.f32.fp8", [], [], [Pure], 1>,
+    Arguments<(ins I32:$src, I1:$wordSel)> {
+  let summary = "Convert packed fp8 to packed f32";
+  let description = [{
+    Convert `src` based on $wordSel to packed fp32.
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `[` $wordSel `]` `:` type($res)
+  }];
+}
+
+def ROCDL_CvtPkF32Bf8Op :
+    ROCDL_IntrOp<"cvt.pk.f32.bf8", [], [], [Pure], 1>,
+    Arguments<(ins I32:$src, I1:$wordSel)> {
+  let summary = "Convert packed bf8 to packed f32";
+  let description = [{
+    Convert `src` based on $wordSel to packed fp32,
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `[` $wordSel `]` `:` type($res)
+  }];
+}
 
 def ROCDL_CvtPkBf8F32Op :
     ROCDL_IntrOp<"cvt.pk.bf8.f32", [], [], [Pure], 1>,

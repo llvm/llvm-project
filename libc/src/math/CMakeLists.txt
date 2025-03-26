@@ -42,8 +42,11 @@ endfunction()
 
 add_math_entrypoint_object(acos)
 add_math_entrypoint_object(acosf)
+add_math_entrypoint_object(acosf16)
+
 add_math_entrypoint_object(acosh)
 add_math_entrypoint_object(acoshf)
+add_math_entrypoint_object(acoshf16)
 
 add_math_entrypoint_object(asin)
 add_math_entrypoint_object(asinf)
@@ -207,6 +210,7 @@ add_math_entrypoint_object(floorf128)
 
 add_math_entrypoint_object(fma)
 add_math_entrypoint_object(fmaf)
+add_math_entrypoint_object(fmaf16)
 
 add_math_entrypoint_object(fmax)
 add_math_entrypoint_object(fmaxf)

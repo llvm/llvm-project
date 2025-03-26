@@ -29,7 +29,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __locale {
 
-using __lconv_t = std::lconv;
+using __lconv_t _LIBCPP_NODEBUG = std::lconv;
 
 class __lconv_storage {
 public:
@@ -317,7 +317,7 @@ struct __locale_guard {
     if (std::strcmp(__l.__get_locale(), __lc) != 0) {
       __locale_all = _strdup(__lc);
       if (__locale_all == nullptr)
-        __throw_bad_alloc();
+        std::__throw_bad_alloc();
       __locale::__setlocale(LC_ALL, __l.__get_locale());
     }
   }

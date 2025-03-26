@@ -539,9 +539,9 @@ class MetadataLoader::MetadataLoaderImpl {
       if (!Visited.insert(S).second)
         break;
     }
-    ParentSubprogram[InitialScope] = llvm::dyn_cast_or_null<DISubprogram>(S);
 
-    return ParentSubprogram[InitialScope];
+    return ParentSubprogram[InitialScope] =
+               llvm::dyn_cast_or_null<DISubprogram>(S);
   }
 
   /// Move local imports from DICompileUnit's 'imports' field to
@@ -1599,8 +1599,26 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     NextMetadataNo++;
     break;
   }
+  case bitc::METADATA_SUBRANGE_TYPE: {
+    if (Record.size() != 13)
+      return error("Invalid record");
+
+    IsDistinct = Record[0];
+    DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[7]);
+    MetadataList.assignValue(
+        GET_OR_DISTINCT(DISubrangeType,
+                        (Context, getMDString(Record[1]),
+                         getMDOrNull(Record[2]), Record[3],
+                         getMDOrNull(Record[4]), Record[5], Record[6], Flags,
+                         getDITypeRefOrNull(Record[8]), getMDOrNull(Record[9]),
+                         getMDOrNull(Record[10]), getMDOrNull(Record[11]),
+                         getMDOrNull(Record[12]))),
+        NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
   case bitc::METADATA_COMPOSITE_TYPE: {
-    if (Record.size() < 16 || Record.size() > 25)
+    if (Record.size() < 16 || Record.size() > 26)
       return error("Invalid record");
 
     // If we have a UUID and this is not a forward declaration, lookup the
@@ -1633,6 +1651,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     Metadata *Rank = nullptr;
     Metadata *Annotations = nullptr;
     Metadata *Specification = nullptr;
+    Metadata *BitStride = nullptr;
     auto *Identifier = getMDString(Record[15]);
     // If this module is being parsed so that it can be ThinLTO imported
     // into another module, composite types only need to be imported as
@@ -1684,10 +1703,12 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       if (Record.size() > 23) {
         Specification = getMDOrNull(Record[23]);
       }
+      if (Record.size() > 25)
+        BitStride = getMDOrNull(Record[25]);
     }
 
-    if (Record.size() > 25 && Record[25] != dwarf::DW_APPLE_ENUM_KIND_invalid)
-      EnumKind = Record[25];
+    if (Record.size() > 24 && Record[24] != dwarf::DW_APPLE_ENUM_KIND_invalid)
+      EnumKind = Record[24];
 
     DICompositeType *CT = nullptr;
     if (Identifier)
@@ -1696,17 +1717,17 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
           SizeInBits, AlignInBits, OffsetInBits, Specification,
           NumExtraInhabitants, Flags, Elements, RuntimeLang, EnumKind,
           VTableHolder, TemplateParams, Discriminator, DataLocation, Associated,
-          Allocated, Rank, Annotations);
+          Allocated, Rank, Annotations, BitStride);
 
     // Create a node if we didn't get a lazy ODR type.
     if (!CT)
-      CT = GET_OR_DISTINCT(DICompositeType,
-                           (Context, Tag, Name, File, Line, Scope, BaseType,
-                            SizeInBits, AlignInBits, OffsetInBits, Flags,
-                            Elements, RuntimeLang, EnumKind, VTableHolder,
-                            TemplateParams, Identifier, Discriminator,
-                            DataLocation, Associated, Allocated, Rank,
-                            Annotations, Specification, NumExtraInhabitants));
+      CT = GET_OR_DISTINCT(
+          DICompositeType,
+          (Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
+           AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang, EnumKind,
+           VTableHolder, TemplateParams, Identifier, Discriminator,
+           DataLocation, Associated, Allocated, Rank, Annotations,
+           Specification, NumExtraInhabitants, BitStride));
     if (!IsNotUsedInTypeRef && Identifier)
       MetadataList.addTypeRef(*Identifier, *cast<DICompositeType>(CT));
 

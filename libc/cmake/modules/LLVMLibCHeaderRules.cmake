@@ -98,13 +98,6 @@ function(add_gen_header target_name)
   set(dep_file "${out_file}.d")
   set(yaml_file ${CMAKE_SOURCE_DIR}/${ADD_GEN_HDR_YAML_FILE})
 
-  set(fq_data_files "")
-  if(ADD_GEN_HDR_DATA_FILES)
-    foreach(data_file IN LISTS ADD_GEN_HDR_DATA_FILES)
-      list(APPEND fq_data_files "${CMAKE_CURRENT_SOURCE_DIR}/${data_file}")
-    endforeach(data_file)
-  endif()
-
   set(entry_points "${TARGET_ENTRYPOINT_NAME_LIST}")
   list(TRANSFORM entry_points PREPEND "--entry-point=")
 
@@ -117,7 +110,7 @@ function(add_gen_header target_name)
             --write-if-changed
             ${entry_points}
             ${yaml_file}
-    DEPENDS ${yaml_file} ${fq_data_files}
+    DEPENDS ${yaml_file}
     DEPFILE ${dep_file}
     COMMENT "Generating header ${ADD_GEN_HDR_GEN_HDR} from ${yaml_file}"
   )
@@ -133,7 +126,7 @@ function(add_gen_header target_name)
               ${entry_points}
               --output_dir ${decl_out_file}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      DEPENDS ${yaml_file} ${fq_data_files}
+      DEPENDS ${yaml_file}
     )
   endif()
 

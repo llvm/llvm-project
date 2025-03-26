@@ -207,10 +207,10 @@ Error SimpleRemoteEPCServer::sendSetupMessage(
          "Dispatch function name should not be set");
   EI.BootstrapSymbols[ExecutorSessionObjectName] = ExecutorAddr::fromPtr(this);
   EI.BootstrapSymbols[DispatchFnName] = ExecutorAddr::fromPtr(jitDispatchEntry);
-  EI.BootstrapSymbols[rt::RegisterEHFrameSectionWrapperName] =
-      ExecutorAddr::fromPtr(&llvm_orc_registerEHFrameSectionWrapper);
-  EI.BootstrapSymbols[rt::DeregisterEHFrameSectionWrapperName] =
-      ExecutorAddr::fromPtr(&llvm_orc_deregisterEHFrameSectionWrapper);
+  EI.BootstrapSymbols[rt::RegisterEHFrameSectionAllocActionName] =
+      ExecutorAddr::fromPtr(&llvm_orc_registerEHFrameSectionAllocAction);
+  EI.BootstrapSymbols[rt::DeregisterEHFrameSectionAllocActionName] =
+      ExecutorAddr::fromPtr(&llvm_orc_deregisterEHFrameSectionAllocAction);
 
   using SPSSerialize =
       shared::SPSArgList<shared::SPSSimpleRemoteEPCExecutorInfo>;

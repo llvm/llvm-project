@@ -13,7 +13,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; CHECK-NEXT: %fma:sreg_32 = nofpexcept S_FMAMK_F32 [[COPY]], 1056964608, [[COPY1]], implicit $mode
+    ; CHECK-NEXT: %fma:sreg_32 = nofpexcept S_FMAC_F32 1056964608, [[COPY]], [[COPY1]], implicit $mode
     ; CHECK-NEXT: $sgpr0 = COPY %fma
     %0:sreg_32 = COPY $sgpr0
     %1:sreg_32 = COPY $sgpr1
@@ -33,7 +33,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; CHECK-NEXT: %fma:sreg_32 = nofpexcept S_FMAMK_F32 [[COPY]], 1056964608, [[COPY1]], implicit $mode
+    ; CHECK-NEXT: %fma:sreg_32 = nofpexcept S_FMAC_F32 [[COPY]], 1056964608, [[COPY1]], implicit $mode
     ; CHECK-NEXT: $sgpr0 = COPY %fma
     %0:sreg_32 = COPY $sgpr0
     %1:sreg_32 = COPY $sgpr1
@@ -73,7 +73,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; CHECK-NEXT: %fma:sreg_32 = nofpexcept S_FMAMK_F32 [[COPY]], 1234567890, [[COPY1]], implicit $mode
+    ; CHECK-NEXT: %fma:sreg_32 = nofpexcept S_FMAC_F32 1234567890, [[COPY]], [[COPY1]], implicit $mode
     ; CHECK-NEXT: $sgpr0 = COPY %fma
     %0:sreg_32 = COPY $sgpr0
     %1:sreg_32 = COPY $sgpr1
@@ -93,7 +93,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; CHECK-NEXT: %fma:sreg_32 = nofpexcept S_FMAMK_F32 [[COPY]], 1234567890, [[COPY1]], implicit $mode
+    ; CHECK-NEXT: %fma:sreg_32 = nofpexcept S_FMAC_F32 [[COPY]], 1234567890, [[COPY1]], implicit $mode
     ; CHECK-NEXT: $sgpr0 = COPY %fma
     %0:sreg_32 = COPY $sgpr0
     %1:sreg_32 = COPY $sgpr1
@@ -212,8 +212,7 @@ body:             |
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK-NEXT: %noninlinable:sreg_32 = S_MOV_B32 1234567890
-    ; CHECK-NEXT: %fma:sreg_32 = nofpexcept S_FMAMK_F32 [[COPY]], 1056964608, %noninlinable, implicit $mode
+    ; CHECK-NEXT: %fma:sreg_32 = nofpexcept S_FMAAK_F32 [[COPY]], 1056964608, 1234567890, implicit $mode
     ; CHECK-NEXT: $sgpr0 = COPY %fma
     %0:sreg_32 = COPY $sgpr0
     %inlinable:sreg_32 = S_MOV_B32 1056964608
@@ -232,7 +231,7 @@ body:             |
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK-NEXT: %fma:sreg_32 = nofpexcept S_FMAMK_F32 1234567890, 1234567890, [[COPY]], implicit $mode
+    ; CHECK-NEXT: %fma:sreg_32 = nofpexcept S_FMAC_F32 1234567890, 1234567890, [[COPY]], implicit $mode
     ; CHECK-NEXT: $sgpr0 = COPY %fma
     %0:sreg_32 = COPY $sgpr0
     %noninlinable:sreg_32 = S_MOV_B32 1234567890

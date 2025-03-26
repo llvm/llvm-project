@@ -343,6 +343,7 @@ static void registerEPCallbacks(PassBuilder &PB) {
 #define HANDLE_EXTENSION(Ext)                                                  \
   llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
 #include "llvm/Support/Extension.def"
+#undef HANDLE_EXTENSION
 
 bool llvm::runPassPipeline(
     StringRef Arg0, Module &M, TargetMachine *TM, TargetLibraryInfoImpl *TLII,
@@ -456,6 +457,7 @@ bool llvm::runPassPipeline(
 #define HANDLE_EXTENSION(Ext)                                                  \
   get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
 #include "llvm/Support/Extension.def"
+#undef HANDLE_EXTENSION
 
   // Specially handle the alias analysis manager so that we can register
   // a custom pipeline of AA passes with it.

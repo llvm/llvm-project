@@ -16,12 +16,14 @@
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Common/static-multimap-view.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/PPCIntrinsicCall.h"
 #include "flang/Optimizer/Builder/Runtime/Allocatable.h"
+#include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Command.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
@@ -38,6 +40,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Runtime/entry-names.h"
@@ -103,6 +106,34 @@ using I = IntrinsicLibrary;
 /// argument is an optional variable in the current scope).
 static constexpr bool handleDynamicOptional = true;
 
+/// TODO: Move all CUDA Fortran intrinsic handlers into its own file similar to
+/// PPC.
+static const char __ldca_i4x4[] = "__ldca_i4x4_";
+static const char __ldca_i8x2[] = "__ldca_i8x2_";
+static const char __ldca_r2x2[] = "__ldca_r2x2_";
+static const char __ldca_r4x4[] = "__ldca_r4x4_";
+static const char __ldca_r8x2[] = "__ldca_r8x2_";
+static const char __ldcg_i4x4[] = "__ldcg_i4x4_";
+static const char __ldcg_i8x2[] = "__ldcg_i8x2_";
+static const char __ldcg_r2x2[] = "__ldcg_r2x2_";
+static const char __ldcg_r4x4[] = "__ldcg_r4x4_";
+static const char __ldcg_r8x2[] = "__ldcg_r8x2_";
+static const char __ldcs_i4x4[] = "__ldcs_i4x4_";
+static const char __ldcs_i8x2[] = "__ldcs_i8x2_";
+static const char __ldcs_r2x2[] = "__ldcs_r2x2_";
+static const char __ldcs_r4x4[] = "__ldcs_r4x4_";
+static const char __ldcs_r8x2[] = "__ldcs_r8x2_";
+static const char __ldcv_i4x4[] = "__ldcv_i4x4_";
+static const char __ldcv_i8x2[] = "__ldcv_i8x2_";
+static const char __ldcv_r2x2[] = "__ldcv_r2x2_";
+static const char __ldcv_r4x4[] = "__ldcv_r4x4_";
+static const char __ldcv_r8x2[] = "__ldcv_r8x2_";
+static const char __ldlu_i4x4[] = "__ldlu_i4x4_";
+static const char __ldlu_i8x2[] = "__ldlu_i8x2_";
+static const char __ldlu_r2x2[] = "__ldlu_r2x2_";
+static const char __ldlu_r4x4[] = "__ldlu_r4x4_";
+static const char __ldlu_r8x2[] = "__ldlu_r8x2_";
+
 /// Table that drives the fir generation depending on the intrinsic or intrinsic
 /// module procedure one to one mapping with Fortran arguments. If no mapping is
 /// defined here for a generic intrinsic, genRuntimeCall will be called
@@ -111,6 +142,106 @@ static constexpr bool handleDynamicOptional = true;
 /// argument must not be lowered by value. In which case, the lowering rules
 /// should be provided for all the intrinsic arguments for completeness.
 static constexpr IntrinsicHandler handlers[]{
+    {"__ldca_i4x4",
+     &I::genCUDALDXXFunc<__ldca_i4x4, 4>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldca_i8x2",
+     &I::genCUDALDXXFunc<__ldca_i8x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldca_r2x2",
+     &I::genCUDALDXXFunc<__ldca_r2x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldca_r4x4",
+     &I::genCUDALDXXFunc<__ldca_r4x4, 4>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldca_r8x2",
+     &I::genCUDALDXXFunc<__ldca_r8x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcg_i4x4",
+     &I::genCUDALDXXFunc<__ldcg_i4x4, 4>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcg_i8x2",
+     &I::genCUDALDXXFunc<__ldcg_i8x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcg_r2x2",
+     &I::genCUDALDXXFunc<__ldcg_r2x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcg_r4x4",
+     &I::genCUDALDXXFunc<__ldcg_r4x4, 4>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcg_r8x2",
+     &I::genCUDALDXXFunc<__ldcg_r8x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcs_i4x4",
+     &I::genCUDALDXXFunc<__ldcs_i4x4, 4>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcs_i8x2",
+     &I::genCUDALDXXFunc<__ldcs_i8x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcs_r2x2",
+     &I::genCUDALDXXFunc<__ldcs_r2x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcs_r4x4",
+     &I::genCUDALDXXFunc<__ldcs_r4x4, 4>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcs_r8x2",
+     &I::genCUDALDXXFunc<__ldcs_r8x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcv_i4x4",
+     &I::genCUDALDXXFunc<__ldcv_i4x4, 4>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcv_i8x2",
+     &I::genCUDALDXXFunc<__ldcv_i8x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcv_r2x2",
+     &I::genCUDALDXXFunc<__ldcv_r2x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcv_r4x4",
+     &I::genCUDALDXXFunc<__ldcv_r4x4, 4>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldcv_r8x2",
+     &I::genCUDALDXXFunc<__ldcv_r8x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldlu_i4x4",
+     &I::genCUDALDXXFunc<__ldlu_i4x4, 4>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldlu_i8x2",
+     &I::genCUDALDXXFunc<__ldlu_i8x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldlu_r2x2",
+     &I::genCUDALDXXFunc<__ldlu_r2x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldlu_r4x4",
+     &I::genCUDALDXXFunc<__ldlu_r4x4, 4>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
+    {"__ldlu_r8x2",
+     &I::genCUDALDXXFunc<__ldlu_r8x2, 2>,
+     {{{"a", asAddr}}},
+     /*isElemental=*/false},
     {"abort", &I::genAbort},
     {"abs", &I::genAbs},
     {"achar", &I::genChar},
@@ -152,7 +283,39 @@ static constexpr IntrinsicHandler handlers[]{
     {"atomicaddi", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicaddl", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicandi", &I::genAtomicAnd, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomiccasd",
+     &I::genAtomicCas,
+     {{{"a", asAddr}, {"v1", asValue}, {"v2", asValue}}},
+     false},
+    {"atomiccasf",
+     &I::genAtomicCas,
+     {{{"a", asAddr}, {"v1", asValue}, {"v2", asValue}}},
+     false},
+    {"atomiccasi",
+     &I::genAtomicCas,
+     {{{"a", asAddr}, {"v1", asValue}, {"v2", asValue}}},
+     false},
+    {"atomiccasul",
+     &I::genAtomicCas,
+     {{{"a", asAddr}, {"v1", asValue}, {"v2", asValue}}},
+     false},
     {"atomicdeci", &I::genAtomicDec, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicexchd",
+     &I::genAtomicExch,
+     {{{"a", asAddr}, {"v", asValue}}},
+     false},
+    {"atomicexchf",
+     &I::genAtomicExch,
+     {{{"a", asAddr}, {"v", asValue}}},
+     false},
+    {"atomicexchi",
+     &I::genAtomicExch,
+     {{{"a", asAddr}, {"v", asValue}}},
+     false},
+    {"atomicexchul",
+     &I::genAtomicExch,
+     {{{"a", asAddr}, {"v", asValue}}},
+     false},
     {"atomicinci", &I::genAtomicInc, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicmaxd", &I::genAtomicMax, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicmaxf", &I::genAtomicMax, {{{"a", asAddr}, {"v", asValue}}}, false},
@@ -167,6 +330,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"atomicsubf", &I::genAtomicSub, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicsubi", &I::genAtomicSub, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicsubl", &I::genAtomicSub, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicxori", &I::genAtomicXor, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"bessel_jn",
      &I::genBesselJn,
      {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
@@ -316,6 +480,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"getgid", &I::genGetGID},
     {"getpid", &I::genGetPID},
     {"getuid", &I::genGetUID},
+    {"hostnm",
+     &I::genHostnm,
+     {{{"c", asBox}, {"status", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"iachar", &I::genIchar},
     {"iall",
      &I::genIall,
@@ -423,8 +591,18 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genIeeeSupportFlag,
      {{{"flag", asValue}, {"x", asInquired, handleDynamicOptional}}},
      /*isElemental=*/false},
-    {"ieee_support_halting", &I::genIeeeSupportHalting},
-    {"ieee_support_rounding", &I::genIeeeSupportRounding},
+    {"ieee_support_halting",
+     &I::genIeeeSupportHalting,
+     {{{"flag", asValue}}},
+     /*isElemental=*/false},
+    {"ieee_support_rounding",
+     &I::genIeeeSupportRounding,
+     {{{"round_value", asValue}, {"x", asInquired, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"ieee_support_standard",
+     &I::genIeeeSupportStandard,
+     {{{"flag", asValue}, {"x", asInquired, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"ieee_unordered", &I::genIeeeUnordered},
     {"ieee_value", &I::genIeeeValue},
     {"ieor", &I::genIeor},
@@ -1244,8 +1422,10 @@ static constexpr MathOperation mathOperations[] = {
     {"erf", "erf", genFuncType<Ty::Real<8>, Ty::Real<8>>,
      genMathOp<mlir::math::ErfOp>},
     {"erf", RTNAME_STRING(ErfF128), FuncTypeReal16Real16, genLibF128Call},
-    {"erfc", "erfcf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
-    {"erfc", "erfc", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"erfc", "erfcf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::ErfcOp>},
+    {"erfc", "erfc", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::ErfcOp>},
     {"erfc", RTNAME_STRING(ErfcF128), FuncTypeReal16Real16, genLibF128Call},
     {"exp", "expf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
      genMathOp<mlir::math::ExpOp>},
@@ -2691,6 +2871,45 @@ mlir::Value IntrinsicLibrary::genAtomicOr(mlir::Type resultType,
   return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
 }
 
+// ATOMICCAS
+fir::ExtendedValue
+IntrinsicLibrary::genAtomicCas(mlir::Type resultType,
+                               llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  auto successOrdering = mlir::LLVM::AtomicOrdering::acq_rel;
+  auto failureOrdering = mlir::LLVM::AtomicOrdering::monotonic;
+  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(resultType.getContext());
+
+  mlir::Value arg0 = fir::getBase(args[0]);
+  mlir::Value arg1 = fir::getBase(args[1]);
+  mlir::Value arg2 = fir::getBase(args[2]);
+
+  auto bitCastFloat = [&](mlir::Value arg) -> mlir::Value {
+    if (mlir::isa<mlir::Float32Type>(arg.getType()))
+      return builder.create<mlir::LLVM::BitcastOp>(loc, builder.getI32Type(),
+                                                   arg);
+    if (mlir::isa<mlir::Float64Type>(arg.getType()))
+      return builder.create<mlir::LLVM::BitcastOp>(loc, builder.getI64Type(),
+                                                   arg);
+    return arg;
+  };
+
+  arg1 = bitCastFloat(arg1);
+  arg2 = bitCastFloat(arg2);
+
+  if (arg1.getType() != arg2.getType()) {
+    // arg1 and arg2 need to have the same type in AtomicCmpXchgOp.
+    arg2 = builder.createConvert(loc, arg1.getType(), arg2);
+  }
+
+  auto address =
+      builder.create<mlir::UnrealizedConversionCastOp>(loc, llvmPtrTy, arg0)
+          .getResult(0);
+  auto cmpxchg = builder.create<mlir::LLVM::AtomicCmpXchgOp>(
+      loc, address, arg1, arg2, successOrdering, failureOrdering);
+  return builder.create<mlir::LLVM::ExtractValueOp>(loc, cmpxchg, 1);
+}
+
 mlir::Value IntrinsicLibrary::genAtomicDec(mlir::Type resultType,
                                            llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
@@ -2698,6 +2917,19 @@ mlir::Value IntrinsicLibrary::genAtomicDec(mlir::Type resultType,
 
   mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::udec_wrap;
   return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
+}
+
+// ATOMICEXCH
+fir::ExtendedValue
+IntrinsicLibrary::genAtomicExch(mlir::Type resultType,
+                                llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  mlir::Value arg0 = fir::getBase(args[0]);
+  mlir::Value arg1 = fir::getBase(args[1]);
+  assert(arg1.getType().isIntOrFloat());
+
+  mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::xchg;
+  return genAtomBinOp(builder, loc, binOp, arg0, arg1);
 }
 
 mlir::Value IntrinsicLibrary::genAtomicInc(mlir::Type resultType,
@@ -2729,6 +2961,16 @@ mlir::Value IntrinsicLibrary::genAtomicMin(mlir::Type resultType,
           ? mlir::LLVM::AtomicBinOp::min
           : mlir::LLVM::AtomicBinOp::fmin;
   return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
+}
+
+// ATOMICXOR
+fir::ExtendedValue
+IntrinsicLibrary::genAtomicXor(mlir::Type resultType,
+                               llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  mlir::Value arg0 = fir::getBase(args[0]);
+  mlir::Value arg1 = fir::getBase(args[1]);
+  return genAtomBinOp(builder, loc, mlir::LLVM::AtomicBinOp::_xor, arg0, arg1);
 }
 
 // ASSOCIATED
@@ -3152,6 +3394,17 @@ void IntrinsicLibrary::genCFPointer(llvm::ArrayRef<fir::ExtendedValue> args) {
 
   fir::factory::associateMutableBox(builder, loc, *fPtr, getCPtrExtVal(*fPtr),
                                     /*lbounds=*/mlir::ValueRange{});
+
+  // If the pointer is a registered CUDA fortran variable, the descriptor needs
+  // to be synced.
+  if (auto declare = mlir::dyn_cast_or_null<hlfir::DeclareOp>(
+          fPtr->getAddr().getDefiningOp()))
+    if (declare.getMemref().getDefiningOp() &&
+        mlir::isa<fir::AddrOfOp>(declare.getMemref().getDefiningOp()))
+      if (cuf::isRegisteredDeviceAttr(declare.getDataAttr()) &&
+          !cuf::isCUDADeviceContext(builder.getRegion()))
+        fir::runtime::cuda::genSyncGlobalDescriptor(builder, loc,
+                                                    declare.getMemref());
 }
 
 // C_F_PROCPOINTER
@@ -3426,6 +3679,30 @@ IntrinsicLibrary::genCshift(mlir::Type resultType,
     fir::runtime::genCshift(builder, loc, resultIrBox, array, shift, dim);
   }
   return readAndAddCleanUp(resultMutableBox, resultType, "CSHIFT");
+}
+
+// __LDCA, __LDCS, __LDLU, __LDCV
+template <const char *fctName, int extent>
+fir::ExtendedValue
+IntrinsicLibrary::genCUDALDXXFunc(mlir::Type resultType,
+                                  llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Type resTy = fir::SequenceType::get(extent, resultType);
+  mlir::Value arg = fir::getBase(args[0]);
+  mlir::Value res = builder.create<fir::AllocaOp>(loc, resTy);
+  if (mlir::isa<fir::BaseBoxType>(arg.getType()))
+    arg = builder.create<fir::BoxAddrOp>(loc, arg);
+  mlir::Type refResTy = fir::ReferenceType::get(resTy);
+  mlir::FunctionType ftype =
+      mlir::FunctionType::get(arg.getContext(), {refResTy, refResTy}, {});
+  auto funcOp = builder.createFunction(loc, fctName, ftype);
+  llvm::SmallVector<mlir::Value> funcArgs;
+  funcArgs.push_back(res);
+  funcArgs.push_back(arg);
+  builder.create<fir::CallOp>(loc, funcOp, funcArgs);
+  mlir::Value ext =
+      builder.createIntegerConstant(loc, builder.getIndexType(), extent);
+  return fir::ArrayBoxValue(res, {ext});
 }
 
 // DATE_AND_TIME
@@ -4044,6 +4321,37 @@ void IntrinsicLibrary::genGetEnvironmentVariable(
   }
 }
 
+// HOSTNM
+fir::ExtendedValue
+IntrinsicLibrary::genHostnm(std::optional<mlir::Type> resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert((args.size() == 1 && resultType.has_value()) ||
+         (args.size() >= 1 && !resultType.has_value()));
+
+  mlir::Value res = fir::getBase(args[0]);
+  mlir::Value statusValue = fir::runtime::genHostnm(builder, loc, res);
+
+  if (resultType.has_value()) {
+    // Function form, return status.
+    return builder.createConvert(loc, *resultType, statusValue);
+  }
+
+  // Subroutine form, store status and return none.
+  const fir::ExtendedValue &status = args[1];
+  if (!isStaticallyAbsent(status)) {
+    mlir::Value statusAddr = fir::getBase(status);
+    mlir::Value statusIsPresentAtRuntime =
+        builder.genIsNotNullAddr(loc, statusAddr);
+    builder.genIfThen(loc, statusIsPresentAtRuntime)
+        .genThen([&]() {
+          builder.createStoreWithConvert(loc, statusValue, statusAddr);
+        })
+        .end();
+  }
+
+  return {};
+}
+
 /// Process calls to Maxval, Minval, Product, Sum intrinsic functions that
 /// take a DIM argument.
 template <typename FD>
@@ -4298,8 +4606,8 @@ void IntrinsicLibrary::genRaiseExcept(int excepts, mlir::Value cond) {
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   }
   mlir::Type i32Ty = builder.getIntegerType(32);
-  genRuntimeCall(
-      "feraiseexcept", i32Ty,
+  fir::runtime::genFeraiseexcept(
+      builder, loc,
       fir::runtime::genMapExcept(
           builder, loc, builder.createIntegerConstant(loc, i32Ty, excepts)));
   if (cond)
@@ -4666,8 +4974,8 @@ void IntrinsicLibrary::genIeeeGetFlag(llvm::ArrayRef<fir::ExtendedValue> args) {
   mlir::Value zero = builder.createIntegerConstant(loc, i32Ty, 0);
   auto [fieldRef, ignore] = getFieldRef(builder, loc, flag);
   mlir::Value field = builder.create<fir::LoadOp>(loc, fieldRef);
-  mlir::Value excepts = IntrinsicLibrary::genRuntimeCall(
-      "fetestexcept", i32Ty,
+  mlir::Value excepts = fir::runtime::genFetestexcept(
+      builder, loc,
       fir::runtime::genMapExcept(
           builder, loc, builder.create<fir::ConvertOp>(loc, i32Ty, field)));
   mlir::Value logicalResult = builder.create<fir::ConvertOp>(
@@ -4690,8 +4998,7 @@ void IntrinsicLibrary::genIeeeGetHaltingMode(
   mlir::Value zero = builder.createIntegerConstant(loc, i32Ty, 0);
   auto [fieldRef, ignore] = getFieldRef(builder, loc, flag);
   mlir::Value field = builder.create<fir::LoadOp>(loc, fieldRef);
-  mlir::Value haltSet =
-      IntrinsicLibrary::genRuntimeCall("fegetexcept", i32Ty, {});
+  mlir::Value haltSet = fir::runtime::genFegetexcept(builder, loc);
   mlir::Value intResult = builder.create<mlir::arith::AndIOp>(
       loc, haltSet,
       fir::runtime::genMapExcept(
@@ -5439,9 +5746,11 @@ void IntrinsicLibrary::genIeeeSetFlagOrHaltingMode(
       loc, builder.create<fir::ConvertOp>(loc, i1Ty, getBase(args[1])),
       /*withElseRegion=*/true);
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-  genRuntimeCall(isFlag ? "feraiseexcept" : "feenableexcept", i32Ty, except);
+  (isFlag ? fir::runtime::genFeraiseexcept : fir::runtime::genFeenableexcept)(
+      builder, loc, builder.create<fir::ConvertOp>(loc, i32Ty, except));
   builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-  genRuntimeCall(isFlag ? "feclearexcept" : "fedisableexcept", i32Ty, except);
+  (isFlag ? fir::runtime::genFeclearexcept : fir::runtime::genFedisableexcept)(
+      builder, loc, builder.create<fir::ConvertOp>(loc, i32Ty, except));
   builder.setInsertionPointAfter(ifOp);
 }
 
@@ -5450,13 +5759,33 @@ void IntrinsicLibrary::genIeeeSetRoundingMode(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   // Set the current floating point rounding mode to the value of arg
   // ROUNDING_VALUE. Values are llvm.get.rounding encoding values.
-  // Generate an error if the value of optional arg RADIX is not 2.
+  // Modes ieee_to_zero, ieee_nearest, ieee_up, and ieee_down are supported.
+  // Modes ieee_away and ieee_other are not supported, and are treated as
+  // ieee_nearest. Generate an error if the optional RADIX arg is not 2.
   assert(args.size() == 1 || args.size() == 2);
   if (args.size() == 2)
     checkRadix(builder, loc, fir::getBase(args[1]), "ieee_set_rounding_mode");
-  auto [fieldRef, ignore] = getFieldRef(builder, loc, fir::getBase(args[0]));
+  auto [fieldRef, fieldTy] = getFieldRef(builder, loc, fir::getBase(args[0]));
   mlir::func::FuncOp setRound = fir::factory::getLlvmSetRounding(builder);
   mlir::Value mode = builder.create<fir::LoadOp>(loc, fieldRef);
+  static_assert(
+      _FORTRAN_RUNTIME_IEEE_TO_ZERO >= 0 &&
+      _FORTRAN_RUNTIME_IEEE_TO_ZERO <= 3 &&
+      _FORTRAN_RUNTIME_IEEE_NEAREST >= 0 &&
+      _FORTRAN_RUNTIME_IEEE_NEAREST <= 3 && _FORTRAN_RUNTIME_IEEE_UP >= 0 &&
+      _FORTRAN_RUNTIME_IEEE_UP <= 3 && _FORTRAN_RUNTIME_IEEE_DOWN >= 0 &&
+      _FORTRAN_RUNTIME_IEEE_DOWN <= 3 && "unexpected rounding mode mapping");
+  mlir::Value mask = builder.create<mlir::arith::ShLIOp>(
+      loc, builder.createAllOnesInteger(loc, fieldTy),
+      builder.createIntegerConstant(loc, fieldTy, 2));
+  mlir::Value modeIsSupported = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::eq,
+      builder.create<mlir::arith::AndIOp>(loc, mode, mask),
+      builder.createIntegerConstant(loc, fieldTy, 0));
+  mlir::Value nearest = builder.createIntegerConstant(
+      loc, fieldTy, _FORTRAN_RUNTIME_IEEE_NEAREST);
+  mode = builder.create<mlir::arith::SelectOp>(loc, modeIsSupported, mode,
+                                               nearest);
   mode = builder.create<fir::ConvertOp>(
       loc, setRound.getFunctionType().getInput(0), mode);
   builder.create<fir::CallOp>(loc, setRound, mode);
@@ -5512,24 +5841,61 @@ mlir::Value IntrinsicLibrary::genIeeeSignbit(mlir::Type resultType,
 fir::ExtendedValue
 IntrinsicLibrary::genIeeeSupportFlag(mlir::Type resultType,
                                      llvm::ArrayRef<fir::ExtendedValue> args) {
-  // Check if a floating point exception flag is supported. A flag is
-  // supported either for all type kinds or none. An optional kind argument X
-  // is therefore ignored. Standard flags are all supported. The nonstandard
-  // DENORM extension is not supported, at least for now.
+  // Check if a floating point exception flag is supported.
   assert(args.size() == 1 || args.size() == 2);
-  auto [fieldRef, fieldTy] = getFieldRef(builder, loc, fir::getBase(args[0]));
+  mlir::Type i1Ty = builder.getI1Type();
+  mlir::Type i32Ty = builder.getIntegerType(32);
+  auto [fieldRef, fieldTy] = getFieldRef(builder, loc, getBase(args[0]));
   mlir::Value flag = builder.create<fir::LoadOp>(loc, fieldRef);
-  mlir::Value mask = builder.createIntegerConstant( // values are powers of 2
+  mlir::Value standardFlagMask = builder.createIntegerConstant(
       loc, fieldTy,
       _FORTRAN_RUNTIME_IEEE_INVALID | _FORTRAN_RUNTIME_IEEE_DIVIDE_BY_ZERO |
           _FORTRAN_RUNTIME_IEEE_OVERFLOW | _FORTRAN_RUNTIME_IEEE_UNDERFLOW |
           _FORTRAN_RUNTIME_IEEE_INEXACT);
-  return builder.createConvert(
-      loc, resultType,
-      builder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::ne,
-          builder.create<mlir::arith::AndIOp>(loc, flag, mask),
-          builder.createIntegerConstant(loc, fieldTy, 0)));
+  mlir::Value isStandardFlag = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::ne,
+      builder.create<mlir::arith::AndIOp>(loc, flag, standardFlagMask),
+      builder.createIntegerConstant(loc, fieldTy, 0));
+  fir::IfOp ifOp = builder.create<fir::IfOp>(loc, i1Ty, isStandardFlag,
+                                             /*withElseRegion=*/true);
+  // Standard flags are supported.
+  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+  builder.create<fir::ResultOp>(loc, builder.createBool(loc, true));
+
+  // TargetCharacteristics information for the nonstandard ieee_denorm flag
+  // is not available here. So use a runtime check restricted to possibly
+  // supported kinds.
+  builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+  bool mayBeSupported = false;
+  if (mlir::Value arg1 = getBase(args[1])) {
+    mlir::Type arg1Ty = arg1.getType();
+    if (fir::ReferenceType refTy = mlir::dyn_cast<fir::ReferenceType>(arg1Ty))
+      arg1Ty = refTy.getEleTy();
+    switch (mlir::dyn_cast<mlir::FloatType>(arg1Ty).getWidth()) {
+    case 16:
+      mayBeSupported = arg1Ty.isBF16(); // kind=3
+      break;
+    case 32: // kind=4
+    case 64: // kind=8
+      mayBeSupported = true;
+      break;
+    }
+  }
+  if (mayBeSupported) {
+    mlir::Value isDenorm = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::eq, flag,
+        builder.createIntegerConstant(loc, fieldTy,
+                                      _FORTRAN_RUNTIME_IEEE_DENORM));
+    mlir::Value result = builder.create<mlir::arith::AndIOp>(
+        loc, isDenorm,
+        fir::runtime::genSupportHalting(
+            builder, loc, builder.create<fir::ConvertOp>(loc, i32Ty, flag)));
+    builder.create<fir::ResultOp>(loc, result);
+  } else {
+    builder.create<fir::ResultOp>(loc, builder.createBool(loc, false));
+  }
+  builder.setInsertionPointAfter(ifOp);
+  return builder.createConvert(loc, resultType, ifOp.getResult(0));
 }
 
 // IEEE_SUPPORT_HALTING
@@ -5545,13 +5911,12 @@ fir::ExtendedValue IntrinsicLibrary::genIeeeSupportHalting(
   return builder.createConvert(
       loc, resultType,
       fir::runtime::genSupportHalting(
-          builder, loc, {builder.create<fir::ConvertOp>(loc, i32Ty, field)}));
+          builder, loc, builder.create<fir::ConvertOp>(loc, i32Ty, field)));
 }
 
 // IEEE_SUPPORT_ROUNDING
-mlir::Value
-IntrinsicLibrary::genIeeeSupportRounding(mlir::Type resultType,
-                                         llvm::ArrayRef<mlir::Value> args) {
+fir::ExtendedValue IntrinsicLibrary::genIeeeSupportRounding(
+    mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
   // Check if floating point rounding mode ROUND_VALUE is supported.
   // Rounding is supported either for all type kinds or none.
   // An optional X kind argument is therefore ignored.
@@ -5562,7 +5927,7 @@ IntrinsicLibrary::genIeeeSupportRounding(mlir::Type resultType,
   //  3 - toward negative infinity [supported]
   //  4 - to nearest, ties away from zero [not supported]
   assert(args.size() == 1 || args.size() == 2);
-  auto [fieldRef, fieldTy] = getFieldRef(builder, loc, args[0]);
+  auto [fieldRef, fieldTy] = getFieldRef(builder, loc, getBase(args[0]));
   mlir::Value mode = builder.create<fir::LoadOp>(loc, fieldRef);
   mlir::Value lbOk = builder.create<mlir::arith::CmpIOp>(
       loc, mlir::arith::CmpIPredicate::sge, mode,
@@ -5573,6 +5938,19 @@ IntrinsicLibrary::genIeeeSupportRounding(mlir::Type resultType,
       builder.createIntegerConstant(loc, fieldTy, _FORTRAN_RUNTIME_IEEE_DOWN));
   return builder.createConvert(
       loc, resultType, builder.create<mlir::arith::AndIOp>(loc, lbOk, ubOk));
+}
+
+// IEEE_SUPPORT_STANDARD
+fir::ExtendedValue IntrinsicLibrary::genIeeeSupportStandard(
+    mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
+  // Check if IEEE standard support is available, which reduces to checking
+  // if halting control is supported, as that is the only support component
+  // that may not be available.
+  assert(args.size() <= 1);
+  mlir::Value overflow = builder.createIntegerConstant(
+      loc, builder.getIntegerType(32), _FORTRAN_RUNTIME_IEEE_OVERFLOW);
+  return builder.createConvert(
+      loc, resultType, fir::runtime::genSupportHalting(builder, loc, overflow));
 }
 
 // IEEE_UNORDERED

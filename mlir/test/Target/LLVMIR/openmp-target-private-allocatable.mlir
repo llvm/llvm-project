@@ -8,7 +8,15 @@ omp.private {type = private} @box.heap_privatizer : !llvm.struct<(ptr, i64, i32,
   llvm.call @alloc_foo_1(%arg0) : (!llvm.ptr) -> ()
   omp.yield(%arg1 : !llvm.ptr)
 } dealloc {
+// There is no reason for the dealloc region here to have two blocks.
+// But a multi-block test is useful in checking that the OMPIRBuilder
+// has updated the InsertPoint properly after translating the dealloc
+// region to LLVMIR.
+// See https://github.com/llvm/llvm-project/issues/129202 for more
+// context
 ^bb0(%arg0: !llvm.ptr):
+  llvm.br ^bb1
+^bb1:
   llvm.call @dealloc_foo_1(%arg0) : (!llvm.ptr) -> ()
   omp.yield
 }
@@ -60,3 +68,6 @@ llvm.func @_FortranAAssign(!llvm.ptr, !llvm.ptr, !llvm.ptr, i32) -> !llvm.struct
 
 // Now, check the deallocation of the private var.
 // CHECK:  call void @dealloc_foo_1(ptr %[[DESC_TO_DEALLOC]])
+// CHECK-NEXT: br label %[[CONT_BLOCK:.*]]
+// CHECK: [[CONT_BLOCK]]:
+// CHECK-NEXT: ret void

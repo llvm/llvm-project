@@ -33,7 +33,7 @@ enum CPUFeatures {
   FEAT_FP,
   FEAT_SIMD,
   FEAT_CRC,
-  RESERVED_FEAT_SHA1, // previously used and now ABI legacy
+  FEAT_CSSC,
   FEAT_SHA2,
   FEAT_SHA3,
   RESERVED_FEAT_AES, // previously used and now ABI legacy

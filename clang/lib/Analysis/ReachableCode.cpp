@@ -454,12 +454,11 @@ bool DeadCodeScan::isDeadCodeRoot(const clang::CFGBlock *Block) {
   return isDeadRoot;
 }
 
-// Check if the given `DeadStmt` is one of target statements or is a sub-stmt of
-// them. `Block` is the CFGBlock containing the `DeadStmt`.
-template <class... Ts>
-static bool isDeadStmtInOneOf(const Stmt *DeadStmt, const CFGBlock *Block) {
+// Check if the given `DeadStmt` is a coroutine statement and is a substmt of
+// the coroutine statement. `Block` is the CFGBlock containing the `DeadStmt`.
+static bool isInCoroutineStmt(const Stmt *DeadStmt, const CFGBlock *Block) {
   // The coroutine statement, co_return, co_await, or co_yield.
-  const Stmt *TargetStmt = nullptr;
+  const Stmt *CoroStmt = nullptr;
   // Find the first coroutine statement after the DeadStmt in the block.
   bool AfterDeadStmt = false;
   for (CFGBlock::const_iterator I = Block->begin(), E = Block->end(); I != E;
@@ -468,27 +467,32 @@ static bool isDeadStmtInOneOf(const Stmt *DeadStmt, const CFGBlock *Block) {
       const Stmt *S = CS->getStmt();
       if (S == DeadStmt)
         AfterDeadStmt = true;
-      if (AfterDeadStmt && llvm::isa<Ts...>(S)) {
-        TargetStmt = S;
+      if (AfterDeadStmt &&
+          // For simplicity, we only check simple coroutine statements.
+          (llvm::isa<CoreturnStmt>(S) || llvm::isa<CoroutineSuspendExpr>(S))) {
+        CoroStmt = S;
         break;
       }
     }
-  if (!TargetStmt)
+  if (!CoroStmt)
     return false;
   struct Checker : DynamicRecursiveASTVisitor {
     const Stmt *DeadStmt;
-    bool IsSubStmtOfTargetStmt = false;
-    Checker(const Stmt *S) : DeadStmt(S) { ShouldVisitImplicitCode = true; }
+    bool CoroutineSubStmt = false;
+    Checker(const Stmt *S) : DeadStmt(S) {
+      // Statements captured in the CFG can be implicit.
+      ShouldVisitImplicitCode = true;
+    }
 
     bool VisitStmt(Stmt *S) override {
       if (S == DeadStmt)
-        IsSubStmtOfTargetStmt = true;
+        CoroutineSubStmt = true;
       return true;
     }
   };
   Checker checker(DeadStmt);
-  checker.TraverseStmt(const_cast<Stmt *>(TargetStmt));
-  return checker.IsSubStmtOfTargetStmt;
+  checker.TraverseStmt(const_cast<Stmt *>(CoroStmt));
+  return checker.CoroutineSubStmt;
 }
 
 static bool isValidDeadStmt(const Stmt *S, const clang::CFGBlock *Block) {
@@ -499,12 +503,7 @@ static bool isValidDeadStmt(const Stmt *S, const clang::CFGBlock *Block) {
   // Coroutine statements are never considered dead statements, because removing
   // them may change the function semantic if it is the only coroutine statement
   // of the coroutine.
-  //
-  // If the dead stmt is a sub-stmt of CXXDefaultInitExpr and CXXDefaultArgExpr,
-  // we would rather expect to find CXXDefaultInitExpr and CXXDefaultArgExpr as
-  // a valid dead stmt.
-  return !isDeadStmtInOneOf<CoreturnStmt, CoroutineSuspendExpr,
-                            CXXDefaultArgExpr, CXXDefaultInitExpr>(S, Block);
+  return !isInCoroutineStmt(S, Block);
 }
 
 const Stmt *DeadCodeScan::findDeadCode(const clang::CFGBlock *Block) {

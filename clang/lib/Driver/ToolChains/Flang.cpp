@@ -60,6 +60,8 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
                             options::OPT_frealloc_lhs,
                             options::OPT_fno_realloc_lhs,
                             options::OPT_fsave_main_program,
+                            options::OPT_fd_lines_as_code,
+                            options::OPT_fd_lines_as_comments,
                             options::OPT_fno_save_main_program});
 }
 
@@ -149,15 +151,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
 
-  // Enable vectorization per default according to the optimization level
-  // selected. For optimization levels that want vectorization we use the alias
-  // option to simplify the hasFlag logic.
-  bool enableVec = shouldEnableVectorizerAtOLevel(Args, false);
-  OptSpecifier vectorizeAliasOption =
-      enableVec ? options::OPT_O_Group : options::OPT_fvectorize;
-  if (Args.hasFlag(options::OPT_fvectorize, vectorizeAliasOption,
-                   options::OPT_fno_vectorize, enableVec))
-    CmdArgs.push_back("-vectorize-loops");
+  handleVectorizeLoopsArgs(Args, CmdArgs);
+  handleVectorizeSLPArgs(Args, CmdArgs);
 
   if (shouldLoopVersion(Args))
     CmdArgs.push_back("-fversion-loops-for-stride");
@@ -512,6 +507,9 @@ void Flang::addTargetOptions(const ArgList &Args,
     else
       CmdArgs.push_back(A->getValue());
   }
+
+  Args.addAllArgs(CmdArgs,
+                  {options::OPT_fverbose_asm, options::OPT_fno_verbose_asm});
 }
 
 void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
@@ -815,8 +813,13 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // 'flang -E' always produces output that is suitable for use as fixed form
   // Fortran. However it is only valid free form source if the original is also
-  // free form.
-  if (InputType == types::TY_PP_Fortran &&
+  // free form. Ensure this logic does not incorrectly assume fixed-form for
+  // cases where it shouldn't, such as `flang -x f95 foo.f90`.
+  bool isAtemporaryPreprocessedFile =
+      Input.isFilename() &&
+      llvm::sys::path::extension(Input.getFilename())
+          .ends_with(types::getTypeTempSuffix(InputType, /*CLStyle=*/false));
+  if (InputType == types::TY_PP_Fortran && isAtemporaryPreprocessedFile &&
       !Args.getLastArg(options::OPT_ffixed_form, options::OPT_ffree_form))
     CmdArgs.push_back("-ffixed-form");
 

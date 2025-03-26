@@ -49,6 +49,20 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
   )
 
   add_entrypoint_object(
+    bits${suffix}
+    HDRS
+      bits${suffix}.h
+    SRCS
+      bits${suffix}.cpp
+    COMPILE_OPTIONS
+      ${libc_opt_high_flag}
+    DEPENDS
+      libc.src.__support.fixed_point.fx_bits
+      libc.include.llvm-libc-types.stdfix-types
+      libc.include.llvm-libc-macros.stdfix_macros
+  )
+
+  add_entrypoint_object(
     countls${suffix}
     HDRS
       countls${suffix}.h

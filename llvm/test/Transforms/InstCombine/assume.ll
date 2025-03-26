@@ -2,8 +2,6 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck --check-prefixes=CHECK,DEFAULT %s
 ; RUN: opt < %s -passes=instcombine --enable-knowledge-retention -S | FileCheck --check-prefixes=CHECK,BUNDLES %s
 
-; RUN: opt < %s -passes=instcombine -S --try-experimental-debuginfo-iterators | FileCheck --check-prefixes=CHECK,DEFAULT %s
-; RUN: opt < %s -passes=instcombine --enable-knowledge-retention -S --try-experimental-debuginfo-iterators | FileCheck --check-prefixes=CHECK,BUNDLES %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -581,6 +579,23 @@ not_taken:
   ret i1 %control
 }
 
+define void @nonnull_only_ephemeral_use(ptr %p) {
+; DEFAULT-LABEL: @nonnull_only_ephemeral_use(
+; DEFAULT-NEXT:    [[A:%.*]] = load ptr, ptr [[P:%.*]], align 8
+; DEFAULT-NEXT:    [[CMP:%.*]] = icmp ne ptr [[A]], null
+; DEFAULT-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; DEFAULT-NEXT:    ret void
+;
+; BUNDLES-LABEL: @nonnull_only_ephemeral_use(
+; BUNDLES-NEXT:    [[A:%.*]] = load ptr, ptr [[P:%.*]], align 8
+; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[A]]) ]
+; BUNDLES-NEXT:    ret void
+;
+  %a = load ptr, ptr %p
+  %cmp = icmp ne ptr %a, null
+  tail call void @llvm.assume(i1 %cmp)
+  ret void
+}
 
 define void @always_true_assumption() {
 ; CHECK-LABEL: @always_true_assumption(

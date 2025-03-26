@@ -1208,7 +1208,8 @@ struct InformationCache {
         TargetTriple(M.getTargetTriple()) {
     if (UseExplorer)
       Explorer = new (Allocator) MustBeExecutedContextExplorer(
-          /* ExploreInterBlock */ true, /* ExploreCFGForward */ true,
+          /* ExploreInterBlock */
+          true, /* ExploreCFGForward */ true,
           /* ExploreCFGBackward */ true,
           /* LIGetter */
           [&](const Function &F) { return AG.getAnalysis<LoopAnalysis>(F); },
@@ -5102,8 +5103,7 @@ private:
       indicatePessimisticFixpoint();
       return;
     }
-    for (const MemberTy &C : R.Set)
-      Set.insert(C);
+    Set.insert_range(R.Set);
     UndefIsContained |= R.undefIsContained();
     checkAndInvalidate();
   }
