@@ -212,16 +212,18 @@ static bool evaluateAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
   if (SE.isKnownPositive(Step)) {
     // For positive steps, check if (AR->getStart() - StartPtr) + MaxBTC <=
     // DerefBytes / Step
+    const SCEV *StartOffset = SE.getNoopOrSignExtend(
+        SE.getMinusSCEV(AR->getStart(), StartPtr), WiderTy);
     return SE.isKnownPredicate(
-        CmpInst::ICMP_ULE,
-        SE.getAddExpr(SE.getMinusSCEV(AR->getStart(), StartPtr), MaxBTC),
+        CmpInst::ICMP_ULE, SE.getAddExpr(StartOffset, MaxBTC),
         SE.getUDivExpr(SE.getConstant(WiderTy, DerefBytes), Step));
   }
   if (SE.isKnownNegative(Step)) {
     // For negative steps, check using StartOffset == AR->getStart() - StartPtr:
     //  * StartOffset >= MaxBTC * Step
     //  * AND  StartOffset <= DerefBytes / Step
-    auto *StartOffset = SE.getMinusSCEV(AR->getStart(), StartPtr);
+    auto *StartOffset = SE.getNoopOrSignExtend(
+        SE.getMinusSCEV(AR->getStart(), StartPtr), WiderTy);
     return SE.isKnownPredicate(
                CmpInst::ICMP_UGE, StartOffset,
                SE.getMulExpr(MaxBTC, SE.getNegativeSCEV(Step))) &&
