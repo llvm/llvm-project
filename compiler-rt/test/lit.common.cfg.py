@@ -395,9 +395,10 @@ if config.have_disable_symbolizer_path_search:
         if sanitizer not in config.environment:
             config.environment[sanitizer] = symbolizer_path
 
+env_utility = "/opt/freeware/bin/env" if config.host_os == "AIX" else "env"
 env_unset_command = " ".join(f"-u {var}" for var in tool_symbolizer_path_list)
 config.substitutions.append(
-    ("%env_unset_tool_symbolizer_path", f"env {env_unset_command}")
+    ("%env_unset_tool_symbolizer_path", f"{env_utility} {env_unset_command}")
 )
 
 # Allow tests to be executed on a simulator or remotely.
