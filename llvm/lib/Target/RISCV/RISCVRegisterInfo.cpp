@@ -408,8 +408,11 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
   Register NewBase = MRI.createVirtualRegister(&RISCV::GPRRegClass);
 
   auto *OldMMO = *(II->memoperands_begin());
+  LocationSize OldLoc = OldMMO->getSize();
+  assert(OldLoc.isPrecise() && OldLoc.getValue().isKnownMultipleOf(NF));
+  TypeSize NewSize = OldLoc.getValue().divideCoefficientBy(NF);
   auto *NewMMO = MF.getMachineMemOperand(OldMMO, OldMMO->getOffset(),
-                                         LocationSize::beforeOrAfterPointer());
+                                         LocationSize::precise(NewSize));
   for (unsigned I = 0; I < NF; ++I) {
     // Adding implicit-use of super register to describe we are using part of
     // super register, that prevents machine verifier complaining when part of
@@ -488,8 +491,11 @@ void RISCVRegisterInfo::lowerVRELOAD(MachineBasicBlock::iterator II) const {
   bool IsBaseKill = II->getOperand(1).isKill();
   Register NewBase = MRI.createVirtualRegister(&RISCV::GPRRegClass);
   auto *OldMMO = *(II->memoperands_begin());
+  LocationSize OldLoc = OldMMO->getSize();
+  assert(OldLoc.isPrecise() && OldLoc.getValue().isKnownMultipleOf(NF));
+  TypeSize NewSize = OldLoc.getValue().divideCoefficientBy(NF);
   auto *NewMMO = MF.getMachineMemOperand(OldMMO, OldMMO->getOffset(),
-                                         LocationSize::beforeOrAfterPointer());
+                                         LocationSize::precise(NewSize));
   for (unsigned I = 0; I < NF; ++I) {
     BuildMI(MBB, II, DL, TII->get(Opcode),
             TRI->getSubReg(DestReg, SubRegIdx + I))
