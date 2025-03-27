@@ -106,16 +106,14 @@ private:
     _LIBCPP_ASSERT_INTERNAL(
         __current <= __end, "__bounded_iter(current, begin, end): current and end are inconsistent");
 
-    // However, this order is important to help the compiler reason about bounds checks. For example, `std::vector` sets
-    // `__end_ptr` to the capacity, not the true container end. To translate container-end fenceposts into hardening-end
-    // fenceposts, we must know that container-end <= hardening-end. `std::__to_address` is needed because `_Iterator`
-    // may be wrapped type, such that `operator<=` has side effects.
+    // Add assumptions to help the compiler reason about bounds checks. For example, std::vector sets the end of
+    // the __bounded_iter's valid range to the capacity of the vector, not vector::end(). To translate container-end
+    // fenceposts into hardening-end fenceposts, we must know that container-end <= hardening-end.
     pointer __begin_ptr   = std::__to_address(__begin);
     pointer __current_ptr = std::__to_address(__current);
     pointer __end_ptr     = std::__to_address(__end);
     _LIBCPP_ASSUME(__begin_ptr <= __current_ptr);
     _LIBCPP_ASSUME(__current_ptr <= __end_ptr);
-    // Silence warnings when assumptions are disabled.
     (void)__begin_ptr;
     (void)__current_ptr;
     (void)__end_ptr;
