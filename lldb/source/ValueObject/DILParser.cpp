@@ -26,23 +26,22 @@
 
 namespace lldb_private::dil {
 
-DILDiagnosticError::DILDiagnosticError(ErrorCode ec, llvm::StringRef expr,
+DILDiagnosticError::DILDiagnosticError(llvm::StringRef expr,
                                        const std::string &message, uint32_t loc,
                                        uint16_t err_len)
-    : // ErrorInfo(ec) {
-      ErrorInfo(std::error_code(EINVAL, std::generic_category())) {
+    : ErrorInfo(make_error_code(std::errc::invalid_argument)) {
   DiagnosticDetail::SourceLocation sloc = {
       FileSpec{}, /*line=*/1, static_cast<uint16_t>(loc + 1),
       err_len,    false,      /*in_user_input=*/true};
   std::string rendered_msg =
-      llvm::formatv("<user expression 0>:1:{0}: {1}\n    1 | {2}\n     | ^",
+      llvm::formatv("<user expression 0>:1:{0}: {1}\n   1 | {2}\n     | ^",
                     loc + 1, message, expr);
   DiagnosticDetail detail;
   detail.source_location = sloc;
   detail.severity = lldb::eSeverityError;
   detail.message = message;
   detail.rendered = rendered_msg;
-  m_details.push_back(detail);
+  m_detail = std::move(detail);
 }
 
 llvm::Expected<ASTNodeUP>
@@ -50,28 +49,36 @@ DILParser::Parse(llvm::StringRef dil_input_expr, DILLexer lexer,
                  std::shared_ptr<StackFrame> frame_sp,
                  lldb::DynamicValueType use_dynamic, bool use_synthetic,
                  bool fragile_ivar, bool check_ptr_vs_member) {
-  Status error;
+  Status lldb_error;
+  // Cannot declare an llvm::Error without initializing it to something, because
+  // llvm::Error::Error() constructor is protected. If there's a better way to
+  // handle this, please let me know.
+  llvm::Error error(lldb_error.takeError());
   DILParser parser(dil_input_expr, lexer, frame_sp, use_dynamic, use_synthetic,
                    fragile_ivar, check_ptr_vs_member, error);
-  return parser.Run();
+
+  ASTNodeUP node_up = parser.Run();
+
+  if (error)
+    return error;
+
+  return node_up;
 }
 
 DILParser::DILParser(llvm::StringRef dil_input_expr, DILLexer lexer,
                      std::shared_ptr<StackFrame> frame_sp,
                      lldb::DynamicValueType use_dynamic, bool use_synthetic,
-                     bool fragile_ivar, bool check_ptr_vs_member, Status &error)
-    : m_ctx_scope(frame_sp), m_input_expr(dil_input_expr), m_dil_lexer(lexer),
-      m_error(error), m_use_dynamic(use_dynamic),
+                     bool fragile_ivar, bool check_ptr_vs_member,
+                     llvm::Error &error)
+    : m_ctx_scope(frame_sp), m_input_expr(dil_input_expr),
+      m_dil_lexer(std::move(lexer)), m_error(error), m_use_dynamic(use_dynamic),
       m_use_synthetic(use_synthetic), m_fragile_ivar(fragile_ivar),
       m_check_ptr_vs_member(check_ptr_vs_member) {}
 
-llvm::Expected<ASTNodeUP> DILParser::Run() {
+ASTNodeUP DILParser::Run() {
   ASTNodeUP expr = ParseExpression();
 
   Expect(Token::Kind::eof);
-
-  if (m_error.Fail())
-    return m_error.ToError();
 
   return expr;
 }
@@ -97,7 +104,9 @@ ASTNodeUP DILParser::ParsePrimaryExpression() {
 
     return std::make_unique<IdentifierNode>(loc, identifier, m_use_dynamic,
                                             m_ctx_scope);
-  } else if (CurToken().Is(Token::l_paren)) {
+  }
+
+  if (CurToken().Is(Token::l_paren)) {
     m_dil_lexer.Advance();
     auto expr = ParseExpression();
     Expect(Token::r_paren);
@@ -121,9 +130,8 @@ ASTNodeUP DILParser::ParsePrimaryExpression() {
 std::string DILParser::ParseNestedNameSpecifier() {
   // The first token in nested_name_specifier is always an identifier, or
   // '(anonymous namespace)'.
-  if (CurToken().IsNot(Token::identifier) && CurToken().IsNot(Token::l_paren)) {
+  if (CurToken().IsNot(Token::identifier) && CurToken().IsNot(Token::l_paren))
     return "";
-  }
 
   // Anonymous namespaces need to be treated specially: They are represented
   // the the string '(anonymous namespace)', which has a space in it (throwing
@@ -207,7 +215,7 @@ std::string DILParser::ParseIdExpression() {
 
   // No nested_name_specifier, but with global scope -- this is also a
   // qualified_id production. Follow the second production rule.
-  else if (global_scope) {
+  if (global_scope) {
     Expect(Token::identifier);
     std::string identifier = CurToken().GetSpelling();
     m_dil_lexer.Advance();
@@ -242,25 +250,24 @@ Status GetStatusError(DILDiagnosticError dil_error) {
 
 void DILParser::BailOut(ErrorCode code, const std::string &error,
                         uint32_t loc) {
-  if (m_error.Fail()) {
+  if (m_error)
     // If error is already set, then the parser is in the "bail-out" mode. Don't
     // do anything and keep the original error.
     return;
-  }
 
-  m_error = GetStatusError(DILDiagnosticError(
-      code, m_input_expr, error, loc, CurToken().GetSpelling().length()));
+  m_error = llvm::make_error<DILDiagnosticError>(
+      m_input_expr, error, loc, CurToken().GetSpelling().length());
   // Advance the lexer token index to the end of the lexed tokens vector.
   m_dil_lexer.ResetTokenIdx(m_dil_lexer.NumLexedTokens() - 1);
 }
 
 void DILParser::BailOut(Status error) {
-  if (m_error.Fail()) {
+  if (m_error)
     // If error is already set, then the parser is in the "bail-out" mode. Don't
     // do anything and keep the original error.
     return;
-  }
-  m_error = std::move(error);
+
+  m_error = error.ToError();
   // Advance the lexer token index to the end of the lexed tokens vector.
   m_dil_lexer.ResetTokenIdx(m_dil_lexer.NumLexedTokens() - 1);
 }

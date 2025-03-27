@@ -34,25 +34,26 @@ enum class ErrorCode : unsigned char {
 // The following is modeled on class OptionParseError.
 class DILDiagnosticError
     : public llvm::ErrorInfo<DILDiagnosticError, DiagnosticError> {
-  std::vector<DiagnosticDetail> m_details;
+  DiagnosticDetail m_detail;
 
 public:
   using llvm::ErrorInfo<DILDiagnosticError, DiagnosticError>::ErrorInfo;
   DILDiagnosticError(DiagnosticDetail detail)
-      : ErrorInfo(std::error_code(EINVAL, std::generic_category())),
-        m_details({detail}) {}
+      : ErrorInfo(make_error_code(std::errc::invalid_argument)),
+        m_detail(std::move(detail)) {}
 
-  DILDiagnosticError(ErrorCode ec, llvm::StringRef expr,
-                     const std::string &message, uint32_t loc,
-                     uint16_t err_len);
+  DILDiagnosticError(llvm::StringRef expr, const std::string &message,
+                     uint32_t loc, uint16_t err_len);
 
   std::unique_ptr<CloneableError> Clone() const override {
-    return std::make_unique<DILDiagnosticError>(m_details[0]);
+    return std::make_unique<DILDiagnosticError>(m_detail);
   }
 
   llvm::ArrayRef<DiagnosticDetail> GetDetails() const override {
-    return m_details;
+    return {m_detail};
   }
+
+  std::string message() const override { return m_detail.rendered; }
 };
 
 // This is needed, at the moment, because the code that calls the 'frame
@@ -83,9 +84,9 @@ private:
                      std::shared_ptr<StackFrame> frame_sp,
                      lldb::DynamicValueType use_dynamic, bool use_synthetic,
                      bool fragile_ivar, bool check_ptr_vs_member,
-                     Status &error);
+                     llvm::Error &error);
 
-  llvm::Expected<ASTNodeUP> Run();
+  ASTNodeUP Run();
 
   ASTNodeUP ParseExpression();
   ASTNodeUP ParsePrimaryExpression();
@@ -102,7 +103,6 @@ private:
   void Expect(Token::Kind kind);
 
   void TentativeParsingRollback(uint32_t saved_idx) {
-    m_error.Clear();
     m_dil_lexer.ResetTokenIdx(saved_idx);
   }
 
@@ -118,7 +118,7 @@ private:
   DILLexer m_dil_lexer;
 
   // Holds an error if it occures during parsing.
-  Status &m_error;
+  llvm::Error &m_error;
 
   lldb::DynamicValueType m_use_dynamic;
   bool m_use_synthetic;

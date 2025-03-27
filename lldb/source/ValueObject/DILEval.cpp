@@ -226,10 +226,8 @@ Interpreter::Visit(const IdentifierNode *node) {
   if (!identifier) {
     std::string errMsg =
         llvm::formatv("use of undeclared identifier '{0}'", node->GetName());
-    Status error = GetStatusError(
-        DILDiagnosticError(ErrorCode::kUndeclaredIdentifier, m_expr, errMsg,
-                           node->GetLocation(), node->GetName().size()));
-    return error.ToError();
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, errMsg, node->GetLocation(), node->GetName().size());
   }
 
   return identifier;
