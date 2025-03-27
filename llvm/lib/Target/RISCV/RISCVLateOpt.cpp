@@ -89,8 +89,6 @@ bool RISCVLateOpt::trySimplifyCondBr(
     } else
       MBB.addSuccessor(Folded);
 
-    TBB = Folded;
-    FBB = nullptr;
     return true;
   }
 
