@@ -62,6 +62,13 @@ entry:
 
 ; // -----
 
+@glob.private2 = private constant [32 x i32] zeroinitializer
+@glob2 = weak_odr hidden alias [32 x i32], inttoptr (i64 add (i64 ptrtoint (ptr @glob.private2 to i64), i64 1234) to ptr)
+
+; CHECK: llvm.mlir.alias weak_odr hidden @glob2 {dso_local} : !llvm.array<32 x i32> {
+
+; // -----
+
 @g1 = private global i32 0
 @g2 = internal constant ptr @a1
 @g3 = internal constant ptr @a2

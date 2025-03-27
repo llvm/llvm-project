@@ -2,8 +2,8 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG:  %[[#uint_ty:]] = OpTypeInt 32 0
-; CHECK-DAG:   %[[#uint_0:]] = OpConstant %[[#uint_ty]] 0
-; CHECK-DAG:   %[[#int_10:]] = OpConstant %[[#uint_ty]] 10
+; CHECK-DAG:   %[[#uint_0:]] = OpConstant %[[#uint_ty]] 0{{$}}
+; CHECK-DAG:   %[[#int_10:]] = OpConstant %[[#uint_ty]] 10{{$}}
 ; CHECK-DAG: %[[#array_ty:]] = OpTypeArray %[[#uint_ty]] %[[#int_10]]
 ; CHECK-DAG: %[[#array_fp:]] = OpTypePointer Function %[[#array_ty]]
 ; CHECK-DAG: %[[#array_pp:]] = OpTypePointer Private %[[#array_ty]]
