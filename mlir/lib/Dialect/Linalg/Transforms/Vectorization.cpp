@@ -1670,7 +1670,8 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
   rewriter.setInsertionPoint(unpackOp);
 
   // TODO: support non-ranked tensor types. ShapedType
-  RankedTensorType unpackTensorType = dyn_cast<RankedTensorType>(unpackOp.getSourceType());
+  RankedTensorType unpackTensorType =
+      dyn_cast<RankedTensorType>(unpackOp.getSourceType());
 
   ArrayRef<int64_t> innerDimPos = unpackOp.getInnerDimsPos();
   ArrayRef<int64_t> innerTiles = unpackOp.getStaticInnerTiles();
