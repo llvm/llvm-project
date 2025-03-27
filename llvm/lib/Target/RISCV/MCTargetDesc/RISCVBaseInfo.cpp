@@ -247,7 +247,7 @@ void RISCVZC::printRlist(unsigned SlistEncode, raw_ostream &OS) {
     if (SlistEncode == RISCVZC::RA_S0_S11)
       OS << "-s11";
     else if (SlistEncode > RISCVZC::RA_S0 && SlistEncode <= RISCVZC::RA_S0_S11)
-      OS << "-s" << (SlistEncode - 5);
+      OS << "-s" << (SlistEncode - RISCVZC::RA_S0);
   }
   OS << "}";
 }
