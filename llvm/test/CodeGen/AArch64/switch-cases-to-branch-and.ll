@@ -4,30 +4,24 @@
 define i32 @switch_with_matching_dests_0_and_pow2_3_cases(i8 %v) {
 ; CHECK-LABEL: switch_with_matching_dests_0_and_pow2_3_cases:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    mov w9, #100 ; =0x64
-; CHECK-NEXT:    mov w8, #20 ; =0x14
+; CHECK-NEXT:    mov w8, #100 ; =0x64
+; CHECK-NEXT:    mov w9, #223 ; =0xdf
 ; CHECK-NEXT:  LBB0_1: ; %loop.header
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ands w10, w0, #0xff
-; CHECK-NEXT:    b.eq LBB0_6
-; CHECK-NEXT:  ; %bb.2: ; %loop.header
-; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    cmp w10, #32
-; CHECK-NEXT:    b.eq LBB0_6
-; CHECK-NEXT:  ; %bb.3: ; %loop.header
-; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    tst w0, w9
+; CHECK-NEXT:    b.eq LBB0_4
+; CHECK-NEXT:  ; %bb.2: ; in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    and w10, w0, #0xff
 ; CHECK-NEXT:    cmp w10, #124
-; CHECK-NEXT:    b.eq LBB0_7
-; CHECK-NEXT:  ; %bb.4: ; %loop.latch
+; CHECK-NEXT:    b.eq LBB0_5
+; CHECK-NEXT:  ; %bb.3: ; %loop.latch
 ; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    subs w9, w9, #1
+; CHECK-NEXT:    subs w8, w8, #1
 ; CHECK-NEXT:    b.ne LBB0_1
-; CHECK-NEXT:  ; %bb.5:
-; CHECK-NEXT:    mov w8, #20 ; =0x14
-; CHECK-NEXT:  LBB0_6: ; %common.ret
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:  LBB0_4:
+; CHECK-NEXT:    mov w0, #20 ; =0x14
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  LBB0_7: ; %e2
+; CHECK-NEXT:  LBB0_5: ; %e2
 ; CHECK-NEXT:    mov w0, #30 ; =0x1e
 ; CHECK-NEXT:    ret
 entry:

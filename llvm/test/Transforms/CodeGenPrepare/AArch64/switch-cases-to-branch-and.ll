@@ -9,11 +9,12 @@ define i32 @switch_with_matching_dests_0_and_pow2_3_cases(i8 %v) {
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[V]] to i32
-; CHECK-NEXT:    switch i32 [[TMP3]], label %[[LOOP_LATCH]] [
-; CHECK-NEXT:      i32 32, label %[[E1:.*]]
-; CHECK-NEXT:      i32 0, label %[[E1]]
-; CHECK-NEXT:      i32 124, label %[[E2:.*]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP3]], -33
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[E1:.*]], label %[[BB3:.*]]
+; CHECK:       [[BB3]]:
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[TMP3]], 124
+; CHECK-NEXT:    br i1 [[COND]], label %[[E2:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[IV_NEXT]], 100
@@ -54,11 +55,12 @@ define i32 @switch_with_matching_dests_0_and_pow2_3_cases_swapped(i8 %v) {
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[V]] to i32
-; CHECK-NEXT:    switch i32 [[TMP3]], label %[[LOOP_LATCH]] [
-; CHECK-NEXT:      i32 0, label %[[E1:.*]]
-; CHECK-NEXT:      i32 32, label %[[E1]]
-; CHECK-NEXT:      i32 124, label %[[E2:.*]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP3]], -33
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[E1:.*]], label %[[BB3:.*]]
+; CHECK:       [[BB3]]:
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[TMP3]], 124
+; CHECK-NEXT:    br i1 [[COND]], label %[[E2:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[IV_NEXT]], 100
@@ -106,11 +108,12 @@ define i32 @switch_with_matching_dests_0_and_pow2_3_cases_with_phi(i8 %v, i1 %c)
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[THEN]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i8 [[V]] to i32
-; CHECK-NEXT:    switch i32 [[TMP0]], label %[[LOOP_LATCH]] [
-; CHECK-NEXT:      i32 32, label %[[E1]]
-; CHECK-NEXT:      i32 0, label %[[E1]]
-; CHECK-NEXT:      i32 124, label %[[E2:.*]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], -33
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[E1]], label %[[BB3:.*]]
+; CHECK:       [[BB3]]:
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[TMP0]], 124
+; CHECK-NEXT:    br i1 [[COND]], label %[[E2:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 100
@@ -118,7 +121,7 @@ define i32 @switch_with_matching_dests_0_and_pow2_3_cases_with_phi(i8 %v, i1 %c)
 ; CHECK:       [[E0]]:
 ; CHECK-NEXT:    ret i32 10
 ; CHECK:       [[E1]]:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ 20, %[[LOOP_HEADER]] ], [ 20, %[[LOOP_HEADER]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ 20, %[[LOOP_HEADER]] ]
 ; CHECK-NEXT:    ret i32 [[P]]
 ; CHECK:       [[E2]]:
 ; CHECK-NEXT:    ret i32 30
@@ -214,19 +217,20 @@ define i32 @switch_in_loop_with_matching_dests_0_and_pow2_3_cases(ptr %start) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[START]], %[[ENTRY]] ], [ [[TMP0:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[START]], %[[ENTRY]] ], [ [[TMP0:%.*]], %[[TMP4:.*]] ]
 ; CHECK-NEXT:    [[TMP0]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
 ; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[TMP0]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[L]] to i32
-; CHECK-NEXT:    switch i32 [[TMP1]], label %[[LOOP]] [
-; CHECK-NEXT:      i32 32, label %[[E1:.*]]
-; CHECK-NEXT:      i32 0, label %[[E1]]
-; CHECK-NEXT:      i32 124, label %[[E2:.*]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP1]], -33
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP5]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[E1:.*]], label %[[TMP4]]
+; CHECK:       [[TMP4]]:
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[TMP1]], 124
+; CHECK-NEXT:    br i1 [[COND]], label %[[E2:.*]], label %[[LOOP]]
 ; CHECK:       [[E1]]:
 ; CHECK-NEXT:    br label %[[E2]]
 ; CHECK:       [[E2]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ -1, %[[E1]] ], [ 0, %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ -1, %[[E1]] ], [ 0, %[[TMP4]] ]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
@@ -256,20 +260,22 @@ define i32 @switch_in_loop_with_matching_dests_0_and_pow2_4_cases(ptr %start) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[START]], %[[ENTRY]] ], [ [[TMP0:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[START]], %[[ENTRY]] ], [ [[TMP0:%.*]], %[[TMP4:.*]] ]
 ; CHECK-NEXT:    [[TMP0]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
 ; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[TMP0]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[L]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP1]], -33
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP5]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[E1:.*]], label %[[TMP4]]
+; CHECK:       [[TMP4]]:
 ; CHECK-NEXT:    switch i32 [[TMP1]], label %[[LOOP]] [
-; CHECK-NEXT:      i32 0, label %[[E1:.*]]
-; CHECK-NEXT:      i32 15, label %[[E1]]
-; CHECK-NEXT:      i32 32, label %[[E1]]
 ; CHECK-NEXT:      i32 124, label %[[E2:.*]]
+; CHECK-NEXT:      i32 15, label %[[E1]]
 ; CHECK-NEXT:    ]
 ; CHECK:       [[E1]]:
 ; CHECK-NEXT:    br label %[[E2]]
 ; CHECK:       [[E2]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ -1, %[[E1]] ], [ 0, %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ -1, %[[E1]] ], [ 0, %[[TMP4]] ]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:

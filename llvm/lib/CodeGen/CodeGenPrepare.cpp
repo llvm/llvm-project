@@ -441,7 +441,8 @@ private:
   bool optimizeShuffleVectorInst(ShuffleVectorInst *SVI);
   bool optimizeSwitchType(SwitchInst *SI);
   bool optimizeSwitchPhiConstants(SwitchInst *SI);
-  bool optimizeSwitchInst(SwitchInst *SI);
+  bool optimizeSwitchPow2Constant(SwitchInst *SI, ModifyDT &ModifiedDT);
+  bool optimizeSwitchInst(SwitchInst *SI, ModifyDT &ModifiedDT);
   bool optimizeExtractElementInst(Instruction *Inst);
   bool dupRetToEnableTailCallOpts(BasicBlock *BB, ModifyDT &ModifiedDT);
   bool fixupDbgValue(Instruction *I);
@@ -7888,9 +7889,80 @@ bool CodeGenPrepare::optimizeSwitchPhiConstants(SwitchInst *SI) {
   return Changed;
 }
 
-bool CodeGenPrepare::optimizeSwitchInst(SwitchInst *SI) {
+bool CodeGenPrepare::optimizeSwitchPow2Constant(SwitchInst *SI,
+                                                ModifyDT &ModifiedDT) {
+  // Try to split off and combine a case with 0 and a power-of-2 together to a
+  // single check and branch.
+
+  // Bail out if there either aren't enough cases to fold or too many.
+  if (SI->getNumCases() < 2 || SI->getNumCases() >= 8)
+    return false;
+
+  // Collect cases and sort them so that power-of-2s come first in ascending
+  // order.
+  SmallVector<std::pair<APInt, BasicBlock *>> Cases;
+  for (auto &C : SI->cases())
+    Cases.emplace_back(C.getCaseValue()->getValue(), C.getCaseSuccessor());
+  sort(Cases, [](const auto &A, const auto &B) {
+    const APInt &AV = A.first;
+    const APInt &BV = B.first;
+    if (AV.isPowerOf2() != BV.isPowerOf2())
+      return AV.isPowerOf2();
+    return AV.ult(BV);
+  });
+
+  // Bail out if we don't have a single power-of-2 constant, followed by zero
+  // with a common destination.
+  // TODO: could support multiple power-of-2s by just picking one.
+  BasicBlock *Dst = Cases[0].second;
+  APInt Pow2 = Cases[0].first;
+  if (Dst != Cases[1].second || !Cases[1].first.isZero() || !Pow2.isPowerOf2())
+    return false;
+
+  // Limit the transform to switches leaving loops for now.
+  if (LI->getLoopFor(Dst) == LI->getLoopFor(SI->getParent()))
+    return false;
+
+  // Check if there are case values before/after the power-of-2 that are
+  // consecutive. In that case, they can be generated as range-checks.
+  sort(Cases,
+       [](const auto &A, const auto &B) { return A.first.ult(B.first); });
+  auto Idx = find_if(Cases, [Pow2](const auto &C) { return C.first == Pow2; });
+  bool Increasing = Idx + 1 != Cases.end() && (Idx + 1)->second == Dst &&
+                    Idx->first + 1 == (Idx + 1)->first;
+  bool Decreasing = Idx != Cases.begin() && (Idx - 1)->second == Dst &&
+                    Idx->first - 1 == (Idx - 1)->first;
+  if (Increasing || Decreasing)
+    return false;
+
+  auto *OldBB = SI->getParent();
+  auto *NewBB = OldBB->splitBasicBlock(OldBB->getTerminator()->getIterator());
+  OldBB->getTerminator()->eraseFromParent();
+  IRBuilder<> B(OldBB);
+  auto *Pow2CI = ConstantInt::get(OldBB->getContext(), Pow2);
+  auto *And = B.CreateAnd(
+      SI->getCondition(),
+      B.CreateNeg(B.CreateAdd(Pow2CI, B.getIntN(Pow2.getBitWidth(), 1))));
+  auto *C = B.CreateICmpEQ(And, B.getIntN(Pow2.getBitWidth(), 0));
+  B.CreateCondBr(C, Dst, SI->getParent());
+  SI->removeCase(
+      SI->findCaseValue(ConstantInt::get(OldBB->getContext(), Cases[0].first)));
+  SI->removeCase(SI->findCaseValue(Pow2CI));
+
+  for (auto &P : Dst->phis()) {
+    P.addIncoming(P.getIncomingValueForBlock(NewBB), OldBB);
+    P.removeIncomingValue(NewBB);
+    P.removeIncomingValue(NewBB);
+  }
+
+  ModifiedDT = ModifyDT::ModifyBBDT;
+  return true;
+}
+
+bool CodeGenPrepare::optimizeSwitchInst(SwitchInst *SI, ModifyDT &ModifiedDT) {
   bool Changed = optimizeSwitchType(SI);
   Changed |= optimizeSwitchPhiConstants(SI);
+  Changed |= optimizeSwitchPow2Constant(SI, ModifiedDT);
   return Changed;
 }
 
@@ -8815,7 +8887,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
   case Instruction::ShuffleVector:
     return optimizeShuffleVectorInst(cast<ShuffleVectorInst>(I));
   case Instruction::Switch:
-    return optimizeSwitchInst(cast<SwitchInst>(I));
+    return optimizeSwitchInst(cast<SwitchInst>(I), ModifiedDT);
   case Instruction::ExtractElement:
     return optimizeExtractElementInst(cast<ExtractElementInst>(I));
   case Instruction::Br:
