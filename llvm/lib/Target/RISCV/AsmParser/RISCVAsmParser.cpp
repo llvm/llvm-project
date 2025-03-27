@@ -477,7 +477,7 @@ public:
   bool isSystemRegister() const { return Kind == KindTy::SystemRegister; }
   bool isRegReg() const { return Kind == KindTy::RegReg; }
   bool isRlist() const { return Kind == KindTy::Rlist; }
-  bool isRlistS0() const { return Kind == KindTy::Rlist && Rlist.Val != 4; }
+  bool isRlistS0() const { return Kind == KindTy::Rlist && Rlist.Val != RISCVZC::RA; }
   bool isSpimm() const { return Kind == KindTy::Spimm; }
 
   bool isGPR() const {
