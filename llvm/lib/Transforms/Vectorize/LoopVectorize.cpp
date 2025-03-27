@@ -7325,8 +7325,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
       continue;
 
     const auto &ChainOps = RdxDesc.getReductionOpChain(RedPhi, OrigLoop);
-    SetVector<Instruction *> ChainOpsAndOperands(ChainOps.begin(),
-                                                 ChainOps.end());
+    SetVector<Instruction *> ChainOpsAndOperands(llvm::from_range, ChainOps);
     auto IsZExtOrSExt = [](const unsigned Opcode) -> bool {
       return Opcode == Instruction::ZExt || Opcode == Instruction::SExt;
     };
