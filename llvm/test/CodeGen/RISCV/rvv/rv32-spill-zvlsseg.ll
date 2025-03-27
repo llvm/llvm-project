@@ -22,11 +22,11 @@ define <vscale x 1 x i32> @spill_zvlsseg_nxv1i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O0-NEXT:    vsetvli zero, a1, e32, mf2, tu, ma
 ; SPILL-O0-NEXT:    vmv1r.v v8, v9
 ; SPILL-O0-NEXT:    addi a0, sp, 16
-; SPILL-O0-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; SPILL-O0-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
 ; SPILL-O0-NEXT:    #APP
 ; SPILL-O0-NEXT:    #NO_APP
 ; SPILL-O0-NEXT:    addi a0, sp, 16
-; SPILL-O0-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
+; SPILL-O0-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
 ; SPILL-O0-NEXT:    csrr a0, vlenb
 ; SPILL-O0-NEXT:    add sp, sp, a0
 ; SPILL-O0-NEXT:    addi sp, sp, 16
@@ -90,11 +90,11 @@ define <vscale x 1 x i32> @spill_zvlsseg_nxv1i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O0-VSETVLI-NEXT:    vsetvli zero, a1, e32, mf2, tu, ma
 ; SPILL-O0-VSETVLI-NEXT:    vmv1r.v v8, v9
 ; SPILL-O0-VSETVLI-NEXT:    addi a0, sp, 16
-; SPILL-O0-VSETVLI-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; SPILL-O0-VSETVLI-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
 ; SPILL-O0-VSETVLI-NEXT:    #APP
 ; SPILL-O0-VSETVLI-NEXT:    #NO_APP
 ; SPILL-O0-VSETVLI-NEXT:    addi a0, sp, 16
-; SPILL-O0-VSETVLI-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
+; SPILL-O0-VSETVLI-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
 ; SPILL-O0-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; SPILL-O0-VSETVLI-NEXT:    add sp, sp, a0
 ; SPILL-O0-VSETVLI-NEXT:    addi sp, sp, 16
@@ -142,11 +142,11 @@ define <vscale x 2 x i32> @spill_zvlsseg_nxv2i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O0-NEXT:    vsetvli zero, a1, e32, m1, tu, ma
 ; SPILL-O0-NEXT:    vmv1r.v v8, v9
 ; SPILL-O0-NEXT:    addi a0, sp, 16
-; SPILL-O0-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; SPILL-O0-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
 ; SPILL-O0-NEXT:    #APP
 ; SPILL-O0-NEXT:    #NO_APP
 ; SPILL-O0-NEXT:    addi a0, sp, 16
-; SPILL-O0-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
+; SPILL-O0-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
 ; SPILL-O0-NEXT:    csrr a0, vlenb
 ; SPILL-O0-NEXT:    add sp, sp, a0
 ; SPILL-O0-NEXT:    addi sp, sp, 16
@@ -210,11 +210,11 @@ define <vscale x 2 x i32> @spill_zvlsseg_nxv2i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O0-VSETVLI-NEXT:    vsetvli zero, a1, e32, m1, tu, ma
 ; SPILL-O0-VSETVLI-NEXT:    vmv1r.v v8, v9
 ; SPILL-O0-VSETVLI-NEXT:    addi a0, sp, 16
-; SPILL-O0-VSETVLI-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; SPILL-O0-VSETVLI-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
 ; SPILL-O0-VSETVLI-NEXT:    #APP
 ; SPILL-O0-VSETVLI-NEXT:    #NO_APP
 ; SPILL-O0-VSETVLI-NEXT:    addi a0, sp, 16
-; SPILL-O0-VSETVLI-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
+; SPILL-O0-VSETVLI-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
 ; SPILL-O0-VSETVLI-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; SPILL-O0-VSETVLI-NEXT:    add sp, sp, a0
 ; SPILL-O0-VSETVLI-NEXT:    addi sp, sp, 16
@@ -263,11 +263,11 @@ define <vscale x 4 x i32> @spill_zvlsseg_nxv4i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O0-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
 ; SPILL-O0-NEXT:    vmv2r.v v8, v10
 ; SPILL-O0-NEXT:    addi a0, sp, 16
-; SPILL-O0-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
+; SPILL-O0-NEXT:    vs2r.v v8, (a0) # vscale x 16-byte Folded Spill
 ; SPILL-O0-NEXT:    #APP
 ; SPILL-O0-NEXT:    #NO_APP
 ; SPILL-O0-NEXT:    addi a0, sp, 16
-; SPILL-O0-NEXT:    vl2r.v v8, (a0) # Unknown-size Folded Reload
+; SPILL-O0-NEXT:    vl2r.v v8, (a0) # vscale x 16-byte Folded Reload
 ; SPILL-O0-NEXT:    csrr a0, vlenb
 ; SPILL-O0-NEXT:    slli a0, a0, 1
 ; SPILL-O0-NEXT:    add sp, sp, a0
@@ -335,11 +335,11 @@ define <vscale x 4 x i32> @spill_zvlsseg_nxv4i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O0-VSETVLI-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
 ; SPILL-O0-VSETVLI-NEXT:    vmv2r.v v8, v10
 ; SPILL-O0-VSETVLI-NEXT:    addi a0, sp, 16
-; SPILL-O0-VSETVLI-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
+; SPILL-O0-VSETVLI-NEXT:    vs2r.v v8, (a0) # vscale x 16-byte Folded Spill
 ; SPILL-O0-VSETVLI-NEXT:    #APP
 ; SPILL-O0-VSETVLI-NEXT:    #NO_APP
 ; SPILL-O0-VSETVLI-NEXT:    addi a0, sp, 16
-; SPILL-O0-VSETVLI-NEXT:    vl2r.v v8, (a0) # Unknown-size Folded Reload
+; SPILL-O0-VSETVLI-NEXT:    vl2r.v v8, (a0) # vscale x 16-byte Folded Reload
 ; SPILL-O0-VSETVLI-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; SPILL-O0-VSETVLI-NEXT:    add sp, sp, a0
 ; SPILL-O0-VSETVLI-NEXT:    addi sp, sp, 16
@@ -391,11 +391,11 @@ define <vscale x 8 x i32> @spill_zvlsseg_nxv8i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O0-NEXT:    vsetvli zero, a1, e32, m4, tu, ma
 ; SPILL-O0-NEXT:    vmv4r.v v8, v12
 ; SPILL-O0-NEXT:    addi a0, sp, 16
-; SPILL-O0-NEXT:    vs4r.v v8, (a0) # Unknown-size Folded Spill
+; SPILL-O0-NEXT:    vs4r.v v8, (a0) # vscale x 32-byte Folded Spill
 ; SPILL-O0-NEXT:    #APP
 ; SPILL-O0-NEXT:    #NO_APP
 ; SPILL-O0-NEXT:    addi a0, sp, 16
-; SPILL-O0-NEXT:    vl4r.v v8, (a0) # Unknown-size Folded Reload
+; SPILL-O0-NEXT:    vl4r.v v8, (a0) # vscale x 32-byte Folded Reload
 ; SPILL-O0-NEXT:    csrr a0, vlenb
 ; SPILL-O0-NEXT:    slli a0, a0, 2
 ; SPILL-O0-NEXT:    add sp, sp, a0
@@ -463,11 +463,11 @@ define <vscale x 8 x i32> @spill_zvlsseg_nxv8i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O0-VSETVLI-NEXT:    vsetvli zero, a1, e32, m4, tu, ma
 ; SPILL-O0-VSETVLI-NEXT:    vmv4r.v v8, v12
 ; SPILL-O0-VSETVLI-NEXT:    addi a0, sp, 16
-; SPILL-O0-VSETVLI-NEXT:    vs4r.v v8, (a0) # Unknown-size Folded Spill
+; SPILL-O0-VSETVLI-NEXT:    vs4r.v v8, (a0) # vscale x 32-byte Folded Spill
 ; SPILL-O0-VSETVLI-NEXT:    #APP
 ; SPILL-O0-VSETVLI-NEXT:    #NO_APP
 ; SPILL-O0-VSETVLI-NEXT:    addi a0, sp, 16
-; SPILL-O0-VSETVLI-NEXT:    vl4r.v v8, (a0) # Unknown-size Folded Reload
+; SPILL-O0-VSETVLI-NEXT:    vl4r.v v8, (a0) # vscale x 32-byte Folded Reload
 ; SPILL-O0-VSETVLI-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; SPILL-O0-VSETVLI-NEXT:    add sp, sp, a0
 ; SPILL-O0-VSETVLI-NEXT:    addi sp, sp, 16
@@ -519,11 +519,11 @@ define <vscale x 4 x i32> @spill_zvlsseg3_nxv4i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O0-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
 ; SPILL-O0-NEXT:    vmv2r.v v8, v10
 ; SPILL-O0-NEXT:    addi a0, sp, 16
-; SPILL-O0-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
+; SPILL-O0-NEXT:    vs2r.v v8, (a0) # vscale x 16-byte Folded Spill
 ; SPILL-O0-NEXT:    #APP
 ; SPILL-O0-NEXT:    #NO_APP
 ; SPILL-O0-NEXT:    addi a0, sp, 16
-; SPILL-O0-NEXT:    vl2r.v v8, (a0) # Unknown-size Folded Reload
+; SPILL-O0-NEXT:    vl2r.v v8, (a0) # vscale x 16-byte Folded Reload
 ; SPILL-O0-NEXT:    csrr a0, vlenb
 ; SPILL-O0-NEXT:    slli a0, a0, 1
 ; SPILL-O0-NEXT:    add sp, sp, a0
@@ -601,11 +601,11 @@ define <vscale x 4 x i32> @spill_zvlsseg3_nxv4i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O0-VSETVLI-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
 ; SPILL-O0-VSETVLI-NEXT:    vmv2r.v v8, v10
 ; SPILL-O0-VSETVLI-NEXT:    addi a0, sp, 16
-; SPILL-O0-VSETVLI-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
+; SPILL-O0-VSETVLI-NEXT:    vs2r.v v8, (a0) # vscale x 16-byte Folded Spill
 ; SPILL-O0-VSETVLI-NEXT:    #APP
 ; SPILL-O0-VSETVLI-NEXT:    #NO_APP
 ; SPILL-O0-VSETVLI-NEXT:    addi a0, sp, 16
-; SPILL-O0-VSETVLI-NEXT:    vl2r.v v8, (a0) # Unknown-size Folded Reload
+; SPILL-O0-VSETVLI-NEXT:    vl2r.v v8, (a0) # vscale x 16-byte Folded Reload
 ; SPILL-O0-VSETVLI-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; SPILL-O0-VSETVLI-NEXT:    add sp, sp, a0
 ; SPILL-O0-VSETVLI-NEXT:    addi sp, sp, 16

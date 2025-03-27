@@ -10,21 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ABIInfo.h"
-#include "CGHLSLRuntime.h"
 #include "CGBuiltin.h"
-#include "TargetInfo.h"
+#include "CGHLSLRuntime.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
-#include "llvm/IR/MDBuilder.h"
-#include "llvm/IR/MatrixBuilder.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
-#include "llvm/Support/ConvertUTF.h"
 
 using namespace clang;
 using namespace CodeGen;
