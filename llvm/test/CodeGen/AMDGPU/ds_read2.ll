@@ -1321,19 +1321,19 @@ bb:
 define amdgpu_kernel void @ds_read_call_read(ptr addrspace(1) %out, ptr addrspace(3) %arg) {
 ; CI-LABEL: ds_read_call_read:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_getpc_b64 s[40:41]
-; CI-NEXT:    s_mov_b32 s40, s0
-; CI-NEXT:    s_load_dwordx4 s[40:43], s[40:41], 0x0
+; CI-NEXT:    s_getpc_b64 s[48:49]
+; CI-NEXT:    s_mov_b32 s48, s0
+; CI-NEXT:    s_load_dwordx4 s[48:51], s[48:49], 0x0
 ; CI-NEXT:    s_mov_b32 s14, s10
 ; CI-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
 ; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    s_mov_b32 s12, s8
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    s_add_u32 s40, s40, s11
+; CI-NEXT:    s_add_u32 s48, s48, s11
 ; CI-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; CI-NEXT:    s_load_dwordx2 s[36:37], s[4:5], 0x0
 ; CI-NEXT:    s_load_dword s6, s[4:5], 0x2
-; CI-NEXT:    s_addc_u32 s41, s41, 0
+; CI-NEXT:    s_addc_u32 s49, s49, 0
 ; CI-NEXT:    s_add_u32 s8, s4, 12
 ; CI-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; CI-NEXT:    s_mov_b32 s13, s9
@@ -1345,11 +1345,11 @@ define amdgpu_kernel void @ds_read_call_read(ptr addrspace(1) %out, ptr addrspac
 ; CI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; CI-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; CI-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; CI-NEXT:    s_mov_b64 s[0:1], s[40:41]
+; CI-NEXT:    s_mov_b64 s[0:1], s[48:49]
 ; CI-NEXT:    s_mov_b32 s17, void_func_void@abs32@hi
 ; CI-NEXT:    s_mov_b32 s16, void_func_void@abs32@lo
 ; CI-NEXT:    v_or_b32_e32 v31, v0, v2
-; CI-NEXT:    s_mov_b64 s[2:3], s[42:43]
+; CI-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; CI-NEXT:    s_mov_b32 s32, 0
 ; CI-NEXT:    s_mov_b32 s39, 0xf000
 ; CI-NEXT:    s_mov_b32 s38, -1

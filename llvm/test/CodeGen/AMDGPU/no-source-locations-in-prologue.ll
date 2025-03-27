@@ -188,6 +188,38 @@ define hidden void @_ZL3barv() #0 !dbg !1644 {
 ; CHECK-NEXT:    .cfi_undefined 59
 ; CHECK-NEXT:    .cfi_undefined 60
 ; CHECK-NEXT:    .cfi_undefined 61
+; CHECK-NEXT:    .cfi_undefined 72
+; CHECK-NEXT:    .cfi_undefined 73
+; CHECK-NEXT:    .cfi_undefined 74
+; CHECK-NEXT:    .cfi_undefined 75
+; CHECK-NEXT:    .cfi_undefined 76
+; CHECK-NEXT:    .cfi_undefined 77
+; CHECK-NEXT:    .cfi_undefined 78
+; CHECK-NEXT:    .cfi_undefined 79
+; CHECK-NEXT:    .cfi_undefined 88
+; CHECK-NEXT:    .cfi_undefined 89
+; CHECK-NEXT:    .cfi_undefined 90
+; CHECK-NEXT:    .cfi_undefined 91
+; CHECK-NEXT:    .cfi_undefined 92
+; CHECK-NEXT:    .cfi_undefined 93
+; CHECK-NEXT:    .cfi_undefined 94
+; CHECK-NEXT:    .cfi_undefined 95
+; CHECK-NEXT:    .cfi_undefined 1096
+; CHECK-NEXT:    .cfi_undefined 1097
+; CHECK-NEXT:    .cfi_undefined 1098
+; CHECK-NEXT:    .cfi_undefined 1099
+; CHECK-NEXT:    .cfi_undefined 1100
+; CHECK-NEXT:    .cfi_undefined 1101
+; CHECK-NEXT:    .cfi_undefined 1102
+; CHECK-NEXT:    .cfi_undefined 1103
+; CHECK-NEXT:    .cfi_undefined 1112
+; CHECK-NEXT:    .cfi_undefined 1113
+; CHECK-NEXT:    .cfi_undefined 1114
+; CHECK-NEXT:    .cfi_undefined 1115
+; CHECK-NEXT:    .cfi_undefined 1116
+; CHECK-NEXT:    .cfi_undefined 1117
+; CHECK-NEXT:    .cfi_undefined 1118
+; CHECK-NEXT:    .cfi_undefined 1119
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s16, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
