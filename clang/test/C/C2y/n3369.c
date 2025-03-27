@@ -65,4 +65,38 @@ void test_multidimensional_arrays() {
   int array[12][7];
   static_assert(_Countof(array) == 12);
   static_assert(_Countof(*array) == 7);
+
+  int mdarray[12][7][100][3];
+  static_assert(_Countof(mdarray) == 12);
+  static_assert(_Countof(*mdarray) == 7);
+  static_assert(_Countof(**mdarray) == 100);
+  static_assert(_Countof(***mdarray) == 3);
+}
+
+void test_unspecified_array_length() {
+  static_assert(_Countof(int[])); // expected-error {{invalid application of '_Countof' to an incomplete type 'int[]'}}
+
+  extern int x[][6][3];
+  static_assert(_Countof(x)); // expected-error {{invalid application of '_Countof' to an incomplete type 'int[][6][3]'}}
+  static_assert(_Countof(*x) == 6);
+  static_assert(_Countof(**x) == 3);
+}
+
+// Test that the return type of _Countof is what you'd expect (size_t).
+void test_return_type() {
+  static_assert(_Generic(typeof(_Countof global_array), typeof(sizeof(0)) : 1, default : 0));
+}
+
+// Test that _Countof is able to look through typedefs.
+void test_typedefs() {
+  typedef int foo[12];
+  foo f;
+  static_assert(_Countof(foo) == 12);
+  static_assert(_Countof(f) == 12);
+
+  // Ensure multidimensional arrays also work.
+  foo x[100];
+  static_assert(_Generic(typeof(x), int[100][12] : 1, default : 0));
+  static_assert(_Countof(x) == 100);
+  static_assert(_Countof(*x) == 12);
 }
