@@ -2109,10 +2109,9 @@ TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
     if (isa<LoopOp>(innermostWrapper))
       return TargetRegionFlags::spmd | TargetRegionFlags::trip_count;
 
-    TargetRegionFlags result =
-        TargetRegionFlags::generic | TargetRegionFlags::trip_count;
-
-    // Find single nested parallel-do and add spmd flag (generic-spmd case).
+    // Find single immediately nested captured omp.parallel and add spmd flag
+    // (generic-spmd case).
+    //
     // TODO: This shouldn't have to be done here, as it is too easy to break.
     // The openmp-opt pass should be updated to be able to promote kernels like
     // this from "Generic" to "Generic-SPMD". However, the use of the
@@ -2125,24 +2124,17 @@ TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
                              sibling->hasTrait<OpTrait::IsTerminator>());
         });
 
-    if (!isa_and_present<LoopNestOp>(nestedCapture))
+    TargetRegionFlags result =
+        TargetRegionFlags::generic | TargetRegionFlags::trip_count;
+
+    if (!nestedCapture)
       return result;
 
-    int numNestedWrappers;
-    LoopWrapperInterface *nestedWrapper =
-        getInnermostWrapper(cast<LoopNestOp>(nestedCapture), numNestedWrappers);
+    while (nestedCapture->getParentOp() != capturedOp)
+      nestedCapture = nestedCapture->getParentOp();
 
-    if (numNestedWrappers != 1 || !isa<WsloopOp>(nestedWrapper))
-      return result;
-
-    Operation *parallelOp = (*nestedWrapper)->getParentOp();
-    if (!isa_and_present<ParallelOp>(parallelOp))
-      return result;
-
-    if (parallelOp->getParentOp() != capturedOp)
-      return result;
-
-    return result | TargetRegionFlags::spmd;
+    return isa<ParallelOp>(nestedCapture) ? result | TargetRegionFlags::spmd
+                                          : result;
   }
   // Detect target-parallel-wsloop[-simd].
   else if (isa<WsloopOp>(innermostWrapper)) {
