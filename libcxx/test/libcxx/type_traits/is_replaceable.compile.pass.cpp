@@ -191,7 +191,9 @@ static_assert(std::__is_replaceable<std::deque<int, NonPropagatingStatelessCopyA
 static_assert(std::__is_replaceable<std::deque<int, NonPropagatingStatelessMoveAssignAlloc<int> > >::value, "");
 
 // exception_ptr
+#ifndef _LIBCPP_ABI_MICROSOFT
 static_assert(std::__is_replaceable<std::exception_ptr>::value, "");
+#endif
 
 // expected
 #if TEST_STD_VER >= 23
