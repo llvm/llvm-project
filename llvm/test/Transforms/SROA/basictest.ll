@@ -529,8 +529,9 @@ entry:
 define ptr @test10() {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr null to i64
-; CHECK-NEXT:    ret ptr null
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i8> zeroinitializer to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[TMP0]] to ptr
+; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
 entry:
   %a = alloca [8 x i8]
@@ -1075,26 +1076,13 @@ define void @PR14059.1(ptr %d) {
 ;
 ; CHECK-LABEL: @PR14059.1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double undef to i64
-; CHECK-NEXT:    [[X_SROA_0_I_0_INSERT_MASK:%.*]] = and i64 [[TMP0]], -4294967296
-; CHECK-NEXT:    [[X_SROA_0_I_0_INSERT_INSERT:%.*]] = or i64 [[X_SROA_0_I_0_INSERT_MASK]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[X_SROA_0_I_0_INSERT_INSERT]] to double
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double [[TMP1]] to i64
-; CHECK-NEXT:    [[X_SROA_0_I_2_INSERT_MASK:%.*]] = and i64 [[TMP2]], -281474976645121
-; CHECK-NEXT:    [[X_SROA_0_I_2_INSERT_INSERT:%.*]] = or i64 [[X_SROA_0_I_2_INSERT_MASK]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i64 [[X_SROA_0_I_2_INSERT_INSERT]] to double
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double [[TMP3]] to i64
-; CHECK-NEXT:    [[X_SROA_0_I_4_COPYLOAD:%.*]] = load i32, ptr [[D:%.*]], align 1
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double 0.000000e+00 to i64
-; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_EXT:%.*]] = zext i32 [[X_SROA_0_I_4_COPYLOAD]] to i64
-; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_SHIFT:%.*]] = shl i64 [[X_SROA_0_I_4_INSERT_EXT]], 32
-; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_MASK3:%.*]] = and i64 [[TMP5]], 4294967295
-; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_INSERT4:%.*]] = or i64 [[X_SROA_0_I_4_INSERT_MASK3]], [[X_SROA_0_I_4_INSERT_SHIFT]]
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64 [[X_SROA_0_I_4_INSERT_INSERT4]] to double
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast double [[TMP6]] to i64
-; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_MASK:%.*]] = and i64 [[TMP7]], 4294967295
-; CHECK-NEXT:    [[X_SROA_0_I_4_INSERT_INSERT:%.*]] = or i64 [[X_SROA_0_I_4_INSERT_MASK]], 4607182418800017408
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64 [[X_SROA_0_I_4_INSERT_INSERT]] to double
+; CHECK-NEXT:    [[X_SROA_0_I_SROA_0_0_VECBLEND:%.*]] = select <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false>, <8 x i8> <i8 0, i8 0, i8 0, i8 0, i8 undef, i8 undef, i8 undef, i8 undef>, <8 x i8> undef
+; CHECK-NEXT:    [[X_SROA_0_I_SROA_0_2_VECBLEND:%.*]] = select <8 x i1> <i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false>, <8 x i8> <i8 undef, i8 undef, i8 0, i8 0, i8 0, i8 0, i8 undef, i8 undef>, <8 x i8> [[X_SROA_0_I_SROA_0_0_VECBLEND]]
+; CHECK-NEXT:    [[X_SROA_0_I_SROA_0_4_COPYLOAD:%.*]] = load <4 x i8>, ptr [[D:%.*]], align 1
+; CHECK-NEXT:    [[X_SROA_0_I_SROA_0_4_VEC_EXPAND:%.*]] = shufflevector <4 x i8> [[X_SROA_0_I_SROA_0_4_COPYLOAD]], <4 x i8> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[X_SROA_0_I_SROA_0_4_VECBLEND2:%.*]] = select <8 x i1> <i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, <8 x i8> [[X_SROA_0_I_SROA_0_4_VEC_EXPAND]], <8 x i8> zeroinitializer
+; CHECK-NEXT:    [[X_SROA_0_I_SROA_0_4_VECBLEND:%.*]] = select <8 x i1> <i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, <8 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 extractelement (<4 x i8> bitcast (<1 x i32> splat (i32 1072693248) to <4 x i8>), i32 0), i8 extractelement (<4 x i8> bitcast (<1 x i32> splat (i32 1072693248) to <4 x i8>), i32 1), i8 extractelement (<4 x i8> bitcast (<1 x i32> splat (i32 1072693248) to <4 x i8>), i32 2), i8 extractelement (<4 x i8> bitcast (<1 x i32> splat (i32 1072693248) to <4 x i8>), i32 3)>, <8 x i8> [[X_SROA_0_I_SROA_0_4_VECBLEND2]]
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <8 x i8> [[X_SROA_0_I_SROA_0_4_VECBLEND]] to double
 ; CHECK-NEXT:    [[ACCUM_REAL_I:%.*]] = load double, ptr [[D]], align 8
 ; CHECK-NEXT:    [[ADD_R_I:%.*]] = fadd double [[ACCUM_REAL_I]], [[TMP8]]
 ; CHECK-NEXT:    store double [[ADD_R_I]], ptr [[D]], align 8
@@ -1332,10 +1320,10 @@ define void @PR15674(ptr %data, ptr %src, i32 %size) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP_SROA_0:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    switch i32 [[SIZE:%.*]], label [[END:%.*]] [
-; CHECK-NEXT:    i32 4, label [[BB4:%.*]]
-; CHECK-NEXT:    i32 3, label [[BB3:%.*]]
-; CHECK-NEXT:    i32 2, label [[BB2:%.*]]
-; CHECK-NEXT:    i32 1, label [[BB1:%.*]]
+; CHECK-NEXT:      i32 4, label [[BB4:%.*]]
+; CHECK-NEXT:      i32 3, label [[BB3:%.*]]
+; CHECK-NEXT:      i32 2, label [[BB2:%.*]]
+; CHECK-NEXT:      i32 1, label [[BB1:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[SRC_GEP3:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i32 3
