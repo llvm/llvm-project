@@ -772,7 +772,10 @@ class Base(unittest.TestCase):
             'settings set symbols.clang-modules-cache-path "{}"'.format(
                 configuration.lldb_module_cache_dir
             ),
+            # Disable colors by default.
             "settings set use-color false",
+            # Disable the statusline by default.
+            "settings set show-statusline false",
         ]
 
         # Set any user-overridden settings.

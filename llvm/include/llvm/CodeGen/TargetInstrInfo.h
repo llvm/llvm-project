@@ -1791,9 +1791,7 @@ public:
   virtual MachineInstr *optimizeLoadInstr(MachineInstr &MI,
                                           const MachineRegisterInfo *MRI,
                                           Register &FoldAsLoadDefReg,
-                                          MachineInstr *&DefMI) const {
-    return nullptr;
-  }
+                                          MachineInstr *&DefMI) const;
 
   /// 'Reg' is known to be defined by a move immediate instruction,
   /// try to fold the immediate into the use instruction.

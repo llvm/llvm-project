@@ -14,9 +14,13 @@ RUN apt-get update && \
     python3 \
     git \
     curl \
-    zlib1g-dev
+    zlib1g-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN curl -O -L https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-$LLVM_VERSION.tar.gz && tar -xf llvmorg-$LLVM_VERSION.tar.gz
+RUN curl -O -L https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-$LLVM_VERSION.tar.gz && \
+  tar -xf llvmorg-$LLVM_VERSION.tar.gz && \
+  rm -f llvmorg-$LLVM_VERSION.tar.gz
 
 WORKDIR /llvm-project-llvmorg-$LLVM_VERSION
 
@@ -65,7 +69,9 @@ RUN apt-get update && \
     python3-pip \
     ccache \
     file \
-    tzdata
+    tzdata && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install sccache as it is needed by most of the project test workflows and
 # cannot be installed by the ccache action when executing as a non-root user.

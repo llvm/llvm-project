@@ -696,8 +696,8 @@ define i32 @casts_no_users() {
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r175 = sitofp <2 x i16> undef to <2 x float>
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r176 = uitofp <2 x i32> undef to <2 x float>
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r177 = sitofp <2 x i32> undef to <2 x float>
-; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r178 = uitofp <2 x i64> undef to <2 x float>
-; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r179 = sitofp <2 x i64> undef to <2 x float>
+; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %r178 = uitofp <2 x i64> undef to <2 x float>
+; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %r179 = sitofp <2 x i64> undef to <2 x float>
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r180 = uitofp <2 x i1> undef to <2 x double>
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r181 = sitofp <2 x i1> undef to <2 x double>
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %r182 = uitofp <2 x i8> undef to <2 x double>
@@ -716,8 +716,8 @@ define i32 @casts_no_users() {
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r195 = sitofp <4 x i16> undef to <4 x float>
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r196 = uitofp <4 x i32> undef to <4 x float>
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r197 = sitofp <4 x i32> undef to <4 x float>
-; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %r198 = uitofp <4 x i64> undef to <4 x float>
-; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %r199 = sitofp <4 x i64> undef to <4 x float>
+; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %r198 = uitofp <4 x i64> undef to <4 x float>
+; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %r199 = sitofp <4 x i64> undef to <4 x float>
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r200 = uitofp <4 x i1> undef to <4 x double>
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r201 = sitofp <4 x i1> undef to <4 x double>
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %r202 = uitofp <4 x i8> undef to <4 x double>
@@ -736,8 +736,8 @@ define i32 @casts_no_users() {
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %r215 = sitofp <8 x i16> undef to <8 x float>
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r216 = uitofp <8 x i32> undef to <8 x float>
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r217 = sitofp <8 x i32> undef to <8 x float>
-; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %r218 = uitofp <8 x i64> undef to <8 x float>
-; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %r219 = sitofp <8 x i64> undef to <8 x float>
+; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %r218 = uitofp <8 x i64> undef to <8 x float>
+; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %r219 = sitofp <8 x i64> undef to <8 x float>
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %r220 = uitofp <8 x i1> undef to <8 x double>
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %r221 = sitofp <8 x i1> undef to <8 x double>
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %r222 = uitofp <8 x i8> undef to <8 x double>
@@ -756,8 +756,8 @@ define i32 @casts_no_users() {
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %r235 = sitofp <16 x i16> undef to <16 x float>
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %r236 = uitofp <16 x i32> undef to <16 x float>
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %r237 = sitofp <16 x i32> undef to <16 x float>
-; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r238 = uitofp <16 x i64> undef to <16 x float>
-; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %r239 = sitofp <16 x i64> undef to <16 x float>
+; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %r238 = uitofp <16 x i64> undef to <16 x float>
+; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %r239 = sitofp <16 x i64> undef to <16 x float>
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %r240 = uitofp <16 x i1> undef to <16 x double>
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %r241 = sitofp <16 x i1> undef to <16 x double>
 ; CHECK-SVE-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %r242 = uitofp <16 x i8> undef to <16 x double>
@@ -1122,8 +1122,8 @@ define i32 @casts_no_users() {
 ; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r175 = sitofp <2 x i16> undef to <2 x float>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r176 = uitofp <2 x i32> undef to <2 x float>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r177 = sitofp <2 x i32> undef to <2 x float>
-; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r178 = uitofp <2 x i64> undef to <2 x float>
-; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r179 = sitofp <2 x i64> undef to <2 x float>
+; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %r178 = uitofp <2 x i64> undef to <2 x float>
+; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %r179 = sitofp <2 x i64> undef to <2 x float>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r180 = uitofp <2 x i1> undef to <2 x double>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r181 = sitofp <2 x i1> undef to <2 x double>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %r182 = uitofp <2 x i8> undef to <2 x double>
@@ -1335,8 +1335,8 @@ define i32 @casts_no_users() {
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r175 = sitofp <2 x i16> undef to <2 x float>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r176 = uitofp <2 x i32> undef to <2 x float>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r177 = sitofp <2 x i32> undef to <2 x float>
-; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r178 = uitofp <2 x i64> undef to <2 x float>
-; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r179 = sitofp <2 x i64> undef to <2 x float>
+; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %r178 = uitofp <2 x i64> undef to <2 x float>
+; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %r179 = sitofp <2 x i64> undef to <2 x float>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r180 = uitofp <2 x i1> undef to <2 x double>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r181 = sitofp <2 x i1> undef to <2 x double>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %r182 = uitofp <2 x i8> undef to <2 x double>
