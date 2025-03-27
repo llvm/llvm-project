@@ -6,9 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_acosh.h>
+#ifndef __CLC_MATH_CLC_ACOSH_H__
+#define __CLC_MATH_CLC_ACOSH_H__
 
+#define __CLC_BODY <clc/math/unary_decl.inc>
+#define __CLC_FUNCTION __clc_acosh
+
+#include <clc/math/gentype.inc>
+
+#undef __CLC_BODY
 #undef __CLC_FUNCTION
-#define __CLC_FUNCTION acosh
-#include <clc/math/unary_builtin.inc>
+
+#endif // __CLC_MATH_CLC_ACOSH_H__
