@@ -184,7 +184,7 @@ public:
     return ConflictPair::noConflict(src);
   }
 
-  bool isLinkNeeded(ConflictPair pair) const override {
+  bool isLinkNeeded(ConflictPair pair, bool forDependency) const override {
     assert(canBeLinked(pair.src) && "expected linkable operation");
 
     LLVM::Linkage srcLinkage = getLinkage(pair.src);
@@ -194,19 +194,28 @@ public:
       return true;
     }
 
-    if (shouldLinkOnlyNeeded()) {
-      // Don't import globals that are already defined
-      if (!pair.dst || !isDeclaration(pair.dst))
-        return false;
-    }
+    bool alreadyDeclared = pair.dst && isDeclaration(pair.dst);
+
+    // Don't import globals that are already defined
+    if (shouldLinkOnlyNeeded() && !alreadyDeclared)
+      return false;
+
+    // Always import dependencies that are not yet defined or declared
+    if (forDependency && !pair.dst)
+      return true;
+
     if (isDeclaration(pair.src))
       return false;
 
-    bool keepOnlyInSource = isLocalLinkage(srcLinkage) ||
-                            isLinkOnceLinkage(srcLinkage) ||
-                            isAvailableExternallyLinkage(srcLinkage);
+    if (pair.hasConflict())
+      return true;
 
-    return pair.dst || shouldOverrideFromSrc() || !keepOnlyInSource;
+    if (shouldOverrideFromSrc())
+      return true;
+
+    // linkage specifies to keep operation only in source
+    return !(isLocalLinkage(srcLinkage) || isLinkOnceLinkage(srcLinkage) ||
+             isAvailableExternallyLinkage(srcLinkage));
   }
 
   FailureOr<bool> shouldLinkFromSource(ConflictPair pair) const {
@@ -383,6 +392,22 @@ public:
     }
 
     return pair.dst;
+  }
+
+  SmallVector<Operation *> dependencies(Operation *op) const override {
+    SmallVector<Operation *> result;
+
+    Operation *symbolTableOp = symbolTable->getOp();
+    op->walk([&](SymbolUserOpInterface user) {
+      if (user.getOperation() == op)
+        return;
+
+      if (SymbolRefAttr symbol = user.getUserSymbol())
+        if (Operation *dep = symbolTable->lookupSymbolIn(symbolTableOp, symbol))
+          result.push_back(dep);
+    });
+
+    return result;
   }
 
 private:

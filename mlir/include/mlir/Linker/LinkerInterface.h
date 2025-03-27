@@ -75,7 +75,7 @@ public:
   virtual StringRef getSymbol(Operation *op) const = 0;
 
   /// Determines if an operation should be linked into the destination module.
-  virtual bool isLinkNeeded(ConflictPair pair) const = 0;
+  virtual bool isLinkNeeded(ConflictPair pair, bool forDependency) const = 0;
 
   /// Checks if an operation conflicts with existing linked operations.
   virtual ConflictPair findConflict(Operation *src) const = 0;
@@ -88,6 +88,9 @@ public:
 
   /// Link the operations in the source module into the destination module.
   virtual Operation *materialize(ConflictPair pair, ModuleOp dst) const = 0;
+
+  /// Dependencies of the given operation required to be linked.
+  virtual SmallVector<Operation *> dependencies(Operation *op) const = 0;
 
   void setFlags(unsigned flags) { this->flags = flags; }
 

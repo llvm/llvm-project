@@ -35,33 +35,44 @@ public:
       if (op == src)
         return WalkResult::advance();
 
-      auto linker = dyn_cast<SymbolLinkerInterface>(op->getDialect());
-      if (!linker)
-        return WalkResult::advance();
-
-      // TODO do this in init
-      linker->setFlags(flags);
-
-      if (!linker->canBeLinked(op))
-        return WalkResult::advance();
-
-      ConflictPair conflict = linker->findConflict(op);
-      if (!linker->isLinkNeeded(conflict))
-        return WalkResult::advance();
-
-      if (conflict.hasConflict())
-        return failed(linker->resolveConflict(conflict))
-                   ? WalkResult::interrupt()
-                   : WalkResult::advance();
-
-      // TODO rename: registerForLink
-      linker->registerForLink(op);
+      if (summarize(op, flags, /*forDependency=*/false).failed())
+        return WalkResult::interrupt();
       return WalkResult::advance();
     });
 
-    // TODO deal with references
-
     return failure(result.wasInterrupted());
+  }
+
+  LogicalResult summarize(Operation *op, unsigned flags, bool forDependency) {
+    auto linker = dyn_cast<SymbolLinkerInterface>(op->getDialect());
+    if (!linker)
+      return success();
+
+    linker->setFlags(flags);
+
+    if (!linker->canBeLinked(op))
+      return success();
+
+    ConflictPair conflict = linker->findConflict(op);
+    if (!linker->isLinkNeeded(conflict, forDependency))
+      return success();
+
+    if (conflict.hasConflict()) {
+      if (linker->resolveConflict(conflict).failed())
+        return failure();
+    } else {
+      linker->registerForLink(op);
+    }
+
+    if (forDependency)
+      return success();
+
+    for (Operation *dep : linker->dependencies(op)) {
+      if (summarize(dep, flags, /*forDependency=*/true).failed())
+        return failure();
+    }
+
+    return success();
   }
 
   LogicalResult link(ModuleOp dst) const override {
