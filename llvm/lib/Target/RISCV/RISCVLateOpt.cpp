@@ -106,4 +106,6 @@ bool RISCVLateBranchOpt::runOnMachineFunction(MachineFunction &Fn) {
   return Changed;
 }
 
-FunctionPass *llvm::createRISCVLateBranchOptPass() { return new RISCVLateBranchOpt(); }
+FunctionPass *llvm::createRISCVLateBranchOptPass() {
+  return new RISCVLateBranchOpt();
+}
