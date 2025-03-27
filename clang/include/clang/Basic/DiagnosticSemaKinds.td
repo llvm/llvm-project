@@ -7022,6 +7022,8 @@ def err_sizeof_alignof_typeof_bitfield : Error<
   "bit-field">;
 def err_alignof_member_of_incomplete_type : Error<
   "invalid application of 'alignof' to a field of a class still being defined">;
+def err_countof_arg_not_array_type : Error<
+  "'_Countof' requires an argument of array type; %0 invalid">;
 def err_vecstep_non_scalar_vector_type : Error<
   "'vec_step' requires built-in scalar or vector type, %0 invalid">;
 def err_offsetof_incomplete_type : Error<
