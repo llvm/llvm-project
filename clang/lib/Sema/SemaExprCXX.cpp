@@ -60,7 +60,7 @@ ParsedType Sema::getInheritingConstructorName(CXXScopeSpec &SS,
                                               SourceLocation NameLoc,
                                               const IdentifierInfo &Name) {
   NestedNameSpecifier *NNS = SS.getScopeRep();
-  if (const IdentifierInfo *II = NNS->getAsIdentifier())
+  if ([[maybe_unused]] const IdentifierInfo *II = NNS->getAsIdentifier())
     assert(II == &Name && "not a constructor name");
 
   QualType Type(NNS->translateToType(Context), 0);
