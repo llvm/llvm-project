@@ -1511,10 +1511,10 @@ extern unsigned IOCTL_PIO_SCRNMAP;
 
 #  if SANITIZER_GLIBC
 struct __sanitizer_servent {
-  char *s_name;     /* official service name */
-  char **s_aliases; /* alias list */
-  int s_port;       /* port number */
-  char *s_proto;    /* protocol to use */
+  char *s_name;
+  char **s_aliases;
+  int s_port;
+  char *s_proto;
 };
 #  endif
 
