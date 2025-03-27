@@ -1302,7 +1302,6 @@ bool RISCVInstrInfo::reverseBranchCondition(
 }
 
 bool RISCVInstrInfo::isLoadImm(const MachineInstr *MI, int64_t &Imm) {
-  // For now, Only checks for LI (i.e. ADDI x0, imm)
   if (MI->getOpcode() == RISCV::ADDI && MI->getOperand(1).isReg() &&
       MI->getOperand(1).getReg() == RISCV::X0) {
     Imm = MI->getOperand(2).getImm();
