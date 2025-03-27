@@ -448,6 +448,27 @@ void sequence_container_benchmarks(std::string container) {
         }
       });
   }
+
+  /////////////////////////
+  // General usage patterns
+  /////////////////////////
+  bench("iterate-whole-container", [cheap](auto& st) {
+    auto const size = st.range(0);
+    std::vector<ValueType> in;
+    std::generate_n(std::back_inserter(in), size, cheap);
+    DoNotOptimizeData(in);
+
+    Container c(in.begin(), in.end());
+    DoNotOptimizeData(c);
+
+    auto use = [](auto& element) { benchmark::DoNotOptimize(element); };
+
+    for ([[maybe_unused]] auto _ : st) {
+      for (auto it = c.begin(); it != c.end(); ++it) {
+        use(*it);
+      }
+    }
+  });
 }
 
 } // namespace support
