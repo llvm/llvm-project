@@ -1679,32 +1679,32 @@ bool BinaryFunction::scanExternalRefs() {
       BC.MIB->replaceBranchTarget(Instruction, BranchTargetSymbol,
                                   Emitter.LocalCtx.get());
     } else {
-      bool NeedsPatch = false;
       analyzeInstructionForFuncReference(Instruction);
-      for (unsigned OpNum = 0; OpNum < MCPlus::getNumPrimeOperands(Instruction);
-           ++OpNum) {
-        const MCSymbol *Symbol = BC.MIB->getTargetSymbol(Instruction, OpNum);
-        if (!Symbol)
-          continue;
-        if (!ignoreReference(Symbol)) {
-          NeedsPatch = true;
-          break;
-        }
-      }
+      const bool NeedsPatch = llvm::any_of(
+          MCPlus::primeOperands(Instruction), [&](const MCOperand &Op) {
+            return Op.isExpr() &&
+                   !ignoreReference(BC.MIB->getTargetSymbol(Op.getExpr()));
+          });
       if (!NeedsPatch)
         continue;
     }
 
     // For AArch64, we need to undo relaxation done by the linker if the target
     // of the instruction is a function that we plan to move.
-    const Relocation *Rel;
-    if (BC.isAArch64() && (Rel = getRelocationAt(Offset))) {
+    //
+    // Linker relaxation is documented at:
+    // https://github.com/ARM-software/abi-aa/blob/main/aaelf64/aaelf64.rst
+    // under #relocation-optimization.
+    if (const Relocation *Rel;
+        BC.isAArch64() && (Rel = getRelocationAt(Offset))) {
       // NOP+ADR sequence can originate from either ADRP+ADD or ADRP+LDR.
       // In either case, we convert it into ADRP+ADD.
       if (BC.MIB->isADR(Instruction) &&
           (Rel->Type == ELF::R_AARCH64_ADD_ABS_LO12_NC ||
            Rel->Type == ELF::R_AARCH64_LD64_GOT_LO12_NC)) {
         if (!BC.MIB->isNoop(PrevInstruction)) {
+          // In case of unexpected conversion from the linker, skip target
+          // optimization.
           const MCSymbol *Symbol = BC.MIB->getTargetSymbol(Instruction);
           BC.errs() << "BOLT-WARNING: cannot undo linker relaxation for "
                        "instruction at 0x"
@@ -1717,6 +1717,7 @@ bool BinaryFunction::scanExternalRefs() {
 
         InstructionListType AdrpAdd =
             BC.MIB->undoAdrpAddRelaxation(Instruction, BC.Ctx.get());
+        assert(AdrpAdd.size() == 2 && "Two instructions expected");
         LLVM_DEBUG({
           dbgs() << "BOLT-DEBUG: linker relaxation undone for instruction "
                     "at 0x"
@@ -1772,6 +1773,9 @@ bool BinaryFunction::scanExternalRefs() {
       }
     }
 
+    // On AArch64, we use instruction patches for fixing references. We make an
+    // exception for branch instructions since they require optional
+    // relocations.
     if (BC.isAArch64() && !BranchTargetSymbol) {
       LLVM_DEBUG(BC.printInstruction(dbgs(), Instruction, AbsoluteInstrAddr));
       InstructionPatches.push_back({AbsoluteInstrAddr, Instruction});
