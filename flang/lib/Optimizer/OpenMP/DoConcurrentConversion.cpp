@@ -27,7 +27,6 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
-#include <algorithm>
 #include <memory>
 #include <utility>
 
@@ -239,94 +238,6 @@ private:
 using LoopNestToIndVarMap =
     llvm::MapVector<fir::DoLoopOp, InductionVariableInfo>;
 
-/// For the \p doLoop parameter, find the operation that declares its iteration
-/// variable or allocates memory for it.
-///
-/// For example, give the following loop:
-/// ```
-///   ...
-///   %i:2 = hlfir.declare %0 {uniq_name = "_QFEi"} : ...
-///   ...
-///   fir.do_loop %ind_var = %lb to %ub step %s unordered {
-///     %ind_var_conv = fir.convert %ind_var : (index) -> i32
-///     fir.store %ind_var_conv to %i#1 : !fir.ref<i32>
-///     ...
-///   }
-/// ```
-///
-/// This function returns the `hlfir.declare` op for `%i`.
-///
-/// Note: The current implementation is dependent on how flang emits loop
-/// bodies; which is sufficient for the current simple test/use cases. If this
-/// proves to be insufficient, this should be made more generic.
-mlir::Operation *findLoopIterationVarMemDecl(fir::DoLoopOp doLoop) {
-  mlir::Value result = nullptr;
-
-  // Checks if a StoreOp is updating the memref of the loop's iteration
-  // variable.
-  auto isStoringIV = [&](fir::StoreOp storeOp) {
-    // Direct store into the IV memref.
-    if (storeOp.getValue() == doLoop.getInductionVar())
-      return true;
-
-    // Indirect store into the IV memref.
-    if (auto convertOp = mlir::dyn_cast<fir::ConvertOp>(
-            storeOp.getValue().getDefiningOp())) {
-      if (convertOp.getOperand() == doLoop.getInductionVar())
-        return true;
-    }
-
-    return false;
-  };
-
-  for (mlir::Operation &op : doLoop) {
-    if (auto storeOp = mlir::dyn_cast<fir::StoreOp>(op))
-      if (isStoringIV(storeOp)) {
-        result = storeOp.getMemref();
-        break;
-      }
-  }
-
-  assert(result != nullptr && result.getDefiningOp() != nullptr);
-  return result.getDefiningOp();
-}
-
-/// Given an operation `op`, this returns true if `op`'s operand is ultimately
-/// the loop's induction variable. Detecting this helps finding the live-in
-/// value corresponding to the induction variable in case the induction variable
-/// is indirectly used in the loop (e.g. throught a cast op).
-bool isIndVarUltimateOperand(mlir::Operation *op, fir::DoLoopOp doLoop) {
-  while (op != nullptr && op->getNumOperands() > 0) {
-    auto ivIt = llvm::find_if(op->getOperands(), [&](mlir::Value operand) {
-      return operand == doLoop.getInductionVar();
-    });
-
-    if (ivIt != op->getOperands().end())
-      return true;
-
-    op = op->getOperand(0).getDefiningOp();
-  }
-
-  return false;
-}
-
-/// For the \p doLoop parameter, find the operations that declares its induction
-/// variable or allocates memory for it.
-mlir::Operation *findLoopIndVarMemDecl(fir::DoLoopOp doLoop) {
-  mlir::Value result = nullptr;
-  mlir::visitUsedValuesDefinedAbove(
-      doLoop.getRegion(), [&](mlir::OpOperand *operand) {
-        if (isIndVarUltimateOperand(operand->getOwner(), doLoop)) {
-          assert(result == nullptr &&
-                 "loop can have only one induction variable");
-          result = operand->get();
-        }
-      });
-
-  assert(result != nullptr && result.getDefiningOp() != nullptr);
-  return result.getDefiningOp();
-}
-
 /// Collect the list of values used inside the loop but defined outside of it.
 void collectLoopLiveIns(fir::DoLoopOp doLoop,
                         llvm::SmallVectorImpl<mlir::Value> &liveIns) {
@@ -345,92 +256,6 @@ void collectLoopLiveIns(fir::DoLoopOp doLoop,
 
         liveIns.push_back(operand->get());
       });
-}
-
-/// Collects the op(s) responsible for updating a loop's iteration variable with
-/// the current iteration number. For example, for the input IR:
-/// ```
-/// %i = fir.alloca i32 {bindc_name = "i"}
-/// %i_decl:2 = hlfir.declare %i ...
-/// ...
-/// fir.do_loop %i_iv = %lb to %ub step %step unordered {
-///   %1 = fir.convert %i_iv : (index) -> i32
-///   fir.store %1 to %i_decl#1 : !fir.ref<i32>
-///   ...
-/// }
-/// ```
-/// this function would return the first 2 ops in the `fir.do_loop`'s region.
-llvm::SetVector<mlir::Operation *>
-extractIndVarUpdateOps(fir::DoLoopOp doLoop) {
-  mlir::Value indVar = doLoop.getInductionVar();
-  llvm::SetVector<mlir::Operation *> indVarUpdateOps;
-
-  llvm::SmallVector<mlir::Value> toProcess;
-  toProcess.push_back(indVar);
-
-  llvm::DenseSet<mlir::Value> done;
-
-  while (!toProcess.empty()) {
-    mlir::Value val = toProcess.back();
-    toProcess.pop_back();
-
-    if (!done.insert(val).second)
-      continue;
-
-    for (mlir::Operation *user : val.getUsers()) {
-      indVarUpdateOps.insert(user);
-
-      for (mlir::Value result : user->getResults())
-        toProcess.push_back(result);
-    }
-  }
-
-  return std::move(indVarUpdateOps);
-}
-
-/// Starting with a value at the end of a definition/conversion chain, walk the
-/// chain backwards and collect all the visited ops along the way. This is the
-/// same as the "backward slice" of the use-def chain of \p link.
-///
-/// If the root of the chain/slice is a constant op  (where convert operations
-/// on constant count as constants as well), then populate \p opChain with the
-/// extracted chain/slice. If not, then \p opChain will contains a single value:
-/// \p link.
-///
-/// The purpose of this function is that we pull in the chain of
-/// constant+conversion ops inside the parallel region if possible; which
-/// prevents creating an unnecessary shared/mapped value that crosses the OpenMP
-/// region.
-///
-/// For example, given this IR:
-/// ```
-/// %c10 = arith.constant 10 : i32
-/// %10 = fir.convert %c10 : (i32) -> index
-/// ```
-/// and giving `%10` as the starting input: `link`, `defChain` would contain
-/// both of the above ops.
-void collectIndirectConstOpChain(mlir::Operation *link,
-                                 llvm::SetVector<mlir::Operation *> &opChain) {
-  mlir::BackwardSliceOptions options;
-  options.inclusive = true;
-  mlir::getBackwardSlice(link, &opChain, options);
-
-  assert(!opChain.empty());
-
-  bool isConstantChain = [&]() {
-    if (!mlir::isa_and_present<mlir::arith::ConstantOp>(opChain.front()))
-      return false;
-
-    return llvm::all_of(llvm::drop_begin(opChain), [](mlir::Operation *op) {
-      return mlir::isa_and_present<fir::ConvertOp>(op);
-    });
-  }();
-
-  if (isConstantChain)
-    return;
-
-  opChain.clear();
-  opChain.insert(link);
 }
 
 /// Loop \p innerLoop is considered perfectly-nested inside \p outerLoop iff
