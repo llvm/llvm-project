@@ -488,20 +488,20 @@ def : SysReg<"mctrctl", 0x34e>;
 
 // XSfmclic
 let FeaturesRequired = [{ {RISCV::FeatureVendorXSfmclic} }] in {
-def : SysReg<"mtvt", 0x307>;
-def : SysReg<"mnxti", 0x345>;
-def : SysReg<"mintstatus", 0x346>;
-def : SysReg<"mscratchcsw", 0x348>;
-def : SysReg<"mscratchcswl", 0x349>;
+def : SysReg<"sf.mtvt", 0x307>;
+def : SysReg<"sf.mnxti", 0x345>;
+def : SysReg<"sf.mintstatus", 0x346>;
+def : SysReg<"sf.mscratchcsw", 0x348>;
+def : SysReg<"sf.mscratchcswl", 0x349>;
 }
 
 // XSfsclic
 let FeaturesRequired = [{ {RISCV::FeatureVendorXSfsclic} }] in {
-def : SysReg<"stvt", 0x107>;
-def : SysReg<"snxti", 0x145>;
-def : SysReg<"sintstatus", 0x146>;
-def : SysReg<"sscratchcsw", 0x148>;
-def : SysReg<"sscratchcswl", 0x149>;
+def : SysReg<"sf.stvt", 0x107>;
+def : SysReg<"sf.snxti", 0x145>;
+def : SysReg<"sf.sintstatus", 0x146>;
+def : SysReg<"sf.sscratchcsw", 0x148>;
+def : SysReg<"sf.sscratchcswl", 0x149>;
 }
 
 // Xqciint

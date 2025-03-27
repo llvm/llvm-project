@@ -283,7 +283,7 @@ static void emitSiFiveCLICStackSwap(MachineFunction &MF, MachineBasicBlock &MBB,
 
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW))
       .addReg(SPReg, RegState::Define)
-      .addImm(RISCVSysReg::mscratchcsw)
+      .addImm(RISCVSysReg::sf_mscratchcsw)
       .addReg(SPReg, RegState::Kill)
       .setMIFlag(MachineInstr::FrameSetup);
 
@@ -1015,7 +1015,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     return;
 
-  // SiFive CLIC needs to swap `sp` into `mscratchcsw`
+  // SiFive CLIC needs to swap `sp` into `sf.mscratchcsw`
   emitSiFiveCLICStackSwap(MF, MBB, MBBI, DL);
 
   // Emit prologue for shadow call stack.

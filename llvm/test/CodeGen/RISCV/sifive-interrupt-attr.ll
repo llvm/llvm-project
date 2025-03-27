@@ -6,7 +6,7 @@
 
 ; Test Handling of the SiFive-CLIC interrupt attributes.
 ;
-; "stack-swap" means that sp should be swapped into `mscratchcsw`
+; "stack-swap" means that sp should be swapped into `sf.mscratchcsw`
 ;
 ; "preemptible" means that `mcause` and `mepc` should be saved and interrupts
 ; should be re-enabled by setting a bit in `mstatus`.
@@ -16,14 +16,14 @@
 define void @stack_swap_empty() "interrupt"="SiFive-CLIC-stack-swap" {
 ; RV32-LABEL: stack_swap_empty:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    csrrw sp, mscratchcsw, sp
-; RV32-NEXT:    csrrw sp, mscratchcsw, sp
+; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
+; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV32-NEXT:    mret
 ;
 ; RV64-LABEL: stack_swap_empty:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    csrrw sp, mscratchcsw, sp
-; RV64-NEXT:    csrrw sp, mscratchcsw, sp
+; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
+; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV64-NEXT:    mret
   ret void
 }
@@ -31,7 +31,7 @@ define void @stack_swap_empty() "interrupt"="SiFive-CLIC-stack-swap" {
 define void @stack_swap_empty_fp() "interrupt"="SiFive-CLIC-stack-swap" "frame-pointer"="all" {
 ; RV32-LABEL: stack_swap_empty_fp:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    csrrw sp, mscratchcsw, sp
+; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -47,12 +47,12 @@ define void @stack_swap_empty_fp() "interrupt"="SiFive-CLIC-stack-swap" "frame-p
 ; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
-; RV32-NEXT:    csrrw sp, mscratchcsw, sp
+; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV32-NEXT:    mret
 ;
 ; RV64-LABEL: stack_swap_empty_fp:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    csrrw sp, mscratchcsw, sp
+; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
@@ -68,7 +68,7 @@ define void @stack_swap_empty_fp() "interrupt"="SiFive-CLIC-stack-swap" "frame-p
 ; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
-; RV64-NEXT:    csrrw sp, mscratchcsw, sp
+; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV64-NEXT:    mret
   ret void
 }
@@ -115,7 +115,7 @@ define void @preemptible_empty() "interrupt"="SiFive-CLIC-preemptible" {
 define void @both_empty() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV32-LABEL: both_empty:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    csrrw sp, mscratchcsw, sp
+; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
@@ -130,12 +130,12 @@ define void @both_empty() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
-; RV32-NEXT:    csrrw sp, mscratchcsw, sp
+; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV32-NEXT:    mret
 ;
 ; RV64-LABEL: both_empty:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    csrrw sp, mscratchcsw, sp
+; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
@@ -150,7 +150,7 @@ define void @both_empty() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV64-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
-; RV64-NEXT:    csrrw sp, mscratchcsw, sp
+; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV64-NEXT:    mret
   ret void
 }
@@ -160,7 +160,7 @@ declare void @callee()
 define void @stack_swap_caller() "interrupt"="SiFive-CLIC-stack-swap" {
 ; RV32-LABEL: stack_swap_caller:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    csrrw sp, mscratchcsw, sp
+; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV32-NEXT:    addi sp, sp, -64
 ; RV32-NEXT:    .cfi_def_cfa_offset 64
 ; RV32-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
@@ -230,12 +230,12 @@ define void @stack_swap_caller() "interrupt"="SiFive-CLIC-stack-swap" {
 ; RV32-NEXT:    .cfi_restore t6
 ; RV32-NEXT:    addi sp, sp, 64
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
-; RV32-NEXT:    csrrw sp, mscratchcsw, sp
+; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV32-NEXT:    mret
 ;
 ; RV64-LABEL: stack_swap_caller:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    csrrw sp, mscratchcsw, sp
+; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV64-NEXT:    addi sp, sp, -128
 ; RV64-NEXT:    .cfi_def_cfa_offset 128
 ; RV64-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
@@ -305,7 +305,7 @@ define void @stack_swap_caller() "interrupt"="SiFive-CLIC-stack-swap" {
 ; RV64-NEXT:    .cfi_restore t6
 ; RV64-NEXT:    addi sp, sp, 128
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
-; RV64-NEXT:    csrrw sp, mscratchcsw, sp
+; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV64-NEXT:    mret
   call void @callee()
   ret void
@@ -314,7 +314,7 @@ define void @stack_swap_caller() "interrupt"="SiFive-CLIC-stack-swap" {
 define void @stack_swap_caller_fp() "interrupt"="SiFive-CLIC-stack-swap" "frame-pointer"="all" {
 ; RV32-LABEL: stack_swap_caller_fp:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    csrrw sp, mscratchcsw, sp
+; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV32-NEXT:    addi sp, sp, -80
 ; RV32-NEXT:    .cfi_def_cfa_offset 80
 ; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
@@ -391,12 +391,12 @@ define void @stack_swap_caller_fp() "interrupt"="SiFive-CLIC-stack-swap" "frame-
 ; RV32-NEXT:    .cfi_restore t6
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
-; RV32-NEXT:    csrrw sp, mscratchcsw, sp
+; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV32-NEXT:    mret
 ;
 ; RV64-LABEL: stack_swap_caller_fp:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    csrrw sp, mscratchcsw, sp
+; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV64-NEXT:    addi sp, sp, -144
 ; RV64-NEXT:    .cfi_def_cfa_offset 144
 ; RV64-NEXT:    sd ra, 136(sp) # 8-byte Folded Spill
@@ -473,7 +473,7 @@ define void @stack_swap_caller_fp() "interrupt"="SiFive-CLIC-stack-swap" "frame-
 ; RV64-NEXT:    .cfi_restore t6
 ; RV64-NEXT:    addi sp, sp, 144
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
-; RV64-NEXT:    csrrw sp, mscratchcsw, sp
+; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV64-NEXT:    mret
   call void @callee()
   ret void
@@ -652,7 +652,7 @@ define void @preeemptible_caller() "interrupt"="SiFive-CLIC-preemptible" {
 define void @both_caller() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV32-LABEL: both_caller:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    csrrw sp, mscratchcsw, sp
+; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV32-NEXT:    addi sp, sp, -80
 ; RV32-NEXT:    .cfi_def_cfa_offset 80
 ; RV32-NEXT:    sw s0, 76(sp) # 4-byte Folded Spill
@@ -732,12 +732,12 @@ define void @both_caller() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV32-NEXT:    lw s0, 76(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
-; RV32-NEXT:    csrrw sp, mscratchcsw, sp
+; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV32-NEXT:    mret
 ;
 ; RV64-LABEL: both_caller:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    csrrw sp, mscratchcsw, sp
+; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV64-NEXT:    addi sp, sp, -144
 ; RV64-NEXT:    .cfi_def_cfa_offset 144
 ; RV64-NEXT:    sd s0, 136(sp) # 8-byte Folded Spill
@@ -817,7 +817,7 @@ define void @both_caller() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV64-NEXT:    ld s0, 136(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 144
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
-; RV64-NEXT:    csrrw sp, mscratchcsw, sp
+; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV64-NEXT:    mret
   call void @callee()
   ret void
@@ -826,7 +826,7 @@ define void @both_caller() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 define void @stack_swap_clobber() "interrupt"="SiFive-CLIC-stack-swap" {
 ; RV32-LABEL: stack_swap_clobber:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    csrrw sp, mscratchcsw, sp
+; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
@@ -841,12 +841,12 @@ define void @stack_swap_clobber() "interrupt"="SiFive-CLIC-stack-swap" {
 ; RV32-NEXT:    .cfi_restore s1
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
-; RV32-NEXT:    csrrw sp, mscratchcsw, sp
+; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV32-NEXT:    mret
 ;
 ; RV64-LABEL: stack_swap_clobber:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    csrrw sp, mscratchcsw, sp
+; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
@@ -861,7 +861,7 @@ define void @stack_swap_clobber() "interrupt"="SiFive-CLIC-stack-swap" {
 ; RV64-NEXT:    .cfi_restore s1
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
-; RV64-NEXT:    csrrw sp, mscratchcsw, sp
+; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV64-NEXT:    mret
   call void asm sideeffect "", "~{x8},~{x9}"() #4
   ret void
@@ -870,7 +870,7 @@ define void @stack_swap_clobber() "interrupt"="SiFive-CLIC-stack-swap" {
 define void @stack_swap_clobber_fp() "interrupt"="SiFive-CLIC-stack-swap" "frame-pointer"="all" {
 ; RV32-LABEL: stack_swap_clobber_fp:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    csrrw sp, mscratchcsw, sp
+; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -892,12 +892,12 @@ define void @stack_swap_clobber_fp() "interrupt"="SiFive-CLIC-stack-swap" "frame
 ; RV32-NEXT:    .cfi_restore s1
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
-; RV32-NEXT:    csrrw sp, mscratchcsw, sp
+; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV32-NEXT:    mret
 ;
 ; RV64-LABEL: stack_swap_clobber_fp:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    csrrw sp, mscratchcsw, sp
+; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV64-NEXT:    addi sp, sp, -32
 ; RV64-NEXT:    .cfi_def_cfa_offset 32
 ; RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
@@ -919,7 +919,7 @@ define void @stack_swap_clobber_fp() "interrupt"="SiFive-CLIC-stack-swap" "frame
 ; RV64-NEXT:    .cfi_restore s1
 ; RV64-NEXT:    addi sp, sp, 32
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
-; RV64-NEXT:    csrrw sp, mscratchcsw, sp
+; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV64-NEXT:    mret
   call void asm sideeffect "", "~{x8},~{x9}"() #4
   ret void
@@ -988,7 +988,7 @@ define void @preemptible_clobber() "interrupt"="SiFive-CLIC-preemptible" {
 define void @both_clobber() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV32-LABEL: both_clobber:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    csrrw sp, mscratchcsw, sp
+; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
@@ -1013,12 +1013,12 @@ define void @both_clobber() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
-; RV32-NEXT:    csrrw sp, mscratchcsw, sp
+; RV32-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV32-NEXT:    mret
 ;
 ; RV64-LABEL: both_clobber:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    csrrw sp, mscratchcsw, sp
+; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV64-NEXT:    addi sp, sp, -32
 ; RV64-NEXT:    .cfi_def_cfa_offset 32
 ; RV64-NEXT:    sd s0, 24(sp) # 8-byte Folded Spill
@@ -1043,7 +1043,7 @@ define void @both_clobber() "interrupt"="SiFive-CLIC-preemptible-stack-swap" {
 ; RV64-NEXT:    ld s0, 24(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 32
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
-; RV64-NEXT:    csrrw sp, mscratchcsw, sp
+; RV64-NEXT:    csrrw sp, sf.mscratchcsw, sp
 ; RV64-NEXT:    mret
   call void asm sideeffect "", "~{x8},~{x9}"() #4
   ret void
