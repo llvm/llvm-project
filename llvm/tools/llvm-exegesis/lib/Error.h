@@ -76,6 +76,19 @@ private:
   int SignalNumber;
 };
 
+// A class representing a case where a perf counter was only partially
+// scheduled, most likely due to perf counter contention.
+class PerfCounterNotFullyEnabled
+    : public ErrorInfo<PerfCounterNotFullyEnabled> {
+public:
+  static char ID;
+  PerfCounterNotFullyEnabled() {}
+
+  void log(raw_ostream &OS) const override;
+
+  std::error_code convertToErrorCode() const override;
+};
+
 } // namespace exegesis
 } // namespace llvm
 
