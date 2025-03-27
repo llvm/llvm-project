@@ -109,6 +109,7 @@ private:
   void lower(MachineInstr &MI, const RegBankLLTMapping &Mapping,
              SmallSet<Register, 4> &SgprWaterfallOperandRegs);
 
+  void lowerVccExtToSel(MachineInstr &MI);
   void lowerDiv_BFE(MachineInstr &MI);
   void lowerUni_BFE(MachineInstr &MI);
   void lowerSplitTo32(MachineInstr &MI);
