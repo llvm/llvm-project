@@ -76,8 +76,9 @@ MachineBasicBlock *llvm::PeelSingleBlockLoop(LoopPeelDirection Direction,
 
   for (auto I = NewBB->getFirstNonPHI(); I != NewBB->end(); ++I)
     for (MachineOperand &MO : I->uses())
-      if (MO.isReg() && Remaps.count(MO.getReg()))
-        MO.setReg(Remaps[MO.getReg()]);
+      if (MO.isReg())
+        if (auto It = Remaps.find(MO.getReg()); It != Remaps.end())
+          MO.setReg(It->second);
 
   for (auto I = NewBB->begin(); I->isPHI(); ++I) {
     MachineInstr &MI = *I;
@@ -90,8 +91,8 @@ MachineBasicBlock *llvm::PeelSingleBlockLoop(LoopPeelDirection Direction,
       // When peeling front, we are only left with the initial value from the
       // preheader.
       Register R = MI.getOperand(LoopRegIdx).getReg();
-      if (Remaps.count(R))
-        R = Remaps[R];
+      if (auto It = Remaps.find(R); It != Remaps.end())
+        R = It->second;
       OrigPhi.getOperand(InitRegIdx).setReg(R);
       MI.removeOperand(LoopRegIdx + 1);
       MI.removeOperand(LoopRegIdx + 0);

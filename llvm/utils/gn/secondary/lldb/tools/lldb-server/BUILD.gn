@@ -62,7 +62,6 @@ executable("lldb-server") {
   # Reaches into Plugins/ObjectFile/Mach-O.
   include_dirs = [ "//lldb/source" ]
   sources = [
-    "Acceptor.cpp",
     "LLDBServerUtilities.cpp",
     "SystemInitializerLLGS.cpp",
     "lldb-gdbserver.cpp",

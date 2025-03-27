@@ -59,7 +59,7 @@ public:
   serializeToObject(Attribute attribute, Operation *module,
                     const gpu::TargetOptions &options) const;
 
-  Attribute createObject(Attribute attribute,
+  Attribute createObject(Attribute attribute, Operation *module,
                          const SmallVector<char, 0> &object,
                          const gpu::TargetOptions &options) const;
 };
@@ -97,17 +97,15 @@ SerializeGPUModuleBase::SerializeGPUModuleBase(
     : ModuleToObject(module, target.getTriple(), target.getChip(),
                      target.getFeatures(), target.getO()),
       target(target), toolkitPath(targetOptions.getToolkitPath()),
-      fileList(targetOptions.getLinkFiles()) {
+      librariesToLink(targetOptions.getLibrariesToLink()) {
 
   // If `targetOptions` has an empty toolkitPath use `getROCMPath`
   if (toolkitPath.empty())
     toolkitPath = getROCMPath();
 
   // Append the files in the target attribute.
-  if (ArrayAttr files = target.getLink())
-    for (Attribute attr : files.getValue())
-      if (auto file = dyn_cast<StringAttr>(attr))
-        fileList.push_back(file.str());
+  if (target.getLink())
+    librariesToLink.append(target.getLink().begin(), target.getLink().end());
 }
 
 void SerializeGPUModuleBase::init() {
@@ -128,8 +126,8 @@ ROCDLTargetAttr SerializeGPUModuleBase::getTarget() const { return target; }
 
 StringRef SerializeGPUModuleBase::getToolkitPath() const { return toolkitPath; }
 
-ArrayRef<std::string> SerializeGPUModuleBase::getFileList() const {
-  return fileList;
+ArrayRef<Attribute> SerializeGPUModuleBase::getLibrariesToLink() const {
+  return librariesToLink;
 }
 
 LogicalResult SerializeGPUModuleBase::appendStandardLibs(AMDGCNLibraries libs) {
@@ -160,7 +158,7 @@ LogicalResult SerializeGPUModuleBase::appendStandardLibs(AMDGCNLibraries libs) {
                                   << " does not exist or is not a file";
       return true;
     }
-    fileList.push_back(pathRef.str());
+    librariesToLink.push_back(StringAttr::get(target.getContext(), pathRef));
     path.truncate(baseSize);
     return false;
   };
@@ -178,13 +176,13 @@ LogicalResult SerializeGPUModuleBase::appendStandardLibs(AMDGCNLibraries libs) {
 std::optional<SmallVector<std::unique_ptr<llvm::Module>>>
 SerializeGPUModuleBase::loadBitcodeFiles(llvm::Module &module) {
   // Return if there are no libs to load.
-  if (deviceLibs == AMDGCNLibraries::None && fileList.empty())
+  if (deviceLibs == AMDGCNLibraries::None && librariesToLink.empty())
     return SmallVector<std::unique_ptr<llvm::Module>>();
   if (failed(appendStandardLibs(deviceLibs)))
     return std::nullopt;
   SmallVector<std::unique_ptr<llvm::Module>> bcFiles;
-  if (failed(loadBitcodeFilesFromList(module.getContext(), fileList, bcFiles,
-                                      true)))
+  if (failed(loadBitcodeFilesFromList(module.getContext(), librariesToLink,
+                                      bcFiles, true)))
     return std::nullopt;
   return std::move(bcFiles);
 }
@@ -231,9 +229,6 @@ void SerializeGPUModuleBase::addControlVariables(
     llvm::Module &module, AMDGCNLibraries libs, bool wave64, bool daz,
     bool finiteOnly, bool unsafeMath, bool fastMath, bool correctSqrt,
     StringRef abiVer) {
-  // Return if no device libraries are required.
-  if (libs == AMDGCNLibraries::None)
-    return;
   // Helper function for adding control variables.
   auto addControlVariable = [&module](StringRef name, uint32_t value,
                                       uint32_t bitwidth) {
@@ -252,6 +247,13 @@ void SerializeGPUModuleBase::addControlVariables(
     controlVariable->setAlignment(llvm::MaybeAlign(bitwidth / 8));
     controlVariable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Local);
   };
+
+  int abi = 500;
+  abiVer.getAsInteger(0, abi);
+  module.addModuleFlag(llvm::Module::Error, "amdhsa_code_object_version", abi);
+  // Return if no device libraries are required.
+  if (libs == AMDGCNLibraries::None)
+    return;
   // Add ocml related control variables.
   if (any(libs & AMDGCNLibraries::Ocml)) {
     addControlVariable("__oclc_finite_only_opt", finiteOnly || fastMath, 8);
@@ -263,7 +265,6 @@ void SerializeGPUModuleBase::addControlVariables(
   // Add ocml or ockl related control variables.
   if (any(libs & (AMDGCNLibraries::Ocml | AMDGCNLibraries::Ockl))) {
     addControlVariable("__oclc_wavefrontsize64", wave64, 8);
-
     // Get the ISA version.
     llvm::AMDGPU::IsaVersion isaVersion = llvm::AMDGPU::getIsaVersion(chip);
     // Add the ISA control variable.
@@ -271,8 +272,6 @@ void SerializeGPUModuleBase::addControlVariables(
                        isaVersion.Minor + 100 * isaVersion.Stepping +
                            1000 * isaVersion.Major,
                        32);
-    int abi = 500;
-    abiVer.getAsInteger(0, abi);
     addControlVariable("__oclc_ABI_version", abi, 32);
   }
 }
@@ -500,19 +499,21 @@ std::optional<SmallVector<char, 0>> ROCDLTargetAttrImpl::serializeToObject(
 }
 
 Attribute
-ROCDLTargetAttrImpl::createObject(Attribute attribute,
+ROCDLTargetAttrImpl::createObject(Attribute attribute, Operation *module,
                                   const SmallVector<char, 0> &object,
                                   const gpu::TargetOptions &options) const {
   gpu::CompilationTarget format = options.getCompilationTarget();
   // If format is `fatbin` transform it to binary as `fatbin` is not yet
   // supported.
-  if (format > gpu::CompilationTarget::Binary)
+  gpu::KernelTableAttr kernels;
+  if (format > gpu::CompilationTarget::Binary) {
     format = gpu::CompilationTarget::Binary;
-
+    kernels = ROCDL::getKernelMetadata(module, object);
+  }
   DictionaryAttr properties{};
   Builder builder(attribute.getContext());
-  return builder.getAttr<gpu::ObjectAttr>(
-      attribute, format,
-      builder.getStringAttr(StringRef(object.data(), object.size())),
-      properties);
+  StringAttr objectStr =
+      builder.getStringAttr(StringRef(object.data(), object.size()));
+  return builder.getAttr<gpu::ObjectAttr>(attribute, format, objectStr,
+                                          properties, kernels);
 }

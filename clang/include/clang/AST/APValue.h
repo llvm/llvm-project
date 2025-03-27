@@ -157,14 +157,13 @@ public:
 
     void Profile(llvm::FoldingSetNodeID &ID) const;
 
-    template <class T>
-    bool is() const { return Ptr.is<T>(); }
+    template <class T> bool is() const { return isa<T>(Ptr); }
 
-    template <class T>
-    T get() const { return Ptr.get<T>(); }
+    template <class T> T get() const { return cast<T>(Ptr); }
 
-    template <class T>
-    T dyn_cast() const { return Ptr.dyn_cast<T>(); }
+    template <class T> T dyn_cast() const {
+      return dyn_cast_if_present<T>(Ptr);
+    }
 
     void *getOpaqueValue() const;
 
@@ -249,6 +248,7 @@ public:
   struct NoLValuePath {};
   struct UninitArray {};
   struct UninitStruct {};
+  struct ConstexprUnknown {};
 
   template <typename Impl> friend class clang::serialization::BasicReaderBase;
   friend class ASTImporter;
@@ -256,6 +256,7 @@ public:
 
 private:
   ValueKind Kind;
+  bool AllowConstexprUnknown : 1;
 
   struct ComplexAPSInt {
     APSInt Real, Imag;
@@ -314,53 +315,118 @@ private:
   DataType Data;
 
 public:
-  APValue() : Kind(None) {}
-  explicit APValue(APSInt I) : Kind(None) {
+  bool allowConstexprUnknown() const { return AllowConstexprUnknown; }
+
+  void setConstexprUnknown(bool IsConstexprUnknown = true) {
+    AllowConstexprUnknown = IsConstexprUnknown;
+  }
+
+  /// Creates an empty APValue of type None.
+  APValue() : Kind(None), AllowConstexprUnknown(false) {}
+  /// Creates an integer APValue holding the given value.
+  explicit APValue(APSInt I) : Kind(None), AllowConstexprUnknown(false) {
     MakeInt(); setInt(std::move(I));
   }
-  explicit APValue(APFloat F) : Kind(None) {
+  /// Creates a float APValue holding the given value.
+  explicit APValue(APFloat F) : Kind(None), AllowConstexprUnknown(false) {
     MakeFloat(); setFloat(std::move(F));
   }
-  explicit APValue(APFixedPoint FX) : Kind(None) {
+  /// Creates a fixed-point APValue holding the given value.
+  explicit APValue(APFixedPoint FX) : Kind(None), AllowConstexprUnknown(false) {
     MakeFixedPoint(std::move(FX));
   }
-  explicit APValue(const APValue *E, unsigned N) : Kind(None) {
+  /// Creates a vector APValue with \p N elements. The elements
+  /// are read from \p E.
+  explicit APValue(const APValue *E, unsigned N)
+      : Kind(None), AllowConstexprUnknown(false) {
     MakeVector(); setVector(E, N);
   }
-  APValue(APSInt R, APSInt I) : Kind(None) {
+  /// Creates an integer complex APValue with the given real and imaginary
+  /// values.
+  APValue(APSInt R, APSInt I) : Kind(None), AllowConstexprUnknown(false) {
     MakeComplexInt(); setComplexInt(std::move(R), std::move(I));
   }
-  APValue(APFloat R, APFloat I) : Kind(None) {
+  /// Creates a float complex APValue with the given real and imaginary values.
+  APValue(APFloat R, APFloat I) : Kind(None), AllowConstexprUnknown(false) {
     MakeComplexFloat(); setComplexFloat(std::move(R), std::move(I));
   }
   APValue(const APValue &RHS);
   APValue(APValue &&RHS);
-  APValue(LValueBase B, const CharUnits &O, NoLValuePath N,
+  /// Creates an lvalue APValue without an lvalue path.
+  /// \param Base The base of the lvalue.
+  /// \param Offset The offset of the lvalue.
+  /// \param IsNullPtr Whether this lvalue is a null pointer.
+  APValue(LValueBase Base, const CharUnits &Offset, NoLValuePath,
           bool IsNullPtr = false)
-      : Kind(None) {
-    MakeLValue(); setLValue(B, O, N, IsNullPtr);
+      : Kind(None), AllowConstexprUnknown(false) {
+    MakeLValue();
+    setLValue(Base, Offset, NoLValuePath{}, IsNullPtr);
   }
-  APValue(LValueBase B, const CharUnits &O, ArrayRef<LValuePathEntry> Path,
-          bool OnePastTheEnd, bool IsNullPtr = false)
-      : Kind(None) {
-    MakeLValue(); setLValue(B, O, Path, OnePastTheEnd, IsNullPtr);
+  /// Creates an lvalue APValue with an lvalue path.
+  /// \param Base The base of the lvalue.
+  /// \param Offset The offset of the lvalue.
+  /// \param Path The lvalue path.
+  /// \param OnePastTheEnd Whether this lvalue is one-past-the-end of the
+  /// subobject it points to.
+  /// \param IsNullPtr Whether this lvalue is a null pointer.
+  APValue(LValueBase Base, const CharUnits &Offset,
+          ArrayRef<LValuePathEntry> Path, bool OnePastTheEnd,
+          bool IsNullPtr = false)
+      : Kind(None), AllowConstexprUnknown(false) {
+    MakeLValue();
+    setLValue(Base, Offset, Path, OnePastTheEnd, IsNullPtr);
   }
-  APValue(UninitArray, unsigned InitElts, unsigned Size) : Kind(None) {
+  /// Creates a constexpr unknown lvalue APValue.
+  /// \param Base The base of the lvalue.
+  /// \param Offset The offset of the lvalue.
+  /// \param IsNullPtr Whether this lvalue is a null pointer.
+  APValue(LValueBase Base, const CharUnits &Offset, ConstexprUnknown,
+          bool IsNullPtr = false)
+      : Kind(None), AllowConstexprUnknown(true) {
+    MakeLValue();
+    setLValue(Base, Offset, NoLValuePath{}, IsNullPtr);
+  }
+
+  /// Creates a new array APValue.
+  /// \param UninitArray Marker. Pass an empty UninitArray.
+  /// \param InitElts Number of elements you're going to initialize in the
+  /// array.
+  /// \param Size Full size of the array.
+  APValue(UninitArray, unsigned InitElts, unsigned Size)
+      : Kind(None), AllowConstexprUnknown(false) {
     MakeArray(InitElts, Size);
   }
-  APValue(UninitStruct, unsigned B, unsigned M) : Kind(None) {
-    MakeStruct(B, M);
+  /// Creates a new struct APValue.
+  /// \param UninitStruct Marker. Pass an empty UninitStruct.
+  /// \param NumBases Number of bases.
+  /// \param NumMembers Number of members.
+  APValue(UninitStruct, unsigned NumBases, unsigned NumMembers)
+      : Kind(None), AllowConstexprUnknown(false) {
+    MakeStruct(NumBases, NumMembers);
   }
-  explicit APValue(const FieldDecl *D, const APValue &V = APValue())
-      : Kind(None) {
-    MakeUnion(); setUnion(D, V);
+  /// Creates a new union APValue.
+  /// \param ActiveDecl The FieldDecl of the active union member.
+  /// \param ActiveValue The value of the active union member.
+  explicit APValue(const FieldDecl *ActiveDecl,
+                   const APValue &ActiveValue = APValue())
+      : Kind(None), AllowConstexprUnknown(false) {
+    MakeUnion();
+    setUnion(ActiveDecl, ActiveValue);
   }
+  /// Creates a new member pointer APValue.
+  /// \param Member Declaration of the member
+  /// \param IsDerivedMember Whether member is a derived one.
+  /// \param Path The path of the member.
   APValue(const ValueDecl *Member, bool IsDerivedMember,
-          ArrayRef<const CXXRecordDecl*> Path) : Kind(None) {
+          ArrayRef<const CXXRecordDecl *> Path)
+      : Kind(None), AllowConstexprUnknown(false) {
     MakeMemberPointer(Member, IsDerivedMember, Path);
   }
-  APValue(const AddrLabelExpr* LHSExpr, const AddrLabelExpr* RHSExpr)
-      : Kind(None) {
+  /// Creates a new address label diff APValue.
+  /// \param LHSExpr The left-hand side of the difference.
+  /// \param RHSExpr The right-hand side of the difference.
+  APValue(const AddrLabelExpr *LHSExpr, const AddrLabelExpr *RHSExpr)
+      : Kind(None), AllowConstexprUnknown(false) {
     MakeAddrLabelDiff(); setAddrLabelDiff(LHSExpr, RHSExpr);
   }
   static APValue IndeterminateValue() {

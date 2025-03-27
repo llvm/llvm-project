@@ -521,13 +521,6 @@ enum library_type {
   library_throughput
 };
 
-#if KMP_OS_LINUX
-enum clock_function_type {
-  clock_function_gettimeofday,
-  clock_function_clock_gettime
-};
-#endif /* KMP_OS_LINUX */
-
 #if KMP_MIC_SUPPORTED
 enum mic_type { non_mic, mic1, mic2, mic3, dummy };
 #endif
@@ -1359,6 +1352,10 @@ extern kmp_uint64 __kmp_now_nsec();
 #define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
 #elif KMP_OS_OPENBSD
 /* TODO: tune for KMP_OS_OPENBSD */
+#define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
+#define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
+#elif KMP_OS_HAIKU
+/* TODO: tune for KMP_OS_HAIKU */
 #define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
 #define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
 #elif KMP_OS_HURD
@@ -2797,6 +2794,7 @@ struct kmp_taskdata { /* aligned during dynamic allocation       */
 #if OMPX_TASKGRAPH
   bool is_taskgraph = 0; // whether the task is within a TDG
   kmp_tdg_info_t *tdg; // used to associate task with a TDG
+  kmp_int32 td_tdg_task_id; // local task id in its TDG
 #endif
   kmp_target_data_t td_target_data;
 }; // struct kmp_taskdata
@@ -3415,8 +3413,6 @@ extern kmp_bootstrap_lock_t
                              __kmp_threads expansion to co-exist */
 
 extern kmp_lock_t __kmp_global_lock; /* control OS/global access  */
-extern kmp_queuing_lock_t __kmp_dispatch_lock; /* control dispatch access  */
-extern kmp_lock_t __kmp_debug_lock; /* control I/O access for KMP_DEBUG */
 
 extern enum library_type __kmp_library;
 
@@ -3544,11 +3540,6 @@ extern int __kmp_dispatch_num_buffers; /* max possible dynamic loops in
 extern int __kmp_hot_teams_mode;
 extern int __kmp_hot_teams_max_level;
 #endif
-
-#if KMP_OS_LINUX
-extern enum clock_function_type __kmp_clock_function;
-extern int __kmp_clock_function_param;
-#endif /* KMP_OS_LINUX */
 
 #if KMP_MIC_SUPPORTED
 extern enum mic_type __kmp_mic_type;
@@ -4552,7 +4543,8 @@ extern int __kmpc_get_target_offload();
 typedef enum kmp_pause_status_t {
   kmp_not_paused = 0, // status is not paused, or, requesting resume
   kmp_soft_paused = 1, // status is soft-paused, or, requesting soft pause
-  kmp_hard_paused = 2 // status is hard-paused, or, requesting hard pause
+  kmp_hard_paused = 2, // status is hard-paused, or, requesting hard pause
+  kmp_stop_tool_paused = 3 // requesting stop_tool pause
 } kmp_pause_status_t;
 
 // This stores the pause state of the runtime
@@ -4731,6 +4723,8 @@ public:
       : f(nullptr) {
     open(filename, mode, env_var);
   }
+  kmp_safe_raii_file_t(const kmp_safe_raii_file_t &other) = delete;
+  kmp_safe_raii_file_t &operator=(const kmp_safe_raii_file_t &other) = delete;
   ~kmp_safe_raii_file_t() { close(); }
 
   /// Open filename using mode. This is automatically closed in the destructor.

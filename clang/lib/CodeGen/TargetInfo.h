@@ -98,6 +98,24 @@ public:
                                     const CallArgList &Args,
                                     QualType ReturnType) const {}
 
+  /// Returns true if inlining the function call would produce incorrect code
+  /// for the current target and should be ignored (even with the always_inline
+  /// or flatten attributes).
+  ///
+  /// Note: This probably should be handled in LLVM. However, the LLVM
+  /// `alwaysinline` attribute currently means the inliner will ignore
+  /// mismatched attributes (which sometimes can generate invalid code). So,
+  /// this hook allows targets to avoid adding the LLVM `alwaysinline` attribute
+  /// based on C/C++ attributes or other target-specific reasons.
+  ///
+  /// See previous discussion here:
+  /// https://discourse.llvm.org/t/rfc-avoid-inlining-alwaysinline-functions-when-they-cannot-be-inlined/79528
+  virtual bool
+  wouldInliningViolateFunctionCallABI(const FunctionDecl *Caller,
+                                      const FunctionDecl *Callee) const {
+    return false;
+  }
+
   /// Determines the size of struct _Unwind_Exception on this platform,
   /// in 8-bit units.  The Itanium ABI defines this as:
   ///   struct _Unwind_Exception {
@@ -334,6 +352,12 @@ public:
                                                  llvm::AtomicOrdering Ordering,
                                                  llvm::LLVMContext &Ctx) const;
 
+  /// Allow the target to apply other metadata to an atomic instruction
+  virtual void setTargetAtomicMetadata(CodeGenFunction &CGF,
+                                       llvm::Instruction &AtomicInst,
+                                       const AtomicExpr *Expr = nullptr) const {
+  }
+
   /// Interface class for filling custom fields of a block literal for OpenCL.
   class TargetOpenCLBlockHelper {
   public:
@@ -414,13 +438,23 @@ public:
     return nullptr;
   }
 
+  /// Return an LLVM type that corresponds to a HLSL type
+  virtual llvm::Type *
+  getHLSLType(CodeGenModule &CGM, const Type *T,
+              const SmallVector<int32_t> *Packoffsets = nullptr) const {
+    return nullptr;
+  }
+
+  // Set the Branch Protection Attributes of the Function accordingly to the
+  // BPI. Remove attributes that contradict with current BPI.
   static void
   setBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
                                   llvm::Function &F);
 
+  // Add the Branch Protection Attributes of the FuncAttrs.
   static void
-  setBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
-                                  llvm::AttrBuilder &FuncAttrs);
+  initBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
+                                   llvm::AttrBuilder &FuncAttrs);
 
 protected:
   static std::string qualifyWindowsLibrary(StringRef Lib);
@@ -491,6 +525,9 @@ std::unique_ptr<TargetCodeGenInfo>
 createMIPSTargetCodeGenInfo(CodeGenModule &CGM, bool IsOS32);
 
 std::unique_ptr<TargetCodeGenInfo>
+createWindowsMIPSTargetCodeGenInfo(CodeGenModule &CGM, bool IsOS32);
+
+std::unique_ptr<TargetCodeGenInfo>
 createMSP430TargetCodeGenInfo(CodeGenModule &CGM);
 
 std::unique_ptr<TargetCodeGenInfo>
@@ -542,6 +579,9 @@ createTCETargetCodeGenInfo(CodeGenModule &CGM);
 
 std::unique_ptr<TargetCodeGenInfo>
 createVETargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createDirectXTargetCodeGenInfo(CodeGenModule &CGM);
 
 enum class WebAssemblyABIKind {
   MVP = 0,

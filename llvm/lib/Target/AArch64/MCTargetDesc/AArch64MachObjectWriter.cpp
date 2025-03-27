@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/AArch64FixupKinds.h"
+#include "MCTargetDesc/AArch64MCExpr.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -212,18 +213,15 @@ void AArch64MachObjectWriter::recordRelocation(
       // FIXME: x86_64 sets the type to a branch reloc here. Should we do
       // something similar?
     }
-  } else if (Target.getSymB()) { // A - B + constant
+  } else if (auto *B = Target.getSubSym()) { // A - B + constant
     const MCSymbol *A = &Target.getSymA()->getSymbol();
     const MCSymbol *A_Base = Writer->getAtom(*A);
-
-    const MCSymbol *B = &Target.getSymB()->getSymbol();
     const MCSymbol *B_Base = Writer->getAtom(*B);
 
     // Check for "_foo@got - .", which comes through here as:
     // Ltmp0:
     //    ... _foo@got - Ltmp0
     if (Target.getSymA()->getKind() == MCSymbolRefExpr::VK_GOT &&
-        Target.getSymB()->getKind() == MCSymbolRefExpr::VK_None &&
         Asm.getSymbolOffset(*B) ==
             Asm.getFragmentOffset(*Fragment) + Fixup.getOffset()) {
       // SymB is the PC, so use a PC-rel pointer-to-GOT relocation.
@@ -234,8 +232,7 @@ void AArch64MachObjectWriter::recordRelocation(
       MRE.r_word1 = (IsPCRel << 24) | (Log2Size << 25) | (Type << 28);
       Writer->addRelocation(A_Base, Fragment->getParent(), MRE);
       return;
-    } else if (Target.getSymA()->getKind() != MCSymbolRefExpr::VK_None ||
-               Target.getSymB()->getKind() != MCSymbolRefExpr::VK_None) {
+    } else if (Target.getSymA()->getKind() != MCSymbolRefExpr::VK_None) {
       // Otherwise, neither symbol can be modified.
       Asm.getContext().reportError(Fixup.getLoc(),
                                    "unsupported relocation of modified symbol");
@@ -392,6 +389,46 @@ void AArch64MachObjectWriter::recordRelocation(
 
     // Put zero into the instruction itself. The addend is in the relocation.
     Value = 0;
+  }
+
+  if (Target.getRefKind() == AArch64MCExpr::VK_AUTH ||
+      Target.getRefKind() == AArch64MCExpr::VK_AUTHADDR) {
+    auto *Expr = cast<AArch64AuthMCExpr>(Fixup.getValue());
+
+    assert(Type == MachO::ARM64_RELOC_UNSIGNED);
+
+    if (IsPCRel) {
+      Asm.getContext().reportError(Fixup.getLoc(),
+                                   "invalid PC relative auth relocation");
+      return;
+    }
+
+    if (Log2Size != 3) {
+      Asm.getContext().reportError(
+          Fixup.getLoc(), "invalid auth relocation size, must be 8 bytes");
+      return;
+    }
+
+    if (Target.getSubSym()) {
+      Asm.getContext().reportError(
+          Fixup.getLoc(),
+          "invalid auth relocation, can't reference two symbols");
+      return;
+    }
+
+    uint16_t Discriminator = Expr->getDiscriminator();
+    AArch64PACKey::ID Key = Expr->getKey();
+
+    if (!isInt<32>(Value)) {
+      Asm.getContext().reportError(Fixup.getLoc(),
+                                   "addend too big for relocation");
+      return;
+    }
+
+    Type = MachO::ARM64_RELOC_AUTHENTICATED_POINTER;
+    Value = (uint32_t(Value)) | (uint64_t(Discriminator) << 32) |
+            (uint64_t(Expr->hasAddressDiversity()) << 48) |
+            (uint64_t(Key) << 49) | (1ULL << 63);
   }
 
   // If there's any addend left to handle, encode it in the instruction.

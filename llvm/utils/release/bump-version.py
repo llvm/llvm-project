@@ -12,6 +12,9 @@ from typing import Optional
 
 
 class Processor:
+    def __init__(self, args):
+        self.args = args
+
     def process_line(self, line: str) -> str:
         raise NotImplementedError()
 
@@ -23,6 +26,13 @@ class Processor:
             version.micro,
             version.pre,
         )
+
+        if self.args.rc:
+            self.suffix = f"-rc{self.args.rc}"
+
+        if self.args.git:
+            self.suffix = "git"
+
         data = fpath.read_text()
         new_data = []
 
@@ -64,7 +74,7 @@ class CMakeProcessor(Processor):
             if self.suffix:
                 nline = re.sub(
                     r"set\(LLVM_VERSION_SUFFIX(.*)\)",
-                    f"set(LLVM_VERSION_SUFFIX -{self.suffix[0]}{self.suffix[1]})",
+                    f"set(LLVM_VERSION_SUFFIX {self.suffix})",
                     line,
                 )
             else:
@@ -144,6 +154,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("version", help="Version to bump to, e.g. 15.0.1", default=None)
     parser.add_argument("--rc", default=None, type=int, help="RC version")
+    parser.add_argument("--git", action="store_true", help="Git version")
     parser.add_argument(
         "-s",
         "--source-root",
@@ -153,9 +164,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    if args.rc and args.git:
+        raise RuntimeError("Can't specify --git and --rc at the same time!")
+
     verstr = args.version
-    if args.rc:
-        verstr += f"-rc{args.rc}"
 
     # parse the version string with distutils.
     # note that -rc will end up as version.pre here
@@ -170,20 +182,25 @@ if __name__ == "__main__":
 
     files_to_update = (
         # Main CMakeLists.
-        (source_root / "llvm" / "CMakeLists.txt", CMakeProcessor()),
+        (source_root / "cmake" / "Modules" / "LLVMVersion.cmake", CMakeProcessor(args)),
         # Lit configuration
         (
             "llvm/utils/lit/lit/__init__.py",
-            LitProcessor(),
+            LitProcessor(args),
+        ),
+        # mlgo-utils configuration
+        (
+            "llvm/utils/mlgo-utils/mlgo/__init__.py",
+            LitProcessor(args),
         ),
         # GN build system
         (
             "llvm/utils/gn/secondary/llvm/version.gni",
-            GNIProcessor(),
+            GNIProcessor(args),
         ),
         (
             "libcxx/include/__config",
-            LibCXXProcessor(),
+            LibCXXProcessor(args),
         ),
     )
 

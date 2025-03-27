@@ -45,6 +45,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestReducer
     MLIRTestTransforms
     MLIRTilingInterfaceTestPasses
+    MLIRTosaTestPasses
     MLIRVectorTestPasses
     MLIRTestVectorToSPIRV
     MLIRLLVMTestPasses
@@ -66,7 +67,6 @@ set(LIBS
   ${dialect_libs}
   ${conversion_libs}
   ${extension_libs}
-  ${test_libs}
 
   MLIRAffineAnalysis
   MLIRAnalysis
@@ -91,19 +91,19 @@ add_mlir_library(MLIRMlirOptMain
   mlir-opt.cpp
 
   EXCLUDE_FROM_LIBMLIR
-
-  LINK_LIBS PUBLIC
+  )
+mlir_target_link_libraries(MLIRMlirOptMain PUBLIC
   ${LIBS}
+  ${test_libs}
   )
 
 add_mlir_tool(mlir-opt
   mlir-opt.cpp
 
-  DEPENDS
-  ${LIBS}
   SUPPORT_PLUGINS
   )
-target_link_libraries(mlir-opt PRIVATE ${LIBS})
+mlir_target_link_libraries(mlir-opt PRIVATE ${LIBS})
+target_link_libraries(mlir-opt PRIVATE ${test_libs})
 llvm_update_compile_flags(mlir-opt)
 
 mlir_check_all_link_libraries(mlir-opt)

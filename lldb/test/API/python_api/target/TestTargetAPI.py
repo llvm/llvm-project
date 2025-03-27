@@ -153,6 +153,11 @@ class TargetAPITestCase(TestBase):
         self.assertSuccess(error, "Make sure memory read succeeded")
         self.assertEqual(len(content), 1)
 
+        # Make sure reading from 0x0 fails
+        sb_addr = lldb.SBAddress(0, target)
+        self.assertIsNone(target.ReadMemory(sb_addr, 1, error))
+        self.assertTrue(error.Fail())
+
     @skipIfWindows  # stdio manipulation unsupported on Windows
     @skipIfRemote  # stdio manipulation unsupported on remote iOS devices<rdar://problem/54581135>
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])

@@ -24,16 +24,16 @@ public:
 
     // Set up a Module with a dummy function operation inside.
     // Set the insertion point in the function entry block.
-    mlir::ModuleOp mod = builder.create<mlir::ModuleOp>(loc);
+    moduleOp = builder.create<mlir::ModuleOp>(loc);
+    builder.setInsertionPointToStart(moduleOp->getBody());
     mlir::func::FuncOp func =
-        mlir::func::FuncOp::create(loc, "runtime_unit_tests_func",
+        builder.create<mlir::func::FuncOp>(loc, "runtime_unit_tests_func",
             builder.getFunctionType(std::nullopt, std::nullopt));
     auto *entryBlock = func.addEntryBlock();
-    mod.push_back(mod);
     builder.setInsertionPointToStart(entryBlock);
 
     kindMap = std::make_unique<fir::KindMapping>(&context);
-    firBuilder = std::make_unique<fir::FirOpBuilder>(mod, *kindMap);
+    firBuilder = std::make_unique<fir::FirOpBuilder>(builder, *kindMap);
 
     i1Ty = firBuilder->getI1Type();
     i8Ty = firBuilder->getI8Type();
@@ -47,10 +47,10 @@ public:
     f80Ty = firBuilder->getF80Type();
     f128Ty = firBuilder->getF128Type();
 
-    c4Ty = fir::ComplexType::get(firBuilder->getContext(), 4);
-    c8Ty = fir::ComplexType::get(firBuilder->getContext(), 8);
-    c10Ty = fir::ComplexType::get(firBuilder->getContext(), 10);
-    c16Ty = fir::ComplexType::get(firBuilder->getContext(), 16);
+    c4Ty = mlir::ComplexType::get(f32Ty);
+    c8Ty = mlir::ComplexType::get(f64Ty);
+    c10Ty = mlir::ComplexType::get(f80Ty);
+    c16Ty = mlir::ComplexType::get(f128Ty);
 
     seqTy10 = fir::SequenceType::get(fir::SequenceType::Shape(1, 10), i32Ty);
     boxTy = fir::BoxType::get(mlir::NoneType::get(firBuilder->getContext()));
@@ -66,6 +66,7 @@ public:
   }
 
   mlir::MLIRContext context;
+  mlir::OwningOpRef<mlir::ModuleOp> moduleOp;
   std::unique_ptr<fir::KindMapping> kindMap;
   std::unique_ptr<fir::FirOpBuilder> firBuilder;
 

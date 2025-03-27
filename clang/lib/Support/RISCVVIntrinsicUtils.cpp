@@ -1010,7 +1010,7 @@ RVVIntrinsic::RVVIntrinsic(
       (!IsMasked && hasPassthruOperand())) {
     for (auto &I : IntrinsicTypes) {
       if (I >= 0)
-        I += NF;
+        I += 1;
     }
   }
 }
@@ -1039,8 +1039,7 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
     llvm::ArrayRef<PrototypeDescriptor> Prototype, bool IsMasked,
     bool HasMaskedOffOperand, bool HasVL, unsigned NF,
     PolicyScheme DefaultScheme, Policy PolicyAttrs, bool IsTuple) {
-  SmallVector<PrototypeDescriptor> NewPrototype(Prototype.begin(),
-                                                Prototype.end());
+  SmallVector<PrototypeDescriptor> NewPrototype(Prototype);
   bool HasPassthruOp = DefaultScheme == PolicyScheme::HasPassthruOperand;
   if (IsMasked) {
     // If HasMaskedOffOperand, insert result type as first input operand if
@@ -1205,13 +1204,16 @@ raw_ostream &operator<<(raw_ostream &OS, const RVVIntrinsicRecord &Record) {
     OS << "nullptr,";
   else
     OS << "\"" << Record.OverloadedName << "\",";
+  OS << "{";
+  for (uint32_t Exts : Record.RequiredExtensions)
+    OS << Exts << ',';
+  OS << "},";
   OS << Record.PrototypeIndex << ",";
   OS << Record.SuffixIndex << ",";
   OS << Record.OverloadedSuffixIndex << ",";
   OS << (int)Record.PrototypeLength << ",";
   OS << (int)Record.SuffixLength << ",";
   OS << (int)Record.OverloadedSuffixSize << ",";
-  OS << Record.RequiredExtensions << ",";
   OS << (int)Record.TypeRangeMask << ",";
   OS << (int)Record.Log2LMULMask << ",";
   OS << (int)Record.NF << ",";

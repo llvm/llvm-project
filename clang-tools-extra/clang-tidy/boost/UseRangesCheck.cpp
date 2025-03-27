@@ -204,7 +204,7 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
   ReplacerMap Results;
   static const Signature SingleSig = {{0}};
   static const Signature TwoSig = {{0}, {2}};
-  static const auto AddFrom =
+  const auto AddFrom =
       [&Results](llvm::IntrusiveRefCntPtr<UseRangesCheck::Replacer> Replacer,
                  std::initializer_list<StringRef> Names, StringRef Prefix) {
         llvm::SmallString<64> Buffer;
@@ -214,17 +214,17 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
         }
       };
 
-  static const auto AddFromStd =
-      [](llvm::IntrusiveRefCntPtr<UseRangesCheck::Replacer> Replacer,
-         std::initializer_list<StringRef> Names) {
+  const auto AddFromStd =
+      [&](llvm::IntrusiveRefCntPtr<UseRangesCheck::Replacer> Replacer,
+          std::initializer_list<StringRef> Names) {
         AddFrom(Replacer, Names, "std");
       };
 
-  static const auto AddFromBoost =
-      [](llvm::IntrusiveRefCntPtr<UseRangesCheck::Replacer> Replacer,
-         std::initializer_list<
-             std::pair<StringRef, std::initializer_list<StringRef>>>
-             NamespaceAndNames) {
+  const auto AddFromBoost =
+      [&](llvm::IntrusiveRefCntPtr<UseRangesCheck::Replacer> Replacer,
+          std::initializer_list<
+              std::pair<StringRef, std::initializer_list<StringRef>>>
+              NamespaceAndNames) {
         for (auto [Namespace, Names] : NamespaceAndNames)
           AddFrom(Replacer, Names,
                   SmallString<64>{"boost", (Namespace.empty() ? "" : "::"),

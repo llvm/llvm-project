@@ -1,10 +1,6 @@
 ; RUN: llc %s -stop-after=finalize-isel -o - \
 ; RUN: | FileCheck %s --implicit-check-not=DBG_
 
-
-; RUN: llc --try-experimental-debuginfo-iterators %s -stop-after=finalize-isel -o - \
-; RUN: | FileCheck %s --implicit-check-not=DBG_
-
 ;; Ensure that the order of several debug intrinsics between non-debug
 ;; instructions is maintained.
 

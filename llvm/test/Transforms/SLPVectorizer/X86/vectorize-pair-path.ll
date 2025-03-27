@@ -24,7 +24,7 @@ define double @root_selection(double %a, double %b, double %c, double %d) local_
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul fast <2 x double> [[TMP6]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = fsub fast <2 x double> [[TMP7]], <double 1.100000e+01, double undef>
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast <2 x double> [[TMP8]], <double 1.200000e+01, double 4.000000e+00>
-; CHECK-NEXT:    [[TMP10:%.*]] = fdiv fast <2 x double> [[TMP9]], <double 1.400000e+00, double 1.400000e+00>
+; CHECK-NEXT:    [[TMP10:%.*]] = fdiv fast <2 x double> [[TMP9]], splat (double 1.400000e+00)
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x double> [[TMP10]], i32 1
 ; CHECK-NEXT:    [[I07:%.*]] = fadd fast double undef, [[TMP11]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP10]], i32 0

@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -345,6 +346,52 @@ Register SystemZInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return isSimpleMove(MI, FrameIndex, SystemZII::SimpleBDXStore);
 }
 
+Register SystemZInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
+                                                     int &FrameIndex) const {
+  // if this is not a simple load from memory, it's not a load from stack slot
+  // either.
+  const MCInstrDesc &MCID = MI.getDesc();
+  if (!(MCID.TSFlags & SystemZII::SimpleBDXLoad))
+    return 0;
+
+  // This version of isLoadFromStackSlot should only be used post frame-index
+  // elimination.
+  assert(!MI.getOperand(1).isFI());
+
+  // Now attempt to derive frame index from MachineMemOperands.
+  SmallVector<const MachineMemOperand *, 1> Accesses;
+  if (hasLoadFromStackSlot(MI, Accesses)) {
+    FrameIndex =
+        cast<FixedStackPseudoSourceValue>(Accesses.front()->getPseudoValue())
+            ->getFrameIndex();
+    return MI.getOperand(0).getReg();
+  }
+  return 0;
+}
+
+Register SystemZInstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
+                                                    int &FrameIndex) const {
+  // if this is not a simple store to memory, it's not a store to stack slot
+  // either.
+  const MCInstrDesc &MCID = MI.getDesc();
+  if (!(MCID.TSFlags & SystemZII::SimpleBDXStore))
+    return 0;
+
+  // This version of isStoreToStackSlot should only be used post frame-index
+  // elimination.
+  assert(!MI.getOperand(1).isFI());
+
+  // Now attempt to derive frame index from MachineMemOperands.
+  SmallVector<const MachineMemOperand *, 1> Accesses;
+  if (hasStoreToStackSlot(MI, Accesses)) {
+    FrameIndex =
+        cast<FixedStackPseudoSourceValue>(Accesses.front()->getPseudoValue())
+            ->getFrameIndex();
+    return MI.getOperand(0).getReg();
+  }
+  return 0;
+}
+
 bool SystemZInstrInfo::isStackSlotCopy(const MachineInstr &MI,
                                        int &DestFrameIndex,
                                        int &SrcFrameIndex) const {
@@ -631,8 +678,7 @@ MachineInstr *SystemZInstrInfo::optimizeLoadInstr(MachineInstr &MI,
   DefMI = MRI->getVRegDef(FoldAsLoadDefReg);
   assert(DefMI);
   bool SawStore = false;
-  if (!DefMI->isSafeToMove(nullptr, SawStore) ||
-      !MRI->hasOneNonDBGUse(FoldAsLoadDefReg))
+  if (!DefMI->isSafeToMove(SawStore) || !MRI->hasOneNonDBGUse(FoldAsLoadDefReg))
     return nullptr;
 
   int UseOpIdx =
@@ -857,8 +903,10 @@ bool SystemZInstrInfo::PredicateInstruction(
 
 void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI,
-                                   const DebugLoc &DL, MCRegister DestReg,
-                                   MCRegister SrcReg, bool KillSrc) const {
+                                   const DebugLoc &DL, Register DestReg,
+                                   Register SrcReg, bool KillSrc,
+                                   bool RenamableDest,
+                                   bool RenamableSrc) const {
   // Split 128-bit GPR moves into two 64-bit moves. Add implicit uses of the
   // super register in case one of the subregs is undefined.
   // This handles ADDR128 too.
@@ -904,7 +952,7 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         RI.getMatchingSuperReg(RI.getSubReg(DestReg, SystemZ::subreg_l64),
                                SystemZ::subreg_h64, &SystemZ::VR128BitRegClass);
 
-    if (DestRegHi != SrcReg)
+    if (DestRegHi != SrcReg.asMCReg())
       copyPhysReg(MBB, MBBI, DL, DestRegHi, SrcReg, false);
     BuildMI(MBB, MBBI, DL, get(SystemZ::VREPG), DestRegLo)
       .addReg(SrcReg, getKillRegState(KillSrc)).addImm(1);
@@ -981,6 +1029,12 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Opcode = SystemZ::VLR;
   else if (SystemZ::AR32BitRegClass.contains(DestReg, SrcReg))
     Opcode = SystemZ::CPYA;
+  else if (SystemZ::GR64BitRegClass.contains(DestReg) &&
+           SystemZ::FP64BitRegClass.contains(SrcReg))
+    Opcode = SystemZ::LGDR;
+  else if (SystemZ::FP64BitRegClass.contains(DestReg) &&
+           SystemZ::GR64BitRegClass.contains(SrcReg))
+    Opcode = SystemZ::LDGR;
   else
     llvm_unreachable("Impossible reg-to-reg copy");
 
@@ -991,7 +1045,8 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 void SystemZInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
     bool isKill, int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    const TargetRegisterInfo *TRI, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   // Callers may expect a single instruction, so keep 128-bit moves
@@ -1003,12 +1058,10 @@ void SystemZInstrInfo::storeRegToStackSlot(
                     FrameIdx);
 }
 
-void SystemZInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                            MachineBasicBlock::iterator MBBI,
-                                            Register DestReg, int FrameIdx,
-                                            const TargetRegisterClass *RC,
-                                            const TargetRegisterInfo *TRI,
-                                            Register VReg) const {
+void SystemZInstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DestReg,
+    int FrameIdx, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    Register VReg, MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   // Callers may expect a single instruction, so keep 128-bit moves
@@ -1791,6 +1844,10 @@ unsigned SystemZInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return MI.getOperand(1).getImm();
   else if (MI.getOpcode() == SystemZ::FENTRY_CALL)
     return 6;
+  if (MI.getOpcode() == TargetOpcode::PATCHABLE_FUNCTION_ENTER)
+    return 18;
+  if (MI.getOpcode() == TargetOpcode::PATCHABLE_RET)
+    return 18 + (MI.getOperand(0).getImm() == SystemZ::CondReturn ? 4 : 0);
 
   return MI.getDesc().getSize();
 }
@@ -2304,4 +2361,13 @@ bool SystemZInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
   }
 
   return false;
+}
+
+std::optional<DestSourcePair>
+SystemZInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
+  // if MI is a simple single-register copy operation, return operand pair
+  if (MI.isMoveReg())
+    return DestSourcePair(MI.getOperand(0), MI.getOperand(1));
+
+  return std::nullopt;
 }

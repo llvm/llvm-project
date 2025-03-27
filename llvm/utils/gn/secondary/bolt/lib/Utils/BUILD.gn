@@ -1,7 +1,24 @@
+import("//llvm/utils/gn/build/write_vcsrevision.gni")
+
+# Configure the VCSVersion.inc file
+config("write_vcsrevision_config") {
+  # To pick up the generated inc file.
+  include_dirs = [ target_gen_dir ]
+  visibility = [ ":write_vcsversion" ]
+}
+
+write_vcsrevision("write_vcsversion") {
+  visibility = [ ":Utils" ]
+  header = "$target_gen_dir/VCSVersion.inc"
+  names = [ "LLDB" ]
+  public_configs = [ ":write_vcsrevision_config" ]
+}
+
 static_library("Utils") {
   output_name = "LLVMBOLTUtils"
   configs += [ "//llvm/utils/gn/build:bolt_code" ]
   deps = [
+    ":write_vcsversion",
     "//llvm/lib/Support",
     "//llvm/utils/gn/build/libs/pthread",
   ]

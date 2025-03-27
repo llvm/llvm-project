@@ -16,7 +16,10 @@ movabsq $memcpy+2, %rax
 
 # CHECK:      movq (%rip), %rax
 # CHECK-NEXT:   R_X86_64_REX_GOTPCRELX  abs-0x4
+# CHECK:      movq (%rip), %r16
+# CHECK-NEXT:   R_X86_64_CODE_4_GOTPCRELX abs-0x4
 movq abs@GOTPCREL(%rip), %rax
+movq abs@GOTPCREL(%rip), %r16
 abs = 42
 
 # CHECK:      movabsq $0, %rbx

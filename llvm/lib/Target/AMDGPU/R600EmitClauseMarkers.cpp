@@ -180,11 +180,8 @@ private:
                         MachineBasicBlock::iterator BBEnd) {
     const R600RegisterInfo &TRI = TII->getRegisterInfo();
     //TODO: change this to defs?
-    for (MachineInstr::const_mop_iterator
-           MOI = Def->operands_begin(),
-           MOE = Def->operands_end(); MOI != MOE; ++MOI) {
-      if (!MOI->isReg() || !MOI->isDef() ||
-          TRI.isPhysRegLiveAcrossClauses(MOI->getReg()))
+    for (MachineOperand &MO : Def->all_defs()) {
+      if (TRI.isPhysRegLiveAcrossClauses(MO.getReg()))
         continue;
 
       // Def defines a clause local register, so check that its use will fit
@@ -208,11 +205,11 @@ private:
         // occur in the same basic block as its definition, because
         // it is illegal for the scheduler to schedule them in
         // different blocks.
-        if (UseI->readsRegister(MOI->getReg(), &TRI))
+        if (UseI->readsRegister(MO.getReg(), &TRI))
           LastUseCount = AluInstCount;
 
         // Exit early if the current use kills the register
-        if (UseI != Def && UseI->killsRegister(MOI->getReg(), &TRI))
+        if (UseI != Def && UseI->killsRegister(MO.getReg(), &TRI))
           break;
       }
       if (LastUseCount)

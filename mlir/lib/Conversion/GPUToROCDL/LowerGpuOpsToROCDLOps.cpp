@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Pass/Pass.h"
@@ -19,16 +18,15 @@
 #include "mlir/Transforms/Passes.h"
 
 #include "mlir/Conversion/AMDGPUToROCDL/AMDGPUToROCDL.h"
-#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
-#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMPass.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 #include "mlir/Conversion/MathToROCDL/MathToROCDL.h"
-#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
-#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -46,7 +44,6 @@
 
 #include "../GPUCommon/GPUOpsLowering.h"
 #include "../GPUCommon/IndexIntrinsicsOpLowering.h"
-#include "../GPUCommon/OpToFuncCallLowering.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTGPUOPSTOROCDLOPS
@@ -157,6 +154,10 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     // TODO: Use ds_swizzle for XOR when step/offsets are constants for better
     // perf.
     switch (op.getMode()) {
+    case gpu::ShuffleMode::DOWN:
+      dstLane = rewriter.create<LLVM::AddOp>(loc, int32Type, srcLaneId,
+                                             adaptor.getOffset());
+      break;
     case gpu::ShuffleMode::XOR:
       dstLane = rewriter.create<LLVM::XOrOp>(loc, int32Type, srcLaneId,
                                              adaptor.getOffset());
@@ -198,7 +199,7 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
 //
 // This pass only handles device code and is not meant to be run on GPU host
 // code.
-struct LowerGpuOpsToROCDLOpsPass
+struct LowerGpuOpsToROCDLOpsPass final
     : public impl::ConvertGpuOpsToROCDLOpsBase<LowerGpuOpsToROCDLOpsPass> {
   LowerGpuOpsToROCDLOpsPass() = default;
   LowerGpuOpsToROCDLOpsPass(const std::string &chipset, unsigned indexBitwidth,
@@ -212,6 +213,11 @@ struct LowerGpuOpsToROCDLOpsPass
       this->useBarePtrCallConv = useBarePtrCallConv;
     if (this->runtime.getNumOccurrences() == 0)
       this->runtime = runtime;
+  }
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    Base::getDependentDialects(registry);
+    registerConvertToLLVMDependentDialectLoading(registry);
   }
 
   void runOnOperation() override {
@@ -266,7 +272,7 @@ struct LowerGpuOpsToROCDLOpsPass
       RewritePatternSet patterns(ctx);
       populateGpuRewritePatterns(patterns);
       arith::populateExpandBFloat16Patterns(patterns);
-      (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
+      (void)applyPatternsGreedily(m, std::move(patterns));
     }
 
     LLVMTypeConverter converter(ctx, options);
@@ -285,16 +291,36 @@ struct LowerGpuOpsToROCDLOpsPass
         });
 
     RewritePatternSet llvmPatterns(ctx);
+    LLVMConversionTarget target(getContext());
 
-    mlir::arith::populateArithToLLVMConversionPatterns(converter, llvmPatterns);
+    llvm::SmallDenseSet<StringRef> allowedDialectsSet(allowedDialects.begin(),
+                                                      allowedDialects.end());
+    for (Dialect *dialect : ctx->getLoadedDialects()) {
+      bool allowed = allowedDialectsSet.contains(dialect->getNamespace());
+      // Empty `allowedDialectsSet` means all dialects are allowed.
+      if (!allowedDialectsSet.empty() && !allowed)
+        continue;
+
+      auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+      if (!iface) {
+        // Error out if dialect was explicily specified but doesn't implement
+        // conversion interface.
+        if (allowed) {
+          m.emitError()
+              << "dialect does not implement ConvertToLLVMPatternInterface: "
+              << dialect->getNamespace();
+          return signalPassFailure();
+        }
+        continue;
+      }
+
+      iface->populateConvertToLLVMConversionPatterns(target, converter,
+                                                     llvmPatterns);
+    }
+
     populateAMDGPUToROCDLConversionPatterns(converter, llvmPatterns,
                                             *maybeChipset);
-    populateVectorToLLVMConversionPatterns(converter, llvmPatterns);
-    cf::populateControlFlowToLLVMConversionPatterns(converter, llvmPatterns);
-    populateFuncToLLVMConversionPatterns(converter, llvmPatterns);
-    populateFinalizeMemRefToLLVMConversionPatterns(converter, llvmPatterns);
     populateGpuToROCDLConversionPatterns(converter, llvmPatterns, runtime);
-    LLVMConversionTarget target(getContext());
     configureGpuToROCDLConversionLegality(target);
     if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
       signalPassFailure();
@@ -329,25 +355,19 @@ void mlir::configureGpuToROCDLConversionLegality(ConversionTarget &target) {
   target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
   target.addLegalDialect<ROCDL::ROCDLDialect>();
   target.addIllegalDialect<gpu::GPUDialect>();
-  target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op, LLVM::FAbsOp,
-                      LLVM::FCeilOp, LLVM::FFloorOp, LLVM::FRemOp, LLVM::LogOp,
-                      LLVM::Log10Op, LLVM::Log2Op, LLVM::PowOp, LLVM::SinOp,
-                      LLVM::SqrtOp>();
-
+  target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op, LLVM::FCeilOp,
+                      LLVM::FFloorOp, LLVM::FRemOp, LLVM::LogOp, LLVM::Log10Op,
+                      LLVM::Log2Op, LLVM::PowOp, LLVM::SinOp>();
+  // These ops are legal for f32 type.
+  target.addDynamicallyLegalOp<LLVM::ExpOp, LLVM::LogOp>([](Operation *op) {
+    return any_of(op->getOperandTypes(), llvm::IsaPred<Float32Type>);
+  });
   // TODO: Remove once we support replacing non-root ops.
-  target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
-}
-
-template <typename OpTy>
-static void populateOpPatterns(LLVMTypeConverter &converter,
-                               RewritePatternSet &patterns, StringRef f32Func,
-                               StringRef f64Func) {
-  patterns.add<ScalarizeVectorOpLowering<OpTy>>(converter);
-  patterns.add<OpToFuncCallLowering<OpTy>>(converter, f32Func, f64Func);
+  target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp>();
 }
 
 void mlir::populateGpuToROCDLConversionPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
     mlir::gpu::amd::Runtime runtime) {
   using gpu::index_lowering::IndexKind;
   using gpu::index_lowering::IntrType;
@@ -372,10 +392,11 @@ void mlir::populateGpuToROCDLConversionPatterns(
   patterns.add<GPUReturnOpLowering>(converter);
   patterns.add<GPUFuncOpLowering>(
       converter,
-      /*allocaAddrSpace=*/ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace,
-      /*workgroupAddrSpace=*/ROCDL::ROCDLDialect::kSharedMemoryAddressSpace,
-      rocdlDialect->getKernelAttrHelper().getName(),
-      rocdlDialect->getReqdWorkGroupSizeAttrHelper().getName());
+      GPUFuncOpLoweringOptions{
+          /*allocaAddrSpace=*/ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace,
+          /*workgroupAddrSpace=*/ROCDL::ROCDLDialect::kSharedMemoryAddressSpace,
+          rocdlDialect->getKernelAttrHelper().getName(),
+          rocdlDialect->getReqdWorkGroupSizeAttrHelper().getName()});
   if (Runtime::HIP == runtime) {
     patterns.add<GPUPrintfOpToHIPLowering>(converter);
   } else if (Runtime::OpenCL == runtime) {

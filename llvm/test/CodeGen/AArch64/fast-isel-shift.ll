@@ -681,7 +681,7 @@ define i64 @shl_zext_zero(i32 %a) {
 ; CHECK-LABEL: shl_zext_zero:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    ubfx x0, x0, #0, #32
+; CHECK-NEXT:    lsr w0, w0, #0
 ; CHECK-NEXT:    ret
   %1 = zext i32 %a to i64
   %2 = shl i64 %1, 0
@@ -692,7 +692,7 @@ define i64 @lshr_zext_zero(i32 %a) {
 ; CHECK-LABEL: lshr_zext_zero:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    ubfx x0, x0, #0, #32
+; CHECK-NEXT:    lsr w0, w0, #0
 ; CHECK-NEXT:    ret
   %1 = zext i32 %a to i64
   %2 = lshr i64 %1, 0
@@ -703,7 +703,7 @@ define i64 @ashr_zext_zero(i32 %a) {
 ; CHECK-LABEL: ashr_zext_zero:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    ubfx x0, x0, #0, #32
+; CHECK-NEXT:    lsr w0, w0, #0
 ; CHECK-NEXT:    ret
   %1 = zext i32 %a to i64
   %2 = ashr i64 %1, 0

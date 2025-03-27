@@ -63,7 +63,7 @@ define <2 x i1> @icmp_eq_zext_unused(<2 x i8> %x) {
 
 define <2 x i1> @icmp_ne_zext_is_true(<2 x i8> %x) {
 ; CHECK-LABEL: @icmp_ne_zext_is_true(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %xext = zext <2 x i8> %x to <2 x i32>
   %cmp = icmp ne <2 x i32> %xext, <i32 256, i32 1234>
@@ -72,7 +72,7 @@ define <2 x i1> @icmp_ne_zext_is_true(<2 x i8> %x) {
 
 define <2 x i1> @icmp_ult_zext_is_true(<2 x i8> %x) {
 ; CHECK-LABEL: @icmp_ult_zext_is_true(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %xext = zext <2 x i8> %x to <2 x i32>
   %cmp = icmp ult <2 x i32> %xext, <i32 256, i32 1234>
@@ -81,7 +81,7 @@ define <2 x i1> @icmp_ult_zext_is_true(<2 x i8> %x) {
 
 define <2 x i1> @icmp_ule_zext_is_true(<2 x i8> %x) {
 ; CHECK-LABEL: @icmp_ule_zext_is_true(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %xext = zext <2 x i8> %x to <2 x i32>
   %cmp = icmp ule <2 x i32> %xext, <i32 256, i32 -1>
@@ -150,7 +150,7 @@ define <2 x i1> @icmp_eq_sext_fail(<2 x i8> %x) {
 
 define <2 x i1> @icmp_ne_sext_is_true(<2 x i8> %x) {
 ; CHECK-LABEL: @icmp_ne_sext_is_true(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %xext = sext <2 x i8> %x to <2 x i32>
   %cmp = icmp ne <2 x i32> %xext, <i32 199, i32 1234>

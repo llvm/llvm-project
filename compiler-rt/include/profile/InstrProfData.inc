@@ -303,6 +303,18 @@ COVMAP_HEADER(uint32_t, Int32Ty, Version, \
 #undef COVMAP_HEADER
 /* COVMAP_HEADER end.  */
 
+/* COVINIT_FUNC start */
+#ifndef COVINIT_FUNC
+#define COVINIT_FUNC(Type, LLVMType, Name, Initializer)
+#else
+#define INSTR_PROF_DATA_DEFINED
+#endif
+COVINIT_FUNC(IntPtrT, llvm::PointerType::getUnqual(Ctx), WriteoutFunction, \
+             WriteoutF)
+COVINIT_FUNC(IntPtrT, llvm::PointerType::getUnqual(Ctx), ResetFunction, \
+             ResetF)
+#undef COVINIT_FUNC
+/* COVINIT_FUNC end */
 
 #ifdef INSTR_PROF_SECT_ENTRY
 #define INSTR_PROF_DATA_DEFINED
@@ -336,15 +348,15 @@ INSTR_PROF_SECT_ENTRY(IPSK_covmap, \
 INSTR_PROF_SECT_ENTRY(IPSK_covfun, \
                       INSTR_PROF_QUOTE(INSTR_PROF_COVFUN_COMMON), \
                       INSTR_PROF_COVFUN_COFF, "__LLVM_COV,")
-INSTR_PROF_SECT_ENTRY(IPSK_orderfile, \
-                      INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_COMMON), \
-                      INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_COFF), "__DATA,")
 INSTR_PROF_SECT_ENTRY(IPSK_covdata, \
                       INSTR_PROF_QUOTE(INSTR_PROF_COVDATA_COMMON), \
                       INSTR_PROF_COVDATA_COFF, "__LLVM_COV,")
 INSTR_PROF_SECT_ENTRY(IPSK_covname, \
                       INSTR_PROF_QUOTE(INSTR_PROF_COVNAME_COMMON), \
                       INSTR_PROF_COVNAME_COFF, "__LLVM_COV,")
+INSTR_PROF_SECT_ENTRY(IPSK_covinit, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_COVINIT_COMMON), \
+                      INSTR_PROF_COVINIT_COFF, "__LLVM_COV,")
 
 #undef INSTR_PROF_SECT_ENTRY
 #endif
@@ -715,10 +727,12 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_COVMAP_VERSION 6
 
 /* Profile version is always of type uint64_t. Reserve the upper 32 bits in the
- * version for other variants of profile. We set the 8th most significant bit 
+ * version for other variants of profile. We set the 8th most significant bit
  * (i.e. bit 56) to 1 to indicate if this is an IR-level instrumentation
  * generated profile, and 0 if this is a Clang FE generated profile.
  * 1 in bit 57 indicates there are context-sensitive records in the profile.
+ * The 54th bit indicates whether to always instrument loop entry blocks.
+ * The 58th bit indicates whether to always instrument function entry blocks.
  * The 59th bit indicates whether to use debug info to correlate profiles.
  * The 60th bit indicates single byte coverage instrumentation.
  * The 61st bit indicates function entry instrumentation only.
@@ -727,6 +741,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
  */
 #define VARIANT_MASKS_ALL 0xffffffff00000000ULL
 #define GET_VERSION(V) ((V) & ~VARIANT_MASKS_ALL)
+#define VARIANT_MASK_INSTR_LOOP_ENTRIES (0x1ULL << 55)
 #define VARIANT_MASK_IR_PROF (0x1ULL << 56)
 #define VARIANT_MASK_CSIR_PROF (0x1ULL << 57)
 #define VARIANT_MASK_INSTR_ENTRY (0x1ULL << 58)
@@ -738,7 +753,9 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_RAW_VERSION_VAR __llvm_profile_raw_version
 #define INSTR_PROF_PROFILE_RUNTIME_VAR __llvm_profile_runtime
 #define INSTR_PROF_PROFILE_COUNTER_BIAS_VAR __llvm_profile_counter_bias
+#define INSTR_PROF_PROFILE_BITMAP_BIAS_VAR __llvm_profile_bitmap_bias
 #define INSTR_PROF_PROFILE_SET_TIMESTAMP __llvm_profile_set_timestamp
+#define INSTR_PROF_PROFILE_SAMPLING_VAR __llvm_profile_sampling
 
 /* The variable that holds the name of the profile data
  * specified via command line. */
@@ -758,7 +775,8 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_COVFUN_COMMON __llvm_covfun
 #define INSTR_PROF_COVDATA_COMMON __llvm_covdata
 #define INSTR_PROF_COVNAME_COMMON __llvm_covnames
-#define INSTR_PROF_ORDERFILE_COMMON __llvm_orderfile
+#define INSTR_PROF_COVINIT_COMMON __llvm_covinit
+
 /* Windows section names. Because these section names contain dollar characters,
  * they must be quoted.
  */
@@ -777,7 +795,10 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
  */
 #define INSTR_PROF_COVDATA_COFF ".lcovd"
 #define INSTR_PROF_COVNAME_COFF ".lcovn"
-#define INSTR_PROF_ORDERFILE_COFF ".lorderfile$M"
+
+// FIXME: Placeholder for Windows. Windows currently does not initialize
+// the GCOV functions in the runtime.
+#define INSTR_PROF_COVINIT_COFF ".lcovd$M"
 
 #ifdef _WIN32
 /* Runtime section names and name strings.  */
@@ -797,7 +818,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_COVFUN_SECT_NAME INSTR_PROF_COVFUN_COFF
 #define INSTR_PROF_COVDATA_SECT_NAME INSTR_PROF_COVDATA_COFF
 #define INSTR_PROF_COVNAME_SECT_NAME INSTR_PROF_COVNAME_COFF
-#define INSTR_PROF_ORDERFILE_SECT_NAME INSTR_PROF_ORDERFILE_COFF
+#define INSTR_PROF_COVINIT_SECT_NAME INSTR_PROF_COVINIT_COFF
 #else
 /* Runtime section names and name strings.  */
 #define INSTR_PROF_DATA_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_DATA_COMMON)
@@ -816,17 +837,8 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_COVFUN_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVFUN_COMMON)
 #define INSTR_PROF_COVDATA_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVDATA_COMMON)
 #define INSTR_PROF_COVNAME_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVNAME_COMMON)
-/* Order file instrumentation. */
-#define INSTR_PROF_ORDERFILE_SECT_NAME                                         \
-  INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_COMMON)
+#define INSTR_PROF_COVINIT_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVINIT_COMMON)
 #endif
-
-#define INSTR_PROF_ORDERFILE_BUFFER_NAME _llvm_order_file_buffer
-#define INSTR_PROF_ORDERFILE_BUFFER_NAME_STR                                   \
-  INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_BUFFER_NAME)
-#define INSTR_PROF_ORDERFILE_BUFFER_IDX_NAME _llvm_order_file_buffer_idx
-#define INSTR_PROF_ORDERFILE_BUFFER_IDX_NAME_STR                               \
-  INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_BUFFER_IDX_NAME)
 
 /* Macros to define start/stop section symbol for a given
  * section on Linux. For instance
@@ -861,12 +873,6 @@ typedef struct InstrProfValueData {
 
 #endif /* INSTR_PROF_DATA_INC */
 
-#ifndef INSTR_ORDER_FILE_INC
-/* The maximal # of functions: 128*1024 (the buffer size will be 128*4 KB). */
-#define INSTR_ORDER_FILE_BUFFER_SIZE 131072
-#define INSTR_ORDER_FILE_BUFFER_BITS 17
-#define INSTR_ORDER_FILE_BUFFER_MASK 0x1ffff
-#endif /* INSTR_ORDER_FILE_INC */
 #else
 #undef INSTR_PROF_DATA_DEFINED
 #endif

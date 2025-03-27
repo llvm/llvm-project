@@ -106,14 +106,25 @@ add_clang_library(clangCodeGen
   ConstantInitBuilder.cpp
   CoverageMappingGen.cpp
   ItaniumCXXABI.cpp
+  HLSLBufferLayoutBuilder.cpp
   LinkInModulesPass.cpp
   MacroPPCallbacks.cpp
   MicrosoftCXXABI.cpp
   ModuleBuilder.cpp
-  ObjectFilePCHContainerOperations.cpp
+  ObjectFilePCHContainerWriter.cpp
   PatternInit.cpp
   SanitizerMetadata.cpp
   SwiftCallingConv.cpp
+  TargetBuiltins/ARM.cpp
+  TargetBuiltins/AMDGPU.cpp
+  TargetBuiltins/Hexagon.cpp
+  TargetBuiltins/NVPTX.cpp
+  TargetBuiltins/PPC.cpp
+  TargetBuiltins/RISCV.cpp
+  TargetBuiltins/SPIR.cpp
+  TargetBuiltins/SystemZ.cpp
+  TargetBuiltins/WebAssembly.cpp
+  TargetBuiltins/X86.cpp
   TargetInfo.cpp
   Targets/AArch64.cpp
   Targets/AMDGPU.cpp
@@ -122,6 +133,7 @@ add_clang_library(clangCodeGen
   Targets/AVR.cpp
   Targets/BPF.cpp
   Targets/CSKY.cpp
+  Targets/DirectX.cpp
   Targets/Hexagon.cpp
   Targets/Lanai.cpp
   Targets/LoongArch.cpp
@@ -143,6 +155,7 @@ add_clang_library(clangCodeGen
   VarBypassDetector.cpp
 
   DEPENDS
+  vt_gen
   intrinsics_gen
   ClangDriverOptions
   # These generated headers are included transitively.

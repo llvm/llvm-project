@@ -86,8 +86,8 @@ end:
 define amdgpu_ps float @else3(i32 %z, float %v, i32 inreg %bound, i32 %x0) #0 {
 ; SI-LABEL: else3:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 6, v0
 ; SI-NEXT:    s_mov_b32 s1, 0
+; SI-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 6, v0
 ; SI-NEXT:    s_branch .LBB2_2
 ; SI-NEXT:  .LBB2_1: ; %if.end
 ; SI-NEXT:    ; in Loop: Header=BB2_2 Depth=1

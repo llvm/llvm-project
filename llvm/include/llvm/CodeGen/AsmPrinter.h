@@ -44,6 +44,7 @@ class DebugHandlerBase;
 class DIE;
 class DIEAbbrev;
 class DwarfDebug;
+class EHStreamer;
 class GCMetadataPrinter;
 class GCStrategy;
 class GlobalAlias;
@@ -187,14 +188,16 @@ protected:
   /// For dso_local functions, the current $local alias for the function.
   MCSymbol *CurrentFnBeginLocal = nullptr;
 
-  /// A vector of all debug/EH info emitters we should use. This vector
-  /// maintains ownership of the emitters.
+  /// A handle to the EH info emitter (if present).
+  // Only for EHStreamer subtypes, but some C++ compilers will incorrectly warn
+  // us if we declare that directly.
+  SmallVector<std::unique_ptr<AsmPrinterHandler>, 1> EHHandlers;
+
+  // A vector of all Debuginfo emitters we should use. Protected so that
+  // targets can add their own. This vector maintains ownership of the
+  // emitters.
   SmallVector<std::unique_ptr<AsmPrinterHandler>, 2> Handlers;
   size_t NumUserHandlers = 0;
-
-  /// Debuginfo handler. Protected so that targets can add their own.
-  SmallVector<std::unique_ptr<DebugHandlerBase>, 1> DebugHandlers;
-  size_t NumUserDebugHandlers = 0;
 
   StackMaps SM;
 
@@ -224,6 +227,9 @@ private:
   /// .note.GNU-no-split-stack section when it also contains functions without a
   /// split stack prologue.
   bool HasNoSplitStack = false;
+
+  /// True if debugging information is available in this module.
+  bool DbgInfoAvailable = false;
 
 protected:
   explicit AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
@@ -430,6 +436,9 @@ public:
   /// Get the CFISection type for the module.
   CFISection getModuleCFISectionType() const { return ModuleCFISection; }
 
+  /// Returns true if valid debug info is present.
+  bool hasDebugInfo() const { return DbgInfoAvailable; }
+
   bool needsSEHMoves();
 
   /// Since emitting CFI unwind information is entangled with supporting the
@@ -521,8 +530,6 @@ public:
 
   void addAsmPrinterHandler(std::unique_ptr<AsmPrinterHandler> Handler);
 
-  void addDebugHandler(std::unique_ptr<DebugHandlerBase> Handler);
-
   // Targets can, or in the case of EmitInstruction, must implement these to
   // customize output.
 
@@ -577,6 +584,9 @@ public:
     report_fatal_error("ptrauth constant lowering not implemented");
   }
 
+  /// Lower the specified BlockAddress to an MCExpr.
+  virtual const MCExpr *lowerBlockAddressConstant(const BlockAddress &BA);
+
   /// Return true if the basic block has exactly one predecessor and the control
   /// transfer mechanism between the predecessor and this block is a
   /// fall-through.
@@ -622,7 +632,7 @@ public:
                                          StringRef Suffix) const;
 
   /// Return the MCSymbol for the specified ExternalSymbol.
-  MCSymbol *GetExternalSymbolSymbol(Twine Sym) const;
+  MCSymbol *GetExternalSymbolSymbol(const Twine &Sym) const;
 
   /// Return the symbol for the specified jump table entry.
   MCSymbol *GetJTISymbol(unsigned JTID, bool isLinkerPrivate = false) const;
@@ -883,8 +893,13 @@ private:
   // Internal Implementation Details
   //===------------------------------------------------------------------===//
 
-  void emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
-                          const MachineBasicBlock *MBB, unsigned uid) const;
+  void emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
+                         ArrayRef<unsigned> JumpTableIndices,
+                         bool JTInDiffSection);
+
+  void emitJumpTableSizesSection(const MachineJumpTableInfo &MJTI,
+                                 const Function &F) const;
+
   void emitLLVMUsedList(const ConstantArray *InitList);
   /// Emit llvm.ident metadata in an '.ident' directive.
   void emitModuleIdents(Module &M);
@@ -894,11 +909,13 @@ private:
   GCMetadataPrinter *getOrCreateGCPrinter(GCStrategy &S);
   void emitGlobalIFunc(Module &M, const GlobalIFunc &GI);
 
-private:
   /// This method decides whether the specified basic block requires a label.
   bool shouldEmitLabelForBasicBlock(const MachineBasicBlock &MBB) const;
 
 protected:
+  virtual void emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
+                                  const MachineBasicBlock *MBB,
+                                  unsigned uid) const;
   virtual void emitGlobalAlias(const Module &M, const GlobalAlias &GA);
   virtual bool shouldEmitWeakSwiftAsyncExtendedFramePointerFlags() const {
     return false;

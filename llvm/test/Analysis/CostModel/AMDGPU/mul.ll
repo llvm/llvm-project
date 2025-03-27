@@ -215,78 +215,78 @@ define i32 @mul_constpow2() {
 define i32 @mul_uniformconstpow2() {
 ; SLOW16-LABEL: 'mul_uniformconstpow2'
 ; SLOW16-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %I64 = mul i64 undef, 16
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V2i64 = mul <2 x i64> undef, <i64 16, i64 16>
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V4i64 = mul <4 x i64> undef, <i64 16, i64 16, i64 16, i64 16>
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 480 for instruction: %V8i64 = mul <8 x i64> undef, <i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16>
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V2i64 = mul <2 x i64> undef, splat (i64 16)
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V4i64 = mul <4 x i64> undef, splat (i64 16)
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 480 for instruction: %V8i64 = mul <8 x i64> undef, splat (i64 16)
 ; SLOW16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I32 = mul i32 undef, 16
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4i32 = mul <4 x i32> undef, <i32 16, i32 16, i32 16, i32 16>
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8i32 = mul <8 x i32> undef, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V16i32 = mul <16 x i32> undef, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4i32 = mul <4 x i32> undef, splat (i32 16)
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8i32 = mul <8 x i32> undef, splat (i32 16)
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V16i32 = mul <16 x i32> undef, splat (i32 16)
 ; SLOW16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I16 = mul i16 undef, 16
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8i16 = mul <8 x i16> undef, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16i16 = mul <16 x i16> undef, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %V32i16 = mul <32 x i16> undef, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8i16 = mul <8 x i16> undef, splat (i16 16)
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16i16 = mul <16 x i16> undef, splat (i16 16)
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %V32i16 = mul <32 x i16> undef, splat (i16 16)
 ; SLOW16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I8 = mul i8 undef, 16
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16i8 = mul <16 x i8> undef, <i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16>
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %V32i8 = mul <32 x i8> undef, <i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16>
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 264 for instruction: %V64i8 = mul <64 x i8> undef, <i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16>
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16i8 = mul <16 x i8> undef, splat (i8 16)
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %V32i8 = mul <32 x i8> undef, splat (i8 16)
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 264 for instruction: %V64i8 = mul <64 x i8> undef, splat (i8 16)
 ; SLOW16-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 undef
 ;
 ; FAST16-LABEL: 'mul_uniformconstpow2'
 ; FAST16-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %I64 = mul i64 undef, 16
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V2i64 = mul <2 x i64> undef, <i64 16, i64 16>
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V4i64 = mul <4 x i64> undef, <i64 16, i64 16, i64 16, i64 16>
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 480 for instruction: %V8i64 = mul <8 x i64> undef, <i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16>
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V2i64 = mul <2 x i64> undef, splat (i64 16)
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V4i64 = mul <4 x i64> undef, splat (i64 16)
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 480 for instruction: %V8i64 = mul <8 x i64> undef, splat (i64 16)
 ; FAST16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I32 = mul i32 undef, 16
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4i32 = mul <4 x i32> undef, <i32 16, i32 16, i32 16, i32 16>
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8i32 = mul <8 x i32> undef, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V16i32 = mul <16 x i32> undef, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4i32 = mul <4 x i32> undef, splat (i32 16)
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8i32 = mul <8 x i32> undef, splat (i32 16)
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V16i32 = mul <16 x i32> undef, splat (i32 16)
 ; FAST16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I16 = mul i16 undef, 16
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8i16 = mul <8 x i16> undef, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16i16 = mul <16 x i16> undef, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V32i16 = mul <32 x i16> undef, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8i16 = mul <8 x i16> undef, splat (i16 16)
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16i16 = mul <16 x i16> undef, splat (i16 16)
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V32i16 = mul <32 x i16> undef, splat (i16 16)
 ; FAST16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I8 = mul i8 undef, 16
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16i8 = mul <16 x i8> undef, <i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16>
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %V32i8 = mul <32 x i8> undef, <i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16>
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 264 for instruction: %V64i8 = mul <64 x i8> undef, <i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16>
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16i8 = mul <16 x i8> undef, splat (i8 16)
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %V32i8 = mul <32 x i8> undef, splat (i8 16)
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 264 for instruction: %V64i8 = mul <64 x i8> undef, splat (i8 16)
 ; FAST16-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 undef
 ;
 ; SLOW16-SIZE-LABEL: 'mul_uniformconstpow2'
 ; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %I64 = mul i64 undef, 16
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V2i64 = mul <2 x i64> undef, <i64 16, i64 16>
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V4i64 = mul <4 x i64> undef, <i64 16, i64 16, i64 16, i64 16>
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 288 for instruction: %V8i64 = mul <8 x i64> undef, <i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16>
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V2i64 = mul <2 x i64> undef, splat (i64 16)
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V4i64 = mul <4 x i64> undef, splat (i64 16)
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 288 for instruction: %V8i64 = mul <8 x i64> undef, splat (i64 16)
 ; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I32 = mul i32 undef, 16
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4i32 = mul <4 x i32> undef, <i32 16, i32 16, i32 16, i32 16>
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8i32 = mul <8 x i32> undef, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V16i32 = mul <16 x i32> undef, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4i32 = mul <4 x i32> undef, splat (i32 16)
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8i32 = mul <8 x i32> undef, splat (i32 16)
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V16i32 = mul <16 x i32> undef, splat (i32 16)
 ; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I16 = mul i16 undef, 16
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8i16 = mul <8 x i16> undef, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16i16 = mul <16 x i16> undef, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %V32i16 = mul <32 x i16> undef, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8i16 = mul <8 x i16> undef, splat (i16 16)
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16i16 = mul <16 x i16> undef, splat (i16 16)
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %V32i16 = mul <32 x i16> undef, splat (i16 16)
 ; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I8 = mul i8 undef, 16
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16i8 = mul <16 x i8> undef, <i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16>
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V32i8 = mul <32 x i8> undef, <i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16>
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 132 for instruction: %V64i8 = mul <64 x i8> undef, <i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16>
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16i8 = mul <16 x i8> undef, splat (i8 16)
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V32i8 = mul <32 x i8> undef, splat (i8 16)
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 132 for instruction: %V64i8 = mul <64 x i8> undef, splat (i8 16)
 ; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; FAST16-SIZE-LABEL: 'mul_uniformconstpow2'
 ; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %I64 = mul i64 undef, 16
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V2i64 = mul <2 x i64> undef, <i64 16, i64 16>
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V4i64 = mul <4 x i64> undef, <i64 16, i64 16, i64 16, i64 16>
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 288 for instruction: %V8i64 = mul <8 x i64> undef, <i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16, i64 16>
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V2i64 = mul <2 x i64> undef, splat (i64 16)
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V4i64 = mul <4 x i64> undef, splat (i64 16)
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 288 for instruction: %V8i64 = mul <8 x i64> undef, splat (i64 16)
 ; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I32 = mul i32 undef, 16
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4i32 = mul <4 x i32> undef, <i32 16, i32 16, i32 16, i32 16>
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8i32 = mul <8 x i32> undef, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V16i32 = mul <16 x i32> undef, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4i32 = mul <4 x i32> undef, splat (i32 16)
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8i32 = mul <8 x i32> undef, splat (i32 16)
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V16i32 = mul <16 x i32> undef, splat (i32 16)
 ; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I16 = mul i16 undef, 16
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8i16 = mul <8 x i16> undef, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16i16 = mul <16 x i16> undef, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32i16 = mul <32 x i16> undef, <i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16, i16 16>
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8i16 = mul <8 x i16> undef, splat (i16 16)
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16i16 = mul <16 x i16> undef, splat (i16 16)
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32i16 = mul <32 x i16> undef, splat (i16 16)
 ; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I8 = mul i8 undef, 16
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16i8 = mul <16 x i8> undef, <i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16>
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V32i8 = mul <32 x i8> undef, <i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16>
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 132 for instruction: %V64i8 = mul <64 x i8> undef, <i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16, i8 16>
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16i8 = mul <16 x i8> undef, splat (i8 16)
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V32i8 = mul <32 x i8> undef, splat (i8 16)
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 132 for instruction: %V64i8 = mul <64 x i8> undef, splat (i8 16)
 ; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
   %I64 = mul i64 undef, 16
@@ -415,78 +415,78 @@ define i32 @mul_constnegpow2() {
 define i32 @mul_uniformconstnegpow2() {
 ; SLOW16-LABEL: 'mul_uniformconstnegpow2'
 ; SLOW16-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %I64 = mul i64 undef, -16
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V2i64 = mul <2 x i64> undef, <i64 -16, i64 -16>
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V4i64 = mul <4 x i64> undef, <i64 -16, i64 -16, i64 -16, i64 -16>
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 480 for instruction: %V8i64 = mul <8 x i64> undef, <i64 -16, i64 -16, i64 -16, i64 -16, i64 -16, i64 -16, i64 -16, i64 -16>
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V2i64 = mul <2 x i64> undef, splat (i64 -16)
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V4i64 = mul <4 x i64> undef, splat (i64 -16)
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 480 for instruction: %V8i64 = mul <8 x i64> undef, splat (i64 -16)
 ; SLOW16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I32 = mul i32 undef, -16
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4i32 = mul <4 x i32> undef, <i32 -16, i32 -16, i32 -16, i32 -16>
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8i32 = mul <8 x i32> undef, <i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16>
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V16i32 = mul <16 x i32> undef, <i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16>
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4i32 = mul <4 x i32> undef, splat (i32 -16)
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8i32 = mul <8 x i32> undef, splat (i32 -16)
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V16i32 = mul <16 x i32> undef, splat (i32 -16)
 ; SLOW16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I16 = mul i16 undef, -16
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8i16 = mul <8 x i16> undef, <i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16>
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16i16 = mul <16 x i16> undef, <i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16>
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %V32i16 = mul <32 x i16> undef, <i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16>
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8i16 = mul <8 x i16> undef, splat (i16 -16)
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16i16 = mul <16 x i16> undef, splat (i16 -16)
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %V32i16 = mul <32 x i16> undef, splat (i16 -16)
 ; SLOW16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I8 = mul i8 undef, -16
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16i8 = mul <16 x i8> undef, <i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16>
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %V32i8 = mul <32 x i8> undef, <i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16>
-; SLOW16-NEXT:  Cost Model: Found an estimated cost of 264 for instruction: %V64i8 = mul <64 x i8> undef, <i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16>
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16i8 = mul <16 x i8> undef, splat (i8 -16)
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %V32i8 = mul <32 x i8> undef, splat (i8 -16)
+; SLOW16-NEXT:  Cost Model: Found an estimated cost of 264 for instruction: %V64i8 = mul <64 x i8> undef, splat (i8 -16)
 ; SLOW16-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 undef
 ;
 ; FAST16-LABEL: 'mul_uniformconstnegpow2'
 ; FAST16-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %I64 = mul i64 undef, -16
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V2i64 = mul <2 x i64> undef, <i64 -16, i64 -16>
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V4i64 = mul <4 x i64> undef, <i64 -16, i64 -16, i64 -16, i64 -16>
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 480 for instruction: %V8i64 = mul <8 x i64> undef, <i64 -16, i64 -16, i64 -16, i64 -16, i64 -16, i64 -16, i64 -16, i64 -16>
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V2i64 = mul <2 x i64> undef, splat (i64 -16)
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V4i64 = mul <4 x i64> undef, splat (i64 -16)
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 480 for instruction: %V8i64 = mul <8 x i64> undef, splat (i64 -16)
 ; FAST16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I32 = mul i32 undef, -16
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4i32 = mul <4 x i32> undef, <i32 -16, i32 -16, i32 -16, i32 -16>
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8i32 = mul <8 x i32> undef, <i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16>
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V16i32 = mul <16 x i32> undef, <i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16>
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4i32 = mul <4 x i32> undef, splat (i32 -16)
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8i32 = mul <8 x i32> undef, splat (i32 -16)
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V16i32 = mul <16 x i32> undef, splat (i32 -16)
 ; FAST16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I16 = mul i16 undef, -16
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8i16 = mul <8 x i16> undef, <i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16>
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16i16 = mul <16 x i16> undef, <i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16>
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V32i16 = mul <32 x i16> undef, <i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16>
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8i16 = mul <8 x i16> undef, splat (i16 -16)
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16i16 = mul <16 x i16> undef, splat (i16 -16)
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %V32i16 = mul <32 x i16> undef, splat (i16 -16)
 ; FAST16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I8 = mul i8 undef, -16
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16i8 = mul <16 x i8> undef, <i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16>
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %V32i8 = mul <32 x i8> undef, <i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16>
-; FAST16-NEXT:  Cost Model: Found an estimated cost of 264 for instruction: %V64i8 = mul <64 x i8> undef, <i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16>
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16i8 = mul <16 x i8> undef, splat (i8 -16)
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %V32i8 = mul <32 x i8> undef, splat (i8 -16)
+; FAST16-NEXT:  Cost Model: Found an estimated cost of 264 for instruction: %V64i8 = mul <64 x i8> undef, splat (i8 -16)
 ; FAST16-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 undef
 ;
 ; SLOW16-SIZE-LABEL: 'mul_uniformconstnegpow2'
 ; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %I64 = mul i64 undef, -16
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V2i64 = mul <2 x i64> undef, <i64 -16, i64 -16>
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V4i64 = mul <4 x i64> undef, <i64 -16, i64 -16, i64 -16, i64 -16>
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 288 for instruction: %V8i64 = mul <8 x i64> undef, <i64 -16, i64 -16, i64 -16, i64 -16, i64 -16, i64 -16, i64 -16, i64 -16>
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V2i64 = mul <2 x i64> undef, splat (i64 -16)
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V4i64 = mul <4 x i64> undef, splat (i64 -16)
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 288 for instruction: %V8i64 = mul <8 x i64> undef, splat (i64 -16)
 ; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I32 = mul i32 undef, -16
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4i32 = mul <4 x i32> undef, <i32 -16, i32 -16, i32 -16, i32 -16>
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8i32 = mul <8 x i32> undef, <i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16>
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V16i32 = mul <16 x i32> undef, <i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16>
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4i32 = mul <4 x i32> undef, splat (i32 -16)
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8i32 = mul <8 x i32> undef, splat (i32 -16)
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V16i32 = mul <16 x i32> undef, splat (i32 -16)
 ; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I16 = mul i16 undef, -16
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8i16 = mul <8 x i16> undef, <i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16>
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16i16 = mul <16 x i16> undef, <i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16>
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %V32i16 = mul <32 x i16> undef, <i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16>
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8i16 = mul <8 x i16> undef, splat (i16 -16)
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16i16 = mul <16 x i16> undef, splat (i16 -16)
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %V32i16 = mul <32 x i16> undef, splat (i16 -16)
 ; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I8 = mul i8 undef, -16
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16i8 = mul <16 x i8> undef, <i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16>
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V32i8 = mul <32 x i8> undef, <i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16>
-; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 132 for instruction: %V64i8 = mul <64 x i8> undef, <i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16>
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16i8 = mul <16 x i8> undef, splat (i8 -16)
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V32i8 = mul <32 x i8> undef, splat (i8 -16)
+; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 132 for instruction: %V64i8 = mul <64 x i8> undef, splat (i8 -16)
 ; SLOW16-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; FAST16-SIZE-LABEL: 'mul_uniformconstnegpow2'
 ; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %I64 = mul i64 undef, -16
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V2i64 = mul <2 x i64> undef, <i64 -16, i64 -16>
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V4i64 = mul <4 x i64> undef, <i64 -16, i64 -16, i64 -16, i64 -16>
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 288 for instruction: %V8i64 = mul <8 x i64> undef, <i64 -16, i64 -16, i64 -16, i64 -16, i64 -16, i64 -16, i64 -16, i64 -16>
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V2i64 = mul <2 x i64> undef, splat (i64 -16)
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V4i64 = mul <4 x i64> undef, splat (i64 -16)
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 288 for instruction: %V8i64 = mul <8 x i64> undef, splat (i64 -16)
 ; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I32 = mul i32 undef, -16
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4i32 = mul <4 x i32> undef, <i32 -16, i32 -16, i32 -16, i32 -16>
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8i32 = mul <8 x i32> undef, <i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16>
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V16i32 = mul <16 x i32> undef, <i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16, i32 -16>
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4i32 = mul <4 x i32> undef, splat (i32 -16)
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8i32 = mul <8 x i32> undef, splat (i32 -16)
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V16i32 = mul <16 x i32> undef, splat (i32 -16)
 ; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I16 = mul i16 undef, -16
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8i16 = mul <8 x i16> undef, <i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16>
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16i16 = mul <16 x i16> undef, <i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16>
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32i16 = mul <32 x i16> undef, <i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16, i16 -16>
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8i16 = mul <8 x i16> undef, splat (i16 -16)
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16i16 = mul <16 x i16> undef, splat (i16 -16)
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32i16 = mul <32 x i16> undef, splat (i16 -16)
 ; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %I8 = mul i8 undef, -16
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16i8 = mul <16 x i8> undef, <i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16>
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V32i8 = mul <32 x i8> undef, <i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16>
-; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 132 for instruction: %V64i8 = mul <64 x i8> undef, <i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16, i8 -16>
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16i8 = mul <16 x i8> undef, splat (i8 -16)
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V32i8 = mul <32 x i8> undef, splat (i8 -16)
+; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 132 for instruction: %V64i8 = mul <64 x i8> undef, splat (i8 -16)
 ; FAST16-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
   %I64 = mul i64 undef, -16

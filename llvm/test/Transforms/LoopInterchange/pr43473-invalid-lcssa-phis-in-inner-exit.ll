@@ -6,7 +6,7 @@
 ; In the 2 test cases below, we have a LCSSA PHI in the inner loop exit, which
 ; is used in the outer loop latch. This is not supported.
 
-define void @test1() {
+define void @test1(i1 %arg) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
@@ -19,12 +19,12 @@ define void @test1() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[IDX]], align 8
 ; CHECK-NEXT:    store double undef, ptr [[IDX]], align 8
 ; CHECK-NEXT:    [[INNER_IV_NEXT]] = add nuw nsw i64 [[INNER_IV]], 1
-; CHECK-NEXT:    br i1 false, label [[INNER]], label [[OUTER_LATCH]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[INNER]], label [[OUTER_LATCH]]
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    [[INC43_LCSSA_WIDE_US:%.*]] = phi i64 [ [[INNER_IV_NEXT]], [[INNER]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INC43_LCSSA_WIDE_US]] to i32
 ; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nsw i64 [[OUTER_IV]], 1
-; CHECK-NEXT:    br i1 false, label [[OUTER_HEADER]], label [[OUTER_EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[OUTER_HEADER]], label [[OUTER_EXIT:%.*]]
 ; CHECK:       outer.exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -41,20 +41,20 @@ inner:                                    ; preds = %for.body28.us, %for.body25.
   %0 = load double, ptr %idx, align 8
   store double undef, ptr %idx, align 8
   %inner.iv.next = add nuw nsw i64 %inner.iv, 1
-  br i1 undef, label %inner, label %outer.latch
+  br i1 %arg, label %inner, label %outer.latch
 
 outer.latch:                ; preds = %inner
   %inc43.lcssa.wide.us = phi i64 [ %inner.iv.next, %inner ]
   %1 = trunc i64 %inc43.lcssa.wide.us to i32
   %outer.iv.next = add nsw i64 %outer.iv, 1
-  br i1 undef, label %outer.header, label %outer.exit
+  br i1 %arg, label %outer.header, label %outer.exit
 
 outer.exit:       ; preds = %for.cond26.for.end44_crit_edge.us
   ret void
 }
 
 ; Same as @test1, but with a dedicated inner loop exit block.
-define void @test2() {
+define void @test2(i1 %arg) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
@@ -67,14 +67,14 @@ define void @test2() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[IDX]], align 8
 ; CHECK-NEXT:    store double undef, ptr [[IDX]], align 8
 ; CHECK-NEXT:    [[INNER_IV_NEXT]] = add nuw nsw i64 [[INNER_IV]], 1
-; CHECK-NEXT:    br i1 false, label [[INNER]], label [[INNER_EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[INNER]], label [[INNER_EXIT:%.*]]
 ; CHECK:       inner.exit:
 ; CHECK-NEXT:    [[INC43_LCSSA_WIDE_US:%.*]] = phi i64 [ [[INNER_IV_NEXT]], [[INNER]] ]
 ; CHECK-NEXT:    br label [[OUTER_LATCH]]
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INC43_LCSSA_WIDE_US]] to i32
 ; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nsw i64 [[OUTER_IV]], 1
-; CHECK-NEXT:    br i1 false, label [[OUTER_HEADER]], label [[OUTER_EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[OUTER_HEADER]], label [[OUTER_EXIT:%.*]]
 ; CHECK:       outer.exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -91,7 +91,7 @@ inner:                                    ; preds = %for.body28.us, %for.body25.
   %0 = load double, ptr %idx, align 8
   store double undef, ptr %idx, align 8
   %inner.iv.next = add nuw nsw i64 %inner.iv, 1
-  br i1 undef, label %inner, label %inner.exit
+  br i1 %arg, label %inner, label %inner.exit
 
 inner.exit:
   %inc43.lcssa.wide.us = phi i64 [ %inner.iv.next, %inner ]
@@ -100,7 +100,7 @@ inner.exit:
 outer.latch:                ; preds = %inner
   %1 = trunc i64 %inc43.lcssa.wide.us to i32
   %outer.iv.next = add nsw i64 %outer.iv, 1
-  br i1 undef, label %outer.header, label %outer.exit
+  br i1 %arg, label %outer.header, label %outer.exit
 
 outer.exit:       ; preds = %for.cond26.for.end44_crit_edge.us
   ret void

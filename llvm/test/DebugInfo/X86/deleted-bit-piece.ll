@@ -9,9 +9,9 @@ target triple = "x86_64-apple-macosx10.8.0"
 ; CHECK: __Z3foov:
 ; CHECK: retq
 
-define void @_Z3foov() !dbg !12 {
+define void @_Z3foov(i1 %arg) !dbg !12 {
 entry:
-  br i1 undef, label %exit, label %bb
+  br i1 %arg, label %exit, label %bb
 
 bb:                                               ; preds = %entry
   call void @llvm.dbg.value(metadata ptr undef, metadata !15, metadata !16), !dbg !17

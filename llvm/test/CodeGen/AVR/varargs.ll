@@ -1,4 +1,4 @@
-; RUN: llc -mattr=sram,movw,addsubiw < %s -march=avr | FileCheck %s
+; RUN: llc -mattr=sram,movw,addsubiw < %s -mtriple=avr | FileCheck %s
 
 declare void @llvm.va_start(ptr)
 declare i16 @vsprintf(ptr nocapture, ptr nocapture, ptr)

@@ -781,6 +781,9 @@ private:
   // or equal to minWidthOfFPowIExponent option value.
   bool isFPowIConvertible(math::FPowIOp op);
 
+  // Reture true, if operation is integer type.
+  bool isConvertible(Operation *op);
+
   // Generate outlined implementations for power operations
   // and store them in funcImpls map.
   void generateOpImplementations();
@@ -798,13 +801,17 @@ bool ConvertMathToFuncsPass::isFPowIConvertible(math::FPowIOp op) {
   return (expTy && expTy.getWidth() >= minWidthOfFPowIExponent);
 }
 
+bool ConvertMathToFuncsPass::isConvertible(Operation *op) {
+  return isa<IntegerType>(getElementTypeOrSelf(op->getResult(0).getType()));
+}
+
 void ConvertMathToFuncsPass::generateOpImplementations() {
   ModuleOp module = getOperation();
 
   module.walk([&](Operation *op) {
     TypeSwitch<Operation *>(op)
         .Case<math::CountLeadingZerosOp>([&](math::CountLeadingZerosOp op) {
-          if (!convertCtlz)
+          if (!convertCtlz || !isConvertible(op))
             return;
           Type resultType = getElementTypeOrSelf(op.getResult().getType());
 
@@ -816,6 +823,9 @@ void ConvertMathToFuncsPass::generateOpImplementations() {
             entry.first->second = createCtlzFunc(&module, resultType);
         })
         .Case<math::IPowIOp>([&](math::IPowIOp op) {
+          if (!isConvertible(op))
+            return;
+
           Type resultType = getElementTypeOrSelf(op.getResult().getType());
 
           // Generate the software implementation of this operation,
@@ -873,9 +883,12 @@ void ConvertMathToFuncsPass::runOnOperation() {
                          func::FuncDialect, scf::SCFDialect,
                          vector::VectorDialect>();
 
-  target.addIllegalOp<math::IPowIOp>();
-  if (convertCtlz)
-    target.addIllegalOp<math::CountLeadingZerosOp>();
+  target.addDynamicallyLegalOp<math::IPowIOp>(
+      [this](math::IPowIOp op) { return !isConvertible(op); });
+  if (convertCtlz) {
+    target.addDynamicallyLegalOp<math::CountLeadingZerosOp>(
+        [this](math::CountLeadingZerosOp op) { return !isConvertible(op); });
+  }
   target.addDynamicallyLegalOp<math::FPowIOp>(
       [this](math::FPowIOp op) { return !isFPowIConvertible(op); });
   if (failed(applyPartialConversion(module, target, std::move(patterns))))

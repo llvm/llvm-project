@@ -520,7 +520,6 @@ TEST(CommandLineTest, LookupFailsInWrongSubCommand) {
 
   const char *args[] = {"prog", "sc1", "-sc2"};
   EXPECT_FALSE(cl::ParseCommandLineOptions(3, args, StringRef(), &OS));
-  OS.flush();
   EXPECT_FALSE(Errs.empty());
 }
 
@@ -616,7 +615,6 @@ TEST(CommandLineTest, AddToAllSubCommands) {
   EXPECT_TRUE(AllOpt);
 
   // Since all parsing succeeded, the error message should be empty.
-  OS.flush();
   EXPECT_TRUE(Errs.empty());
 }
 
@@ -657,14 +655,12 @@ TEST(CommandLineTest, RemoveFromRegularSubCommand) {
   EXPECT_FALSE(RemoveOption);
   EXPECT_TRUE(cl::ParseCommandLineOptions(3, args, StringRef(), &OS));
   EXPECT_TRUE(RemoveOption);
-  OS.flush();
   EXPECT_TRUE(Errs.empty());
 
   RemoveOption.removeArgument();
 
   cl::ResetAllOptionOccurrences();
   EXPECT_FALSE(cl::ParseCommandLineOptions(3, args, StringRef(), &OS));
-  OS.flush();
   EXPECT_FALSE(Errs.empty());
 }
 
@@ -1277,15 +1273,15 @@ TEST(CommandLineTest, PositionalEatArgsError) {
 
   std::string Errs;
   raw_string_ostream OS(Errs);
-  EXPECT_FALSE(cl::ParseCommandLineOptions(2, args, StringRef(), &OS)); OS.flush();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(2, args, StringRef(), &OS));
   EXPECT_FALSE(Errs.empty()); Errs.clear();
-  EXPECT_FALSE(cl::ParseCommandLineOptions(3, args2, StringRef(), &OS)); OS.flush();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(3, args2, StringRef(), &OS));
   EXPECT_FALSE(Errs.empty()); Errs.clear();
-  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args3, StringRef(), &OS)); OS.flush();
+  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args3, StringRef(), &OS));
   EXPECT_TRUE(Errs.empty()); Errs.clear();
 
   cl::ResetAllOptionOccurrences();
-  EXPECT_TRUE(cl::ParseCommandLineOptions(6, args4, StringRef(), &OS)); OS.flush();
+  EXPECT_TRUE(cl::ParseCommandLineOptions(6, args4, StringRef(), &OS));
   EXPECT_EQ(PosEatArgs.size(), 1u);
   EXPECT_EQ(PosEatArgs2.size(), 2u);
   EXPECT_TRUE(Errs.empty());
@@ -1875,7 +1871,7 @@ TEST(CommandLineTest, LongOptions) {
   //
 
   EXPECT_TRUE(
-      cl::ParseCommandLineOptions(4, args1, StringRef(), &OS)); OS.flush();
+      cl::ParseCommandLineOptions(4, args1, StringRef(), &OS));
   EXPECT_TRUE(OptA);
   EXPECT_FALSE(OptBLong);
   EXPECT_STREQ("val1", OptAB.c_str());
@@ -1883,7 +1879,7 @@ TEST(CommandLineTest, LongOptions) {
   cl::ResetAllOptionOccurrences();
 
   EXPECT_TRUE(
-      cl::ParseCommandLineOptions(4, args2, StringRef(), &OS)); OS.flush();
+      cl::ParseCommandLineOptions(4, args2, StringRef(), &OS));
   EXPECT_TRUE(OptA);
   EXPECT_FALSE(OptBLong);
   EXPECT_STREQ("val1", OptAB.c_str());
@@ -1893,7 +1889,7 @@ TEST(CommandLineTest, LongOptions) {
   // Fails because `-ab` and `--ab` are treated the same and appear more than
   // once.  Also, `val1` is unexpected.
   EXPECT_FALSE(
-      cl::ParseCommandLineOptions(4, args3, StringRef(), &OS)); OS.flush();
+      cl::ParseCommandLineOptions(4, args3, StringRef(), &OS));
   outs()<< Errs << "\n";
   EXPECT_FALSE(Errs.empty()); Errs.clear();
   cl::ResetAllOptionOccurrences();
@@ -1906,13 +1902,13 @@ TEST(CommandLineTest, LongOptions) {
   // Fails because `-ab` is treated as `-a -b`, so `-a` is seen twice, and
   // `val1` is unexpected.
   EXPECT_FALSE(cl::ParseCommandLineOptions(4, args1, StringRef(),
-                                           &OS, nullptr, true)); OS.flush();
+                                           &OS, nullptr, true));
   EXPECT_FALSE(Errs.empty()); Errs.clear();
   cl::ResetAllOptionOccurrences();
 
   // Works because `-a` is treated differently than `--ab`.
   EXPECT_TRUE(cl::ParseCommandLineOptions(4, args2, StringRef(),
-                                           &OS, nullptr, true)); OS.flush();
+                                           &OS, nullptr, true));
   EXPECT_TRUE(Errs.empty()); Errs.clear();
   cl::ResetAllOptionOccurrences();
 
@@ -1922,7 +1918,6 @@ TEST(CommandLineTest, LongOptions) {
   EXPECT_TRUE(OptA);
   EXPECT_TRUE(OptBLong);
   EXPECT_STREQ("val1", OptAB.c_str());
-  OS.flush();
   EXPECT_TRUE(Errs.empty()); Errs.clear();
   cl::ResetAllOptionOccurrences();
 }
@@ -1941,12 +1936,10 @@ TEST(CommandLineTest, OptionErrorMessage) {
   raw_string_ostream OS(Errs);
 
   OptA.error("custom error", OS);
-  OS.flush();
   EXPECT_NE(Errs.find("for the -a option:"), std::string::npos);
   Errs.clear();
 
   OptLong.error("custom error", OS);
-  OS.flush();
   EXPECT_NE(Errs.find("for the --long option:"), std::string::npos);
   Errs.clear();
 
@@ -1969,7 +1962,6 @@ TEST(CommandLineTest, OptionErrorMessageSuggest) {
   raw_string_ostream OS(Errs);
 
   EXPECT_FALSE(cl::ParseCommandLineOptions(2, args, StringRef(), &OS));
-  OS.flush();
   EXPECT_NE(Errs.find("prog: Did you mean '--aluminium'?\n"),
             std::string::npos);
   Errs.clear();
@@ -1992,7 +1984,6 @@ TEST(CommandLineTest, OptionErrorMessageSuggestNoHidden) {
   raw_string_ostream OS(Errs);
 
   EXPECT_FALSE(cl::ParseCommandLineOptions(2, args, StringRef(), &OS));
-  OS.flush();
   EXPECT_NE(Errs.find("prog: Did you mean '--aluminium'?\n"),
             std::string::npos);
   Errs.clear();
@@ -2082,7 +2073,6 @@ TEST(CommandLineTest, ConsumeAfterOnePositional) {
   std::string Errs;
   raw_string_ostream OS(Errs);
   EXPECT_TRUE(cl::ParseCommandLineOptions(4, Args, StringRef(), &OS));
-  OS.flush();
   EXPECT_EQ("input", Input);
   EXPECT_EQ(ExtraArgs.size(), 2u);
   EXPECT_EQ(ExtraArgs[0], "arg1");
@@ -2105,7 +2095,6 @@ TEST(CommandLineTest, ConsumeAfterTwoPositionals) {
   std::string Errs;
   raw_string_ostream OS(Errs);
   EXPECT_TRUE(cl::ParseCommandLineOptions(5, Args, StringRef(), &OS));
-  OS.flush();
   EXPECT_EQ("input1", Input1);
   EXPECT_EQ("input2", Input2);
   EXPECT_EQ(ExtraArgs.size(), 2u);

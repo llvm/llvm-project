@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <thread>
-#if !defined(__FreeBSD__) && !defined(__NetBSD__)
+#if !defined(__FreeBSD__) && !defined(__NetBSD__) && !defined(__OpenBSD__)
 #include <alloca.h>
 #else
 #include <cstdlib>

@@ -39,6 +39,7 @@ void registerLoopLikeInterfaceTestPasses();
 void registerPassManagerTestPass();
 void registerPrintSpirvAvailabilityPass();
 void registerRegionTestPasses();
+void registerPrintTosaAvailabilityPass();
 void registerShapeFunctionTestPasses();
 void registerSideEffectTestPasses();
 void registerSliceAnalysisTestPass();
@@ -87,11 +88,13 @@ void registerTestComposeSubView();
 void registerTestCompositePass();
 void registerTestConstantFold();
 void registerTestControlFlowSink();
+void registerTestConvertToSPIRVPass();
 void registerTestDataLayoutPropagation();
 void registerTestDataLayoutQuery();
 void registerTestDeadCodeAnalysisPass();
 void registerTestDecomposeCallGraphTypes();
 void registerTestDiagnosticsPass();
+void registerTestDiagnosticsMetadataPass();
 void registerTestDominancePass();
 void registerTestDynamicPipelinePass();
 void registerTestEmulateNarrowTypePass();
@@ -112,6 +115,7 @@ void registerTestLinalgRankReduceContractionOps();
 void registerTestLinalgTransforms();
 void registerTestLivenessAnalysisPass();
 void registerTestLivenessPass();
+void registerTestLLVMLegalizePatternsPass();
 void registerTestLoopFusion();
 void registerTestLoopMappingPass();
 void registerTestLoopUnrollingPass();
@@ -141,13 +145,17 @@ void registerTestSCFWhileOpBuilderPass();
 void registerTestSCFWrapInZeroTripCheckPasses();
 void registerTestShapeMappingPass();
 void registerTestSliceAnalysisPass();
+void registerTestSPIRVCPURunnerPipeline();
 void registerTestSPIRVFuncSignatureConversion();
+void registerTestSPIRVVectorUnrolling();
 void registerTestTensorCopyInsertionPass();
 void registerTestTensorTransforms();
 void registerTestTopologicalSortAnalysisPass();
 void registerTestTransformDialectEraseSchedulePass();
+void registerTestPassStateExtensionCommunication();
 void registerTestVectorLowerings();
 void registerTestVectorReductionToSPIRVDotProd();
+void registerTestVulkanRunnerPipeline();
 void registerTestWrittenToPass();
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 void registerTestDialectConversionPasses();
@@ -162,12 +170,14 @@ void registerTestDialect(DialectRegistry &);
 void registerTestDynDialect(DialectRegistry &);
 void registerTestTilingInterfaceTransformDialectExtension(DialectRegistry &);
 void registerTestTransformDialectExtension(DialectRegistry &);
+void registerTestTransformsTransformDialectExtension(DialectRegistry &);
 } // namespace test
 
 #ifdef MLIR_INCLUDE_TESTS
 void registerTestPasses() {
   registerCloneTestPasses();
   registerConvertToTargetEnvPass();
+  registerPrintTosaAvailabilityPass();
   registerLazyLoadingTestPasses();
   registerLoopLikeInterfaceTestPasses();
   registerPassManagerTestPass();
@@ -220,11 +230,13 @@ void registerTestPasses() {
   mlir::test::registerTestCompositePass();
   mlir::test::registerTestConstantFold();
   mlir::test::registerTestControlFlowSink();
+  mlir::test::registerTestConvertToSPIRVPass();
   mlir::test::registerTestDataLayoutPropagation();
   mlir::test::registerTestDataLayoutQuery();
   mlir::test::registerTestDeadCodeAnalysisPass();
   mlir::test::registerTestDecomposeCallGraphTypes();
   mlir::test::registerTestDiagnosticsPass();
+  mlir::test::registerTestDiagnosticsMetadataPass();
   mlir::test::registerTestDominancePass();
   mlir::test::registerTestDynamicPipelinePass();
   mlir::test::registerTestEmulateNarrowTypePass();
@@ -245,6 +257,7 @@ void registerTestPasses() {
   mlir::test::registerTestLinalgTransforms();
   mlir::test::registerTestLivenessAnalysisPass();
   mlir::test::registerTestLivenessPass();
+  mlir::test::registerTestLLVMLegalizePatternsPass();
   mlir::test::registerTestLoopFusion();
   mlir::test::registerTestLoopMappingPass();
   mlir::test::registerTestLoopUnrollingPass();
@@ -274,13 +287,17 @@ void registerTestPasses() {
   mlir::test::registerTestSCFWrapInZeroTripCheckPasses();
   mlir::test::registerTestShapeMappingPass();
   mlir::test::registerTestSliceAnalysisPass();
+  mlir::test::registerTestSPIRVCPURunnerPipeline();
   mlir::test::registerTestSPIRVFuncSignatureConversion();
+  mlir::test::registerTestSPIRVVectorUnrolling();
   mlir::test::registerTestTensorCopyInsertionPass();
   mlir::test::registerTestTensorTransforms();
   mlir::test::registerTestTopologicalSortAnalysisPass();
   mlir::test::registerTestTransformDialectEraseSchedulePass();
+  mlir::test::registerTestPassStateExtensionCommunication();
   mlir::test::registerTestVectorLowerings();
   mlir::test::registerTestVectorReductionToSPIRVDotProd();
+  mlir::test::registerTestVulkanRunnerPipeline();
   mlir::test::registerTestWrittenToPass();
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
   mlir::test::registerTestDialectConversionPasses();
@@ -307,6 +324,7 @@ int main(int argc, char **argv) {
 #ifdef MLIR_INCLUDE_TESTS
   ::test::registerTestDialect(registry);
   ::test::registerTestTransformDialectExtension(registry);
+  ::test::registerTestTransformsTransformDialectExtension(registry);
   ::test::registerTestTilingInterfaceTransformDialectExtension(registry);
   ::test::registerTestDynDialect(registry);
 #endif

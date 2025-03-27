@@ -92,6 +92,10 @@ public:
   /// unsigned domain.
   static ConstantRange fromKnownBits(const KnownBits &Known, bool IsSigned);
 
+  /// Split the ConstantRange into positive and negative components, ignoring
+  /// zero values.
+  std::pair<ConstantRange, ConstantRange> splitPosNeg() const;
+
   /// Produce the smallest range such that all values that may satisfy the given
   /// predicate with any value contained within Other is contained in the
   /// returned range.  Formally, this returns a superset of
@@ -500,6 +504,14 @@ public:
   /// from a left shift of a value in this range by a value in \p Other.
   /// TODO: This isn't fully implemented yet.
   ConstantRange shl(const ConstantRange &Other) const;
+
+  /// Return a new range representing the possible values resulting
+  /// from a left shift with wrap type \p NoWrapKind of a value in this
+  /// range and a value in \p Other.
+  /// If the result range is disjoint, the preferred range is determined by the
+  /// \p PreferredRangeType.
+  ConstantRange shlWithNoWrap(const ConstantRange &Other, unsigned NoWrapKind,
+                              PreferredRangeType RangeType = Smallest) const;
 
   /// Return a new range representing the possible values resulting from a
   /// logical right shift of a value in this range and a value in \p Other.

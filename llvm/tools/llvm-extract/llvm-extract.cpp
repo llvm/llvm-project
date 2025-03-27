@@ -41,7 +41,7 @@
 
 using namespace llvm;
 
-cl::OptionCategory ExtractCat("llvm-extract Options");
+static cl::OptionCategory ExtractCat("llvm-extract Options");
 
 // InputFilename - The filename to read from.
 static cl::opt<std::string> InputFilename(cl::Positional,
@@ -297,9 +297,8 @@ int main(int argc, char **argv) {
           Function *CF = CB->getCalledFunction();
           if (!CF)
             continue;
-          if (CF->isDeclaration() || GVs.count(CF))
+          if (CF->isDeclaration() || !GVs.insert(CF))
             continue;
-          GVs.insert(CF);
           Workqueue.push_back(CF);
         }
       }

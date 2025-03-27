@@ -14,13 +14,11 @@
 #include "test/UnitTest/Test.h"
 
 template <typename T>
-class HypotTestTemplate : public LIBC_NAMESPACE::testing::Test {
-private:
+struct HypotTestTemplate : public LIBC_NAMESPACE::testing::Test {
   using Func = T (*)(T, T);
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
-public:
   void test_special_numbers(Func func) {
     constexpr int N = 4;
     // Pythagorean triples.

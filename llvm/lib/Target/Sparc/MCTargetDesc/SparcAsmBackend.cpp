@@ -132,7 +132,7 @@ namespace {
   class SparcAsmBackend : public MCAsmBackend {
   protected:
     bool Is64Bit;
-    bool HasV9;
+    bool IsV8Plus;
 
   public:
     SparcAsmBackend(const MCSubtargetInfo &STI)
@@ -140,11 +140,8 @@ namespace {
                            ? llvm::endianness::little
                            : llvm::endianness::big),
           Is64Bit(STI.getTargetTriple().isArch64Bit()),
-          HasV9(STI.hasFeature(Sparc::FeatureV9)) {}
+          IsV8Plus(STI.hasFeature(Sparc::FeatureV8Plus)) {}
 
-    unsigned getNumFixupKinds() const override {
-      return Sparc::NumTargetFixupKinds;
-    }
 
     std::optional<MCFixupKind> getFixupKind(StringRef Name) const override {
       unsigned Type;
@@ -264,7 +261,8 @@ namespace {
       if (Kind < FirstTargetFixupKind)
         return MCAsmBackend::getFixupKindInfo(Kind);
 
-      assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+      assert(unsigned(Kind - FirstTargetFixupKind) <
+                 Sparc::NumTargetFixupKinds &&
              "Invalid kind!");
       if (Endian == llvm::endianness::little)
         return InfosLE[Kind - FirstTargetFixupKind];
@@ -275,8 +273,6 @@ namespace {
     bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
                                const MCValue &Target,
                                const MCSubtargetInfo *STI) override {
-      if (Fixup.getKind() >= FirstLiteralRelocationKind)
-        return true;
       switch ((Sparc::Fixups)Fixup.getKind()) {
       default:
         return false;
@@ -359,7 +355,7 @@ namespace {
     std::unique_ptr<MCObjectTargetWriter>
     createObjectTargetWriter() const override {
       uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(OSType);
-      return createSparcELFObjectWriter(Is64Bit, HasV9, OSABI);
+      return createSparcELFObjectWriter(Is64Bit, IsV8Plus, OSABI);
     }
   };
 

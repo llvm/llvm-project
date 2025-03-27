@@ -56,8 +56,6 @@ STATISTIC(EmittedRelaxableFragments,
           "Number of emitted assembler fragments - relaxable");
 STATISTIC(EmittedDataFragments,
           "Number of emitted assembler fragments - data");
-STATISTIC(EmittedCompactEncodedInstFragments,
-          "Number of emitted assembler fragments - compact encoded inst");
 STATISTIC(EmittedAlignFragments,
           "Number of emitted assembler fragments - align");
 STATISTIC(EmittedFillFragments,
@@ -86,26 +84,20 @@ MCAssembler::MCAssembler(MCContext &Context,
     : Context(Context), Backend(std::move(Backend)),
       Emitter(std::move(Emitter)), Writer(std::move(Writer)) {}
 
-MCAssembler::~MCAssembler() = default;
-
 void MCAssembler::reset() {
   RelaxAll = false;
-  SubsectionsViaSymbols = false;
   Sections.clear();
   Symbols.clear();
-  LinkerOptions.clear();
-  FileNames.clear();
   ThumbFuncs.clear();
   BundleAlignSize = 0;
-  ELFHeaderEFlags = 0;
 
   // reset objects owned by us
   if (getBackendPtr())
     getBackendPtr()->reset();
   if (getEmitterPtr())
     getEmitterPtr()->reset();
-  if (getWriterPtr())
-    getWriterPtr()->reset();
+  if (Writer)
+    Writer->reset();
 }
 
 bool MCAssembler::registerSection(MCSection &Section) {
@@ -127,10 +119,10 @@ bool MCAssembler::isThumbFunc(const MCSymbol *Symbol) const {
   const MCExpr *Expr = Symbol->getVariableValue();
 
   MCValue V;
-  if (!Expr->evaluateAsRelocatable(V, nullptr, nullptr))
+  if (!Expr->evaluateAsRelocatable(V, nullptr))
     return false;
 
-  if (V.getSymB() || V.getRefKind() != MCSymbolRefExpr::VK_None)
+  if (V.getSubSym() || V.getRefKind() != MCSymbolRefExpr::VK_None)
     return false;
 
   const MCSymbolRefExpr *Ref = V.getSymA();
@@ -163,7 +155,7 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
   MCContext &Ctx = getContext();
   Value = 0;
   WasForced = false;
-  if (!Expr->evaluateAsRelocatable(Target, this, &Fixup)) {
+  if (!Expr->evaluateAsRelocatable(Target, this)) {
     Ctx.reportError(Fixup.getLoc(), "expected relocatable expression");
     return true;
   }
@@ -175,21 +167,15 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
     }
   }
 
-  assert(getBackendPtr() && "Expected assembler backend");
-  bool IsTarget = getBackendPtr()->getFixupKindInfo(Fixup.getKind()).Flags &
-                  MCFixupKindInfo::FKF_IsTarget;
-
-  if (IsTarget)
+  unsigned FixupFlags = getBackend().getFixupKindInfo(Fixup.getKind()).Flags;
+  if (FixupFlags & MCFixupKindInfo::FKF_IsTarget)
     return getBackend().evaluateTargetFixup(*this, Fixup, DF, Target, STI,
                                             Value, WasForced);
 
-  unsigned FixupFlags = getBackendPtr()->getFixupKindInfo(Fixup.getKind()).Flags;
-  bool IsPCRel = getBackendPtr()->getFixupKindInfo(Fixup.getKind()).Flags &
-                 MCFixupKindInfo::FKF_IsPCRel;
-
+  bool IsPCRel = FixupFlags & MCFixupKindInfo::FKF_IsPCRel;
   bool IsResolved = false;
   if (IsPCRel) {
-    if (Target.getSymB()) {
+    if (Target.getSubSym()) {
       IsResolved = false;
     } else if (!Target.getSymA()) {
       IsResolved = false;
@@ -198,9 +184,9 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
       const MCSymbol &SA = A->getSymbol();
       if (A->getKind() != MCSymbolRefExpr::VK_None || SA.isUndefined()) {
         IsResolved = false;
-      } else if (auto *Writer = getWriterPtr()) {
+      } else {
         IsResolved = (FixupFlags & MCFixupKindInfo::FKF_Constant) ||
-                     Writer->isSymbolRefDifferenceFullyResolvedImpl(
+                     getWriter().isSymbolRefDifferenceFullyResolvedImpl(
                          *this, SA, *DF, false, true);
       }
     }
@@ -221,8 +207,7 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
       Value -= getSymbolOffset(Sym);
   }
 
-  bool ShouldAlignPC = getBackend().getFixupKindInfo(Fixup.getKind()).Flags &
-                       MCFixupKindInfo::FKF_IsAlignedDownTo32Bits;
+  bool ShouldAlignPC = FixupFlags & MCFixupKindInfo::FKF_IsAlignedDownTo32Bits;
   assert((ShouldAlignPC ? IsPCRel : true) &&
     "FKF_IsAlignedDownTo32Bits is only allowed on PC-relative fixups!");
 
@@ -235,16 +220,23 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
     Value -= Offset;
   }
 
-  // Let the backend force a relocation if needed.
-  if (IsResolved &&
-      getBackend().shouldForceRelocation(*this, Fixup, Target, STI)) {
-    IsResolved = false;
-    WasForced = true;
+  // .reloc directive and the backend might force the relocation.
+  // Backends that customize shouldForceRelocation generally just need the fixup
+  // kind. AVR needs the fixup value to bypass the assembly time overflow with a
+  // relocation.
+  if (IsResolved) {
+    auto TargetVal = MCValue::get(Target.getSymA(), Target.getSymB(), Value,
+                                  Target.getRefKind());
+    if (Fixup.getKind() >= FirstLiteralRelocationKind ||
+        getBackend().shouldForceRelocation(*this, Fixup, TargetVal, STI)) {
+      IsResolved = false;
+      WasForced = true;
+    }
   }
 
   // A linker relaxation target may emit ADD/SUB relocations for A-B+C. Let
   // recordRelocation handle non-VK_None cases like A@plt-B+C.
-  if (!IsResolved && Target.getSymA() && Target.getSymB() &&
+  if (!IsResolved && Target.getSymA() && Target.getSubSym() &&
       Target.getSymA()->getKind() == MCSymbolRefExpr::VK_None &&
       getBackend().handleAddSubRelocations(*this, *DF, Fixup, Target, Value))
     return true;
@@ -259,8 +251,6 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
     return cast<MCDataFragment>(F).getContents().size();
   case MCFragment::FT_Relaxable:
     return cast<MCRelaxableFragment>(F).getContents().size();
-  case MCFragment::FT_CompactEncodedInst:
-    return cast<MCCompactEncodedInstFragment>(F).getContents().size();
   case MCFragment::FT_Fill: {
     auto &FF = cast<MCFillFragment>(F);
     int64_t NumValues = 0;
@@ -438,6 +428,28 @@ void MCAssembler::layoutBundle(MCFragment *Prev, MCFragment *F) const {
       DF->Offset = EF->Offset;
 }
 
+void MCAssembler::ensureValid(MCSection &Sec) const {
+  if (Sec.hasLayout())
+    return;
+  Sec.setHasLayout(true);
+  MCFragment *Prev = nullptr;
+  uint64_t Offset = 0;
+  for (MCFragment &F : Sec) {
+    F.Offset = Offset;
+    if (isBundlingEnabled() && F.hasInstructions()) {
+      layoutBundle(Prev, &F);
+      Offset = F.Offset;
+    }
+    Offset += computeFragmentSize(F);
+    Prev = &F;
+  }
+}
+
+uint64_t MCAssembler::getFragmentOffset(const MCFragment &F) const {
+  ensureValid(*F.getParent());
+  return F.Offset;
+}
+
 // Simple getSymbolOffset helper for the non-variable case.
 static bool getLabelOffset(const MCAssembler &Asm, const MCSymbol &S,
                            bool ReportError, uint64_t &Val) {
@@ -476,10 +488,10 @@ static bool getSymbolOffsetImpl(const MCAssembler &Asm, const MCSymbol &S,
     Offset += ValA;
   }
 
-  const MCSymbolRefExpr *B = Target.getSymB();
+  const MCSymbol *B = Target.getSubSym();
   if (B) {
     uint64_t ValB;
-    if (!getSymbolOffsetImpl(Asm, B->getSymbol(), ReportError, ValB))
+    if (!getSymbolOffsetImpl(Asm, *B, ReportError, ValB))
       return false;
     Offset -= ValB;
   }
@@ -511,11 +523,11 @@ const MCSymbol *MCAssembler::getBaseSymbol(const MCSymbol &Symbol) const {
     return nullptr;
   }
 
-  const MCSymbolRefExpr *RefB = Value.getSymB();
-  if (RefB) {
+  const MCSymbol *SymB = Value.getSubSym();
+  if (SymB) {
     getContext().reportError(
         Expr->getLoc(),
-        Twine("symbol '") + RefB->getSymbol().getName() +
+        Twine("symbol '") + SymB->getName() +
             "' could not be evaluated in a subtraction expression");
     return nullptr;
   }
@@ -666,11 +678,6 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
   case MCFragment::FT_Relaxable:
     ++stats::EmittedRelaxableFragments;
     OS << cast<MCRelaxableFragment>(F).getContents();
-    break;
-
-  case MCFragment::FT_CompactEncodedInst:
-    ++stats::EmittedCompactEncodedInstFragments;
-    OS << cast<MCCompactEncodedInstFragment>(F).getContents();
     break;
 
   case MCFragment::FT_Fill: {
@@ -829,7 +836,7 @@ void MCAssembler::writeSectionData(raw_ostream &OS,
         // into a virtual section. This is to support clients which use standard
         // directives to fill the contents of virtual sections.
         const MCDataFragment &DF = cast<MCDataFragment>(F);
-        if (DF.fixup_begin() != DF.fixup_end())
+        if (DF.getFixups().size())
           getContext().reportError(SMLoc(), Sec->getVirtualSectionKind() +
                                                 " section '" + Sec->getName() +
                                                 "' cannot have fixups");
@@ -922,20 +929,22 @@ void MCAssembler::layout() {
 
   // Layout until everything fits.
   this->HasLayout = true;
-  for (MCSection &Sec : *this)
-    layoutSection(Sec);
   while (layoutOnce()) {
+    if (getContext().hadError())
+      return;
+    // Size of fragments in one section can depend on the size of fragments in
+    // another. If any fragment has changed size, we have to re-layout (and
+    // as a result possibly further relax) all.
+    for (MCSection &Sec : *this)
+      Sec.setHasLayout(false);
   }
 
   DEBUG_WITH_TYPE("mc-dump", {
       errs() << "assembler backend - post-relaxation\n--\n";
       dump(); });
 
-  // Some targets might want to adjust fragment offsets. If so, perform another
-  // layout loop.
-  if (getBackend().finishLayout(*this))
-    for (MCSection &Sec : *this)
-      layoutSection(Sec);
+  // Finalize the layout, including fragment lowering.
+  getBackend().finishLayout(*this);
 
   DEBUG_WITH_TYPE("mc-dump", {
       errs() << "assembler backend - final-layout\n--\n";
@@ -1041,10 +1050,6 @@ bool MCAssembler::fixupNeedsRelaxation(const MCFixup &Fixup,
   bool WasForced;
   bool Resolved = evaluateFixup(Fixup, DF, Target, DF->getSubtargetInfo(),
                                 Value, WasForced);
-  if (Target.getSymA() &&
-      Target.getSymA()->getKind() == MCSymbolRefExpr::VK_X86_ABS8 &&
-      Fixup.getKind() == FK_Data_1)
-    return false;
   return getBackend().fixupNeedsRelaxationAdvanced(*this, Fixup, Resolved,
                                                    Value, DF, WasForced);
 }
@@ -1098,7 +1103,7 @@ bool MCAssembler::relaxLEB(MCLEBFragment &LF) {
   // Use evaluateKnownAbsolute for Mach-O as a hack: .subsections_via_symbols
   // requires that .uleb128 A-B is foldable where A and B reside in different
   // fragments. This is used by __gcc_except_table.
-  bool Abs = getSubsectionsViaSymbols()
+  bool Abs = getWriter().getSubsectionsViaSymbols()
                  ? LF.getValue().evaluateKnownAbsolute(Value, *this)
                  : LF.getValue().evaluateAsAbsolute(Value, *this);
   if (!Abs) {
@@ -1288,42 +1293,15 @@ bool MCAssembler::relaxFragment(MCFragment &F) {
   }
 }
 
-void MCAssembler::layoutSection(MCSection &Sec) {
-  MCFragment *Prev = nullptr;
-  uint64_t Offset = 0;
-  for (MCFragment &F : Sec) {
-    F.Offset = Offset;
-    if (LLVM_UNLIKELY(isBundlingEnabled())) {
-      if (F.hasInstructions()) {
-        layoutBundle(Prev, &F);
-        Offset = F.Offset;
-      }
-      Prev = &F;
-    }
-    Offset += computeFragmentSize(F);
-  }
-}
-
 bool MCAssembler::layoutOnce() {
   ++stats::RelaxationSteps;
 
-  // Size of fragments in one section can depend on the size of fragments in
-  // another. If any fragment has changed size, we have to re-layout (and
-  // as a result possibly further relax) all.
-  bool ChangedAny = false;
-  for (MCSection &Sec : *this) {
-    for (;;) {
-      bool Changed = false;
-      for (MCFragment &F : Sec)
-        if (relaxFragment(F))
-          Changed = true;
-      ChangedAny |= Changed;
-      if (!Changed)
-        break;
-      layoutSection(Sec);
-    }
-  }
-  return ChangedAny;
+  bool Changed = false;
+  for (MCSection &Sec : *this)
+    for (MCFragment &Frag : Sec)
+      if (relaxFragment(Frag))
+        Changed = true;
+  return Changed;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

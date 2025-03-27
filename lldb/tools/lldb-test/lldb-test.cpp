@@ -13,6 +13,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Expression/IRMemoryMap.h"
@@ -23,6 +24,7 @@
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/Symtab.h"
+#include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/VariableList.h"
@@ -179,6 +181,10 @@ static cl::opt<FindType> Find(
 
 static cl::opt<std::string> Name("name", cl::desc("Name to find."),
                                  cl::sub(SymbolsSubcommand));
+static cl::opt<std::string> MangledName(
+    "mangled-name",
+    cl::desc("Mangled name to find. Only compatible when searching types"),
+    cl::sub(SymbolsSubcommand));
 static cl::opt<bool>
     Regex("regex",
           cl::desc("Search using regular expressions (available for variables "
@@ -193,6 +199,12 @@ static cl::opt<std::string> CompilerContext(
     "compiler-context",
     cl::desc("Specify a compiler context as \"kind:name,...\"."),
     cl::value_desc("context"), cl::sub(SymbolsSubcommand));
+
+static cl::opt<bool> FindInAnyModule(
+    "find-in-any-module",
+    cl::desc("If true, the type will be searched for in all modules. Otherwise "
+             "the modules must be provided in -compiler-context"),
+    cl::sub(SymbolsSubcommand));
 
 static cl::opt<std::string>
     Language("language", cl::desc("Specify a language type, like C99."),
@@ -312,7 +324,6 @@ llvm::SmallVector<CompilerContext, 4> parseCompilerContext() {
             .Case("Variable", CompilerContextKind::Variable)
             .Case("Enum", CompilerContextKind::Enum)
             .Case("Typedef", CompilerContextKind::Typedef)
-            .Case("AnyModule", CompilerContextKind::AnyModule)
             .Case("AnyType", CompilerContextKind::AnyType)
             .Default(CompilerContextKind::Invalid);
     if (value.empty()) {
@@ -409,7 +420,7 @@ std::string opts::breakpoint::substitute(StringRef Cmd) {
       break;
     }
   }
-  return std::move(OS.str());
+  return Result;
 }
 
 int opts::breakpoint::evaluateBreakpoints(Debugger &Dbg) {
@@ -434,7 +445,7 @@ int opts::breakpoint::evaluateBreakpoints(Debugger &Dbg) {
     CommandReturnObject Result(/*colors*/ false);
     if (!Dbg.GetCommandInterpreter().HandleCommand(
             Command.c_str(), /*add_to_history*/ eLazyBoolNo, Result)) {
-      P.formatLine("Failed: {0}", Result.GetErrorData());
+      P.formatLine("Failed: {0}", Result.GetErrorString());
       HadErrors = 1;
       continue;
     }
@@ -463,6 +474,9 @@ static lldb::DescriptionLevel GetDescriptionLevel() {
 }
 
 Error opts::symbols::findFunctions(lldb_private::Module &Module) {
+  if (!MangledName.empty())
+    return make_string_error("Cannot search functions by mangled name.");
+
   SymbolFile &Symfile = *Module.GetSymbolFile();
   SymbolContextList List;
   auto compiler_context = parseCompilerContext();
@@ -524,6 +538,8 @@ Error opts::symbols::findBlocks(lldb_private::Module &Module) {
   assert(!Regex);
   assert(!File.empty());
   assert(Line != 0);
+  if (!MangledName.empty())
+    return make_string_error("Cannot search blocks by mangled name.");
 
   SymbolContextList List;
 
@@ -558,6 +574,9 @@ Error opts::symbols::findBlocks(lldb_private::Module &Module) {
 }
 
 Error opts::symbols::findNamespaces(lldb_private::Module &Module) {
+  if (!MangledName.empty())
+    return make_string_error("Cannot search namespaces by mangled name.");
+
   SymbolFile &Symfile = *Module.GetSymbolFile();
   Expected<CompilerDeclContext> ContextOr = getDeclContext(Symfile);
   if (!ContextOr)
@@ -580,12 +599,18 @@ Error opts::symbols::findTypes(lldb_private::Module &Module) {
   Expected<CompilerDeclContext> ContextOr = getDeclContext(Symfile);
   if (!ContextOr)
     return ContextOr.takeError();
+  ;
 
+  TypeQueryOptions Opts = TypeQueryOptions::e_module_search;
+  if (FindInAnyModule)
+    Opts |= TypeQueryOptions::e_ignore_modules;
   TypeResults results;
+  if (!Name.empty() && !MangledName.empty())
+    return make_string_error("Cannot search by both name and mangled name.");
+
   if (!Name.empty()) {
     if (ContextOr->IsValid()) {
-      TypeQuery query(*ContextOr, ConstString(Name),
-                      TypeQueryOptions::e_module_search);
+      TypeQuery query(*ContextOr, ConstString(Name), Opts);
       if (!Language.empty())
         query.AddLanguage(Language::GetLanguageTypeFromString(Language));
       Symfile.FindTypes(query, results);
@@ -595,8 +620,22 @@ Error opts::symbols::findTypes(lldb_private::Module &Module) {
         query.AddLanguage(Language::GetLanguageTypeFromString(Language));
       Symfile.FindTypes(query, results);
     }
+  } else if (!MangledName.empty()) {
+    Opts = TypeQueryOptions::e_search_by_mangled_name;
+    if (ContextOr->IsValid()) {
+      TypeQuery query(*ContextOr, ConstString(MangledName), Opts);
+      if (!Language.empty())
+        query.AddLanguage(Language::GetLanguageTypeFromString(Language));
+      Symfile.FindTypes(query, results);
+    } else {
+      TypeQuery query(MangledName, Opts);
+      if (!Language.empty())
+        query.AddLanguage(Language::GetLanguageTypeFromString(Language));
+      Symfile.FindTypes(query, results);
+    }
+
   } else {
-    TypeQuery query(parseCompilerContext(), TypeQueryOptions::e_module_search);
+    TypeQuery query(parseCompilerContext(), Opts);
     if (!Language.empty())
       query.AddLanguage(Language::GetLanguageTypeFromString(Language));
     Symfile.FindTypes(query, results);
@@ -612,6 +651,9 @@ Error opts::symbols::findTypes(lldb_private::Module &Module) {
 }
 
 Error opts::symbols::findVariables(lldb_private::Module &Module) {
+  if (!MangledName.empty())
+    return make_string_error("Cannot search variables by mangled name.");
+
   SymbolFile &Symfile = *Module.GetSymbolFile();
   VariableList List;
   if (Regex) {
@@ -815,6 +857,9 @@ Expected<Error (*)(lldb_private::Module &)> opts::symbols::getAction() {
         "Only one of -regex, -context and -file may be used simultaneously.");
   if (Regex && Name.empty())
     return make_string_error("-regex used without a -name");
+
+  if (FindInAnyModule && (Find != FindType::Type))
+    return make_string_error("-find-in-any-module only works with -find=type");
 
   switch (Find) {
   case FindType::None:
@@ -1151,7 +1196,7 @@ int opts::irmemorymap::evaluateMemoryMapCommands(Debugger &Dbg) {
     return CI.HandleCommand(Cmd, eLazyBoolNo, Result);
   };
   if (!IssueCmd("b main") || !IssueCmd("run")) {
-    outs() << formatv("Failed: {0}\n", Result.GetErrorData());
+    outs() << formatv("Failed: {0}\n", Result.GetErrorString());
     exit(1);
   }
 

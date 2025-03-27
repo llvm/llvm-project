@@ -996,6 +996,21 @@ module attributes { transform.target_tag = "start_here" } {
     } -> tensor<40x10x50x15xf32>
     return %result : tensor<40x10x50x15xf32>
   }
+
+  func.func @generic_min(%arg0: tensor<1x7x4xf32>, %arg1: tensor<4xf32>, %arg2: tensor<1x1x4xf32>) {
+    linalg.generic {
+      indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d1 * 2 + d3 * 2, d2)>, 
+      affine_map<(d0, d1, d2, d3) -> (d3)>, 
+      affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>], 
+      iterator_types = ["parallel", "parallel", "parallel", "reduction"]} 
+      ins(%arg0, %arg1 : tensor<1x7x4xf32>, tensor<4xf32>) 
+      outs(%arg2 : tensor<1x1x4xf32>) {
+    ^bb0(%in: f32, %in_1: f32, %out: f32):
+      %5 = arith.minimumf %out, %in : f32
+      linalg.yield %5 : f32
+    } -> tensor<1x1x4xf32>
+    return
+  }
 }
 
 // -----

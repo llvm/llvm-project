@@ -26,6 +26,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "clang/Serialization/ModuleFile.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_HOST_TRIPLE
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -278,12 +279,14 @@ GenerateModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
       !CI.getFrontendOpts().ModuleOutputPath.empty()) {
     Consumers.push_back(std::make_unique<ReducedBMIGenerator>(
         CI.getPreprocessor(), CI.getModuleCache(),
-        CI.getFrontendOpts().ModuleOutputPath));
+        CI.getFrontendOpts().ModuleOutputPath,
+        +CI.getFrontendOpts().AllowPCMWithCompilerErrors));
   }
 
   Consumers.push_back(std::make_unique<CXX20ModulesGenerator>(
       CI.getPreprocessor(), CI.getModuleCache(),
-      CI.getFrontendOpts().OutputFile));
+      CI.getFrontendOpts().OutputFile,
+      +CI.getFrontendOpts().AllowPCMWithCompilerErrors));
 
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
@@ -456,6 +459,8 @@ private:
       return "BuildingDeductionGuides";
     case CodeSynthesisContext::TypeAliasTemplateInstantiation:
       return "TypeAliasTemplateInstantiation";
+    case CodeSynthesisContext::PartialOrderingTTP:
+      return "PartialOrderingTTP";
     }
     return "";
   }
@@ -622,7 +627,8 @@ namespace {
       Out.indent(2) << "Module map file: " << ModuleMapPath << "\n";
     }
 
-    bool ReadLanguageOptions(const LangOptions &LangOpts, bool Complain,
+    bool ReadLanguageOptions(const LangOptions &LangOpts,
+                             StringRef ModuleFilename, bool Complain,
                              bool AllowCompatibleDifferences) override {
       Out.indent(2) << "Language options:\n";
 #define LANGOPT(Name, Bits, Default, Description) \
@@ -645,7 +651,8 @@ namespace {
       return false;
     }
 
-    bool ReadTargetOptions(const TargetOptions &TargetOpts, bool Complain,
+    bool ReadTargetOptions(const TargetOptions &TargetOpts,
+                           StringRef ModuleFilename, bool Complain,
                            bool AllowCompatibleDifferences) override {
       Out.indent(2) << "Target options:\n";
       Out.indent(4) << "  Triple: " << TargetOpts.Triple << "\n";
@@ -665,6 +672,7 @@ namespace {
     }
 
     bool ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
+                               StringRef ModuleFilename,
                                bool Complain) override {
       Out.indent(2) << "Diagnostic options:\n";
 #define DIAGOPT(Name, Bits, Default) DUMP_BOOLEAN(DiagOpts->Name, #Name);
@@ -684,6 +692,7 @@ namespace {
     }
 
     bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
+                                 StringRef ModuleFilename,
                                  StringRef SpecificModuleCachePath,
                                  bool Complain) override {
       Out.indent(2) << "Header search options:\n";
@@ -717,7 +726,8 @@ namespace {
     }
 
     bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
-                                 bool ReadMacros, bool Complain,
+                                 StringRef ModuleFilename, bool ReadMacros,
+                                 bool Complain,
                                  std::string &SuggestedPredefines) override {
       Out.indent(2) << "Preprocessor options:\n";
       DUMP_BOOLEAN(PPOpts.UsePredefines,
@@ -868,7 +878,8 @@ void DumpModuleInfoAction::ExecuteAction() {
 
   Preprocessor &PP = CI.getPreprocessor();
   DumpModuleInfoListener Listener(Out);
-  HeaderSearchOptions &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
+  const HeaderSearchOptions &HSOpts =
+      PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
   // The FrontendAction::BeginSourceFile () method loads the AST so that much
   // of the information is already available and modules should have been
@@ -1102,7 +1113,6 @@ void PrintPreambleAction::ExecuteAction() {
   case Language::Unknown:
   case Language::Asm:
   case Language::LLVM_IR:
-  case Language::RenderScript:
     // We can't do anything with these.
     return;
   }

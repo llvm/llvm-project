@@ -32,6 +32,7 @@
 #include "clang/Lex/PPEmbedParameters.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/TokenLexer.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -855,10 +856,10 @@ private:
           !PP.CurSubmoduleState->VisibleModules.getGeneration())
         return nullptr;
 
-      auto *Info = State.dyn_cast<ModuleMacroInfo*>();
+      auto *Info = dyn_cast_if_present<ModuleMacroInfo *>(State);
       if (!Info) {
         Info = new (PP.getPreprocessorAllocator())
-            ModuleMacroInfo(State.get<MacroDirective *>());
+            ModuleMacroInfo(cast<MacroDirective *>(State));
         State = Info;
       }
 
@@ -884,18 +885,18 @@ private:
     }
 
     ~MacroState() {
-      if (auto *Info = State.dyn_cast<ModuleMacroInfo*>())
+      if (auto *Info = dyn_cast_if_present<ModuleMacroInfo *>(State))
         Info->~ModuleMacroInfo();
     }
 
     MacroDirective *getLatest() const {
-      if (auto *Info = State.dyn_cast<ModuleMacroInfo*>())
+      if (auto *Info = dyn_cast_if_present<ModuleMacroInfo *>(State))
         return Info->MD;
-      return State.get<MacroDirective*>();
+      return cast<MacroDirective *>(State);
     }
 
     void setLatest(MacroDirective *MD) {
-      if (auto *Info = State.dyn_cast<ModuleMacroInfo*>())
+      if (auto *Info = dyn_cast_if_present<ModuleMacroInfo *>(State))
         Info->MD = MD;
       else
         State = MD;
@@ -910,7 +911,7 @@ private:
     getActiveModuleMacros(Preprocessor &PP, const IdentifierInfo *II) const {
       if (auto *Info = getModuleInfo(PP, II))
         return Info->ActiveModuleMacros;
-      return std::nullopt;
+      return {};
     }
 
     MacroDirective::DefInfo findDirectiveAtLoc(SourceLocation Loc,
@@ -932,19 +933,19 @@ private:
     }
 
     ArrayRef<ModuleMacro*> getOverriddenMacros() const {
-      if (auto *Info = State.dyn_cast<ModuleMacroInfo*>())
+      if (auto *Info = dyn_cast_if_present<ModuleMacroInfo *>(State))
         return Info->OverriddenMacros;
-      return std::nullopt;
+      return {};
     }
 
     void setOverriddenMacros(Preprocessor &PP,
                              ArrayRef<ModuleMacro *> Overrides) {
-      auto *Info = State.dyn_cast<ModuleMacroInfo*>();
+      auto *Info = dyn_cast_if_present<ModuleMacroInfo *>(State);
       if (!Info) {
         if (Overrides.empty())
           return;
         Info = new (PP.getPreprocessorAllocator())
-            ModuleMacroInfo(State.get<MacroDirective *>());
+            ModuleMacroInfo(cast<MacroDirective *>(State));
         State = Info;
       }
       Info->OverriddenMacros.clear();
@@ -1053,22 +1054,6 @@ private:
     std::optional<MacroAnnotationInfo> DeprecationInfo;
     std::optional<MacroAnnotationInfo> RestrictExpansionInfo;
     std::optional<SourceLocation> FinalAnnotationLoc;
-
-    static MacroAnnotations makeDeprecation(SourceLocation Loc,
-                                            std::string Msg) {
-      return MacroAnnotations{MacroAnnotationInfo{Loc, std::move(Msg)},
-                              std::nullopt, std::nullopt};
-    }
-
-    static MacroAnnotations makeRestrictExpansion(SourceLocation Loc,
-                                                  std::string Msg) {
-      return MacroAnnotations{
-          std::nullopt, MacroAnnotationInfo{Loc, std::move(Msg)}, std::nullopt};
-    }
-
-    static MacroAnnotations makeFinal(SourceLocation Loc) {
-      return MacroAnnotations{std::nullopt, std::nullopt, Loc};
-    }
   };
 
   /// Warning information for macro annotations.
@@ -1159,6 +1144,11 @@ private:
   /// indicate where CachedLexPos should be set when the BackTrack() method is
   /// invoked (at which point the last position is popped).
   std::vector<CachedTokensTy::size_type> BacktrackPositions;
+
+  /// Stack of cached tokens/initial number of cached tokens pairs, allowing
+  /// nested unannotated backtracks.
+  std::vector<std::pair<CachedTokensTy, CachedTokensTy::size_type>>
+      UnannotatedBacktrackTokens;
 
   /// True if \p Preprocessor::SkipExcludedConditionalBlock() is running.
   /// This is used to guard against calling this function recursively.
@@ -1454,7 +1444,7 @@ public:
     auto I = LeafModuleMacros.find(II);
     if (I != LeafModuleMacros.end())
       return I->second;
-    return std::nullopt;
+    return {};
   }
 
   /// Get the list of submodules that we're currently building.
@@ -1500,7 +1490,7 @@ public:
   /// Mark the file as included.
   /// Returns true if this is the first time the file was included.
   bool markIncluded(FileEntryRef File) {
-    HeaderInfo.getFileInfo(File);
+    HeaderInfo.getFileInfo(File).IsLocallyIncluded = true;
     return IncludedFiles.insert(File).second;
   }
 
@@ -1722,8 +1712,16 @@ public:
   /// at some point after EnableBacktrackAtThisPos. If you don't, caching of
   /// tokens will continue indefinitely.
   ///
-  void EnableBacktrackAtThisPos();
+  /// \param Unannotated Whether token annotations are reverted upon calling
+  /// Backtrack().
+  void EnableBacktrackAtThisPos(bool Unannotated = false);
 
+private:
+  std::pair<CachedTokensTy::size_type, bool> LastBacktrackPos();
+
+  CachedTokensTy PopUnannotatedBacktrackTokens();
+
+public:
   /// Disable the last EnableBacktrackAtThisPos call.
   void CommitBacktrackedTokens();
 
@@ -1734,6 +1732,12 @@ public:
   /// True if EnableBacktrackAtThisPos() was called and
   /// caching of tokens is on.
   bool isBacktrackEnabled() const { return !BacktrackPositions.empty(); }
+
+  /// True if EnableBacktrackAtThisPos() was called and
+  /// caching of unannotated tokens is on.
+  bool isUnannotatedBacktrackEnabled() const {
+    return !UnannotatedBacktrackTokens.empty();
+  }
 
   /// Lex the next token for this preprocessor.
   void Lex(Token &Result);
@@ -1751,7 +1755,8 @@ public:
   bool LexAfterModuleImport(Token &Result);
   void CollectPpImportSuffix(SmallVectorImpl<Token> &Toks);
 
-  void makeModuleVisible(Module *M, SourceLocation Loc);
+  void makeModuleVisible(Module *M, SourceLocation Loc,
+                         bool IncludeExports = true);
 
   SourceLocation getModuleImportLoc(Module *M) const {
     return CurSubmoduleState->VisibleModules.getImportLoc(M);
@@ -1841,8 +1846,9 @@ public:
   void RevertCachedTokens(unsigned N) {
     assert(isBacktrackEnabled() &&
            "Should only be called when tokens are cached for backtracking");
-    assert(signed(CachedLexPos) - signed(N) >= signed(BacktrackPositions.back())
-         && "Should revert tokens up to the last backtrack position, not more");
+    assert(signed(CachedLexPos) - signed(N) >=
+               signed(LastBacktrackPos().first) &&
+           "Should revert tokens up to the last backtrack position, not more");
     assert(signed(CachedLexPos) - signed(N) >= 0 &&
            "Corrupted backtrack positions ?");
     CachedLexPos -= N;
@@ -2119,8 +2125,8 @@ public:
   }
 
   /// Given a Token \p Tok that is a numeric constant with length 1,
-  /// return the character.
-  char
+  /// return the value of constant as an unsigned 8-bit integer.
+  uint8_t
   getSpellingOfSingleCharacterNumericConstant(const Token &Tok,
                                               bool *Invalid = nullptr) const {
     assert((Tok.is(tok::numeric_constant) || Tok.is(tok::binary_data)) &&
@@ -2265,6 +2271,11 @@ public:
       }
     }
   }
+
+  /// Determine whether the next preprocessor token to be
+  /// lexed is a '('.  If so, consume the token and return true, if not, this
+  /// method should have no observable side-effect on the lexed tokens.
+  bool isNextPPTokenLParen();
 
 private:
   /// Identifiers used for SEH handling in Borland. These are only
@@ -2612,6 +2623,19 @@ private:
   /// \#pragma GCC poison/system_header/dependency and \#pragma once.
   void RegisterBuiltinPragmas();
 
+  /// RegisterBuiltinMacro - Register the specified identifier in the identifier
+  /// table and mark it as a builtin macro to be expanded.
+  IdentifierInfo *RegisterBuiltinMacro(const char *Name) {
+    // Get the identifier.
+    IdentifierInfo *Id = getIdentifierInfo(Name);
+
+    // Mark it as being a macro that is builtin.
+    MacroInfo *MI = AllocateMacroInfo(SourceLocation());
+    MI->setIsBuiltinMacro();
+    appendDefMacroDirective(Id, MI);
+    return Id;
+  }
+
   /// Register builtin macros such as __LINE__ with the identifier table.
   void RegisterBuiltinMacros();
 
@@ -2629,11 +2653,6 @@ private:
                                   ArrayRef<Token> tokens);
 
   void removeCachedMacroExpandedTokensOfLastLexer();
-
-  /// Determine whether the next preprocessor token to be
-  /// lexed is a '('.  If so, consume the token and return true, if not, this
-  /// method should have no observable side-effect on the lexed tokens.
-  bool isNextPPTokenLParen();
 
   /// After reading "MACRO(", this method is invoked to read all of the formal
   /// arguments specified for the macro invocation.  Returns null on error.
@@ -2864,35 +2883,18 @@ public:
 
   void addMacroDeprecationMsg(const IdentifierInfo *II, std::string Msg,
                               SourceLocation AnnotationLoc) {
-    auto Annotations = AnnotationInfos.find(II);
-    if (Annotations == AnnotationInfos.end())
-      AnnotationInfos.insert(std::make_pair(
-          II,
-          MacroAnnotations::makeDeprecation(AnnotationLoc, std::move(Msg))));
-    else
-      Annotations->second.DeprecationInfo =
-          MacroAnnotationInfo{AnnotationLoc, std::move(Msg)};
+    AnnotationInfos[II].DeprecationInfo =
+        MacroAnnotationInfo{AnnotationLoc, std::move(Msg)};
   }
 
   void addRestrictExpansionMsg(const IdentifierInfo *II, std::string Msg,
                                SourceLocation AnnotationLoc) {
-    auto Annotations = AnnotationInfos.find(II);
-    if (Annotations == AnnotationInfos.end())
-      AnnotationInfos.insert(
-          std::make_pair(II, MacroAnnotations::makeRestrictExpansion(
-                                 AnnotationLoc, std::move(Msg))));
-    else
-      Annotations->second.RestrictExpansionInfo =
-          MacroAnnotationInfo{AnnotationLoc, std::move(Msg)};
+    AnnotationInfos[II].RestrictExpansionInfo =
+        MacroAnnotationInfo{AnnotationLoc, std::move(Msg)};
   }
 
   void addFinalLoc(const IdentifierInfo *II, SourceLocation AnnotationLoc) {
-    auto Annotations = AnnotationInfos.find(II);
-    if (Annotations == AnnotationInfos.end())
-      AnnotationInfos.insert(
-          std::make_pair(II, MacroAnnotations::makeFinal(AnnotationLoc)));
-    else
-      Annotations->second.FinalAnnotationLoc = AnnotationLoc;
+    AnnotationInfos[II].FinalAnnotationLoc = AnnotationLoc;
   }
 
   const MacroAnnotations &getMacroAnnotations(const IdentifierInfo *II) const {
@@ -3072,5 +3074,9 @@ struct EmbedAnnotationData {
 using PragmaHandlerRegistry = llvm::Registry<PragmaHandler>;
 
 } // namespace clang
+
+namespace llvm {
+extern template class CLANG_TEMPLATE_ABI Registry<clang::PragmaHandler>;
+} // namespace llvm
 
 #endif // LLVM_CLANG_LEX_PREPROCESSOR_H

@@ -18,6 +18,8 @@
 
 #include "hdr/fenv_macros.h"
 
+using LIBC_NAMESPACE::Sign;
+
 // TODO: Strengthen errno,exception checks and remove these assert macros
 // after new matchers/test fixtures are added
 #define ASSERT_FP_EQ_WITH_EXCEPTION(result, expected, expected_exception)      \
@@ -113,7 +115,7 @@ public:
     expected_bits = min_subnormal + 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected);
-    ASSERT_FP_EQ_WITH_UNDERFLOW(func(x, 0), 0);
+    ASSERT_FP_EQ_WITH_UNDERFLOW(func(x, 0), zero);
 
     x = -x;
     result = func(x, -1);

@@ -24,6 +24,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaOpenACC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/STLExtras.h"
@@ -125,18 +126,15 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
       Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs, GNUOrMSAttrs);
   MaybeDestroyTemplateIds();
 
-  // Attributes that are left should all go on the statement, so concatenate the
-  // two lists.
-  ParsedAttributes Attrs(AttrFactory);
-  takeAndConcatenateAttrs(CXX11Attrs, GNUOrMSAttrs, Attrs);
+  takeAndConcatenateAttrs(CXX11Attrs, std::move(GNUOrMSAttrs));
 
-  assert((Attrs.empty() || Res.isInvalid() || Res.isUsable()) &&
+  assert((CXX11Attrs.empty() || Res.isInvalid() || Res.isUsable()) &&
          "attributes on empty statement");
 
-  if (Attrs.empty() || Res.isInvalid())
+  if (CXX11Attrs.empty() || Res.isInvalid())
     return Res;
 
-  return Actions.ActOnAttributedStmt(Attrs, Res.get());
+  return Actions.ActOnAttributedStmt(CXX11Attrs, Res.get());
 }
 
 namespace {
@@ -206,11 +204,10 @@ Retry:
       // Both C++11 and GNU attributes preceding the label appertain to the
       // label, so put them in a single list to pass on to
       // ParseLabeledStatement().
-      ParsedAttributes Attrs(AttrFactory);
-      takeAndConcatenateAttrs(CXX11Attrs, GNUAttrs, Attrs);
+      takeAndConcatenateAttrs(CXX11Attrs, std::move(GNUAttrs));
 
       // identifier ':' statement
-      return ParseLabeledStatement(Attrs, StmtCtx);
+      return ParseLabeledStatement(CXX11Attrs, StmtCtx);
     }
 
     // Look up the identifier, and typo-correct it to a keyword if it's not
@@ -228,7 +225,7 @@ Retry:
         return StmtError();
       }
 
-      // If the identifier was typo-corrected, try again.
+      // If the identifier was annotated, try again.
       if (Tok.isNot(tok::identifier))
         goto Retry;
     }
@@ -297,6 +294,13 @@ Retry:
     GNUAttributeLoc = Tok.getLocation();
     ParseGNUAttributes(GNUAttrs);
     goto Retry;
+  }
+
+  case tok::kw_template: {
+    SourceLocation DeclEnd;
+    ParseTemplateDeclarationOrSpecialization(DeclaratorContext::Block, DeclEnd,
+                                             getAccessSpecifierIfPresent());
+    return StmtError();
   }
 
   case tok::kw_case:                // C99 6.8.1: labeled-statement
@@ -789,7 +793,7 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
   }
 
   // If we've not parsed a statement yet, parse one now.
-  if (!SubStmt.isInvalid() && !SubStmt.isUsable())
+  if (SubStmt.isUnset())
     SubStmt = ParseStatement(nullptr, StmtCtx);
 
   // Broken substmt shouldn't prevent the label from being added to the AST.
@@ -880,7 +884,15 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
     SourceLocation DotDotDotLoc;
     ExprResult RHS;
     if (TryConsumeToken(tok::ellipsis, DotDotDotLoc)) {
-      Diag(DotDotDotLoc, diag::ext_gnu_case_range);
+      // In C++, this is a GNU extension. In C, it's a C2y extension.
+      unsigned DiagId;
+      if (getLangOpts().CPlusPlus)
+        DiagId = diag::ext_gnu_case_range;
+      else if (getLangOpts().C2y)
+        DiagId = diag::warn_c23_compat_case_range;
+      else
+        DiagId = diag::ext_c2y_case_range;
+      Diag(DotDotDotLoc, DiagId);
       RHS = ParseCaseExpression(CaseLoc);
       if (RHS.isInvalid()) {
         if (!SkipUntil(tok::colon, tok::r_brace, StopAtSemi | StopBeforeMatch))
@@ -1039,7 +1051,11 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
   ParseScope CompoundScope(this, ScopeFlags);
 
   // Parse the statements in the body.
-  return ParseCompoundStatementBody(isStmtExpr);
+  StmtResult R;
+  StackHandler.runWithSufficientStackSpace(Tok.getLocation(), [&, this]() {
+    R = ParseCompoundStatementBody(isStmtExpr);
+  });
+  return R;
 }
 
 /// Parse any pragmas at the start of the compound expression. We handle these
@@ -1204,7 +1220,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
   while (Tok.is(tok::kw___label__)) {
     SourceLocation LabelLoc = ConsumeToken();
 
-    SmallVector<Decl *, 8> DeclsInGroup;
+    SmallVector<Decl *, 4> DeclsInGroup;
     while (true) {
       if (Tok.isNot(tok::identifier)) {
         Diag(Tok, diag::err_expected) << tok::identifier;
@@ -1233,6 +1249,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
       ParsedStmtContext::Compound |
       (isStmtExpr ? ParsedStmtContext::InStmtExpr : ParsedStmtContext());
 
+  bool LastIsError = false;
   while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
          Tok.isNot(tok::eof)) {
     if (Tok.is(tok::annot_pragma_unused)) {
@@ -1289,7 +1306,15 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
 
     if (R.isUsable())
       Stmts.push_back(R.get());
+    LastIsError = R.isInvalid();
   }
+  // StmtExpr needs to do copy initialization for last statement.
+  // If last statement is invalid, the last statement in `Stmts` will be
+  // incorrect. Then the whole compound statement should also be marked as
+  // invalid to prevent subsequent errors.
+  if (isStmtExpr && LastIsError && !Stmts.empty())
+    return StmtError();
+
   // Warn the user that using option `-ffp-eval-method=source` on a
   // 32-bit target and feature `sse` disabled, or using
   // `pragma clang fp eval_method=source` and feature `sse` disabled, is not
@@ -1508,10 +1533,13 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   SourceLocation ConstevalLoc;
 
   if (Tok.is(tok::kw_constexpr)) {
-    Diag(Tok, getLangOpts().CPlusPlus17 ? diag::warn_cxx14_compat_constexpr_if
-                                        : diag::ext_constexpr_if);
-    IsConstexpr = true;
-    ConsumeToken();
+    // C23 supports constexpr keyword, but only for object definitions.
+    if (getLangOpts().CPlusPlus) {
+      Diag(Tok, getLangOpts().CPlusPlus17 ? diag::warn_cxx14_compat_constexpr_if
+                                          : diag::ext_constexpr_if);
+      IsConstexpr = true;
+      ConsumeToken();
+    }
   } else {
     if (Tok.is(tok::exclaim)) {
       NotLocation = ConsumeToken();
@@ -1522,6 +1550,11 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
                                           : diag::ext_consteval_if);
       IsConsteval = true;
       ConstevalLoc = ConsumeToken();
+    } else if (Tok.is(tok::code_completion)) {
+      cutOffParsing();
+      Actions.CodeCompletion().CodeCompleteKeywordAfterIf(
+          NotLocation.isValid());
+      return StmtError();
     }
   }
   if (!IsConsteval && (NotLocation.isValid() || Tok.isNot(tok::l_paren))) {
@@ -1845,6 +1878,11 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
                                 Sema::ConditionKind::Boolean, LParen, RParen))
     return StmtError();
 
+  // OpenACC Restricts a while-loop inside of certain construct/clause
+  // combinations, so diagnose that here in OpenACC mode.
+  SemaOpenACC::LoopInConstructRAII LCR{getActions().OpenACC()};
+  getActions().OpenACC().ActOnWhileStmt(WhileLoc);
+
   // C99 6.8.5p5 - In C99, the body of the while statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause.  We only do this
   // if the body isn't a compound statement to avoid push/pop in common cases.
@@ -1892,6 +1930,11 @@ StmtResult Parser::ParseDoStatement() {
     ScopeFlags = Scope::BreakScope | Scope::ContinueScope;
 
   ParseScope DoScope(this, ScopeFlags);
+
+  // OpenACC Restricts a do-while-loop inside of certain construct/clause
+  // combinations, so diagnose that here in OpenACC mode.
+  SemaOpenACC::LoopInConstructRAII LCR{getActions().OpenACC()};
+  getActions().OpenACC().ActOnDoStmt(DoLoc);
 
   // C99 6.8.5p5 - In C99, the body of the do statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause. We only do this
@@ -2317,6 +2360,15 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
     }
   }
 
+  // OpenACC Restricts a for-loop inside of certain construct/clause
+  // combinations, so diagnose that here in OpenACC mode.
+  SemaOpenACC::LoopInConstructRAII LCR{getActions().OpenACC()};
+  if (ForRangeInfo.ParsedForRangeDecl())
+    getActions().OpenACC().ActOnRangeForStmtBegin(ForLoc, ForRangeStmt.get());
+  else
+    getActions().OpenACC().ActOnForStmtBegin(
+        ForLoc, FirstPart.get(), SecondPart.get().second, ThirdPart.get());
+
   // C99 6.8.5p5 - In C99, the body of the for statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause.  We only do this
   // if the body isn't a compound statement to avoid push/pop in common cases.
@@ -2348,6 +2400,8 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
 
   // Pop the body scope if needed.
   InnerScope.Exit();
+
+  getActions().OpenACC().ActOnForStmtEnd(ForLoc, Body);
 
   // Leave the for-scope.
   ForScope.Exit();
@@ -2528,8 +2582,7 @@ Decl *Parser::ParseFunctionStatementBody(Decl *Decl, ParseScope &BodyScope) {
   // If the function body could not be parsed, make a bogus compoundstmt.
   if (FnBody.isInvalid()) {
     Sema::CompoundScopeRAII CompoundScope(Actions);
-    FnBody =
-        Actions.ActOnCompoundStmt(LBraceLoc, LBraceLoc, std::nullopt, false);
+    FnBody = Actions.ActOnCompoundStmt(LBraceLoc, LBraceLoc, {}, false);
   }
 
   BodyScope.Exit();
@@ -2566,8 +2619,7 @@ Decl *Parser::ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope) {
   // compound statement as the body.
   if (FnBody.isInvalid()) {
     Sema::CompoundScopeRAII CompoundScope(Actions);
-    FnBody =
-        Actions.ActOnCompoundStmt(LBraceLoc, LBraceLoc, std::nullopt, false);
+    FnBody = Actions.ActOnCompoundStmt(LBraceLoc, LBraceLoc, {}, false);
   }
 
   BodyScope.Exit();

@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -51,6 +52,17 @@ public:
   void computeInfo(CGFunctionInfo &FI) const override;
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
+
+  llvm::FixedVectorType *
+  getOptimalVectorMemoryType(llvm::FixedVectorType *T,
+                             const LangOptions &Opt) const override {
+    // We have legal instructions for 96-bit so 3x32 can be supported.
+    // FIXME: This check should be a subtarget feature as technically SI doesn't
+    // support it.
+    if (T->getNumElements() == 3 && getDataLayout().getTypeSizeInBits(T) == 96)
+      return T;
+    return DefaultABIInfo::getOptimalVectorMemoryType(T, Opt);
+  }
 };
 
 bool AMDGPUABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
@@ -224,7 +236,8 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
     // Records with non-trivial destructors/copy-constructors should not be
     // passed by value.
     if (auto RAA = getRecordArgABI(Ty, getCXXABI()))
-      return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     RAA == CGCXXABI::RAA_DirectInMemory);
 
     // Ignore empty structs/unions.
     if (isEmptyRecord(getContext(), Ty, true))
@@ -311,6 +324,9 @@ public:
                                          SyncScope Scope,
                                          llvm::AtomicOrdering Ordering,
                                          llvm::LLVMContext &Ctx) const override;
+  void setTargetAtomicMetadata(CodeGenFunction &CGF,
+                               llvm::Instruction &AtomicInst,
+                               const AtomicExpr *Expr = nullptr) const override;
   llvm::Value *createEnqueuedBlockKernel(CodeGenFunction &CGF,
                                          llvm::Function *BlockInvokeFunc,
                                          llvm::Type *BlockTy) const override;
@@ -450,9 +466,6 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
   if (FD)
     setFunctionDeclAttributes(FD, F, M);
 
-  if (M.getContext().getTargetInfo().allowAMDGPUUnsafeFPAtomics())
-    F->addFnAttr("amdgpu-unsafe-fp-atomics", "true");
-
   if (!getABIInfo().getCodeGenOpts().EmitIEEENaNCompliantInsts)
     F->addFnAttr("amdgpu-ieee", "false");
 }
@@ -536,7 +549,11 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
     break;
   }
 
-  if (Ordering != llvm::AtomicOrdering::SequentiallyConsistent) {
+  // OpenCL assumes by default that atomic scopes are per-address space for
+  // non-sequentially consistent operations.
+  if (Scope >= SyncScope::OpenCLWorkGroup &&
+      Scope <= SyncScope::OpenCLSubGroup &&
+      Ordering != llvm::AtomicOrdering::SequentiallyConsistent) {
     if (!Name.empty())
       Name = Twine(Twine(Name) + Twine("-")).str();
 
@@ -544,6 +561,43 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
   }
 
   return Ctx.getOrInsertSyncScopeID(Name);
+}
+
+void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
+    CodeGenFunction &CGF, llvm::Instruction &AtomicInst,
+    const AtomicExpr *AE) const {
+  auto *RMW = dyn_cast<llvm::AtomicRMWInst>(&AtomicInst);
+  auto *CmpX = dyn_cast<llvm::AtomicCmpXchgInst>(&AtomicInst);
+
+  // OpenCL and old style HIP atomics consider atomics targeting thread private
+  // memory to be undefined.
+  //
+  // TODO: This is probably undefined for atomic load/store, but there's not
+  // much direct codegen benefit to knowing this.
+  if (((RMW && RMW->getPointerAddressSpace() == llvm::AMDGPUAS::FLAT_ADDRESS) ||
+       (CmpX &&
+        CmpX->getPointerAddressSpace() == llvm::AMDGPUAS::FLAT_ADDRESS)) &&
+      AE && AE->threadPrivateMemoryAtomicsAreUndefined()) {
+    llvm::MDBuilder MDHelper(CGF.getLLVMContext());
+    llvm::MDNode *ASRange = MDHelper.createRange(
+        llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS),
+        llvm::APInt(32, llvm::AMDGPUAS::PRIVATE_ADDRESS + 1));
+    AtomicInst.setMetadata(llvm::LLVMContext::MD_noalias_addrspace, ASRange);
+  }
+
+  if (!RMW)
+    return;
+
+  AtomicOptions AO = CGF.CGM.getAtomicOpts();
+  llvm::MDNode *Empty = llvm::MDNode::get(CGF.getLLVMContext(), {});
+  if (!AO.getOption(clang::AtomicOptionKind::FineGrainedMemory))
+    RMW->setMetadata("amdgpu.no.fine.grained.memory", Empty);
+  if (!AO.getOption(clang::AtomicOptionKind::RemoteMemory))
+    RMW->setMetadata("amdgpu.no.remote.memory", Empty);
+  if (AO.getOption(clang::AtomicOptionKind::IgnoreDenormalMode) &&
+      RMW->getOperation() == llvm::AtomicRMWInst::FAdd &&
+      RMW->getType()->isFloatTy())
+    RMW->setMetadata("amdgpu.ignore.denormal.mode", Empty);
 }
 
 bool AMDGPUTargetCodeGenInfo::shouldEmitStaticExternCAliases() const {
@@ -558,6 +612,20 @@ void AMDGPUTargetCodeGenInfo::setCUDAKernelCallingConvention(
     const FunctionType *&FT) const {
   FT = getABIInfo().getContext().adjustFunctionType(
       FT, FT->getExtInfo().withCallingConv(CC_OpenCLKernel));
+}
+
+/// Return IR struct type for rtinfo struct in rocm-device-libs used for device
+/// enqueue.
+///
+/// ptr addrspace(1) kernel_object, i32 private_segment_size,
+/// i32 group_segment_size
+
+static llvm::StructType *
+getAMDGPURuntimeHandleType(llvm::LLVMContext &C,
+                           llvm::Type *KernelDescriptorPtrTy) {
+  llvm::Type *Int32 = llvm::Type::getInt32Ty(C);
+  return llvm::StructType::create(C, {KernelDescriptorPtrTy, Int32, Int32},
+                                  "block.runtime.handle.t");
 }
 
 /// Create an OpenCL kernel for an enqueued block.
@@ -599,23 +667,29 @@ llvm::Value *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
     ArgNames.push_back(
         llvm::MDString::get(C, (Twine("local_arg") + Twine(I)).str()));
   }
-  std::string Name = Invoke->getName().str() + "_kernel";
+
+  llvm::Module &Mod = CGF.CGM.getModule();
+  const llvm::DataLayout &DL = Mod.getDataLayout();
+
+  llvm::Twine Name = Invoke->getName() + "_kernel";
   auto *FT = llvm::FunctionType::get(llvm::Type::getVoidTy(C), ArgTys, false);
+
+  // The kernel itself can be internal, the runtime does not directly access the
+  // kernel address (only the kernel descriptor).
   auto *F = llvm::Function::Create(FT, llvm::GlobalValue::InternalLinkage, Name,
-                                   &CGF.CGM.getModule());
+                                   &Mod);
   F->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
 
   llvm::AttrBuilder KernelAttrs(C);
   // FIXME: The invoke isn't applying the right attributes either
   // FIXME: This is missing setTargetAttributes
   CGF.CGM.addDefaultFunctionDefinitionAttributes(KernelAttrs);
-  KernelAttrs.addAttribute("enqueued-block");
   F->addFnAttrs(KernelAttrs);
 
   auto IP = CGF.Builder.saveIP();
   auto *BB = llvm::BasicBlock::Create(C, "entry", F);
   Builder.SetInsertPoint(BB);
-  const auto BlockAlign = CGF.CGM.getDataLayout().getPrefTypeAlign(BlockTy);
+  const auto BlockAlign = DL.getPrefTypeAlign(BlockTy);
   auto *BlockPtr = Builder.CreateAlloca(BlockTy, nullptr);
   BlockPtr->setAlignment(BlockAlign);
   Builder.CreateAlignedStore(F->arg_begin(), BlockPtr, BlockAlign);
@@ -638,7 +712,39 @@ llvm::Value *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
   if (CGF.CGM.getCodeGenOpts().EmitOpenCLArgMetadata)
     F->setMetadata("kernel_arg_name", llvm::MDNode::get(C, ArgNames));
 
-  return F;
+  llvm::StructType *HandleTy = getAMDGPURuntimeHandleType(
+      C, llvm::PointerType::get(C, DL.getDefaultGlobalsAddressSpace()));
+  llvm::Constant *RuntimeHandleInitializer =
+      llvm::ConstantAggregateZero::get(HandleTy);
+
+  llvm::Twine RuntimeHandleName = F->getName() + ".runtime.handle";
+
+  // The runtime needs access to the runtime handle as an external symbol. The
+  // runtime handle will need to be made external later, in
+  // AMDGPUExportOpenCLEnqueuedBlocks. The kernel itself has a hidden reference
+  // inside the runtime handle, and is not directly referenced.
+
+  // TODO: We would initialize the first field by declaring F->getName() + ".kd"
+  // to reference the kernel descriptor. The runtime wouldn't need to bother
+  // setting it. We would need to have a final symbol name though.
+  // TODO: Can we directly use an external symbol with getGlobalIdentifier?
+  auto *RuntimeHandle = new llvm::GlobalVariable(
+      Mod, HandleTy,
+      /*isConstant=*/true, llvm::GlobalValue::InternalLinkage,
+      /*Initializer=*/RuntimeHandleInitializer, RuntimeHandleName,
+      /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
+      DL.getDefaultGlobalsAddressSpace(),
+      /*isExternallyInitialized=*/true);
+
+  llvm::MDNode *HandleAsMD =
+      llvm::MDNode::get(C, llvm::ValueAsMetadata::get(RuntimeHandle));
+  F->setMetadata(llvm::LLVMContext::MD_associated, HandleAsMD);
+
+  RuntimeHandle->setSection(".amdgpu.kernel.runtime.handle");
+
+  CGF.CGM.addUsedGlobal(F);
+  CGF.CGM.addUsedGlobal(RuntimeHandle);
+  return RuntimeHandle;
 }
 
 void CodeGenModule::handleAMDGPUFlatWorkGroupSizeAttr(
@@ -647,12 +753,16 @@ void CodeGenModule::handleAMDGPUFlatWorkGroupSizeAttr(
     int32_t *MaxThreadsVal) {
   unsigned Min = 0;
   unsigned Max = 0;
+  auto Eval = [&](Expr *E) {
+    return E->EvaluateKnownConstInt(getContext()).getExtValue();
+  };
   if (FlatWGS) {
-    Min = FlatWGS->getMin()->EvaluateKnownConstInt(getContext()).getExtValue();
-    Max = FlatWGS->getMax()->EvaluateKnownConstInt(getContext()).getExtValue();
+    Min = Eval(FlatWGS->getMin());
+    Max = Eval(FlatWGS->getMax());
   }
   if (ReqdWGS && Min == 0 && Max == 0)
-    Min = Max = ReqdWGS->getXDim() * ReqdWGS->getYDim() * ReqdWGS->getZDim();
+    Min = Max = Eval(ReqdWGS->getXDim()) * Eval(ReqdWGS->getYDim()) *
+                Eval(ReqdWGS->getZDim());
 
   if (Min != 0) {
     assert(Min <= Max && "Min must be less than or equal Max");

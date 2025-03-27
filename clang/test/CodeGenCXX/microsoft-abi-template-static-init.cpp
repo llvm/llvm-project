@@ -49,8 +49,6 @@ struct X {
   static T ioo;
   static T init();
 };
-// template specialized static data don't need in llvm.used,
-// the static init routine get call from _GLOBAL__sub_I_ routines.
 template <> int X<int>::ioo = X<int>::init();
 template struct X<int>;
 class a {
@@ -87,5 +85,6 @@ struct S1
 int foo();
 inline int zoo = foo();
 inline static int boo = foo();
+inline __declspec(dllexport) A exported_inline{};
 
-// CHECK: @llvm.used = appending global [8 x ptr] [ptr @"?x@selectany_init@@3HA", ptr @"?x1@selectany_init@@3HA", ptr @"?x@?$A@H@explicit_template_instantiation@@2HA", ptr @"?ioo@?$X_@H@@2HA", ptr @"?aoo@S1@@2UA@@A", ptr @"?zoo@@3HA", ptr @"?s@?$ExportedTemplate@H@@2US@@A", ptr @"?x@?$A@H@implicit_template_instantiation@@2HA"], section "llvm.metadata"
+// CHECK: @llvm.used = appending global [10 x ptr] [ptr @"?x@selectany_init@@3HA", ptr @"?x1@selectany_init@@3HA", ptr @"?x@?$A@H@explicit_template_instantiation@@2HA", ptr @"?ioo@?$X_@H@@2HA", ptr @"?ioo@?$X@H@@2HA", ptr @"?aoo@S1@@2UA@@A", ptr @"?zoo@@3HA", ptr @"?exported_inline@@3UA@@A", ptr @"?s@?$ExportedTemplate@H@@2US@@A", ptr @"?x@?$A@H@implicit_template_instantiation@@2HA"], section "llvm.metadata"

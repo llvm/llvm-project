@@ -83,35 +83,9 @@ private:
   };
 };
 
-/// Supports registration/deregistration of EH-frames in a target process.
-class EHFrameRegistrar {
-public:
-  virtual ~EHFrameRegistrar();
-  virtual Error registerEHFrames(orc::ExecutorAddrRange EHFrameSection) = 0;
-  virtual Error deregisterEHFrames(orc::ExecutorAddrRange EHFrameSection) = 0;
-};
-
-/// Registers / Deregisters EH-frames in the current process.
-class InProcessEHFrameRegistrar final : public EHFrameRegistrar {
-public:
-  Error registerEHFrames(orc::ExecutorAddrRange EHFrameSection) override;
-
-  Error deregisterEHFrames(orc::ExecutorAddrRange EHFrameSection) override;
-};
-
-using StoreFrameRangeFunction = std::function<void(
-    orc::ExecutorAddr EHFrameSectionAddr, size_t EHFrameSectionSize)>;
-
-/// Creates a pass that records the address and size of the EH frame section.
-/// If no eh-frame section is found then the address and size will both be given
-/// as zero.
-///
-/// Authors of JITLinkContexts can use this function to register a post-fixup
-/// pass that records the range of the eh-frame section. This range can
-/// be used after finalization to register and deregister the frame.
-LinkGraphPassFunction
-createEHFrameRecorderPass(const Triple &TT,
-                          StoreFrameRangeFunction StoreFrameRange);
+/// Returns a pointer to the DWARF eh-frame section if the graph contains a
+/// non-empty one, otherwise returns null.
+Section *getEHFrameSection(LinkGraph &G);
 
 } // end namespace jitlink
 } // end namespace llvm

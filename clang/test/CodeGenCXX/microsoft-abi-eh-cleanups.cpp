@@ -63,14 +63,14 @@ int HasDeactivatedCleanups() {
 // WIN32:   %[[isactive:.*]] = alloca i1
 // WIN32:   call ptr @llvm.stacksave.p0()
 // WIN32:   %[[argmem:.*]] = alloca inalloca [[argmem_ty:<{ %struct.A, %struct.A }>]]
-// WIN32:   %[[arg1:.*]] = getelementptr inbounds [[argmem_ty]], ptr %[[argmem]], i32 0, i32 1
+// WIN32:   %[[arg1:.*]] = getelementptr inbounds nuw [[argmem_ty]], ptr %[[argmem]], i32 0, i32 1
 // WIN32:   call x86_thiscallcc noundef ptr @"??0A@@QAE@XZ"
 // WIN32:   invoke void @"?TakeRef@@YAXABUA@@@Z"
 //
 // WIN32:   invoke x86_thiscallcc noundef ptr @"??0A@@QAE@XZ"(ptr {{[^,]*}} %[[arg1]])
 // WIN32:   store i1 true, ptr %[[isactive]]
 //
-// WIN32:   %[[arg0:.*]] = getelementptr inbounds [[argmem_ty]], ptr %[[argmem]], i32 0, i32 0
+// WIN32:   %[[arg0:.*]] = getelementptr inbounds nuw [[argmem_ty]], ptr %[[argmem]], i32 0, i32 0
 // WIN32:   invoke x86_thiscallcc noundef ptr @"??0A@@QAE@XZ"
 // WIN32:   invoke void @"?TakeRef@@YAXABUA@@@Z"
 // WIN32:   invoke x86_thiscallcc noundef ptr @"??0A@@QAE@XZ"

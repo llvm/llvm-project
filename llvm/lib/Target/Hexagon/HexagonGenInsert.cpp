@@ -167,7 +167,7 @@ namespace {
     }
 
     static inline unsigned v2x(unsigned v) {
-      return Register::virtReg2Index(v);
+      return Register(v).virtRegIndex();
     }
 
     static inline unsigned x2v(unsigned x) {
@@ -271,7 +271,7 @@ namespace {
     CellMapShadow(const BitTracker &T) : BT(T) {}
 
     const BitTracker::RegisterCell &lookup(unsigned VR) {
-      unsigned RInd = Register::virtReg2Index(VR);
+      unsigned RInd = Register(VR).virtRegIndex();
       // Grow the vector to at least 32 elements.
       if (RInd >= CVect.size())
         CVect.resize(std::max(RInd+16, 32U), nullptr);
@@ -1451,7 +1451,7 @@ bool HexagonGenInsert::removeDeadCode(MachineDomTreeNode *N) {
         Opc == TargetOpcode::LIFETIME_END)
       continue;
     bool Store = false;
-    if (MI->isInlineAsm() || !MI->isSafeToMove(nullptr, Store))
+    if (MI->isInlineAsm() || !MI->isSafeToMove(Store))
       continue;
 
     bool AllDead = true;
@@ -1578,7 +1578,7 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
 
     IterListType Out;
     for (IFMapType::iterator I = IFMap.begin(), E = IFMap.end(); I != E; ++I) {
-      unsigned Idx = Register::virtReg2Index(I->first);
+      unsigned Idx = Register(I->first).virtRegIndex();
       if (Idx >= Cutoff)
         Out.push_back(I);
     }

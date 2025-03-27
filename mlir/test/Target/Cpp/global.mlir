@@ -38,18 +38,22 @@ emitc.global @opaque_init : !emitc.opaque<"char"> = #emitc.opaque<"CHAR_MIN">
 // CPP-DECLTOP: char opaque_init = CHAR_MIN;
 
 func.func @use_global_scalar_read() -> i32 {
-  %0 = emitc.get_global @myglobal_int : i32
-  return %0 : i32
+  %0 = emitc.get_global @myglobal_int : !emitc.lvalue<i32>
+  %1 = emitc.load %0 : !emitc.lvalue<i32>
+  return %1 : i32
 }
 // CPP-DEFAULT-LABEL: int32_t use_global_scalar_read()
-// CPP-DEFAULT-NEXT: return myglobal_int;
+// CPP-DEFAULT-NEXT: int32_t [[V0:[^ ]*]] = myglobal_int;
+// CPP-DEFAULT-NEXT: return [[V0]];
 
 // CPP-DECLTOP-LABEL: int32_t use_global_scalar_read()
-// CPP-DECLTOP-NEXT: return myglobal_int;
+// CPP-DECLTOP-NEXT: int32_t [[V0:[^ ]*]];
+// CPP-DECLTOP-NEXT: [[V0]] = myglobal_int;
+// CPP-DECLTOP-NEXT: return [[V0]];
 
 func.func @use_global_scalar_write(%arg0 : i32) {
-  %0 = emitc.get_global @myglobal_int : i32
-  emitc.assign %arg0 : i32 to %0 : i32 
+  %0 = emitc.get_global @myglobal_int : !emitc.lvalue<i32>
+  emitc.assign %arg0 : i32 to %0 : !emitc.lvalue<i32>
   return
 }
 // CPP-DEFAULT-LABEL: void use_global_scalar_write
@@ -64,21 +68,25 @@ func.func @use_global_scalar_write(%arg0 : i32) {
 
 func.func @use_global_array_read(%i: index) -> f32 {
   %0 = emitc.get_global @myglobal : !emitc.array<2xf32>
-  %1 = emitc.subscript %0[%i] : (!emitc.array<2xf32>, index) -> f32
-  return %1 : f32
+  %1 = emitc.subscript %0[%i] : (!emitc.array<2xf32>, index) -> !emitc.lvalue<f32>
+  %2 = emitc.load %1 : <f32>
+  return %2 : f32
 }
 // CPP-DEFAULT-LABEL: float use_global_array_read
 // CPP-DEFAULT-SAME: (size_t [[V1:.*]])
-// CPP-DEFAULT-NEXT: return myglobal[[[V1]]];
+// CPP-DEFAULT-NEXT: float [[V2:.*]] = myglobal[[[V1]]];
+// CPP-DEFAULT-NEXT: return [[V2]];
 
 // CPP-DECLTOP-LABEL: float use_global_array_read
 // CPP-DECLTOP-SAME: (size_t [[V1:.*]])
-// CPP-DECLTOP-NEXT: return myglobal[[[V1]]];
+// CPP-DECLTOP-NEXT: float [[V2:.*]];
+// CPP-DECLTOP-NEXT: [[V2]] = myglobal[[[V1]]];
+// CPP-DECLTOP-NEXT: return [[V2]];
 
 func.func @use_global_array_write(%i: index, %val : f32) {
   %0 = emitc.get_global @myglobal : !emitc.array<2xf32>
-  %1 = emitc.subscript %0[%i] : (!emitc.array<2xf32>, index) -> f32
-  emitc.assign %val : f32 to %1 : f32 
+  %1 = emitc.subscript %0[%i] : (!emitc.array<2xf32>, index) -> !emitc.lvalue<f32>
+  emitc.assign %val : f32 to %1 : !emitc.lvalue<f32> 
   return
 }
 // CPP-DEFAULT-LABEL: void use_global_array_write

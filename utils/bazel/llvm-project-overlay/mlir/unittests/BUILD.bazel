@@ -138,6 +138,19 @@ cc_test(
 )
 
 cc_test(
+    name = "amdgpu_tests",
+    size = "small",
+    srcs = glob([
+        "Dialect/AMDGPU/*.cpp",
+    ]),
+    deps = [
+        "//mlir:AMDGPUUtils",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
     name = "memref_tests",
     size = "small",
     srcs = glob([

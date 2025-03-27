@@ -620,19 +620,48 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const char *LinkingOutput) const {
   std::string Linker = getToolChain().GetLinkerPath();
   ArgStringList CmdArgs;
-  CmdArgs.push_back("--no-undefined");
-  CmdArgs.push_back("-shared");
+  if (!Args.hasArg(options::OPT_r)) {
+    CmdArgs.push_back("--no-undefined");
+    CmdArgs.push_back("-shared");
+  }
 
   addLinkerCompressDebugSectionsOption(getToolChain(), Args, CmdArgs);
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
-  if (C.getDriver().isUsingLTO())
-    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
-                  C.getDriver().getLTOMode() == LTOK_Thin);
-  else if (Args.hasArg(options::OPT_mcpu_EQ))
+  if (C.getDriver().isUsingLTO()) {
+    const bool ThinLTO = (C.getDriver().getLTOMode() == LTOK_Thin);
+    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0], ThinLTO);
+
+    if (!ThinLTO && JA.getOffloadingDeviceKind() == Action::OFK_HIP)
+      addFullLTOPartitionOption(C.getDriver(), Args, CmdArgs);
+  } else if (Args.hasArg(options::OPT_mcpu_EQ)) {
     CmdArgs.push_back(Args.MakeArgString(
-        "-plugin-opt=mcpu=" + Args.getLastArgValue(options::OPT_mcpu_EQ)));
+        "-plugin-opt=mcpu=" +
+        getProcessorFromTargetID(getToolChain().getTriple(),
+                                 Args.getLastArgValue(options::OPT_mcpu_EQ))));
+  }
+
+  // Always pass the target-id features to the LTO job.
+  std::vector<StringRef> Features;
+  getAMDGPUTargetFeatures(C.getDriver(), getToolChain().getTriple(), Args,
+                          Features);
+  if (!Features.empty()) {
+    CmdArgs.push_back(
+        Args.MakeArgString("-plugin-opt=-mattr=" + llvm::join(Features, ",")));
+  }
+
+  if (Args.hasArg(options::OPT_stdlib))
+    CmdArgs.append({"-lc", "-lm"});
+  if (Args.hasArg(options::OPT_startfiles)) {
+    std::optional<std::string> IncludePath = getToolChain().getStdlibPath();
+    if (!IncludePath)
+      IncludePath = "/lib";
+    SmallString<128> P(*IncludePath);
+    llvm::sys::path::append(P, "crt1.o");
+    CmdArgs.push_back(Args.MakeArgString(P));
+  }
+
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
   C.addCommand(std::make_unique<Command>(
@@ -680,6 +709,26 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
 
   handleTargetFeaturesGroup(D, Triple, Args, Features,
                             options::OPT_m_amdgpu_Features_Group);
+}
+
+static unsigned getFullLTOPartitions(const Driver &D, const ArgList &Args) {
+  int Value = 0;
+  StringRef A = Args.getLastArgValue(options::OPT_flto_partitions_EQ, "8");
+  if (A.getAsInteger(10, Value) || (Value < 1)) {
+    Arg *Arg = Args.getLastArg(options::OPT_flto_partitions_EQ);
+    D.Diag(diag::err_drv_invalid_int_value)
+        << Arg->getAsString(Args) << Arg->getValue();
+    return 1;
+  }
+
+  return Value;
+}
+
+void amdgpu::addFullLTOPartitionOption(const Driver &D,
+                                       const llvm::opt::ArgList &Args,
+                                       llvm::opt::ArgStringList &CmdArgs) {
+  CmdArgs.push_back(Args.MakeArgString("--lto-partitions=" +
+                                       Twine(getFullLTOPartitions(D, Args))));
 }
 
 /// AMDGPU Toolchain
@@ -882,7 +931,7 @@ AMDGPUToolChain::getSystemGPUArchs(const ArgList &Args) const {
   else
     Program = GetProgramPath("amdgpu-arch");
 
-  auto StdoutOrErr = executeToolChainProgram(Program, /*SecondsToWait=*/10);
+  auto StdoutOrErr = executeToolChainProgram(Program);
   if (!StdoutOrErr)
     return StdoutOrErr.takeError();
 
@@ -910,7 +959,8 @@ void ROCMToolChain::addClangTargetOptions(
       DriverArgs.hasArg(options::OPT_nostdlib))
     return;
 
-  if (DriverArgs.hasArg(options::OPT_nogpulib))
+  if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                          true))
     return;
 
   // Get the device name and canonicalize it
@@ -925,7 +975,6 @@ void ROCMToolChain::addClangTargetOptions(
     return;
 
   bool Wave64 = isWave64(DriverArgs, Kind);
-
   // TODO: There are way too many flags that change this. Do we need to check
   // them all?
   bool DAZ = DriverArgs.hasArg(options::OPT_cl_denorms_are_zero) ||
@@ -938,22 +987,26 @@ void ROCMToolChain::addClangTargetOptions(
   bool CorrectSqrt =
       DriverArgs.hasArg(options::OPT_cl_fp32_correctly_rounded_divide_sqrt);
 
+  // GPU Sanitizer currently only supports ASan and is enabled through host
+  // ASan.
+  bool GPUSan = DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
+                                   options::OPT_fno_gpu_sanitize, true) &&
+                getSanitizerArgs(DriverArgs).needsAsanRt();
+
   // Add the OpenCL specific bitcode library.
-  llvm::SmallVector<std::string, 12> BCLibs;
-  BCLibs.push_back(RocmInstallation->getOpenCLPath().str());
+  llvm::SmallVector<BitCodeLibraryInfo, 12> BCLibs;
+  BCLibs.emplace_back(RocmInstallation->getOpenCLPath().str());
 
   // Add the generic set of libraries.
   BCLibs.append(RocmInstallation->getCommonBitcodeLibs(
       DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
-      FastRelaxedMath, CorrectSqrt, ABIVer, false));
+      FastRelaxedMath, CorrectSqrt, ABIVer, GPUSan, false));
 
-  if (getSanitizerArgs(DriverArgs).needsAsanRt()) {
-    CC1Args.push_back("-mlink-bitcode-file");
-    CC1Args.push_back(
-        DriverArgs.MakeArgString(RocmInstallation->getAsanRTLPath()));
-  }
-  for (StringRef BCFile : BCLibs) {
-    CC1Args.push_back("-mlink-builtin-bitcode");
+  for (auto [BCFile, Internalize] : BCLibs) {
+    if (Internalize)
+      CC1Args.push_back("-mlink-builtin-bitcode");
+    else
+      CC1Args.push_back("-mlink-bitcode-file");
     CC1Args.push_back(DriverArgs.MakeArgString(BCFile));
   }
 }
@@ -976,18 +1029,30 @@ bool RocmInstallationDetector::checkCommonBitcodeLibs(
   return true;
 }
 
-llvm::SmallVector<std::string, 12>
+llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 RocmInstallationDetector::getCommonBitcodeLibs(
     const llvm::opt::ArgList &DriverArgs, StringRef LibDeviceFile, bool Wave64,
     bool DAZ, bool FiniteOnly, bool UnsafeMathOpt, bool FastRelaxedMath,
-    bool CorrectSqrt, DeviceLibABIVersion ABIVer, bool isOpenMP = false) const {
-  llvm::SmallVector<std::string, 12> BCLibs;
+    bool CorrectSqrt, DeviceLibABIVersion ABIVer, bool GPUSan,
+    bool isOpenMP) const {
+  llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> BCLibs;
 
-  auto AddBCLib = [&](StringRef BCFile) { BCLibs.push_back(BCFile.str()); };
+  auto AddBCLib = [&](ToolChain::BitCodeLibraryInfo BCLib,
+                      bool Internalize = true) {
+    BCLib.ShouldInternalize = Internalize;
+    BCLibs.emplace_back(BCLib);
+  };
+  auto AddSanBCLibs = [&]() {
+    if (GPUSan)
+      AddBCLib(getAsanRTLPath(), false);
+  };
 
+  AddSanBCLibs();
   AddBCLib(getOCMLPath());
   if (!isOpenMP)
     AddBCLib(getOCKLPath());
+  else if (GPUSan && isOpenMP)
+    AddBCLib(getOCKLPath(), false);
   AddBCLib(getDenormalsAreZeroPath(DAZ));
   AddBCLib(getUnsafeMathPath(UnsafeMathOpt || FastRelaxedMath));
   AddBCLib(getFiniteOnlyPath(FiniteOnly || FastRelaxedMath));
@@ -1001,7 +1066,7 @@ RocmInstallationDetector::getCommonBitcodeLibs(
   return BCLibs;
 }
 
-llvm::SmallVector<std::string, 12>
+llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 ROCMToolChain::getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
                                        const std::string &GPUArch,
                                        bool isOpenMP) const {
@@ -1033,7 +1098,50 @@ ROCMToolChain::getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
       options::OPT_fno_hip_fp32_correctly_rounded_divide_sqrt, true);
   bool Wave64 = isWave64(DriverArgs, Kind);
 
+  // GPU Sanitizer currently only supports ASan and is enabled through host
+  // ASan.
+  bool GPUSan = DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
+                                   options::OPT_fno_gpu_sanitize, true) &&
+                getSanitizerArgs(DriverArgs).needsAsanRt();
+
   return RocmInstallation->getCommonBitcodeLibs(
       DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
-      FastRelaxedMath, CorrectSqrt, ABIVer, isOpenMP);
+      FastRelaxedMath, CorrectSqrt, ABIVer, GPUSan, isOpenMP);
+}
+
+bool AMDGPUToolChain::shouldSkipSanitizeOption(
+    const ToolChain &TC, const llvm::opt::ArgList &DriverArgs,
+    StringRef TargetID, const llvm::opt::Arg *A) const {
+  // For actions without targetID, do nothing.
+  if (TargetID.empty())
+    return false;
+  Option O = A->getOption();
+
+  if (!O.matches(options::OPT_fsanitize_EQ))
+    return false;
+
+  if (!DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
+                          options::OPT_fno_gpu_sanitize, true))
+    return true;
+
+  auto &Diags = TC.getDriver().getDiags();
+
+  // For simplicity, we only allow -fsanitize=address
+  SanitizerMask K = parseSanitizerValue(A->getValue(), /*AllowGroups=*/false);
+  if (K != SanitizerKind::Address)
+    return true;
+
+  llvm::StringMap<bool> FeatureMap;
+  auto OptionalGpuArch = parseTargetID(TC.getTriple(), TargetID, &FeatureMap);
+
+  assert(OptionalGpuArch && "Invalid Target ID");
+  (void)OptionalGpuArch;
+  auto Loc = FeatureMap.find("xnack");
+  if (Loc == FeatureMap.end() || !Loc->second) {
+    Diags.Report(
+        clang::diag::warn_drv_unsupported_option_for_offload_arch_req_feature)
+        << A->getAsString(DriverArgs) << TargetID << "xnack+";
+    return true;
+  }
+  return false;
 }

@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFTypes.h"
@@ -107,7 +108,7 @@ public:
 
   virtual uint8_t getEIdentABIVersion() const = 0;
 
-  std::vector<ELFPltEntry> getPltEntries() const;
+  std::vector<ELFPltEntry> getPltEntries(const MCSubtargetInfo &STI) const;
 
   /// Returns a vector containing a symbol version for each dynamic symbol.
   /// Returns an empty vector if version sections do not exist.
@@ -409,6 +410,9 @@ protected:
     switch (getEMachine()) {
     case ELF::EM_ARM:
       Type = ELF::SHT_ARM_ATTRIBUTES;
+      break;
+    case ELF::EM_AARCH64:
+      Type = ELF::SHT_AARCH64_ATTRIBUTES;
       break;
     case ELF::EM_RISCV:
       Type = ELF::SHT_RISCV_ATTRIBUTES;
@@ -949,16 +953,15 @@ bool ELFObjectFile<ELFT>::isSectionText(DataRefImpl Sec) const {
 template <class ELFT>
 bool ELFObjectFile<ELFT>::isSectionData(DataRefImpl Sec) const {
   const Elf_Shdr *EShdr = getSection(Sec);
-  return EShdr->sh_type == ELF::SHT_PROGBITS &&
-         EShdr->sh_flags & ELF::SHF_ALLOC &&
-         !(EShdr->sh_flags & ELF::SHF_EXECINSTR);
+  return (EShdr->sh_flags & ELF::SHF_ALLOC) &&
+         !(EShdr->sh_flags & ELF::SHF_EXECINSTR) &&
+         EShdr->sh_type != ELF::SHT_NOBITS;
 }
 
 template <class ELFT>
 bool ELFObjectFile<ELFT>::isSectionBSS(DataRefImpl Sec) const {
   const Elf_Shdr *EShdr = getSection(Sec);
-  return EShdr->sh_flags & (ELF::SHF_ALLOC | ELF::SHF_WRITE) &&
-         EShdr->sh_type == ELF::SHT_NOBITS;
+  return EShdr->sh_flags & ELF::SHF_ALLOC && EShdr->sh_type == ELF::SHT_NOBITS;
 }
 
 template <class ELFT>

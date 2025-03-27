@@ -2,6 +2,7 @@ import("//llvm/utils/gn/build/driver_executable.gni")
 
 driver_executable("llvm-profdata") {
   deps = [
+    "//llvm/lib/Debuginfod",
     "//llvm/lib/IR",
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",

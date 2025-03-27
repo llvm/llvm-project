@@ -188,7 +188,7 @@ namespace UndefinedBehavior {
 
   namespace Ptr {
     struct A {};
-    struct B : A { int n; };
+    struct B : A { int n; int m; };
     B a[3][3];
     constexpr B *p = a[0] + 4; // expected-error {{constant expression}} expected-note {{element 4 of array of 3 elements}}
     B b = {};
@@ -204,6 +204,7 @@ namespace UndefinedBehavior {
     static_assert((A*)nb == 0, "");
     static_assert((B*)na == 0, "");
     constexpr const int &nf = nb->n; // expected-error {{constant expression}} expected-note {{cannot access field of null pointer}}
+    constexpr const int &mf = nb->m; // expected-error {{constant expression}} expected-note {{cannot access field of null pointer}}
     constexpr const int *np1 = (int*)nullptr + 0; // ok
     constexpr const int *np2 = &(*(int(*)[4])nullptr)[0]; // ok
     constexpr const int *np3 = &(*(int(*)[4])nullptr)[2]; // expected-error {{constant expression}} expected-note {{cannot perform pointer arithmetic on null pointer}}
@@ -509,22 +510,22 @@ namespace UnspecifiedRelations {
   // different objects that are not members of the same array or to different
   // functions, or if only one of them is null, the results of p<q, p>q, p<=q,
   // and p>=q are unspecified.
-  constexpr bool u1 = p < q; // expected-error {{constant expression}} expected-note {{comparison between '&a' and '&b' has unspecified value}}
-  constexpr bool u2 = p > q; // expected-error {{constant expression}} expected-note {{comparison between '&a' and '&b' has unspecified value}}
-  constexpr bool u3 = p <= q; // expected-error {{constant expression}} expected-note {{comparison between '&a' and '&b' has unspecified value}}
-  constexpr bool u4 = p >= q; // expected-error {{constant expression}} expected-note {{comparison between '&a' and '&b' has unspecified value}}
-  constexpr bool u5 = p < (int*)0; // expected-error {{constant expression}} expected-note {{comparison between '&a' and 'nullptr' has unspecified value}}
-  constexpr bool u6 = p <= (int*)0; // expected-error {{constant expression}} expected-note {{comparison between '&a' and 'nullptr' has unspecified value}}
-  constexpr bool u7 = p > (int*)0; // expected-error {{constant expression}} expected-note {{comparison between '&a' and 'nullptr' has unspecified value}}
-  constexpr bool u8 = p >= (int*)0; // expected-error {{constant expression}} expected-note {{comparison between '&a' and 'nullptr' has unspecified value}}
-  constexpr bool u9 = (int*)0 < q; // expected-error {{constant expression}} expected-note {{comparison between 'nullptr' and '&b' has unspecified value}}
-  constexpr bool u10 = (int*)0 <= q; // expected-error {{constant expression}} expected-note {{comparison between 'nullptr' and '&b' has unspecified value}}
-  constexpr bool u11 = (int*)0 > q; // expected-error {{constant expression}} expected-note {{comparison between 'nullptr' and '&b' has unspecified value}}
-  constexpr bool u12 = (int*)0 >= q; // expected-error {{constant expression}} expected-note {{comparison between 'nullptr' and '&b' has unspecified value}}
+  constexpr bool u1 = p < q; // expected-error {{constant expression}} expected-note {{comparison between pointers to unrelated objects '&a' and '&b' has unspecified value}}
+  constexpr bool u2 = p > q; // expected-error {{constant expression}} expected-note {{comparison between pointers to unrelated objects '&a' and '&b' has unspecified value}}
+  constexpr bool u3 = p <= q; // expected-error {{constant expression}} expected-note {{comparison between pointers to unrelated objects '&a' and '&b' has unspecified value}}
+  constexpr bool u4 = p >= q; // expected-error {{constant expression}} expected-note {{comparison between pointers to unrelated objects '&a' and '&b' has unspecified value}}
+  constexpr bool u5 = p < (int*)0; // expected-error {{constant expression}} expected-note {{comparison between pointers to unrelated objects '&a' and 'nullptr' has unspecified value}}
+  constexpr bool u6 = p <= (int*)0; // expected-error {{constant expression}} expected-note {{comparison between pointers to unrelated objects '&a' and 'nullptr' has unspecified value}}
+  constexpr bool u7 = p > (int*)0; // expected-error {{constant expression}} expected-note {{comparison between pointers to unrelated objects '&a' and 'nullptr' has unspecified value}}
+  constexpr bool u8 = p >= (int*)0; // expected-error {{constant expression}} expected-note {{comparison between pointers to unrelated objects '&a' and 'nullptr' has unspecified value}}
+  constexpr bool u9 = (int*)0 < q; // expected-error {{constant expression}} expected-note {{comparison between pointers to unrelated objects 'nullptr' and '&b' has unspecified value}}
+  constexpr bool u10 = (int*)0 <= q; // expected-error {{constant expression}} expected-note {{comparison between pointers to unrelated objects 'nullptr' and '&b' has unspecified value}}
+  constexpr bool u11 = (int*)0 > q; // expected-error {{constant expression}} expected-note {{comparison between pointers to unrelated objects 'nullptr' and '&b' has unspecified value}}
+  constexpr bool u12 = (int*)0 >= q; // expected-error {{constant expression}} expected-note {{comparison between pointers to unrelated objects 'nullptr' and '&b' has unspecified value}}
   void f(), g();
 
   constexpr void (*pf)() = &f, (*pg)() = &g;
-  constexpr bool u13 = pf < pg; // expected-error {{constant expression}} expected-note {{comparison between '&f' and '&g' has unspecified value}}
+  constexpr bool u13 = pf < pg; // expected-error {{constant expression}} expected-note {{comparison between pointers to unrelated objects '&f' and '&g' has unspecified value}}
                                 // expected-warning@-1 {{ordered comparison of function pointers}}
   constexpr bool u14 = pf == pg;
 
@@ -571,18 +572,19 @@ namespace UnspecifiedRelations {
   // [expr.rel]p3: Pointers to void can be compared [...] if both pointers
   // represent the same address or are both the null pointer [...]; otherwise
   // the result is unspecified.
+  // Same address restriction removed by CWG2749
   struct S { int a, b; } s;
   constexpr void *null = 0;
   constexpr void *pv = (void*)&s.a;
   constexpr void *qv = (void*)&s.b;
   constexpr bool v1 = null < (int*)0;
-  constexpr bool v2 = null < pv; // expected-error {{constant expression}} expected-note {{comparison between 'nullptr' and '&s.a' has unspecified value}}
-  constexpr bool v3 = null == pv; // ok
-  constexpr bool v4 = qv == pv; // ok
-  constexpr bool v5 = qv >= pv; // expected-error {{constant expression}} expected-note {{unequal pointers to void}}
-  constexpr bool v6 = qv > null; // expected-error {{constant expression}} expected-note {{comparison between '&s.b' and 'nullptr' has unspecified value}}
-  constexpr bool v7 = qv <= (void*)&s.b; // ok
-  constexpr bool v8 = qv > (void*)&s.a; // expected-error {{constant expression}} expected-note {{unequal pointers to void}}
+  constexpr bool v2 = null < pv; // expected-error {{constant expression}} expected-note {{comparison between pointers to unrelated objects 'nullptr' and '&s.a' has unspecified value}}
+  constexpr bool v3 = null == pv;
+  constexpr bool v4 = qv == pv;
+  constexpr bool v5 = qv >= pv;
+  constexpr bool v6 = qv > null; // expected-error {{constant expression}} expected-note {{comparison between pointers to unrelated objects '&s.b' and 'nullptr' has unspecified value}}
+  constexpr bool v7 = qv <= (void*)&s.b;
+  constexpr bool v8 = qv > (void*)&s.a;
 }
 
 // - an assignment or a compound assignment (5.17); or

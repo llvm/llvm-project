@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+zbs -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+zbs -M no-aliases \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ-NOALIAS %s
 # RUN: llvm-mc %s  -triple=riscv64 -mattr=+zbs \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ %s

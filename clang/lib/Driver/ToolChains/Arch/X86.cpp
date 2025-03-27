@@ -237,15 +237,18 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
     bool IsNegative = Name.consume_front("no-");
 
-#ifndef NDEBUG
-    assert(Name.starts_with("avx10.") && "Invalid AVX10 feature name.");
     StringRef Version, Width;
     std::tie(Version, Width) = Name.substr(6).split('-');
-    assert(Version == "1" && "Invalid AVX10 feature name.");
-    assert((Width == "256" || Width == "512") && "Invalid AVX10 feature name.");
-#endif
+    assert(Name.starts_with("avx10.") && "Invalid AVX10 feature name.");
+    assert((Version == "1" || Version == "2") && "Invalid AVX10 feature name.");
 
-    Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
+    if (Width == "") {
+      assert(IsNegative && "Only negative options can omit width.");
+      Features.push_back(Args.MakeArgString("-" + Name + "-256"));
+    } else {
+      assert((Width == "256" || Width == "512") && "Invalid vector length.");
+      Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
+    }
   }
 
   // Now add any that the user explicitly requested on the command line,
@@ -266,19 +269,29 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     }
 
     bool IsNegative = Name.starts_with("no-");
+
+    bool Not64Bit = ArchType != llvm::Triple::x86_64;
+    if (Not64Bit && Name == "uintr")
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << Triple.getTriple();
+
     if (A->getOption().matches(options::OPT_mapx_features_EQ) ||
         A->getOption().matches(options::OPT_mno_apx_features_EQ)) {
 
+      if (Not64Bit && !IsNegative)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << StringRef(A->getSpelling().str() + "|-mapxf")
+            << Triple.getTriple();
+
       for (StringRef Value : A->getValues()) {
-        if (Value == "egpr" || Value == "push2pop2" || Value == "ppx" ||
-            Value == "ndd" || Value == "ccmp" || Value == "nf" ||
-            Value == "cf" || Value == "zu") {
-          Features.push_back(
-              Args.MakeArgString((IsNegative ? "-" : "+") + Value));
-          continue;
-        }
-        D.Diag(clang::diag::err_drv_unsupported_option_argument)
-            << A->getSpelling() << Value;
+        if (Value != "egpr" && Value != "push2pop2" && Value != "ppx" &&
+            Value != "ndd" && Value != "ccmp" && Value != "nf" &&
+            Value != "cf" && Value != "zu")
+          D.Diag(clang::diag::err_drv_unsupported_option_argument)
+              << A->getSpelling() << Value;
+
+        Features.push_back(
+            Args.MakeArgString((IsNegative ? "-" : "+") + Value));
       }
       continue;
     }

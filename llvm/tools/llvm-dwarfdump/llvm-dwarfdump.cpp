@@ -272,7 +272,7 @@ static cl::opt<bool>
                               "expressed in bytes."),
                      cat(DwarfDumpCategory));
 static cl::opt<bool> ManuallyGenerateUnitIndex(
-    "manaully-generate-unit-index",
+    "manually-generate-unit-index",
     cl::desc("if the input is dwp file, parse .debug_info "
              "section and use it to populate "
              "DW_SECT_INFO contributions in cu-index. "
@@ -565,9 +565,13 @@ static bool lookup(ObjectFile &Obj, DWARFContext &DICtx, uint64_t Address,
 
   // TODO: it is neccessary to set proper SectionIndex here.
   // object::SectionedAddress::UndefSection works for only absolute addresses.
-  if (DILineInfo LineInfo = DICtx.getLineInfoForAddress(
-          {Lookup, object::SectionedAddress::UndefSection}))
+  if (DILineInfo LineInfo =
+          DICtx
+              .getLineInfoForAddress(
+                  {Lookup, object::SectionedAddress::UndefSection})
+              .value_or(DILineInfo())) {
     LineInfo.dump(OS);
+  }
 
   return true;
 }
@@ -661,8 +665,7 @@ createRegInfo(const object::ObjectFile &Obj) {
   TT.setVendor(Triple::UnknownVendor);
   TT.setOS(Triple::UnknownOS);
   std::string TargetLookupError;
-  const Target *TheTarget =
-      TargetRegistry::lookupTarget(TT.str(), TargetLookupError);
+  const Target *TheTarget = TargetRegistry::lookupTarget(TT, TargetLookupError);
   if (!TargetLookupError.empty())
     return nullptr;
   MCRegInfo.reset(TheTarget->createMCRegInfo(TT.str()));
@@ -681,7 +684,7 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   auto GetRegName = [&MCRegInfo](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
     if (!MCRegInfo)
       return {};
-    if (std::optional<unsigned> LLVMRegNum =
+    if (std::optional<MCRegister> LLVMRegNum =
             MCRegInfo->getLLVMRegNum(DwarfRegNum, IsEH))
       if (const char *RegName = MCRegInfo->getName(*LLVMRegNum))
         return StringRef(RegName);

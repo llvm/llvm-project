@@ -99,7 +99,6 @@ public:
   void emitDarwinTargetVariantBuildVersion(unsigned Platform, unsigned Major,
                                            unsigned Minor, unsigned Update,
                                            VersionTuple SDKVersion) override;
-  void emitThumbFunc(MCSymbol *Func) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -123,7 +122,7 @@ public:
   void emitCGProfileEntry(const MCSymbolRefExpr *From,
                           const MCSymbolRefExpr *To, uint64_t Count) override {
     if (!From->getSymbol().isTemporary() && !To->getSymbol().isTemporary())
-      getAssembler().CGProfile.push_back({From, To, Count});
+      getWriter().getCGProfile().push_back({From, To, Count});
   }
 
   void finishImpl() override;
@@ -182,10 +181,11 @@ void MCMachOStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 void MCMachOStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
   MCValue Res;
 
-  if (Value->evaluateAsRelocatable(Res, nullptr, nullptr)) {
+  if (Value->evaluateAsRelocatable(Res, nullptr)) {
     if (const MCSymbolRefExpr *SymAExpr = Res.getSymA()) {
       const MCSymbol &SymA = SymAExpr->getSymbol();
-      if (!Res.getSymB() && (SymA.getName() == "" || Res.getConstant() != 0))
+      if (!Res.getSubSym() &&
+          (SymA.getName().empty() || Res.getConstant() != 0))
         cast<MCSymbolMachO>(Symbol)->setAltEntry();
     }
   }
@@ -220,13 +220,13 @@ void MCMachOStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
   case MCAF_Code32: return; // Change parsing mode; no-op here.
   case MCAF_Code64: return; // Change parsing mode; no-op here.
   case MCAF_SubsectionsViaSymbols:
-    getAssembler().setSubsectionsViaSymbols(true);
+    getWriter().setSubsectionsViaSymbols(true);
     return;
   }
 }
 
 void MCMachOStreamer::emitLinkerOptions(ArrayRef<std::string> Options) {
-  getAssembler().getLinkerOptions().push_back(Options);
+  getWriter().getLinkerOptions().push_back(Options);
 }
 
 void MCMachOStreamer::emitDataRegion(MCDataRegionType Kind) {
@@ -267,13 +267,6 @@ void MCMachOStreamer::emitDarwinTargetVariantBuildVersion(
     VersionTuple SDKVersion) {
   getWriter().setTargetVariantBuildVersion((MachO::PlatformType)Platform, Major,
                                            Minor, Update, SDKVersion);
-}
-
-void MCMachOStreamer::emitThumbFunc(MCSymbol *Symbol) {
-  // Remember that the function is a thumb function. Fixup and relocation
-  // values will need adjusted.
-  getAssembler().setIsThumbFunc(Symbol);
-  cast<MCSymbolMachO>(Symbol)->setThumbFunc();
 }
 
 bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,
@@ -456,7 +449,7 @@ void MCMachOStreamer::emitInstToData(const MCInst &Inst,
     DF->getFixups().push_back(Fixup);
   }
   DF->setHasInstructions(STI);
-  DF->getContents().append(Code.begin(), Code.end());
+  DF->appendContents(Code);
 }
 
 void MCMachOStreamer::finishImpl() {
@@ -506,9 +499,10 @@ void MCMachOStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
 
 void MCMachOStreamer::finalizeCGProfile() {
   MCAssembler &Asm = getAssembler();
-  if (Asm.CGProfile.empty())
+  MCObjectWriter &W = getWriter();
+  if (W.getCGProfile().empty())
     return;
-  for (MCAssembler::CGProfileEntry &E : Asm.CGProfile) {
+  for (auto &E : W.getCGProfile()) {
     finalizeCGProfileEntry(E.From);
     finalizeCGProfileEntry(E.To);
   }
@@ -520,10 +514,9 @@ void MCMachOStreamer::finalizeCGProfile() {
   changeSection(CGProfileSection);
   // For each entry, reserve space for 2 32-bit indices and a 64-bit count.
   size_t SectionBytes =
-      Asm.CGProfile.size() * (2 * sizeof(uint32_t) + sizeof(uint64_t));
+      W.getCGProfile().size() * (2 * sizeof(uint32_t) + sizeof(uint64_t));
   cast<MCDataFragment>(*CGProfileSection->begin())
-      .getContents()
-      .resize(SectionBytes);
+      .appendContents(SectionBytes, 0);
 }
 
 MCStreamer *llvm::createMachOStreamer(MCContext &Context,
@@ -532,14 +525,8 @@ MCStreamer *llvm::createMachOStreamer(MCContext &Context,
                                       std::unique_ptr<MCCodeEmitter> &&CE,
                                       bool DWARFMustBeAtTheEnd,
                                       bool LabelSections) {
-  MCMachOStreamer *S = new MCMachOStreamer(
-      Context, std::move(MAB), std::move(OW), std::move(CE), LabelSections);
-  const Triple &Target = Context.getTargetTriple();
-  S->emitVersionForTarget(
-      Target, Context.getObjectFileInfo()->getSDKVersion(),
-      Context.getObjectFileInfo()->getDarwinTargetVariantTriple(),
-      Context.getObjectFileInfo()->getDarwinTargetVariantSDKVersion());
-  return S;
+  return new MCMachOStreamer(Context, std::move(MAB), std::move(OW),
+                             std::move(CE), LabelSections);
 }
 
 // The AddrSig section uses a series of relocations to refer to the symbols that
@@ -564,5 +551,5 @@ void MCMachOStreamer::createAddrSigSection() {
   // (instead of emitting a zero-sized section) so these relocations are
   // technically valid, even though we don't expect these relocations to
   // actually be applied by the linker.
-  Frag->getContents().resize(8);
+  Frag->appendContents(8, 0);
 }

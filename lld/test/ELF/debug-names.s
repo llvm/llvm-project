@@ -10,7 +10,7 @@
 
 # REQUIRES: x86
 # RUN: rm -rf %t && split-file %s %t && cd %t
-# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 --crel a.s -o a.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 b.s -o b.o
 
 # RUN: ld.lld --debug-names --no-debug-names a.o b.o -o out0

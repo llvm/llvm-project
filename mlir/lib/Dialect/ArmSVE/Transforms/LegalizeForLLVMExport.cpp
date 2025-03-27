@@ -20,22 +20,6 @@
 using namespace mlir;
 using namespace mlir::arm_sve;
 
-template <typename OpTy>
-class ForwardOperands : public OpConversionPattern<OpTy> {
-  using OpConversionPattern<OpTy>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(OpTy op, typename OpTy::Adaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
-    if (adaptor.getOperands().getTypes() == op->getOperands().getTypes())
-      return rewriter.notifyMatchFailure(op, "operand types already match");
-
-    rewriter.modifyOpInPlace(op,
-                             [&]() { op->setOperands(adaptor.getOperands()); });
-    return success();
-  }
-};
-
 using SdotOpLowering = OneToOneConvertToLLVMPattern<SdotOp, SdotIntrOp>;
 using SmmlaOpLowering = OneToOneConvertToLLVMPattern<SmmlaOp, SmmlaIntrOp>;
 using UdotOpLowering = OneToOneConvertToLLVMPattern<UdotOp, UdotIntrOp>;
@@ -200,14 +184,10 @@ struct CreateMaskOpLowering
 
 /// Populate the given list with patterns that convert from ArmSVE to LLVM.
 void mlir::populateArmSVELegalizeForLLVMExportPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   // Populate conversion patterns
 
   // clang-format off
-  patterns.add<ForwardOperands<func::CallOp>,
-               ForwardOperands<func::CallIndirectOp>,
-               ForwardOperands<func::ReturnOp>>(converter,
-                                          &converter.getContext());
   patterns.add<SdotOpLowering,
                SmmlaOpLowering,
                UdotOpLowering,

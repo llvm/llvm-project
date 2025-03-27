@@ -411,7 +411,8 @@ class DesignateOpConversion
     llvm::SmallVector<mlir::Value> firstElementIndices;
     auto indices = designate.getIndices();
     int i = 0;
-    for (auto isTriplet : designate.getIsTripletAttr().asArrayRef()) {
+    auto attrs = designate.getIsTripletAttr();
+    for (auto isTriplet : attrs.asArrayRef()) {
       // Coordinate of the first element are the index and triplets lower
       // bounds
       firstElementIndices.push_back(indices[i]);
@@ -734,6 +735,9 @@ public:
       llvm::APInt dim = getExtentOp.getDim();
       uint64_t dimVal = dim.getLimitedValue(shapeTy.getRank());
       mlir::Value extent = s.getExtents()[dimVal];
+      fir::FirOpBuilder builder(rewriter, getExtentOp.getOperation());
+      extent = builder.createConvert(getExtentOp.getLoc(),
+                                     builder.getIndexType(), extent);
       rewriter.replaceOp(getExtentOp, extent);
       return mlir::success();
     }

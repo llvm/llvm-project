@@ -49,6 +49,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::ASIN_F128, "asinf128");
     setLibcallName(RTLIB::ACOS_F128, "acosf128");
     setLibcallName(RTLIB::ATAN_F128, "atanf128");
+    setLibcallName(RTLIB::ATAN2_F128, "atan2f128");
     setLibcallName(RTLIB::SINH_F128, "sinhf128");
     setLibcallName(RTLIB::COSH_F128, "coshf128");
     setLibcallName(RTLIB::TANH_F128, "tanhf128");
@@ -81,6 +82,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::POWI_F128, "__powikf2");
     setLibcallName(RTLIB::FPEXT_F32_F128, "__extendsfkf2");
     setLibcallName(RTLIB::FPEXT_F64_F128, "__extenddfkf2");
+    setLibcallName(RTLIB::FPROUND_F128_F16, "__trunckfhf2");
     setLibcallName(RTLIB::FPROUND_F128_F32, "__trunckfsf2");
     setLibcallName(RTLIB::FPROUND_F128_F64, "__trunckfdf2");
     setLibcallName(RTLIB::FPTOSINT_F128_I32, "__fixkfsi");
@@ -155,6 +157,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
         break;
       }
       [[fallthrough]];
+    case Triple::DriverKit:
     case Triple::TvOS:
     case Triple::WatchOS:
     case Triple::XROS:
@@ -164,9 +167,10 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     default:
       break;
     }
-  } else {
-    setLibcallName(RTLIB::FPEXT_F16_F32, "__gnu_h2f_ieee");
-    setLibcallName(RTLIB::FPROUND_F32_F16, "__gnu_f2h_ieee");
+  } else if (TT.getOS() == Triple::BridgeOS) {
+    // TODO: BridgeOS should be included in isOSDarwin.
+    setLibcallName(RTLIB::EXP10_F32, "__exp10f");
+    setLibcallName(RTLIB::EXP10_F64, "__exp10");
   }
 
   if (TT.isGNUEnvironment() || TT.isOSFuchsia() ||
@@ -199,14 +203,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::FREXP_PPCF128, nullptr);
   }
 
-  if (TT.isAArch64()) {
-    if (TT.isOSMSVCRT()) {
-      // MSVCRT doesn't have powi; fall back to pow
-      setLibcallName(RTLIB::POWI_F32, nullptr);
-      setLibcallName(RTLIB::POWI_F64, nullptr);
-    }
-  }
-
   // Disable most libcalls on AMDGPU.
   if (TT.isAMDGPU()) {
     for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I) {
@@ -222,20 +218,10 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
         setLibcallName(static_cast<RTLIB::Libcall>(I), nullptr);
   }
 
-  if (TT.isARM() || TT.isThumb()) {
-    // These libcalls are not available in 32-bit.
-    setLibcallName(RTLIB::SHL_I128, nullptr);
-    setLibcallName(RTLIB::SRL_I128, nullptr);
-    setLibcallName(RTLIB::SRA_I128, nullptr);
-    setLibcallName(RTLIB::MUL_I128, nullptr);
-    setLibcallName(RTLIB::MULO_I64, nullptr);
-    setLibcallName(RTLIB::MULO_I128, nullptr);
-
-    if (TT.isOSMSVCRT()) {
-      // MSVCRT doesn't have powi; fall back to pow
-      setLibcallName(RTLIB::POWI_F32, nullptr);
-      setLibcallName(RTLIB::POWI_F64, nullptr);
-    }
+  if (TT.isOSMSVCRT()) {
+    // MSVCRT doesn't have powi; fall back to pow
+    setLibcallName(RTLIB::POWI_F32, nullptr);
+    setLibcallName(RTLIB::POWI_F64, nullptr);
   }
 
   if (TT.getArch() == Triple::ArchType::avr) {
@@ -256,37 +242,9 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::UREM_I32, nullptr);
   }
 
-  if (TT.getArch() == Triple::ArchType::hexagon) {
-    // These cause problems when the shift amount is non-constant.
-    setLibcallName(RTLIB::SHL_I128, nullptr);
-    setLibcallName(RTLIB::SRL_I128, nullptr);
-    setLibcallName(RTLIB::SRA_I128, nullptr);
-  }
-
-  if (TT.isLoongArch()) {
-    if (!TT.isLoongArch64()) {
-      // Set libcalls.
-      setLibcallName(RTLIB::MUL_I128, nullptr);
-      // The MULO libcall is not part of libgcc, only compiler-rt.
-      setLibcallName(RTLIB::MULO_I64, nullptr);
-    }
-    // The MULO libcall is not part of libgcc, only compiler-rt.
-    setLibcallName(RTLIB::MULO_I128, nullptr);
-  }
-
-  if (TT.isMIPS32()) {
-    // These libcalls are not available in 32-bit.
-    setLibcallName(RTLIB::SHL_I128, nullptr);
-    setLibcallName(RTLIB::SRL_I128, nullptr);
-    setLibcallName(RTLIB::SRA_I128, nullptr);
-    setLibcallName(RTLIB::MUL_I128, nullptr);
-    setLibcallName(RTLIB::MULO_I64, nullptr);
-    setLibcallName(RTLIB::MULO_I128, nullptr);
-  }
-
-  if (TT.isPPC()) {
-    if (!TT.isPPC64()) {
-      // These libcalls are not available in 32-bit.
+  if (!TT.isWasm()) {
+    // These libcalls are only available in compiler-rt, not libgcc.
+    if (TT.isArch32Bit()) {
       setLibcallName(RTLIB::SHL_I128, nullptr);
       setLibcallName(RTLIB::SRL_I128, nullptr);
       setLibcallName(RTLIB::SRA_I128, nullptr);
@@ -294,53 +252,5 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
       setLibcallName(RTLIB::MULO_I64, nullptr);
     }
     setLibcallName(RTLIB::MULO_I128, nullptr);
-  }
-
-  if (TT.isRISCV32()) {
-    // These libcalls are not available in 32-bit.
-    setLibcallName(RTLIB::SHL_I128, nullptr);
-    setLibcallName(RTLIB::SRL_I128, nullptr);
-    setLibcallName(RTLIB::SRA_I128, nullptr);
-    setLibcallName(RTLIB::MUL_I128, nullptr);
-    setLibcallName(RTLIB::MULO_I64, nullptr);
-  }
-
-  if (TT.isSPARC()) {
-    if (!TT.isSPARC64()) {
-      // These libcalls are not available in 32-bit.
-      setLibcallName(RTLIB::MULO_I64, nullptr);
-      setLibcallName(RTLIB::MUL_I128, nullptr);
-      setLibcallName(RTLIB::SHL_I128, nullptr);
-      setLibcallName(RTLIB::SRL_I128, nullptr);
-      setLibcallName(RTLIB::SRA_I128, nullptr);
-    }
-    setLibcallName(RTLIB::MULO_I128, nullptr);
-  }
-
-  if (TT.isSystemZ()) {
-    setLibcallName(RTLIB::SRL_I128, nullptr);
-    setLibcallName(RTLIB::SHL_I128, nullptr);
-    setLibcallName(RTLIB::SRA_I128, nullptr);
-  }
-
-  if (TT.isX86()) {
-    if (TT.getArch() == Triple::ArchType::x86) {
-      // These libcalls are not available in 32-bit.
-      setLibcallName(RTLIB::SHL_I128, nullptr);
-      setLibcallName(RTLIB::SRL_I128, nullptr);
-      setLibcallName(RTLIB::SRA_I128, nullptr);
-      setLibcallName(RTLIB::MUL_I128, nullptr);
-      // The MULO libcall is not part of libgcc, only compiler-rt.
-      setLibcallName(RTLIB::MULO_I64, nullptr);
-    }
-
-    // The MULO libcall is not part of libgcc, only compiler-rt.
-    setLibcallName(RTLIB::MULO_I128, nullptr);
-
-    if (TT.isOSMSVCRT()) {
-      // MSVCRT doesn't have powi; fall back to pow
-      setLibcallName(RTLIB::POWI_F32, nullptr);
-      setLibcallName(RTLIB::POWI_F64, nullptr);
-    }
   }
 }

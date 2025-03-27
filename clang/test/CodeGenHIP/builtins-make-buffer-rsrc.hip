@@ -25,7 +25,7 @@
 // CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[STRIDE_ADDR_ASCAST]], align 2
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[NUM_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[FLAGS_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr [[TMP0]], i16 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]])
+// CHECK-NEXT:    [[TMP4:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr [[TMP0]], i16 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]])
 // CHECK-NEXT:    ret ptr addrspace(8) [[TMP4]]
 //
 __device__ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_rsrc_p0(void *p, short stride, int num, int flags) {
@@ -49,7 +49,7 @@ __device__ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_rsrc_p0(void *p, short
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[NUM_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[FLAGS_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr [[TMP0]], i16 4, i32 [[TMP1]], i32 [[TMP2]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr [[TMP0]], i16 4, i32 [[TMP1]], i32 [[TMP2]])
 // CHECK-NEXT:    ret ptr addrspace(8) [[TMP3]]
 //
 __device__ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_rsrc_p0_stride_constant(void *p, int num, int flags) {
@@ -73,7 +73,7 @@ __device__ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_rsrc_p0_stride_constan
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[STRIDE_ADDR_ASCAST]], align 2
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[FLAGS_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr [[TMP0]], i16 [[TMP1]], i32 1234, i32 [[TMP2]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr [[TMP0]], i16 [[TMP1]], i32 1234, i32 [[TMP2]])
 // CHECK-NEXT:    ret ptr addrspace(8) [[TMP3]]
 //
 __device__ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_rsrc_p0_num_constant(void *p, short stride, int flags) {
@@ -97,7 +97,7 @@ __device__ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_rsrc_p0_num_constant(v
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[STRIDE_ADDR_ASCAST]], align 2
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[NUM_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr [[TMP0]], i16 [[TMP1]], i32 [[TMP2]], i32 5678)
+// CHECK-NEXT:    [[TMP3:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr [[TMP0]], i16 [[TMP1]], i32 [[TMP2]], i32 5678)
 // CHECK-NEXT:    ret ptr addrspace(8) [[TMP3]]
 //
 __device__ __amdgpu_buffer_rsrc_t test_amdgcn_make_buffer_rsrc_p0_flags_constant(void *p, short stride, int num) {

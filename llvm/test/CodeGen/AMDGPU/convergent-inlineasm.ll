@@ -23,12 +23,8 @@ bb5:                                              ; preds = %bb3, %bb
 }
 
 ; GCN-LABEL: {{^}}nonconvergent_inlineasm:
-; GCN: s_cbranch_execz
-
-; GCN: ; %bb.{{[0-9]+}}:
 ; GCN: v_cmp_ne_u32_e64
-
-; GCN: BB{{[0-9]+_[0-9]+}}:
+; GCN: s_cbranch_execz
 
 define amdgpu_kernel void @nonconvergent_inlineasm(ptr addrspace(1) nocapture %arg) {
 bb:

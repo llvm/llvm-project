@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include "lldb/API/LLDB.h"
 #include "lldb/API/SBCommandInterpreter.h"
@@ -29,6 +30,9 @@
 #define NUMBER_OF_SIMULTANEOUS_DEBUG_SESSIONS 10
 
 #define DEBUG 0
+
+#define STR1(x) #x
+#define STR(x) STR1(x)
 
 using namespace lldb;
 
@@ -102,20 +106,21 @@ void *do_one_debugger (void *in)
     if (debugger.IsValid ())
     {
         debugger.SetAsync (true);
-        SBTarget target = debugger.CreateTargetWithFileAndArch(inferior_process_name, "x86_64");
+        SBTarget target = debugger.CreateTargetWithFileAndArch(inferior_process_name,
+                                                               STR(LLDB_HOST_ARCH));
         SBCommandInterpreter command_interp = debugger.GetCommandInterpreter();
         if (target.IsValid())
         {
             SBBreakpoint bar_br = target.BreakpointCreateByName ("bar", "testprog");
             if (!bar_br.IsValid())
             {
-                printf ("#%lld: failed to set breakpoint on bar, exiting.\n", threadnum);
+                printf ("#%" PRIu64 ": failed to set breakpoint on bar, exiting.\n", threadnum);
                 exit (1);
             }
             SBBreakpoint foo_br = target.BreakpointCreateByName ("foo", "testprog");
             if (!foo_br.IsValid())
             {
-                printf ("#%lld: Failed to set breakpoint on foo()\n", threadnum);
+                printf ("#%" PRIu64 ": Failed to set breakpoint on foo()\n", threadnum);
             }
 
             SBLaunchInfo launch_info (NULL);
@@ -136,15 +141,17 @@ void *do_one_debugger (void *in)
 
                 if (!walk_stack_to_main (process.GetThreadAtIndex(0)))
                 {
-                    printf ("#%lld: backtrace while @ foo() failed\n", threadnum);
+                    printf ("#%" PRIu64 ": backtrace while @ foo() failed\n", threadnum);
                     completed_threads_array[threadnum] = true;
                     return (void *) 1;
                 }
 
-                if (strcmp (process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetFunctionName(), "foo") != 0)
+                // On Linux the () are included.
+                const char* hit_fn = process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetFunctionName();
+                if (strcmp (hit_fn, "foo") != 0 && strcmp (hit_fn, "foo()") != 0)
                 {
 #if DEBUG == 1
-                    printf ("#%lld: First breakpoint did not stop at foo(), instead stopped at '%s'\n", threadnum, process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetFunctionName());
+                    printf ("#%" PRIu64 ": First breakpoint did not stop at foo(), instead stopped at '%s'\n", threadnum, process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetFunctionName());
 #endif
                     completed_threads_array[threadnum] = true;
                     return (void*) 1;
@@ -156,7 +163,7 @@ void *do_one_debugger (void *in)
 
                 if (process.GetState() == StateType::eStateExited)
                 {
-                    printf ("#%lld: Process exited\n", threadnum);
+                    printf ("#%" PRIu64 ": Process exited\n", threadnum);
                     completed_threads_array[threadnum] = true;
                     return (void *) 1;
                 }
@@ -164,14 +171,15 @@ void *do_one_debugger (void *in)
 
                 if (!walk_stack_to_main (process.GetThreadAtIndex(0)))
                 {
-                    printf ("#%lld: backtrace while @ bar() failed\n", threadnum);
+                    printf ("#%" PRIu64 ": backtrace while @ bar() failed\n", threadnum);
                     completed_threads_array[threadnum] = true;
                     return (void *) 1;
                 }
 
-                if (strcmp (process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetFunctionName(), "bar") != 0)
+                hit_fn = process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetFunctionName();
+                if (strcmp (hit_fn, "bar") != 0 && strcmp (hit_fn, "bar()") != 0)
                 {
-                    printf ("#%lld: First breakpoint did not stop at bar()\n", threadnum);
+                    printf ("#%" PRIu64 ": First breakpoint did not stop at bar()\n", threadnum);
                     completed_threads_array[threadnum] = true;
                     return (void*) 1;
                 }
@@ -183,7 +191,7 @@ void *do_one_debugger (void *in)
                 SBDebugger::Destroy(debugger);
 
 #if DEBUG == 1
-                printf ("#%lld: All good!\n", threadnum);
+                printf ("#%" PRIu64 ": All good!\n", threadnum);
 #endif
                 successful_threads_array[threadnum] = true;
                 completed_threads_array[threadnum] = true;
@@ -191,7 +199,7 @@ void *do_one_debugger (void *in)
             }
             else
             {
-                printf("#%lld: process failed to launch\n", threadnum);
+                printf("#%" PRIu64 ": process failed to launch\n", threadnum);
                 successful_threads_array[threadnum] = false;
                 completed_threads_array[threadnum] = true;
                 return (void*) 0;
@@ -199,7 +207,7 @@ void *do_one_debugger (void *in)
         }
         else
         {
-            printf ("#%lld: did not get valid target\n", threadnum);
+            printf ("#%" PRIu64 ": did not get valid target\n", threadnum);
             successful_threads_array[threadnum] = false;
             completed_threads_array[threadnum] = true;
             return (void*) 0;
@@ -207,7 +215,7 @@ void *do_one_debugger (void *in)
     }
     else
     {
-        printf ("#%lld: did not get debugger\n", threadnum);
+        printf ("#%" PRIu64 ": did not get debugger\n", threadnum);
         successful_threads_array[threadnum] = false;
         completed_threads_array[threadnum] = true;
         return (void*) 0;

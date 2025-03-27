@@ -94,12 +94,15 @@ public:
   // calls are particularly expensive in NVPTX.
   unsigned getInliningThresholdMultiplier() const { return 11; }
 
+  InstructionCost getInstructionCost(const User *U,
+                                     ArrayRef<const Value *> Operands,
+                                     TTI::TargetCostKind CostKind);
+
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = std::nullopt,
-      const Instruction *CxtI = nullptr);
+      ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr);
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
@@ -124,6 +127,17 @@ public:
       return true;
     }
   }
+
+  bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
+                                  Intrinsic::ID IID) const;
+
+  Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
+                                          Value *NewV) const;
+  unsigned getAssumedAddrSpace(const Value *V) const;
+
+  void collectKernelLaunchBounds(
+      const Function &F,
+      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const;
 };
 
 } // end namespace llvm

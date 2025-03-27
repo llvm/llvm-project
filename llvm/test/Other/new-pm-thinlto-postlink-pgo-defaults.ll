@@ -39,6 +39,7 @@
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-O-NEXT: Running pass: PromotePass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
+; CHECK-O-NEXT: Running analysis: LastRunTrackingAnalysis
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-O-NEXT: Running analysis: AAManager
 ; CHECK-O-NEXT: Running analysis: BasicAA
@@ -137,6 +138,7 @@
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}ShouldNotRunFunctionPassesAnalysis
 ; CHECK-O-NEXT: Running analysis: ShouldNotRunFunctionPassesAnalysis
 ; CHECK-O-NEXT: Running pass: CoroSplitPass
+; CHECK-O-NEXT: Running pass: CoroAnnotationElidePass
 ; CHECK-O-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}ShouldNotRunFunctionPassesAnalysis
 ; CHECK-O-NEXT: Invalidating analysis: ShouldNotRunFunctionPassesAnalysis
 ; CHECK-O-NEXT: Invalidating analysis: InlineAdvisorAnalysis

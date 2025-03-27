@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; During lowering, a BUILD_VECTOR of undef values was created. This was
 ; not properly handled by buildHvxVectorReg, which tried to generate a

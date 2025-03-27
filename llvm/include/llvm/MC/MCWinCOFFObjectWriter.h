@@ -45,7 +45,7 @@ public:
 
 class WinCOFFWriter;
 
-class WinCOFFObjectWriter : public MCObjectWriter {
+class WinCOFFObjectWriter final : public MCObjectWriter {
   friend class WinCOFFWriter;
 
   std::unique_ptr<MCWinCOFFObjectTargetWriter> TargetObjectWriter;
@@ -72,6 +72,7 @@ public:
                         const MCFixup &Fixup, MCValue Target,
                         uint64_t &FixedValue) override;
   uint64_t writeObject(MCAssembler &Asm) override;
+  int getSectionNumber(const MCSection &Section) const;
 };
 
 /// Construct a new Win COFF writer instance.

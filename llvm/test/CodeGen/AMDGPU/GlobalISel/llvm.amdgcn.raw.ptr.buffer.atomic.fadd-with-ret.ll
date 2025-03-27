@@ -11,7 +11,7 @@ declare <2 x half> @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.v2f16(<2 x half>, ptr
 define amdgpu_kernel void @buffer_atomic_add_f32_rtn(float %val, ptr addrspace(8) inreg %rsrc, i32 %voffset, i32 %soffset) {
 main_body:
   %ret = call float @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.f32(float %val, ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
-  store float %ret, ptr undef
+  store float %ret, ptr poison
   ret void
 }
 
@@ -20,6 +20,6 @@ main_body:
 define amdgpu_kernel void @buffer_atomic_add_v2f16_rtn(<2 x half> %val, ptr addrspace(8) inreg %rsrc, i32 %voffset, i32 inreg %soffset) {
 main_body:
   %ret = call <2 x half> @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.v2f16(<2 x half> %val, ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
-  store <2 x half> %ret, ptr undef
+  store <2 x half> %ret, ptr poison
   ret void
 }

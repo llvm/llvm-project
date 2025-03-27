@@ -71,12 +71,12 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.build(
             dictionary={
                 "EXE": exe_name,
-                "CC": clang,
                 "SDKROOT": sdkroot.strip(),
                 "ARCH": arch,
                 "ARCH_CFLAGS": "-target {} {}".format(triple, version_min),
                 "USE_SYSTEM_STDLIB": 1,
-            }
+            },
+            compiler=clang,
         )
         exe_path = os.path.realpath(self.getBuildArtifact(exe_name))
         cmd = [

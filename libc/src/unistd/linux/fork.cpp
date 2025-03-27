@@ -8,14 +8,14 @@
 
 #include "src/unistd/fork.h"
 
-#include "src/__support/OSUtil/pid.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/fork_callbacks.h"
+#include "src/__support/threads/identifier.h"
 #include "src/__support/threads/thread.h" // For thread self object
-#include "src/errno/libc_errno.h"
 
+#include "src/errno/libc_errno.h"
 #include <signal.h>      // For SIGCHLD
 #include <sys/syscall.h> // For syscall numbers.
 
@@ -26,40 +26,36 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(pid_t, fork, (void)) {
   invoke_prepare_callbacks();
-
-  // Invalidate tid/pid cache before fork to avoid post fork signal handler from
-  // getting wrong values. gettid() is not async-signal-safe, but let's provide
-  // our best efforts here.
-  pid_t parent_tid = self.get_tid();
-  self.invalidate_tid();
-  ProcessIdentity::start_fork();
-
+  pid_t parent_tid = internal::gettid();
+  // Invalidate parent's tid cache before forking. We cannot do this in child
+  // process because in the post-fork instruction windows, there may be a signal
+  // handler triggered which may get the wrong tid.
+  internal::force_set_tid(0);
 #ifdef SYS_fork
-  pid_t ret = LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_fork);
+  pid_t ret = syscall_impl<pid_t>(SYS_fork);
 #elif defined(SYS_clone)
-  pid_t ret = LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_clone, SIGCHLD, 0);
+  pid_t ret = syscall_impl<pid_t>(SYS_clone, SIGCHLD, 0);
 #else
 #error "fork and clone syscalls not available."
 #endif
+
+  if (ret == 0) {
+    // Return value is 0 in the child process.
+    // The child is created with a single thread whose self object will be a
+    // copy of parent process' thread which called fork. So, we have to fix up
+    // the child process' self object with the new process' tid.
+    internal::force_set_tid(syscall_impl<pid_t>(SYS_gettid));
+    invoke_child_callbacks();
+    return 0;
+  }
 
   if (ret < 0) {
     // Error case, a child process was not created.
     libc_errno = static_cast<int>(-ret);
     return -1;
   }
-
-  // Child process
-  if (ret == 0) {
-    self.refresh_tid();
-    ProcessIdentity::refresh_cache();
-    ProcessIdentity::end_fork();
-    invoke_child_callbacks();
-    return 0;
-  }
-
-  // Parent process
-  self.refresh_tid(parent_tid);
-  ProcessIdentity::end_fork();
+  // recover parent's tid.
+  internal::force_set_tid(parent_tid);
   invoke_parent_callbacks();
   return ret;
 }

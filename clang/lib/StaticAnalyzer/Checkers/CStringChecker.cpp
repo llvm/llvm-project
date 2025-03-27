@@ -16,6 +16,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -337,7 +338,8 @@ public:
                          const Stmt *S, StringRef WarningMsg) const;
   void emitAdditionOverflowBug(CheckerContext &C, ProgramStateRef State) const;
   void emitUninitializedReadBug(CheckerContext &C, ProgramStateRef State,
-                                const Expr *E, StringRef Msg) const;
+                                const Expr *E, const MemRegion *R,
+                                StringRef Msg) const;
   ProgramStateRef checkAdditionOverflow(CheckerContext &C,
                                             ProgramStateRef state,
                                             NonLoc left,
@@ -474,7 +476,8 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
     OS << "The first element of the ";
     printIdxWithOrdinalSuffix(OS, Buffer.ArgumentIndex + 1);
     OS << " argument is undefined";
-    emitUninitializedReadBug(C, State, Buffer.Expression, OS.str());
+    emitUninitializedReadBug(C, State, Buffer.Expression,
+                             FirstElementVal->getAsRegion(), OS.str());
     return nullptr;
   }
 
@@ -538,13 +541,16 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
     OS << ") in the ";
     printIdxWithOrdinalSuffix(OS, Buffer.ArgumentIndex + 1);
     OS << " argument is undefined";
-    emitUninitializedReadBug(C, State, Buffer.Expression, OS.str());
+    emitUninitializedReadBug(C, State, Buffer.Expression,
+                             LastElementVal.getAsRegion(), OS.str());
     return nullptr;
   }
   return State;
 }
-
-// FIXME: This was originally copied from ArrayBoundChecker.cpp. Refactor?
+// FIXME: The root of this logic was copied from the old checker
+// alpha.security.ArrayBound (which is removed within this commit).
+// It should be refactored to use the different, more sophisticated bounds
+// checking logic used by the new checker ``security.ArrayBound``.
 ProgramStateRef CStringChecker::CheckLocation(CheckerContext &C,
                                               ProgramStateRef state,
                                               AnyArgExpr Buffer, SVal Element,
@@ -818,7 +824,7 @@ void CStringChecker::emitNullArgBug(CheckerContext &C, ProgramStateRef State,
 
 void CStringChecker::emitUninitializedReadBug(CheckerContext &C,
                                               ProgramStateRef State,
-                                              const Expr *E,
+                                              const Expr *E, const MemRegion *R,
                                               StringRef Msg) const {
   if (ExplodedNode *N = C.generateErrorNode(State)) {
     if (!BT_UninitRead)
@@ -831,6 +837,7 @@ void CStringChecker::emitUninitializedReadBug(CheckerContext &C,
                     Report->getLocation());
     Report->addRange(E->getSourceRange());
     bugreporter::trackExpressionValue(N, E, *Report);
+    Report->addVisitor<NoStoreFuncVisitor>(R->castAs<SubRegion>());
     C.emitReport(std::move(Report));
   }
 }
@@ -1020,8 +1027,8 @@ SVal CStringChecker::getCStringLengthForRegion(CheckerContext &C,
       BasicValueFactory &BVF = svalBuilder.getBasicValueFactory();
       const llvm::APSInt &maxValInt = BVF.getMaxValue(sizeTy);
       llvm::APSInt fourInt = APSIntType(maxValInt).getValue(4);
-      const llvm::APSInt *maxLengthInt = BVF.evalAPSInt(BO_Div, maxValInt,
-                                                        fourInt);
+      std::optional<APSIntPtr> maxLengthInt =
+          BVF.evalAPSInt(BO_Div, maxValInt, fourInt);
       NonLoc maxLength = svalBuilder.makeIntVal(*maxLengthInt);
       SVal evalLength = svalBuilder.evalBinOpNN(state, BO_LE, *strLn, maxLength,
                                                 svalBuilder.getConditionType());

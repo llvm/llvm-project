@@ -381,6 +381,11 @@ void TextNodeDumper::Visit(const OMPClause *C) {
     OS << " <implicit>";
 }
 
+void TextNodeDumper::VisitOpenACCAsteriskSizeExpr(
+    const OpenACCAsteriskSizeExpr *E) {
+  // Nothing to do here, only location exists, and that is printed elsewhere.
+}
+
 void TextNodeDumper::Visit(const OpenACCClause *C) {
   if (!C) {
     ColorScope Color(OS, ShowColors, NullColor);
@@ -403,22 +408,55 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Copy:
     case OpenACCClauseKind::PCopy:
     case OpenACCClauseKind::PresentOrCopy:
+    case OpenACCClauseKind::Host:
     case OpenACCClauseKind::If:
+    case OpenACCClauseKind::IfPresent:
     case OpenACCClauseKind::Independent:
+    case OpenACCClauseKind::Detach:
+    case OpenACCClauseKind::Delete:
+    case OpenACCClauseKind::Device:
+    case OpenACCClauseKind::DeviceNum:
+    case OpenACCClauseKind::DefaultAsync:
+    case OpenACCClauseKind::DeviceResident:
     case OpenACCClauseKind::DevicePtr:
+    case OpenACCClauseKind::Finalize:
     case OpenACCClauseKind::FirstPrivate:
+    case OpenACCClauseKind::Link:
     case OpenACCClauseKind::NoCreate:
+    case OpenACCClauseKind::NoHost:
     case OpenACCClauseKind::NumGangs:
     case OpenACCClauseKind::NumWorkers:
     case OpenACCClauseKind::Present:
     case OpenACCClauseKind::Private:
     case OpenACCClauseKind::Self:
     case OpenACCClauseKind::Seq:
+    case OpenACCClauseKind::Tile:
+    case OpenACCClauseKind::Worker:
+    case OpenACCClauseKind::UseDevice:
+    case OpenACCClauseKind::Vector:
     case OpenACCClauseKind::VectorLength:
+    case OpenACCClauseKind::Invalid:
       // The condition expression will be printed as a part of the 'children',
       // but print 'clause' here so it is clear what is happening from the dump.
       OS << " clause";
       break;
+    case OpenACCClauseKind::Gang: {
+      OS << " clause";
+      // print the list of all GangKinds, so that there is some sort of
+      // relationship to the expressions listed afterwards.
+      auto *GC = cast<OpenACCGangClause>(C);
+
+      for (unsigned I = 0; I < GC->getNumExprs(); ++I) {
+        OS << " " << GC->getExpr(I).first;
+      }
+      break;
+    }
+    case OpenACCClauseKind::Collapse:
+      OS << " clause";
+      if (cast<OpenACCCollapseClause>(C)->hasForce())
+        OS << ": force";
+      break;
+
     case OpenACCClauseKind::CopyIn:
     case OpenACCClauseKind::PCopyIn:
     case OpenACCClauseKind::PresentOrCopyIn:
@@ -464,9 +502,15 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
       OS << " clause Operator: "
          << cast<OpenACCReductionClause>(C)->getReductionOp();
       break;
-    default:
-      // Nothing to do here.
-      break;
+    case OpenACCClauseKind::Bind:
+      OS << " clause";
+      if (cast<OpenACCBindClause>(C)->isIdentifierArgument())
+        OS << " identifier '"
+           << cast<OpenACCBindClause>(C)->getIdentifierArgument()->getName()
+           << "'";
+      else
+        AddChild(
+            [=] { Visit(cast<OpenACCBindClause>(C)->getStringArgument()); });
     }
   }
   dumpPointer(C);
@@ -676,10 +720,36 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
          << GetApproxValue(Value.getComplexFloatImag()) << 'i';
     }
     return;
-  case APValue::LValue:
+  case APValue::LValue: {
     (void)Context;
-    OS << "LValue <todo>";
+    OS << "LValue Base=";
+    APValue::LValueBase B = Value.getLValueBase();
+    if (B.isNull())
+      OS << "null";
+    else if (const auto *BE = B.dyn_cast<const Expr *>()) {
+      OS << BE->getStmtClassName() << ' ';
+      dumpPointer(BE);
+    } else {
+      const auto *VDB = B.get<const ValueDecl *>();
+      OS << VDB->getDeclKindName() << "Decl";
+      dumpPointer(VDB);
+    }
+    OS << ", Null=" << Value.isNullPointer()
+       << ", Offset=" << Value.getLValueOffset().getQuantity()
+       << ", HasPath=" << Value.hasLValuePath();
+    if (Value.hasLValuePath()) {
+      OS << ", PathLength=" << Value.getLValuePath().size();
+      OS << ", Path=(";
+      llvm::ListSeparator Sep;
+      for (const auto &PathEntry : Value.getLValuePath()) {
+        // We're printing all entries as array indices because don't have the
+        // type information here to do anything else.
+        OS << Sep << PathEntry.getAsArrayIndex();
+      }
+      OS << ")";
+    }
     return;
+  }
   case APValue::Array: {
     unsigned ArraySize = Value.getArraySize();
     unsigned NumInitializedElements = Value.getArrayInitializedElts();
@@ -841,7 +911,41 @@ void TextNodeDumper::dumpBareDeclRef(const Decl *D) {
 
   if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
     ColorScope Color(OS, ShowColors, DeclNameColor);
-    OS << " '" << ND->getDeclName() << '\'';
+    if (DeclarationName Name = ND->getDeclName())
+      OS << " '" << Name << '\'';
+    else
+      switch (ND->getKind()) {
+      case Decl::Decomposition: {
+        auto *DD = cast<DecompositionDecl>(ND);
+        OS << " first_binding '" << DD->bindings()[0]->getDeclName() << '\'';
+        break;
+      }
+      case Decl::Field: {
+        auto *FD = cast<FieldDecl>(ND);
+        OS << " field_index " << FD->getFieldIndex();
+        break;
+      }
+      case Decl::ParmVar: {
+        auto *PD = cast<ParmVarDecl>(ND);
+        OS << " depth " << PD->getFunctionScopeDepth() << " index "
+           << PD->getFunctionScopeIndex();
+        break;
+      }
+      case Decl::TemplateTypeParm: {
+        auto *TD = cast<TemplateTypeParmDecl>(ND);
+        OS << " depth " << TD->getDepth() << " index " << TD->getIndex();
+        break;
+      }
+      case Decl::NonTypeTemplateParm: {
+        auto *TD = cast<NonTypeTemplateParmDecl>(ND);
+        OS << " depth " << TD->getDepth() << " index " << TD->getIndex();
+        break;
+      }
+      default:
+        // Var, Namespace, (CXX)Record: Nothing else besides source location.
+        dumpSourceRange(ND->getSourceRange());
+        break;
+      }
   }
 
   if (const ValueDecl *VD = dyn_cast<ValueDecl>(D))
@@ -864,9 +968,9 @@ void TextNodeDumper::dumpAccessSpecifier(AccessSpecifier AS) {
 
 void TextNodeDumper::dumpCleanupObject(
     const ExprWithCleanups::CleanupObject &C) {
-  if (auto *BD = C.dyn_cast<BlockDecl *>())
+  if (auto *BD = dyn_cast<BlockDecl *>(C))
     dumpDeclRef(BD, "cleanup");
-  else if (auto *CLE = C.dyn_cast<CompoundLiteralExpr *>())
+  else if (auto *CLE = dyn_cast<CompoundLiteralExpr *>(C))
     AddChild([=] {
       OS << "cleanup ";
       {
@@ -1132,6 +1236,12 @@ void TextNodeDumper::VisitIntegralTemplateArgument(const TemplateArgument &TA) {
   dumpTemplateArgument(TA);
 }
 
+void TextNodeDumper::VisitStructuralValueTemplateArgument(
+    const TemplateArgument &TA) {
+  OS << " structural value";
+  dumpTemplateArgument(TA);
+}
+
 void TextNodeDumper::dumpTemplateName(TemplateName TN, StringRef Label) {
   AddChild(Label, [=] {
     {
@@ -1196,6 +1306,18 @@ void TextNodeDumper::dumpBareTemplateName(TemplateName TN) {
       AddChild("parameter", [=] { Visit(P); });
     dumpDeclRef(STS->getAssociatedDecl(), "associated");
     dumpTemplateName(STS->getReplacement(), "replacement");
+    return;
+  }
+  case TemplateName::DeducedTemplate: {
+    OS << " deduced";
+    const DeducedTemplateStorage *DTS = TN.getAsDeducedTemplateName();
+    dumpTemplateName(DTS->getUnderlying(), "underlying");
+    AddChild("defaults", [=] {
+      auto [StartPos, Args] = DTS->getDefaultArguments();
+      OS << " start " << StartPos;
+      for (const TemplateArgument &Arg : Args)
+        AddChild([=] { Visit(Arg, SourceRange()); });
+    });
     return;
   }
   // FIXME: Implement these.
@@ -1859,6 +1981,9 @@ void TextNodeDumper::VisitVectorType(const VectorType *T) {
     OS << " fixed-length rvv data vector";
     break;
   case VectorKind::RVVFixedLengthMask:
+  case VectorKind::RVVFixedLengthMask_1:
+  case VectorKind::RVVFixedLengthMask_2:
+  case VectorKind::RVVFixedLengthMask_4:
     OS << " fixed-length rvv mask vector";
     break;
   }
@@ -2074,6 +2199,11 @@ void TextNodeDumper::VisitEnumDecl(const EnumDecl *D) {
     OS << " __module_private__";
   if (D->isFixed())
     dumpType(D->getIntegerType());
+
+  if (const auto *Instance = D->getInstantiatedFromMemberEnum()) {
+    OS << " instantiated_from";
+    dumpPointer(Instance);
+  }
 }
 
 void TextNodeDumper::VisitRecordDecl(const RecordDecl *D) {
@@ -2416,8 +2546,11 @@ void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
     OS << " instantiated_from";
     dumpPointer(Instance);
   }
-  if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D))
+  if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
     dumpTemplateSpecializationKind(CTSD->getSpecializationKind());
+    if (CTSD->hasStrictPackMatch())
+      OS << " strict-pack-match";
+  }
 
   dumpNestedNameSpecifier(D->getQualifier());
 
@@ -2694,6 +2827,8 @@ void TextNodeDumper::VisitAccessSpecDecl(const AccessSpecDecl *D) {
 void TextNodeDumper::VisitFriendDecl(const FriendDecl *D) {
   if (TypeSourceInfo *T = D->getFriendType())
     dumpType(T->getType());
+  if (D->isPackExpansion())
+    OS << "...";
 }
 
 void TextNodeDumper::VisitObjCIvarDecl(const ObjCIvarDecl *D) {
@@ -2874,18 +3009,120 @@ void TextNodeDumper::VisitHLSLBufferDecl(const HLSLBufferDecl *D) {
   dumpName(D);
 }
 
+void TextNodeDumper::VisitHLSLOutArgExpr(const HLSLOutArgExpr *E) {
+  OS << (E->isInOut() ? " inout" : " out");
+}
+
 void TextNodeDumper::VisitOpenACCConstructStmt(const OpenACCConstructStmt *S) {
   OS << " " << S->getDirectiveKind();
 }
 void TextNodeDumper::VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S) {
-
   if (S->isOrphanedLoopConstruct())
     OS << " <orphan>";
   else
-    OS << " parent: " << S->getParentComputeConstruct();
+    OS << " parent: " << S->getParentComputeConstructKind();
+}
+
+void TextNodeDumper::VisitOpenACCCombinedConstruct(
+    const OpenACCCombinedConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+
+void TextNodeDumper::VisitOpenACCDataConstruct(const OpenACCDataConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+
+void TextNodeDumper::VisitOpenACCEnterDataConstruct(
+    const OpenACCEnterDataConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+
+void TextNodeDumper::VisitOpenACCExitDataConstruct(
+    const OpenACCExitDataConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+
+void TextNodeDumper::VisitOpenACCHostDataConstruct(
+    const OpenACCHostDataConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+
+void TextNodeDumper::VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+void TextNodeDumper::VisitOpenACCCacheConstruct(
+    const OpenACCCacheConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+  if (S->hasReadOnly())
+    OS <<" readonly";
+}
+void TextNodeDumper::VisitOpenACCInitConstruct(const OpenACCInitConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+void TextNodeDumper::VisitOpenACCShutdownConstruct(
+    const OpenACCShutdownConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+void TextNodeDumper::VisitOpenACCSetConstruct(const OpenACCSetConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+void TextNodeDumper::VisitOpenACCUpdateConstruct(
+    const OpenACCUpdateConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+
+void TextNodeDumper::VisitOpenACCAtomicConstruct(
+    const OpenACCAtomicConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+  OS << ' ' << S->getAtomicKind();
+}
+
+void TextNodeDumper::VisitOpenACCDeclareDecl(const OpenACCDeclareDecl *D) {
+  OS << " " << D->getDirectiveKind();
+
+  for (const OpenACCClause *C : D->clauses())
+    AddChild([=] {
+      Visit(C);
+      for (const Stmt *S : C->children())
+        AddChild([=] { Visit(S); });
+    });
+}
+void TextNodeDumper::VisitOpenACCRoutineDecl(const OpenACCRoutineDecl *D) {
+  OS << " " << D->getDirectiveKind();
+
+  dumpSourceRange(SourceRange{D->getLParenLoc(), D->getRParenLoc()});
+
+  AddChild([=] { Visit(D->getFunctionReference()); });
+
+  for (const OpenACCClause *C : D->clauses())
+    AddChild([=] {
+      Visit(C);
+      for (const Stmt *S : C->children())
+        AddChild([=] { Visit(S); });
+    });
+}
+
+void TextNodeDumper::VisitOpenACCRoutineDeclAttr(
+    const OpenACCRoutineDeclAttr *A) {
+  for (const OpenACCClause *C : A->Clauses)
+    AddChild([=] {
+      Visit(C);
+      for (const Stmt *S : C->children())
+        AddChild([=] { Visit(S); });
+    });
 }
 
 void TextNodeDumper::VisitEmbedExpr(const EmbedExpr *S) {
   AddChild("begin", [=] { OS << S->getStartingElementPos(); });
   AddChild("number of elements", [=] { OS << S->getDataElementCount(); });
+}
+
+void TextNodeDumper::VisitAtomicExpr(const AtomicExpr *AE) {
+  OS << ' ' << AE->getOpAsString();
+}
+
+void TextNodeDumper::VisitConvertVectorExpr(const ConvertVectorExpr *S) {
+  VisitStmt(S);
+  if (S->hasStoredFPFeatures())
+    printFPOptions(S->getStoredFPFeatures());
 }

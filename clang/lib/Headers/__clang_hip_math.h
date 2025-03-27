@@ -13,6 +13,10 @@
 #error "This file is for HIP and OpenMP AMDGCN device compilation only."
 #endif
 
+// The __CLANG_GPU_DISABLE_MATH_WRAPPERS macro provides a way to let standard
+// libcalls reach the link step instead of being eagerly replaced.
+#ifndef __CLANG_GPU_DISABLE_MATH_WRAPPERS
+
 #if !defined(__HIPCC_RTC__)
 #include <limits.h>
 #include <stdint.h>
@@ -29,6 +33,9 @@
 #define __DEVICE__ static __device__ inline __attribute__((always_inline))
 #endif
 
+#pragma push_macro("__PRIVATE_AS")
+
+#define __PRIVATE_AS __attribute__((opencl_private))
 // Device library provides fast low precision and slow full-recision
 // implementations for some functions. Which one gets selected depends on
 // __CLANG_GPU_APPROX_TRANSCENDENTALS__ which gets defined by clang if
@@ -385,7 +392,7 @@ __DEVICE__
 float erfinvf(float __x) { return __ocml_erfinv_f32(__x); }
 
 __DEVICE__
-float exp10f(float __x) { return __ocml_exp10_f32(__x); }
+float exp10f(float __x) { return __builtin_exp10f(__x); }
 
 __DEVICE__
 float exp2f(float __x) { return __builtin_exp2f(__x); }
@@ -488,13 +495,13 @@ __DEVICE__
 float log1pf(float __x) { return __ocml_log1p_f32(__x); }
 
 __DEVICE__
-float log2f(float __x) { return __FAST_OR_SLOW(__log2f, __ocml_log2_f32)(__x); }
+float log2f(float __x) { return __FAST_OR_SLOW(__log2f, __builtin_log2f)(__x); }
 
 __DEVICE__
 float logbf(float __x) { return __ocml_logb_f32(__x); }
 
 __DEVICE__
-float logf(float __x) { return __FAST_OR_SLOW(__logf, __ocml_log_f32)(__x); }
+float logf(float __x) { return __FAST_OR_SLOW(__logf, __builtin_logf)(__x); }
 
 __DEVICE__
 long int lrintf(float __x) { return __builtin_rintf(__x); }
@@ -508,8 +515,7 @@ float modff(float __x, float *__iptr) {
 #ifdef __OPENMP_AMDGCN__
 #pragma omp allocate(__tmp) allocator(omp_thread_mem_alloc)
 #endif
-  float __r =
-      __ocml_modf_f32(__x, (__attribute__((address_space(5))) float *)&__tmp);
+  float __r = __ocml_modf_f32(__x, (__PRIVATE_AS float *)&__tmp);
   *__iptr = __tmp;
   return __r;
 }
@@ -591,8 +597,7 @@ float remquof(float __x, float __y, int *__quo) {
 #ifdef __OPENMP_AMDGCN__
 #pragma omp allocate(__tmp) allocator(omp_thread_mem_alloc)
 #endif
-  float __r = __ocml_remquo_f32(
-      __x, __y, (__attribute__((address_space(5))) int *)&__tmp);
+  float __r = __ocml_remquo_f32(__x, __y, (__PRIVATE_AS int *)&__tmp);
   *__quo = __tmp;
 
   return __r;
@@ -634,8 +639,11 @@ float rsqrtf(float __x) { return __ocml_rsqrt_f32(__x); }
 
 __DEVICE__
 float scalblnf(float __x, long int __n) {
-  return (__n < INT_MAX) ? __builtin_amdgcn_ldexpf(__x, __n)
-                         : __ocml_scalb_f32(__x, __n);
+  if (__n > INT_MAX)
+    __n = INT_MAX;
+  else if (__n < INT_MIN)
+    __n = INT_MIN;
+  return __builtin_ldexpf(__x, (int)__n);
 }
 
 __DEVICE__
@@ -653,8 +661,7 @@ void sincosf(float __x, float *__sinptr, float *__cosptr) {
 #ifdef __CLANG_CUDA_APPROX_TRANSCENDENTALS__
   __sincosf(__x, __sinptr, __cosptr);
 #else
-  *__sinptr =
-      __ocml_sincos_f32(__x, (__attribute__((address_space(5))) float *)&__tmp);
+  *__sinptr = __ocml_sincos_f32(__x, (__PRIVATE_AS float *)&__tmp);
   *__cosptr = __tmp;
 #endif
 }
@@ -665,8 +672,7 @@ void sincospif(float __x, float *__sinptr, float *__cosptr) {
 #ifdef __OPENMP_AMDGCN__
 #pragma omp allocate(__tmp) allocator(omp_thread_mem_alloc)
 #endif
-  *__sinptr = __ocml_sincospi_f32(
-      __x, (__attribute__((address_space(5))) float *)&__tmp);
+  *__sinptr = __ocml_sincospi_f32(__x, (__PRIVATE_AS float *)&__tmp);
   *__cosptr = __tmp;
 }
 
@@ -909,8 +915,7 @@ double modf(double __x, double *__iptr) {
 #ifdef __OPENMP_AMDGCN__
 #pragma omp allocate(__tmp) allocator(omp_thread_mem_alloc)
 #endif
-  double __r =
-      __ocml_modf_f64(__x, (__attribute__((address_space(5))) double *)&__tmp);
+  double __r = __ocml_modf_f64(__x, (__PRIVATE_AS double *)&__tmp);
   *__iptr = __tmp;
 
   return __r;
@@ -1000,8 +1005,7 @@ double remquo(double __x, double __y, int *__quo) {
 #ifdef __OPENMP_AMDGCN__
 #pragma omp allocate(__tmp) allocator(omp_thread_mem_alloc)
 #endif
-  double __r = __ocml_remquo_f64(
-      __x, __y, (__attribute__((address_space(5))) int *)&__tmp);
+  double __r = __ocml_remquo_f64(__x, __y, (__PRIVATE_AS int *)&__tmp);
   *__quo = __tmp;
 
   return __r;
@@ -1043,8 +1047,11 @@ double rsqrt(double __x) { return __ocml_rsqrt_f64(__x); }
 
 __DEVICE__
 double scalbln(double __x, long int __n) {
-  return (__n < INT_MAX) ? __builtin_amdgcn_ldexp(__x, __n)
-                         : __ocml_scalb_f64(__x, __n);
+  if (__n > INT_MAX)
+    __n = INT_MAX;
+  else if (__n < INT_MIN)
+    __n = INT_MIN;
+  return __builtin_ldexp(__x, (int)__n);
 }
 __DEVICE__
 double scalbn(double __x, int __n) { return __builtin_amdgcn_ldexp(__x, __n); }
@@ -1061,8 +1068,7 @@ void sincos(double __x, double *__sinptr, double *__cosptr) {
 #ifdef __OPENMP_AMDGCN__
 #pragma omp allocate(__tmp) allocator(omp_thread_mem_alloc)
 #endif
-  *__sinptr = __ocml_sincos_f64(
-      __x, (__attribute__((address_space(5))) double *)&__tmp);
+  *__sinptr = __ocml_sincos_f64(__x, (__PRIVATE_AS double *)&__tmp);
   *__cosptr = __tmp;
 }
 
@@ -1072,8 +1078,7 @@ void sincospi(double __x, double *__sinptr, double *__cosptr) {
 #ifdef __OPENMP_AMDGCN__
 #pragma omp allocate(__tmp) allocator(omp_thread_mem_alloc)
 #endif
-  *__sinptr = __ocml_sincospi_f64(
-      __x, (__attribute__((address_space(5))) double *)&__tmp);
+  *__sinptr = __ocml_sincospi_f64(__x, (__PRIVATE_AS double *)&__tmp);
   *__cosptr = __tmp;
 }
 
@@ -1318,7 +1323,9 @@ __host__ inline static int max(int __arg1, int __arg2) {
 #endif
 
 #pragma pop_macro("__DEVICE__")
+#pragma pop_macro("__PRIVATE_AS")
 #pragma pop_macro("__RETURN_TYPE")
 #pragma pop_macro("__FAST_OR_SLOW")
 
+#endif // __CLANG_GPU_DISABLE_MATH_WRAPPERS
 #endif // __CLANG_HIP_MATH_H__

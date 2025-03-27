@@ -30,7 +30,7 @@ define amdgpu_kernel void @rsq_legacy_f32_constant_100.0(ptr addrspace(1) %out) 
 ; FUNC-LABEL: {{^}}rsq_legacy_undef_f32:
 ; SI-NOT: v_rsq_legacy_f32
 define amdgpu_kernel void @rsq_legacy_undef_f32(ptr addrspace(1) %out) #1 {
-  %rsq = call float @llvm.amdgcn.rsq.legacy(float undef)
+  %rsq = call float @llvm.amdgcn.rsq.legacy(float poison)
   store float %rsq, ptr addrspace(1) %out, align 4
   ret void
 }

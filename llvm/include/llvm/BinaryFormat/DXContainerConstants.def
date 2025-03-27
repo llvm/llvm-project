@@ -4,6 +4,7 @@ CONTAINER_PART(DXIL)
 CONTAINER_PART(SFI0)
 CONTAINER_PART(HASH)
 CONTAINER_PART(PSV0)
+CONTAINER_PART(RTS0)
 CONTAINER_PART(ISG1)
 CONTAINER_PART(OSG1)
 CONTAINER_PART(PSG1)
@@ -52,13 +53,33 @@ SHADER_FEATURE_FLAG(31, 36, NextUnusedBit, "Next reserved shader flag bit (not a
 #undef SHADER_FEATURE_FLAG
 #endif // SHADER_FEATURE_FLAG
 
+
+// ROOT_ELEMENT_FLAG(bit offset for the flag, name).
+#ifdef ROOT_ELEMENT_FLAG
+
+ROOT_ELEMENT_FLAG(0, AllowInputAssemblerInputLayout)
+ROOT_ELEMENT_FLAG(1, DenyVertexShaderRootAccess)
+ROOT_ELEMENT_FLAG(2, DenyHullShaderRootAccess)
+ROOT_ELEMENT_FLAG(3, DenyDomainShaderRootAccess)
+ROOT_ELEMENT_FLAG(4, DenyGeometryShaderRootAccess)
+ROOT_ELEMENT_FLAG(5, DenyPixelShaderRootAccess)
+ROOT_ELEMENT_FLAG(6, AllowStreamOutput)
+ROOT_ELEMENT_FLAG(7, LocalRootSignature)
+ROOT_ELEMENT_FLAG(8, DenyAmplificationShaderRootAccess)
+ROOT_ELEMENT_FLAG(9, DenyMeshShaderRootAccess)
+ROOT_ELEMENT_FLAG(10, CBVSRVUAVHeapDirectlyIndexed)
+ROOT_ELEMENT_FLAG(11, SamplerHeapDirectlyIndexed)
+#undef ROOT_ELEMENT_FLAG
+#endif // ROOT_ELEMENT_FLAG
+
+
 #ifdef DXIL_MODULE_FLAG
 
 // Only save DXIL module flags which not map to feature flags here.
 DXIL_MODULE_FLAG( 0,  DisableOptimizations,   "D3D11_1_SB_GLOBAL_FLAG_SKIP_OPTIMIZATION")
 DXIL_MODULE_FLAG( 1,  DisableMathRefactoring, "D3D10_SB_GLOBAL_FLAG_REFACTORING_ALLOWED")
 DXIL_MODULE_FLAG( 3,  ForceEarlyDepthStencil, "D3D11_SB_GLOBAL_FLAG_FORCE_EARLY_DEPTH_STENCIL")
-DXIL_MODULE_FLAG( 4,  EnableRawAndStructuredBuffers, "D3D11_SB_GLOBAL_FLAG_ENABLE_RAW_AND_STRUCTURED_BUFFERS")
+DXIL_MODULE_FLAG( 4,  EnableRawAndStructuredBuffers, "Raw and Structured buffers")
 DXIL_MODULE_FLAG( 5,  LowPrecisionPresent, "D3D11_1_SB_GLOBAL_FLAG_ENABLE_MINIMUM_PRECISION")
 DXIL_MODULE_FLAG( 8,  AllResourcesBound, "D3D12_SB_GLOBAL_FLAG_ALL_RESOURCES_BOUND")
 DXIL_MODULE_FLAG(23,  UseNativeLowPrecision, "Native 16bit types enabled")
@@ -149,6 +170,51 @@ INTERPOLATION_MODE(8, Invalid)
 
 #undef INTERPOLATION_MODE
 #endif // INTERPOLATION_MODE
+
+#ifdef RESOURCE_TYPE
+RESOURCE_TYPE(0, Invalid)
+RESOURCE_TYPE(1, Sampler)
+RESOURCE_TYPE(2, CBV)
+RESOURCE_TYPE(3, SRVTyped)
+RESOURCE_TYPE(4, SRVRaw)
+RESOURCE_TYPE(5, SRVStructured)
+RESOURCE_TYPE(6, UAVTyped)
+RESOURCE_TYPE(7, UAVRaw)
+RESOURCE_TYPE(8, UAVStructured)
+RESOURCE_TYPE(9, UAVStructuredWithCounter)
+
+#undef RESOURCE_TYPE
+#endif // RESOURCE_TYPE
+
+#ifdef RESOURCE_KIND
+RESOURCE_KIND(0, Invalid)
+RESOURCE_KIND(1, Texture1D)
+RESOURCE_KIND(2, Texture2D)
+RESOURCE_KIND(3, Texture2DMS)
+RESOURCE_KIND(4, Texture3D)
+RESOURCE_KIND(5, TextureCube)
+RESOURCE_KIND(6, Texture1DArray)
+RESOURCE_KIND(7, Texture2DArray)
+RESOURCE_KIND(8, Texture2DMSArray)
+RESOURCE_KIND(9, TextureCubeArray)
+RESOURCE_KIND(10, TypedBuffer)
+RESOURCE_KIND(11, RawBuffer)
+RESOURCE_KIND(12, StructuredBuffer)
+RESOURCE_KIND(13, CBuffer)
+RESOURCE_KIND(14, Sampler)
+RESOURCE_KIND(15, TBuffer)
+RESOURCE_KIND(16, RTAccelerationStructure)
+RESOURCE_KIND(17, FeedbackTexture2D)
+RESOURCE_KIND(18, FeedbackTexture2DArray)
+
+#undef RESOURCE_KIND
+#endif // RESOURCE_KIND
+
+#ifdef RESOURCE_FLAG
+RESOURCE_FLAG(0, UsedByAtomic64)
+
+#undef RESOURCE_FLAG
+#endif // RESOURCE_FLAG
 
 #ifdef D3D_SYSTEM_VALUE
 

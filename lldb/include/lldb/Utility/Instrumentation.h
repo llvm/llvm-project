@@ -70,7 +70,7 @@ template <typename... Ts> inline std::string stringify_args(const Ts &...ts) {
   std::string buffer;
   llvm::raw_string_ostream ss(buffer);
   stringify_helper(ss, ts...);
-  return ss.str();
+  return buffer;
 }
 
 /// RAII object for instrumenting LLDB API functions.

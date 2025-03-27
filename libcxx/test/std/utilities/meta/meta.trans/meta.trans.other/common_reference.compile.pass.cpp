@@ -33,26 +33,22 @@ struct Tuple_helper<std::void_t<std::common_reference_t<Ts, Us>...>, UserTuple<T
   using type = UserTuple<std::common_reference_t<Ts, Us>...>;
 };
 
-namespace std {
 template <class... Ts, class... Us, template <class> class TQual, template <class> class UQual>
-struct basic_common_reference< ::UserTuple<Ts...>, ::UserTuple<Us...>, TQual, UQual>
+struct std::basic_common_reference< ::UserTuple<Ts...>, ::UserTuple<Us...>, TQual, UQual>
     : ::Tuple_helper<void, UserTuple<TQual<Ts>...>, UserTuple<UQual<Us>...> > {};
-} // namespace std
 
 struct X2 {};
 struct Y2 {};
 struct Z2 {};
 
-namespace std {
 template <>
-struct common_type<X2, Y2> {
+struct std::common_type<X2, Y2> {
   using type = Z2;
 };
 template <>
-struct common_type<Y2, X2> {
+struct std::common_type<Y2, X2> {
   using type = Z2;
 };
-} // namespace std
 
 // (6.1)
 //  -- If sizeof...(T) is zero, there shall be no member type.

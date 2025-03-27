@@ -95,6 +95,42 @@ module m
   end subroutine
 end module
 
+module mod1
+  type, bind(C) :: t
+     integer :: n
+  end type
+  type(t), allocatable :: x
+end
+
+module mod2
+  type, bind(C) :: t
+     integer :: n
+  end type
+  type(t), allocatable :: x
+end
+
+module mod3
+  type, bind(C) :: t
+     real :: a
+  end type
+  type(t), allocatable :: x
+end
+
+subroutine same_type
+  use mod1, only: a => x
+  use mod2, only: b => x
+  use mod3, only: c => x
+  allocate(a)
+  allocate(b, source=a) ! ok
+  deallocate(a)
+  allocate(a, source=b) ! ok
+  !ERROR: Allocatable object in ALLOCATE must be type compatible with source expression from MOLD or SOURCE
+  allocate(c, source=a)
+  deallocate(a)
+  !ERROR: Allocatable object in ALLOCATE must be type compatible with source expression from MOLD or SOURCE
+  allocate(a, source=c)
+end
+
 ! Related to C945, check typeless expression are caught
 
 subroutine sub

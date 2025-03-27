@@ -127,44 +127,6 @@ def split_list_into_sublists(items):
     return chuncks
 
 
-def uniquify_enum_cases(lst):
-    """Prunes duplicate enum cases from the list.
-
-    Arguments:
-     - lst: List whose elements are to be uniqued. Assumes each element is a
-       (symbol, value) pair and elements already sorted according to value.
-
-    Returns:
-     - A list with all duplicates removed. The elements are sorted according to
-       value and, for each value, uniqued according to symbol.
-       original list,
-     - A map from deduplicated cases to the uniqued case.
-    """
-    cases = lst
-    uniqued_cases = []
-    duplicated_cases = {}
-
-    # First sort according to the value
-    cases.sort(key=lambda x: x[1])
-
-    # Then group them according to the value
-    for _, groups in itertools.groupby(cases, key=lambda x: x[1]):
-        # For each value, sort according to the enumerant symbol.
-        sorted_group = sorted(groups, key=lambda x: x[0])
-        # Keep the "smallest" case, which is typically the symbol without extension
-        # suffix. But we have special cases that we want to fix.
-        case = sorted_group[0]
-        for i in range(1, len(sorted_group)):
-            duplicated_cases[sorted_group[i][0]] = case[0]
-        if case[0] == "HlslSemanticGOOGLE":
-            assert len(sorted_group) == 2, "unexpected new variant for HlslSemantic"
-            case = sorted_group[1]
-            duplicated_cases[sorted_group[0][0]] = case[0]
-        uniqued_cases.append(case)
-
-    return uniqued_cases, duplicated_cases
-
-
 def toposort(dag, sort_fn):
     """Topologically sorts the given dag.
 
@@ -197,14 +159,12 @@ def toposort(dag, sort_fn):
     return sorted_nodes
 
 
-def toposort_capabilities(all_cases, capability_mapping):
+def toposort_capabilities(all_cases):
     """Returns topologically sorted capability (symbol, value) pairs.
 
     Arguments:
       - all_cases: all capability cases (containing symbol, value, and implied
         capabilities).
-      - capability_mapping: mapping from duplicated capability symbols to the
-        canonicalized symbol chosen for SPIRVBase.td.
 
     Returns:
       A list containing topologically sorted capability (symbol, value) pairs.
@@ -215,13 +175,10 @@ def toposort_capabilities(all_cases, capability_mapping):
         # Get the current capability.
         cur = case["enumerant"]
         name_to_value[cur] = case["value"]
-        # Ignore duplicated symbols.
-        if cur in capability_mapping:
-            continue
 
         # Get capabilities implied by the current capability.
         prev = case.get("capabilities", [])
-        uniqued_prev = set([capability_mapping.get(c, c) for c in prev])
+        uniqued_prev = set(prev)
         dag[cur] = uniqued_prev
 
     sorted_caps = toposort(dag, lambda x: name_to_value[x])
@@ -229,36 +186,12 @@ def toposort_capabilities(all_cases, capability_mapping):
     return [(c, name_to_value[c]) for c in sorted_caps]
 
 
-def get_capability_mapping(operand_kinds):
-    """Returns the capability mapping from duplicated cases to canonicalized ones.
-
-    Arguments:
-      - operand_kinds: all operand kinds' grammar spec
-
-    Returns:
-      - A map mapping from duplicated capability symbols to the canonicalized
-        symbol chosen for SPIRVBase.td.
-    """
-    # Find the operand kind for capability
-    cap_kind = {}
-    for kind in operand_kinds:
-        if kind["kind"] == "Capability":
-            cap_kind = kind
-
-    kind_cases = [(case["enumerant"], case["value"]) for case in cap_kind["enumerants"]]
-    _, capability_mapping = uniquify_enum_cases(kind_cases)
-
-    return capability_mapping
-
-
-def get_availability_spec(enum_case, capability_mapping, for_op, for_cap):
+def get_availability_spec(enum_case, for_op, for_cap):
     """Returns the availability specification string for the given enum case.
 
     Arguments:
       - enum_case: the enum case to generate availability spec for. It may contain
         'version', 'lastVersion', 'extensions', or 'capabilities'.
-      - capability_mapping: mapping from duplicated capability symbols to the
-        canonicalized symbol chosen for SPIRVBase.td.
       - for_op: bool value indicating whether this is the availability spec for an
         op itself.
       - for_cap: bool value indicating whether this is the availability spec for
@@ -313,10 +246,7 @@ def get_availability_spec(enum_case, capability_mapping, for_op, for_cap):
     if caps:
         canonicalized_caps = []
         for c in caps:
-            if c in capability_mapping:
-                canonicalized_caps.append(capability_mapping[c])
-            else:
-                canonicalized_caps.append(c)
+            canonicalized_caps.append(c)
         prefixed_caps = [
             "SPIRV_C_{}".format(c) for c in sorted(set(canonicalized_caps))
         ]
@@ -357,7 +287,7 @@ def get_availability_spec(enum_case, capability_mapping, for_op, for_cap):
     return "{}{}{}".format(implies, "\n  " if implies and avail else "", avail)
 
 
-def gen_operand_kind_enum_attr(operand_kind, capability_mapping):
+def gen_operand_kind_enum_attr(operand_kind):
     """Generates the TableGen EnumAttr definition for the given operand kind.
 
     Returns:
@@ -388,13 +318,12 @@ def gen_operand_kind_enum_attr(operand_kind, capability_mapping):
         # Special treatment for capability cases: we need to sort them topologically
         # because a capability can refer to another via the 'implies' field.
         kind_cases = toposort_capabilities(
-            operand_kind["enumerants"], capability_mapping
+            operand_kind["enumerants"]
         )
     else:
         kind_cases = [
             (case["enumerant"], case["value"]) for case in operand_kind["enumerants"]
         ]
-        kind_cases, _ = uniquify_enum_cases(kind_cases)
     max_len = max([len(symbol) for (symbol, _) in kind_cases])
 
     # Generate the definition for each enum case
@@ -412,7 +341,6 @@ def gen_operand_kind_enum_attr(operand_kind, capability_mapping):
             value = int(case_pair[1])
         avail = get_availability_spec(
             name_to_case_dict[name],
-            capability_mapping,
             False,
             kind_name == "Capability",
         )
@@ -536,7 +464,10 @@ def gen_instr_coverage_report(path, instructions):
 
     content = content.split(AUTOGEN_OPCODE_SECTION_MARKER)
 
-    existing_opcodes = [k[11:] for k in re.findall("def SPIRV_OC_\w+", content[1])]
+    prefix = "def SPIRV_OC_"
+    existing_opcodes = [
+        k[len(prefix) :] for k in re.findall(prefix + r"\w+", content[1])
+    ]
     existing_instructions = list(
         filter(lambda inst: (inst["opname"] in existing_opcodes), instructions)
     )
@@ -594,7 +525,7 @@ def update_td_opcodes(path, instructions, filter_list):
     # Extend opcode list with existing list
     prefix = "def SPIRV_OC_"
     existing_opcodes = [
-        k[len(prefix) :] for k in re.findall(prefix + "\w+", content[1])
+        k[len(prefix) :] for k in re.findall(prefix + r"\w+", content[1])
     ]
     filter_list.extend(existing_opcodes)
     filter_list = list(set(filter_list))
@@ -637,14 +568,17 @@ def update_td_enum_attrs(path, operand_kinds, filter_list):
     assert len(content) == 3
 
     # Extend filter list with existing enum definitions
-    existing_kinds = [k[8:-4] for k in re.findall("def SPIRV_\w+Attr", content[1])]
+    prefix = "def SPIRV_"
+    suffix = "Attr"
+    existing_kinds = [
+        k[len(prefix) : -len(suffix)]
+        for k in re.findall(prefix + r"\w+" + suffix, content[1])
+    ]
     filter_list.extend(existing_kinds)
-
-    capability_mapping = get_capability_mapping(operand_kinds)
 
     # Generate definitions for all enums in filter list
     defs = [
-        gen_operand_kind_enum_attr(kind, capability_mapping)
+        gen_operand_kind_enum_attr(kind)
         for kind in operand_kinds
         if kind["kind"] in filter_list
     ]
@@ -754,7 +688,7 @@ def get_description(text, appendix):
 
 
 def get_op_definition(
-    instruction, opname, doc, existing_info, capability_mapping, settings
+    instruction, opname, doc, existing_info, settings
 ):
     """Generates the TableGen op definition for the given SPIR-V instruction.
 
@@ -763,8 +697,6 @@ def get_op_definition(
       - doc: the instruction's SPIR-V HTML doc
       - existing_info: a dict containing potential manually specified sections for
         this instruction
-      - capability_mapping: mapping from duplicated capability symbols to the
-                     canonicalized symbol chosen for SPIRVBase.td
 
     Returns:
       - A string containing the TableGen op definition
@@ -832,7 +764,7 @@ def get_op_definition(
     operands = instruction.get("operands", [])
 
     # Op availability
-    avail = get_availability_spec(instruction, capability_mapping, True, False)
+    avail = get_availability_spec(instruction, True, False)
     if avail:
         avail = "\n\n  {0}".format(avail)
 
@@ -959,12 +891,21 @@ def extract_td_op_info(op_def):
       - A dict containing potential manually specified sections
     """
     # Get opname
-    opname = [o[8:-2] for o in re.findall("def SPIRV_\w+Op", op_def)]
+    prefix = "def SPIRV_"
+    suffix = "Op"
+    opname = [
+        o[len(prefix) : -len(suffix)]
+        for o in re.findall(prefix + r"\w+" + suffix, op_def)
+    ]
     assert len(opname) == 1, "more than one ops in the same section!"
     opname = opname[0]
 
     # Get instruction category
-    inst_category = [o[4:] for o in re.findall("SPIRV_\w+Op", op_def.split(":", 1)[1])]
+    prefix = "SPIRV_"
+    inst_category = [
+        o[len(prefix) :]
+        for o in re.findall(prefix + r"\w+Op\b", op_def.split(":", 1)[1])
+    ]
     assert len(inst_category) <= 1, "more than one ops in the same section!"
     inst_category = inst_category[0] if len(inst_category) == 1 else "Op"
 
@@ -972,6 +913,7 @@ def extract_td_op_info(op_def):
     op_tmpl_params, _ = get_string_between_nested(op_def, "<", ">")
     opstringname, rest = get_string_between(op_tmpl_params, '"', '"')
     category_args = rest.split("[", 1)[0]
+    category_args = category_args.rsplit(",", 1)[0]
 
     # Get traits
     traits, _ = get_string_between_nested(rest, "[", "]")
@@ -1003,7 +945,7 @@ def extract_td_op_info(op_def):
 
 
 def update_td_op_definitions(
-    path, instructions, docs, filter_list, inst_category, capability_mapping, settings
+    path, instructions, docs, filter_list, inst_category, settings
 ):
     """Updates SPIRVOps.td with newly generated op definition.
 
@@ -1012,8 +954,6 @@ def update_td_op_definitions(
       - instructions: SPIR-V JSON grammar for all instructions
       - docs: SPIR-V HTML doc for all instructions
       - filter_list: a list containing new opnames to include
-      - capability_mapping: mapping from duplicated capability symbols to the
-                     canonicalized symbol chosen for SPIRVBase.td.
 
     Returns:
       - A string containing all the TableGen op definitions
@@ -1061,7 +1001,6 @@ def update_td_op_definitions(
                     opname,
                     docs[fixed_opname],
                     op_info_dict.get(opname, {"inst_category": inst_category}),
-                    capability_mapping,
                     settings,
                 )
             )
@@ -1168,14 +1107,12 @@ if __name__ == "__main__":
     if args.new_inst is not None:
         assert args.op_td_path is not None
         docs = get_spirv_doc_from_html_spec(ext_html_url, args)
-        capability_mapping = get_capability_mapping(operand_kinds)
         update_td_op_definitions(
             args.op_td_path,
             instructions,
             docs,
             args.new_inst,
             args.inst_category,
-            capability_mapping,
             args,
         )
         print("Done. Note that this script just generates a template; ", end="")

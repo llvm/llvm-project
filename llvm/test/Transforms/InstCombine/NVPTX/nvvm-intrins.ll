@@ -238,49 +238,49 @@ define i64 @test_f2ull(float %a) #0 {
 ; CHECK-LABEL: @test_i2d
 define double @test_i2d(i32 %a) #0 {
 ; CHECK: sitofp i32 %a to double
-  %ret = call double @llvm.nvvm.i2d.rz(i32 %a)
+  %ret = call double @llvm.nvvm.i2d.rn(i32 %a)
   ret double %ret
 }
 ; CHECK-LABEL: @test_i2f
 define float @test_i2f(i32 %a) #0 {
 ; CHECK: sitofp i32 %a to float
-  %ret = call float @llvm.nvvm.i2f.rz(i32 %a)
+  %ret = call float @llvm.nvvm.i2f.rn(i32 %a)
   ret float %ret
 }
 ; CHECK-LABEL: @test_ll2d
 define double @test_ll2d(i64 %a) #0 {
 ; CHECK: sitofp i64 %a to double
-  %ret = call double @llvm.nvvm.ll2d.rz(i64 %a)
+  %ret = call double @llvm.nvvm.ll2d.rn(i64 %a)
   ret double %ret
 }
 ; CHECK-LABEL: @test_ll2f
 define float @test_ll2f(i64 %a) #0 {
 ; CHECK: sitofp i64 %a to float
-  %ret = call float @llvm.nvvm.ll2f.rz(i64 %a)
+  %ret = call float @llvm.nvvm.ll2f.rn(i64 %a)
   ret float %ret
 }
 ; CHECK-LABEL: @test_ui2d
 define double @test_ui2d(i32 %a) #0 {
 ; CHECK: uitofp i32 %a to double
-  %ret = call double @llvm.nvvm.ui2d.rz(i32 %a)
+  %ret = call double @llvm.nvvm.ui2d.rn(i32 %a)
   ret double %ret
 }
 ; CHECK-LABEL: @test_ui2f
 define float @test_ui2f(i32 %a) #0 {
 ; CHECK: uitofp i32 %a to float
-  %ret = call float @llvm.nvvm.ui2f.rz(i32 %a)
+  %ret = call float @llvm.nvvm.ui2f.rn(i32 %a)
   ret float %ret
 }
 ; CHECK-LABEL: @test_ull2d
 define double @test_ull2d(i64 %a) #0 {
 ; CHECK: uitofp i64 %a to double
-  %ret = call double @llvm.nvvm.ull2d.rz(i64 %a)
+  %ret = call double @llvm.nvvm.ull2d.rn(i64 %a)
   ret double %ret
 }
 ; CHECK-LABEL: @test_ull2f
 define float @test_ull2f(i64 %a) #0 {
 ; CHECK: uitofp i64 %a to float
-  %ret = call float @llvm.nvvm.ull2f.rz(i64 %a)
+  %ret = call float @llvm.nvvm.ull2f.rn(i64 %a)
   ret float %ret
 }
 
@@ -384,6 +384,48 @@ define float @test_sqrt_rn_f_ftz(float %a) #0 {
   ret float %ret
 }
 
+; CHECK-LABEL: @test_fshl_clamp_1
+define i32 @test_fshl_clamp_1(i32 %a, i32 %b) {
+; CHECK: call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 3)
+  %call = call i32 @llvm.nvvm.fshl.clamp.i32(i32 %a, i32 %b, i32 3)
+  ret i32 %call
+}
+
+; CHECK-LABEL: @test_fshl_clamp_2
+define i32 @test_fshl_clamp_2(i32 %a, i32 %b) {
+; CHECK: ret i32 %b
+  %call = call i32 @llvm.nvvm.fshl.clamp.i32(i32 %a, i32 %b, i32 300)
+  ret i32 %call
+}
+
+; CHECK-LABEL: @test_fshl_clamp_3
+define i32 @test_fshl_clamp_3(i32 %a, i32 %b, i32 %c) {
+; CHECK: call i32 @llvm.nvvm.fshl.clamp.i32(i32 %a, i32 %b, i32 %c)
+  %call = call i32 @llvm.nvvm.fshl.clamp.i32(i32 %a, i32 %b, i32 %c)
+  ret i32 %call
+}
+
+; CHECK-LABEL: @test_fshr_clamp_1
+define i32 @test_fshr_clamp_1(i32 %a, i32 %b) {
+; CHECK: call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 29)
+  %call = call i32 @llvm.nvvm.fshr.clamp.i32(i32 %a, i32 %b, i32 3)
+  ret i32 %call
+}
+
+; CHECK-LABEL: @test_fshr_clamp_2
+define i32 @test_fshr_clamp_2(i32 %a, i32 %b) {
+; CHECK: ret i32 %a
+  %call = call i32 @llvm.nvvm.fshr.clamp.i32(i32 %a, i32 %b, i32 300)
+  ret i32 %call
+}
+
+; CHECK-LABEL: @test_fshr_clamp_3
+define i32 @test_fshr_clamp_3(i32 %a, i32 %b, i32 %c) {
+; CHECK: call i32 @llvm.nvvm.fshr.clamp.i32(i32 %a, i32 %b, i32 %c)
+  %call = call i32 @llvm.nvvm.fshr.clamp.i32(i32 %a, i32 %b, i32 %c)
+  ret i32 %call
+}
+
 declare double @llvm.nvvm.add.rn.d(double, double)
 declare float @llvm.nvvm.add.rn.f(float, float)
 declare float @llvm.nvvm.add.rn.ftz.f(float, float)
@@ -428,10 +470,10 @@ declare float @llvm.nvvm.fmax.ftz.f(float, float)
 declare double @llvm.nvvm.fmin.d(double, double)
 declare float @llvm.nvvm.fmin.f(float, float)
 declare float @llvm.nvvm.fmin.ftz.f(float, float)
-declare double @llvm.nvvm.i2d.rz(i32)
-declare float @llvm.nvvm.i2f.rz(i32)
-declare double @llvm.nvvm.ll2d.rz(i64)
-declare float @llvm.nvvm.ll2f.rz(i64)
+declare double @llvm.nvvm.i2d.rn(i32)
+declare float @llvm.nvvm.i2f.rn(i32)
+declare double @llvm.nvvm.ll2d.rn(i64)
+declare float @llvm.nvvm.ll2f.rn(i64)
 declare double @llvm.nvvm.lohi.i2d(i32, i32)
 declare double @llvm.nvvm.mul.rn.d(double, double)
 declare float @llvm.nvvm.mul.rn.f(float, float)
@@ -450,8 +492,9 @@ declare float @llvm.nvvm.sqrt.rn.ftz.f(float)
 declare double @llvm.nvvm.trunc.d(double)
 declare float @llvm.nvvm.trunc.f(float)
 declare float @llvm.nvvm.trunc.ftz.f(float)
-declare double @llvm.nvvm.ui2d.rz(i32)
+declare double @llvm.nvvm.ui2d.rn(i32)
 declare float @llvm.nvvm.ui2f.rn(i32)
-declare float @llvm.nvvm.ui2f.rz(i32)
-declare double @llvm.nvvm.ull2d.rz(i64)
-declare float @llvm.nvvm.ull2f.rz(i64)
+declare double @llvm.nvvm.ull2d.rn(i64)
+declare float @llvm.nvvm.ull2f.rn(i64)
+declare i32 @llvm.nvvm.fshr.clamp.i32(i32, i32, i32)
+declare i32 @llvm.nvvm.fshl.clamp.i32(i32, i32, i32)

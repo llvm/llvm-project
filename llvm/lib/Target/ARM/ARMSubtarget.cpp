@@ -287,12 +287,15 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   case CortexA78:
   case CortexA78AE:
   case CortexA78C:
+  case CortexA510:
   case CortexA710:
   case CortexR4:
   case CortexR5:
   case CortexR7:
   case CortexM3:
+  case CortexM55:
   case CortexM7:
+  case CortexM85:
   case CortexR52:
   case CortexR52plus:
   case CortexX1:
@@ -302,7 +305,7 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
     LdStMultipleTiming = SingleIssuePlusExtras;
     MaxInterleaveFactor = 4;
     if (!isThumb())
-      PrefLoopLogAlignment = 3;
+      PreferBranchLogAlignment = 3;
     break;
   case Kryo:
     break;
@@ -475,7 +478,7 @@ unsigned ARMSubtarget::getGPRAllocationOrder(const MachineFunction &MF) const {
 }
 
 bool ARMSubtarget::ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                               unsigned PhysReg) const {
+                                               MCRegister PhysReg) const {
   // To minimize code size in Thumb2, we prefer the usage of low regs (lower
   // cost per use) so we can  use narrow encoding. By default, caller-saved
   // registers (e.g. lr, r12) are always  allocated first, regardless of
@@ -485,11 +488,41 @@ bool ARMSubtarget::ignoreCSRForAllocationOrder(const MachineFunction &MF,
          ARM::GPRRegClass.contains(PhysReg);
 }
 
-bool ARMSubtarget::splitFramePointerPush(const MachineFunction &MF) const {
+ARMSubtarget::PushPopSplitVariation
+ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
-  if (!MF.getTarget().getMCAsmInfo()->usesWindowsCFI() ||
-      !F.needsUnwindTableEntry())
-    return false;
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return MFI.hasVarSizedObjects() || getRegisterInfo()->hasStackRealignment(MF);
+  const std::vector<CalleeSavedInfo> CSI =
+      MF.getFrameInfo().getCalleeSavedInfo();
+
+  // Thumb1 always splits the pushes at R7, because the Thumb1 push instruction
+  // cannot use high registers except for lr.
+  if (isThumb1Only())
+    return SplitR7;
+
+  // If R7 is the frame pointer, we must split at R7 to ensure that the
+  // previous frame pointer (R7) and return address (LR) are adjacent on the
+  // stack, to form a valid frame record.
+  if (getFramePointerReg() == ARM::R7 &&
+      MF.getTarget().Options.FramePointerIsReserved(MF))
+    return SplitR7;
+
+  // Returns SplitR11WindowsSEH when the stack pointer needs to be
+  // restored from the frame pointer r11 + an offset and Windows CFI is enabled.
+  // This stack unwinding cannot be expressed with SEH unwind opcodes when done
+  // with a single push, making it necessary to split the push into r4-r10, and
+  // another containing r11+lr.
+  if (MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+      F.needsUnwindTableEntry() &&
+      (MFI.hasVarSizedObjects() || getRegisterInfo()->hasStackRealignment(MF)))
+    return SplitR11WindowsSEH;
+
+  // Returns SplitR11AAPCSSignRA when the frame pointer is R11, requiring R11
+  // and LR to be adjacent on the stack, and branch signing is enabled,
+  // requiring R12 to be on the stack.
+  if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress() &&
+      getFramePointerReg() == ARM::R11 &&
+      MF.getTarget().Options.FramePointerIsReserved(MF))
+    return SplitR11AAPCSSignRA;
+  return NoSplit;
 }

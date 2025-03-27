@@ -22,3 +22,29 @@ void LoongArchTargetStreamer::setTargetABI(LoongArchABI::ABI ABI) {
          "Improperly initialized target ABI");
   TargetABI = ABI;
 }
+
+void LoongArchTargetStreamer::emitDirectiveOptionPush() {}
+void LoongArchTargetStreamer::emitDirectiveOptionPop() {}
+void LoongArchTargetStreamer::emitDirectiveOptionRelax() {}
+void LoongArchTargetStreamer::emitDirectiveOptionNoRelax() {}
+
+// This part is for ascii assembly output.
+LoongArchTargetAsmStreamer::LoongArchTargetAsmStreamer(
+    MCStreamer &S, formatted_raw_ostream &OS)
+    : LoongArchTargetStreamer(S), OS(OS) {}
+
+void LoongArchTargetAsmStreamer::emitDirectiveOptionPush() {
+  OS << "\t.option\tpush\n";
+}
+
+void LoongArchTargetAsmStreamer::emitDirectiveOptionPop() {
+  OS << "\t.option\tpop\n";
+}
+
+void LoongArchTargetAsmStreamer::emitDirectiveOptionRelax() {
+  OS << "\t.option\trelax\n";
+}
+
+void LoongArchTargetAsmStreamer::emitDirectiveOptionNoRelax() {
+  OS << "\t.option\tnorelax\n";
+}

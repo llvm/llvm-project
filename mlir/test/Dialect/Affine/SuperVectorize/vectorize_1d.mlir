@@ -22,7 +22,7 @@ func.func @vec1d_1(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 // CHECK-NEXT: %{{.*}} = affine.apply #[[$map_id1]](%[[C0]])
 // CHECK-NEXT: %{{.*}} = affine.apply #[[$map_id1]](%[[C0]])
 // CHECK-NEXT: %{{.*}} = arith.constant 0.0{{.*}}: f32
-// CHECK-NEXT: {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {in_bounds = [true], permutation_map = #[[$map_proj_d0d1_0]]} : memref<?x?xf32>, vector<128xf32>
+// CHECK-NEXT: {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {permutation_map = #[[$map_proj_d0d1_0]]} : memref<?x?xf32>, vector<128xf32>
    affine.for %i0 = 0 to %M { // vectorized due to scalar -> vector
      %a0 = affine.load %A[%c0, %c0] : memref<?x?xf32>
    }
@@ -425,7 +425,7 @@ func.func @vec_rejected_8(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 // CHECK:     %{{.*}} = affine.apply #[[$map_id1]](%{{.*}})
 // CHECK:     %{{.*}} = affine.apply #[[$map_id1]](%{{.*}})
 // CHECK:     %{{.*}} = arith.constant 0.0{{.*}}: f32
-// CHECK:     {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {in_bounds = [true], permutation_map = #[[$map_proj_d0d1_0]]} : memref<?x?xf32>, vector<128xf32>
+// CHECK:     {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {permutation_map = #[[$map_proj_d0d1_0]]} : memref<?x?xf32>, vector<128xf32>
    affine.for %i17 = 0 to %M { // not vectorized, the 1-D pattern that matched %{{.*}} in DFS post-order prevents vectorizing %{{.*}}
      affine.for %i18 = 0 to %M { // vectorized due to scalar -> vector
        %a18 = affine.load %A[%c0, %c0] : memref<?x?xf32>
@@ -459,7 +459,7 @@ func.func @vec_rejected_9(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 // CHECK:      %{{.*}} = affine.apply #[[$map_id1]](%{{.*}})
 // CHECK-NEXT: %{{.*}} = affine.apply #[[$map_id1]](%{{.*}})
 // CHECK-NEXT: %{{.*}} = arith.constant 0.0{{.*}}: f32
-// CHECK-NEXT: {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {in_bounds = [true], permutation_map = #[[$map_proj_d0d1_0]]} : memref<?x?xf32>, vector<128xf32>
+// CHECK-NEXT: {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {permutation_map = #[[$map_proj_d0d1_0]]} : memref<?x?xf32>, vector<128xf32>
    affine.for %i17 = 0 to %M { // not vectorized, the 1-D pattern that matched %i18 in DFS post-order prevents vectorizing %{{.*}}
      affine.for %i18 = 0 to %M { // vectorized due to scalar -> vector
        %a18 = affine.load %A[%c0, %c0] : memref<?x?xf32>
@@ -683,4 +683,20 @@ func.func @vec_vecdim_reduction_rejected(%in: memref<256x512xf32>, %out: memref<
 }
 
 // CHECK-LABEL: @vec_vecdim_reduction_rejected
+// CHECK-NOT: vector
+
+
+// -----
+
+// Non scalar type is not regarded as the uniform in the vectorization
+func.func @vec_non_scalar_type() {
+  %idx0 = index.constant 0
+  %alloc_82 = memref.alloc() : memref<1xi64>
+  affine.for %arg0 = 0 to 78 {
+    %dim_191 = memref.dim %alloc_82, %idx0 : memref<1xi64>
+  }
+  return
+}
+
+// CHECK-LABEL: @vec_non_scalar_type
 // CHECK-NOT: vector

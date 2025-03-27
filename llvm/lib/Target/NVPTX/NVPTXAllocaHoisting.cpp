@@ -46,7 +46,7 @@ bool NVPTXAllocaHoisting::runOnFunction(Function &function) {
     for (BasicBlock::iterator BI = I->begin(), BE = I->end(); BI != BE;) {
       AllocaInst *allocaInst = dyn_cast<AllocaInst>(BI++);
       if (allocaInst && isa<ConstantInt>(allocaInst->getArraySize())) {
-        allocaInst->moveBefore(firstTerminatorInst);
+        allocaInst->moveBefore(firstTerminatorInst->getIterator());
         functionModified = true;
       }
     }

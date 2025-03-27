@@ -29,10 +29,12 @@ config.suffixes = [
     ".c",
     ".cpp",
     ".i",
+    ".cir",
     ".cppm",
     ".m",
     ".mm",
     ".cu",
+    ".cuh",
     ".hip",
     ".hlsl",
     ".ll",
@@ -84,6 +86,7 @@ tool_dirs = [config.clang_tools_dir, config.llvm_tools_dir]
 tools = [
     "apinotes-test",
     "c-index-test",
+    "cir-opt",
     "clang-diff",
     "clang-format",
     "clang-repl",
@@ -95,6 +98,8 @@ tools = [
     "llvm-ifs",
     "yaml2obj",
     "clang-linker-wrapper",
+    "clang-nvlink-wrapper",
+    "clang-sycl-linker",
     "llvm-lto",
     "llvm-lto2",
     "llvm-profdata",
@@ -108,15 +113,6 @@ tools = [
 
 if config.clang_examples:
     config.available_features.add("examples")
-
-if config.llvm_examples:
-    config.available_features.add("llvm-examples")
-
-if config.llvm_linked_bye_extension:
-    config.substitutions.append(("%offload-opt-loadbye", ""))
-else:
-    loadbye = f"-load-pass-plugin={config.llvm_shlib_dir}/Bye{config.llvm_shlib_ext}"
-    config.substitutions.append(("%offload-opt-loadbye", f"--offload-opt={loadbye}"))
 
 
 def have_host_jit_feature_support(feature_name):
@@ -190,6 +186,14 @@ if config.clang_staticanalyzer:
         )
     )
 
+    csv2json_path = os.path.join(config.test_source_root, "Analysis", "csv2json.py")
+    config.substitutions.append(
+        (
+            "%csv2json",
+            '"%s" %s' % (config.python_executable, csv2json_path),
+        )
+    )
+
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 config.substitutions.append(
@@ -217,13 +221,13 @@ config.substitutions.append(
 config.substitutions.append(("%host_cc", config.host_cc))
 config.substitutions.append(("%host_cxx", config.host_cxx))
 
+# Determine whether the test target is compatible with execution on the host.
+if "aarch64" in config.host_arch:
+    config.available_features.add("aarch64-host")
 
 # Plugins (loadable modules)
 if config.has_plugins and config.llvm_plugin_ext:
     config.available_features.add("plugins")
-
-if config.llvm_has_plugins and config.llvm_plugin_ext:
-    config.available_features.add("llvm-plugins")
 
 if config.clang_default_pie_on_linux:
     config.available_features.add("default-pie-on-linux")
@@ -257,6 +261,7 @@ if platform.system() not in ["Darwin", "Fuchsia"]:
 
 
 def is_filesystem_case_insensitive():
+    os.makedirs(config.test_exec_root, exist_ok=True)
     handle, path = tempfile.mkstemp(prefix="case-test", dir=config.test_exec_root)
     isInsensitive = os.path.exists(
         os.path.join(os.path.dirname(path), os.path.basename(path).upper())

@@ -28,8 +28,9 @@ const char WasmMagic[] = {'\0', 'a', 's', 'm'};
 const uint32_t WasmVersion = 0x1;
 // Wasm linking metadata version
 const uint32_t WasmMetadataVersion = 0x2;
-// Wasm uses a 64k page size
-const uint32_t WasmPageSize = 65536;
+// Wasm uses a 64k page size by default (but the custom-page-sizes proposal
+// allows changing it)
+const uint32_t WasmDefaultPageSize = 65536;
 
 enum : unsigned {
   WASM_SEC_CUSTOM = 0,     // Custom / User-defined section
@@ -144,11 +145,20 @@ enum : unsigned {
   WASM_OPCODE_I32_RMW_CMPXCHG = 0x48,
 };
 
+// Sub-opcodes for catch clauses in a try_table instruction
+enum : unsigned {
+  WASM_OPCODE_CATCH = 0x00,
+  WASM_OPCODE_CATCH_REF = 0x01,
+  WASM_OPCODE_CATCH_ALL = 0x02,
+  WASM_OPCODE_CATCH_ALL_REF = 0x03,
+};
+
 enum : unsigned {
   WASM_LIMITS_FLAG_NONE = 0x0,
   WASM_LIMITS_FLAG_HAS_MAX = 0x1,
   WASM_LIMITS_FLAG_IS_SHARED = 0x2,
   WASM_LIMITS_FLAG_IS_64 = 0x4,
+  WASM_LIMITS_FLAG_HAS_PAGE_SIZE = 0x8,
 };
 
 enum : unsigned {
@@ -162,12 +172,11 @@ enum : unsigned {
   WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER = 0x02, // if passive == 0
   WASM_ELEM_SEGMENT_HAS_INIT_EXPRS = 0x04,
 };
-const unsigned WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND = 0x3;
+const unsigned WASM_ELEM_SEGMENT_MASK_HAS_ELEM_DESC = 0x3;
 
 // Feature policy prefixes used in the custom "target_features" section
 enum : uint8_t {
   WASM_FEATURE_PREFIX_USED = '+',
-  WASM_FEATURE_PREFIX_REQUIRED = '=',
   WASM_FEATURE_PREFIX_DISALLOWED = '-',
 };
 
@@ -194,6 +203,7 @@ enum : unsigned {
   WASM_DYLINK_NEEDED = 0x2,
   WASM_DYLINK_EXPORT_INFO = 0x3,
   WASM_DYLINK_IMPORT_INFO = 0x4,
+  WASM_DYLINK_RUNTIME_PATH = 0x5,
 };
 
 // Kind codes used in the custom "linking" section in the WASM_COMDAT_INFO
@@ -287,6 +297,7 @@ struct WasmDylinkInfo {
   std::vector<StringRef> Needed; // Shared library dependencies
   std::vector<WasmDylinkImportInfo> ImportInfo;
   std::vector<WasmDylinkExportInfo> ExportInfo;
+  std::vector<StringRef> RuntimePath;
 };
 
 struct WasmProducerInfo {
@@ -310,6 +321,7 @@ struct WasmLimits {
   uint8_t Flags;
   uint64_t Minimum;
   uint64_t Maximum;
+  uint32_t PageSize;
 };
 
 struct WasmTableType {
@@ -407,6 +419,10 @@ struct WasmDataSegment {
   uint32_t LinkingFlags;
   uint32_t Comdat; // from the "comdat info" section
 };
+
+// 3 different element segment modes are encodable. This class is currently
+// only used during decoding (see WasmElemSegment below).
+enum class ElemSegmentMode { Active, Passive, Declarative };
 
 // Represents a Wasm element segment, with some limitations compared the spec:
 // 1) Does not model passive or declarative segments (Segment will end up with
@@ -521,7 +537,10 @@ inline bool operator!=(const WasmGlobalType &LHS, const WasmGlobalType &RHS) {
 inline bool operator==(const WasmLimits &LHS, const WasmLimits &RHS) {
   return LHS.Flags == RHS.Flags && LHS.Minimum == RHS.Minimum &&
          (LHS.Flags & WASM_LIMITS_FLAG_HAS_MAX ? LHS.Maximum == RHS.Maximum
-                                               : true);
+                                               : true) &&
+         (LHS.Flags & WASM_LIMITS_FLAG_HAS_PAGE_SIZE
+              ? LHS.PageSize == RHS.PageSize
+              : true);
 }
 
 inline bool operator==(const WasmTableType &LHS, const WasmTableType &RHS) {

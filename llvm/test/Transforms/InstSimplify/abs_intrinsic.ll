@@ -64,7 +64,7 @@ define i32 @zext_abs(i31 %x) {
 
 define <3 x i82> @lshr_abs(<3 x i82> %x) {
 ; CHECK-LABEL: @lshr_abs(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i82> [[X:%.*]], <i82 1, i82 1, i82 1>
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i82> [[X:%.*]], splat (i82 1)
 ; CHECK-NEXT:    [[ABS:%.*]] = call <3 x i82> @llvm.abs.v3i82(<3 x i82> [[LSHR]], i1 true)
 ; CHECK-NEXT:    ret <3 x i82> [[ABS]]
 ;
@@ -121,7 +121,7 @@ define i1 @abs_nsw_must_be_positive(i32 %x) {
 
 define <4 x i1> @abs_nsw_must_be_positive_vec(<4 x i32> %x) {
 ; CHECK-LABEL: @abs_nsw_must_be_positive_vec(
-; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <4 x i1> splat (i1 true)
 ;
   %abs = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %x, i1 true)
   %c2 = icmp sge <4 x i32> %abs, zeroinitializer
@@ -163,7 +163,7 @@ define i1 @abs_known_positive_input_compare(i31 %x) {
 
 define <4 x i1> @abs_known_positive_input_compare_vec(<4 x i31> %x) {
 ; CHECK-LABEL: @abs_known_positive_input_compare_vec(
-; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <4 x i1> splat (i1 true)
 ;
   %zext = zext <4 x i31> %x to <4 x i32>
   %abs = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %zext, i1 false)
@@ -183,7 +183,7 @@ define i1 @abs_known_not_int_min(i32 %x) {
 
 define <4 x i1> @abs_known_not_int_min_vec(<4 x i32> %x) {
 ; CHECK-LABEL: @abs_known_not_int_min_vec(
-; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <4 x i1> splat (i1 true)
 ;
   %or = or <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
   %abs = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %or, i1 false)

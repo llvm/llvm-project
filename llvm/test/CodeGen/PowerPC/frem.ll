@@ -70,7 +70,6 @@ define <4 x float> @frem4x32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-NEXT:    xscvspdpn 2, 0
 ; CHECK-NEXT:    bl fmodf
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-NEXT:    xxmrghd 0, 1, 61
 ; CHECK-NEXT:    xscvspdpn 1, 62
 ; CHECK-NEXT:    xscvspdpn 2, 63
@@ -84,7 +83,6 @@ define <4 x float> @frem4x32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-NEXT:    xscvspdpn 2, 0
 ; CHECK-NEXT:    bl fmodf
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-NEXT:    xxmrghd 0, 61, 1
 ; CHECK-NEXT:    lxv 63, 80(1) # 16-byte Folded Reload
 ; CHECK-NEXT:    lxv 62, 64(1) # 16-byte Folded Reload
@@ -124,11 +122,8 @@ define <2 x double> @frem2x64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-NEXT:    xscpsgndp 61, 1, 1
 ; CHECK-NEXT:    xxswapd 1, 62
 ; CHECK-NEXT:    xxswapd 2, 63
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
-; CHECK-NEXT:    # kill: def $f2 killed $f2 killed $vsl2
 ; CHECK-NEXT:    bl fmod
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-NEXT:    xxmrghd 34, 61, 1
 ; CHECK-NEXT:    lxv 63, 64(1) # 16-byte Folded Reload
 ; CHECK-NEXT:    lxv 62, 48(1) # 16-byte Folded Reload

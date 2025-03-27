@@ -44,6 +44,7 @@ add_llvm_unittest(SupportTests
   FileOutputBufferTest.cpp
   FormatVariadicTest.cpp
   FSUniqueIDTest.cpp
+  GenericDomTreeTest.cpp
   GlobPatternTest.cpp
   HashBuilderTest.cpp
   IndexedAccessorTest.cpp
@@ -60,6 +61,8 @@ add_llvm_unittest(SupportTests
   MemoryBufferRefTest.cpp
   MemoryBufferTest.cpp
   MemoryTest.cpp
+  MustacheTest.cpp      
+  ModRefTest.cpp
   NativeFormatTests.cpp
   OptimizedStructLayoutTest.cpp
   ParallelTest.cpp
@@ -67,6 +70,7 @@ add_llvm_unittest(SupportTests
   PerThreadBumpPtrAllocatorTest.cpp
   ProcessTest.cpp
   ProgramTest.cpp
+  RecyclerTest.cpp
   RegexTest.cpp
   ReverseIterationTest.cpp
   ReplaceFileTest.cpp

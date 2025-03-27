@@ -240,7 +240,7 @@ GCNILPScheduler::Candidate* GCNILPScheduler::pickCandidate() {
     return nullptr;
   auto Best = AvailQueue.begin();
   for (auto I = std::next(AvailQueue.begin()), E = AvailQueue.end(); I != E; ++I) {
-    auto NewBestSU = pickBest(Best->SU, I->SU);
+    const auto *NewBestSU = pickBest(Best->SU, I->SU);
     if (NewBestSU != Best->SU) {
       assert(NewBestSU == I->SU);
       Best = I;
@@ -272,7 +272,7 @@ void GCNILPScheduler::advanceToCycle(unsigned NextCycle) {
 
 void GCNILPScheduler::releasePredecessors(const SUnit* SU) {
   for (const auto &PredEdge : SU->Preds) {
-    auto PredSU = PredEdge.getSUnit();
+    auto *PredSU = PredEdge.getSUnit();
     if (PredEdge.isWeak())
       continue;
     assert(PredSU->isBoundaryNode() || PredSU->NumSuccsLeft > 0);
@@ -311,7 +311,7 @@ GCNILPScheduler::schedule(ArrayRef<const SUnit*> BotRoots,
   Schedule.reserve(SUnits.size());
   while (true) {
     if (AvailQueue.empty() && !PendingQueue.empty()) {
-      auto EarliestSU =
+      auto *EarliestSU =
           llvm::min_element(PendingQueue, [=](const Candidate &C1,
                                               const Candidate &C2) {
             return C1.SU->getHeight() < C2.SU->getHeight();
@@ -328,10 +328,10 @@ GCNILPScheduler::schedule(ArrayRef<const SUnit*> BotRoots,
                << ' ' << C.SU->NodeNum;
                dbgs() << '\n';);
 
-    auto C = pickCandidate();
+    auto *C = pickCandidate();
     assert(C);
     AvailQueue.remove(*C);
-    auto SU = C->SU;
+    auto *SU = C->SU;
     LLVM_DEBUG(dbgs() << "Selected "; DAG.dumpNode(*SU));
 
     advanceToCycle(SU->getHeight());

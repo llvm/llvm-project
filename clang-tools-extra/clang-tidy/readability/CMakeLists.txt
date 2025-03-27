@@ -3,7 +3,8 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_clang_library(clangTidyReadabilityModule
+add_clang_library(clangTidyReadabilityModule STATIC
+  AmbiguousSmartptrResetCallCheck.cpp
   AvoidConstParamsInDecls.cpp
   AvoidNestedConditionalOperatorCheck.cpp
   AvoidReturnWithVoidValueCheck.cpp

@@ -23,11 +23,9 @@
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
-#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 
 #define GET_GICOMBINER_DEPS
@@ -46,8 +44,7 @@ namespace {
 
 class RISCVPostLegalizerCombinerImpl : public Combiner {
 protected:
-  // TODO: Make CombinerHelper methods const.
-  mutable CombinerHelper Helper;
+  const CombinerHelper Helper;
   const RISCVPostLegalizerCombinerImplRuleConfig &RuleConfig;
   const RISCVSubtarget &STI;
 

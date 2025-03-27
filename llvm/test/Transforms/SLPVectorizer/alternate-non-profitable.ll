@@ -153,7 +153,7 @@ define <2 x i8> @replace_through_binop_fail_cant_speculate(i8 %inp, <2 x i8> %d,
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[INP]], 5
 ; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x i8> poison, i8 [[INP]], i64 0
 ; CHECK-NEXT:    [[V:%.*]] = insertelement <2 x i8> [[V0]], i8 [[ADD]], i64 1
-; CHECK-NEXT:    [[DIV0:%.*]] = sdiv <2 x i8> <i8 -128, i8 -128>, [[V]]
+; CHECK-NEXT:    [[DIV0:%.*]] = sdiv <2 x i8> splat (i8 -128), [[V]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[INP]], 123
 ; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i8> [[DIV0]], i8 [[TMP1]], i64 0
 ; CHECK-NEXT:    ret <2 x i8> [[R]]

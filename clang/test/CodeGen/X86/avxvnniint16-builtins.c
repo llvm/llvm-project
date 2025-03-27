@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +avxvnniint16 -emit-llvm -o - -Wall -Werror | FileCheck %s
 // RUN: %clang_cc1 %s -ffreestanding -triple=i386-unknown-unknown -target-feature +avxvnniint16 -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +avx10.2-256 -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 %s -ffreestanding -triple=i386-unknown-unknown -target-feature +avx10.2-256 -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 #include <immintrin.h>
 

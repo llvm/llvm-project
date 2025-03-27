@@ -19,7 +19,7 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include <map>
 
-using namespace llvm;
+namespace llvm {
 
 // LRStartEndInfo contains the start and end of a specific live range as
 // slot indices as well as storing the index of the physical register it
@@ -90,5 +90,7 @@ static const std::vector<int64_t> InstructionsMappingShape{
 static const int64_t ModelMaxSupportedMBBCount = 100;
 static const std::vector<int64_t> MBBFrequencyShape{1,
                                                     ModelMaxSupportedMBBCount};
+
+} // namespace llvm
 
 #endif // LLVM_CODEGEN_MLREGALLOCEVICTIONADVISOR_H

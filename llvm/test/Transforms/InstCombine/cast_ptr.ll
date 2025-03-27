@@ -259,7 +259,7 @@ define i32 @ptr_add_in_int(i32 %x, i32 %y) {
 define i32 @ptr_add_in_int_2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ptr_add_in_int_2(
 ; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nsw i32 [[Y:%.*]], 2
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[P2_IDX]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[X:%.*]], [[P2_IDX]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %ptr = inttoptr i32 %x to ptr
@@ -271,7 +271,7 @@ define i32 @ptr_add_in_int_2(i32 %x, i32 %y) {
 define i32 @ptr_add_in_int_nneg(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ptr_add_in_int_nneg(
 ; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.abs.i32(i32 [[Y:%.*]], i1 true)
-; CHECK-NEXT:    [[R:%.*]] = add nuw i32 [[Z]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add nuw i32 [[X:%.*]], [[Z]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %z = call i32 @llvm.abs.i32(i32 %y, i1 true)
@@ -308,7 +308,7 @@ define i16 @ptr_add_in_int_different_type_2(i32 %x, i32 %y) {
 define i32 @ptr_add_in_int_different_type_3(i16 %x, i32 %y) {
 ; CHECK-LABEL: @ptr_add_in_int_different_type_3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[X:%.*]] to i32
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %ptr = inttoptr i16 %x to ptr
@@ -320,7 +320,7 @@ define i32 @ptr_add_in_int_different_type_3(i16 %x, i32 %y) {
 define i32 @ptr_add_in_int_different_type_4(i64 %x, i32 %y) {
 ; CHECK-LABEL: @ptr_add_in_int_different_type_4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X:%.*]] to i32
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %ptr = inttoptr i64 %x to ptr
@@ -332,7 +332,7 @@ define i32 @ptr_add_in_int_different_type_4(i64 %x, i32 %y) {
 define i32 @ptr_add_in_int_not_inbounds(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ptr_add_in_int_not_inbounds(
 ; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.abs.i32(i32 [[Y:%.*]], i1 true)
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[Z]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[X:%.*]], [[Z]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %z = call i32 @llvm.abs.i32(i32 %y, i1 true)
@@ -407,7 +407,7 @@ define i32 @ptr_add_in_int_extra_use1(i32 %x) {
 ; CHECK-LABEL: @ptr_add_in_int_extra_use1(
 ; CHECK-NEXT:    [[PTR:%.*]] = inttoptr i32 [[X:%.*]] to ptr
 ; CHECK-NEXT:    call void @use_ptr(ptr [[PTR]])
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i32 4096
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i32 4096
 ; CHECK-NEXT:    [[R:%.*]] = ptrtoint ptr [[P2]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -421,7 +421,7 @@ define i32 @ptr_add_in_int_extra_use1(i32 %x) {
 define i32 @ptr_add_in_int_extra_use2(i32 %x) {
 ; CHECK-LABEL: @ptr_add_in_int_extra_use2(
 ; CHECK-NEXT:    [[PTR:%.*]] = inttoptr i32 [[X:%.*]] to ptr
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i32 4096
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i32 4096
 ; CHECK-NEXT:    call void @use_ptr(ptr nonnull [[P2]])
 ; CHECK-NEXT:    [[R:%.*]] = ptrtoint ptr [[P2]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]

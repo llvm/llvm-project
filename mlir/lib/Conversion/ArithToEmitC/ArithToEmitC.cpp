@@ -421,6 +421,38 @@ public:
   }
 };
 
+template <class ArithOp, class EmitCOp>
+class BinaryUIOpConversion final : public OpConversionPattern<ArithOp> {
+public:
+  using OpConversionPattern<ArithOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(ArithOp uiBinOp, typename ArithOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type newRetTy = this->getTypeConverter()->convertType(uiBinOp.getType());
+    if (!newRetTy)
+      return rewriter.notifyMatchFailure(uiBinOp,
+                                         "converting result type failed");
+    if (!isa<IntegerType>(newRetTy)) {
+      return rewriter.notifyMatchFailure(uiBinOp, "expected integer type");
+    }
+    Type unsignedType =
+        adaptIntegralTypeSignedness(newRetTy, /*needsUnsigned=*/true);
+    if (!unsignedType)
+      return rewriter.notifyMatchFailure(uiBinOp,
+                                         "converting result type failed");
+    Value lhsAdapted = adaptValueType(uiBinOp.getLhs(), rewriter, unsignedType);
+    Value rhsAdapted = adaptValueType(uiBinOp.getRhs(), rewriter, unsignedType);
+
+    auto newDivOp =
+        rewriter.create<EmitCOp>(uiBinOp.getLoc(), unsignedType,
+                                 ArrayRef<Value>{lhsAdapted, rhsAdapted});
+    Value resultAdapted = adaptValueType(newDivOp, rewriter, newRetTy);
+    rewriter.replaceOp(uiBinOp, resultAdapted);
+    return success();
+  }
+};
+
 template <typename ArithOp, typename EmitCOp>
 class IntegerOpConversion final : public OpConversionPattern<ArithOp> {
 public:
@@ -642,7 +674,7 @@ public:
     Type actualResultType = dstType;
     if (isa<arith::FPToUIOp>(castOp)) {
       actualResultType =
-          rewriter.getIntegerType(operandType.getIntOrFloatBitWidth(),
+          rewriter.getIntegerType(dstType.getIntOrFloatBitWidth(),
                                   /*isSigned=*/false);
     }
 
@@ -701,6 +733,43 @@ public:
   }
 };
 
+// Floating-point to floating-point conversions.
+template <typename CastOp>
+class FpCastOpConversion : public OpConversionPattern<CastOp> {
+public:
+  FpCastOpConversion(const TypeConverter &typeConverter, MLIRContext *context)
+      : OpConversionPattern<CastOp>(typeConverter, context) {}
+
+  LogicalResult
+  matchAndRewrite(CastOp castOp, typename CastOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Vectors in particular are not supported.
+    Type operandType = adaptor.getIn().getType();
+    if (!emitc::isSupportedFloatType(operandType))
+      return rewriter.notifyMatchFailure(castOp,
+                                         "unsupported cast source type");
+    if (auto roundingModeOp =
+            dyn_cast<arith::ArithRoundingModeInterface>(*castOp)) {
+      // Only supporting default rounding mode as of now.
+      if (roundingModeOp.getRoundingModeAttr())
+        return rewriter.notifyMatchFailure(castOp, "unsupported rounding mode");
+    }
+
+    Type dstType = this->getTypeConverter()->convertType(castOp.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(castOp, "type conversion failed");
+
+    if (!emitc::isSupportedFloatType(dstType))
+      return rewriter.notifyMatchFailure(castOp,
+                                         "unsupported cast destination type");
+
+    Value fpCastOperand = adaptor.getIn();
+    rewriter.replaceOpWithNewOp<emitc::CastOp>(castOp, dstType, fpCastOperand);
+
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -722,6 +791,8 @@ void mlir::populateArithToEmitCPatterns(TypeConverter &typeConverter,
     ArithOpConversion<arith::MulFOp, emitc::MulOp>,
     ArithOpConversion<arith::RemSIOp, emitc::RemOp>,
     ArithOpConversion<arith::SubFOp, emitc::SubOp>,
+    BinaryUIOpConversion<arith::DivUIOp, emitc::DivOp>,
+    BinaryUIOpConversion<arith::RemUIOp, emitc::RemOp>,
     IntegerOpConversion<arith::AddIOp, emitc::AddOp>,
     IntegerOpConversion<arith::MulIOp, emitc::MulOp>,
     IntegerOpConversion<arith::SubIOp, emitc::SubOp>,
@@ -744,7 +815,9 @@ void mlir::populateArithToEmitCPatterns(TypeConverter &typeConverter,
     ItoFCastOpConversion<arith::SIToFPOp>,
     ItoFCastOpConversion<arith::UIToFPOp>,
     FtoICastOpConversion<arith::FPToSIOp>,
-    FtoICastOpConversion<arith::FPToUIOp>
+    FtoICastOpConversion<arith::FPToUIOp>,
+    FpCastOpConversion<arith::ExtFOp>,
+    FpCastOpConversion<arith::TruncFOp>
   >(typeConverter, ctx);
   // clang-format on
 }

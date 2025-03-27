@@ -19,12 +19,8 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCSectionELF.h"
+#include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCValue.h"
-#include "llvm/Support/LEB128.h"
-#include "llvm/Support/RISCVAttributes.h"
 
 using namespace llvm;
 
@@ -51,14 +47,16 @@ RISCVELFStreamer &RISCVTargetELFStreamer::getStreamer() {
   return static_cast<RISCVELFStreamer &>(Streamer);
 }
 
-void RISCVTargetELFStreamer::emitDirectiveOptionPush() {}
-void RISCVTargetELFStreamer::emitDirectiveOptionPop() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionExact() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionNoExact() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionPIC() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionNoPIC() {}
-void RISCVTargetELFStreamer::emitDirectiveOptionRVC() {}
-void RISCVTargetELFStreamer::emitDirectiveOptionNoRVC() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionPop() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionPush() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionRelax() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionNoRelax() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionRVC() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionNoRVC() {}
 
 void RISCVTargetELFStreamer::emitAttribute(unsigned Attribute, unsigned Value) {
   getStreamer().setAttributeItem(Attribute, Value, /*OverwriteExisting=*/true);
@@ -87,10 +85,10 @@ void RISCVTargetELFStreamer::finishAttributeSection() {
 
 void RISCVTargetELFStreamer::finish() {
   RISCVTargetStreamer::finish();
-  MCAssembler &MCA = getStreamer().getAssembler();
+  ELFObjectWriter &W = getStreamer().getWriter();
   RISCVABI::ABI ABI = getTargetABI();
 
-  unsigned EFlags = MCA.getELFHeaderEFlags();
+  unsigned EFlags = W.getELFHeaderEFlags();
 
   if (hasRVC())
     EFlags |= ELF::EF_RISCV_RVC;
@@ -117,7 +115,7 @@ void RISCVTargetELFStreamer::finish() {
     llvm_unreachable("Improperly initialised target ABI");
   }
 
-  MCA.setELFHeaderEFlags(EFlags);
+  W.setELFHeaderEFlags(EFlags);
 }
 
 void RISCVTargetELFStreamer::reset() {
@@ -132,7 +130,6 @@ void RISCVTargetELFStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {
 void RISCVELFStreamer::reset() {
   static_cast<RISCVTargetStreamer *>(getTargetStreamer())->reset();
   MCELFStreamer::reset();
-  MappingSymbolCounter = 0;
   LastMappingSymbols.clear();
   LastEMS = EMS_None;
 }
@@ -152,8 +149,7 @@ void RISCVELFStreamer::emitInstructionsMappingSymbol() {
 }
 
 void RISCVELFStreamer::emitMappingSymbol(StringRef Name) {
-  auto *Symbol = cast<MCSymbolELF>(getContext().getOrCreateSymbol(
-      Name + "." + Twine(MappingSymbolCounter++)));
+  auto *Symbol = cast<MCSymbolELF>(getContext().createLocalSymbol(Name));
   emitLabel(Symbol);
   Symbol->setType(ELF::STT_NOTYPE);
   Symbol->setBinding(ELF::STB_LOCAL);
@@ -192,13 +188,10 @@ void RISCVELFStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
   MCELFStreamer::emitValueImpl(Value, Size, Loc);
 }
 
-namespace llvm {
-MCELFStreamer *createRISCVELFStreamer(MCContext &C,
-                                      std::unique_ptr<MCAsmBackend> MAB,
-                                      std::unique_ptr<MCObjectWriter> MOW,
-                                      std::unique_ptr<MCCodeEmitter> MCE) {
-  RISCVELFStreamer *S =
-      new RISCVELFStreamer(C, std::move(MAB), std::move(MOW), std::move(MCE));
-  return S;
+MCStreamer *llvm::createRISCVELFStreamer(const Triple &, MCContext &C,
+                                         std::unique_ptr<MCAsmBackend> &&MAB,
+                                         std::unique_ptr<MCObjectWriter> &&MOW,
+                                         std::unique_ptr<MCCodeEmitter> &&MCE) {
+  return new RISCVELFStreamer(C, std::move(MAB), std::move(MOW),
+                              std::move(MCE));
 }
-} // namespace llvm

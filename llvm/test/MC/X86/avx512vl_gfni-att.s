@@ -352,3 +352,18 @@
 // CHECK: encoding: [0x62,0xf3,0xdd,0x30,0xce,0x09,0x07]
           vgf2p8affineqb  $7, (%rcx){1to4}, %ymm20, %ymm1
 
+// CHECK: vgf2p8affineinvqb $7, 8(%rcx){1to2}, %xmm20, %xmm1
+// CHECK: encoding: [0x62,0xf3,0xdd,0x10,0xcf,0x49,0x01,0x07]
+          vgf2p8affineinvqb $7, 8(%rcx){1to2}, %xmm20, %xmm1
+
+// CHECK: vgf2p8affineinvqb $7, 8(%rcx){1to4}, %ymm20, %ymm1
+// CHECK: encoding: [0x62,0xf3,0xdd,0x30,0xcf,0x49,0x01,0x07]
+          vgf2p8affineinvqb $7, 8(%rcx){1to4}, %ymm20, %ymm1
+
+// CHECK: vgf2p8affineqb  $7, 8(%rcx){1to2}, %xmm20, %xmm1
+// CHECK: encoding: [0x62,0xf3,0xdd,0x10,0xce,0x49,0x01,0x07]
+          vgf2p8affineqb  $7, 8(%rcx){1to2}, %xmm20, %xmm1
+
+// CHECK: vgf2p8affineqb  $7, 8(%rcx){1to4}, %ymm20, %ymm1
+// CHECK: encoding: [0x62,0xf3,0xdd,0x30,0xce,0x49,0x01,0x07]
+          vgf2p8affineqb  $7, 8(%rcx){1to4}, %ymm20, %ymm1

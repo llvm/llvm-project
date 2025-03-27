@@ -25,6 +25,7 @@
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupPythonClassWithDict.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
@@ -117,8 +118,9 @@ public:
   CommandObjectProcessLaunch(CommandInterpreter &interpreter)
       : CommandObjectProcessLaunchOrAttach(
             interpreter, "process launch",
-            "Launch the executable in the debugger.", nullptr,
-            eCommandRequiresTarget, "restart"),
+            "Launch the executable in the debugger. If no run-args are "
+            "specified, the arguments from target.run-args are used.",
+            nullptr, eCommandRequiresTarget, "restart"),
 
         m_class_options("scripted process", true, 'C', 'k', 'v', 0) {
     m_all_options.Append(&m_options);
@@ -199,6 +201,13 @@ protected:
 
     if (target->GetDisableSTDIO())
       m_options.launch_info.GetFlags().Set(eLaunchFlagDisableSTDIO);
+
+    if (!m_options.launch_info.GetWorkingDirectory()) {
+      if (llvm::StringRef wd = target->GetLaunchWorkingDirectory();
+          !wd.empty()) {
+        m_options.launch_info.SetWorkingDirectory(FileSpec(wd));
+      }
+    }
 
     // Merge the launch info environment with the target environment.
     Environment target_env = target->GetEnvironment();
@@ -369,25 +378,23 @@ protected:
 
     // Okay, we're done.  Last step is to warn if the executable module has
     // changed:
-    char new_path[PATH_MAX];
     ModuleSP new_exec_module_sp(target->GetExecutableModule());
     if (!old_exec_module_sp) {
       // We might not have a module if we attached to a raw pid...
       if (new_exec_module_sp) {
-        new_exec_module_sp->GetFileSpec().GetPath(new_path, PATH_MAX);
-        result.AppendMessageWithFormat("Executable module set to \"%s\".\n",
-                                       new_path);
+        result.AppendMessageWithFormat(
+            "Executable binary set to \"%s\".\n",
+            new_exec_module_sp->GetFileSpec().GetPath().c_str());
       }
+    } else if (!new_exec_module_sp) {
+      result.AppendWarningWithFormat("No executable binary.");
     } else if (old_exec_module_sp->GetFileSpec() !=
                new_exec_module_sp->GetFileSpec()) {
-      char old_path[PATH_MAX];
-
-      old_exec_module_sp->GetFileSpec().GetPath(old_path, PATH_MAX);
-      new_exec_module_sp->GetFileSpec().GetPath(new_path, PATH_MAX);
 
       result.AppendWarningWithFormat(
-          "Executable module changed from \"%s\" to \"%s\".\n", old_path,
-          new_path);
+          "Executable binary changed from \"%s\" to \"%s\".\n",
+          old_exec_module_sp->GetFileSpec().GetPath().c_str(),
+          new_exec_module_sp->GetFileSpec().GetPath().c_str());
     }
 
     if (!old_arch_spec.IsValid()) {
@@ -454,7 +461,7 @@ protected:
       switch (short_option) {
       case 'i':
         if (option_arg.getAsInteger(0, m_ignore))
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "invalid value for ignore option: \"%s\", should be a number.",
               option_arg.str().c_str());
         break;
@@ -512,7 +519,7 @@ protected:
         }
       }
 
-      Target *target = m_exe_ctx.GetTargetPtr();
+      Target &target = GetTarget();
       BreakpointIDList run_to_bkpt_ids;
       // Don't pass an empty run_to_breakpoint list, as Verify will look for the
       // default breakpoint.
@@ -540,7 +547,7 @@ protected:
         // the breakpoint.location specifications since the latter require
         // special handling.  We also figure out whether there's at least one
         // specifier in the set that is enabled.
-        BreakpointList &bkpt_list = target->GetBreakpointList();
+        BreakpointList &bkpt_list = target.GetBreakpointList();
         std::unordered_set<break_id_t> bkpts_seen;
         std::unordered_set<break_id_t> bkpts_with_locs_seen;
         BreakpointIDList with_locs;
@@ -668,7 +675,7 @@ protected:
       }
 
       // Now re-enable the breakpoints we disabled:
-      BreakpointList &bkpt_list = target->GetBreakpointList();
+      BreakpointList &bkpt_list = target.GetBreakpointList();
       for (break_id_t bp_id : bkpts_disabled) {
         BreakpointSP bp_sp = bkpt_list.FindBreakpointByID(bp_id);
         if (bp_sp)
@@ -745,8 +752,8 @@ public:
         bool success;
         tmp_result = OptionArgParser::ToBoolean(option_arg, false, &success);
         if (!success)
-          error.SetErrorStringWithFormat("invalid boolean option: \"%s\"",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid boolean option: \"%s\"", option_arg.str().c_str());
         else {
           if (tmp_result)
             m_keep_stopped = eLazyBoolYes;
@@ -1421,7 +1428,7 @@ protected:
 
       PlatformSP platform_sp = process->GetTarget().GetPlatform();
       if (!platform_sp) {
-        result.AppendError("Couldn'retrieve the target's platform");
+        result.AppendError("Couldn't retrieve the target's platform");
         return;
       }
 
@@ -1586,7 +1593,7 @@ public:
 
 protected:
   void DoExecute(Args &signal_args, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
+    Target &target = GetTarget();
 
     // Any signals that are being set should be added to the Target's
     // DummySignals so they will get applied on rerun, etc.

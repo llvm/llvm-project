@@ -50,6 +50,11 @@
 #if defined(__sun__) && defined(__svr4__)
 #include <kstat.h>
 #endif
+#if defined(__GNUC__) || defined(__clang__)
+#if (defined(__i386__) || defined(__x86_64__)) && !defined(_MSC_VER)
+#include <cpuid.h>
+#endif
+#endif
 
 #define DEBUG_TYPE "host-detection"
 
@@ -63,11 +68,15 @@ using namespace llvm;
 
 static std::unique_ptr<llvm::MemoryBuffer>
     LLVM_ATTRIBUTE_UNUSED getProcCpuinfoContent() {
+  const char *CPUInfoFile = "/proc/cpuinfo";
+  if (const char *CpuinfoIntercept = std::getenv("LLVM_CPUINFO"))
+    CPUInfoFile = CpuinfoIntercept;
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
-      llvm::MemoryBuffer::getFileAsStream("/proc/cpuinfo");
+      llvm::MemoryBuffer::getFileAsStream(CPUInfoFile);
+
   if (std::error_code EC = Text.getError()) {
-    llvm::errs() << "Can't read "
-                 << "/proc/cpuinfo: " << EC.message() << "\n";
+    llvm::errs() << "Can't read " << CPUInfoFile << ": " << EC.message()
+                 << "\n";
     return nullptr;
   }
   return std::move(*Text);
@@ -150,6 +159,7 @@ StringRef sys::detail::getHostCPUNameForPowerPC(StringRef ProcCpuinfoContent) {
       .Case("POWER8NVL", "pwr8")
       .Case("POWER9", "pwr9")
       .Case("POWER10", "pwr10")
+      .Case("POWER11", "pwr11")
       // FIXME: If we get a simulator or machine with the capabilities of
       // mcpu=future, we should revisit this and add the name reported by the
       // simulator/machine.
@@ -163,7 +173,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
   // Read 32 lines from /proc/cpuinfo, which should contain the CPU part line
   // in all cases.
   SmallVector<StringRef, 32> Lines;
-  ProcCpuinfoContent.split(Lines, "\n");
+  ProcCpuinfoContent.split(Lines, '\n');
 
   // Look for the CPU implementer line.
   StringRef Implementer;
@@ -270,13 +280,16 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
 
   if (Implementer == "0x46") { // Fujitsu Ltd.
     return StringSwitch<const char *>(Part)
-      .Case("0x001", "a64fx")
-      .Default("generic");
+        .Case("0x001", "a64fx")
+        .Case("0x003", "fujitsu-monaka")
+        .Default("generic");
   }
 
   if (Implementer == "0x4e") { // NVIDIA Corporation
     return StringSwitch<const char *>(Part)
         .Case("0x004", "carmel")
+        .Case("0x10", "olympus")
+        .Case("0x010", "olympus")
         .Default("generic");
   }
 
@@ -336,6 +349,35 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
     }
   }
 
+  if (Implementer == "0x61") { // Apple
+    return StringSwitch<const char *>(Part)
+        .Case("0x020", "apple-m1")
+        .Case("0x021", "apple-m1")
+        .Case("0x022", "apple-m1")
+        .Case("0x023", "apple-m1")
+        .Case("0x024", "apple-m1")
+        .Case("0x025", "apple-m1")
+        .Case("0x028", "apple-m1")
+        .Case("0x029", "apple-m1")
+        .Case("0x030", "apple-m2")
+        .Case("0x031", "apple-m2")
+        .Case("0x032", "apple-m2")
+        .Case("0x033", "apple-m2")
+        .Case("0x034", "apple-m2")
+        .Case("0x035", "apple-m2")
+        .Case("0x038", "apple-m2")
+        .Case("0x039", "apple-m2")
+        .Case("0x049", "apple-m3")
+        .Case("0x048", "apple-m3")
+        .Default("generic");
+  }
+
+  if (Implementer == "0x63") { // Arm China.
+    return StringSwitch<const char *>(Part)
+        .Case("0x132", "star-mc1")
+        .Default("generic");
+  }
+
   if (Implementer == "0x6d") { // Microsoft Corporation.
     // The Microsoft Azure Cobalt 100 CPU is handled as a Neoverse N2.
     return StringSwitch<const char *>(Part)
@@ -384,8 +426,11 @@ StringRef getCPUNameFromS390Model(unsigned int Id, bool HaveVectorSupport) {
       return HaveVectorSupport? "z15" : "zEC12";
     case 3931:
     case 3932:
-    default:
       return HaveVectorSupport? "z16" : "zEC12";
+    case 9175:
+    case 9176:
+    default:
+      return HaveVectorSupport? "arch15" : "zEC12";
   }
 }
 } // end anonymous namespace
@@ -396,7 +441,7 @@ StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
   // The "processor 0:" line comes after a fair amount of other information,
   // including a cache breakdown, but this should be plenty.
   SmallVector<StringRef, 32> Lines;
-  ProcCpuinfoContent.split(Lines, "\n");
+  ProcCpuinfoContent.split(Lines, '\n');
 
   // Look for the CPU features.
   SmallVector<StringRef, 32> CPUFeatures;
@@ -438,7 +483,7 @@ StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
 StringRef sys::detail::getHostCPUNameForRISCV(StringRef ProcCpuinfoContent) {
   // There are 24 lines in /proc/cpuinfo
   SmallVector<StringRef> Lines;
-  ProcCpuinfoContent.split(Lines, "\n");
+  ProcCpuinfoContent.split(Lines, '\n');
 
   // Look for uarch line to determine cpu name
   StringRef UArch;
@@ -450,6 +495,7 @@ StringRef sys::detail::getHostCPUNameForRISCV(StringRef ProcCpuinfoContent) {
   }
 
   return StringSwitch<const char *>(UArch)
+      .Case("eswin,eic770x", "sifive-p550")
       .Case("sifive,u74-mc", "sifive-u74")
       .Case("sifive,bullet0", "sifive-u74")
       .Default("");
@@ -521,68 +567,15 @@ StringRef sys::detail::getHostCPUNameForBPF() {
 #endif
 }
 
-#if defined(__i386__) || defined(_M_IX86) || \
-    defined(__x86_64__) || defined(_M_X64)
-
-// The check below for i386 was copied from clang's cpuid.h (__get_cpuid_max).
-// Check motivated by bug reports for OpenSSL crashing on CPUs without CPUID
-// support. Consequently, for i386, the presence of CPUID is checked first
-// via the corresponding eflags bit.
-// Removal of cpuid.h header motivated by PR30384
-// Header cpuid.h and method __get_cpuid_max are not used in llvm, clang, openmp
-// or test-suite, but are used in external projects e.g. libstdcxx
-static bool isCpuIdSupported() {
-#if defined(__GNUC__) || defined(__clang__)
-#if defined(__i386__)
-  int __cpuid_supported;
-  __asm__("  pushfl\n"
-          "  popl   %%eax\n"
-          "  movl   %%eax,%%ecx\n"
-          "  xorl   $0x00200000,%%eax\n"
-          "  pushl  %%eax\n"
-          "  popfl\n"
-          "  pushfl\n"
-          "  popl   %%eax\n"
-          "  movl   $0,%0\n"
-          "  cmpl   %%eax,%%ecx\n"
-          "  je     1f\n"
-          "  movl   $1,%0\n"
-          "1:"
-          : "=r"(__cpuid_supported)
-          :
-          : "eax", "ecx");
-  if (!__cpuid_supported)
-    return false;
-#endif
-  return true;
-#endif
-  return true;
-}
+#if defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||            \
+    defined(_M_X64)
 
 /// getX86CpuIDAndInfo - Execute the specified cpuid and return the 4 values in
 /// the specified arguments.  If we can't run cpuid on the host, return true.
 static bool getX86CpuIDAndInfo(unsigned value, unsigned *rEAX, unsigned *rEBX,
                                unsigned *rECX, unsigned *rEDX) {
-#if defined(__GNUC__) || defined(__clang__)
-#if defined(__x86_64__)
-  // gcc doesn't know cpuid would clobber ebx/rbx. Preserve it manually.
-  // FIXME: should we save this for Clang?
-  __asm__("movq\t%%rbx, %%rsi\n\t"
-          "cpuid\n\t"
-          "xchgq\t%%rbx, %%rsi\n\t"
-          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
-          : "a"(value));
-  return false;
-#elif defined(__i386__)
-  __asm__("movl\t%%ebx, %%esi\n\t"
-          "cpuid\n\t"
-          "xchgl\t%%ebx, %%esi\n\t"
-          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
-          : "a"(value));
-  return false;
-#else
-  return true;
-#endif
+#if (defined(__i386__) || defined(__x86_64__)) && !defined(_MSC_VER)
+  return !__get_cpuid(value, rEAX, rEBX, rECX, rEDX);
 #elif defined(_MSC_VER)
   // The MSVC intrinsic is portable across x86 and x64.
   int registers[4];
@@ -608,9 +601,6 @@ VendorSignatures getVendorSignature(unsigned *MaxLeaf) {
     MaxLeaf = &EAX;
   else
     *MaxLeaf = 0;
-
-  if (!isCpuIdSupported())
-    return VendorSignatures::UNKNOWN;
 
   if (getX86CpuIDAndInfo(0, MaxLeaf, &EBX, &ECX, &EDX) || *MaxLeaf < 1)
     return VendorSignatures::UNKNOWN;
@@ -639,26 +629,12 @@ using namespace llvm::sys::detail::x86;
 static bool getX86CpuIDAndInfoEx(unsigned value, unsigned subleaf,
                                  unsigned *rEAX, unsigned *rEBX, unsigned *rECX,
                                  unsigned *rEDX) {
-#if defined(__GNUC__) || defined(__clang__)
-#if defined(__x86_64__)
-  // gcc doesn't know cpuid would clobber ebx/rbx. Preserve it manually.
-  // FIXME: should we save this for Clang?
-  __asm__("movq\t%%rbx, %%rsi\n\t"
-          "cpuid\n\t"
-          "xchgq\t%%rbx, %%rsi\n\t"
-          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
-          : "a"(value), "c"(subleaf));
-  return false;
-#elif defined(__i386__)
-  __asm__("movl\t%%ebx, %%esi\n\t"
-          "cpuid\n\t"
-          "xchgl\t%%ebx, %%esi\n\t"
-          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
-          : "a"(value), "c"(subleaf));
-  return false;
-#else
-  return true;
-#endif
+  // TODO(boomanaiden154): When the minimum toolchain versions for gcc and clang
+  // are such that __cpuidex is defined within cpuid.h for both, we can remove
+  // the __get_cpuid_count function and share the MSVC implementation between
+  // all three.
+#if (defined(__i386__) || defined(__x86_64__)) && !defined(_MSC_VER)
+  return !__get_cpuid_count(value, subleaf, rEAX, rEBX, rECX, rEDX);
 #elif defined(_MSC_VER)
   int registers[4];
   __cpuidex(registers, value, subleaf);
@@ -674,6 +650,9 @@ static bool getX86CpuIDAndInfoEx(unsigned value, unsigned subleaf,
 
 // Read control register 0 (XCR0). Used to detect features such as AVX.
 static bool getX86XCR0(unsigned *rEAX, unsigned *rEDX) {
+  // TODO(boomanaiden154): When the minimum toolchain versions for gcc and clang
+  // are such that _xgetbv is supported by both, we can unify the implementation
+  // with MSVC and remove all inline assembly.
 #if defined(__GNUC__) || defined(__clang__)
   // Check xgetbv; this uses a .byte sequence instead of the instruction
   // directly because older assemblers do not include support for xgetbv and
@@ -859,22 +838,39 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
     // Alderlake:
     case 0x97:
     case 0x9a:
+      CPU = "alderlake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_ALDERLAKE;
+      break;
+
     // Gracemont
     case 0xbe:
+      CPU = "gracemont";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_ALDERLAKE;
+      break;
+
     // Raptorlake:
     case 0xb7:
     case 0xba:
     case 0xbf:
+      CPU = "raptorlake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_ALDERLAKE;
+      break;
+
     // Meteorlake:
     case 0xaa:
     case 0xac:
-      CPU = "alderlake";
+      CPU = "meteorlake";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_ALDERLAKE;
       break;
 
     // Arrowlake:
     case 0xc5:
+    // Arrowlake U:
+    case 0xb5:
       CPU = "arrowlake";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_ARROWLAKE;
@@ -882,9 +878,14 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
 
     // Arrowlake S:
     case 0xc6:
+      CPU = "arrowlake-s";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_ARROWLAKE_S;
+      break;
+
     // Lunarlake:
     case 0xbd:
-      CPU = "arrowlake-s";
+      CPU = "lunarlake";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_ARROWLAKE_S;
       break;
@@ -920,6 +921,11 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
 
     // Emerald Rapids:
     case 0xcf:
+      CPU = "emeraldrapids";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_SAPPHIRERAPIDS;
+      break;
+
     // Sapphire Rapids:
     case 0x8f:
       CPU = "sapphirerapids";
@@ -1059,6 +1065,19 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
     CPU = "pentium4";
     break;
   }
+  case 19:
+    switch (Model) {
+    // Diamond Rapids:
+    case 0x01:
+      CPU = "diamondrapids";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_DIAMONDRAPIDS;
+      break;
+
+    default: // Unknown family 19 CPU.
+      break;
+    }
+    break;
   default:
     break; // Unknown.
   }
@@ -1111,6 +1130,7 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
     CPU = "k8";
     break;
   case 16:
+  case 18:
     CPU = "amdfam10";
     *Type = X86::AMDFAM10H; // "amdfam10"
     switch (Model) {
@@ -1212,6 +1232,25 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
       break; //  "znver4"
     }
     break; // family 19h
+  case 26:
+    CPU = "znver5";
+    *Type = X86::AMDFAM1AH;
+    if (Model <= 0x77) {
+      // Models 00h-0Fh (Breithorn).
+      // Models 10h-1Fh (Breithorn-Dense).
+      // Models 20h-2Fh (Strix 1).
+      // Models 30h-37h (Strix 2).
+      // Models 38h-3Fh (Strix 3).
+      // Models 40h-4Fh (Granite Ridge).
+      // Models 50h-5Fh (Weisshorn).
+      // Models 60h-6Fh (Krackan1).
+      // Models 70h-77h (Sarlak).
+      CPU = "znver5";
+      *Subtype = X86::AMDFAM1AH_ZNVER5;
+      break; //  "znver5"
+    }
+    break;
+
   default:
     break; // Unknown AMD CPU.
   }
@@ -1476,6 +1515,18 @@ StringRef sys::getHostCPUName() {
   return getCPUNameFromS390Model(Id, HaveVectorSupport);
 }
 #elif defined(__APPLE__) && (defined(__arm__) || defined(__aarch64__))
+// Copied from <mach/machine.h> in the macOS SDK.
+//
+// Also available here, though usually not as up-to-date:
+// https://github.com/apple-oss-distributions/xnu/blob/xnu-11215.41.3/osfmk/mach/machine.h#L403-L452.
+#define CPUFAMILY_UNKNOWN 0
+#define CPUFAMILY_ARM_9 0xe73283ae
+#define CPUFAMILY_ARM_11 0x8ff620d8
+#define CPUFAMILY_ARM_XSCALE 0x53b005f5
+#define CPUFAMILY_ARM_12 0xbd1b0ae9
+#define CPUFAMILY_ARM_13 0x0cc90e64
+#define CPUFAMILY_ARM_14 0x96077ef1
+#define CPUFAMILY_ARM_15 0xa8511bca
 #define CPUFAMILY_ARM_SWIFT 0x1e2d6381
 #define CPUFAMILY_ARM_CYCLONE 0x37a09642
 #define CPUFAMILY_ARM_TYPHOON 0x2c91a47e
@@ -1487,13 +1538,46 @@ StringRef sys::getHostCPUName() {
 #define CPUFAMILY_ARM_FIRESTORM_ICESTORM 0x1b588bb3
 #define CPUFAMILY_ARM_BLIZZARD_AVALANCHE 0xda33d83d
 #define CPUFAMILY_ARM_EVEREST_SAWTOOTH 0x8765edea
+#define CPUFAMILY_ARM_IBIZA 0xfa33415e
+#define CPUFAMILY_ARM_PALMA 0x72015832
+#define CPUFAMILY_ARM_COLL 0x2876f5b5
+#define CPUFAMILY_ARM_LOBOS 0x5f4dea93
+#define CPUFAMILY_ARM_DONAN 0x6f5129ac
+#define CPUFAMILY_ARM_BRAVA 0x17d5b93a
+#define CPUFAMILY_ARM_TAHITI 0x75d4acb9
+#define CPUFAMILY_ARM_TUPAI 0x204526d0
 
 StringRef sys::getHostCPUName() {
   uint32_t Family;
   size_t Length = sizeof(Family);
   sysctlbyname("hw.cpufamily", &Family, &Length, NULL, 0);
 
+  // This is found by testing on actual hardware, and by looking at:
+  // https://github.com/apple-oss-distributions/xnu/blob/xnu-11215.41.3/osfmk/arm/cpuid.c#L109-L231.
+  //
+  // Another great resource is
+  // https://github.com/AsahiLinux/docs/wiki/Codenames.
+  //
+  // NOTE: We choose to return `apple-mX` instead of `apple-aX`, since the M1,
+  // M2, M3 etc. aliases are more widely known to users than A14, A15, A16 etc.
+  // (and this code is basically only used on host macOS anyways).
   switch (Family) {
+  case CPUFAMILY_UNKNOWN:
+    return "generic";
+  case CPUFAMILY_ARM_9:
+    return "arm920t"; // or arm926ej-s
+  case CPUFAMILY_ARM_11:
+    return "arm1136jf-s";
+  case CPUFAMILY_ARM_XSCALE:
+    return "xscale";
+  case CPUFAMILY_ARM_12: // Seems unused by the kernel
+    return "generic";
+  case CPUFAMILY_ARM_13:
+    return "cortex-a8";
+  case CPUFAMILY_ARM_14:
+    return "cortex-a9";
+  case CPUFAMILY_ARM_15:
+    return "cortex-a7";
   case CPUFAMILY_ARM_SWIFT:
     return "swift";
   case CPUFAMILY_ARM_CYCLONE:
@@ -1510,15 +1594,25 @@ StringRef sys::getHostCPUName() {
     return "apple-a12";
   case CPUFAMILY_ARM_LIGHTNING_THUNDER:
     return "apple-a13";
-  case CPUFAMILY_ARM_FIRESTORM_ICESTORM:
+  case CPUFAMILY_ARM_FIRESTORM_ICESTORM: // A14 / M1
     return "apple-m1";
-  case CPUFAMILY_ARM_BLIZZARD_AVALANCHE:
+  case CPUFAMILY_ARM_BLIZZARD_AVALANCHE: // A15 / M2
     return "apple-m2";
-  case CPUFAMILY_ARM_EVEREST_SAWTOOTH:
+  case CPUFAMILY_ARM_EVEREST_SAWTOOTH: // A16
+  case CPUFAMILY_ARM_IBIZA:            // M3
+  case CPUFAMILY_ARM_PALMA:            // M3 Max
+  case CPUFAMILY_ARM_LOBOS:            // M3 Pro
     return "apple-m3";
+  case CPUFAMILY_ARM_COLL: // A17 Pro
+    return "apple-a17";
+  case CPUFAMILY_ARM_DONAN:  // M4
+  case CPUFAMILY_ARM_BRAVA:  // M4 Max
+  case CPUFAMILY_ARM_TAHITI: // A18 Pro
+  case CPUFAMILY_ARM_TUPAI:  // A18
+    return "apple-m4";
   default:
     // Default to the newest CPU we know about.
-    return "apple-m3";
+    return "apple-m4";
   }
 }
 #elif defined(_AIX)
@@ -1549,6 +1643,12 @@ StringRef sys::getHostCPUName() {
   case 0x40000:
 #endif
     return "pwr10";
+#ifdef POWER_11
+  case POWER_11:
+#else
+  case 0x80000:
+#endif
+    return "pwr11";
   default:
     return "generic";
   }
@@ -1562,6 +1662,8 @@ StringRef sys::getHostCPUName() {
   switch (processor_id & 0xf000) {
   case 0xc000: // Loongson 64bit, 4-issue
     return "la464";
+  case 0xd000: // Loongson 64bit, 6-issue
+    return "la664";
   // TODO: Others.
   default:
     break;
@@ -1589,7 +1691,7 @@ StringRef sys::getHostCPUName() {
 #if defined(__linux__)
 StringRef sys::detail::getHostCPUNameForSPARC(StringRef ProcCpuinfoContent) {
   SmallVector<StringRef> Lines;
-  ProcCpuinfoContent.split(Lines, "\n");
+  ProcCpuinfoContent.split(Lines, '\n');
 
   // Look for cpu line to determine cpu name
   StringRef Cpu;
@@ -1866,20 +1968,23 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["cmpccxadd"]  = HasLeaf7Subleaf1 && ((EAX >> 7) & 1);
   Features["hreset"]     = HasLeaf7Subleaf1 && ((EAX >> 22) & 1);
   Features["avxifma"]    = HasLeaf7Subleaf1 && ((EAX >> 23) & 1) && HasAVXSave;
+  Features["movrs"] = HasLeaf7Subleaf1 && ((EAX >> 31) & 1);
   Features["avxvnniint8"] = HasLeaf7Subleaf1 && ((EDX >> 4) & 1) && HasAVXSave;
   Features["avxneconvert"] = HasLeaf7Subleaf1 && ((EDX >> 5) & 1) && HasAVXSave;
   Features["amx-complex"] = HasLeaf7Subleaf1 && ((EDX >> 8) & 1) && HasAMXSave;
   Features["avxvnniint16"] = HasLeaf7Subleaf1 && ((EDX >> 10) & 1) && HasAVXSave;
   Features["prefetchi"]  = HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
   Features["usermsr"]  = HasLeaf7Subleaf1 && ((EDX >> 15) & 1);
-  Features["avx10.1-256"] = HasLeaf7Subleaf1 && ((EDX >> 19) & 1);
+  bool HasAVX10 = HasLeaf7Subleaf1 && ((EDX >> 19) & 1);
   bool HasAPXF = HasLeaf7Subleaf1 && ((EDX >> 21) & 1);
   Features["egpr"] = HasAPXF;
   Features["push2pop2"] = HasAPXF;
   Features["ppx"] = HasAPXF;
   Features["ndd"] = HasAPXF;
   Features["ccmp"] = HasAPXF;
+  Features["nf"] = HasAPXF;
   Features["cf"] = HasAPXF;
+  Features["zu"] = HasAPXF;
 
   bool HasLeafD = MaxLevel >= 0xd &&
                   !getX86CpuIDAndInfoEx(0xd, 0x1, &EAX, &EBX, &ECX, &EDX);
@@ -1898,10 +2003,23 @@ const StringMap<bool> sys::getHostCPUFeatures() {
       MaxLevel >= 0x19 && !getX86CpuIDAndInfo(0x19, &EAX, &EBX, &ECX, &EDX);
   Features["widekl"] = HasLeaf7 && HasLeaf19 && ((EBX >> 2) & 1);
 
+  bool HasLeaf1E = MaxLevel >= 0x1e &&
+                   !getX86CpuIDAndInfoEx(0x1e, 0x1, &EAX, &EBX, &ECX, &EDX);
+  Features["amx-fp8"] = HasLeaf1E && ((EAX >> 4) & 1) && HasAMXSave;
+  Features["amx-transpose"] = HasLeaf1E && ((EAX >> 5) & 1) && HasAMXSave;
+  Features["amx-tf32"] = HasLeaf1E && ((EAX >> 6) & 1) && HasAMXSave;
+  Features["amx-avx512"] = HasLeaf1E && ((EAX >> 7) & 1) && HasAMXSave;
+  Features["amx-movrs"] = HasLeaf1E && ((EAX >> 8) & 1) && HasAMXSave;
+
   bool HasLeaf24 =
       MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
-  Features["avx10.1-512"] =
-      Features["avx10.1-256"] && HasLeaf24 && ((EBX >> 18) & 1);
+
+  int AVX10Ver = HasLeaf24 && (EBX & 0xff);
+  int Has512Len = HasLeaf24 && ((EBX >> 18) & 1);
+  Features["avx10.1-256"] = HasAVX10 && AVX10Ver >= 1;
+  Features["avx10.1-512"] = HasAVX10 && AVX10Ver >= 1 && Has512Len;
+  Features["avx10.2-256"] = HasAVX10 && AVX10Ver >= 2;
+  Features["avx10.2-512"] = HasAVX10 && AVX10Ver >= 2 && Has512Len;
 
   return Features;
 }
@@ -1913,7 +2031,7 @@ const StringMap<bool> sys::getHostCPUFeatures() {
     return Features;
 
   SmallVector<StringRef, 32> Lines;
-  P->getBuffer().split(Lines, "\n");
+  P->getBuffer().split(Lines, '\n');
 
   SmallVector<StringRef, 32> CPUFeatures;
 
@@ -1925,7 +2043,8 @@ const StringMap<bool> sys::getHostCPUFeatures() {
     }
 
 #if defined(__aarch64__)
-  // Keep track of which crypto features we have seen
+  // All of these are "crypto" features, but we must sift out actual features
+  // as the former meaning of "crypto" as a single feature is no more.
   enum { CAP_AES = 0x1, CAP_PMULL = 0x2, CAP_SHA1 = 0x4, CAP_SHA2 = 0x8 };
   uint32_t crypto = 0;
 #endif
@@ -1968,9 +2087,13 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   }
 
 #if defined(__aarch64__)
-  // If we have all crypto bits we can add the feature
-  if (crypto == (CAP_AES | CAP_PMULL | CAP_SHA1 | CAP_SHA2))
-    Features["crypto"] = true;
+  // LLVM has decided some AArch64 CPUs have all the instructions they _may_
+  // have, as opposed to all the instructions they _must_ have, so allow runtime
+  // information to correct us on that.
+  uint32_t Aes = CAP_AES | CAP_PMULL;
+  uint32_t Sha2 = CAP_SHA1 | CAP_SHA2;
+  Features["aes"] = (crypto & Aes) == Aes;
+  Features["sha2"] = (crypto & Sha2) == Sha2;
 #endif
 
   return Features;
@@ -1979,12 +2102,17 @@ const StringMap<bool> sys::getHostCPUFeatures() {
 const StringMap<bool> sys::getHostCPUFeatures() {
   StringMap<bool> Features;
 
-  if (IsProcessorFeaturePresent(PF_ARM_NEON_INSTRUCTIONS_AVAILABLE))
-    Features["neon"] = true;
-  if (IsProcessorFeaturePresent(PF_ARM_V8_CRC32_INSTRUCTIONS_AVAILABLE))
-    Features["crc"] = true;
-  if (IsProcessorFeaturePresent(PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE))
-    Features["crypto"] = true;
+  // If we're asking the OS at runtime, believe what the OS says
+  Features["neon"] =
+      IsProcessorFeaturePresent(PF_ARM_NEON_INSTRUCTIONS_AVAILABLE);
+  Features["crc"] =
+      IsProcessorFeaturePresent(PF_ARM_V8_CRC32_INSTRUCTIONS_AVAILABLE);
+
+  // Avoid inferring "crypto" means more than the traditional AES + SHA2
+  bool TradCrypto =
+      IsProcessorFeaturePresent(PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE);
+  Features["aes"] = TradCrypto;
+  Features["sha2"] = TradCrypto;
 
   return Features;
 }
@@ -1993,8 +2121,9 @@ const StringMap<bool> sys::getHostCPUFeatures() {
 const StringMap<bool> sys::getHostCPUFeatures() {
   unsigned long hwcap = getauxval(AT_HWCAP);
   bool HasFPU = hwcap & (1UL << 3); // HWCAP_LOONGARCH_FPU
-  uint32_t cpucfg2 = 0x2;
+  uint32_t cpucfg2 = 0x2, cpucfg3 = 0x3;
   __asm__("cpucfg %[cpucfg2], %[cpucfg2]\n\t" : [cpucfg2] "+r"(cpucfg2));
+  __asm__("cpucfg %[cpucfg3], %[cpucfg3]\n\t" : [cpucfg3] "+r"(cpucfg3));
 
   StringMap<bool> Features;
 
@@ -2005,6 +2134,16 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["lasx"] = hwcap & (1UL << 5); // HWCAP_LOONGARCH_LASX
   Features["lvz"] = hwcap & (1UL << 9);  // HWCAP_LOONGARCH_LVZ
 
+  Features["frecipe"] = cpucfg2 & (1U << 25); // CPUCFG.2.FRECIPE
+  Features["div32"] = cpucfg2 & (1U << 26);   // CPUCFG.2.DIV32
+  Features["lam-bh"] = cpucfg2 & (1U << 27);  // CPUCFG.2.LAM_BH
+  Features["lamcas"] = cpucfg2 & (1U << 28);  // CPUCFG.2.LAMCAS
+  Features["scq"] = cpucfg2 & (1U << 30);     // CPUCFG.2.SCQ
+
+  Features["ld-seq-sa"] = cpucfg3 & (1U << 23); // CPUCFG.3.LD_SEQ_SA
+
+  // TODO: Need to complete.
+  // Features["llacq-screl"] = cpucfg2 & (1U << 29); // CPUCFG.2.LLACQ_SCREL
   return Features;
 }
 #elif defined(__linux__) && defined(__riscv)
@@ -2015,7 +2154,8 @@ struct RISCVHwProbe {
 };
 const StringMap<bool> sys::getHostCPUFeatures() {
   RISCVHwProbe Query[]{{/*RISCV_HWPROBE_KEY_BASE_BEHAVIOR=*/3, 0},
-                       {/*RISCV_HWPROBE_KEY_IMA_EXT_0=*/4, 0}};
+                       {/*RISCV_HWPROBE_KEY_IMA_EXT_0=*/4, 0},
+                       {/*RISCV_HWPROBE_KEY_MISALIGNED_SCALAR_PERF=*/9, 0}};
   int Ret = syscall(/*__NR_riscv_hwprobe=*/258, /*pairs=*/Query,
                     /*pair_count=*/std::size(Query), /*cpu_count=*/0,
                     /*cpus=*/0, /*flags=*/0);
@@ -2071,9 +2211,26 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["zicond"] = ExtMask & (1ULL << 35);  // RISCV_HWPROBE_EXT_ZICOND
   Features["zihintpause"] =
       ExtMask & (1ULL << 36); // RISCV_HWPROBE_EXT_ZIHINTPAUSE
+  Features["zve32x"] = ExtMask & (1ULL << 37); // RISCV_HWPROBE_EXT_ZVE32X
+  Features["zve32f"] = ExtMask & (1ULL << 38); // RISCV_HWPROBE_EXT_ZVE32F
+  Features["zve64x"] = ExtMask & (1ULL << 39); // RISCV_HWPROBE_EXT_ZVE64X
+  Features["zve64f"] = ExtMask & (1ULL << 40); // RISCV_HWPROBE_EXT_ZVE64F
+  Features["zve64d"] = ExtMask & (1ULL << 41); // RISCV_HWPROBE_EXT_ZVE64D
+  Features["zimop"] = ExtMask & (1ULL << 42);  // RISCV_HWPROBE_EXT_ZIMOP
+  Features["zca"] = ExtMask & (1ULL << 43);    // RISCV_HWPROBE_EXT_ZCA
+  Features["zcb"] = ExtMask & (1ULL << 44);    // RISCV_HWPROBE_EXT_ZCB
+  Features["zcd"] = ExtMask & (1ULL << 45);    // RISCV_HWPROBE_EXT_ZCD
+  Features["zcf"] = ExtMask & (1ULL << 46);    // RISCV_HWPROBE_EXT_ZCF
+  Features["zcmop"] = ExtMask & (1ULL << 47);  // RISCV_HWPROBE_EXT_ZCMOP
+  Features["zawrs"] = ExtMask & (1ULL << 48);  // RISCV_HWPROBE_EXT_ZAWRS
 
-  // TODO: set unaligned-scalar-mem if RISCV_HWPROBE_KEY_MISALIGNED_PERF returns
-  // RISCV_HWPROBE_MISALIGNED_FAST.
+  // Check whether the processor supports fast misaligned scalar memory access.
+  // NOTE: RISCV_HWPROBE_KEY_MISALIGNED_SCALAR_PERF is only available on
+  // Linux 6.11 or later. If it is not recognized, the key field will be cleared
+  // to -1.
+  if (Query[2].Key != -1 &&
+      Query[2].Value == /*RISCV_HWPROBE_MISALIGNED_SCALAR_FAST=*/3)
+    Features["unaligned-scalar-mem"] = true;
 
   return Features;
 }

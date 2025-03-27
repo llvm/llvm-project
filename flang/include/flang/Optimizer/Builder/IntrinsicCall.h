@@ -16,7 +16,7 @@
 #include "flang/Optimizer/Builder/Runtime/Numeric.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Runtime/entry-names.h"
-#include "flang/Runtime/iostat.h"
+#include "flang/Runtime/iostat-consts.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -166,11 +166,6 @@ struct IntrinsicLibrary {
   getRuntimeCallGenerator(llvm::StringRef name,
                           mlir::FunctionType soughtFuncType);
 
-  /// Helper to generate TODOs for module procedures that must be intercepted in
-  /// lowering and are not yet implemented.
-  template <const char *intrinsicName>
-  void genModuleProcTODO(llvm::ArrayRef<fir::ExtendedValue>);
-
   void genAbort(llvm::ArrayRef<fir::ExtendedValue>);
   /// Lowering for the ABS intrinsic. The ABS intrinsic expects one argument in
   /// the llvm::ArrayRef. The ABS intrinsic is lowered into MLIR/FIR operation
@@ -190,6 +185,20 @@ struct IntrinsicLibrary {
   mlir::Value genAnint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genAny(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAtanpi(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAtomicAdd(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAtomicAnd(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genAtomicCas(mlir::Type,
+                                  llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genAtomicDec(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genAtomicExch(mlir::Type,
+                                   llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genAtomicInc(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAtomicMax(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAtomicMin(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAtomicOr(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAtomicSub(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genAtomicXor(mlir::Type,
+                                  llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue
       genCommandArgumentCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAsind(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -207,6 +216,8 @@ struct IntrinsicLibrary {
   mlir::Value genBtest(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genCeiling(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genChar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genChdir(std::optional<mlir::Type> resultType,
+                              llvm::ArrayRef<fir::ExtendedValue>);
   template <mlir::arith::CmpIPredicate pred>
   fir::ExtendedValue genCharacterCompare(mlir::Type,
                                          llvm::ArrayRef<fir::ExtendedValue>);
@@ -215,16 +226,21 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genCpuTime(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCshift(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  template <const char *fctName, int extent>
+  fir::ExtendedValue genCUDALDXXFunc(mlir::Type,
+                                     llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCAssociatedCFunPtr(mlir::Type,
                                            llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCAssociatedCPtr(mlir::Type,
                                         llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genCDevLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genErfcScaled(mlir::Type resultType,
                             llvm::ArrayRef<mlir::Value> args);
   void genCFPointer(llvm::ArrayRef<fir::ExtendedValue>);
   void genCFProcPointer(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCFunLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genClock64(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <mlir::arith::CmpIPredicate pred>
   fir::ExtendedValue genCPtrCompare(mlir::Type,
                                     llvm::ArrayRef<fir::ExtendedValue>);
@@ -249,6 +265,7 @@ struct IntrinsicLibrary {
   mlir::Value genFloor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genFraction(mlir::Type resultType,
                           mlir::ArrayRef<mlir::Value> args);
+  void genFree(mlir::ArrayRef<fir::ExtendedValue> args);
   fir::ExtendedValue genGetCwd(std::optional<mlir::Type> resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args);
   void genGetCommand(mlir::ArrayRef<fir::ExtendedValue> args);
@@ -256,6 +273,12 @@ struct IntrinsicLibrary {
                         llvm::ArrayRef<mlir::Value> args);
   void genGetCommandArgument(mlir::ArrayRef<fir::ExtendedValue> args);
   void genGetEnvironmentVariable(llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genGetGID(mlir::Type resultType,
+                        llvm::ArrayRef<mlir::Value> args);
+  mlir::Value genGetUID(mlir::Type resultType,
+                        llvm::ArrayRef<mlir::Value> args);
+  fir::ExtendedValue genHostnm(std::optional<mlir::Type> resultType,
+                               llvm::ArrayRef<fir::ExtendedValue> args);
   fir::ExtendedValue genIall(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIand(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genIany(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -268,11 +291,11 @@ struct IntrinsicLibrary {
   mlir::Value genIeeeCopySign(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genIeeeGetFlag(llvm::ArrayRef<fir::ExtendedValue>);
   void genIeeeGetHaltingMode(llvm::ArrayRef<fir::ExtendedValue>);
-  template <bool isGet>
-  void genIeeeGetOrSetModes(llvm::ArrayRef<fir::ExtendedValue>);
-  template <bool isGet>
-  void genIeeeGetOrSetStatus(llvm::ArrayRef<fir::ExtendedValue>);
+  template <bool isGet, bool isModes>
+  void genIeeeGetOrSetModesOrStatus(llvm::ArrayRef<fir::ExtendedValue>);
   void genIeeeGetRoundingMode(llvm::ArrayRef<fir::ExtendedValue>);
+  void genIeeeGetUnderflowMode(llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genIeeeInt(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeIsFinite(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeIsNan(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeIsNegative(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -283,17 +306,25 @@ struct IntrinsicLibrary {
   template <mlir::arith::CmpFPredicate pred>
   mlir::Value genIeeeQuietCompare(mlir::Type resultType,
                                   llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIeeeReal(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIeeeRem(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIeeeRint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <bool isFlag>
   void genIeeeSetFlagOrHaltingMode(llvm::ArrayRef<fir::ExtendedValue>);
   void genIeeeSetRoundingMode(llvm::ArrayRef<fir::ExtendedValue>);
+  void genIeeeSetUnderflowMode(llvm::ArrayRef<fir::ExtendedValue>);
   template <mlir::arith::CmpFPredicate pred>
   mlir::Value genIeeeSignalingCompare(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeSignbit(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue
-      genIeeeSupportFlagOrHalting(mlir::Type,
-                                  llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genIeeeSupportRounding(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genIeeeSupportFlag(mlir::Type,
+                                        llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genIeeeSupportHalting(mlir::Type,
+                                           llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genIeeeSupportRounding(mlir::Type,
+                                            llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genIeeeSupportStandard(mlir::Type,
+                                            llvm::ArrayRef<fir::ExtendedValue>);
   template <mlir::arith::CmpIPredicate pred>
   mlir::Value genIeeeTypeCompare(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeUnordered(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -315,8 +346,11 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genLen(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genLenTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genMalloc(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <typename Shift>
   mlir::Value genMask(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genMatchAllSync(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genMatchAnySync(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genMatmul(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMatmulTranspose(mlir::Type,
                                         llvm::ArrayRef<fir::ExtendedValue>);
@@ -330,6 +364,8 @@ struct IntrinsicLibrary {
   mlir::Value genModulo(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genMoveAlloc(llvm::ArrayRef<fir::ExtendedValue>);
   void genMvbits(llvm::ArrayRef<fir::ExtendedValue>);
+  enum class NearestProc { Nearest, NextAfter, NextDown, NextUp };
+  template <NearestProc>
   mlir::Value genNearest(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genNint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genNorm2(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -383,7 +419,13 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genSignalSubroutine(llvm::ArrayRef<fir::ExtendedValue>);
   void genSleep(llvm::ArrayRef<fir::ExtendedValue>);
-  void genSystem(mlir::ArrayRef<fir::ExtendedValue> args);
+  void genSyncThreads(llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genSyncThreadsAnd(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genSyncThreadsCount(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genSyncThreadsOr(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  void genSyncWarp(llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genSystem(std::optional<mlir::Type>,
+                               mlir::ArrayRef<fir::ExtendedValue> args);
   void genSystemClock(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genTand(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genTrailz(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -391,6 +433,9 @@ struct IntrinsicLibrary {
                                  llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genTranspose(mlir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
+  void genThreadFence(llvm::ArrayRef<fir::ExtendedValue>);
+  void genThreadFenceBlock(llvm::ArrayRef<fir::ExtendedValue>);
+  void genThreadFenceSystem(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUnpack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -422,9 +467,12 @@ struct IntrinsicLibrary {
                                   mlir::Type resultType,
                                   llvm::ArrayRef<fir::ExtendedValue> args);
 
-  /// Generate code to raise \p except if \p cond is absent,
+  /// Generate code to raise \p excepts if \p cond is absent,
   /// or present and true.
-  void genRaiseExcept(int except, mlir::Value cond = {});
+  void genRaiseExcept(int excepts, mlir::Value cond = {});
+
+  /// Generate a quiet NaN of a given floating point type.
+  mlir::Value genQNan(mlir::Type resultType);
 
   /// Define the different FIR generators that can be mapped to intrinsic to
   /// generate the related code.
@@ -655,7 +703,7 @@ static inline mlir::Type getTypeHelper(mlir::MLIRContext *context,
     r = builder.getRealType(kind);
     break;
   case ParamTypeId::Complex:
-    r = fir::ComplexType::get(context, kind);
+    r = mlir::ComplexType::get(builder.getRealType(kind));
     break;
   }
 

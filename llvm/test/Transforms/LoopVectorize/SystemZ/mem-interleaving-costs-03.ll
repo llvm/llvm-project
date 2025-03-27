@@ -6,7 +6,8 @@
 ; Check cost function for <8 x i128> store interleave group.
 
 ; CHECK: LV: Checking a loop in 'fun'
-; CHECK: LV: Found an estimated cost of 8 for VF 4 For instruction:   store i128 8721036757475490113
+; CHECK: LV: Found an estimated cost of 4 for VF 4 For instruction:   store i128 8721036757475490113
+; CHECK: LV: Found an estimated cost of 4 for VF 4 For instruction:   store i128 8721036757475490113
 
 define noundef i32 @fun(i32 %argc, ptr nocapture readnone %argv) {
 entry:

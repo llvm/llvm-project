@@ -11,7 +11,7 @@ struct HasField {
 
 void foo(int *b) {
   struct HasField f;
-  // CHECK: %[[A:.+]] = getelementptr inbounds %struct.HasField, ptr addrspace(4) %{{.+}}
+  // CHECK: %[[A:.+]] = getelementptr inbounds nuw %struct.HasField, ptr addrspace(4) %{{.+}}
   // CHECK: %[[CALL:.+]] = call ptr addrspace(4) @llvm.ptr.annotation.p4.p1(ptr addrspace(4) %[[A]], ptr addrspace(1) [[ANNOT]]
   // CHECK: store ptr addrspace(4) %{{[0-9]+}}, ptr addrspace(4) %[[CALL]]
   f.a = b;

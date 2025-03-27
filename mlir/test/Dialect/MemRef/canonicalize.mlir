@@ -70,6 +70,19 @@ func.func @subview_of_static_full_size(%arg0 : memref<4x6x16x32xi8>) -> memref<4
 
 // -----
 
+// CHECK-LABEL: func @negative_subview_of_static_full_size
+//  CHECK-SAME:   %[[ARG0:.+]]: memref<16x4xf32,  strided<[4, 1], offset: ?>>
+//  CHECK-SAME:   %[[IDX:.+]]: index
+//       CHECK:   %[[S:.+]] = memref.subview %[[ARG0]][%[[IDX]], 0] [16, 4] [1, 1]
+//  CHECK-SAME:                    to memref<16x4xf32,  strided<[4, 1], offset: ?>>
+//       CHECK:    return %[[S]] : memref<16x4xf32,  strided<[4, 1], offset: ?>>
+func.func @negative_subview_of_static_full_size(%arg0:  memref<16x4xf32,  strided<[4, 1], offset: ?>>, %idx: index) -> memref<16x4xf32,  strided<[4, 1], offset: ?>> {
+  %0 = memref.subview %arg0[%idx, 0][16, 4][1, 1] : memref<16x4xf32,  strided<[4, 1], offset: ?>> to memref<16x4xf32,  strided<[4, 1], offset: ?>>
+  return %0 : memref<16x4xf32,  strided<[4, 1], offset: ?>>
+}
+
+// -----
+
 func.func @subview_canonicalize(%arg0 : memref<?x?x?xf32>, %arg1 : index,
     %arg2 : index) -> memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
 {

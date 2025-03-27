@@ -1044,9 +1044,9 @@ struct EmulateWideIntPass final
       return typeConverter.isLegal(op);
     };
     target.addDynamicallyLegalOp<func::CallOp, func::ReturnOp>(opLegalCallback);
-    target
-        .addDynamicallyLegalDialect<arith::ArithDialect, vector::VectorDialect>(
-            opLegalCallback);
+    target.addDynamicallyLegalOp<vector::PrintOp>(opLegalCallback);
+    target.addDynamicallyLegalDialect<arith::ArithDialect>(opLegalCallback);
+    target.addLegalDialect<vector::VectorDialect>();
 
     RewritePatternSet patterns(ctx);
     arith::populateArithWideIntEmulationPatterns(typeConverter, patterns);
@@ -1081,7 +1081,7 @@ arith::WideIntEmulationConverter::WideIntEmulationConverter(
     if (width == 2 * maxIntWidth)
       return VectorType::get(2, IntegerType::get(ty.getContext(), maxIntWidth));
 
-    return std::nullopt;
+    return nullptr;
   });
 
   // Vector case.
@@ -1102,7 +1102,7 @@ arith::WideIntEmulationConverter::WideIntEmulationConverter(
                              IntegerType::get(ty.getContext(), maxIntWidth));
     }
 
-    return std::nullopt;
+    return nullptr;
   });
 
   // Function case.
@@ -1111,18 +1111,19 @@ arith::WideIntEmulationConverter::WideIntEmulationConverter(
     //   (i2N, i2N) -> i2N --> (vector<2xiN>, vector<2xiN>) -> vector<2xiN>
     SmallVector<Type> inputs;
     if (failed(convertTypes(ty.getInputs(), inputs)))
-      return std::nullopt;
+      return nullptr;
 
     SmallVector<Type> results;
     if (failed(convertTypes(ty.getResults(), results)))
-      return std::nullopt;
+      return nullptr;
 
     return FunctionType::get(ty.getContext(), inputs, results);
   });
 }
 
 void arith::populateArithWideIntEmulationPatterns(
-    WideIntEmulationConverter &typeConverter, RewritePatternSet &patterns) {
+    const WideIntEmulationConverter &typeConverter,
+    RewritePatternSet &patterns) {
   // Populate `func.*` conversion patterns.
   populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,
                                                                  typeConverter);

@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp -fopenmp-version=50
 ! OpenMP Version 5.0
 ! 2.10.1 use_device_ptr clause
 ! List item in USE_DEVICE_PTR clause must not be structure element.
@@ -20,7 +20,7 @@ subroutine omp_target_data
    type(my_type) :: my_var
    a = 1
 
-   !ERROR: A variable that is part of another variable (structure element) cannot appear on the TARGET DATA USE_DEVICE_PTR clause
+   !ERROR: A variable that is part of another variable cannot appear on the USE_DEVICE_PTR clause
    !$omp target data map(tofrom: a, arrayB) use_device_ptr(my_var%my_cptr)
       allocate(arrayB)
       call c_f_pointer(my_var%my_cptr, arrayB)

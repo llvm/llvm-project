@@ -163,6 +163,9 @@ else()
   set(OPENMP_TEST_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS 1)
 endif()
 
+set(OPENMP_TEST_ENABLE_TSAN "${OPENMP_TEST_COMPILER_HAS_TSAN_FLAGS}" CACHE BOOL
+    "Whether to enable tests using tsan")
+
 # Function to set compiler features for use in lit.
 function(update_test_compiler_features)
   set(FEATURES "[")

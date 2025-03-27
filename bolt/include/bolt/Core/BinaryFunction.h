@@ -117,7 +117,6 @@ inline raw_ostream &operator<<(raw_ostream &OS,
     TotalCount += CSP.Count;
     TotalMispreds += CSP.Mispreds;
   }
-  SS.flush();
 
   OS << TotalCount << " (" << TotalMispreds << " misses) :" << TempString;
   return OS;
@@ -344,9 +343,6 @@ private:
   /// True if the function uses ORC format for stack unwinding.
   bool HasORC{false};
 
-  /// True if the original entry point was patched.
-  bool IsPatched{false};
-
   /// True if the function contains explicit or implicit indirect branch to its
   /// split fragments, e.g., split jump table, landing pad in split fragment
   bool HasIndirectTargetToSplitFragment{false};
@@ -387,6 +383,9 @@ private:
   /// Raw branch count for this function in the profile.
   uint64_t RawBranchCount{0};
 
+  /// Dynamically executed function bytes, used for density computation.
+  uint64_t SampleCountInBytes{0};
+
   /// Indicates the type of profile the function is using.
   uint16_t ProfileFlags{PF_NONE};
 
@@ -425,6 +424,9 @@ private:
 
   /// Function order for streaming into the destination binary.
   uint32_t Index{-1U};
+
+  /// Function is referenced by a non-control flow instruction.
+  bool HasAddressTaken{false};
 
   /// Get basic block index assuming it belongs to this function.
   unsigned getIndex(const BinaryBasicBlock *BB) const {
@@ -524,6 +526,11 @@ private:
   /// Marking for the beginnings of language-specific data areas for each
   /// fragment of the function.
   SmallVector<MCSymbol *, 0> LSDASymbols;
+
+  /// Each function fragment may have another fragment containing all landing
+  /// pads for it. If that's the case, the LP fragment will be stored in the
+  /// vector below with indexing starting with the main fragment.
+  SmallVector<std::optional<FragmentNum>, 0> LPFragments;
 
   /// Map to discover which CFIs are attached to a given instruction offset.
   /// Maps an instruction offset into a FrameInstructions offset.
@@ -815,6 +822,14 @@ public:
     return nullptr;
   }
 
+  /// Return true if function is referenced in a non-control flow instruction.
+  /// This flag is set when the code and relocation analyses are being
+  /// performed, which occurs when safe ICF (Identical Code Folding) is enabled.
+  bool hasAddressTaken() const { return HasAddressTaken; }
+
+  /// Set whether function is referenced in a non-control flow instruction.
+  void setHasAddressTaken(bool AddressTaken) { HasAddressTaken = AddressTaken; }
+
   /// Returns the raw binary encoding of this function.
   ErrorOr<ArrayRef<uint8_t>> getData() const;
 
@@ -904,6 +919,10 @@ public:
   BinaryBasicBlock *getBasicBlockAtOffset(uint64_t Offset) {
     BinaryBasicBlock *BB = getBasicBlockContainingOffset(Offset);
     return BB && BB->getOffset() == Offset ? BB : nullptr;
+  }
+
+  const BinaryBasicBlock *getBasicBlockAtOffset(uint64_t Offset) const {
+    return const_cast<BinaryFunction *>(this)->getBasicBlockAtOffset(Offset);
   }
 
   /// Retrieve the landing pad BB associated with invoke instruction \p Invoke
@@ -1241,7 +1260,7 @@ public:
   /// Register relocation type \p RelType at a given \p Address in the function
   /// against \p Symbol.
   /// Assert if the \p Address is not inside this function.
-  void addRelocation(uint64_t Address, MCSymbol *Symbol, uint64_t RelType,
+  void addRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t RelType,
                      uint64_t Addend, uint64_t Value);
 
   /// Return the name of the section this function originated from.
@@ -1353,9 +1372,6 @@ public:
 
   /// Return true if the function uses ORC format for stack unwinding.
   bool hasORC() const { return HasORC; }
-
-  /// Return true if the original entry point was patched.
-  bool isPatched() const { return IsPatched; }
 
   const JumpTable *getJumpTable(const MCInst &Inst) const {
     const uint64_t Address = BC.MIB->getJumpTable(Inst);
@@ -1692,6 +1708,8 @@ public:
 
   void setPseudo(bool Pseudo) { IsPseudo = Pseudo; }
 
+  void setPreserveNops(bool Value) { PreserveNops = Value; }
+
   BinaryFunction &setUsesGnuArgsSize(bool Uses = true) {
     UsesGnuArgsSize = Uses;
     return *this;
@@ -1704,8 +1722,6 @@ public:
 
   /// Mark function that should not be emitted.
   void setIgnored();
-
-  void setIsPatched(bool V) { IsPatched = V; }
 
   void setHasIndirectTargetToSplitFragment(bool V) {
     HasIndirectTargetToSplitFragment = V;
@@ -1793,11 +1809,6 @@ public:
     return ParentFragments.contains(&Other);
   }
 
-  /// Returns if this function is a parent of \p Other function.
-  bool isParentOf(const BinaryFunction &Other) const {
-    return Fragments.contains(&Other);
-  }
-
   /// Return the child fragment form parent function
   iterator_range<FragmentsSetTy::const_iterator> getFragments() const {
     return iterator_range<FragmentsSetTy::const_iterator>(Fragments.begin(),
@@ -1806,11 +1817,6 @@ public:
 
   /// Return the parent function for split function fragments.
   FragmentsSetTy *getParentFragments() { return &ParentFragments; }
-
-  /// Returns if this function is a parent or child of \p Other function.
-  bool isParentOrChildOf(const BinaryFunction &Other) const {
-    return isChildOf(Other) || isParentOf(Other);
-  }
 
   /// Set the profile data for the number of times the function was called.
   BinaryFunction &setExecutionCount(uint64_t Count) {
@@ -1853,6 +1859,9 @@ public:
   /// to this function.
   void setRawBranchCount(uint64_t Count) { RawBranchCount = Count; }
 
+  /// Return the number of dynamically executed bytes, from raw perf data.
+  uint64_t getSampleCountInBytes() const { return SampleCountInBytes; }
+
   /// Return the execution count for functions with known profile.
   /// Return 0 if the function has no profile.
   uint64_t getKnownExecutionCount() const {
@@ -1882,6 +1891,42 @@ public:
     LSDASymbols[F.get()] = BC.Ctx->getOrCreateSymbol(SymbolName);
 
     return LSDASymbols[F.get()];
+  }
+
+  /// If all landing pads for the function fragment \p F are located in fragment
+  /// \p LPF, designate \p LPF as a landing-pad fragment for \p F. Passing
+  /// std::nullopt in LPF, means that landing pads for \p F are located in more
+  /// than one fragment.
+  void setLPFragment(const FragmentNum F, std::optional<FragmentNum> LPF) {
+    if (F.get() >= LPFragments.size())
+      LPFragments.resize(F.get() + 1);
+
+    LPFragments[F.get()] = LPF;
+  }
+
+  /// If function fragment \p F has a designated landing pad fragment, i.e. a
+  /// fragment that contains all landing pads for throwers in \p F, then return
+  /// that landing pad fragment number. If \p F does not need landing pads,
+  /// return \p F. Return nullptr if landing pads for \p F are scattered among
+  /// several function fragments.
+  std::optional<FragmentNum> getLPFragment(const FragmentNum F) {
+    if (!isSplit()) {
+      assert(F == FragmentNum::main() && "Invalid fragment number");
+      return FragmentNum::main();
+    }
+
+    if (F.get() >= LPFragments.size())
+      return std::nullopt;
+
+    return LPFragments[F.get()];
+  }
+
+  /// Return a symbol corresponding to a landing pad fragment for fragment \p F.
+  /// See getLPFragment().
+  MCSymbol *getLPStartSymbol(const FragmentNum F) {
+    if (std::optional<FragmentNum> LPFragment = getLPFragment(F))
+      return getSymbol(*LPFragment);
+    return nullptr;
   }
 
   void setOutputDataAddress(uint64_t Address) { OutputDataOffset = Address; }
@@ -2007,6 +2052,11 @@ public:
     return Islands ? Islands->getAlignment() : 1;
   }
 
+  /// If there is a constant island in the range [StartOffset, EndOffset),
+  /// return its address.
+  std::optional<uint64_t> getIslandInRange(uint64_t StartOffset,
+                                           uint64_t EndOffset) const;
+
   uint64_t
   estimateConstantIslandSize(const BinaryFunction *OnBehalfOf = nullptr) const {
     if (!Islands)
@@ -2092,6 +2142,9 @@ public:
   // Check for linker veneers, which lack relocations and need manual
   // adjustments.
   void handleAArch64IndirectCall(MCInst &Instruction, const uint64_t Offset);
+
+  /// Analyze instruction to identify a function reference.
+  void analyzeInstructionForFuncReference(const MCInst &Inst);
 
   /// Scan function for references to other functions. In relocation mode,
   /// add relocations for external references. In non-relocation mode, detect
@@ -2363,6 +2416,19 @@ inline raw_ostream &operator<<(raw_ostream &OS,
                                const BinaryFunction &Function) {
   OS << Function.getPrintName();
   return OS;
+}
+
+/// Compare function by index if it is valid, fall back to the original address
+/// otherwise.
+inline bool compareBinaryFunctionByIndex(const BinaryFunction *A,
+                                         const BinaryFunction *B) {
+  if (A->hasValidIndex() && B->hasValidIndex())
+    return A->getIndex() < B->getIndex();
+  if (A->hasValidIndex() && !B->hasValidIndex())
+    return true;
+  if (!A->hasValidIndex() && B->hasValidIndex())
+    return false;
+  return A->getAddress() < B->getAddress();
 }
 
 } // namespace bolt

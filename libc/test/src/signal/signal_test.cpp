@@ -13,14 +13,12 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <signal.h>
-
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
 TEST(LlvmLibcSignal, Invalid) {
   LIBC_NAMESPACE::libc_errno = 0;
-  LIBC_NAMESPACE::sighandler_t valid = +[](int) {};
+  auto *valid = +[](int) {};
   EXPECT_THAT((void *)LIBC_NAMESPACE::signal(0, valid),
               Fails(EINVAL, (void *)SIG_ERR));
   EXPECT_THAT((void *)LIBC_NAMESPACE::signal(65, valid),

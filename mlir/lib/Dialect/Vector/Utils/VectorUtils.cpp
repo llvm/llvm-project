@@ -261,7 +261,7 @@ bool vector::isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
   ArrayRef<int64_t> vectorShape = vectorType.getShape();
   auto vecRank = vectorType.getRank();
 
-  if (!trailingNDimsContiguous(memrefType, vecRank))
+  if (!memrefType.areTrailingDimsContiguous(vecRank))
     return false;
 
   // Extract the trailing dims and strides of the input memref
@@ -323,8 +323,7 @@ SmallVector<OpFoldResult> vector::getMixedSizesXfer(bool hasTensorSemantics,
 }
 
 bool vector::isLinearizableVector(VectorType type) {
-  auto numScalableDims = llvm::count(type.getScalableDims(), true);
-  return (type.getRank() > 1) && (numScalableDims <= 1);
+  return (type.getRank() > 1) && (type.getNumScalableDims() <= 1);
 }
 
 Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,

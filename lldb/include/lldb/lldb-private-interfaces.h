@@ -9,7 +9,6 @@
 #ifndef LLDB_LLDB_PRIVATE_INTERFACES_H
 #define LLDB_LLDB_PRIVATE_INTERFACES_H
 
-#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -25,12 +24,14 @@ class Value;
 } // namespace llvm
 
 namespace lldb_private {
+class ScriptedInterfaceUsages;
 typedef lldb::ABISP (*ABICreateInstance)(lldb::ProcessSP process_sp,
                                          const ArchSpec &arch);
 typedef std::unique_ptr<Architecture> (*ArchitectureCreateInstance)(
     const ArchSpec &arch);
-typedef lldb::DisassemblerSP (*DisassemblerCreateInstance)(const ArchSpec &arch,
-                                                           const char *flavor);
+typedef lldb::DisassemblerSP (*DisassemblerCreateInstance)(
+    const ArchSpec &arch, const char *flavor, const char *cpu,
+    const char *features);
 typedef DynamicLoader *(*DynamicLoaderCreateInstance)(Process *process,
                                                       bool force);
 typedef lldb::JITLoaderSP (*JITLoaderCreateInstance)(Process *process,
@@ -56,7 +57,7 @@ typedef ObjectFile *(*ObjectFileCreateMemoryInstance)(
     const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
     const lldb::ProcessSP &process_sp, lldb::addr_t offset);
 typedef bool (*ObjectFileSaveCore)(const lldb::ProcessSP &process_sp,
-                                   const lldb_private::SaveCoreOptions &options,
+                                   lldb_private::SaveCoreOptions &options,
                                    Status &error);
 typedef EmulateInstruction *(*EmulateInstructionCreateInstance)(
     const ArchSpec &arch, InstructionType inst_type);
@@ -124,6 +125,8 @@ typedef lldb::REPLSP (*REPLCreateInstance)(Status &error,
                                            lldb::LanguageType language,
                                            Debugger *debugger, Target *target,
                                            const char *repl_options);
+typedef bool (*ScriptedInterfaceCreateInstance)(lldb::ScriptLanguage language,
+                                                ScriptedInterfaceUsages usages);
 typedef int (*ComparisonFunction)(const void *, const void *);
 typedef void (*DebuggerInitializeCallback)(Debugger &debugger);
 /// Trace

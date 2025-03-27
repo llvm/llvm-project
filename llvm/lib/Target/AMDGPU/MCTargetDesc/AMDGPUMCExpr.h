@@ -48,14 +48,10 @@ private:
   AMDGPUMCExpr(VariantKind Kind, ArrayRef<const MCExpr *> Args, MCContext &Ctx);
   ~AMDGPUMCExpr();
 
-  bool evaluateExtraSGPRs(MCValue &Res, const MCAssembler *Asm,
-                          const MCFixup *Fixup) const;
-  bool evaluateTotalNumVGPR(MCValue &Res, const MCAssembler *Asm,
-                            const MCFixup *Fixup) const;
-  bool evaluateAlignTo(MCValue &Res, const MCAssembler *Asm,
-                       const MCFixup *Fixup) const;
-  bool evaluateOccupancy(MCValue &Res, const MCAssembler *Asm,
-                         const MCFixup *Fixup) const;
+  bool evaluateExtraSGPRs(MCValue &Res, const MCAssembler *Asm) const;
+  bool evaluateTotalNumVGPR(MCValue &Res, const MCAssembler *Asm) const;
+  bool evaluateAlignTo(MCValue &Res, const MCAssembler *Asm) const;
+  bool evaluateOccupancy(MCValue &Res, const MCAssembler *Asm) const;
 
 public:
   static const AMDGPUMCExpr *
@@ -90,21 +86,34 @@ public:
                                              const GCNSubtarget &STM,
                                              MCContext &Ctx);
 
+  ArrayRef<const MCExpr *> getArgs() const { return Args; }
   VariantKind getKind() const { return Kind; }
   const MCExpr *getSubExpr(size_t Index) const;
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCFixup *Fixup) const override;
+  bool evaluateAsRelocatableImpl(MCValue &Res,
+                                 const MCAssembler *Asm) const override;
+  bool isSymbolUsedInExpression(const MCSymbol *Sym) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override;
-  void fixELFSymbolsInTLSFixups(MCAssembler &) const override{};
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }
 };
 
+namespace AMDGPU {
+// Tries to leverage KnownBits for MCExprs to reduce and limit any composed
+// MCExprs printing. E.g., for an expression such as
+// ((unevaluatable_sym | 1) & 1) won't evaluate due to unevaluatable_sym and
+// would verbosely print the full expression; however, KnownBits should deduce
+// the value to be 1. Particularly useful for AMDGPU metadata MCExprs.
+void printAMDGPUMCExpr(const MCExpr *Expr, raw_ostream &OS,
+                       const MCAsmInfo *MAI);
+
+const MCExpr *foldAMDGPUMCExpr(const MCExpr *Expr, MCContext &Ctx);
+
+} // end namespace AMDGPU
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCEXPR_H

@@ -125,7 +125,7 @@ body:             |
 # CHECK: 	mvhi	160(%r15), 0            # 4-byte Folded Spill
 # CHECK:	mvc	160(4,%r15), 0(%r2)     # 4-byte Folded Spill
 # CHECK-LABEL: .LBB2_2:
-# CHECK:        l       %r0, 160(%r15)          # 4-byte Folded Reload
+# CHECK:        l       %r0, 160(%r15)          # 4-byte Reload
 # CHECK:        clfi    %r0, 65536
 ---
 name:            fun2
@@ -182,7 +182,7 @@ body:             |
 # CHECK: 	mvghi	160(%r15), 0            # 8-byte Folded Spill
 # CHECK:	mvc	160(8,%r15), 0(%r2)     # 8-byte Folded Spill
 # CHECK-LABEL: .LBB3_2:
-# CHECK:        lg      %r0, 160(%r15)          # 8-byte Folded Reload
+# CHECK:        lg      %r0, 160(%r15)          # 8-byte Reload
 # CHECK:        clgfi   %r0, 65536
 ---
 name:            fun3

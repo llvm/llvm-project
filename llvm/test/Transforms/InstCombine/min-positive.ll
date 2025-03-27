@@ -97,7 +97,7 @@ define i1 @maybe_not_positive(i32 %other) {
 
 define <2 x i1> @maybe_not_positive_vec(<2 x i32> %x, <2 x i32> %other) {
 ; CHECK-LABEL: @maybe_not_positive_vec(
-; CHECK-NEXT:    [[NOTNEG:%.*]] = and <2 x i32> [[X:%.*]], <i32 7, i32 7>
+; CHECK-NEXT:    [[NOTNEG:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 7)
 ; CHECK-NEXT:    [[SEL:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[NOTNEG]], <2 x i32> [[OTHER:%.*]])
 ; CHECK-NEXT:    [[TEST:%.*]] = icmp sgt <2 x i32> [[SEL]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[TEST]]

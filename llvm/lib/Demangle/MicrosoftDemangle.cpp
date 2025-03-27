@@ -24,6 +24,7 @@
 #include <array>
 #include <cctype>
 #include <cstdio>
+#include <optional>
 #include <string_view>
 #include <tuple>
 
@@ -2035,6 +2036,10 @@ Demangler::demanglePrimitiveType(std::string_view &MangledName) {
       return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::Char16);
     case 'U':
       return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::Char32);
+    case 'P':
+      return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::Auto);
+    case 'T':
+      return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::DecltypeAuto);
     }
     break;
   }
@@ -2422,6 +2427,24 @@ void Demangler::dumpBackReferences() {
   }
   if (Backrefs.NamesCount > 0)
     std::printf("\n");
+}
+
+std::optional<size_t>
+llvm::getArm64ECInsertionPointInMangledName(std::string_view MangledName) {
+  std::string_view ProcessedName{MangledName};
+
+  // We only support this for MSVC-style C++ symbols.
+  if (!consumeFront(ProcessedName, '?'))
+    return std::nullopt;
+
+  // The insertion point is just after the name of the symbol, so parse that to
+  // remove it from the processed name.
+  Demangler D;
+  D.demangleFullyQualifiedSymbolName(ProcessedName);
+  if (D.Error)
+    return std::nullopt;
+
+  return MangledName.length() - ProcessedName.length();
 }
 
 char *llvm::microsoftDemangle(std::string_view MangledName, size_t *NMangled,

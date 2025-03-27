@@ -87,35 +87,35 @@ define void @sink_splat_add_scalable(ptr nocapture %a, i32 signext %x) {
 ; NO-SINK-LABEL: sink_splat_add_scalable:
 ; NO-SINK:       # %bb.0: # %entry
 ; NO-SINK-NEXT:    csrr a5, vlenb
-; NO-SINK-NEXT:    srli a2, a5, 1
-; NO-SINK-NEXT:    li a3, 1024
-; NO-SINK-NEXT:    bgeu a3, a2, .LBB1_2
+; NO-SINK-NEXT:    srli a3, a5, 1
+; NO-SINK-NEXT:    li a2, 1024
+; NO-SINK-NEXT:    bgeu a2, a3, .LBB1_2
 ; NO-SINK-NEXT:  # %bb.1:
-; NO-SINK-NEXT:    li a3, 0
+; NO-SINK-NEXT:    li a2, 0
 ; NO-SINK-NEXT:    j .LBB1_5
 ; NO-SINK-NEXT:  .LBB1_2: # %vector.ph
-; NO-SINK-NEXT:    addi a3, a2, -1
-; NO-SINK-NEXT:    andi a4, a3, 1024
-; NO-SINK-NEXT:    xori a3, a4, 1024
+; NO-SINK-NEXT:    addi a2, a3, -1
+; NO-SINK-NEXT:    andi a4, a2, 1024
+; NO-SINK-NEXT:    xori a2, a4, 1024
 ; NO-SINK-NEXT:    vsetvli a6, zero, e32, m2, ta, ma
 ; NO-SINK-NEXT:    vmv.v.x v8, a1
 ; NO-SINK-NEXT:    slli a5, a5, 1
 ; NO-SINK-NEXT:    mv a6, a0
-; NO-SINK-NEXT:    mv a7, a3
+; NO-SINK-NEXT:    mv a7, a2
 ; NO-SINK-NEXT:  .LBB1_3: # %vector.body
 ; NO-SINK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; NO-SINK-NEXT:    vl2re32.v v10, (a6)
+; NO-SINK-NEXT:    sub a7, a7, a3
 ; NO-SINK-NEXT:    vadd.vv v10, v10, v8
 ; NO-SINK-NEXT:    vs2r.v v10, (a6)
-; NO-SINK-NEXT:    sub a7, a7, a2
 ; NO-SINK-NEXT:    add a6, a6, a5
 ; NO-SINK-NEXT:    bnez a7, .LBB1_3
 ; NO-SINK-NEXT:  # %bb.4: # %middle.block
 ; NO-SINK-NEXT:    beqz a4, .LBB1_7
 ; NO-SINK-NEXT:  .LBB1_5: # %for.body.preheader
-; NO-SINK-NEXT:    slli a2, a3, 2
-; NO-SINK-NEXT:    add a2, a0, a2
+; NO-SINK-NEXT:    slli a2, a2, 2
 ; NO-SINK-NEXT:    lui a3, 1
+; NO-SINK-NEXT:    add a2, a0, a2
 ; NO-SINK-NEXT:    add a0, a0, a3
 ; NO-SINK-NEXT:  .LBB1_6: # %for.body
 ; NO-SINK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -130,34 +130,34 @@ define void @sink_splat_add_scalable(ptr nocapture %a, i32 signext %x) {
 ; SINK-LABEL: sink_splat_add_scalable:
 ; SINK:       # %bb.0: # %entry
 ; SINK-NEXT:    csrr a5, vlenb
-; SINK-NEXT:    srli a2, a5, 1
-; SINK-NEXT:    li a3, 1024
-; SINK-NEXT:    bgeu a3, a2, .LBB1_2
+; SINK-NEXT:    srli a3, a5, 1
+; SINK-NEXT:    li a2, 1024
+; SINK-NEXT:    bgeu a2, a3, .LBB1_2
 ; SINK-NEXT:  # %bb.1:
-; SINK-NEXT:    li a3, 0
+; SINK-NEXT:    li a2, 0
 ; SINK-NEXT:    j .LBB1_5
 ; SINK-NEXT:  .LBB1_2: # %vector.ph
-; SINK-NEXT:    addi a3, a2, -1
-; SINK-NEXT:    andi a4, a3, 1024
-; SINK-NEXT:    xori a3, a4, 1024
+; SINK-NEXT:    addi a2, a3, -1
+; SINK-NEXT:    andi a4, a2, 1024
+; SINK-NEXT:    xori a2, a4, 1024
 ; SINK-NEXT:    slli a5, a5, 1
 ; SINK-NEXT:    mv a6, a0
-; SINK-NEXT:    mv a7, a3
+; SINK-NEXT:    mv a7, a2
 ; SINK-NEXT:    vsetvli t0, zero, e32, m2, ta, ma
 ; SINK-NEXT:  .LBB1_3: # %vector.body
 ; SINK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SINK-NEXT:    vl2re32.v v8, (a6)
+; SINK-NEXT:    sub a7, a7, a3
 ; SINK-NEXT:    vadd.vx v8, v8, a1
 ; SINK-NEXT:    vs2r.v v8, (a6)
-; SINK-NEXT:    sub a7, a7, a2
 ; SINK-NEXT:    add a6, a6, a5
 ; SINK-NEXT:    bnez a7, .LBB1_3
 ; SINK-NEXT:  # %bb.4: # %middle.block
 ; SINK-NEXT:    beqz a4, .LBB1_7
 ; SINK-NEXT:  .LBB1_5: # %for.body.preheader
-; SINK-NEXT:    slli a2, a3, 2
-; SINK-NEXT:    add a2, a0, a2
+; SINK-NEXT:    slli a2, a2, 2
 ; SINK-NEXT:    lui a3, 1
+; SINK-NEXT:    add a2, a0, a2
 ; SINK-NEXT:    add a0, a0, a3
 ; SINK-NEXT:  .LBB1_6: # %for.body
 ; SINK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -172,34 +172,34 @@ define void @sink_splat_add_scalable(ptr nocapture %a, i32 signext %x) {
 ; DEFAULT-LABEL: sink_splat_add_scalable:
 ; DEFAULT:       # %bb.0: # %entry
 ; DEFAULT-NEXT:    csrr a5, vlenb
-; DEFAULT-NEXT:    srli a2, a5, 1
-; DEFAULT-NEXT:    li a3, 1024
-; DEFAULT-NEXT:    bgeu a3, a2, .LBB1_2
+; DEFAULT-NEXT:    srli a3, a5, 1
+; DEFAULT-NEXT:    li a2, 1024
+; DEFAULT-NEXT:    bgeu a2, a3, .LBB1_2
 ; DEFAULT-NEXT:  # %bb.1:
-; DEFAULT-NEXT:    li a3, 0
+; DEFAULT-NEXT:    li a2, 0
 ; DEFAULT-NEXT:    j .LBB1_5
 ; DEFAULT-NEXT:  .LBB1_2: # %vector.ph
-; DEFAULT-NEXT:    addi a3, a2, -1
-; DEFAULT-NEXT:    andi a4, a3, 1024
-; DEFAULT-NEXT:    xori a3, a4, 1024
+; DEFAULT-NEXT:    addi a2, a3, -1
+; DEFAULT-NEXT:    andi a4, a2, 1024
+; DEFAULT-NEXT:    xori a2, a4, 1024
 ; DEFAULT-NEXT:    slli a5, a5, 1
 ; DEFAULT-NEXT:    mv a6, a0
-; DEFAULT-NEXT:    mv a7, a3
+; DEFAULT-NEXT:    mv a7, a2
 ; DEFAULT-NEXT:    vsetvli t0, zero, e32, m2, ta, ma
 ; DEFAULT-NEXT:  .LBB1_3: # %vector.body
 ; DEFAULT-NEXT:    # =>This Inner Loop Header: Depth=1
 ; DEFAULT-NEXT:    vl2re32.v v8, (a6)
+; DEFAULT-NEXT:    sub a7, a7, a3
 ; DEFAULT-NEXT:    vadd.vx v8, v8, a1
 ; DEFAULT-NEXT:    vs2r.v v8, (a6)
-; DEFAULT-NEXT:    sub a7, a7, a2
 ; DEFAULT-NEXT:    add a6, a6, a5
 ; DEFAULT-NEXT:    bnez a7, .LBB1_3
 ; DEFAULT-NEXT:  # %bb.4: # %middle.block
 ; DEFAULT-NEXT:    beqz a4, .LBB1_7
 ; DEFAULT-NEXT:  .LBB1_5: # %for.body.preheader
-; DEFAULT-NEXT:    slli a2, a3, 2
-; DEFAULT-NEXT:    add a2, a0, a2
+; DEFAULT-NEXT:    slli a2, a2, 2
 ; DEFAULT-NEXT:    lui a3, 1
+; DEFAULT-NEXT:    add a2, a0, a2
 ; DEFAULT-NEXT:    add a0, a0, a3
 ; DEFAULT-NEXT:  .LBB1_6: # %for.body
 ; DEFAULT-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -407,34 +407,34 @@ define void @sink_splat_fadd_scalable(ptr nocapture %a, float %x) {
 ; NO-SINK-LABEL: sink_splat_fadd_scalable:
 ; NO-SINK:       # %bb.0: # %entry
 ; NO-SINK-NEXT:    csrr a1, vlenb
-; NO-SINK-NEXT:    srli a2, a1, 2
-; NO-SINK-NEXT:    li a3, 1024
-; NO-SINK-NEXT:    bgeu a3, a2, .LBB4_2
+; NO-SINK-NEXT:    srli a3, a1, 2
+; NO-SINK-NEXT:    li a2, 1024
+; NO-SINK-NEXT:    bgeu a2, a3, .LBB4_2
 ; NO-SINK-NEXT:  # %bb.1:
-; NO-SINK-NEXT:    li a3, 0
+; NO-SINK-NEXT:    li a2, 0
 ; NO-SINK-NEXT:    j .LBB4_5
 ; NO-SINK-NEXT:  .LBB4_2: # %vector.ph
-; NO-SINK-NEXT:    addi a3, a2, -1
-; NO-SINK-NEXT:    andi a4, a3, 1024
-; NO-SINK-NEXT:    xori a3, a4, 1024
+; NO-SINK-NEXT:    addi a2, a3, -1
+; NO-SINK-NEXT:    andi a4, a2, 1024
+; NO-SINK-NEXT:    xori a2, a4, 1024
 ; NO-SINK-NEXT:    vsetvli a5, zero, e32, m1, ta, ma
 ; NO-SINK-NEXT:    vfmv.v.f v8, fa0
 ; NO-SINK-NEXT:    mv a5, a0
-; NO-SINK-NEXT:    mv a6, a3
+; NO-SINK-NEXT:    mv a6, a2
 ; NO-SINK-NEXT:  .LBB4_3: # %vector.body
 ; NO-SINK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; NO-SINK-NEXT:    vl1re32.v v9, (a5)
+; NO-SINK-NEXT:    sub a6, a6, a3
 ; NO-SINK-NEXT:    vfadd.vv v9, v9, v8
 ; NO-SINK-NEXT:    vs1r.v v9, (a5)
-; NO-SINK-NEXT:    sub a6, a6, a2
 ; NO-SINK-NEXT:    add a5, a5, a1
 ; NO-SINK-NEXT:    bnez a6, .LBB4_3
 ; NO-SINK-NEXT:  # %bb.4: # %middle.block
 ; NO-SINK-NEXT:    beqz a4, .LBB4_7
 ; NO-SINK-NEXT:  .LBB4_5: # %for.body.preheader
-; NO-SINK-NEXT:    slli a1, a3, 2
-; NO-SINK-NEXT:    add a1, a0, a1
+; NO-SINK-NEXT:    slli a1, a2, 2
 ; NO-SINK-NEXT:    lui a2, 1
+; NO-SINK-NEXT:    add a1, a0, a1
 ; NO-SINK-NEXT:    add a0, a0, a2
 ; NO-SINK-NEXT:  .LBB4_6: # %for.body
 ; NO-SINK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -449,33 +449,33 @@ define void @sink_splat_fadd_scalable(ptr nocapture %a, float %x) {
 ; SINK-LABEL: sink_splat_fadd_scalable:
 ; SINK:       # %bb.0: # %entry
 ; SINK-NEXT:    csrr a1, vlenb
-; SINK-NEXT:    srli a2, a1, 2
-; SINK-NEXT:    li a3, 1024
-; SINK-NEXT:    bgeu a3, a2, .LBB4_2
+; SINK-NEXT:    srli a3, a1, 2
+; SINK-NEXT:    li a2, 1024
+; SINK-NEXT:    bgeu a2, a3, .LBB4_2
 ; SINK-NEXT:  # %bb.1:
-; SINK-NEXT:    li a3, 0
+; SINK-NEXT:    li a2, 0
 ; SINK-NEXT:    j .LBB4_5
 ; SINK-NEXT:  .LBB4_2: # %vector.ph
-; SINK-NEXT:    addi a3, a2, -1
-; SINK-NEXT:    andi a4, a3, 1024
-; SINK-NEXT:    xori a3, a4, 1024
+; SINK-NEXT:    addi a2, a3, -1
+; SINK-NEXT:    andi a4, a2, 1024
+; SINK-NEXT:    xori a2, a4, 1024
 ; SINK-NEXT:    mv a5, a0
-; SINK-NEXT:    mv a6, a3
+; SINK-NEXT:    mv a6, a2
 ; SINK-NEXT:    vsetvli a7, zero, e32, m1, ta, ma
 ; SINK-NEXT:  .LBB4_3: # %vector.body
 ; SINK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SINK-NEXT:    vl1re32.v v8, (a5)
+; SINK-NEXT:    sub a6, a6, a3
 ; SINK-NEXT:    vfadd.vf v8, v8, fa0
 ; SINK-NEXT:    vs1r.v v8, (a5)
-; SINK-NEXT:    sub a6, a6, a2
 ; SINK-NEXT:    add a5, a5, a1
 ; SINK-NEXT:    bnez a6, .LBB4_3
 ; SINK-NEXT:  # %bb.4: # %middle.block
 ; SINK-NEXT:    beqz a4, .LBB4_7
 ; SINK-NEXT:  .LBB4_5: # %for.body.preheader
-; SINK-NEXT:    slli a1, a3, 2
-; SINK-NEXT:    add a1, a0, a1
+; SINK-NEXT:    slli a1, a2, 2
 ; SINK-NEXT:    lui a2, 1
+; SINK-NEXT:    add a1, a0, a1
 ; SINK-NEXT:    add a0, a0, a2
 ; SINK-NEXT:  .LBB4_6: # %for.body
 ; SINK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -490,33 +490,33 @@ define void @sink_splat_fadd_scalable(ptr nocapture %a, float %x) {
 ; DEFAULT-LABEL: sink_splat_fadd_scalable:
 ; DEFAULT:       # %bb.0: # %entry
 ; DEFAULT-NEXT:    csrr a1, vlenb
-; DEFAULT-NEXT:    srli a2, a1, 2
-; DEFAULT-NEXT:    li a3, 1024
-; DEFAULT-NEXT:    bgeu a3, a2, .LBB4_2
+; DEFAULT-NEXT:    srli a3, a1, 2
+; DEFAULT-NEXT:    li a2, 1024
+; DEFAULT-NEXT:    bgeu a2, a3, .LBB4_2
 ; DEFAULT-NEXT:  # %bb.1:
-; DEFAULT-NEXT:    li a3, 0
+; DEFAULT-NEXT:    li a2, 0
 ; DEFAULT-NEXT:    j .LBB4_5
 ; DEFAULT-NEXT:  .LBB4_2: # %vector.ph
-; DEFAULT-NEXT:    addi a3, a2, -1
-; DEFAULT-NEXT:    andi a4, a3, 1024
-; DEFAULT-NEXT:    xori a3, a4, 1024
+; DEFAULT-NEXT:    addi a2, a3, -1
+; DEFAULT-NEXT:    andi a4, a2, 1024
+; DEFAULT-NEXT:    xori a2, a4, 1024
 ; DEFAULT-NEXT:    mv a5, a0
-; DEFAULT-NEXT:    mv a6, a3
+; DEFAULT-NEXT:    mv a6, a2
 ; DEFAULT-NEXT:    vsetvli a7, zero, e32, m1, ta, ma
 ; DEFAULT-NEXT:  .LBB4_3: # %vector.body
 ; DEFAULT-NEXT:    # =>This Inner Loop Header: Depth=1
 ; DEFAULT-NEXT:    vl1re32.v v8, (a5)
+; DEFAULT-NEXT:    sub a6, a6, a3
 ; DEFAULT-NEXT:    vfadd.vf v8, v8, fa0
 ; DEFAULT-NEXT:    vs1r.v v8, (a5)
-; DEFAULT-NEXT:    sub a6, a6, a2
 ; DEFAULT-NEXT:    add a5, a5, a1
 ; DEFAULT-NEXT:    bnez a6, .LBB4_3
 ; DEFAULT-NEXT:  # %bb.4: # %middle.block
 ; DEFAULT-NEXT:    beqz a4, .LBB4_7
 ; DEFAULT-NEXT:  .LBB4_5: # %for.body.preheader
-; DEFAULT-NEXT:    slli a1, a3, 2
-; DEFAULT-NEXT:    add a1, a0, a1
+; DEFAULT-NEXT:    slli a1, a2, 2
 ; DEFAULT-NEXT:    lui a2, 1
+; DEFAULT-NEXT:    add a1, a0, a1
 ; DEFAULT-NEXT:    add a0, a0, a2
 ; DEFAULT-NEXT:  .LBB4_6: # %for.body
 ; DEFAULT-NEXT:    # =>This Inner Loop Header: Depth=1
