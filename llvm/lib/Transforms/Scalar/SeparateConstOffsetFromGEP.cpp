@@ -235,8 +235,10 @@ public:
   /// \p GEP The given GEP
   /// \p UserChainTail Outputs the tail of UserChain so that we can
   ///                  garbage-collect unused instructions in UserChain.
+  /// \p PreservesNUW  Outputs whether the extraction allows preserving the
+  ///                  GEP's nuw flag, if it has one.
   static Value *Extract(Value *Idx, GetElementPtrInst *GEP,
-                        User *&UserChainTail);
+                        User *&UserChainTail, bool &PreservesNUW);
 
   /// Looks for a constant offset from the given GEP index without extracting
   /// it. It returns the numeric value of the extracted constant offset (0 if
@@ -266,6 +268,13 @@ private:
   /// A helper function to look into both operands of a binary operator.
   APInt findInEitherOperand(BinaryOperator *BO, bool SignExtended,
                             bool ZeroExtended);
+
+  /// A helper function to check if a subsequent call to rebuildWithoutConst
+  /// will allow preserving the GEP's nuw flag. That is the case if all
+  /// reassociated binary operations are add nuw and no non-nuw trunc is
+  /// distributed through an add.
+  /// Can only be called after find has populated the UserChain.
+  bool checkRebuildingPreservesNUW() const;
 
   /// After finding the constant offset C from the GEP index I, we build a new
   /// index I' s.t. I' + C = I. This function builds and returns the new
@@ -676,6 +685,30 @@ Value *ConstantOffsetExtractor::applyExts(Value *V) {
   return Current;
 }
 
+bool ConstantOffsetExtractor::checkRebuildingPreservesNUW() const {
+  auto AllowsPreservingNUW = [](User *U) {
+    if (BinaryOperator *BO = dyn_cast<BinaryOperator>(U)) {
+      auto Opcode = BO->getOpcode();
+      if (Opcode == BinaryOperator::Or) {
+        // Ors are only considered here if they are disjoint. The addition that
+        // they represent in this case is NUW.
+        assert(cast<PossiblyDisjointInst>(BO)->isDisjoint());
+        return true;
+      }
+      return Opcode == BinaryOperator::Add && BO->hasNoUnsignedWrap();
+    }
+    // UserChain can only contain ConstantInt, CastInst, or BinaryOperator.
+    // Among the possible CastInsts, only trunc without nuw is a problem: If it
+    // is distributed through an add nuw, wrapping may occur:
+    // "add nuw trunc(a), trunc(b)" is more poisonous than "trunc(add nuw a, b)"
+    if (TruncInst *TI = dyn_cast<TruncInst>(U))
+      return TI->hasNoUnsignedWrap();
+    return true;
+  };
+
+  return all_of(UserChain, AllowsPreservingNUW);
+}
+
 Value *ConstantOffsetExtractor::rebuildWithoutConstOffset() {
   distributeExtsAndCloneChain(UserChain.size() - 1);
   // Remove all nullptrs (used to be s/zext) from UserChain.
@@ -779,7 +812,8 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
 }
 
 Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
-                                        User *&UserChainTail) {
+                                        User *&UserChainTail,
+                                        bool &PreservesNUW) {
   ConstantOffsetExtractor Extractor(GEP->getIterator());
   // Find a non-zero constant offset first.
   APInt ConstantOffset =
@@ -787,8 +821,12 @@ Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
                      GEP->isInBounds());
   if (ConstantOffset == 0) {
     UserChainTail = nullptr;
+    PreservesNUW = true;
     return nullptr;
   }
+
+  PreservesNUW = Extractor.checkRebuildingPreservesNUW();
+
   // Separates the constant offset from the GEP index.
   Value *IdxWithoutConstOffset = Extractor.rebuildWithoutConstOffset();
   UserChainTail = Extractor.UserChain.back();
@@ -1052,7 +1090,9 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
     }
   }
 
-  bool MayRecoverInbounds = AccumulativeByteOffset >= 0 && GEP->isInBounds();
+  // Track information for preserving GEP flags.
+  bool AllOffsetsNonNegative = AccumulativeByteOffset >= 0;
+  bool AllNUWPreserved = true;
 
   // Remove the constant offset in each sequential index. The resultant GEP
   // computes the variadic base.
@@ -1072,8 +1112,9 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
       // uses the variadic part as the new index.
       Value *OldIdx = GEP->getOperand(I);
       User *UserChainTail;
-      Value *NewIdx =
-          ConstantOffsetExtractor::Extract(OldIdx, GEP, UserChainTail);
+      bool PreservesNUW;
+      Value *NewIdx = ConstantOffsetExtractor::Extract(
+          OldIdx, GEP, UserChainTail, PreservesNUW);
       if (NewIdx != nullptr) {
         // Switches to the index with the constant offset removed.
         GEP->setOperand(I, NewIdx);
@@ -1081,11 +1122,9 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
         // and the old index if they are not used.
         RecursivelyDeleteTriviallyDeadInstructions(UserChainTail);
         RecursivelyDeleteTriviallyDeadInstructions(OldIdx);
-        MayRecoverInbounds =
-            MayRecoverInbounds &&
-            isKnownNonNegative(
-                NewIdx,
-                SimplifyQuery(*DL, TLI, DT, /*AC=*/nullptr, /*CXTI=*/GEP));
+        AllOffsetsNonNegative =
+            AllOffsetsNonNegative && isKnownNonNegative(NewIdx, *DL);
+        AllNUWPreserved &= PreservesNUW;
       }
     }
   }
@@ -1106,15 +1145,34 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // inbounds keyword is not present, the offsets are added to the base
   // address with silently-wrapping two's complement arithmetic".
   // Therefore, the final code will be a semantically equivalent.
-  //
-  // If the initial GEP was inbounds and all variable indices and the
+  GEPNoWrapFlags NewGEPFlags = GEPNoWrapFlags::none();
+
+  // If the initial GEP was inbounds/nusw and all variable indices and the
   // accumulated offsets are non-negative, they can be added in any order and
-  // the intermediate results are in bounds. So, we can preserve the inbounds
-  // flag for both GEPs. GEPs with inbounds are more friendly to alias analysis.
-  //
-  // TODO(gep_nowrap): Preserve nuw?
-  GEPNoWrapFlags NewGEPFlags =
-      MayRecoverInbounds ? GEPNoWrapFlags::inBounds() : GEPNoWrapFlags::none();
+  // the intermediate results are in bounds and don't overflow in a nusw sense.
+  // So, we can preserve the inbounds/nusw flag for both GEPs.
+  bool CanPreserveInBoundsNUSW = AllOffsetsNonNegative;
+
+  // If the initial GEP was NUW and all operations that we reassociate were NUW
+  // additions, the resulting GEPs are also NUW.
+  if (GEP->hasNoUnsignedWrap() && AllNUWPreserved) {
+    NewGEPFlags |= GEPNoWrapFlags::noUnsignedWrap();
+    // If the initial GEP additionally had NUSW (or inbounds, which implies
+    // NUSW), we know that the indices in the initial GEP must all have their
+    // signbit not set. For indices that are the result of NUW adds, the
+    // add-operands therefore also don't have their signbit set. Therefore, all
+    // indices of the resulting GEPs are non-negative -> we can preserve
+    // the inbounds/nusw flag.
+    CanPreserveInBoundsNUSW |= GEP->hasNoUnsignedSignedWrap();
+  }
+
+  if (CanPreserveInBoundsNUSW) {
+    if (GEP->isInBounds())
+      NewGEPFlags |= GEPNoWrapFlags::inBounds();
+    else if (GEP->hasNoUnsignedSignedWrap())
+      NewGEPFlags |= GEPNoWrapFlags::noUnsignedSignedWrap();
+  }
+
   GEP->setNoWrapFlags(NewGEPFlags);
 
   // Lowers a GEP to either GEPs with a single index or arithmetic operations.
