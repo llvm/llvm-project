@@ -9,6 +9,7 @@ add_llvm_unittest(ObjectYAMLTests
   ELFYAMLTest.cpp
   MinidumpYAMLTest.cpp
   YAML2ObjTest.cpp
+  YAMLSchemeGen.cpp
   YAMLTest.cpp
   )
 
