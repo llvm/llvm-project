@@ -2,24 +2,14 @@
 
 ! Below are just few lines extracted from the dump. The actual output is much _much_ bigger.
 
-! CHECK: {{.*[/\\]}}debug-parsing-log.f90:25:1: IMPLICIT statement
+! CHECK: {{.*[/\\]}}debug-parsing-log.f90:15:1: IMPLICIT statement
 ! CHECK-NEXT:  END PROGRAM
 ! CHECK-NEXT:  ^
 ! CHECK-NEXT:  fail 3
-! CHECK-NEXT: {{.*[/\\]}}debug-parsing-log.f90:25:1: error: expected 'IMPLICIT NONE'
+! CHECK-NEXT: {{.*[/\\]}}debug-parsing-log.f90:15:1: error: expected 'IMPLICIT NONE'
 ! CHECK-NEXT:   END PROGRAM
 ! CHECK-NEXT:   ^
-! CHECK-NEXT: {{.*[/\\]}}debug-parsing-log.f90:25:1: in the context: IMPLICIT statement
+! CHECK-NEXT: {{.*[/\\]}}debug-parsing-log.f90:15:1: in the context: IMPLICIT statement
 ! CHECK-NEXT:   END PROGRAM
 ! CHECK-NEXT:   ^
-! CHECK-NEXT: {{.*[/\\]}}debug-parsing-log.f90:25:1: in the context: implicit part
-! CHECK-NEXT:   END PROGRAM
-! CHECK-NEXT:   ^
-! CHECK-NEXT: {{.*[/\\]}}debug-parsing-log.f90:25:1: in the context: specification part
-! CHECK-NEXT:   END PROGRAM
-! CHECK-NEXT:   ^
-! CHECK-NEXT: {{.*[/\\]}}debug-parsing-log.f90:25:1: in the context: main program
-! CHECK-NEXT:   END PROGRAM
-! CHECK-NEXT:   ^
-
 END PROGRAM
