@@ -510,7 +510,6 @@ static DecodeStatus decodeZcmpRlist(MCInst &Inst, uint32_t Imm,
 static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
                                         uint64_t Address, const void *Decoder);
 
-
 static DecodeStatus decodeZcmpSpimm(MCInst &Inst, uint32_t Imm,
                                     uint64_t Address, const void *Decoder);
 

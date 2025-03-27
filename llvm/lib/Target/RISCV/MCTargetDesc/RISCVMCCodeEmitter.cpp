@@ -107,7 +107,6 @@ public:
   unsigned getRlistS0OpValue(const MCInst &MI, unsigned OpNo,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
-
 };
 } // end anonymous namespace
 
@@ -632,6 +631,5 @@ RISCVMCCodeEmitter::getRlistS0OpValue(const MCInst &MI, unsigned OpNo,
   assert(Imm != RISCVZC::RA && "Rlist operand must include s0");
   return Imm;
 }
-
 
 #include "RISCVGenMCCodeEmitter.inc"
