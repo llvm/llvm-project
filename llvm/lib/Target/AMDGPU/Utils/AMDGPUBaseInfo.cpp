@@ -1406,14 +1406,15 @@ SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
 std::optional<SmallVector<unsigned>>
 getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size) {
   assert(Size > 2);
+  LLVMContext &Ctx = F.getContext();
 
   Attribute A = F.getFnAttribute(Name);
-  if (!A.isStringAttribute())
+  if (!A.isStringAttribute()) {
+    Ctx.emitError(Name + " is not a string attritue");
     return std::nullopt;
+  }
 
   SmallVector<unsigned> Vals(Size);
-
-  LLVMContext &Ctx = F.getContext();
 
   StringRef S = A.getValueAsString();
   unsigned i = 0;
