@@ -709,8 +709,7 @@ func.func @conv2d_channel_first_q_promote(%img: tensor<100x3x224x224xi8>, %filt:
 
 // -----
 // Test that we can lower all the way to LLVM without crashing, don't check results here.
-func.func @pack_memref(%source: memref<128x256xf32>, memref<8x16x8x32xf32>) -> memref<8x16x8x32xf32> {
-  %dest = memref.alloc() : memref<8x16x8x32xf32>
+func.func @pack_memref(%source: memref<128x256xf32>, %dest: memref<8x16x8x32xf32>) -> memref<8x16x8x32xf32> {
   linalg.pack %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [8, 32]
       into %dest : memref<128x256xf32> -> memref<8x16x8x32xf32>
   return %dest : memref<8x16x8x32xf32>
