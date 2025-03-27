@@ -36,9 +36,7 @@ struct RISCVLateOpt : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
 private:
-  bool trySimplifyCondBr(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
-                         MachineBasicBlock *FBB,
-                         SmallVectorImpl<MachineOperand> &Cond) const;
+  bool runOnBasicBlock(MachineBasicBlock &MBB) const;
 
   const RISCVInstrInfo *RII = nullptr;
 };
@@ -48,9 +46,11 @@ char RISCVLateOpt::ID = 0;
 INITIALIZE_PASS(RISCVLateOpt, "riscv-late-opt", RISCV_LATE_OPT_NAME, false,
                 false)
 
-bool RISCVLateOpt::trySimplifyCondBr(
-    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
-    SmallVectorImpl<MachineOperand> &Cond) const {
+bool RISCVLateOpt::runOnBasicBlock(MachineBasicBlock &MBB) const {
+  MachineBasicBlock *TBB, *FBB;
+  SmallVector<MachineOperand, 4> Cond;
+  if (RII->analyzeBranch(MBB, TBB, FBB, Cond, /*AllowModify=*/false))
+    return false;
 
   if (!TBB || Cond.size() != 3)
     return false;
@@ -63,36 +63,35 @@ bool RISCVLateOpt::trySimplifyCondBr(
   // Try and convert a conditional branch that can be evaluated statically
   // into an unconditional branch.
   int64_t C0, C1;
-  if (RISCVInstrInfo::isFromLoadImm(MRI, Cond[1], C0) &&
-      RISCVInstrInfo::isFromLoadImm(MRI, Cond[2], C1)) {
-    MachineBasicBlock *Folded =
-        RISCVInstrInfo::evaluateCondBranch(CC, C0, C1) ? TBB : FBB;
+  if (!RISCVInstrInfo::isFromLoadImm(MRI, Cond[1], C0) ||
+      !RISCVInstrInfo::isFromLoadImm(MRI, Cond[2], C1))
+    return false;
 
-    // At this point, its legal to optimize.
-    RII->removeBranch(MBB);
+  MachineBasicBlock *Folded =
+      RISCVInstrInfo::evaluateCondBranch(CC, C0, C1) ? TBB : FBB;
 
-    // Only need to insert a branch if we're not falling through.
-    if (Folded) {
-      DebugLoc DL = MBB.findBranchDebugLoc();
-      RII->insertBranch(MBB, Folded, nullptr, {}, DL);
-    }
+  // At this point, its legal to optimize.
+  RII->removeBranch(MBB);
 
-    // Update the successors. Remove them all and add back the correct one.
-    while (!MBB.succ_empty())
-      MBB.removeSuccessor(MBB.succ_end() - 1);
-
-    // If it's a fallthrough, we need to figure out where MBB is going.
-    if (!Folded) {
-      MachineFunction::iterator Fallthrough = ++MBB.getIterator();
-      if (Fallthrough != MBB.getParent()->end())
-        MBB.addSuccessor(&*Fallthrough);
-    } else
-      MBB.addSuccessor(Folded);
-
-    return true;
+  // Only need to insert a branch if we're not falling through.
+  if (Folded) {
+    DebugLoc DL = MBB.findBranchDebugLoc();
+    RII->insertBranch(MBB, Folded, nullptr, {}, DL);
   }
 
-  return false;
+  // Update the successors. Remove them all and add back the correct one.
+  while (!MBB.succ_empty())
+    MBB.removeSuccessor(MBB.succ_end() - 1);
+
+  // If it's a fallthrough, we need to figure out where MBB is going.
+  if (!Folded) {
+    MachineFunction::iterator Fallthrough = ++MBB.getIterator();
+    if (Fallthrough != MBB.getParent()->end())
+      MBB.addSuccessor(&*Fallthrough);
+  } else
+    MBB.addSuccessor(Folded);
+
+  return true;
 }
 
 bool RISCVLateOpt::runOnMachineFunction(MachineFunction &Fn) {
@@ -103,14 +102,8 @@ bool RISCVLateOpt::runOnMachineFunction(MachineFunction &Fn) {
   RII = ST.getInstrInfo();
 
   bool Changed = false;
-
-  for (MachineBasicBlock &MBB : Fn) {
-    MachineBasicBlock *TBB, *FBB;
-    SmallVector<MachineOperand, 4> Cond;
-    if (!RII->analyzeBranch(MBB, TBB, FBB, Cond, /*AllowModify=*/false))
-      Changed |= trySimplifyCondBr(MBB, TBB, FBB, Cond);
-  }
-
+  for (MachineBasicBlock &MBB : Fn)
+    Changed |= runOnBasicBlock(MBB);
   return Changed;
 }
 
