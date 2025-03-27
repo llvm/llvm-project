@@ -274,7 +274,8 @@ static bool enableUnifiedLTO(Module &M) {
 // regular LTO bitcode file to OS.
 void splitAndWriteThinLTOBitcode(
     raw_ostream &OS, raw_ostream *ThinLinkOS,
-    function_ref<AAResults &(Function &)> AARGetter, Module &M) {
+    function_ref<AAResults &(Function &)> AARGetter, Module &M,
+    const bool ShouldPreserveUseListOrder) {
   std::string ModuleId = getUniqueModuleId(&M);
   if (ModuleId.empty()) {
     assert(!enableUnifiedLTO(M));
@@ -487,9 +488,9 @@ void splitAndWriteThinLTOBitcode(
   // be used in the backends, and use that in the minimized bitcode
   // produced for the full link.
   ModuleHash ModHash = {{0}};
-  W.writeModule(M, /*ShouldPreserveUseListOrder=*/false, &Index,
+  W.writeModule(M, ShouldPreserveUseListOrder, &Index,
                 /*GenerateHash=*/true, &ModHash);
-  W.writeModule(*MergedM, /*ShouldPreserveUseListOrder=*/false, &MergedMIndex);
+  W.writeModule(*MergedM, ShouldPreserveUseListOrder, &MergedMIndex);
   W.writeSymtab();
   W.writeStrtab();
   OS << Buffer;
@@ -530,13 +531,15 @@ bool hasTypeMetadata(Module &M) {
 
 bool writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
                          function_ref<AAResults &(Function &)> AARGetter,
-                         Module &M, const ModuleSummaryIndex *Index) {
+                         Module &M, const ModuleSummaryIndex *Index,
+                         const bool ShouldPreserveUseListOrder) {
   std::unique_ptr<ModuleSummaryIndex> NewIndex = nullptr;
   // See if this module has any type metadata. If so, we try to split it
   // or at least promote type ids to enable WPD.
   if (hasTypeMetadata(M)) {
     if (enableSplitLTOUnit(M)) {
-      splitAndWriteThinLTOBitcode(OS, ThinLinkOS, AARGetter, M);
+      splitAndWriteThinLTOBitcode(OS, ThinLinkOS, AARGetter, M,
+                                  ShouldPreserveUseListOrder);
       return true;
     }
     // Promote type ids as needed for index-based WPD.
@@ -564,7 +567,7 @@ bool writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
   // be used in the backends, and use that in the minimized bitcode
   // produced for the full link.
   ModuleHash ModHash = {{0}};
-  WriteBitcodeToFile(M, OS, /*ShouldPreserveUseListOrder=*/false, Index,
+  WriteBitcodeToFile(M, OS, ShouldPreserveUseListOrder, Index,
                      /*GenerateHash=*/true, &ModHash);
   // If a minimized bitcode module was requested for the thin link, only
   // the information that is needed by thin link will be written in the
@@ -590,7 +593,8 @@ llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
       [&FAM](Function &F) -> AAResults & {
         return FAM.getResult<AAManager>(F);
       },
-      M, &AM.getResult<ModuleSummaryIndexAnalysis>(M));
+      M, &AM.getResult<ModuleSummaryIndexAnalysis>(M),
+      ShouldPreserveUseListOrder);
 
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
