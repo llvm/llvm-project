@@ -868,16 +868,16 @@ void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
   }
 
   // Sort by the Binding and Direction for fast lookup
-  std::stable_sort(DiagCounterDirs.begin(), DiagCounterDirs.end(),
-                   [](const auto &LHS, const auto &RHS) {
-                     const auto L = std::pair{
-                         std::get<const dxil::ResourceBindingInfo *>(LHS),
-                         std::get<ResourceCounterDirection>(LHS)};
-                     const auto R = std::pair{
-                         std::get<const dxil::ResourceBindingInfo *>(RHS),
-                         std::get<ResourceCounterDirection>(RHS)};
-                     return L < R;
-                   });
+  std::sort(DiagCounterDirs.begin(), DiagCounterDirs.end(),
+            [](const auto &LHS, const auto &RHS) {
+              const auto L =
+                  std::pair{std::get<const dxil::ResourceBindingInfo *>(LHS),
+                            std::get<ResourceCounterDirection>(LHS)};
+              const auto R =
+                  std::pair{std::get<const dxil::ResourceBindingInfo *>(RHS),
+                            std::get<ResourceCounterDirection>(RHS)};
+              return L < R;
+            });
 
   {
     auto *SpanStart = DiagCounterDirs.begin();
