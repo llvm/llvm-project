@@ -68,7 +68,7 @@ def rlist : RISCVOp<OtherVT> {
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
     // 0~3 Reserved for EABI
-    return isUInt<4>(Imm) && Imm >= 4;
+    return isUInt<4>(Imm) && Imm >= RISCVZC::RA;
   }];
 
   let OperandType = "OPERAND_RLIST";

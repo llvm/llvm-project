@@ -43,7 +43,7 @@ def rlist_s0 : RISCVOp<OtherVT> {
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
     // 0~4 invalid for `qc.cm.pushfp`
-    return isUInt<4>(Imm) && Imm >= 5;
+    return isUInt<4>(Imm) && Imm >= RISCVZC::RA_S0;
   }];
 
   string OperandType = "OPERAND_RLIST_S0";
