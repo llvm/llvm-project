@@ -508,18 +508,6 @@ ErrorGeneric::ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
           break;
       }
 
-      if (flags()->track_poison > 0 && IsPoisonTrackingMagic(shadow_val)) {
-        if (internal_strcmp(bug_descr, "unknown-crash") != 0) {
-          Printf(
-              "ERROR: use-after-poison tracking magic values overlap with "
-              "other constants.\n");
-          Printf("Please file a bug.\n");
-        } else {
-          bug_descr = "use-after-poison";
-          bug_type_score = 20;
-        }
-      }
-
       scariness.Scare(bug_type_score + read_after_free_bonus, bug_descr);
       if (far_from_bounds) scariness.Scare(10, "far-from-bounds");
     }
@@ -565,12 +553,8 @@ static void PrintLegend(InternalScopedString *str) {
   PrintShadowByte(str, "  Global redzone:          ", kAsanGlobalRedzoneMagic);
   PrintShadowByte(str, "  Global init order:       ",
                   kAsanInitializationOrderMagic);
-  // TODO: sync description with PoisonTrackingMagicValues
-  PrintShadowByte(
-      str, "  Poisoned by user:        ", kAsanUserPoisonedMemoryMagic,
-      flags()->track_poison > 0 ? " with detailed tracking using {0x80-0x8F, "
-                                  "0x90-0x9F, 0xD0-0xDF, 0xE0-0xEF}\n"
-                                : "\n");
+  PrintShadowByte(str, "  Poisoned by user:        ",
+                  kAsanUserPoisonedMemoryMagic);
   PrintShadowByte(str, "  Container overflow:      ",
                   kAsanContiguousContainerOOBMagic);
   PrintShadowByte(str, "  Array cookie:            ",
@@ -624,13 +608,11 @@ static void CheckPoisonRecords(uptr addr) {
     return;
   uptr shadow_addr = MemToShadow(addr);
   unsigned char poison_magic = *(reinterpret_cast<u8 *>(shadow_addr));
-  int poison_index = PoisonTrackingMagicToIndex[poison_magic];
 
-  if (poison_index < 0 || poison_index >= NumPoisonTrackingMagicValues)
+  if (poison_magic != kAsanUserPoisonedMemoryMagic)
     return;
 
-  PoisonRecordRingBuffer *PoisonRecord =
-      reinterpret_cast<PoisonRecordRingBuffer *>(PoisonRecords[poison_index]);
+  PoisonRecordRingBuffer *PoisonRecord = GetPoisonRecord();
   if (PoisonRecord) {
     bool FoundMatch = false;
 

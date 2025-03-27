@@ -26,40 +26,17 @@ namespace __asan {
 
 static atomic_uint8_t can_poison_memory;
 
-PoisonRecordRingBuffer *PoisonRecords[NumPoisonTrackingMagicValues] = {0};
-int PoisonTrackingMagicToIndex[256] = {-1};
+static PoisonRecordRingBuffer *PoisonRecords = nullptr;
 
 void InitializePoisonTracking() {
   if (flags()->track_poison <= 0)
     return;
 
-  for (unsigned int i = 0; i < sizeof(PoisonTrackingMagicToIndex) / sizeof(int);
-       i++) {
-    PoisonTrackingMagicToIndex[i] = -1;
-  }
-
-  for (unsigned int i = 0; i < NumPoisonTrackingMagicValues; i++) {
-    int magic = PoisonTrackingIndexToMagic[i];
-    CHECK(magic > 0);
-    CHECK((unsigned int)magic <
-          sizeof(PoisonTrackingMagicToIndex) / sizeof(int));
-
-    // Necessary for AddressIsPoisoned calculations
-    CHECK((char)magic < 0);
-
-    PoisonTrackingMagicToIndex[magic] = i;
-
-    PoisonRecords[i] = PoisonRecordRingBuffer::New(flags()->track_poison);
-  }
+  PoisonRecords = PoisonRecordRingBuffer::New(flags()->track_poison);
 }
 
-bool IsPoisonTrackingMagic(int byte) {
-  return (byte >= 0 &&
-          (unsigned long)byte <
-              (sizeof(PoisonTrackingMagicToIndex) / sizeof(int)) &&
-          PoisonTrackingMagicToIndex[byte] >= 0 &&
-          PoisonTrackingMagicToIndex[byte] < NumPoisonTrackingMagicValues &&
-          PoisonTrackingIndexToMagic[PoisonTrackingMagicToIndex[byte]] == byte);
+PoisonRecordRingBuffer* GetPoisonRecord() {
+  return PoisonRecords;
 }
 
 void SetCanPoisonMemory(bool value) {
@@ -149,23 +126,18 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
 
   if (flags()->track_poison > 0) {
     GET_STACK_TRACE(/*max_size=*/ 16, /*fast=*/ false);
+    u32 current_tid = GetCurrentTidOrInvalid();
+
     // TODO: garbage collect stacks once they fall off the ring buffer?
     // StackDepot doesn't currently have a way to delete stacks.
     u32 stack_id = StackDepotPut(stack);
 
-    u32 current_tid = GetCurrentTidOrInvalid();
-    u32 poison_index = ((stack_id * 151157) ^ (current_tid * 733123)) %
-                       NumPoisonTrackingMagicValues;
-    poison_magic = PoisonTrackingIndexToMagic[poison_index];
     PoisonRecord record{.stack_id = stack_id,
                         .thread_id = current_tid,
                         .begin = beg_addr,
                         .end = end_addr};
-    // This is a data race: with concurrent writes, some records may be lost,
-    // but it's a sacrifice I am willing to make for speed.
-    // The sharding across PoisonRecords reduces the likelihood of
-    // concurrent writes.
-    PoisonRecords[poison_index]->push(record);
+    // TODO: mutex
+    GetPoisonRecord()->push(record);
   }
 
   ShadowSegmentEndpoint beg(beg_addr);
