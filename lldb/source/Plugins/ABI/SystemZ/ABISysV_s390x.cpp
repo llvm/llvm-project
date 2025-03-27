@@ -404,11 +404,10 @@ Status ABISysV_s390x::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
     const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName("r2", 0);
 
     auto data_or_err = new_value_sp->GetData();
-    if (auto error = data_or_err.takeError()) {
-      return Status::FromErrorStringWithFormat(
-          "Couldn't convert return value to raw data: %s",
-          llvm::toString(std::move(error)).c_str());
-    }
+    if (auto error = data_or_err.takeError())
+      return Status::FromError(llvm::joinErrors(
+          llvm::createStringError("Couldn't convert return value to raw data"),
+          std::move(error)));
 
     auto data = std::move(*data_or_err);
 
