@@ -85,9 +85,9 @@ static const DeltaPass IR_Passes[] = {
 static const DeltaPass MIR_Passes[] = {
   #undef DELTA_PASS_IR
 #undef DELTA_PASS_MIR
-  #define DELTA_PASS_MIR(NAME, FUNC, DESC) {NAME, FUNC, DESC},
-  #include "DeltaPasses.def"
-  #undef DELTA_PASS_MIR
+#define DELTA_PASS_MIR(NAME, FUNC, DESC) {NAME, FUNC, DESC},
+#include "DeltaPasses.def"
+#undef DELTA_PASS_MIR
 };
   
 
