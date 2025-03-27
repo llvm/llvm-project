@@ -214,6 +214,9 @@ Changes to LLDB
   Windows 11 on the Microsoft SQ2 and Snapdragon Elite X platforms.
 * LLDB now steps through C++ thunks. This fixes an issue where previously, it
   wouldn't step into multiple inheritance virtual functions.
+* A statusline was added to command-line LLDB to show progress events and
+  information about the current state of the debugger at the bottom of the
+  screen.
 
 ### Changes to lldb-dap
 
