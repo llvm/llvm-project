@@ -46,7 +46,7 @@ struct RISCVLateOpt : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
 private:
-  bool trySimplifyCondBr(MachineInstr *MI, MachineBasicBlock *TBB,
+  bool trySimplifyCondBr(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                          MachineBasicBlock *FBB,
                          SmallVectorImpl<MachineOperand> &Cond) const;
 
@@ -58,9 +58,31 @@ char RISCVLateOpt::ID = 0;
 INITIALIZE_PASS(RISCVLateOpt, "riscv-late-opt", RISCV_LATE_OPT_NAME, false,
                 false)
 
+static bool evaluateCondBranch(unsigned CC, int64_t C0, int64_t C1) {
+  switch (CC) {
+  default:
+    llvm_unreachable("Unexpected CC");
+  case RISCVCC::COND_EQ:
+    return C0 == C1;
+  case RISCVCC::COND_NE:
+    return C0 != C1;
+  case RISCVCC::COND_LT:
+    return C0 < C1;
+  case RISCVCC::COND_GE:
+    return C0 >= C1;
+  case RISCVCC::COND_LTU:
+    return (uint64_t)C0 < (uint64_t)C1;
+  case RISCVCC::COND_GEU:
+    return (uint64_t)C0 >= (uint64_t)C1;
+  }
+}
+
 bool RISCVLateOpt::trySimplifyCondBr(
-    MachineInstr *MI, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
+    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
     SmallVectorImpl<MachineOperand> &Cond) const {
+
+  if (!TBB || Cond.size() != 3)
+    return false;
 
   RISCVCC::CondCode CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
   assert(CC != RISCVCC::COND_INVALID);
@@ -75,8 +97,7 @@ bool RISCVLateOpt::trySimplifyCondBr(
     return false;
   };
 
-  MachineBasicBlock *MBB = MI->getParent();
-  MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   // Either a load from immediate instruction or X0.
   auto isFromLoadImm = [&](const MachineOperand &Op, int64_t &Imm) -> bool {
     if (!Op.isReg())
@@ -94,69 +115,35 @@ bool RISCVLateOpt::trySimplifyCondBr(
   MachineBasicBlock *Folded = nullptr;
   int64_t C0, C1;
   if (isFromLoadImm(Cond[1], C0) && isFromLoadImm(Cond[2], C1)) {
-    switch (CC) {
-    case RISCVCC::COND_INVALID:
-      llvm_unreachable("Unexpected CC");
-    case RISCVCC::COND_EQ: {
-      Folded = (C0 == C1) ? TBB : FBB;
-      break;
-    }
-    case RISCVCC::COND_NE: {
-      Folded = (C0 != C1) ? TBB : FBB;
-      break;
-    }
-    case RISCVCC::COND_LT: {
-      Folded = (C0 < C1) ? TBB : FBB;
-      break;
-    }
-    case RISCVCC::COND_GE: {
-      Folded = (C0 >= C1) ? TBB : FBB;
-      break;
-    }
-    case RISCVCC::COND_LTU: {
-      Folded = ((uint64_t)C0 < (uint64_t)C1) ? TBB : FBB;
-      break;
-    }
-    case RISCVCC::COND_GEU: {
-      Folded = ((uint64_t)C0 >= (uint64_t)C1) ? TBB : FBB;
-      break;
-    }
-    }
+    Folded = evaluateCondBranch(CC, C0, C1) ? TBB : FBB;
 
-    // Do the conversion
-    // Build the new unconditional branch
-    DebugLoc DL = MBB->findBranchDebugLoc();
+    // At this point, its legal to optimize.
+    RII->removeBranch(MBB);
+    Cond.clear();
+
+    // Only need to insert a branch if we're not falling through.
     if (Folded) {
-      BuildMI(*MBB, MI, DL, RII->get(RISCV::PseudoBR)).addMBB(Folded);
-    } else {
-      MachineFunction::iterator Fallthrough = ++MBB->getIterator();
-      if (Fallthrough == MBB->getParent()->end())
-        return false;
-      BuildMI(*MBB, MI, DL, RII->get(RISCV::PseudoBR)).addMBB(&*Fallthrough);
+      DebugLoc DL = MBB.findBranchDebugLoc();
+      RII->insertBranch(MBB, Folded, nullptr, {}, DL);
     }
 
-    // Update successors of MBB->
-    if (Folded == TBB) {
-      // If we're taking TBB, then the succ to delete is the fallthrough (if
-      // it was a succ in the first place), or its the MBB from the
-      // unconditional branch.
-      if (!FBB) {
-        MachineFunction::iterator Fallthrough = ++MBB->getIterator();
-        if (Fallthrough != MBB->getParent()->end() &&
-            MBB->isSuccessor(&*Fallthrough))
-          MBB->removeSuccessor(&*Fallthrough, true);
-      } else {
-        MBB->removeSuccessor(FBB, true);
-      }
-    } else if (Folded == FBB) {
-      // If we're taking the fallthrough or unconditional branch, then the
-      // succ to remove is the one from the conditional branch.
-      MBB->removeSuccessor(TBB, true);
-    }
+    // Update the successors. Remove them all and add back the correct one.
+    while (!MBB.succ_empty())
+      MBB.removeSuccessor(MBB.succ_end() - 1);
 
-    MI->eraseFromParent();
+    // If it's a fallthrough, we need to figure out where MBB is going.
+    if (!Folded) {
+      MachineFunction::iterator Fallthrough = ++MBB.getIterator();
+      if (Fallthrough != MBB.getParent()->end())
+        MBB.addSuccessor(&*Fallthrough);
+    } else
+      MBB.addSuccessor(Folded);
+
+    TBB = Folded;
+    FBB = nullptr;
     return true;
   }
+
   return false;
 }
 
@@ -170,19 +157,10 @@ bool RISCVLateOpt::runOnMachineFunction(MachineFunction &Fn) {
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : Fn) {
-    for (MachineBasicBlock::iterator MII = MBB.begin(), MIE = MBB.end();
-         MII != MIE;) {
-      MachineInstr *MI = &*MII;
-      // We may be erasing MI below, increment MII now.
-      ++MII;
-      if (!MI->isConditionalBranch())
-        continue;
-
-      MachineBasicBlock *TBB, *FBB;
-      SmallVector<MachineOperand, 4> Cond;
-      if (!RII->analyzeBranch(MBB, TBB, FBB, Cond, /*AllowModify=*/false))
-        Changed |= trySimplifyCondBr(MI, TBB, FBB, Cond);
-    }
+    MachineBasicBlock *TBB, *FBB;
+    SmallVector<MachineOperand, 4> Cond;
+    if (!RII->analyzeBranch(MBB, TBB, FBB, Cond, /*AllowModify=*/false))
+      Changed |= trySimplifyCondBr(MBB, TBB, FBB, Cond);
   }
 
   return Changed;
