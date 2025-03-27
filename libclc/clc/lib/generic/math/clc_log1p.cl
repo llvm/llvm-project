@@ -6,9 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_acosh.h>
+#include <clc/clc_convert.h>
+#include <clc/float/definitions.h>
+#include <clc/internal/clc.h>
+#include <clc/math/clc_fma.h>
+#include <clc/math/clc_mad.h>
+#include <clc/math/math.h>
+#include <clc/math/tables.h>
+#include <clc/relational/clc_isinf.h>
 
-#undef __CLC_FUNCTION
-#define __CLC_FUNCTION acosh
-#include <clc/math/unary_builtin.inc>
+#define __CLC_BODY <clc_log1p.inc>
+#include <clc/math/gentype.inc>
