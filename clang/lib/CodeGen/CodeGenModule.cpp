@@ -5391,7 +5391,7 @@ LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
     if (D == nullptr)
       return LangAS::hlsl_private;
 
-    // Except resources (Uniform, UniformConstant) & instanglble (handles)
+    // Except resources (Uniform, UniformConstant) & intangible (handles)
     if (D->getType()->isHLSLResourceType() ||
         D->getType()->isHLSLIntangibleType())
       return D->getType().getAddressSpace();
