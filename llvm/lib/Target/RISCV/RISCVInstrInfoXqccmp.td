@@ -27,7 +27,7 @@
 
 def RlistS0AsmOperand : AsmOperandClass {
   let Name = "RlistS0";
-  let ParserMethod = "parseReglist<true>";
+  let ParserMethod = "parseReglistS0";
   let RenderMethod = "addRlistOperands";
   let DiagnosticType = "InvalidRlistS0";
   let DiagnosticString = "operand must be {ra, s0[-sN]} or {x1, x8[-x9][, x18[-xN]]}";

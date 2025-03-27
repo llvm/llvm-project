@@ -632,7 +632,8 @@ RISCVMCCodeEmitter::getRlistS0OpValue(const MCInst &MI, unsigned OpNo,
   const MCOperand &MO = MI.getOperand(OpNo);
   assert(MO.isImm() && "Rlist operand must be immediate");
   auto Imm = MO.getImm();
-  assert(Imm >= 5 && "EABI is currently not implemented");
+  assert(Imm >= 4 && "EABI is currently not implemented");
+  assert(Imm != RISCVZC::RA && "Rlist operand must include s0");
   return Imm;
 }
 
