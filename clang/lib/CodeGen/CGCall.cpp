@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LLVMABI/Type.h"
+#include "LLVMABI/ABIFunctionInfo.h"
 #include "CGCall.h"
 #include "ABIInfo.h"
 #include "ABIInfoImpl.h"
@@ -49,6 +50,14 @@ using namespace CodeGen;
 using namespace ABI;
 
 /***/
+ABIFunction::CallingConv ClangCallConvToABICallConv(CallingConv CC) {
+  switch (CC) {
+  default: return ABIFunction::CallingConv::CC_C;
+  case CC_X86StdCall: return ABIFunction::CallingConv::CC_X86StdCall;
+  }
+}
+
+
 unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
   switch (CC) {
   default: return llvm::CallingConv::C;
@@ -816,7 +825,7 @@ void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI);
 }
 }
 
-std::unique_ptr<ABI::ABIBuiltinType> *getABIType(QualType QT){
+std::unique_ptr<ABI::ABIBuiltinType> getABIType(QualType QT){
   const clang::Type *BaseType = QT.getTypePtr();
 
   switch (BaseType->getTypeClass()) {
@@ -880,7 +889,7 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
   if (FI)
     return *FI;
 
-  unsigned CC = ClangCallConvToLLVMCallConv(info.getCC());
+  ABIFunction::CallingConv CC = ClangCallConvToABICallConv(info.getCC());
 
   // map clang::QualType -> abi::Type
   // implicit conversion from clang::CanQualType to clang::QualType
@@ -889,21 +898,15 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
   std::vector<ABI::ABIBuiltinType> abiTypes;
   abiTypes.reserve(argTypes.size());  
 
-  for (const llvm::CanQualType &element : argTypes) {
+  for (CanQualType &element : argTypes) {
     abiTypes.push_back(*getABIType(element));  // Move unique_ptr into the vector
   }
 
-  llvm::ArrayRef<ABI::ABIBuiltinType> argTypesABI(abiTypes);
-
   // map the abi::Types -> abi::FunctionInfo type, done by the library
-  ABIFunctionInfo *ABIFI = ABIFunctionInfo::create(CC, resultTypeABI.get(), argTypesABI);
-
-  // // Construct the function info.  We co-allocate the ArgInfos.
-  // FI = CGFunctionInfo::create(CC, isInstanceMethod, isChainCall, isDelegateCall,
-  //                             info, paramInfos, resultType, argTypes, required);
+  ABIFunction::ABIFunctionInfo *ABIFI = ABIFunction::ABIFunctionInfo::create(CC, abiTypes, *(resultTypeABI.get()));
 
   // Compute ABI information.
-  if (CC == llvm::CallingConv::SPIR_KERNEL) {
+  if (ClangCallConvToLLVMCallConv(info.getCC()) == llvm::CallingConv::SPIR_KERNEL) {
     // Force target independent argument handling for the host visible
     // kernel functions.
     computeSPIRKernelABIInfo(CGM, *FI);
