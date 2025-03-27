@@ -97,6 +97,6 @@ static void extractDIMetadataFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
   identifyUninterestingMDNodes(O, MDs);
 }
 
-void llvm::reduceDIMetadataDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractDIMetadataFromModule, "Reducing DIMetadata (di-metadata)");
+void llvm::reduceDIMetadataDeltaPass(TestRunner &Test, StringRef PassMessage) {
+  runDeltaPass(Test, extractDIMetadataFromModule, PassMessage);
 }

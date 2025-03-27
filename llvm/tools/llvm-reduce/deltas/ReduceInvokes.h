@@ -12,7 +12,7 @@
 #include "TestRunner.h"
 
 namespace llvm {
-void reduceInvokesDeltaPass(TestRunner &Test);
+void reduceInvokesDeltaPass(TestRunner &Test, StringRef PassMessage);
 } // namespace llvm
 
 #endif

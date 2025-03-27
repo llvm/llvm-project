@@ -19,7 +19,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 
 namespace llvm {
-void reduceGlobalsDeltaPass(TestRunner &Test);
+void reduceGlobalsDeltaPass(TestRunner &Test, StringRef PassMessage);
 } // namespace llvm
 
 #endif

@@ -61,20 +61,8 @@ static void replaceFunctionCalls(Function *OldF, Function *NewF) {
   for (Use &U : OldF->uses()) {
     auto *CI = cast<CallBase>(U.getUser());
     assert(&U == &CI->getCalledOperandUse());
-
-    Function *CalledF = CI->getCalledFunction();
-    if (CalledF == OldF) {
-      Callers.push_back(CI);
-    } else {
-      // The call may have undefined behavior by calling a function with a
-      // mismatched signature. In this case, do not bother adjusting the
-      // callsites to pad with any new arguments.
-
-      // TODO: Better QoI to try to add new arguments to the end, and ignore
-      // existing mismatches.
-      assert(!CalledF && CI->getCalledOperand()->stripPointerCasts() == OldF &&
-             "only expected call and function signature mismatch");
-    }
+    assert(CI->getCalledFunction() == OldF);
+    Callers.push_back(CI);
   }
 
   // Call arguments for NewF.
@@ -214,7 +202,7 @@ static void reduceOperandsToArgs(Oracle &O, ReducerWorkItem &WorkItem) {
   }
 }
 
-void llvm::reduceOperandsToArgsDeltaPass(TestRunner &Test) {
+void llvm::reduceOperandsToArgsDeltaPass(TestRunner &Test, StringRef PassMessage) {
   runDeltaPass(Test, reduceOperandsToArgs,
-               "Converting operands to function arguments (operands-to-args)");
+               PassMessage);
 }

@@ -12,7 +12,7 @@
 #include "TestRunner.h"
 
 namespace llvm {
-void reduceInstructionFlagsDeltaPass(TestRunner &Test);
+void reduceInstructionFlagsDeltaPass(TestRunner &Test, StringRef PassMessage);
 } // namespace llvm
 
 #endif

@@ -84,6 +84,6 @@ static void reduceFlagsInModule(Oracle &O, ReducerWorkItem &WorkItem) {
   }
 }
 
-void llvm::reduceInstructionFlagsDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, reduceFlagsInModule, "Reducing Instruction Flags (instruction-flags)");
+void llvm::reduceInstructionFlagsDeltaPass(TestRunner &Test, StringRef PassMessage) {
+  runDeltaPass(Test, reduceFlagsInModule, PassMessage);
 }

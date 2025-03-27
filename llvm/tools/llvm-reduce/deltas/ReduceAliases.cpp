@@ -44,10 +44,10 @@ static void extractIFuncsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
     lowerGlobalIFuncUsersAsGlobalCtor(Mod, IFuncs);
 }
 
-void llvm::reduceAliasesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractAliasesFromModule, "Reducing Aliases (aliases)");
+void llvm::reduceAliasesDeltaPass(TestRunner &Test, StringRef PassMessage) {
+  runDeltaPass(Test, extractAliasesFromModule, PassMessage);
 }
 
-void llvm::reduceIFuncsDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractIFuncsFromModule, "Reducing Ifuncs (ifuncs)");
+void llvm::reduceIFuncsDeltaPass(TestRunner &Test, StringRef PassMessage) {
+  runDeltaPass(Test, extractIFuncsFromModule, PassMessage);
 }

@@ -105,7 +105,7 @@ static void extractOperandBundesFromModule(Oracle &O,
     maybeRewriteCallWithDifferentBundles(I.first, I.second);
 }
 
-void llvm::reduceOperandBundesDeltaPass(TestRunner &Test) {
+void llvm::reduceOperandBundesDeltaPass(TestRunner &Test, StringRef PassMessage) {
   runDeltaPass(Test, extractOperandBundesFromModule,
-               "Reducing Operand Bundles (operand-bundles)");
+               PassMessage);
 }

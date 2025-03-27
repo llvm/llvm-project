@@ -68,16 +68,14 @@ static void stripIRFromFunctions(Oracle &O, ReducerWorkItem &WorkItem) {
   }
 }
 
-void llvm::reduceIRInstructionReferencesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, stripIRFromInstructions,
-               "Reducing IR references from instructions (ir-instruction-references)");
+void llvm::reduceIRInstructionReferencesDeltaPass(TestRunner &Test, StringRef PassMessage) {
+  runDeltaPass(Test, stripIRFromInstructions, PassMessage);
 }
 
-void llvm::reduceIRBlockReferencesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, stripIRFromBlocks, "Reducing IR references from blocks (ir-block-references)");
+void llvm::reduceIRBlockReferencesDeltaPass(TestRunner &Test, StringRef PassMessage) {
+  runDeltaPass(Test, stripIRFromBlocks, PassMessage);
 }
 
-void llvm::reduceIRFunctionReferencesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, stripIRFromFunctions,
-               "Reducing IR references from functions (ir-function-references)");
+void llvm::reduceIRFunctionReferencesDeltaPass(TestRunner &Test, StringRef PassMessage) {
+  runDeltaPass(Test, stripIRFromFunctions, PassMessage);
 }

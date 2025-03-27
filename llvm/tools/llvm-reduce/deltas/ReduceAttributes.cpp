@@ -148,6 +148,6 @@ static void extractAttributesFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
   R.visit(WorkItem.getModule());
 }
 
-void llvm::reduceAttributesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractAttributesFromModule, "Reducing Attributes (attributes)");
+void llvm::reduceAttributesDeltaPass(TestRunner &Test, StringRef PassMessage) {
+  runDeltaPass(Test, extractAttributesFromModule, PassMessage);
 }

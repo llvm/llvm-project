@@ -20,7 +20,7 @@
 #include "Delta.h"
 
 namespace llvm {
-void reduceSpecialGlobalsDeltaPass(TestRunner &Test);
+void reduceSpecialGlobalsDeltaPass(TestRunner &Test, StringRef PassMessage);
 } // namespace llvm
 
 #endif

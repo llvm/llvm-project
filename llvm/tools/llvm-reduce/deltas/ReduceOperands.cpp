@@ -83,7 +83,7 @@ static bool switchCaseExists(Use &Op, ConstantInt *CI) {
   return SI->findCaseValue(CI) != SI->case_default();
 }
 
-void llvm::reduceOperandsOneDeltaPass(TestRunner &Test) {
+void llvm::reduceOperandsOneDeltaPass(TestRunner &Test, StringRef PassMessage) {
   auto ReduceValue = [](Use &Op) -> Value * {
     if (!shouldReduceOperand(Op))
       return nullptr;
@@ -123,10 +123,10 @@ void llvm::reduceOperandsOneDeltaPass(TestRunner &Test) {
       [ReduceValue](Oracle &O, ReducerWorkItem &WorkItem) {
         extractOperandsFromModule(O, WorkItem, ReduceValue);
       },
-      "Reducing Operands to one (operands-one)");
+      PassMessage);
 }
 
-void llvm::reduceOperandsZeroDeltaPass(TestRunner &Test) {
+void llvm::reduceOperandsZeroDeltaPass(TestRunner &Test, StringRef PassMessage) {
   auto ReduceValue = [](Use &Op) -> Value * {
     if (!shouldReduceOperand(Op))
       return nullptr;
@@ -142,10 +142,10 @@ void llvm::reduceOperandsZeroDeltaPass(TestRunner &Test) {
       [ReduceValue](Oracle &O, ReducerWorkItem &Program) {
         extractOperandsFromModule(O, Program, ReduceValue);
       },
-      "Reducing Operands to zero (operands-zero)");
+      PassMessage);
 }
 
-void llvm::reduceOperandsNaNDeltaPass(TestRunner &Test) {
+void llvm::reduceOperandsNaNDeltaPass(TestRunner &Test, StringRef PassMessage) {
   auto ReduceValue = [](Use &Op) -> Value * {
     Type *Ty = Op->getType();
     if (!Ty->isFPOrFPVectorTy())
@@ -170,5 +170,5 @@ void llvm::reduceOperandsNaNDeltaPass(TestRunner &Test) {
       [ReduceValue](Oracle &O, ReducerWorkItem &Program) {
         extractOperandsFromModule(O, Program, ReduceValue);
       },
-      "Reducing Operands to NaN (operands-nan)");
+      PassMessage);
 }

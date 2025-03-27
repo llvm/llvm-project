@@ -12,9 +12,9 @@
 #include "Delta.h"
 
 namespace llvm {
-void reduceOperandsOneDeltaPass(TestRunner &Test);
-void reduceOperandsZeroDeltaPass(TestRunner &Test);
-void reduceOperandsNaNDeltaPass(TestRunner &Test);
+void reduceOperandsOneDeltaPass(TestRunner &Test, StringRef PassMessage);
+void reduceOperandsZeroDeltaPass(TestRunner &Test, StringRef PassMessage);
+void reduceOperandsNaNDeltaPass(TestRunner &Test, StringRef PassMessage);
 } // namespace llvm
 
 #endif

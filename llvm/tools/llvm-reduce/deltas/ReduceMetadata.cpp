@@ -123,10 +123,10 @@ static void extractMetadataFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
   }
 }
 
-void llvm::reduceMetadataDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractMetadataFromModule, "Reducing Metadata (metadata)");
+void llvm::reduceMetadataDeltaPass(TestRunner &Test, StringRef PassMessage) {
+  runDeltaPass(Test, extractMetadataFromModule, PassMessage);
 }
 
-void llvm::reduceNamedMetadataDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, reduceNamedMetadataOperands, "Reducing Named Metadata (named-metadata)");
+void llvm::reduceNamedMetadataDeltaPass(TestRunner &Test, StringRef PassMessage) {
+  runDeltaPass(Test, reduceNamedMetadataOperands, PassMessage);
 }

@@ -20,6 +20,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <functional>
 #include <utility>
+#include "llvm/ADT/StringRef.h"
 
 namespace llvm {
 

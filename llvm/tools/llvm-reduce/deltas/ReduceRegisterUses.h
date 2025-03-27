@@ -17,7 +17,7 @@
 #include "Delta.h"
 
 namespace llvm {
-void reduceRegisterUsesMIRDeltaPass(TestRunner &Test);
+void reduceRegisterUsesMIRDeltaPass(TestRunner &Test, StringRef PassMessage);
 } // namespace llvm
 
 #endif

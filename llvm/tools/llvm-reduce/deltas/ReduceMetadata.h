@@ -17,8 +17,8 @@
 #include "TestRunner.h"
 
 namespace llvm {
-void reduceMetadataDeltaPass(TestRunner &Test);
-void reduceNamedMetadataDeltaPass(TestRunner &Test);
+void reduceMetadataDeltaPass(TestRunner &Test, StringRef PassMessage);
+void reduceNamedMetadataDeltaPass(TestRunner &Test, StringRef PassMessage);
 } // namespace llvm
 
 #endif

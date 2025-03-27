@@ -12,7 +12,7 @@
 #include "Delta.h"
 
 namespace llvm {
-void stripDebugInfoDeltaPass(TestRunner &Test);
+void stripDebugInfoDeltaPass(TestRunner &Test, StringRef PassMessage);
 } // namespace llvm
 
 #endif

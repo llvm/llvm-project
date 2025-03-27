@@ -14,11 +14,13 @@
 #ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEVIRTUALREGISTERS_H
 #define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEVIRTUALREGISTERS_H
 
+#include "llvm/ADT/StringRef.h"
+
 namespace llvm {
 class TestRunner;
 
 /// Remove register allocation hints from virtual registes.
-void reduceVirtualRegisterHintsDeltaPass(TestRunner &Test);
+void reduceVirtualRegisterHintsDeltaPass(TestRunner &Test, StringRef PassMessage);
 
 } // namespace llvm
 

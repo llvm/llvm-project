@@ -18,8 +18,8 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 
 namespace llvm {
-void reduceBasicBlocksDeltaPass(TestRunner &Test);
-void reduceUnreachableBasicBlocksDeltaPass(TestRunner &Test);
+void reduceBasicBlocksDeltaPass(TestRunner &Test, StringRef PassMessage);
+void reduceUnreachableBasicBlocksDeltaPass(TestRunner &Test, StringRef PassMessage);
 } // namespace llvm
 
 #endif

@@ -12,7 +12,7 @@
 #include "Delta.h"
 
 namespace llvm {
-void runIRPassesDeltaPass(TestRunner &Test);
+void runIRPassesDeltaPass(TestRunner &Test, StringRef PassMessage);
 } // namespace llvm
 
 #endif

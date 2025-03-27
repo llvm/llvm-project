@@ -34,6 +34,6 @@ static void extractDbgRecordsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
             DR.eraseFromParent();
 }
 
-void llvm::reduceDbgRecordDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractDbgRecordsFromModule, "Reducing DbgRecords (dbg-records)");
+void llvm::reduceDbgRecordDeltaPass(TestRunner &Test, StringRef PassMessage) {
+  runDeltaPass(Test, extractDbgRecordsFromModule, PassMessage);
 }

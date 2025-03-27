@@ -17,7 +17,7 @@
 #include "TestRunner.h"
 
 namespace llvm {
-void reduceDIMetadataDeltaPass(TestRunner &Test);
+void reduceDIMetadataDeltaPass(TestRunner &Test, StringRef PassMessage);
 } // namespace llvm
 
 #endif

@@ -12,7 +12,7 @@
 #include "Delta.h"
 
 namespace llvm {
-void reduceOperandsToArgsDeltaPass(TestRunner &Test);
+void reduceOperandsToArgsDeltaPass(TestRunner &Test, StringRef PassMessage);
 } // namespace llvm
 
 #endif /* LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEOPERANDSTOARGS_H */

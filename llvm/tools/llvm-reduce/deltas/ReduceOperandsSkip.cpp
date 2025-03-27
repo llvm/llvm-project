@@ -230,7 +230,7 @@ static void extractOperandsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
   }
 }
 
-void llvm::reduceOperandsSkipDeltaPass(TestRunner &Test) {
+void llvm::reduceOperandsSkipDeltaPass(TestRunner &Test, StringRef PassMessage) {
   runDeltaPass(Test, extractOperandsFromModule,
-               "Reducing operands by skipping over instructions (operands-skip)");
+               PassMessage);
 }

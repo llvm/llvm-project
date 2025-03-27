@@ -41,8 +41,8 @@ static void removeVolatileInModule(Oracle &O, ReducerWorkItem &WorkItem) {
     removeVolatileInFunction(O, F);
 }
 
-void llvm::reduceVolatileInstructionsDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, removeVolatileInModule, "Reducing Volatile Instructions (volatile)");
+void llvm::reduceVolatileInstructionsDeltaPass(TestRunner &Test, StringRef PassMessage) {
+  runDeltaPass(Test, removeVolatileInModule, PassMessage);
 }
 
 static void reduceAtomicSyncScopesInFunction(Oracle &O, Function &F) {
@@ -72,9 +72,9 @@ static void reduceAtomicSyncScopesInModule(Oracle &O,
     reduceAtomicSyncScopesInFunction(O, F);
 }
 
-void llvm::reduceAtomicSyncScopesDeltaPass(TestRunner &Test) {
+void llvm::reduceAtomicSyncScopesDeltaPass(TestRunner &Test, StringRef PassMessage) {
   runDeltaPass(Test, reduceAtomicSyncScopesInModule,
-               "Reducing Atomic Sync Scopes (syncscopes)");
+               PassMessage);
 }
 
 // TODO: Might be helpful to incrementally relax orders
@@ -105,6 +105,6 @@ static void reduceAtomicOrderingInModule(Oracle &O, ReducerWorkItem &WorkItem) {
     reduceAtomicOrderingInFunction(O, F);
 }
 
-void llvm::reduceAtomicOrderingDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, reduceAtomicOrderingInModule, "Reducing Atomic Ordering (atomic-ordering)");
+void llvm::reduceAtomicOrderingDeltaPass(TestRunner &Test, StringRef PassMessage) {
+  runDeltaPass(Test, reduceAtomicOrderingInModule, PassMessage);
 }

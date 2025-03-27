@@ -17,9 +17,9 @@
 #include "Delta.h"
 
 namespace llvm {
-void reduceUsingSimplifyCFGDeltaPass(TestRunner &Test);
-void reduceConditionalsTrueDeltaPass(TestRunner &Test);
-void reduceConditionalsFalseDeltaPass(TestRunner &Test);
+void reduceUsingSimplifyCFGDeltaPass(TestRunner &Test, StringRef PassMessage);
+void reduceConditionalsTrueDeltaPass(TestRunner &Test, StringRef PassMessage);
+void reduceConditionalsFalseDeltaPass(TestRunner &Test, StringRef PassMessage);
 } // namespace llvm
 
 #endif

@@ -31,8 +31,8 @@ static void reduceUsingSimplifyCFG(Oracle &O, ReducerWorkItem &WorkItem) {
     simplifyCFG(BB, TTI);
 }
 
-void llvm::reduceUsingSimplifyCFGDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, reduceUsingSimplifyCFG, "Reducing using SimplifyCFG (simplify-cfg)");
+void llvm::reduceUsingSimplifyCFGDeltaPass(TestRunner &Test, StringRef PassMessage) {
+  runDeltaPass(Test, reduceUsingSimplifyCFG, PassMessage);
 }
 static void reduceConditionals(Oracle &O, ReducerWorkItem &WorkItem,
                                bool Direction) {
@@ -59,20 +59,20 @@ static void reduceConditionals(Oracle &O, ReducerWorkItem &WorkItem,
     simplifyCFG(BB, TTI);
 }
 
-void llvm::reduceConditionalsTrueDeltaPass(TestRunner &Test) {
+void llvm::reduceConditionalsTrueDeltaPass(TestRunner &Test, StringRef PassMessage) {
   runDeltaPass(
       Test,
       [](Oracle &O, ReducerWorkItem &WorkItem) {
         reduceConditionals(O, WorkItem, true);
       },
-      "Reducing conditional branches to true (simplify-conditionals-true)");
+      PassMessage);
 }
 
-void llvm::reduceConditionalsFalseDeltaPass(TestRunner &Test) {
+void llvm::reduceConditionalsFalseDeltaPass(TestRunner &Test, StringRef PassMessage) {
   runDeltaPass(
       Test,
       [](Oracle &O, ReducerWorkItem &WorkItem) {
         reduceConditionals(O, WorkItem, false);
       },
-      "Reducing conditional branches to false (simplify-conditionals-false)");
+      PassMessage);
 }

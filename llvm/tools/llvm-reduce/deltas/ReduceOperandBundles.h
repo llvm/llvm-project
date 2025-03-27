@@ -14,9 +14,11 @@
 #ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEOPERANDBUNDLES_H
 #define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEOPERANDBUNDLES_H
 
+#include "llvm/ADT/StringRef.h"
+
 namespace llvm {
 class TestRunner;
-void reduceOperandBundesDeltaPass(TestRunner &Test);
+void reduceOperandBundesDeltaPass(TestRunner &Test, StringRef PassMessage);
 } // namespace llvm
 
 #endif

@@ -32,9 +32,9 @@ static void extractFunctionBodiesFromModule(Oracle &O,
   }
 }
 
-void llvm::reduceFunctionBodiesDeltaPass(TestRunner &Test) {
+void llvm::reduceFunctionBodiesDeltaPass(TestRunner &Test, StringRef PassMessage) {
   runDeltaPass(Test, extractFunctionBodiesFromModule,
-               "Reducing Function Bodies (function-bodies)");
+               PassMessage);
 }
 
 static void reduceFunctionData(Oracle &O, ReducerWorkItem &WorkItem) {
@@ -57,6 +57,6 @@ static void reduceFunctionData(Oracle &O, ReducerWorkItem &WorkItem) {
   }
 }
 
-void llvm::reduceFunctionDataDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, reduceFunctionData, "Reducing Function Data (function-data)");
+void llvm::reduceFunctionDataDeltaPass(TestRunner &Test, StringRef PassMessage) {
+  runDeltaPass(Test, reduceFunctionData, PassMessage);
 }

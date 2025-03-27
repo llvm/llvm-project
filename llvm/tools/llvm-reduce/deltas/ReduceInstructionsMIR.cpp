@@ -158,6 +158,6 @@ static void extractInstrFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
   }
 }
 
-void llvm::reduceInstructionsMIRDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractInstrFromModule, "Reducing Instructions (instructions)");
+void llvm::reduceInstructionsMIRDeltaPass(TestRunner &Test, StringRef PassMessage) {
+  runDeltaPass(Test, extractInstrFromModule, PassMessage);
 }

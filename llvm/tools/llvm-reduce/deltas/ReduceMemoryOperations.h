@@ -12,9 +12,9 @@
 #include "TestRunner.h"
 
 namespace llvm {
-void reduceVolatileInstructionsDeltaPass(TestRunner &Test);
-void reduceAtomicSyncScopesDeltaPass(TestRunner &Test);
-void reduceAtomicOrderingDeltaPass(TestRunner &Test);
+void reduceVolatileInstructionsDeltaPass(TestRunner &Test, StringRef PassMessage);
+void reduceAtomicSyncScopesDeltaPass(TestRunner &Test, StringRef PassMessage);
+void reduceAtomicOrderingDeltaPass(TestRunner &Test, StringRef PassMessage);
 } // namespace llvm
 
 #endif

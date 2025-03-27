@@ -17,8 +17,8 @@
 #include "Delta.h"
 
 namespace llvm {
-void reduceFunctionBodiesDeltaPass(TestRunner &Test);
-void reduceFunctionDataDeltaPass(TestRunner &Test);
+void reduceFunctionBodiesDeltaPass(TestRunner &Test, StringRef PassMessage);
+void reduceFunctionDataDeltaPass(TestRunner &Test, StringRef PassMessage);
 } // namespace llvm
 
 #endif

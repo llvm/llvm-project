@@ -67,6 +67,6 @@ static void reduceGVs(Oracle &O, ReducerWorkItem &Program) {
   }
 }
 
-void llvm::reduceGlobalValuesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, reduceGVs, "Reducing GlobalValues (global-values)");
+void llvm::reduceGlobalValuesDeltaPass(TestRunner &Test, StringRef PassMessage) {
+  runDeltaPass(Test, reduceGVs, PassMessage);
 }

@@ -14,10 +14,11 @@
 #ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEINSTRUCTIONS_MIR_H
 #define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEINSTRUCTIONS_MIR_H
 
+#include "llvm/ADT/StringRef.h"
 namespace llvm {
 class TestRunner;
 
-void reduceInstructionsMIRDeltaPass(TestRunner &Test);
+void reduceInstructionsMIRDeltaPass(TestRunner &Test, StringRef PassMessage);
 } // namespace llvm
 
 #endif

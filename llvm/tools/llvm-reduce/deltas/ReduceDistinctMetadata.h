@@ -17,7 +17,7 @@
 #include "TestRunner.h"
 
 namespace llvm {
-void reduceDistinctMetadataDeltaPass(TestRunner &Test);
+void reduceDistinctMetadataDeltaPass(TestRunner &Test, StringRef PassMessage);
 } // namespace llvm
 
 #endif

@@ -26,6 +26,6 @@ static void clearModuleData(Oracle &O, ReducerWorkItem &WorkItem) {
     Program.setModuleInlineAsm("");
 }
 
-void llvm::reduceModuleDataDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, clearModuleData, "Reducing Module Data (module-data)");
+void llvm::reduceModuleDataDeltaPass(TestRunner &Test, StringRef PassMessage) {
+  runDeltaPass(Test, clearModuleData, PassMessage);
 }

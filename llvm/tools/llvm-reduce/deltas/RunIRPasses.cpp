@@ -50,6 +50,6 @@ static void runPasses(Oracle &O, ReducerWorkItem &WorkItem) {
   MPM.run(Program, MAM);
 }
 
-void llvm::runIRPassesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, runPasses, "Running passes (ir-passes)");
+void llvm::runIRPassesDeltaPass(TestRunner &Test, StringRef PassMessage) {
+  runDeltaPass(Test, runPasses, PassMessage);
 }

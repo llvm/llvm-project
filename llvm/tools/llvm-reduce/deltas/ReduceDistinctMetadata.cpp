@@ -136,7 +136,7 @@ static void extractDistinctMetadataFromModule(Oracle &O,
     cleanUpTemporaries(NamedNode, TemporaryTuple, Program);
 }
 
-void llvm::reduceDistinctMetadataDeltaPass(TestRunner &Test) {
+void llvm::reduceDistinctMetadataDeltaPass(TestRunner &Test, StringRef PassMessage) {
   runDeltaPass(Test, extractDistinctMetadataFromModule,
-               "Reducing Distinct Metadata (distinct-metadata)");
+               PassMessage);
 }
