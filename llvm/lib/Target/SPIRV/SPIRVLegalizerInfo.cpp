@@ -24,43 +24,6 @@ using namespace llvm;
 using namespace llvm::LegalizeActions;
 using namespace llvm::LegalityPredicates;
 
-// clang-format off
-static const std::set<unsigned> TypeFoldingSupportingOpcs = {
-    TargetOpcode::G_ADD,
-    TargetOpcode::G_FADD,
-    TargetOpcode::G_STRICT_FADD,
-    TargetOpcode::G_SUB,
-    TargetOpcode::G_FSUB,
-    TargetOpcode::G_STRICT_FSUB,
-    TargetOpcode::G_MUL,
-    TargetOpcode::G_FMUL,
-    TargetOpcode::G_STRICT_FMUL,
-    TargetOpcode::G_SDIV,
-    TargetOpcode::G_UDIV,
-    TargetOpcode::G_FDIV,
-    TargetOpcode::G_STRICT_FDIV,
-    TargetOpcode::G_SREM,
-    TargetOpcode::G_UREM,
-    TargetOpcode::G_FREM,
-    TargetOpcode::G_STRICT_FREM,
-    TargetOpcode::G_FNEG,
-    TargetOpcode::G_CONSTANT,
-    TargetOpcode::G_FCONSTANT,
-    TargetOpcode::G_AND,
-    TargetOpcode::G_OR,
-    TargetOpcode::G_XOR,
-    TargetOpcode::G_SHL,
-    TargetOpcode::G_ASHR,
-    TargetOpcode::G_LSHR,
-    TargetOpcode::G_SELECT,
-    TargetOpcode::G_EXTRACT_VECTOR_ELT,
-};
-// clang-format on
-
-bool isTypeFoldingSupported(unsigned Opcode) {
-  return TypeFoldingSupportingOpcs.count(Opcode) > 0;
-}
-
 LegalityPredicate typeOfExtendedScalars(unsigned TypeIdx, bool IsExtendedInts) {
   return [IsExtendedInts, TypeIdx](const LegalityQuery &Query) {
     const LLT Ty = Query.Types[TypeIdx];
@@ -181,7 +144,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
         return IsExtendedInts && Ty.isValid();
       };
 
-  for (auto Opc : TypeFoldingSupportingOpcs)
+  for (auto Opc : getTypeFoldingSupportedOpcodes())
     getActionDefinitionsBuilder(Opc).custom();
 
   getActionDefinitionsBuilder(G_GLOBAL_VALUE).alwaysLegal();
@@ -390,8 +353,7 @@ bool SPIRVLegalizerInfo::legalizeCustom(
     LostDebugLocObserver &LocObserver) const {
   auto Opc = MI.getOpcode();
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-  if (!isTypeFoldingSupported(Opc)) {
-    assert(Opc == TargetOpcode::G_ICMP);
+  if (Opc == TargetOpcode::G_ICMP) {
     assert(GR->getSPIRVTypeForVReg(MI.getOperand(0).getReg()));
     auto &Op0 = MI.getOperand(2);
     auto &Op1 = MI.getOperand(3);

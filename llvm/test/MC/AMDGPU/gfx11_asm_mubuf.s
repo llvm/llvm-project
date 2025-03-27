@@ -1,5 +1,4 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck --check-prefix=GFX11 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX11-ERR --implicit-check-not=error: %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck --check-prefix=GFX11 %s
 
 buffer_gl0_inv
 // GFX11: encoding: [0x00,0x00,0xac,0xe0,0x00,0x00,0x00,0x00]
@@ -63,9 +62,6 @@ buffer_load_b32 v5, off, s[8:11], s3 offset:4095 dlc
 
 buffer_load_b32 v5, off, s[8:11], s3 offset:4095 glc slc dlc
 // GFX11: encoding: [0xff,0x7f,0x50,0xe0,0x00,0x05,0x02,0x03]
-
-buffer_load_b32 v5, off, s[8:11], s3 offset:4095 lds
-// GFX11-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 buffer_load_b64 v[5:6], off, s[8:11], s3 offset:4095
 // GFX11: encoding: [0xff,0x0f,0x54,0xe0,0x00,0x05,0x02,0x03]
