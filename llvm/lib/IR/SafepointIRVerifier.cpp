@@ -171,7 +171,7 @@ protected:
       // Do not need to mark all in and out edges dead
       // because BB is marked dead and this is enough
       // to run further.
-      DeadBlocks.insert(Dom.begin(), Dom.end());
+      DeadBlocks.insert_range(Dom);
 
       // Figure out the dominance-frontier(D).
       for (BasicBlock *B : Dom)
@@ -646,7 +646,7 @@ void GCPtrTracker::recalculateBBsStates() {
     transferBlock(BB, *BBS, ContributionChanged);
     if (OldOutCount != BBS->AvailableOut.size()) {
       assert(OldOutCount > BBS->AvailableOut.size() && "invariant!");
-      Worklist.insert(succ_begin(BB), succ_end(BB));
+      Worklist.insert_range(successors(BB));
     }
   }
 }
@@ -750,7 +750,7 @@ void GCPtrTracker::gatherDominatingDefs(const BasicBlock *BB,
     auto BBS = getBasicBlockState(DTN->getBlock());
     assert(BBS && "immediate dominator cannot be dead for a live block");
     const auto &Defs = BBS->Contribution;
-    Result.insert(Defs.begin(), Defs.end());
+    Result.insert_range(Defs);
     // If this block is 'Cleared', then nothing LiveIn to this block can be
     // available after this block completes.  Note: This turns out to be
     // really important for reducing memory consuption of the initial available

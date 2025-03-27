@@ -272,13 +272,13 @@ concept __common_iter_has_ptr_op = requires(const common_iterator<_Iter, _Sent>&
 
 template <class, class>
 struct __arrow_type_or_void {
-  using type = void;
+  using type _LIBCPP_NODEBUG = void;
 };
 
 template <class _Iter, class _Sent>
   requires __common_iter_has_ptr_op<_Iter, _Sent>
 struct __arrow_type_or_void<_Iter, _Sent> {
-  using type = decltype(std::declval<const common_iterator<_Iter, _Sent>&>().operator->());
+  using type _LIBCPP_NODEBUG = decltype(std::declval<const common_iterator<_Iter, _Sent>&>().operator->());
 };
 
 template <input_iterator _Iter, class _Sent>

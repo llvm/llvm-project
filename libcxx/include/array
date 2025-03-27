@@ -497,7 +497,7 @@ struct _LIBCPP_TEMPLATE_VIS tuple_size<array<_Tp, _Size> > : public integral_con
 template <size_t _Ip, class _Tp, size_t _Size>
 struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, array<_Tp, _Size> > {
   static_assert(_Ip < _Size, "Index out of bounds in std::tuple_element<> (std::array)");
-  using type = _Tp;
+  using type _LIBCPP_NODEBUG = _Tp;
 };
 
 template <size_t _Ip, class _Tp, size_t _Size>

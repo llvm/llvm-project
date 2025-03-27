@@ -14361,9 +14361,24 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
     const FunctionDecl *FDecl = Best->Function;
     if (FDecl && FDecl->isTemplateInstantiation() &&
         FDecl->getReturnType()->isUndeducedType()) {
+
+      // Creating dependent CallExpr is not okay if the enclosing context itself
+      // is not dependent. This situation notably arises if a non-dependent
+      // member function calls the later-defined overloaded static function.
+      //
+      // For example, in
+      // class A {
+      //    void c() { callee(1); }
+      //    static auto callee(auto x) { }
+      // };
+      //
+      // Here callee(1) is unresolved at the call site, but is not inside a
+      // dependent context. There will be no further attempt to resolve this
+      // call if it is made dependent.
+
       if (const auto *TP =
               FDecl->getTemplateInstantiationPattern(/*ForDefinition=*/false);
-          TP && TP->willHaveBody()) {
+          TP && TP->willHaveBody() && CurContext->isDependentContext()) {
         return CallExpr::Create(Context, Fn, Args, Context.DependentTy,
                                 VK_PRValue, RParenLoc, CurFPFeatureOverrides());
       }

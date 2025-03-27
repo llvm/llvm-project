@@ -1245,7 +1245,7 @@ void MipsAsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
 // and value for debug thread local expression.
 void MipsAsmPrinter::emitDebugValue(const MCExpr *Value, unsigned Size) const {
   if (auto *MipsExpr = dyn_cast<MipsMCExpr>(Value)) {
-    if (MipsExpr && MipsExpr->getKind() == MipsMCExpr::MEK_DTPREL) {
+    if (MipsExpr && MipsExpr->getSpecifier() == MipsMCExpr::MEK_DTPREL) {
       switch (Size) {
       case 4:
         getTargetStreamer().emitDTPRel32Value(MipsExpr->getSubExpr());

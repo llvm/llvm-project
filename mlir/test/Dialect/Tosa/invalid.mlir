@@ -616,17 +616,17 @@ func.func @test_avg_pool2d_zero_dim_input(%arg0: tensor<1x0x?x9xf32>, %arg1: ten
 
 // -----
 
-func.func @test_variable_duplicates(%arg0: tensor<2x4x8xi32>) -> () {
-  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi32>
+func.func @test_variable_duplicates(%arg0: tensor<2x4x8xi8>) -> () {
+  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
   // expected-error@+1 {{'tosa.variable' op name has already been declared}}
-  tosa.variable @stored_var = dense<3> : tensor<1x4x8xi32>
+  tosa.variable @stored_var = dense<3> : tensor<1x4x8xi8>
   return
 }
 
 // -----
 
-func.func @test_variable_read_type(%arg0: tensor<2x4x8xi32>) -> () {
-  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi32>
+func.func @test_variable_read_type(%arg0: tensor<2x4x8xi8>) -> () {
+  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
   // expected-error@+1 {{'tosa.variable.read' op result type does not equal variable type}}
   %0 = tosa.variable.read @stored_var : tensor<2x4x8xi16>
   return
@@ -634,8 +634,8 @@ func.func @test_variable_read_type(%arg0: tensor<2x4x8xi32>) -> () {
 
 // -----
 
-func.func @test_variable_read_shape(%arg0: tensor<2x4x8xi32>) -> () {
-  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi32>
+func.func @test_variable_read_shape(%arg0: tensor<2x4x8xi8>) -> () {
+  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
   // expected-error@+1 {{'tosa.variable.read' op result type does not equal variable type}}
   %0 = tosa.variable.read @stored_var : tensor<1x4x8xi32>
   return
@@ -644,7 +644,7 @@ func.func @test_variable_read_shape(%arg0: tensor<2x4x8xi32>) -> () {
 // -----
 
 func.func @test_variable_write_type(%arg0: tensor<2x4x8xi16>) -> () {
-  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi32>
+  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
   // expected-error@+1 {{'tosa.variable.write' op operand type does not equal variable type}}
   tosa.variable.write @stored_var, %arg0 : tensor<2x4x8xi16>
   return
@@ -652,10 +652,10 @@ func.func @test_variable_write_type(%arg0: tensor<2x4x8xi16>) -> () {
 
 // -----
 
-func.func @test_variable_write_shape(%arg0: tensor<1x4x8xi32>) -> () {
-  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi32>
+func.func @test_variable_write_shape(%arg0: tensor<1x4x8xi8>) -> () {
+  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
   // expected-error@+1 {{'tosa.variable.write' op operand type does not equal variable type}}
-  tosa.variable.write @stored_var, %arg0 : tensor<1x4x8xi32>
+  tosa.variable.write @stored_var, %arg0 : tensor<1x4x8xi8>
   return
 }
 
@@ -1920,4 +1920,22 @@ func.func @test_scalar_output_transpose(%arg0: tensor<*xf32>) -> tensor<f32> {
   // expected-error@+1 {{'tosa.transpose' op result #0 must be tosa-conformant tensor of at least rank 1, but got 'tensor<f32>'}}
   %1 = tosa.transpose %arg0 {perms = array<i32: 2, 0, 1>} : (tensor<*xf32>) -> tensor<f32>
   return %1 : tensor<f32>
+}
+
+// -----
+
+// CHECK-LABEL: test_add_i1
+func.func @test_add_i1(%arg0: tensor<13x21x1xi1>, %arg1: tensor<13x21x3xi1>) -> tensor<13x21x3xi1> {
+  // expected-error@+1 {{'tosa.add' op illegal: operand/result data types not supported}}
+  %0 = tosa.add %arg0, %arg1 : (tensor<13x21x1xi1>, tensor<13x21x3xi1>) -> tensor<13x21x3xi1>
+  return %0 : tensor<13x21x3xi1>
+}
+
+// -----
+
+// CHECK-LABEL: test_mul_out_i16
+func.func @test_mul_out_i16(%arg0: tensor<13x21x3xi8>, %arg1: tensor<13x1x3xi8>, %shift: tensor<1xi8>) -> tensor<13x21x3xi16> {
+  // expected-error@+1 {{'tosa.mul' op illegal: operand/result data types not supported}}
+  %0 = tosa.mul %arg0, %arg1, %shift : (tensor<13x21x3xi8>, tensor<13x1x3xi8>, tensor<1xi8>) -> tensor<13x21x3xi16>
+  return %0 : tensor<13x21x3xi16>
 }

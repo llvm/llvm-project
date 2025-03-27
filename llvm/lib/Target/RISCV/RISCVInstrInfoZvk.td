@@ -603,13 +603,16 @@ multiclass VPatUnarySDNode_V<SDPatternOperator op, string instruction_name,
 // This should match the logic in RISCVDAGToDAGISel::selectVSplat
 def riscv_splat_vector : PatFrag<(ops node:$rs1),
                                  (riscv_vmv_v_x_vl undef, node:$rs1, srcvalue)>;
-def riscv_vnot : PatFrag<(ops node:$rs1), (xor node:$rs1,
-                                               (riscv_splat_vector -1))>;
+def allonessew8  : ImmLeaf<XLenVT, "return SignExtend64<8>(Imm) == -1LL;">;
+def allonessew16 : ImmLeaf<XLenVT, "return SignExtend64<16>(Imm) == -1LL;">;
+def allonessew32 : ImmLeaf<XLenVT, "return SignExtend64<32>(Imm) == -1LL;">;
+def allonessew64 : ImmLeaf<XLenVT, "return Imm == -1LL;">;
 
 foreach vti = AllIntegerVectors in {
   let Predicates = !listconcat([HasStdExtZvkb],
                                GetVTypePredicates<vti>.Predicates) in {
-    def : Pat<(vti.Vector (and (riscv_vnot vti.RegClass:$rs1),
+    def : Pat<(vti.Vector (and (xor vti.RegClass:$rs1,
+                                    (riscv_splat_vector !cast<ImmLeaf>("allonessew"#vti.SEW))),
                                vti.RegClass:$rs2)),
               (!cast<Instruction>("PseudoVANDN_VV_"#vti.LMul.MX)
                  (vti.Vector (IMPLICIT_DEF)),
@@ -734,7 +737,7 @@ foreach vti = AllIntegerVectors in {
                                GetVTypePredicates<vti>.Predicates) in {
     def : Pat<(vti.Vector (riscv_and_vl (riscv_xor_vl
                                            (vti.Vector vti.RegClass:$rs1),
-                                           (riscv_splat_vector -1),
+                                           (riscv_splat_vector !cast<ImmLeaf>("allonessew"#vti.SEW)),
                                            (vti.Vector vti.RegClass:$passthru),
                                            (vti.Mask VMV0:$vm),
                                            VLOpFrag),

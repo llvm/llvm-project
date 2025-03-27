@@ -1,16 +1,16 @@
 # RUN: llvm-mc --disassemble %s -triple powerpc64le-unknown-unknown \
 # RUN:   -mcpu=future | FileCheck %s
 
-#CHECK: dmxxextfdmr512 1, 2, 34, 0
+#CHECK: dmxxextfdmr512 2, 34, 1, 0
 0x12 0x17 0x82 0xf0
 
-#CHECK: dmxxextfdmr512 1, 2, 34, 1
+#CHECK: dmxxextfdmr512 2, 34, 1, 1
 0x12 0x17 0x83 0xf0
 
-#CHECK: dmxxextfdmr256 3, 8, 0
+#CHECK: dmxxextfdmr256 8, 3, 0
 0x90 0x47 0x80 0xf1
 
-#CHECK: dmxxextfdmr256 3, 8, 3
+#CHECK: dmxxextfdmr256 8, 3, 3
 0x90 0x4f 0x81 0xf1
 
 #CHECK: dmxxinstfdmr512 1, 2, 34, 0

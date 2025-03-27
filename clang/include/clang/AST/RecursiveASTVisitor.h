@@ -1005,7 +1005,9 @@ DEF_TRAVERSE_TYPE(RValueReferenceType,
 
 DEF_TRAVERSE_TYPE(MemberPointerType, {
   TRY_TO(TraverseNestedNameSpecifier(T->getQualifier()));
-  TRY_TO(TraverseDecl(T->getMostRecentCXXRecordDecl()));
+  if (T->isSugared())
+    TRY_TO(TraverseType(
+        QualType(T->getMostRecentCXXRecordDecl()->getTypeForDecl(), 0)));
   TRY_TO(TraverseType(T->getPointeeType()));
 })
 

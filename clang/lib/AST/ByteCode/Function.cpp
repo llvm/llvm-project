@@ -35,10 +35,12 @@ Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
       Kind = FunctionKind::Dtor;
     } else if (const auto *MD = dyn_cast<CXXMethodDecl>(F)) {
       Virtual = MD->isVirtual();
-      if (IsLambdaStaticInvoker) // MD->isLambdaStaticInvoker())
+      if (IsLambdaStaticInvoker)
         Kind = FunctionKind::LambdaStaticInvoker;
       else if (clang::isLambdaCallOperator(F))
         Kind = FunctionKind::LambdaCallOperator;
+      else if (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator())
+        Kind = FunctionKind::CopyOrMoveOperator;
     }
   }
 }

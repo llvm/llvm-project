@@ -2685,10 +2685,23 @@ QualType Sema::BuildFunctionType(QualType T,
   return Context.getFunctionType(T, ParamTypes, EPI);
 }
 
-QualType Sema::BuildMemberPointerType(QualType T,
-                                      NestedNameSpecifier *Qualifier,
+QualType Sema::BuildMemberPointerType(QualType T, const CXXScopeSpec &SS,
                                       CXXRecordDecl *Cls, SourceLocation Loc,
                                       DeclarationName Entity) {
+  if (!Cls && !isDependentScopeSpecifier(SS)) {
+    Cls = dyn_cast_or_null<CXXRecordDecl>(computeDeclContext(SS));
+    if (!Cls) {
+      auto D =
+          Diag(SS.getBeginLoc(), diag::err_illegal_decl_mempointer_in_nonclass)
+          << SS.getRange();
+      if (const IdentifierInfo *II = Entity.getAsIdentifierInfo())
+        D << II;
+      else
+        D << "member pointer";
+      return QualType();
+    }
+  }
+
   // Verify that we're not building a pointer to pointer to function with
   // exception specification.
   if (CheckDistantExceptionSpec(T)) {
@@ -2730,7 +2743,7 @@ QualType Sema::BuildMemberPointerType(QualType T,
   if (T->isFunctionType())
     adjustMemberFunctionCC(T, /*HasThisPointer=*/true, IsCtorOrDtor, Loc);
 
-  return Context.getMemberPointerType(T, Qualifier, Cls);
+  return Context.getMemberPointerType(T, SS.getScopeRep(), Cls);
 }
 
 QualType Sema::BuildBlockPointerType(QualType T,
@@ -5344,20 +5357,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         // Avoid emitting extra errors if we already errored on the scope.
         D.setInvalidType(true);
         AreDeclaratorChunksValid = false;
-      } else if (auto *RD =
-                     dyn_cast_or_null<CXXRecordDecl>(S.computeDeclContext(SS));
-                 RD || S.isDependentScopeSpecifier(SS)) {
-        T = S.BuildMemberPointerType(T, SS.getScopeRep(), RD, DeclType.Loc,
-                                     D.getIdentifier());
       } else {
-        S.Diag(DeclType.Mem.Scope().getBeginLoc(),
-             diag::err_illegal_decl_mempointer_in_nonclass)
-          << (D.getIdentifier() ? D.getIdentifier()->getName() : "type name")
-          << DeclType.Mem.Scope().getRange();
-        D.setInvalidType(true);
-        AreDeclaratorChunksValid = false;
-        // FIXME: Maybe we could model these as as a MemberPointerType with a
-        // non-dependent, non-class qualifier anyway.
+        T = S.BuildMemberPointerType(T, SS, /*Cls=*/nullptr, DeclType.Loc,
+                                     D.getIdentifier());
       }
 
       if (T.isNull()) {
@@ -9255,10 +9257,10 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
   //         "Can't ask whether a dependent type is complete");
 
   if (const MemberPointerType *MPTy = T->getAs<MemberPointerType>()) {
-    if (!MPTy->getQualifier()->isDependent()) {
-      QualType T = Context.getTypeDeclType(MPTy->getMostRecentCXXRecordDecl());
-      if (getLangOpts().CompleteMemberPointers &&
-          !MPTy->getMostRecentCXXRecordDecl()->isBeingDefined() &&
+    if (CXXRecordDecl *RD = MPTy->getMostRecentCXXRecordDecl();
+        RD && !RD->isDependentType()) {
+      QualType T = Context.getTypeDeclType(RD);
+      if (getLangOpts().CompleteMemberPointers && !RD->isBeingDefined() &&
           RequireCompleteType(Loc, T, Kind, diag::err_memptr_incomplete))
         return true;
 

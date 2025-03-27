@@ -2452,7 +2452,7 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
     const CXXRecordDecl *RD =
         cast<MemberPointerType>(CanonicalType)->getMostRecentCXXRecordDecl();
     // Member pointers with dependent class types don't get special treatment.
-    if (!RD)
+    if (!RD || RD->isDependentType())
       return false;
     ASTContext &Context = RD->getASTContext();
     // Member pointers not in the MS ABI don't get special treatment.

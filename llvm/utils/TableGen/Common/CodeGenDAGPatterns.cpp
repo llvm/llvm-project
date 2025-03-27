@@ -3321,8 +3321,7 @@ void CodeGenDAGPatterns::ParsePatternFragments(bool OutFrags) {
     std::vector<std::string> &Args = P->getArgList();
     // Copy the args so we can take StringRefs to them.
     auto ArgsCopy = Args;
-    SmallDenseSet<StringRef, 4> OperandsSet;
-    OperandsSet.insert(ArgsCopy.begin(), ArgsCopy.end());
+    SmallDenseSet<StringRef, 4> OperandsSet(llvm::from_range, ArgsCopy);
 
     if (OperandsSet.count(""))
       P->error("Cannot have unnamed 'node' values in pattern fragment!");
