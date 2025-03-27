@@ -1409,8 +1409,10 @@ getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size) {
   LLVMContext &Ctx = F.getContext();
 
   Attribute A = F.getFnAttribute(Name);
+  if (!A.isValid())
+    return std::nullopt;
   if (!A.isStringAttribute()) {
-    Ctx.emitError(Name + " is not a string attritue");
+    Ctx.emitError(Name + " is not a string attribute");
     return std::nullopt;
   }
 
