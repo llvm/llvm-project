@@ -2512,7 +2512,19 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
     Block *dominatedBlock = (*dominatedBlocks.begin())->getBlock();
     builder.setInsertionPoint(dominatedBlock->getTerminator());
   } else {
-    builder.setInsertionPointAfterValue(*argOperand);
+    Value insertPt = *argOperand;
+    if (auto blockArg = dyn_cast<BlockArgument>(*argOperand)) {
+      // The value might be coming from a phi node and is now a block argument,
+      // which means the insertion point is set to the start of the block. If
+      // this block is a target destination of an invoke, the insertion point
+      // must happen after the landing pad operation.
+      Block *insertionBlock = argOperand->getParentBlock();
+      if (!insertionBlock->empty() &&
+          isa<LandingpadOp>(insertionBlock->front()))
+        insertPt = cast<LandingpadOp>(insertionBlock->front()).getRes();
+    }
+
+    builder.setInsertionPointAfterValue(insertPt);
   }
   auto locationExprAttr =
       debugImporter->translateExpression(dbgIntr->getExpression());

@@ -613,6 +613,30 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateVectorSplat(
         State.VF, State.get(getOperand(0), /*IsScalar*/ true), "broadcast");
   }
+  case VPInstruction::ComputeFindLastIVResult: {
+    // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
+    // and will be removed by breaking up the recipe further.
+    auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
+    // Get its reduction variable descriptor.
+    const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
+    [[maybe_unused]] RecurKind RK = RdxDesc.getRecurrenceKind();
+    assert(RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK) &&
+           "Unexpected reduction kind");
+    assert(!PhiR->isInLoop() &&
+           "In-loop FindLastIV reduction is not supported yet");
+
+    // The recipe's operands are the reduction phi, followed by one operand for
+    // each part of the reduction.
+    unsigned UF = getNumOperands() - 2;
+    Value *ReducedPartRdx = State.get(getOperand(2));
+    for (unsigned Part = 1; Part < UF; ++Part) {
+      ReducedPartRdx = createMinMaxOp(Builder, RecurKind::SMax, ReducedPartRdx,
+                                      State.get(getOperand(2 + Part)));
+    }
+
+    return createFindLastIVReduction(Builder, ReducedPartRdx,
+                                     State.get(getOperand(1), true), RdxDesc);
+  }
   case VPInstruction::ComputeReductionResult: {
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
     // and will be removed by breaking up the recipe further.
@@ -622,6 +646,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
     const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
 
     RecurKind RK = RdxDesc.getRecurrenceKind();
+    assert(!RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK) &&
+           "should be handled by ComputeFindLastIVResult");
 
     Type *PhiTy = OrigPhi->getType();
     // The recipe's operands are the reduction phi, followed by one operand for
@@ -657,9 +683,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
         if (Op != Instruction::ICmp && Op != Instruction::FCmp)
           ReducedPartRdx = Builder.CreateBinOp(
               (Instruction::BinaryOps)Op, RdxPart, ReducedPartRdx, "bin.rdx");
-        else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK))
-          ReducedPartRdx =
-              createMinMaxOp(Builder, RecurKind::SMax, ReducedPartRdx, RdxPart);
         else
           ReducedPartRdx = createMinMaxOp(Builder, RK, ReducedPartRdx, RdxPart);
       }
@@ -668,8 +691,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // Create the reduction after the loop. Note that inloop reductions create
     // the target reduction in the loop using a Reduction recipe.
     if ((State.VF.isVector() ||
-         RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
-         RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) &&
+         RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) &&
         !PhiR->isInLoop()) {
       // TODO: Support in-order reductions based on the recurrence descriptor.
       // All ops in the reduction inherit fast-math-flags from the recurrence
@@ -680,9 +702,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
       if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
         ReducedPartRdx =
             createAnyOfReduction(Builder, ReducedPartRdx, RdxDesc, OrigPhi);
-      else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK))
-        ReducedPartRdx =
-            createFindLastIVReduction(Builder, ReducedPartRdx, RdxDesc);
       else
         ReducedPartRdx = createSimpleReduction(Builder, ReducedPartRdx, RK);
 
@@ -828,6 +847,7 @@ bool VPInstruction::isVectorToScalar() const {
   return getOpcode() == VPInstruction::ExtractFromEnd ||
          getOpcode() == Instruction::ExtractElement ||
          getOpcode() == VPInstruction::FirstActiveLane ||
+         getOpcode() == VPInstruction::ComputeFindLastIVResult ||
          getOpcode() == VPInstruction::ComputeReductionResult ||
          getOpcode() == VPInstruction::AnyOf;
 }
@@ -932,6 +952,8 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
     return true;
   case VPInstruction::PtrAdd:
     return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
+  case VPInstruction::ComputeFindLastIVResult:
+    return Op == getOperand(1);
   };
   llvm_unreachable("switch should return");
 }
@@ -1009,6 +1031,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ExtractFromEnd:
     O << "extract-from-end";
+    break;
+  case VPInstruction::ComputeFindLastIVResult:
+    O << "compute-find-last-iv-result";
     break;
   case VPInstruction::ComputeReductionResult:
     O << "compute-reduction-result";
@@ -1570,7 +1595,6 @@ void VPWidenRecipe::execute(VPTransformState &State) {
   }
   case Instruction::Freeze: {
     Value *Op = State.get(getOperand(0));
-
     Value *Freeze = Builder.CreateFreeze(Op);
     State.set(this, Freeze);
     break;

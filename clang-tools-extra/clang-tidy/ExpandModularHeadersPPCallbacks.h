@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLING_EXPANDMODULARHEADERSPPCALLBACKS_H_
 #define LLVM_CLANG_TOOLING_EXPANDMODULARHEADERSPPCALLBACKS_H_
 
+#include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseSet.h"
@@ -129,6 +130,7 @@ private:
   SourceManager &Sources;
   DiagnosticsEngine Diags;
   LangOptions LangOpts;
+  HeaderSearchOptions HSOpts;
   TrivialModuleLoader ModuleLoader;
 
   std::unique_ptr<HeaderSearch> HeaderInfo;
