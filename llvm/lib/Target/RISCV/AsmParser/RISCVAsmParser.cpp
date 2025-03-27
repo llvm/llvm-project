@@ -2826,7 +2826,11 @@ ParseStatus RISCVAsmParser::parseReglist(OperandVector &Operands) {
 
   bool SeenComma = false;
 
-  // If you must include S0, then you need the comma. Fail now if it isn't there
+  // There are two choices here:
+  // - `s0` is required (qc.cm.pushfp), and so we must see the comma between
+  //   `ra` and `s0` and must always try to parse `s0`, below
+  // - `s0` is not required (usual case), so only try to parse `s0` if there is
+  //   a comma
   if constexpr (MustIncludeS0) {
     if (parseToken(AsmToken::Comma, "register list must include 's0' or 'x8'"))
       return ParseStatus::Failure;
@@ -2835,7 +2839,7 @@ ParseStatus RISCVAsmParser::parseReglist(OperandVector &Operands) {
     SeenComma = parseOptionalToken(AsmToken::Comma);
   }
 
-  // parse case like ,s0 - we may have already seen the comma in which case skip
+  // parse case like , s0 (knowing the comma is or must be there)
   if (SeenComma) {
     if (getLexer().isNot(AsmToken::Identifier))
       return Error(getLoc(), "invalid register");
