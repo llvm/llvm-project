@@ -114,9 +114,9 @@ jobs:
       - name: Build
         # Need to run install-LLVM twice to ensure the symlink is installed (this is a bug).
         run: |
-          ninja -C build install-LLVM
-          ninja -C build install-LLVM
-          ninja -C build install-llvm-headers
+          ninja -v -C build install-LLVM
+          ninja -v -C build install-LLVM
+          ninja -v -C build install-llvm-headers
       - name: Dump ABI
         run: |
           if [ "${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}" = "llvm-c" ]; then
