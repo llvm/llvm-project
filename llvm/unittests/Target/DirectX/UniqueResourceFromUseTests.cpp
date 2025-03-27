@@ -371,8 +371,8 @@ entry:
   }
 }
 
-// Test that multiple different resources with unique incs/decs don't
-// raise a Diagnostic and can be individually checked for direction
+// Test that multiple different resources with unique incs/decs aren't
+// marked invalid
 TEST_F(UniqueResourceFromUseTest, TestResourceCounterMultiple) {
   StringRef Assembly = R"(
 define void @main() {
@@ -405,6 +405,37 @@ entry:
       const auto *const Binding = DBM.find(CI);
       ASSERT_EQ(DCDM[*Binding], *Dir);
       Dir++;
+    }
+  }
+}
+
+// Test that single different resources with unique incs/decs is marked invalid
+TEST_F(UniqueResourceFromUseTest, TestResourceCounterInvalid) {
+  StringRef Assembly = R"(
+define void @main() {
+entry:
+  %handle = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding(i32 1, i32 2, i32 3, i32 4, i1 false)
+  call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", float, 1, 0) %handle, i8 -1)
+  call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", float, 1, 0) %handle, i8 1)
+  ret void
+}
+  )";
+
+  auto M = parseAsm(Assembly);
+
+  const DXILBindingMap &DBM = MAM->getResult<DXILResourceBindingAnalysis>(*M);
+  const DXILResourceCounterDirectionMap &DCDM =
+      MAM->getResult<DXILResourceCounterDirectionAnalysis>(*M);
+
+  for (const Function &F : M->functions()) {
+    if (F.getIntrinsicID() != Intrinsic::dx_resource_handlefrombinding) {
+      continue;
+    }
+
+    for (const User *U : F.users()) {
+      const CallInst *CI = cast<CallInst>(U);
+      const auto *const Binding = DBM.find(CI);
+      ASSERT_EQ(DCDM[*Binding], ResourceCounterDirection::Invalid);
     }
   }
 }

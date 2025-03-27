@@ -11,7 +11,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
@@ -22,7 +21,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
-#include <iterator>
 
 #define DEBUG_TYPE "dxil-resource"
 
@@ -832,11 +830,6 @@ static bool isUpdateCounterIntrinsic(Function &F) {
 }
 
 void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
-  SmallVector<
-      std::tuple<const dxil::ResourceBindingInfo *, ResourceCounterDirection,
-                 const Function *, const CallInst *>>
-      DiagCounterDirs;
-
   for (Function &F : M.functions()) {
     if (!isUpdateCounterIntrinsic(F))
       continue;
@@ -863,82 +856,42 @@ void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
       SmallVector<const dxil::ResourceBindingInfo *> RBInfos =
           DBM.findByUse(HandleArg);
       for (const dxil::ResourceBindingInfo *RBInfo : RBInfos)
-        DiagCounterDirs.emplace_back(RBInfo, Direction, &F, CI);
+        CounterDirections.emplace_back(RBInfo, Direction);
     }
   }
 
   // Sort by the Binding and Direction for fast lookup
-  std::sort(DiagCounterDirs.begin(), DiagCounterDirs.end(),
-            [](const auto &LHS, const auto &RHS) {
-              const auto L =
-                  std::pair{std::get<const dxil::ResourceBindingInfo *>(LHS),
-                            std::get<ResourceCounterDirection>(LHS)};
-              const auto R =
-                  std::pair{std::get<const dxil::ResourceBindingInfo *>(RHS),
-                            std::get<ResourceCounterDirection>(RHS)};
-              return L < R;
-            });
+  std::sort(CounterDirections.begin(), CounterDirections.end());
 
+  // Remove the duplicate entries. Since direction is considered for equality
+  // a unique resource with more than one direction will not be deduped.
+  auto UniqueEnd =
+      std::unique(CounterDirections.begin(), CounterDirections.end());
+
+  // If any duplicate entries still exist at this point then it must be a
+  // resource that was both incremented and decremented which is not allowed.
+  // Mark all those entries as invalid.
   {
-    auto *SpanStart = DiagCounterDirs.begin();
-    auto *SpanEnd = SpanStart;
-    auto *ItEnd = DiagCounterDirs.end();
-
-    while (SpanStart < ItEnd) {
-      while (SpanEnd < ItEnd &&
-             std::get<const dxil::ResourceBindingInfo *>(*SpanStart) ==
-                 std::get<const dxil::ResourceBindingInfo *>(*SpanEnd))
-        SpanEnd++;
-
-      // SpanStart : SpanEnd-1 are the same binding. Its an error if they aren't
-      // all the same direction
-      ResourceCounterDirection ResourceDir =
-          std::get<ResourceCounterDirection>(*SpanStart);
-      bool ValidUse = true;
-      for (auto *CheckIt = SpanStart; CheckIt < SpanEnd; ++CheckIt) {
-        if (ResourceDir != std::get<ResourceCounterDirection>(*CheckIt)) {
-          ValidUse = false;
-          break;
-        }
-      }
-
-      // Update the direction and raise a diag when an invalid use is detected
-      for (auto *RaiseIt = SpanStart; !ValidUse && RaiseIt < SpanEnd;
-           ++RaiseIt) {
-        std::get<ResourceCounterDirection>(*RaiseIt) =
+    auto DupFirst = CounterDirections.begin();
+    auto DupNext = DupFirst + 1;
+    auto DupLast = UniqueEnd;
+    for (; DupFirst < DupLast && DupNext < DupLast; ++DupFirst, ++DupNext) {
+      if (std::get<const dxil::ResourceBindingInfo *>(*DupFirst) ==
+          std::get<const dxil::ResourceBindingInfo *>(*DupNext)) {
+        std::get<ResourceCounterDirection>(*DupFirst) =
             ResourceCounterDirection::Invalid;
-
-        StringRef Message =
-            "RWStructuredBuffers may increment or decrement their "
-            "counters, but not both.";
-        const Function *F = std::get<const Function *>(*RaiseIt);
-        const CallInst *CI = std::get<const CallInst *>(*RaiseIt);
-        M.getContext().diagnose(
-            DiagnosticInfoGenericWithLoc(Message, *F, CI->getDebugLoc()));
+        std::get<ResourceCounterDirection>(*DupNext) =
+            ResourceCounterDirection::Invalid;
       }
-
-      SpanStart = SpanEnd;
     }
   }
 
-  // Remove the duplicate entries. All entries with the same resource have the
-  // same direction so it can be ignored.
-  auto *const UniqueEnd =
-      std::unique(DiagCounterDirs.begin(), DiagCounterDirs.end(),
-                  [](const auto &LHS, const auto &RHS) {
-                    return std::get<const dxil::ResourceBindingInfo *>(LHS) ==
-                           std::get<const dxil::ResourceBindingInfo *>(RHS);
-                  });
+  // Remove the duplicate entries again now that each duplicate resource has the
+  // same direction for each entry leaving one entry per RBI
+  UniqueEnd = std::unique(CounterDirections.begin(), UniqueEnd);
 
-  // Copy the results into the final location
-  CounterDirections.clear();
-  CounterDirections.reserve(UniqueEnd - DiagCounterDirs.begin());
-  std::transform(DiagCounterDirs.begin(), UniqueEnd,
-                 std::back_inserter(CounterDirections), [](const auto &Item) {
-                   return std::pair{
-                       std::get<const dxil::ResourceBindingInfo *>(Item),
-                       std::get<ResourceCounterDirection>(Item)};
-                 });
+  // Actually erase the invalidated items
+  CounterDirections.erase(UniqueEnd, CounterDirections.end());
 }
 
 ResourceCounterDirection DXILResourceCounterDirectionMap::operator[](

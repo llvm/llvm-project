@@ -859,14 +859,6 @@ PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &MAM) {
   DXILBindingMap &DBM = MAM.getResult<DXILResourceBindingAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
 
-  // TODO: This needs to be called even though its not currently being used in
-  // order for tests to pass. It will eventually need to be used as part of
-  // https://github.com/llvm/llvm-project/issues/125126 which will have the same
-  // effect. Until then discard the result.
-  DXILResourceCounterDirectionMap &DRCDM =
-      MAM.getResult<DXILResourceCounterDirectionAnalysis>(M);
-  (void)DRCDM;
-
   bool MadeChanges = OpLowerer(M, DBM, DRTM).lowerIntrinsics();
   if (!MadeChanges)
     return PreservedAnalyses::all();
