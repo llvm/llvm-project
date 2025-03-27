@@ -23,9 +23,7 @@ std::expected<void, int> returns_expected_void() {
 }
 
 void test() {
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  returns_expected();
-  
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  returns_expected_void();
+  returns_expected(); // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  returns_expected_void(); // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

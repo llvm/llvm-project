@@ -30,6 +30,7 @@
 //  U is a specialization of std::expected and std::is_same_v<U:error_type, E> is true
 
 #include <expected>
+#include <tuple>
 #include <utility>
 
 struct NotSameAsInt {};
@@ -51,7 +52,7 @@ void test() {
     // U is not a specialization of std::expected
     {
       std::expected<void, int> f1;
-      (void)f1.and_then(lval_return_not_std_expected); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::and_then<int (&)()>' requested here}}
+      std::ignore = f1.and_then(lval_return_not_std_expected); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::and_then<int (&)()>' requested here}}
       // expected-error-re@*:* {{static assertion failed {{.*}}The result of f() must be a specialization of std::expected}}
       // expected-error-re@*:* {{{{.*}}cannot be used prior to '::' because it has no members}}
       // expected-error-re@*:* {{no matching constructor for initialization of{{.*}}}}
@@ -60,7 +61,7 @@ void test() {
     // !std::is_same_v<U:error_type, E>
     {
       std::expected<void, int> f1;
-      (void)f1.and_then(lval_error_type_not_same_as_int);  // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::and_then<std::expected<int, NotSameAsInt> (&)()>' requested here}}
+      std::ignore = f1.and_then(lval_error_type_not_same_as_int);  // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::and_then<std::expected<int, NotSameAsInt> (&)()>' requested here}}
       // expected-error-re@*:* {{static assertion failed {{.*}}The result of f() must have the same error_type as this expected}}
     }
   }
@@ -70,7 +71,7 @@ void test() {
     // U is not a specialization of std::expected
     {
       const std::expected<void, int> f1;
-      (void)f1.and_then(clval_return_not_std_expected); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::and_then<int (&)()>' requested here}}
+      std::ignore = f1.and_then(clval_return_not_std_expected); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::and_then<int (&)()>' requested here}}
       // expected-error-re@*:* {{static assertion failed {{.*}}The result of f() must be a specialization of std::expected}}
       // expected-error-re@*:* {{{{.*}}cannot be used prior to '::' because it has no members}}
       // expected-error-re@*:* {{no matching constructor for initialization of{{.*}}}}
@@ -79,7 +80,7 @@ void test() {
     // !std::is_same_v<U:error_type, E>
     {
       const std::expected<void, int> f1;
-      (void)f1.and_then(clval_error_type_not_same_as_int);  // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::and_then<std::expected<int, NotSameAsInt> (&)()>' requested here}}
+      std::ignore = f1.and_then(clval_error_type_not_same_as_int);  // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::and_then<std::expected<int, NotSameAsInt> (&)()>' requested here}}
       // expected-error-re@*:* {{static assertion failed {{.*}}The result of f() must have the same error_type as this expected}}
     }
   }
@@ -89,7 +90,7 @@ void test() {
     // U is not a specialization of std::expected
     {
       std::expected<void, int> f1;
-      (void)std::move(f1).and_then(rval_return_not_std_expected); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::and_then<int (&)()>' requested here}}
+      std::ignore = std::move(f1).and_then(rval_return_not_std_expected); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::and_then<int (&)()>' requested here}}
       // expected-error-re@*:* {{static assertion failed {{.*}}The result of f() must be a specialization of std::expected}}
       // expected-error-re@*:* {{{{.*}}cannot be used prior to '::' because it has no members}}
       // expected-error-re@*:* {{no matching constructor for initialization of{{.*}}}}
@@ -98,7 +99,7 @@ void test() {
     // !std::is_same_v<U:error_type, E>
     {
       std::expected<void, int> f1;
-      (void)std::move(f1).and_then(rval_error_type_not_same_as_int); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::and_then<std::expected<int, NotSameAsInt> (&)()>' requested here}}
+      std::ignore = std::move(f1).and_then(rval_error_type_not_same_as_int); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::and_then<std::expected<int, NotSameAsInt> (&)()>' requested here}}
       // expected-error-re@*:* {{static assertion failed {{.*}}The result of f() must have the same error_type as this expected}}
     }
   }
@@ -108,7 +109,7 @@ void test() {
     // U is not a specialization of std::expected
     {
       const std::expected<void, int> f1;
-      (void)std::move(f1).and_then(crval_return_not_std_expected); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::and_then<int (&)()>' requested here}}
+      std::ignore = std::move(f1).and_then(crval_return_not_std_expected); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::and_then<int (&)()>' requested here}}
       // expected-error-re@*:* {{static assertion failed {{.*}}The result of f() must be a specialization of std::expected}}
       // expected-error-re@*:* {{{{.*}}cannot be used prior to '::' because it has no members}}
       // expected-error-re@*:* {{no matching constructor for initialization of{{.*}}}}
@@ -117,7 +118,7 @@ void test() {
     // !std::is_same_v<U:error_type, E>
     {
       const std::expected<void, int> f1;
-      (void)std::move(f1).and_then(crval_error_type_not_same_as_int); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::and_then<std::expected<int, NotSameAsInt> (&)()>' requested here}}
+      std::ignore = std::move(f1).and_then(crval_error_type_not_same_as_int); // expected-note{{in instantiation of function template specialization 'std::expected<void, int>::and_then<std::expected<int, NotSameAsInt> (&)()>' requested here}}
       // expected-error-re@*:* {{static assertion failed {{.*}}The result of f() must have the same error_type as this expected}}
     }
   }
@@ -126,8 +127,7 @@ void test() {
   {
     const std::expected<int, int> f1(std::unexpected<int>(1));
     
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    f1.and_then([](int&){ return 1; });
+    f1.and_then([](int&){ return 1; }); // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
 }
 // clang-format on
