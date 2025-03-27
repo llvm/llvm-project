@@ -161,7 +161,6 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
 
   VariableCategory VC = VariableCategory::Value;
   const QualType VT = Variable->getType();
-  VT->dump();
   if (VT->isReferenceType()) {
     VC = VariableCategory::Reference;
   } else if (VT->isPointerType()) {
@@ -170,7 +169,6 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     if (ArrayT->getElementType()->isPointerType())
       VC = VariableCategory::Pointer;
   }
-  llvm::errs() << (int)VC << "\n";
 
   auto CheckValue = [&]() {
     // The scope is only registered if the analysis shall be run.
