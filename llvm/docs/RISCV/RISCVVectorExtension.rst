@@ -275,7 +275,7 @@ To avoid this, ``RISCVVMV0Elimination`` replaces any uses of ``vmv0`` with physi
   // vmv0 gets eliminated to:
 
   $v0 = COPY %3:vr
-  %x:vrnov0 = PseudoVADD_VV_M1_MASK %0:vrnov0, %1:vr, %2:vr, $0, ...
+  %x:vrnov0 = PseudoVADD_VV_M1_MASK %0:vrnov0, %1:vr, %2:vr, $v0, ...
 
 .. _rvv_register_allocation:
 
