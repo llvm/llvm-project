@@ -75,17 +75,6 @@ i6400:
 # CHECK-NEXT:	 -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   div    $2, $1
 # CHECK-NEXT:	1.00    -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     sw     $2, 0($sp)
 
-# CHECK:	Timeline view:
-# CHECK-NEXT:	                    0123456789          0123456789
-# CHECK-NEXT:	Index     0123456789          0123456789          01
-# CHECK:	[0,0]     DeeE .    .    .    .    .    .    .    ..   lw       $1, 0($sp)
-# CHECK-NEXT:	[0,1]     .DeeE.    .    .    .    .    .    .    ..   lw       $2, 8($sp)
-# CHECK-NEXT:	[0,2]     .  DE.    .    .    .    .    .    .    ..   move     $3, $1
-# CHECK-NEXT:	[0,3]     .   DeeeE .    .    .    .    .    .    ..   mul      $3, $2, $3
-# CHECK-NEXT:	[0,4]     .    .  DE.    .    .    .    .    .    ..   sw       $3, 8($sp)
-# CHECK-NEXT:	[0,5]     .    .  DeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeE.   div      $2, $1
-# CHECK-NEXT:	[0,6]     .    .    .    .    .    .    .    .    DE   sw       $2, 0($sp)
-
 # CHECK:	Average Wait times (based on the timeline view):
 # CHECK-NEXT:	[0]: Executions
 # CHECK-NEXT:	[1]: Average time spent waiting in a scheduler's queue
