@@ -64,15 +64,13 @@ exit:
 ;   for (int j = 1; j < 256; j++)
 ;     A[i][j-1] = A[i][j] + B[i][j];
 ;
-; FIXME: These loops are exchanged at this time due to the problem in
-; profitability heuristic calculation for vectorization.
 
-; CHECK:      --- !Passed
+; CHECK:      --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            Interchanged
+; CHECK-NEXT: Name:            InterchangeNotProfitable
 ; CHECK-NEXT: Function:        interchange_unnecesasry_for_vectorization
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Loop interchanged with enclosing loop.
+; CHECK-NEXT:   - String:          Insufficient information to calculate the cost of loop for interchange.
 define void @interchange_unnecesasry_for_vectorization() {
 entry:
   br label %for.i.header
