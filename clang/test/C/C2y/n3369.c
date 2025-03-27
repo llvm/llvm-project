@@ -139,3 +139,8 @@ void test_struct_members() {
   } t;
   static_assert(_Countof(t.fam)); // expected-error {{invalid application of '_Countof' to an incomplete type 'int[]'}}
 }
+
+void test_compound_literals() {
+  static_assert(_Countof((int[2]){}) == 2);
+  static_assert(_Countof((int[]){1, 2, 3, 4}) == 4);	
+}
