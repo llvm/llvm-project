@@ -1732,6 +1732,8 @@ TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering2) {
   const SCEV *M2 = SE.getNegativeSCEV(P2);
 
   SmallVector<const SCEV *, 6> Ops = {M2, P0, M0, P1, P2};
+  // When _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG, this will
+  // crash if the comparator has the specific caching bug.
   SE.getAddExpr(Ops);
 }
 
