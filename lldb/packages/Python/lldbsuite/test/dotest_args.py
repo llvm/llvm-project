@@ -295,7 +295,7 @@ def create_parser():
     group.add_argument(
         "--platform-available-ports",
         dest="lldb_platform_available_ports",
-        type=lambda ports: [int(port.strip()) for port in ports.split(":")],
+        nargs="*",
         metavar="platform-available-ports",
         help="Ports available for connection to a lldb server on the remote platform",
     )
