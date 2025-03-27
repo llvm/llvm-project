@@ -435,7 +435,8 @@ void llvm::computeKnownBitsFromRangeMetadata(const MDNode &Ranges,
         (Range.getUnsignedMax() ^ Range.getUnsignedMin()).countl_zero();
     // BitWidth must equal the Ranges BitWidth for the correct number of high
     // bits to be set.
-    assert(BitWidth == Lower->getBitWidth());
+    assert(BitWidth == Lower->getBitWidth() &&
+           "Known bit width must match range bit width!");
     APInt Mask = APInt::getHighBitsSet(BitWidth, CommonPrefixBits);
     APInt UnsignedMax = Range.getUnsignedMax().zextOrTrunc(BitWidth);
     Known.One &= UnsignedMax & Mask;
