@@ -38,3 +38,16 @@ float3 test_cos_float3(float3 p0) { return cos(p0); }
 // CHECK-LABEL: define noundef nofpclass(nan inf) <4 x float> @_Z15test_cos_float4
 // CHECK: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.cos.v4f32
 float4 test_cos_float4(float4 p0) { return cos(p0); }
+
+// CHECK-LABEL: define noundef nofpclass(nan inf) float {{.*}}test_cos_double
+// CHECK: call reassoc nnan ninf nsz arcp afn float @llvm.cos.f32(
+float test_cos_double(double p0) { return cos(p0); }
+// CHECK-LABEL: define noundef nofpclass(nan inf) <2 x float> {{.*}}test_cos_double2
+// CHECK: call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.cos.v2f32
+float2 test_cos_double2(double2 p0) { return cos(p0); }
+// CHECK-LABEL: define noundef nofpclass(nan inf) <3 x float> {{.*}}test_cos_double3
+// CHECK: call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.cos.v3f32
+float3 test_cos_double3(double3 p0) { return cos(p0); }
+// CHECK-LABEL: define noundef nofpclass(nan inf) <4 x float> {{.*}}test_cos_double4
+// CHECK: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.cos.v4f32
+float4 test_cos_double4(double4 p0) { return cos(p0); }

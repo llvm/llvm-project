@@ -2341,7 +2341,7 @@ void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
 void CodeGenRegBank::inferMatchingSuperRegClass(
     CodeGenRegisterClass *RC,
     std::list<CodeGenRegisterClass>::iterator FirstSubRegRC) {
-  DenseMap<const CodeGenRegister *, std::vector<const CodeGenRegister *>>
+  std::vector<std::pair<const CodeGenRegister *, const CodeGenRegister *>>
       SubToSuperRegs;
   BitVector TopoSigs(getNumTopoSigs());
 
@@ -2353,15 +2353,17 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
     if (RC->getSubClassWithSubReg(&SubIdx) != RC)
       continue;
 
-    // Build list of (Super, Sub) pairs for this SubIdx.
+    // Build list of (Sub, Super) pairs for this SubIdx, sorted by Sub. Note
+    // that the list may contain entries with the same Sub but different Supers.
     SubToSuperRegs.clear();
     TopoSigs.reset();
     for (const auto Super : RC->getMembers()) {
       const CodeGenRegister *Sub = Super->getSubRegs().find(&SubIdx)->second;
       assert(Sub && "Missing sub-register");
-      SubToSuperRegs[Sub].push_back(Super);
+      SubToSuperRegs.emplace_back(Sub, Super);
       TopoSigs.set(Sub->getTopoSig());
     }
+    sort(SubToSuperRegs, on_first<deref<std::less<>>>());
 
     // Iterate over sub-register class candidates.  Ignore classes created by
     // this loop. They will never be useful.
@@ -2376,14 +2378,17 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
       // Topological shortcut: SubRC members have the wrong shape.
       if (!TopoSigs.anyCommon(SubRC.getTopoSigs()))
         continue;
-      // Compute the subset of RC that maps into SubRC.
+      // Compute the subset of RC that maps into SubRC with a single linear scan
+      // through SubToSuperRegs and the members of SubRC.
       CodeGenRegister::Vec SubSetVec;
-      for (const CodeGenRegister *R : SubRC.getMembers()) {
-        auto It = SubToSuperRegs.find(R);
-        if (It != SubToSuperRegs.end()) {
-          const std::vector<const CodeGenRegister *> &SuperRegs = It->second;
-          SubSetVec.insert(SubSetVec.end(), SuperRegs.begin(), SuperRegs.end());
-        }
+      auto SubI = SubRC.getMembers().begin(), SubE = SubRC.getMembers().end();
+      for (auto &[Sub, Super] : SubToSuperRegs) {
+        while (SubI != SubE && **SubI < *Sub)
+          ++SubI;
+        if (SubI == SubE)
+          break;
+        if (**SubI == *Sub)
+          SubSetVec.push_back(Super);
       }
 
       if (SubSetVec.empty())
