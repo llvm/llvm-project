@@ -1623,8 +1623,8 @@ foreach vt = Reg64DataTypes.types in {
 
 
 // 96-bit bitcast
-foreach vt = SGPR_96.RegTypes in {
-  foreach st = SGPR_96.RegTypes in {
+foreach vt = Reg96Types.types in {
+  foreach st = Reg96Types.types in {
     if !not(!eq (vt, st)) then {
       def : BitConvert <vt, st, SGPR_96>;
     }
@@ -1633,8 +1633,8 @@ foreach vt = SGPR_96.RegTypes in {
 
 
 // 128-bit bitcast
-foreach vt = VReg_128.RegTypes in {
-  foreach st = VReg_128.RegTypes in {
+foreach vt = Reg128Types.types in {
+  foreach st = Reg128Types.types in {
     if !not(!eq (vt, st)) then {
       def : BitConvert <vt, st, VReg_128>;
       def : BitConvert <vt, st, SReg_128>;
@@ -1644,8 +1644,8 @@ foreach vt = VReg_128.RegTypes in {
 
 
 // 160-bit bitcast
-foreach vt = VReg_160.RegTypes in {
-  foreach st = VReg_160.RegTypes in {
+foreach vt = Reg160Types.types in {
+  foreach st = Reg160Types.types in {
     if !not(!eq (vt, st)) then {
       def : BitConvert <vt, st, VReg_160>;
       def : BitConvert <vt, st, SReg_160>;
@@ -1654,8 +1654,8 @@ foreach vt = VReg_160.RegTypes in {
 }
 
 // 192-bit bitcast
-foreach vt = VReg_192.RegTypes in {
-  foreach st = VReg_192.RegTypes in {
+foreach vt = Reg192Types.types in {
+  foreach st = Reg192Types.types in {
     if !not(!eq (vt, st)) then {
       def : BitConvert <vt, st, VReg_192>;
       def : BitConvert <vt, st, SReg_192>;
@@ -1664,8 +1664,8 @@ foreach vt = VReg_192.RegTypes in {
 }
 
 // 224-bit bitcast
-foreach vt = VReg_224.RegTypes in {
-  foreach st = VReg_224.RegTypes in {
+foreach vt = Reg224Types.types in {
+  foreach st = Reg224Types.types in {
     if !not(!eq (vt, st)) then {
       def : BitConvert <vt, st, VReg_224>;
       def : BitConvert <vt, st, SReg_224>;
@@ -1675,8 +1675,8 @@ foreach vt = VReg_224.RegTypes in {
 
 
 // 256-bit bitcast
-foreach vt = VReg_256.RegTypes in {
-  foreach st = VReg_256.RegTypes in {
+foreach vt = Reg256Types.types in {
+  foreach st = Reg256Types.types in {
     if !not(!eq (vt, st)) then {
       def : BitConvert <vt, st, VReg_256>;
       def : BitConvert <vt, st, SReg_256>;
@@ -1686,8 +1686,8 @@ foreach vt = VReg_256.RegTypes in {
 
 
 // 288-bit bitcast
-foreach vt = VReg_288.RegTypes in {
-  foreach st = VReg_288.RegTypes in {
+foreach vt = Reg288Types.types in {
+  foreach st = Reg288Types.types in {
     if !not(!eq (vt, st)) then {
       def : BitConvert <vt, st, VReg_288>;
       def : BitConvert <vt, st, SReg_288>;
@@ -1696,8 +1696,8 @@ foreach vt = VReg_288.RegTypes in {
 }
 
 // 320-bit bitcast
-foreach vt = VReg_320.RegTypes in {
-  foreach st = VReg_320.RegTypes in {
+foreach vt = Reg320Types.types in {
+  foreach st = Reg320Types.types in {
     if !not(!eq (vt, st)) then {
       def : BitConvert <vt, st, VReg_320>;
       def : BitConvert <vt, st, SReg_320>;
@@ -1706,8 +1706,8 @@ foreach vt = VReg_320.RegTypes in {
 }
 
 // 320-bit bitcast
-foreach vt = VReg_352.RegTypes in {
-  foreach st = VReg_352.RegTypes in {
+foreach vt = Reg352Types.types in {
+  foreach st = Reg352Types.types in {
     if !not(!eq (vt, st)) then {
       def : BitConvert <vt, st, VReg_352>;
       def : BitConvert <vt, st, SReg_352>;
@@ -1716,8 +1716,8 @@ foreach vt = VReg_352.RegTypes in {
 }
 
 // 384-bit bitcast
-foreach vt = VReg_384.RegTypes in {
-  foreach st = VReg_384.RegTypes in {
+foreach vt = Reg384Types.types in {
+  foreach st = Reg384Types.types in {
     if !not(!eq (vt, st)) then {
       def : BitConvert <vt, st, VReg_384>;
       def : BitConvert <vt, st, SReg_384>;
@@ -1726,8 +1726,8 @@ foreach vt = VReg_384.RegTypes in {
 }
 
 // 512-bit bitcast
-foreach vt = VReg_512.RegTypes in {
-  foreach st = VReg_512.RegTypes in {
+foreach vt = Reg512Types.types in {
+  foreach st = Reg512Types.types in {
     if !not(!eq (vt, st)) then {
       def : BitConvert <vt, st, VReg_512>;
       def : BitConvert <vt, st, SReg_512>;
@@ -1737,8 +1737,8 @@ foreach vt = VReg_512.RegTypes in {
 
 
 // 1024-bit bitcast
-foreach vt = VReg_1024.RegTypes in {
-  foreach st = VReg_1024.RegTypes in {
+foreach vt = Reg1024Types.types in {
+  foreach st = Reg1024Types.types in {
     if !not(!eq (vt, st)) then {
       def : BitConvert <vt, st, VReg_1024>;
       def : BitConvert <vt, st, SReg_1024>;
