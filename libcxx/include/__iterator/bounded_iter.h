@@ -101,8 +101,6 @@ private:
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __bounded_iter(_Iterator __current, _Iterator __begin, _Iterator __end)
       : __current_(__current), __begin_(__begin), __end_(__end) {
-    // These are internal checks rather than hardening checks because the STL container is expected to ensure they are
-    // in order.
     _LIBCPP_ASSERT_INTERNAL(
         __begin <= __current, "__bounded_iter(current, begin, end): current and begin are inconsistent");
     _LIBCPP_ASSERT_INTERNAL(
