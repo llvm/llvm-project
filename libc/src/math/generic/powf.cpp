@@ -657,6 +657,11 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   uint32_t y_abs = ybits.abs().uintval();
 
   ///////// BEGIN - Check exceptional cases ////////////////////////////////////
+  // if x or y is signaling NaN
+  if (xbits.is_signaling_nan() || ybits.is_signaling_nan()) {
+    fputil::raise_except_if_required(FE_INVALID);
+    return FloatBits::quiet_nan().get_val();
+  }
 
   // The single precision number that is closest to 1 is (1 - 2^-24), which has
   //   log2(1 - 2^-24) ~ -1.715...p-24.

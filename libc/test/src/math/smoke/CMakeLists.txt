@@ -4228,6 +4228,7 @@ add_fp_unittest(
   SRCS
     pow_test.cpp
   DEPENDS
+    libc.src.errno.errno
     libc.hdr.fenv_macros
     libc.src.math.pow
 )
