@@ -1382,11 +1382,10 @@ lldb::SBData SBValue::GetData() {
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
     auto data_or_err = value_sp->GetData();
-    if (!data_or_err) {
-
+    if (!data_or_err)
       LLDB_LOG_ERRORV(GetLog(LLDBLog::API), data_or_err.takeError(),
                       "SBValue GetData failed to extract info: {0}");
-    }
+
     DataExtractorSP data_sp(new DataExtractor());
     *sb_data = data_sp;
   }
