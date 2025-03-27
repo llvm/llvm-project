@@ -40,8 +40,7 @@ static StringRef getTypeKeyword(Type type) {
       .Case<LLVMMetadataType>([&](Type) { return "metadata"; })
       .Case<LLVMFunctionType>([&](Type) { return "func"; })
       .Case<LLVMPointerType>([&](Type) { return "ptr"; })
-      .Case<LLVMFixedVectorType, LLVMScalableVectorType>(
-          [&](Type) { return "vec"; })
+      .Case<LLVMScalableVectorType>([&](Type) { return "vec"; })
       .Case<LLVMArrayType>([&](Type) { return "array"; })
       .Case<LLVMStructType>([&](Type) { return "struct"; })
       .Case<LLVMTargetExtType>([&](Type) { return "target"; })
@@ -104,9 +103,9 @@ void mlir::LLVM::detail::printType(Type type, AsmPrinter &printer) {
   printer << getTypeKeyword(type);
 
   llvm::TypeSwitch<Type>(type)
-      .Case<LLVMPointerType, LLVMArrayType, LLVMFixedVectorType,
-            LLVMScalableVectorType, LLVMFunctionType, LLVMTargetExtType,
-            LLVMStructType>([&](auto type) { type.print(printer); });
+      .Case<LLVMPointerType, LLVMArrayType, LLVMScalableVectorType,
+            LLVMFunctionType, LLVMTargetExtType, LLVMStructType>(
+          [&](auto type) { type.print(printer); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -143,14 +142,11 @@ static Type parseVectorType(AsmParser &parser) {
   }
 
   bool isScalable = dims.size() == 2;
-  if (isScalable)
-    return parser.getChecked<LLVMScalableVectorType>(loc, elementType, dims[1]);
-  if (elementType.isSignlessIntOrFloat()) {
-    parser.emitError(typePos)
-        << "cannot use !llvm.vec for built-in primitives, use 'vector' instead";
+  if (!isScalable) {
+    parser.emitError(dimPos) << "expected scalable vector";
     return Type();
   }
-  return parser.getChecked<LLVMFixedVectorType>(loc, elementType, dims[0]);
+  return parser.getChecked<LLVMScalableVectorType>(loc, elementType, dims[1]);
 }
 
 /// Attempts to set the body of an identified structure type. Reports a parsing

@@ -687,8 +687,6 @@ static Type extractVectorElementType(Type type) {
     return vectorType.getElementType();
   if (auto scalableVectorType = llvm::dyn_cast<LLVMScalableVectorType>(type))
     return scalableVectorType.getElementType();
-  if (auto fixedVectorType = llvm::dyn_cast<LLVMFixedVectorType>(type))
-    return fixedVectorType.getElementType();
   return type;
 }
 
@@ -725,20 +723,19 @@ static void destructureIndices(Type currType, ArrayRef<GEPArg> indices,
     if (rawConstantIndices.size() == 1 || !currType)
       continue;
 
-    currType =
-        TypeSwitch<Type, Type>(currType)
-            .Case<VectorType, LLVMScalableVectorType, LLVMFixedVectorType,
-                  LLVMArrayType>([](auto containerType) {
-              return containerType.getElementType();
-            })
-            .Case([&](LLVMStructType structType) -> Type {
-              int64_t memberIndex = rawConstantIndices.back();
-              if (memberIndex >= 0 && static_cast<size_t>(memberIndex) <
-                                          structType.getBody().size())
-                return structType.getBody()[memberIndex];
-              return nullptr;
-            })
-            .Default(Type(nullptr));
+    currType = TypeSwitch<Type, Type>(currType)
+                   .Case<VectorType, LLVMScalableVectorType, LLVMArrayType>(
+                       [](auto containerType) {
+                         return containerType.getElementType();
+                       })
+                   .Case([&](LLVMStructType structType) -> Type {
+                     int64_t memberIndex = rawConstantIndices.back();
+                     if (memberIndex >= 0 && static_cast<size_t>(memberIndex) <
+                                                 structType.getBody().size())
+                       return structType.getBody()[memberIndex];
+                     return nullptr;
+                   })
+                   .Default(Type(nullptr));
   }
 }
 
@@ -839,11 +836,11 @@ verifyStructIndices(Type baseGEPType, unsigned indexPos,
         return verifyStructIndices(elementTypes[gepIndex], indexPos + 1,
                                    indices, emitOpError);
       })
-      .Case<VectorType, LLVMScalableVectorType, LLVMFixedVectorType,
-            LLVMArrayType>([&](auto containerType) -> LogicalResult {
-        return verifyStructIndices(containerType.getElementType(), indexPos + 1,
-                                   indices, emitOpError);
-      })
+      .Case<VectorType, LLVMScalableVectorType, LLVMArrayType>(
+          [&](auto containerType) -> LogicalResult {
+            return verifyStructIndices(containerType.getElementType(),
+                                       indexPos + 1, indices, emitOpError);
+          })
       .Default([&](auto otherType) -> LogicalResult {
         return emitOpError()
                << "type " << otherType << " cannot be indexed (index #"
@@ -3157,16 +3154,14 @@ OpFoldResult LLVM::ZeroOp::fold(FoldAdaptor) {
 //===----------------------------------------------------------------------===//
 
 /// Compute the total number of elements in the given type, also taking into
-/// account nested types. Supported types are `VectorType`, `LLVMArrayType` and
-/// `LLVMFixedVectorType`. Everything else is treated as a scalar.
+/// account nested types. Supported types are `VectorType` and `LLVMArrayType`.
+/// Everything else is treated as a scalar.
 static int64_t getNumElements(Type t) {
   if (auto vecType = dyn_cast<VectorType>(t))
     return vecType.getNumElements() * getNumElements(vecType.getElementType());
   if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(t))
     return arrayType.getNumElements() *
            getNumElements(arrayType.getElementType());
-  if (auto vecType = dyn_cast<LLVMFixedVectorType>(t))
-    return vecType.getNumElements() * getNumElements(vecType.getElementType());
   assert(!isa<LLVM::LLVMScalableVectorType>(t) &&
          "number of elements of a scalable vector type is unknown");
   return 1;
@@ -3184,8 +3179,6 @@ static bool hasScalableVectorType(Type t) {
   }
   if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(t))
     return hasScalableVectorType(arrayType.getElementType());
-  if (auto vecType = dyn_cast<LLVMFixedVectorType>(t))
-    return hasScalableVectorType(vecType.getElementType());
   return false;
 }
 
@@ -3265,8 +3258,7 @@ LogicalResult LLVM::ConstantOp::verify() {
                << "scalable vector type requires a splat attribute";
       return success();
     }
-    if (!isa<VectorType, LLVM::LLVMArrayType, LLVM::LLVMFixedVectorType>(
-            getType()))
+    if (!isa<VectorType, LLVM::LLVMArrayType>(getType()))
       return emitOpError() << "expected vector or array type";
     // The number of elements of the attribute and the type must match.
     int64_t attrNumElements;
@@ -3515,8 +3507,7 @@ LogicalResult LLVM::BitcastOp::verify() {
   if (!resultType)
     return success();
 
-  auto isVector =
-      llvm::IsaPred<VectorType, LLVMScalableVectorType, LLVMFixedVectorType>;
+  auto isVector = llvm::IsaPred<VectorType, LLVMScalableVectorType>;
 
   // Due to bitcast requiring both operands to be of the same size, it is not
   // possible for only one of the two to be a pointer of vectors.
@@ -3982,7 +3973,6 @@ void LLVMDialect::initialize() {
 
   // clang-format off
   addTypes<LLVMVoidType,
-           LLVMPPCFP128Type,
            LLVMTokenType,
            LLVMLabelType,
            LLVMMetadataType>();

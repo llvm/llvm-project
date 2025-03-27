@@ -137,7 +137,7 @@ static bool isSupportedTypeForConversion(Type type) {
   // LLVM vector types are only used for either pointers or target specific
   // types. These types cannot be casted in the general case, thus the memory
   // optimizations do not support them.
-  if (isa<LLVM::LLVMFixedVectorType, LLVM::LLVMScalableVectorType>(type))
+  if (isa<LLVM::LLVMScalableVectorType>(type))
     return false;
 
   if (auto vectorType = dyn_cast<VectorType>(type)) {

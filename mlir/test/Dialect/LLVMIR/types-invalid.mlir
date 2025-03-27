@@ -139,20 +139,6 @@ func.func @unscalable_vector() {
 
 // -----
 
-func.func @zero_vector() {
-  // expected-error @+1 {{the number of vector elements must be positive}}
-  "some.op"() : () -> !llvm.vec<0 x ptr>
-}
-
-// -----
-
-func.func @nested_vector() {
-  // expected-error @+1 {{invalid vector element type}}
-  "some.op"() : () -> !llvm.vec<2 x vector<2xi32>>
-}
-
-// -----
-
 func.func @scalable_void_vector() {
   // expected-error @+1 {{invalid vector element type}}
   "some.op"() : () -> !llvm.vec<?x4 x void>
@@ -167,11 +153,6 @@ func.func private @unexpected_type() -> !llvm.tensor<*xf32>
 
 // expected-error @+1 {{unexpected type, expected keyword}}
 func.func private @unexpected_type() -> !llvm.f32
-
-// -----
-
-// expected-error @below {{cannot use !llvm.vec for built-in primitives, use 'vector' instead}}
-func.func private @llvm_vector_primitive() -> !llvm.vec<4 x f32>
 
 // -----
 
