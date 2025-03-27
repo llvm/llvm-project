@@ -335,6 +335,50 @@ protected:
     });
   }
 
+  BitVector getClobberedRegs(const MCInst &Point) const {
+    BitVector Clobbered(NumRegs, false);
+    // Assume a call can clobber all registers, including callee-saved
+    // registers. There's a good chance that callee-saved registers will be
+    // saved on the stack at some point during execution of the callee.
+    // Therefore they should also be considered as potentially modified by an
+    // attacker/written to.
+    // Also, not all functions may respect the AAPCS ABI rules about
+    // caller/callee-saved registers.
+    if (BC.MIB->isCall(Point))
+      Clobbered.set();
+    else
+      BC.MIB->getClobberedRegs(Point, Clobbered);
+    return Clobbered;
+  }
+
+  // Returns all registers that can be treated as if they are written by an
+  // authentication instruction.
+  SmallVector<MCPhysReg> getAuthenticatedRegs(const MCInst &Point,
+                                              const State &Cur) const {
+    SmallVector<MCPhysReg> Regs;
+    const MCPhysReg NoReg = BC.MIB->getNoRegister();
+
+    // A signed pointer can be authenticated, or
+    ErrorOr<MCPhysReg> AutReg = BC.MIB->getAuthenticatedReg(Point);
+    if (AutReg && *AutReg != NoReg)
+      Regs.push_back(*AutReg);
+
+    // ... a safe address can be materialized, or
+    MCPhysReg NewAddrReg = BC.MIB->getSafelyMaterializedAddressReg(Point);
+    if (NewAddrReg != NoReg)
+      Regs.push_back(NewAddrReg);
+
+    // ... an address can be updated in a safe manner, producing the result
+    // which is as trusted as the input address.
+    MCPhysReg ArithResult, ArithSrc;
+    std::tie(ArithResult, ArithSrc) =
+        BC.MIB->analyzeSafeAddressArithmetics(Point);
+    if (ArithResult != NoReg && Cur.SafeToDerefRegs[ArithSrc])
+      Regs.push_back(ArithResult);
+
+    return Regs;
+  }
+
   State computeNext(const MCInst &Point, const State &Cur) {
     PacStatePrinter P(BC);
     LLVM_DEBUG({
@@ -355,19 +399,20 @@ protected:
       return State();
     }
 
+    // First, compute various properties of the instruction, taking the state
+    // before its execution into account, if necessary.
+
+    BitVector Clobbered = getClobberedRegs(Point);
+    // Compute the set of registers that can be considered as written by
+    // an authentication instruction. This includes operations that are
+    // *strictly better* than authentication, such as materializing a
+    // PC-relative constant.
+    SmallVector<MCPhysReg> AuthenticatedOrBetter =
+        getAuthenticatedRegs(Point, Cur);
+
+    // Then, compute the state after this instruction is executed.
     State Next = Cur;
-    BitVector Clobbered(NumRegs, false);
-    // Assume a call can clobber all registers, including callee-saved
-    // registers. There's a good chance that callee-saved registers will be
-    // saved on the stack at some point during execution of the callee.
-    // Therefore they should also be considered as potentially modified by an
-    // attacker/written to.
-    // Also, not all functions may respect the AAPCS ABI rules about
-    // caller/callee-saved registers.
-    if (BC.MIB->isCall(Point))
-      Clobbered.set();
-    else
-      BC.MIB->getClobberedRegs(Point, Clobbered);
+
     Next.SafeToDerefRegs.reset(Clobbered);
     // Keep track of this instruction if it writes to any of the registers we
     // need to track that for:
@@ -375,17 +420,18 @@ protected:
       if (Clobbered[Reg])
         lastWritingInsts(Next, Reg) = {&Point};
 
-    ErrorOr<MCPhysReg> AutReg = BC.MIB->getAuthenticatedReg(Point);
-    if (AutReg && *AutReg != BC.MIB->getNoRegister()) {
-      // The sub-registers of *AutReg are also trusted now, but not its
-      // super-registers (as they retain untrusted register units).
-      BitVector AuthenticatedSubregs =
-          BC.MIB->getAliases(*AutReg, /*OnlySmaller=*/true);
-      for (MCPhysReg Reg : AuthenticatedSubregs.set_bits()) {
-        Next.SafeToDerefRegs.set(Reg);
-        if (RegsToTrackInstsFor.isTracked(Reg))
-          lastWritingInsts(Next, Reg).clear();
-      }
+    // After accounting for clobbered registers in general, override the state
+    // according to authentication and other *special cases* of clobbering.
+
+    // The sub-registers of each authenticated register are also trusted now,
+    // but not their super-registers (as they retain untrusted register units).
+    BitVector AuthenticatedSubregs(NumRegs);
+    for (MCPhysReg AutReg : AuthenticatedOrBetter)
+      AuthenticatedSubregs |= BC.MIB->getAliases(AutReg, /*OnlySmaller=*/true);
+    for (MCPhysReg Reg : AuthenticatedSubregs.set_bits()) {
+      Next.SafeToDerefRegs.set(Reg);
+      if (RegsToTrackInstsFor.isTracked(Reg))
+        lastWritingInsts(Next, Reg).clear();
     }
 
     LLVM_DEBUG({

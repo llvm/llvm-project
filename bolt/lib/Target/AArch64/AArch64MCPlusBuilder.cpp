@@ -304,6 +304,36 @@ public:
     }
   }
 
+  MCPhysReg getSafelyMaterializedAddressReg(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
+    case AArch64::ADR:
+    case AArch64::ADRP:
+      return Inst.getOperand(0).getReg();
+    default:
+      return getNoRegister();
+    }
+  }
+
+  std::pair<MCPhysReg, MCPhysReg>
+  analyzeSafeAddressArithmetics(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
+    default:
+      return std::make_pair(getNoRegister(), getNoRegister());
+    case AArch64::ADDXri:
+    case AArch64::SUBXri:
+      return std::make_pair(Inst.getOperand(0).getReg(),
+                            Inst.getOperand(1).getReg());
+    case AArch64::ORRXrs:
+      // "mov Xd, Xm" is equivalent to "orr Xd, XZR, Xm, lsl #0"
+      if (Inst.getOperand(1).getReg() != AArch64::XZR ||
+          Inst.getOperand(3).getImm() != 0)
+        return std::make_pair(getNoRegister(), getNoRegister());
+
+      return std::make_pair(Inst.getOperand(0).getReg(),
+                            Inst.getOperand(2).getReg());
+    }
+  }
+
   bool isADRP(const MCInst &Inst) const override {
     return Inst.getOpcode() == AArch64::ADRP;
   }
