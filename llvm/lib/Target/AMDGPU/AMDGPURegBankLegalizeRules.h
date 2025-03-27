@@ -46,6 +46,7 @@ enum UniformityLLTOpPredicateID {
   UniS64,
 
   DivS1,
+  DivS16,
   DivS32,
   DivS64,
 
@@ -125,6 +126,7 @@ enum RegBankLLTMappingApplyID {
   SgprB512,
 
   // vgpr scalars, pointers, vectors and B-types
+  Vgpr16,
   Vgpr32,
   Vgpr64,
   VgprP0,
