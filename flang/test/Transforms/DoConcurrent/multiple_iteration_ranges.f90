@@ -2,10 +2,10 @@
 
 ! RUN: split-file %s %t
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-parallel=host %t/multi_range.f90 -o - \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=host %t/multi_range.f90 -o - \
 ! RUN:   | FileCheck %s --check-prefixes=HOST,COMMON
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-parallel=device %t/multi_range.f90 -o - \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=device %t/multi_range.f90 -o - \
 ! RUN:   | FileCheck %s --check-prefixes=DEVICE,COMMON
 
 !--- multi_range.f90

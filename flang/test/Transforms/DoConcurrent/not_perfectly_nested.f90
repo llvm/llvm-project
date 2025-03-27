@@ -2,10 +2,10 @@
 ! we skip converting the not-perfectly nested `do concurrent` loop.
 
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-parallel=host %s -o - \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=host %s -o - \
 ! RUN:   | FileCheck %s --check-prefixes=HOST,COMMON
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-parallel=device %s -o - \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=device %s -o - \
 ! RUN:   | FileCheck %s --check-prefixes=DEVICE,COMMON
 
 program main

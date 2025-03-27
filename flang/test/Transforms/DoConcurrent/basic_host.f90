@@ -1,8 +1,8 @@
 ! Tests mapping of a basic `do concurrent` loop to `!$omp parallel do`.
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-parallel=host %s -o - \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=host %s -o - \
 ! RUN:   | FileCheck %s
-! RUN: bbc -emit-hlfir -fopenmp -fdo-concurrent-parallel=host %s -o - \
+! RUN: bbc -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=host %s -o - \
 ! RUN:   | FileCheck %s
  
 ! CHECK-LABEL: do_concurrent_basic

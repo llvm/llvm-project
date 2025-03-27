@@ -1,6 +1,6 @@
 // Tests mapping of a basic `do concurrent` loop to `!$omp parallel do`.
 
-// RUN: fir-opt --fopenmp-do-concurrent-conversion="map-to=host" %s | FileCheck %s
+// RUN: fir-opt --omp-do-concurrent-conversion="map-to=host" %s | FileCheck %s
 
 // CHECK-LABEL: func.func @do_concurrent_basic
 func.func @do_concurrent_basic() attributes {fir.bindc_name = "do_concurrent_basic"} {

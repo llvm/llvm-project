@@ -361,8 +361,17 @@ bool CodeGenAction::beginSourceFileAction() {
       !isOpenMPEnabled) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Warning,
-        "lowering `do concurrent` loops to OpenMP is only supported if "
-        "OpenMP is enabled");
+        "OpenMP is required for lowering `do concurrent` loops to OpenMP."
+        "Enable OpenMP using `-fopenmp`."
+        "`do concurrent` loops will be serialized.");
+    ci.getDiagnostics().Report(diagID);
+    opts.doConcurrentMappingKind = DoConcurrentMappingKind::DCMK_None;
+  }
+
+  if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None) {
+    unsigned diagID = ci.getDiagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Warning,
+        "Mapping `do concurrent` to OpenMP is still experimental.");
     ci.getDiagnostics().Report(diagID);
   }
 

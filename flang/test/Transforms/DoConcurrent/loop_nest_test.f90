@@ -2,7 +2,7 @@
 
 ! REQUIRES: asserts
 
-! RUN: %flang_fc1 -emit-hlfir  -fopenmp -fdo-concurrent-parallel=host \
+! RUN: %flang_fc1 -emit-hlfir  -fopenmp -fdo-concurrent-to-openmp=host \
 ! RUN:   -mmlir -debug %s -o - 2> %t.log || true
 
 ! RUN: FileCheck %s < %t.log
