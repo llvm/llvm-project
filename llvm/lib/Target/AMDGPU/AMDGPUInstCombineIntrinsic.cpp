@@ -729,6 +729,15 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     break;
   }
+  case Intrinsic::amdgcn_cvt_off_f32_i4: {
+    ConstantInt *CArg = dyn_cast<ConstantInt>(II.getArgOperand(0));
+    if (!CArg)
+      break;
+    int CI4BitAsInt = CArg->getValue().trunc(4).getSExtValue();
+    float ResVal = 0.0625 * CI4BitAsInt;
+    Constant *Res = ConstantFP::get(II.getType(), ResVal);
+    return IC.replaceInstUsesWith(II, Res);
+  }
   case Intrinsic::amdgcn_ubfe:
   case Intrinsic::amdgcn_sbfe: {
     // Decompose simple cases into standard shifts.

@@ -1578,6 +1578,11 @@ class MovDPP8Pattern<Predicate Pred, Instruction Inst, ValueType vt> : GCNPat <
   let OtherPredicates = [Pred];
 }
 
+def : GCNPat <
+  (f32 (int_amdgcn_cvt_off_f32_i4 i32:$src)),
+  (V_CVT_OFF_F32_I4_e32 VGPR_32:$src)
+>;
+
 foreach vt = Reg32Types.types in {
   def : MovDPP8Pattern<isGFX10Only, V_MOV_B32_dpp8_gfx10, vt>;
   def : MovDPP8Pattern<isGFX11Only, V_MOV_B32_dpp8_gfx11, vt>;
