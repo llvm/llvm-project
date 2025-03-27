@@ -917,16 +917,28 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(1)
       .widenScalarOrEltToNextPow2OrMinSize(1)
       .minScalar(1, s32)
+      .lowerIf([](const LegalityQuery &Query) {
+        return Query.Types[1].isVector() &&
+               Query.Types[1].getScalarSizeInBits() == 64 &&
+               Query.Types[0].getScalarSizeInBits() == 16;
+      })
       .widenScalarOrEltToNextPow2OrMinSize(0, /*MinSize=*/HasFP16 ? 16 : 32)
+      .scalarizeIf(
+          // v2i64->v2f32 needs to scalarize to avoid double-rounding issues.
+          [](const LegalityQuery &Query) {
+            return Query.Types[0].getScalarSizeInBits() == 32 &&
+                   Query.Types[1].getScalarSizeInBits() == 64;
+          },
+          0)
       .widenScalarIf(
-          [=](const LegalityQuery &Query) {
+          [](const LegalityQuery &Query) {
             return Query.Types[1].getScalarSizeInBits() <= 64 &&
                    Query.Types[0].getScalarSizeInBits() <
                        Query.Types[1].getScalarSizeInBits();
           },
           LegalizeMutations::changeElementSizeTo(0, 1))
       .widenScalarIf(
-          [=](const LegalityQuery &Query) {
+          [](const LegalityQuery &Query) {
             return Query.Types[0].getScalarSizeInBits() <= 64 &&
                    Query.Types[0].getScalarSizeInBits() >
                        Query.Types[1].getScalarSizeInBits();
