@@ -328,10 +328,6 @@ private:
                                const MachineInstr &MI2) const;
   bool hasReassociableVectorSibling(const MachineInstr &Inst,
                                     bool &Commuted) const;
-
-  /// Return true if the instruction is a load immediate instruction (i.e.
-  /// ADDI x0, imm).
-  static bool isLoadImm(const MachineInstr *MI, int64_t &Imm);
 };
 
 namespace RISCV {

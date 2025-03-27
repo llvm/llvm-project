@@ -1301,7 +1301,9 @@ bool RISCVInstrInfo::reverseBranchCondition(
   return false;
 }
 
-bool RISCVInstrInfo::isLoadImm(const MachineInstr *MI, int64_t &Imm) {
+// Return true if the instruction is a load immediate instruction (i.e.
+// ADDI x0, imm).
+static bool isLoadImm(const MachineInstr *MI, int64_t &Imm) {
   if (MI->getOpcode() == RISCV::ADDI && MI->getOperand(1).isReg() &&
       MI->getOperand(1).getReg() == RISCV::X0) {
     Imm = MI->getOperand(2).getImm();
