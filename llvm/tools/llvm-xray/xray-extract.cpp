@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "func-id-helper.h"
 #include "xray-registry.h"
 #include "llvm/Object/ObjectFile.h"
@@ -20,8 +19,8 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/XRay/InstrumentationMap.h"
 
 #include <assert.h>
@@ -54,9 +53,10 @@ static cl::opt<bool> Demangle("demangle",
 static cl::opt<bool> NoDemangle("no-demangle",
                                 cl::desc("don't demangle symbols"),
                                 cl::sub(Extract));
-static cl::opt<bool> FromMapping("mapping", cl::init(false),
-                             cl::desc("Create instrumentation map from object map YAML"),
-                             cl::sub(Extract));
+static cl::opt<bool>
+    FromMapping("mapping", cl::init(false),
+                cl::desc("Create instrumentation map from object map YAML"),
+                cl::sub(Extract));
 
 namespace {
 
@@ -70,9 +70,9 @@ struct YAMLXRayObjectMapping {
   std::vector<YAMLXRayObjectMapEntry> Objects;
 };
 
-}
+} // namespace
 
-namespace llvm{
+namespace llvm {
 namespace yaml {
 template <> struct MappingTraits<YAMLXRayObjectMapEntry> {
   static void mapping(IO &IO, YAMLXRayObjectMapEntry &Entry) {
@@ -94,7 +94,8 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(YAMLXRayObjectMapEntry)
 
 namespace {
 
-Error ReadObjectMappingYAML(StringRef Filename, YAMLXRayObjectMapping& Mapping) {
+Error readObjectMappingYaml(StringRef Filename,
+                            YAMLXRayObjectMapping &Mapping) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileBufferOrErr =
       llvm::MemoryBuffer::getFile(ExtractInput);
   if (!FileBufferOrErr) {
@@ -118,13 +119,14 @@ struct IdMappingHelper {
   IdMappingHelper(int NumObjBits) : NumObjBits(NumObjBits) {
     assert(NumObjBits >= 0 && NumObjBits < 32 && "Invalid NumObjBits");
     NumFnBits = 32 - NumObjBits;
-    ObjBitMask = (1l << NumObjBits) - 1;
-    FnBitMask = (1l << NumFnBits) - 1;
+    ObjBitMask = (1ll << NumObjBits) - 1;
+    FnBitMask = (1ll << NumFnBits) - 1;
   }
 
-  int32_t MapId(int32_t FnId, int32_t ObjId) const {
+  int32_t mapId(int32_t FnId, int32_t ObjId) const {
     return ((ObjId & ObjBitMask) << NumFnBits) | (FnId & FnBitMask);
   }
+
 private:
   int NumObjBits;
   int NumFnBits;
@@ -132,11 +134,10 @@ private:
   int32_t FnBitMask;
 };
 
-
-void TranslateAndAppendSleds(const InstrumentationMap &Map,
-                             FuncIdConversionHelper &FH,
-                             int ObjId, const IdMappingHelper& IdMapping,
-                             std::vector<YAMLXRaySledEntry>& YAMLSleds) {
+void translateAndAppendSleds(const InstrumentationMap &Map,
+                             FuncIdConversionHelper &FH, int ObjId,
+                             const IdMappingHelper &IdMapping,
+                             std::vector<YAMLXRaySledEntry> &YAMLSleds) {
   auto Sleds = Map.sleds();
   auto SledCount = std::distance(Sleds.begin(), Sleds.end());
   YAMLSleds.reserve(YAMLSleds.size() + SledCount);
@@ -144,10 +145,11 @@ void TranslateAndAppendSleds(const InstrumentationMap &Map,
     auto FuncId = Map.getFunctionId(Sled.Function);
     if (!FuncId)
       return;
-    auto MappedId = IdMapping.MapId(*FuncId, ObjId);
-    YAMLSleds.push_back(
-        {MappedId, Sled.Address, Sled.Function, Sled.Kind, Sled.AlwaysInstrument,
-         ExtractSymbolize ? FH.SymbolOrNumber(*FuncId) : "", Sled.Version});
+    auto MappedId = IdMapping.mapId(*FuncId, ObjId);
+    YAMLSleds.push_back({MappedId, Sled.Address, Sled.Function, Sled.Kind,
+                         Sled.AlwaysInstrument,
+                         ExtractSymbolize ? FH.SymbolOrNumber(*FuncId) : "",
+                         Sled.Version});
   }
 }
 
@@ -159,12 +161,12 @@ static CommandRegistration Unused(&Extract, []() -> Error {
   if (FromMapping) {
     YAMLXRayObjectMapping ObjMapping;
 
-    auto Err = ReadObjectMappingYAML(ExtractInput, ObjMapping);
+    auto Err = readObjectMappingYaml(ExtractInput, ObjMapping);
     if (Err) {
       return Err;
     }
     NumObjBits = ObjMapping.NumObjBits;
-    for (auto& Obj : ObjMapping.Objects) {
+    for (auto &Obj : ObjMapping.Objects) {
       Inputs[Obj.ObjId] = Obj.Path;
     }
   } else {
@@ -180,22 +182,22 @@ static CommandRegistration Unused(&Extract, []() -> Error {
 
   std::vector<YAMLXRaySledEntry> YAMLSleds;
 
-  for (auto& [ObjId, Path] : Inputs) {
+  for (auto &[ObjId, Path] : Inputs) {
     auto InstrumentationMapOrError = loadInstrumentationMap(Path);
     if (!InstrumentationMapOrError)
-      return joinErrors(make_error<StringError>(
-                            Twine("Cannot extract instrumentation map from '") +
-                                Path + "'.",
-                            std::make_error_code(std::errc::invalid_argument)),
-                        InstrumentationMapOrError.takeError());
+      return joinErrors(
+          make_error<StringError>(
+              Twine("Cannot extract instrumentation map from '") + Path + "'.",
+              std::make_error_code(std::errc::invalid_argument)),
+          InstrumentationMapOrError.takeError());
 
     const auto &FunctionAddresses =
         InstrumentationMapOrError->getFunctionAddresses();
 
     llvm::xray::FuncIdConversionHelper FuncIdHelper(Path, Symbolizer,
                                                     FunctionAddresses);
-    TranslateAndAppendSleds(*InstrumentationMapOrError, FuncIdHelper,
-                            ObjId, IdMapping, YAMLSleds);
+    translateAndAppendSleds(*InstrumentationMapOrError, FuncIdHelper, ObjId,
+                            IdMapping, YAMLSleds);
   }
 
   std::error_code EC;
@@ -207,5 +209,3 @@ static CommandRegistration Unused(&Extract, []() -> Error {
   Out << YAMLSleds;
   return Error::success();
 });
-
-

@@ -450,9 +450,8 @@ static void writeObjectMapping() {
     Report("Writing object mapping file.\n");
 
   char MapFilename[256] = {};
-  int NeededLength = internal_snprintf(
-      MapFilename, sizeof(MapFilename), "%s.map.yaml",
-      LW->GetFilename());
+  int NeededLength = internal_snprintf(MapFilename, sizeof(MapFilename),
+                                       "%s.map.yaml", LW->GetFilename());
   if (NeededLength > int(sizeof(MapFilename))) {
     Report("XRay map file name too long (%d): %s\n", NeededLength, MapFilename);
     return;
@@ -488,7 +487,6 @@ XRayLogFlushStatus basicLoggingFlush() XRAY_NEVER_INSTRUMENT {
 // This is a handler that, effectively, does nothing.
 void basicLoggingHandleArg0Empty(int32_t, XRayEntryType) XRAY_NEVER_INSTRUMENT {
 }
-
 
 bool basicLogDynamicInitializer() XRAY_NEVER_INSTRUMENT {
   XRayLogImpl Impl{
@@ -532,7 +530,10 @@ bool basicLogDynamicInitializer() XRAY_NEVER_INSTRUMENT {
     pthread_once(&DynamicOnce, +[] {
       static void *FakeTLD = nullptr;
       FakeTLD = &getThreadLocalData();
-      Atexit(+[] { TLDDestructor(FakeTLD); writeObjectMapping(); });
+      Atexit(+[] {
+        TLDDestructor(FakeTLD);
+        writeObjectMapping();
+      });
     });
   }
   return true;

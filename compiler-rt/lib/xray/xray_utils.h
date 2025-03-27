@@ -31,7 +31,7 @@ public:
 #if SANITIZER_FUCHSIA
  LogWriter(zx_handle_t Vmo) : Vmo(Vmo) {}
 #else
-  explicit LogWriter(int Fd, const char* Filename) : Fd(Fd) {
+  explicit LogWriter(int Fd, const char *Filename) : Fd(Fd) {
     internal_strlcpy(this->Filename, Filename, sizeof(this->Filename));
   }
 #endif
@@ -40,7 +40,7 @@ public:
  // Write a character range into a log.
  void WriteAll(const char *Begin, const char *End);
 
- const char* GetFilename();
+ const char *GetFilename();
 
  void Flush();
 

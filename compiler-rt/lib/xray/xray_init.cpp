@@ -67,40 +67,41 @@ atomic_uint8_t XRayFlagsInitialized{0};
 // A mutex to allow only one thread to initialize the XRay data structures.
 SpinMutex XRayInitMutex;
 
-
 namespace {
 
 struct DlIteratePhdrData {
   intptr_t TargetSledAddr{0};
-  const char* Path{nullptr};
+  const char *Path{nullptr};
   bool Found{false};
 };
 
-const char* DetectObjPath(bool IsDSO, uint64_t Addr) XRAY_NEVER_INSTRUMENT {
+const char *detectObjPath(bool IsDSO, uint64_t Addr) XRAY_NEVER_INSTRUMENT {
   if (IsDSO) {
     // Detection of DSO paths only supported for ELF
 #ifdef __ELF__
     // Look for the given address by iterating over the loaded DSOs
     DlIteratePhdrData Data;
     Data.TargetSledAddr = Addr;
-    dl_iterate_phdr([](dl_phdr_info *info, size_t size, void *arg) -> int {
-      auto *data = (DlIteratePhdrData *)arg;
-      data->Found = false;
-      for (int i = 0; i < info->dlpi_phnum; i++) {
-        const auto *phdr = &info->dlpi_phdr[i];
-        if (phdr->p_type != PT_LOAD)
-          continue;
-        intptr_t beg = info->dlpi_addr + phdr->p_vaddr;
-        intptr_t end = beg + phdr->p_memsz;
+    dl_iterate_phdr(
+        [](dl_phdr_info *info, size_t size, void *arg) -> int {
+          auto *data = (DlIteratePhdrData *)arg;
+          data->Found = false;
+          for (int i = 0; i < info->dlpi_phnum; i++) {
+            const auto *phdr = &info->dlpi_phdr[i];
+            if (phdr->p_type != PT_LOAD)
+              continue;
+            intptr_t beg = info->dlpi_addr + phdr->p_vaddr;
+            intptr_t end = beg + phdr->p_memsz;
 
-        if (beg <= data->TargetSledAddr && data->TargetSledAddr < end) {
-          data->Path = info->dlpi_name;
-          data->Found = true;
-          return 1;
-        }
-      }
-      return 0;
-    }, &Data);
+            if (beg <= data->TargetSledAddr && data->TargetSledAddr < end) {
+              data->Path = info->dlpi_name;
+              data->Found = true;
+              return 1;
+            }
+          }
+          return 0;
+        },
+        &Data);
     if (Data.Found) {
       return Data.Path;
     }
@@ -111,11 +112,11 @@ const char* DetectObjPath(bool IsDSO, uint64_t Addr) XRAY_NEVER_INSTRUMENT {
   // If the address is in the main executable, use the built-in sanitizer
   // functionality.
   __sanitizer::UpdateProcessName();
-  const char* ExecName = __sanitizer::GetProcessName();
+  const char *ExecName = __sanitizer::GetProcessName();
   // TODO: Is this the full path?
   return ExecName;
 }
-}
+} // namespace
 
 // Registers XRay sleds and trampolines coming from the main executable or one
 // of the linked DSOs.
@@ -162,12 +163,13 @@ __xray_register_sleds(const XRaySledEntry *SledsBegin,
   if (Verbosity())
     Report("Registering %d new functions!\n", SledMap.Functions);
 
-  const char* Path = DetectObjPath(FromDSO, SledsBegin->address());
+  const char *Path = detectObjPath(FromDSO, SledsBegin->address());
   if (Path) {
     // Copy needed because DSO path is freed when unloaded.
     SledMap.Path = internal_strdup(Path);
   } else {
-    Report("Unable to determine load path for address %x\n", SledsBegin->address());
+    Report("Unable to determine load path for address %x\n",
+           SledsBegin->address());
   }
 
   {

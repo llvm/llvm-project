@@ -155,9 +155,7 @@ void LogWriter::WriteAll(const char *Begin, const char *End) XRAY_NEVER_INSTRUME
   }
 }
 
-const char* LogWriter::GetFilename() XRAY_NEVER_INSTRUMENT {
-  return Filename;
-}
+const char *LogWriter::GetFilename() XRAY_NEVER_INSTRUMENT { return Filename; }
 
 void LogWriter::Flush() XRAY_NEVER_INSTRUMENT {
   fsync(Fd);

@@ -169,7 +169,7 @@ extern int32_t __xray_pack_id(int32_t FuncId, int32_t ObjId);
 /// from.
 /// The returned string is owned by the XRay runtime and remains valid until the
 /// end of execution.
-extern const char* __xray_object_path(int32_t ObjId);
+extern const char *__xray_object_path(int32_t ObjId);
 
 /// Initialize the required XRay data structures. This is useful in cases where
 /// users want to control precisely when the XRay instrumentation data
