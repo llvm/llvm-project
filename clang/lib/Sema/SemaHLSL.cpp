@@ -2475,50 +2475,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
-  case Builtin::BI__builtin_hlsl_dot2add: {
-    if (SemaRef.checkArgCount(TheCall, 3))
-      return true;
-
-    auto checkHalfVectorOfSize2 = [](clang::QualType PassedType) -> bool {
-      if (const auto *VecTy = PassedType->getAs<VectorType>())
-        return !(VecTy->getNumElements() == 2 &&
-            VecTy->getElementType()->isHalfType());
-      return true;
-    };
-
-    auto CheckArgTypeIsCorrect = [](
-      Sema *S, Expr *Arg, QualType ExpectedType,
-      llvm::function_ref<bool(clang::QualType PassedType)> Check) -> bool {
-      QualType PassedType = Arg->getType();
-      if (Check(PassedType)) {
-        if (auto *VecTyA = PassedType->getAs<VectorType>())
-          ExpectedType = S->Context.getVectorType(
-              ExpectedType, VecTyA->getNumElements(), VecTyA->getVectorKind());
-        S->Diag(Arg->getBeginLoc(), diag::err_typecheck_convert_incompatible)
-            << PassedType << ExpectedType << 1 << 0 << 0;
-        return true;
-      }
-      return false;
-    };
-
-    if(CheckArgTypeIsCorrect(&SemaRef, TheCall->getArg(0),
-                             SemaRef.getASTContext().HalfTy,
-                             checkHalfVectorOfSize2))
-      return true;
-    if(CheckArgTypeIsCorrect(&SemaRef, TheCall->getArg(1),
-                             SemaRef.getASTContext().HalfTy,
-                             checkHalfVectorOfSize2))
-      return true;
-
-    if (!SemaRef.getASTContext().hasSameUnqualifiedType(TheCall->getArg(2)->getType(), SemaRef.getASTContext().FloatTy)) {
-      SemaRef.Diag(TheCall->getArg(2)->getBeginLoc(), diag::err_typecheck_convert_incompatible)
-          << TheCall->getArg(2)->getType() << SemaRef.getASTContext().FloatTy << 1 << 0 << 0;
-      return true;
-    }
-
-    TheCall->setType(SemaRef.getASTContext().FloatTy);
-    break;
-  }
   case Builtin::BI__builtin_hlsl_elementwise_firstbithigh:
   case Builtin::BI__builtin_hlsl_elementwise_firstbitlow: {
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
