@@ -3249,33 +3249,42 @@ void SemaHLSL::processExplicitBindingsOnDecl(VarDecl *VD) {
     }
   }
 }
+namespace {
+class InitListTransformer {
+  Sema &S;
+  ASTContext &Ctx;
+  QualType InitTy;
+  QualType *DstIt = nullptr;
+  Expr **ArgIt = nullptr;
+  bool Wrap;
 
-static bool CastInitializer(Sema &S, ASTContext &Ctx, Expr *E,
-                            llvm::SmallVectorImpl<Expr *> &List,
-                            llvm::SmallVectorImpl<QualType> &DestTypes) {
-  if (List.size() >= DestTypes.size()) {
-    List.push_back(E);
-    // This is odd, but it isn't technically a failure due to conversion, we
-    // handle mismatched counts of arguments differently.
-    return true;
+ bool castInitializer(Expr *E) {
+  assert(DstIt && "This should always be something!");
+  if (DstIt == DestTypes.end()) {
+    if (!Wrap) {
+      ArgExprs.push_back(E);
+      // This is odd, but it isn't technically a failure due to conversion, we
+      // handle mismatched counts of arguments differently.
+      return true;
+    }
+    DstIt = DestTypes.begin();
   }
-  InitializedEntity Entity = InitializedEntity::InitializeParameter(
-      Ctx, DestTypes[List.size()], false);
+  InitializedEntity Entity =
+      InitializedEntity::InitializeParameter(Ctx, *DstIt, true);
   ExprResult Res = S.PerformCopyInitialization(Entity, E->getBeginLoc(), E);
   if (Res.isInvalid())
     return false;
   Expr *Init = Res.get();
-  List.push_back(Init);
+  ArgExprs.push_back(Init);
+  DstIt++;
   return true;
 }
 
-static bool BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
-                                 llvm::SmallVectorImpl<Expr *> &List,
-                                 llvm::SmallVectorImpl<QualType> &DestTypes) {
+bool buildInitializerListImpl(Expr *E) {
   // If this is an initialization list, traverse the sub initializers.
   if (auto *Init = dyn_cast<InitListExpr>(E)) {
     for (auto *SubInit : Init->inits())
-      if (!BuildInitializerList(S, Ctx, SubInit, List, DestTypes))
+      if (!buildInitializerListImpl(SubInit))
         return false;
     return true;
   }
@@ -3284,7 +3293,7 @@ static bool BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
   QualType Ty = E->getType();
 
   if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType()))
-    return CastInitializer(S, Ctx, E, List, DestTypes);
+    return castInitializer(E);
 
   if (auto *VecTy = Ty->getAs<VectorType>()) {
     uint64_t Size = VecTy->getNumElements();
@@ -3299,7 +3308,7 @@ static bool BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
           E, E->getBeginLoc(), Idx, E->getEndLoc());
       if (ElExpr.isInvalid())
         return false;
-      if (!CastInitializer(S, Ctx, ElExpr.get(), List, DestTypes))
+      if (!castInitializer(ElExpr.get()))
         return false;
     }
     return true;
@@ -3316,7 +3325,7 @@ static bool BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
           E, E->getBeginLoc(), Idx, E->getEndLoc());
       if (ElExpr.isInvalid())
         return false;
-      if (!BuildInitializerList(S, Ctx, ElExpr.get(), List, DestTypes))
+      if (!buildInitializerListImpl(ElExpr.get()))
         return false;
     }
     return true;
@@ -3341,7 +3350,7 @@ static bool BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
             E, false, E->getBeginLoc(), CXXScopeSpec(), FD, Found, NameInfo);
         if (Res.isInvalid())
           return false;
-        if (!BuildInitializerList(S, Ctx, Res.get(), List, DestTypes))
+        if (!buildInitializerListImpl(Res.get()))
           return false;
       }
     }
@@ -3349,11 +3358,11 @@ static bool BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
   return true;
 }
 
-static Expr *GenerateInitLists(ASTContext &Ctx, QualType Ty,
-                               llvm::SmallVectorImpl<Expr *>::iterator &It) {
-  if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType())) {
-    return *(It++);
-  }
+Expr *generateInitListsImpl(QualType Ty) {
+  assert(ArgIt != ArgExprs.end() && "Something is off in iteration!");
+  if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType()))
+    return *(ArgIt++);
+
   llvm::SmallVector<Expr *> Inits;
   assert(!isa<MatrixType>(Ty) && "Matrix types not yet supported in HLSL");
   Ty = Ty.getDesugaredType(Ctx);
@@ -3369,7 +3378,7 @@ static Expr *GenerateInitLists(ASTContext &Ctx, QualType Ty,
       Size = VTy->getZExtSize();
     }
     for (uint64_t I = 0; I < Size; ++I)
-      Inits.push_back(GenerateInitLists(Ctx, ElTy, It));
+      Inits.push_back(generateInitListsImpl(ElTy));
   }
   if (auto *RTy = Ty->getAs<RecordType>()) {
     llvm::SmallVector<const RecordType *> RecordTypes;
@@ -3384,7 +3393,7 @@ static Expr *GenerateInitLists(ASTContext &Ctx, QualType Ty,
       const RecordType *RT = RecordTypes.back();
       RecordTypes.pop_back();
       for (auto *FD : RT->getDecl()->fields()) {
-        Inits.push_back(GenerateInitLists(Ctx, FD->getType(), It));
+        Inits.push_back(generateInitListsImpl(FD->getType()));
       }
     }
   }
@@ -3392,6 +3401,43 @@ static Expr *GenerateInitLists(ASTContext &Ctx, QualType Ty,
                                          Inits, Inits.back()->getEndLoc());
   NewInit->setType(Ty);
   return NewInit;
+}
+public:
+llvm::SmallVector<QualType, 16> DestTypes;
+  llvm::SmallVector<Expr *, 16> ArgExprs;
+  InitListTransformer(Sema &SemaRef, const InitializedEntity &Entity)
+      : S(SemaRef), Ctx(SemaRef.getASTContext()),
+        Wrap(Entity.getType()->isIncompleteArrayType()) {
+    InitTy = Entity.getType().getNonReferenceType();
+    // When we're generating initializer lists for incomplete array types we
+    // need to wrap around both when building the initializers and when
+    // generating the final initializer lists.
+    if (Wrap)
+      InitTy = QualType(InitTy->getBaseElementTypeUnsafe(),0);
+    BuildFlattenedTypeList(InitTy, DestTypes);
+    DstIt = DestTypes.begin();
+  }
+
+  bool buildInitializerList(Expr *E) {
+    return buildInitializerListImpl(E);
+  }
+
+  Expr *generateInitLists() {
+    ArgIt = ArgExprs.begin();
+    if (!Wrap)
+      return generateInitListsImpl(InitTy);
+    llvm::SmallVector<Expr *> Inits;
+    while (ArgIt != ArgExprs.end())
+      Inits.push_back(generateInitListsImpl(InitTy));
+
+    auto *NewInit = new (Ctx) InitListExpr(Ctx, Inits.front()->getBeginLoc(),
+                                           Inits, Inits.back()->getEndLoc());
+    llvm::APInt ArySize(64, Inits.size());
+    NewInit->setType(Ctx.getConstantArrayType(InitTy, ArySize, nullptr,
+                                              ArraySizeModifier::Normal, 0));
+    return NewInit;
+  }
+};
 }
 
 bool SemaHLSL::TransformInitList(const InitializedEntity &Entity,
@@ -3401,14 +3447,8 @@ bool SemaHLSL::TransformInitList(const InitializedEntity &Entity,
   if (Init->getType()->isScalarType())
     return true;
   ASTContext &Ctx = SemaRef.getASTContext();
-  llvm::SmallVector<QualType, 16> DestTypes;
-  // An initializer list might be attempting to initialize a reference or
-  // rvalue-reference. When checking the initializer we should look through the
-  // reference.
-  QualType InitTy = Entity.getType().getNonReferenceType();
-  BuildFlattenedTypeList(InitTy, DestTypes);
+  InitListTransformer ILT(SemaRef, Entity);
 
-  llvm::SmallVector<Expr *, 16> ArgExprs;
   for (unsigned I = 0; I < Init->getNumInits(); ++I) {
     Expr *E = Init->getInit(I);
     if (E->HasSideEffects(Ctx)) {
@@ -3419,21 +3459,32 @@ bool SemaHLSL::TransformInitList(const InitializedEntity &Entity,
                                     E->getObjectKind(), E);
       Init->setInit(I, E);
     }
-    if (!BuildInitializerList(SemaRef, Ctx, E, ArgExprs, DestTypes))
+    if (!ILT.buildInitializerList(E))
       return false;
   }
+  size_t ExpectedSize = ILT.DestTypes.size();
+  size_t ActualSize = ILT.ArgExprs.size();
+  // For incomplete arrays it is completely arbitrary to choose whether we think
+  // the user intended fewer or more elements. This implementation assumes that
+  // the user intended more, and errors that there are too few initializers to
+  // complete the final element.
+  if (Entity.getType()->isIncompleteArrayType())
+    ExpectedSize = ((ActualSize + ExpectedSize - 1) / ExpectedSize) * ExpectedSize;
 
-  if (DestTypes.size() != ArgExprs.size()) {
-    int TooManyOrFew = ArgExprs.size() > DestTypes.size() ? 1 : 0;
+  // An initializer list might be attempting to initialize a reference or
+  // rvalue-reference. When checking the initializer we should look through
+  // the reference.
+  QualType InitTy = Entity.getType().getNonReferenceType();
+  if (ExpectedSize != ActualSize) {
+    int TooManyOrFew = ActualSize > ExpectedSize ? 1 : 0;
     SemaRef.Diag(Init->getBeginLoc(), diag::err_hlsl_incorrect_num_initializers)
-        << TooManyOrFew << InitTy << DestTypes.size() << ArgExprs.size();
+        << TooManyOrFew << InitTy << ExpectedSize << ActualSize;
     return false;
   }
 
-  auto It = ArgExprs.begin();
-  // GenerateInitLists will always return an InitListExpr here, because the
+  // generateInitListsImpl will always return an InitListExpr here, because the
   // scalar case is handled above.
-  auto *NewInit = cast<InitListExpr>(GenerateInitLists(Ctx, InitTy, It));
+  auto *NewInit = cast<InitListExpr>(ILT.generateInitLists());
   Init->resizeInits(Ctx, NewInit->getNumInits());
   for (unsigned I = 0; I < NewInit->getNumInits(); ++I)
     Init->updateInit(Ctx, I, NewInit->getInit(I));
