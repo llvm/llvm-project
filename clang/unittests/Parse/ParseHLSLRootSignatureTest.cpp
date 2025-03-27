@@ -81,8 +81,9 @@ protected:
         llvm::MemoryBuffer::getMemBuffer(Source);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
 
-    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                            Diags, LangOpts, Target.get());
+    HeaderSearchOptions SearchOpts;
+    HeaderSearch HeaderInfo(SearchOpts, SourceMgr, Diags, LangOpts,
+                            Target.get());
     std::unique_ptr<Preprocessor> PP = std::make_unique<Preprocessor>(
         std::make_shared<PreprocessorOptions>(), Diags, LangOpts, SourceMgr,
         HeaderInfo, ModLoader,
