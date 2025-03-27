@@ -8,18 +8,27 @@
 #ifndef MLIR_CONVERSION_GPUTOAMDGPU_GPUTOAMDGPU_H_
 #define MLIR_CONVERSION_GPUTOAMDGPU_GPUTOAMDGPU_H_
 
+
+#include "mlir/IR/PatternMatch.h"
 #include <memory>
+#include <string>
 
 namespace mlir {
 
 class LLVMTypeConverter;
 class RewritePatternSet;
+class TypeConverter;
 class Pass;
 
-void populateGPUToAMDGPUConversionPatterns(LLVMTypeConverter &converter,
-                                            RewritePatternSet &patterns);
+#define GEN_PASS_DECL_CONVERTGPUTOAMDGPUPASS
+#include "mlir/Conversion/Passes.h.inc"
 
-std::unique_ptr<Pass> createConvertGPUToAMDGPUPass();
+void populateSubgroupReduceLoweringPatterns(LLVMTypeConverter &converter,
+                                            RewritePatternSet &patterns,
+                                            unsigned subgroupSize,
+                                            PatternBenefit benefit);
+// void populateGPUToAMDGPUConversionPatterns(LLVMTypeConverter &converter,
+//                                             RewritePatternSet &patterns);
 
 } // namespace mlir
 
