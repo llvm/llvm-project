@@ -2263,16 +2263,16 @@ Register PPCFastISel::fastMaterializeConstant(const Constant *C) {
 // Materialize the address created by an alloca into a register, and
 // return the register number (or zero if we failed to handle it).
 Register PPCFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
+  DenseMap<const AllocaInst *, int>::iterator SI =
+      FuncInfo.StaticAllocaMap.find(AI);
+
   // Don't handle dynamic allocas.
-  if (!FuncInfo.StaticAllocaMap.count(AI))
+  if (SI == FuncInfo.StaticAllocaMap.end())
     return Register();
 
   MVT VT;
   if (!isLoadTypeLegal(AI->getType(), VT))
     return Register();
-
-  DenseMap<const AllocaInst*, int>::iterator SI =
-    FuncInfo.StaticAllocaMap.find(AI);
 
   if (SI != FuncInfo.StaticAllocaMap.end()) {
     Register ResultReg = createResultReg(&PPC::G8RC_and_G8RC_NOX0RegClass);

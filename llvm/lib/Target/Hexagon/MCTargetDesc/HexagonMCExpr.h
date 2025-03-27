@@ -41,7 +41,6 @@ public:
                                  const MCAssembler *Asm) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override;
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override;
   MCExpr const *getExpr() const;
   void setMustExtend(bool Val = true);
   bool mustExtend() const;

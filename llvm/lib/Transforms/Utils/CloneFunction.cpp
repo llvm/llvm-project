@@ -313,9 +313,7 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   auto *NewModule = NewFunc->getParent();
   auto *NMD = NewModule->getOrInsertNamedMetadata("llvm.dbg.cu");
   // Avoid multiple insertions of the same DICompileUnit to NMD.
-  SmallPtrSet<const void *, 8> Visited;
-  for (auto *Operand : NMD->operands())
-    Visited.insert(Operand);
+  SmallPtrSet<const void *, 8> Visited(llvm::from_range, NMD->operands());
 
   // Collect and clone all the compile units referenced from the instructions in
   // the function (e.g. as instructions' scope).

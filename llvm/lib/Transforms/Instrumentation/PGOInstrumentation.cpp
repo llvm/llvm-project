@@ -967,9 +967,7 @@ void FunctionInstrumenter::instrument() {
       InstrumentBBs.size() + FuncInfo.SIVisitor.getNumOfSelectInsts();
 
   if (IsCtxProf) {
-    StringSet<> SkipCSInstr;
-    SkipCSInstr.insert(CtxPGOSkipCallsiteInstrument.begin(),
-                       CtxPGOSkipCallsiteInstrument.end());
+    StringSet<> SkipCSInstr(llvm::from_range, CtxPGOSkipCallsiteInstrument);
 
     auto *CSIntrinsic =
         Intrinsic::getOrInsertDeclaration(&M, Intrinsic::instrprof_callsite);

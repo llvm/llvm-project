@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/LoongArchFixupKinds.h"
+#include "MCTargetDesc/LoongArchMCExpr.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -48,6 +50,27 @@ unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
                                                 const MCValue &Target,
                                                 const MCFixup &Fixup,
                                                 bool IsPCRel) const {
+  switch (Target.getRefKind()) {
+  case LoongArchMCExpr::VK_TLS_LE_HI20:
+  case LoongArchMCExpr::VK_TLS_IE_PC_HI20:
+  case LoongArchMCExpr::VK_TLS_IE_HI20:
+  case LoongArchMCExpr::VK_TLS_LD_PC_HI20:
+  case LoongArchMCExpr::VK_TLS_LD_HI20:
+  case LoongArchMCExpr::VK_TLS_GD_PC_HI20:
+  case LoongArchMCExpr::VK_TLS_GD_HI20:
+  case LoongArchMCExpr::VK_TLS_DESC_PC_HI20:
+  case LoongArchMCExpr::VK_TLS_DESC_HI20:
+  case LoongArchMCExpr::VK_TLS_LE_HI20_R:
+  case LoongArchMCExpr::VK_TLS_LD_PCREL20_S2:
+  case LoongArchMCExpr::VK_TLS_GD_PCREL20_S2:
+  case LoongArchMCExpr::VK_TLS_DESC_PCREL20_S2:
+    if (auto *S = Target.getSymA())
+      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    break;
+  default:
+    break;
+  }
+
   // Determine the type of the relocation
   unsigned Kind = Fixup.getTargetKind();
 

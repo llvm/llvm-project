@@ -522,7 +522,7 @@ public:
 
     unsigned NumSunk = 0;
     ReversePostOrderTraversal<Function*> RPOT(&F);
-    VN.setReachableBBs(BasicBlocksSet(RPOT.begin(), RPOT.end()));
+    VN.setReachableBBs(BasicBlocksSet(llvm::from_range, RPOT));
     // Populate reverse post-order to order basic blocks in deterministic
     // order. Any arbitrary ordering will work in this case as long as they are
     // deterministic. The node ordering of newly created basic blocks
@@ -566,8 +566,7 @@ private:
     for (PHINode &PN : BB->phis()) {
       auto MPHI = ModelledPHI(&PN, RPOTOrder);
       PHIs.insert(MPHI);
-      for (auto *V : MPHI.getValues())
-        PHIContents.insert(V);
+      PHIContents.insert_range(MPHI.getValues());
     }
   }
 

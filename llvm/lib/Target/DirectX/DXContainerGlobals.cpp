@@ -186,51 +186,71 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
 
-  for (const dxil::ResourceBindingInfo &RBI : DBM) {
+  auto MakeBinding =
+      [](const dxil::ResourceBindingInfo::ResourceBinding &Binding,
+         const dxbc::PSV::ResourceType Type, const dxil::ResourceKind Kind,
+         const dxbc::PSV::ResourceFlags Flags = dxbc::PSV::ResourceFlags()) {
+        dxbc::PSV::v2::ResourceBindInfo BindInfo;
+        BindInfo.Type = Type;
+        BindInfo.LowerBound = Binding.LowerBound;
+        BindInfo.UpperBound = Binding.LowerBound + Binding.Size - 1;
+        BindInfo.Space = Binding.Space;
+        BindInfo.Kind = static_cast<dxbc::PSV::ResourceKind>(Kind);
+        BindInfo.Flags = Flags;
+        return BindInfo;
+      };
+
+  for (const dxil::ResourceBindingInfo &RBI : DBM.cbuffers()) {
     const dxil::ResourceBindingInfo::ResourceBinding &Binding =
         RBI.getBinding();
-    dxbc::PSV::v2::ResourceBindInfo BindInfo;
-    BindInfo.LowerBound = Binding.LowerBound;
-    BindInfo.UpperBound = Binding.LowerBound + Binding.Size - 1;
-    BindInfo.Space = Binding.Space;
+    PSV.Resources.push_back(MakeBinding(Binding, dxbc::PSV::ResourceType::CBV,
+                                        dxil::ResourceKind::CBuffer));
+  }
+  for (const dxil::ResourceBindingInfo &RBI : DBM.samplers()) {
+    const dxil::ResourceBindingInfo::ResourceBinding &Binding =
+        RBI.getBinding();
+    PSV.Resources.push_back(MakeBinding(Binding,
+                                        dxbc::PSV::ResourceType::Sampler,
+                                        dxil::ResourceKind::Sampler));
+  }
+  for (const dxil::ResourceBindingInfo &RBI : DBM.srvs()) {
+    const dxil::ResourceBindingInfo::ResourceBinding &Binding =
+        RBI.getBinding();
 
     dxil::ResourceTypeInfo &TypeInfo = DRTM[RBI.getHandleTy()];
-    dxbc::PSV::ResourceType ResType = dxbc::PSV::ResourceType::Invalid;
-    bool IsUAV = TypeInfo.getResourceClass() == dxil::ResourceClass::UAV;
-    switch (TypeInfo.getResourceKind()) {
-    case dxil::ResourceKind::Sampler:
-      ResType = dxbc::PSV::ResourceType::Sampler;
-      break;
-    case dxil::ResourceKind::CBuffer:
-      ResType = dxbc::PSV::ResourceType::CBV;
-      break;
-    case dxil::ResourceKind::StructuredBuffer:
-      ResType = IsUAV ? dxbc::PSV::ResourceType::UAVStructured
-                      : dxbc::PSV::ResourceType::SRVStructured;
-      if (IsUAV && TypeInfo.getUAV().HasCounter)
-        ResType = dxbc::PSV::ResourceType::UAVStructuredWithCounter;
-      break;
-    case dxil::ResourceKind::RTAccelerationStructure:
+    dxbc::PSV::ResourceType ResType;
+    if (TypeInfo.isStruct())
+      ResType = dxbc::PSV::ResourceType::SRVStructured;
+    else if (TypeInfo.isTyped())
+      ResType = dxbc::PSV::ResourceType::SRVTyped;
+    else
       ResType = dxbc::PSV::ResourceType::SRVRaw;
-      break;
-    case dxil::ResourceKind::RawBuffer:
-      ResType = IsUAV ? dxbc::PSV::ResourceType::UAVRaw
-                      : dxbc::PSV::ResourceType::SRVRaw;
-      break;
-    default:
-      ResType = IsUAV ? dxbc::PSV::ResourceType::UAVTyped
-                      : dxbc::PSV::ResourceType::SRVTyped;
-      break;
-    }
-    BindInfo.Type = ResType;
 
-    BindInfo.Kind =
-        static_cast<dxbc::PSV::ResourceKind>(TypeInfo.getResourceKind());
+    PSV.Resources.push_back(
+        MakeBinding(Binding, ResType, TypeInfo.getResourceKind()));
+  }
+  for (const dxil::ResourceBindingInfo &RBI : DBM.uavs()) {
+    const dxil::ResourceBindingInfo::ResourceBinding &Binding =
+        RBI.getBinding();
+
+    dxil::ResourceTypeInfo &TypeInfo = DRTM[RBI.getHandleTy()];
+    dxbc::PSV::ResourceType ResType;
+    if (TypeInfo.getUAV().HasCounter)
+      ResType = dxbc::PSV::ResourceType::UAVStructuredWithCounter;
+    else if (TypeInfo.isStruct())
+      ResType = dxbc::PSV::ResourceType::UAVStructured;
+    else if (TypeInfo.isTyped())
+      ResType = dxbc::PSV::ResourceType::UAVTyped;
+    else
+      ResType = dxbc::PSV::ResourceType::UAVRaw;
+
+    dxbc::PSV::ResourceFlags Flags;
     // TODO: Add support for dxbc::PSV::ResourceFlag::UsedByAtomic64, tracking
     // with https://github.com/llvm/llvm-project/issues/104392
-    BindInfo.Flags.Flags = 0u;
+    Flags.Flags = 0u;
 
-    PSV.Resources.emplace_back(BindInfo);
+    PSV.Resources.push_back(
+        MakeBinding(Binding, ResType, TypeInfo.getResourceKind(), Flags));
   }
 }
 

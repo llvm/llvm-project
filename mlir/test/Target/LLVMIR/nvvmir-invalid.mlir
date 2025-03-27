@@ -125,6 +125,14 @@ llvm.func @convert_float_to_tf32_no_rnd_mode(%src : f32) -> i32 {
 
 // -----
 
+llvm.func @nvvm_st_bulk_initval_nonzero(%addr : !llvm.ptr, %size : i64) {
+  // expected-error @below {{only 0 is supported for initVal, got 1}}
+  nvvm.st.bulk %addr, size =  %size, init =  1 : !llvm.ptr
+  llvm.return
+}
+
+// -----
+
 llvm.func @nvvm_tcgen05_cp_128x256b_mc(%taddr : !llvm.ptr<6>, %smem_desc : i64) {
   // expected-error @below {{Invalid multicast type for tcgen05.cp Op}}
   nvvm.tcgen05.cp %taddr, %smem_desc {shape = #nvvm.tcgen05_cp_shape<shape_128x256b>, multicast = #nvvm.tcgen05_cp_multicast<warpx2_02_13>}

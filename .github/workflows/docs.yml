@@ -54,19 +54,17 @@ jobs:
     runs-on: ubuntu-24.04
     if: github.repository == 'llvm/llvm-project'
     steps:
-      # Don't fetch before checking for file changes to force the file changes
-      # action to use the Github API in pull requests. If it's a push to a
-      # branch we can't use the Github API to get the diff, so we need to have
-      # a local checkout beforehand.
-      - name: Fetch LLVM sources (Push)
-        if: ${{ github.event_name == 'push' }}
+      - name: Fetch LLVM sources
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          fetch-depth: 1
+          fetch-depth: 2
       - name: Get subprojects that have doc changes
         id: docs-changed-subprojects
         uses: step-security/changed-files@3dbe17c78367e7d60f00d78ae6781a35be47b4a1 # v45.0.1
         with:
+          skip_initial_fetch: true
+          base_sha: 'HEAD~1'
+          sha: 'HEAD'
           files_yaml: |
             llvm:
               - 'llvm/docs/**'
@@ -96,11 +94,6 @@ jobs:
               - 'flang/include/flang/Optimizer/Dialect/FIROps.td'
             workflow:
               - '.github/workflows/docs.yml'
-      - name: Fetch LLVM sources (PR)
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          fetch-depth: 1
       - name: Setup Python env
         uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
