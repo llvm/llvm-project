@@ -53,6 +53,7 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
                       "Failed to extract data: {0}");
       return false;
     }
+    auto data = std::move(*data_or_err);
     if (context_type == Value::ContextType::RegisterInfo) {
       const RegisterInfo *reg_info = value.GetRegisterInfo();
       if (reg_info) {
@@ -92,7 +93,7 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
               target_sp->ReadCStringFromMemory(
                   address, (char *)buffer_sp->GetBytes(), max_len, error);
               if (error.Success())
-                data_or_err->SetData(buffer_sp);
+                data.SetData(buffer_sp);
             }
           }
         } else {

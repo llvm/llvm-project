@@ -525,8 +525,7 @@ public:
         auto data_or_err = valobj_sp->GetData();
         if (auto error = data_or_err.takeError()) {
             err = Status::FromError(
-                llvm::joinErrors(
-                  llvm::createStringError("couldn't get the value of %s: ", 
+                llvm::joinErrors(llvm::createStringError("couldn't get the value of %s: ", 
                     GetName().AsCString()), std::move(error)));
             return;
         }
