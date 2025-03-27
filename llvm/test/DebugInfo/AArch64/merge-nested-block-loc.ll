@@ -40,27 +40,17 @@ entry:
   br i1 false, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  %mul3 = mul i32 0, 0, !dbg !14
-  store i32 %mul3, ptr %i, align 4, !dbg !14
+  store i32 1, ptr %i, align 4, !dbg !7
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  %mul9 = mul i32 0, 0, !dbg !15
-  store i32 %mul9, ptr %i, align 4, !dbg !15
+  store i32 0, ptr %i, align 4, !dbg !12
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
   %0 = load i32, ptr %i, align 4
   ret i32 0
 }
-
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr captures(none)) #0
-
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr captures(none)) #0
-
-attributes #0 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2}
@@ -72,17 +62,14 @@ attributes #0 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !4 = !DIFile(filename: "1.c", directory: "")
 !5 = !DISubroutineType(types: !6)
 !6 = !{}
-!7 = !DILocation(line: 3, column: 10, scope: !8)
-!8 = distinct !DILexicalBlock(scope: !3, file: !4, line: 3, column: 7)
-!9 = !DILocation(line: 4, column: 7, scope: !10)
-!10 = distinct !DILexicalBlock(scope: !8, file: !4, line: 3, column: 21)
-!11 = !DILocation(line: 40, column: 3, scope: !12)
-!12 = !DILexicalBlockFile(scope: !10, file: !13, discriminator: 0)
-!13 = !DIFile(filename: "m.c", directory: "")
-!14 = !DILocation(line: 42, column: 3, scope: !12)
-!15 = !DILocation(line: 42, column: 3, scope: !16)
-!16 = !DILexicalBlockFile(scope: !17, file: !13, discriminator: 0)
-!17 = distinct !DILexicalBlock(scope: !8, file: !4, line: 6, column: 9)
+!7 = !DILocation(line: 42, column: 3, scope: !8)
+!8 = !DILexicalBlockFile(scope: !10, file: !9, discriminator: 0)
+!9 = !DIFile(filename: "m.c", directory: "")
+!10 = distinct !DILexicalBlock(scope: !11, file: !4, line: 3, column: 21)
+!11 = distinct !DILexicalBlock(scope: !3, file: !4, line: 3, column: 7)
+!12 = !DILocation(line: 42, column: 3, scope: !13)
+!13 = !DILexicalBlockFile(scope: !14, file: !9, discriminator: 0)
+!14 = distinct !DILexicalBlock(scope: !11, file: !4, line: 6, column: 9)
 
 ; CHECK: [[SP:![0-9]+]] = distinct !DISubprogram(name: "foo", scope: [[FILE1:![0-9]+]], file: [[FILE1]], line: 1
 ; CHECK: [[FILE1]] = !DIFile(filename: "1.c", directory: "")
