@@ -14,8 +14,8 @@
 #define LLVM_CLANG_PARSE_PARSEHLSLROOTSIGNATURE_H
 
 #include "clang/Basic/DiagnosticParse.h"
-#include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/LexHLSLRootSignature.h"
+#include "clang/Lex/Preprocessor.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"

@@ -49,7 +49,8 @@ bool RootSignatureParser::Parse() {
       llvm_unreachable("Switch for consumed token was not provided");
     }
 
-    if (Error) return true;
+    if (Error)
+      return true;
 
     if (!TryConsumeExpectedToken(TokenKind::pu_comma))
       break;
@@ -92,12 +93,13 @@ bool RootSignatureParser::ParseDescriptorTableClause() {
   assert((CurToken.Kind == TokenKind::kw_CBV ||
           CurToken.Kind == TokenKind::kw_SRV ||
           CurToken.Kind == TokenKind::kw_UAV ||
-          CurToken.Kind == TokenKind::kw_Sampler)
-          && "Expects to only be invoked starting at given keyword");
+          CurToken.Kind == TokenKind::kw_Sampler) &&
+         "Expects to only be invoked starting at given keyword");
 
   DescriptorTableClause Clause;
   switch (CurToken.Kind) {
-  default: break; // Unreachable given Try + assert pattern
+  default:
+    break; // Unreachable given Try + assert pattern
   case TokenKind::kw_CBV:
     Clause.Type = ClauseType::CBuffer;
     break;
@@ -115,7 +117,6 @@ bool RootSignatureParser::ParseDescriptorTableClause() {
   if (ConsumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
                            CurToken.Kind))
     return true;
-
 
   if (ConsumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_after,
                            CurToken.Kind))
