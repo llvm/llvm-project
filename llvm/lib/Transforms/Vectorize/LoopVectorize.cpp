@@ -4043,7 +4043,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     return Rem->isZero();
   };
 
-  if (MaxPowerOf2RuntimeVF > 0) {
+  if (MaxPowerOf2RuntimeVF > 0u) {
     assert((UserVF.isNonZero() || isPowerOf2_32(*MaxPowerOf2RuntimeVF)) &&
            "MaxFixedVF must be a power of 2");
     if (NoScalarEpilogueNeeded(*MaxPowerOf2RuntimeVF)) {
@@ -4055,7 +4055,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 
   auto ExpectedTC = getSmallBestKnownTC(PSE, TheLoop);
   if (ExpectedTC && ExpectedTC <= TTI.getMinTripCountTailFoldingThreshold()) {
-    if (MaxPowerOf2RuntimeVF > 0) {
+    if (MaxPowerOf2RuntimeVF > 0u) {
       // If we have a low-trip-count, and the fixed-width VF is known to divide
       // the trip count but the scalable factor does not, use the fixed-width
       // factor in preference to allow the generation of a non-predicated loop.
