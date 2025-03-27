@@ -1017,15 +1017,10 @@ allocReductionVars(T loop, ArrayRef<BlockArgument> reductionArgs,
       // variable allocated in the inlined region)
       llvm::Value *var = builder.CreateAlloca(
           moduleTranslation.convertType(reductionDecls[i].getType()));
-      //      var->setName("private_redvar");
 
       llvm::Type *ptrTy = llvm::PointerType::getUnqual(builder.getContext());
       llvm::Value *castVar =
           builder.CreatePointerBitCastOrAddrSpaceCast(var, ptrTy);
-      // TODO: I (Sergio) just guessed casting phis[0] like it's done for var is
-      // what's supposed to happen with this code coming from a merge from main,
-      // but I don't actually know. Someone more familiar with it needs to check
-      // this.
       llvm::Value *castPhi =
           builder.CreatePointerBitCastOrAddrSpaceCast(phis[0], ptrTy);
 
@@ -1039,7 +1034,6 @@ allocReductionVars(T loop, ArrayRef<BlockArgument> reductionArgs,
              "allocaction is implicit for by-val reduction");
       llvm::Value *var = builder.CreateAlloca(
           moduleTranslation.convertType(reductionDecls[i].getType()));
-      //      var->setName("private_redvar");
 
       llvm::Type *ptrTy = llvm::PointerType::getUnqual(builder.getContext());
       llvm::Value *castVar =
