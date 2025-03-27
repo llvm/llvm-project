@@ -160,7 +160,7 @@ struct CUFAddConstructor
     llvm::SmallVector<int> priorities;
     llvm::SmallVector<mlir::Attribute> data;
     priorities.push_back(0);
-    data.push_back(builder.getAttr<mlir::LLVM::ZeroAttr>(mod.getContext()));
+    data.push_back(mlir::LLVM::ZeroAttr::get(mod.getContext()));
     builder.create<mlir::LLVM::GlobalCtorsOp>(
         mod.getLoc(), builder.getArrayAttr(funcs),
         builder.getI32ArrayAttr(priorities), builder.getArrayAttr(data));
