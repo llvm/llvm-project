@@ -69,7 +69,6 @@ bool RISCVLateOpt::trySimplifyCondBr(
 
     // At this point, its legal to optimize.
     RII->removeBranch(MBB);
-    Cond.clear();
 
     // Only need to insert a branch if we're not falling through.
     if (Folded) {
