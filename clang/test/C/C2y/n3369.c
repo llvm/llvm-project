@@ -8,6 +8,15 @@
  * this operator to _Countof.
  */
 
+#if !__has_feature(c_countof)
+#error "Expected to have _Countof support"
+#endif
+
+#if !__has_extension(c_countof)
+// __has_extension returns true if __has_feature returns true.
+#error "Expected to have _Countof support"
+#endif
+
 int global_array[12];
 
 void test_parsing_failures() {

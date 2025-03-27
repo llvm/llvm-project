@@ -8,6 +8,24 @@
  * It also tests the behavior of the precompat warning. And it tests the
  * behavior in C++ mode where the extension is not supported.
  */
+
+#if __STDC_VERSION__ < 202400L && !defined(__cplusplus)
+#if __has_feature(c_countof)
+#error "Did not expect _Countof to be a feature in older language modes"
+#endif
+
+#if !__has_extension(c_countof)
+#error "Expected _Countof to be an extension in older language modes"
+#endif
+#endif /* __STDC_VERSION__ < 202400L && !defined(__cplusplus) */
+
+#ifdef __cplusplus
+/* C++ should not have this as a feature or as an extension. */
+#if __has_feature(c_countof) || __has_extension(c_countof)
+#error "did not expect there to be _Countof support"
+#endif
+#endif /* __cplusplus */
+
 int array[12];
 int x = _Countof(array);   /* expected-warning {{'_Countof' is a C2y extension}}
                               compat-warning {{'_Countof' is incompatible with C standards before C2y}}

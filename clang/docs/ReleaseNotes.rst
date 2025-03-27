@@ -146,7 +146,8 @@ C2y Feature Support
   which renamed ``_Lengthof`` to ``_Countof``. This feature is implemented as
   a conforming extension in earlier C language modes, but not in C++ language
   modes (``std::extent`` and ``std::size`` already provide the same
-  functionality but with more granularity).
+  functionality but with more granularity). The feature can be tested via
+  ``__has_feature(c_countof)`` or ``__has_extension(c_countof)``.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
