@@ -732,7 +732,7 @@ public:
       case BO_NE:
         return cir::CmpOpKind::ne;
       default:
-        llvm_unreachable("unsupported comparison kind");
+        llvm_unreachable("unsupported comparison kind for cir.cmp");
       }
     };
 

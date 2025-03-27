@@ -865,9 +865,6 @@ def CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
   let assemblyFormat = [{
     `(` $kind `,` $lhs `,` $rhs  `)` `:` type($lhs) `,` type($result) attr-dict
   }];
-
-  // Already covered by the traits
-  let hasVerifier = 0;
 }
 
 //===----------------------------------------------------------------------===//
