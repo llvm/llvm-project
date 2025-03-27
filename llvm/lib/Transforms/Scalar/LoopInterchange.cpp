@@ -1197,25 +1197,35 @@ LoopInterchangeProfitability::isProfitablePerInstrOrderCost() {
   return std::nullopt;
 }
 
+/// Return true if we can vectorize the loop specified by \p LoopId.
+static bool canVectorize(const CharMatrix &DepMatrix, unsigned LoopId) {
+  for (unsigned I = 0; I != DepMatrix.size(); I++) {
+    char Dir = DepMatrix[I][LoopId];
+    if (Dir != 'I' && Dir != '=')
+      return false;
+  }
+  return true;
+}
+
 std::optional<bool> LoopInterchangeProfitability::isProfitableForVectorization(
     unsigned InnerLoopId, unsigned OuterLoopId, CharMatrix &DepMatrix) {
-  for (auto &Row : DepMatrix) {
-    // If the inner loop is loop independent or doesn't carry any dependency
-    // it is not profitable to move this to outer position, since we are
-    // likely able to do inner loop vectorization already.
-    if (Row[InnerLoopId] == 'I' || Row[InnerLoopId] == '=')
-      return std::optional<bool>(false);
+  // If the outer loop is not loop independent it is not profitable to move
+  // this to inner position, since doing so would not enable inner loop
+  // parallelism.
+  if (!canVectorize(DepMatrix, OuterLoopId))
+    return false;
 
-    // If the outer loop is not loop independent it is not profitable to move
-    // this to inner position, since doing so would not enable inner loop
-    // parallelism.
-    if (Row[OuterLoopId] != 'I' && Row[OuterLoopId] != '=')
-      return std::optional<bool>(false);
-  }
-  // If inner loop has dependence and outer loop is loop independent then it
-  // is/ profitable to interchange to enable inner loop parallelism.
-  // If there are no dependences, interchanging will not improve anything.
-  return std::optional<bool>(!DepMatrix.empty());
+  // If inner loop has dependence and outer loop is loop independent then it is
+  // profitable to interchange to enable inner loop parallelism.
+  if (!canVectorize(DepMatrix, InnerLoopId))
+    return true;
+
+  // If both the inner and the outer loop can be vectorized, it is necessary to
+  // check the cost of each vectorized loop for profitability decision. At this
+  // time we do not have a cost model to estimate them, so return nullopt.
+  // TODO: Estimate the cost of vectorized loop when both the outer and the
+  // inner loop can be vectorized.
+  return std::nullopt;
 }
 
 bool LoopInterchangeProfitability::isProfitable(
