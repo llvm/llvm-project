@@ -877,7 +877,7 @@ def Wa_COMMA : CommaJoined<["-"], "Wa,">,
 def warning_suppression_mappings_EQ : Joined<["--"],
   "warning-suppression-mappings=">, Group<Diag_Group>,
   HelpText<"File containing diagnostic suppression mappings. See user manual "
-  "for file format.">, Visibility<[ClangOption, CC1Option]>;
+  "for file format.">, Visibility<[ClangOption, CLOption, CC1Option]>;
 def Wall : Flag<["-"], "Wall">, Group<W_Group>, Flags<[HelpHidden]>,
   Visibility<[ClangOption, CC1Option, FlangOption]>;
 def WCL4 : Flag<["-"], "WCL4">, Group<W_Group>, Flags<[HelpHidden]>,
