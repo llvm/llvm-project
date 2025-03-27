@@ -832,11 +832,10 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   AST->ModCache = createCrossProcessModuleCache();
   AST->HSOpts = HSOpts ? HSOpts : std::make_shared<HeaderSearchOptions>();
   AST->HSOpts->ModuleFormat = std::string(PCHContainerRdr.getFormats().front());
-  AST->HeaderInfo.reset(new HeaderSearch(AST->getHeaderSearchOpts(),
-                                         AST->getSourceManager(),
-                                         AST->getDiagnostics(),
-                                         AST->getLangOpts(),
-                                         /*Target=*/nullptr));
+  AST->HeaderInfo.reset(
+      new HeaderSearch(AST->getHeaderSearchOpts(), AST->getSourceManager(),
+                       AST->getDiagnostics(), AST->getLangOpts(),
+                       /*Target=*/nullptr));
   AST->PPOpts = std::make_shared<PreprocessorOptions>();
 
   // Gather Info for preprocessor construction later on.

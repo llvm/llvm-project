@@ -39,8 +39,8 @@ void test() {
   (void)std::forward_like<vfp>(i);  // expected-error {{no matching function for call to 'forward_like'}}
   (void)std::forward_like<cvfp>(i); // expected-error {{no matching function for call to 'forward_like'}}
 
-  using fpr  = void()&;
-  using fprr = void()&&;
+  using fpr  = void() &;
+  using fprr = void() &&;
   (void)std::forward_like<fpr>(i);  // expected-error {{no matching function for call to 'forward_like'}}
   (void)std::forward_like<fprr>(i); // expected-error {{no matching function for call to 'forward_like'}}
 }

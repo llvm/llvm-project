@@ -880,7 +880,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
       if (args[0]) {
         if (const auto *cst{UnwrapExpr<Constant<SomeDerived>>(args[0])}) {
           if (auto constr{cst->GetScalarValue()}) {
-            if (StructureConstructorValues & values{constr->values()};
+            if (StructureConstructorValues &values{constr->values()};
                 values.size() == 1) {
               const Expr<SomeType> &value{values.begin()->second.value()};
               if (auto flag{ToInt64(value)}) {
