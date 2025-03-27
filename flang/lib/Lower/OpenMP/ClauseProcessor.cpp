@@ -867,9 +867,9 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
       }
 
       // If we pass a mutable box e.g. !fir.ref<!fir.box<!fir.heap<...>>> then
-      // the runtime will use the addres of the box not the address of the data.
-      // Flang generates a lot of memcpys between different box allocations so
-      // this is not a reliable way to identify the dependency.
+      // the runtime will use the address of the box not the address of the
+      // data. Flang generates a lot of memcpys between different box
+      // allocations so this is not a reliable way to identify the dependency.
       if (auto ref = mlir::dyn_cast<fir::ReferenceType>(dependVar.getType()))
         if (fir::isa_box_type(ref.getElementType()))
           dependVar = builder.create<fir::LoadOp>(
