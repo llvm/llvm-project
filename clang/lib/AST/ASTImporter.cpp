@@ -30,6 +30,7 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/LambdaCapture.h"
@@ -495,6 +496,16 @@ namespace clang {
     Expected<InheritedConstructor>
     ImportInheritedConstructor(const InheritedConstructor &From);
 
+    StringRef ImportASTStringRef(StringRef FromStr);
+    Error ImportConstraintSatisfaction(const ASTConstraintSatisfaction &FromSat,
+                                       ConstraintSatisfaction &ToSat);
+    Expected<concepts::Requirement *>
+    ImportTypeRequirement(concepts::TypeRequirement *From);
+    Expected<concepts::Requirement *>
+    ImportExprRequirement(concepts::ExprRequirement *From);
+    Expected<concepts::Requirement *>
+    ImportNestedRequirement(concepts::NestedRequirement *From);
+
     template <typename T>
     bool hasSameVisibilityContextAndLinkage(T *Found, T *From);
 
@@ -564,6 +575,10 @@ namespace clang {
     ExpectedDecl VisitVarTemplateDecl(VarTemplateDecl *D);
     ExpectedDecl VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *D);
     ExpectedDecl VisitFunctionTemplateDecl(FunctionTemplateDecl *D);
+    ExpectedDecl VisitConceptDecl(ConceptDecl *D);
+    ExpectedDecl VisitImplicitConceptSpecializationDecl(
+        ImplicitConceptSpecializationDecl *D);
+    ExpectedDecl VisitRequiresExprBodyDecl(RequiresExprBodyDecl *E);
 
     // Importing statements
     ExpectedStmt VisitStmt(Stmt *S);
@@ -680,6 +695,8 @@ namespace clang {
     ExpectedStmt VisitTypeTraitExpr(TypeTraitExpr *E);
     ExpectedStmt VisitCXXTypeidExpr(CXXTypeidExpr *E);
     ExpectedStmt VisitCXXFoldExpr(CXXFoldExpr *E);
+    ExpectedStmt VisitRequiresExpr(RequiresExpr *E);
+    ExpectedStmt VisitConceptSpecializationExpr(ConceptSpecializationExpr *E);
 
     // Helper for chaining together multiple imports. If an error is detected,
     // subsequent imports will return default constructed nodes, so that failure
@@ -1036,6 +1053,188 @@ Expected<ConceptReference *> ASTNodeImporter::import(ConceptReference *From) {
                             Importer.getToContext(), ToTAInfo)
                       : nullptr);
   return ConceptRef;
+}
+
+StringRef ASTNodeImporter::ImportASTStringRef(StringRef FromStr) {
+  char *ToStore = new (Importer.getToContext()) char[FromStr.size()];
+  std::copy(FromStr.begin(), FromStr.end(), ToStore);
+  return StringRef(ToStore, FromStr.size());
+}
+
+Error ASTNodeImporter::ImportConstraintSatisfaction(
+    const ASTConstraintSatisfaction &FromSat, ConstraintSatisfaction &ToSat) {
+  ToSat.IsSatisfied = FromSat.IsSatisfied;
+  ToSat.ContainsErrors = FromSat.ContainsErrors;
+  if (!ToSat.IsSatisfied) {
+    for (auto Record = FromSat.begin(); Record != FromSat.end(); ++Record) {
+      if (Expr *E = Record->dyn_cast<Expr *>()) {
+        ExpectedExpr ToSecondExpr = import(E);
+        if (!ToSecondExpr)
+          return ToSecondExpr.takeError();
+        ToSat.Details.emplace_back(ToSecondExpr.get());
+      } else {
+        auto Pair = Record->dyn_cast<std::pair<SourceLocation, StringRef> *>();
+
+        ExpectedSLoc ToPairFirst = import(Pair->first);
+        if (!ToPairFirst)
+          return ToPairFirst.takeError();
+        StringRef ToPairSecond = ImportASTStringRef(Pair->second);
+        ToSat.Details.emplace_back(
+            new (Importer.getToContext())
+                ConstraintSatisfaction::SubstitutionDiagnostic{
+                    ToPairFirst.get(), ToPairSecond});
+      }
+    }
+  }
+  return Error::success();
+}
+
+template <>
+Expected<concepts::Requirement::SubstitutionDiagnostic *>
+ASTNodeImporter::import(
+    concepts::Requirement::SubstitutionDiagnostic *FromDiag) {
+  StringRef ToEntity = ImportASTStringRef(FromDiag->SubstitutedEntity);
+  ExpectedSLoc ToLoc = import(FromDiag->DiagLoc);
+  if (!ToLoc)
+    return ToLoc.takeError();
+  StringRef ToDiagMessage = ImportASTStringRef(FromDiag->DiagMessage);
+  return new (Importer.getToContext())
+      concepts::Requirement::SubstitutionDiagnostic{ToEntity, ToLoc.get(),
+                                                    ToDiagMessage};
+}
+
+Expected<concepts::Requirement *>
+ASTNodeImporter::ImportTypeRequirement(concepts::TypeRequirement *From) {
+  using namespace concepts;
+
+  if (From->isSubstitutionFailure()) {
+    auto DiagOrErr = import(From->getSubstitutionDiagnostic());
+    if (!DiagOrErr)
+      return DiagOrErr.takeError();
+    return new (Importer.getToContext()) TypeRequirement(*DiagOrErr);
+  } else {
+    Expected<TypeSourceInfo *> ToType = import(From->getType());
+    if (!ToType)
+      return ToType.takeError();
+    return new (Importer.getToContext()) TypeRequirement(*ToType);
+  }
+}
+
+Expected<concepts::Requirement *>
+ASTNodeImporter::ImportExprRequirement(concepts::ExprRequirement *From) {
+  using namespace concepts;
+
+  bool IsRKSimple = From->getKind() == Requirement::RK_Simple;
+  ExprRequirement::SatisfactionStatus Status = From->getSatisfactionStatus();
+  /*llvm::PointerUnion<Requirement::SubstitutionDiagnostic *, Expr *>
+  DiagOrExpr; if (Status == ExprRequirement::SS_ExprSubstitutionFailure) { auto
+  DiagOrErr = ImportSubstitutionDiagnos(From->getExprSubstitutionDiagnostic());
+    if (!DiagOrErr)
+      return DiagOrErr.takeError();
+    DiagOrExpr = DiagOrErr.get();
+  } else {
+    Expected<Expr *> ExprOrErr = import(From->getExpr());
+    if (!ExprOrErr)
+      return ExprOrErr.takeError();
+    DiagOrExpr = ExprOrErr.get();
+  }*/
+
+  std::optional<ExprRequirement::ReturnTypeRequirement> Req;
+  ConceptSpecializationExpr *SubstitutedConstraintExpr = nullptr;
+
+  if (IsRKSimple) {
+    Req.emplace();
+  } else {
+    const ExprRequirement::ReturnTypeRequirement &FromTypeRequirement =
+        From->getReturnTypeRequirement();
+
+    if (FromTypeRequirement.isTypeConstraint()) {
+      auto ParamsOrErr =
+          import(FromTypeRequirement.getTypeConstraintTemplateParameterList());
+      if (!ParamsOrErr)
+        return ParamsOrErr.takeError();
+      if (Status >= ExprRequirement::SS_ConstraintsNotSatisfied) {
+        auto SubstConstraintExprOrErr =
+            import(From->getReturnTypeRequirementSubstitutedConstraintExpr());
+        if (!SubstConstraintExprOrErr)
+          return SubstConstraintExprOrErr.takeError();
+        SubstitutedConstraintExpr = SubstConstraintExprOrErr.get();
+      }
+      Req.emplace(ParamsOrErr.get());
+    } else if (FromTypeRequirement.isSubstitutionFailure()) {
+      auto DiagOrErr = import(FromTypeRequirement.getSubstitutionDiagnostic());
+      if (DiagOrErr)
+        return DiagOrErr.takeError();
+      Req.emplace(DiagOrErr.get());
+    } else {
+      Req.emplace();
+    }
+  }
+
+  ExpectedSLoc NoexceptLocOrErr = import(From->getNoexceptLoc());
+  if (!NoexceptLocOrErr)
+    return NoexceptLocOrErr.takeError();
+
+  if (Status == ExprRequirement::SS_ExprSubstitutionFailure) {
+    auto DiagOrErr = import(From->getExprSubstitutionDiagnostic());
+    if (!DiagOrErr)
+      return DiagOrErr.takeError();
+    return new (Importer.getToContext()) ExprRequirement(
+        *DiagOrErr, IsRKSimple, *NoexceptLocOrErr, std::move(*Req));
+  } else {
+    Expected<Expr *> ExprOrErr = import(From->getExpr());
+    if (!ExprOrErr)
+      return ExprOrErr.takeError();
+    return new (Importer.getToContext()) concepts::ExprRequirement(
+        *ExprOrErr, IsRKSimple, *NoexceptLocOrErr, std::move(*Req), Status,
+        SubstitutedConstraintExpr);
+  }
+}
+
+Expected<concepts::Requirement *>
+ASTNodeImporter::ImportNestedRequirement(concepts::NestedRequirement *From) {
+  using namespace concepts;
+
+  const ASTConstraintSatisfaction &FromSatisfaction =
+      From->getConstraintSatisfaction();
+  if (From->hasInvalidConstraint()) {
+    StringRef ToEntity = ImportASTStringRef(From->getInvalidConstraintEntity());
+    ASTConstraintSatisfaction *ToSatisfaction =
+        ASTConstraintSatisfaction::Rebuild(Importer.getToContext(),
+                                           FromSatisfaction);
+    return new (Importer.getToContext())
+        NestedRequirement(ToEntity, ToSatisfaction);
+  } else {
+    ExpectedExpr ToExpr = import(From->getConstraintExpr());
+    if (!ToExpr)
+      return ToExpr.takeError();
+    if (ToExpr.get()->isInstantiationDependent()) {
+      return new (Importer.getToContext()) NestedRequirement(ToExpr.get());
+    } else {
+      ConstraintSatisfaction Satisfaction;
+      if (Error Err =
+              ImportConstraintSatisfaction(FromSatisfaction, Satisfaction))
+        return std::move(Err);
+      return new (Importer.getToContext()) NestedRequirement(
+          Importer.getToContext(), ToExpr.get(), Satisfaction);
+    }
+  }
+}
+
+template <>
+Expected<concepts::Requirement *>
+ASTNodeImporter::import(concepts::Requirement *FromRequire) {
+  switch (FromRequire->getKind()) {
+  case concepts::Requirement::RequirementKind::RK_Type:
+    return ImportTypeRequirement(cast<concepts::TypeRequirement>(FromRequire));
+  case concepts::Requirement::RequirementKind::RK_Compound:
+  case concepts::Requirement::RequirementKind::RK_Simple:
+    return ImportExprRequirement(cast<concepts::ExprRequirement>(FromRequire));
+  case concepts::Requirement::RequirementKind::RK_Nested:
+    return ImportNestedRequirement(
+        cast<concepts::NestedRequirement>(FromRequire));
+  }
+  llvm_unreachable("Unhandled requirement kind");
 }
 
 template <>
@@ -6796,6 +6995,50 @@ ASTNodeImporter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   return ToFunc;
 }
 
+ExpectedDecl ASTNodeImporter::VisitConceptDecl(ConceptDecl *D) {
+  DeclContext *DC, *LexicalDC;
+  Error Err = Error::success();
+  Err = ImportDeclContext(D, DC, LexicalDC);
+  auto LocationOrErr = importChecked(Err, D->getLocation());
+  auto NameDeclOrErr = importChecked(Err, D->getDeclName());
+  auto ToTemplateParameters = importChecked(Err, D->getTemplateParameters());
+  auto ConstraintExpr = importChecked(Err, D->getConstraintExpr());
+  if (Err)
+    return std::move(Err);
+
+  return ConceptDecl::Create(Importer.getToContext(), DC, LocationOrErr,
+                             NameDeclOrErr, ToTemplateParameters,
+                             ConstraintExpr);
+}
+
+ExpectedDecl ASTNodeImporter::VisitImplicitConceptSpecializationDecl(
+    ImplicitConceptSpecializationDecl *D) {
+  DeclContext *DC, *LexicalDC;
+  Error Err = Error::success();
+  Err = ImportDeclContext(D, DC, LexicalDC);
+  auto ToSL = importChecked(Err, D->getLocation());
+  if (Err)
+    return std::move(Err);
+
+  SmallVector<TemplateArgument, 2> ToArgs;
+  if (Error Err = ImportTemplateArguments(D->getTemplateArguments(), ToArgs))
+    return std::move(Err);
+
+  return ImplicitConceptSpecializationDecl::Create(Importer.getToContext(), DC,
+                                                   ToSL, ToArgs);
+}
+
+ExpectedDecl
+ASTNodeImporter::VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D) {
+  DeclContext *DC, *LexicalDC;
+  Error Err = Error::success();
+  Err = ImportDeclContext(D, DC, LexicalDC);
+  auto RequiresLoc = importChecked(Err, D->getLocation());
+  if (Err)
+    return std::move(Err);
+  return RequiresExprBodyDecl::Create(Importer.getToContext(), DC, RequiresLoc);
+}
+
 //----------------------------------------------------------------------------
 // Import Statements
 //----------------------------------------------------------------------------
@@ -9013,6 +9256,52 @@ ExpectedStmt ASTNodeImporter::VisitCXXFoldExpr(CXXFoldExpr *E) {
   return new (Importer.getToContext())
       CXXFoldExpr(ToType, ToCallee, ToLParenLoc, ToLHS, E->getOperator(),
                   ToEllipsisLoc, ToRHS, ToRParenLoc, E->getNumExpansions());
+}
+
+ExpectedStmt ASTNodeImporter::VisitRequiresExpr(RequiresExpr *E) {
+  Error Err = Error::success();
+  // auto ToType = importChecked(Err, E->getType());
+  auto RequiresKWLoc = importChecked(Err, E->getRequiresKWLoc());
+  auto RParenLoc = importChecked(Err, E->getRParenLoc());
+  auto RBraceLoc = importChecked(Err, E->getRBraceLoc());
+
+  auto Body = importChecked(Err, E->getBody());
+  auto LParenLoc = importChecked(Err, E->getLParenLoc());
+  if (Err)
+    return std::move(Err);
+  SmallVector<ParmVarDecl *, 4> LocalParameters(E->getLocalParameters().size());
+  if (Error Err =
+          ImportArrayChecked(E->getLocalParameters(), LocalParameters.begin()))
+    return std::move(Err);
+  SmallVector<concepts::Requirement *, 4> Requirements(
+      E->getRequirements().size());
+  if (Error Err =
+          ImportArrayChecked(E->getRequirements(), Requirements.begin()))
+    return std::move(Err);
+  return RequiresExpr::Create(Importer.getToContext(), RequiresKWLoc, Body,
+                              LParenLoc, LocalParameters, RParenLoc,
+                              Requirements, RBraceLoc);
+}
+
+ExpectedStmt
+ASTNodeImporter::VisitConceptSpecializationExpr(ConceptSpecializationExpr *E) {
+  Error Err = Error::success();
+  auto CL = importChecked(Err, E->getConceptReference());
+  auto CSD = importChecked(Err, E->getSpecializationDecl());
+  if (Err)
+    return std::move(Err);
+  if (E->isValueDependent()) {
+    return ConceptSpecializationExpr::Create(
+        Importer.getToContext(), CL,
+        const_cast<ImplicitConceptSpecializationDecl *>(CSD), nullptr);
+  }
+  ConstraintSatisfaction Satisfaction;
+  if (Error Err =
+          ImportConstraintSatisfaction(E->getSatisfaction(), Satisfaction))
+    return std::move(Err);
+  return ConceptSpecializationExpr::Create(
+      Importer.getToContext(), CL,
+      const_cast<ImplicitConceptSpecializationDecl *>(CSD), &Satisfaction);
 }
 
 Error ASTNodeImporter::ImportOverriddenMethods(CXXMethodDecl *ToMethod,
