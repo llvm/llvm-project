@@ -315,10 +315,10 @@ pcaddi $t1, %desc_pcrel_20(foo)
 .ifdef FIXME
 
 fld.s $ft1, $a0, %pc_lo12(foo)
-# ERROR: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [-2048, 2047]
+# ERROR: :[[#@LINE-1]]:18: error: immediate must be an integer in the range [-2048, 2047]
 
 fst.d $ft1, $a0, %pc_lo12(foo)
-# ERROR: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [-2048, 2047]
+# ERROR: :[[#@LINE-1]]:18: error: immediate must be an integer in the range [-2048, 2047]
 
 vld $vr9, $a0, %pc_lo12(foo)
 # ERROR: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
