@@ -938,6 +938,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   default:
     return false;
   case Instruction::ExtractElement:
+  case Instruction::ExtractValue:
     return Op == getOperand(1);
   case Instruction::PHI:
     return true;
@@ -959,8 +960,9 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::PtrAdd:
     return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
   case VPInstruction::ComputeAnyOfResult:
-  case VPInstruction::ComputeFindLastIVResult:
     return Op == getOperand(1);
+  case VPInstruction::ComputeFindLastIVResult:
+    return Op == getOperand(1) || Op == getOperand(2);
   };
   llvm_unreachable("switch should return");
 }
