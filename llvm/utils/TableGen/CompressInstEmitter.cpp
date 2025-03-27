@@ -235,7 +235,7 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
       if (Opnd.MINumOperands > 1)
         OpndRec = cast<DefInit>(Opnd.MIOperandInfo->getArg(SubOp))->getDef();
 
-      if (const DefInit *DI = dyn_cast<DefInit>(Dag->getArg(DAGOpNo))) {
+      if (const auto *DI = dyn_cast<DefInit>(Dag->getArg(DAGOpNo))) {
         if (DI->getDef()->isSubClassOf("Register")) {
           // Check if the fixed register belongs to the Register class.
           if (!validateRegister(DI->getDef(), OpndRec))
@@ -262,7 +262,7 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
                               "' in the corresponding instruction operand!");
 
         OperandMap[OpNo].Kind = OpData::Operand;
-      } else if (const IntInit *II = dyn_cast<IntInit>(Dag->getArg(DAGOpNo))) {
+      } else if (const auto *II = dyn_cast<IntInit>(Dag->getArg(DAGOpNo))) {
         // Validate that corresponding instruction operand expects an immediate.
         if (OpndRec->isSubClassOf("RegisterClass"))
           PrintFatalError(Rec->getLoc(), "Error in Dag '" + Dag->getAsString() +
