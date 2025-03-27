@@ -1399,6 +1399,17 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    switch (Opcode) {
+    default:
+      return false;
+    case Instruction::ExtractValue:
+      return Op == getOperand(1);
+    }
+  }
 };
 
 /// VPWidenCastRecipe is a recipe to create vector cast instructions.
@@ -1594,6 +1605,14 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    // Scalar called fuction cannot be vectorized.
+    return Op == getOperand(getNumOperands() - 1);
+  }
 };
 
 /// A recipe representing a sequence of load -> update -> store as part of

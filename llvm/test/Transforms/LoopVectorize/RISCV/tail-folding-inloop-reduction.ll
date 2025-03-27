@@ -1790,13 +1790,14 @@ define i32 @anyof_icmp(ptr %a, i64 %n, i32 %start, i32 %inv) {
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP12]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP11]])
-; IF-EVL-NEXT:    [[TMP13:%.*]] = icmp slt <vscale x 4 x i32> [[VP_OP_LOAD]], splat (i32 3)
-; IF-EVL-NEXT:    [[TMP16]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> [[TMP13]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[VEC_PHI]], i32 [[TMP11]])
-; IF-EVL-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP11]] to i64
-; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP9]], [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP9]]
-; IF-EVL-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP35:![0-9]+]]
+; IF-EVL-NEXT:    [[TMP14:%.*]] = icmp slt <vscale x 4 x i32> [[VP_OP_LOAD]], splat (i32 3)
+; IF-EVL-NEXT:    [[TMP15:%.*]] = or <vscale x 4 x i1> [[VEC_PHI]], [[TMP14]]
+; IF-EVL-NEXT:    [[TMP16]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[TMP15]], <vscale x 4 x i1> [[VEC_PHI]], i32 [[TMP11]])
+; IF-EVL-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP11]] to i64
+; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP17]], [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP17]]
+; IF-EVL-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[N]]
+; IF-EVL-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP35:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    [[TMP19:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP16]])
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = freeze i1 [[TMP19]]
@@ -1907,13 +1908,14 @@ define i32 @anyof_fcmp(ptr %a, i64 %n, i32 %start, i32 %inv) {
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP12]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP11]])
-; IF-EVL-NEXT:    [[TMP13:%.*]] = fcmp fast olt <vscale x 4 x float> [[VP_OP_LOAD]], splat (float 3.000000e+00)
-; IF-EVL-NEXT:    [[TMP16]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> [[TMP13]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[VEC_PHI]], i32 [[TMP11]])
-; IF-EVL-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP11]] to i64
-; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP9]], [[EVL_BASED_IV]]
-; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP9]]
-; IF-EVL-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP37:![0-9]+]]
+; IF-EVL-NEXT:    [[TMP14:%.*]] = fcmp fast olt <vscale x 4 x float> [[VP_OP_LOAD]], splat (float 3.000000e+00)
+; IF-EVL-NEXT:    [[TMP15:%.*]] = or <vscale x 4 x i1> [[VEC_PHI]], [[TMP14]]
+; IF-EVL-NEXT:    [[TMP16]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[TMP15]], <vscale x 4 x i1> [[VEC_PHI]], i32 [[TMP11]])
+; IF-EVL-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP11]] to i64
+; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP17]], [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP17]]
+; IF-EVL-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[N]]
+; IF-EVL-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP37:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    [[TMP19:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP16]])
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = freeze i1 [[TMP19]]

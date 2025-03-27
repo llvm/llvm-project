@@ -478,259 +478,391 @@ for.body:                                         ; preds = %for.body.preheader,
 }
 
 define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocapture noundef readonly %B, i32 noundef signext %n) {
-; RV64-LABEL: define void @vector_reverse_f32(
-; RV64-SAME: ptr noundef writeonly captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] {
-; RV64-NEXT:  [[ENTRY:.*:]]
-; RV64-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; RV64-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B]] to i64
-; RV64-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[N]], 0
-; RV64-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
-; RV64:       [[FOR_BODY_PREHEADER]]:
-; RV64-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
-; RV64-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
-; RV64-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
-; RV64-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; RV64:       [[VECTOR_SCEVCHECK]]:
-; RV64-NEXT:    [[TMP3:%.*]] = add nsw i64 [[TMP0]], -1
-; RV64-NEXT:    [[TMP4:%.*]] = add i32 [[N]], -1
-; RV64-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
-; RV64-NEXT:    [[MUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 1, i32 [[TMP5]])
-; RV64-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL]], 0
-; RV64-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL]], 1
-; RV64-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP4]], [[MUL_RESULT]]
-; RV64-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP6]], [[TMP4]]
-; RV64-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW]]
-; RV64-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP3]], 4294967295
-; RV64-NEXT:    [[TMP10:%.*]] = or i1 [[TMP8]], [[TMP9]]
-; RV64-NEXT:    br i1 [[TMP10]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
-; RV64:       [[VECTOR_MEMCHECK]]:
-; RV64-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 4
-; RV64-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP12]], 4
-; RV64-NEXT:    [[TMP14:%.*]] = sub i64 [[B1]], [[A2]]
-; RV64-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP14]], [[TMP13]]
-; RV64-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
-; RV64:       [[VECTOR_PH]]:
-; RV64-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP15]], 4
-; RV64-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP16]]
-; RV64-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; RV64-NEXT:    [[TMP17:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-NEXT:    [[TMP18:%.*]] = mul nuw i64 [[TMP17]], 4
-; RV64-NEXT:    [[TMP19:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
-; RV64-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
-; RV64-NEXT:    [[TMP20:%.*]] = sub i32 [[N]], [[DOTCAST]]
-; RV64-NEXT:    br label %[[VECTOR_BODY:.*]]
-; RV64:       [[VECTOR_BODY]]:
-; RV64-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; RV64-NEXT:    [[DOTCAST3:%.*]] = trunc i64 [[INDEX]] to i32
-; RV64-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[N]], [[DOTCAST3]]
-; RV64-NEXT:    [[TMP21:%.*]] = add nsw i32 [[OFFSET_IDX]], -1
-; RV64-NEXT:    [[TMP22:%.*]] = zext i32 [[TMP21]] to i64
-; RV64-NEXT:    [[TMP23:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP22]]
-; RV64-NEXT:    [[TMP24:%.*]] = mul i64 0, [[TMP18]]
-; RV64-NEXT:    [[TMP25:%.*]] = sub i64 [[TMP18]], 1
-; RV64-NEXT:    [[TMP26:%.*]] = mul i64 -1, [[TMP25]]
-; RV64-NEXT:    [[TMP27:%.*]] = getelementptr inbounds float, ptr [[TMP23]], i64 [[TMP24]]
-; RV64-NEXT:    [[TMP28:%.*]] = getelementptr inbounds float, ptr [[TMP27]], i64 [[TMP26]]
-; RV64-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP28]], align 4
-; RV64-NEXT:    [[REVERSE:%.*]] = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> [[WIDE_LOAD]])
-; RV64-NEXT:    [[TMP29:%.*]] = fadd <vscale x 4 x float> [[REVERSE]], splat (float 1.000000e+00)
-; RV64-NEXT:    [[TMP30:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP22]]
-; RV64-NEXT:    [[TMP31:%.*]] = mul i64 0, [[TMP18]]
-; RV64-NEXT:    [[TMP32:%.*]] = sub i64 [[TMP18]], 1
-; RV64-NEXT:    [[TMP33:%.*]] = mul i64 -1, [[TMP32]]
-; RV64-NEXT:    [[TMP34:%.*]] = getelementptr inbounds float, ptr [[TMP30]], i64 [[TMP31]]
-; RV64-NEXT:    [[TMP35:%.*]] = getelementptr inbounds float, ptr [[TMP34]], i64 [[TMP33]]
-; RV64-NEXT:    [[REVERSE4:%.*]] = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> [[TMP29]])
-; RV64-NEXT:    store <vscale x 4 x float> [[REVERSE4]], ptr [[TMP35]], align 4
-; RV64-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP18]]
-; RV64-NEXT:    [[TMP36:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; RV64-NEXT:    br i1 [[TMP36]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
-; RV64:       [[MIDDLE_BLOCK]]:
-; RV64-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
-; RV64-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND_CLEANUP_LOOPEXIT:.*]], label %[[SCALAR_PH]]
-; RV64:       [[SCALAR_PH]]:
-; RV64-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP19]], %[[MIDDLE_BLOCK]] ], [ [[TMP0]], %[[FOR_BODY_PREHEADER]] ], [ [[TMP0]], %[[VECTOR_SCEVCHECK]] ], [ [[TMP0]], %[[VECTOR_MEMCHECK]] ]
-; RV64-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i32 [ [[TMP20]], %[[MIDDLE_BLOCK]] ], [ [[N]], %[[FOR_BODY_PREHEADER]] ], [ [[N]], %[[VECTOR_SCEVCHECK]] ], [ [[N]], %[[VECTOR_MEMCHECK]] ]
-; RV64-NEXT:    br label %[[FOR_BODY:.*]]
-; RV64:       [[FOR_COND_CLEANUP_LOOPEXIT]]:
-; RV64-NEXT:    br label %[[FOR_COND_CLEANUP]]
-; RV64:       [[FOR_COND_CLEANUP]]:
-; RV64-NEXT:    ret void
-; RV64:       [[FOR_BODY]]:
-;
-; RV32-LABEL: define void @vector_reverse_f32(
-; RV32-SAME: ptr noundef writeonly captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] {
-; RV32-NEXT:  [[ENTRY:.*:]]
-; RV32-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i32
-; RV32-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B]] to i32
-; RV32-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[N]], 0
-; RV32-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
-; RV32:       [[FOR_BODY_PREHEADER]]:
-; RV32-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
-; RV32-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; RV32-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
-; RV32-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
-; RV32-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
-; RV32:       [[VECTOR_MEMCHECK]]:
-; RV32-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vscale.i32()
-; RV32-NEXT:    [[TMP4:%.*]] = mul nuw i32 [[TMP3]], 4
-; RV32-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP4]], 4
-; RV32-NEXT:    [[TMP6:%.*]] = sub i32 [[B1]], [[A2]]
-; RV32-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP6]], [[TMP5]]
-; RV32-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
-; RV32:       [[VECTOR_PH]]:
-; RV32-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; RV32-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
-; RV32-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP8]]
-; RV32-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; RV32-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; RV32-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 4
-; RV32-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
-; RV32-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
-; RV32-NEXT:    [[TMP12:%.*]] = sub i32 [[N]], [[DOTCAST]]
-; RV32-NEXT:    br label %[[VECTOR_BODY:.*]]
-; RV32:       [[VECTOR_BODY]]:
-; RV32-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; RV32-NEXT:    [[DOTCAST3:%.*]] = trunc i64 [[INDEX]] to i32
-; RV32-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[N]], [[DOTCAST3]]
-; RV32-NEXT:    [[TMP13:%.*]] = add nsw i32 [[OFFSET_IDX]], -1
-; RV32-NEXT:    [[TMP14:%.*]] = zext i32 [[TMP13]] to i64
-; RV32-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP14]]
-; RV32-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP10]] to i32
-; RV32-NEXT:    [[TMP17:%.*]] = mul i32 0, [[TMP16]]
-; RV32-NEXT:    [[TMP18:%.*]] = sub i32 [[TMP16]], 1
-; RV32-NEXT:    [[TMP19:%.*]] = mul i32 -1, [[TMP18]]
-; RV32-NEXT:    [[TMP20:%.*]] = getelementptr inbounds float, ptr [[TMP15]], i32 [[TMP17]]
-; RV32-NEXT:    [[TMP21:%.*]] = getelementptr inbounds float, ptr [[TMP20]], i32 [[TMP19]]
-; RV32-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP21]], align 4
-; RV32-NEXT:    [[REVERSE:%.*]] = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> [[WIDE_LOAD]])
-; RV32-NEXT:    [[TMP22:%.*]] = fadd <vscale x 4 x float> [[REVERSE]], splat (float 1.000000e+00)
-; RV32-NEXT:    [[TMP23:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP14]]
-; RV32-NEXT:    [[TMP24:%.*]] = trunc i64 [[TMP10]] to i32
-; RV32-NEXT:    [[TMP25:%.*]] = mul i32 0, [[TMP24]]
-; RV32-NEXT:    [[TMP26:%.*]] = sub i32 [[TMP24]], 1
-; RV32-NEXT:    [[TMP27:%.*]] = mul i32 -1, [[TMP26]]
-; RV32-NEXT:    [[TMP28:%.*]] = getelementptr inbounds float, ptr [[TMP23]], i32 [[TMP25]]
-; RV32-NEXT:    [[TMP29:%.*]] = getelementptr inbounds float, ptr [[TMP28]], i32 [[TMP27]]
-; RV32-NEXT:    [[REVERSE4:%.*]] = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> [[TMP22]])
-; RV32-NEXT:    store <vscale x 4 x float> [[REVERSE4]], ptr [[TMP29]], align 4
-; RV32-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP10]]
-; RV32-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; RV32-NEXT:    br i1 [[TMP30]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
-; RV32:       [[MIDDLE_BLOCK]]:
-; RV32-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
-; RV32-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND_CLEANUP_LOOPEXIT:.*]], label %[[SCALAR_PH]]
-; RV32:       [[SCALAR_PH]]:
-; RV32-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP11]], %[[MIDDLE_BLOCK]] ], [ [[TMP0]], %[[FOR_BODY_PREHEADER]] ], [ [[TMP0]], %[[VECTOR_MEMCHECK]] ]
-; RV32-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i32 [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ [[N]], %[[FOR_BODY_PREHEADER]] ], [ [[N]], %[[VECTOR_MEMCHECK]] ]
-; RV32-NEXT:    br label %[[FOR_BODY:.*]]
-; RV32:       [[FOR_COND_CLEANUP_LOOPEXIT]]:
-; RV32-NEXT:    br label %[[FOR_COND_CLEANUP]]
-; RV32:       [[FOR_COND_CLEANUP]]:
-; RV32-NEXT:    ret void
-; RV32:       [[FOR_BODY]]:
-;
-; RV64-UF2-LABEL: define void @vector_reverse_f32(
-; RV64-UF2-SAME: ptr noundef writeonly captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] {
-; RV64-UF2-NEXT:  [[ENTRY:.*:]]
-; RV64-UF2-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; RV64-UF2-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B]] to i64
-; RV64-UF2-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[N]], 0
-; RV64-UF2-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
-; RV64-UF2:       [[FOR_BODY_PREHEADER]]:
-; RV64-UF2-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
-; RV64-UF2-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-UF2-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 8
-; RV64-UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
-; RV64-UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; RV64-UF2:       [[VECTOR_SCEVCHECK]]:
-; RV64-UF2-NEXT:    [[TMP3:%.*]] = add nsw i64 [[TMP0]], -1
-; RV64-UF2-NEXT:    [[TMP4:%.*]] = add i32 [[N]], -1
-; RV64-UF2-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
-; RV64-UF2-NEXT:    [[MUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 1, i32 [[TMP5]])
-; RV64-UF2-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL]], 0
-; RV64-UF2-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL]], 1
-; RV64-UF2-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP4]], [[MUL_RESULT]]
-; RV64-UF2-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP6]], [[TMP4]]
-; RV64-UF2-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW]]
-; RV64-UF2-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP3]], 4294967295
-; RV64-UF2-NEXT:    [[TMP10:%.*]] = or i1 [[TMP8]], [[TMP9]]
-; RV64-UF2-NEXT:    br i1 [[TMP10]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
-; RV64-UF2:       [[VECTOR_MEMCHECK]]:
-; RV64-UF2-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-UF2-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 4
-; RV64-UF2-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP12]], 8
-; RV64-UF2-NEXT:    [[TMP14:%.*]] = sub i64 [[B1]], [[A2]]
-; RV64-UF2-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP14]], [[TMP13]]
-; RV64-UF2-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
-; RV64-UF2:       [[VECTOR_PH]]:
-; RV64-UF2-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-UF2-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP15]], 8
-; RV64-UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP16]]
-; RV64-UF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; RV64-UF2-NEXT:    [[TMP17:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-UF2-NEXT:    [[TMP18:%.*]] = mul nuw i64 [[TMP17]], 4
-; RV64-UF2-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP18]], 2
-; RV64-UF2-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
-; RV64-UF2-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
-; RV64-UF2-NEXT:    [[TMP21:%.*]] = sub i32 [[N]], [[DOTCAST]]
-; RV64-UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
-; RV64-UF2:       [[VECTOR_BODY]]:
-; RV64-UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; RV64-UF2-NEXT:    [[DOTCAST3:%.*]] = trunc i64 [[INDEX]] to i32
-; RV64-UF2-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[N]], [[DOTCAST3]]
-; RV64-UF2-NEXT:    [[TMP22:%.*]] = add nsw i32 [[OFFSET_IDX]], -1
-; RV64-UF2-NEXT:    [[TMP23:%.*]] = zext i32 [[TMP22]] to i64
-; RV64-UF2-NEXT:    [[TMP24:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP23]]
-; RV64-UF2-NEXT:    [[TMP25:%.*]] = mul i64 0, [[TMP18]]
-; RV64-UF2-NEXT:    [[TMP26:%.*]] = sub i64 [[TMP18]], 1
-; RV64-UF2-NEXT:    [[TMP27:%.*]] = mul i64 -1, [[TMP26]]
-; RV64-UF2-NEXT:    [[TMP28:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i64 [[TMP25]]
-; RV64-UF2-NEXT:    [[TMP29:%.*]] = getelementptr inbounds float, ptr [[TMP28]], i64 [[TMP27]]
-; RV64-UF2-NEXT:    [[TMP30:%.*]] = mul i64 -1, [[TMP18]]
-; RV64-UF2-NEXT:    [[TMP31:%.*]] = sub i64 [[TMP18]], 1
-; RV64-UF2-NEXT:    [[TMP32:%.*]] = mul i64 -1, [[TMP31]]
-; RV64-UF2-NEXT:    [[TMP33:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i64 [[TMP30]]
-; RV64-UF2-NEXT:    [[TMP34:%.*]] = getelementptr inbounds float, ptr [[TMP33]], i64 [[TMP32]]
-; RV64-UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP29]], align 4
-; RV64-UF2-NEXT:    [[REVERSE:%.*]] = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> [[WIDE_LOAD]])
-; RV64-UF2-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 4 x float>, ptr [[TMP34]], align 4
-; RV64-UF2-NEXT:    [[REVERSE5:%.*]] = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> [[WIDE_LOAD4]])
-; RV64-UF2-NEXT:    [[TMP35:%.*]] = fadd <vscale x 4 x float> [[REVERSE]], splat (float 1.000000e+00)
-; RV64-UF2-NEXT:    [[TMP36:%.*]] = fadd <vscale x 4 x float> [[REVERSE5]], splat (float 1.000000e+00)
-; RV64-UF2-NEXT:    [[TMP37:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP23]]
-; RV64-UF2-NEXT:    [[TMP38:%.*]] = mul i64 0, [[TMP18]]
-; RV64-UF2-NEXT:    [[TMP39:%.*]] = sub i64 [[TMP18]], 1
-; RV64-UF2-NEXT:    [[TMP40:%.*]] = mul i64 -1, [[TMP39]]
-; RV64-UF2-NEXT:    [[TMP41:%.*]] = getelementptr inbounds float, ptr [[TMP37]], i64 [[TMP38]]
-; RV64-UF2-NEXT:    [[TMP42:%.*]] = getelementptr inbounds float, ptr [[TMP41]], i64 [[TMP40]]
-; RV64-UF2-NEXT:    [[TMP43:%.*]] = mul i64 -1, [[TMP18]]
-; RV64-UF2-NEXT:    [[TMP44:%.*]] = sub i64 [[TMP18]], 1
-; RV64-UF2-NEXT:    [[TMP45:%.*]] = mul i64 -1, [[TMP44]]
-; RV64-UF2-NEXT:    [[TMP46:%.*]] = getelementptr inbounds float, ptr [[TMP37]], i64 [[TMP43]]
-; RV64-UF2-NEXT:    [[TMP47:%.*]] = getelementptr inbounds float, ptr [[TMP46]], i64 [[TMP45]]
-; RV64-UF2-NEXT:    [[REVERSE6:%.*]] = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> [[TMP35]])
-; RV64-UF2-NEXT:    store <vscale x 4 x float> [[REVERSE6]], ptr [[TMP42]], align 4
-; RV64-UF2-NEXT:    [[REVERSE7:%.*]] = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> [[TMP36]])
-; RV64-UF2-NEXT:    store <vscale x 4 x float> [[REVERSE7]], ptr [[TMP47]], align 4
-; RV64-UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP19]]
-; RV64-UF2-NEXT:    [[TMP48:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; RV64-UF2-NEXT:    br i1 [[TMP48]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
-; RV64-UF2:       [[MIDDLE_BLOCK]]:
-; RV64-UF2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
-; RV64-UF2-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND_CLEANUP_LOOPEXIT:.*]], label %[[SCALAR_PH]]
-; RV64-UF2:       [[SCALAR_PH]]:
-; RV64-UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP20]], %[[MIDDLE_BLOCK]] ], [ [[TMP0]], %[[FOR_BODY_PREHEADER]] ], [ [[TMP0]], %[[VECTOR_SCEVCHECK]] ], [ [[TMP0]], %[[VECTOR_MEMCHECK]] ]
-; RV64-UF2-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi i32 [ [[TMP21]], %[[MIDDLE_BLOCK]] ], [ [[N]], %[[FOR_BODY_PREHEADER]] ], [ [[N]], %[[VECTOR_SCEVCHECK]] ], [ [[N]], %[[VECTOR_MEMCHECK]] ]
-; RV64-UF2-NEXT:    br label %[[FOR_BODY:.*]]
-; RV64-UF2:       [[FOR_COND_CLEANUP_LOOPEXIT]]:
-; RV64-UF2-NEXT:    br label %[[FOR_COND_CLEANUP]]
-; RV64-UF2:       [[FOR_COND_CLEANUP]]:
-; RV64-UF2-NEXT:    ret void
-; RV64-UF2:       [[FOR_BODY]]:
+; CHECK-LABEL: 'vector_reverse_f32'
+; CHECK-NEXT:  LV: Loop hints: force=enabled width=vscale x 4 interleave=0
+; CHECK-NEXT:  LV: Found a loop: for.body
+; CHECK-NEXT:  LV: Found an induction variable.
+; CHECK-NEXT:  LV: Found an induction variable.
+; CHECK-NEXT:  LV: Found FP op with unsafe algebra.
+; CHECK-NEXT:  LV: Did not find one integer induction var.
+; CHECK-NEXT:  LV: We can vectorize this loop (with a runtime bound check)!
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
+; CHECK-NEXT:  LV: Found trip count: 0
+; CHECK-NEXT:  LV: Found maximum trip count: 4294967295
+; CHECK-NEXT:  LV: Scalable vectorization is available
+; CHECK-NEXT:  LV: The max safe fixed VF is: 67108864.
+; CHECK-NEXT:  LV: The max safe scalable VF is: vscale x 4294967295.
+; CHECK-NEXT:  LV: Found uniform instruction: %cmp = icmp ugt i64 %indvars.iv, 1
+; CHECK-NEXT:  LV: Found uniform instruction: %arrayidx = getelementptr inbounds float, ptr %B, i64 %idxprom
+; CHECK-NEXT:  LV: Found uniform instruction: %arrayidx3 = getelementptr inbounds float, ptr %A, i64 %idxprom
+; CHECK-NEXT:  LV: Found uniform instruction: %idxprom = zext i32 %i.0 to i64
+; CHECK-NEXT:  LV: Found uniform instruction: %idxprom = zext i32 %i.0 to i64
+; CHECK-NEXT:  LV: Found uniform instruction: %indvars.iv = phi i64 [ %0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
+; CHECK-NEXT:  LV: Found uniform instruction: %indvars.iv.next = add nsw i64 %indvars.iv, -1
+; CHECK-NEXT:  LV: Found uniform instruction: %i.0.in8 = phi i32 [ %n, %for.body.preheader ], [ %i.0, %for.body ]
+; CHECK-NEXT:  LV: Found uniform instruction: %i.0 = add nsw i32 %i.0.in8, -1
+; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %indvars.iv = phi i64 [ %0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
+; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %i.0.in8 = phi i32 [ %n, %for.body.preheader ], [ %i.0, %for.body ]
+; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %i.0 = add nsw i32 %i.0.in8, -1
+; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %idxprom = zext i32 %i.0 to i64
+; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %arrayidx = getelementptr inbounds float, ptr %B, i64 %idxprom
+; CHECK-NEXT:  LV: Found an estimated cost of 9 for VF vscale x 4 For instruction: %1 = load float, ptr %arrayidx, align 4
+; CHECK-NEXT:  LV: Found an estimated cost of 4 for VF vscale x 4 For instruction: %conv1 = fadd float %1, 1.000000e+00
+; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %arrayidx3 = getelementptr inbounds float, ptr %A, i64 %idxprom
+; CHECK-NEXT:  LV: Found an estimated cost of 9 for VF vscale x 4 For instruction: store float %conv1, ptr %arrayidx3, align 4
+; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %cmp = icmp ugt i64 %indvars.iv, 1
+; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %indvars.iv.next = add nsw i64 %indvars.iv, -1
+; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit, !llvm.loop !0
+; CHECK-NEXT:  LV: Using user VF vscale x 4.
+; CHECK-NEXT:  Creating VPBasicBlock for for.body
+; CHECK-NEXT:  VPlan 'Plain CFG
+; CHECK-NEXT:   for UF>=1' {
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.body.preheader>:
+; CHECK-NEXT:    IR %0 = zext i32 %n to i64
+; CHECK-NEXT:  Successor(s): for.body
+; CHECK-EMPTY:
+; CHECK-NEXT:  for.body:
+; CHECK-NEXT:    WIDEN-PHI ir<%indvars.iv> = phi [ ir<%indvars.iv.next>, for.body ], [ ir<%0>, ir-bb<for.body.preheader> ]
+; CHECK-NEXT:    WIDEN-PHI ir<%i.0.in8> = phi [ ir<%i.0>, for.body ], [ ir<%n>, ir-bb<for.body.preheader> ]
+; CHECK-NEXT:    EMIT ir<%i.0> = add ir<%i.0.in8>, ir<-1>
+; CHECK-NEXT:    EMIT-SCALAR ir<%idxprom> = zext ir<%i.0>
+; CHECK-NEXT:    EMIT ir<%arrayidx> = getelementptr ir<%B>, ir<%idxprom>
+; CHECK-NEXT:    EMIT ir<%1> = load ir<%arrayidx>
+; CHECK-NEXT:    EMIT ir<%conv1> = fadd ir<%1>, ir<1.000000e+00>
+; CHECK-NEXT:    EMIT ir<%arrayidx3> = getelementptr ir<%A>, ir<%idxprom>
+; CHECK-NEXT:    EMIT store ir<%conv1>, ir<%arrayidx3>
+; CHECK-NEXT:    EMIT ir<%cmp> = icmp ir<%indvars.iv>, ir<1>
+; CHECK-NEXT:    EMIT ir<%indvars.iv.next> = add ir<%indvars.iv>, ir<-1>
+; CHECK-NEXT:    EMIT branch-on-cond ir<%cmp>
+; CHECK-NEXT:  Successor(s): for.body, ir-bb<for.cond.cleanup.loopexit>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
+; CHECK-NEXT:  No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
+; CHECK-NEXT:  LV: Scalarizing: %i.0 = add nsw i32 %i.0.in8, -1
+; CHECK-NEXT:  LV: Scalarizing: %idxprom = zext i32 %i.0 to i64
+; CHECK-NEXT:  LV: Scalarizing: %arrayidx = getelementptr inbounds float, ptr %B, i64 %idxprom
+; CHECK-NEXT:  LV: Scalarizing: %arrayidx3 = getelementptr inbounds float, ptr %A, i64 %idxprom
+; CHECK-NEXT:  LV: Scalarizing: %cmp = icmp ugt i64 %indvars.iv, 1
+; CHECK-NEXT:  LV: Scalarizing: %indvars.iv.next = add nsw i64 %indvars.iv, -1
+; CHECK-NEXT:  VPlan 'Initial VPlan for VF={vscale x 4},UF>=1' {
+; CHECK-NEXT:  Live-in vp<%0> = VF
+; CHECK-NEXT:  Live-in vp<%1> = VF * UF
+; CHECK-NEXT:  Live-in vp<%2> = vector-trip-count
+; CHECK-NEXT:  vp<%3> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.body.preheader>:
+; CHECK-NEXT:    IR %0 = zext i32 %n to i64
+; CHECK-NEXT:    EMIT vp<%3> = EXPAND SCEV (zext i32 %n to i64)
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    vp<%4> = DERIVED-IV ir<%0> + vp<%2> * ir<-1>
+; CHECK-NEXT:    vp<%5> = DERIVED-IV ir<%n> + vp<%2> * ir<-1>
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      EMIT vp<%6> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT:      vp<%7> = DERIVED-IV ir<%n> + vp<%6> * ir<-1>
+; CHECK-NEXT:      vp<%8> = SCALAR-STEPS vp<%7>, ir<-1>, vp<%0>
+; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<%8>, ir<-1>
+; CHECK-NEXT:      CLONE ir<%idxprom> = zext ir<%i.0>
+; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
+; CHECK-NEXT:      vp<%9> = vector-end-pointer inbounds ir<%arrayidx>, vp<%0>
+; CHECK-NEXT:      WIDEN ir<%1> = load vp<%9>
+; CHECK-NEXT:      WIDEN ir<%conv1> = fadd ir<%1>, ir<1.000000e+00>
+; CHECK-NEXT:      CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
+; CHECK-NEXT:      vp<%10> = vector-end-pointer inbounds ir<%arrayidx3>, vp<%0>
+; CHECK-NEXT:      WIDEN store vp<%10>, ir<%conv1>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<%6>, vp<%1>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<%2>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<%3>, vp<%2>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<%4>, middle.block ], [ ir<%0>, ir-bb<for.body.preheader> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val>.1 = phi [ vp<%5>, middle.block ], [ ir<%n>, ir-bb<for.body.preheader> ]
+; CHECK-NEXT:  Successor(s): ir-bb<for.body>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.body>:
+; CHECK-NEXT:    IR %indvars.iv = phi i64 [ %0, %for.body.preheader ], [ %indvars.iv.next, %for.body ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:    IR %i.0.in8 = phi i32 [ %n, %for.body.preheader ], [ %i.0, %for.body ] (extra operand: vp<%bc.resume.val>.1 from scalar.ph)
+; CHECK-NEXT:    IR %i.0 = add nsw i32 %i.0.in8, -1
+; CHECK-NEXT:    IR %idxprom = zext i32 %i.0 to i64
+; CHECK-NEXT:    IR %arrayidx = getelementptr inbounds float, ptr %B, i64 %idxprom
+; CHECK-NEXT:    IR %1 = load float, ptr %arrayidx, align 4
+; CHECK-NEXT:    IR %conv1 = fadd float %1, 1.000000e+00
+; CHECK-NEXT:    IR %arrayidx3 = getelementptr inbounds float, ptr %A, i64 %idxprom
+; CHECK-NEXT:    IR store float %conv1, ptr %arrayidx3, align 4
+; CHECK-NEXT:    IR %cmp = icmp ugt i64 %indvars.iv, 1
+; CHECK-NEXT:    IR %indvars.iv.next = add nsw i64 %indvars.iv, -1
+; CHECK-NEXT:  No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %indvars.iv = phi i64 [ %0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
+; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %i.0.in8 = phi i32 [ %n, %for.body.preheader ], [ %i.0, %for.body ]
+; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %i.0 = add nsw i32 %i.0.in8, -1
+; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %idxprom = zext i32 %i.0 to i64
+; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %arrayidx = getelementptr inbounds float, ptr %B, i64 %idxprom
+; CHECK-NEXT:  LV: Found an estimated cost of 9 for VF vscale x 4 For instruction: %1 = load float, ptr %arrayidx, align 4
+; CHECK-NEXT:  LV: Found an estimated cost of 4 for VF vscale x 4 For instruction: %conv1 = fadd float %1, 1.000000e+00
+; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %arrayidx3 = getelementptr inbounds float, ptr %A, i64 %idxprom
+; CHECK-NEXT:  LV: Found an estimated cost of 9 for VF vscale x 4 For instruction: store float %conv1, ptr %arrayidx3, align 4
+; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %cmp = icmp ugt i64 %indvars.iv, 1
+; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %indvars.iv.next = add nsw i64 %indvars.iv, -1
+; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit, !llvm.loop !0
+; CHECK-NEXT:  LV(REG): Calculating max register usage:
+; CHECK-NEXT:  LV(REG): At #0 Interval # 0
+; CHECK-NEXT:  LV(REG): At #1 Interval # 1
+; CHECK-NEXT:  LV(REG): At #2 Interval # 2
+; CHECK-NEXT:  LV(REG): At #3 Interval # 2
+; CHECK-NEXT:  LV(REG): At #4 Interval # 2
+; CHECK-NEXT:  LV(REG): At #5 Interval # 2
+; CHECK-NEXT:  LV(REG): At #6 Interval # 3
+; CHECK-NEXT:  LV(REG): At #7 Interval # 3
+; CHECK-NEXT:  LV(REG): At #8 Interval # 3
+; CHECK-NEXT:  LV(REG): At #9 Interval # 3
+; CHECK-NEXT:  LV(REG): At #10 Interval # 3
+; CHECK-NEXT:  LV(REG): At #11 Interval # 3
+; CHECK-NEXT:  LV(REG): At #12 Interval # 2
+; CHECK-NEXT:  LV(REG): At #13 Interval # 2
+; CHECK-NEXT:  LV(REG): VF = vscale x 4
+; CHECK-NEXT:  LV(REG): Found max usage: 2 item
+; CHECK-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
+; CHECK-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 2 registers
+; CHECK-NEXT:  LV(REG): Found invariant usage: 1 item
+; CHECK-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-NEXT:  LV: The target has 31 registers of RISCV::GPRRC register class
+; CHECK-NEXT:  LV: The target has 32 registers of RISCV::VRRC register class
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
+; CHECK-NEXT:  LV: Loop cost is 26
+; CHECK-NEXT:  LV: IC is 1
+; CHECK-NEXT:  LV: VF is vscale x 4
+; CHECK-NEXT:  LV: Not Interleaving.
+; CHECK-NEXT:  LV: Interleaving is not beneficial.
+; CHECK-NEXT:  LV: Found a vectorizable loop (vscale x 4) in <stdin>
+; CHECK-NEXT:  LEV: Epilogue vectorization is not profitable for this loop
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
+; CHECK-NEXT:  Executing best plan with VF=vscale x 4, UF=1
+; CHECK-NEXT:  VPlan 'Final VPlan for VF={vscale x 4},UF={1}' {
+; CHECK-NEXT:  Live-in ir<%18> = VF
+; CHECK-NEXT:  Live-in ir<%18>.1 = VF * UF
+; CHECK-NEXT:  Live-in ir<%n.vec> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<%0> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.body.preheader>:
+; CHECK-NEXT:    IR %0 = zext i32 %n to i64
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.scevcheck>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<vector.scevcheck>:
+; CHECK-NEXT:    IR %3 = add nsw i64 %0, -1
+; CHECK-NEXT:    IR %4 = add i32 %n, -1
+; CHECK-NEXT:    IR %5 = trunc i64 %3 to i32
+; CHECK-NEXT:    IR %mul = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 1, i32 %5)
+; CHECK-NEXT:    IR %mul.result = extractvalue { i32, i1 } %mul, 0
+; CHECK-NEXT:    IR %mul.overflow = extractvalue { i32, i1 } %mul, 1
+; CHECK-NEXT:    IR %6 = sub i32 %4, %mul.result
+; CHECK-NEXT:    IR %7 = icmp ugt i32 %6, %4
+; CHECK-NEXT:    IR %8 = or i1 %7, %mul.overflow
+; CHECK-NEXT:    IR %9 = icmp ugt i64 %3, 4294967295
+; CHECK-NEXT:    IR %10 = or i1 %8, %9
+; CHECK-NEXT:    EMIT branch-on-cond ir<%10>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.memcheck>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<vector.memcheck>:
+; CHECK-NEXT:    IR %11 = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    IR %12 = mul nuw i64 %11, 4
+; CHECK-NEXT:    IR %13 = mul i64 %12, 4
+; CHECK-NEXT:    IR %14 = sub i64 %B1, %A2
+; CHECK-NEXT:    IR %diff.check = icmp ult i64 %14, %13
+; CHECK-NEXT:    EMIT branch-on-cond ir<%diff.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<vector.ph>:
+; CHECK-NEXT:    IR %15 = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    IR %16 = mul nuw i64 %15, 4
+; CHECK-NEXT:    IR %n.mod.vf = urem i64 %0, %16
+; CHECK-NEXT:    IR %n.vec = sub i64 %0, %n.mod.vf
+; CHECK-NEXT:    IR %17 = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    IR %18 = mul nuw i64 %17, 4
+; CHECK-NEXT:    vp<%3> = DERIVED-IV ir<%0> + ir<%n.vec> * ir<-1>
+; CHECK-NEXT:    vp<%4> = DERIVED-IV ir<%n> + ir<%n.vec> * ir<-1>
+; CHECK-NEXT:  Successor(s): vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.body:
+; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<%index.next>, vector.body ]
+; CHECK-NEXT:    vp<%5> = DERIVED-IV ir<%n> + vp<%index> * ir<-1>
+; CHECK-NEXT:    CLONE ir<%i.0> = add nsw vp<%5>, ir<-1>
+; CHECK-NEXT:    CLONE ir<%idxprom> = zext ir<%i.0>
+; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
+; CHECK-NEXT:    vp<%6> = vector-end-pointer inbounds ir<%arrayidx>, ir<%18>
+; CHECK-NEXT:    WIDEN ir<%19> = load vp<%6>
+; CHECK-NEXT:    EMIT vp<%7> = broadcast ir<1.000000e+00>
+; CHECK-NEXT:    WIDEN ir<%conv1> = fadd ir<%19>, vp<%7>
+; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
+; CHECK-NEXT:    vp<%8> = vector-end-pointer inbounds ir<%arrayidx3>, ir<%18>
+; CHECK-NEXT:    WIDEN store vp<%8>, ir<%conv1>
+; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<%18>.1
+; CHECK-NEXT:    EMIT branch-on-count vp<%index.next>, ir<%n.vec>
+; CHECK-NEXT:  Successor(s): middle.block, vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%0>, ir<%n.vec>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, ir-bb<scalar.ph>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<scalar.ph>:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<%3>, middle.block ], [ ir<%0>, ir-bb<for.body.preheader> ], [ ir<%0>, ir-bb<vector.scevcheck> ], [ ir<%0>, ir-bb<vector.memcheck> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val>.1 = phi [ vp<%4>, middle.block ], [ ir<%n>, ir-bb<for.body.preheader> ], [ ir<%n>, ir-bb<vector.scevcheck> ], [ ir<%n>, ir-bb<vector.memcheck> ]
+; CHECK-NEXT:  Successor(s): ir-bb<for.body>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.body>:
+; CHECK-NEXT:    IR %indvars.iv = phi i64 [ %0, %scalar.ph ], [ %indvars.iv.next, %for.body ] (extra operand: vp<%bc.resume.val> from ir-bb<scalar.ph>)
+; CHECK-NEXT:    IR %i.0.in8 = phi i32 [ %n, %scalar.ph ], [ %i.0, %for.body ] (extra operand: vp<%bc.resume.val>.1 from ir-bb<scalar.ph>)
+; CHECK-NEXT:    IR %i.0 = add nsw i32 %i.0.in8, -1
+; CHECK-NEXT:    IR %idxprom = zext i32 %i.0 to i64
+; CHECK-NEXT:    IR %arrayidx = getelementptr inbounds float, ptr %B, i64 %idxprom
+; CHECK-NEXT:    IR %19 = load float, ptr %arrayidx, align 4
+; CHECK-NEXT:    IR %conv1 = fadd float %19, 1.000000e+00
+; CHECK-NEXT:    IR %arrayidx3 = getelementptr inbounds float, ptr %A, i64 %idxprom
+; CHECK-NEXT:    IR store float %conv1, ptr %arrayidx3, align 4
+; CHECK-NEXT:    IR %cmp = icmp ugt i64 %indvars.iv, 1
+; CHECK-NEXT:    IR %indvars.iv.next = add nsw i64 %indvars.iv, -1
+; CHECK-NEXT:  No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  LV: vectorizing VPBB: ir-bb<for.body.preheader> in BB: for.body.preheader
+; CHECK-NEXT:  LV: filled BB:
+; CHECK-NEXT:  for.body.preheader: ; preds = %entry
+; CHECK-NEXT:    %0 = zext i32 %n to i64
+; CHECK-NEXT:    %1 = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    %2 = mul nuw i64 %1, 4
+; CHECK-NEXT:    %min.iters.check = icmp ult i64 %0, %2
+; CHECK-NEXT:    br i1 %min.iters.check, label %scalar.ph, label %vector.ph
+; CHECK-NEXT:  LV: vectorizing VPBB: ir-bb<vector.scevcheck> in BB: vector.scevcheck
+; CHECK-NEXT:  LV: filled BB:
+; CHECK-NEXT:  vector.scevcheck: ; No predecessors!
+; CHECK-NEXT:    %3 = add nsw i64 %0, -1
+; CHECK-NEXT:    %4 = add i32 %n, -1
+; CHECK-NEXT:    %5 = trunc i64 %3 to i32
+; CHECK-NEXT:    %mul = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 1, i32 %5)
+; CHECK-NEXT:    %mul.result = extractvalue { i32, i1 } %mul, 0
+; CHECK-NEXT:    %mul.overflow = extractvalue { i32, i1 } %mul, 1
+; CHECK-NEXT:    %6 = sub i32 %4, %mul.result
+; CHECK-NEXT:    %7 = icmp ugt i32 %6, %4
+; CHECK-NEXT:    %8 = or i1 %7, %mul.overflow
+; CHECK-NEXT:    %9 = icmp ugt i64 %3, 4294967295
+; CHECK-NEXT:    %10 = or i1 %8, %9
+; CHECK-NEXT:    br i1 %10, <null operand!>, <null operand!>
+; CHECK-NEXT:  LV: draw edge from for.body.preheader
+; CHECK-NEXT:  LV: vectorizing VPBB: ir-bb<vector.memcheck> in BB: vector.memcheck
+; CHECK-NEXT:  LV: filled BB:
+; CHECK-NEXT:  vector.memcheck: ; No predecessors!
+; CHECK-NEXT:    %11 = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    %12 = mul nuw i64 %11, 4
+; CHECK-NEXT:    %13 = mul i64 %12, 4
+; CHECK-NEXT:    %14 = sub i64 %B1, %A2
+; CHECK-NEXT:    %diff.check = icmp ult i64 %14, %13
+; CHECK-NEXT:    br i1 %diff.check, <null operand!>, <null operand!>
+; CHECK-NEXT:  LV: draw edge from vector.scevcheck
+; CHECK-NEXT:  LV: vectorizing VPBB: ir-bb<vector.ph> in BB: vector.ph
+; CHECK-NEXT:  LV: filled BB:
+; CHECK-NEXT:  vector.ph: ; No predecessors!
+; CHECK-NEXT:    %15 = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    %16 = mul nuw i64 %15, 4
+; CHECK-NEXT:    %n.mod.vf = urem i64 %0, %16
+; CHECK-NEXT:    %n.vec = sub i64 %0, %n.mod.vf
+; CHECK-NEXT:    %17 = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    %18 = mul nuw i64 %17, 4
+; CHECK-NEXT:    %19 = sub i64 %0, %n.vec
+; CHECK-NEXT:    %.cast = trunc i64 %n.vec to i32
+; CHECK-NEXT:    %20 = sub i32 %n, %.cast
+; CHECK-NEXT:    br
+; CHECK-NEXT:  LV: draw edge from vector.memcheck
+; CHECK-NEXT:  LV: created vector.body
+; CHECK-NEXT:  LV: draw edge from vector.ph
+; CHECK-NEXT:  LV: vectorizing VPBB: vector.body in BB: vector.body
+; CHECK-NEXT:  LV: filled BB:
+; CHECK-NEXT:  vector.body: ; preds = %vector.body, %vector.ph
+; CHECK-NEXT:    %index = phi i64 [ 0, %vector.ph ]
+; CHECK-NEXT:    %.cast3 = trunc i64 %index to i32
+; CHECK-NEXT:    %offset.idx = sub i32 %n, %.cast3
+; CHECK-NEXT:    %21 = add nsw i32 %offset.idx, -1
+; CHECK-NEXT:    %22 = zext i32 %21 to i64
+; CHECK-NEXT:    %23 = getelementptr inbounds float, ptr %B, i64 %22
+; CHECK-NEXT:    %24 = mul i64 0, %18
+; CHECK-NEXT:    %25 = sub i64 %18, 1
+; CHECK-NEXT:    %26 = mul i64 -1, %25
+; CHECK-NEXT:    %27 = getelementptr inbounds float, ptr %23, i64 %24
+; CHECK-NEXT:    %28 = getelementptr inbounds float, ptr %27, i64 %26
+; CHECK-NEXT:    %wide.load = load <vscale x 4 x float>, ptr %28, align 4
+; CHECK-NEXT:    %reverse = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> %wide.load)
+; CHECK-NEXT:    %29 = fadd <vscale x 4 x float> %reverse, splat (float 1.000000e+00)
+; CHECK-NEXT:    %30 = getelementptr inbounds float, ptr %A, i64 %22
+; CHECK-NEXT:    %31 = mul i64 0, %18
+; CHECK-NEXT:    %32 = sub i64 %18, 1
+; CHECK-NEXT:    %33 = mul i64 -1, %32
+; CHECK-NEXT:    %34 = getelementptr inbounds float, ptr %30, i64 %31
+; CHECK-NEXT:    %35 = getelementptr inbounds float, ptr %34, i64 %33
+; CHECK-NEXT:    %reverse4 = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> %29)
+; CHECK-NEXT:    store <vscale x 4 x float> %reverse4, ptr %35, align 4
+; CHECK-NEXT:    %index.next = add nuw i64 %index, %18
+; CHECK-NEXT:    %36 = icmp eq i64 %index.next, %n.vec
+; CHECK-NEXT:    br i1 %36, <null operand!>, label %vector.body
+; CHECK-NEXT:  LV: created middle.block
+; CHECK-NEXT:  LV: draw edge from vector.body
+; CHECK-NEXT:  LV: vectorizing VPBB: middle.block in BB: middle.block
+; CHECK-NEXT:  LV: filled BB:
+; CHECK-NEXT:  middle.block: ; preds = %vector.body
+; CHECK-NEXT:    %cmp.n = icmp eq i64 %0, %n.vec
+; CHECK-NEXT:    br i1 %cmp.n, <null operand!>, <null operand!>
+; CHECK-NEXT:  LV: vectorizing VPBB: ir-bb<for.cond.cleanup.loopexit> in BB: for.cond.cleanup.loopexit
+; CHECK-NEXT:  LV: filled BB:
+; CHECK-NEXT:  for.cond.cleanup.loopexit: ; preds = %for.body
+; CHECK-NEXT:    br label %for.cond.cleanup
+; CHECK-NEXT:  LV: draw edge from middle.block
+; CHECK-NEXT:  LV: vectorizing VPBB: ir-bb<scalar.ph> in BB: scalar.ph
+; CHECK-NEXT:  LV: filled BB:
+; CHECK-NEXT:  scalar.ph: ; preds = %for.body.preheader
+; CHECK-NEXT:    %bc.resume.val = phi i64 [ %19, %middle.block ], [ %0, %for.body.preheader ], [ %0, %vector.scevcheck ], [ %0, %vector.memcheck ]
+; CHECK-NEXT:    %bc.resume.val5 = phi i32 [ %20, %middle.block ], [ %n, %for.body.preheader ], [ %n, %vector.scevcheck ], [ %n, %vector.memcheck ]
+; CHECK-NEXT:    br label %for.body
+; CHECK-NEXT:  LV: draw edge from middle.block
+; CHECK-NEXT:  LV: draw edge from for.body.preheader
+; CHECK-NEXT:  LV: draw edge from vector.scevcheck
+; CHECK-NEXT:  LV: draw edge from vector.memcheck
+; CHECK-NEXT:  LV: vectorizing VPBB: ir-bb<for.body> in BB: for.body
+; CHECK-NEXT:  LV: filled BB:
+; CHECK-NEXT:  for.body: ; preds = %for.body, %scalar.ph
+; CHECK-NEXT:    %indvars.iv = phi i64 [ %bc.resume.val, %scalar.ph ], [ %indvars.iv.next, %for.body ]
+; CHECK-NEXT:    %i.0.in8 = phi i32 [ %bc.resume.val5, %scalar.ph ], [ %i.0, %for.body ]
+; CHECK-NEXT:    %i.0 = add nsw i32 %i.0.in8, -1
+; CHECK-NEXT:    %idxprom = zext i32 %i.0 to i64
+; CHECK-NEXT:    %arrayidx = getelementptr inbounds float, ptr %B, i64 %idxprom
+; CHECK-NEXT:    %37 = load float, ptr %arrayidx, align 4
+; CHECK-NEXT:    %conv1 = fadd float %37, 1.000000e+00
+; CHECK-NEXT:    %arrayidx3 = getelementptr inbounds float, ptr %A, i64 %idxprom
+; CHECK-NEXT:    store float %conv1, ptr %arrayidx3, align 4
+; CHECK-NEXT:    %cmp = icmp ugt i64 %indvars.iv, 1
+; CHECK-NEXT:    %indvars.iv.next = add nsw i64 %indvars.iv, -1
+; CHECK-NEXT:    br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit, !llvm.loop !0
+; CHECK-NEXT:  LV: draw edge from scalar.ph
+; CHECK-NEXT:  LV: Interleaving disabled by the pass manager
+; CHECK-NEXT:  LV: Vectorizing: innermost loop.
 ;
 entry:
   %cmp7 = icmp sgt i32 %n, 0

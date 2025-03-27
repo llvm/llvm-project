@@ -3193,10 +3193,7 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 
   auto *VectorPreheader = Plan.getVectorPreheader();
   for (VPValue *VPV : VPValues) {
-    if (all_of(VPV->users(),
-               [VPV](VPUser *U) { return U->usesScalars(VPV); }) ||
-        (VPV->isLiveIn() && VPV->getLiveInIRValue() &&
-         isa<Constant>(VPV->getLiveInIRValue())))
+    if (all_of(VPV->users(), [VPV](VPUser *U) { return U->usesScalars(VPV); }))
       continue;
 
     // Add explicit broadcast at the insert point that dominates all users.
@@ -3213,8 +3210,25 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
                "All users must be in the vector preheader or dominated by it");
     }
 
-    VPBuilder Builder(cast<VPBasicBlock>(HoistBlock), HoistPoint);
-    auto *Broadcast = Builder.createNaryOp(VPInstruction::Broadcast, {VPV});
+    VPInstruction *Broadcast;
+    if (VPV->isLiveIn() && isa_and_nonnull<Constant>(VPV->getLiveInIRValue())) {
+      // We cannot replace the constant live-ins for PHIs by broadcast in the
+      // same VPBB because it will break PHI. Also cannot replace the
+      // VPWidenGEPRecipe since it broadcasts the generated pointer instead of
+      // operands.
+      if (auto *R = dyn_cast_if_present<VPRecipeBase>(*(VPV->users().begin()));
+          R && !isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPWidenGEPRecipe>(R) &&
+          !VPV->hasMoreThanOneUniqueUser()) {
+        Broadcast = new VPInstruction(VPInstruction::Broadcast, {VPV});
+        // Insert just before the user to reduce register pressure.
+        Broadcast->insertBefore(R);
+      } else {
+        continue;
+      }
+    } else {
+      VPBuilder Builder(cast<VPBasicBlock>(HoistBlock), HoistPoint);
+      Broadcast = Builder.createNaryOp(VPInstruction::Broadcast, {VPV});
+    }
     VPV->replaceUsesWithIf(Broadcast,
                            [VPV, Broadcast](VPUser &U, unsigned Idx) {
                              return Broadcast != &U && !U.usesScalars(VPV);
