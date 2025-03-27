@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c23 -pedantic -Wall -Wno-comment -verify=both,c23 %s
 // RUN: %clang_cc1 -fsyntax-only -std=c17 -pedantic -Wall -Wno-comment -Wno-c23-extensions -verify=both,c17 %s
 
-/* WG14 N3037:
+/* WG14 N3037: Clang 21
  * Improved tag compatibility
  *
  * Identical tag types have always been compatible across TU boundaries. This
