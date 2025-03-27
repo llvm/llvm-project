@@ -224,6 +224,22 @@ static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeGPRPairCRegisterClass(MCInst &Inst, uint32_t RegNo,
+                                                uint64_t Address,
+                                                const MCDisassembler *Decoder) {
+  if (RegNo >= 8 || RegNo % 2)
+    return MCDisassembler::Fail;
+
+  const RISCVDisassembler *Dis =
+      static_cast<const RISCVDisassembler *>(Decoder);
+  const MCRegisterInfo *RI = Dis->getContext().getRegisterInfo();
+  MCRegister Reg = RI->getMatchingSuperReg(
+      RISCV::X8 + RegNo, RISCV::sub_gpr_even,
+      &RISCVMCRegisterClasses[RISCV::GPRPairCRegClassID]);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus DecodeSR07RegisterClass(MCInst &Inst, uint32_t RegNo,
                                             uint64_t Address,
                                             const void *Decoder) {
@@ -351,6 +367,15 @@ static DecodeStatus decodeUImmPlus1OperandGE(MCInst &Inst, uint32_t Imm,
     return MCDisassembler::Fail;
 
   Inst.addOperand(MCOperand::createImm(Imm + 1));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeUImmSlistOperand(MCInst &Inst, uint32_t Imm,
+                                           int64_t Address,
+                                           const MCDisassembler *Decoder) {
+  assert(isUInt<3>(Imm) && "Invalid Slist immediate");
+  const uint8_t Slist[] = {0, 1, 2, 4, 8, 16, 15, 31};
+  Inst.addOperand(MCOperand::createImm(Slist[Imm]));
   return MCDisassembler::Success;
 }
 
@@ -647,13 +672,15 @@ static constexpr FeatureBitset XRivosFeatureGroup = {
 };
 
 static constexpr FeatureBitset XqciFeatureGroup = {
-    RISCV::FeatureVendorXqcia,   RISCV::FeatureVendorXqciac,
-    RISCV::FeatureVendorXqcibm,  RISCV::FeatureVendorXqcicli,
-    RISCV::FeatureVendorXqcicm,  RISCV::FeatureVendorXqcics,
-    RISCV::FeatureVendorXqcicsr, RISCV::FeatureVendorXqciint,
-    RISCV::FeatureVendorXqcili,  RISCV::FeatureVendorXqcilia,
-    RISCV::FeatureVendorXqcilo,  RISCV::FeatureVendorXqcilsm,
-    RISCV::FeatureVendorXqcisls,
+    RISCV::FeatureVendorXqcia,    RISCV::FeatureVendorXqciac,
+    RISCV::FeatureVendorXqcibi,   RISCV::FeatureVendorXqcibm,
+    RISCV::FeatureVendorXqcicli,  RISCV::FeatureVendorXqcicm,
+    RISCV::FeatureVendorXqcics,   RISCV::FeatureVendorXqcicsr,
+    RISCV::FeatureVendorXqciint,  RISCV::FeatureVendorXqcilb,
+    RISCV::FeatureVendorXqcili,   RISCV::FeatureVendorXqcilia,
+    RISCV::FeatureVendorXqcilo,   RISCV::FeatureVendorXqcilsm,
+    RISCV::FeatureVendorXqcisim,  RISCV::FeatureVendorXqcisls,
+    RISCV::FeatureVendorXqcisync,
 };
 
 static constexpr FeatureBitset XSfVectorGroup = {
@@ -690,12 +717,10 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableXCV32, XCVFeatureGroup, "CORE-V extensions"},
     {DecoderTableXqci32, XqciFeatureGroup, "Qualcomm uC Extensions"},
     {DecoderTableXRivos32, XRivosFeatureGroup, "Rivos"},
-    {DecoderTable32, {}, "RISCV32"},
-    {DecoderTableRV32GPRPair32, {}, "RV32GPRPair (rv32 and GPR pairs)"},
+    {DecoderTable32, {}, "standard 32-bit instructions"},
+    {DecoderTableRV32Only32, {}, "RV32-only standard 32-bit instructions"},
     {DecoderTableZfinx32, {}, "Zfinx (Float in Integer)"},
-    {DecoderTableZdinxRV32GPRPair32,
-     {},
-     "ZdinxRV32GPRPair (rv32 and Double in Integer)"},
+    {DecoderTableZdinxRV32Only32, {}, "RV32-only Zdinx (Double in Integer)"},
 };
 
 DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
@@ -714,7 +739,7 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
     if (!Entry.haveContainedFeatures(STI.getFeatureBits()))
       continue;
 
-    LLVM_DEBUG(dbgs() << "Trying " << Entry.Desc << "table:\n");
+    LLVM_DEBUG(dbgs() << "Trying " << Entry.Desc << " table:\n");
     DecodeStatus Result =
         decodeInstruction(Entry.Table, MI, Insn, Address, this, STI);
     if (Result == MCDisassembler::Fail)
@@ -728,16 +753,16 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
 
 static constexpr DecoderListEntry DecoderList16[]{
     // Vendor Extensions
-    {DecoderTableXqci16, XqciFeatureGroup, "Qualcomm uC 16bit"},
+    {DecoderTableXqci16, XqciFeatureGroup, "Qualcomm uC 16-bit"},
     {DecoderTableXqccmp16,
      {RISCV::FeatureVendorXqccmp},
      "Xqccmp (Qualcomm 16-bit Push/Pop & Double Move Instructions)"},
     {DecoderTableXwchc16, {RISCV::FeatureVendorXwchc}, "WCH QingKe XW"},
     // Standard Extensions
     // DecoderTableZicfiss16 must be checked before DecoderTable16.
-    {DecoderTableZicfiss16, {}, "RVZicfiss (Shadow Stack)"},
-    {DecoderTable16, {}, "RISCV_C (16-bit Instruction)"},
-    {DecoderTableRISCV32Only_16, {}, "RISCV32Only_16 (16-bit Instruction)"},
+    {DecoderTableZicfiss16, {}, "Zicfiss (Shadow Stack 16-bit)"},
+    {DecoderTable16, {}, "standard 16-bit instructions"},
+    {DecoderTableRV32Only16, {}, "RV32-only 16-bit instructions"},
     // Zc* instructions incompatible with Zcf or Zcd
     {DecoderTableZcOverlap16,
      {},

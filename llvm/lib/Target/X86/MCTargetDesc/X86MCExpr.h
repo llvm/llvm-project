@@ -31,6 +31,38 @@ private:
   explicit X86MCExpr(MCRegister R) : Reg(R) {}
 
 public:
+  // Relocation specifier. Named VK_ for legacy reasons.
+  enum Specifier {
+    VK_None,
+
+    VK_ABS8 = MCSymbolRefExpr::FirstTargetSpecifier,
+    VK_DTPOFF,
+    VK_DTPREL,
+    VK_GOT,
+    VK_GOTENT,
+    VK_GOTNTPOFF,
+    VK_GOTOFF,
+    VK_GOTPCREL,
+    VK_GOTPCREL_NORELAX,
+    VK_GOTREL,
+    VK_GOTTPOFF,
+    VK_INDNTPOFF,
+    VK_NTPOFF,
+    VK_PCREL,
+    VK_PLT,
+    VK_PLTOFF,
+    VK_SIZE,
+    VK_TLSCALL,
+    VK_TLSDESC,
+    VK_TLSGD,
+    VK_TLSLD,
+    VK_TLSLDM,
+    VK_TLVP,
+    VK_TLVPPAGE,
+    VK_TLVPPAGEOFF,
+    VK_TPOFF,
+  };
+
   /// @name Construction
   /// @{
 
@@ -72,6 +104,9 @@ public:
   }
 };
 
+static inline X86MCExpr::Specifier getSpecifier(const MCSymbolRefExpr *SRE) {
+  return X86MCExpr::Specifier(SRE->getKind());
+}
 } // end namespace llvm
 
 #endif

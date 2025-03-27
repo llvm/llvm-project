@@ -319,6 +319,10 @@ MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
   } else if (ConstInstr->getOpcode() == SPIRV::ASSIGN_TYPE) {
     ConstReg = ConstInstr->getOperand(1).getReg();
     return MRI->getVRegDef(ConstReg);
+  } else if (ConstInstr->getOpcode() == TargetOpcode::G_CONSTANT ||
+             ConstInstr->getOpcode() == TargetOpcode::G_FCONSTANT) {
+    ConstReg = ConstInstr->getOperand(0).getReg();
+    return ConstInstr;
   }
   return MRI->getVRegDef(ConstReg);
 }
@@ -813,10 +817,13 @@ bool isSpvIntrinsic(const Value *Arg) {
 
 // Function to create continued instructions for SPV_INTEL_long_composites
 // extension
-void createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
-                                 unsigned MinWC, unsigned ContinuedOpcode,
-                                 ArrayRef<Register> Args,
-                                 Register ReturnRegister, Register TypeID) {
+SmallVector<MachineInstr *, 4>
+createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
+                            unsigned MinWC, unsigned ContinuedOpcode,
+                            ArrayRef<Register> Args, Register ReturnRegister,
+                            Register TypeID) {
+
+  SmallVector<MachineInstr *, 4> Instructions;
   constexpr unsigned MaxWordCount = UINT16_MAX;
   const size_t NumElements = Args.size();
   size_t MaxNumElements = MaxWordCount - MinWC;
@@ -835,12 +842,94 @@ void createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
   for (size_t I = 0; I < SPIRVStructNumElements; ++I)
     MIB.addUse(Args[I]);
 
+  Instructions.push_back(MIB.getInstr());
+
   for (size_t I = SPIRVStructNumElements; I < NumElements;
        I += MaxNumElements) {
     auto MIB = MIRBuilder.buildInstr(ContinuedOpcode);
     for (size_t J = I; J < std::min(I + MaxNumElements, NumElements); ++J)
       MIB.addUse(Args[J]);
+    Instructions.push_back(MIB.getInstr());
   }
+  return Instructions;
+}
+
+const std::set<unsigned> &getTypeFoldingSupportedOpcodes() {
+  // clang-format off
+  static const std::set<unsigned> TypeFoldingSupportingOpcs = {
+    TargetOpcode::G_ADD,
+    TargetOpcode::G_FADD,
+    TargetOpcode::G_STRICT_FADD,
+    TargetOpcode::G_SUB,
+    TargetOpcode::G_FSUB,
+    TargetOpcode::G_STRICT_FSUB,
+    TargetOpcode::G_MUL,
+    TargetOpcode::G_FMUL,
+    TargetOpcode::G_STRICT_FMUL,
+    TargetOpcode::G_SDIV,
+    TargetOpcode::G_UDIV,
+    TargetOpcode::G_FDIV,
+    TargetOpcode::G_STRICT_FDIV,
+    TargetOpcode::G_SREM,
+    TargetOpcode::G_UREM,
+    TargetOpcode::G_FREM,
+    TargetOpcode::G_STRICT_FREM,
+    TargetOpcode::G_FNEG,
+    TargetOpcode::G_CONSTANT,
+    TargetOpcode::G_FCONSTANT,
+    TargetOpcode::G_AND,
+    TargetOpcode::G_OR,
+    TargetOpcode::G_XOR,
+    TargetOpcode::G_SHL,
+    TargetOpcode::G_ASHR,
+    TargetOpcode::G_LSHR,
+    TargetOpcode::G_SELECT,
+    TargetOpcode::G_EXTRACT_VECTOR_ELT,
+  };
+  // clang-format on
+  return TypeFoldingSupportingOpcs;
+}
+
+bool isTypeFoldingSupported(unsigned Opcode) {
+  return getTypeFoldingSupportedOpcodes().count(Opcode) > 0;
+}
+
+// Traversing [g]MIR accounting for pseudo-instructions.
+MachineInstr *passCopy(MachineInstr *Def, const MachineRegisterInfo *MRI) {
+  return (Def->getOpcode() == SPIRV::ASSIGN_TYPE ||
+          Def->getOpcode() == TargetOpcode::COPY)
+             ? MRI->getVRegDef(Def->getOperand(1).getReg())
+             : Def;
+}
+
+MachineInstr *getDef(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
+  if (MachineInstr *Def = MRI->getVRegDef(MO.getReg()))
+    return passCopy(Def, MRI);
+  return nullptr;
+}
+
+MachineInstr *getImm(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
+  if (MachineInstr *Def = getDef(MO, MRI)) {
+    if (Def->getOpcode() == TargetOpcode::G_CONSTANT ||
+        Def->getOpcode() == SPIRV::OpConstantI)
+      return Def;
+  }
+  return nullptr;
+}
+
+int64_t foldImm(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
+  if (MachineInstr *Def = getImm(MO, MRI)) {
+    if (Def->getOpcode() == SPIRV::OpConstantI)
+      return Def->getOperand(2).getImm();
+    if (Def->getOpcode() == TargetOpcode::G_CONSTANT)
+      return Def->getOperand(1).getCImm()->getZExtValue();
+  }
+  llvm_unreachable("Unexpected integer constant pattern");
+}
+
+unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
+                                const MachineInstr *ResType) {
+  return foldImm(ResType->getOperand(2), MRI);
 }
 
 } // namespace llvm

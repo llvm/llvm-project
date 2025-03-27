@@ -1791,7 +1791,7 @@ CGDebugInfo::createInlinedTrapSubprogram(StringRef FuncName,
   // We are caching the subprogram because we don't want to duplicate
   // subprograms with the same message. Note that `SPFlagDefinition` prevents
   // subprograms from being uniqued.
-  llvm::DISubprogram *&SP = InlinedTrapFuncMap[FuncName];
+  llvm::DISubprogram *&SP = InlinedSubprogramMap[FuncName];
 
   if (!SP) {
     llvm::DISubroutineType *DIFnTy = DBuilder.createSubroutineType(nullptr);
@@ -3490,7 +3490,8 @@ llvm::DIType *CGDebugInfo::CreateType(const MemberPointerType *Ty,
     }
   }
 
-  llvm::DIType *ClassType = getOrCreateType(QualType(Ty->getClass(), 0), U);
+  llvm::DIType *ClassType = getOrCreateType(
+      QualType(Ty->getMostRecentCXXRecordDecl()->getTypeForDecl(), 0), U);
   if (Ty->isMemberDataPointerType())
     return DBuilder.createMemberPointerType(
         getOrCreateType(Ty->getPointeeType(), U), ClassType, Size, /*Align=*/0,

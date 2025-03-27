@@ -39,6 +39,7 @@ if (SPHINX_FOUND)
       assert
       cpio
       ctype
+      dirent
       endian
       errno
       fenv
@@ -62,6 +63,7 @@ if (SPHINX_FOUND)
       sys/stat
       sys/statvfs
       sys/time
+      sys/utsname
       sys/wait
       termios
       threads

@@ -505,9 +505,9 @@ void TypePrinter::printMemberPointerBefore(const MemberPointerType *T,
 
   PrintingPolicy InnerPolicy(Policy);
   InnerPolicy.IncludeTagDefinition = false;
-  TypePrinter(InnerPolicy).print(QualType(T->getClass(), 0), OS, StringRef());
+  T->getQualifier()->print(OS, InnerPolicy);
 
-  OS << "::*";
+  OS << "*";
 }
 
 void TypePrinter::printMemberPointerAfter(const MemberPointerType *T,

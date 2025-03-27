@@ -1458,16 +1458,73 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
   if (LooksLikeAFreeShift())
     return 0;
 
+  // When targets have both DSP and MVE we find that the
+  // the compiler will attempt to vectorize as well as using
+  // scalar (S/U)MLAL operations. This is in cases where we have
+  // the pattern ext(mul(ext(i16), ext(i16))) we find
+  // that codegen performs better when only using (S/U)MLAL scalar
+  // ops instead of trying to mix vector ops with (S/U)MLAL ops. We therefore
+  // check if a mul instruction is used in a (U/S)MLAL pattern.
+  auto MulInDSPMLALPattern = [&](const Instruction *I, unsigned Opcode,
+                                 Type *Ty) -> bool {
+    if (!ST->hasDSP())
+      return false;
+
+    if (!I)
+      return false;
+
+    if (Opcode != Instruction::Mul)
+      return false;
+
+    if (Ty->isVectorTy())
+      return false;
+
+    auto ValueOpcodesEqual = [](const Value *LHS, const Value *RHS) -> bool {
+      return cast<Instruction>(LHS)->getOpcode() ==
+             cast<Instruction>(RHS)->getOpcode();
+    };
+    auto IsExtInst = [](const Value *V) -> bool {
+      return isa<ZExtInst>(V) || isa<SExtInst>(V);
+    };
+    auto IsExtensionFromHalf = [](const Value *V) -> bool {
+      return cast<Instruction>(V)->getOperand(0)->getType()->isIntegerTy(16);
+    };
+
+    // We check the arguments of the instruction to see if they're extends
+    auto *BinOp = dyn_cast<BinaryOperator>(I);
+    if (!BinOp)
+      return false;
+    Value *Op0 = BinOp->getOperand(0);
+    Value *Op1 = BinOp->getOperand(1);
+    if (IsExtInst(Op0) && IsExtInst(Op1) && ValueOpcodesEqual(Op0, Op1)) {
+      // We're interested in an ext of an i16
+      if (!I->getType()->isIntegerTy(32) || !IsExtensionFromHalf(Op0) ||
+          !IsExtensionFromHalf(Op1))
+        return false;
+      // We need to check if this result will be further extended to i64
+      // and that all these uses are SExt
+      for (auto *U : I->users())
+        if (!IsExtInst(U))
+          return false;
+      return true;
+    }
+
+    return false;
+  };
+
+  if (MulInDSPMLALPattern(CxtI, Opcode, Ty))
+    return 0;
+
   // Default to cheap (throughput/size of 1 instruction) but adjust throughput
   // for "multiple beats" potentially needed by MVE instructions.
   int BaseCost = 1;
   if (ST->hasMVEIntegerOps() && Ty->isVectorTy())
     BaseCost = ST->getMVEVectorCostFactor(CostKind);
 
-  // The rest of this mostly follows what is done in BaseT::getArithmeticInstrCost,
-  // without treating floats as more expensive that scalars or increasing the
-  // costs for custom operations. The results is also multiplied by the
-  // MVEVectorCostFactor where appropriate.
+  // The rest of this mostly follows what is done in
+  // BaseT::getArithmeticInstrCost, without treating floats as more expensive
+  // that scalars or increasing the costs for custom operations. The results is
+  // also multiplied by the MVEVectorCostFactor where appropriate.
   if (TLI->isOperationLegalOrCustomOrPromote(ISDOpcode, LT.second))
     return LT.first * BaseCost;
 
@@ -1784,7 +1841,7 @@ ARMTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
 InstructionCost ARMTTIImpl::getExtendedReductionCost(
     unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *ValTy,
-    FastMathFlags FMF, TTI::TargetCostKind CostKind) {
+    std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) {
   EVT ValVT = TLI->getValueType(DL, ValTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
 

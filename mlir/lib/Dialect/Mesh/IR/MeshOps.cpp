@@ -269,7 +269,7 @@ ShapedType mesh::shardShapedType(ShapedType shape, MeshOp mesh,
 
 Type mesh::shardType(Type type, MeshOp mesh, MeshSharding sharding) {
   RankedTensorType rankedTensorType = dyn_cast<RankedTensorType>(type);
-  if (rankedTensorType) {
+  if (rankedTensorType && !rankedTensorType.getShape().empty()) {
     return shardShapedType(rankedTensorType, mesh, sharding);
   }
   return type;

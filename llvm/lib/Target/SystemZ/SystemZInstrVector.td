@@ -12,9 +12,11 @@
 
 let Predicates = [FeatureVector] in {
   // Register move.
-  def VLR : UnaryVRRa<"vlr", 0xE756, null_frag, v128any, v128any>;
-  def VLR32 : UnaryAliasVRR<null_frag, v32sb, v32sb>;
-  def VLR64 : UnaryAliasVRR<null_frag, v64db, v64db>;
+  let isMoveReg = 1 in {
+    def VLR : UnaryVRRa<"vlr", 0xE756, null_frag, v128any, v128any>;
+    def VLR32 : UnaryAliasVRR<null_frag, v32sb, v32sb>;
+    def VLR64 : UnaryAliasVRR<null_frag, v64db, v64db>;
+  }
 
   // Load GR from VR element.
   def VLGV  : BinaryVRScGeneric<"vlgv", 0xE721>;

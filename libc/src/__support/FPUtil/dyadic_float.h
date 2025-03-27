@@ -335,7 +335,7 @@ template <size_t Bits> struct DyadicFloat {
                  .get_val();
 
     MantissaType round_mask =
-        shift > MantissaType::BITS ? 0 : MantissaType(1) << (shift - 1);
+        shift - 1 >= MantissaType::BITS ? 0 : MantissaType(1) << (shift - 1);
     MantissaType sticky_mask = round_mask - MantissaType(1);
 
     bool round_bit = !(mantissa & round_mask).is_zero();

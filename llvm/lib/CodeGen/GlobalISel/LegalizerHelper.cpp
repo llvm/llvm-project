@@ -183,7 +183,7 @@ void LegalizerHelper::insertParts(Register DstReg,
   // Merge sub-vectors with different number of elements and insert into DstReg.
   if (ResultTy.isVector()) {
     assert(LeftoverRegs.size() == 1 && "Expected one leftover register");
-    SmallVector<Register, 8> AllRegs(PartRegs.begin(), PartRegs.end());
+    SmallVector<Register, 8> AllRegs(PartRegs);
     AllRegs.append(LeftoverRegs.begin(), LeftoverRegs.end());
     return mergeMixedSubvectors(DstReg, AllRegs);
   }
@@ -4229,7 +4229,7 @@ LegalizerHelper::scalarizeVectorBooleanStore(GStore &StoreMI) {
     unsigned NumBits = MemTy.getSizeInBits();
     LLT IntTy = LLT::scalar(NumBits);
     auto CurrVal = MIRBuilder.buildConstant(IntTy, 0);
-    LLT IdxTy = getLLTForMVT(TLI.getVectorIdxTy(MF.getDataLayout()));
+    LLT IdxTy = TLI.getVectorIdxLLT(MF.getDataLayout());
 
     for (unsigned I = 0, E = MemTy.getNumElements(); I < E; ++I) {
       auto Elt = MIRBuilder.buildExtractVectorElement(
@@ -6139,6 +6139,8 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_FCANONICALIZE:
   case TargetOpcode::G_SEXT_INREG:
   case TargetOpcode::G_ABS:
+  case TargetOpcode::G_CTLZ:
+  case TargetOpcode::G_CTPOP:
     if (TypeIdx != 0)
       return UnableToLegalize;
     Observer.changingInstr(MI);
@@ -6277,7 +6279,7 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     auto NeutralElement = getNeutralElementForVecReduce(
         MI.getOpcode(), MIRBuilder, MoreTy.getElementType());
 
-    LLT IdxTy(TLI.getVectorIdxTy(MIRBuilder.getDataLayout()));
+    LLT IdxTy(TLI.getVectorIdxLLT(MIRBuilder.getDataLayout()));
     for (size_t i = OrigTy.getNumElements(), e = MoreTy.getNumElements();
          i != e; i++) {
       auto Idx = MIRBuilder.buildConstant(IdxTy, i);

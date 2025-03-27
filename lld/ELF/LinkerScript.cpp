@@ -797,7 +797,7 @@ void LinkerScript::processSectionCommands() {
   if (!potentialSpillLists.empty()) {
     DenseSet<StringRef> insertNames;
     for (InsertCommand &ic : insertCommands)
-      insertNames.insert(ic.names.begin(), ic.names.end());
+      insertNames.insert_range(ic.names);
     for (SectionCommand *&base : sectionCommands) {
       auto *osd = dyn_cast<OutputDesc>(base);
       if (!osd)

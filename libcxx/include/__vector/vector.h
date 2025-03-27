@@ -461,6 +461,15 @@ public:
   emplace_back(_Args&&... __args);
 #endif
 
+  template <class... _Args>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __emplace_back_assume_capacity(_Args&&... __args) {
+    _LIBCPP_ASSERT_INTERNAL(
+        size() < capacity(), "We assume that we have enough space to insert an element at the end of the vector");
+    _ConstructTransaction __tx(*this, 1);
+    __alloc_traits::construct(this->__alloc_, std::__to_address(__tx.__pos_), std::forward<_Args>(__args)...);
+    ++__tx.__pos_;
+  }
+
 #if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<_Tp> _Range>
   _LIBCPP_HIDE_FROM_ABI constexpr void append_range(_Range&& __range) {
@@ -757,13 +766,6 @@ private:
     _ConstructTransaction(_ConstructTransaction const&)            = delete;
     _ConstructTransaction& operator=(_ConstructTransaction const&) = delete;
   };
-
-  template <class... _Args>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __construct_one_at_end(_Args&&... __args) {
-    _ConstructTransaction __tx(*this, 1);
-    __alloc_traits::construct(this->__alloc_, std::__to_address(__tx.__pos_), std::forward<_Args>(__args)...);
-    ++__tx.__pos_;
-  }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __base_destruct_at_end(pointer __new_last) _NOEXCEPT {
     pointer __soon_to_be_end = this->__end_;
@@ -1152,7 +1154,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 inline
     vector<_Tp, _Allocator>::emplace_back(_Args&&... __args) {
   pointer __end = this->__end_;
   if (__end < this->__cap_) {
-    __construct_one_at_end(std::forward<_Args>(__args)...);
+    __emplace_back_assume_capacity(std::forward<_Args>(__args)...);
     ++__end;
   } else {
     __end = __emplace_back_slow_path(std::forward<_Args>(__args)...);
@@ -1206,7 +1208,7 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, const_reference __x) 
   pointer __p = this->__begin_ + (__position - begin());
   if (this->__end_ < this->__cap_) {
     if (__p == this->__end_) {
-      __construct_one_at_end(__x);
+      __emplace_back_assume_capacity(__x);
     } else {
       __move_range(__p, this->__end_, __p + 1);
       const_pointer __xr = pointer_traits<const_pointer>::pointer_to(__x);
@@ -1228,7 +1230,7 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, value_type&& __x) {
   pointer __p = this->__begin_ + (__position - begin());
   if (this->__end_ < this->__cap_) {
     if (__p == this->__end_) {
-      __construct_one_at_end(std::move(__x));
+      __emplace_back_assume_capacity(std::move(__x));
     } else {
       __move_range(__p, this->__end_, __p + 1);
       *__p = std::move(__x);
@@ -1248,7 +1250,7 @@ vector<_Tp, _Allocator>::emplace(const_iterator __position, _Args&&... __args) {
   pointer __p = this->__begin_ + (__position - begin());
   if (this->__end_ < this->__cap_) {
     if (__p == this->__end_) {
-      __construct_one_at_end(std::forward<_Args>(__args)...);
+      __emplace_back_assume_capacity(std::forward<_Args>(__args)...);
     } else {
       __temp_value<value_type, _Allocator> __tmp(this->__alloc_, std::forward<_Args>(__args)...);
       __move_range(__p, this->__end_, __p + 1);
@@ -1300,7 +1302,7 @@ vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _Inpu
   pointer __p           = this->__begin_ + __off;
   pointer __old_last    = this->__end_;
   for (; this->__end_ != this->__cap_ && __first != __last; ++__first)
-    __construct_one_at_end(*__first);
+    __emplace_back_assume_capacity(*__first);
 
   if (__first == __last)
     (void)std::rotate(__p, __old_last, this->__end_);

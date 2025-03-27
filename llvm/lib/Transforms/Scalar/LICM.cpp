@@ -688,9 +688,10 @@ public:
     // intersection of their successors is non-empty.
     // TODO: This could be expanded to allowing branches where both ends
     // eventually converge to a single block.
-    SmallPtrSet<BasicBlock *, 4> TrueDestSucc, FalseDestSucc;
-    TrueDestSucc.insert(succ_begin(TrueDest), succ_end(TrueDest));
-    FalseDestSucc.insert(succ_begin(FalseDest), succ_end(FalseDest));
+    SmallPtrSet<BasicBlock *, 4> TrueDestSucc(llvm::from_range,
+                                              successors(TrueDest));
+    SmallPtrSet<BasicBlock *, 4> FalseDestSucc(llvm::from_range,
+                                               successors(FalseDest));
     BasicBlock *CommonSucc = nullptr;
     if (TrueDestSucc.count(FalseDest)) {
       CommonSucc = FalseDest;
@@ -730,10 +731,9 @@ public:
       return false;
     // We can hoist phis if the block they are in is the target of hoistable
     // branches which cover all of the predecessors of the block.
-    SmallPtrSet<BasicBlock *, 8> PredecessorBlocks;
     BasicBlock *BB = PN->getParent();
-    for (BasicBlock *PredBB : predecessors(BB))
-      PredecessorBlocks.insert(PredBB);
+    SmallPtrSet<BasicBlock *, 8> PredecessorBlocks(llvm::from_range,
+                                                   predecessors(BB));
     // If we have less predecessor blocks than predecessors then the phi will
     // have more than one incoming value for the same block which we can't
     // handle.

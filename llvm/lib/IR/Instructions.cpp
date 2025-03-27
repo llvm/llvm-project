@@ -4529,6 +4529,27 @@ UnreachableInst *UnreachableInst::cloneImpl() const {
   return new UnreachableInst(Context);
 }
 
+bool UnreachableInst::shouldLowerToTrap(bool TrapUnreachable,
+                                        bool NoTrapAfterNoreturn) const {
+  if (!TrapUnreachable)
+    return false;
+
+  // We may be able to ignore unreachable behind a noreturn call.
+  if (const CallInst *Call = dyn_cast_or_null<CallInst>(getPrevNode());
+      Call && Call->doesNotReturn()) {
+    if (NoTrapAfterNoreturn)
+      return false;
+    // Do not emit an additional trap instruction.
+    if (Call->isNonContinuableTrap())
+      return false;
+  }
+
+  if (getFunction()->hasFnAttribute(Attribute::Naked))
+    return false;
+
+  return true;
+}
+
 FreezeInst *FreezeInst::cloneImpl() const {
   return new FreezeInst(getOperand(0));
 }

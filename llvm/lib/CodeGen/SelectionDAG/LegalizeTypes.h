@@ -756,6 +756,7 @@ private:
 
   void PromoteFloatResult(SDNode *N, unsigned ResNo);
   SDValue PromoteFloatRes_BITCAST(SDNode *N);
+  SDValue PromoteFloatRes_FREEZE(SDNode *N);
   SDValue PromoteFloatRes_BinOp(SDNode *N);
   SDValue PromoteFloatRes_UnaryWithTwoFPResults(SDNode *N);
   SDValue PromoteFloatRes_ConstantFP(SDNode *N);

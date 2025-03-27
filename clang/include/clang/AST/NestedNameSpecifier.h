@@ -201,6 +201,11 @@ public:
     return nullptr;
   }
 
+  /// Fully translate this nested name specifier to a type.
+  /// Unlike getAsType, this will convert this entire nested
+  /// name specifier chain into its equivalent type.
+  const Type *translateToType(const ASTContext &Context) const;
+
   NestedNameSpecifierDependence getDependence() const;
 
   /// Whether this nested name specifier refers to a dependent

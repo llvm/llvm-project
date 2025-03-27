@@ -58,6 +58,10 @@ public:
 #ifndef LIBC_TARGET_OS_IS_WINDOWS
     using namespace LIBC_NAMESPACE::fputil::testing;
 
+    if (LIBC_NAMESPACE::fputil::get_fp_type<OutType>() ==
+        LIBC_NAMESPACE::fputil::get_fp_type<InType>())
+      return;
+
     if (ForceRoundingMode r(RoundingMode::Nearest); r.success) {
       EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(in.max_normal, in.neg_max_normal),
                                   FE_OVERFLOW | FE_INEXACT);
@@ -146,5 +150,18 @@ public:
   }                                                                            \
   TEST_F(LlvmLibcSubTest, RangeErrors) { test_range_errors(&func); }           \
   TEST_F(LlvmLibcSubTest, InexactResults) { test_inexact_results(&func); }
+
+#define LIST_SUB_SAME_TYPE_TESTS(suffix, OutType, InType, func)                \
+  using LlvmLibcSubTest##suffix = SubTest<OutType, InType>;                    \
+  TEST_F(LlvmLibcSubTest##suffix, SpecialNumbers) {                            \
+    test_special_numbers(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibcSubTest##suffix, InvalidOperations) {                         \
+    test_invalid_operations(&func);                                            \
+  }                                                                            \
+  TEST_F(LlvmLibcSubTest##suffix, RangeErrors) { test_range_errors(&func); }   \
+  TEST_F(LlvmLibcSubTest##suffix, InexactResults) {                            \
+    test_inexact_results(&func);                                               \
+  }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_SUBTEST_H

@@ -56,3 +56,23 @@ float3 test_lerp_float3(float3 p0) { return lerp(p0, p0, p0); }
 // CHECK: %hlsl.lerp = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.[[TARGET]].lerp.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
 // CHECK: ret <4 x float> %hlsl.lerp
 float4 test_lerp_float4(float4 p0) { return lerp(p0, p0, p0); }
+
+// CHECK-LABEL: test_lerp_double
+// CHECK: %hlsl.lerp = call reassoc nnan ninf nsz arcp afn float @llvm.[[TARGET]].lerp.f32(float %{{.*}}, float %{{.*}}, float %{{.*}})
+// CHECK: ret float %hlsl.lerp
+float test_lerp_double(double p0) { return lerp(p0, p0, p0); }
+
+// CHECK-LABEL: test_lerp_double2
+// CHECK: %hlsl.lerp = call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.[[TARGET]].lerp.v2f32(<2 x float> %{{.*}}, <2 x float> %{{.*}}, <2 x float> %{{.*}})
+// CHECK: ret <2 x float> %hlsl.lerp
+float2 test_lerp_double2(double2 p0) { return lerp(p0, p0, p0); }
+
+// CHECK-LABEL: test_lerp_double3
+// CHECK: %hlsl.lerp = call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.[[TARGET]].lerp.v3f32(<3 x float> %{{.*}}, <3 x float> %{{.*}}, <3 x float> %{{.*}})
+// CHECK: ret <3 x float> %hlsl.lerp
+float3 test_lerp_double3(double3 p0) { return lerp(p0, p0, p0); }
+
+// CHECK-LABEL: test_lerp_double4
+// CHECK: %hlsl.lerp = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.[[TARGET]].lerp.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
+// CHECK: ret <4 x float> %hlsl.lerp
+float4 test_lerp_double4(double4 p0) { return lerp(p0, p0, p0); }

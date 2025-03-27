@@ -13,11 +13,10 @@ define void @test_free_instructions_feeding_geps_for_interleave_groups(ptr noali
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP39:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP40:%.*]] = load float, ptr [[P_INVAR]], align 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[TMP40]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP41:%.*]] = shl i64 [[TMP39]], 2
+; CHECK-NEXT:    [[TMP41:%.*]] = shl i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr float, ptr [[DST_1]], i64 [[TMP41]]
 ; CHECK-NEXT:    [[TMP42:%.*]] = load float, ptr [[P_INVAR]], align 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT27:%.*]] = insertelement <2 x float> poison, float [[TMP42]], i64 0
@@ -143,11 +142,10 @@ define void @geps_feeding_interleave_groups_with_reuse(ptr %arg, i64 %arg1, ptr 
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP24:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP25:%.*]] = shl i64 [[TMP24]], 5
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i8, ptr [[ARG]], i64 [[TMP25]]
-; CHECK-NEXT:    [[TMP27:%.*]] = shl i64 [[TMP24]], 4
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i8, ptr [[ARG2]], i64 [[TMP27]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[INDEX]], 5
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i8, ptr [[ARG]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = shl i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i8, ptr [[ARG2]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x float>, ptr [[TMP26]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x float> [[WIDE_VEC]], <16 x float> poison, <2 x i32> <i32 0, i32 8>
 ; CHECK-NEXT:    [[STRIDED_VEC14:%.*]] = shufflevector <16 x float> [[WIDE_VEC]], <16 x float> poison, <2 x i32> <i32 1, i32 9>
@@ -397,13 +395,12 @@ define void @geps_feeding_interleave_groups_with_reuse2(ptr %A, ptr %B, i64 %N) 
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 8, i64 16, i64 24>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP50:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP51:%.*]] = lshr exact i64 [[TMP50]], 1
+; CHECK-NEXT:    [[TMP51:%.*]] = lshr exact i64 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP52:%.*]] = getelementptr nusw i32, ptr [[B]], i64 [[TMP51]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i32>, ptr [[TMP52]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; CHECK-NEXT:    [[STRIDED_VEC34:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
-; CHECK-NEXT:    [[TMP56:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP50]]
+; CHECK-NEXT:    [[TMP56:%.*]] = getelementptr i32, ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP54:%.*]] = getelementptr i32, ptr [[B]], <4 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP54]], i32 4, <4 x i1> splat (i1 true), <4 x i32> poison), !alias.scope [[META6:![0-9]+]], !noalias [[META9:![0-9]+]]
 ; CHECK-NEXT:    [[TMP58:%.*]] = shufflevector <4 x i32> [[STRIDED_VEC]], <4 x i32> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -517,8 +514,7 @@ define void @interleave_store_double_i64(ptr %dst) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr { double, i64 }, ptr [[DST]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr { double, i64 }, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[VEC_IND]] to <2 x double>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> zeroinitializer, <2 x double> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
@@ -639,8 +635,7 @@ define void @interleave_store_i64_double_2(ptr %dst) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr { i64, double }, ptr [[DST]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr { i64, double }, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[VEC_IND]] to <2 x double>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>

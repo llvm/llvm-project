@@ -82,6 +82,14 @@ struct DeviceExprChecker
           }
         }
       }
+      const Symbol &ultimate{sym->GetUltimate()};
+      const Scope &scope{ultimate.owner()};
+      const Symbol *mod{scope.IsModule() ? scope.symbol() : nullptr};
+      // Allow ieee_arithmetic module functions to be called on the device.
+      // TODO: Check for unsupported ieee_arithmetic on the device.
+      if (mod && mod->name() == "ieee_arithmetic") {
+        return {};
+      }
     } else if (x.GetSpecificIntrinsic()) {
       // TODO(CUDA): Check for unsupported intrinsics here
       return {};

@@ -13,9 +13,8 @@ define void @load_store_interleave_group(ptr noalias %data) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP3]]

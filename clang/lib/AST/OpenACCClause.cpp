@@ -628,6 +628,18 @@ OpenACCBindClause *OpenACCBindClause::Create(const ASTContext &C,
   return new (Mem) OpenACCBindClause(BeginLoc, LParenLoc, ID, EndLoc);
 }
 
+bool clang::operator==(const OpenACCBindClause &LHS,
+                       const OpenACCBindClause &RHS) {
+  if (LHS.isStringArgument() != RHS.isStringArgument())
+    return false;
+
+  if (LHS.isStringArgument())
+    return LHS.getStringArgument()->getString() ==
+           RHS.getStringArgument()->getString();
+  return LHS.getIdentifierArgument()->getName() ==
+         RHS.getIdentifierArgument()->getName();
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenACC clauses printing methods
 //===----------------------------------------------------------------------===//

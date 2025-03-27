@@ -105,6 +105,11 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                                G_FEXP10, G_FLOG, G_FLOG2, G_FLOG10})
       .libcall();
 
+  getActionDefinitionsBuilder(G_FSQRT)
+      .legalFor(HasSSE1 || UseX87, {s32})
+      .legalFor(HasSSE2 || UseX87, {s64})
+      .legalFor(UseX87, {s80});
+
   // merge/unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
     unsigned BigTyIdx = Op == G_MERGE_VALUES ? 0 : 1;

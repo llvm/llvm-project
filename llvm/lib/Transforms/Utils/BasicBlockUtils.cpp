@@ -1660,7 +1660,7 @@ void llvm::SplitBlockAndInsertIfThenElse(
   SmallPtrSet<BasicBlock *, 8> UniqueOrigSuccessors;
   BasicBlock *Head = SplitBefore->getParent();
   if (DTU) {
-    UniqueOrigSuccessors.insert(succ_begin(Head), succ_end(Head));
+    UniqueOrigSuccessors.insert_range(successors(Head));
     Updates.reserve(4 + 2 * UniqueOrigSuccessors.size());
   }
 

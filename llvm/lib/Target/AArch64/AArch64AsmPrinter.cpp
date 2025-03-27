@@ -919,19 +919,17 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
       // Intentionally load the GOT entry and branch to it, rather than possibly
       // late binding the function, which may clobber the registers before we
       // have a chance to save them.
-      EmitToStreamer(
-          MCInstBuilder(AArch64::ADRP)
-              .addReg(AArch64::X16)
-              .addExpr(AArch64MCExpr::create(
-                  HwasanTagMismatchRef, AArch64MCExpr::VariantKind::VK_GOT_PAGE,
-                  OutContext)));
-      EmitToStreamer(
-          MCInstBuilder(AArch64::LDRXui)
-              .addReg(AArch64::X16)
-              .addReg(AArch64::X16)
-              .addExpr(AArch64MCExpr::create(
-                  HwasanTagMismatchRef, AArch64MCExpr::VariantKind::VK_GOT_LO12,
-                  OutContext)));
+      EmitToStreamer(MCInstBuilder(AArch64::ADRP)
+                         .addReg(AArch64::X16)
+                         .addExpr(AArch64MCExpr::create(
+                             HwasanTagMismatchRef, AArch64MCExpr::VK_GOT_PAGE,
+                             OutContext)));
+      EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
+                         .addReg(AArch64::X16)
+                         .addReg(AArch64::X16)
+                         .addExpr(AArch64MCExpr::create(
+                             HwasanTagMismatchRef, AArch64MCExpr::VK_GOT_LO12,
+                             OutContext)));
       EmitToStreamer(MCInstBuilder(AArch64::BR).addReg(AArch64::X16));
     }
   }
@@ -1141,7 +1139,7 @@ bool AArch64AsmPrinter::printAsmRegInClass(const MachineOperand &MO,
   assert(MO.isReg() && "Should only get here with a register!");
   const TargetRegisterInfo *RI = STI->getRegisterInfo();
   Register Reg = MO.getReg();
-  unsigned RegToPrint = RC->getRegister(RI->getEncodingValue(Reg));
+  MCRegister RegToPrint = RC->getRegister(RI->getEncodingValue(Reg));
   if (!RI->regsOverlap(RegToPrint, Reg))
     return true;
   O << AArch64InstPrinter::getRegisterName(RegToPrint, AltName);

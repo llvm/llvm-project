@@ -1214,6 +1214,17 @@ def LLVM_UndefAttr : LLVM_Attr<"Undef", "undef">;
 def LLVM_PoisonAttr : LLVM_Attr<"Poison", "poison">;
 
 //===----------------------------------------------------------------------===//
+// DSOLocalEquivalentAttr
+//===----------------------------------------------------------------------===//
+
+/// Folded into from LLVM::DSOLocalEquivalentOp.
+def LLVM_DSOLocalEquivalentAttr : LLVM_Attr<"DSOLocalEquivalent",
+                                            "dso_local_equivalent"> {
+  let parameters = (ins "FlatSymbolRefAttr":$sym);
+  let assemblyFormat = "$sym";
+}
+
+//===----------------------------------------------------------------------===//
 // VecTypeHintAttr
 //===----------------------------------------------------------------------===//
 

@@ -505,9 +505,8 @@ public:
   // Return whether this parser accept star as start of statement
   virtual bool starIsStartOfStatement() { return false; };
 
-  virtual const MCExpr *applyModifierToExpr(const MCExpr *E,
-                                            MCSymbolRefExpr::VariantKind,
-                                            MCContext &Ctx) {
+  virtual const MCExpr *applySpecifier(const MCExpr *E, uint32_t,
+                                       MCContext &Ctx) {
     return nullptr;
   }
 

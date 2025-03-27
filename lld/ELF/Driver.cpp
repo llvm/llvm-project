@@ -1545,6 +1545,15 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.warnSymbolOrdering =
       args.hasFlag(OPT_warn_symbol_ordering, OPT_no_warn_symbol_ordering, true);
   ctx.arg.whyExtract = args.getLastArgValue(OPT_why_extract);
+  for (opt::Arg *arg : args.filtered(OPT_why_live)) {
+    StringRef value(arg->getValue());
+    if (Expected<GlobPattern> pat = GlobPattern::create(arg->getValue())) {
+      ctx.arg.whyLive.emplace_back(std::move(*pat));
+    } else {
+      ErrAlways(ctx) << arg->getSpelling() << ": " << pat.takeError();
+      continue;
+    }
+  }
   ctx.arg.zCombreloc = getZFlag(args, "combreloc", "nocombreloc", true);
   ctx.arg.zCopyreloc = getZFlag(args, "copyreloc", "nocopyreloc", true);
   ctx.arg.zForceBti = hasZOption(args, "force-bti");

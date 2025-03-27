@@ -35,11 +35,10 @@ define void @test_scalarize_call(i32 %start, ptr %dst) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 %start, [[INDEX]]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add i32 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[INDUCTION1:%.*]] = add i32 [[OFFSET_IDX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.smin.i32(i32 [[INDUCTION]], i32 65535)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.smin.i32(i32 [[OFFSET_IDX]], i32 65535)
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.smin.i32(i32 [[INDUCTION1]], i32 65535)
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i32 [[INDUCTION]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i32 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[INDUCTION1]]
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[TMP3]], align 8
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP4]], align 8
@@ -142,10 +141,9 @@ define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[INDUCTION3:%.*]] = add i1 [[OFFSET_IDX]], true
 ; CHECK-NEXT:    br i1 [[INDUCTION]], label %pred.store.if, label %pred.store.continue
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[INDUCTION4:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr %src, i64 [[INDUCTION4]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr %src, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr %dst, i64 [[INDUCTION4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr %dst, i64 [[INDEX]]
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    br label %pred.store.continue
 ; CHECK:       pred.store.continue:
@@ -343,9 +341,8 @@ define void @pr76986_trunc_sext_interleaving_only(i16 %arg, ptr noalias %src, pt
 ; CHECK-LABEL: define void @pr76986_trunc_sext_interleaving_only(
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr %src, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr %src, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr %src, i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP3]], align 1
@@ -355,7 +352,7 @@ define void @pr76986_trunc_sext_interleaving_only(i16 %arg, ptr noalias %src, pt
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[TMP7]] to i16
 ; CHECK-NEXT:    [[TMP10:%.*]] = sdiv i16 [[TMP8]], %arg
 ; CHECK-NEXT:    [[TMP11:%.*]] = sdiv i16 [[TMP9]], %arg
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr %dst, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr %dst, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i16, ptr %dst, i64 [[TMP1]]
 ; CHECK-NEXT:    store i16 [[TMP10]], ptr [[TMP12]], align 2
 ; CHECK-NEXT:    store i16 [[TMP11]], ptr [[TMP13]], align 2

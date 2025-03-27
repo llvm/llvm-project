@@ -1031,13 +1031,14 @@ namespace ranges {
   template<bidirectional_iterator I, sentinel_for<I> S, class Comp = ranges::less,
            class Proj = identity>
     requires sortable<I, Comp, Proj>
-    I inplace_merge(I first, I middle, S last, Comp comp = {}, Proj proj = {});                    // since C++20
+    constexpr I                                                                            // constexpr since C++26
+      inplace_merge(I first, I middle, S last, Comp comp = {}, Proj proj = {});            // since C++20
 
   template<bidirectional_range R, class Comp = ranges::less, class Proj = identity>
     requires sortable<iterator_t<R>, Comp, Proj>
-    borrowed_iterator_t<R>
+    constexpr borrowed_iterator_t<R>                                                       // constexpr since C++26
       inplace_merge(R&& r, iterator_t<R> middle, Comp comp = {},
-                    Proj proj = {});                                                               // since C++20
+                    Proj proj = {});                                                       // since C++20
 
   template<permutable I, sentinel_for<I> S, class Proj = identity,
            indirect_equivalence_relation<projected<I, Proj>> C = ranges::equal_to>
@@ -1609,11 +1610,11 @@ template <class InputIterator1, class InputIterator2, class OutputIterator, clas
           InputIterator2 first2, InputIterator2 last2, OutputIterator result, Compare comp);
 
 template <class BidirectionalIterator>
-    void
+    constexpr void                                    // constexpr since C++26
     inplace_merge(BidirectionalIterator first, BidirectionalIterator middle, BidirectionalIterator last);
 
 template <class BidirectionalIterator, class Compare>
-    void
+    constexpr void                                    // constexpr since C++26
     inplace_merge(BidirectionalIterator first, BidirectionalIterator middle, BidirectionalIterator last, Compare comp);
 
 template <class InputIterator1, class InputIterator2>

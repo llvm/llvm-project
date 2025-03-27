@@ -38,3 +38,16 @@ float3 test_log_float3(float3 p0) { return log(p0); }
 // CHECK-LABEL: define noundef nofpclass(nan inf) <4 x float> @_Z15test_log_float4
 // CHECK: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.log.v4f32
 float4 test_log_float4(float4 p0) { return log(p0); }
+
+// CHECK-LABEL: define noundef nofpclass(nan inf) float {{.*}}test_log_double
+// CHECK: call reassoc nnan ninf nsz arcp afn float @llvm.log.f32(
+float test_log_double(double p0) { return log(p0); }
+// CHECK-LABEL: define noundef nofpclass(nan inf) <2 x float> {{.*}}test_log_double2
+// CHECK: call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.log.v2f32
+float2 test_log_double2(double2 p0) { return log(p0); }
+// CHECK-LABEL: define noundef nofpclass(nan inf) <3 x float> {{.*}}test_log_double3
+// CHECK: call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.log.v3f32
+float3 test_log_double3(double3 p0) { return log(p0); }
+// CHECK-LABEL: define noundef nofpclass(nan inf) <4 x float> {{.*}}test_log_double4
+// CHECK: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.log.v4f32
+float4 test_log_double4(double4 p0) { return log(p0); }

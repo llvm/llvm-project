@@ -954,11 +954,13 @@ protected:
     LLVM_PREFERRED_TYPE(TypeTrait)
     unsigned Kind : 8;
 
-    /// If this expression is not value-dependent, this indicates whether
-    /// the trait evaluated true or false.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsBooleanTypeTrait : 1;
+
+    /// If this expression is a non value-dependent boolean trait,
+    /// this indicates whether the trait evaluated true or false.
     LLVM_PREFERRED_TYPE(bool)
     unsigned Value : 1;
-
     /// The number of arguments to this type trait. According to [implimits]
     /// 8 bits would be enough, but we require (and test for) at least 16 bits
     /// to mirror FunctionType.

@@ -1635,8 +1635,7 @@ void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
   if (!Value::hasMetadata())
     return; // Nothing to remove!
 
-  SmallSet<unsigned, 32> KnownSet;
-  KnownSet.insert(KnownIDs.begin(), KnownIDs.end());
+  SmallSet<unsigned, 32> KnownSet(llvm::from_range, KnownIDs);
 
   // A DIAssignID attachment is debug metadata, don't drop it.
   KnownSet.insert(LLVMContext::MD_DIAssignID);

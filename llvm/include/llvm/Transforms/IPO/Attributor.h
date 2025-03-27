@@ -5103,8 +5103,7 @@ private:
       indicatePessimisticFixpoint();
       return;
     }
-    for (const MemberTy &C : R.Set)
-      Set.insert(C);
+    Set.insert_range(R.Set);
     UndefIsContained |= R.undefIsContained();
     checkAndInvalidate();
   }

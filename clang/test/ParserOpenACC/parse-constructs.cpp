@@ -51,3 +51,10 @@ namespace NS {
 // expected-note@#PrivateMemFunc{{implicitly declared private here}}
 #pragma acc routine (NS::C::private_mem_func) seq
 #pragma acc routine (NS::C::public_mem_func) seq
+
+void foo() {
+  auto x = [](){};
+#pragma acc routine seq
+  auto y = [](){};
+#pragma acc routine (x) seq
+}

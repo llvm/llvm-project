@@ -3557,6 +3557,11 @@ struct OmpArgument {
       OmpMapperSpecifier, OmpReductionSpecifier>
       u;
 };
+
+struct OmpArgumentList {
+  WRAPPER_CLASS_BOILERPLATE(OmpArgumentList, std::list<OmpArgument>);
+  CharBlock source;
+};
 } // namespace arguments
 
 inline namespace traits {
@@ -4511,10 +4516,11 @@ struct OmpDirectiveSpecification {
   llvm::omp::Directive DirId() const { //
     return std::get<OmpDirectiveName>(t).v;
   }
+  const OmpArgumentList &Arguments() const;
   const OmpClauseList &Clauses() const;
 
   CharBlock source;
-  std::tuple<OmpDirectiveName, std::optional<std::list<OmpArgument>>,
+  std::tuple<OmpDirectiveName, std::optional<OmpArgumentList>,
       std::optional<OmpClauseList>, Flags>
       t;
 };
@@ -4865,16 +4871,15 @@ struct OmpLoopDirective {
 
 // 2.14.2 cancellation-point -> CANCELLATION POINT construct-type-clause
 struct OpenMPCancellationPointConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPCancellationPointConstruct);
+  WRAPPER_CLASS_BOILERPLATE(
+      OpenMPCancellationPointConstruct, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<Verbatim, OmpClauseList> t;
 };
 
 // 2.14.1 cancel -> CANCEL construct-type-clause [ [,] if-clause]
 struct OpenMPCancelConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPCancelConstruct);
+  WRAPPER_CLASS_BOILERPLATE(OpenMPCancelConstruct, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<Verbatim, OmpClauseList> t;
 };
 
 // Ref: [5.0:254-255], [5.1:287-288], [5.2:322-323]
@@ -4884,9 +4889,8 @@ struct OpenMPCancelConstruct {
 //                  destroy-clause |
 //                  update-clause
 struct OpenMPDepobjConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPDepobjConstruct);
+  WRAPPER_CLASS_BOILERPLATE(OpenMPDepobjConstruct, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<Verbatim, OmpObject, OmpClause> t;
 };
 
 // Ref: [5.2: 200-201]
@@ -4927,22 +4931,14 @@ struct OpenMPDispatchConstruct {
 //    ACQ_REL | RELEASE | ACQUIRE |                 // since 5.0
 //    SEQ_CST                                       // since 5.1
 struct OpenMPFlushConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPFlushConstruct);
-  CharBlock source;
-  std::tuple<Verbatim, std::optional<OmpObjectList>,
-      std::optional<OmpClauseList>, /*TrailingClauses=*/bool>
-      t;
-};
-
-struct OmpSimpleStandaloneDirective {
-  WRAPPER_CLASS_BOILERPLATE(OmpSimpleStandaloneDirective, llvm::omp::Directive);
+  WRAPPER_CLASS_BOILERPLATE(OpenMPFlushConstruct, OmpDirectiveSpecification);
   CharBlock source;
 };
 
 struct OpenMPSimpleStandaloneConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPSimpleStandaloneConstruct);
+  WRAPPER_CLASS_BOILERPLATE(
+      OpenMPSimpleStandaloneConstruct, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<OmpSimpleStandaloneDirective, OmpClauseList> t;
 };
 
 struct OpenMPStandaloneConstruct {

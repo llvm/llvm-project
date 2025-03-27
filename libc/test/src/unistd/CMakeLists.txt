@@ -15,6 +15,8 @@ add_libc_unittest(
     libc.src.unistd.access
     libc.src.unistd.close
     libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -30,6 +32,7 @@ add_libc_unittest(
     libc.src.unistd.chdir
     libc.src.unistd.close
     libc.src.fcntl.open
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -48,6 +51,7 @@ add_libc_unittest(
     libc.src.unistd.read
     libc.src.unistd.unlink
     libc.src.unistd.write
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -66,6 +70,7 @@ add_libc_unittest(
     libc.src.unistd.read
     libc.src.unistd.unlink
     libc.src.unistd.write
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -84,6 +89,7 @@ add_libc_unittest(
     libc.src.unistd.read
     libc.src.unistd.unlink
     libc.src.unistd.write
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -99,6 +105,7 @@ add_libc_unittest(
     libc.src.fcntl.open
     libc.src.unistd.fchdir
     libc.src.unistd.close
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -118,6 +125,8 @@ add_libc_unittest(
     libc.src.unistd.unlink
     libc.src.unistd.write
     libc.src.__support.CPP.string_view
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -136,6 +145,7 @@ add_libc_unittest(
     libc.src.unistd.pwrite
     libc.src.unistd.unlink
     libc.src.unistd.write
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -154,6 +164,7 @@ add_libc_unittest(
     libc.src.unistd.read
     libc.src.unistd.write
     libc.src.stdio.remove
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -170,6 +181,8 @@ add_libc_unittest(
     libc.src.unistd.close
     libc.src.unistd.link
     libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -185,6 +198,8 @@ add_libc_unittest(
     libc.src.unistd.close
     libc.src.unistd.linkat
     libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -200,6 +215,7 @@ add_libc_unittest(
     libc.src.unistd.close
     libc.src.unistd.lseek
     libc.src.unistd.read
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -214,6 +230,7 @@ add_libc_unittest(
     libc.src.errno.errno
     libc.src.unistd.close
     libc.src.unistd.pipe
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -228,6 +245,7 @@ add_libc_unittest(
     libc.src.errno.errno
     libc.src.unistd.close
     libc.src.unistd.pipe2
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -242,6 +260,8 @@ add_libc_unittest(
     libc.src.errno.errno
     libc.src.sys.stat.mkdir
     libc.src.unistd.rmdir
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -268,6 +288,8 @@ add_libc_unittest(
     libc.src.unistd.symlink
     libc.src.unistd.unlink
     libc.src.__support.CPP.string_view
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -285,6 +307,8 @@ add_libc_unittest(
     libc.src.unistd.symlink
     libc.src.unistd.unlink
     libc.src.__support.CPP.string_view
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -310,6 +334,8 @@ add_libc_unittest(
     libc.src.unistd.close
     libc.src.unistd.symlink
     libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -325,6 +351,8 @@ add_libc_unittest(
     libc.src.unistd.close
     libc.src.unistd.symlinkat
     libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -343,6 +371,8 @@ add_libc_unittest(
     libc.src.unistd.unlink
     libc.src.unistd.write
     libc.src.__support.CPP.string_view
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -357,6 +387,8 @@ add_libc_unittest(
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -372,6 +404,8 @@ add_libc_unittest(
     libc.src.fcntl.openat
     libc.src.unistd.close
     libc.src.unistd.unlinkat
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -402,6 +436,8 @@ add_libc_unittest(
     getsid_test.cpp
   DEPENDS
     libc.src.unistd.getsid
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -425,6 +461,8 @@ add_libc_unittest(
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -449,6 +487,7 @@ add_libc_unittest(
     libc.include.sys_syscall
     libc.src.errno.errno
     libc.src.unistd.__llvm_libc_syscall
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -477,6 +516,8 @@ add_libc_unittest(
     libc.src.unistd.fpathconf
     libc.src.fcntl.open
     libc.src.unistd.close
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -492,6 +533,8 @@ add_libc_unittest(
     libc.src.unistd.pathconf
     libc.src.fcntl.open
     libc.src.unistd.close
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_test(
@@ -517,6 +560,7 @@ add_libc_test(
   DEPENDS
     libc.src.unistd.getentropy
     libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 

@@ -246,6 +246,9 @@ public:
     if (Callee && TFA.isTrivial(Callee) && !Callee->isVirtualAsWritten())
       return true;
 
+    if (isTrivialBuiltinFunction(Callee))
+      return true;
+
     if (CE->getNumArgs() == 0)
       return false;
 

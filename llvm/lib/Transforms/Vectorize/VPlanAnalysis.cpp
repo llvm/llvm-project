@@ -66,6 +66,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
                inferScalarType(R->getOperand(1)) &&
            "different types inferred for different operands");
     return IntegerType::get(Ctx, 1);
+  case VPInstruction::ComputeFindLastIVResult:
   case VPInstruction::ComputeReductionResult: {
     auto *PhiR = cast<VPReductionPHIRecipe>(R->getOperand(0));
     auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
@@ -255,7 +256,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
               [](const auto *R) { return R->getScalarType(); })
           .Case<VPReductionRecipe, VPPredInstPHIRecipe, VPWidenPHIRecipe,
                 VPScalarIVStepsRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,
-                VPReverseVectorPointerRecipe, VPWidenCanonicalIVRecipe,
+                VPVectorEndPointerRecipe, VPWidenCanonicalIVRecipe,
                 VPPartialReductionRecipe>([this](const VPRecipeBase *R) {
             return inferScalarType(R->getOperand(0));
           })

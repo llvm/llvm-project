@@ -1062,7 +1062,7 @@ namespace cwg471 { // cwg471: 2.8
   //   expected-note@#cwg471-G-using {{declared private here}}
 } // namespace cwg471
 
-namespace cwg472 { // cwg472: no drafting 2011-04
+namespace cwg472 { // cwg472: no open 2011-04
 struct B {
   int i; // #cwg472-i
 };
@@ -1176,7 +1176,7 @@ namespace cwg480 { // cwg480: 2.7
 
   extern int D::*c;
   int A::*d = static_cast<int A::*>(c);
-  // expected-error@-1 {{conversion from pointer to member of class 'cwg480::D' to pointer to member of class 'A' via virtual base 'cwg480::B' is not allowed}}
+  // expected-error@-1 {{conversion from pointer to member of class 'D' to pointer to member of class 'A' via virtual base 'cwg480::B' is not allowed}}
 
   D *e;
   A *f = e;

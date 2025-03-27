@@ -154,10 +154,8 @@ static void destructureSlot(
     statistics.maxSubelementAmount->updateMax(slot.subelementTypes.size());
 
   SetVector<Operation *> usersToRewire;
-  for (Operation *user : llvm::make_first_range(info.userToBlockingUses))
-    usersToRewire.insert(user);
-  for (DestructurableAccessorOpInterface accessor : info.accessors)
-    usersToRewire.insert(accessor);
+  usersToRewire.insert_range(llvm::make_first_range(info.userToBlockingUses));
+  usersToRewire.insert_range(info.accessors);
   usersToRewire = mlir::topologicalSort(usersToRewire);
 
   llvm::SmallVector<Operation *> toErase;

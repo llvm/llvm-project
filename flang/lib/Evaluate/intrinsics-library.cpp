@@ -23,7 +23,7 @@
 #include <complex>
 #include <functional>
 #if HAS_QUADMATHLIB
-#include "quadmath.h"
+#include "quadmath_wrapper.h"
 #endif
 #include "flang/Common/float128.h"
 #include "flang/Common/float80.h"

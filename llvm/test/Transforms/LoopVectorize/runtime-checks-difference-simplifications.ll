@@ -58,8 +58,7 @@ define void @test_large_number_of_group(ptr %dst, i64 %off, i64 %N) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP11:%.*]] = add nsw i64 [[TMP10]], -5
+; CHECK-NEXT:    [[TMP11:%.*]] = add nsw i64 [[INDEX]], -5
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP11]], [[OFF]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[DST:%.*]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr double, ptr [[TMP13]], i32 0
@@ -242,15 +241,14 @@ define void @check_creation_order(ptr %a, ptr %b, i32 %m) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[INVARIANT_GEP]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[INVARIANT_GEP]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr double, ptr [[TMP3]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP4]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[B]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[TMP5]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x double>, ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <4 x double> [[WIDE_LOAD]], [[WIDE_LOAD4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds double, ptr [[TMP8]], i32 0
 ; CHECK-NEXT:    store <4 x double> [[TMP7]], ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

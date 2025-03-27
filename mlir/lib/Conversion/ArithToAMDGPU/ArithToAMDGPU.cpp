@@ -83,14 +83,15 @@ static bool isSupportedF8(Type elementType, Chipset chipset) {
   return false;
 }
 
-static Value castF32To(Type elementType, Value f32, Location loc,
+static Value castF32To(Type desType, Value f32, Location loc,
                        PatternRewriter &rewriter) {
+  Type elementType = getElementTypeOrSelf(desType);
   if (elementType.isF32())
     return f32;
   if (elementType.getIntOrFloatBitWidth() < 32)
-    return rewriter.create<arith::TruncFOp>(loc, elementType, f32);
+    return rewriter.create<arith::TruncFOp>(loc, desType, f32);
   if (elementType.getIntOrFloatBitWidth() > 32)
-    return rewriter.create<arith::ExtFOp>(loc, elementType, f32);
+    return rewriter.create<arith::ExtFOp>(loc, desType, f32);
   llvm_unreachable("The only 32-bit float type is f32");
 }
 
@@ -110,6 +111,7 @@ ExtFOnFloat8RewritePattern::matchAndRewrite(arith::ExtFOp op,
   Location loc = op.getLoc();
   Value in = op.getIn();
   Type outElemType = getElementTypeOrSelf(op.getOut().getType());
+  VectorType extResType = VectorType::get(2, rewriter.getF32Type());
   if (!inVecType) {
     Value asFloat = rewriter.create<amdgpu::ExtPackedFp8Op>(
         loc, rewriter.getF32Type(), in, 0);
@@ -150,11 +152,20 @@ ExtFOnFloat8RewritePattern::matchAndRewrite(arith::ExtFOp op,
     int64_t elemsThisOp = std::min(numElements, i + 4) - i;
     Value inSlice = rewriter.create<vector::ExtractStridedSliceOp>(
         loc, in, i, elemsThisOp, 1);
-    for (int64_t j = 0; j < elemsThisOp; ++j) {
-      Value asFloat = rewriter.create<amdgpu::ExtPackedFp8Op>(
-          loc, rewriter.getF32Type(), inSlice, j);
-      Value asType = castF32To(outElemType, asFloat, loc, rewriter);
-      result = rewriter.create<vector::InsertOp>(loc, asType, result, i + j);
+    for (int64_t j = 0; j < elemsThisOp; j += 2) {
+      if (i + j + 1 < numElements) { // Convert two 8-bit elements
+        Value asFloats = rewriter.create<amdgpu::ExtPackedFp8Op>(
+            loc, extResType, inSlice, j / 2);
+        Type desType = VectorType::get(2, outElemType);
+        Value asType = castF32To(desType, asFloats, loc, rewriter);
+        result = rewriter.create<vector::InsertStridedSliceOp>(
+            loc, asType, result, i + j, 1);
+      } else { // Convert a 8-bit element
+        Value asFloat = rewriter.create<amdgpu::ExtPackedFp8Op>(
+            loc, rewriter.getF32Type(), inSlice, j / 2 * 2);
+        Value asType = castF32To(outElemType, asFloat, loc, rewriter);
+        result = rewriter.create<vector::InsertOp>(loc, asType, result, i + j);
+      }
     }
   }
 

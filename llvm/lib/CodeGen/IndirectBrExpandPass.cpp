@@ -119,8 +119,7 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU) {
       }
 
       IndirectBrs.push_back(IBr);
-      for (BasicBlock *SuccBB : IBr->successors())
-        IndirectBrSuccs.insert(SuccBB);
+      IndirectBrSuccs.insert_range(IBr->successors());
     }
 
   if (IndirectBrs.empty())

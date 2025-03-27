@@ -38,15 +38,14 @@ define void @multiple_exits_unique_exit_block(ptr %A, ptr %B, i32 %N) #0 {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP13]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[TMP19]], i32 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP23:%.*]] = mul i64 [[TMP22]], 4
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[TMP19]], i64 [[TMP23]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP21]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 4 x i32>, ptr [[TMP24]], align 4
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[TMP13]]
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i32, ptr [[TMP25]], i32 0
 ; CHECK-NEXT:    [[TMP28:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP29:%.*]] = mul i64 [[TMP28]], 4
@@ -129,15 +128,14 @@ define i32 @multiple_exits_multiple_exit_blocks(ptr %A, ptr %B, i32 %N) #0 {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP13]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[TMP19]], i32 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP23:%.*]] = mul i64 [[TMP22]], 4
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[TMP19]], i64 [[TMP23]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP21]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 4 x i32>, ptr [[TMP24]], align 4
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[TMP13]]
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i32, ptr [[TMP25]], i32 0
 ; CHECK-NEXT:    [[TMP28:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP29:%.*]] = mul i64 [[TMP28]], 4

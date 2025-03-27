@@ -454,10 +454,23 @@ inline FPDecorationId demangledPostfixToDecorationId(const std::string &S) {
   return It == Mapping.end() ? FPDecorationId::NONE : It->second;
 }
 
-void createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
-                                 unsigned MinWC, unsigned ContinuedOpcode,
-                                 ArrayRef<Register> Args,
-                                 Register ReturnRegister, Register TypeID);
+SmallVector<MachineInstr *, 4>
+createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
+                            unsigned MinWC, unsigned ContinuedOpcode,
+                            ArrayRef<Register> Args, Register ReturnRegister,
+                            Register TypeID);
+
+// Instruction selection directed by type folding.
+const std::set<unsigned> &getTypeFoldingSupportedOpcodes();
+bool isTypeFoldingSupported(unsigned Opcode);
+
+// Traversing [g]MIR accounting for pseudo-instructions.
+MachineInstr *passCopy(MachineInstr *Def, const MachineRegisterInfo *MRI);
+MachineInstr *getDef(const MachineOperand &MO, const MachineRegisterInfo *MRI);
+MachineInstr *getImm(const MachineOperand &MO, const MachineRegisterInfo *MRI);
+int64_t foldImm(const MachineOperand &MO, const MachineRegisterInfo *MRI);
+unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
+                                const MachineInstr *ResType);
 
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H
