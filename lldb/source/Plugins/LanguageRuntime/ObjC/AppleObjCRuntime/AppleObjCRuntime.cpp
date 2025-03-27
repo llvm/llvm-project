@@ -549,7 +549,7 @@ ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
        idx++) {
     ValueObjectSP dict_entry = reserved_dict->GetChildAtIndex(idx);
 
-    auto data_or_err = dict_entry->GetData();
+    auto data_or_err = llvm::expectedToOptional(dict_entry->GetData());
     if (!data_or_err)
       return ThreadSP();
     auto data = std::move(*data_or_err);
