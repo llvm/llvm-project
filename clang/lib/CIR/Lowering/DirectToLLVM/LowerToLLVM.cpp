@@ -516,14 +516,11 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
     assert(!MissingFeatures::dataMemberType());
     break;
   case cir::CastKind::ptr_to_bool: {
-    auto zero =
-        mlir::IntegerAttr::get(mlir::IntegerType::get(getContext(), 64), 0);
-    auto null = rewriter.create<cir::ConstantOp>(
-        castOp.getLoc(), castOp.getSrc().getType(),
-        cir::ConstPtrAttr::get(getContext(), castOp.getSrc().getType(), zero));
-    rewriter.replaceOpWithNewOp<cir::CmpOp>(
-        castOp, cir::BoolType::get(getContext()), cir::CmpOpKind::ne,
-        castOp.getSrc(), null);
+    mlir::Value llvmSrcVal = adaptor.getOperands().front();
+    mlir::Value zeroPtr = rewriter.create<mlir::LLVM::ZeroOp>(
+        castOp.getLoc(), llvmSrcVal.getType());
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
+        castOp, mlir::LLVM::ICmpPredicate::ne, llvmSrcVal, zeroPtr);
     break;
   }
   case cir::CastKind::address_space: {
