@@ -256,44 +256,34 @@ public:
     }
   }
 
+  // Return a copy of all the enabled instances.
+  // Note that this is a copy of the internal state so modifications
+  // to the returned instances will not be reflected back to instances
+  // stored by the PluginInstances object.
+  std::vector<Instance> GetSnapshot() { return m_instances; }
+
   const Instance *GetInstanceAtIndex(uint32_t idx) {
     uint32_t count = 0;
 
-    const Instance *instance = FindEnabledInstance(
+    return FindEnabledInstance(
         [&](const Instance &instance) { return count++ == idx; });
-    return instance;
   }
 
   const Instance *GetInstanceForName(llvm::StringRef name) {
     if (name.empty())
       return nullptr;
 
-    const Instance *instance = FindEnabledInstance(
+    return FindEnabledInstance(
         [&](const Instance &instance) { return instance.name == name; });
-
-    return instance;
-  }
-
-  // Iterate over all enabled plugins, calling the callback for each one.
-  void ForEachEnabledPlugin(
-      std::function<IterationAction(const Instance &)> callback) const {
-    for (auto &instance : m_instances) {
-      if (callback(instance) == IterationAction::Stop)
-        return;
-    }
   }
 
   const Instance *
   FindEnabledInstance(std::function<bool(const Instance &)> predicate) const {
-    const Instance *found = nullptr;
-    ForEachEnabledPlugin([&](const Instance &instance) {
-      if (predicate(instance)) {
-        found = &instance;
-        return IterationAction::Stop;
-      }
-      return IterationAction::Continue;
-    });
-    return found;
+    for (const auto &instance : m_instances) {
+      if (predicate(instance))
+        return &instance;
+    }
+    return nullptr;
   }
 
 private:
@@ -744,19 +734,13 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
 
   // Fall back to object plugins.
   const auto &plugin_name = options.GetPluginName().value_or("");
-  bool saved = false;
-  GetObjectFileInstances().ForEachEnabledPlugin([&](const auto &instance) {
+  auto instances = GetObjectFileInstances().GetSnapshot();
+  for (auto &instance : instances) {
     if (plugin_name.empty() || instance.name == plugin_name) {
-      if (instance.save_core &&
-          instance.save_core(process_sp, options, error)) {
-        saved = true;
-        return IterationAction::Stop;
-      }
+      if (instance.save_core && instance.save_core(process_sp, options, error))
+        return error;
     }
-    return IterationAction::Continue;
-  });
-  if (saved)
-    return error;
+  }
 
   // Check to see if any of the object file plugins tried and failed to save.
   // If none ran, set the error message.
@@ -868,11 +852,10 @@ PluginManager::GetPlatformCreateCallbackForPluginName(llvm::StringRef name) {
 
 void PluginManager::AutoCompletePlatformName(llvm::StringRef name,
                                              CompletionRequest &request) {
-  GetPlatformInstances().ForEachEnabledPlugin([&](const auto &instance) {
+  for (const auto &instance : GetPlatformInstances().GetSnapshot()) {
     if (instance.name.starts_with(name))
       request.AddCompletion(instance.name);
-    return IterationAction::Continue;
-  });
+  }
 }
 
 #pragma mark Process
@@ -917,11 +900,10 @@ PluginManager::GetProcessCreateCallbackForPluginName(llvm::StringRef name) {
 
 void PluginManager::AutoCompleteProcessName(llvm::StringRef name,
                                             CompletionRequest &request) {
-  GetProcessInstances().ForEachEnabledPlugin([&](const auto &instance) {
+  for (const auto &instance : GetProcessInstances().GetSnapshot()) {
     if (instance.name.starts_with(name))
       request.AddCompletion(instance.name, instance.description);
-    return IterationAction::Continue;
-  });
+  }
 }
 
 #pragma mark RegisterTypeBuilder
@@ -1005,22 +987,19 @@ PluginManager::GetScriptInterpreterCreateCallbackAtIndex(uint32_t idx) {
 lldb::ScriptInterpreterSP
 PluginManager::GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
                                                Debugger &debugger) {
-  ScriptInterpreterCreateInstance script_instance = nullptr;
-  GetScriptInterpreterInstances().ForEachEnabledPlugin(
-      [&](const auto &instance) {
-        if (instance.language == lldb::eScriptLanguageNone)
-          script_instance = instance.create_callback;
+  const auto instances = GetScriptInterpreterInstances().GetSnapshot();
+  ScriptInterpreterCreateInstance none_instance = nullptr;
+  for (const auto &instance : instances) {
+    if (instance.language == lldb::eScriptLanguageNone)
+      none_instance = instance.create_callback;
 
-        if (script_lang == instance.language) {
-          script_instance = instance.create_callback;
-          return IterationAction::Stop;
-        }
-        return IterationAction::Continue;
-      });
+    if (script_lang == instance.language)
+      return instance.create_callback(debugger);
+  }
 
   // If we didn't find one, return the ScriptInterpreter for the null language.
-  assert(script_instance != nullptr);
-  return script_instance(debugger);
+  assert(none_instance != nullptr);
+  return none_instance(debugger);
 }
 
 #pragma mark StructuredDataPlugin
@@ -1190,64 +1169,60 @@ PluginManager::GetSymbolLocatorCreateCallbackAtIndex(uint32_t idx) {
 
 ModuleSpec
 PluginManager::LocateExecutableObjectFile(const ModuleSpec &module_spec) {
-  std::optional<ModuleSpec> result;
-  GetSymbolLocatorInstances().ForEachEnabledPlugin([&](const auto &instance) {
+  auto instances = GetSymbolLocatorInstances().GetSnapshot();
+  for (auto &instance : instances) {
     if (instance.locate_executable_object_file) {
-      result = instance.locate_executable_object_file(module_spec);
+      std::optional<ModuleSpec> result =
+          instance.locate_executable_object_file(module_spec);
       if (result)
-        return IterationAction::Stop;
+        return *result;
     }
-    return IterationAction::Continue;
-  });
-  return result ? *result : ModuleSpec{};
+  }
+  return {};
 }
 
 FileSpec PluginManager::LocateExecutableSymbolFile(
     const ModuleSpec &module_spec, const FileSpecList &default_search_paths) {
-  std::optional<FileSpec> result;
-  GetSymbolLocatorInstances().ForEachEnabledPlugin([&](const auto &instance) {
+  auto instances = GetSymbolLocatorInstances().GetSnapshot();
+  for (auto &instance : instances) {
     if (instance.locate_executable_symbol_file) {
-      result = instance.locate_executable_symbol_file(module_spec,
-                                                      default_search_paths);
+      std::optional<FileSpec> result = instance.locate_executable_symbol_file(
+          module_spec, default_search_paths);
       if (result)
-        return IterationAction::Stop;
+        return *result;
     }
-    return IterationAction::Continue;
-  });
-  return result ? *result : FileSpec{};
+  }
+  return {};
 }
 
 bool PluginManager::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
                                                 Status &error,
                                                 bool force_lookup,
                                                 bool copy_executable) {
-  bool found = false;
-  GetSymbolLocatorInstances().ForEachEnabledPlugin([&](const auto &instance) {
+  auto instances = GetSymbolLocatorInstances().GetSnapshot();
+  for (auto &instance : instances) {
     if (instance.download_object_symbol_file) {
       if (instance.download_object_symbol_file(module_spec, error, force_lookup,
-                                               copy_executable)) {
-        found = true;
-        return IterationAction::Stop;
-      }
+                                               copy_executable))
+        return true;
     }
-    return IterationAction::Continue;
-  });
-  return found;
+  }
+  return false;
 }
 
 FileSpec PluginManager::FindSymbolFileInBundle(const FileSpec &symfile_bundle,
                                                const UUID *uuid,
                                                const ArchSpec *arch) {
-  std::optional<FileSpec> result;
-  GetSymbolLocatorInstances().ForEachEnabledPlugin([&](const auto &instance) {
+  auto instances = GetSymbolLocatorInstances().GetSnapshot();
+  for (auto &instance : instances) {
     if (instance.find_symbol_file_in_bundle) {
-      result = instance.find_symbol_file_in_bundle(symfile_bundle, uuid, arch);
+      std::optional<FileSpec> result =
+          instance.find_symbol_file_in_bundle(symfile_bundle, uuid, arch);
       if (result)
-        return IterationAction::Stop;
+        return *result;
     }
-    return IterationAction::Continue;
-  });
-  return result ? *result : FileSpec{};
+  }
+  return {};
 }
 
 #pragma mark Trace
@@ -1519,20 +1494,18 @@ PluginManager::GetTypeSystemCreateCallbackAtIndex(uint32_t idx) {
 }
 
 LanguageSet PluginManager::GetAllTypeSystemSupportedLanguagesForTypes() {
+  const auto instances = GetTypeSystemInstances().GetSnapshot();
   LanguageSet all;
-  GetTypeSystemInstances().ForEachEnabledPlugin([&](const auto &instance) {
-    all.bitvector |= instance.supported_languages_for_types.bitvector;
-    return IterationAction::Continue;
-  });
+  for (unsigned i = 0; i < instances.size(); ++i)
+    all.bitvector |= instances[i].supported_languages_for_types.bitvector;
   return all;
 }
 
 LanguageSet PluginManager::GetAllTypeSystemSupportedLanguagesForExpressions() {
+  const auto instances = GetTypeSystemInstances().GetSnapshot();
   LanguageSet all;
-  GetTypeSystemInstances().ForEachEnabledPlugin([&](const auto &instance) {
-    all.bitvector |= instance.supported_languages_for_expressions.bitvector;
-    return IterationAction::Continue;
-  });
+  for (unsigned i = 0; i < instances.size(); ++i)
+    all.bitvector |= instances[i].supported_languages_for_expressions.bitvector;
   return all;
 }
 
@@ -1573,13 +1546,7 @@ bool PluginManager::UnregisterPlugin(
 }
 
 uint32_t PluginManager::GetNumScriptedInterfaces() {
-  uint32_t num = 0;
-  GetScriptedInterfaceInstances().ForEachEnabledPlugin(
-      [&](const auto &instance) {
-        ++num;
-        return IterationAction::Continue;
-      });
-  return num;
+  return GetScriptedInterfaceInstances().GetSnapshot().size();
 }
 
 llvm::StringRef PluginManager::GetScriptedInterfaceNameAtIndex(uint32_t index) {
@@ -1645,11 +1612,10 @@ LanguageSet PluginManager::GetREPLSupportedLanguagesAtIndex(uint32_t idx) {
 }
 
 LanguageSet PluginManager::GetREPLAllTypeSystemSupportedLanguages() {
+  const auto instances = GetREPLInstances().GetSnapshot();
   LanguageSet all;
-  GetREPLInstances().ForEachEnabledPlugin([&](const auto &instance) {
-    all.bitvector |= instance.supported_languages.bitvector;
-    return IterationAction::Continue;
-  });
+  for (unsigned i = 0; i < instances.size(); ++i)
+    all.bitvector |= instances[i].supported_languages.bitvector;
   return all;
 }
 
