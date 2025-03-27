@@ -8,11 +8,14 @@
 
 // REQUIRES: std-at-least-c++20
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_REMOVED_CONSTEXPR_HASH_VECTOR_BOOL
+
 // <vector>
 
 // template<class Allocator> struct hash<vector<bool, Allocator>>;
 
-// libc++ makes the operator() of this partial specialization constexpr since C++20, which is a conforming extension.
+// Since LLVM 16, libc++ has made the operator() of this partial specialization constexpr since C++20,
+// which is a conforming extension. However, such extension was unintended, and is being removed.
 
 #include <cassert>
 #include <functional>
