@@ -835,6 +835,9 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::GET_FPENV, VT, Expand);
     setOperationAction(ISD::SET_FPENV, VT, Expand);
     setOperationAction(ISD::RESET_FPENV, VT, Expand);
+
+    for (MVT InputVT : MVT::all_valuetypes())
+      setPartialReduceMLAAction(VT, InputVT, Expand);
   }
 
   // Most targets ignore the @llvm.prefetch intrinsic.
