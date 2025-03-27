@@ -58,7 +58,7 @@ def NegStackAdjAsmOperand : AsmOperandClass {
   let RenderMethod = "addSpimmOperands";
 }
 
-def rlist : Operand<OtherVT> {
+def rlist : RISCVOp<OtherVT> {
    let ParserMatchClass = RlistAsmOperand;
    let PrintMethod = "printRlist";
    let DecoderMethod = "decodeZcmpRlist";
@@ -70,6 +70,8 @@ def rlist : Operand<OtherVT> {
     // 0~3 Reserved for EABI
     return isUInt<4>(Imm) && Imm >= 4;
   }];
+
+  let OperandType = "OPERAND_RLIST";
 }
 
 def stackadj : RISCVOp<OtherVT> {
