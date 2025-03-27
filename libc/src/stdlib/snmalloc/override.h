@@ -28,6 +28,10 @@
 
 // TODO: define this in stdio.h
 #define STDERR_FILENO 2
+
+// When PThread destructor is used, snmalloc uses pthread_key_create to
+// register its cleanup routine together with an atexit operation for main
+// thread cleanup.
 #define SNMALLOC_USE_PTHREAD_DESTRUCTORS
 
 // Enforce internal errno implementation
