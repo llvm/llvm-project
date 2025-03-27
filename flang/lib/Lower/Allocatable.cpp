@@ -468,11 +468,11 @@ private:
   }
 
   void genSimpleAllocation(const Allocation &alloc,
-      const fir::MutableBoxValue &box) {  
+                           const fir::MutableBoxValue &box) {
     bool isCudaSymbol = Fortran::semantics::HasCUDAAttr(alloc.getSymbol());
-    
+
     unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
-  
+
     if (isCudaSymbol) {
       bool inlineAllocation = !box.isDerived() && !errorManager.hasStatSpec() &&
                               !alloc.type.IsPolymorphic() &&
@@ -501,7 +501,8 @@ private:
       stat = genRuntimeAllocate(builder, loc, box, errorManager);
       setPinnedToFalse();
     } else {
-      stat = genCudaAllocate(builder, loc, box, errorManager, alloc.getSymbol());
+      stat =
+          genCudaAllocate(builder, loc, box, errorManager, alloc.getSymbol());
     }
     fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
     postAllocationAction(alloc);
@@ -866,21 +867,21 @@ genDeallocate(fir::FirOpBuilder &builder,
   if (!isCudaSymbol) {
     // For non-CUDA symbols, always use runtime deallocation.
     errorManager.genStatCheck(builder, loc);
-    stat = genRuntimeDeallocate(builder, loc, box, errorManager, declaredTypeDesc);
-  }
-  else {
+    stat =
+        genRuntimeDeallocate(builder, loc, box, errorManager, declaredTypeDesc);
+  } else {
     bool inlineDeallocation =
-    !box.isDerived() && !box.isPolymorphic() && !box.hasAssumedRank() &&
-    !box.isUnlimitedPolymorphic() && !errorManager.hasStatSpec() &&
-    !useAllocateRuntime && !box.isPointer();
+        !box.isDerived() && !box.isPolymorphic() && !box.hasAssumedRank() &&
+        !box.isUnlimitedPolymorphic() && !errorManager.hasStatSpec() &&
+        !useAllocateRuntime && !box.isPointer();
 
-    if (inlineDeallocation && isCudaDeviceContext) {  
-      // Inline deallocation for CUDA when conditions hold.  
-      stat = fir::factory::genFreemem(builder, loc, box);  
-    } else {  
-      // Otherwise, use the CUDA-specific runtime deallocation.  
-      errorManager.genStatCheck(builder, loc);  
-      stat = genCudaDeallocate(builder, loc, box, errorManager, *symbol);  
+    if (inlineDeallocation && isCudaDeviceContext) {
+      // Inline deallocation for CUDA when conditions hold.
+      stat = fir::factory::genFreemem(builder, loc, box);
+    } else {
+      // Otherwise, use the CUDA-specific runtime deallocation.
+      errorManager.genStatCheck(builder, loc);
+      stat = genCudaDeallocate(builder, loc, box, errorManager, *symbol);
     }
   }
   fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
