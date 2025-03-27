@@ -111,7 +111,8 @@ _CLC_DEF _CLC_OVERLOAD float __clc_powr(float x, float y) {
 
   const float LOG2_HEAD = 0x1.62e000p-1f;  // 0.693115234
   const float LOG2_TAIL = 0x1.0bfbe8p-15f; // 0.0000319461833
-  tv = USE_TABLE(loge_tbl, indx);
+  tv.s0 = USE_TABLE(loge_tbl_lo, indx);
+  tv.s1 = USE_TABLE(loge_tbl_hi, indx);
   float lth = -r;
   float ltt = __clc_mad(mfn, LOG2_TAIL, -poly) + tv.s1;
   float lt = lth + ltt;

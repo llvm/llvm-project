@@ -50,3 +50,20 @@ float3 test_round_float3(float3 p0) { return round(p0); }
 // CHECK: %elt.roundeven = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.roundeven.v4f32
 // CHECK: ret <4 x float> %elt.roundeven
 float4 test_round_float4(float4 p0) { return round(p0); }
+
+// CHECK-LABEL: define noundef nofpclass(nan inf) float {{.*}}test_round_double
+// CHECK: %elt.roundeven = call reassoc nnan ninf nsz arcp afn float @llvm.roundeven.f32(
+// CHECK: ret float %elt.roundeven
+float test_round_double(double p0) { return round(p0); }
+// CHECK-LABEL: define noundef nofpclass(nan inf) <2 x float> {{.*}}test_round_double2
+// CHECK: %elt.roundeven = call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.roundeven.v2f32
+// CHECK: ret <2 x float> %elt.roundeven
+float2 test_round_double2(double2 p0) { return round(p0); }
+// CHECK-LABEL: define noundef nofpclass(nan inf) <3 x float> {{.*}}test_round_double3
+// CHECK: %elt.roundeven = call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.roundeven.v3f32
+// CHECK: ret <3 x float> %elt.roundeven
+float3 test_round_double3(double3 p0) { return round(p0); }
+// CHECK-LABEL: define noundef nofpclass(nan inf) <4 x float> {{.*}}test_round_double4
+// CHECK: %elt.roundeven = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.roundeven.v4f32
+// CHECK: ret <4 x float> %elt.roundeven
+float4 test_round_double4(double4 p0) { return round(p0); }
