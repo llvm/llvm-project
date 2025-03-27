@@ -562,23 +562,23 @@ define void @and_ule_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 sign
 define void @or_sge_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 signext %3) {
 ; RV32I-LABEL: or_sge_eq:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    bge a0, a1, .LBB21_3
+; RV32I-NEXT:    bge a0, a1, .LBB21_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    beq a2, a3, .LBB21_3
-; RV32I-NEXT:  # %bb.2:
-; RV32I-NEXT:    tail bar
-; RV32I-NEXT:  .LBB21_3:
+; RV32I-NEXT:    bne a2, a3, .LBB21_3
+; RV32I-NEXT:  .LBB21_2:
 ; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB21_3:
+; RV32I-NEXT:    tail bar
 ;
 ; RV64I-LABEL: or_sge_eq:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    bge a0, a1, .LBB21_3
+; RV64I-NEXT:    bge a0, a1, .LBB21_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    beq a2, a3, .LBB21_3
-; RV64I-NEXT:  # %bb.2:
-; RV64I-NEXT:    tail bar
-; RV64I-NEXT:  .LBB21_3:
+; RV64I-NEXT:    bne a2, a3, .LBB21_3
+; RV64I-NEXT:  .LBB21_2:
 ; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB21_3:
+; RV64I-NEXT:    tail bar
   %5 = icmp sge i32 %0, %1
   %6 = icmp eq i32 %2, %3
   %7 = or i1 %5, %6
@@ -595,23 +595,23 @@ define void @or_sge_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 define void @or_sle_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 signext %3) {
 ; RV32I-LABEL: or_sle_eq:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    bge a1, a0, .LBB22_3
+; RV32I-NEXT:    bge a1, a0, .LBB22_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    beq a2, a3, .LBB22_3
-; RV32I-NEXT:  # %bb.2:
-; RV32I-NEXT:    tail bar
-; RV32I-NEXT:  .LBB22_3:
+; RV32I-NEXT:    bne a2, a3, .LBB22_3
+; RV32I-NEXT:  .LBB22_2:
 ; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB22_3:
+; RV32I-NEXT:    tail bar
 ;
 ; RV64I-LABEL: or_sle_eq:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    bge a1, a0, .LBB22_3
+; RV64I-NEXT:    bge a1, a0, .LBB22_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    beq a2, a3, .LBB22_3
-; RV64I-NEXT:  # %bb.2:
-; RV64I-NEXT:    tail bar
-; RV64I-NEXT:  .LBB22_3:
+; RV64I-NEXT:    bne a2, a3, .LBB22_3
+; RV64I-NEXT:  .LBB22_2:
 ; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB22_3:
+; RV64I-NEXT:    tail bar
   %5 = icmp sle i32 %0, %1
   %6 = icmp eq i32 %2, %3
   %7 = or i1 %5, %6
@@ -628,23 +628,23 @@ define void @or_sle_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 define void @or_uge_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 signext %3) {
 ; RV32I-LABEL: or_uge_eq:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    bgeu a0, a1, .LBB23_3
+; RV32I-NEXT:    bgeu a0, a1, .LBB23_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    beq a2, a3, .LBB23_3
-; RV32I-NEXT:  # %bb.2:
-; RV32I-NEXT:    tail bar
-; RV32I-NEXT:  .LBB23_3:
+; RV32I-NEXT:    bne a2, a3, .LBB23_3
+; RV32I-NEXT:  .LBB23_2:
 ; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB23_3:
+; RV32I-NEXT:    tail bar
 ;
 ; RV64I-LABEL: or_uge_eq:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    bgeu a0, a1, .LBB23_3
+; RV64I-NEXT:    bgeu a0, a1, .LBB23_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    beq a2, a3, .LBB23_3
-; RV64I-NEXT:  # %bb.2:
-; RV64I-NEXT:    tail bar
-; RV64I-NEXT:  .LBB23_3:
+; RV64I-NEXT:    bne a2, a3, .LBB23_3
+; RV64I-NEXT:  .LBB23_2:
 ; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB23_3:
+; RV64I-NEXT:    tail bar
   %5 = icmp uge i32 %0, %1
   %6 = icmp eq i32 %2, %3
   %7 = or i1 %5, %6
@@ -661,23 +661,23 @@ define void @or_uge_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 define void @or_ule_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 signext %3) {
 ; RV32I-LABEL: or_ule_eq:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    bgeu a1, a0, .LBB24_3
+; RV32I-NEXT:    bgeu a1, a0, .LBB24_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    beq a2, a3, .LBB24_3
-; RV32I-NEXT:  # %bb.2:
-; RV32I-NEXT:    tail bar
-; RV32I-NEXT:  .LBB24_3:
+; RV32I-NEXT:    bne a2, a3, .LBB24_3
+; RV32I-NEXT:  .LBB24_2:
 ; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB24_3:
+; RV32I-NEXT:    tail bar
 ;
 ; RV64I-LABEL: or_ule_eq:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    bgeu a1, a0, .LBB24_3
+; RV64I-NEXT:    bgeu a1, a0, .LBB24_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    beq a2, a3, .LBB24_3
-; RV64I-NEXT:  # %bb.2:
-; RV64I-NEXT:    tail bar
-; RV64I-NEXT:  .LBB24_3:
+; RV64I-NEXT:    bne a2, a3, .LBB24_3
+; RV64I-NEXT:  .LBB24_2:
 ; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB24_3:
+; RV64I-NEXT:    tail bar
   %5 = icmp ule i32 %0, %1
   %6 = icmp eq i32 %2, %3
   %7 = or i1 %5, %6
@@ -694,23 +694,23 @@ define void @or_ule_eq(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 define void @or_sge_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 signext %3) {
 ; RV32I-LABEL: or_sge_ne:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    bge a0, a1, .LBB25_3
+; RV32I-NEXT:    bge a0, a1, .LBB25_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    bne a2, a3, .LBB25_3
-; RV32I-NEXT:  # %bb.2:
-; RV32I-NEXT:    tail bar
-; RV32I-NEXT:  .LBB25_3:
+; RV32I-NEXT:    beq a2, a3, .LBB25_3
+; RV32I-NEXT:  .LBB25_2:
 ; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB25_3:
+; RV32I-NEXT:    tail bar
 ;
 ; RV64I-LABEL: or_sge_ne:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    bge a0, a1, .LBB25_3
+; RV64I-NEXT:    bge a0, a1, .LBB25_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    bne a2, a3, .LBB25_3
-; RV64I-NEXT:  # %bb.2:
-; RV64I-NEXT:    tail bar
-; RV64I-NEXT:  .LBB25_3:
+; RV64I-NEXT:    beq a2, a3, .LBB25_3
+; RV64I-NEXT:  .LBB25_2:
 ; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB25_3:
+; RV64I-NEXT:    tail bar
   %5 = icmp sge i32 %0, %1
   %6 = icmp ne i32 %2, %3
   %7 = or i1 %5, %6
@@ -727,23 +727,23 @@ define void @or_sge_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 define void @or_sle_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 signext %3) {
 ; RV32I-LABEL: or_sle_ne:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    bge a1, a0, .LBB26_3
+; RV32I-NEXT:    bge a1, a0, .LBB26_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    bne a2, a3, .LBB26_3
-; RV32I-NEXT:  # %bb.2:
-; RV32I-NEXT:    tail bar
-; RV32I-NEXT:  .LBB26_3:
+; RV32I-NEXT:    beq a2, a3, .LBB26_3
+; RV32I-NEXT:  .LBB26_2:
 ; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB26_3:
+; RV32I-NEXT:    tail bar
 ;
 ; RV64I-LABEL: or_sle_ne:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    bge a1, a0, .LBB26_3
+; RV64I-NEXT:    bge a1, a0, .LBB26_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    bne a2, a3, .LBB26_3
-; RV64I-NEXT:  # %bb.2:
-; RV64I-NEXT:    tail bar
-; RV64I-NEXT:  .LBB26_3:
+; RV64I-NEXT:    beq a2, a3, .LBB26_3
+; RV64I-NEXT:  .LBB26_2:
 ; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB26_3:
+; RV64I-NEXT:    tail bar
   %5 = icmp sle i32 %0, %1
   %6 = icmp ne i32 %2, %3
   %7 = or i1 %5, %6
@@ -760,23 +760,23 @@ define void @or_sle_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 define void @or_uge_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 signext %3) {
 ; RV32I-LABEL: or_uge_ne:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    bgeu a0, a1, .LBB27_3
+; RV32I-NEXT:    bgeu a0, a1, .LBB27_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    bne a2, a3, .LBB27_3
-; RV32I-NEXT:  # %bb.2:
-; RV32I-NEXT:    tail bar
-; RV32I-NEXT:  .LBB27_3:
+; RV32I-NEXT:    beq a2, a3, .LBB27_3
+; RV32I-NEXT:  .LBB27_2:
 ; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB27_3:
+; RV32I-NEXT:    tail bar
 ;
 ; RV64I-LABEL: or_uge_ne:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    bgeu a0, a1, .LBB27_3
+; RV64I-NEXT:    bgeu a0, a1, .LBB27_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    bne a2, a3, .LBB27_3
-; RV64I-NEXT:  # %bb.2:
-; RV64I-NEXT:    tail bar
-; RV64I-NEXT:  .LBB27_3:
+; RV64I-NEXT:    beq a2, a3, .LBB27_3
+; RV64I-NEXT:  .LBB27_2:
 ; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB27_3:
+; RV64I-NEXT:    tail bar
   %5 = icmp uge i32 %0, %1
   %6 = icmp ne i32 %2, %3
   %7 = or i1 %5, %6
@@ -793,23 +793,23 @@ define void @or_uge_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 signe
 define void @or_ule_ne(i32 signext %0, i32 signext %1, i32 signext %2, i32 signext %3) {
 ; RV32I-LABEL: or_ule_ne:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    bgeu a1, a0, .LBB28_3
+; RV32I-NEXT:    bgeu a1, a0, .LBB28_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    bne a2, a3, .LBB28_3
-; RV32I-NEXT:  # %bb.2:
-; RV32I-NEXT:    tail bar
-; RV32I-NEXT:  .LBB28_3:
+; RV32I-NEXT:    beq a2, a3, .LBB28_3
+; RV32I-NEXT:  .LBB28_2:
 ; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB28_3:
+; RV32I-NEXT:    tail bar
 ;
 ; RV64I-LABEL: or_ule_ne:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    bgeu a1, a0, .LBB28_3
+; RV64I-NEXT:    bgeu a1, a0, .LBB28_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    bne a2, a3, .LBB28_3
-; RV64I-NEXT:  # %bb.2:
-; RV64I-NEXT:    tail bar
-; RV64I-NEXT:  .LBB28_3:
+; RV64I-NEXT:    beq a2, a3, .LBB28_3
+; RV64I-NEXT:  .LBB28_2:
 ; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB28_3:
+; RV64I-NEXT:    tail bar
   %5 = icmp ule i32 %0, %1
   %6 = icmp ne i32 %2, %3
   %7 = or i1 %5, %6
@@ -1156,23 +1156,23 @@ define void @and_sle_lt1(i32 signext %0, i32 signext %1, i32 signext %2) {
 define void @or_uge_gt0(i32 signext %0, i32 signext %1, i32 signext %2) {
 ; RV32I-LABEL: or_uge_gt0:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    bgeu a0, a1, .LBB39_3
+; RV32I-NEXT:    bgeu a0, a1, .LBB39_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    bgtz a2, .LBB39_3
-; RV32I-NEXT:  # %bb.2:
-; RV32I-NEXT:    tail bar
-; RV32I-NEXT:  .LBB39_3:
+; RV32I-NEXT:    blez a2, .LBB39_3
+; RV32I-NEXT:  .LBB39_2:
 ; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB39_3:
+; RV32I-NEXT:    tail bar
 ;
 ; RV64I-LABEL: or_uge_gt0:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    bgeu a0, a1, .LBB39_3
+; RV64I-NEXT:    bgeu a0, a1, .LBB39_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    bgtz a2, .LBB39_3
-; RV64I-NEXT:  # %bb.2:
-; RV64I-NEXT:    tail bar
-; RV64I-NEXT:  .LBB39_3:
+; RV64I-NEXT:    blez a2, .LBB39_3
+; RV64I-NEXT:  .LBB39_2:
 ; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB39_3:
+; RV64I-NEXT:    tail bar
   %4 = icmp uge i32 %0, %1
   %5 = icmp sgt i32 %2, 0
   %6 = or i1 %4, %5
@@ -1189,23 +1189,23 @@ define void @or_uge_gt0(i32 signext %0, i32 signext %1, i32 signext %2) {
 define void @or_ule_lt1(i32 signext %0, i32 signext %1, i32 signext %2) {
 ; RV32I-LABEL: or_ule_lt1:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    bgeu a1, a0, .LBB40_3
+; RV32I-NEXT:    bgeu a1, a0, .LBB40_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    blez a2, .LBB40_3
-; RV32I-NEXT:  # %bb.2:
-; RV32I-NEXT:    tail bar
-; RV32I-NEXT:  .LBB40_3:
+; RV32I-NEXT:    bgtz a2, .LBB40_3
+; RV32I-NEXT:  .LBB40_2:
 ; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB40_3:
+; RV32I-NEXT:    tail bar
 ;
 ; RV64I-LABEL: or_ule_lt1:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    bgeu a1, a0, .LBB40_3
+; RV64I-NEXT:    bgeu a1, a0, .LBB40_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    blez a2, .LBB40_3
-; RV64I-NEXT:  # %bb.2:
-; RV64I-NEXT:    tail bar
-; RV64I-NEXT:  .LBB40_3:
+; RV64I-NEXT:    bgtz a2, .LBB40_3
+; RV64I-NEXT:  .LBB40_2:
 ; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB40_3:
+; RV64I-NEXT:    tail bar
   %4 = icmp ule i32 %0, %1
   %5 = icmp slt i32 %2, 1
   %6 = or i1 %4, %5

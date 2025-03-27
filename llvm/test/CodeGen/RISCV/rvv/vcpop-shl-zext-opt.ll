@@ -74,15 +74,15 @@ define dso_local void @test_store1(ptr nocapture noundef writeonly %dst, ptr noc
 ;
 ; RV64-LABEL: test_store1:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    blez a3, .LBB0_6
+; RV64-NEXT:    blez a3, .LBB0_10
 ; RV64-NEXT:  # %bb.1: # %for.body.preheader
 ; RV64-NEXT:    li a5, 8
 ; RV64-NEXT:    li a4, 0
-; RV64-NEXT:    bltu a3, a5, .LBB0_7
+; RV64-NEXT:    bltu a3, a5, .LBB0_6
 ; RV64-NEXT:  # %bb.2: # %for.body.preheader
 ; RV64-NEXT:    sub a5, a0, a1
 ; RV64-NEXT:    li a6, 31
-; RV64-NEXT:    bgeu a6, a5, .LBB0_7
+; RV64-NEXT:    bgeu a6, a5, .LBB0_6
 ; RV64-NEXT:  # %bb.3: # %vector.ph
 ; RV64-NEXT:    lui a4, 524288
 ; RV64-NEXT:    addiw a4, a4, -8
@@ -104,29 +104,29 @@ define dso_local void @test_store1(ptr nocapture noundef writeonly %dst, ptr noc
 ; RV64-NEXT:    add a0, a0, a7
 ; RV64-NEXT:    bne a6, a5, .LBB0_4
 ; RV64-NEXT:  # %bb.5: # %middle.block
-; RV64-NEXT:    bne a4, a3, .LBB0_7
-; RV64-NEXT:  .LBB0_6: # %for.cond.cleanup
-; RV64-NEXT:    ret
-; RV64-NEXT:  .LBB0_7: # %for.body.preheader13
+; RV64-NEXT:    beq a4, a3, .LBB0_10
+; RV64-NEXT:  .LBB0_6: # %for.body.preheader13
 ; RV64-NEXT:    slli a4, a4, 2
 ; RV64-NEXT:    slli a5, a3, 2
 ; RV64-NEXT:    add a3, a1, a4
 ; RV64-NEXT:    add a1, a1, a5
-; RV64-NEXT:    j .LBB0_9
-; RV64-NEXT:  .LBB0_8: # %for.inc
-; RV64-NEXT:    # in Loop: Header=BB0_9 Depth=1
+; RV64-NEXT:    j .LBB0_8
+; RV64-NEXT:  .LBB0_7: # %for.inc
+; RV64-NEXT:    # in Loop: Header=BB0_8 Depth=1
 ; RV64-NEXT:    addi a3, a3, 4
-; RV64-NEXT:    beq a3, a1, .LBB0_6
-; RV64-NEXT:  .LBB0_9: # %for.body
+; RV64-NEXT:    beq a3, a1, .LBB0_10
+; RV64-NEXT:  .LBB0_8: # %for.body
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    lw a4, 0(a3)
-; RV64-NEXT:    bge a4, a2, .LBB0_8
-; RV64-NEXT:  # %bb.10: # %if.then
-; RV64-NEXT:    # in Loop: Header=BB0_9 Depth=1
+; RV64-NEXT:    bge a4, a2, .LBB0_7
+; RV64-NEXT:  # %bb.9: # %if.then
+; RV64-NEXT:    # in Loop: Header=BB0_8 Depth=1
 ; RV64-NEXT:    addi a5, a0, 4
 ; RV64-NEXT:    sw a4, 0(a0)
 ; RV64-NEXT:    mv a0, a5
-; RV64-NEXT:    j .LBB0_8
+; RV64-NEXT:    j .LBB0_7
+; RV64-NEXT:  .LBB0_10: # %for.cond.cleanup
+; RV64-NEXT:    ret
 entry:
   %cmp8 = icmp sgt i32 %n, 0
   br i1 %cmp8, label %for.body.preheader, label %for.cond.cleanup

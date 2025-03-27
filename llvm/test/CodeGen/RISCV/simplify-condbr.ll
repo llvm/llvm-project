@@ -30,12 +30,12 @@ define fastcc i32 @S_regrepeat(ptr %startposp, i32 %max, i8 %0, i1 %cmp343) noun
 ; CHECK-NEXT:    bltu a1, a2, .LBB0_8
 ; CHECK-NEXT:  # %bb.2: # %do_exactf
 ; CHECK-NEXT:    andi a3, a3, 1
-; CHECK-NEXT:    beqz a3, .LBB0_10
+; CHECK-NEXT:    beqz a3, .LBB0_8
 ; CHECK-NEXT:  # %bb.3: # %land.rhs251
 ; CHECK-NEXT:    lw zero, 0(zero)
 ; CHECK-NEXT:    li s0, 1
-; CHECK-NEXT:    bnez s0, .LBB0_9
-; CHECK-NEXT:    j .LBB0_8
+; CHECK-NEXT:    beqz s0, .LBB0_8
+; CHECK-NEXT:    j .LBB0_9
 ; CHECK-NEXT:  .LBB0_4: # %sw.bb336
 ; CHECK-NEXT:    mv s1, a0
 ; CHECK-NEXT:    li s0, 0
@@ -62,8 +62,6 @@ define fastcc i32 @S_regrepeat(ptr %startposp, i32 %max, i8 %0, i1 %cmp343) noun
 ; CHECK-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_10:
-; CHECK-NEXT:    j .LBB0_8
 entry:
   switch i8 %0, label %if.else1492 [
     i8 19, label %sw.bb336
@@ -113,32 +111,29 @@ define ptr @Perl_pp_refassign(ptr %PL_stack_sp, i1 %tobool.not, i1 %tobool3.not,
 ; CHECK-LABEL: Perl_pp_refassign:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a1, a1, 1
-; CHECK-NEXT:    beqz a1, .LBB1_3
+; CHECK-NEXT:    beqz a1, .LBB1_6
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    andi a2, a2, 1
-; CHECK-NEXT:    bnez a2, .LBB1_4
-; CHECK-NEXT:  .LBB1_2: # %cond.true4
+; CHECK-NEXT:    bnez a2, .LBB1_5
+; CHECK-NEXT:  # %bb.3: # %cond.true4
 ; CHECK-NEXT:    ld a0, 0(a0)
 ; CHECK-NEXT:    snez a0, a0
-; CHECK-NEXT:    bnez a0, .LBB1_5
-; CHECK-NEXT:    j .LBB1_6
-; CHECK-NEXT:  .LBB1_3: # %cond.true
-; CHECK-NEXT:    ld a1, 0(a0)
-; CHECK-NEXT:    andi a2, a2, 1
-; CHECK-NEXT:    beqz a2, .LBB1_2
-; CHECK-NEXT:  .LBB1_4:
-; CHECK-NEXT:    j .LBB1_6
-; CHECK-NEXT:  .LBB1_5: # %sw.bb85
+; CHECK-NEXT:    beqz a0, .LBB1_5
+; CHECK-NEXT:  # %bb.4: # %sw.bb85
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    ld a0, 0(a1)
 ; CHECK-NEXT:    call Perl_av_store
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:  .LBB1_6: # %common.ret
+; CHECK-NEXT:  .LBB1_5: # %common.ret
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB1_6: # %cond.true
+; CHECK-NEXT:    ld a1, 0(a0)
+; CHECK-NEXT:    j .LBB1_2
 entry:
   br i1 %tobool.not, label %cond.end, label %cond.true
 
