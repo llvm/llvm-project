@@ -258,4 +258,28 @@ def GpuSPIRVAttachTarget: Pass<"spirv-attach-target", ""> {
   ];
 }
 
+def GpuDecomposeSubgroupReduceToDppPass: Pass<"decompose-subgroup-reduce-to-dpp", ""> {
+  let summary = "Decomposes reductions across subgroups to data parallel primitives.";
+  let description = [{
+    This pass decomposes gpu::subgroup_reduce ops to AMDGPU::DPP ops where
+    applicable, while respecting cluster size and stride. 
+
+    Example:
+    ```
+    // File: in.mlir:
+    [TO-DO]
+    // mlir-opt --decompose-subgroup-reduce-to-dpp subgroup-size=64 in.mlir
+    [TO-DO]
+    ```
+  }];
+  let dependentDialects = [
+    "amdgpu::AMDGPUDialect",
+    "LLVM::LLVMDialect",
+    "ROCDL::ROCDLDialect",
+  ];
+  let options = [Option<"subgroupSize", "subgroup-size", "unsigned",
+                        /*default=*/"64",
+                        "Size of subgroup">];
+}
+
 #endif // MLIR_DIALECT_GPU_PASSES
