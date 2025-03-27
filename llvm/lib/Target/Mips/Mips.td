@@ -242,11 +242,7 @@ def ImplP5600 : SubtargetFeature<"p5600", "ProcImpl",
 // same CPU architecture.
 def ImplI6400
     : SubtargetFeature<"i6400", "ProcImpl", "MipsSubtarget::CPU::I6400",
-                       "MIPS I6400 Processor", [FeatureMips64r6]>;
-
-def ImplI6500
-    : SubtargetFeature<"i6500", "ProcImpl", "MipsSubtarget::CPU::I6500",
-                       "MIPS I6500 Processor", [FeatureMips64r6]>;
+                       "MIPS I6400/I6500 Processors", [FeatureMips64r6]>;
 
 class Proc<string Name, list<SubtargetFeature> Features>
  : ProcessorModel<Name, MipsGenericModel, Features>;
@@ -272,7 +268,7 @@ def : Proc<"octeon", [FeatureMips64r2, FeatureCnMips]>;
 def : Proc<"octeon+", [FeatureMips64r2, FeatureCnMips, FeatureCnMipsP]>;
 def : ProcessorModel<"p5600", MipsP5600Model, [ImplP5600]>;
 def : ProcessorModel<"i6400", NoSchedModel, [ImplI6400]>;
-def : ProcessorModel<"i6500", NoSchedModel, [ImplI6500]>;
+def : ProcessorModel<"i6500", NoSchedModel, [ImplI6400]>;
 
 def MipsAsmParser : AsmParser {
   let ShouldEmitMatchRegisterName = 0;
