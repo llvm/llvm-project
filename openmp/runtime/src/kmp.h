@@ -4204,6 +4204,8 @@ KMP_EXPORT void __kmpc_serialized_parallel(ident_t *, kmp_int32 global_tid);
 KMP_EXPORT void __kmpc_end_serialized_parallel(ident_t *, kmp_int32 global_tid);
 
 KMP_EXPORT void __kmpc_flush(ident_t *);
+KMP_EXPORT void __kmpc_flush_explicit(ident_t *, kmp_int32 order,
+                                      kmp_int32 scope);
 KMP_EXPORT void __kmpc_barrier(ident_t *, kmp_int32 global_tid);
 KMP_EXPORT kmp_int32 __kmpc_master(ident_t *, kmp_int32 global_tid);
 KMP_EXPORT void __kmpc_end_master(ident_t *, kmp_int32 global_tid);
