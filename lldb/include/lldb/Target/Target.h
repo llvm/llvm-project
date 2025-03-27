@@ -1692,6 +1692,22 @@ protected:
   }
 };
 
+/// The private implementation backing SBLock.
+class APILock {
+public:
+  APILock(std::shared_ptr<std::recursive_mutex> mutex_sp)
+      : m_mutex(std::move(mutex_sp)), m_lock(*m_mutex) {}
+
+  void Lock() { m_lock.lock(); }
+  void Unlock() { m_lock.unlock(); }
+
+  operator bool() const { return static_cast<bool>(m_lock); }
+
+private:
+  std::shared_ptr<std::recursive_mutex> m_mutex;
+  std::unique_lock<std::recursive_mutex> m_lock;
+};
+
 } // namespace lldb_private
 
 #endif // LLDB_TARGET_TARGET_H
