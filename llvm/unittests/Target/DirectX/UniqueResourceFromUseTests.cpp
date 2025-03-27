@@ -29,8 +29,9 @@ class UniqueResourceFromUseTest : public testing::Test {
 protected:
   PassBuilder *PB;
   ModuleAnalysisManager *MAM;
-
+  LLVMContext *Context;
   virtual void SetUp() {
+    Context = new LLVMContext();
     MAM = new ModuleAnalysisManager();
     PB = new PassBuilder();
     PB->registerModuleAnalyses(*MAM);
@@ -39,9 +40,17 @@ protected:
     MAM->registerPass([&] { return DXILResourceCounterDirectionAnalysis(); });
   }
 
+  std::unique_ptr<Module> parseAsm(StringRef Asm) {
+    SMDiagnostic Error;
+    std::unique_ptr<Module> M = parseAssemblyString(Asm, Error, *Context);
+    EXPECT_TRUE(M) << "Bad assembly?: " << Error.getMessage();
+    return M;
+  }
+
   virtual void TearDown() {
     delete PB;
     delete MAM;
+    delete Context;
   }
 };
 
@@ -58,10 +67,7 @@ entry:
 declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
   )";
 
-  LLVMContext Context;
-  SMDiagnostic Error;
-  auto M = parseAssemblyString(Assembly, Error, Context);
-  ASSERT_TRUE(M) << "Bad assembly?";
+  auto M = parseAsm(Assembly);
 
   const DXILBindingMap &DBM = MAM->getResult<DXILResourceBindingAnalysis>(*M);
   for (const Function &F : M->functions()) {
@@ -107,10 +113,7 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
 declare target("dx.RawBuffer", float, 1, 0) @ind.func(target("dx.RawBuffer", float, 1, 0) %handle)
   )";
 
-  LLVMContext Context;
-  SMDiagnostic Error;
-  auto M = parseAssemblyString(Assembly, Error, Context);
-  ASSERT_TRUE(M) << "Bad assembly?";
+  auto M = parseAsm(Assembly);
 
   const DXILBindingMap &DBM = MAM->getResult<DXILResourceBindingAnalysis>(*M);
   for (const Function &F : M->functions()) {
@@ -159,10 +162,7 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
 declare target("dx.RawBuffer", float, 1, 0) @ind.func(target("dx.RawBuffer", float, 1, 0) %x, target("dx.RawBuffer", float, 1, 0) %y)
   )";
 
-  LLVMContext Context;
-  SMDiagnostic Error;
-  auto M = parseAssemblyString(Assembly, Error, Context);
-  ASSERT_TRUE(M) << "Bad assembly?";
+  auto M = parseAsm(Assembly);
 
   const DXILBindingMap &DBM = MAM->getResult<DXILResourceBindingAnalysis>(*M);
   for (const Function &F : M->functions()) {
@@ -238,10 +238,7 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
 declare target("dx.RawBuffer", float, 1, 0) @ind.func(target("dx.RawBuffer", float, 1, 0) %x)
   )";
 
-  LLVMContext Context;
-  SMDiagnostic Error;
-  auto M = parseAssemblyString(Assembly, Error, Context);
-  ASSERT_TRUE(M) << "Bad assembly?";
+  auto M = parseAsm(Assembly);
 
   const DXILBindingMap &DBM = MAM->getResult<DXILResourceBindingAnalysis>(*M);
   for (const Function &F : M->functions()) {
@@ -292,10 +289,7 @@ entry:
 }
   )";
 
-  LLVMContext Context;
-  SMDiagnostic Error;
-  auto M = parseAssemblyString(Assembly, Error, Context);
-  ASSERT_TRUE(M) << "Bad assembly?";
+  auto M = parseAsm(Assembly);
 
   const DXILBindingMap &DBM = MAM->getResult<DXILResourceBindingAnalysis>(*M);
   const DXILResourceCounterDirectionMap &DCDM =
@@ -328,10 +322,7 @@ entry:
 }
   )";
 
-  LLVMContext Context;
-  SMDiagnostic Error;
-  auto M = parseAssemblyString(Assembly, Error, Context);
-  ASSERT_TRUE(M) << "Bad assembly?";
+  auto M = parseAsm(Assembly);
 
   const DXILBindingMap &DBM = MAM->getResult<DXILResourceBindingAnalysis>(*M);
   const DXILResourceCounterDirectionMap &DCDM =
@@ -361,10 +352,7 @@ entry:
 }
   )";
 
-  LLVMContext Context;
-  SMDiagnostic Error;
-  auto M = parseAssemblyString(Assembly, Error, Context);
-  ASSERT_TRUE(M) << "Bad assembly?";
+  auto M = parseAsm(Assembly);
 
   const DXILBindingMap &DBM = MAM->getResult<DXILResourceBindingAnalysis>(*M);
   const DXILResourceCounterDirectionMap &DCDM =
@@ -397,10 +385,7 @@ entry:
 }
   )";
 
-  LLVMContext Context;
-  SMDiagnostic Error;
-  auto M = parseAssemblyString(Assembly, Error, Context);
-  ASSERT_TRUE(M) << "Bad assembly?";
+  auto M = parseAsm(Assembly);
 
   const DXILBindingMap &DBM = MAM->getResult<DXILResourceBindingAnalysis>(*M);
   const DXILResourceCounterDirectionMap &DCDM =
