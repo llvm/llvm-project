@@ -442,7 +442,6 @@ Status ABISysV_ppc::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           llvm::createStringError("Couldn't convert return value to raw data"),
           std::move(err)));
 
-
     auto data = std::move(*data_or_err);
 
     size_t num_bytes = data.GetByteSize();
