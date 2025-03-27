@@ -48,7 +48,6 @@
 #include "llvm/Support/SystemUtils.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
-#include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Target/TargetMachine.h"
@@ -723,16 +722,14 @@ extern "C" int optMain(
     // The user has asked to use the new pass manager and provided a pipeline
     // string. Hand off the rest of the functionality to the new code for that
     // layer.
-    bool result = runPassPipeline(
-        argv[0], *M, TM.get(), &TLII, Out.get(), ThinLinkOut.get(),
-        RemarksFile.get(), Pipeline, PluginList, PassBuilderCallbacks, OK, VK,
-        PreserveAssemblyUseListOrder, PreserveBitcodeUseListOrder,
-        EmitSummaryIndex, EmitModuleHash, EnableDebugify,
-        VerifyDebugInfoPreserve, UnifiedLTO);
-
-    llvm::TimerGroup::printAll(*llvm::CreateInfoOutputFile());
-    llvm::TimerGroup::clearAll();
-    return result ? 0 : 1;
+    return runPassPipeline(
+               argv[0], *M, TM.get(), &TLII, Out.get(), ThinLinkOut.get(),
+               RemarksFile.get(), Pipeline, PluginList, PassBuilderCallbacks,
+               OK, VK, PreserveAssemblyUseListOrder,
+               PreserveBitcodeUseListOrder, EmitSummaryIndex, EmitModuleHash,
+               EnableDebugify, VerifyDebugInfoPreserve, UnifiedLTO)
+               ? 0
+               : 1;
   }
 
   if (OptLevelO0 || OptLevelO1 || OptLevelO2 || OptLevelOs || OptLevelOz ||
@@ -907,9 +904,6 @@ extern "C" int optMain(
 
   if (ThinLinkOut)
     ThinLinkOut->keep();
-
-  llvm::TimerGroup::printAll(*llvm::CreateInfoOutputFile());
-  llvm::TimerGroup::clearAll();
 
   return 0;
 }
