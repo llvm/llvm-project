@@ -102,7 +102,7 @@ public:
   //
   // Since the overwhelming majority of users of this provide precise values,
   // this assumes the provided value is precise.
-  constexpr LocationSize(uint64_t Raw)
+  explicit constexpr LocationSize(uint64_t Raw)
       : Value(Raw > MaxValue ? AfterPointer : Raw) {}
   // Create non-scalable LocationSize
   static LocationSize precise(uint64_t Value) {
@@ -189,14 +189,16 @@ public:
   bool operator==(const LocationSize &Other) const {
     return Value == Other.Value;
   }
-
   bool operator==(const TypeSize &Other) const {
-    return hasValue() && getValue() == Other;
+    return (*this == LocationSize::precise(Other));
+  }
+  bool operator==(const uint64_t &Other) const {
+    return (*this == LocationSize::precise(Other));
   }
 
   bool operator!=(const LocationSize &Other) const { return !(*this == Other); }
-
   bool operator!=(const TypeSize &Other) const { return !(*this == Other); }
+  bool operator!=(const uint64_t &Other) const { return !(*this == Other); }
 
   // Ordering operators are not provided, since it's unclear if there's only one
   // reasonable way to compare:
@@ -301,6 +303,12 @@ public:
   explicit MemoryLocation(const Value *Ptr, LocationSize Size,
                           const AAMDNodes &AATags = AAMDNodes())
       : Ptr(Ptr), Size(Size), AATags(AATags) {}
+  explicit MemoryLocation(const Value *Ptr, TypeSize Size,
+                          const AAMDNodes &AATags = AAMDNodes())
+      : Ptr(Ptr), Size(LocationSize::precise(Size)), AATags(AATags) {}
+  explicit MemoryLocation(const Value *Ptr, uint64_t Size,
+                          const AAMDNodes &AATags = AAMDNodes())
+      : Ptr(Ptr), Size(LocationSize::precise(Size)), AATags(AATags) {}
 
   MemoryLocation getWithNewPtr(const Value *NewPtr) const {
     MemoryLocation Copy(*this);
@@ -312,6 +320,12 @@ public:
     MemoryLocation Copy(*this);
     Copy.Size = NewSize;
     return Copy;
+  }
+  MemoryLocation getWithNewSize(uint64_t NewSize) const {
+    return getWithNewSize(LocationSize::precise(NewSize));
+  }
+  MemoryLocation getWithNewSize(TypeSize NewSize) const {
+    return getWithNewSize(LocationSize::precise(NewSize));
   }
 
   MemoryLocation getWithoutAATags() const {
