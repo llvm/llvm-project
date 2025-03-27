@@ -438,9 +438,10 @@ Status ABISysV_ppc::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
 
     auto data_or_err = new_value_sp->GetData();
     if (auto err = data_or_err.takeError())
-      return Status::FromErrorStringWithFormat(
-          "Couldn't convert return value to raw data: %s",
-          llvm::toString(std::move(err)).c_str());
+      return Status::FromError(llvm::joinErrors(
+          llvm::createStringError("Couldn't convert return value to raw data"),
+          std::move(err)));
+
 
     auto data = std::move(*data_or_err);
 

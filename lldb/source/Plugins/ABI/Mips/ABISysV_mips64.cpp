@@ -678,7 +678,7 @@ Status ABISysV_mips64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   if (auto err = data_or_err.takeError())
     return Status::FromError(llvm::joinErrors(
         llvm::createStringError("Couldn't convert return value to raw data"),
-        std::move(error)));
+        std::move(err)));
 
   auto data = std::move(*data_or_err);
   size_t num_bytes = data.GetByteSize();

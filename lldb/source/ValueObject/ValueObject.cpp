@@ -691,7 +691,8 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
       ValueObjectSP pointee_sp = Dereference(error);
       if (error.Fail() || pointee_sp.get() == nullptr)
         return 0;
-      auto data_or_err = pointee_sp->GetData();
+      
+      auto data_or_err = llvm::expectedToOptional(pointee_sp->GetData());
       if (!data_or_err)
         return 0;
       data = *data_or_err;
@@ -700,7 +701,7 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
       ValueObjectSP child_sp = GetChildAtIndex(0);
       if (child_sp.get() == nullptr)
         return 0;
-      auto data_or_err = child_sp->GetData();
+      auto data_or_err = llvm::expectedToOptional(child_sp->GetData());
       if (!data_or_err)
         return 0;
       data = *data_or_err;
