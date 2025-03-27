@@ -1011,6 +1011,26 @@ static Value *foldPHINodeOrSelectInst(Instruction &I) {
   return foldSelectInst(cast<SelectInst>(I));
 }
 
+/// Returns a fixed vector type equivalent to the memory set by II or nullptr if
+/// unable to do so.
+static FixedVectorType *getVectorTypeFor(const MemSetInst &II,
+                                         const DataLayout &DL) {
+  const ConstantInt *Length = dyn_cast<ConstantInt>(II.getLength());
+  if (!Length)
+    return nullptr;
+
+  APInt Val = Length->getValue();
+  if (Val.ugt(std::numeric_limits<unsigned>::max()))
+    return nullptr;
+
+  auto *VTy =
+      FixedVectorType::get(II.getValue()->getType(), Val.getZExtValue());
+  if (DL.getTypeStoreSizeInBits(VTy) != DL.getTypeAllocSizeInBits(VTy))
+    return nullptr;
+
+  return VTy;
+}
+
 /// Builder for the alloca slices.
 ///
 /// This class builds a set of alloca slices by recursively visiting the uses
@@ -1099,15 +1119,16 @@ private:
     return Base::visitGetElementPtrInst(GEPI);
   }
 
+  bool isSplittableMemOp(Type *Ty, bool IsVolatile) {
+    return Ty->isIntegerTy() && !IsVolatile && DL.typeSizeEqualsStoreSize(Ty);
+  }
+
   void handleLoadOrStore(Type *Ty, Instruction &I, const APInt &Offset,
                          uint64_t Size, bool IsVolatile) {
     // We allow splitting of non-volatile loads and stores where the type is an
     // integer type. These may be used to implement 'memcpy' or other "transfer
     // of bits" patterns.
-    bool IsSplittable =
-        Ty->isIntegerTy() && !IsVolatile && DL.typeSizeEqualsStoreSize(Ty);
-
-    insertUse(I, Offset, Size, IsSplittable);
+    insertUse(I, Offset, Size, isSplittableMemOp(Ty, IsVolatile));
   }
 
   void visitLoadInst(LoadInst &LI) {
@@ -1182,10 +1203,23 @@ private:
     if (!IsOffsetKnown)
       return PI.setAborted(&II);
 
+    auto IsSplittable = [&]() {
+      FixedVectorType *VTy = getVectorTypeFor(II, DL);
+      Type *ATy = AS.AI.getAllocatedType();
+
+      if (!Length)
+        return false;
+      if (!VTy)
+        return true;
+      if (DL.getTypeAllocSize(VTy) != DL.getTypeAllocSize(ATy))
+        return true;
+      return isSplittableMemOp(ATy, II.isVolatile());
+    };
+
     insertUse(II, Offset,
               Length ? Length->getLimitedValue()
                      : AllocSize - Offset.getLimitedValue(),
-              (bool)Length);
+              IsSplittable());
   }
 
   void visitMemTransferInst(MemTransferInst &II) {
@@ -2150,8 +2184,20 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
   if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(U->getUser())) {
     if (MI->isVolatile())
       return false;
-    if (!S.isSplittable())
-      return false; // Skip any unsplittable intrinsics.
+
+    auto *II = dyn_cast<MemSetInst>(U->getUser());
+    if (!II && !S.isSplittable()) {
+      // Skip any non-memset unsplittable intrinsics.
+      return false;
+    }
+    if (II) {
+      // For memset, allow if we have a suitable vector type
+      Type *VTy = getVectorTypeFor(*II, DL);
+      if (!VTy)
+        return false;
+      if (!canConvertValue(DL, SliceTy, VTy))
+        return false;
+    }
   } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U->getUser())) {
     if (!II->isLifetimeStartOrEnd() && !II->isDroppable())
       return false;
@@ -2395,12 +2441,15 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL,
 
   // Put load and store types into a set for de-duplication.
   for (const Slice &S : P) {
-    Type *Ty;
+    Type *Ty = nullptr;
     if (auto *LI = dyn_cast<LoadInst>(S.getUse()->getUser()))
       Ty = LI->getType();
     else if (auto *SI = dyn_cast<StoreInst>(S.getUse()->getUser()))
       Ty = SI->getValueOperand()->getType();
-    else
+    else if (auto *II = dyn_cast<MemSetInst>(S.getUse()->getUser()))
+      Ty = getVectorTypeFor(*II, DL);
+
+    if (!Ty)
       continue;
 
     auto CandTy = Ty->getScalarType();
