@@ -709,6 +709,7 @@ public:
 #undef HANDLEBINOP
 
   mlir::Value emitCmp(const BinaryOperator *e) {
+    const mlir::Location loc = cgf.getLoc(e->getExprLoc());
     mlir::Value result;
     QualType lhsTy = e->getLHS()->getType();
     QualType rhsTy = e->getRHS()->getType();
@@ -734,12 +735,12 @@ public:
     };
 
     if (lhsTy->getAs<MemberPointerType>()) {
+      assert(!cir::MissingFeatures::dataMemberType());
       assert(e->getOpcode() == BO_EQ || e->getOpcode() == BO_NE);
       mlir::Value lhs = cgf.emitScalarExpr(e->getLHS());
       mlir::Value rhs = cgf.emitScalarExpr(e->getRHS());
       cir::CmpOpKind kind = clangCmpToCIRCmp(e->getOpcode());
-      result =
-          builder.createCompare(cgf.getLoc(e->getExprLoc()), kind, lhs, rhs);
+      result = builder.createCompare(loc, kind, lhs, rhs);
     } else if (!lhsTy->isAnyComplexType() && !rhsTy->isAnyComplexType()) {
       BinOpInfo boInfo = emitBinOps(e);
       mlir::Value lhs = boInfo.lhs;
@@ -747,31 +748,26 @@ public:
 
       if (lhsTy->isVectorType()) {
         assert(!cir::MissingFeatures::vectorType());
-        cgf.cgm.errorNYI(boInfo.loc, "vector comparisons");
-        result = builder.getBool(false, cgf.getLoc(boInfo.loc));
+        cgf.cgm.errorNYI(loc, "vector comparisons");
+        result = builder.getBool(false, loc);
       } else if (boInfo.isFixedPointOp()) {
         assert(!cir::MissingFeatures::fixedPointType());
-        cgf.cgm.errorNYI(boInfo.loc, "fixed point comparisons");
-        result = builder.getBool(false, cgf.getLoc(boInfo.loc));
-      } else if (lhsTy->hasSignedIntegerRepresentation()) {
-        cir::CmpOpKind kind = clangCmpToCIRCmp(e->getOpcode());
-        result = builder.createCompare(cgf.getLoc(boInfo.loc), kind, lhs, rhs);
+        cgf.cgm.errorNYI(loc, "fixed point comparisons");
+        result = builder.getBool(false, loc);
       } else {
         // Unsigned integers and pointers.
         if (cgf.cgm.getCodeGenOpts().StrictVTablePointers &&
             mlir::isa<cir::PointerType>(lhs.getType()) &&
             mlir::isa<cir::PointerType>(rhs.getType())) {
-          cgf.cgm.errorNYI(boInfo.loc, "strict vtable pointer comparisons");
-          result = builder.getBool(false, cgf.getLoc(boInfo.loc));
+          cgf.cgm.errorNYI(loc, "strict vtable pointer comparisons");
         }
 
         cir::CmpOpKind kind = clangCmpToCIRCmp(e->getOpcode());
-        result = builder.createCompare(cgf.getLoc(boInfo.loc), kind, lhs, rhs);
+        result = builder.createCompare(loc, kind, lhs, rhs);
       }
     } else {
       // Complex Comparison: can only be an equality comparison.
       assert(!cir::MissingFeatures::complexType());
-      const mlir::Location loc = cgf.getLoc(e->getSourceRange());
       cgf.cgm.errorNYI(loc, "complex comparison");
       result = builder.getBool(false, loc);
     }
