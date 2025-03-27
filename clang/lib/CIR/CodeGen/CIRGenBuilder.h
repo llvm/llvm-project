@@ -14,6 +14,7 @@
 
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace clang::CIRGen {
 
@@ -72,21 +73,121 @@ public:
     if (const auto arrayVal = mlir::dyn_cast<cir::ConstArrayAttr>(attr)) {
       if (mlir::isa<mlir::StringAttr>(arrayVal.getElts()))
         return false;
-      for (const auto elt : mlir::cast<mlir::ArrayAttr>(arrayVal.getElts())) {
-        if (!isNullValue(elt))
-          return false;
-      }
-      return true;
+
+      return llvm::all_of(
+          mlir::cast<mlir::ArrayAttr>(arrayVal.getElts()),
+          [&](const mlir::Attribute &elt) { return isNullValue(elt); });
     }
     return false;
   }
 
+  //
+  // Type helpers
+  // ------------
+  //
+  cir::IntType getUIntNTy(int n) {
+    switch (n) {
+    case 8:
+      return getUInt8Ty();
+    case 16:
+      return getUInt16Ty();
+    case 32:
+      return getUInt32Ty();
+    case 64:
+      return getUInt64Ty();
+    default:
+      return cir::IntType::get(getContext(), n, false);
+    }
+  }
+
+  cir::IntType getSIntNTy(int n) {
+    switch (n) {
+    case 8:
+      return getSInt8Ty();
+    case 16:
+      return getSInt16Ty();
+    case 32:
+      return getSInt32Ty();
+    case 64:
+      return getSInt64Ty();
+    default:
+      return cir::IntType::get(getContext(), n, true);
+    }
+  }
+
+  cir::VoidType getVoidTy() { return typeCache.VoidTy; }
+
+  cir::IntType getSInt8Ty() { return typeCache.SInt8Ty; }
+  cir::IntType getSInt16Ty() { return typeCache.SInt16Ty; }
+  cir::IntType getSInt32Ty() { return typeCache.SInt32Ty; }
+  cir::IntType getSInt64Ty() { return typeCache.SInt64Ty; }
+
+  cir::IntType getUInt8Ty() { return typeCache.UInt8Ty; }
+  cir::IntType getUInt16Ty() { return typeCache.UInt16Ty; }
+  cir::IntType getUInt32Ty() { return typeCache.UInt32Ty; }
+  cir::IntType getUInt64Ty() { return typeCache.UInt64Ty; }
+
+  bool isInt8Ty(mlir::Type i) {
+    return i == typeCache.UInt8Ty || i == typeCache.SInt8Ty;
+  }
+  bool isInt16Ty(mlir::Type i) {
+    return i == typeCache.UInt16Ty || i == typeCache.SInt16Ty;
+  }
+  bool isInt32Ty(mlir::Type i) {
+    return i == typeCache.UInt32Ty || i == typeCache.SInt32Ty;
+  }
+  bool isInt64Ty(mlir::Type i) {
+    return i == typeCache.UInt64Ty || i == typeCache.SInt64Ty;
+  }
   bool isInt(mlir::Type i) { return mlir::isa<cir::IntType>(i); }
 
   // Creates constant nullptr for pointer type ty.
   cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
     assert(!cir::MissingFeatures::targetCodeGenInfoGetNullPointer());
     return create<cir::ConstantOp>(loc, ty, getConstPtrAttr(ty, 0));
+  }
+
+  mlir::Value createNeg(mlir::Value value) {
+
+    if (auto intTy = mlir::dyn_cast<cir::IntType>(value.getType())) {
+      // Source is a unsigned integer: first cast it to signed.
+      if (intTy.isUnsigned())
+        value = createIntCast(value, getSIntNTy(intTy.getWidth()));
+      return create<cir::UnaryOp>(value.getLoc(), value.getType(),
+                                  cir::UnaryOpKind::Minus, value);
+    }
+
+    llvm_unreachable("negation for the given type is NYI");
+  }
+
+  mlir::Value createFSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+
+    return create<cir::BinOp>(loc, cir::BinOpKind::Sub, lhs, rhs);
+  }
+
+  mlir::Value createFAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+
+    return create<cir::BinOp>(loc, cir::BinOpKind::Add, lhs, rhs);
+  }
+  mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+
+    return create<cir::BinOp>(loc, cir::BinOpKind::Mul, lhs, rhs);
+  }
+  mlir::Value createFDiv(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    assert(!cir::MissingFeatures::metaDataNode());
+    assert(!cir::MissingFeatures::fpConstraints());
+    assert(!cir::MissingFeatures::fastMathFlags());
+
+    return create<cir::BinOp>(loc, cir::BinOpKind::Div, lhs, rhs);
   }
 };
 

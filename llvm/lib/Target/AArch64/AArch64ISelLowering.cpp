@@ -5106,6 +5106,29 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
   uint64_t VTSize = VT.getFixedSizeInBits();
   uint64_t InVTSize = InVT.getFixedSizeInBits();
   if (VTSize < InVTSize) {
+    // AArch64 doesn't have a direct vector instruction to convert
+    // fixed point to floating point AND narrow it at the same time.
+    // Additional rounding when the target is f32/f64 causes double
+    // rounding issues. Conversion to f16 is fine due to narrow width.
+    bool IsTargetf32 = VT.getVectorElementType() == MVT::f32;
+    bool IsTargetf16 = false;
+    if (Op.hasOneUse() &&
+        Op->user_begin()->getOpcode() == ISD::CONCAT_VECTORS) {
+      // Some vector types are split during legalization into half, followed by
+      // concatenation, followed by rounding to the original vector type. If we
+      // end up resolving to f16 type, we shouldn't worry about rounding errors.
+      SDNode *U = *Op->user_begin();
+      if (U->hasOneUse() && U->user_begin()->getOpcode() == ISD::FP_ROUND) {
+        EVT TmpVT = U->user_begin()->getValueType(0);
+        if (TmpVT.getScalarType() == MVT::f16)
+          IsTargetf16 = true;
+      }
+    }
+
+    if (IsTargetf32 && !IsTargetf16) {
+      return !IsStrict ? DAG.UnrollVectorOp(Op.getNode()) : SDValue();
+    }
+
     MVT CastVT =
         MVT::getVectorVT(MVT::getFloatingPointVT(InVT.getScalarSizeInBits()),
                          InVT.getVectorNumElements());

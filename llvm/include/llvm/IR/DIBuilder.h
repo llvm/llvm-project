@@ -609,13 +609,15 @@ namespace llvm {
     /// \param Rank           The rank attribute of a descriptor-based
     ///                       Fortran array, either a DIExpression* or
     ///                       a DIVariable*.
+    /// \param BitStride      The bit size of an element of the array.
     DICompositeType *createArrayType(
         DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
         uint64_t Size, uint32_t AlignInBits, DIType *Ty, DINodeArray Subscripts,
         PointerUnion<DIExpression *, DIVariable *> DataLocation = nullptr,
         PointerUnion<DIExpression *, DIVariable *> Associated = nullptr,
         PointerUnion<DIExpression *, DIVariable *> Allocated = nullptr,
-        PointerUnion<DIExpression *, DIVariable *> Rank = nullptr);
+        PointerUnion<DIExpression *, DIVariable *> Rank = nullptr,
+        Metadata *BitStride = nullptr);
 
     /// Create debugging information entry for a vector type.
     /// \param Size         Array size.
