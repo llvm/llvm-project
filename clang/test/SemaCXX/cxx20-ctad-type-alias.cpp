@@ -485,7 +485,7 @@ struct Out {
     A(T2);
   };
   A(int) -> A<T1>;
-  
+
   template <typename T3>
   using B = A<T3>;
 };

@@ -9552,8 +9552,11 @@ concepts::NestedRequirement *
 Sema::BuildNestedRequirement(Expr *Constraint) {
   ConstraintSatisfaction Satisfaction;
   if (!Constraint->isInstantiationDependent() &&
-      CheckConstraintSatisfaction(nullptr, {Constraint}, /*TemplateArgs=*/{},
-                                  Constraint->getSourceRange(), Satisfaction))
+      CheckConstraintSatisfaction(
+          nullptr,
+          AssociatedConstraint(Constraint,
+                               /*ArgumentPackSubstitutionIndex=*/-1),
+          /*TemplateArgs=*/{}, Constraint->getSourceRange(), Satisfaction))
     return nullptr;
   return new (Context) concepts::NestedRequirement(Context, Constraint,
                                                    Satisfaction);
