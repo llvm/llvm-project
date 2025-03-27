@@ -22,35 +22,15 @@
 #include "asan_testing.h"
 #include "common.h"
 #include "min_allocator.h"
+#include "MoveOnly.h"
 #include "test_allocator.h"
 #include "test_macros.h"
 
-struct MoveOnly {
-  int value;
-
-  TEST_CONSTEXPR_CXX14 explicit MoveOnly(int i) : value(i) {}
-
-  MoveOnly(MoveOnly const&)            = delete;
-  MoveOnly& operator=(MoveOnly const&) = delete;
-
-  TEST_CONSTEXPR_CXX14 MoveOnly(MoveOnly&& other) TEST_NOEXCEPT : value(other.value) { other.value = -1; }
-
-  TEST_CONSTEXPR_CXX14 MoveOnly& operator=(MoveOnly&& other) TEST_NOEXCEPT {
-    value       = other.value;
-    other.value = -1;
-    return *this;
-  }
-
-  TEST_CONSTEXPR_CXX14 friend bool operator==(MoveOnly const& lhs, MoveOnly const& rhs) {
-    return lhs.value == rhs.value;
-  }
-};
-
 template <class T>
-struct has_moved_from_sentinel : std::false_type {};
+struct has_moved_from_sentinel_value : std::false_type {};
 
 template <>
-struct has_moved_from_sentinel<MoveOnly> : std::true_type {};
+struct has_moved_from_sentinel_value<MoveOnly> : std::true_type {};
 
 template <template <class...> class Allocator, class T>
 TEST_CONSTEXPR_CXX20 void test() {
@@ -226,48 +206,48 @@ TEST_CONSTEXPR_CXX20 void test() {
     // When capacity must increase
     {
       Vector v;
-      v.emplace_back(0);
       v.emplace_back(1);
+      v.emplace_back(2);
 
       while (v.size() < v.capacity()) {
-        v.emplace_back(2);
+        v.emplace_back(3);
       }
       assert(v.size() == v.capacity());
-      // vector is {0, 1, 2...}
+      // vector is {1, 2, 3...}
 
       std::size_t old_cap = v.capacity();
       v.emplace(v.cbegin(), std::move(v[1]));
       assert(v.capacity() > old_cap); // test the test
 
-      // vector is {1, 0, -1, 2...}
-      // Note that old v[1] has been set to -1 when it was moved-from
+      // vector is {2, 1, 0, 3...}
+      // Note that old v[1] has been set to 0 when it was moved-from
       assert(v.size() >= 3);
-      assert(v[0] == T(1));
-      assert(v[1] == T(0));
-      if (has_moved_from_sentinel<T>::value)
-        assert(v[2] == T(-1));
+      assert(v[0] == T(2));
+      assert(v[1] == T(1));
+      if (has_moved_from_sentinel_value<T>::value)
+        assert(v[2] == T(0));
       assert(is_contiguous_container_asan_correct(v));
     }
 
     // When elements shift around
     {
       Vector v;
-      v.emplace_back(0);
       v.emplace_back(1);
-      // vector is {0, 1}
+      v.emplace_back(2);
+      // vector is {1, 2}
 
       v.reserve(3);
       std::size_t old_cap = v.capacity();
       v.emplace(v.cbegin(), std::move(v[1]));
       assert(v.capacity() == old_cap); // test the test
 
-      // vector is {1, 0, -1}
-      // Note that old v[1] has been set to -1 when it was moved-from
+      // vector is {2, 1, 0}
+      // Note that old v[1] has been set to 0 when it was moved-from
       assert(v.size() == 3);
-      assert(v[0] == T(1));
-      assert(v[1] == T(0));
-      if (has_moved_from_sentinel<T>::value)
-        assert(v[2] == T(-1));
+      assert(v[0] == T(2));
+      assert(v[1] == T(1));
+      if (has_moved_from_sentinel_value<T>::value)
+        assert(v[2] == T(0));
       assert(is_contiguous_container_asan_correct(v));
     }
   }
@@ -301,12 +281,14 @@ TEST_CONSTEXPR_CXX20 void test() {
   // on the stack and then moves it into its final location inside the newly allocated vector storage.
   //
   // If that were the case, and if the element happened to throw upon move construction or move assignment into its
-  // final location, we would have invalidated iterators despite the overall emplace being required to have the
-  // strong exception safety guarantee.
+  // final location, we would have invalidated iterators, when a different approach would allow us to still provide
+  // the strong exception safety guarantee.
   //
-  // Instead, a conforming implementation needs to emplace the new element into its final location immediately, and
-  // only after this has been done, then start making non-reversible changes to the vector's underlying storage.
-#ifndef TEST_HAS_NO_EXCEPTIONS
+  // Instead of the naive approach, libc++ emplaces the new element into its final location immediately, and only
+  // after this has been done do we start making non-reversible changes to the vector's underlying storage. This
+  // test pins down that behavior, although that is something that we don't advertise widely and could potentially
+  // change in the future.
+#if defined(_LIBCPP_VERSION) && !defined(TEST_HAS_NO_EXCEPTIONS)
   {
     std::vector<ThrowingMove, Allocator<ThrowingMove> > v;
     v.emplace_back(0, /* do throw */ false);
@@ -317,7 +299,7 @@ TEST_CONSTEXPR_CXX20 void test() {
     }
     assert(v.size() == v.capacity()); // the next emplace will be forced to invalidate iterators
 
-    v.emplace(v.cend(), 3, /* do throw */ true); // this shouldn't throw since we shouldn't move
+    v.emplace(v.cend(), 3, /* do throw */ true); // this shouldn't throw since we shouldn't move this element at all
 
     assert(v.size() >= 3);
     assert(v[0] == ThrowingMove(0));
@@ -325,7 +307,7 @@ TEST_CONSTEXPR_CXX20 void test() {
     assert(v.back() == ThrowingMove(3));
     assert(is_contiguous_container_asan_correct(v));
   }
-#endif // TEST_HAS_NO_EXCEPTIONS
+#endif // defined(_LIBCPP_VERSION) && !defined(TEST_HAS_NO_EXCEPTIONS)
 }
 
 TEST_CONSTEXPR_CXX20 bool tests() {
