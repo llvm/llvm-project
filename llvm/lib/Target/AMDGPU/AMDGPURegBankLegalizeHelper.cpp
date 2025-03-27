@@ -293,6 +293,23 @@ void RegBankLegalizeHelper::lowerSplitTo32(MachineInstr &MI) {
   return;
 }
 
+void RegBankLegalizeHelper::lowerSplitTo32Sel(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst) == V4S16 ? V2S16 : S32;
+  auto Op2 = B.buildUnmerge({VgprRB, Ty}, MI.getOperand(2).getReg());
+  auto Op3 = B.buildUnmerge({VgprRB, Ty}, MI.getOperand(3).getReg());
+  Register Cond = MI.getOperand(1).getReg();
+  auto Flags = MI.getFlags();
+  auto Lo =
+      B.buildSelect({VgprRB, Ty}, Cond, Op2.getReg(0), Op3.getReg(0), Flags);
+  auto Hi =
+      B.buildSelect({VgprRB, Ty}, Cond, Op2.getReg(1), Op3.getReg(1), Flags);
+
+  B.buildMergeLikeInstr(Dst, {Lo, Hi});
+  MI.eraseFromParent();
+  return;
+}
+
 void RegBankLegalizeHelper::lower(MachineInstr &MI,
                                   const RegBankLLTMapping &Mapping,
                                   SmallSet<Register, 4> &WaterfallSgprs) {
@@ -379,6 +396,8 @@ void RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerUni_BFE(MI);
   case SplitTo32:
     return lowerSplitTo32(MI);
+  case SplitTo32Sel:
+    return lowerSplitTo32Sel(MI);
   case SplitLoad: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     unsigned Size = DstTy.getSizeInBits();
@@ -492,7 +511,8 @@ LLT RegBankLegalizeHelper::getBTyFromID(RegBankLLTMappingApplyID ID, LLT Ty) {
   case UniInVgprB64:
     if (Ty == LLT::scalar(64) || Ty == LLT::fixed_vector(2, 32) ||
         Ty == LLT::fixed_vector(4, 16) || Ty == LLT::pointer(0, 64) ||
-        Ty == LLT::pointer(1, 64) || Ty == LLT::pointer(4, 64))
+        Ty == LLT::pointer(1, 64) || Ty == LLT::pointer(4, 64) ||
+        Ty == LLT::pointer(999, 64))
       return Ty;
     return LLT();
   case SgprB96:
