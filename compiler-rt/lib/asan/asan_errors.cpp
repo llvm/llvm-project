@@ -117,7 +117,7 @@ void ErrorFreeNotMalloced::Print() {
 
 void ErrorAllocTypeMismatch::Print() {
   static const char *alloc_names[] = {"INVALID", "malloc", "operator new",
-.                                      "operator new []"};
+                                      "operator new []"};
   static const char *dealloc_names[] = {"INVALID", "free", "operator delete",
                                         "operator delete []"};
   CHECK_NE(alloc_type, dealloc_type);
@@ -506,7 +506,6 @@ ErrorGeneric::ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
           far_from_bounds = AdjacentShadowValuesAreFullyPoisoned(shadow_addr);
           break;
       }
-
       scariness.Scare(bug_type_score + read_after_free_bonus, bug_descr);
       if (far_from_bounds) scariness.Scare(10, "far-from-bounds");
     }

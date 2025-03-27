@@ -130,8 +130,6 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
   VPrintf(3, "Trying to poison memory region [%p, %p)\n", (void *)beg_addr,
           (void *)end_addr);
 
-  u32 poison_magic = kAsanUserPoisonedMemoryMagic;
-
   if (flags()->track_poison > 0) {
     GET_STACK_TRACE(/*max_size=*/ 16, /*fast=*/ false);
     u32 current_tid = GetCurrentTidOrInvalid();
@@ -160,7 +158,7 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
       if (beg.offset > 0) {
         *beg.chunk = Min(value, beg.offset);
       } else {
-        *beg.chunk = poison_magic;
+        *beg.chunk = kAsanUserPoisonedMemoryMagic;
       }
     }
     return;
@@ -179,7 +177,7 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
   REAL(memset)(beg.chunk, poison_magic, end.chunk - beg.chunk);
   // Poison if byte in end.offset is unaddressable.
   if (end.value > 0 && end.value <= end.offset) {
-    *end.chunk = poison_magic;
+    *end.chunk = kAsanUserPoisonedMemoryMagic;
   }
 }
 
