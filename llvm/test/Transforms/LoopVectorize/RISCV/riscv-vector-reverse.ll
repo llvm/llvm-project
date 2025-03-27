@@ -239,10 +239,11 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:    vp<%4> = vector-end-pointer inbounds ir<%arrayidx>, ir<%18>
 ; CHECK-NEXT:    WIDEN ir<%19> = load vp<%4>
-; CHECK-NEXT:    WIDEN ir<%add9> = add ir<%19>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[BROADCAST:%.+]]> = broadcast ir<1>
+; CHECK-NEXT:    WIDEN ir<%add9> = add ir<%19>, vp<[[BROADCAST]]>
 ; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:    vp<%5> = vector-end-pointer inbounds ir<%arrayidx3>, ir<%18>
-; CHECK-NEXT:    WIDEN store vp<%5>, ir<%add9>
+; CHECK-NEXT:    vp<[[VECTOR_END_POINTER1:%.+]]> = vector-end-pointer inbounds ir<%arrayidx3>, ir<%18>
+; CHECK-NEXT:    WIDEN store vp<[[VECTOR_END_POINTER1]]>, ir<%add9>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<%18>.1
 ; CHECK-NEXT:    EMIT branch-on-count vp<%index.next>, ir<%n.vec>
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
@@ -650,10 +651,11 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:    vp<%4> = vector-end-pointer inbounds ir<%arrayidx>, ir<%18>
 ; CHECK-NEXT:    WIDEN ir<%19> = load vp<%4>
-; CHECK-NEXT:    WIDEN ir<%conv1> = fadd ir<%19>, ir<1.000000e+00>
+; CHECK-NEXT:    EMIT vp<[[BROADCAST:%.+]]> = broadcast ir<1.000000e+00>
+; CHECK-NEXT:    WIDEN ir<%conv1> = fadd ir<%19>, vp<[[BROADCAST]]>
 ; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:    vp<%5> = vector-end-pointer inbounds ir<%arrayidx3>, ir<%18>
-; CHECK-NEXT:    WIDEN store vp<%5>, ir<%conv1>
+; CHECK-NEXT:    vp<[[VECTOR_END_POINTER:%.+]]> = vector-end-pointer inbounds ir<%arrayidx3>, ir<%18>
+; CHECK-NEXT:    WIDEN store vp<[[VECTOR_END_POINTER]]>, ir<%conv1>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<%18>.1
 ; CHECK-NEXT:    EMIT branch-on-count vp<%index.next>, ir<%n.vec>
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
