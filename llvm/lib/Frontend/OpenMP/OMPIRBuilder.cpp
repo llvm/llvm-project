@@ -8761,7 +8761,6 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
         &Builder, XElemTy, LoadSize * 8, LoadSize * 8, OldVal->getAlign(),
         OldVal->getAlign(), true /* UseLibcall */, X);
     auto AtomicLoadRes = atomicInfo.EmitAtomicLoadLibcall(AO);
-
     BasicBlock *CurBB = Builder.GetInsertBlock();
     Instruction *CurBBTI = CurBB->getTerminator();
     CurBBTI = CurBBTI ? CurBBTI : Builder.CreateUnreachable();
