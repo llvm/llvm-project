@@ -734,7 +734,7 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
-    def request_writeMemory(self, memoryReference, offset, data, allowPartial=True):
+    def request_writeMemory(self, memoryReference, data, offset=0, allowPartial=True):
         args_dict = {
             "memoryReference": memoryReference,
             "offset": offset,

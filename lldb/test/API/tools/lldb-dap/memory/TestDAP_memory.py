@@ -133,7 +133,7 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
 
         # Write the Base64-encoded string "Mg==", which decodes to binary 0x32
         # which is decimal 50 and corresponds to the ASCII character '2'.
-        mem_response = self.dap_server.request_writeMemory(memref, 0, "Mg==")
+        mem_response = self.writeMemory(memref, 50, 0, True)
         self.assertEqual(mem_response["success"], True)
         self.assertEqual(mem_response["body"]["bytesWritten"], 1)
 
@@ -144,20 +144,28 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(mem_response["body"]["data"], "Mg==")
 
         # Memory write failed for 0x0.
-        mem_response = self.dap_server.request_writeMemory("0x0", 0, "Mg==")
+        mem_response = self.writeMemory("0x0", 50, 0, True)
         self.assertEqual(mem_response["success"], False)
 
         # Malformed memory reference.
-        mem_response = self.dap_server.request_writeMemory("12345", 0, "Mg==")
+        mem_response = self.writeMemory("12345", 50, 0, True)
         self.assertEqual(mem_response["success"], False)
 
         ptr_deref = self.dap_server.request_evaluate("nonWritable")["body"]
         memref = ptr_deref["memoryReference"]
 
         # Writing to non-writable region should return an appropriate error.
-        mem_response = self.dap_server.request_writeMemory(memref, 0, "Mg==", False)
+        mem_response = self.writeMemory(memref, 50, 0, False)
         self.assertEqual(mem_response["success"], False)
         self.assertRegex(
             mem_response["message"],
-            r"Memory "+memref+" region is not writable",
+            r"Memory " + memref + " region is not writable",
+        )
+
+        # Trying to write empty value; data=""
+        mem_response = self.writeMemory(memref)
+        self.assertEqual(mem_response["success"], False)
+        self.assertRegex(
+            mem_response["message"],
+            r"Data cannot be empty value. Provide valid data",
         )

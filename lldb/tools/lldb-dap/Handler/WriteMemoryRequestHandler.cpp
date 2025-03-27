@@ -113,23 +113,29 @@ void WriteMemoryRequestHandler::operator()(
       address + GetInteger<uint64_t>(arguments, "offset").value_or(0);
 
   llvm::StringRef data64 = GetString(arguments, "data").value_or("");
+  if (data64.empty()) {
+    response["success"] = false;
+    EmplaceSafeString(response, "message","Data cannot be empty value. Provide valid data");
+    dap.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
 
   // The VSCode IDE or other DAP clients send memory data as a Base64 string.
   // This function decodes it into raw binary before writing it to the target
   // process memory.
   std::vector<char> output;
-  auto decodeError = llvm::decodeBase64(data64, output);
+  auto decode_error = llvm::decodeBase64(data64, output);
 
-  if (decodeError) {
+  if (decode_error) {
     response["success"] = false;
-    EmplaceSafeString(response, "message",
-                      llvm::toString(std::move(decodeError)).c_str());
+    EmpleceSafeErrorMessage(dap, response, "message",
+                      llvm::toString(std::move(decode_error)).c_str());
     dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
 
   bool allowPartial = GetBoolean(arguments, "allowPartial").value_or(true);
-  lldb::SBError writeError;
+  lldb::SBError write_error;
   uint64_t bytes_written = 0;
 
   // Write the memory
@@ -155,12 +161,12 @@ void WriteMemoryRequestHandler::operator()(
 
     bytes_written =
         process.WriteMemory(address_offset, static_cast<void *>(output.data()),
-                            output.size(), writeError);
+                            output.size(), write_error);
   }
 
   if (bytes_written == 0) {
     response["success"] = false;
-    EmplaceSafeString(response, "message", writeError.GetCString());
+    EmplaceSafeString(response, "message", write_error.GetCString());
     dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
