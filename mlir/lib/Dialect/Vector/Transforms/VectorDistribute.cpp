@@ -1761,21 +1761,15 @@ void mlir::vector::populatePropagateWarpVectorDistributionPatterns(
     const WarpShuffleFromIdxFn &warpShuffleFromIdxFn, PatternBenefit benefit,
     PatternBenefit readBenefit) {
   patterns.add<WarpOpTransferRead>(patterns.getContext(), readBenefit);
-  patterns
-      .add<WarpOpElementwise, WarpOpBroadcast, WarpOpShapeCast, WarpOpExtract,
-           WarpOpConstant, WarpOpExtractElement, WarpOpInsertElement,
-           WarpOpInsertScalar, WarpOpInsert, WarpOpCreateMask>(
-          patterns.getContext(), benefit);
+  patterns.add<WarpOpElementwise, WarpOpDeadResult, WarpOpBroadcast,
+               WarpOpShapeCast, WarpOpExtract, WarpOpForwardOperand,
+               WarpOpConstant, WarpOpExtractElement, WarpOpInsertElement,
+               WarpOpInsertScalar, WarpOpInsert, WarpOpCreateMask>(
+      patterns.getContext(), benefit);
   patterns.add<WarpOpExtractScalar>(patterns.getContext(), warpShuffleFromIdxFn,
                                     benefit);
   patterns.add<WarpOpScfForOp>(patterns.getContext(), distributionMapFn,
                                benefit);
-}
-
-void mlir::vector::populateWarpSimplificationPatterns(
-    RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<WarpOpDeadResult, WarpOpForwardOperand>(patterns.getContext(),
-                                                       benefit);
 }
 
 void mlir::vector::populateDistributeReduction(
