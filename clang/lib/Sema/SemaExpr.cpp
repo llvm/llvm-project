@@ -19853,6 +19853,12 @@ static void DoMarkVarDeclReferenced(
           // Re-set the member to trigger a recomputation of the dependence bits
           // for the expression.
           DRE->setDecl(DRE->getDecl());
+          // The size of an incomplete array type can be updated by
+          // instantiating the initializer. The DeclRefExpr's type should be
+          // updated accordingly too, or users of it would be confused!
+          //
+          // FIXME: Do we need to recompute the type for all the Decls, as in
+          // BuildDeclarationNameExpr?
           if (SemaRef.Context.getAsIncompleteArrayType(DRE->getType()) &&
               !SemaRef.Context.getAsIncompleteArrayType(Var->getType()))
             DRE->setType(Var->getType());
