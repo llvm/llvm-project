@@ -134,8 +134,6 @@ struct alignas(ConstraintAlignment) FoldExpandedConstraint {
 
   static bool AreCompatibleForSubsumption(const FoldExpandedConstraint &A,
                                           const FoldExpandedConstraint &B);
-
-  llvm::FoldingSetNodeID ProfileForSubsumption() const;
 };
 
 const NormalizedConstraint *getNormalizedAssociatedConstraints(
