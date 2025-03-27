@@ -4390,9 +4390,7 @@ static bool isInvalidPackingPosSpecification(ArrayRef<int64_t> dimsPos,
   size_t dimsPosSize = dimsPos.size();
   if (dimsPosSize > rank)
     return true;
-  DenseSet<int64_t> uniqued;
-  for (int64_t dim : dimsPos)
-    uniqued.insert(dim);
+  DenseSet<int64_t> uniqued(llvm::from_range, dimsPos);
   if (dimsPosSize != uniqued.size())
     return true;
   return llvm::any_of(dimsPos, [rank](int64_t dimPos) {
