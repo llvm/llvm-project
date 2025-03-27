@@ -865,6 +865,7 @@ public:
     BranchOnCount,
     BranchOnCond,
     Broadcast,
+    ComputeFindLastIVResult,
     ComputeReductionResult,
     // Takes the VPValue to extract from as first operand and the lane or part
     // to extract as second operand, counting from the end starting with 1 for
@@ -3597,8 +3598,9 @@ public:
     UFs.insert(UF);
   }
 
-  /// Returns true if the VPlan already has been unrolled, i.e. it has UF = 1.
-  bool isUnrolled() const { return UFs.size() == 1 && UFs.back() == 1; }
+  /// Returns true if the VPlan already has been unrolled, i.e. it has a single
+  /// concrete UF.
+  bool isUnrolled() const { return UFs.size() == 1; }
 
   /// Return a string with the name of the plan and the applicable VFs and UFs.
   std::string getName() const;
