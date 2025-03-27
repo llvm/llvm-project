@@ -984,7 +984,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   // Additionally, many existing test cases rely on the current behavior (e.g.,
   // llvm/test/CodeGen/PowerPC/vec_shuffle.ll). A broader discussion and
   // incremental changes might be needed to properly
-  //  support POISON without breaking existing targets and tests.
+  // support POISON without breaking existing targets and tests.
   case ISD::POISON: {
     SDValue UndefNode = DAG.getUNDEF(Node->getValueType(0));
     ReplaceNode(Node, UndefNode.getNode());
