@@ -1980,7 +1980,7 @@ private:
     llvm_unreachable("illegal reduction operator");
   }
 
-  /// Collect DO CONCURRENT or FORALL loop control information.
+  /// Collect DO CONCURRENT loop control information.
   IncrementLoopNestInfo getConcurrentControl(
       const Fortran::parser::ConcurrentHeader &header,
       const std::list<Fortran::parser::LocalitySpec> &localityList = {}) {
