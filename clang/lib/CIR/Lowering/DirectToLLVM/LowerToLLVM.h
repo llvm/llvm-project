@@ -178,6 +178,17 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMBinOpLowering : public mlir::OpConversionPattern<cir::BinOp> {
+  mlir::LLVM::IntegerOverflowFlags getIntOverflowFlag(cir::BinOp op) const;
+
+public:
+  using mlir::OpConversionPattern<cir::BinOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::BinOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMBrOpLowering : public mlir::OpConversionPattern<cir::BrOp> {
 public:
   using mlir::OpConversionPattern<cir::BrOp>::OpConversionPattern;

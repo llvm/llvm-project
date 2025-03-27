@@ -830,6 +830,13 @@ pythonize_bool(COMPILER_RT_TEST_USE_LLD)
 option(COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER "Build Compiler RT linked with in LLVM symbolizer" OFF)
 mark_as_advanced(COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
 
+option(SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH "Disable searching for external symbolizer in $PATH" OFF)
+mark_as_advanced(SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
+
+if (SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
+  add_compile_definitions(SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
+endif()
+
 add_subdirectory(lib)
 
 if(COMPILER_RT_INCLUDE_TESTS)

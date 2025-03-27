@@ -77,8 +77,7 @@ def _libc_library_filegroups(
         # and ensure the consistent and tightly controlled set of flags
         # (see libc_common_copts and libc_release_copts above) is used to build
         # libc code both for tests and for release configuration.
-        target_compatible_with = None,  # @unused
-        weak = False):  # @unused
+        target_compatible_with = None):  # @unused
     """Internal macro to collect sources and headers required to build a library.
     """
 
@@ -101,10 +100,7 @@ def libc_support_library(name, **kwargs):
     _libc_library(name = name, **kwargs)
     _libc_library_filegroups(name = name, is_function = False, **kwargs)
 
-def libc_function(
-        name,
-        weak = False,
-        **kwargs):
+def libc_function(name, **kwargs):
     """Add target for a libc function.
 
     This macro creates an internal cc_library that can be used to test this
@@ -114,7 +110,6 @@ def libc_function(
     Args:
       name: Target name. It is normally the name of the function this target is
             for.
-      weak: Make the symbol corresponding to the libc function "weak".
       **kwargs: Other attributes relevant for a cc_library. For example, deps.
     """
 
@@ -127,19 +122,6 @@ def libc_function(
     )
 
     _libc_library_filegroups(name = name, is_function = True, **kwargs)
-
-    # TODO(PR #130327): Remove this after downstream uses are migrated to libc_release_library.
-    # This second target is the llvm libc C function with default visibility.
-    func_attrs = [
-        "LLVM_LIBC_FUNCTION_ATTR_" + name + "='LLVM_LIBC_EMPTY, [[gnu::weak]]'",
-    ] if weak else []
-
-    _libc_library(
-        name = name,
-        copts = libc_release_copts(),
-        local_defines = func_attrs,
-        **kwargs
-    )
 
 def libc_release_library(
         name,

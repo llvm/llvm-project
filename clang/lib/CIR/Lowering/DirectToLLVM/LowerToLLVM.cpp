@@ -32,7 +32,6 @@
 #include "clang/CIR/Passes.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 
@@ -85,12 +84,11 @@ static mlir::Value createIntCast(mlir::OpBuilder &bld, mlir::Value src,
 
   if (dstWidth > srcWidth && isSigned)
     return bld.create<mlir::LLVM::SExtOp>(loc, dstTy, src);
-  else if (dstWidth > srcWidth)
+  if (dstWidth > srcWidth)
     return bld.create<mlir::LLVM::ZExtOp>(loc, dstTy, src);
-  else if (dstWidth < srcWidth)
+  if (dstWidth < srcWidth)
     return bld.create<mlir::LLVM::TruncOp>(loc, dstTy, src);
-  else
-    return bld.create<mlir::LLVM::BitcastOp>(loc, dstTy, src);
+  return bld.create<mlir::LLVM::BitcastOp>(loc, dstTy, src);
 }
 
 /// Emits the value from memory as expected by its users. Should be called when
@@ -994,6 +992,131 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
                         << elementType;
 }
 
+mlir::LLVM::IntegerOverflowFlags
+CIRToLLVMBinOpLowering::getIntOverflowFlag(cir::BinOp op) const {
+  if (op.getNoUnsignedWrap())
+    return mlir::LLVM::IntegerOverflowFlags::nuw;
+
+  if (op.getNoSignedWrap())
+    return mlir::LLVM::IntegerOverflowFlags::nsw;
+
+  return mlir::LLVM::IntegerOverflowFlags::none;
+}
+
+static bool isIntTypeUnsigned(mlir::Type type) {
+  // TODO: Ideally, we should only need to check cir::IntType here.
+  return mlir::isa<cir::IntType>(type)
+             ? mlir::cast<cir::IntType>(type).isUnsigned()
+             : mlir::cast<mlir::IntegerType>(type).isUnsigned();
+}
+
+mlir::LogicalResult CIRToLLVMBinOpLowering::matchAndRewrite(
+    cir::BinOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  if (adaptor.getLhs().getType() != adaptor.getRhs().getType())
+    return op.emitError() << "inconsistent operands' types not supported yet";
+
+  mlir::Type type = op.getRhs().getType();
+  assert(!cir::MissingFeatures::vectorType());
+  if (!mlir::isa<cir::IntType, cir::BoolType, cir::CIRFPTypeInterface,
+                 mlir::IntegerType>(type))
+    return op.emitError() << "operand type not supported yet";
+
+  auto llvmTy = getTypeConverter()->convertType(op.getType());
+  mlir::Type llvmEltTy =
+      mlir::isa<mlir::VectorType>(llvmTy)
+          ? mlir::cast<mlir::VectorType>(llvmTy).getElementType()
+          : llvmTy;
+  auto rhs = adaptor.getRhs();
+  auto lhs = adaptor.getLhs();
+
+  type = elementTypeIfVector(type);
+
+  switch (op.getKind()) {
+  case cir::BinOpKind::Add:
+    if (mlir::isa<mlir::IntegerType>(llvmEltTy)) {
+      if (op.getSaturated()) {
+        if (isIntTypeUnsigned(type)) {
+          rewriter.replaceOpWithNewOp<mlir::LLVM::UAddSat>(op, lhs, rhs);
+          break;
+        }
+        rewriter.replaceOpWithNewOp<mlir::LLVM::SAddSat>(op, lhs, rhs);
+        break;
+      }
+      rewriter.replaceOpWithNewOp<mlir::LLVM::AddOp>(op, llvmTy, lhs, rhs,
+                                                     getIntOverflowFlag(op));
+    } else {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::FAddOp>(op, lhs, rhs);
+    }
+    break;
+  case cir::BinOpKind::Sub:
+    if (mlir::isa<mlir::IntegerType>(llvmEltTy)) {
+      if (op.getSaturated()) {
+        if (isIntTypeUnsigned(type)) {
+          rewriter.replaceOpWithNewOp<mlir::LLVM::USubSat>(op, lhs, rhs);
+          break;
+        }
+        rewriter.replaceOpWithNewOp<mlir::LLVM::SSubSat>(op, lhs, rhs);
+        break;
+      }
+      rewriter.replaceOpWithNewOp<mlir::LLVM::SubOp>(op, llvmTy, lhs, rhs,
+                                                     getIntOverflowFlag(op));
+    } else {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::FSubOp>(op, lhs, rhs);
+    }
+    break;
+  case cir::BinOpKind::Mul:
+    if (mlir::isa<mlir::IntegerType>(llvmEltTy))
+      rewriter.replaceOpWithNewOp<mlir::LLVM::MulOp>(op, llvmTy, lhs, rhs,
+                                                     getIntOverflowFlag(op));
+    else
+      rewriter.replaceOpWithNewOp<mlir::LLVM::FMulOp>(op, lhs, rhs);
+    break;
+  case cir::BinOpKind::Div:
+    if (mlir::isa<mlir::IntegerType>(llvmEltTy)) {
+      auto isUnsigned = isIntTypeUnsigned(type);
+      if (isUnsigned)
+        rewriter.replaceOpWithNewOp<mlir::LLVM::UDivOp>(op, lhs, rhs);
+      else
+        rewriter.replaceOpWithNewOp<mlir::LLVM::SDivOp>(op, lhs, rhs);
+    } else {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::FDivOp>(op, lhs, rhs);
+    }
+    break;
+  case cir::BinOpKind::Rem:
+    if (mlir::isa<mlir::IntegerType>(llvmEltTy)) {
+      auto isUnsigned = isIntTypeUnsigned(type);
+      if (isUnsigned)
+        rewriter.replaceOpWithNewOp<mlir::LLVM::URemOp>(op, lhs, rhs);
+      else
+        rewriter.replaceOpWithNewOp<mlir::LLVM::SRemOp>(op, lhs, rhs);
+    } else {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::FRemOp>(op, lhs, rhs);
+    }
+    break;
+  case cir::BinOpKind::And:
+    rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(op, lhs, rhs);
+    break;
+  case cir::BinOpKind::Or:
+    rewriter.replaceOpWithNewOp<mlir::LLVM::OrOp>(op, lhs, rhs);
+    break;
+  case cir::BinOpKind::Xor:
+    rewriter.replaceOpWithNewOp<mlir::LLVM::XOrOp>(op, lhs, rhs);
+    break;
+  case cir::BinOpKind::Max:
+    if (mlir::isa<mlir::IntegerType>(llvmEltTy)) {
+      auto isUnsigned = isIntTypeUnsigned(type);
+      if (isUnsigned)
+        rewriter.replaceOpWithNewOp<mlir::LLVM::UMaxOp>(op, llvmTy, lhs, rhs);
+      else
+        rewriter.replaceOpWithNewOp<mlir::LLVM::SMaxOp>(op, llvmTy, lhs, rhs);
+    }
+    break;
+  }
+
+  return mlir::LogicalResult::success();
+}
+
 static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
                                  mlir::DataLayout &dataLayout) {
   converter.addConversion([&](cir::PointerType type) -> mlir::Type {
@@ -1132,6 +1255,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                                             dl);
   patterns.add<
       // clang-format off
+               CIRToLLVMBinOpLowering,
                CIRToLLVMBrCondOpLowering,
                CIRToLLVMBrOpLowering,
                CIRToLLVMFuncOpLowering,

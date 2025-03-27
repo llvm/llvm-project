@@ -3,12 +3,11 @@
 ; CHECK-LABEL: @test_fshl
 ; CHECK-LABEL: vector.body:
 ; CHECK-NEXT:    [[IDX:%.+]] = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK-NEXT:    [[IDX0:%.+]] = add i32 %index, 0
-; CHECK-NEXT:    [[GEP:%.+]] = getelementptr inbounds i16, ptr %src, i32 [[IDX0]]
+; CHECK-NEXT:    [[GEP:%.+]] = getelementptr inbounds i16, ptr %src, i32 %index
 ; CHECK-NEXT:    [[GEP0:%.+]] = getelementptr inbounds i16, ptr [[GEP]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.+]] = load <4 x i16>, ptr [[GEP0]], align 2
 ; CHECK-NEXT:    [[FSHL:%.+]] = call <4 x i16> @llvm.fshl.v4i16(<4 x i16> [[WIDE_LOAD]], <4 x i16> [[WIDE_LOAD]], <4 x i16> splat (i16 15))
-; CHECK-NEXT:    [[GEP0:%.+]] = getelementptr inbounds i16, ptr %dst, i32 [[IDX0]]
+; CHECK-NEXT:    [[GEP0:%.+]] = getelementptr inbounds i16, ptr %dst, i32 %index
 ; CHECK-NEXT:    [[GEP1:%.+]] = getelementptr inbounds i16, ptr [[GEP0]], i32 0
 ; CHECK-NEXT:    store <4 x i16> [[FSHL]], ptr [[GEP1]], align 2
 ; CHECK-NEXT:    [[IDX_NEXT:%.+]] = add nuw i32 [[IDX]], 4

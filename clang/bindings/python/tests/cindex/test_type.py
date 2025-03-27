@@ -18,7 +18,7 @@ import unittest
 
 from .util import get_cursor, get_cursors, get_tu
 
-struct_input = """\
+STRUCT_INPUT = """\
 
 typedef int I;
 
@@ -36,7 +36,7 @@ struct teststruct {
 """
 
 
-constarray_input = """
+CONSTARRAY_INPUT = """
 struct teststruct {
   void *A[2];
 };
@@ -45,7 +45,7 @@ struct teststruct {
 
 class TestType(unittest.TestCase):
     def test_a_struct(self):
-        tu = get_tu(struct_input)
+        tu = get_tu(STRUCT_INPUT)
 
         teststruct = get_cursor(tu, "teststruct")
         self.assertIsNotNone(teststruct, "Could not find teststruct.")
@@ -143,7 +143,7 @@ class TestType(unittest.TestCase):
         t.get_declaration()
 
     def testConstantArray(self):
-        tu = get_tu(constarray_input)
+        tu = get_tu(CONSTARRAY_INPUT)
 
         teststruct = get_cursor(tu, "teststruct")
         self.assertIsNotNone(teststruct, "Didn't find teststruct??")

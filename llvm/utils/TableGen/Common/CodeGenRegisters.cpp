@@ -861,23 +861,27 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
   }
 }
 
-// Compute inherited propertied for a synthesized register class.
+// Compute inherited properties for a synthesized register class.
 void CodeGenRegisterClass::inheritProperties(CodeGenRegBank &RegBank) {
   assert(!getDef() && "Only synthesized classes can inherit properties");
   assert(!SuperClasses.empty() && "Synthesized class without super class");
 
-  // The last super-class is the smallest one.
-  CodeGenRegisterClass &Super = *SuperClasses.back();
+  // The last super-class is the smallest one in topological order. Check for
+  // allocatable super-classes and inherit from the nearest allocatable one if
+  // any.
+  auto NearestAllocSCRIt =
+      find_if(reverse(SuperClasses),
+              [&](const CodeGenRegisterClass *S) { return S->Allocatable; });
+  CodeGenRegisterClass &Super = NearestAllocSCRIt == SuperClasses.rend()
+                                    ? *SuperClasses.back()
+                                    : **NearestAllocSCRIt;
 
   // Most properties are copied directly.
   // Exceptions are members, size, and alignment
   Namespace = Super.Namespace;
   VTs = Super.VTs;
   CopyCost = Super.CopyCost;
-  // Check for allocatable superclasses.
-  Allocatable = any_of(SuperClasses, [&](const CodeGenRegisterClass *S) {
-    return S->Allocatable;
-  });
+  Allocatable = Super.Allocatable;
   AltOrderSelect = Super.AltOrderSelect;
   AllocationPriority = Super.AllocationPriority;
   GlobalPriority = Super.GlobalPriority;
