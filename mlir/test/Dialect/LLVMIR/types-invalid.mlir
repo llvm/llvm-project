@@ -118,34 +118,6 @@ func.func @identified_struct_with_void() {
 
 // -----
 
-func.func @dynamic_vector() {
-  // expected-error @+1 {{expected '? x <integer> x <type>' or '<integer> x <type>'}}
-  "some.op"() : () -> !llvm.vec<? x ptr>
-}
-
-// -----
-
-func.func @dynamic_scalable_vector() {
-  // expected-error @+1 {{expected '? x <integer> x <type>' or '<integer> x <type>'}}
-  "some.op"() : () -> !llvm.vec<?x? x ptr>
-}
-
-// -----
-
-func.func @unscalable_vector() {
-  // expected-error @+1 {{expected '? x <integer> x <type>' or '<integer> x <type>'}}
-  "some.op"() : () -> !llvm.vec<4x4 x ptr>
-}
-
-// -----
-
-func.func @scalable_void_vector() {
-  // expected-error @+1 {{invalid vector element type}}
-  "some.op"() : () -> !llvm.vec<?x4 x void>
-}
-
-// -----
-
 // expected-error @+1 {{unexpected type, expected keyword}}
 func.func private @unexpected_type() -> !llvm.tensor<*xf32>
 

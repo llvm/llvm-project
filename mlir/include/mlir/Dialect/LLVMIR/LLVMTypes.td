@@ -289,38 +289,6 @@ def LLVMPointerType : LLVMType<"LLVMPointer", "ptr", [
 }
 
 //===----------------------------------------------------------------------===//
-// LLVMScalableVectorType
-//===----------------------------------------------------------------------===//
-
-def LLVMScalableVectorType : LLVMType<"LLVMScalableVector", "vec"> {
-  let summary = "LLVM scalable vector type";
-  let description = [{
-    LLVM dialect scalable vector type, represents a sequence of elements of
-    unknown length that is known to be divisible by some constant. These
-    elements can be processed as one in SIMD context.
-  }];
-
-  let typeName = "llvm.scalable_vec";
-
-  let parameters = (ins "Type":$elementType, "unsigned":$minNumElements);
-  let assemblyFormat = [{
-    `<` `?` `x` $minNumElements `x` ` ` custom<PrettyLLVMType>($elementType) `>`
-  }];
-
-  let genVerifyDecl = 1;
-
-  let builders = [
-    TypeBuilderWithInferredContext<(ins "Type":$elementType,
-                                        "unsigned":$minNumElements)>
-  ];
-
-  let extraClassDeclaration = [{
-    /// Checks if the given type can be used in a vector type.
-    static bool isValidElementType(Type type);
-  }];
-}
-
-//===----------------------------------------------------------------------===//
 // LLVMTargetExtType
 //===----------------------------------------------------------------------===//
 

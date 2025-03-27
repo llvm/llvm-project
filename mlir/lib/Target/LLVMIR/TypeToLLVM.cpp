@@ -71,8 +71,7 @@ public:
               return llvm::Type::getX86_AMXTy(context);
             })
             .Case<LLVM::LLVMArrayType, IntegerType, LLVM::LLVMFunctionType,
-                  LLVM::LLVMPointerType, LLVM::LLVMStructType,
-                  LLVM::LLVMScalableVectorType, VectorType,
+                  LLVM::LLVMPointerType, LLVM::LLVMStructType, VectorType,
                   LLVM::LLVMTargetExtType>(
                 [this](auto type) { return this->translate(type); })
             .Default([](Type t) -> llvm::Type * {
@@ -141,12 +140,6 @@ private:
                                            type.getNumElements());
     return llvm::FixedVectorType::get(translateType(type.getElementType()),
                                       type.getNumElements());
-  }
-
-  /// Translates the given scalable-vector type.
-  llvm::Type *translate(LLVM::LLVMScalableVectorType type) {
-    return llvm::ScalableVectorType::get(translateType(type.getElementType()),
-                                         type.getMinNumElements());
   }
 
   /// Translates the given target extension type.
