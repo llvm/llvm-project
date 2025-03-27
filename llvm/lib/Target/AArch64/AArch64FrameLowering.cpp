@@ -1595,7 +1595,7 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
 }
 
 static void fixupCalleeSaveRestoreToFPBased(MachineInstr &MI,
-                                            uint64_t FPSPOffset) {
+                                            int64_t FPSPOffset) {
   assert(!AArch64InstrInfo::isSEHInstruction(MI));
 
   unsigned Opc = MI.getOpcode();
@@ -1632,7 +1632,13 @@ static void fixupCalleeSaveRestoreToFPBased(MachineInstr &MI,
   MachineOperand &OffsetOpnd = MI.getOperand(OffsetIdx);
   // All generated opcodes have scaled offsets.
   assert(FPSPOffset % Scale == 0);
-  OffsetOpnd.setImm(OffsetOpnd.getImm() - FPSPOffset / Scale);
+  int64_t ResidualOffset = OffsetOpnd.getImm() - (FPSPOffset / Scale);
+  OffsetOpnd.setImm(ResidualOffset);
+
+  assert((!MI.getOperand(0).isReg() ||
+          MI.getOperand(0).getReg() != AArch64::FP || ResidualOffset == 0) &&
+         "FP/LR frame record should be restored from FP+0");
+
 }
 
 // Fixup callee-save register save/restore instructions to take into account
@@ -2570,8 +2576,9 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
       fixupCalleeSaveRestoreStackOffset(*LastPopI, AFI->getLocalStackSize(),
                                         NeedsWinCFI, &HasWinCFI);
       // if FP-based addressing, rewrite CSR restores from SP to FP
-      fixupCalleeSaveRestoreToFPBased(
-          *LastPopI, AFI->getCalleeSaveBaseToFrameRecordOffset());
+      int64_t FPOffset = AFI->getCalleeSaveBaseToFrameRecordOffset() +
+                         AFI->getLocalStackSize();
+      fixupCalleeSaveRestoreToFPBased(*LastPopI, FPOffset);
     } else if (CombineSPBump)
       fixupCalleeSaveRestoreStackOffset(*LastPopI, AFI->getLocalStackSize(),
                                         NeedsWinCFI, &HasWinCFI);

@@ -42,8 +42,8 @@ define swiftcorocc i64 @test_intrin() #0 {
 ; CHECK-NEXT:    cbz x0, LBB1_2
 ; CHECK-NEXT:  ; %bb.1: ; %else
 ; CHECK-NEXT:    add x16, x29, #16
-; CHECK-NEXT:    ldp x26, x25, [x29] ; 16-byte Folded Reload
-; CHECK-NEXT:    ldp x29, x30, [x29, #16] ; 16-byte Folded Reload
+; CHECK-NEXT:    ldp x26, x25, [x29, #-16] ; 16-byte Folded Reload
+; CHECK-NEXT:    ldp x29, x30, [x29] ; 16-byte Folded Reload
 ; CHECK-NEXT:    autib x30, x16
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB1_2: ; %then
