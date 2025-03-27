@@ -212,11 +212,13 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   const Pointer &A = getParam<Pointer>(Frame, 0);
   const Pointer &B = getParam<Pointer>(Frame, 1);
 
-  if (ID == Builtin::BIstrcmp || ID == Builtin::BIstrncmp)
+  if (ID == Builtin::BIstrcmp || ID == Builtin::BIstrncmp ||
+      ID == Builtin::BIwcscmp || ID == Builtin::BIwcsncmp)
     diagnoseNonConstexprBuiltin(S, OpPC, ID);
 
   uint64_t Limit = ~static_cast<uint64_t>(0);
-  if (ID == Builtin::BIstrncmp || ID == Builtin::BI__builtin_strncmp)
+  if (ID == Builtin::BIstrncmp || ID == Builtin::BI__builtin_strncmp ||
+      ID == Builtin::BIwcsncmp || ID == Builtin::BI__builtin_wcsncmp)
     Limit = peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)))
                 .getZExtValue();
 
@@ -231,12 +233,22 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   if (A.isDummy() || B.isDummy())
     return false;
 
+  bool IsWide = ID == Builtin::BIwcscmp || ID == Builtin::BIwcsncmp ||
+                ID == Builtin::BI__builtin_wcscmp ||
+                ID == Builtin::BI__builtin_wcsncmp;
   assert(A.getFieldDesc()->isPrimitiveArray());
   assert(B.getFieldDesc()->isPrimitiveArray());
 
+  assert(getElemType(A).getTypePtr() == getElemType(B).getTypePtr());
+  PrimType ElemT = *S.getContext().classify(getElemType(A));
+
+  auto returnResult = [&](int V) -> bool {
+    pushInteger(S, V, Call->getType());
+    return true;
+  };
+
   unsigned IndexA = A.getIndex();
   unsigned IndexB = B.getIndex();
-  int32_t Result = 0;
   uint64_t Steps = 0;
   for (;; ++IndexA, ++IndexB, ++Steps) {
 
@@ -248,22 +260,33 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
         !CheckRange(S, OpPC, PB, AK_Read)) {
       return false;
     }
+
+    if (IsWide) {
+      INT_TYPE_SWITCH(ElemT, {
+        T CA = PA.deref<T>();
+        T CB = PB.deref<T>();
+        if (CA > CB)
+          return returnResult(1);
+        else if (CA < CB)
+          return returnResult(-1);
+        else if (CA.isZero() || CB.isZero())
+          return returnResult(0);
+      });
+      continue;
+    }
+
     uint8_t CA = PA.deref<uint8_t>();
     uint8_t CB = PB.deref<uint8_t>();
 
-    if (CA > CB) {
-      Result = 1;
-      break;
-    } else if (CA < CB) {
-      Result = -1;
-      break;
-    }
+    if (CA > CB)
+      return returnResult(1);
+    else if (CA < CB)
+      return returnResult(-1);
     if (CA == 0 || CB == 0)
-      break;
+      return returnResult(0);
   }
 
-  pushInteger(S, Result, Call->getType());
-  return true;
+  return returnResult(0);
 }
 
 static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
@@ -2120,6 +2143,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BIstrcmp:
   case Builtin::BI__builtin_strncmp:
   case Builtin::BIstrncmp:
+  case Builtin::BI__builtin_wcsncmp:
+  case Builtin::BIwcsncmp:
+  case Builtin::BI__builtin_wcscmp:
+  case Builtin::BIwcscmp:
     if (!interp__builtin_strcmp(S, OpPC, Frame, F, Call))
       return false;
     break;
