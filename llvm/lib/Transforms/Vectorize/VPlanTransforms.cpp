@@ -1105,7 +1105,8 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
   if (!TC || !BestVF.isFixed())
     return false;
 
-  // Calculate the widest type required for known TC, VF and UF.
+  // Calculate the minimum power-of-2 bit width that can fit the known TC, VF
+  // and UF. Returns at least 8.
   auto ComputeBitWidth = [](APInt TC, uint64_t Align) {
     APInt AlignedTC =
         Align * APIntOps::RoundingUDiv(TC, APInt(TC.getBitWidth(), Align),
