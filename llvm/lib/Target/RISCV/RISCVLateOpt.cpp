@@ -1,4 +1,4 @@
-//===-- RISCVLateOpt.cpp - Late stage optimization ------------------------===//
+//===-- RISCVLateBranchOpt.cpp - Late stage optimization ------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,17 +17,16 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "riscv-late-opt"
-#define RISCV_LATE_OPT_NAME "RISC-V Late Stage Optimizations"
+#define RISCV_LATE_BRANCH_OPT_NAME "RISC-V Late Branch Optimisation Pass"
 
 namespace {
 
-struct RISCVLateOpt : public MachineFunctionPass {
+struct RISCVLateBranchOpt : public MachineFunctionPass {
   static char ID;
 
-  RISCVLateOpt() : MachineFunctionPass(ID) {}
+  RISCVLateBranchOpt() : MachineFunctionPass(ID) {}
 
-  StringRef getPassName() const override { return RISCV_LATE_OPT_NAME; }
+  StringRef getPassName() const override { return RISCV_LATE_BRANCH_OPT_NAME; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -42,11 +41,11 @@ private:
 };
 } // namespace
 
-char RISCVLateOpt::ID = 0;
-INITIALIZE_PASS(RISCVLateOpt, "riscv-late-opt", RISCV_LATE_OPT_NAME, false,
-                false)
+char RISCVLateBranchOpt::ID = 0;
+INITIALIZE_PASS(RISCVLateBranchOpt, "riscv-late-branch-opt",
+                RISCV_LATE_BRANCH_OPT_NAME, false, false)
 
-bool RISCVLateOpt::runOnBasicBlock(MachineBasicBlock &MBB) const {
+bool RISCVLateBranchOpt::runOnBasicBlock(MachineBasicBlock &MBB) const {
   MachineBasicBlock *TBB, *FBB;
   SmallVector<MachineOperand, 4> Cond;
   if (RII->analyzeBranch(MBB, TBB, FBB, Cond, /*AllowModify=*/false))
@@ -94,7 +93,7 @@ bool RISCVLateOpt::runOnBasicBlock(MachineBasicBlock &MBB) const {
   return true;
 }
 
-bool RISCVLateOpt::runOnMachineFunction(MachineFunction &Fn) {
+bool RISCVLateBranchOpt::runOnMachineFunction(MachineFunction &Fn) {
   if (skipFunction(Fn.getFunction()))
     return false;
 
@@ -107,4 +106,4 @@ bool RISCVLateOpt::runOnMachineFunction(MachineFunction &Fn) {
   return Changed;
 }
 
-FunctionPass *llvm::createRISCVLateOptPass() { return new RISCVLateOpt(); }
+FunctionPass *llvm::createRISCVLateBranchOptPass() { return new RISCVLateBranchOpt(); }
