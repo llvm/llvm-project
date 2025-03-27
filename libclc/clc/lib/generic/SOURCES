@@ -18,13 +18,17 @@ integer/clc_rotate.cl
 integer/clc_sub_sat.cl
 integer/clc_upsample.cl
 math/clc_acos.cl
+math/clc_acosh.cl
 math/clc_acospi.cl
 math/clc_asin.cl
+math/clc_asinh.cl
 math/clc_asinpi.cl
 math/clc_atan.cl
+math/clc_atanh.cl
 math/clc_atanpi.cl
 math/clc_ceil.cl
 math/clc_copysign.cl
+math/clc_ep_log.cl
 math/clc_fabs.cl
 math/clc_fma.cl
 math/clc_floor.cl
@@ -33,6 +37,7 @@ math/clc_hypot.cl
 math/clc_ldexp.cl
 math/clc_log.cl
 math/clc_log10.cl
+math/clc_log1p.cl
 math/clc_log2.cl
 math/clc_mad.cl
 math/clc_modf.cl
@@ -44,6 +49,7 @@ math/clc_rsqrt.cl
 math/clc_sincos_helpers.cl
 math/clc_sqrt.cl
 math/clc_sw_fma.cl
+math/clc_tables.cl
 math/clc_trunc.cl
 relational/clc_all.cl
 relational/clc_any.cl
