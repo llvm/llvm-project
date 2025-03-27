@@ -1995,7 +1995,7 @@ auto SubsumptionChecker::find(AtomicConstraint *Ori) -> Literal {
   const auto &Mapping = Ori->ParameterMapping;
   ID.AddBoolean(Mapping.has_value());
   if (Mapping) {
-    for (const TemplateArgumentLoc & TAL : *Mapping) {
+    for (const TemplateArgumentLoc &TAL : *Mapping) {
       SemaRef.getASTContext()
           .getCanonicalTemplateArgument(TAL.getArgument())
           .Profile(ID, SemaRef.getASTContext());
