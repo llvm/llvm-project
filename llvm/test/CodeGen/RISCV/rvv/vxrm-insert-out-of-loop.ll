@@ -26,8 +26,7 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:    slli t1, t2, 1
 ; RV32-NEXT:    li t6, 32
 ; RV32-NEXT:    mv t0, t1
-; RV32-NEXT:    j .LBB0_3
-; RV32-NEXT:  .LBB0_3: # %for.cond1.preheader.us.preheader
+; RV32-NEXT:  # %bb.3: # %for.cond1.preheader.us.preheader
 ; RV32-NEXT:    li t0, 32
 ; RV32-NEXT:  # %bb.4: # %for.cond1.preheader.us.preheader
 ; RV32-NEXT:    addi sp, sp, -16

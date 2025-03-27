@@ -10,8 +10,7 @@ define void @foo(i16 %finder_idx) {
 ; CHECK-NEXT:    bltz a0, .LBB0_4
 ; CHECK-NEXT:  # %bb.2: # %while.cond.preheader.i
 ; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    j .LBB0_3
-; CHECK-NEXT:  .LBB0_3: # %while.body
+; CHECK-NEXT:  # %bb.3: # %while.body
 ; CHECK-NEXT:  .LBB0_4: # %while.cond1.preheader.i
 entry:
   br label %for.body
@@ -49,8 +48,7 @@ define void @bar(i16 %finder_idx) {
 ; CHECK-NEXT:    bgez a0, .LBB1_4
 ; CHECK-NEXT:  # %bb.2: # %while.cond.preheader.i
 ; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    j .LBB1_3
-; CHECK-NEXT:  .LBB1_3: # %while.body
+; CHECK-NEXT:  # %bb.3: # %while.body
 ; CHECK-NEXT:  .LBB1_4: # %while.cond1.preheader.i
 entry:
   br label %for.body

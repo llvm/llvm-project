@@ -43,28 +43,22 @@ define i1 @sink_li(ptr %text, ptr %text.addr.0) nounwind {
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    j .LBB0_1
 ; CHECK-NEXT:  # %bb.12: # %while.body.6
-; CHECK-NEXT:    j .LBB0_13
-; CHECK-NEXT:  .LBB0_13: # %while.body.6
-; CHECK-NEXT:    j .LBB0_14
-; CHECK-NEXT:  .LBB0_14: # %strdup.exit.split.loop.exit126
+; CHECK-NEXT:  # %bb.13: # %while.body.6
+; CHECK-NEXT:  # %bb.14: # %strdup.exit.split.loop.exit126
 ; CHECK-NEXT:    addi s0, s1, 7
 ; CHECK-NEXT:    j .LBB0_24
 ; CHECK-NEXT:  .LBB0_15: # %while.body
 ; CHECK-NEXT:    j .LBB0_17
-; CHECK-NEXT:    j .LBB0_17
 ; CHECK-NEXT:  .LBB0_16: # %while.body.1
-; CHECK-NEXT:    j .LBB0_17
 ; CHECK-NEXT:  .LBB0_17: # %strdup.exit.loopexit
 ; CHECK-NEXT:    li s0, 0
 ; CHECK-NEXT:    j .LBB0_24
 ; CHECK-NEXT:  .LBB0_18: # %while.body.3
-; CHECK-NEXT:    j .LBB0_19
-; CHECK-NEXT:  .LBB0_19: # %strdup.exit.split.loop.exit120
+; CHECK-NEXT:  # %bb.19: # %strdup.exit.split.loop.exit120
 ; CHECK-NEXT:    addi s0, s1, 4
 ; CHECK-NEXT:    j .LBB0_24
 ; CHECK-NEXT:  .LBB0_20: # %while.body.4
-; CHECK-NEXT:    j .LBB0_21
-; CHECK-NEXT:  .LBB0_21: # %strdup.exit.split.loop.exit122
+; CHECK-NEXT:  # %bb.21: # %strdup.exit.split.loop.exit122
 ; CHECK-NEXT:    addi s0, s1, 5
 ; CHECK-NEXT:    j .LBB0_24
 ; CHECK-NEXT:  .LBB0_22: # %while.body.5
