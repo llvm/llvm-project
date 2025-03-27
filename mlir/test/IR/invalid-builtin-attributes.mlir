@@ -109,6 +109,14 @@ func.func @invalid_tensor_literal() {
 
 // -----
 
+func.func @invalid_tensor_literal() {
+  // expected-error @+2 {{unexpected decimal integer literal for a floating point value}}
+  // expected-note @+1 {{add a trailing dot to make the literal a float}}
+  "foo"(){bar = sparse<[0, 0], 0101> : tensor<1xf16>} : () -> ()
+}
+
+// -----
+
 func.func @hexadecimal_float_leading_minus() {
   // expected-error @+1 {{hexadecimal float literal should not have a leading minus}}
   "foo"() {value = -0x7fff : f16} : () -> ()
