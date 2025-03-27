@@ -160,9 +160,11 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
 
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
+      if (MI.isImplicitDef())
+        continue;
+
       // At this point, the chain call pseudos are already expanded.
       bool IsChainCall = MI.getOpcode() == AMDGPU::SI_TCRETURN;
-      bool IsImplicitDef = MI.isImplicitDef();
 
       // TODO: Check regmasks? Do they occur anywhere except calls?
       for (const MachineOperand &MO : MI.operands()) {
@@ -251,8 +253,7 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
         // VGPR usage. We can identify them easily because they're only used in
         // the chain call, and possibly in an IMPLICIT_DEF coming from an
         // llvm.amdgcn.dead intrinsic.
-        if (IsIWWFunction && (IsChainCall || IsImplicitDef) &&
-            TRI.isVectorRegister(MRI, Reg))
+        if (IsIWWFunction && IsChainCall && TRI.isVectorRegister(MRI, Reg))
           continue;
 
         if (AMDGPU::SGPR_32RegClass.contains(Reg) ||
