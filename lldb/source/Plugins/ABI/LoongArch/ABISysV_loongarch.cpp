@@ -267,15 +267,16 @@ Status ABISysV_loongarch::SetReturnValueObject(StackFrameSP &frame_sp,
     return result;
   }
 
-  DataExtractor data;
-  size_t num_bytes = new_value_sp->GetData(data, result);
+  auto data_or_err = new_value_sp->GetData();
 
-  if (result.Fail()) {
-    result = Status::FromErrorStringWithFormat(
-        "Couldn't convert return value to raw data: %s", result.AsCString());
-    return result;
-  }
+  if (auto error = data_or_err.takeError())
+    return Status::FromError(llvm::joinErrors(
+        llvm::createStringError("Couldn't convert return value to raw data"),
+        std::move(error)));
 
+  auto data = std::move(*data_or_err);
+
+  size_t num_bytes = data.GetByteSize();
   size_t reg_size = m_is_la64 ? 8 : 4;
   // Currently, we only support sizeof(data) <= 2 * reg_size.
   // 1. If the (`size` <= reg_size), the `data` will be returned through `ARG1`.

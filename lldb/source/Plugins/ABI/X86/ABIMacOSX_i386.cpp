@@ -206,30 +206,31 @@ Status ABIMacOSX_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   bool set_it_simple = false;
   if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
       compiler_type.IsPointerType()) {
-    DataExtractor data;
-    Status data_error;
-    size_t num_bytes = new_value_sp->GetData(data, data_error);
-    if (data_error.Fail()) {
+    auto data_or_err = new_value_sp->GetData();
+    if (auto err = data_or_err.takeError()) {
       error = Status::FromErrorStringWithFormat(
           "Couldn't convert return value to raw data: %s",
-          data_error.AsCString());
+          llvm::toString(std::move(err)).c_str());
       return error;
     }
+    size_t num_bytes = data_or_err->GetByteSize();
+
     lldb::offset_t offset = 0;
     if (num_bytes <= 8) {
       const RegisterInfo *eax_info = reg_ctx->GetRegisterInfoByName("eax", 0);
       if (num_bytes <= 4) {
-        uint32_t raw_value = data.GetMaxU32(&offset, num_bytes);
+        uint32_t raw_value = data_or_err->GetMaxU32(&offset, num_bytes);
 
         if (reg_ctx->WriteRegisterFromUnsigned(eax_info, raw_value))
           set_it_simple = true;
       } else {
-        uint32_t raw_value = data.GetMaxU32(&offset, 4);
+        uint32_t raw_value = data_or_err->GetMaxU32(&offset, 4);
 
         if (reg_ctx->WriteRegisterFromUnsigned(eax_info, raw_value)) {
           const RegisterInfo *edx_info =
               reg_ctx->GetRegisterInfoByName("edx", 0);
-          uint32_t raw_value = data.GetMaxU32(&offset, num_bytes - offset);
+          uint32_t raw_value =
+              data_or_err->GetMaxU32(&offset, num_bytes - offset);
 
           if (reg_ctx->WriteRegisterFromUnsigned(edx_info, raw_value))
             set_it_simple = true;

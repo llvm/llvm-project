@@ -322,18 +322,20 @@ Status ABIWindows_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       compiler_type.IsPointerType()) {
     const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName("rax", 0);
 
-    DataExtractor data;
-    Status data_error;
-    size_t num_bytes = new_value_sp->GetData(data, data_error);
-    if (data_error.Fail()) {
+    auto data_or_err = new_value_sp->GetData();
+
+    if (auto err = data_or_err.takeError()) {
       error = Status::FromErrorStringWithFormat(
           "Couldn't convert return value to raw data: %s",
-          data_error.AsCString());
+          llvm::toString(std::move(err)).c_str());
       return error;
     }
+
+    size_t num_bytes = data_or_err->GetByteSize();
+
     lldb::offset_t offset = 0;
     if (num_bytes <= 8) {
-      uint64_t raw_value = data.GetMaxU64(&offset, num_bytes);
+      uint64_t raw_value = data_or_err->GetMaxU64(&offset, num_bytes);
 
       if (reg_ctx->WriteRegisterFromUnsigned(reg_info, raw_value))
         set_it_simple = true;
@@ -357,20 +359,20 @@ Status ABIWindows_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
         const RegisterInfo *xmm0_info =
             reg_ctx->GetRegisterInfoByName("xmm0", 0);
         RegisterValue xmm0_value;
-        DataExtractor data;
-        Status data_error;
-        size_t num_bytes = new_value_sp->GetData(data, data_error);
-        if (data_error.Fail()) {
+
+        auto data_or_err = new_value_sp->GetData();
+        if (auto err = data_or_err.takeError()) {
           error = Status::FromErrorStringWithFormat(
               "Couldn't convert return value to raw data: %s",
-              data_error.AsCString());
+              llvm::toString(std::move(err)).c_str());
           return error;
         }
+        size_t num_bytes = data_or_err->GetByteSize();
 
         unsigned char buffer[16];
-        ByteOrder byte_order = data.GetByteOrder();
+        ByteOrder byte_order = data_or_err->GetByteOrder();
 
-        data.CopyByteOrderedData(0, num_bytes, buffer, 16, byte_order);
+        data_or_err->CopyByteOrderedData(0, num_bytes, buffer, 16, byte_order);
         xmm0_value.SetBytes(buffer, 16, byte_order);
         reg_ctx->WriteRegister(xmm0_info, xmm0_value);
         set_it_simple = true;

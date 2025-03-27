@@ -319,15 +319,16 @@ Status ABISysV_ppc64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       compiler_type.IsPointerType()) {
     const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName("r3", 0);
 
-    DataExtractor data;
-    Status data_error;
-    size_t num_bytes = new_value_sp->GetData(data, data_error);
-    if (data_error.Fail()) {
-      error = Status::FromErrorStringWithFormat(
-          "Couldn't convert return value to raw data: %s",
-          data_error.AsCString());
-      return error;
-    }
+    auto data_or_err = new_value_sp->GetData();
+
+    if (auto error = data_or_err.takeError())
+      return Status::FromError(llvm::joinErrors(
+          llvm::createStringError("Couldn't convert return value to raw data"),
+          std::move(error)));
+
+    auto data = std::move(*data_or_err);
+
+    size_t num_bytes = data.GetByteSize();
     lldb::offset_t offset = 0;
     if (num_bytes <= 8) {
       uint64_t raw_value = data.GetMaxU64(&offset, num_bytes);
@@ -351,16 +352,16 @@ Status ABISysV_ppc64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
         return error;
       }
       if (*bit_width <= 64) {
-        DataExtractor data;
-        Status data_error;
-        size_t num_bytes = new_value_sp->GetData(data, data_error);
-        if (data_error.Fail()) {
-          error = Status::FromErrorStringWithFormat(
-              "Couldn't convert return value to raw data: %s",
-              data_error.AsCString());
-          return error;
-        }
+        auto data_or_err = new_value_sp->GetData();
 
+        if (auto error = data_or_err.takeError())
+          return Status::FromError(
+              llvm::joinErrors(llvm::createStringError(
+                                   "Couldn't convert return value to raw data"),
+                               std::move(error)));
+
+        auto data = std::move(*data_or_err);
+        size_t num_bytes = data.GetByteSize();
         unsigned char buffer[16];
         ByteOrder byte_order = data.GetByteOrder();
 

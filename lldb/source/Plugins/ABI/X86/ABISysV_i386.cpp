@@ -215,17 +215,16 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   const uint32_t type_flags = compiler_type.GetTypeInfo();
   Thread *thread = frame_sp->GetThread().get();
   RegisterContext *reg_ctx = thread->GetRegisterContext().get();
-  DataExtractor data;
-  Status data_error;
-  size_t num_bytes = new_value_sp->GetData(data, data_error);
+  auto data_or_err = new_value_sp->GetData();
   bool register_write_successful = true;
 
-  if (data_error.Fail()) {
+  if (auto err = data_or_err.takeError()) {
     error = Status::FromErrorStringWithFormat(
         "Couldn't convert return value to raw data: %s",
-        data_error.AsCString());
+        llvm::toString(std::move(err)).c_str());
     return error;
   }
+  size_t num_bytes = data_or_err->GetByteSize();
 
   // Following "IF ELSE" block categorizes various 'Fundamental Data Types'.
   // The terminology 'Fundamental Data Types' used here is adopted from Table
@@ -240,7 +239,7 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
     }
     lldb::offset_t offset = 0;
     const RegisterInfo *eax_info = reg_ctx->GetRegisterInfoByName("eax", 0);
-    uint32_t raw_value = data.GetMaxU32(&offset, num_bytes);
+    uint32_t raw_value = data_or_err->GetMaxU32(&offset, num_bytes);
     register_write_successful =
         reg_ctx->WriteRegisterFromUnsigned(eax_info, raw_value);
   } else if ((type_flags & eTypeIsScalar) ||
@@ -259,9 +258,10 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
         // handle it
         break;
       case 8: {
-        uint32_t raw_value_low = data.GetMaxU32(&offset, 4);
+        uint32_t raw_value_low = data_or_err->GetMaxU32(&offset, 4);
         const RegisterInfo *edx_info = reg_ctx->GetRegisterInfoByName("edx", 0);
-        uint32_t raw_value_high = data.GetMaxU32(&offset, num_bytes - offset);
+        uint32_t raw_value_high =
+            data_or_err->GetMaxU32(&offset, num_bytes - offset);
         register_write_successful =
             (reg_ctx->WriteRegisterFromUnsigned(eax_info, raw_value_low) &&
              reg_ctx->WriteRegisterFromUnsigned(edx_info, raw_value_high));
@@ -270,7 +270,7 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       case 4:
       case 2:
       case 1: {
-        uint32_t raw_value = data.GetMaxU32(&offset, num_bytes);
+        uint32_t raw_value = data_or_err->GetMaxU32(&offset, num_bytes);
         register_write_successful =
             reg_ctx->WriteRegisterFromUnsigned(eax_info, raw_value);
         break;
@@ -278,7 +278,7 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       }
     } else if (type_flags & eTypeIsEnumeration) // handles enum
     {
-      uint32_t raw_value = data.GetMaxU32(&offset, num_bytes);
+      uint32_t raw_value = data_or_err->GetMaxU32(&offset, num_bytes);
       register_write_successful =
           reg_ctx->WriteRegisterFromUnsigned(eax_info, raw_value);
     } else if (type_flags & eTypeIsFloat) // 'Floating Point'
@@ -314,11 +314,11 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       {
         long double value_long_dbl = 0.0;
         if (num_bytes == 4)
-          value_long_dbl = data.GetFloat(&offset);
+          value_long_dbl = data_or_err->GetFloat(&offset);
         else if (num_bytes == 8)
-          value_long_dbl = data.GetDouble(&offset);
+          value_long_dbl = data_or_err->GetDouble(&offset);
         else if (num_bytes == 12)
-          value_long_dbl = data.GetLongDouble(&offset);
+          value_long_dbl = data_or_err->GetLongDouble(&offset);
         else {
           error = Status::FromErrorString(
               "Invalid number of bytes for this return type");

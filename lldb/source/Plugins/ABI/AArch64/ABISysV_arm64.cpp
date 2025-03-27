@@ -296,15 +296,14 @@ Status ABISysV_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   RegisterContext *reg_ctx = thread->GetRegisterContext().get();
 
   if (reg_ctx) {
-    DataExtractor data;
-    Status data_error;
-    const uint64_t byte_size = new_value_sp->GetData(data, data_error);
-    if (data_error.Fail()) {
-      error = Status::FromErrorStringWithFormat(
-          "Couldn't convert return value to raw data: %s",
-          data_error.AsCString());
-      return error;
+    auto data_or_err = new_value_sp->GetData();
+    if (auto error = data_or_err.takeError()) {
+      return Status::FromError(llvm::joinErrors(
+          llvm::createStringError("Couldn't convert return value to raw data"),
+          std::move(error)));
     }
+    auto data = std::move(*data_or_err);
+    const uint64_t byte_size = data.GetByteSize();
 
     const uint32_t type_flags = return_value_type.GetTypeInfo(nullptr);
     if (type_flags & eTypeIsScalar || type_flags & eTypeIsPointer) {

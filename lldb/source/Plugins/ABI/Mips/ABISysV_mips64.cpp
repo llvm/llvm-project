@@ -674,16 +674,16 @@ Status ABISysV_mips64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   if (!reg_ctx)
     error = Status::FromErrorString("no registers are available");
 
-  DataExtractor data;
-  Status data_error;
-  size_t num_bytes = new_value_sp->GetData(data, data_error);
-  if (data_error.Fail()) {
+  auto data_or_err = new_value_sp->GetData();
+  if (auto err = data_or_err.takeError()) {
     error = Status::FromErrorStringWithFormat(
         "Couldn't convert return value to raw data: %s",
-        data_error.AsCString());
+        llvm::toString(std::move(err)).c_str());
     return error;
   }
 
+  auto data = std::move(*data_or_err);
+  size_t num_bytes = data.GetByteSize();
   const uint32_t type_flags = compiler_type.GetTypeInfo(nullptr);
 
   if (type_flags & eTypeIsScalar || type_flags & eTypeIsPointer) {

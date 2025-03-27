@@ -403,15 +403,16 @@ Status ABISysV_s390x::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       compiler_type.IsPointerType()) {
     const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName("r2", 0);
 
-    DataExtractor data;
-    Status data_error;
-    size_t num_bytes = new_value_sp->GetData(data, data_error);
-    if (data_error.Fail()) {
-      error = Status::FromErrorStringWithFormat(
+    auto data_or_err = new_value_sp->GetData();
+    if (auto error = data_or_err.takeError()) {
+      return Status::FromErrorStringWithFormat(
           "Couldn't convert return value to raw data: %s",
-          data_error.AsCString());
-      return error;
+          llvm::toString(std::move(error)).c_str());
     }
+
+    auto data = std::move(*data_or_err);
+
+    size_t num_bytes = data.GetByteSize();
     lldb::offset_t offset = 0;
     if (num_bytes <= 8) {
       uint64_t raw_value = data.GetMaxU64(&offset, num_bytes);
@@ -437,16 +438,15 @@ Status ABISysV_s390x::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
       if (*bit_width <= 64) {
         const RegisterInfo *f0_info = reg_ctx->GetRegisterInfoByName("f0", 0);
         RegisterValue f0_value;
-        DataExtractor data;
-        Status data_error;
-        size_t num_bytes = new_value_sp->GetData(data, data_error);
-        if (data_error.Fail()) {
-          error = Status::FromErrorStringWithFormat(
-              "Couldn't convert return value to raw data: %s",
-              data_error.AsCString());
-          return error;
-        }
+        auto data_or_err = new_value_sp->GetData();
+        if (auto error = data_or_err.takeError())
+          return Status::FromError(
+              llvm::joinErrors(llvm::createStringError(
+                                   "Couldn't convert return value to raw data"),
+                               std::move(error)));
 
+        auto data = std::move(*data_or_err);
+        size_t num_bytes = data.GetByteSize();
         unsigned char buffer[8];
         ByteOrder byte_order = data.GetByteOrder();
 
