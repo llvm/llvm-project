@@ -268,9 +268,9 @@ set_source_files_properties(
   ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_exp.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_exp10.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_exp2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_log.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_log10.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_log2.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_log.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_powr.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_recip.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_rsqrt.cl
@@ -278,8 +278,8 @@ set_source_files_properties(
   ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_sqrt.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/math/native_tan.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/amdgpu/lib/math/native_exp.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/amdgpu/lib/math/native_log10.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/amdgpu/lib/math/native_log.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/amdgpu/lib/math/native_log10.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/r600/lib/math/native_rsqrt.cl
   PROPERTIES COMPILE_OPTIONS -fapprox-func
 )
