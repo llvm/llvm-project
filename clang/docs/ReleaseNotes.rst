@@ -145,7 +145,7 @@ C2y Feature Support
   which introduces the ``_Lengthof`` operator, and `WG14 N3469 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3469.htm>`_
   which renamed ``_Lengthof`` to ``_Countof``. This feature is implemented as
   a conforming extension in earlier C language modes, but not in C++ language
-  modes (``std::extent`` and ``std::rank`` already provide the same
+  modes (``std::extent`` and ``std::size`` already provide the same
   functionality but with more granularity).
 
 C23 Feature Support
