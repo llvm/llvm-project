@@ -8,7 +8,8 @@
 
 #if __CLC_FPSIZE == 32
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_atan2(__CLC_GENTYPE y, __CLC_GENTYPE x) {
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_atan2(__CLC_GENTYPE y,
+                                                 __CLC_GENTYPE x) {
   const __CLC_GENTYPE pi = 0x1.921fb6p+1f;
   const __CLC_GENTYPE piby2 = 0x1.921fb6p+0f;
   const __CLC_GENTYPE piby4 = 0x1.921fb6p-1f;
@@ -71,7 +72,8 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_atan2(__CLC_GENTYPE y, __CLC_GENTYPE 
 
 #elif __CLC_FPSIZE == 64
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_atan2(__CLC_GENTYPE y, __CLC_GENTYPE x) {
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_atan2(__CLC_GENTYPE y,
+                                                 __CLC_GENTYPE x) {
   const __CLC_GENTYPE pi = 3.1415926535897932e+00;    /* 0x400921fb54442d18 */
   const __CLC_GENTYPE piby2 = 1.5707963267948966e+00; /* 0x3ff921fb54442d18 */
   const __CLC_GENTYPE piby4 = 7.8539816339744831e-01; /* 0x3fe921fb54442d18 */
@@ -142,7 +144,8 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_atan2(__CLC_GENTYPE y, __CLC_GENTYPE 
     __CLC_GENTYPE vm = __clc_ldexp(v, m);
 
     // 26 leading bits of u
-    __CLC_GENTYPE u1 = __CLC_AS_GENTYPE(__CLC_AS_ULONGN(um) & 0xfffffffff8000000UL);
+    __CLC_GENTYPE u1 =
+        __CLC_AS_GENTYPE(__CLC_AS_ULONGN(um) & 0xfffffffff8000000UL);
     __CLC_GENTYPE u2 = um - u1;
 
     __CLC_GENTYPE r = MATH_DIVIDE(__clc_fma(-c, u2, __clc_fma(-c, u1, vm)),
@@ -163,9 +166,11 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_atan2(__CLC_GENTYPE y, __CLC_GENTYPE 
 
   __CLC_GENTYPE q5, q6;
   {
-    __CLC_GENTYPE u1 = __CLC_AS_GENTYPE(__CLC_AS_ULONGN(u) & 0xffffffff00000000UL);
+    __CLC_GENTYPE u1 =
+        __CLC_AS_GENTYPE(__CLC_AS_ULONGN(u) & 0xffffffff00000000UL);
     __CLC_GENTYPE u2 = u - u1;
-    __CLC_GENTYPE vu1 = __CLC_AS_GENTYPE(__CLC_AS_ULONGN(vbyu) & 0xffffffff00000000UL);
+    __CLC_GENTYPE vu1 =
+        __CLC_AS_GENTYPE(__CLC_AS_ULONGN(vbyu) & 0xffffffff00000000UL);
     __CLC_GENTYPE vu2 = vbyu - vu1;
 
     q5 = 0.0;
