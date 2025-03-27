@@ -1,19 +1,28 @@
 // RUN: %clang_cc1 -fsycl-is-host -emit-llvm -triple x86_64-unknown-linux-gnu %s -o - | FileCheck --check-prefixes=CHECK-HOST,CHECK-HOST-LINUX %s
-// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-unknown-linux-gnu -triple amdgcn %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-AMDGCN %s
-// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-unknown-linux-gnu -triple nvptx %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-NVPTX %s
-// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-unknown-linux-gnu -triple spir64 %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-SPIR %s
+// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-unknown-linux-gnu -triple amdgcn-amd-amdhsa %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-AMDGCN %s
+// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-unknown-linux-gnu -triple nvptx-nvidia-cuda %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-NVPTX %s
+// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-unknown-linux-gnu -triple nvptx64-nvidia-cuda %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-NVPTX %s
+// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-unknown-linux-gnu -triple spir-unknown-unknown %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-SPIR %s
+// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-unknown-linux-gnu -triple spir64-unknown-unknown %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-SPIR %s
+// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-unknown-linux-gnu -triple spirv32-unknown-unknown %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-SPIR %s
+// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-unknown-linux-gnu -triple spirv64-unknown-unknown %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-SPIR %s
 // RUN: %clang_cc1 -fsycl-is-host -emit-llvm -triple x86_64-pc-windows-msvc %s -o - | FileCheck --check-prefixes=CHECK-HOST,CHECK-HOST-WINDOWS %s
-// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-pc-windows-msvc -triple amdgcn %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-AMDGCN %s
-// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-pc-windows-msvc -triple nvptx %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-NVPTX %s
-// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-pc-windows-msvc -triple spir64 %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-SPIR %s
+// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-pc-windows-msvc -triple amdgcn-amd-amdhsa %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-AMDGCN %s
+// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-pc-windows-msvc -triple nvptx-nvidia-cuda %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-NVPTX %s
+// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-pc-windows-msvc -triple nvptx64-nvidia-cuda %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-NVPTX %s
+// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-pc-windows-msvc -triple spir-unknown-unknown %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-SPIR %s
+// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-pc-windows-msvc -triple spir64-unknown-unknown %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-SPIR %s
+// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-pc-windows-msvc -triple spirv32-unknown-unknown %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-SPIR %s
+// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -aux-triple x86_64-pc-windows-msvc -triple spirv64-unknown-unknown %s -o - | FileCheck --check-prefixes=CHECK-DEVICE,CHECK-SPIR %s
 
 // Test the generation of SYCL kernel caller functions. These functions are
 // generated from functions declared with the sycl_kernel_entry_point attribute
 // and emited during device compilation. They are not emitted during device
 // compilation.
 
-template <typename name, typename Func>
-__attribute__((sycl_kernel_entry_point(name))) void kernel_single_task(const Func kernelFunc) {
+template <typename KernelName, typename KernelType>
+[[clang::sycl_kernel_entry_point(KernelName)]]
+void kernel_single_task(KernelType kernelFunc) {
   kernelFunc();
 }
 
@@ -22,7 +31,7 @@ struct single_purpose_kernel {
   void operator()() const {}
 };
 
-__attribute__((sycl_kernel_entry_point(single_purpose_kernel_name)))
+[[clang::sycl_kernel_entry_point(single_purpose_kernel_name)]]
 void single_purpose_kernel_task(single_purpose_kernel kernelFunc) {
   kernelFunc();
 }
@@ -89,7 +98,7 @@ int main() {
 // FIXME: main(). main() shouldn't be emitted in device code, but that pruning
 // FIXME: isn't performed yet.
 // CHECK-DEVICE:      Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
-// CHECK-DEVICE-NEXT: define dso_local noundef i32 @main() #0
+// CHECK-DEVICE-NEXT: define {{[a-z_ ]*}}noundef i32 @main() #0
 
 // IR for the SYCL kernel caller function generated for
 // single_purpose_kernel_task with single_purpose_kernel_name as the SYCL kernel
@@ -119,7 +128,7 @@ int main() {
 // CHECK-NVPTX:       define linkonce_odr void @_ZNK21single_purpose_kernelclEv
 //
 // CHECK-SPIR:        Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
-// CHECK-SPIR-NEXT:   define dso_local spir_kernel void @_ZTS26single_purpose_kernel_name
+// CHECK-SPIR-NEXT:   define {{[a-z_ ]*}}spir_kernel void @_ZTS26single_purpose_kernel_name
 // CHECK-SPIR-SAME:     (ptr noundef byval(%struct.single_purpose_kernel) align 1 %kernelFunc) #[[SPIR_ATTR0:[0-9]+]] {
 // CHECK-SPIR-NEXT:   entry:
 // CHECK-SPIR-NEXT:     %kernelFunc.ascast = addrspacecast ptr %kernelFunc to ptr addrspace(4)
@@ -157,7 +166,7 @@ int main() {
 // CHECK-NVPTX:       define internal void @_ZZ4mainENKUlvE_clEv
 //
 // CHECK-SPIR:        Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
-// CHECK-SPIR-NEXT:   define dso_local spir_kernel void @_ZTSZ4mainE18lambda_kernel_name
+// CHECK-SPIR-NEXT:   define {{[a-z_ ]*}}spir_kernel void @_ZTSZ4mainE18lambda_kernel_name
 // CHECK-SPIR-SAME:     (ptr noundef byval(%class.anon) align 4 %kernelFunc) #[[SPIR_ATTR0]] {
 // CHECK-SPIR-NEXT:   entry:
 // CHECK-SPIR-NEXT:     %kernelFunc.ascast = addrspacecast ptr %kernelFunc to ptr addrspace(4)

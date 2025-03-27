@@ -229,8 +229,9 @@ public:
   const CGFunctionInfo &arrangeBuiltinFunctionCall(QualType resultType,
                                                    const CallArgList &args);
 
-  /// A SYCL device kernel function is a free standing function with
-  /// spir_kernel calling convention
+  /// A SYCL kernel caller function is an offload device entry point function
+  /// with a target device dependent calling convention such as amdgpu_kernel,
+  /// ptx_kernel, or spir_kernel.
   const CGFunctionInfo &
   arrangeSYCLKernelCallerDeclaration(QualType resultType,
                                      const FunctionArgList &args);
