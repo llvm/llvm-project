@@ -6,8 +6,8 @@
 //
 //===-----------------------------------------------------------------===//
 
+#include "include/llvm-libc-types/EFI_SYSTEM_TABLE.h"
 #include "src/__support/OSUtil/exit.h"
-#include "Uefi.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {

@@ -1,17 +1,17 @@
-//===---------- UEFI implementation of error utils ------------*- C++ -*-===//
+//===----------- UEFI implementation of error utils --------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===-------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_UEFI_ERROR_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_UEFI_ERROR_H
 
-#include "errno.h"
+#include <errno.h>
+#include <limits.h>
 #include "include/llvm-libc-types/EFI_STATUS.h"
-#include "limits.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -24,7 +24,7 @@ namespace LIBC_NAMESPACE_DECL {
 static constexpr struct errno_efi_status_entry {
   EFI_STATUS status;
   int errno_value;
-} uefi_status_errno_map[] = {
+} UEFI_STATUS_ERRNO_MAP[] = {
     {EFI_SUCCESS, 0},
     {EFI_ENCODE_ERROR(EFI_LOAD_ERROR), EINVAL},
     {EFI_ENCODE_ERROR(EFI_INVALID_PARAMETER), EINVAL},
@@ -66,12 +66,12 @@ static constexpr struct errno_efi_status_entry {
     {EFI_ENCODE_WARNING(EFI_WARN_RESET_REQUIRED), EINTR},
 };
 
-static constexpr size_t uefi_status_errno_map_length =
-    sizeof(uefi_status_errno_map) / sizeof(uefi_status_errno_map[0]);
+static constexpr size_t UEFI_STATUS_ERRNO_MAP_LENGTH =
+    sizeof(UEFI_STATUS_ERRNO_MAP) / sizeof(UEFI_STATUS_ERRNO_MAP[0]);
 
 static inline int uefi_status_to_errno(EFI_STATUS status) {
-  for (size_t i = 0; i < uefi_status_errno_map_length; i++) {
-    const struct errno_efi_status_entry *entry = &uefi_status_errno_map[i];
+  for (size_t i = 0; i < UEFI_STATUS_ERRNO_MAP_LENGTH; i++) {
+    const struct errno_efi_status_entry *entry = &UEFI_STATUS_ERRNO_MAP[i];
     if (entry->status == status)
       return entry->errno_value;
   }
@@ -81,8 +81,8 @@ static inline int uefi_status_to_errno(EFI_STATUS status) {
 }
 
 static inline EFI_STATUS errno_to_uefi_status(int errno_value) {
-  for (size_t i = 0; i < uefi_status_errno_map_length; i++) {
-    const struct errno_efi_status_entry *entry = &uefi_status_errno_map[i];
+  for (size_t i = 0; i < UEFI_STATUS_ERRNO_MAP_LENGTH; i++) {
+    const struct errno_efi_status_entry *entry = &UEFI_STATUS_ERRNO_MAP[i];
     if (entry->errno_value == errno_value)
       return entry->status;
   }
