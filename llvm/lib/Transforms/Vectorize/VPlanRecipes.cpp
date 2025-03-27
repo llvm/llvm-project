@@ -915,6 +915,8 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   default:
     return false;
   case Instruction::ExtractElement:
+  case Instruction::ExtractValue:
+  case VPInstruction::ExtractFromEnd:
     return Op == getOperand(1);
   case Instruction::PHI:
     return true;

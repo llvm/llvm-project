@@ -23,8 +23,10 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:     EMIT vp<[[PTR:%.+]]> = ptradd ir<%start>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[WIDE_PTR:%.+]]> = vector-pointer vp<[[PTR]]>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[WIDE_PTR]]>
-; CHECK-NEXT:     EMIT vp<[[C1:%.+]]> = icmp eq ir<%l>, ir<-12>
-; CHECK-NEXT:     EMIT vp<[[C2:%.+]]> = icmp eq ir<%l>, ir<13>
+; CHECK-NEXT:     EMIT vp<[[BROADCAST1:%.+]]> = broadcast ir<-12>
+; CHECK-NEXT:     EMIT vp<[[C1:%.+]]> = icmp eq ir<%l>, vp<[[BROADCAST1]]>
+; CHECK-NEXT:     EMIT vp<[[BROADCAST2:%.+]]> = broadcast ir<13>
+; CHECK-NEXT:     EMIT vp<[[C2:%.+]]> = icmp eq ir<%l>, vp<[[BROADCAST2]]>
 ; CHECK-NEXT:     EMIT vp<[[OR_CASES:%.+]]> = or vp<[[C1]]>, vp<[[C2]]>
 ; CHECK-NEXT:     EMIT vp<[[DEFAULT_MASK:%.+]]> = not vp<[[OR_CASES]]>
 ; CHECK-NEXT:   Successor(s): pred.store

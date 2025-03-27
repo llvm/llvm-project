@@ -201,7 +201,8 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:      vp<[[VEC_PTR:%.+]]> = vector-end-pointer inbounds ir<%arrayidx>, ir<[[VF]]>
 ; CHECK-NEXT:      WIDEN ir<[[L:%.+]]> = load vp<[[VEC_PTR]]>
-; CHECK-NEXT:      WIDEN ir<%add9> = add ir<[[L]]>, ir<1>
+; CHECK-NEXT:      EMIT vp<[[BROADCAST:%.+]]> = broadcast ir<1>
+; CHECK-NEXT:      WIDEN ir<%add9> = add ir<[[L]]>, vp<[[BROADCAST]]>
 ; CHECK-NEXT:      CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
 ; CHECK-NEXT:      vp<[[VEC_PTR2:%.+]]> = vector-end-pointer inbounds ir<%arrayidx3>, ir<[[VF]]>
 ; CHECK-NEXT:      WIDEN store vp<[[VEC_PTR2]]>, ir<%add9>
@@ -450,7 +451,8 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:      vp<[[VEC_PTR:%.+]]> = vector-end-pointer inbounds ir<%arrayidx>, ir<[[VF]]>
 ; CHECK-NEXT:      WIDEN ir<[[L:%.+]]> = load vp<[[VEC_PTR]]>
-; CHECK-NEXT:      WIDEN ir<%conv1> = fadd ir<[[L]]>, ir<1.000000e+00>
+; CHECK-NEXT:      EMIT vp<[[BROADCAST:%.+]]> = broadcast ir<1.000000e+00>
+; CHECK-NEXT:      WIDEN ir<%conv1> = fadd ir<[[L]]>, vp<[[BROADCAST]]>
 ; CHECK-NEXT:      CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
 ; CHECK-NEXT:      vp<[[VEC_PTR:%.+]]> = vector-end-pointer inbounds ir<%arrayidx3>, ir<[[VF]]>
 ; CHECK-NEXT:      WIDEN store vp<[[VEC_PTR]]>, ir<%conv1>
