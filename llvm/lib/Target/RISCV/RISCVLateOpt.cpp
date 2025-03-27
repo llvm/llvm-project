@@ -65,7 +65,8 @@ bool RISCVLateOpt::trySimplifyCondBr(
   int64_t C0, C1;
   if (RISCVInstrInfo::isFromLoadImm(MRI, Cond[1], C0) &&
       RISCVInstrInfo::isFromLoadImm(MRI, Cond[2], C1)) {
-    MachineBasicBlock *Folded = RISCVInstrInfo::evaluateCondBranch(CC, C0, C1) ? TBB : FBB;
+    MachineBasicBlock *Folded =
+        RISCVInstrInfo::evaluateCondBranch(CC, C0, C1) ? TBB : FBB;
 
     // At this point, its legal to optimize.
     RII->removeBranch(MBB);
