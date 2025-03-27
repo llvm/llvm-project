@@ -4803,22 +4803,23 @@ PackOp PackOp::createTransposedClone(OpBuilder &b, Location loc,
                           getPaddingValue(), metadata.outerDimsPerm);
 }
 
-void PackOp::getEffects(
-    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
+template <typename OpTy>
+static void getEffectsImpl(
+    OpTy op, SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+                 &effects) {
   // No memory effects for pure tensor semantics
-  if (hasPureTensorSemantics())
+  if (op.hasPureTensorSemantics())
     return;
 
-  for (OpOperand &opOperand : getOperation()->getOpOperands()) {
+  for (OpOperand &opOperand : op.getOperation()->getOpOperands()) {
     if (!llvm::isa<MemRefType>(opOperand.get().getType()))
       continue;
 
-    if (&opOperand == &getSourceMutable()) {
+    if (&opOperand == &op.getSourceMutable()) {
       effects.emplace_back(MemoryEffects::Read::get(), &opOperand, /*stage=*/0,
                            /*effectOnFullRegion=*/true,
                            SideEffects::DefaultResource::get());
-    } else if (&opOperand == &getDestMutable()) {
+    } else if (&opOperand == &op.getDestMutable()) {
       effects.emplace_back(MemoryEffects::Read::get(), &opOperand, /*stage=*/0,
                            /*effectOnFullRegion=*/true,
                            SideEffects::DefaultResource::get());
@@ -4829,30 +4830,16 @@ void PackOp::getEffects(
   }
 }
 
+void PackOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  getEffectsImpl(*this, effects);
+}
+
 void UnPackOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
-  // No memory effects for pure tensor semantics
-  if (hasPureTensorSemantics())
-    return;
-
-  for (OpOperand &opOperand : getOperation()->getOpOperands()) {
-    if (!llvm::isa<MemRefType>(opOperand.get().getType()))
-      continue;
-
-    if (&opOperand == &getSourceMutable()) {
-      effects.emplace_back(MemoryEffects::Read::get(), &opOperand, /*stage=*/0,
-                           /*effectOnFullRegion=*/true,
-                           SideEffects::DefaultResource::get());
-    } else if (&opOperand == &getDestMutable()) {
-      effects.emplace_back(MemoryEffects::Read::get(), &opOperand, /*stage=*/0,
-                           /*effectOnFullRegion=*/true,
-                           SideEffects::DefaultResource::get());
-      effects.emplace_back(MemoryEffects::Write::get(), &opOperand, /*stage=*/0,
-                           /*effectOnFullRegion=*/true,
-                           SideEffects::DefaultResource::get());
-    }
-  }
+  getEffectsImpl(*this, effects);
 }
 
 /// Returns true if the tiles and the tiled dims are constant.
