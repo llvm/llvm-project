@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_CODEGEN_CGFUNCTIONINFO_H
 #define LLVM_CLANG_CODEGEN_CGFUNCTIONINFO_H
 
+#include "LLVMABI/Type.h"
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
@@ -559,18 +560,19 @@ public:
 
 // Implementation detail of CGFunctionInfo, factored out so it can be named
 // in the TrailingObjects base class of CGFunctionInfo.
-struct CGFunctionInfoArgInfo {
-  CanQualType type;
+struct ABIFunctionInfoArgInfo {
+  ABIType type;
   ABIArgInfo info;
 };
 
 /// CGFunctionInfo - Class to encapsulate the information about a
 /// function definition.
-class CGFunctionInfo final
-    : public llvm::FoldingSetNode,
-      private llvm::TrailingObjects<CGFunctionInfo, CGFunctionInfoArgInfo,
-                                    FunctionProtoType::ExtParameterInfo> {
-  typedef CGFunctionInfoArgInfo ArgInfo;
+class ABIFunctionInfo final{
+    // : public llvm::FoldingSetNode,
+    //   private llvm::TrailingObjects<CGFunctionInfo, CGFunctionInfoArgInfo,
+    //                                 FunctionProtoType::ExtParameterInfo> {
+
+  typedef ABIFunctionInfoArgInfo ArgInfo;
   typedef FunctionProtoType::ExtParameterInfo ExtParameterInfo;
 
   /// The LLVM::CallingConv to use for this function (as specified by the
@@ -651,10 +653,10 @@ class CGFunctionInfo final
     return getTrailingObjects<ExtParameterInfo>();
   }
 
-  CGFunctionInfo() : Required(RequiredArgs::All) {}
+  ABIFunctionInfo() : Required(RequiredArgs::All) {}
 
 public:
-  static CGFunctionInfo *
+  static ABIFunctionInfo *
   create(unsigned llvmCC, bool instanceMethod, bool chainCall,
          bool delegateCall, const FunctionType::ExtInfo &extInfo,
          ArrayRef<ExtParameterInfo> paramInfos, CanQualType resultType,

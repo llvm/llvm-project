@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "LLVMABI/Type.h"
 #include "CGCall.h"
 #include "ABIInfo.h"
 #include "ABIInfoImpl.h"
@@ -45,6 +46,7 @@
 #include <optional>
 using namespace clang;
 using namespace CodeGen;
+using namespace ABI;
 
 /***/
 unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
@@ -814,6 +816,43 @@ void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI);
 }
 }
 
+std::unique_ptr<ABI::ABIBuiltinType> *getABIType(QualType QT){
+  const clang::Type *BaseType = QT.getTypePtr();
+
+  switch (BaseType->getTypeClass()) {
+    case clang::Type::Builtin: {
+        // Cast to BuiltinType to access its kind
+        auto *BT = llvm::cast<clang::BuiltinType>(BaseType);
+
+        ABIBuiltinType::Kind ABIKind;
+        switch (BT->getKind()) {
+        case clang::BuiltinType::Void:
+            ABIKind = ABIBuiltinType::Void;
+            break;
+        case clang::BuiltinType::Bool:
+            ABIKind = ABIBuiltinType::Bool;
+            break;
+        case clang::BuiltinType::Int:
+            ABIKind = ABIBuiltinType::Integer;
+            break;
+        case clang::BuiltinType::UInt:
+            ABIKind = ABIBuiltinType::UnsignedInteger;
+            break;
+        case clang::BuiltinType::Float:
+            ABIKind = ABIBuiltinType::FloatingPoint;
+            break;
+        default:
+            // TODO: support additional types
+            return std::make_unique<ABIBuiltinType>(ABI::ABIBuiltinType::Kind::Void);
+        }
+        return std::make_unique<ABIBuiltinType>(ABIKind);
+    }
+    default :
+      // TODO: support additonal types
+      return std::make_unique<ABIBuiltinType>(ABI::ABIBuiltinType::Kind::Bool);
+}
+}
+
 /// Arrange the argument and result information for an abstract value
 /// of a given function type.  This is the method which all of the
 /// above functions ultimately defer to.
@@ -824,29 +863,6 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
     RequiredArgs required) {
   assert(llvm::all_of(argTypes,
                       [](CanQualType T) { return T.isCanonicalAsParam(); }));
-
-// first convert each of these types into ABI::types. -> info, paramInfos, required, resultType, argTypes
-// then in the library, create abi::functionInfo type, same as how CGFunctionInfo is created. 
-// then in the library, lower abi::functionInfo to abi::x_86_abiArgInfo
-// then return that. then the frontend has to lower that to llvm-ir.
-// so clang will have to map that to clang::CGFunctionInfo.
-  ABIType resultTypeABI = getABIType(resultType);
-
-  std::vector<ABIType> abiTypes;
-  abiTypes.reserve(canQualTypes.size());  
-
-  for (const llvm::CanQualType &element : argTypes) {
-    abiTypes.push_back(getABIType(element));
-  }
-  llvm::ArrayRef<ABIType> argTypesABI = llvm::ArrayRef<ABIType>(abiTypes);
-
-  ABIFunctionInfo *ABIFI = ABIFunctionInfo::create(CC, isInstanceMethod, isChainCall, isDelegateCall,
-                              info, paramInfos, resultType, argTypes, required);
-  
-  // TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() ;
-  ABIInfo::computeFunctionInfo(CodeGenModule::getTargetCodeGenInfo(), ABIFI);
-
-  CGFunctionInfo *FI = mapABIFunctionInfoToCGFunctionInfo(ABIFI);
 
   // Lookup or create unique function info.
   llvm::FoldingSetNodeID ID;
@@ -866,14 +882,25 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
 
   unsigned CC = ClangCallConvToLLVMCallConv(info.getCC());
 
-  // Construct the function info.  We co-allocate the ArgInfos.
+  // map clang::QualType -> abi::Type
+  // implicit conversion from clang::CanQualType to clang::QualType
+  std::unique_ptr<ABI::ABIBuiltinType> resultTypeABI = getABIType(resultType);
+
+  std::vector<ABI::ABIBuiltinType> abiTypes;
+  abiTypes.reserve(argTypes.size());  
+
+  for (const llvm::CanQualType &element : argTypes) {
+    abiTypes.push_back(*getABIType(element));  // Move unique_ptr into the vector
+  }
+
+  llvm::ArrayRef<ABI::ABIBuiltinType> argTypesABI(abiTypes);
+
+  // map the abi::Types -> abi::FunctionInfo type, done by the library
+  ABIFunctionInfo *ABIFI = ABIFunctionInfo::create(CC, resultTypeABI.get(), argTypesABI);
+
+  // // Construct the function info.  We co-allocate the ArgInfos.
   // FI = CGFunctionInfo::create(CC, isInstanceMethod, isChainCall, isDelegateCall,
   //                             info, paramInfos, resultType, argTypes, required);
-  FunctionInfos.InsertNode(FI, insertPos);
-
-  bool inserted = FunctionsBeingProcessed.insert(FI).second;
-  (void)inserted;
-  assert(inserted && "Recursively being processed?");
 
   // Compute ABI information.
   if (CC == llvm::CallingConv::SPIR_KERNEL) {
@@ -883,8 +910,16 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
   } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
   } else {
-    CGM.getABIInfo().computeInfo(*FI);
+    // inject the required ABI information into the function. done by the library
+    ABI::computeFunctionInfo(CodeGenModule::getTargetCodeGenInfo(), ABIFI);
   }
+
+  // lower the ABI::FunctionInfo Type to Clang::CGFunctionInfo
+  CGFunctionInfo *FI = mapABIFunctionInfoToCGFunctionInfo(ABIFI);
+  FunctionInfos.InsertNode(FI, insertPos);
+  bool inserted = FunctionsBeingProcessed.insert(FI).second;
+  (void)inserted;
+  assert(inserted && "Recursively being processed?");
 
   // Loop over all of the computed argument and return value info.  If any of
   // them are direct or extend without a specified coerce type, specify the
