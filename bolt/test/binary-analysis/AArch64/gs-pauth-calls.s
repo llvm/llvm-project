@@ -672,7 +672,7 @@ indirect_call_invalidates_safety:
         blr     x16             // protected call, but makes x16 unsafe
         blr     x16             // unprotected call
 
-        mov     x19, x0
+        mov     x18, x0
         autiza  x18
         blr     x18             // protected call, but makes x18 unsafe
         blr     x18             // unprotected call
