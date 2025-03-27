@@ -2986,10 +2986,8 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       // Complex: to v2f32
       {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i8, 3},
       {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i16, 3},
-      {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i64, 2},
       {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i8, 3},
       {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i16, 3},
-      {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i64, 2},
 
       // SVE: to nxv2f32
       {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i8,
@@ -3319,6 +3317,20 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     if (const auto *Entry = ConvertCostTableLookup(
             FP16Tbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
       return AdjustCost(Entry->Cost);
+
+  // INT_TO_FP of i64->f32 will scalarize, which is required to avoid
+  // double-rounding issues.
+  if ((ISD == ISD::SINT_TO_FP || ISD == ISD::UINT_TO_FP) &&
+      DstTy.getScalarType() == MVT::f32 && SrcTy.getScalarSizeInBits() > 32 &&
+      isa<FixedVectorType>(Dst) && isa<FixedVectorType>(Src))
+    return AdjustCost(
+        cast<FixedVectorType>(Dst)->getNumElements() *
+            getCastInstrCost(Opcode, Dst->getScalarType(), Src->getScalarType(),
+                             CCH, CostKind) +
+        BaseT::getScalarizationOverhead(cast<FixedVectorType>(Src), false, true,
+                                        CostKind) +
+        BaseT::getScalarizationOverhead(cast<FixedVectorType>(Dst), true, false,
+                                        CostKind));
 
   if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
       CCH == TTI::CastContextHint::Masked &&

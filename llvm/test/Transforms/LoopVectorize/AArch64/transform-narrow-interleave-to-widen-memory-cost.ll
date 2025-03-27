@@ -16,11 +16,10 @@ define void @test_complex_add_float(ptr %res, ptr noalias %A, ptr noalias %B, i6
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[IV:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
-; CHECK-NEXT:    [[GEP_A_0:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_A_0:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i64 [[TMP1]]
-; CHECK-NEXT:    [[GEP_B_0:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_B_0:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x float>, ptr [[GEP_A_0]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x float> [[WIDE_VEC]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -38,7 +37,7 @@ define void @test_complex_add_float(ptr %res, ptr noalias %A, ptr noalias %B, i6
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <4 x float> [[STRIDED_VEC3]], [[STRIDED_VEC9]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x float> [[STRIDED_VEC1]], [[STRIDED_VEC7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = fadd <4 x float> [[STRIDED_VEC4]], [[STRIDED_VEC10]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RES]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RES]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RES]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x float> [[TMP6]], <4 x float> [[TMP8]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x float> [[TMP12]], <8 x float> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
@@ -93,11 +92,10 @@ define void @test_complex_add_double(ptr %res, ptr noalias %A, ptr noalias %B, i
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x double>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <4 x double> [[WIDE_VEC]], <4 x double> poison, <2 x i32> <i32 0, i32 2>
@@ -115,7 +113,7 @@ define void @test_complex_add_double(ptr %res, ptr noalias %A, ptr noalias %B, i
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[WIDE_LOAD1]], [[WIDE_LOAD3]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[STRIDED_VEC1]], [[STRIDED_VEC7]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = fadd <2 x double> [[STRIDED_VEC5]], [[STRIDED_VEC11]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RES]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RES]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RES]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[TMP9]], <2 x double> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x double> [[TMP12]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
