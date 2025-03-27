@@ -650,9 +650,9 @@ def ConvertGPUToSPIRV : Pass<"convert-gpu-to-spirv", "ModuleOp"> {
 def ConvertGPUToAMDGPUPass : Pass<"convert-gpu-to-amdgpu"> {
   let summary = "Generate AMDGPU operations for gpu operations";
   let dependentDialects = [
-    "LLVM::LLVMDialect",
-    "::mlir::gpu::GPUDialect",
     "amdgpu::AMDGPUDialect",
+    "LLVM::LLVMDialect",
+    "ROCDL::ROCDLDialect",
   ];
   let options = [Option<"subgroupSize", "subgroup-size", "unsigned",
                         /*default=*/"64",
