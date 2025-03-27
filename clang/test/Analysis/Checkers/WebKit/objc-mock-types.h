@@ -279,6 +279,20 @@ inline CFTypeRef bridge_cast(NSObject *object)
     return (__bridge CFTypeRef)object;
 }
 
+inline id bridge_id_cast(CFTypeRef object)
+{
+    return (__bridge id)object;
+}
+
+inline RetainPtr<id> bridge_id_cast(RetainPtr<CFTypeRef>&& object)
+{
+#if __has_feature(objc_arc)
+    return adoptNS((__bridge_transfer id)object.leakRef());
+#else
+    return adoptNS((__bridge id)object.leakRef());
+#endif
+}
+
 template <typename ExpectedType>
 struct ObjCTypeCastTraits {
 public:
@@ -419,6 +433,7 @@ using WTF::adoptCF;
 using WTF::retainPtr;
 using WTF::downcast;
 using WTF::bridge_cast;
+using WTF::bridge_id_cast;
 using WTF::is_objc;
 using WTF::checked_objc_cast;
 using WTF::dynamic_objc_cast;

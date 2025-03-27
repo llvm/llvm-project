@@ -395,6 +395,11 @@ unsigned ccf(CFTypeRef obj) {
   return CFArrayGetCount(checked_cf_cast<CFArrayRef>(obj));
 }
 
+void some_function(id);
+void idcf(CFTypeRef obj) {
+  some_function(bridge_id_cast(obj));
+}
+
 } // ptr_conversion
 
 @interface TestObject : NSObject
