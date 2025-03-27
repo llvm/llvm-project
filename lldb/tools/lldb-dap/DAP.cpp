@@ -673,7 +673,7 @@ void DAP::SetTarget(const lldb::SBTarget target) {
 
 bool DAP::HandleObject(const protocol::Message &M) {
   TelemetryDispatcher dispatcher(&debugger);
-  dispatcher.Set("client_name", "DAP");
+  dispatcher.Set("client_name", transport.GetClientName().str());
   if (const auto *req = std::get_if<protocol::Request>(&M)) {
     auto handler_pos = request_handlers.find(req->command);
     dispatcher.Set("client_data",
