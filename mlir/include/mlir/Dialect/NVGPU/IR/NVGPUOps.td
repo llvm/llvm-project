@@ -438,7 +438,7 @@ def NVGPU_TmaFenceOp : NVGPU_Op<"tma.fence.descriptor", []> {
   let description = [{
     The Op fences the given `$tmaDescriptor`. This is necessary if the tensor map
     descriptor was modified from the host using cudaMemcpy. In this case, the
-    kernel needs a fence, then it is safe to use `tensor.map` for load.
+    kernel needs a fence after which it is safe to use `tensor.map`.
   }];
   let arguments = (ins NVGPU_TensorMapDescriptor:$tensorMapDescriptor);
   let assemblyFormat = [{
