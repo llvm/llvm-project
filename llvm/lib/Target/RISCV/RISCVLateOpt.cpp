@@ -58,25 +58,6 @@ char RISCVLateOpt::ID = 0;
 INITIALIZE_PASS(RISCVLateOpt, "riscv-late-opt", RISCV_LATE_OPT_NAME, false,
                 false)
 
-static bool evaluateCondBranch(unsigned CC, int64_t C0, int64_t C1) {
-  switch (CC) {
-  default:
-    llvm_unreachable("Unexpected CC");
-  case RISCVCC::COND_EQ:
-    return C0 == C1;
-  case RISCVCC::COND_NE:
-    return C0 != C1;
-  case RISCVCC::COND_LT:
-    return C0 < C1;
-  case RISCVCC::COND_GE:
-    return C0 >= C1;
-  case RISCVCC::COND_LTU:
-    return (uint64_t)C0 < (uint64_t)C1;
-  case RISCVCC::COND_GEU:
-    return (uint64_t)C0 >= (uint64_t)C1;
-  }
-}
-
 bool RISCVLateOpt::trySimplifyCondBr(
     MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
     SmallVectorImpl<MachineOperand> &Cond) const {
@@ -87,35 +68,15 @@ bool RISCVLateOpt::trySimplifyCondBr(
   RISCVCC::CondCode CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
   assert(CC != RISCVCC::COND_INVALID);
 
-  // Right now we only care about LI (i.e. ADDI x0, imm)
-  auto isLoadImm = [](const MachineInstr *MI, int64_t &Imm) -> bool {
-    if (MI->getOpcode() == RISCV::ADDI && MI->getOperand(1).isReg() &&
-        MI->getOperand(1).getReg() == RISCV::X0) {
-      Imm = MI->getOperand(2).getImm();
-      return true;
-    }
-    return false;
-  };
-
-  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-  // Either a load from immediate instruction or X0.
-  auto isFromLoadImm = [&](const MachineOperand &Op, int64_t &Imm) -> bool {
-    if (!Op.isReg())
-      return false;
-    Register Reg = Op.getReg();
-    if (Reg == RISCV::X0) {
-      Imm = 0;
-      return true;
-    }
-    return Reg.isVirtual() && isLoadImm(MRI.getVRegDef(Reg), Imm);
-  };
-
   // Try and convert a conditional branch that can be evaluated statically
   // into an unconditional branch.
   MachineBasicBlock *Folded = nullptr;
   int64_t C0, C1;
-  if (isFromLoadImm(Cond[1], C0) && isFromLoadImm(Cond[2], C1)) {
-    Folded = evaluateCondBranch(CC, C0, C1) ? TBB : FBB;
+
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  if (RISCVInstrInfo::isFromLoadImm(MRI, Cond[1], C0) &&
+      RISCVInstrInfo::isFromLoadImm(MRI, Cond[2], C1)) {
+    Folded = RISCVInstrInfo::evaluateCondBranch(CC, C0, C1) ? TBB : FBB;
 
     // At this point, its legal to optimize.
     RII->removeBranch(MBB);

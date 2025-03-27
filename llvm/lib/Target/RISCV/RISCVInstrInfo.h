@@ -307,6 +307,13 @@ public:
   static bool isLdStSafeToPair(const MachineInstr &LdSt,
                                const TargetRegisterInfo *TRI);
 
+  static bool evaluateCondBranch(unsigned CC, int64_t C0, int64_t C1);
+
+  static bool isLoadImm(const MachineInstr *MI, int64_t &Imm);
+
+  static bool isFromLoadImm(const MachineRegisterInfo &MRI,
+                            const MachineOperand &Op, int64_t &Imm);
+
 protected:
   const RISCVSubtarget &STI;
 
