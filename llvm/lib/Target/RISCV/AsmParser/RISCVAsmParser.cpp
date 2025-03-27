@@ -398,13 +398,13 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     RegOp Reg;
     ImmOp Imm;
     FPImmOp FPImm;
-    struct SysRegOp SysReg;
-    struct VTypeOp VType;
-    struct FRMOp FRM;
-    struct FenceOp Fence;
-    struct RlistOp Rlist;
-    struct SpimmOp Spimm;
-    struct RegRegOp RegReg;
+    SysRegOp SysReg;
+    VTypeOp VType;
+    FRMOp FRM;
+    FenceOp Fence;
+    RlistOp Rlist;
+    SpimmOp Spimm;
+    RegRegOp RegReg;
   };
 
   RISCVOperand(KindTy K) : Kind(K) {}
