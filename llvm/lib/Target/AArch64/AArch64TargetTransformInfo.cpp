@@ -4438,7 +4438,7 @@ static bool shouldUnrollMultiExitLoop(Loop *L, ScalarEvolution &SE,
   // Small search loops with multiple exits can be highly beneficial to unroll.
   // We only care about loops with exactly two exiting blocks, although each
   // block could jump to the same exit block.
-  ArrayRef<BasicBlock*> Blocks = L->getBlocks();
+  ArrayRef<BasicBlock *> Blocks = L->getBlocks();
   if (Blocks.size() != 2)
     return false;
 
