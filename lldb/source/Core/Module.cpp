@@ -1486,7 +1486,7 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
             LoadScriptOptions options;
             bool did_load = script_interpreter->LoadScriptingModule(
                 scripting_stream.GetData(), options, error,
-                /*module_sp*/ nullptr, /*extra_path*/ {}, 
+                /*module_sp*/ nullptr, /*extra_path*/ {},
                 target->shared_from_this());
             if (!did_load)
               return false;

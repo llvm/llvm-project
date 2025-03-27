@@ -233,9 +233,8 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallModuleInit(
 bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallModuleNewTarget(
     const char *python_module_name, const char *session_dictionary_name,
     lldb::TargetSP target) {
-  return false;   
+  return false;
 }
-
 
 python::PythonObject
 lldb_private::python::SWIGBridge::LLDBSWIGPythonCreateOSPlugin(
