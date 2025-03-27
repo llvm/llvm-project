@@ -114,5 +114,4 @@ bool RISCVLateOpt::runOnMachineFunction(MachineFunction &Fn) {
   return Changed;
 }
 
-/// Returns an instance of the Make Compressible Optimization pass.
 FunctionPass *llvm::createRISCVLateOptPass() { return new RISCVLateOpt(); }
