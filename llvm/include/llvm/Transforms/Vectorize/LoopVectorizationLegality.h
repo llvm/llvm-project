@@ -272,6 +272,10 @@ public:
   /// induction descriptor.
   using InductionList = MapVector<PHINode *, InductionDescriptor>;
 
+  /// MonotonicPHIList saves monotonic phi variables and maps them to the
+  /// monotonic phi descriptor.
+  using MonotonicPHIList = MapVector<PHINode *, MonotonicDescriptor>;
+
   /// RecurrenceSet contains the phi nodes that are recurrences other than
   /// inductions and reductions.
   using RecurrenceSet = SmallPtrSet<const PHINode *, 8>;
@@ -314,6 +318,11 @@ public:
 
   /// Returns the induction variables found in the loop.
   const InductionList &getInductionVars() const { return Inductions; }
+
+  /// Returns the monotonic phi variables found in the loop.
+  const MonotonicPHIList &getMonotonicPHIs() const { return MonotonicPHIs; }
+
+  bool hasMonotonicPHIs() const { return !MonotonicPHIs.empty(); }
 
   /// Return the fixed-order recurrences found in the loop.
   RecurrenceSet &getFixedOrderRecurrences() { return FixedOrderRecurrences; }
@@ -371,6 +380,12 @@ public:
   /// NOTE: This method must only be used before modifying the original scalar
   /// loop. Do not use after invoking 'createVectorizedLoopSkeleton' (PR34965).
   int isConsecutivePtr(Type *AccessTy, Value *Ptr) const;
+
+  /// Returns true if Phi is monotonic variable.
+  bool isMonotonicPHI(PHINode *Phi) const;
+
+  /// Check if memory access is compressed when vectorizing.
+  bool isCompressedPtr(Type *AccessTy, Value *Ptr, BasicBlock *BB) const;
 
   /// Returns true if \p V is invariant across all loop iterations according to
   /// SCEV.
@@ -676,6 +691,9 @@ private:
   /// Notice that inductions don't need to start at zero and that induction
   /// variables can be pointers.
   InductionList Inductions;
+
+  /// Holds all of the monotonic phi variables that we found in the loop.
+  MonotonicPHIList MonotonicPHIs;
 
   /// Holds all the casts that participate in the update chain of the induction
   /// variables, and that have been proven to be redundant (possibly under a

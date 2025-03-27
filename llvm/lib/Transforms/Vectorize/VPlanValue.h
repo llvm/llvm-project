@@ -371,12 +371,13 @@ public:
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
     VPReductionPHISC,
+    VPMonotonicPHISC,
     // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
     // END: Phi-like recipes
     VPFirstPHISC = VPWidenPHISC,
     VPFirstHeaderPHISC = VPCanonicalIVPHISC,
-    VPLastHeaderPHISC = VPReductionPHISC,
-    VPLastPHISC = VPReductionPHISC,
+    VPLastHeaderPHISC = VPMonotonicPHISC,
+    VPLastPHISC = VPMonotonicPHISC,
   };
 
   VPDef(const unsigned char SC) : SubclassID(SC) {}

@@ -553,6 +553,7 @@ public:
     case VPRecipeBase::VPWidenIntOrFpInductionSC:
     case VPRecipeBase::VPWidenPointerInductionSC:
     case VPRecipeBase::VPReductionPHISC:
+    case VPRecipeBase::VPMonotonicPHISC:
     case VPRecipeBase::VPPartialReductionSC:
       return true;
     case VPRecipeBase::VPBranchOnMaskSC:
@@ -1014,6 +1015,7 @@ public:
     ComputeAnyOfResult,
     ComputeFindIVResult,
     ComputeReductionResult,
+    ComputeMonotonicResult,
     // Extracts the last lane from its operand if it is a vector, or the last
     // part if scalar. In the latter case, the recipe will be removed during
     // unrolling.
@@ -2403,6 +2405,50 @@ public:
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return isOrdered() || isInLoop();
+  }
+};
+
+/// A recipe for handling monotonic phis. The start value is the first operand
+/// of the recipe and the incoming value from the backedge is the second
+/// operand.
+class VPMonotonicPHIRecipe : public VPHeaderPHIRecipe {
+  MonotonicDescriptor Desc;
+
+public:
+  VPMonotonicPHIRecipe(PHINode *Phi, const MonotonicDescriptor &Desc,
+                       VPValue *Start)
+      : VPHeaderPHIRecipe(VPDef::VPMonotonicPHISC, Phi, Start), Desc(Desc) {}
+
+  ~VPMonotonicPHIRecipe() override = default;
+
+  VPMonotonicPHIRecipe *clone() override {
+    auto *R = new VPMonotonicPHIRecipe(cast<PHINode>(getUnderlyingInstr()),
+                                       Desc, getStartValue());
+    R->addOperand(getBackedgeValue());
+    return R;
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPMonotonicPHISC)
+
+  static inline bool classof(const VPHeaderPHIRecipe *R) {
+    return R->getVPDefID() == VPDef::VPMonotonicPHISC;
+  }
+
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  const MonotonicDescriptor &getDescriptor() const { return Desc; }
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
   }
 };
 

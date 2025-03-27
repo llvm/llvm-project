@@ -1241,9 +1241,9 @@ public:
   getDivRemSpeculationCost(Instruction *I,
                            ElementCount VF) const;
 
-  /// Returns widening decision (CM_Widen or CM_Widen_Reverse) if \p I is a
-  /// memory instruction with consecutive access that can be widened, or
-  /// CM_Unknown otherwise.
+  /// Returns widening decision (CM_Widen, CM_Widen_Reverse or CM_Compressed) if
+  /// \p I is a memory instruction with consecutive access that can be widened,
+  /// or CM_Unknown otherwise.
   InstWidening memoryInstructionCanBeWidened(Instruction *I, ElementCount VF);
 
   /// Returns true if \p I is a memory instruction in an interleaved-group
@@ -3000,6 +3000,9 @@ LoopVectorizationCostModel::memoryInstructionCanBeWidened(Instruction *I,
   auto *Ptr = getLoadStorePointerOperand(I);
   auto *ScalarTy = getLoadStoreType(I);
 
+  if (Legal->isCompressedPtr(ScalarTy, Ptr, I->getParent()))
+    return CM_Compressed;
+
   // In order to be widened, the pointer should be consecutive, first of all.
   auto Stride = Legal->isConsecutivePtr(ScalarTy, Ptr);
   if (!Stride)
@@ -3255,6 +3258,39 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     // The induction variable and its update instruction will remain uniform.
     AddToWorklistIfAllowed(Ind);
     AddToWorklistIfAllowed(IndUpdate);
+  }
+
+  // Handle monotonic phis (similarly to induction vars).
+  for (const auto &MonotonicPHI : Legal->getMonotonicPHIs()) {
+    auto *Phi = MonotonicPHI.first;
+    auto *PhiUpdate = cast<Instruction>(Phi->getIncomingValueForBlock(Latch));
+    const auto &Desc = MonotonicPHI.second;
+
+    auto UniformPhi = llvm::all_of(Phi->users(), [&](User *U) -> bool {
+      auto *I = cast<Instruction>(U);
+      if (I == Desc.getStepInst())
+        return true;
+      if (auto *PN = dyn_cast<PHINode>(I); PN && Desc.getChain().contains(PN))
+        return true;
+      return !TheLoop->contains(I) || Worklist.count(I) ||
+             IsVectorizedMemAccessUse(I, Phi);
+    });
+    if (!UniformPhi)
+      continue;
+
+    auto UniformPhiUpdate =
+        llvm::all_of(PhiUpdate->users(), [&](User *U) -> bool {
+          auto *I = cast<Instruction>(U);
+          if (I == Phi)
+            return true;
+          return !TheLoop->contains(I) || Worklist.count(I) ||
+                 IsVectorizedMemAccessUse(I, Phi);
+        });
+    if (!UniformPhiUpdate)
+      continue;
+
+    AddToWorklistIfAllowed(Phi);
+    AddToWorklistIfAllowed(PhiUpdate);
   }
 
   Uniforms[VF].insert_range(Worklist);
@@ -4048,6 +4084,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPEVLBasedIVPHISC:
       case VPDef::VPPredInstPHISC:
       case VPDef::VPBranchOnMaskSC:
+      case VPDef::VPMonotonicPHISC:
         continue;
       case VPDef::VPReductionSC:
       case VPDef::VPActiveLaneMaskPHISC:
@@ -4559,6 +4596,10 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   // exits because the VPInstruction::AnyOf code cannot currently handle
   // multiple parts.
   if (Plan.hasEarlyExit())
+    return 1;
+
+  // Monotonic vars don't support interleaving.
+  if (Legal->hasMonotonicPHIs())
     return 1;
 
   const bool HasReductions =
@@ -8075,11 +8116,19 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
       return Recipe;
 
     VPHeaderPHIRecipe *PhiRecipe = nullptr;
-    assert((Legal->isReductionVariable(Phi) ||
+    assert((Legal->isMonotonicPHI(Phi) || Legal->isReductionVariable(Phi) ||
             Legal->isFixedOrderRecurrence(Phi)) &&
-           "can only widen reductions and fixed-order recurrences here");
+           "can only widen monotonic phis, reductions and fixed-order "
+           "recurrences here");
     VPValue *StartV = Operands[0];
-    if (Legal->isReductionVariable(Phi)) {
+    Value *IncomingVal =
+        Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader());
+    if (Legal->isMonotonicPHI(Phi)) {
+      const MonotonicDescriptor &Desc =
+          Legal->getMonotonicPHIs().find(Phi)->second;
+      assert(Desc.getExpr()->getStart() == PSE.getSCEV(IncomingVal));
+      PhiRecipe = new VPMonotonicPHIRecipe(Phi, Desc, StartV);
+    } else if (Legal->isReductionVariable(Phi)) {
       const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(Phi);
       assert(RdxDesc.getRecurrenceStartValue() ==
              Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader()));
@@ -8429,6 +8478,46 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Transform initial VPlan: Apply previously taken decisions, in order, to
   // bring the VPlan to its final state.
   // ---------------------------------------------------------------------------
+
+  // Adjust the recipes for any monotonic phis.
+  for (VPRecipeBase &R : HeaderVPBB->phis()) {
+    auto *MonotonicPhi = dyn_cast<VPMonotonicPHIRecipe>(&R);
+    if (!MonotonicPhi)
+      continue;
+
+    // Prohibit scalarization of monotonic phis.
+    if (!all_of(Range, [&](ElementCount VF) {
+          return CM.isUniformAfterVectorization(
+              MonotonicPhi->getUnderlyingInstr(), VF);
+        }))
+      return nullptr;
+
+    // Obtain mask value for the predicate edge from the last VPBlendRecipe in
+    // chain.
+    VPValue *Chain = MonotonicPhi->getBackedgeValue();
+    VPValue *Mask = nullptr;
+    while (auto *BlendR = dyn_cast<VPBlendRecipe>(Chain))
+      for (unsigned I = 0, E = BlendR->getNumIncomingValues(); I != E; ++I)
+        if (auto *IncomingVal = BlendR->getIncomingValue(I);
+            IncomingVal != MonotonicPhi) {
+          Chain = IncomingVal;
+          Mask = BlendR->getMask(I);
+          break;
+        }
+    assert(Mask);
+
+    auto &Desc = MonotonicPhi->getDescriptor();
+    auto &SE = *PSE.getSE();
+    auto *Step = vputils::getOrCreateVPValueForSCEVExpr(
+        *Plan, Desc.getExpr()->getStepRecurrence(SE));
+
+    auto *MonotonicI =
+        new VPInstruction(VPInstruction::ComputeMonotonicResult,
+                          {MonotonicPhi, Mask, Step}, *Desc.getStepInst());
+    auto *InsertBlock = MonotonicPhi->getBackedgeRecipe().getParent();
+    InsertBlock->insert(MonotonicI, InsertBlock->getFirstNonPhi());
+    MonotonicPhi->getBackedgeValue()->replaceAllUsesWith(MonotonicI);
+  }
 
   // Adjust the recipes for any inloop reductions.
   adjustRecipesForReductions(Plan, RecipeBuilder, Range.Start);
@@ -9892,6 +9981,15 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     IC = LVP.selectInterleaveCount(LVP.getPlanFor(VF.Width), VF.Width, VF.Cost);
 
     unsigned SelectedIC = std::max(IC, UserIC);
+
+    if (LVL.hasMonotonicPHIs() && SelectedIC > 1) {
+      reportVectorizationFailure(
+          "Interleaving of loop with monotonic vars",
+          "Interleaving of loops with monotonic vars is not supported",
+          "CantInterleaveWithMonotonicVars", ORE, L);
+      return false;
+    }
+
     //  Optimistically generate runtime checks if they are needed. Drop them if
     //  they turn out to not be profitable.
     if (VF.Width.isVector() || SelectedIC > 1) {
