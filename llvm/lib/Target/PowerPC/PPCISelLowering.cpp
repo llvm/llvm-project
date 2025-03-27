@@ -125,6 +125,11 @@ cl::desc("don't always align innermost loop to 32 bytes on ppc"), cl::Hidden);
 static cl::opt<bool> UseAbsoluteJumpTables("ppc-use-absolute-jumptables",
 cl::desc("use absolute jump tables on ppc"), cl::Hidden);
 
+static cl::opt<bool> DisableAggressiveCPLHoist(
+    "disable-aggressive-cpl-hoist",
+    cl::desc("aggressively hoist constant pool loads out of loops"),
+    cl::Hidden);
+
 static cl::opt<bool>
     DisablePerfectShuffle("ppc-disable-perfect-shuffle",
                           cl::desc("disable vector permute decomposition"),
@@ -18675,6 +18680,14 @@ isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const {
 
   // For non-constant masks, we can always use the record-form and.
   return true;
+}
+
+// Constant pool loads in loops cause a major performance degradation with
+// prefixed pc-relative loads so move them out aggressively.
+// FIXME: This may be useful with TOC-based CP loads under some conditions
+// but initial performance testing did not produce conclusive evidence.
+bool PPCTargetLowering::aggressivelyHoistInvariantLoads() const {
+  return Subtarget.isUsingPCRelativeCalls() && !DisableAggressiveCPLHoist;
 }
 
 /// getAddrModeForFlags - Based on the set of address flags, select the most

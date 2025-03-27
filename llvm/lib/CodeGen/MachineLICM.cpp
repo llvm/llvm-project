@@ -1351,10 +1351,12 @@ bool MachineLICMImpl::IsProfitableToHoist(MachineInstr &MI,
     return false;
   }
 
+  bool InvariantLoad = MI.isDereferenceableInvariantLoad();
   // Do not "speculate" in high register pressure situation. If an
   // instruction is not guaranteed to be executed in the loop, it's best to be
   // conservative.
   if (AvoidSpeculation &&
+      (!InvariantLoad || !TLI->aggressivelyHoistInvariantLoads()) &&
       (!IsGuaranteedToExecute(MI.getParent(), CurLoop) && !MayCSE(&MI))) {
     LLVM_DEBUG(dbgs() << "Won't speculate: " << MI);
     return false;
@@ -1393,8 +1395,7 @@ bool MachineLICMImpl::IsProfitableToHoist(MachineInstr &MI,
 
   // High register pressure situation, only hoist if the instruction is going
   // to be remat'ed.
-  if (!isTriviallyReMaterializable(MI) &&
-      !MI.isDereferenceableInvariantLoad()) {
+  if (!isTriviallyReMaterializable(MI) && !InvariantLoad) {
     LLVM_DEBUG(dbgs() << "Can't remat / high reg-pressure: " << MI);
     return false;
   }
