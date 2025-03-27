@@ -106,10 +106,22 @@ def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure],
   let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$in, I32Attr:$bit);
 }
 
+class LLVM_PowFI<string func> :
+    LLVM_OneResultIntrOp<func, [], [0,1],
+        [Pure], /*requiresFastmath=*/1> {
+    let arguments =
+        (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
+            AnySignlessInteger:$power,
+            DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+    let assemblyFormat = "`(` operands `)` attr-dict `:` "
+            "functional-type(operands, results)";
+}
+
 def LLVM_CopySignOp : LLVM_BinarySameArgsIntrOpF<"copysign">;
 def LLVM_ExpOp : LLVM_UnaryIntrOpF<"exp">;
 def LLVM_Exp2Op : LLVM_UnaryIntrOpF<"exp2">;
 def LLVM_Exp10Op : LLVM_UnaryIntrOpF<"exp10">;
+def LLVM_LoadExpOp: LLVM_PowFI<"ldexp">;
 def LLVM_FAbsOp : LLVM_UnaryIntrOpF<"fabs">;
 def LLVM_FCeilOp : LLVM_UnaryIntrOpF<"ceil">;
 def LLVM_FFloorOp : LLVM_UnaryIntrOpF<"floor">;
@@ -130,15 +142,7 @@ def LLVM_RoundOp : LLVM_UnaryIntrOpF<"round">;
 def LLVM_FTruncOp : LLVM_UnaryIntrOpF<"trunc">;
 def LLVM_SqrtOp : LLVM_UnaryIntrOpF<"sqrt">;
 def LLVM_PowOp : LLVM_BinarySameArgsIntrOpF<"pow">;
-def LLVM_PowIOp : LLVM_OneResultIntrOp<"powi", [], [0,1],
-                                       [Pure], /*requiresFastmath=*/1> {
-  let arguments =
-      (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
-           AnySignlessInteger:$power,
-           DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
-  let assemblyFormat = "`(` operands `)` attr-dict `:` "
-      "functional-type(operands, results)";
-}
+def LLVM_PowIOp : LLVM_PowFI<"powi">;
 def LLVM_RintOp : LLVM_UnaryIntrOpF<"rint">;
 def LLVM_NearbyintOp : LLVM_UnaryIntrOpF<"nearbyint">;
 class LLVM_IntRoundIntrOpBase<string func> :
