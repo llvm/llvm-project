@@ -35,7 +35,7 @@ namespace ranges {
 
 template <class _Iter, class _Sent, class _Proj, class _Comp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Iter
-__is_sorted_until_impl(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj) {
+__is_sorted_until_impl(_Iter __first, _Sent __last, _Comp&& __comp, _Proj&& __proj) {
   if (__first == __last)
     return __first;
   auto __i = __first;

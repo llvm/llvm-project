@@ -42,7 +42,7 @@ namespace ranges {
 struct __stable_sort {
   template <class _Iter, class _Sent, class _Comp, class _Proj>
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX26 _Iter
-  __stable_sort_fn_impl(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj) {
+  __stable_sort_fn_impl(_Iter __first, _Sent __last, _Comp&& __comp, _Proj&& __proj) {
     auto __last_iter = ranges::next(__first, __last);
 
     auto&& __projected_comp = std::__make_projected(__comp, __proj);

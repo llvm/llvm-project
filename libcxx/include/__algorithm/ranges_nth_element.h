@@ -42,7 +42,7 @@ namespace ranges {
 struct __nth_element {
   template <class _Iter, class _Sent, class _Comp, class _Proj>
   _LIBCPP_HIDE_FROM_ABI constexpr static _Iter
-  __nth_element_fn_impl(_Iter __first, _Iter __nth, _Sent __last, _Comp& __comp, _Proj& __proj) {
+  __nth_element_fn_impl(_Iter __first, _Iter __nth, _Sent __last, _Comp&& __comp, _Proj&& __proj) {
     auto __last_iter = ranges::next(__first, __last);
 
     auto&& __projected_comp = std::__make_projected(__comp, __proj);

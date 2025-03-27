@@ -38,7 +38,7 @@ namespace ranges {
 
 template <class _Iter, class _Sent, class _Proj, class _Pred>
 _LIBCPP_HIDE_FROM_ABI constexpr subrange<_Iter>
-__remove_if_impl(_Iter __first, _Sent __last, _Pred& __pred, _Proj& __proj) {
+__remove_if_impl(_Iter __first, _Sent __last, _Pred&& __pred, _Proj&& __proj) {
   auto __new_end = ranges::__find_if_impl(__first, __last, __pred, __proj);
   if (__new_end == __last)
     return {__new_end, __new_end};

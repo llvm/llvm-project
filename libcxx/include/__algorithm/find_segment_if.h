@@ -26,7 +26,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _SegmentedIterator, class _Pred, class _Proj>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _SegmentedIterator
-__find_segment_if(_SegmentedIterator __first, _SegmentedIterator __last, _Pred __pred, _Proj& __proj) {
+__find_segment_if(_SegmentedIterator __first, _SegmentedIterator __last, _Pred __pred, _Proj&& __proj) {
   using _Traits = __segmented_iterator_traits<_SegmentedIterator>;
 
   auto __sfirst = _Traits::__segment(__first);

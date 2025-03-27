@@ -25,11 +25,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Comp, class _Proj>
 class _MinmaxElementLessFunc {
-  _Comp& __comp_;
-  _Proj& __proj_;
+  _Comp&& __comp_;
+  _Proj&& __proj_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _MinmaxElementLessFunc(_Comp& __comp, _Proj& __proj)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _MinmaxElementLessFunc(_Comp&& __comp, _Proj&& __proj)
       : __comp_(__comp), __proj_(__proj) {}
 
   template <class _Iter>
@@ -40,7 +40,7 @@ public:
 
 template <class _Iter, class _Sent, class _Proj, class _Comp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter>
-__minmax_element_impl(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj) {
+__minmax_element_impl(_Iter __first, _Sent __last, _Comp&& __comp, _Proj&& __proj) {
   auto __less = _MinmaxElementLessFunc<_Comp, _Proj>(__comp, __proj);
 
   pair<_Iter, _Iter> __result(__first, __first);

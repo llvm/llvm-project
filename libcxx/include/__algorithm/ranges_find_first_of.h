@@ -39,9 +39,9 @@ struct __find_first_of {
       _Sent1 __last1,
       _Iter2 __first2,
       _Sent2 __last2,
-      _Pred& __pred,
-      _Proj1& __proj1,
-      _Proj2& __proj2) {
+      _Pred&& __pred,
+      _Proj1&& __proj1,
+      _Proj2&& __proj2) {
     for (; __first1 != __last1; ++__first1) {
       for (auto __j = __first2; __j != __last2; ++__j) {
         if (std::invoke(__pred, std::invoke(__proj1, *__first1), std::invoke(__proj2, *__j)))

@@ -43,7 +43,7 @@ namespace ranges {
 struct __pop_heap {
   template <class _Iter, class _Sent, class _Comp, class _Proj>
   _LIBCPP_HIDE_FROM_ABI constexpr static _Iter
-  __pop_heap_fn_impl(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj) {
+  __pop_heap_fn_impl(_Iter __first, _Sent __last, _Comp&& __comp, _Proj&& __proj) {
     auto __last_iter = ranges::next(__first, __last);
     auto __len       = __last_iter - __first;
 

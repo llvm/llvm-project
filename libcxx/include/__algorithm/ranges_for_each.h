@@ -40,7 +40,7 @@ struct __for_each {
 private:
   template <class _Iter, class _Sent, class _Proj, class _Func>
   _LIBCPP_HIDE_FROM_ABI constexpr static for_each_result<_Iter, _Func>
-  __for_each_impl(_Iter __first, _Sent __last, _Func& __func, _Proj& __proj) {
+  __for_each_impl(_Iter __first, _Sent __last, _Func& __func, _Proj&& __proj) {
     for (; __first != __last; ++__first)
       std::invoke(__func, std::invoke(__proj, *__first));
     return {std::move(__first), std::move(__func)};

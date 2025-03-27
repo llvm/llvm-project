@@ -34,7 +34,7 @@ namespace ranges {
 
 template <class _Iter, class _Sent, class _Type, class _Proj, class _Pred>
 _LIBCPP_HIDE_FROM_ABI constexpr _Iter
-__replace_if_impl(_Iter __first, _Sent __last, _Pred& __pred, const _Type& __new_value, _Proj& __proj) {
+__replace_if_impl(_Iter __first, _Sent __last, _Pred&& __pred, const _Type& __new_value, _Proj&& __proj) {
   for (; __first != __last; ++__first) {
     if (std::invoke(__pred, std::invoke(__proj, *__first)))
       *__first = __new_value;

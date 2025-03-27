@@ -44,9 +44,9 @@ struct __ends_with {
       _Sent1 __last1,
       _Iter2 __first2,
       _Sent2 __last2,
-      _Pred& __pred,
-      _Proj1& __proj1,
-      _Proj2& __proj2) {
+      _Pred&& __pred,
+      _Proj1&& __proj1,
+      _Proj2&& __proj2) {
     auto __rbegin1 = std::make_reverse_iterator(__last1);
     auto __rend1   = std::make_reverse_iterator(__first1);
     auto __rbegin2 = std::make_reverse_iterator(__last2);
@@ -61,9 +61,9 @@ struct __ends_with {
       _Sent1 __last1,
       _Iter2 __first2,
       _Sent2 __last2,
-      _Pred& __pred,
-      _Proj1& __proj1,
-      _Proj2& __proj2) {
+      _Pred&& __pred,
+      _Proj1&& __proj1,
+      _Proj2&& __proj2) {
     if constexpr (std::bidirectional_iterator<_Sent1> && std::bidirectional_iterator<_Sent2> &&
                   (!std::random_access_iterator<_Sent1>) && (!std::random_access_iterator<_Sent2>)) {
       return __ends_with_fn_impl_bidirectional(__first1, __last1, __first2, __last2, __pred, __proj1, __proj2);
@@ -101,9 +101,9 @@ struct __ends_with {
       _Sent1 __last1,
       _Iter2 __first2,
       _Sent2 __last2,
-      _Pred& __pred,
-      _Proj1& __proj1,
-      _Proj2& __proj2,
+      _Pred&& __pred,
+      _Proj1&& __proj1,
+      _Proj2&& __proj2,
       _Offset __offset) {
     if constexpr (std::bidirectional_iterator<_Sent1> && std::bidirectional_iterator<_Sent2> &&
                   !std::random_access_iterator<_Sent1> && !std::random_access_iterator<_Sent2>) {

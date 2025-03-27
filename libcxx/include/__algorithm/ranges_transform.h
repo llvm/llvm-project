@@ -45,7 +45,7 @@ struct __transform {
 private:
   template <class _InIter, class _Sent, class _OutIter, class _Func, class _Proj>
   _LIBCPP_HIDE_FROM_ABI static constexpr unary_transform_result<_InIter, _OutIter>
-  __unary(_InIter __first, _Sent __last, _OutIter __result, _Func& __operation, _Proj& __projection) {
+  __unary(_InIter __first, _Sent __last, _OutIter __result, _Func& __operation, _Proj&& __projection) {
     while (__first != __last) {
       *__result = std::invoke(__operation, std::invoke(__projection, *__first));
       ++__first;
@@ -70,8 +70,8 @@ private:
            _Sent2 __last2,
            _OutIter __result,
            _Func& __binary_operation,
-           _Proj1& __projection1,
-           _Proj2& __projection2) {
+           _Proj1&& __projection1,
+           _Proj2&& __projection2) {
     while (__first1 != __last1 && __first2 != __last2) {
       *__result =
           std::invoke(__binary_operation, std::invoke(__projection1, *__first1), std::invoke(__projection2, *__first2));

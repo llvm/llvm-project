@@ -42,7 +42,7 @@ namespace ranges {
 struct __search_n {
   template <class _Iter1, class _Sent1, class _SizeT, class _Type, class _Pred, class _Proj>
   _LIBCPP_HIDE_FROM_ABI static constexpr subrange<_Iter1> __ranges_search_n_impl(
-      _Iter1 __first, _Sent1 __last, _SizeT __count, const _Type& __value, _Pred& __pred, _Proj& __proj) {
+      _Iter1 __first, _Sent1 __last, _SizeT __count, const _Type& __value, _Pred&& __pred, _Proj&& __proj) {
     if (__count == 0)
       return {__first, __first};
 

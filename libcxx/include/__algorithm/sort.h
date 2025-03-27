@@ -876,7 +876,7 @@ __sort<__less<long double>&, long double*>(long double*, long double*, __less<lo
 
 template <class _AlgPolicy, class _RandomAccessIterator, class _Comp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-__sort_dispatch(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp& __comp) {
+__sort_dispatch(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp&& __comp) {
   typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
   difference_type __depth_limit = 2 * std::__log2i(__last - __first);
 
@@ -941,7 +941,7 @@ _LIBCPP_HIDE_FROM_ABI void __sort_dispatch(_Type* __first, _Type* __last, ranges
 
 template <class _AlgPolicy, class _RandomAccessIterator, class _Comp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-__sort_impl(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp& __comp) {
+__sort_impl(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp&& __comp) {
   std::__debug_randomize_range<_AlgPolicy>(__first, __last);
 
   if (__libcpp_is_constant_evaluated()) {

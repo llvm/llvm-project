@@ -40,9 +40,9 @@ struct __lexicographical_compare {
       _Sent1 __last1,
       _Iter2 __first2,
       _Sent2 __last2,
-      _Comp& __comp,
-      _Proj1& __proj1,
-      _Proj2& __proj2) {
+      _Comp&& __comp,
+      _Proj1&& __proj1,
+      _Proj2&& __proj2) {
     auto [__first1_un, __last1_un] = std::__unwrap_range(std::move(__first1), std::move(__last1));
     auto [__first2_un, __last2_un] = std::__unwrap_range(std::move(__first2), std::move(__last2));
     return std::__lexicographical_compare(

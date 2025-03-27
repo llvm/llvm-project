@@ -37,7 +37,13 @@ template <class _AlgPolicy,
           class _Proj1,
           class _Proj2>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter1, _Iter1> __search_forward_impl(
-    _Iter1 __first1, _Sent1 __last1, _Iter2 __first2, _Sent2 __last2, _Pred& __pred, _Proj1& __proj1, _Proj2& __proj2) {
+    _Iter1 __first1,
+    _Sent1 __last1,
+    _Iter2 __first2,
+    _Sent2 __last2,
+    _Pred&& __pred,
+    _Proj1&& __proj1,
+    _Proj2&& __proj2) {
   if (__first2 == __last2)
     return std::make_pair(__first1, __first1); // Everything matches an empty sequence
   while (true) {
@@ -85,9 +91,9 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter1, _Iter1> __searc
     _Sent1 __last1,
     _Iter2 __first2,
     _Sent2 __last2,
-    _Pred& __pred,
-    _Proj1& __proj1,
-    _Proj2& __proj2,
+    _Pred&& __pred,
+    _Proj1&& __proj1,
+    _Proj2&& __proj2,
     _DiffT1 __size1,
     _DiffT2 __size2) {
   const _Iter1 __s = __first1 + __size1 - _DiffT1(__size2 - 1); // Start of pattern match can't go beyond here
@@ -128,7 +134,13 @@ template <class _Iter1,
                             __has_random_access_iterator_category<_Iter2>::value,
                         int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter1, _Iter1> __search_impl(
-    _Iter1 __first1, _Sent1 __last1, _Iter2 __first2, _Sent2 __last2, _Pred& __pred, _Proj1& __proj1, _Proj2& __proj2) {
+    _Iter1 __first1,
+    _Sent1 __last1,
+    _Iter2 __first2,
+    _Sent2 __last2,
+    _Pred&& __pred,
+    _Proj1&& __proj1,
+    _Proj2&& __proj2) {
   auto __size2 = __last2 - __first2;
   if (__size2 == 0)
     return std::make_pair(__first1, __first1);
@@ -155,7 +167,13 @@ template <
                         __has_random_access_iterator_category<_Iter2>::value),
                   int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter1, _Iter1> __search_impl(
-    _Iter1 __first1, _Sent1 __last1, _Iter2 __first2, _Sent2 __last2, _Pred& __pred, _Proj1& __proj1, _Proj2& __proj2) {
+    _Iter1 __first1,
+    _Sent1 __last1,
+    _Iter2 __first2,
+    _Sent2 __last2,
+    _Pred&& __pred,
+    _Proj1&& __proj1,
+    _Proj2&& __proj2) {
   return std::__search_forward_impl<_ClassicAlgPolicy>(__first1, __last1, __first2, __last2, __pred, __proj1, __proj2);
 }
 

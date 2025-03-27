@@ -39,7 +39,7 @@ namespace ranges {
 struct __find {
   template <class _Iter, class _Sent, class _Tp, class _Proj>
   _LIBCPP_HIDE_FROM_ABI static constexpr _Iter
-  __find_unwrap(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
+  __find_unwrap(_Iter __first, _Sent __last, const _Tp& __value, _Proj&& __proj) {
     if constexpr (forward_iterator<_Iter>) {
       auto [__first_un, __last_un] = std::__unwrap_range(__first, std::move(__last));
       return std::__rewrap_range<_Sent>(

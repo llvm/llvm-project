@@ -33,7 +33,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // generic implementation
 template <class _AlgPolicy, class _Iter, class _Sent, class _Tp, class _Proj>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename _IterOps<_AlgPolicy>::template __difference_type<_Iter>
-__count(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
+__count(_Iter __first, _Sent __last, const _Tp& __value, _Proj&& __proj) {
   typename _IterOps<_AlgPolicy>::template __difference_type<_Iter> __r(0);
   for (; __first != __last; ++__first)
     if (std::__invoke(__proj, *__first) == __value)

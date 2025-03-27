@@ -49,8 +49,8 @@ struct __partition_copy {
       _Sent&& __last,
       _OutIter1&& __out_true,
       _OutIter2&& __out_false,
-      _Pred& __pred,
-      _Proj& __proj) {
+      _Pred&& __pred,
+      _Proj&& __proj) {
     for (; __first != __last; ++__first) {
       if (std::invoke(__pred, std::invoke(__proj, *__first))) {
         *__out_true = *__first;

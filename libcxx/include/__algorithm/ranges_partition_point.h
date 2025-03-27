@@ -39,7 +39,7 @@ struct __partition_point {
   // TODO(ranges): delegate to the classic algorithm.
   template <class _Iter, class _Sent, class _Proj, class _Pred>
   _LIBCPP_HIDE_FROM_ABI constexpr static _Iter
-  __partition_point_fn_impl(_Iter&& __first, _Sent&& __last, _Pred& __pred, _Proj& __proj) {
+  __partition_point_fn_impl(_Iter&& __first, _Sent&& __last, _Pred&& __pred, _Proj&& __proj) {
     auto __len = ranges::distance(__first, __last);
 
     while (__len != 0) {
