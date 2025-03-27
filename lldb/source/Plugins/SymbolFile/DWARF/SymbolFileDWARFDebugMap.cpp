@@ -722,19 +722,17 @@ void SymbolFileDWARFDebugMap::ForEachSymbolFile(
     std::string description,
     std::function<IterationAction(SymbolFileDWARF &)> closure) {
   const size_t num_oso_idxs = m_compile_unit_infos.size();
-  const size_t update_rate = std::max<size_t>(1, num_oso_idxs / 100);
-  Progress progress(std::move(description), "", num_oso_idxs);
+  Progress progress(std::move(description), "", num_oso_idxs,
+                    /*debugger=*/nullptr,
+                    /*minimum_report_time=*/std::chrono::milliseconds(20));
   for (uint32_t oso_idx = 0; oso_idx < num_oso_idxs; ++oso_idx) {
     if (SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx)) {
-      if (oso_idx % update_rate == 0)
-        progress.Increment(oso_idx, oso_dwarf->GetObjectFile()
-                                        ? oso_dwarf->GetObjectFile()
-                                              ->GetFileSpec()
-                                              .GetFilename()
-                                              .GetString()
-                                        : std::string());
-      if (!oso_dwarf)
-        continue;
+      progress.Increment(oso_idx, oso_dwarf->GetObjectFile()
+                                      ? oso_dwarf->GetObjectFile()
+                                            ->GetFileSpec()
+                                            .GetFilename()
+                                            .GetString()
+                                      : "");
       if (closure(*oso_dwarf) == IterationAction::Stop)
         return;
     }
