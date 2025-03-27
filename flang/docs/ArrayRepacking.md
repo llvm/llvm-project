@@ -432,6 +432,8 @@ There is an existing optimization pass (controlled via `-f[no-]version-loops-for
 
 The array repacking is targeting better data cache utilization, and is not intended to enable more unit-strided vectorization for the assumed-shape arrays. At the same time, combining array repacking with the loop versioning may provide better performance for programs where the actual array arguments are non-contiguous, but then their repacked copies can be accessed using unit strides.
 
+It is suggested that the LoopVersioning pass is run before the lowering of `fir.pack_array` and `fir.unpack_array` operations, and recognizes `fir.pack_array` on the path from `fir.declare` to the function entry block argument. The pass generates the dynamic contiguity checks, and multiversions the loops. In case the repacking actually happens, the most optimal versions of the loops are executed.
+
 In cases where `fir.pack_array` is statically known to produce a copy that is contiguous in the innermost dimension, the loop versioning pass can skip the generation of the dynamic checks.
 
 ### Driver: user options
