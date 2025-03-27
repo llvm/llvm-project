@@ -1,16 +1,17 @@
-//===- GPUToAMDGPU.cpp - GPU to AMDGPU dialect conversion -------===//
+//===- DecomposeSubgroupReduceToDPP.cpp - Decompose subgroup reduce pass -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file implements decompose subgroup reduce to DPP pass.
+//
+//===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/GPUToAMDGPU/GPUToAMDGPU.h"
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
 
-#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
-#include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -22,20 +23,14 @@
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
 
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/MathExtras.h"
-#include <cassert>
-#include <cstdint>
-
-#include "../LLVMCommon/MemRefDescriptor.h"
-
-#include "llvm/ADT/STLExtras.h"
-#include <optional>
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTGPUTOAMDGPUPASS
-#include "mlir/Conversion/Passes.h.inc"
+#define GEN_PASS_DEF_GPUDECOMPOSESUBGROUPREDUCETODPPPASS
+#include "mlir/Dialect/GPU/Transforms/Passes.h.inc"
 } // namespace mlir
 
 using namespace mlir;
@@ -144,8 +139,8 @@ Value createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
 struct ScalarSubgroupReduceToShuffles final
     : OpRewritePattern<gpu::SubgroupReduceOp> {
   ScalarSubgroupReduceToShuffles(MLIRContext *ctx, unsigned subgroupSize,
-                                 bool matchClustered, PatternBenefit benefit)
-      : OpRewritePattern(ctx, benefit), subgroupSize(subgroupSize),
+                                 bool matchClustered)
+      : OpRewritePattern(ctx), subgroupSize(subgroupSize),
         matchClustered(matchClustered) {}
 
   LogicalResult matchAndRewrite(gpu::SubgroupReduceOp op,
@@ -174,30 +169,24 @@ private:
   bool matchClustered = false;
 };
 
-struct ConvertGPUToAMDGPUPass
-    : public impl::ConvertGPUToAMDGPUPassBase<ConvertGPUToAMDGPUPass> {
+struct GpuDecomposeSubgroupReduceToDppPass
+    : public impl::GpuDecomposeSubgroupReduceToDppPassBase<
+          GpuDecomposeSubgroupReduceToDppPass> {
   using Base::Base;
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
-    LLVMTypeConverter converter(&getContext());
-    LLVMConversionTarget target(getContext());
-    target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
-    target.addLegalDialect<::mlir::amdgpu::AMDGPUDialect>();
-    target.addLegalDialect<::mlir::ROCDL::ROCDLDialect>();
-
-    int subgroupSizeInt = static_cast<int>(subgroupSize);
-    populateSubgroupReduceLoweringPatterns(converter, patterns, subgroupSizeInt,
-                                           PatternBenefit(1));
-    if (failed(applyPartialConversion(getOperation(), target,
-                                      std::move(patterns))))
-      signalPassFailure();
+    // int subgroupSizeInt = static_cast<int>(subgroupSize);
+    populateGpuDecomposeSubgroupReduceToDppPatterns(patterns, subgroupSize);
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
+      return signalPassFailure();
   }
 };
+
 } // namespace
 
-void mlir::populateSubgroupReduceLoweringPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns, unsigned subgroupSize, PatternBenefit benefit) {
+void mlir::populateGpuDecomposeSubgroupReduceToDppPatterns(
+    RewritePatternSet &patterns, unsigned subgroupSize) {
   patterns.add<ScalarSubgroupReduceToShuffles>(
-      patterns.getContext(), subgroupSize, /*matchClustered=*/true, benefit);
+      patterns.getContext(), subgroupSize, /*matchClustered=*/true);
 }

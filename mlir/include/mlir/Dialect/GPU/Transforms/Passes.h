@@ -94,6 +94,9 @@ void populateGpuDecomposeMemrefsPatterns(RewritePatternSet &patterns);
 /// Erase barriers that do not enforce conflicting memory side effects.
 void populateGpuEliminateBarriersPatterns(RewritePatternSet &patterns);
 
+void populateGpuDecomposeSubgroupReduceToDppPatterns(
+    RewritePatternSet &patterns, unsigned subgroupSize);
+
 /// Generate the code for registering passes.
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/GPU/Transforms/Passes.h.inc"
