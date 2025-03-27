@@ -17,7 +17,6 @@
 #include "InterpState.h"
 #include "PrimType.h"
 #include "Source.h"
-#include "llvm/Support/Error.h"
 
 namespace clang {
 namespace interp {
@@ -42,8 +41,6 @@ public:
   /// Clean up all resources.
   void cleanup();
 
-  InterpState &getState() { return S; }
-
 protected:
   EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk);
 
@@ -58,12 +55,16 @@ protected:
   virtual bool visitExpr(const Expr *E, bool DestroyToplevelScope) = 0;
   virtual bool visitDeclAndReturn(const VarDecl *VD, bool ConstantContext) = 0;
   virtual bool visitFunc(const FunctionDecl *F) = 0;
+  virtual bool visit(const Expr *E) = 0;
+  virtual bool emitBool(bool V, const Expr *E) = 0;
 
   /// Emits jumps.
   bool jumpTrue(const LabelTy &Label);
   bool jumpFalse(const LabelTy &Label);
   bool jump(const LabelTy &Label);
   bool fallthrough(const LabelTy &Label);
+  /// Speculative execution.
+  bool speculate(const CallExpr *E, const LabelTy &EndLabel);
 
   /// Since expressions can only jump forward, predicated execution is
   /// used to deal with if-else statements.

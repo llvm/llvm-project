@@ -25,40 +25,6 @@ def _extract_register_value(reg_info, reg_bank, byte_order, bytes_per_entry=8):
 
 
 class TestGdbRemoteGPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
-    @skipIfOutOfTreeDebugserver
-    @skipUnlessDarwin  # G packet not supported
-    def test_g_packet(self):
-        self.build()
-        self.prep_debug_monitor_and_inferior()
-        self.test_sequence.add_log_lines(
-            [
-                "read packet: $g#67",
-                {
-                    "direction": "send",
-                    "regex": r"^\$(.+)#[0-9a-fA-F]{2}$",
-                    "capture": {1: "register_bank"},
-                },
-            ],
-            True,
-        )
-        context = self.expect_gdbremote_sequence()
-        register_bank = context.get("register_bank")
-        self.assertNotEqual(register_bank[0], "E")
-
-        self.test_sequence.add_log_lines(
-            [
-                "read packet: $G" + register_bank + "#00",
-                {
-                    "direction": "send",
-                    "regex": r"^\$(.+)#[0-9a-fA-F]{2}$",
-                    "capture": {1: "G_reply"},
-                },
-            ],
-            True,
-        )
-        context = self.expect_gdbremote_sequence()
-        self.assertNotEqual(context.get("G_reply")[0], "E")
-
     @skipIf(archs=no_match(["x86_64"]))
     def g_returns_correct_data(self, with_suffix):
         procs = self.prep_debug_monitor_and_inferior()

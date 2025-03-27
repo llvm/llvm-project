@@ -16,9 +16,9 @@ int gv2;
 static void buggy(int *x) { }
 
 // Type qualifiers.
-typedef int f(void); 
+typedef int f(void);
 typedef f* fptr;
-const f* v1;         // expected-warning {{qualifier on function type 'f' (aka 'int (void)') has unspecified behavior}}
+const f* v1;         // expected-warning {{'const' qualifier on function type 'f' (aka 'int (void)') has no effect and is a Clang extension}}
 __restrict__ f* v2;  // expected-error {{restrict requires a pointer or reference ('f' (aka 'int (void)') is invalid)}}
 __restrict__ fptr v3; // expected-error {{pointer to function type 'f' (aka 'int (void)') may not be 'restrict' qualified}}
 f *__restrict__ v4;   // expected-error {{pointer to function type 'f' (aka 'int (void)') may not be 'restrict' qualified}}

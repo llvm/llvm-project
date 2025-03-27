@@ -48,11 +48,9 @@ if(MSVC)
   endif()
 
   # List to '/EXPORT:sym0 /EXPORT:sym1 /EXPORT:sym2 ...'
-  foreach(sym ${clang_repl_exports})
-    set(clang_repl_link_str "${clang_repl_link_str} /EXPORT:${sym}")
-  endforeach(sym ${clang_repl_exports})
+  list(TRANSFORM clang_repl_exports PREPEND "LINKER:/EXPORT:")
 
-  set_property(TARGET clang-repl APPEND_STRING PROPERTY LINK_FLAGS ${clang_repl_link_str})
+  set_property(TARGET clang-repl APPEND PROPERTY LINK_OPTIONS ${clang_repl_exports})
 
 endif(MSVC)
 
@@ -68,7 +66,7 @@ clang_target_link_libraries(clang-repl PRIVATE
 # start to exceed this limit, e.g. when linking for arm-linux-gnueabihf with
 # gold. This flag tells the linker to build a PLT for the full address range.
 # Linkers without this flag are assumed to support proper PLTs by default.
-set(flag_long_plt "-Wl,--long-plt")
+set(flag_long_plt "LINKER:--long-plt")
 check_linker_flag(CXX ${flag_long_plt} HAVE_LINKER_FLAG_LONG_PLT)
 if(HAVE_LINKER_FLAG_LONG_PLT)
   target_link_options(clang-repl PRIVATE ${flag_long_plt})

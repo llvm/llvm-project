@@ -18,19 +18,12 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-namespace bufferization {
-class BufferizeTypeConverter;
-} // namespace bufferization
-
 class RewritePatternSet;
 
 namespace func {
 
 #define GEN_PASS_DECL
 #include "mlir/Dialect/Func/Transforms/Passes.h.inc"
-
-/// Creates an instance of func bufferization pass.
-std::unique_ptr<Pass> createFuncBufferizePass();
 
 /// Pass to deduplicate functions.
 std::unique_ptr<Pass> createDuplicateFunctionEliminationPass();

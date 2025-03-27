@@ -127,6 +127,19 @@ TEST(SmallSetTest, InsertPerfectFwd) {
   }
 }
 
+TEST(SmallSetTest, CtorRange) {
+  constexpr unsigned Args[] = {3, 1, 2};
+  SmallSet<int, 4> s1(llvm::from_range, Args);
+  EXPECT_THAT(s1, ::testing::UnorderedElementsAre(1, 2, 3));
+}
+
+TEST(SmallSetTest, InsertRange) {
+  SmallSet<int, 4> s1;
+  constexpr unsigned Args[] = {3, 1, 2};
+  s1.insert_range(Args);
+  EXPECT_THAT(s1, ::testing::UnorderedElementsAre(1, 2, 3));
+}
+
 TEST(SmallSetTest, Grow) {
   SmallSet<int, 4> s1;
 

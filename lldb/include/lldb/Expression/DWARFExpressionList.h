@@ -106,10 +106,6 @@ public:
   /// \return
   ///     True if IsLocationList() is true and the address was found;
   ///     false otherwise.
-  //    bool
-  //    LocationListContainsLoadAddress (Process* process, const Address &addr)
-  //    const;
-  //
   bool ContainsAddress(lldb::addr_t func_load_addr, lldb::addr_t addr) const;
 
   void SetModule(const lldb::ModuleSP &module) { m_module_wp = module; }

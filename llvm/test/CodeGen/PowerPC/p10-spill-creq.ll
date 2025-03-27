@@ -54,13 +54,13 @@ define dso_local double @P10_Spill_CR_EQ(ptr %arg) local_unnamed_addr #0 {
 ; CHECK-NEXT:    # implicit-def: $r4
 ; CHECK-NEXT:  .LBB0_8: # %bb20
 ; CHECK-NEXT:    mfcr r12
-; CHECK-NEXT:    cmpwi cr2, r3, -1
 ; CHECK-NEXT:    cmpwi cr3, r4, -1
+; CHECK-NEXT:    cmpwi cr2, r3, -1
 ; CHECK-NEXT:    stw r12, 8(r1)
 ; CHECK-NEXT:    cmpwi cr7, r3, 0
 ; CHECK-NEXT:    cmpwi cr6, r4, 0
-; CHECK-NEXT:    crand 4*cr5+gt, 4*cr2+gt, 4*cr1+lt
 ; CHECK-NEXT:    crand 4*cr5+lt, 4*cr3+gt, 4*cr5+un
+; CHECK-NEXT:    crand 4*cr5+gt, 4*cr2+gt, 4*cr1+lt
 ; CHECK-NEXT:    # implicit-def: $x3
 ; CHECK-NEXT:    bc 4, 4*cr5+gt, .LBB0_10
 ; CHECK-NEXT:  # %bb.9: # %bb34
@@ -95,15 +95,15 @@ define dso_local double @P10_Spill_CR_EQ(ptr %arg) local_unnamed_addr #0 {
 ; CHECK-NEXT:    lwz r7, 0(r3)
 ; CHECK-NEXT:  .LBB0_18: # %bb58
 ; CHECK-NEXT:    lwz r6, 92(r6)
+; CHECK-NEXT:    cmpwi cr4, r7, 1
 ; CHECK-NEXT:    crand 4*cr7+un, 4*cr3+gt, 4*cr6+un
 ; CHECK-NEXT:    cmpwi cr3, r5, 1
-; CHECK-NEXT:    cmpwi cr4, r7, 1
 ; CHECK-NEXT:    crand 4*cr7+gt, 4*cr7+eq, 4*cr1+lt
 ; CHECK-NEXT:    # implicit-def: $x5
 ; CHECK-NEXT:    crand 4*cr6+un, 4*cr2+eq, 4*cr6+un
 ; CHECK-NEXT:    crand 4*cr5+un, 4*cr6+eq, 4*cr5+un
-; CHECK-NEXT:    crand 4*cr6+gt, 4*cr3+lt, 4*cr6+gt
 ; CHECK-NEXT:    crand 4*cr7+lt, 4*cr4+lt, 4*cr7+lt
+; CHECK-NEXT:    crand 4*cr6+gt, 4*cr3+lt, 4*cr6+gt
 ; CHECK-NEXT:    cmpwi r6, 1
 ; CHECK-NEXT:    crand 4*cr6+lt, lt, 4*cr6+lt
 ; CHECK-NEXT:    bc 4, 4*cr6+gt, .LBB0_20

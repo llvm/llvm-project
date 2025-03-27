@@ -8,9 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
-#include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
-#include "AArch64TargetMachine.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -24,21 +22,13 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
@@ -47,7 +37,6 @@
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
@@ -56,7 +45,6 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 #include <cassert>
-#include <iterator>
 #include <memory>
 #include <utility>
 
@@ -442,8 +430,7 @@ void AArch64StackTagging::tagAlloca(AllocaInst *AI, Instruction *InsertBefore,
                                                     Intrinsic::aarch64_stgp);
 
   InitializerBuilder IB(Size, DL, Ptr, SetTagFunc, SetTagZeroFunc, StgpFunc);
-  bool LittleEndian =
-      Triple(AI->getModule()->getTargetTriple()).isLittleEndian();
+  bool LittleEndian = AI->getModule()->getTargetTriple().isLittleEndian();
   // Current implementation of initializer merging assumes little endianness.
   if (MergeInit && !F->hasOptNone() && LittleEndian &&
       Size < ClMergeInitSizeLimit) {
@@ -481,12 +468,11 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
   assert(PrologueBB);
 
   IRBuilder<> IRB(&PrologueBB->front());
-  Function *IRG_SP = Intrinsic::getOrInsertDeclaration(
-      F->getParent(), Intrinsic::aarch64_irg_sp);
   Instruction *Base =
-      IRB.CreateCall(IRG_SP, {Constant::getNullValue(IRB.getInt64Ty())});
+      IRB.CreateIntrinsic(Intrinsic::aarch64_irg_sp, {},
+                          {Constant::getNullValue(IRB.getInt64Ty())});
   Base->setName("basetag");
-  auto TargetTriple = Triple(M.getTargetTriple());
+  const Triple &TargetTriple = M.getTargetTriple();
   // This ABI will make it into Android API level 35.
   // The ThreadLong format is the same as with HWASan, but the entries for
   // stack MTE take two slots (16 bytes).
@@ -580,16 +566,15 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     NextTag = (NextTag + 1) % 16;
     // Replace alloca with tagp(alloca).
     IRBuilder<> IRB(Info.AI->getNextNode());
-    Function *TagP = Intrinsic::getOrInsertDeclaration(
-        F->getParent(), Intrinsic::aarch64_tagp, {Info.AI->getType()});
     Instruction *TagPCall =
-        IRB.CreateCall(TagP, {Constant::getNullValue(Info.AI->getType()), Base,
-                              ConstantInt::get(IRB.getInt64Ty(), Tag)});
+        IRB.CreateIntrinsic(Intrinsic::aarch64_tagp, {Info.AI->getType()},
+                            {Constant::getNullValue(Info.AI->getType()), Base,
+                             ConstantInt::get(IRB.getInt64Ty(), Tag)});
     if (Info.AI->hasName())
       TagPCall->setName(Info.AI->getName() + ".tag");
     // Does not replace metadata, so we don't have to handle DbgVariableRecords.
     Info.AI->replaceUsesWithIf(TagPCall, [&](const Use &U) {
-      return !memtag::isLifetimeIntrinsic(U.getUser());
+      return !isa<LifetimeIntrinsic>(U.getUser());
     });
     TagPCall->setOperand(0, Info.AI);
 

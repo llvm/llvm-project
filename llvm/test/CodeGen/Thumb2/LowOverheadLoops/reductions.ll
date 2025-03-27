@@ -446,8 +446,8 @@ define dso_local arm_aapcs_vfpcc i32 @two_loops_mul_add_v4i32(ptr nocapture read
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    vdup.32 q0, r3
 ; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w r3, r3, r7, lsr #2
 ; CHECK-NEXT:    vmov.32 q0[0], r12
+; CHECK-NEXT:    add.w r3, r3, r7, lsr #2
 ; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:  .LBB6_5: @ %vector.body46
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1

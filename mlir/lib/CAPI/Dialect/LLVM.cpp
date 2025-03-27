@@ -43,12 +43,30 @@ MlirType mlirLLVMArrayTypeGet(MlirType elementType, unsigned numElements) {
   return wrap(LLVMArrayType::get(unwrap(elementType), numElements));
 }
 
+MlirType mlirLLVMArrayTypeGetElementType(MlirType type) {
+  return wrap(cast<LLVM::LLVMArrayType>(unwrap(type)).getElementType());
+}
+
 MlirType mlirLLVMFunctionTypeGet(MlirType resultType, intptr_t nArgumentTypes,
                                  MlirType const *argumentTypes, bool isVarArg) {
   SmallVector<Type, 2> argumentStorage;
   return wrap(LLVMFunctionType::get(
       unwrap(resultType),
       unwrapList(nArgumentTypes, argumentTypes, argumentStorage), isVarArg));
+}
+
+intptr_t mlirLLVMFunctionTypeGetNumInputs(MlirType type) {
+  return llvm::cast<LLVM::LLVMFunctionType>(unwrap(type)).getNumParams();
+}
+
+MlirType mlirLLVMFunctionTypeGetInput(MlirType type, intptr_t pos) {
+  assert(pos >= 0 && "pos in array must be positive");
+  return wrap(llvm::cast<LLVM::LLVMFunctionType>(unwrap(type))
+                  .getParamType(static_cast<unsigned>(pos)));
+}
+
+MlirType mlirLLVMFunctionTypeGetReturnType(MlirType type) {
+  return wrap(llvm::cast<LLVM::LLVMFunctionType>(unwrap(type)).getReturnType());
 }
 
 bool mlirTypeIsALLVMStructType(MlirType type) {

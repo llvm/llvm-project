@@ -81,9 +81,11 @@ are welcome:
 expected to work, with functionality improving rapidly. ARM and AArch64 support
 is more experimental, with more known issues than the others.
 
-RISC-V support is in active development, refer to the
-`tracking issue <https://github.com/llvm/llvm-project/issues/55383>`_
-for the current status.
+Support for the following architectures is in active development. For their
+current state, follow the links to their respective issues:
+
+* `RISC-V <https://github.com/llvm/llvm-project/issues/55383>`_
+* `LoongArch <https://github.com/llvm/llvm-project/issues/112693>`_
 
 Get Involved
 ------------
@@ -132,6 +134,7 @@ interesting areas to contribute to lldb.
    use/intel_pt
    use/ondemand
    use/aarch64-linux
+   use/symbolfilejson
    use/troubleshooting
    use/links
    Man Page <man/lldb>
@@ -161,6 +164,7 @@ interesting areas to contribute to lldb.
    resources/fuzzing
    resources/sbapi
    resources/dataformatters
+   resources/formatterbytecode
    resources/extensions
    resources/lldbgdbremote
    resources/lldbplatformpackets
@@ -178,6 +182,8 @@ interesting areas to contribute to lldb.
 
    Source Code <https://github.com/llvm/llvm-project>
    Releases <https://github.com/llvm/llvm-project/releases>
+   Join the Discord <https://discord.gg/xS7Z362>
+   Discord Channel <https://discord.com/channels/636084430946959380/636732809708306432>
    Discussion Forums <https://discourse.llvm.org/c/subprojects/lldb/8>
    Developer Policy <https://llvm.org/docs/DeveloperPolicy.html>
    Bug Reports <https://github.com/llvm/llvm-project/issues?q=is%3Aissue+label%3Alldb+is%3Aopen>

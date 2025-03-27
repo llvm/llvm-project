@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -split-input-file -affine-data-copy-generate="generate-dma=false fast-mem-space=0 skip-non-unit-stride-loops" | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -affine-data-copy-generate="fast-mem-space=0 skip-non-unit-stride-loops" | FileCheck %s
 // Small buffer size to trigger fine copies.
-// RUN: mlir-opt %s -split-input-file -affine-data-copy-generate="generate-dma=false fast-mem-space=0 fast-mem-capacity=1" | FileCheck --check-prefix=CHECK-SMALL %s
+// RUN: mlir-opt %s -split-input-file -affine-data-copy-generate="fast-mem-space=0 fast-mem-capacity=1" | FileCheck --check-prefix=CHECK-SMALL %s
 
 // Test affine data copy with a memref filter. We use a test pass that invokes
 // affine data copy utility on the input loop nest.
@@ -8,6 +8,7 @@
 // affine.load op in the innermost loop as a filter.
 // RUN: mlir-opt %s -split-input-file -test-affine-data-copy='memref-filter' | FileCheck %s --check-prefix=FILTER
 // RUN: mlir-opt %s -split-input-file -test-affine-data-copy='for-memref-region' | FileCheck %s --check-prefix=MEMREF_REGION
+// RUN: mlir-opt %s -split-input-file -test-affine-data-copy='capacity-kib=32' | FileCheck %s --check-prefix=LIMITED-MEM
 
 // -copy-skip-non-stride-loops forces the copies to be placed right inside the
 // tile space loops, avoiding the sensitivity of copy placement depth to memory
@@ -23,6 +24,7 @@
 
 // CHECK-LABEL: func @matmul
 // FILTER-LABEL: func @matmul
+// LIMITED-MEM-LABEL: func @matmul
 func.func @matmul(%A: memref<4096x4096xf32>, %B: memref<4096x4096xf32>, %C: memref<4096x4096xf32>) -> memref<4096x4096xf32> {
   affine.for %i = 0 to 4096 step 128 {
     affine.for %j = 0 to 4096 step 128 {
@@ -43,6 +45,7 @@ func.func @matmul(%A: memref<4096x4096xf32>, %B: memref<4096x4096xf32>, %C: memr
     }
   }
   return %C : memref<4096x4096xf32>
+  // LIMITED-MEM: return
 }
 
 // Buffers of size 128x128 get created here for all three matrices.
@@ -300,14 +303,15 @@ func.func @affine_parallel(%85:memref<2x5x4x2xi64>) {
       }
     }
   }
-  // CHECK:     affine.for
-  // CHECK-NEXT:  affine.for %{{.*}} = 0 to 5
-  // CHECK-NEXT:    affine.for %{{.*}} = 0 to 4
-  // CHECK-NEXT:      affine.for %{{.*}} = 0 to 2
-
+  // Lower and upper bounds for the region can't be determined for the outermost
+  // dimension. No fast buffer generation.
   // CHECK:     affine.for
   // CHECK-NEXT:  affine.parallel
   // CHECK-NEXT:    affine.parallel
+  // CHECK-NEXT:      affine.for
+  // CHECK-NOT:      affine.for
+
+
   return
 }
 
@@ -331,5 +335,115 @@ func.func @index_elt_type(%arg0: memref<1x2x4x8xindex>) {
   // CHECK:     affine.for %{{.*}} = 0 to 2
   // CHECK-NEXT:  affine.for %{{.*}} = 0 to 4
   // CHECK-NEXT:    affine.for %{{.*}} = 0 to 8
+  return
+}
+
+#map = affine_map<(d0) -> (d0 + 1)>
+
+// CHECK-LABEL: func @arbitrary_memory_space
+func.func @arbitrary_memory_space() {
+  %alloc = memref.alloc() : memref<256x8xi8, #spirv.storage_class<StorageBuffer>>
+  affine.for %arg0 = 0 to 32 step 4 {
+    %0 = affine.apply #map(%arg0)
+    affine.for %arg1 = 0 to 8 step 2 {
+      %1 = affine.apply #map(%arg1)
+      affine.for %arg2 = 0 to 8 step 2 {
+        // CHECK: memref.alloc() : memref<1x7xi8>
+        %2 = affine.apply #map(%arg2)
+        %3 = affine.load %alloc[%0, %1] : memref<256x8xi8, #spirv.storage_class<StorageBuffer>>
+        affine.store %3, %alloc[%0, %2] : memref<256x8xi8, #spirv.storage_class<StorageBuffer>>
+      }
+    }
+  }
+  return
+}
+
+// CHECK-LABEL: zero_ranked
+func.func @zero_ranked(%3:memref<480xi1>) {
+  %false = arith.constant false
+  %4 = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  affine.store %false, %4[] : memref<i1>
+  %5 = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  memref.copy %4, %5 : memref<i1> to memref<i1>
+  affine.for %arg0 = 0 to 480 {
+    %11 = affine.load %3[%arg0] : memref<480xi1>
+    %12 = affine.load %5[] : memref<i1>
+    %13 = arith.cmpi slt, %11, %12 : i1
+    %14 = arith.select %13, %11, %12 : i1
+    affine.store %14, %5[] : memref<i1>
+  }
+  return
+}
+
+// CHECK-LABEL: func @scalar_memref_copy_without_dma
+func.func @scalar_memref_copy_without_dma() {
+    %false = arith.constant false
+    %4 = memref.alloc() {alignment = 128 : i64} : memref<i1>
+    affine.store %false, %4[] : memref<i1>
+
+    // CHECK: %[[FALSE:.*]] = arith.constant false
+    // CHECK: %[[MEMREF:.*]] = memref.alloc() {alignment = 128 : i64} : memref<i1>
+    // CHECK: affine.store %[[FALSE]], %[[MEMREF]][] : memref<i1>
+    return
+}
+
+// CHECK-LABEL: func @scalar_memref_copy_in_loop
+func.func @scalar_memref_copy_in_loop(%3:memref<480xi1>) {
+  %false = arith.constant false
+  %4 = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  affine.store %false, %4[] : memref<i1>
+  %5 = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  memref.copy %4, %5 : memref<i1> to memref<i1>
+  affine.for %arg0 = 0 to 480 {
+    %11 = affine.load %3[%arg0] : memref<480xi1>
+    %12 = affine.load %5[] : memref<i1>
+    %13 = arith.cmpi slt, %11, %12 : i1
+    %14 = arith.select %13, %11, %12 : i1
+    affine.store %14, %5[] : memref<i1>
+  }
+
+  // CHECK: %[[FALSE:.*]] = arith.constant false
+  // CHECK: %[[MEMREF:.*]] = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  // CHECK: affine.store %[[FALSE]], %[[MEMREF]][] : memref<i1>
+  // CHECK: %[[TARGET:.*]] = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  // CHECK: memref.copy %alloc, %[[TARGET]] : memref<i1> to memref<i1>
+  // CHECK: %[[FAST_MEMREF:.*]] = memref.alloc() : memref<480xi1>
+  // CHECK: affine.for %{{.*}} = 0 to 480 {
+  // CHECK:   %{{.*}} = affine.load %arg0[%{{.*}}] : memref<480xi1>
+  // CHECK:   affine.store %{{.*}}, %[[FAST_MEMREF]][%{{.*}}] : memref<480xi1>
+  // CHECK: }
+  // CHECK: affine.for %arg1 = 0 to 480 {
+  // CHECK:   %[[L0:.*]] = affine.load %[[FAST_MEMREF]][%arg1] : memref<480xi1>
+  // CHECK:   %[[L1:.*]] = affine.load %[[TARGET]][] : memref<i1>
+  // CHECK:   %[[CMPI:.*]] = arith.cmpi slt, %[[L0]], %[[L1]] : i1
+  // CHECK:   %[[SELECT:.*]] = arith.select %[[CMPI]], %[[L0]], %[[L1]] : i1
+  // CHECK:   affine.store %[[SELECT]], %[[TARGET]][] : memref<i1>
+  // CHECK: }
+  // CHECK: memref.dealloc %[[FAST_MEMREF]] : memref<480xi1>
+  return
+}
+
+// CHECK-LABEL: func @memref_def_inside
+// LIMITED-MEM-LABEL: func @memref_def_inside
+func.func @memref_def_inside(%arg0: index) {
+  %0 = llvm.mlir.constant(1.000000e+00 : f32) : f32
+  // No copy generation can happen at this depth given the definition inside.
+  affine.for %arg1 = 0 to 29 {
+    %alloc_7 = memref.alloc() : memref<1xf32>
+    // CHECK: affine.store {{.*}} : memref<1xf32>
+    affine.store %0, %alloc_7[0] : memref<1xf32>
+  }
+
+  // With the limited capacity specified, buffer generation happens at the
+  // innermost depth. Tests that copy-placement is proper and respects the
+  // memref definition.
+
+  // LIMITED-MEM:      affine.for %{{.*}} = 0 to 29
+  // LIMITED-MEM-NEXT:   memref.alloc() : memref<1xf32>
+  // LIMITED-MEM-NEXT:   memref.alloc() : memref<1xf32>
+  // LIMITED-MEM-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
+  // LIMITED-MEM-NEXT:   affine.load %{{.*}}[%c0{{.*}}] : memref<1xf32>
+  // LIMITED-MEM-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
+  // LIMITED-MEM-NEXT:   memref.dealloc %{{.*}} : memref<1xf32>
   return
 }

@@ -135,8 +135,9 @@ module attributes {gpu.container_module} {
     }
   }
   llvm.func internal @__cudaFortranConstructor() {
+    %0 = cuf.register_module @cuda_device_mod -> !llvm.ptr
     // expected-error@+1{{'cuf.register_kernel' op only kernel gpu.func can be registered}}
-    cuf.register_kernel @cuda_device_mod::@_QPsub_device1
+    cuf.register_kernel @cuda_device_mod::@_QPsub_device1(%0 : !llvm.ptr)
     llvm.return
   }
 }
@@ -150,8 +151,9 @@ module attributes {gpu.container_module} {
     }
   }
   llvm.func internal @__cudaFortranConstructor() {
+    %0 = cuf.register_module @cuda_device_mod -> !llvm.ptr
     // expected-error@+1{{'cuf.register_kernel' op device function not found}}
-    cuf.register_kernel @cuda_device_mod::@_QPsub_device2
+    cuf.register_kernel @cuda_device_mod::@_QPsub_device2(%0 : !llvm.ptr)
     llvm.return
   }
 }
@@ -160,8 +162,9 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   llvm.func internal @__cudaFortranConstructor() {
+    %0 = cuf.register_module @cuda_device_mod -> !llvm.ptr
     // expected-error@+1{{'cuf.register_kernel' op gpu module not found}}
-    cuf.register_kernel @cuda_device_mod::@_QPsub_device1
+    cuf.register_kernel @cuda_device_mod::@_QPsub_device1(%0 : !llvm.ptr)
     llvm.return
   }
 }
@@ -170,8 +173,25 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   llvm.func internal @__cudaFortranConstructor() {
+    %0 = cuf.register_module @cuda_device_mod -> !llvm.ptr
     // expected-error@+1{{'cuf.register_kernel' op expect a module and a kernel name}}
-    cuf.register_kernel @_QPsub_device1
+    cuf.register_kernel @_QPsub_device1(%0 : !llvm.ptr)
+    llvm.return
+  }
+}
+
+// -----
+
+module attributes {gpu.container_module} {
+  gpu.module @cuda_device_mod {
+    llvm.func @_QPsub_device1() {
+      llvm.return
+    }
+  }
+  llvm.func internal @__cudaFortranConstructor() {
+    %0 = cuf.register_module @cuda_device_mod -> !llvm.ptr
+    // expected-error@+1{{'cuf.register_kernel' op only gpu.kernel llvm.func can be registered}}
+    cuf.register_kernel @cuda_device_mod::@_QPsub_device1(%0 : !llvm.ptr)
     llvm.return
   }
 }

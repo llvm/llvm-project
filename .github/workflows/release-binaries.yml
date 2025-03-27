@@ -16,9 +16,11 @@ on:
         description: "Runner to use for the build"
         required: true
         type: choice
+        # We use ubuntu-22.04 rather than the latest version to make the built
+        # binaries more portable (eg functional aginast older glibc).
         options:
           - ubuntu-22.04
-          - windows-2022
+          - ubuntu-22.04-arm
           - macos-13
           - macos-14
 
@@ -50,16 +52,18 @@ jobs:
   prepare:
     name: Prepare to build binaries
     runs-on: ${{ inputs.runs-on }}
-    if: github.repository == 'llvm/llvm-project'
+    if: github.repository_owner == 'llvm'
     outputs:
       release-version: ${{ steps.vars.outputs.release-version }}
       ref: ${{ steps.vars.outputs.ref }}
       upload: ${{ steps.vars.outputs.upload }}
       target-cmake-flags: ${{ steps.vars.outputs.target-cmake-flags }}
+      ccache: ${{ steps.vars.outputs.ccache }}
       build-flang: ${{ steps.vars.outputs.build-flang }}
-      enable-pgo: ${{ steps.vars.outputs.enable-pgo }}
       release-binary-basename: ${{ steps.vars.outputs.release-binary-basename }}
       release-binary-filename: ${{ steps.vars.outputs.release-binary-filename }}
+      build-runs-on: ${{ steps.vars.outputs.build-runs-on }}
+      test-runs-on: ${{ steps.vars.outputs.build-runs-on }}
 
     steps:
     # It's good practice to use setup-python, but this is also required on macos-14
@@ -83,7 +87,7 @@ jobs:
         USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
       shell: bash
       run: |
-        ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user ${{ github.actor }} --user-token "$USER_TOKEN" check-permissions
+        ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user "$GITHUB_ACTOR" --user-token "$USER_TOKEN" check-permissions
 
     - name: Collect Variables
       id: vars
@@ -102,8 +106,8 @@ jobs:
           release_version="$trimmed"
           ref="llvmorg-$release_version"
         else
-          release_version="${{ (github.event_name == 'pull_request' && format('PR{0}', github.event.pull_request.number)) || 'CI'}}-${{ github.sha }}"
-          ref=${{ github.sha }}
+          release_version="${{ (github.event_name == 'pull_request' && format('PR{0}', github.event.pull_request.number)) || 'CI'}}-$GITHUB_SHA"
+          ref="$GITHUB_SHA"
         fi
         if [ -n "${{ inputs.upload }}" ]; then
           upload="${{ inputs.upload }}"
@@ -114,42 +118,80 @@ jobs:
         echo "ref=$ref" >> $GITHUB_OUTPUT
         echo "upload=$upload" >> $GITHUB_OUTPUT
 
-        release_binary_basename="LLVM-$release_version-${{ runner.os }}-${{ runner.arch }}"
+        release_binary_basename="LLVM-$release_version-$RUNNER_OS-$RUNNER_ARCH"
         echo "release-binary-basename=$release_binary_basename" >> $GITHUB_OUTPUT
         echo "release-binary-filename=$release_binary_basename.tar.xz" >> $GITHUB_OUTPUT
 
-        # Detect necessary CMake flags
-        target="${{ runner.os }}-${{ runner.arch }}"
-        echo "enable-pgo=false" >> $GITHUB_OUTPUT
-        target_cmake_flags="-DLLVM_RELEASE_ENABLE_PGO=OFF"
+        target="$RUNNER_OS-$RUNNER_ARCH"
+        # The hendrikmuhs/ccache-action action does not support installing sccache
+        # on arm64 Linux.
+        if [ "$target" = "Linux-ARM64" ]; then
+          echo ccache=ccache >> $GITHUB_OUTPUT
+        else
+          echo ccache=sccache >> $GITHUB_OUTPUT
+        fi
+
         # The macOS builds try to cross compile some libraries so we need to
         # add extra CMake args to disable them.
         # See https://github.com/llvm/llvm-project/issues/99767
-        if [ "${{ runner.os }}" = "macOS" ]; then
-          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_COMPILER_RT_ENABLE_IOS=OFF"
-          if [ "${{ runner.arch }}" = "ARM64" ]; then
+        if [ "$RUNNER_OS" = "macOS" ]; then
+          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_COMPILER_RT_ENABLE_IOS=OFF"
+          if [ "$RUNNER_ARCH" = "ARM64" ]; then
             arches=arm64
           else
             arches=x86_64
+            # Disable Flang builds on macOS x86_64.  The FortranLower library takes
+            # 2-3 hours to build on macOS, much slower than on Linux.
+            # The long build time causes the release build to time out on x86_64,
+            # so we need to disable flang there.
+            target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_PROJECTS='clang;lld;lldb;clang-tools-extra;polly;mlir'"
           fi
-          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_DARWIN_osx_ARCHS=$arches -DBOOTSTRAP_DARWIN_osx_BUILTIN_ARCHS=$arches"
+          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_ARCHS=$arches -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_BUILTIN_ARCHS=$arches"
         fi
 
         build_flang="true"
 
-        if [ "${{ runner.os }}" = "Windows" ]; then
+        if [ "$RUNNER_OS" = "Windows" ]; then
           # The build times out on Windows, so we need to disable LTO.
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
         fi
 
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         echo "build-flang=$build_flang" >> $GITHUB_OUTPUT
+        case "${{ inputs.runs-on }}" in
+          ubuntu-22.04*)
+            build_runs_on="depot-${{ inputs.runs-on }}-16"
+            test_runs_on=$build_runs_on
+            ;;
+          macos-13)
+            if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+              build_runs_on="${{ inputs.runs-on }}"
+            else
+              build_runs_on="macos-13-large"
+            fi
+            test_runs_on="${{ inputs.runs-on }}"
+            ;;
+          macos-14)
+            if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+              build_runs_on="${{ inputs.runs-on }}"
+            else
+              build_runs_on="depot-macos-14"
+            fi
+            test_runs_on="${{ inputs.runs-on }}"
+            ;;
+          *)
+            test_runs_on="${{ inputs.runs-on }}"
+            build_runs_on=$test_runs_on
+            ;;
+        esac
+        echo "build-runs-on=$build_runs_on" >> $GITHUB_OUTPUT
+        echo "test-runs-on=$test_runs_on" >> $GITHUB_OUTPUT
 
-  build-stage1:
-    name: "Build Stage 1"
+  build-release-package:
+    name: "Build Release Package"
     needs: prepare
-    if: github.repository == 'llvm/llvm-project'
-    runs-on: ${{ inputs.runs-on }}
+    if: github.repository_owner == 'llvm'
+    runs-on: ${{ needs.prepare.outputs.build-runs-on }}
     steps:
 
     - name: Checkout Actions
@@ -187,17 +229,11 @@ jobs:
       id: setup-stage
       uses: ./workflows-main/.github/workflows/release-binaries-setup-stage
 
-    - name: Setup sccache
-      uses: hendrikmuhs/ccache-action@ca3acd2731eef11f1572ccb126356c2f9298d35e # v1.2.9
-      with:
-        # Default to 2G to workaround: https://github.com/hendrikmuhs/ccache-action/issues/174
-        max-size: 2G
-        key: sccache-${{ runner.os }}-${{ runner.arch }}-release
-        variant: sccache
-
-    - name: Build Stage 1 Clang
+    - name: Configure
       id: build
       shell: bash
+      env:
+        CCACHE_BIN: ${{ needs.prepare.outputs.ccache }}
       run: |
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
@@ -205,185 +241,15 @@ jobs:
             ${{ needs.prepare.outputs.target-cmake-flags }} \
             -C clang/cmake/caches/Release.cmake \
             -DBOOTSTRAP_LLVM_PARALLEL_LINK_JOBS=1 \
-            -DBOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}" \
-            -DCMAKE_C_COMPILER_LAUNCHER=sccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
-        ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build
-        # There is a race condition on the MacOS builders and this command is here
-        # to help debug that when it happens.
-        ls -ltr ${{ steps.setup-stage.outputs.build-prefix }}/build
+            -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
+
+    - name: Build
+      shell: bash
+      run: |
+        ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
+        release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
+        mv $release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
     
-    - name: Save Stage
-      uses: ./workflows-main/.github/workflows/release-binaries-save-stage
-      with:
-        build-prefix: ${{ steps.setup-stage.outputs.build-prefix }}
-
-  build-stage2:
-    name: "Build Stage 2"
-    needs:
-      - prepare
-      - build-stage1
-    if: github.repository == 'llvm/llvm-project'
-    runs-on: ${{ inputs.runs-on }}
-    steps:
-    - name: Checkout Actions
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ (github.event_name == 'pull_request' && github.sha) || 'main' }}
-        sparse-checkout: |
-          .github/workflows/
-        sparse-checkout-cone-mode: false
-        path: workflows
-    - name: Setup Stage
-      id: setup-stage
-      uses: ./workflows/.github/workflows/release-binaries-setup-stage
-      with:
-        previous-artifact: build-stage1
-
-    - name: Build Stage 2
-      # Re-enable once PGO builds are supported.
-      if: needs.prepare.outputs.enable-pgo == 'true'
-      shell: bash
-      run: |
-        ninja -C ${{ steps.setup-stage.outputs.build-prefix}}/build stage2-instrumented
-
-    - name: Save Stage
-      uses: ./workflows/.github/workflows/release-binaries-save-stage
-      with:
-        build-prefix: ${{ steps.setup-stage.outputs.build-prefix }}
-
-  build-stage3-clang:
-    name: "Build Stage 3 LLVM/Clang"
-    needs:
-      - prepare
-      - build-stage2
-    if: github.repository == 'llvm/llvm-project'
-    runs-on: ${{ inputs.runs-on }}
-    steps:
-    - name: Checkout Actions
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ (github.event_name == 'pull_request' && github.sha) || 'main' }}
-        sparse-checkout: |
-          .github/workflows/
-        sparse-checkout-cone-mode: false
-        path: workflows
-    - name: Setup Stage
-      id: setup-stage
-      uses: ./workflows/.github/workflows/release-binaries-setup-stage
-      with:
-        previous-artifact: build-stage2
-
-    - name: Build LLVM/Clang
-      shell: bash
-      run: |
-        # There is a race condition on the MacOS builders and this command is here
-        # to help debug that when it happens.
-        ls -ltr ${{ steps.setup-stage.outputs.build-prefix }}/build
-        ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-clang
-        # Build some of the larger binaries here too.
-        ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build/tools/clang/stage2-bins/ \
-            clang-scan-deps \
-            modularize clangd \
-            clangd-indexer \
-            clang-check \
-            ${{ (runner.os == 'Linux' && 'clangd-fuzzer') || '' }} \
-            clang-tidy \
-            llc \
-            lli \
-            llvm-exegesis \
-            llvm-opt-fuzzer \
-            llvm-reduce \
-            llvm-lto \
-            dsymutil
-
-    - name: Save Stage
-      uses: ./workflows/.github/workflows/release-binaries-save-stage
-      with:
-        build-prefix: ${{ steps.setup-stage.outputs.build-prefix }}
-
-  build-stage3-flang:
-    name: "Build Stage 3 Flang/MLIR/Bolt"
-    needs:
-      - prepare
-      - build-stage3-clang
-    runs-on: ${{ inputs.runs-on }}
-    steps:
-    - name: Checkout Actions
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ (github.event_name == 'pull_request' && github.sha) || 'main' }}
-        sparse-checkout: |
-          .github/workflows/
-        sparse-checkout-cone-mode: false
-        path: workflows
-    - name: Setup Stage
-      id: setup-stage
-      uses: ./workflows/.github/workflows/release-binaries-setup-stage
-      with:
-        previous-artifact: build-stage3-clang
-
-    - name: Build Flang / MLIR / Bolt
-      shell: bash
-      run: |
-        # Build some of the mlir tools that take a long time to link
-        if [ "${{ needs.prepare.outputs.build-flang }}" = "true" ]; then
-          ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build/tools/clang/stage2-bins/ -j2 flang bbc
-        fi
-        ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build/tools/clang/stage2-bins/ \
-            mlir-bytecode-parser-fuzzer \
-            mlir-cpu-runner \
-            mlir-lsp-server \
-            mlir-opt \
-            mlir-query \
-            mlir-reduce \
-            mlir-text-parser-fuzzer \
-            mlir-translate \
-            mlir-transform-opt \
-            mlir-cat \
-            mlir-minimal-opt \
-            mlir-minimal-opt-canonicalize \
-            mlir-pdll-lsp-server \
-            llvm-bolt \
-            llvm-bolt-heatmap
-    
-    - name: Save Stage
-      uses: ./workflows/.github/workflows/release-binaries-save-stage
-      with:
-        build-prefix: ${{ steps.setup-stage.outputs.build-prefix }}
-
-  build-stage3-all:
-    name: "Build Stage 3"
-    needs:
-      - prepare
-      - build-stage3-flang
-    runs-on: ${{ inputs.runs-on }}
-    steps:
-    - name: Checkout Actions
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ (github.event_name == 'pull_request' && github.sha) || 'main' }}
-        sparse-checkout: |
-          .github/workflows/
-        sparse-checkout-cone-mode: false
-        path: workflows
-    - name: Setup Stage
-      id: setup-stage
-      uses: ./workflows/.github/workflows/release-binaries-setup-stage
-      with:
-        previous-artifact: build-stage3-flang
-
-    - name: Build Release Package
-      shell: bash
-      run: |
-        which cmake
-        ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
-        # Copy Release artifact to the workspace so it is easier to upload.
-        # This is necessary, because on Windows, the build-prefix path can
-        # only be used on bash steps, because it uses the form of /d/files/
-        # and other steps expect D:\files.
-        mv ${{ steps.setup-stage.outputs.build-prefix  }}/build/tools/clang/stage2-bins/${{ needs.prepare.outputs.release-binary-filename }} .
-
     - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-release-binary
@@ -397,10 +263,10 @@ jobs:
       shell: bash
       run: |
         find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname ${{ needs.prepare.outputs.release-binary-filename }} -delete
-        rm -Rf ${{ steps.setup-stage.outputs.build-prefix }}/build/tools/clang/stage2-bins/_CPack_Packages
-
+        find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname _CPack_Packages -prune -exec rm -r {} +
+    
     - name: Save Stage
-      uses: ./workflows/.github/workflows/release-binaries-save-stage
+      uses: ./workflows-main/.github/workflows/release-binaries-save-stage
       with:
         build-prefix: ${{ steps.setup-stage.outputs.build-prefix }}
 
@@ -408,12 +274,11 @@ jobs:
     name: "Upload Release Binaries"
     needs:
       - prepare
-      - build-stage3-all
+      - build-release-package
     if: >-
-      always() &&
       github.event_name != 'pull_request' &&
       needs.prepare.outputs.upload == 'true'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write # For release uploads
       id-token: write     # For artifact attestations
@@ -463,17 +328,17 @@ jobs:
         upload \
         --files ${{ needs.prepare.outputs.release-binary-filename }}*
 
-  test-stage3:
-    name: "Test Stage 3"
+  test-release:
+    name: "Test Release"
     needs:
       - prepare
-      - build-stage3-all
+      - build-release-package
     if: >-
-      github.repository == 'llvm/llvm-project'
-    runs-on: ${{ inputs.runs-on }}
+      github.repository_owner == 'llvm'
+    runs-on: ${{ needs.prepare.outputs.test-runs-on }}
     steps:
     - name: Checkout Actions
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         ref: ${{ (github.event_name == 'pull_request' && github.sha) || 'main' }}
         sparse-checkout: |
@@ -484,7 +349,7 @@ jobs:
       id: setup-stage
       uses: ./workflows/.github/workflows/release-binaries-setup-stage
       with:
-        previous-artifact: build-stage3-all
+        previous-artifact: build-release-package
 
     - name: Run Tests
       shell: bash

@@ -925,8 +925,8 @@ define half @vreduce_ord_fadd_nxv10f16(<vscale x 10 x half> %v, half %s) {
 ; CHECK-LABEL: vreduce_ord_fadd_nxv10f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    srli a0, a0, 3
 ; CHECK-NEXT:    li a1, 10
+; CHECK-NEXT:    srli a0, a0, 3
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v12, fa0
@@ -963,11 +963,11 @@ define half @vreduce_fadd_nxv3f16(<vscale x 3 x half> %v, half %s) {
 ; CHECK-LABEL: vreduce_fadd_nxv3f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NEXT:    srli a0, a0, 3
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NEXT:    lui a1, 1048568
 ; CHECK-NEXT:    vmv.s.x v10, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
@@ -982,11 +982,11 @@ define half @vreduce_fadd_nxv6f16(<vscale x 6 x half> %v, half %s) {
 ; CHECK-LABEL: vreduce_fadd_nxv6f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vfmv.s.f v10, fa0
 ; CHECK-NEXT:    srli a1, a0, 3
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    sub a0, a0, a1
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v10, fa0
 ; CHECK-NEXT:    lui a1, 1048568
 ; CHECK-NEXT:    vmv.s.x v11, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma

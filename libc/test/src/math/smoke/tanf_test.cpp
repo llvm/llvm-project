@@ -35,3 +35,30 @@ TEST_F(LlvmLibcTanfTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::tanf(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcTanfTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::tanf(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::tanf(max_denormal));
+}
+
+TEST_F(LlvmLibcTanfTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::tanf(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::tanf(max_denormal));
+}
+
+TEST_F(LlvmLibcTanfTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::tanf(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::tanf(max_denormal));
+}
+
+#endif

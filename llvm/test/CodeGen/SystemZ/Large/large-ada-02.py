@@ -3,8 +3,8 @@
 # generation of a different instruction sequence
 # RUN: %python %s | llc -mtriple=s390x-ibm-zos -O2 | FileCheck %s
 
-# CHECK: algfi	8, {{[0-9]+}}
-# CHECK: la	8, 0(8)
+# CHECK: algfi	8,{{[0-9]+}}
+# CHECK: la	8,0(8)
 
 from __future__ import print_function
 

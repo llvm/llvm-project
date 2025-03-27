@@ -253,6 +253,8 @@ static void DefineExactWidthIntType(const LangOptions &LangOpts,
 
   StringRef ConstSuffix(TI.getTypeConstantSuffix(Ty));
   Builder.defineMacro(Prefix + Twine(TypeWidth) + "_C_SUFFIX__", ConstSuffix);
+  Builder.defineMacro(Prefix + Twine(TypeWidth) + "_C(c)",
+                      ConstSuffix.size() ? Twine("c##") + ConstSuffix : "c");
 }
 
 static void DefineExactWidthIntTypeSize(TargetInfo::IntType Ty,
@@ -587,7 +589,7 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     if (LangOpts.getSYCLVersion() == LangOptions::SYCL_2017)
       Builder.defineMacro("CL_SYCL_LANGUAGE_VERSION", "121");
     else if (LangOpts.getSYCLVersion() == LangOptions::SYCL_2020)
-      Builder.defineMacro("SYCL_LANGUAGE_VERSION", "202001");
+      Builder.defineMacro("SYCL_LANGUAGE_VERSION", "202012L");
   }
 
   // Not "standard" per se, but available even with the -undef flag.
@@ -662,7 +664,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_lambdas", "200907L");
     Builder.defineMacro("__cpp_constexpr", LangOpts.CPlusPlus26   ? "202406L"
                                            : LangOpts.CPlusPlus23 ? "202211L"
-                                           : LangOpts.CPlusPlus20 ? "201907L"
+                                           : LangOpts.CPlusPlus20 ? "202002L"
                                            : LangOpts.CPlusPlus17 ? "201603L"
                                            : LangOpts.CPlusPlus14 ? "201304L"
                                                                   : "200704");
@@ -718,7 +720,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_nested_namespace_definitions", "201411L");
     Builder.defineMacro("__cpp_variadic_using", "201611L");
     Builder.defineMacro("__cpp_aggregate_bases", "201603L");
-    Builder.defineMacro("__cpp_structured_bindings", "202403L");
+    Builder.defineMacro("__cpp_structured_bindings", "202411L");
     Builder.defineMacro("__cpp_nontype_template_args",
                         "201411L"); // (not latest)
     Builder.defineMacro("__cpp_fold_expressions", "201603L");
@@ -727,8 +729,8 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   }
   if (LangOpts.AlignedAllocation && !LangOpts.AlignedAllocationUnavailable)
     Builder.defineMacro("__cpp_aligned_new", "201606L");
-  if (LangOpts.RelaxedTemplateTemplateArgs)
-    Builder.defineMacro("__cpp_template_template_args", "201611L");
+
+  Builder.defineMacro("__cpp_template_template_args", "201611L");
 
   // C++20 features.
   if (LangOpts.CPlusPlus20) {
@@ -752,6 +754,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_if_consteval", "202106L");
     Builder.defineMacro("__cpp_multidimensional_subscript", "202211L");
     Builder.defineMacro("__cpp_auto_cast", "202110L");
+    Builder.defineMacro("__cpp_explicit_this_parameter", "202110L");
   }
 
   // We provide those C++23 features as extensions in earlier language modes, so
@@ -1103,7 +1106,15 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   assert(TI.getCharWidth() == 8 && "Only support 8-bit char so far");
   Builder.defineMacro("__CHAR_BIT__", Twine(TI.getCharWidth()));
 
-  Builder.defineMacro("__BOOL_WIDTH__", Twine(TI.getBoolWidth()));
+  // The macro is specifying the number of bits in the width, not the number of
+  // bits the object requires for its in-memory representation, which is what
+  // getBoolWidth() will return. The bool/_Bool data type is only ever one bit
+  // wide. See C23 6.2.6.2p2 for the rules in C. Note that
+  // C++23 [basic.fundamental]p10 allows an implementation-defined value
+  // representation for bool; when lowering to LLVM, Clang represents bool as an
+  // i8 in memory but as an i1 when the value is needed, so '1' is also correct
+  // for C++.
+  Builder.defineMacro("__BOOL_WIDTH__", "1");
   Builder.defineMacro("__SHRT_WIDTH__", Twine(TI.getShortWidth()));
   Builder.defineMacro("__INT_WIDTH__", Twine(TI.getIntWidth()));
   Builder.defineMacro("__LONG_WIDTH__", Twine(TI.getLongWidth()));
@@ -1155,12 +1166,16 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 
   DefineType("__INTMAX_TYPE__", TI.getIntMaxType(), Builder);
   DefineFmt(LangOpts, "__INTMAX", TI.getIntMaxType(), TI, Builder);
-  Builder.defineMacro("__INTMAX_C_SUFFIX__",
-                      TI.getTypeConstantSuffix(TI.getIntMaxType()));
+  StringRef ConstSuffix(TI.getTypeConstantSuffix(TI.getIntMaxType()));
+  Builder.defineMacro("__INTMAX_C_SUFFIX__", ConstSuffix);
+  Builder.defineMacro("__INTMAX_C(c)",
+                      ConstSuffix.size() ? Twine("c##") + ConstSuffix : "c");
   DefineType("__UINTMAX_TYPE__", TI.getUIntMaxType(), Builder);
   DefineFmt(LangOpts, "__UINTMAX", TI.getUIntMaxType(), TI, Builder);
-  Builder.defineMacro("__UINTMAX_C_SUFFIX__",
-                      TI.getTypeConstantSuffix(TI.getUIntMaxType()));
+  ConstSuffix = TI.getTypeConstantSuffix(TI.getUIntMaxType());
+  Builder.defineMacro("__UINTMAX_C_SUFFIX__", ConstSuffix);
+  Builder.defineMacro("__UINTMAX_C(c)",
+                      ConstSuffix.size() ? Twine("c##") + ConstSuffix : "c");
   DefineType("__PTRDIFF_TYPE__", TI.getPtrDiffType(LangAS::Default), Builder);
   DefineFmt(LangOpts, "__PTRDIFF", TI.getPtrDiffType(LangAS::Default), TI,
             Builder);
@@ -1451,8 +1466,14 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     case 50:
       Builder.defineMacro("_OPENMP", "201811");
       break;
+    case 51:
+      Builder.defineMacro("_OPENMP", "202011");
+      break;
     case 52:
       Builder.defineMacro("_OPENMP", "202111");
+      break;
+    case 60:
+      Builder.defineMacro("_OPENMP", "202411");
       break;
     default: // case 51:
       // Default version is OpenMP 5.1

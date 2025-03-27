@@ -18,6 +18,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
 
 #define DEBUG_TYPE "bolt-rtlib"
 
@@ -38,6 +39,23 @@ std::string RuntimeLibrary::getLibPathByToolPath(StringRef ToolPath,
     llvm::sys::path::append(LibPath, "lib" LLVM_LIBDIR_SUFFIX);
   }
   llvm::sys::path::append(LibPath, LibFileName);
+  if (!llvm::sys::fs::exists(LibPath)) {
+    // If it is a symlink, check the directory that the symlink points to.
+    if (llvm::sys::fs::is_symlink_file(ToolPath)) {
+      SmallString<256> RealPath;
+      llvm::sys::fs::real_path(ToolPath, RealPath);
+      if (llvm::ErrorOr<std::string> P =
+              llvm::sys::findProgramByName(RealPath)) {
+        outs() << "BOLT-INFO: library not found: " << LibPath << "\n"
+               << "BOLT-INFO: " << ToolPath << " is a symlink; will look up "
+               << LibFileName
+               << " at the target directory that the symlink points to\n";
+        return getLibPath(*P, LibFileName);
+      }
+    }
+    errs() << "BOLT-ERROR: library not found: " << LibPath << "\n";
+    exit(1);
+  }
   return std::string(LibPath);
 }
 

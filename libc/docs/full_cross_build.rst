@@ -8,7 +8,7 @@ Full Cross Build
    :depth: 1
    :local:
 
-.. note:: 
+.. note::
    Fullbuild requires running headergen, which is a python program that depends on
    pyyaml. The minimum versions are listed on the :ref:`header_generation`
    page, as well as additional information.
@@ -95,8 +95,8 @@ configure step.
 Bootstrap cross build
 =====================
 
-In this recipe, the clang compiler and the ``libc-hdrgen`` binary, both are
-built automatically before building the libc for the target.
+In this recipe, the clang compiler is built automatically before building
+the libc for the target.
 
 CMake configure step
 --------------------
@@ -151,8 +151,8 @@ built using any of the three recipes described above.
 Building for the GPU
 ====================
 
-To build for a GPU architecture, it should only be necessary to specify the 
-target triple as one of the supported GPU targets. Currently, this is either 
-``nvptx64-nvidia-cuda`` for NVIDIA GPUs or ``amdgcn-amd-amdhsa`` for AMD GPUs. 
-More detailed information is provided in the :ref:`GPU 
+To build for a GPU architecture, it should only be necessary to specify the
+target triple as one of the supported GPU targets. Currently, this is either
+``nvptx64-nvidia-cuda`` for NVIDIA GPUs or ``amdgcn-amd-amdhsa`` for AMD GPUs.
+More detailed information is provided in the :ref:`GPU
 documentation<libc_gpu_building>`.

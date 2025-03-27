@@ -14,6 +14,7 @@ include "mlir/Dialect/MemRef/IR/MemRefBase.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/CopyOpInterface.td"
+include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/ShapedOpInterfaces.td"
@@ -577,7 +578,8 @@ def MemRef_DimOp : MemRef_Op<"dim", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
     MemRefsNormalizable,
     ConditionallySpeculatable, NoMemoryEffect,
-    ShapedDimOpInterface]> {
+    ShapedDimOpInterface,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRangesFromOptional"]>]> {
   let summary = "dimension index operation";
   let description = [{
     The `dim` operation takes a memref and a dimension operand of type `index`.
@@ -1182,40 +1184,23 @@ def LoadOp : MemRef_Op<"load",
       DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>]> {
   let summary = "load operation";
   let description = [{
-    The `load` op reads an element from a memref specified by an index list. The
-    output of load is a new value with the same type as the elements of the
-    memref. The arity of indices is the rank of the memref (i.e., if the memref
-    loaded from is of rank 3, then 3 indices are required for the load following
-    the memref identifier).
+    The `load` op reads an element from a memref at the specified indices.
 
-    In an `affine.if` or `affine.for` body, the indices of a load are restricted
-    to SSA values bound to surrounding loop induction variables,
-    [symbols](Affine.md/#dimensions-and-symbols), results of a
-    constant operations, or the result of an
-    `affine.apply` operation that can in turn take as arguments all of the
-    aforementioned SSA values or the recursively result of such an
-    `affine.apply` operation.
+    The number of indices must match the rank of the memref. The indices must
+    be in-bounds: `0 <= idx < dim_size`
+
+    The single result of `memref.load` is a value with the same type as the
+    element type of the memref.
+
+    A set `nontemporal` attribute indicates that this load is not expected to
+    be reused in the cache. For details, refer to the
+    [https://llvm.org/docs/LangRef.html#load-instruction](LLVM load instruction).
 
     Example:
 
     ```mlir
-    %1 = affine.apply affine_map<(d0, d1) -> (3*d0)> (%i, %j)
-    %2 = affine.apply affine_map<(d0, d1) -> (d1+1)> (%i, %j)
-    %12 = memref.load %A[%1, %2] : memref<8x?xi32, #layout, memspace0>
-
-    // Example of an indirect load (treated as non-affine)
-    %3 = affine.apply affine_map<(d0) -> (2*d0 + 1)>(%12)
-    %13 = memref.load %A[%3, %2] : memref<4x?xi32, #layout, memspace0>
+    %0 = memref.load %A[%a, %b] : memref<8x?xi32, #layout, memspace0>
     ```
-
-    **Context:** The `load` and `store` operations are specifically crafted to
-    fully resolve a reference to an element of a memref, and (in affine
-    `affine.if` and `affine.for` operations) the compiler can follow use-def
-    chains (e.g. through [`affine.apply`](Affine.md/#affineapply-affineapplyop)
-    operations) to precisely analyze references at compile-time using polyhedral
-    techniques. This is possible because of the
-    [restrictions on dimensions and symbols](Affine.md/#restrictions-on-dimensions-and-symbols)
-    in these contexts.
   }];
 
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
@@ -1529,7 +1514,8 @@ def MemRef_ReshapeOp: MemRef_Op<"reshape", [
   }];
 
   let arguments = (ins AnyRankedOrUnrankedMemRef:$source,
-                       MemRefRankOf<[AnySignlessInteger, Index], [1]>:$shape);
+                       Arg<MemRefRankOf<[AnySignlessInteger, Index], [1]>,
+                       "dynamically-sized shape", [MemRead]>:$shape);
   let results = (outs AnyRankedOrUnrankedMemRef:$result);
 
   let builders = [OpBuilder<
@@ -1674,7 +1660,7 @@ def MemRef_ExpandShapeOp : MemRef_ReassociativeReshapeOp<"expand_shape", [
     }]>,
 
     // Builder that infers the result layout map. The result shape must be
-    // specified. Otherwise, the op may be ambiguous. The output shape for 
+    // specified. Otherwise, the op may be ambiguous. The output shape for
     // the op will be inferred using the inferOutputShape() method.
     OpBuilder<(ins "ArrayRef<int64_t>":$resultShape, "Value":$src,
                "ArrayRef<ReassociationIndices>":$reassociation)>,
@@ -1814,32 +1800,20 @@ def MemRef_StoreOp : MemRef_Op<"store",
       DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>]> {
   let summary = "store operation";
   let description = [{
-    Store a value to a memref location given by indices. The value stored should
-    have the same type as the elemental type of the memref. The number of
-    arguments provided within brackets need to match the rank of the memref.
+    The `store` op stores an element into a memref at the specified indices.
+    
+    The number of indices must match the rank of the memref. The indices must
+    be in-bounds: `0 <= idx < dim_size`
 
-    In an affine context, the indices of a store are restricted to SSA values
-    bound to surrounding loop induction variables,
-    [symbols](Affine.md/#restrictions-on-dimensions-and-symbols), results of a
-    `constant` operation, or the result of an
-    [`affine.apply`](Affine.md/#affineapply-affineapplyop) operation that can in
-    turn take as arguments all of the aforementioned SSA values or the
-    recursively result of such an `affine.apply` operation.
+    A set `nontemporal` attribute indicates that this store is not expected to
+    be reused in the cache. For details, refer to the
+    [https://llvm.org/docs/LangRef.html#store-instruction](LLVM store instruction).
 
     Example:
 
     ```mlir
-    memref.store %100, %A[%1, 1023] : memref<4x?xf32, #layout, memspace0>
+    memref.store %val, %A[%a, %b] : memref<8x?xi32, #layout, memspace0>
     ```
-
-    **Context:** The `load` and `store` operations are specifically crafted to
-    fully resolve a reference to an element of a memref, and (in polyhedral
-    `affine.if` and `affine.for` operations) the compiler can follow use-def
-    chains (e.g. through [`affine.apply`](Affine.md/#affineapply-affineapplyop)
-    operations) to precisely analyze references at compile-time using polyhedral
-    techniques. This is possible because of the
-    [restrictions on dimensions and symbols](Affine.md/#restrictions-on-dimensions-and-symbols)
-    in these contexts.
   }];
 
   let arguments = (ins AnyType:$value,
@@ -2078,14 +2052,14 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     /// A subview result type can be fully inferred from the source type and the
     /// static representation of offsets, sizes and strides. Special sentinels
     /// encode the dynamic case.
-    static Type inferResultType(MemRefType sourceMemRefType,
-                                ArrayRef<int64_t> staticOffsets,
-                                ArrayRef<int64_t> staticSizes,
-                                ArrayRef<int64_t> staticStrides);
-    static Type inferResultType(MemRefType sourceMemRefType,
-                                ArrayRef<OpFoldResult> staticOffsets,
-                                ArrayRef<OpFoldResult> staticSizes,
-                                ArrayRef<OpFoldResult> staticStrides);
+    static MemRefType inferResultType(MemRefType sourceMemRefType,
+                                      ArrayRef<int64_t> staticOffsets,
+                                      ArrayRef<int64_t> staticSizes,
+                                      ArrayRef<int64_t> staticStrides);
+    static MemRefType inferResultType(MemRefType sourceMemRefType,
+                                      ArrayRef<OpFoldResult> staticOffsets,
+                                      ArrayRef<OpFoldResult> staticSizes,
+                                      ArrayRef<OpFoldResult> staticStrides);
 
     /// A rank-reducing result type can be inferred from the desired result
     /// shape. Only the layout map is inferred.
@@ -2094,16 +2068,16 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     /// and the desired sizes. In case there are more "ones" among the sizes
     /// than the difference in source/result rank, it is not clear which dims of
     /// size one should be dropped.
-    static Type inferRankReducedResultType(ArrayRef<int64_t> resultShape,
-                                           MemRefType sourceMemRefType,
-                                           ArrayRef<int64_t> staticOffsets,
-                                           ArrayRef<int64_t> staticSizes,
-                                           ArrayRef<int64_t> staticStrides);
-    static Type inferRankReducedResultType(ArrayRef<int64_t> resultShape,
-                                           MemRefType sourceMemRefType,
-                                           ArrayRef<OpFoldResult> staticOffsets,
-                                           ArrayRef<OpFoldResult> staticSizes,
-                                           ArrayRef<OpFoldResult> staticStrides);
+    static MemRefType inferRankReducedResultType(
+        ArrayRef<int64_t> resultShape, MemRefType sourceMemRefType,
+        ArrayRef<int64_t> staticOffsets,
+        ArrayRef<int64_t> staticSizes,
+        ArrayRef<int64_t> staticStrides);
+    static MemRefType inferRankReducedResultType(
+        ArrayRef<int64_t> resultShape, MemRefType sourceMemRefType,
+        ArrayRef<OpFoldResult> staticOffsets,
+        ArrayRef<OpFoldResult> staticSizes,
+        ArrayRef<OpFoldResult> staticStrides);
 
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
     /// and `static_strides` attributes.

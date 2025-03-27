@@ -43,7 +43,7 @@ protected:
 
   RISCVInstrInfoTest() {
     std::string Error;
-    auto TT(Triple::normalize(GetParam()));
+    Triple TT(GetParam());
     const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
     TargetOptions Options;
 
@@ -135,7 +135,7 @@ TEST_P(RISCVInstrInfoTest, IsCopyInstrImpl) {
   EXPECT_EQ(MI4Res->Destination->getReg(), RISCV::F1_D);
   EXPECT_EQ(MI4Res->Source->getReg(), RISCV::F2_D);
 
-  // ADD. TODO: Should return true for add reg, x0 and add x0, reg.
+  // ADD.
   MachineInstr *MI5 = BuildMI(*MF, DL, TII->get(RISCV::ADD), RISCV::X1)
                           .addReg(RISCV::X2)
                           .addReg(RISCV::X3)
@@ -148,14 +148,18 @@ TEST_P(RISCVInstrInfoTest, IsCopyInstrImpl) {
                           .addReg(RISCV::X2)
                           .getInstr();
   auto MI6Res = TII->isCopyInstrImpl(*MI6);
-  EXPECT_FALSE(MI6Res.has_value());
+  ASSERT_TRUE(MI6Res.has_value());
+  EXPECT_EQ(MI6Res->Destination->getReg(), RISCV::X1);
+  EXPECT_EQ(MI6Res->Source->getReg(), RISCV::X2);
 
   MachineInstr *MI7 = BuildMI(*MF, DL, TII->get(RISCV::ADD), RISCV::X1)
                           .addReg(RISCV::X2)
                           .addReg(RISCV::X0)
                           .getInstr();
   auto MI7Res = TII->isCopyInstrImpl(*MI7);
-  EXPECT_FALSE(MI7Res.has_value());
+  ASSERT_TRUE(MI7Res.has_value());
+  EXPECT_EQ(MI7Res->Destination->getReg(), RISCV::X1);
+  EXPECT_EQ(MI7Res->Source->getReg(), RISCV::X2);
 }
 
 TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {

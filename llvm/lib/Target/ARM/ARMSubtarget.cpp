@@ -287,12 +287,15 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   case CortexA78:
   case CortexA78AE:
   case CortexA78C:
+  case CortexA510:
   case CortexA710:
   case CortexR4:
   case CortexR5:
   case CortexR7:
   case CortexM3:
+  case CortexM55:
   case CortexM7:
+  case CortexM85:
   case CortexR52:
   case CortexR52plus:
   case CortexX1:
@@ -475,7 +478,7 @@ unsigned ARMSubtarget::getGPRAllocationOrder(const MachineFunction &MF) const {
 }
 
 bool ARMSubtarget::ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                               unsigned PhysReg) const {
+                                               MCRegister PhysReg) const {
   // To minimize code size in Thumb2, we prefer the usage of low regs (lower
   // cost per use) so we can  use narrow encoding. By default, caller-saved
   // registers (e.g. lr, r12) are always  allocated first, regardless of
@@ -492,17 +495,16 @@ ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   const std::vector<CalleeSavedInfo> CSI =
       MF.getFrameInfo().getCalleeSavedInfo();
 
-  // Returns SplitR7 if the frame setup must be split into two separate pushes
-  // of r0-r7,lr and another containing r8-r11 (+r12 if necessary). This is
-  // always required on Thumb1-only targets, as the push and pop instructions
-  // can't access the high registers. This is also required when R7 is the frame
-  // pointer and frame pointer elimiination is disabled, or branch signing is
-  // enabled and AAPCS is disabled.
-  if ((MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress() &&
-       !createAAPCSFrameChain()) ||
-      (getFramePointerReg() == ARM::R7 &&
-       MF.getTarget().Options.DisableFramePointerElim(MF)) ||
-      isThumb1Only())
+  // Thumb1 always splits the pushes at R7, because the Thumb1 push instruction
+  // cannot use high registers except for lr.
+  if (isThumb1Only())
+    return SplitR7;
+
+  // If R7 is the frame pointer, we must split at R7 to ensure that the
+  // previous frame pointer (R7) and return address (LR) are adjacent on the
+  // stack, to form a valid frame record.
+  if (getFramePointerReg() == ARM::R7 &&
+      MF.getTarget().Options.FramePointerIsReserved(MF))
     return SplitR7;
 
   // Returns SplitR11WindowsSEH when the stack pointer needs to be
@@ -514,5 +516,13 @@ ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
       F.needsUnwindTableEntry() &&
       (MFI.hasVarSizedObjects() || getRegisterInfo()->hasStackRealignment(MF)))
     return SplitR11WindowsSEH;
+
+  // Returns SplitR11AAPCSSignRA when the frame pointer is R11, requiring R11
+  // and LR to be adjacent on the stack, and branch signing is enabled,
+  // requiring R12 to be on the stack.
+  if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress() &&
+      getFramePointerReg() == ARM::R11 &&
+      MF.getTarget().Options.FramePointerIsReserved(MF))
+    return SplitR11AAPCSSignRA;
   return NoSplit;
 }

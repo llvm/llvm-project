@@ -11,9 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "XtensaRegisterInfo.h"
+#include "MCTargetDesc/XtensaMCTargetDesc.h"
 #include "XtensaInstrInfo.h"
 #include "XtensaSubtarget.h"
-#include "XtensaUtils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -99,7 +99,7 @@ bool XtensaRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int64_t Offset =
       SPOffset + (int64_t)StackSize + MI.getOperand(FIOperandNum + 1).getImm();
 
-  bool Valid = isValidAddrOffset(MI, Offset);
+  bool Valid = Xtensa::isValidAddrOffsetForOpcode(MI.getOpcode(), Offset);
 
   // If MI is not a debug value, make sure Offset fits in the 16-bit immediate
   // field.

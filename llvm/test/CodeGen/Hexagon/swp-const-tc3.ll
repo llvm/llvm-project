@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; Test that the pipeliner correctly fixes up the pipelined CFG when the loop
 ; has a constant trip count, and the trip count is less than the number of

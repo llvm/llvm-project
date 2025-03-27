@@ -25,8 +25,8 @@ define void @test_i16_extend(ptr %p.1, ptr %p.2, i32 %idx.i32) {
 ; CHECK-LABEL: @test_i16_extend(
 ; CHECK-NEXT:    [[P_0:%.*]] = load ptr, ptr @global, align 8
 ; CHECK-NEXT:    [[IDX_0:%.*]] = zext i32 [[IDX_I32:%.*]] to i64
-; CHECK-NEXT:    [[T53:%.*]] = getelementptr inbounds i16, ptr [[P_1:%.*]], i64 [[IDX_0]]
-; CHECK-NEXT:    [[T56:%.*]] = getelementptr inbounds i16, ptr [[P_2:%.*]], i64 [[IDX_0]]
+; CHECK-NEXT:    [[T53:%.*]] = getelementptr inbounds nuw i16, ptr [[P_1:%.*]], i64 [[IDX_0]]
+; CHECK-NEXT:    [[T56:%.*]] = getelementptr inbounds nuw i16, ptr [[P_2:%.*]], i64 [[IDX_0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[T53]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i16> [[TMP1]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i16>, ptr [[T56]], align 2

@@ -286,7 +286,7 @@ struct LowerVectorMaskPass
     populateVectorMaskLoweringPatternsForSideEffectingOps(loweringPatterns);
     MaskOp::getCanonicalizationPatterns(loweringPatterns, context);
 
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(loweringPatterns))))
+    if (failed(applyPatternsGreedily(op, std::move(loweringPatterns))))
       signalPassFailure();
   }
 

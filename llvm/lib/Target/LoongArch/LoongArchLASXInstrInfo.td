@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Target nodes.
 def loongarch_xvpermi: SDNode<"LoongArchISD::XVPERMI", SDT_LoongArchV1RUimm>;
 
 def lasxsplati8
@@ -1443,6 +1444,12 @@ def : Pat<(xor (v8i32 LASX256:$xj), (v8i32 (vsplat_uimm_pow2 uimm5:$imm))),
 def : Pat<(xor (v4i64 LASX256:$xj), (v4i64 (vsplat_uimm_pow2 uimm6:$imm))),
           (XVBITREVI_D LASX256:$xj, uimm6:$imm)>;
 
+// Vector bswaps
+def : Pat<(bswap (v16i16 LASX256:$xj)), (XVSHUF4I_B LASX256:$xj, 0b10110001)>;
+def : Pat<(bswap (v8i32 LASX256:$xj)), (XVSHUF4I_B LASX256:$xj, 0b00011011)>;
+def : Pat<(bswap (v4i64 LASX256:$xj)),
+          (XVSHUF4I_W (XVSHUF4I_B LASX256:$xj, 0b00011011), 0b10110001)>;
+
 // XVFADD_{S/D}
 defm : PatXrXrF<fadd, "XVFADD">;
 
@@ -1555,6 +1562,12 @@ def : Pat<(vector_insert v8f32:$vd, FPR32:$fj, uimm3:$imm),
 def : Pat<(vector_insert v4f64:$vd, FPR64:$fj, uimm2:$imm),
           (XVINSGR2VR_D $vd, (COPY_TO_REGCLASS FPR64:$fj, GPR), uimm2:$imm)>;
 
+// scalar_to_vector
+def : Pat<(v8f32 (scalar_to_vector FPR32:$fj)),
+          (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32)>;
+def : Pat<(v4f64 (scalar_to_vector FPR64:$fj)),
+          (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64)>; 
+
 // XVPICKVE2GR_W[U]
 def : Pat<(loongarch_vpick_sext_elt v8i32:$xd, uimm3:$imm, i32),
           (XVPICKVE2GR_W v8i32:$xd, uimm3:$imm)>;
@@ -1566,6 +1579,15 @@ def : Pat<(lasxsplati8 GPR:$rj), (XVREPLGR2VR_B GPR:$rj)>;
 def : Pat<(lasxsplati16 GPR:$rj), (XVREPLGR2VR_H GPR:$rj)>;
 def : Pat<(lasxsplati32 GPR:$rj), (XVREPLGR2VR_W GPR:$rj)>;
 def : Pat<(lasxsplati64 GPR:$rj), (XVREPLGR2VR_D GPR:$rj)>;
+
+def : Pat<(v32i8 (loongarch_vreplgr2vr GRLenVT:$rj)),
+          (v32i8 (XVREPLGR2VR_B GRLenVT:$rj))>;
+def : Pat<(v16i16 (loongarch_vreplgr2vr GRLenVT:$rj)),
+          (v16i16 (XVREPLGR2VR_H GRLenVT:$rj))>;
+def : Pat<(v8i32 (loongarch_vreplgr2vr GRLenVT:$rj)),
+          (v8i32 (XVREPLGR2VR_W GRLenVT:$rj))>;
+def : Pat<(v4i64 (loongarch_vreplgr2vr GRLenVT:$rj)),
+          (v4i64 (XVREPLGR2VR_D GRLenVT:$rj))>;
 
 // XVREPLVE_{B/H/W/D}
 def : Pat<(loongarch_vreplve v32i8:$xj, GRLenVT:$rk),
@@ -2094,6 +2116,15 @@ foreach Inst = ["XVFRECIPE_S", "XVFRSQRTE_S"] in
 foreach Inst = ["XVFRECIPE_D", "XVFRSQRTE_D"] in
   def : Pat<(deriveLASXIntrinsic<Inst>.ret (v4f64 LASX256:$xj)),
             (!cast<LAInst>(Inst) LASX256:$xj)>;
+
+def : Pat<(loongarch_vfrecipe v8f32:$src), 
+          (XVFRECIPE_S v8f32:$src)>;
+def : Pat<(loongarch_vfrecipe v4f64:$src), 
+          (XVFRECIPE_D v4f64:$src)>;
+def : Pat<(loongarch_vfrsqrte v8f32:$src), 
+          (XVFRSQRTE_S v8f32:$src)>;
+def : Pat<(loongarch_vfrsqrte v4f64:$src), 
+          (XVFRSQRTE_D v4f64:$src)>;
 }
 
 def : Pat<(int_loongarch_lasx_xvpickve_w_f v8f32:$xj, timm:$imm),

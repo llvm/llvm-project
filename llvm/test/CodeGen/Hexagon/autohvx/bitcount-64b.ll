@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; CHECK-LABEL: f0
 ; CHECK: v[[V00:[0-9]+]]:[[V01:[0-9]+]].uh = vzxt(v0.ub)

@@ -54,6 +54,18 @@ enum ProtectedOperationKind {
 
   /// Returning a pt-guarded variable by reference.
   POK_PtReturnByRef,
+
+  /// Passing pointer to a guarded variable.
+  POK_PassPointer,
+
+  /// Passing a pt-guarded pointer.
+  POK_PtPassPointer,
+
+  /// Returning pointer to a guarded variable.
+  POK_ReturnPointer,
+
+  /// Returning a pt-guarded pointer.
+  POK_PtReturnPointer,
 };
 
 /// This enum distinguishes between different kinds of lock actions. For
@@ -222,6 +234,42 @@ public:
   /// \param Loc -- The location of the function call.
   virtual void handleFunExcludesLock(StringRef Kind, Name FunName,
                                      Name LockName, SourceLocation Loc) {}
+
+  /// Warn when an actual underlying mutex of a scoped lockable does not match
+  /// the expected.
+  /// \param Loc -- The location of the call expression.
+  /// \param DLoc -- The location of the function declaration.
+  /// \param ScopeName -- The name of the scope passed to the function.
+  /// \param Kind -- The kind of the expected mutex.
+  /// \param Expected -- The name of the expected mutex.
+  /// \param Actual -- The name of the actual mutex.
+  virtual void handleUnmatchedUnderlyingMutexes(SourceLocation Loc,
+                                                SourceLocation DLoc,
+                                                Name ScopeName, StringRef Kind,
+                                                Name Expected, Name Actual) {}
+
+  /// Warn when we get fewer underlying mutexes than expected.
+  /// \param Loc -- The location of the call expression.
+  /// \param DLoc -- The location of the function declaration.
+  /// \param ScopeName -- The name of the scope passed to the function.
+  /// \param Kind -- The kind of the expected mutex.
+  /// \param Expected -- The name of the expected mutex.
+  virtual void handleExpectMoreUnderlyingMutexes(SourceLocation Loc,
+                                                 SourceLocation DLoc,
+                                                 Name ScopeName, StringRef Kind,
+                                                 Name Expected) {}
+
+  /// Warn when we get more underlying mutexes than expected.
+  /// \param Loc -- The location of the call expression.
+  /// \param DLoc -- The location of the function declaration.
+  /// \param ScopeName -- The name of the scope passed to the function.
+  /// \param Kind -- The kind of the actual mutex.
+  /// \param Actual -- The name of the actual mutex.
+  virtual void handleExpectFewerUnderlyingMutexes(SourceLocation Loc,
+                                                  SourceLocation DLoc,
+                                                  Name ScopeName,
+                                                  StringRef Kind, Name Actual) {
+  }
 
   /// Warn that L1 cannot be acquired before L2.
   virtual void handleLockAcquiredBefore(StringRef Kind, Name L1Name,

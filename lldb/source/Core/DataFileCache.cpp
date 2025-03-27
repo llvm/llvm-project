@@ -264,14 +264,12 @@ bool CacheSignature::Decode(const lldb_private::DataExtractor &data,
 }
 
 uint32_t ConstStringTable::Add(ConstString s) {
-  auto pos = m_string_to_offset.find(s);
-  if (pos != m_string_to_offset.end())
-    return pos->second;
-  const uint32_t offset = m_next_offset;
-  m_strings.push_back(s);
-  m_string_to_offset[s] = offset;
-  m_next_offset += s.GetLength() + 1;
-  return offset;
+  auto [pos, inserted] = m_string_to_offset.try_emplace(s, m_next_offset);
+  if (inserted) {
+    m_strings.push_back(s);
+    m_next_offset += s.GetLength() + 1;
+  }
+  return pos->second;
 }
 
 static const llvm::StringRef kStringTableIdentifier("STAB");

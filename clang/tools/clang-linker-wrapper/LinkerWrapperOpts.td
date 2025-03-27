@@ -17,45 +17,23 @@ def cuda_path_EQ : Joined<["--"], "cuda-path=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<dir>">,
   HelpText<"Set the system CUDA path">;
 def host_triple_EQ : Joined<["--"], "host-triple=">,
-  Flags<[WrapperOnlyOption]>, MetaVarName<"<triple>">,
-  HelpText<"Triple to use for the host compilation">;
-def opt_level : Joined<["--"], "opt-level=">,
-  Flags<[WrapperOnlyOption]>, MetaVarName<"<O0, O1, O2, or O3>">,
-  HelpText<"Optimization level for LTO">;
-def bitcode_library_EQ : Joined<["--"], "bitcode-library=">,
-  Flags<[WrapperOnlyOption]>, MetaVarName<"<kind>-<triple>-<arch>=<path>">,
-  HelpText<"Extra bitcode library to link">;
-def builtin_bitcode_EQ : Joined<["--"], "builtin-bitcode=">,
-  Flags<[WrapperOnlyOption]>, MetaVarName<"<triple>=<path>">,
-  HelpText<"Perform a special internalizing link on the bitcode file. "
-           "This is necessary for some vendor libraries to be linked correctly">;
+                     Flags<[WrapperOnlyOption]>,
+                     MetaVarName<"<triple>">,
+                     HelpText<"Triple to use for the host compilation">;
 def device_linker_args_EQ : Joined<["--"], "device-linker=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<value> or <triple>=<value>">,
   HelpText<"Arguments to pass to the device linker invocation">;
 def device_compiler_args_EQ : Joined<["--"], "device-compiler=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<value> or <triple>=<value>">,
   HelpText<"Arguments to pass to the device compiler invocation">;
-def clang_backend : Flag<["--"], "clang-backend">,
-  Flags<[WrapperOnlyOption]>,
-  HelpText<"Run the backend using clang rather than the LTO backend">;
 def dry_run : Flag<["--"], "dry-run">,
   Flags<[WrapperOnlyOption]>,
   HelpText<"Print program arguments without running">;
 def verbose : Flag<["--"], "wrapper-verbose">,
   Flags<[WrapperOnlyOption]>, HelpText<"Verbose output from tools">;
 def embed_bitcode : Flag<["--"], "embed-bitcode">,
-  Flags<[WrapperOnlyOption]>, HelpText<"Embed linked bitcode in the module">;
-def debug : Flag<["--"], "device-debug">, Flags<[WrapperOnlyOption]>, 
-  HelpText<"Use debugging">;
-def ptxas_arg : Joined<["--"], "ptxas-arg=">,
-  Flags<[WrapperOnlyOption]>,
-  HelpText<"Argument to pass to the 'ptxas' invocation">;
-def pass_remarks_EQ : Joined<["--"], "pass-remarks=">,
-  Flags<[WrapperOnlyOption]>, HelpText<"Pass remarks for LTO">;
-def pass_remarks_missed_EQ : Joined<["--"], "pass-remarks-missed=">,
-  Flags<[WrapperOnlyOption]>, HelpText<"Pass remarks for LTO">;
-def pass_remarks_analysis_EQ : Joined<["--"], "pass-remarks-analysis=">,
-  Flags<[WrapperOnlyOption]>, HelpText<"Pass remarks for LTO">;
+                    Flags<[WrapperOnlyOption]>,
+                    HelpText<"Embed linked bitcode in the module">;
 def print_wrapped_module : Flag<["--"], "print-wrapped-module">,
   Flags<[WrapperOnlyOption]>,
   HelpText<"Print the wrapped module's IR for testing">;

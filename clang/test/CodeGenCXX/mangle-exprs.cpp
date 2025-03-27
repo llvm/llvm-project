@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fclang-abi-compat=latest -emit-llvm %s -o - -triple=x86_64-apple-darwin9 | FileCheck %s
+// RUN: %clang_cc1 -Wno-error=return-type -std=c++11 -fclang-abi-compat=latest -emit-llvm %s -o - -triple=x86_64-apple-darwin9 | FileCheck %s
 
 namespace std {
   typedef decltype(sizeof(int)) size_t;
@@ -327,7 +327,7 @@ namespace test7 {
   template<class T> decltype(T{{1,2}}) fTB(T t) {}
   template<class T> decltype(T({1,2})) fTC(T t) {}
 
-  int main() {
+  void main() {
     fA1(1); // CHECK-LABEL: define {{.*}} @_ZN5test73fA1IiEEDTcmtlNS_1AELi1ELi2EEcvT__EES2_
     fA2(1); // CHECK-LABEL: define {{.*}} @_ZN5test73fA2IiEEDTcmcvNS_1AEilLi1ELi2EEcvT__EES2_
     fB1(1); // CHECK-LABEL: define {{.*}} @_ZN5test73fB1IiEEDTcmtlNS_1BELi1ELi2EEcvT__EES2_

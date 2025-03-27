@@ -4,7 +4,7 @@
 ; the `select` is elided.
 ;
 ; RUN: split-file %s %t
-; RUN: llvm-ctxprof-util fromJSON --input=%t/profile.json --output=%t/profile.ctxprofdata
+; RUN: llvm-ctxprof-util fromYAML --input=%t/profile.yaml --output=%t/profile.ctxprofdata
 ;
 ; RUN: opt -passes=ctx-instr-gen %t/example.ll -use-ctx-profile=%t/profile.ctxprofdata -S -o - | FileCheck %s --check-prefix=INSTR
 ; RUN: opt -passes=ctx-instr-gen,module-inline %t/example.ll -use-ctx-profile=%t/profile.ctxprofdata -S -o - | FileCheck %s --check-prefix=POST-INL
@@ -72,5 +72,14 @@ define i32 @bar(i32 %t) !guid !1 {
 !0 = !{i64 1234}
 !1 = !{i64 5678}
 
-;--- profile.json
-[{"Guid":1234, "Counters":[10, 4], "Callsites":[[{"Guid": 5678, "Counters":[4,3]}],[{"Guid": 5678, "Counters":[6,6]}]]}]
+;--- profile.yaml
+Contexts:
+  - Guid: 1234
+    TotalRootEntryCount: 100
+    Counters: [10, 4]
+    Callsites:  -
+                  - Guid: 5678
+                    Counters: [4,3]
+                - 
+                  - Guid: 5678
+                    Counters: [6,6]

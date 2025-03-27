@@ -67,6 +67,7 @@ struct Entry {
     ScriptThread,
     ThreadInfo,
     TargetArch,
+    TargetFile,
     ScriptTarget,
     ModuleFile,
     File,

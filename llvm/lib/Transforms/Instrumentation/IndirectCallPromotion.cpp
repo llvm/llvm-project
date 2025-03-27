@@ -42,7 +42,6 @@
 #include "llvm/Transforms/Utils/Instrumentation.h"
 #include <cassert>
 #include <cstdint>
-#include <memory>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -1004,8 +1003,7 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI, bool InLTO,
   if (EnableVTableProfileUse) {
     computeVirtualCallSiteTypeInfoMap(M, MAM, VirtualCSInfo);
 
-    for (StringRef Str : ICPIgnoredBaseTypes)
-      IgnoredBaseTypes.insert(Str);
+    IgnoredBaseTypes.insert_range(ICPIgnoredBaseTypes);
   }
 
   // VTableAddressPointOffsetVal stores the vtable address points. The vtable

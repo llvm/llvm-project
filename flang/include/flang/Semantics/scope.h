@@ -11,11 +11,11 @@
 
 #include "attr.h"
 #include "symbol.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/reference.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/provenance.h"
+#include "flang/Support/Fortran.h"
 #include <list>
 #include <map>
 #include <optional>
@@ -61,7 +61,7 @@ class Scope {
 public:
   ENUM_CLASS(Kind, Global, IntrinsicModules, Module, MainProgram, Subprogram,
       BlockData, DerivedType, BlockConstruct, Forall, OtherConstruct,
-      OpenACCConstruct, ImpliedDos)
+      OpenACCConstruct, ImpliedDos, OtherClause)
   using ImportKind = common::ImportKind;
 
   // Create the Global scope -- the root of the scope tree

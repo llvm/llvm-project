@@ -9,11 +9,11 @@
 #ifndef LLDB_TARGET_STACKFRAMERECOGNIZER_H
 #define LLDB_TARGET_STACKFRAMERECOGNIZER_H
 
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectList.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectList.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-public.h"
 
@@ -180,7 +180,7 @@ class ValueObjectRecognizerSynthesizedValue : public ValueObject {
     SetName(parent.GetName());
   }
 
-  std::optional<uint64_t> GetByteSize() override {
+  llvm::Expected<uint64_t> GetByteSize() override {
     return m_parent->GetByteSize();
   }
   lldb::ValueType GetValueType() const override { return m_type; }

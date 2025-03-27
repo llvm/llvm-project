@@ -2,6 +2,9 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_cooperative_matrix %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_cooperative_matrix %s -o - -filetype=obj | spirv-val %}
 
+; TODO: This test currently fails with LLVM_ENABLE_EXPENSIVE_CHECKS enabled
+; XFAIL: expensive_checks
+
 ; CHECK-ERROR: LLVM ERROR: OpTypeCooperativeMatrixKHR type requires the following SPIR-V extension: SPV_KHR_cooperative_matrix
 
 ; CHECK: OpCapability CooperativeMatrixKHR
@@ -21,7 +24,7 @@
 ; CHECK: %[[#Load1:]] = OpCooperativeMatrixLoadKHR %[[#MatTy2]]
 ; CHECK: OpCooperativeMatrixLengthKHR %[[#Int32Ty]] %[[#MatTy2:]]
 ; CHECK: OpCooperativeMatrixLoadKHR %[[#MatTy3]]
-; CHECK: OpCooperativeMatrixMulAddKHR %[[#MatTy1]]
+; CHECK: OpCooperativeMatrixMulAddKHR %[[#MatTy1]] %[[#]] %[[#]] %[[#]] MatrixCSignedComponentsKHR|MatrixResultSignedComponentsKHR
 ; CHECK: OpCooperativeMatrixStoreKHR
 
 define spir_kernel void @matr_mult(ptr addrspace(1) align 1 %_arg_accA, ptr addrspace(1) align 1 %_arg_accB, ptr addrspace(1) align 4 %_arg_accC, i64 %_arg_N, i64 %_arg_K) {

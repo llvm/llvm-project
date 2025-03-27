@@ -1,5 +1,5 @@
-; RUN: llc -march=nvptx  < %s > %t
-; RUN: llc -march=nvptx64  < %s > %t
+; RUN: llc -mtriple=nvptx < %s > %t
+; RUN: llc -mtriple=nvptx64 < %s > %t
 
 @i1_l = external global i1		; <ptr> [#uses=1]
 @i1_s = external global i1		; <ptr> [#uses=1]

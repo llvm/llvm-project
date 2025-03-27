@@ -228,7 +228,7 @@ struct SequenceOp : public SetTheory::Operator {
           Expr->getAsString());
       // Try to reevaluate Rec in case it is a set.
       if (const RecVec *Result = ST.expand(Rec))
-        Elts.insert(Result->begin(), Result->end());
+        Elts.insert_range(*Result);
       else
         Elts.insert(Rec);
 
@@ -283,7 +283,7 @@ void SetTheory::evaluate(const Init *Expr, RecSet &Elts, ArrayRef<SMLoc> Loc) {
   // A def in a list can be a just an element, or it may expand.
   if (const auto *Def = dyn_cast<DefInit>(Expr)) {
     if (const RecVec *Result = expand(Def->getDef()))
-      return Elts.insert(Result->begin(), Result->end());
+      return Elts.insert_range(*Result);
     Elts.insert(Def->getDef());
     return;
   }
@@ -296,7 +296,7 @@ void SetTheory::evaluate(const Init *Expr, RecSet &Elts, ArrayRef<SMLoc> Loc) {
   const auto *DagExpr = dyn_cast<DagInit>(Expr);
   if (!DagExpr)
     PrintFatalError(Loc, "Invalid set element: " + Expr->getAsString());
-  const DefInit *OpInit = dyn_cast<DefInit>(DagExpr->getOperator());
+  const auto *OpInit = dyn_cast<DefInit>(DagExpr->getOperator());
   if (!OpInit)
     PrintFatalError(Loc, "Bad set expression: " + Expr->getAsString());
   auto I = Operators.find(OpInit->getDef()->getName());

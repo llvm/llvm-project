@@ -309,7 +309,7 @@ define i64 @no_undef_counter() nounwind {
 ; CHECK-NEXT:    [[UNDEF:%.*]] = phi i64 [ [[NEXT_UNDEF:%.*]], [[BLOCK9]] ], [ undef, [[FUNC_START:%.*]] ]
 ; CHECK-NEXT:    [[ITER:%.*]] = phi i64 [ [[NEXT_ITER:%.*]], [[BLOCK9]] ], [ 1, [[FUNC_START]] ]
 ; CHECK-NEXT:    [[NEXT_ITER]] = add nuw nsw i64 [[ITER]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 (ptr, ...) @printf(ptr noalias nocapture @.str3, i64 [[NEXT_ITER]], i64 [[UNDEF]])
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 (ptr, ...) @printf(ptr noalias captures(none) @.str3, i64 [[NEXT_ITER]], i64 [[UNDEF]])
 ; CHECK-NEXT:    [[NEXT_UNDEF]] = add nsw i64 [[UNDEF]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[NEXT_ITER]], 100
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[BLOCK9]], label [[EXIT:%.*]]

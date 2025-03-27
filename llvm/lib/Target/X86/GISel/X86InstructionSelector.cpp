@@ -38,7 +38,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicsX86.h"
-#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -108,9 +107,9 @@ private:
   bool selectCondBranch(MachineInstr &I, MachineRegisterInfo &MRI,
                         MachineFunction &MF) const;
   bool selectTurnIntoCOPY(MachineInstr &I, MachineRegisterInfo &MRI,
-                          const unsigned DstReg,
+                          const Register DstReg,
                           const TargetRegisterClass *DstRC,
-                          const unsigned SrcReg,
+                          const Register SrcReg,
                           const TargetRegisterClass *SrcRC) const;
   bool materializeFP(MachineInstr &I, MachineRegisterInfo &MRI,
                      MachineFunction &MF) const;
@@ -121,14 +120,14 @@ private:
                     MachineFunction &MF) const;
 
   // emit insert subreg instruction and insert it before MachineInstr &I
-  bool emitInsertSubreg(unsigned DstReg, unsigned SrcReg, MachineInstr &I,
+  bool emitInsertSubreg(Register DstReg, Register SrcReg, MachineInstr &I,
                         MachineRegisterInfo &MRI, MachineFunction &MF) const;
   // emit extract subreg instruction and insert it before MachineInstr &I
-  bool emitExtractSubreg(unsigned DstReg, unsigned SrcReg, MachineInstr &I,
+  bool emitExtractSubreg(Register DstReg, Register SrcReg, MachineInstr &I,
                          MachineRegisterInfo &MRI, MachineFunction &MF) const;
 
   const TargetRegisterClass *getRegClass(LLT Ty, const RegisterBank &RB) const;
-  const TargetRegisterClass *getRegClass(LLT Ty, unsigned Reg,
+  const TargetRegisterClass *getRegClass(LLT Ty, Register Reg,
                                          MachineRegisterInfo &MRI) const;
 
   const X86TargetMachine &TM;
@@ -208,7 +207,7 @@ X86InstructionSelector::getRegClass(LLT Ty, const RegisterBank &RB) const {
 }
 
 const TargetRegisterClass *
-X86InstructionSelector::getRegClass(LLT Ty, unsigned Reg,
+X86InstructionSelector::getRegClass(LLT Ty, Register Reg,
                                     MachineRegisterInfo &MRI) const {
   const RegisterBank &RegBank = *RBI.getRegBank(Reg, MRI, TRI);
   return getRegClass(Ty, RegBank);
@@ -603,7 +602,7 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
       return false;
 
     unsigned char OpFlag = STI.classifyLocalReference(nullptr);
-    unsigned PICBase = 0;
+    Register PICBase;
     if (OpFlag == X86II::MO_GOTOFF)
       PICBase = TII.getGlobalBaseReg(&MF);
     else if (STI.is64Bit())
@@ -772,8 +771,8 @@ static bool canTurnIntoCOPY(const TargetRegisterClass *DstRC,
 }
 
 bool X86InstructionSelector::selectTurnIntoCOPY(
-    MachineInstr &I, MachineRegisterInfo &MRI, const unsigned DstReg,
-    const TargetRegisterClass *DstRC, const unsigned SrcReg,
+    MachineInstr &I, MachineRegisterInfo &MRI, const Register DstReg,
+    const TargetRegisterClass *DstRC, const Register SrcReg,
     const TargetRegisterClass *SrcRC) const {
 
   if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI) ||
@@ -1049,6 +1048,13 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
     break;
   }
 
+  assert((LhsReg.isVirtual() && RhsReg.isVirtual()) &&
+         "Both arguments of FCMP need to be virtual!");
+  auto *LhsBank = RBI.getRegBank(LhsReg, MRI, TRI);
+  [[maybe_unused]] auto *RhsBank = RBI.getRegBank(RhsReg, MRI, TRI);
+  assert((LhsBank == RhsBank) &&
+         "Both banks assigned to FCMP arguments need to be same!");
+
   // Compute the opcode for the CMP instruction.
   unsigned OpCmp;
   LLT Ty = MRI.getType(LhsReg);
@@ -1056,10 +1062,15 @@ bool X86InstructionSelector::selectFCmp(MachineInstr &I,
   default:
     return false;
   case 32:
-    OpCmp = X86::UCOMISSrr;
+    OpCmp = LhsBank->getID() == X86::PSRRegBankID ? X86::UCOM_FpIr32
+                                                  : X86::UCOMISSrr;
     break;
   case 64:
-    OpCmp = X86::UCOMISDrr;
+    OpCmp = LhsBank->getID() == X86::PSRRegBankID ? X86::UCOM_FpIr64
+                                                  : X86::UCOMISDrr;
+    break;
+  case 80:
+    OpCmp = X86::UCOM_FpIr80;
     break;
   }
 
@@ -1255,16 +1266,16 @@ bool X86InstructionSelector::selectExtract(MachineInstr &I,
 
   if (SrcTy.getSizeInBits() == 256 && DstTy.getSizeInBits() == 128) {
     if (HasVLX)
-      I.setDesc(TII.get(X86::VEXTRACTF32x4Z256rri));
+      I.setDesc(TII.get(X86::VEXTRACTF32X4Z256rri));
     else if (HasAVX)
       I.setDesc(TII.get(X86::VEXTRACTF128rri));
     else
       return false;
   } else if (SrcTy.getSizeInBits() == 512 && HasAVX512) {
     if (DstTy.getSizeInBits() == 128)
-      I.setDesc(TII.get(X86::VEXTRACTF32x4Zrri));
+      I.setDesc(TII.get(X86::VEXTRACTF32X4Zrri));
     else if (DstTy.getSizeInBits() == 256)
-      I.setDesc(TII.get(X86::VEXTRACTF64x4Zrri));
+      I.setDesc(TII.get(X86::VEXTRACTF64X4Zrri));
     else
       return false;
   } else
@@ -1277,7 +1288,7 @@ bool X86InstructionSelector::selectExtract(MachineInstr &I,
   return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 }
 
-bool X86InstructionSelector::emitExtractSubreg(unsigned DstReg, unsigned SrcReg,
+bool X86InstructionSelector::emitExtractSubreg(Register DstReg, Register SrcReg,
                                                MachineInstr &I,
                                                MachineRegisterInfo &MRI,
                                                MachineFunction &MF) const {
@@ -1315,7 +1326,7 @@ bool X86InstructionSelector::emitExtractSubreg(unsigned DstReg, unsigned SrcReg,
   return true;
 }
 
-bool X86InstructionSelector::emitInsertSubreg(unsigned DstReg, unsigned SrcReg,
+bool X86InstructionSelector::emitInsertSubreg(Register DstReg, Register SrcReg,
                                               MachineInstr &I,
                                               MachineRegisterInfo &MRI,
                                               MachineFunction &MF) const {
@@ -1388,16 +1399,16 @@ bool X86InstructionSelector::selectInsert(MachineInstr &I,
 
   if (DstTy.getSizeInBits() == 256 && InsertRegTy.getSizeInBits() == 128) {
     if (HasVLX)
-      I.setDesc(TII.get(X86::VINSERTF32x4Z256rri));
+      I.setDesc(TII.get(X86::VINSERTF32X4Z256rri));
     else if (HasAVX)
       I.setDesc(TII.get(X86::VINSERTF128rri));
     else
       return false;
   } else if (DstTy.getSizeInBits() == 512 && HasAVX512) {
     if (InsertRegTy.getSizeInBits() == 128)
-      I.setDesc(TII.get(X86::VINSERTF32x4Zrri));
+      I.setDesc(TII.get(X86::VINSERTF32X4Zrri));
     else if (InsertRegTy.getSizeInBits() == 256)
-      I.setDesc(TII.get(X86::VINSERTF64x4Zrri));
+      I.setDesc(TII.get(X86::VINSERTF64X4Zrri));
     else
       return false;
   } else
@@ -1830,7 +1841,7 @@ bool X86InstructionSelector::selectSelect(MachineInstr &I,
                                           MachineRegisterInfo &MRI,
                                           MachineFunction &MF) const {
   GSelect &Sel = cast<GSelect>(I);
-  unsigned DstReg = Sel.getReg(0);
+  Register DstReg = Sel.getReg(0);
   BuildMI(*Sel.getParent(), Sel, Sel.getDebugLoc(), TII.get(X86::TEST32rr))
       .addReg(Sel.getCondReg())
       .addReg(Sel.getCondReg());

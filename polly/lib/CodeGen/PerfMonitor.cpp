@@ -64,7 +64,7 @@ Function *PerfMonitor::getRDTSCP() {
 
 PerfMonitor::PerfMonitor(const Scop &S, Module *M)
     : M(M), Builder(M->getContext()), S(S) {
-  if (Triple(M->getTargetTriple()).getArch() == llvm::Triple::x86_64)
+  if (M->getTargetTriple().getArch() == llvm::Triple::x86_64)
     Supported = true;
   else
     Supported = false;

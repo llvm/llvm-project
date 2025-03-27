@@ -163,8 +163,8 @@ if (BOLT_ENABLE_RUNTIME)
   add_llvm_install_targets(install-bolt_rt
     DEPENDS bolt_rt bolt
     COMPONENT bolt)
-  set(LIBBOLT_RT_INSTR "${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins/lib/libbolt_rt_instr.a")
-  set(LIBBOLT_RT_HUGIFY "${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins/lib/libbolt_rt_hugify.a")
+  set(LIBBOLT_RT_INSTR "${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins/lib${LLVM_LIBDIR_SUFFIX}/libbolt_rt_instr.a")
+  set(LIBBOLT_RT_HUGIFY "${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins/lib${LLVM_LIBDIR_SUFFIX}/libbolt_rt_hugify.a")
 endif()
 
 find_program(GNU_LD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.bfd ld.bfd DOC "GNU ld")
@@ -202,3 +202,11 @@ endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/bolt/RuntimeLibs/RuntimeLibraryVariables.inc.in
                ${CMAKE_CURRENT_BINARY_DIR}/include/bolt/RuntimeLibs/RuntimeLibraryVariables.inc @ONLY)
+
+set(BOLT_ENUM_TARGETS "")
+foreach(t ${BOLT_TARGETS_TO_BUILD})
+  set(BOLT_ENUM_TARGETS "${BOLT_ENUM_TARGETS}BOLT_TARGET(${t})\n")
+endforeach(t)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/bolt/Core/TargetConfig.def.in
+               ${CMAKE_CURRENT_BINARY_DIR}/include/bolt/Core/TargetConfig.def @ONLY)

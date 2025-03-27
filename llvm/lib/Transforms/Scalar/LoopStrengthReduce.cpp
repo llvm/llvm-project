@@ -96,7 +96,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -622,6 +621,9 @@ static bool containsAddRecDependentOnLoop(const SCEV *S, const Loop &L) {
 /// representation.
 /// \see Formula::BaseRegs.
 bool Formula::isCanonical(const Loop &L) const {
+  assert((Scale == 0 || ScaledReg) &&
+         "ScaledReg must be non-null if Scale is non-zero");
+
   if (!ScaledReg)
     return BaseRegs.size() <= 1;
 
@@ -1736,7 +1738,7 @@ bool LSRUse::InsertFormula(const Formula &F, const Loop &L) {
   Formulae.push_back(F);
 
   // Record registers now being used by this use.
-  Regs.insert(F.BaseRegs.begin(), F.BaseRegs.end());
+  Regs.insert_range(F.BaseRegs);
   if (F.ScaledReg)
     Regs.insert(F.ScaledReg);
 
@@ -1757,7 +1759,7 @@ void LSRUse::RecomputeRegs(size_t LUIdx, RegUseTracker &RegUses) {
   Regs.clear();
   for (const Formula &F : Formulae) {
     if (F.ScaledReg) Regs.insert(F.ScaledReg);
-    Regs.insert(F.BaseRegs.begin(), F.BaseRegs.end());
+    Regs.insert_range(F.BaseRegs);
   }
 
   // Update the RegTracker.
@@ -2661,15 +2663,15 @@ LSRInstance::OptimizeLoopTermCond() {
     // Conservatively avoid trying to use the post-inc value in non-latch
     // exits if there may be pre-inc users in intervening blocks.
     if (LatchBlock != ExitingBlock)
-      for (IVUsers::const_iterator UI = IU.begin(), E = IU.end(); UI != E; ++UI)
+      for (const IVStrideUse &UI : IU)
         // Test if the use is reachable from the exiting block. This dominator
         // query is a conservative approximation of reachability.
-        if (&*UI != CondUse &&
-            !DT.properlyDominates(UI->getUser()->getParent(), ExitingBlock)) {
+        if (&UI != CondUse &&
+            !DT.properlyDominates(UI.getUser()->getParent(), ExitingBlock)) {
           // Conservatively assume there may be reuse if the quotient of their
           // strides could be a legal scale.
           const SCEV *A = IU.getStride(*CondUse, L);
-          const SCEV *B = IU.getStride(*UI, L);
+          const SCEV *B = IU.getStride(UI, L);
           if (!A || !B) continue;
           if (SE.getTypeSizeInBits(A->getType()) !=
               SE.getTypeSizeInBits(B->getType())) {
@@ -2690,9 +2692,9 @@ LSRInstance::OptimizeLoopTermCond() {
                 C->getValue().isMinSignedValue())
               goto decline_post_inc;
             // Check for possible scaled-address reuse.
-            if (isAddressUse(TTI, UI->getUser(), UI->getOperandValToReplace())) {
-              MemAccessTy AccessTy = getAccessType(
-                  TTI, UI->getUser(), UI->getOperandValToReplace());
+            if (isAddressUse(TTI, UI.getUser(), UI.getOperandValToReplace())) {
+              MemAccessTy AccessTy =
+                  getAccessType(TTI, UI.getUser(), UI.getOperandValToReplace());
               int64_t Scale = C->getSExtValue();
               if (TTI.isLegalAddressingMode(AccessTy.MemTy, /*BaseGV=*/nullptr,
                                             /*BaseOffset=*/0,
@@ -2717,7 +2719,7 @@ LSRInstance::OptimizeLoopTermCond() {
     // the exiting block branch, move it.
     if (Cond->getNextNonDebugInstruction() != TermBr) {
       if (Cond->hasOneUse()) {
-        Cond->moveBefore(TermBr);
+        Cond->moveBefore(TermBr->getIterator());
       } else {
         // Clone the terminating condition and insert into the loopend.
         ICmpInst *OldCond = Cond;
@@ -3213,8 +3215,7 @@ void LSRInstance::ChainInstruction(Instruction *UserInst, Instruction *IVOper,
   SmallPtrSet<Instruction*,4> &NearUsers = ChainUsersVec[ChainIdx].NearUsers;
   // This chain's NearUsers become FarUsers.
   if (!LastIncExpr->isZero()) {
-    ChainUsersVec[ChainIdx].FarUsers.insert(NearUsers.begin(),
-                                            NearUsers.end());
+    ChainUsersVec[ChainIdx].FarUsers.insert_range(NearUsers);
     NearUsers.clear();
   }
 
@@ -3973,9 +3974,10 @@ void LSRInstance::GenerateReassociationsImpl(LSRUse &LU, unsigned LUIdx,
       F.UnfoldedOffset =
           Immediate::getFixed((uint64_t)F.UnfoldedOffset.getFixedValue() +
                               InnerSumSC->getValue()->getZExtValue());
-      if (IsScaledReg)
+      if (IsScaledReg) {
         F.ScaledReg = nullptr;
-      else
+        F.Scale = 0;
+      } else
         F.BaseRegs.erase(F.BaseRegs.begin() + Idx);
     } else if (IsScaledReg)
       F.ScaledReg = InnerSum;
@@ -5291,7 +5293,7 @@ void LSRInstance::NarrowSearchSpaceByDeletingCostlyFormulas() {
     Formula &F = LU.Formulae[0];
     LLVM_DEBUG(dbgs() << "  Leaving only "; F.print(dbgs()); dbgs() << '\n');
     // When we choose the formula, the regs become unique.
-    UniqRegs.insert(F.BaseRegs.begin(), F.BaseRegs.end());
+    UniqRegs.insert_range(F.BaseRegs);
     if (F.ScaledReg)
       UniqRegs.insert(F.ScaledReg);
   }
@@ -6135,7 +6137,7 @@ void LSRInstance::ImplementSolution(
     if (!llvm::all_of(BO->uses(),
                       [&](Use &U) {return DT.dominates(IVIncInsertPos, U);}))
       continue;
-    BO->moveBefore(IVIncInsertPos);
+    BO->moveBefore(IVIncInsertPos->getIterator());
     Changed = true;
   }
 
@@ -6173,11 +6175,11 @@ LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
     // CatchSwitchInst.  Because the CatchSwitchInst cannot be split, there is
     // no good place to stick any instructions.
     if (auto *PN = dyn_cast<PHINode>(U.getUser())) {
-       auto *FirstNonPHI = PN->getParent()->getFirstNonPHI();
+       auto FirstNonPHI = PN->getParent()->getFirstNonPHIIt();
        if (isa<FuncletPadInst>(FirstNonPHI) ||
            isa<CatchSwitchInst>(FirstNonPHI))
          for (BasicBlock *PredBB : PN->blocks())
-           if (isa<CatchSwitchInst>(PredBB->getFirstNonPHI()))
+           if (isa<CatchSwitchInst>(PredBB->getFirstNonPHIIt()))
              return;
     }
   }

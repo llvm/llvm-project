@@ -50,23 +50,10 @@ llvm_config.with_system_environment(
 )
 
 # Enable sanitizer runtime flags.
-if "Address" in config.llvm_use_sanitizer:
+if config.llvm_use_sanitizer:
     config.environment["ASAN_OPTIONS"] = "detect_stack_use_after_return=1"
-    if platform.system() == "Darwin":
-        config.environment["MallocNanoZone"] = "0"
-
-if "Thread" in config.llvm_use_sanitizer:
     config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
-
-
-# Support running the test suite under the lldb-repro wrapper. This makes it
-# possible to capture a test suite run and then rerun all the test from the
-# just captured reproducer.
-lldb_repro_mode = lit_config.params.get("lldb-run-with-repro", None)
-if lldb_repro_mode:
-    config.available_features.add("lldb-repro")
-    lit_config.note("Running Shell tests in {} mode.".format(lldb_repro_mode))
-    toolchain.use_lldb_repro_substitutions(config, lldb_repro_mode)
+    config.environment["MallocNanoZone"] = "0"
 
 if config.lldb_platform_url and config.cmake_sysroot and config.enable_remote:
     if re.match(r".*-linux.*", config.target_triple):
@@ -81,6 +68,9 @@ toolchain.use_support_substitutions(config)
 
 if re.match(r"^arm(hf.*-linux)|(.*-linux-gnuabihf)", config.target_triple):
     config.available_features.add("armhf-linux")
+
+if re.match(r".*-(windows|mingw32)", config.target_triple):
+    config.available_features.add("target-windows")
 
 if re.match(r".*-(windows-msvc)$", config.target_triple):
     config.available_features.add("windows-msvc")

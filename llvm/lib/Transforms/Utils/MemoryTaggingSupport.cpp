@@ -154,9 +154,7 @@ void StackInfoBuilder::visit(OptimizationRemarkEmitter &ORE,
     }
     return;
   }
-  auto *II = dyn_cast<IntrinsicInst>(&Inst);
-  if (II && (II->getIntrinsicID() == Intrinsic::lifetime_start ||
-             II->getIntrinsicID() == Intrinsic::lifetime_end)) {
+  if (auto *II = dyn_cast<LifetimeIntrinsic>(&Inst)) {
     AllocaInst *AI = findAllocaForValue(II->getArgOperand(1));
     if (!AI) {
       Info.UnrecognizedLifetimes.push_back(&Inst);
@@ -261,19 +259,13 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
   Info.AI = NewAI;
 }
 
-bool isLifetimeIntrinsic(Value *V) {
-  auto *II = dyn_cast<IntrinsicInst>(V);
-  return II && II->isLifetimeStartOrEnd();
-}
-
 Value *readRegister(IRBuilder<> &IRB, StringRef Name) {
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-  Function *ReadRegister = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::read_register, IRB.getIntPtrTy(M->getDataLayout()));
   MDNode *MD =
       MDNode::get(M->getContext(), {MDString::get(M->getContext(), Name)});
   Value *Args[] = {MetadataAsValue::get(M->getContext(), MD)};
-  return IRB.CreateCall(ReadRegister, Args);
+  return IRB.CreateIntrinsic(Intrinsic::read_register,
+                             IRB.getIntPtrTy(M->getDataLayout()), Args);
 }
 
 Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB) {
@@ -287,12 +279,10 @@ Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB) {
 Value *getFP(IRBuilder<> &IRB) {
   Function *F = IRB.GetInsertBlock()->getParent();
   Module *M = F->getParent();
-  auto *GetStackPointerFn = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::frameaddress,
-      IRB.getPtrTy(M->getDataLayout().getAllocaAddrSpace()));
   return IRB.CreatePtrToInt(
-      IRB.CreateCall(GetStackPointerFn,
-                     {Constant::getNullValue(IRB.getInt32Ty())}),
+      IRB.CreateIntrinsic(Intrinsic::frameaddress,
+                          IRB.getPtrTy(M->getDataLayout().getAllocaAddrSpace()),
+                          {Constant::getNullValue(IRB.getInt32Ty())}),
       IRB.getIntPtrTy(M->getDataLayout()));
 }
 

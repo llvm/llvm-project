@@ -52,7 +52,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <vector>
@@ -503,6 +502,10 @@ static void computeFunctionSummary(
       if (!IsThinLTO)
         continue;
 
+      // Skip indirect calls if we haven't enabled memprof ICP.
+      if (!CalledFunction && !EnableMemProfIndirectCallSupport)
+        continue;
+
       // Ensure we keep this analysis in sync with the handling in the ThinLTO
       // backend (see MemProfContextDisambiguation::applyImport). Save this call
       // so that we can skip it in checking the reverse case later.
@@ -519,6 +522,7 @@ static void computeFunctionSummary(
       if (MemProfMD) {
         std::vector<MIBInfo> MIBs;
         std::vector<uint64_t> TotalSizes;
+        std::vector<std::vector<ContextTotalSize>> ContextSizeInfos;
         for (auto &MDOp : MemProfMD->operands()) {
           auto *MIBMD = cast<const MDNode>(MDOp);
           MDNode *StackNode = getMIBStackNode(MIBMD);
@@ -536,18 +540,32 @@ static void computeFunctionSummary(
             if (StackIdIndices.empty() || StackIdIndices.back() != StackIdIdx)
               StackIdIndices.push_back(StackIdIdx);
           }
+          // If we have context size information, collect it for inclusion in
+          // the summary.
+          assert(MIBMD->getNumOperands() > 2 || !MemProfReportHintedSizes);
+          if (MIBMD->getNumOperands() > 2) {
+            std::vector<ContextTotalSize> ContextSizes;
+            for (unsigned I = 2; I < MIBMD->getNumOperands(); I++) {
+              MDNode *ContextSizePair = dyn_cast<MDNode>(MIBMD->getOperand(I));
+              assert(ContextSizePair->getNumOperands() == 2);
+              uint64_t FullStackId = mdconst::dyn_extract<ConstantInt>(
+                                         ContextSizePair->getOperand(0))
+                                         ->getZExtValue();
+              uint64_t TS = mdconst::dyn_extract<ConstantInt>(
+                                ContextSizePair->getOperand(1))
+                                ->getZExtValue();
+              ContextSizes.push_back({FullStackId, TS});
+            }
+            ContextSizeInfos.push_back(std::move(ContextSizes));
+          }
           MIBs.push_back(
               MIBInfo(getMIBAllocType(MIBMD), std::move(StackIdIndices)));
-          if (MemProfReportHintedSizes) {
-            auto TotalSize = getMIBTotalSize(MIBMD);
-            assert(TotalSize);
-            TotalSizes.push_back(TotalSize);
-          }
         }
         Allocs.push_back(AllocInfo(std::move(MIBs)));
-        if (MemProfReportHintedSizes) {
-          assert(Allocs.back().MIBs.size() == TotalSizes.size());
-          Allocs.back().TotalSizes = std::move(TotalSizes);
+        assert(!ContextSizeInfos.empty() || !MemProfReportHintedSizes);
+        if (!ContextSizeInfos.empty()) {
+          assert(Allocs.back().MIBs.size() == ContextSizeInfos.size());
+          Allocs.back().ContextSizeInfos = std::move(ContextSizeInfos);
         }
       } else if (!InstCallsite.empty()) {
         SmallVector<unsigned> StackIdIndices;
@@ -561,7 +579,8 @@ static void computeFunctionSummary(
           auto CalleeValueInfo =
               Index.getOrInsertValueInfo(cast<GlobalValue>(CalledValue));
           Callsites.push_back({CalleeValueInfo, StackIdIndices});
-        } else if (EnableMemProfIndirectCallSupport) {
+        } else {
+          assert(EnableMemProfIndirectCallSupport);
           // For indirect callsites, create multiple Callsites, one per target.
           // This enables having a different set of clone versions per target,
           // and we will apply the cloning decisions while speculatively
@@ -618,12 +637,10 @@ static void computeFunctionSummary(
     // All new reference edges inserted in two loops below are either
     // read or write only. They will be grouped in the end of RefEdges
     // vector, so we can use a single integer value to identify them.
-    for (const auto &VI : LoadRefEdges)
-      RefEdges.insert(VI);
+    RefEdges.insert_range(LoadRefEdges);
 
     unsigned FirstWORef = RefEdges.size();
-    for (const auto &VI : StoreRefEdges)
-      RefEdges.insert(VI);
+    RefEdges.insert_range(StoreRefEdges);
 
     Refs = RefEdges.takeVector();
     for (; RefCnt < FirstWORef; ++RefCnt)
@@ -1223,6 +1240,9 @@ bool llvm::mayHaveMemprofSummary(const CallBase *CB) {
     if (CI && CalledFunction->isIntrinsic())
       return false;
   } else {
+    // Skip indirect calls if we haven't enabled memprof ICP.
+    if (!EnableMemProfIndirectCallSupport)
+      return false;
     // Skip inline assembly calls.
     if (CI && CI->isInlineAsm())
       return false;

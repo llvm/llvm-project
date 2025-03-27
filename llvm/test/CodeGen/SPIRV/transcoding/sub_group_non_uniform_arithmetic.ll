@@ -329,12 +329,12 @@
 ; CHECK-SPIRV-DAG: %[[#double:]] = OpTypeFloat 64
 
 ; CHECK-SPIRV-DAG: %[[#false:]] = OpConstantFalse %[[#bool]]
+; CHECK-SPIRV-DAG: %[[#int_32:]] = OpConstant %[[#int]] 32
 ; CHECK-SPIRV-DAG: %[[#ScopeSubgroup:]] = OpConstant %[[#int]] 3
 ; CHECK-SPIRV-DAG: %[[#char_0:]] = OpConstant %[[#char]] 0
 ; CHECK-SPIRV-DAG: %[[#char_10:]] = OpConstant %[[#char]] 10
 ; CHECK-SPIRV-DAG: %[[#short_0:]] = OpConstant %[[#short]] 0
 ; CHECK-SPIRV-DAG: %[[#int_0:]] = OpConstant %[[#int]] 0
-; CHECK-SPIRV-DAG: %[[#int_32:]] = OpConstant %[[#int]] 32
 ; CHECK-SPIRV-DAG: %[[#long_0:]] = OpConstantNull %[[#long]]
 ; CHECK-SPIRV-DAG: %[[#half_0:]] = OpConstant %[[#half]] 0
 ; CHECK-SPIRV-DAG: %[[#float_0:]] = OpConstant %[[#float]] 0

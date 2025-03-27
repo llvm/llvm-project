@@ -20,12 +20,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
@@ -94,6 +95,17 @@ KnownBits ConstantRange::toKnownBits() const {
   return Known;
 }
 
+std::pair<ConstantRange, ConstantRange> ConstantRange::splitPosNeg() const {
+  uint32_t BW = getBitWidth();
+  APInt Zero = APInt::getZero(BW), One = APInt(BW, 1);
+  APInt SignedMin = APInt::getSignedMinValue(BW);
+  // There are no positive 1-bit values. The 1 would get interpreted as -1.
+  ConstantRange PosFilter =
+      BW == 1 ? getEmpty() : ConstantRange(One, SignedMin);
+  ConstantRange NegFilter(SignedMin, Zero);
+  return {intersectWith(PosFilter), intersectWith(NegFilter)};
+}
+
 ConstantRange ConstantRange::makeAllowedICmpRegion(CmpInst::Predicate Pred,
                                                    const ConstantRange &CR) {
   if (CR.isEmptySet())
@@ -158,11 +170,10 @@ ConstantRange ConstantRange::makeExactICmpRegion(CmpInst::Predicate Pred,
                                                  const APInt &C) {
   // Computes the exact range that is equal to both the constant ranges returned
   // by makeAllowedICmpRegion and makeSatisfyingICmpRegion. This is always true
-  // when RHS is a singleton such as an APInt and so the assert is valid.
-  // However for non-singleton RHS, for example ult [2,5) makeAllowedICmpRegion
-  // returns [0,4) but makeSatisfyICmpRegion returns [0,2).
+  // when RHS is a singleton such as an APInt. However for non-singleton RHS,
+  // for example ult [2,5) makeAllowedICmpRegion returns [0,4) but
+  // makeSatisfyICmpRegion returns [0,2).
   //
-  assert(makeAllowedICmpRegion(Pred, C) == makeSatisfyingICmpRegion(Pred, C));
   return makeAllowedICmpRegion(Pred, C);
 }
 
@@ -191,7 +202,7 @@ CmpInst::Predicate ConstantRange::getEquivalentPredWithFlippedSignedness(
          "Only for relational integer predicates!");
 
   CmpInst::Predicate FlippedSignednessPred =
-      CmpInst::getFlippedSignednessPredicate(Pred);
+      ICmpInst::getFlippedSignednessPredicate(Pred);
 
   if (areInsensitiveToSignednessOfICmpPredicate(CR1, CR2))
     return FlippedSignednessPred;
@@ -1355,20 +1366,14 @@ ConstantRange::udiv(const ConstantRange &RHS) const {
 }
 
 ConstantRange ConstantRange::sdiv(const ConstantRange &RHS) const {
+  APInt Zero = APInt::getZero(getBitWidth());
+  APInt SignedMin = APInt::getSignedMinValue(getBitWidth());
+
   // We split up the LHS and RHS into positive and negative components
   // and then also compute the positive and negative components of the result
   // separately by combining division results with the appropriate signs.
-  APInt Zero = APInt::getZero(getBitWidth());
-  APInt SignedMin = APInt::getSignedMinValue(getBitWidth());
-  // There are no positive 1-bit values. The 1 would get interpreted as -1.
-  ConstantRange PosFilter =
-      getBitWidth() == 1 ? getEmpty()
-                         : ConstantRange(APInt(getBitWidth(), 1), SignedMin);
-  ConstantRange NegFilter(SignedMin, Zero);
-  ConstantRange PosL = intersectWith(PosFilter);
-  ConstantRange NegL = intersectWith(NegFilter);
-  ConstantRange PosR = RHS.intersectWith(PosFilter);
-  ConstantRange NegR = RHS.intersectWith(NegFilter);
+  auto [PosL, NegL] = splitPosNeg();
+  auto [PosR, NegR] = RHS.splitPosNeg();
 
   ConstantRange PosRes = getEmpty();
   if (!PosL.isEmptySet() && !PosR.isEmptySet())
@@ -1519,15 +1524,72 @@ ConstantRange ConstantRange::binaryNot() const {
   return ConstantRange(APInt::getAllOnes(getBitWidth())).sub(*this);
 }
 
+/// Estimate the 'bit-masked AND' operation's lower bound.
+///
+/// E.g., given two ranges as follows (single quotes are separators and
+/// have no meaning here),
+///
+///   LHS = [10'00101'1,  ; LLo
+///          10'10000'0]  ; LHi
+///   RHS = [10'11111'0,  ; RLo
+///          10'11111'1]  ; RHi
+///
+/// we know that the higher 2 bits of the result is always 10; and we also
+/// notice that RHS[1:6] are always 1, so the result[1:6] cannot be less than
+/// LHS[1:6] (i.e., 00101). Thus, the lower bound is 10'00101'0.
+///
+/// The algorithm is as follows,
+/// 1. we first calculate a mask to find the higher common bits by
+///       Mask = ~((LLo ^ LHi) | (RLo ^ RHi) | (LLo ^ RLo));
+///       Mask = clear all non-leading-ones bits in Mask;
+///    in the example, the Mask is set to 11'00000'0;
+/// 2. calculate a new mask by setting all common leading bits to 1 in RHS, and
+///    keeping the longest leading ones (i.e., 11'11111'0 in the example);
+/// 3. return (LLo & new mask) as the lower bound;
+/// 4. repeat the step 2 and 3 with LHS and RHS swapped, and update the lower
+///    bound with the larger one.
+static APInt estimateBitMaskedAndLowerBound(const ConstantRange &LHS,
+                                            const ConstantRange &RHS) {
+  auto BitWidth = LHS.getBitWidth();
+  // If either is full set or unsigned wrapped, then the range must contain '0'
+  // which leads the lower bound to 0.
+  if ((LHS.isFullSet() || RHS.isFullSet()) ||
+      (LHS.isWrappedSet() || RHS.isWrappedSet()))
+    return APInt::getZero(BitWidth);
+
+  auto LLo = LHS.getLower();
+  auto LHi = LHS.getUpper() - 1;
+  auto RLo = RHS.getLower();
+  auto RHi = RHS.getUpper() - 1;
+
+  // Calculate the mask for the higher common bits.
+  auto Mask = ~((LLo ^ LHi) | (RLo ^ RHi) | (LLo ^ RLo));
+  unsigned LeadingOnes = Mask.countLeadingOnes();
+  Mask.clearLowBits(BitWidth - LeadingOnes);
+
+  auto estimateBound = [BitWidth, &Mask](APInt ALo, const APInt &BLo,
+                                         const APInt &BHi) {
+    unsigned LeadingOnes = ((BLo & BHi) | Mask).countLeadingOnes();
+    unsigned StartBit = BitWidth - LeadingOnes;
+    ALo.clearLowBits(StartBit);
+    return ALo;
+  };
+
+  auto LowerBoundByLHS = estimateBound(LLo, RLo, RHi);
+  auto LowerBoundByRHS = estimateBound(RLo, LLo, LHi);
+
+  return APIntOps::umax(LowerBoundByLHS, LowerBoundByRHS);
+}
+
 ConstantRange ConstantRange::binaryAnd(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
     return getEmpty();
 
   ConstantRange KnownBitsRange =
       fromKnownBits(toKnownBits() & Other.toKnownBits(), false);
-  ConstantRange UMinUMaxRange =
-      getNonEmpty(APInt::getZero(getBitWidth()),
-                  APIntOps::umin(Other.getUnsignedMax(), getUnsignedMax()) + 1);
+  auto LowerBound = estimateBitMaskedAndLowerBound(*this, Other);
+  ConstantRange UMinUMaxRange = getNonEmpty(
+      LowerBound, APIntOps::umin(Other.getUnsignedMax(), getUnsignedMax()) + 1);
   return KnownBitsRange.intersectWith(UMinUMaxRange);
 }
 
@@ -1537,10 +1599,17 @@ ConstantRange ConstantRange::binaryOr(const ConstantRange &Other) const {
 
   ConstantRange KnownBitsRange =
       fromKnownBits(toKnownBits() | Other.toKnownBits(), false);
+
+  //      ~a & ~b    >= x
+  // <=>  ~(~a & ~b) <= ~x
+  // <=>  a | b      <= ~x
+  // <=>  a | b      <  ~x + 1 = -x
+  // thus, UpperBound(a | b) == -LowerBound(~a & ~b)
+  auto UpperBound =
+      -estimateBitMaskedAndLowerBound(binaryNot(), Other.binaryNot());
   // Upper wrapped range.
-  ConstantRange UMaxUMinRange =
-      getNonEmpty(APIntOps::umax(getUnsignedMin(), Other.getUnsignedMin()),
-                  APInt::getZero(getBitWidth()));
+  ConstantRange UMaxUMinRange = getNonEmpty(
+      APIntOps::umax(getUnsignedMin(), Other.getUnsignedMin()), UpperBound);
   return KnownBitsRange.intersectWith(UMaxUMinRange);
 }
 

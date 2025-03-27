@@ -16,6 +16,7 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -56,7 +57,8 @@ static llvm::LogicalResult checkCudaAttr(Op op) {
   if (op.getDataAttr() == cuf::DataAttribute::Device ||
       op.getDataAttr() == cuf::DataAttribute::Managed ||
       op.getDataAttr() == cuf::DataAttribute::Unified ||
-      op.getDataAttr() == cuf::DataAttribute::Pinned)
+      op.getDataAttr() == cuf::DataAttribute::Pinned ||
+      op.getDataAttr() == cuf::DataAttribute::Shared)
     return mlir::success();
   return op.emitOpError()
          << "expect device, managed, pinned or unified cuda attribute";
@@ -101,7 +103,7 @@ llvm::LogicalResult cuf::DataTransferOp::verify() {
   mlir::Type srcTy = getSrc().getType();
   mlir::Type dstTy = getDst().getType();
   if (getShape()) {
-    if (!fir::isa_ref_type(srcTy) || !fir::isa_ref_type(dstTy))
+    if (!fir::isa_ref_type(srcTy) && !fir::isa_ref_type(dstTy))
       return emitOpError()
              << "shape can only be specified on data transfer with references";
   }
@@ -276,18 +278,45 @@ mlir::LogicalResult cuf::RegisterKernelOp::verify() {
 
   mlir::SymbolTable symTab(mod);
   auto gpuMod = symTab.lookup<mlir::gpu::GPUModuleOp>(getKernelModuleName());
-  if (!gpuMod)
+  if (!gpuMod) {
+    // If already a gpu.binary then stop the check here.
+    if (symTab.lookup<mlir::gpu::BinaryOp>(getKernelModuleName()))
+      return mlir::success();
     return emitOpError("gpu module not found");
+  }
 
   mlir::SymbolTable gpuSymTab(gpuMod);
-  auto func = gpuSymTab.lookup<mlir::gpu::GPUFuncOp>(getKernelName());
-  if (!func)
-    return emitOpError("device function not found");
+  if (auto func = gpuSymTab.lookup<mlir::gpu::GPUFuncOp>(getKernelName())) {
+    if (!func.isKernel())
+      return emitOpError("only kernel gpu.func can be registered");
+    return mlir::success();
+  } else if (auto func =
+                 gpuSymTab.lookup<mlir::LLVM::LLVMFuncOp>(getKernelName())) {
+    if (!func->getAttrOfType<mlir::UnitAttr>(
+            mlir::gpu::GPUDialect::getKernelFuncAttrName()))
+      return emitOpError("only gpu.kernel llvm.func can be registered");
+    return mlir::success();
+  }
+  return emitOpError("device function not found");
+}
 
-  if (!func.isKernel())
-    return emitOpError("only kernel gpu.func can be registered");
+//===----------------------------------------------------------------------===//
+// SharedMemoryOp
+//===----------------------------------------------------------------------===//
 
-  return mlir::success();
+void cuf::SharedMemoryOp::build(
+    mlir::OpBuilder &builder, mlir::OperationState &result, mlir::Type inType,
+    llvm::StringRef uniqName, llvm::StringRef bindcName,
+    mlir::ValueRange typeparams, mlir::ValueRange shape,
+    llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  mlir::StringAttr nameAttr =
+      uniqName.empty() ? mlir::StringAttr{} : builder.getStringAttr(uniqName);
+  mlir::StringAttr bindcAttr =
+      bindcName.empty() ? mlir::StringAttr{} : builder.getStringAttr(bindcName);
+  build(builder, result, wrapAllocaResultType(inType),
+        mlir::TypeAttr::get(inType), nameAttr, bindcAttr, typeparams, shape,
+        /*offset=*/mlir::Value{});
+  result.addAttributes(attributes);
 }
 
 // Tablegen operators

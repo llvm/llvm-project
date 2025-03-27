@@ -80,8 +80,8 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; SSE-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[TMP2]], i32 2
 ; SSE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP4]], align 8
 ; SSE-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x double>, ptr [[TMP5]], align 8
-; SSE-NEXT:    [[TMP6:%.*]] = fcmp fast une <2 x double> [[WIDE_LOAD]], <double 4.200000e+01, double 4.200000e+01>
-; SSE-NEXT:    [[TMP7:%.*]] = fcmp fast une <2 x double> [[WIDE_LOAD2]], <double 4.200000e+01, double 4.200000e+01>
+; SSE-NEXT:    [[TMP6:%.*]] = fcmp fast une <2 x double> [[WIDE_LOAD]], splat (double 4.200000e+01)
+; SSE-NEXT:    [[TMP7:%.*]] = fcmp fast une <2 x double> [[WIDE_LOAD2]], splat (double 4.200000e+01)
 ; SSE-NEXT:    [[TMP8:%.*]] = fadd fast <2 x double> [[VEC_PHI]], [[WIDE_LOAD]]
 ; SSE-NEXT:    [[TMP9:%.*]] = fadd fast <2 x double> [[VEC_PHI1]], [[WIDE_LOAD2]]
 ; SSE-NEXT:    [[PREDPHI]] = select <2 x i1> [[TMP6]], <2 x double> [[TMP8]], <2 x double> [[VEC_PHI]]
@@ -139,10 +139,10 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; AVX-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x double>, ptr [[TMP9]], align 8
 ; AVX-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x double>, ptr [[TMP10]], align 8
 ; AVX-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x double>, ptr [[TMP11]], align 8
-; AVX-NEXT:    [[TMP12:%.*]] = fcmp fast une <4 x double> [[WIDE_LOAD]], <double 4.200000e+01, double 4.200000e+01, double 4.200000e+01, double 4.200000e+01>
-; AVX-NEXT:    [[TMP13:%.*]] = fcmp fast une <4 x double> [[WIDE_LOAD4]], <double 4.200000e+01, double 4.200000e+01, double 4.200000e+01, double 4.200000e+01>
-; AVX-NEXT:    [[TMP14:%.*]] = fcmp fast une <4 x double> [[WIDE_LOAD5]], <double 4.200000e+01, double 4.200000e+01, double 4.200000e+01, double 4.200000e+01>
-; AVX-NEXT:    [[TMP15:%.*]] = fcmp fast une <4 x double> [[WIDE_LOAD6]], <double 4.200000e+01, double 4.200000e+01, double 4.200000e+01, double 4.200000e+01>
+; AVX-NEXT:    [[TMP12:%.*]] = fcmp fast une <4 x double> [[WIDE_LOAD]], splat (double 4.200000e+01)
+; AVX-NEXT:    [[TMP13:%.*]] = fcmp fast une <4 x double> [[WIDE_LOAD4]], splat (double 4.200000e+01)
+; AVX-NEXT:    [[TMP14:%.*]] = fcmp fast une <4 x double> [[WIDE_LOAD5]], splat (double 4.200000e+01)
+; AVX-NEXT:    [[TMP15:%.*]] = fcmp fast une <4 x double> [[WIDE_LOAD6]], splat (double 4.200000e+01)
 ; AVX-NEXT:    [[TMP16:%.*]] = fadd fast <4 x double> [[VEC_PHI]], [[WIDE_LOAD]]
 ; AVX-NEXT:    [[TMP17:%.*]] = fadd fast <4 x double> [[VEC_PHI1]], [[WIDE_LOAD4]]
 ; AVX-NEXT:    [[TMP18:%.*]] = fadd fast <4 x double> [[VEC_PHI2]], [[WIDE_LOAD5]]

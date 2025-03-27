@@ -44,6 +44,7 @@ enum class VFParamKind {
 enum class VFISAKind {
   AdvancedSIMD, // AArch64 Advanced SIMD (NEON)
   SVE,          // AArch64 Scalable Vector Extension
+  RVV,          // RISC-V Vector Extension
   SSE,          // x86 SSE
   AVX,          // x86 AVX
   AVX2,         // x86 AVX2

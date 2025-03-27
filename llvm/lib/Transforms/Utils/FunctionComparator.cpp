@@ -15,7 +15,6 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Attributes.h"
@@ -84,6 +83,13 @@ int FunctionComparator::cmpAPInts(const APInt &L, const APInt &R) const {
   return 0;
 }
 
+int FunctionComparator::cmpConstantRanges(const ConstantRange &L,
+                                          const ConstantRange &R) const {
+  if (int Res = cmpAPInts(L.getLower(), R.getLower()))
+    return Res;
+  return cmpAPInts(L.getUpper(), R.getUpper());
+}
+
 int FunctionComparator::cmpAPFloats(const APFloat &L, const APFloat &R) const {
   // Floats are ordered first by semantics (i.e. float, double, half, etc.),
   // then by value interpreted as a bitstring (aka APInt).
@@ -148,12 +154,22 @@ int FunctionComparator::cmpAttrs(const AttributeList L,
         if (LA.getKindAsEnum() != RA.getKindAsEnum())
           return cmpNumbers(LA.getKindAsEnum(), RA.getKindAsEnum());
 
-        const ConstantRange &LCR = LA.getRange();
-        const ConstantRange &RCR = RA.getRange();
-        if (int Res = cmpAPInts(LCR.getLower(), RCR.getLower()))
+        if (int Res = cmpConstantRanges(LA.getRange(), RA.getRange()))
           return Res;
-        if (int Res = cmpAPInts(LCR.getUpper(), RCR.getUpper()))
+        continue;
+      } else if (LA.isConstantRangeListAttribute() &&
+                 RA.isConstantRangeListAttribute()) {
+        if (LA.getKindAsEnum() != RA.getKindAsEnum())
+          return cmpNumbers(LA.getKindAsEnum(), RA.getKindAsEnum());
+
+        ArrayRef<ConstantRange> CRL = LA.getValueAsConstantRangeList();
+        ArrayRef<ConstantRange> CRR = RA.getValueAsConstantRangeList();
+        if (int Res = cmpNumbers(CRL.size(), CRR.size()))
           return Res;
+
+        for (const auto &[L, R] : zip(CRL, CRR))
+          if (int Res = cmpConstantRanges(L, R))
+            return Res;
         continue;
       }
       if (LA < RA)
@@ -442,9 +458,7 @@ int FunctionComparator::cmpConstants(const Constant *L,
       if (InRangeL) {
         if (!InRangeR)
           return 1;
-        if (int Res = cmpAPInts(InRangeL->getLower(), InRangeR->getLower()))
-          return Res;
-        if (int Res = cmpAPInts(InRangeL->getUpper(), InRangeR->getUpper()))
+        if (int Res = cmpConstantRanges(*InRangeL, *InRangeR))
           return Res;
       } else if (InRangeR) {
         return -1;

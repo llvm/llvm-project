@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14
+
 #include <array>
 #include <benchmark/benchmark.h>
 #include <cstring>
@@ -23,7 +25,7 @@ static std::array<T, 1000> generate(std::uniform_int_distribution<T> distributio
 
 static void bm_gcd_random(benchmark::State& state) {
   std::array data = generate<int>();
-  while (state.KeepRunningBatch(data.size()))
+  while (state.KeepRunningBatch(data.size() * data.size()))
     for (auto v0 : data)
       for (auto v1 : data)
         benchmark::DoNotOptimize(std::gcd(v0, v1));
@@ -41,7 +43,8 @@ static void bm_gcd_trivial(benchmark::State& state) {
 BENCHMARK(bm_gcd_trivial);
 
 static void bm_gcd_complex(benchmark::State& state) {
-  int lhs = 2971215073, rhs = 1836311903;
+  long long lhs = 2971215073;
+  long long rhs = 1836311903;
   for (auto _ : state) {
     benchmark::DoNotOptimize(lhs);
     benchmark::DoNotOptimize(rhs);

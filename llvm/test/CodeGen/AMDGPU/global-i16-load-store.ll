@@ -8,7 +8,7 @@
 define amdgpu_kernel void @half8(ptr addrspace(1) nocapture readonly %0, ptr addrspace(1) nocapture writeonly %1) local_unnamed_addr #0 {
 ; GFX908-LABEL: half8:
 ; GFX908:       ; %bb.0:
-; GFX908-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX908-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX908-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    global_load_dwordx4 v[0:3], v4, s[0:1]
@@ -18,7 +18,7 @@ define amdgpu_kernel void @half8(ptr addrspace(1) nocapture readonly %0, ptr add
 ;
 ; GFX90A-LABEL: half8:
 ; GFX90A:       ; %bb.0:
-; GFX90A-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX90A-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX90A-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    global_load_dwordx4 v[0:3], v4, s[0:1]
@@ -28,7 +28,7 @@ define amdgpu_kernel void @half8(ptr addrspace(1) nocapture readonly %0, ptr add
 ;
 ; GFX1030-LABEL: half8:
 ; GFX1030:       ; %bb.0:
-; GFX1030-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX1030-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX1030-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1030-NEXT:    global_load_dwordx4 v[0:3], v4, s[0:1]
@@ -74,7 +74,7 @@ define amdgpu_kernel void @half8(ptr addrspace(1) nocapture readonly %0, ptr add
 define amdgpu_kernel void @half6(ptr addrspace(1) nocapture readonly %0, ptr addrspace(1) nocapture writeonly %1) local_unnamed_addr #0 {
 ; GFX908-LABEL: half6:
 ; GFX908:       ; %bb.0:
-; GFX908-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX908-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX908-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    global_load_dwordx3 v[0:2], v3, s[0:1]
@@ -84,7 +84,7 @@ define amdgpu_kernel void @half6(ptr addrspace(1) nocapture readonly %0, ptr add
 ;
 ; GFX90A-LABEL: half6:
 ; GFX90A:       ; %bb.0:
-; GFX90A-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX90A-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX90A-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    global_load_dwordx3 v[0:2], v3, s[0:1]
@@ -94,7 +94,7 @@ define amdgpu_kernel void @half6(ptr addrspace(1) nocapture readonly %0, ptr add
 ;
 ; GFX1030-LABEL: half6:
 ; GFX1030:       ; %bb.0:
-; GFX1030-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX1030-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX1030-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1030-NEXT:    global_load_dwordx3 v[0:2], v3, s[0:1]
@@ -132,7 +132,7 @@ define amdgpu_kernel void @half6(ptr addrspace(1) nocapture readonly %0, ptr add
 define amdgpu_kernel void @half4(ptr addrspace(1) nocapture readonly %0, ptr addrspace(1) nocapture writeonly %1) local_unnamed_addr #0 {
 ; GFX908-LABEL: half4:
 ; GFX908:       ; %bb.0:
-; GFX908-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX908-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX908-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
@@ -144,7 +144,7 @@ define amdgpu_kernel void @half4(ptr addrspace(1) nocapture readonly %0, ptr add
 ;
 ; GFX90A-LABEL: half4:
 ; GFX90A:       ; %bb.0:
-; GFX90A-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX90A-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
@@ -155,7 +155,7 @@ define amdgpu_kernel void @half4(ptr addrspace(1) nocapture readonly %0, ptr add
 ;
 ; GFX1030-LABEL: half4:
 ; GFX1030:       ; %bb.0:
-; GFX1030-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX1030-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX1030-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1030-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
@@ -188,7 +188,7 @@ define amdgpu_kernel void @half4(ptr addrspace(1) nocapture readonly %0, ptr add
 define amdgpu_kernel void @half2(ptr addrspace(1) nocapture readonly %0, ptr addrspace(1) nocapture writeonly %1) local_unnamed_addr #0 {
 ; GFX908-LABEL: half2:
 ; GFX908:       ; %bb.0:
-; GFX908-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX908-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX908-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    global_load_dword v1, v0, s[0:1]
@@ -198,7 +198,7 @@ define amdgpu_kernel void @half2(ptr addrspace(1) nocapture readonly %0, ptr add
 ;
 ; GFX90A-LABEL: half2:
 ; GFX90A:       ; %bb.0:
-; GFX90A-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX90A-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    global_load_dword v1, v0, s[0:1]
@@ -208,7 +208,7 @@ define amdgpu_kernel void @half2(ptr addrspace(1) nocapture readonly %0, ptr add
 ;
 ; GFX1030-LABEL: half2:
 ; GFX1030:       ; %bb.0:
-; GFX1030-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX1030-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX1030-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1030-NEXT:    global_load_dword v1, v0, s[0:1]

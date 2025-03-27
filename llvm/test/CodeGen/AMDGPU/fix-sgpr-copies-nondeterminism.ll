@@ -11,8 +11,8 @@ define amdgpu_gs void @f(i32 inreg %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-NEXT:    v_mov_b32_e32 v5, v0
 ; CHECK-NEXT:    s_branch .LBB0_3
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    v_mov_b32_e32 v5, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v5, 1
 ; CHECK-NEXT:  .LBB0_3: ; %bb4
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 0
 ; CHECK-NEXT:    s_mov_b32 s1, s0
@@ -27,8 +27,6 @@ define amdgpu_gs void @f(i32 inreg %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    buffer_store_b128 v[5:8], v6, s[0:3], 0 idxen
 ; CHECK-NEXT:    buffer_store_b128 v[1:4], v6, s[0:3], 0 idxen
-; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; CHECK-NEXT:    s_endpgm
 bb:
   %i = icmp eq i32 %arg, 0

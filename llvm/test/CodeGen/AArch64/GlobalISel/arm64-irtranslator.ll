@@ -1477,6 +1477,20 @@ define void @test_lifetime_intrin() {
   ret void
 }
 
+define void @test_lifetime_intrin_optnone() optnone noinline {
+; CHECK-LABEL: name: test_lifetime_intrin_optnone
+; CHECK: RET_ReallyLR
+; O3-LABEL: name: test_lifetime_intrin_optnone
+; O3: {{%[0-9]+}}:_(p0) = G_FRAME_INDEX %stack.0.slot
+; O3-NEXT: G_STORE
+; O3-NEXT: RET_ReallyLR
+  %slot = alloca i8, i32 4
+  call void @llvm.lifetime.start.p0(i64 0, ptr %slot)
+  store volatile i8 10, ptr %slot
+  call void @llvm.lifetime.end.p0(i64 0, ptr %slot)
+  ret void
+}
+
 define void @test_load_store_atomics(ptr %addr) {
 ; CHECK-LABEL: name: test_load_store_atomics
 ; CHECK: [[ADDR:%[0-9]+]]:_(p0) = COPY $x0
@@ -2248,7 +2262,7 @@ declare ptr @llvm.invariant.start.p0(i64, ptr nocapture) readonly nounwind
 declare void @llvm.invariant.end.p0(ptr, i64, ptr nocapture) nounwind
 define void @test_invariant_intrin() {
 ; CHECK-LABEL: name: test_invariant_intrin
-; CHECK: %{{[0-9]+}}:_(s64) = G_IMPLICIT_DEF
+; CHECK: %{{[0-9]+}}:_(p0) = G_IMPLICIT_DEF
 ; CHECK-NEXT: RET_ReallyLR
   %x = alloca %t
   %inv = call ptr @llvm.invariant.start.p0(i64 8, ptr %x)
@@ -2343,6 +2357,14 @@ define float @test_atan_f32(float %x) {
   ; CHECK: %{{[0-9]+}}:_(s32) = G_FATAN %{{[0-9]+}}
   %y = call float @llvm.atan.f32(float %x)
   ret float %y
+}
+
+declare float @llvm.atan2.f32(float, float)
+define float @test_atan2_f32(float %x, float %y) {
+  ; CHECK-LABEL: name:            test_atan2_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FATAN2 %{{[0-9]+}}
+  %z = call float @llvm.atan2.f32(float %x, float %y)
+  ret float %z
 }
 
 declare float @llvm.cosh.f32(float)

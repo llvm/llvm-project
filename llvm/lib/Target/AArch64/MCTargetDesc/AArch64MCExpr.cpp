@@ -30,6 +30,7 @@ const AArch64MCExpr *AArch64MCExpr::create(const MCExpr *Expr, VariantKind Kind,
 }
 
 StringRef AArch64MCExpr::getVariantKindName() const {
+  // clang-format off
   switch (static_cast<uint32_t>(getKind())) {
   case VK_CALL:                return "";
   case VK_LO12:                return ":lo12:";
@@ -67,6 +68,7 @@ StringRef AArch64MCExpr::getVariantKindName() const {
   case VK_TPREL_LO12:          return ":tprel_lo12:";
   case VK_TPREL_LO12_NC:       return ":tprel_lo12_nc:";
   case VK_TLSDESC_LO12:        return ":tlsdesc_lo12:";
+  case VK_TLSDESC_AUTH_LO12:   return ":tlsdesc_auth_lo12:";
   case VK_ABS_PAGE:            return "";
   case VK_ABS_PAGE_NC:         return ":pg_hi21_nc:";
   case VK_GOT:                 return ":got:";
@@ -80,11 +82,17 @@ StringRef AArch64MCExpr::getVariantKindName() const {
   case VK_GOTTPREL_G0_NC:      return ":gottprel_g0_nc:";
   case VK_TLSDESC:             return "";
   case VK_TLSDESC_PAGE:        return ":tlsdesc:";
+  case VK_TLSDESC_AUTH:        return "";
+  case VK_TLSDESC_AUTH_PAGE:   return ":tlsdesc_auth:";
   case VK_SECREL_LO12:         return ":secrel_lo12:";
   case VK_SECREL_HI12:         return ":secrel_hi12:";
+  case VK_GOT_AUTH:            return ":got_auth:";
+  case VK_GOT_AUTH_PAGE:       return ":got_auth:";
+  case VK_GOT_AUTH_LO12:       return ":got_auth_lo12:";
   default:
     llvm_unreachable("Invalid ELF symbol kind");
   }
+  // clang-format on
 }
 
 void AArch64MCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
@@ -101,58 +109,11 @@ MCFragment *AArch64MCExpr::findAssociatedFragment() const {
 }
 
 bool AArch64MCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                              const MCAssembler *Asm,
-                                              const MCFixup *Fixup) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup))
+                                              const MCAssembler *Asm) const {
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
-
-  Res =
-      MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), getKind());
-
+  Res.setSpecifier(getSpecifier());
   return true;
-}
-
-static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {
-  switch (Expr->getKind()) {
-  case MCExpr::Target:
-    llvm_unreachable("Can't handle nested target expression");
-    break;
-  case MCExpr::Constant:
-    break;
-
-  case MCExpr::Binary: {
-    const MCBinaryExpr *BE = cast<MCBinaryExpr>(Expr);
-    fixELFSymbolsInTLSFixupsImpl(BE->getLHS(), Asm);
-    fixELFSymbolsInTLSFixupsImpl(BE->getRHS(), Asm);
-    break;
-  }
-
-  case MCExpr::SymbolRef: {
-    // We're known to be under a TLS fixup, so any symbol should be
-    // modified. There should be only one.
-    const MCSymbolRefExpr &SymRef = *cast<MCSymbolRefExpr>(Expr);
-    cast<MCSymbolELF>(SymRef.getSymbol()).setType(ELF::STT_TLS);
-    break;
-  }
-
-  case MCExpr::Unary:
-    fixELFSymbolsInTLSFixupsImpl(cast<MCUnaryExpr>(Expr)->getSubExpr(), Asm);
-    break;
-  }
-}
-
-void AArch64MCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
-  switch (getSymbolLoc(Kind)) {
-  default:
-    return;
-  case VK_DTPREL:
-  case VK_GOTTPREL:
-  case VK_TPREL:
-  case VK_TLSDESC:
-    break;
-  }
-
-  fixELFSymbolsInTLSFixupsImpl(getSubExpr(), Asm);
 }
 
 const AArch64AuthMCExpr *AArch64AuthMCExpr::create(const MCExpr *Expr,
@@ -186,14 +147,10 @@ MCFragment *AArch64AuthMCExpr::findAssociatedFragment() const {
   llvm_unreachable("FIXME: what goes here?");
 }
 
-bool AArch64AuthMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                                  const MCAssembler *Asm,
-                                                  const MCFixup *Fixup) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup))
+bool AArch64AuthMCExpr::evaluateAsRelocatableImpl(
+    MCValue &Res, const MCAssembler *Asm) const {
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
-
-  if (Res.getSymB())
-    report_fatal_error("Auth relocation can't reference two symbols");
 
   Res = MCValue::get(Res.getSymA(), nullptr, Res.getConstant(), getKind());
   return true;

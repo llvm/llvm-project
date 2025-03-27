@@ -193,10 +193,10 @@ protected:
         llvm::MemoryBuffer::getMemBuffer(SourceText);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
 
+    HeaderSearchOptions HSOpts;
     TrivialModuleLoader ModLoader;
 
-    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                            Diags, LangOpts, Target.get());
+    HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
     AddFakeHeader(HeaderInfo, HeaderPath, SystemHeader);
 
     Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
@@ -212,10 +212,10 @@ protected:
         llvm::MemoryBuffer::getMemBuffer(SourceText);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
 
+    HeaderSearchOptions HSOpts;
     TrivialModuleLoader ModLoader;
 
-    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                            Diags, LangOpts, Target.get());
+    HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
     AddFakeHeader(HeaderInfo, HeaderPath, SystemHeader);
 
     Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
@@ -240,12 +240,12 @@ protected:
 
   std::vector<CondDirectiveCallbacks::Result>
   DirectiveExprRange(StringRef SourceText) {
+    HeaderSearchOptions HSOpts;
     TrivialModuleLoader ModLoader;
     std::unique_ptr<llvm::MemoryBuffer> Buf =
         llvm::MemoryBuffer::getMemBuffer(SourceText);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
-    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                            Diags, LangOpts, Target.get());
+    HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
     Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
                     SourceMgr, HeaderInfo, ModLoader,
                     /*IILookup =*/nullptr,
@@ -267,9 +267,10 @@ protected:
         llvm::MemoryBuffer::getMemBuffer(SourceText, "test.c");
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(SourceBuf)));
 
-    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                            Diags, LangOpts, Target.get());
+    HeaderSearchOptions HSOpts;
     TrivialModuleLoader ModLoader;
+
+    HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
 
     Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
                     SourceMgr, HeaderInfo, ModLoader, /*IILookup=*/nullptr,
@@ -295,9 +296,10 @@ protected:
         llvm::MemoryBuffer::getMemBuffer(SourceText, "test.cl");
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(SourceBuf)));
 
+    HeaderSearchOptions HSOpts;
     TrivialModuleLoader ModLoader;
-    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                            Diags, OpenCLLangOpts, Target.get());
+    HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, OpenCLLangOpts,
+                            Target.get());
 
     Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags,
                     OpenCLLangOpts, SourceMgr, HeaderInfo, ModLoader,
@@ -432,9 +434,9 @@ TEST_F(PPCallbacksTest, FileNotFoundSkipped) {
       llvm::MemoryBuffer::getMemBuffer(SourceText);
   SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(SourceBuf)));
 
-  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                          Diags, LangOpts, Target.get());
+  HeaderSearchOptions HSOpts;
   TrivialModuleLoader ModLoader;
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
 
   DiagnosticConsumer *DiagConsumer = new DiagnosticConsumer;
   DiagnosticsEngine FileNotFoundDiags(DiagID, DiagOpts.get(), DiagConsumer);
