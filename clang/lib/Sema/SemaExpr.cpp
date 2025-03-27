@@ -4266,7 +4266,7 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(Expr *E,
   bool IsUnevaluatedOperand =
       (ExprKind == UETT_SizeOf || ExprKind == UETT_DataSizeOf ||
        ExprKind == UETT_AlignOf || ExprKind == UETT_PreferredAlignOf ||
-       ExprKind == UETT_VecStep);
+       ExprKind == UETT_VecStep || ExprKind == UETT_CountOf);
   if (IsUnevaluatedOperand) {
     ExprResult Result = CheckUnevaluatedOperand(E);
     if (Result.isInvalid())
@@ -4337,6 +4337,21 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(Expr *E,
   if (CheckObjCTraitOperandConstraints(*this, ExprTy, E->getExprLoc(),
                                        E->getSourceRange(), ExprKind))
     return true;
+
+  if (ExprKind == UETT_CountOf) {
+    // The type has to be an array type. We already checked for incomplete
+    // types above.
+    QualType ExprType = E->IgnoreParens()->getType();
+    if (!ExprType->isArrayType()) {
+      Diag(E->getExprLoc(), diag::err_countof_arg_not_array_type) << ExprType;
+      return true;
+    }
+    // FIXME: warn on _Countof on an array parameter. Not warning on it
+    // currently because there are papers in WG14 about array types which do
+    // not decay that could impact this behavior, so we want to see if anything
+    // changes here before coming up with a warning group for _Countof-related
+    // diagnostics.
+  }
 
   if (ExprKind == UETT_SizeOf) {
     if (const auto *DeclRef = dyn_cast<DeclRefExpr>(E->IgnoreParens())) {
@@ -4608,6 +4623,15 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
     return true;
   }
 
+  if (ExprKind == UETT_CountOf) {
+    // The type has to be an array type. We already checked for incomplete
+    // types above.
+    if (!ExprType->isArrayType()) {
+      Diag(OpLoc, diag::err_countof_arg_not_array_type) << ExprType;
+      return true;
+    }
+  }
+
   // WebAssembly tables are always illegal operands to unary expressions and
   // type traits.
   if (Context.getTargetInfo().getTriple().isWasm() &&
@@ -4666,7 +4690,8 @@ ExprResult Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
   // properly deal with VLAs in nested calls of sizeof and typeof.
   if (currentEvaluationContext().isUnevaluated() &&
       currentEvaluationContext().InConditionallyConstantEvaluateContext &&
-      ExprKind == UETT_SizeOf && TInfo->getType()->isVariablyModifiedType())
+      (ExprKind == UETT_SizeOf || ExprKind == UETT_CountOf) &&
+      TInfo->getType()->isVariablyModifiedType())
     TInfo = TransformToPotentiallyEvaluated(TInfo);
 
   // C99 6.5.3.4p4: the type (an unsigned integer type) is size_t.
@@ -4697,16 +4722,16 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
   } else if (E->refersToBitField()) {  // C99 6.5.3.4p1.
     Diag(E->getExprLoc(), diag::err_sizeof_alignof_typeof_bitfield) << 0;
     isInvalid = true;
-  } else if (ExprKind == UETT_VectorElements) {
-    isInvalid = CheckUnaryExprOrTypeTraitOperand(E, UETT_VectorElements);
-  } else {
-    isInvalid = CheckUnaryExprOrTypeTraitOperand(E, UETT_SizeOf);
+  } else if (ExprKind == UETT_VectorElements || ExprKind == UETT_SizeOf ||
+             ExprKind == UETT_CountOf) { // FIXME: __datasizeof?
+    isInvalid = CheckUnaryExprOrTypeTraitOperand(E, ExprKind);
   }
 
   if (isInvalid)
     return ExprError();
 
-  if (ExprKind == UETT_SizeOf && E->getType()->isVariableArrayType()) {
+  if ((ExprKind == UETT_SizeOf || ExprKind == UETT_CountOf) &&
+      E->getType()->isVariableArrayType()) {
     PE = TransformToPotentiallyEvaluated(E);
     if (PE.isInvalid()) return ExprError();
     E = PE.get();
