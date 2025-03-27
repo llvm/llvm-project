@@ -362,8 +362,7 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP21:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP22:%.*]], %[[VECTOR_BODY]] ]
-; DEFAULT-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 0
-; DEFAULT-NEXT:    [[TMP13:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[TMP7]]
+; DEFAULT-NEXT:    [[TMP13:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[INDEX]]
 ; DEFAULT-NEXT:    [[TMP15:%.*]] = getelementptr i16, ptr [[TMP13]], i32 0
 ; DEFAULT-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP17:%.*]] = mul i64 [[TMP16]], 4
@@ -422,8 +421,7 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; VSCALEFORTUNING2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VSCALEFORTUNING2-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP15:%.*]], %[[VECTOR_BODY]] ]
 ; VSCALEFORTUNING2-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP16:%.*]], %[[VECTOR_BODY]] ]
-; VSCALEFORTUNING2-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 0
-; VSCALEFORTUNING2-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[TMP7]]
+; VSCALEFORTUNING2-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[INDEX]]
 ; VSCALEFORTUNING2-NEXT:    [[TMP9:%.*]] = getelementptr i16, ptr [[TMP8]], i32 0
 ; VSCALEFORTUNING2-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
 ; VSCALEFORTUNING2-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 4

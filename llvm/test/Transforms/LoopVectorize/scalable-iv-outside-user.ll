@@ -31,8 +31,7 @@ define i32 @iv_live_out_wide(ptr %dst) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i32> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <vscale x 2 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i16, ptr [[TMP10]], i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP12]], 2
