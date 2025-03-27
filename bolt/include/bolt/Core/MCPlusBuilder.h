@@ -551,6 +551,16 @@ public:
     return Analysis->isReturn(Inst);
   }
 
+  /// Returns the registers that are trusted at function entry.
+  ///
+  /// Each register should be treated as if a successfully authenticated
+  /// pointer was written to it before entering the function (i.e. the
+  /// pointer is safe to jump to as well as to be signed).
+  virtual SmallVector<MCPhysReg> getTrustedLiveInRegs() const {
+    llvm_unreachable("not implemented");
+    return {};
+  }
+
   virtual ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return getNoRegister();
