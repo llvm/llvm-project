@@ -174,7 +174,7 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
     beg.chunk++;
   }
 
-  REAL(memset)(beg.chunk, poison_magic, end.chunk - beg.chunk);
+  REAL(memset)(beg.chunk, kAsanUserPoisonedMemoryMagic, end.chunk - beg.chunk);
   // Poison if byte in end.offset is unaddressable.
   if (end.value > 0 && end.value <= end.offset) {
     *end.chunk = kAsanUserPoisonedMemoryMagic;
