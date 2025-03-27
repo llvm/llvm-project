@@ -11,7 +11,6 @@
 #define _LIBCPP___ALGORITHM_FOR_EACH_H
 
 #include <__algorithm/for_each_segment.h>
-#include <__algorithm/iterator_operations.h>
 #include <__config>
 #include <__iterator/segmented_iterator.h>
 #include <__type_traits/enable_if.h>
@@ -26,7 +25,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class, class _InputIterator, class _Sent, class _Function>
+template <class _InputIterator, class _Sent, class _Function>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Function
 __for_each(_InputIterator __first, _Sent __last, _Function& __f) {
   for (; __first != __last; ++__first)
@@ -44,12 +43,11 @@ struct _ForeachSegment {
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
   operator()(typename _Traits::__local_iterator __lfirst, typename _Traits::__local_iterator __llast) {
-    std::__for_each<_ClassicAlgPolicy>(__lfirst, __llast, __func_);
+    std::__for_each(__lfirst, __llast, __func_);
   }
 };
 
-template <class,
-          class _SegmentedIterator,
+template <class _SegmentedIterator,
           class _Function,
           __enable_if_t<__is_segmented_iterator<_SegmentedIterator>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Function
@@ -61,7 +59,7 @@ __for_each(_SegmentedIterator __first, _SegmentedIterator __last, _Function& __f
 template <class _InputIterator, class _Function>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Function
 for_each(_InputIterator __first, _InputIterator __last, _Function __f) {
-  return std::__for_each<_ClassicAlgPolicy>(__first, __last, __f);
+  return std::__for_each(__first, __last, __f);
 }
 
 _LIBCPP_END_NAMESPACE_STD

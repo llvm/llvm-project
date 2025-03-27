@@ -11,7 +11,6 @@
 #define _LIBCPP___ALGORITHM_FOR_EACH_N_H
 
 #include <__algorithm/for_each.h>
-#include <__algorithm/iterator_operations.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
@@ -56,7 +55,7 @@ for_each_n(_InputIterator __first, _Size __orig_n, _Function __f) {
   typedef decltype(std::__convert_to_integral(__orig_n)) _IntegralSize;
   _IntegralSize __n     = __orig_n;
   _InputIterator __last = std::next(__first, __n);
-  std::__for_each<_ClassicAlgPolicy>(__first, __last, __f);
+  std::__for_each(__first, __last, __f);
   return __last;
 }
 
