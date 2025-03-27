@@ -69,6 +69,7 @@ add_header_library(
     .futex_utils
     .raw_mutex
     libc.src.__support.threads.mutex_common
+    libc.src.__support.threads.identifier
 )
 
 add_object_library(
