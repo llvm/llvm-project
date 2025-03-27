@@ -9,7 +9,7 @@ llvm.func @ctor() {
   llvm.return
 }
 
-// expected-error@+1{{ctors, priorities and data must have the same number of elements}}
+// expected-error@+1{{ctors, priorities, and data must have the same number of elements}}
 llvm.mlir.global_ctors ctors = [@ctor], priorities = [], data = [#llvm.zero]
 
 // -----
@@ -18,7 +18,7 @@ llvm.func @dtor() {
   llvm.return
 }
 
-// expected-error@+1{{dtors, priorities and data must have the same number of elements}}
+// expected-error@+1{{dtors, priorities, and data must have the same number of elements}}
 llvm.mlir.global_dtors dtors = [@dtor], priorities = [0 : i32, 32767 : i32], data = [#llvm.zero]
 
 // -----

@@ -2513,7 +2513,7 @@ LogicalResult checkGlobalXtorData(Operation *op, ArrayAttr data) {
     return success();
 
   if (llvm::all_of(data.getAsRange<Attribute>(), [](Attribute v) {
-        return isa<FlatSymbolRefAttr>(v) || isa<ZeroAttr>(v);
+        return isa<FlatSymbolRefAttr, ZeroAttr>(v);
       }))
     return success();
   return op->emitError("data element must be symbol or #llvm.zero");
@@ -2537,7 +2537,7 @@ LogicalResult GlobalCtorsOp::verify() {
       getCtors().size() == getData().size())
     return success();
   return emitError(
-      "ctors, priorities and data must have the same number of elements");
+      "ctors, priorities, and data must have the same number of elements");
 }
 
 //===----------------------------------------------------------------------===//
@@ -2562,7 +2562,7 @@ LogicalResult GlobalDtorsOp::verify() {
       getDtors().size() == getData().size())
     return success();
   return emitError(
-      "dtors, priorities and data must have the same number of elements");
+      "dtors, priorities, and data must have the same number of elements");
 }
 
 //===----------------------------------------------------------------------===//

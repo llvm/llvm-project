@@ -1443,7 +1443,7 @@ def LLVM_GlobalCtorsOp : LLVM_Op<"mlir.global_ctors", [
                        ArrayAttr:$data);
   let summary = "LLVM dialect global_ctors.";
   let description = [{
-    Specifies a list of constructor functions, priorities and associated data.
+    Specifies a list of constructor functions, priorities, and associated data.
     The functions referenced by this array will be called in ascending order
     of priority (i.e. lowest first) when the module is loaded. The order of
     functions with the same priority is not defined. This operation is
