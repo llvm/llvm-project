@@ -5,10 +5,10 @@
 ;; 1. trunc(abs(sub(sext(a),sext(b)))) -> abds(a,b) or abdu(a,b)
 ;; 2. abs(sub_nsw(x, y)) -> abds(a,b)
 ;; 3. sub(smax(a,b),smin(a,b)) -> abds(a,b) or abdu(a,b)
-;; 4. select(icmp(a,b),sub(a,b),sub(b,a)) -> abds(a,b) or abdu(a,b)
+;; 4. select(icmp(a,b, slt|ult),sub(a,b),sub(b,a)) -> abds(a,b) or abdu(a,b)
 ;; 5. sub(select(icmp(a,b),a,b),select(icmp(a,b),b,a)) -> abds(a,b) or abdu(a,b)
 ;;
-;; abds / abdu can be lower to vabsd.{b/h/w/d} / vabsd.{b/h/w/d}u  instruction
+;; abds / abdu can be lowered to vabsd.{b/h/w/d} / vabsd.{b/h/w/d}u  instruction
 ;;
 ;; Later patch will address it.
 
@@ -300,7 +300,7 @@ define <16 x i8> @maxmin_bu_com1(<16 x i8> %0, <16 x i8> %1) {
   ret <16 x i8> %sub
 }
 
-;; select(icmp(a,b),sub(a,b),sub(b,a)) -> abds(a,b)
+;; select(icmp(a,b, slt),sub(a,b),sub(b,a)) -> abds(a,b)
 define <16 x i8> @vabsd_b_cmp(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; CHECK-LABEL: vabsd_b_cmp:
 ; CHECK:       # %bb.0:
@@ -413,7 +413,7 @@ define <2 x i64> @vabsd_du_cmp(<2 x i64> %a, <2 x i64> %b) nounwind {
   ret <2 x i64> %sel
 }
 
-;; sub(select(icmp(a,b),a,b),select(icmp(a,b),b,a)) -> abds(a,b)
+;; sub(select(icmp(a,b, slt),a,b),select(icmp(a,b, slt),b,a)) -> abds(a,b)
 define <16 x i8> @vabsd_b_select(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; CHECK-LABEL: vabsd_b_select:
 ; CHECK:       # %bb.0:
