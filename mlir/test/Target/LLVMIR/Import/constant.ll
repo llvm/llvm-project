@@ -236,3 +236,41 @@ define i64 @const_exprs_with_duplicate() {
 ; CHECK:  %[[VAL0:.+]] = llvm.ptrtoint %[[ADDR]]
 ; CHECK:  %[[VAL1:.+]] = llvm.add %[[VAL0]], %[[VAL0]]
 ; CHECK:  llvm.return %[[VAL1]]
+
+; // -----
+
+declare void @extern_func()
+@const = dso_local constant i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @extern_func to i64), i64 ptrtoint (ptr @const to i64)) to i32)
+
+; CHECK: llvm.mlir.global external constant @const()
+; CHECK:   %[[ADDR:.+]] = llvm.mlir.addressof @const : !llvm.ptr
+; CHECK:   llvm.ptrtoint %[[ADDR]] : !llvm.ptr to i64
+; CHECK:   llvm.dso_local_equivalent @extern_func : !llvm.ptr
+
+; // -----
+
+declare i32 @extern_func()
+
+define void @call_extern_func() {
+  call noundef i32 dso_local_equivalent @extern_func()
+  ret void
+}
+
+; CHECK-LABEL: @call_extern_func()
+; CHECK: %[[DSO_EQ:.+]] = llvm.dso_local_equivalent @extern_func : !llvm.ptr
+; CHECK: llvm.call %[[DSO_EQ]]() : !llvm.ptr, () -> (i32 {llvm.noundef})
+
+; // -----
+
+define void @aliasee_func() {
+  ret void
+}
+
+@alias_func = alias void (), ptr @aliasee_func
+define void @call_alias_func() {
+  call void dso_local_equivalent @alias_func()
+  ret void
+}
+
+; CHECK-LABEL: @call_alias_func()
+; CHECK: llvm.dso_local_equivalent @alias_func : !llvm.ptr

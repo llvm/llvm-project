@@ -21,6 +21,7 @@
 #include "lldb/Core/SourceManager.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Core/Telemetry.h"
+#include "lldb/Core/Statusline.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/StreamFile.h"
@@ -308,6 +309,10 @@ public:
 
   bool SetShowProgress(bool show_progress);
 
+  bool GetShowStatusline() const;
+
+  const FormatEntity::Entry *GetStatuslineFormat() const;
+
   llvm::StringRef GetShowProgressAnsiPrefix() const;
 
   llvm::StringRef GetShowProgressAnsiSuffix() const;
@@ -416,6 +421,9 @@ public:
 
   /// Decrement the "interrupt requested" counter.
   void CancelInterruptRequest();
+
+  /// Redraw the statusline if enabled.
+  void RedrawStatusline(bool update = true);
 
   /// This is the correct way to query the state of Interruption.
   /// If you are on the RunCommandInterpreter thread, it will check the
@@ -604,11 +612,20 @@ public:
     return m_source_file_cache;
   }
 
+  struct ProgressReport {
+    uint64_t id;
+    uint64_t completed;
+    uint64_t total;
+    std::string message;
+  };
+  std::optional<ProgressReport> GetCurrentProgressReport() const;
+
 protected:
   friend class CommandInterpreter;
   friend class REPL;
   friend class Progress;
   friend class ProgressManager;
+  friend class Statusline;
 
   /// Report progress events.
   ///
@@ -660,6 +677,8 @@ protected:
   lldb::LockableStreamFileSP GetOutputStreamSP() { return m_output_stream_sp; }
   lldb::LockableStreamFileSP GetErrorStreamSP() { return m_error_stream_sp; }
   /// @}
+
+  bool StatuslineSupported();
 
   void PushIOHandler(const lldb::IOHandlerSP &reader_sp,
                      bool cancel_top_handler = true);
@@ -737,7 +756,7 @@ protected:
   IOHandlerStack m_io_handler_stack;
   std::recursive_mutex m_io_handler_synchronous_mutex;
 
-  std::optional<uint64_t> m_current_event_id;
+  std::optional<Statusline> m_statusline;
 
   llvm::StringMap<std::weak_ptr<LogHandler>> m_stream_handlers;
   std::shared_ptr<CallbackLogHandler> m_callback_handler_sp;
@@ -753,6 +772,12 @@ protected:
   llvm::once_flag m_clear_once;
   lldb::TargetSP m_dummy_target_sp;
   Diagnostics::CallbackID m_diagnostics_callback_id;
+
+  /// Bookkeeping for command line progress events.
+  /// @{
+  llvm::SmallVector<ProgressReport, 4> m_progress_reports;
+  mutable std::mutex m_progress_reports_mutex;
+  /// @}
 
   std::mutex m_destroy_callback_mutex;
   lldb::callback_token_t m_destroy_callback_next_token = 0;

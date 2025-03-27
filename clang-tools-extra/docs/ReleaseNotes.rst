@@ -91,12 +91,6 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
-- :program:`clang-tidy` no longer processes declarations from system headers
-  by default, greatly improving performance. This behavior is disabled if the
-  `SystemHeaders` option is enabled.
-  Note: this may lead to false negatives; downstream users may need to adjust
-  their checks to preserve existing behavior.
-
 - Improved :program:`clang-tidy-diff.py` script. Add the `-warnings-as-errors`
   argument to treat warnings as errors.
 
