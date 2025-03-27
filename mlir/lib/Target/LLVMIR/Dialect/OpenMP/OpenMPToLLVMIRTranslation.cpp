@@ -1464,7 +1464,6 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
                                ->getDataLayout()
                                .getProgramAddressSpace();
 
-
   for (auto [privDecl, mlirPrivVar, blockArg] :
        llvm::zip_equal(privateVarsInfo.privatizers, privateVarsInfo.mlirVars,
                        privateVarsInfo.blockArgs)) {
@@ -1478,7 +1477,6 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
                                                    builder.getPtrTy(defaultAS));
 
     privateVarsInfo.llvmVars.push_back(llvmPrivateVar);
-
   }
 
   return afterAllocas;
