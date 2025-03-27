@@ -979,7 +979,7 @@ public:
   /// Setup cost-based decisions for user vectorization factor.
   /// \return true if the UserVF is a feasible VF to be chosen.
   bool selectUserVectorizationFactor(ElementCount UserVF) {
-    collectUniformsAndScalars(UserVF);
+    collectNonVectorized(UserVF);
     return expectedCost(UserVF).isValid();
   }
 
@@ -1235,13 +1235,13 @@ public:
   /// the loop.
   void collectInstsToScalarize(ElementCount VF);
 
-  /// Collect Uniform and Scalar values for the given \p VF.
+  /// Collect Uniforms, Scalars, and Insts to Scalarize for the given \p VF.
   /// The sets depend on CM decision for Load/Store instructions
   /// that may be vectorized as interleave, gather-scatter or scalarized.
   /// Also make a decision on what to do about call instructions in the loop
   /// at that VF -- scalarize, call a known vector routine, or call a
   /// vector intrinsic.
-  void collectUniformsAndScalars(ElementCount VF) {
+  void collectNonVectorized(ElementCount VF) {
     // Do the analysis once.
     if (VF.isScalar() || Uniforms.contains(VF))
       return;
@@ -5285,7 +5285,7 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<ElementCount> VFs) {
           RegUsage[ClassID] += 1;
         }
       } else {
-        collectUniformsAndScalars(VFs[J]);
+        collectNonVectorized(VFs[J]);
         for (auto *Inst : OpenIntervals) {
           // Skip ignored values for VF > 1.
           if (VecValuesToIgnore.count(Inst))
@@ -7186,9 +7186,10 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
     VFCandidates.push_back(VF);
 
   CM.collectInLoopReductions();
-  for (const auto &VF : VFCandidates)
+  for (const auto &VF : VFCandidates) {
     // Collect Uniform and Scalar instructions after vectorization with VF.
-    CM.collectUniformsAndScalars(VF);
+    CM.collectNonVectorized(VF);
+  }
 
   buildVPlansWithVPRecipes(ElementCount::getFixed(1), MaxFactors.FixedVF);
   buildVPlansWithVPRecipes(ElementCount::getScalable(1), MaxFactors.ScalableVF);
