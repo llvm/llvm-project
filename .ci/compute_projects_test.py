@@ -161,6 +161,15 @@ class TestComputeProjects(unittest.TestCase):
         self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(env_variables["runtimes_check_targets"], "")
 
+    def test_blah(self):
+        env_variables = compute_projects.get_env_variables(
+            [".ci/compute_projects.py", "libcxx/CMakeLists.txt"], "Linux"
+        )
+        self.assertEqual(env_variables["projects_to_build"], "")
+        self.assertEqual(env_variables["project_check_targets"], "")
+        self.assertEqual(env_variables["runtimes_to_build"], "")
+        self.assertEqual(env_variables["runtimes_check_targets"], "")
+
 
 if __name__ == "__main__":
     unittest.main()

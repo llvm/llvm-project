@@ -112,6 +112,8 @@ PROJECT_CHECK_TARGETS = {
     "polly": "check-polly",
 }
 
+RUNTIMES = {"libcxx", "libcxxabi", "libunwind"}
+
 
 def _add_dependencies(projects: Set[str]) -> Set[str]:
     projects_with_dependents = set(projects)
@@ -130,6 +132,8 @@ def _compute_projects_to_test(modified_projects: Set[str], platform: str) -> Set
     for modified_project in modified_projects:
         # Skip all projects where we cannot run tests.
         if modified_project not in PROJECT_CHECK_TARGETS:
+            continue
+        if modified_project in RUNTIMES:
             continue
         projects_to_test.add(modified_project)
         if modified_project not in DEPENDENTS_TO_TEST:
