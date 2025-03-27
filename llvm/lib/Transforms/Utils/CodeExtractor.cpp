@@ -248,6 +248,19 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
   return Result;
 }
 
+static bool isAlignmentPreservedForAddrCast(const Triple &TargetTriple) {
+  switch (TargetTriple.getArch()) {
+  case Triple::ArchType::amdgcn:
+  case Triple::ArchType::r600:
+    return true;
+  // TODO: Add other architectures for which we are certain that alignment
+  // is preserved during address space cast operations.
+  default:
+    return false;
+  }
+  return false;
+}
+
 CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                              bool AggregateArgs, BlockFrequencyInfo *BFI,
                              BranchProbabilityInfo *BPI, AssumptionCache *AC,
@@ -1612,8 +1625,31 @@ void CodeExtractor::emitFunctionBody(
       Idx[1] = ConstantInt::get(Type::getInt32Ty(header->getContext()), aggIdx);
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           StructArgTy, AggArg, Idx, "gep_" + inputs[i]->getName(), newFuncRoot);
-      RewriteVal = new LoadInst(StructArgTy->getElementType(aggIdx), GEP,
-                                "loadgep_" + inputs[i]->getName(), newFuncRoot);
+      LoadInst *LoadGEP =
+          new LoadInst(StructArgTy->getElementType(aggIdx), GEP,
+                       "loadgep_" + inputs[i]->getName(), newFuncRoot);
+      if (StructArgTy->getElementType(aggIdx)->isPointerTy()) {
+        unsigned AlignmentValue;
+        const Triple &TargetTriple =
+            newFunction->getParent()->getTargetTriple();
+        const DataLayout &DL = header->getDataLayout();
+        // Pointers without casting can provide more information about
+        // alignment. Use pointers without casts if given target preserves
+        // alignment information for cast the operation.
+        if (isAlignmentPreservedForAddrCast(TargetTriple))
+          AlignmentValue =
+              inputs[i]->stripPointerCasts()->getPointerAlignment(DL).value();
+        else
+          AlignmentValue = inputs[i]->getPointerAlignment(DL).value();
+        MDBuilder MDB(header->getContext());
+        LoadGEP->setMetadata(
+            LLVMContext::MD_align,
+            MDNode::get(
+                header->getContext(),
+                MDB.createConstant(ConstantInt::get(
+                    Type::getInt64Ty(header->getContext()), AlignmentValue))));
+      }
+      RewriteVal = LoadGEP;
       ++aggIdx;
     } else
       RewriteVal = &*ScalarAI++;

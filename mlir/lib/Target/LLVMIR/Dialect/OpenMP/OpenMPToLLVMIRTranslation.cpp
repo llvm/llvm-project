@@ -33,6 +33,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/TargetParser/Triple.h"
@@ -4407,13 +4408,17 @@ createDeviceArgumentAccessor(MapInfoData &mapData, llvm::Argument &arg,
   builder.restoreIP(allocaIP);
 
   omp::VariableCaptureKind capture = omp::VariableCaptureKind::ByRef;
-
+  LLVM::TypeToLLVMIRTranslator typeToLLVMIRTranslator(
+      ompBuilder.M.getContext());
+  unsigned alignmentValue = 0;
   // Find the associated MapInfoData entry for the current input
   for (size_t i = 0; i < mapData.MapClause.size(); ++i)
     if (mapData.OriginalValue[i] == input) {
       auto mapOp = cast<omp::MapInfoOp>(mapData.MapClause[i]);
       capture = mapOp.getMapCaptureType();
-
+      // Get information of alignment of mapped object
+      alignmentValue = typeToLLVMIRTranslator.getPreferredAlignment(
+          mapOp.getVarType(), ompBuilder.M.getDataLayout());
       break;
     }
 
@@ -4437,9 +4442,21 @@ createDeviceArgumentAccessor(MapInfoData &mapData, llvm::Argument &arg,
     break;
   }
   case omp::VariableCaptureKind::ByRef: {
-    retVal = builder.CreateAlignedLoad(
+    llvm::LoadInst *loadInst = builder.CreateAlignedLoad(
         v->getType(), v,
         ompBuilder.M.getDataLayout().getPrefTypeAlign(v->getType()));
+    // Add information about alignment of objects that are mapped by reference
+    if (v->getType()->isPointerTy() && alignmentValue) {
+      llvm::MDBuilder MDB(builder.getContext());
+      loadInst->setMetadata(
+          llvm::LLVMContext::MD_align,
+          llvm::MDNode::get(builder.getContext(),
+                            MDB.createConstant(llvm::ConstantInt::get(
+                                llvm::Type::getInt64Ty(builder.getContext()),
+                                alignmentValue))));
+    }
+    retVal = loadInst;
+
     break;
   }
   case omp::VariableCaptureKind::This:
