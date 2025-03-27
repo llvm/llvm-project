@@ -1509,6 +1509,15 @@ extern unsigned IOCTL_KIOCSOUND;
 extern unsigned IOCTL_PIO_SCRNMAP;
 #endif
 
+#  if SANITIZER_GLIBC
+struct __sanitizer_servent {
+  char *s_name;     /* official service name */
+  char **s_aliases; /* alias list */
+  int s_port;       /* port number */
+  char *s_proto;    /* protocol to use */
+};
+#  endif
+
 extern const int si_SEGV_MAPERR;
 extern const int si_SEGV_ACCERR;
 }  // namespace __sanitizer
