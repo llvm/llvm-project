@@ -339,7 +339,7 @@ public:
 
   static bool classifySymbolRef(const MCExpr *Expr,
                                 AArch64MCExpr::Specifier &ELFSpec,
-                                MCSymbolRefExpr::VariantKind &DarwinRefKind,
+                                AArch64MCExpr::Specifier &DarwinSpec,
                                 int64_t &Addend);
 };
 
@@ -889,16 +889,16 @@ public:
 
   bool isSymbolicUImm12Offset(const MCExpr *Expr) const {
     AArch64MCExpr::Specifier ELFSpec;
-    MCSymbolRefExpr::VariantKind DarwinRefKind;
+    AArch64MCExpr::Specifier DarwinSpec;
     int64_t Addend;
-    if (!AArch64AsmParser::classifySymbolRef(Expr, ELFSpec, DarwinRefKind,
+    if (!AArch64AsmParser::classifySymbolRef(Expr, ELFSpec, DarwinSpec,
                                              Addend)) {
       // If we don't understand the expression, assume the best and
       // let the fixup and relocation code deal with it.
       return true;
     }
 
-    if (DarwinRefKind == MCSymbolRefExpr::VK_PAGEOFF ||
+    if (DarwinSpec == AArch64MCExpr::M_PAGEOFF ||
         llvm::is_contained(
             {AArch64MCExpr::VK_LO12, AArch64MCExpr::VK_GOT_LO12,
              AArch64MCExpr::VK_GOT_AUTH_LO12, AArch64MCExpr::VK_DTPREL_LO12,
@@ -912,8 +912,8 @@ public:
       // size when converted, so there is no "out of range" condition when using
       // @pageoff.
       return true;
-    } else if (DarwinRefKind == MCSymbolRefExpr::VK_GOTPAGEOFF ||
-               DarwinRefKind == MCSymbolRefExpr::VK_TLVPPAGEOFF) {
+    } else if (DarwinSpec == AArch64MCExpr::M_GOTPAGEOFF ||
+               DarwinSpec == AArch64MCExpr::M_TLVPPAGEOFF) {
       // @gotpageoff/@tlvppageoff can only be used directly, not with an addend.
       return Addend == 0;
     }
@@ -1006,13 +1006,13 @@ public:
     }
 
     AArch64MCExpr::Specifier ELFSpec;
-    MCSymbolRefExpr::VariantKind DarwinRefKind;
+    AArch64MCExpr::Specifier DarwinSpec;
     int64_t Addend;
-    if (AArch64AsmParser::classifySymbolRef(Expr, ELFSpec, DarwinRefKind,
+    if (AArch64AsmParser::classifySymbolRef(Expr, ELFSpec, DarwinSpec,
                                             Addend)) {
-      return DarwinRefKind == MCSymbolRefExpr::VK_PAGEOFF ||
-             DarwinRefKind == MCSymbolRefExpr::VK_TLVPPAGEOFF ||
-             (DarwinRefKind == MCSymbolRefExpr::VK_GOTPAGEOFF && Addend == 0) ||
+      return DarwinSpec == AArch64MCExpr::M_PAGEOFF ||
+             DarwinSpec == AArch64MCExpr::M_TLVPPAGEOFF ||
+             (DarwinSpec == AArch64MCExpr::M_GOTPAGEOFF && Addend == 0) ||
              llvm::is_contained(
                  {AArch64MCExpr::VK_LO12, AArch64MCExpr::VK_GOT_AUTH_LO12,
                   AArch64MCExpr::VK_DTPREL_HI12, AArch64MCExpr::VK_DTPREL_LO12,
@@ -1120,13 +1120,13 @@ public:
       return false;
 
     AArch64MCExpr::Specifier ELFSpec;
-    MCSymbolRefExpr::VariantKind DarwinRefKind;
+    AArch64MCExpr::Specifier DarwinSpec;
     int64_t Addend;
-    if (!AArch64AsmParser::classifySymbolRef(getImm(), ELFSpec, DarwinRefKind,
+    if (!AArch64AsmParser::classifySymbolRef(getImm(), ELFSpec, DarwinSpec,
                                              Addend)) {
       return false;
     }
-    if (DarwinRefKind != MCSymbolRefExpr::VK_None)
+    if (DarwinSpec != AArch64MCExpr::None)
       return false;
 
     return llvm::is_contained(AllowedModifiers, ELFSpec);
@@ -3297,22 +3297,22 @@ ParseStatus AArch64AsmParser::tryParseAdrpLabel(OperandVector &Operands) {
     return ParseStatus::Failure;
 
   AArch64MCExpr::Specifier ELFSpec;
-  MCSymbolRefExpr::VariantKind DarwinRefKind;
+  AArch64MCExpr::Specifier DarwinSpec;
   int64_t Addend;
-  if (classifySymbolRef(Expr, ELFSpec, DarwinRefKind, Addend)) {
-    if (DarwinRefKind == MCSymbolRefExpr::VK_None &&
+  if (classifySymbolRef(Expr, ELFSpec, DarwinSpec, Addend)) {
+    if (DarwinSpec == AArch64MCExpr::None &&
         ELFSpec == AArch64MCExpr::VK_INVALID) {
       // No modifier was specified at all; this is the syntax for an ELF basic
       // ADRP relocation (unfortunately).
       Expr =
           AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS_PAGE, getContext());
-    } else if ((DarwinRefKind == MCSymbolRefExpr::VK_GOTPAGE ||
-                DarwinRefKind == MCSymbolRefExpr::VK_TLVPPAGE) &&
+    } else if ((DarwinSpec == AArch64MCExpr::M_GOTPAGE ||
+                DarwinSpec == AArch64MCExpr::M_TLVPPAGE) &&
                Addend != 0) {
       return Error(S, "gotpage label reference not allowed an addend");
-    } else if (DarwinRefKind != MCSymbolRefExpr::VK_PAGE &&
-               DarwinRefKind != MCSymbolRefExpr::VK_GOTPAGE &&
-               DarwinRefKind != MCSymbolRefExpr::VK_TLVPPAGE &&
+    } else if (DarwinSpec != AArch64MCExpr::M_PAGE &&
+               DarwinSpec != AArch64MCExpr::M_GOTPAGE &&
+               DarwinSpec != AArch64MCExpr::M_TLVPPAGE &&
                ELFSpec != AArch64MCExpr::VK_ABS_PAGE_NC &&
                ELFSpec != AArch64MCExpr::VK_GOT_PAGE &&
                ELFSpec != AArch64MCExpr::VK_GOT_AUTH_PAGE &&
@@ -3351,10 +3351,10 @@ ParseStatus AArch64AsmParser::tryParseAdrLabel(OperandVector &Operands) {
     return ParseStatus::Failure;
 
   AArch64MCExpr::Specifier ELFSpec;
-  MCSymbolRefExpr::VariantKind DarwinRefKind;
+  AArch64MCExpr::Specifier DarwinSpec;
   int64_t Addend;
-  if (classifySymbolRef(Expr, ELFSpec, DarwinRefKind, Addend)) {
-    if (DarwinRefKind == MCSymbolRefExpr::VK_None &&
+  if (classifySymbolRef(Expr, ELFSpec, DarwinSpec, Addend)) {
+    if (DarwinSpec == AArch64MCExpr::None &&
         ELFSpec == AArch64MCExpr::VK_INVALID) {
       // No modifier was specified at all; this is the syntax for an ELF basic
       // ADR relocation (unfortunately).
@@ -5817,13 +5817,13 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
     if (Inst.getOperand(2).isExpr()) {
       const MCExpr *Expr = Inst.getOperand(2).getExpr();
       AArch64MCExpr::Specifier ELFSpec;
-      MCSymbolRefExpr::VariantKind DarwinRefKind;
+      AArch64MCExpr::Specifier DarwinSpec;
       int64_t Addend;
-      if (classifySymbolRef(Expr, ELFSpec, DarwinRefKind, Addend)) {
+      if (classifySymbolRef(Expr, ELFSpec, DarwinSpec, Addend)) {
 
         // Only allow these with ADDXri.
-        if ((DarwinRefKind == MCSymbolRefExpr::VK_PAGEOFF ||
-             DarwinRefKind == MCSymbolRefExpr::VK_TLVPPAGEOFF) &&
+        if ((DarwinSpec == AArch64MCExpr::M_PAGEOFF ||
+             DarwinSpec == AArch64MCExpr::M_TLVPPAGEOFF) &&
             Inst.getOpcode() == AArch64::ADDXri)
           return false;
 
@@ -8192,11 +8192,12 @@ bool AArch64AsmParser::parseAuthExpr(const MCExpr *&Res, SMLoc &EndLoc) {
   return false;
 }
 
-bool AArch64AsmParser::classifySymbolRef(
-    const MCExpr *Expr, AArch64MCExpr::Specifier &ELFSpec,
-    MCSymbolRefExpr::VariantKind &DarwinRefKind, int64_t &Addend) {
+bool AArch64AsmParser::classifySymbolRef(const MCExpr *Expr,
+                                         AArch64MCExpr::Specifier &ELFSpec,
+                                         AArch64MCExpr::Specifier &DarwinSpec,
+                                         int64_t &Addend) {
   ELFSpec = AArch64MCExpr::VK_INVALID;
-  DarwinRefKind = MCSymbolRefExpr::VK_None;
+  DarwinSpec = AArch64MCExpr::None;
   Addend = 0;
 
   if (const AArch64MCExpr *AE = dyn_cast<AArch64MCExpr>(Expr)) {
@@ -8207,7 +8208,7 @@ bool AArch64AsmParser::classifySymbolRef(
   const MCSymbolRefExpr *SE = dyn_cast<MCSymbolRefExpr>(Expr);
   if (SE) {
     // It's a simple symbol reference with no addend.
-    DarwinRefKind = SE->getKind();
+    DarwinSpec = AArch64MCExpr::Specifier(SE->getKind());
     return true;
   }
 
@@ -8223,13 +8224,13 @@ bool AArch64AsmParser::classifySymbolRef(
     return false;
 
   if (Res.getSymA())
-    DarwinRefKind = Res.getSymA()->getKind();
+    DarwinSpec = AArch64MCExpr::Specifier(Res.getSymA()->getKind());
   Addend = Res.getConstant();
 
   // It's some symbol reference + a constant addend, but really
   // shouldn't use both Darwin and ELF syntax.
   return ELFSpec == AArch64MCExpr::VK_INVALID ||
-         DarwinRefKind == MCSymbolRefExpr::VK_None;
+         DarwinSpec == AArch64MCExpr::None;
 }
 
 /// Force static initialization.

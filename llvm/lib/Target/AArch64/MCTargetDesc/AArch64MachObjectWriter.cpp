@@ -66,12 +66,12 @@ bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
     return true;
   case FK_Data_4:
     Log2Size = Log2_32(4);
-    if (Sym->getKind() == MCSymbolRefExpr::VK_GOT)
+    if (getSpecifier(Sym) == AArch64MCExpr::M_GOT)
       RelocType = unsigned(MachO::ARM64_RELOC_POINTER_TO_GOT);
     return true;
   case FK_Data_8:
     Log2Size = Log2_32(8);
-    if (Sym->getKind() == MCSymbolRefExpr::VK_GOT)
+    if (getSpecifier(Sym) == AArch64MCExpr::M_GOT)
       RelocType = unsigned(MachO::ARM64_RELOC_POINTER_TO_GOT);
     return true;
   case AArch64::fixup_aarch64_add_imm12:
@@ -81,34 +81,34 @@ bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
   case AArch64::fixup_aarch64_ldst_imm12_scale8:
   case AArch64::fixup_aarch64_ldst_imm12_scale16:
     Log2Size = Log2_32(4);
-    switch (Sym->getKind()) {
+    switch (AArch64MCExpr::Specifier(getSpecifier(Sym))) {
     default:
       return false;
-    case MCSymbolRefExpr::VK_PAGEOFF:
+    case AArch64MCExpr::M_PAGEOFF:
       RelocType = unsigned(MachO::ARM64_RELOC_PAGEOFF12);
       return true;
-    case MCSymbolRefExpr::VK_GOTPAGEOFF:
+    case AArch64MCExpr::M_GOTPAGEOFF:
       RelocType = unsigned(MachO::ARM64_RELOC_GOT_LOAD_PAGEOFF12);
       return true;
-    case MCSymbolRefExpr::VK_TLVPPAGEOFF:
+    case AArch64MCExpr::M_TLVPPAGEOFF:
       RelocType = unsigned(MachO::ARM64_RELOC_TLVP_LOAD_PAGEOFF12);
       return true;
     }
   case AArch64::fixup_aarch64_pcrel_adrp_imm21:
     Log2Size = Log2_32(4);
     // This encompasses the relocation for the whole 21-bit value.
-    switch (Sym->getKind()) {
+    switch (getSpecifier(Sym)) {
     default:
       Asm.getContext().reportError(Fixup.getLoc(),
                                    "ADR/ADRP relocations must be GOT relative");
       return false;
-    case MCSymbolRefExpr::VK_PAGE:
+    case AArch64MCExpr::M_PAGE:
       RelocType = unsigned(MachO::ARM64_RELOC_PAGE21);
       return true;
-    case MCSymbolRefExpr::VK_GOTPAGE:
+    case AArch64MCExpr::M_GOTPAGE:
       RelocType = unsigned(MachO::ARM64_RELOC_GOT_LOAD_PAGE21);
       return true;
-    case MCSymbolRefExpr::VK_TLVPPAGE:
+    case AArch64MCExpr::M_TLVPPAGE:
       RelocType = unsigned(MachO::ARM64_RELOC_TLVP_LOAD_PAGE21);
       return true;
     }
@@ -221,7 +221,7 @@ void AArch64MachObjectWriter::recordRelocation(
     // Check for "_foo@got - .", which comes through here as:
     // Ltmp0:
     //    ... _foo@got - Ltmp0
-    if (Target.getSymA()->getKind() == MCSymbolRefExpr::VK_GOT &&
+    if (getSpecifier(Target.getSymA()) == AArch64MCExpr::M_GOT &&
         Asm.getSymbolOffset(*B) ==
             Asm.getFragmentOffset(*Fragment) + Fixup.getOffset()) {
       // SymB is the PC, so use a PC-rel pointer-to-GOT relocation.
@@ -232,7 +232,7 @@ void AArch64MachObjectWriter::recordRelocation(
       MRE.r_word1 = (IsPCRel << 24) | (Log2Size << 25) | (Type << 28);
       Writer->addRelocation(A_Base, Fragment->getParent(), MRE);
       return;
-    } else if (Target.getSymA()->getKind() != MCSymbolRefExpr::VK_None) {
+    } else if (getSpecifier(Target.getSymA()) != AArch64MCExpr::None) {
       // Otherwise, neither symbol can be modified.
       Asm.getContext().reportError(Fixup.getLoc(),
                                    "unsupported relocation of modified symbol");
