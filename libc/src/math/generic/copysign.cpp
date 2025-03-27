@@ -24,10 +24,9 @@ LLVM_LIBC_FUNCTION(double, copysign, (double x, double y)) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#if defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64) &&                              \
-    defined(LIBC_ALIAS_LONG_DOUBLE)
+#if defined(LIBC_ALIAS_LONG_DOUBLE_TO_DOUBLE)
 #include "src/math/copysignl.h"
 
 LLVM_LIBC_ALIAS(copysignl, copysign);
 
-#endif // LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
+#endif // LIBC_ALIAS_LONG_DOUBLE_TO_DOUBLE

@@ -19,8 +19,7 @@ LLVM_LIBC_FUNCTION(float128, copysignf128, (float128 x, float128 y)) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#if defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128) &&                             \
-    defined(LIBC_ALIAS_LONG_DOUBLE)
+#if defined(LIBC_ALIAS_LONG_DOUBLE_TO_FLOAT128)
 #include "src/math/copysignl.h"
 
 LLVM_LIBC_ALIAS(copysignl, copysignf128);
