@@ -689,7 +689,7 @@ if ( LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL" )
 endif( LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL" )
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  append("-Werror=unguarded-availability-new" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  append("-Werror=unguarded-availability-new -Wno-unnecessary-virtual-specifier" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND LLVM_ENABLE_LTO)
