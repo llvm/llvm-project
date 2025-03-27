@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_UEFI_ERROR_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_UEFI_ERROR_H
 
-#include <errno.h>
-#include <limits.h>
 #include "include/llvm-libc-types/EFI_STATUS.h"
 #include "src/__support/macros/config.h"
+#include <errno.h>
+#include <limits.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
