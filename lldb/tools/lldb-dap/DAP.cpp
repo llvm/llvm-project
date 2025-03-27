@@ -1145,27 +1145,22 @@ lldb::SBValue Variables::FindVariable(uint64_t variablesReference,
   return variable;
 }
 
-bool DAP::isSupported(ClientFeature feature) {
-  return clientFeatures.find(feature) != clientFeatures.end();
-}
-
 protocol::Capabilities DAP::GetCapabilities() {
   protocol::Capabilities capabilities;
 
   // Supported capabilities that are not specific to a single request.
   capabilities.supportedFeatures = {
-      AdapterFeature::supportsLogPoints,
-      AdapterFeature::supportsSteppingGranularity,
-      AdapterFeature::supportsValueFormattingOptions,
+      protocol::eAdapterFeatureSupportsLogPoints,
+      protocol::eAdapterFeatureSupportsSteppingGranularity,
+      protocol::eAdapterFeatureSupportsValueFormattingOptions,
   };
 
-  // Unsupported capabilities.
-  // supportsGotoTargetsRequest, supportsLoadedSourcesRequest,
-  // supportsRestartFrame, supportsStepBack
-
   // Capabilities associated with specific requests.
-  for (auto &kv : request_handlers)
-    capabilities.supportedFeatures.merge(kv.second->GetSupportedFeatures());
+  for (auto &kv : request_handlers) {
+    llvm::SmallDenseSet<AdapterFeature, 1> features =
+        kv.second->GetSupportedFeatures();
+    capabilities.supportedFeatures.insert(features.begin(), features.end());
+  }
 
   // Available filters or options for the setExceptionBreakpoints request.
   std::vector<protocol::ExceptionBreakpointsFilter> filters;

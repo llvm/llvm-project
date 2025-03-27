@@ -16,6 +16,7 @@
 #include "lldb/API/SBStream.h"
 
 using namespace lldb;
+using namespace lldb_dap::protocol;
 
 namespace lldb_dap {
 
@@ -231,8 +232,8 @@ static void EventThreadFunction(DAP &dap) {
 }
 
 /// Initialize request; value of command field is 'initialize'.
-llvm::Expected<protocol::InitializeResponseBody> InitializeRequestHandler::Run(
-    const protocol::InitializeRequestArguments &arguments) const {
+llvm::Expected<InitializeResponseBody> InitializeRequestHandler::Run(
+    const InitializeRequestArguments &arguments) const {
   dap.clientFeatures = arguments.supportedFeatures;
 
   // Do not source init files until in/out/err are configured.
@@ -251,8 +252,9 @@ llvm::Expected<protocol::InitializeResponseBody> InitializeRequestHandler::Run(
 
   auto interp = dap.debugger.GetCommandInterpreter();
 
-  // The sourceInitFile option is not part of the DAP specification. It is an extension
-  // used by the test suite to prevent sourcing `.lldbinit` and changing its behavior .
+  // The sourceInitFile option is not part of the DAP specification. It is an
+  // extension used by the test suite to prevent sourcing `.lldbinit` and
+  // changing its behavior .
   if (arguments.lldbExtSourceInitFile.value_or(true)) {
     dap.debugger.SkipLLDBInitFiles(false);
     dap.debugger.SkipAppInitFiles(false);
@@ -267,7 +269,8 @@ llvm::Expected<protocol::InitializeResponseBody> InitializeRequestHandler::Run(
   dap.PopulateExceptionBreakpoints();
   auto cmd = dap.debugger.GetCommandInterpreter().AddMultiwordCommand(
       "lldb-dap", "Commands for managing lldb-dap.");
-  if (arguments.isSupported(ClientFeature::supportsStartDebuggingRequest)) {
+  if (arguments.supportedFeatures.contains(
+          eClientFeatureSupportsStartDebuggingRequest)) {
     cmd.AddCommand(
         "start-debugging", new StartDebuggingRequestHandler(dap),
         "Sends a startDebugging request from the debug adapter to the client "
@@ -279,7 +282,8 @@ llvm::Expected<protocol::InitializeResponseBody> InitializeRequestHandler::Run(
   cmd.AddCommand("send-event", new SendEventRequestHandler(dap),
                  "Sends an DAP event to the client.");
 
-  if (arguments.isSupported(ClientFeature::supportsProgressReporting))
+  if (arguments.supportedFeatures.contains(
+          eClientFeatureSupportsProgressReporting))
     dap.progress_event_thread =
         std::thread(ProgressEventThreadFunction, std::ref(dap));
 

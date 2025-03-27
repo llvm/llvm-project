@@ -16,18 +16,17 @@ using namespace llvm;
 
 namespace lldb_dap::protocol {
 
-bool fromJSON(const json::Value &Params, Source::PresentationHint &PH,
-              json::Path P) {
+bool fromJSON(const json::Value &Params, PresentationHint &PH, json::Path P) {
   auto rawHint = Params.getAsString();
   if (!rawHint) {
     P.report("expected a string");
     return false;
   }
-  std::optional<Source::PresentationHint> hint =
-      StringSwitch<std::optional<Source::PresentationHint>>(*rawHint)
-          .Case("normal", Source::PresentationHint::normal)
-          .Case("emphasize", Source::PresentationHint::emphasize)
-          .Case("deemphasize", Source::PresentationHint::deemphasize)
+  std::optional<PresentationHint> hint =
+      StringSwitch<std::optional<PresentationHint>>(*rawHint)
+          .Case("normal", ePresentationHintNormal)
+          .Case("emphasize", ePresentationHintEmphasize)
+          .Case("deemphasize", ePresentationHintDeemphasize)
           .Default(std::nullopt);
   if (!hint) {
     P.report("unexpected value");
@@ -59,15 +58,15 @@ json::Value toJSON(const ExceptionBreakpointsFilter &EBF) {
   return result;
 }
 
-json::Value toJSON(const ColumnDescriptor::Type &T) {
+json::Value toJSON(const ColumnType &T) {
   switch (T) {
-  case ColumnDescriptor::Type::String:
+  case eColumnTypeString:
     return "string";
-  case ColumnDescriptor::Type::Number:
+  case eColumnTypeNumber:
     return "number";
-  case ColumnDescriptor::Type::Boolean:
+  case eColumnTypeBoolean:
     return "boolean";
-  case ColumnDescriptor::Type::Timestamp:
+  case eColumnTypeTimestamp:
     return "unixTimestampUTC";
   }
 }
@@ -87,26 +86,26 @@ json::Value toJSON(const ColumnDescriptor &CD) {
 
 json::Value toJSON(const ChecksumAlgorithm &CA) {
   switch (CA) {
-  case ChecksumAlgorithm::md5:
+  case eChecksumAlgorithmMD5:
     return "MD5";
-  case ChecksumAlgorithm::sha1:
+  case eChecksumAlgorithmSHA1:
     return "SHA1";
-  case ChecksumAlgorithm::sha256:
+  case eChecksumAlgorithmSHA256:
     return "SHA256";
-  case ChecksumAlgorithm::timestamp:
+  case eChecksumAlgorithmTimestamp:
     return "timestamp";
   }
 }
 
 json::Value toJSON(const BreakpointModeApplicability &BMA) {
   switch (BMA) {
-  case BreakpointModeApplicability::source:
+  case eBreakpointModeApplicabilitySource:
     return "source";
-  case BreakpointModeApplicability::exception:
+  case eBreakpointModeApplicabilityException:
     return "exception";
-  case BreakpointModeApplicability::data:
+  case eBreakpointModeApplicabilityData:
     return "data";
-  case BreakpointModeApplicability::instruction:
+  case eBreakpointModeApplicabilityInstruction:
     return "instruction";
   }
 }
@@ -124,123 +123,90 @@ json::Value toJSON(const BreakpointMode &BM) {
   return result;
 }
 
+static llvm::StringLiteral ToString(AdapterFeature feature) {
+  switch (feature) {
+  case eAdapterFeatureSupportsANSIStyling:
+    return "supportsANSIStyling";
+  case eAdapterFeatureSupportsBreakpointLocationsRequest:
+    return "supportsBreakpointLocationsRequest";
+  case eAdapterFeatureSupportsCancelRequest:
+    return "supportsCancelRequest";
+  case eAdapterFeatureSupportsClipboardContext:
+    return "supportsClipboardContext";
+  case eAdapterFeatureSupportsCompletionsRequest:
+    return "supportsCompletionsRequest";
+  case eAdapterFeatureSupportsConditionalBreakpoints:
+    return "supportsConditionalBreakpoints";
+  case eAdapterFeatureSupportsConfigurationDoneRequest:
+    return "supportsConfigurationDoneRequest";
+  case eAdapterFeatureSupportsDataBreakpointBytes:
+    return "supportsDataBreakpointBytes";
+  case eAdapterFeatureSupportsDataBreakpoints:
+    return "supportsDataBreakpoints";
+  case eAdapterFeatureSupportsDelayedStackTraceLoading:
+    return "supportsDelayedStackTraceLoading";
+  case eAdapterFeatureSupportsDisassembleRequest:
+    return "supportsDisassembleRequest";
+  case eAdapterFeatureSupportsEvaluateForHovers:
+    return "supportsEvaluateForHovers";
+  case eAdapterFeatureSupportsExceptionFilterOptions:
+    return "supportsExceptionFilterOptions";
+  case eAdapterFeatureSupportsExceptionInfoRequest:
+    return "supportsExceptionInfoRequest";
+  case eAdapterFeatureSupportsExceptionOptions:
+    return "supportsExceptionOptions";
+  case eAdapterFeatureSupportsFunctionBreakpoints:
+    return "supportsFunctionBreakpoints";
+  case eAdapterFeatureSupportsGotoTargetsRequest:
+    return "supportsGotoTargetsRequest";
+  case eAdapterFeatureSupportsHitConditionalBreakpoints:
+    return "supportsHitConditionalBreakpoints";
+  case eAdapterFeatureSupportsInstructionBreakpoints:
+    return "supportsInstructionBreakpoints";
+  case eAdapterFeatureSupportsLoadedSourcesRequest:
+    return "supportsLoadedSourcesRequest";
+  case eAdapterFeatureSupportsLogPoints:
+    return "supportsLogPoints";
+  case eAdapterFeatureSupportsModulesRequest:
+    return "supportsModulesRequest";
+  case eAdapterFeatureSupportsReadMemoryRequest:
+    return "supportsReadMemoryRequest";
+  case eAdapterFeatureSupportsRestartFrame:
+    return "supportsRestartFrame";
+  case eAdapterFeatureSupportsRestartRequest:
+    return "supportsRestartRequest";
+  case eAdapterFeatureSupportsSetExpression:
+    return "supportsSetExpression";
+  case eAdapterFeatureSupportsSetVariable:
+    return "supportsSetVariable";
+  case eAdapterFeatureSupportsSingleThreadExecutionRequests:
+    return "supportsSingleThreadExecutionRequests";
+  case eAdapterFeatureSupportsStepBack:
+    return "supportsStepBack";
+  case eAdapterFeatureSupportsStepInTargetsRequest:
+    return "supportsStepInTargetsRequest";
+  case eAdapterFeatureSupportsSteppingGranularity:
+    return "supportsSteppingGranularity";
+  case eAdapterFeatureSupportsTerminateRequest:
+    return "supportsTerminateRequest";
+  case eAdapterFeatureSupportsTerminateThreadsRequest:
+    return "supportsTerminateThreadsRequest";
+  case eAdapterFeatureSupportSuspendDebuggee:
+    return "supportSuspendDebuggee";
+  case eAdapterFeatureSupportsValueFormattingOptions:
+    return "supportsValueFormattingOptions";
+  case eAdapterFeatureSupportsWriteMemoryRequest:
+    return "supportsWriteMemoryRequest";
+  case eAdapterFeatureSupportTerminateDebuggee:
+    return "supportTerminateDebuggee";
+  }
+}
+
 json::Value toJSON(const Capabilities &C) {
   json::Object result;
 
   for (const auto &feature : C.supportedFeatures)
-    switch (feature) {
-    case Capabilities::Feature::supportsANSIStyling:
-      result.insert({"supportsANSIStyling", true});
-      break;
-    case Capabilities::Feature::supportsBreakpointLocationsRequest:
-      result.insert({"supportsBreakpointLocationsRequest", true});
-      break;
-    case Capabilities::Feature::supportsCancelRequest:
-      result.insert({"supportsCancelRequest", true});
-      break;
-    case Capabilities::Feature::supportsClipboardContext:
-      result.insert({"supportsClipboardContext", true});
-      break;
-    case Capabilities::Feature::supportsCompletionsRequest:
-      result.insert({"supportsCompletionsRequest", true});
-      break;
-    case Capabilities::Feature::supportsConditionalBreakpoints:
-      result.insert({"supportsConditionalBreakpoints", true});
-      break;
-    case Capabilities::Feature::supportsConfigurationDoneRequest:
-      result.insert({"supportsConfigurationDoneRequest", true});
-      break;
-    case Capabilities::Feature::supportsDataBreakpointBytes:
-      result.insert({"supportsDataBreakpointBytes", true});
-      break;
-    case Capabilities::Feature::supportsDataBreakpoints:
-      result.insert({"supportsDataBreakpoints", true});
-      break;
-    case Capabilities::Feature::supportsDelayedStackTraceLoading:
-      result.insert({"supportsDelayedStackTraceLoading", true});
-      break;
-    case Capabilities::Feature::supportsDisassembleRequest:
-      result.insert({"supportsDisassembleRequest", true});
-      break;
-    case Capabilities::Feature::supportsEvaluateForHovers:
-      result.insert({"supportsEvaluateForHovers", true});
-      break;
-    case Capabilities::Feature::supportsExceptionFilterOptions:
-      result.insert({"supportsExceptionFilterOptions", true});
-      break;
-    case Capabilities::Feature::supportsExceptionInfoRequest:
-      result.insert({"supportsExceptionInfoRequest", true});
-      break;
-    case Capabilities::Feature::supportsExceptionOptions:
-      result.insert({"supportsExceptionOptions", true});
-      break;
-    case Capabilities::Feature::supportsFunctionBreakpoints:
-      result.insert({"supportsFunctionBreakpoints", true});
-      break;
-    case Capabilities::Feature::supportsGotoTargetsRequest:
-      result.insert({"supportsGotoTargetsRequest", true});
-      break;
-    case Capabilities::Feature::supportsHitConditionalBreakpoints:
-      result.insert({"supportsHitConditionalBreakpoints", true});
-      break;
-    case Capabilities::Feature::supportsInstructionBreakpoints:
-      result.insert({"supportsInstructionBreakpoints", true});
-      break;
-    case Capabilities::Feature::supportsLoadedSourcesRequest:
-      result.insert({"supportsLoadedSourcesRequest", true});
-      break;
-    case Capabilities::Feature::supportsLogPoints:
-      result.insert({"supportsLogPoints", true});
-      break;
-    case Capabilities::Feature::supportsModulesRequest:
-      result.insert({"supportsModulesRequest", true});
-      break;
-    case Capabilities::Feature::supportsReadMemoryRequest:
-      result.insert({"supportsReadMemoryRequest", true});
-      break;
-    case Capabilities::Feature::supportsRestartFrame:
-      result.insert({"supportsRestartFrame", true});
-      break;
-    case Capabilities::Feature::supportsRestartRequest:
-      result.insert({"supportsRestartRequest", true});
-      break;
-    case Capabilities::Feature::supportsSetExpression:
-      result.insert({"supportsSetExpression", true});
-      break;
-    case Capabilities::Feature::supportsSetVariable:
-      result.insert({"supportsSetVariable", true});
-      break;
-    case Capabilities::Feature::supportsSingleThreadExecutionRequests:
-      result.insert({"supportsSingleThreadExecutionRequests", true});
-      break;
-    case Capabilities::Feature::supportsStepBack:
-      result.insert({"supportsStepBack", true});
-      break;
-    case Capabilities::Feature::supportsStepInTargetsRequest:
-      result.insert({"supportsStepInTargetsRequest", true});
-      break;
-    case Capabilities::Feature::supportsSteppingGranularity:
-      result.insert({"supportsSteppingGranularity", true});
-      break;
-    case Capabilities::Feature::supportsTerminateRequest:
-      result.insert({"supportsTerminateRequest", true});
-      break;
-    case Capabilities::Feature::supportsTerminateThreadsRequest:
-      result.insert({"supportsTerminateThreadsRequest", true});
-      break;
-    case Capabilities::Feature::supportSuspendDebuggee:
-      result.insert({"supportSuspendDebuggee", true});
-      break;
-    case Capabilities::Feature::supportsValueFormattingOptions:
-      result.insert({"supportsValueFormattingOptions", true});
-      break;
-    case Capabilities::Feature::supportsWriteMemoryRequest:
-      result.insert({"supportsWriteMemoryRequest", true});
-      break;
-    case Capabilities::Feature::supportTerminateDebuggee:
-      result.insert({"supportTerminateDebuggee", true});
-      break;
-    }
+    result.insert({ToString(feature), true});
 
   if (C.exceptionBreakpointFilters && !C.exceptionBreakpointFilters->empty())
     result.insert(

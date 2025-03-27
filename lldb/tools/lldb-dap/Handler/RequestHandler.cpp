@@ -98,7 +98,8 @@ void BaseRequestHandler::SetSourceMapFromArguments(
 static llvm::Error RunInTerminal(DAP &dap,
                                  const llvm::json::Object &launch_request,
                                  const uint64_t timeout_seconds) {
-  if (!dap.isSupported(ClientFeature::supportsRunInTerminalRequest))
+  if (!dap.clientFeatures.contains(
+          protocol::eClientFeatureSupportsRunInTerminalRequest))
     return llvm::make_error<DAPError>("Cannot use runInTerminal, feature is "
                                       "not supported by the connected client");
 

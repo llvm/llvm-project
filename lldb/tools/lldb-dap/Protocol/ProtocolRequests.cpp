@@ -8,6 +8,7 @@
 
 #include "Protocol/ProtocolRequests.h"
 #include "DAP.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include <utility>
@@ -24,19 +25,18 @@ bool fromJSON(const json::Value &Params, DisconnectArguments &DA,
          O.mapOptional("suspendDebuggee", DA.suspendDebuggee);
 }
 
-bool fromJSON(const llvm::json::Value &Params,
-              InitializeRequestArguments::PathFormat &PF, llvm::json::Path P) {
+bool fromJSON(const llvm::json::Value &Params, PathFormat &PF,
+              llvm::json::Path P) {
   auto rawPathFormat = Params.getAsString();
   if (!rawPathFormat) {
     P.report("expected a string");
     return false;
   }
 
-  std::optional<InitializeRequestArguments::PathFormat> pathFormat =
-      StringSwitch<std::optional<InitializeRequestArguments::PathFormat>>(
-          *rawPathFormat)
-          .Case("path", InitializeRequestArguments::PathFormat::path)
-          .Case("uri", InitializeRequestArguments::PathFormat::uri)
+  std::optional<PathFormat> pathFormat =
+      StringSwitch<std::optional<PathFormat>>(*rawPathFormat)
+          .Case("path", ePatFormatPath)
+          .Case("uri", ePathFormatURI)
           .Default(std::nullopt);
   if (!pathFormat) {
     P.report("unexpected value, expected 'path' or 'uri'");
@@ -47,6 +47,21 @@ bool fromJSON(const llvm::json::Value &Params,
   return true;
 }
 
+static const llvm::StringMap<ClientFeature> ClientFeatureByKey{
+    {"supportsVariableType", eClientFeatureSupportsVariableType},
+    {"supportsVariablePaging", eClientFeatureSupportsVariablePaging},
+    {"supportsRunInTerminalRequest",
+     eClientFeatureSupportsRunInTerminalRequest},
+    {"supportsMemoryReferences", eClientFeatureSupportsMemoryReferences},
+    {"supportsProgressReporting", eClientFeatureSupportsProgressReporting},
+    {"supportsInvalidatedEvent", eClientFeatureSupportsInvalidatedEvent},
+    {"supportsMemoryEvent", eClientFeatureSupportsMemoryEvent},
+    {"supportsArgsCanBeInterpretedByShell",
+     eClientFeatureSupportsArgsCanBeInterpretedByShell},
+    {"supportsStartDebuggingRequest",
+     eClientFeatureSupportsStartDebuggingRequest},
+    {"supportsANSIStyling", eClientFeatureSupportsANSIStyling}};
+
 bool fromJSON(const llvm::json::Value &Params, InitializeRequestArguments &IRA,
               llvm::json::Path P) {
   json::ObjectMapper OM(Params, P);
@@ -54,34 +69,10 @@ bool fromJSON(const llvm::json::Value &Params, InitializeRequestArguments &IRA,
     return false;
 
   const json::Object *O = Params.getAsObject();
-  if (std::optional<bool> v = O->getBoolean("supportsVariableType"); v && *v)
-    IRA.supportedFeatures.insert(ClientFeature::supportsVariableType);
-  if (std::optional<bool> v = O->getBoolean("supportsVariablePaging"); v && *v)
-    IRA.supportedFeatures.insert(ClientFeature::supportsVariablePaging);
-  if (std::optional<bool> v = O->getBoolean("supportsRunInTerminalRequest");
-      v && *v)
-    IRA.supportedFeatures.insert(ClientFeature::supportsRunInTerminalRequest);
-  if (std::optional<bool> v = O->getBoolean("supportsMemoryReferences");
-      v && *v)
-    IRA.supportedFeatures.insert(ClientFeature::supportsMemoryReferences);
-  if (std::optional<bool> v = O->getBoolean("supportsProgressReporting");
-      v && *v)
-    IRA.supportedFeatures.insert(ClientFeature::supportsProgressReporting);
-  if (std::optional<bool> v = O->getBoolean("supportsInvalidatedEvent");
-      v && *v)
-    IRA.supportedFeatures.insert(ClientFeature::supportsInvalidatedEvent);
-  if (std::optional<bool> v = O->getBoolean("supportsMemoryEvent"); v && *v)
-    IRA.supportedFeatures.insert(ClientFeature::supportsMemoryEvent);
-  if (std::optional<bool> v =
-          O->getBoolean("supportsArgsCanBeInterpretedByShell");
-      v && *v)
-    IRA.supportedFeatures.insert(
-        ClientFeature::supportsArgsCanBeInterpretedByShell);
-  if (std::optional<bool> v = O->getBoolean("supportsStartDebuggingRequest");
-      v && *v)
-    IRA.supportedFeatures.insert(ClientFeature::supportsStartDebuggingRequest);
-  if (std::optional<bool> v = O->getBoolean("supportsANSIStyling"); v && *v)
-    IRA.supportedFeatures.insert(ClientFeature::supportsANSIStyling);
+
+  for (auto &kv : ClientFeatureByKey)
+    if (std::optional<bool> v = O->getBoolean(kv.first()); v && *v)
+      IRA.supportedFeatures.insert(kv.second);
 
   return OM.mapOptional("adatperID", IRA.adatperID) &&
          OM.mapOptional("clientID", IRA.clientID) &&

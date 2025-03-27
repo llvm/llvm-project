@@ -54,6 +54,28 @@ bool fromJSON(const llvm::json::Value &, DisconnectArguments &,
 /// body field is required.
 using DisconnectResponse = VoidResponse;
 
+/// Features supported by DAP clients.
+enum ClientFeature {
+  eClientFeatureSupportsVariableType,
+  eClientFeatureSupportsVariablePaging,
+  eClientFeatureSupportsRunInTerminalRequest,
+  eClientFeatureSupportsMemoryReferences,
+  eClientFeatureSupportsProgressReporting,
+  eClientFeatureSupportsInvalidatedEvent,
+  eClientFeatureSupportsMemoryEvent,
+  /// Client supports the `argsCanBeInterpretedByShell` attribute on the
+  /// `runInTerminal` request.
+  eClientFeatureSupportsArgsCanBeInterpretedByShell,
+  eClientFeatureSupportsStartDebuggingRequest,
+  /// The client will interpret ANSI escape sequences in the display of
+  /// `OutputEvent.output` and `Variable.value` fields when
+  /// `Capabilities.supportsANSIStyling` is also enabled.
+  eClientFeatureSupportsANSIStyling,
+};
+
+/// Format of paths reported by the debug adapter.
+enum PathFormat { ePatFormatPath, ePathFormatURI };
+
 /// Arguments for `initialize` request.
 struct InitializeRequestArguments {
   /// The ID of the debug adapter.
@@ -68,11 +90,9 @@ struct InitializeRequestArguments {
   /// The ISO-639 locale of the client using this adapter, e.g. en-US or de-CH.
   std::optional<std::string> locale;
 
-  enum class PathFormat { path, uri };
-
   /// Determines in what format paths are specified. The default is `path`,
   /// which is the native format.
-  std::optional<PathFormat> pathFormat = PathFormat::path;
+  std::optional<PathFormat> pathFormat = ePatFormatPath;
 
   /// If true all line numbers are 1-based (default).
   std::optional<bool> linesStartAt1;
@@ -80,38 +100,8 @@ struct InitializeRequestArguments {
   /// If true all column numbers are 1-based (default).
   std::optional<bool> columnsStartAt1;
 
-  enum class Feature {
-    /// Client supports the `type` attribute for variables.
-    supportsVariableType,
-    /// Client supports the paging of variables.
-    supportsVariablePaging,
-    /// Client supports the `runInTerminal` request.
-    supportsRunInTerminalRequest,
-    /// Client supports memory references.
-    supportsMemoryReferences,
-    /// Client supports progress reporting.
-    supportsProgressReporting,
-    /// Client supports the `invalidated` event.
-    supportsInvalidatedEvent,
-    /// Client supports the `memory` event.
-    supportsMemoryEvent,
-    /// Client supports the `argsCanBeInterpretedByShell` attribute on the
-    /// `runInTerminal` request.
-    supportsArgsCanBeInterpretedByShell,
-    /// Client supports the `startDebugging` request.
-    supportsStartDebuggingRequest,
-    /// The client will interpret ANSI escape sequences in the display of
-    /// `OutputEvent.output` and `Variable.value` fields when
-    /// `Capabilities.supportsANSIStyling` is also enabled.
-    supportsANSIStyling,
-  };
-
   /// The set of supported features reported by the client.
-  std::set<Feature> supportedFeatures;
-
-  bool isSupported(Feature feature) const {
-    return supportedFeatures.find(feature) != supportedFeatures.end();
-  }
+  llvm::DenseSet<ClientFeature> supportedFeatures;
 
   /// lldb-dap Extensions
   /// @{

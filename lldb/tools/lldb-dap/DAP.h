@@ -60,8 +60,8 @@ typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
 typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
     InstructionBreakpointMap;
 
-using AdapterFeature = protocol::Capabilities::Feature;
-using ClientFeature = protocol::InitializeRequestArguments::Feature;
+using AdapterFeature = protocol::AdapterFeature;
+using ClientFeature = protocol::ClientFeature;
 
 enum class OutputType { Console, Stdout, Stderr, Telemetry };
 
@@ -211,7 +211,7 @@ struct DAP {
   // will contain that expression.
   std::string last_nonempty_var_expression;
   /// The set of features supported by the connected client.
-  std::set<ClientFeature> clientFeatures;
+  llvm::DenseSet<ClientFeature> clientFeatures;
 
   /// Creates a new DAP sessions.
   ///
@@ -372,9 +372,6 @@ struct DAP {
 
   /// The set of capablities supported by this adapter.
   protocol::Capabilities GetCapabilities();
-
-  /// Returns true if the connected client supports the given feature.
-  bool isSupported(ClientFeature);
 
   /// Debuggee will continue from stopped state.
   void WillContinue() { variables.Clear(); }
