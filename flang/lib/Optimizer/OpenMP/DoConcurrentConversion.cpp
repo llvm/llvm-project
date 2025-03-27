@@ -163,12 +163,77 @@ namespace looputils {
 /// Stores info needed about the induction/iteration variable for each `do
 /// concurrent` in a loop nest.
 struct InductionVariableInfo {
+  InductionVariableInfo(fir::DoLoopOp doLoop) { populateInfo(doLoop); }
+
   /// The operation allocating memory for iteration variable.
   mlir::Operation *iterVarMemDef;
 
   /// the operation(s) updating the iteration variable with the current
   /// iteration number.
-  llvm::SetVector<mlir::Operation *> indVarUpdateOps;
+  llvm::SmallVector<mlir::Operation *> indVarUpdateOps;
+
+private:
+  /// For the \p doLoop parameter, find the following:
+  ///
+  /// 1. The operation that declares its iteration variable or allocates memory
+  /// for it. For example, give the following loop:
+  /// ```
+  ///   ...
+  ///   %i:2 = hlfir.declare %0 {uniq_name = "_QFEi"} : ...
+  ///   ...
+  ///   fir.do_loop %ind_var = %lb to %ub step %s unordered {
+  ///     %ind_var_conv = fir.convert %ind_var : (index) -> i32
+  ///     fir.store %ind_var_conv to %i#1 : !fir.ref<i32>
+  ///     ...
+  ///   }
+  /// ```
+  ///
+  /// This function sets the `iterVarMemDef` member to the `hlfir.declare` op
+  /// for `%i`.
+  ///
+  /// 2. The operation(s) that update the loop's iteration variable from its
+  /// induction variable. For the above example, the `indVarUpdateOps` is
+  /// populated with the first 2 ops in the loop's body.
+  ///
+  /// Note: The current implementation is dependent on how flang emits loop
+  /// bodies; which is sufficient for the current simple test/use cases. If this
+  /// proves to be insufficient, this should be made more generic.
+  void populateInfo(fir::DoLoopOp doLoop) {
+    mlir::Value result = nullptr;
+
+    // Checks if a StoreOp is updating the memref of the loop's iteration
+    // variable.
+    auto isStoringIV = [&](fir::StoreOp storeOp) {
+      // Direct store into the IV memref.
+      if (storeOp.getValue() == doLoop.getInductionVar()) {
+        indVarUpdateOps.push_back(storeOp);
+        return true;
+      }
+
+      // Indirect store into the IV memref.
+      if (auto convertOp = mlir::dyn_cast<fir::ConvertOp>(
+              storeOp.getValue().getDefiningOp())) {
+        if (convertOp.getOperand() == doLoop.getInductionVar()) {
+          indVarUpdateOps.push_back(convertOp);
+          indVarUpdateOps.push_back(storeOp);
+          return true;
+        }
+      }
+
+      return false;
+    };
+
+    for (mlir::Operation &op : doLoop) {
+      if (auto storeOp = mlir::dyn_cast<fir::StoreOp>(op))
+        if (isStoringIV(storeOp)) {
+          result = storeOp.getMemref();
+          break;
+        }
+    }
+
+    assert(result != nullptr && result.getDefiningOp() != nullptr);
+    iterVarMemDef = result.getDefiningOp();
+  }
 };
 
 using LoopNestToIndVarMap =
@@ -462,11 +527,7 @@ mlir::LogicalResult collectLoopNest(fir::DoLoopOp currentLoop,
   assert(currentLoop.getUnordered());
 
   while (true) {
-    loopNest.insert(
-        {currentLoop,
-         InductionVariableInfo{
-             findLoopIterationVarMemDecl(currentLoop),
-             std::move(looputils::extractIndVarUpdateOps(currentLoop))}});
+    loopNest.insert({currentLoop, InductionVariableInfo(currentLoop)});
     llvm::SmallVector<fir::DoLoopOp> unorderedLoops;
 
     for (auto nestedLoop : currentLoop.getRegion().getOps<fir::DoLoopOp>())
