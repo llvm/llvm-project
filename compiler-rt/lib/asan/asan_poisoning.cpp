@@ -36,7 +36,8 @@ void InitializePoisonTracking() {
   PoisonRecords = PoisonRecordRingBuffer::New(flags()->track_poison);
 }
 
-PoisonRecordRingBuffer* SANITIZER_ACQUIRE(PoisonRecordsMutex) AcquirePoisonRecords() {
+PoisonRecordRingBuffer *SANITIZER_ACQUIRE(PoisonRecordsMutex)
+    AcquirePoisonRecords() {
   PoisonRecordsMutex.Lock();
 
   return PoisonRecords;

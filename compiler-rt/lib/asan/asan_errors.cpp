@@ -553,8 +553,8 @@ static void PrintLegend(InternalScopedString *str) {
   PrintShadowByte(str, "  Global redzone:          ", kAsanGlobalRedzoneMagic);
   PrintShadowByte(str, "  Global init order:       ",
                   kAsanInitializationOrderMagic);
-  PrintShadowByte(str, "  Poisoned by user:        ",
-                  kAsanUserPoisonedMemoryMagic);
+  PrintShadowByte(str,
+                  "  Poisoned by user:        ", kAsanUserPoisonedMemoryMagic);
   PrintShadowByte(str, "  Container overflow:      ",
                   kAsanContiguousContainerOOBMagic);
   PrintShadowByte(str, "  Array cookie:            ",
