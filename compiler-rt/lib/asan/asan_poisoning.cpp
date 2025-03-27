@@ -131,7 +131,7 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
           (void *)end_addr);
 
   if (flags()->track_poison > 0) {
-    GET_STACK_TRACE(/*max_size=*/ 16, /*fast=*/ false);
+    GET_STACK_TRACE(/*max_size=*/16, /*fast=*/false);
     u32 current_tid = GetCurrentTidOrInvalid();
 
     // TODO: garbage collect stacks once they fall off the ring buffer?
