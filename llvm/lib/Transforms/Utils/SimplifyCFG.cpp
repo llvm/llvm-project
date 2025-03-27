@@ -2721,7 +2721,7 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
 
     // In the normal destination, the incoming values for these two `invoke`s
     // must be compatible.
-    SmallPtrSet<Value *, 16> EquivalenceSet(Invokes.begin(), Invokes.end());
+    SmallPtrSet<Value *, 16> EquivalenceSet(llvm::from_range, Invokes);
     if (!incomingValuesAreCompatible(
             NormalBB, {Invokes[0]->getParent(), Invokes[1]->getParent()},
             &EquivalenceSet))
