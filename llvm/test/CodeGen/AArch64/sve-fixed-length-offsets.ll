@@ -17,8 +17,8 @@ define void @nxv16i8(ptr %ldptr, ptr %stptr) {
 ;
 ; CHECK-128-LABEL: nxv16i8:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    ldr z0, [x0, #16, mul vl]
-; CHECK-128-NEXT:    str z0, [x1, #16, mul vl]
+; CHECK-128-NEXT:    ldr q0, [x0, #256]
+; CHECK-128-NEXT:    str q0, [x1, #256]
 ; CHECK-128-NEXT:    ret
 ;
 ; CHECK-256-LABEL: nxv16i8:
@@ -62,8 +62,8 @@ define void @nxv8i16(ptr %ldptr, ptr %stptr) {
 ;
 ; CHECK-128-LABEL: nxv8i16:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    ldr z0, [x0, #16, mul vl]
-; CHECK-128-NEXT:    str z0, [x1, #16, mul vl]
+; CHECK-128-NEXT:    ldr q0, [x0, #256]
+; CHECK-128-NEXT:    str q0, [x1, #256]
 ; CHECK-128-NEXT:    ret
 ;
 ; CHECK-256-LABEL: nxv8i16:
@@ -107,8 +107,8 @@ define void @nxv4i32(ptr %ldptr, ptr %stptr) {
 ;
 ; CHECK-128-LABEL: nxv4i32:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    ldr z0, [x0, #16, mul vl]
-; CHECK-128-NEXT:    str z0, [x1, #16, mul vl]
+; CHECK-128-NEXT:    ldr q0, [x0, #256]
+; CHECK-128-NEXT:    str q0, [x1, #256]
 ; CHECK-128-NEXT:    ret
 ;
 ; CHECK-256-LABEL: nxv4i32:
@@ -152,8 +152,8 @@ define void @nxv2i64(ptr %ldptr, ptr %stptr) {
 ;
 ; CHECK-128-LABEL: nxv2i64:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    ldr z0, [x0, #16, mul vl]
-; CHECK-128-NEXT:    str z0, [x1, #16, mul vl]
+; CHECK-128-NEXT:    ldr q0, [x0, #256]
+; CHECK-128-NEXT:    str q0, [x1, #256]
 ; CHECK-128-NEXT:    ret
 ;
 ; CHECK-256-LABEL: nxv2i64:
