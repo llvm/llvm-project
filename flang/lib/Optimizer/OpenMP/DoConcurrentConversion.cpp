@@ -649,12 +649,15 @@ void sinkLoopIVArgs(mlir::ConversionPatternRewriter &rewriter,
 /// of it. This usually corresponds to temporary values that are used inside the
 /// loop body for initialzing other variables for example.
 ///
+/// See `flang/test/Transforms/DoConcurrent/locally_destroyed_temp.f90` for an
+/// example of why we need this.
+///
 /// \param [in] doLoop - the loop within which the function searches for values
 /// used exclusively inside.
 ///
 /// \param [out] locals - the list of loop-local values detected for \p doLoop.
-static void collectLoopLocalValues(fir::DoLoopOp doLoop,
-                                   llvm::SetVector<mlir::Value> &locals) {
+void collectLoopLocalValues(fir::DoLoopOp doLoop,
+                            llvm::SetVector<mlir::Value> &locals) {
   doLoop.walk([&](mlir::Operation *op) {
     for (mlir::Value operand : op->getOperands()) {
       if (locals.contains(operand))
