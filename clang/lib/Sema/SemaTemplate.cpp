@@ -3529,16 +3529,10 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     if (Pattern->isInvalidDecl())
       return QualType();
 
-    // Only substitute for the innermost template argument list.  NOTE: Some
-    // external resugarers rely on leaving a Subst* node here.  Make the
-    // substitution non-final in that case.  Note that these external resugarers
-    // will still miss some information in this representation, because we don't
-    // provide enough context in the Subst* nodes in order to tell different
-    // template type alias specializations apart.
+    // Only substitute for the innermost template argument list.
     MultiLevelTemplateArgumentList TemplateArgLists;
-    TemplateArgLists.addOuterTemplateArguments(
-        Template, CTAI.SugaredConverted,
-        /*Final=*/!getLangOpts().RetainSubstTemplateTypeParmTypeAstNodes);
+    TemplateArgLists.addOuterTemplateArguments(Template, CTAI.SugaredConverted,
+                                               /*Final=*/true);
     TemplateArgLists.addOuterRetainedLevels(
         AliasTemplate->getTemplateParameters()->getDepth());
 
@@ -7569,7 +7563,7 @@ ExprResult Sema::BuildExpressionFromDeclTemplateArgument(
             ParamType->getPointeeType(), RefExpr.get()->getValueKind(),
             RefExpr.get()->getExprLoc(), RefExpr.get(), VD, NTTP->getIndex(),
             /*PackIndex=*/std::nullopt,
-            /*RefParam=*/true);
+            /*RefParam=*/true, /*Final=*/true);
       }
     }
   }

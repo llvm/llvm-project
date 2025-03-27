@@ -413,9 +413,11 @@ class SubstTemplateTemplateParmStorage
 
   SubstTemplateTemplateParmStorage(TemplateName Replacement,
                                    Decl *AssociatedDecl, unsigned Index,
-                                   std::optional<unsigned> PackIndex)
+                                   std::optional<unsigned> PackIndex,
+                                   bool Final)
       : UncommonTemplateNameStorage(SubstTemplateTemplateParm, Index,
-                                    PackIndex ? *PackIndex + 1 : 0),
+                                    ((PackIndex ? *PackIndex + 1 : 0) << 1) |
+                                        Final),
         Replacement(Replacement), AssociatedDecl(AssociatedDecl) {
     assert(AssociatedDecl != nullptr);
   }
@@ -429,10 +431,15 @@ public:
   /// This should match the result of `getParameter()->getIndex()`.
   unsigned getIndex() const { return Bits.Index; }
 
+  // This substitution is Final, which means the substitution is fully
+  // sugared: it doesn't need to be resugared later.
+  bool getFinal() const { return Bits.Data & 1; }
+
   std::optional<unsigned> getPackIndex() const {
-    if (Bits.Data == 0)
+    auto Data = Bits.Data >> 1;
+    if (Data == 0)
       return std::nullopt;
-    return Bits.Data - 1;
+    return Data - 1;
   }
 
   TemplateTemplateParmDecl *getParameter() const;
@@ -442,7 +449,7 @@ public:
 
   static void Profile(llvm::FoldingSetNodeID &ID, TemplateName Replacement,
                       Decl *AssociatedDecl, unsigned Index,
-                      std::optional<unsigned> PackIndex);
+                      std::optional<unsigned> PackIndex, bool Final);
 };
 
 class DeducedTemplateStorage : public UncommonTemplateNameStorage,
