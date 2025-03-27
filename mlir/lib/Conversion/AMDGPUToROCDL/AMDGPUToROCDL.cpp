@@ -925,23 +925,16 @@ struct GlobalLoadLDSOpLowering
     // `global_load_lds` instructions.
     auto loadWidth = elemSizeInBits / 8;
 
-    // TODO: add chipset support check
-    if (chipset.majorVersion >= 12)
-      return op.emitOpError("TODO");
+    const Chipset GlobalLoadEnabled{9, 0x4, 0x0};
+    if (chipset < GlobalLoadEnabled)
+      return op.emitOpError("chipset not supported");
 
-    // TODO: fold this into chipset check.
     // Currently only 1, 2, and 4 byte loads are supported.
     if (!(loadWidth == 1 || loadWidth == 2 || loadWidth == 4))
-      return op.emitOpError("unsupported element size");
+      return op.emitOpError("chipset unsupported element size");
 
-    Value src = adaptor.getSrc();
-    Value dst = adaptor.getDst();
-    Value memrefSrc = op.getSrc();
-    Value memrefDst = op.getDst();
-
-    // Collapse src memref with indices, returns the base pointer and linearized
-    // index.
-    auto flattenIndex =
+    // Return pair of {base pointer, linearized index}.
+    auto getBasePtrAndLinearizedIndex =
         [&](Value memref, MemRefType memrefType,
             ValueRange indices) -> std::optional<std::pair<Value, Value>> {
       MemRefDescriptor memRefDescriptor(memref);
@@ -955,13 +948,14 @@ struct GlobalLoadLDSOpLowering
           getLinearIndexI32(rewriter, loc, memRefDescriptor, indices, strides));
     };
 
-    // Source
-    auto optSrcBuffer = flattenIndex(src, cast<MemRefType>(memrefSrc.getType()),
-                                     op.getSrcIndices());
+    auto optSrcBuffer = getBasePtrAndLinearizedIndex(
+        adaptor.getSrc(), cast<MemRefType>(op.getSrc().getType()),
+        op.getSrcIndices());
     if (!optSrcBuffer)
       return op.emitOpError("failed to flatten source memref indices");
-    auto optDstBuffer = flattenIndex(dst, cast<MemRefType>(memrefDst.getType()),
-                                     op.getDstIndices());
+    auto optDstBuffer = getBasePtrAndLinearizedIndex(
+        adaptor.getDst(), cast<MemRefType>(op.getDst().getType()),
+        op.getDstIndices());
     if (!optDstBuffer)
       return op.emitOpError("failed to flatten destination memref indices");
 

@@ -481,11 +481,6 @@ LogicalResult GlobalLoadLDSOp::verify() {
     return emitOpError("source memory address space must be Global");
   if (dstAddrSpace.getInt() != 3)
     return emitOpError("destination memory address space must be Workgroup");
-
-  // Check chunk size compatible with element type.
-  // TODO
-  auto dstChunkSize = dstType.getShape();
-
   return success();
 }
 

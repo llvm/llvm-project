@@ -9,6 +9,7 @@
 // test pass doesn't set up the GPU address space conversions.
 
 #gpu_global_addrspace = 1
+#gpu_lds_addrspace = 3
 
 // CHECK-LABEL: func @fat_raw_buffer_cast
 func.func @fat_raw_buffer_cast(%buf: memref<8xi32, #gpu_global_addrspace>) -> memref<8xi32, #amdgpu.address_space<fat_raw_buffer>> {
@@ -459,5 +460,27 @@ func.func @sched_barrier() {
   amdgpu.sched_barrier allow = <transcendental>
   // CHECK: rocdl.sched.barrier 18
   amdgpu.sched_barrier allow = <valu|all_vmem>
+  func.return
+}
+
+// CHECK-LABEL: func @global_load_to_rocdl_f32
+// CHECK-SAME: (%[[ARG0:.*]]: memref<128x72xf32, 1>)
+func.func @global_load_to_rocdl_f32(%global : memref<128x72xf32, #gpu_global_addrspace>) {
+  %c0 = arith.constant 0 : i32
+  %c12 = arith.constant 12 : i32
+  %c32 = arith.constant 32 : i32
+  %alloc = memref.alloc() : memref<64x64xf32, #gpu_lds_addrspace>
+  // GFX942: %[[GLOBAL_DESC:.*]] = builtin.unrealized_conversion_cast %arg0 : memref<128x72xf32, 1> to !llvm.struct<(ptr<1>, ptr<1>, i64, array<2 x i64>, array<2 x i64>)>
+  // GFX942: %[[ALLOC:.*]] = memref.alloc() : memref<64x64xf32, 3>
+  // GFX942: %[[LDS_DESC:.*]] = builtin.unrealized_conversion_cast %[[ALLOC]] : memref<64x64xf32, 3> to !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+  // GFX942: %[[GLOBAL_BASE:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1] : !llvm.struct<(ptr<1>, ptr<1>, i64, array<2 x i64>, array<2 x i64>)> 
+  // GFX942: %[[LDS_BASE:.*]] = llvm.extractvalue %[[LDS_DESC]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+  // GFX942: %[[GLOBAL_PTR:.*]] = llvm.getelementptr %[[GLOBAL_BASE]][%[[GLOBAL_OFFSET:.*]]] : (!llvm.ptr<1>, i32) -> !llvm.ptr<1>, f32
+  // GFX942: %[[LDS_PTR:.*]] = llvm.getelementptr %[[LDS_BASE]][%[[LDS_OFFSET:.*]]] : (!llvm.ptr<3>, i32) -> !llvm.ptr<3>, f32
+  // GFX942: %[[C4:.*]] = llvm.mlir.constant(4 : i32) : i32
+  // GFX942: %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // GFX942: %[[C0_2:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // GFX942: rocdl.global.load.lds %[[GLOBAL_PTR]], %[[LDS_PTR]], %[[C4]], %[[C0]], %[[C0_2]]
+  amdgpu.global_load %global[%c12, %c0], %alloc[%c32, %c0] : memref<128x72xf32, #gpu_global_addrspace>, memref<64x64xf32, #gpu_lds_addrspace>
   func.return
 }

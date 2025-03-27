@@ -784,15 +784,19 @@ def AMDGPU_GlobalLoadLDSOp :
     Results<(outs)> {
   let summary = "MLIR wrapper for CDNA mfma instructions";
   let description = [{
-    The `amdgpu.mfma` op is an MLIR wrapper around intrinsics
-    for various `mfma` instructions in the CDNA architecture, which perform
-    multiple outer products in order to allow fast matrix multiplication.
+    The `amdgpu.global_load` op is a wrapper around the `global_load_lds` instructions.
 
-    The `amdgpu.global_load` op is a wrapper around the various `global_load_lds` instructions.
-
-    The `$src`, along with its indices, points to the memory location this thread reads from.
+    Operands:
+    * `$src`: global memory memref to read from.
+    * `$srcIndices`: indices into `$src` to read from for this thread.
+    * `$dst`: LDS memory memref to write to.
+    * `$dstIndices`: base indices into `$dst` to write to for the subgroup of this thread.
+      number of subgroup size of elements will be written contiguously to `$dst[$dstIndices]`.
+    
     The `$dst`, along with its indices, points to the memory location the subgroup of this thread
     will write to.
+  
+    Note: only enabled for gfx942 and later.
   }];
   let assemblyFormat = [{
     $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` attr-dict `:` type($src) `,` type($dst)
