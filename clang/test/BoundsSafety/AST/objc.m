@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -Wno-deprecated-declarations -Wno-return-type -Wno-objc-root-class -ast-dump %s 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -fexperimental-bounds-safety-attributes -x objective-c -Wno-deprecated-declarations -Wno-return-type -Wno-objc-root-class -ast-dump %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fbounds-safety -x objective-c -fexperimental-bounds-safety-objc -Wno-deprecated-declarations -Wno-return-type -Wno-objc-root-class -ast-dump %s 2>&1 | FileCheck --check-prefixes=COMMON-CHECK,BOUNDS-CHECK %s
+// RUN: %clang_cc1 -fexperimental-bounds-safety-attributes -x objective-c -Wno-deprecated-declarations -Wno-return-type -Wno-objc-root-class -ast-dump %s 2>&1 | FileCheck --check-prefixes=COMMON-CHECK,ATTR-CHECK %s
 
 #include <ptrcheck.h>
 
@@ -15,35 +15,42 @@
  - (void)reverseCParam:(int * __counted_by(len))p, int len;
 @end
 
-// CHECK-LABEL: -ObjCProtocolDecl {{.*}} CountedByProtocol
-// CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - simpleParam:: 'void'
-// CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int'
-// CHECK-NOT: IsDeref
-// CHECK-NEXT:   | | `-DependerDeclsAttr
-// CHECK-NEXT:   | `-ParmVarDecl {{.*}} p 'int *{{(__single)?}} __counted_by(len)':'int *{{(__single)?}}'
-// CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - reverseParam:: 'void'
-// CHECK-NEXT:   | |-ParmVarDecl {{.*}} p 'int *{{(__single)?}} __counted_by(len)':'int *{{(__single)?}}'
-// CHECK-NEXT:   | `-ParmVarDecl {{.*}} len 'int'
-// CHECK-NOT: IsDeref
-// CHECK-NEXT:   |   `-DependerDeclsAttr
-// CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - nestedParam:: 'void'
-// CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int *'
-// CHECK-NEXT:   | | `-DependerDeclsAttr {{.*}} IsDeref
-// CHECK-NEXT:   | `-ParmVarDecl {{.*}} p 'int *{{(__single)?}} __counted_by(*len)':'int *{{(__single)?}}'
-// CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - simpleRet: 'int *{{(__single)?}} __counted_by(len)':'int *{{(__single)?}}'
-// CHECK-NEXT:   | `-ParmVarDecl {{.*}} len 'int'
-// CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - nestedRet: 'int *{{(__single)?}} __counted_by(*len)':'int *{{(__single)?}}'
-// CHECK-NEXT:   | `-ParmVarDecl {{.*}} len 'int *'
-// CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - cParam: 'void'
-// CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int'
-// CHECK-NOT: IsDeref
-// CHECK-NEXT:   | | `-DependerDeclsAttr
-// CHECK-NEXT:   | `-ParmVarDecl {{.*}} p 'int *{{(__single)?}} __counted_by(len)':'int *{{(__single)?}}'
-// CHECK-NEXT:   `-ObjCMethodDecl {{.*}} - reverseCParam: 'void'
-// CHECK-NEXT:     |-ParmVarDecl {{.*}} p 'int *{{(__single)?}} __counted_by(len)':'int *{{(__single)?}}'
-// CHECK-NEXT:     `-ParmVarDecl {{.*}} len 'int'
-// CHECK-NOT: IsDeref
-// CHECK-NEXT:       `-DependerDeclsAttr
+// COMMON-CHECK-LABEL: -ObjCProtocolDecl {{.*}} CountedByProtocol
+// COMMON-CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - simpleParam:: 'void'
+// COMMON-CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int'
+// COMMON-CHECK-NOT: IsDeref
+// COMMON-CHECK-NEXT:   | | `-DependerDeclsAttr
+// BOUNDS-CHECK-NEXT:   | `-ParmVarDecl {{.*}} p 'int *__single __counted_by(len)':'int *__single'
+// ATTR-CHECK-NEXT:     | `-ParmVarDecl {{.*}} p 'int * __counted_by(len)':'int *'
+// COMMON-CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - reverseParam:: 'void'
+// BOUNDS-CHECK-NEXT:   | |-ParmVarDecl {{.*}} p 'int *__single __counted_by(len)':'int *__single'
+// ATTR-CHECK-NEXT:     | |-ParmVarDecl {{.*}} p 'int * __counted_by(len)':'int *'
+// COMMON-CHECK-NEXT:   | `-ParmVarDecl {{.*}} len 'int'
+// COMMON-CHECK-NOT: IsDeref
+// COMMON-CHECK-NEXT:   |   `-DependerDeclsAttr
+// COMMON-CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - nestedParam:: 'void'
+// COMMON-CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int *'
+// COMMON-CHECK-NEXT:   | | `-DependerDeclsAttr {{.*}} IsDeref
+// BOUNDS-CHECK-NEXT:   | `-ParmVarDecl {{.*}} p 'int *__single __counted_by(*len)':'int *__single'
+// ATTR-CHECK-NEXT:     | `-ParmVarDecl {{.*}} p 'int * __counted_by(*len)':'int *'
+// BOUNDS-CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - simpleRet: 'int *__single __counted_by(len)':'int *__single'
+// ATTR-CHECK-NEXT:     |-ObjCMethodDecl {{.*}} - simpleRet: 'int * __counted_by(len)':'int *'
+// COMMON-CHECK-NEXT:   | `-ParmVarDecl {{.*}} len 'int'
+// BOUNDS-CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - nestedRet: 'int *__single __counted_by(*len)':'int *__single'
+// ATTR-CHECK-NEXT:     |-ObjCMethodDecl {{.*}} - nestedRet: 'int * __counted_by(*len)':'int *'
+// COMMON-CHECK-NEXT:   | `-ParmVarDecl {{.*}} len 'int *'
+// COMMON-CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - cParam: 'void'
+// COMMON-CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int'
+// COMMON-CHECK-NOT: IsDeref
+// COMMON-CHECK-NEXT:   | | `-DependerDeclsAttr
+// BOUNDS-CHECK-NEXT:   | `-ParmVarDecl {{.*}} p 'int *__single __counted_by(len)':'int *__single'
+// ATTR-CHECK-NEXT:     | `-ParmVarDecl {{.*}} p 'int * __counted_by(len)':'int *'
+// COMMON-CHECK-NEXT:   `-ObjCMethodDecl {{.*}} - reverseCParam: 'void'
+// BOUNDS-CHECK-NEXT:     |-ParmVarDecl {{.*}} p 'int *__single __counted_by(len)':'int *__single'
+// ATTR-CHECK-NEXT:       |-ParmVarDecl {{.*}} p 'int * __counted_by(len)':'int *'
+// COMMON-CHECK-NEXT:     `-ParmVarDecl {{.*}} len 'int'
+// COMMON-CHECK-NOT: IsDeref
+// COMMON-CHECK-NEXT:       `-DependerDeclsAttr
 
 @interface CountedByClass <CountedByProtocol>
  - (void)simpleParam:(int)len :(int * __counted_by(len))p;
@@ -57,37 +64,44 @@
  - (void)reverseCParam:(int * __counted_by(len))p, int len;
 @end
 
-// CHECK-LABEL: -ObjCInterfaceDecl {{.*}} CountedByClass
-// CHECK-NEXT:   |-ObjCImplementation {{.*}} 'CountedByClass'
-// CHECK-NEXT:   |-ObjCProtocol {{.*}} 'CountedByProtocol'
-// CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - simpleParam:: 'void'
-// CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int'
-// CHECK-NOT: IsDeref
-// CHECK-NEXT:   | | `-DependerDeclsAttr
-// CHECK-NEXT:   | `-ParmVarDecl {{.*}} p 'int *{{(__single)?}} __counted_by(len)':'int *{{(__single)?}}'
-// CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - reverseParam:: 'void'
-// CHECK-NEXT:   | |-ParmVarDecl {{.*}} p 'int *{{(__single)?}} __counted_by(len)':'int *{{(__single)?}}'
-// CHECK-NEXT:   | `-ParmVarDecl {{.*}} len 'int'
-// CHECK-NOT: IsDeref
-// CHECK-NEXT:   |   `-DependerDeclsAttr
-// CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - nestedParam:: 'void'
-// CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int *'
-// CHECK-NEXT:   | | `-DependerDeclsAttr {{.*}} IsDeref
-// CHECK-NEXT:   | `-ParmVarDecl {{.*}} p 'int *{{(__single)?}} __counted_by(*len)':'int *{{(__single)?}}'
-// CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - simpleRet: 'int *{{(__single)?}} __counted_by(len)':'int *{{(__single)?}}'
-// CHECK-NEXT:   | `-ParmVarDecl {{.*}} len 'int'
-// CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - nestedRet: 'int *{{(__single)?}} __counted_by(*len)':'int *{{(__single)?}}'
-// CHECK-NEXT:   | `-ParmVarDecl {{.*}} len 'int *'
-// CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - cParam: 'void'
-// CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int'
-// CHECK-NOT: IsDeref
-// CHECK-NEXT:   | | `-DependerDeclsAttr
-// CHECK-NEXT:   | `-ParmVarDecl {{.*}} p 'int *{{(__single)?}} __counted_by(len)':'int *{{(__single)?}}'
-// CHECK-NEXT:   `-ObjCMethodDecl {{.*}} - reverseCParam: 'void'
-// CHECK-NEXT:     |-ParmVarDecl {{.*}} p 'int *{{(__single)?}} __counted_by(len)':'int *{{(__single)?}}'
-// CHECK-NEXT:     `-ParmVarDecl {{.*}} len 'int'
-// CHECK-NOT: IsDeref
-// CHECK-NEXT:       `-DependerDeclsAttr
+// COMMON-CHECK-LABEL: -ObjCInterfaceDecl {{.*}} CountedByClass
+// COMMON-CHECK-NEXT:   |-ObjCImplementation {{.*}} 'CountedByClass'
+// COMMON-CHECK-NEXT:   |-ObjCProtocol {{.*}} 'CountedByProtocol'
+// COMMON-CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - simpleParam:: 'void'
+// COMMON-CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int'
+// COMMON-CHECK-NOT: IsDeref
+// COMMON-CHECK-NEXT:   | | `-DependerDeclsAttr
+// BOUNDS-CHECK-NEXT:   | `-ParmVarDecl {{.*}} p 'int *__single __counted_by(len)':'int *__single'
+// ATTR-CHECK-NEXT:     | `-ParmVarDecl {{.*}} p 'int * __counted_by(len)':'int *'
+// COMMON-CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - reverseParam:: 'void'
+// BOUNDS-CHECK-NEXT:   | |-ParmVarDecl {{.*}} p 'int *__single __counted_by(len)':'int *__single'
+// ATTR-CHECK-NEXT:     | |-ParmVarDecl {{.*}} p 'int * __counted_by(len)':'int *'
+// COMMON-CHECK-NEXT:   | `-ParmVarDecl {{.*}} len 'int'
+// COMMON-CHECK-NOT: IsDeref
+// COMMON-CHECK-NEXT:   |   `-DependerDeclsAttr
+// COMMON-CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - nestedParam:: 'void'
+// COMMON-CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int *'
+// COMMON-CHECK-NEXT:   | | `-DependerDeclsAttr {{.*}} IsDeref
+// BOUNDS-CHECK-NEXT:   | `-ParmVarDecl {{.*}} p 'int *__single __counted_by(*len)':'int *__single'
+// ATTR-CHECK-NEXT:     | `-ParmVarDecl {{.*}} p 'int * __counted_by(*len)':'int *'
+// BOUNDS-CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - simpleRet: 'int *__single __counted_by(len)':'int *__single'
+// ATTR-CHECK-NEXT:     |-ObjCMethodDecl {{.*}} - simpleRet: 'int * __counted_by(len)':'int *'
+// COMMON-CHECK-NEXT:   | `-ParmVarDecl {{.*}} len 'int'
+// BOUNDS-CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - nestedRet: 'int *__single __counted_by(*len)':'int *__single'
+// ATTR-CHECK-NEXT:     |-ObjCMethodDecl {{.*}} - nestedRet: 'int * __counted_by(*len)':'int *'
+// COMMON-CHECK-NEXT:   | `-ParmVarDecl {{.*}} len 'int *'
+// COMMON-CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - cParam: 'void'
+// COMMON-CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int'
+// COMMON-CHECK-NOT: IsDeref
+// COMMON-CHECK-NEXT:   | | `-DependerDeclsAttr
+// BOUNDS-CHECK-NEXT:   | `-ParmVarDecl {{.*}} p 'int *__single __counted_by(len)':'int *__single'
+// ATTR-CHECK-NEXT:     | `-ParmVarDecl {{.*}} p 'int * __counted_by(len)':'int *'
+// COMMON-CHECK-NEXT:   `-ObjCMethodDecl {{.*}} - reverseCParam: 'void'
+// BOUNDS-CHECK-NEXT:     |-ParmVarDecl {{.*}} p 'int *__single __counted_by(len)':'int *__single'
+// ATTR-CHECK-NEXT:       |-ParmVarDecl {{.*}} p 'int * __counted_by(len)':'int *'
+// COMMON-CHECK-NEXT:     `-ParmVarDecl {{.*}} len 'int'
+// COMMON-CHECK-NOT: IsDeref
+// COMMON-CHECK-NEXT:       `-DependerDeclsAttr
 
 @implementation CountedByClass
  - (void)simpleParam:(int)len :(int * __counted_by(len))p {}
@@ -101,54 +115,61 @@
  - (void)reverseCParam:(int * __counted_by(len))p, int len {}
 @end
 
-// CHECK-LABEL: -ObjCImplementationDecl {{.*}} CountedByClass
-// CHECK-NEXT:   |-ObjCInterface {{.*}} 'CountedByClass'
-// CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - simpleParam:: 'void'
-// CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} self 'CountedByClass *'
-// CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} _cmd 'SEL':'SEL *'
-// CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int'
-// CHECK-NOT: IsDeref
-// CHECK-NEXT:   | | `-DependerDeclsAttr
-// CHECK-NEXT:   | |-ParmVarDecl {{.*}} p 'int *{{(__single)?}} __counted_by(len)':'int *{{(__single)?}}'
-// CHECK-NEXT:   | `-CompoundStmt
-// CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - reverseParam:: 'void'
-// CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} self 'CountedByClass *'
-// CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} _cmd 'SEL':'SEL *'
-// CHECK-NEXT:   | |-ParmVarDecl {{.*}} p 'int *{{(__single)?}} __counted_by(len)':'int *{{(__single)?}}'
-// CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int'
-// CHECK-NOT: IsDeref
-// CHECK-NEXT:   |   `-DependerDeclsAttr
-// CHECK-NEXT:   | `-CompoundStmt
-// CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - nestedParam:: 'void'
-// CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} self 'CountedByClass *'
-// CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} _cmd 'SEL':'SEL *'
-// CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int *'
-// CHECK-NEXT:   | | `-DependerDeclsAttr {{.*}} IsDeref
-// CHECK-NEXT:   | |-ParmVarDecl {{.*}} p 'int *{{(__single)?}} __counted_by(*len)':'int *{{(__single)?}}'
-// CHECK-NEXT:   | `-CompoundStmt
-// CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - simpleRet: 'int *{{(__single)?}} __counted_by(len)':'int *{{(__single)?}}'
-// CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} self 'CountedByClass *'
-// CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} _cmd 'SEL':'SEL *'
-// CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int'
-// CHECK-NEXT:   | `-CompoundStmt
-// CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - nestedRet: 'int *{{(__single)?}} __counted_by(*len)':'int *{{(__single)?}}'
-// CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} self 'CountedByClass *'
-// CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} _cmd 'SEL':'SEL *'
-// CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int *'
-// CHECK-NEXT:   | `-CompoundStmt
-// CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - cParam: 'void'
-// CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} self 'CountedByClass *'
-// CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} _cmd 'SEL':'SEL *'
-// CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int'
-// CHECK-NOT: IsDeref
-// CHECK-NEXT:   | | `-DependerDeclsAttr
-// CHECK-NEXT:   | |-ParmVarDecl {{.*}} p 'int *{{(__single)?}} __counted_by(len)':'int *{{(__single)?}}'
-// CHECK-NEXT:   | `-CompoundStmt
-// CHECK-NEXT:   `-ObjCMethodDecl {{.*}} - reverseCParam: 'void'
-// CHECK-NEXT:     |-ImplicitParamDecl {{.*}} self 'CountedByClass *'
-// CHECK-NEXT:     |-ImplicitParamDecl {{.*}} _cmd 'SEL':'SEL *'
-// CHECK-NEXT:     |-ParmVarDecl {{.*}} p 'int *{{(__single)?}} __counted_by(len)':'int *{{(__single)?}}'
-// CHECK-NEXT:     |-ParmVarDecl {{.*}} len 'int'
-// CHECK-NOT: IsDeref
-// CHECK-NEXT:       `-DependerDeclsAttr
-// CHECK-NEXT:     `-CompoundStmt
+// COMMON-CHECK-LABEL: -ObjCImplementationDecl {{.*}} CountedByClass
+// COMMON-CHECK-NEXT:   |-ObjCInterface {{.*}} 'CountedByClass'
+// COMMON-CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - simpleParam:: 'void'
+// COMMON-CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} self 'CountedByClass *'
+// COMMON-CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} _cmd 'SEL':'SEL *'
+// COMMON-CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int'
+// COMMON-CHECK-NOT: IsDeref
+// COMMON-CHECK-NEXT:   | | `-DependerDeclsAttr
+// BOUNDS-CHECK-NEXT:   | |-ParmVarDecl {{.*}} p 'int *__single __counted_by(len)':'int *__single'
+// ATTR-CHECK-NEXT:     | |-ParmVarDecl {{.*}} p 'int * __counted_by(len)':'int *'
+// COMMON-CHECK-NEXT:   | `-CompoundStmt
+// COMMON-CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - reverseParam:: 'void'
+// COMMON-CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} self 'CountedByClass *'
+// COMMON-CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} _cmd 'SEL':'SEL *'
+// BOUNDS-CHECK-NEXT:   | |-ParmVarDecl {{.*}} p 'int *__single __counted_by(len)':'int *__single'
+// ATTR-CHECK-NEXT:     | |-ParmVarDecl {{.*}} p 'int * __counted_by(len)':'int *'
+// COMMON-CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int'
+// COMMON-CHECK-NOT: IsDeref
+// COMMON-CHECK-NEXT:   |   `-DependerDeclsAttr
+// COMMON-CHECK-NEXT:   | `-CompoundStmt
+// COMMON-CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - nestedParam:: 'void'
+// COMMON-CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} self 'CountedByClass *'
+// COMMON-CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} _cmd 'SEL':'SEL *'
+// COMMON-CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int *'
+// COMMON-CHECK-NEXT:   | | `-DependerDeclsAttr {{.*}} IsDeref
+// BOUNDS-CHECK-NEXT:   | |-ParmVarDecl {{.*}} p 'int *__single __counted_by(*len)':'int *__single'
+// ATTR-CHECK-NEXT:     | |-ParmVarDecl {{.*}} p 'int * __counted_by(*len)':'int *'
+// COMMON-CHECK-NEXT:   | `-CompoundStmt
+// BOUNDS-CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - simpleRet: 'int *__single __counted_by(len)':'int *__single'
+// ATTR-CHECK-NEXT:     |-ObjCMethodDecl {{.*}} - simpleRet: 'int * __counted_by(len)':'int *'
+// COMMON-CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} self 'CountedByClass *'
+// COMMON-CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} _cmd 'SEL':'SEL *'
+// COMMON-CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int'
+// COMMON-CHECK-NEXT:   | `-CompoundStmt
+// BOUNDS-CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - nestedRet: 'int *__single __counted_by(*len)':'int *__single'
+// ATTR-CHECK-NEXT:     |-ObjCMethodDecl {{.*}} - nestedRet: 'int * __counted_by(*len)':'int *'
+// COMMON-CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} self 'CountedByClass *'
+// COMMON-CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} _cmd 'SEL':'SEL *'
+// COMMON-CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int *'
+// COMMON-CHECK-NEXT:   | `-CompoundStmt
+// COMMON-CHECK-NEXT:   |-ObjCMethodDecl {{.*}} - cParam: 'void'
+// COMMON-CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} self 'CountedByClass *'
+// COMMON-CHECK-NEXT:   | |-ImplicitParamDecl {{.*}} _cmd 'SEL':'SEL *'
+// COMMON-CHECK-NEXT:   | |-ParmVarDecl {{.*}} len 'int'
+// COMMON-CHECK-NOT: IsDeref
+// COMMON-CHECK-NEXT:   | | `-DependerDeclsAttr
+// BOUNDS-CHECK-NEXT:   | |-ParmVarDecl {{.*}} p 'int *__single __counted_by(len)':'int *__single'
+// ATTR-CHECK-NEXT:     | |-ParmVarDecl {{.*}} p 'int * __counted_by(len)':'int *'
+// COMMON-CHECK-NEXT:   | `-CompoundStmt
+// COMMON-CHECK-NEXT:   `-ObjCMethodDecl {{.*}} - reverseCParam: 'void'
+// COMMON-CHECK-NEXT:     |-ImplicitParamDecl {{.*}} self 'CountedByClass *'
+// COMMON-CHECK-NEXT:     |-ImplicitParamDecl {{.*}} _cmd 'SEL':'SEL *'
+// BOUNDS-CHECK-NEXT:     |-ParmVarDecl {{.*}} p 'int *__single __counted_by(len)':'int *__single'
+// ATTR-CHECK-NEXT:       |-ParmVarDecl {{.*}} p 'int * __counted_by(len)':'int *'
+// COMMON-CHECK-NEXT:     |-ParmVarDecl {{.*}} len 'int'
+// COMMON-CHECK-NOT: IsDeref
+// COMMON-CHECK-NEXT:       `-DependerDeclsAttr
+// COMMON-CHECK-NEXT:     `-CompoundStmt
