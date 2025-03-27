@@ -1,5 +1,4 @@
-//===-- SBMutex.cpp
-//--------------------------------------------------------===//
+//===-- SBMutex.cpp -------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +16,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBMutex::SBMutex() { LLDB_INSTRUMENT_VA(this); }
+SBMutex::SBMutex() : m_opaque_sp(std::make_shared<std::recursive_mutex>()) {
+  LLDB_INSTRUMENT_VA(this);
+}
 
 SBMutex::SBMutex(const SBMutex &rhs) : m_opaque_sp(rhs.m_opaque_sp) {
   LLDB_INSTRUMENT_VA(this);

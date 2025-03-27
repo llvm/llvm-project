@@ -1,5 +1,4 @@
-//===-- SBMutex.h
-//----------------------------------------------------------===//
+//===-- SBMutex.h ---------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_API_SBLOCK_H
-#define LLDB_API_SBLOCK_H
+#ifndef LLDB_API_SBMUTEX_H
+#define LLDB_API_SBMUTEX_H
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/lldb-forward.h"
@@ -16,9 +15,6 @@
 
 namespace lldb {
 
-/// A general-purpose lock in the SB API. The lock can be locked and unlocked.
-/// The default constructed lock is unlocked, but generally the lock is locked
-/// when it is returned from a class.
 class LLDB_API SBMutex {
 public:
   SBMutex();
@@ -43,6 +39,7 @@ private:
 
   std::shared_ptr<std::recursive_mutex> m_opaque_sp;
 };
-#endif
 
 } // namespace lldb
+
+#endif
