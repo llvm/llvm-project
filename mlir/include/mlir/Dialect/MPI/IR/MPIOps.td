@@ -73,8 +73,7 @@ def MPI_CommRankOp : MPI_Op<"comm_rank", []> {
     I32 : $rank
   );
 
-  let assemblyFormat = "(`(` $comm ^ `)`)? attr-dict (`:` type($comm) ^ `->`):"
-                       "(`:`)? type(results)";
+  let assemblyFormat = "`(` $comm  `)` attr-dict `:` type(results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -91,15 +90,14 @@ def MPI_CommSizeOp : MPI_Op<"comm_size", []> {
     to check for errors.
   }];
 
-  let arguments = (ins Optional<MPI_Comm> : $comm);
+  let arguments = (ins MPI_Comm : $comm);
 
   let results = (
     outs Optional<MPI_Retval> : $retval,
     I32 : $size
   );
 
-  let assemblyFormat = "(`(` $comm ^ `)`)? attr-dict (`:` type($comm) ^ `->`):"
-                       "(`:`)? type(results)";
+  let assemblyFormat = "`(` $comm  `)` attr-dict `:` type(results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -127,7 +125,7 @@ def MPI_CommSplit : MPI_Op<"comm_split", []> {
   );
 
   let assemblyFormat = "`(` $comm `,` $color `,` $key `)` attr-dict `:` "
-                       "type($comm) `,` type($color) `,` type($key) `->` "
+                       "type($color) `,` type($key) `->` "
                        "type(results)";
 }
 
@@ -153,12 +151,12 @@ def MPI_SendOp : MPI_Op<"send", []> {
     ins AnyMemRef : $ref,
     I32 : $tag,
     I32 : $dest,
-    Optional<MPI_Comm> : $comm
+    MPI_Comm : $comm
   );
 
   let results = (outs Optional<MPI_Retval>:$retval);
 
-  let assemblyFormat = "`(` $ref `,` $tag `,` $dest (`,` $comm ^)? `)` attr-dict `:` "
+  let assemblyFormat = "`(` $ref `,` $tag `,` $dest `,` $comm `)` attr-dict `:` "
                        "type($ref) `,` type($tag) `,` type($dest)"
                        "(`->` type($retval)^)?";
   let hasCanonicalizer = 1;
@@ -187,7 +185,7 @@ def MPI_ISendOp : MPI_Op<"isend", []> {
     ins AnyMemRef : $ref,
     I32 : $tag,
     I32 : $rank,
-    Optional<MPI_Comm> : $comm
+    MPI_Comm : $comm
   );
 
   let results = (
@@ -195,9 +193,9 @@ def MPI_ISendOp : MPI_Op<"isend", []> {
     MPI_Request : $req
   );
 
-  let assemblyFormat = "`(` $ref `,` $tag `,` $rank (`,` $comm ^)?`)` attr-dict "
+  let assemblyFormat = "`(` $ref `,` $tag `,` $rank `,` $comm`)` attr-dict "
                        "`:` type($ref) `,` type($tag) `,` type($rank) "
-                       "(`,` type($comm) ^)? `->` type(results)";
+                       "`->` type(results)";
   let hasCanonicalizer = 1;
 }
 
@@ -225,14 +223,14 @@ def MPI_RecvOp : MPI_Op<"recv", []> {
   let arguments = (
     ins AnyMemRef : $ref,
     I32 : $tag, I32 : $source,
-    Optional<MPI_Comm> : $comm
+    MPI_Comm : $comm
   );
 
   let results = (outs Optional<MPI_Retval>:$retval);
 
-  let assemblyFormat = "`(` $ref `,` $tag `,` $source (`,` $comm ^)?`)` attr-dict"
+  let assemblyFormat = "`(` $ref `,` $tag `,` $source `,` $comm `)` attr-dict"
                        " `:` type($ref) `,` type($tag) `,` type($source) "
-                       "(`,` type($comm) ^)? (`->` type($retval)^)?";
+                       "(`->` type($retval)^)?";
   let hasCanonicalizer = 1;
 }
 
@@ -259,7 +257,7 @@ def MPI_IRecvOp : MPI_Op<"irecv", []> {
     ins AnyMemRef : $ref,
     I32 : $tag,
     I32 : $rank,
-    Optional<MPI_Comm> : $comm
+    MPI_Comm : $comm
   );
 
   let results = (
@@ -267,9 +265,9 @@ def MPI_IRecvOp : MPI_Op<"irecv", []> {
     MPI_Request : $req
   );
 
-  let assemblyFormat = "`(` $ref `,` $tag `,` $rank (`,` $comm ^)?`)` attr-dict "
+  let assemblyFormat = "`(` $ref `,` $tag `,` $rank `,` $comm`)` attr-dict "
                        "`:` type($ref) `,` type($tag) `,` type($rank)"
-                       "(`,` type($comm) ^)? `->` type(results)";
+                       "`->` type(results)";
   let hasCanonicalizer = 1;
 }
 
@@ -298,14 +296,14 @@ def MPI_AllReduceOp : MPI_Op<"allreduce", []> {
     ins AnyMemRef : $sendbuf,
     AnyMemRef : $recvbuf,
     MPI_OpClassAttr : $op,
-    Optional<MPI_Comm> : $comm
+    MPI_Comm : $comm
   );
 
   let results = (outs Optional<MPI_Retval>:$retval);
 
-  let assemblyFormat = "`(` $sendbuf `,` $recvbuf `,` $op (`,` $comm ^)?`)` "
+  let assemblyFormat = "`(` $sendbuf `,` $recvbuf `,` $op `,` $comm `)` "
                        "attr-dict `:` type($sendbuf) `,` type($recvbuf) "
-                       "(`,` type($comm) ^)? (`->` type($retval)^)?";
+                       "(`->` type($retval)^)?";
 }
 
 //===----------------------------------------------------------------------===//
@@ -324,7 +322,7 @@ def MPI_Barrier : MPI_Op<"barrier", []> {
     to check for errors.
   }];
 
-  let arguments = (ins Optional<MPI_Comm> : $comm);
+  let arguments = (ins MPI_Comm : $comm);
 
   let results = (outs Optional<MPI_Retval>:$retval);
 
@@ -336,9 +334,8 @@ def MPI_Barrier : MPI_Op<"barrier", []> {
   //                      "(`(` $comm `)` attr-dict `:` type($comm) `->` type($retval))"
   //                      ")?";
   let assemblyFormat = [{
-    (`(` $comm ^ `)`)? attr-dict
-    (`:` type($comm) ^ `->`):(`:`)?
-    type(results)
+    `(` $comm  `)` attr-dict
+    (`->` type($retval)^)?
   }];
 }
 
