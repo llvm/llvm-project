@@ -1,3 +1,4 @@
+; RUN: llc -O0 -mtriple=spirv-unknown-vulkan1.3 %s -print-after-all -o - 2>&1 | FileCheck %s
 ; RUN: llc -O0 -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
 
 ; CHECK-DAG: [[uint:%[0-9]+]] = OpTypeInt 32 0
@@ -19,14 +20,17 @@
 ; CHECK-DAG: [[uint_1:%[0-9]+]] = OpConstant [[uint]] 1
 ; CHECK-DAG: [[uint_2:%[0-9]+]] = OpConstant [[uint]] 2
 
-; CHECK-DAG: [[ptr_uint:%[0-9]+]] = OpTypePointer Function [[uint]]
-; CHECK-DAG:    [[ptr_A:%[0-9]+]] = OpTypePointer Function [[A]]
-; CHECK-DAG:    [[ptr_B:%[0-9]+]] = OpTypePointer Function [[B]]
+; CHECK-DAG: [[ptr_uint:%[0-9]+]] = OpTypePointer Private [[uint]]
+; CHECK-DAG:    [[ptr_A:%[0-9]+]] = OpTypePointer Private [[A]]
+; CHECK-DAG:    [[ptr_B:%[0-9]+]] = OpTypePointer Private [[B]]
+
+; CHECK-DAG: [[tmp:%[0-9]+]] = OpVariable [[ptr_B]] Private
 
 define void @main() #1 {
 entry:
   %0 = alloca %B, align 4
-; CHECK: [[tmp:%[0-9]+]] = OpVariable [[ptr_B]] Function
+; CHECK:     OpLabel
+; CHECK-NOT: OpVariable
 
   %1 = getelementptr %B, ptr %0, i32 0, i32 0
 ; CHECK: {{%[0-9]+}} = OpAccessChain [[ptr_A]] [[tmp]] [[uint_0]]
