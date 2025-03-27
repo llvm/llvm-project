@@ -1684,11 +1684,10 @@ static Type *getMinimumFPType(Value *V, bool PreferBFloat) {
     if (Type *T = shrinkFPConstant(CFP, PreferBFloat))
       return T;
 
-  // We can only correctly find a minimum type for a scalable vector when it is
-  // a splat.
-  if (auto *FPCE = dyn_cast<ConstantExpr>(V))
-    if (isa<ScalableVectorType>(V->getType()))
-      if (auto *Splat = dyn_cast<ConstantFP>(FPCE->getSplatValue()))
+  // Try to shrink scalable and fixed splat vectors.
+  if (auto *FPC = dyn_cast<Constant>(V))
+    if (isa<VectorType>(V->getType()))
+      if (auto *Splat = dyn_cast_or_null<ConstantFP>(FPC->getSplatValue()))
         if (Type *T = shrinkFPConstant(Splat, PreferBFloat))
           return T;
 
