@@ -406,6 +406,8 @@ private:
   std::optional<std::string> SuggestionCallback(llvm::StringRef line);
 
   void AutoCompleteCallback(CompletionRequest &request);
+
+  void RedrawCallback();
 #endif
 
 protected:
