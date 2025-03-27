@@ -270,7 +270,7 @@ llvm::Expected<InitializeResponseBody> InitializeRequestHandler::Run(
   auto cmd = dap.debugger.GetCommandInterpreter().AddMultiwordCommand(
       "lldb-dap", "Commands for managing lldb-dap.");
   if (arguments.supportedFeatures.contains(
-          eClientFeatureSupportsStartDebuggingRequest)) {
+          eClientFeatureStartDebuggingRequest)) {
     cmd.AddCommand(
         "start-debugging", new StartDebuggingRequestHandler(dap),
         "Sends a startDebugging request from the debug adapter to the client "
@@ -282,8 +282,7 @@ llvm::Expected<InitializeResponseBody> InitializeRequestHandler::Run(
   cmd.AddCommand("send-event", new SendEventRequestHandler(dap),
                  "Sends an DAP event to the client.");
 
-  if (arguments.supportedFeatures.contains(
-          eClientFeatureSupportsProgressReporting))
+  if (arguments.supportedFeatures.contains(eClientFeatureProgressReporting))
     dap.progress_event_thread =
         std::thread(ProgressEventThreadFunction, std::ref(dap));
 

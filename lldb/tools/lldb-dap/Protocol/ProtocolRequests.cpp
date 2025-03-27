@@ -48,19 +48,17 @@ bool fromJSON(const llvm::json::Value &Params, PathFormat &PF,
 }
 
 static const llvm::StringMap<ClientFeature> ClientFeatureByKey{
-    {"supportsVariableType", eClientFeatureSupportsVariableType},
-    {"supportsVariablePaging", eClientFeatureSupportsVariablePaging},
-    {"supportsRunInTerminalRequest",
-     eClientFeatureSupportsRunInTerminalRequest},
-    {"supportsMemoryReferences", eClientFeatureSupportsMemoryReferences},
-    {"supportsProgressReporting", eClientFeatureSupportsProgressReporting},
-    {"supportsInvalidatedEvent", eClientFeatureSupportsInvalidatedEvent},
-    {"supportsMemoryEvent", eClientFeatureSupportsMemoryEvent},
+    {"supportsVariableType", eClientFeatureVariableType},
+    {"supportsVariablePaging", eClientFeatureVariablePaging},
+    {"supportsRunInTerminalRequest", eClientFeatureRunInTerminalRequest},
+    {"supportsMemoryReferences", eClientFeatureMemoryReferences},
+    {"supportsProgressReporting", eClientFeatureProgressReporting},
+    {"supportsInvalidatedEvent", eClientFeatureInvalidatedEvent},
+    {"supportsMemoryEvent", eClientFeatureMemoryEvent},
     {"supportsArgsCanBeInterpretedByShell",
-     eClientFeatureSupportsArgsCanBeInterpretedByShell},
-    {"supportsStartDebuggingRequest",
-     eClientFeatureSupportsStartDebuggingRequest},
-    {"supportsANSIStyling", eClientFeatureSupportsANSIStyling}};
+     eClientFeatureArgsCanBeInterpretedByShell},
+    {"supportsStartDebuggingRequest", eClientFeatureStartDebuggingRequest},
+    {"supportsANSIStyling", eClientFeatureANSIStyling}};
 
 bool fromJSON(const llvm::json::Value &Params, InitializeRequestArguments &IRA,
               llvm::json::Path P) {

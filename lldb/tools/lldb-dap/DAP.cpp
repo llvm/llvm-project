@@ -1150,9 +1150,9 @@ protocol::Capabilities DAP::GetCapabilities() {
 
   // Supported capabilities that are not specific to a single request.
   capabilities.supportedFeatures = {
-      protocol::eAdapterFeatureSupportsLogPoints,
-      protocol::eAdapterFeatureSupportsSteppingGranularity,
-      protocol::eAdapterFeatureSupportsValueFormattingOptions,
+      protocol::eAdapterFeatureLogPoints,
+      protocol::eAdapterFeatureSteppingGranularity,
+      protocol::eAdapterFeatureValueFormattingOptions,
   };
 
   // Capabilities associated with specific requests.

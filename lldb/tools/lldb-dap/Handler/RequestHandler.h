@@ -49,10 +49,8 @@ public:
 
   virtual void operator()(const protocol::Request &request) const = 0;
 
-  using FeatureSet =  llvm::SmallDenseSet<AdapterFeature, 1>;
-  virtual FeatureSet GetSupportedFeatures() const {
-    return {};
-  }
+  using FeatureSet = llvm::SmallDenseSet<AdapterFeature, 1>;
+  virtual FeatureSet GetSupportedFeatures() const { return {}; }
 
 protected:
   /// Helpers used by multiple request handlers.
@@ -180,8 +178,8 @@ class BreakpointLocationsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "breakpointLocations"; }
-  llvm::SmallDenseSet<AdapterFeature, 1> GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureSupportsBreakpointLocationsRequest};
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureBreakpointLocationsRequest};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -190,8 +188,8 @@ class CompletionsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "completions"; }
-  llvm::SmallDenseSet<AdapterFeature, 1> GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureSupportsCompletionsRequest};
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureCompletionsRequest};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -207,8 +205,8 @@ class ConfigurationDoneRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "configurationDone"; }
-  llvm::SmallDenseSet<AdapterFeature, 1> GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureSupportsConfigurationDoneRequest};
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureConfigurationDoneRequest};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -219,8 +217,8 @@ class DisconnectRequestHandler
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "disconnect"; }
-  llvm::SmallDenseSet<AdapterFeature, 1> GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureSupportTerminateDebuggee};
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureTerminateDebuggee};
   }
   llvm::Expected<protocol::DisconnectResponse>
   Run(const std::optional<protocol::DisconnectArguments> &args) const override;
@@ -231,8 +229,8 @@ public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "evaluate"; }
   void operator()(const llvm::json::Object &request) const override;
-  llvm::SmallDenseSet<AdapterFeature, 1> GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureSupportsEvaluateForHovers};
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureEvaluateForHovers};
   }
 };
 
@@ -240,8 +238,8 @@ class ExceptionInfoRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "exceptionInfo"; }
-  llvm::SmallDenseSet<AdapterFeature, 1> GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureSupportsExceptionInfoRequest};
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureExceptionInfoRequest};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -267,8 +265,8 @@ class RestartRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "restart"; }
-  llvm::SmallDenseSet<AdapterFeature, 1> GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureSupportsRestartRequest};
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureRestartRequest};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -291,8 +289,8 @@ class StepInTargetsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "stepInTargets"; }
-  llvm::SmallDenseSet<AdapterFeature, 1> GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureSupportsStepInTargetsRequest};
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureStepInTargetsRequest};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -308,9 +306,9 @@ class SetBreakpointsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "setBreakpoints"; }
-  llvm::SmallDenseSet<AdapterFeature, 1> GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureSupportsConditionalBreakpoints,
-            protocol::eAdapterFeatureSupportsHitConditionalBreakpoints};
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureConditionalBreakpoints,
+            protocol::eAdapterFeatureHitConditionalBreakpoints};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -319,8 +317,8 @@ class SetExceptionBreakpointsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "setExceptionBreakpoints"; }
-  llvm::SmallDenseSet<AdapterFeature, 1> GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureSupportsExceptionOptions};
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureExceptionOptions};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -329,8 +327,8 @@ class SetFunctionBreakpointsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "setFunctionBreakpoints"; }
-  llvm::SmallDenseSet<AdapterFeature, 1> GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureSupportsFunctionBreakpoints};
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureFunctionBreakpoints};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -347,8 +345,8 @@ public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "setDataBreakpoints"; }
   void operator()(const llvm::json::Object &request) const override;
-  llvm::SmallDenseSet<AdapterFeature, 1> GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureSupportsDataBreakpoints};
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureDataBreakpoints};
   }
 };
 
@@ -359,8 +357,8 @@ public:
     return "setInstructionBreakpoints";
   }
   void operator()(const llvm::json::Object &request) const override;
-  llvm::SmallDenseSet<AdapterFeature, 1> GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureSupportsInstructionBreakpoints};
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureInstructionBreakpoints};
   }
 };
 
@@ -375,8 +373,8 @@ class ModulesRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "modules"; }
-  llvm::SmallDenseSet<AdapterFeature, 1> GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureSupportsModulesRequest};
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureModulesRequest};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -399,8 +397,8 @@ class SetVariableRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "setVariable"; }
-  llvm::SmallDenseSet<AdapterFeature, 1> GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureSupportsSetVariable};
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureSetVariable};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -420,8 +418,8 @@ public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "stackTrace"; }
   void operator()(const llvm::json::Object &request) const override;
-  llvm::SmallDenseSet<AdapterFeature, 1> GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureSupportsDelayedStackTraceLoading};
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureDelayedStackTraceLoading};
   }
 };
 
@@ -450,8 +448,8 @@ class DisassembleRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "disassemble"; }
-  llvm::SmallDenseSet<AdapterFeature, 1> GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureSupportsDisassembleRequest};
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureDisassembleRequest};
   }
   void operator()(const llvm::json::Object &request) const override;
 };
@@ -460,8 +458,8 @@ class ReadMemoryRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
   static llvm::StringLiteral GetCommand() { return "readMemory"; }
-  llvm::SmallDenseSet<AdapterFeature, 1> GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureSupportsReadMemoryRequest};
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureReadMemoryRequest};
   }
   void operator()(const llvm::json::Object &request) const override;
 };

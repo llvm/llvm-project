@@ -136,98 +136,98 @@ llvm::json::Value toJSON(const BreakpointMode &);
 enum AdapterFeature {
   /// The debug adapter supports ANSI escape sequences in styling of
   /// `OutputEvent.output` and `Variable.value` fields.
-  eAdapterFeatureSupportsANSIStyling,
+  eAdapterFeatureANSIStyling,
   /// The debug adapter supports the `breakpointLocations` request.
-  eAdapterFeatureSupportsBreakpointLocationsRequest,
+  eAdapterFeatureBreakpointLocationsRequest,
   /// The debug adapter supports the `cancel` request.
-  eAdapterFeatureSupportsCancelRequest,
+  eAdapterFeatureCancelRequest,
   /// The debug adapter supports the `clipboard` context value in the
   /// `evaluate` request.
-  eAdapterFeatureSupportsClipboardContext,
+  eAdapterFeatureClipboardContext,
   /// The debug adapter supports the `completions` request.
-  eAdapterFeatureSupportsCompletionsRequest,
+  eAdapterFeatureCompletionsRequest,
   /// The debug adapter supports conditional breakpoints.
-  eAdapterFeatureSupportsConditionalBreakpoints,
+  eAdapterFeatureConditionalBreakpoints,
   /// The debug adapter supports the `configurationDone` request.
-  eAdapterFeatureSupportsConfigurationDoneRequest,
+  eAdapterFeatureConfigurationDoneRequest,
   /// The debug adapter supports the `asAddress` and `bytes` fields in the
   /// `dataBreakpointInfo` request.
-  eAdapterFeatureSupportsDataBreakpointBytes,
+  eAdapterFeatureDataBreakpointBytes,
   /// The debug adapter supports data breakpoints.
-  eAdapterFeatureSupportsDataBreakpoints,
+  eAdapterFeatureDataBreakpoints,
   /// The debug adapter supports the delayed loading of parts of the stack,
   /// which requires that both the `startFrame` and `levels` arguments and the
   /// `totalFrames` result of the `stackTrace` request are supported.
-  eAdapterFeatureSupportsDelayedStackTraceLoading,
+  eAdapterFeatureDelayedStackTraceLoading,
   /// The debug adapter supports the `disassemble` request.
-  eAdapterFeatureSupportsDisassembleRequest,
+  eAdapterFeatureDisassembleRequest,
   /// The debug adapter supports a (side effect free) `evaluate` request for
   /// data hovers.
-  eAdapterFeatureSupportsEvaluateForHovers,
+  eAdapterFeatureEvaluateForHovers,
   /// The debug adapter supports `filterOptions` as an argument on the
   /// `setExceptionBreakpoints` request.
-  eAdapterFeatureSupportsExceptionFilterOptions,
+  eAdapterFeatureExceptionFilterOptions,
   /// The debug adapter supports the `exceptionInfo` request.
-  eAdapterFeatureSupportsExceptionInfoRequest,
+  eAdapterFeatureExceptionInfoRequest,
   /// The debug adapter supports `exceptionOptions` on the
   /// `setExceptionBreakpoints` request.
-  eAdapterFeatureSupportsExceptionOptions,
+  eAdapterFeatureExceptionOptions,
   /// The debug adapter supports function breakpoints.
-  eAdapterFeatureSupportsFunctionBreakpoints,
+  eAdapterFeatureFunctionBreakpoints,
   /// The debug adapter supports the `gotoTargets` request.
-  eAdapterFeatureSupportsGotoTargetsRequest,
+  eAdapterFeatureGotoTargetsRequest,
   /// The debug adapter supports breakpoints that break execution after a
   /// specified number of hits.
-  eAdapterFeatureSupportsHitConditionalBreakpoints,
+  eAdapterFeatureHitConditionalBreakpoints,
   /// The debug adapter supports adding breakpoints based on instruction
   /// references.
-  eAdapterFeatureSupportsInstructionBreakpoints,
+  eAdapterFeatureInstructionBreakpoints,
   /// The debug adapter supports the `loadedSources` request.
-  eAdapterFeatureSupportsLoadedSourcesRequest,
+  eAdapterFeatureLoadedSourcesRequest,
   /// The debug adapter supports log points by interpreting the `logMessage`
   /// attribute of the `SourceBreakpoint`.
-  eAdapterFeatureSupportsLogPoints,
+  eAdapterFeatureLogPoints,
   /// The debug adapter supports the `modules` request.
-  eAdapterFeatureSupportsModulesRequest,
+  eAdapterFeatureModulesRequest,
   /// The debug adapter supports the `readMemory` request.
-  eAdapterFeatureSupportsReadMemoryRequest,
+  eAdapterFeatureReadMemoryRequest,
   /// The debug adapter supports restarting a frame.
-  eAdapterFeatureSupportsRestartFrame,
+  eAdapterFeatureRestartFrame,
   /// The debug adapter supports the `restart` request. In this case a client
   /// should not implement `restart` by terminating and relaunching the
   /// adapter but by calling the `restart` request.
-  eAdapterFeatureSupportsRestartRequest,
+  eAdapterFeatureRestartRequest,
   /// The debug adapter supports the `setExpression` request.
-  eAdapterFeatureSupportsSetExpression,
+  eAdapterFeatureSetExpression,
   /// The debug adapter supports setting a variable to a value.
-  eAdapterFeatureSupportsSetVariable,
+  eAdapterFeatureSetVariable,
   /// The debug adapter supports the `singleThread` property on the execution
   /// requests (`continue`, `next`, `stepIn`, `stepOut`, `reverseContinue`,
   /// `stepBack`).
-  eAdapterFeatureSupportsSingleThreadExecutionRequests,
+  eAdapterFeatureSingleThreadExecutionRequests,
   /// The debug adapter supports stepping back via the `stepBack` and
   /// `reverseContinue` requests.
-  eAdapterFeatureSupportsStepBack,
+  eAdapterFeatureStepBack,
   /// The debug adapter supports the `stepInTargets` request.
-  eAdapterFeatureSupportsStepInTargetsRequest,
+  eAdapterFeatureStepInTargetsRequest,
   /// The debug adapter supports stepping granularities (argument
   /// `granularity`) for the stepping requests.
-  eAdapterFeatureSupportsSteppingGranularity,
+  eAdapterFeatureSteppingGranularity,
   /// The debug adapter supports the `terminate` request.
-  eAdapterFeatureSupportsTerminateRequest,
+  eAdapterFeatureTerminateRequest,
   /// The debug adapter supports the `terminateThreads` request.
-  eAdapterFeatureSupportsTerminateThreadsRequest,
+  eAdapterFeatureTerminateThreadsRequest,
   /// The debug adapter supports the `suspendDebuggee` attribute on the
   /// `disconnect` request.
-  eAdapterFeatureSupportSuspendDebuggee,
+  eAdapterFeatureSuspendDebuggee,
   /// The debug adapter supports a `format` attribute on the `stackTrace`,
   /// `variables`, and `evaluate` requests.
-  eAdapterFeatureSupportsValueFormattingOptions,
+  eAdapterFeatureValueFormattingOptions,
   /// The debug adapter supports the `writeMemory` request.
-  eAdapterFeatureSupportsWriteMemoryRequest,
+  eAdapterFeatureWriteMemoryRequest,
   /// The debug adapter supports the `terminateDebuggee` attribute on the
   /// `disconnect` request.
-  eAdapterFeatureSupportTerminateDebuggee,
+  eAdapterFeatureTerminateDebuggee,
 };
 
 /// Information about the capabilities of a debug adapter.

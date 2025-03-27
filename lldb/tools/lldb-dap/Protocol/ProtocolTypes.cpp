@@ -125,79 +125,79 @@ json::Value toJSON(const BreakpointMode &BM) {
 
 static llvm::StringLiteral ToString(AdapterFeature feature) {
   switch (feature) {
-  case eAdapterFeatureSupportsANSIStyling:
+  case eAdapterFeatureANSIStyling:
     return "supportsANSIStyling";
-  case eAdapterFeatureSupportsBreakpointLocationsRequest:
+  case eAdapterFeatureBreakpointLocationsRequest:
     return "supportsBreakpointLocationsRequest";
-  case eAdapterFeatureSupportsCancelRequest:
+  case eAdapterFeatureCancelRequest:
     return "supportsCancelRequest";
-  case eAdapterFeatureSupportsClipboardContext:
+  case eAdapterFeatureClipboardContext:
     return "supportsClipboardContext";
-  case eAdapterFeatureSupportsCompletionsRequest:
+  case eAdapterFeatureCompletionsRequest:
     return "supportsCompletionsRequest";
-  case eAdapterFeatureSupportsConditionalBreakpoints:
+  case eAdapterFeatureConditionalBreakpoints:
     return "supportsConditionalBreakpoints";
-  case eAdapterFeatureSupportsConfigurationDoneRequest:
+  case eAdapterFeatureConfigurationDoneRequest:
     return "supportsConfigurationDoneRequest";
-  case eAdapterFeatureSupportsDataBreakpointBytes:
+  case eAdapterFeatureDataBreakpointBytes:
     return "supportsDataBreakpointBytes";
-  case eAdapterFeatureSupportsDataBreakpoints:
+  case eAdapterFeatureDataBreakpoints:
     return "supportsDataBreakpoints";
-  case eAdapterFeatureSupportsDelayedStackTraceLoading:
+  case eAdapterFeatureDelayedStackTraceLoading:
     return "supportsDelayedStackTraceLoading";
-  case eAdapterFeatureSupportsDisassembleRequest:
+  case eAdapterFeatureDisassembleRequest:
     return "supportsDisassembleRequest";
-  case eAdapterFeatureSupportsEvaluateForHovers:
+  case eAdapterFeatureEvaluateForHovers:
     return "supportsEvaluateForHovers";
-  case eAdapterFeatureSupportsExceptionFilterOptions:
+  case eAdapterFeatureExceptionFilterOptions:
     return "supportsExceptionFilterOptions";
-  case eAdapterFeatureSupportsExceptionInfoRequest:
+  case eAdapterFeatureExceptionInfoRequest:
     return "supportsExceptionInfoRequest";
-  case eAdapterFeatureSupportsExceptionOptions:
+  case eAdapterFeatureExceptionOptions:
     return "supportsExceptionOptions";
-  case eAdapterFeatureSupportsFunctionBreakpoints:
+  case eAdapterFeatureFunctionBreakpoints:
     return "supportsFunctionBreakpoints";
-  case eAdapterFeatureSupportsGotoTargetsRequest:
+  case eAdapterFeatureGotoTargetsRequest:
     return "supportsGotoTargetsRequest";
-  case eAdapterFeatureSupportsHitConditionalBreakpoints:
+  case eAdapterFeatureHitConditionalBreakpoints:
     return "supportsHitConditionalBreakpoints";
-  case eAdapterFeatureSupportsInstructionBreakpoints:
+  case eAdapterFeatureInstructionBreakpoints:
     return "supportsInstructionBreakpoints";
-  case eAdapterFeatureSupportsLoadedSourcesRequest:
+  case eAdapterFeatureLoadedSourcesRequest:
     return "supportsLoadedSourcesRequest";
-  case eAdapterFeatureSupportsLogPoints:
+  case eAdapterFeatureLogPoints:
     return "supportsLogPoints";
-  case eAdapterFeatureSupportsModulesRequest:
+  case eAdapterFeatureModulesRequest:
     return "supportsModulesRequest";
-  case eAdapterFeatureSupportsReadMemoryRequest:
+  case eAdapterFeatureReadMemoryRequest:
     return "supportsReadMemoryRequest";
-  case eAdapterFeatureSupportsRestartFrame:
+  case eAdapterFeatureRestartFrame:
     return "supportsRestartFrame";
-  case eAdapterFeatureSupportsRestartRequest:
+  case eAdapterFeatureRestartRequest:
     return "supportsRestartRequest";
-  case eAdapterFeatureSupportsSetExpression:
+  case eAdapterFeatureSetExpression:
     return "supportsSetExpression";
-  case eAdapterFeatureSupportsSetVariable:
+  case eAdapterFeatureSetVariable:
     return "supportsSetVariable";
-  case eAdapterFeatureSupportsSingleThreadExecutionRequests:
+  case eAdapterFeatureSingleThreadExecutionRequests:
     return "supportsSingleThreadExecutionRequests";
-  case eAdapterFeatureSupportsStepBack:
+  case eAdapterFeatureStepBack:
     return "supportsStepBack";
-  case eAdapterFeatureSupportsStepInTargetsRequest:
+  case eAdapterFeatureStepInTargetsRequest:
     return "supportsStepInTargetsRequest";
-  case eAdapterFeatureSupportsSteppingGranularity:
+  case eAdapterFeatureSteppingGranularity:
     return "supportsSteppingGranularity";
-  case eAdapterFeatureSupportsTerminateRequest:
+  case eAdapterFeatureTerminateRequest:
     return "supportsTerminateRequest";
-  case eAdapterFeatureSupportsTerminateThreadsRequest:
+  case eAdapterFeatureTerminateThreadsRequest:
     return "supportsTerminateThreadsRequest";
-  case eAdapterFeatureSupportSuspendDebuggee:
+  case eAdapterFeatureSuspendDebuggee:
     return "supportSuspendDebuggee";
-  case eAdapterFeatureSupportsValueFormattingOptions:
+  case eAdapterFeatureValueFormattingOptions:
     return "supportsValueFormattingOptions";
-  case eAdapterFeatureSupportsWriteMemoryRequest:
+  case eAdapterFeatureWriteMemoryRequest:
     return "supportsWriteMemoryRequest";
-  case eAdapterFeatureSupportTerminateDebuggee:
+  case eAdapterFeatureTerminateDebuggee:
     return "supportTerminateDebuggee";
   }
 }

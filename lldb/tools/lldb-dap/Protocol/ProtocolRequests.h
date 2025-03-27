@@ -56,21 +56,21 @@ using DisconnectResponse = VoidResponse;
 
 /// Features supported by DAP clients.
 enum ClientFeature {
-  eClientFeatureSupportsVariableType,
-  eClientFeatureSupportsVariablePaging,
-  eClientFeatureSupportsRunInTerminalRequest,
-  eClientFeatureSupportsMemoryReferences,
-  eClientFeatureSupportsProgressReporting,
-  eClientFeatureSupportsInvalidatedEvent,
-  eClientFeatureSupportsMemoryEvent,
+  eClientFeatureVariableType,
+  eClientFeatureVariablePaging,
+  eClientFeatureRunInTerminalRequest,
+  eClientFeatureMemoryReferences,
+  eClientFeatureProgressReporting,
+  eClientFeatureInvalidatedEvent,
+  eClientFeatureMemoryEvent,
   /// Client supports the `argsCanBeInterpretedByShell` attribute on the
   /// `runInTerminal` request.
-  eClientFeatureSupportsArgsCanBeInterpretedByShell,
-  eClientFeatureSupportsStartDebuggingRequest,
+  eClientFeatureArgsCanBeInterpretedByShell,
+  eClientFeatureStartDebuggingRequest,
   /// The client will interpret ANSI escape sequences in the display of
   /// `OutputEvent.output` and `Variable.value` fields when
   /// `Capabilities.supportsANSIStyling` is also enabled.
-  eClientFeatureSupportsANSIStyling,
+  eClientFeatureANSIStyling,
 };
 
 /// Format of paths reported by the debug adapter.
