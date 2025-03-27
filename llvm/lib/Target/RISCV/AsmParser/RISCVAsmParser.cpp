@@ -481,7 +481,9 @@ public:
   bool isSystemRegister() const { return Kind == KindTy::SystemRegister; }
   bool isRegReg() const { return Kind == KindTy::RegReg; }
   bool isRlist() const { return Kind == KindTy::Rlist; }
-  bool isRlistS0() const { return Kind == KindTy::Rlist && Rlist.Val != RISCVZC::RA; }
+  bool isRlistS0() const {
+    return Kind == KindTy::Rlist && Rlist.Val != RISCVZC::RA;
+  }
   bool isSpimm() const { return Kind == KindTy::Spimm; }
 
   bool isGPR() const {
@@ -2802,7 +2804,8 @@ ParseStatus RISCVAsmParser::parseRegReg(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands, bool MustIncludeS0) {
+ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
+                                               bool MustIncludeS0) {
   // Rlist: {ra [, s0[-sN]]}
   // XRlist: {x1 [, x8[-x9][, x18[-xN]]]}
 
