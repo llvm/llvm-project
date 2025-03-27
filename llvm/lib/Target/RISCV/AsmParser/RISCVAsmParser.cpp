@@ -405,13 +405,13 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     RegOp Reg;
     ImmOp Imm;
     FPImmOp FPImm;
-    struct SysRegOp SysReg;
-    struct VTypeOp VType;
-    struct FRMOp FRM;
-    struct FenceOp Fence;
-    struct RlistOp Rlist;
-    struct SpimmOp Spimm;
-    struct RegRegOp RegReg;
+    SysRegOp SysReg;
+    VTypeOp VType;
+    FRMOp FRM;
+    FenceOp Fence;
+    RlistOp Rlist;
+    SpimmOp Spimm;
+    RegRegOp RegReg;
   };
 
   RISCVOperand(KindTy K) : Kind(K) {}
@@ -1296,7 +1296,7 @@ public:
   static std::unique_ptr<RISCVOperand>
   createReg(MCRegister Reg, SMLoc S, SMLoc E, bool IsGPRAsFPR = false) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::Register);
-    Op->Reg.RegNum = Reg.id();
+    Op->Reg.RegNum = Reg;
     Op->Reg.IsGPRAsFPR = IsGPRAsFPR;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -1368,8 +1368,8 @@ public:
   static std::unique_ptr<RISCVOperand> createRegReg(MCRegister Reg1,
                                                     MCRegister Reg2, SMLoc S) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::RegReg);
-    Op->RegReg.Reg1 = Reg1.id();
-    Op->RegReg.Reg2 = Reg2.id();
+    Op->RegReg.Reg1 = Reg1;
+    Op->RegReg.Reg2 = Reg2;
     Op->StartLoc = S;
     Op->EndLoc = S;
     return Op;
@@ -2778,9 +2778,9 @@ ParseStatus RISCVAsmParser::parseRegReg(OperandVector &Operands) {
   if (getLexer().getKind() != AsmToken::Identifier)
     return ParseStatus::NoMatch;
 
-  StringRef RegName = getLexer().getTok().getIdentifier();
-  MCRegister Reg = matchRegisterNameHelper(RegName);
-  if (!Reg)
+  StringRef OffsetRegName = getLexer().getTok().getIdentifier();
+  MCRegister OffsetReg = matchRegisterNameHelper(OffsetRegName);
+  if (!OffsetReg)
     return Error(getLoc(), "invalid register");
   getLexer().Lex();
 
@@ -2790,16 +2790,16 @@ ParseStatus RISCVAsmParser::parseRegReg(OperandVector &Operands) {
   if (getLexer().getKind() != AsmToken::Identifier)
     return Error(getLoc(), "expected register");
 
-  StringRef Reg2Name = getLexer().getTok().getIdentifier();
-  MCRegister Reg2 = matchRegisterNameHelper(Reg2Name);
-  if (!Reg2)
+  StringRef BaseRegName = getLexer().getTok().getIdentifier();
+  MCRegister BaseReg = matchRegisterNameHelper(BaseRegName);
+  if (!BaseReg)
     return Error(getLoc(), "invalid register");
   getLexer().Lex();
 
   if (parseToken(AsmToken::RParen, "expected ')'"))
     return ParseStatus::Failure;
 
-  Operands.push_back(RISCVOperand::createRegReg(Reg, Reg2, getLoc()));
+  Operands.push_back(RISCVOperand::createRegReg(BaseReg, OffsetReg, getLoc()));
 
   return ParseStatus::Success;
 }
