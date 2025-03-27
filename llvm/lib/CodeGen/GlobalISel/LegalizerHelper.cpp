@@ -8303,7 +8303,8 @@ LegalizerHelper::lowerUnmergeValues(MachineInstr &MI) {
       Shift = SrcReg;
     }
     if (DstTy.isVector()) {
-      VectorElems.emplace_back(MIRBuilder.buildTrunc(DstTy.getScalarType(), Shift).getReg(0));
+      VectorElems.emplace_back(
+          MIRBuilder.buildTrunc(DstTy.getScalarType(), Shift).getReg(0));
       if (VectorElems.size() == DstTy.getNumElements()) {
         MIRBuilder.buildBuildVector(MI.getOperand(I++), VectorElems);
         VectorElems.clear();
