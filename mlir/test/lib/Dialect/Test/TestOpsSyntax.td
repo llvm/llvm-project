@@ -654,6 +654,19 @@ def FormatTypesMatchContextOp : TEST_Op<"format_types_match_context", [
 }
 
 //===----------------------------------------------------------------------===//
+// InferTypesFrom type inference
+
+def FormatTypesMatchMultipleVarOp : TEST_Op<"format_types_match_multiple_var", [
+    InferTypesFrom<"result type is a tuple of types of value1 and value2",
+                   ["value1", "result"], "value2",
+                   "TupleType::get($_ctxt, {$arg0, $arg1})">]> {
+  let arguments = (ins AnyType:$value1,
+                       AnyType:$value2);
+  let results = (outs AnyType:$result);
+  let assemblyFormat = "attr-dict $value1 `,` $value2 `:` type($value1) `->` type($result)";
+}
+
+//===----------------------------------------------------------------------===//
 // InferTypeOpInterface type inference in assembly format
 
 def FormatInferTypeOp : TEST_Op<"format_infer_type", [InferTypeOpInterface]> {
