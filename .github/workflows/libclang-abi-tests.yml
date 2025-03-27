@@ -83,6 +83,8 @@ jobs:
   abi-dump:
     if: github.repository_owner == 'llvm'
     needs: abi-dump-setup
+    container:
+      image: 'ghcr.io/llvm/ci-ubuntu-22.04:latest'
     runs-on: ubuntu-latest
     strategy:
       matrix:
