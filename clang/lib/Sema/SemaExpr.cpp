@@ -19849,20 +19849,16 @@ static void DoMarkVarDeclReferenced(
           SemaRef.InstantiateVariableDefinition(PointOfInstantiation, Var);
         });
 
-        if (auto *DRE = dyn_cast_or_null<DeclRefExpr>(E)) {
-          // Re-set the member to trigger a recomputation of the dependence bits
-          // for the expression.
+        // The size of an incomplete array type can be updated by
+        // instantiating the initializer. The DeclRefExpr's type should be
+        // updated accordingly too, or users of it would be confused!
+        SemaRef.getCompletedType(E);
+
+        // Re-set the member to trigger a recomputation of the dependence bits
+        // for the expression.
+        if (auto *DRE = dyn_cast_or_null<DeclRefExpr>(E))
           DRE->setDecl(DRE->getDecl());
-          // The size of an incomplete array type can be updated by
-          // instantiating the initializer. The DeclRefExpr's type should be
-          // updated accordingly too, or users of it would be confused!
-          //
-          // FIXME: Do we need to recompute the type for all the Decls, as in
-          // BuildDeclarationNameExpr?
-          if (SemaRef.Context.getAsIncompleteArrayType(DRE->getType()) &&
-              !SemaRef.Context.getAsIncompleteArrayType(Var->getType()))
-            DRE->setType(Var->getType());
-        } else if (auto *ME = dyn_cast_or_null<MemberExpr>(E))
+        else if (auto *ME = dyn_cast_or_null<MemberExpr>(E))
           ME->setMemberDecl(ME->getMemberDecl());
       } else if (FirstInstantiation) {
         SemaRef.PendingInstantiations
