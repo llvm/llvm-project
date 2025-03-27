@@ -439,15 +439,42 @@ XRayLogInitStatus basicLoggingInit(UNUSED size_t BufferSize,
   return XRayLogInitStatus::XRAY_LOG_INITIALIZED;
 }
 
+static void writeObjectMapping() {
+  LogWriter *LW = getGlobalLog();
+  if (!LW) {
+    Report("Log file was not initialized!\n");
+    return;
+  }
+
+  if (Verbosity())
+    Report("Writing object mapping file.\n");
+
+  char MapFilename[256] = {};
+  int NeededLength = internal_snprintf(
+      MapFilename, sizeof(MapFilename), "%s.map.yaml",
+      LW->GetFilename());
+  if (NeededLength > int(sizeof(MapFilename))) {
+    Report("XRay map file name too long (%d): %s\n", NeededLength, MapFilename);
+    return;
+  }
+
+  bool Success = __xray_write_object_mapping(MapFilename);
+
+  if (!Success)
+    Report("Failed to write the XRay object mapping to %s\n", MapFilename);
+}
+
 XRayLogInitStatus basicLoggingFinalize() XRAY_NEVER_INSTRUMENT {
   uint8_t Expected = 0;
   if (!atomic_compare_exchange_strong(&BasicInitialized, &Expected, 0,
-                                      memory_order_acq_rel) &&
-      Verbosity())
-    Report("Basic logging already finalized.\n");
+                                      memory_order_acq_rel)) {
+    if (Verbosity())
+      Report("Basic logging already finalized.\n");
+    return XRayLogInitStatus::XRAY_LOG_FINALIZED;
+  }
 
-  // Nothing really to do aside from marking state of the global to be
-  // uninitialized.
+  // Write the object mapping file and mark state as finalized.
+  writeObjectMapping();
 
   return XRayLogInitStatus::XRAY_LOG_FINALIZED;
 }
@@ -461,6 +488,7 @@ XRayLogFlushStatus basicLoggingFlush() XRAY_NEVER_INSTRUMENT {
 // This is a handler that, effectively, does nothing.
 void basicLoggingHandleArg0Empty(int32_t, XRayEntryType) XRAY_NEVER_INSTRUMENT {
 }
+
 
 bool basicLogDynamicInitializer() XRAY_NEVER_INSTRUMENT {
   XRayLogImpl Impl{
@@ -504,7 +532,7 @@ bool basicLogDynamicInitializer() XRAY_NEVER_INSTRUMENT {
     pthread_once(&DynamicOnce, +[] {
       static void *FakeTLD = nullptr;
       FakeTLD = &getThreadLocalData();
-      Atexit(+[] { TLDDestructor(FakeTLD); });
+      Atexit(+[] { TLDDestructor(FakeTLD); writeObjectMapping(); });
     });
   }
   return true;

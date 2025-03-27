@@ -165,6 +165,12 @@ extern int32_t __xray_unpack_object_id(int32_t PackedId);
 /// high bits are truncated.
 extern int32_t __xray_pack_id(int32_t FuncId, int32_t ObjId);
 
+/// Returns the path from which the given object (executable or DSO) was loaded
+/// from.
+/// The returned string is owned by the XRay runtime and remains valid until the
+/// end of execution.
+extern const char* __xray_object_path(int32_t ObjId);
+
 /// Initialize the required XRay data structures. This is useful in cases where
 /// users want to control precisely when the XRay instrumentation data
 /// structures are initialized, for example when the XRay library is built with

@@ -21,7 +21,10 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/YAMLTraits.h"
 #include "llvm/XRay/InstrumentationMap.h"
+
+#include <assert.h>
 
 using namespace llvm;
 using namespace llvm::xray;
@@ -51,51 +54,158 @@ static cl::opt<bool> Demangle("demangle",
 static cl::opt<bool> NoDemangle("no-demangle",
                                 cl::desc("don't demangle symbols"),
                                 cl::sub(Extract));
+static cl::opt<bool> FromMapping("mapping", cl::init(false),
+                             cl::desc("Create instrumentation map from object map YAML"),
+                             cl::sub(Extract));
 
 namespace {
 
-void exportAsYAML(const InstrumentationMap &Map, raw_ostream &OS,
-                  FuncIdConversionHelper &FH) {
-  // First we translate the sleds into the YAMLXRaySledEntry objects in a deque.
-  std::vector<YAMLXRaySledEntry> YAMLSleds;
+struct YAMLXRayObjectMapEntry {
+  int32_t ObjId;
+  std::string Path;
+};
+
+struct YAMLXRayObjectMapping {
+  int NumObjBits;
+  std::vector<YAMLXRayObjectMapEntry> Objects;
+};
+
+}
+
+namespace llvm{
+namespace yaml {
+template <> struct MappingTraits<YAMLXRayObjectMapEntry> {
+  static void mapping(IO &IO, YAMLXRayObjectMapEntry &Entry) {
+    IO.mapRequired("id", Entry.ObjId);
+    IO.mapRequired("path", Entry.Path);
+  }
+};
+
+template <> struct MappingTraits<YAMLXRayObjectMapping> {
+  static void mapping(IO &IO, YAMLXRayObjectMapping &Mapping) {
+    IO.mapRequired("num_object_bits", Mapping.NumObjBits);
+    IO.mapRequired("objects", Mapping.Objects);
+  }
+};
+} // end namespace yaml
+} // end namespace llvm
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(YAMLXRayObjectMapEntry)
+
+namespace {
+
+Error ReadObjectMappingYAML(StringRef Filename, YAMLXRayObjectMapping& Mapping) {
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileBufferOrErr =
+      llvm::MemoryBuffer::getFile(ExtractInput);
+  if (!FileBufferOrErr) {
+    return joinErrors(make_error<StringError>(
+                          Twine("Cannot read object mapping YAML from '") +
+                              ExtractInput + "'.",
+                          std::make_error_code(std::errc::invalid_argument)),
+                      errorCodeToError(FileBufferOrErr.getError()));
+  }
+
+  yaml::Input In((*FileBufferOrErr)->getBuffer());
+  In >> Mapping;
+  if (In.error())
+    return make_error<StringError>(
+        Twine("Failed loading YAML document from '") + Filename + "'.",
+        In.error());
+  return Error::success();
+}
+
+struct IdMappingHelper {
+  IdMappingHelper(int NumObjBits) : NumObjBits(NumObjBits) {
+    assert(NumObjBits >= 0 && NumObjBits < 32 && "Invalid NumObjBits");
+    NumFnBits = 32 - NumObjBits;
+    ObjBitMask = (1l << NumObjBits) - 1;
+    FnBitMask = (1l << NumFnBits) - 1;
+  }
+
+  int32_t MapId(int32_t FnId, int32_t ObjId) const {
+    return ((ObjId & ObjBitMask) << NumFnBits) | (FnId & FnBitMask);
+  }
+private:
+  int NumObjBits;
+  int NumFnBits;
+  int32_t ObjBitMask;
+  int32_t FnBitMask;
+};
+
+
+void TranslateAndAppendSleds(const InstrumentationMap &Map,
+                             FuncIdConversionHelper &FH,
+                             int ObjId, const IdMappingHelper& IdMapping,
+                             std::vector<YAMLXRaySledEntry>& YAMLSleds) {
   auto Sleds = Map.sleds();
-  YAMLSleds.reserve(std::distance(Sleds.begin(), Sleds.end()));
+  auto SledCount = std::distance(Sleds.begin(), Sleds.end());
+  YAMLSleds.reserve(YAMLSleds.size() + SledCount);
   for (const auto &Sled : Sleds) {
     auto FuncId = Map.getFunctionId(Sled.Function);
     if (!FuncId)
       return;
+    auto MappedId = IdMapping.MapId(*FuncId, ObjId);
     YAMLSleds.push_back(
-        {*FuncId, Sled.Address, Sled.Function, Sled.Kind, Sled.AlwaysInstrument,
+        {MappedId, Sled.Address, Sled.Function, Sled.Kind, Sled.AlwaysInstrument,
          ExtractSymbolize ? FH.SymbolOrNumber(*FuncId) : "", Sled.Version});
   }
-  Output Out(OS, nullptr, 0);
-  Out << YAMLSleds;
 }
 
 } // namespace
 
 static CommandRegistration Unused(&Extract, []() -> Error {
-  auto InstrumentationMapOrError = loadInstrumentationMap(ExtractInput);
-  if (!InstrumentationMapOrError)
-    return joinErrors(make_error<StringError>(
-                          Twine("Cannot extract instrumentation map from '") +
-                              ExtractInput + "'.",
-                          std::make_error_code(std::errc::invalid_argument)),
-                      InstrumentationMapOrError.takeError());
+  int NumObjBits{0};
+  std::unordered_map<int, std::string> Inputs;
+  if (FromMapping) {
+    YAMLXRayObjectMapping ObjMapping;
+
+    auto Err = ReadObjectMappingYAML(ExtractInput, ObjMapping);
+    if (Err) {
+      return Err;
+    }
+    NumObjBits = ObjMapping.NumObjBits;
+    for (auto& Obj : ObjMapping.Objects) {
+      Inputs[Obj.ObjId] = Obj.Path;
+    }
+  } else {
+    Inputs[0] = ExtractInput;
+  }
+
+  IdMappingHelper IdMapping(NumObjBits);
+
+  symbolize::LLVMSymbolizer::Options opts;
+  if (Demangle.getPosition() < NoDemangle.getPosition())
+    opts.Demangle = false;
+  symbolize::LLVMSymbolizer Symbolizer(opts);
+
+  std::vector<YAMLXRaySledEntry> YAMLSleds;
+
+  for (auto& [ObjId, Path] : Inputs) {
+    auto InstrumentationMapOrError = loadInstrumentationMap(Path);
+    if (!InstrumentationMapOrError)
+      return joinErrors(make_error<StringError>(
+                            Twine("Cannot extract instrumentation map from '") +
+                                Path + "'.",
+                            std::make_error_code(std::errc::invalid_argument)),
+                        InstrumentationMapOrError.takeError());
+
+    const auto &FunctionAddresses =
+        InstrumentationMapOrError->getFunctionAddresses();
+
+    llvm::xray::FuncIdConversionHelper FuncIdHelper(Path, Symbolizer,
+                                                    FunctionAddresses);
+    TranslateAndAppendSleds(*InstrumentationMapOrError, FuncIdHelper,
+                            ObjId, IdMapping, YAMLSleds);
+  }
 
   std::error_code EC;
   raw_fd_ostream OS(ExtractOutput, EC, sys::fs::OpenFlags::OF_TextWithCRLF);
   if (EC)
     return make_error<StringError>(
         Twine("Cannot open file '") + ExtractOutput + "' for writing.", EC);
-  const auto &FunctionAddresses =
-      InstrumentationMapOrError->getFunctionAddresses();
-  symbolize::LLVMSymbolizer::Options opts;
-  if (Demangle.getPosition() < NoDemangle.getPosition())
-    opts.Demangle = false;
-  symbolize::LLVMSymbolizer Symbolizer(opts);
-  llvm::xray::FuncIdConversionHelper FuncIdHelper(ExtractInput, Symbolizer,
-                                                  FunctionAddresses);
-  exportAsYAML(*InstrumentationMapOrError, OS, FuncIdHelper);
+  Output Out(OS, nullptr, 0);
+  Out << YAMLSleds;
   return Error::success();
 });
+
+

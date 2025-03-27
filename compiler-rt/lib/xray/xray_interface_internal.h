@@ -106,6 +106,8 @@ extern int32_t __xray_register_dso(const XRaySledEntry *SledsBegin,
                                    XRayTrampolines Trampolines);
 
 extern bool __xray_deregister_dso(int32_t ObjId);
+
+extern bool __xray_write_object_mapping(const char* outfile);
 }
 
 namespace __xray {
@@ -137,6 +139,7 @@ struct XRaySledMap {
   XRayTrampolines Trampolines;
   bool FromDSO;
   bool Loaded;
+  const char* Path;
 };
 
 bool patchFunctionEntry(bool Enable, uint32_t FuncId, const XRaySledEntry &Sled,

@@ -688,3 +688,38 @@ int32_t __xray_unpack_object_id(int32_t PackedId) {
 int32_t __xray_pack_id(int32_t FuncId, int32_t ObjId) {
   return __xray::MakePackedId(FuncId, ObjId);
 }
+
+const char* __xray_object_path(int32_t ObjId) {
+  SpinMutexLock Guard(&XRayInstrMapMutex);
+  if (ObjId < 0 || static_cast<uint32_t>(ObjId) >=
+                       atomic_load(&XRayNumObjects, memory_order_acquire))
+    return nullptr;
+  return XRayInstrMaps[ObjId].Path;
+}
+
+#include <stdio.h>
+
+bool __xray_write_object_mapping(const char* outfile) XRAY_NEVER_INSTRUMENT {
+  // TODO: Use low-level IO API?
+  FILE *of = fopen(outfile, "w");
+  if (!of) {
+    Report("Unable to write object mapping to file %s\n");
+    return false;
+  }
+
+  fprintf(of, "--- !XRayMapping\n");
+  fprintf(of, "num_object_bits: %d\n", __xray::XRayNObjBits);
+  fprintf(of, "objects:\n");
+  int NumObjects = __xray_num_objects();
+  for (int ObjId = 0; ObjId < NumObjects; ObjId++) {
+    auto* Path = __xray_object_path(ObjId);
+    if (!Path)
+      Report("Unknown path for object %d. The XRay mapping file may be "
+             "incomplete.\n", ObjId);
+    fprintf(of, "  - id: %d\n", ObjId);
+    fprintf(of, "    path: \"%s\"\n", Path ? Path : "");
+  }
+  fprintf(of, "...\n");
+  fclose(of);
+  return true;
+}
