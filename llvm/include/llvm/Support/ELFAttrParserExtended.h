@@ -38,6 +38,11 @@ public:
   virtual ~ELFExtendedAttrParser() { static_cast<void>(!Cursor.takeError()); }
   Error parse(ArrayRef<uint8_t> Section, llvm::endianness Endian) override;
 
+  const SmallVector<BuildAttributeSubSection, 8> &
+  getBuildAttributesSection() const {
+    return SubSectionVec;
+  }
+
   std::optional<unsigned> getAttributeValue(unsigned Tag) const override;
   std::optional<unsigned> getAttributeValue(StringRef BuildAttrSubsectionName,
                                             unsigned Tag) const override;
