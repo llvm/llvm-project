@@ -128,6 +128,12 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseEmptyTest) {
 
 TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   const llvm::StringLiteral Source = R"cc(
+    DescriptorTable(
+      CBV(),
+      SRV(),
+      Sampler(),
+      UAV()
+    ),
     DescriptorTable()
   )cc";
 
@@ -143,9 +149,30 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   Consumer->SetNoDiag();
 
   ASSERT_FALSE(Parser.Parse());
+
+  // First Descriptor Table with 4 elements
   RootElement Elem = Elements[0];
+  ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::CBuffer);
+
+  Elem = Elements[1];
+  ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::SRV);
+
+  Elem = Elements[2];
+  ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::Sampler);
+
+  Elem = Elements[3];
+  ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::UAV);
+
+  Elem = Elements[4];
+  ASSERT_TRUE(std::holds_alternative<DescriptorTable>(Elem));
+  ASSERT_EQ(std::get<DescriptorTable>(Elem).NumClauses, (uint32_t)4);
 
   // Empty Descriptor Table
+  Elem = Elements[5];
   ASSERT_TRUE(std::holds_alternative<DescriptorTable>(Elem));
   ASSERT_EQ(std::get<DescriptorTable>(Elem).NumClauses, 0u);
   ASSERT_TRUE(Consumer->IsSatisfied());

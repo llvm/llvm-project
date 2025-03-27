@@ -59,17 +59,69 @@ bool RootSignatureParser::Parse() {
 }
 
 bool RootSignatureParser::ParseDescriptorTable() {
+  assert(CurToken.Kind == TokenKind::kw_DescriptorTable &&
+         "Expects to only be invoked starting at given keyword");
+
   DescriptorTable Table;
 
   if (ConsumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
                            CurToken.Kind))
     return true;
 
+  // Iterate as many Clauses as possible
+  while (TryConsumeExpectedToken({TokenKind::kw_CBV, TokenKind::kw_SRV,
+                                  TokenKind::kw_UAV, TokenKind::kw_Sampler})) {
+    if (ParseDescriptorTableClause())
+      return true;
+
+    Table.NumClauses++;
+
+    if (!TryConsumeExpectedToken(TokenKind::pu_comma))
+      break;
+  }
+
   if (ConsumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_after,
                            CurToken.Kind))
     return true;
 
   Elements.push_back(Table);
+  return false;
+}
+
+bool RootSignatureParser::ParseDescriptorTableClause() {
+  assert((CurToken.Kind == TokenKind::kw_CBV ||
+          CurToken.Kind == TokenKind::kw_SRV ||
+          CurToken.Kind == TokenKind::kw_UAV ||
+          CurToken.Kind == TokenKind::kw_Sampler)
+          && "Expects to only be invoked starting at given keyword");
+
+  DescriptorTableClause Clause;
+  switch (CurToken.Kind) {
+  default: break; // Unreachable given Try + assert pattern
+  case TokenKind::kw_CBV:
+    Clause.Type = ClauseType::CBuffer;
+    break;
+  case TokenKind::kw_SRV:
+    Clause.Type = ClauseType::SRV;
+    break;
+  case TokenKind::kw_UAV:
+    Clause.Type = ClauseType::UAV;
+    break;
+  case TokenKind::kw_Sampler:
+    Clause.Type = ClauseType::Sampler;
+    break;
+  }
+
+  if (ConsumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
+                           CurToken.Kind))
+    return true;
+
+
+  if (ConsumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_after,
+                           CurToken.Kind))
+    return true;
+
+  Elements.push_back(Clause);
   return false;
 }
 

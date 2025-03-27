@@ -42,6 +42,7 @@ private:
 
   /// Root Element parse methods:
   bool ParseDescriptorTable();
+  bool ParseDescriptorTableClause();
 
   /// Invoke the Lexer to consume a token and update CurToken with the result
   void ConsumeNextToken() { CurToken = Lexer.ConsumeToken(); }
