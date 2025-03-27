@@ -237,6 +237,17 @@ public:
     return true;
   }
 
+  /// Overloaded member function of \c visitInputFile that should
+  /// be defined when the input file contains both the virtual and external
+  /// paths, for example when deserializing input files from AST files.
+  ///
+  /// \returns true to continue receiving the next input file, false to stop.
+  virtual bool visitInputFile(StringRef FilenameAsRequested, StringRef Filename,
+                              bool isSystem, bool isOverridden,
+                              bool isExplicitModule) {
+    return true;
+  }
+
   /// Returns true if this \c ASTReaderListener wants to receive the
   /// imports of the AST file via \c visitImport, false otherwise.
   virtual bool needsImportVisitation() const { return false; }
