@@ -19014,8 +19014,8 @@ bool Sema::checkThisInStaticMemberFunctionType(CXXMethodDecl *Method) {
     return true;
 
   // Check the trailing requires clause
-  if (Expr *E = Method->getTrailingRequiresClause())
-    if (!Finder.TraverseStmt(E))
+  if (const AssociatedConstraint &TRC = Method->getTrailingRequiresClause())
+    if (!Finder.TraverseStmt(const_cast<Expr *>(TRC.ConstraintExpr)))
       return true;
 
   return checkThisInStaticMemberFunctionAttributes(Method);

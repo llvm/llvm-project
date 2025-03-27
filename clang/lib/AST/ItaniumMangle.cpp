@@ -3770,7 +3770,9 @@ void CXXNameMangler::mangleBareFunctionType(const FunctionProtoType *Proto,
 
   if (FD) {
     FunctionTypeDepth.enterResultType();
-    mangleRequiresClause(FD->getTrailingRequiresClause());
+    // FIXME: Should the mangling include the ArgumentPackSubstitutionIndex as
+    // well?
+    mangleRequiresClause(FD->getTrailingRequiresClause().ConstraintExpr);
   }
 
   FunctionTypeDepth.pop(saved);

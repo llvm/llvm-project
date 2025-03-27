@@ -901,7 +901,7 @@ void ASTDeclReader::VisitDeclaratorDecl(DeclaratorDecl *DD) {
   if (Record.readInt()) { // hasExtInfo
     auto *Info = new (Reader.getContext()) DeclaratorDecl::ExtInfo();
     Record.readQualifierInfo(*Info);
-    Info->TrailingRequiresClause = Record.readExpr();
+    Info->TrailingRequiresClause = {Record.readExpr(), int(Record.readInt())};
     DD->DeclInfo = Info;
   }
   QualType TSIType = Record.readType();

@@ -8865,12 +8865,14 @@ public:
       CXXMethodDecl *CallOperator, CXXRecordDecl *Class,
       TemplateParameterList *TemplateParams);
 
-  void CompleteLambdaCallOperator(
-      CXXMethodDecl *Method, SourceLocation LambdaLoc,
-      SourceLocation CallOperatorLoc, Expr *TrailingRequiresClause,
-      TypeSourceInfo *MethodTyInfo, ConstexprSpecKind ConstexprKind,
-      StorageClass SC, ArrayRef<ParmVarDecl *> Params,
-      bool HasExplicitResultType);
+  void
+  CompleteLambdaCallOperator(CXXMethodDecl *Method, SourceLocation LambdaLoc,
+                             SourceLocation CallOperatorLoc,
+                             const AssociatedConstraint &TrailingRequiresClause,
+                             TypeSourceInfo *MethodTyInfo,
+                             ConstexprSpecKind ConstexprKind, StorageClass SC,
+                             ArrayRef<ParmVarDecl *> Params,
+                             bool HasExplicitResultType);
 
   /// Returns true if the explicit object parameter was invalid.
   bool DiagnoseInvalidExplicitObjectParameterInLambda(CXXMethodDecl *Method,

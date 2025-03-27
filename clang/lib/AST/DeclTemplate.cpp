@@ -291,15 +291,15 @@ void TemplateDecl::getAssociatedConstraints(
     llvm::SmallVectorImpl<AssociatedConstraint> &ACs) const {
   TemplateParams->getAssociatedConstraints(ACs);
   if (auto *FD = dyn_cast_or_null<FunctionDecl>(getTemplatedDecl()))
-    if (const Expr *TRC = FD->getTrailingRequiresClause())
-      ACs.emplace_back(TRC, /*ArgumentPackSubstitutionIndex=*/-1);
+    if (const AssociatedConstraint &TRC = FD->getTrailingRequiresClause())
+      ACs.emplace_back(TRC);
 }
 
 bool TemplateDecl::hasAssociatedConstraints() const {
   if (TemplateParams->hasAssociatedConstraints())
     return true;
   if (auto *FD = dyn_cast_or_null<FunctionDecl>(getTemplatedDecl()))
-    return FD->getTrailingRequiresClause();
+    return bool(FD->getTrailingRequiresClause());
   return false;
 }
 

@@ -7378,8 +7378,11 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
       return false;
     }
 
-    if (!isSameConstraintExpr(FuncX->getTrailingRequiresClause(),
-                              FuncY->getTrailingRequiresClause()))
+    AssociatedConstraint ACX = FuncX->getTrailingRequiresClause(),
+                         ACY = FuncY->getTrailingRequiresClause();
+    if (ACX.ArgumentPackSubstitutionIndex != ACY.ArgumentPackSubstitutionIndex)
+      return false;
+    if (!isSameConstraintExpr(ACX.ConstraintExpr, ACY.ConstraintExpr))
       return false;
 
     auto GetTypeAsWritten = [](const FunctionDecl *FD) {

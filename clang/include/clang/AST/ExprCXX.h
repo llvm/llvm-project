@@ -2129,7 +2129,7 @@ public:
   ArrayRef<NamedDecl *> getExplicitTemplateParameters() const;
 
   /// Get the trailing requires clause, if any.
-  Expr *getTrailingRequiresClause() const;
+  const AssociatedConstraint &getTrailingRequiresClause() const;
 
   /// Whether this is a generic lambda.
   bool isGenericLambda() const { return getTemplateParameterList(); }
