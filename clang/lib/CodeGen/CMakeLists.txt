@@ -115,6 +115,7 @@ add_clang_library(clangCodeGen
   PatternInit.cpp
   SanitizerMetadata.cpp
   SwiftCallingConv.cpp
+  LangBuiltins/CGHLSLBuiltins.cpp
   TargetBuiltins/ARM.cpp
   TargetBuiltins/AMDGPU.cpp
   TargetBuiltins/Hexagon.cpp
