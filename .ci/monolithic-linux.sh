@@ -38,7 +38,7 @@ function at-exit {
   shopt -s nullglob
   if command -v buildkite-agent 2>&1 >/dev/null
   then
-    python3 "${MONOREPO_ROOT}"/.ci/generate_test_report.py ":linux: Linux x64 Test Results" \
+    python3 "${MONOREPO_ROOT}"/.ci/generate_test_report_buildkite.py ":linux: Linux x64 Test Results" \
       "linux-x64-test-results" $retcode "${BUILD_DIR}"/test-results.*.xml
   fi
 }
