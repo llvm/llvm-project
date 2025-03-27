@@ -238,7 +238,7 @@ protected:
   /// continues. Otherwise, iteration terminates.
   void
   ForEachSymbolFile(std::string description,
-                    std::function<IterationAction(SymbolFileDWARF *)> closure);
+                    std::function<IterationAction(SymbolFileDWARF &)> closure);
 
   CompileUnitInfo *GetCompileUnitInfoForSymbolWithIndex(uint32_t symbol_idx,
                                                         uint32_t *oso_idx_ptr);
