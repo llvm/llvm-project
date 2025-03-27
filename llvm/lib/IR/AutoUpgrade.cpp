@@ -5083,9 +5083,6 @@ bool static upgradeSingleNVVMAnnotation(GlobalValue *GV, StringRef K,
         mdconst::extract<ConstantInt>(V)->getZExtValue();
     const unsigned Idx = (AlignIdxValuePair >> 16);
     const Align StackAlign = Align(AlignIdxValuePair & 0xFFFF);
-    // TODO: Skip adding the stackalign attribute for returns, for now.
-    if (!Idx)
-      return false;
     cast<Function>(GV)->addAttributeAtIndex(
         Idx, Attribute::getWithStackAlignment(GV->getContext(), StackAlign));
     return true;

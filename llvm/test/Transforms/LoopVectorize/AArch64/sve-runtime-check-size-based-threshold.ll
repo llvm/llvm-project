@@ -52,9 +52,8 @@ define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr 
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i64, ptr [[SRC_1]], i64 [[TMP17]]
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i64, ptr [[SRC_2]], i64 [[TMP17]]
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i64, ptr [[SRC_1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i64, ptr [[SRC_2]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i64, ptr [[TMP23]], i32 0
 ; CHECK-NEXT:    [[TMP28:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP29:%.*]] = mul i64 [[TMP28]], 2
@@ -69,8 +68,8 @@ define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr 
 ; CHECK-NEXT:    [[WIDE_LOAD14:%.*]] = load <vscale x 2 x i64>, ptr [[TMP34]], align 8
 ; CHECK-NEXT:    [[TMP35:%.*]] = add <vscale x 2 x i64> [[WIDE_LOAD]], [[WIDE_LOAD13]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = add <vscale x 2 x i64> [[WIDE_LOAD12]], [[WIDE_LOAD14]]
-; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr i64, ptr [[DST_1]], i64 [[TMP17]]
-; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr i64, ptr [[DST_2]], i64 [[TMP17]]
+; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr i64, ptr [[DST_1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr i64, ptr [[DST_2]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr i64, ptr [[TMP37]], i32 0
 ; CHECK-NEXT:    [[TMP42:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP43:%.*]] = mul i64 [[TMP42]], 2

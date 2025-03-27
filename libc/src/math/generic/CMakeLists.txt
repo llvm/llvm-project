@@ -3945,6 +3945,27 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  acoshf16
+  SRCS
+    acoshf16.cpp
+  HDRS
+    ../acoshf16.h
+  DEPENDS
+    .explogxf
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types 
+)
+
+add_entrypoint_object(
   asinhf
   SRCS
     asinhf.cpp
@@ -4264,6 +4285,17 @@ add_entrypoint_object(
     ../fmaf.h
   DEPENDS
     libc.src.__support.FPUtil.fma
+)
+
+add_entrypoint_object(
+  fmaf16
+  SRCS
+    fmaf16.cpp
+  HDRS
+    ../fmaf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.macros.properties.types
 )
 
 add_entrypoint_object(

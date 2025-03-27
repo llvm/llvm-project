@@ -3879,9 +3879,9 @@ static void handleIndirectSymViaGOTPCRel(AsmPrinter &AP, const MCExpr **ME,
 
   // Check for a valid base symbol
   const MCSymbol *BaseSym = AP.getSymbol(BaseGV);
-  const MCSymbolRefExpr *SymB = MV.getSymB();
+  const MCSymbol *SymB = MV.getSubSym();
 
-  if (!SymB || BaseSym != &SymB->getSymbol())
+  if (!SymB || BaseSym != SymB)
     return;
 
   // Make sure to match:
@@ -4142,7 +4142,7 @@ MCSymbol *AsmPrinter::getSymbolWithGlobalValueBase(const GlobalValue *GV,
 }
 
 /// Return the MCSymbol for the specified ExternalSymbol.
-MCSymbol *AsmPrinter::GetExternalSymbolSymbol(Twine Sym) const {
+MCSymbol *AsmPrinter::GetExternalSymbolSymbol(const Twine &Sym) const {
   SmallString<60> NameStr;
   Mangler::getNameWithPrefix(NameStr, Sym, getDataLayout());
   return OutContext.getOrCreateSymbol(NameStr);

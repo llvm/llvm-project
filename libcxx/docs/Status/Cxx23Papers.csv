@@ -54,7 +54,7 @@
 "`P0009R18 <https://wg21.link/P0009R18>`__","mdspan: A Non-Owning Multidimensional Array Reference","2022-07 (Virtual)","|Complete|","18",""
 "`P0429R9 <https://wg21.link/P0429R9>`__","A Standard ``flat_map``","2022-07 (Virtual)","|Complete|","20",""
 "`P1169R4 <https://wg21.link/P1169R4>`__","``static operator()``","2022-07 (Virtual)","|Complete|","16",""
-"`P1222R4 <https://wg21.link/P1222R4>`__","A Standard ``flat_set``","2022-07 (Virtual)","","",""
+"`P1222R4 <https://wg21.link/P1222R4>`__","A Standard ``flat_set``","2022-07 (Virtual)","|In progress|","",""
 "`P1223R5 <https://wg21.link/P1223R5>`__","``ranges::find_last()``, ``ranges::find_last_if()``, and ``ranges::find_last_if_not()``","2022-07 (Virtual)","|Complete|","19",""
 "`P1467R9 <https://wg21.link/P1467R9>`__","Extended ``floating-point`` types and standard names","2022-07 (Virtual)","","",""
 "`P1642R11 <https://wg21.link/P1642R11>`__","Freestanding ``[utilities]``, ``[ranges]``, and ``[iterators]``","2022-07 (Virtual)","","",""
