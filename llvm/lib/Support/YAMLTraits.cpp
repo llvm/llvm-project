@@ -74,9 +74,9 @@ Input::~Input() = default;
 
 std::error_code Input::error() { return EC; }
 
-bool Input::outputting() const {
-  return false;
-}
+IOKind Input::getKind() const { return IOKind::Inputting; }
+
+bool Input::outputting() const { return false; }
 
 bool Input::setCurrentDocument() {
   if (DocIterator != Strm->end()) {
@@ -485,9 +485,9 @@ Output::Output(raw_ostream &yout, void *context, int WrapColumn)
 
 Output::~Output() = default;
 
-bool Output::outputting() const {
-  return true;
-}
+IOKind Output::getKind() const { return IOKind::Outputting; }
+
+bool Output::outputting() const { return true; }
 
 void Output::beginMapping() {
   StateStack.push_back(inMapFirstKey);
