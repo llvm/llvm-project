@@ -362,17 +362,6 @@
       unsigned short accum: rounduhk,                                          \
       unsigned long accum: roundulk)(x, y)
 
-#define idivfx(x, y)                                                           \
-  _Generic((x),                                                                \
-      fract: idivr,                                                            \
-      long fract: idivlr,                                                      \
-      accum: idivk,                                                            \
-      long accum: idivlk,                                                      \
-      unsigned fract: idivur,                                                  \
-      unsigned long fract: idivulr,                                            \
-      unsigned accum: idivuk,                                                  \
-      unsigned long accum: idivulk)(x, y)
-
 #endif // LIBC_COMPILER_HAS_FIXED_POINT
 
 #endif // LLVM_LIBC_MACROS_STDFIX_MACROS_H

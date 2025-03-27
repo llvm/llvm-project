@@ -40,15 +40,6 @@
 #include "src/stdfix/roundulr.h"
 #include "src/stdfix/roundur.h"
 
-#include "src/stdfix/idivk.h"
-#include "src/stdfix/idivlk.h"
-#include "src/stdfix/idivlr.h"
-#include "src/stdfix/idivr.h"
-#include "src/stdfix/idivuk.h"
-#include "src/stdfix/idivulk.h"
-#include "src/stdfix/idivulr.h"
-#include "src/stdfix/idivur.h"
-
 using LIBC_NAMESPACE::abshk;
 using LIBC_NAMESPACE::abshr;
 using LIBC_NAMESPACE::absk;
@@ -67,14 +58,6 @@ using LIBC_NAMESPACE::countlsuk;
 using LIBC_NAMESPACE::countlsulk;
 using LIBC_NAMESPACE::countlsulr;
 using LIBC_NAMESPACE::countlsur;
-using LIBC_NAMESPACE::idivk;
-using LIBC_NAMESPACE::idivlk;
-using LIBC_NAMESPACE::idivlr;
-using LIBC_NAMESPACE::idivr;
-using LIBC_NAMESPACE::idivuk;
-using LIBC_NAMESPACE::idivulk;
-using LIBC_NAMESPACE::idivulr;
-using LIBC_NAMESPACE::idivur;
 using LIBC_NAMESPACE::roundhk;
 using LIBC_NAMESPACE::roundhr;
 using LIBC_NAMESPACE::roundk;
@@ -127,16 +110,4 @@ TEST(LlvmLibcCountlsfxTest, Basic) {
   ASSERT_EQ(countlsfx(0.5uk), countlsuk(0.5uk));
   ASSERT_EQ(countlsfx(0.5uhk), countlsuhk(0.5uhk));
   ASSERT_EQ(countlsfx(0.5ulk), countlsulk(0.5ulk));
-}
-
-TEST(LlvmLibcIdivfxTest, Basic) {
-  ASSERT_EQ(idivfx(0.5r, 0.25r), idivr(0.5r, 0.25r));
-  ASSERT_EQ(idivfx(0.5lr, 0.25lr), idivlr(0.5lr, 0.25lr));
-  ASSERT_EQ(idivfx(0.5k, 0.25k), idivk(0.5k, 0.25k));
-  ASSERT_EQ(idivfx(0.5lk, 0.25lk), idivlk(0.5lk, 0.25lk));
-
-  ASSERT_EQ(idivfx(0.5ur, 0.25ur), idivur(0.5ur, 0.25ur));
-  ASSERT_EQ(idivfx(0.5ulr, 0.25ulr), idivulr(0.5ulr, 0.25ulr));
-  ASSERT_EQ(idivfx(0.5uk, 0.25uk), idivuk(0.5uk, 0.25uk));
-  ASSERT_EQ(idivfx(0.5ulk, 0.25ulk), idivulk(0.5ulk, 0.25ulk));
 }

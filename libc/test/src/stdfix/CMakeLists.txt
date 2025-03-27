@@ -205,19 +205,10 @@ foreach(s IN ITEMS r hr lr k hk lk)
   )
 endforeach()
 
-foreach(suffix IN ITEMS r lr k lk)
-  list(APPEND macros_depends
-    libc.src.stdfix.idiv${suffix}
-    libc.src.stdfix.idivu${suffix}
-  )
-endforeach()
-
 add_libc_test(
   macros_test
-  SUITE
-    libc-stdfix-tests
-  SRCS
-    macros_test.cpp
+  SUITE libc-stdfix-tests
+  SRCS macros_test.cpp
   DEPENDS
     libc.include.stdfix
     ${macros_depends}
