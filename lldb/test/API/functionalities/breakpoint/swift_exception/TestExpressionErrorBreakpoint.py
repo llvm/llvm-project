@@ -25,32 +25,40 @@ class TestSwiftErrorBreakpoint(TestBase):
     def test_swift_error_no_typename(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
         self.build()
-        self.do_tests(None, True)
+        self.do_tests(None)
 
     @swiftTest
     def test_swift_error_matching_base_typename(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
         self.build()
-        self.do_tests("EnumError", True)
+        self.do_tests("EnumError")
 
     @swiftTest
     def test_swift_error_matching_full_typename(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
         self.build()
-        self.do_tests("a.EnumError", True)
+        self.do_tests("a.EnumError")
 
     @swiftTest
     def test_swift_error_bogus_typename(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
         self.build()
-        self.do_tests("NoSuchErrorHere", False)
+        self.do_tests_in_mode("NoSuchErrorHere", mode="untyped", should_stop=False)
 
-    def setUp(self):
-        TestBase.setUp(self)
+    @swiftTest
+    @expectedFailureAll(bugnumber="rdar://148033473")
+    def test_swift_typed_error_bogus_typename(self):
+        """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
+        self.build()
+        self.do_tests_in_mode("NoSuchErrorHere", mode="typed", should_stop=False)
 
-    def do_tests(self, typename, should_stop):
-        self.do_test(typename, should_stop, self.create_breakpoint_with_api)
-        self.do_test(typename, should_stop, self.create_breakpoint_with_command)
+    def do_tests(self, typename, should_stop=True):
+        for mode in ("typed", "untyped"):
+            self.do_tests_in_mode(typename, mode, should_stop)
+
+    def do_tests_in_mode(self, typename, mode, should_stop):
+        self.do_test(typename, mode, should_stop, self.create_breakpoint_with_api)
+        self.do_test(typename, mode, should_stop, self.create_breakpoint_with_command)
 
     def create_breakpoint_with_api(self, target, typename):
         types = lldb.SBStringList()
@@ -64,7 +72,7 @@ class TestSwiftErrorBreakpoint(TestBase):
         return lldbutil.run_break_set_by_exception(
             self, "swift", exception_typename=typename)
 
-    def do_test(self, typename, should_stop, make_breakpoint):
+    def do_test(self, typename, mode, should_stop, make_breakpoint):
         exe_name = "a.out"
         exe = self.getBuildArtifact(exe_name)
 
@@ -78,7 +86,7 @@ class TestSwiftErrorBreakpoint(TestBase):
         # before launch.
 
         # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, os.getcwd())
+        process = target.LaunchSimple([mode], None, os.getcwd())
 
         if should_stop:
             self.assertTrue(process, PROCESS_IS_VALID)

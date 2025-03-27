@@ -280,10 +280,11 @@ static lldb::BreakpointResolverSP
 CreateExceptionResolver(const lldb::BreakpointSP &bkpt, bool catch_bp, bool throw_bp) {
   BreakpointResolverSP resolver_sp;
 
+  static const char *names[] = {"swift_willThrow", "swift_willThrowTypedImpl"};
   if (throw_bp)
-    resolver_sp.reset(new BreakpointResolverName(
-        bkpt, "swift_willThrow", eFunctionNameTypeBase, eLanguageTypeUnknown,
-        Breakpoint::Exact, 0, eLazyBoolNo));
+    resolver_sp.reset(
+        new BreakpointResolverName(bkpt, names, 2, eFunctionNameTypeBase,
+                                   eLanguageTypeUnknown, 0, eLazyBoolNo));
   // FIXME: We don't do catch breakpoints for ObjC yet.
   // Should there be some way for the runtime to specify what it can do in this
   // regard?
