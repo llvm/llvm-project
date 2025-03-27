@@ -7130,9 +7130,9 @@ defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stri
 def fhermetic_module_files : Flag<["-"], "fhermetic-module-files">, Group<f_Group>,
   HelpText<"Emit hermetic module files (no nested USE association)">;
 
-def do_concurrent_parallel_EQ : Joined<["-"], "fdo-concurrent-parallel=">,
-  HelpText<"Try to map `do concurrent` loops to OpenMP (on host or device)">,
-      Values<"none,host,device">;
+def fdo_concurrent_to_openmp_EQ : Joined<["-"], "fdo-concurrent-to-openmp=">,
+  HelpText<"Try to map `do concurrent` loops to OpenMP [none|host|device]">,
+      Values<"none, host, device">;
 } // let Visibility = [FC1Option, FlangOption]
 
 def J : JoinedOrSeparate<["-"], "J">,

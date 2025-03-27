@@ -27,7 +27,6 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
-#include <algorithm>
 #include <memory>
 #include <utility>
 
@@ -161,53 +160,83 @@ void cloneOrMapRegionOutsiders(fir::FirOpBuilder &builder,
 namespace {
 namespace looputils {
 /// Stores info needed about the induction/iteration variable for each `do
-/// concurrent` in a loop nest. This includes:
-/// * the operation allocating memory for iteration variable,
-/// * the operation(s) updating the iteration variable with the current
-///   iteration number.
+/// concurrent` in a loop nest.
 struct InductionVariableInfo {
+  InductionVariableInfo(fir::DoLoopOp doLoop) { populateInfo(doLoop); }
+
+  /// The operation allocating memory for iteration variable.
   mlir::Operation *iterVarMemDef;
-  llvm::SetVector<mlir::Operation *> indVarUpdateOps;
+
+  /// the operation(s) updating the iteration variable with the current
+  /// iteration number.
+  llvm::SmallVector<mlir::Operation *> indVarUpdateOps;
+
+private:
+  /// For the \p doLoop parameter, find the following:
+  ///
+  /// 1. The operation that declares its iteration variable or allocates memory
+  /// for it. For example, give the following loop:
+  /// ```
+  ///   ...
+  ///   %i:2 = hlfir.declare %0 {uniq_name = "_QFEi"} : ...
+  ///   ...
+  ///   fir.do_loop %ind_var = %lb to %ub step %s unordered {
+  ///     %ind_var_conv = fir.convert %ind_var : (index) -> i32
+  ///     fir.store %ind_var_conv to %i#1 : !fir.ref<i32>
+  ///     ...
+  ///   }
+  /// ```
+  ///
+  /// This function sets the `iterVarMemDef` member to the `hlfir.declare` op
+  /// for `%i`.
+  ///
+  /// 2. The operation(s) that update the loop's iteration variable from its
+  /// induction variable. For the above example, the `indVarUpdateOps` is
+  /// populated with the first 2 ops in the loop's body.
+  ///
+  /// Note: The current implementation is dependent on how flang emits loop
+  /// bodies; which is sufficient for the current simple test/use cases. If this
+  /// proves to be insufficient, this should be made more generic.
+  void populateInfo(fir::DoLoopOp doLoop) {
+    mlir::Value result = nullptr;
+
+    // Checks if a StoreOp is updating the memref of the loop's iteration
+    // variable.
+    auto isStoringIV = [&](fir::StoreOp storeOp) {
+      // Direct store into the IV memref.
+      if (storeOp.getValue() == doLoop.getInductionVar()) {
+        indVarUpdateOps.push_back(storeOp);
+        return true;
+      }
+
+      // Indirect store into the IV memref.
+      if (auto convertOp = mlir::dyn_cast<fir::ConvertOp>(
+              storeOp.getValue().getDefiningOp())) {
+        if (convertOp.getOperand() == doLoop.getInductionVar()) {
+          indVarUpdateOps.push_back(convertOp);
+          indVarUpdateOps.push_back(storeOp);
+          return true;
+        }
+      }
+
+      return false;
+    };
+
+    for (mlir::Operation &op : doLoop) {
+      if (auto storeOp = mlir::dyn_cast<fir::StoreOp>(op))
+        if (isStoringIV(storeOp)) {
+          result = storeOp.getMemref();
+          break;
+        }
+    }
+
+    assert(result != nullptr && result.getDefiningOp() != nullptr);
+    iterVarMemDef = result.getDefiningOp();
+  }
 };
 
 using LoopNestToIndVarMap =
     llvm::MapVector<fir::DoLoopOp, InductionVariableInfo>;
-
-/// Given an operation `op`, this returns true if `op`'s operand is ultimately
-/// the loop's induction variable. Detecting this helps finding the live-in
-/// value corresponding to the induction variable in case the induction variable
-/// is indirectly used in the loop (e.g. throught a cast op).
-bool isIndVarUltimateOperand(mlir::Operation *op, fir::DoLoopOp doLoop) {
-  while (op != nullptr && op->getNumOperands() > 0) {
-    auto ivIt = llvm::find_if(op->getOperands(), [&](mlir::Value operand) {
-      return operand == doLoop.getInductionVar();
-    });
-
-    if (ivIt != op->getOperands().end())
-      return true;
-
-    op = op->getOperand(0).getDefiningOp();
-  }
-
-  return false;
-}
-
-/// For the \p doLoop parameter, find the operations that declares its induction
-/// variable or allocates memory for it.
-mlir::Operation *findLoopIndVarMemDecl(fir::DoLoopOp doLoop) {
-  mlir::Value result = nullptr;
-  mlir::visitUsedValuesDefinedAbove(
-      doLoop.getRegion(), [&](mlir::OpOperand *operand) {
-        if (isIndVarUltimateOperand(operand->getOwner(), doLoop)) {
-          assert(result == nullptr &&
-                 "loop can have only one induction variable");
-          result = operand->get();
-        }
-      });
-
-  assert(result != nullptr && result.getDefiningOp() != nullptr);
-  return result.getDefiningOp();
-}
 
 /// Collect the list of values used inside the loop but defined outside of it.
 void collectLoopLiveIns(fir::DoLoopOp doLoop,
@@ -229,126 +258,65 @@ void collectLoopLiveIns(fir::DoLoopOp doLoop,
       });
 }
 
-/// Collects the op(s) responsible for updating a loop's iteration variable with
-/// the current iteration number. For example, for the input IR:
-/// ```
-/// %i = fir.alloca i32 {bindc_name = "i"}
-/// %i_decl:2 = hlfir.declare %i ...
-/// ...
-/// fir.do_loop %i_iv = %lb to %ub step %step unordered {
-///   %1 = fir.convert %i_iv : (index) -> i32
-///   fir.store %1 to %i_decl#1 : !fir.ref<i32>
-///   ...
-/// }
-/// ```
-/// this function would return the first 2 ops in the `fir.do_loop`'s region.
-llvm::SetVector<mlir::Operation *>
-extractIndVarUpdateOps(fir::DoLoopOp doLoop) {
-  mlir::Value indVar = doLoop.getInductionVar();
-  llvm::SetVector<mlir::Operation *> indVarUpdateOps;
-
-  llvm::SmallVector<mlir::Value> toProcess;
-  toProcess.push_back(indVar);
-
-  llvm::DenseSet<mlir::Value> done;
-
-  while (!toProcess.empty()) {
-    mlir::Value val = toProcess.back();
-    toProcess.pop_back();
-
-    if (!done.insert(val).second)
-      continue;
-
-    for (mlir::Operation *user : val.getUsers()) {
-      indVarUpdateOps.insert(user);
-
-      for (mlir::Value result : user->getResults())
-        toProcess.push_back(result);
-    }
-  }
-
-  return std::move(indVarUpdateOps);
-}
-
-/// Starting with a value at the end of a definition/conversion chain, walk the
-/// chain backwards and collect all the visited ops along the way. This is the
-/// same as the "backward slice" of the use-def chain of \p link.
-///
-/// If the root of the chain/slice is a constant op  (where convert operations
-/// on constant count as constants as well), then populate \p opChain with the
-/// extracted chain/slice. If not, then \p opChain will contains a single value:
-/// \p link.
-///
-/// The purpose of this function is that we pull in the chain of
-/// constant+conversion ops inside the parallel region if possible; which
-/// prevents creating an unnecessary shared/mapped value that crosses the OpenMP
-/// region.
-///
-/// For example, given this IR:
-/// ```
-/// %c10 = arith.constant 10 : i32
-/// %10 = fir.convert %c10 : (i32) -> index
-/// ```
-/// and giving `%10` as the starting input: `link`, `defChain` would contain
-/// both of the above ops.
-void collectIndirectConstOpChain(mlir::Operation *link,
-                                 llvm::SetVector<mlir::Operation *> &opChain) {
-  mlir::BackwardSliceOptions options;
-  options.inclusive = true;
-  mlir::getBackwardSlice(link, &opChain, options);
-
-  assert(!opChain.empty());
-
-  bool isConstantChain = [&]() {
-    if (!mlir::isa_and_present<mlir::arith::ConstantOp>(opChain.front()))
-      return false;
-
-    return llvm::all_of(llvm::drop_begin(opChain), [](mlir::Operation *op) {
-      return mlir::isa_and_present<fir::ConvertOp>(op);
-    });
-  }();
-
-  if (isConstantChain)
-    return;
-
-  opChain.clear();
-  opChain.insert(link);
-}
-
 /// Loop \p innerLoop is considered perfectly-nested inside \p outerLoop iff
-/// there are no operations in \p outerloop's other than:
+/// there are no operations in \p outerloop's body other than:
 ///
-/// 1. the operations needed to assing/update \p outerLoop's induction variable.
+/// 1. the operations needed to assign/update \p outerLoop's induction variable.
 /// 2. \p innerLoop itself.
 ///
 /// \p return true if \p innerLoop is perfectly nested inside \p outerLoop
 /// according to the above definition.
 bool isPerfectlyNested(fir::DoLoopOp outerLoop, fir::DoLoopOp innerLoop) {
-  mlir::BackwardSliceOptions backwardSliceOptions;
-  backwardSliceOptions.inclusive = true;
-  // We will collect the backward slices for innerLoop's LB, UB, and step.
-  // However, we want to limit the scope of these slices to the scope of
-  // outerLoop's region.
-  backwardSliceOptions.filter = [&](mlir::Operation *op) {
-    return !mlir::areValuesDefinedAbove(op->getResults(),
-                                        outerLoop.getRegion());
-  };
-
   mlir::ForwardSliceOptions forwardSliceOptions;
   forwardSliceOptions.inclusive = true;
+  // The following will be used as an example to clarify the internals of this
+  // function:
+  // ```
+  // 1. fir.do_loop %i_idx = %34 to %36 step %c1 unordered {
+  // 2.   %i_idx_2 = fir.convert %i_idx : (index) -> i32
+  // 3.   fir.store %i_idx_2 to %i_iv#1 : !fir.ref<i32>
+  //
+  // 4.   fir.do_loop %j_idx = %37 to %39 step %c1_3 unordered {
+  // 5.     %j_idx_2 = fir.convert %j_idx : (index) -> i32
+  // 6.     fir.store %j_idx_2 to %j_iv#1 : !fir.ref<i32>
+  //        ... loop nest body, possible uses %i_idx ...
+  //      }
+  //    }
+  // ```
+  // In this example, the `j` loop is perfectly nested inside the `i` loop and
+  // below is how we find that.
+
   // We don't care about the outer-loop's induction variable's uses within the
   // inner-loop, so we filter out these uses.
+  //
+  // This filter tells `getForwardSlice` (below) to only collect operations
+  // which produce results defined above (i.e. outside) the inner-loop's body.
+  //
+  // Since `outerLoop.getInductionVar()` is a block argument (to the
+  // outer-loop's body), the filter effectively collects uses of
+  // `outerLoop.getInductionVar()` inside the outer-loop but outside the
+  // inner-loop.
   forwardSliceOptions.filter = [&](mlir::Operation *op) {
     return mlir::areValuesDefinedAbove(op->getResults(), innerLoop.getRegion());
   };
 
   llvm::SetVector<mlir::Operation *> indVarSlice;
+  // The forward slice of the `i` loop's IV will be the 2 ops in line 1 & 2
+  // above. Uses of `%i_idx` inside the `j` loop are not collected because of
+  // the filter.
   mlir::getForwardSlice(outerLoop.getInductionVar(), &indVarSlice,
                         forwardSliceOptions);
-  llvm::DenseSet<mlir::Operation *> innerLoopSetupOpsSet(indVarSlice.begin(),
-                                                         indVarSlice.end());
+  llvm::DenseSet<mlir::Operation *> indVarSet(indVarSlice.begin(),
+                                              indVarSlice.end());
 
-  llvm::DenseSet<mlir::Operation *> loopBodySet;
+  llvm::DenseSet<mlir::Operation *> outerLoopBodySet;
+  // The following walk collects ops inside `outerLoop` that are **not**:
+  // * the outer-loop itself,
+  // * or the inner-loop,
+  // * or the `fir.result` op (the outer-loop's terminator).
+  //
+  // For the above example, this will also populate `outerLoopBodySet` with ops
+  // in line 1 & 2 since we skip the `i` loop, the `j` loop, and the terminator.
   outerLoop.walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
     if (op == outerLoop)
       return mlir::WalkResult::advance();
@@ -359,11 +327,15 @@ bool isPerfectlyNested(fir::DoLoopOp outerLoop, fir::DoLoopOp innerLoop) {
     if (mlir::isa<fir::ResultOp>(op))
       return mlir::WalkResult::advance();
 
-    loopBodySet.insert(op);
+    outerLoopBodySet.insert(op);
     return mlir::WalkResult::advance();
   });
 
-  bool result = (loopBodySet == innerLoopSetupOpsSet);
+  // If `outerLoopBodySet` ends up having the same ops as `indVarSet`, then
+  // `outerLoop` only contains ops that setup its induction variable +
+  // `innerLoop` + the `fir.result` terminator. In other words, `innerLoop` is
+  // perfectly nested inside `outerLoop`.
+  bool result = (outerLoopBodySet == indVarSet);
   mlir::Location loc = outerLoop.getLoc();
   LLVM_DEBUG(DBGS() << "Loop pair starting at location " << loc << " is"
                     << (result ? "" : " not") << " perfectly nested\n");
@@ -371,31 +343,28 @@ bool isPerfectlyNested(fir::DoLoopOp outerLoop, fir::DoLoopOp innerLoop) {
   return result;
 }
 
-/// Starting with `outerLoop` collect a perfectly nested loop nest, if any. This
-/// function collects as much as possible loops in the nest; it case it fails to
-/// recognize a certain nested loop as part of the nest it just returns the
-/// parent loops it discovered before.
+/// Starting with `currentLoop` collect a perfectly nested loop nest, if any.
+/// This function collects as much as possible loops in the nest; it case it
+/// fails to recognize a certain nested loop as part of the nest it just returns
+/// the parent loops it discovered before.
 mlir::LogicalResult collectLoopNest(fir::DoLoopOp currentLoop,
                                     LoopNestToIndVarMap &loopNest) {
   assert(currentLoop.getUnordered());
 
   while (true) {
-    loopNest.try_emplace(
-        currentLoop,
-        InductionVariableInfo{
-            findLoopIndVarMemDecl(currentLoop),
-            std::move(looputils::extractIndVarUpdateOps(currentLoop))});
-
-    auto directlyNestedLoops = currentLoop.getRegion().getOps<fir::DoLoopOp>();
+    loopNest.insert({currentLoop, InductionVariableInfo(currentLoop)});
     llvm::SmallVector<fir::DoLoopOp> unorderedLoops;
 
-    for (auto nestedLoop : directlyNestedLoops)
+    for (auto nestedLoop : currentLoop.getRegion().getOps<fir::DoLoopOp>())
       if (nestedLoop.getUnordered())
         unorderedLoops.push_back(nestedLoop);
 
     if (unorderedLoops.empty())
       break;
 
+    // Having more than one unordered loop means that we are not dealing with a
+    // perfect loop nest (i.e. a mulit-range `do concurrent` loop); which is the
+    // case we are after here.
     if (unorderedLoops.size() > 1)
       return mlir::failure();
 
@@ -505,12 +474,15 @@ void sinkLoopIVArgs(mlir::ConversionPatternRewriter &rewriter,
 /// of it. This usually corresponds to temporary values that are used inside the
 /// loop body for initialzing other variables for example.
 ///
+/// See `flang/test/Transforms/DoConcurrent/locally_destroyed_temp.f90` for an
+/// example of why we need this.
+///
 /// \param [in] doLoop - the loop within which the function searches for values
 /// used exclusively inside.
 ///
 /// \param [out] locals - the list of loop-local values detected for \p doLoop.
-static void collectLoopLocalValues(fir::DoLoopOp doLoop,
-                                   llvm::SetVector<mlir::Value> &locals) {
+void collectLoopLocalValues(fir::DoLoopOp doLoop,
+                            llvm::SetVector<mlir::Value> &locals) {
   doLoop.walk([&](mlir::Operation *op) {
     for (mlir::Value operand : op->getOperands()) {
       if (locals.contains(operand))
@@ -684,6 +656,104 @@ private:
 
   using LiveInShapeInfoMap =
       llvm::DenseMap<mlir::Value, TargetDeclareShapeCreationInfo>;
+
+  mlir::omp::ParallelOp genParallelOp(mlir::Location loc,
+                                      mlir::ConversionPatternRewriter &rewriter,
+                                      looputils::LoopNestToIndVarMap &loopNest,
+                                      mlir::IRMapping &mapper) const {
+    auto parallelOp = rewriter.create<mlir::omp::ParallelOp>(loc);
+    rewriter.createBlock(&parallelOp.getRegion());
+    rewriter.setInsertionPoint(rewriter.create<mlir::omp::TerminatorOp>(loc));
+
+    genLoopNestIndVarAllocs(rewriter, loopNest, mapper);
+    return parallelOp;
+  }
+
+  void genLoopNestIndVarAllocs(mlir::ConversionPatternRewriter &rewriter,
+                               looputils::LoopNestToIndVarMap &loopNest,
+                               mlir::IRMapping &mapper) const {
+
+    for (auto &[_, indVarInfo] : loopNest)
+      genInductionVariableAlloc(rewriter, indVarInfo.iterVarMemDef, mapper);
+  }
+
+  mlir::Operation *
+  genInductionVariableAlloc(mlir::ConversionPatternRewriter &rewriter,
+                            mlir::Operation *indVarMemDef,
+                            mlir::IRMapping &mapper) const {
+    assert(
+        indVarMemDef != nullptr &&
+        "Induction variable memdef is expected to have a defining operation.");
+
+    llvm::SmallSetVector<mlir::Operation *, 2> indVarDeclareAndAlloc;
+    for (auto operand : indVarMemDef->getOperands())
+      indVarDeclareAndAlloc.insert(operand.getDefiningOp());
+    indVarDeclareAndAlloc.insert(indVarMemDef);
+
+    mlir::Operation *result;
+    for (mlir::Operation *opToClone : indVarDeclareAndAlloc)
+      result = rewriter.clone(*opToClone, mapper);
+
+    return result;
+  }
+
+  void genLoopNestClauseOps(
+      mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
+      looputils::LoopNestToIndVarMap &loopNest, mlir::IRMapping &mapper,
+      mlir::omp::LoopNestOperands &loopNestClauseOps,
+      mlir::omp::TargetOperands *targetClauseOps = nullptr) const {
+    assert(loopNestClauseOps.loopLowerBounds.empty() &&
+           "Loop nest bounds were already emitted!");
+
+    auto populateBounds = [](mlir::Value var,
+                             llvm::SmallVectorImpl<mlir::Value> &bounds) {
+      bounds.push_back(var.getDefiningOp()->getResult(0));
+    };
+
+    auto hostEvalCapture = [&](mlir::Value var,
+                               llvm::SmallVectorImpl<mlir::Value> &bounds) {
+      populateBounds(var, bounds);
+
+      if (targetClauseOps)
+        targetClauseOps->hostEvalVars.push_back(var);
+    };
+
+    for (auto &[doLoop, _] : loopNest) {
+      hostEvalCapture(doLoop.getLowerBound(),
+                      loopNestClauseOps.loopLowerBounds);
+      hostEvalCapture(doLoop.getUpperBound(),
+                      loopNestClauseOps.loopUpperBounds);
+      hostEvalCapture(doLoop.getStep(), loopNestClauseOps.loopSteps);
+    }
+
+    loopNestClauseOps.loopInclusive = rewriter.getUnitAttr();
+  }
+
+  mlir::omp::LoopNestOp
+  genWsLoopOp(mlir::ConversionPatternRewriter &rewriter, fir::DoLoopOp doLoop,
+              mlir::IRMapping &mapper,
+              const mlir::omp::LoopNestOperands &clauseOps,
+              bool isComposite) const {
+
+    auto wsloopOp = rewriter.create<mlir::omp::WsloopOp>(doLoop.getLoc());
+    wsloopOp.setComposite(isComposite);
+    rewriter.createBlock(&wsloopOp.getRegion());
+
+    auto loopNestOp =
+        rewriter.create<mlir::omp::LoopNestOp>(doLoop.getLoc(), clauseOps);
+
+    // Clone the loop's body inside the loop nest construct using the
+    // mapped values.
+    rewriter.cloneRegionBefore(doLoop.getRegion(), loopNestOp.getRegion(),
+                               loopNestOp.getRegion().begin(), mapper);
+
+    mlir::Operation *terminator = loopNestOp.getRegion().back().getTerminator();
+    rewriter.setInsertionPointToEnd(&loopNestOp.getRegion().back());
+    rewriter.create<mlir::omp::YieldOp>(terminator->getLoc());
+    rewriter.eraseOp(terminator);
+
+    return loopNestOp;
+  }
 
   void
   genBoundsOps(mlir::ConversionPatternRewriter &rewriter, mlir::Location loc,
@@ -953,51 +1023,6 @@ private:
     return teamsOp;
   }
 
-  void genLoopNestClauseOps(
-      mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
-      looputils::LoopNestToIndVarMap &loopNest, mlir::IRMapping &mapper,
-      mlir::omp::LoopNestOperands &loopNestClauseOps,
-      mlir::omp::TargetOperands *targetClauseOps = nullptr) const {
-    assert(loopNestClauseOps.loopLowerBounds.empty() &&
-           "Loop nest bounds were already emitted!");
-
-    // Clones the chain of ops defining a certain loop bound or its step into
-    // the parallel region. For example, if the value of a bound is defined by a
-    // `fir.convert`op, this lambda clones the `fir.convert` as well as the
-    // value it converts from. We do this since `omp.target` regions are
-    // isolated from above.
-    auto cloneBoundOrStepOpChain =
-        [&](mlir::Operation *operation) -> mlir::Operation * {
-      llvm::SetVector<mlir::Operation *> opChain;
-      looputils::collectIndirectConstOpChain(operation, opChain);
-
-      mlir::Operation *result;
-      for (mlir::Operation *link : opChain)
-        result = rewriter.clone(*link, mapper);
-
-      return result;
-    };
-
-    auto hostEvalCapture = [&](mlir::Value var,
-                               llvm::SmallVectorImpl<mlir::Value> &bounds) {
-      var = cloneBoundOrStepOpChain(var.getDefiningOp())->getResult(0);
-      bounds.push_back(var);
-
-      if (targetClauseOps)
-        targetClauseOps->hostEvalVars.push_back(var);
-    };
-
-    for (auto &[doLoop, _] : loopNest) {
-      hostEvalCapture(doLoop.getLowerBound(),
-                      loopNestClauseOps.loopLowerBounds);
-      hostEvalCapture(doLoop.getUpperBound(),
-                      loopNestClauseOps.loopUpperBounds);
-      hostEvalCapture(doLoop.getStep(), loopNestClauseOps.loopSteps);
-    }
-
-    loopNestClauseOps.loopInclusive = rewriter.getUnitAttr();
-  }
-
   mlir::omp::DistributeOp
   genDistributeOp(mlir::Location loc,
                   mlir::ConversionPatternRewriter &rewriter) const {
@@ -1006,72 +1031,6 @@ private:
 
     rewriter.createBlock(&distOp.getRegion());
     return distOp;
-  }
-
-  void genLoopNestIndVarAllocs(mlir::ConversionPatternRewriter &rewriter,
-                               looputils::LoopNestToIndVarMap &loopNest,
-                               mlir::IRMapping &mapper) const {
-
-    for (auto &[_, indVarInfo] : loopNest)
-      genInductionVariableAlloc(rewriter, indVarInfo.iterVarMemDef, mapper);
-  }
-
-  mlir::Operation *
-  genInductionVariableAlloc(mlir::ConversionPatternRewriter &rewriter,
-                            mlir::Operation *indVarMemDef,
-                            mlir::IRMapping &mapper) const {
-    assert(
-        indVarMemDef != nullptr &&
-        "Induction variable memdef is expected to have a defining operation.");
-
-    llvm::SmallSetVector<mlir::Operation *, 2> indVarDeclareAndAlloc;
-    for (auto operand : indVarMemDef->getOperands())
-      indVarDeclareAndAlloc.insert(operand.getDefiningOp());
-    indVarDeclareAndAlloc.insert(indVarMemDef);
-
-    mlir::Operation *result;
-    for (mlir::Operation *opToClone : indVarDeclareAndAlloc)
-      result = rewriter.clone(*opToClone, mapper);
-
-    return result;
-  }
-
-  mlir::omp::ParallelOp genParallelOp(mlir::Location loc,
-                                      mlir::ConversionPatternRewriter &rewriter,
-                                      looputils::LoopNestToIndVarMap &loopNest,
-                                      mlir::IRMapping &mapper) const {
-    auto parallelOp = rewriter.create<mlir::omp::ParallelOp>(loc);
-    rewriter.createBlock(&parallelOp.getRegion());
-    rewriter.setInsertionPoint(rewriter.create<mlir::omp::TerminatorOp>(loc));
-
-    genLoopNestIndVarAllocs(rewriter, loopNest, mapper);
-    return parallelOp;
-  }
-
-  mlir::omp::LoopNestOp
-  genWsLoopOp(mlir::ConversionPatternRewriter &rewriter, fir::DoLoopOp doLoop,
-              mlir::IRMapping &mapper,
-              const mlir::omp::LoopNestOperands &clauseOps,
-              bool isComposite) const {
-
-    auto wsloopOp = rewriter.create<mlir::omp::WsloopOp>(doLoop.getLoc());
-    wsloopOp.setComposite(isComposite);
-    rewriter.createBlock(&wsloopOp.getRegion());
-
-    auto loopNestOp =
-        rewriter.create<mlir::omp::LoopNestOp>(doLoop.getLoc(), clauseOps);
-
-    // Clone the loop's body inside the loop nest construct using the
-    // mapped values.
-    rewriter.cloneRegionBefore(doLoop.getRegion(), loopNestOp.getRegion(),
-                               loopNestOp.getRegion().begin(), mapper);
-
-    mlir::Operation *terminator = loopNestOp.getRegion().back().getTerminator();
-    rewriter.setInsertionPointToEnd(&loopNestOp.getRegion().back());
-    rewriter.create<mlir::omp::YieldOp>(terminator->getLoc());
-    rewriter.eraseOp(terminator);
-
-    return loopNestOp;
   }
 
   bool mapToDevice;
@@ -1122,8 +1081,6 @@ public:
 
     if (mlir::failed(mlir::applyFullConversion(getOperation(), target,
                                                std::move(patterns)))) {
-      mlir::emitError(mlir::UnknownLoc::get(context),
-                      "error in converting do-concurrent op");
       signalPassFailure();
     }
   }

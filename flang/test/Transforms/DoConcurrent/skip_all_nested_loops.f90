@@ -1,10 +1,10 @@
 ! Tests that if `do concurrent` is indirectly nested in its parent loop, that we
 ! skip converting the indirectly nested `do concurrent` loop.
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-parallel=host %s -o - \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=host %s -o - \
 ! RUN:   | FileCheck %s --check-prefixes=HOST,COMMON
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-parallel=device %s -o - \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=device %s -o - \
 ! RUN:   | FileCheck %s --check-prefixes=DEVICE,COMMON
 
 program main
