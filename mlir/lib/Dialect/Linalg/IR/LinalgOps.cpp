@@ -4816,16 +4816,15 @@ void PackOp::getEffects(
 
     if (&opOperand == &getSourceMutable()) {
       effects.emplace_back(MemoryEffects::Read::get(), &opOperand, /*stage=*/0,
-                         /*effectOnFullRegion=*/true,
-                         SideEffects::DefaultResource::get());
-    }
-    else if (&opOperand == &getDestMutable()) {
+                           /*effectOnFullRegion=*/true,
+                           SideEffects::DefaultResource::get());
+    } else if (&opOperand == &getDestMutable()) {
       effects.emplace_back(MemoryEffects::Read::get(), &opOperand, /*stage=*/0,
-                         /*effectOnFullRegion=*/true,
-                         SideEffects::DefaultResource::get());
+                           /*effectOnFullRegion=*/true,
+                           SideEffects::DefaultResource::get());
       effects.emplace_back(MemoryEffects::Write::get(), &opOperand, /*stage=*/0,
-                         /*effectOnFullRegion=*/true,
-                         SideEffects::DefaultResource::get());
+                           /*effectOnFullRegion=*/true,
+                           SideEffects::DefaultResource::get());
     }
   }
 }
@@ -4843,16 +4842,15 @@ void UnPackOp::getEffects(
 
     if (&opOperand == &getSourceMutable()) {
       effects.emplace_back(MemoryEffects::Read::get(), &opOperand, /*stage=*/0,
-                         /*effectOnFullRegion=*/true,
-                         SideEffects::DefaultResource::get());
-    }
-    else if (&opOperand == &getDestMutable()) {
+                           /*effectOnFullRegion=*/true,
+                           SideEffects::DefaultResource::get());
+    } else if (&opOperand == &getDestMutable()) {
       effects.emplace_back(MemoryEffects::Read::get(), &opOperand, /*stage=*/0,
-                         /*effectOnFullRegion=*/true,
-                         SideEffects::DefaultResource::get());
+                           /*effectOnFullRegion=*/true,
+                           SideEffects::DefaultResource::get());
       effects.emplace_back(MemoryEffects::Write::get(), &opOperand, /*stage=*/0,
-                         /*effectOnFullRegion=*/true,
-                         SideEffects::DefaultResource::get());
+                           /*effectOnFullRegion=*/true,
+                           SideEffects::DefaultResource::get());
     }
   }
 }

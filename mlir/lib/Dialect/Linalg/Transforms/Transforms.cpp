@@ -360,7 +360,8 @@ linalg::lowerUnPack(RewriterBase &rewriter, linalg::UnPackOp unPackOp,
   rewriter.setInsertionPoint(unPackOp);
 
   // TODO: support non-ranked tensor types. ShapedType
-  RankedTensorType packedTensorType = dyn_cast<RankedTensorType>(unPackOp.getSourceType());
+  RankedTensorType packedTensorType =
+      dyn_cast<RankedTensorType>(unPackOp.getSourceType());
   int64_t packedRank = packedTensorType.getRank();
 
   OpFoldResult zero = rewriter.getIndexAttr(0), one = rewriter.getIndexAttr(1);
