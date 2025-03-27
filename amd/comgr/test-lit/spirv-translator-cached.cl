@@ -19,5 +19,10 @@
 // RUN: COUNT=$(ls "%t.cache" | wc -l)
 // RUN: [ 2 -eq $COUNT ]
 
+// COM: Run again and check that the cache contents haven't changed
+// RUN: AMD_COMGR_CACHE_DIR=%t.cache spirv-translator %t.spv -o %t.translated.again.bc
+// RUN: COUNT=$(ls "%t.cache" | wc -l)
+// RUN: [ 2 -eq $COUNT ]
+
 // COM: Dissasemble LLVM IR bitcode to LLVM IR text
 // RUN: llvm-dis %t.translated.bc -o - | FileCheck %S/spirv-translator.cl
