@@ -655,6 +655,7 @@ private:
 #ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
     // `__bounded_iter` will tell the compiler that `__p` is bounded by `__begin_` and `__end_cap`, but nothing a priori
     // relates `__p` to `__end_`.
+    _LIBCPP_ASSERT_INTERNAL(__p <= this->__end_, "vector::__make_iter passed an invalid pointer");
     _LIBCPP_ASSUME(__p <= this->__end_);
 
     // Bound the iterator according to the capacity, rather than the size.
@@ -679,6 +680,7 @@ private:
 #ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
     // `__bounded_iter` will tell the compiler that `__p` is bounded by `__begin_` and `__end_cap`, but nothing a priori
     // relates `__p` to `__end_`.
+    _LIBCPP_ASSERT_INTERNAL(__p <= this->__end_, "vector::__make_iter passed an invalid pointer");
     _LIBCPP_ASSUME(__p <= this->__end_);
 
     // Bound the iterator according to the capacity, rather than the size. See above.
