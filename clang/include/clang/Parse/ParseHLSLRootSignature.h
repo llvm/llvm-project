@@ -40,6 +40,20 @@ public:
 private:
   DiagnosticsEngine &Diags() { return PP.getDiagnostics(); }
 
+  /// All private Parse.* methods follow a similar pattern:
+  ///   - Each method will start with an assert to denote what the CurToken is
+  /// expected to be and will parse from that token forward
+  ///   - Therefore, it is the callers responsibility to ensure that you are
+  /// at the correct CurToken. This should be done with the pattern of:
+  ///  if (TryConsumeExpectedToken(TokenKind)
+  ///    if (Parse.*())
+  ///      return true;
+  ///   - All methods return true if a parsing error is encountered. It is the
+  /// callers responsibility to propogate this error up, or deal with it
+  /// otherwise
+  ///   - An error will be raised if the proceeding tokens are not what is
+  /// expected, or, there is a lexing error
+
   /// Root Element parse methods:
   bool ParseDescriptorTable();
   bool ParseDescriptorTableClause();
