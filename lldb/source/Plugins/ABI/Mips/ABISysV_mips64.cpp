@@ -675,12 +675,10 @@ Status ABISysV_mips64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
     error = Status::FromErrorString("no registers are available");
 
   auto data_or_err = new_value_sp->GetData();
-  if (auto err = data_or_err.takeError()) {
-    error = Status::FromErrorStringWithFormat(
-        "Couldn't convert return value to raw data: %s",
-        llvm::toString(std::move(err)).c_str());
-    return error;
-  }
+  if (auto err = data_or_err.takeError())
+    return Status::FromError(llvm::joinErrors(
+        llvm::createStringError("Couldn't convert return value to raw data"),
+        std::move(error)));
 
   auto data = std::move(*data_or_err);
   size_t num_bytes = data.GetByteSize();

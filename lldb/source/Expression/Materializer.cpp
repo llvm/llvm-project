@@ -487,11 +487,11 @@ public:
 
       if (auto error = valobj_extractor_or_err.takeError()) {
         err = Status::FromError(llvm::joinErrors(
-            llvm::createStringError("couldn't read contents of reference variable %s: ",
-                                    GetName().AsCString()),
+            llvm::createStringError(
+                "couldn't read contents of reference variable %s: ",
+                GetName().AsCString()),
             std::move(error)));
         return;
-
       }
 
       lldb::offset_t offset = 0;
