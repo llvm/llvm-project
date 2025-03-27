@@ -109,10 +109,16 @@ func.func @invalid_tensor_literal() {
 
 // -----
 
-func.func @invalid_tensor_literal() {
-  // expected-error @+2 {{unexpected decimal integer literal for a floating point value}}
-  // expected-note @+1 {{add a trailing dot to make the literal a float}}
-  "foo"(){bar = sparse<[0, 0], 0101> : tensor<1xf16>} : () -> ()
+func.func @invalid_sparse_indices() {
+  // expected-error @+1 {{expected integer elements, but parsed floating-point}}
+  "foo"(){bar = sparse<0.5, 1> : tensor<1xi16>} : () -> ()
+}
+
+// -----
+
+func.func @invalid_sparse_values() {
+  // expected-error @+1 {{expected integer elements, but parsed floating-point}}
+  "foo"(){bar = sparse<0, 1.1> : tensor<1xi16>} : () -> ()
 }
 
 // -----
