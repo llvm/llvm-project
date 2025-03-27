@@ -1261,9 +1261,9 @@ bool AMDGPUSwLowerLDS::run() {
   }
 
   if (AsanInstrumentLDS) {
-    SmallVector<InterestingMemoryOperand, 16> OperandsToInstrument;
+    SmallVector<MemoryRefInfo, 16> OperandsToInstrument;
     for (Instruction *Inst : AsanInfo.Instructions) {
-      SmallVector<InterestingMemoryOperand, 1> InterestingOperands;
+      SmallVector<MemoryRefInfo, 1> InterestingOperands;
       getInterestingMemoryOperands(M, Inst, InterestingOperands);
       for (auto &Operand : InterestingOperands) {
         OperandsToInstrument.push_back(Operand);
