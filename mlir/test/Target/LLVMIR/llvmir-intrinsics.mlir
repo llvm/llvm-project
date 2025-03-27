@@ -1102,6 +1102,35 @@ llvm.func @vector_ptrmask(%p: !llvm.vec<8 x ptr>, %mask: vector<8 x i64>) -> !ll
   llvm.return %0 : !llvm.vec<8 x ptr>
 }
 
+// CHECK-LABEL: @experimental_constrained_sitofp
+llvm.func @experimental_constrained_sitofp(%s: i32, %v: vector<4 x i32>) {
+  // CHECK: call float @llvm.experimental.constrained.sitofp.f32.i32(
+  // CHECK: metadata !"round.towardzero"
+  // CHECK: metadata !"fpexcept.ignore"
+  %0 = llvm.intr.experimental.constrained.sitofp %s towardzero ignore : i32 to f32
+  // CHECK: call float @llvm.experimental.constrained.sitofp.f32.i32(
+  // CHECK: metadata !"round.tonearest"
+  // CHECK: metadata !"fpexcept.maytrap"
+  %1 = llvm.intr.experimental.constrained.sitofp %s tonearest maytrap : i32 to f32
+  // CHECK: call float @llvm.experimental.constrained.sitofp.f32.i32(
+  // CHECK: metadata !"round.upward"
+  // CHECK: metadata !"fpexcept.strict"
+  %2 = llvm.intr.experimental.constrained.sitofp %s upward strict : i32 to f32
+  // CHECK: call float @llvm.experimental.constrained.sitofp.f32.i32(
+  // CHECK: metadata !"round.downward"
+  // CHECK: metadata !"fpexcept.ignore"
+  %3 = llvm.intr.experimental.constrained.sitofp %s downward ignore : i32 to f32
+  // CHECK: call float @llvm.experimental.constrained.sitofp.f32.i32(
+  // CHECK: metadata !"round.tonearestaway"
+  // CHECK: metadata !"fpexcept.ignore"
+  %4 = llvm.intr.experimental.constrained.sitofp %s tonearestaway ignore : i32 to f32
+  // CHECK: call <4 x float> @llvm.experimental.constrained.sitofp.v4f32.v4i32(
+  // CHECK: metadata !"round.upward"
+  // CHECK: metadata !"fpexcept.strict"
+  %5 = llvm.intr.experimental.constrained.sitofp %v upward strict : vector<4 x i32> to vector<4 x f32>
+  llvm.return
+}
+
 // CHECK-LABEL: @experimental_constrained_fptrunc
 llvm.func @experimental_constrained_fptrunc(%s: f64, %v: vector<4xf32>) {
   // CHECK: call float @llvm.experimental.constrained.fptrunc.f32.f64(
@@ -1318,5 +1347,9 @@ llvm.func @experimental_constrained_fpext(%s: f32, %v: vector<4xf32>) {
 // CHECK-DAG: declare ptr addrspace(1) @llvm.stacksave.p1()
 // CHECK-DAG: declare void @llvm.stackrestore.p0(ptr)
 // CHECK-DAG: declare void @llvm.stackrestore.p1(ptr addrspace(1))
+// CHECK-DAG: declare float @llvm.experimental.constrained.sitofp.f32.i32(i32, metadata, metadata)
+// CHECK-DAG: declare <4 x float> @llvm.experimental.constrained.sitofp.v4f32.v4i32(<4 x i32>, metadata, metadata)
 // CHECK-DAG: declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
 // CHECK-DAG: declare <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f32(<4 x float>, metadata, metadata)
+// CHECK-DAG: declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
+// CHECK-DAG: declare <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(<4 x float>, metadata)

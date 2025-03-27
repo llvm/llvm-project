@@ -459,6 +459,15 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
   }];
 }
 
+def LLVM_ConstrainedSIToFP
+    : LLVM_ConstrainedIntr<"sitofp", /*numArgs=*/1,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[0],
+        /*hasRoundingMode=*/1> {
+    let assemblyFormat = [{
+        $arg_0 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0) `to` type(results)
+    }];
+}
+
 def LLVM_ConstrainedFPTruncIntr
     : LLVM_ConstrainedIntr<"fptrunc", /*numArgs=*/1,
         /*overloadedResult=*/1, /*overloadedOperands=*/[0],
