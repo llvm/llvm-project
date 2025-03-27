@@ -4501,8 +4501,9 @@ static void createTargetLoopWorkshareCall(
   Module &M = OMPBuilder->M;
   IRBuilder<> &Builder = OMPBuilder->Builder;
   Value *TripCount = TripCountOrig;
-  // FIXME(JAN): The trip count is 1 larger than it should be for GPU, this may
-  // not be the right way to fix it, but this works for now.
+  // The trip count is 1 larger than it should be for GPU, this is because
+  // of how the deviceRTL functions work with clang. TODO: make the trip
+  // count consistent between both so we don't have to subtract one here.
   if (OMPBuilder->Config.isGPU()) {
     Builder.restoreIP({InsertBlock, std::prev(InsertBlock->end())});
     LLVMContext &Ctx = M.getContext();
