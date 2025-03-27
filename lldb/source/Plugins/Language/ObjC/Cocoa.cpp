@@ -1205,10 +1205,11 @@ bool lldb_private::formatters::ObjCSELSummaryProvider(
     valobj_sp = ValueObject::CreateValueObjectFromAddress("text", data_address,
                                                           exe_ctx, charstar);
   } else {
-    auto data_or_err = valobj.GetData();
-    if (!data_or_err)
+    auto data = llvm::expectedToOptional(valobj.GetData());
+
+    if (!data)
       return false;
-    valobj_sp = ValueObject::CreateValueObjectFromData("text", *data_or_err,
+    valobj_sp = ValueObject::CreateValueObjectFromData("text", *data,
                                                        exe_ctx, charstar);
   }
 

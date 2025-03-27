@@ -200,10 +200,12 @@ bool TypeFormatImpl_EnumType::FormatObject(ValueObject *valobj,
                     "Can't extract data related to enum type info: {0}");
     return false;
   }
+
+  auto data = std::move(*data_or_err);
   ExecutionContext exe_ctx(valobj->GetExecutionContextRef());
   StreamString sstr;
-  valobj_enum_type.DumpTypeValue(&sstr, lldb::eFormatEnum, *data_or_err, 0,
-                                 data_or_err->GetByteSize(), 0, 0,
+  valobj_enum_type.DumpTypeValue(&sstr, lldb::eFormatEnum, data, 0,
+                                 data.GetByteSize(), 0, 0,
                                  exe_ctx.GetBestExecutionContextScope());
   if (!sstr.GetString().empty())
     dest = std::string(sstr.GetString());

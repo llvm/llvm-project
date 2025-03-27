@@ -273,12 +273,12 @@ ValueObjectSP ForwardListFrontEnd::GetChildAtIndex(uint32_t idx) {
 
   // we need to copy current_sp into a new object otherwise we will end up with
   // all items named __value_
-  auto data_or_err = current_sp->GetData();
-  if (!data_or_err)
+  auto data = llvm::expectedToOptional(current_sp->GetData());
+  if (!data)
     return nullptr;
 
   return CreateValueObjectFromData(
-      llvm::formatv("[{0}]", idx).str(), *data_or_err,
+      llvm::formatv("[{0}]", idx).str(), *data,
       m_backend.GetExecutionContextRef(), m_element_type);
 }
 

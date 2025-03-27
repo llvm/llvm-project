@@ -207,13 +207,13 @@ lldb::ValueObjectSP lldb_private::formatters::
     return lldb::ValueObjectSP();
   StreamString stream;
   stream.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  auto data_or_err = val_hash.first->GetData();
-  if (!data_or_err)
+  auto data = llvm::expectedToOptional(val_hash.first->GetData());
+  if (!data)
     return lldb::ValueObjectSP();
   const bool thread_and_frame_only_if_stopped = true;
   ExecutionContext exe_ctx = val_hash.first->GetExecutionContextRef().Lock(
       thread_and_frame_only_if_stopped);
-  return CreateValueObjectFromData(stream.GetString(), *data_or_err, exe_ctx,
+  return CreateValueObjectFromData(stream.GetString(), *data, exe_ctx,
                                    m_element_type);
 }
 
