@@ -161,7 +161,7 @@ class TestComputeProjects(unittest.TestCase):
         self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(env_variables["runtimes_check_targets"], "")
 
-    def test_blah(self):
+    def test_exclude_runtiems_in_projects(self):
         env_variables = compute_projects.get_env_variables(
             [".ci/compute_projects.py", "libcxx/CMakeLists.txt"], "Linux"
         )

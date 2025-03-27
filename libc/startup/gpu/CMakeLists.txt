@@ -33,14 +33,8 @@ function(add_startup_object name)
     set_target_properties(${fq_target_name}.exe PROPERTIES
       RUNTIME_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR}
       RUNTIME_OUTPUT_NAME ${name}.o)
-    # FIXME: A bug in the AMDGPU LTO pass is incorrectly removing the kernels.
-    if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-      target_link_options(${fq_target_name}.exe PRIVATE
-                          "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")
-    else()
-      target_link_options(${fq_target_name}.exe PRIVATE
-                          "-r" "-nostdlib" "-Wl,--lto-emit-llvm")
-    endif()
+    target_link_options(${fq_target_name}.exe PRIVATE
+                        "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")
   endif()
 endfunction()
 

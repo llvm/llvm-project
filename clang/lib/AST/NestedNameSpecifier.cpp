@@ -289,6 +289,7 @@ NestedNameSpecifier::translateToType(const ASTContext &Context) const {
     // These are not representable as types.
     return nullptr;
   }
+  llvm_unreachable("Unhandled SpecifierKind enum");
 }
 
 /// Print this nested name specifier to the given output

@@ -75,7 +75,6 @@ void Statusline::Draw(std::string str) {
   locked_stream << ANSI_SAVE_CURSOR;
   locked_stream.Printf(ANSI_TO_START_OF_ROW,
                        static_cast<unsigned>(m_terminal_height));
-  locked_stream << ANSI_CLEAR_LINE;
   locked_stream << str;
   locked_stream << ANSI_NORMAL;
   locked_stream << ANSI_RESTORE_CURSOR;

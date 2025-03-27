@@ -19849,6 +19849,12 @@ static void DoMarkVarDeclReferenced(
           SemaRef.InstantiateVariableDefinition(PointOfInstantiation, Var);
         });
 
+        // The size of an incomplete array type can be updated by
+        // instantiating the initializer. The DeclRefExpr's type should be
+        // updated accordingly too, or users of it would be confused!
+        if (E)
+          SemaRef.getCompletedType(E);
+
         // Re-set the member to trigger a recomputation of the dependence bits
         // for the expression.
         if (auto *DRE = dyn_cast_or_null<DeclRefExpr>(E))

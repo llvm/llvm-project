@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcfunc.h>
+#ifndef __CLC_MATH_CLC_REMAINDER_H__
+#define __CLC_MATH_CLC_REMAINDER_H__
 
-#ifdef cl_khr_fp64
+#define __CLC_FUNCTION __clc_remainder
+#define __CLC_BODY <clc/shared/binary_decl.inc>
 
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+#include <clc/math/gentype.inc>
 
-_CLC_DECL void __clc_ep_log(double x, private int *xexp, private double *r1,
-                            private double *r2);
+#undef __CLC_BODY
+#undef __CLC_FUNCTION
 
-#endif
+#endif // __CLC_MATH_CLC_REMAINDER_H__

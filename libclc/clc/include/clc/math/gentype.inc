@@ -68,6 +68,7 @@
 #define __CLC_CONVERT_S_GENTYPE __CLC_XCONCAT(__clc_convert_, __CLC_S_GENTYPE)
 #define __CLC_CONVERT_U_GENTYPE __CLC_XCONCAT(__clc_convert_, __CLC_U_GENTYPE)
 
+#if (!defined(__HALF_ONLY) && !defined(__DOUBLE_ONLY))
 #define __CLC_SCALAR_GENTYPE float
 #define __CLC_FPSIZE 32
 #define __CLC_FP_LIT(x) x##F
@@ -133,7 +134,9 @@
 #undef __CLC_FPSIZE
 #undef __CLC_SCALAR_GENTYPE
 
-#ifndef __FLOAT_ONLY
+#endif
+
+#if (!defined(__HALF_ONLY) && !defined(__FLOAT_ONLY))
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
@@ -204,7 +207,7 @@
 #endif
 #endif
 
-#ifndef __FLOAT_ONLY
+#if (!defined(__FLOAT_ONLY) && !defined(__DOUBLE_ONLY))
 #ifdef cl_khr_fp16
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
