@@ -1455,6 +1455,7 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
   assert(allocaTerminator->getNumSuccessors() == 1 &&
          "This is an unconditional branch created by splitBB");
 
+  llvm::DataLayout dataLayout = builder.GetInsertBlock()->getDataLayout();
   llvm::BasicBlock *afterAllocas = allocaTerminator->getSuccessor(0);
 
   unsigned int allocaAS =
@@ -1462,6 +1463,7 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
   unsigned int defaultAS = moduleTranslation.getLLVMModule()
                                ->getDataLayout()
                                .getProgramAddressSpace();
+
 
   for (auto [privDecl, mlirPrivVar, blockArg] :
        llvm::zip_equal(privateVarsInfo.privatizers, privateVarsInfo.mlirVars,
@@ -1476,17 +1478,18 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
                                                    builder.getPtrTy(defaultAS));
 
     privateVarsInfo.llvmVars.push_back(llvmPrivateVar);
+
   }
 
   return afterAllocas;
 }
 
-static LogicalResult
-copyFirstPrivateVars(llvm::IRBuilderBase &builder,
-                     LLVM::ModuleTranslation &moduleTranslation,
-                     SmallVectorImpl<mlir::Value> &mlirPrivateVars,
-                     ArrayRef<llvm::Value *> llvmPrivateVars,
-                     SmallVectorImpl<omp::PrivateClauseOp> &privateDecls) {
+static LogicalResult copyFirstPrivateVars(
+    llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation,
+    SmallVectorImpl<mlir::Value> &mlirPrivateVars,
+    ArrayRef<llvm::Value *> llvmPrivateVars,
+    SmallVectorImpl<omp::PrivateClauseOp> &privateDecls,
+    llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
   // Apply copy region for firstprivate.
   bool needsFirstprivate =
       llvm::any_of(privateDecls, [](omp::PrivateClauseOp &privOp) {
@@ -1510,7 +1513,8 @@ copyFirstPrivateVars(llvm::IRBuilderBase &builder,
     Region &copyRegion = decl.getCopyRegion();
 
     // map copyRegion rhs arg
-    llvm::Value *nonPrivateVar = moduleTranslation.lookupValue(mlirVar);
+    llvm::Value *nonPrivateVar = findAssociatedValue(
+        mlirVar, builder, moduleTranslation, mappedPrivateVars);
     assert(nonPrivateVar);
     moduleTranslation.mapValue(decl.getCopyMoldArg(), nonPrivateVar);
 
@@ -4851,7 +4855,8 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
       return llvm::make_error<PreviouslyReportedError>();
 
     if (failed(copyFirstPrivateVars(builder, moduleTranslation, mlirPrivateVars,
-                                    llvmPrivateVars, privateDecls)))
+                                    llvmPrivateVars, privateDecls,
+                                    &mappedPrivateVars)))
       return llvm::make_error<PreviouslyReportedError>();
 
     SmallVector<Region *> privateCleanupRegions;
