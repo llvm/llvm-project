@@ -50,7 +50,7 @@
 
 #define LLVM_LIBC_ALIAS(name, func)                                            \
   decltype(LIBC_NAMESPACE::name) LIBC_NAMESPACE::name [[gnu::alias(#func)]];   \
-  asm(#name " = " #func);                                                      \
+  extern "C" decltype(LIBC_NAMESPACE::name) name [[gnu::alias(#func)]];        \
   static_assert(true, "Require semicolon")
 #else
 #define LLVM_LIBC_FUNCTION(type, name, arglist)                                \
