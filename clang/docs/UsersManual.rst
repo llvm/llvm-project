@@ -1082,7 +1082,7 @@ Passing the ``-ffreestanding`` flag causes Clang to build for a freestanding
 * builtin functions are disabled by default (``-fno-builtins``),
 * unwind tables are disabled by default 
   (``fno-asynchronous-unwind-tables -fno-unwind-tables``), and
-* allows ``main`` to be used as a regular symbol.
+* does not treat the global ``main`` function as a special function.
 
 An implementation of the following runtime library functions must always be
 provided with the usual semantics, as Clang will generate calls to them:
