@@ -311,10 +311,6 @@ public:
   /// RISCVCC::CondCode.
   static bool evaluateCondBranch(unsigned CC, int64_t C0, int64_t C1);
 
-  /// Return true if the instruction is a load immediate instruction (i.e.
-  /// ADDI x0, imm).
-  static bool isLoadImm(const MachineInstr *MI, int64_t &Imm);
-
   /// Return true if the operand is a load immediate instruction and
   /// sets Imm to the immediate value.
   static bool isFromLoadImm(const MachineRegisterInfo &MRI,
@@ -332,6 +328,10 @@ private:
                                const MachineInstr &MI2) const;
   bool hasReassociableVectorSibling(const MachineInstr &Inst,
                                     bool &Commuted) const;
+
+  /// Return true if the instruction is a load immediate instruction (i.e.
+  /// ADDI x0, imm).
+  static bool isLoadImm(const MachineInstr *MI, int64_t &Imm);
 };
 
 namespace RISCV {
