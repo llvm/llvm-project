@@ -101,6 +101,14 @@ private:
       llvm::SmallDenseMap<TokenKind, llvm::hlsl::rootsig::ParamType> &Params,
       llvm::SmallDenseSet<TokenKind> &Mandatory);
 
+  /// Parameter parse methods corresponding to a ParamType
+  bool parseUIntParam(uint32_t *X);
+  bool parseRegister(llvm::hlsl::rootsig::Register *Reg);
+
+  /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
+  /// 32-bit integer
+  bool handleUIntLiteral(uint32_t *X);
+
   /// Invoke the Lexer to consume a token and update CurToken with the result
   void consumeNextToken() { CurToken = Lexer.ConsumeToken(); }
 
