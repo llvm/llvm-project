@@ -32,7 +32,6 @@ subnormal_config.cl
 ../../generic/lib/math/cos.cl
 ../../generic/lib/math/cosh.cl
 ../../generic/lib/math/cospi.cl
-../../generic/lib/math/ep_log.cl
 ../../generic/lib/math/erf.cl
 ../../generic/lib/math/erfc.cl
 ../../generic/lib/math/exp.cl
