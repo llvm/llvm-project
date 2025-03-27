@@ -38,3 +38,8 @@
 
 // RUN: %clang -### -target amdgcn -mcpu=gfx1010 -mno-amdgpu-precise-memory-op %s 2>&1 | FileCheck --check-prefix=NO-PREC-MEM %s
 // NO-PREC-MEM-NOT: {{".*precise-memory"}}
+
+// RUN: %clang -### -target amdgcn -mcpu=gfx1100 -mreal-true16 %s 2>&1 | FileCheck --check-prefix=REAL16 %s
+// RUN: %clang -### -target amdgcn -mcpu=gfx1100 -mno-real-true16 %s 2>&1 | FileCheck --check-prefix=NO-REAL16 %s
+// REAL16: "-target-feature" "+real-true16"
+// NO-REAL16-NOT: {{".*real-true16"}}

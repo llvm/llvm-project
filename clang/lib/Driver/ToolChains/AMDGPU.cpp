@@ -707,6 +707,10 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
                    options::OPT_mno_amdgpu_precise_memory_op, false))
     Features.push_back("+precise-memory");
 
+  if (Args.hasFlag(options::OPT_mreal_true16, options::OPT_mno_real_true16,
+                   false))
+    Features.push_back("+real-true16");
+
   handleTargetFeaturesGroup(D, Triple, Args, Features,
                             options::OPT_m_amdgpu_Features_Group);
 }

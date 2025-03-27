@@ -5182,6 +5182,9 @@ defm wavefrontsize64 : SimpleMFlag<"wavefrontsize64",
 defm amdgpu_precise_memory_op
     : SimpleMFlag<"amdgpu-precise-memory-op", "Enable", "Disable",
                   " precise memory mode (AMDGPU only)">;
+defm real_true16: SimpleMFlag<"real-true16",
+  "enable real-true16 in GFX11Plus", "enable real-true16 mode",
+  " real-true16 mode (AMDGPU only)">;
 
 def munsafe_fp_atomics : Flag<["-"], "munsafe-fp-atomics">,
   Visibility<[ClangOption, CC1Option]>, Alias<fatomic_ignore_denormal_mode>;
