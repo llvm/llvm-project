@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CIR/LoweringHelpers.h"
+#include "clang/CIR/MissingFeatures.h"
 
 mlir::DenseElementsAttr
 convertStringAttrToDenseElementsAttr(cir::ConstArrayAttr attr,
@@ -23,8 +24,7 @@ convertStringAttrToDenseElementsAttr(cir::ConstArrayAttr attr,
 
   const auto arrayTy = mlir::cast<cir::ArrayType>(attr.getType());
   if (arrayTy.getSize() != stringAttr.size())
-    llvm_unreachable("array type of the length not equal to that of the string "
-                     "attribute is not supported yet");
+    assert(!cir::MissingFeatures::stringTypeWithDifferentArraySize());
 
   return mlir::DenseElementsAttr::get(
       mlir::RankedTensorType::get({(int64_t)values.size()}, type),
