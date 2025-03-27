@@ -21,18 +21,19 @@ program main
 end program main
 
 ! CHECK: %[[N_DECL:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} {uniq_name = "_QFFfooEn"}
+
 ! CHECK: fir.load
+
+! CHECK: %[[LB:.*]] = fir.convert %{{c1_.*}} : (i32) -> index
 ! CHECK: %[[N_VAL:.*]] = fir.load %[[N_DECL]]#0 : !fir.ref<i32>
+! CHECK: %[[UB:.*]] = fir.convert %[[N_VAL]] : (i32) -> index
+! CHECK: %[[C1:.*]] = arith.constant 1 : index
 
 ! CHECK: omp.parallel {
 
-! Verify the constant chain of ops for the lower bound are cloned in the region.
-! CHECK:   %[[C1:.*]] = arith.constant 1 : i32
-! CHECK:   %[[LB:.*]] = fir.convert %[[C1]] : (i32) -> index
 
-! Verify that we restort to using the outside value for the upper bound since it
+! Verify that we resort to using the outside value for the upper bound since it
 ! is not originally a constant.
-! CHECK:   %[[UB:.*]] = fir.convert %[[N_VAL]] : (i32) -> index
 
 ! CHECK:   omp.wsloop {
 ! CHECK:     omp.loop_nest (%{{.*}}) : index = (%[[LB]]) to (%[[UB]]) inclusive step (%{{.*}}) {
@@ -41,4 +42,3 @@ end program main
 ! CHECK:   }
 ! CHECK:   omp.terminator
 ! CHECK: }
-
