@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// This file provides RISC-V specific target descriptions.
+/// This file provides RISC-V specific target optimizations, currently it's
+/// limited to convert conditional branches into unconditional branches when
+/// the condition can be statically evaluated.
 ///
 //===----------------------------------------------------------------------===//
 
