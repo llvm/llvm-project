@@ -301,7 +301,8 @@ def Index : Type<CPred<"::llvm::isa<::mlir::IndexType>($_self)">, "index",
                  "::mlir::IndexType">,
             BuildableType<"$_builder.getIndexType()">;
 
-def AnyPointerLike : Type<CPred<"$_self.hasTrait<::mlir::PointerLike>()">, "pointer-like", "::mlir::Type">;
+def AnyPointerLike : Type<CPred<"$_self.hasTrait<::mlir::PointerLike>()">,
+                          "pointer-like", "::mlir::Type">;
 
 // Any signless integer type or index type.
 def AnySignlessIntegerOrIndex : Type<CPred<"$_self.isSignlessIntOrIndex()">,
