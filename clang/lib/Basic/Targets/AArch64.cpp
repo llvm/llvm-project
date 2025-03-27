@@ -1192,16 +1192,18 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     }
   }
 
+  setDataLayout();
+  setArchFeatures();
+
   // Check features that are manually disabled by command line options.
   // This needs to be checked after architecture-related features are handled,
   // making sure they are properly disabled when required.
   for (const auto &Feature : Features) {
     if (Feature == "-d128")
       HasD128 = false;
+    if (Feature == "-crc")
+      HasCRC = false;
   }
-
-  setDataLayout();
-  setArchFeatures();
 
   if (HasNoFP) {
     FPU &= ~FPUMode;
