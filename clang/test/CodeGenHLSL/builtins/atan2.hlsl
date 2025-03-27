@@ -57,3 +57,27 @@ float3 test_atan2_float3 (float3 p0, float3 p1) {
 float4 test_atan2_float4 (float4 p0, float4 p1) {
   return atan2(p0, p1);
 }
+
+// CHECK-LABEL: test_atan2_double
+// CHECK: call reassoc nnan ninf nsz arcp afn float @llvm.atan2.f32
+float test_atan2_double (double p0, double p1) {
+  return atan2(p0, p1);
+}
+
+// CHECK-LABEL: test_atan2_double2
+// CHECK: call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.atan2.v2f32
+float2 test_atan2_double2 (double2 p0, double2 p1) {
+  return atan2(p0, p1);
+}
+
+// CHECK-LABEL: test_atan2_double3
+// CHECK: call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.atan2.v3f32
+float3 test_atan2_double3 (double3 p0, double3 p1) {
+  return atan2(p0, p1);
+}
+
+// CHECK-LABEL: test_atan2_double4
+// CHECK: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.atan2.v4f32
+float4 test_atan2_double4 (double4 p0, double4 p1) {
+  return atan2(p0, p1);
+}
