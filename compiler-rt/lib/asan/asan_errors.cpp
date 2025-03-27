@@ -612,7 +612,7 @@ static void CheckPoisonRecords(uptr addr) {
   if (poison_magic != kAsanUserPoisonedMemoryMagic)
     return;
 
-  PoisonRecordRingBuffer *PoisonRecord = GetPoisonRecord();
+  PoisonRecordRingBuffer *PoisonRecord = AcquirePoisonRecords();
   if (PoisonRecord) {
     bool FoundMatch = false;
 
@@ -637,6 +637,7 @@ static void CheckPoisonRecords(uptr addr) {
       Printf("Try setting a larger track_poison value.\n");
     }
   }
+  ReleasePoisonRecords();
 }
 
 void ErrorGeneric::Print() {

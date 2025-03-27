@@ -26,6 +26,7 @@ namespace __asan {
 
 static atomic_uint8_t can_poison_memory;
 
+static Mutex PoisonRecordsMutex;
 static PoisonRecordRingBuffer *PoisonRecords = nullptr;
 
 void InitializePoisonTracking() {
@@ -35,8 +36,14 @@ void InitializePoisonTracking() {
   PoisonRecords = PoisonRecordRingBuffer::New(flags()->track_poison);
 }
 
-PoisonRecordRingBuffer* GetPoisonRecord() {
+PoisonRecordRingBuffer* SANITIZER_ACQUIRE(PoisonRecordsMutex) AcquirePoisonRecords() {
+  PoisonRecordsMutex.Lock();
+
   return PoisonRecords;
+}
+
+void SANITIZER_RELEASE(PoisonRecordsMutex) ReleasePoisonRecords() {
+  PoisonRecordsMutex.Unlock();
 }
 
 void SetCanPoisonMemory(bool value) {
@@ -136,8 +143,8 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
                         .thread_id = current_tid,
                         .begin = beg_addr,
                         .end = end_addr};
-    // TODO: mutex
-    GetPoisonRecord()->push(record);
+    AcquirePoisonRecords()->push(record);
+    ReleasePoisonRecords();
   }
 
   ShadowSegmentEndpoint beg(beg_addr);

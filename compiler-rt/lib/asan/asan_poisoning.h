@@ -10,6 +10,7 @@
 //
 // Shadow memory poisoning by ASan RTL and by user application.
 //===----------------------------------------------------------------------===//
+
 #ifndef ASAN_POISONING_H
 #define ASAN_POISONING_H
 
@@ -37,7 +38,8 @@ using PoisonRecordRingBuffer = RingBuffer<struct PoisonRecord>;
 // Set up data structures for track_poison.
 void InitializePoisonTracking();
 
-PoisonRecordRingBuffer* GetPoisonRecord();
+PoisonRecordRingBuffer* AcquirePoisonRecords();
+void ReleasePoisonRecords();
 
 // Enable/disable memory poisoning.
 void SetCanPoisonMemory(bool value);
