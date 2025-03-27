@@ -49,7 +49,8 @@ public:
 
   virtual void operator()(const protocol::Request &request) const = 0;
 
-  virtual llvm::SmallDenseSet<AdapterFeature, 1> GetSupportedFeatures() const {
+  using FeatureSet =  llvm::SmallDenseSet<AdapterFeature, 1>;
+  virtual FeatureSet GetSupportedFeatures() const {
     return {};
   }
 
