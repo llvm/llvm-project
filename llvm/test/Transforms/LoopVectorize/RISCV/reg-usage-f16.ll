@@ -4,14 +4,16 @@
 
 define void @add(ptr noalias nocapture readonly %src1, ptr noalias nocapture readonly %src2, i32 signext %size, ptr noalias nocapture writeonly %result) {
 ; CHECK-LABEL: add
-; ZVFH:       LV(REG): Found max usage: 2 item
+; ZVFH:       LV(REG): VF = 2
+; ZVFH-NEXT:  LV(REG): Found max usage: 2 item
 ; ZVFH-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
 ; ZVFH-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 2 registers
 ; ZVFH-NEXT:  LV(REG): Found invariant usage: 1 item
 ; ZVFH-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
-; ZVFHMIN:       LV(REG): Found max usage: 2 item
+; ZVFHMIN:       LV(REG): VF = 2
+; ZVFHMIN-NEXT:  LV(REG): Found max usage: 2 item
 ; ZVFHMIN-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
-; ZVFHMIN-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 4 registers
+; ZVFHMIN-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 2 registers
 ; ZVFHMIN-NEXT:  LV(REG): Found invariant usage: 1 item
 ; ZVFHMIN-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
 
