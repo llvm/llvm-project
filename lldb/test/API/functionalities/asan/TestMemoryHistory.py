@@ -52,6 +52,10 @@ class AsanTestCase(TestBase):
             substrs=["stopped", "stop reason = Use of deallocated memory"],
         )
 
+        # Make sure we're not stopped in the sanitizer library but instead at the
+        # point of failure in the user-code.
+        self.assertEqual(self.frame().GetFunctionName(), "main")
+
         # test the 'memory history' command
         self.expect(
             "memory history 'pointer'",

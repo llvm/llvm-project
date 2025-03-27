@@ -36,6 +36,8 @@ public:
   /// Get the frame at index \p idx. Invisible frames cannot be indexed.
   lldb::StackFrameSP GetFrameAtIndex(uint32_t idx);
 
+  void ResetSuggestedStackFrameIndex() { m_selected_frame_idx.reset(); }
+
   /// Get the first concrete frame with index greater than or equal to \p idx.
   /// Unlike \ref GetFrameAtIndex, this cannot return a synthetic frame.
   lldb::StackFrameSP GetFrameWithConcreteFrameIndex(uint32_t unwind_idx);
