@@ -8281,9 +8281,8 @@ LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerUnmergeValues(MachineInstr &MI) {
   const unsigned NumDst = MI.getNumOperands() - 1;
   Register SrcReg = MI.getOperand(NumDst).getReg();
-  Register Dst0Reg = MI.getOperand(0).getReg();
-  LLT DstTy = MRI.getType(Dst0Reg);
-  if (DstTy.isPointer())
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  if (DstTy.getScalarType().isPointer())
     return UnableToLegalize; // TODO
 
   SrcReg = coerceToScalar(SrcReg);
@@ -8293,14 +8292,25 @@ LegalizerHelper::lowerUnmergeValues(MachineInstr &MI) {
   // Expand scalarizing unmerge as bitcast to integer and shift.
   LLT IntTy = MRI.getType(SrcReg);
 
-  MIRBuilder.buildTrunc(Dst0Reg, SrcReg);
-
-  const unsigned DstSize = DstTy.getSizeInBits();
-  unsigned Offset = DstSize;
-  for (unsigned I = 1; I != NumDst; ++I, Offset += DstSize) {
-    auto ShiftAmt = MIRBuilder.buildConstant(IntTy, Offset);
-    auto Shift = MIRBuilder.buildLShr(IntTy, SrcReg, ShiftAmt);
-    MIRBuilder.buildTrunc(MI.getOperand(I), Shift);
+  const unsigned DstSize = DstTy.getScalarSizeInBits();
+  SmallVector<Register> VectorElems;
+  Register Shift;
+  for (unsigned I = 0, Offset = 0; I != NumDst; Offset += DstSize) {
+    if (Offset) {
+      auto ShiftAmt = MIRBuilder.buildConstant(IntTy, Offset);
+      Shift = MIRBuilder.buildLShr(IntTy, SrcReg, ShiftAmt).getReg(0);
+    } else {
+      Shift = SrcReg;
+    }
+    if (DstTy.isVector()) {
+      VectorElems.emplace_back(MIRBuilder.buildTrunc(DstTy.getScalarType(), Shift).getReg(0));
+      if (VectorElems.size() == DstTy.getNumElements()) {
+        MIRBuilder.buildBuildVector(MI.getOperand(I++), VectorElems);
+        VectorElems.clear();
+      }
+    } else {
+      MIRBuilder.buildTrunc(MI.getOperand(I++), Shift);
+    }
   }
 
   MI.eraseFromParent();
