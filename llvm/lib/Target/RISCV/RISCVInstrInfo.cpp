@@ -705,11 +705,9 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     llvm_unreachable("Can't store this register to stack slot");
 
   if (IsScalableVector) {
-    LocationSize LocSize =
-        LocationSize::precise(TypeSize::getScalable(MFI.getObjectSize(FI)));
     MachineMemOperand *MMO = MF->getMachineMemOperand(
         MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOStore,
-        LocSize, MFI.getObjectAlign(FI));
+        TypeSize::getScalable(MFI.getObjectSize(FI)), MFI.getObjectAlign(FI));
 
     MFI.setStackID(FI, TargetStackID::ScalableVector);
     BuildMI(MBB, I, DebugLoc(), get(Opcode))
@@ -799,11 +797,9 @@ void RISCVInstrInfo::loadRegFromStackSlot(
     llvm_unreachable("Can't load this register from stack slot");
 
   if (IsScalableVector) {
-    LocationSize LocSize =
-        LocationSize::precise(TypeSize::getScalable(MFI.getObjectSize(FI)));
     MachineMemOperand *MMO = MF->getMachineMemOperand(
         MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOLoad,
-        LocSize, MFI.getObjectAlign(FI));
+        TypeSize::getScalable(MFI.getObjectSize(FI)), MFI.getObjectAlign(FI));
 
     MFI.setStackID(FI, TargetStackID::ScalableVector);
     BuildMI(MBB, I, DL, get(Opcode), DstReg)
