@@ -52,7 +52,9 @@ public:
 
   unsigned getOpenCLKernelCallingConv() const override;
   llvm::Type *getOpenCLType(CodeGenModule &CGM, const Type *T) const override;
-  llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *Ty) const override;
+  llvm::Type *
+  getHLSLType(CodeGenModule &CGM, const Type *Ty,
+              const SmallVector<int32_t> *Packoffsets = nullptr) const override;
   llvm::Type *getSPIRVImageTypeFromHLSLResource(
       const HLSLAttributedResourceType::Attributes &attributes,
       llvm::Type *ElementType, llvm::LLVMContext &Ctx) const;
@@ -64,6 +66,8 @@ public:
   void setCUDAKernelCallingConvention(const FunctionType *&FT) const override;
   LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
                                   const VarDecl *D) const override;
+  void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
+                           CodeGen::CodeGenModule &M) const override;
   llvm::SyncScope::ID getLLVMSyncScopeID(const LangOptions &LangOpts,
                                          SyncScope Scope,
                                          llvm::AtomicOrdering Ordering,
@@ -154,8 +158,10 @@ ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
       // copied to be valid on the device.
       // This behavior follows the CUDA spec
       // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#global-function-argument-processing,
-      // and matches the NVPTX implementation.
-      return getNaturalAlignIndirect(Ty, /* byval */ true);
+      // and matches the NVPTX implementation. TODO: hardcoding to 0 should be
+      // revisited if HIPSPV / byval starts making use of the AS of an indirect
+      // arg.
+      return getNaturalAlignIndirect(Ty, /*AddrSpace=*/0, /*byval=*/true);
     }
   }
   return classifyArgumentType(Ty);
@@ -170,7 +176,8 @@ ABIArgInfo SPIRVABIInfo::classifyArgumentType(QualType Ty) const {
   // Records with non-trivial destructors/copy-constructors should not be
   // passed by value.
   if (auto RAA = getRecordArgABI(Ty, getCXXABI()))
-    return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   RAA == CGCXXABI::RAA_DirectInMemory);
 
   if (const RecordType *RT = Ty->getAs<RecordType>()) {
     const RecordDecl *RD = RT->getDecl();
@@ -243,6 +250,41 @@ SPIRVTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
     return AddrSpace;
 
   return DefaultGlobalAS;
+}
+
+void SPIRVTargetCodeGenInfo::setTargetAttributes(
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
+  if (!M.getLangOpts().HIP ||
+      M.getTarget().getTriple().getVendor() != llvm::Triple::AMD)
+    return;
+  if (GV->isDeclaration())
+    return;
+
+  auto F = dyn_cast<llvm::Function>(GV);
+  if (!F)
+    return;
+
+  auto FD = dyn_cast_or_null<FunctionDecl>(D);
+  if (!FD)
+    return;
+  if (!FD->hasAttr<CUDAGlobalAttr>())
+    return;
+
+  unsigned N = M.getLangOpts().GPUMaxThreadsPerBlock;
+  if (auto FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>())
+    N = FlatWGS->getMax()->EvaluateKnownConstInt(M.getContext()).getExtValue();
+
+  // We encode the maximum flat WG size in the first component of the 3D
+  // max_work_group_size attribute, which will get reverse translated into the
+  // original AMDGPU attribute when targeting AMDGPU.
+  auto Int32Ty = llvm::IntegerType::getInt32Ty(M.getLLVMContext());
+  llvm::Metadata *AttrMDArgs[] = {
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, N)),
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 1)),
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 1))};
+
+  F->setMetadata("max_work_group_size",
+                 llvm::MDNode::get(M.getLLVMContext(), AttrMDArgs));
 }
 
 llvm::SyncScope::ID
@@ -327,8 +369,9 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getOpenCLType(CodeGenModule &CGM,
   return nullptr;
 }
 
-llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(CodeGenModule &CGM,
-                                                     const Type *Ty) const {
+llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
+    CodeGenModule &CGM, const Type *Ty,
+    const SmallVector<int32_t> *Packoffsets) const {
   auto *ResType = dyn_cast<HLSLAttributedResourceType>(Ty);
   if (!ResType)
     return nullptr;

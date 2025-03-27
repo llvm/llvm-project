@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "JSONUtils.h"
-
 #include "BreakpointBase.h"
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
@@ -41,11 +40,11 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <chrono>
-#include <climits>
 #include <cstddef>
 #include <iomanip>
 #include <optional>
@@ -71,64 +70,46 @@ llvm::StringRef GetAsString(const llvm::json::Value &value) {
 }
 
 // Gets a string from a JSON object using the key, or returns an empty string.
-llvm::StringRef GetString(const llvm::json::Object &obj, llvm::StringRef key,
-                          llvm::StringRef defaultValue) {
-  if (std::optional<llvm::StringRef> value = obj.getString(key))
-    return *value;
-  return defaultValue;
+std::optional<llvm::StringRef> GetString(const llvm::json::Object &obj,
+                                         llvm::StringRef key) {
+  return obj.getString(key);
 }
 
-llvm::StringRef GetString(const llvm::json::Object *obj, llvm::StringRef key,
-                          llvm::StringRef defaultValue) {
+std::optional<llvm::StringRef> GetString(const llvm::json::Object *obj,
+                                         llvm::StringRef key) {
   if (obj == nullptr)
-    return defaultValue;
-  return GetString(*obj, key, defaultValue);
+    return std::nullopt;
+
+  return GetString(*obj, key);
 }
 
-// Gets an unsigned integer from a JSON object using the key, or returns the
-// specified fail value.
-uint64_t GetUnsigned(const llvm::json::Object &obj, llvm::StringRef key,
-                     uint64_t fail_value) {
-  if (auto value = obj.getInteger(key))
-    return (uint64_t)*value;
-  return fail_value;
-}
-
-uint64_t GetUnsigned(const llvm::json::Object *obj, llvm::StringRef key,
-                     uint64_t fail_value) {
-  if (obj == nullptr)
-    return fail_value;
-  return GetUnsigned(*obj, key, fail_value);
-}
-
-bool GetBoolean(const llvm::json::Object &obj, llvm::StringRef key,
-                bool fail_value) {
+std::optional<bool> GetBoolean(const llvm::json::Object &obj,
+                               llvm::StringRef key) {
   if (auto value = obj.getBoolean(key))
     return *value;
   if (auto value = obj.getInteger(key))
     return *value != 0;
-  return fail_value;
+  return std::nullopt;
 }
 
-bool GetBoolean(const llvm::json::Object *obj, llvm::StringRef key,
-                bool fail_value) {
+std::optional<bool> GetBoolean(const llvm::json::Object *obj,
+                               llvm::StringRef key) {
+  if (obj != nullptr)
+    return GetBoolean(*obj, key);
+  return std::nullopt;
+}
+
+std::optional<int64_t> GetSigned(const llvm::json::Object &obj,
+                                 llvm::StringRef key) {
+  return obj.getInteger(key);
+}
+
+std::optional<int64_t> GetSigned(const llvm::json::Object *obj,
+                                 llvm::StringRef key) {
   if (obj == nullptr)
-    return fail_value;
-  return GetBoolean(*obj, key, fail_value);
-}
+    return std::nullopt;
 
-int64_t GetSigned(const llvm::json::Object &obj, llvm::StringRef key,
-                  int64_t fail_value) {
-  if (auto value = obj.getInteger(key))
-    return *value;
-  return fail_value;
-}
-
-int64_t GetSigned(const llvm::json::Object *obj, llvm::StringRef key,
-                  int64_t fail_value) {
-  if (obj == nullptr)
-    return fail_value;
-  return GetSigned(*obj, key, fail_value);
+  return GetSigned(*obj, key);
 }
 
 bool ObjectContainsKey(const llvm::json::Object &obj, llvm::StringRef key) {
@@ -280,8 +261,9 @@ void FillResponse(const llvm::json::Object &request,
   // to true by default.
   response.try_emplace("type", "response");
   response.try_emplace("seq", (int64_t)0);
-  EmplaceSafeString(response, "command", GetString(request, "command"));
-  const int64_t seq = GetSigned(request, "seq", 0);
+  EmplaceSafeString(response, "command",
+                    GetString(request, "command").value_or(""));
+  const int64_t seq = GetSigned(request, "seq").value_or(0);
   response.try_emplace("request_seq", seq);
   response.try_emplace("success", true);
 }
@@ -698,16 +680,6 @@ llvm::json::Value CreateSource(llvm::StringRef source_path) {
   return llvm::json::Value(std::move(source));
 }
 
-static std::optional<llvm::json::Value> CreateSource(lldb::SBFrame &frame) {
-  auto line_entry = frame.GetLineEntry();
-  // A line entry of 0 indicates the line is compiler generated i.e. no source
-  // file is associated with the frame.
-  if (line_entry.GetFileSpec().IsValid() && line_entry.GetLine() != 0)
-    return CreateSource(line_entry);
-
-  return {};
-}
-
 // "StackFrame": {
 //   "type": "object",
 //   "description": "A Stackframe contains the source location.",
@@ -799,21 +771,40 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
 
   EmplaceSafeString(object, "name", frame_name);
 
-  auto source = CreateSource(frame);
-
-  if (source) {
-    object.try_emplace("source", *source);
-    auto line_entry = frame.GetLineEntry();
-    auto line = line_entry.GetLine();
-    if (line && line != LLDB_INVALID_LINE_NUMBER)
-      object.try_emplace("line", line);
-    else
-      object.try_emplace("line", 0);
+  auto line_entry = frame.GetLineEntry();
+  // A line entry of 0 indicates the line is compiler generated i.e. no source
+  // file is associated with the frame.
+  if (line_entry.GetFileSpec().IsValid() &&
+      (line_entry.GetLine() != 0 ||
+       line_entry.GetLine() != LLDB_INVALID_LINE_NUMBER)) {
+    object.try_emplace("source", CreateSource(line_entry));
+    object.try_emplace("line", line_entry.GetLine());
     auto column = line_entry.GetColumn();
     object.try_emplace("column", column);
-  } else {
-    object.try_emplace("line", 0);
-    object.try_emplace("column", 0);
+  } else if (frame.GetSymbol().IsValid()) {
+    // If no source is associated with the frame, use the DAPFrameID to track
+    // the 'source' and generate assembly.
+    llvm::json::Object source;
+    EmplaceSafeString(source, "name", frame_name);
+    char buf[PATH_MAX] = {0};
+    size_t size = frame.GetModule().GetFileSpec().GetPath(buf, PATH_MAX);
+    EmplaceSafeString(source, "path",
+                      std::string(buf, size) + '`' + frame_name);
+    source.try_emplace("sourceReference", MakeDAPFrameID(frame));
+    // Mark the source as deemphasized since users will only be able to view
+    // assembly for these frames.
+    EmplaceSafeString(source, "presentationHint", "deemphasize");
+    object.try_emplace("source", std::move(source));
+
+    // Calculate the line of the current PC from the start of the current
+    // symbol.
+    lldb::addr_t inst_offset = frame.GetPCAddress().GetOffset() -
+                               frame.GetSymbol().GetStartAddress().GetOffset();
+    lldb::addr_t inst_line =
+        inst_offset / (frame.GetThread().GetProcess().GetAddressByteSize() / 2);
+    // Line numbers are 1-based.
+    object.try_emplace("line", inst_line + 1);
+    object.try_emplace("column", 1);
   }
 
   const auto pc = frame.GetPC();
@@ -995,6 +986,9 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
     break;
   case lldb::eStopReasonProcessorTrace:
     body.try_emplace("reason", "processor trace");
+    break;
+  case lldb::eStopReasonHistoryBoundary:
+    body.try_emplace("reason", "history boundary");
     break;
   case lldb::eStopReasonSignal:
   case lldb::eStopReasonException:
@@ -1428,7 +1422,7 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit) {
 /// https://microsoft.github.io/debug-adapter-protocol/specification#Reverse_Requests_RunInTerminal
 llvm::json::Object
 CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
-                                  llvm::StringRef debug_adaptor_path,
+                                  llvm::StringRef debug_adapter_path,
                                   llvm::StringRef comm_file,
                                   lldb::pid_t debugger_pid) {
   llvm::json::Object run_in_terminal_args;
@@ -1438,20 +1432,21 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
 
   const auto *launch_request_arguments = launch_request.getObject("arguments");
   // The program path must be the first entry in the "args" field
-  std::vector<std::string> args = {debug_adaptor_path.str(), "--comm-file",
+  std::vector<std::string> args = {debug_adapter_path.str(), "--comm-file",
                                    comm_file.str()};
   if (debugger_pid != LLDB_INVALID_PROCESS_ID) {
     args.push_back("--debugger-pid");
     args.push_back(std::to_string(debugger_pid));
   }
   args.push_back("--launch-target");
-  args.push_back(GetString(launch_request_arguments, "program").str());
+  args.push_back(
+      GetString(launch_request_arguments, "program").value_or("").str());
   std::vector<std::string> target_args =
       GetStrings(launch_request_arguments, "args");
   args.insert(args.end(), target_args.begin(), target_args.end());
   run_in_terminal_args.try_emplace("args", args);
 
-  const auto cwd = GetString(launch_request_arguments, "cwd");
+  const auto cwd = GetString(launch_request_arguments, "cwd").value_or("");
   if (!cwd.empty())
     run_in_terminal_args.try_emplace("cwd", cwd);
 
@@ -1532,7 +1527,8 @@ static void addStatistic(lldb::SBTarget &target, llvm::json::Object &event) {
     const char *key = keys.GetStringAtIndex(i);
     FilterAndGetValueForKey(statistics, key, stats_body);
   }
-  event.try_emplace("statistics", std::move(stats_body));
+  llvm::json::Object body{{"$__lldb_statistics", std::move(stats_body)}};
+  event.try_emplace("body", std::move(body));
 }
 
 llvm::json::Object CreateTerminatedEventObject(lldb::SBTarget &target) {

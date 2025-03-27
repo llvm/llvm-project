@@ -643,6 +643,9 @@ public:
   bool pointsToConstantMemory(const MemoryLocation &Loc, bool OrLocal = false) {
     return isNoModRef(AA.getModRefInfoMask(Loc, AAQI, OrLocal));
   }
+  bool pointsToConstantMemory(const Value *P, bool OrLocal = false) {
+    return pointsToConstantMemory(MemoryLocation::getBeforeOrAfter(P), OrLocal);
+  }
   ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
                                bool IgnoreLocals = false) {
     return AA.getModRefInfoMask(Loc, AAQI, IgnoreLocals);
@@ -667,6 +670,9 @@ public:
     return alias(MemoryLocation(V1, LocationSize::precise(1)),
                  MemoryLocation(V2, LocationSize::precise(1))) ==
            AliasResult::MustAlias;
+  }
+  bool isNoAlias(const MemoryLocation &LocA, const MemoryLocation &LocB) {
+    return alias(LocA, LocB) == AliasResult::NoAlias;
   }
   ModRefInfo callCapturesBefore(const Instruction *I,
                                 const MemoryLocation &MemLoc,
@@ -874,6 +880,13 @@ bool isIdentifiedObject(const Value *V);
 /// arguments other than itself, which is not necessarily true for
 /// IdentifiedObjects.
 bool isIdentifiedFunctionLocal(const Value *V);
+
+/// Return true if we know V to the base address of the corresponding memory
+/// object.  This implies that any address less than V must be out of bounds
+/// for the underlying object.  Note that just being isIdentifiedObject() is
+/// not enough - For example, a negative offset from a noalias argument or call
+/// can be inbounds w.r.t the actual underlying object.
+bool isBaseOfObject(const Value *V);
 
 /// Returns true if the pointer is one which would have been considered an
 /// escape by isNonEscapingLocalObject.

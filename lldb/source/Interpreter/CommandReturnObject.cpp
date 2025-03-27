@@ -147,7 +147,8 @@ void CommandReturnObject::SetError(llvm::Error error) {
   }
 }
 
-std::string CommandReturnObject::GetInlineDiagnosticString(unsigned indent) {
+std::string
+CommandReturnObject::GetInlineDiagnosticString(unsigned indent) const {
   StreamString diag_stream(m_colors);
   RenderDiagnosticDetails(diag_stream, indent, true, m_diagnostics);
   // Duplex the diagnostics to the secondary stream (but not inlined).
@@ -157,7 +158,7 @@ std::string CommandReturnObject::GetInlineDiagnosticString(unsigned indent) {
   return diag_stream.GetString().str();
 }
 
-std::string CommandReturnObject::GetErrorString(bool with_diagnostics) {
+std::string CommandReturnObject::GetErrorString(bool with_diagnostics) const {
   StreamString stream(m_colors);
   if (with_diagnostics)
     RenderDiagnosticDetails(stream, std::nullopt, false, m_diagnostics);
@@ -169,57 +170,7 @@ std::string CommandReturnObject::GetErrorString(bool with_diagnostics) {
 }
 
 StructuredData::ObjectSP CommandReturnObject::GetErrorData() {
-  auto make_array = []() { return std::make_unique<StructuredData::Array>(); };
-  auto make_bool = [](bool b) {
-    return std::make_unique<StructuredData::Boolean>(b);
-  };
-  auto make_dict = []() {
-    return std::make_unique<StructuredData::Dictionary>();
-  };
-  auto make_int = [](unsigned i) {
-    return std::make_unique<StructuredData::UnsignedInteger>(i);
-  };
-  auto make_string = [](llvm::StringRef s) {
-    return std::make_unique<StructuredData::String>(s);
-  };
-  auto dict_up = make_dict();
-  dict_up->AddItem("version", make_int(1));
-  auto array_up = make_array();
-  for (const DiagnosticDetail &diag : m_diagnostics) {
-    auto detail_up = make_dict();
-    if (auto &sloc = diag.source_location) {
-      auto sloc_up = make_dict();
-      sloc_up->AddItem("file", make_string(sloc->file.GetPath()));
-      sloc_up->AddItem("line", make_int(sloc->line));
-      sloc_up->AddItem("length", make_int(sloc->length));
-      sloc_up->AddItem("hidden", make_bool(sloc->hidden));
-      sloc_up->AddItem("in_user_input", make_bool(sloc->in_user_input));
-      detail_up->AddItem("source_location", std::move(sloc_up));
-    }
-    llvm::StringRef severity = "unknown";
-    switch (diag.severity) {
-    case lldb::eSeverityError:
-      severity = "error";
-      break;
-    case lldb::eSeverityWarning:
-      severity = "warning";
-      break;
-    case lldb::eSeverityInfo:
-      severity = "note";
-      break;
-    }
-    detail_up->AddItem("severity", make_string(severity));
-    detail_up->AddItem("message", make_string(diag.message));
-    detail_up->AddItem("rendered", make_string(diag.rendered));
-    array_up->AddItem(std::move(detail_up));
-  }
-  dict_up->AddItem("details", std::move(array_up));
-  if (auto stream_sp = m_err_stream.GetStreamAtIndex(eStreamStringIndex)) {
-    auto text = std::static_pointer_cast<StreamString>(stream_sp)->GetString();
-    if (!text.empty())
-      dict_up->AddItem("text", make_string(text));
-  }
-  return dict_up;
+  return Serialize(m_diagnostics);
 }
 
 // Similar to AppendError, but do not prepend 'Status: ' to message, and don't

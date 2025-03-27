@@ -77,6 +77,41 @@ Module::Module(StringRef MID, LLVMContext &C)
   Context.addModule(this);
 }
 
+Module &Module::operator=(Module &&Other) {
+  assert(&Context == &Other.Context && "Module must be in the same Context");
+
+  dropAllReferences();
+
+  ModuleID = std::move(Other.ModuleID);
+  SourceFileName = std::move(Other.SourceFileName);
+  IsNewDbgInfoFormat = std::move(Other.IsNewDbgInfoFormat);
+
+  GlobalList.clear();
+  GlobalList.splice(GlobalList.begin(), Other.GlobalList);
+
+  FunctionList.clear();
+  FunctionList.splice(FunctionList.begin(), Other.FunctionList);
+
+  AliasList.clear();
+  AliasList.splice(AliasList.begin(), Other.AliasList);
+
+  IFuncList.clear();
+  IFuncList.splice(IFuncList.begin(), Other.IFuncList);
+
+  NamedMDList.clear();
+  NamedMDList.splice(NamedMDList.begin(), Other.NamedMDList);
+  GlobalScopeAsm = std::move(Other.GlobalScopeAsm);
+  OwnedMemoryBuffer = std::move(Other.OwnedMemoryBuffer);
+  Materializer = std::move(Other.Materializer);
+  TargetTriple = std::move(Other.TargetTriple);
+  DL = std::move(Other.DL);
+  CurrentIntrinsicIds = std::move(Other.CurrentIntrinsicIds);
+  UniquedIntrinsicNames = std::move(Other.UniquedIntrinsicNames);
+  ModuleFlags = std::move(Other.ModuleFlags);
+  Context.addModule(this);
+  return *this;
+}
+
 Module::~Module() {
   Context.removeModule(this);
   dropAllReferences();
@@ -879,4 +914,12 @@ VersionTuple Module::getDarwinTargetVariantSDKVersion() const {
 
 void Module::setDarwinTargetVariantSDKVersion(VersionTuple Version) {
   addSDKVersionMD(Version, *this, "darwin.target_variant.SDK Version");
+}
+
+StringRef Module::getTargetABIFromMD() {
+  StringRef TargetABI;
+  if (auto *TargetABIMD =
+          dyn_cast_or_null<MDString>(getModuleFlag("target-abi")))
+    TargetABI = TargetABIMD->getString();
+  return TargetABI;
 }

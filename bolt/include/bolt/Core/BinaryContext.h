@@ -28,6 +28,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
@@ -276,11 +277,10 @@ class BinaryContext {
   void deregisterSectionName(const BinarySection &Section);
 
 public:
-  static Expected<std::unique_ptr<BinaryContext>>
-  createBinaryContext(Triple TheTriple, StringRef InputFileName,
-                      SubtargetFeatures *Features, bool IsPIC,
-                      std::unique_ptr<DWARFContext> DwCtx,
-                      JournalingStreams Logger);
+  static Expected<std::unique_ptr<BinaryContext>> createBinaryContext(
+      Triple TheTriple, std::shared_ptr<orc::SymbolStringPool> SSP,
+      StringRef InputFileName, SubtargetFeatures *Features, bool IsPIC,
+      std::unique_ptr<DWARFContext> DwCtx, JournalingStreams Logger);
 
   /// Superset of compiler units that will contain overwritten code that needs
   /// new debug info. In a few cases, functions may end up not being
@@ -372,6 +372,7 @@ public:
   bool hasSymbolsWithFileName() const { return HasSymbolsWithFileName; }
   void setHasSymbolsWithFileName(bool Value) { HasSymbolsWithFileName = Value; }
 
+  std::shared_ptr<orc::SymbolStringPool> getSymbolStringPool() { return SSP; }
   /// Return true if relocations against symbol with a given name
   /// must be created.
   bool forceSymbolRelocations(StringRef SymbolName) const;
@@ -536,6 +537,17 @@ public:
   BinaryFunction *createInjectedBinaryFunction(const std::string &Name,
                                                bool IsSimple = true);
 
+  /// Patch the original binary contents at address \p Address with a sequence
+  /// of instructions from the \p Instructions list. The callee is responsible
+  /// for checking that the sequence doesn't cross any function or section
+  /// boundaries.
+  ///
+  /// Optional \p Name can be assigned to the patch. The name will be emitted to
+  /// the symbol table at \p Address.
+  BinaryFunction *createInstructionPatch(uint64_t Address,
+                                         InstructionListType &Instructions,
+                                         const Twine &Name = "");
+
   std::vector<BinaryFunction *> &getInjectedBinaryFunctions() {
     return InjectedBinaryFunctions;
   }
@@ -630,6 +642,8 @@ public:
   std::unique_ptr<DWARFContext> DwCtx;
 
   std::unique_ptr<Triple> TheTriple;
+
+  std::shared_ptr<orc::SymbolStringPool> SSP;
 
   const Target *TheTarget;
 
@@ -807,8 +821,10 @@ public:
 
   BinaryContext(std::unique_ptr<MCContext> Ctx,
                 std::unique_ptr<DWARFContext> DwCtx,
-                std::unique_ptr<Triple> TheTriple, const Target *TheTarget,
-                std::string TripleName, std::unique_ptr<MCCodeEmitter> MCE,
+                std::unique_ptr<Triple> TheTriple,
+                std::shared_ptr<orc::SymbolStringPool> SSP,
+                const Target *TheTarget, std::string TripleName,
+                std::unique_ptr<MCCodeEmitter> MCE,
                 std::unique_ptr<MCObjectFileInfo> MOFI,
                 std::unique_ptr<const MCAsmInfo> AsmInfo,
                 std::unique_ptr<const MCInstrInfo> MII,
@@ -1279,7 +1295,7 @@ public:
   void foldFunction(BinaryFunction &ChildBF, BinaryFunction &ParentBF);
 
   /// Add a Section relocation at a given \p Address.
-  void addRelocation(uint64_t Address, MCSymbol *Symbol, uint64_t Type,
+  void addRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t Type,
                      uint64_t Addend = 0, uint64_t Value = 0);
 
   /// Return a relocation registered at a given \p Address, or nullptr if there
@@ -1292,7 +1308,7 @@ public:
   }
 
   /// Register dynamic relocation at \p Address.
-  void addDynamicRelocation(uint64_t Address, MCSymbol *Symbol, uint64_t Type,
+  void addDynamicRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t Type,
                             uint64_t Addend, uint64_t Value = 0);
 
   /// Return a dynamic relocation registered at a given \p Address, or nullptr
@@ -1356,6 +1372,12 @@ public:
   computeInstructionSize(const MCInst &Inst,
                          const MCCodeEmitter *Emitter = nullptr) const {
     if (std::optional<uint32_t> Size = MIB->getSize(Inst))
+      return *Size;
+
+    if (MIB->isPseudo(Inst))
+      return 0;
+
+    if (std::optional<uint32_t> Size = MIB->getInstructionSize(Inst))
       return *Size;
 
     if (!Emitter)
@@ -1423,6 +1445,17 @@ public:
                         bool PrintMCInst = false, bool PrintMemData = false,
                         bool PrintRelocations = false,
                         StringRef Endl = "\n") const;
+
+  /// Print data when embedded in the instruction stream keeping the format
+  /// similar to printInstruction().
+  void printData(raw_ostream &OS, ArrayRef<uint8_t> Data,
+                 uint64_t Offset) const;
+
+  /// Extract data from the binary corresponding to [Address, Address + Size)
+  /// range. Return an empty ArrayRef if the address range does not belong to
+  /// any section in the binary, crosses a section boundary, or falls into a
+  /// virtual section.
+  ArrayRef<uint8_t> extractData(uint64_t Address, uint64_t Size) const;
 
   /// Print a range of instructions.
   template <typename Itr>

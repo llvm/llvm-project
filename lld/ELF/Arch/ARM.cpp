@@ -136,7 +136,7 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
     // GOT(S) + A - P
     return R_GOT_PC;
   case R_ARM_SBREL32:
-    return R_ARM_SBREL;
+    return RE_ARM_SBREL;
   case R_ARM_TARGET1:
     return ctx.arg.target1Rel ? R_PC : R_ABS;
   case R_ARM_TARGET2:
@@ -176,14 +176,14 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
   case R_ARM_THM_ALU_PREL_11_0:
   case R_ARM_THM_PC8:
   case R_ARM_THM_PC12:
-    return R_ARM_PCA;
+    return RE_ARM_PCA;
   case R_ARM_MOVW_BREL_NC:
   case R_ARM_MOVW_BREL:
   case R_ARM_MOVT_BREL:
   case R_ARM_THM_MOVW_BREL_NC:
   case R_ARM_THM_MOVW_BREL:
   case R_ARM_THM_MOVT_BREL:
-    return R_ARM_SBREL;
+    return RE_ARM_SBREL;
   case R_ARM_NONE:
     return R_NONE;
   case R_ARM_TLS_LE32:
@@ -557,8 +557,8 @@ void ARM::encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
     rot = (lz + 8) << 7;
   }
   if (check && imm > 0xff)
-    Err(ctx) << getErrorLoc(ctx, loc) << "unencodeable immediate "
-             << Twine(val).str() << " for relocation " << rel.type;
+    Err(ctx) << getErrorLoc(ctx, loc) << "unencodeable immediate " << val
+             << " for relocation " << rel.type;
   write32(ctx, loc,
           (read32(ctx, loc) & 0xff3ff000) | opcode | rot | (imm & 0xff));
 }
@@ -663,12 +663,12 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_ARM_THM_JUMP8:
     // We do a 9 bit check because val is right-shifted by 1 bit.
     checkInt(ctx, loc, val, 9, rel);
-    write16(ctx, loc, (read32(ctx, loc) & 0xff00) | ((val >> 1) & 0x00ff));
+    write16(ctx, loc, (read16(ctx, loc) & 0xff00) | ((val >> 1) & 0x00ff));
     break;
   case R_ARM_THM_JUMP11:
     // We do a 12 bit check because val is right-shifted by 1 bit.
     checkInt(ctx, loc, val, 12, rel);
-    write16(ctx, loc, (read32(ctx, loc) & 0xf800) | ((val >> 1) & 0x07ff));
+    write16(ctx, loc, (read16(ctx, loc) & 0xf800) | ((val >> 1) & 0x07ff));
     break;
   case R_ARM_THM_JUMP19:
     // Encoding T3: Val = S:J2:J1:imm6:imm11:0
@@ -1219,29 +1219,27 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
     sym->stOther = eSym.st_other;
 
     if (eSym.st_shndx != SHN_ABS) {
-      ErrAlways(ctx) << "CMSE symbol '" << sym->getName()
-                     << "' in import library '" << this << "' is not absolute";
+      Err(ctx) << "CMSE symbol '" << sym->getName() << "' in import library '"
+               << this << "' is not absolute";
       continue;
     }
 
     if (!(eSym.st_value & 1) || (eSym.getType() != STT_FUNC)) {
-      ErrAlways(ctx) << "CMSE symbol '" << sym->getName()
-                     << "' in import library '" << this
-                     << "' is not a Thumb function definition";
+      Err(ctx) << "CMSE symbol '" << sym->getName() << "' in import library '"
+               << this << "' is not a Thumb function definition";
       continue;
     }
 
     if (ctx.symtab->cmseImportLib.count(sym->getName())) {
-      ErrAlways(ctx) << "CMSE symbol '" << sym->getName()
-                     << "' is multiply defined in import library '" << this
-                     << "'";
+      Err(ctx) << "CMSE symbol '" << sym->getName()
+               << "' is multiply defined in import library '" << this << "'";
       continue;
     }
 
     if (eSym.st_size != ACLESESYM_SIZE) {
       Warn(ctx) << "CMSE symbol '" << sym->getName() << "' in import library '"
-                << this << "' does not have correct size of "
-                << Twine(ACLESESYM_SIZE) << " bytes";
+                << this << "' does not have correct size of " << ACLESESYM_SIZE
+                << " bytes";
     }
 
     ctx.symtab->cmseImportLib[sym->getName()] = sym;
@@ -1289,8 +1287,7 @@ void elf::processArmCmseSymbols(Ctx &ctx) {
     // If input object build attributes do not support CMSE, error and disable
     // further scanning for <sym>, __acle_se_<sym> pairs.
     if (!ctx.arg.armCMSESupport) {
-      ErrAlways(ctx)
-          << "CMSE is only supported by ARMv8-M architecture or later";
+      Err(ctx) << "CMSE is only supported by ARMv8-M architecture or later";
       ctx.arg.cmseImplib = false;
       break;
     }
@@ -1300,17 +1297,16 @@ void elf::processArmCmseSymbols(Ctx &ctx) {
     StringRef name = acleSeSym->getName().substr(std::strlen(ACLESESYM_PREFIX));
     Symbol *sym = ctx.symtab->find(name);
     if (!sym) {
-      ErrAlways(ctx)
-          << acleSeSym->file << ": cmse special symbol '"
-          << acleSeSym->getName()
-          << "' detected, but no associated entry function definition '" << name
-          << "' with external linkage found";
+      Err(ctx) << acleSeSym->file << ": cmse special symbol '"
+               << acleSeSym->getName()
+               << "' detected, but no associated entry function definition '"
+               << name << "' with external linkage found";
       continue;
     }
 
     std::string errMsg = checkCmseSymAttributes(ctx, acleSeSym, sym);
     if (!errMsg.empty()) {
-      ErrAlways(ctx) << errMsg;
+      Err(ctx) << errMsg;
       continue;
     }
 
@@ -1324,32 +1320,17 @@ void elf::processArmCmseSymbols(Ctx &ctx) {
     MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
     for (size_t i = 0, e = syms.size(); i != e; ++i) {
       StringRef symName = syms[i]->getName();
-      if (ctx.symtab->cmseSymMap.count(symName))
-        syms[i] = ctx.symtab->cmseSymMap[symName].acleSeSym;
+      auto it = ctx.symtab->cmseSymMap.find(symName);
+      if (it != ctx.symtab->cmseSymMap.end())
+        syms[i] = it->second.acleSeSym;
     }
   });
 }
 
-class elf::ArmCmseSGVeneer {
-public:
-  ArmCmseSGVeneer(Symbol *sym, Symbol *acleSeSym,
-                  std::optional<uint64_t> addr = std::nullopt)
-      : sym(sym), acleSeSym(acleSeSym), entAddr{addr} {}
-  static const size_t size{ACLESESYM_SIZE};
-  const std::optional<uint64_t> getAddr() const { return entAddr; };
-
-  Symbol *sym;
-  Symbol *acleSeSym;
-  uint64_t offset = 0;
-
-private:
-  const std::optional<uint64_t> entAddr;
-};
-
 ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
-    : SyntheticSection(ctx, llvm::ELF::SHF_ALLOC | llvm::ELF::SHF_EXECINSTR,
-                       llvm::ELF::SHT_PROGBITS,
-                       /*alignment=*/32, ".gnu.sgstubs") {
+    : SyntheticSection(ctx, ".gnu.sgstubs", SHT_PROGBITS,
+                       SHF_ALLOC | SHF_EXECINSTR,
+                       /*addralign=*/32) {
   entsize = ACLESESYM_SIZE;
   // The range of addresses used in the CMSE import library should be fixed.
   for (auto &[_, sym] : ctx.symtab->cmseImportLib) {
@@ -1389,19 +1370,20 @@ void ArmCmseSGSection::addSGVeneer(Symbol *acleSeSym, Symbol *sym) {
     return;
   // Only secure symbols with values equal to that of it's non-secure
   // counterpart needs to be in the .gnu.sgstubs section.
-  ArmCmseSGVeneer *ss = nullptr;
-  if (ctx.symtab->cmseImportLib.count(sym->getName())) {
-    Defined *impSym = ctx.symtab->cmseImportLib[sym->getName()];
-    ss = make<ArmCmseSGVeneer>(sym, acleSeSym, impSym->value);
+  std::unique_ptr<ArmCmseSGVeneer> ss;
+  auto it = ctx.symtab->cmseImportLib.find(sym->getName());
+  if (it != ctx.symtab->cmseImportLib.end()) {
+    Defined *impSym = it->second;
+    ss = std::make_unique<ArmCmseSGVeneer>(sym, acleSeSym, impSym->value);
   } else {
-    ss = make<ArmCmseSGVeneer>(sym, acleSeSym);
+    ss = std::make_unique<ArmCmseSGVeneer>(sym, acleSeSym);
     ++newEntries;
   }
-  sgVeneers.emplace_back(ss);
+  sgVeneers.emplace_back(std::move(ss));
 }
 
 void ArmCmseSGSection::writeTo(uint8_t *buf) {
-  for (ArmCmseSGVeneer *s : sgVeneers) {
+  for (std::unique_ptr<ArmCmseSGVeneer> &s : sgVeneers) {
     uint8_t *p = buf + s->offset;
     write16(ctx, p + 0, 0xe97f); // SG
     write16(ctx, p + 2, 0xe97f);
@@ -1430,8 +1412,8 @@ void ArmCmseSGSection::finalizeContents() {
 
   auto it =
       std::stable_partition(sgVeneers.begin(), sgVeneers.end(),
-                            [](auto *i) { return i->getAddr().has_value(); });
-  std::sort(sgVeneers.begin(), it, [](auto *a, auto *b) {
+                            [](auto &i) { return i->getAddr().has_value(); });
+  std::sort(sgVeneers.begin(), it, [](auto &a, auto &b) {
     return a->getAddr().value() < b->getAddr().value();
   });
   // This is the partition of the veneers with fixed addresses.
@@ -1441,13 +1423,12 @@ void ArmCmseSGSection::finalizeContents() {
   // Check if the start address of '.gnu.sgstubs' correspond to the
   // linker-synthesized veneer with the lowest address.
   if ((getVA() & ~1) != (addr & ~1)) {
-    ErrAlways(ctx)
+    Err(ctx)
         << "start address of '.gnu.sgstubs' is different from previous link";
     return;
   }
 
-  for (size_t i = 0; i < sgVeneers.size(); ++i) {
-    ArmCmseSGVeneer *s = sgVeneers[i];
+  for (auto [i, s] : enumerate(sgVeneers)) {
     s->offset = i * s->size;
     Defined(ctx, file, StringRef(), s->sym->binding, s->sym->stOther,
             s->sym->type, s->offset | 1, s->size, this)
@@ -1462,21 +1443,22 @@ void ArmCmseSGSection::finalizeContents() {
 // See Arm® v8-M Security Extensions: Requirements on Development Tools
 // https://developer.arm.com/documentation/ecm0359818/latest
 template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
-  StringTableSection *shstrtab =
-      make<StringTableSection>(ctx, ".shstrtab", /*dynamic=*/false);
-  StringTableSection *strtab =
-      make<StringTableSection>(ctx, ".strtab", /*dynamic=*/false);
-  SymbolTableBaseSection *impSymTab =
-      make<SymbolTableSection<ELFT>>(ctx, *strtab);
+  auto shstrtab =
+      std::make_unique<StringTableSection>(ctx, ".shstrtab", /*dynamic=*/false);
+  auto strtab =
+      std::make_unique<StringTableSection>(ctx, ".strtab", /*dynamic=*/false);
+  auto impSymTab = std::make_unique<SymbolTableSection<ELFT>>(ctx, *strtab);
 
   SmallVector<std::pair<std::unique_ptr<OutputSection>, SyntheticSection *>, 0>
       osIsPairs;
   osIsPairs.emplace_back(
-      std::make_unique<OutputSection>(ctx, strtab->name, 0, 0), strtab);
+      std::make_unique<OutputSection>(ctx, strtab->name, 0, 0), strtab.get());
   osIsPairs.emplace_back(
-      std::make_unique<OutputSection>(ctx, impSymTab->name, 0, 0), impSymTab);
+      std::make_unique<OutputSection>(ctx, impSymTab->name, 0, 0),
+      impSymTab.get());
   osIsPairs.emplace_back(
-      std::make_unique<OutputSection>(ctx, shstrtab->name, 0, 0), shstrtab);
+      std::make_unique<OutputSection>(ctx, shstrtab->name, 0, 0),
+      shstrtab.get());
 
   llvm::sort(ctx.symtab->cmseSymMap, [&](const auto &a, const auto &b) {
     return a.second.sym->getVA(ctx) < b.second.sym->getVA(ctx);
@@ -1512,8 +1494,8 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   Expected<std::unique_ptr<FileOutputBuffer>> bufferOrErr =
       FileOutputBuffer::create(ctx.arg.cmseOutputLib, fileSize, flags);
   if (!bufferOrErr) {
-    ErrAlways(ctx) << "failed to open " << ctx.arg.cmseOutputLib << ": "
-                   << bufferOrErr.takeError();
+    Err(ctx) << "failed to open " << ctx.arg.cmseOutputLib << ": "
+             << bufferOrErr.takeError();
     return;
   }
 
@@ -1554,8 +1536,8 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   }
 
   if (auto e = buffer->commit())
-    Fatal(ctx) << "failed to write output '" << buffer->getPath()
-               << "': " << std::move(e);
+    Err(ctx) << "failed to write output '" << buffer->getPath()
+             << "': " << std::move(e);
 }
 
 void elf::setARMTargetInfo(Ctx &ctx) { ctx.target.reset(new ARM(ctx)); }

@@ -53,7 +53,7 @@ public:
 
 protected:
   std::unique_ptr<Symbol *[]> symbols;
-  uint32_t numSymbols = 0;
+  size_t numSymbols = 0;
   SmallVector<InputSectionBase *, 0> sections;
 
 public:
@@ -147,9 +147,6 @@ public:
   // True if this is an argument for --just-symbols. Usually false.
   bool justSymbols = false;
 
-  std::string getSrcMsg(const Symbol &sym, const InputSectionBase &sec,
-                        uint64_t offset);
-
   // On PPC64 we need to keep track of which files contain small code model
   // relocations that access the .toc section. To minimize the chance of a
   // relocation overflow, files that do contain said relocations should have
@@ -181,6 +178,7 @@ private:
 class ELFFileBase : public InputFile {
 public:
   ELFFileBase(Ctx &ctx, Kind k, ELFKind ekind, MemoryBufferRef m);
+  ~ELFFileBase();
   static bool classof(const InputFile *f) { return f->isElf(); }
 
   void init();
@@ -210,11 +208,14 @@ public:
   }
   template <typename ELFT> typename ELFT::SymRange getELFSyms() const {
     return typename ELFT::SymRange(
-        reinterpret_cast<const typename ELFT::Sym *>(elfSyms), numELFSyms);
+        reinterpret_cast<const typename ELFT::Sym *>(elfSyms), numSymbols);
   }
   template <typename ELFT> typename ELFT::SymRange getGlobalELFSyms() const {
     return getELFSyms<ELFT>().slice(firstGlobal);
   }
+
+  // Get cached DWARF information.
+  DWARFCache *getDwarf();
 
 protected:
   // Initializes this class's member variables.
@@ -224,10 +225,20 @@ protected:
   const void *elfShdrs = nullptr;
   const void *elfSyms = nullptr;
   uint32_t numELFShdrs = 0;
-  uint32_t numELFSyms = 0;
   uint32_t firstGlobal = 0;
 
+  // Below are ObjFile specific members.
+
+  // Debugging information to retrieve source file and line for error
+  // reporting. Linker may find reasonable number of errors in a
+  // single object file, so we cache debugging information in order to
+  // parse it only once for each object file we link.
+  llvm::once_flag initDwarf;
+  std::unique_ptr<DWARFCache> dwarf;
+
 public:
+  // Name of source file obtained from STT_FILE, if present.
+  StringRef sourceFile;
   uint32_t andFeatures = 0;
   bool hasCommonSyms = false;
   ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
@@ -257,15 +268,6 @@ public:
 
   uint32_t getSectionIndex(const Elf_Sym &sym) const;
 
-  std::optional<llvm::DILineInfo> getDILineInfo(const InputSectionBase *,
-                                                uint64_t);
-  std::optional<std::pair<std::string, unsigned>>
-  getVariableLoc(StringRef name);
-
-  // Name of source file obtained from STT_FILE symbol value,
-  // or empty string if there is no such symbol in object file
-  // symbol table.
-  StringRef sourceFile;
 
   // Pointer to this input file's .llvm_addrsig section, if it has one.
   const Elf_Shdr *addrsigSec = nullptr;
@@ -286,8 +288,7 @@ public:
   // but had one or more functions with the no_split_stack attribute.
   bool someNoSplitStack = false;
 
-  // Get cached DWARF information.
-  DWARFCache *getDwarf();
+  void initDwarf();
 
   void initSectionsAndLocalSyms(bool ignoreComdats);
   void postParse();
@@ -318,13 +319,6 @@ private:
   // The following variable contains the contents of .symtab_shndx.
   // If the section does not exist (which is common), the array is empty.
   ArrayRef<Elf_Word> shndxTable;
-
-  // Debugging information to retrieve source file and line for error
-  // reporting. Linker may find reasonable number of errors in a
-  // single object file, so we cache debugging information in order to
-  // parse it only once for each object file we link.
-  std::unique_ptr<DWARFCache> dwarf;
-  llvm::once_flag initDwarf;
 };
 
 class BitcodeFile : public InputFile {
@@ -370,6 +364,8 @@ private:
   template <typename ELFT>
   std::vector<uint32_t> parseVerneed(const llvm::object::ELFFile<ELFT> &obj,
                                      const typename ELFT::Shdr *sec);
+  template <typename ELFT>
+  void parseGnuAndFeatures(const llvm::object::ELFFile<ELFT> &obj);
 };
 
 class BinaryFile : public InputFile {

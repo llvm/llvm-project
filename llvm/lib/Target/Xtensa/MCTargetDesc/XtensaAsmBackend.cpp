@@ -33,9 +33,6 @@ public:
       : MCAsmBackend(llvm::endianness::little), OSABI(osABI),
         IsLittleEndian(isLE) {}
 
-  unsigned getNumFixupKinds() const override {
-    return Xtensa::NumTargetFixupKinds;
-  }
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
@@ -71,7 +68,7 @@ XtensaMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+  assert(unsigned(Kind - FirstTargetFixupKind) < Xtensa::NumTargetFixupKinds &&
          "Invalid kind!");
   return Infos[Kind - FirstTargetFixupKind];
 }
@@ -88,8 +85,10 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case FK_Data_8:
     return Value;
   case Xtensa::fixup_xtensa_branch_6: {
+    if (!Value)
+      return 0;
     Value -= 4;
-    if (!isInt<6>(Value))
+    if (!isUInt<6>(Value))
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
     unsigned Hi2 = (Value >> 4) & 0x3;
     unsigned Lo4 = Value & 0xf;

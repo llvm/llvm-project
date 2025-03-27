@@ -17,7 +17,7 @@
 #define MODULE_ANALYSIS(NAME, CREATE_PASS)
 #endif
 MODULE_ANALYSIS("dx-shader-flags", dxil::ShaderFlagsAnalysis())
-MODULE_ANALYSIS("dxil-resource-md", DXILResourceMDAnalysis())
+MODULE_ANALYSIS("dxil-root-signature-analysis", dxil::RootSignatureAnalysis())
 #undef MODULE_ANALYSIS
 
 #ifndef MODULE_PASS
@@ -31,4 +31,12 @@ MODULE_PASS("dxil-pretty-printer", DXILPrettyPrinterPass(dbgs()))
 MODULE_PASS("dxil-translate-metadata", DXILTranslateMetadata())
 // TODO: rename to print<foo> after NPM switch
 MODULE_PASS("print-dx-shader-flags", dxil::ShaderFlagsAnalysisPrinter(dbgs()))
+MODULE_PASS("print<dxil-root-signature>", dxil::RootSignatureAnalysisPrinter(dbgs()))
 #undef MODULE_PASS
+
+#ifndef FUNCTION_PASS
+#define FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+FUNCTION_PASS("dxil-resource-access", DXILResourceAccess())
+FUNCTION_PASS("dxil-legalize", DXILLegalizePass())
+#undef FUNCTION_PASS

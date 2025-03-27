@@ -8,9 +8,12 @@
 
 #include "ConstCorrectnessCheck.h"
 #include "../utils/FixItHintUtils.h"
+#include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include <cassert>
 
 using namespace clang::ast_matchers;
 
@@ -35,32 +38,54 @@ AST_MATCHER(Type, isDependentType) { return Node.isDependentType(); }
 ConstCorrectnessCheck::ConstCorrectnessCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      AnalyzeValues(Options.get("AnalyzeValues", true)),
+      AnalyzePointers(Options.get("AnalyzePointers", true)),
       AnalyzeReferences(Options.get("AnalyzeReferences", true)),
+      AnalyzeValues(Options.get("AnalyzeValues", true)),
+
+      WarnPointersAsPointers(Options.get("WarnPointersAsPointers", true)),
       WarnPointersAsValues(Options.get("WarnPointersAsValues", false)),
-      TransformValues(Options.get("TransformValues", true)),
-      TransformReferences(Options.get("TransformReferences", true)),
+
+      TransformPointersAsPointers(
+          Options.get("TransformPointersAsPointers", true)),
       TransformPointersAsValues(
-          Options.get("TransformPointersAsValues", false)) {
-  if (AnalyzeValues == false && AnalyzeReferences == false)
+          Options.get("TransformPointersAsValues", false)),
+      TransformReferences(Options.get("TransformReferences", true)),
+      TransformValues(Options.get("TransformValues", true)),
+
+      AllowedTypes(
+          utils::options::parseStringList(Options.get("AllowedTypes", ""))) {
+  if (AnalyzeValues == false && AnalyzeReferences == false &&
+      AnalyzePointers == false)
     this->configurationDiag(
         "The check 'misc-const-correctness' will not "
-        "perform any analysis because both 'AnalyzeValues' and "
-        "'AnalyzeReferences' are false.");
+        "perform any analysis because 'AnalyzeValues', "
+        "'AnalyzeReferences' and 'AnalyzePointers' are false.");
 }
 
 void ConstCorrectnessCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "AnalyzeValues", AnalyzeValues);
+  Options.store(Opts, "AnalyzePointers", AnalyzePointers);
   Options.store(Opts, "AnalyzeReferences", AnalyzeReferences);
+  Options.store(Opts, "AnalyzeValues", AnalyzeValues);
+
+  Options.store(Opts, "WarnPointersAsPointers", WarnPointersAsPointers);
   Options.store(Opts, "WarnPointersAsValues", WarnPointersAsValues);
 
-  Options.store(Opts, "TransformValues", TransformValues);
-  Options.store(Opts, "TransformReferences", TransformReferences);
+  Options.store(Opts, "TransformPointersAsPointers",
+                TransformPointersAsPointers);
   Options.store(Opts, "TransformPointersAsValues", TransformPointersAsValues);
+  Options.store(Opts, "TransformReferences", TransformReferences);
+  Options.store(Opts, "TransformValues", TransformValues);
+
+  Options.store(Opts, "AllowedTypes",
+                utils::options::serializeStringList(AllowedTypes));
 }
 
 void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
-  const auto ConstType = hasType(isConstQualified());
+  const auto ConstType = hasType(
+      qualType(isConstQualified(),
+               // pointee check will check the const pointer and const array
+               unless(pointerType()), unless(arrayType())));
+
   const auto ConstReference = hasType(references(isConstQualified()));
   const auto RValueReference = hasType(
       referenceType(anyOf(rValueReferenceType(), unless(isSpelledAsLValue()))));
@@ -72,6 +97,12 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
       // template types need to be considered as well.
       hasType(referenceType(pointee(hasCanonicalType(templateTypeParmType())))),
       hasType(referenceType(pointee(substTemplateTypeParmType()))));
+
+  const auto AllowedType = hasType(qualType(anyOf(
+      hasDeclaration(namedDecl(matchers::matchesAnyListedName(AllowedTypes))),
+      references(namedDecl(matchers::matchesAnyListedName(AllowedTypes))),
+      pointerType(pointee(hasDeclaration(
+          namedDecl(matchers::matchesAnyListedName(AllowedTypes))))))));
 
   const auto AutoTemplateType = varDecl(
       anyOf(hasType(autoType()), hasType(referenceType(pointee(autoType()))),
@@ -87,7 +118,8 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
       unless(anyOf(ConstType, ConstReference, TemplateType,
                    hasInitializer(isInstantiationDependent()), AutoTemplateType,
                    RValueReference, FunctionPointerRef,
-                   hasType(cxxRecordDecl(isLambda())), isImplicit())));
+                   hasType(cxxRecordDecl(isLambda())), isImplicit(),
+                   AllowedType)));
 
   // Match the function scope for which the analysis of all local variables
   // shall be run.
@@ -111,6 +143,11 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *LocalScope = Result.Nodes.getNodeAs<Stmt>("scope");
   const auto *Variable = Result.Nodes.getNodeAs<VarDecl>("local-value");
   const auto *Function = Result.Nodes.getNodeAs<FunctionDecl>("function-decl");
+  const auto *VarDeclStmt = Result.Nodes.getNodeAs<DeclStmt>("decl-stmt");
+  // It can not be guaranteed that the variable is declared isolated,
+  // therefore a transformation might effect the other variables as well and
+  // be incorrect.
+  const bool CanBeFixIt = VarDeclStmt != nullptr && VarDeclStmt->isSingleDecl();
 
   /// If the variable was declared in a template it might be analyzed multiple
   /// times. Only one of those instantiations shall emit a warning. NOTE: This
@@ -123,75 +160,103 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   VariableCategory VC = VariableCategory::Value;
-  if (Variable->getType()->isReferenceType())
+  const QualType VT = Variable->getType();
+  if (VT->isReferenceType()) {
     VC = VariableCategory::Reference;
-  if (Variable->getType()->isPointerType())
+  } else if (VT->isPointerType()) {
     VC = VariableCategory::Pointer;
-  if (Variable->getType()->isArrayType()) {
-    if (const auto *ArrayT = dyn_cast<ArrayType>(Variable->getType())) {
-      if (ArrayT->getElementType()->isPointerType())
-        VC = VariableCategory::Pointer;
-    }
+  } else if (const auto *ArrayT = dyn_cast<ArrayType>(VT)) {
+    if (ArrayT->getElementType()->isPointerType())
+      VC = VariableCategory::Pointer;
   }
 
-  // Each variable can only be in one category: Value, Pointer, Reference.
-  // Analysis can be controlled for every category.
-  if (VC == VariableCategory::Reference && !AnalyzeReferences)
-    return;
+  auto CheckValue = [&]() {
+    // The scope is only registered if the analysis shall be run.
+    registerScope(LocalScope, Result.Context);
 
-  if (VC == VariableCategory::Reference &&
-      Variable->getType()->getPointeeType()->isPointerType() &&
-      !WarnPointersAsValues)
-    return;
+    // Offload const-analysis to utility function.
+    if (ScopesCache[LocalScope]->isMutated(Variable))
+      return;
 
-  if (VC == VariableCategory::Pointer && !WarnPointersAsValues)
-    return;
-
-  if (VC == VariableCategory::Value && !AnalyzeValues)
-    return;
-
-  // The scope is only registered if the analysis shall be run.
-  registerScope(LocalScope, Result.Context);
-
-  // Offload const-analysis to utility function.
-  if (ScopesCache[LocalScope]->isMutated(Variable))
-    return;
-
-  auto Diag = diag(Variable->getBeginLoc(),
-                   "variable %0 of type %1 can be declared 'const'")
-              << Variable << Variable->getType();
-  if (IsNormalVariableInTemplate)
-    TemplateDiagnosticsCache.insert(Variable->getBeginLoc());
-
-  const auto *VarDeclStmt = Result.Nodes.getNodeAs<DeclStmt>("decl-stmt");
-
-  // It can not be guaranteed that the variable is declared isolated, therefore
-  // a transformation might effect the other variables as well and be incorrect.
-  if (VarDeclStmt == nullptr || !VarDeclStmt->isSingleDecl())
-    return;
-
-  using namespace utils::fixit;
-  if (VC == VariableCategory::Value && TransformValues) {
-    Diag << addQualifierToVarDecl(*Variable, *Result.Context, Qualifiers::Const,
-                                  QualifierTarget::Value,
-                                  QualifierPolicy::Right);
-    // FIXME: Add '{}' for default initialization if no user-defined default
-    // constructor exists and there is no initializer.
-    return;
-  }
-
-  if (VC == VariableCategory::Reference && TransformReferences) {
-    Diag << addQualifierToVarDecl(*Variable, *Result.Context, Qualifiers::Const,
-                                  QualifierTarget::Value,
-                                  QualifierPolicy::Right);
-    return;
-  }
-
-  if (VC == VariableCategory::Pointer) {
-    if (WarnPointersAsValues && TransformPointersAsValues) {
+    auto Diag = diag(Variable->getBeginLoc(),
+                     "variable %0 of type %1 can be declared 'const'")
+                << Variable << VT;
+    if (IsNormalVariableInTemplate)
+      TemplateDiagnosticsCache.insert(Variable->getBeginLoc());
+    if (!CanBeFixIt)
+      return;
+    using namespace utils::fixit;
+    if (VC == VariableCategory::Value && TransformValues) {
       Diag << addQualifierToVarDecl(*Variable, *Result.Context,
                                     Qualifiers::Const, QualifierTarget::Value,
                                     QualifierPolicy::Right);
+      // FIXME: Add '{}' for default initialization if no user-defined default
+      // constructor exists and there is no initializer.
+      return;
+    }
+
+    if (VC == VariableCategory::Reference && TransformReferences) {
+      Diag << addQualifierToVarDecl(*Variable, *Result.Context,
+                                    Qualifiers::Const, QualifierTarget::Value,
+                                    QualifierPolicy::Right);
+      return;
+    }
+
+    if (VC == VariableCategory::Pointer && TransformPointersAsValues) {
+      Diag << addQualifierToVarDecl(*Variable, *Result.Context,
+                                    Qualifiers::Const, QualifierTarget::Value,
+                                    QualifierPolicy::Right);
+      return;
+    }
+  };
+
+  auto CheckPointee = [&]() {
+    assert(VC == VariableCategory::Pointer);
+    registerScope(LocalScope, Result.Context);
+    if (ScopesCache[LocalScope]->isPointeeMutated(Variable))
+      return;
+    auto Diag =
+        diag(Variable->getBeginLoc(),
+             "pointee of variable %0 of type %1 can be declared 'const'")
+        << Variable << VT;
+    if (IsNormalVariableInTemplate)
+      TemplateDiagnosticsCache.insert(Variable->getBeginLoc());
+    if (!CanBeFixIt)
+      return;
+    using namespace utils::fixit;
+    if (TransformPointersAsPointers) {
+      Diag << addQualifierToVarDecl(*Variable, *Result.Context,
+                                    Qualifiers::Const, QualifierTarget::Pointee,
+                                    QualifierPolicy::Right);
+    }
+  };
+
+  // Each variable can only be in one category: Value, Pointer, Reference.
+  // Analysis can be controlled for every category.
+  if (VC == VariableCategory::Value && AnalyzeValues) {
+    CheckValue();
+    return;
+  }
+  if (VC == VariableCategory::Reference && AnalyzeReferences) {
+    if (VT->getPointeeType()->isPointerType() && !WarnPointersAsValues)
+      return;
+    CheckValue();
+    return;
+  }
+  if (VC == VariableCategory::Pointer && AnalyzePointers) {
+    if (WarnPointersAsValues && !VT.isConstQualified())
+      CheckValue();
+    if (WarnPointersAsPointers) {
+      if (const auto *PT = dyn_cast<PointerType>(VT)) {
+        if (!PT->getPointeeType().isConstQualified())
+          CheckPointee();
+      }
+      if (const auto *AT = dyn_cast<ArrayType>(VT)) {
+        if (!AT->getElementType().isConstQualified()) {
+          assert(AT->getElementType()->isPointerType());
+          CheckPointee();
+        }
+      }
     }
     return;
   }

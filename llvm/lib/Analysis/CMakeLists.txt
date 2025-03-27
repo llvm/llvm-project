@@ -62,6 +62,7 @@ add_llvm_component_library(LLVMAnalysis
   DominanceFrontier.cpp
   DXILResource.cpp
   DXILMetadataAnalysis.cpp
+  EphemeralValuesCache.cpp
   FunctionPropertiesAnalysis.cpp
   GlobalsModRef.cpp
   GuardUtils.cpp
@@ -79,6 +80,7 @@ add_llvm_component_library(LLVMAnalysis
   InstructionPrecedenceTracking.cpp
   InstructionSimplify.cpp
   InteractiveModelRunner.cpp
+  KernelInfo.cpp
   LastRunTrackingAnalysis.cpp
   LazyBranchProbabilityInfo.cpp
   LazyBlockFrequencyInfo.cpp

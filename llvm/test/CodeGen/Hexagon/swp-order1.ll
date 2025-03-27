@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=hexagon < %s
+; RUN: llc -O2 -mtriple=hexagon < %s
 ; REQUIRES: asserts
 
 %0 = type { [2 x [8 x [16 x i8]]], [4 x [16 x ptr]] }

@@ -49,6 +49,11 @@ struct vector {
 	vector(InputIterator first, InputIterator __last);
 
   T &at(int n);
+
+  void push_back(const T&);
+  void push_back(T&&);
+  const T& back() const;
+  void insert(iterator, T&&);
 };
 
 template<typename T>
@@ -56,6 +61,7 @@ struct basic_string_view {
   basic_string_view();
   basic_string_view(const T *);
   const T *begin() const;
+  const T *data() const;
 };
 using string_view = basic_string_view<char>;
 
@@ -75,6 +81,7 @@ struct basic_string {
   const T *c_str() const;
   operator basic_string_view<T> () const;
   using const_iterator = iter<T>;
+  const T *data() const;
 };
 using string = basic_string<char>;
 
@@ -122,6 +129,11 @@ struct reference_wrapper {
 
 template<typename T>
 reference_wrapper<T> ref(T& t) noexcept;
+
+template <typename T>
+struct [[gsl::Pointer]] iterator {
+  T& operator*() const;
+};
 
 struct false_type {
     static constexpr bool value = false;

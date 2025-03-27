@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
@@ -1289,6 +1290,72 @@ struct TypeIdSummary {
   std::map<uint64_t, WholeProgramDevirtResolution> WPDRes;
 };
 
+class CfiFunctionIndex {
+  DenseMap<GlobalValue::GUID, std::set<std::string, std::less<>>> Index;
+  using IndexIterator =
+      DenseMap<GlobalValue::GUID,
+               std::set<std::string, std::less<>>>::const_iterator;
+  using NestedIterator = std::set<std::string, std::less<>>::const_iterator;
+
+public:
+  // Iterates keys of the DenseMap.
+  class GUIDIterator : public iterator_adaptor_base<GUIDIterator, IndexIterator,
+                                                    std::forward_iterator_tag,
+                                                    GlobalValue::GUID> {
+    using base = GUIDIterator::iterator_adaptor_base;
+
+  public:
+    GUIDIterator() = default;
+    explicit GUIDIterator(IndexIterator I) : base(I) {}
+
+    GlobalValue::GUID operator*() const { return this->wrapped()->first; }
+  };
+
+  CfiFunctionIndex() = default;
+  template <typename It> CfiFunctionIndex(It B, It E) {
+    for (; B != E; ++B)
+      emplace(*B);
+  }
+
+  std::vector<StringRef> symbols() const {
+    std::vector<StringRef> Symbols;
+    for (auto &[GUID, Syms] : Index)
+      Symbols.insert(Symbols.end(), Syms.begin(), Syms.end());
+    return Symbols;
+  }
+
+  GUIDIterator guid_begin() const { return GUIDIterator(Index.begin()); }
+  GUIDIterator guid_end() const { return GUIDIterator(Index.end()); }
+  iterator_range<GUIDIterator> guids() const {
+    return make_range(guid_begin(), guid_end());
+  }
+
+  iterator_range<NestedIterator> forGuid(GlobalValue::GUID GUID) const {
+    auto I = Index.find(GUID);
+    if (I == Index.end())
+      return make_range(NestedIterator{}, NestedIterator{});
+    return make_range(I->second.begin(), I->second.end());
+  }
+
+  template <typename... Args> void emplace(Args &&...A) {
+    StringRef S(std::forward<Args>(A)...);
+    GlobalValue::GUID GUID =
+        GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S));
+    Index[GUID].emplace(S);
+  }
+
+  size_t count(StringRef S) const {
+    GlobalValue::GUID GUID =
+        GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S));
+    auto I = Index.find(GUID);
+    if (I == Index.end())
+      return 0;
+    return I->second.count(S);
+  }
+
+  bool empty() const { return Index.empty(); }
+};
+
 /// 160 bits SHA1
 using ModuleHash = std::array<uint32_t, 5>;
 
@@ -1315,7 +1382,7 @@ using GVSummaryPtrSet = std::unordered_set<GlobalValueSummary *>;
 /// Map of a type GUID to type id string and summary (multimap used
 /// in case of GUID conflicts).
 using TypeIdSummaryMapTy =
-    std::multimap<GlobalValue::GUID, std::pair<std::string, TypeIdSummary>>;
+    std::multimap<GlobalValue::GUID, std::pair<StringRef, TypeIdSummary>>;
 
 /// The following data structures summarize type metadata information.
 /// For type metadata overview see https://llvm.org/docs/TypeMetadata.html.
@@ -1351,6 +1418,9 @@ private:
   /// Holds strings for combined index, mapping to the corresponding module ID.
   ModulePathStringTableTy ModulePathStringTable;
 
+  BumpPtrAllocator TypeIdSaverAlloc;
+  UniqueStringSaver TypeIdSaver;
+
   /// Mapping from type identifier GUIDs to type identifier and its summary
   /// information. Produced by thin link.
   TypeIdSummaryMapTy TypeIdMap;
@@ -1359,7 +1429,7 @@ private:
   /// with that type identifier's metadata. Produced by per module summary
   /// analysis and consumed by thin link. For more information, see description
   /// above where TypeIdCompatibleVtableInfo is defined.
-  std::map<std::string, TypeIdCompatibleVtableInfo, std::less<>>
+  std::map<StringRef, TypeIdCompatibleVtableInfo, std::less<>>
       TypeIdCompatibleVtableMap;
 
   /// Mapping from original ID to GUID. If original ID can map to multiple
@@ -1415,8 +1485,8 @@ private:
   /// True if some of the FunctionSummary contains a ParamAccess.
   bool HasParamAccess = false;
 
-  std::set<std::string, std::less<>> CfiFunctionDefs;
-  std::set<std::string, std::less<>> CfiFunctionDecls;
+  CfiFunctionIndex CfiFunctionDefs;
+  CfiFunctionIndex CfiFunctionDecls;
 
   // Used in cases where we want to record the name of a global, but
   // don't have the string owned elsewhere (e.g. the Strtab on a module).
@@ -1455,8 +1525,9 @@ public:
   // See HaveGVs variable comment.
   ModuleSummaryIndex(bool HaveGVs, bool EnableSplitLTOUnit = false,
                      bool UnifiedLTO = false)
-      : HaveGVs(HaveGVs), EnableSplitLTOUnit(EnableSplitLTOUnit),
-        UnifiedLTO(UnifiedLTO), Saver(Alloc) {}
+      : TypeIdSaver(TypeIdSaverAlloc), HaveGVs(HaveGVs),
+        EnableSplitLTOUnit(EnableSplitLTOUnit), UnifiedLTO(UnifiedLTO),
+        Saver(Alloc) {}
 
   // Current version for the module summary in bitcode files.
   // The BitcodeSummaryVersion should be bumped whenever we introduce changes
@@ -1663,19 +1734,11 @@ public:
     return I == OidGuidMap.end() ? 0 : I->second;
   }
 
-  std::set<std::string, std::less<>> &cfiFunctionDefs() {
-    return CfiFunctionDefs;
-  }
-  const std::set<std::string, std::less<>> &cfiFunctionDefs() const {
-    return CfiFunctionDefs;
-  }
+  CfiFunctionIndex &cfiFunctionDefs() { return CfiFunctionDefs; }
+  const CfiFunctionIndex &cfiFunctionDefs() const { return CfiFunctionDefs; }
 
-  std::set<std::string, std::less<>> &cfiFunctionDecls() {
-    return CfiFunctionDecls;
-  }
-  const std::set<std::string, std::less<>> &cfiFunctionDecls() const {
-    return CfiFunctionDecls;
-  }
+  CfiFunctionIndex &cfiFunctionDecls() { return CfiFunctionDecls; }
+  const CfiFunctionIndex &cfiFunctionDecls() const { return CfiFunctionDecls; }
 
   /// Add a global value summary for a value.
   void addGlobalValueSummary(const GlobalValue &GV,
@@ -1707,10 +1770,9 @@ public:
                        GlobalValue::GUID OrigGUID) {
     if (OrigGUID == 0 || ValueGUID == OrigGUID)
       return;
-    if (OidGuidMap.count(OrigGUID) && OidGuidMap[OrigGUID] != ValueGUID)
-      OidGuidMap[OrigGUID] = 0;
-    else
-      OidGuidMap[OrigGUID] = ValueGUID;
+    auto [It, Inserted] = OidGuidMap.try_emplace(OrigGUID, ValueGUID);
+    if (!Inserted && It->second != ValueGUID)
+      It->second = 0;
   }
 
   /// Find the summary for ValueInfo \p VI in module \p ModuleId, or nullptr if
@@ -1829,8 +1891,8 @@ public:
     for (auto &[GUID, TypeIdPair] : make_range(TidIter))
       if (TypeIdPair.first == TypeId)
         return TypeIdPair.second;
-    auto It = TypeIdMap.insert(
-        {GlobalValue::getGUID(TypeId), {std::string(TypeId), TypeIdSummary()}});
+    auto It = TypeIdMap.insert({GlobalValue::getGUID(TypeId),
+                                {TypeIdSaver.save(TypeId), TypeIdSummary()}});
     return It->second.second;
   }
 
@@ -1859,7 +1921,7 @@ public:
   /// the ThinLTO backends.
   TypeIdCompatibleVtableInfo &
   getOrInsertTypeIdCompatibleVtableSummary(StringRef TypeId) {
-    return TypeIdCompatibleVtableMap[std::string(TypeId)];
+    return TypeIdCompatibleVtableMap[TypeIdSaver.save(TypeId)];
   }
 
   /// For the given \p TypeId, this returns the TypeIdCompatibleVtableMap
@@ -1909,6 +1971,11 @@ public:
 
   /// Checks if we can import global variable from another module.
   bool canImportGlobalVar(const GlobalValueSummary *S, bool AnalyzeRefs) const;
+
+  /// Same as above but checks whether the global var is importable as a
+  /// declaration.
+  bool canImportGlobalVar(const GlobalValueSummary *S, bool AnalyzeRefs,
+                          bool &CanImportDecl) const;
 };
 
 /// GraphTraits definition to build SCC for the index

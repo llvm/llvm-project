@@ -141,7 +141,7 @@ struct VerifierSupport {
   raw_ostream *OS;
   const Module &M;
   ModuleSlotTracker MST;
-  Triple TT;
+  const Triple &TT;
   const DataLayout &DL;
   LLVMContext &Context;
 
@@ -153,8 +153,8 @@ struct VerifierSupport {
   bool TreatBrokenDebugInfoAsError = true;
 
   explicit VerifierSupport(raw_ostream *OS, const Module &M)
-      : OS(OS), M(M), MST(&M), TT(Triple::normalize(M.getTargetTriple())),
-        DL(M.getDataLayout()), Context(M.getContext()) {}
+      : OS(OS), M(M), MST(&M), TT(M.getTargetTriple()), DL(M.getDataLayout()),
+        Context(M.getContext()) {}
 
 private:
   void Write(const Module *M) {
@@ -808,6 +808,10 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
           "visibility must be dso_local!",
           &GV);
 
+  if (GV.isTagged()) {
+    Check(!GV.hasSection(), "tagged GlobalValue must not be in section.", &GV);
+  }
+
   forEachUser(&GV, GlobalValueVisited, [&](const Value *V) -> bool {
     if (const Instruction *I = dyn_cast<Instruction>(V)) {
       if (!I->getParent() || !I->getParent()->getParent())
@@ -1150,6 +1154,30 @@ void Verifier::visitDIScope(const DIScope &N) {
     CheckDI(isa<DIFile>(F), "invalid file", &N, F);
 }
 
+void Verifier::visitDISubrangeType(const DISubrangeType &N) {
+  CheckDI(N.getTag() == dwarf::DW_TAG_subrange_type, "invalid tag", &N);
+  auto *BaseType = N.getRawBaseType();
+  CheckDI(!BaseType || isType(BaseType), "BaseType must be a type");
+  auto *LBound = N.getRawLowerBound();
+  CheckDI(!LBound || isa<ConstantAsMetadata>(LBound) ||
+              isa<DIVariable>(LBound) || isa<DIExpression>(LBound),
+          "LowerBound must be signed constant or DIVariable or DIExpression",
+          &N);
+  auto *UBound = N.getRawUpperBound();
+  CheckDI(!UBound || isa<ConstantAsMetadata>(UBound) ||
+              isa<DIVariable>(UBound) || isa<DIExpression>(UBound),
+          "UpperBound must be signed constant or DIVariable or DIExpression",
+          &N);
+  auto *Stride = N.getRawStride();
+  CheckDI(!Stride || isa<ConstantAsMetadata>(Stride) ||
+              isa<DIVariable>(Stride) || isa<DIExpression>(Stride),
+          "Stride must be signed constant or DIVariable or DIExpression", &N);
+  auto *Bias = N.getRawBias();
+  CheckDI(!Bias || isa<ConstantAsMetadata>(Bias) || isa<DIVariable>(Bias) ||
+              isa<DIExpression>(Bias),
+          "Bias must be signed constant or DIVariable or DIExpression", &N);
+}
+
 void Verifier::visitDISubrange(const DISubrange &N) {
   CheckDI(N.getTag() == dwarf::DW_TAG_subrange_type, "invalid tag", &N);
   CheckDI(!N.getRawCountNode() || !N.getRawUpperBound(),
@@ -1315,6 +1343,8 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
   unsigned DIBlockByRefStruct = 1 << 4;
   CheckDI((N.getFlags() & DIBlockByRefStruct) == 0,
           "DIBlockByRefStruct on DICompositeType is no longer supported", &N);
+  CheckDI(llvm::all_of(N.getElements(), [](const DINode *N) { return N; }),
+          "DISubprogram contains null entry in `elements` field", &N);
 
   if (N.isVector()) {
     const DINodeArray Elements = N.getElements();
@@ -2026,11 +2056,15 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
             "huge alignment values are unsupported", V);
     }
     if (Attrs.hasAttribute(Attribute::ByVal)) {
+      Type *ByValTy = Attrs.getByValType();
       SmallPtrSet<Type *, 4> Visited;
-      Check(Attrs.getByValType()->isSized(&Visited),
+      Check(ByValTy->isSized(&Visited),
             "Attribute 'byval' does not support unsized types!", V);
-      Check(DL.getTypeAllocSize(Attrs.getByValType()).getKnownMinValue() <
-                (1ULL << 32),
+      // Check if it is or contains a target extension type that disallows being
+      // used on the stack.
+      Check(!ByValTy->containsNonLocalTargetExtType(),
+            "'byval' argument has illegal target extension type", V);
+      Check(DL.getTypeAllocSize(ByValTy).getKnownMinValue() < (1ULL << 32),
             "huge 'byval' arguments are unsupported", V);
     }
     if (Attrs.hasAttribute(Attribute::ByRef)) {
@@ -2260,19 +2294,23 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
   Check((Attrs.hasFnAttr("aarch64_new_za") + Attrs.hasFnAttr("aarch64_in_za") +
          Attrs.hasFnAttr("aarch64_inout_za") +
          Attrs.hasFnAttr("aarch64_out_za") +
-         Attrs.hasFnAttr("aarch64_preserves_za")) <= 1,
+         Attrs.hasFnAttr("aarch64_preserves_za") +
+         Attrs.hasFnAttr("aarch64_za_state_agnostic")) <= 1,
         "Attributes 'aarch64_new_za', 'aarch64_in_za', 'aarch64_out_za', "
-        "'aarch64_inout_za' and 'aarch64_preserves_za' are mutually exclusive",
+        "'aarch64_inout_za', 'aarch64_preserves_za' and "
+        "'aarch64_za_state_agnostic' are mutually exclusive",
         V);
 
-  Check(
-      (Attrs.hasFnAttr("aarch64_new_zt0") + Attrs.hasFnAttr("aarch64_in_zt0") +
-       Attrs.hasFnAttr("aarch64_inout_zt0") +
-       Attrs.hasFnAttr("aarch64_out_zt0") +
-       Attrs.hasFnAttr("aarch64_preserves_zt0")) <= 1,
-      "Attributes 'aarch64_new_zt0', 'aarch64_in_zt0', 'aarch64_out_zt0', "
-      "'aarch64_inout_zt0' and 'aarch64_preserves_zt0' are mutually exclusive",
-      V);
+  Check((Attrs.hasFnAttr("aarch64_new_zt0") +
+         Attrs.hasFnAttr("aarch64_in_zt0") +
+         Attrs.hasFnAttr("aarch64_inout_zt0") +
+         Attrs.hasFnAttr("aarch64_out_zt0") +
+         Attrs.hasFnAttr("aarch64_preserves_zt0") +
+         Attrs.hasFnAttr("aarch64_za_state_agnostic")) <= 1,
+        "Attributes 'aarch64_new_zt0', 'aarch64_in_zt0', 'aarch64_out_zt0', "
+        "'aarch64_inout_zt0', 'aarch64_preserves_zt0' and "
+        "'aarch64_za_state_agnostic' are mutually exclusive",
+        V);
 
   if (Attrs.hasFnAttr(Attribute::JumpTable)) {
     const GlobalValue *GV = cast<GlobalValue>(V);
@@ -2712,7 +2750,7 @@ static Instruction *getSuccPad(Instruction *Terminator) {
     UnwindDest = CSI->getUnwindDest();
   else
     UnwindDest = cast<CleanupReturnInst>(Terminator)->getUnwindDest();
-  return UnwindDest->getFirstNonPHI();
+  return &*UnwindDest->getFirstNonPHIIt();
 }
 
 void Verifier::verifySiblingFuncletUnwinds() {
@@ -4323,9 +4361,13 @@ void Verifier::verifySwiftErrorValue(const Value *SwiftErrorVal) {
 }
 
 void Verifier::visitAllocaInst(AllocaInst &AI) {
+  Type *Ty = AI.getAllocatedType();
   SmallPtrSet<Type*, 4> Visited;
-  Check(AI.getAllocatedType()->isSized(&Visited),
-        "Cannot allocate unsized type", &AI);
+  Check(Ty->isSized(&Visited), "Cannot allocate unsized type", &AI);
+  // Check if it's a target extension type that disallows being used on the
+  // stack.
+  Check(!Ty->containsNonLocalTargetExtType(),
+        "Alloca has illegal target extension type", &AI);
   Check(AI.getArraySize()->getType()->isIntegerTy(),
         "Alloca array size must have integer type", &AI);
   if (MaybeAlign A = AI.getAlign()) {
@@ -4334,8 +4376,7 @@ void Verifier::visitAllocaInst(AllocaInst &AI) {
   }
 
   if (AI.isSwiftError()) {
-    Check(AI.getAllocatedType()->isPointerTy(),
-          "swifterror alloca must have pointer type", &AI);
+    Check(Ty->isPointerTy(), "swifterror alloca must have pointer type", &AI);
     Check(!AI.isArrayAllocation(),
           "swifterror alloca must not be array allocation", &AI);
     verifySwiftErrorValue(&AI);
@@ -4568,7 +4609,7 @@ void Verifier::visitCatchPadInst(CatchPadInst &CPI) {
 
   // The catchpad instruction must be the first non-PHI instruction in the
   // block.
-  Check(BB->getFirstNonPHI() == &CPI,
+  Check(&*BB->getFirstNonPHIIt() == &CPI,
         "CatchPadInst not the first non-PHI instruction in the block.", &CPI);
 
   visitEHPadPredecessors(CPI);
@@ -4592,7 +4633,7 @@ void Verifier::visitCleanupPadInst(CleanupPadInst &CPI) {
 
   // The cleanuppad instruction must be the first non-PHI instruction in the
   // block.
-  Check(BB->getFirstNonPHI() == &CPI,
+  Check(&*BB->getFirstNonPHIIt() == &CPI,
         "CleanupPadInst not the first non-PHI instruction in the block.", &CPI);
 
   auto *ParentPad = CPI.getParentPad();
@@ -4647,7 +4688,7 @@ void Verifier::visitFuncletPadInst(FuncletPadInst &FPI) {
       Value *UnwindPad;
       bool ExitsFPI;
       if (UnwindDest) {
-        UnwindPad = UnwindDest->getFirstNonPHI();
+        UnwindPad = &*UnwindDest->getFirstNonPHIIt();
         if (!cast<Instruction>(UnwindPad)->isEHPad())
           continue;
         Value *UnwindParent = getParentPad(UnwindPad);
@@ -4750,7 +4791,7 @@ void Verifier::visitFuncletPadInst(FuncletPadInst &FPI) {
       BasicBlock *SwitchUnwindDest = CatchSwitch->getUnwindDest();
       Value *SwitchUnwindPad;
       if (SwitchUnwindDest)
-        SwitchUnwindPad = SwitchUnwindDest->getFirstNonPHI();
+        SwitchUnwindPad = &*SwitchUnwindDest->getFirstNonPHIIt();
       else
         SwitchUnwindPad = ConstantTokenNone::get(FPI.getContext());
       Check(SwitchUnwindPad == FirstUnwindPad,
@@ -4773,7 +4814,7 @@ void Verifier::visitCatchSwitchInst(CatchSwitchInst &CatchSwitch) {
 
   // The catchswitch instruction must be the first non-PHI instruction in the
   // block.
-  Check(BB->getFirstNonPHI() == &CatchSwitch,
+  Check(&*BB->getFirstNonPHIIt() == &CatchSwitch,
         "CatchSwitchInst not the first non-PHI instruction in the block.",
         &CatchSwitch);
 
@@ -4782,14 +4823,14 @@ void Verifier::visitCatchSwitchInst(CatchSwitchInst &CatchSwitch) {
         "CatchSwitchInst has an invalid parent.", ParentPad);
 
   if (BasicBlock *UnwindDest = CatchSwitch.getUnwindDest()) {
-    Instruction *I = UnwindDest->getFirstNonPHI();
+    BasicBlock::iterator I = UnwindDest->getFirstNonPHIIt();
     Check(I->isEHPad() && !isa<LandingPadInst>(I),
           "CatchSwitchInst must unwind to an EH block which is not a "
           "landingpad.",
           &CatchSwitch);
 
     // Record catchswitch sibling unwinds for verifySiblingFuncletUnwinds
-    if (getParentPad(I) == ParentPad)
+    if (getParentPad(&*I) == ParentPad)
       SiblingFuncletInfo[&CatchSwitch] = &CatchSwitch;
   }
 
@@ -4797,7 +4838,7 @@ void Verifier::visitCatchSwitchInst(CatchSwitchInst &CatchSwitch) {
         "CatchSwitchInst cannot have empty handler list", &CatchSwitch);
 
   for (BasicBlock *Handler : CatchSwitch.handlers()) {
-    Check(isa<CatchPadInst>(Handler->getFirstNonPHI()),
+    Check(isa<CatchPadInst>(Handler->getFirstNonPHIIt()),
           "CatchSwitchInst handlers must be catchpads", &CatchSwitch, Handler);
   }
 
@@ -4811,7 +4852,7 @@ void Verifier::visitCleanupReturnInst(CleanupReturnInst &CRI) {
         CRI.getOperand(0));
 
   if (BasicBlock *UnwindDest = CRI.getUnwindDest()) {
-    Instruction *I = UnwindDest->getFirstNonPHI();
+    BasicBlock::iterator I = UnwindDest->getFirstNonPHIIt();
     Check(I->isEHPad() && !isa<LandingPadInst>(I),
           "CleanupReturnInst must unwind to an EH block which is not a "
           "landingpad.",
@@ -5186,10 +5227,12 @@ void Verifier::visitInstruction(Instruction &I) {
                 F->getIntrinsicID() == Intrinsic::experimental_patchpoint ||
                 F->getIntrinsicID() == Intrinsic::fake_use ||
                 F->getIntrinsicID() == Intrinsic::experimental_gc_statepoint ||
+                F->getIntrinsicID() == Intrinsic::wasm_throw ||
                 F->getIntrinsicID() == Intrinsic::wasm_rethrow ||
                 IsAttachedCallOperand(F, CBI, i),
             "Cannot invoke an intrinsic other than donothing, patchpoint, "
-            "statepoint, coro_resume, coro_destroy or clang.arc.attachedcall",
+            "statepoint, coro_resume, coro_destroy, clang.arc.attachedcall or "
+            "wasm.(re)throw",
             &I);
       Check(F->getParent() == &M, "Referencing function in another module!", &I,
             &M, F, F->getParent());
@@ -5540,7 +5583,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::memmove:
   case Intrinsic::memset:
   case Intrinsic::memset_inline:
+    break;
   case Intrinsic::experimental_memset_pattern: {
+    const auto Memset = cast<MemSetPatternInst>(&Call);
+    Check(Memset->getValue()->getType()->isSized(),
+          "unsized types cannot be used as memset patterns", Call);
     break;
   }
   case Intrinsic::memcpy_element_unordered_atomic:
@@ -6350,6 +6397,16 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "SGPR arguments must have the `inreg` attribute", &Call);
     Check(!Call.paramHasAttr(3, Attribute::InReg),
           "VGPR arguments must not have the `inreg` attribute", &Call);
+    Check(isa_and_present<UnreachableInst>(Call.getNextNode()),
+          "llvm.amdgcn.cs.chain must be followed by unreachable", &Call);
+    break;
+  }
+  case Intrinsic::amdgcn_init_exec_from_input: {
+    const Argument *Arg = dyn_cast<Argument>(Call.getOperand(0));
+    Check(Arg && Arg->hasInRegAttr(),
+          "only inreg arguments to the parent function are valid as inputs to "
+          "this intrinsic",
+          &Call);
     break;
   }
   case Intrinsic::amdgcn_set_inactive_chain_arg: {
@@ -6381,6 +6438,55 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
         AMDGPU::isFlatGlobalAddrSpace(
             Call.getArgOperand(0)->getType()->getPointerAddressSpace()),
         "llvm.amdgcn.s.prefetch.data only supports global or constant memory");
+    break;
+  }
+  case Intrinsic::amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
+  case Intrinsic::amdgcn_mfma_scale_f32_32x32x64_f8f6f4: {
+    Value *Src0 = Call.getArgOperand(0);
+    Value *Src1 = Call.getArgOperand(1);
+
+    uint64_t CBSZ = cast<ConstantInt>(Call.getArgOperand(3))->getZExtValue();
+    uint64_t BLGP = cast<ConstantInt>(Call.getArgOperand(4))->getZExtValue();
+    Check(CBSZ <= 4, "invalid value for cbsz format", Call,
+          Call.getArgOperand(3));
+    Check(BLGP <= 4, "invalid value for blgp format", Call,
+          Call.getArgOperand(4));
+
+    // AMDGPU::MFMAScaleFormats values
+    auto getFormatNumRegs = [](unsigned FormatVal) {
+      switch (FormatVal) {
+      case 0:
+      case 1:
+        return 8u;
+      case 2:
+      case 3:
+        return 6u;
+      case 4:
+        return 4u;
+      default:
+        llvm_unreachable("invalid format value");
+      }
+    };
+
+    auto isValidSrcASrcBVector = [](FixedVectorType *Ty) {
+      if (!Ty || !Ty->getElementType()->isIntegerTy(32))
+        return false;
+      unsigned NumElts = Ty->getNumElements();
+      return NumElts == 4 || NumElts == 6 || NumElts == 8;
+    };
+
+    auto *Src0Ty = dyn_cast<FixedVectorType>(Src0->getType());
+    auto *Src1Ty = dyn_cast<FixedVectorType>(Src1->getType());
+    Check(isValidSrcASrcBVector(Src0Ty),
+          "operand 0 must be 4, 6 or 8 element i32 vector", &Call, Src0);
+    Check(isValidSrcASrcBVector(Src1Ty),
+          "operand 1 must be 4, 6 or 8 element i32 vector", &Call, Src1);
+
+    // Permit excess registers for the format.
+    Check(Src0Ty->getNumElements() >= getFormatNumRegs(CBSZ),
+          "invalid vector type for format", &Call, Src0, Call.getArgOperand(3));
+    Check(Src1Ty->getNumElements() >= getFormatNumRegs(BLGP),
+          "invalid vector type for format", &Call, Src1, Call.getArgOperand(5));
     break;
   }
   case Intrinsic::nvvm_setmaxnreg_inc_sync_aligned_u32:
@@ -6455,8 +6561,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       const ColorVector &CV = BlockEHFuncletColors.find(CallBB)->second;
       assert(CV.size() > 0 && "Uncolored block");
       for (BasicBlock *ColorFirstBB : CV)
-        if (dyn_cast_or_null<FuncletPadInst>(ColorFirstBB->getFirstNonPHI()))
-          InEHFunclet = true;
+        if (auto It = ColorFirstBB->getFirstNonPHIIt();
+            It != ColorFirstBB->end())
+          if (dyn_cast_or_null<FuncletPadInst>(&*It))
+            InEHFunclet = true;
 
       // Check for funclet operand bundle
       bool HasToken = false;
@@ -7107,7 +7215,7 @@ void Verifier::verifyCompileUnits() {
   auto *CUs = M.getNamedMetadata("llvm.dbg.cu");
   SmallPtrSet<const Metadata *, 2> Listed;
   if (CUs)
-    Listed.insert(CUs->op_begin(), CUs->op_end());
+    Listed.insert_range(CUs->operands());
   for (const auto *CU : CUVisited)
     CheckDI(Listed.count(CU), "DICompileUnit not listed in llvm.dbg.cu", CU);
   CUVisited.clear();

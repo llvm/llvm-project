@@ -13,17 +13,24 @@
 
 namespace fir {
 
-void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm,
-                                          PassConstructor ctor) {
-  addNestedPassToOps<mlir::func::FuncOp, mlir::omp::DeclareReductionOp,
+template <typename F>
+void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm, F ctor) {
+  addNestedPassToOps<F, mlir::func::FuncOp, mlir::omp::DeclareReductionOp,
                      mlir::omp::PrivateClauseOp, fir::GlobalOp>(pm, ctor);
 }
 
+template <typename F>
+void addPassToGPUModuleOperations(mlir::PassManager &pm, F ctor) {
+  mlir::OpPassManager &nestPM = pm.nest<mlir::gpu::GPUModuleOp>();
+  nestPM.addNestedPass<mlir::func::FuncOp>(ctor());
+  nestPM.addNestedPass<mlir::gpu::GPUFuncOp>(ctor());
+}
+
+template <typename F>
 void addNestedPassToAllTopLevelOperationsConditionally(
-    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled,
-    PassConstructor ctor) {
+    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled, F ctor) {
   if (!disabled)
-    addNestedPassToAllTopLevelOperations(pm, ctor);
+    addNestedPassToAllTopLevelOperations<F>(pm, ctor);
 }
 
 void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm) {
@@ -34,12 +41,11 @@ void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm) {
 
 void addCfgConversionPass(mlir::PassManager &pm,
                           const MLIRToLLVMPassPipelineConfig &config) {
-  if (config.NSWOnLoopVarInc)
-    addNestedPassToAllTopLevelOperationsConditionally(
-        pm, disableCfgConversion, fir::createCFGConversionPassWithNSW);
-  else
-    addNestedPassToAllTopLevelOperationsConditionally(pm, disableCfgConversion,
-                                                      fir::createCFGConversion);
+  fir::CFGConversionOptions options;
+  if (!config.NSWOnLoopVarInc)
+    options.setNSW = false;
+  addNestedPassToAllTopLevelOperationsConditionally(
+      pm, disableCfgConversion, [&]() { return createCFGConversion(options); });
 }
 
 void addAVC(mlir::PassManager &pm, const llvm::OptimizationLevel &optLevel) {
@@ -160,7 +166,8 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
   pm.addPass(mlir::createCSEPass());
   fir::addAVC(pm, pc.OptLevel);
-  addNestedPassToAllTopLevelOperations(pm, fir::createCharacterConversion);
+  addNestedPassToAllTopLevelOperations<PassConstructor>(
+      pm, fir::createCharacterConversion);
   pm.addPass(mlir::createCanonicalizerPass(config));
   pm.addPass(fir::createSimplifyRegionLite());
   if (pc.OptLevel.isOptimizingForSpeed()) {
@@ -191,17 +198,26 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   pm.addPass(fir::createPolymorphicOpConversion());
   pm.addPass(fir::createAssumedRankOpConversion());
 
+  // Expand FIR operations that may use SCF dialect for their
+  // implementation. This is a mandatory pass.
+  pm.addPass(fir::createSimplifyFIROperations(
+      {/*preferInlineImplementation=*/pc.OptLevel.isOptimizingForSpeed()}));
+
   if (pc.AliasAnalysis && !disableFirAliasTags && !useOldAliasTags)
     pm.addPass(fir::createAddAliasTags());
 
-  addNestedPassToAllTopLevelOperations(pm, fir::createStackReclaim);
+  addNestedPassToAllTopLevelOperations<PassConstructor>(
+      pm, fir::createStackReclaim);
   // convert control flow to CFG form
   fir::addCfgConversionPass(pm, pc);
-  pm.addPass(mlir::createConvertSCFToCFPass());
+  pm.addPass(mlir::createSCFToControlFlowPass());
 
   pm.addPass(mlir::createCanonicalizerPass(config));
   pm.addPass(fir::createSimplifyRegionLite());
   pm.addPass(mlir::createCSEPass());
+
+  if (pc.OptLevel.isOptimizingForSpeed())
+    pm.addPass(fir::createSetRuntimeCallAttributes());
 
   // Last Optimizer EP Callback
   pc.invokeFIROptLastEPCallbacks(pm, pc.OptLevel);
@@ -216,19 +232,46 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm, bool enableOpenMP,
                                   llvm::OptimizationLevel optLevel) {
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
-    addNestedPassToAllTopLevelOperations(pm,
-                                         hlfir::createSimplifyHLFIRIntrinsics);
+    addNestedPassToAllTopLevelOperations<PassConstructor>(
+        pm, hlfir::createSimplifyHLFIRIntrinsics);
   }
-  addNestedPassToAllTopLevelOperations(pm, hlfir::createInlineElementals);
+  addNestedPassToAllTopLevelOperations<PassConstructor>(
+      pm, hlfir::createInlineElementals);
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
     pm.addPass(mlir::createCSEPass());
-    addNestedPassToAllTopLevelOperations(pm,
-                                         hlfir::createOptimizedBufferization);
+    // Run SimplifyHLFIRIntrinsics pass late after CSE,
+    // and allow introducing operations with new side effects.
+    addNestedPassToAllTopLevelOperations<PassConstructor>(pm, []() {
+      return hlfir::createSimplifyHLFIRIntrinsics(
+          {/*allowNewSideEffects=*/true});
+    });
+    addNestedPassToAllTopLevelOperations<PassConstructor>(
+        pm, hlfir::createOptimizedBufferization);
+    addNestedPassToAllTopLevelOperations<PassConstructor>(
+        pm, hlfir::createInlineHLFIRAssign);
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments());
   pm.addPass(hlfir::createLowerHLFIRIntrinsics());
-  pm.addPass(hlfir::createBufferizeHLFIR());
+
+  hlfir::BufferizeHLFIROptions bufferizeOptions;
+  // For opt-for-speed, avoid running any of the loops resulting
+  // from hlfir.elemental lowering, if the result is an empty array.
+  // This helps to avoid long running loops for elementals with
+  // shapes like (0, HUGE).
+  if (optLevel.isOptimizingForSpeed())
+    bufferizeOptions.optimizeEmptyElementals = true;
+  pm.addPass(hlfir::createBufferizeHLFIR(bufferizeOptions));
+  // Run hlfir.assign inlining again after BufferizeHLFIR,
+  // because the latter may introduce new hlfir.assign operations,
+  // e.g. for copying an array into a temporary due to
+  // hlfir.associate.
+  // TODO: we can remove the previous InlineHLFIRAssign, when
+  // FIR AliasAnalysis is good enough to say that a temporary
+  // array does not alias with any user object.
+  if (optLevel.isOptimizingForSpeed())
+    addNestedPassToAllTopLevelOperations<PassConstructor>(
+        pm, hlfir::createInlineHLFIRAssign);
   pm.addPass(hlfir::createConvertHLFIRtoFIR());
   if (enableOpenMP)
     pm.addPass(flangomp::createLowerWorkshare());
@@ -247,6 +290,7 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm, bool isTargetDevice) {
   pm.addPass(flangomp::createMapInfoFinalizationPass());
   pm.addPass(flangomp::createMapsForPrivatizedSymbolsPass());
   pm.addPass(flangomp::createMarkDeclareTargetPass());
+  pm.addPass(flangomp::createGenericLoopConversionPass());
   if (isTargetDevice)
     pm.addPass(flangomp::createFunctionFilteringPass());
 }
@@ -263,7 +307,10 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
                                          MLIRToLLVMPassPipelineConfig config,
                                          llvm::StringRef inputFilename) {
   fir::addBoxedProcedurePass(pm);
-  addNestedPassToAllTopLevelOperations(pm, fir::createAbstractResultOpt);
+  addNestedPassToAllTopLevelOperations<PassConstructor>(
+      pm, fir::createAbstractResultOpt);
+  addPassToGPUModuleOperations<PassConstructor>(pm,
+                                                fir::createAbstractResultOpt);
   fir::addCodeGenRewritePass(
       pm, (config.DebugInfo != llvm::codegenoptions::NoDebugInfo));
   fir::addExternalNameConversionPass(pm, config.Underscoring);
@@ -277,22 +324,17 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   // Add function attributes
   mlir::LLVM::framePointerKind::FramePointerKind framePointerKind;
 
-  if (config.FramePointerKind != llvm::FramePointerKind::None ||
-      config.NoInfsFPMath || config.NoNaNsFPMath || config.ApproxFuncFPMath ||
-      config.NoSignedZerosFPMath || config.UnsafeFPMath) {
-    if (config.FramePointerKind == llvm::FramePointerKind::NonLeaf)
-      framePointerKind =
-          mlir::LLVM::framePointerKind::FramePointerKind::NonLeaf;
-    else if (config.FramePointerKind == llvm::FramePointerKind::All)
-      framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::All;
-    else
-      framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::None;
+  if (config.FramePointerKind == llvm::FramePointerKind::NonLeaf)
+    framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::NonLeaf;
+  else if (config.FramePointerKind == llvm::FramePointerKind::All)
+    framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::All;
+  else
+    framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::None;
 
-    pm.addPass(fir::createFunctionAttr(
-        {framePointerKind, config.NoInfsFPMath, config.NoNaNsFPMath,
-         config.ApproxFuncFPMath, config.NoSignedZerosFPMath,
-         config.UnsafeFPMath}));
-  }
+  pm.addPass(fir::createFunctionAttr(
+      {framePointerKind, config.NoInfsFPMath, config.NoNaNsFPMath,
+       config.ApproxFuncFPMath, config.NoSignedZerosFPMath, config.UnsafeFPMath,
+       ""}));
 
   fir::addFIRToLLVMPass(pm, config);
 }

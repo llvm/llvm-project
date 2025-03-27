@@ -209,7 +209,7 @@ public:
   EVT getTypeForExtReturn(LLVMContext &Context, EVT VT,
                           ISD::NodeType ExtendKind) const override;
 
-  MVT getVectorIdxTy(const DataLayout &) const override;
+  unsigned getVectorIdxWidth(const DataLayout &) const override;
   bool isSelectSupported(SelectSupportKind) const override;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
@@ -402,6 +402,7 @@ enum NodeType : unsigned {
   TC_RETURN,
   TC_RETURN_GFX,
   TC_RETURN_CHAIN,
+  TC_RETURN_CHAIN_DVGPR,
   TRAP,
 
   // Masked control flow nodes.
@@ -546,8 +547,9 @@ enum NodeType : unsigned {
   LDS,
 
   DUMMY_CHAIN,
-  FIRST_MEM_OPCODE_NUMBER = ISD::FIRST_TARGET_MEMORY_OPCODE,
-  LOAD_D16_HI,
+
+  FIRST_MEMORY_OPCODE,
+  LOAD_D16_HI = FIRST_MEMORY_OPCODE,
   LOAD_D16_LO,
   LOAD_D16_HI_I8,
   LOAD_D16_HI_U8,
@@ -603,6 +605,7 @@ enum NodeType : unsigned {
   BUFFER_ATOMIC_FMIN,
   BUFFER_ATOMIC_FMAX,
   BUFFER_ATOMIC_COND_SUB_U32,
+  LAST_MEMORY_OPCODE = BUFFER_ATOMIC_COND_SUB_U32,
 };
 
 } // End namespace AMDGPUISD

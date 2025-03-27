@@ -149,7 +149,8 @@ static constexpr unsigned InvalidPID = -1;
 /// \param Dem denominator
 /// \returns a printable object to print (Num/Dem) using "%0.2f".
 static auto formatRatioOf(CostType Num, CostType Dem) {
-  return format("%0.2f", (static_cast<double>(Num) / Dem) * 100);
+  CostType DemOr1 = Dem ? Dem : 1;
+  return format("%0.2f", (static_cast<double>(Num) / DemOr1) * 100);
 }
 
 /// Checks whether a given function is non-copyable.
@@ -157,13 +158,12 @@ static auto formatRatioOf(CostType Num, CostType Dem) {
 /// Non-copyable functions cannot be cloned into multiple partitions, and only
 /// one copy of the function can be present across all partitions.
 ///
-/// External functions fall into this category. If we were to clone them, we
-/// would end up with multiple symbol definitions and a very unhappy linker.
+/// Kernel functions and external functions fall into this category. If we were
+/// to clone them, we would end up with multiple symbol definitions and a very
+/// unhappy linker.
 static bool isNonCopyable(const Function &F) {
-  assert(AMDGPU::isEntryFunctionCC(F.getCallingConv())
-             ? F.hasExternalLinkage()
-             : true && "Kernel w/o external linkage?");
-  return F.hasExternalLinkage() || !F.isDefinitionExact();
+  return F.hasExternalLinkage() || !F.isDefinitionExact() ||
+         AMDGPU::isEntryFunctionCC(F.getCallingConv());
 }
 
 /// If \p GV has local linkage, make it external + hidden.
@@ -569,7 +569,7 @@ void SplitGraph::buildGraph(CallGraph &CG) {
         LLVM_DEBUG(dbgs() << "    indirect call found\n");
         FnsWithIndirectCalls.push_back(&Fn);
       } else if (!KnownCallees.empty())
-        DirectCallees.insert(KnownCallees.begin(), KnownCallees.end());
+        DirectCallees.insert_range(KnownCallees);
     }
 
     Node &N = getNode(Cache, Fn);
@@ -1100,10 +1100,10 @@ void RecursiveSearchSplitting::pickPartition(unsigned Depth, unsigned Idx,
       if (Entry.CostExcludingGraphEntryPoints > LargeClusterThreshold) {
         // Check if the amount of code in common makes it worth it.
         assert(SimilarDepsCost && Entry.CostExcludingGraphEntryPoints);
-        const double Ratio =
-            SimilarDepsCost / Entry.CostExcludingGraphEntryPoints;
+        const double Ratio = static_cast<double>(SimilarDepsCost) /
+                             Entry.CostExcludingGraphEntryPoints;
         assert(Ratio >= 0.0 && Ratio <= 1.0);
-        if (LargeFnOverlapForMerge > Ratio) {
+        if (Ratio > LargeFnOverlapForMerge) {
           // For debug, just print "L", so we'll see "L3=P3" for instance, which
           // will mean we reached max depth and chose P3 based on this
           // heuristic.
@@ -1545,32 +1545,27 @@ PreservedAnalyses AMDGPUSplitModulePass::run(Module &M,
                       << "'\n");
 
     while (true) {
-      llvm::LockFileManager Locked(LockFilePath.str());
-      switch (Locked) {
-      case LockFileManager::LFS_Error:
+      llvm::LockFileManager Lock(LockFilePath.str());
+      bool Owned;
+      if (Error Err = Lock.tryLock().moveInto(Owned)) {
+        consumeError(std::move(Err));
         LLVM_DEBUG(
             dbgs() << "[amdgpu-split-module] unable to acquire lockfile, debug "
                       "output may be mangled by other processes\n");
-        Locked.unsafeRemoveLockFile();
-        break;
-      case LockFileManager::LFS_Owned:
-        break;
-      case LockFileManager::LFS_Shared: {
-        switch (Locked.waitForUnlock()) {
-        case LockFileManager::Res_Success:
+      } else if (!Owned) {
+        switch (Lock.waitForUnlockFor(std::chrono::seconds(90))) {
+        case WaitForUnlockResult::Success:
           break;
-        case LockFileManager::Res_OwnerDied:
+        case WaitForUnlockResult::OwnerDied:
           continue; // try again to get the lock.
-        case LockFileManager::Res_Timeout:
+        case WaitForUnlockResult::Timeout:
           LLVM_DEBUG(
               dbgs()
               << "[amdgpu-split-module] unable to acquire lockfile, debug "
                  "output may be mangled by other processes\n");
-          Locked.unsafeRemoveLockFile();
+          Lock.unsafeMaybeUnlock();
           break; // give up
         }
-        break;
-      }
       }
 
       splitAMDGPUModule(TTIGetter, M, N, ModuleCallback);

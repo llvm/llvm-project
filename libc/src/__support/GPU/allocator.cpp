@@ -17,7 +17,7 @@ namespace {
 
 void *rpc_allocate(uint64_t size) {
   void *ptr = nullptr;
-  rpc::Client::Port port = rpc::client.open<RPC_MALLOC>();
+  rpc::Client::Port port = rpc::client.open<LIBC_MALLOC>();
   port.send_and_recv(
       [=](rpc::Buffer *buffer, uint32_t) { buffer->data[0] = size; },
       [&](rpc::Buffer *buffer, uint32_t) {
@@ -28,7 +28,7 @@ void *rpc_allocate(uint64_t size) {
 }
 
 void rpc_free(void *ptr) {
-  rpc::Client::Port port = rpc::client.open<RPC_FREE>();
+  rpc::Client::Port port = rpc::client.open<LIBC_FREE>();
   port.send([=](rpc::Buffer *buffer, uint32_t) {
     buffer->data[0] = reinterpret_cast<uintptr_t>(ptr);
   });

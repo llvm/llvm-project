@@ -28,6 +28,10 @@ void RTDEF(CUFLaunchClusterKernel)(const void *kernelName, intptr_t clusterX,
     intptr_t gridZ, intptr_t blockX, intptr_t blockY, intptr_t blockZ,
     int32_t smem, void **params, void **extra);
 
+void RTDEF(CUFLaunchCooperativeKernel)(const void *kernelName, intptr_t gridX,
+    intptr_t gridY, intptr_t gridZ, intptr_t blockX, intptr_t blockY,
+    intptr_t blockZ, int32_t smem, void **params, void **extra);
+
 } // extern "C"
 
 #endif // FORTRAN_RUNTIME_CUDA_KERNEL_H_

@@ -619,6 +619,44 @@ static Attr *handleHLSLLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
   return ::new (S.Context) HLSLLoopHintAttr(S.Context, A, UnrollFactor);
 }
 
+static Attr *handleHLSLControlFlowHint(Sema &S, Stmt *St, const ParsedAttr &A,
+                                       SourceRange Range) {
+
+  return ::new (S.Context) HLSLControlFlowHintAttr(S.Context, A);
+}
+
+static Attr *handleAtomicAttr(Sema &S, Stmt *St, const ParsedAttr &AL,
+                              SourceRange Range) {
+  if (!AL.checkAtLeastNumArgs(S, 1))
+    return nullptr;
+
+  SmallVector<AtomicAttr::ConsumedOption, 6> Options;
+  for (unsigned ArgIndex = 0; ArgIndex < AL.getNumArgs(); ++ArgIndex) {
+    AtomicAttr::ConsumedOption Option;
+    StringRef OptionString;
+    SourceLocation Loc;
+
+    if (!AL.isArgIdent(ArgIndex)) {
+      S.Diag(AL.getArgAsExpr(ArgIndex)->getBeginLoc(),
+             diag::err_attribute_argument_type)
+          << AL << AANT_ArgumentIdentifier;
+      return nullptr;
+    }
+
+    IdentifierLoc *Ident = AL.getArgAsIdent(ArgIndex);
+    OptionString = Ident->Ident->getName();
+    Loc = Ident->Loc;
+    if (!AtomicAttr::ConvertStrToConsumedOption(OptionString, Option)) {
+      S.Diag(Loc, diag::err_attribute_invalid_atomic_argument) << OptionString;
+      return nullptr;
+    }
+    Options.push_back(Option);
+  }
+
+  return ::new (S.Context)
+      AtomicAttr(S.Context, AL, Options.data(), Options.size());
+}
+
 static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
                                   SourceRange Range) {
   if (A.isInvalid() || A.getKind() == ParsedAttr::IgnoredAttribute)
@@ -655,6 +693,8 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleLoopHintAttr(S, St, A, Range);
   case ParsedAttr::AT_HLSLLoopHint:
     return handleHLSLLoopHintAttr(S, St, A, Range);
+  case ParsedAttr::AT_HLSLControlFlowHint:
+    return handleHLSLControlFlowHint(S, St, A, Range);
   case ParsedAttr::AT_OpenCLUnrollHint:
     return handleOpenCLUnrollHint(S, St, A, Range);
   case ParsedAttr::AT_Suppress:
@@ -677,6 +717,8 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleNoConvergentAttr(S, St, A, Range);
   case ParsedAttr::AT_Annotate:
     return S.CreateAnnotationAttr(A);
+  case ParsedAttr::AT_Atomic:
+    return handleAtomicAttr(S, St, A, Range);
   default:
     if (Attr *AT = nullptr; A.getInfo().handleStmtAttribute(S, St, A, AT) !=
                             ParsedAttrInfo::NotHandled) {

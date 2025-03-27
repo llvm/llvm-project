@@ -1,5 +1,4 @@
-//===------ ELFNixPlatform.cpp - Utilities for executing ELFNix in Orc
-//-----===//
+//===----- ELFNixPlatform.cpp - Utilities for executing ELFNix in Orc -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
+#include "llvm/ExecutionEngine/JITLink/loongarch.h"
 #include "llvm/ExecutionEngine/JITLink/ppc64.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
@@ -40,34 +40,10 @@ getArgDataBufferType(const ArgTs &...Args) {
 
 std::unique_ptr<jitlink::LinkGraph> createPlatformGraph(ELFNixPlatform &MOP,
                                                         std::string Name) {
-  unsigned PointerSize;
-  llvm::endianness Endianness;
-  const auto &TT = MOP.getExecutionSession().getTargetTriple();
-
-  switch (TT.getArch()) {
-  case Triple::x86_64:
-    PointerSize = 8;
-    Endianness = llvm::endianness::little;
-    break;
-  case Triple::aarch64:
-    PointerSize = 8;
-    Endianness = llvm::endianness::little;
-    break;
-  case Triple::ppc64:
-    PointerSize = 8;
-    Endianness = llvm::endianness::big;
-    break;
-  case Triple::ppc64le:
-    PointerSize = 8;
-    Endianness = llvm::endianness::little;
-    break;
-  default:
-    llvm_unreachable("Unrecognized architecture");
-  }
-
-  return std::make_unique<jitlink::LinkGraph>(std::move(Name), TT, PointerSize,
-                                              Endianness,
-                                              jitlink::getGenericEdgeKindName);
+  auto &ES = MOP.getExecutionSession();
+  return std::make_unique<jitlink::LinkGraph>(
+      std::move(Name), ES.getSymbolStringPool(), ES.getTargetTriple(),
+      SubtargetFeatures(), jitlink::getGenericEdgeKindName);
 }
 
 // Creates a Bootstrap-Complete LinkGraph to run deferred actions.
@@ -156,31 +132,26 @@ public:
   StringRef getName() const override { return "DSOHandleMU"; }
 
   void materialize(std::unique_ptr<MaterializationResponsibility> R) override {
-    unsigned PointerSize;
-    llvm::endianness Endianness;
-    jitlink::Edge::Kind EdgeKind;
-    const auto &TT = ENP.getExecutionSession().getTargetTriple();
 
-    switch (TT.getArch()) {
+    auto &ES = ENP.getExecutionSession();
+
+    jitlink::Edge::Kind EdgeKind;
+
+    switch (ES.getTargetTriple().getArch()) {
     case Triple::x86_64:
-      PointerSize = 8;
-      Endianness = llvm::endianness::little;
       EdgeKind = jitlink::x86_64::Pointer64;
       break;
     case Triple::aarch64:
-      PointerSize = 8;
-      Endianness = llvm::endianness::little;
       EdgeKind = jitlink::aarch64::Pointer64;
       break;
     case Triple::ppc64:
-      PointerSize = 8;
-      Endianness = llvm::endianness::big;
       EdgeKind = jitlink::ppc64::Pointer64;
       break;
     case Triple::ppc64le:
-      PointerSize = 8;
-      Endianness = llvm::endianness::little;
       EdgeKind = jitlink::ppc64::Pointer64;
+      break;
+    case Triple::loongarch64:
+      EdgeKind = jitlink::loongarch::Pointer64;
       break;
     default:
       llvm_unreachable("Unrecognized architecture");
@@ -188,13 +159,13 @@ public:
 
     // void *__dso_handle = &__dso_handle;
     auto G = std::make_unique<jitlink::LinkGraph>(
-        "<DSOHandleMU>", TT, PointerSize, Endianness,
-        jitlink::getGenericEdgeKindName);
+        "<DSOHandleMU>", ES.getSymbolStringPool(), ES.getTargetTriple(),
+        SubtargetFeatures(), jitlink::getGenericEdgeKindName);
     auto &DSOHandleSection =
         G->createSection(".data.__dso_handle", MemProt::Read);
     auto &DSOHandleBlock = G->createContentBlock(
-        DSOHandleSection, getDSOHandleContent(PointerSize), orc::ExecutorAddr(),
-        8, 0);
+        DSOHandleSection, getDSOHandleContent(G->getPointerSize()),
+        orc::ExecutorAddr(), 8, 0);
     auto &DSOHandleSymbol = G->addDefinedSymbol(
         DSOHandleBlock, 0, *R->getInitializerSymbol(), DSOHandleBlock.getSize(),
         jitlink::Linkage::Strong, jitlink::Scope::Default, false, true);
@@ -349,6 +320,7 @@ ELFNixPlatform::standardPlatformAliases(ExecutionSession &ES,
   SymbolAliasMap Aliases;
   addAliases(ES, Aliases, requiredCXXAliases());
   addAliases(ES, Aliases, standardRuntimeUtilityAliases());
+  addAliases(ES, Aliases, standardLazyCompilationAliases());
   return Aliases;
 }
 
@@ -377,6 +349,16 @@ ELFNixPlatform::standardRuntimeUtilityAliases() {
       StandardRuntimeUtilityAliases);
 }
 
+ArrayRef<std::pair<const char *, const char *>>
+ELFNixPlatform::standardLazyCompilationAliases() {
+  static const std::pair<const char *, const char *>
+      StandardLazyCompilationAliases[] = {
+          {"__orc_rt_reenter", "__orc_rt_sysv_reenter"}};
+
+  return ArrayRef<std::pair<const char *, const char *>>(
+      StandardLazyCompilationAliases);
+}
+
 bool ELFNixPlatform::supportedTarget(const Triple &TT) {
   switch (TT.getArch()) {
   case Triple::x86_64:
@@ -384,6 +366,7 @@ bool ELFNixPlatform::supportedTarget(const Triple &TT) {
   // FIXME: jitlink for ppc64 hasn't been well tested, leave it unsupported
   // right now.
   case Triple::ppc64le:
+  case Triple::loongarch64:
     return true;
   default:
     return false;
@@ -396,7 +379,7 @@ ELFNixPlatform::ELFNixPlatform(
     : ES(ObjLinkingLayer.getExecutionSession()), PlatformJD(PlatformJD),
       ObjLinkingLayer(ObjLinkingLayer),
       DSOHandleSymbol(ES.intern("__dso_handle")) {
-  ErrorAsOutParameter _(&Err);
+  ErrorAsOutParameter _(Err);
   ObjLinkingLayer.addPlugin(std::make_unique<ELFNixPlatformPlugin>(*this));
 
   PlatformJD.addGenerator(std::move(OrcRuntimeGenerator));
@@ -486,11 +469,12 @@ void ELFNixPlatform::pushInitializersLoop(
       Worklist.pop_back();
 
       // If we've already visited this JITDylib on this iteration then continue.
-      if (JDDepMap.count(DepJD))
+      auto [It, Inserted] = JDDepMap.try_emplace(DepJD);
+      if (!Inserted)
         continue;
 
       // Add dep info.
-      auto &DM = JDDepMap[DepJD];
+      auto &DM = It->second;
       DepJD->withLinkOrderDo([&](const JITDylibSearchOrder &O) {
         for (auto &KV : O) {
           if (KV.first == DepJD)
@@ -663,14 +647,14 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::
 
   for (auto *Sym : G.defined_symbols()) {
     for (auto &RTSym : RuntimeSymbols) {
-      if (Sym->hasName() && Sym->getName() == RTSym.first) {
+      if (Sym->hasName() && *Sym->getName() == RTSym.first) {
         if (*RTSym.second)
           return make_error<StringError>(
               "Duplicate " + RTSym.first +
                   " detected during ELFNixPlatform bootstrap",
               inconvertibleErrorCode());
 
-        if (Sym->getName() == *MP.DSOHandleSymbol)
+        if (*Sym->getName() == *MP.DSOHandleSymbol)
           RegisterELFNixHeader = true;
 
         *RTSym.second = Sym->getAddress();
@@ -798,7 +782,7 @@ void ELFNixPlatform::ELFNixPlatformPlugin::addDSOHandleSupportPasses(
   Config.PostAllocationPasses.push_back([this, &JD = MR.getTargetJITDylib()](
                                             jitlink::LinkGraph &G) -> Error {
     auto I = llvm::find_if(G.defined_symbols(), [this](jitlink::Symbol *Sym) {
-      return Sym->getName() == *MP.DSOHandleSymbol;
+      return Sym->getName() == MP.DSOHandleSymbol;
     });
     assert(I != G.defined_symbols().end() && "Missing DSO handle symbol");
     {
@@ -894,9 +878,9 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::preserveInitSections(
       // to the first block.
       if (!InitSym) {
         auto &B = **InitSection.blocks().begin();
-        InitSym = &G.addDefinedSymbol(B, 0, *InitSymName, B.getSize(),
-                                      jitlink::Linkage::Strong,
-                                      jitlink::Scope::Default, false, true);
+        InitSym = &G.addDefinedSymbol(
+            B, 0, *InitSymName, B.getSize(), jitlink::Linkage::Strong,
+            jitlink::Scope::SideEffectsOnly, false, true);
       }
 
       // Add keep-alive edges to anonymous symbols in all other init blocks.
@@ -997,12 +981,17 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::registerInitSections(
 
 Error ELFNixPlatform::ELFNixPlatformPlugin::fixTLVSectionsAndEdges(
     jitlink::LinkGraph &G, JITDylib &JD) {
-
+  auto TLSGetAddrSymbolName = G.intern("__tls_get_addr");
+  auto TLSDescResolveSymbolName = G.intern("__tlsdesc_resolver");
   for (auto *Sym : G.external_symbols()) {
-    if (Sym->getName() == "__tls_get_addr") {
-      Sym->setName("___orc_rt_elfnix_tls_get_addr");
-    } else if (Sym->getName() == "__tlsdesc_resolver") {
-      Sym->setName("___orc_rt_elfnix_tlsdesc_resolver");
+    if (Sym->getName() == TLSGetAddrSymbolName) {
+      auto TLSGetAddr =
+          MP.getExecutionSession().intern("___orc_rt_elfnix_tls_get_addr");
+      Sym->setName(std::move(TLSGetAddr));
+    } else if (Sym->getName() == TLSDescResolveSymbolName) {
+      auto TLSGetAddr =
+          MP.getExecutionSession().intern("___orc_rt_elfnix_tlsdesc_resolver");
+      Sym->setName(std::move(TLSGetAddr));
     }
   }
 

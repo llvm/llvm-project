@@ -66,6 +66,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
@@ -76,6 +77,7 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -892,8 +894,12 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (!IsStructurallyEquivalent(Context, MemPtr1->getPointeeType(),
                                   MemPtr2->getPointeeType()))
       return false;
-    if (!IsStructurallyEquivalent(Context, QualType(MemPtr1->getClass(), 0),
-                                  QualType(MemPtr2->getClass(), 0)))
+    if (!IsStructurallyEquivalent(Context, MemPtr1->getQualifier(),
+                                  MemPtr2->getQualifier()))
+      return false;
+    if (!IsStructurallyEquivalent(Context,
+                                  MemPtr1->getMostRecentCXXRecordDecl(),
+                                  MemPtr2->getMostRecentCXXRecordDecl()))
       return false;
     break;
   }

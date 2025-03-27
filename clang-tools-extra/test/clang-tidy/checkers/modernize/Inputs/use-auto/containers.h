@@ -214,8 +214,8 @@ class map : public bidirectional_iterable<iterator<pair<key, value>>> {
 public:
   map() {}
 
-  iterator<pair<key, value>> find(const key &) {}
-  const_iterator<iterator<pair<key, value>>> find(const key &) const {}
+  iterator<pair<key, value>> find(const key &);
+  const_iterator<iterator<pair<key, value>>> find(const key &) const;
 };
 
 template <typename key, typename value>

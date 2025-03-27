@@ -21,6 +21,7 @@
 #include "asan_poisoning.h"
 #include "asan_report.h"
 #include "asan_stack.h"
+#include "asan_suppressions.h"
 #include "asan_thread.h"
 #include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_allocator_checks.h"
@@ -732,7 +733,8 @@ struct Allocator {
     if (!AtomicallySetQuarantineFlagIfAllocated(m, ptr, stack)) return;
 
     if (m->alloc_type != alloc_type) {
-      if (atomic_load(&alloc_dealloc_mismatch, memory_order_acquire)) {
+      if (atomic_load(&alloc_dealloc_mismatch, memory_order_acquire) &&
+          !IsAllocDeallocMismatchSuppressed(stack)) {
         ReportAllocTypeMismatch((uptr)ptr, stack, (AllocType)m->alloc_type,
                                 (AllocType)alloc_type);
       }

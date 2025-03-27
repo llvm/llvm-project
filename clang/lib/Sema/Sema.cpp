@@ -61,6 +61,7 @@
 #include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/SemaRISCV.h"
+#include "clang/Sema/SemaSPIRV.h"
 #include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/SemaSystemZ.h"
@@ -239,6 +240,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       PPCPtr(std::make_unique<SemaPPC>(*this)),
       PseudoObjectPtr(std::make_unique<SemaPseudoObject>(*this)),
       RISCVPtr(std::make_unique<SemaRISCV>(*this)),
+      SPIRVPtr(std::make_unique<SemaSPIRV>(*this)),
       SYCLPtr(std::make_unique<SemaSYCL>(*this)),
       SwiftPtr(std::make_unique<SemaSwift>(*this)),
       SystemZPtr(std::make_unique<SemaSystemZ>(*this)),
@@ -476,8 +478,8 @@ void Sema::Initialize() {
   if (Context.getTargetInfo().hasAArch64SVETypes() ||
       (Context.getAuxTargetInfo() &&
        Context.getAuxTargetInfo()->hasAArch64SVETypes())) {
-#define SVE_TYPE(Name, Id, SingletonId) \
-    addImplicitTypedef(Name, Context.SingletonId);
+#define SVE_TYPE(Name, Id, SingletonId)                                        \
+  addImplicitTypedef(#Name, Context.SingletonId);
 #include "clang/Basic/AArch64SVEACLETypes.def"
   }
 
@@ -707,6 +709,7 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
     case CK_ToVoid:
     case CK_NonAtomicToAtomic:
     case CK_HLSLArrayRValue:
+    case CK_HLSLAggregateSplatCast:
       break;
     }
   }
@@ -722,6 +725,15 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
 
   QualType ExprTy = Context.getCanonicalType(E->getType());
   QualType TypeTy = Context.getCanonicalType(Ty);
+
+  // This cast is used in place of a regular LValue to RValue cast for
+  // HLSL Array Parameter Types. It needs to be emitted even if
+  // ExprTy == TypeTy, except if E is an HLSLOutArgExpr
+  // Emitting a cast in that case will prevent HLSLOutArgExpr from
+  // being handled properly in EmitCallArg
+  if (Kind == CK_HLSLArrayRValue && !isa<HLSLOutArgExpr>(E))
+    return ImplicitCastExpr::Create(Context, Ty, Kind, E, BasePath, VK,
+                                    CurFPFeatureOverrides());
 
   if (ExprTy == TypeTy)
     return E;
@@ -1093,9 +1105,13 @@ void Sema::ActOnStartOfTranslationUnit() {
 }
 
 void Sema::ActOnEndOfTranslationUnitFragment(TUFragmentKind Kind) {
-  // No explicit actions are required at the end of the global module fragment.
-  if (Kind == TUFragmentKind::Global)
+  if (Kind == TUFragmentKind::Global) {
+    // Perform Pending Instantiations at the end of global module fragment so
+    // that the module ownership of TU-level decls won't get messed.
+    llvm::TimeTraceScope TimeScope("PerformPendingInstantiations");
+    PerformPendingInstantiations();
     return;
+  }
 
   // Transfer late parsed template instantiations over to the pending template
   // instantiation list. During normal compilation, the late template parser
@@ -1405,8 +1421,7 @@ void Sema::ActOnEndOfTranslationUnit() {
   }
 
   if (LangOpts.HLSL)
-    HLSL().DiagnoseAvailabilityViolations(
-        getASTContext().getTranslationUnitDecl());
+    HLSL().ActOnEndOfTranslationUnit(getASTContext().getTranslationUnitDecl());
 
   // If there were errors, disable 'unused' warnings since they will mostly be
   // noise. Don't warn for a use from a module: either we should warn on all
@@ -1643,11 +1658,20 @@ void Sema::EmitDiagnostic(unsigned DiagID, const DiagnosticBuilder &DB) {
     }
 
     case DiagnosticIDs::SFINAE_Suppress:
+      if (DiagnosticsEngine::Level Level = getDiagnostics().getDiagnosticLevel(
+              DiagInfo.getID(), DiagInfo.getLocation());
+          Level == DiagnosticsEngine::Ignored)
+        return;
       // Make a copy of this suppressed diagnostic and store it with the
       // template-deduction information;
       if (*Info) {
-        (*Info)->addSuppressedDiagnostic(DiagInfo.getLocation(),
-                       PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
+        (*Info)->addSuppressedDiagnostic(
+            DiagInfo.getLocation(),
+            PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
+        if (!Diags.getDiagnosticIDs()->isNote(DiagID))
+          PrintContextStack([Info](SourceLocation Loc, PartialDiagnostic PD) {
+            (*Info)->addSuppressedDiagnostic(Loc, std::move(PD));
+          });
       }
 
       // Suppress this diagnostic.
@@ -1668,7 +1692,7 @@ void Sema::EmitDiagnostic(unsigned DiagID, const DiagnosticBuilder &DB) {
   // that is different from the last template instantiation where
   // we emitted an error, print a template instantiation
   // backtrace.
-  if (!DiagnosticIDs::isBuiltinNote(DiagID))
+  if (!Diags.getDiagnosticIDs()->isNote(DiagID))
     PrintContextStack();
 }
 
@@ -1682,7 +1706,8 @@ bool Sema::hasUncompilableErrorOccurred() const {
   if (Loc == DeviceDeferredDiags.end())
     return false;
   for (auto PDAt : Loc->second) {
-    if (DiagnosticIDs::isDefaultMappingAsError(PDAt.second.getDiagID()))
+    if (Diags.getDiagnosticIDs()->isDefaultMappingAsError(
+            PDAt.second.getDiagID()))
       return true;
   }
   return false;
@@ -1777,6 +1802,47 @@ public:
       Inherited::visitUsedDecl(Loc, D);
   }
 
+  // Visitor member and parent dtors called by this dtor.
+  void VisitCalledDestructors(CXXDestructorDecl *DD) {
+    const CXXRecordDecl *RD = DD->getParent();
+
+    // Visit the dtors of all members
+    for (const FieldDecl *FD : RD->fields()) {
+      QualType FT = FD->getType();
+      if (const auto *RT = FT->getAs<RecordType>())
+        if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
+          if (ClassDecl->hasDefinition())
+            if (CXXDestructorDecl *MemberDtor = ClassDecl->getDestructor())
+              asImpl().visitUsedDecl(MemberDtor->getLocation(), MemberDtor);
+    }
+
+    // Also visit base class dtors
+    for (const auto &Base : RD->bases()) {
+      QualType BaseType = Base.getType();
+      if (const auto *RT = BaseType->getAs<RecordType>())
+        if (const auto *BaseDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
+          if (BaseDecl->hasDefinition())
+            if (CXXDestructorDecl *BaseDtor = BaseDecl->getDestructor())
+              asImpl().visitUsedDecl(BaseDtor->getLocation(), BaseDtor);
+    }
+  }
+
+  void VisitDeclStmt(DeclStmt *DS) {
+    // Visit dtors called by variables that need destruction
+    for (auto *D : DS->decls())
+      if (auto *VD = dyn_cast<VarDecl>(D))
+        if (VD->isThisDeclarationADefinition() &&
+            VD->needsDestruction(S.Context)) {
+          QualType VT = VD->getType();
+          if (const auto *RT = VT->getAs<RecordType>())
+            if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
+              if (ClassDecl->hasDefinition())
+                if (CXXDestructorDecl *Dtor = ClassDecl->getDestructor())
+                  asImpl().visitUsedDecl(Dtor->getLocation(), Dtor);
+        }
+
+    Inherited::VisitDeclStmt(DS);
+  }
   void checkVar(VarDecl *VD) {
     assert(VD->isFileVarDecl() &&
            "Should only check file-scope variables");
@@ -1818,6 +1884,8 @@ public:
     if (auto *S = FD->getBody()) {
       this->Visit(S);
     }
+    if (CXXDestructorDecl *Dtor = dyn_cast<CXXDestructorDecl>(FD))
+      asImpl().VisitCalledDestructors(Dtor);
     UsePath.pop_back();
     InUsePath.erase(FD);
   }

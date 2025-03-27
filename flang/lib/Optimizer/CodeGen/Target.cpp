@@ -80,17 +80,17 @@ struct GenericTarget : public CodeGenSpecifics {
                                 mlir::TypeRange{ptrTy, idxTy});
   }
 
-  Marshalling boxcharArgumentType(mlir::Type eleTy, bool sret) const override {
+  Marshalling boxcharArgumentType(mlir::Type eleTy) const override {
     CodeGenSpecifics::Marshalling marshal;
     auto idxTy = mlir::IntegerType::get(eleTy.getContext(), S::defaultWidth);
     auto ptrTy = fir::ReferenceType::get(eleTy);
     marshal.emplace_back(ptrTy, AT{});
-    // Return value arguments are grouped as a pair. Others are passed in a
-    // split format with all pointers first (in the declared position) and all
-    // LEN arguments appended after all of the dummy arguments.
+    // Characters are passed in a split format with all pointers first (in the
+    // declared position) and all LEN arguments appended after all of the dummy
+    // arguments.
     // NB: Other conventions/ABIs can/should be supported via options.
     marshal.emplace_back(idxTy, AT{/*alignment=*/0, /*byval=*/false,
-                                   /*sret=*/sret, /*append=*/!sret});
+                                   /*sret=*/false, /*append=*/true});
     return marshal;
   }
 
@@ -572,12 +572,12 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
       // select an fp type of the right size, and it makes things simpler
       // here.
       if (partByteSize > 8)
-        return mlir::FloatType::getF128(context);
+        return mlir::Float128Type::get(context);
       if (partByteSize > 4)
-        return mlir::FloatType::getF64(context);
+        return mlir::Float64Type::get(context);
       if (partByteSize > 2)
-        return mlir::FloatType::getF32(context);
-      return mlir::FloatType::getF16(context);
+        return mlir::Float32Type::get(context);
+      return mlir::Float16Type::get(context);
     }
     assert(partByteSize <= 8 &&
            "expect integer part of aggregate argument to fit into eight bytes");
@@ -788,6 +788,8 @@ struct TargetX86_64Win : public GenericTarget<TargetX86_64Win> {
 //===----------------------------------------------------------------------===//
 
 namespace {
+// AArch64 procedure call standard:
+// https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#parameter-passing
 struct TargetAArch64 : public GenericTarget<TargetAArch64> {
   using GenericTarget::GenericTarget;
 
@@ -825,6 +827,196 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
     }
     return marshal;
   }
+
+  // Flatten a RecordType::TypeList containing more record types or array type
+  static std::optional<std::vector<mlir::Type>>
+  flattenTypeList(const RecordType::TypeList &types) {
+    std::vector<mlir::Type> flatTypes;
+    // The flat list will be at least the same size as the non-flat list.
+    flatTypes.reserve(types.size());
+    for (auto [c, type] : types) {
+      // Flatten record type
+      if (auto recTy = mlir::dyn_cast<RecordType>(type)) {
+        auto subTypeList = flattenTypeList(recTy.getTypeList());
+        if (!subTypeList)
+          return std::nullopt;
+        llvm::copy(*subTypeList, std::back_inserter(flatTypes));
+        continue;
+      }
+
+      // Flatten array type
+      if (auto seqTy = mlir::dyn_cast<SequenceType>(type)) {
+        if (seqTy.hasDynamicExtents())
+          return std::nullopt;
+        std::size_t n = seqTy.getConstantArraySize();
+        auto eleTy = seqTy.getElementType();
+        // Flatten array of record types
+        if (auto recTy = mlir::dyn_cast<RecordType>(eleTy)) {
+          auto subTypeList = flattenTypeList(recTy.getTypeList());
+          if (!subTypeList)
+            return std::nullopt;
+          for (std::size_t i = 0; i < n; ++i)
+            llvm::copy(*subTypeList, std::back_inserter(flatTypes));
+        } else {
+          std::fill_n(std::back_inserter(flatTypes),
+                      seqTy.getConstantArraySize(), eleTy);
+        }
+        continue;
+      }
+
+      // Other types are already flat
+      flatTypes.push_back(type);
+    }
+    return flatTypes;
+  }
+
+  // Determine if the type is a Homogenous Floating-point Aggregate (HFA). An
+  // HFA is a record type with up to 4 floating-point members of the same type.
+  static std::optional<int> usedRegsForHFA(fir::RecordType ty) {
+    RecordType::TypeList types = ty.getTypeList();
+    if (types.empty() || types.size() > 4)
+      return std::nullopt;
+
+    std::optional<std::vector<mlir::Type>> flatTypes = flattenTypeList(types);
+    if (!flatTypes || flatTypes->size() > 4) {
+      return std::nullopt;
+    }
+
+    if (!isa_real(flatTypes->front())) {
+      return std::nullopt;
+    }
+
+    return llvm::all_equal(*flatTypes) ? std::optional<int>{flatTypes->size()}
+                                       : std::nullopt;
+  }
+
+  struct NRegs {
+    int n{0};
+    bool isSimd{false};
+  };
+
+  NRegs usedRegsForRecordType(mlir::Location loc, fir::RecordType type) const {
+    if (std::optional<int> size = usedRegsForHFA(type))
+      return {*size, true};
+
+    auto [size, align] = fir::getTypeSizeAndAlignmentOrCrash(
+        loc, type, getDataLayout(), kindMap);
+
+    if (size <= 16)
+      return {static_cast<int>((size + 7) / 8), false};
+
+    // Pass on the stack, i.e. no registers used
+    return {};
+  }
+
+  NRegs usedRegsForType(mlir::Location loc, mlir::Type type) const {
+    return llvm::TypeSwitch<mlir::Type, NRegs>(type)
+        .Case<mlir::IntegerType>([&](auto intTy) {
+          return intTy.getWidth() == 128 ? NRegs{2, false} : NRegs{1, false};
+        })
+        .Case<mlir::FloatType>([&](auto) { return NRegs{1, true}; })
+        .Case<mlir::ComplexType>([&](auto) { return NRegs{2, true}; })
+        .Case<fir::LogicalType>([&](auto) { return NRegs{1, false}; })
+        .Case<fir::CharacterType>([&](auto) { return NRegs{1, false}; })
+        .Case<fir::SequenceType>([&](auto ty) {
+          assert(ty.getShape().size() == 1 &&
+                 "invalid array dimensions in BIND(C)");
+          NRegs nregs = usedRegsForType(loc, ty.getEleTy());
+          nregs.n *= ty.getShape()[0];
+          return nregs;
+        })
+        .Case<fir::RecordType>(
+            [&](auto ty) { return usedRegsForRecordType(loc, ty); })
+        .Case<fir::VectorType>([&](auto) {
+          TODO(loc, "passing vector argument to C by value is not supported");
+          return NRegs{};
+        })
+        .Default([&](auto ty) {
+          if (fir::conformsWithPassByRef(ty))
+            return NRegs{1, false}; // Pointers take 1 integer register
+          TODO(loc, "unsupported component type for BIND(C), VALUE derived "
+                    "type argument");
+          return NRegs{};
+        });
+  }
+
+  bool hasEnoughRegisters(mlir::Location loc, fir::RecordType type,
+                          const Marshalling &previousArguments) const {
+    int availIntRegisters = 8;
+    int availSIMDRegisters = 8;
+
+    // Check previous arguments to see how many registers are used already
+    for (auto [type, attr] : previousArguments) {
+      if (availIntRegisters <= 0 || availSIMDRegisters <= 0)
+        break;
+
+      if (attr.isByVal())
+        continue; // Previous argument passed on the stack
+
+      NRegs nregs = usedRegsForType(loc, type);
+      if (nregs.isSimd)
+        availSIMDRegisters -= nregs.n;
+      else
+        availIntRegisters -= nregs.n;
+    }
+
+    NRegs nregs = usedRegsForRecordType(loc, type);
+
+    if (nregs.isSimd)
+      return nregs.n <= availSIMDRegisters;
+
+    return nregs.n <= availIntRegisters;
+  }
+
+  CodeGenSpecifics::Marshalling
+  passOnTheStack(mlir::Location loc, mlir::Type ty, bool isResult) const {
+    CodeGenSpecifics::Marshalling marshal;
+    auto sizeAndAlign =
+        fir::getTypeSizeAndAlignmentOrCrash(loc, ty, getDataLayout(), kindMap);
+    // The stack is always 8 byte aligned
+    unsigned short align =
+        std::max(sizeAndAlign.second, static_cast<unsigned short>(8));
+    marshal.emplace_back(fir::ReferenceType::get(ty),
+                         AT{align, /*byval=*/!isResult, /*sret=*/isResult});
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  structType(mlir::Location loc, fir::RecordType type, bool isResult) const {
+    NRegs nregs = usedRegsForRecordType(loc, type);
+
+    // If the type needs no registers it must need to be passed on the stack
+    if (nregs.n == 0)
+      return passOnTheStack(loc, type, isResult);
+
+    CodeGenSpecifics::Marshalling marshal;
+
+    mlir::Type pcsType;
+    if (nregs.isSimd) {
+      pcsType = type;
+    } else {
+      pcsType = fir::SequenceType::get(
+          nregs.n, mlir::IntegerType::get(type.getContext(), 64));
+    }
+
+    marshal.emplace_back(pcsType, AT{});
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  structArgumentType(mlir::Location loc, fir::RecordType ty,
+                     const Marshalling &previousArguments) const override {
+    if (!hasEnoughRegisters(loc, ty, previousArguments)) {
+      return passOnTheStack(loc, ty, /*isResult=*/false);
+    }
+
+    return structType(loc, ty, /*isResult=*/false);
+  }
+
+  CodeGenSpecifics::Marshalling
+  structReturnType(mlir::Location loc, fir::RecordType ty) const override {
+    return structType(loc, ty, /*isResult=*/true);
+  }
 };
 } // namespace
 
@@ -857,6 +1049,29 @@ struct TargetPPC64 : public GenericTarget<TargetPPC64> {
         AT{});
     return marshal;
   }
+
+  CodeGenSpecifics::Marshalling
+  structType(mlir::Location loc, fir::RecordType ty, bool isResult) const {
+    CodeGenSpecifics::Marshalling marshal;
+    auto sizeAndAlign{
+        fir::getTypeSizeAndAlignmentOrCrash(loc, ty, getDataLayout(), kindMap)};
+    unsigned short align{
+        std::max(sizeAndAlign.second, static_cast<unsigned short>(8))};
+    marshal.emplace_back(fir::ReferenceType::get(ty),
+                         AT{align, /*byval*/ !isResult, /*sret*/ isResult});
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  structArgumentType(mlir::Location loc, fir::RecordType ty,
+                     const Marshalling &previousArguments) const override {
+    return structType(loc, ty, false);
+  }
+
+  CodeGenSpecifics::Marshalling
+  structReturnType(mlir::Location loc, fir::RecordType ty) const override {
+    return structType(loc, ty, true);
+  }
 };
 } // namespace
 
@@ -868,7 +1083,7 @@ namespace {
 struct TargetPPC64le : public GenericTarget<TargetPPC64le> {
   using GenericTarget::GenericTarget;
 
-  static constexpr int defaultWidth = 64;
+  static constexpr int defaultWidth{64};
 
   CodeGenSpecifics::Marshalling
   complexArgumentType(mlir::Location, mlir::Type eleTy) const override {
@@ -888,6 +1103,143 @@ struct TargetPPC64le : public GenericTarget<TargetPPC64le> {
         mlir::TupleType::get(eleTy.getContext(), mlir::TypeRange{eleTy, eleTy}),
         AT{});
     return marshal;
+  }
+
+  unsigned getElemWidth(mlir::Type ty) const {
+    unsigned width{};
+    llvm::TypeSwitch<mlir::Type>(ty)
+        .template Case<mlir::ComplexType>([&](mlir::ComplexType cmplx) {
+          auto elemType{
+              mlir::dyn_cast<mlir::FloatType>(cmplx.getElementType())};
+          width = elemType.getWidth();
+        })
+        .template Case<mlir::FloatType>(
+            [&](mlir::FloatType real) { width = real.getWidth(); });
+    return width;
+  }
+
+  // Determine if all derived types components are of the same float type with
+  // the same width. Complex(4) is considered 2 floats and complex(8) 2 doubles.
+  bool hasSameFloatAndWidth(
+      fir::RecordType recTy,
+      std::pair<mlir::Type, unsigned> &firstTypeAndWidth) const {
+    for (auto comp : recTy.getTypeList()) {
+      mlir::Type compType{comp.second};
+      if (mlir::isa<fir::RecordType>(compType)) {
+        auto rc{hasSameFloatAndWidth(mlir::cast<fir::RecordType>(compType),
+                                     firstTypeAndWidth)};
+        if (!rc)
+          return false;
+      } else {
+        mlir::Type ty;
+        bool isFloatType{false};
+        if (mlir::isa<mlir::FloatType, mlir::ComplexType>(compType)) {
+          ty = compType;
+          isFloatType = true;
+        } else if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(compType)) {
+          ty = seqTy.getEleTy();
+          isFloatType = mlir::isa<mlir::FloatType, mlir::ComplexType>(ty);
+        }
+
+        if (!isFloatType) {
+          return false;
+        }
+        auto width{getElemWidth(ty)};
+        if (firstTypeAndWidth.first == nullptr) {
+          firstTypeAndWidth.first = ty;
+          firstTypeAndWidth.second = width;
+        } else if (width != firstTypeAndWidth.second) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  CodeGenSpecifics::Marshalling
+  passOnTheStack(mlir::Location loc, mlir::Type ty, bool isResult) const {
+    CodeGenSpecifics::Marshalling marshal;
+    auto sizeAndAlign{
+        fir::getTypeSizeAndAlignmentOrCrash(loc, ty, getDataLayout(), kindMap)};
+    unsigned short align{
+        std::max(sizeAndAlign.second, static_cast<unsigned short>(8))};
+    marshal.emplace_back(fir::ReferenceType::get(ty),
+                         AT{align, /*byval=*/!isResult, /*sret=*/isResult});
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  structType(mlir::Location loc, fir::RecordType recTy, bool isResult) const {
+    CodeGenSpecifics::Marshalling marshal;
+    auto sizeAndAlign{fir::getTypeSizeAndAlignmentOrCrash(
+        loc, recTy, getDataLayout(), kindMap)};
+    auto recordTypeSize{sizeAndAlign.first};
+    mlir::Type seqTy;
+    std::pair<mlir::Type, unsigned> firstTyAndWidth{nullptr, 0};
+
+    // If there are less than or equal to 8 floats, the structure is flatten as
+    // an array of floats.
+    constexpr uint64_t maxNoOfFloats{8};
+
+    // i64 type
+    mlir::Type elemTy{mlir::IntegerType::get(recTy.getContext(), defaultWidth)};
+    uint64_t nElem{static_cast<uint64_t>(
+        std::ceil(static_cast<float>(recordTypeSize * 8) / defaultWidth))};
+
+    // If the derived type components contains are all floats with the same
+    // width, the argument is passed as an array of floats.
+    if (hasSameFloatAndWidth(recTy, firstTyAndWidth)) {
+      uint64_t n{};
+      auto firstType{firstTyAndWidth.first};
+
+      // Type is either float or complex
+      if (auto cmplx = mlir::dyn_cast<mlir::ComplexType>(firstType)) {
+        auto fltType{mlir::dyn_cast<mlir::FloatType>(cmplx.getElementType())};
+        n = static_cast<uint64_t>(8 * recordTypeSize / fltType.getWidth());
+        if (n <= maxNoOfFloats) {
+          nElem = n;
+          elemTy = fltType;
+        }
+      } else if (mlir::isa<mlir::FloatType>(firstType)) {
+        auto elemSizeAndAlign{fir::getTypeSizeAndAlignmentOrCrash(
+            loc, firstType, getDataLayout(), kindMap)};
+        n = static_cast<uint64_t>(recordTypeSize / elemSizeAndAlign.first);
+        if (n <= maxNoOfFloats) {
+          nElem = n;
+          elemTy = firstType;
+        }
+      }
+      // Neither float nor complex
+      assert(n > 0 && "unexpected type");
+    }
+
+    // For function returns, only flattened if there are less than 8
+    // floats in total.
+    if (isResult &&
+        ((mlir::isa<mlir::FloatType>(elemTy) && nElem > maxNoOfFloats) ||
+         !mlir::isa<mlir::FloatType>(elemTy))) {
+      return passOnTheStack(loc, recTy, isResult);
+    }
+
+    seqTy = fir::SequenceType::get(nElem, elemTy);
+    marshal.emplace_back(seqTy, AT{});
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  structArgumentType(mlir::Location loc, fir::RecordType recType,
+                     const Marshalling &previousArguments) const override {
+    auto sizeAndAlign{fir::getTypeSizeAndAlignmentOrCrash(
+        loc, recType, getDataLayout(), kindMap)};
+    if (sizeAndAlign.first > 64) {
+      return passOnTheStack(loc, recType, false);
+    }
+    return structType(loc, recType, false);
+  }
+
+  CodeGenSpecifics::Marshalling
+  structReturnType(mlir::Location loc, fir::RecordType recType) const override {
+    return structType(loc, recType, true);
   }
 };
 } // namespace
@@ -1081,6 +1433,9 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
   using GenericTarget::GenericTarget;
 
   static constexpr int defaultWidth = 64;
+  static constexpr int GRLen = defaultWidth; /* eight bytes */
+  static constexpr int GRLenInChar = GRLen / 8;
+  static constexpr int FRLen = defaultWidth; /* eight bytes */
 
   CodeGenSpecifics::Marshalling
   complexArgumentType(mlir::Location loc, mlir::Type eleTy) const override {
@@ -1150,6 +1505,313 @@ struct TargetLoongArch64 : public GenericTarget<TargetLoongArch64> {
     }
 
     return GenericTarget::integerArgumentType(loc, argTy);
+  }
+
+  /// Flatten non-basic types, resulting in an array of types containing only
+  /// `IntegerType` and `FloatType`.
+  llvm::SmallVector<mlir::Type> flattenTypeList(mlir::Location loc,
+                                                const mlir::Type type) const {
+    llvm::SmallVector<mlir::Type> flatTypes;
+
+    llvm::TypeSwitch<mlir::Type>(type)
+        .template Case<mlir::IntegerType>([&](mlir::IntegerType intTy) {
+          if (intTy.getWidth() != 0)
+            flatTypes.push_back(intTy);
+        })
+        .template Case<mlir::FloatType>([&](mlir::FloatType floatTy) {
+          if (floatTy.getWidth() != 0)
+            flatTypes.push_back(floatTy);
+        })
+        .template Case<mlir::ComplexType>([&](mlir::ComplexType cmplx) {
+          const auto *sem = &floatToSemantics(kindMap, cmplx.getElementType());
+          if (sem == &llvm::APFloat::IEEEsingle() ||
+              sem == &llvm::APFloat::IEEEdouble() ||
+              sem == &llvm::APFloat::IEEEquad())
+            std::fill_n(std::back_inserter(flatTypes), 2,
+                        cmplx.getElementType());
+          else
+            TODO(loc, "unsupported complex type(not IEEEsingle, IEEEdouble, "
+                      "IEEEquad) as a structure component for BIND(C), "
+                      "VALUE derived type argument and type return");
+        })
+        .template Case<fir::LogicalType>([&](fir::LogicalType logicalTy) {
+          const unsigned width =
+              kindMap.getLogicalBitsize(logicalTy.getFKind());
+          if (width != 0)
+            flatTypes.push_back(
+                mlir::IntegerType::get(type.getContext(), width));
+        })
+        .template Case<fir::CharacterType>([&](fir::CharacterType charTy) {
+          assert(kindMap.getCharacterBitsize(charTy.getFKind()) <= 8 &&
+                 "the bit size of characterType as an interoperable type must "
+                 "not exceed 8");
+          for (unsigned i = 0; i < charTy.getLen(); ++i)
+            flatTypes.push_back(mlir::IntegerType::get(type.getContext(), 8));
+        })
+        .template Case<fir::SequenceType>([&](fir::SequenceType seqTy) {
+          if (!seqTy.hasDynamicExtents()) {
+            const std::uint64_t numOfEle = seqTy.getConstantArraySize();
+            mlir::Type eleTy = seqTy.getEleTy();
+            if (!mlir::isa<mlir::IntegerType, mlir::FloatType>(eleTy)) {
+              llvm::SmallVector<mlir::Type> subTypeList =
+                  flattenTypeList(loc, eleTy);
+              if (subTypeList.size() != 0)
+                for (std::uint64_t i = 0; i < numOfEle; ++i)
+                  llvm::copy(subTypeList, std::back_inserter(flatTypes));
+            } else {
+              std::fill_n(std::back_inserter(flatTypes), numOfEle, eleTy);
+            }
+          } else
+            TODO(loc, "unsupported dynamic extent sequence type as a structure "
+                      "component for BIND(C), "
+                      "VALUE derived type argument and type return");
+        })
+        .template Case<fir::RecordType>([&](fir::RecordType recTy) {
+          for (auto &component : recTy.getTypeList()) {
+            mlir::Type eleTy = component.second;
+            llvm::SmallVector<mlir::Type> subTypeList =
+                flattenTypeList(loc, eleTy);
+            if (subTypeList.size() != 0)
+              llvm::copy(subTypeList, std::back_inserter(flatTypes));
+          }
+        })
+        .template Case<fir::VectorType>([&](fir::VectorType vecTy) {
+          auto sizeAndAlign = fir::getTypeSizeAndAlignmentOrCrash(
+              loc, vecTy, getDataLayout(), kindMap);
+          if (sizeAndAlign.first == 2 * GRLenInChar)
+            flatTypes.push_back(
+                mlir::IntegerType::get(type.getContext(), 2 * GRLen));
+          else
+            TODO(loc, "unsupported vector width(must be 128 bits)");
+        })
+        .Default([&](mlir::Type ty) {
+          if (fir::conformsWithPassByRef(ty))
+            flatTypes.push_back(
+                mlir::IntegerType::get(type.getContext(), GRLen));
+          else
+            TODO(loc, "unsupported component type for BIND(C), VALUE derived "
+                      "type argument and type return");
+        });
+
+    return flatTypes;
+  }
+
+  /// Determine if a struct is eligible to be passed in FARs (and GARs) (i.e.,
+  /// when flattened it contains a single fp value, fp+fp, or int+fp of
+  /// appropriate size).
+  bool detectFARsEligibleStruct(mlir::Location loc, fir::RecordType recTy,
+                                mlir::Type &field1Ty,
+                                mlir::Type &field2Ty) const {
+    field1Ty = field2Ty = nullptr;
+    llvm::SmallVector<mlir::Type> flatTypes = flattenTypeList(loc, recTy);
+    size_t flatSize = flatTypes.size();
+
+    // Cannot be eligible if the number of flattened types is equal to 0 or
+    // greater than 2.
+    if (flatSize == 0 || flatSize > 2)
+      return false;
+
+    bool isFirstAvaliableFloat = false;
+
+    assert((mlir::isa<mlir::IntegerType, mlir::FloatType>(flatTypes[0])) &&
+           "Type must be integerType or floatType after flattening");
+    if (auto floatTy = mlir::dyn_cast<mlir::FloatType>(flatTypes[0])) {
+      const unsigned Size = floatTy.getWidth();
+      // Can't be eligible if larger than the FP registers. Half precision isn't
+      // currently supported on LoongArch and the ABI hasn't been confirmed, so
+      // default to the integer ABI in that case.
+      if (Size > FRLen || Size < 32)
+        return false;
+      isFirstAvaliableFloat = true;
+      field1Ty = floatTy;
+    } else if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(flatTypes[0])) {
+      if (intTy.getWidth() > GRLen)
+        return false;
+      field1Ty = intTy;
+    }
+
+    // flatTypes has two elements
+    if (flatSize == 2) {
+      assert((mlir::isa<mlir::IntegerType, mlir::FloatType>(flatTypes[1])) &&
+             "Type must be integerType or floatType after flattening");
+      if (auto floatTy = mlir::dyn_cast<mlir::FloatType>(flatTypes[1])) {
+        const unsigned Size = floatTy.getWidth();
+        if (Size > FRLen || Size < 32)
+          return false;
+        field2Ty = floatTy;
+        return true;
+      } else if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(flatTypes[1])) {
+        // Can't be eligible if an integer type was already found (int+int pairs
+        // are not eligible).
+        if (!isFirstAvaliableFloat)
+          return false;
+        if (intTy.getWidth() > GRLen)
+          return false;
+        field2Ty = intTy;
+        return true;
+      }
+    }
+
+    // return isFirstAvaliableFloat if flatTypes only has one element
+    return isFirstAvaliableFloat;
+  }
+
+  bool checkTypeHasEnoughRegs(mlir::Location loc, int &GARsLeft, int &FARsLeft,
+                              const mlir::Type type) const {
+    if (!type)
+      return true;
+
+    llvm::TypeSwitch<mlir::Type>(type)
+        .template Case<mlir::IntegerType>([&](mlir::IntegerType intTy) {
+          const unsigned width = intTy.getWidth();
+          if (width > 128)
+            TODO(loc,
+                 "integerType with width exceeding 128 bits is unsupported");
+          if (width == 0)
+            return;
+          if (width <= GRLen)
+            --GARsLeft;
+          else if (width <= 2 * GRLen)
+            GARsLeft = GARsLeft - 2;
+        })
+        .template Case<mlir::FloatType>([&](mlir::FloatType floatTy) {
+          const unsigned width = floatTy.getWidth();
+          if (width > 128)
+            TODO(loc, "floatType with width exceeding 128 bits is unsupported");
+          if (width == 0)
+            return;
+          if (width == 32 || width == 64)
+            --FARsLeft;
+          else if (width <= GRLen)
+            --GARsLeft;
+          else if (width <= 2 * GRLen)
+            GARsLeft = GARsLeft - 2;
+        })
+        .Default([&](mlir::Type ty) {
+          if (fir::conformsWithPassByRef(ty))
+            --GARsLeft; // Pointers.
+          else
+            TODO(loc, "unsupported component type for BIND(C), VALUE derived "
+                      "type argument and type return");
+        });
+
+    return GARsLeft >= 0 && FARsLeft >= 0;
+  }
+
+  bool hasEnoughRegisters(mlir::Location loc, int GARsLeft, int FARsLeft,
+                          const Marshalling &previousArguments,
+                          const mlir::Type &field1Ty,
+                          const mlir::Type &field2Ty) const {
+    for (auto &typeAndAttr : previousArguments) {
+      const auto &attr = std::get<Attributes>(typeAndAttr);
+      if (attr.isByVal()) {
+        // Previous argument passed on the stack, and its address is passed in
+        // GAR.
+        --GARsLeft;
+        continue;
+      }
+
+      // Previous aggregate arguments were marshalled into simpler arguments.
+      const auto &type = std::get<mlir::Type>(typeAndAttr);
+      llvm::SmallVector<mlir::Type> flatTypes = flattenTypeList(loc, type);
+
+      for (auto &flatTy : flatTypes) {
+        if (!checkTypeHasEnoughRegs(loc, GARsLeft, FARsLeft, flatTy))
+          return false;
+      }
+    }
+
+    if (!checkTypeHasEnoughRegs(loc, GARsLeft, FARsLeft, field1Ty))
+      return false;
+    if (!checkTypeHasEnoughRegs(loc, GARsLeft, FARsLeft, field2Ty))
+      return false;
+    return true;
+  }
+
+  /// LoongArch64 subroutine calling sequence ABI in:
+  /// https://github.com/loongson/la-abi-specs/blob/release/lapcs.adoc#subroutine-calling-sequence
+  CodeGenSpecifics::Marshalling
+  classifyStruct(mlir::Location loc, fir::RecordType recTy, int GARsLeft,
+                 int FARsLeft, bool isResult,
+                 const Marshalling &previousArguments) const {
+    CodeGenSpecifics::Marshalling marshal;
+
+    auto [recSize, recAlign] = fir::getTypeSizeAndAlignmentOrCrash(
+        loc, recTy, getDataLayout(), kindMap);
+    mlir::MLIRContext *context = recTy.getContext();
+
+    if (recSize == 0) {
+      TODO(loc, "unsupported empty struct type for BIND(C), "
+                "VALUE derived type argument and type return");
+    }
+
+    if (recSize > 2 * GRLenInChar) {
+      marshal.emplace_back(
+          fir::ReferenceType::get(recTy),
+          AT{recAlign, /*byval=*/!isResult, /*sret=*/isResult});
+      return marshal;
+    }
+
+    // Pass by FARs(and GARs)
+    mlir::Type field1Ty = nullptr, field2Ty = nullptr;
+    if (detectFARsEligibleStruct(loc, recTy, field1Ty, field2Ty) &&
+        hasEnoughRegisters(loc, GARsLeft, FARsLeft, previousArguments, field1Ty,
+                           field2Ty)) {
+      if (!isResult) {
+        if (field1Ty)
+          marshal.emplace_back(field1Ty, AT{});
+        if (field2Ty)
+          marshal.emplace_back(field2Ty, AT{});
+      } else {
+        // field1Ty is always preferred over field2Ty for assignment, so there
+        // will never be a case where field1Ty == nullptr and field2Ty !=
+        // nullptr.
+        if (field1Ty && !field2Ty)
+          marshal.emplace_back(field1Ty, AT{});
+        else if (field1Ty && field2Ty)
+          marshal.emplace_back(
+              mlir::TupleType::get(context,
+                                   mlir::TypeRange{field1Ty, field2Ty}),
+              AT{/*alignment=*/0, /*byval=*/true});
+      }
+      return marshal;
+    }
+
+    if (recSize <= GRLenInChar) {
+      marshal.emplace_back(mlir::IntegerType::get(context, GRLen), AT{});
+      return marshal;
+    }
+
+    if (recAlign == 2 * GRLenInChar) {
+      marshal.emplace_back(mlir::IntegerType::get(context, 2 * GRLen), AT{});
+      return marshal;
+    }
+
+    // recSize > GRLenInChar && recSize <= 2 * GRLenInChar
+    marshal.emplace_back(
+        fir::SequenceType::get({2}, mlir::IntegerType::get(context, GRLen)),
+        AT{});
+    return marshal;
+  }
+
+  /// Marshal a derived type passed by value like a C struct.
+  CodeGenSpecifics::Marshalling
+  structArgumentType(mlir::Location loc, fir::RecordType recTy,
+                     const Marshalling &previousArguments) const override {
+    int GARsLeft = 8;
+    int FARsLeft = FRLen ? 8 : 0;
+
+    return classifyStruct(loc, recTy, GARsLeft, FARsLeft, /*isResult=*/false,
+                          previousArguments);
+  }
+
+  CodeGenSpecifics::Marshalling
+  structReturnType(mlir::Location loc, fir::RecordType recTy) const override {
+    // The rules for return and argument types are the same.
+    int GARsLeft = 2;
+    int FARsLeft = FRLen ? 2 : 0;
+    return classifyStruct(loc, recTy, GARsLeft, FARsLeft, /*isResult=*/true,
+                          {});
   }
 };
 } // namespace

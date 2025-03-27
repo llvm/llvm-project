@@ -539,6 +539,10 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
     ::mlir::Attribute removeResultAttr(unsigned index, ::mlir::StringAttr name) {
       return ::mlir::function_interface_impl::removeResultAttr($_op, index, name);
     }
+    ::mlir::Attribute removeResultAttr(unsigned index, ::llvm::StringRef name) {
+      return removeResultAttr(
+          index, ::mlir::StringAttr::get(this->getOperation()->getContext(), name));
+    }
 
     /// Returns the dictionary attribute corresponding to the argument at
     /// 'index'. If there are no argument attributes at 'index', a null

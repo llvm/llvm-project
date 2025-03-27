@@ -694,8 +694,7 @@ static void interpretValues(const MachineInstr *CurMI,
         for (auto &FwdReg : ForwardedRegWorklist)
           if (TRI.regsOverlap(FwdReg.first, MO.getReg()))
             Defs.insert(FwdReg.first);
-        for (MCRegUnit Unit : TRI.regunits(MO.getReg()))
-          NewClobberedRegUnits.insert(Unit);
+        NewClobberedRegUnits.insert_range(TRI.regunits(MO.getReg()));
       }
     }
   };
@@ -706,8 +705,7 @@ static void interpretValues(const MachineInstr *CurMI,
   getForwardingRegsDefinedByMI(*CurMI, FwdRegDefs);
   if (FwdRegDefs.empty()) {
     // Any definitions by this instruction will clobber earlier reg movements.
-    ClobberedRegUnits.insert(NewClobberedRegUnits.begin(),
-                             NewClobberedRegUnits.end());
+    ClobberedRegUnits.insert_range(NewClobberedRegUnits);
     return;
   }
 
@@ -756,8 +754,7 @@ static void interpretValues(const MachineInstr *CurMI,
     ForwardedRegWorklist.erase(ParamFwdReg);
 
   // Any definitions by this instruction will clobber earlier reg movements.
-  ClobberedRegUnits.insert(NewClobberedRegUnits.begin(),
-                           NewClobberedRegUnits.end());
+  ClobberedRegUnits.insert_range(NewClobberedRegUnits);
 
   // Now that we are done handling this instruction, add items from the
   // temporary worklist to the real one.
@@ -918,7 +915,7 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
 
       // Skip instructions which aren't calls. Both calls and tail-calling jump
       // instructions (e.g TAILJMPd64) are classified correctly here.
-      if (!MI.isCandidateForCallSiteEntry())
+      if (!MI.isCandidateForAdditionalCallInfo())
         continue;
 
       // Skip instructions marked as frame setup, as they are not interesting to
@@ -2019,7 +2016,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
 
   // When describing calls, we need a label for the call instruction.
   if (!NoDebug && SP->areAllCallsDescribed() &&
-      MI->isCandidateForCallSiteEntry(MachineInstr::AnyInBundle) &&
+      MI->isCandidateForAdditionalCallInfo(MachineInstr::AnyInBundle) &&
       (!MI->hasDelaySlot() || delaySlotSupported(*MI))) {
     const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
     bool IsTail = TII->isTailCall(*MI);
@@ -2057,6 +2054,16 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     }
   }
 
+  auto RecordSourceLine = [this](auto &DL, auto Flags) {
+    SmallString<128> LocationString;
+    if (Asm->OutStreamer->isVerboseAsm()) {
+      raw_svector_ostream OS(LocationString);
+      DL.print(OS);
+    }
+    recordSourceLine(DL.getLine(), DL.getCol(), DL.getScope(), Flags,
+                     LocationString);
+  };
+
   // When we emit a line-0 record, we don't update PrevInstLoc; so look at
   // the last line number actually emitted, to see if it was line 0.
   unsigned LastAsmLine =
@@ -2084,8 +2091,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     // But we might be coming back to it after a line 0 record.
     if ((LastAsmLine == 0 && DL.getLine() != 0) || Flags) {
       // Reinstate the source location but not marked as a statement.
-      const MDNode *Scope = DL.getScope();
-      recordSourceLine(DL.getLine(), DL.getCol(), Scope, Flags);
+      RecordSourceLine(DL, Flags);
     }
     return;
   }
@@ -2136,8 +2142,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   if (DL.getLine() && (DL.getLine() != OldLine || ForceIsStmt))
     Flags |= DWARF2_FLAG_IS_STMT;
 
-  const MDNode *Scope = DL.getScope();
-  recordSourceLine(DL.getLine(), DL.getCol(), Scope, Flags);
+  RecordSourceLine(DL, Flags);
 
   // If we're not at line 0, remember this location.
   if (DL.getLine())
@@ -2192,14 +2197,45 @@ findPrologueEndLoc(const MachineFunction *MF) {
   // better off synthesising an early prologue_end.
   auto CurBlock = MF->begin();
   auto CurInst = CurBlock->begin();
-  while (true) {
-    // Skip empty blocks, in rare cases the entry can be empty.
-    if (CurInst == CurBlock->end()) {
-      ++CurBlock;
-      CurInst = CurBlock->begin();
-      continue;
+
+  // Find the initial instruction, we're guaranteed one by the caller, but not
+  // which block it's in.
+  while (CurBlock->empty())
+    CurInst = (++CurBlock)->begin();
+  assert(CurInst != CurBlock->end());
+
+  // Helper function for stepping through the initial sequence of
+  // unconditionally executed instructions.
+  auto getNextInst = [&CurBlock, &CurInst, MF]() -> bool {
+    // We've reached the end of the block. Did we just look at a terminator?
+    if (CurInst->isTerminator()) {
+      // Some kind of "real" control flow is occurring. At the very least
+      // we would have to start exploring the CFG, a good signal that the
+      // prologue is over.
+      return false;
     }
 
+    // If we've already fallen through into a loop, don't fall through
+    // further, use a backup-location.
+    if (CurBlock->pred_size() > 1)
+      return false;
+
+    // Fall-through from entry to the next block. This is common at -O0 when
+    // there's no initialisation in the function. Bail if we're also at the
+    // end of the function, or the remaining blocks have no instructions.
+    // Skip empty blocks, in rare cases the entry can be empty, and
+    // other optimisations may add empty blocks that the control flow falls
+    // through.
+    do {
+      ++CurBlock;
+      if (CurBlock == MF->end())
+        return false;
+    } while (CurBlock->empty());
+    CurInst = CurBlock->begin();
+    return true;
+  };
+
+  while (true) {
     // Check whether this non-meta instruction a good position for prologue_end.
     if (!CurInst->isMetaInstruction()) {
       auto FoundInst = ExamineInst(*CurInst);
@@ -2216,25 +2252,8 @@ findPrologueEndLoc(const MachineFunction *MF) {
       continue;
     }
 
-    // We've reached the end of the block. Did we just look at a terminator?
-    if (CurInst->isTerminator()) {
-      // Some kind of "real" control flow is occurring. At the very least
-      // we would have to start exploring the CFG, a good signal that the
-      // prologue is over.
+    if (!getNextInst())
       break;
-    }
-
-    // If we've already fallen through into a loop, don't fall through
-    // further, use a backup-location.
-    if (CurBlock->pred_size() > 1)
-      break;
-
-    // Fall-through from entry to the next block. This is common at -O0 when
-    // there's no initialisation in the function. Bail if we're also at the
-    // end of the function.
-    if (++CurBlock == MF->end())
-      break;
-    CurInst = CurBlock->begin();
   }
 
   // We couldn't find any source-location, suggesting all meaningful information
@@ -2258,7 +2277,8 @@ findPrologueEndLoc(const MachineFunction *MF) {
 static void recordSourceLine(AsmPrinter &Asm, unsigned Line, unsigned Col,
                              const MDNode *S, unsigned Flags, unsigned CUID,
                              uint16_t DwarfVersion,
-                             ArrayRef<std::unique_ptr<DwarfCompileUnit>> DCUs) {
+                             ArrayRef<std::unique_ptr<DwarfCompileUnit>> DCUs,
+                             StringRef Comment = {}) {
   StringRef Fn;
   unsigned FileNo = 1;
   unsigned Discriminator = 0;
@@ -2272,7 +2292,7 @@ static void recordSourceLine(AsmPrinter &Asm, unsigned Line, unsigned Col,
                  .getOrCreateSourceID(Scope->getFile());
   }
   Asm.OutStreamer->emitDwarfLocDirective(FileNo, Line, Col, Flags, 0,
-                                         Discriminator, Fn);
+                                         Discriminator, Fn, Comment);
 }
 
 const MachineInstr *
@@ -2359,8 +2379,7 @@ void DwarfDebug::findForceIsStmtInstrs(const MachineFunction *MF) {
       continue;
     for (auto &MI : MBB) {
       if (MI.getDebugLoc() && MI.getDebugLoc()->getLine()) {
-        for (auto *Pred : MBB.predecessors())
-          PredMBBsToExamine.insert(Pred);
+        PredMBBsToExamine.insert_range(MBB.predecessors());
         PotentialIsStmtMBBInstrs.insert({&MBB, &MI});
         break;
       }
@@ -2603,10 +2622,10 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
 // Register a source line with debug info. Returns the  unique label that was
 // emitted and which provides correspondence to the source line list.
 void DwarfDebug::recordSourceLine(unsigned Line, unsigned Col, const MDNode *S,
-                                  unsigned Flags) {
+                                  unsigned Flags, StringRef Location) {
   ::recordSourceLine(*Asm, Line, Col, S, Flags,
                      Asm->OutStreamer->getContext().getDwarfCompileUnitID(),
-                     getDwarfVersion(), getUnits());
+                     getDwarfVersion(), getUnits(), Location);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3775,6 +3794,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
       // they depend on addresses, throwing them out and rebuilding them.
       setCurrentDWARF5AccelTable(DWARF5AccelTableKind::CU);
       CU.constructTypeDIE(RefDie, cast<DICompositeType>(CTy));
+      CU.updateAcceleratorTables(CTy->getScope(), CTy, RefDie);
       return;
     }
 

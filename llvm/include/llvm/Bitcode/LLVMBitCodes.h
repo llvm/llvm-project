@@ -307,12 +307,12 @@ enum GlobalValueSummarySymtabCodes {
   // [valueid, n x stackidindex]
   FS_PERMODULE_CALLSITE_INFO = 26,
   // Summary of per-module allocation memprof metadata.
-  // [nummib, nummib x (alloc type, numstackids, numstackids x stackidindex),
+  // [nummib, nummib x (alloc type, context radix tree index),
   // [nummib x (numcontext x total size)]?]
   FS_PERMODULE_ALLOC_INFO = 27,
   // Summary of combined index memprof callsite metadata.
-  // [valueid, numstackindices, numver,
-  //  numstackindices x stackidindex, numver x version]
+  // [valueid, context radix tree index, numver,
+  //  numver x version]
   FS_COMBINED_CALLSITE_INFO = 28,
   // Summary of combined index allocation memprof metadata.
   // [nummib, numver,
@@ -331,6 +331,10 @@ enum GlobalValueSummarySymtabCodes {
   // the entries must be in the exact same order as the corresponding sizes.
   // [nummib x (numcontext x full stack id)]
   FS_ALLOC_CONTEXT_IDS = 31,
+  // Linearized radix tree of allocation contexts. See the description above the
+  // CallStackRadixTreeBuilder class in ProfileData/MemProf.h for format.
+  // [n x entry]
+  FS_CONTEXT_RADIX_TREE_ARRAY = 32,
 };
 
 enum MetadataCodes {
@@ -381,6 +385,7 @@ enum MetadataCodes {
   METADATA_GENERIC_SUBRANGE = 45, // [distinct, count, lo, up, stride]
   METADATA_ARG_LIST = 46,         // [n x [type num, value num]]
   METADATA_ASSIGN_ID = 47,        // [distinct, ...]
+  METADATA_SUBRANGE_TYPE = 48,    // [distinct, ...]
 };
 
 // The constants block (CONSTANTS_BLOCK_ID) describes emission for each
@@ -783,6 +788,8 @@ enum AttributeKindCodes {
   ATTR_KIND_CORO_ELIDE_SAFE = 98,
   ATTR_KIND_NO_EXT = 99,
   ATTR_KIND_NO_DIVERGENCE_SOURCE = 100,
+  ATTR_KIND_SANITIZE_TYPE = 101,
+  ATTR_KIND_CAPTURES = 102,
 };
 
 enum ComdatSelectionKindCodes {

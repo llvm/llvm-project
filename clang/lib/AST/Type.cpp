@@ -267,6 +267,12 @@ void ConstantArrayType::Profile(llvm::FoldingSetNodeID &ID,
     SizeExpr->Profile(ID, Context, true);
 }
 
+QualType ArrayParameterType::getConstantArrayType(const ASTContext &Ctx) const {
+  return Ctx.getConstantArrayType(getElementType(), getSize(), getSizeExpr(),
+                                  getSizeModifier(),
+                                  getIndexTypeQualifiers().getAsOpaqueValue());
+}
+
 DependentSizedArrayType::DependentSizedArrayType(QualType et, QualType can,
                                                  Expr *e, ArraySizeModifier sm,
                                                  unsigned tq,
@@ -402,6 +408,12 @@ VectorType::VectorType(TypeClass tc, QualType vecType, unsigned nElements,
     : Type(tc, canonType, vecType->getDependence()), ElementType(vecType) {
   VectorTypeBits.VecKind = llvm::to_underlying(vecKind);
   VectorTypeBits.NumElements = nElements;
+}
+
+bool Type::isPackedVectorBoolType(const ASTContext &ctx) const {
+  if (ctx.getLangOpts().HLSL)
+    return false;
+  return isExtVectorBoolType();
 }
 
 BitIntType::BitIntType(bool IsUnsigned, unsigned NumBits)
@@ -1056,7 +1068,8 @@ public:
     if (pointeeType.getAsOpaquePtr() == T->getPointeeType().getAsOpaquePtr())
       return QualType(T, 0);
 
-    return Ctx.getMemberPointerType(pointeeType, T->getClass());
+    return Ctx.getMemberPointerType(pointeeType, T->getQualifier(),
+                                    T->getMostRecentCXXRecordDecl());
   }
 
   QualType VisitConstantArrayType(const ConstantArrayType *T) {
@@ -2434,19 +2447,17 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
     // Member pointers in the MS ABI have special behavior in
     // RequireCompleteType: they attach a MSInheritanceAttr to the CXXRecordDecl
     // to indicate which inheritance model to use.
-    auto *MPTy = cast<MemberPointerType>(CanonicalType);
-    const Type *ClassTy = MPTy->getClass();
+    // The inheritance attribute might only be present on the most recent
+    // CXXRecordDecl.
+    const CXXRecordDecl *RD =
+        cast<MemberPointerType>(CanonicalType)->getMostRecentCXXRecordDecl();
     // Member pointers with dependent class types don't get special treatment.
-    if (ClassTy->isDependentType())
+    if (!RD || RD->isDependentType())
       return false;
-    const CXXRecordDecl *RD = ClassTy->getAsCXXRecordDecl();
     ASTContext &Context = RD->getASTContext();
     // Member pointers not in the MS ABI don't get special treatment.
     if (!Context.getTargetInfo().getCXXABI().isMicrosoft())
       return false;
-    // The inheritance attribute might only be present on the most recent
-    // CXXRecordDecl, use that one.
-    RD = RD->getMostRecentNonInjectedDecl();
     // Nothing interesting to do if the inheritance attribute is already set.
     if (RD->hasAttr<MSInheritanceAttr>())
       return false;
@@ -2521,9 +2532,7 @@ bool Type::isSVESizelessBuiltinType() const {
 #define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
   case BuiltinType::Id:                                                        \
     return true;
-#define AARCH64_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                \
-  case BuiltinType::Id:                                                        \
-    return false;
+#define SVE_TYPE(Name, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
     default:
       return false;
@@ -3476,9 +3485,9 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case Id: \
     return #ExtType;
 #include "clang/Basic/OpenCLExtensionTypes.def"
-#define SVE_TYPE(Name, Id, SingletonId) \
-  case Id: \
-    return Name;
+#define SVE_TYPE(Name, Id, SingletonId)                                        \
+  case Id:                                                                     \
+    return #Name;
 #include "clang/Basic/AArch64SVEACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
   case Id: \
@@ -3555,6 +3564,21 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
   case CC_PreserveNone: return "preserve_none";
     // clang-format off
   case CC_RISCVVectorCall: return "riscv_vector_cc";
+#define CC_VLS_CASE(ABI_VLEN) \
+  case CC_RISCVVLSCall_##ABI_VLEN: return "riscv_vls_cc(" #ABI_VLEN ")";
+  CC_VLS_CASE(32)
+  CC_VLS_CASE(64)
+  CC_VLS_CASE(128)
+  CC_VLS_CASE(256)
+  CC_VLS_CASE(512)
+  CC_VLS_CASE(1024)
+  CC_VLS_CASE(2048)
+  CC_VLS_CASE(4096)
+  CC_VLS_CASE(8192)
+  CC_VLS_CASE(16384)
+  CC_VLS_CASE(32768)
+  CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
     // clang-format on
   }
 
@@ -4031,12 +4055,12 @@ void DependentDecltypeType::Profile(llvm::FoldingSetNodeID &ID,
 
 PackIndexingType::PackIndexingType(const ASTContext &Context,
                                    QualType Canonical, QualType Pattern,
-                                   Expr *IndexExpr, bool ExpandsToEmptyPack,
+                                   Expr *IndexExpr, bool FullySubstituted,
                                    ArrayRef<QualType> Expansions)
     : Type(PackIndexing, Canonical,
            computeDependence(Pattern, IndexExpr, Expansions)),
       Context(Context), Pattern(Pattern), IndexExpr(IndexExpr),
-      Size(Expansions.size()), ExpandsToEmptyPack(ExpandsToEmptyPack) {
+      Size(Expansions.size()), FullySubstituted(FullySubstituted) {
 
   std::uninitialized_copy(Expansions.begin(), Expansions.end(),
                           getTrailingObjects<QualType>());
@@ -4081,10 +4105,10 @@ PackIndexingType::computeDependence(QualType Pattern, Expr *IndexExpr,
 
 void PackIndexingType::Profile(llvm::FoldingSetNodeID &ID,
                                const ASTContext &Context, QualType Pattern,
-                               Expr *E, bool ExpandsToEmptyPack) {
+                               Expr *E, bool FullySubstituted) {
   Pattern.Profile(ID);
   E->Profile(ID, Context, true);
-  ID.AddBoolean(ExpandsToEmptyPack);
+  ID.AddBoolean(FullySubstituted);
 }
 
 UnaryTransformType::UnaryTransformType(QualType BaseType,
@@ -4222,6 +4246,7 @@ bool AttributedType::isCallingConv() const {
   case attr::M68kRTD:
   case attr::PreserveNone:
   case attr::RISCVVectorCC:
+  case attr::RISCVVLSCC:
     return true;
   }
   llvm_unreachable("invalid attr kind");
@@ -4597,8 +4622,15 @@ static CachedProperties computeCachedProperties(const Type *T) {
     return Cache::get(cast<ReferenceType>(T)->getPointeeType());
   case Type::MemberPointer: {
     const auto *MPT = cast<MemberPointerType>(T);
-    return merge(Cache::get(MPT->getClass()),
-                 Cache::get(MPT->getPointeeType()));
+    CachedProperties Cls = [&] {
+      if (auto *RD = MPT->getMostRecentCXXRecordDecl())
+        return Cache::get(QualType(RD->getTypeForDecl(), 0));
+      if (const Type *T = MPT->getQualifier()->getAsType())
+        return Cache::get(T);
+      // Treat as a dependent type.
+      return CachedProperties(Linkage::External, false);
+    }();
+    return merge(Cls, Cache::get(MPT->getPointeeType()));
   }
   case Type::ConstantArray:
   case Type::IncompleteArray:
@@ -4687,7 +4719,8 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
     return computeTypeLinkageInfo(cast<ReferenceType>(T)->getPointeeType());
   case Type::MemberPointer: {
     const auto *MPT = cast<MemberPointerType>(T);
-    LinkageInfo LV = computeTypeLinkageInfo(MPT->getClass());
+    LinkageInfo LV =
+        getDeclLinkageAndVisibility(MPT->getMostRecentCXXRecordDecl());
     LV.merge(computeTypeLinkageInfo(MPT->getPointeeType()));
     return LV;
   }
@@ -4723,7 +4756,9 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
   case Type::Pipe:
     return computeTypeLinkageInfo(cast<PipeType>(T)->getElementType());
   case Type::HLSLAttributedResource:
-    llvm_unreachable("not yet implemented");
+    return computeTypeLinkageInfo(cast<HLSLAttributedResourceType>(T)
+                                      ->getContainedType()
+                                      ->getCanonicalTypeInternal());
   }
 
   llvm_unreachable("unhandled type class");
@@ -5092,6 +5127,10 @@ bool Type::hasSizedVLAType() const {
   return false;
 }
 
+bool Type::isHLSLResourceRecord() const {
+  return HLSLAttributedResourceType::findHandleTypeOnResource(this) != nullptr;
+}
+
 bool Type::isHLSLIntangibleType() const {
   const Type *Ty = getUnqualifiedDesugaredType();
 
@@ -5110,7 +5149,7 @@ bool Type::isHLSLIntangibleType() const {
 
   CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
   assert(RD != nullptr &&
-         "all HLSL struct and classes should be CXXRecordDecl");
+         "all HLSL structs and classes should be CXXRecordDecl");
   assert(RD->isCompleteDefinition() && "expecting complete type");
   return RD->isHLSLIntangible();
 }
@@ -5146,8 +5185,29 @@ QualType::DestructionKind QualType::isDestructedTypeImpl(QualType type) {
   return DK_none;
 }
 
+bool MemberPointerType::isSugared() const {
+  CXXRecordDecl *D1 = getMostRecentCXXRecordDecl(),
+                *D2 = getQualifier()->getAsRecordDecl();
+  assert(!D1 == !D2);
+  return D1 != D2 && D1->getCanonicalDecl() != D2->getCanonicalDecl();
+}
+
+void MemberPointerType::Profile(llvm::FoldingSetNodeID &ID, QualType Pointee,
+                                const NestedNameSpecifier *Qualifier,
+                                const CXXRecordDecl *Cls) {
+  ID.AddPointer(Pointee.getAsOpaquePtr());
+  ID.AddPointer(Qualifier);
+  if (Cls)
+    ID.AddPointer(Cls->getCanonicalDecl());
+}
+
 CXXRecordDecl *MemberPointerType::getMostRecentCXXRecordDecl() const {
-  return getClass()->getAsCXXRecordDecl()->getMostRecentNonInjectedDecl();
+  auto *RD = dyn_cast<MemberPointerType>(getCanonicalTypeInternal())
+                 ->getQualifier()
+                 ->getAsRecordDecl();
+  if (!RD)
+    return nullptr;
+  return RD->getMostRecentNonInjectedDecl();
 }
 
 void clang::FixedPointValueToString(SmallVectorImpl<char> &Str,

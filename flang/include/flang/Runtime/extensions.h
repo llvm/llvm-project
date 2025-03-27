@@ -54,6 +54,9 @@ uid_t RTNAME(GetUID)();
 // GNU extension subroutine GETLOG(C).
 void FORTRAN_PROCEDURE_NAME(getlog)(char *name, std::int64_t length);
 
+// GNU extension subroutine HOSTNM(C)
+void FORTRAN_PROCEDURE_NAME(hostnm)(char *name, std::int64_t length);
+
 std::intptr_t RTNAME(Malloc)(std::size_t size);
 
 // GNU extension function STATUS = SIGNAL(number, handler)
@@ -68,6 +71,12 @@ void RTNAME(Sleep)(std::int64_t seconds);
 std::int64_t FORTRAN_PROCEDURE_NAME(access)(const char *name,
     std::int64_t nameLength, const char *mode, std::int64_t modeLength);
 #endif
+
+// GNU extension subroutine CHDIR(NAME, [STATUS])
+int RTNAME(Chdir)(const char *name);
+
+// GNU extension function IERRNO()
+int FORTRAN_PROCEDURE_NAME(ierrno)();
 
 } // extern "C"
 #endif // FORTRAN_RUNTIME_EXTENSIONS_H_

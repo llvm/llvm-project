@@ -372,6 +372,32 @@ define <2 x i8> @srem_XY_XZ_with_CY_gt_CZ_no_nuw_out(<2 x i8> %X) {
   ret <2 x i8> %r
 }
 
+define i8 @srem_XY_XZ_with_CY_gt_CZ_drop_nsw(i8 noundef %X) {
+; CHECK-LABEL: @srem_XY_XZ_with_CY_gt_CZ_drop_nsw(
+; CHECK-NEXT:    [[BO0:%.*]] = mul nsw i8 [[X:%.*]], 127
+; CHECK-NEXT:    [[BO1:%.*]] = shl nsw i8 [[X]], 7
+; CHECK-NEXT:    [[R:%.*]] = srem i8 [[BO1]], [[BO0]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %BO0 = mul nsw i8 %X, 127
+  %BO1 = shl nsw i8 %X, 7
+  %r = srem i8 %BO1, %BO0
+  ret i8 %r
+}
+
+define i8 @srem_XY_XZ_with_CY_gt_CZ_drop_nsw_commuted(i8 noundef %X) {
+; CHECK-LABEL: @srem_XY_XZ_with_CY_gt_CZ_drop_nsw_commuted(
+; CHECK-NEXT:    [[BO0:%.*]] = mul nsw i8 [[X:%.*]], 127
+; CHECK-NEXT:    [[BO1:%.*]] = shl nsw i8 [[X]], 7
+; CHECK-NEXT:    [[R:%.*]] = srem i8 [[BO0]], [[BO1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %BO0 = mul nsw i8 %X, 127
+  %BO1 = shl nsw i8 %X, 7
+  %r = srem i8 %BO0, %BO1
+  ret i8 %r
+}
+
 define i8 @srem_XY_XZ_with_CY_gt_CZ_fail_missing_flag1(i8 %X) {
 ; CHECK-LABEL: @srem_XY_XZ_with_CY_gt_CZ_fail_missing_flag1(
 ; CHECK-NEXT:    [[BO0:%.*]] = mul nuw nsw i8 [[X:%.*]], 10

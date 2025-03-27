@@ -2,6 +2,7 @@
 // RUN:   -config="{CheckOptions: {\
 // RUN:     misc-const-correctness.TransformValues: true, \
 // RUN:     misc-const-correctness.WarnPointersAsValues: false, \
+// RUN:     misc-const-correctness.WarnPointersAsPointers: false, \
 // RUN:     misc-const-correctness.TransformPointersAsValues: false \
 // RUN:   }}" -- -fno-delayed-template-parsing
 

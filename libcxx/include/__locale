@@ -12,6 +12,7 @@
 
 #include <__config>
 #include <__locale_dir/locale_base_api.h>
+#include <__memory/addressof.h>
 #include <__memory/shared_count.h>
 #include <__mutex/once_flag.h>
 #include <__type_traits/make_unsigned.h>
@@ -50,7 +51,7 @@ _LIBCPP_HIDE_FROM_ABI const _Facet& use_facet(const locale&);
 class _LIBCPP_EXPORTED_FROM_ABI locale {
 public:
   // locale is essentially a shared_ptr that doesn't support weak_ptrs and never got a move constructor.
-  using __trivially_relocatable = locale;
+  using __trivially_relocatable _LIBCPP_NODEBUG = locale;
 
   // types:
   class _LIBCPP_EXPORTED_FROM_ABI facet;
@@ -60,8 +61,9 @@ public:
 
   static const category // values assigned here are for exposition only
       none    = 0,
-      collate = LC_COLLATE_MASK, ctype = LC_CTYPE_MASK, monetary = LC_MONETARY_MASK, numeric = LC_NUMERIC_MASK,
-      time = LC_TIME_MASK, messages = LC_MESSAGES_MASK, all = collate | ctype | monetary | numeric | time | messages;
+      collate = _LIBCPP_COLLATE_MASK, ctype = _LIBCPP_CTYPE_MASK, monetary = _LIBCPP_MONETARY_MASK,
+      numeric = _LIBCPP_NUMERIC_MASK, time = _LIBCPP_TIME_MASK, messages = _LIBCPP_MESSAGES_MASK,
+      all = collate | ctype | monetary | numeric | time | messages;
 
   // construct/copy/destroy:
   locale() _NOEXCEPT;
@@ -153,9 +155,9 @@ inline _LIBCPP_HIDE_FROM_ABI locale::locale(const locale& __other, _Facet* __f) 
 template <class _Facet>
 locale locale::combine(const locale& __other) const {
   if (!std::has_facet<_Facet>(__other))
-    __throw_runtime_error("locale::combine: locale missing facet");
+    std::__throw_runtime_error("locale::combine: locale missing facet");
 
-  return locale(*this, &const_cast<_Facet&>(std::use_facet<_Facet>(__other)));
+  return locale(*this, std::addressof(const_cast<_Facet&>(std::use_facet<_Facet>(__other))));
 }
 
 template <class _Facet>
@@ -348,7 +350,7 @@ public:
 #  define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_ALPHA
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
 #  ifdef __APPLE__
-  typedef __uint32_t mask;
+  typedef uint32_t mask;
 #  elif defined(__FreeBSD__)
   typedef unsigned long mask;
 #  elif defined(__NetBSD__)
@@ -516,6 +518,8 @@ protected:
 };
 #endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
+inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_isascii(int __c) { return (__c & ~0x7F) == 0; }
+
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI ctype<char> : public locale::facet, public ctype_base {
   const mask* __tab_;
@@ -527,25 +531,25 @@ public:
   explicit ctype(const mask* __tab = nullptr, bool __del = false, size_t __refs = 0);
 
   _LIBCPP_HIDE_FROM_ABI bool is(mask __m, char_type __c) const {
-    return isascii(__c) ? (__tab_[static_cast<int>(__c)] & __m) != 0 : false;
+    return std::__libcpp_isascii(__c) ? (__tab_[static_cast<int>(__c)] & __m) != 0 : false;
   }
 
   _LIBCPP_HIDE_FROM_ABI const char_type* is(const char_type* __low, const char_type* __high, mask* __vec) const {
     for (; __low != __high; ++__low, ++__vec)
-      *__vec = isascii(*__low) ? __tab_[static_cast<int>(*__low)] : 0;
+      *__vec = std::__libcpp_isascii(*__low) ? __tab_[static_cast<int>(*__low)] : 0;
     return __low;
   }
 
   _LIBCPP_HIDE_FROM_ABI const char_type* scan_is(mask __m, const char_type* __low, const char_type* __high) const {
     for (; __low != __high; ++__low)
-      if (isascii(*__low) && (__tab_[static_cast<int>(*__low)] & __m))
+      if (std::__libcpp_isascii(*__low) && (__tab_[static_cast<int>(*__low)] & __m))
         break;
     return __low;
   }
 
   _LIBCPP_HIDE_FROM_ABI const char_type* scan_not(mask __m, const char_type* __low, const char_type* __high) const {
     for (; __low != __high; ++__low)
-      if (!isascii(*__low) || !(__tab_[static_cast<int>(*__low)] & __m))
+      if (!std::__libcpp_isascii(*__low) || !(__tab_[static_cast<int>(*__low)] & __m))
         break;
     return __low;
   }
@@ -1295,7 +1299,7 @@ struct _LIBCPP_EXPORTED_FROM_ABI __narrow_to_utf8<16> : public codecvt<char16_t,
       const char16_t* __wn = (const char16_t*)__wb;
       __r = do_out(__mb, (const char16_t*)__wb, (const char16_t*)__we, __wn, __buf, __buf + __sz, __bn);
       if (__r == codecvt_base::error || __wn == (const char16_t*)__wb)
-        __throw_runtime_error("locale not supported");
+        std::__throw_runtime_error("locale not supported");
       for (const char* __p = __buf; __p < __bn; ++__p, ++__s)
         *__s = *__p;
       __wb = (const _CharT*)__wn;
@@ -1323,7 +1327,7 @@ struct _LIBCPP_EXPORTED_FROM_ABI __narrow_to_utf8<32> : public codecvt<char32_t,
       const char32_t* __wn = (const char32_t*)__wb;
       __r = do_out(__mb, (const char32_t*)__wb, (const char32_t*)__we, __wn, __buf, __buf + __sz, __bn);
       if (__r == codecvt_base::error || __wn == (const char32_t*)__wb)
-        __throw_runtime_error("locale not supported");
+        std::__throw_runtime_error("locale not supported");
       for (const char* __p = __buf; __p < __bn; ++__p, ++__s)
         *__s = *__p;
       __wb = (const _CharT*)__wn;
@@ -1367,7 +1371,7 @@ struct _LIBCPP_EXPORTED_FROM_ABI __widen_from_utf8<16> : public codecvt<char16_t
       const char* __nn = __nb;
       __r              = do_in(__mb, __nb, __ne - __nb > __sz ? __nb + __sz : __ne, __nn, __buf, __buf + __sz, __bn);
       if (__r == codecvt_base::error || __nn == __nb)
-        __throw_runtime_error("locale not supported");
+        std::__throw_runtime_error("locale not supported");
       for (const char16_t* __p = __buf; __p < __bn; ++__p, ++__s)
         *__s = *__p;
       __nb = __nn;
@@ -1395,7 +1399,7 @@ struct _LIBCPP_EXPORTED_FROM_ABI __widen_from_utf8<32> : public codecvt<char32_t
       const char* __nn = __nb;
       __r              = do_in(__mb, __nb, __ne - __nb > __sz ? __nb + __sz : __ne, __nn, __buf, __buf + __sz, __bn);
       if (__r == codecvt_base::error || __nn == __nb)
-        __throw_runtime_error("locale not supported");
+        std::__throw_runtime_error("locale not supported");
       for (const char32_t* __p = __buf; __p < __bn; ++__p, ++__s)
         *__s = *__p;
       __nb = __nn;

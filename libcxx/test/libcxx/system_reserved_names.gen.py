@@ -119,6 +119,11 @@ for header in public_headers:
 #define __acquire SYSTEM_RESERVED_NAME
 #define __release SYSTEM_RESERVED_NAME
 
+// Android and FreeBSD use this for __attribute__((__unused__))
+#if !defined(__FreeBSD__)  && !defined(__ANDROID__)
+#define __unused SYSTEM_RESERVED_NAME
+#endif
+
 // These names are not reserved, so the user can macro-define them.
 // These are intended to find improperly _Uglified template parameters.
 #define A SYSTEM_RESERVED_NAME

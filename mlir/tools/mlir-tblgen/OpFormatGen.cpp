@@ -11,6 +11,7 @@
 #include "OpClass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/TableGen/Class.h"
+#include "mlir/TableGen/EnumInfo.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Trait.h"
@@ -113,13 +114,16 @@ struct AttributeLikeVariable : public VariableElement {
     return isa<VariableElement>(fe) && classof(cast<VariableElement>(fe));
   }
 
-  /// Returns true if the variable is a UnitAttr or a UnitProperty.
+  /// Returns true if the variable is a UnitAttr or a UnitProp.
   bool isUnit() const {
     if (const auto *attr = dyn_cast<AttributeVariable>(this))
       return attr->getVar()->attr.getBaseAttr().getAttrDefName() == "UnitAttr";
     if (const auto *prop = dyn_cast<PropertyVariable>(this)) {
-      return prop->getVar()->prop.getBaseProperty().getPropertyDefName() ==
-             "UnitProperty";
+      StringRef baseDefName =
+          prop->getVar()->prop.getBaseProperty().getPropertyDefName();
+      // Note: remove the `UnitProperty` case once the deprecation period is
+      // over.
+      return baseDefName == "UnitProp" || baseDefName == "UnitProperty";
     }
     llvm_unreachable("Type that wasn't listed in classof()");
   }
@@ -421,17 +425,17 @@ struct OperationFormat {
 //===----------------------------------------------------------------------===//
 // Parser Gen
 
-/// Returns true if we can format the given attribute as an EnumAttr in the
+/// Returns true if we can format the given attribute as an enum in the
 /// parser format.
 static bool canFormatEnumAttr(const NamedAttribute *attr) {
   Attribute baseAttr = attr->attr.getBaseAttr();
-  const EnumAttr *enumAttr = dyn_cast<EnumAttr>(&baseAttr);
-  if (!enumAttr)
+  if (!baseAttr.isEnumAttr())
     return false;
+  EnumInfo enumInfo(&baseAttr.getDef());
 
   // The attribute must have a valid underlying type and a constant builder.
-  return !enumAttr->getUnderlyingType().empty() &&
-         !enumAttr->getConstBuilderTemplate().empty();
+  return !enumInfo.getUnderlyingType().empty() &&
+         !baseAttr.getConstBuilderTemplate().empty();
 }
 
 /// Returns if we should format the given attribute as an SymbolNameAttr.
@@ -1147,21 +1151,21 @@ static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
                               FmtContext &attrTypeCtx, bool parseAsOptional,
                               bool useProperties, StringRef opCppClassName) {
   Attribute baseAttr = var->attr.getBaseAttr();
-  const EnumAttr &enumAttr = cast<EnumAttr>(baseAttr);
-  std::vector<EnumAttrCase> cases = enumAttr.getAllCases();
+  EnumInfo enumInfo(&baseAttr.getDef());
+  std::vector<EnumCase> cases = enumInfo.getAllCases();
 
   // Generate the code for building an attribute for this enum.
   std::string attrBuilderStr;
   {
     llvm::raw_string_ostream os(attrBuilderStr);
-    os << tgfmt(enumAttr.getConstBuilderTemplate(), &attrTypeCtx,
+    os << tgfmt(baseAttr.getConstBuilderTemplate(), &attrTypeCtx,
                 "*attrOptional");
   }
 
   // Build a string containing the cases that can be formatted as a keyword.
   std::string validCaseKeywordsStr = "{";
   llvm::raw_string_ostream validCaseKeywordsOS(validCaseKeywordsStr);
-  for (const EnumAttrCase &attrCase : cases)
+  for (const EnumCase &attrCase : cases)
     if (canFormatStringAsKeyword(attrCase.getStr()))
       validCaseKeywordsOS << '"' << attrCase.getStr() << "\",";
   validCaseKeywordsOS.str().back() = '}';
@@ -1191,8 +1195,8 @@ static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
         formatv("result.addAttribute(\"{0}\", {0}Attr);", var->name);
   }
 
-  body << formatv(enumAttrParserCode, var->name, enumAttr.getCppNamespace(),
-                  enumAttr.getStringToSymbolFnName(), attrBuilderStr,
+  body << formatv(enumAttrParserCode, var->name, enumInfo.getCppNamespace(),
+                  enumInfo.getStringToSymbolFnName(), attrBuilderStr,
                   validCaseKeywordsStr, errorMessage, attrAssignment);
 }
 
@@ -1309,7 +1313,7 @@ if (!attr && {2}) {{
              "Properties.";
   return ::mlir::failure();
 }
-if (::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
+if (attr && ::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
   return ::mlir::failure();
 )decl";
 
@@ -1996,7 +2000,7 @@ static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
     fctx.withBuilder("::mlir::OpBuilder((*this)->getContext())");
     body << getter << "Attr() != "
          << tgfmt(attr.getConstBuilderTemplate(), &fctx,
-                  attr.getDefaultValue());
+                  tgfmt(attr.getDefaultValue(), &fctx));
   }
   if (optionalAndDefault)
     body << ")";
@@ -2004,29 +2008,49 @@ static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
 
 static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
                                     PropertyVariable &propElement) {
-  body << op.getGetterName(propElement.getVar()->name)
-       << "() != " << propElement.getVar()->prop.getDefaultValue();
+  FmtContext fctx;
+  fctx.withBuilder("::mlir::OpBuilder((*this)->getContext())");
+  body << op.getGetterName(propElement.getVar()->name) << "() != "
+       << tgfmt(propElement.getVar()->prop.getDefaultValue(), &fctx);
+}
+
+/// Elide the variadic segment size attributes if necessary.
+/// This pushes elided attribute names in `elidedStorage`.
+static void genVariadicSegmentElision(OperationFormat &fmt, Operator &op,
+                                      MethodBody &body,
+                                      const char *elidedStorage) {
+  if (!fmt.allOperands &&
+      op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments"))
+    body << "  " << elidedStorage << ".push_back(\"operandSegmentSizes\");\n";
+  if (!fmt.allResultTypes &&
+      op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
+    body << "  " << elidedStorage << ".push_back(\"resultSegmentSizes\");\n";
 }
 
 /// Generate the printer for the 'prop-dict' directive.
 static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
                                MethodBody &body) {
   body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedProps;\n";
+
+  genVariadicSegmentElision(fmt, op, body, "elidedProps");
+
   for (const NamedProperty *namedProperty : fmt.usedProperties)
     body << "  elidedProps.push_back(\"" << namedProperty->name << "\");\n";
   for (const NamedAttribute *namedAttr : fmt.usedAttributes)
     body << "  elidedProps.push_back(\"" << namedAttr->name << "\");\n";
 
-  // Add code to check attributes for equality with the default value
-  // for attributes with the elidePrintingDefaultValue bit set.
+  // Add code to check attributes for equality with their default values.
+  // Default-valued attributes will not be printed when their value matches the
+  // default.
   for (const NamedAttribute &namedAttr : op.getAttributes()) {
     const Attribute &attr = namedAttr.attr;
     if (!attr.isDerivedAttr() && attr.hasDefaultValue()) {
       const StringRef &name = namedAttr.name;
       FmtContext fctx;
       fctx.withBuilder("odsBuilder");
-      std::string defaultValue = std::string(
-          tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
+      std::string defaultValue =
+          std::string(tgfmt(attr.getConstBuilderTemplate(), &fctx,
+                            tgfmt(attr.getDefaultValue(), &fctx)));
       body << "  {\n";
       body << "     ::mlir::Builder odsBuilder(getContext());\n";
       body << "     ::mlir::Attribute attr = " << op.getGetterName(name)
@@ -2039,8 +2063,10 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
   // Similarly, elide default-valued properties.
   for (const NamedProperty &prop : op.getProperties()) {
     if (prop.prop.hasDefaultValue()) {
+      FmtContext fctx;
+      fctx.withBuilder("odsBuilder");
       body << "  if (" << op.getGetterName(prop.name)
-           << "() == " << prop.prop.getDefaultValue() << ") {";
+           << "() == " << tgfmt(prop.prop.getDefaultValue(), &fctx) << ") {";
       body << "    elidedProps.push_back(\"" << prop.name << "\");\n";
       body << "  }\n";
     }
@@ -2057,27 +2083,26 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
 static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
                                MethodBody &body, bool withKeyword) {
   body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs;\n";
-  // Elide the variadic segment size attributes if necessary.
-  if (!fmt.allOperands &&
-      op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments"))
-    body << "  elidedAttrs.push_back(\"operandSegmentSizes\");\n";
-  if (!fmt.allResultTypes &&
-      op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
-    body << "  elidedAttrs.push_back(\"resultSegmentSizes\");\n";
+
+  genVariadicSegmentElision(fmt, op, body, "elidedAttrs");
+
   for (const StringRef key : fmt.inferredAttributes.keys())
     body << "  elidedAttrs.push_back(\"" << key << "\");\n";
   for (const NamedAttribute *attr : fmt.usedAttributes)
     body << "  elidedAttrs.push_back(\"" << attr->name << "\");\n";
-  // Add code to check attributes for equality with the default value
-  // for attributes with the elidePrintingDefaultValue bit set.
+
+  // Add code to check attributes for equality with their default values.
+  // Default-valued attributes will not be printed when their value matches the
+  // default.
   for (const NamedAttribute &namedAttr : op.getAttributes()) {
     const Attribute &attr = namedAttr.attr;
     if (!attr.isDerivedAttr() && attr.hasDefaultValue()) {
       const StringRef &name = namedAttr.name;
       FmtContext fctx;
       fctx.withBuilder("odsBuilder");
-      std::string defaultValue = std::string(
-          tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
+      std::string defaultValue =
+          std::string(tgfmt(attr.getConstBuilderTemplate(), &fctx,
+                            tgfmt(attr.getDefaultValue(), &fctx)));
       body << "  {\n";
       body << "     ::mlir::Builder odsBuilder(getContext());\n";
       body << "     ::mlir::Attribute attr = " << op.getGetterName(name)
@@ -2240,13 +2265,13 @@ static MethodBody &genTypeOperandPrinter(FormatElement *arg, const Operator &op,
 static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
                                MethodBody &body) {
   Attribute baseAttr = var->attr.getBaseAttr();
-  const EnumAttr &enumAttr = cast<EnumAttr>(baseAttr);
-  std::vector<EnumAttrCase> cases = enumAttr.getAllCases();
+  const EnumInfo enumInfo(&baseAttr.getDef());
+  std::vector<EnumCase> cases = enumInfo.getAllCases();
 
   body << formatv(enumAttrBeginPrinterCode,
                   (var->attr.isOptional() ? "*" : "") +
                       op.getGetterName(var->name),
-                  enumAttr.getSymbolToStringFnName());
+                  enumInfo.getSymbolToStringFnName());
 
   // Get a string containing all of the cases that can't be represented with a
   // keyword.
@@ -2259,7 +2284,7 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
   // Otherwise if this is a bit enum attribute, don't allow cases that may
   // overlap with other cases. For simplicity sake, only allow cases with a
   // single bit value.
-  if (enumAttr.isBitEnum()) {
+  if (enumInfo.isBitEnum()) {
     for (auto it : llvm::enumerate(cases)) {
       int64_t value = it.value().getValue();
       if (value < 0 || !llvm::isPowerOf2_64(value))
@@ -2271,8 +2296,8 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
   // case value to determine when to print in the string form.
   if (nonKeywordCases.any()) {
     body << "    switch (caseValue) {\n";
-    StringRef cppNamespace = enumAttr.getCppNamespace();
-    StringRef enumName = enumAttr.getEnumClassName();
+    StringRef cppNamespace = enumInfo.getCppNamespace();
+    StringRef enumName = enumInfo.getEnumClassName();
     for (auto it : llvm::enumerate(cases)) {
       if (nonKeywordCases.test(it.index()))
         continue;

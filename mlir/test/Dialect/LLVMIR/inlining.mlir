@@ -663,3 +663,32 @@ llvm.func @caller() {
   llvm.call @vararg_intrinrics() : () -> ()
   llvm.return
 }
+
+// -----
+
+llvm.func @private_func(%a : i32) -> i32 attributes {sym_visibility = "private"} {
+  llvm.return %a : i32
+}
+
+// CHECK-LABEL: func @caller
+llvm.func @caller(%x : i32) -> i32 {
+  // CHECK-NOT: llvm.call @private_func
+  %z = llvm.call @private_func(%x) : (i32) -> (i32)
+  llvm.return %z : i32
+}
+
+// -----
+
+llvm.func @unreachable_func(%a : i32) -> i32 {
+  "llvm.intr.trap"() : () -> ()
+  llvm.unreachable
+}
+
+// CHECK-LABEL: func @caller
+llvm.func @caller(%x : i32) -> i32 {
+  // CHECK-NOT: llvm.call @unreachable_func
+  // CHECK: llvm.intr.trap
+  // CHECK: llvm.unreachable
+  %z = llvm.call @unreachable_func(%x) : (i32) -> (i32)
+  llvm.return %z : i32
+}

@@ -17,6 +17,7 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Scope.h"
+#include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
 
@@ -624,14 +625,21 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
 
   Actions.ActOnStartOfFunctionDef(getCurScope(), LM.D);
 
-  if (Tok.is(tok::kw_try)) {
-    ParseFunctionTryBlock(LM.D, FnScope);
-
+  auto _ = llvm::make_scope_exit([&]() {
     while (Tok.isNot(tok::eof))
       ConsumeAnyToken();
 
     if (Tok.is(tok::eof) && Tok.getEofData() == LM.D)
       ConsumeAnyToken();
+
+    if (auto *FD = dyn_cast_or_null<FunctionDecl>(LM.D))
+      if (isa<CXXMethodDecl>(FD) ||
+          FD->isInIdentifierNamespace(Decl::IDNS_OrdinaryFriend))
+        Actions.ActOnFinishInlineFunctionDef(FD);
+  });
+
+  if (Tok.is(tok::kw_try)) {
+    ParseFunctionTryBlock(LM.D, FnScope);
     return;
   }
   if (Tok.is(tok::colon)) {
@@ -641,12 +649,6 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
     if (!Tok.is(tok::l_brace)) {
       FnScope.Exit();
       Actions.ActOnFinishFunctionBody(LM.D, nullptr);
-
-      while (Tok.isNot(tok::eof))
-        ConsumeAnyToken();
-
-      if (Tok.is(tok::eof) && Tok.getEofData() == LM.D)
-        ConsumeAnyToken();
       return;
     }
   } else
@@ -660,17 +662,6 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
          "current template being instantiated!");
 
   ParseFunctionStatementBody(LM.D, FnScope);
-
-  while (Tok.isNot(tok::eof))
-    ConsumeAnyToken();
-
-  if (Tok.is(tok::eof) && Tok.getEofData() == LM.D)
-    ConsumeAnyToken();
-
-  if (auto *FD = dyn_cast_or_null<FunctionDecl>(LM.D))
-    if (isa<CXXMethodDecl>(FD) ||
-        FD->isInIdentifierNamespace(Decl::IDNS_OrdinaryFriend))
-      Actions.ActOnFinishInlineFunctionDef(FD);
 }
 
 /// ParseLexedMemberInitializers - We finished parsing the member specification
@@ -722,8 +713,7 @@ void Parser::ParseLexedMemberInitializer(LateParsedMemberInitializer &MI) {
   ExprResult Init = ParseCXXMemberInitializer(MI.Field, /*IsFunction=*/false,
                                               EqualLoc);
 
-  Actions.ActOnFinishCXXInClassMemberInitializer(MI.Field, EqualLoc,
-                                                 Init.get());
+  Actions.ActOnFinishCXXInClassMemberInitializer(MI.Field, EqualLoc, Init);
 
   // The next token should be our artificial terminating EOF token.
   if (Tok.isNot(tok::eof)) {

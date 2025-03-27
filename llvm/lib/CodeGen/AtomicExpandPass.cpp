@@ -324,8 +324,10 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       // failure path. As a result, fence insertion is directly done by
       // expandAtomicCmpXchg in that case.
       FenceOrdering = CASI->getMergedOrdering();
-      CASI->setSuccessOrdering(AtomicOrdering::Monotonic);
-      CASI->setFailureOrdering(AtomicOrdering::Monotonic);
+      auto CASOrdering = TLI->atomicOperationOrderAfterFenceSplit(CASI);
+
+      CASI->setSuccessOrdering(CASOrdering);
+      CASI->setFailureOrdering(CASOrdering);
     }
 
     if (FenceOrdering != AtomicOrdering::Monotonic) {

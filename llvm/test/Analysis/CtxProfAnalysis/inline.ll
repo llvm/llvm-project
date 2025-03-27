@@ -1,11 +1,12 @@
+; REQUIRES: x86_64-linux
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
-; RUN: llvm-ctxprof-util fromJSON --input=%t/profile.json --output=%t/profile.ctxprofdata
+; RUN: llvm-ctxprof-util fromYAML --input=%t/profile.yaml --output=%t/profile.ctxprofdata
 
 ; RUN: opt -passes='module-inline,print<ctx-prof-analysis>' -ctx-profile-printer-level=everything %t/module.ll -S \
-; RUN:   -use-ctx-profile=%t/profile.ctxprofdata -ctx-profile-printer-level=json \
-; RUN:   -o - 2> %t/profile-final.txt | FileCheck %s
-; RUN: %python %S/json_equals.py %t/profile-final.txt %t/expected.json
+; RUN:   -use-ctx-profile=%t/profile.ctxprofdata -ctx-profile-printer-level=yaml \
+; RUN:   -o - 2> %t/profile-final.yaml | FileCheck %s
+; RUN: diff %t/profile-final.yaml %t/expected.yaml
 
 ; There are 2 calls to @a from @entrypoint. We only inline the one callsite
 ; marked as alwaysinline, the rest are blocked (marked noinline). After the inline,
@@ -94,33 +95,35 @@ define i32 @b() !guid !2 {
 !0 = !{i64 1000}
 !1 = !{i64 1001}
 !2 = !{i64 1002}
-;--- profile.json
-[
-  { "Guid": 1000,
-    "Counters": [10, 2, 8],
-    "Callsites": [
-      [ { "Guid": 1001,
-          "Counters": [2, 100],
-          "Callsites": [[{"Guid": 1002, "Counters": [100]}]]}
-      ],
-      [ { "Guid": 1001,
-          "Counters": [8, 500],
-          "Callsites": [[{"Guid": 1002, "Counters": [500]}]]}
-      ]
-    ]
-  }
-]
-;--- expected.json
-[
-  { "Guid": 1000,
-    "Counters": [10, 2, 8, 100],
-    "Callsites": [
-      [],
-      [ { "Guid": 1001,
-          "Counters": [8, 500],
-          "Callsites": [[{"Guid": 1002, "Counters": [500]}]]}
-      ],
-      [{ "Guid": 1002, "Counters": [100]}]
-    ]
-  }
-]
+;--- profile.yaml
+Contexts:
+  - Guid: 1000
+    TotalRootEntryCount: 24
+    Counters: [10, 2, 8]
+    Callsites:  -
+                  - Guid: 1001
+                    Counters: [2, 100]
+                    Callsites:  -
+                                  - Guid: 1002
+                                    Counters: [100]
+                -
+                  - Guid: 1001
+                    Counters: [8, 500]
+                    Callsites:  -
+                                  - Guid: 1002
+                                    Counters: [500]
+;--- expected.yaml
+
+Contexts:
+  - Guid:            1000
+    TotalRootEntryCount: 24
+    Counters:        [ 10, 2, 8, 100 ]
+    Callsites:
+      - [  ]
+      - - Guid:            1001
+          Counters:        [ 8, 500 ]
+          Callsites:
+            - - Guid:            1002
+                Counters:        [ 500 ]
+      - - Guid:            1002
+          Counters:        [ 100 ]

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_CONTAINER_ADAPTOR_H
-#define _LIBCPP___FORMAT_CONTAINER_ADAPTOR_H
+#ifndef _LIBCPP___CXX03___FORMAT_CONTAINER_ADAPTOR_H
+#define _LIBCPP___CXX03___FORMAT_CONTAINER_ADAPTOR_H
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -70,4 +70,4 @@ struct _LIBCPP_TEMPLATE_VIS formatter<stack<_Tp, _Container>, _CharT>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_CONTAINER_ADAPTOR_H
+#endif // _LIBCPP___CXX03___FORMAT_CONTAINER_ADAPTOR_H

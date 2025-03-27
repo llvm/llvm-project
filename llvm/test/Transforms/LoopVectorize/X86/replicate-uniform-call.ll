@@ -11,23 +11,22 @@ define void @smax_call_uniform(ptr %dst, i64 %x) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 -68, -69
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i64 [[X]], 0
-; CHECK-NEXT:    br i1 true, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_UREM_CONTINUE6:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_UREM_IF:.*]], label %[[PRED_UREM_CONTINUE:.*]]
 ; CHECK:       [[PRED_UREM_IF]]:
 ; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[MUL]], [[X]]
 ; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE]]
 ; CHECK:       [[PRED_UREM_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ poison, %[[VECTOR_BODY]] ], [ [[REM]], %[[PRED_UREM_IF]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_UREM_IF1:.*]], label %[[PRED_UREM_CONTINUE2:.*]]
 ; CHECK:       [[PRED_UREM_IF1]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = urem i64 [[MUL]], [[X]]
@@ -48,10 +47,8 @@ define void @smax_call_uniform(ptr %dst, i64 %x) {
 ; CHECK:       [[PRED_UREM_CONTINUE6]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = tail call i64 @llvm.smax.i64(i64 [[TMP4]], i64 0)
 ; CHECK-NEXT:    [[TMP13:%.*]] = tail call i64 @llvm.smax.i64(i64 [[TMP9]], i64 0)
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
-; CHECK-NEXT:    [[P:%.*]] = select i1 [[TMP14]], i64 [[TMP12]], i64 1
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
-; CHECK-NEXT:    [[PREDPHI7:%.*]] = select i1 [[TMP15]], i64 [[TMP13]], i64 1
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], i64 1, i64 [[TMP12]]
+; CHECK-NEXT:    [[PREDPHI7:%.*]] = select i1 [[C]], i64 1, i64 [[TMP13]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[P]], 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[PREDPHI7]], 1
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[DST]], i64 [[ADD]]
@@ -59,12 +56,12 @@ define void @smax_call_uniform(ptr %dst, i64 %x) {
 ; CHECK-NEXT:    store i64 0, ptr [[GEP]], align 8
 ; CHECK-NEXT:    store i64 0, ptr [[TMP19]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], %[[LOOP_LATCH:.*]] ]
@@ -79,7 +76,7 @@ define void @smax_call_uniform(ptr %dst, i64 %x) {
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i64, ptr [[DST]], i64 [[IV_NEXT]]
 ; CHECK-NEXT:    store i64 0, ptr [[GEP1]], align 8
 ; CHECK-NEXT:    [[IV_NEXT1]] = add i64 [[IV1]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT1]], 0
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT1]], 1024
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -104,7 +101,7 @@ loop.latch:
   %gep = getelementptr i64, ptr %dst, i64 %add
   store i64 0, ptr %gep, align 8
   %iv.next = add i64 %iv, 1
-  %ec = icmp eq i64 %iv.next, 0
+  %ec = icmp eq i64 %iv.next, 1024
   br i1 %ec, label %exit, label %loop.header
 
 exit:

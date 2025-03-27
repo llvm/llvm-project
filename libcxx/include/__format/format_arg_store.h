@@ -164,7 +164,7 @@ consteval __arg_t __determine_arg_t() {
 template <class _Context, class _Tp>
 _LIBCPP_HIDE_FROM_ABI basic_format_arg<_Context> __create_format_arg(_Tp& __value) noexcept {
   using _Dp               = remove_const_t<_Tp>;
-  constexpr __arg_t __arg = __determine_arg_t<_Context, _Dp>();
+  constexpr __arg_t __arg = __format::__determine_arg_t<_Context, _Dp>();
   static_assert(__arg != __arg_t::__none, "the supplied type is not formattable");
   static_assert(__formattable_with<_Tp, _Context>);
 
@@ -257,7 +257,7 @@ struct _LIBCPP_TEMPLATE_VIS __format_arg_store {
     }
   }
 
-  using _Storage =
+  using _Storage _LIBCPP_NODEBUG =
       conditional_t<__format::__use_packed_format_arg_store(sizeof...(_Args)),
                     __format::__packed_format_arg_store<_Context, sizeof...(_Args)>,
                     __format::__unpacked_format_arg_store<_Context, sizeof...(_Args)>>;

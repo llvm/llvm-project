@@ -109,7 +109,7 @@ enum ThinLTOModes {
   THINALL
 };
 
-cl::opt<ThinLTOModes> ThinLTOMode(
+static cl::opt<ThinLTOModes> ThinLTOMode(
     "thinlto-action", cl::desc("Perform a single ThinLTO stage:"),
     cl::values(
         clEnumValN(
@@ -264,12 +264,6 @@ static cl::opt<bool>
     LTOSaveBeforeOpt("lto-save-before-opt", cl::init(false),
                      cl::desc("Save the IR before running optimizations"));
 
-static cl::opt<bool> TryUseNewDbgInfoFormat(
-    "try-experimental-debuginfo-iterators",
-    cl::desc("Enable debuginfo iterator positions, if they're built in"),
-    cl::init(false), cl::Hidden);
-
-extern cl::opt<bool> UseNewDbgInfoFormat;
 extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
 extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
 
@@ -1011,12 +1005,6 @@ int main(int argc, char **argv) {
   if (LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_UNSET)
     LoadBitcodeIntoNewDbgInfoFormat = cl::boolOrDefault::BOU_TRUE;
 
-  // RemoveDIs debug-info transition: tests may request that we /try/ to use the
-  // new debug-info format.
-  if (TryUseNewDbgInfoFormat) {
-    // Turn the new debug-info format on.
-    UseNewDbgInfoFormat = true;
-  }
   // Since llvm-lto collects multiple IR modules together, for simplicity's sake
   // we disable the "PreserveInputDbgFormat" flag to enforce a single debug info
   // format.

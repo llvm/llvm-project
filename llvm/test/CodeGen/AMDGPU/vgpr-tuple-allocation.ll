@@ -54,11 +54,11 @@ define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, 
 ; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_readlane_b32 s31, v44, 1
 ; GFX9-NEXT:    v_readlane_b32 s30, v44, 0
+; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v44, 2
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GFX9-NEXT:    buffer_load_dword v44, off, s[0:3], s33 offset:16 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_mov_b64 exec, s[6:7]
-; GFX9-NEXT:    s_addk_i32 s32, 0xf800
 ; GFX9-NEXT:    s_mov_b32 s33, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -111,12 +111,12 @@ define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, 
 ; GFX10-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:12
 ; GFX10-NEXT:    v_readlane_b32 s31, v44, 1
 ; GFX10-NEXT:    v_readlane_b32 s30, v44, 0
+; GFX10-NEXT:    s_mov_b32 s32, s33
 ; GFX10-NEXT:    v_readlane_b32 s4, v44, 2
 ; GFX10-NEXT:    s_or_saveexec_b32 s5, -1
 ; GFX10-NEXT:    buffer_load_dword v44, off, s[0:3], s33 offset:16 ; 4-byte Folded Reload
 ; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-NEXT:    s_mov_b32 exec_lo, s5
-; GFX10-NEXT:    s_addk_i32 s32, 0xfc00
 ; GFX10-NEXT:    s_mov_b32 s33, s4
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -165,11 +165,11 @@ define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, 
 ; GFX11-NEXT:    scratch_load_b32 v40, off, s33 offset:12
 ; GFX11-NEXT:    v_readlane_b32 s31, v44, 1
 ; GFX11-NEXT:    v_readlane_b32 s30, v44, 0
+; GFX11-NEXT:    s_mov_b32 s32, s33
 ; GFX11-NEXT:    v_readlane_b32 s0, v44, 2
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
 ; GFX11-NEXT:    scratch_load_b32 v44, off, s33 offset:16 ; 4-byte Folded Reload
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s1
-; GFX11-NEXT:    s_addk_i32 s32, 0xffe0
 ; GFX11-NEXT:    s_mov_b32 s33, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -188,7 +188,7 @@ main_body:
   call void asm sideeffect "", "~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15}"() #0
   call void asm sideeffect "", "~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23}"() #0
   call void asm sideeffect "", "~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"() #0
-  %v = call <4 x float> @llvm.amdgcn.image.gather4.c.b.cl.2d.v4f32.f32.f32(i32 1, float %bias, float %zcompare, float %s, float %t, float %clamp, <8 x i32> undef, <4 x i32> undef, i1 false, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.gather4.c.b.cl.2d.v4f32.f32.f32(i32 1, float %bias, float %zcompare, float %s, float %t, float %clamp, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0)
   call void @extern_func()
   ret <4 x float> %v
 }
@@ -238,11 +238,11 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:16 ; 4-byte Folded Reload
 ; GFX9-NEXT:    v_readlane_b32 s31, v45, 1
 ; GFX9-NEXT:    v_readlane_b32 s30, v45, 0
+; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v45, 2
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GFX9-NEXT:    buffer_load_dword v45, off, s[0:3], s33 offset:20 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_mov_b64 exec, s[6:7]
-; GFX9-NEXT:    s_addk_i32 s32, 0xf800
 ; GFX9-NEXT:    s_mov_b32 s33, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -288,12 +288,12 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX10-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:16
 ; GFX10-NEXT:    v_readlane_b32 s31, v45, 1
 ; GFX10-NEXT:    v_readlane_b32 s30, v45, 0
+; GFX10-NEXT:    s_mov_b32 s32, s33
 ; GFX10-NEXT:    v_readlane_b32 s4, v45, 2
 ; GFX10-NEXT:    s_or_saveexec_b32 s5, -1
 ; GFX10-NEXT:    buffer_load_dword v45, off, s[0:3], s33 offset:20 ; 4-byte Folded Reload
 ; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-NEXT:    s_mov_b32 exec_lo, s5
-; GFX10-NEXT:    s_addk_i32 s32, 0xfc00
 ; GFX10-NEXT:    s_mov_b32 s33, s4
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -337,11 +337,11 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX11-NEXT:    scratch_load_b32 v40, off, s33 offset:16
 ; GFX11-NEXT:    v_readlane_b32 s31, v45, 1
 ; GFX11-NEXT:    v_readlane_b32 s30, v45, 0
+; GFX11-NEXT:    s_mov_b32 s32, s33
 ; GFX11-NEXT:    v_readlane_b32 s0, v45, 2
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
 ; GFX11-NEXT:    scratch_load_b32 v45, off, s33 offset:20 ; 4-byte Folded Reload
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s1
-; GFX11-NEXT:    s_addk_i32 s32, 0xffe0
 ; GFX11-NEXT:    s_mov_b32 s33, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -353,10 +353,10 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 
 
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.gather4.c.b.cl.2d.v4f32.f32.f32(i32 1, float %bias, float %zcompare, float %s, float %t, float %clamp, <8 x i32> undef, <4 x i32> undef, i1 false, i32 0, i32 0)
-  store <4 x float> %v, ptr addrspace(1) undef
+  %v = call <4 x float> @llvm.amdgcn.image.gather4.c.b.cl.2d.v4f32.f32.f32(i32 1, float %bias, float %zcompare, float %s, float %t, float %clamp, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0)
+  store <4 x float> %v, ptr addrspace(1) poison
   call void @extern_func()
-  %v1 = call <4 x float> @llvm.amdgcn.image.gather4.c.b.cl.2d.v4f32.f32.f32(i32 1, float %bias, float %zcompare, float %s, float %t, float %clamp, <8 x i32> undef, <4 x i32> undef, i1 false, i32 0, i32 0)
+  %v1 = call <4 x float> @llvm.amdgcn.image.gather4.c.b.cl.2d.v4f32.f32.f32(i32 1, float %bias, float %zcompare, float %s, float %t, float %clamp, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0)
   ret <4 x float> %v1
 }
 

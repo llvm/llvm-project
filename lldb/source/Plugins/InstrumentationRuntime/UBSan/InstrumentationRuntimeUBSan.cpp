@@ -116,8 +116,6 @@ StructuredData::ObjectSP InstrumentationRuntimeUBSan::RetrieveReportData(
   if (!frame_sp)
     return StructuredData::ObjectSP();
 
-  StreamFileSP Stream = target.GetDebugger().GetOutputStreamSP();
-
   EvaluateExpressionOptions options;
   options.SetUnwindOnError(true);
   options.SetTryAllThreads(true);
@@ -130,15 +128,15 @@ StructuredData::ObjectSP InstrumentationRuntimeUBSan::RetrieveReportData(
 
   ValueObjectSP main_value;
   ExecutionContext exe_ctx;
-  Status eval_error;
   frame_sp->CalculateExecutionContext(exe_ctx);
   ExpressionResults result = UserExpression::Evaluate(
       exe_ctx, options, ub_sanitizer_retrieve_report_data_command, "",
-      main_value, eval_error);
+      main_value);
   if (result != eExpressionCompleted) {
     StreamString ss;
     ss << "cannot evaluate UndefinedBehaviorSanitizer expression:\n";
-    ss << eval_error.AsCString();
+    if (main_value)
+      ss << main_value->GetError().AsCString();
     Debugger::ReportWarning(ss.GetString().str(),
                             process_sp->GetTarget().GetDebugger().GetID());
     return StructuredData::ObjectSP();

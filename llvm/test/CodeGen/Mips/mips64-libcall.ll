@@ -1,6 +1,6 @@
-; RUN: llc -march=mips64el -mcpu=mips64r2 -O3 < %s |\
+; RUN: llc -mtriple=mips64el -mcpu=mips64r2 -O3 < %s |\
 ; RUN: FileCheck %s -check-prefix=HARD
-; RUN: llc -march=mips64el -mcpu=mips64r2 -mattr=+soft-float < %s |\
+; RUN: llc -mtriple=mips64el -mcpu=mips64r2 -mattr=+soft-float < %s |\
 ; RUN: FileCheck %s -check-prefix=SOFT
 
 ; Check that %add is not passed in an integer register.

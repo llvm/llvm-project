@@ -69,13 +69,14 @@ public:
   bool operator()(const Component &component) const {
     return (*this)(component.base());
   }
-  // Forbid integer division by zero in constants.
+  // Prevent integer division by known zeroes in constant expressions.
   template <int KIND>
   bool operator()(
       const Divide<Type<TypeCategory::Integer, KIND>> &division) const {
     using T = Type<TypeCategory::Integer, KIND>;
-    if (const auto divisor{GetScalarConstantValue<T>(division.right())}) {
-      return !divisor->IsZero() && (*this)(division.left());
+    if ((*this)(division.left()) && (*this)(division.right())) {
+      const auto divisor{GetScalarConstantValue<T>(division.right())};
+      return !divisor || !divisor->IsZero();
     } else {
       return false;
     }
@@ -100,9 +101,9 @@ template <bool INVARIANT>
 bool IsConstantExprHelper<INVARIANT>::IsConstantStructureConstructorComponent(
     const Symbol &component, const Expr<SomeType> &expr) const {
   if (IsAllocatable(component)) {
-    return IsNullObjectPointer(expr);
+    return IsNullObjectPointer(&expr);
   } else if (IsPointer(component)) {
-    return IsNullPointer(expr) || IsInitialDataTarget(expr) ||
+    return IsNullPointerOrAllocatable(&expr) || IsInitialDataTarget(expr) ||
         IsInitialProcedureTarget(expr);
   } else {
     return (*this)(expr);
@@ -194,7 +195,7 @@ struct IsActuallyConstantHelper {
       const bool compIsConstant{(*this)(y)};
       // If an allocatable component is initialized by a constant,
       // the structure constructor is not a constant.
-      if ((!compIsConstant && !IsNullPointer(y)) ||
+      if ((!compIsConstant && !IsNullPointerOrAllocatable(&y)) ||
           (compIsConstant && IsAllocatable(sym))) {
         return false;
       }
@@ -311,7 +312,9 @@ public:
   bool operator()(const ProcedureRef &x) const {
     if (const SpecificIntrinsic * intrinsic{x.proc().GetSpecificIntrinsic()}) {
       return intrinsic->characteristics.value().attrs.test(
-          characteristics::Procedure::Attr::NullPointer);
+                 characteristics::Procedure::Attr::NullPointer) ||
+          intrinsic->characteristics.value().attrs.test(
+              characteristics::Procedure::Attr::NullAllocatable);
     }
     return false;
   }
@@ -388,7 +391,7 @@ bool IsInitialProcedureTarget(const Expr<SomeType> &expr) {
   if (const auto *proc{std::get_if<ProcedureDesignator>(&expr.u)}) {
     return IsInitialProcedureTarget(*proc);
   } else {
-    return IsNullProcedurePointer(expr);
+    return IsNullProcedurePointer(&expr);
   }
 }
 
@@ -432,7 +435,8 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
                 "Implied-shape parameter '%s' has rank %d but its initializer has rank %d"_err_en_US,
                 symbol.name(), symRank, folded.Rank());
           }
-        } else if (auto extents{AsConstantExtents(context, symTS->shape())}) {
+        } else if (auto extents{AsConstantExtents(context, symTS->shape())};
+            extents && !HasNegativeExtent(*extents)) {
           if (folded.Rank() == 0 && symRank == 0) {
             // symbol and constant are both scalars
             return {std::move(folded)};
@@ -832,7 +836,10 @@ class IsContiguousHelper
 public:
   using Result = std::optional<bool>; // tri-state
   using Base = AnyTraverse<IsContiguousHelper, Result>;
-  explicit IsContiguousHelper(FoldingContext &c) : Base{*this}, context_{c} {}
+  explicit IsContiguousHelper(
+      FoldingContext &c, bool namedConstantSectionsAreContiguous)
+      : Base{*this}, context_{c}, namedConstantSectionsAreContiguous_{
+                                      namedConstantSectionsAreContiguous} {}
   using Base::operator();
 
   template <typename T> Result operator()(const Constant<T> &) const {
@@ -854,6 +861,11 @@ public:
                    ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
       // RANK(*) associating entity is contiguous.
       if (details->IsAssumedSize()) {
+        return true;
+      } else if (!IsVariable(details->expr()) &&
+          (namedConstantSectionsAreContiguous_ ||
+              !ExtractDataRef(details->expr(), true, true))) {
+        // Selector is associated to an expression value.
         return true;
       } else {
         return Base::operator()(ultimate); // use expr
@@ -1112,22 +1124,34 @@ private:
   }
 
   FoldingContext &context_;
+  bool namedConstantSectionsAreContiguous_{false};
 };
 
 template <typename A>
-std::optional<bool> IsContiguous(const A &x, FoldingContext &context) {
-  return IsContiguousHelper{context}(x);
+std::optional<bool> IsContiguous(const A &x, FoldingContext &context,
+    bool namedConstantSectionsAreContiguous) {
+  if (!IsVariable(x) &&
+      (namedConstantSectionsAreContiguous || !ExtractDataRef(x, true, true))) {
+    return true;
+  } else {
+    return IsContiguousHelper{context, namedConstantSectionsAreContiguous}(x);
+  }
 }
 
+template std::optional<bool> IsContiguous(const Expr<SomeType> &,
+    FoldingContext &, bool namedConstantSectionsAreContiguous);
+template std::optional<bool> IsContiguous(const ArrayRef &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous);
+template std::optional<bool> IsContiguous(const Substring &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous);
+template std::optional<bool> IsContiguous(const Component &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous);
+template std::optional<bool> IsContiguous(const ComplexPart &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous);
+template std::optional<bool> IsContiguous(const CoarrayRef &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous);
 template std::optional<bool> IsContiguous(
-    const Expr<SomeType> &, FoldingContext &);
-template std::optional<bool> IsContiguous(const ArrayRef &, FoldingContext &);
-template std::optional<bool> IsContiguous(const Substring &, FoldingContext &);
-template std::optional<bool> IsContiguous(const Component &, FoldingContext &);
-template std::optional<bool> IsContiguous(
-    const ComplexPart &, FoldingContext &);
-template std::optional<bool> IsContiguous(const CoarrayRef &, FoldingContext &);
-template std::optional<bool> IsContiguous(const Symbol &, FoldingContext &);
+    const Symbol &, FoldingContext &, bool namedConstantSectionsAreContiguous);
 
 // IsErrorExpr()
 struct IsErrorExprHelper : public AnyTraverse<IsErrorExprHelper, bool> {

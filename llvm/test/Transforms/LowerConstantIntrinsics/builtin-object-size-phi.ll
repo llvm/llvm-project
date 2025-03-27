@@ -143,7 +143,7 @@ define dso_local i64 @pick_max_one_oob(i1 %c0, i1 %c1) {
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[P_END:%.*]] = phi ptr [ [[P_ELSE]], [[IF_ELSE]] ], [ [[P_THEN]], [[IF_THEN]] ]
-; CHECK-NEXT:    [[OBJSIZE:%.*]] = select i1 [[C1:%.*]], i64 1, i64 0
+; CHECK-NEXT:    [[OBJSIZE:%.*]] = select i1 [[C1:%.*]], i64 -1, i64 0
 ; CHECK-NEXT:    ret i64 [[OBJSIZE]]
 ;
   %p = alloca [2 x i8], align 1

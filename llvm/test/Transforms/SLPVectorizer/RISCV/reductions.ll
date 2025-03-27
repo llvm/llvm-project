@@ -341,13 +341,12 @@ define void @reduce_or_2() {
 ; ZVFHMIN-NEXT:    [[TMP3:%.*]] = icmp ult <16 x i64> [[TMP2]], zeroinitializer
 ; ZVFHMIN-NEXT:    [[TMP4:%.*]] = insertelement <16 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0>, i64 [[TMP1]], i32 6
 ; ZVFHMIN-NEXT:    [[TMP5:%.*]] = icmp ult <16 x i64> [[TMP4]], zeroinitializer
-; ZVFHMIN-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP3]])
-; ZVFHMIN-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP5]])
-; ZVFHMIN-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP6]], [[TMP7]]
-; ZVFHMIN-NEXT:    br i1 [[OP_RDX]], label [[TMP9:%.*]], label [[TMP8:%.*]]
-; ZVFHMIN:       8:
+; ZVFHMIN-NEXT:    [[RDX_OP:%.*]] = or <16 x i1> [[TMP3]], [[TMP5]]
+; ZVFHMIN-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[RDX_OP]])
+; ZVFHMIN-NEXT:    br i1 [[TMP6]], label [[TMP8:%.*]], label [[TMP7:%.*]]
+; ZVFHMIN:       7:
 ; ZVFHMIN-NEXT:    ret void
-; ZVFHMIN:       9:
+; ZVFHMIN:       8:
 ; ZVFHMIN-NEXT:    ret void
 ;
 ; ZVL128-LABEL: @reduce_or_2(
@@ -356,28 +355,24 @@ define void @reduce_or_2() {
 ; ZVL128-NEXT:    [[TMP3:%.*]] = icmp ult <16 x i64> [[TMP2]], zeroinitializer
 ; ZVL128-NEXT:    [[TMP4:%.*]] = insertelement <16 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0>, i64 [[TMP1]], i32 6
 ; ZVL128-NEXT:    [[TMP5:%.*]] = icmp ult <16 x i64> [[TMP4]], zeroinitializer
-; ZVL128-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP3]])
-; ZVL128-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP5]])
-; ZVL128-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP6]], [[TMP7]]
-; ZVL128-NEXT:    br i1 [[OP_RDX]], label [[TMP9:%.*]], label [[TMP8:%.*]]
-; ZVL128:       8:
+; ZVL128-NEXT:    [[RDX_OP:%.*]] = or <16 x i1> [[TMP3]], [[TMP5]]
+; ZVL128-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[RDX_OP]])
+; ZVL128-NEXT:    br i1 [[TMP6]], label [[TMP8:%.*]], label [[TMP7:%.*]]
+; ZVL128:       7:
 ; ZVL128-NEXT:    ret void
-; ZVL128:       9:
+; ZVL128:       8:
 ; ZVL128-NEXT:    ret void
 ;
 ; ZVL256-LABEL: @reduce_or_2(
 ; ZVL256-NEXT:    [[TMP1:%.*]] = shl i64 0, 0
-; ZVL256-NEXT:    [[TMP2:%.*]] = insertelement <16 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison>, i64 [[TMP1]], i32 15
-; ZVL256-NEXT:    [[TMP3:%.*]] = icmp ult <16 x i64> [[TMP2]], zeroinitializer
-; ZVL256-NEXT:    [[TMP4:%.*]] = insertelement <16 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0>, i64 [[TMP1]], i32 6
-; ZVL256-NEXT:    [[TMP5:%.*]] = icmp ult <16 x i64> [[TMP4]], zeroinitializer
-; ZVL256-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP3]])
-; ZVL256-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP5]])
-; ZVL256-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP6]], [[TMP7]]
-; ZVL256-NEXT:    br i1 [[OP_RDX]], label [[TMP9:%.*]], label [[TMP8:%.*]]
-; ZVL256:       8:
+; ZVL256-NEXT:    [[TMP2:%.*]] = insertelement <32 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0>, i64 [[TMP1]], i32 15
+; ZVL256-NEXT:    [[TMP3:%.*]] = shufflevector <32 x i64> [[TMP2]], <32 x i64> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 15, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; ZVL256-NEXT:    [[TMP4:%.*]] = icmp ult <32 x i64> [[TMP3]], zeroinitializer
+; ZVL256-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v32i1(<32 x i1> [[TMP4]])
+; ZVL256-NEXT:    br i1 [[TMP5]], label [[TMP7:%.*]], label [[TMP6:%.*]]
+; ZVL256:       6:
 ; ZVL256-NEXT:    ret void
-; ZVL256:       9:
+; ZVL256:       7:
 ; ZVL256-NEXT:    ret void
 ;
 ; ZVL512-LABEL: @reduce_or_2(
@@ -877,20 +872,10 @@ entry:
 define i64 @red_zext_ld_4xi64(ptr %ptr) {
 ; CHECK-LABEL: @red_zext_ld_4xi64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LD0:%.*]] = load i8, ptr [[PTR:%.*]], align 1
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[LD0]] to i64
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 1
-; CHECK-NEXT:    [[LD1:%.*]] = load i8, ptr [[GEP]], align 1
-; CHECK-NEXT:    [[ZEXT_1:%.*]] = zext i8 [[LD1]] to i64
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i64 [[ZEXT]], [[ZEXT_1]]
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 2
-; CHECK-NEXT:    [[LD2:%.*]] = load i8, ptr [[GEP_1]], align 1
-; CHECK-NEXT:    [[ZEXT_2:%.*]] = zext i8 [[LD2]] to i64
-; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i64 [[ADD_1]], [[ZEXT_2]]
-; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 3
-; CHECK-NEXT:    [[LD3:%.*]] = load i8, ptr [[GEP_2]], align 1
-; CHECK-NEXT:    [[ZEXT_3:%.*]] = zext i8 [[LD3]] to i64
-; CHECK-NEXT:    [[ADD_3:%.*]] = add nuw nsw i64 [[ADD_2]], [[ZEXT_3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[TMP1]])
+; CHECK-NEXT:    [[ADD_3:%.*]] = zext i16 [[TMP2]] to i64
 ; CHECK-NEXT:    ret i64 [[ADD_3]]
 ;
 entry:
@@ -1037,10 +1022,8 @@ define i32 @stride_sum_abs_diff(ptr %p, ptr %q, i64 %stride) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[Q]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[P_2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr [[Q_2]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> poison, <2 x i32> [[TMP1]], i64 0)
-; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> [[TMP5]], <2 x i32> [[TMP3]], i64 2)
-; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> poison, <2 x i32> [[TMP2]], i64 0)
-; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> [[TMP7]], <2 x i32> [[TMP4]], i64 2)
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub <4 x i32> [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[TMP9]], i1 true)
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP10]])

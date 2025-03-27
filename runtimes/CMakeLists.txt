@@ -1,6 +1,18 @@
 # This file handles building LLVM runtime sub-projects.
 cmake_minimum_required(VERSION 3.20.0)
 
+# This file can be used in two ways: the bootstrapping build calls it from
+# llvm/runtimes/CMakeLists.txt where we reuse the build tree of the top-level
+# build or it can be directly invoked in this directory. In the latter case we
+# might be building against a LLVM install tree and might not have a valid build
+# tree set up yet. We can detect whether we are using the bootstrapping build
+# by checking for the HAVE_LLVM_LIT flag that is passed explicitly to
+# llvm_ExternalProject_Add().
+if (HAVE_LLVM_LIT)
+  message(STATUS "Performing bootstrapping runtimes build.")
+else()
+  message(STATUS "Performing standalone runtimes build.")
+endif()
 # Add path for custom and the LLVM build's modules to the CMake module path.
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
@@ -24,7 +36,7 @@ list(INSERT CMAKE_MODULE_PATH 0
 # We order libraries to mirror roughly how they are layered, except that compiler-rt can depend
 # on libc++, so we put it after.
 set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;offload")
-set(LLVM_SUPPORTED_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc")
+set(LLVM_SUPPORTED_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc;flang-rt")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
@@ -236,6 +248,25 @@ foreach(entry ${runtimes})
 endforeach()
 
 if(LLVM_INCLUDE_TESTS)
+  # If built with the runtimes build (rooted at runtimes/CMakeLists.txt), we
+  # won't have llvm-lit. If built with the bootstrapping build (rooted at
+  # llvm/CMakeLists.txt), the top-level llvm CMake invocation already generated
+  # the llvm-lit script.
+  if (NOT HAVE_LLVM_LIT)
+    # Ensure that the appropriate variables for lit are set before adding any
+    # runtimes since their CMake tests configuration might depend on lit being
+    # present. This ensures that the testsuites use a local lit from the build
+    # dir rather than ${LLVM_INSTALL_DIR}/bin/llvm-lit (which may not exist if
+    # LLVM_BINARY_DIR points at an installed LLVM tree rather than a build tree).
+    set(LLVM_LIT_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/bin)
+    get_llvm_lit_path(_base_dir _file_name)
+    set(LLVM_EXTERNAL_LIT "${_base_dir}/${_file_name}" CACHE STRING "Command used to spawn lit" FORCE)
+    # Avoid warning about missing llvm-lit from runtimes CMake files. This is
+    # fine since we call configure_file() to create llvm-lit at the end of this
+    # file (after recursing into all runtimes' CMake logic), so it will exist.
+    set(LLVM_EXTERNAL_LIT_MISSING_WARNED_ONCE YES CACHE INTERNAL "")
+  endif()
+
   set(LIT_ARGS_DEFAULT "-sv --show-xfail --show-unsupported")
   if (MSVC OR XCODE)
     set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
@@ -273,6 +304,8 @@ if(LLVM_INCLUDE_TESTS)
     # If built by manually invoking cmake on this directory, we don't have
     # llvm-lit. If invoked via llvm/runtimes, the toplevel llvm cmake
     # invocation already generated the llvm-lit script.
+    # NOTE: this must be called after all testsuites have been added, since
+    # otherwise the generated llvm-lit does not have all required path mappings.
     add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit
                      ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
   endif()
@@ -306,10 +339,28 @@ if(SUB_COMPONENTS)
   if(LLVM_RUNTIMES_TARGET)
     configure_file(
       ${CMAKE_CURRENT_SOURCE_DIR}/Components.cmake.in
-      ${LLVM_BINARY_DIR}/runtimes/${LLVM_RUNTIMES_TARGET}/Components.cmake)
+      ${CMAKE_CURRENT_BINARY_DIR}/runtimes/${LLVM_RUNTIMES_TARGET}/Components.cmake)
   else()
     configure_file(
       ${CMAKE_CURRENT_SOURCE_DIR}/Components.cmake.in
-      ${LLVM_BINARY_DIR}/runtimes/Components.cmake)
+      ${CMAKE_CURRENT_BINARY_DIR}/runtimes/Components.cmake)
   endif()
+endif()
+
+# If the user requested 'compile_commands.json' we merge the generated JSON from
+# the created directories.
+if(CMAKE_EXPORT_COMPILE_COMMANDS AND NOT ("${LLVM_BINARY_DIR}" STREQUAL "${CMAKE_BINARY_DIR}"))
+  # Make a dependency so that we don't error if the file gets deleted somehow.
+  add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/compile_commands.json
+                     COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_BINARY_DIR}/compile_commands.json)
+
+  file(TO_NATIVE_PATH "${LLVM_MAIN_SRC_DIR}/utils/merge-json.py" MERGE_JSON_PATH)
+  add_custom_command(OUTPUT ${LLVM_BINARY_DIR}/compile_commands.json
+                     COMMAND ${CMAKE_COMMAND} -E touch ${LLVM_BINARY_DIR}/compile_commands.json
+                     COMMAND ${Python3_EXECUTABLE} ${MERGE_JSON_PATH}
+                             ${LLVM_BINARY_DIR}/compile_commands.json
+                             ${CMAKE_BINARY_DIR}/compile_commands.json
+                             -o ${LLVM_BINARY_DIR}/compile_commands.json
+                     DEPENDS ${CMAKE_BINARY_DIR}/compile_commands.json)
+  add_custom_target(merge_runtime_commands ALL DEPENDS ${LLVM_BINARY_DIR}/compile_commands.json)
 endif()

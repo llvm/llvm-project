@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_ARITHMETIC_H
-#define _LIBCPP___CONCEPTS_ARITHMETIC_H
+#ifndef _LIBCPP___CXX03___CONCEPTS_ARITHMETIC_H
+#define _LIBCPP___CXX03___CONCEPTS_ARITHMETIC_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_floating_point.h>
@@ -53,4 +53,4 @@ concept __libcpp_integer = __libcpp_unsigned_integer<_Tp> || __libcpp_signed_int
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_ARITHMETIC_H
+#endif // _LIBCPP___CXX03___CONCEPTS_ARITHMETIC_H

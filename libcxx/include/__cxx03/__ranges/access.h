@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_ACCESS_H
-#define _LIBCPP___RANGES_ACCESS_H
+#ifndef _LIBCPP___CXX03___RANGES_ACCESS_H
+#define _LIBCPP___CXX03___RANGES_ACCESS_H
 
 #include <__cxx03/__concepts/class_or_enum.h>
 #include <__cxx03/__config>
@@ -207,4 +207,4 @@ inline constexpr auto cend = __cend::__fn{};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_ACCESS_H
+#endif // _LIBCPP___CXX03___RANGES_ACCESS_H

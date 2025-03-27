@@ -37,7 +37,7 @@ define <vscale x 2 x double> @idempotent_fmul_u_f64(<vscale x 2 x i1> %pg, <vsca
 define <vscale x 2 x double> @idempotent_fmul_u_different_argument_order(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a) #0 {
 ; CHECK-LABEL: define <vscale x 2 x double> @idempotent_fmul_u_different_argument_order(
 ; CHECK-SAME: <vscale x 2 x i1> [[PG:%.*]], <vscale x 2 x double> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.fmul.u.nxv2f64(<vscale x 2 x i1> [[PG]], <vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+00, i64 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x double> [[A]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.fmul.u.nxv2f64(<vscale x 2 x i1> [[PG]], <vscale x 2 x double> splat (double 1.000000e+00), <vscale x 2 x double> [[A]])
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = call <vscale x 2 x double> @llvm.aarch64.sve.dup.x.nxv2f64(double 1.0)
@@ -51,7 +51,7 @@ define <vscale x 8 x half> @idempotent_fmul_u_with_predicated_dup(<vscale x 8 x 
 ; CHECK-SAME: <vscale x 8 x i1> [[PG:%.*]], <vscale x 8 x half> [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 ;
-  %1 = call <vscale x 8 x half> @llvm.aarch64.sve.dup.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x i1> %pg, half 1.0)
+  %1 = call <vscale x 8 x half> @llvm.aarch64.sve.dup.nxv8f16(<vscale x 8 x half> poison, <vscale x 8 x i1> %pg, half 1.0)
   %2 = call <vscale x 8 x half> @llvm.aarch64.sve.fmul.u.nxv8f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %1)
   ret <vscale x 8 x half> %2
 }
@@ -61,7 +61,7 @@ define <vscale x 8 x half> @idempotent_fmul_u_two_dups(<vscale x 8 x i1> %pg, <v
   ; together is sane.
 ; CHECK-LABEL: define <vscale x 8 x half> @idempotent_fmul_u_two_dups(
 ; CHECK-SAME: <vscale x 8 x i1> [[PG:%.*]], <vscale x 8 x half> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    ret <vscale x 8 x half> shufflevector (<vscale x 8 x half> insertelement (<vscale x 8 x half> poison, half 0xH3C00, i64 0), <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 8 x half> splat (half 0xH3C00)
 ;
   %1 = call <vscale x 8 x half> @llvm.aarch64.sve.dup.x.nxv8f16(half 1.0)
   %2 = call <vscale x 8 x half> @llvm.aarch64.sve.dup.x.nxv8f16(half 1.0)
@@ -73,7 +73,7 @@ define <vscale x 8 x half> @idempotent_fmul_u_two_dups(<vscale x 8 x i1> %pg, <v
 define <vscale x 8 x half> @non_idempotent_fmul_u_f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a) #0 {
 ; CHECK-LABEL: define <vscale x 8 x half> @non_idempotent_fmul_u_f16(
 ; CHECK-SAME: <vscale x 8 x i1> [[PG:%.*]], <vscale x 8 x half> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.fmul.u.nxv8f16(<vscale x 8 x i1> [[PG]], <vscale x 8 x half> [[A]], <vscale x 8 x half> shufflevector (<vscale x 8 x half> insertelement (<vscale x 8 x half> poison, half 0xH4000, i64 0), <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer))
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.fmul.u.nxv8f16(<vscale x 8 x i1> [[PG]], <vscale x 8 x half> [[A]], <vscale x 8 x half> splat (half 0xH4000))
 ; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 ;
   %1 = call <vscale x 8 x half> @llvm.aarch64.sve.dup.x.nxv8f16(half 2.0)
@@ -84,7 +84,7 @@ define <vscale x 8 x half> @non_idempotent_fmul_u_f16(<vscale x 8 x i1> %pg, <vs
 define <vscale x 4 x float> @non_idempotent_fmul_u_f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a) #0 {
 ; CHECK-LABEL: define <vscale x 4 x float> @non_idempotent_fmul_u_f32(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x float> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.fmul.u.nxv4f32(<vscale x 4 x i1> [[PG]], <vscale x 4 x float> [[A]], <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 2.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer))
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.fmul.u.nxv4f32(<vscale x 4 x i1> [[PG]], <vscale x 4 x float> [[A]], <vscale x 4 x float> splat (float 2.000000e+00))
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = call <vscale x 4 x float> @llvm.aarch64.sve.dup.x.nxv4f32(float 2.0)
@@ -95,7 +95,7 @@ define <vscale x 4 x float> @non_idempotent_fmul_u_f32(<vscale x 4 x i1> %pg, <v
 define <vscale x 2 x double> @non_idempotent_fmul_u_f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a) #0 {
 ; CHECK-LABEL: define <vscale x 2 x double> @non_idempotent_fmul_u_f64(
 ; CHECK-SAME: <vscale x 2 x i1> [[PG:%.*]], <vscale x 2 x double> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.fmul.u.nxv2f64(<vscale x 2 x i1> [[PG]], <vscale x 2 x double> [[A]], <vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 2.000000e+00, i64 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer))
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.fmul.u.nxv2f64(<vscale x 2 x i1> [[PG]], <vscale x 2 x double> [[A]], <vscale x 2 x double> splat (double 2.000000e+00))
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = call <vscale x 2 x double> @llvm.aarch64.sve.dup.x.nxv2f64(double 2.0)
@@ -107,11 +107,11 @@ define <vscale x 2 x double> @non_idempotent_fmul_u_with_predicated_dup(<vscale 
   ; Different predicates
 ; CHECK-LABEL: define <vscale x 2 x double> @non_idempotent_fmul_u_with_predicated_dup(
 ; CHECK-SAME: <vscale x 2 x i1> [[PG1:%.*]], <vscale x 2 x i1> [[PG2:%.*]], <vscale x 2 x double> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.dup.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> [[PG1]], double 1.000000e+00)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.dup.nxv2f64(<vscale x 2 x double> poison, <vscale x 2 x i1> [[PG1]], double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.fmul.u.nxv2f64(<vscale x 2 x i1> [[PG2]], <vscale x 2 x double> [[A]], <vscale x 2 x double> [[TMP1]])
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP2]]
 ;
-  %1 = call <vscale x 2 x double> @llvm.aarch64.sve.dup.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> %pg1, double 1.0)
+  %1 = call <vscale x 2 x double> @llvm.aarch64.sve.dup.nxv2f64(<vscale x 2 x double> poison, <vscale x 2 x i1> %pg1, double 1.0)
   %2 = call <vscale x 2 x double> @llvm.aarch64.sve.fmul.u.nxv2f64(<vscale x 2 x i1> %pg2, <vscale x 2 x double> %a, <vscale x 2 x double> %1)
   ret <vscale x 2 x double> %2
 }

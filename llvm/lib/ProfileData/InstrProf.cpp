@@ -438,7 +438,7 @@ std::string getPGOFuncNameVarName(StringRef FuncName,
 }
 
 bool isGPUProfTarget(const Module &M) {
-  const auto &T = Triple(M.getTargetTriple());
+  const Triple &T = M.getTargetTriple();
   return T.isAMDGPU() || T.isNVPTX();
 }
 
@@ -1076,7 +1076,8 @@ void TemporalProfTraceTy::createBPFunctionNodes(
     // BalancedPartitioning more effective.
     for (auto &[Id, UNs] : IdToUNs)
       llvm::erase_if(UNs, [&](auto &UN) {
-        return UNFrequency[UN] <= 1 || 2 * UNFrequency[UN] > IdToUNs.size();
+        unsigned Freq = UNFrequency[UN];
+        return Freq <= 1 || 2 * Freq > IdToUNs.size();
       });
   }
 
@@ -1436,7 +1437,7 @@ bool needsComdatForCounter(const GlobalObject &GO, const Module &M) {
   if (GO.hasComdat())
     return true;
 
-  if (!Triple(M.getTargetTriple()).supportsCOMDAT())
+  if (!M.getTargetTriple().supportsCOMDAT())
     return false;
 
   // See createPGOFuncNameVar for more details. To avoid link errors, profile

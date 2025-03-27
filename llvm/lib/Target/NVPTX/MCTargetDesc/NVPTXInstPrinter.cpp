@@ -14,6 +14,7 @@
 #include "NVPTX.h"
 #include "NVPTXUtilities.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -83,7 +84,7 @@ void NVPTXInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                     raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     printRegName(O, Reg);
   } else if (Op.isImm()) {
     markup(O, Markup::Immediate) << formatImm(Op.getImm());
@@ -415,4 +416,40 @@ void NVPTXInstPrinter::printPrmtMode(const MCInst *MI, int OpNum,
     O << ".rc16";
     return;
   }
+}
+
+void NVPTXInstPrinter::printTmaReductionMode(const MCInst *MI, int OpNum,
+                                             raw_ostream &O,
+                                             const char *Modifier) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  using RedTy = llvm::nvvm::TMAReductionOp;
+
+  switch (static_cast<RedTy>(MO.getImm())) {
+  case RedTy::ADD:
+    O << ".add";
+    return;
+  case RedTy::MIN:
+    O << ".min";
+    return;
+  case RedTy::MAX:
+    O << ".max";
+    return;
+  case RedTy::INC:
+    O << ".inc";
+    return;
+  case RedTy::DEC:
+    O << ".dec";
+    return;
+  case RedTy::AND:
+    O << ".and";
+    return;
+  case RedTy::OR:
+    O << ".or";
+    return;
+  case RedTy::XOR:
+    O << ".xor";
+    return;
+  }
+  llvm_unreachable(
+      "Invalid Reduction Op in printCpAsyncBulkTensorReductionMode");
 }

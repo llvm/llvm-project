@@ -5150,8 +5150,8 @@ define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
   auto *Ti16 = sandboxir::Type::getInt16Ty(Ctx);
   auto *Tdouble = sandboxir::Type::getDoubleTy(Ctx);
   auto *Tfloat = sandboxir::Type::getFloatTy(Ctx);
-  auto *Tptr = sandboxir::PointerType::get(Tfloat, 0);
-  auto *Tptr1 = sandboxir::PointerType::get(Tfloat, 1);
+  auto *Tptr = sandboxir::PointerType::get(Ctx, 0);
+  auto *Tptr1 = sandboxir::PointerType::get(Ctx, 1);
 
   // Check classof(), getOpcode(), getSrcTy(), getDstTy()
   auto *ZExt = cast<sandboxir::CastInst>(&*It++);
@@ -5841,9 +5841,9 @@ define void @foo(i32 %i0, i32 %i1) {
     EXPECT_EQ(ICmp->getSignedPredicate(), LLVMICmp->getSignedPredicate());
     EXPECT_EQ(ICmp->getUnsignedPredicate(), LLVMICmp->getUnsignedPredicate());
   }
-  auto *NewCmp =
+  auto *NewCmp = cast<sandboxir::CmpInst>(
       sandboxir::CmpInst::create(llvm::CmpInst::ICMP_ULE, F.getArg(0),
-                                 F.getArg(1), BB->begin(), Ctx, "NewCmp");
+                                 F.getArg(1), BB->begin(), Ctx, "NewCmp"));
   EXPECT_EQ(NewCmp, &*BB->begin());
   EXPECT_EQ(NewCmp->getPredicate(), llvm::CmpInst::ICMP_ULE);
   EXPECT_EQ(NewCmp->getOperand(0), F.getArg(0));
@@ -5856,6 +5856,16 @@ define void @foo(i32 %i0, i32 %i1) {
   sandboxir::Type *RT =
       sandboxir::CmpInst::makeCmpResultType(F.getArg(0)->getType());
   EXPECT_TRUE(RT->isIntegerTy(1)); // Only one bit in a single comparison
+
+  {
+    // Check create() when operands are constant.
+    auto *Const42 =
+        sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 42);
+    auto *NewConstCmp =
+        sandboxir::CmpInst::create(llvm::CmpInst::ICMP_ULE, Const42, Const42,
+                                   BB->begin(), Ctx, "NewConstCmp");
+    EXPECT_TRUE(isa<sandboxir::Constant>(NewConstCmp));
+  }
 }
 
 TEST_F(SandboxIRTest, FCmpInst) {
@@ -5906,8 +5916,8 @@ bb1:
   CopyFrom->setFastMathFlags(FastMathFlags::getFast());
 
   // create with default flags
-  auto *NewFCmp = sandboxir::CmpInst::create(
-      llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), It1, Ctx, "NewFCmp");
+  auto *NewFCmp = cast<sandboxir::CmpInst>(sandboxir::CmpInst::create(
+      llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), It1, Ctx, "NewFCmp"));
   EXPECT_EQ(NewFCmp->getPredicate(), llvm::CmpInst::FCMP_ONE);
   EXPECT_EQ(NewFCmp->getOperand(0), F.getArg(0));
   EXPECT_EQ(NewFCmp->getOperand(1), F.getArg(1));
@@ -5917,9 +5927,10 @@ bb1:
   FastMathFlags DefaultFMF = NewFCmp->getFastMathFlags();
   EXPECT_TRUE(CopyFrom->getFastMathFlags() != DefaultFMF);
   // create with copied flags
-  auto *NewFCmpFlags = sandboxir::CmpInst::createWithCopiedFlags(
-      llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), CopyFrom, It1, Ctx,
-      "NewFCmpFlags");
+  auto *NewFCmpFlags =
+      cast<sandboxir::CmpInst>(sandboxir::CmpInst::createWithCopiedFlags(
+          llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), CopyFrom, It1, Ctx,
+          "NewFCmpFlags"));
   EXPECT_FALSE(NewFCmpFlags->getFastMathFlags() !=
                CopyFrom->getFastMathFlags());
   EXPECT_EQ(NewFCmpFlags->getPredicate(), llvm::CmpInst::FCMP_ONE);
@@ -5928,6 +5939,16 @@ bb1:
 #ifndef NDEBUG
   EXPECT_EQ(NewFCmpFlags->getName(), "NewFCmpFlags");
 #endif // NDEBUG
+
+  {
+    // Check create() when operands are constant.
+    auto *Const42 =
+        sandboxir::ConstantFP::get(sandboxir::Type::getFloatTy(Ctx), 42.0);
+    auto *NewConstCmp =
+        sandboxir::CmpInst::create(llvm::CmpInst::FCMP_ULE, Const42, Const42,
+                                   BB->begin(), Ctx, "NewConstCmp");
+    EXPECT_TRUE(isa<sandboxir::Constant>(NewConstCmp));
+  }
 }
 
 TEST_F(SandboxIRTest, UnreachableInst) {
@@ -6058,4 +6079,113 @@ TEST_F(SandboxIRTest, InstructionCallbacks) {
   EXPECT_THAT(Inserted, testing::IsEmpty());
   EXPECT_THAT(Removed, testing::IsEmpty());
   EXPECT_THAT(Moved, testing::IsEmpty());
+}
+
+// Check callbacks when we set a Use.
+TEST_F(SandboxIRTest, SetUseCallbacks) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v0, i8 %v1) {
+  %add0 = add i8 %v0, %v1
+  %add1 = add i8 %add0, %v1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *Arg0 = F->getArg(0);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Add1 = cast<sandboxir::BinaryOperator>(&*It++);
+
+  SmallVector<std::pair<sandboxir::Use, sandboxir::Value *>> UsesSet;
+  auto Id = Ctx.registerSetUseCallback(
+      [&UsesSet](sandboxir::Use U, sandboxir::Value *NewSrc) {
+        UsesSet.push_back({U, NewSrc});
+      });
+
+  // Now change %add1 operand to not use %add0.
+  Add1->setOperand(0, Arg0);
+  EXPECT_EQ(UsesSet.size(), 1u);
+  EXPECT_EQ(UsesSet[0].first.get(), Add1->getOperandUse(0).get());
+  EXPECT_EQ(UsesSet[0].second, Arg0);
+  // Restore to previous state.
+  Add1->setOperand(0, Add0);
+  UsesSet.clear();
+
+  // RAUW
+  Add0->replaceAllUsesWith(Arg0);
+  EXPECT_EQ(UsesSet.size(), 1u);
+  EXPECT_EQ(UsesSet[0].first.get(), Add1->getOperandUse(0).get());
+  EXPECT_EQ(UsesSet[0].second, Arg0);
+  // Restore to previous state.
+  Add1->setOperand(0, Add0);
+  UsesSet.clear();
+
+  // RUWIf
+  Add0->replaceUsesWithIf(Arg0, [](const auto &U) { return true; });
+  EXPECT_EQ(UsesSet.size(), 1u);
+  EXPECT_EQ(UsesSet[0].first.get(), Add1->getOperandUse(0).get());
+  EXPECT_EQ(UsesSet[0].second, Arg0);
+  // Restore to previous state.
+  Add1->setOperand(0, Add0);
+  UsesSet.clear();
+
+  // RUOW
+  Add1->replaceUsesOfWith(Add0, Arg0);
+  EXPECT_EQ(UsesSet.size(), 1u);
+  EXPECT_EQ(UsesSet[0].first.get(), Add1->getOperandUse(0).get());
+  EXPECT_EQ(UsesSet[0].second, Arg0);
+  // Restore to previous state.
+  Add1->setOperand(0, Add0);
+  UsesSet.clear();
+
+  // Check unregister.
+  Ctx.unregisterSetUseCallback(Id);
+  Add0->replaceAllUsesWith(Arg0);
+  EXPECT_TRUE(UsesSet.empty());
+}
+
+TEST_F(SandboxIRTest, FunctionObjectAlreadyExists) {
+  parseIR(C, R"IR(
+define void @foo() {
+  call void @bar()
+  ret void
+}
+define void @bar() {
+  ret void
+}
+)IR");
+  Function &LLVMFoo = *M->getFunction("foo");
+  Function &LLVMBar = *M->getFunction("bar");
+  sandboxir::Context Ctx(C);
+  // This will create a Function object for @bar().
+  Ctx.createFunction(&LLVMFoo);
+  EXPECT_NE(Ctx.getValue(&LLVMBar), nullptr);
+  // This should not crash, even though there is already a value for LLVMBar.
+  Ctx.createFunction(&LLVMBar);
+}
+
+TEST_F(SandboxIRTest, OpaqueValue) {
+  parseIR(C, R"IR(
+declare void @bar(metadata)
+define void @foo() {
+  call void @bar(metadata !1)
+  call void asm "asm", ""()
+  ret void
+}
+!1 = !{}
+)IR");
+  Function &LLVMFoo = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(&LLVMFoo);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Call = cast<sandboxir::CallInst>(&*It++);
+  auto *Op0 = Call->getOperand(0);
+  EXPECT_TRUE(isa<sandboxir::OpaqueValue>(Op0));
+  auto *Asm = cast<sandboxir::CallInst>(&*It++);
+  auto *AsmOp0 = Asm->getOperand(0);
+  EXPECT_TRUE(isa<sandboxir::OpaqueValue>(AsmOp0));
 }

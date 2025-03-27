@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___BIT_HAS_SINGLE_BIT_H
-#define _LIBCPP___BIT_HAS_SINGLE_BIT_H
+#ifndef _LIBCPP___CXX03___BIT_HAS_SINGLE_BIT_H
+#define _LIBCPP___CXX03___BIT_HAS_SINGLE_BIT_H
 
 #include <__cxx03/__concepts/arithmetic.h>
 #include <__cxx03/__config>
@@ -34,4 +34,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___BIT_HAS_SINGLE_BIT_H
+#endif // _LIBCPP___CXX03___BIT_HAS_SINGLE_BIT_H

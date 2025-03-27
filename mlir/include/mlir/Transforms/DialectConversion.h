@@ -65,11 +65,14 @@ public:
     SignatureConversion(unsigned numOrigInputs)
         : remappedInputs(numOrigInputs) {}
 
-    /// This struct represents a range of new types or a single value that
+    /// This struct represents a range of new types or a range of values that
     /// remaps an existing signature input.
     struct InputMapping {
       size_t inputNo, size;
-      Value replacementValue;
+      SmallVector<Value, 1> replacementValues;
+
+      /// Return "true" if this input was replaces with one or multiple values.
+      bool replacedWithValues() const { return !replacementValues.empty(); }
     };
 
     /// Return the argument types for the new signature.
@@ -92,9 +95,9 @@ public:
     /// used if the new types are not intended to remap an existing input.
     void addInputs(ArrayRef<Type> types);
 
-    /// Remap an input of the original signature to another `replacement`
-    /// value. This drops the original argument.
-    void remapInput(unsigned origInputNo, Value replacement);
+    /// Remap an input of the original signature to `replacements`
+    /// values. This drops the original argument.
+    void remapInput(unsigned origInputNo, ArrayRef<Value> replacements);
 
   private:
     /// Remap an input of the original signature with a range of types in the
@@ -181,6 +184,10 @@ public:
   /// converting (potentially multiple) block arguments that were the result of
   /// a signature conversion of a single block argument, to a single SSA value
   /// with the old block argument type.
+  ///
+  /// Note: Argument materializations are used only with the 1:N dialect
+  /// conversion driver. The 1:N dialect conversion driver will be removed soon
+  /// and so will be argument materializations.
   template <typename FnT, typename T = typename llvm::function_traits<
                               std::decay_t<FnT>>::template arg_t<1>>
   void addArgumentMaterialization(FnT &&callback) {
@@ -189,9 +196,9 @@ public:
   }
 
   /// This method registers a materialization that will be called when
-  /// converting a legal replacement value back to an illegal source type.
-  /// This is used when some uses of the original, illegal value must persist
-  /// beyond the main conversion.
+  /// converting a replacement value back to its original source type.
+  /// This is used when some uses of the original value persist beyond the main
+  /// conversion.
   template <typename FnT, typename T = typename llvm::function_traits<
                               std::decay_t<FnT>>::template arg_t<1>>
   void addSourceMaterialization(FnT &&callback) {
@@ -200,17 +207,18 @@ public:
   }
 
   /// This method registers a materialization that will be called when
-  /// converting an illegal (source) value to a legal (target) type.
+  /// converting a value to a target type according to a pattern's type
+  /// converter.
   ///
-  /// Note: For target materializations, users can optionally take the original
-  /// type. This type may be different from the type of the input. For example,
-  /// let's assume that a conversion pattern "P1" replaced an SSA value "v1"
-  /// (type "t1") with "v2" (type "t2"). Then a different conversion pattern
-  /// "P2" matches an op that has "v1" as an operand. Let's furthermore assume
-  /// that "P2" determines that the legalized type of "t1" is "t3", which may
-  /// be different from "t2". In this example, the target materialization
-  /// will be invoked with: outputType = "t3", inputs = "v2",
-  // originalType = "t1". Note  that the original type "t1" cannot be recovered
+  /// Note: Target materializations can optionally inspect the "original"
+  /// type. This type may be different from the type of the input value.
+  /// For example, let's assume that a conversion pattern "P1" replaced an SSA
+  /// value "v1" (type "t1") with "v2" (type "t2"). Then a different conversion
+  /// pattern "P2" matches an op that has "v1" as an operand. Let's furthermore
+  /// assume that "P2" determines that the converted target type of "t1" is
+  /// "t3", which may be different from "t2". In this example, the target
+  /// materialization will be invoked with: outputType = "t3", inputs = "v2",
+  /// originalType = "t1". Note that the original type "t1" cannot be recovered
   /// from just "t3" and "v2"; that's why the originalType parameter exists.
   ///
   /// Note: During a 1:N conversion, the result types can be a TypeRange. In
@@ -523,29 +531,98 @@ private:
 // Conversion Patterns
 //===----------------------------------------------------------------------===//
 
+namespace detail {
+/// Helper class that derives from a ConversionRewritePattern class and
+/// provides separate `match` and `rewrite` entry points instead of a combined
+/// `matchAndRewrite`.
+template <typename PatternT>
+class ConversionSplitMatchAndRewriteImpl : public PatternT {
+  using PatternT::PatternT;
+
+  /// Attempt to match against IR rooted at the specified operation, which is
+  /// the same operation kind as getRootKind().
+  ///
+  /// Note: This function must not modify the IR.
+  virtual LogicalResult match(typename PatternT::OperationT op) const = 0;
+
+  /// Rewrite the IR rooted at the specified operation with the result of
+  /// this pattern, generating any new operations with the specified
+  /// rewriter.
+  virtual void rewrite(typename PatternT::OperationT op,
+                       typename PatternT::OpAdaptor adaptor,
+                       ConversionPatternRewriter &rewriter) const {
+    // One of the two `rewrite` functions must be implemented.
+    llvm_unreachable("rewrite is not implemented");
+  }
+
+  virtual void rewrite(typename PatternT::OperationT op,
+                       typename PatternT::OneToNOpAdaptor adaptor,
+                       ConversionPatternRewriter &rewriter) const {
+    if constexpr (std::is_same<typename PatternT::OpAdaptor,
+                               ArrayRef<Value>>::value) {
+      rewrite(op, PatternT::getOneToOneAdaptorOperands(adaptor), rewriter);
+    } else {
+      SmallVector<Value> oneToOneOperands =
+          PatternT::getOneToOneAdaptorOperands(adaptor.getOperands());
+      rewrite(op, typename PatternT::OpAdaptor(oneToOneOperands, adaptor),
+              rewriter);
+    }
+  }
+
+  LogicalResult
+  matchAndRewrite(typename PatternT::OperationT op,
+                  typename PatternT::OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
+    if (succeeded(match(op))) {
+      rewrite(op, adaptor, rewriter);
+      return success();
+    }
+    return failure();
+  }
+
+  LogicalResult
+  matchAndRewrite(typename PatternT::OperationT op,
+                  typename PatternT::OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
+    // Users would normally override this function in conversion patterns to
+    // implement a 1:1 pattern. Patterns that are derived from this class have
+    // separate `match` and `rewrite` functions, so this `matchAndRewrite`
+    // overload is obsolete.
+    llvm_unreachable("this function is unreachable");
+  }
+};
+} // namespace detail
+
 /// Base class for the conversion patterns. This pattern class enables type
 /// conversions, and other uses specific to the conversion framework. As such,
 /// patterns of this type can only be used with the 'apply*' methods below.
 class ConversionPattern : public RewritePattern {
 public:
-  /// Hook for derived classes to implement rewriting. `op` is the (first)
-  /// operation matched by the pattern, `operands` is a list of the rewritten
-  /// operand values that are passed to `op`, `rewriter` can be used to emit the
-  /// new operations. This function should not fail. If some specific cases of
-  /// the operation are not supported, these cases should not be matched.
-  virtual void rewrite(Operation *op, ArrayRef<Value> operands,
-                       ConversionPatternRewriter &rewriter) const {
-    llvm_unreachable("unimplemented rewrite");
-  }
+  using OperationT = Operation *;
+  using OpAdaptor = ArrayRef<Value>;
+  using OneToNOpAdaptor = ArrayRef<ValueRange>;
+
+  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
+  /// separate `match` and `rewrite`.
+  using SplitMatchAndRewrite =
+      detail::ConversionSplitMatchAndRewriteImpl<ConversionPattern>;
 
   /// Hook for derived classes to implement combined matching and rewriting.
+  /// This overload supports only 1:1 replacements. The 1:N overload is called
+  /// by the driver. By default, it calls this 1:1 overload or reports a fatal
+  /// error if 1:N replacements were found.
   virtual LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const {
-    if (failed(match(op)))
-      return failure();
-    rewrite(op, operands, rewriter);
-    return success();
+    llvm_unreachable("matchAndRewrite is not implemented");
+  }
+
+  /// Hook for derived classes to implement combined matching and rewriting.
+  /// This overload supports 1:N replacements.
+  virtual LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
+                  ConversionPatternRewriter &rewriter) const {
+    return matchAndRewrite(op, getOneToOneAdaptorOperands(operands), rewriter);
   }
 
   /// Attempt to match and rewrite the IR root at the specified operation.
@@ -574,12 +651,18 @@ protected:
       : RewritePattern(std::forward<Args>(args)...),
         typeConverter(&typeConverter) {}
 
+  /// Given an array of value ranges, which are the inputs to a 1:N adaptor,
+  /// try to extract the single value of each range to construct a the inputs
+  /// for a 1:1 adaptor.
+  ///
+  /// This function produces a fatal error if at least one range has 0 or
+  /// more than 1 value: "pattern 'name' does not support 1:N conversion"
+  SmallVector<Value>
+  getOneToOneAdaptorOperands(ArrayRef<ValueRange> operands) const;
+
 protected:
   /// An optional type converter for use by this pattern.
   const TypeConverter *typeConverter = nullptr;
-
-private:
-  using RewritePattern::rewrite;
 };
 
 /// OpConversionPattern is a wrapper around ConversionPattern that allows for
@@ -588,7 +671,15 @@ private:
 template <typename SourceOp>
 class OpConversionPattern : public ConversionPattern {
 public:
+  using OperationT = SourceOp;
   using OpAdaptor = typename SourceOp::Adaptor;
+  using OneToNOpAdaptor =
+      typename SourceOp::template GenericAdaptor<ArrayRef<ValueRange>>;
+
+  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
+  /// separate `match` and `rewrite`.
+  using SplitMatchAndRewrite =
+      detail::ConversionSplitMatchAndRewriteImpl<OpConversionPattern<SourceOp>>;
 
   OpConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
       : ConversionPattern(SourceOp::getOperationName(), benefit, context) {}
@@ -599,37 +690,33 @@ public:
 
   /// Wrappers around the ConversionPattern methods that pass the derived op
   /// type.
-  LogicalResult match(Operation *op) const final {
-    return match(cast<SourceOp>(op));
-  }
-  void rewrite(Operation *op, ArrayRef<Value> operands,
-               ConversionPatternRewriter &rewriter) const final {
-    auto sourceOp = cast<SourceOp>(op);
-    rewrite(sourceOp, OpAdaptor(operands, sourceOp), rewriter);
-  }
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     auto sourceOp = cast<SourceOp>(op);
     return matchAndRewrite(sourceOp, OpAdaptor(operands, sourceOp), rewriter);
   }
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    auto sourceOp = cast<SourceOp>(op);
+    return matchAndRewrite(sourceOp, OneToNOpAdaptor(operands, sourceOp),
+                           rewriter);
+  }
 
-  /// Rewrite and Match methods that operate on the SourceOp type. These must be
+  /// Methods that operate on the SourceOp type. One of these must be
   /// overridden by the derived pattern class.
-  virtual LogicalResult match(SourceOp op) const {
-    llvm_unreachable("must override match or matchAndRewrite");
-  }
-  virtual void rewrite(SourceOp op, OpAdaptor adaptor,
-                       ConversionPatternRewriter &rewriter) const {
-    llvm_unreachable("must override matchAndRewrite or a rewrite method");
-  }
   virtual LogicalResult
   matchAndRewrite(SourceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const {
-    if (failed(match(op)))
-      return failure();
-    rewrite(op, adaptor, rewriter);
-    return success();
+    llvm_unreachable("matchAndRewrite is not implemented");
+  }
+  virtual LogicalResult
+  matchAndRewrite(SourceOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const {
+    SmallVector<Value> oneToOneOperands =
+        getOneToOneAdaptorOperands(adaptor.getOperands());
+    return matchAndRewrite(op, OpAdaptor(oneToOneOperands, adaptor), rewriter);
   }
 
 private:
@@ -652,29 +739,28 @@ public:
 
   /// Wrappers around the ConversionPattern methods that pass the derived op
   /// type.
-  void rewrite(Operation *op, ArrayRef<Value> operands,
-               ConversionPatternRewriter &rewriter) const final {
-    rewrite(cast<SourceOp>(op), operands, rewriter);
-  }
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     return matchAndRewrite(cast<SourceOp>(op), operands, rewriter);
   }
-
-  /// Rewrite and Match methods that operate on the SourceOp type. These must be
-  /// overridden by the derived pattern class.
-  virtual void rewrite(SourceOp op, ArrayRef<Value> operands,
-                       ConversionPatternRewriter &rewriter) const {
-    llvm_unreachable("must override matchAndRewrite or a rewrite method");
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    return matchAndRewrite(cast<SourceOp>(op), operands, rewriter);
   }
+
+  /// Methods that operate on the SourceOp type. One of these must be
+  /// overridden by the derived pattern class.
   virtual LogicalResult
   matchAndRewrite(SourceOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const {
-    if (failed(match(op)))
-      return failure();
-    rewrite(op, operands, rewriter);
-    return success();
+    llvm_unreachable("matchAndRewrite is not implemented");
+  }
+  virtual LogicalResult
+  matchAndRewrite(SourceOp op, ArrayRef<ValueRange> operands,
+                  ConversionPatternRewriter &rewriter) const {
+    return matchAndRewrite(op, getOneToOneAdaptorOperands(operands), rewriter);
   }
 
 private:
@@ -810,15 +896,7 @@ public:
   void replaceOp(Operation *op, Operation *newOp) override;
 
   /// Replace the given operation with the new value ranges. The number of op
-  /// results and value ranges must match. If an original SSA value is replaced
-  /// by multiple SSA values (i.e., a value range has more than 1 element), the
-  /// conversion driver will insert an argument materialization to convert the
-  /// N SSA values back into 1 SSA value of the original type. The given
-  /// operation is erased.
-  ///
-  /// Note: The argument materialization is a workaround until we have full 1:N
-  /// support in the dialect conversion. (It is going to disappear from both
-  /// `replaceOpWithMultiple` and `applySignatureConversion`.)
+  /// results and value ranges must match. The given  operation is erased.
   void replaceOpWithMultiple(Operation *op, ArrayRef<ValueRange> newValues);
 
   /// PatternRewriter hook for erasing a dead operation. The uses of this
@@ -1215,8 +1293,8 @@ struct ConversionConfig {
   // represented at the moment.
   RewriterBase::Listener *listener = nullptr;
 
-  /// If set to "true", the dialect conversion attempts to build source/target/
-  /// argument materializations through the type converter API in lieu of
+  /// If set to "true", the dialect conversion attempts to build source/target
+  /// materializations through the type converter API in lieu of
   /// "builtin.unrealized_conversion_cast ops". The conversion process fails if
   /// at least one materialization could not be built.
   ///

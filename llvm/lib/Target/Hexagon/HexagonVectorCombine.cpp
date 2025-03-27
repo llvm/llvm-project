@@ -342,7 +342,8 @@ private:
   MoveList createLoadGroups(const AddrList &Group) const;
   MoveList createStoreGroups(const AddrList &Group) const;
   bool moveTogether(MoveGroup &Move) const;
-  template <typename T> InstMap cloneBefore(Instruction *To, T &&Insts) const;
+  template <typename T>
+  InstMap cloneBefore(BasicBlock::iterator To, T &&Insts) const;
 
   void realignLoadGroup(IRBuilderBase &Builder, const ByteSpan &VSpan,
                         int ScLen, Value *AlignVal, Value *AlignAddr) const;
@@ -985,7 +986,7 @@ auto AlignVectors::createStoreGroups(const AddrList &Group) const -> MoveList {
     assert(!Move.Main.empty() && "Move group should have non-empty Main");
     if (Move.Main.size() >= SizeLimit)
       return false;
-    // For stores with return values we'd have to collect downward depenencies.
+    // For stores with return values we'd have to collect downward dependencies.
     // There are no such stores that we handle at the moment, so omit that.
     assert(Info.Inst->getType()->isVoidTy() &&
            "Not handling stores with return values");
@@ -1046,7 +1047,7 @@ auto AlignVectors::moveTogether(MoveGroup &Move) const -> bool {
   if (Move.IsLoad) {
     // Move all the loads (and dependencies) to where the first load is.
     // Clone all deps to before Where, keeping order.
-    Move.Clones = cloneBefore(Where, Move.Deps);
+    Move.Clones = cloneBefore(Where->getIterator(), Move.Deps);
     // Move all main instructions to after Where, keeping order.
     ArrayRef<Instruction *> Main(Move.Main);
     for (Instruction *M : Main) {
@@ -1067,7 +1068,7 @@ auto AlignVectors::moveTogether(MoveGroup &Move) const -> bool {
     // Move all main instructions to before Where, inverting order.
     ArrayRef<Instruction *> Main(Move.Main);
     for (Instruction *M : Main.drop_front(1)) {
-      M->moveBefore(Where);
+      M->moveBefore(Where->getIterator());
       Where = M;
     }
   }
@@ -1076,7 +1077,8 @@ auto AlignVectors::moveTogether(MoveGroup &Move) const -> bool {
 }
 
 template <typename T>
-auto AlignVectors::cloneBefore(Instruction *To, T &&Insts) const -> InstMap {
+auto AlignVectors::cloneBefore(BasicBlock::iterator To, T &&Insts) const
+    -> InstMap {
   InstMap Map;
 
   for (Instruction *I : Insts) {
@@ -1172,8 +1174,8 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
   for (const ByteSpan::Block &B : VSpan) {
     ByteSpan ASection = ASpan.section(B.Pos, B.Seg.Size);
     for (const ByteSpan::Block &S : ASection) {
-      EarliestUser[S.Seg.Val] = std::min(
-          EarliestUser[S.Seg.Val], earliestUser(B.Seg.Val->uses()), isEarlier);
+      auto &EU = EarliestUser[S.Seg.Val];
+      EU = std::min(EU, earliestUser(B.Seg.Val->uses()), isEarlier);
     }
   }
 
@@ -1200,10 +1202,10 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
                             VSpan.section(Start, Width).values());
   };
 
-  auto moveBefore = [this](Instruction *In, Instruction *To) {
+  auto moveBefore = [this](BasicBlock::iterator In, BasicBlock::iterator To) {
     // Move In and its upward dependencies to before To.
     assert(In->getParent() == To->getParent());
-    DepList Deps = getUpwardDeps(In, To);
+    DepList Deps = getUpwardDeps(&*In, &*To);
     In->moveBefore(To);
     // DepList is sorted with respect to positions in the basic block.
     InstMap Map = cloneBefore(In, Deps);
@@ -1236,7 +1238,7 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
       // in order to check legality.
       if (auto *Load = dyn_cast<Instruction>(Loads[Index])) {
         if (!HVC.isSafeToMoveBeforeInBB(*Load, BasePos))
-          moveBefore(Load, &*BasePos);
+          moveBefore(Load->getIterator(), BasePos);
       }
       LLVM_DEBUG(dbgs() << "Loads[" << Index << "]:" << *Loads[Index] << '\n');
     }

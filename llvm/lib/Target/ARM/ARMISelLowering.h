@@ -321,7 +321,8 @@ class VectorType;
     CSINC, // Conditional select increment.
 
     // Vector load N-element structure to all lanes:
-    VLD1DUP = ISD::FIRST_TARGET_MEMORY_OPCODE,
+    FIRST_MEMORY_OPCODE,
+    VLD1DUP = FIRST_MEMORY_OPCODE,
     VLD2DUP,
     VLD3DUP,
     VLD4DUP,
@@ -356,7 +357,8 @@ class VectorType;
 
     // Load/Store of dual registers
     LDRD,
-    STRD
+    STRD,
+    LAST_MEMORY_OPCODE = STRD,
   };
 
   } // end namespace ARMISD
@@ -886,6 +888,7 @@ class VectorType;
     SDValue LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const;
     void LowerLOAD(SDNode *N, SmallVectorImpl<SDValue> &Results,
                    SelectionDAG &DAG) const;
+    SDValue LowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
 
     Register getRegisterByName(const char* RegName, LLT VT,
                                const MachineFunction &MF) const override;
@@ -962,7 +965,7 @@ class VectorType;
     bool CanLowerReturn(CallingConv::ID CallConv,
                         MachineFunction &MF, bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        LLVMContext &Context) const override;
+                        LLVMContext &Context, const Type *RetTy) const override;
 
     SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -978,13 +981,11 @@ class VectorType;
     bool isUnsupportedFloatingType(EVT VT) const;
 
     SDValue getCMOV(const SDLoc &dl, EVT VT, SDValue FalseVal, SDValue TrueVal,
-                    SDValue ARMcc, SDValue CCR, SDValue Cmp,
-                    SelectionDAG &DAG) const;
+                    SDValue ARMcc, SDValue Flags, SelectionDAG &DAG) const;
     SDValue getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                       SDValue &ARMcc, SelectionDAG &DAG, const SDLoc &dl) const;
     SDValue getVFPCmp(SDValue LHS, SDValue RHS, SelectionDAG &DAG,
                       const SDLoc &dl, bool Signaling = false) const;
-    SDValue duplicateCmp(SDValue Cmp, SelectionDAG &DAG) const;
 
     SDValue OptimizeVFPBrcond(SDValue Op, SelectionDAG &DAG) const;
 

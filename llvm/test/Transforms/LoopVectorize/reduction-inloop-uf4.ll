@@ -16,9 +16,9 @@ define i32 @reduction_sum_single(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 16
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 32
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 48
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 32
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
@@ -64,6 +64,91 @@ entry:
 ._crit_edge:                                      ; preds = %.lr.ph
   %sum.0.lcssa = phi i32 [ %l7, %.lr.ph ]
   ret i32 %sum.0.lcssa
+}
+
+; Check that we correctly unroll two reductions chained together.
+define i64 @reduction_sum_chain(ptr noalias %p, ptr noalias %q) {
+; CHECK-LABEL: @reduction_sum_chain(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[TMP21:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[TMP23:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[Q:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 32
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i64 64
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i64 96
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP0]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP1]], i64 32
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP1]], i64 64
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP1]], i64 96
+; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x i64>, ptr [[TMP5]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x i64>, ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x i64>, ptr [[TMP7]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[WIDE_LOAD4]])
+; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[TMP10]], [[VEC_PHI1]]
+; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[WIDE_LOAD5]])
+; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP12]], [[VEC_PHI2]]
+; CHECK-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[WIDE_LOAD6]])
+; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], [[VEC_PHI3]]
+; CHECK-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[WIDE_LOAD7]])
+; CHECK-NEXT:    [[TMP17]] = add i64 [[TMP16]], [[TMP9]]
+; CHECK-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[WIDE_LOAD8]])
+; CHECK-NEXT:    [[TMP19]] = add i64 [[TMP18]], [[TMP11]]
+; CHECK-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[WIDE_LOAD9]])
+; CHECK-NEXT:    [[TMP21]] = add i64 [[TMP20]], [[TMP13]]
+; CHECK-NEXT:    [[TMP22:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[WIDE_LOAD10]])
+; CHECK-NEXT:    [[TMP23]] = add i64 [[TMP22]], [[TMP15]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
+; CHECK-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i64 [[TMP19]], [[TMP17]]
+; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add i64 [[TMP21]], [[BIN_RDX]]
+; CHECK-NEXT:    [[BIN_RDX12:%.*]] = add i64 [[TMP23]], [[BIN_RDX11]]
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 poison, label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[ADD2_LCSSA:%.*]] = phi i64 [ poison, [[LOOP]] ], [ [[BIN_RDX12]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i64 [[ADD2_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [0, %entry], [%iv.next, %loop]
+  %rdx = phi i64 [0, %entry], [%add2, %loop]
+
+  %p.gep = getelementptr i64, ptr %p, i64 %iv
+  %q.gep = getelementptr i64, ptr %q, i64 %iv
+
+  %x = load i64, ptr %p.gep
+  %y = load i64, ptr %q.gep
+
+  %add1 = add i64 %rdx, %x
+  %add2 = add i64 %add1, %y
+
+  %iv.next = add i64 %iv, 1
+  %done = icmp eq i64 %iv.next, 256
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret i64 %add2
 }
 
 define i32 @predicated(ptr noalias nocapture %A) {
@@ -257,10 +342,10 @@ define i32 @predicated(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[TMP108:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP98]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP109:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP108]])
 ; CHECK-NEXT:    [[TMP110]] = add i32 [[TMP109]], [[VEC_PHI6]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 16)
 ; CHECK-NEXT:    [[TMP111:%.*]] = icmp eq i64 [[INDEX_NEXT]], 272
-; CHECK-NEXT:    br i1 [[TMP111]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP111]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP104]], [[TMP101]]
 ; CHECK-NEXT:    [[BIN_RDX37:%.*]] = add i32 [[TMP107]], [[BIN_RDX]]
@@ -269,7 +354,7 @@ define i32 @predicated(ptr noalias nocapture %A) {
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[DOTLR_PH:%.*]]
 ; CHECK:       .lr.ph:
-; CHECK-NEXT:    br i1 poison, label [[DOT_CRIT_EDGE]], label [[DOTLR_PH]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 poison, label [[DOT_CRIT_EDGE]], label [[DOTLR_PH]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       ._crit_edge:
 ; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ poison, [[DOTLR_PH]] ], [ [[BIN_RDX38]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[SUM_0_LCSSA]]
@@ -499,7 +584,7 @@ define i32 @cond_rdx_pred(i32 %cond, ptr noalias %a, i64 %N) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 16)
 ; CHECK-NEXT:    [[TMP119:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP119]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP119]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = mul i32 [[TMP112]], [[TMP109]]
 ; CHECK-NEXT:    [[BIN_RDX39:%.*]] = mul i32 [[TMP115]], [[BIN_RDX]]
@@ -512,7 +597,7 @@ define i32 @cond_rdx_pred(i32 %cond, ptr noalias %a, i64 %N) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    br i1 poison, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 poison, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[RES_LCSSA:%.*]] = phi i32 [ poison, [[FOR_INC]] ], [ [[BIN_RDX40]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[RES_LCSSA]]

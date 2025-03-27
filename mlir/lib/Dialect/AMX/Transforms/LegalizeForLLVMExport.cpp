@@ -53,8 +53,7 @@ FailureOr<Value> getStride(ConversionPatternRewriter &rewriter,
   unsigned bytes = width >> 3;
   int64_t offset;
   SmallVector<int64_t, 4> strides;
-  if (failed(getStridesAndOffset(mType, strides, offset)) ||
-      strides.back() != 1)
+  if (failed(mType.getStridesAndOffset(strides, offset)) || strides.back() != 1)
     return failure();
   if (strides[preLast] == ShapedType::kDynamic) {
     // Dynamic stride needs code to compute the stride at runtime.

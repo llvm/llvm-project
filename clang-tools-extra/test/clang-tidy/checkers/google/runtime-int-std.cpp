@@ -54,4 +54,5 @@ short bar(const short, unsigned short) {
 
   tmpl<short>();
 // CHECK-MESSAGES: [[@LINE-1]]:8: warning: consider replacing 'short' with 'std::int16_t'
+  return 0;
 }

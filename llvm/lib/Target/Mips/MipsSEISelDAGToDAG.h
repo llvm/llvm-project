@@ -30,7 +30,7 @@ private:
   void addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI,
                              MachineFunction &MF);
 
-  unsigned getMSACtrlReg(const SDValue RegIdx) const;
+  MCRegister getMSACtrlReg(const SDValue RegIdx) const;
 
   bool replaceUsesWithZeroReg(MachineRegisterInfo *MRI, const MachineInstr&);
 

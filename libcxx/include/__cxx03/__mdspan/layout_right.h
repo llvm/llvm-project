@@ -14,8 +14,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MDSPAN_LAYOUT_RIGHT_H
-#define _LIBCPP___MDSPAN_LAYOUT_RIGHT_H
+#ifndef _LIBCPP___CXX03___MDSPAN_LAYOUT_RIGHT_H
+#define _LIBCPP___CXX03___MDSPAN_LAYOUT_RIGHT_H
 
 #include <__cxx03/__assert>
 #include <__cxx03/__config>
@@ -198,4 +198,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MDSPAN_LAYOUT_RIGHT_H
+#endif // _LIBCPP___CXX03___MDSPAN_LAYOUT_RIGHT_H

@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=aarch64-unknown-unknown -mattr=+neon | FileCheck %s --check-prefixes=CHECK,NEON
 ; RUN: llc < %s -mtriple=aarch64-unknown-unknown -mattr=+neon,+dotprod | FileCheck %s --check-prefixes=CHECK,DOT
 ; RUN: llc < %s -mtriple=aarch64-unknown-unknown -mattr=+sve | FileCheck %s --check-prefixes=CHECK,SVE
+; RUN: llc < %s -mtriple=aarch64_be-unknown-unknown | FileCheck %s --check-prefixes=BE
 ; RUN: llc < %s -global-isel -mtriple=aarch64-unknown-unknown | FileCheck %s --check-prefix=GISEL
 ; RUN: llc < %s -O0 -global-isel -mtriple=aarch64-unknown-unknown | FileCheck %s --check-prefix=GISELO0
 ; RUN: llc < %s -global-isel -mtriple=aarch64-unknown-unknown -mattr=+neon | FileCheck %s --check-prefixes=GISEL,NEON-GISEL
@@ -28,9 +29,21 @@ define i8 @popcount128(ptr nocapture nonnull readonly %0) {
 ; CHECK-NEXT:    add x8, x0, #8
 ; CHECK-NEXT:    ld1 { v0.d }[1], [x8]
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlv h0, v0.16b
+; CHECK-NEXT:    addv b0, v0.16b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
+;
+; BE-LABEL: popcount128:
+; BE:       // %bb.0: // %Entry
+; BE-NEXT:    ldr d0, [x0]
+; BE-NEXT:    add x8, x0, #8
+; BE-NEXT:    ld1 { v0.d }[1], [x8]
+; BE-NEXT:    rev64 v0.16b, v0.16b
+; BE-NEXT:    cnt v0.16b, v0.16b
+; BE-NEXT:    addv b0, v0.16b
+; BE-NEXT:    rev64 v0.4s, v0.4s
+; BE-NEXT:    mov w0, v0.s[1]
+; BE-NEXT:    ret
 ;
 ; GISEL-LABEL: popcount128:
 ; GISEL:       // %bb.0: // %Entry
@@ -104,12 +117,33 @@ define i16 @popcount256(ptr nocapture nonnull readonly %0) {
 ; CHECK-NEXT:    ld1 { v1.d }[1], [x8]
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    cnt v1.16b, v1.16b
-; CHECK-NEXT:    uaddlv h0, v0.16b
-; CHECK-NEXT:    uaddlv h1, v1.16b
+; CHECK-NEXT:    addv b0, v0.16b
+; CHECK-NEXT:    addv b1, v1.16b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    fmov w9, s1
 ; CHECK-NEXT:    add w0, w9, w8
 ; CHECK-NEXT:    ret
+;
+; BE-LABEL: popcount256:
+; BE:       // %bb.0: // %Entry
+; BE-NEXT:    ldr d0, [x0]
+; BE-NEXT:    ldr d1, [x0, #16]
+; BE-NEXT:    add x8, x0, #24
+; BE-NEXT:    add x9, x0, #8
+; BE-NEXT:    ld1 { v0.d }[1], [x9]
+; BE-NEXT:    ld1 { v1.d }[1], [x8]
+; BE-NEXT:    rev64 v0.16b, v0.16b
+; BE-NEXT:    rev64 v1.16b, v1.16b
+; BE-NEXT:    cnt v0.16b, v0.16b
+; BE-NEXT:    cnt v1.16b, v1.16b
+; BE-NEXT:    addv b0, v0.16b
+; BE-NEXT:    addv b1, v1.16b
+; BE-NEXT:    rev64 v0.4s, v0.4s
+; BE-NEXT:    rev64 v1.4s, v1.4s
+; BE-NEXT:    mov w8, v0.s[1]
+; BE-NEXT:    mov w9, v1.s[1]
+; BE-NEXT:    add w0, w9, w8
+; BE-NEXT:    ret
 ;
 ; GISEL-LABEL: popcount256:
 ; GISEL:       // %bb.0: // %Entry
@@ -191,15 +225,24 @@ define <1 x i128> @popcount1x128(<1 x i128> %0) {
 ;
 ; CHECK-LABEL: popcount1x128:
 ; CHECK:       // %bb.0: // %Entry
-; CHECK-NEXT:    fmov d1, x0
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov v1.d[1], x1
-; CHECK-NEXT:    cnt v1.16b, v1.16b
-; CHECK-NEXT:    uaddlv h1, v1.16b
-; CHECK-NEXT:    mov v0.s[0], v1.s[0]
-; CHECK-NEXT:    mov x1, v0.d[1]
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    mov v0.d[1], x1
+; CHECK-NEXT:    mov x1, xzr
+; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    addv b0, v0.16b
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
+;
+; BE-LABEL: popcount1x128:
+; BE:       // %bb.0: // %Entry
+; BE-NEXT:    fmov d0, x0
+; BE-NEXT:    mov x0, xzr
+; BE-NEXT:    mov v0.d[1], x1
+; BE-NEXT:    rev64 v0.16b, v0.16b
+; BE-NEXT:    cnt v0.16b, v0.16b
+; BE-NEXT:    addv b0, v0.16b
+; BE-NEXT:    fmov x1, d0
+; BE-NEXT:    ret
 ;
 ; GISEL-LABEL: popcount1x128:
 ; GISEL:       // %bb.0: // %Entry
@@ -268,6 +311,17 @@ define <2 x i64> @popcount2x64(<2 x i64> %0) {
 ; SVE-NEXT:    uaddlp v0.2d, v0.4s
 ; SVE-NEXT:    ret
 ;
+; BE-LABEL: popcount2x64:
+; BE:       // %bb.0: // %Entry
+; BE-NEXT:    rev64 v0.16b, v0.16b
+; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; BE-NEXT:    cnt v0.16b, v0.16b
+; BE-NEXT:    uaddlp v0.8h, v0.16b
+; BE-NEXT:    uaddlp v0.4s, v0.8h
+; BE-NEXT:    uaddlp v0.2d, v0.4s
+; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; BE-NEXT:    ret
+;
 ; GISELO0-LABEL: popcount2x64:
 ; GISELO0:       // %bb.0: // %Entry
 ; GISELO0-NEXT:    cnt v0.16b, v0.16b
@@ -328,6 +382,15 @@ define <1 x i64> @popcount1x64(<1 x i64> %0) {
 ; CHECK-NEXT:    uaddlp v0.1d, v0.2s
 ; CHECK-NEXT:    ret
 ;
+; BE-LABEL: popcount1x64:
+; BE:       // %bb.0: // %Entry
+; BE-NEXT:    rev64 v0.8b, v0.8b
+; BE-NEXT:    cnt v0.8b, v0.8b
+; BE-NEXT:    uaddlp v0.4h, v0.8b
+; BE-NEXT:    uaddlp v0.2s, v0.4h
+; BE-NEXT:    uaddlp v0.1d, v0.2s
+; BE-NEXT:    ret
+;
 ; GISEL-LABEL: popcount1x64:
 ; GISEL:       // %bb.0: // %Entry
 ; GISEL-NEXT:    cnt v0.8b, v0.8b
@@ -383,6 +446,17 @@ define <4 x i32> @popcount4x32(<4 x i32> %0) {
 ; SVE-NEXT:    uaddlp v0.8h, v0.16b
 ; SVE-NEXT:    uaddlp v0.4s, v0.8h
 ; SVE-NEXT:    ret
+;
+; BE-LABEL: popcount4x32:
+; BE:       // %bb.0: // %Entry
+; BE-NEXT:    rev64 v0.16b, v0.16b
+; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; BE-NEXT:    cnt v0.16b, v0.16b
+; BE-NEXT:    uaddlp v0.8h, v0.16b
+; BE-NEXT:    uaddlp v0.4s, v0.8h
+; BE-NEXT:    rev64 v0.4s, v0.4s
+; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; BE-NEXT:    ret
 ;
 ; GISELO0-LABEL: popcount4x32:
 ; GISELO0:       // %bb.0: // %Entry
@@ -451,6 +525,15 @@ define <2 x i32> @popcount2x32(<2 x i32> %0) {
 ; SVE-NEXT:    uaddlp v0.2s, v0.4h
 ; SVE-NEXT:    ret
 ;
+; BE-LABEL: popcount2x32:
+; BE:       // %bb.0: // %Entry
+; BE-NEXT:    rev64 v0.8b, v0.8b
+; BE-NEXT:    cnt v0.8b, v0.8b
+; BE-NEXT:    uaddlp v0.4h, v0.8b
+; BE-NEXT:    uaddlp v0.2s, v0.4h
+; BE-NEXT:    rev64 v0.2s, v0.2s
+; BE-NEXT:    ret
+;
 ; GISELO0-LABEL: popcount2x32:
 ; GISELO0:       // %bb.0: // %Entry
 ; GISELO0-NEXT:    cnt v0.8b, v0.8b
@@ -500,6 +583,16 @@ define <8 x i16> @popcount8x16(<8 x i16> %0) {
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    ret
 ;
+; BE-LABEL: popcount8x16:
+; BE:       // %bb.0: // %Entry
+; BE-NEXT:    rev64 v0.16b, v0.16b
+; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; BE-NEXT:    cnt v0.16b, v0.16b
+; BE-NEXT:    uaddlp v0.8h, v0.16b
+; BE-NEXT:    rev64 v0.8h, v0.8h
+; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; BE-NEXT:    ret
+;
 ; GISEL-LABEL: popcount8x16:
 ; GISEL:       // %bb.0: // %Entry
 ; GISEL-NEXT:    cnt v0.16b, v0.16b
@@ -530,6 +623,14 @@ define <4 x i16> @popcount4x16(<4 x i16> %0) {
 ; CHECK-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-NEXT:    uaddlp v0.4h, v0.8b
 ; CHECK-NEXT:    ret
+;
+; BE-LABEL: popcount4x16:
+; BE:       // %bb.0: // %Entry
+; BE-NEXT:    rev64 v0.8b, v0.8b
+; BE-NEXT:    cnt v0.8b, v0.8b
+; BE-NEXT:    uaddlp v0.4h, v0.8b
+; BE-NEXT:    rev64 v0.4h, v0.4h
+; BE-NEXT:    ret
 ;
 ; GISEL-LABEL: popcount4x16:
 ; GISEL:       // %bb.0: // %Entry

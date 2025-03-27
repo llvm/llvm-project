@@ -21,6 +21,7 @@
 
 DEF_CONST(Function, Function)
 DEF_VALUE(Argument, Argument)
+DEF_VALUE(OpaqueValue, OpaqueValue)
 
 DEF_USER(User, User)
 DEF_VALUE(Block, BasicBlock)

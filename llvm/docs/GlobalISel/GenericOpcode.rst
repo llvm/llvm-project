@@ -474,6 +474,16 @@ undefined.
   %2:_(s33) = G_CTLZ_ZERO_UNDEF %1
   %2:_(s33) = G_CTTZ_ZERO_UNDEF %1
 
+G_ABDS, G_ABDU
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Compute the absolute difference (signed and unsigned), e.g. abs(x-y).
+
+.. code-block:: none
+
+  %0:_(s33) = G_ABDS %2, %3
+  %1:_(s33) = G_ABDU %4, %5
+
 Floating Point Operations
 -------------------------
 
@@ -715,7 +725,13 @@ Mixing scalable vectors and fixed vectors are not allowed.
 G_CONCAT_VECTORS
 ^^^^^^^^^^^^^^^^
 
-Concatenate two vectors to form a longer vector.
+Concatenate vectors to form a longer vector.
+
+.. code-block:: none
+
+  %4:_(<16 x i32>) = G_CONCAT_VECTORS %0:_(<4 x i32>), %1:_(<4 x i32>),
+                                      %2:_(<4 x i32>), %3:_(<4 x i32>)
+
 
 G_BUILD_VECTOR, G_BUILD_VECTOR_TRUNC
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -727,15 +743,33 @@ same as all source operands)
 The _TRUNC version truncates the larger operand types to fit the
 destination vector elt type.
 
+.. code-block:: none
+
+  %4:_(<4 x i32>) = G_BUILD_VECTOR %0:_(i32), %1:_(i32), %2:_(i32), %3:_(i32)
+
+  %4:_(<4 x i32>) = G_BUILD_VECTOR_TRUNC %0:_(i64), %1:_(i64), %2:_(i64), %3:_(i64)
+
+
 G_INSERT_VECTOR_ELT
 ^^^^^^^^^^^^^^^^^^^
 
 Insert an element into a vector
 
+.. code-block:: none
+
+  %4:_(<16 x i32>) = G_INSERT_VECTOR_ELT %vec:_(<16 x i32>), %elt:_(i32), %idx:_(s64)
+
+
+
 G_EXTRACT_VECTOR_ELT
 ^^^^^^^^^^^^^^^^^^^^
 
 Extract an element from a vector
+
+.. code-block:: none
+
+  %elt:_(i32) = G_EXTRACT_VECTOR_ELT %vec:_(<16 x i32>), %idx:_(s64)
+
 
 G_SHUFFLE_VECTOR
 ^^^^^^^^^^^^^^^^
@@ -1124,3 +1158,6 @@ G_CONSTANT_FOLD_BARRIER
 This operation is used as an opaque barrier to prevent constant folding. Combines
 and other transformations should not look through this. These have no other
 semantics and can be safely eliminated if a target chooses.
+
+
+Unlisted: G_STACKSAVE, G_STACKRESTORE, G_FSHL, G_FSHR, G_SMULFIX, G_UMULFIX, G_SMULFIXSAT, G_UMULFIXSAT, G_SDIVFIX, G_UDIVFIX, G_SDIVFIXSAT, G_UDIVFIXSAT, G_FPOWI, G_FEXP10, G_FLDEXP, G_FFREXP, G_GET_FPENV, G_SET_FPENV, G_RESET_FPENV, G_GET_FPMODE, G_SET_FPMODE, G_RESET_FPMODE, G_INTRINSIC_FPTRUNC_ROUND, G_INTRINSIC_LRINT, G_INTRINSIC_LLRINT, G_INTRINSIC_ROUNDEVEN, G_READCYCLECOUNTER, G_READSTEADYCOUNTER, G_PREFETCH, G_READ_REGISTER, G_WRITE_REGISTER, G_STRICT_FADD, G_STRICT_FSUB, G_STRICT_FMUL, G_STRICT_FDIV, G_STRICT_FREM, G_STRICT_FMA, G_STRICT_FSQRT, G_STRICT_FLDEXP, G_ASSERT_ALIGN

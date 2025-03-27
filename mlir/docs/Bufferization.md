@@ -223,8 +223,8 @@ func.func @test_matmul(%A: memref<1x17x19xf32>,
                        %B: memref<1x19x29xf32>,
                        %C: memref<1x17x29xf32>) {
 
-  %A_tensor = bufferization.to_tensor %A restrict : memref<1x17x19xf32>
-  %B_tensor = bufferization.to_tensor %B restrict : memref<1x19x29xf32>
+  %A_tensor = bufferization.to_tensor %A restrict : memref<1x17x19xf32> to tensor<1x17x19xf32>
+  %B_tensor = bufferization.to_tensor %B restrict : memref<1x19x29xf32> to tensor<1x19x29xf32>
 
   %0 = tosa.matmul %A_tensor, %B_tensor
       : (tensor<1x17x19xf32>, tensor<1x19x29xf32>) ->

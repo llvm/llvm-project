@@ -239,13 +239,10 @@ define void @test_none_v4i32(<2 x i32> %vec, ptr %ptr1) {
 ;
 ; CHECK-LE-P9-LABEL: test_none_v4i32:
 ; CHECK-LE-P9:       # %bb.0: # %entry
-; CHECK-LE-P9-NEXT:    li r3, 0
-; CHECK-LE-P9-NEXT:    vextuwrx r3, r3, v2
-; CHECK-LE-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-LE-P9-NEXT:    addis r3, r2, .LCPI2_0@toc@ha
 ; CHECK-LE-P9-NEXT:    addi r3, r3, .LCPI2_0@toc@l
-; CHECK-LE-P9-NEXT:    lxv vs1, 0(r3)
-; CHECK-LE-P9-NEXT:    xxperm v2, vs0, vs1
+; CHECK-LE-P9-NEXT:    lxv vs0, 0(r3)
+; CHECK-LE-P9-NEXT:    xxperm v2, v2, vs0
 ; CHECK-LE-P9-NEXT:    stxv v2, 0(r5)
 ; CHECK-LE-P9-NEXT:    blr
 ;
@@ -263,14 +260,11 @@ define void @test_none_v4i32(<2 x i32> %vec, ptr %ptr1) {
 ;
 ; CHECK-BE-P9-LABEL: test_none_v4i32:
 ; CHECK-BE-P9:       # %bb.0: # %entry
-; CHECK-BE-P9-NEXT:    li r3, 0
-; CHECK-BE-P9-NEXT:    vextuwlx r3, r3, v2
-; CHECK-BE-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-BE-P9-NEXT:    addis r3, r2, .LCPI2_0@toc@ha
 ; CHECK-BE-P9-NEXT:    addi r3, r3, .LCPI2_0@toc@l
-; CHECK-BE-P9-NEXT:    lxv vs1, 0(r3)
-; CHECK-BE-P9-NEXT:    xxperm vs0, v2, vs1
-; CHECK-BE-P9-NEXT:    stxv vs0, 0(r5)
+; CHECK-BE-P9-NEXT:    lxv vs0, 0(r3)
+; CHECK-BE-P9-NEXT:    xxperm v2, v2, vs0
+; CHECK-BE-P9-NEXT:    stxv v2, 0(r5)
 ; CHECK-BE-P9-NEXT:    blr
 ;
 ; CHECK-AIX-64-P8-LABEL: test_none_v4i32:
@@ -286,13 +280,10 @@ define void @test_none_v4i32(<2 x i32> %vec, ptr %ptr1) {
 ;
 ; CHECK-AIX-64-P9-LABEL: test_none_v4i32:
 ; CHECK-AIX-64-P9:       # %bb.0: # %entry
-; CHECK-AIX-64-P9-NEXT:    li r4, 0
-; CHECK-AIX-64-P9-NEXT:    vextuwlx r4, r4, v2
-; CHECK-AIX-64-P9-NEXT:    mtfprwz f0, r4
 ; CHECK-AIX-64-P9-NEXT:    ld r4, L..C1(r2) # %const.0
-; CHECK-AIX-64-P9-NEXT:    lxv vs1, 0(r4)
-; CHECK-AIX-64-P9-NEXT:    xxperm vs0, v2, vs1
-; CHECK-AIX-64-P9-NEXT:    stxv vs0, 0(r3)
+; CHECK-AIX-64-P9-NEXT:    lxv vs0, 0(r4)
+; CHECK-AIX-64-P9-NEXT:    xxperm v2, v2, vs0
+; CHECK-AIX-64-P9-NEXT:    stxv v2, 0(r3)
 ; CHECK-AIX-64-P9-NEXT:    blr
 ;
 ; CHECK-AIX-32-P8-LABEL: test_none_v4i32:
@@ -308,13 +299,10 @@ define void @test_none_v4i32(<2 x i32> %vec, ptr %ptr1) {
 ;
 ; CHECK-AIX-32-P9-LABEL: test_none_v4i32:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
-; CHECK-AIX-32-P9-NEXT:    addi r4, r1, -16
-; CHECK-AIX-32-P9-NEXT:    stxv v2, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    lfiwzx f0, 0, r4
 ; CHECK-AIX-32-P9-NEXT:    lwz r4, L..C1(r2) # %const.0
-; CHECK-AIX-32-P9-NEXT:    lxv vs1, 0(r4)
-; CHECK-AIX-32-P9-NEXT:    xxperm vs0, v2, vs1
-; CHECK-AIX-32-P9-NEXT:    stxv vs0, 0(r3)
+; CHECK-AIX-32-P9-NEXT:    lxv vs0, 0(r4)
+; CHECK-AIX-32-P9-NEXT:    xxperm v2, v2, vs0
+; CHECK-AIX-32-P9-NEXT:    stxv v2, 0(r3)
 ; CHECK-AIX-32-P9-NEXT:    blr
 entry:
   %0 = extractelement <2 x i32> %vec, i64 0

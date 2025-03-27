@@ -215,6 +215,8 @@ public:
 
     eCore_x86_64_x86_64,
     eCore_x86_64_x86_64h, // Haswell enabled x86_64
+    eCore_x86_64_amd64,
+
     eCore_hexagon_generic,
     eCore_hexagon_hexagonv4,
     eCore_hexagon_hexagonv5,

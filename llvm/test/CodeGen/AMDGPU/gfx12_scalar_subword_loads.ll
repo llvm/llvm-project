@@ -465,19 +465,12 @@ main_body:
 }
 
 define amdgpu_ps void @s_buffer_load_byte_sgpr_or_imm_offset_divergent(<4 x i32> inreg %src, ptr addrspace(1) nocapture %out, i32 %offset) {
-; DAG-LABEL: s_buffer_load_byte_sgpr_or_imm_offset_divergent:
-; DAG:       ; %bb.0: ; %main_body
-; DAG-NEXT:    buffer_load_i8 v2, v2, s[0:3], null offen
-; DAG-NEXT:    s_wait_loadcnt 0x0
-; DAG-NEXT:    global_store_b32 v[0:1], v2, off
-; DAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: s_buffer_load_byte_sgpr_or_imm_offset_divergent:
-; GISEL:       ; %bb.0: ; %main_body
-; GISEL-NEXT:    buffer_load_b32 v2, v2, s[0:3], null offen
-; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    global_store_b32 v[0:1], v2, off
-; GISEL-NEXT:    s_endpgm
+; GCN-LABEL: s_buffer_load_byte_sgpr_or_imm_offset_divergent:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    buffer_load_i8 v2, v2, s[0:3], null offen
+; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    global_store_b32 v[0:1], v2, off
+; GCN-NEXT:    s_endpgm
 main_body:
   %ld = call i8 @llvm.amdgcn.s.buffer.load.i8(<4 x i32> %src, i32 %offset, i32 0)
   %sext = sext i8 %ld to i32
@@ -538,20 +531,12 @@ main_body:
 }
 
 define amdgpu_ps void @s_buffer_load_ubyte_sgpr_or_imm_offset_divergent(<4 x i32> inreg %src, ptr addrspace(1) nocapture %out, i32 %offset) {
-; DAG-LABEL: s_buffer_load_ubyte_sgpr_or_imm_offset_divergent:
-; DAG:       ; %bb.0: ; %main_body
-; DAG-NEXT:    buffer_load_u8 v2, v2, s[0:3], null offen
-; DAG-NEXT:    s_wait_loadcnt 0x0
-; DAG-NEXT:    global_store_b32 v[0:1], v2, off
-; DAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: s_buffer_load_ubyte_sgpr_or_imm_offset_divergent:
-; GISEL:       ; %bb.0: ; %main_body
-; GISEL-NEXT:    buffer_load_b32 v2, v2, s[0:3], null offen
-; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    v_and_b32_e32 v2, 0xff, v2
-; GISEL-NEXT:    global_store_b32 v[0:1], v2, off
-; GISEL-NEXT:    s_endpgm
+; GCN-LABEL: s_buffer_load_ubyte_sgpr_or_imm_offset_divergent:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    buffer_load_u8 v2, v2, s[0:3], null offen
+; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    global_store_b32 v[0:1], v2, off
+; GCN-NEXT:    s_endpgm
 main_body:
   %ld = call i8 @llvm.amdgcn.s.buffer.load.u8(<4 x i32> %src, i32 %offset, i32 0)
   %zext = zext i8 %ld to i32
@@ -606,19 +591,12 @@ main_body:
 }
 
 define amdgpu_ps void @s_buffer_load_short_sgpr_or_imm_offset_divergent(<4 x i32> inreg %src, ptr addrspace(1) nocapture %out, i32 %offset) {
-; DAG-LABEL: s_buffer_load_short_sgpr_or_imm_offset_divergent:
-; DAG:       ; %bb.0: ; %main_body
-; DAG-NEXT:    buffer_load_i16 v2, v2, s[0:3], null offen
-; DAG-NEXT:    s_wait_loadcnt 0x0
-; DAG-NEXT:    global_store_b32 v[0:1], v2, off
-; DAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: s_buffer_load_short_sgpr_or_imm_offset_divergent:
-; GISEL:       ; %bb.0: ; %main_body
-; GISEL-NEXT:    buffer_load_b32 v2, v2, s[0:3], null offen
-; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    global_store_b32 v[0:1], v2, off
-; GISEL-NEXT:    s_endpgm
+; GCN-LABEL: s_buffer_load_short_sgpr_or_imm_offset_divergent:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    buffer_load_i16 v2, v2, s[0:3], null offen
+; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    global_store_b32 v[0:1], v2, off
+; GCN-NEXT:    s_endpgm
 main_body:
   %ld = call i16 @llvm.amdgcn.s.buffer.load.i16(<4 x i32> %src, i32 %offset, i32 0)
   %sext = sext i16 %ld to i32
@@ -679,20 +657,12 @@ main_body:
 }
 
 define amdgpu_ps void @s_buffer_load_ushort_sgpr_or_imm_offset_divergent(<4 x i32> inreg %src, ptr addrspace(1) nocapture %out, i32 %offset) {
-; DAG-LABEL: s_buffer_load_ushort_sgpr_or_imm_offset_divergent:
-; DAG:       ; %bb.0: ; %main_body
-; DAG-NEXT:    buffer_load_u16 v2, v2, s[0:3], null offen
-; DAG-NEXT:    s_wait_loadcnt 0x0
-; DAG-NEXT:    global_store_b32 v[0:1], v2, off
-; DAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: s_buffer_load_ushort_sgpr_or_imm_offset_divergent:
-; GISEL:       ; %bb.0: ; %main_body
-; GISEL-NEXT:    buffer_load_b32 v2, v2, s[0:3], null offen
-; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GISEL-NEXT:    global_store_b32 v[0:1], v2, off
-; GISEL-NEXT:    s_endpgm
+; GCN-LABEL: s_buffer_load_ushort_sgpr_or_imm_offset_divergent:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    buffer_load_u16 v2, v2, s[0:3], null offen
+; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    global_store_b32 v[0:1], v2, off
+; GCN-NEXT:    s_endpgm
 main_body:
   %ld = call i16 @llvm.amdgcn.s.buffer.load.u16(<4 x i32> %src, i32 %offset, i32 0)
   %zext = zext i16 %ld to i32

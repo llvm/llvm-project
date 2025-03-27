@@ -988,6 +988,10 @@ struct FormatStyle {
   /// \version 3.7
   bool AllowShortLoopsOnASingleLine;
 
+  /// If ``true``, ``namespace a { class b; }`` can be put on a single line.
+  /// \version 20
+  bool AllowShortNamespacesOnASingleLine;
+
   /// Different ways to break after the function definition return type.
   /// This option is **deprecated** and is retained for backwards compatibility.
   enum DefinitionReturnTypeBreakingStyle : int8_t {
@@ -1208,6 +1212,22 @@ struct FormatStyle {
   /// \version 3.7
   bool BinPackArguments;
 
+  /// If ``BinPackLongBracedList`` is ``true`` it overrides
+  /// ``BinPackArguments`` if there are 20 or more items in a braced
+  /// initializer list.
+  /// \code
+  ///    BinPackLongBracedList: false  vs.    BinPackLongBracedList: true
+  ///    vector<int> x{                       vector<int> x{1, 2, ...,
+  ///                                                       20, 21};
+  ///                1,
+  ///                2,
+  ///                ...,
+  ///                20,
+  ///                21};
+  /// \endcode
+  /// \version 21
+  bool BinPackLongBracedList;
+
   /// Different way to try to fit all parameters on a line.
   enum BinPackParametersStyle : int8_t {
     /// Bin-pack parameters.
@@ -1269,7 +1289,7 @@ struct FormatStyle {
   BitFieldColonSpacingStyle BitFieldColonSpacing;
 
   /// The number of columns to use to indent the contents of braced init lists.
-  /// If unset, ``ContinuationIndentWidth`` is used.
+  /// If unset or negative, ``ContinuationIndentWidth`` is used.
   /// \code
   ///   AlignAfterOpenBracket: AlwaysBreak
   ///   BracedInitializerIndentWidth: 2
@@ -1299,7 +1319,7 @@ struct FormatStyle {
   ///   }
   /// \endcode
   /// \version 17
-  std::optional<unsigned> BracedInitializerIndentWidth;
+  int BracedInitializerIndentWidth;
 
   /// Different ways to wrap braces after control statements.
   enum BraceWrappingAfterControlStatementStyle : int8_t {
@@ -2248,6 +2268,33 @@ struct FormatStyle {
   /// \version 16
   BreakBeforeInlineASMColonStyle BreakBeforeInlineASMColon;
 
+  /// If ``true``, break before a template closing bracket (``>``) when there is
+  /// a line break after the matching opening bracket (``<``).
+  /// \code
+  ///    true:
+  ///    template <typename Foo, typename Bar>
+  ///
+  ///    template <typename Foo,
+  ///              typename Bar>
+  ///
+  ///    template <
+  ///        typename Foo,
+  ///        typename Bar
+  ///    >
+  ///
+  ///    false:
+  ///    template <typename Foo, typename Bar>
+  ///
+  ///    template <typename Foo,
+  ///              typename Bar>
+  ///
+  ///    template <
+  ///        typename Foo,
+  ///        typename Bar>
+  /// \endcode
+  /// \version 21
+  bool BreakBeforeTemplateCloser;
+
   /// If ``true``, ternary operators will be placed after line breaks.
   /// \code
   ///    true:
@@ -2294,7 +2341,7 @@ struct FormatStyle {
     BBO_RespectPrecedence
   };
 
-  /// The break constructor initializers style to use.
+  /// The break binary operations style to use.
   /// \version 20
   BreakBinaryOperationsStyle BreakBinaryOperations;
 
@@ -2506,9 +2553,10 @@ struct FormatStyle {
   /// lists.
   ///
   /// Important differences:
-  /// - No spaces inside the braced list.
-  /// - No line break before the closing brace.
-  /// - Indentation with the continuation indent, not with the block indent.
+  ///
+  /// * No spaces inside the braced list.
+  /// * No line break before the closing brace.
+  /// * Indentation with the continuation indent, not with the block indent.
   ///
   /// Fundamentally, C++11 braced lists are formatted exactly like function
   /// calls would be formatted in their place. If the braced list follows a name
@@ -2797,22 +2845,18 @@ struct FormatStyle {
   /// \version 3.3
   bool IndentCaseLabels;
 
-  /// Indent goto labels.
-  ///
-  /// When ``false``, goto labels are flushed left.
+  /// If ``true``, clang-format will indent the body of an ``export { ... }``
+  /// block. This doesn't affect the formatting of anything else related to
+  /// exported declarations.
   /// \code
-  ///    true:                                  false:
-  ///    int f() {                      vs.     int f() {
-  ///      if (foo()) {                           if (foo()) {
-  ///      label1:                              label1:
-  ///        bar();                                 bar();
-  ///      }                                      }
-  ///    label2:                                label2:
-  ///      return 1;                              return 1;
-  ///    }                                      }
+  ///    true:                     false:
+  ///    export {          vs.     export {
+  ///      void foo();             void foo();
+  ///      void bar();             void bar();
+  ///    }                         }
   /// \endcode
-  /// \version 10
-  bool IndentGotoLabels;
+  /// \version 20
+  bool IndentExportBlock;
 
   /// Indents extern blocks
   enum IndentExternBlockStyle : int8_t {
@@ -2853,6 +2897,23 @@ struct FormatStyle {
   /// IndentExternBlockStyle is the type of indenting of extern blocks.
   /// \version 11
   IndentExternBlockStyle IndentExternBlock;
+
+  /// Indent goto labels.
+  ///
+  /// When ``false``, goto labels are flushed left.
+  /// \code
+  ///    true:                                  false:
+  ///    int f() {                      vs.     int f() {
+  ///      if (foo()) {                           if (foo()) {
+  ///      label1:                              label1:
+  ///        bar();                                 bar();
+  ///      }                                      }
+  ///    label2:                                label2:
+  ///      return 1;                              return 1;
+  ///    }                                      }
+  /// \endcode
+  /// \version 10
+  bool IndentGotoLabels;
 
   /// Options for indenting preprocessor directives.
   enum PPDirectiveIndentStyle : int8_t {
@@ -3199,11 +3260,12 @@ struct FormatStyle {
   /// \version 19
   KeepEmptyLinesStyle KeepEmptyLines;
 
-  /// This option is deprecated. See ``AtEndOfFile`` of ``KeepEmptyLines``.
+  /// This option is **deprecated**. See ``AtEndOfFile`` of ``KeepEmptyLines``.
   /// \version 17
   // bool KeepEmptyLinesAtEOF;
 
-  /// This option is deprecated. See ``AtStartOfBlock`` of ``KeepEmptyLines``.
+  /// This option is **deprecated**. See ``AtStartOfBlock`` of
+  /// ``KeepEmptyLines``.
   /// \version 3.7
   // bool KeepEmptyLinesAtTheStartOfBlocks;
 
@@ -3256,7 +3318,9 @@ struct FormatStyle {
   enum LanguageKind : int8_t {
     /// Do not use.
     LK_None,
-    /// Should be used for C, C++.
+    /// Should be used for C.
+    LK_C,
+    /// Should be used for C++.
     LK_Cpp,
     /// Should be used for C#.
     LK_CSharp,
@@ -3281,7 +3345,9 @@ struct FormatStyle {
     /// https://sci-hub.st/10.1109/IEEESTD.2018.8299595
     LK_Verilog
   };
-  bool isCpp() const { return Language == LK_Cpp || Language == LK_ObjC; }
+  bool isCpp() const {
+    return Language == LK_Cpp || Language == LK_C || Language == LK_ObjC;
+  }
   bool isCSharp() const { return Language == LK_CSharp; }
   bool isJson() const { return Language == LK_Json; }
   bool isJavaScript() const { return Language == LK_JavaScript; }
@@ -3291,7 +3357,12 @@ struct FormatStyle {
   }
   bool isTableGen() const { return Language == LK_TableGen; }
 
-  /// Language, this format style is targeted at.
+  /// The language that this format style targets.
+  /// \note
+  ///  You can specify the language (``C``, ``Cpp``, or ``ObjC``) for ``.h``
+  ///  files by adding a ``// clang-format Language:`` line before the first
+  ///  non-comment (and non-empty) line, e.g. ``// clang-format Language: Cpp``.
+  /// \endnote
   /// \version 3.5
   LanguageKind Language;
 
@@ -3620,6 +3691,10 @@ struct FormatStyle {
   /// \version 3.7
   unsigned PenaltyBreakBeforeFirstCallParameter;
 
+  /// The penalty for breaking before a member access operator (``.``, ``->``).
+  /// \version 20
+  unsigned PenaltyBreakBeforeMemberAccess;
+
   /// The penalty for each line break introduced inside a comment.
   /// \version 3.7
   unsigned PenaltyBreakComment;
@@ -3742,19 +3817,19 @@ struct FormatStyle {
   QualifierAlignmentStyle QualifierAlignment;
 
   /// The order in which the qualifiers appear.
-  /// Order is an array that can contain any of the following:
+  /// The order is an array that can contain any of the following:
   ///
-  ///   * const
-  ///   * inline
-  ///   * static
-  ///   * friend
-  ///   * constexpr
-  ///   * volatile
-  ///   * restrict
-  ///   * type
+  ///   * ``const``
+  ///   * ``inline``
+  ///   * ``static``
+  ///   * ``friend``
+  ///   * ``constexpr``
+  ///   * ``volatile``
+  ///   * ``restrict``
+  ///   * ``type``
   ///
   /// \note
-  ///  It **must** contain ``type``.
+  ///  It must contain ``type``.
   /// \endnote
   ///
   /// Items to the left of ``type`` will be placed to the left of the type and
@@ -4970,12 +5045,11 @@ struct FormatStyle {
   /// \version 12
   std::vector<std::string> StatementAttributeLikeMacros;
 
-  /// A vector of macros that should be interpreted as complete
-  /// statements.
+  /// A vector of macros that should be interpreted as complete statements.
   ///
-  /// Typical macros are expressions, and require a semi-colon to be
-  /// added; sometimes this is not the case, and this allows to make
-  /// clang-format aware of such cases.
+  /// Typical macros are expressions and require a semicolon to be added.
+  /// Sometimes this is not the case, and this allows to make clang-format aware
+  /// of such cases.
   ///
   /// For example: Q_UNUSED
   /// \version 8
@@ -5039,8 +5113,8 @@ struct FormatStyle {
   /// \version 3.7
   unsigned TabWidth;
 
-  /// A vector of non-keyword identifiers that should be interpreted as
-  /// template names.
+  /// A vector of non-keyword identifiers that should be interpreted as template
+  /// names.
   ///
   /// A ``<`` after a template name is annotated as a template opener instead of
   /// a binary operator.
@@ -5100,6 +5174,15 @@ struct FormatStyle {
   /// \version 3.7
   UseTabStyle UseTab;
 
+  /// A vector of non-keyword identifiers that should be interpreted as variable
+  /// template names.
+  ///
+  /// A ``)`` after a variable template instantiation is **not** annotated as
+  /// the closing parenthesis of C-style cast operator.
+  ///
+  /// \version 20
+  std::vector<std::string> VariableTemplates;
+
   /// For Verilog, put each port on its own line in module instantiations.
   /// \code
   ///    true:
@@ -5130,6 +5213,39 @@ struct FormatStyle {
   /// For example: BOOST_PP_STRINGIZE
   /// \version 11
   std::vector<std::string> WhitespaceSensitiveMacros;
+
+  /// Different styles for wrapping namespace body with empty lines.
+  enum WrapNamespaceBodyWithEmptyLinesStyle : int8_t {
+    /// Remove all empty lines at the beginning and the end of namespace body.
+    /// \code
+    ///   namespace N1 {
+    ///   namespace N2
+    ///   function();
+    ///   }
+    ///   }
+    /// \endcode
+    WNBWELS_Never,
+    /// Always have at least one empty line at the beginning and the end of
+    /// namespace body except that the number of empty lines between consecutive
+    /// nested namespace definitions is not increased.
+    /// \code
+    ///   namespace N1 {
+    ///   namespace N2 {
+    ///
+    ///   function();
+    ///
+    ///   }
+    ///   }
+    /// \endcode
+    WNBWELS_Always,
+    /// Keep existing newlines at the beginning and the end of namespace body.
+    /// ``MaxEmptyLinesToKeep`` still applies.
+    WNBWELS_Leave
+  };
+
+  /// Wrap namespace body with empty lines.
+  /// \version 20
+  WrapNamespaceBodyWithEmptyLinesStyle WrapNamespaceBodyWithEmptyLines;
 
   bool operator==(const FormatStyle &R) const {
     return AccessModifierOffset == R.AccessModifierOffset &&
@@ -5169,10 +5285,13 @@ struct FormatStyle {
                R.AllowShortIfStatementsOnASingleLine &&
            AllowShortLambdasOnASingleLine == R.AllowShortLambdasOnASingleLine &&
            AllowShortLoopsOnASingleLine == R.AllowShortLoopsOnASingleLine &&
+           AllowShortNamespacesOnASingleLine ==
+               R.AllowShortNamespacesOnASingleLine &&
            AlwaysBreakBeforeMultilineStrings ==
                R.AlwaysBreakBeforeMultilineStrings &&
            AttributeMacros == R.AttributeMacros &&
            BinPackArguments == R.BinPackArguments &&
+           BinPackLongBracedList == R.BinPackLongBracedList &&
            BinPackParameters == R.BinPackParameters &&
            BitFieldColonSpacing == R.BitFieldColonSpacing &&
            BracedInitializerIndentWidth == R.BracedInitializerIndentWidth &&
@@ -5185,6 +5304,7 @@ struct FormatStyle {
            BreakBeforeBraces == R.BreakBeforeBraces &&
            BreakBeforeConceptDeclarations == R.BreakBeforeConceptDeclarations &&
            BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
+           BreakBeforeTemplateCloser == R.BreakBeforeTemplateCloser &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
            BreakBinaryOperations == R.BreakBinaryOperations &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
@@ -5217,6 +5337,7 @@ struct FormatStyle {
            IndentAccessModifiers == R.IndentAccessModifiers &&
            IndentCaseBlocks == R.IndentCaseBlocks &&
            IndentCaseLabels == R.IndentCaseLabels &&
+           IndentExportBlock == R.IndentExportBlock &&
            IndentExternBlock == R.IndentExternBlock &&
            IndentGotoLabels == R.IndentGotoLabels &&
            IndentPPDirectives == R.IndentPPDirectives &&
@@ -5248,6 +5369,7 @@ struct FormatStyle {
            PenaltyBreakAssignment == R.PenaltyBreakAssignment &&
            PenaltyBreakBeforeFirstCallParameter ==
                R.PenaltyBreakBeforeFirstCallParameter &&
+           PenaltyBreakBeforeMemberAccess == R.PenaltyBreakBeforeMemberAccess &&
            PenaltyBreakComment == R.PenaltyBreakComment &&
            PenaltyBreakFirstLessLess == R.PenaltyBreakFirstLessLess &&
            PenaltyBreakOpenParenthesis == R.PenaltyBreakOpenParenthesis &&
@@ -5309,10 +5431,11 @@ struct FormatStyle {
            TableGenBreakInsideDAGArg == R.TableGenBreakInsideDAGArg &&
            TabWidth == R.TabWidth && TemplateNames == R.TemplateNames &&
            TypeNames == R.TypeNames && TypenameMacros == R.TypenameMacros &&
-           UseTab == R.UseTab &&
+           UseTab == R.UseTab && VariableTemplates == R.VariableTemplates &&
            VerilogBreakBetweenInstancePorts ==
                R.VerilogBreakBetweenInstancePorts &&
-           WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros;
+           WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros &&
+           WrapNamespaceBodyWithEmptyLines == R.WrapNamespaceBodyWithEmptyLines;
   }
 
   std::optional<FormatStyle> GetLanguageStyle(LanguageKind Language) const;
@@ -5450,10 +5573,10 @@ formatReplacements(StringRef Code, const tooling::Replacements &Replaces,
 /// cleaning up the code after that on success; otherwise, return an llvm::Error
 /// carrying llvm::StringError.
 /// This also supports inserting/deleting C++ #include directives:
-/// - If a replacement has offset UINT_MAX, length 0, and a replacement text
+/// * If a replacement has offset UINT_MAX, length 0, and a replacement text
 ///   that is an #include directive, this will insert the #include into the
 ///   correct block in the \p Code.
-/// - If a replacement has offset UINT_MAX, length 1, and a replacement text
+/// * If a replacement has offset UINT_MAX, length 1, and a replacement text
 ///   that is the name of the header to be removed, the header will be removed
 ///   from \p Code if it exists.
 /// The include manipulation is done via ``tooling::HeaderInclude``, see its
@@ -5559,13 +5682,12 @@ extern const char *DefaultFallbackStyle;
 ///
 /// ``StyleName`` can take several forms:
 /// * "{<key>: <value>, ...}" - Set specic style parameters.
-/// * "<style name>" - One of the style names supported by
-/// getPredefinedStyle().
+/// * "<style name>" - One of the style names supported by getPredefinedStyle().
 /// * "file" - Load style configuration from a file called ``.clang-format``
-/// located in one of the parent directories of ``FileName`` or the current
-/// directory if ``FileName`` is empty.
+///   located in one of the parent directories of ``FileName`` or the current
+///   directory if ``FileName`` is empty.
 /// * "file:<format_file_path>" to explicitly specify the configuration file to
-/// use.
+///   use.
 ///
 /// \param[in] StyleName Style name to interpret according to the description
 /// above.
@@ -5597,6 +5719,8 @@ FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code);
 // Returns a string representation of ``Language``.
 inline StringRef getLanguageName(FormatStyle::LanguageKind Language) {
   switch (Language) {
+  case FormatStyle::LK_C:
+    return "C";
   case FormatStyle::LK_Cpp:
     return "C++";
   case FormatStyle::LK_CSharp:

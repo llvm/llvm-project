@@ -12,19 +12,16 @@ void SingleOnly() {
   #pragma acc parallel loop default(present) async default(none)
   for (unsigned I = 0; I < 5; ++I);
 
-  // expected-warning@+3{{OpenACC clause 'copy' not yet implemented, clause ignored}}
   // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'serial loop' directive}}
   // expected-note@+1{{previous clause is here}}
   #pragma acc serial loop async default(present) copy(i) default(none) self
   for (unsigned I = 0; I < 5; ++I);
 
-  // expected-warning@+3{{OpenACC clause 'copy' not yet implemented, clause ignored}}
   // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'kernels loop' directive}}
   // expected-note@+1{{previous clause is here}}
   #pragma acc kernels loop async default(present) copy(i) default(none) self
   for (unsigned I = 0; I < 5; ++I);
 
-  // expected-warning@+2{{OpenACC clause 'copy' not yet implemented, clause ignored}}
   // expected-error@+1{{expected '('}}
   #pragma acc parallel loop async default(none) copy(i) default self
   for (unsigned I = 0; I < 5; ++I);

@@ -179,7 +179,7 @@ define float @v_uitofp_to_f32_multi_use_lshr8_mask255(i32 %arg0) nounwind {
 ; GFX11-NEXT:    global_store_b32 v[0:1], v1, off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %lshr.8 = lshr i32 %arg0, 8
-  store i32 %lshr.8, ptr addrspace(1) undef
+  store i32 %lshr.8, ptr addrspace(1) poison
   %masked = and i32 %lshr.8, 255
   %cvt = uitofp i32 %masked to float
   ret float %cvt
@@ -456,7 +456,7 @@ define <4 x float> @v_uitofp_unpack_i32_to_v4f32(i32 %arg0) nounwind {
   %mask.lshr.24 = and i32 %lshr.24, 255
   %cvt3 = uitofp i32 %mask.lshr.24 to float
 
-  %ins.0 = insertelement <4 x float> undef, float %cvt0, i32 0
+  %ins.0 = insertelement <4 x float> poison, float %cvt0, i32 0
   %ins.1 = insertelement <4 x float> %ins.0, float %cvt1, i32 1
   %ins.2 = insertelement <4 x float> %ins.1, float %cvt2, i32 2
   %ins.3 = insertelement <4 x float> %ins.2, float %cvt3, i32 3
@@ -1657,8 +1657,8 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(ptr addrspace(1) noalias %o
 ; GFX10-NEXT:    v_or_b32_sdwa v2, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX10-NEXT:    v_cvt_f32_ubyte3_e32 v3, v0
-; GFX10-NEXT:    v_add_nc_u16 v1, v1, 0x900
-; GFX10-NEXT:    v_add_nc_u16 v5, v2, 0x900
+; GFX10-NEXT:    v_add_nc_u16 v1, 0x900, v1
+; GFX10-NEXT:    v_add_nc_u16 v5, 0x900, v2
 ; GFX10-NEXT:    v_cvt_f32_ubyte2_e32 v2, v0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v6, 16, v1
 ; GFX10-NEXT:    v_cvt_f32_ubyte1_e32 v1, v0
@@ -1723,10 +1723,10 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(ptr addrspace(1) noalias %o
 ; GFX11-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_or_b32_e32 v1, v1, v3
-; GFX11-NEXT:    v_add_nc_u16 v2, v2, 0x900
+; GFX11-NEXT:    v_add_nc_u16 v2, 0x900, v2
 ; GFX11-NEXT:    v_cvt_f32_ubyte3_e32 v3, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_add_nc_u16 v1, v1, 0x900
+; GFX11-NEXT:    v_add_nc_u16 v1, 0x900, v1
 ; GFX11-NEXT:    v_and_b32_e32 v5, 0xffff, v2
 ; GFX11-NEXT:    v_cvt_f32_ubyte2_e32 v2, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_3)
@@ -2992,14 +2992,14 @@ entry:
   br label %for.body.i
 
 for.body.i:                                       ; preds = %for.body.i, %entry
-  %retval.sroa.0.0.copyload = load ptr, ptr addrspace(1) undef, align 8
-  %add.ptr = getelementptr inbounds %Vec, ptr %retval.sroa.0.0.copyload, i64 undef
+  %retval.sroa.0.0.copyload = load ptr, ptr addrspace(1) poison, align 8
+  %add.ptr = getelementptr inbounds %Vec, ptr %retval.sroa.0.0.copyload, i64 0
   %retval.sroa.0.0..sroa_cast_adr = addrspacecast ptr %add.ptr to ptr addrspace(1)
   %retval.sroa.0.0.copyload.i = load i32, ptr addrspace(1) %retval.sroa.0.0..sroa_cast_adr, align 1
   %p1.sroa.6.0.extract.shift = lshr i32 %retval.sroa.0.0.copyload.i, 24
   %p1.sroa.6.0.extract.trunc = trunc i32 %p1.sroa.6.0.extract.shift to i8
   %conv12 = uitofp i8 %p1.sroa.6.0.extract.trunc to float
-  %0 = load float, ptr addrspace(1) undef, align 8
+  %0 = load float, ptr addrspace(1) poison, align 8
   %mul = fmul contract float %0, %conv12
   %add = fadd contract float %mul, 5.000000e-01
   %conv13 = fptoui float %add to i8
@@ -3011,7 +3011,7 @@ for.body.i:                                       ; preds = %for.body.i, %entry
   %retval.sroa.2.0.insert.insert = or i32 %retval.sroa.3.0.insert.insert, %retval.sroa.2.0.insert.ext
   %retval.sroa.0.0.insert.ext = and i32 %retval.sroa.0.0.copyload.i, 255
   %retval.sroa.0.0.insert.insert = or i32 %retval.sroa.2.0.insert.insert, %retval.sroa.0.0.insert.ext
-  store i32 %retval.sroa.0.0.insert.insert, ptr addrspace(1) undef, align 1
+  store i32 %retval.sroa.0.0.insert.insert, ptr addrspace(1) poison, align 1
   ret void
 }
 

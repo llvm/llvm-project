@@ -708,8 +708,7 @@ AST_MATCHER(FieldDecl, isBitField) {
 /// fieldDecl(hasBitWidth(2))
 ///   matches 'int a;' and 'int c;' but not 'int b;'.
 AST_MATCHER_P(FieldDecl, hasBitWidth, unsigned, Width) {
-  return Node.isBitField() &&
-         Node.getBitWidthValue(Finder->getASTContext()) == Width;
+  return Node.isBitField() && Node.getBitWidthValue() == Width;
 }
 
 /// Matches non-static data members that have an in-class initializer.
@@ -1085,12 +1084,19 @@ AST_POLYMORPHIC_MATCHER_P2(
 /// \code
 ///   template<typename T> struct C {};
 ///   C<int> c;
+///   template<typename T> void f() {}
+///   void func() { f<int>(); };
 /// \endcode
+///
 /// classTemplateSpecializationDecl(templateArgumentCountIs(1))
 ///   matches C<int>.
+///
+/// functionDecl(templateArgumentCountIs(1))
+///   matches f<int>();
 AST_POLYMORPHIC_MATCHER_P(
     templateArgumentCountIs,
     AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
+                                    VarTemplateSpecializationDecl, FunctionDecl,
                                     TemplateSpecializationType),
     unsigned, N) {
   return internal::getTemplateSpecializationArgs(Node).size() == N;
@@ -1235,6 +1241,17 @@ AST_MATCHER_P(TemplateArgument, equalsIntegralValue,
 /// inside the autorelease pool.
 extern const internal::VariadicDynCastAllOfMatcher<Stmt,
        ObjCAutoreleasePoolStmt> autoreleasePoolStmt;
+
+/// Matches any export declaration.
+///
+/// Example matches following declarations.
+/// \code
+///   export void foo();
+///   export { void foo(); }
+///   export namespace { void foo(); }
+///   export int v;
+/// \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Decl, ExportDecl> exportDecl;
 
 /// Matches any value declaration.
 ///
@@ -2114,6 +2131,16 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, Expr> expr;
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, DeclRefExpr>
     declRefExpr;
 
+/// Matches expressions that refer to dependent scope declarations.
+///
+/// example matches T::v;
+/// \code
+///  template <class T> class X : T { void f() { T::v; } };
+/// \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Stmt,
+                                                   DependentScopeDeclRefExpr>
+    dependentScopeDeclRefExpr;
+
 /// Matches a reference to an ObjCIvar.
 ///
 /// Example: matches "a" in "init" method:
@@ -2469,7 +2496,28 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, FloatingLiteral>
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, ImaginaryLiteral>
     imaginaryLiteral;
 
-/// Matches fixed point literals
+/// Matches fixed-point literals eg.
+/// 0.5r, 0.5hr, 0.5lr, 0.5uhr, 0.5ur, 0.5ulr
+/// 1.0k, 1.0hk, 1.0lk, 1.0uhk, 1.0uk, 1.0ulk
+/// Exponents 1.0e10k
+/// Hexadecimal numbers 0x0.2p2r
+///
+/// Does not match implicit conversions such as first two lines:
+/// \code
+///    short _Accum sa = 2;
+///    _Accum a = 12.5;
+///    _Accum b = 1.25hk;
+///    _Fract c = 0.25hr;
+///    _Fract v = 0.35uhr;
+///    _Accum g = 1.45uhk;
+///    _Accum decexp1 = 1.575e1k;
+/// \endcode
+/// \compile_args{-ffixed-point;-std=c99}
+///
+/// The matcher \matcher{fixedPointLiteral()} matches
+/// \match{1.25hk}, \match{0.25hr}, \match{0.35uhr},
+/// \match{1.45uhk}, \match{1.575e1k}, but does not
+/// match \nomatch{12.5} and \nomatch{2} from the code block.
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, FixedPointLiteral>
     fixedPointLiteral;
 
@@ -3234,6 +3282,29 @@ AST_MATCHER_P(CXXDependentScopeMemberExpr, memberHasSameNameAsBoundNode,
         }
         return true;
       });
+}
+
+/// Matches the dependent name of a DependentScopeDeclRefExpr or
+/// DependentNameType
+///
+/// Given:
+/// \code
+///  template <class T> class X : T { void f() { T::v; } };
+/// \endcode
+/// \c dependentScopeDeclRefExpr(hasDependentName("v")) matches `T::v`
+///
+/// Given:
+/// \code
+///  template <typename T> struct declToImport {
+///    typedef typename T::type dependent_name;
+///  };
+/// \endcode
+/// \c dependentNameType(hasDependentName("type")) matches `T::type`
+AST_POLYMORPHIC_MATCHER_P(hasDependentName,
+                          AST_POLYMORPHIC_SUPPORTED_TYPES(
+                              DependentScopeDeclRefExpr, DependentNameType),
+                          std::string, N) {
+  return internal::getDependentName(Node) == N;
 }
 
 /// Matches C++ classes that are directly or indirectly derived from a class
@@ -4033,7 +4104,7 @@ AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
 AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
     hasType,
     AST_POLYMORPHIC_SUPPORTED_TYPES(Expr, FriendDecl, ValueDecl,
-                                    CXXBaseSpecifier),
+                                    CXXBaseSpecifier, ObjCInterfaceDecl),
     internal::Matcher<Decl>, InnerMatcher, 1) {
   QualType QT = internal::getUnderlyingType(Node);
   if (!QT.isNull())
@@ -7430,11 +7501,13 @@ extern const AstTypeMatcher<RValueReferenceType> rValueReferenceType;
 ///   matches "int const *b"
 ///
 /// Usable as: Matcher<BlockPointerType>, Matcher<MemberPointerType>,
-///   Matcher<PointerType>, Matcher<ReferenceType>
+///   Matcher<PointerType>, Matcher<ReferenceType>,
+///   Matcher<ObjCObjectPointerType>
 AST_TYPELOC_TRAVERSE_MATCHER_DECL(
     pointee, getPointee,
     AST_POLYMORPHIC_SUPPORTED_TYPES(BlockPointerType, MemberPointerType,
-                                    PointerType, ReferenceType));
+                                    PointerType, ReferenceType,
+                                    ObjCObjectPointerType));
 
 /// Matches typedef types.
 ///
@@ -7688,6 +7761,28 @@ AST_MATCHER_P(DecayedType, hasDecayedType, internal::Matcher<QualType>,
               InnerType) {
   return InnerType.matches(Node.getDecayedType(), Finder, Builder);
 }
+
+/// Matches a dependent name type
+///
+/// Example matches T::type
+/// \code
+///  template <typename T> struct declToImport {
+///    typedef typename T::type dependent_name;
+///  };
+/// \endcode
+extern const AstTypeMatcher<DependentNameType> dependentNameType;
+
+/// Matches a dependent template specialization type
+///
+/// Example matches A<T>::template B<T>
+/// \code
+///   template<typename T> struct A;
+///   template<typename T> struct declToImport {
+///     typename A<T>::template B<T> a;
+///   };
+/// \endcode
+extern const AstTypeMatcher<DependentTemplateSpecializationType>
+    dependentTemplateSpecializationType;
 
 /// Matches declarations whose declaration context, interpreted as a
 /// Decl, matches \c InnerMatcher.

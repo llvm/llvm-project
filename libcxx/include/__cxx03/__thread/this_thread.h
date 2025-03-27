@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___THREAD_THIS_THREAD_H
-#define _LIBCPP___THREAD_THIS_THREAD_H
+#ifndef _LIBCPP___CXX03___THREAD_THIS_THREAD_H
+#define _LIBCPP___CXX03___THREAD_THIS_THREAD_H
 
 #include <__cxx03/__chrono/steady_clock.h>
 #include <__cxx03/__chrono/time_point.h>
@@ -71,4 +71,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___THREAD_THIS_THREAD_H
+#endif // _LIBCPP___CXX03___THREAD_THIS_THREAD_H

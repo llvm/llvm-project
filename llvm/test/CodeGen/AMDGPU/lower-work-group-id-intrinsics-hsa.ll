@@ -58,10 +58,10 @@ define amdgpu_kernel void @workgroup_ids_kernel() {
   %idx = call i32 @llvm.amdgcn.workgroup.id.x()
   %idy = call i32 @llvm.amdgcn.workgroup.id.y()
   %idz = call i32 @llvm.amdgcn.workgroup.id.z()
-  %ielemx = insertelement <3 x i32> undef, i32 %idx, i64 0
+  %ielemx = insertelement <3 x i32> poison, i32 %idx, i64 0
   %ielemy = insertelement <3 x i32> %ielemx, i32 %idy, i64 1
   %ielemz = insertelement <3 x i32> %ielemy, i32 %idz, i64 2
-  call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> %ielemz, ptr addrspace(8) undef, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> %ielemz, ptr addrspace(8) poison, i32 0, i32 0, i32 0)
   ret void
 }
 
@@ -193,7 +193,6 @@ define amdgpu_kernel void @caller() {
 ; GFX12-SDAG-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX12-SDAG-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX12-SDAG-NEXT:    s_mov_b32 s32, 0
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-SDAG-NEXT:    s_swappc_b64 s[30:31], s[12:13]
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
@@ -207,7 +206,6 @@ define amdgpu_kernel void @caller() {
 ; GFX12-GISEL-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX12-GISEL-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX12-GISEL-NEXT:    s_mov_b32 s32, 0
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX12-GISEL-NEXT:    s_swappc_b64 s[30:31], s[12:13]
 ; GFX12-GISEL-NEXT:    s_endpgm
   %idx = call i32 @llvm.amdgcn.workgroup.id.x()

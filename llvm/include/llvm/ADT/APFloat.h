@@ -155,7 +155,41 @@ struct APFloatBase {
     S_IEEEsingle,
     S_IEEEdouble,
     S_IEEEquad,
+    // The IBM double-double semantics. Such a number consists of a pair of
+    // IEEE 64-bit doubles (Hi, Lo), where |Hi| > |Lo|, and if normal,
+    // (double)(Hi + Lo) == Hi. The numeric value it's modeling is Hi + Lo.
+    // Therefore it has two 53-bit mantissa parts that aren't necessarily
+    // adjacent to each other, and two 11-bit exponents.
+    //
+    // Note: we need to make the value different from semBogus as otherwise
+    // an unsafe optimization may collapse both values to a single address,
+    // and we heavily rely on them having distinct addresses.
     S_PPCDoubleDouble,
+    // These are legacy semantics for the fallback, inaccurate implementation
+    // of IBM double-double, if the accurate semPPCDoubleDouble doesn't handle
+    // the operation. It's equivalent to having an IEEE number with consecutive
+    // 106 bits of mantissa and 11 bits of exponent.
+    //
+    // It's not equivalent to IBM double-double. For example, a legit IBM
+    // double-double, 1 + epsilon:
+    //
+    // 1 + epsilon = 1 + (1 >> 1076)
+    //
+    // is not representable by a consecutive 106 bits of mantissa.
+    //
+    // Currently, these semantics are used in the following way:
+    //
+    //   semPPCDoubleDouble -> (IEEEdouble, IEEEdouble) ->
+    //   (64-bit APInt, 64-bit APInt) -> (128-bit APInt) ->
+    //   semPPCDoubleDoubleLegacy -> IEEE operations
+    //
+    // We use bitcastToAPInt() to get the bit representation (in APInt) of the
+    // underlying IEEEdouble, then use the APInt constructor to construct the
+    // legacy IEEE float.
+    //
+    // TODO: Implement all operations in semPPCDoubleDouble, and delete these
+    // semantics.
+    S_PPCDoubleDoubleLegacy,
     // 8-bit floating point number following IEEE-754 conventions with bit
     // layout S1E5M2 as described in https://arxiv.org/abs/2209.05433.
     S_Float8E5M2,
@@ -214,7 +248,7 @@ struct APFloatBase {
     // types, there are no infinity or NaN values. The format is detailed in
     // https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
     S_Float4E2M1FN,
-
+    // TODO: Documentation is missing.
     S_x87DoubleExtended,
     S_MaxSemantics = S_x87DoubleExtended,
   };
@@ -228,6 +262,7 @@ struct APFloatBase {
   static const fltSemantics &IEEEdouble() LLVM_READNONE;
   static const fltSemantics &IEEEquad() LLVM_READNONE;
   static const fltSemantics &PPCDoubleDouble() LLVM_READNONE;
+  static const fltSemantics &PPCDoubleDoubleLegacy() LLVM_READNONE;
   static const fltSemantics &Float8E5M2() LLVM_READNONE;
   static const fltSemantics &Float8E5M2FNUZ() LLVM_READNONE;
   static const fltSemantics &Float8E4M3() LLVM_READNONE;
@@ -245,6 +280,11 @@ struct APFloatBase {
   /// A Pseudo fltsemantic used to construct APFloats that cannot conflict with
   /// anything real.
   static const fltSemantics &Bogus() LLVM_READNONE;
+
+  // Returns true if any number described by this semantics can be precisely
+  // represented by the specified semantics. Does not take into account
+  // the value of fltNonfiniteBehavior, hasZero, hasSignedRepr.
+  static bool isRepresentableBy(const fltSemantics &A, const fltSemantics &B);
 
   /// @}
 
@@ -313,6 +353,7 @@ struct APFloatBase {
   static bool semanticsHasSignedRepr(const fltSemantics &);
   static bool semanticsHasInf(const fltSemantics &);
   static bool semanticsHasNaN(const fltSemantics &);
+  static bool isIEEELikeFP(const fltSemantics &);
 
   // Returns true if any number described by \p Src can be precisely represented
   // by a normal (not subnormal) value in \p Dst.
@@ -688,7 +729,7 @@ private:
   APInt convertDoubleAPFloatToAPInt() const;
   APInt convertQuadrupleAPFloatToAPInt() const;
   APInt convertF80LongDoubleAPFloatToAPInt() const;
-  APInt convertPPCDoubleDoubleAPFloatToAPInt() const;
+  APInt convertPPCDoubleDoubleLegacyAPFloatToAPInt() const;
   APInt convertFloat8E5M2APFloatToAPInt() const;
   APInt convertFloat8E5M2FNUZAPFloatToAPInt() const;
   APInt convertFloat8E4M3APFloatToAPInt() const;
@@ -709,7 +750,7 @@ private:
   void initFromDoubleAPInt(const APInt &api);
   void initFromQuadrupleAPInt(const APInt &api);
   void initFromF80LongDoubleAPInt(const APInt &api);
-  void initFromPPCDoubleDoubleAPInt(const APInt &api);
+  void initFromPPCDoubleDoubleLegacyAPInt(const APInt &api);
   void initFromFloat8E5M2APInt(const APInt &api);
   void initFromFloat8E5M2FNUZAPInt(const APInt &api);
   void initFromFloat8E4M3APInt(const APInt &api);
@@ -750,6 +791,8 @@ private:
 
   /// Sign bit of the number.
   unsigned int sign : 1;
+
+  friend class IEEEFloatUnitTestHelper;
 };
 
 hash_code hash_value(const IEEEFloat &Arg);
@@ -764,7 +807,7 @@ IEEEFloat frexp(const IEEEFloat &Val, int &Exp, roundingMode RM);
 class DoubleAPFloat final {
   // Note: this must be the first data member.
   const fltSemantics *Semantics;
-  std::unique_ptr<APFloat[]> Floats;
+  APFloat *Floats;
 
   opStatus addImpl(const APFloat &a, const APFloat &aa, const APFloat &c,
                    const APFloat &cc, roundingMode RM);
@@ -780,6 +823,7 @@ public:
   DoubleAPFloat(const fltSemantics &S, APFloat &&First, APFloat &&Second);
   DoubleAPFloat(const DoubleAPFloat &RHS);
   DoubleAPFloat(DoubleAPFloat &&RHS);
+  ~DoubleAPFloat();
 
   DoubleAPFloat &operator=(const DoubleAPFloat &RHS);
   inline DoubleAPFloat &operator=(DoubleAPFloat &&RHS);
@@ -1502,11 +1546,16 @@ inline APFloat neg(APFloat X) {
   return X;
 }
 
-/// Implements IEEE-754 2019 minimumNumber semantics. Returns the smaller of the
-/// 2 arguments if both are not NaN. If either argument is a NaN, returns the
-/// other argument. -0 is treated as ordered less than +0.
+/// Implements IEEE-754 2008 minNum semantics. Returns the smaller of the
+/// 2 arguments if both are not NaN. If either argument is a qNaN, returns the
+/// other argument. If either argument is sNaN, return a qNaN.
+/// -0 is treated as ordered less than +0.
 LLVM_READONLY
 inline APFloat minnum(const APFloat &A, const APFloat &B) {
+  if (A.isSignaling())
+    return A.makeQuiet();
+  if (B.isSignaling())
+    return B.makeQuiet();
   if (A.isNaN())
     return B;
   if (B.isNaN())
@@ -1516,11 +1565,16 @@ inline APFloat minnum(const APFloat &A, const APFloat &B) {
   return B < A ? B : A;
 }
 
-/// Implements IEEE-754 2019 maximumNumber semantics. Returns the larger of the
-/// 2 arguments if both are not NaN. If either argument is a NaN, returns the
-/// other argument. +0 is treated as ordered greater than -0.
+/// Implements IEEE-754 2008 maxNum semantics. Returns the larger of the
+/// 2 arguments if both are not NaN. If either argument is a qNaN, returns the
+/// other argument. If either argument is sNaN, return a qNaN.
+/// +0 is treated as ordered greater than -0.
 LLVM_READONLY
 inline APFloat maxnum(const APFloat &A, const APFloat &B) {
+  if (A.isSignaling())
+    return A.makeQuiet();
+  if (B.isSignaling())
+    return B.makeQuiet();
   if (A.isNaN())
     return B;
   if (B.isNaN())
@@ -1607,6 +1661,8 @@ APFloat &DoubleAPFloat::getFirst() { return Floats[0]; }
 const APFloat &DoubleAPFloat::getFirst() const { return Floats[0]; }
 APFloat &DoubleAPFloat::getSecond() { return Floats[1]; }
 const APFloat &DoubleAPFloat::getSecond() const { return Floats[1]; }
+
+inline DoubleAPFloat::~DoubleAPFloat() { delete[] Floats; }
 
 } // namespace detail
 

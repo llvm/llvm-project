@@ -70,6 +70,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
+  if (TT.isOSBinFormatCOFF())
+    return std::make_unique<TargetLoweringObjectFileCOFF>();
   return std::make_unique<MipsTargetObjectFile>();
 }
 

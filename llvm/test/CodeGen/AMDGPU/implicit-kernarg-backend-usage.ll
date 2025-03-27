@@ -101,6 +101,7 @@ define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addr
 ; GFX9V5-NEXT:    flat_store_dword v[2:3], v0
 ; GFX9V5-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V5-NEXT:    s_endpgm
+
   %flat.private = addrspacecast ptr addrspace(5) %ptr.private to ptr
   %flat.local = addrspacecast ptr addrspace(3) %ptr.local to ptr
   store volatile i32 1, ptr %flat.private
@@ -158,7 +159,7 @@ define amdgpu_kernel void @llvm_amdgcn_is_shared(ptr %ptr) {
 ; GFX9V5-NEXT:    s_endpgm
   %is.shared = call i1 @llvm.amdgcn.is.shared(ptr %ptr)
   %zext = zext i1 %is.shared to i32
-  store volatile i32 %zext, ptr addrspace(1) undef
+  store volatile i32 %zext, ptr addrspace(1) poison
   ret void
 }
 
@@ -212,7 +213,7 @@ define amdgpu_kernel void @llvm_amdgcn_is_private(ptr %ptr) {
 ; GFX9V5-NEXT:    s_endpgm
   %is.private = call i1 @llvm.amdgcn.is.private(ptr %ptr)
   %zext = zext i1 %is.private to i32
-  store volatile i32 %zext, ptr addrspace(1) undef
+  store volatile i32 %zext, ptr addrspace(1) poison
   ret void
 }
 
@@ -256,6 +257,29 @@ define amdgpu_kernel void @llvm_debugtrap() {
 ; GFX9V5:       ; %bb.0:
 ; GFX9V5-NEXT:    s_trap 3
   call void @llvm.debugtrap()
+  unreachable
+}
+
+define amdgpu_kernel void @llvm_ubsantrap() {
+; GFX8V4-LABEL: llvm_ubsantrap:
+; GFX8V4:       ; %bb.0:
+; GFX8V4-NEXT:    s_mov_b64 s[0:1], s[6:7]
+; GFX8V4-NEXT:    s_trap 2
+;
+; GFX8V5-LABEL: llvm_ubsantrap:
+; GFX8V5:       ; %bb.0:
+; GFX8V5-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0xc8
+; GFX8V5-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8V5-NEXT:    s_trap 2
+;
+; GFX9V4-LABEL: llvm_ubsantrap:
+; GFX9V4:       ; %bb.0:
+; GFX9V4-NEXT:    s_trap 2
+;
+; GFX9V5-LABEL: llvm_ubsantrap:
+; GFX9V5:       ; %bb.0:
+; GFX9V5-NEXT:    s_trap 2
+  call void @llvm.ubsantrap(i8 0)
   unreachable
 }
 

@@ -326,6 +326,8 @@ def : SourceOfDivergence<int_amdgcn_mov_dpp8>;
 def : SourceOfDivergence<int_amdgcn_update_dpp>;
 def : SourceOfDivergence<int_amdgcn_writelane>;
 def : SourceOfDivergence<int_amdgcn_init_whole_wave>;
+def : SourceOfDivergence<int_amdgcn_permlane16_swap>;
+def : SourceOfDivergence<int_amdgcn_permlane32_swap>;
 
 foreach intr = AMDGPUMFMAIntrinsics908 in
 def : SourceOfDivergence<intr>;
@@ -343,6 +345,11 @@ def : SourceOfDivergence<intr>;
 def : SourceOfDivergence<int_amdgcn_global_load_tr_b64>;
 def : SourceOfDivergence<int_amdgcn_global_load_tr_b128>;
 
+def : SourceOfDivergence<int_amdgcn_ds_read_tr4_b64>;
+def : SourceOfDivergence<int_amdgcn_ds_read_tr6_b96>;
+def : SourceOfDivergence<int_amdgcn_ds_read_tr8_b64>;
+def : SourceOfDivergence<int_amdgcn_ds_read_tr16_b64>;
+
 // The dummy boolean output is divergent from the IR's perspective,
 // but the mask results are uniform. These produce a divergent and
 // uniform result, so the returned struct is collectively divergent.
@@ -354,6 +361,8 @@ def : SourceOfDivergence<int_amdgcn_inverse_ballot>;
 
 foreach intr = AMDGPUImageDimAtomicIntrinsics in
 def : SourceOfDivergence<intr>;
+
+def : SourceOfDivergence<int_amdgcn_dead>;
 
 class AlwaysUniform<Intrinsic intr> {
   Intrinsic Intr = intr;

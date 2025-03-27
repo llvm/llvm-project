@@ -735,7 +735,7 @@ void mallocCastToFP(void) {
 // This tests that 'malloc()' buffers are undefined by default
 char mallocGarbage (void) {
 	char *buf = malloc(2);
-	char result = buf[1]; // expected-warning{{undefined}}
+	char result = buf[1]; // expected-warning{{uninitialized}}
 	free(buf);
 	return result;
 }
@@ -1914,8 +1914,8 @@ variable 'buf', which is not memory allocated by 'malloc()' [unix.Malloc]}}
 
 (*crash_a)(); // expected-warning{{type specifier missing}}
 // A CallEvent without a corresponding FunctionDecl.
-crash_b() { crash_a(); } // no-crash
-// expected-warning@-1{{type specifier missing}} expected-warning@-1{{non-void}}
+crash_b() { crash_a(); return 0; } // no-crash
+// expected-warning@-1{{type specifier missing}}
 
 long *global_a;
 void realloc_crash(void) {

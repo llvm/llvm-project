@@ -25,30 +25,28 @@ Non-comprehensive list of changes in this release
 
 ELF Improvements
 ----------------
+* For AArch64, added support for ``-zgcs-report-dynamic``, enabling checks for
+  GNU GCS Attribute Flags in Dynamic Objects when GCS is enabled. Inherits value
+  from ``-zgcs-report`` (capped at ``warning`` level) unless user-defined,
+  ensuring compatibility with GNU ld linker.
 
-* ``-z nosectionheader`` has been implemented to omit the section header table.
-  The operation is similar to ``llvm-objcopy --strip-sections``.
-  (`#101286 <https://github.com/llvm/llvm-project/pull/101286>`_)
-* Section ``CLASS`` linker script syntax binds input sections to named classes,
-  which are referenced later one or more times. This provides access to the
-  automatic spilling mechanism of `--enable-non-contiguous-regions` without
-  globally changing the semantics of section matching. It also independently
-  increases the expressive power of linker scripts.
-  (`#95323 <https://github.com/llvm/llvm-project/pull/95323>`_)
+* The default Hexagon architecture version in ELF object files produced by
+  lld is changed to v68. This change is only effective when the version is
+  not provided in the command line by the user and cannot be inferred from
+  inputs.
+
+* ``--why-live=<glob>`` prints for each symbol matching ``<glob>`` a chain of
+  items that kept it live during garbage collection. This is inspired by the
+  Mach-O LLD feature of the same name.
 
 Breaking changes
 ----------------
 
 COFF Improvements
 -----------------
-* ``/includeglob`` has been implemented to match the behavior of ``--undefined-glob`` available for ELF.
-* ``/lldsavetemps`` allows saving select intermediate LTO compilation results (e.g. resolution, preopt, promote, internalize, import, opt, precodegen, prelink, combinedindex).
-* ``/machine:arm64ec`` support completed, enabling the linking of ARM64EC images.
-* COFF weak anti-dependency alias symbols are now supported.
 
 MinGW Improvements
 ------------------
-* ``--undefined-glob`` is now supported by translating into the ``/includeglob`` flag.
 
 MachO Improvements
 ------------------

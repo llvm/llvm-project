@@ -10,7 +10,7 @@
 
 // Older versions of clang may encounter a backend error (see 0295c2ad):
 //   Pass-by-value arguments with alignment greater than register width are not supported.
-// XFAIL: target=powerpc{{.*}}-ibm-{{.*}} && (clang-17 || clang-18)
+// XFAIL: target=powerpc{{.*}}-ibm-{{.*}} && clang-18
 
 // This test crashes AppleClang 15 but not later versions.
 // UNSUPPORTED: apple-clang-15

@@ -47,6 +47,7 @@ define void @vector_reg_liverange_split() #0 {
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX90A-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX90A-NEXT:    s_mov_b32 s32, s33
 ; GFX90A-NEXT:    v_readlane_b32 s4, v40, 4
 ; GFX90A-NEXT:    v_readlane_b32 s28, v40, 2
 ; GFX90A-NEXT:    v_readlane_b32 s29, v40, 3
@@ -56,7 +57,6 @@ define void @vector_reg_liverange_split() #0 {
 ; GFX90A-NEXT:    buffer_load_dword a32, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[6:7]
-; GFX90A-NEXT:    s_addk_i32 s32, 0xfc00
 ; GFX90A-NEXT:    s_mov_b32 s33, s4
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]

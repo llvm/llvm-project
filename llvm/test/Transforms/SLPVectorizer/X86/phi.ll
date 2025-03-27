@@ -153,8 +153,8 @@ define float @foo3(ptr nocapture readonly %A) #0 {
 ; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 3
 ; CHECK-NEXT:    [[ARRAYIDX19:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    [[TMP7]] = load <2 x float>, ptr [[ARRAYIDX19]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x float>, ptr [[ARRAYIDX14]], align 4
+; CHECK-NEXT:    [[TMP7]] = load <2 x float>, ptr [[ARRAYIDX19]], align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> [[TMP8]], <2 x float> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 poison>
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x float> [[TMP9]], <4 x float> [[TMP10]], <4 x i32> <i32 5, i32 1, i32 2, i32 poison>
@@ -277,13 +277,13 @@ for.end:                                          ; preds = %for.body
   ret float %add31
 }
 
-define void @test(ptr %i1, ptr %i2, ptr %o) {
+define void @test(ptr %i1, ptr %i2, ptr %o, i1 %arg) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I1_0:%.*]] = load x86_fp80, ptr [[I1:%.*]], align 16
 ; CHECK-NEXT:    [[I1_GEP1:%.*]] = getelementptr x86_fp80, ptr [[I1]], i64 1
 ; CHECK-NEXT:    [[I1_1:%.*]] = load x86_fp80, ptr [[I1_GEP1]], align 16
-; CHECK-NEXT:    br i1 undef, label [[THEN:%.*]], label [[END:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[THEN:%.*]], label [[END:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[I2_0:%.*]] = load x86_fp80, ptr [[I2:%.*]], align 16
 ; CHECK-NEXT:    [[I2_GEP1:%.*]] = getelementptr inbounds x86_fp80, ptr [[I2]], i64 1
@@ -305,7 +305,7 @@ entry:
   %i1.0 = load x86_fp80, ptr %i1, align 16
   %i1.gep1 = getelementptr x86_fp80, ptr %i1, i64 1
   %i1.1 = load x86_fp80, ptr %i1.gep1, align 16
-  br i1 undef, label %then, label %end
+  br i1 %arg, label %then, label %end
 
 then:
   %i2.0 = load x86_fp80, ptr %i2, align 16

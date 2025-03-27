@@ -780,7 +780,7 @@ ClangExpressionParser::ClangExpressionParser(
   SetupTargetOpts(*m_compiler, *target_sp);
 
   // 3. Create and install the target on the compiler.
-  m_compiler->createDiagnostics();
+  m_compiler->createDiagnostics(m_compiler->getVirtualFileSystem());
   // Limit the number of error diagnostics we emit.
   // A value of 0 means no limit for both LLDB and Clang.
   m_compiler->getDiagnostics().setErrorLimit(target_sp->GetExprErrorLimit());
@@ -1538,6 +1538,10 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
       llvm_module_up, // handed off here
       function_name, exe_ctx.GetTargetSP(), sc,
       m_compiler->getTargetOpts().Features);
+
+  if (auto *options = m_expr.GetOptions())
+    execution_unit_sp->AppendPreferredSymbolContexts(
+        options->GetPreferredSymbolContexts());
 
   ClangExpressionHelper *type_system_helper =
       dyn_cast<ClangExpressionHelper>(m_expr.GetTypeSystemHelper());

@@ -146,16 +146,37 @@ if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
   endif()
 
   if (NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
-    message(FATAL_ERROR "Clang is not enabled, but is required for the Flang driver")
+    message(STATUS "Enabling clang as a dependency to flang")
+    list(APPEND LLVM_ENABLE_PROJECTS "clang")
   endif()
 endif()
+
+if ("libc" IN_LIST LLVM_ENABLE_PROJECTS)
+  message(WARNING "Using LLVM_ENABLE_PROJECTS=libc is deprecated now, and will "
+    "become a fatal error in the LLVM 21 release.  Please use "
+    "-DLLVM_ENABLE_RUNTIMES=libc or see the instructions at "
+    "https://libc.llvm.org/ for building the runtimes.")
+endif()
+
+if ("compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS)
+  message(WARNING "Using LLVM_ENABLE_PROJECTS=compiler-rt is deprecated now, and will "
+    "become a fatal error in the LLVM 21 release.  Please use "
+    "-DLLVM_ENABLE_RUNTIMES=compiler-rt or see the instructions at "
+    "https://compiler-rt.llvm.org/ for building the runtimes.")
+endif()
+
+if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+  if (NOT "flang" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(FATAL_ERROR "Flang is not enabled, but is required for the Flang-RT runtime")
+  endif ()
+endif ()
 
 # Select the runtimes to build
 #
 # As we migrate runtimes to using the bootstrapping build, the set of default runtimes
 # should grow as we remove those runtimes from LLVM_ENABLE_PROJECTS above.
 set(LLVM_DEFAULT_RUNTIMES "libcxx;libcxxabi;libunwind")
-set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc;offload")
+set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc;offload;flang-rt")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all")
@@ -179,13 +200,8 @@ if(LIBC_GPU_BUILD)
   list(APPEND RUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES "libc")
 endif()
 
-set(NEED_LIBC_HDRGEN FALSE)
-if("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
-  set(NEED_LIBC_HDRGEN TRUE)
-endif()
 foreach(_name ${LLVM_RUNTIME_TARGETS})
   if("libc" IN_LIST RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
-    set(NEED_LIBC_HDRGEN TRUE)
     if("${_name}" STREQUAL "amdgcn-amd-amdhsa" OR "${_name}" STREQUAL "nvptx64-nvidia-cuda")
       set(LLVM_LIBC_GPU_BUILD ON)
     endif()
@@ -195,26 +211,6 @@ if("${LIBC_TARGET_TRIPLE}" STREQUAL "amdgcn-amd-amdhsa" OR
    "${LIBC_TARGET_TRIPLE}" STREQUAL "nvptx64-nvidia-cuda")
   set(LLVM_LIBC_GPU_BUILD ON)
 endif()
-if(NEED_LIBC_HDRGEN)
-  # To build the libc runtime, we need to be able to build few libc build
-  # tools from the "libc" project. So, we add it to the list of enabled
-  # projects.
-  if (NOT "libc" IN_LIST LLVM_ENABLE_PROJECTS)
-    message(STATUS "Enabling libc project to build libc build tools")
-    list(APPEND LLVM_ENABLE_PROJECTS "libc")
-  endif()
-endif()
-
-foreach(proj IN LISTS LLVM_ENABLE_RUNTIMES)
-  if("${proj}" IN_LIST LLVM_ENABLE_PROJECTS)
-    # The 'libc' project bootstraps a few executables via the project build and
-    # should not emit an error currently.
-    if(NOT (NEED_LIBC_HDRGEN AND "${proj}" STREQUAL "libc"))
-      message(FATAL_ERROR "Runtime project \"${proj}\" found in LLVM_ENABLE_PROJECTS and LLVM_ENABLE_RUNTIMES. It must only appear in one of them and that one should almost always be LLVM_ENABLE_RUNTIMES.")
-    endif()
-  endif()
-endforeach()
-unset(NEED_LIBC_HDRGEN)
 
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
 # `LLVM_ENABLE_PROJECTS` CMake cache variable.  This exists for
@@ -500,6 +496,7 @@ set(LLVM_ALL_TARGETS
   PowerPC
   RISCV
   Sparc
+  SPIRV
   SystemZ
   VE
   WebAssembly
@@ -512,7 +509,6 @@ set(LLVM_ALL_EXPERIMENTAL_TARGETS
   CSKY
   DirectX
   M68k
-  SPIRV
   Xtensa
 )
 
@@ -545,6 +541,9 @@ option(LLVM_ENABLE_CRASH_DUMPS "Turn on memory dumps on crashes. Currently only 
 set(LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING "DISABLED" CACHE STRING
   "Enhance Debugify's line number coverage tracking; enabling this is ABI-breaking. Can be DISABLED, or COVERAGE.")
 set_property(CACHE LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING PROPERTY STRINGS DISABLED COVERAGE)
+
+option(LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS
+  "Add additional fields to DILocations to support Key Instructions" OFF)
 
 set(WINDOWS_PREFER_FORWARD_SLASH_DEFAULT OFF)
 if (MINGW)
@@ -836,6 +835,7 @@ option (LLVM_ENABLE_DOXYGEN "Use doxygen to generate llvm API documentation." OF
 option (LLVM_ENABLE_SPHINX "Use Sphinx to generate llvm documentation." OFF)
 option (LLVM_ENABLE_OCAMLDOC "Build OCaml bindings documentation." ON)
 option (LLVM_ENABLE_BINDINGS "Build bindings." ON)
+option (LLVM_ENABLE_TELEMETRY "Enable the telemetry library. If set to OFF, library cannot be enabled after build (eg., at runtime)" ON)
 
 set(LLVM_INSTALL_DOXYGEN_HTML_DIR "${CMAKE_INSTALL_DOCDIR}/llvm/doxygen-html"
     CACHE STRING "Doxygen-generated HTML documentation install directory")
@@ -1141,6 +1141,8 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
     ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/tf_runtime)
   install(TARGETS tf_xla_runtime EXPORT LLVMExports
     ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX} COMPONENT tf_xla_runtime)
+  install(TARGETS tf_xla_runtime EXPORT LLVMDevelopmentExports
+    ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX} COMPONENT tf_xla_runtime)
   set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS tf_xla_runtime)
   # Once we add more modules, we should handle this more automatically.
   if (DEFINED LLVM_OVERRIDE_MODEL_HEADER_INLINERSIZEMODEL)
@@ -1187,6 +1189,7 @@ endif()
 if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
           add_compile_definitions(_XOPEN_SOURCE=700)
           add_compile_definitions(_LARGE_FILE_API)
+          add_compile_options(-pthread)
 
   # Modules should be built with -shared -Wl,-G, so we can use runtime linking
   # with plugins.

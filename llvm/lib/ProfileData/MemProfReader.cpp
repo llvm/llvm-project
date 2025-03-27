@@ -32,6 +32,7 @@
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/ProfileData/MemProfReader.h"
+#include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
@@ -40,11 +41,12 @@
 #include "llvm/Support/Path.h"
 
 #define DEBUG_TYPE "memprof"
+
 namespace llvm {
 namespace memprof {
 namespace {
 template <class T = uint64_t> inline T alignedRead(const char *Ptr) {
-  static_assert(std::is_pod<T>::value, "Not a pod type.");
+  static_assert(std::is_integral_v<T>, "Not an integral type");
   assert(reinterpret_cast<size_t>(Ptr) % sizeof(T) == 0 && "Unaligned Read");
   return *reinterpret_cast<const T *>(Ptr);
 }
@@ -228,28 +230,6 @@ std::string getBuildIdString(const SegmentEntry &Entry) {
 }
 } // namespace
 
-MemProfReader::MemProfReader(
-    llvm::DenseMap<FrameId, Frame> FrameIdMap,
-    llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> ProfData)
-    : IdToFrame(std::move(FrameIdMap)),
-      FunctionProfileData(std::move(ProfData)) {
-  // Populate CSId in each IndexedAllocationInfo and IndexedMemProfRecord
-  // while storing CallStack in CSIdToCallStack.
-  for (auto &KV : FunctionProfileData) {
-    IndexedMemProfRecord &Record = KV.second;
-    for (auto &AS : Record.AllocSites) {
-      CallStackId CSId = hashCallStack(AS.CallStack);
-      AS.CSId = CSId;
-      CSIdToCallStack.insert({CSId, AS.CallStack});
-    }
-    for (auto &CS : Record.CallSites) {
-      CallStackId CSId = hashCallStack(CS);
-      Record.CallSiteIds.push_back(CSId);
-      CSIdToCallStack.insert({CSId, CS});
-    }
-  }
-}
-
 Expected<std::unique_ptr<RawMemProfReader>>
 RawMemProfReader::create(const Twine &Path, const StringRef ProfiledBinary,
                          bool KeepName) {
@@ -326,7 +306,7 @@ bool RawMemProfReader::hasFormat(const MemoryBuffer &Buffer) {
 
 void RawMemProfReader::printYAML(raw_ostream &OS) {
   uint64_t NumAllocFunctions = 0, NumMibInfo = 0;
-  for (const auto &KV : FunctionProfileData) {
+  for (const auto &KV : MemProfData.Records) {
     const size_t NumAllocSites = KV.second.AllocSites.size();
     if (NumAllocSites > 0) {
       NumAllocFunctions++;
@@ -521,15 +501,14 @@ Error RawMemProfReader::mapRawProfileToRecords() {
       Callstack.append(Frames.begin(), Frames.end());
     }
 
-    CallStackId CSId = hashCallStack(Callstack);
-    CSIdToCallStack.insert({CSId, Callstack});
+    CallStackId CSId = MemProfData.addCallStack(Callstack);
 
     // We attach the memprof record to each function bottom-up including the
     // first non-inline frame.
     for (size_t I = 0; /*Break out using the condition below*/; I++) {
       const Frame &F = idToFrame(Callstack[I]);
-      IndexedMemProfRecord &Record = FunctionProfileData[F.Function];
-      Record.AllocSites.emplace_back(Callstack, CSId, MIB);
+      IndexedMemProfRecord &Record = MemProfData.Records[F.Function];
+      Record.AllocSites.emplace_back(CSId, MIB);
 
       if (!F.IsInlineFrame)
         break;
@@ -540,16 +519,10 @@ Error RawMemProfReader::mapRawProfileToRecords() {
   for (const auto &[Id, Locs] : PerFunctionCallSites) {
     // Some functions may have only callsite data and no allocation data. Here
     // we insert a new entry for callsite data if we need to.
-    IndexedMemProfRecord &Record = FunctionProfileData[Id];
-    for (LocationPtr Loc : Locs) {
-      CallStackId CSId = hashCallStack(*Loc);
-      CSIdToCallStack.insert({CSId, *Loc});
-      Record.CallSites.push_back(*Loc);
-      Record.CallSiteIds.push_back(CSId);
-    }
+    IndexedMemProfRecord &Record = MemProfData.Records[Id];
+    for (LocationPtr Loc : Locs)
+      Record.CallSites.emplace_back(MemProfData.addCallStack(*Loc));
   }
-
-  verifyFunctionProfileData(FunctionProfileData);
 
   return Error::success();
 }
@@ -608,9 +581,7 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
           GuidToSymbolName.insert({Guid, CanonicalName.str()});
         }
 
-        const FrameId Hash = F.hash();
-        IdToFrame.insert({Hash, F});
-        SymbolizedFrame[VAddr].push_back(Hash);
+        SymbolizedFrame[VAddr].push_back(MemProfData.addFrame(F));
       }
     }
 
@@ -625,8 +596,8 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
   // Drop the entries where the callstack is empty.
   for (const uint64_t Id : EntriesToErase) {
     StackMap.erase(Id);
-    if(CallstackProfileData[Id].AccessHistogramSize > 0)
-      free((void*) CallstackProfileData[Id].AccessHistogram);
+    if (CallstackProfileData[Id].AccessHistogramSize > 0)
+      free((void *)CallstackProfileData[Id].AccessHistogram);
     CallstackProfileData.erase(Id);
   }
 
@@ -779,6 +750,72 @@ Error RawMemProfReader::readNextRecord(
     return F;
   };
   return MemProfReader::readNextRecord(GuidRecord, IdToFrameCallback);
+}
+
+Expected<std::unique_ptr<YAMLMemProfReader>>
+YAMLMemProfReader::create(const Twine &Path) {
+  auto BufferOr = MemoryBuffer::getFileOrSTDIN(Path, /*IsText=*/true);
+  if (std::error_code EC = BufferOr.getError())
+    return report(errorCodeToError(EC), Path.getSingleStringRef());
+
+  std::unique_ptr<MemoryBuffer> Buffer(BufferOr.get().release());
+  return create(std::move(Buffer));
+}
+
+Expected<std::unique_ptr<YAMLMemProfReader>>
+YAMLMemProfReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
+  auto Reader = std::make_unique<YAMLMemProfReader>();
+  Reader->parse(Buffer->getBuffer());
+  return std::move(Reader);
+}
+
+bool YAMLMemProfReader::hasFormat(const StringRef Path) {
+  auto BufferOr = MemoryBuffer::getFileOrSTDIN(Path, /*IsText=*/true);
+  if (!BufferOr)
+    return false;
+
+  std::unique_ptr<MemoryBuffer> Buffer(BufferOr.get().release());
+  return hasFormat(*Buffer);
+}
+
+bool YAMLMemProfReader::hasFormat(const MemoryBuffer &Buffer) {
+  return Buffer.getBuffer().starts_with("---");
+}
+
+void YAMLMemProfReader::parse(StringRef YAMLData) {
+  memprof::AllMemProfData Doc;
+  yaml::Input Yin(YAMLData);
+
+  Yin >> Doc;
+  if (Yin.error())
+    return;
+
+  // Add a call stack to MemProfData.CallStacks and return its CallStackId.
+  auto AddCallStack = [&](ArrayRef<Frame> CallStack) -> CallStackId {
+    SmallVector<FrameId> IndexedCallStack;
+    IndexedCallStack.reserve(CallStack.size());
+    for (const Frame &F : CallStack)
+      IndexedCallStack.push_back(MemProfData.addFrame(F));
+    return MemProfData.addCallStack(std::move(IndexedCallStack));
+  };
+
+  for (const auto &[GUID, Record] : Doc.HeapProfileRecords) {
+    IndexedMemProfRecord IndexedRecord;
+
+    // Convert AllocationInfo to IndexedAllocationInfo.
+    for (const AllocationInfo &AI : Record.AllocSites) {
+      CallStackId CSId = AddCallStack(AI.CallStack);
+      IndexedRecord.AllocSites.emplace_back(CSId, AI.Info);
+    }
+
+    // Populate CallSites with CalleeGuids.
+    for (const auto &CallSite : Record.CallSites) {
+      CallStackId CSId = AddCallStack(CallSite.Frames);
+      IndexedRecord.CallSites.emplace_back(CSId, CallSite.CalleeGuids);
+    }
+
+    MemProfData.Records.try_emplace(GUID, std::move(IndexedRecord));
+  }
 }
 } // namespace memprof
 } // namespace llvm

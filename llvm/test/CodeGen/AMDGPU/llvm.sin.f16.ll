@@ -3,7 +3,10 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX8 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX9 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX10 %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX11 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GFX11,GFX11-TRUE16 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GFX11,GFX11-FAKE16 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GFX12,GFX12-TRUE16 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GFX12,GFX12-FAKE16 %s
 
 define amdgpu_kernel void @sin_f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX6-LABEL: sin_f16:
@@ -68,18 +71,57 @@ define amdgpu_kernel void @sin_f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX10-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: sin_f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    global_load_u16 v1, v0, s[2:3]
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_mul_f16_e32 v1, 0.15915494, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_sin_f16_e32 v1, v1
-; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: sin_f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[2:3]
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.l, 0.15915494, v0.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_sin_f16_e32 v0.l, v0.l
+; GFX11-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: sin_f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    global_load_u16 v1, v0, s[2:3]
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    v_mul_f16_e32 v1, 0.15915494, v1
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_sin_f16_e32 v1, v1
+; GFX11-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-FAKE16-NEXT:    s_endpgm
+;
+; GFX12-TRUE16-LABEL: sin_f16:
+; GFX12-TRUE16:       ; %bb.0:
+; GFX12-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[2:3]
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-TRUE16-NEXT:    v_mul_f16_e32 v0.l, 0.15915494, v0.l
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_sin_f16_e32 v0.l, v0.l
+; GFX12-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX12-TRUE16-NEXT:    s_endpgm
+;
+; GFX12-FAKE16-LABEL: sin_f16:
+; GFX12-FAKE16:       ; %bb.0:
+; GFX12-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FAKE16-NEXT:    global_load_u16 v1, v0, s[2:3]
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-FAKE16-NEXT:    v_mul_f16_e32 v1, 0.15915494, v1
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-FAKE16-NEXT:    v_sin_f16_e32 v1, v1
+; GFX12-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX12-FAKE16-NEXT:    s_endpgm
   %a.val = load half, ptr addrspace(1) %a
   %r.val = call half @llvm.sin.f16(half %a.val)
   store half %r.val, ptr addrspace(1) %r
@@ -170,24 +212,79 @@ define amdgpu_kernel void @sin_v2f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: sin_v2f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    global_load_b32 v1, v0, s[2:3]
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11-NEXT:    v_mul_f16_e32 v1, 0.15915494, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_mul_f16_e32 v2, 0.15915494, v2
-; GFX11-NEXT:    v_sin_f16_e32 v1, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_sin_f16_e32 v2, v2
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-NEXT:    v_pack_b32_f16 v1, v1, v2
-; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: sin_v2f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    global_load_b32 v0, v1, s[2:3]
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
+; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.l, 0.15915494, v0.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.h, 0.15915494, v2.l
+; GFX11-TRUE16-NEXT:    v_sin_f16_e32 v0.l, v0.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_sin_f16_e32 v0.h, v0.h
+; GFX11-TRUE16-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
+; GFX11-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: sin_v2f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    global_load_b32 v1, v0, s[2:3]
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
+; GFX11-FAKE16-NEXT:    v_mul_f16_e32 v1, 0.15915494, v1
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-FAKE16-NEXT:    v_mul_f16_e32 v2, 0.15915494, v2
+; GFX11-FAKE16-NEXT:    v_sin_f16_e32 v1, v1
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_sin_f16_e32 v2, v2
+; GFX11-FAKE16-NEXT:    s_waitcnt_depctr 0xfff
+; GFX11-FAKE16-NEXT:    v_pack_b32_f16 v1, v1, v2
+; GFX11-FAKE16-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-FAKE16-NEXT:    s_endpgm
+;
+; GFX12-TRUE16-LABEL: sin_v2f16:
+; GFX12-TRUE16:       ; %bb.0:
+; GFX12-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    global_load_b32 v2, v1, s[2:3]
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-TRUE16-NEXT:    v_mul_f16_e32 v0.l, 0.15915494, v2.l
+; GFX12-TRUE16-NEXT:    v_mul_f16_e32 v0.h, 0.15915494, v2.l
+; GFX12-TRUE16-NEXT:    ; kill: def $vgpr2 killed $vgpr2_lo16 killed $exec
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_sin_f16_e32 v0.l, v0.l
+; GFX12-TRUE16-NEXT:    v_sin_f16_e32 v0.h, v0.h
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
+; GFX12-TRUE16-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX12-TRUE16-NEXT:    s_endpgm
+;
+; GFX12-FAKE16-LABEL: sin_v2f16:
+; GFX12-FAKE16:       ; %bb.0:
+; GFX12-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FAKE16-NEXT:    global_load_b32 v1, v0, s[2:3]
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
+; GFX12-FAKE16-NEXT:    v_mul_f16_e32 v1, 0.15915494, v1
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-FAKE16-NEXT:    v_mul_f16_e32 v2, 0.15915494, v2
+; GFX12-FAKE16-NEXT:    v_sin_f16_e32 v1, v1
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; GFX12-FAKE16-NEXT:    v_sin_f16_e32 v2, v2
+; GFX12-FAKE16-NEXT:    v_pack_b32_f16 v1, v1, v2
+; GFX12-FAKE16-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX12-FAKE16-NEXT:    s_endpgm
   %a.val = load <2 x half>, ptr addrspace(1) %a
   %r.val = call <2 x half> @llvm.sin.v2f16(<2 x half> %a.val)
   store <2 x half> %r.val, ptr addrspace(1) %r
@@ -196,3 +293,6 @@ define amdgpu_kernel void @sin_v2f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 
 declare half @llvm.sin.f16(half %a)
 declare <2 x half> @llvm.sin.v2f16(<2 x half> %a)
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GFX11: {{.*}}
+; GFX12: {{.*}}

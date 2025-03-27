@@ -11,8 +11,9 @@ let Component = "AST" in {
 // Constant expression diagnostics. These (and their users) belong in Sema.
 def note_expr_divide_by_zero : Note<"division by zero">;
 def note_constexpr_invalid_cast : Note<
-  "%select{reinterpret_cast|dynamic_cast|%select{this conversion|cast that"
-  " performs the conversions of a reinterpret_cast}1|cast from %1}0"
+  "%enum_select<ConstexprInvalidCastKind>{%Reinterpret{reinterpret_cast}|%Dynamic{dynamic_cast}|"
+  "%ThisConversionOrReinterpret{%select{this conversion|cast that performs the conversions "
+  "of a reinterpret_cast}1}|%CastFrom{cast from %1}}0"
   " is not allowed in a constant expression"
   "%select{| in C++ standards before C++20||}0">;
 def note_constexpr_invalid_void_star_cast : Note<
@@ -90,12 +91,18 @@ def note_constexpr_pointer_subtraction_not_same_array : Note<
 def note_constexpr_pointer_subtraction_zero_size : Note<
   "subtraction of pointers to type %0 of zero size">;
 def note_constexpr_pointer_comparison_unspecified : Note<
-  "comparison between '%0' and '%1' has unspecified value">;
+  "comparison between pointers to unrelated objects '%0' and '%1' has unspecified value">;
+def note_constexpr_pointer_arith_unspecified : Note<
+  "arithmetic involving unrelated objects '%0' and '%1' has unspecified value">;
 def note_constexpr_pointer_constant_comparison : Note<
   "comparison of numeric address '%0' with pointer '%1' can only be performed "
   "at runtime">;
 def note_constexpr_literal_comparison : Note<
-  "comparison of addresses of literals has unspecified value">;
+  "comparison of addresses of potentially overlapping literals has unspecified value">;
+def note_constexpr_literal_arith : Note<
+  "arithmetic on addresses of potentially overlapping literals has unspecified value">;
+def note_constexpr_repeated_literal_eval : Note<
+  "repeated evaluation of the same literal expression can produce different objects">;
 def note_constexpr_opaque_call_comparison : Note<
   "comparison against opaque constant address '%0' can only be performed at "
   "runtime">;
@@ -389,6 +396,16 @@ def note_constexpr_assumption_failed : Note<
   "assumption evaluated to false">;
 def err_experimental_clang_interp_failed : Error<
   "the experimental clang interpreter failed to evaluate an expression">;
+
+def warn_attribute_needs_aggregate : Warning<
+  "%0 attribute is ignored in non-aggregate type %1">,
+  InGroup<IgnoredAttributes>;
+
+def warn_cxx20_compat_requires_explicit_init_non_aggregate : Warning<
+  "explicit initialization of field %1 will not be enforced in C++20 and later "
+  "because %2 has a user-declared constructor, making the type no longer an "
+  "aggregate">,
+  DefaultIgnore, InGroup<CXX20Compat>;
 
 def warn_integer_constant_overflow : Warning<
   "overflow in expression; result is %0 with type %1">,
@@ -782,8 +799,8 @@ def err_module_odr_violation_field : Error<
   "%select{"
   "field %4|"
   "field %4 with type %5|"
-  "%select{non-|}5bitfield %4|"
-  "bitfield %4 with one width expression|"
+  "%select{non-|}5bit-field %4|"
+  "bit-field %4 with one width expression|"
   "%select{non-|}5mutable field %4|"
   "field %4 with %select{no|an}5 initializer|"
   "field %4 with an initializer"
@@ -793,8 +810,8 @@ def note_module_odr_violation_field : Note<
   "%select{"
   "field %3|"
   "field %3 with type %4|"
-  "%select{non-|}4bitfield %3|"
-  "bitfield %3 with different width expression|"
+  "%select{non-|}4bit-field %3|"
+  "bit-field %3 with different width expression|"
   "%select{non-|}4mutable field %3|"
   "field %3 with %select{no|an}4 initializer|"
   "field %3 with a different initializer"

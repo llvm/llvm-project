@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CheckExprLifetime.h"
 #include "TypeLocBuilder.h"
 #include "clang/APINotes/APINotesReader.h"
 #include "clang/AST/Decl.h"
@@ -477,11 +478,11 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
                             const api_notes::FunctionInfo &Info,
                             VersionedInfoMetadata Metadata) {
   // Find the declaration itself.
-  FunctionDecl *FD = AnyFunc.dyn_cast<FunctionDecl *>();
+  FunctionDecl *FD = dyn_cast<FunctionDecl *>(AnyFunc);
   Decl *D = FD;
   ObjCMethodDecl *MD = nullptr;
   if (!D) {
-    MD = AnyFunc.get<ObjCMethodDecl *>();
+    MD = cast<ObjCMethodDecl *>(AnyFunc);
     D = MD;
   }
 
@@ -509,6 +510,11 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
     if (ParamTypeBefore.getAsOpaquePtr() != Param->getType().getAsOpaquePtr())
       AnyTypeChanged = true;
   }
+
+  // returns_(un)retained
+  if (!Info.SwiftReturnOwnership.empty())
+    D->addAttr(SwiftAttrAttr::Create(S.Context,
+                                     "returns_" + Info.SwiftReturnOwnership));
 
   // Result type override.
   QualType OverriddenResultType;
@@ -568,7 +574,8 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
 static void ProcessAPINotes(Sema &S, CXXMethodDecl *Method,
                             const api_notes::CXXMethodInfo &Info,
                             VersionedInfoMetadata Metadata) {
-  if (Info.This && Info.This->isLifetimebound()) {
+  if (Info.This && Info.This->isLifetimebound() &&
+      !sema::implicitObjectParamIsLifetimeBound(Method)) {
     auto MethodType = Method->getType();
     auto *attr = ::new (S.Context)
         LifetimeBoundAttr(S.Context, getPlaceholderAttrInfo());

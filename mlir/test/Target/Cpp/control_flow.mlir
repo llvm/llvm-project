@@ -68,3 +68,22 @@ func.func @block_labels1() {
   // CPP-DECLTOP-NEXT: label2:
   // CPP-DECLTOP-NEXT: return;
   // CPP-DECLTOP-NEXT: }
+
+emitc.func @expression_inlining(%0 : i32, %1 : i32) {
+  %2 = expression : i1 {
+    %3 = cmp lt, %0, %1 : (i32, i32) -> i1
+    yield %3 : i1
+  }
+  cf.cond_br %2, ^bb1, ^bb1
+  ^bb1:  // 2 preds: ^bb0, ^bb0
+    return
+}
+// CPP-DECLTOP: void expression_inlining(int32_t [[v1:v.*]], int32_t [[v2:v.*]]) {
+// CPP-DECLTOP-NEXT:   if ([[v1]] < [[v2]]) {
+// CPP-DECLTOP-NEXT:     goto label2;
+// CPP-DECLTOP-NEXT:   } else {
+// CPP-DECLTOP-NEXT:     goto label2;
+// CPP-DECLTOP-NEXT:   }
+// CPP-DECLTOP-NEXT: label2:
+// CPP-DECLTOP-NEXT:   return;
+// CPP-DECLTOP-NEXT: }

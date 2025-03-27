@@ -186,7 +186,7 @@ declare void @llvm.memset.p5.i32(ptr addrspace(5) nocapture writeonly, i8, i32, 
 
 define void @test_mem_intrinsic_memcpy(ptr %dest0,ptr %src0,ptr addrspace(1) %dest1,ptr addrspace(1) %src1,ptr addrspace(2) %dest2,ptr addrspace(2) %src2,ptr addrspace(3) %dest3,ptr addrspace(3) %src3,ptr addrspace(4) %dest4,ptr addrspace(4) %src4,ptr addrspace(5) %dest5,ptr addrspace(5) %src5) #0 {
 entry:
-  ;CHECK: define void @test_mem_intrinsic_memcpy(ptr [[DEST0:%.*]], ptr [[SRC0:%.*]], ptr addrspace(1) [[DEST1:%.*]], ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(2) [[DEST2:%.*]], ptr addrspace(2) [[SRC2:%.*]], ptr addrspace(3) [[DEST3:%.*]], ptr addrspace(3) [[SRC3:%.*]], ptr addrspace(4) [[DEST4:%.*]], ptr addrspace(4) [[SRC4:%.*]], ptr addrspace(5) [[DEST5:%.*]], ptr addrspace(5) [[SRC5:%.*]]) #2 {
+  ;CHECK: define void @test_mem_intrinsic_memcpy(ptr [[DEST0:%.*]], ptr [[SRC0:%.*]], ptr addrspace(1) [[DEST1:%.*]], ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(2) [[DEST2:%.*]], ptr addrspace(2) [[SRC2:%.*]], ptr addrspace(3) [[DEST3:%.*]], ptr addrspace(3) [[SRC3:%.*]], ptr addrspace(4) [[DEST4:%.*]], ptr addrspace(4) [[SRC4:%.*]], ptr addrspace(5) [[DEST5:%.*]], ptr addrspace(5) [[SRC5:%.*]]){{.*}} {
   ;CHECK-NEXT: entry:
   ;CHECK-NEXT: [[VR0:%.*]] = call ptr @__asan_memcpy(ptr [[DEST0]], ptr [[SRC0]], i64 64)
   ;CHECK-NEXT: [[VR1:%.*]] = addrspacecast ptr addrspace(1) [[SRC1]] to ptr
@@ -469,7 +469,7 @@ entry:
 
 define void @test_mem_intrinsic_memmove(ptr %dest0,ptr %src0,ptr addrspace(1) %dest1,ptr addrspace(1) %src1,ptr addrspace(2) %dest2,ptr addrspace(2) %src2,ptr addrspace(3) %dest3,ptr addrspace(3) %src3,ptr addrspace(4) %dest4,ptr addrspace(4) %src4,ptr addrspace(5) %dest5,ptr addrspace(5) %src5) #0 {
 entry:
-  ;CHECK: define void @test_mem_intrinsic_memmove(ptr [[DEST0:%.*]], ptr [[SRC0:%.*]], ptr addrspace(1) [[DEST1:%.*]], ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(2) [[DEST2:%.*]], ptr addrspace(2) [[SRC2:%.*]], ptr addrspace(3) [[DEST3:%.*]], ptr addrspace(3) [[SRC3:%.*]], ptr addrspace(4) [[DEST4:%.*]], ptr addrspace(4) [[SRC4:%.*]], ptr addrspace(5) [[DEST5:%.*]], ptr addrspace(5) [[SRC5:%.*]]) #2 {
+  ;CHECK: define void @test_mem_intrinsic_memmove(ptr [[DEST0:%.*]], ptr [[SRC0:%.*]], ptr addrspace(1) [[DEST1:%.*]], ptr addrspace(1) [[SRC1:%.*]], ptr addrspace(2) [[DEST2:%.*]], ptr addrspace(2) [[SRC2:%.*]], ptr addrspace(3) [[DEST3:%.*]], ptr addrspace(3) [[SRC3:%.*]], ptr addrspace(4) [[DEST4:%.*]], ptr addrspace(4) [[SRC4:%.*]], ptr addrspace(5) [[DEST5:%.*]], ptr addrspace(5) [[SRC5:%.*]]){{.*}} {
   ;CHECK-NEXT: entry:
   ;CHECK-NEXT: [[VR0:%.*]] = call ptr @__asan_memmove(ptr [[DEST0]], ptr [[SRC0]], i64 64)
   ;CHECK-NEXT: [[VR1:%.*]] = addrspacecast ptr addrspace(1) [[SRC1]] to ptr
@@ -753,7 +753,7 @@ entry:
 
 define void @test_mem_intrinsic_memset(ptr %ptr0,ptr addrspace(1) %ptr1,ptr addrspace(2) %ptr2,ptr addrspace(3) %ptr3,ptr addrspace(4) %ptr4,ptr addrspace(5) %ptr5) #0{
 entry:
-  ;CHECK: define void @test_mem_intrinsic_memset(ptr [[PTR0:%.*]], ptr addrspace(1) [[PTR1:%.*]], ptr addrspace(2) [[PTR2:%.*]], ptr addrspace(3) [[PTR3:%.*]], ptr addrspace(4) [[PTR4:%.*]], ptr addrspace(5) [[PTR5:%.*]]) #2 {
+  ;CHECK: define void @test_mem_intrinsic_memset(ptr [[PTR0:%.*]], ptr addrspace(1) [[PTR1:%.*]], ptr addrspace(2) [[PTR2:%.*]], ptr addrspace(3) [[PTR3:%.*]], ptr addrspace(4) [[PTR4:%.*]], ptr addrspace(5) [[PTR5:%.*]]){{.*}} {
   ;CHECK-NEXT: entry:
   ;CHECK-NEXT: [[VR0:%.*]] = call ptr @__asan_memset(ptr [[PTR0]], i32 1, i64 128)
   ;CHECK-NEXT: [[VR1:%.*]] = addrspacecast ptr addrspace(1) [[PTR1]] to ptr

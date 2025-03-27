@@ -122,6 +122,11 @@ static cl::opt<std::string> VectorizerStartEPPipeline(
     cl::desc("A textual description of the function pass pipeline inserted at "
              "the VectorizerStart extension point into default pipelines"),
     cl::Hidden);
+static cl::opt<std::string> VectorizerEndEPPipeline(
+    "passes-ep-vectorizer-end",
+    cl::desc("A textual description of the function pass pipeline inserted at "
+             "the VectorizerEnd extension point into default pipelines"),
+    cl::Hidden);
 static cl::opt<std::string> PipelineStartEPPipeline(
     "passes-ep-pipeline-start",
     cl::desc("A textual description of the module pass pipeline inserted at "
@@ -285,6 +290,12 @@ static void registerEPCallbacks(PassBuilder &PB) {
           ExitOnError Err("Unable to parse VectorizerStartEP pipeline: ");
           Err(PB.parsePassPipeline(PM, VectorizerStartEPPipeline));
         });
+  if (tryParsePipelineText<FunctionPassManager>(PB, VectorizerEndEPPipeline))
+    PB.registerVectorizerEndEPCallback(
+        [&PB](FunctionPassManager &PM, OptimizationLevel Level) {
+          ExitOnError Err("Unable to parse VectorizerEndEP pipeline: ");
+          Err(PB.parsePassPipeline(PM, VectorizerEndEPPipeline));
+        });
   if (tryParsePipelineText<ModulePassManager>(PB, PipelineStartEPPipeline))
     PB.registerPipelineStartEPCallback(
         [&PB](ModulePassManager &PM, OptimizationLevel) {
@@ -332,6 +343,7 @@ static void registerEPCallbacks(PassBuilder &PB) {
 #define HANDLE_EXTENSION(Ext)                                                  \
   llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
 #include "llvm/Support/Extension.def"
+#undef HANDLE_EXTENSION
 
 bool llvm::runPassPipeline(
     StringRef Arg0, Module &M, TargetMachine *TM, TargetLibraryInfoImpl *TLII,
@@ -445,6 +457,7 @@ bool llvm::runPassPipeline(
 #define HANDLE_EXTENSION(Ext)                                                  \
   get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
 #include "llvm/Support/Extension.def"
+#undef HANDLE_EXTENSION
 
   // Specially handle the alias analysis manager so that we can register
   // a custom pipeline of AA passes with it.

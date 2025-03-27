@@ -1699,9 +1699,9 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
 
       if (IsExported) {
         if (IsJumpTableCanonical)
-          ExportSummary->cfiFunctionDefs().insert(std::string(F->getName()));
+          ExportSummary->cfiFunctionDefs().emplace(F->getName());
         else
-          ExportSummary->cfiFunctionDecls().insert(std::string(F->getName()));
+          ExportSummary->cfiFunctionDecls().emplace(F->getName());
       }
 
       if (!IsJumpTableCanonical) {
@@ -1847,6 +1847,9 @@ LowerTypeTestsModule::LowerTypeTestsModule(
     auto &FAM =
         AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     for (Function &F : M) {
+      // Skip declarations since we should not query the TTI for them.
+      if (F.isDeclaration())
+        continue;
       auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
       if (TTI.hasArmWideBranch(false))
         CanUseArmJumpTable = true;
@@ -1863,8 +1866,7 @@ LowerTypeTestsModule::LowerTypeTestsModule(
   if (GlobalAnnotation && GlobalAnnotation->hasInitializer()) {
     const ConstantArray *CA =
         cast<ConstantArray>(GlobalAnnotation->getInitializer());
-    for (Value *Op : CA->operands())
-      FunctionAnnotations.insert(Op);
+    FunctionAnnotations.insert_range(CA->operands());
   }
 }
 
@@ -1876,8 +1878,8 @@ bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
   if (!ClReadSummary.empty()) {
     ExitOnError ExitOnErr("-lowertypetests-read-summary: " + ClReadSummary +
                           ": ");
-    auto ReadSummaryFile =
-        ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(ClReadSummary)));
+    auto ReadSummaryFile = ExitOnErr(errorOrToExpected(
+        MemoryBuffer::getFile(ClReadSummary, /*IsText=*/true)));
 
     yaml::Input In(ReadSummaryFile->getBuffer());
     In >> Summary;
@@ -2090,20 +2092,19 @@ bool LowerTypeTestsModule::lower() {
   };
   MapVector<StringRef, ExportedFunctionInfo> ExportedFunctions;
   if (ExportSummary) {
-    // A set of all functions that are address taken by a live global object.
-    DenseSet<GlobalValue::GUID> AddressTaken;
-    for (auto &I : *ExportSummary)
-      for (auto &GVS : I.second.SummaryList)
-        if (GVS->isLive())
-          for (const auto &Ref : GVS->refs()) {
-            AddressTaken.insert(Ref.getGUID());
-            for (auto &RefGVS : Ref.getSummaryList())
-              if (auto Alias = dyn_cast<AliasSummary>(RefGVS.get()))
-                AddressTaken.insert(Alias->getAliaseeGUID());
-          }
-
     NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions");
     if (CfiFunctionsMD) {
+      // A set of all functions that are address taken by a live global object.
+      DenseSet<GlobalValue::GUID> AddressTaken;
+      for (auto &I : *ExportSummary)
+        for (auto &GVS : I.second.SummaryList)
+          if (GVS->isLive())
+            for (const auto &Ref : GVS->refs()) {
+              AddressTaken.insert(Ref.getGUID());
+              for (auto &RefGVS : Ref.getSummaryList())
+                if (auto Alias = dyn_cast<AliasSummary>(RefGVS.get()))
+                  AddressTaken.insert(Alias->getAliaseeGUID());
+            }
       for (auto *FuncMD : CfiFunctionsMD->operands()) {
         assert(FuncMD->getNumOperands() >= 2);
         StringRef FunctionName =
@@ -2205,9 +2206,9 @@ bool LowerTypeTestsModule::lower() {
     bool IsExported = false;
     if (Function *F = dyn_cast<Function>(&GO)) {
       IsJumpTableCanonical = isJumpTableCanonical(F);
-      if (ExportedFunctions.count(F->getName())) {
-        IsJumpTableCanonical |=
-            ExportedFunctions[F->getName()].Linkage == CFL_Definition;
+      if (auto It = ExportedFunctions.find(F->getName());
+          It != ExportedFunctions.end()) {
+        IsJumpTableCanonical |= It->second.Linkage == CFL_Definition;
         IsExported = true;
       // TODO: The logic here checks only that the function is address taken,
       // not that the address takers are live. This can be updated to check
@@ -2405,9 +2406,9 @@ bool LowerTypeTestsModule::lower() {
             cast<MDString>(AliasMD->getOperand(0))->getString();
         StringRef Aliasee = cast<MDString>(AliasMD->getOperand(1))->getString();
 
-        if (!ExportedFunctions.count(Aliasee) ||
-            ExportedFunctions[Aliasee].Linkage != CFL_Definition ||
-            !M.getNamedAlias(Aliasee))
+        if (auto It = ExportedFunctions.find(Aliasee);
+            It == ExportedFunctions.end() ||
+            It->second.Linkage != CFL_Definition || !M.getNamedAlias(Aliasee))
           continue;
 
         GlobalValue::VisibilityTypes Visibility =

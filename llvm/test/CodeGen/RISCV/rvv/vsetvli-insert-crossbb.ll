@@ -338,16 +338,16 @@ define <vscale x 1 x double> @test8(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    add a0, a0, sp
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs1r.v v9, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs1r.v v9, (a0) # vscale x 8-byte Folded Spill
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
 ; CHECK-NEXT:    call foo
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    add a0, a0, sp
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl1r.v v9, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, s0, e64, m1, ta, ma
 ; CHECK-NEXT:    vfsub.vv v8, v9, v8
 ; CHECK-NEXT:    csrr a0, vlenb
@@ -393,18 +393,18 @@ define <vscale x 1 x double> @test9(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    vfadd.vv v9, v8, v9
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs1r.v v9, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs1r.v v9, (a0) # vscale x 8-byte Folded Spill
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    add a0, a0, sp
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
 ; CHECK-NEXT:    call foo
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl1r.v v9, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    add a0, a0, sp
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
 ; CHECK-NEXT:    j .LBB7_3
 ; CHECK-NEXT:  .LBB7_2: # %if.else
 ; CHECK-NEXT:    vfsub.vv v9, v8, v9
@@ -1125,7 +1125,6 @@ exit:
 define <vscale x 4 x i32> @clobbered_forwarded_avl(i64 %n, <vscale x 4 x i32> %v, i1 %cmp) {
 ; CHECK-LABEL: clobbered_forwarded_avl:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mv a2, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:  .LBB27_1: # %for.body
@@ -1133,9 +1132,7 @@ define <vscale x 4 x i32> @clobbered_forwarded_avl(i64 %n, <vscale x 4 x i32> %v
 ; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    bnez a1, .LBB27_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vadd.vv v10, v8, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
 entry:

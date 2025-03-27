@@ -1032,17 +1032,19 @@ bb7:                                              ; preds = %bb2
 define signext i32 @bug(i32 signext %x) {
 ; CHECK-LABEL: bug:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    beqz a0, .LBB18_4
+; CHECK-NEXT:    beqz a0, .LBB18_5
 ; CHECK-NEXT:  # %bb.1: # %if.end
-; CHECK-NEXT:    srliw a2, a0, 16
-; CHECK-NEXT:    seqz a1, a2
-; CHECK-NEXT:    slli a1, a1, 4
-; CHECK-NEXT:    sllw a0, a0, a1
-; CHECK-NEXT:    li a1, 16
-; CHECK-NEXT:    beqz a2, .LBB18_3
+; CHECK-NEXT:    srliw a1, a0, 16
+; CHECK-NEXT:    seqz a2, a1
+; CHECK-NEXT:    slli a2, a2, 4
+; CHECK-NEXT:    sllw a0, a0, a2
+; CHECK-NEXT:    beqz a1, .LBB18_3
 ; CHECK-NEXT:  # %bb.2: # %if.end
 ; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:  .LBB18_3: # %if.end
+; CHECK-NEXT:    j .LBB18_4
+; CHECK-NEXT:  .LBB18_3:
+; CHECK-NEXT:    li a1, 16
+; CHECK-NEXT:  .LBB18_4: # %if.end
 ; CHECK-NEXT:    srliw a2, a0, 24
 ; CHECK-NEXT:    seqz a2, a2
 ; CHECK-NEXT:    slli a3, a2, 3
@@ -1067,22 +1069,24 @@ define signext i32 @bug(i32 signext %x) {
 ; CHECK-NEXT:    not a0, a0
 ; CHECK-NEXT:    srli a0, a0, 31
 ; CHECK-NEXT:    addw a0, a1, a0
-; CHECK-NEXT:  .LBB18_4: # %cleanup
+; CHECK-NEXT:  .LBB18_5: # %cleanup
 ; CHECK-NEXT:    ret
 ;
 ; NOREMOVAL-LABEL: bug:
 ; NOREMOVAL:       # %bb.0: # %entry
-; NOREMOVAL-NEXT:    beqz a0, .LBB18_4
+; NOREMOVAL-NEXT:    beqz a0, .LBB18_5
 ; NOREMOVAL-NEXT:  # %bb.1: # %if.end
-; NOREMOVAL-NEXT:    srliw a2, a0, 16
-; NOREMOVAL-NEXT:    seqz a1, a2
-; NOREMOVAL-NEXT:    slli a1, a1, 4
-; NOREMOVAL-NEXT:    sllw a0, a0, a1
-; NOREMOVAL-NEXT:    li a1, 16
-; NOREMOVAL-NEXT:    beqz a2, .LBB18_3
+; NOREMOVAL-NEXT:    srliw a1, a0, 16
+; NOREMOVAL-NEXT:    seqz a2, a1
+; NOREMOVAL-NEXT:    slli a2, a2, 4
+; NOREMOVAL-NEXT:    sllw a0, a0, a2
+; NOREMOVAL-NEXT:    beqz a1, .LBB18_3
 ; NOREMOVAL-NEXT:  # %bb.2: # %if.end
 ; NOREMOVAL-NEXT:    li a1, 32
-; NOREMOVAL-NEXT:  .LBB18_3: # %if.end
+; NOREMOVAL-NEXT:    j .LBB18_4
+; NOREMOVAL-NEXT:  .LBB18_3:
+; NOREMOVAL-NEXT:    li a1, 16
+; NOREMOVAL-NEXT:  .LBB18_4: # %if.end
 ; NOREMOVAL-NEXT:    srliw a2, a0, 24
 ; NOREMOVAL-NEXT:    seqz a2, a2
 ; NOREMOVAL-NEXT:    slli a3, a2, 3
@@ -1107,7 +1111,7 @@ define signext i32 @bug(i32 signext %x) {
 ; NOREMOVAL-NEXT:    not a0, a0
 ; NOREMOVAL-NEXT:    srli a0, a0, 31
 ; NOREMOVAL-NEXT:    addw a0, a1, a0
-; NOREMOVAL-NEXT:  .LBB18_4: # %cleanup
+; NOREMOVAL-NEXT:  .LBB18_5: # %cleanup
 ; NOREMOVAL-NEXT:    ret
 entry:
   %tobool.not = icmp eq i32 %x, 0
@@ -1348,7 +1352,6 @@ define signext i32 @sextw_sh2add(i1 zeroext %0, ptr %1, i32 signext %2, i32 sign
 ; NOREMOVAL-LABEL: sextw_sh2add:
 ; NOREMOVAL:       # %bb.0:
 ; NOREMOVAL-NEXT:    sh2add a2, a2, a3
-; NOREMOVAL-NEXT:    mv a2, a2
 ; NOREMOVAL-NEXT:    beqz a0, .LBB22_2
 ; NOREMOVAL-NEXT:  # %bb.1:
 ; NOREMOVAL-NEXT:    sw a2, 0(a1)

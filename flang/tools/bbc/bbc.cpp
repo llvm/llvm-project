@@ -14,11 +14,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/LangOptions.h"
-#include "flang/Common/OpenMP-features.h"
-#include "flang/Common/Version.h"
-#include "flang/Common/default-kinds.h"
 #include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Lower/Bridge.h"
@@ -42,6 +37,11 @@
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/unparse-with-symbols.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/LangOptions.h"
+#include "flang/Support/OpenMP-features.h"
+#include "flang/Support/Version.h"
+#include "flang/Support/default-kinds.h"
 #include "flang/Tools/CrossToolHelpers.h"
 #include "flang/Tools/TargetSetup.h"
 #include "flang/Version.inc"
@@ -234,11 +234,39 @@ static llvm::cl::opt<bool> integerWrapAround(
     llvm::cl::desc("Treat signed integer overflow as two's complement"),
     llvm::cl::init(false));
 
-// TODO: integrate this option with the above
+static llvm::cl::opt<bool> initGlobalZero(
+    "finit-global-zero",
+    llvm::cl::desc("Zero initialize globals without default initialization"),
+    llvm::cl::init(true));
+
 static llvm::cl::opt<bool>
-    setNSW("integer-overflow",
-           llvm::cl::desc("add nsw flag to internal operations"),
-           llvm::cl::init(false));
+    reallocateLHS("frealloc-lhs",
+                  llvm::cl::desc("Follow Fortran 2003 rules for (re)allocating "
+                                 "the LHS of the intrinsic assignment"),
+                  llvm::cl::init(true));
+
+// TODO: -fstack-arrays is currently only used for fir.pack_array,
+// but it should probably be used for deciding how arrays/temporaries
+// are allocated during lowering.
+static llvm::cl::opt<bool>
+    stackArrays("fstack-arrays",
+                llvm::cl::desc("Allocate all arrays of unknown size and "
+                               "temporary arrays in stack memory"),
+                llvm::cl::init(false));
+
+static llvm::cl::opt<bool>
+    repackArrays("frepack-arrays",
+                 llvm::cl::desc("Pack non-contiguous assummed shape arrays "
+                                "into contiguous memory"),
+                 llvm::cl::init(false));
+
+static llvm::cl::opt<bool>
+    repackArraysWhole("frepack-arrays-continuity-whole",
+                      llvm::cl::desc("Repack arrays that are non-contiguous "
+                                     "in any dimension. If set to false, "
+                                     "only the arrays non-contiguous in the "
+                                     "leading dimension will be repacked"),
+                      llvm::cl::init(true));
 
 #define FLANG_EXCLUDE_CODEGEN
 #include "flang/Optimizer/Passes/CommandLineOpts.h"
@@ -275,7 +303,7 @@ createTargetMachine(llvm::StringRef targetTriple, std::string &error) {
   if (!theTarget)
     return nullptr;
   return std::unique_ptr<llvm::TargetMachine>{
-      theTarget->createTargetMachine(triple, /*CPU=*/"",
+      theTarget->createTargetMachine(llvm::Triple(triple), /*CPU=*/"",
                                      /*Features=*/"", llvm::TargetOptions(),
                                      /*Reloc::Model=*/std::nullopt)};
 }
@@ -381,7 +409,11 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setNoPPCNativeVecElemOrder(enableNoPPCNativeVecElemOrder);
   loweringOptions.setLowerToHighLevelFIR(useHLFIR || emitHLFIR);
   loweringOptions.setIntegerWrapAround(integerWrapAround);
-  loweringOptions.setNSWOnLoopVarInc(setNSW);
+  loweringOptions.setInitGlobalZero(initGlobalZero);
+  loweringOptions.setReallocateLHS(reallocateLHS);
+  loweringOptions.setStackArrays(stackArrays);
+  loweringOptions.setRepackArrays(repackArrays);
+  loweringOptions.setRepackArraysWhole(repackArraysWhole);
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
   Fortran::frontend::TargetOptions targetOpts;
   Fortran::frontend::CodeGenOptions cgOpts;
@@ -470,7 +502,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
     MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
     if (enableOpenMP)
       config.EnableOpenMP = true;
-    config.NSWOnLoopVarInc = setNSW;
+    config.NSWOnLoopVarInc = !integerWrapAround;
     fir::registerDefaultInlinerPass(config);
     fir::createDefaultFIROptimizerPassPipeline(pm, config);
   }

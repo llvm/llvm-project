@@ -1415,6 +1415,12 @@ void ClangdLSPServer::onInlayHint(const InlayHintsParams &Params,
                      std::move(Reply));
 }
 
+void ClangdLSPServer::onCallHierarchyOutgoingCalls(
+    const CallHierarchyOutgoingCallsParams &Params,
+    Callback<std::vector<CallHierarchyOutgoingCall>> Reply) {
+  Server->outgoingCalls(Params.item, std::move(Reply));
+}
+
 void ClangdLSPServer::applyConfiguration(
     const ConfigurationSettings &Settings) {
   // Per-file update to the compilation database.
@@ -1693,6 +1699,8 @@ void ClangdLSPServer::bindMethods(LSPBinder &Bind,
   Bind.method("typeHierarchy/subtypes", this, &ClangdLSPServer::onSubTypes);
   Bind.method("textDocument/prepareCallHierarchy", this, &ClangdLSPServer::onPrepareCallHierarchy);
   Bind.method("callHierarchy/incomingCalls", this, &ClangdLSPServer::onCallHierarchyIncomingCalls);
+  if (Opts.EnableOutgoingCalls)
+    Bind.method("callHierarchy/outgoingCalls", this, &ClangdLSPServer::onCallHierarchyOutgoingCalls);
   Bind.method("textDocument/selectionRange", this, &ClangdLSPServer::onSelectionRange);
   Bind.method("textDocument/documentLink", this, &ClangdLSPServer::onDocumentLink);
   Bind.method("textDocument/semanticTokens/full", this, &ClangdLSPServer::onSemanticTokens);

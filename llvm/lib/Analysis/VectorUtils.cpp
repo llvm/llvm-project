@@ -72,6 +72,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::atan2:
   case Intrinsic::sin:
   case Intrinsic::cos:
+  case Intrinsic::sincos:
+  case Intrinsic::sincospi:
   case Intrinsic::tan:
   case Intrinsic::sinh:
   case Intrinsic::cosh:
@@ -87,6 +89,7 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::maxnum:
   case Intrinsic::minimum:
   case Intrinsic::maximum:
+  case Intrinsic::modf:
   case Intrinsic::copysign:
   case Intrinsic::floor:
   case Intrinsic::ceil:
@@ -113,14 +116,46 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   }
 }
 
+bool llvm::isTriviallyScalarizable(Intrinsic::ID ID,
+                                   const TargetTransformInfo *TTI) {
+  if (isTriviallyVectorizable(ID))
+    return true;
+
+  if (TTI && Intrinsic::isTargetIntrinsic(ID))
+    return TTI->isTargetIntrinsicTriviallyScalarizable(ID);
+
+  // TODO: Move frexp to isTriviallyVectorizable.
+  // https://github.com/llvm/llvm-project/issues/112408
+  switch (ID) {
+  case Intrinsic::frexp:
+  case Intrinsic::uadd_with_overflow:
+  case Intrinsic::sadd_with_overflow:
+  case Intrinsic::ssub_with_overflow:
+  case Intrinsic::usub_with_overflow:
+  case Intrinsic::umul_with_overflow:
+  case Intrinsic::smul_with_overflow:
+    return true;
+  }
+  return false;
+}
+
 /// Identifies if the vector form of the intrinsic has a scalar operand.
 bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
-                                              unsigned ScalarOpdIdx) {
+                                              unsigned ScalarOpdIdx,
+                                              const TargetTransformInfo *TTI) {
+
+  if (TTI && Intrinsic::isTargetIntrinsic(ID))
+    return TTI->isTargetIntrinsicWithScalarOpAtArg(ID, ScalarOpdIdx);
+
   switch (ID) {
   case Intrinsic::abs:
+  case Intrinsic::vp_abs:
   case Intrinsic::ctlz:
+  case Intrinsic::vp_ctlz:
   case Intrinsic::cttz:
+  case Intrinsic::vp_cttz:
   case Intrinsic::is_fpclass:
+  case Intrinsic::vp_is_fpclass:
   case Intrinsic::powi:
     return (ScalarOpdIdx == 1);
   case Intrinsic::smul_fix:
@@ -128,24 +163,38 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   case Intrinsic::umul_fix:
   case Intrinsic::umul_fix_sat:
     return (ScalarOpdIdx == 2);
+  case Intrinsic::experimental_vp_splice:
+    return ScalarOpdIdx == 2 || ScalarOpdIdx == 4 || ScalarOpdIdx == 5;
   default:
     return false;
   }
 }
 
-bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
-                                                  int OpdIdx) {
+bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
+    Intrinsic::ID ID, int OpdIdx, const TargetTransformInfo *TTI) {
   assert(ID != Intrinsic::not_intrinsic && "Not an intrinsic!");
+
+  if (TTI && Intrinsic::isTargetIntrinsic(ID))
+    return TTI->isTargetIntrinsicWithOverloadTypeAtArg(ID, OpdIdx);
+
+  if (VPCastIntrinsic::isVPCast(ID))
+    return OpdIdx == -1 || OpdIdx == 0;
 
   switch (ID) {
   case Intrinsic::fptosi_sat:
   case Intrinsic::fptoui_sat:
   case Intrinsic::lrint:
   case Intrinsic::llrint:
+  case Intrinsic::vp_lrint:
+  case Intrinsic::vp_llrint:
   case Intrinsic::ucmp:
   case Intrinsic::scmp:
     return OpdIdx == -1 || OpdIdx == 0;
+  case Intrinsic::modf:
+  case Intrinsic::sincos:
+  case Intrinsic::sincospi:
   case Intrinsic::is_fpclass:
+  case Intrinsic::vp_is_fpclass:
     return OpdIdx == 0;
   case Intrinsic::powi:
     return OpdIdx == -1 || OpdIdx == 1;
@@ -154,8 +203,12 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
   }
 }
 
-bool llvm::isVectorIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
-                                                            int RetIdx) {
+bool llvm::isVectorIntrinsicWithStructReturnOverloadAtField(
+    Intrinsic::ID ID, int RetIdx, const TargetTransformInfo *TTI) {
+
+  if (TTI && Intrinsic::isTargetIntrinsic(ID))
+    return TTI->isTargetIntrinsicWithStructReturnOverloadAtField(ID, RetIdx);
+
   switch (ID) {
   case Intrinsic::frexp:
     return RetIdx == 0 || RetIdx == 1;
@@ -368,6 +421,36 @@ bool llvm::getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
   return true;
 }
 
+bool llvm::isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
+                             std::array<std::pair<int, int>, 2> &SrcInfo) {
+  const int SignalValue = NumElts * 2;
+  SrcInfo[0] = {-1, SignalValue};
+  SrcInfo[1] = {-1, SignalValue};
+  for (auto [i, M] : enumerate(Mask)) {
+    if (M < 0)
+      continue;
+    int Src = M >= (int)NumElts;
+    int Diff = (int)i - (M % NumElts);
+    bool Match = false;
+    for (int j = 0; j < 2; j++) {
+      auto &[SrcE, DiffE] = SrcInfo[j];
+      if (SrcE == -1) {
+        assert(DiffE == SignalValue);
+        SrcE = Src;
+        DiffE = Diff;
+      }
+      if (SrcE == Src && DiffE == Diff) {
+        Match = true;
+        break;
+      }
+    }
+    if (!Match)
+      return false;
+  }
+  // Avoid all undef masks
+  return SrcInfo[0].first != -1;
+}
+
 void llvm::narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
                                  SmallVectorImpl<int> &ScaledMask) {
   assert(Scale > 0 && "Unexpected scaling factor");
@@ -440,6 +523,41 @@ bool llvm::widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
   return true;
 }
 
+bool llvm::widenShuffleMaskElts(ArrayRef<int> M,
+                                SmallVectorImpl<int> &NewMask) {
+  unsigned NumElts = M.size();
+  if (NumElts % 2 != 0)
+    return false;
+
+  NewMask.clear();
+  for (unsigned i = 0; i < NumElts; i += 2) {
+    int M0 = M[i];
+    int M1 = M[i + 1];
+
+    // If both elements are undef, new mask is undef too.
+    if (M0 == -1 && M1 == -1) {
+      NewMask.push_back(-1);
+      continue;
+    }
+
+    if (M0 == -1 && M1 != -1 && (M1 % 2) == 1) {
+      NewMask.push_back(M1 / 2);
+      continue;
+    }
+
+    if (M0 != -1 && (M0 % 2) == 0 && ((M0 + 1) == M1 || M1 == -1)) {
+      NewMask.push_back(M0 / 2);
+      continue;
+    }
+
+    NewMask.clear();
+    return false;
+  }
+
+  assert(NewMask.size() == NumElts / 2 && "Incorrect size for mask!");
+  return true;
+}
+
 bool llvm::scaleShuffleMaskElts(unsigned NumDstElts, ArrayRef<int> Mask,
                                 SmallVectorImpl<int> &ScaledMask) {
   unsigned NumSrcElts = Mask.size();
@@ -483,7 +601,8 @@ void llvm::processShuffleMasks(
     ArrayRef<int> Mask, unsigned NumOfSrcRegs, unsigned NumOfDestRegs,
     unsigned NumOfUsedRegs, function_ref<void()> NoInputAction,
     function_ref<void(ArrayRef<int>, unsigned, unsigned)> SingleInputAction,
-    function_ref<void(ArrayRef<int>, unsigned, unsigned)> ManyInputsAction) {
+    function_ref<void(ArrayRef<int>, unsigned, unsigned, bool)>
+        ManyInputsAction) {
   SmallVector<SmallVector<SmallVector<int>>> Res(NumOfDestRegs);
   // Try to perform better estimation of the permutation.
   // 1. Split the source/destination vectors into real registers.
@@ -494,25 +613,26 @@ void llvm::processShuffleMasks(
   unsigned SzSrc = Sz / NumOfSrcRegs;
   for (unsigned I = 0; I < NumOfDestRegs; ++I) {
     auto &RegMasks = Res[I];
-    RegMasks.assign(NumOfSrcRegs, {});
+    RegMasks.assign(2 * NumOfSrcRegs, {});
     // Check that the values in dest registers are in the one src
     // register.
     for (unsigned K = 0; K < SzDest; ++K) {
       int Idx = I * SzDest + K;
       if (Idx == Sz)
         break;
-      if (Mask[Idx] >= Sz || Mask[Idx] == PoisonMaskElem)
+      if (Mask[Idx] >= 2 * Sz || Mask[Idx] == PoisonMaskElem)
         continue;
-      int SrcRegIdx = Mask[Idx] / SzSrc;
+      int MaskIdx = Mask[Idx] % Sz;
+      int SrcRegIdx = MaskIdx / SzSrc + (Mask[Idx] >= Sz ? NumOfSrcRegs : 0);
       // Add a cost of PermuteTwoSrc for each new source register permute,
       // if we have more than one source registers.
       if (RegMasks[SrcRegIdx].empty())
         RegMasks[SrcRegIdx].assign(SzDest, PoisonMaskElem);
-      RegMasks[SrcRegIdx][K] = Mask[Idx] % SzSrc;
+      RegMasks[SrcRegIdx][K] = MaskIdx % SzSrc;
     }
   }
   // Process split mask.
-  for (unsigned I = 0; I < NumOfUsedRegs; ++I) {
+  for (unsigned I : seq<unsigned>(NumOfUsedRegs)) {
     auto &Dest = Res[I];
     int NumSrcRegs =
         count_if(Dest, [](ArrayRef<int> Mask) { return !Mask.empty(); });
@@ -553,11 +673,12 @@ void llvm::processShuffleMasks(
         }
       };
       int SecondIdx;
+      bool NewReg = true;
       do {
         int FirstIdx = -1;
         SecondIdx = -1;
         MutableArrayRef<int> FirstMask, SecondMask;
-        for (unsigned I = 0; I < NumOfDestRegs; ++I) {
+        for (unsigned I : seq<unsigned>(2 * NumOfSrcRegs)) {
           SmallVectorImpl<int> &RegMask = Dest[I];
           if (RegMask.empty())
             continue;
@@ -570,7 +691,8 @@ void llvm::processShuffleMasks(
           SecondIdx = I;
           SecondMask = RegMask;
           CombineMasks(FirstMask, SecondMask);
-          ManyInputsAction(FirstMask, FirstIdx, SecondIdx);
+          ManyInputsAction(FirstMask, FirstIdx, SecondIdx, NewReg);
+          NewReg = false;
           NormalizeMask(FirstMask);
           RegMask.clear();
           SecondMask = FirstMask;
@@ -578,7 +700,8 @@ void llvm::processShuffleMasks(
         }
         if (FirstIdx != SecondIdx && SecondIdx >= 0) {
           CombineMasks(SecondMask, FirstMask);
-          ManyInputsAction(SecondMask, SecondIdx, FirstIdx);
+          ManyInputsAction(SecondMask, SecondIdx, FirstIdx, NewReg);
+          NewReg = false;
           Dest[FirstIdx].clear();
           NormalizeMask(SecondMask);
         }

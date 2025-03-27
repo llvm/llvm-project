@@ -16,12 +16,12 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
 #define FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
 
-#include "flang/Common/MathOptionsBase.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Support/MathOptionsBase.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/DenseMap.h"
@@ -57,7 +57,13 @@ public:
   explicit FirOpBuilder(mlir::Operation *op, fir::KindMapping kindMap,
                         mlir::SymbolTable *symbolTable = nullptr)
       : OpBuilder{op, /*listener=*/this}, kindMap{std::move(kindMap)},
-        symbolTable{symbolTable} {}
+        symbolTable{symbolTable} {
+    auto fmi = mlir::dyn_cast<mlir::arith::ArithFastMathInterface>(*op);
+    if (fmi) {
+      // Set the builder with FastMathFlags attached to the operation.
+      setFastMathFlags(fmi.getFastMathFlagsAttr().getValue());
+    }
+  }
   explicit FirOpBuilder(mlir::OpBuilder &builder, fir::KindMapping kindMap,
                         mlir::SymbolTable *symbolTable = nullptr)
       : OpBuilder(builder), OpBuilder::Listener(), kindMap{std::move(kindMap)},
@@ -379,6 +385,15 @@ public:
                                            mlir::FunctionType ty,
                                            mlir::SymbolTable *);
 
+  /// Returns a named function for a Fortran runtime API, creating
+  /// it, if it does not exist in the module yet.
+  /// If \p isIO is set to true, then the function corresponds
+  /// to one of Fortran runtime IO APIs.
+  mlir::func::FuncOp createRuntimeFunction(mlir::Location loc,
+                                           llvm::StringRef name,
+                                           mlir::FunctionType ty,
+                                           bool isIO = false);
+
   /// Cast the input value to IndexType.
   mlir::Value convertToIndexType(mlir::Location loc, mlir::Value val) {
     return createConvert(loc, getIndexType(), val);
@@ -555,6 +570,31 @@ public:
 
   /// Construct a data layout on demand and return it
   mlir::DataLayout &getDataLayout();
+
+  /// Convert operands &/or result from/to unsigned so that the operation
+  /// only receives/produces signless operands.
+  template <typename OpTy>
+  mlir::Value createUnsigned(mlir::Location loc, mlir::Type resultType,
+                             mlir::Value left, mlir::Value right) {
+    if (!resultType.isIntOrFloat())
+      return create<OpTy>(loc, resultType, left, right);
+    mlir::Type signlessType = mlir::IntegerType::get(
+        getContext(), resultType.getIntOrFloatBitWidth(),
+        mlir::IntegerType::SignednessSemantics::Signless);
+    mlir::Type opResType = resultType;
+    if (left.getType().isUnsignedInteger()) {
+      left = createConvert(loc, signlessType, left);
+      opResType = signlessType;
+    }
+    if (right.getType().isUnsignedInteger()) {
+      right = createConvert(loc, signlessType, right);
+      opResType = signlessType;
+    }
+    mlir::Value result = create<OpTy>(loc, opResType, left, right);
+    if (resultType.isUnsignedInteger())
+      result = createConvert(loc, resultType, result);
+    return result;
+  }
 
 private:
   /// Set attributes (e.g. FastMathAttr) to \p op operation
@@ -734,15 +774,30 @@ mlir::Value createZeroValue(fir::FirOpBuilder &builder, mlir::Location loc,
 std::optional<std::int64_t> getExtentFromTriplet(mlir::Value lb, mlir::Value ub,
                                                  mlir::Value stride);
 
+/// Compute the extent value given the lower bound \lb and upper bound \ub.
+/// All inputs must have the same SSA integer type.
+mlir::Value computeExtent(fir::FirOpBuilder &builder, mlir::Location loc,
+                          mlir::Value lb, mlir::Value ub);
+mlir::Value computeExtent(fir::FirOpBuilder &builder, mlir::Location loc,
+                          mlir::Value lb, mlir::Value ub, mlir::Value zero,
+                          mlir::Value one);
+
 /// Generate max(\p value, 0) where \p value is a scalar integer.
 mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Value value);
+mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,
+                           mlir::Value value, mlir::Value zero);
 
 /// The type(C_PTR/C_FUNPTR) is defined as the derived type with only one
 /// component of integer 64, and the component is the C address. Get the C
 /// address.
 mlir::Value genCPtrOrCFunptrAddr(fir::FirOpBuilder &builder, mlir::Location loc,
                                  mlir::Value cPtr, mlir::Type ty);
+
+/// The type(C_DEVPTR) is defined as the derived type with only one
+/// component of C_PTR type. Get the C address from the C_PTR component.
+mlir::Value genCDevPtrAddr(fir::FirOpBuilder &builder, mlir::Location loc,
+                           mlir::Value cDevPtr, mlir::Type ty);
 
 /// Get the C address value.
 mlir::Value genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
@@ -774,6 +829,27 @@ elideLengthsAlreadyInType(mlir::Type type, mlir::ValueRange lenParams);
 /// Get the address space which should be used for allocas
 uint64_t getAllocaAddressSpace(mlir::DataLayout *dataLayout);
 
+/// The two vectors of MLIR values have the following property:
+///   \p extents1[i] must have the same value as \p extents2[i]
+/// The function returns a new vector of MLIR values that preserves
+/// the same property vs \p extents1 and \p extents2, but allows
+/// more optimizations. For example, if extents1[j] is a known constant,
+/// and extents2[j] is not, then result[j] is the MLIR value extents1[j].
+llvm::SmallVector<mlir::Value> deduceOptimalExtents(mlir::ValueRange extents1,
+                                                    mlir::ValueRange extents2);
+
+/// Given array extents generate code that sets them all to zeroes,
+/// if the array is empty, e.g.:
+///   %false = arith.constant false
+///   %c0 = arith.constant 0 : index
+///   %p1 = arith.cmpi eq, %e0, %c0 : index
+///   %p2 = arith.ori %false, %p1 : i1
+///   %p3 = arith.cmpi eq, %e1, %c0 : index
+///   %p4 = arith.ori %p1, %p2 : i1
+///   %result0 = arith.select %p4, %c0, %e0 : index
+///   %result1 = arith.select %p4, %c0, %e1 : index
+llvm::SmallVector<mlir::Value> updateRuntimeExtentsForEmptyArrays(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::ValueRange extents);
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

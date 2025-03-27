@@ -51,8 +51,8 @@ class DiagnosticsEngine;
 class DiagnosticConsumer;
 class FileManager;
 class FrontendAction;
-class InMemoryModuleCache;
 class Module;
+class ModuleCache;
 class Preprocessor;
 class Sema;
 class SourceManager;
@@ -97,7 +97,7 @@ class CompilerInstance : public ModuleLoader {
   IntrusiveRefCntPtr<SourceManager> SourceMgr;
 
   /// The cache of PCM files.
-  IntrusiveRefCntPtr<InMemoryModuleCache> ModuleCache;
+  IntrusiveRefCntPtr<ModuleCache> ModCache;
 
   /// The preprocessor.
   std::shared_ptr<Preprocessor> PP;
@@ -118,7 +118,7 @@ class CompilerInstance : public ModuleLoader {
   std::unique_ptr<Sema> TheSema;
 
   /// The frontend timer group.
-  std::unique_ptr<llvm::TimerGroup> FrontendTimerGroup;
+  std::unique_ptr<llvm::TimerGroup> timerGroup;
 
   /// The frontend timer.
   std::unique_ptr<llvm::Timer> FrontendTimer;
@@ -209,7 +209,7 @@ public:
   explicit CompilerInstance(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps =
           std::make_shared<PCHContainerOperations>(),
-      InMemoryModuleCache *SharedModuleCache = nullptr);
+      ModuleCache *ModCache = nullptr);
   ~CompilerInstance() override;
 
   /// @name High-Level Operations
@@ -630,7 +630,7 @@ public:
   /// @name Frontend timer
   /// @{
 
-  bool hasFrontendTimer() const { return (bool)FrontendTimer; }
+  llvm::TimerGroup &getTimerGroup() const { return *timerGroup; }
 
   llvm::Timer &getFrontendTimer() const {
     assert(FrontendTimer && "Compiler instance has no frontend timer!");
@@ -675,13 +675,17 @@ public:
   /// Note that this routine also replaces the diagnostic client,
   /// allocating one if one is not provided.
   ///
+  /// \param VFS is used for any IO needed when creating DiagnosticsEngine. It
+  /// doesn't replace VFS in the CompilerInstance (if any).
+  ///
   /// \param Client If non-NULL, a diagnostic client that will be
   /// attached to (and, then, owned by) the DiagnosticsEngine inside this AST
   /// unit.
   ///
   /// \param ShouldOwnClient If Client is non-NULL, specifies whether
   /// the diagnostic object should take ownership of the client.
-  void createDiagnostics(DiagnosticConsumer *Client = nullptr,
+  void createDiagnostics(llvm::vfs::FileSystem &VFS,
+                         DiagnosticConsumer *Client = nullptr,
                          bool ShouldOwnClient = true);
 
   /// Create a DiagnosticsEngine object with a the TextDiagnosticPrinter.
@@ -702,10 +706,11 @@ public:
   /// used by some diagnostics printers (for logging purposes only).
   ///
   /// \return The new object on success, or null on failure.
-  static IntrusiveRefCntPtr<DiagnosticsEngine> createDiagnostics(
-      DiagnosticOptions *Opts, DiagnosticConsumer *Client = nullptr,
-      bool ShouldOwnClient = true, const CodeGenOptions *CodeGenOpts = nullptr,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
+  static IntrusiveRefCntPtr<DiagnosticsEngine>
+  createDiagnostics(llvm::vfs::FileSystem &VFS, DiagnosticOptions *Opts,
+                    DiagnosticConsumer *Client = nullptr,
+                    bool ShouldOwnClient = true,
+                    const CodeGenOptions *CodeGenOpts = nullptr);
 
   /// Create the file manager and replace any existing one with it.
   ///
@@ -741,9 +746,8 @@ public:
   static IntrusiveRefCntPtr<ASTReader> createPCHExternalASTSource(
       StringRef Path, StringRef Sysroot,
       DisableValidationForModuleKind DisableValidation,
-      bool AllowPCHWithCompilerErrors, Preprocessor &PP,
-      InMemoryModuleCache &ModuleCache, ASTContext &Context,
-      const PCHContainerReader &PCHContainerRdr,
+      bool AllowPCHWithCompilerErrors, Preprocessor &PP, ModuleCache &ModCache,
+      ASTContext &Context, const PCHContainerReader &PCHContainerRdr,
       ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
       ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
       void *DeserializationListener, bool OwnDeserializationListener,
@@ -891,7 +895,7 @@ public:
 
   void setExternalSemaSource(IntrusiveRefCntPtr<ExternalSemaSource> ESS);
 
-  InMemoryModuleCache &getModuleCache() const { return *ModuleCache; }
+  ModuleCache &getModuleCache() const { return *ModCache; }
 };
 
 } // end namespace clang

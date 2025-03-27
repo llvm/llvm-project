@@ -118,7 +118,7 @@ static bool hasBcmp(const Triple &TT) {
   return TT.isOSFreeBSD() || TT.isOSSolaris();
 }
 
-static bool isCallingConvCCompatible(CallingConv::ID CC, StringRef TT,
+static bool isCallingConvCCompatible(CallingConv::ID CC, const Triple &TT,
                                      FunctionType *FuncTy) {
   switch (CC) {
   default:
@@ -131,7 +131,7 @@ static bool isCallingConvCCompatible(CallingConv::ID CC, StringRef TT,
 
     // The iOS ABI diverges from the standard in some cases, so for now don't
     // try to simplify those calls.
-    if (Triple(TT).isiOS())
+    if (TT.isiOS())
       return false;
 
     if (!FuncTy->getReturnType()->isPointerTy() &&
@@ -1325,6 +1325,14 @@ static const VecDesc VecFuncs_SLEEFGNUABI_VFScalable[] = {
 #undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
 };
 
+static const VecDesc VecFuncs_SLEEFGNUABI_VFScalableRISCV[] = {
+#define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
+  {SCAL, VEC, VF, MASK, VABI_PREFIX},
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV
+};
+
 static const VecDesc VecFuncs_ArmPL[] = {
 #define TLI_DEFINE_ARMPL_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
@@ -1373,6 +1381,9 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
       addVectorizableFunctions(VecFuncs_SLEEFGNUABI_VF2);
       addVectorizableFunctions(VecFuncs_SLEEFGNUABI_VF4);
       addVectorizableFunctions(VecFuncs_SLEEFGNUABI_VFScalable);
+      break;
+    case llvm::Triple::riscv64:
+      addVectorizableFunctions(VecFuncs_SLEEFGNUABI_VFScalableRISCV);
       break;
     }
     break;
@@ -1435,8 +1446,7 @@ TargetLibraryInfoImpl::getVectorMappingInfo(StringRef F, const ElementCount &VF,
 TargetLibraryInfo TargetLibraryAnalysis::run(const Function &F,
                                              FunctionAnalysisManager &) {
   if (!BaselineInfoImpl)
-    BaselineInfoImpl =
-        TargetLibraryInfoImpl(Triple(F.getParent()->getTargetTriple()));
+    BaselineInfoImpl = TargetLibraryInfoImpl(F.getParent()->getTargetTriple());
   return TargetLibraryInfo(*BaselineInfoImpl, &F);
 }
 
@@ -1448,19 +1458,16 @@ unsigned TargetLibraryInfoImpl::getWCharSize(const Module &M) const {
 }
 
 unsigned TargetLibraryInfoImpl::getSizeTSize(const Module &M) const {
-  // There is really no guarantee that sizeof(size_t) is equal to sizeof(int*).
-  // If that isn't true then it should be possible to derive the SizeTTy from
-  // the target triple here instead and do an early return.
+  // There is really no guarantee that sizeof(size_t) is equal to the index
+  // size of the default address space. If that isn't true then it should be
+  // possible to derive the SizeTTy from the target triple here instead and do
+  // an early return.
 
-  // Historically LLVM assume that size_t has same size as intptr_t (hence
-  // deriving the size from sizeof(int*) in address space zero). This should
-  // work for most targets. For future consideration: DataLayout also implement
-  // getIndexSizeInBits which might map better to size_t compared to
-  // getPointerSizeInBits. Hard coding address space zero here might be
-  // unfortunate as well. Maybe getDefaultGlobalsAddressSpace() or
-  // getAllocaAddrSpace() is better.
-  unsigned AddressSpace = 0;
-  return M.getDataLayout().getPointerSizeInBits(AddressSpace);
+  // Hard coding address space zero may seem unfortunate, but a number of
+  // configurations of common targets (i386, x86-64 x32, aarch64 x32, possibly
+  // others) have larger-than-size_t index sizes on non-default address spaces,
+  // making this the best default.
+  return M.getDataLayout().getIndexSizeInBits(/*AddressSpace=*/0);
 }
 
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass()

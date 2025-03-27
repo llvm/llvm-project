@@ -16,6 +16,7 @@
 #include "PrimType.h"
 #include "Record.h"
 #include "Source.h"
+#include "clang/AST/ExprCXX.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -237,8 +238,7 @@ static void moveRecord(Block *B, std::byte *Src, std::byte *Dst,
   assert(D);
   assert(D->ElemRecord);
 
-  // FIXME: There might be cases where we need to move over the (v)bases as
-  // well.
+  // FIXME: Code duplication.
   for (const auto &F : D->ElemRecord->fields()) {
     auto FieldOffset = F.Offset;
     const auto *SrcDesc =
@@ -249,6 +249,26 @@ static void moveRecord(Block *B, std::byte *Src, std::byte *Dst,
 
     if (auto Fn = F.Desc->MoveFn)
       Fn(B, Src + FieldOffset, Dst + FieldOffset, F.Desc);
+  }
+
+  for (const auto &Base : D->ElemRecord->bases()) {
+    auto BaseOffset = Base.Offset;
+    const auto *SrcDesc =
+        reinterpret_cast<const InlineDescriptor *>(Src + BaseOffset) - 1;
+    auto *DestDesc = reinterpret_cast<InlineDescriptor *>(Dst + BaseOffset) - 1;
+    std::memcpy(DestDesc, SrcDesc, sizeof(InlineDescriptor));
+
+    if (auto Fn = Base.Desc->MoveFn)
+      Fn(B, Src + BaseOffset, Dst + BaseOffset, Base.Desc);
+  }
+
+  for (const auto &VBase : D->ElemRecord->virtual_bases()) {
+    auto VBaseOffset = VBase.Offset;
+    const auto *SrcDesc =
+        reinterpret_cast<const InlineDescriptor *>(Src + VBaseOffset) - 1;
+    auto *DestDesc =
+        reinterpret_cast<InlineDescriptor *>(Dst + VBaseOffset) - 1;
+    std::memcpy(DestDesc, SrcDesc, sizeof(InlineDescriptor));
   }
 }
 
@@ -310,9 +330,10 @@ static BlockMoveFn getMoveArrayPrim(PrimType Type) {
 }
 
 /// Primitives.
-Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
-                       bool IsConst, bool IsTemporary, bool IsMutable)
-    : Source(D), ElemSize(primSize(Type)), Size(ElemSize),
+Descriptor::Descriptor(const DeclTy &D, const Type *SourceTy, PrimType Type,
+                       MetadataSize MD, bool IsConst, bool IsTemporary,
+                       bool IsMutable)
+    : Source(D), SourceType(SourceTy), ElemSize(primSize(Type)), Size(ElemSize),
       MDSize(MD.value_or(0)), AllocSize(align(Size + MDSize)), PrimT(Type),
       IsConst(IsConst), IsMutable(IsMutable), IsTemporary(IsTemporary),
       CtorFn(getCtorPrim(Type)), DtorFn(getDtorPrim(Type)),
@@ -348,10 +369,12 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
 }
 
 /// Arrays of composite elements.
-Descriptor::Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
+Descriptor::Descriptor(const DeclTy &D, const Type *SourceTy,
+                       const Descriptor *Elem, MetadataSize MD,
                        unsigned NumElems, bool IsConst, bool IsTemporary,
                        bool IsMutable)
-    : Source(D), ElemSize(Elem->getAllocSize() + sizeof(InlineDescriptor)),
+    : Source(D), SourceType(SourceTy),
+      ElemSize(Elem->getAllocSize() + sizeof(InlineDescriptor)),
       Size(ElemSize * NumElems), MDSize(MD.value_or(0)),
       AllocSize(std::max<size_t>(alignof(void *), Size) + MDSize),
       ElemDesc(Elem), IsConst(IsConst), IsMutable(IsMutable),
@@ -383,14 +406,16 @@ Descriptor::Descriptor(const DeclTy &D, const Record *R, MetadataSize MD,
 }
 
 /// Dummy.
-Descriptor::Descriptor(const DeclTy &D)
-    : Source(D), ElemSize(1), Size(1), MDSize(0), AllocSize(MDSize),
-      ElemRecord(nullptr), IsConst(true), IsMutable(false), IsTemporary(false),
-      IsDummy(true) {
+Descriptor::Descriptor(const DeclTy &D, MetadataSize MD)
+    : Source(D), ElemSize(1), Size(1), MDSize(MD.value_or(0)),
+      AllocSize(MDSize), ElemRecord(nullptr), IsConst(true), IsMutable(false),
+      IsTemporary(false), IsDummy(true) {
   assert(Source && "Missing source");
 }
 
 QualType Descriptor::getType() const {
+  if (SourceType)
+    return QualType(SourceType, 0);
   if (const auto *D = asValueDecl())
     return D->getType();
   if (const auto *T = dyn_cast_if_present<TypeDecl>(asDecl()))
@@ -409,7 +434,8 @@ QualType Descriptor::getElemQualType() const {
   assert(isArray());
   QualType T = getType();
   if (T->isPointerOrReferenceType())
-    return T->getPointeeType();
+    T = T->getPointeeType();
+
   if (const auto *AT = T->getAsArrayTypeUnsafe()) {
     // For primitive arrays, we don't save a QualType at all,
     // just a PrimType. Try to figure out the QualType here.
@@ -424,21 +450,46 @@ QualType Descriptor::getElemQualType() const {
     return CT->getElementType();
   if (const auto *CT = T->getAs<VectorType>())
     return CT->getElementType();
-  llvm_unreachable("Array that's not an array/complex/vector type?");
+
+  return T;
+}
+
+QualType Descriptor::getDataType(const ASTContext &Ctx) const {
+  auto MakeArrayType = [&](QualType ElemType) -> QualType {
+    if (IsArray)
+      return Ctx.getConstantArrayType(
+          ElemType, APInt(64, static_cast<uint64_t>(getNumElems()), false),
+          nullptr, ArraySizeModifier::Normal, 0);
+    return ElemType;
+  };
+
+  if (const auto *E = asExpr()) {
+    if (isa<CXXNewExpr>(E))
+      return MakeArrayType(E->getType()->getPointeeType());
+
+    // std::allocator.allocate() call.
+    if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E);
+        ME && ME->getRecordDecl()->getName() == "allocator" &&
+        ME->getMethodDecl()->getName() == "allocate")
+      return MakeArrayType(E->getType()->getPointeeType());
+    return E->getType();
+  }
+
+  return getType();
 }
 
 SourceLocation Descriptor::getLocation() const {
-  if (auto *D = Source.dyn_cast<const Decl *>())
+  if (auto *D = dyn_cast<const Decl *>(Source))
     return D->getLocation();
-  if (auto *E = Source.dyn_cast<const Expr *>())
+  if (auto *E = dyn_cast<const Expr *>(Source))
     return E->getExprLoc();
   llvm_unreachable("Invalid descriptor type");
 }
 
 SourceInfo Descriptor::getLoc() const {
-  if (const auto *D = Source.dyn_cast<const Decl *>())
+  if (const auto *D = dyn_cast<const Decl *>(Source))
     return SourceInfo(D);
-  if (const auto *E = Source.dyn_cast<const Expr *>())
+  if (const auto *E = dyn_cast<const Expr *>(Source))
     return SourceInfo(E);
   llvm_unreachable("Invalid descriptor type");
 }

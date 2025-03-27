@@ -12,11 +12,16 @@ target triple = "powerpc-ibm-aix"
 ; CHECK-NEXT: L..__llvm_covinit_functions:
 ; CHECK-NEXT:     .vbyte  4, __llvm_gcov_writeout[DS]
 ; CHECK-NEXT:     .vbyte  4, __llvm_gcov_reset[DS]
-; The first .csect directive below is specifying the content of the csect.
-; The second .csect directive below is used to insert the .ref pseudo
-; instruction.
 ; CHECK:    .csect __llvm_gcov_ctr_section[RW],3
-; CHECK:    .csect __llvm_gcov_ctr_section[RW],3
+; CHECK-NEXT:    .lglobl __llvm_gcov_ctr                 # @_MergedGlobals
+; CHECK-NEXT:    .lglobl __llvm_gcov_ctr.1
+; CHECK-NEXT:    .align  3
+; CHECK-NEXT: L.._MergedGlobals:
+; CHECK-NEXT: __llvm_gcov_ctr:
+; CHECK-NEXT:     .space  8
+; CHECK-NEXT: __llvm_gcov_ctr.1:
+; CHECK-NEXT:     .space  8
+; CHECK:     .csect __llvm_gcov_ctr_section[RW],3
 ; CHECK-RW-NEXT:    .ref __llvm_covinit[RW]
 ; CHECK-RO-NEXT:    .ref __llvm_covinit[RO]
 

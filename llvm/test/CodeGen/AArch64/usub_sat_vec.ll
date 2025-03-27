@@ -2,6 +2,9 @@
 ; RUN: llc < %s -mtriple=aarch64-- | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=aarch64-- -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
+; CHECK-GI:       warning: Instruction selection used fallback path for v16i4
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for v16i1
+
 declare <1 x i8> @llvm.usub.sat.v1i8(<1 x i8>, <1 x i8>)
 declare <2 x i8> @llvm.usub.sat.v2i8(<2 x i8>, <2 x i8>)
 declare <4 x i8> @llvm.usub.sat.v4i8(<4 x i8>, <4 x i8>)
@@ -249,10 +252,9 @@ define void @v2i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-NEXT:    mov v0.s[1], w10
 ; CHECK-SD-NEXT:    mov v1.s[1], w11
 ; CHECK-SD-NEXT:    uqsub v0.2s, v0.2s, v1.2s
-; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    strh w9, [x2]
-; CHECK-SD-NEXT:    strh w8, [x2, #2]
+; CHECK-SD-NEXT:    mov s1, v0.s[1]
+; CHECK-SD-NEXT:    str h0, [x2]
+; CHECK-SD-NEXT:    str h1, [x2, #2]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v2i16:
@@ -486,17 +488,33 @@ define <8 x i64> @v8i64(<8 x i64> %x, <8 x i64> %y) nounwind {
 }
 
 define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
-; CHECK-LABEL: v2i128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    subs x8, x0, x4
-; CHECK-NEXT:    sbcs x9, x1, x5
-; CHECK-NEXT:    csel x0, xzr, x8, lo
-; CHECK-NEXT:    csel x1, xzr, x9, lo
-; CHECK-NEXT:    subs x8, x2, x6
-; CHECK-NEXT:    sbcs x9, x3, x7
-; CHECK-NEXT:    csel x2, xzr, x8, lo
-; CHECK-NEXT:    csel x3, xzr, x9, lo
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: v2i128:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    subs x8, x0, x4
+; CHECK-SD-NEXT:    sbcs x9, x1, x5
+; CHECK-SD-NEXT:    csel x0, xzr, x8, lo
+; CHECK-SD-NEXT:    csel x1, xzr, x9, lo
+; CHECK-SD-NEXT:    subs x8, x2, x6
+; CHECK-SD-NEXT:    sbcs x9, x3, x7
+; CHECK-SD-NEXT:    csel x2, xzr, x8, lo
+; CHECK-SD-NEXT:    csel x3, xzr, x9, lo
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: v2i128:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    subs x8, x0, x4
+; CHECK-GI-NEXT:    sbcs x9, x1, x5
+; CHECK-GI-NEXT:    cset w10, lo
+; CHECK-GI-NEXT:    tst w10, #0x1
+; CHECK-GI-NEXT:    csel x0, xzr, x8, ne
+; CHECK-GI-NEXT:    csel x1, xzr, x9, ne
+; CHECK-GI-NEXT:    subs x8, x2, x6
+; CHECK-GI-NEXT:    sbcs x9, x3, x7
+; CHECK-GI-NEXT:    cset w10, lo
+; CHECK-GI-NEXT:    tst w10, #0x1
+; CHECK-GI-NEXT:    csel x2, xzr, x8, ne
+; CHECK-GI-NEXT:    csel x3, xzr, x9, ne
+; CHECK-GI-NEXT:    ret
   %z = call <2 x i128> @llvm.usub.sat.v2i128(<2 x i128> %x, <2 x i128> %y)
   ret <2 x i128> %z
 }

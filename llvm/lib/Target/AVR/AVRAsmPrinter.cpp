@@ -206,7 +206,7 @@ const MCExpr *AVRAsmPrinter::lowerConstant(const Constant *CV) {
     bool IsProgMem = GV->getAddressSpace() == AVR::ProgramMemory;
     if (IsProgMem) {
       const MCExpr *Expr = MCSymbolRefExpr::create(getSymbol(GV), Ctx);
-      return AVRMCExpr::create(AVRMCExpr::VK_AVR_PM, Expr, false, Ctx);
+      return AVRMCExpr::create(AVRMCExpr::VK_PM, Expr, false, Ctx);
     }
   }
 

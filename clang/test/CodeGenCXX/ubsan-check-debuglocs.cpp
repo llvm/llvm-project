@@ -8,7 +8,7 @@
 // CHECK-SAME: !dbg
 
 struct SourceLocation {
-  SourceLocation acquire() {};
+  SourceLocation acquire() { return {}; };
 };
 extern "C" void __ubsan_handle_type_mismatch_v1(SourceLocation *Loc);
 static void handleTypeMismatchImpl(SourceLocation *Loc) { Loc->acquire(); }

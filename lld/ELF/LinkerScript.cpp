@@ -145,7 +145,9 @@ OutputDesc *LinkerScript::createOutputSection(StringRef name,
     // There was a forward reference.
     sec = secRef;
   } else {
-    sec = make<OutputDesc>(ctx, name, SHT_PROGBITS, 0);
+    descPool.emplace_back(
+        std::make_unique<OutputDesc>(ctx, name, SHT_PROGBITS, 0));
+    sec = descPool.back().get();
     if (!secRef)
       secRef = sec;
   }
@@ -154,10 +156,14 @@ OutputDesc *LinkerScript::createOutputSection(StringRef name,
 }
 
 OutputDesc *LinkerScript::getOrCreateOutputSection(StringRef name) {
-  OutputDesc *&cmdRef = nameToOutputSection[CachedHashStringRef(name)];
-  if (!cmdRef)
-    cmdRef = make<OutputDesc>(ctx, name, SHT_PROGBITS, 0);
-  return cmdRef;
+  auto &secRef = nameToOutputSection[CachedHashStringRef(name)];
+  if (!secRef) {
+    secRef = descPool
+                 .emplace_back(
+                     std::make_unique<OutputDesc>(ctx, name, SHT_PROGBITS, 0))
+                 .get();
+  }
+  return secRef;
 }
 
 // Expands the memory region by the specified size.
@@ -396,33 +402,38 @@ void LinkerScript::assignSymbol(SymbolAssignment *cmd, bool inSec) {
   cmd->sym->type = v.type;
 }
 
-static inline StringRef getFilename(const InputFile *file) {
-  return file ? file->getNameForScript() : StringRef();
-}
-
-bool InputSectionDescription::matchesFile(const InputFile *file) const {
+bool InputSectionDescription::matchesFile(const InputFile &file) const {
   if (filePat.isTrivialMatchAll())
     return true;
 
-  if (!matchesFileCache || matchesFileCache->first != file)
-    matchesFileCache.emplace(file, filePat.match(getFilename(file)));
+  if (!matchesFileCache || matchesFileCache->first != &file) {
+    if (matchType == MatchType::WholeArchive) {
+      matchesFileCache.emplace(&file, filePat.match(file.archiveName));
+    } else {
+      if (matchType == MatchType::ArchivesExcluded && !file.archiveName.empty())
+        matchesFileCache.emplace(&file, false);
+      else
+        matchesFileCache.emplace(&file, filePat.match(file.getNameForScript()));
+    }
+  }
 
   return matchesFileCache->second;
 }
 
-bool SectionPattern::excludesFile(const InputFile *file) const {
+bool SectionPattern::excludesFile(const InputFile &file) const {
   if (excludedFilePat.empty())
     return false;
 
-  if (!excludesFileCache || excludesFileCache->first != file)
-    excludesFileCache.emplace(file, excludedFilePat.match(getFilename(file)));
+  if (!excludesFileCache || excludesFileCache->first != &file)
+    excludesFileCache.emplace(&file,
+                              excludedFilePat.match(file.getNameForScript()));
 
   return excludesFileCache->second;
 }
 
 bool LinkerScript::shouldKeep(InputSectionBase *s) {
   for (InputSectionDescription *id : keptSections)
-    if (id->matchesFile(s->file))
+    if (id->matchesFile(*s->file))
       for (SectionPattern &p : id->sectionPatterns)
         if (p.sectionPat.match(s->name) &&
             (s->flags & id->withFlags) == id->withFlags &&
@@ -551,8 +562,8 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
         if (!pat.sectionPat.match(sec->name))
           continue;
 
-        if (!cmd->matchesFile(sec->file) || pat.excludesFile(sec->file) ||
-            sec->parent == &outCmd || !flagsMatch(sec))
+        if (!cmd->matchesFile(*sec->file) || pat.excludesFile(*sec->file) ||
+            !flagsMatch(sec))
           continue;
 
         if (sec->parent) {
@@ -615,7 +626,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
 
     for (InputSectionDescription *isd : scd->sc.commands) {
       for (InputSectionBase *sec : isd->sectionBases) {
-        if (sec->parent == &outCmd || !flagsMatch(sec))
+        if (!flagsMatch(sec))
           continue;
         bool isSpill = sec->parent && isa<OutputSection>(sec->parent);
         if (!sec->parent || (isSpill && outCmd.name == "/DISCARD/")) {
@@ -786,7 +797,7 @@ void LinkerScript::processSectionCommands() {
   if (!potentialSpillLists.empty()) {
     DenseSet<StringRef> insertNames;
     for (InsertCommand &ic : insertCommands)
-      insertNames.insert(ic.names.begin(), ic.names.end());
+      insertNames.insert_range(ic.names);
     for (SectionCommand *&base : sectionCommands) {
       auto *osd = dyn_cast<OutputDesc>(base);
       if (!osd)
@@ -1548,6 +1559,8 @@ bool LinkerScript::spillSections() {
   if (potentialSpillLists.empty())
     return false;
 
+  DenseSet<PotentialSpillSection *> skippedSpills;
+
   bool spilled = false;
   for (SectionCommand *cmd : reverse(sectionCommands)) {
     auto *osd = dyn_cast<OutputDesc>(cmd);
@@ -1574,16 +1587,34 @@ bool LinkerScript::spillSections() {
         if (isa<PotentialSpillSection>(isec))
           continue;
 
-        // Find the next potential spill location and remove it from the list.
         auto it = potentialSpillLists.find(isec);
         if (it == potentialSpillLists.end())
-          continue;
+          break;
+
+        // Consume spills until finding one that might help, then consume it.
+        auto canSpillHelp = [&](PotentialSpillSection *spill) {
+          // Spills to the same region that overflowed cannot help.
+          if (hasRegionOverflowed(osec->memRegion) &&
+              spill->getParent()->memRegion == osec->memRegion)
+            return false;
+          if (hasRegionOverflowed(osec->lmaRegion) &&
+              spill->getParent()->lmaRegion == osec->lmaRegion)
+            return false;
+          return true;
+        };
         PotentialSpillList &list = it->second;
-        PotentialSpillSection *spill = list.head;
-        if (spill->next)
-          list.head = spill->next;
-        else
-          potentialSpillLists.erase(isec);
+        PotentialSpillSection *spill;
+        for (spill = list.head; spill; spill = spill->next) {
+          if (list.head->next)
+            list.head = spill->next;
+          else
+            potentialSpillLists.erase(isec);
+          if (canSpillHelp(spill))
+            break;
+          skippedSpills.insert(spill);
+        }
+        if (!spill)
+          continue;
 
         // Replace the next spill location with the spilled section and adjust
         // its properties to match the new location. Note that the alignment of
@@ -1617,6 +1648,15 @@ bool LinkerScript::spillSections() {
       }
     }
   }
+
+  // Clean up any skipped spills.
+  DenseSet<InputSectionDescription *> isds;
+  for (PotentialSpillSection *s : skippedSpills)
+    isds.insert(s->isd);
+  for (InputSectionDescription *isd : isds)
+    llvm::erase_if(isd->sections, [&](InputSection *s) {
+      return skippedSpills.contains(dyn_cast<PotentialSpillSection>(s));
+    });
 
   return spilled;
 }
@@ -1778,7 +1818,7 @@ static void checkMemoryRegion(Ctx &ctx, const MemoryRegion *region,
   if (osecEnd > regionEnd) {
     ErrAlways(ctx) << "section '" << osec->name << "' will not fit in region '"
                    << region->name << "': overflowed by "
-                   << Twine(osecEnd - regionEnd) << " bytes";
+                   << (osecEnd - regionEnd) << " bytes";
   }
 }
 

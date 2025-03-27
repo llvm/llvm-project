@@ -382,7 +382,7 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
   BasicBlock *BEBlock = BasicBlock::Create(Header->getContext(),
                                            Header->getName() + ".backedge", F);
   BranchInst *BETerminator = BranchInst::Create(Header, BEBlock);
-  BETerminator->setDebugLoc(Header->getFirstNonPHI()->getDebugLoc());
+  BETerminator->setDebugLoc(Header->getFirstNonPHIIt()->getDebugLoc());
 
   LLVM_DEBUG(dbgs() << "LoopSimplify: Inserting unique backedge block "
                     << BEBlock->getName() << "\n");
@@ -777,8 +777,8 @@ INITIALIZE_PASS_BEGIN(LoopSimplify, "loop-simplify",
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(LoopSimplify, "loop-simplify",
-                "Canonicalize natural loops", false, false)
+INITIALIZE_PASS_END(LoopSimplify, "loop-simplify", "Canonicalize natural loops",
+                    false, false)
 
 // Publicly exposed interface to pass...
 char &llvm::LoopSimplifyID = LoopSimplify::ID;

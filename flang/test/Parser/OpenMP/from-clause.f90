@@ -11,7 +11,7 @@ end
 !UNPARSE: !$OMP TARGET UPDATE  FROM(x)
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target update
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target update
 !PARSE-TREE: OmpClauseList -> OmpClause -> From -> OmpFromClause
 !PARSE-TREE: | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | bool = 'true'
@@ -26,9 +26,9 @@ end
 !UNPARSE: !$OMP TARGET UPDATE  FROM(PRESENT: x)
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target update
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target update
 !PARSE-TREE: OmpClauseList -> OmpClause -> From -> OmpFromClause
-!PARSE-TREE: | Expectation = Present
+!PARSE-TREE: | Modifier -> OmpExpectation -> Value = Present
 !PARSE-TREE: | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | bool = 'true'
 
@@ -42,10 +42,10 @@ end
 !UNPARSE: !$OMP TARGET UPDATE  FROM(PRESENT, ITERATOR(INTEGER i = 1_4:10_4): x(i))
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target update
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target update
 !PARSE-TREE: OmpClauseList -> OmpClause -> From -> OmpFromClause
-!PARSE-TREE: | Expectation = Present
-!PARSE-TREE: | OmpIterator -> OmpIteratorSpecifier
+!PARSE-TREE: | Modifier -> OmpExpectation -> Value = Present
+!PARSE-TREE: | Modifier -> OmpIterator -> OmpIteratorSpecifier
 !PARSE-TREE: | | TypeDeclarationStmt
 !PARSE-TREE: | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
 !PARSE-TREE: | | | EntityDecl
@@ -71,10 +71,10 @@ end
 !UNPARSE: !$OMP TARGET UPDATE  FROM(PRESENT, ITERATOR(INTEGER i = 1_4:10_4): x(i))
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target update
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target update
 !PARSE-TREE: OmpClauseList -> OmpClause -> From -> OmpFromClause
-!PARSE-TREE: | Expectation = Present
-!PARSE-TREE: | OmpIterator -> OmpIteratorSpecifier
+!PARSE-TREE: | Modifier -> OmpExpectation -> Value = Present
+!PARSE-TREE: | Modifier -> OmpIterator -> OmpIteratorSpecifier
 !PARSE-TREE: | | TypeDeclarationStmt
 !PARSE-TREE: | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
 !PARSE-TREE: | | | EntityDecl

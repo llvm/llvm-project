@@ -67,10 +67,15 @@ static void transplantSymbolsAtOffset(InputSection *fromIsec,
                                       InputSection *toIsec, Defined *skip,
                                       uint64_t fromOff, uint64_t toOff) {
   // Ensure the symbols will still be in address order after our insertions.
-  auto insertIt = llvm::upper_bound(toIsec->symbols, toOff,
-                                    [](uint64_t off, const Symbol *s) {
-                                      return cast<Defined>(s)->value < off;
-                                    });
+  auto symSucceedsOff = [](uint64_t off, const Symbol *s) {
+    return cast<Defined>(s)->value > off;
+  };
+  assert(std::is_partitioned(toIsec->symbols.begin(), toIsec->symbols.end(),
+                             [symSucceedsOff, toOff](const Symbol *s) {
+                               return !symSucceedsOff(toOff, s);
+                             }) &&
+         "Symbols in toIsec must be partitioned by toOff.");
+  auto insertIt = llvm::upper_bound(toIsec->symbols, toOff, symSucceedsOff);
   llvm::erase_if(fromIsec->symbols, [&](Symbol *s) {
     auto *d = cast<Defined>(s);
     if (d->value != fromOff)

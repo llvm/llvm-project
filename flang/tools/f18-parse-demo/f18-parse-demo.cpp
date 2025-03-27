@@ -21,8 +21,6 @@
 // scaffolding compiler driver that can test some semantic passes of the
 // F18 compiler under development.
 
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/default-kinds.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
@@ -31,6 +29,8 @@
 #include "flang/Parser/parsing.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Parser/unparse.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/default-kinds.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Program.h"

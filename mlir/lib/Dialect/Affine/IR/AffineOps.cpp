@@ -270,6 +270,16 @@ Region *mlir::affine::getAffineScope(Operation *op) {
   return nullptr;
 }
 
+Region *mlir::affine::getAffineAnalysisScope(Operation *op) {
+  Operation *curOp = op;
+  while (auto *parentOp = curOp->getParentOp()) {
+    if (!isa<AffineForOp, AffineIfOp, AffineParallelOp>(parentOp))
+      return curOp->getParentRegion();
+    curOp = parentOp;
+  }
+  return nullptr;
+}
+
 // A Value can be used as a dimension id iff it meets one of the following
 // conditions:
 // *) It is valid as a symbol.
@@ -410,7 +420,8 @@ bool mlir::affine::isValidSymbol(Value value) {
 /// A value can be used as a symbol for `region` iff it meets one of the
 /// following conditions:
 /// *) It is a constant.
-/// *) It is the result of an affine apply operation with symbol arguments.
+/// *) It is a result of a `Pure` operation whose operands are valid symbolic
+/// *) identifiers.
 /// *) It is a result of the dim op on a memref whose corresponding size is
 ///    a valid symbol.
 /// *) It is defined at the top level of 'region' or is its argument.
@@ -443,9 +454,12 @@ bool mlir::affine::isValidSymbol(Value value, Region *region) {
   if (matchPattern(defOp, m_Constant(&operandCst)))
     return true;
 
-  // Affine apply operation is ok if all of its operands are ok.
-  if (auto applyOp = dyn_cast<AffineApplyOp>(defOp))
-    return applyOp.isValidSymbol(region);
+  // `Pure` operation that whose operands are valid symbolic identifiers.
+  if (isPure(defOp) && llvm::all_of(defOp->getOperands(), [&](Value operand) {
+        return affine::isValidSymbol(operand, region);
+      })) {
+    return true;
+  }
 
   // Dim op results could be valid symbols at any level.
   if (auto dimOp = dyn_cast<ShapedDimOpInterface>(defOp))
@@ -1222,8 +1236,7 @@ mlir::affine::makeComposedFoldedAffineApply(OpBuilder &b, Location loc,
   }
 
   applyOp->erase();
-  assert(foldResults.size() == 1 && "expected 1 folded result");
-  return foldResults.front();
+  return llvm::getSingleElement(foldResults);
 }
 
 OpFoldResult
@@ -1292,8 +1305,7 @@ static OpFoldResult makeComposedFoldedMinMax(OpBuilder &b, Location loc,
   }
 
   minMaxOp->erase();
-  assert(foldResults.size() == 1 && "expected 1 folded result");
-  return foldResults.front();
+  return llvm::getSingleElement(foldResults);
 }
 
 OpFoldResult
@@ -1898,6 +1910,10 @@ LogicalResult AffineForOp::verifyRegions() {
     if (failed(verifyDimAndSymbolIdentifiers(*this, getUpperBoundOperands(),
                                              getUpperBoundMap().getNumDims())))
       return failure();
+  if (getLowerBoundMap().getNumResults() < 1)
+    return emitOpError("expected lower bound map to have at least one result");
+  if (getUpperBoundMap().getNumResults() < 1)
+    return emitOpError("expected upper bound map to have at least one result");
 
   unsigned opNumResults = getNumResults();
   if (opNumResults == 0)
@@ -2296,6 +2312,10 @@ struct AffineForEmptyLoopFolder : public OpRewritePattern<AffineForOp> {
     for (unsigned i = 0, e = yieldOp->getNumOperands(); i < e; ++i) {
       Value val = yieldOp.getOperand(i);
       auto *iterArgIt = llvm::find(iterArgs, val);
+      // TODO: It should be possible to perform a replacement by computing the
+      // last value of the IV based on the bounds and the step.
+      if (val == forOp.getInductionVar())
+        return failure();
       if (iterArgIt == iterArgs.end()) {
         // `val` is defined outside of the loop.
         assert(forOp.isDefinedOutsideOfLoop(val) &&
@@ -3040,8 +3060,9 @@ void AffineLoadOp::print(OpAsmPrinter &p) {
 
 /// Verify common indexing invariants of affine.load, affine.store,
 /// affine.vector_load and affine.vector_store.
+template <typename AffineMemOpTy>
 static LogicalResult
-verifyMemoryOpIndexing(Operation *op, AffineMapAttr mapAttr,
+verifyMemoryOpIndexing(AffineMemOpTy op, AffineMapAttr mapAttr,
                        Operation::operand_range mapOperands,
                        MemRefType memrefType, unsigned numIndexOperands) {
   AffineMap map = mapAttr.getValue();
@@ -3050,14 +3071,12 @@ verifyMemoryOpIndexing(Operation *op, AffineMapAttr mapAttr,
   if (map.getNumInputs() != numIndexOperands)
     return op->emitOpError("expects as many subscripts as affine map inputs");
 
-  Region *scope = getAffineScope(op);
   for (auto idx : mapOperands) {
     if (!idx.getType().isIndex())
       return op->emitOpError("index to load must have 'index' type");
-    if (!isValidAffineIndexOperand(idx, scope))
-      return op->emitOpError(
-          "index must be a valid dimension or symbol identifier");
   }
+  if (failed(verifyDimAndSymbolIdentifiers(op, mapOperands, map.getNumDims())))
+    return failure();
 
   return success();
 }
@@ -3068,8 +3087,7 @@ LogicalResult AffineLoadOp::verify() {
     return emitOpError("result type must match element type of memref");
 
   if (failed(verifyMemoryOpIndexing(
-          getOperation(),
-          (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName()),
+          *this, (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName()),
           getMapOperands(), memrefType,
           /*numIndexOperands=*/getNumOperands() - 1)))
     return failure();
@@ -3185,8 +3203,7 @@ LogicalResult AffineStoreOp::verify() {
         "value to store must have the same type as memref element type");
 
   if (failed(verifyMemoryOpIndexing(
-          getOperation(),
-          (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName()),
+          *this, (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName()),
           getMapOperands(), memrefType,
           /*numIndexOperands=*/getNumOperands() - 2)))
     return failure();
@@ -3914,14 +3931,24 @@ LogicalResult AffineParallelOp::verify() {
   }
 
   unsigned expectedNumLBResults = 0;
-  for (APInt v : getLowerBoundsGroups())
-    expectedNumLBResults += v.getZExtValue();
+  for (APInt v : getLowerBoundsGroups()) {
+    unsigned results = v.getZExtValue();
+    if (results == 0)
+      return emitOpError()
+             << "expected lower bound map to have at least one result";
+    expectedNumLBResults += results;
+  }
   if (expectedNumLBResults != getLowerBoundsMap().getNumResults())
     return emitOpError() << "expected lower bounds map to have "
                          << expectedNumLBResults << " results";
   unsigned expectedNumUBResults = 0;
-  for (APInt v : getUpperBoundsGroups())
-    expectedNumUBResults += v.getZExtValue();
+  for (APInt v : getUpperBoundsGroups()) {
+    unsigned results = v.getZExtValue();
+    if (results == 0)
+      return emitOpError()
+             << "expected upper bound map to have at least one result";
+    expectedNumUBResults += results;
+  }
   if (expectedNumUBResults != getUpperBoundsMap().getNumResults())
     return emitOpError() << "expected upper bounds map to have "
                          << expectedNumUBResults << " results";
@@ -4407,8 +4434,7 @@ static LogicalResult verifyVectorMemoryOp(Operation *op, MemRefType memrefType,
 LogicalResult AffineVectorLoadOp::verify() {
   MemRefType memrefType = getMemRefType();
   if (failed(verifyMemoryOpIndexing(
-          getOperation(),
-          (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName()),
+          *this, (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName()),
           getMapOperands(), memrefType,
           /*numIndexOperands=*/getNumOperands() - 1)))
     return failure();
@@ -4520,6 +4546,10 @@ void AffineDelinearizeIndexOp::build(OpBuilder &odsBuilder,
                                      OperationState &odsState,
                                      Value linearIndex, ValueRange basis,
                                      bool hasOuterBound) {
+  if (hasOuterBound && !basis.empty() && basis.front() == nullptr) {
+    hasOuterBound = false;
+    basis = basis.drop_front();
+  }
   SmallVector<Value> dynamicBasis;
   SmallVector<int64_t> staticBasis;
   dispatchIndexOpFoldResults(getAsOpFoldResult(basis), dynamicBasis,
@@ -4533,6 +4563,10 @@ void AffineDelinearizeIndexOp::build(OpBuilder &odsBuilder,
                                      Value linearIndex,
                                      ArrayRef<OpFoldResult> basis,
                                      bool hasOuterBound) {
+  if (hasOuterBound && !basis.empty() && basis.front() == OpFoldResult()) {
+    hasOuterBound = false;
+    basis = basis.drop_front();
+  }
   SmallVector<Value> dynamicBasis;
   SmallVector<int64_t> staticBasis;
   dispatchIndexOpFoldResults(basis, dynamicBasis, staticBasis);
@@ -4569,9 +4603,49 @@ LogicalResult AffineDelinearizeIndexOp::verify() {
   return success();
 }
 
+/// Given mixed basis of affine.delinearize_index/linearize_index replace
+/// constant SSA values with the constant integer value and return the new
+/// static basis. In case no such candidate for replacement exists, this utility
+/// returns std::nullopt.
+static std::optional<SmallVector<int64_t>>
+foldCstValueToCstAttrBasis(ArrayRef<OpFoldResult> mixedBasis,
+                           MutableOperandRange mutableDynamicBasis,
+                           ArrayRef<Attribute> dynamicBasis) {
+  uint64_t dynamicBasisIndex = 0;
+  for (OpFoldResult basis : dynamicBasis) {
+    if (basis) {
+      mutableDynamicBasis.erase(dynamicBasisIndex);
+    } else {
+      ++dynamicBasisIndex;
+    }
+  }
+
+  // No constant SSA value exists.
+  if (dynamicBasisIndex == dynamicBasis.size())
+    return std::nullopt;
+
+  SmallVector<int64_t> staticBasis;
+  for (OpFoldResult basis : mixedBasis) {
+    std::optional<int64_t> basisVal = getConstantIntValue(basis);
+    if (!basisVal)
+      staticBasis.push_back(ShapedType::kDynamic);
+    else
+      staticBasis.push_back(*basisVal);
+  }
+
+  return staticBasis;
+}
+
 LogicalResult
 AffineDelinearizeIndexOp::fold(FoldAdaptor adaptor,
                                SmallVectorImpl<OpFoldResult> &result) {
+  std::optional<SmallVector<int64_t>> maybeStaticBasis =
+      foldCstValueToCstAttrBasis(getMixedBasis(), getDynamicBasisMutable(),
+                                 adaptor.getDynamicBasis());
+  if (maybeStaticBasis) {
+    setStaticBasis(*maybeStaticBasis);
+    return success();
+  }
   // If we won't be doing any division or modulo (no basis or the one basis
   // element is purely advisory), simply return the input value.
   if (getNumResults() == 1) {
@@ -4614,6 +4688,13 @@ SmallVector<OpFoldResult> AffineDelinearizeIndexOp::getEffectiveBasis() {
   return getMixedValues(getStaticBasis(), getDynamicBasis(), builder);
 }
 
+SmallVector<OpFoldResult> AffineDelinearizeIndexOp::getPaddedBasis() {
+  SmallVector<OpFoldResult> ret = getMixedBasis();
+  if (!hasOuterBound())
+    ret.insert(ret.begin(), OpFoldResult());
+  return ret;
+}
+
 namespace {
 
 // Drops delinearization indices that correspond to unit-extent basis
@@ -4632,25 +4713,27 @@ struct DropUnitExtentBasis
       return zero.value();
     };
 
-    bool hasOuterBound = delinearizeOp.hasOuterBound();
     // Replace all indices corresponding to unit-extent basis with 0.
     // Remaining basis can be used to get a new `affine.delinearize_index` op.
     SmallVector<OpFoldResult> newBasis;
-    for (auto [index, basis] : llvm::enumerate(delinearizeOp.getMixedBasis())) {
-      std::optional<int64_t> basisVal = getConstantIntValue(basis);
+    for (auto [index, basis] :
+         llvm::enumerate(delinearizeOp.getPaddedBasis())) {
+      std::optional<int64_t> basisVal =
+          basis ? getConstantIntValue(basis) : std::nullopt;
       if (basisVal && *basisVal == 1)
-        replacements[index + (hasOuterBound ? 0 : 1)] = getZero();
+        replacements[index] = getZero();
       else
         newBasis.push_back(basis);
     }
 
-    if (newBasis.size() == delinearizeOp.getStaticBasis().size())
+    if (newBasis.size() == delinearizeOp.getNumResults())
       return rewriter.notifyMatchFailure(delinearizeOp,
                                          "no unit basis elements");
 
-    if (!newBasis.empty() || !hasOuterBound) {
+    if (!newBasis.empty()) {
+      // Will drop the leading nullptr from `basis` if there was no outer bound.
       auto newDelinearizeOp = rewriter.create<affine::AffineDelinearizeIndexOp>(
-          loc, delinearizeOp.getLinearIndex(), newBasis, hasOuterBound);
+          loc, delinearizeOp.getLinearIndex(), newBasis);
       int newIndex = 0;
       // Map back the new delinearized indices to the values they replace.
       for (auto &replacement : replacements) {
@@ -4666,14 +4749,16 @@ struct DropUnitExtentBasis
 };
 
 /// If a `affine.delinearize_index`'s input is a `affine.linearize_index
-/// disjoint` and the two operations have the same basis, replace the
-/// delinearizeation results with the inputs of the `affine.linearize_index`
-/// since they are exact inverses of each other.
+/// disjoint` and the two operations end with the same basis elements,
+/// cancel those parts of the operations out because they are inverses
+/// of each other.
+///
+/// If the operations have the same basis, cancel them entirely.
 ///
 /// The `disjoint` flag is needed on the `affine.linearize_index` because
 /// otherwise, there is no guarantee that the inputs to the linearization are
 /// in-bounds the way the outputs of the delinearization would be.
-struct CancelDelinearizeOfLinearizeDisjointExact
+struct CancelDelinearizeOfLinearizeDisjointExactTail
     : public OpRewritePattern<affine::AffineDelinearizeIndexOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -4685,12 +4770,129 @@ struct CancelDelinearizeOfLinearizeDisjointExact
       return rewriter.notifyMatchFailure(delinearizeOp,
                                          "index doesn't come from linearize");
 
-    if (!linearizeOp.getDisjoint() ||
-        linearizeOp.getEffectiveBasis() != delinearizeOp.getEffectiveBasis())
-      return rewriter.notifyMatchFailure(
-          linearizeOp, "not disjoint or basis doesn't match delinearize");
+    if (!linearizeOp.getDisjoint())
+      return rewriter.notifyMatchFailure(linearizeOp, "not disjoint");
 
-    rewriter.replaceOp(delinearizeOp, linearizeOp.getMultiIndex());
+    ValueRange linearizeIns = linearizeOp.getMultiIndex();
+    // Note: we use the full basis so we don't lose outer bounds later.
+    SmallVector<OpFoldResult> linearizeBasis = linearizeOp.getMixedBasis();
+    SmallVector<OpFoldResult> delinearizeBasis = delinearizeOp.getMixedBasis();
+    size_t numMatches = 0;
+    for (auto [linSize, delinSize] : llvm::zip(
+             llvm::reverse(linearizeBasis), llvm::reverse(delinearizeBasis))) {
+      if (linSize != delinSize)
+        break;
+      ++numMatches;
+    }
+
+    if (numMatches == 0)
+      return rewriter.notifyMatchFailure(
+          delinearizeOp, "final basis element doesn't match linearize");
+
+    // The easy case: everything lines up and the basis match sup completely.
+    if (numMatches == linearizeBasis.size() &&
+        numMatches == delinearizeBasis.size() &&
+        linearizeIns.size() == delinearizeOp.getNumResults()) {
+      rewriter.replaceOp(delinearizeOp, linearizeOp.getMultiIndex());
+      return success();
+    }
+
+    Value newLinearize = rewriter.create<affine::AffineLinearizeIndexOp>(
+        linearizeOp.getLoc(), linearizeIns.drop_back(numMatches),
+        ArrayRef<OpFoldResult>{linearizeBasis}.drop_back(numMatches),
+        linearizeOp.getDisjoint());
+    auto newDelinearize = rewriter.create<affine::AffineDelinearizeIndexOp>(
+        delinearizeOp.getLoc(), newLinearize,
+        ArrayRef<OpFoldResult>{delinearizeBasis}.drop_back(numMatches),
+        delinearizeOp.hasOuterBound());
+    SmallVector<Value> mergedResults(newDelinearize.getResults());
+    mergedResults.append(linearizeIns.take_back(numMatches).begin(),
+                         linearizeIns.take_back(numMatches).end());
+    rewriter.replaceOp(delinearizeOp, mergedResults);
+    return success();
+  }
+};
+
+/// If the input to a delinearization is a disjoint linearization, and the
+/// last k > 1 components of the delinearization basis multiply to the
+/// last component of the linearization basis, break the linearization and
+/// delinearization into two parts, peeling off the last input to linearization.
+///
+/// For example:
+///    %0 = affine.linearize_index [%z, %y, %x] by (3, 2, 32) : index
+///    %1:4 = affine.delinearize_index %0 by (2, 3, 8, 4) : index, ...
+/// becomes
+///    %0 = affine.linearize_index [%z, %y] by (3, 2) : index
+///    %1:2 = affine.delinearize_index %0 by (2, 3) : index
+///    %2:2 = affine.delinearize_index %x by (8, 4) : index
+/// where the original %1:4 is replaced by %1:2 ++ %2:2
+struct SplitDelinearizeSpanningLastLinearizeArg final
+    : OpRewritePattern<affine::AffineDelinearizeIndexOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(affine::AffineDelinearizeIndexOp delinearizeOp,
+                                PatternRewriter &rewriter) const override {
+    auto linearizeOp = delinearizeOp.getLinearIndex()
+                           .getDefiningOp<affine::AffineLinearizeIndexOp>();
+    if (!linearizeOp)
+      return rewriter.notifyMatchFailure(delinearizeOp,
+                                         "index doesn't come from linearize");
+
+    if (!linearizeOp.getDisjoint())
+      return rewriter.notifyMatchFailure(linearizeOp,
+                                         "linearize isn't disjoint");
+
+    int64_t target = linearizeOp.getStaticBasis().back();
+    if (ShapedType::isDynamic(target))
+      return rewriter.notifyMatchFailure(
+          linearizeOp, "linearize ends with dynamic basis value");
+
+    int64_t sizeToSplit = 1;
+    size_t elemsToSplit = 0;
+    ArrayRef<int64_t> basis = delinearizeOp.getStaticBasis();
+    for (int64_t basisElem : llvm::reverse(basis)) {
+      if (ShapedType::isDynamic(basisElem))
+        return rewriter.notifyMatchFailure(
+            delinearizeOp, "dynamic basis element while scanning for split");
+      sizeToSplit *= basisElem;
+      elemsToSplit += 1;
+
+      if (sizeToSplit > target)
+        return rewriter.notifyMatchFailure(delinearizeOp,
+                                           "overshot last argument size");
+      if (sizeToSplit == target)
+        break;
+    }
+
+    if (sizeToSplit < target)
+      return rewriter.notifyMatchFailure(
+          delinearizeOp, "product of known basis elements doesn't exceed last "
+                         "linearize argument");
+
+    if (elemsToSplit < 2)
+      return rewriter.notifyMatchFailure(
+          delinearizeOp,
+          "need at least two elements to form the basis product");
+
+    Value linearizeWithoutBack =
+        rewriter.create<affine::AffineLinearizeIndexOp>(
+            linearizeOp.getLoc(), linearizeOp.getMultiIndex().drop_back(),
+            linearizeOp.getDynamicBasis(),
+            linearizeOp.getStaticBasis().drop_back(),
+            linearizeOp.getDisjoint());
+    auto delinearizeWithoutSplitPart =
+        rewriter.create<affine::AffineDelinearizeIndexOp>(
+            delinearizeOp.getLoc(), linearizeWithoutBack,
+            delinearizeOp.getDynamicBasis(), basis.drop_back(elemsToSplit),
+            delinearizeOp.hasOuterBound());
+    auto delinearizeBack = rewriter.create<affine::AffineDelinearizeIndexOp>(
+        delinearizeOp.getLoc(), linearizeOp.getMultiIndex().back(),
+        basis.take_back(elemsToSplit), /*hasOuterBound=*/true);
+    SmallVector<Value> results = llvm::to_vector(
+        llvm::concat<Value>(delinearizeWithoutSplitPart.getResults(),
+                            delinearizeBack.getResults()));
+    rewriter.replaceOp(delinearizeOp, results);
+
     return success();
   }
 };
@@ -4699,7 +4901,8 @@ struct CancelDelinearizeOfLinearizeDisjointExact
 void affine::AffineDelinearizeIndexOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
   patterns
-      .insert<CancelDelinearizeOfLinearizeDisjointExact, DropUnitExtentBasis>(
+      .insert<CancelDelinearizeOfLinearizeDisjointExactTail,
+              DropUnitExtentBasis, SplitDelinearizeSpanningLastLinearizeArg>(
           context);
 }
 
@@ -4711,6 +4914,8 @@ void AffineLinearizeIndexOp::build(OpBuilder &odsBuilder,
                                    OperationState &odsState,
                                    ValueRange multiIndex, ValueRange basis,
                                    bool disjoint) {
+  if (!basis.empty() && basis.front() == Value())
+    basis = basis.drop_front();
   SmallVector<Value> dynamicBasis;
   SmallVector<int64_t> staticBasis;
   dispatchIndexOpFoldResults(getAsOpFoldResult(basis), dynamicBasis,
@@ -4723,6 +4928,8 @@ void AffineLinearizeIndexOp::build(OpBuilder &odsBuilder,
                                    ValueRange multiIndex,
                                    ArrayRef<OpFoldResult> basis,
                                    bool disjoint) {
+  if (!basis.empty() && basis.front() == OpFoldResult())
+    basis = basis.drop_front();
   SmallVector<Value> dynamicBasis;
   SmallVector<int64_t> staticBasis;
   dispatchIndexOpFoldResults(basis, dynamicBasis, staticBasis);
@@ -4755,6 +4962,13 @@ LogicalResult AffineLinearizeIndexOp::verify() {
 }
 
 OpFoldResult AffineLinearizeIndexOp::fold(FoldAdaptor adaptor) {
+  std::optional<SmallVector<int64_t>> maybeStaticBasis =
+      foldCstValueToCstAttrBasis(getMixedBasis(), getDynamicBasisMutable(),
+                                 adaptor.getDynamicBasis());
+  if (maybeStaticBasis) {
+    setStaticBasis(*maybeStaticBasis);
+    return getResult();
+  }
   // No indices linearizes to zero.
   if (getMultiIndex().empty())
     return IntegerAttr::get(getResult().getType(), 0);
@@ -4798,7 +5012,14 @@ SmallVector<OpFoldResult> AffineLinearizeIndexOp::getEffectiveBasis() {
                           builder);
   }
 
-  return ::mlir::getMixedValues(getStaticBasis(), getDynamicBasis(), builder);
+  return getMixedValues(getStaticBasis(), getDynamicBasis(), builder);
+}
+
+SmallVector<OpFoldResult> AffineLinearizeIndexOp::getPaddedBasis() {
+  SmallVector<OpFoldResult> ret = getMixedBasis();
+  if (!hasOuterBound())
+    ret.insert(ret.begin(), OpFoldResult());
+  return ret;
 }
 
 namespace {
@@ -4860,38 +5081,228 @@ struct DropLinearizeUnitComponentsIfDisjointOrZero final
   }
 };
 
-/// Cancel out linearize_index(delinearize_index(x, B), B).
+/// Return the product of `terms`, creating an `affine.apply` if any of them are
+/// non-constant values. If any of `terms` is `nullptr`, return `nullptr`.
+static OpFoldResult computeProduct(Location loc, OpBuilder &builder,
+                                   ArrayRef<OpFoldResult> terms) {
+  int64_t nDynamic = 0;
+  SmallVector<Value> dynamicPart;
+  AffineExpr result = builder.getAffineConstantExpr(1);
+  for (OpFoldResult term : terms) {
+    if (!term)
+      return term;
+    std::optional<int64_t> maybeConst = getConstantIntValue(term);
+    if (maybeConst) {
+      result = result * builder.getAffineConstantExpr(*maybeConst);
+    } else {
+      dynamicPart.push_back(cast<Value>(term));
+      result = result * builder.getAffineSymbolExpr(nDynamic++);
+    }
+  }
+  if (auto constant = dyn_cast<AffineConstantExpr>(result))
+    return getAsIndexOpFoldResult(builder.getContext(), constant.getValue());
+  return builder.create<AffineApplyOp>(loc, result, dynamicPart).getResult();
+}
+
+/// If conseceutive outputs of a delinearize_index are linearized with the same
+/// bounds, canonicalize away the redundant arithmetic.
 ///
-/// That is, rewrite
+/// That is, if we have
 /// ```
-/// %0:N = affine.delinearize_index %x by (%b1, %b2, ... %bN)
-/// %y = affine.linearize_index [%0#0, %0#1, ... %0#(N-1)] by (%b1, %b2, ...
-/// %bN)
+/// %s:N = affine.delinearize_index %x into (...a, B1, B2, ... BK, ...b)
+/// %t = affine.linearize_index [...c, %s#I, %s#(I + 1), ... %s#(I+K-1), ...d]
+///   by (...e, B1, B2, ..., BK, ...f)
 /// ```
-/// to replacing `%y` with `%x`.
-struct CancelLinearizeOfDelinearizeExact final
+///
+/// We can rewrite this to
+/// ```
+/// B = B1 * B2 ... BK
+/// %sMerged:(N-K+1) affine.delinearize_index %x into (...a, B, ...b)
+/// %t = affine.linearize_index [...c, %s#I, ...d] by (...e, B, ...f)
+/// ```
+/// where we replace all results of %s unaffected by the change with results
+/// from %sMerged.
+///
+/// As a special case, if all results of the delinearize are merged in this way
+/// we can replace those usages with %x, thus cancelling the delinearization
+/// entirely, as in
+/// ```
+/// %s:3 = affine.delinearize_index %x into (2, 4, 8)
+/// %t = affine.linearize_index [%s#0, %s#1, %s#2, %c0] by (2, 4, 8, 16)
+/// ```
+/// becoming `%t = affine.linearize_index [%x, %c0] by (64, 16)`
+struct CancelLinearizeOfDelinearizePortion final
     : OpRewritePattern<affine::AffineLinearizeIndexOp> {
   using OpRewritePattern::OpRewritePattern;
 
+private:
+  // Struct representing a case where the cancellation pattern
+  // applies. A `Match` means that `length` inputs to the linearize operation
+  // starting at `linStart` can be cancelled with `length` outputs of
+  // `delinearize`, starting from `delinStart`.
+  struct Match {
+    AffineDelinearizeIndexOp delinearize;
+    unsigned linStart = 0;
+    unsigned delinStart = 0;
+    unsigned length = 0;
+  };
+
+public:
   LogicalResult matchAndRewrite(affine::AffineLinearizeIndexOp linearizeOp,
                                 PatternRewriter &rewriter) const override {
-    auto delinearizeOp = linearizeOp.getMultiIndex()
-                             .front()
-                             .getDefiningOp<affine::AffineDelinearizeIndexOp>();
-    if (!delinearizeOp)
-      return rewriter.notifyMatchFailure(
-          linearizeOp, "last entry doesn't come from a delinearize");
+    SmallVector<Match> matches;
 
-    if (linearizeOp.getEffectiveBasis() != delinearizeOp.getEffectiveBasis())
-      return rewriter.notifyMatchFailure(
-          linearizeOp, "basis of linearize and delinearize don't match exactly "
-                       "(excluding outer bounds)");
+    const SmallVector<OpFoldResult> linBasis = linearizeOp.getPaddedBasis();
+    ArrayRef<OpFoldResult> linBasisRef = linBasis;
 
-    if (delinearizeOp.getResults() != linearizeOp.getMultiIndex())
-      return rewriter.notifyMatchFailure(
-          linearizeOp, "not all indices come from delinearize");
+    ValueRange multiIndex = linearizeOp.getMultiIndex();
+    unsigned numLinArgs = multiIndex.size();
+    unsigned linArgIdx = 0;
+    // We only want to replace one run from the same delinearize op per
+    // pattern invocation lest we run into invalidation issues.
+    llvm::SmallPtrSet<Operation *, 2> alreadyMatchedDelinearize;
+    while (linArgIdx < numLinArgs) {
+      auto asResult = dyn_cast<OpResult>(multiIndex[linArgIdx]);
+      if (!asResult) {
+        linArgIdx++;
+        continue;
+      }
 
-    rewriter.replaceOp(linearizeOp, delinearizeOp.getLinearIndex());
+      auto delinearizeOp =
+          dyn_cast<AffineDelinearizeIndexOp>(asResult.getOwner());
+      if (!delinearizeOp) {
+        linArgIdx++;
+        continue;
+      }
+
+      /// Result 0 of the delinearize and argument 0 of the linearize can
+      /// leave their maximum value unspecified. However, even if this happens
+      /// we can still sometimes start the match process. Specifically, if
+      /// - The argument we're matching is result 0 and argument 0 (so the
+      /// bounds don't matter). For example,
+      ///
+      ///     %0:2 = affine.delinearize_index %x into (8) : index, index
+      ///     %1 = affine.linearize_index [%s#0, %s#1, ...] (8, ...)
+      /// allows cancellation
+      /// - The delinearization doesn't specify a bound, but the linearization
+      ///  is `disjoint`, which asserts that the bound on the linearization is
+      ///  correct.
+      unsigned delinArgIdx = asResult.getResultNumber();
+      SmallVector<OpFoldResult> delinBasis = delinearizeOp.getPaddedBasis();
+      OpFoldResult firstDelinBound = delinBasis[delinArgIdx];
+      OpFoldResult firstLinBound = linBasis[linArgIdx];
+      bool boundsMatch = firstDelinBound == firstLinBound;
+      bool bothAtFront = linArgIdx == 0 && delinArgIdx == 0;
+      bool knownByDisjoint =
+          linearizeOp.getDisjoint() && delinArgIdx == 0 && !firstDelinBound;
+      if (!boundsMatch && !bothAtFront && !knownByDisjoint) {
+        linArgIdx++;
+        continue;
+      }
+
+      unsigned j = 1;
+      unsigned numDelinOuts = delinearizeOp.getNumResults();
+      for (; j + linArgIdx < numLinArgs && j + delinArgIdx < numDelinOuts;
+           ++j) {
+        if (multiIndex[linArgIdx + j] !=
+            delinearizeOp.getResult(delinArgIdx + j))
+          break;
+        if (linBasis[linArgIdx + j] != delinBasis[delinArgIdx + j])
+          break;
+      }
+      // If there're multiple matches against the same delinearize_index,
+      // only rewrite the first one we find to prevent invalidations. The next
+      // ones will be taken care of by subsequent pattern invocations.
+      if (j <= 1 || !alreadyMatchedDelinearize.insert(delinearizeOp).second) {
+        linArgIdx++;
+        continue;
+      }
+      matches.push_back(Match{delinearizeOp, linArgIdx, delinArgIdx, j});
+      linArgIdx += j;
+    }
+
+    if (matches.empty())
+      return rewriter.notifyMatchFailure(
+          linearizeOp, "no run of delinearize outputs to deal with");
+
+    // Record all the delinearize replacements so we can do them after creating
+    // the new linearization operation, since the new operation might use
+    // outputs of something we're replacing.
+    SmallVector<SmallVector<Value>> delinearizeReplacements;
+
+    SmallVector<Value> newIndex;
+    newIndex.reserve(numLinArgs);
+    SmallVector<OpFoldResult> newBasis;
+    newBasis.reserve(numLinArgs);
+    unsigned prevMatchEnd = 0;
+    for (Match m : matches) {
+      unsigned gap = m.linStart - prevMatchEnd;
+      llvm::append_range(newIndex, multiIndex.slice(prevMatchEnd, gap));
+      llvm::append_range(newBasis, linBasisRef.slice(prevMatchEnd, gap));
+      // Update here so we don't forget this during early continues
+      prevMatchEnd = m.linStart + m.length;
+
+      PatternRewriter::InsertionGuard g(rewriter);
+      rewriter.setInsertionPoint(m.delinearize);
+
+      ArrayRef<OpFoldResult> basisToMerge =
+          linBasisRef.slice(m.linStart, m.length);
+      // We use the slice from the linearize's basis above because of the
+      // "bounds inferred from `disjoint`" case above.
+      OpFoldResult newSize =
+          computeProduct(linearizeOp.getLoc(), rewriter, basisToMerge);
+
+      // Trivial case where we can just skip past the delinearize all together
+      if (m.length == m.delinearize.getNumResults()) {
+        newIndex.push_back(m.delinearize.getLinearIndex());
+        newBasis.push_back(newSize);
+        // Pad out set of replacements so we don't do anything with this one.
+        delinearizeReplacements.push_back(SmallVector<Value>());
+        continue;
+      }
+
+      SmallVector<Value> newDelinResults;
+      SmallVector<OpFoldResult> newDelinBasis = m.delinearize.getPaddedBasis();
+      newDelinBasis.erase(newDelinBasis.begin() + m.delinStart,
+                          newDelinBasis.begin() + m.delinStart + m.length);
+      newDelinBasis.insert(newDelinBasis.begin() + m.delinStart, newSize);
+      auto newDelinearize = rewriter.create<AffineDelinearizeIndexOp>(
+          m.delinearize.getLoc(), m.delinearize.getLinearIndex(),
+          newDelinBasis);
+
+      // Since there may be other uses of the indices we just merged together,
+      // create a residual affine.delinearize_index that delinearizes the
+      // merged output into its component parts.
+      Value combinedElem = newDelinearize.getResult(m.delinStart);
+      auto residualDelinearize = rewriter.create<AffineDelinearizeIndexOp>(
+          m.delinearize.getLoc(), combinedElem, basisToMerge);
+
+      // Swap all the uses of the unaffected delinearize outputs to the new
+      // delinearization so that the old code can be removed if this
+      // linearize_index is the only user of the merged results.
+      llvm::append_range(newDelinResults,
+                         newDelinearize.getResults().take_front(m.delinStart));
+      llvm::append_range(newDelinResults, residualDelinearize.getResults());
+      llvm::append_range(
+          newDelinResults,
+          newDelinearize.getResults().drop_front(m.delinStart + 1));
+
+      delinearizeReplacements.push_back(newDelinResults);
+      newIndex.push_back(combinedElem);
+      newBasis.push_back(newSize);
+    }
+    llvm::append_range(newIndex, multiIndex.drop_front(prevMatchEnd));
+    llvm::append_range(newBasis, linBasisRef.drop_front(prevMatchEnd));
+    rewriter.replaceOpWithNewOp<AffineLinearizeIndexOp>(
+        linearizeOp, newIndex, newBasis, linearizeOp.getDisjoint());
+
+    for (auto [m, newResults] :
+         llvm::zip_equal(matches, delinearizeReplacements)) {
+      if (newResults.empty())
+        continue;
+      rewriter.replaceOp(m.delinearize, newResults);
+    }
+
     return success();
   }
 };
@@ -4929,7 +5340,7 @@ struct DropLinearizeLeadingZero final
 
 void affine::AffineLinearizeIndexOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
-  patterns.add<CancelLinearizeOfDelinearizeExact, DropLinearizeLeadingZero,
+  patterns.add<CancelLinearizeOfDelinearizePortion, DropLinearizeLeadingZero,
                DropLinearizeUnitComponentsIfDisjointOrZero>(context);
 }
 

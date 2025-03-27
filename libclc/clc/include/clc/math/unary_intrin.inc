@@ -1,3 +1,14 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include <clc/clcfunc.h>
+#include <clc/clctypes.h>
+
 _CLC_OVERLOAD float __CLC_FUNCTION(float f) __asm(__CLC_INTRINSIC ".f32");
 _CLC_OVERLOAD float2 __CLC_FUNCTION(float2 f) __asm(__CLC_INTRINSIC ".v2f32");
 _CLC_OVERLOAD float3 __CLC_FUNCTION(float3 f) __asm(__CLC_INTRINSIC ".v3f32");

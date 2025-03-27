@@ -71,9 +71,12 @@ STATISTIC(StrtabBytes, "Total size of SHT_STRTAB sections");
 STATISTIC(SymtabBytes, "Total size of SHT_SYMTAB sections");
 STATISTIC(RelocationBytes, "Total size of relocation sections");
 STATISTIC(DynsymBytes, "Total size of SHT_DYNSYM sections");
-STATISTIC(DebugBytes, "Total size of debug info sections");
+STATISTIC(
+    DebugBytes,
+    "Total size of debug info sections (not including those written to .dwo)");
 STATISTIC(UnwindBytes, "Total size of unwind sections");
 STATISTIC(OtherBytes, "Total size of uncategorized sections");
+STATISTIC(DwoBytes, "Total size of sections written to .dwo file");
 
 } // namespace stats
 
@@ -969,7 +972,9 @@ void ELFWriter::writeSectionHeaders(const MCAssembler &Asm) {
       return Section->getFlags() & Flag;
     };
 
-    if (Section->getName().starts_with(".debug")) {
+    if (Mode == DwoOnly) {
+      stats::DwoBytes += Size;
+    } else if (Section->getName().starts_with(".debug")) {
       stats::DebugBytes += Size;
     } else if (Section->getName().starts_with(".eh_frame")) {
       stats::UnwindBytes += Size;
@@ -1219,7 +1224,8 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
       continue;
     }
 
-    if (Renames.count(&Symbol) && Renames[&Symbol] != Alias) {
+    if (auto It = Renames.find(&Symbol);
+        It != Renames.end() && It->second != Alias) {
       Asm.getContext().reportError(S.Loc, Twine("multiple versions for ") +
                                               Symbol.getName());
       continue;
@@ -1251,47 +1257,19 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
   if (!RefA)
     return false;
 
-  MCSymbolRefExpr::VariantKind Kind = RefA->getKind();
-  switch (Kind) {
-  default:
-    break;
-  // The .odp creation emits a relocation against the symbol ".TOC." which
-  // create a R_PPC64_TOC relocation. However the relocation symbol name
-  // in final object creation should be NULL, since the symbol does not
-  // really exist, it is just the reference to TOC base for the current
-  // object file. Since the symbol is undefined, returning false results
-  // in a relocation with a null section which is the desired result.
-  case MCSymbolRefExpr::VK_PPC_TOCBASE:
-    return false;
-
-  // These VariantKind cause the relocation to refer to something other than
-  // the symbol itself, like a linker generated table. Since the address of
-  // symbol is not relevant, we cannot replace the symbol with the
-  // section and patch the difference in the addend.
-  case MCSymbolRefExpr::VK_GOT:
-  case MCSymbolRefExpr::VK_PLT:
-  case MCSymbolRefExpr::VK_GOTPCREL:
-  case MCSymbolRefExpr::VK_GOTPCREL_NORELAX:
-  case MCSymbolRefExpr::VK_PPC_GOT_LO:
-  case MCSymbolRefExpr::VK_PPC_GOT_HI:
-  case MCSymbolRefExpr::VK_PPC_GOT_HA:
-    return true;
-  }
-
   // An undefined symbol is not in any section, so the relocation has to point
   // to the symbol itself.
   assert(Sym && "Expected a symbol");
-  if (Sym->isUndefined())
-    return true;
-
-  // For memory-tagged symbols, ensure that the relocation uses the symbol. For
-  // tagged symbols, we emit an empty relocation (R_AARCH64_NONE) in a special
-  // section (SHT_AARCH64_MEMTAG_GLOBALS_STATIC) to indicate to the linker that
-  // this global needs to be tagged. In addition, the linker needs to know
-  // whether to emit a special addend when relocating `end` symbols, and this
-  // can only be determined by the attributes of the symbol itself.
-  if (Sym->isMemtag())
-    return true;
+  if (Sym->isUndefined()) {
+    // The .odp creation emits a relocation against the symbol ".TOC." which
+    // create a R_PPC64_TOC relocation. However the relocation symbol name
+    // in final object creation should be NULL, since the symbol does not
+    // really exist, it is just the reference to TOC base for the current
+    // object file. Since the symbol is undefined, returning false results
+    // in a relocation with a null section which is the desired result.
+    return !(Type == ELF::R_PPC64_TOC &&
+             TargetObjectWriter->getEMachine() == ELF::EM_PPC64);
+  }
 
   unsigned Binding = Sym->getBinding();
   switch(Binding) {
@@ -1398,8 +1376,8 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   MCContext &Ctx = Asm.getContext();
   const MCTargetOptions *TO = Ctx.getTargetOptions();
 
-  if (const MCSymbolRefExpr *RefB = Target.getSymB()) {
-    const auto &SymB = cast<MCSymbolELF>(RefB->getSymbol());
+  if (auto *RefB = Target.getSubSym()) {
+    const auto &SymB = cast<MCSymbolELF>(*RefB);
     if (SymB.isUndefined()) {
       Ctx.reportError(Fixup.getLoc(),
                       Twine("symbol '") + SymB.getName() +

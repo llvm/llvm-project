@@ -462,3 +462,6 @@ RUN: ld.lld -### foo.o -m i386pep --rpath foo 2>&1 | FileCheck -check-prefix=WAR
 RUN: ld.lld -### foo.o -m i386pep -rpath=foo 2>&1 | FileCheck -check-prefix=WARN_RPATH %s
 RUN: ld.lld -### foo.o -m i386pep --rpath=foo 2>&1 | FileCheck -check-prefix=WARN_RPATH %s
 WARN_RPATH: warning: parameter -{{-?}}rpath has no effect on PE/COFF targets
+
+RUN: ld.lld -### foo.o -m i386pe --dependent-load-flag=0x800 2>&1 | FileCheck -check-prefix=DEPENDENT_LOAD_FLAG %s
+DEPENDENT_LOAD_FLAG: -dependentloadflag:0x800
