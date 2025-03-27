@@ -219,7 +219,7 @@ def SymbolUserOpInterface : OpInterface<"SymbolUserOpInterface"> {
     >,
     InterfaceMethod<
       /*desc=*/"Get user symbol attribute, returns empty if not set",
-      /*retTy=*/"std::optional<::mlir::StringRef>",
+      /*retTy=*/"SymbolRefAttr",
       /*methodName=*/"getUserSymbol",
       (ins), [{}],
       /*defaultImplementation=*/[{

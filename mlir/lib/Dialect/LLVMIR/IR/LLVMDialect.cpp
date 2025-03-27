@@ -1293,7 +1293,7 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
   return success();
 }
-std::optional<::mlir::StringRef> CallOp::getUserSymbol() { return getCallee(); }
+SymbolRefAttr CallOp::getUserSymbol() { return getCalleeAttr(); }
 
 void CallOp::print(OpAsmPrinter &p) {
   auto callee = getCallee();
@@ -2058,9 +2058,7 @@ AddressOfOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   return success();
 }
 
-std::optional<::mlir::StringRef> AddressOfOp::getUserSymbol() {
-  return getGlobalName();
-}
+SymbolRefAttr AddressOfOp::getUserSymbol() { return getGlobalNameAttr(); }
 
 // AddressOfOp constant-folds to the global symbol name.
 OpFoldResult LLVM::AddressOfOp::fold(FoldAdaptor) {
