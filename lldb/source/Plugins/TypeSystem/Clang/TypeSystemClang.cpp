@@ -254,11 +254,12 @@ static lldb::addr_t GetVTableAddress(Process &process,
     return LLDB_INVALID_ADDRESS;
   }
 
-  auto size = data_or_err->GetByteSize();
-  if (vbtable_ptr_offset + data_or_err->GetAddressByteSize() > size)
+  auto data = std::move(*data_or_err);
+  auto size = data.GetByteSize();
+  if (vbtable_ptr_offset + data.GetAddressByteSize() > size)
     return LLDB_INVALID_ADDRESS;
 
-  return data_or_err->GetAddress(&vbtable_ptr_offset);
+  return data.GetAddress(&vbtable_ptr_offset);
 }
 
 static int64_t ReadVBaseOffsetFromVTable(Process &process,
