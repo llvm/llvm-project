@@ -16,6 +16,7 @@
 #include "OutputRedirector.h"
 #include "ProgressEvent.h"
 #include "Protocol/ProtocolBase.h"
+#include "Protocol/ProtocolRequests.h"
 #include "SourceBreakpoint.h"
 #include "Transport.h"
 #include "lldb/API/SBBroadcaster.h"
@@ -38,9 +39,13 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Threading.h"
+#include <condition_variable>
+#include <cstdint>
+#include <deque>
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <set>
 #include <thread>
 #include <vector>
 
@@ -397,6 +402,23 @@ struct DAP {
   InstructionBreakpoint *GetInstructionBreakpoint(const lldb::break_id_t bp_id);
 
   InstructionBreakpoint *GetInstructionBPFromStopReason(lldb::SBThread &thread);
+
+  /// Checks if the request is cancelled.
+  bool IsCancelled(const protocol::Request &);
+
+  /// Clears the cancel request from the set of tracked cancel requests.
+  void ClearCancelRequest(const protocol::CancelArguments &);
+
+private:
+  std::mutex m_queue_mutex;
+  std::deque<protocol::Message> m_queue;
+  std::condition_variable m_queue_cv;
+
+  std::mutex m_cancelled_requests_mutex;
+  std::set<int64_t> m_cancelled_requests;
+
+  std::mutex m_active_request_mutex;
+  const protocol::Request *m_active_request;
 };
 
 } // namespace lldb_dap
