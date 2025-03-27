@@ -16,6 +16,7 @@
 #include "PrimType.h"
 #include "Record.h"
 #include "Source.h"
+#include "clang/AST/ExprCXX.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -451,6 +452,30 @@ QualType Descriptor::getElemQualType() const {
     return CT->getElementType();
 
   return T;
+}
+
+QualType Descriptor::getDataType(const ASTContext &Ctx) const {
+  auto MakeArrayType = [&](QualType ElemType) -> QualType {
+    if (IsArray)
+      return Ctx.getConstantArrayType(
+          ElemType, APInt(64, static_cast<uint64_t>(getNumElems()), false),
+          nullptr, ArraySizeModifier::Normal, 0);
+    return ElemType;
+  };
+
+  if (const auto *E = asExpr()) {
+    if (isa<CXXNewExpr>(E))
+      return MakeArrayType(E->getType()->getPointeeType());
+
+    // std::allocator.allocate() call.
+    if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E);
+        ME && ME->getRecordDecl()->getName() == "allocator" &&
+        ME->getMethodDecl()->getName() == "allocate")
+      return MakeArrayType(E->getType()->getPointeeType());
+    return E->getType();
+  }
+
+  return getType();
 }
 
 SourceLocation Descriptor::getLocation() const {

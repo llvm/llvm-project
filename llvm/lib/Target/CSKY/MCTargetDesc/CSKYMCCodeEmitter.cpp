@@ -294,8 +294,7 @@ unsigned CSKYMCCodeEmitter::getImmJMPIX(const MCInst &MI, unsigned Idx,
 
 MCFixupKind CSKYMCCodeEmitter::getTargetFixup(const MCExpr *Expr) const {
   const CSKYMCExpr *CSKYExpr = cast<CSKYMCExpr>(Expr);
-
-  switch (CSKYExpr->getKind()) {
+  switch (CSKYExpr->getSpecifier()) {
   default:
     llvm_unreachable("Unhandled fixup kind!");
   case CSKYMCExpr::VK_ADDR:

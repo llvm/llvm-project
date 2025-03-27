@@ -1257,21 +1257,6 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
   if (!RefA)
     return false;
 
-  MCSymbolRefExpr::VariantKind Kind = RefA->getKind();
-  switch (Kind) {
-  default:
-    break;
-
-  // These VariantKind cause the relocation to refer to something other than
-  // the symbol itself, like a linker generated table. Since the address of
-  // symbol is not relevant, we cannot replace the symbol with the
-  // section and patch the difference in the addend.
-  case MCSymbolRefExpr::VK_GOT:
-  case MCSymbolRefExpr::VK_PLT:
-  case MCSymbolRefExpr::VK_GOTPCREL:
-    return true;
-  }
-
   // An undefined symbol is not in any section, so the relocation has to point
   // to the symbol itself.
   assert(Sym && "Expected a symbol");
@@ -1285,15 +1270,6 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
     return !(Type == ELF::R_PPC64_TOC &&
              TargetObjectWriter->getEMachine() == ELF::EM_PPC64);
   }
-
-  // For memory-tagged symbols, ensure that the relocation uses the symbol. For
-  // tagged symbols, we emit an empty relocation (R_AARCH64_NONE) in a special
-  // section (SHT_AARCH64_MEMTAG_GLOBALS_STATIC) to indicate to the linker that
-  // this global needs to be tagged. In addition, the linker needs to know
-  // whether to emit a special addend when relocating `end` symbols, and this
-  // can only be determined by the attributes of the symbol itself.
-  if (Sym->isMemtag())
-    return true;
 
   unsigned Binding = Sym->getBinding();
   switch(Binding) {
@@ -1400,8 +1376,8 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   MCContext &Ctx = Asm.getContext();
   const MCTargetOptions *TO = Ctx.getTargetOptions();
 
-  if (const MCSymbolRefExpr *RefB = Target.getSymB()) {
-    const auto &SymB = cast<MCSymbolELF>(RefB->getSymbol());
+  if (auto *RefB = Target.getSubSym()) {
+    const auto &SymB = cast<MCSymbolELF>(*RefB);
     if (SymB.isUndefined()) {
       Ctx.reportError(Fixup.getLoc(),
                       Twine("symbol '") + SymB.getName() +

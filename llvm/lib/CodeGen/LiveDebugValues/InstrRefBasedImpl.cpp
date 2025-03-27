@@ -900,8 +900,7 @@ public:
     // Commit ActiveMLoc changes.
     ActiveMLocIt->second.clear();
     if (!NewMLocs.empty())
-      for (DebugVariableID VarID : NewMLocs)
-        ActiveMLocs[*NewLoc].insert(VarID);
+      ActiveMLocs[*NewLoc].insert_range(NewMLocs);
   }
 
   /// Transfer variables based on \p Src to be based on \p Dst. This handles

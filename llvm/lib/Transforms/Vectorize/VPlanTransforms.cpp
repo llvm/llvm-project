@@ -742,6 +742,69 @@ static VPWidenInductionRecipe *getOptimizableIVOf(VPValue *VPV) {
 }
 
 /// Attempts to optimize the induction variable exit values for users in the
+/// early exit block.
+static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
+                                               VPTypeAnalysis &TypeInfo,
+                                               VPBlockBase *PredVPBB,
+                                               VPValue *Op) {
+  using namespace VPlanPatternMatch;
+
+  VPValue *Incoming, *Mask;
+  if (!match(Op, m_VPInstruction<Instruction::ExtractElement>(
+                     m_VPValue(Incoming),
+                     m_VPInstruction<VPInstruction::FirstActiveLane>(
+                         m_VPValue(Mask)))))
+    return nullptr;
+
+  auto *WideIV = getOptimizableIVOf(Incoming);
+  if (!WideIV)
+    return nullptr;
+
+  auto *WideIntOrFp = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
+  if (WideIntOrFp && WideIntOrFp->getTruncInst())
+    return nullptr;
+
+  // Calculate the final index.
+  VPValue *EndValue = Plan.getCanonicalIV();
+  auto CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
+  VPBuilder B(cast<VPBasicBlock>(PredVPBB));
+
+  DebugLoc DL = cast<VPInstruction>(Op)->getDebugLoc();
+  VPValue *FirstActiveLane =
+      B.createNaryOp(VPInstruction::FirstActiveLane, Mask, DL);
+  Type *FirstActiveLaneType = TypeInfo.inferScalarType(FirstActiveLane);
+  if (CanonicalIVType != FirstActiveLaneType) {
+    Instruction::CastOps CastOp =
+        CanonicalIVType->getScalarSizeInBits() <
+                FirstActiveLaneType->getScalarSizeInBits()
+            ? Instruction::Trunc
+            : Instruction::ZExt;
+    FirstActiveLane =
+        B.createScalarCast(CastOp, FirstActiveLane, CanonicalIVType, DL);
+  }
+  EndValue = B.createNaryOp(Instruction::Add, {EndValue, FirstActiveLane}, DL);
+
+  // `getOptimizableIVOf()` always returns the pre-incremented IV, so if it
+  // changed it means the exit is using the incremented value, so we need to
+  // add the step.
+  if (Incoming != WideIV) {
+    VPValue *One = Plan.getOrAddLiveIn(ConstantInt::get(CanonicalIVType, 1));
+    EndValue = B.createNaryOp(Instruction::Add, {EndValue, One}, DL);
+  }
+
+  if (!WideIntOrFp || !WideIntOrFp->isCanonical()) {
+    const InductionDescriptor &ID = WideIV->getInductionDescriptor();
+    VPValue *Start = WideIV->getStartValue();
+    VPValue *Step = WideIV->getStepValue();
+    EndValue = B.createDerivedIV(
+        ID.getKind(), dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
+        Start, EndValue, Step);
+  }
+
+  return EndValue;
+}
+
+/// Attempts to optimize the induction variable exit values for users in the
 /// exit block coming from the latch in the original scalar loop.
 static VPValue *
 optimizeLatchExitInductionUser(VPlan &Plan, VPTypeAnalysis &TypeInfo,
@@ -803,12 +866,15 @@ void VPlanTransforms::optimizeInductionExitUsers(
         break;
 
       for (auto [Idx, PredVPBB] : enumerate(ExitVPBB->getPredecessors())) {
+        VPValue *Escape = nullptr;
         if (PredVPBB == MiddleVPBB)
-          if (VPValue *Escape = optimizeLatchExitInductionUser(
-                  Plan, TypeInfo, PredVPBB, ExitIRI->getOperand(Idx),
-                  EndValues))
-            ExitIRI->setOperand(Idx, Escape);
-        // TODO: Optimize early exit induction users in follow-on patch.
+          Escape = optimizeLatchExitInductionUser(
+              Plan, TypeInfo, PredVPBB, ExitIRI->getOperand(Idx), EndValues);
+        else
+          Escape = optimizeEarlyExitInductionUser(Plan, TypeInfo, PredVPBB,
+                                                  ExitIRI->getOperand(Idx));
+        if (Escape)
+          ExitIRI->setOperand(Idx, Escape);
       }
     }
   }
@@ -922,6 +988,17 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
         cast<VPInstruction>(OldMask)->eraseFromParent();
     }
     return;
+  }
+
+  // VPScalarIVSteps can only be simplified after unrolling. VPScalarIVSteps for
+  // part 0 can be replaced by their start value, if only the first lane is
+  // demanded.
+  if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(&R)) {
+    if (Steps->getParent()->getPlan()->isUnrolled() && Steps->isPart0() &&
+        vputils::onlyFirstLaneUsed(Steps)) {
+      Steps->replaceAllUsesWith(Steps->getOperand(0));
+      return;
+    }
   }
 
   VPValue *A;
@@ -1077,7 +1154,7 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   Term->eraseFromParent();
 
   Plan.setVF(BestVF);
-  Plan.setUF(BestUF);
+  assert(Plan.getUF() == BestUF && "BestUF must match the Plan's UF");
   // TODO: Further simplifications are possible
   //      1. Replace inductions with constants.
   //      2. Replace vector loop region with VPBasicBlock.
@@ -2162,7 +2239,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
       ExitIRI->extractLastLaneOfOperand(MiddleBuilder);
     }
     // Add the incoming value from the early exit.
-    if (!IncomingFromEarlyExit->isLiveIn()) {
+    if (!IncomingFromEarlyExit->isLiveIn() && !Plan.hasScalarVFOnly()) {
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
           VPInstruction::FirstActiveLane, {EarlyExitTakenCond}, nullptr,
           "first.active.lane");
@@ -2303,7 +2380,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
                                              unsigned VectorRegWidth) {
   using namespace llvm::VPlanPatternMatch;
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
-  if (VF.isScalable() || !VectorLoop)
+  if (VF.isScalable() || !VectorLoop || Plan.getUF() != 1)
     return;
 
   VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();

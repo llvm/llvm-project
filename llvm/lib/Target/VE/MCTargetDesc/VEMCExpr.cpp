@@ -34,8 +34,8 @@ void VEMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
 
   const MCExpr *Expr = getSubExpr();
   Expr->print(OS, MAI);
-  if (Kind != VK_None && Kind != VK_REFLONG)
-    OS << '@' << MAI->getSpecifierName(Kind);
+  if (specifier != VK_None && specifier != VK_REFLONG)
+    OS << '@' << MAI->getSpecifierName(specifier);
 }
 
 VE::Fixups VEMCExpr::getFixupKind(VEMCExpr::Specifier S) {
@@ -79,10 +79,7 @@ bool VEMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                          const MCAssembler *Asm) const {
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
-
-  Res = MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(),
-                     getSpecifier());
-
+  Res.setSpecifier(specifier);
   return true;
 }
 
