@@ -933,6 +933,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   pto.LoopUnrolling = opts.UnrollLoops;
   pto.LoopInterleaving = opts.UnrollLoops;
   pto.LoopVectorization = opts.VectorizeLoop;
+  pto.SLPVectorization = opts.VectorizeSLP;
 
   llvm::PassBuilder pb(targetMachine, pto, pgoOpt, &pic);
 
