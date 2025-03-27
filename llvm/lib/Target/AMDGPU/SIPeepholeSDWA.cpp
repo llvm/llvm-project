@@ -1070,6 +1070,11 @@ bool isConvertibleToSDWA(MachineInstr &MI,
   if (TII->isSDWA(Opc))
     return true;
 
+  // FIXME V_CNDMASK_B32_e64 needs handling of the implicit VCC use
+  // introduced by conversion to VOP2.
+  if (Opc == AMDGPU::V_CNDMASK_B32_e64)
+    return false;
+
   // Check if this instruction has opcode that supports SDWA
   if (AMDGPU::getSDWAOp(Opc) == -1)
     Opc = AMDGPU::getVOPe32(Opc);
@@ -1106,10 +1111,6 @@ bool isConvertibleToSDWA(MachineInstr &MI,
 
   // Check if target supports this SDWA opcode
   if (TII->pseudoToMCOpcode(Opc) == -1)
-    return false;
-
-  // FIXME: has SDWA but require handling of implicit VCC use
-  if (Opc == AMDGPU::V_CNDMASK_B32_e32)
     return false;
 
   if (MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0)) {
