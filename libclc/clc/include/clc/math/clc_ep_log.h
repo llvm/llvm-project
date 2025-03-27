@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_acosh.h>
+#ifndef __CLC_MATH_CLC_EP_LOG_H__
+#define __CLC_MATH_CLC_EP_LOG_H__
 
-#undef __CLC_FUNCTION
-#define __CLC_FUNCTION acosh
-#include <clc/math/unary_builtin.inc>
+#define __CLC_BODY <clc/math/clc_ep_log.inc>
+#include <clc/math/gentype.inc>
+
+#endif // __CLC_MATH_CLC_EP_LOG_H__

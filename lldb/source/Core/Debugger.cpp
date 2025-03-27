@@ -2178,8 +2178,6 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
       m_progress_reports.push_back(progress_report);
     }
   }
-
-  RedrawStatusline();
 }
 
 std::optional<Debugger::ProgressReport>
