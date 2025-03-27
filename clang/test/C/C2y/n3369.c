@@ -54,6 +54,11 @@ void test_constant_expression_behavior(int n) {
   int yet_another_array[7][n];
   static_assert(_Countof(yet_another_array) == 7);
   static_assert(_Countof(*yet_another_array)); // expected-error {{static assertion expression is not an integral constant expression}}
+  
+  int one_more_time[n][n][7];
+  static_assert(_Countof(one_more_time));  // expected-error {{static assertion expression is not an integral constant expression}}
+  static_assert(_Countof(*one_more_time)); // expected-error {{static assertion expression is not an integral constant expression}}
+  static_assert(_Countof(**one_more_time) == 7);
 }
 
 void test_with_function_param(int array[12], int (*array_ptr)[12], int static_array[static 12]) {
