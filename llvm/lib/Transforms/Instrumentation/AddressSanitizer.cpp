@@ -1314,9 +1314,12 @@ PreservedAnalyses AddressSanitizerPass::run(Module &M,
   for (Function &F : M) {
     if (F.empty())
       continue;
-    if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage) continue;
-    if (!ClDebugFunc.empty() && ClDebugFunc == F.getName()) continue;
-    if (F.getName().starts_with("__asan_")) continue;
+    if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage)
+      continue;
+    if (!ClDebugFunc.empty() && ClDebugFunc == F.getName())
+      continue;
+    if (F.getName().starts_with("__asan_"))
+      continue;
     if (F.isPresplitCoroutine())
       continue;
     AddressSanitizer FunctionSanitizer(
