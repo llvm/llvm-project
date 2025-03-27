@@ -80,6 +80,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Support/WithColor.h"
 #include <optional>
 
 using namespace llvm;
@@ -311,6 +312,7 @@ bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
   // original layout positions and finding the original fallthroughs.
   MF.RenumberBlocks();
 
+  unsigned NodeCount = 0;
   DenseMap<UniqueBBID, BBClusterInfo> FuncClusterInfo;
   if (BBSectionsType == BasicBlockSection::List) {
     auto [HasProfile, ClusterInfo] =
@@ -318,6 +320,16 @@ bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
             .getClusterInfoForFunction(MF.getName());
     if (!HasProfile)
       return false;
+    
+    NodeCount = getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>()
+                    .getCfgNodeNumForFunction(MF.getName());
+    if ((NodeCount != 0) && (NodeCount != MF.size())) {
+      WithColor::warning() << "MF " << MF.getName() << ": node count mismatch "
+                        << "(profile=" << NodeCount
+                        << " actual=" << MF.size() << ")\n";
+      return false;
+    }
+
     for (auto &BBClusterInfo : ClusterInfo) {
       FuncClusterInfo.try_emplace(BBClusterInfo.BBID, BBClusterInfo);
     }

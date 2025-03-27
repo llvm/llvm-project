@@ -69,6 +69,13 @@ BasicBlockSectionsProfileReader::getClusterInfoForFunction(
              : std::pair(false, SmallVector<BBClusterInfo>());
 }
 
+unsigned BasicBlockSectionsProfileReader::getCfgNodeNumForFunction(
+    StringRef FuncName) const {
+  auto R = ProgramPathAndClusterInfo.find(getAliasName(FuncName));
+  return R != ProgramPathAndClusterInfo.end()
+             ? R->second.NodeCount : 0;
+}
+
 SmallVector<SmallVector<unsigned>>
 BasicBlockSectionsProfileReader::getClonePathsForFunction(
     StringRef FuncName) const {
@@ -263,6 +270,16 @@ Error BasicBlockSectionsProfileReader::ReadV0Profile() {
     StringRef S(*LineIt);
     if (S[0] == '@')
       continue;
+
+    // Record the function cfg node num for staleness check
+    if (S.consume_front("$node_count")) {
+      unsigned long long NodeCount;
+      if (getAsUnsignedInteger(S.trim(), 10, NodeCount))
+        return invalidProfileError("Invalid node count value.");
+      if (FI != ProgramBBClusterInfo.end())
+        FI->second.NodeCount = (unsigned)NodeCount;
+      continue;
+    }
     // Check for the leading "!"
     if (!S.consume_front("!") || S.empty())
       break;
@@ -431,6 +448,11 @@ std::pair<bool, SmallVector<BBClusterInfo>>
 BasicBlockSectionsProfileReaderWrapperPass::getClusterInfoForFunction(
     StringRef FuncName) const {
   return BBSPR.getClusterInfoForFunction(FuncName);
+}
+
+unsigned BasicBlockSectionsProfileReaderWrapperPass::getCfgNodeNumForFunction(
+    StringRef FuncName) const {
+  return BBSPR.getCfgNodeNumForFunction(FuncName);
 }
 
 SmallVector<SmallVector<unsigned>>
