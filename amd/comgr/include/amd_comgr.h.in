@@ -1795,6 +1795,23 @@ typedef enum amd_comgr_action_kind_s {
   AMD_COMGR_ACTION_UNBUNDLE = 0xF,
 
    /**
+   * Compile each source SPIR-V object in @p input into a relocatable.
+   * For each successful compilation, add a relocatable object to @p result
+   *
+   * We accomplish this by first translating the .spv files to .bc via the
+   * SPIR-V translator. We then extract any relevant -cc1 flags from the embedded
+   * @llvm.cmdline variable. Finally, we compile the bitcode to a reloctable,
+   * appending any extracted flags.
+   *
+   * Return @p AMD_COMGR_STATUS_ERROR if any translation, flag extraction, or
+   * compilation fails.
+   *
+   * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
+   * if any input is not SPIR-V.
+   */
+  AMD_COMGR_ACTION_COMPILE_SPIRV_TO_RELOCATABLE = 0x10,
+
+   /**
    * Translate each source SPIR-V object in @p input into LLVM IR Bitcode.
    * For each successful translation, add a bc object to @p result   *
    *
