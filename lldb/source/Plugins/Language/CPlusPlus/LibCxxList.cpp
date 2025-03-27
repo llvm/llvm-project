@@ -392,13 +392,13 @@ lldb::ValueObjectSP ListFrontEnd::GetChildAtIndex(uint32_t idx) {
 
   // we need to copy current_sp into a new object otherwise we will end up with
   // all items named __value_
-  auto data_or_err = current_sp->GetData();
-  if (!data_or_err)
+  auto data = llvm::expectedToOptional(current_sp->GetData());
+  if (!data)
     return lldb::ValueObjectSP();
 
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromData(name.GetString(), *data_or_err,
+  return CreateValueObjectFromData(name.GetString(), *data,
                                    m_backend.GetExecutionContextRef(),
                                    m_element_type);
 }
