@@ -38,6 +38,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <utility>
+#include <variant>
 
 namespace clang {
 
@@ -743,6 +744,12 @@ class Sema;
       Standard.setAllToTypes(T);
     }
 
+    bool isPerfect(const ASTContext &C) const {
+      return (isStandard() && Standard.isIdentityConversion() &&
+              C.hasSameType(Standard.getFromType(), Standard.getToType(2))) ||
+             getKind() == StaticObjectArgumentConversion;
+    }
+
     // True iff this is a conversion sequence from an initializer list to an
     // array or std::initializer.
     bool hasInitializerListContainerType() const {
@@ -979,6 +986,18 @@ class Sema;
       return false;
     }
 
+    bool isPerfectMatch(const ASTContext &Ctx) const {
+      if (!Viable)
+        return false;
+      for (auto &C : Conversions) {
+        if (!C.isInitialized())
+          return false;
+        if (!C.isPerfect(Ctx))
+          return false;
+      }
+      return true;
+    }
+
     bool TryToFixBadConversion(unsigned Idx, Sema &S) {
       bool CanFix = Fix.tryToFixConversion(
                       Conversions[Idx].Bad.FromExpr,
@@ -1015,6 +1034,61 @@ class Sema;
           RewriteKind(CRK_None) {}
   };
 
+  struct NonDeducedConversionTemplateOverloadCandidate {
+    FunctionTemplateDecl *FunctionTemplate;
+    DeclAccessPair FoundDecl;
+    CXXRecordDecl *ActingContext;
+    Expr *From;
+    QualType ToType;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned AllowObjCConversionOnExplicit : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned AllowExplicit : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned AllowResultConversion : 1;
+  };
+
+  struct NonDeducedMethodTemplateOverloadCandidate {
+    FunctionTemplateDecl *FunctionTemplate;
+    DeclAccessPair FoundDecl;
+    ArrayRef<Expr *> Args;
+    CXXRecordDecl *ActingContext;
+    Expr::Classification ObjectClassification;
+    QualType ObjectType;
+
+    OverloadCandidateParamOrder PO;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned SuppressUserConversions : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned PartialOverloading : 1;
+  };
+
+  struct NonDeducedFunctionTemplateOverloadCandidate {
+    FunctionTemplateDecl *FunctionTemplate;
+    DeclAccessPair FoundDecl;
+    ArrayRef<Expr *> Args;
+
+    CallExpr::ADLCallKind IsADLCandidate;
+    OverloadCandidateParamOrder PO;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned SuppressUserConversions : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned PartialOverloading : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned AllowExplicit : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned AggregateCandidateDeduction : 1;
+  };
+
+  using NonDeducedTemplateOverloadCandidate =
+      std::variant<NonDeducedConversionTemplateOverloadCandidate,
+                   NonDeducedMethodTemplateOverloadCandidate,
+                   NonDeducedFunctionTemplateOverloadCandidate>;
+
+  static_assert(
+      std::is_trivially_destructible_v<NonDeducedTemplateOverloadCandidate>);
+
   /// OverloadCandidateSet - A set of overload candidates, used in C++
   /// overload resolution (C++ 13.3).
   class OverloadCandidateSet {
@@ -1043,6 +1117,8 @@ class Sema;
       /// C++ [over.match.call.general]
       /// Resolve a call through the address of an overload set.
       CSK_AddressOfOverloadSet,
+
+      CSK_CodeCompletion,
     };
 
     /// Information about operator rewrites to consider when adding operator
@@ -1116,6 +1192,7 @@ class Sema;
   private:
     SmallVector<OverloadCandidate, 16> Candidates;
     llvm::SmallPtrSet<uintptr_t, 16> Functions;
+    SmallVector<NonDeducedTemplateOverloadCandidate, 8> NonDeducedCandidates;
 
     // Allocator for ConversionSequenceLists. We store the first few of these
     // inline to avoid allocation for small sets.
@@ -1126,7 +1203,7 @@ class Sema;
     OperatorRewriteInfo RewriteInfo;
 
     constexpr static unsigned NumInlineBytes =
-        24 * sizeof(ImplicitConversionSequence);
+        32 * sizeof(ImplicitConversionSequence);
     unsigned NumInlineBytesUsed = 0;
     alignas(void *) char InlineSpace[NumInlineBytes];
 
@@ -1144,8 +1221,8 @@ class Sema;
       // It's simpler if this doesn't need to consider alignment.
       static_assert(alignof(T) == alignof(void *),
                     "Only works for pointer-aligned types.");
-      static_assert(std::is_trivial<T>::value ||
-                        std::is_same<ImplicitConversionSequence, T>::value,
+      static_assert(std::is_trivially_destructible_v<T> ||
+                        (std::is_same_v<ImplicitConversionSequence, T>),
                     "Add destruction logic to OverloadCandidateSet::clear().");
 
       unsigned NBytes = sizeof(T) * N;
@@ -1199,8 +1276,12 @@ class Sema;
     iterator begin() { return Candidates.begin(); }
     iterator end() { return Candidates.end(); }
 
-    size_t size() const { return Candidates.size(); }
-    bool empty() const { return Candidates.empty(); }
+    size_t size() const {
+      return Candidates.size() + NonDeducedCandidates.size();
+    }
+    bool empty() const {
+      return Candidates.empty() && NonDeducedCandidates.empty();
+    }
 
     /// Allocate storage for conversion sequences for NumConversions
     /// conversions.
@@ -1214,6 +1295,19 @@ class Sema;
         new (&Conversions[I]) ImplicitConversionSequence();
 
       return ConversionSequenceList(Conversions, NumConversions);
+    }
+
+    llvm::MutableArrayRef<Expr *> getPersistentArgsArray(unsigned N) {
+      Expr **Exprs = slabAllocate<Expr *>(N);
+      return llvm::MutableArrayRef<Expr *>(Exprs, N);
+    }
+
+    template <typename... T>
+    llvm::MutableArrayRef<Expr *> getPersistentArgsArray(T *...Exprs) {
+      llvm::MutableArrayRef<Expr *> Arr =
+          getPersistentArgsArray(sizeof...(Exprs));
+      llvm::copy(std::initializer_list<Expr *>{Exprs...}, Arr.data());
+      return Arr;
     }
 
     /// Add a new candidate with NumConversions conversion sequence slots
@@ -1231,9 +1325,35 @@ class Sema;
       return C;
     }
 
+    void AddNonDeducedTemplateCandidate(
+        FunctionTemplateDecl *FunctionTemplate, DeclAccessPair FoundDecl,
+        ArrayRef<Expr *> Args, bool SuppressUserConversions,
+        bool PartialOverloading, bool AllowExplicit,
+        CallExpr::ADLCallKind IsADLCandidate, OverloadCandidateParamOrder PO,
+        bool AggregateCandidateDeduction);
+
+    void AddNonDeducedMethodTemplateCandidate(
+        FunctionTemplateDecl *MethodTmpl, DeclAccessPair FoundDecl,
+        CXXRecordDecl *ActingContext, QualType ObjectType,
+        Expr::Classification ObjectClassification, ArrayRef<Expr *> Args,
+        bool SuppressUserConversions, bool PartialOverloading,
+        OverloadCandidateParamOrder PO);
+
+    void AddNonDeducedConversionTemplateCandidate(
+        FunctionTemplateDecl *FunctionTemplate, DeclAccessPair FoundDecl,
+        CXXRecordDecl *ActingContext, Expr *From, QualType ToType,
+        bool AllowObjCConversionOnExplicit, bool AllowExplicit,
+        bool AllowResultConversion);
+
+    void InjectNonDeducedTemplateCandidates(Sema &S);
+
     /// Find the best viable function on this overload set, if it exists.
     OverloadingResult BestViableFunction(Sema &S, SourceLocation Loc,
                                          OverloadCandidateSet::iterator& Best);
+
+    OverloadingResult
+    BestViableFunctionImpl(Sema &S, SourceLocation Loc,
+                           OverloadCandidateSet::iterator &Best);
 
     SmallVector<OverloadCandidate *, 32> CompleteCandidates(
         Sema &S, OverloadCandidateDisplayKind OCD, ArrayRef<Expr *> Args,
