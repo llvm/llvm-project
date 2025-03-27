@@ -655,11 +655,7 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
             Res);
 
       case MCBinaryExpr::Add:
-        return evaluateSymbolicAdd(
-            Asm, Addrs, InSet, LHSValue,
-            MCValue::get(RHSValue.getSymA(), RHSValue.getSymB(),
-                         RHSValue.getConstant(), RHSValue.getRefKind()),
-            Res);
+        return evaluateSymbolicAdd(Asm, Addrs, InSet, LHSValue, RHSValue, Res);
       }
     }
 

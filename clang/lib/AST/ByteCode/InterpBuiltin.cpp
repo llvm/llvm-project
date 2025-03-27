@@ -239,9 +239,16 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   assert(A.getFieldDesc()->isPrimitiveArray());
   assert(B.getFieldDesc()->isPrimitiveArray());
 
+  assert(getElemType(A).getTypePtr() == getElemType(B).getTypePtr());
+  PrimType ElemT = *S.getContext().classify(getElemType(A));
+
+  auto returnResult = [&](int V) -> bool {
+    pushInteger(S, V, Call->getType());
+    return true;
+  };
+
   unsigned IndexA = A.getIndex();
   unsigned IndexB = B.getIndex();
-  int32_t Result = 0;
   uint64_t Steps = 0;
   for (;; ++IndexA, ++IndexB, ++Steps) {
 
@@ -254,36 +261,32 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
       return false;
     }
 
-    if (IsWide)
-      INT_TYPE_SWITCH(
-          *S.getContext().classify(S.getASTContext().getWCharType()), {
-            T A = PA.deref<T>();
-            T B = PB.deref<T>();
-            if (A < B) {
-              pushInteger(S, -1, Call->getType());
-              return true;
-            } else if (A > B) {
-              pushInteger(S, 1, Call->getType());
-              return true;
-            }
-          });
+    if (IsWide) {
+      INT_TYPE_SWITCH(ElemT, {
+        T CA = PA.deref<T>();
+        T CB = PB.deref<T>();
+        if (CA > CB)
+          return returnResult(1);
+        else if (CA < CB)
+          return returnResult(-1);
+        else if (CA.isZero() || CB.isZero())
+          return returnResult(0);
+      });
+      continue;
+    }
 
     uint8_t CA = PA.deref<uint8_t>();
     uint8_t CB = PB.deref<uint8_t>();
 
-    if (CA > CB) {
-      Result = 1;
-      break;
-    } else if (CA < CB) {
-      Result = -1;
-      break;
-    }
+    if (CA > CB)
+      return returnResult(1);
+    else if (CA < CB)
+      return returnResult(-1);
     if (CA == 0 || CB == 0)
-      break;
+      return returnResult(0);
   }
 
-  pushInteger(S, Result, Call->getType());
-  return true;
+  return returnResult(0);
 }
 
 static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
@@ -2789,6 +2792,18 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
         DestElem.deref<T>() = Src.atIndex(I).deref<T>();
         DestElem.initialize();
       });
+    }
+    return true;
+  }
+
+  if (DestDesc->isCompositeArray()) {
+    assert(SrcDesc->isCompositeArray());
+    assert(SrcDesc->getNumElems() == DestDesc->getNumElems());
+    for (unsigned I = 0, N = DestDesc->getNumElems(); I != N; ++I) {
+      const Pointer &SrcElem = Src.atIndex(I).narrow();
+      Pointer DestElem = Dest.atIndex(I).narrow();
+      if (!copyComposite(S, OpPC, SrcElem, DestElem, Activate))
+        return false;
     }
     return true;
   }

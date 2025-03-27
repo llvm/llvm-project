@@ -252,8 +252,7 @@ define void @wide_truncated_iv(ptr %dst) {
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX3:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT7:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[VEC_IND4:%.*]] = phi <8 x i8> [ [[INDUCTION]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT6:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX3]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX3]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP9]], i32 0
 ; CHECK-NEXT:    store <8 x i8> [[VEC_IND4]], ptr [[TMP10]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT7]] = add nuw i64 [[INDEX3]], 8

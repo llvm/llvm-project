@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 triple riscv64 -emit-llvm -target-feature +m -target-feature +v -target-abi lp64d -o /dev/null %s
+// RUN: %clang_cc1 -triple riscv64 -emit-llvm -target-feature +m -target-feature +v -target-abi lp64d -o /dev/null %s
 
 struct a {
   using b = char __attribute__((vector_size(sizeof(char))));
