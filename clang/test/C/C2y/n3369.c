@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c2y -pedantic -Wall -Wno-comment -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c2y -pedantic -Wall -Wno-comment -fexperimental-new-constant-interpreter -verify %s
 
 /* WG14 N3369: Clang 21
  * _Lengthof operator
