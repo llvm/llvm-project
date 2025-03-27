@@ -1,4 +1,5 @@
 // RUN: mlir-link -sort-symbols -split-input-file %s | FileCheck %s
+// REQUIRES: mlir-link-linkonce
 
 // CHECK: llvm.func @bar()
 
