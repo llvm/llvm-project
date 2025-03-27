@@ -385,21 +385,25 @@ subroutine allocate_real(a0_0, a1_0, a0_1, a1_1)
   type(real_a0) :: a0_0, a0_1(100)
   type(real_a1) :: a1_0, a1_1(100)
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[a0_0]], p
-  ! CHECK: fir.store {{.*}} to %[[coor]]
+  ! CHECK: %[[conv:.*]] = fir.convert %[[coor]]
+  ! CHECK: fir.call @_FortranAAllocatableAllocate(%[[conv]]
   allocate(a0_0%p)
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[a0_1]], %{{.*}}
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
-  ! CHECK: fir.store {{.*}} to %[[coor]]
+  ! CHECK: %[[conv:.*]] = fir.convert %[[coor]]
+  ! CHECK: fir.call @_FortranAAllocatableAllocate(%[[conv]]
   allocate(a0_1(5)%p)
 
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[a1_0]], p
-  ! CHECK: fir.store {{.*}} to %[[coor]]
+  ! CHECK: %[[conv:.*]] = fir.convert %[[coor]]
+  ! CHECK: fir.call @_FortranAAllocatableSetBounds(%[[conv]]
   allocate(a1_0%p(100))
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[a1_1]], %{{.*}}
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
-  ! CHECK: fir.store {{.*}} to %[[coor]]
+  ! CHECK: %[[conv:.*]] = fir.convert %[[coor]]
+  ! CHECK: fir.call @_FortranAAllocatableSetBounds(%[[conv]]
   allocate(a1_1(5)%p(100))
 end subroutine
 
@@ -409,21 +413,25 @@ subroutine allocate_cst_char(a0_0, a1_0, a0_1, a1_1)
   type(cst_char_a0) :: a0_0, a0_1(100)
   type(cst_char_a1) :: a1_0, a1_1(100)
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[a0_0]], p
-  ! CHECK: fir.store {{.*}} to %[[coor]]
+  ! CHECK: %[[conv:.*]] = fir.convert %[[coor]]
+  ! CHECK: fir.call @_FortranAAllocatableAllocate(%[[conv]]
   allocate(a0_0%p)
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[a0_1]], %{{.*}}
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
-  ! CHECK: fir.store {{.*}} to %[[coor]]
+  ! CHECK: %[[conv:.*]] = fir.convert %[[coor]]
+  ! CHECK: fir.call @_FortranAAllocatableAllocate(%[[conv]]
   allocate(a0_1(5)%p)
 
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[a1_0]], p
-  ! CHECK: fir.store {{.*}} to %[[coor]]
+  ! CHECK: %[[conv:.*]] = fir.convert %[[coor]]
+  ! CHECK: fir.call @_FortranAAllocatableSetBounds(%[[conv]]
   allocate(a1_0%p(100))
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[a1_1]], %{{.*}}
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
-  ! CHECK: fir.store {{.*}} to %[[coor]]
+  ! CHECK: %[[conv:.*]] = fir.convert %[[coor]]
+  ! CHECK: fir.call @_FortranAAllocatableSetBounds(%[[conv]]
   allocate(a1_1(5)%p(100))
 end subroutine
 
@@ -433,21 +441,25 @@ subroutine allocate_def_char(a0_0, a1_0, a0_1, a1_1)
   type(def_char_a0) :: a0_0, a0_1(100)
   type(def_char_a1) :: a1_0, a1_1(100)
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[a0_0]], p
-  ! CHECK: fir.store {{.*}} to %[[coor]]
+  ! CHECK: %[[conv:.*]] = fir.convert %[[coor]]
+  ! CHECK: fir.call @_FortranAAllocatableInitCharacterForAllocate(%[[conv]]
   allocate(character(18)::a0_0%p)
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[a0_1]], %{{.*}}
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
-  ! CHECK: fir.store {{.*}} to %[[coor]]
+  ! CHECK: %[[conv:.*]] = fir.convert %[[coor]]
+  ! CHECK: fir.call @_FortranAAllocatableInitCharacterForAllocate(%[[conv]]
   allocate(character(18)::a0_1(5)%p)
 
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[a1_0]], p
-  ! CHECK: fir.store {{.*}} to %[[coor]]
+  ! CHECK: %[[conv:.*]] = fir.convert %[[coor]]
+  ! CHECK: fir.call @_FortranAAllocatableInitCharacterForAllocate(%[[conv]]
   allocate(character(18)::a1_0%p(100))
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[a1_1]], %{{.*}}
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
-  ! CHECK: fir.store {{.*}} to %[[coor]]
+  ! CHECK: %[[conv:.*]] = fir.convert %[[coor]]
+  ! CHECK: fir.call @_FortranAAllocatableInitCharacterForAllocate(%[[conv]]
   allocate(character(18)::a1_1(5)%p(100))
 end subroutine
 
@@ -461,21 +473,25 @@ subroutine deallocate_real(a0_0, a1_0, a0_1, a1_1)
   type(real_a0) :: a0_0, a0_1(100)
   type(real_a1) :: a1_0, a1_1(100)
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[a0_0]], p
-  ! CHECK: fir.store {{.*}} to %[[coor]]
+  ! CHECK: %[[conv:.*]] = fir.convert %[[coor]]
+  ! CHECK: fir.call @_FortranAAllocatableDeallocate(%[[conv]]
   deallocate(a0_0%p)
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[a0_1]], %{{.*}}
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
-  ! CHECK: fir.store {{.*}} to %[[coor]]
+  ! CHECK: %[[conv:.*]] = fir.convert %[[coor]]
+  ! CHECK: fir.call @_FortranAAllocatableDeallocate(%[[conv]]
   deallocate(a0_1(5)%p)
 
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[a1_0]], p
-  ! CHECK: fir.store {{.*}} to %[[coor]]
+  ! CHECK: %[[conv:.*]] = fir.convert %[[coor]]
+  ! CHECK: fir.call @_FortranAAllocatableDeallocate(%[[conv]]
   deallocate(a1_0%p)
 
   ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[a1_1]], %{{.*}}
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], p
-  ! CHECK: fir.store {{.*}} to %[[coor]]
+  ! CHECK: %[[conv:.*]] = fir.convert %[[coor]]
+  ! CHECK: fir.call @_FortranAAllocatableDeallocate(%[[conv]]
   deallocate(a1_1(5)%p)
 end subroutine
 

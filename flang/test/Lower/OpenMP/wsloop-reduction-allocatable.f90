@@ -18,29 +18,30 @@ print *,r
 
 end program
 
+
 ! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_heap_i32 : !fir.ref<!fir.box<!fir.heap<i32>>> alloc {
-! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.heap<i32>>
-! CHECK:           omp.yield(%[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<i32>>>)
+! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<i32>>
+! CHECK:           omp.yield(%[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>)
 ! CHECK-LABEL:   } init {
-! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>, %[[ALLOC:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>):
-! CHECK:           %[[VAL_1:.*]] = arith.constant 0 : i32
-! CHECK:           %[[LOAD:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:           %[[ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-! CHECK:           %[[ADDRI:.*]] = fir.convert %[[ADDR]] : (!fir.heap<i32>) -> i64
-! CHECK:           %[[C0_I64:.*]] = arith.constant 0 : i64
-! CHECK:           %[[IS_NULL:.*]] = arith.cmpi eq, %[[ADDRI]], %[[C0_I64]] : i64
-! CHECK:           fir.if %[[IS_NULL]] {
-! CHECK:             %[[NULL_BOX:.*]] = fir.embox %[[ADDR]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
-! CHECK:             fir.store %[[NULL_BOX]] to %[[ALLOC]] : !fir.ref<!fir.box<!fir.heap<i32>>
+! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<
+! CHECK:           %[[VAL_2:.*]] = arith.constant 0 : i32
+! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:           %[[VAL_4:.*]] = fir.box_addr %[[VAL_3]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
+! CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.heap<i32>) -> i64
+! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i64
+! CHECK:           %[[VAL_7:.*]] = arith.cmpi eq, %[[VAL_5]], %[[VAL_6]] : i64
+! CHECK:           fir.if %[[VAL_7]] {
+! CHECK:             %[[VAL_8:.*]] = fir.embox %[[VAL_4]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
+! CHECK:             fir.store %[[VAL_8]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:           } else {
-! CHECK:             %[[VAL_3:.*]] = fir.allocmem i32
-! CHECK:             fir.store %[[VAL_1]] to %[[VAL_3]] : !fir.heap<i32>
-! CHECK:             %[[VAL_4:.*]] = fir.embox %[[VAL_3]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
-! CHECK:             fir.store %[[VAL_4]] to %[[ALLOC]] : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:             %[[VAL_9:.*]] = fir.allocmem i32 {bindc_name = "", uniq_name = ""}
+! CHECK:             fir.store %[[VAL_2]] to %[[VAL_9]] : !fir.heap<i32>
+! CHECK:             %[[VAL_10:.*]] = fir.embox %[[VAL_9]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
+! CHECK:             fir.store %[[VAL_10]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:           }
-! CHECK:           omp.yield(%[[ALLOC]] : !fir.ref<!fir.box<!fir.heap<i32>>>)
-! CHECK:         } combiner {
-! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>):
+! CHECK:           omp.yield(%[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<i32>>>)
+! CHECK-LABEL:   } combiner {
+! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:           %[[VAL_4:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
@@ -50,8 +51,8 @@ end program
 ! CHECK:           %[[VAL_8:.*]] = arith.addi %[[VAL_6]], %[[VAL_7]] : i32
 ! CHECK:           fir.store %[[VAL_8]] to %[[VAL_4]] : !fir.heap<i32>
 ! CHECK:           omp.yield(%[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>)
-! CHECK:         }  cleanup {
-! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>):
+! CHECK-LABEL:   } cleanup {
+! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<
 ! CHECK:           %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:           %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
 ! CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.heap<i32>) -> i64
@@ -71,25 +72,41 @@ end program
 ! CHECK:           %[[VAL_4:.*]] = fir.embox %[[VAL_3]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
 ! CHECK:           fir.store %[[VAL_4]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFEr"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
-! CHECK:           %[[VAL_6:.*]] = fir.allocmem i32 {fir.must_be_heap = true, uniq_name = "_QFEr.alloc"}
-! CHECK:           %[[VAL_7:.*]] = fir.embox %[[VAL_6]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
-! CHECK:           fir.store %[[VAL_7]] to %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:           %[[VAL_8:.*]] = arith.constant 0 : i32
-! CHECK:           hlfir.assign %[[VAL_8]] to %[[VAL_5]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:           %[[VAL_6:.*]] = arith.constant false
+! CHECK:           %[[VAL_7:.*]] = fir.absent !fir.box<none>
+! CHECK:           %[[VAL_8:.*]] = fir.address_of(@_QQclX100ec2b8f633a84df3b7cc2ad55f845c) : !fir.ref<!fir.char<1,88>>
+! CHECK:           %[[VAL_9:.*]] = arith.constant 8 : i32
+! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_5]]#1 : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.char<1,88>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_12:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_10]], %[[VAL_6]], %[[VAL_7]], %[[VAL_11]], %[[VAL_9]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:           %[[VAL_13:.*]] = arith.constant 0 : i32
+! CHECK:           hlfir.assign %[[VAL_13]] to %[[VAL_5]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_11:.*]] = arith.constant 0 : i32
-! CHECK:             %[[VAL_12:.*]] = arith.constant 10 : i32
-! CHECK:             %[[VAL_13:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[VAL_9:.*]] : !fir.ref<i32>) reduction(byref @add_reduction_byref_box_heap_i32 %[[VAL_5]]#0 -> %[[VAL_14:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>>) {
-! CHECK-NEXT:          omp.loop_nest (%[[VAL_15:.*]]) : i32 = (%[[VAL_11]]) to (%[[VAL_12]]) inclusive step (%[[VAL_13]]) {
-! CHECK:                 %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_14]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFEr"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
-! CHECK:                 hlfir.assign %[[VAL_15]] to %[[VAL_10]]#0 : i32, !fir.ref<i32>
-! CHECK:                 %[[VAL_17:.*]] = fir.load %[[VAL_10]]#0 : !fir.ref<i32>
-! CHECK:                 hlfir.assign %[[VAL_17]] to %[[VAL_16]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:             %[[VAL_14:.*]] = arith.constant 0 : i32
+! CHECK:             %[[VAL_15:.*]] = arith.constant 10 : i32
+! CHECK:             %[[VAL_16:.*]] = arith.constant 1 : i32
+! CHECK:             omp.wsloop private(@_QFEi_private_i32 %[[VAL_1]]#0 -> %[[VAL_17:.*]] : !fir.ref<i32>) reduction(byref @add_reduction_byref_box_heap_i32 %[[VAL_5]]#0 -> %[[VAL_18:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>>) {
+! CHECK:               omp.loop_nest (%[[VAL_19:.*]]) : i32 = (%[[VAL_14]]) to (%[[VAL_15]]) inclusive step (%[[VAL_16]]) {
+! CHECK:                 %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_17]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_18]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFEr"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+! CHECK:                 hlfir.assign %[[VAL_19]] to %[[VAL_20]]#1 : i32, !fir.ref<i32>
+! CHECK:                 %[[VAL_22:.*]] = fir.load %[[VAL_20]]#0 : !fir.ref<i32>
+! CHECK:                 hlfir.assign %[[VAL_22]] to %[[VAL_21]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:                 omp.yield
 ! CHECK:               }
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }
+! CHECK:           %[[VAL_23:.*]] = arith.constant 6 : i32
+! CHECK:           %[[VAL_24:.*]] = fir.address_of(@_QQclX100ec2b8f633a84df3b7cc2ad55f845c) : !fir.ref<!fir.char<1,88>>
+! CHECK:           %[[VAL_25:.*]] = fir.convert %[[VAL_24]] : (!fir.ref<!fir.char<1,88>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_26:.*]] = arith.constant 17 : i32
+! CHECK:           %[[VAL_27:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_23]], %[[VAL_25]], %[[VAL_26]]) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+! CHECK:           %[[VAL_28:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:           %[[VAL_29:.*]] = fir.box_addr %[[VAL_28]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
+! CHECK:           %[[VAL_30:.*]] = fir.load %[[VAL_29]] : !fir.heap<i32>
+! CHECK:           %[[VAL_31:.*]] = fir.call @_FortranAioOutputInteger32(%[[VAL_27]], %[[VAL_30]]) fastmath<contract> : (!fir.ref<i8>, i32) -> i1
+! CHECK:           %[[VAL_32:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_27]]) fastmath<contract> : (!fir.ref<i8>) -> i32
+! CHECK:           return
+! CHECK:         }
 

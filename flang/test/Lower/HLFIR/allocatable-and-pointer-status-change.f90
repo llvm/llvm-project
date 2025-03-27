@@ -4,108 +4,158 @@
 
 subroutine allocation(x)
   character(*), allocatable :: x(:)
-! CHECK-LABEL: func.func @_QPallocation(
-! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] typeparams %[[VAL_2:[a-z0-9]*]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>,  {{.*}}Ex
   deallocate(x)
-! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
-! CHECK:  %[[VAL_5:.*]] = fir.box_addr %[[VAL_4]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> !fir.heap<!fir.array<?x!fir.char<1,?>>>
-! CHECK:  fir.freemem %[[VAL_5]] : !fir.heap<!fir.array<?x!fir.char<1,?>>>
-! CHECK:  %[[VAL_6:.*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.char<1,?>>>
-! CHECK:  %[[VAL_7:.*]] = arith.constant 0 : index
-! CHECK:  %[[VAL_8:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
-! CHECK:  %[[VAL_9:.*]] = fir.embox %[[VAL_6]](%[[VAL_8]]) typeparams %[[VAL_2]] : (!fir.heap<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>
   allocate(x(100))
-! CHECK:  %[[VAL_10:.*]] = arith.constant 100 : i32
-! CHECK:  %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i32) -> index
-! CHECK:  %[[VAL_12:.*]] = arith.constant 0 : index
-! CHECK:  %[[VAL_13:.*]] = arith.cmpi sgt, %[[VAL_11]], %[[VAL_12]] : index
-! CHECK:  %[[VAL_14:.*]] = arith.select %[[VAL_13]], %[[VAL_11]], %[[VAL_12]] : index
-! CHECK:  %[[VAL_15:.*]] = fir.allocmem !fir.array<?x!fir.char<1,?>>(%[[VAL_2]] : index), %[[VAL_14]] {fir.must_be_heap = true, uniq_name = "_QFallocationEx.alloc"}
-! CHECK:  %[[VAL_16:.*]] = fir.shape %[[VAL_14]] : (index) -> !fir.shape<1>
-! CHECK:  %[[VAL_17:.*]] = fir.embox %[[VAL_15]](%[[VAL_16]]) typeparams %[[VAL_2]] : (!fir.heap<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>
-! CHECK:  fir.store %[[VAL_17]] to %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
 end subroutine
+! CHECK-LABEL:   func.func @_QPallocation(
+! CHECK-SAME:                             %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>> {fir.bindc_name = "x"}) {
+! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
+! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
+! CHECK:           %[[VAL_3:.*]] = fir.box_elesize %[[VAL_2]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> index
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_3]] dummy_scope %[[VAL_1]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFallocationEx"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>, index, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>)
+! CHECK:           %[[VAL_5:.*]] = arith.constant false
+! CHECK:           %[[VAL_6:.*]] = fir.absent !fir.box<none>
+! CHECK:           %[[VAL_7:.*]] = fir.address_of(@_QQclXca783e65b88d3c02cf95fcee70c426bc) : !fir.ref<!fir.char<1,96>>
+! CHECK:           %[[VAL_8:.*]] = arith.constant 7 : i32
+! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_4]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<!fir.char<1,96>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_11:.*]] = fir.call @_FortranAAllocatableDeallocate(%[[VAL_9]], %[[VAL_5]], %[[VAL_6]], %[[VAL_10]], %[[VAL_8]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:           %[[VAL_12:.*]] = arith.constant false
+! CHECK:           %[[VAL_13:.*]] = fir.absent !fir.box<none>
+! CHECK:           %[[VAL_14:.*]] = fir.address_of(@_QQclXca783e65b88d3c02cf95fcee70c426bc) : !fir.ref<!fir.char<1,96>>
+! CHECK:           %[[VAL_15:.*]] = arith.constant 8 : i32
+! CHECK:           %[[VAL_16:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_17:.*]] = arith.constant 100 : i32
+! CHECK:           %[[VAL_18:.*]] = arith.constant 0 : i32
+! CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_4]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_20:.*]] = fir.convert %[[VAL_16]] : (index) -> i64
+! CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_17]] : (i32) -> i64
+! CHECK:           fir.call @_FortranAAllocatableSetBounds(%[[VAL_19]], %[[VAL_18]], %[[VAL_20]], %[[VAL_21]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
+! CHECK:           %[[VAL_22:.*]] = fir.convert %[[VAL_4]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_23:.*]] = fir.convert %[[VAL_14]] : (!fir.ref<!fir.char<1,96>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_24:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_22]], %[[VAL_12]], %[[VAL_13]], %[[VAL_23]], %[[VAL_15]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:           return
+! CHECK:         }
 
 subroutine pointer_assignment(p, ziel)
   real, pointer :: p(:)
   real, target :: ziel(42:)
-! CHECK-LABEL: func.func @_QPpointer_assignment(
-! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>,  {{.*}}Ep
-! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]](%[[VAL_5:[a-z0-9]*]]) dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<target>,  {{.*}}Eziel
   p => ziel
-! CHECK:  %[[VAL_7:.*]] = fir.shift %[[VAL_4:.*]] : (index) -> !fir.shift<1>
-! CHECK:  %[[VAL_8:.*]] = fir.rebox %[[VAL_6]]#1(%[[VAL_7]]) : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
-! CHECK:  fir.store %[[VAL_8]] to %[[VAL_2]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   p => ziel(42:77:3)
-! CHECK:  %[[VAL_14:.*]] = hlfir.designate %{{.*}}#0 (%{{.*}}:%{{.*}}:%{{.*}})  shape %{{.*}} : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<12xf32>>
-! CHECK:  %[[VAL_15:.*]] = fir.rebox %[[VAL_14]] : (!fir.box<!fir.array<12xf32>>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
-! CHECK:  fir.store %[[VAL_15]] to %[[VAL_2]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 end subroutine
+! CHECK-LABEL:   func.func @_QPpointer_assignment(
+! CHECK-SAME:                                     %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> {fir.bindc_name = "p"},
+! CHECK-SAME:                                     %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "ziel", fir.target}) {
+! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_2]] {fortran_attrs = {{.*}}<pointer>, uniq_name = "_QFpointer_assignmentEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
+! CHECK:           %[[VAL_4:.*]] = arith.constant 42 : i64
+! CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (i64) -> index
+! CHECK:           %[[VAL_6:.*]] = fir.shift %[[VAL_5]] : (index) -> !fir.shift<1>
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_6]]) dummy_scope %[[VAL_2]] {fortran_attrs = {{.*}}<target>, uniq_name = "_QFpointer_assignmentEziel"} : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+! CHECK:           %[[VAL_8:.*]] = fir.shift %[[VAL_5]] : (index) -> !fir.shift<1>
+! CHECK:           %[[VAL_9:.*]] = fir.rebox %[[VAL_7]]#1(%[[VAL_8]]) : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+! CHECK:           fir.store %[[VAL_9]] to %[[VAL_3]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK:           %[[VAL_10:.*]] = arith.constant 42 : index
+! CHECK:           %[[VAL_11:.*]] = arith.constant 77 : index
+! CHECK:           %[[VAL_12:.*]] = arith.constant 3 : index
+! CHECK:           %[[VAL_13:.*]] = arith.constant 12 : index
+! CHECK:           %[[VAL_14:.*]] = fir.shape %[[VAL_13]] : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_15:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_10]]:%[[VAL_11]]:%[[VAL_12]])  shape %[[VAL_14]] : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<12xf32>>
+! CHECK:           %[[VAL_16:.*]] = fir.rebox %[[VAL_15]] : (!fir.box<!fir.array<12xf32>>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+! CHECK:           fir.store %[[VAL_16]] to %[[VAL_3]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK:           return
+! CHECK:         }
 
 subroutine pointer_remapping(p, ziel)
   real, pointer :: p(:, :)
   real, target :: ziel(10, 20, 30)
-! CHECK-LABEL: func.func @_QPpointer_remapping(
-! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>,  {{.*}}Ep
-! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]](%[[VAL_6:[a-z0-9]*]]) dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<target>,  {{.*}}Eziel
   p(2:7, 3:102) => ziel
-! CHECK:  %[[VAL_8:.*]] = arith.constant 2 : i64
-! CHECK:  %[[VAL_9:.*]] = arith.constant 7 : i64
-! CHECK:  %[[VAL_10:.*]] = arith.constant 3 : i64
-! CHECK:  %[[VAL_11:.*]] = arith.constant 102 : i64
-! CHECK:  %[[VAL_12:.*]] = arith.constant 1 : index
-! CHECK:  %[[VAL_13:.*]] = fir.convert %[[VAL_8]] : (i64) -> index
-! CHECK:  %[[VAL_14:.*]] = fir.convert %[[VAL_9]] : (i64) -> index
-! CHECK:  %[[VAL_15:.*]] = arith.subi %[[VAL_14]], %[[VAL_13]] : index
-! CHECK:  %[[VAL_16:.*]] = arith.addi %[[VAL_15]], %[[VAL_12]] : index
-! CHECK:  %[[VAL_17:.*]] = fir.convert %[[VAL_10]] : (i64) -> index
-! CHECK:  %[[VAL_18:.*]] = fir.convert %[[VAL_11]] : (i64) -> index
-! CHECK:  %[[VAL_19:.*]] = arith.subi %[[VAL_18]], %[[VAL_17]] : index
-! CHECK:  %[[VAL_20:.*]] = arith.addi %[[VAL_19]], %[[VAL_12]] : index
-! CHECK:  %[[VAL_21:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.ref<!fir.array<10x20x30xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
-! CHECK:  %[[VAL_22:.*]] = fir.shape_shift %[[VAL_8]], %[[VAL_16]], %[[VAL_10]], %[[VAL_20]] : (i64, index, i64, index) -> !fir.shapeshift<2>
-! CHECK:  %[[VAL_23:.*]] = fir.embox %[[VAL_21]](%[[VAL_22]]) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.box<!fir.ptr<!fir.array<?x?xf32>>>
-! CHECK:  fir.store %[[VAL_23]] to %[[VAL_2]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
 end subroutine
+! CHECK-LABEL:   func.func @_QPpointer_remapping(
+! CHECK-SAME:                                    %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>> {fir.bindc_name = "p"},
+! CHECK-SAME:                                    %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.array<10x20x30xf32>> {fir.bindc_name = "ziel", fir.target}) {
+! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_2]] {fortran_attrs = {{.*}}<pointer>, uniq_name = "_QFpointer_remappingEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>)
+! CHECK:           %[[VAL_4:.*]] = arith.constant 10 : index
+! CHECK:           %[[VAL_5:.*]] = arith.constant 20 : index
+! CHECK:           %[[VAL_6:.*]] = arith.constant 30 : index
+! CHECK:           %[[VAL_7:.*]] = fir.shape %[[VAL_4]], %[[VAL_5]], %[[VAL_6]] : (index, index, index) -> !fir.shape<3>
+! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_7]]) dummy_scope %[[VAL_2]] {fortran_attrs = {{.*}}<target>, uniq_name = "_QFpointer_remappingEziel"} : (!fir.ref<!fir.array<10x20x30xf32>>, !fir.shape<3>, !fir.dscope) -> (!fir.ref<!fir.array<10x20x30xf32>>, !fir.ref<!fir.array<10x20x30xf32>>)
+! CHECK:           %[[VAL_9:.*]] = arith.constant 2 : i64
+! CHECK:           %[[VAL_10:.*]] = arith.constant 7 : i64
+! CHECK:           %[[VAL_11:.*]] = arith.constant 3 : i64
+! CHECK:           %[[VAL_12:.*]] = arith.constant 102 : i64
+! CHECK:           %[[VAL_13:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_9]] : (i64) -> index
+! CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_10]] : (i64) -> index
+! CHECK:           %[[VAL_16:.*]] = arith.subi %[[VAL_15]], %[[VAL_14]] : index
+! CHECK:           %[[VAL_17:.*]] = arith.addi %[[VAL_16]], %[[VAL_13]] : index
+! CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_11]] : (i64) -> index
+! CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_12]] : (i64) -> index
+! CHECK:           %[[VAL_20:.*]] = arith.subi %[[VAL_19]], %[[VAL_18]] : index
+! CHECK:           %[[VAL_21:.*]] = arith.addi %[[VAL_20]], %[[VAL_13]] : index
+! CHECK:           %[[VAL_22:.*]] = fir.convert %[[VAL_8]]#1 : (!fir.ref<!fir.array<10x20x30xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+! CHECK:           %[[VAL_23:.*]] = fir.shape_shift %[[VAL_9]], %[[VAL_17]], %[[VAL_11]], %[[VAL_21]] : (i64, index, i64, index) -> !fir.shapeshift<2>
+! CHECK:           %[[VAL_24:.*]] = fir.embox %[[VAL_22]](%[[VAL_23]]) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.box<!fir.ptr<!fir.array<?x?xf32>>>
+! CHECK:           fir.store %[[VAL_24]] to %[[VAL_3]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
+! CHECK:           return
+! CHECK:         }
 
 subroutine alloc_comp(x)
   type t
      real, allocatable :: a(:)
   end type
   type(t) :: x(10)
-! CHECK-LABEL: func.func @_QPalloc_comp(
-! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]](%[[VAL_2:[a-z0-9]*]]) {{.*}}Ex
   allocate(x(10_8)%a(100_8))
-! CHECK:  %[[VAL_4:.*]] = arith.constant 10 : index
-! CHECK:  %[[VAL_5:.*]] = hlfir.designate %[[VAL_3]]#0 (%[[VAL_4]])  : (!fir.ref<!fir.array<10x!fir.type<_QFalloc_compTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>>, index) -> !fir.ref<!fir.type<_QFalloc_compTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
-! CHECK:  %[[VAL_6:.*]] = hlfir.designate %[[VAL_5]]{"a"}   {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QFalloc_compTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-! CHECK:  %[[VAL_7:.*]] = arith.constant 100 : i64
-! CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i64) -> index
-! CHECK:  %[[VAL_9:.*]] = arith.constant 0 : index
-! CHECK:  %[[VAL_10:.*]] = arith.cmpi sgt, %[[VAL_8]], %[[VAL_9]] : index
-! CHECK:  %[[VAL_11:.*]] = arith.select %[[VAL_10]], %[[VAL_8]], %[[VAL_9]] : index
-! CHECK:  %[[VAL_12:.*]] = fir.allocmem !fir.array<?xf32>, %[[VAL_11]] {fir.must_be_heap = true, uniq_name = "_QFalloc_compEa.alloc"}
-! CHECK:  %[[VAL_13:.*]] = fir.shape %[[VAL_11]] : (index) -> !fir.shape<1>
-! CHECK:  %[[VAL_14:.*]] = fir.embox %[[VAL_12]](%[[VAL_13]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
-! CHECK:  fir.store %[[VAL_14]] to %[[VAL_6]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 end subroutine
+! CHECK-LABEL:   func.func @_QPalloc_comp(
+! CHECK-SAME:                             %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.array<10x!fir.type<_QFalloc_compTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>> {fir.bindc_name = "x"}) {
+! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
+! CHECK:           %[[VAL_2:.*]] = arith.constant 10 : index
+! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) dummy_scope %[[VAL_1]] {uniq_name = "_QFalloc_compEx"} : (!fir.ref<!fir.array<10x!fir.type<_QFalloc_compTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10x!fir.type<_QFalloc_compTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>>, !fir.ref<!fir.array<10x!fir.type<_QFalloc_compTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>>)
+! CHECK:           %[[VAL_5:.*]] = arith.constant false
+! CHECK:           %[[VAL_6:.*]] = fir.absent !fir.box<none>
+! CHECK:           %[[VAL_7:.*]] = fir.address_of(@_QQclXca783e65b88d3c02cf95fcee70c426bc) : !fir.ref<!fir.char<1,96>>
+! CHECK:           %[[VAL_8:.*]] = arith.constant 109 : i32
+! CHECK:           %[[VAL_9:.*]] = arith.constant 10 : index
+! CHECK:           %[[VAL_10:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_9]])  : (!fir.ref<!fir.array<10x!fir.type<_QFalloc_compTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>>, index) -> !fir.ref<!fir.type<_QFalloc_compTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
+! CHECK:           %[[VAL_11:.*]] = hlfir.designate %[[VAL_10]]{"a"}   {fortran_attrs = {{.*}}<allocatable>} : (!fir.ref<!fir.type<_QFalloc_compTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK:           %[[VAL_12:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_13:.*]] = arith.constant 100 : i64
+! CHECK:           %[[VAL_14:.*]] = arith.constant 0 : i32
+! CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_11]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_12]] : (index) -> i64
+! CHECK:           fir.call @_FortranAAllocatableSetBounds(%[[VAL_15]], %[[VAL_14]], %[[VAL_16]], %[[VAL_13]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
+! CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_11]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<!fir.char<1,96>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_19:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_17]], %[[VAL_5]], %[[VAL_6]], %[[VAL_18]], %[[VAL_8]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:           return
+! CHECK:         }
 
 subroutine ptr_comp_assign(x, ziel)
   type t
      real, pointer :: p(:)
   end type
   type(t) :: x(10)
-! CHECK-LABEL: func.func @_QPptr_comp_assign(
-! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]](%[[VAL_3:[a-z0-9]*]]) {{.*}}Ex
   real, target :: ziel(100)
   x(9_8)%p => ziel
-! CHECK:  %[[VAL_5:.*]] = arith.constant 100 : index
-! CHECK:  %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
-! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]](%[[VAL_6:[a-z0-9]*]]) dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<target>,  {{.*}}Eziel
-! CHECK:  %[[VAL_8:.*]] = arith.constant 9 : index
-! CHECK:  %[[VAL_9:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_8]])  : (!fir.ref<!fir.array<10x!fir.type<_QFptr_comp_assignTt{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>>, index) -> !fir.ref<!fir.type<_QFptr_comp_assignTt{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
-! CHECK:  %[[VAL_10:.*]] = hlfir.designate %[[VAL_9]]{"p"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QFptr_comp_assignTt{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
-! CHECK:  %[[VAL_11:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
-! CHECK:  %[[VAL_12:.*]] = fir.embox %[[VAL_7]]#0(%[[VAL_11]]) : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
-! CHECK:  fir.store %[[VAL_12]] to %[[VAL_10]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 end subroutine
+! CHECK-LABEL:   func.func @_QPptr_comp_assign(
+! CHECK-SAME:                                  %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.array<10x!fir.type<_QFptr_comp_assignTt{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>> {fir.bindc_name = "x"},
+! CHECK-SAME:                                  %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.array<100xf32>> {fir.bindc_name = "ziel", fir.target}) {
+! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
+! CHECK:           %[[VAL_3:.*]] = arith.constant 10 : index
+! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_4]]) dummy_scope %[[VAL_2]] {uniq_name = "_QFptr_comp_assignEx"} : (!fir.ref<!fir.array<10x!fir.type<_QFptr_comp_assignTt{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10x!fir.type<_QFptr_comp_assignTt{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>>, !fir.ref<!fir.array<10x!fir.type<_QFptr_comp_assignTt{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>>)
+! CHECK:           %[[VAL_6:.*]] = arith.constant 100 : index
+! CHECK:           %[[VAL_7:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_7]]) dummy_scope %[[VAL_2]] {fortran_attrs = {{.*}}<target>, uniq_name = "_QFptr_comp_assignEziel"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+! CHECK:           %[[VAL_9:.*]] = arith.constant 9 : index
+! CHECK:           %[[VAL_10:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_9]])  : (!fir.ref<!fir.array<10x!fir.type<_QFptr_comp_assignTt{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>>, index) -> !fir.ref<!fir.type<_QFptr_comp_assignTt{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
+! CHECK:           %[[VAL_11:.*]] = hlfir.designate %[[VAL_10]]{"p"}   {fortran_attrs = {{.*}}<pointer>} : (!fir.ref<!fir.type<_QFptr_comp_assignTt{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK:           %[[VAL_12:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_13:.*]] = fir.embox %[[VAL_8]]#1(%[[VAL_12]]) : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+! CHECK:           fir.store %[[VAL_13]] to %[[VAL_11]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK:           return
+! CHECK:         }

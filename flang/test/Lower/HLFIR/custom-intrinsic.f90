@@ -696,149 +696,177 @@ subroutine allocatables_test(a, b, c)
   c = min(a, b, c)
 end subroutine
 ! CHECK-LABEL:   func.func @_QPallocatables_test(
-! CHECK-SAME:                                    %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>> {fir.bindc_name = "a"},
-! CHECK-SAME:                                    %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>> {fir.bindc_name = "b"},
-! CHECK-SAME:                                    %[[VAL_2:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>> {fir.bindc_name = "c"}) {
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocatables_testEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>)
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocatables_testEb"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>)
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocatables_testEc"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>)
-! CHECK:           %[[VAL_6:.*]] = fir.address_of(@_QFallocatables_testECnx) : !fir.ref<i32>
-! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFallocatables_testECnx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_8:.*]] = fir.address_of(@_QFallocatables_testECny) : !fir.ref<i32>
-! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFallocatables_testECny"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_10:.*]] = fir.address_of(@_QFallocatables_testECnz) : !fir.ref<i32>
-! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFallocatables_testECnz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_12:.*]] = arith.constant 1 : i32
-! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_12]] : (i32) -> index
-! CHECK:           %[[VAL_14:.*]] = arith.constant 2 : i32
-! CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (i32) -> index
-! CHECK:           %[[VAL_16:.*]] = arith.constant 3 : i32
-! CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_16]] : (i32) -> index
-! CHECK:           %[[VAL_18:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_19:.*]] = arith.cmpi sgt, %[[VAL_13]], %[[VAL_18]] : index
-! CHECK:           %[[VAL_20:.*]] = arith.select %[[VAL_19]], %[[VAL_13]], %[[VAL_18]] : index
-! CHECK:           %[[VAL_21:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_22:.*]] = arith.cmpi sgt, %[[VAL_15]], %[[VAL_21]] : index
-! CHECK:           %[[VAL_23:.*]] = arith.select %[[VAL_22]], %[[VAL_15]], %[[VAL_21]] : index
-! CHECK:           %[[VAL_24:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_25:.*]] = arith.cmpi sgt, %[[VAL_17]], %[[VAL_24]] : index
-! CHECK:           %[[VAL_26:.*]] = arith.select %[[VAL_25]], %[[VAL_17]], %[[VAL_24]] : index
-! CHECK:           %[[VAL_27:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_20]], %[[VAL_23]], %[[VAL_26]] {fir.must_be_heap = true, uniq_name = "_QFallocatables_testEa.alloc"}
-! CHECK:           %[[VAL_28:.*]] = fir.shape %[[VAL_20]], %[[VAL_23]], %[[VAL_26]] : (index, index, index) -> !fir.shape<3>
-! CHECK:           %[[VAL_29:.*]] = fir.embox %[[VAL_27]](%[[VAL_28]]) : (!fir.heap<!fir.array<?x?x?xi32>>, !fir.shape<3>) -> !fir.box<!fir.heap<!fir.array<?x?x?xi32>>>
-! CHECK:           fir.store %[[VAL_29]] to %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
-! CHECK:           %[[VAL_30:.*]] = arith.constant 1 : i32
-! CHECK:           %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (i32) -> index
-! CHECK:           %[[VAL_32:.*]] = arith.constant 2 : i32
-! CHECK:           %[[VAL_33:.*]] = fir.convert %[[VAL_32]] : (i32) -> index
-! CHECK:           %[[VAL_34:.*]] = arith.constant 3 : i32
-! CHECK:           %[[VAL_35:.*]] = fir.convert %[[VAL_34]] : (i32) -> index
-! CHECK:           %[[VAL_36:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_37:.*]] = arith.cmpi sgt, %[[VAL_31]], %[[VAL_36]] : index
-! CHECK:           %[[VAL_38:.*]] = arith.select %[[VAL_37]], %[[VAL_31]], %[[VAL_36]] : index
-! CHECK:           %[[VAL_39:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_40:.*]] = arith.cmpi sgt, %[[VAL_33]], %[[VAL_39]] : index
-! CHECK:           %[[VAL_41:.*]] = arith.select %[[VAL_40]], %[[VAL_33]], %[[VAL_39]] : index
-! CHECK:           %[[VAL_42:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_43:.*]] = arith.cmpi sgt, %[[VAL_35]], %[[VAL_42]] : index
-! CHECK:           %[[VAL_44:.*]] = arith.select %[[VAL_43]], %[[VAL_35]], %[[VAL_42]] : index
-! CHECK:           %[[VAL_45:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_38]], %[[VAL_41]], %[[VAL_44]] {fir.must_be_heap = true, uniq_name = "_QFallocatables_testEb.alloc"}
-! CHECK:           %[[VAL_46:.*]] = fir.shape %[[VAL_38]], %[[VAL_41]], %[[VAL_44]] : (index, index, index) -> !fir.shape<3>
-! CHECK:           %[[VAL_47:.*]] = fir.embox %[[VAL_45]](%[[VAL_46]]) : (!fir.heap<!fir.array<?x?x?xi32>>, !fir.shape<3>) -> !fir.box<!fir.heap<!fir.array<?x?x?xi32>>>
-! CHECK:           fir.store %[[VAL_47]] to %[[VAL_4]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
-! CHECK:           %[[VAL_48:.*]] = arith.constant 1 : i32
-! CHECK:           %[[VAL_49:.*]] = fir.convert %[[VAL_48]] : (i32) -> index
-! CHECK:           %[[VAL_50:.*]] = arith.constant 2 : i32
-! CHECK:           %[[VAL_51:.*]] = fir.convert %[[VAL_50]] : (i32) -> index
-! CHECK:           %[[VAL_52:.*]] = arith.constant 3 : i32
-! CHECK:           %[[VAL_53:.*]] = fir.convert %[[VAL_52]] : (i32) -> index
-! CHECK:           %[[VAL_54:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_55:.*]] = arith.cmpi sgt, %[[VAL_49]], %[[VAL_54]] : index
-! CHECK:           %[[VAL_56:.*]] = arith.select %[[VAL_55]], %[[VAL_49]], %[[VAL_54]] : index
-! CHECK:           %[[VAL_57:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_58:.*]] = arith.cmpi sgt, %[[VAL_51]], %[[VAL_57]] : index
-! CHECK:           %[[VAL_59:.*]] = arith.select %[[VAL_58]], %[[VAL_51]], %[[VAL_57]] : index
-! CHECK:           %[[VAL_60:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_61:.*]] = arith.cmpi sgt, %[[VAL_53]], %[[VAL_60]] : index
-! CHECK:           %[[VAL_62:.*]] = arith.select %[[VAL_61]], %[[VAL_53]], %[[VAL_60]] : index
-! CHECK:           %[[VAL_63:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_56]], %[[VAL_59]], %[[VAL_62]] {fir.must_be_heap = true, uniq_name = "_QFallocatables_testEc.alloc"}
-! CHECK:           %[[VAL_64:.*]] = fir.shape %[[VAL_56]], %[[VAL_59]], %[[VAL_62]] : (index, index, index) -> !fir.shape<3>
-! CHECK:           %[[VAL_65:.*]] = fir.embox %[[VAL_63]](%[[VAL_64]]) : (!fir.heap<!fir.array<?x?x?xi32>>, !fir.shape<3>) -> !fir.box<!fir.heap<!fir.array<?x?x?xi32>>>
-! CHECK:           fir.store %[[VAL_65]] to %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
-! CHECK:           %[[VAL_66:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
-! CHECK:           %[[VAL_67:.*]] = fir.box_addr %[[VAL_66]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>) -> !fir.heap<!fir.array<?x?x?xi32>>
-! CHECK:           %[[VAL_68:.*]] = fir.convert %[[VAL_67]] : (!fir.heap<!fir.array<?x?x?xi32>>) -> i64
-! CHECK:           %[[VAL_69:.*]] = arith.constant 0 : i64
-! CHECK:           %[[VAL_70:.*]] = arith.cmpi ne, %[[VAL_68]], %[[VAL_69]] : i64
-! CHECK:           %[[VAL_71:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
-! CHECK:           %[[VAL_72:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_73:.*]]:3 = fir.box_dims %[[VAL_71]], %[[VAL_72]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
-! CHECK:           %[[VAL_74:.*]] = arith.constant 1 : index
-! CHECK:           %[[VAL_75:.*]]:3 = fir.box_dims %[[VAL_71]], %[[VAL_74]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
-! CHECK:           %[[VAL_76:.*]] = arith.constant 2 : index
-! CHECK:           %[[VAL_77:.*]]:3 = fir.box_dims %[[VAL_71]], %[[VAL_76]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
-! CHECK:           %[[VAL_78:.*]] = fir.shape %[[VAL_73]]#1, %[[VAL_75]]#1, %[[VAL_77]]#1 : (index, index, index) -> !fir.shape<3>
-! CHECK:           %[[VAL_79:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
-! CHECK:           %[[VAL_80:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
-! CHECK:           %[[VAL_81:.*]] = hlfir.elemental %[[VAL_78]] unordered : (!fir.shape<3>) -> !hlfir.expr<?x?x?xi32> {
-! CHECK:           ^bb0(%[[VAL_82:.*]]: index, %[[VAL_83:.*]]: index, %[[VAL_84:.*]]: index):
-! CHECK:             %[[VAL_85:.*]] = arith.constant 0 : index
-! CHECK:             %[[VAL_86:.*]]:3 = fir.box_dims %[[VAL_71]], %[[VAL_85]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
-! CHECK:             %[[VAL_87:.*]] = arith.constant 1 : index
-! CHECK:             %[[VAL_88:.*]]:3 = fir.box_dims %[[VAL_71]], %[[VAL_87]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
-! CHECK:             %[[VAL_89:.*]] = arith.constant 2 : index
-! CHECK:             %[[VAL_90:.*]]:3 = fir.box_dims %[[VAL_71]], %[[VAL_89]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
-! CHECK:             %[[VAL_91:.*]] = arith.constant 1 : index
-! CHECK:             %[[VAL_92:.*]] = arith.subi %[[VAL_86]]#0, %[[VAL_91]] : index
-! CHECK:             %[[VAL_93:.*]] = arith.addi %[[VAL_82]], %[[VAL_92]] : index
-! CHECK:             %[[VAL_94:.*]] = arith.subi %[[VAL_88]]#0, %[[VAL_91]] : index
-! CHECK:             %[[VAL_95:.*]] = arith.addi %[[VAL_83]], %[[VAL_94]] : index
-! CHECK:             %[[VAL_96:.*]] = arith.subi %[[VAL_90]]#0, %[[VAL_91]] : index
-! CHECK:             %[[VAL_97:.*]] = arith.addi %[[VAL_84]], %[[VAL_96]] : index
-! CHECK:             %[[VAL_98:.*]] = hlfir.designate %[[VAL_71]] (%[[VAL_93]], %[[VAL_95]], %[[VAL_97]])  : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index, index, index) -> !fir.ref<i32>
-! CHECK:             %[[VAL_99:.*]] = fir.load %[[VAL_98]] : !fir.ref<i32>
-! CHECK:             %[[VAL_100:.*]] = arith.constant 0 : index
-! CHECK:             %[[VAL_101:.*]]:3 = fir.box_dims %[[VAL_79]], %[[VAL_100]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
-! CHECK:             %[[VAL_102:.*]] = arith.constant 1 : index
-! CHECK:             %[[VAL_103:.*]]:3 = fir.box_dims %[[VAL_79]], %[[VAL_102]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
-! CHECK:             %[[VAL_104:.*]] = arith.constant 2 : index
-! CHECK:             %[[VAL_105:.*]]:3 = fir.box_dims %[[VAL_79]], %[[VAL_104]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
-! CHECK:             %[[VAL_106:.*]] = arith.constant 1 : index
-! CHECK:             %[[VAL_107:.*]] = arith.subi %[[VAL_101]]#0, %[[VAL_106]] : index
-! CHECK:             %[[VAL_108:.*]] = arith.addi %[[VAL_82]], %[[VAL_107]] : index
-! CHECK:             %[[VAL_109:.*]] = arith.subi %[[VAL_103]]#0, %[[VAL_106]] : index
-! CHECK:             %[[VAL_110:.*]] = arith.addi %[[VAL_83]], %[[VAL_109]] : index
-! CHECK:             %[[VAL_111:.*]] = arith.subi %[[VAL_105]]#0, %[[VAL_106]] : index
-! CHECK:             %[[VAL_112:.*]] = arith.addi %[[VAL_84]], %[[VAL_111]] : index
-! CHECK:             %[[VAL_113:.*]] = hlfir.designate %[[VAL_79]] (%[[VAL_108]], %[[VAL_110]], %[[VAL_112]])  : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index, index, index) -> !fir.ref<i32>
-! CHECK:             %[[VAL_114:.*]] = fir.load %[[VAL_113]] : !fir.ref<i32>
-! CHECK:             %[[VAL_115:.*]] = arith.cmpi slt, %[[VAL_99]], %[[VAL_114]] : i32
-! CHECK:             %[[VAL_116:.*]] = arith.select %[[VAL_115]], %[[VAL_99]], %[[VAL_114]] : i32
-! CHECK:             %[[VAL_117:.*]] = fir.if %[[VAL_70]] -> (i32) {
-! CHECK:               %[[VAL_118:.*]] = arith.constant 0 : index
-! CHECK:               %[[VAL_119:.*]]:3 = fir.box_dims %[[VAL_80]], %[[VAL_118]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
-! CHECK:               %[[VAL_120:.*]] = arith.constant 1 : index
-! CHECK:               %[[VAL_121:.*]]:3 = fir.box_dims %[[VAL_80]], %[[VAL_120]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
-! CHECK:               %[[VAL_122:.*]] = arith.constant 2 : index
-! CHECK:               %[[VAL_123:.*]]:3 = fir.box_dims %[[VAL_80]], %[[VAL_122]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
-! CHECK:               %[[VAL_124:.*]] = arith.constant 1 : index
-! CHECK:               %[[VAL_125:.*]] = arith.subi %[[VAL_119]]#0, %[[VAL_124]] : index
-! CHECK:               %[[VAL_126:.*]] = arith.addi %[[VAL_82]], %[[VAL_125]] : index
-! CHECK:               %[[VAL_127:.*]] = arith.subi %[[VAL_121]]#0, %[[VAL_124]] : index
-! CHECK:               %[[VAL_128:.*]] = arith.addi %[[VAL_83]], %[[VAL_127]] : index
-! CHECK:               %[[VAL_129:.*]] = arith.subi %[[VAL_123]]#0, %[[VAL_124]] : index
-! CHECK:               %[[VAL_130:.*]] = arith.addi %[[VAL_84]], %[[VAL_129]] : index
-! CHECK:               %[[VAL_131:.*]] = hlfir.designate %[[VAL_80]] (%[[VAL_126]], %[[VAL_128]], %[[VAL_130]])  : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index, index, index) -> !fir.ref<i32>
-! CHECK:               %[[VAL_132:.*]] = fir.load %[[VAL_131]] : !fir.ref<i32>
-! CHECK:               %[[VAL_133:.*]] = arith.cmpi slt, %[[VAL_116]], %[[VAL_132]] : i32
-! CHECK:               %[[VAL_134:.*]] = arith.select %[[VAL_133]], %[[VAL_116]], %[[VAL_132]] : i32
-! CHECK:               fir.result %[[VAL_134]] : i32
+! CHECK-SAME:                                    %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>> {fir.bindc_name = "a"},
+! CHECK-SAME:                                    %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>> {fir.bindc_name = "b"},
+! CHECK-SAME:                                    %[[VAL_2:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>> {fir.bindc_name = "c"}) {
+! CHECK:           %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_3]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFallocatables_testEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[VAL_3]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFallocatables_testEb"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_2]] dummy_scope %[[VAL_3]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFallocatables_testEc"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>)
+! CHECK:           %[[VAL_7:.*]] = fir.address_of(@_QFallocatables_testECnx) : !fir.ref<i32>
+! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] {fortran_attrs = {{.*}}<parameter>, uniq_name = "_QFallocatables_testECnx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_9:.*]] = fir.address_of(@_QFallocatables_testECny) : !fir.ref<i32>
+! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9]] {fortran_attrs = {{.*}}<parameter>, uniq_name = "_QFallocatables_testECny"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_11:.*]] = fir.address_of(@_QFallocatables_testECnz) : !fir.ref<i32>
+! CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]] {fortran_attrs = {{.*}}<parameter>, uniq_name = "_QFallocatables_testECnz"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_13:.*]] = arith.constant false
+! CHECK:           %[[VAL_14:.*]] = fir.absent !fir.box<none>
+! CHECK:           %[[VAL_15:.*]] = fir.address_of(@_QQclX9ac8f8ca39400c93d3d5d265c9eadfd7) : !fir.ref<!fir.char<1,75>>
+! CHECK:           %[[VAL_16:.*]] = arith.constant 692 : i32
+! CHECK:           %[[VAL_17:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_18:.*]] = arith.constant 1 : i32
+! CHECK:           %[[VAL_19:.*]] = arith.constant 0 : i32
+! CHECK:           %[[VAL_20:.*]] = fir.convert %[[VAL_4]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_17]] : (index) -> i64
+! CHECK:           %[[VAL_22:.*]] = fir.convert %[[VAL_18]] : (i32) -> i64
+! CHECK:           fir.call @_FortranAAllocatableSetBounds(%[[VAL_20]], %[[VAL_19]], %[[VAL_21]], %[[VAL_22]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
+! CHECK:           %[[VAL_23:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_24:.*]] = arith.constant 2 : i32
+! CHECK:           %[[VAL_25:.*]] = arith.constant 1 : i32
+! CHECK:           %[[VAL_26:.*]] = fir.convert %[[VAL_4]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_27:.*]] = fir.convert %[[VAL_23]] : (index) -> i64
+! CHECK:           %[[VAL_28:.*]] = fir.convert %[[VAL_24]] : (i32) -> i64
+! CHECK:           fir.call @_FortranAAllocatableSetBounds(%[[VAL_26]], %[[VAL_25]], %[[VAL_27]], %[[VAL_28]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
+! CHECK:           %[[VAL_29:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_30:.*]] = arith.constant 3 : i32
+! CHECK:           %[[VAL_31:.*]] = arith.constant 2 : i32
+! CHECK:           %[[VAL_32:.*]] = fir.convert %[[VAL_4]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_33:.*]] = fir.convert %[[VAL_29]] : (index) -> i64
+! CHECK:           %[[VAL_34:.*]] = fir.convert %[[VAL_30]] : (i32) -> i64
+! CHECK:           fir.call @_FortranAAllocatableSetBounds(%[[VAL_32]], %[[VAL_31]], %[[VAL_33]], %[[VAL_34]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
+! CHECK:           %[[VAL_35:.*]] = fir.convert %[[VAL_4]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_36:.*]] = fir.convert %[[VAL_15]] : (!fir.ref<!fir.char<1,75>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_37:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_35]], %[[VAL_13]], %[[VAL_14]], %[[VAL_36]], %[[VAL_16]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:           %[[VAL_38:.*]] = arith.constant false
+! CHECK:           %[[VAL_39:.*]] = fir.absent !fir.box<none>
+! CHECK:           %[[VAL_40:.*]] = fir.address_of(@_QQclX9ac8f8ca39400c93d3d5d265c9eadfd7) : !fir.ref<!fir.char<1,75>>
+! CHECK:           %[[VAL_41:.*]] = arith.constant 693 : i32
+! CHECK:           %[[VAL_42:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_43:.*]] = arith.constant 1 : i32
+! CHECK:           %[[VAL_44:.*]] = arith.constant 0 : i32
+! CHECK:           %[[VAL_45:.*]] = fir.convert %[[VAL_5]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_46:.*]] = fir.convert %[[VAL_42]] : (index) -> i64
+! CHECK:           %[[VAL_47:.*]] = fir.convert %[[VAL_43]] : (i32) -> i64
+! CHECK:           fir.call @_FortranAAllocatableSetBounds(%[[VAL_45]], %[[VAL_44]], %[[VAL_46]], %[[VAL_47]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
+! CHECK:           %[[VAL_48:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_49:.*]] = arith.constant 2 : i32
+! CHECK:           %[[VAL_50:.*]] = arith.constant 1 : i32
+! CHECK:           %[[VAL_51:.*]] = fir.convert %[[VAL_5]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_52:.*]] = fir.convert %[[VAL_48]] : (index) -> i64
+! CHECK:           %[[VAL_53:.*]] = fir.convert %[[VAL_49]] : (i32) -> i64
+! CHECK:           fir.call @_FortranAAllocatableSetBounds(%[[VAL_51]], %[[VAL_50]], %[[VAL_52]], %[[VAL_53]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
+! CHECK:           %[[VAL_54:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_55:.*]] = arith.constant 3 : i32
+! CHECK:           %[[VAL_56:.*]] = arith.constant 2 : i32
+! CHECK:           %[[VAL_57:.*]] = fir.convert %[[VAL_5]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_58:.*]] = fir.convert %[[VAL_54]] : (index) -> i64
+! CHECK:           %[[VAL_59:.*]] = fir.convert %[[VAL_55]] : (i32) -> i64
+! CHECK:           fir.call @_FortranAAllocatableSetBounds(%[[VAL_57]], %[[VAL_56]], %[[VAL_58]], %[[VAL_59]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
+! CHECK:           %[[VAL_60:.*]] = fir.convert %[[VAL_5]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_61:.*]] = fir.convert %[[VAL_40]] : (!fir.ref<!fir.char<1,75>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_62:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_60]], %[[VAL_38]], %[[VAL_39]], %[[VAL_61]], %[[VAL_41]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:           %[[VAL_63:.*]] = arith.constant false
+! CHECK:           %[[VAL_64:.*]] = fir.absent !fir.box<none>
+! CHECK:           %[[VAL_65:.*]] = fir.address_of(@_QQclX9ac8f8ca39400c93d3d5d265c9eadfd7) : !fir.ref<!fir.char<1,75>>
+! CHECK:           %[[VAL_66:.*]] = arith.constant 694 : i32
+! CHECK:           %[[VAL_67:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_68:.*]] = arith.constant 1 : i32
+! CHECK:           %[[VAL_69:.*]] = arith.constant 0 : i32
+! CHECK:           %[[VAL_70:.*]] = fir.convert %[[VAL_6]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_71:.*]] = fir.convert %[[VAL_67]] : (index) -> i64
+! CHECK:           %[[VAL_72:.*]] = fir.convert %[[VAL_68]] : (i32) -> i64
+! CHECK:           fir.call @_FortranAAllocatableSetBounds(%[[VAL_70]], %[[VAL_69]], %[[VAL_71]], %[[VAL_72]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
+! CHECK:           %[[VAL_73:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_74:.*]] = arith.constant 2 : i32
+! CHECK:           %[[VAL_75:.*]] = arith.constant 1 : i32
+! CHECK:           %[[VAL_76:.*]] = fir.convert %[[VAL_6]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_77:.*]] = fir.convert %[[VAL_73]] : (index) -> i64
+! CHECK:           %[[VAL_78:.*]] = fir.convert %[[VAL_74]] : (i32) -> i64
+! CHECK:           fir.call @_FortranAAllocatableSetBounds(%[[VAL_76]], %[[VAL_75]], %[[VAL_77]], %[[VAL_78]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
+! CHECK:           %[[VAL_79:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_80:.*]] = arith.constant 3 : i32
+! CHECK:           %[[VAL_81:.*]] = arith.constant 2 : i32
+! CHECK:           %[[VAL_82:.*]] = fir.convert %[[VAL_6]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_83:.*]] = fir.convert %[[VAL_79]] : (index) -> i64
+! CHECK:           %[[VAL_84:.*]] = fir.convert %[[VAL_80]] : (i32) -> i64
+! CHECK:           fir.call @_FortranAAllocatableSetBounds(%[[VAL_82]], %[[VAL_81]], %[[VAL_83]], %[[VAL_84]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
+! CHECK:           %[[VAL_85:.*]] = fir.convert %[[VAL_6]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_86:.*]] = fir.convert %[[VAL_65]] : (!fir.ref<!fir.char<1,75>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_87:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_85]], %[[VAL_63]], %[[VAL_64]], %[[VAL_86]], %[[VAL_66]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:           %[[VAL_88:.*]] = fir.load %[[VAL_6]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
+! CHECK:           %[[VAL_89:.*]] = fir.box_addr %[[VAL_88]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>) -> !fir.heap<!fir.array<?x?x?xi32>>
+! CHECK:           %[[VAL_90:.*]] = fir.convert %[[VAL_89]] : (!fir.heap<!fir.array<?x?x?xi32>>) -> i64
+! CHECK:           %[[VAL_91:.*]] = arith.constant 0 : i64
+! CHECK:           %[[VAL_92:.*]] = arith.cmpi ne, %[[VAL_90]], %[[VAL_91]] : i64
+! CHECK:           %[[VAL_93:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
+! CHECK:           %[[VAL_94:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_95:.*]]:3 = fir.box_dims %[[VAL_93]], %[[VAL_94]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
+! CHECK:           %[[VAL_96:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_97:.*]]:3 = fir.box_dims %[[VAL_93]], %[[VAL_96]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
+! CHECK:           %[[VAL_98:.*]] = arith.constant 2 : index
+! CHECK:           %[[VAL_99:.*]]:3 = fir.box_dims %[[VAL_93]], %[[VAL_98]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
+! CHECK:           %[[VAL_100:.*]] = fir.shape %[[VAL_95]]#1, %[[VAL_97]]#1, %[[VAL_99]]#1 : (index, index, index) -> !fir.shape<3>
+! CHECK:           %[[VAL_101:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
+! CHECK:           %[[VAL_102:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
+! CHECK:           %[[VAL_103:.*]] = hlfir.elemental %[[VAL_100]] unordered : (!fir.shape<3>) -> !hlfir.expr<?x?x?xi32> {
+! CHECK:           ^bb0(%[[VAL_104:.*]]: index, %[[VAL_105:.*]]: index, %[[VAL_106:.*]]: index):
+! CHECK:             %[[VAL_107:.*]] = arith.constant 0 : index
+! CHECK:             %[[VAL_108:.*]]:3 = fir.box_dims %[[VAL_93]], %[[VAL_107]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
+! CHECK:             %[[VAL_109:.*]] = arith.constant 1 : index
+! CHECK:             %[[VAL_110:.*]]:3 = fir.box_dims %[[VAL_93]], %[[VAL_109]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
+! CHECK:             %[[VAL_111:.*]] = arith.constant 2 : index
+! CHECK:             %[[VAL_112:.*]]:3 = fir.box_dims %[[VAL_93]], %[[VAL_111]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
+! CHECK:             %[[VAL_113:.*]] = arith.constant 1 : index
+! CHECK:             %[[VAL_114:.*]] = arith.subi %[[VAL_108]]#0, %[[VAL_113]] : index
+! CHECK:             %[[VAL_115:.*]] = arith.addi %[[VAL_104]], %[[VAL_114]] : index
+! CHECK:             %[[VAL_116:.*]] = arith.subi %[[VAL_110]]#0, %[[VAL_113]] : index
+! CHECK:             %[[VAL_117:.*]] = arith.addi %[[VAL_105]], %[[VAL_116]] : index
+! CHECK:             %[[VAL_118:.*]] = arith.subi %[[VAL_112]]#0, %[[VAL_113]] : index
+! CHECK:             %[[VAL_119:.*]] = arith.addi %[[VAL_106]], %[[VAL_118]] : index
+! CHECK:             %[[VAL_120:.*]] = hlfir.designate %[[VAL_93]] (%[[VAL_115]], %[[VAL_117]], %[[VAL_119]])  : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index, index, index) -> !fir.ref<i32>
+! CHECK:             %[[VAL_121:.*]] = fir.load %[[VAL_120]] : !fir.ref<i32>
+! CHECK:             %[[VAL_122:.*]] = arith.constant 0 : index
+! CHECK:             %[[VAL_123:.*]]:3 = fir.box_dims %[[VAL_101]], %[[VAL_122]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
+! CHECK:             %[[VAL_124:.*]] = arith.constant 1 : index
+! CHECK:             %[[VAL_125:.*]]:3 = fir.box_dims %[[VAL_101]], %[[VAL_124]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
+! CHECK:             %[[VAL_126:.*]] = arith.constant 2 : index
+! CHECK:             %[[VAL_127:.*]]:3 = fir.box_dims %[[VAL_101]], %[[VAL_126]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
+! CHECK:             %[[VAL_128:.*]] = arith.constant 1 : index
+! CHECK:             %[[VAL_129:.*]] = arith.subi %[[VAL_123]]#0, %[[VAL_128]] : index
+! CHECK:             %[[VAL_130:.*]] = arith.addi %[[VAL_104]], %[[VAL_129]] : index
+! CHECK:             %[[VAL_131:.*]] = arith.subi %[[VAL_125]]#0, %[[VAL_128]] : index
+! CHECK:             %[[VAL_132:.*]] = arith.addi %[[VAL_105]], %[[VAL_131]] : index
+! CHECK:             %[[VAL_133:.*]] = arith.subi %[[VAL_127]]#0, %[[VAL_128]] : index
+! CHECK:             %[[VAL_134:.*]] = arith.addi %[[VAL_106]], %[[VAL_133]] : index
+! CHECK:             %[[VAL_135:.*]] = hlfir.designate %[[VAL_101]] (%[[VAL_130]], %[[VAL_132]], %[[VAL_134]])  : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index, index, index) -> !fir.ref<i32>
+! CHECK:             %[[VAL_136:.*]] = fir.load %[[VAL_135]] : !fir.ref<i32>
+! CHECK:             %[[VAL_137:.*]] = arith.cmpi slt, %[[VAL_121]], %[[VAL_136]] : i32
+! CHECK:             %[[VAL_138:.*]] = arith.select %[[VAL_137]], %[[VAL_121]], %[[VAL_136]] : i32
+! CHECK:             %[[VAL_139:.*]] = fir.if %[[VAL_92]] -> (i32) {
+! CHECK:               %[[VAL_140:.*]] = arith.constant 0 : index
+! CHECK:               %[[VAL_141:.*]]:3 = fir.box_dims %[[VAL_102]], %[[VAL_140]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
+! CHECK:               %[[VAL_142:.*]] = arith.constant 1 : index
+! CHECK:               %[[VAL_143:.*]]:3 = fir.box_dims %[[VAL_102]], %[[VAL_142]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
+! CHECK:               %[[VAL_144:.*]] = arith.constant 2 : index
+! CHECK:               %[[VAL_145:.*]]:3 = fir.box_dims %[[VAL_102]], %[[VAL_144]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
+! CHECK:               %[[VAL_146:.*]] = arith.constant 1 : index
+! CHECK:               %[[VAL_147:.*]] = arith.subi %[[VAL_141]]#0, %[[VAL_146]] : index
+! CHECK:               %[[VAL_148:.*]] = arith.addi %[[VAL_104]], %[[VAL_147]] : index
+! CHECK:               %[[VAL_149:.*]] = arith.subi %[[VAL_143]]#0, %[[VAL_146]] : index
+! CHECK:               %[[VAL_150:.*]] = arith.addi %[[VAL_105]], %[[VAL_149]] : index
+! CHECK:               %[[VAL_151:.*]] = arith.subi %[[VAL_145]]#0, %[[VAL_146]] : index
+! CHECK:               %[[VAL_152:.*]] = arith.addi %[[VAL_106]], %[[VAL_151]] : index
+! CHECK:               %[[VAL_153:.*]] = hlfir.designate %[[VAL_102]] (%[[VAL_148]], %[[VAL_150]], %[[VAL_152]])  : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index, index, index) -> !fir.ref<i32>
+! CHECK:               %[[VAL_154:.*]] = fir.load %[[VAL_153]] : !fir.ref<i32>
+! CHECK:               %[[VAL_155:.*]] = arith.cmpi slt, %[[VAL_138]], %[[VAL_154]] : i32
+! CHECK:               %[[VAL_156:.*]] = arith.select %[[VAL_155]], %[[VAL_138]], %[[VAL_154]] : i32
+! CHECK:               fir.result %[[VAL_156]] : i32
 ! CHECK:             } else {
-! CHECK:               fir.result %[[VAL_116]] : i32
+! CHECK:               fir.result %[[VAL_138]] : i32
 ! CHECK:             }
-! CHECK:             hlfir.yield_element %[[VAL_135:.*]] : i32
+! CHECK:             hlfir.yield_element %[[VAL_139]] : i32
 ! CHECK:           }
-! CHECK:           hlfir.assign %[[VAL_136:.*]] to %[[VAL_5]]#0 realloc : !hlfir.expr<?x?x?xi32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
-! CHECK:           hlfir.destroy %[[VAL_136]] : !hlfir.expr<?x?x?xi32>
+! CHECK:           hlfir.assign %[[VAL_103]] to %[[VAL_6]]#0 realloc : !hlfir.expr<?x?x?xi32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
+! CHECK:           hlfir.destroy %[[VAL_103]] : !hlfir.expr<?x?x?xi32>
 ! CHECK:           return
 ! CHECK:         }

@@ -34,12 +34,13 @@ end subroutine
 ! CHECK:  %[[VAL_9:.*]] = arith.constant 0 : i64
 ! CHECK:  %[[VAL_10:.*]] = arith.cmpi ne, %[[VAL_8]], %[[VAL_9]] : i64
 ! CHECK:  fir.if %[[VAL_10]] {
-! CHECK:    %[[VAL_11:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
-! CHECK:    %[[VAL_12:.*]] = fir.box_addr %[[VAL_11]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
-! CHECK:    fir.freemem %[[VAL_12]] : !fir.heap<f32>
-! CHECK:    %[[VAL_13:.*]] = fir.zero_bits !fir.heap<f32>
-! CHECK:    %[[VAL_14:.*]] = fir.embox %[[VAL_13]] : (!fir.heap<f32>) -> !fir.box<!fir.heap<f32>>
-! CHECK:    fir.store %[[VAL_14]] to %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
+! CHECK:    %[[VAL_11:.*]] = arith.constant false
+! CHECK:    %[[VAL_12:.*]] = fir.absent !fir.box<none>
+! CHECK:    %[[VAL_13:.*]] = fir.address_of(@_QQclX572920c036ca2a0767a89e67f96902da) : !fir.ref<!fir.char<1,91>>
+! CHECK:    %[[VAL_14:.*]] = arith.constant 23 : i32
+! CHECK:    %[[VAL_15:.*]] = fir.convert %[[VAL_3]]#1 : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:    %[[VAL_16:.*]] = fir.convert %[[VAL_13]] : (!fir.ref<!fir.char<1,91>>) -> !fir.ref<i8>
+! CHECK:    %[[VAL_17:.*]] = fir.call @_FortranAAllocatableDeallocate(%[[VAL_15]], %[[VAL_11]], %[[VAL_12]], %[[VAL_16]], %[[VAL_14]])
 ! CHECK:  }
 
 subroutine multiple_return(cdt)
@@ -59,7 +60,7 @@ end subroutine
 ! CHECK:  cf.br ^bb3
 ! CHECK: ^bb3:
 ! CHECK:  fir.if {{.*}} {
-! CHECK:    fir.freemem
+! CHECK:    fir.call @_FortranAAllocatableDeallocate
 ! CHECK:  }
 ! CHECK:  return
 
@@ -105,7 +106,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPsimple_block(
 ! CHECK:  fir.call @_QPbar
 ! CHECK:  fir.if {{.*}} {
-! CHECK:    fir.freemem
+! CHECK:    fir.call @_FortranAAllocatableDeallocate
 ! CHECK:  }
 ! CHECK:  fir.call @_QPbar_after_block
 
@@ -123,13 +124,13 @@ end subroutine
 ! CHECK:  cf.cond_br %{{.*}}, ^bb1, ^bb2
 ! CHECK: ^bb1:
 ! CHECK:  fir.if {{.*}} {
-! CHECK:    fir.freemem
+! CHECK:    fir.call @_FortranAAllocatableDeallocate
 ! CHECK:  }
 ! CHECK:  cf.br ^bb3
 ! CHECK: ^bb2:
 ! CHECK:  fir.call @_QPbar
 ! CHECK:  fir.if {{.*}} {
-! CHECK:    fir.freemem
+! CHECK:    fir.call @_FortranAAllocatableDeallocate
 ! CHECK:  }
 ! CHECK:  fir.call @_QPbar_after_block
 ! CHECK:  cf.br ^bb3

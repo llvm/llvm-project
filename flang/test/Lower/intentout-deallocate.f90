@@ -56,16 +56,15 @@ contains
 ! CHECK: %[[BOX_ADDR_PTR:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.heap<!fir.array<?xi32>>) -> i64
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i64
 ! CHECK: %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_PTR]], %[[C0]] : i64
-! CHECK: fir.if %[[IS_ALLOCATED]] {
-! CHECK:   %[[BOX:.*]] = fir.load %[[ARG0]]{{[#0]*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:   %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK:   fir.freemem %[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>
-! CHECK:   %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-! CHECK:   %[[C0:.*]] = arith.constant 0 : index
-! CHECK:   %[[SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
-! CHECK:   %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-! CHECK:   fir.store %[[EMBOX]] to %[[ARG0]]{{[#0]*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK: }
+! CHECK:   fir.if %[[IS_ALLOCATED]] {
+! CHECK:     %[[VAL_6:.*]] = arith.constant false
+! CHECK:     %[[VAL_7:.*]] = fir.absent !fir.box<none>
+! CHECK:     %[[VAL_8:.*]] = fir.address_of(@_QQclXec1fdecbdab00016d5f81c67562024e7) : !fir.ref<!fir.char<1,73>>
+! CHECK:     %[[VAL_9:.*]] = arith.constant 38 : i32
+! CHECK:     %[[VAL_10:.*]] = fir.convert {{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:     %[[VAL_11:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.char<1,73>>) -> !fir.ref<i8>
+! CHECK:     %[[VAL_12:.*]] = fir.call @_FortranAAllocatableDeallocate(%[[VAL_10]], %[[VAL_6]], %[[VAL_7]], %[[VAL_11]], %[[VAL_9]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:   }
 
   subroutine sub2()
     integer, allocatable :: a(:)
@@ -78,15 +77,14 @@ contains
 ! FIR-LABEL: func.func @_QMmod1Psub2()
 ! FIR: %[[BOX:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "a", uniq_name = "_QMmod1Fsub2Ea"}
 ! FIR: %[[BOX_ALLOC:.*]] = fir.alloca !fir.heap<!fir.array<?xi32>> {uniq_name = "_QMmod1Fsub2Ea.addr"}
+! FIR: fir.call @_FortranAAllocatableAllocate
 ! FIR: %[[BOX_ADDR:.*]] = fir.load %[[BOX_ALLOC]] : !fir.ref<!fir.heap<!fir.array<?xi32>>>
 ! FIR: %[[BOX_ADDR_PTR:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.heap<!fir.array<?xi32>>) -> i64
 ! FIR: %[[C0:.*]] = arith.constant 0 : i64
 ! FIR: %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_PTR]], %[[C0]] : i64
 ! FIR: fir.if %[[IS_ALLOCATED]] {
-! FIR:   %[[LOAD:.*]] = fir.load %[[BOX_ALLOC]] : !fir.ref<!fir.heap<!fir.array<?xi32>>>
-! FIR:   fir.freemem %[[LOAD]] : !fir.heap<!fir.array<?xi32>>
-! FIR:   %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-! FIR:   fir.store %[[ZERO]] to %[[BOX_ALLOC]] : !fir.ref<!fir.heap<!fir.array<?xi32>>>
+! FIR:    %[[CONV:.*]] = fir.convert %[[BOX]]
+! FIR:    %[[FREE:.*]] = fir.call @_FortranAAllocatableDeallocate(%[[CONV]], {{.*}}
 ! FIR: }
 ! FIR: %[[LOAD:.*]] = fir.load %[[BOX_ALLOC]] : !fir.ref<!fir.heap<!fir.array<?xi32>>>
 ! FIR: %{{.*}} = fir.embox %[[LOAD]](%{{.*}}) : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<
@@ -100,14 +98,14 @@ contains
 ! HLFIR: %[[C0:.*]] = arith.constant 0 : i64
 ! HLFIR: %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_PTR]], %[[C0]] : i64
 ! HLFIR: fir.if %[[IS_ALLOCATED]] {
-! HLFIR:   %[[BOX:.*]] = fir.load %[[ARG0]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! HLFIR:   %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! HLFIR:   fir.freemem %[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>
-! HLFIR:   %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-! HLFIR:   %[[C0:.*]] = arith.constant 0 : index
-! HLFIR:   %[[SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
-! HLFIR:   %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-! HLFIR:   fir.store %[[EMBOX]] to %[[ARG0]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! HLFIR:   %[[VAL_24:.*]] = arith.constant false
+! HLFIR:   %[[VAL_25:.*]] = fir.absent !fir.box<none>
+! HLFIR:   %[[VAL_26:.*]] = fir.address_of(@_QQclXec1fdecbdab00016d5f81c67562024e7) : !fir.ref<!fir.char<1,73>>
+! HLFIR:   %[[VAL_27:.*]] = arith.constant {{.*}} : i32
+! HLFIR:   %[[VAL_28:.*]] = fir.convert %[[ARG0]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! HLFIR:   %[[VAL_29:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,73>>) -> !fir.ref<i8>
+! HLFIR:   %[[VAL_30:.*]] = fir.call @_FortranAAllocatableDeallocate(%[[VAL_28]], %[[VAL_24]], %[[VAL_25]], %[[VAL_29]], %[[VAL_27]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! HLFIR: }
 ! HLFIR: fir.call @sub3(%[[ARG0]]#0) {{.*}}: (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> ()
 
   subroutine sub4()
@@ -180,24 +178,25 @@ contains
 ! CHECK-LABEL: func.func @_QMmod1Psub9(
 ! FIR-SAME:  %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a", fir.optional})
 ! HLFIR: %[[ARG0:.*]]:2 = hlfir.declare {{.*}}"_QMmod1Fsub9Ea"
-! CHECK: %[[IS_PRESENT:.*]] = fir.is_present %[[ARG0]]{{[#0]*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> i1
-! CHECK: fir.if %[[IS_PRESENT]] {
-! CHECK:   %[[BOX:.*]] = fir.load %[[ARG0]]{{[#0]*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:   %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK:   %[[BOX_ADDR_PTR:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.heap<!fir.array<?xi32>>) -> i64
-! CHECK:   %[[C0:.*]] = arith.constant 0 : i64
-! CHECK:   %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_PTR]], %[[C0]] : i64
-! CHECK:   fir.if %[[IS_ALLOCATED]] {
-! CHECK:     %[[BOX:.*]] = fir.load %[[ARG0]]{{[#0]*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:     %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK:     fir.freemem %[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>
-! CHECK:     %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-! CHECK:     %[[C0:.*]] = arith.constant 0 : index
-! CHECK:     %[[SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
-! CHECK:     %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-! CHECK:     fir.store %[[EMBOX]] to %[[ARG0]]{{[#0]*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:   }
-! CHECK: }
+! CHECK:           %[[VAL_1:.*]] = fir.is_present %[[ARG0]]{{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> i1
+! CHECK:           fir.if %[[VAL_1]] {
+! CHECK:             %[[VAL_2:.*]] = fir.load %[[ARG0]]{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:             %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:             %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.heap<!fir.array<?xi32>>) -> i64
+! CHECK:             %[[VAL_5:.*]] = arith.constant 0 : i64
+! CHECK:             %[[VAL_6:.*]] = arith.cmpi ne, %[[VAL_4]], %[[VAL_5]] : i64
+! CHECK:             fir.if %[[VAL_6]] {
+! CHECK:               %[[VAL_7:.*]] = arith.constant false
+! CHECK:               %[[VAL_8:.*]] = fir.absent !fir.box<none>
+! CHECK:               %[[VAL_9:.*]] = fir.address_of(@_QQclXec1fdecbdab00016d5f81c67562024e7) : !fir.ref<!fir.char<1,73>>
+! CHECK:               %[[VAL_10:.*]] = arith.constant {{.*}} : i32
+! CHECK:               %[[VAL_11:.*]] = fir.convert %[[ARG0]]{{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:               %[[VAL_12:.*]] = fir.convert %[[VAL_9]] : (!fir.ref<!fir.char<1,73>>) -> !fir.ref<i8>
+! CHECK:               %[[VAL_13:.*]] = fir.call @_FortranAAllocatableDeallocate(%[[VAL_11]], %[[VAL_7]], %[[VAL_8]], %[[VAL_12]], %[[VAL_10]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:             }
+! CHECK:           }
+! CHECK:           return
+! CHECK:         }
 
   subroutine sub10(a)
     integer, intent(out), allocatable :: a(:)
@@ -208,21 +207,24 @@ contains
 ! CHECK-LABEL: func.func @_QMmod1Psub10(
 ! FIR-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a"}) {
 ! HLFIR: %[[ARG0:.*]]:2 = hlfir.declare {{.*}}"_QMmod1Fsub10Ea"
-! CHECK: %[[LOAD:.*]] = fir.load %[[ARG0]]{{[#0]*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK: %[[BOX_ADDR_PTR:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.heap<!fir.array<?xi32>>) -> i64
-! CHECK: %[[C0:.*]] = arith.constant 0 : i64
-! CHECK: %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_PTR]], %[[C0]] : i64
-! CHECK: fir.if %[[IS_ALLOCATED]] {
-! CHECK:   %[[BOX:.*]] = fir.load %[[ARG0]]{{[#0]*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:   %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK:   fir.freemem %[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>
-! CHECK:   %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-! CHECK:   %[[C0:.*]] = arith.constant 0 : index
-! CHECK:   %[[SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
-! CHECK:   %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-! CHECK:   fir.store %[[EMBOX]] to %[[ARG0]]{{[#0]*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK: }
+! CHECK:           %[[VAL_1:.*]] = fir.load %[[ARG0]]{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:           %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.heap<!fir.array<?xi32>>) -> i64
+! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i64
+! CHECK:           %[[VAL_5:.*]] = arith.cmpi ne, %[[VAL_3]], %[[VAL_4]] : i64
+! CHECK:           fir.if %[[VAL_5]] {
+! CHECK:             %[[VAL_6:.*]] = arith.constant false
+! CHECK:             %[[VAL_7:.*]] = fir.absent !fir.box<none>
+! CHECK:             %[[VAL_8:.*]] = fir.address_of(@_QQclXec1fdecbdab00016d5f81c67562024e7) : !fir.ref<!fir.char<1,73>>
+! CHECK:             %[[VAL_9:.*]] = arith.constant {{.*}} : i32
+! CHECK:             %[[VAL_10:.*]] = fir.convert %[[ARG0]]{{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:             %[[VAL_11:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.char<1,73>>) -> !fir.ref<i8>
+! CHECK:             %[[VAL_12:.*]] = fir.call @_FortranAAllocatableDeallocate(%[[VAL_10]], %[[VAL_6]], %[[VAL_7]], %[[VAL_11]], %[[VAL_9]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:           }
+! CHECK:           cf.br ^bb1
+! CHECK:         ^bb1:  // pred: ^bb0
+! CHECK:           return
+! CHECK:         }
 
 ! CHECK-LABEL: func.func @_QMmod1Psub11() {
 ! CHECK-NOT: fir.freemem
@@ -235,40 +237,46 @@ contains
 ! CHECK-LABEL: func.func @_QMmod1Psub12(
 ! FIR-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a"}) {
 ! HLFIR: %[[ARG0:.*]]:2 = hlfir.declare {{.*}}"_QMmod1Fsub12Ea"
-! CHECK: %[[LOAD:.*]] = fir.load %[[ARG0]]{{[#0]*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK: %[[BOX_ADDR_PTR:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.heap<!fir.array<?xi32>>) -> i64
-! CHECK: %[[C0:.*]] = arith.constant 0 : i64
-! CHECK: %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_PTR]], %[[C0]] : i64
-! CHECK: fir.if %[[IS_ALLOCATED]] {
-! CHECK:   %[[BOX:.*]] = fir.load %[[ARG0]]{{[#0]*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:   %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK:   fir.freemem %[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>
-! CHECK:   %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-! CHECK:   %[[C0:.*]] = arith.constant 0 : index
-! CHECK:   %[[SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
-! CHECK:   %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-! CHECK:   fir.store %[[EMBOX]] to %[[ARG0]]{{[#0]*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK: }
+! CHECK:           %[[VAL_1:.*]] = fir.load %[[ARG0]]{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:           %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.heap<!fir.array<?xi32>>) -> i64
+! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i64
+! CHECK:           %[[VAL_5:.*]] = arith.cmpi ne, %[[VAL_3]], %[[VAL_4]] : i64
+! CHECK:           fir.if %[[VAL_5]] {
+! CHECK:             %[[VAL_6:.*]] = arith.constant false
+! CHECK:             %[[VAL_7:.*]] = fir.absent !fir.box<none>
+! CHECK:             %[[VAL_8:.*]] = fir.address_of(@_QQclXec1fdecbdab00016d5f81c67562024e7) : !fir.ref<!fir.char<1,73>>
+! CHECK:             %[[VAL_9:.*]] = arith.constant {{.*}} : i32
+! CHECK:             %[[VAL_10:.*]] = fir.convert %[[ARG0]]{{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:             %[[VAL_11:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.char<1,73>>) -> !fir.ref<i8>
+! CHECK:             %[[VAL_12:.*]] = fir.call @_FortranAAllocatableDeallocate(%[[VAL_10]], %[[VAL_6]], %[[VAL_7]], %[[VAL_11]], %[[VAL_9]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:           }
+! CHECK:           cf.br ^bb1
+! CHECK:         ^bb1:  // pred: ^bb0
+! CHECK:           return
+! CHECK:         }
 
 ! CHECK-LABEL: func.func @_QMmod1Psub13(
 ! FIR-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a"}) {
 ! HLFIR: %[[ARG0:.*]]:2 = hlfir.declare {{.*}}"_QMmod1Fsub12Ea"
-! CHECK: %[[LOAD:.*]] = fir.load %[[ARG0]]{{[#0]*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK: %[[BOX_ADDR_PTR:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.heap<!fir.array<?xi32>>) -> i64
-! CHECK: %[[C0:.*]] = arith.constant 0 : i64
-! CHECK: %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_PTR]], %[[C0]] : i64
-! CHECK: fir.if %[[IS_ALLOCATED]] {
-! CHECK:   %[[BOX:.*]] = fir.load %[[ARG0]]{{[#0]*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:   %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK:   fir.freemem %[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>
-! CHECK:   %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-! CHECK:   %[[C0:.*]] = arith.constant 0 : index
-! CHECK:   %[[SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
-! CHECK:   %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-! CHECK:   fir.store %[[EMBOX]] to %[[ARG0]]{{[#0]*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK: }
+! CHECK:           %[[VAL_1:.*]] = fir.load %[[ARG0]]{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:           %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.heap<!fir.array<?xi32>>) -> i64
+! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i64
+! CHECK:           %[[VAL_5:.*]] = arith.cmpi ne, %[[VAL_3]], %[[VAL_4]] : i64
+! CHECK:           fir.if %[[VAL_5]] {
+! CHECK:             %[[VAL_6:.*]] = arith.constant false
+! CHECK:             %[[VAL_7:.*]] = fir.absent !fir.box<none>
+! CHECK:             %[[VAL_8:.*]] = fir.address_of(@_QQclXec1fdecbdab00016d5f81c67562024e7) : !fir.ref<!fir.char<1,73>>
+! CHECK:             %[[VAL_9:.*]] = arith.constant {{.*}} : i32
+! CHECK:             %[[VAL_10:.*]] = fir.convert %[[ARG0]]{{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:             %[[VAL_11:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.char<1,73>>) -> !fir.ref<i8>
+! CHECK:             %[[VAL_12:.*]] = fir.call @_FortranAAllocatableDeallocate(%[[VAL_10]], %[[VAL_6]], %[[VAL_7]], %[[VAL_11]], %[[VAL_9]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:           }
+! CHECK:           cf.br ^bb1
+! CHECK:         ^bb1:  // pred: ^bb0
+! CHECK:           return
+! CHECK:         }
 
 
   subroutine sub14(p)

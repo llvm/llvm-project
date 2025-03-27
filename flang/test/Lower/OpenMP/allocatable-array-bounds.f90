@@ -95,20 +95,35 @@ end subroutine assumed_shape_array
 end module assumed_allocatable_array_routines
 
 !HOST-LABEL: func.func @_QPcall_assumed_shape_and_size_array() {
-!HOST: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "arr_read_write", uniq_name = "_QFcall_assumed_shape_and_size_arrayEarr_read_write"}
-!HOST: %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFcall_assumed_shape_and_size_arrayEarr_read_write"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
-!HOST: %[[ALLOCA_MEM:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} {fir.must_be_heap = true, uniq_name = "_QFcall_assumed_shape_and_size_arrayEarr_read_write.alloc"}
-!HOST: %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
-!HOST: %[[EMBOX:.*]] = fir.embox %[[ALLOCA_MEM]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-!HOST: fir.store %[[EMBOX]] to %[[DECLARE]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-!HOST: %[[LOAD:.*]] = fir.load %[[DECLARE]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-!HOST: %[[CONSTANT_1:.*]] = arith.constant 10 : index
-!HOST: %[[CONSTANT_2:.*]] = arith.constant 20 : index
-!HOST: %[[CONSTANT_3:.*]] = arith.constant 1 : index
-!HOST: %[[CONSTANT_4:.*]] = arith.constant 11 : index
-!HOST: %[[SHAPE:.*]] = fir.shape %[[CONSTANT_4]] : (index) -> !fir.shape<1>
-!HOST: %[[DESIGNATE:.*]] = hlfir.designate %[[LOAD]] (%[[CONSTANT_1]]:%[[CONSTANT_2]]:%[[CONSTANT_3]])  shape %[[SHAPE]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<11xi32>>
-!HOST: fir.call @_QPassumed_size_array(%[[DESIGNATE]]) fastmath<contract> : (!fir.ref<!fir.array<11xi32>>) -> ()
+!HOST: %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "arr_read_write", uniq_name = "_QFcall_assumed_shape_and_size_arrayEarr_read_write"}
+!HOST: %[[VAL_1:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
+!HOST: %[[VAL_2:.*]] = arith.constant 0 : index
+!HOST: %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
+!HOST: %[[VAL_4:.*]] = fir.embox %[[VAL_1]](%[[VAL_3]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+!HOST: fir.store %[[VAL_4]] to %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+!HOST: %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFcall_assumed_shape_and_size_arrayEarr_read_write"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+!HOST: %[[VAL_6:.*]] = arith.constant false
+!HOST: %[[VAL_7:.*]] = fir.absent !fir.box<none>
+!HOST: %[[VAL_8:.*]] = fir.address_of(@_QQclX406d77a864a01343bfa72d1eaaccf436) : !fir.ref<!fir.char<1,84>>
+!HOST: %[[VAL_9:.*]] = arith.constant {{.*}} : i32
+!HOST: %[[VAL_10:.*]] = arith.constant 1 : index
+!HOST: %[[VAL_11:.*]] = arith.constant {{.*}} : i32
+!HOST: %[[VAL_12:.*]] = arith.constant 0 : i32
+!HOST: %[[VAL_13:.*]] = fir.convert %[[VAL_5]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+!HOST: %[[VAL_14:.*]] = fir.convert %[[VAL_10]] : (index) -> i64
+!HOST: %[[VAL_15:.*]] = fir.convert %[[VAL_11]] : (i32) -> i64
+!HOST: fir.call @_FortranAAllocatableSetBounds(%[[VAL_13]], %[[VAL_12]], %[[VAL_14]], %[[VAL_15]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
+!HOST: %[[VAL_16:.*]] = fir.convert %[[VAL_5]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+!HOST: %[[VAL_17:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.char<1,84>>) -> !fir.ref<i8>
+!HOST: %[[VAL_18:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_16]], %[[VAL_6]], %[[VAL_7]], %[[VAL_17]], %[[VAL_9]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+!HOST: %[[VAL_19:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+!HOST: %[[VAL_20:.*]] = arith.constant {{.*}} : index
+!HOST: %[[VAL_21:.*]] = arith.constant {{.*}} : index
+!HOST: %[[VAL_22:.*]] = arith.constant 1 : index
+!HOST: %[[VAL_23:.*]] = arith.constant {{.*}} : index
+!HOST: %[[VAL_24:.*]] = fir.shape %[[VAL_23]] : (index) -> !fir.shape<1>
+!HOST: %[[VAL_25:.*]] = hlfir.designate %[[VAL_19]] (%[[VAL_20]]:%[[VAL_21]]:%[[VAL_22]])  shape %[[VAL_24]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index, index, index, !fir.shape<1>) -> !fir.ref<!fir.array<11xi32>>
+!HOST: fir.call @_QPassumed_size_array(%[[VAL_25]]) fastmath<contract> : (!fir.ref<!fir.array<11xi32>>) -> ()
 subroutine call_assumed_shape_and_size_array
     use assumed_allocatable_array_routines
     integer, allocatable :: arr_read_write(:)

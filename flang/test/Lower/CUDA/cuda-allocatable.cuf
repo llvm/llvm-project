@@ -124,7 +124,7 @@ end subroutine
 ! CHECK: fir.call @_FortranAAllocatableSetBounds
 ! CHECK: %{{.*}} = cuf.allocate %[[BOX_A_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> source(%[[LOAD_B]] : !fir.box<!fir.heap<!fir.array<?xf32>>>) {data_attr = #cuf.cuda<device>} -> i32
 ! CHECK: fir.if
-! CHECK: fir.freemem
+! CHECK: fir.call @_FortranAAllocatableDeallocate
 ! CHECK: fir.if %{{.*}} {
 ! CHECK:   %{{.*}} = cuf.deallocate %[[BOX_A_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
 ! CHECK: }
@@ -206,6 +206,7 @@ end
 ! CHECK-LABEL: func.func @_QPsetpinned()  
 ! CHECK: %[[PLOG:.*]] = fir.alloca !fir.logical<4> {bindc_name = "plog", uniq_name = "_QFsetpinnedEplog"}
 ! CHECK: %[[PLOG_DECL:.*]]:2 = hlfir.declare %[[PLOG]] {uniq_name = "_QFsetpinnedEplog"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK: fir.call @_FortranAAllocatableAllocate
 ! CHECK: %[[FALSE:.*]] = arith.constant false
 ! CHECK: %[[FLASE_CONV:.*]] = fir.convert %[[FALSE]] : (i1) -> !fir.logical<4>
 ! CHECK: fir.store %[[FLASE_CONV]] to %[[PLOG_DECL]]#0 : !fir.ref<!fir.logical<4>>

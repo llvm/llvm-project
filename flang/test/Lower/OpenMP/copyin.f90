@@ -86,33 +86,33 @@ subroutine copyin_char_chararray()
 end
 
 ! CHECK-LABEL:   func.func @_QPcopyin_derived_type() {
-! CHECK:           %[[VAL_0:.*]] = fir.address_of(@_QFcopyin_derived_typeE.b.my_type.t_arr) : !fir.ref<!fir.array<2x1x!fir.type<_QM__fortran_type_infoTvalue{{[<]?}}{genre:i8,__padding0:!fir.array<7xi8>,value:i64}{{[>]?}}>>>
+! CHECK:           %[[VAL_0:.*]] = fir.address_of(@_QFcopyin_derived_typeE.b.my_type.t_arr) : !fir.ref<!fir.array<2x1x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 2 : index
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_5:.*]] = fir.shape_shift %[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]] : (index, index, index, index) -> !fir.shapeshift<2>
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_5]]) {{{.*}}, uniq_name = "_QFcopyin_derived_typeE.b.my_type.t_arr"}
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_5]]) {fortran_attrs = {{.*}}<target>, uniq_name = "_QFcopyin_derived_typeE.b.my_type.t_arr"} : (!fir.ref<!fir.array<2x1x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>, !fir.shapeshift<2>) -> (!fir.box<!fir.array<2x1x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>, !fir.ref<!fir.array<2x1x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>)
 ! CHECK:           %[[VAL_7:.*]] = fir.address_of(@_QFcopyin_derived_typeE.n.t_i) : !fir.ref<!fir.char<1,3>>
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 3 : index
-! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]] typeparams %[[VAL_8]] {{{.*}}, uniq_name = "_QFcopyin_derived_typeE.n.t_i"}
+! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]] typeparams %[[VAL_8]] {fortran_attrs = {{.*}}<target>, uniq_name = "_QFcopyin_derived_typeE.n.t_i"} : (!fir.ref<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>)
 ! CHECK:           %[[VAL_10:.*]] = fir.address_of(@_QFcopyin_derived_typeE.n.t_arr) : !fir.ref<!fir.char<1,5>>
 ! CHECK:           %[[VAL_11:.*]] = arith.constant 5 : index
-! CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_10]] typeparams %[[VAL_11]] {{{.*}}, uniq_name = "_QFcopyin_derived_typeE.n.t_arr"}
+! CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_10]] typeparams %[[VAL_11]] {fortran_attrs = {{.*}}<target>, uniq_name = "_QFcopyin_derived_typeE.n.t_arr"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 ! CHECK:           %[[VAL_13:.*]] = fir.address_of(@_QFcopyin_derived_typeE.n.my_type) : !fir.ref<!fir.char<1,7>>
 ! CHECK:           %[[VAL_14:.*]] = arith.constant 7 : index
-! CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_13]] typeparams %[[VAL_14]] {{{.*}}, uniq_name = "_QFcopyin_derived_typeE.n.my_type"}
+! CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_13]] typeparams %[[VAL_14]] {fortran_attrs = {{.*}}<target>, uniq_name = "_QFcopyin_derived_typeE.n.my_type"} : (!fir.ref<!fir.char<1,7>>, index) -> (!fir.ref<!fir.char<1,7>>, !fir.ref<!fir.char<1,7>>)
 ! CHECK:           %[[VAL_16:.*]] = fir.address_of(@_QFcopyin_derived_typeEx5) : !fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>
 ! CHECK:           %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_16]] {uniq_name = "_QFcopyin_derived_typeEx5"} : (!fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>) -> (!fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>, !fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>)
 ! CHECK:           %[[VAL_18:.*]] = omp.threadprivate %[[VAL_17]]#0 : !fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>> -> !fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>
 ! CHECK:           %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_18]] {uniq_name = "_QFcopyin_derived_typeEx5"} : (!fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>) -> (!fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>, !fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>)
-! CHECK:           %[[VAL_20:.*]] = fir.address_of(@_QFcopyin_derived_typeE.c.my_type)
+! CHECK:           %[[VAL_20:.*]] = fir.address_of(@_QFcopyin_derived_typeE.c.my_type) : !fir.ref<!fir.array<2x!fir.type<_QM__fortran_type_infoTcomponent{name:!fir.box<!fir.ptr<!fir.char<1,?>>>,genre:i8,category:i8,kind:i8,rank:i8,__padding0:!fir.array<4xi8>,offset:i64,characterlen:!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>,derived:!fir.box<!fir.ptr<!fir.type<_QM__fortran_type_infoTderivedtype{binding:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>}>>>>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>,sizeinbytes:i64,uninstantiated:!fir.box<!fir.ptr<!fir.type<_QM__fortran_type_infoTderivedtype>>>,kindparameter:!fir.box<!fir.ptr<!fir.array<?xi64>>>,lenparameterkind:!fir.box<!fir.ptr<!fir.array<?xi8>>>,component:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTcomponent>>>>,procptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTprocptrcomponent{name:!fir.box<!fir.ptr<!fir.char<1,?>>>,offset:i64,initialization:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>}>>>>,special:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTspecialbinding{which:i8,isargdescriptorset:i8,istypebound:i8,isargcontiguousset:i8,__padding0:!fir.array<4xi8>,proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>}>>>>,specialbitset:i32,hasparent:i8,noinitializationneeded:i8,nodestructionneeded:i8,nofinalizationneeded:i8,__padding0:!fir.array<4xi8>}>>>,lenvalue:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>>,bounds:!fir.box<!fir.ptr<!fir.array<?x?x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>>,initialization:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>>
 ! CHECK:           %[[VAL_21:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_22:.*]] = arith.constant 2 : index
 ! CHECK:           %[[VAL_23:.*]] = fir.shape_shift %[[VAL_21]], %[[VAL_22]] : (index, index) -> !fir.shapeshift<1>
-! CHECK:           %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_20]](%[[VAL_23]]) {{{.*}}, uniq_name = "_QFcopyin_derived_typeE.c.my_type"}
-! CHECK:           %[[VAL_25:.*]] = fir.address_of(@_QFcopyin_derived_typeE.dt.my_type)
-! CHECK:           %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_25]] {{{.*}}, uniq_name = "_QFcopyin_derived_typeE.dt.my_type"}
+! CHECK:           %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_20]](%[[VAL_23]]) {fortran_attrs = {{.*}}<target>, uniq_name = "_QFcopyin_derived_typeE.c.my_type"} : (!fir.ref<!fir.array<2x!fir.type<_QM__fortran_type_infoTcomponent{name:!fir.box<!fir.ptr<!fir.char<1,?>>>,genre:i8,category:i8,kind:i8,rank:i8,__padding0:!fir.array<4xi8>,offset:i64,characterlen:!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>,derived:!fir.box<!fir.ptr<!fir.type<_QM__fortran_type_infoTderivedtype{binding:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>}>>>>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>,sizeinbytes:i64,uninstantiated:!fir.box<!fir.ptr<!fir.type<_QM__fortran_type_infoTderivedtype>>>,kindparameter:!fir.box<!fir.ptr<!fir.array<?xi64>>>,lenparameterkind:!fir.box<!fir.ptr<!fir.array<?xi8>>>,component:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTcomponent>>>>,procptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTprocptrcomponent{name:!fir.box<!fir.ptr<!fir.char<1,?>>>,offset:i64,initialization:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>}>>>>,special:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTspecialbinding{which:i8,isargdescriptorset:i8,istypebound:i8,isargcontiguousset:i8,__padding0:!fir.array<4xi8>,proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>}>>>>,specialbitset:i32,hasparent:i8,noinitializationneeded:i8,nodestructionneeded:i8,nofinalizationneeded:i8,__padding0:!fir.array<4xi8>}>>>,lenvalue:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>>,bounds:!fir.box<!fir.ptr<!fir.array<?x?x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>>,initialization:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<2x!fir.type<_QM__fortran_type_infoTcomponent{name:!fir.box<!fir.ptr<!fir.char<1,?>>>,genre:i8,category:i8,kind:i8,rank:i8,__padding0:!fir.array<4xi8>,offset:i64,characterlen:!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>,derived:!fir.box<!fir.ptr<!fir.type<_QM__fortran_type_infoTderivedtype{binding:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>}>>>>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>,sizeinbytes:i64,uninstantiated:!fir.box<!fir.ptr<!fir.type<_QM__fortran_type_infoTderivedtype>>>,kindparameter:!fir.box<!fir.ptr<!fir.array<?xi64>>>,lenparameterkind:!fir.box<!fir.ptr<!fir.array<?xi8>>>,component:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTcomponent>>>>,procptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTprocptrcomponent{name:!fir.box<!fir.ptr<!fir.char<1,?>>>,offset:i64,initialization:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>}>>>>,special:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTspecialbinding{which:i8,isargdescriptorset:i8,istypebound:i8,isargcontiguousset:i8,__padding0:!fir.array<4xi8>,proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>}>>>>,specialbitset:i32,hasparent:i8,noinitializationneeded:i8,nodestructionneeded:i8,nofinalizationneeded:i8,__padding0:!fir.array<4xi8>}>>>,lenvalue:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>>,bounds:!fir.box<!fir.ptr<!fir.array<?x?x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>>,initialization:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>>, !fir.ref<!fir.array<2x!fir.type<_QM__fortran_type_infoTcomponent{name:!fir.box<!fir.ptr<!fir.char<1,?>>>,genre:i8,category:i8,kind:i8,rank:i8,__padding0:!fir.array<4xi8>,offset:i64,characterlen:!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>,derived:!fir.box<!fir.ptr<!fir.type<_QM__fortran_type_infoTderivedtype{binding:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>}>>>>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>,sizeinbytes:i64,uninstantiated:!fir.box<!fir.ptr<!fir.type<_QM__fortran_type_infoTderivedtype>>>,kindparameter:!fir.box<!fir.ptr<!fir.array<?xi64>>>,lenparameterkind:!fir.box<!fir.ptr<!fir.array<?xi8>>>,component:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTcomponent>>>>,procptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTprocptrcomponent{name:!fir.box<!fir.ptr<!fir.char<1,?>>>,offset:i64,initialization:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>}>>>>,special:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTspecialbinding{which:i8,isargdescriptorset:i8,istypebound:i8,isargcontiguousset:i8,__padding0:!fir.array<4xi8>,proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>}>>>>,specialbitset:i32,hasparent:i8,noinitializationneeded:i8,nodestructionneeded:i8,nofinalizationneeded:i8,__padding0:!fir.array<4xi8>}>>>,lenvalue:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>>,bounds:!fir.box<!fir.ptr<!fir.array<?x?x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>>,initialization:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>>)
+! CHECK:           %[[VAL_25:.*]] = fir.address_of(@_QFcopyin_derived_typeE.dt.my_type) : !fir.ref<!fir.type<_QM__fortran_type_infoTderivedtype{binding:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>}>>>>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>,sizeinbytes:i64,uninstantiated:!fir.box<!fir.ptr<!fir.type<_QM__fortran_type_infoTderivedtype>>>,kindparameter:!fir.box<!fir.ptr<!fir.array<?xi64>>>,lenparameterkind:!fir.box<!fir.ptr<!fir.array<?xi8>>>,component:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTcomponent{name:!fir.box<!fir.ptr<!fir.char<1,?>>>,genre:i8,category:i8,kind:i8,rank:i8,__padding0:!fir.array<4xi8>,offset:i64,characterlen:!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>,derived:!fir.box<!fir.ptr<!fir.type<_QM__fortran_type_infoTderivedtype>>>,lenvalue:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>>,bounds:!fir.box<!fir.ptr<!fir.array<?x?x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>>,initialization:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>>>,procptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTprocptrcomponent{name:!fir.box<!fir.ptr<!fir.char<1,?>>>,offset:i64,initialization:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>}>>>>,special:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTspecialbinding{which:i8,isargdescriptorset:i8,istypebound:i8,isargcontiguousset:i8,__padding0:!fir.array<4xi8>,proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>}>>>>,specialbitset:i32,hasparent:i8,noinitializationneeded:i8,nodestructionneeded:i8,nofinalizationneeded:i8,__padding0:!fir.array<4xi8>}>>
+! CHECK:           %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_25]] {fortran_attrs = {{.*}}<target>, uniq_name = "_QFcopyin_derived_typeE.dt.my_type"} : (!fir.ref<!fir.type<_QM__fortran_type_infoTderivedtype{binding:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>}>>>>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>,sizeinbytes:i64,uninstantiated:!fir.box<!fir.ptr<!fir.type<_QM__fortran_type_infoTderivedtype>>>,kindparameter:!fir.box<!fir.ptr<!fir.array<?xi64>>>,lenparameterkind:!fir.box<!fir.ptr<!fir.array<?xi8>>>,component:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTcomponent{name:!fir.box<!fir.ptr<!fir.char<1,?>>>,genre:i8,category:i8,kind:i8,rank:i8,__padding0:!fir.array<4xi8>,offset:i64,characterlen:!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>,derived:!fir.box<!fir.ptr<!fir.type<_QM__fortran_type_infoTderivedtype>>>,lenvalue:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>>,bounds:!fir.box<!fir.ptr<!fir.array<?x?x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>>,initialization:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>>>,procptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTprocptrcomponent{name:!fir.box<!fir.ptr<!fir.char<1,?>>>,offset:i64,initialization:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>}>>>>,special:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTspecialbinding{which:i8,isargdescriptorset:i8,istypebound:i8,isargcontiguousset:i8,__padding0:!fir.array<4xi8>,proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>}>>>>,specialbitset:i32,hasparent:i8,noinitializationneeded:i8,nodestructionneeded:i8,nofinalizationneeded:i8,__padding0:!fir.array<4xi8>}>>) -> (!fir.ref<!fir.type<_QM__fortran_type_infoTderivedtype{binding:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>}>>>>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>,sizeinbytes:i64,uninstantiated:!fir.box<!fir.ptr<!fir.type<_QM__fortran_type_infoTderivedtype>>>,kindparameter:!fir.box<!fir.ptr<!fir.array<?xi64>>>,lenparameterkind:!fir.box<!fir.ptr<!fir.array<?xi8>>>,component:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTcomponent{name:!fir.box<!fir.ptr<!fir.char<1,?>>>,genre:i8,category:i8,kind:i8,rank:i8,__padding0:!fir.array<4xi8>,offset:i64,characterlen:!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>,derived:!fir.box<!fir.ptr<!fir.type<_QM__fortran_type_infoTderivedtype>>>,lenvalue:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>>,bounds:!fir.box<!fir.ptr<!fir.array<?x?x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>>,initialization:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>>>,procptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTprocptrcomponent{name:!fir.box<!fir.ptr<!fir.char<1,?>>>,offset:i64,initialization:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>}>>>>,special:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTspecialbinding{which:i8,isargdescriptorset:i8,istypebound:i8,isargcontiguousset:i8,__padding0:!fir.array<4xi8>,proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>}>>>>,specialbitset:i32,hasparent:i8,noinitializationneeded:i8,nodestructionneeded:i8,nofinalizationneeded:i8,__padding0:!fir.array<4xi8>}>>, !fir.ref<!fir.type<_QM__fortran_type_infoTderivedtype{binding:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>}>>>>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>,sizeinbytes:i64,uninstantiated:!fir.box<!fir.ptr<!fir.type<_QM__fortran_type_infoTderivedtype>>>,kindparameter:!fir.box<!fir.ptr<!fir.array<?xi64>>>,lenparameterkind:!fir.box<!fir.ptr<!fir.array<?xi8>>>,component:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTcomponent{name:!fir.box<!fir.ptr<!fir.char<1,?>>>,genre:i8,category:i8,kind:i8,rank:i8,__padding0:!fir.array<4xi8>,offset:i64,characterlen:!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>,derived:!fir.box<!fir.ptr<!fir.type<_QM__fortran_type_infoTderivedtype>>>,lenvalue:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>>,bounds:!fir.box<!fir.ptr<!fir.array<?x?x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>>,initialization:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>>>,procptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTprocptrcomponent{name:!fir.box<!fir.ptr<!fir.char<1,?>>>,offset:i64,initialization:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>}>>>>,special:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTspecialbinding{which:i8,isargdescriptorset:i8,istypebound:i8,isargcontiguousset:i8,__padding0:!fir.array<4xi8>,proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>}>>>>,specialbitset:i32,hasparent:i8,noinitializationneeded:i8,nodestructionneeded:i8,nofinalizationneeded:i8,__padding0:!fir.array<4xi8>}>>)
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_27:.*]] = omp.threadprivate %[[VAL_17]]#0 : !fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>> -> !fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>
 ! CHECK:             %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_27]] {uniq_name = "_QFcopyin_derived_typeEx5"} : (!fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>) -> (!fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>, !fir.ref<!fir.type<_QFcopyin_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>)
@@ -146,23 +146,19 @@ end
 ! CHECK:           %[[VAL_4:.*]] = omp.threadprivate %[[VAL_3]]#0 : !fir.ref<i32> -> !fir.ref<i32>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFcombined_parallel_worksharing_loopEx6"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           omp.parallel {
-
-! CHECK:             %[[VAL_8:.*]] = omp.threadprivate %[[VAL_3]]#0 : !fir.ref<i32> -> !fir.ref<i32>
-! CHECK:             %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFcombined_parallel_worksharing_loopEx6"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:             %[[VAL_10:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
-! CHECK:             hlfir.assign %[[VAL_10]] to %[[VAL_9]]#0 : i32, !fir.ref<i32>
-
+! CHECK:             %[[VAL_6:.*]] = omp.threadprivate %[[VAL_3]]#1 : !fir.ref<i32> -> !fir.ref<i32>
+! CHECK:             %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFcombined_parallel_worksharing_loopEx6"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[VAL_8:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
+! CHECK:             hlfir.assign %[[VAL_8]] to %[[VAL_7]]#0 : i32, !fir.ref<i32>
 ! CHECK:             omp.barrier
-
-
+! CHECK:             %[[VAL_9:.*]] = arith.constant 1 : i32
+! CHECK:             %[[VAL_10:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<i32>
 ! CHECK:             %[[VAL_11:.*]] = arith.constant 1 : i32
-! CHECK:             %[[VAL_12:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<i32>
-! CHECK:             %[[VAL_13:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop private(@{{.*}} %{{.*}} -> %[[VAL_6:.*]] : !fir.ref<i32>) {
-! CHECK-NEXT:          omp.loop_nest (%[[VAL_14:.*]]) : i32 = (%[[VAL_11]]) to (%[[VAL_12]]) inclusive step (%[[VAL_13]]) {
-! CHECK:                 %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFcombined_parallel_worksharing_loopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 hlfir.assign %[[VAL_14]] to %[[VAL_7]]#0 : i32, !fir.ref<i32>
-! CHECK:                 fir.call @_QPsub4(%[[VAL_9]]#0) fastmath<contract> : (!fir.ref<i32>) -> ()
+! CHECK:             omp.wsloop private(@_QFcombined_parallel_worksharing_loopEi_private_i32 %[[VAL_1]]#0 -> %[[VAL_12:.*]] : !fir.ref<i32>) {
+! CHECK:               omp.loop_nest (%[[VAL_13:.*]]) : i32 = (%[[VAL_9]]) to (%[[VAL_10]]) inclusive step (%[[VAL_11]]) {
+! CHECK:                 %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QFcombined_parallel_worksharing_loopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 hlfir.assign %[[VAL_13]] to %[[VAL_14]]#1 : i32, !fir.ref<i32>
+! CHECK:                 fir.call @_QPsub4(%[[VAL_7]]#1) fastmath<contract> : (!fir.ref<i32>) -> ()
 ! CHECK:                 omp.yield
 ! CHECK:               }
 ! CHECK:             }
@@ -303,34 +299,33 @@ end subroutine
 ! CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<i8>) -> !fir.ref<i32>
 ! CHECK:           %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_17]] {uniq_name = "_QFcommon_2Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           omp.parallel {
-
-! CHECK:             %[[VAL_21:.*]] = omp.threadprivate %[[VAL_2]] : !fir.ref<!fir.array<8xi8>> -> !fir.ref<!fir.array<8xi8>>
-! CHECK:             %[[VAL_22:.*]] = fir.convert %[[VAL_21]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
-! CHECK:             %[[VAL_23:.*]] = arith.constant 0 : index
-! CHECK:             %[[VAL_24:.*]] = fir.coordinate_of %[[VAL_22]], %[[VAL_23]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
-! CHECK:             %[[VAL_25:.*]] = fir.convert %[[VAL_24]] : (!fir.ref<i8>) -> !fir.ref<i32>
-! CHECK:             %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_25]] {uniq_name = "_QFcommon_2Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:             %[[VAL_27:.*]] = fir.convert %[[VAL_21]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
-! CHECK:             %[[VAL_28:.*]] = arith.constant 4 : index
-! CHECK:             %[[VAL_29:.*]] = fir.coordinate_of %[[VAL_27]], %[[VAL_28]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
-! CHECK:             %[[VAL_30:.*]] = fir.convert %[[VAL_29]] : (!fir.ref<i8>) -> !fir.ref<i32>
-! CHECK:             %[[VAL_31:.*]]:2 = hlfir.declare %[[VAL_30]] {uniq_name = "_QFcommon_2Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:             %[[VAL_32:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<i32>
-! CHECK:             hlfir.assign %[[VAL_32]] to %[[VAL_26]]#0 : i32, !fir.ref<i32>
-! CHECK:             %[[VAL_33:.*]] = fir.load %[[VAL_18]]#0 : !fir.ref<i32>
-! CHECK:             hlfir.assign %[[VAL_33]] to %[[VAL_31]]#0 : i32, !fir.ref<i32>
+! CHECK:             %[[VAL_19:.*]] = omp.threadprivate %[[VAL_2]] : !fir.ref<!fir.array<8xi8>> -> !fir.ref<!fir.array<8xi8>>
+! CHECK:             %[[VAL_20:.*]] = fir.convert %[[VAL_19]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+! CHECK:             %[[VAL_21:.*]] = arith.constant 0 : index
+! CHECK:             %[[VAL_22:.*]] = fir.coordinate_of %[[VAL_20]], %[[VAL_21]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:             %[[VAL_23:.*]] = fir.convert %[[VAL_22]] : (!fir.ref<i8>) -> !fir.ref<i32>
+! CHECK:             %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_23]] {uniq_name = "_QFcommon_2Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[VAL_25:.*]] = fir.convert %[[VAL_19]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+! CHECK:             %[[VAL_26:.*]] = arith.constant 4 : index
+! CHECK:             %[[VAL_27:.*]] = fir.coordinate_of %[[VAL_25]], %[[VAL_26]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:             %[[VAL_28:.*]] = fir.convert %[[VAL_27]] : (!fir.ref<i8>) -> !fir.ref<i32>
+! CHECK:             %[[VAL_29:.*]]:2 = hlfir.declare %[[VAL_28]] {uniq_name = "_QFcommon_2Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[VAL_30:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<i32>
+! CHECK:             hlfir.assign %[[VAL_30]] to %[[VAL_24]]#0 : i32, !fir.ref<i32>
+! CHECK:             %[[VAL_31:.*]] = fir.load %[[VAL_18]]#0 : !fir.ref<i32>
+! CHECK:             hlfir.assign %[[VAL_31]] to %[[VAL_29]]#0 : i32, !fir.ref<i32>
 ! CHECK:             omp.barrier
+! CHECK:             %[[VAL_32:.*]] = arith.constant 1 : i32
+! CHECK:             %[[VAL_33:.*]] = fir.load %[[VAL_24]]#0 : !fir.ref<i32>
 ! CHECK:             %[[VAL_34:.*]] = arith.constant 1 : i32
-! CHECK:             %[[VAL_35:.*]] = fir.load %[[VAL_26]]#0 : !fir.ref<i32>
-! CHECK:             %[[VAL_36:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop private(@{{.*}} %{{.*}} -> %[[VAL_19:.*]] : !fir.ref<i32>) {
-! CHECK-NEXT:          omp.loop_nest (%[[VAL_37:.*]]) : i32 = (%[[VAL_34]]) to (%[[VAL_35]]) inclusive step (%[[VAL_36]]) {
-! CHECK:             %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_19]] {uniq_name = "_QFcommon_2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 hlfir.assign %[[VAL_37]] to %[[VAL_20]]#0 : i32, !fir.ref<i32>
-! CHECK:                 %[[VAL_38:.*]] = fir.load %[[VAL_31]]#0 : !fir.ref<i32>
-! CHECK:                 %[[VAL_39:.*]] = fir.load %[[VAL_20]]#0 : !fir.ref<i32>
+! CHECK:             omp.wsloop private(@_QFcommon_2Ei_private_i32 %[[VAL_1]]#0 -> %[[VAL_35:.*]] : !fir.ref<i32>) {
+! CHECK:               omp.loop_nest (%[[VAL_36:.*]]) : i32 = (%[[VAL_32]]) to (%[[VAL_33]]) inclusive step (%[[VAL_34]]) {
+! CHECK:                 %[[VAL_37:.*]]:2 = hlfir.declare %[[VAL_35]] {uniq_name = "_QFcommon_2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 hlfir.assign %[[VAL_36]] to %[[VAL_37]]#1 : i32, !fir.ref<i32>
+! CHECK:                 %[[VAL_38:.*]] = fir.load %[[VAL_29]]#0 : !fir.ref<i32>
+! CHECK:                 %[[VAL_39:.*]] = fir.load %[[VAL_37]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_40:.*]] = arith.addi %[[VAL_38]], %[[VAL_39]] : i32
-! CHECK:                 hlfir.assign %[[VAL_40]] to %[[VAL_31]]#0 : i32, !fir.ref<i32>
+! CHECK:                 hlfir.assign %[[VAL_40]] to %[[VAL_29]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 omp.yield
 ! CHECK:               }
 ! CHECK:             }
@@ -353,13 +348,13 @@ end subroutine
 
 ! CHECK-LABEL:   func.func @_QPpointer() {
 ! CHECK:           %[[VAL_0:.*]] = fir.address_of(@_QFpointerEp) : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFpointerEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
-! CHECK:           %[[VAL_2:.*]] = omp.threadprivate %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFpointerEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = {{.*}}<pointer>, uniq_name = "_QFpointerEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+! CHECK:           %[[VAL_2:.*]] = omp.threadprivate %[[VAL_1]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {fortran_attrs = {{.*}}<pointer>, uniq_name = "_QFpointerEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_4:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {pinned}
-! CHECK:             %[[VAL_5:.*]] = omp.threadprivate %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-! CHECK:             %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFpointerEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+! CHECK:             %[[VAL_5:.*]] = omp.threadprivate %[[VAL_1]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:             %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {fortran_attrs = {{.*}}<pointer>, uniq_name = "_QFpointerEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 ! CHECK:             %[[VAL_7:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:             fir.store %[[VAL_7]] to %[[VAL_6]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:             omp.barrier
@@ -384,41 +379,41 @@ end subroutine
 
 ! CHECK-LABEL:   func.func @_QPallocatable() {
 ! CHECK:           %[[VAL_0:.*]] = fir.address_of(@_QFallocatableEp) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocatableEp"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
-! CHECK:           %[[VAL_2:.*]] = omp.threadprivate %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocatableEp"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFallocatableEp"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+! CHECK:           %[[VAL_2:.*]] = omp.threadprivate %[[VAL_1]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFallocatableEp"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_4:.*]] = omp.threadprivate %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:             %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocatableEp"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+! CHECK:             %[[VAL_4:.*]] = omp.threadprivate %[[VAL_1]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:             %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFallocatableEp"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 ! CHECK:             %[[VAL_6:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:             %[[VAL_7:.*]] = fir.box_addr %[[VAL_6]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
 ! CHECK:             %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.heap<!fir.array<?xi32>>) -> i64
-! CHECK:             %[[C0_I64:.*]] = arith.constant 0 : i64
-! CHECK:             %[[VAL_9:.*]] = arith.cmpi ne, %[[VAL_8]], %[[C0_I64]] : i64
-! CHECK:             fir.if %[[VAL_9]] {
-! CHECK:               %[[VAL_10:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:             hlfir.assign %[[VAL_10]] to %[[VAL_5]]#0 realloc : !fir.box<!fir.heap<!fir.array<?xi32>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:             %[[VAL_9:.*]] = arith.constant 0 : i64
+! CHECK:             %[[VAL_10:.*]] = arith.cmpi ne, %[[VAL_8]], %[[VAL_9]] : i64
+! CHECK:             fir.if %[[VAL_10]] {
+! CHECK:               %[[VAL_11:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:               hlfir.assign %[[VAL_11]] to %[[VAL_5]]#0 realloc : !fir.box<!fir.heap<!fir.array<?xi32>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:             } else {
-! CHECK:              %[[VAL_10:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:              %[[VAL_11:.*]] = fir.box_addr %[[VAL_10]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK:              %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.heap<!fir.array<?xi32>>) -> i64
-! CHECK:              %[[C0_I64_0:.*]] = arith.constant 0 : i64
-! CHECK:              %[[VAL_13:.*]] = arith.cmpi ne, %[[VAL_12]], %[[C0_I64_0]] : i64
-! CHECK:              fir.if %[[VAL_13]] {
-! CHECK:               %[[VAL_14:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:                %[[VAL_15:.*]] = fir.box_addr %[[VAL_14]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK:                fir.freemem %[[VAL_15]] : !fir.heap<!fir.array<?xi32>>
-! CHECK:                %[[VAL_16:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-! CHECK:                %[[C0:.*]] = arith.constant 0 : index
-! CHECK:                %[[VAL_17:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
-! CHECK:                %[[VAL_18:.*]] = fir.embox %[[VAL_16]](%[[VAL_17]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-! CHECK:                fir.store %[[VAL_18]] to %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:              }
+! CHECK:               %[[VAL_12:.*]] = fir.load %[[VAL_5]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:               %[[VAL_13:.*]] = fir.box_addr %[[VAL_12]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:               %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (!fir.heap<!fir.array<?xi32>>) -> i64
+! CHECK:               %[[VAL_15:.*]] = arith.constant 0 : i64
+! CHECK:               %[[VAL_16:.*]] = arith.cmpi ne, %[[VAL_14]], %[[VAL_15]] : i64
+! CHECK:               fir.if %[[VAL_16]] {
+! CHECK:                 %[[VAL_17:.*]] = arith.constant false
+! CHECK:                 %[[VAL_18:.*]] = fir.absent !fir.box<none>
+! CHECK:                 %[[VAL_19:.*]] = fir.address_of(@_QQclX3573f88d1792380f265b3d2ede411e3d) : !fir.ref<!fir.char<1,66>>
+! CHECK:                 %[[VAL_20:.*]] = arith.constant {{.*}} : i32
+! CHECK:                 %[[VAL_21:.*]] = fir.convert %[[VAL_5]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:                 %[[VAL_22:.*]] = fir.convert %[[VAL_19]] : (!fir.ref<!fir.char<1,66>>) -> !fir.ref<i8>
+! CHECK:                 %[[VAL_23:.*]] = fir.call @_FortranAAllocatableDeallocate(%[[VAL_21]], %[[VAL_17]], %[[VAL_18]], %[[VAL_22]], %[[VAL_20]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:               }
+! CHECK:             }
 ! CHECK:             omp.barrier
-! CHECK:             %[[VAL_19:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:             %[[VAL_20:.*]] = fir.box_addr %[[VAL_19]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK:             %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (!fir.heap<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
-! CHECK:             fir.call @_QPsub8(%[[VAL_21]]) fastmath<contract> : (!fir.ref<!fir.array<?xi32>>) -> ()
+! CHECK:             %[[VAL_24:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:             %[[VAL_25:.*]] = fir.box_addr %[[VAL_24]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK:             %[[VAL_26:.*]] = fir.convert %[[VAL_25]] : (!fir.heap<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
+! CHECK:             fir.call @_QPsub8(%[[VAL_26]]) fastmath<contract> : (!fir.ref<!fir.array<?xi32>>) -> ()
 ! CHECK:             omp.terminator
 ! CHECK:           }
 ! CHECK:           return
@@ -434,12 +429,12 @@ end subroutine
 
 ! CHECK-LABEL:   func.func @_QPallocatable2() {
 ! CHECK:           %[[VAL_0:.*]] = fir.address_of(@_QFallocatable2Ea) : !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocatable2Ea"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
-! CHECK:           %[[VAL_2:.*]] = omp.threadprivate %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>> -> !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocatable2Ea"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFallocatable2Ea"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+! CHECK:           %[[VAL_2:.*]] = omp.threadprivate %[[VAL_1]]#1 : !fir.ref<!fir.box<!fir.heap<i32>>> -> !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFallocatable2Ea"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_4:.*]] = omp.threadprivate %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>> -> !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:             %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocatable2Ea"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+! CHECK:             %[[VAL_4:.*]] = omp.threadprivate %[[VAL_1]]#1 : !fir.ref<!fir.box<!fir.heap<i32>>> -> !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:             %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFallocatable2Ea"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
 ! CHECK:             %[[VAL_6:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:             %[[VAL_7:.*]] = fir.box_addr %[[VAL_6]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
 ! CHECK:             %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.heap<i32>) -> i64
@@ -451,22 +446,24 @@ end subroutine
 ! CHECK:               %[[VAL_13:.*]] = fir.load %[[VAL_12]] : !fir.heap<i32>
 ! CHECK:               hlfir.assign %[[VAL_13]] to %[[VAL_5]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:             } else {
-! CHECK:               %[[VAL_11:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:               %[[VAL_15:.*]] = fir.box_addr  %[[VAL_11]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
+! CHECK:               %[[VAL_14:.*]] = fir.load %[[VAL_5]]#1 : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:               %[[VAL_15:.*]] = fir.box_addr %[[VAL_14]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
 ! CHECK:               %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (!fir.heap<i32>) -> i64
-! CHECK:               %[[C0_I64_0:.*]] = arith.constant 0 : i64
-! CHECK:               %[[VAL_17:.*]] = arith.cmpi ne, %[[VAL_16]], %[[C0_I64_0]] : i64
-! CHECK:               fir.if %[[VAL_17]] {
-! CHECK:                 %[[VAL_18:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:                 %[[VAL_19:.*]] = fir.box_addr %[[VAL_18]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-! CHECK:                 fir.freemem %[[VAL_19]] : !fir.heap<i32>
-! CHECK:                 %[[VAL_20:.*]] = fir.zero_bits !fir.heap<i32>
-! CHECK:                 %[[VAL_21:.*]] = fir.embox %[[VAL_20]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
-! CHECK:                 fir.store %[[VAL_21]] to %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:               %[[VAL_17:.*]] = arith.constant 0 : i64
+! CHECK:               %[[VAL_18:.*]] = arith.cmpi ne, %[[VAL_16]], %[[VAL_17]] : i64
+! CHECK:               fir.if %[[VAL_18]] {
+! CHECK:                 %[[VAL_19:.*]] = arith.constant false
+! CHECK:                 %[[VAL_20:.*]] = fir.absent !fir.box<none>
+! CHECK:                 %[[VAL_21:.*]] = fir.address_of(@_QQclX3573f88d1792380f265b3d2ede411e3d) : !fir.ref<!fir.char<1,66>>
+! CHECK:                 %[[VAL_22:.*]] = arith.constant {{.*}} : i32
+! CHECK:                 %[[VAL_23:.*]] = fir.convert %[[VAL_5]]#1 : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:                 %[[VAL_24:.*]] = fir.convert %[[VAL_21]] : (!fir.ref<!fir.char<1,66>>) -> !fir.ref<i8>
+! CHECK:                 %[[VAL_25:.*]] = fir.call @_FortranAAllocatableDeallocate(%[[VAL_23]], %[[VAL_19]], %[[VAL_20]], %[[VAL_24]], %[[VAL_22]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK:               }
+! CHECK:             }
 ! CHECK:             omp.barrier
-! CHECK:             %[[VAL_22:.*]] = arith.constant 1 : i32
-! CHECK:             hlfir.assign %[[VAL_22]] to %[[VAL_5]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:             %[[VAL_26:.*]] = arith.constant 1 : i32
+! CHECK:             hlfir.assign %[[VAL_26]] to %[[VAL_5]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:             omp.terminator
 ! CHECK:           }
 ! CHECK:           return
@@ -480,55 +477,60 @@ subroutine allocatable2()
   !$omp end parallel
 end subroutine
 
-! CHECK:    func.func @_QPallocatable3() {
-! CHECK:      %[[VAL_0:.*]] = fir.address_of(@_QFallocatable3Ea) : !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:      %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocatable3Ea"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
-! CHECK:      %[[VAL_2:.*]] = omp.threadprivate %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>> -> !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:       %[[VAL_3:.*]]:2  = hlfir.declare %[[VAL_2]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocatable3Ea"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
-! CHECK:      %[[VAL_4:.*]] = fir.allocmem i32 {fir.must_be_heap = true, uniq_name = "_QFallocatable3Ea.alloc"}
-! CHECK:      %[[VAL_5:.*]] = fir.embox %[[VAL_4]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
-! CHECK:      fir.store %[[VAL_5]] to %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:      %[[C10_I32:.*]] = arith.constant 10 : i32
-! CHECK:      hlfir.assign %[[C10_I32]] to %[[VAL_3]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:      omp.parallel {
-! CHECK:        %[[VAL_6:.*]] = omp.threadprivate %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>> -> !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:        %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocatable3Ea"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
-! CHECK:        %[[VAL_8:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:        %[[VAL_9:.*]] = fir.box_addr %[[VAL_8]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-! CHECK:        %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (!fir.heap<i32>) -> i64
-! CHECK:        %[[C10_I64:.*]] = arith.constant 0 : i64
-! CHECK:        %[[VAL_11:.*]] = arith.cmpi ne, %[[VAL_10]], %[[C10_I64]] : i64
-! CHECK:        fir.if %[[VAL_11]] {
-! CHECK:         %[[VAL_12:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:         %[[VAL_13:.*]] = fir.box_addr %[[VAL_12]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-! CHECK:          %[[VAL_14:.*]] = fir.load %[[VAL_13]] : !fir.heap<i32>
-! CHECK:          hlfir.assign %[[VAL_14]] to %[[VAL_7]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:        } else {
-! CHECK:           %[[VAL_12:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:           %[[VAL_15:.*]] = fir.box_addr %[[VAL_12]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-! CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (!fir.heap<i32>) -> i64
-! CHECK:           %[[C0_I64_0:.*]] = arith.constant 0 : i64
-! CHECK:           %[[VAL_17:.*]] = arith.cmpi ne, %[[VAL_16]], %[[C0_I64_0]] : i64
-! CHECK:           fir.if %[[VAL_17]] {
-! CHECK:             %[[VAL_18:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:             %[[VAL_19:.*]] = fir.box_addr %[[VAL_18]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-! CHECK:             fir.freemem %[[VAL_19]] : !fir.heap<i32>
-! CHECK:             %[[VAL_20:.*]] = fir.zero_bits !fir.heap<i32>
-! CHECK:             %[[VAL_21:.*]] = fir.embox %[[VAL_20]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
-! CHECK:             fir.store %[[VAL_21]] to %[[VAL_7]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK-LABEL:   func.func @_QPallocatable3() {
+! CHECK:           %[[VAL_0:.*]] = fir.address_of(@_QFallocatable3Ea) : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFallocatable3Ea"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+! CHECK:           %[[VAL_2:.*]] = omp.threadprivate %[[VAL_1]]#1 : !fir.ref<!fir.box<!fir.heap<i32>>> -> !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFallocatable3Ea"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+! CHECK:           %[[VAL_4:.*]] = arith.constant false
+! CHECK:           %[[VAL_5:.*]] = fir.absent !fir.box<none>
+! CHECK:           %[[VAL_6:.*]] = fir.address_of(@_QQclX3573f88d1792380f265b3d2ede411e3d) : !fir.ref<!fir.char<1,66>>
+! CHECK:           %[[VAL_7:.*]] = arith.constant {{.*}} : i32
+! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_3]]#1 : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<!fir.char<1,66>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_10:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_8]], %[[VAL_4]], %[[VAL_5]], %[[VAL_9]], %[[VAL_7]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:           %[[VAL_11:.*]] = arith.constant 10 : i32
+! CHECK:           hlfir.assign %[[VAL_11]] to %[[VAL_3]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:           omp.parallel {
+! CHECK:             %[[VAL_12:.*]] = omp.threadprivate %[[VAL_1]]#1 : !fir.ref<!fir.box<!fir.heap<i32>>> -> !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:             %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFallocatable3Ea"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+! CHECK:             %[[VAL_14:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:             %[[VAL_15:.*]] = fir.box_addr %[[VAL_14]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
+! CHECK:             %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (!fir.heap<i32>) -> i64
+! CHECK:             %[[VAL_17:.*]] = arith.constant 0 : i64
+! CHECK:             %[[VAL_18:.*]] = arith.cmpi ne, %[[VAL_16]], %[[VAL_17]] : i64
+! CHECK:             fir.if %[[VAL_18]] {
+! CHECK:               %[[VAL_19:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:               %[[VAL_20:.*]] = fir.box_addr %[[VAL_19]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
+! CHECK:               %[[VAL_21:.*]] = fir.load %[[VAL_20]] : !fir.heap<i32>
+! CHECK:               hlfir.assign %[[VAL_21]] to %[[VAL_13]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:             } else {
+! CHECK:               %[[VAL_22:.*]] = fir.load %[[VAL_13]]#1 : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:               %[[VAL_23:.*]] = fir.box_addr %[[VAL_22]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
+! CHECK:               %[[VAL_24:.*]] = fir.convert %[[VAL_23]] : (!fir.heap<i32>) -> i64
+! CHECK:               %[[VAL_25:.*]] = arith.constant 0 : i64
+! CHECK:               %[[VAL_26:.*]] = arith.cmpi ne, %[[VAL_24]], %[[VAL_25]] : i64
+! CHECK:               fir.if %[[VAL_26]] {
+! CHECK:                 %[[VAL_27:.*]] = arith.constant false
+! CHECK:                 %[[VAL_28:.*]] = fir.absent !fir.box<none>
+! CHECK:                 %[[VAL_29:.*]] = fir.address_of(@_QQclX3573f88d1792380f265b3d2ede411e3d) : !fir.ref<!fir.char<1,66>>
+! CHECK:                 %[[VAL_30:.*]] = arith.constant {{.*}} : i32
+! CHECK:                 %[[VAL_31:.*]] = fir.convert %[[VAL_13]]#1 : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:                 %[[VAL_32:.*]] = fir.convert %[[VAL_29]] : (!fir.ref<!fir.char<1,66>>) -> !fir.ref<i8>
+! CHECK:                 %[[VAL_33:.*]] = fir.call @_FortranAAllocatableDeallocate(%[[VAL_31]], %[[VAL_27]], %[[VAL_28]], %[[VAL_32]], %[[VAL_30]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:               }
+! CHECK:             }
+! CHECK:             omp.barrier
+! CHECK:             %[[VAL_34:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:             %[[VAL_35:.*]] = fir.box_addr %[[VAL_34]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
+! CHECK:             %[[VAL_36:.*]] = fir.load %[[VAL_35]] : !fir.heap<i32>
+! CHECK:             %[[VAL_37:.*]] = arith.constant 1 : i32
+! CHECK:             %[[VAL_38:.*]] = arith.addi %[[VAL_36]], %[[VAL_37]] : i32
+! CHECK:             hlfir.assign %[[VAL_38]] to %[[VAL_13]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:             omp.terminator
 ! CHECK:           }
-! CHECK:          }
-! CHECK:        omp.barrier
-! CHECK:        %[[VAL_22:.*]] = fir.load %7#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:        %[[VAL_23:.*]] = fir.box_addr %[[VAL_22]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-! CHECK:       %[[VAL_24:.*]] = fir.load %[[VAL_23]] : !fir.heap<i32>
-! CHECK:        %[[C1_I32:.*]] = arith.constant 1 : i32
-! CHECK:        %[[VAL_25:.*]]= arith.addi %[[VAL_24]], %[[C1_I32]] : i32
-! CHECK:        hlfir.assign %[[VAL_25]]to %[[VAL_7]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:        omp.terminator
-! CHECK:      }
-! CHECK:      return
-! CHECK:    }
+! CHECK:           return
+! CHECK:         }
 subroutine allocatable3()
   integer, allocatable, save :: a
   !$omp threadprivate(a)
