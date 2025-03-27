@@ -616,7 +616,7 @@ static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
 
 static DecodeStatus decodeZcmpRlist(MCInst &Inst, uint32_t Imm,
                                     uint64_t Address, const void *Decoder) {
-  if (Imm <= 3)
+  if (Imm < RISCVZC::RA)
     return MCDisassembler::Fail;
   Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
@@ -624,7 +624,7 @@ static DecodeStatus decodeZcmpRlist(MCInst &Inst, uint32_t Imm,
 
 static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
                                         uint64_t Address, const void *Decoder) {
-  if (Imm <= 4)
+  if (Imm < RISCVZC::RA_S0)
     return MCDisassembler::Fail;
   Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
