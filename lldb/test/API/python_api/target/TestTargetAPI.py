@@ -539,8 +539,8 @@ class TargetAPITestCase(TestBase):
         self.dbg.SetSelectedTarget(target)
 
     @no_debug_info_test
-    def test_acquire_sblock(self):
-        """Make sure we can acquire the API lock from Python."""
+    def test_get_api_mutex(self):
+        """Make sure we can lock and unlock the API mutex from Python."""
         target = self.dbg.GetDummyTarget()
 
         mutex = target.GetAPIMutex()
@@ -552,8 +552,8 @@ class TargetAPITestCase(TestBase):
         mutex.unlock()
 
     @no_debug_info_test
-    def test_acquire_sblock_with_statement(self):
-        """Make sure we can acquire the API lock using a with-statement from Python."""
+    def test_get_api_mutex_with_statement(self):
+        """Make sure we can lock and unlock the API mutex using a with-statement from Python."""
         target = self.dbg.GetDummyTarget()
 
         with target.GetAPIMutex() as mutex:
