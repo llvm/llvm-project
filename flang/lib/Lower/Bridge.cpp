@@ -2363,7 +2363,7 @@ private:
          llvm::zip_equal(incrementLoopNestInfo, nestLBs, nestUBs, nestSts)) {
       // Structured loop - generate fir.do_loop.
       if (info.isStructured()) {
-        if (info.isUnordered)
+        if (genDoConcurrent)
           continue;
 
         // The loop variable is a doLoop op argument.
