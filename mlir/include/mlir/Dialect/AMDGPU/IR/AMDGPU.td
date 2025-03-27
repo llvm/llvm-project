@@ -771,12 +771,14 @@ def AMDGPU_WMMAOp :
   let hasVerifier = 1;
 }
 
+def GlobalLoadMemRefType : MemRefOf<[GlobalLoadTypes]>;
+
 def AMDGPU_GlobalLoadLDSOp :
     AMDGPU_Op<"global_load", [SameVariadicOperandSize]>,
     Arguments<(ins
-                   Arg<AnyMemRef, "buffer to read from", [MemRead]>:$src,
+                   Arg<GlobalLoadMemRefType, "buffer to read from", [MemRead]>:$src,
                    Variadic<I32>:$srcIndices,
-                   Arg<AnyMemRef, "buffer to write to", [MemWrite]>:$dst,
+                   Arg<GlobalLoadMemRefType, "buffer to write to", [MemWrite]>:$dst,
                    Variadic<I32>:$dstIndices
                    )>,
     Results<(outs)> {
@@ -788,11 +790,12 @@ def AMDGPU_GlobalLoadLDSOp :
 
     The `amdgpu.global_load` op is a wrapper around the various `global_load_lds` instructions.
 
-    The 
-
+    The `$src`, along with its indices, points to the memory location this thread reads from.
+    The `$dst`, along with its indices, points to the memory location the subgroup of this thread
+    will write to.
   }];
   let assemblyFormat = [{
-    $src `[` $srcIndices `]` $dst `[` $dstIndices `]` attr-dict `:` type($src) `,` type($dst)
+    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` attr-dict `:` type($src) `,` type($dst)
   }];
   let hasVerifier = 1;
 }

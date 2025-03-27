@@ -903,6 +903,78 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
   }
 };
 
+struct GlobalLoadLDSOpLowering : public ConvertOpToLLVMPattern<GlobalLoadLDSOp> {
+  GlobalLoadLDSOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<GlobalLoadLDSOp>(converter), chipset(chipset) {}
+
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(GlobalLoadLDSOp op, GlobalLoadLDSOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    auto elemType = cast<MemRefType>(op.getDst().getType()).getElementType();
+    size_t elemSizeInBits = elemType.getIntOrFloatBitWidth();
+    if (elemSizeInBits % 8 != 0)
+      return op.emitOpError("element size must be a multiple of 8");
+    auto loadWidth = elemSizeInBits / 8;
+
+    // TODO: add chipset support check
+    if (chipset.majorVersion >= 12)
+      return op.emitOpError("TODO");
+
+    // TODO: fold this into chipset check.
+    // Currently only 1, 2, and 4 byte loads are supported.
+    if (!(loadWidth == 1 || loadWidth == 2 || loadWidth == 4))
+      return op.emitOpError("unsupported element size");
+
+    Value src = adaptor.getSrc();
+    Value dst = adaptor.getDst();
+    Value memrefSrc = op.getSrc();
+    Value memrefDst = op.getDst();
+
+    // Collapse src memref with indices:
+    auto flattenIndex = [&](Value memref, MemRefType memrefType,
+                            ValueRange indices) -> std::optional<Value> {
+      MemRefDescriptor memRefDescriptor(memref);
+      int64_t offset = 0;
+      SmallVector<int64_t, 5> strides;
+      if (failed(memrefType.getStridesAndOffset(strides, offset)))
+        return {};
+      return getLinearIndexI32(rewriter, loc, memRefDescriptor, indices,
+                               strides);
+    };
+
+    // Source
+    auto optSrcIdx = flattenIndex(src, cast<MemRefType>(memrefSrc.getType()),
+                                  op.getSrcIndices());
+    if (!optSrcIdx)
+      return op.emitOpError("failed to flatten source memref indices");
+    auto optDstIdx = flattenIndex(dst, cast<MemRefType>(memrefDst.getType()),
+                                  op.getDstIndices());
+    if (!optDstIdx)
+      return op.emitOpError("failed to flatten destination memref indices");
+
+    Type srcPtrType =
+        LLVM::LLVMPointerType::get(rewriter.getContext(), 1);
+    Type dstPtrType =
+        LLVM::LLVMPointerType::get(rewriter.getContext(), 3);
+    Value srcPtr = rewriter.create<LLVM::GEPOp>(
+        loc, srcPtrType, elemType, src, ArrayRef<Value>({*optSrcIdx}));
+    
+    Value dstPtr = rewriter.create<LLVM::GEPOp>(
+        loc, dstPtrType, elemType, dst, ArrayRef<Value>({*optDstIdx}));
+
+    rewriter.replaceOpWithNewOp<ROCDL::GlobalLoadLDSOp>(
+        op, srcPtr, dstPtr, createI32Constant(rewriter, loc, loadWidth),
+        createI32Constant(rewriter, loc, 0),
+        createI32Constant(rewriter, loc, 0));
+
+    return success();
+  }
+};
+
 namespace {
 struct ExtPackedFp8OpLowering final
     : public ConvertOpToLLVMPattern<ExtPackedFp8Op> {
@@ -1286,6 +1358,6 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
                                ROCDL::RawPtrBufferAtomicCmpSwap>,
            AMDGPUDPPLowering, LDSBarrierOpLowering, SchedBarrierOpLowering,
            MFMAOpLowering, WMMAOpLowering, ExtPackedFp8OpLowering,
-           PackedTrunc2xFp8OpLowering, PackedStochRoundFp8OpLowering>(converter,
-                                                                      chipset);
+           PackedTrunc2xFp8OpLowering, PackedStochRoundFp8OpLowering,
+           GlobalLoadLDSOpLowering>(converter, chipset);
 }
