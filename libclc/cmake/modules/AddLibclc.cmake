@@ -260,7 +260,6 @@ function(add_libclc_builtin_set)
     endif()
 
     get_filename_component( file_dir ${file} DIRECTORY )
-    get_filename_component( input_filename ${file} NAME_WE )
 
     set( file_specific_compile_options )
     get_source_file_property( compile_opts ${file} COMPILE_OPTIONS)
