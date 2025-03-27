@@ -76,7 +76,7 @@ end program
 ! CHECK:           %[[VAL_7:.*]] = fir.absent !fir.box<none>
 ! CHECK:           %[[VAL_8:.*]] = fir.address_of(@_QQclX100ec2b8f633a84df3b7cc2ad55f845c) : !fir.ref<!fir.char<1,88>>
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 8 : i32
-! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_5]]#1 : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_5]]{{.*}} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.char<1,88>>) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_12:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_10]], %[[VAL_6]], %[[VAL_7]], %[[VAL_11]], %[[VAL_9]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK:           %[[VAL_13:.*]] = arith.constant 0 : i32
@@ -89,7 +89,7 @@ end program
 ! CHECK:               omp.loop_nest (%[[VAL_19:.*]]) : i32 = (%[[VAL_14]]) to (%[[VAL_15]]) inclusive step (%[[VAL_16]]) {
 ! CHECK:                 %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_17]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_18]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFEr"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
-! CHECK:                 hlfir.assign %[[VAL_19]] to %[[VAL_20]]#1 : i32, !fir.ref<i32>
+! CHECK:                 hlfir.assign %[[VAL_19]] to %[[VAL_20]]{{.*}} : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_22:.*]] = fir.load %[[VAL_20]]#0 : !fir.ref<i32>
 ! CHECK:                 hlfir.assign %[[VAL_22]] to %[[VAL_21]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:                 omp.yield

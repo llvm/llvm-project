@@ -38,7 +38,7 @@ end subroutine
 ! CHECK:    %[[VAL_12:.*]] = fir.absent !fir.box<none>
 ! CHECK:    %[[VAL_13:.*]] = fir.address_of(@_QQclX572920c036ca2a0767a89e67f96902da) : !fir.ref<!fir.char<1,91>>
 ! CHECK:    %[[VAL_14:.*]] = arith.constant 23 : i32
-! CHECK:    %[[VAL_15:.*]] = fir.convert %[[VAL_3]]#1 : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:    %[[VAL_15:.*]] = fir.convert %[[VAL_3]]{{.*}} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:    %[[VAL_16:.*]] = fir.convert %[[VAL_13]] : (!fir.ref<!fir.char<1,91>>) -> !fir.ref<i8>
 ! CHECK:    %[[VAL_17:.*]] = fir.call @_FortranAAllocatableDeallocate(%[[VAL_15]], %[[VAL_11]], %[[VAL_12]], %[[VAL_16]], %[[VAL_14]])
 ! CHECK:  }

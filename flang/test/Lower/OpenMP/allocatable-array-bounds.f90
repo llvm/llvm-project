@@ -109,11 +109,11 @@ end module assumed_allocatable_array_routines
 !HOST: %[[VAL_10:.*]] = arith.constant 1 : index
 !HOST: %[[VAL_11:.*]] = arith.constant {{.*}} : i32
 !HOST: %[[VAL_12:.*]] = arith.constant 0 : i32
-!HOST: %[[VAL_13:.*]] = fir.convert %[[VAL_5]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+!HOST: %[[VAL_13:.*]] = fir.convert %[[VAL_5]]{{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 !HOST: %[[VAL_14:.*]] = fir.convert %[[VAL_10]] : (index) -> i64
 !HOST: %[[VAL_15:.*]] = fir.convert %[[VAL_11]] : (i32) -> i64
 !HOST: fir.call @_FortranAAllocatableSetBounds(%[[VAL_13]], %[[VAL_12]], %[[VAL_14]], %[[VAL_15]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
-!HOST: %[[VAL_16:.*]] = fir.convert %[[VAL_5]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+!HOST: %[[VAL_16:.*]] = fir.convert %[[VAL_5]]{{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 !HOST: %[[VAL_17:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.char<1,84>>) -> !fir.ref<i8>
 !HOST: %[[VAL_18:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_16]], %[[VAL_6]], %[[VAL_7]], %[[VAL_17]], %[[VAL_9]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 !HOST: %[[VAL_19:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>

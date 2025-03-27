@@ -92,11 +92,11 @@ end program
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 2 : i32
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 0 : i32
-! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_3]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_3]]{{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_8]] : (index) -> i64
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_9]] : (i32) -> i64
 ! CHECK:           fir.call @_FortranAAllocatableSetBounds(%[[VAL_11]], %[[VAL_10]], %[[VAL_12]], %[[VAL_13]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
-! CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_3]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_3]]{{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<!fir.char<1,96>>) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_16:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_14]], %[[VAL_4]], %[[VAL_5]], %[[VAL_15]], %[[VAL_7]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK:           omp.parallel {
@@ -107,7 +107,7 @@ end program
 ! CHECK:               omp.loop_nest (%[[VAL_22:.*]]) : i32 = (%[[VAL_17]]) to (%[[VAL_18]]) inclusive step (%[[VAL_19]]) {
 ! CHECK:                 %[[VAL_23:.*]]:2 = hlfir.declare %[[VAL_20]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_21]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFEr"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
-! CHECK:                 hlfir.assign %[[VAL_22]] to %[[VAL_23]]#1 : i32, !fir.ref<i32>
+! CHECK:                 hlfir.assign %[[VAL_22]] to %[[VAL_23]]{{.*}} : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_25:.*]] = fir.load %[[VAL_23]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_26:.*]] = fir.load %[[VAL_24]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:                 %[[VAL_27:.*]] = arith.constant 1 : index
@@ -130,7 +130,7 @@ end program
 ! CHECK:           %[[VAL_37:.*]] = fir.convert %[[VAL_36]] : (!fir.ref<!fir.char<1,96>>) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_38:.*]] = arith.constant 17 : i32
 ! CHECK:           %[[VAL_39:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_35]], %[[VAL_37]], %[[VAL_38]]) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
-! CHECK:           %[[VAL_40:.*]] = fir.load %[[VAL_3]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:           %[[VAL_40:.*]] = fir.load %[[VAL_3]]{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:           %[[VAL_41:.*]] = fir.convert %[[VAL_40]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.box<none>
 ! CHECK:           %[[VAL_42:.*]] = fir.call @_FortranAioOutputDescriptor(%[[VAL_39]], %[[VAL_41]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>) -> i1
 ! CHECK:           %[[VAL_43:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_39]]) fastmath<contract> : (!fir.ref<i8>) -> i32

@@ -102,7 +102,7 @@ contains
 ! HLFIR:   %[[VAL_25:.*]] = fir.absent !fir.box<none>
 ! HLFIR:   %[[VAL_26:.*]] = fir.address_of(@_QQclXec1fdecbdab00016d5f81c67562024e7) : !fir.ref<!fir.char<1,73>>
 ! HLFIR:   %[[VAL_27:.*]] = arith.constant {{.*}} : i32
-! HLFIR:   %[[VAL_28:.*]] = fir.convert %[[ARG0]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! HLFIR:   %[[VAL_28:.*]] = fir.convert %[[ARG0]]{{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! HLFIR:   %[[VAL_29:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,73>>) -> !fir.ref<i8>
 ! HLFIR:   %[[VAL_30:.*]] = fir.call @_FortranAAllocatableDeallocate(%[[VAL_28]], %[[VAL_24]], %[[VAL_25]], %[[VAL_29]], %[[VAL_27]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! HLFIR: }
