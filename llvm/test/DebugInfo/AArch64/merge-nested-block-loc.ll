@@ -1,8 +1,8 @@
 ; RUN: opt -mtriple=aarch64-unknown-linux-gnu -S %s -passes=sroa -o - | FileCheck %s
 
-; In this test we want to ensure that the location of phi instruction merged from locations
-; of %mul3 and %mul9 belongs to the correct scope (DILexicalBlockFile), so that line
-; number of that location belongs to the corresponding file.
+; In this test we want to ensure that the merged location of phi instruction
+; belongs to the correct scope (DILexicalBlockFile), so that line number
+; of that location belongs to the corresponding file.
 
 ; Generated with clang from
 ; # 1 "1.c" 1
