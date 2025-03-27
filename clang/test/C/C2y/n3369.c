@@ -31,6 +31,11 @@ void test_semantic_failures() {
   int non_array;
   (void)_Countof non_array;  // expected-error {{'_Countof' requires an argument of array type; 'int' invalid}}  
   (void)_Countof(int);       // expected-error {{'_Countof' requires an argument of array type; 'int' invalid}}  
+  (void)_Countof(test_semantic_failures); // expected-error {{invalid application of '_Countof' to a function type}}
+  (void)_Countof(struct S);  // expected-error {{invalid application of '_Countof' to an incomplete type 'struct S'}} \
+                                expected-note {{forward declaration of 'struct S'}}
+  struct T { int x; };
+  (void)_Countof(struct T);  // expected-error {{'_Countof' requires an argument of array type; 'struct T' invalid}}
 }
 
 void test_constant_expression_behavior(int n) {
@@ -114,4 +119,23 @@ void test_typedefs() {
   static_assert(_Generic(typeof(x), int[100][12] : 1, default : 0));
   static_assert(_Countof(x) == 100);
   static_assert(_Countof(*x) == 12);
+}
+
+void test_zero_size_arrays() {
+  int array[0]; // expected-warning {{zero size arrays are an extension}}
+  static_assert(_Countof(array) == 0);
+  static_assert(_Countof(int[0]) == 0); // expected-warning {{zero size arrays are an extension}}
+}
+
+void test_struct_members() {
+  struct S {
+    int array[10];
+  } s;
+  static_assert(_Countof(s.array) == 10);
+
+  struct T {
+    int count;
+    int fam[];
+  } t;
+  static_assert(_Countof(t.fam)); // expected-error {{invalid application of '_Countof' to an incomplete type 'int[]'}}
 }
