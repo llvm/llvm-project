@@ -1365,7 +1365,7 @@ define half @trunc(fp128 %a) nounwind {
 ; CHECK-P8-NEXT:    bl __trunckfhf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    clrldi r3, r3, 48
-; CHECK-P8-NEXT:    bl __extendhfsf2
+; CHECK-P8-NEXT:    bl __gnu_h2f_ieee
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
