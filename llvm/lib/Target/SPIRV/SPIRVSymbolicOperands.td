@@ -172,6 +172,7 @@ def KernelProfilingInfoOperand : OperandCategory;
 def OpcodeOperand : OperandCategory;
 def CooperativeMatrixLayoutOperand : OperandCategory;
 def CooperativeMatrixOperandsOperand : OperandCategory;
+def MatrixMultiplyAccumulateOperand :OperandCategory;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Extesions enum values and at the same time
@@ -313,6 +314,7 @@ defm SPV_INTEL_bindless_images : ExtensionOperand<116>;
 defm SPV_INTEL_long_composites : ExtensionOperand<117>;
 defm SPV_INTEL_memory_access_aliasing : ExtensionOperand<118>;
 defm SPV_INTEL_fp_max_error : ExtensionOperand<119>;
+defm SPV_INTEL_subgroup_matrix_multiply_accumulate : ExtensionOperand<120>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -512,6 +514,7 @@ defm FunctionFloatControlINTEL : CapabilityOperand<5821, 0, 0, [SPV_INTEL_float_
 defm LongCompositesINTEL : CapabilityOperand<6089, 0, 0, [SPV_INTEL_long_composites], []>;
 defm BindlessImagesINTEL : CapabilityOperand<6528, 0, 0, [SPV_INTEL_bindless_images], []>;
 defm MemoryAccessAliasingINTEL : CapabilityOperand<5910, 0, 0, [SPV_INTEL_memory_access_aliasing], []>;
+defm SubgroupMatrixMultiplyAccumulateINTEL : CapabilityOperand<6236, 0, 0, [SPV_INTEL_subgroup_matrix_multiply_accumulate], []>;
 defm FPMaxErrorINTEL : CapabilityOperand<6169, 0, 0, [SPV_INTEL_fp_max_error], []>;
 
 //===----------------------------------------------------------------------===//
@@ -1741,3 +1744,41 @@ defm MatrixAAndBTF32ComponentsINTEL : CooperativeMatrixOperandsOperand<0x20, [SP
 defm MatrixAAndBBFloat16ComponentsINTEL : CooperativeMatrixOperandsOperand<0x40, [SPV_INTEL_joint_matrix], [CooperativeMatrixBFloat16ComponentTypeINTEL]>;
 defm MatrixCBFloat16ComponentsINTEL : CooperativeMatrixOperandsOperand<0x80, [SPV_INTEL_joint_matrix], [CooperativeMatrixBFloat16ComponentTypeINTEL]>;
 defm MatrixResultBFloat16ComponentsINTEL : CooperativeMatrixOperandsOperand<0x100, [SPV_INTEL_joint_matrix], [CooperativeMatrixBFloat16ComponentTypeINTEL]>;
+
+//===----------------------------------------------------------------------===//
+// Multiclass used to define Matrix Multiply Accumulate Operands enum values and at the same time
+// SymbolicOperand entries with string mnemonics and capabilities.
+//===----------------------------------------------------------------------===//
+def MatrixMultiplyAccumulate : GenericEnum, Operand<i32> {
+  let FilterClass = "MatrixMultiplyAccumulate";
+  let NameField = "Name";
+  let ValueField = "Value";
+  let PrintMethod = !strconcat("printSymbolicOperand<OperandCategory::", FilterClass, "Operand>");
+}
+
+class MatrixMultiplyAccumulate<string name, bits<32> value> {
+  string Name = name;
+  bits<32> Value = value;
+}
+
+multiclass  MatrixMultiplyAccumulateOperand<bits<32> value, list<Extension> reqExtensions> {
+def : MatrixMultiplyAccumulate<NAME, value>;
+  defm : SymbolicOperandWithRequirements< MatrixMultiplyAccumulateOperand, value, NAME, 0, 0, reqExtensions, []>;
+}
+
+defm None :  MatrixMultiplyAccumulateOperand<0x0, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixASignedComponentsINTEL :  MatrixMultiplyAccumulateOperand<0x1, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixBSignedComponentsINTEL :  MatrixMultiplyAccumulateOperand<0x2, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixCBFloat16INTEL :  MatrixMultiplyAccumulateOperand<0x4, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixResultBFloat16INTEL :  MatrixMultiplyAccumulateOperand<0x8, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixAPackedInt8INTEL :  MatrixMultiplyAccumulateOperand<0x10, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixBPackedInt8INTEL :  MatrixMultiplyAccumulateOperand<0x20, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixAPackedInt4INTEL :  MatrixMultiplyAccumulateOperand<0x40, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixBPackedInt4INTEL :  MatrixMultiplyAccumulateOperand<0x80, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixATF32INTEL :  MatrixMultiplyAccumulateOperand<0x100, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixBTF32INTEL :  MatrixMultiplyAccumulateOperand<0x200, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixAPackedFloat16INTEL :  MatrixMultiplyAccumulateOperand<0x400, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixBPackedFloat16INTEL :  MatrixMultiplyAccumulateOperand<0x800, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixAPackedBFloat16INTEL :  MatrixMultiplyAccumulateOperand<0x1000, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixBPackedBFloat16INTEL :  MatrixMultiplyAccumulateOperand<0x2000, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+
