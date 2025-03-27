@@ -81,16 +81,14 @@ void ConstCorrectnessCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
-  const auto ConstType = hasType(
-      qualType(isConstQualified(),
-               // pointee check will check the const pointer and const array
-               unless(pointerType()), unless(arrayType())));
+  const auto ConstType =
+      hasType(qualType(isConstQualified(),
+                       // pointee check will check the constness of pointer
+                       unless(pointerType())));
 
   const auto ConstReference = hasType(references(isConstQualified()));
   const auto RValueReference = hasType(
       referenceType(anyOf(rValueReferenceType(), unless(isSpelledAsLValue()))));
-  const auto ConstArrayType =
-      hasType(arrayType(hasElementType(isConstQualified())));
 
   const auto TemplateType = anyOf(
       hasType(hasCanonicalType(templateTypeParmType())),
@@ -117,7 +115,7 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   // Example: `int i = 10` would match `int i`.
   const auto LocalValDecl = varDecl(
       isLocal(), hasInitializer(anything()),
-      unless(anyOf(ConstType, ConstReference, ConstArrayType, TemplateType,
+      unless(anyOf(ConstType, ConstReference, TemplateType,
                    hasInitializer(isInstantiationDependent()), AutoTemplateType,
                    RValueReference, FunctionPointerRef,
                    hasType(cxxRecordDecl(isLambda())), isImplicit(),
