@@ -486,10 +486,12 @@ public:
       auto valobj_extractor_or_err = valobj_sp->GetData();
 
       if (auto error = valobj_extractor_or_err.takeError()) {
-        err = Status::FromErrorStringWithFormat(
-            "couldn't read contents of reference variable %s: %s",
-            GetName().AsCString(), llvm::toString(std::move(error)).c_str());
+        err = Status::FromError(llvm::joinErrors(
+            llvm::createStringError("couldn't read contents of reference variable %s: ",
+                                    GetName().AsCString()),
+            std::move(error)));
         return;
+
       }
 
       lldb::offset_t offset = 0;
@@ -524,10 +526,11 @@ public:
       } else {
         auto data_or_err = valobj_sp->GetData();
         if (auto error = data_or_err.takeError()) {
-            err = Status::FromError(
-                llvm::joinErrors(llvm::createStringError("couldn't get the value of %s: ", 
-                    GetName().AsCString()), std::move(error)));
-            return;
+          err = Status::FromError(llvm::joinErrors(
+              llvm::createStringError("couldn't get the value of %s: ",
+                                      GetName().AsCString()),
+              std::move(error)));
+          return;
         }
 
         auto data = std::move(*data_or_err);
