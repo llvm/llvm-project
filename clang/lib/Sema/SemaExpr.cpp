@@ -19849,11 +19849,14 @@ static void DoMarkVarDeclReferenced(
           SemaRef.InstantiateVariableDefinition(PointOfInstantiation, Var);
         });
 
-        // Re-set the member to trigger a recomputation of the dependence bits
-        // for the expression.
-        if (auto *DRE = dyn_cast_or_null<DeclRefExpr>(E))
+        if (auto *DRE = dyn_cast_or_null<DeclRefExpr>(E)) {
+          // Re-set the member to trigger a recomputation of the dependence bits
+          // for the expression.
           DRE->setDecl(DRE->getDecl());
-        else if (auto *ME = dyn_cast_or_null<MemberExpr>(E))
+          if (SemaRef.Context.getAsIncompleteArrayType(DRE->getType()) &&
+              !SemaRef.Context.getAsIncompleteArrayType(Var->getType()))
+            DRE->setType(Var->getType());
+        } else if (auto *ME = dyn_cast_or_null<MemberExpr>(E))
           ME->setMemberDecl(ME->getMemberDecl());
       } else if (FirstInstantiation) {
         SemaRef.PendingInstantiations
