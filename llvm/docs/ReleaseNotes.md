@@ -214,6 +214,9 @@ Changes to LLDB
   Windows 11 on the Microsoft SQ2 and Snapdragon Elite X platforms.
 * LLDB now steps through C++ thunks. This fixes an issue where previously, it
   wouldn't step into multiple inheritance virtual functions.
+* The `min-gdbserver-port` and `max-gdbserver-port` options have been removed
+  from `lldb-server`'s platform mode. Since the changes to `lldb-server`'s port
+  handling in LLDB 20, these options have had no effect.
 
 ### Changes to lldb-dap
 
