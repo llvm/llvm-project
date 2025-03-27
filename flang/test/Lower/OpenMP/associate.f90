@@ -6,12 +6,12 @@
 !CHECK:         omp.parallel {
 !CHECK-NOT:       hlfir.declare {{.*}} {uniq_name = "_QFtest_parallel_assocEa"}
 !CHECK-NOT:       hlfir.declare {{.*}} {uniq_name = "_QFtest_parallel_assocEb"}
-!CHECK:           omp.wsloop {
+!CHECK:           omp.wsloop private({{.*}}) {
 !CHECK:           }
 !CHECK:         }
 !CHECK:         omp.parallel {{.*}} {
 !CHECK-NOT:       hlfir.declare {{.*}} {uniq_name = "_QFtest_parallel_assocEb"}
-!CHECK:           omp.wsloop {
+!CHECK:           omp.wsloop private({{.*}}) {
 !CHECK:           }
 !CHECK:         }
 subroutine test_parallel_assoc()

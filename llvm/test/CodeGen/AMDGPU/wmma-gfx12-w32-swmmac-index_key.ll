@@ -19,8 +19,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x32_f16_index_key(<8 x half> %A, <16
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b128 v[24:25], v[16:19], off offset:16
 ; GFX12-NEXT:    global_store_b128 v[24:25], v[12:15], off
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
   %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
@@ -51,8 +49,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x32_bf16_index_key(<8 x i16> %A, <16
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b128 v[24:25], v[16:19], off offset:16
 ; GFX12-NEXT:    global_store_b128 v[24:25], v[12:15], off
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
   %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
@@ -77,8 +73,6 @@ define amdgpu_ps void @test_swmmac_f16_16x16x32_f16_index_key(<8 x half> %A, <16
 ; GFX12-NEXT:    v_swmmac_f16_16x16x32_f16 v[12:15], v[0:3], v[4:11], v16 index_key:1
 ; GFX12-NEXT:    global_store_b128 v[18:19], v[22:25], off
 ; GFX12-NEXT:    global_store_b128 v[20:21], v[12:15], off
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
   %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
@@ -103,8 +97,6 @@ define amdgpu_ps void @test_swmmac_bf16_16x16x32_bf16_index_key(<8 x i16> %A, <1
 ; GFX12-NEXT:    v_swmmac_bf16_16x16x32_bf16 v[12:15], v[0:3], v[4:11], v16 index_key:1
 ; GFX12-NEXT:    global_store_b128 v[18:19], v[22:25], off
 ; GFX12-NEXT:    global_store_b128 v[20:21], v[12:15], off
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
   %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
@@ -135,8 +127,6 @@ define amdgpu_ps void @test_swmmac_i32_16x16x32_iu8_index_key(<2 x i32> %A, <4 x
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b128 v[18:19], v[10:13], off offset:16
 ; GFX12-NEXT:    global_store_b128 v[18:19], v[6:9], off
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
   %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
@@ -167,8 +157,6 @@ define amdgpu_ps void @test_swmmac_i32_16x16x32_iu4_index_key(i32 %A, <2 x i32> 
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b128 v[15:16], v[7:10], off offset:16
 ; GFX12-NEXT:    global_store_b128 v[15:16], v[3:6], off
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
   %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
@@ -199,8 +187,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x32_fp8_fp8_index_key(<2 x i32> %A, 
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b128 v[18:19], v[10:13], off offset:16
 ; GFX12-NEXT:    global_store_b128 v[18:19], v[6:9], off
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
   %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
@@ -231,8 +217,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x32_fp8_bf8_index_key(<2 x i32> %A, 
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b128 v[18:19], v[10:13], off offset:16
 ; GFX12-NEXT:    global_store_b128 v[18:19], v[6:9], off
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
   %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
@@ -263,8 +247,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x32_bf8_fp8_index_key(<2 x i32> %A, 
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b128 v[18:19], v[10:13], off offset:16
 ; GFX12-NEXT:    global_store_b128 v[18:19], v[6:9], off
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
   %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4
@@ -295,8 +277,6 @@ define amdgpu_ps void @test_swmmac_f32_16x16x32_bf8_bf8_index_key(<2 x i32> %A, 
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b128 v[18:19], v[10:13], off offset:16
 ; GFX12-NEXT:    global_store_b128 v[18:19], v[6:9], off
-; GFX12-NEXT:    s_nop 0
-; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
   %IndexVec = load <2 x i16>, ptr addrspace(1) %IndexVecPtr, align 4

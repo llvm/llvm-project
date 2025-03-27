@@ -16,15 +16,15 @@
 #include "test_macros.h"
 
 struct A {
-    std::list<A> l;
-    std::list<A>::iterator it;
-    std::list<A>::const_iterator cit;
-    std::list<A>::reverse_iterator rit;
-    std::list<A>::const_reverse_iterator crit;
+  std::list<A> l;
+  std::list<A>::iterator it;
+  std::list<A>::const_iterator cit;
+  std::list<A>::reverse_iterator rit;
+  std::list<A>::const_reverse_iterator crit;
 };
 
 int main(int, char**) {
-    A a;
+  A a;
 
   return 0;
 }

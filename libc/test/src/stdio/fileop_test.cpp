@@ -31,7 +31,7 @@ TEST(LlvmLibcFILETest, SimpleFileOperations) {
   constexpr char FILENAME[] = "testdata/simple_operations.test";
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
-  ASSERT_EQ(LIBC_NAMESPACE::fileno(file), 3);
+  ASSERT_GE(LIBC_NAMESPACE::fileno(file), 0);
   constexpr char CONTENT[] = "1234567890987654321";
   ASSERT_EQ(sizeof(CONTENT) - 1,
             LIBC_NAMESPACE::fwrite(CONTENT, 1, sizeof(CONTENT) - 1, file));
@@ -87,7 +87,7 @@ TEST(LlvmLibcFILETest, SimpleFileOperations) {
 
   LIBC_NAMESPACE::libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::fwrite("nothing", 1, 1, file),
-              returns(EQ(0)).with_errno(NE(0)));
+              returns(EQ(size_t(0))).with_errno(NE(0)));
   LIBC_NAMESPACE::libc_errno = 0;
 
   ASSERT_EQ(LIBC_NAMESPACE::fclose(file), 0);

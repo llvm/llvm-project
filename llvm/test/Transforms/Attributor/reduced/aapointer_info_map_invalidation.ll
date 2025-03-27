@@ -8,7 +8,7 @@ define amdgpu_kernel void @__omp_offloading_fd00_2c00523__ZN11qmcplusplus7ompBLA
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca [0 x [0 x float]], i32 0, align 8, addrspace(5)
 ; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr addrspace(5) [[TMP1]] to ptr
 ; CHECK-NEXT:    store ptr [[TMP2]], ptr addrspace(5) [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = call fastcc i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr nocapture nofree noundef readonly align 8 dereferenceable_or_null(8) [[TMP2]], i1 noundef false)
+; CHECK-NEXT:    [[TMP3:%.*]] = call fastcc i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr nofree noundef readonly align 8 captures(none) dereferenceable_or_null(8) [[TMP2]], i1 noundef false)
 ; CHECK-NEXT:    ret void
 ;
   %1 = alloca [0 x [0 x float]], i32 0, align 8, addrspace(5)
@@ -21,7 +21,7 @@ define amdgpu_kernel void @__omp_offloading_fd00_2c00523__ZN11qmcplusplus7ompBLA
 define fastcc i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr %0, i1 %1) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@__kmpc_nvptx_parallel_reduce_nowait_v2
-; CHECK-SAME: (ptr nocapture nofree nonnull readonly align 8 dereferenceable(8) [[TMP0:%.*]], i1 noundef [[TMP1:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (ptr nofree nonnull readonly align 8 captures(none) dereferenceable(8) [[TMP0:%.*]], i1 noundef [[TMP1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP3:%.*]], label [[TMP79:%.*]]
 ; CHECK:       3:
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP4:%.*]], label [[TMP6:%.*]]

@@ -235,7 +235,7 @@ declare <2 x i1> @llvm.x86.avx512.fpclass.pd.128(<2 x double>, i32)
 define zeroext i8 @test_mm_fpclass_pd_mask(<2 x double> %__A) {
 ; CHECK-LABEL: test_mm_fpclass_pd_mask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vfpclasspd $2, %xmm0, %k0
+; CHECK-NEXT:    vfpclasspd $2, %xmm0, %k0 # k0 = isPositiveZero(xmm0)
 ; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    ret{{[l|q]}}
@@ -279,7 +279,7 @@ declare <4 x i1> @llvm.x86.avx512.fpclass.pd.256(<4 x double>, i32)
 define zeroext i8 @test_mm256_fpclass_pd_mask(<4 x double> %__A) {
 ; CHECK-LABEL: test_mm256_fpclass_pd_mask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vfpclasspd $2, %ymm0, %k0
+; CHECK-NEXT:    vfpclasspd $2, %ymm0, %k0 # k0 = isPositiveZero(ymm0)
 ; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    vzeroupper
@@ -322,7 +322,7 @@ declare <4 x i1> @llvm.x86.avx512.fpclass.ps.128(<4 x float>, i32)
 define zeroext i8 @test_mm_fpclass_ps_mask(<4 x float> %__A) {
 ; CHECK-LABEL: test_mm_fpclass_ps_mask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vfpclassps $2, %xmm0, %k0
+; CHECK-NEXT:    vfpclassps $2, %xmm0, %k0 # k0 = isPositiveZero(xmm0)
 ; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    ret{{[l|q]}}
@@ -336,7 +336,7 @@ entry:
 define zeroext i8 @test_mm256_mask_fpclass_ps_mask(i8 zeroext %__U, <8 x float> %__A) {
 ; X86-LABEL: test_mm256_mask_fpclass_ps_mask:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vfpclassps $2, %ymm0, %k0
+; X86-NEXT:    vfpclassps $2, %ymm0, %k0 # k0 = isPositiveZero(ymm0)
 ; X86-NEXT:    kmovw %k0, %eax
 ; X86-NEXT:    andb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
@@ -345,7 +345,7 @@ define zeroext i8 @test_mm256_mask_fpclass_ps_mask(i8 zeroext %__U, <8 x float> 
 ;
 ; X64-LABEL: test_mm256_mask_fpclass_ps_mask:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vfpclassps $2, %ymm0, %k0
+; X64-NEXT:    vfpclassps $2, %ymm0, %k0 # k0 = isPositiveZero(ymm0)
 ; X64-NEXT:    kmovw %k0, %eax
 ; X64-NEXT:    andb %dil, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
@@ -364,7 +364,7 @@ declare <8 x i1> @llvm.x86.avx512.fpclass.ps.256(<8 x float>, i32)
 define zeroext i8 @test_mm256_fpclass_ps_mask(<8 x float> %__A) {
 ; CHECK-LABEL: test_mm256_fpclass_ps_mask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vfpclassps $2, %ymm0, %k0
+; CHECK-NEXT:    vfpclassps $2, %ymm0, %k0 # k0 = isPositiveZero(ymm0)
 ; CHECK-NEXT:    kmovw %k0, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    vzeroupper

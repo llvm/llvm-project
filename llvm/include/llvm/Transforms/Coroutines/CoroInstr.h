@@ -170,7 +170,7 @@ public:
       Inst->eraseFromParent();
       return;
     }
-    Inst->moveBefore(getCoroBegin()->getNextNode());
+    Inst->moveBefore(std::next(getCoroBegin()->getIterator()));
   }
 
   // Info argument of coro.id is

@@ -81,7 +81,8 @@ define i32 @undef(i1 %cond, i32 %v) {
 ; CHECK:       B:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       EXIT:
-; CHECK-NEXT:    ret i32 [[V:%.*]]
+; CHECK-NEXT:    [[W:%.*]] = phi i32 [ [[V:%.*]], [[A]] ], [ undef, [[B]] ]
+; CHECK-NEXT:    ret i32 [[W]]
 ;
   br i1 %cond, label %A, label %B
 A:

@@ -262,6 +262,19 @@ bool shouldRecordCommandLine(const ToolChain &TC,
                              bool &FRecordCommandLine,
                              bool &GRecordCommandLine);
 
+void renderCommonIntegerOverflowOptions(const llvm::opt::ArgList &Args,
+                                        llvm::opt::ArgStringList &CmdArgs);
+
+bool shouldEnableVectorizerAtOLevel(const llvm::opt::ArgList &Args,
+                                    bool isSlpVec);
+
+/// Enable -fvectorize based on the optimization level selected.
+void handleVectorizeLoopsArgs(const llvm::opt::ArgList &Args,
+                              llvm::opt::ArgStringList &CmdArgs);
+
+/// Enable -fslp-vectorize based on the optimization level selected.
+void handleVectorizeSLPArgs(const llvm::opt::ArgList &Args,
+                            llvm::opt::ArgStringList &CmdArgs);
 } // end namespace tools
 } // end namespace driver
 } // end namespace clang

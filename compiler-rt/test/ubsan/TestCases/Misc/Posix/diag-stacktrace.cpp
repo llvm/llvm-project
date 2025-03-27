@@ -2,10 +2,10 @@
 // UNSUPPORTED: target=thumb{{.*}}
 // UNSUPPORTED: android
 
-// RUN: %clangxx -fsanitize=return %gmlt -O2 -fno-omit-frame-pointer -fasynchronous-unwind-tables %s -o %t
+// RUN: %clangxx -Wno-error=return-type -fsanitize=return %gmlt -O2 -fno-omit-frame-pointer -fasynchronous-unwind-tables %s -o %t
 // RUN: %env_ubsan_opts=print_stacktrace=1:fast_unwind_on_fatal=0 not %run %t 2>&1 | FileCheck %s
 // RUN: %env_ubsan_opts=print_stacktrace=1:fast_unwind_on_fatal=1 not %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx -fsanitize=return %gmlt -O2 -fno-omit-frame-pointer -fno-exceptions -fno-asynchronous-unwind-tables %s -o %t
+// RUN: %clangxx -Wno-error=return-type -fsanitize=return %gmlt -O2 -fno-omit-frame-pointer -fno-exceptions -fno-asynchronous-unwind-tables %s -o %t
 // RUN: %env_ubsan_opts=print_stacktrace=1:fast_unwind_on_fatal=0 not %run %t 2>&1 | FileCheck %s
 // RUN: %env_ubsan_opts=print_stacktrace=1:fast_unwind_on_fatal=1 not %run %t 2>&1 | FileCheck %s
 

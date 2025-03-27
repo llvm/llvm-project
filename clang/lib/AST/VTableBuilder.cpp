@@ -1169,12 +1169,13 @@ void ItaniumVTableBuilder::ComputeThisAdjustments() {
       //
       // Do not set ThunkInfo::Method if Idx is already in VTableThunks. This
       // can happen when covariant return adjustment is required too.
-      if (!VTableThunks.count(Idx)) {
+      auto [It, Inserted] = VTableThunks.try_emplace(Idx);
+      if (Inserted) {
         const CXXMethodDecl *Method = VTables.findOriginalMethodInMap(MD);
-        VTableThunks[Idx].Method = Method;
-        VTableThunks[Idx].ThisType = Method->getThisType().getTypePtr();
+        It->second.Method = Method;
+        It->second.ThisType = Method->getThisType().getTypePtr();
       }
-      VTableThunks[Idx].This = ThisAdjustment;
+      It->second.This = ThisAdjustment;
     };
 
     SetThisAdjustmentThunk(VTableIndex);
@@ -1653,8 +1654,9 @@ void ItaniumVTableBuilder::AddMethods(
     // findOriginalMethod to find the method that created the entry if the
     // method in the entry requires adjustment.
     if (!ReturnAdjustment.isEmpty()) {
-      VTableThunks[Components.size()].Method = MD;
-      VTableThunks[Components.size()].ThisType = MD->getThisType().getTypePtr();
+      auto &VTT = VTableThunks[Components.size()];
+      VTT.Method = MD;
+      VTT.ThisType = MD->getThisType().getTypePtr();
     }
 
     AddMethod(Overrider.Method, ReturnAdjustment);
@@ -2113,8 +2115,8 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
 
     // Dump the next address point.
     uint64_t NextIndex = Index + 1;
-    if (AddressPointsByIndex.count(NextIndex)) {
-      if (AddressPointsByIndex.count(NextIndex) == 1) {
+    if (unsigned Count = AddressPointsByIndex.count(NextIndex)) {
+      if (Count == 1) {
         const BaseSubobject &Base =
           AddressPointsByIndex.find(NextIndex)->second;
 
@@ -3831,8 +3833,8 @@ const VirtualBaseInfo &MicrosoftVTableContext::computeVBTableRelatedInformation(
   unsigned VBTableIndex = 1 + VBI->VBTableIndices.size();
   for (const auto &VB : RD->vbases()) {
     const CXXRecordDecl *CurVBase = VB.getType()->getAsCXXRecordDecl();
-    if (!VBI->VBTableIndices.count(CurVBase))
-      VBI->VBTableIndices[CurVBase] = VBTableIndex++;
+    if (VBI->VBTableIndices.try_emplace(CurVBase, VBTableIndex).second)
+      ++VBTableIndex;
   }
 
   return *VBI;

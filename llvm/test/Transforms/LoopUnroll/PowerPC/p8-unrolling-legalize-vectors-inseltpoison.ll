@@ -32,22 +32,22 @@ define ptr @f(ptr returned %s, i32 zeroext %x, i32 signext %k) local_unnamed_add
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH_NEW]] ], [ [[INDEX_NEXT_1:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND12:%.*]] = phi <16 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>, [[VECTOR_PH_NEW]] ], [ [[VEC_IND_NEXT13_1:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, [[VECTOR_PH_NEW]] ], [ [[NITER_NEXT_1:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = shl <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, [[VEC_IND12]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl <16 x i32> splat (i32 1), [[VEC_IND12]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <16 x i32> [[TMP4]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <16 x i32> [[TMP5]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = select <16 x i1> [[TMP6]], <16 x i8> <i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48>, <16 x i8> <i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49>
+; CHECK-NEXT:    [[TMP7:%.*]] = select <16 x i1> [[TMP6]], <16 x i8> splat (i8 48), <16 x i8> splat (i8 49)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <16 x i8> [[TMP7]], ptr [[TMP8]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT:%.*]] = add nuw nsw i64 [[INDEX]], 16
-; CHECK-NEXT:    [[VEC_IND_NEXT13:%.*]] = add <16 x i32> [[VEC_IND12]], <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
-; CHECK-NEXT:    [[TMP9:%.*]] = shl <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, [[VEC_IND_NEXT13]]
+; CHECK-NEXT:    [[VEC_IND_NEXT13:%.*]] = add <16 x i32> [[VEC_IND12]], splat (i32 16)
+; CHECK-NEXT:    [[TMP9:%.*]] = shl <16 x i32> splat (i32 1), [[VEC_IND_NEXT13]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = and <16 x i32> [[TMP9]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <16 x i32> [[TMP10]], zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = select <16 x i1> [[TMP11]], <16 x i8> <i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48>, <16 x i8> <i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49>
+; CHECK-NEXT:    [[TMP12:%.*]] = select <16 x i1> [[TMP11]], <16 x i8> splat (i8 48), <16 x i8> splat (i8 49)
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 [[INDEX_NEXT]]
 ; CHECK-NEXT:    store <16 x i8> [[TMP12]], ptr [[TMP13]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT_1]] = add i64 [[INDEX]], 32
-; CHECK-NEXT:    [[VEC_IND_NEXT13_1]] = add <16 x i32> [[VEC_IND12]], <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>
+; CHECK-NEXT:    [[VEC_IND_NEXT13_1]] = add <16 x i32> [[VEC_IND12]], splat (i32 32)
 ; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[MIDDLE_BLOCK_UNR_LCSSA_LOOPEXIT:%.*]], label [[VECTOR_BODY]]
@@ -63,10 +63,10 @@ define ptr @f(ptr returned %s, i32 zeroext %x, i32 signext %k) local_unnamed_add
 ; CHECK:       vector.body.epil.preheader:
 ; CHECK-NEXT:    br label [[VECTOR_BODY_EPIL:%.*]]
 ; CHECK:       vector.body.epil:
-; CHECK-NEXT:    [[TMP14:%.*]] = shl <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, [[VEC_IND12_UNR]]
+; CHECK-NEXT:    [[TMP14:%.*]] = shl <16 x i32> splat (i32 1), [[VEC_IND12_UNR]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = and <16 x i32> [[TMP14]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq <16 x i32> [[TMP15]], zeroinitializer
-; CHECK-NEXT:    [[TMP17:%.*]] = select <16 x i1> [[TMP16]], <16 x i8> <i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48, i8 48>, <16 x i8> <i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49>
+; CHECK-NEXT:    [[TMP17:%.*]] = select <16 x i1> [[TMP16]], <16 x i8> splat (i8 48), <16 x i8> splat (i8 49)
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 [[INDEX_UNR]]
 ; CHECK-NEXT:    store <16 x i8> [[TMP17]], ptr [[TMP18]], align 1
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK]]

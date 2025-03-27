@@ -196,3 +196,7 @@ bool ThreadPlanBase::MischiefManaged() {
   // The base plan is never done.
   return false;
 }
+
+RunDirection ThreadPlanBase::GetDirection() const {
+  return m_process.GetBaseDirection();
+}

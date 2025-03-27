@@ -153,6 +153,12 @@
 /// exported when llvm is built as a shared library with everything else that is
 /// unannotated will have internal visibility.
 ///
+/// LLVM_ABI_EXPORT is for the special case for things like plugin symbol
+/// declarations or definitions where we don't want the macro to be switching
+/// between dllexport and dllimport on windows based on what codebase is being
+/// built, it will only be dllexport. For non windows platforms this macro
+/// behaves the same as LLVM_ABI.
+///
 /// LLVM_EXPORT_TEMPLATE is used on explicit template instantiations in source
 /// files that were declared extern in a header. This macro is only set as a
 /// compiler export attribute on windows, on other platforms it does nothing.
@@ -179,6 +185,7 @@
 #define LLVM_ABI
 #define LLVM_TEMPLATE_ABI
 #define LLVM_EXPORT_TEMPLATE
+#define LLVM_ABI_EXPORT
 #elif defined(_WIN32) && !defined(__MINGW32__)
 #if defined(LLVM_EXPORTS)
 #define LLVM_ABI __declspec(dllexport)
@@ -189,19 +196,24 @@
 #define LLVM_TEMPLATE_ABI __declspec(dllimport)
 #define LLVM_EXPORT_TEMPLATE
 #endif
-#elif defined(__ELF__) || defined(__MINGW32__) || defined(_AIX)
+#define LLVM_ABI_EXPORT __declspec(dllexport)
+#elif defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||             \
+    defined(__MVS__)
 #define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #define LLVM_TEMPLATE_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #define LLVM_EXPORT_TEMPLATE
-#elif defined(__MACH__) || defined(__WASM__)
+#define LLVM_ABI_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#elif defined(__MACH__) || defined(__WASM__) || defined(__EMSCRIPTEN__)
 #define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #define LLVM_TEMPLATE_ABI
 #define LLVM_EXPORT_TEMPLATE
+#define LLVM_ABI_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
 #endif
 #else
 #define LLVM_ABI
 #define LLVM_TEMPLATE_ABI
 #define LLVM_EXPORT_TEMPLATE
+#define LLVM_ABI_EXPORT
 #endif
 #define LLVM_C_ABI LLVM_ABI
 #endif
@@ -216,6 +228,12 @@
 #define LLVM_ATTRIBUTE_USED __attribute__((__used__))
 #else
 #define LLVM_ATTRIBUTE_USED
+#endif
+
+#if __has_attribute(retain)
+#define LLVM_ATTRIBUTE_RETAIN __attribute__((__retain__))
+#else
+#define LLVM_ATTRIBUTE_RETAIN
 #endif
 
 #if defined(__clang__)
@@ -399,6 +417,12 @@
 #define LLVM_GSL_POINTER [[gsl::Pointer]]
 #else
 #define LLVM_GSL_POINTER
+#endif
+
+#if LLVM_HAS_CPP_ATTRIBUTE(clang::lifetimebound)
+#define LLVM_LIFETIME_BOUND [[clang::lifetimebound]]
+#else
+#define LLVM_LIFETIME_BOUND
 #endif
 
 #if LLVM_HAS_CPP_ATTRIBUTE(nodiscard) >= 201907L
@@ -601,7 +625,8 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 /// get stripped in release builds.
 // FIXME: Move this to a private config.h as it's not usable in public headers.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-#define LLVM_DUMP_METHOD LLVM_ATTRIBUTE_NOINLINE LLVM_ATTRIBUTE_USED
+#define LLVM_DUMP_METHOD                                                       \
+  LLVM_ATTRIBUTE_NOINLINE LLVM_ATTRIBUTE_USED LLVM_ATTRIBUTE_RETAIN
 #else
 #define LLVM_DUMP_METHOD LLVM_ATTRIBUTE_NOINLINE
 #endif

@@ -16,7 +16,7 @@
 #include <__config>
 #include <__mutex/mutex.h>
 #include <__mutex/unique_lock.h>
-#include <__system_error/system_error.h>
+#include <__system_error/throw_system_error.h>
 #include <__thread/support.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_floating_point.h>
@@ -33,7 +33,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#ifndef _LIBCPP_HAS_NO_THREADS
+#if _LIBCPP_HAS_THREADS
 
 // enum class cv_status
 _LIBCPP_DECLARE_STRONG_ENUM(cv_status){no_timeout, timeout};
@@ -91,7 +91,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI void
   __do_timed_wait(unique_lock<mutex>& __lk, chrono::time_point<_Clock, chrono::nanoseconds>) _NOEXCEPT;
 };
-#endif // !_LIBCPP_HAS_NO_THREADS
+#endif // _LIBCPP_HAS_THREADS
 
 template <class _Rep, class _Period, __enable_if_t<is_floating_point<_Rep>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI chrono::nanoseconds __safe_nanosecond_cast(chrono::duration<_Rep, _Period> __d) {
@@ -140,7 +140,7 @@ inline _LIBCPP_HIDE_FROM_ABI chrono::nanoseconds __safe_nanosecond_cast(chrono::
   return nanoseconds(__result);
 }
 
-#ifndef _LIBCPP_HAS_NO_THREADS
+#if _LIBCPP_HAS_THREADS
 template <class _Predicate>
 void condition_variable::wait(unique_lock<mutex>& __lk, _Predicate __pred) {
   while (!__pred())
@@ -210,7 +210,7 @@ inline void condition_variable::__do_timed_wait(
     unique_lock<mutex>& __lk, chrono::time_point<chrono::steady_clock, chrono::nanoseconds> __tp) _NOEXCEPT {
   using namespace chrono;
   if (!__lk.owns_lock())
-    __throw_system_error(EPERM, "condition_variable::timed wait: mutex not locked");
+    std::__throw_system_error(EPERM, "condition_variable::timed wait: mutex not locked");
   nanoseconds __d = __tp.time_since_epoch();
   timespec __ts;
   seconds __s                 = duration_cast<seconds>(__d);
@@ -225,7 +225,7 @@ inline void condition_variable::__do_timed_wait(
   }
   int __ec = pthread_cond_clockwait(&__cv_, __lk.mutex()->native_handle(), CLOCK_MONOTONIC, &__ts);
   if (__ec != 0 && __ec != ETIMEDOUT)
-    __throw_system_error(__ec, "condition_variable timed_wait failed");
+    std::__throw_system_error(__ec, "condition_variable timed_wait failed");
 }
 #  endif // _LIBCPP_HAS_COND_CLOCKWAIT
 
@@ -235,7 +235,7 @@ inline void condition_variable::__do_timed_wait(unique_lock<mutex>& __lk,
   wait_for(__lk, __tp - _Clock::now());
 }
 
-#endif // _LIBCPP_HAS_NO_THREADS
+#endif // _LIBCPP_HAS_THREADS
 
 _LIBCPP_END_NAMESPACE_STD
 

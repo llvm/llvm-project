@@ -20,6 +20,11 @@
 
 namespace llvm {
 class MCSymbol;
+
+namespace object {
+class RelocationRef;
+} // namespace object
+
 class raw_ostream;
 
 namespace ELF {
@@ -30,7 +35,16 @@ enum { R_X86_64_converted_reloc_bit = 0x80 };
 namespace bolt {
 
 /// Relocation class.
-struct Relocation {
+class Relocation {
+public:
+  Relocation(uint64_t Offset, MCSymbol *Symbol, uint32_t Type, uint64_t Addend,
+             uint64_t Value)
+      : Offset(Offset), Symbol(Symbol), Type(Type), Optional(false),
+        Addend(Addend), Value(Value) {}
+
+  Relocation()
+      : Offset(0), Symbol(0), Type(0), Optional(0), Addend(0), Value(0) {}
+
   static Triple::ArchType Arch; /// set by BinaryContext ctor.
 
   /// The offset of this relocation in the object it is contained in.
@@ -40,8 +54,13 @@ struct Relocation {
   MCSymbol *Symbol;
 
   /// Relocation type.
-  uint64_t Type;
+  uint32_t Type;
 
+private:
+  /// Relocations added by optimizations can be optional.
+  bool Optional = false;
+
+public:
   /// The offset from the \p Symbol base used to compute the final
   /// value of this relocation.
   uint64_t Addend;
@@ -51,71 +70,74 @@ struct Relocation {
   uint64_t Value;
 
   /// Return size in bytes of the given relocation \p Type.
-  static size_t getSizeForType(uint64_t Type);
+  static size_t getSizeForType(uint32_t Type);
+
+  /// Some relocations added by optimizations are optional, meaning they can be
+  /// omitted under certain circumstances.
+  void setOptional() { Optional = true; }
 
   /// Return size of this relocation.
   size_t getSize() const { return getSizeForType(Type); }
 
   /// Skip relocations that we don't want to handle in BOLT
-  static bool skipRelocationType(uint64_t Type);
+  static bool skipRelocationType(uint32_t Type);
 
-  /// Handle special cases when relocation should not be processed by BOLT or
-  /// change relocation \p Type to proper one before continuing if \p Contents
-  /// and \P Type mismatch occurred.
-  static bool skipRelocationProcess(uint64_t &Type, uint64_t Contents);
-
-  // Adjust value depending on relocation type (make it PC relative or not)
-  static uint64_t encodeValue(uint64_t Type, uint64_t Value, uint64_t PC);
+  /// Adjust value depending on relocation type (make it PC relative or not).
+  static uint64_t encodeValue(uint32_t Type, uint64_t Value, uint64_t PC);
 
   /// Extract current relocated value from binary contents. This is used for
   /// RISC architectures where values are encoded in specific bits depending
   /// on the relocation value. For X86, we limit to sign extending the value
   /// if necessary.
-  static uint64_t extractValue(uint64_t Type, uint64_t Contents, uint64_t PC);
+  static uint64_t extractValue(uint32_t Type, uint64_t Contents, uint64_t PC);
 
   /// Return true if relocation type is PC-relative. Return false otherwise.
-  static bool isPCRelative(uint64_t Type);
+  static bool isPCRelative(uint32_t Type);
 
   /// Check if \p Type is a supported relocation type.
-  static bool isSupported(uint64_t Type);
+  static bool isSupported(uint32_t Type);
 
   /// Return true if relocation type implies the creation of a GOT entry
-  static bool isGOT(uint64_t Type);
+  static bool isGOT(uint32_t Type);
 
   /// Special relocation type that allows the linker to modify the instruction.
-  static bool isX86GOTPCRELX(uint64_t Type);
-  static bool isX86GOTPC64(uint64_t Type);
+  static bool isX86GOTPCRELX(uint32_t Type);
+  static bool isX86GOTPC64(uint32_t Type);
 
   /// Return true if relocation type is NONE
-  static bool isNone(uint64_t Type);
+  static bool isNone(uint32_t Type);
 
   /// Return true if relocation type is RELATIVE
-  static bool isRelative(uint64_t Type);
+  static bool isRelative(uint32_t Type);
 
   /// Return true if relocation type is IRELATIVE
-  static bool isIRelative(uint64_t Type);
+  static bool isIRelative(uint32_t Type);
 
   /// Return true if relocation type is for thread local storage.
-  static bool isTLS(uint64_t Type);
+  static bool isTLS(uint32_t Type);
 
   /// Return true of relocation type is for referencing a specific instruction
   /// (as opposed to a function, basic block, etc).
-  static bool isInstructionReference(uint64_t Type);
+  static bool isInstructionReference(uint32_t Type);
+
+  /// Return the relocation type of \p Rel from llvm::object. It checks for
+  /// overflows as BOLT uses 32 bits for the type.
+  static uint32_t getType(const object::RelocationRef &Rel);
 
   /// Return code for a NONE relocation
-  static uint64_t getNone();
+  static uint32_t getNone();
 
   /// Return code for a PC-relative 4-byte relocation
-  static uint64_t getPC32();
+  static uint32_t getPC32();
 
   /// Return code for a PC-relative 8-byte relocation
-  static uint64_t getPC64();
+  static uint32_t getPC64();
 
   /// Return code for a ABS 8-byte relocation
-  static uint64_t getAbs64();
+  static uint32_t getAbs64();
 
   /// Return code for a RELATIVE relocation
-  static uint64_t getRelative();
+  static uint32_t getRelative();
 
   /// Return true if this relocation is PC-relative. Return false otherwise.
   bool isPCRelative() const { return isPCRelative(Type); }
@@ -161,7 +183,7 @@ private:
   const MCExpr *createExpr(MCStreamer *Streamer) const;
   const MCExpr *createExpr(MCStreamer *Streamer,
                            const MCExpr *RetainedValue) const;
-  static MCBinaryExpr::Opcode getComposeOpcodeFor(uint64_t Type);
+  static MCBinaryExpr::Opcode getComposeOpcodeFor(uint32_t Type);
 };
 
 /// Relocation ordering by offset.

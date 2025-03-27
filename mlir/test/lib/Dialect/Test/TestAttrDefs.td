@@ -17,6 +17,7 @@
 include "TestDialect.td"
 include "TestEnumDefs.td"
 include "mlir/Dialect/Polynomial/IR/PolynomialAttributes.td"
+include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
 include "mlir/Dialect/Utils/StructuredOpsUtils.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
@@ -226,6 +227,12 @@ def TestAttrWithOptionalUnsigned : Test_Attr<"TestAttrWithOptionalUnsigned"> {
   let mnemonic = "attr_with_optional_unsigned";
 }
 
+def TestAttrWithOptionalEnum : Test_Attr<"TestAttrWithOptionalEnum"> {
+  let parameters = (ins OptionalParameter<"std::optional<SimpleEnum>">:$value);
+  let assemblyFormat = "`<` $value `>`";
+  let mnemonic = "attr_with_optional_enum";
+}
+
 def TestAttrUgly : Test_Attr<"TestAttrUgly"> {
   let parameters = (ins "::mlir::Attribute":$attr);
 
@@ -378,6 +385,14 @@ def NestedPolynomialAttr2 : Test_Attr<"NestedPolynomialAttr2"> {
   }];
 }
 
+// Test a ptr constant memory space.
+def TestConstMemorySpaceAttr : Test_Attr<"TestConstMemorySpace", [
+    DeclareAttrInterfaceMethods<MemorySpaceAttrInterface>
+  ]> {
+  let mnemonic = "const_memory_space";
+  let parameters = (ins DefaultValuedParameter<"unsigned", "0">:$addressSpace);
+  let assemblyFormat = "(`<` $addressSpace^ `>`)?";
+}
 
 // Test custom location handling.
 def TestCustomLocationAttr : Test_LocAttr<"TestCustomLocation"> {
@@ -387,6 +402,16 @@ def TestCustomLocationAttr : Test_LocAttr<"TestCustomLocation"> {
   // Choose a silly separator token so we know it's hitting this code path
   // and not another.
   let assemblyFormat = "`<` $file `*` $line `>`";
+}
+
+// Test OpAsmAttrInterface.
+def TestOpAsmAttrInterfaceAttr : Test_Attr<"TestOpAsmAttrInterface",
+    [DeclareAttrInterfaceMethods<OpAsmAttrInterface, ["getAlias"]>]> {
+  let mnemonic = "op_asm_attr_interface";
+  let parameters = (ins "mlir::StringAttr":$value);
+  let assemblyFormat = [{
+    `<` struct(params) `>`
+  }];
 }
 
 #endif // TEST_ATTRDEFS

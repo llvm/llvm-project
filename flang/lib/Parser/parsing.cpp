@@ -75,6 +75,7 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
       messages_, *currentCooked_, preprocessor_, options.features};
   prescanner.set_fixedForm(options.isFixedForm)
       .set_fixedFormColumnLimit(options.fixedFormColumns)
+      .set_preprocessingOnly(options.prescanAndReformat)
       .set_expandIncludeLines(!options.prescanAndReformat ||
           options.expandIncludeLinesInPreprocessedOutput)
       .AddCompilerDirectiveSentinel("dir$");
@@ -158,8 +159,9 @@ void Parsing::EmitPreprocessedSource(
         // which signifies a comment (directive) in both source forms.
         inDirective = true;
       }
-      if (inDirective && directive.size() < directiveNameLength &&
-          IsLetter(ch)) {
+      bool inDirectiveSentinel{
+          inDirective && directive.size() < directiveNameLength};
+      if (inDirectiveSentinel && IsLetter(ch)) {
         directive += getOriginalChar(ch);
       }
 
@@ -210,7 +212,8 @@ void Parsing::EmitPreprocessedSource(
           out << ' ';
         }
       }
-      if (!inContinuation && position && position->column <= 72 && ch != ' ') {
+      if (!inContinuation && !inDirectiveSentinel && position &&
+          position->column <= 72 && ch != ' ') {
         // Preserve original indentation
         for (; column < position->column; ++column) {
           out << ' ';

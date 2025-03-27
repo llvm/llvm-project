@@ -17,6 +17,7 @@
 
 #include "clang/Basic/AttrSubjectMatchRules.h"
 #include "clang/Basic/AttributeCommonInfo.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Registry.h"
 #include <climits>
@@ -174,5 +175,9 @@ typedef llvm::Registry<ParsedAttrInfo> ParsedAttrInfoRegistry;
 const std::list<std::unique_ptr<ParsedAttrInfo>> &getAttributePluginInstances();
 
 } // namespace clang
+
+namespace llvm {
+extern template class CLANG_TEMPLATE_ABI Registry<clang::ParsedAttrInfo>;
+} // namespace llvm
 
 #endif // LLVM_CLANG_BASIC_PARSEDATTRINFO_H

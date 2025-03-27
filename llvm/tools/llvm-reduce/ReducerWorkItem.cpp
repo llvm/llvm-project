@@ -267,7 +267,7 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
 
     DstMBB->setIsEHPad(SrcMBB.isEHPad());
     DstMBB->setIsEHScopeEntry(SrcMBB.isEHScopeEntry());
-    DstMBB->setIsEHCatchretTarget(SrcMBB.isEHCatchretTarget());
+    DstMBB->setIsEHContTarget(SrcMBB.isEHContTarget());
     DstMBB->setIsEHFuncletEntry(SrcMBB.isEHFuncletEntry());
 
     // FIXME: These are not serialized
@@ -343,11 +343,9 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
     }
   }
 
-  DenseSet<const uint32_t *> ConstRegisterMasks;
-
   // Track predefined/named regmasks which we ignore.
-  for (const uint32_t *Mask : TRI->getRegMasks())
-    ConstRegisterMasks.insert(Mask);
+  DenseSet<const uint32_t *> ConstRegisterMasks(llvm::from_range,
+                                                TRI->getRegMasks());
 
   // Clone instructions.
   for (auto &SrcMBB : *SrcMF) {
@@ -394,13 +392,12 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
   DstMF->getProperties().reset().set(SrcMF->getProperties());
 
   if (!SrcMF->getFrameInstructions().empty() ||
-      !SrcMF->getLongjmpTargets().empty() ||
-      !SrcMF->getCatchretTargets().empty())
+      !SrcMF->getLongjmpTargets().empty() || !SrcMF->getEHContTargets().empty())
     report_fatal_error("cloning not implemented for machine function property");
 
   DstMF->setCallsEHReturn(SrcMF->callsEHReturn());
   DstMF->setCallsUnwindInit(SrcMF->callsUnwindInit());
-  DstMF->setHasEHCatchret(SrcMF->hasEHCatchret());
+  DstMF->setHasEHContTarget(SrcMF->hasEHContTarget());
   DstMF->setHasEHScopes(SrcMF->hasEHScopes());
   DstMF->setHasEHFunclets(SrcMF->hasEHFunclets());
   DstMF->setHasFakeUses(SrcMF->hasFakeUses());
@@ -521,9 +518,7 @@ ReducerWorkItem::clone(const TargetMachine *TM) const {
     // MachineModuleInfo contains a lot of other state used during codegen which
     // we won't be using here, but we should be able to ignore it (although this
     // is pretty ugly).
-    const LLVMTargetMachine *LLVMTM =
-        static_cast<const LLVMTargetMachine *>(TM);
-    CloneMMM->MMI = std::make_unique<MachineModuleInfo>(LLVMTM);
+    CloneMMM->MMI = std::make_unique<MachineModuleInfo>(TM);
 
     for (const Function &F : getModule()) {
       if (auto *MF = MMI->getMachineFunction(F))
@@ -839,9 +834,8 @@ llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
     };
 
     std::unique_ptr<Module> M = MParser->parseIRModule(SetDataLayout);
-    LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
 
-    MMM->MMI = std::make_unique<MachineModuleInfo>(LLVMTM);
+    MMM->MMI = std::make_unique<MachineModuleInfo>(TM.get());
     MParser->parseMachineFunctions(*M, *MMM->MMI);
     MMM->M = std::move(M);
   } else {

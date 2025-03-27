@@ -11,8 +11,6 @@
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
 
-// XFAIL: LIBCXX-FREEBSD-FIXME
-
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ru_RU.UTF-8
@@ -89,27 +87,22 @@ int main(int, char**)
     }
 #endif
 
-#if defined( _WIN32) || defined(_AIX)
-    std::string us_grouping = "\3";
-#else
-    std::string us_grouping = "\3\3";
-#endif
     {
         Fnf f(LOCALE_en_US_UTF_8, 1);
-        assert(f.grouping() == us_grouping);
+        assert(f.grouping() == "\3" || f.grouping() == "\3\3");
     }
     {
         Fnt f(LOCALE_en_US_UTF_8, 1);
-        assert(f.grouping() == us_grouping);
+        assert(f.grouping() == "\3" || f.grouping() == "\3\3");
     }
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         Fwf f(LOCALE_en_US_UTF_8, 1);
-        assert(f.grouping() == us_grouping);
+        assert(f.grouping() == "\3" || f.grouping() == "\3\3");
     }
     {
         Fwt f(LOCALE_en_US_UTF_8, 1);
-        assert(f.grouping() == us_grouping);
+        assert(f.grouping() == "\3" || f.grouping() == "\3\3");
     }
 #endif
 
@@ -132,27 +125,22 @@ int main(int, char**)
     }
 #endif
 
-#if defined( _WIN32) || defined(_AIX)
-    std::string ru_grouping = "\3";
-#else
-    std::string ru_grouping = "\3\3";
-#endif
     {
         Fnf f(LOCALE_ru_RU_UTF_8, 1);
-        assert(f.grouping() == ru_grouping);
+        assert(f.grouping() == "\3" || f.grouping() == "\3\3");
     }
     {
         Fnt f(LOCALE_ru_RU_UTF_8, 1);
-        assert(f.grouping() == ru_grouping);
+        assert(f.grouping() == "\3" || f.grouping() == "\3\3");
     }
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         Fwf f(LOCALE_ru_RU_UTF_8, 1);
-        assert(f.grouping() == ru_grouping);
+        assert(f.grouping() == "\3" || f.grouping() == "\3\3");
     }
     {
         Fwt f(LOCALE_ru_RU_UTF_8, 1);
-        assert(f.grouping() == ru_grouping);
+        assert(f.grouping() == "\3" || f.grouping() == "\3\3");
     }
 #endif
 

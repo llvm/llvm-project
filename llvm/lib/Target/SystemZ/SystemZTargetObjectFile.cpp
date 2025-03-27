@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZTargetObjectFile.h"
+#include "MCTargetDesc/SystemZMCExpr.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCValue.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
 const MCExpr *SystemZELFTargetObjectFile::getDebugThreadLocalSymbol(
     const MCSymbol *Sym) const {
-  return MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_DTPOFF, getContext());
+  return MCSymbolRefExpr::create(Sym, SystemZMCExpr::VK_DTPOFF, getContext());
 }

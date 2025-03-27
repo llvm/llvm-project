@@ -3982,7 +3982,7 @@ define i8 @atomicrmw_xchg_0_i8_monotonic(ptr %a) nounwind {
 ; LA64-NEXT:    ori $a2, $zero, 255
 ; LA64-NEXT:    sll.w $a2, $a2, $a1
 ; LA64-NEXT:    nor $a2, $a2, $zero
-; LA64-NEXT:    amand_db.w $a3, $a2, $a0
+; LA64-NEXT:    amand.w $a3, $a2, $a0
 ; LA64-NEXT:    srl.w $a0, $a3, $a1
 ; LA64-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i8 0 monotonic
@@ -4011,7 +4011,7 @@ define i8 @atomicrmw_xchg_minus_1_i8_monotonic(ptr %a) nounwind {
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
 ; LA64-NEXT:    ori $a2, $zero, 255
 ; LA64-NEXT:    sll.w $a2, $a2, $a1
-; LA64-NEXT:    amor_db.w $a3, $a2, $a0
+; LA64-NEXT:    amor.w $a3, $a2, $a0
 ; LA64-NEXT:    srl.w $a0, $a3, $a1
 ; LA64-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i8 -1 monotonic
@@ -4090,7 +4090,7 @@ define i16 @atomicrmw_xchg_0_i16_monotonic(ptr %a) nounwind {
 ; LA64-NEXT:    ori $a2, $a2, 4095
 ; LA64-NEXT:    sll.w $a2, $a2, $a1
 ; LA64-NEXT:    nor $a2, $a2, $zero
-; LA64-NEXT:    amand_db.w $a3, $a2, $a0
+; LA64-NEXT:    amand.w $a3, $a2, $a0
 ; LA64-NEXT:    srl.w $a0, $a3, $a1
 ; LA64-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i16 0 monotonic
@@ -4121,7 +4121,7 @@ define i16 @atomicrmw_xchg_minus_1_i16_monotonic(ptr %a) nounwind {
 ; LA64-NEXT:    lu12i.w $a2, 15
 ; LA64-NEXT:    ori $a2, $a2, 4095
 ; LA64-NEXT:    sll.w $a2, $a2, $a1
-; LA64-NEXT:    amor_db.w $a3, $a2, $a0
+; LA64-NEXT:    amor.w $a3, $a2, $a0
 ; LA64-NEXT:    srl.w $a0, $a3, $a1
 ; LA64-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i16 -1 monotonic
@@ -4142,7 +4142,7 @@ define i32 @atomicrmw_xchg_i32_monotonic(ptr %a, i32 %b) nounwind {
 ;
 ; LA64-LABEL: atomicrmw_xchg_i32_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    amswap_db.w $a2, $a1, $a0
+; LA64-NEXT:    amswap.w $a2, $a1, $a0
 ; LA64-NEXT:    move $a0, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i32 %b monotonic
@@ -4162,7 +4162,7 @@ define i64 @atomicrmw_xchg_i64_monotonic(ptr %a, i64 %b) nounwind {
 ;
 ; LA64-LABEL: atomicrmw_xchg_i64_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    amswap_db.d $a2, $a1, $a0
+; LA64-NEXT:    amswap.d $a2, $a1, $a0
 ; LA64-NEXT:    move $a0, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i64 %b monotonic
@@ -4273,7 +4273,7 @@ define i32 @atomicrmw_add_i32_monotonic(ptr %a, i32 %b) nounwind {
 ;
 ; LA64-LABEL: atomicrmw_add_i32_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    amadd_db.w $a2, $a1, $a0
+; LA64-NEXT:    amadd.w $a2, $a1, $a0
 ; LA64-NEXT:    move $a0, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw add ptr %a, i32 %b monotonic
@@ -4293,7 +4293,7 @@ define i64 @atomicrmw_add_i64_monotonic(ptr %a, i64 %b) nounwind {
 ;
 ; LA64-LABEL: atomicrmw_add_i64_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    amadd_db.d $a2, $a1, $a0
+; LA64-NEXT:    amadd.d $a2, $a1, $a0
 ; LA64-NEXT:    move $a0, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw add ptr %a, i64 %b monotonic
@@ -4405,7 +4405,7 @@ define i32 @atomicrmw_sub_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; LA64-LABEL: atomicrmw_sub_i32_monotonic:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    sub.w $a2, $zero, $a1
-; LA64-NEXT:    amadd_db.w $a1, $a2, $a0
+; LA64-NEXT:    amadd.w $a1, $a2, $a0
 ; LA64-NEXT:    move $a0, $a1
 ; LA64-NEXT:    ret
   %1 = atomicrmw sub ptr %a, i32 %b monotonic
@@ -4426,7 +4426,7 @@ define i64 @atomicrmw_sub_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; LA64-LABEL: atomicrmw_sub_i64_monotonic:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    sub.d $a2, $zero, $a1
-; LA64-NEXT:    amadd_db.d $a1, $a2, $a0
+; LA64-NEXT:    amadd.d $a1, $a2, $a0
 ; LA64-NEXT:    move $a0, $a1
 ; LA64-NEXT:    ret
   %1 = atomicrmw sub ptr %a, i64 %b monotonic
@@ -4609,7 +4609,7 @@ define i8 @atomicrmw_and_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA64-NEXT:    andi $a1, $a1, 255
 ; LA64-NEXT:    sll.w $a1, $a1, $a2
 ; LA64-NEXT:    orn $a1, $a1, $a3
-; LA64-NEXT:    amand_db.w $a3, $a1, $a0
+; LA64-NEXT:    amand.w $a3, $a1, $a0
 ; LA64-NEXT:    srl.w $a0, $a3, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw and ptr %a, i8 %b monotonic
@@ -4646,7 +4646,7 @@ define i16 @atomicrmw_and_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-NEXT:    sll.w $a1, $a1, $a2
 ; LA64-NEXT:    orn $a1, $a1, $a3
-; LA64-NEXT:    amand_db.w $a3, $a1, $a0
+; LA64-NEXT:    amand.w $a3, $a1, $a0
 ; LA64-NEXT:    srl.w $a0, $a3, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw and ptr %a, i16 %b monotonic
@@ -4667,7 +4667,7 @@ define i32 @atomicrmw_and_i32_monotonic(ptr %a, i32 %b) nounwind {
 ;
 ; LA64-LABEL: atomicrmw_and_i32_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    amand_db.w $a2, $a1, $a0
+; LA64-NEXT:    amand.w $a2, $a1, $a0
 ; LA64-NEXT:    move $a0, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw and ptr %a, i32 %b monotonic
@@ -4687,7 +4687,7 @@ define i64 @atomicrmw_and_i64_monotonic(ptr %a, i64 %b) nounwind {
 ;
 ; LA64-LABEL: atomicrmw_and_i64_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    amand_db.d $a2, $a1, $a0
+; LA64-NEXT:    amand.d $a2, $a1, $a0
 ; LA64-NEXT:    move $a0, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw and ptr %a, i64 %b monotonic
@@ -4716,7 +4716,7 @@ define i8 @atomicrmw_or_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
 ; LA64-NEXT:    andi $a1, $a1, 255
 ; LA64-NEXT:    sll.w $a1, $a1, $a2
-; LA64-NEXT:    amor_db.w $a3, $a1, $a0
+; LA64-NEXT:    amor.w $a3, $a1, $a0
 ; LA64-NEXT:    srl.w $a0, $a3, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw or ptr %a, i8 %b monotonic
@@ -4745,7 +4745,7 @@ define i16 @atomicrmw_or_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
 ; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-NEXT:    sll.w $a1, $a1, $a2
-; LA64-NEXT:    amor_db.w $a3, $a1, $a0
+; LA64-NEXT:    amor.w $a3, $a1, $a0
 ; LA64-NEXT:    srl.w $a0, $a3, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw or ptr %a, i16 %b monotonic
@@ -4766,7 +4766,7 @@ define i32 @atomicrmw_or_i32_monotonic(ptr %a, i32 %b) nounwind {
 ;
 ; LA64-LABEL: atomicrmw_or_i32_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    amor_db.w $a2, $a1, $a0
+; LA64-NEXT:    amor.w $a2, $a1, $a0
 ; LA64-NEXT:    move $a0, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw or ptr %a, i32 %b monotonic
@@ -4786,7 +4786,7 @@ define i64 @atomicrmw_or_i64_monotonic(ptr %a, i64 %b) nounwind {
 ;
 ; LA64-LABEL: atomicrmw_or_i64_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    amor_db.d $a2, $a1, $a0
+; LA64-NEXT:    amor.d $a2, $a1, $a0
 ; LA64-NEXT:    move $a0, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw or ptr %a, i64 %b monotonic
@@ -4815,7 +4815,7 @@ define i8 @atomicrmw_xor_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
 ; LA64-NEXT:    andi $a1, $a1, 255
 ; LA64-NEXT:    sll.w $a1, $a1, $a2
-; LA64-NEXT:    amxor_db.w $a3, $a1, $a0
+; LA64-NEXT:    amxor.w $a3, $a1, $a0
 ; LA64-NEXT:    srl.w $a0, $a3, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i8 %b monotonic
@@ -4844,7 +4844,7 @@ define i16 @atomicrmw_xor_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
 ; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-NEXT:    sll.w $a1, $a1, $a2
-; LA64-NEXT:    amxor_db.w $a3, $a1, $a0
+; LA64-NEXT:    amxor.w $a3, $a1, $a0
 ; LA64-NEXT:    srl.w $a0, $a3, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i16 %b monotonic
@@ -4865,7 +4865,7 @@ define i32 @atomicrmw_xor_i32_monotonic(ptr %a, i32 %b) nounwind {
 ;
 ; LA64-LABEL: atomicrmw_xor_i32_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    amxor_db.w $a2, $a1, $a0
+; LA64-NEXT:    amxor.w $a2, $a1, $a0
 ; LA64-NEXT:    move $a0, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i32 %b monotonic
@@ -4885,7 +4885,7 @@ define i64 @atomicrmw_xor_i64_monotonic(ptr %a, i64 %b) nounwind {
 ;
 ; LA64-LABEL: atomicrmw_xor_i64_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    amxor_db.d $a2, $a1, $a0
+; LA64-NEXT:    amxor.d $a2, $a1, $a0
 ; LA64-NEXT:    move $a0, $a2
 ; LA64-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i64 %b monotonic

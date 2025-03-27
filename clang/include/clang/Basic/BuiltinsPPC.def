@@ -1138,5 +1138,6 @@ UNALIASED_CUSTOM_BUILTIN(mma_pmxvbf16ger2nn, "vW512*VVi15i15i3", true,
 // FIXME: Obviously incomplete.
 
 #undef BUILTIN
+#undef TARGET_BUILTIN
 #undef CUSTOM_BUILTIN
 #undef UNALIASED_CUSTOM_BUILTIN

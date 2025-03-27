@@ -31,7 +31,7 @@ constexpr void test_mdspan_types(const H& handle, const M& map, const A& acc) {
 
   MDS m_org(handle, map, acc);
   MDS m(m_org);
-  static_assert(noexcept(MDS(m_org)) == (noexcept(H(handle))&& noexcept(M(map))&& noexcept(A(acc))));
+  static_assert(noexcept(MDS(m_org)) == (noexcept(H(handle)) && noexcept(M(map)) && noexcept(A(acc))));
   static_assert(
       std::is_trivially_copyable_v<MDS> ==
       (std::is_trivially_copyable_v<H> && std::is_trivially_copyable_v<M> && std::is_trivially_copyable_v<A>));

@@ -36,7 +36,7 @@ AnalysisKey InlineSizeEstimatorAnalysis::Key;
 #include <deque>
 #include <optional>
 
-cl::opt<std::string> TFIR2NativeModelPath(
+static cl::opt<std::string> TFIR2NativeModelPath(
     "ml-inliner-ir2native-model", cl::Hidden,
     cl::desc("Path to saved model evaluating native size from IR."));
 

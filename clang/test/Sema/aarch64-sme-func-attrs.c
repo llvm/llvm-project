@@ -9,6 +9,7 @@ void sme_arm_streaming_compatible(void) __arm_streaming_compatible;
 __arm_new("za") void sme_arm_new_za(void) {}
 void sme_arm_shared_za(void) __arm_inout("za");
 void sme_arm_preserves_za(void) __arm_preserves("za");
+void sme_arm_agnostic(void) __arm_agnostic("sme_za_state");
 
 __arm_new("za") void sme_arm_streaming_new_za(void) __arm_streaming {}
 void sme_arm_streaming_shared_za(void) __arm_streaming __arm_inout("za");
@@ -87,6 +88,26 @@ fptrty7 invalid_streaming_func() { return streaming_ptr_invalid; }
 // expected-warning@+2 {{'__arm_streaming' only applies to non-K&R-style functions}}
 // expected-error@+1 {{'__arm_streaming' only applies to function types; type here is 'void ()'}}
 void function_no_prototype() __arm_streaming;
+
+// expected-cpp-error@+2 {{__arm_agnostic("sme_za_state") cannot share ZA state with its caller}}
+// expected-error@+1 {{__arm_agnostic("sme_za_state") cannot share ZA state with its caller}}
+void sme_arm_agnostic_shared_za_zt0(void) __arm_agnostic("sme_za_state") __arm_inout("zt0") {}
+
+// expected-cpp-error@+2 {{__arm_agnostic("sme_za_state") cannot share ZA state with its caller}}
+// expected-error@+1 {{__arm_agnostic("sme_za_state") cannot share ZA state with its caller}}
+void sme_arm_agnostic_shared_za_za(void) __arm_agnostic("sme_za_state") __arm_inout("za") {}
+
+// expected-cpp-error@+2 {{__arm_agnostic("sme_za_state") cannot share ZA state with its caller}}
+// expected-error@+1 {{__arm_agnostic("sme_za_state") cannot share ZA state with its caller}}
+void sme_arm_agnostic_shared_za_za_rev(void) __arm_inout("za") __arm_agnostic("sme_za_state") {}
+
+// expected-cpp-error@+2 {{__arm_agnostic("sme_za_state") is not supported together with __arm_new("za") or __arm_new("zt0")}}
+// expected-error@+1 {{__arm_agnostic("sme_za_state") is not supported together with __arm_new("za") or __arm_new("zt0")}}
+__arm_new("zt0") void sme_arm_agnostic_arm_new_zt0(void) __arm_agnostic("sme_za_state") {}
+
+// expected-cpp-error@+2 {{__arm_agnostic("sme_za_state") is not supported together with __arm_new("za") or __arm_new("zt0")}}
+// expected-error@+1 {{__arm_agnostic("sme_za_state") is not supported together with __arm_new("za") or __arm_new("zt0")}}
+__arm_new("za") void sme_arm_agnostic_arm_new_za(void) __arm_agnostic("sme_za_state") {}
 
 //
 // Check for incorrect conversions of function pointers with the attributes

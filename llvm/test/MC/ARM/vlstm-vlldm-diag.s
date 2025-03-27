@@ -36,6 +36,14 @@ vlldm r8, {d3 - d31}
 // ERR: error: operand must be exactly {d0-d15} (T1) or {d0-d31} (T2)
 // ERR-NEXT: vlldm r8, {d3 - d31}
 
+vlstm r8, {d31}
+// ERR: error: operand must be exactly {d0-d15} (T1) or {d0-d31} (T2)
+// ERR-NEXT: vlstm r8, {d31}
+
+vlldm r8, {d31}
+// ERR: error: operand must be exactly {d0-d15} (T1) or {d0-d31} (T2)
+// ERR-NEXT: vlldm r8, {d31}
+
 vlstm r8, {d0 - d35}
 // ERR: error: register expected
 // ERR-NEXT: vlstm r8, {d0 - d35}

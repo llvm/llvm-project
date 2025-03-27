@@ -350,9 +350,9 @@ void FuncOp::print(mlir::OpAsmPrinter &p) {
 //===----------------------------------------------------------------------===//
 
 void GenericCallOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
-                          StringRef callee, ArrayRef<mlir::Value> arguments) {
-  // Generic call always returns an unranked Tensor initially.
-  state.addTypes(UnrankedTensorType::get(builder.getF64Type()));
+                          mlir::Type resultType, StringRef callee,
+                          ArrayRef<mlir::Value> arguments) {
+  state.addTypes(resultType);
   state.addOperands(arguments);
   state.addAttribute("callee",
                      mlir::SymbolRefAttr::get(builder.getContext(), callee));
@@ -367,7 +367,7 @@ CallInterfaceCallable GenericCallOp::getCallableForCallee() {
 /// Set the callee for the generic call operation, this is required by the call
 /// interface.
 void GenericCallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
-  (*this)->setAttr("callee", callee.get<SymbolRefAttr>());
+  (*this)->setAttr("callee", cast<SymbolRefAttr>(callee));
 }
 
 /// Get the argument operands to the called function, this is required by the

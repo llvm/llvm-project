@@ -13,6 +13,15 @@ using namespace llvm;
 
 namespace llvm {
 
+TEST(EquivalenceClassesTest, CopyAssignemnt) {
+  EquivalenceClasses<int> EC, Copy;
+  EC.insert(1);
+  EC.insert(4);
+  EquivalenceClasses<int> &Ref = Copy = EC;
+  EXPECT_EQ(Copy.getNumClasses(), 2u);
+  EXPECT_EQ(&Ref, &Copy);
+}
+
 TEST(EquivalenceClassesTest, NoMerges) {
   EquivalenceClasses<int> EqClasses;
   // Until we merged any sets, check that every element is only equivalent to

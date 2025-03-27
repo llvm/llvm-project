@@ -16,10 +16,8 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/Basic/ASTSourceDescriptor.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/SourceManager.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 #include <optional>
@@ -92,9 +90,18 @@ ExternalASTSource::GetExternalCXXBaseSpecifiers(uint64_t Offset) {
   return nullptr;
 }
 
-bool
-ExternalASTSource::FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                                  DeclarationName Name) {
+bool ExternalASTSource::FindExternalVisibleDeclsByName(
+    const DeclContext *DC, DeclarationName Name,
+    const DeclContext *OriginalDC) {
+  return false;
+}
+
+bool ExternalASTSource::LoadExternalSpecializations(const Decl *D, bool) {
+  return false;
+}
+
+bool ExternalASTSource::LoadExternalSpecializations(
+    const Decl *D, ArrayRef<TemplateArgument>) {
   return false;
 }
 

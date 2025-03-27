@@ -60,7 +60,8 @@ define ghccc void @foo() nounwind {
 ; LA64-NEXT:    ld.d $s1, $a0, %pc_lo12(sp)
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(base)
 ; LA64-NEXT:    ld.d $s0, $a0, %pc_lo12(base)
-; LA64-NEXT:    b %plt(bar)
+; LA64-NEXT:    pcaddu18i $t8, %call36(bar)
+; LA64-NEXT:    jr $t8
 
 entry:
   %0  = load double, ptr @d4

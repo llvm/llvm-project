@@ -21,6 +21,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
@@ -135,7 +136,7 @@ class Reporter {
   llvm::raw_ostream &OS;
   const ASTContext &Ctx;
   const SourceManager &SM;
-  const HeaderSearch &HS;
+  const Preprocessor &PP;
   const include_cleaner::Includes &Includes;
   const PragmaIncludes *PI;
   FileID MainFile;
@@ -170,9 +171,9 @@ class Reporter {
 
   void fillTarget(Ref &R) {
     // Duplicates logic from walkUsed(), which doesn't expose SymbolLocations.
-    for (auto &Loc : locateSymbol(R.Sym))
+    for (auto &Loc : locateSymbol(R.Sym, Ctx.getLangOpts()))
       R.Locations.push_back(Loc);
-    R.Headers = headersForSymbol(R.Sym, SM, PI);
+    R.Headers = headersForSymbol(R.Sym, PP, PI);
 
     for (const auto &H : R.Headers) {
       R.Includes.append(Includes.match(H));
@@ -189,14 +190,15 @@ class Reporter {
                      R.Includes.end());
 
     if (!R.Headers.empty())
-      R.Insert = spellHeader({R.Headers.front(), HS, MainFE});
+      R.Insert =
+          spellHeader({R.Headers.front(), PP.getHeaderSearchInfo(), MainFE});
   }
 
 public:
-  Reporter(llvm::raw_ostream &OS, ASTContext &Ctx, const HeaderSearch &HS,
+  Reporter(llvm::raw_ostream &OS, ASTContext &Ctx, const Preprocessor &PP,
            const include_cleaner::Includes &Includes, const PragmaIncludes *PI,
            FileID MainFile)
-      : OS(OS), Ctx(Ctx), SM(Ctx.getSourceManager()), HS(HS),
+      : OS(OS), Ctx(Ctx), SM(Ctx.getSourceManager()), PP(PP),
         Includes(Includes), PI(PI), MainFile(MainFile),
         MainFE(SM.getFileEntryForID(MainFile)) {}
 
@@ -498,9 +500,9 @@ private:
 void writeHTMLReport(FileID File, const include_cleaner::Includes &Includes,
                      llvm::ArrayRef<Decl *> Roots,
                      llvm::ArrayRef<SymbolReference> MacroRefs, ASTContext &Ctx,
-                     const HeaderSearch &HS, PragmaIncludes *PI,
+                     const Preprocessor &PP, PragmaIncludes *PI,
                      llvm::raw_ostream &OS) {
-  Reporter R(OS, Ctx, HS, Includes, PI, File);
+  Reporter R(OS, Ctx, PP, Includes, PI, File);
   const auto& SM = Ctx.getSourceManager();
   for (Decl *Root : Roots)
     walkAST(*Root, [&](SourceLocation Loc, const NamedDecl &D, RefType T) {

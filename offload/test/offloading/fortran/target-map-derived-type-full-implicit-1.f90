@@ -1,7 +1,5 @@
-! Offloading test checking interaction of an
-! implicit derived type mapping when mapped
-! to target and assinging one derived type
-! to another
+! Offloading test checking interaction of an implicit derived type mapping when
+! mapped to target and assigning one derived type to another
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic

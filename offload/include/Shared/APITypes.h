@@ -17,28 +17,20 @@
 #include "Environment.h"
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Frontend/Offloading/Utility.h"
 
 #include <cstddef>
 #include <cstdint>
 
 extern "C" {
 
-/// This struct is a record of an entry point or global. For a function
-/// entry point the size is expected to be zero
-struct __tgt_offload_entry {
-  void *addr;       // Pointer to the offload entry info (function or global)
-  char *name;       // Name of the function or global
-  size_t size;      // Size of the entry info (0 if it is a function)
-  int32_t flags;    // Flags associated with the entry, e.g. 'link'.
-  int32_t data;     // Extra data associated with the entry.
-};
-
 /// This struct is a record of the device image information
 struct __tgt_device_image {
-  void *ImageStart;                  // Pointer to the target code start
-  void *ImageEnd;                    // Pointer to the target code end
-  __tgt_offload_entry *EntriesBegin; // Begin of table with all target entries
-  __tgt_offload_entry *EntriesEnd;   // End of table (non inclusive)
+  void *ImageStart; // Pointer to the target code start
+  void *ImageEnd;   // Pointer to the target code end
+  llvm::offloading::EntryTy
+      *EntriesBegin; // Begin of table with all target entries
+  llvm::offloading::EntryTy *EntriesEnd; // End of table (non inclusive)
 };
 
 struct __tgt_device_info {
@@ -51,14 +43,16 @@ struct __tgt_device_info {
 struct __tgt_bin_desc {
   int32_t NumDeviceImages;          // Number of device types supported
   __tgt_device_image *DeviceImages; // Array of device images (1 per dev. type)
-  __tgt_offload_entry *HostEntriesBegin; // Begin of table with all host entries
-  __tgt_offload_entry *HostEntriesEnd;   // End of table (non inclusive)
+  llvm::offloading::EntryTy
+      *HostEntriesBegin; // Begin of table with all host entries
+  llvm::offloading::EntryTy *HostEntriesEnd; // End of table (non inclusive)
 };
 
 /// This struct contains the offload entries identified by the target runtime
 struct __tgt_target_table {
-  __tgt_offload_entry *EntriesBegin; // Begin of the table with all the entries
-  __tgt_offload_entry
+  llvm::offloading::EntryTy
+      *EntriesBegin; // Begin of the table with all the entries
+  llvm::offloading::EntryTy
       *EntriesEnd; // End of the table with all the entries (non inclusive)
 };
 
@@ -107,9 +101,9 @@ struct KernelArgsTy {
   } Flags = {0, 0, 0};
   // The number of teams (for x,y,z dimension).
   uint32_t NumTeams[3] = {0, 0, 0};
-   // The number of threads (for x,y,z dimension).
+  // The number of threads (for x,y,z dimension).
   uint32_t ThreadLimit[3] = {0, 0, 0};
-  uint32_t DynCGroupMem = 0;     // Amount of dynamic cgroup memory requested.
+  uint32_t DynCGroupMem = 0; // Amount of dynamic cgroup memory requested.
 };
 static_assert(sizeof(KernelArgsTy().Flags) == sizeof(uint64_t),
               "Invalid struct size");

@@ -199,7 +199,7 @@ bb1:                                              ; preds = %bb2
   ret void
 
 bb2:                                              ; preds = %bb6, %bb
-  %tmp = phi float [ undef, %bb ], [ %tmp8, %bb6 ]
+  %tmp = phi float [ poison, %bb ], [ %tmp8, %bb6 ]
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #1
   %f_tid = bitcast i32 %tid to float
   %tmp3 = fsub float %f_tid, %tmp

@@ -128,6 +128,28 @@ enable or disable extended libc++ behavior.
   replacement scenarios from working, e.g. replacing `operator new` and
   expecting a non-replaced `operator new[]` to call the replaced `operator new`.
 
+**_LIBCPP_REMOVE_TRANSITIVE_INCLUDES**:
+  When this macro is defined, the standard library headers will adhere to a
+  stricter policy regarding the (transitive) inclusion of other standard library
+  headers, only guaranteeing to provide those definitions explicitly mandated by
+  the standard. Please notice that defining this macro might break existing codebases
+  that implicitly rely on standard headers providing definitions not explicitly
+  required by the standard.
+
+  The primary motivation for this configuration macro is to improve compilation
+  times. In most standard library implementations, header files include more
+  definitions than officially required because the implementation details give rise
+  to internal dependencies. The common practice is to have the standard headers
+  internally include other standard headers, but this generally results in
+  increased compilation overhead. This configuration option attempts to mitigate
+  this problem by avoiding such unnecessary inclusions. Compiling
+  a codebase with this macro may improve portability by identifying
+  missing standard header inclusions.
+
+  However, be aware that enabling this macro may lead to breakages
+  when updating to a newer version of the library, since transitive includes
+  that your code was previously relying on may have been removed.
+
 **_LIBCPP_DISABLE_DEPRECATION_WARNINGS**:
   This macro disables warnings when using deprecated components. For example,
   using `std::auto_ptr` when compiling in C++11 mode will normally trigger a
@@ -155,6 +177,9 @@ C++17 Specific Configuration Macros
 
 **_LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE**:
   This macro is used to re-enable the `random_shuffle` algorithm.
+
+**_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION**:
+  This macro is used to re-enable `unary_function` and `binary_function`.
 
 **_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS**:
   This macro is used to re-enable `set_unexpected`, `get_unexpected`, and

@@ -10,6 +10,8 @@
 
 import argparse
 import os
+import re
+import shlex
 import subprocess
 import sys
 from typing import List, Optional
@@ -312,13 +314,120 @@ class DarkerFormatHelper(FormatHelper):
             return None
 
 
-ALL_FORMATTERS = (DarkerFormatHelper(), ClangFormatHelper())
+class UndefGetFormatHelper(FormatHelper):
+    name = "undef deprecator"
+    friendly_name = "undef deprecator"
+
+    @property
+    def instructions(self) -> str:
+        return " ".join(shlex.quote(c) for c in self.cmd)
+
+    def filter_changed_files(self, changed_files: List[str]) -> List[str]:
+        filtered_files = []
+        for path in changed_files:
+            _, ext = os.path.splitext(path)
+            if ext in (".cpp", ".c", ".h", ".hpp", ".hxx", ".cxx", ".inc", ".cppm", ".ll"):
+                filtered_files.append(path)
+        return filtered_files
+
+    def has_tool(self) -> bool:
+        return True
+
+    def pr_comment_text_for_diff(self, diff: str) -> str:
+        return f"""
+:warning: {self.name} found issues in your code. :warning:
+
+<details>
+<summary>
+You can test this locally with the following command:
+</summary>
+
+``````````bash
+{self.instructions}
+``````````
+
+</details>
+
+{diff}
+"""
+
+    def format_run(self, changed_files: List[str], args: FormatArgs) -> Optional[str]:
+        files = self.filter_changed_files(changed_files)
+        if not files:
+            return None
+
+        # Use git to find files that have had a change in the number of undefs
+        regex = "([^a-zA-Z0-9#_-]undef[^a-zA-Z0-9_-]|UndefValue::get)"
+        cmd = ["git", "diff", "-U0", "--pickaxe-regex", "-S", regex]
+
+        if args.start_rev and args.end_rev:
+            cmd.append(args.start_rev)
+            cmd.append(args.end_rev)
+
+        cmd += files
+        self.cmd = cmd
+
+        if args.verbose:
+            print(f"Running: {self.instructions}")
+
+        proc = subprocess.run(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8"
+        )
+        sys.stdout.write(proc.stderr)
+        stdout = proc.stdout
+
+        files = []
+        # Split the diff so we have one array entry per file.
+        # Each file is prefixed like:
+        # diff --git a/file b/file
+        for file in re.split("^diff --git ", stdout, 0, re.MULTILINE):
+            # search for additions of undef
+            if re.search(r"^[+](?!\s*#\s*).*(\bundef\b|UndefValue::get)", file, re.MULTILINE):
+                files.append(re.match("a/([^ ]+)", file.splitlines()[0])[1])
+
+        if not files:
+            return None
+
+        files = "\n".join(" - " + f for f in files)
+        report = f"""
+The following files introduce new uses of undef:
+{files}
+
+[Undef](https://llvm.org/docs/LangRef.html#undefined-values) is now deprecated and should only be used in the rare cases where no replacement is possible. For example, a load of uninitialized memory yields `undef`. You should use `poison` values for placeholders instead.
+
+In tests, avoid using `undef` and having tests that trigger undefined behavior. If you need an operand with some unimportant value, you can add a new argument to the function and use that instead.
+
+For example, this is considered a bad practice:
+```llvm
+define void @fn() {{
+  ...
+  br i1 undef, ...
+}}
+```
+
+Please use the following instead:
+```llvm
+define void @fn(i1 %cond) {{
+  ...
+  br i1 %cond, ...
+}}
+```
+
+Please refer to the [Undefined Behavior Manual](https://llvm.org/docs/UndefinedBehavior.html) for more information.
+"""
+        if args.verbose:
+            print(f"error: {self.name} failed")
+            print(report)
+        return report
+
+
+ALL_FORMATTERS = (DarkerFormatHelper(), ClangFormatHelper(), UndefGetFormatHelper())
 
 
 def hook_main():
     # fill out args
     args = FormatArgs()
-    args.verbose = False
+    args.verbose = os.getenv("FORMAT_HOOK_VERBOSE", False)
 
     # find the changed files
     cmd = ["git", "diff", "--cached", "--name-only", "--diff-filter=d"]
@@ -338,6 +447,9 @@ def hook_main():
             print(f"Couldn't find {fmt.name}, can't check " + fmt.friendly_name.lower())
 
     if len(failed_fmts) > 0:
+        print(
+            "Pre-commit format hook failed, rerun with FORMAT_HOOK_VERBOSE=1 environment for verbose output"
+        )
         sys.exit(1)
 
     sys.exit(0)

@@ -10,9 +10,9 @@ define void @test() #0 {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ undef, [[BB1]] ], [ undef, [[BB:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP18:%.*]], [[BB1]] ], [ undef, [[BB]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 undef, [[TMP]]
+; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ 1, [[BB1]] ], [ 2, [[BB:%.*]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP18:%.*]], [[BB1]] ], [ 3, [[BB]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 4, [[TMP]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[TMP3]], [[TMP]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP4]], [[TMP]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[TMP5]], [[TMP]]
@@ -34,9 +34,9 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb1, %bb
-  %tmp = phi i32 [ undef, %bb1 ], [ undef, %bb ]
-  %tmp2 = phi i32 [ %tmp18, %bb1 ], [ undef, %bb ]
-  %tmp3 = mul i32 undef, %tmp
+  %tmp = phi i32 [ 1, %bb1 ], [ 2, %bb ]
+  %tmp2 = phi i32 [ %tmp18, %bb1 ], [ 3, %bb ]
+  %tmp3 = mul i32 4, %tmp
   %tmp4 = mul i32 %tmp3, %tmp
   %tmp5 = mul i32 %tmp4, %tmp
   %tmp6 = mul i32 %tmp5, %tmp
@@ -60,10 +60,10 @@ define void @test_2(ptr addrspace(1) %arg, i32 %arg1) #0 {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ undef, [[BB:%.*]] ], [ undef, [[BB2]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ 0, [[BB]] ], [ undef, [[BB2]] ]
+; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ 3, [[BB:%.*]] ], [ 3, [[BB2]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ 0, [[BB]] ], [ 3, [[BB2]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[TMP]], 8
-; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 undef, [[TMP0]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 27, [[TMP0]]
 ; CHECK-NEXT:    call void @use(i32 [[OP_RDX]])
 ; CHECK-NEXT:    br label [[BB2]]
 ;
@@ -71,24 +71,24 @@ bb:
   br label %bb2
 
 bb2:                                              ; preds = %bb2, %bb
-  %tmp = phi i32 [ undef, %bb ], [ undef, %bb2 ]
-  %tmp3 = phi i32 [ 0, %bb ], [ undef, %bb2 ]
-  %tmp4 = add i32 %tmp, undef
-  %tmp5 = add i32 undef, %tmp4
+  %tmp = phi i32 [ 3, %bb ], [ 3, %bb2 ]
+  %tmp3 = phi i32 [ 0, %bb ], [ 3, %bb2 ]
+  %tmp4 = add i32 %tmp, 3
+  %tmp5 = add i32 3, %tmp4
   %tmp6 = add i32 %tmp, %tmp5
-  %tmp7 = add i32 undef, %tmp6
+  %tmp7 = add i32 3, %tmp6
   %tmp8 = add i32 %tmp, %tmp7
-  %tmp9 = add i32 undef, %tmp8
+  %tmp9 = add i32 3, %tmp8
   %tmp10 = add i32 %tmp, %tmp9
-  %tmp11 = add i32 undef, %tmp10
+  %tmp11 = add i32 3, %tmp10
   %tmp12 = add i32 %tmp, %tmp11
-  %tmp13 = add i32 undef, %tmp12
+  %tmp13 = add i32 3, %tmp12
   %tmp14 = add i32 %tmp, %tmp13
-  %tmp15 = add i32 undef, %tmp14
+  %tmp15 = add i32 3, %tmp14
   %tmp16 = add i32 %tmp, %tmp15
-  %tmp17 = add i32 undef, %tmp16
+  %tmp17 = add i32 3, %tmp16
   %tmp18 = add i32 %tmp, %tmp17
-  %tmp19 = add i32 undef, %tmp18
+  %tmp19 = add i32 3, %tmp18
   call void @use(i32 %tmp19)
   br label %bb2
 }
@@ -103,40 +103,16 @@ define i64 @test_3() #0 {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ undef, [[BB1]] ], [ undef, [[BB2:%.*]] ]
-; CHECK-NEXT:    [[VAL4:%.*]] = phi i32 [ undef, [[BB1]] ], [ undef, [[BB2]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x i32> [ splat (i32 3), [[BB1]] ], [ poison, [[BB2:%.*]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <28 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1>
+; CHECK-NEXT:    [[VAL4:%.*]] = extractelement <28 x i32> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <32 x i32> poison, i32 [[VAL4]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i32> [[TMP0]], <32 x i32> poison, <32 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.mul.v32i32(<32 x i32> [[TMP1]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = mul i32 [[TMP2]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX4:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX5:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX6:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX7:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX8:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX9:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX10:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX11:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX12:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX13:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX14:%.*]] = mul i32 [[OP_RDX]], [[OP_RDX1]]
-; CHECK-NEXT:    [[OP_RDX15:%.*]] = mul i32 [[OP_RDX2]], [[OP_RDX3]]
-; CHECK-NEXT:    [[OP_RDX16:%.*]] = mul i32 [[OP_RDX4]], [[OP_RDX5]]
-; CHECK-NEXT:    [[OP_RDX17:%.*]] = mul i32 [[OP_RDX6]], [[OP_RDX7]]
-; CHECK-NEXT:    [[OP_RDX18:%.*]] = mul i32 [[OP_RDX8]], [[OP_RDX9]]
-; CHECK-NEXT:    [[OP_RDX19:%.*]] = mul i32 [[OP_RDX10]], [[OP_RDX11]]
-; CHECK-NEXT:    [[OP_RDX20:%.*]] = mul i32 [[OP_RDX12]], [[OP_RDX13]]
-; CHECK-NEXT:    [[OP_RDX21:%.*]] = mul i32 [[OP_RDX14]], [[OP_RDX15]]
-; CHECK-NEXT:    [[OP_RDX22:%.*]] = mul i32 [[OP_RDX16]], [[OP_RDX17]]
-; CHECK-NEXT:    [[OP_RDX23:%.*]] = mul i32 [[OP_RDX18]], [[OP_RDX19]]
-; CHECK-NEXT:    [[OP_RDX24:%.*]] = mul i32 [[OP_RDX20]], [[VAL]]
-; CHECK-NEXT:    [[OP_RDX25:%.*]] = mul i32 [[OP_RDX21]], [[OP_RDX22]]
-; CHECK-NEXT:    [[OP_RDX26:%.*]] = mul i32 [[OP_RDX23]], [[OP_RDX24]]
-; CHECK-NEXT:    [[OP_RDX27:%.*]] = mul i32 [[OP_RDX25]], [[OP_RDX26]]
-; CHECK-NEXT:    [[VAL64:%.*]] = add i32 undef, [[OP_RDX27]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call <28 x i32> @llvm.vector.extract.v28i32.v32i32(<32 x i32> [[TMP1]], i64 0)
+; CHECK-NEXT:    [[RDX_OP:%.*]] = mul <28 x i32> [[TMP5]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call <32 x i32> @llvm.vector.insert.v32i32.v28i32(<32 x i32> [[TMP1]], <28 x i32> [[RDX_OP]], i64 0)
+; CHECK-NEXT:    [[OP_RDX27:%.*]] = call i32 @llvm.vector.reduce.mul.v32i32(<32 x i32> [[TMP6]])
+; CHECK-NEXT:    [[VAL64:%.*]] = add i32 3, [[OP_RDX27]]
 ; CHECK-NEXT:    [[VAL65:%.*]] = sext i32 [[VAL64]] to i64
 ; CHECK-NEXT:    ret i64 [[VAL65]]
 ;
@@ -150,8 +126,8 @@ bb2:                                              ; No predecessors!
   br label %bb3
 
 bb3:                                              ; preds = %bb2, %bb1
-  %val = phi i32 [ undef, %bb1 ], [ undef, %bb2 ]
-  %val4 = phi i32 [ undef, %bb1 ], [ undef, %bb2 ]
+  %val = phi i32 [ 3, %bb1 ], [ 3, %bb2 ]
+  %val4 = phi i32 [ 3, %bb1 ], [ 3, %bb2 ]
   %val5 = mul i32 %val, %val4
   %val6 = mul i32 %val5, %val4
   %val7 = mul i32 %val6, %val4
@@ -211,7 +187,7 @@ bb3:                                              ; preds = %bb2, %bb1
   %val61 = mul i32 %val60, %val4
   %val62 = mul i32 %val61, %val4
   %val63 = mul i32 %val62, %val4
-  %val64 = add i32 undef, %val63
+  %val64 = add i32 3, %val63
   %val65 = sext i32 %val64 to i64
   ret i64 %val65
 }

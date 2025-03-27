@@ -21,8 +21,19 @@ public:
   void testSpecialNumbers(FrexpFunc func) {
     int exponent;
     EXPECT_FP_EQ_ALL_ROUNDING(aNaN, func(aNaN, &exponent));
+#ifdef LIBC_FREXP_INF_NAN_EXPONENT
+    EXPECT_EQ(LIBC_FREXP_INF_NAN_EXPONENT, exponent);
+#endif // LIBC_FREXP_INF_NAN_EXPONENT
+
     EXPECT_FP_EQ_ALL_ROUNDING(inf, func(inf, &exponent));
+#ifdef LIBC_FREXP_INF_NAN_EXPONENT
+    EXPECT_EQ(LIBC_FREXP_INF_NAN_EXPONENT, exponent);
+#endif // LIBC_FREXP_INF_NAN_EXPONENT
+
     EXPECT_FP_EQ_ALL_ROUNDING(neg_inf, func(neg_inf, &exponent));
+#ifdef LIBC_FREXP_INF_NAN_EXPONENT
+    EXPECT_EQ(LIBC_FREXP_INF_NAN_EXPONENT, exponent);
+#endif // LIBC_FREXP_INF_NAN_EXPONENT
 
     EXPECT_FP_EQ_ALL_ROUNDING(zero, func(zero, &exponent));
     EXPECT_EQ(exponent, 0);

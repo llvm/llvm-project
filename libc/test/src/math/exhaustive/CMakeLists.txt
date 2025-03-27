@@ -202,6 +202,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  exp10m1f_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    exp10m1f_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.exp10m1f
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   expm1f_test
   NO_RUN_POSTBUILD
   NEED_MPFR
@@ -290,7 +305,7 @@ add_fp_unittest(
   SRCS
     hypotf_test.cpp
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
   DEPENDS
     .exhaustive_test
     libc.src.math.hypotf

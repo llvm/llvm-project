@@ -8,16 +8,17 @@ target triple = "spirv-unknown-vulkan1.3-compute"
 ; CHECK-DAG: OpName %[[#fn:]] "_Z2fnv"
 ; CHECK-DAG: OpName %[[#fn1:]] "_Z3fn1v"
 ; CHECK-DAG: OpName %[[#fn2:]] "_Z3fn2v"
-; CHECK-DAG: OpName %[[#val:]] "val"
-; CHECK-DAG: OpName %[[#a:]] "a"
-; CHECK-DAG: OpName %[[#b:]] "b"
-; CHECK-DAG: OpName %[[#c:]] "c"
+
+; CHECK-DAG: OpName %[[#r2m_a:]] ".reg2mem3"
+; CHECK-DAG: OpName %[[#r2m_b:]] ".reg2mem1"
+; CHECK-DAG: OpName %[[#r2m_c:]] ".reg2mem"
 
 ; CHECK-DAG: %[[#int_ty:]] = OpTypeInt 32 0
-; CHECK-DAG: %[[#bool_ty:]] = OpTypeBool
-; CHECK-DAG: %[[#int_pfty:]] = OpTypePointer Function %[[#int_ty]]
 
-; CHECK-DAG: %[[#int_0:]] = OpConstant %[[#int_ty]] 0
+; CHECK-DAG: %[[#int_0:]] = OpConstant %[[#]] 0
+; CHECK-DAG: %[[#int_1:]] = OpConstant %[[#]] 1
+; CHECK-DAG: %[[#true:]] = OpConstantTrue
+; CHECK-DAG: %[[#false:]] = OpConstantFalse
 
 declare token @llvm.experimental.convergence.entry() #1
 
@@ -44,100 +45,87 @@ entry:
 
 ; CHECK: %[[#process]] = OpFunction %[[#int_ty]]
 define spir_func noundef i32 @_Z7processv() #0 {
+
+; CHECK:         %[[#entry:]] = OpLabel
+; CHECK-DAG:      %[[#r2m_a]] = OpVariable %[[#]] Function
+; CHECK:                        OpSelectionMerge %[[#a_merge:]]
+; CHECK:                        OpBranchConditional %[[#]] %[[#a_true:]] %[[#a_false:]]
 entry:
-  ; CHECK:     %[[#entry:]] = OpLabel
   %0 = call token @llvm.experimental.convergence.entry()
-  %a = alloca i32, align 4
-  %b = alloca i32, align 4
-  %c = alloca i32, align 4
-  %val = alloca i32, align 4
-  store i32 0, ptr %a, align 4
-  store i32 1, ptr %b, align 4
-  store i32 2, ptr %c, align 4
-  store i32 0, ptr %val, align 4
-  ; CHECK-DAG:      %[[#a]] = OpVariable %[[#int_pfty]] Function
-  ; CHECK-DAG:      %[[#b]] = OpVariable %[[#int_pfty]] Function
-  ; CHECK-DAG:      %[[#c]] = OpVariable %[[#int_pfty]] Function
-  ; CHECK-DAG:    %[[#val]] = OpVariable %[[#int_pfty]] Function
-  %1 = load i32, ptr %a, align 4
-  %tobool = icmp ne i32 %1, 0
-  br i1 %tobool, label %cond.true, label %cond.false
-  ; CHECK:        %[[#tmp:]] = OpLoad %[[#int_ty]] %[[#a]]
-  ; CHECK:       %[[#cond:]] = OpINotEqual %[[#bool_ty]] %[[#tmp]] %[[#int_0]]
-  ; CHECK:                     OpSelectionMerge %[[#cond_end:]]
-  ; CHECK:                     OpBranchConditional %[[#cond]] %[[#cond_true:]] %[[#cond_false:]]
+  %var = alloca i32
+  br i1 true, label %a_true, label %a_false
 
-cond.true:                                        ; preds = %entry
-  %2 = load i32, ptr %b, align 4
-  br label %cond.end
-  ; CHECK: %[[#cond_true]] = OpLabel
-  ; CHECK:                   OpBranch %[[#cond_end]]
+; CHECK: %[[#a_false]] = OpLabel
+; CHECK:                 OpStore %[[#r2m_a]] %[[#false]]
+; CHECK:                 OpBranch %[[#a_merge]]
+a_false:
+  br label %a_merge
 
-cond.false:                                       ; preds = %entry
-  %3 = load i32, ptr %c, align 4
-  br label %cond.end
-  ; CHECK: %[[#cond_false]] = OpLabel
-  ; CHECK:    %[[#load_c:]] = OpLoad %[[#]] %[[#c]]
-  ; CHECK:                    OpBranch %[[#cond_end]]
+; CHECK: %[[#a_true]] = OpLabel
+; CHECK:                OpStore %[[#r2m_a]] %[[#true]]
+; CHECK:                OpBranch %[[#a_merge]]
+a_true:
+  br label %a_merge
 
-cond.end:                                         ; preds = %cond.false, %cond.true
-  %cond = phi i32 [ %2, %cond.true ], [ %3, %cond.false ]
-  %tobool1 = icmp ne i32 %cond, 0
-  br i1 %tobool1, label %if.then, label %if.end
-  ; CHECK: %[[#cond_end]] = OpLabel
-  ; CHECK:     %[[#tmp:]] = OpPhi %[[#int_ty]] %[[#load_b:]] %[[#cond_true]] %[[#load_c]] %[[#cond_false]]
-  ; CHECK:                  OpSelectionMerge %[[#if_end:]]
-  ; CHECK:                  OpBranchConditional %[[#]] %[[#if_then:]] %[[#if_end]]
+; CHECK: %[[#a_merge]] = OpLabel
+; CHECK:    %[[#tmp:]] = OpLoad %[[#]] %[[#r2m_a]]
+; CHECK:                 OpSelectionMerge %[[#b_merge:]]
+; CHECK:                 OpBranchConditional %[[#]] %[[#b_true:]] %[[#b_merge]]
+a_merge:
+  %1 = phi i1 [ true, %a_true ], [ false, %a_false ]
+  br i1 %1, label %b_true, label %b_merge
 
-if.then:                                          ; preds = %cond.end
-  %4 = load i32, ptr %val, align 4
-  %inc = add nsw i32 %4, 1
-  store i32 %inc, ptr %val, align 4
-  br label %if.end
-  ; CHECK: %[[#if_then]] = OpLabel
-  ; CHECK:                 OpBranch %[[#if_end]]
+; CHECK: %[[#b_true]] = OpLabel
+; CHECK:                OpBranch %[[#b_merge]]
+b_true:
+  store i32 0, ptr %var ; Prevents whole branch optimization.
+  br label %b_merge
 
-if.end:                                           ; preds = %if.then, %cond.end
-  %call2 = call spir_func noundef i32 @_Z2fnv() #4 [ "convergencectrl"(token %0) ]
-  %tobool3 = icmp ne i32 %call2, 0
-  br i1 %tobool3, label %cond.true4, label %cond.false6
-  ; CHECK: %[[#if_end]] = OpLabel
-  ; CHECK:                OpSelectionMerge %[[#cond_end8:]]
-  ; CHECK:                OpBranchConditional %[[#]] %[[#cond_true4:]] %[[#cond_false6:]]
+; CHECK: %[[#b_merge]] = OpLabel
+; CHECK:                 OpFunctionCall
+; CHECK:                 OpSelectionMerge %[[#c_merge:]]
+; CHECK:                 OpBranchConditional %[[#]] %[[#c_true:]] %[[#c_false:]]
+b_merge:
+  %f1 = call spir_func noundef i32 @_Z2fnv() #4 [ "convergencectrl"(token %0) ]
+  br i1 true, label %c_true, label %c_false
 
-cond.true4:                                       ; preds = %if.end
-  %call5 = call spir_func noundef i32 @_Z3fn1v() #4 [ "convergencectrl"(token %0) ]
-  br label %cond.end8
-  ; CHECK: %[[#cond_true4]] = OpLabel
-  ; CHECK:                   OpBranch %[[#cond_end8]]
+; CHECK: %[[#c_false]] = OpLabel
+; CHECK:        %[[#]] = OpFunctionCall
+; CHECK:                 OpStore %[[#r2m_b]] %[[#]]
+; CHECK:                 OpBranch %[[#c_merge]]
+c_false:
+  %f3 = call spir_func noundef i32 @_Z3fn2v() #4 [ "convergencectrl"(token %0) ]
+  br label %c_merge
 
-cond.false6:                                      ; preds = %if.end
-  %call7 = call spir_func noundef i32 @_Z3fn2v() #4 [ "convergencectrl"(token %0) ]
-  br label %cond.end8
-  ; CHECK: %[[#cond_false6]] = OpLabel
-  ; CHECK:                     OpBranch %[[#cond_end8]]
+; CHECK: %[[#c_true]] = OpLabel
+; CHECK:       %[[#]] = OpFunctionCall
+; CHECK:                OpStore %[[#r2m_b]] %[[#]]
+; CHECK:                OpBranch %[[#c_merge]]
+c_true:
+  %f2 = call spir_func noundef i32 @_Z3fn1v() #4 [ "convergencectrl"(token %0) ]
+  br label %c_merge
 
-cond.end8:                                        ; preds = %cond.false6, %cond.true4
-  %cond9 = phi i32 [ %call5, %cond.true4 ], [ %call7, %cond.false6 ]
-  %tobool10 = icmp ne i32 %cond9, 0
-  br i1 %tobool10, label %if.then11, label %if.end13
-  ; CHECK: %[[#cond_end8]] = OpLabel
-  ; CHECK:                   OpSelectionMerge %[[#if_end13:]]
-  ; CHECK:                   OpBranchConditional %[[#]] %[[#if_then11:]] %[[#if_end13]]
 
-if.then11:                                        ; preds = %cond.end8
-  %5 = load i32, ptr %val, align 4
-  %inc12 = add nsw i32 %5, 1
-  store i32 %inc12, ptr %val, align 4
-  br label %if.end13
-  ; CHECK: %[[#if_then11]] = OpLabel
-  ; CHECK:                   OpBranch %[[#if_end13]]
+; CHECK: %[[#c_merge]] = OpLabel
+; CHECK:    %[[#tmp:]] = OpLoad %[[#]] %[[#r2m_b]]
+; CHECK:                 OpStore %[[#r2m_c]] %[[#tmp:]]
+; CHECK:                 OpSelectionMerge %[[#d_merge:]]
+; CHECK:                 OpBranchConditional %[[#]] %[[#d_true:]] %[[#d_merge]]
+c_merge:
+  %5 = phi i32 [ %f2, %c_true ], [ %f3, %c_false ]
+  br i1 true, label %d_true, label %d_merge
 
-if.end13:                                         ; preds = %if.then11, %cond.end8
-  %6 = load i32, ptr %val, align 4
-  ret i32 %6
-  ; CHECK: %[[#if_end13]] = OpLabel
-  ; CHECK:                  OpReturnValue
+; CHECK: %[[#d_true]] = OpLabel
+; CHECK:                OpBranch %[[#d_merge]]
+d_true:
+  store i32 0, ptr %var ; Prevents whole branch optimization.
+  br label %d_merge
+
+; CHECK: %[[#d_merge]] = OpLabel
+; CHECK:    %[[#tmp:]] = OpLoad %[[#]] %[[#r2m_c]]
+; CHECK:                 OpReturnValue %[[#tmp]]
+d_merge:
+  ret i32 %5
 }
 
 ; Function Attrs: convergent noinline norecurse nounwind optnone

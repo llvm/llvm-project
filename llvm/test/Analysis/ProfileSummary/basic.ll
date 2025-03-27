@@ -2,12 +2,16 @@
 ; RUN: opt < %s -disable-output -profile-summary-hot-count=500 -passes=print-profile-summary -S 2>&1 | FileCheck %s -check-prefixes=OVERRIDE-HOT
 ; RUN: opt < %s -disable-output -profile-summary-cold-count=0 -passes=print-profile-summary -S 2>&1 | FileCheck %s -check-prefixes=OVERRIDE-COLD
 ; RUN: opt < %s -disable-output -profile-summary-cold-count=200 -profile-summary-hot-count=1000 -passes=print-profile-summary -S 2>&1 | FileCheck %s -check-prefixes=OVERRIDE-BOTH
+; RUN: opt < %s -disable-output -profile-summary-cutoff-hot=0 -passes=print-profile-summary -S 2>&1 | FileCheck %s -check-prefixes=HOT-CUTOFF-0
+; RUN: opt < %s -disable-output -profile-summary-cutoff-cold=0 -profile-summary-hot-count=18446744073709551615 -passes=print-profile-summary -S 2>&1 | FileCheck %s -check-prefixes=COLD-CUTOFF-0
 
 define void @f1() !prof !20 {
 ; CHECK-LABEL: f1 :hot
-; OVERRIDE-HOT-LABEL: f1
+; OVERRIDE-HOT-LABEL: f1{{$}}
 ; OVERRIDE-COLD-LABEL: f1 :hot
-; OVERRIDE-BOTH-LABEL: f1
+; OVERRIDE-BOTH-LABEL: f1{{$}}
+; HOT-CUTOFF-0-LABEL: f1{{$}}
+; COLD-CUTOFF-0-LABEL: f1 :cold
 
   ret void
 }
@@ -15,17 +19,21 @@ define void @f1() !prof !20 {
 define void @f2() !prof !21 {
 ; CHECK-LABEL: f2 :cold
 ; OVERRIDE-HOT-LABEL: f2 :cold
-; OVERRIDE-COLD-LABEL: f2
-; OVERRIDE-BOTH-LABEL: f2
+; OVERRIDE-COLD-LABEL: f2{{$}}
+; OVERRIDE-BOTH-LABEL: f2 :cold
+; HOT-CUTOFF-0-LABEL: f2 :cold
+; COLD-CUTOFF-0-LABEL: f2 :cold
 
   ret void
 }
 
 define void @f3() !prof !22 {
-; CHECK-LABEL: f3
-; OVERRIDE-HOT-LABEL: f3
-; OVERRIDE-COLD-LABEL: f3
-; OVERRIDE-BOTH-LABEL: f3
+; CHECK-LABEL: f3 :hot
+; OVERRIDE-HOT-LABEL: f3{{$}}
+; OVERRIDE-COLD-LABEL: f3 :hot
+; OVERRIDE-BOTH-LABEL: f3 :cold
+; HOT-CUTOFF-0-LABEL: f3{{$}}
+; COLD-CUTOFF-0-LABEL: f3 :cold
 
   ret void
 }

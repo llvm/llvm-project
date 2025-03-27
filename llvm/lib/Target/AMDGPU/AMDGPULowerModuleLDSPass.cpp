@@ -529,13 +529,11 @@ public:
     // block to spare deduplicating it later.
     auto [It, Inserted] = tableKernelIndexCache.try_emplace(F);
     if (Inserted) {
-      Function *Decl = Intrinsic::getOrInsertDeclaration(
-          &M, Intrinsic::amdgcn_lds_kernel_id, {});
-
       auto InsertAt = F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
       IRBuilder<> Builder(&*InsertAt);
 
-      It->second = Builder.CreateCall(Decl, {});
+      It->second =
+          Builder.CreateIntrinsic(Intrinsic::amdgcn_lds_kernel_id, {}, {});
     }
 
     return It->second;
@@ -922,6 +920,123 @@ public:
     return KernelToCreatedDynamicLDS;
   }
 
+  static GlobalVariable *uniquifyGVPerKernel(Module &M, GlobalVariable *GV,
+                                             Function *KF) {
+    bool NeedsReplacement = false;
+    for (Use &U : GV->uses()) {
+      if (auto *I = dyn_cast<Instruction>(U.getUser())) {
+        Function *F = I->getFunction();
+        if (isKernelLDS(F) && F != KF) {
+          NeedsReplacement = true;
+          break;
+        }
+      }
+    }
+    if (!NeedsReplacement)
+      return GV;
+    // Create a new GV used only by this kernel and its function
+    GlobalVariable *NewGV = new GlobalVariable(
+        M, GV->getValueType(), GV->isConstant(), GV->getLinkage(),
+        GV->getInitializer(), GV->getName() + "." + KF->getName(), nullptr,
+        GV->getThreadLocalMode(), GV->getType()->getAddressSpace());
+    NewGV->copyAttributesFrom(GV);
+    for (Use &U : make_early_inc_range(GV->uses())) {
+      if (auto *I = dyn_cast<Instruction>(U.getUser())) {
+        Function *F = I->getFunction();
+        if (!isKernelLDS(F) || F == KF) {
+          U.getUser()->replaceUsesOfWith(GV, NewGV);
+        }
+      }
+    }
+    return NewGV;
+  }
+
+  bool lowerSpecialLDSVariables(
+      Module &M, LDSUsesInfoTy &LDSUsesInfo,
+      VariableFunctionMap &LDSToKernelsThatNeedToAccessItIndirectly) {
+    bool Changed = false;
+    // The 1st round: give module-absolute assignments
+    int NumAbsolutes = 0;
+    std::vector<GlobalVariable *> OrderedGVs;
+    for (auto &K : LDSToKernelsThatNeedToAccessItIndirectly) {
+      GlobalVariable *GV = K.first;
+      if (!isNamedBarrier(*GV))
+        continue;
+      // give a module-absolute assignment if it is indirectly accessed by
+      // multiple kernels. This is not precise, but we don't want to duplicate
+      // a function when it is called by multiple kernels.
+      if (LDSToKernelsThatNeedToAccessItIndirectly[GV].size() > 1) {
+        OrderedGVs.push_back(GV);
+      } else {
+        // leave it to the 2nd round, which will give a kernel-relative
+        // assignment if it is only indirectly accessed by one kernel
+        LDSUsesInfo.direct_access[*K.second.begin()].insert(GV);
+      }
+      LDSToKernelsThatNeedToAccessItIndirectly.erase(GV);
+    }
+    OrderedGVs = sortByName(std::move(OrderedGVs));
+    for (GlobalVariable *GV : OrderedGVs) {
+      int BarId = ++NumAbsolutes;
+      unsigned BarrierScope = llvm::AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
+      // 4 bits for alignment, 5 bits for the barrier num,
+      // 3 bits for the barrier scope
+      unsigned Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
+      recordLDSAbsoluteAddress(&M, GV, Offset);
+    }
+    OrderedGVs.clear();
+
+    // The 2nd round: give a kernel-relative assignment for GV that
+    // either only indirectly accessed by single kernel or only directly
+    // accessed by multiple kernels.
+    std::vector<Function *> OrderedKernels;
+    for (auto &K : LDSUsesInfo.direct_access) {
+      Function *F = K.first;
+      assert(isKernelLDS(F));
+      OrderedKernels.push_back(F);
+    }
+    OrderedKernels = sortByName(std::move(OrderedKernels));
+
+    llvm::DenseMap<Function *, uint32_t> Kernel2BarId;
+    for (Function *F : OrderedKernels) {
+      for (GlobalVariable *GV : LDSUsesInfo.direct_access[F]) {
+        if (!isNamedBarrier(*GV))
+          continue;
+
+        LDSUsesInfo.direct_access[F].erase(GV);
+        if (GV->isAbsoluteSymbolRef()) {
+          // already assigned
+          continue;
+        }
+        OrderedGVs.push_back(GV);
+      }
+      OrderedGVs = sortByName(std::move(OrderedGVs));
+      for (GlobalVariable *GV : OrderedGVs) {
+        // GV could also be used directly by other kernels. If so, we need to
+        // create a new GV used only by this kernel and its function.
+        auto NewGV = uniquifyGVPerKernel(M, GV, F);
+        Changed |= (NewGV != GV);
+        int BarId = (NumAbsolutes + 1);
+        if (Kernel2BarId.find(F) != Kernel2BarId.end()) {
+          BarId = (Kernel2BarId[F] + 1);
+        }
+        Kernel2BarId[F] = BarId;
+        unsigned BarrierScope = llvm::AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
+        unsigned Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
+        recordLDSAbsoluteAddress(&M, NewGV, Offset);
+      }
+      OrderedGVs.clear();
+    }
+    // Also erase those special LDS variables from indirect_access.
+    for (auto &K : LDSUsesInfo.indirect_access) {
+      assert(isKernelLDS(K.first));
+      for (GlobalVariable *GV : K.second) {
+        if (isNamedBarrier(*GV))
+          K.second.erase(GV);
+      }
+    }
+    return Changed;
+  }
+
   bool runOnModule(Module &M) {
     CallGraph CG = CallGraph(M);
     bool Changed = superAlignLDSGlobals(M);
@@ -942,6 +1057,12 @@ public:
       for (GlobalVariable *GV : K.second) {
         LDSToKernelsThatNeedToAccessItIndirectly[GV].insert(F);
       }
+    }
+
+    if (LDSUsesInfo.HasSpecialGVs) {
+      // Special LDS variables need special address assignment
+      Changed |= lowerSpecialLDSVariables(
+          M, LDSUsesInfo, LDSToKernelsThatNeedToAccessItIndirectly);
     }
 
     // Partition variables accessed indirectly into the different strategies

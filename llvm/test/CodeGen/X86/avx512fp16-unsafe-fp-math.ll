@@ -112,7 +112,7 @@ define half @test_max_f16(half %a, ptr %ptr) {
 ;
 ; CHECK-LABEL: test_max_f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmovsh (%rdi), %xmm1
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vmaxsh %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 entry:
@@ -130,7 +130,7 @@ define half @test_min_f16(half %a, ptr %ptr) {
 ;
 ; CHECK-LABEL: test_min_f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmovsh (%rdi), %xmm1
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vminsh %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 entry:

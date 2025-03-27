@@ -33,6 +33,22 @@ entry:
   ret i1 %equal
 }
 
+define i1 @icmp_equality_test_constant_samesign(i42 %X, i42 %Y) {
+; CHECK-LABEL: @icmp_equality_test_constant_samesign(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[XEQY:%.*]] = icmp eq i42 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[XEQY]]
+;
+entry:
+  %XeqC = icmp eq i42 %X, -42
+  %YeqC = icmp eq i42 %Y, -42
+  %XeqY = icmp samesign eq i42 %X, %Y
+  %not.YeqC = xor i1 %YeqC, true
+  %and = select i1 %not.YeqC, i1 %XeqY, i1 false
+  %equal = select i1 %XeqC, i1 %YeqC, i1 %and
+  ret i1 %equal
+}
+
 define i1 @icmp_equality_test_swift_optional_pointers(i64 %X, i64 %Y) {
 ; CHECK-LABEL: @icmp_equality_test_swift_optional_pointers(
 ; CHECK-NEXT:  entry:

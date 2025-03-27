@@ -68,11 +68,10 @@ public:
   }
 
   bool SetDefaultValue(int64_t value) {
-    if (value >= m_min_value && value <= m_max_value) {
-      m_default_value = value;
-      return true;
-    }
-    return false;
+    assert(value >= m_min_value && value <= m_max_value &&
+           "disallowed default value");
+    m_default_value = value;
+    return true;
   }
 
   void SetMinimumValue(int64_t v) { m_min_value = v; }

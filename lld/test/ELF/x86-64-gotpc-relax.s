@@ -1,5 +1,5 @@
 # REQUIRES: x86
-## Test R_X86_64_GOTPCRELX and R_X86_64_REX_GOTPCRELX/R_X86_64_REX2_GOTPCRELX GOT optimization.
+## Test R_X86_64_GOTPCRELX and R_X86_64_REX_GOTPCRELX/R_X86_64_CODE_4_GOTPCRELX GOT optimization.
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t1 --no-apply-dynamic-relocs

@@ -501,6 +501,79 @@ define amdgpu_cs void @cs_to_chain(<3 x i32> inreg %a, <3 x i32> %b) {
   unreachable
 }
 
+; Chain call with SGPR arguments that we cannot prove are uniform.
+define amdgpu_cs void @cs_to_chain_nonuniform(<3 x i32> %a, <3 x i32> %b) {
+; GISEL-GFX11-LABEL: cs_to_chain_nonuniform:
+; GISEL-GFX11:       ; %bb.0:
+; GISEL-GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GISEL-GFX11-NEXT:    v_readfirstlane_b32 s1, v1
+; GISEL-GFX11-NEXT:    v_readfirstlane_b32 s2, v2
+; GISEL-GFX11-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v4
+; GISEL-GFX11-NEXT:    v_mov_b32_e32 v10, v5
+; GISEL-GFX11-NEXT:    s_mov_b32 s4, chain_callee@abs32@lo
+; GISEL-GFX11-NEXT:    s_mov_b32 s5, chain_callee@abs32@hi
+; GISEL-GFX11-NEXT:    s_mov_b32 exec_lo, -1
+; GISEL-GFX11-NEXT:    s_setpc_b64 s[4:5]
+;
+; GISEL-GFX10-LABEL: cs_to_chain_nonuniform:
+; GISEL-GFX10:       ; %bb.0:
+; GISEL-GFX10-NEXT:    s_getpc_b64 s[100:101]
+; GISEL-GFX10-NEXT:    s_mov_b32 s100, s0
+; GISEL-GFX10-NEXT:    v_readfirstlane_b32 s1, v1
+; GISEL-GFX10-NEXT:    s_load_dwordx4 s[100:103], s[100:101], 0x10
+; GISEL-GFX10-NEXT:    v_readfirstlane_b32 s2, v2
+; GISEL-GFX10-NEXT:    v_mov_b32_e32 v8, v3
+; GISEL-GFX10-NEXT:    v_mov_b32_e32 v9, v4
+; GISEL-GFX10-NEXT:    v_mov_b32_e32 v10, v5
+; GISEL-GFX10-NEXT:    s_mov_b32 s4, chain_callee@abs32@lo
+; GISEL-GFX10-NEXT:    s_mov_b32 s5, chain_callee@abs32@hi
+; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-GFX10-NEXT:    s_bitset0_b32 s103, 21
+; GISEL-GFX10-NEXT:    s_add_u32 s100, s100, s0
+; GISEL-GFX10-NEXT:    s_addc_u32 s101, s101, 0
+; GISEL-GFX10-NEXT:    v_readfirstlane_b32 s0, v0
+; GISEL-GFX10-NEXT:    s_mov_b64 s[48:49], s[100:101]
+; GISEL-GFX10-NEXT:    s_mov_b64 s[50:51], s[102:103]
+; GISEL-GFX10-NEXT:    s_mov_b32 exec_lo, -1
+; GISEL-GFX10-NEXT:    s_setpc_b64 s[4:5]
+;
+; DAGISEL-GFX11-LABEL: cs_to_chain_nonuniform:
+; DAGISEL-GFX11:       ; %bb.0:
+; DAGISEL-GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; DAGISEL-GFX11-NEXT:    v_readfirstlane_b32 s1, v1
+; DAGISEL-GFX11-NEXT:    v_readfirstlane_b32 s2, v2
+; DAGISEL-GFX11-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v4
+; DAGISEL-GFX11-NEXT:    v_mov_b32_e32 v10, v5
+; DAGISEL-GFX11-NEXT:    s_mov_b32 s5, chain_callee@abs32@hi
+; DAGISEL-GFX11-NEXT:    s_mov_b32 s4, chain_callee@abs32@lo
+; DAGISEL-GFX11-NEXT:    s_mov_b32 exec_lo, -1
+; DAGISEL-GFX11-NEXT:    s_setpc_b64 s[4:5]
+;
+; DAGISEL-GFX10-LABEL: cs_to_chain_nonuniform:
+; DAGISEL-GFX10:       ; %bb.0:
+; DAGISEL-GFX10-NEXT:    s_getpc_b64 s[100:101]
+; DAGISEL-GFX10-NEXT:    s_mov_b32 s100, s0
+; DAGISEL-GFX10-NEXT:    v_readfirstlane_b32 s1, v1
+; DAGISEL-GFX10-NEXT:    s_load_dwordx4 s[100:103], s[100:101], 0x10
+; DAGISEL-GFX10-NEXT:    v_readfirstlane_b32 s2, v2
+; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v8, v3
+; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v9, v4
+; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v10, v5
+; DAGISEL-GFX10-NEXT:    s_mov_b32 s5, chain_callee@abs32@hi
+; DAGISEL-GFX10-NEXT:    s_mov_b32 s4, chain_callee@abs32@lo
+; DAGISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; DAGISEL-GFX10-NEXT:    s_bitset0_b32 s103, 21
+; DAGISEL-GFX10-NEXT:    s_add_u32 s100, s100, s0
+; DAGISEL-GFX10-NEXT:    s_addc_u32 s101, s101, 0
+; DAGISEL-GFX10-NEXT:    v_readfirstlane_b32 s0, v0
+; DAGISEL-GFX10-NEXT:    s_mov_b64 s[48:49], s[100:101]
+; DAGISEL-GFX10-NEXT:    s_mov_b64 s[50:51], s[102:103]
+; DAGISEL-GFX10-NEXT:    s_mov_b32 exec_lo, -1
+; DAGISEL-GFX10-NEXT:    s_setpc_b64 s[4:5]
+  call void(ptr, i32, <3 x i32>, <3 x i32>, i32, ...) @llvm.amdgcn.cs.chain.v3i32(ptr @chain_callee, i32 -1, <3 x i32> inreg %a, <3 x i32> %b, i32 0)
+  unreachable
+}
+
 define amdgpu_cs_chain void @chain_to_chain(<3 x i32> inreg %a, <3 x i32> %b) {
 ; GISEL-GFX11-LABEL: chain_to_chain:
 ; GISEL-GFX11:       ; %bb.0:
