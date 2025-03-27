@@ -524,11 +524,14 @@ public:
       } else {
         auto data_or_err = valobj_sp->GetData();
         if (auto error = data_or_err.takeError()) {
-          err = Status::FromErrorStringWithFormat(
-              "couldn't get the value of %s: %s", GetName().AsCString(),
-              llvm::toString(std::move(error)).c_str());
-          return;
+            err = Status::FromError(
+                llvm::joinErrors(
+                  llvm::createStringError("couldn't get the value of %s: ", 
+                    GetName().AsCString()), std::move(error)));
+            return;
         }
+
+        auto data = std::move(*data_or_err);
 
         if (m_temporary_allocation != LLDB_INVALID_ADDRESS) {
           err = Status::FromErrorStringWithFormat(
@@ -537,9 +540,9 @@ public:
           return;
         }
 
-        if (data_or_err->GetByteSize() <
+        if (data.GetByteSize() <
             llvm::expectedToOptional(GetByteSize(scope)).value_or(0)) {
-          if (data_or_err->GetByteSize() == 0 && !LocationExpressionIsValid()) {
+          if (data.GetByteSize() == 0 && !LocationExpressionIsValid()) {
             err = Status::FromErrorStringWithFormat(
                 "the variable '%s' has no location, "
                 "it may have been optimized out",
@@ -550,7 +553,7 @@ public:
                 ") is larger than the ValueObject's size (%" PRIu64 ")",
                 GetName().AsCString(),
                 llvm::expectedToOptional(GetByteSize(scope)).value_or(0),
-                data_or_err->GetByteSize());
+                data.GetByteSize());
           }
           return;
         }
@@ -568,14 +571,14 @@ public:
         const bool zero_memory = false;
 
         m_temporary_allocation = map.Malloc(
-            data_or_err->GetByteSize(), byte_align,
+            data.GetByteSize(), byte_align,
             lldb::ePermissionsReadable | lldb::ePermissionsWritable,
             IRMemoryMap::eAllocationPolicyMirror, zero_memory, alloc_error);
 
-        m_temporary_allocation_size = data_or_err->GetByteSize();
+        m_temporary_allocation_size = data.GetByteSize();
 
         m_original_data = std::make_shared<DataBufferHeap>(
-            data_or_err->GetDataStart(), data_or_err->GetByteSize());
+            data.GetDataStart(), data.GetByteSize());
 
         if (!alloc_error.Success()) {
           err = Status::FromErrorStringWithFormat(
@@ -586,8 +589,8 @@ public:
 
         Status write_error;
 
-        map.WriteMemory(m_temporary_allocation, data_or_err->GetDataStart(),
-                        data_or_err->GetByteSize(), write_error);
+        map.WriteMemory(m_temporary_allocation, data.GetDataStart(),
+                        data.GetByteSize(), write_error);
 
         if (!write_error.Success()) {
           err = Status::FromErrorStringWithFormat(
