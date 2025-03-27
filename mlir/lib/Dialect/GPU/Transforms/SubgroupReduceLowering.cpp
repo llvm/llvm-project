@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/GPU/Utils/GPUUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/PatternMatch.h"
@@ -23,6 +25,8 @@
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
+
+#define DPP
 
 using namespace mlir;
 
@@ -188,6 +192,8 @@ Value createSubgroupShuffleReduction(OpBuilder &builder, Location loc,
                                      function_ref<Value(Value)> unpackFn) {
   // Lane value always stays in the original type. We use it to perform arith
   // reductions.
+  llvm::errs() << "Cluster Stride: " << ci.clusterStride << "\n";
+  llvm::errs() << "Cluster Size: " << ci.clusterSize << "\n";
   Value laneVal = input;
   // Parallel reduction using butterfly shuffles.
   for (unsigned i = ci.clusterStride; i < ci.clusterStride * ci.clusterSize;
@@ -206,6 +212,146 @@ Value createSubgroupShuffleReduction(OpBuilder &builder, Location loc,
   return laneVal;
 }
 
+#ifdef DPP
+Value createSubgroupDPPReduction(OpBuilder &b, Location loc,
+  Value input, gpu::AllReduceOperation mode,
+  const ClusterInfo &ci,
+  function_ref<Value(Value)> packFn,
+  function_ref<Value(Value)> unpackFn) {
+  llvm::errs() << "createSubgroupDPPReduction" << "\n";
+  Value result = input;
+  if (ci.clusterSize >= 2) {
+    auto permArg = b.getIntegerAttr(b.getIntegerType(32), 1);
+    Value dppResult = b.create<amdgpu::DPPOp>(loc, result.getType(), result, result, amdgpu::DPPPerm::row_shr, permArg);
+    llvm::errs() << dppResult << " c 2 \n";
+    result = vector::makeArithReduction(b, loc,
+      gpu::convertReductionKind(mode),
+      result, dppResult);
+  }
+
+  if (ci.clusterSize >= 4) {
+    auto permArg = b.getIntegerAttr(b.getIntegerType(32), 2);
+    Value dppResult = b.create<amdgpu::DPPOp>(loc, result.getType(), result, result, amdgpu::DPPPerm::row_shr, permArg);
+    llvm::errs() << dppResult << " c 4 \n";
+    result = vector::makeArithReduction(b, loc,
+      gpu::convertReductionKind(mode),
+      result, dppResult);
+  }
+
+  if (ci.clusterSize >= 8) {
+
+    Value dppResult = b.create<amdgpu::DPPOp>(loc, result.getType(), result, result, amdgpu::DPPPerm::row_half_mirror, b.getUnitAttr());
+    llvm::errs() << dppResult << " c 8 \n";
+    result = vector::makeArithReduction(b, loc,
+      gpu::convertReductionKind(mode),
+      result, dppResult);
+  }
+
+  if (ci.clusterSize >= 16) {
+    Value dppResult = b.create<amdgpu::DPPOp>(loc, result.getType(), result, result, amdgpu::DPPPerm::row_mirror, b.getUnitAttr());
+    llvm::errs() << dppResult << " c 16 \n";
+    result = vector::makeArithReduction(b, loc,
+      gpu::convertReductionKind(mode),
+      result, dppResult);
+  }
+
+  if (ci.clusterSize >= 32) {
+    // auto permArg = builder.getInt32(15);
+    // auto rowMask = builder.getInt32("0xa");
+    // auto bankMask = builder.getInt32("0xf");
+    // auto boundCtrl = builder.getBoolAttr(false);
+    auto permArg = b.getIntegerAttr(b.getIntegerType(32), 15);
+    Value dppResult = b.create<amdgpu::DPPOp>(loc, result.getType(), result, result, amdgpu::DPPPerm::row_bcast_15, b.getUnitAttr(), 10, 15, false);
+    llvm::errs() << dppResult << " c 32 \n";
+    result = vector::makeArithReduction(b, loc,
+      gpu::convertReductionKind(mode),
+      result, dppResult);
+  }
+
+  if (ci.clusterSize == 64) {
+    // auto permArg = builder.getInt32(31);
+    // auto rowMask = builder.getInt32("0xc");
+    // auto bankMask = builder.getInt32("0xf");
+    // auto boundCtrl = builder.getBoolAttr(false);
+    auto permArg = b.getIntegerAttr(b.getIntegerType(32), 31);
+    Value dppResult = b.create<amdgpu::DPPOp>(loc, result.getType(), result, result, amdgpu::DPPPerm::row_bcast_31, b.getUnitAttr(), 12, 15, false);
+    llvm::errs() << dppResult << " c 64 \n";
+    result = vector::makeArithReduction(b, loc,
+      gpu::convertReductionKind(mode),
+      result, dppResult);
+  }
+  
+  // // read lane 63 with the final result. 
+  // auto lane = b.getIntegerAttr(b.getIntegerType(32), 63);
+  // result = b.create<ROCDL::ReadLaneOp>(loc, input.getType(), result, lane);  
+  assert(result.getType() == input.getType());
+  return result;
+}
+#endif
+
+// Value createSubgroupDPPReduction(OpBuilder &b, Location loc,
+//   Value input, gpu::AllReduceOperation mode,
+//   const ClusterInfo &ci,
+//   function_ref<Value(Value)> packFn,
+//   function_ref<Value(Value)> unpackFn) {
+
+//   Value result = input;
+//   if (ci.clusterSize >= 2) {
+//     auto permArg = b.getInt32(1);
+//     Value dppResult = builder.create<amdgpu::DPPOp>(packFn(result), packFn(result), amdgpu::DPPPerm::row_shr, permArg);
+//     result = vector::makeArithReduction(builder, loc,
+//       gpu::convertReductionKind(mode),
+//       result, unpackFn(dppResult));
+//   }
+
+//   if (ci.clusterSize >= 4) {
+//     auto permArg = builder.getInt32(2);
+//     Value dppResult = builder.create<amdgpu::DPPOp>(packFn(result), packFn(result), amdgpu::DPPPerm::row_shr, permArg);
+//     result = vector::makeArithReduction(builder, loc,
+//       gpu::convertReductionKind(mode),
+//       result, unpackFn(dppResult));
+//   }
+
+//   if (ci.clusterSize >= 8) {
+//     Value dppResult = builder.create<amdgpu::DPPOp>(packFn(result), packFn(result), amdgpu::DPPPerm::row_half_mirror);
+//     result = vector::makeArithReduction(builder, loc,
+//       gpu::convertReductionKind(mode),
+//       result, unpackFn(dppResult));
+//   }
+
+//   if (ci.clusterSize >= 16) {
+//     Value dppResult = builder.create<amdgpu::DPPOp>(packFn(result), packFn(result), amdgpu::DPPPerm::row_mirror);
+//     result = vector::makeArithReduction(builder, loc,
+//       gpu::convertReductionKind(mode),
+//       result, unpackFn(dppResult));
+//   }
+
+//   if (ci.clusterSize >= 32) {
+//     auto permArg = builder.getInt32(15);
+//     auto rowMask = builder.getInt32("0xa");
+//     auto bankMask = builder.getInt32("0xf");
+//     auto boundCtrl = builder.getBoolAttr(false);
+//     Value dppResult = builder.create<amdgpu::DPPOp>(packFn(result), packFn(result), amdgpu::DPPPerm::row_bcast, permArg, rowMask, bankMask, boundCtrl);
+//     result = vector::makeArithReduction(builder, loc,
+//       gpu::convertReductionKind(mode),
+//       result, unpackFn(dppResult));
+//   }
+
+//   if (ci.clusterSize == 64) {
+//     auto permArg = builder.getInt32(31);
+//     auto rowMask = builder.getInt32("0xc");
+//     auto bankMask = builder.getInt32("0xf");
+//     auto boundCtrl = builder.getBoolAttr(false);
+//     Value dppResult = builder.create<amdgpu::DPPOp>(packFn(result), packFn(result), amdgpu::DPPPerm::row_bcast, permArg, rowMask, bankMask, boundCtrl);
+//     result = vector::makeArithReduction(builder, loc,
+//       gpu::convertReductionKind(mode),
+//       result, unpackFn(dppResult));
+//   }
+
+//   assert(result.getType() == input.getType());
+//   return result;
+// }
+
 /// Lowers scalar gpu subgroup reductions to a series of shuffles.
 struct ScalarSubgroupReduceToShuffles final
     : OpRewritePattern<gpu::SubgroupReduceOp> {
@@ -217,6 +363,7 @@ struct ScalarSubgroupReduceToShuffles final
 
   LogicalResult matchAndRewrite(gpu::SubgroupReduceOp op,
                                 PatternRewriter &rewriter) const override {
+    llvm::errs() << "ScalarSubgroupReduceToShuffles" << "\n";
     if (op.getClusterSize().has_value() != matchClustered) {
       return rewriter.notifyMatchFailure(
           op, llvm::formatv("op is {0}clustered but pattern is configured to "
@@ -239,10 +386,17 @@ struct ScalarSubgroupReduceToShuffles final
     Location loc = op.getLoc();
     // Since this is already a native shuffle scalar, no packing is necessary.
     if (elemBitwidth == shuffleBitwidth) {
+      llvm::errs() << "ScalarSubgroupReduceToShuffles - 1" << "\n";
       auto identityFn = [](Value v) { return v; };
+#ifndef DPP
       rewriter.replaceOp(op, createSubgroupShuffleReduction(
                                  rewriter, loc, op.getValue(), op.getOp(), *ci,
                                  identityFn, identityFn));
+#else
+      rewriter.replaceOp(op, createSubgroupDPPReduction(
+                                  rewriter, loc, op.getValue(), op.getOp(), *ci,
+                                  identityFn, identityFn));
+#endif
       return success();
     }
 
@@ -260,10 +414,15 @@ struct ScalarSubgroupReduceToShuffles final
           rewriter.create<arith::TruncIOp>(loc, equivIntType, packedVal);
       return rewriter.create<arith::BitcastOp>(loc, valueTy, asInt);
     };
-
+    llvm::errs() << "ScalarSubgroupReduceToShuffles - 2" << "\n";
+#ifndef DPP
     rewriter.replaceOp(
         op, createSubgroupShuffleReduction(rewriter, loc, op.getValue(),
                                            op.getOp(), *ci, packFn, unpackFn));
+#else
+    rewriter.replaceOp(op, createSubgroupDPPReduction(rewriter, loc, op.getValue(),
+    op.getOp(), *ci, packFn, unpackFn));
+#endif
     return success();
   }
 
@@ -284,6 +443,7 @@ struct VectorSubgroupReduceToShuffles final
 
   LogicalResult matchAndRewrite(gpu::SubgroupReduceOp op,
                                 PatternRewriter &rewriter) const override {
+    llvm::errs() << "VectorSubgroupReduceToShuffles" << "\n";
     if (op.getClusterSize().has_value() != matchClustered) {
       return rewriter.notifyMatchFailure(
           op, llvm::formatv("op is {0}clustered but pattern is configured to "
