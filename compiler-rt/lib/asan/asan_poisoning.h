@@ -14,9 +14,6 @@
 #ifndef ASAN_POISONING_H
 #define ASAN_POISONING_H
 
-#ifndef ASAN_POISONING_H
-#define ASAN_POISONING_H
-
 #include "asan_interceptors.h"
 #include "asan_internal.h"
 #include "asan_mapping.h"

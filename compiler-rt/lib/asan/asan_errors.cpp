@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "asan_errors.h"
-
 #include "asan_descriptions.h"
 #include "asan_mapping.h"
 #include "asan_poisoning.h"
@@ -118,7 +117,7 @@ void ErrorFreeNotMalloced::Print() {
 
 void ErrorAllocTypeMismatch::Print() {
   static const char *alloc_names[] = {"INVALID", "malloc", "operator new",
-                                      "operator new []"};
+.                                      "operator new []"};
   static const char *dealloc_names[] = {"INVALID", "free", "operator delete",
                                         "operator delete []"};
   CHECK_NE(alloc_type, dealloc_type);
@@ -553,8 +552,8 @@ static void PrintLegend(InternalScopedString *str) {
   PrintShadowByte(str, "  Global redzone:          ", kAsanGlobalRedzoneMagic);
   PrintShadowByte(str, "  Global init order:       ",
                   kAsanInitializationOrderMagic);
-  PrintShadowByte(str,
-                  "  Poisoned by user:        ", kAsanUserPoisonedMemoryMagic);
+  PrintShadowByte(str, "  Poisoned by user:        ",
+                  kAsanUserPoisonedMemoryMagic);
   PrintShadowByte(str, "  Container overflow:      ",
                   kAsanContiguousContainerOOBMagic);
   PrintShadowByte(str, "  Array cookie:            ",
@@ -664,8 +663,7 @@ void ErrorGeneric::Print() {
   ReportErrorSummary(bug_descr, &stack);
   PrintShadowMemoryForAddress(addr);
 
-  // This uses a range of shadow values, hence it is not convenient to make a
-  // specific error handler.
+  // This is an experimental flag, hence we don't make a special handler.
   if (flags()->track_poison > 0)
     CheckPoisonRecords(addr);
 }
