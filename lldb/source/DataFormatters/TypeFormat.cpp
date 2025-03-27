@@ -98,11 +98,12 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
           }
         } else {
           auto data_or_err = valobj->GetData();
-          if (!data_or_err)
+          if (!data_or_err) {
             LLDB_LOG_ERRORV(
                 GetLog(LLDBLog::DataFormatters), data_or_err.takeError(),
                 "Failed to extract data for CString info to display: {0}:");
-          return false;
+            return false;
+          }
         }
 
         ExecutionContextScope *exe_scope =
