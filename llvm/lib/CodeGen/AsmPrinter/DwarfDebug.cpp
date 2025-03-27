@@ -17,6 +17,7 @@
 #include "DwarfExpression.h"
 #include "DwarfUnit.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
@@ -169,6 +170,9 @@ static cl::opt<DwarfDebug::MinimizeAddrInV5> MinimizeAddrInV5Option(
                clEnumValN(DwarfDebug::MinimizeAddrInV5::Disabled, "Disabled",
                           "Stuff")),
     cl::init(DwarfDebug::MinimizeAddrInV5::Default));
+
+static cl::opt<bool> KeyInstructionsAreStmts("dwarf-use-key-instructions",
+                                             cl::Hidden, cl::init(false));
 
 static constexpr unsigned ULEB128PadSize = 4;
 
@@ -2070,6 +2074,10 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   unsigned LastAsmLine =
       Asm->OutStreamer->getContext().getCurrentDwarfLoc().getLine();
 
+  bool IsKey = false;
+  if (KeyInstructionsAreStmts && DL && DL.getLine())
+    IsKey = KeyInstructions.contains(MI);
+
   if (!DL && MI == PrologEndLoc) {
     // In rare situations, we might want to place the end of the prologue
     // somewhere that doesn't have a source location already. It should be in
@@ -2088,13 +2096,18 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     // If we have an ongoing unspecified location, nothing to do here.
     if (!DL)
       return;
-    // We have an explicit location, same as the previous location.
-    // But we might be coming back to it after a line 0 record.
-    if ((LastAsmLine == 0 && DL.getLine() != 0) || Flags) {
-      // Reinstate the source location but not marked as a statement.
-      RecordSourceLine(DL, Flags);
+
+    // Skip this if the instruction is Key, else we might accidentally miss an
+    // is_stmt.
+    if (!IsKey) {
+      // We have an explicit location, same as the previous location.
+      // But we might be coming back to it after a line 0 record.
+      if ((LastAsmLine == 0 && DL.getLine() != 0) || Flags) {
+        // Reinstate the source location but not marked as a statement.
+        RecordSourceLine(DL, Flags);
+      }
+      return;
     }
-    return;
   }
 
   if (!DL) {
@@ -2141,11 +2154,17 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     Flags |= DWARF2_FLAG_PROLOGUE_END | DWARF2_FLAG_IS_STMT;
     PrologEndLoc = nullptr;
   }
-  // If the line changed, we call that a new statement; unless we went to
-  // line 0 and came back, in which case it is not a new statement.
-  unsigned OldLine = PrevInstLoc ? PrevInstLoc.getLine() : LastAsmLine;
-  if (DL.getLine() && (DL.getLine() != OldLine || ForceIsStmt))
-    Flags |= DWARF2_FLAG_IS_STMT;
+
+  if (KeyInstructionsAreStmts) {
+    if (IsKey)
+      Flags |= DWARF2_FLAG_IS_STMT;
+  } else {
+    // If the line changed, we call that a new statement; unless we went to
+    // line 0 and came back, in which case it is not a new statement.
+    unsigned OldLine = PrevInstLoc ? PrevInstLoc.getLine() : LastAsmLine;
+    if (DL.getLine() && (DL.getLine() != OldLine || ForceIsStmt))
+      Flags |= DWARF2_FLAG_IS_STMT;
+  }
 
   RecordSourceLine(DL, Flags);
 
@@ -2338,6 +2357,170 @@ DwarfDebug::emitInitialLocDirective(const MachineFunction &MF, unsigned CUID) {
   return PrologEndLoc;
 }
 
+void DwarfDebug::findKeyInstructions(const MachineFunction *MF) {
+  // New function - reset KeyInstructions.
+  KeyInstructions.clear();
+
+  // The current candidate is_stmt instructions for each source atom.
+  // Map {(InlinedAt, Group): (Rank, Instructions)}.
+  DenseMap<std::pair<DILocation *, uint32_t>,
+           std::pair<uint16_t, SmallVector<const MachineInstr *>>>
+      GroupCandidates;
+
+  // For each instruction:
+  //   * Skip insts without DebugLoc, AtomGroup or AtomRank, and line zeros.
+  //   * Check if insts in this group have been seen already in GroupCandidates.
+  //     * If this instr rank is equal, add this instruction to KeyInstructions.
+  //       Remove existing instructions from KeyInstructions if they have the
+  //       same parent.
+  //     * If this instr rank is higher (lower precedence), ignore it.
+  //     * If this instr rank is lower (higher precedence), erase existing
+  //       instructions from KeyInstructions. Add this instr to KeyInstructions.
+
+  for (auto &MBB : *MF) {
+    // Rather than apply is_stmt directly to Key Instructions, we "float"
+    // is_stmt up to the 1st instruction with the same line number in a
+    // contiguous block. That instruction is called the "buoy". The
+    // buoy gets reset if we encouner an instruction with an atom
+    // group.
+    const MachineInstr *Buoy = nullptr;
+    // The atom group number associated with Buoy which may be 0 if we haven't
+    // encountered an atom group yet in this blob of instructions with the same
+    // line number.
+    uint64_t BuoyAtom = 0;
+
+    for (auto &MI : MBB) {
+      if (MI.isMetaInstruction())
+        continue;
+
+      if (!MI.getDebugLoc() || !MI.getDebugLoc().getLine())
+        continue;
+
+      // Reset the Buoy to this instruciton if it has a different line number.
+      if (!Buoy ||
+          Buoy->getDebugLoc().getLine() != MI.getDebugLoc().getLine()) {
+        Buoy = &MI;
+        BuoyAtom = 0;
+      }
+
+      // Call instructions are handled specially - we always mark them as key
+      // regardless of atom info.
+      const auto &TII =
+          *MI.getParent()->getParent()->getSubtarget().getInstrInfo();
+      if (MI.isCall() || TII.isTailCall(MI)) {
+        assert(MI.getDebugLoc() && "Unexpectedly missing DL");
+
+        // Calls are always key.
+        KeyInstructions.insert(Buoy);
+
+        uint64_t Group = MI.getDebugLoc()->getAtomGroup();
+        uint8_t Rank = MI.getDebugLoc()->getAtomRank();
+        if (Group && Rank) {
+          auto *InlinedAt = MI.getDebugLoc()->getInlinedAt();
+          auto &[CandidateRank, CandidateInsts] = GroupCandidates[{InlinedAt, Group}];
+
+          // This looks similar to the non-call handling code, except that
+          // we don't put the call into CandidateInsts so that they can't be
+          // made un-key. As a result, we also have to take special care not
+          // to erase the is_stmt from the buoy, and prevent that happening
+          // in the future.
+
+          if (CandidateRank == Rank) {
+            // We've seen other instructions in this group of this rank. Discard
+            // ones we've seen in this block, keep the others.
+            assert(!CandidateInsts.empty());
+            SmallVector<const MachineInstr *> Insts;
+            Insts.reserve(CandidateInsts.size());
+            for (auto &PrevInst : CandidateInsts) {
+              if (PrevInst->getParent() != MI.getParent())
+                Insts.push_back(PrevInst);
+              else if (PrevInst != Buoy)
+                KeyInstructions.erase(PrevInst);
+            }
+
+            if (Insts.empty()) {
+              CandidateInsts.clear();
+              CandidateRank = 0;
+            } else {
+              CandidateInsts = std::move(Insts);
+            }
+
+          } else if (CandidateRank > Rank) {
+            // We've seen other instructions in this group of lower precedence
+            // (higher rank). Discard them.
+            for (auto *Supplanted : CandidateInsts) {
+              // Don't erase the is_stmt we're using for this call.
+              if (Supplanted != Buoy)
+                KeyInstructions.erase(Supplanted);
+            }
+            CandidateInsts.clear();
+            CandidateRank = 0;
+          }
+        }
+
+        // Avoid floating any future is_stmts up to the call.
+        Buoy = nullptr;
+        continue;
+      }
+
+      auto *InlinedAt = MI.getDebugLoc()->getInlinedAt();
+      uint64_t Group = MI.getDebugLoc()->getAtomGroup();
+      uint8_t Rank = MI.getDebugLoc()->getAtomRank();
+      if (!Group || !Rank)
+        continue;
+
+      // Don't let is_stmts float past instructions from different source atoms.
+      if (BuoyAtom && BuoyAtom != Group) {
+        Buoy = &MI;
+        BuoyAtom = MI.getDebugLoc()->getAtomGroup();
+      }
+
+      auto &[CandidateRank, CandidateInsts] = GroupCandidates[{InlinedAt, Group}];
+
+      if (CandidateRank == 0) {
+        // This is the first time we're seeing an instruction in this atom
+        // group. Add it to the map.
+        assert(CandidateInsts.empty());
+        CandidateRank = Rank;
+        CandidateInsts.push_back(Buoy);
+
+      } else if (CandidateRank == Rank) {
+        // We've seen other instructions in this group of this rank. Discard
+        // ones we've seen in this block, keep the others, add this one.
+        assert(!CandidateInsts.empty());
+        SmallVector<const MachineInstr *> Insts;
+        Insts.reserve(CandidateInsts.size() + 1);
+        for (auto &PrevInst : CandidateInsts) {
+          if (PrevInst->getParent() != MI.getParent())
+            Insts.push_back(PrevInst);
+          else
+            KeyInstructions.erase(PrevInst);
+        }
+        Insts.push_back(Buoy);
+        CandidateInsts = std::move(Insts);
+
+      } else if (CandidateRank > Rank) {
+        // We've seen other instructions in this group of lower precedence
+        // (higher rank). Discard them, add this one.
+        assert(!CandidateInsts.empty());
+        CandidateRank = Rank;
+        for (auto *Supplanted : CandidateInsts)
+          KeyInstructions.erase(Supplanted);
+        CandidateInsts = {Buoy};
+
+      } else {
+        // We've seen other instructions in this group with higher precedence
+        // (lower rank). Discard this one.
+        assert(Rank != 0 && CandidateRank < Rank && CandidateRank != 0);
+        continue;
+      }
+      KeyInstructions.insert(Buoy);
+      assert(!BuoyAtom || BuoyAtom == MI.getDebugLoc()->getAtomGroup());
+      BuoyAtom = MI.getDebugLoc()->getAtomGroup();
+    }
+  }
+}
+
 /// For the function \p MF, finds the set of instructions which may represent a
 /// change in line number from one or more of the preceding MBBs. Stores the
 /// resulting set of instructions, which should have is_stmt set, in
@@ -2496,7 +2679,10 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
   PrologEndLoc = emitInitialLocDirective(
       *MF, Asm->OutStreamer->getContext().getDwarfCompileUnitID());
 
-  findForceIsStmtInstrs(MF);
+  if (KeyInstructionsAreStmts)
+    findKeyInstructions(MF);
+  else
+    findForceIsStmtInstrs(MF);
 }
 
 unsigned
