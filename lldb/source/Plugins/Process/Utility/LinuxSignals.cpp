@@ -61,10 +61,17 @@ void LinuxSignals::Reset() {
   AddSignal(5,      "SIGTRAP",      true,     true,   true,   "trace trap (not reset when caught)");
   AddSignal(6,      "SIGABRT",      false,    true,   true,   "abort()/IOT trap", "SIGIOT");
 
-  AddSignal(7,      "SIGBUS",       false,    true,   true,   "bus error");
-  ADD_SIGCODE(SIGBUS, 7, BUS_ADRALN, 1, "illegal alignment");
-  ADD_SIGCODE(SIGBUS, 7, BUS_ADRERR, 2, "illegal address");
-  ADD_SIGCODE(SIGBUS, 7, BUS_OBJERR, 3, "hardware error");
+#if defined(mips) || defined(__mips__) || defined(__mips)
+    AddSignal(10,      "SIGBUS",       false,    true,   true,   "bus error");
+    ADD_SIGCODE(SIGBUS, 10, BUS_ADRALN, 1, "illegal alignment");
+    ADD_SIGCODE(SIGBUS, 10, BUS_ADRERR, 2, "illegal address");
+    ADD_SIGCODE(SIGBUS, 10, BUS_OBJERR, 3, "hardware error");
+#else
+    AddSignal(7,      "SIGBUS",       false,    true,   true,   "bus error");
+    ADD_SIGCODE(SIGBUS, 7, BUS_ADRALN, 1, "illegal alignment");
+    ADD_SIGCODE(SIGBUS, 7, BUS_ADRERR, 2, "illegal address");
+    ADD_SIGCODE(SIGBUS, 7, BUS_OBJERR, 3, "hardware error");
+#endif
 
   AddSignal(8,      "SIGFPE",       false,    true,   true,   "floating point exception");
   ADD_SIGCODE(SIGFPE, 8, FPE_INTDIV, 1, "integer divide by zero");
@@ -77,7 +84,11 @@ void LinuxSignals::Reset() {
   ADD_SIGCODE(SIGFPE, 8, FPE_FLTSUB, 8, "subscript out of range");
 
   AddSignal(9,      "SIGKILL",      false,    true,   true,   "kill");
-  AddSignal(10,     "SIGUSR1",      false,    true,   true,   "user defined signal 1");
+#if defined(mips) || defined(__mips__) || defined(__mips)
+    AddSignal(7,     "SIGUSR1",      false,    true,   true,   "user defined signal 1");
+#else
+    AddSignal(10,     "SIGUSR1",      false,    true,   true,   "user defined signal 1");
+#endif
 
   AddSignal(11,     "SIGSEGV",      false,    true,   true,   "segmentation violation");
   ADD_SIGCODE(SIGSEGV, 11, SEGV_MAPERR,  1, "address not mapped to object", SignalCodePrintOption::Address);
