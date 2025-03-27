@@ -60,11 +60,11 @@ define i32 @flags_copy_lowering() nounwind {
 ; CHECK-NEXT:    setb %sil
 ; CHECK-NEXT:    adcl $0, %ecx
 ; CHECK-NEXT:    testb %sil, %sil
-; CHECK-NEXT:    setzune %dl
-; CHECK-NEXT:    testb %sil, %sil
 ; CHECK-NEXT:    je .LBB4_3
 ; CHECK-NEXT:  # %bb.2: # %bb1
 ; CHECK-NEXT:    # in Loop: Header=BB4_1 Depth=1
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    movb %sil, %dl
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB4_1
 ; CHECK-NEXT:  .LBB4_3: # %bb2

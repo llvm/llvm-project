@@ -22,7 +22,6 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -1098,31 +1097,10 @@ llvm::Type *CodeGenModule::getBlockDescriptorType() {
   if (BlockDescriptorType)
     return BlockDescriptorType;
 
-  llvm::Type *UnsignedLongTy =
-    getTypes().ConvertType(getContext().UnsignedLongTy);
-
-  // struct __block_descriptor {
-  //   unsigned long reserved;
-  //   unsigned long block_size;
-  //
-  //   // later, the following will be added
-  //
-  //   struct {
-  //     void (*copyHelper)();
-  //     void (*copyHelper)();
-  //   } helpers;                // !!! optional
-  //
-  //   const char *signature;   // the block signature
-  //   const char *layout;      // reserved
-  // };
-  BlockDescriptorType = llvm::StructType::create(
-      "struct.__block_descriptor", UnsignedLongTy, UnsignedLongTy);
-
-  // Now form a pointer to that.
   unsigned AddrSpace = 0;
   if (getLangOpts().OpenCL)
     AddrSpace = getContext().getTargetAddressSpace(LangAS::opencl_constant);
-  BlockDescriptorType = llvm::PointerType::get(BlockDescriptorType, AddrSpace);
+  BlockDescriptorType = llvm::PointerType::get(getLLVMContext(), AddrSpace);
   return BlockDescriptorType;
 }
 
@@ -1397,7 +1375,8 @@ void CodeGenFunction::setBlockContextParameter(const ImplicitParamDecl *D,
       DI->setLocation(D->getLocation());
       DI->EmitDeclareOfBlockLiteralArgVariable(
           *BlockInfo, D->getName(), argNum,
-          cast<llvm::AllocaInst>(alloc.getPointer()), Builder);
+          cast<llvm::AllocaInst>(alloc.getPointer()->stripPointerCasts()),
+          Builder);
     }
   }
 
@@ -2589,10 +2568,6 @@ const BlockByrefInfo &CodeGenFunction::getBlockByrefInfo(const VarDecl *D) {
   if (it != BlockByrefInfos.end())
     return it->second;
 
-  llvm::StructType *byrefType =
-    llvm::StructType::create(getLLVMContext(),
-                             "struct.__block_byref_" + D->getNameAsString());
-
   QualType Ty = D->getType();
 
   CharUnits size;
@@ -2657,7 +2632,9 @@ const BlockByrefInfo &CodeGenFunction::getBlockByrefInfo(const VarDecl *D) {
   }
   types.push_back(varTy);
 
-  byrefType->setBody(types, packed);
+  llvm::StructType *byrefType = llvm::StructType::create(
+      getLLVMContext(), types, "struct.__block_byref_" + D->getNameAsString(),
+      packed);
 
   BlockByrefInfo info;
   info.Type = byrefType;
@@ -2802,7 +2779,8 @@ static void configureBlocksRuntimeObject(CodeGenModule &CGM,
                                          llvm::Constant *C) {
   auto *GV = cast<llvm::GlobalValue>(C->stripPointerCasts());
 
-  if (CGM.getTarget().getTriple().isOSBinFormatCOFF()) {
+  if (!CGM.getCodeGenOpts().StaticClosure &&
+      CGM.getTarget().getTriple().isOSBinFormatCOFF()) {
     const IdentifierInfo &II = CGM.getContext().Idents.get(C->getName());
     TranslationUnitDecl *TUDecl = CGM.getContext().getTranslationUnitDecl();
     DeclContext *DC = TranslationUnitDecl::castToDeclContext(TUDecl);
@@ -2817,7 +2795,6 @@ static void configureBlocksRuntimeObject(CodeGenModule &CGM,
           (ND = dyn_cast<VarDecl>(Result)))
         break;
 
-    // TODO: support static blocks runtime
     if (GV->isDeclaration() && (!ND || !ND->hasAttr<DLLExportAttr>())) {
       GV->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
       GV->setLinkage(llvm::GlobalValue::ExternalLinkage);
@@ -2838,10 +2815,9 @@ llvm::FunctionCallee CodeGenModule::getBlockObjectDispose() {
   if (BlockObjectDispose)
     return BlockObjectDispose;
 
-  llvm::Type *args[] = { Int8PtrTy, Int32Ty };
-  llvm::FunctionType *fty
-    = llvm::FunctionType::get(VoidTy, args, false);
-  BlockObjectDispose = CreateRuntimeFunction(fty, "_Block_object_dispose");
+  QualType args[] = {Context.VoidPtrTy, Context.IntTy};
+  BlockObjectDispose =
+      CreateRuntimeFunction(Context.VoidTy, args, "_Block_object_dispose");
   configureBlocksRuntimeObject(
       *this, cast<llvm::Constant>(BlockObjectDispose.getCallee()));
   return BlockObjectDispose;
@@ -2851,10 +2827,9 @@ llvm::FunctionCallee CodeGenModule::getBlockObjectAssign() {
   if (BlockObjectAssign)
     return BlockObjectAssign;
 
-  llvm::Type *args[] = { Int8PtrTy, Int8PtrTy, Int32Ty };
-  llvm::FunctionType *fty
-    = llvm::FunctionType::get(VoidTy, args, false);
-  BlockObjectAssign = CreateRuntimeFunction(fty, "_Block_object_assign");
+  QualType args[] = {Context.VoidPtrTy, Context.VoidPtrTy, Context.IntTy};
+  BlockObjectAssign =
+      CreateRuntimeFunction(Context.VoidTy, args, "_Block_object_assign");
   configureBlocksRuntimeObject(
       *this, cast<llvm::Constant>(BlockObjectAssign.getCallee()));
   return BlockObjectAssign;

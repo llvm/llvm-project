@@ -7,7 +7,8 @@
 template<template<int> typename> struct Ti; // #Ti
 template<template<int...> typename> struct TPi; // #TPi
 template<template<int, int...> typename> struct TiPi;
-template<template<int..., int...> typename> struct TPiPi; // FIXME: Why is this not ill-formed?
+template<template<int..., int...> typename> struct TPiPi;
+// expected-error@-1 {{template parameter pack must be the last template parameter}}
 
 template<typename T, template<T> typename> struct tT0; // #tT0
 template<template<typename T, T> typename> struct Tt0; // #Tt0
@@ -21,7 +22,7 @@ template<int, int> struct ii;
 template<int...> struct Pi;
 template<int, int, int...> struct iiPi;
 
-template<int, typename = int> struct iDt;
+template<int, typename = int> struct iDt; // #iDt
 template<int, typename> struct it; // #it
 
 template<typename T, T v> struct t0;
@@ -66,8 +67,9 @@ namespace DependentType {
   using ok = Pt<tT0<int, i>, tT0<int, iDi>>;
   using err1 = tT0<int, ii>; // expected-error {{too few template arguments for class template 'ii'}}
                              // expected-note@-1 {{different template parameters}}
-  using err2 = tT0<short, i>; // FIXME: should this be OK?
-  using err2a = tT0<long long, i>; // FIXME: should this be OK (if long long is larger than int)?
+  using err2 = tT0<short, i>;
+  using err2a = tT0<long long, i>; // expected-error@#tT0 {{cannot be narrowed from type 'long long' to 'int'}}
+                                   // expected-note@-1 {{different template parameters}}
   using err2b = tT0<void*, i>; // expected-error@#tT0 {{value of type 'void *' is not implicitly convertible to 'int'}}
                                // expected-note@-1 {{different template parameters}}
   using err3 = tT0<short, t0>; // expected-error@#tT0 {{template argument for template type parameter must be a type}}

@@ -5,8 +5,8 @@ writing pattern rewrites targeting MLIR.
 
 Note: This document assumes a familiarity with MLIR concepts; more specifically
 the concepts detailed within the
-[MLIR Pattern Rewriting](https://mlir.llvm.org/docs/PatternRewriter/) and
-[Operation Definition Specification (ODS)](https://mlir.llvm.org/docs/OpDefinitions/)
+[MLIR Pattern Rewriting](PatternRewriter.md) and
+[Operation Definition Specification (ODS)](DefiningDialects/Operations.md)
 documentation.
 
 [TOC]
@@ -34,11 +34,11 @@ that no longer exist.
 ### Why build a new language instead of improving TableGen DRR?
 
 Note: This section assumes familiarity with
-[TDRR](https://mlir.llvm.org/docs/DeclarativeRewrites/), please refer the
+[TDRR](DeclarativeRewrites.md), please refer the
 relevant documentation before continuing.
 
 Tablegen DRR (TDRR), i.e.
-[Table-driven Declarative Rewrite Rules](https://mlir.llvm.org/docs/DeclarativeRewrites/),
+[Table-driven Declarative Rewrite Rules](DeclarativeRewrites.md),
 is a declarative DSL for defining MLIR pattern rewrites within the
 [TableGen](https://llvm.org/docs/TableGen/index.html) language. This
 infrastructure is currently the main way in which patterns may be defined
@@ -257,7 +257,7 @@ the current file.
 #### `.td` includes
 
 When including a `.td` file, PDLL will automatically import any pertinent
-[ODS](https://mlir.llvm.org/docs/OpDefinitions/) information within that file.
+[ODS](DefiningDialects/Operations.md) information within that file.
 This includes any defined operations, constraints, interfaces, and more, making
 them implicitly accessible within PDLL. This is important, as ODS information
 allows for certain PDLL constructs, such as the

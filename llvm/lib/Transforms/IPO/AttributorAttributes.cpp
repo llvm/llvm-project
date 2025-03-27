@@ -33,7 +33,6 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -130,10 +129,7 @@ STATISTIC(NumIndirectCallsPromoted, "Number of indirect calls promoted");
   STATS_DECL_(BUILD_STAT_NAME(NAME, TYPE), MSG);
 #define STATS_TRACK(NAME, TYPE) ++(BUILD_STAT_NAME(NAME, TYPE));
 #define STATS_DECLTRACK(NAME, TYPE, MSG)                                       \
-  {                                                                            \
-    STATS_DECL(NAME, TYPE, MSG)                                                \
-    STATS_TRACK(NAME, TYPE)                                                    \
-  }
+  {STATS_DECL(NAME, TYPE, MSG) STATS_TRACK(NAME, TYPE)}
 #define STATS_DECLTRACK_ARG_ATTR(NAME)                                         \
   STATS_DECLTRACK(NAME, Arguments, BUILD_STAT_MSG_IR_ATTR(arguments, NAME))
 #define STATS_DECLTRACK_CSARG_ATTR(NAME)                                       \
@@ -886,9 +882,8 @@ protected:
   AAPointerInfo::OffsetInfo ReturnedOffsets;
 
   /// See AAPointerInfo::forallInterferingAccesses.
-  bool forallInterferingAccesses(
-      AA::RangeTy Range,
-      function_ref<bool(const AAPointerInfo::Access &, bool)> CB) const {
+  template <typename F>
+  bool forallInterferingAccesses(AA::RangeTy Range, F CB) const {
     if (!isValidState() || !ReturnedOffsets.isUnassigned())
       return false;
 
@@ -907,10 +902,9 @@ protected:
   }
 
   /// See AAPointerInfo::forallInterferingAccesses.
-  bool forallInterferingAccesses(
-      Instruction &I,
-      function_ref<bool(const AAPointerInfo::Access &, bool)> CB,
-      AA::RangeTy &Range) const {
+  template <typename F>
+  bool forallInterferingAccesses(Instruction &I, F CB,
+                                 AA::RangeTy &Range) const {
     if (!isValidState() || !ReturnedOffsets.isUnassigned())
       return false;
 
@@ -1177,7 +1171,7 @@ struct AAPointerInfoImpl
     // TODO: Use reaching kernels from AAKernelInfo (or move it to
     // AAExecutionDomain) such that we allow scopes other than kernels as long
     // as the reaching kernels are disjoint.
-    bool InstInKernel = Scope.hasFnAttribute("kernel");
+    bool InstInKernel = A.getInfoCache().isKernel(Scope);
     bool ObjHasKernelLifetime = false;
     const bool UseDominanceReasoning =
         FindInterferingWrites && IsKnownNoRecurse;
@@ -1211,7 +1205,7 @@ struct AAPointerInfoImpl
       // If the alloca containing function is not recursive the alloca
       // must be dead in the callee.
       const Function *AIFn = AI->getFunction();
-      ObjHasKernelLifetime = AIFn->hasFnAttribute("kernel");
+      ObjHasKernelLifetime = A.getInfoCache().isKernel(*AIFn);
       bool IsKnownNoRecurse;
       if (AA::hasAssumedIRAttr<Attribute::NoRecurse>(
               A, this, IRPosition::function(*AIFn), DepClassTy::OPTIONAL,
@@ -1223,8 +1217,8 @@ struct AAPointerInfoImpl
       // as it is "dead" in the (unknown) callees.
       ObjHasKernelLifetime = HasKernelLifetime(GV, *GV->getParent());
       if (ObjHasKernelLifetime)
-        IsLiveInCalleeCB = [](const Function &Fn) {
-          return !Fn.hasFnAttribute("kernel");
+        IsLiveInCalleeCB = [&A](const Function &Fn) {
+          return !A.getInfoCache().isKernel(Fn);
         };
     }
 
@@ -1239,7 +1233,7 @@ struct AAPointerInfoImpl
       // If the object has kernel lifetime we can ignore accesses only reachable
       // by other kernels. For now we only skip accesses *in* other kernels.
       if (InstInKernel && ObjHasKernelLifetime && !AccInSameScope &&
-          AccScope->hasFnAttribute("kernel"))
+          A.getInfoCache().isKernel(*AccScope))
         return true;
 
       if (Exact && Acc.isMustAccess() && Acc.getRemoteInst() != &I) {
@@ -1685,8 +1679,8 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     if (auto *PHI = dyn_cast<PHINode>(Usr)) {
       // Note the order here, the Usr access might change the map, CurPtr is
       // already in it though.
-      bool IsFirstPHIUser = !OffsetInfoMap.count(PHI);
-      auto &UsrOI = OffsetInfoMap[PHI];
+      auto [PhiIt, IsFirstPHIUser] = OffsetInfoMap.try_emplace(PHI);
+      auto &UsrOI = PhiIt->second;
       auto &PtrOI = OffsetInfoMap[CurPtr];
 
       // Check if the PHI operand has already an unknown offset as we can't
@@ -2054,7 +2048,7 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
     }
 
     bool IsKnownNoCapture;
-    if (!AA::hasAssumedIRAttr<Attribute::NoCapture>(
+    if (!AA::hasAssumedIRAttr<Attribute::Captures>(
             A, this, getIRPosition(), DepClassTy::OPTIONAL, IsKnownNoCapture))
       return indicatePessimisticFixpoint();
 
@@ -2423,7 +2417,7 @@ struct AANoFreeCallSiteArgument final : AANoFreeFloating {
   }
 
   /// See AbstractAttribute::trackStatistics()
-  void trackStatistics() const override{STATS_DECLTRACK_CSARG_ATTR(nofree)};
+  void trackStatistics() const override { STATS_DECLTRACK_CSARG_ATTR(nofree) };
 };
 
 /// NoFree attribute for function return value.
@@ -3741,7 +3735,7 @@ struct AAIntraFnReachabilityFunction final
       }
     }
 
-    DeadEdges.insert(LocalDeadEdges.begin(), LocalDeadEdges.end());
+    DeadEdges.insert_range(LocalDeadEdges);
     return rememberResult(A, RQITy::Reachable::No, RQI, UsedExclusionSet,
                           IsTemporaryRQI);
   }
@@ -3957,7 +3951,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
             unsigned ArgNo = CB->getArgOperandNo(&U);
 
             bool IsKnownNoCapture;
-            if (AA::hasAssumedIRAttr<Attribute::NoCapture>(
+            if (AA::hasAssumedIRAttr<Attribute::Captures>(
                     A, this, IRPosition::callsite_argument(*CB, ArgNo),
                     DepClassTy::OPTIONAL, IsKnownNoCapture))
               return true;
@@ -3973,23 +3967,22 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
       // TODO: We should track the capturing uses in AANoCapture but the problem
       //       is CGSCC runs. For those we would need to "allow" AANoCapture for
       //       a value in the module slice.
-      switch (DetermineUseCaptureKind(U, IsDereferenceableOrNull)) {
-      case UseCaptureKind::NO_CAPTURE:
+      // TODO(captures): Make this more precise.
+      UseCaptureInfo CI =
+          DetermineUseCaptureKind(U, /*Base=*/nullptr, IsDereferenceableOrNull);
+      if (capturesNothing(CI))
         return true;
-      case UseCaptureKind::MAY_CAPTURE:
-        LLVM_DEBUG(dbgs() << "[AANoAliasCSArg] Unknown user: " << *UserI
-                          << "\n");
-        return false;
-      case UseCaptureKind::PASSTHROUGH:
+      if (CI.isPassthrough()) {
         Follow = true;
         return true;
       }
-      llvm_unreachable("unknown UseCaptureKind");
+      LLVM_DEBUG(dbgs() << "[AANoAliasCSArg] Unknown user: " << *UserI << "\n");
+      return false;
     };
 
     bool IsKnownNoCapture;
     const AANoCapture *NoCaptureAA = nullptr;
-    bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::NoCapture>(
+    bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::Captures>(
         A, this, VIRP, DepClassTy::NONE, IsKnownNoCapture, false, &NoCaptureAA);
     if (!IsAssumedNoCapture &&
         (!NoCaptureAA || !NoCaptureAA->isAssumedNoCaptureMaybeReturned())) {
@@ -4075,7 +4068,7 @@ struct AANoAliasReturned final : AANoAliasImpl {
 
       bool IsKnownNoCapture;
       const AANoCapture *NoCaptureAA = nullptr;
-      bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::NoCapture>(
+      bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::Captures>(
           A, this, RVPos, DepClassTy::REQUIRED, IsKnownNoCapture, false,
           &NoCaptureAA);
       return IsAssumedNoCapture ||
@@ -5730,7 +5723,7 @@ struct AAInstanceInfoCallSiteReturned final : AAInstanceInfoFloating {
 bool AANoCapture::isImpliedByIR(Attributor &A, const IRPosition &IRP,
                                 Attribute::AttrKind ImpliedAttributeKind,
                                 bool IgnoreSubsumingPositions) {
-  assert(ImpliedAttributeKind == Attribute::NoCapture &&
+  assert(ImpliedAttributeKind == Attribute::Captures &&
          "Unexpected attribute kind");
   Value &V = IRP.getAssociatedValue();
   if (!IRP.isArgumentPosition())
@@ -5745,27 +5738,37 @@ bool AANoCapture::isImpliedByIR(Attributor &A, const IRPosition &IRP,
     return true;
   }
 
-  if (A.hasAttr(IRP, {Attribute::NoCapture},
-                /* IgnoreSubsumingPositions */ true, Attribute::NoCapture))
-    return true;
+  SmallVector<Attribute, 1> Attrs;
+  A.getAttrs(IRP, {Attribute::Captures}, Attrs,
+             /* IgnoreSubsumingPositions */ true);
+  for (const Attribute &Attr : Attrs)
+    if (capturesNothing(Attr.getCaptureInfo()))
+      return true;
 
   if (IRP.getPositionKind() == IRP_CALL_SITE_ARGUMENT)
-    if (Argument *Arg = IRP.getAssociatedArgument())
-      if (A.hasAttr(IRPosition::argument(*Arg),
-                    {Attribute::NoCapture, Attribute::ByVal},
-                    /* IgnoreSubsumingPositions */ true)) {
-        A.manifestAttrs(IRP,
-                        Attribute::get(V.getContext(), Attribute::NoCapture));
+    if (Argument *Arg = IRP.getAssociatedArgument()) {
+      SmallVector<Attribute, 1> Attrs;
+      A.getAttrs(IRPosition::argument(*Arg),
+                 {Attribute::Captures, Attribute::ByVal}, Attrs,
+                 /* IgnoreSubsumingPositions */ true);
+      bool ArgNoCapture = any_of(Attrs, [](Attribute Attr) {
+        return Attr.getKindAsEnum() == Attribute::ByVal ||
+               capturesNothing(Attr.getCaptureInfo());
+      });
+      if (ArgNoCapture) {
+        A.manifestAttrs(IRP, Attribute::getWithCaptureInfo(
+                                 V.getContext(), CaptureInfo::none()));
         return true;
       }
+    }
 
   if (const Function *F = IRP.getAssociatedFunction()) {
     // Check what state the associated function can actually capture.
     AANoCapture::StateType State;
     determineFunctionCaptureCapabilities(IRP, *F, State);
     if (State.isKnown(NO_CAPTURE)) {
-      A.manifestAttrs(IRP,
-                      Attribute::get(V.getContext(), Attribute::NoCapture));
+      A.manifestAttrs(IRP, Attribute::getWithCaptureInfo(V.getContext(),
+                                                         CaptureInfo::none()));
       return true;
     }
   }
@@ -5828,7 +5831,7 @@ struct AANoCaptureImpl : public AANoCapture {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     bool IsKnown;
-    assert(!AA::hasAssumedIRAttr<Attribute::NoCapture>(
+    assert(!AA::hasAssumedIRAttr<Attribute::Captures>(
         A, nullptr, getIRPosition(), DepClassTy::NONE, IsKnown));
     (void)IsKnown;
   }
@@ -5844,7 +5847,7 @@ struct AANoCaptureImpl : public AANoCapture {
 
     if (isArgumentPosition()) {
       if (isAssumedNoCapture())
-        Attrs.emplace_back(Attribute::get(Ctx, Attribute::NoCapture));
+        Attrs.emplace_back(Attribute::get(Ctx, Attribute::Captures));
       else if (ManifestInternal)
         Attrs.emplace_back(Attribute::get(Ctx, "no-capture-maybe-returned"));
     }
@@ -5906,7 +5909,7 @@ struct AANoCaptureImpl : public AANoCapture {
     // it to justify a non-capture attribute here. This allows recursion!
     bool IsKnownNoCapture;
     const AANoCapture *ArgNoCaptureAA = nullptr;
-    bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::NoCapture>(
+    bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::Captures>(
         A, this, CSArgPos, DepClassTy::REQUIRED, IsKnownNoCapture, false,
         &ArgNoCaptureAA);
     if (IsAssumedNoCapture)
@@ -6012,16 +6015,16 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
   };
 
   auto UseCheck = [&](const Use &U, bool &Follow) -> bool {
-    switch (DetermineUseCaptureKind(U, IsDereferenceableOrNull)) {
-    case UseCaptureKind::NO_CAPTURE:
+    // TODO(captures): Make this more precise.
+    UseCaptureInfo CI =
+        DetermineUseCaptureKind(U, /*Base=*/nullptr, IsDereferenceableOrNull);
+    if (capturesNothing(CI))
       return true;
-    case UseCaptureKind::MAY_CAPTURE:
-      return checkUse(A, T, U, Follow);
-    case UseCaptureKind::PASSTHROUGH:
+    if (CI.isPassthrough()) {
       Follow = true;
       return true;
     }
-    llvm_unreachable("Unexpected use capture kind!");
+    return checkUse(A, T, U, Follow);
   };
 
   if (!A.checkForAllUses(UseCheck, *this, *V))
@@ -6062,7 +6065,7 @@ struct AANoCaptureCallSiteArgument final : AANoCaptureImpl {
     const IRPosition &ArgPos = IRPosition::argument(*Arg);
     bool IsKnownNoCapture;
     const AANoCapture *ArgAA = nullptr;
-    if (AA::hasAssumedIRAttr<Attribute::NoCapture>(
+    if (AA::hasAssumedIRAttr<Attribute::Captures>(
             A, this, ArgPos, DepClassTy::REQUIRED, IsKnownNoCapture, false,
             &ArgAA))
       return ChangeStatus::UNCHANGED;
@@ -6072,7 +6075,9 @@ struct AANoCaptureCallSiteArgument final : AANoCaptureImpl {
   }
 
   /// See AbstractAttribute::trackStatistics()
-  void trackStatistics() const override{STATS_DECLTRACK_CSARG_ATTR(nocapture)};
+  void trackStatistics() const override {
+    STATS_DECLTRACK_CSARG_ATTR(nocapture)
+  };
 };
 
 /// NoCapture attribute for floating values.
@@ -6222,7 +6227,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     // TODO: Try to salvage debug information here.
     CloneI->setDebugLoc(DebugLoc());
     VMap[&I] = CloneI;
-    CloneI->insertBefore(CtxI);
+    CloneI->insertBefore(CtxI->getIterator());
     RemapInstruction(CloneI, VMap);
     return CloneI;
   }
@@ -7060,7 +7065,7 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
         auto CBIRP = IRPosition::callsite_argument(*CB, ArgNo);
 
         bool IsKnownNoCapture;
-        bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::NoCapture>(
+        bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::Captures>(
             A, this, CBIRP, DepClassTy::OPTIONAL, IsKnownNoCapture);
 
         // If a call site argument use is nofree, we are fine.
@@ -7727,7 +7732,7 @@ struct AAPrivatizablePtrCallSiteArgument final
 
     const IRPosition &IRP = getIRPosition();
     bool IsKnownNoCapture;
-    bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::NoCapture>(
+    bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::Captures>(
         A, this, IRP, DepClassTy::REQUIRED, IsKnownNoCapture);
     if (!IsAssumedNoCapture) {
       LLVM_DEBUG(dbgs() << "[AAPrivatizablePtr] pointer might be captured!\n");
@@ -8182,7 +8187,7 @@ ChangeStatus AAMemoryBehaviorFloating::updateImpl(Attributor &A) {
   // to fall back to anythign less optimistic than the function state.
   bool IsKnownNoCapture;
   const AANoCapture *ArgNoCaptureAA = nullptr;
-  bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::NoCapture>(
+  bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::Captures>(
       A, this, IRP, DepClassTy::OPTIONAL, IsKnownNoCapture, false,
       &ArgNoCaptureAA);
 
@@ -8242,7 +8247,7 @@ bool AAMemoryBehaviorFloating::followUsersOfUseIn(Attributor &A, const Use &U,
   if (U.get()->getType()->isPointerTy()) {
     unsigned ArgNo = CB->getArgOperandNo(&U);
     bool IsKnownNoCapture;
-    return !AA::hasAssumedIRAttr<Attribute::NoCapture>(
+    return !AA::hasAssumedIRAttr<Attribute::Captures>(
         A, this, IRPosition::callsite_argument(*CB, ArgNo),
         DepClassTy::OPTIONAL, IsKnownNoCapture);
   }
@@ -9241,12 +9246,12 @@ struct AAValueConstantRangeReturned
     : AAReturnedFromReturnedValues<AAValueConstantRange,
                                    AAValueConstantRangeImpl,
                                    AAValueConstantRangeImpl::StateType,
-                                   /* PropogateCallBaseContext */ true> {
+                                   /* PropagateCallBaseContext */ true> {
   using Base =
       AAReturnedFromReturnedValues<AAValueConstantRange,
                                    AAValueConstantRangeImpl,
                                    AAValueConstantRangeImpl::StateType,
-                                   /* PropogateCallBaseContext */ true>;
+                                   /* PropagateCallBaseContext */ true>;
   AAValueConstantRangeReturned(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 
@@ -12144,16 +12149,13 @@ struct AAGlobalValueInfoFloating : public AAGlobalValueInfo {
 
     auto UsePred = [&](const Use &U, bool &Follow) -> bool {
       Uses.insert(&U);
-      switch (DetermineUseCaptureKind(U, nullptr)) {
-      case UseCaptureKind::NO_CAPTURE:
-        return checkUse(A, U, Follow, Worklist);
-      case UseCaptureKind::MAY_CAPTURE:
-        return checkUse(A, U, Follow, Worklist);
-      case UseCaptureKind::PASSTHROUGH:
+      // TODO(captures): Make this more precise.
+      UseCaptureInfo CI = DetermineUseCaptureKind(U, /*Base=*/nullptr, nullptr);
+      if (CI.isPassthrough()) {
         Follow = true;
         return true;
       }
-      return true;
+      return checkUse(A, U, Follow, Worklist);
     };
     auto EquivalentUseCB = [&](const Use &OldU, const Use &NewU) {
       Uses.insert(&OldU);
@@ -12219,8 +12221,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     } else if (A.isClosedWorldModule()) {
       ArrayRef<Function *> IndirectlyCallableFunctions =
           A.getInfoCache().getIndirectlyCallableFunctions(A);
-      PotentialCallees.insert(IndirectlyCallableFunctions.begin(),
-                              IndirectlyCallableFunctions.end());
+      PotentialCallees.insert_range(IndirectlyCallableFunctions);
     }
 
     if (PotentialCallees.empty())
@@ -12347,7 +12348,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     Value *FP = CB->getCalledOperand();
     if (FP->getType()->getPointerAddressSpace())
-      FP = new AddrSpaceCastInst(FP, PointerType::get(FP->getType(), 0),
+      FP = new AddrSpaceCastInst(FP, PointerType::get(FP->getContext(), 0),
                                  FP->getName() + ".as0", CB->getIterator());
 
     bool CBIsVoid = CB->getType()->isVoidTy();
@@ -12424,7 +12425,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       CallInst *NewCall = nullptr;
       if (isLegalToPromote(*CB, NewCallee)) {
         auto *CBClone = cast<CallBase>(CB->clone());
-        CBClone->insertBefore(ThenTI);
+        CBClone->insertBefore(ThenTI->getIterator());
         NewCall = &cast<CallInst>(promoteCall(*CBClone, NewCallee, &RetBC));
         NumIndirectCallsPromoted++;
       } else {
@@ -12549,7 +12550,7 @@ static bool makeChange(Attributor &A, InstType *MemInst, const Use &U,
   }
 
   Instruction *CastInst = new AddrSpaceCastInst(OriginalValue, NewPtrTy);
-  CastInst->insertBefore(MemInst);
+  CastInst->insertBefore(MemInst->getIterator());
   A.changeUseAfterManifest(const_cast<Use &>(U), *CastInst);
   return true;
 }
@@ -12583,16 +12584,36 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
+    unsigned FlatAS = A.getInfoCache().getFlatAddressSpace().value();
     uint32_t OldAddressSpace = AssumedAddressSpace;
-    auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(getIRPosition(), this,
-                                                        DepClassTy::REQUIRED);
-    auto Pred = [&](Value &Obj) {
+
+    auto CheckAddressSpace = [&](Value &Obj) {
       if (isa<UndefValue>(&Obj))
         return true;
+      // If an argument in flat address space only has addrspace cast uses, and
+      // those casts are same, then we take the dst addrspace.
+      if (auto *Arg = dyn_cast<Argument>(&Obj)) {
+        if (Arg->getType()->getPointerAddressSpace() == FlatAS) {
+          unsigned CastAddrSpace = FlatAS;
+          for (auto *U : Arg->users()) {
+            auto *ASCI = dyn_cast<AddrSpaceCastInst>(U);
+            if (!ASCI)
+              return takeAddressSpace(Obj.getType()->getPointerAddressSpace());
+            if (CastAddrSpace != FlatAS &&
+                CastAddrSpace != ASCI->getDestAddressSpace())
+              return false;
+            CastAddrSpace = ASCI->getDestAddressSpace();
+          }
+          if (CastAddrSpace != FlatAS)
+            return takeAddressSpace(CastAddrSpace);
+        }
+      }
       return takeAddressSpace(Obj.getType()->getPointerAddressSpace());
     };
 
-    if (!AUO->forallUnderlyingObjects(Pred))
+    auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(getIRPosition(), this,
+                                                        DepClassTy::REQUIRED);
+    if (!AUO->forallUnderlyingObjects(CheckAddressSpace))
       return indicatePessimisticFixpoint();
 
     return OldAddressSpace == AssumedAddressSpace ? ChangeStatus::UNCHANGED
@@ -12601,17 +12622,21 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
 
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
-    if (getAddressSpace() == InvalidAddressSpace ||
-        getAddressSpace() == getAssociatedType()->getPointerAddressSpace())
+    unsigned NewAS = getAddressSpace();
+
+    if (NewAS == InvalidAddressSpace ||
+        NewAS == getAssociatedType()->getPointerAddressSpace())
       return ChangeStatus::UNCHANGED;
 
+    unsigned FlatAS = A.getInfoCache().getFlatAddressSpace().value();
+
     Value *AssociatedValue = &getAssociatedValue();
-    Value *OriginalValue = peelAddrspacecast(AssociatedValue);
+    Value *OriginalValue = peelAddrspacecast(AssociatedValue, FlatAS);
 
     PointerType *NewPtrTy =
-        PointerType::get(getAssociatedType()->getContext(), getAddressSpace());
+        PointerType::get(getAssociatedType()->getContext(), NewAS);
     bool UseOriginalValue =
-        OriginalValue->getType()->getPointerAddressSpace() == getAddressSpace();
+        OriginalValue->getType()->getPointerAddressSpace() == NewAS;
 
     bool Changed = false;
 
@@ -12671,12 +12696,19 @@ private:
     return AssumedAddressSpace == AS;
   }
 
-  static Value *peelAddrspacecast(Value *V) {
-    if (auto *I = dyn_cast<AddrSpaceCastInst>(V))
-      return peelAddrspacecast(I->getPointerOperand());
+  static Value *peelAddrspacecast(Value *V, unsigned FlatAS) {
+    if (auto *I = dyn_cast<AddrSpaceCastInst>(V)) {
+      assert(I->getSrcAddressSpace() != FlatAS &&
+             "there should not be flat AS -> non-flat AS");
+      return I->getPointerOperand();
+    }
     if (auto *C = dyn_cast<ConstantExpr>(V))
-      if (C->getOpcode() == Instruction::AddrSpaceCast)
-        return peelAddrspacecast(C->getOperand(0));
+      if (C->getOpcode() == Instruction::AddrSpaceCast) {
+        assert(C->getOperand(0)->getType()->getPointerAddressSpace() !=
+                   FlatAS &&
+               "there should not be flat AS -> non-flat AS X");
+        return C->getOperand(0);
+      }
     return V;
   }
 };
@@ -12774,7 +12806,7 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
       return indicatePessimisticFixpoint();
 
     bool IsKnownNoCapture;
-    if (!AA::hasAssumedIRAttr<Attribute::NoCapture>(
+    if (!AA::hasAssumedIRAttr<Attribute::Captures>(
             A, this, IRP, DepClassTy::OPTIONAL, IsKnownNoCapture))
       return indicatePessimisticFixpoint();
 

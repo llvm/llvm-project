@@ -196,6 +196,8 @@ class CGDebugInfo {
   llvm::DIType *CreateType(const PointerType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const BlockPointerType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const FunctionType *Ty, llvm::DIFile *F);
+  llvm::DIType *CreateType(const HLSLAttributedResourceType *Ty,
+                           llvm::DIFile *F);
   /// Get structure or union type.
   llvm::DIType *CreateType(const RecordType *Tyg);
 
@@ -353,7 +355,7 @@ class CGDebugInfo {
       llvm::ArrayRef<llvm::Metadata *> PreviousFieldsDI, const RecordDecl *RD);
 
   /// A cache that maps names of artificial inlined functions to subprograms.
-  llvm::StringMap<llvm::DISubprogram *> InlinedTrapFuncMap;
+  llvm::StringMap<llvm::DISubprogram *> InlinedSubprogramMap;
 
   /// A function that returns the subprogram corresponding to the artificial
   /// inlined function for traps.

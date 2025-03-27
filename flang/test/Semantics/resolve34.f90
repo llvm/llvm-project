@@ -45,6 +45,11 @@ module m4
   type, extends(t1) :: t2
   end type
 end
+module m4a
+  use m4
+  type, extends(t1) :: t3 ! ok, inaccessible component
+  end type
+end
 
 module m5
   type :: t1

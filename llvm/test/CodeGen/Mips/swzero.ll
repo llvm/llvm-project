@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel < %s | FileCheck %s
 
 %struct.unaligned = type <{ i32 }>
 

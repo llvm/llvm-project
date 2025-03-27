@@ -543,6 +543,20 @@ let Predicates = [HasLSE] in {
   defm : LDOPregister_patterns_mod<"LDCLR", "atomic_load_and", "ORN">;
 }
 
+defm atomic_load_fadd  : binary_atomic_op_fp<atomic_load_fadd>;
+defm atomic_load_fmin  : binary_atomic_op_fp<atomic_load_fmin>;
+defm atomic_load_fmax  : binary_atomic_op_fp<atomic_load_fmax>;
+
+let Predicates = [HasLSFE] in {
+  defm : LDFPOPregister_patterns<"LDFADD",   "atomic_load_fadd">;
+  defm : LDFPOPregister_patterns<"LDFMAXNM", "atomic_load_fmax">;
+  defm : LDFPOPregister_patterns<"LDFMINNM", "atomic_load_fmin">;
+
+  defm : LDBFPOPregister_patterns<"LDBFADD",   "atomic_load_fadd">;
+  defm : LDBFPOPregister_patterns<"LDBFMAXNM", "atomic_load_fmax">;
+  defm : LDBFPOPregister_patterns<"LDBFMINNM", "atomic_load_fmin">;
+}
+
 // v8.9a/v9.4a FEAT_LRCPC patterns
 let Predicates = [HasRCPC3, HasNEON] in {
   // LDAP1 loads
@@ -575,7 +589,7 @@ let Predicates = [HasRCPC3, HasNEON] in {
 }
 
 // v8.4a FEAT_LRCPC2 patterns
-let Predicates = [HasRCPC_IMMO] in {
+let Predicates = [HasRCPC_IMMO, UseLDAPUR] in {
   // Load-Acquire RCpc Register unscaled loads
   def : Pat<(acquiring_load<atomic_load_az_8>
                (am_unscaled8 GPR64sp:$Rn, simm9:$offset)),
@@ -589,7 +603,9 @@ let Predicates = [HasRCPC_IMMO] in {
   def : Pat<(acquiring_load<atomic_load_64>
                (am_unscaled64 GPR64sp:$Rn, simm9:$offset)),
           (LDAPURXi GPR64sp:$Rn, simm9:$offset)>;
+}
 
+let Predicates = [HasRCPC_IMMO] in {
   // Store-Release Register unscaled stores
   def : Pat<(releasing_store<atomic_store_8>
                (am_unscaled8 GPR64sp:$Rn, simm9:$offset), GPR32:$val),

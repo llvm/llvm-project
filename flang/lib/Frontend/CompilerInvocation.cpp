@@ -11,18 +11,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/CompilerInvocation.h"
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/OpenMP-features.h"
-#include "flang/Common/Version.h"
 #include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/OpenMP-features.h"
+#include "flang/Support/Version.h"
 #include "flang/Tools/TargetSetup.h"
 #include "flang/Version.inc"
 #include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/OptionUtils.h"
 #include "clang/Driver/Options.h"
@@ -66,8 +67,8 @@ CompilerInvocationBase::~CompilerInvocationBase() = default;
 static bool parseShowColorsArgs(const llvm::opt::ArgList &args,
                                 bool defaultColor = true) {
   // Color diagnostics default to auto ("on" if terminal supports) in the
-  // compiler driver `flang-new` but default to off in the frontend driver
-  // `flang-new -fc1`, needing an explicit OPT_fdiagnostics_color.
+  // compiler driver `flang` but default to off in the frontend driver
+  // `flang -fc1`, needing an explicit OPT_fdiagnostics_color.
   // Support both clang's -f[no-]color-diagnostics and gcc's
   // -f[no-]diagnostics-colors[=never|always|auto].
   enum {
@@ -242,9 +243,19 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::driver::options::OPT_fno_stack_arrays, false))
     opts.StackArrays = 1;
 
+  if (args.getLastArg(clang::driver::options::OPT_vectorize_loops))
+    opts.VectorizeLoop = 1;
+
+  if (args.getLastArg(clang::driver::options::OPT_vectorize_slp))
+    opts.VectorizeSLP = 1;
+
   if (args.hasFlag(clang::driver::options::OPT_floop_versioning,
                    clang::driver::options::OPT_fno_loop_versioning, false))
     opts.LoopVersioning = 1;
+
+  opts.UnrollLoops = args.hasFlag(clang::driver::options::OPT_funroll_loops,
+                                  clang::driver::options::OPT_fno_unroll_loops,
+                                  (opts.OptimizationLevel > 1));
 
   opts.AliasAnalysis = opts.OptimizationLevel > 0;
 
@@ -349,6 +360,12 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (auto *a = args.getLastArg(clang::driver::options::OPT_save_temps_EQ))
     opts.SaveTempsDir = a->getValue();
 
+  // -record-command-line option.
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_record_command_line)) {
+    opts.RecordCommandLine = a->getValue();
+  }
+
   // -mlink-builtin-bitcode
   for (auto *a :
        args.filtered(clang::driver::options::OPT_mlink_builtin_bitcode))
@@ -451,6 +468,21 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
 
   if (args.hasArg(clang::driver::options::OPT_fdisable_integer_16))
     opts.disabledIntegerKinds.push_back(16);
+
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_mabi_EQ)) {
+    opts.abi = a->getValue();
+    llvm::StringRef V = a->getValue();
+    if (V == "vec-extabi") {
+      opts.EnableAIXExtendedAltivecABI = true;
+    } else if (V == "vec-default") {
+      opts.EnableAIXExtendedAltivecABI = false;
+    }
+  }
+
+  opts.asmVerbose =
+      args.hasFlag(clang::driver::options::OPT_fverbose_asm,
+                   clang::driver::options::OPT_fno_verbose_asm, false);
 }
 // Tweak the frontend configuration based on the frontend action
 static void setUpFrontendBasedOnAction(FrontendOptions &opts) {
@@ -618,6 +650,8 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   opts.outputFile = args.getLastArgValue(clang::driver::options::OPT_o);
   opts.showHelp = args.hasArg(clang::driver::options::OPT_help);
   opts.showVersion = args.hasArg(clang::driver::options::OPT_version);
+  opts.printSupportedCPUs =
+      args.hasArg(clang::driver::options::OPT_print_supported_cpus);
 
   // Get the input kind (from the value passed via `-x`)
   InputKind dashX(Language::Unknown);
@@ -718,6 +752,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       args.hasFlag(clang::driver::options::OPT_fimplicit_none,
                    clang::driver::options::OPT_fno_implicit_none, false));
 
+  // -f{no-}implicit-none-ext
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::ImplicitNoneExternal,
+      args.hasFlag(clang::driver::options::OPT_fimplicit_none_ext,
+                   clang::driver::options::OPT_fno_implicit_none_ext, false));
+
   // -f{no-}backslash
   opts.features.Enable(Fortran::common::LanguageFeature::BackslashEscapes,
                        args.hasFlag(clang::driver::options::OPT_fbackslash,
@@ -731,6 +771,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                    clang::driver::options::OPT_fno_logical_abbreviations,
                    false));
 
+  // -f{no-}unsigned
+  opts.features.Enable(Fortran::common::LanguageFeature::Unsigned,
+                       args.hasFlag(clang::driver::options::OPT_funsigned,
+                                    clang::driver::options::OPT_fno_unsigned,
+                                    false));
+
   // -f{no-}xor-operator
   opts.features.Enable(
       Fortran::common::LanguageFeature::XOROperator,
@@ -741,6 +787,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   if (args.hasArg(clang::driver::options::OPT_fno_automatic)) {
     opts.features.Enable(Fortran::common::LanguageFeature::DefaultSave);
   }
+
+  // -f{no}-save-main-program
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::SaveMainProgram,
+      args.hasFlag(clang::driver::options::OPT_fsave_main_program,
+                   clang::driver::options::OPT_fno_save_main_program, false));
 
   if (args.hasArg(
           clang::driver::options::OPT_falternative_parameter_statement)) {
@@ -818,6 +870,12 @@ static void parsePreprocessorArgs(Fortran::frontend::PreprocessorOptions &opts,
         (currentArg->getOption().matches(clang::driver::options::OPT_cpp))
             ? PPMacrosFlag::Include
             : PPMacrosFlag::Exclude;
+  // Enable -cpp based on -x unless explicitly disabled with -nocpp
+  if (opts.macrosFlag != PPMacrosFlag::Exclude)
+    if (const auto *dashX = args.getLastArg(clang::driver::options::OPT_x))
+      opts.macrosFlag = llvm::StringSwitch<PPMacrosFlag>(dashX->getValue())
+                            .Case("f95-cpp-input", PPMacrosFlag::Include)
+                            .Default(opts.macrosFlag);
 
   opts.noReformat = args.hasArg(clang::driver::options::OPT_fno_reformat);
   opts.preprocessIncludeLines =
@@ -900,7 +958,7 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     }
   }
 
-  // Default to off for `flang-new -fc1`.
+  // Default to off for `flang -fc1`.
   res.getFrontendOpts().showColors =
       parseShowColorsArgs(args, /*defaultDiagColor=*/false);
 
@@ -915,6 +973,32 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                              clang::DiagnosticsEngine &diags) {
   unsigned numErrorsBefore = diags.getNumErrors();
+
+  // -fd-lines-as-code
+  if (args.hasArg(clang::driver::options::OPT_fd_lines_as_code)) {
+    if (res.getFrontendOpts().fortranForm == FortranForm::FreeForm) {
+      const unsigned fdLinesAsWarning = diags.getCustomDiagID(
+          clang::DiagnosticsEngine::Warning,
+          "‘-fd-lines-as-code’ has no effect in free form.");
+      diags.Report(fdLinesAsWarning);
+    } else {
+      res.getFrontendOpts().features.Enable(
+          Fortran::common::LanguageFeature::OldDebugLines, true);
+    }
+  }
+
+  // -fd-lines-as-comments
+  if (args.hasArg(clang::driver::options::OPT_fd_lines_as_comments)) {
+    if (res.getFrontendOpts().fortranForm == FortranForm::FreeForm) {
+      const unsigned fdLinesAsWarning = diags.getCustomDiagID(
+          clang::DiagnosticsEngine::Warning,
+          "‘-fd-lines-as-comments’ has no effect in free form.");
+      diags.Report(fdLinesAsWarning);
+    } else {
+      res.getFrontendOpts().features.Enable(
+          Fortran::common::LanguageFeature::OldDebugLines, false);
+    }
+  }
 
   // -fdefault* family
   if (args.hasArg(clang::driver::options::OPT_fdefault_real_8)) {
@@ -1052,7 +1136,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
           args.hasArg(clang::driver::options::OPT_fopenmp_target_debug))
         res.getLangOpts().OpenMPTargetDebug = 1;
     }
-    if (args.hasArg(clang::driver::options::OPT_nogpulib))
+    if (args.hasArg(clang::driver::options::OPT_no_offloadlib))
       res.getLangOpts().NoGPULib = 1;
   }
 
@@ -1093,8 +1177,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
           !(tt.getArch() == llvm::Triple::aarch64 || tt.isPPC() ||
             tt.getArch() == llvm::Triple::systemz ||
             tt.getArch() == llvm::Triple::nvptx ||
-            tt.getArch() == llvm::Triple::nvptx64 ||
-            tt.getArch() == llvm::Triple::amdgcn ||
+            tt.getArch() == llvm::Triple::nvptx64 || tt.isAMDGCN() ||
             tt.getArch() == llvm::Triple::x86 ||
             tt.getArch() == llvm::Triple::x86_64))
         diags.Report(clang::diag::err_drv_invalid_omp_target)
@@ -1107,6 +1190,24 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     }
   }
   return diags.getNumErrors() == numErrorsBefore;
+}
+
+/// Parses signed integer overflow options and populates the
+/// CompilerInvocation accordingly.
+/// Returns false if new errors are generated.
+///
+/// \param [out] invoc Stores the processed arguments
+/// \param [in] args The compiler invocation arguments to parse
+/// \param [out] diags DiagnosticsEngine to report erros with
+static bool parseIntegerOverflowArgs(CompilerInvocation &invoc,
+                                     llvm::opt::ArgList &args,
+                                     clang::DiagnosticsEngine &diags) {
+  Fortran::common::LangOptions &opts = invoc.getLangOpts();
+
+  if (args.getLastArg(clang::driver::options::OPT_fwrapv))
+    opts.setSignedOverflowBehavior(Fortran::common::LangOptions::SOB_Defined);
+
+  return true;
 }
 
 /// Parses all floating point related arguments and populates the
@@ -1249,6 +1350,18 @@ static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
   return true;
 }
 
+static bool parseLangOptionsArgs(CompilerInvocation &invoc,
+                                 llvm::opt::ArgList &args,
+                                 clang::DiagnosticsEngine &diags) {
+  bool success = true;
+
+  success &= parseIntegerOverflowArgs(invoc, args, diags);
+  success &= parseFloatingPointArgs(invoc, args, diags);
+  success &= parseVScaleArgs(invoc, args, diags);
+
+  return success;
+}
+
 bool CompilerInvocation::createFromArgs(
     CompilerInvocation &invoc, llvm::ArrayRef<const char *> commandLineArgs,
     clang::DiagnosticsEngine &diags, const char *argv0) {
@@ -1314,11 +1427,13 @@ bool CompilerInvocation::createFromArgs(
     invoc.loweringOpts.setNoPPCNativeVecElemOrder(true);
   }
 
-  // -flang-experimental-integer-overflow
-  if (args.hasArg(
-          clang::driver::options::OPT_flang_experimental_integer_overflow)) {
-    invoc.loweringOpts.setNSWOnLoopVarInc(true);
-  }
+  // -f[no-]init-global-zero
+  if (args.hasFlag(clang::driver::options::OPT_finit_global_zero,
+                   clang::driver::options::OPT_fno_init_global_zero,
+                   /*default=*/true))
+    invoc.loweringOpts.setInitGlobalZero(true);
+  else
+    invoc.loweringOpts.setInitGlobalZero(false);
 
   // Preserve all the remark options requested, i.e. -Rpass, -Rpass-missed or
   // -Rpass-analysis. This will be used later when processing and outputting the
@@ -1335,6 +1450,11 @@ bool CompilerInvocation::createFromArgs(
       // the string "pass".
       invoc.getDiagnosticOpts().Remarks.push_back(a->getValue());
   }
+
+  // -frealloc-lhs is the default.
+  if (!args.hasFlag(clang::driver::options::OPT_frealloc_lhs,
+                    clang::driver::options::OPT_fno_realloc_lhs, true))
+    invoc.loweringOpts.setReallocateLHS(false);
 
   success &= parseFrontendArgs(invoc.getFrontendOpts(), args, diags);
   parseTargetArgs(invoc.getTargetOpts(), args);
@@ -1357,9 +1477,7 @@ bool CompilerInvocation::createFromArgs(
   invoc.frontendOpts.mlirArgs =
       args.getAllArgValues(clang::driver::options::OPT_mmlir);
 
-  success &= parseFloatingPointArgs(invoc, args, diags);
-
-  success &= parseVScaleArgs(invoc, args, diags);
+  success &= parseLangOptionsArgs(invoc, args, diags);
 
   success &= parseLinkerOptionsArgs(invoc, args, diags);
 
@@ -1379,6 +1497,10 @@ bool CompilerInvocation::createFromArgs(
       os << ' ' << *it;
     }
   }
+
+  // Process the timing-related options.
+  if (args.hasArg(clang::driver::options::OPT_ftime_report))
+    invoc.enableTimers = true;
 
   invoc.setArgv0(argv0);
 
@@ -1571,6 +1693,8 @@ void CompilerInvocation::setLoweringOptions() {
   loweringOpts.setUnderscoring(codegenOpts.Underscoring);
 
   const Fortran::common::LangOptions &langOptions = getLangOpts();
+  loweringOpts.setIntegerWrapAround(langOptions.getSignedOverflowBehavior() ==
+                                    Fortran::common::LangOptions::SOB_Defined);
   Fortran::common::MathOptionsBase &mathOpts = loweringOpts.getMathOptions();
   // TODO: when LangOptions are finalized, we can represent
   //       the math related options using Fortran::commmon::MathOptionsBase,

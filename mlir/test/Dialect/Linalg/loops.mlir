@@ -254,8 +254,6 @@ func.func @copy_view(%arg0: memref<?xf32, strided<[1], offset: ?>>, %arg1: memre
   affine_map<(i, j, k) -> (i, k, j)>
 ]
 #trait2 = {
-  args_in = 1,
-  args_out = 2,
   iterator_types = ["parallel", "parallel", "parallel"],
   indexing_maps = #accesses,
   library_call = "some_external_function_name_2",
@@ -296,8 +294,6 @@ func.func @generic_region(%arg0: memref<?x?xf32, strided<[?, 1], offset: ?>>, %a
 //       CHECKPARALLEL:   store %[[e]], %{{.*}}[%[[i]], %[[k]], %[[j]]] : memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>>
 
 #trait4 = {
-  args_in = 1,
-  args_out = 2,
   iterator_types = ["parallel", "parallel", "parallel"],
   indexing_maps = #accesses,
   library_call = "some_external_function_name_2",
@@ -366,8 +362,6 @@ func.func @generic_index_region(
 ]
 
 #trait_broadcast = {
-  args_in = 1,
-  args_out = 1,
   indexing_maps = #broadcast_access,
   iterator_types = ["parallel", "parallel"],
   library_call = "some_broadcast_external_fn"
@@ -466,8 +460,6 @@ func.func @generic_index_op_zero_rank(%arg0: memref<i32>, %arg1: memref<3x4xi32>
 ]
 
 #trait_reduce_1D = {
-  args_in = 1,
-  args_out = 1,
   indexing_maps = #reduce_1D_access,
   iterator_types = ["reduction"],
   library_call = "some_reduce_external_fn"
@@ -510,8 +502,6 @@ func.func @generic_op_1D_reduce(%arg0: memref<?xf32>, %arg1: memref<f32>)
 ]
 
 #trait_reduce_init_1D = {
-  args_in = 2,
-  args_out = 1,
   indexing_maps = #reduce_init_1D_access,
   iterator_types = ["reduction"],
   library_call = "some_reduce_external_fn"
@@ -559,8 +549,6 @@ func.func @generic_index_op_1D_reduce(%arg0: memref<?xf32>,
 //       CHECKPARALLEL:   store %[[e]], %[[ARG2]][]
 
 #trait_const_fill = {
-  args_in = 0,
-  args_out = 1,
   indexing_maps = [affine_map<(i) -> (i)>],
   iterator_types = ["parallel"],
   library_call = "some_external_fn"
@@ -591,8 +579,6 @@ func.func @generic_const_init(%arg0: memref<?xf32>) {
   affine_map<() -> ()>
 ]
 #scalar_trait = {
-  args_in = 2,
-  args_out = 1,
   iterator_types = [],
   indexing_maps = #scalar_access,
   library_call = "some_external_fn"
@@ -641,6 +627,53 @@ func.func @scalar_code(%arg0: memref<f32>, %arg1 : memref<f32>, %arg2 : memref<f
 //----------------------------------------------------------------------------//
 // Named ops to loops.
 //----------------------------------------------------------------------------//
+func.func @batch_reduce_matmul_as_contract(
+    %A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memref<?x?xf32>) {
+  linalg.contract
+      indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
+                       affine_map<(d0, d1, d2, d3) -> (d1, d2)>]
+      ins(%A, %B : memref<?x?x?xf32>, memref<?x?x?xf32>)
+      outs(%C : memref<?x?xf32>)
+  return
+}
+// CHECK-LABEL: @batch_reduce_matmul_as_contract
+//  CHECK-SAME: %[[mA:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
+//  CHECK-SAME: %[[mB:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
+//  CHECK-SAME: %[[mC:[a-zA-Z0-9]+]]: memref<?x?xf32>
+//       CHECK: %[[B:.*]] = memref.dim %[[mA]], %c0 : memref<?x?x?xf32>
+//       CHECK: %[[M:.*]] = memref.dim %[[mA]], %c1 : memref<?x?x?xf32>
+//       CHECK: %[[K:.*]] = memref.dim %[[mA]], %c2 : memref<?x?x?xf32>
+//       CHECK: %[[N:.*]] = memref.dim %[[mB]], %c2 : memref<?x?x?xf32>
+//       CHECK: scf.for %[[b:.*]] = %{{.*}} to %[[B]]
+//       CHECK:   scf.for %[[m:.*]] = %{{.*}} to %[[M]]
+//       CHECK:     scf.for %[[n:.*]] = %{{.*}} to %[[N]]
+//       CHECK:       scf.for %[[k:.*]] = %{{.*}} to %[[K]]
+//       CHECK:       %[[va:.*]] = memref.load %[[mA]][%[[b]], %[[m]], %[[k]]] : memref<?x?x?xf32>
+//       CHECK:       %[[vb:.*]] = memref.load %[[mB]][%[[b]], %[[k]], %[[n]]] : memref<?x?x?xf32>
+//       CHECK:       %[[vc:.*]] = memref.load %[[mC]][%[[m]], %[[n]]] : memref<?x?xf32>
+//       CHECK:       %[[inc:.*]] = arith.mulf %[[va]], %[[vb]] : f32
+//       CHECK:       %[[res:.*]] = arith.addf %[[vc]], %[[inc]] : f32
+//       CHECK:       store %[[res]], %[[mC]][%[[m]], %[[n]]] : memref<?x?xf32>
+
+// CHECKPARALLEL-LABEL: @batch_reduce_matmul_as_contract
+//  CHECKPARALLEL-SAME: %[[mA:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
+//  CHECKPARALLEL-SAME: %[[mB:[a-zA-Z0-9]+]]: memref<?x?x?xf32>
+//  CHECKPARALLEL-SAME: %[[mC:[a-zA-Z0-9]+]]: memref<?x?xf32>
+//       CHECKPARALLEL: %[[B:.*]] = memref.dim %[[mA]], %c0 : memref<?x?x?xf32>
+//       CHECKPARALLEL: %[[M:.*]] = memref.dim %[[mA]], %c1 : memref<?x?x?xf32>
+//       CHECKPARALLEL: %[[K:.*]] = memref.dim %[[mA]], %c2 : memref<?x?x?xf32>
+//       CHECKPARALLEL: %[[N:.*]] = memref.dim %[[mB]], %c2 : memref<?x?x?xf32>
+//       CHECKPARALLEL: scf.for %[[b:.*]] = %{{.*}} to %[[B]]
+//       CHECKPARALLEL:   scf.parallel (%[[m:.*]], %[[n:.*]]) = ({{.*}}) to (%[[M]], %[[N]]) step ({{.*}}) {
+//       CHECKPARALLEL:     scf.for %[[k:.*]] = %{{.*}} to %[[K]]
+//       CHECKPARALLEL:         %[[va:.*]] = memref.load %[[mA]][%[[b]], %[[m]], %[[k]]] : memref<?x?x?xf32>
+//       CHECKPARALLEL:         %[[vb:.*]] = memref.load %[[mB]][%[[b]], %[[k]], %[[n]]] : memref<?x?x?xf32>
+//       CHECKPARALLEL:         %[[vc:.*]] = memref.load %[[mC]][%[[m]], %[[n]]] : memref<?x?xf32>
+//       CHECKPARALLEL:         %[[inc:.*]] = arith.mulf %[[va]], %[[vb]] : f32
+//       CHECKPARALLEL:         %[[res:.*]] = arith.addf %[[vc]], %[[inc]] : f32
+//       CHECKPARALLEL:         store %[[res]], %[[mC]][%[[m]], %[[n]]] : memref<?x?xf32>
+
 func.func @named_batch_matmul(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memref<?x?x?xf32>) {
   linalg.batch_matmul ins(%A, %B : memref<?x?x?xf32>, memref<?x?x?xf32>)
                      outs(%C : memref<?x?x?xf32>)

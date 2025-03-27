@@ -1,5 +1,5 @@
 ; Test for checking division is inlined or not in case of Os.
-; RUN: llc -O2 -march=hexagon   < %s | FileCheck  %s
+; RUN: llc -O2 -mtriple=hexagon < %s | FileCheck %s
 
 define dso_local i32 @testInt(i32 %a, i32 %b) local_unnamed_addr  {
 entry:

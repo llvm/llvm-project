@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/Config.h"
+#include "lldb/Host/File.h"
 
 #if LLDB_ENABLE_LIBEDIT
 
@@ -25,6 +26,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/PseudoTerminal.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringList.h"
 
@@ -115,10 +117,17 @@ EditlineAdapter::EditlineAdapter()
   if (*_el_secondary_file == nullptr)
     return;
 
+  lldb::LockableStreamFileSP output_stream_sp =
+      std::make_shared<LockableStreamFile>(*_el_secondary_file,
+                                           NativeFile::Unowned, output_mutex);
+  lldb::LockableStreamFileSP error_stream_sp =
+      std::make_shared<LockableStreamFile>(*_el_secondary_file,
+                                           NativeFile::Unowned, output_mutex);
+
   // Create an Editline instance.
   _editline_sp.reset(new lldb_private::Editline(
-      "gtest editor", *_el_secondary_file, *_el_secondary_file,
-      *_el_secondary_file, output_mutex));
+      "gtest editor", *_el_secondary_file, output_stream_sp, error_stream_sp,
+      /*color=*/false));
   _editline_sp->SetPrompt("> ");
 
   // Hookup our input complete callback.

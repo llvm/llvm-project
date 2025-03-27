@@ -62,6 +62,12 @@ class MuDoubleWrapper {
   }
 };
 
+class SCOPED_LOCKABLE MutexLock {
+ public:
+  MutexLock(Mutex *mu) EXCLUSIVE_LOCK_FUNCTION(mu);
+  ~MutexLock() UNLOCK_FUNCTION();
+};
+
 Mutex mu1;
 UnlockableMu umu;
 Mutex mu2;
@@ -599,8 +605,11 @@ class EXCLUSIVE_LOCK_FUNCTION() ElfTestClass { // \
   // expected-warning {{'exclusive_lock_function' attribute only applies to functions}}
 };
 
-void elf_fun_params(int lvar EXCLUSIVE_LOCK_FUNCTION()); // \
-  // expected-warning {{'exclusive_lock_function' attribute only applies to functions}}
+void elf_fun_params1(MutexLock& scope EXCLUSIVE_LOCK_FUNCTION(mu1));
+void elf_fun_params2(int lvar EXCLUSIVE_LOCK_FUNCTION(mu1)); // \
+  // expected-warning{{'exclusive_lock_function' attribute applies to function parameters only if their type is a reference to a 'scoped_lockable'-annotated type}}
+void elf_fun_params3(MutexLock& scope EXCLUSIVE_LOCK_FUNCTION()); // \
+  // expected-warning{{'exclusive_lock_function' attribute without capability arguments can only be applied to non-static methods of a class}}
 
 // Check argument parsing.
 
@@ -660,8 +669,11 @@ int slf_testfn(int y) {
 int slf_test_var SHARED_LOCK_FUNCTION(); // \
   // expected-warning {{'shared_lock_function' attribute only applies to functions}}
 
-void slf_fun_params(int lvar SHARED_LOCK_FUNCTION()); // \
-  // expected-warning {{'shared_lock_function' attribute only applies to functions}}
+void slf_fun_params1(MutexLock& scope SHARED_LOCK_FUNCTION(mu1));
+void slf_fun_params2(int lvar SHARED_LOCK_FUNCTION(mu1)); // \
+  // expected-warning {{'shared_lock_function' attribute applies to function parameters only if their type is a reference to a 'scoped_lockable'-annotated type}}
+void slf_fun_params3(MutexLock& scope SHARED_LOCK_FUNCTION()); // \
+  // expected-warning {{'shared_lock_function' attribute without capability arguments can only be applied to non-static methods of a class}}
 
 class SlfFoo {
  private:
@@ -903,8 +915,11 @@ class NO_THREAD_SAFETY_ANALYSIS UfTestClass { // \
   // expected-warning {{'no_thread_safety_analysis' attribute only applies to functions}}
 };
 
-void uf_fun_params(int lvar UNLOCK_FUNCTION()); // \
-  // expected-warning {{'unlock_function' attribute only applies to functions}}
+void uf_fun_params1(MutexLock& scope UNLOCK_FUNCTION(mu1));
+void uf_fun_params2(int lvar UNLOCK_FUNCTION(mu1)); // \
+  // expected-warning {{'unlock_function' attribute applies to function parameters only if their type is a reference to a 'scoped_lockable'-annotated type}}
+void uf_fun_params3(MutexLock& scope UNLOCK_FUNCTION()); // \
+  // expected-warning {{'unlock_function' attribute without capability arguments can only be applied to non-static methods of a class}}
 
 // Check argument parsing.
 
@@ -1035,8 +1050,9 @@ int le_testfn(int y) {
 int le_test_var LOCKS_EXCLUDED(mu1); // \
   // expected-warning {{'locks_excluded' attribute only applies to functions}}
 
-void le_fun_params(int lvar LOCKS_EXCLUDED(mu1)); // \
-  // expected-warning {{'locks_excluded' attribute only applies to functions}}
+void le_fun_params1(MutexLock& scope LOCKS_EXCLUDED(mu1));
+void le_fun_params2(int lvar LOCKS_EXCLUDED(mu1)); // \
+  // expected-warning{{'locks_excluded' attribute applies to function parameters only if their type is a reference to a 'scoped_lockable'-annotated type}}
 
 class LeFoo {
  private:
@@ -1102,8 +1118,9 @@ int elr_testfn(int y) {
 int elr_test_var EXCLUSIVE_LOCKS_REQUIRED(mu1); // \
   // expected-warning {{'exclusive_locks_required' attribute only applies to functions}}
 
-void elr_fun_params(int lvar EXCLUSIVE_LOCKS_REQUIRED(mu1)); // \
-  // expected-warning {{'exclusive_locks_required' attribute only applies to functions}}
+void elr_fun_params1(MutexLock& scope EXCLUSIVE_LOCKS_REQUIRED(mu1));
+void elr_fun_params2(int lvar EXCLUSIVE_LOCKS_REQUIRED(mu1)); // \
+  // expected-warning {{'exclusive_locks_required' attribute applies to function parameters only if their type is a reference to a 'scoped_lockable'-annotated type}}
 
 class ElrFoo {
  private:
@@ -1170,8 +1187,9 @@ int slr_testfn(int y) {
 int slr_test_var SHARED_LOCKS_REQUIRED(mu1); // \
   // expected-warning {{'shared_locks_required' attribute only applies to functions}}
 
-void slr_fun_params(int lvar SHARED_LOCKS_REQUIRED(mu1)); // \
-  // expected-warning {{'shared_locks_required' attribute only applies to functions}}
+void slr_fun_params1(MutexLock& scope SHARED_LOCKS_REQUIRED(mu1));
+void slr_fun_params2(int lvar SHARED_LOCKS_REQUIRED(mu1)); // \
+  // expected-warning {{'shared_locks_required' attribute applies to function parameters only if their type is a reference to a 'scoped_lockable'-annotated type}}
 
 class SlrFoo {
  private:

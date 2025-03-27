@@ -15,7 +15,7 @@ alignment:       16
 legalized:       false
 regBankSelected: false
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: _, preferred-register: '' }
+# CHECK-NEXT:   - { id: 0, class: _, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: _, preferred-register: '' }
 # CHECK:          %0:_(p0) = G_GLOBAL_VALUE @g_int

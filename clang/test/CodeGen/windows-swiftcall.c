@@ -5,8 +5,6 @@
 #define ERROR __attribute__((swift_error_result))
 #define CONTEXT __attribute__((swift_context))
 
-// CHECK: [[STRUCT2_RESULT:@.*]] = private {{.*}} constant [[STRUCT2_TYPE:%.*]] { i32 0, i8 0, i8 undef, i8 0, i32 0, i32 0 }
-
 /*****************************************************************************/
 /****************************** PARAMETER ABIS *******************************/
 /*****************************************************************************/
@@ -142,8 +140,8 @@ typedef struct {
 } struct_2;
 TEST(struct_2);
 // CHECK-LABEL: define dso_local swiftcc { i64, i64 } @return_struct_2() {{.*}}{
-// CHECK:   [[RET:%.*]] = alloca [[STRUCT2_TYPE]], align 4
-// CHECK:   call void @llvm.memcpy{{.*}}({{.*}}[[RET]], {{.*}}[[STRUCT2_RESULT]]
+// CHECK:   [[RET:%.*]] = alloca [[STRUCT2:%.*]], align 4
+// CHECK:   call void @llvm.memset
 // CHECK:   [[GEP0:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[RET]], i32 0, i32 0
 // CHECK:   [[T0:%.*]] = load i64, ptr [[GEP0]], align 4
 // CHECK:   [[GEP1:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[RET]], i32 0, i32 1
@@ -153,7 +151,7 @@ TEST(struct_2);
 // CHECK:   ret { i64, i64 } [[R1]]
 // CHECK: }
 // CHECK-LABEL: define dso_local swiftcc void @take_struct_2(i64 %0, i64 %1) {{.*}}{
-// CHECK:   [[V:%.*]] = alloca [[STRUCT:%.*]], align 4
+// CHECK:   [[V:%.*]] = alloca [[STRUCT2]], align 4
 // CHECK:   [[GEP0:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[V]], i32 0, i32 0
 // CHECK:   store i64 %0, ptr [[GEP0]], align 4
 // CHECK:   [[GEP1:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[V]], i32 0, i32 1
@@ -161,7 +159,7 @@ TEST(struct_2);
 // CHECK:   ret void
 // CHECK: }
 // CHECK-LABEL: define dso_local void @test_struct_2() {{.*}} {
-// CHECK:   [[TMP:%.*]] = alloca [[STRUCT2_TYPE]], align 4
+// CHECK:   [[TMP:%.*]] = alloca [[STRUCT2]], align 4
 // CHECK:   [[CALL:%.*]] = call swiftcc { i64, i64 } @return_struct_2()
 // CHECK:   [[GEP:%.*]] = getelementptr inbounds nuw {{.*}} [[TMP]], i32 0, i32 0
 // CHECK:   [[T0:%.*]] = extractvalue { i64, i64 } [[CALL]], 0
@@ -234,7 +232,7 @@ typedef union {
 TEST(union_het_fp)
 // CHECK-LABEL: define dso_local swiftcc i64 @return_union_het_fp()
 // CHECK:  [[RET:%.*]] = alloca [[UNION:%.*]], align 8
-// CHECK:  call void @llvm.memcpy{{.*}}(ptr align {{[0-9]+}} [[RET]]
+// CHECK:  call void @llvm.memset{{.*}}(ptr align {{[0-9]+}} [[RET]]
 // CHECK:  [[GEP:%.*]] = getelementptr inbounds nuw { i64 }, ptr [[RET]], i32 0, i32 0
 // CHECK:  [[R0:%.*]] = load i64, ptr [[GEP]], align 8
 // CHECK:  ret i64 [[R0]]

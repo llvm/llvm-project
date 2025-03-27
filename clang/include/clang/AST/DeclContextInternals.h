@@ -70,7 +70,7 @@ class StoredDeclsList {
         // want to keep (if any) will be of the form DeclListNode(D, <rest>);
         // replace it with just D.
         if (NewLast) {
-          DeclListNode *Node = NewLast->get<DeclListNode*>();
+          DeclListNode *Node = cast<DeclListNode *>(*NewLast);
           *NewLast = Node->D;
           C.DeallocateDeclListNode(Node);
         }
@@ -84,11 +84,11 @@ class StoredDeclsList {
     if (!Data.getPointer())
       // All declarations are erased.
       return nullptr;
-    else if (NewHead.is<NamedDecl *>())
+    else if (isa<NamedDecl *>(NewHead))
       // The list only contains a declaration, the header itself.
       return (DeclListNode::Decls *)&Data;
     else {
-      assert(NewLast && NewLast->is<NamedDecl *>() && "Not the tail?");
+      assert(NewLast && isa<NamedDecl *>(*NewLast) && "Not the tail?");
       return NewLast;
     }
   }
@@ -207,7 +207,7 @@ public:
     }
 
     // Append the Decls.
-    DeclListNode *Node = C.AllocateDeclListNode(Tail->get<NamedDecl *>());
+    DeclListNode *Node = C.AllocateDeclListNode(cast<NamedDecl *>(*Tail));
     Node->Rest = DeclsAsList;
     *Tail = Node;
   }
@@ -293,7 +293,7 @@ public:
         llvm::errs() << '[' << Node->D << "] -> ";
         D = Node->Rest;
       } else {
-        llvm::errs() << '[' << D.get<NamedDecl*>() << "]\n";
+        llvm::errs() << '[' << cast<NamedDecl *>(D) << "]\n";
         return;
       }
     }

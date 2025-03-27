@@ -148,7 +148,7 @@ define void @PR90954(ptr %0, ptr %1, i32 %2) nounwind {
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movabsq $64, %rax
 ; CHECK-NEXT:    tilestored %tmm0, 3072(%rsp,%rax) # 1024-byte Folded Spill
-; CHECK-NEXT:    tileloadd {{[-0-9]+}}(%r{{[sb]}}p), %tmm1 # 1024-byte Folded Reload
+; CHECK-NEXT:    tileloadd 3072(%rsp,%rax), %tmm1 # 1024-byte Folded Reload
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; CHECK-NEXT:    jmp .LBB1_4
   %4 = shl i32 %2, 4
@@ -212,7 +212,7 @@ define void @multi_use() nounwind {
 ; CHECK-NEXT:    tilezero %tmm0
 ; CHECK-NEXT:    movabsq $64, %rbp
 ; CHECK-NEXT:    tilestored %tmm0, 896(%rsp,%rbp) # 1024-byte Folded Spill
-; CHECK-NEXT:    tileloadd {{[-0-9]+}}(%r{{[sb]}}p), %tmm1 # 1024-byte Folded Reload
+; CHECK-NEXT:    tileloadd 896(%rsp,%rbp), %tmm1 # 1024-byte Folded Reload
 ; CHECK-NEXT:    tdpbf16ps %tmm0, %tmm0, %tmm1
 ; CHECK-NEXT:    tdpbf16ps %tmm0, %tmm0, %tmm0
 ; CHECK-NEXT:    addq $2928, %rsp # imm = 0xB70

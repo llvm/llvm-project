@@ -3,7 +3,7 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define fastcc i32 @ascii2flt(ptr %str) nounwind {
+define fastcc i32 @ascii2flt(ptr %str, i1 %arg) nounwind {
 entry:
 	br label %bb2.i
 
@@ -45,7 +45,7 @@ bb10.i196.bb7.i197_crit_edge:		; No predecessors!
 
 bb7.i197:		; preds = %bb10.i196.bb7.i197_crit_edge, %base2flt.exit.bb7.i197_crit_edge, %bb11.i.bb7.i197_crit_edge
 	%.reg2mem.0 = phi i32 [ 0, %base2flt.exit.bb7.i197_crit_edge ], [ %.reg2mem.0, %bb10.i196.bb7.i197_crit_edge ], [ 0, %bb11.i.bb7.i197_crit_edge ]		; <i32> [#uses=1]
-	br i1 undef, label %bb10.i196.base2flt.exit204_crit_edge, label %bb10.i196
+	br i1 %arg, label %bb10.i196.base2flt.exit204_crit_edge, label %bb10.i196
 
 base2flt.exit204:		; preds = %bb10.i196.base2flt.exit204_crit_edge, %base2flt.exit.base2flt.exit204_crit_edge, %bb11.i.base2flt.exit204_crit_edge
 	br i1 false, label %base2flt.exit204.bb8_crit_edge, label %bb

@@ -11,7 +11,7 @@
 define amdgpu_kernel void @__omp_offloading_16_dd2df_main_l9()  {
 ; CHECK-LABEL: __omp_offloading_16_dd2df_main_l9:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_add_u32 s0, s0, s13
+; CHECK-NEXT:    s_add_u32 s0, s0, s15
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
@@ -35,7 +35,6 @@ define amdgpu_kernel void @__omp_offloading_16_dd2df_main_l9()  {
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %bb193
 ; CHECK-NEXT:  .LBB0_2: ; %bb194
-; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:4 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_or_saveexec_b64 s[8:9], -1
 ; CHECK-NEXT:    buffer_load_dword v3, off, s[0:3], 0 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[8:9]
@@ -43,7 +42,9 @@ define amdgpu_kernel void @__omp_offloading_16_dd2df_main_l9()  {
 ; CHECK-NEXT:    v_readlane_b32 s4, v3, 0
 ; CHECK-NEXT:    v_readlane_b32 s5, v3, 1
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
+; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:4 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b32 s4, 0xffff
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_and_b32_e64 v0, s4, v0
 ; CHECK-NEXT:    s_mov_b32 s4, 0
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s[4:5], v0, s4

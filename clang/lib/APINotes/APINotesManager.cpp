@@ -56,7 +56,7 @@ APINotesManager::APINotesManager(SourceManager &SM, const LangOptions &LangOpts)
 APINotesManager::~APINotesManager() {
   // Free the API notes readers.
   for (const auto &Entry : Readers) {
-    if (auto Reader = Entry.second.dyn_cast<APINotesReader *>())
+    if (auto Reader = dyn_cast_if_present<APINotesReader *>(Entry.second))
       delete Reader;
   }
 
@@ -374,14 +374,14 @@ APINotesManager::findAPINotes(SourceLocation Loc) {
       ++NumDirectoryCacheHits;
 
       // We've been redirected to another directory for answers. Follow it.
-      if (Known->second && Known->second.is<DirectoryEntryRef>()) {
+      if (Known->second && isa<DirectoryEntryRef>(Known->second)) {
         DirsVisited.insert(*Dir);
-        Dir = Known->second.get<DirectoryEntryRef>();
+        Dir = cast<DirectoryEntryRef>(Known->second);
         continue;
       }
 
       // We have the answer.
-      if (auto Reader = Known->second.dyn_cast<APINotesReader *>())
+      if (auto Reader = dyn_cast_if_present<APINotesReader *>(Known->second))
         Results.push_back(Reader);
       break;
     }

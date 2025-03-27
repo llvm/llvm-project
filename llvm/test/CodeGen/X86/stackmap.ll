@@ -379,23 +379,23 @@ entry:
 ; CHECK-NEXT:   .short 6
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long
-define void @spillSubReg(i64 %arg) #0 {
+define void @spillSubReg(i64 %arg, i1 %arg2) #0 {
 bb:
-  br i1 undef, label %bb1, label %bb2
+  br i1 %arg2, label %bb1, label %bb2
 
 bb1:
   unreachable
 
 bb2:
   %tmp = load i64, ptr inttoptr (i64 140685446136880 to ptr)
-  br i1 undef, label %bb16, label %bb17
+  br i1 %arg2, label %bb16, label %bb17
 
 bb16:
   unreachable
 
 bb17:
   %tmp32 = trunc i64 %tmp to i32
-  br i1 undef, label %bb60, label %bb61
+  br i1 %arg2, label %bb60, label %bb61
 
 bb60:
   tail call void asm sideeffect "nop", "~{ax},~{bx},~{cx},~{dx},~{bp},~{si},~{di},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"() nounwind

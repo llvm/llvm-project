@@ -715,7 +715,7 @@ void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
     if (auto *Element = dyn_cast_or_null<DINode>(Elements[I]))
       if (Element->getTag() == dwarf::DW_TAG_subrange_type) {
         const DISubrange *SR = cast<DISubrange>(Element);
-        auto *CI = SR->getCount().dyn_cast<ConstantInt *>();
+        auto *CI = dyn_cast<ConstantInt *>(SR->getCount());
         int64_t Count = CI->getSExtValue();
 
         // For struct s { int b; char c[]; }, the c[] will be represented
@@ -1026,8 +1026,9 @@ void BTFDebug::constructLineInfo(MCSymbol *Label, const DIFile *File,
   LineInfo.Label = Label;
   LineInfo.FileNameOff = addString(FileName);
   // If file content is not available, let LineOff = 0.
-  if (Line < FileContent[FileName].size())
-    LineInfo.LineOff = addString(FileContent[FileName][Line]);
+  const auto &Content = FileContent[FileName];
+  if (Line < Content.size())
+    LineInfo.LineOff = addString(Content[Line]);
   else
     LineInfo.LineOff = 0;
   LineInfo.LineNum = Line;
@@ -1499,17 +1500,15 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
       continue;
 
     // Find or create a DataSec
-    if (DataSecEntries.find(std::string(SecName)) == DataSecEntries.end()) {
-      DataSecEntries[std::string(SecName)] =
-          std::make_unique<BTFKindDataSec>(Asm, std::string(SecName));
-    }
+    auto [It, Inserted] = DataSecEntries.try_emplace(std::string(SecName));
+    if (Inserted)
+      It->second = std::make_unique<BTFKindDataSec>(Asm, std::string(SecName));
 
     // Calculate symbol size
     const DataLayout &DL = Global.getDataLayout();
     uint32_t Size = DL.getTypeAllocSize(Global.getValueType());
 
-    DataSecEntries[std::string(SecName)]->addDataSecEntry(VarId,
-        Asm->getSymbol(&Global), Size);
+    It->second->addDataSecEntry(VarId, Asm->getSymbol(&Global), Size);
 
     if (Global.hasInitializer())
       processGlobalInitializer(Global.getInitializer());
@@ -1544,17 +1543,12 @@ bool BTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
       const GlobalValue *GVal = MO.getGlobal();
       auto *GVar = dyn_cast<GlobalVariable>(GVal);
       if (GVar) {
-        // Emit "mov ri, <imm>"
-        int64_t Imm;
-        uint32_t Reloc;
-        if (GVar->hasAttribute(BPFCoreSharedInfo::AmaAttr) ||
-            GVar->hasAttribute(BPFCoreSharedInfo::TypeIdAttr)) {
-          Imm = PatchImms[GVar].first;
-          Reloc = PatchImms[GVar].second;
-        } else {
+        if (!GVar->hasAttribute(BPFCoreSharedInfo::AmaAttr) &&
+            !GVar->hasAttribute(BPFCoreSharedInfo::TypeIdAttr))
           return false;
-        }
 
+        // Emit "mov ri, <imm>"
+        auto [Imm, Reloc] = PatchImms[GVar];
         if (Reloc == BTF::ENUM_VALUE_EXISTENCE || Reloc == BTF::ENUM_VALUE ||
             Reloc == BTF::BTF_TYPE_ID_LOCAL || Reloc == BTF::BTF_TYPE_ID_REMOTE)
           OutMI.setOpcode(BPF::LD_imm64);
@@ -1609,14 +1603,12 @@ void BTFDebug::processFuncPrototypes(const Function *F) {
   if (F->hasSection()) {
     StringRef SecName = F->getSection();
 
-    if (DataSecEntries.find(std::string(SecName)) == DataSecEntries.end()) {
-      DataSecEntries[std::string(SecName)] =
-          std::make_unique<BTFKindDataSec>(Asm, std::string(SecName));
-    }
+    auto [It, Inserted] = DataSecEntries.try_emplace(std::string(SecName));
+    if (Inserted)
+      It->second = std::make_unique<BTFKindDataSec>(Asm, std::string(SecName));
 
     // We really don't know func size, set it to 0.
-    DataSecEntries[std::string(SecName)]->addDataSecEntry(FuncId,
-        Asm->getSymbol(F), 0);
+    It->second->addDataSecEntry(FuncId, Asm->getSymbol(F), 0);
   }
 }
 

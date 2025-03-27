@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "lldb/Expression/LLVMUserExpression.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/IRExecutionUnit.h"
@@ -30,9 +28,11 @@
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanCallUserExpression.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/ErrorMessages.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -187,18 +187,22 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
     if (execution_result == lldb::eExpressionInterrupted ||
         execution_result == lldb::eExpressionHitBreakpoint) {
       const char *error_desc = nullptr;
+      const char *explanation = execution_result == lldb::eExpressionInterrupted
+                                    ? "was interrupted"
+                                    : "hit a breakpoint";
 
       if (user_expression_plan) {
         if (auto real_stop_info_sp = user_expression_plan->GetRealStopInfo())
           error_desc = real_stop_info_sp->GetDescription();
       }
+
       if (error_desc)
         diagnostic_manager.Printf(lldb::eSeverityError,
-                                  "Execution was interrupted, reason: %s.",
+                                  "Expression execution %s: %s.", explanation,
                                   error_desc);
       else
-        diagnostic_manager.PutString(lldb::eSeverityError,
-                                     "Execution was interrupted.");
+        diagnostic_manager.Printf(lldb::eSeverityError,
+                                  "Expression execution %s.", explanation);
 
       if ((execution_result == lldb::eExpressionInterrupted &&
            options.DoesUnwindOnError()) ||
@@ -212,32 +216,36 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
           user_expression_plan->TransferExpressionOwnership();
         diagnostic_manager.AppendMessageToDiagnostic(
             "The process has been left at the point where it was "
-            "interrupted, "
-            "use \"thread return -x\" to return to the state before "
-            "expression evaluation.");
+            "interrupted, use \"thread return -x\" to return to the state "
+            "before expression evaluation.");
       }
 
       return execution_result;
-    } else if (execution_result == lldb::eExpressionStoppedForDebug) {
+    }
+
+    if (execution_result == lldb::eExpressionStoppedForDebug) {
       diagnostic_manager.PutString(
           lldb::eSeverityInfo,
-          "Execution was halted at the first instruction of the expression "
-          "function because \"debug\" was requested.\n"
+          "Expression execution was halted at the first instruction of the "
+          "expression function because \"debug\" was requested.\n"
           "Use \"thread return -x\" to return to the state before expression "
           "evaluation.");
       return execution_result;
-    } else if (execution_result == lldb::eExpressionThreadVanished) {
-      diagnostic_manager.Printf(
-          lldb::eSeverityError,
-          "Couldn't complete execution; the thread "
-          "on which the expression was being run: 0x%" PRIx64
-          " exited during its execution.",
-          expr_thread_id);
-      return execution_result;
-    } else if (execution_result != lldb::eExpressionCompleted) {
+    }
+
+    if (execution_result == lldb::eExpressionThreadVanished) {
       diagnostic_manager.Printf(lldb::eSeverityError,
-                                "Couldn't execute function; result was %s",
-                                ExpressionResultAsCString(execution_result));
+                                "Couldn't execute expression: the thread on "
+                                "which the expression was being run (0x%" PRIx64
+                                ") exited during its execution.",
+                                expr_thread_id);
+      return execution_result;
+    }
+
+    if (execution_result != lldb::eExpressionCompleted) {
+      diagnostic_manager.Printf(lldb::eSeverityError,
+                                "Couldn't execute expression: result was %s",
+                                toString(execution_result).c_str());
       return execution_result;
     }
   }
@@ -245,9 +253,9 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
   if (FinalizeJITExecution(diagnostic_manager, exe_ctx, result,
                            function_stack_bottom, function_stack_top)) {
     return lldb::eExpressionCompleted;
-  } else {
-    return lldb::eExpressionResultUnavailable;
   }
+
+  return lldb::eExpressionResultUnavailable;
 }
 
 bool LLVMUserExpression::FinalizeJITExecution(

@@ -37,12 +37,12 @@
 #include "resolve-labels.h"
 #include "resolve-names.h"
 #include "rewrite-parse-tree.h"
-#include "flang/Common/default-kinds.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Support/default-kinds.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
@@ -661,6 +661,10 @@ void Semantics::EmitMessages(llvm::raw_ostream &os) {
 
 void SemanticsContext::DumpSymbols(llvm::raw_ostream &os) {
   DoDumpSymbols(os, globalScope());
+}
+
+ProgramTree &SemanticsContext::SaveProgramTree(ProgramTree &&tree) {
+  return programTrees_.emplace_back(std::move(tree));
 }
 
 void Semantics::DumpSymbols(llvm::raw_ostream &os) { context_.DumpSymbols(os); }

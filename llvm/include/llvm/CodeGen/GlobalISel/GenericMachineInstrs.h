@@ -28,7 +28,7 @@ namespace llvm {
 class GenericMachineInstr : public MachineInstr {
   constexpr static unsigned PoisonFlags = NoUWrap | NoSWrap | NoUSWrap |
                                           IsExact | Disjoint | NonNeg |
-                                          FmNoNans | FmNoInfs;
+                                          FmNoNans | FmNoInfs | SameSign;
 
 public:
   GenericMachineInstr() = delete;
@@ -486,6 +486,23 @@ public:
   }
 };
 
+/// Represents overflowing sub operations.
+/// G_USUBO, G_SSUBO
+class GSubCarryOut : public GBinOpCarryOut {
+public:
+  bool isSigned() const { return getOpcode() == TargetOpcode::G_SSUBO; }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_USUBO:
+    case TargetOpcode::G_SSUBO:
+      return true;
+    default:
+      return false;
+    }
+  }
+};
+
 /// Represents overflowing add/sub operations that also consume a carry-in.
 /// G_UADDE, G_SADDE, G_USUBE, G_SSUBE
 class GAddSubCarryInOut : public GAddSubCarryOut {
@@ -811,6 +828,18 @@ public:
   }
 };
 
+/// Represents a insert subvector.
+class GInsertSubvector : public GenericMachineInstr {
+public:
+  Register getBigVec() const { return getOperand(1).getReg(); }
+  Register getSubVec() const { return getOperand(2).getReg(); }
+  uint64_t getIndexImm() const { return getOperand(3).getImm(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_INSERT_SUBVECTOR;
+  }
+};
+
 /// Represents a freeze.
 class GFreeze : public GenericMachineInstr {
 public:
@@ -868,6 +897,14 @@ public:
   };
 };
 
+/// Represents an any ext.
+class GAnyExt : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_ANYEXT;
+  };
+};
+
 /// Represents a trunc.
 class GTrunc : public GCastOp {
 public:
@@ -883,6 +920,18 @@ public:
 
   static bool classof(const MachineInstr *MI) {
     return MI->getOpcode() == TargetOpcode::G_VSCALE;
+  };
+};
+
+/// Represents a step vector.
+class GStepVector : public GenericMachineInstr {
+public:
+  uint64_t getStep() const {
+    return getOperand(1).getCImm()->getValue().getZExtValue();
+  }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_STEP_VECTOR;
   };
 };
 

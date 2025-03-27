@@ -48,7 +48,7 @@ bb1:                                              ; preds = %bb17, %bb
   br label %bb4
 
 bb4:                                              ; preds = %bb1
-  br i1 undef, label %bb8, label %bb5
+  br i1 false, label %bb8, label %bb5
 
 bb5:                                              ; preds = %bb4
   unreachable

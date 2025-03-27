@@ -15,12 +15,7 @@
 // the value into the coroutine frame.
 //===----------------------------------------------------------------------===//
 
-#include "ABI.h"
 #include "CoroInternal.h"
-#include "MaterializationUtils.h"
-#include "SpillUtils.h"
-#include "SuspendCrossingInfo.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/StackLifetime.h"
@@ -33,6 +28,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/OptimizedStructLayout.h"
+#include "llvm/Transforms/Coroutines/ABI.h"
+#include "llvm/Transforms/Coroutines/CoroInstr.h"
+#include "llvm/Transforms/Coroutines/MaterializationUtils.h"
+#include "llvm/Transforms/Coroutines/SpillUtils.h"
+#include "llvm/Transforms/Coroutines/SuspendCrossingInfo.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
@@ -234,7 +234,7 @@ public:
   /// Side Effects: Because We sort the allocas, the order of allocas in the
   /// frame may be different with the order in the source code.
   void addFieldForAllocas(const Function &F, FrameDataInfo &FrameData,
-                          coro::Shape &Shape);
+                          coro::Shape &Shape, bool OptimizeFrame);
 
   /// Add a field to this structure.
   [[nodiscard]] FieldIDType addField(Type *Ty, MaybeAlign MaybeFieldAlignment,
@@ -289,8 +289,8 @@ public:
     return Fields.size() - 1;
   }
 
-  /// Finish the layout and set the body on the given type.
-  void finish(StructType *Ty);
+  /// Finish the layout and create the struct type with the given name.
+  StructType *finish(StringRef Name);
 
   uint64_t getStructSize() const {
     assert(IsFinished && "not yet finished!");
@@ -336,7 +336,8 @@ void FrameDataInfo::updateLayoutIndex(FrameTypeBuilder &B) {
 
 void FrameTypeBuilder::addFieldForAllocas(const Function &F,
                                           FrameDataInfo &FrameData,
-                                          coro::Shape &Shape) {
+                                          coro::Shape &Shape,
+                                          bool OptimizeFrame) {
   using AllocaSetType = SmallVector<AllocaInst *, 4>;
   SmallVector<AllocaSetType, 4> NonOverlapedAllocas;
 
@@ -350,7 +351,7 @@ void FrameTypeBuilder::addFieldForAllocas(const Function &F,
     }
   });
 
-  if (!Shape.OptimizeFrame) {
+  if (!OptimizeFrame) {
     for (const auto &A : FrameData.Allocas) {
       AllocaInst *Alloca = A.Alloca;
       NonOverlapedAllocas.emplace_back(AllocaSetType(1, Alloca));
@@ -462,7 +463,7 @@ void FrameTypeBuilder::addFieldForAllocas(const Function &F,
   });
 }
 
-void FrameTypeBuilder::finish(StructType *Ty) {
+StructType *FrameTypeBuilder::finish(StringRef Name) {
   assert(!IsFinished && "already finished!");
 
   // Prepare the optimal-layout field array.
@@ -524,7 +525,7 @@ void FrameTypeBuilder::finish(StructType *Ty) {
     LastOffset = Offset + F.Size;
   }
 
-  Ty->setBody(FieldTypes, Packed);
+  StructType *Ty = StructType::create(Context, FieldTypes, Name, Packed);
 
 #ifndef NDEBUG
   // Check that the IR layout matches the offsets we expect.
@@ -536,6 +537,8 @@ void FrameTypeBuilder::finish(StructType *Ty) {
 #endif
 
   IsFinished = true;
+
+  return Ty;
 }
 
 static void cacheDIVar(FrameDataInfo &FrameData,
@@ -749,13 +752,14 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
                                   dwarf::DW_ATE_unsigned_char)});
 
   for (auto *V : FrameData.getAllDefs()) {
-    if (!DIVarCache.contains(V))
+    auto It = DIVarCache.find(V);
+    if (It == DIVarCache.end())
       continue;
 
     auto Index = FrameData.getFieldIndex(V);
 
-    NameCache.insert({Index, DIVarCache[V]->getName()});
-    TyCache.insert({Index, DIVarCache[V]->getType()});
+    NameCache.insert({Index, It->second->getName()});
+    TyCache.insert({Index, It->second->getType()});
   }
 
   // Cache from index to (Align, Offset Pair)
@@ -781,7 +785,8 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   // fields confilicts with each other.
   unsigned UnknownTypeNum = 0;
   for (unsigned Index = 0; Index < FrameTy->getNumElements(); Index++) {
-    if (!OffsetCache.contains(Index))
+    auto OCIt = OffsetCache.find(Index);
+    if (OCIt == OffsetCache.end())
       continue;
 
     std::string Name;
@@ -793,11 +798,11 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
     Type *Ty = FrameTy->getElementType(Index);
     assert(Ty->isSized() && "We can't handle type which is not sized.\n");
     SizeInBits = Layout.getTypeSizeInBits(Ty).getFixedValue();
-    AlignInBits = OffsetCache[Index].first * 8;
-    OffsetInBits = OffsetCache[Index].second * 8;
+    AlignInBits = OCIt->second.first * 8;
+    OffsetInBits = OCIt->second.second * 8;
 
-    if (NameCache.contains(Index)) {
-      Name = NameCache[Index].str();
+    if (auto It = NameCache.find(Index); It != NameCache.end()) {
+      Name = It->second.str();
       DITy = TyCache[Index];
     } else {
       DITy = solveDIType(DBuilder, Ty, Layout, FrameDITy, LineNum, DITypeCache);
@@ -847,7 +852,7 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   } else {
     DBuilder.insertDeclare(Shape.FramePtr, FrameDIVar,
                            DBuilder.createExpression(), DILoc,
-                           &*Shape.getInsertPtAfterFramePtr());
+                           Shape.getInsertPtAfterFramePtr());
   }
 }
 
@@ -860,14 +865,10 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
 //     ... spills ...
 //   };
 static StructType *buildFrameType(Function &F, coro::Shape &Shape,
-                                  FrameDataInfo &FrameData) {
+                                  FrameDataInfo &FrameData,
+                                  bool OptimizeFrame) {
   LLVMContext &C = F.getContext();
   const DataLayout &DL = F.getDataLayout();
-  StructType *FrameTy = [&] {
-    SmallString<32> Name(F.getName());
-    Name.append(".Frame");
-    return StructType::create(C, Name);
-  }();
 
   // We will use this value to cap the alignment of spilled values.
   std::optional<Align> MaxFrameAlignment;
@@ -905,7 +906,7 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
 
   // Because multiple allocas may own the same field slot,
   // we add allocas to field here.
-  B.addFieldForAllocas(F, FrameData, Shape);
+  B.addFieldForAllocas(F, FrameData, Shape, OptimizeFrame);
   // Add PromiseAlloca to Allocas list so that
   // 1. updateLayoutIndex could update its index after
   // `performOptimizedStructLayout`
@@ -928,7 +929,12 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
     FrameData.setFieldIndex(S.first, Id);
   }
 
-  B.finish(FrameTy);
+  StructType *FrameTy = [&] {
+    SmallString<32> Name(F.getName());
+    Name.append(".Frame");
+    return B.finish(Name);
+  }();
+
   FrameData.updateLayoutIndex(B);
   Shape.FrameAlign = B.getStructAlign();
   Shape.FrameSize = B.getStructSize();
@@ -1064,9 +1070,9 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
 
     Type *ByValTy = nullptr;
     if (auto *Arg = dyn_cast<Argument>(Def)) {
-      // If we're spilling an Argument, make sure we clear 'nocapture'
+      // If we're spilling an Argument, make sure we clear 'captures'
       // from the coroutine function.
-      Arg->getParent()->removeParamAttr(Arg->getArgNo(), Attribute::NoCapture);
+      Arg->getParent()->removeParamAttr(Arg->getArgNo(), Attribute::Captures);
 
       if (Arg->hasByValAttr())
         ByValTy = Arg->getParamByValType();
@@ -1129,7 +1135,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
           bool AllowUnresolved = false;
           // This dbg.declare is preserved for all coro-split function
           // fragments. It will be unreachable in the main function, and
-          // processed by coro::salvageDebugInfo() by CoroCloner.
+          // processed by coro::salvageDebugInfo() by the Cloner.
           if (UseNewDbgInfoFormat) {
             DbgVariableRecord *NewDVR = new DbgVariableRecord(
                 ValueAsMetadata::get(CurrentReload), DDI->getVariable(),
@@ -1141,7 +1147,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
             DIBuilder(*CurrentBlock->getParent()->getParent(), AllowUnresolved)
                 .insertDeclare(CurrentReload, DDI->getVariable(),
                                DDI->getExpression(), DDI->getDebugLoc(),
-                               &*Builder.GetInsertPoint());
+                               Builder.GetInsertPoint());
           }
           // This dbg.declare is for the main function entry point.  It
           // will be deleted in all coro-split functions.
@@ -1373,7 +1379,7 @@ static void rewritePHIsForCleanupPad(BasicBlock *CleanupPadBB,
   auto *SetDispatchValuePN =
       Builder.CreatePHI(SwitchType, pred_size(CleanupPadBB));
   CleanupPad->removeFromParent();
-  CleanupPad->insertAfter(SetDispatchValuePN);
+  CleanupPad->insertAfter(SetDispatchValuePN->getIterator());
   auto *SwitchOnDispatch = Builder.CreateSwitch(SetDispatchValuePN, UnreachBB,
                                                 pred_size(CleanupPadBB));
 
@@ -1444,34 +1450,39 @@ static void rewritePHIs(BasicBlock &BB) {
 
   // Special case for CleanupPad: all EH blocks must have the same unwind edge
   // so we need to create an additional "dispatcher" block.
-  if (auto *CleanupPad =
-          dyn_cast_or_null<CleanupPadInst>(BB.getFirstNonPHI())) {
-    SmallVector<BasicBlock *, 8> Preds(predecessors(&BB));
-    for (BasicBlock *Pred : Preds) {
-      if (CatchSwitchInst *CS =
-              dyn_cast<CatchSwitchInst>(Pred->getTerminator())) {
-        // CleanupPad with a CatchSwitch predecessor: therefore this is an
-        // unwind destination that needs to be handle specially.
-        assert(CS->getUnwindDest() == &BB);
-        (void)CS;
-        rewritePHIsForCleanupPad(&BB, CleanupPad);
-        return;
+  if (!BB.empty()) {
+    if (auto *CleanupPad =
+            dyn_cast_or_null<CleanupPadInst>(BB.getFirstNonPHIIt())) {
+      SmallVector<BasicBlock *, 8> Preds(predecessors(&BB));
+      for (BasicBlock *Pred : Preds) {
+        if (CatchSwitchInst *CS =
+                dyn_cast<CatchSwitchInst>(Pred->getTerminator())) {
+          // CleanupPad with a CatchSwitch predecessor: therefore this is an
+          // unwind destination that needs to be handle specially.
+          assert(CS->getUnwindDest() == &BB);
+          (void)CS;
+          rewritePHIsForCleanupPad(&BB, CleanupPad);
+          return;
+        }
       }
     }
   }
 
   LandingPadInst *LandingPad = nullptr;
   PHINode *ReplPHI = nullptr;
-  if ((LandingPad = dyn_cast_or_null<LandingPadInst>(BB.getFirstNonPHI()))) {
-    // ehAwareSplitEdge will clone the LandingPad in all the edge blocks.
-    // We replace the original landing pad with a PHINode that will collect the
-    // results from all of them.
-    ReplPHI = PHINode::Create(LandingPad->getType(), 1, "");
-    ReplPHI->insertBefore(LandingPad->getIterator());
-    ReplPHI->takeName(LandingPad);
-    LandingPad->replaceAllUsesWith(ReplPHI);
-    // We will erase the original landing pad at the end of this function after
-    // ehAwareSplitEdge cloned it in the transition blocks.
+  if (!BB.empty()) {
+    if ((LandingPad =
+             dyn_cast_or_null<LandingPadInst>(BB.getFirstNonPHIIt()))) {
+      // ehAwareSplitEdge will clone the LandingPad in all the edge blocks.
+      // We replace the original landing pad with a PHINode that will collect the
+      // results from all of them.
+      ReplPHI = PHINode::Create(LandingPad->getType(), 1, "");
+      ReplPHI->insertBefore(LandingPad->getIterator());
+      ReplPHI->takeName(LandingPad);
+      LandingPad->replaceAllUsesWith(ReplPHI);
+      // We will erase the original landing pad at the end of this function after
+      // ehAwareSplitEdge cloned it in the transition blocks.
+    }
   }
 
   SmallVector<BasicBlock *, 8> Preds(predecessors(&BB));
@@ -1693,7 +1704,8 @@ static void eliminateSwiftErrorAlloca(Function &F, AllocaInst *Alloca,
 static void eliminateSwiftErrorArgument(Function &F, Argument &Arg,
                                         coro::Shape &Shape,
                              SmallVectorImpl<AllocaInst*> &AllocasToPromote) {
-  IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrDbg());
+  IRBuilder<> Builder(&F.getEntryBlock(),
+                      F.getEntryBlock().getFirstNonPHIOrDbg());
 
   auto ArgTy = cast<PointerType>(Arg.getType());
   auto ValueTy = PointerType::getUnqual(F.getContext());
@@ -1829,7 +1841,7 @@ static void sinkLifetimeStartMarkers(Function &F, coro::Shape &Shape,
       if (Valid && Lifetimes.size() != 0) {
         auto *NewLifetime = Lifetimes[0]->clone();
         NewLifetime->replaceUsesOfWith(NewLifetime->getOperand(1), AI);
-        NewLifetime->insertBefore(DomBB->getTerminator());
+        NewLifetime->insertBefore(DomBB->getTerminator()->getIterator());
 
         // All the outsided lifetime.start markers are no longer necessary.
         for (Instruction *S : Lifetimes)
@@ -2056,7 +2068,7 @@ void coro::normalizeCoroutine(Function &F, coro::Shape &Shape,
   rewritePHIs(F);
 }
 
-void coro::BaseABI::buildCoroutineFrame() {
+void coro::BaseABI::buildCoroutineFrame(bool OptimizeFrame) {
   SuspendCrossingInfo Checker(F, Shape.CoroSuspends, Shape.CoroEnds);
   doRematerializations(F, Checker, IsMaterializable);
 
@@ -2087,7 +2099,7 @@ void coro::BaseABI::buildCoroutineFrame() {
 
   // Build frame
   FrameDataInfo FrameData(Spills, Allocas);
-  Shape.FrameTy = buildFrameType(F, Shape, FrameData);
+  Shape.FrameTy = buildFrameType(F, Shape, FrameData, OptimizeFrame);
   Shape.FramePtr = Shape.CoroBegin;
   // For now, this works for C++ programs only.
   buildFrameDebugInfo(F, Shape, FrameData);

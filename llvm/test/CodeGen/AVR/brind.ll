@@ -1,4 +1,4 @@
-; RUN: llc -mattr=sram,eijmpcall < %s -march=avr -verify-machineinstrs | FileCheck %s
+; RUN: llc -mattr=sram,eijmpcall < %s -mtriple=avr -verify-machineinstrs | FileCheck %s
 
 @brind.k = private unnamed_addr constant [2 x ptr addrspace(1)] [ptr addrspace(1) blockaddress(@brind, %return), ptr addrspace(1) blockaddress(@brind, %b)], align 1
 

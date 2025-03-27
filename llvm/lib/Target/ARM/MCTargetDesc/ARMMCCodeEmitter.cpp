@@ -32,9 +32,7 @@
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
@@ -1202,51 +1200,51 @@ uint32_t ARMMCCodeEmitter::getHiLoImmOpValue(const MCInst &MI, unsigned OpIdx,
       if (Value > UINT32_MAX)
         report_fatal_error("constant value truncated (limited to 32-bit)");
 
-      switch (ARM16Expr->getKind()) {
-      case ARMMCExpr::VK_ARM_HI16:
+      switch (ARM16Expr->getSpecifier()) {
+      case ARMMCExpr::VK_HI16:
         return (int32_t(Value) & 0xffff0000) >> 16;
-      case ARMMCExpr::VK_ARM_LO16:
+      case ARMMCExpr::VK_LO16:
         return (int32_t(Value) & 0x0000ffff);
 
-      case ARMMCExpr::VK_ARM_HI_8_15:
+      case ARMMCExpr::VK_HI_8_15:
         return (int32_t(Value) & 0xff000000) >> 24;
-      case ARMMCExpr::VK_ARM_HI_0_7:
+      case ARMMCExpr::VK_HI_0_7:
         return (int32_t(Value) & 0x00ff0000) >> 16;
-      case ARMMCExpr::VK_ARM_LO_8_15:
+      case ARMMCExpr::VK_LO_8_15:
         return (int32_t(Value) & 0x0000ff00) >> 8;
-      case ARMMCExpr::VK_ARM_LO_0_7:
+      case ARMMCExpr::VK_LO_0_7:
         return (int32_t(Value) & 0x000000ff);
 
       default: llvm_unreachable("Unsupported ARMFixup");
       }
     }
 
-    switch (ARM16Expr->getKind()) {
+    switch (ARM16Expr->getSpecifier()) {
     default: llvm_unreachable("Unsupported ARMFixup");
-    case ARMMCExpr::VK_ARM_HI16:
+    case ARMMCExpr::VK_HI16:
       Kind = MCFixupKind(isThumb(STI) ? ARM::fixup_t2_movt_hi16
                                       : ARM::fixup_arm_movt_hi16);
       break;
-    case ARMMCExpr::VK_ARM_LO16:
+    case ARMMCExpr::VK_LO16:
       Kind = MCFixupKind(isThumb(STI) ? ARM::fixup_t2_movw_lo16
                                       : ARM::fixup_arm_movw_lo16);
       break;
-    case ARMMCExpr::VK_ARM_HI_8_15:
+    case ARMMCExpr::VK_HI_8_15:
       if (!isThumb(STI))
         llvm_unreachable(":upper_8_15: not supported in Arm state");
       Kind = MCFixupKind(ARM::fixup_arm_thumb_upper_8_15);
       break;
-    case ARMMCExpr::VK_ARM_HI_0_7:
+    case ARMMCExpr::VK_HI_0_7:
       if (!isThumb(STI))
         llvm_unreachable(":upper_0_7: not supported in Arm state");
       Kind = MCFixupKind(ARM::fixup_arm_thumb_upper_0_7);
       break;
-    case ARMMCExpr::VK_ARM_LO_8_15:
+    case ARMMCExpr::VK_LO_8_15:
       if (!isThumb(STI))
         llvm_unreachable(":lower_8_15: not supported in Arm state");
       Kind = MCFixupKind(ARM::fixup_arm_thumb_lower_8_15);
       break;
-    case ARMMCExpr::VK_ARM_LO_0_7:
+    case ARMMCExpr::VK_LO_0_7:
       if (!isThumb(STI))
         llvm_unreachable(":lower_0_7: not supported in Arm state");
       Kind = MCFixupKind(ARM::fixup_arm_thumb_lower_0_7);
@@ -1743,15 +1741,28 @@ getRegisterListOpValue(const MCInst &MI, unsigned Op,
 
   unsigned Binary = 0;
 
-  if (SPRRegs || DPRRegs) {
+  if (SPRRegs || DPRRegs || Reg == ARM::VPR) {
     // VLDM/VSTM/VSCCLRM
     unsigned RegNo = CTX.getRegisterInfo()->getEncodingValue(Reg);
     unsigned NumRegs = (MI.getNumOperands() - Op) & 0xff;
     Binary |= (RegNo & 0x1f) << 8;
 
-    // Ignore VPR
-    if (MI.getOpcode() == ARM::VSCCLRMD || MI.getOpcode() == ARM::VSCCLRMS)
+    if (MI.getOpcode() == ARM::VSCCLRMD)
+      // Ignore VPR
       --NumRegs;
+    else if (MI.getOpcode() == ARM::VSCCLRMS) {
+      // The register list can contain both S registers and D registers, with D
+      // registers counting as two registers. VPR doesn't count towards the
+      // number of registers.
+      NumRegs = 0;
+      for (unsigned I = Op, E = MI.getNumOperands(); I < E; ++I) {
+        Reg = MI.getOperand(I).getReg();
+        if (ARMMCRegisterClasses[ARM::SPRRegClassID].contains(Reg))
+          NumRegs += 1;
+        else if (ARMMCRegisterClasses[ARM::DPRRegClassID].contains(Reg))
+          NumRegs += 2;
+      }
+    }
     if (SPRRegs)
       Binary |= NumRegs;
     else

@@ -40,6 +40,10 @@ class OptimizationRemarkEmitter;
 class TargetTransformInfo;
 class TargetLibraryInfo;
 class VPRecipeBuilder;
+struct VFRange;
+
+extern cl::opt<bool> EnableVPlanNativePath;
+extern cl::opt<unsigned> ForceTargetInstructionCost;
 
 /// VPlan-based builder utility analogous to IRBuilder.
 class VPBuilder {
@@ -140,6 +144,9 @@ public:
     InsertPt = IP->getIterator();
   }
 
+  /// Insert \p R at the current insertion point.
+  void insert(VPRecipeBase *R) { BB->insert(R, InsertPt); }
+
   /// Create an N-ary operation with \p Opcode, \p Operands and set \p Inst as
   /// its underlying Instruction.
   VPInstruction *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
@@ -222,26 +229,30 @@ public:
 
   VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
                               const Twine &Name = "") {
-    return tryInsertInstruction(new VPInstruction(
-        Ptr, Offset, VPRecipeWithIRFlags::GEPFlagsTy(false), DL, Name));
+    return tryInsertInstruction(
+        new VPInstruction(Ptr, Offset, GEPNoWrapFlags::none(), DL, Name));
   }
   VPValue *createInBoundsPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
                                 const Twine &Name = "") {
-    return tryInsertInstruction(new VPInstruction(
-        Ptr, Offset, VPRecipeWithIRFlags::GEPFlagsTy(true), DL, Name));
+    return tryInsertInstruction(
+        new VPInstruction(Ptr, Offset, GEPNoWrapFlags::inBounds(), DL, Name));
   }
 
+  /// Convert the input value \p Current to the corresponding value of an
+  /// induction with \p Start and \p Step values, using \p Start + \p Current *
+  /// \p Step.
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
                                      FPMathOperator *FPBinOp, VPValue *Start,
-                                     VPCanonicalIVPHIRecipe *CanonicalIV,
-                                     VPValue *Step) {
+                                     VPValue *Current, VPValue *Step,
+                                     const Twine &Name = "") {
     return tryInsertInstruction(
-        new VPDerivedIVRecipe(Kind, FPBinOp, Start, CanonicalIV, Step));
+        new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Name));
   }
 
   VPScalarCastRecipe *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
-                                       Type *ResultTy) {
-    return tryInsertInstruction(new VPScalarCastRecipe(Opcode, Op, ResultTy));
+                                       Type *ResultTy, DebugLoc DL) {
+    return tryInsertInstruction(
+        new VPScalarCastRecipe(Opcode, Op, ResultTy, DL));
   }
 
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
@@ -435,20 +446,18 @@ public:
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
   /// according to the best selected \p VF and  \p UF.
   ///
-  /// TODO: \p IsEpilogueVectorization is needed to avoid issues due to epilogue
-  /// vectorization re-using plans for both the main and epilogue vector loops.
-  /// It should be removed once the re-use issue has been fixed.
-  /// \p ExpandedSCEVs is passed during execution of the plan for epilogue loop
-  /// to re-use expansion results generated during main plan execution.
+  /// TODO: \p VectorizingEpilogue indicates if the executed VPlan is for the
+  /// epilogue vector loop. It should be removed once the re-use issue has been
+  /// fixed.
   ///
   /// Returns a mapping of SCEVs to their expanded IR values.
   /// Note that this is a temporary workaround needed due to the current
   /// epilogue handling.
-  DenseMap<const SCEV *, Value *>
-  executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
-              InnerLoopVectorizer &LB, DominatorTree *DT,
-              bool IsEpilogueVectorization,
-              const DenseMap<const SCEV *, Value *> *ExpandedSCEVs = nullptr);
+  DenseMap<const SCEV *, Value *> executePlan(ElementCount VF, unsigned UF,
+                                              VPlan &BestPlan,
+                                              InnerLoopVectorizer &LB,
+                                              DominatorTree *DT,
+                                              bool VectorizingEpilogue);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printPlans(raw_ostream &O);
@@ -486,8 +495,10 @@ protected:
 private:
   /// Build a VPlan according to the information gathered by Legal. \return a
   /// VPlan for vectorization factors \p Range.Start and up to \p Range.End
-  /// exclusive, possibly decreasing \p Range.End.
-  VPlanPtr buildVPlan(VFRange &Range);
+  /// exclusive, possibly decreasing \p Range.End. If no VPlan can be built for
+  /// the input range, set the largest included VF to the maximum VF for which
+  /// no plan could be built.
+  VPlanPtr tryToBuildVPlan(VFRange &Range);
 
   /// Build a VPlan using VPRecipes according to the information gather by
   /// Legal. This method is only used for the legacy inner loop vectorizer.
@@ -506,7 +517,7 @@ private:
   // instructions leading from the loop exit instr to the phi need to be
   // converted to reductions, with one operand being vector and the other being
   // the scalar reduction chain. For other reductions, a select is introduced
-  // between the phi and live-out recipes when folding the tail.
+  // between the phi and users outside the vector region when folding the tail.
   void adjustRecipesForReductions(VPlanPtr &Plan,
                                   VPRecipeBuilder &RecipeBuilder,
                                   ElementCount MinVF);
@@ -524,6 +535,12 @@ private:
   /// that of B.
   bool isMoreProfitable(const VectorizationFactor &A,
                         const VectorizationFactor &B) const;
+
+  /// Returns true if the per-lane cost of VectorizationFactor A is lower than
+  /// that of B in the context of vectorizing a loop with known \p MaxTripCount.
+  bool isMoreProfitable(const VectorizationFactor &A,
+                        const VectorizationFactor &B,
+                        const unsigned MaxTripCount) const;
 
   /// Determines if we have the infrastructure to vectorize the loop and its
   /// epilogue, assuming the main loop is vectorized by \p VF.

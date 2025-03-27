@@ -8,9 +8,9 @@
 
 #include "LibCxx.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include <optional>
 
 using namespace lldb;
@@ -31,8 +31,6 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
-
-  bool MightHaveChildren() override;
 
   size_t GetIndexOfChildWithName(ConstString name) override;
 
@@ -90,18 +88,16 @@ lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::Update() {
   if (!m_element_type.IsValid())
     return lldb::ChildCacheState::eRefetch;
 
-  if (std::optional<uint64_t> size = m_element_type.GetByteSize(nullptr)) {
-    m_element_size = *size;
+  llvm::Expected<uint64_t> size_or_err = m_element_type.GetByteSize(nullptr);
+  if (!size_or_err)
+    LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), size_or_err.takeError(), "{0}");
+  else {
+    m_element_size = *size_or_err;
     // Store raw pointers or end up with a circular dependency.
     m_start = m_backend.GetChildMemberWithName("__begin_").get();
   }
 
   return lldb::ChildCacheState::eRefetch;
-}
-
-bool lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
 }
 
 size_t lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::

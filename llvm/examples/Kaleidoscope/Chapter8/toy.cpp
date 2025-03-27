@@ -1225,7 +1225,7 @@ int main() {
   InitializeAllAsmPrinters();
 
   auto TargetTriple = sys::getDefaultTargetTriple();
-  TheModule->setTargetTriple(TargetTriple);
+  TheModule->setTargetTriple(Triple(TargetTriple));
 
   std::string Error;
   auto Target = TargetRegistry::lookupTarget(TargetTriple, Error);
@@ -1243,7 +1243,7 @@ int main() {
 
   TargetOptions opt;
   auto TheTargetMachine = Target->createTargetMachine(
-      TargetTriple, CPU, Features, opt, Reloc::PIC_);
+      Triple(TargetTriple), CPU, Features, opt, Reloc::PIC_);
 
   TheModule->setDataLayout(TheTargetMachine->createDataLayout());
 

@@ -45,7 +45,7 @@ char CPPLanguageRuntime::ID = 0;
 /// A frame recognizer that is installed to hide libc++ implementation
 /// details from the backtrace.
 class LibCXXFrameRecognizer : public StackFrameRecognizer {
-  std::array<RegularExpression, 4> m_hidden_regex;
+  std::array<RegularExpression, 2> m_hidden_regex;
   RecognizedStackFrameSP m_hidden_frame;
 
   struct LibCXXHiddenFrame : public RecognizedStackFrame {
@@ -55,28 +55,17 @@ class LibCXXFrameRecognizer : public StackFrameRecognizer {
 public:
   LibCXXFrameRecognizer()
       : m_hidden_regex{
-            // internal implementation details of std::function
+            // internal implementation details in the `std::` namespace
             //    std::__1::__function::__alloc_func<void (*)(), std::__1::allocator<void (*)()>, void ()>::operator()[abi:ne200000]
             //    std::__1::__function::__func<void (*)(), std::__1::allocator<void (*)()>, void ()>::operator()
             //    std::__1::__function::__value_func<void ()>::operator()[abi:ne200000]() const
-            RegularExpression{""
-              R"(^std::__[^:]*::)" // Namespace.
-              R"(__function::.*::operator\(\))"},
-            // internal implementation details of std::function in ABI v2
             //    std::__2::__function::__policy_invoker<void (int, int)>::__call_impl[abi:ne200000]<std::__2::__function::__default_alloc_func<int (*)(int, int), int (int, int)>>
-            RegularExpression{""
-              R"(^std::__[^:]*::)" // Namespace.
-              R"(__function::.*::__call_impl)"},
-            // internal implementation details of std::invoke
-            //   std::__1::__invoke[abi:ne200000]<void (*&)()>
-            RegularExpression{
-              R"(^std::__[^:]*::)" // Namespace.
-              R"(__invoke)"},
-            // internal implementation details of std::invoke
-            //   std::__1::__invoke_void_return_wrapper<void, true>::__call[abi:ne200000]<void (*&)()>
-            RegularExpression{
-              R"(^std::__[^:]*::)" // Namespace.
-              R"(__invoke_void_return_wrapper<.*>::__call)"}
+            //    std::__1::__invoke[abi:ne200000]<void (*&)()>
+            //    std::__1::__invoke_void_return_wrapper<void, true>::__call[abi:ne200000]<void (*&)()>
+            RegularExpression{R"(^std::__[^:]*::__)"},
+            // internal implementation details in the `std::ranges` namespace
+            //    std::__1::ranges::__sort::__sort_fn_impl[abi:ne200000]<std::__1::__wrap_iter<int*>, std::__1::__wrap_iter<int*>, bool (*)(int, int), std::__1::identity>
+            RegularExpression{R"(^std::__[^:]*::ranges::__)"},
         },
         m_hidden_frame(new LibCXXHiddenFrame()) {}
 
@@ -90,9 +79,27 @@ public:
     if (!sc.function)
       return {};
 
-    for (RegularExpression &r : m_hidden_regex)
-      if (r.Execute(sc.function->GetNameNoArguments()))
+    // Check if we have a regex match
+    for (RegularExpression &r : m_hidden_regex) {
+      if (!r.Execute(sc.function->GetNameNoArguments()))
+        continue;
+
+      // Only hide this frame if the immediate caller is also within libc++.
+      lldb::ThreadSP thread_sp = frame_sp->GetThread();
+      if (!thread_sp)
+        return {};
+      lldb::StackFrameSP parent_frame_sp =
+          thread_sp->GetStackFrameAtIndex(frame_sp->GetFrameIndex() + 1);
+      if (!parent_frame_sp)
+        return {};
+      const auto &parent_sc =
+          parent_frame_sp->GetSymbolContext(lldb::eSymbolContextFunction);
+      if (!parent_sc.function)
+        return {};
+      if (parent_sc.function->GetNameNoArguments().GetStringRef().starts_with(
+              "std::"))
         return m_hidden_frame;
+    }
 
     return {};
   }
@@ -135,10 +142,7 @@ line_entry_helper(Target &target, const SymbolContext &sc, Symbol *symbol,
 
   CPPLanguageRuntime::LibCppStdFunctionCallableInfo optional_info;
 
-  AddressRange range;
-  sc.GetAddressRange(eSymbolContextEverything, 0, false, range);
-
-  Address address = range.GetBaseAddress();
+  Address address = sc.GetFunctionOrSymbolAddress();
 
   Address addr;
   if (target.ResolveLoadAddress(address.GetCallableLoadAddress(&target),
@@ -259,21 +263,20 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
 
   Target &target = process->GetTarget();
 
-  if (target.GetSectionLoadList().IsEmpty())
+  if (!target.HasLoadedSections())
     return optional_info;
 
   Address vtable_first_entry_resolved;
 
-  if (!target.GetSectionLoadList().ResolveLoadAddress(
-          vtable_address_first_entry, vtable_first_entry_resolved))
+  if (!target.ResolveLoadAddress(vtable_address_first_entry,
+                                 vtable_first_entry_resolved))
     return optional_info;
 
   Address vtable_addr_resolved;
   SymbolContext sc;
   Symbol *symbol = nullptr;
 
-  if (!target.GetSectionLoadList().ResolveLoadAddress(vtable_address,
-                                                      vtable_addr_resolved))
+  if (!target.ResolveLoadAddress(vtable_address, vtable_addr_resolved))
     return optional_info;
 
   target.GetImages().ResolveSymbolContextForAddress(
@@ -315,8 +318,8 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   // Setup for cases 2, 4 and 5 we have a pointer to a function after the
   // vtable. We will use a process of elimination to drop through each case
   // and obtain the data we need.
-  if (target.GetSectionLoadList().ResolveLoadAddress(
-          possible_function_address, function_address_resolved)) {
+  if (target.ResolveLoadAddress(possible_function_address,
+                                function_address_resolved)) {
     target.GetImages().ResolveSymbolContextForAddress(
         function_address_resolved, eSymbolContextEverything, sc);
     symbol = sc.symbol;
@@ -411,15 +414,14 @@ CPPLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
 
   TargetSP target_sp(thread.CalculateTarget());
 
-  if (target_sp->GetSectionLoadList().IsEmpty())
+  if (!target_sp->HasLoadedSections())
     return ret_plan_sp;
 
   Address pc_addr_resolved;
   SymbolContext sc;
   Symbol *symbol;
 
-  if (!target_sp->GetSectionLoadList().ResolveLoadAddress(curr_pc,
-                                                          pc_addr_resolved))
+  if (!target_sp->ResolveLoadAddress(curr_pc, pc_addr_resolved))
     return ret_plan_sp;
 
   target_sp->GetImages().ResolveSymbolContextForAddress(
@@ -473,4 +475,15 @@ CPPLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
   }
 
   return ret_plan_sp;
+}
+
+bool CPPLanguageRuntime::IsSymbolARuntimeThunk(const Symbol &symbol) {
+  llvm::StringRef mangled_name =
+      symbol.GetMangled().GetMangledName().GetStringRef();
+  // Virtual function overriding from a non-virtual base use a "Th" prefix.
+  // Virtual function overriding from a virtual base must use a "Tv" prefix.
+  // Virtual function overriding thunks with covariant returns use a "Tc"
+  // prefix.
+  return mangled_name.starts_with("_ZTh") || mangled_name.starts_with("_ZTv") ||
+         mangled_name.starts_with("_ZTc");
 }

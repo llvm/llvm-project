@@ -226,12 +226,18 @@ template <Fortran::common::TypeCategory TC, int KIND>
 static mlir::Value genScalarLit(
     fir::FirOpBuilder &builder, mlir::Location loc,
     const Fortran::evaluate::Scalar<Fortran::evaluate::Type<TC, KIND>> &value) {
-  if constexpr (TC == Fortran::common::TypeCategory::Integer) {
-    mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, KIND,
-                                               std::nullopt);
+  if constexpr (TC == Fortran::common::TypeCategory::Integer ||
+                TC == Fortran::common::TypeCategory::Unsigned) {
+    // MLIR requires constants to be signless
+    mlir::Type ty = Fortran::lower::getFIRType(
+        builder.getContext(), Fortran::common::TypeCategory::Integer, KIND,
+        std::nullopt);
     if (KIND == 16) {
-      auto bigInt =
-          llvm::APInt(ty.getIntOrFloatBitWidth(), value.SignedDecimal(), 10);
+      auto bigInt = llvm::APInt(ty.getIntOrFloatBitWidth(),
+                                TC == Fortran::common::TypeCategory::Unsigned
+                                    ? value.UnsignedDecimal()
+                                    : value.SignedDecimal(),
+                                10);
       return builder.create<mlir::arith::ConstantOp>(
           loc, ty, mlir::IntegerAttr::get(ty, bigInt));
     }
@@ -364,7 +370,7 @@ static mlir::Value genStructureComponentInit(
       /*typeParams=*/mlir::ValueRange{} /*TODO*/);
 
   if (Fortran::semantics::IsAllocatable(sym)) {
-    if (!Fortran::evaluate::IsNullPointer(expr)) {
+    if (!Fortran::evaluate::IsNullPointerOrAllocatable(&expr)) {
       fir::emitFatalError(loc, "constant structure constructor with an "
                                "allocatable component value that is not NULL");
     } else {
@@ -408,7 +414,7 @@ static mlir::Value genStructureComponentInit(
   // must fall through to genConstantValue() below.
   if (Fortran::semantics::IsBuiltinCPtr(sym) && sym.Rank() == 0 &&
       (Fortran::evaluate::GetLastSymbol(expr) ||
-       Fortran::evaluate::IsNullPointer(expr))) {
+       Fortran::evaluate::IsNullPointer(&expr))) {
     // Builtin c_ptr and c_funptr have special handling because designators
     // and NULL() are handled as initial values for them as an extension
     // (otherwise only c_ptr_null/c_funptr_null are allowed and these are
@@ -584,7 +590,8 @@ genInlinedArrayLit(Fortran::lower::AbstractConverter &converter,
     } while (con.IncrementSubscripts(subscripts));
   } else if constexpr (T::category == Fortran::common::TypeCategory::Derived) {
     do {
-      mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrayTy).getEleTy();
+      mlir::Type eleTy =
+          mlir::cast<fir::SequenceType>(arrayTy).getElementType();
       mlir::Value elementVal =
           genScalarLit(converter, loc, con.At(subscripts), eleTy,
                        /*outlineInReadOnlyMemory=*/false);
@@ -594,7 +601,7 @@ genInlinedArrayLit(Fortran::lower::AbstractConverter &converter,
   } else {
     llvm::SmallVector<mlir::Attribute> rangeStartIdx;
     uint64_t rangeSize = 0;
-    mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrayTy).getEleTy();
+    mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrayTy).getElementType();
     do {
       auto getElementVal = [&]() {
         return builder.createConvert(loc, eleTy,
@@ -643,7 +650,7 @@ genOutlineArrayLit(Fortran::lower::AbstractConverter &converter,
                    mlir::Location loc, mlir::Type arrayTy,
                    const Fortran::evaluate::Constant<T> &constant) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrayTy).getEleTy();
+  mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrayTy).getElementType();
   llvm::StringRef globalName = converter.getUniqueLitName(
       loc, std::make_unique<Fortran::lower::SomeExpr>(toEvExpr(constant)),
       eleTy);

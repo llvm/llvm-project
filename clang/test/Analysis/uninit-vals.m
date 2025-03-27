@@ -34,8 +34,8 @@ void test_uninit_pos(void) {
   struct TestUninit v1 = { 0, 0 };
   struct TestUninit v2 = test_uninit_aux();
   int z; // expected-note{{'z' declared without an initial value}}
-  v1.y = z; // expected-warning{{Assigned value is garbage or undefined}}
-            // expected-note@-1{{Assigned value is garbage or undefined}}
+  v1.y = z; // expected-warning{{Assigned value is uninitialized}}
+            // expected-note@-1{{Assigned value is uninitialized}}
   test_unit_aux2(v2.x + v1.y);
 }
 void test_uninit_pos_2(void) {
@@ -78,8 +78,8 @@ void testFoo(Foo *o) {
 void rdar_7780304(void) {
   typedef struct s_r7780304 { int x; } s_r7780304;
   s_r7780304 b;
-  b.x |= 1; // expected-warning{{The left expression of the compound assignment is an uninitialized value. The computed value will also be garbage}}
-            // expected-note@-1{{The left expression of the compound assignment is an uninitialized value. The computed value will also be garbage}}
+  b.x |= 1; // expected-warning{{The left expression of the compound assignment uses uninitialized memory}}
+            // expected-note@-1{{The left expression of the compound assignment uses uninitialized memory}}
 }
 
 

@@ -1,8 +1,8 @@
-! RUN: bbc -emit-fir -hlfir=false -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX,CMPLX-PRECISE"
-! RUN: bbc -emit-fir -hlfir=false --math-runtime=precise -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-PRECISE"
+! RUN: bbc -emit-fir -hlfir=false -outline-intrinsics %s -o - | FileCheck %s --check-prefixes=%if system-aix %{"CHECK,CMPLX,CMPLX-PRECISE,AIX-LOG"%} %else %{"CHECK,CMPLX,CMPLX-PRECISE,COMMON-LOG"%}
+! RUN: bbc -emit-fir -hlfir=false --math-runtime=precise -outline-intrinsics %s -o - | FileCheck %s --check-prefixes=%if system-aix %{"CMPLX,CMPLX-PRECISE,AIX-LOG"%} %else %{"CMPLX,CMPLX-PRECISE,COMMON-LOG"%}
 ! RUN: bbc -emit-fir -hlfir=false --force-mlir-complex -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-FAST,CMPLX-MLIR"
-! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX,CMPLX-PRECISE"
-! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -mllvm -outline-intrinsics -mllvm --math-runtime=precise %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-PRECISE"
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes=%if system-aix %{"CHECK,CMPLX,CMPLX-PRECISE,AIX-LOG"%} %else %{"CHECK,CMPLX,CMPLX-PRECISE,COMMON-LOG"%}
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -mllvm -outline-intrinsics -mllvm --math-runtime=precise %s -o - | FileCheck %s --check-prefixes=%if system-aix %{"CMPLX,CMPLX-PRECISE,AIX-LOG"%} %else %{"CMPLX,CMPLX-PRECISE,COMMON-LOG"%}
 ! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -mllvm -outline-intrinsics -mllvm --force-mlir-complex %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-FAST,CMPLX-MLIR"
 ! RUN: %flang_fc1 -fapprox-func -emit-fir -flang-deprecated-no-hlfir -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-APPROX"
 
@@ -91,7 +91,8 @@ end subroutine
 ! CMPLX-SAME: (%[[C:.*]]: complex<f64>) -> complex<f64>
 ! CMPLX-FAST: %[[E:.*]] = complex.log %[[C]] fastmath<contract> : complex<f64>
 ! CMPLX-APPROX: %[[E:.*]] = complex.log %[[C]] fastmath<contract,afn> : complex<f64>
-! CMPLX-PRECISE: %[[E:.*]] = fir.call @clog(%[[C]]) fastmath<contract> : (complex<f64>) -> complex<f64>
+! COMMON-LOG: %[[E:.*]] = fir.call @clog(%[[C]]) fastmath<contract> : (complex<f64>) -> complex<f64>
+! AIX-LOG: %[[E:.*]] = fir.call @__clog(%[[C]]) fastmath<contract> : (complex<f64>) -> complex<f64>
 ! CMPLX: return %[[E]] : complex<f64>
 
 ! CHECK-LABEL: private @fir.log10.contract.f32.f32

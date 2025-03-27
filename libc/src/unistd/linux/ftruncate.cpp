@@ -11,11 +11,11 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
+#include "hdr/unistd_macros.h"
 #include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include <stdint.h>      // For uint64_t.
 #include <sys/syscall.h> // For syscall numbers.
-#include <unistd.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

@@ -20,17 +20,21 @@ int* f3(int x, int *y) {
 
 void* compound_literal(int x, int y) {
   if (x)
-    return &(unsigned short){((unsigned short)0x22EF)}; // expected-warning{{Address of stack memory}} expected-warning{{address of stack memory}}
+    return &(unsigned short){((unsigned short)0x22EF)};
+  // expected-warning-re@-1{{Address of stack memory associated with a compound literal declared on line {{[0-9]+}} returned to caller [core.StackAddressEscape]}}
+  // expected-warning@-2{{address of stack memory}}
 
   int* array[] = {};
   struct s { int z; double y; int w; };
   
   if (y)
-    return &((struct s){ 2, 0.4, 5 * 8 }); // expected-warning{{Address of stack memory}} expected-warning{{address of stack memory}}
-    
+    return &((struct s){ 2, 0.4, 5 * 8 });
+  // expected-warning-re@-1{{Address of stack memory associated with a compound literal declared on line {{[0-9]+}} returned to caller [core.StackAddressEscape]}}
+  // expected-warning@-2{{address of stack memory}}
   
   void* p = &((struct s){ 42, 0.4, x ? 42 : 0 });
-  return p; // expected-warning{{Address of stack memory}}
+  return p;
+  // expected-warning-re@-1{{Address of stack memory associated with a compound literal declared on line {{[0-9]+}} returned to caller [core.StackAddressEscape]}}
 }
 
 void* alloca_test(void) {

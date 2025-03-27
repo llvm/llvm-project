@@ -1,0 +1,496 @@
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %s   -o %tmain.o
+# RUN: %clang %cflags -gdwarf-5 %tmain.o -o %tmain.exe
+# RUN: llvm-bolt %tmain.exe -o %tmain.exe.bolt --update-debug-sections
+# RUN: llvm-dwarfdump --debug-names %tmain.exe.bolt > %tlog.txt
+# RUN: cat %tlog.txt | FileCheck -check-prefix=BOLT %s
+
+## This test checks that bolt correctly generates entry for DW_TAG_union_type for .debug_name section.
+
+# BOLT:       Abbreviations [
+# BOLT-NEXT:   Abbreviation [[ABBREV1:0x[0-9a-f]*]] {
+# BOLT-NEXT:     Tag: DW_TAG_subprogram
+# BOLT-NEXT:     DW_IDX_die_offset: DW_FORM_ref4
+# BOLT-NEXT:     DW_IDX_parent: DW_FORM_flag_present
+# BOLT-NEXT:   }
+# BOLT-NEXT:   Abbreviation [[ABBREV2:0x[0-9a-f]*]] {
+# BOLT-NEXT:     Tag: DW_TAG_base_type
+# BOLT-NEXT:     DW_IDX_die_offset: DW_FORM_ref4
+# BOLT-NEXT:     DW_IDX_parent: DW_FORM_flag_present
+# BOLT-NEXT:   }
+# BOLT-NEXT:   Abbreviation [[ABBREV3:0x[0-9a-f]*]] {
+# BOLT-NEXT:     Tag: DW_TAG_union_type
+# BOLT-NEXT:     DW_IDX_die_offset: DW_FORM_ref4
+# BOLT-NEXT:     DW_IDX_parent: DW_FORM_ref4
+# BOLT-NEXT:   }
+# BOLT-NEXT:   Abbreviation [[ABBREV4:0x[0-9a-f]*]] {
+# BOLT-NEXT:     Tag: DW_TAG_structure_type
+# BOLT-NEXT:     DW_IDX_die_offset: DW_FORM_ref4
+# BOLT-NEXT:     DW_IDX_parent: DW_FORM_ref4
+# BOLT-NEXT:   }
+# BOLT-NEXT: ]
+# BOLT-NEXT: Bucket 0 [
+# BOLT-NEXT:   EMPTY
+# BOLT-NEXT: ]
+# BOLT-NEXT: Bucket 1 [
+# BOLT-NEXT:   Name 1 {
+# BOLT-NEXT:     Hash: 0x7C9A7F6A
+# BOLT-NEXT:     String: {{.+}} "main"
+# BOLT-NEXT:     Entry @ [[ENTRY:0x[0-9a-f]*]]  {
+# BOLT-NEXT:       Abbrev: [[ABBREV1]]
+# BOLT-NEXT:       Tag: DW_TAG_subprogram
+# BOLT-NEXT:       DW_IDX_die_offset: 0x00000024
+# BOLT-NEXT:       DW_IDX_parent: <parent not indexed>
+# BOLT-NEXT:     }
+# BOLT-NEXT:   }
+# BOLT-NEXT: ]
+# BOLT-NEXT: Bucket 2 [
+# BOLT-NEXT:   EMPTY
+# BOLT-NEXT: ]
+# BOLT-NEXT: Bucket 3 [
+# BOLT-NEXT:   Name 2 {
+# BOLT-NEXT:     Hash: 0xB888030
+# BOLT-NEXT:     String: {{.+}} "int"
+# BOLT-NEXT:     Entry @ {{.+}} {
+# BOLT-NEXT:       Abbrev: [[ABBREV2]]
+# BOLT-NEXT:       Tag: DW_TAG_base_type
+# BOLT-NEXT:       DW_IDX_die_offset: 0x00000083
+# BOLT-NEXT:       DW_IDX_parent: <parent not indexed>
+# BOLT-NEXT:     }
+# BOLT-NEXT:   }
+# BOLT-NEXT:   Name 3 {
+# BOLT-NEXT:     Hash: 0xED0F01B4
+# BOLT-NEXT:     String: {{.+}} "MyUnion"
+# BOLT-NEXT:     Entry @ {{.+}} {
+# BOLT-NEXT:       Abbrev: [[ABBREV3]]
+# BOLT-NEXT:       Tag: DW_TAG_union_type
+# BOLT-NEXT:       DW_IDX_die_offset: 0x00000049
+# BOLT-NEXT:       DW_IDX_parent: Entry @ [[ENTRY]]
+# BOLT-NEXT:     }
+# BOLT-NEXT:   }
+# BOLT-NEXT: ]
+# BOLT-NEXT: Bucket 4 [
+# BOLT-NEXT:   Name 4 {
+# BOLT-NEXT:     Hash: 0x8AB681F0
+# BOLT-NEXT:     String: {{.+}} "MyStruct"
+# BOLT-NEXT:     Entry @ [[ENTRY2:0x[0-9a-f]*]] {
+# BOLT-NEXT:       Abbrev: [[ABBREV4]]
+# BOLT-NEXT:       Tag: DW_TAG_structure_type
+# BOLT-NEXT:       DW_IDX_die_offset: 0x00000062
+# BOLT-NEXT:       DW_IDX_parent: Entry @ [[ENTRY]]
+# BOLT-NEXT:     }
+# BOLT-NEXT:   }
+# BOLT-NEXT:   Name 5 {
+# BOLT-NEXT:     Hash: 0x8EEF3866
+# BOLT-NEXT:     String: {{.+}} "MyUnion2"
+# BOLT-NEXT:     Entry @ {{.+}} {
+# BOLT-NEXT:       Abbrev: [[ABBREV3]]
+# BOLT-NEXT:       Tag: DW_TAG_union_type
+# BOLT-NEXT:       DW_IDX_die_offset: 0x00000071
+# BOLT-NEXT:       DW_IDX_parent: Entry @ [[ENTRY2]]
+
+
+## int main() {
+##   union MyUnion {
+##     int a;
+##     int b;
+##   };
+##   struct MyStruct {
+##     union MyUnion2 {
+##       int a;
+##     };
+##     MyUnion2 myUnion2;
+##   };
+##   MyUnion myEnum;
+##   myEnum.a = 5;
+##   MyStruct myStruct;
+##   return myEnum.a + myStruct.myUnion2.a;
+## }
+
+	.text
+	.file	"main.cpp"
+	.globl	main                            # -- Begin function main
+	.p2align	4, 0x90
+	.type	main,@function
+main:                                   # @main
+.Lfunc_begin0:
+	.file	0 "union" "main.cpp" md5 0xb75b2512f2daa57bbcfe0c29f56d95f4
+	.loc	0 1 0                           # main.cpp:1:0
+	retq
+.Lfunc_end0:
+	.size	main, .-main
+                                        # -- End function
+	.section	.debug_abbrev,"",@progbits
+	.byte	1                               # Abbreviation Code
+	.byte	17                              # DW_TAG_compile_unit
+	.byte	1                               # DW_CHILDREN_yes
+	.byte	37                              # DW_AT_producer
+	.byte	37                              # DW_FORM_strx1
+	.byte	19                              # DW_AT_language
+	.byte	5                               # DW_FORM_data2
+	.byte	3                               # DW_AT_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	114                             # DW_AT_str_offsets_base
+	.byte	23                              # DW_FORM_sec_offset
+	.byte	16                              # DW_AT_stmt_list
+	.byte	23                              # DW_FORM_sec_offset
+	.byte	27                              # DW_AT_comp_dir
+	.byte	37                              # DW_FORM_strx1
+	.byte	17                              # DW_AT_low_pc
+	.byte	27                              # DW_FORM_addrx
+	.byte	18                              # DW_AT_high_pc
+	.byte	6                               # DW_FORM_data4
+	.byte	115                             # DW_AT_addr_base
+	.byte	23                              # DW_FORM_sec_offset
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
+	.byte	2                               # Abbreviation Code
+	.byte	46                              # DW_TAG_subprogram
+	.byte	1                               # DW_CHILDREN_yes
+	.byte	17                              # DW_AT_low_pc
+	.byte	27                              # DW_FORM_addrx
+	.byte	18                              # DW_AT_high_pc
+	.byte	6                               # DW_FORM_data4
+	.byte	64                              # DW_AT_frame_base
+	.byte	24                              # DW_FORM_exprloc
+	.byte	3                               # DW_AT_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	58                              # DW_AT_decl_file
+	.byte	11                              # DW_FORM_data1
+	.byte	59                              # DW_AT_decl_line
+	.byte	11                              # DW_FORM_data1
+	.byte	73                              # DW_AT_type
+	.byte	19                              # DW_FORM_ref4
+	.byte	63                              # DW_AT_external
+	.byte	25                              # DW_FORM_flag_present
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
+	.byte	3                               # Abbreviation Code
+	.byte	52                              # DW_TAG_variable
+	.byte	0                               # DW_CHILDREN_no
+	.byte	2                               # DW_AT_location
+	.byte	24                              # DW_FORM_exprloc
+	.byte	3                               # DW_AT_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	58                              # DW_AT_decl_file
+	.byte	11                              # DW_FORM_data1
+	.byte	59                              # DW_AT_decl_line
+	.byte	11                              # DW_FORM_data1
+	.byte	73                              # DW_AT_type
+	.byte	19                              # DW_FORM_ref4
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
+	.byte	4                               # Abbreviation Code
+	.byte	23                              # DW_TAG_union_type
+	.byte	1                               # DW_CHILDREN_yes
+	.byte	54                              # DW_AT_calling_convention
+	.byte	11                              # DW_FORM_data1
+	.byte	3                               # DW_AT_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	11                              # DW_AT_byte_size
+	.byte	11                              # DW_FORM_data1
+	.byte	58                              # DW_AT_decl_file
+	.byte	11                              # DW_FORM_data1
+	.byte	59                              # DW_AT_decl_line
+	.byte	11                              # DW_FORM_data1
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
+	.byte	5                               # Abbreviation Code
+	.byte	13                              # DW_TAG_member
+	.byte	0                               # DW_CHILDREN_no
+	.byte	3                               # DW_AT_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	73                              # DW_AT_type
+	.byte	19                              # DW_FORM_ref4
+	.byte	58                              # DW_AT_decl_file
+	.byte	11                              # DW_FORM_data1
+	.byte	59                              # DW_AT_decl_line
+	.byte	11                              # DW_FORM_data1
+	.byte	56                              # DW_AT_data_member_location
+	.byte	11                              # DW_FORM_data1
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
+	.byte	6                               # Abbreviation Code
+	.byte	19                              # DW_TAG_structure_type
+	.byte	1                               # DW_CHILDREN_yes
+	.byte	54                              # DW_AT_calling_convention
+	.byte	11                              # DW_FORM_data1
+	.byte	3                               # DW_AT_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	11                              # DW_AT_byte_size
+	.byte	11                              # DW_FORM_data1
+	.byte	58                              # DW_AT_decl_file
+	.byte	11                              # DW_FORM_data1
+	.byte	59                              # DW_AT_decl_line
+	.byte	11                              # DW_FORM_data1
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
+	.byte	7                               # Abbreviation Code
+	.byte	36                              # DW_TAG_base_type
+	.byte	0                               # DW_CHILDREN_no
+	.byte	3                               # DW_AT_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	62                              # DW_AT_encoding
+	.byte	11                              # DW_FORM_data1
+	.byte	11                              # DW_AT_byte_size
+	.byte	11                              # DW_FORM_data1
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
+	.byte	0                               # EOM(3)
+	.section	.debug_info,"",@progbits
+.Lcu_begin0:
+	.long	.Ldebug_info_end0-.Ldebug_info_start0 # Length of Unit
+.Ldebug_info_start0:
+	.short	5                               # DWARF version number
+	.byte	1                               # DWARF Unit Type
+	.byte	8                               # Address Size (in bytes)
+	.long	.debug_abbrev                   # Offset Into Abbrev. Section
+	.byte	1                               # Abbrev [1] 0xc:0x7b DW_TAG_compile_unit
+	.byte	0                               # DW_AT_producer
+	.short	33                              # DW_AT_language
+	.byte	1                               # DW_AT_name
+	.long	.Lstr_offsets_base0             # DW_AT_str_offsets_base
+	.long	.Lline_table_start0             # DW_AT_stmt_list
+	.byte	2                               # DW_AT_comp_dir
+	.byte	0                               # DW_AT_low_pc
+	.long	.Lfunc_end0-.Lfunc_begin0       # DW_AT_high_pc
+	.long	.Laddr_table_base0              # DW_AT_addr_base
+	.byte	2                               # Abbrev [2] 0x23:0x5f DW_TAG_subprogram
+	.byte	0                               # DW_AT_low_pc
+	.long	.Lfunc_end0-.Lfunc_begin0       # DW_AT_high_pc
+	.byte	1                               # DW_AT_frame_base
+	.byte	86
+	.byte	3                               # DW_AT_name
+	.byte	0                               # DW_AT_decl_file
+	.byte	1                               # DW_AT_decl_line
+	.long	130                             # DW_AT_type
+                                        # DW_AT_external
+	.byte	3                               # Abbrev [3] 0x32:0xb DW_TAG_variable
+	.byte	2                               # DW_AT_location
+	.byte	145
+	.byte	120
+	.byte	5                               # DW_AT_name
+	.byte	0                               # DW_AT_decl_file
+	.byte	12                              # DW_AT_decl_line
+	.long	72                              # DW_AT_type
+	.byte	3                               # Abbrev [3] 0x3d:0xb DW_TAG_variable
+	.byte	2                               # DW_AT_location
+	.byte	145
+	.byte	116
+	.byte	9                               # DW_AT_name
+	.byte	0                               # DW_AT_decl_file
+	.byte	14                              # DW_AT_decl_line
+	.long	97                              # DW_AT_type
+	.byte	4                               # Abbrev [4] 0x48:0x19 DW_TAG_union_type
+	.byte	5                               # DW_AT_calling_convention
+	.byte	8                               # DW_AT_name
+	.byte	4                               # DW_AT_byte_size
+	.byte	0                               # DW_AT_decl_file
+	.byte	2                               # DW_AT_decl_line
+	.byte	5                               # Abbrev [5] 0x4e:0x9 DW_TAG_member
+	.byte	6                               # DW_AT_name
+	.long	130                             # DW_AT_type
+	.byte	0                               # DW_AT_decl_file
+	.byte	3                               # DW_AT_decl_line
+	.byte	0                               # DW_AT_data_member_location
+	.byte	5                               # Abbrev [5] 0x57:0x9 DW_TAG_member
+	.byte	7                               # DW_AT_name
+	.long	130                             # DW_AT_type
+	.byte	0                               # DW_AT_decl_file
+	.byte	4                               # DW_AT_decl_line
+	.byte	0                               # DW_AT_data_member_location
+	.byte	0                               # End Of Children Mark
+	.byte	6                               # Abbrev [6] 0x61:0x20 DW_TAG_structure_type
+	.byte	5                               # DW_AT_calling_convention
+	.byte	12                              # DW_AT_name
+	.byte	4                               # DW_AT_byte_size
+	.byte	0                               # DW_AT_decl_file
+	.byte	6                               # DW_AT_decl_line
+	.byte	5                               # Abbrev [5] 0x67:0x9 DW_TAG_member
+	.byte	10                              # DW_AT_name
+	.long	112                             # DW_AT_type
+	.byte	0                               # DW_AT_decl_file
+	.byte	10                              # DW_AT_decl_line
+	.byte	0                               # DW_AT_data_member_location
+	.byte	4                               # Abbrev [4] 0x70:0x10 DW_TAG_union_type
+	.byte	5                               # DW_AT_calling_convention
+	.byte	11                              # DW_AT_name
+	.byte	4                               # DW_AT_byte_size
+	.byte	0                               # DW_AT_decl_file
+	.byte	7                               # DW_AT_decl_line
+	.byte	5                               # Abbrev [5] 0x76:0x9 DW_TAG_member
+	.byte	6                               # DW_AT_name
+	.long	130                             # DW_AT_type
+	.byte	0                               # DW_AT_decl_file
+	.byte	8                               # DW_AT_decl_line
+	.byte	0                               # DW_AT_data_member_location
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	7                               # Abbrev [7] 0x82:0x4 DW_TAG_base_type
+	.byte	4                               # DW_AT_name
+	.byte	5                               # DW_AT_encoding
+	.byte	4                               # DW_AT_byte_size
+	.byte	0                               # End Of Children Mark
+.Ldebug_info_end0:
+	.section	.debug_str_offsets,"",@progbits
+	.long	56                              # Length of String Offsets Set
+	.short	5
+	.short	0
+.Lstr_offsets_base0:
+	.section	.debug_str,"MS",@progbits,1
+.Linfo_string0:
+	.asciz	"clang version 20.0.0git"       # string offset=0
+.Linfo_string1:
+	.asciz	"main.cpp"                      # string offset=24
+.Linfo_string2:
+	.asciz	"union" # string offset=33
+.Linfo_string3:
+	.asciz	"main"                          # string offset=77
+.Linfo_string4:
+	.asciz	"int"                           # string offset=82
+.Linfo_string5:
+	.asciz	"myEnum"                        # string offset=86
+.Linfo_string6:
+	.asciz	"MyUnion"                       # string offset=93
+.Linfo_string7:
+	.asciz	"a"                             # string offset=101
+.Linfo_string8:
+	.asciz	"b"                             # string offset=103
+.Linfo_string9:
+	.asciz	"myStruct"                      # string offset=105
+.Linfo_string10:
+	.asciz	"MyStruct"                      # string offset=114
+.Linfo_string11:
+	.asciz	"myUnion2"                      # string offset=123
+.Linfo_string12:
+	.asciz	"MyUnion2"                      # string offset=132
+	.section	.debug_str_offsets,"",@progbits
+	.long	.Linfo_string0
+	.long	.Linfo_string1
+	.long	.Linfo_string2
+	.long	.Linfo_string3
+	.long	.Linfo_string4
+	.long	.Linfo_string5
+	.long	.Linfo_string7
+	.long	.Linfo_string8
+	.long	.Linfo_string6
+	.long	.Linfo_string9
+	.long	.Linfo_string11
+	.long	.Linfo_string12
+	.long	.Linfo_string10
+	.section	.debug_addr,"",@progbits
+	.long	.Ldebug_addr_end0-.Ldebug_addr_start0 # Length of contribution
+.Ldebug_addr_start0:
+	.short	5                               # DWARF version number
+	.byte	8                               # Address size
+	.byte	0                               # Segment selector size
+.Laddr_table_base0:
+	.quad	.Lfunc_begin0
+.Ldebug_addr_end0:
+	.section	.debug_names,"",@progbits
+	.long	.Lnames_end0-.Lnames_start0     # Header: unit length
+.Lnames_start0:
+	.short	5                               # Header: version
+	.short	0                               # Header: padding
+	.long	1                               # Header: compilation unit count
+	.long	0                               # Header: local type unit count
+	.long	0                               # Header: foreign type unit count
+	.long	5                               # Header: bucket count
+	.long	5                               # Header: name count
+	.long	.Lnames_abbrev_end0-.Lnames_abbrev_start0 # Header: abbreviation table size
+	.long	8                               # Header: augmentation string size
+	.ascii	"LLVM0700"                      # Header: augmentation string
+	.long	.Lcu_begin0                     # Compilation unit 0
+	.long	0                               # Bucket 0
+	.long	1                               # Bucket 1
+	.long	0                               # Bucket 2
+	.long	2                               # Bucket 3
+	.long	4                               # Bucket 4
+	.long	2090499946                      # Hash in Bucket 1
+	.long	193495088                       # Hash in Bucket 3
+	.long	-317783628                      # Hash in Bucket 3
+	.long	-1967750672                     # Hash in Bucket 4
+	.long	-1896925082                     # Hash in Bucket 4
+	.long	.Linfo_string3                  # String in Bucket 1: main
+	.long	.Linfo_string4                  # String in Bucket 3: int
+	.long	.Linfo_string6                  # String in Bucket 3: MyUnion
+	.long	.Linfo_string10                 # String in Bucket 4: MyStruct
+	.long	.Linfo_string12                 # String in Bucket 4: MyUnion2
+	.long	.Lnames0-.Lnames_entries0       # Offset in Bucket 1
+	.long	.Lnames1-.Lnames_entries0       # Offset in Bucket 3
+	.long	.Lnames2-.Lnames_entries0       # Offset in Bucket 3
+	.long	.Lnames3-.Lnames_entries0       # Offset in Bucket 4
+	.long	.Lnames4-.Lnames_entries0       # Offset in Bucket 4
+.Lnames_abbrev_start0:
+	.byte	1                               # Abbrev code
+	.byte	46                              # DW_TAG_subprogram
+	.byte	3                               # DW_IDX_die_offset
+	.byte	19                              # DW_FORM_ref4
+	.byte	4                               # DW_IDX_parent
+	.byte	25                              # DW_FORM_flag_present
+	.byte	0                               # End of abbrev
+	.byte	0                               # End of abbrev
+	.byte	2                               # Abbrev code
+	.byte	36                              # DW_TAG_base_type
+	.byte	3                               # DW_IDX_die_offset
+	.byte	19                              # DW_FORM_ref4
+	.byte	4                               # DW_IDX_parent
+	.byte	25                              # DW_FORM_flag_present
+	.byte	0                               # End of abbrev
+	.byte	0                               # End of abbrev
+	.byte	3                               # Abbrev code
+	.byte	23                              # DW_TAG_union_type
+	.byte	3                               # DW_IDX_die_offset
+	.byte	19                              # DW_FORM_ref4
+	.byte	4                               # DW_IDX_parent
+	.byte	19                              # DW_FORM_ref4
+	.byte	0                               # End of abbrev
+	.byte	0                               # End of abbrev
+	.byte	4                               # Abbrev code
+	.byte	19                              # DW_TAG_structure_type
+	.byte	3                               # DW_IDX_die_offset
+	.byte	19                              # DW_FORM_ref4
+	.byte	4                               # DW_IDX_parent
+	.byte	19                              # DW_FORM_ref4
+	.byte	0                               # End of abbrev
+	.byte	0                               # End of abbrev
+	.byte	0                               # End of abbrev list
+.Lnames_abbrev_end0:
+.Lnames_entries0:
+.Lnames0:
+.L3:
+	.byte	1                               # Abbreviation code
+	.long	35                              # DW_IDX_die_offset
+	.byte	0                               # DW_IDX_parent
+                                        # End of list: main
+.Lnames1:
+.L1:
+	.byte	2                               # Abbreviation code
+	.long	130                             # DW_IDX_die_offset
+	.byte	0                               # DW_IDX_parent
+                                        # End of list: int
+.Lnames2:
+.L4:
+	.byte	3                               # Abbreviation code
+	.long	72                              # DW_IDX_die_offset
+	.long	.L3-.Lnames_entries0            # DW_IDX_parent
+	.byte	0                               # End of list: MyUnion
+.Lnames3:
+.L2:
+	.byte	4                               # Abbreviation code
+	.long	97                              # DW_IDX_die_offset
+	.long	.L3-.Lnames_entries0            # DW_IDX_parent
+	.byte	0                               # End of list: MyStruct
+.Lnames4:
+.L0:
+	.byte	3                               # Abbreviation code
+	.long	112                             # DW_IDX_die_offset
+	.long	.L2-.Lnames_entries0            # DW_IDX_parent
+	.byte	0                               # End of list: MyUnion2
+	.p2align	2, 0x0
+.Lnames_end0:
+	.ident	"clang version 20.0.0git"
+	.section	".note.GNU-stack","",@progbits
+	.addrsig
+	.section	.debug_line,"",@progbits
+.Lline_table_start0:

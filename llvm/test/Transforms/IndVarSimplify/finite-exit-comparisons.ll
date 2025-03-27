@@ -1052,3 +1052,43 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
+define i8 @test_drop_icmp_samesign(i1 %cond, i32 range(i32 0, 32) %x) {
+; CHECK-LABEL: @test_drop_icmp_samesign(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[FOR_BODY_PREHEADER:%.*]], label [[ELSE:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[CALL1:%.*]] = call i8 @callee()
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[CALL2:%.*]] = call i8 @callee()
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ugt i8 [[TMP0]], [[CALL2]]
+; CHECK-NEXT:    br i1 [[COND2]], label [[FOR_BODY]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    [[CALL2_LCSSA:%.*]] = phi i8 [ [[CALL2]], [[FOR_BODY]] ]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi i8 [ [[CALL1]], [[ELSE]] ], [ [[CALL2_LCSSA]], [[EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+entry:
+  br i1 %cond, label %for.body, label %else
+
+else:
+  %call1 = call i8 @callee()
+  br label %exit
+
+for.body:
+  %call2 = call i8 @callee()
+  %ext = zext i8 %call2 to i32
+  %cond2 = icmp samesign ugt i32 %x, %ext
+  br i1 %cond2, label %for.body, label %exit
+
+exit:
+  %res = phi i8 [ %call1, %else ], [ %call2, %for.body ]
+  ret i8 %res
+}
+
+declare i8 @callee()

@@ -41,7 +41,7 @@ struct WrittenToLatticeValue {
 
   ChangeResult addWrites(const SetVector<StringAttr> &writes) {
     int sizeBefore = this->writes.size();
-    this->writes.insert(writes.begin(), writes.end());
+    this->writes.insert_range(writes);
     int sizeAfter = this->writes.size();
     return sizeBefore == sizeAfter ? ChangeResult::NoChange
                                    : ChangeResult::Change;
@@ -108,7 +108,7 @@ WrittenToAnalysis::visitOperation(Operation *op, ArrayRef<WrittenTo *> operands,
     for (WrittenTo *operand : operands) {
       meet(operand, *r);
     }
-    addDependency(const_cast<WrittenTo *>(r), op);
+    addDependency(const_cast<WrittenTo *>(r), getProgramPointAfter(op));
   }
   return success();
 }

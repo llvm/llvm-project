@@ -150,7 +150,7 @@ TEST(FormatVariadicTest, ValidReplacementSequence) {
   EXPECT_EQ(0u, Replacements[0].Index);
   EXPECT_EQ(3u, Replacements[0].Width);
   EXPECT_EQ(AlignStyle::Left, Replacements[0].Where);
-  EXPECT_EQ("foo", Replacements[0].Options);
+  EXPECT_EQ(" foo ", Replacements[0].Options);
 
   // 8. Everything after the first option specifier is part of the style, even
   // if it contains another option specifier.

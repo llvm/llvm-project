@@ -352,21 +352,30 @@ void good13(void) {
   int Buffer[BufferSize];
 
   int *P = &Buffer[0];
-  while (P < (Buffer + sizeof(Buffer) / sizeof(int))) {
+  while (P < Buffer + sizeof(Buffer) / sizeof(int)) {
     // NO-WARNING: Calculating the element count of the buffer here, which is
     // safe with this idiom (as long as the types don't change).
     ++P;
   }
 
-  while (P < (Buffer + sizeof(Buffer) / sizeof(Buffer[0]))) {
+  while (P < Buffer + sizeof(Buffer) / sizeof(Buffer[0])) {
     // NO-WARNING: Calculating the element count of the buffer here, which is
     // safe with this idiom.
     ++P;
   }
 
-  while (P < (Buffer + sizeof(Buffer) / sizeof(*P))) {
+  while (P < Buffer + sizeof(Buffer) / sizeof(*P)) {
     // NO-WARNING: Calculating the element count of the buffer here, which is
     // safe with this idiom.
+    ++P;
+  }
+}
+
+void situational14(int *Buffer, size_t BufferSize) {
+  int *P = &Buffer[0];
+  while (P < Buffer + BufferSize / sizeof(*Buffer)) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic; this scaled value will be scaled again by the '+' operator
+    // CHECK-MESSAGES: :[[@LINE-2]]:21: note: '+' in pointer arithmetic internally scales with 'sizeof(int)' == {{[0-9]+}}
     ++P;
   }
 }

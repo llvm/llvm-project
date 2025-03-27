@@ -44,7 +44,7 @@ main_body:
     %vdata.f     = bitcast <4 x i32> %vdata to <4 x float>
     %vdata_glc.f = bitcast <4 x i32> %vdata_glc to <4 x float>
     %vdata_slc.f = bitcast <4 x i32> %vdata_slc to <4 x float>
-    %r0 = insertvalue {<4 x float>, <4 x float>, <4 x float>, <4 x float>} undef, <4 x float> %vdata.f, 0
+    %r0 = insertvalue {<4 x float>, <4 x float>, <4 x float>, <4 x float>} poison, <4 x float> %vdata.f, 0
     %r1 = insertvalue {<4 x float>, <4 x float>, <4 x float>, <4 x float>} %r0, <4 x float> %vdata_glc.f, 1
     %r2 = insertvalue {<4 x float>, <4 x float>, <4 x float>, <4 x float>} %r1, <4 x float> %vdata_slc.f, 2
     %r3 = insertvalue {<4 x float>, <4 x float>, <4 x float>, <4 x float>} %r2, <4 x float> %vdata_f32, 3
@@ -113,7 +113,7 @@ define amdgpu_vs {<4 x float>, <4 x float>, <4 x float>} @tbuffer_load_immoffs_l
     %vdata.f     = bitcast <4 x i32> %vdata to <4 x float>
     %vdata_glc.f = bitcast <4 x i32> %vdata_glc to <4 x float>
     %vdata_slc.f = bitcast <4 x i32> %vdata_slc to <4 x float>
-    %r0 = insertvalue {<4 x float>, <4 x float>, <4 x float>} undef, <4 x float> %vdata.f, 0
+    %r0 = insertvalue {<4 x float>, <4 x float>, <4 x float>} poison, <4 x float> %vdata.f, 0
     %r1 = insertvalue {<4 x float>, <4 x float>, <4 x float>} %r0, <4 x float> %vdata_glc.f, 1
     %r2 = insertvalue {<4 x float>, <4 x float>, <4 x float>} %r1, <4 x float> %vdata_slc.f, 2
     ret {<4 x float>, <4 x float>, <4 x float>} %r2

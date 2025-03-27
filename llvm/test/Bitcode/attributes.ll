@@ -105,7 +105,7 @@ define void @f17(ptr align 4 %0)
 }
 
 define void @f18(ptr nocapture %0)
-; CHECK: define void @f18(ptr nocapture %0)
+; CHECK: define void @f18(ptr captures(none) %0)
 {
         ret void;
 }
@@ -512,7 +512,7 @@ define void @f92() sanitize_realtime
 }
 
 ; CHECK: define void @f93() #54
-define void @f93() sanitize_realtime_unsafe {
+define void @f93() sanitize_realtime_blocking {
         ret void;
 }
 
@@ -537,6 +537,11 @@ define void @f91(ptr dead_on_unwind %p) {
   ret void
 }
 
+; CHECK: define void @f94() [[NODIVERGENCESOURCE:#[0-9]+]]
+define void @f94() nodivergencesource {
+  ret void;
+}
+
 ; CHECK: define range(i32 -1, 42) i32 @range_attribute(<4 x i32> range(i32 -1, 42) %a)
 define range(i32 -1, 42) i32 @range_attribute(<4 x i32> range(i32 -1, 42) %a) {
   ret i32 0
@@ -554,6 +559,11 @@ define void @wide_range_attribute(i128 range(i128 618970019642690137449562111, 6
 
 ; CHECK: define void @initializes(ptr initializes((-4, 0), (4, 8)) %a)
 define void @initializes(ptr initializes((-4, 0), (4, 8)) %a) {
+  ret void
+}
+
+; CHECK: define void @captures(ptr captures(address) %p)
+define void @captures(ptr captures(address) %p) {
   ret void
 }
 
@@ -611,8 +621,9 @@ define void @initializes(ptr initializes((-4, 0), (4, 8)) %a) {
 ; CHECK: attributes #51 = { uwtable(sync) }
 ; CHECK: attributes #52 = { nosanitize_bounds }
 ; CHECK: attributes #53 = { sanitize_realtime }
-; CHECK: attributes #54 = { sanitize_realtime_unsafe }
+; CHECK: attributes #54 = { sanitize_realtime_blocking }
 ; CHECK: attributes [[FNRETTHUNKEXTERN]] = { fn_ret_thunk_extern }
 ; CHECK: attributes [[SKIPPROFILE]] = { skipprofile }
 ; CHECK: attributes [[OPTDEBUG]] = { optdebug }
+; CHECK: attributes [[NODIVERGENCESOURCE]] = { nodivergencesource }
 ; CHECK: attributes #[[NOBUILTIN]] = { nobuiltin }

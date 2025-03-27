@@ -182,3 +182,17 @@ func.func @insert_op(%arg0: index, %arg1: memref<13x13xi64>, %arg2: index) {
   vector.print %101 : vector<1xi64>
   return
 }
+
+// -----
+
+// CHECK-LABEL: llvm.func @dso_local_equivalent_select
+llvm.func @dso_local_equivalent_select(%arg: i1) -> !llvm.ptr {
+  // CHECK-NEXT: %[[DSOLOCALEQ:.+]] = llvm.dso_local_equivalent @yay
+  %0 = llvm.dso_local_equivalent @yay : !llvm.ptr
+  %1 = llvm.dso_local_equivalent @yay : !llvm.ptr
+  %2 = arith.select %arg, %0, %1 : !llvm.ptr
+  // CHECK-NEXT: llvm.return %[[DSOLOCALEQ]]
+  llvm.return %2 : !llvm.ptr
+}
+
+llvm.func @yay()

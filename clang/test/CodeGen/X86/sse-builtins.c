@@ -5,6 +5,7 @@
 
 
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
 // NOTE: This should match the tests in llvm/test/CodeGen/X86/sse-intrinsics-fast-isel.ll
 
@@ -13,6 +14,7 @@ __m128 test_mm_add_ps(__m128 A, __m128 B) {
   // CHECK: fadd <4 x float>
   return _mm_add_ps(A, B);
 }
+TEST_CONSTEXPR(match_m128(_mm_add_ps((__m128){+1.0f, +0.0f, +2.0f, +4.0f}, (__m128){+8.0f, +4.0f, +2.0f, +1.0f}), +9.0f, +4.0f, +4.0f, +5.0f));
 
 __m128 test_mm_add_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_add_ss
@@ -22,19 +24,22 @@ __m128 test_mm_add_ss(__m128 A, __m128 B) {
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 0
   return _mm_add_ss(A, B);
 }
+TEST_CONSTEXPR(match_m128(_mm_add_ss((__m128){+1.0f, +0.0f, +2.0f, +4.0f}, (__m128){+8.0f, +4.0f, +2.0f, +1.0f}), +9.0f, +0.0f, +2.0f, +4.0f));
 
 __m128 test_mm_and_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_and_ps
   // CHECK: and <4 x i32>
   return _mm_and_ps(A, B);
 }
+TEST_CONSTEXPR(match_m128(_mm_and_ps((__m128){-4.0f, -5.0f, +6.0f, +7.0f}, (__m128){+0.0f, -0.0f, -0.0f, +7.0f}), -0.0f, -0.0f, +0.0f, +7.0f));
 
 __m128 test_mm_andnot_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_andnot_ps
-  // CHECK: xor <4 x i32> %{{.*}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+  // CHECK: xor <4 x i32> %{{.*}}, splat (i32 -1)
   // CHECK: and <4 x i32>
   return _mm_andnot_ps(A, B);
 }
+TEST_CONSTEXPR(match_m128(_mm_andnot_ps((__m128){-4.0f, -5.0f, +6.0f, +7.0f}, (__m128){+0.0f, -0.0f, -0.0f, +7.0f}), +0.0f, +0.0f, +0.0f, +0.0f));
 
 __m128 test_mm_cmp_ps_eq_oq(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_eq_oq
@@ -322,6 +327,15 @@ __m128 test_mm_cvtsi32_ss(__m128 A, int B) {
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 0
   return _mm_cvtsi32_ss(A, B);
 }
+TEST_CONSTEXPR(match_m128(_mm_cvtsi32_ss((__m128){+1.0f, +0.0f, +2.0f, +4.0f}, 42), +42.0f, +0.0f, +2.0f, +4.0f));
+
+__m128 test_mm_cvt_si2ss(__m128 A, int B) {
+  // CHECK-LABEL: test_mm_cvt_si2ss
+  // CHECK: sitofp i32 %{{.*}} to float
+  // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 0
+  return _mm_cvt_si2ss(A, B);
+}
+TEST_CONSTEXPR(match_m128(_mm_cvt_si2ss((__m128){+4.0f, +2.0f, +0.0f, +4.0f}, -99), -99.0f, +2.0f, +0.0f, +4.0f));
 
 #ifdef __x86_64__
 __m128 test_mm_cvtsi64_ss(__m128 A, long long B) {
@@ -330,6 +344,7 @@ __m128 test_mm_cvtsi64_ss(__m128 A, long long B) {
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 0
   return _mm_cvtsi64_ss(A, B);
 }
+TEST_CONSTEXPR(match_m128(_mm_cvtsi64_ss((__m128){+1.0f, +0.0f, +2.0f, +4.0f}, 555), +555.0f, +0.0f, +2.0f, +4.0f));
 #endif
 
 float test_mm_cvtss_f32(__m128 A) {
@@ -337,6 +352,7 @@ float test_mm_cvtss_f32(__m128 A) {
   // CHECK: extractelement <4 x float> %{{.*}}, i32 0
   return _mm_cvtss_f32(A);
 }
+TEST_CONSTEXPR(_mm_cvtss_f32((__m128){+8.0f, +4.0f, +2.0f, +1.0f}) == +8.0f);
 
 int test_mm_cvtss_si32(__m128 A) {
   // CHECK-LABEL: test_mm_cvtss_si32
@@ -377,6 +393,7 @@ __m128 test_mm_div_ps(__m128 A, __m128 B) {
   // CHECK: fdiv <4 x float>
   return _mm_div_ps(A, B);
 }
+TEST_CONSTEXPR(match_m128(_mm_div_ps((__m128){+1.0f, +0.0f, +2.0f, +4.0f}, (__m128){+8.0f, +4.0f, +2.0f, +1.0f}), +0.125f, +0.0f, +1.0f, +4.0f));
 
 __m128 test_mm_div_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_div_ss
@@ -386,6 +403,7 @@ __m128 test_mm_div_ss(__m128 A, __m128 B) {
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 0
   return _mm_div_ss(A, B);
 }
+TEST_CONSTEXPR(match_m128(_mm_div_ss((__m128){+1.0f, +5.0f, +2.0f, +4.0f}, (__m128){+8.0f, +4.0f, +2.0f, +1.0f}), +0.125f, +5.0f, +2.0f, +4.0f));
 
 unsigned int test_MM_GET_EXCEPTION_MASK(void) {
   // CHECK-LABEL: test_MM_GET_EXCEPTION_MASK
@@ -517,18 +535,21 @@ __m128 test_mm_move_ss(__m128 A, __m128 B) {
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 0
   return _mm_move_ss(A, B);
 }
+TEST_CONSTEXPR(match_m128(_mm_move_ss((__m128){+1.0f, +0.0f, +2.0f, +4.0f}, (__m128){+8.0f, +4.0f, +2.0f, +1.0f}), +8.0f, +0.0f, +2.0f, +4.0f));
 
 __m128 test_mm_movehl_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_movehl_ps
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x i32> <i32 6, i32 7, i32 2, i32 3>
   return _mm_movehl_ps(A, B);
 }
+TEST_CONSTEXPR(match_m128(_mm_movehl_ps((__m128){+1.0f, +0.0f, +2.0f, +4.0f}, (__m128){+8.0f, +4.0f, +2.0f, +1.0f}), +2.0f, +1.0f, +2.0f, +4.0f));
 
 __m128 test_mm_movelh_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_movelh_ps
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   return _mm_movelh_ps(A, B);
 }
+TEST_CONSTEXPR(match_m128(_mm_movelh_ps((__m128){+1.0f, +0.0f, +2.0f, +4.0f}, (__m128){+8.0f, +4.0f, +2.0f, +1.0f}), +1.0f, +0.0f, +8.0f, +4.0f));
 
 int test_mm_movemask_ps(__m128 A) {
   // CHECK-LABEL: test_mm_movemask_ps
@@ -541,6 +562,7 @@ __m128 test_mm_mul_ps(__m128 A, __m128 B) {
   // CHECK: fmul <4 x float>
   return _mm_mul_ps(A, B);
 }
+TEST_CONSTEXPR(match_m128(_mm_mul_ps((__m128){+1.0f, +0.0f, +2.0f, +4.0f}, (__m128){+8.0f, +4.0f, +2.0f, +1.0f}), +8.0f, +0.0f, +4.0f, +4.0f));
 
 __m128 test_mm_mul_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_mul_ss
@@ -550,12 +572,14 @@ __m128 test_mm_mul_ss(__m128 A, __m128 B) {
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 0
   return _mm_mul_ss(A, B);
 }
+TEST_CONSTEXPR(match_m128(_mm_mul_ps((__m128){+1.0f, +0.0f, +2.0f, +4.0f}, (__m128){+8.0f, +4.0f, +2.0f, +1.0f}), +8.0f, +0.0f, +4.0f, +4.0f));
 
 __m128 test_mm_or_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_or_ps
   // CHECK: or <4 x i32>
   return _mm_or_ps(A, B);
 }
+TEST_CONSTEXPR(match_m128(_mm_or_ps((__m128){-4.0f, -5.0f, +6.0f, +7.0f}, (__m128){+0.0f, -0.0f, -0.0f, +7.0f}), -4.0f, -5.0f, -6.0f, +7.0f));
 
 void test_mm_prefetch(char const* p) {
   // CHECK-LABEL: test_mm_prefetch
@@ -628,6 +652,7 @@ __m128 test_mm_set_ps(float A, float B, float C, float D) {
   // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 3
   return _mm_set_ps(A, B, C, D);
 }
+TEST_CONSTEXPR(match_m128(_mm_set_ps(+0.0f, +1.0f, +2.0f, +3.0f), +3.0f, +2.0f, +1.0f, +.0f));
 
 __m128 test_mm_set_ps1(float A) {
   // CHECK-LABEL: test_mm_set_ps1
@@ -637,6 +662,7 @@ __m128 test_mm_set_ps1(float A) {
   // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 3
   return _mm_set_ps1(A);
 }
+TEST_CONSTEXPR(match_m128(_mm_set_ps1(-2.0f), -2.0f, -2.0f, -2.0f, -2.0f));
 
 void test_MM_SET_ROUNDING_MODE(unsigned int A) {
   // CHECK-LABEL: test_MM_SET_ROUNDING_MODE
@@ -657,6 +683,7 @@ __m128 test_mm_set_ss(float A) {
   // CHECK: insertelement <4 x float> {{.*}}, float 0.000000e+00, i32 3
   return _mm_set_ss(A);
 }
+TEST_CONSTEXPR(match_m128(_mm_set_ss(1.0f), +1.0f, +0.0f, +0.0f, +0.0f));
 
 __m128 test_mm_set1_ps(float A) {
   // CHECK-LABEL: test_mm_set1_ps
@@ -666,6 +693,7 @@ __m128 test_mm_set1_ps(float A) {
   // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 3
   return _mm_set1_ps(A);
 }
+TEST_CONSTEXPR(match_m128(_mm_set1_ps(2.0f), +2.0f, +2.0f, +2.0f, +2.0f));
 
 void test_mm_setcsr(unsigned int A) {
   // CHECK-LABEL: test_mm_setcsr
@@ -682,12 +710,14 @@ __m128 test_mm_setr_ps(float A, float B, float C, float D) {
   // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 3
   return _mm_setr_ps(A, B, C, D);
 }
+TEST_CONSTEXPR(match_m128(_mm_setr_ps(+0.0f, +1.0f, +2.0f, +3.0f), +0.0f, +1.0f, +2.0f, +3.0f));
 
 __m128 test_mm_setzero_ps(void) {
   // CHECK-LABEL: test_mm_setzero_ps
   // CHECK: store <4 x float> zeroinitializer
   return _mm_setzero_ps();
 }
+TEST_CONSTEXPR(match_m128(_mm_setzero_ps(), +0.0f, +0.0f, +0.0f, +0.0f));
 
 void test_mm_sfence(void) {
   // CHECK-LABEL: test_mm_sfence
@@ -787,6 +817,7 @@ __m128 test_mm_sub_ps(__m128 A, __m128 B) {
   // CHECK: fsub <4 x float>
   return _mm_sub_ps(A, B);
 }
+TEST_CONSTEXPR(match_m128(_mm_sub_ps((__m128){+1.0f, +0.0f, +2.0f, +4.0f}, (__m128){+8.0f, +4.0f, +2.0f, +1.0f}), -7.0f, -4.0f, +0.0f, +3.0f));
 
 __m128 test_mm_sub_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_sub_ss
@@ -796,6 +827,7 @@ __m128 test_mm_sub_ss(__m128 A, __m128 B) {
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 0
   return _mm_sub_ss(A, B);
 }
+TEST_CONSTEXPR(match_m128(_mm_sub_ss((__m128){+1.0f, +0.0f, +2.0f, +4.0f}, (__m128){+8.0f, +4.0f, +2.0f, +1.0f}), -7.0f, +0.0f, +2.0f, +4.0f));
 
 void test_MM_TRANSPOSE4_PS(__m128 *A, __m128 *B, __m128 *C, __m128 *D) {
   // CHECK-LABEL: test_MM_TRANSPOSE4_PS
@@ -857,15 +889,18 @@ __m128 test_mm_unpackhi_ps(__m128 A, __m128 B) {
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
   return _mm_unpackhi_ps(A, B);
 }
+TEST_CONSTEXPR(match_m128(_mm_unpackhi_ps((__m128){+1.0f, +0.0f, +2.0f, +4.0f}, (__m128){+8.0f, +4.0f, +2.0f, +1.0f}), +2.0f, +2.0f, +4.0f, +1.0f));
 
 __m128 test_mm_unpacklo_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_unpacklo_ps
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
   return _mm_unpacklo_ps(A, B);
 }
+TEST_CONSTEXPR(match_m128(_mm_unpacklo_ps((__m128){+1.0f, +0.0f, +2.0f, +4.0f}, (__m128){+8.0f, +4.0f, +2.0f, +1.0f}), +1.0f, +8.0f, +0.0f, +4.0f));
 
 __m128 test_mm_xor_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_xor_ps
   // CHECK: xor <4 x i32>
   return _mm_xor_ps(A, B);
 }
+TEST_CONSTEXPR(match_m128(_mm_xor_ps((__m128){-4.0f, -5.0f, +6.0f, +7.0f}, (__m128){+0.0f, -0.0f, -0.0f, +7.0f}), -4.0f, +5.0f, -6.0f, +0.0f));

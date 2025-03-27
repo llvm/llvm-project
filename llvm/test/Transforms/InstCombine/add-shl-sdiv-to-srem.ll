@@ -12,6 +12,17 @@ define i8 @add-shl-sdiv-scalar0(i8 %x) {
   ret i8 %rz
 }
 
+define i8 @add-shl-sdiv-scalar0_commuted(i8 %x) {
+; CHECK-LABEL: @add-shl-sdiv-scalar0_commuted(
+; CHECK-NEXT:    [[RZ:%.*]] = srem i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i8 [[RZ]]
+;
+  %sd = sdiv i8 %x, -4
+  %sl = shl i8 %sd, 2
+  %rz = add i8 %x, %sl
+  ret i8 %rz
+}
+
 define i8 @add-shl-sdiv-scalar1(i8 %x) {
 ; CHECK-LABEL: @add-shl-sdiv-scalar1(
 ; CHECK-NEXT:    [[RZ:%.*]] = srem i8 [[X:%.*]], 64
@@ -38,7 +49,7 @@ define i32 @add-shl-sdiv-scalar2(i32 %x) {
 
 define <3 x i8> @add-shl-sdiv-splat0(<3 x i8> %x) {
 ; CHECK-LABEL: @add-shl-sdiv-splat0(
-; CHECK-NEXT:    [[RZ:%.*]] = srem <3 x i8> [[X:%.*]], <i8 4, i8 4, i8 4>
+; CHECK-NEXT:    [[RZ:%.*]] = srem <3 x i8> [[X:%.*]], splat (i8 4)
 ; CHECK-NEXT:    ret <3 x i8> [[RZ]]
 ;
   %sd = sdiv <3 x i8> %x, <i8 -4, i8 -4, i8 -4>
@@ -49,7 +60,7 @@ define <3 x i8> @add-shl-sdiv-splat0(<3 x i8> %x) {
 
 define <4 x i32> @add-shl-sdiv-splat1(<4 x i32> %x) {
 ; CHECK-LABEL: @add-shl-sdiv-splat1(
-; CHECK-NEXT:    [[RZ:%.*]] = srem <4 x i32> [[X:%.*]], <i32 1073741824, i32 1073741824, i32 1073741824, i32 1073741824>
+; CHECK-NEXT:    [[RZ:%.*]] = srem <4 x i32> [[X:%.*]], splat (i32 1073741824)
 ; CHECK-NEXT:    ret <4 x i32> [[RZ]]
 ;
   %sd = sdiv <4 x i32> %x, <i32 -1073741824, i32 -1073741824, i32 -1073741824, i32 -1073741824>
@@ -60,7 +71,7 @@ define <4 x i32> @add-shl-sdiv-splat1(<4 x i32> %x) {
 
 define <2 x i64> @add-shl-sdiv-splat2(<2 x i64> %x) {
 ; CHECK-LABEL: @add-shl-sdiv-splat2(
-; CHECK-NEXT:    [[RZ:%.*]] = srem <2 x i64> [[X:%.*]], <i64 32, i64 32>
+; CHECK-NEXT:    [[RZ:%.*]] = srem <2 x i64> [[X:%.*]], splat (i64 32)
 ; CHECK-NEXT:    ret <2 x i64> [[RZ]]
 ;
   %sd = sdiv <2 x i64> %x, <i64 -32, i64 -32>
@@ -134,9 +145,9 @@ define i32 @add-shl-sdiv-i32-use3(i32 %x) {
 declare void @use3xi8(<3 x i8>)
 define <3 x i8> @add-shl-sdiv-use4(<3 x i8> %x) {
 ; CHECK-LABEL: @add-shl-sdiv-use4(
-; CHECK-NEXT:    [[SD:%.*]] = sdiv <3 x i8> [[X:%.*]], <i8 -4, i8 -4, i8 -4>
+; CHECK-NEXT:    [[SD:%.*]] = sdiv <3 x i8> [[X:%.*]], splat (i8 -4)
 ; CHECK-NEXT:    call void @use3xi8(<3 x i8> [[SD]])
-; CHECK-NEXT:    [[RZ:%.*]] = srem <3 x i8> [[X]], <i8 4, i8 4, i8 4>
+; CHECK-NEXT:    [[RZ:%.*]] = srem <3 x i8> [[X]], splat (i8 4)
 ; CHECK-NEXT:    ret <3 x i8> [[RZ]]
 ;
   %sd = sdiv <3 x i8> %x, <i8 -4, i8 -4, i8 -4>
@@ -187,8 +198,8 @@ define i32 @add-shl-sdiv-negative2(i32 %x) {
 
 define <3 x i8> @add-shl-sdiv-negative3(<3 x i8> %x) {
 ; CHECK-LABEL: @add-shl-sdiv-negative3(
-; CHECK-NEXT:    [[SD:%.*]] = sdiv <3 x i8> [[X:%.*]], <i8 -5, i8 -5, i8 -5>
-; CHECK-NEXT:    [[SL:%.*]] = shl <3 x i8> [[SD]], <i8 2, i8 2, i8 2>
+; CHECK-NEXT:    [[SD:%.*]] = sdiv <3 x i8> [[X:%.*]], splat (i8 -5)
+; CHECK-NEXT:    [[SL:%.*]] = shl <3 x i8> [[SD]], splat (i8 2)
 ; CHECK-NEXT:    [[RZ:%.*]] = add <3 x i8> [[SL]], [[X]]
 ; CHECK-NEXT:    ret <3 x i8> [[RZ]]
 ;
@@ -222,7 +233,7 @@ define <3 x i8> @add-shl-sdiv-3xi8-undef0(<3 x i8> %x) {
 
 define <3 x i8> @add-shl-sdiv-3xi8-undef1(<3 x i8> %x) {
 ; CHECK-LABEL: @add-shl-sdiv-3xi8-undef1(
-; CHECK-NEXT:    [[SD:%.*]] = sdiv <3 x i8> [[X:%.*]], <i8 -4, i8 -4, i8 -4>
+; CHECK-NEXT:    [[SD:%.*]] = sdiv <3 x i8> [[X:%.*]], splat (i8 -4)
 ; CHECK-NEXT:    [[SL:%.*]] = shl <3 x i8> [[SD]], <i8 2, i8 undef, i8 2>
 ; CHECK-NEXT:    [[RZ:%.*]] = add <3 x i8> [[SL]], [[X]]
 ; CHECK-NEXT:    ret <3 x i8> [[RZ]]
@@ -250,7 +261,7 @@ define <2 x i64> @add-shl-sdiv-nonsplat0(<2 x i64> %x) {
 
 define <3 x i8> @add-shl-sdiv-nonsplat1(<3 x i8> %x) {
 ; CHECK-LABEL: @add-shl-sdiv-nonsplat1(
-; CHECK-NEXT:    [[SD:%.*]] = sdiv <3 x i8> [[X:%.*]], <i8 -4, i8 -4, i8 -4>
+; CHECK-NEXT:    [[SD:%.*]] = sdiv <3 x i8> [[X:%.*]], splat (i8 -4)
 ; CHECK-NEXT:    [[SL:%.*]] = shl <3 x i8> [[SD]], <i8 2, i8 2, i8 3>
 ; CHECK-NEXT:    [[RZ:%.*]] = add <3 x i8> [[SL]], [[X]]
 ; CHECK-NEXT:    ret <3 x i8> [[RZ]]

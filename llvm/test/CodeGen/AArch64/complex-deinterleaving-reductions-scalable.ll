@@ -25,11 +25,11 @@ define %"class.std::complex" @complex_mul_v2f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    zip1 z1.d, z1.d, z1.d
 ; CHECK-NEXT:  .LBB0_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x0, #1, mul vl]
-; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x0]
+; CHECK-NEXT:    ldr z2, [x0, #1, mul vl]
+; CHECK-NEXT:    ldr z3, [x0]
 ; CHECK-NEXT:    subs x9, x9, x8
-; CHECK-NEXT:    ld1d { z4.d }, p0/z, [x1, #1, mul vl]
-; CHECK-NEXT:    ld1d { z5.d }, p0/z, [x1]
+; CHECK-NEXT:    ldr z4, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z5, [x1]
 ; CHECK-NEXT:    add x1, x1, x10
 ; CHECK-NEXT:    add x0, x0, x10
 ; CHECK-NEXT:    fcmla z1.d, p0/m, z5.d, z3.d, #0
@@ -114,11 +114,11 @@ define %"class.std::complex" @complex_mul_nonzero_init_v2f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    zip1 z1.d, z1.d, z3.d
 ; CHECK-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x0, #1, mul vl]
-; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x0]
+; CHECK-NEXT:    ldr z2, [x0, #1, mul vl]
+; CHECK-NEXT:    ldr z3, [x0]
 ; CHECK-NEXT:    subs x9, x9, x8
-; CHECK-NEXT:    ld1d { z4.d }, p0/z, [x1, #1, mul vl]
-; CHECK-NEXT:    ld1d { z5.d }, p0/z, [x1]
+; CHECK-NEXT:    ldr z4, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z5, [x1]
 ; CHECK-NEXT:    add x1, x1, x10
 ; CHECK-NEXT:    add x0, x0, x10
 ; CHECK-NEXT:    fcmla z1.d, p0/m, z5.d, z3.d, #0
@@ -196,16 +196,16 @@ define %"class.std::complex" @complex_mul_v2f64_unrolled(ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov z3.d, z0.d
 ; CHECK-NEXT:  .LBB2_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ld1d { z4.d }, p0/z, [x0, #1, mul vl]
-; CHECK-NEXT:    ld1d { z5.d }, p0/z, [x0]
+; CHECK-NEXT:    ldr z4, [x0, #1, mul vl]
+; CHECK-NEXT:    ldr z5, [x0]
 ; CHECK-NEXT:    subs x9, x9, x8
-; CHECK-NEXT:    ld1d { z6.d }, p0/z, [x0, #3, mul vl]
-; CHECK-NEXT:    ld1d { z7.d }, p0/z, [x1, #1, mul vl]
-; CHECK-NEXT:    ld1d { z16.d }, p0/z, [x1]
-; CHECK-NEXT:    ld1d { z17.d }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ldr z6, [x0, #3, mul vl]
+; CHECK-NEXT:    ldr z7, [x1, #1, mul vl]
+; CHECK-NEXT:    ldr z16, [x1]
+; CHECK-NEXT:    ldr z17, [x0, #2, mul vl]
 ; CHECK-NEXT:    add x0, x0, x10
-; CHECK-NEXT:    ld1d { z18.d }, p0/z, [x1, #3, mul vl]
-; CHECK-NEXT:    ld1d { z19.d }, p0/z, [x1, #2, mul vl]
+; CHECK-NEXT:    ldr z18, [x1, #3, mul vl]
+; CHECK-NEXT:    ldr z19, [x1, #2, mul vl]
 ; CHECK-NEXT:    add x1, x1, x10
 ; CHECK-NEXT:    fcmla z1.d, p0/m, z16.d, z5.d, #0
 ; CHECK-NEXT:    fcmla z0.d, p0/m, z7.d, z4.d, #0
@@ -321,8 +321,8 @@ define dso_local %"class.std::complex" @reduction_mix(ptr %a, ptr %b, ptr noalia
 ; CHECK-NEXT:    zip1 z1.d, z2.d, z2.d
 ; CHECK-NEXT:  .LBB3_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x0]
-; CHECK-NEXT:    ld1d { z4.d }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ldr z3, [x0]
+; CHECK-NEXT:    ldr z4, [x0, #1, mul vl]
 ; CHECK-NEXT:    add x0, x0, x11
 ; CHECK-NEXT:    ld1w { z5.d }, p0/z, [x3, x8, lsl #2]
 ; CHECK-NEXT:    add x8, x8, x9
@@ -332,15 +332,14 @@ define dso_local %"class.std::complex" @reduction_mix(ptr %a, ptr %b, ptr noalia
 ; CHECK-NEXT:    add z2.d, z5.d, z2.d
 ; CHECK-NEXT:    b.ne .LBB3_1
 ; CHECK-NEXT:  // %bb.2: // %middle.block
-; CHECK-NEXT:    uaddv d2, p0, z2.d
 ; CHECK-NEXT:    uzp2 z3.d, z1.d, z0.d
 ; CHECK-NEXT:    uzp1 z1.d, z1.d, z0.d
+; CHECK-NEXT:    uaddv d2, p0, z2.d
 ; CHECK-NEXT:    faddv d0, p0, z3.d
-; CHECK-NEXT:    fmov x8, d2
 ; CHECK-NEXT:    faddv d1, p0, z1.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    str s2, [x4]
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z1
-; CHECK-NEXT:    str w8, [x4]
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i64 @llvm.vscale.i64()

@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPCCCState.h"
-#include "PPCSubtarget.h"
-#include "llvm/IR/Module.h"
 using namespace llvm;
 
 // Identify lowered values that originated from ppcf128 arguments and record

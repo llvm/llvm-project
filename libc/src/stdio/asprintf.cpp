@@ -11,10 +11,11 @@
 #include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/vasprintf_internal.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, asprintf,
-                   (char **__restrict buffer, const char *format, ...)) {
+                   (char **__restrict buffer, const char *__restrict format,
+                    ...)) {
   va_list vlist;
   va_start(vlist, format);
   internal::ArgList args(vlist); // This holder class allows for easier copying
@@ -25,4 +26,4 @@ LLVM_LIBC_FUNCTION(int, asprintf,
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

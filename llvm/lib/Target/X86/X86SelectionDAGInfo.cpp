@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/IR/DerivedTypes.h"
 
 using namespace llvm;
 
@@ -27,6 +26,16 @@ using namespace llvm;
 static cl::opt<bool>
     UseFSRMForMemcpy("x86-use-fsrm-for-memcpy", cl::Hidden, cl::init(false),
                      cl::desc("Use fast short rep mov in memcpy lowering"));
+
+bool X86SelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
+  return Opcode >= X86ISD::FIRST_MEMORY_OPCODE &&
+         Opcode <= X86ISD::LAST_MEMORY_OPCODE;
+}
+
+bool X86SelectionDAGInfo::isTargetStrictFPOpcode(unsigned Opcode) const {
+  return Opcode >= X86ISD::FIRST_STRICTFP_OPCODE &&
+         Opcode <= X86ISD::LAST_STRICTFP_OPCODE;
+}
 
 /// Returns the best type to use with repmovs/repstos depending on alignment.
 static MVT getOptimalRepType(const X86Subtarget &Subtarget, Align Alignment) {
@@ -150,6 +159,8 @@ static SDValue emitConstantSizeRepstos(SelectionDAG &DAG,
   MVT BlockType = MVT::i8;
   uint64_t BlockCount = Size;
   uint64_t BytesLeft = 0;
+
+  SDValue OriginalVal = Val;
   if (auto *ValC = dyn_cast<ConstantSDNode>(Val)) {
     BlockType = getOptimalRepType(Subtarget, Alignment);
     uint64_t Value = ValC->getZExtValue() & 255;
@@ -187,8 +198,8 @@ static SDValue emitConstantSizeRepstos(SelectionDAG &DAG,
       DAG.getMemset(Chain, dl,
                     DAG.getNode(ISD::ADD, dl, AddrVT, Dst,
                                 DAG.getConstant(Offset, dl, AddrVT)),
-                    Val, DAG.getConstant(BytesLeft, dl, SizeVT), Alignment,
-                    isVolatile, AlwaysInline,
+                    OriginalVal, DAG.getConstant(BytesLeft, dl, SizeVT),
+                    Alignment, isVolatile, AlwaysInline,
                     /* CI */ nullptr, DstPtrInfo.getWithOffset(Offset)));
 
   return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Results);

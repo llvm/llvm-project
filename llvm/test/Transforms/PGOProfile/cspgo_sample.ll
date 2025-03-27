@@ -53,7 +53,7 @@ for.end:
 
 ; CSGEN-LABEL: @foo
 ; CSGEN:        [[TMP0:%.*]]  = load i16, ptr @__llvm_profile_sampling, align 2
-; CSGEN-NEXT:   [[TMP1:%.*]] = icmp ult i16 [[TMP0]], 201
+; CSGEN-NEXT:   [[TMP1:%.*]] = icmp ult i16 [[TMP0]], 200
 ; CSGEN-NEXT:   br i1 [[TMP1]], label %{{.*}}, label %{{.*}}, !prof [[PROF:![0-9]+]]
 ; CSGEN:        [[TMP2:%.*]] = add i16 {{.*}}, 1
 ; CSGEN-NEXT:   store i16 [[TMP2]], ptr @__llvm_profile_sampling, align 2
@@ -67,7 +67,7 @@ entry:
 }
 ; CSGEN-LABEL: @main
 ; CSGEN:        [[TMP0:%.*]]  = load i16, ptr @__llvm_profile_sampling, align 2
-; CSGEN-NEXT:   [[TMP1:%.*]] = icmp ult i16 [[TMP0]], 201
+; CSGEN-NEXT:   [[TMP1:%.*]] = icmp ult i16 [[TMP0]], 200
 ; CSGEN-NEXT:   br i1 [[TMP1]], label %{{.*}}, label %{{.*}}, !prof [[PROF:![0-9]+]]
 ; CSGEN:        [[TMP2:%.*]] = add i16 {{.*}}, 1
 ; CSGEN-NEXT:   store i16 [[TMP2]], ptr @__llvm_profile_sampling, align 2

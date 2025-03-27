@@ -22,6 +22,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -154,7 +155,7 @@ static Value broadcast(Location loc, Value toBroadcast, unsigned numElements,
   auto vectorType = VectorType::get(numElements, toBroadcast.getType());
   auto llvmVectorType = typeConverter.convertType(vectorType);
   auto llvmI32Type = typeConverter.convertType(rewriter.getIntegerType(32));
-  Value broadcasted = rewriter.create<LLVM::UndefOp>(loc, llvmVectorType);
+  Value broadcasted = rewriter.create<LLVM::PoisonOp>(loc, llvmVectorType);
   for (unsigned i = 0; i < numElements; ++i) {
     auto index = rewriter.create<LLVM::ConstantOp>(
         loc, llvmI32Type, rewriter.getI32IntegerAttr(i));
@@ -706,8 +707,8 @@ public:
     Block *block = rewriter.createBlock(&region);
 
     // Initialize the struct and set the execution mode value.
-    rewriter.setInsertionPoint(block, block->begin());
-    Value structValue = rewriter.create<LLVM::UndefOp>(loc, structType);
+    rewriter.setInsertionPointToStart(block);
+    Value structValue = rewriter.create<LLVM::PoisonOp>(loc, structType);
     Value executionMode = rewriter.create<LLVM::ConstantOp>(
         loc, llvmI32Type,
         rewriter.getI32IntegerAttr(
@@ -1024,6 +1025,269 @@ public:
   }
 };
 
+static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
+                                              StringRef name,
+                                              ArrayRef<Type> paramTypes,
+                                              Type resultType,
+                                              bool convergent = true) {
+  auto func = dyn_cast_or_null<LLVM::LLVMFuncOp>(
+      SymbolTable::lookupSymbolIn(symbolTable, name));
+  if (func)
+    return func;
+
+  OpBuilder b(symbolTable->getRegion(0));
+  func = b.create<LLVM::LLVMFuncOp>(
+      symbolTable->getLoc(), name,
+      LLVM::LLVMFunctionType::get(resultType, paramTypes));
+  func.setCConv(LLVM::cconv::CConv::SPIR_FUNC);
+  func.setConvergent(convergent);
+  func.setNoUnwind(true);
+  func.setWillReturn(true);
+  return func;
+}
+
+static LLVM::CallOp createSPIRVBuiltinCall(Location loc, OpBuilder &builder,
+                                           LLVM::LLVMFuncOp func,
+                                           ValueRange args) {
+  auto call = builder.create<LLVM::CallOp>(loc, func, args);
+  call.setCConv(func.getCConv());
+  call.setConvergentAttr(func.getConvergentAttr());
+  call.setNoUnwindAttr(func.getNoUnwindAttr());
+  call.setWillReturnAttr(func.getWillReturnAttr());
+  return call;
+}
+
+template <typename BarrierOpTy>
+class ControlBarrierPattern : public SPIRVToLLVMConversion<BarrierOpTy> {
+public:
+  using OpAdaptor = typename SPIRVToLLVMConversion<BarrierOpTy>::OpAdaptor;
+
+  using SPIRVToLLVMConversion<BarrierOpTy>::SPIRVToLLVMConversion;
+
+  static constexpr StringRef getFuncName();
+
+  LogicalResult
+  matchAndRewrite(BarrierOpTy controlBarrierOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    constexpr StringRef funcName = getFuncName();
+    Operation *symbolTable =
+        controlBarrierOp->template getParentWithTrait<OpTrait::SymbolTable>();
+
+    Type i32 = rewriter.getI32Type();
+
+    Type voidTy = rewriter.getType<LLVM::LLVMVoidType>();
+    LLVM::LLVMFuncOp func =
+        lookupOrCreateSPIRVFn(symbolTable, funcName, {i32, i32, i32}, voidTy);
+
+    Location loc = controlBarrierOp->getLoc();
+    Value execution = rewriter.create<LLVM::ConstantOp>(
+        loc, i32, static_cast<int32_t>(adaptor.getExecutionScope()));
+    Value memory = rewriter.create<LLVM::ConstantOp>(
+        loc, i32, static_cast<int32_t>(adaptor.getMemoryScope()));
+    Value semantics = rewriter.create<LLVM::ConstantOp>(
+        loc, i32, static_cast<int32_t>(adaptor.getMemorySemantics()));
+
+    auto call = createSPIRVBuiltinCall(loc, rewriter, func,
+                                       {execution, memory, semantics});
+
+    rewriter.replaceOp(controlBarrierOp, call);
+    return success();
+  }
+};
+
+namespace {
+
+StringRef getTypeMangling(Type type, bool isSigned) {
+  return llvm::TypeSwitch<Type, StringRef>(type)
+      .Case<Float16Type>([](auto) { return "Dh"; })
+      .Case<Float32Type>([](auto) { return "f"; })
+      .Case<Float64Type>([](auto) { return "d"; })
+      .Case<IntegerType>([isSigned](IntegerType intTy) {
+        switch (intTy.getWidth()) {
+        case 1:
+          return "b";
+        case 8:
+          return (isSigned) ? "a" : "c";
+        case 16:
+          return (isSigned) ? "s" : "t";
+        case 32:
+          return (isSigned) ? "i" : "j";
+        case 64:
+          return (isSigned) ? "l" : "m";
+        default:
+          llvm_unreachable("Unsupported integer width");
+        }
+      })
+      .Default([](auto) {
+        llvm_unreachable("No mangling defined");
+        return "";
+      });
+}
+
+template <typename ReduceOp>
+constexpr StringLiteral getGroupFuncName();
+
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupIAddOp>() {
+  return "_Z17__spirv_GroupIAddii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupFAddOp>() {
+  return "_Z17__spirv_GroupFAddii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupSMinOp>() {
+  return "_Z17__spirv_GroupSMinii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupUMinOp>() {
+  return "_Z17__spirv_GroupUMinii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupFMinOp>() {
+  return "_Z17__spirv_GroupFMinii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupSMaxOp>() {
+  return "_Z17__spirv_GroupSMaxii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupUMaxOp>() {
+  return "_Z17__spirv_GroupUMaxii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupFMaxOp>() {
+  return "_Z17__spirv_GroupFMaxii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformIAddOp>() {
+  return "_Z27__spirv_GroupNonUniformIAddii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformFAddOp>() {
+  return "_Z27__spirv_GroupNonUniformFAddii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformIMulOp>() {
+  return "_Z27__spirv_GroupNonUniformIMulii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformFMulOp>() {
+  return "_Z27__spirv_GroupNonUniformFMulii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformSMinOp>() {
+  return "_Z27__spirv_GroupNonUniformSMinii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformUMinOp>() {
+  return "_Z27__spirv_GroupNonUniformUMinii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformFMinOp>() {
+  return "_Z27__spirv_GroupNonUniformFMinii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformSMaxOp>() {
+  return "_Z27__spirv_GroupNonUniformSMaxii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformUMaxOp>() {
+  return "_Z27__spirv_GroupNonUniformUMaxii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformFMaxOp>() {
+  return "_Z27__spirv_GroupNonUniformFMaxii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformBitwiseAndOp>() {
+  return "_Z33__spirv_GroupNonUniformBitwiseAndii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformBitwiseOrOp>() {
+  return "_Z32__spirv_GroupNonUniformBitwiseOrii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformBitwiseXorOp>() {
+  return "_Z33__spirv_GroupNonUniformBitwiseXorii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformLogicalAndOp>() {
+  return "_Z33__spirv_GroupNonUniformLogicalAndii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformLogicalOrOp>() {
+  return "_Z32__spirv_GroupNonUniformLogicalOrii";
+}
+template <>
+constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformLogicalXorOp>() {
+  return "_Z33__spirv_GroupNonUniformLogicalXorii";
+}
+} // namespace
+
+template <typename ReduceOp, bool Signed = false, bool NonUniform = false>
+class GroupReducePattern : public SPIRVToLLVMConversion<ReduceOp> {
+public:
+  using SPIRVToLLVMConversion<ReduceOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(ReduceOp op, typename ReduceOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    Type retTy = op.getResult().getType();
+    if (!retTy.isIntOrFloat()) {
+      return failure();
+    }
+    SmallString<36> funcName = getGroupFuncName<ReduceOp>();
+    funcName += getTypeMangling(retTy, false);
+
+    Type i32Ty = rewriter.getI32Type();
+    SmallVector<Type> paramTypes{i32Ty, i32Ty, retTy};
+    if constexpr (NonUniform) {
+      if (adaptor.getClusterSize()) {
+        funcName += "j";
+        paramTypes.push_back(i32Ty);
+      }
+    }
+
+    Operation *symbolTable =
+        op->template getParentWithTrait<OpTrait::SymbolTable>();
+
+    LLVM::LLVMFuncOp func =
+        lookupOrCreateSPIRVFn(symbolTable, funcName, paramTypes, retTy);
+
+    Location loc = op.getLoc();
+    Value scope = rewriter.create<LLVM::ConstantOp>(
+        loc, i32Ty, static_cast<int32_t>(adaptor.getExecutionScope()));
+    Value groupOp = rewriter.create<LLVM::ConstantOp>(
+        loc, i32Ty, static_cast<int32_t>(adaptor.getGroupOperation()));
+    SmallVector<Value> operands{scope, groupOp};
+    operands.append(adaptor.getOperands().begin(), adaptor.getOperands().end());
+
+    auto call = createSPIRVBuiltinCall(loc, rewriter, func, operands);
+    rewriter.replaceOp(op, call);
+    return success();
+  }
+};
+
+template <>
+constexpr StringRef
+ControlBarrierPattern<spirv::ControlBarrierOp>::getFuncName() {
+  return "_Z22__spirv_ControlBarrieriii";
+}
+
+template <>
+constexpr StringRef
+ControlBarrierPattern<spirv::INTELControlBarrierArriveOp>::getFuncName() {
+  return "_Z33__spirv_ControlBarrierArriveINTELiii";
+}
+
+template <>
+constexpr StringRef
+ControlBarrierPattern<spirv::INTELControlBarrierWaitOp>::getFuncName() {
+  return "_Z31__spirv_ControlBarrierWaitINTELiii";
+}
+
 /// Converts `spirv.mlir.loop` to LLVM dialect. All blocks within selection
 /// should be reachable for conversion to succeed. The structure of the loop in
 /// LLVM dialect will be the following:
@@ -1082,6 +1346,12 @@ public:
     // There is no support of loop control at the moment.
     if (loopOp.getLoopControl() != spirv::LoopControl::None)
       return failure();
+
+    // `spirv.mlir.loop` with empty region is redundant and should be erased.
+    if (loopOp.getBody().empty()) {
+      rewriter.eraseOp(loopOp);
+      return success();
+    }
 
     Location loc = loopOp.getLoc();
 
@@ -1483,7 +1753,7 @@ public:
     auto componentsArray = components.getValue();
     auto *context = rewriter.getContext();
     auto llvmI32Type = IntegerType::get(context, 32);
-    Value targetOp = rewriter.create<LLVM::UndefOp>(loc, dstType);
+    Value targetOp = rewriter.create<LLVM::PoisonOp>(loc, dstType);
     for (unsigned i = 0; i < componentsArray.size(); i++) {
       if (!isa<IntegerAttr>(componentsArray[i]))
         return op.emitError("unable to support non-constant component");
@@ -1648,7 +1918,55 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       ShiftPattern<spirv::ShiftLeftLogicalOp, LLVM::ShlOp>,
 
       // Return ops
-      ReturnPattern, ReturnValuePattern>(patterns.getContext(), typeConverter);
+      ReturnPattern, ReturnValuePattern,
+
+      // Barrier ops
+      ControlBarrierPattern<spirv::ControlBarrierOp>,
+      ControlBarrierPattern<spirv::INTELControlBarrierArriveOp>,
+      ControlBarrierPattern<spirv::INTELControlBarrierWaitOp>,
+
+      // Group reduction operations
+      GroupReducePattern<spirv::GroupIAddOp>,
+      GroupReducePattern<spirv::GroupFAddOp>,
+      GroupReducePattern<spirv::GroupFMinOp>,
+      GroupReducePattern<spirv::GroupUMinOp>,
+      GroupReducePattern<spirv::GroupSMinOp, /*Signed=*/true>,
+      GroupReducePattern<spirv::GroupFMaxOp>,
+      GroupReducePattern<spirv::GroupUMaxOp>,
+      GroupReducePattern<spirv::GroupSMaxOp, /*Signed=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformIAddOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformFAddOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformIMulOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformFMulOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformSMinOp, /*Signed=*/true,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformUMinOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformFMinOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformSMaxOp, /*Signed=*/true,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformUMaxOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformFMaxOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformBitwiseAndOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformBitwiseOrOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformBitwiseXorOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformLogicalAndOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformLogicalOrOp, /*Signed=*/false,
+                         /*NonUniform=*/true>,
+      GroupReducePattern<spirv::GroupNonUniformLogicalXorOp, /*Signed=*/false,
+                         /*NonUniform=*/true>>(patterns.getContext(),
+                                               typeConverter);
 
   patterns.add<GlobalVariablePattern>(clientAPI, patterns.getContext(),
                                       typeConverter);

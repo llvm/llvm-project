@@ -471,6 +471,10 @@ def LLVM_DIGlobalVariableExpressionAttr
   let constBuilderCall = "$0";
 }
 
+def DIGlobalVariableExpressionArrayAttr :
+  TypedArrayAttrBase<LLVM_DIGlobalVariableExpressionAttr,
+  "an array of variable expressions">;
+
 //===----------------------------------------------------------------------===//
 // DIGlobalVariableAttr
 //===----------------------------------------------------------------------===//
@@ -586,7 +590,8 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
     OptionalParameter<"unsigned">:$scopeLine,
     OptionalParameter<"DISubprogramFlags">:$subprogramFlags,
     OptionalParameter<"DISubroutineTypeAttr">:$type,
-    OptionalArrayRefParameter<"DINodeAttr">:$retainedNodes
+    OptionalArrayRefParameter<"DINodeAttr">:$retainedNodes,
+    OptionalArrayRefParameter<"DINodeAttr">:$annotations
   );
   let builders = [
     AttrBuilder<(ins
@@ -594,11 +599,11 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
       "DIScopeAttr":$scope, "StringAttr":$name, "StringAttr":$linkageName,
       "DIFileAttr":$file, "unsigned":$line, "unsigned":$scopeLine,
       "DISubprogramFlags":$subprogramFlags, "DISubroutineTypeAttr":$type,
-      "ArrayRef<DINodeAttr>":$retainedNodes
+      "ArrayRef<DINodeAttr>":$retainedNodes, "ArrayRef<DINodeAttr>":$annotations
     ), [{
       return $_get($_ctxt, /*recId=*/nullptr, /*isRecSelf=*/false, id, compileUnit,
                    scope, name, linkageName, file, line, scopeLine,
-                   subprogramFlags, type, retainedNodes);
+                   subprogramFlags, type, retainedNodes, annotations);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
@@ -671,6 +676,21 @@ def LLVM_DIImportedEntityAttr : LLVM_Attr<"DIImportedEntity", "di_imported_entit
 }
 
 //===----------------------------------------------------------------------===//
+// DIAnnotationAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIAnnotationAttr : LLVM_Attr<"DIAnnotation",
+                                      "di_annotation",
+                                      /*traits=*/[], "DINodeAttr"> {
+  let parameters = (ins
+    "StringAttr":$name,
+    "StringAttr":$value
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // DISubrangeAttr
 //===----------------------------------------------------------------------===//
 
@@ -681,6 +701,38 @@ def LLVM_DISubrangeAttr : LLVM_Attr<"DISubrange", "di_subrange", /*traits=*/[],
     OptionalParameter<"::mlir::Attribute">:$lowerBound,
     OptionalParameter<"::mlir::Attribute">:$upperBound,
     OptionalParameter<"::mlir::Attribute">:$stride
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// DICommonBlockAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DICommonBlockAttr : LLVM_Attr<"DICommonBlock", "di_common_block",
+                                       /*traits=*/[], "DIScopeAttr"> {
+  let parameters = (ins
+    "DIScopeAttr":$scope,
+    OptionalParameter<"DIGlobalVariableAttr">:$decl,
+    "StringAttr":$name,
+    OptionalParameter<"DIFileAttr">:$file,
+    OptionalParameter<"unsigned">:$line
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// DIGenericSubrangeAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIGenericSubrangeAttr : LLVM_Attr<"DIGenericSubrange",
+                                           "di_generic_subrange", /*traits=*/[],
+                                           "DINodeAttr"> {
+  let parameters = (ins
+    OptionalParameter<"::mlir::Attribute">:$count,
+    "::mlir::Attribute":$lowerBound,
+    OptionalParameter<"::mlir::Attribute">:$upperBound,
+    "::mlir::Attribute":$stride
   );
   let assemblyFormat = "`<` struct(params) `>`";
 }
@@ -773,7 +825,7 @@ def LLVM_MemoryEffectsAttr : LLVM_Attr<"MemoryEffects", "memory_effects"> {
 def LLVM_AliasScopeDomainAttr : LLVM_Attr<"AliasScopeDomain",
                                           "alias_scope_domain"> {
   let parameters = (ins
-    "DistinctAttr":$id,
+    "Attribute":$id,
     OptionalParameter<"StringAttr">:$description
   );
 
@@ -801,7 +853,7 @@ def LLVM_AliasScopeDomainAttr : LLVM_Attr<"AliasScopeDomain",
 
 def LLVM_AliasScopeAttr : LLVM_Attr<"AliasScope", "alias_scope"> {
   let parameters = (ins
-    "DistinctAttr":$id,
+    "Attribute":$id,
     "AliasScopeDomainAttr":$domain,
     OptionalParameter<"StringAttr">:$description
   );
@@ -839,6 +891,8 @@ def LLVM_AliasScopeAttr : LLVM_Attr<"AliasScope", "alias_scope"> {
     }
     ```
 
+    The first attribute can either be a DistinctAttr or a StringAttr.
+
     See the following link for more details:
     https://llvm.org/docs/LangRef.html#noalias-and-alias-scope-metadata
   }];
@@ -846,6 +900,8 @@ def LLVM_AliasScopeAttr : LLVM_Attr<"AliasScope", "alias_scope"> {
   let summary = "LLVM dialect alias scope";
 
   let assemblyFormat = "`<` struct(params) `>`";
+
+  let genVerifyDecl = 1;
 }
 
 def LLVM_AliasScopeArrayAttr
@@ -1055,6 +1111,7 @@ def LLVM_ConstantRangeAttr : LLVM_Attr<"ConstantRange", "constant_range"> {
     Syntax:
     ```
     `<` `i`(width($lower)) $lower `,` $upper `>`
+    ```
   }];
 
   let builders = [
@@ -1157,6 +1214,17 @@ def LLVM_UndefAttr : LLVM_Attr<"Undef", "undef">;
 def LLVM_PoisonAttr : LLVM_Attr<"Poison", "poison">;
 
 //===----------------------------------------------------------------------===//
+// DSOLocalEquivalentAttr
+//===----------------------------------------------------------------------===//
+
+/// Folded into from LLVM::DSOLocalEquivalentOp.
+def LLVM_DSOLocalEquivalentAttr : LLVM_Attr<"DSOLocalEquivalent",
+                                            "dso_local_equivalent"> {
+  let parameters = (ins "FlatSymbolRefAttr":$sym);
+  let assemblyFormat = "$sym";
+}
+
+//===----------------------------------------------------------------------===//
 // VecTypeHintAttr
 //===----------------------------------------------------------------------===//
 
@@ -1208,6 +1276,55 @@ def WorkgroupAttributionAttr
   let parameters = (ins "IntegerAttr":$num_elements,
                         "TypeAttr":$element_type);
   let assemblyFormat = "`<` $num_elements `,` $element_type `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// DereferenceableAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DereferenceableAttr : LLVM_Attr<"Dereferenceable", "dereferenceable"> {
+  let summary = "LLVM dereferenceable attribute";
+  let description = [{
+    Defines `dereferenceable` or `dereferenceable_or_null` metadata that can
+    be set via the `DereferenceableOpInterface` on an `inttoptr` operation or
+    on a `load` operation which loads a pointer. The attribute is used to
+    denote that the result of these operations is dereferenceable up to a
+    certain number of bytes, represented by `$bytes`. The optional `$mayBeNull`
+    parameter is set to true if the attribute defines `dereferenceable_or_null`
+    metadata.
+
+    See the following links for more details:
+    https://llvm.org/docs/LangRef.html#dereferenceable-metadata
+    https://llvm.org/docs/LangRef.html#dereferenceable-or-null-metadata
+  }];
+  let parameters = (ins "uint64_t":$bytes,
+                        DefaultValuedParameter<"bool", "false">:$mayBeNull);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// ModuleFlagAttr
+//===----------------------------------------------------------------------===//
+
+def ModuleFlagAttr
+    : LLVM_Attr<"ModuleFlag", "mlir.module_flag"> {
+  let summary = "LLVM module flag metadata";
+  let description = [{
+    Represents a single entry of llvm.module.flags metadata
+    (llvm::Module::ModuleFlagEntry in LLVM). The first element is a behavior
+    flag described by `ModFlagBehaviorAttr`, the second is a string ID
+    and third is the value of the flag (currently only integer constants
+    are supported).
+
+    Example:
+    ```mlir
+      #llvm.mlir.module_flag<error, "wchar_size", 4>
+    ```
+  }];
+  let parameters = (ins "ModFlagBehavior":$behavior,
+                        "StringAttr":$key,
+                        "uint32_t":$value);
+  let assemblyFormat = "`<` $behavior `,` $key `,` $value `>`";
 }
 
 #endif // LLVMIR_ATTRDEFS

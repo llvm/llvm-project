@@ -1,8 +1,15 @@
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +ssse3 -emit-llvm -o - -Wall -Werror | FileCheck %s --implicit-check-not=x86mmx
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +ssse3 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --implicit-check-not=x86mmx
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +ssse3 -emit-llvm -o - -Wall -Werror | FileCheck %s --implicit-check-not=x86mmx
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +ssse3 -emit-llvm -o - -Wall -Werror | FileCheck %s --implicit-check-not=x86mmx
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +ssse3 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --implicit-check-not=x86mmx
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +ssse3 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --implicit-check-not=x86mmx
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +ssse3 -emit-llvm -o - -Wall -Werror | FileCheck %s --implicit-check-not=x86mmx
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +ssse3 -emit-llvm -o - -Wall -Werror | FileCheck %s --implicit-check-not=x86mmx
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +ssse3 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --implicit-check-not=x86mmx
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +ssse3 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --implicit-check-not=x86mmx
 
 
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
 __m64 test_mm_abs_pi8(__m64 a) {
   // CHECK-LABEL: test_mm_abs_pi8
@@ -84,7 +91,7 @@ __m64 test_mm_and_si64(__m64 a, __m64 b) {
 
 __m64 test_mm_andnot_si64(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_andnot_si64
-  // CHECK: [[TMP:%.*]] = xor <1 x i64> {{%.*}}, <i64 -1>
+  // CHECK: [[TMP:%.*]] = xor <1 x i64> {{%.*}}, splat (i64 -1)
   // CHECK: and <1 x i64> [[TMP]], {{%.*}}
   return _mm_andnot_si64(a, b);
 }
@@ -325,14 +332,14 @@ __m64 test_mm_min_pu8(__m64 a, __m64 b) {
 
 int test_mm_movemask_pi8(__m64 a) {
   // CHECK-LABEL: test_mm_movemask_pi8
-  // CHECK: call i32 @llvm.x86.sse2.pmovmskb.128(
+  // CHECK: call {{.*}}i32 @llvm.x86.sse2.pmovmskb.128(
   return _mm_movemask_pi8(a);
 }
 
 __m64 test_mm_mul_su32(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_mul_su32
-  // CHECK: and <2 x i64> {{%.*}}, <i64 4294967295, i64 4294967295>
-  // CHECK: and <2 x i64> {{%.*}}, <i64 4294967295, i64 4294967295>
+  // CHECK: and <2 x i64> {{%.*}}, splat (i64 4294967295)
+  // CHECK: and <2 x i64> {{%.*}}, splat (i64 4294967295)
   // CHECK: mul <2 x i64> %{{.*}}, %{{.*}}
   return _mm_mul_su32(a, b);
 }
@@ -403,6 +410,7 @@ __m64 test_mm_set_pi8(char a, char b, char c, char d, char e, char f, char g, ch
   // CHECK: insertelement <8 x i8>
   return _mm_set_pi8(a, b, c, d, e, f, g, h);
 }
+TEST_CONSTEXPR(match_v8qi(_mm_set_pi8(0, -1, 2, -3, 4, -5, 6, -7), -7, 6, -5, 4, -3, 2, -1, 0));
 
 __m64 test_mm_set_pi16(short a, short b, short c, short d) {
   // CHECK-LABEL: test_mm_set_pi16
@@ -412,6 +420,7 @@ __m64 test_mm_set_pi16(short a, short b, short c, short d) {
   // CHECK: insertelement <4 x i16>
   return _mm_set_pi16(a, b, c, d);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_set_pi16(101, 102, -103, -104), -104, -103, 102, 101));
 
 __m64 test_mm_set_pi32(int a, int b) {
   // CHECK-LABEL: test_mm_set_pi32
@@ -419,6 +428,7 @@ __m64 test_mm_set_pi32(int a, int b) {
   // CHECK: insertelement <2 x i32>
   return _mm_set_pi32(a, b);
 }
+TEST_CONSTEXPR(match_v2si(_mm_set_pi32(5000, -1500), -1500, 5000));
 
 __m64 test_mm_setr_pi8(char a, char b, char c, char d, char e, char f, char g, char h) {
   // CHECK-LABEL: test_mm_setr_pi8
@@ -432,6 +442,7 @@ __m64 test_mm_setr_pi8(char a, char b, char c, char d, char e, char f, char g, c
   // CHECK: insertelement <8 x i8>
   return _mm_setr_pi8(a, b, c, d, e, f, g, h);
 }
+TEST_CONSTEXPR(match_v8qi(_mm_setr_pi8(0, -1, 2, -3, 4, -5, 6, -7), 0, -1, 2, -3, 4, -5, 6, -7));
 
 __m64 test_mm_setr_pi16(short a, short b, short c, short d) {
   // CHECK-LABEL: test_mm_setr_pi16
@@ -441,6 +452,7 @@ __m64 test_mm_setr_pi16(short a, short b, short c, short d) {
   // CHECK: insertelement <4 x i16>
   return _mm_setr_pi16(a, b, c, d);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_setr_pi16(101, 102, -103, -104), 101, 102, -103, -104));
 
 __m64 test_mm_setr_pi32(int a, int b) {
   // CHECK-LABEL: test_mm_setr_pi32
@@ -448,6 +460,14 @@ __m64 test_mm_setr_pi32(int a, int b) {
   // CHECK: insertelement <2 x i32>
   return _mm_setr_pi32(a, b);
 }
+TEST_CONSTEXPR(match_v2si(_mm_setr_pi32(5000, -1500), 5000, -1500));
+
+__m64 test_mm_setzero_si64() {
+  // CHECK-LABEL: test_mm_setzero_si64
+  // CHECK: zeroinitializer
+  return _mm_setzero_si64();
+}
+TEST_CONSTEXPR(match_m64(_mm_setzero_si64(), 0ULL));
 
 __m64 test_mm_set1_pi8(char a) {
   // CHECK-LABEL: test_mm_set1_pi8
@@ -461,6 +481,7 @@ __m64 test_mm_set1_pi8(char a) {
   // CHECK: insertelement <8 x i8>
   return _mm_set1_pi8(a);
 }
+TEST_CONSTEXPR(match_v8qi(_mm_set1_pi8(99), 99, 99, 99, 99, 99, 99, 99, 99));
 
 __m64 test_mm_set1_pi16(short a) {
   // CHECK-LABEL: test_mm_set1_pi16
@@ -470,6 +491,7 @@ __m64 test_mm_set1_pi16(short a) {
   // CHECK: insertelement <4 x i16>
   return _mm_set1_pi16(a);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_set1_pi16(-128), -128, -128, -128, -128));
 
 __m64 test_mm_set1_pi32(int a) {
   // CHECK-LABEL: test_mm_set1_pi32
@@ -477,6 +499,7 @@ __m64 test_mm_set1_pi32(int a) {
   // CHECK: insertelement <2 x i32>
   return _mm_set1_pi32(a);
 }
+TEST_CONSTEXPR(match_v2si(_mm_set1_pi32(55), 55, 55));
 
 __m64 test_mm_shuffle_pi8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_shuffle_pi8

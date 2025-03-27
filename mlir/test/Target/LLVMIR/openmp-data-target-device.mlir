@@ -46,7 +46,6 @@ module attributes { } {
               llvm.store %21, %30 : i32, !llvm.ptr
               omp.yield
             }
-            omp.terminator
           }
           omp.terminator
         }

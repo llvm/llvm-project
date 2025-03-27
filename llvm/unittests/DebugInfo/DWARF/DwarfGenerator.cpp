@@ -482,7 +482,7 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
                                        TripleName,
                                    inconvertibleErrorCode());
 
-  TM.reset(TheTarget->createTargetMachine(TripleName, "", "", TargetOptions(),
+  TM.reset(TheTarget->createTargetMachine(TheTriple, "", "", TargetOptions(),
                                           std::nullopt));
   if (!TM)
     return make_error<StringError>("no target machine for target " + TripleName,

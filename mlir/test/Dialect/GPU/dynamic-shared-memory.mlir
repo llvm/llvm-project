@@ -22,7 +22,7 @@ gpu.module @modules {
 
 // CHECK-DAG: %[[S0:.+]] = llvm.mlir.constant(32 : index) : i64
 // CHECK-DAG: %[[S1:.+]] = llvm.mlir.constant(64 : index) : i64
-// CHECK-DAG: %[[S2:.+]] = llvm.mlir.undef : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK-DAG: %[[S2:.+]] = llvm.mlir.poison : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK-DAG: %[[S3:.+]] = llvm.mlir.constant(1 : index) : i64
 // CHECK-DAG: %[[S4:.+]] = llvm.mlir.constant(0 : index) : i64
 // CHECK-DAG: %[[S5:.+]] = llvm.mlir.addressof @__dynamic_shmem__3 : !llvm.ptr<3>
@@ -56,7 +56,7 @@ gpu.module @modules {
     "test.use.shared.memory"(%0) : (memref<32x64xf32, #gpu.address_space<workgroup>>) -> ()
 // CHECK-DAG: %[[S0:.+]] = llvm.mlir.constant(32 : index) : i64
 // CHECK-DAG: %[[S1:.+]] = llvm.mlir.constant(64 : index) : i64
-// CHECK-DAG: %[[S2:.+]] = llvm.mlir.undef : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK-DAG: %[[S2:.+]] = llvm.mlir.poison : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK-DAG: %[[S3:.+]] = llvm.mlir.constant(1 : index) : i64
 // CHECK-DAG: %[[S4:.+]] = llvm.mlir.constant(0 : index) : i64
 // CHECK-DAG: %[[S5:.+]] = llvm.mlir.addressof @__dynamic_shmem__3 : !llvm.ptr<3>
@@ -82,7 +82,7 @@ gpu.module @modules {
     "test.use.shared.memory"(%0) : (memref<32x64xf32, #gpu.address_space<workgroup>>) -> ()
 // CHECK-DAG: %[[S0:.+]] = llvm.mlir.constant(32 : index) : i64
 // CHECK-DAG: %[[S1:.+]] = llvm.mlir.constant(64 : index) : i64
-// CHECK-DAG: %[[S2:.+]] = llvm.mlir.undef : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK-DAG: %[[S2:.+]] = llvm.mlir.poison : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK-DAG: %[[S3:.+]] = llvm.mlir.constant(1 : index) : i64
 // CHECK-DAG: %[[S4:.+]] = llvm.mlir.constant(0 : index) : i64
 // CHECK-DAG: %[[S5:.+]] = llvm.mlir.addressof @__dynamic_shmem__3 : !llvm.ptr<3>

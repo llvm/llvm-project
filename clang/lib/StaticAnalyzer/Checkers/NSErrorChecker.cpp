@@ -201,9 +201,9 @@ static QualType parameterTypeFromSVal(SVal val, CheckerContext &C) {
   if (std::optional<loc::MemRegionVal> X = val.getAs<loc::MemRegionVal>()) {
     const MemRegion* R = X->getRegion();
     if (const VarRegion *VR = R->getAs<VarRegion>())
-      if (const StackArgumentsSpaceRegion *
-          stackReg = dyn_cast<StackArgumentsSpaceRegion>(VR->getMemorySpace()))
-        if (stackReg->getStackFrame() == SFC)
+      if (const auto *StackSpace =
+              VR->getMemorySpaceAs<StackArgumentsSpaceRegion>(C.getState()))
+        if (StackSpace->getStackFrame() == SFC)
           return VR->getValueType();
   }
 

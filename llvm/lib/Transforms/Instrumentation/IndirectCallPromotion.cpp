@@ -42,7 +42,6 @@
 #include "llvm/Transforms/Utils/Instrumentation.h"
 #include <cassert>
 #include <cstdint>
-#include <memory>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -944,7 +943,7 @@ computeVirtualCallSiteTypeInfoMap(Module &M, ModuleAnalysisManager &MAM,
   // Find out virtual calls by looking at users of llvm.type.checked.load in
   // that case.
   Function *TypeTestFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_test));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
   if (!TypeTestFunc || TypeTestFunc->use_empty())
     return;
 
@@ -1004,8 +1003,7 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI, bool InLTO,
   if (EnableVTableProfileUse) {
     computeVirtualCallSiteTypeInfoMap(M, MAM, VirtualCSInfo);
 
-    for (StringRef Str : ICPIgnoredBaseTypes)
-      IgnoredBaseTypes.insert(Str);
+    IgnoredBaseTypes.insert_range(ICPIgnoredBaseTypes);
   }
 
   // VTableAddressPointOffsetVal stores the vtable address points. The vtable

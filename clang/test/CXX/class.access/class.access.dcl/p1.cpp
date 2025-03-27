@@ -331,7 +331,7 @@ namespace test4 {
     // expected-warning@-2 {{access declarations are deprecated; use using declarations instead}}
 #else
     // expected-error@-4 {{ISO C++11 does not allow access declarations; use using declarations instead}}
-    // expected-error@-5 {{using declaration refers into 'Subclass::', which is not a base class of 'C'}}
+    // expected-error@-5 {{using declaration refers into 'Subclass', which is not a base class of 'C'}}
 #endif
 
     int bar();

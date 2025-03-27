@@ -74,20 +74,20 @@ void Test() {
 #pragma acc parallel num_gangs(SomeE, NC)
   while(1);
 
-  // expected-error@+3{{OpenACC integer expression type 'struct ExplicitConvertOnly' requires explicit conversion to 'int'}}
+  // expected-error@+3{{OpenACC integer expression requires explicit conversion from 'struct ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
   // expected-error@+1{{OpenACC clause 'num_gangs' requires expression of integer type ('struct NotConvertible' invalid)}}
 #pragma acc parallel num_gangs(Explicit, NC)
   while(1);
 
-  // expected-error@+4{{OpenACC integer expression type 'struct ExplicitConvertOnly' requires explicit conversion to 'int'}}
+  // expected-error@+4{{OpenACC integer expression requires explicit conversion from 'struct ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
   // expected-error@+2{{OpenACC clause 'num_gangs' requires expression of integer type ('struct NotConvertible' invalid)}}
   // expected-error@+1{{OpenACC 'num_gangs' clause is not valid on 'serial' directive}}
 #pragma acc serial num_gangs(Explicit, NC)
   while(1);
 
-  // expected-error@+6{{OpenACC integer expression type 'struct ExplicitConvertOnly' requires explicit conversion to 'int'}}
+  // expected-error@+6{{OpenACC integer expression requires explicit conversion from 'struct ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
   // expected-error@+4{{OpenACC clause 'num_gangs' requires expression of integer type ('struct NotConvertible' invalid)}}
   // expected-error@+3{{multiple conversions from expression type 'struct AmbiguousConvert' to an integral type}}
@@ -96,7 +96,7 @@ void Test() {
 #pragma acc parallel num_gangs(Explicit, NC, Ambiguous)
   while(1);
 
-  // expected-error@+7{{OpenACC integer expression type 'struct ExplicitConvertOnly' requires explicit conversion to 'int'}}
+  // expected-error@+7{{OpenACC integer expression requires explicit conversion from 'struct ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
   // expected-error@+5{{OpenACC clause 'num_gangs' requires expression of integer type ('struct NotConvertible' invalid)}}
   // expected-error@+4{{multiple conversions from expression type 'struct AmbiguousConvert' to an integral type}}
@@ -105,7 +105,6 @@ void Test() {
   // expected-error@+1{{OpenACC 'num_gangs' clause is not valid on 'serial' directive}}
 #pragma acc serial num_gangs(Explicit, NC, Ambiguous)
   while(1);
-  // TODO
 }
 
 struct HasInt {

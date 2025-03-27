@@ -12,10 +12,13 @@
 #ifndef LLVM_SANDBOXIR_UTILS_H
 #define LLVM_SANDBOXIR_UTILS_H
 
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Verifier.h"
+#include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include <optional>
 
@@ -49,11 +52,26 @@ public:
     return const_cast<Instruction *>(I);
   }
 
+  /// \Returns the base Value for load or store instruction \p LSI.
+  template <typename LoadOrStoreT>
+  static Value *getMemInstructionBase(const LoadOrStoreT *LSI) {
+    static_assert(std::is_same_v<LoadOrStoreT, LoadInst> ||
+                      std::is_same_v<LoadOrStoreT, StoreInst>,
+                  "Expected sandboxir::Load or sandboxir::Store!");
+    return LSI->Ctx.getOrCreateValue(
+        getUnderlyingObject(LSI->getPointerOperand()->Val));
+  }
+
+  /// \Returns the number of bits of \p Ty.
+  static unsigned getNumBits(Type *Ty, const DataLayout &DL) {
+    return DL.getTypeSizeInBits(Ty->LLVMTy);
+  }
+
   /// \Returns the number of bits required to represent the operands or return
   /// value of \p V in \p DL.
   static unsigned getNumBits(Value *V, const DataLayout &DL) {
     Type *Ty = getExpectedType(V);
-    return DL.getTypeSizeInBits(Ty->LLVMTy);
+    return getNumBits(Ty, DL);
   }
 
   /// \Returns the number of bits required to represent the operands or
@@ -71,9 +89,9 @@ public:
   /// \Returns the gap between the memory locations accessed by \p I0 and
   /// \p I1 in bytes.
   template <typename LoadOrStoreT>
-  static std::optional<int>
-  getPointerDiffInBytes(LoadOrStoreT *I0, LoadOrStoreT *I1, ScalarEvolution &SE,
-                        const DataLayout &DL) {
+  static std::optional<int> getPointerDiffInBytes(LoadOrStoreT *I0,
+                                                  LoadOrStoreT *I1,
+                                                  ScalarEvolution &SE) {
     static_assert(std::is_same_v<LoadOrStoreT, LoadInst> ||
                       std::is_same_v<LoadOrStoreT, StoreInst>,
                   "Expected sandboxir::Load or sandboxir::Store!");
@@ -84,8 +102,8 @@ public:
     if (Ptr0 != Ptr1)
       return false;
     llvm::Type *ElemTy = llvm::Type::getInt8Ty(SE.getContext());
-    return getPointersDiff(ElemTy, Opnd0, ElemTy, Opnd1, DL, SE,
-                           /*StrictCheck=*/false, /*CheckType=*/false);
+    return getPointersDiff(ElemTy, Opnd0, ElemTy, Opnd1, I0->getDataLayout(),
+                           SE, /*StrictCheck=*/false, /*CheckType=*/false);
   }
 
   /// \Returns true if \p I0 accesses a memory location lower than \p I1.
@@ -93,11 +111,25 @@ public:
   /// locations are equal, or if I1 accesses a memory location greater than I0.
   template <typename LoadOrStoreT>
   static bool atLowerAddress(LoadOrStoreT *I0, LoadOrStoreT *I1,
-                             ScalarEvolution &SE, const DataLayout &DL) {
-    auto Diff = getPointerDiffInBytes(I0, I1, SE, DL);
+                             ScalarEvolution &SE) {
+    auto Diff = getPointerDiffInBytes(I0, I1, SE);
     if (!Diff)
       return false;
     return *Diff > 0;
+  }
+
+  /// Equivalent to BatchAA::getModRefInfo().
+  static ModRefInfo
+  aliasAnalysisGetModRefInfo(BatchAAResults &BatchAA, const Instruction *I,
+                             const std::optional<MemoryLocation> &OptLoc) {
+    return BatchAA.getModRefInfo(cast<llvm::Instruction>(I->Val), OptLoc);
+  }
+
+  /// Equivalent to llvm::verifyFunction().
+  /// \Returns true if the IR is broken.
+  static bool verifyFunction(const Function *F, raw_ostream &OS) {
+    const auto &LLVMF = *cast<llvm::Function>(F->Val);
+    return llvm::verifyFunction(LLVMF, &OS);
   }
 };
 

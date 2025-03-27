@@ -2,7 +2,7 @@
 ## Test ALIGN when specifying the output section address.
 
 # RUN: echo '.globl _start; _start: ret; \
-# RUN:   .data.rel.ro; .balign 8; .byte 0; \
+# RUN:   .section .data.rel.ro,"aw"; .balign 8; .byte 0; \
 # RUN:   .data; .byte 0; \
 # RUN:   .bss; .balign 32; .byte 0' | \
 # RUN:   llvm-mc -filetype=obj -triple=x86_64 - -o %t.o

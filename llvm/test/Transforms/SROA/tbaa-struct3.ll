@@ -240,7 +240,7 @@ define void @slice_store_v2i8_1(ptr %dst, ptr %dst.2, ptr %src) {
 ; CHECK-NEXT:    [[A_SROA_2_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 6
 ; CHECK-NEXT:    [[A_SROA_2_SROA_0_0_COPYLOAD:%.*]] = load <2 x i8>, ptr [[A_SROA_2_0_SRC_SROA_IDX]], align 2
 ; CHECK-NEXT:    store <2 x i8> [[A_SROA_2_SROA_0_0_COPYLOAD]], ptr [[A_SROA_2_SROA_0]], align 4
-; CHECK-NEXT:    store <2 x i8> bitcast (<1 x i16> <i16 123> to <2 x i8>), ptr [[A_SROA_2_SROA_0]], align 4
+; CHECK-NEXT:    store <2 x i8> bitcast (<1 x i16> splat (i16 123) to <2 x i8>), ptr [[A_SROA_2_SROA_0]], align 4
 ; CHECK-NEXT:    [[A_SROA_2_SROA_0_0_A_SROA_2_SROA_0_0_A_SROA_2_6_V_4:%.*]] = load <2 x i8>, ptr [[A_SROA_2_SROA_0]], align 4
 ; CHECK-NEXT:    store <2 x i8> [[A_SROA_2_SROA_0_0_A_SROA_2_SROA_0_0_A_SROA_2_6_V_4]], ptr [[DST_2]], align 2
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST]], ptr align 1 [[A_SROA_0]], i32 6, i1 true)

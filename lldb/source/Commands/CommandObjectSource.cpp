@@ -302,7 +302,7 @@ protected:
     size_t num_matches = 0;
     assert(module_list.GetSize() > 0);
     Target &target = GetTarget();
-    if (target.GetSectionLoadList().IsEmpty()) {
+    if (!target.HasLoadedSections()) {
       // The target isn't loaded yet, we need to lookup the file address in all
       // modules.  Note: the module list option does not apply to addresses.
       const size_t num_modules = module_list.GetSize();
@@ -328,7 +328,7 @@ protected:
     } else {
       // The target has some things loaded, resolve this address to a compile
       // unit + file + line and display
-      if (target.GetSectionLoadList().ResolveLoadAddress(addr, so_addr)) {
+      if (target.ResolveLoadAddress(addr, so_addr)) {
         ModuleSP module_sp(so_addr.GetModule());
         // Check to make sure this module is in our list.
         if (module_sp && module_list.GetIndexForModule(module_sp.get()) !=
@@ -784,16 +784,14 @@ protected:
 
       if (sc.block == nullptr) {
         // Not an inlined function
-        FileSpec function_file_spec;
-        sc.function->GetStartLineSourceInfo(function_file_spec, start_line);
-        start_file = std::make_shared<SupportFile>(function_file_spec);
-        if (start_line == 0) {
-          result.AppendErrorWithFormat("Could not find line information for "
-                                       "start of function: \"%s\".\n",
-                                       source_info.function.GetCString());
+        auto expected_info = sc.function->GetSourceInfo();
+        if (!expected_info) {
+          result.AppendError(llvm::toString(expected_info.takeError()));
           return 0;
         }
-        sc.function->GetEndLineSourceInfo(end_file, end_line);
+        start_file = expected_info->first;
+        start_line = expected_info->second.GetRangeBase();
+        end_line = expected_info->second.GetRangeEnd();
       } else {
         // We have an inlined function
         start_file = source_info.line_entry.file_sp;
@@ -961,7 +959,7 @@ protected:
       StreamString error_strm;
       SymbolContextList sc_list;
 
-      if (target.GetSectionLoadList().IsEmpty()) {
+      if (!target.HasLoadedSections()) {
         // The target isn't loaded yet, we need to lookup the file address in
         // all modules
         const ModuleList &module_list = target.GetImages();
@@ -989,8 +987,7 @@ protected:
       } else {
         // The target has some things loaded, resolve this address to a compile
         // unit + file + line and display
-        if (target.GetSectionLoadList().ResolveLoadAddress(m_options.address,
-                                                           so_addr)) {
+        if (target.ResolveLoadAddress(m_options.address, so_addr)) {
           ModuleSP module_sp(so_addr.GetModule());
           if (module_sp) {
             SymbolContext sc;

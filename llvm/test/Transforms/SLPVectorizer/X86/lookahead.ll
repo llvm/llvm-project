@@ -286,8 +286,8 @@ define void @lookahead_limit_users_budget(ptr %A, ptr %B, ptr %C, ptr %D, ptr %S
 ; CHECK-NEXT:    [[A2:%.*]] = load double, ptr [[IDXA2]], align 8
 ; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[IDXA1]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A]], align 8
-; CHECK-NEXT:    [[B1:%.*]] = load double, ptr [[IDXB1]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B]], align 8
+; CHECK-NEXT:    [[B1:%.*]] = load double, ptr [[IDXB1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[B2]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = fsub fast <2 x double> [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[C0]], i32 0

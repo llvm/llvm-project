@@ -34,6 +34,7 @@ declare double @llvm.nvvm.bitcast.ll2d(i64)
 declare i32 @llvm.nvvm.rotate.b32(i32, i32)
 declare i64 @llvm.nvvm.rotate.right.b64(i64, i32)
 declare i64 @llvm.nvvm.rotate.b64(i64, i32)
+declare i64 @llvm.nvvm.swap.lo.hi.b64(i64)
 
 declare ptr addrspace(1) @llvm.nvvm.ptr.gen.to.global.p1.p0(ptr)
 declare ptr addrspace(3) @llvm.nvvm.ptr.gen.to.shared.p3.p0(ptr)
@@ -43,6 +44,13 @@ declare ptr @llvm.nvvm.ptr.global.to.gen.p0.p1(ptr addrspace(1))
 declare ptr @llvm.nvvm.ptr.shared.to.gen.p0.p3(ptr addrspace(3))
 declare ptr @llvm.nvvm.ptr.constant.to.gen.p0.p4(ptr addrspace(4))
 declare ptr @llvm.nvvm.ptr.local.to.gen.p0.p5(ptr addrspace(5))
+
+declare i32 @llvm.nvvm.ldg.global.i.i32.p1(ptr addrspace(1), i32)
+declare ptr @llvm.nvvm.ldg.global.p.p1(ptr addrspace(1), i32)
+declare float @llvm.nvvm.ldg.global.f.f32.p1(ptr addrspace(1), i32)
+declare i32 @llvm.nvvm.ldg.global.i.i32.p0(ptr, i32)
+declare ptr @llvm.nvvm.ldg.global.p.p0(ptr, i32)
+declare float @llvm.nvvm.ldg.global.f.f32.p0(ptr, i32)
 
 ; CHECK-LABEL: @simple_upgrade
 define void @simple_upgrade(i32 %a, i64 %b, i16 %c) {
@@ -159,10 +167,12 @@ define void @rotate(i32 %a, i64 %b) {
 ; CHECK: call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 6)
 ; CHECK: call i64 @llvm.fshr.i64(i64 %b, i64 %b, i64 7)
 ; CHECK: call i64 @llvm.fshl.i64(i64 %b, i64 %b, i64 8)
+; CHECK: call i64 @llvm.fshl.i64(i64 %b, i64 %b, i64 32)
 ;
   %r1 = call i32 @llvm.nvvm.rotate.b32(i32 %a, i32 6)
   %r2 = call i64 @llvm.nvvm.rotate.right.b64(i64 %b, i32 7)
   %r3 = call i64 @llvm.nvvm.rotate.b64(i64 %b, i32 8)
+  %r4 = call i64 @llvm.nvvm.swap.lo.hi.b64(i64 %b)
   ret void
 }
 
@@ -188,6 +198,30 @@ define void @addrspacecast(ptr %p0) {
 
   %p7 = call ptr addrspace(5) @llvm.nvvm.ptr.gen.to.local.p5.p0(ptr %p6)
   %p8 = call ptr @llvm.nvvm.ptr.local.to.gen.p0.p5(ptr addrspace(5) %p7)
+
+  ret void
+}
+
+; CHECK-LABEL: @ldg
+define void @ldg(ptr %p0, ptr addrspace(1) %p1) {
+; CHECK: %1 = load i32, ptr addrspace(1) %p1, align 4, !invariant.load !0
+; CHECK: %2 = load ptr, ptr addrspace(1) %p1, align 8, !invariant.load !0
+; CHECK: %3 = load float, ptr addrspace(1) %p1, align 16, !invariant.load !0
+
+; CHECK: %4 = addrspacecast ptr %p0 to ptr addrspace(1)
+; CHECK: %5 = load i32, ptr addrspace(1) %4, align 4, !invariant.load !0
+; CHECK: %6 = addrspacecast ptr %p0 to ptr addrspace(1)
+; CHECK: %7 = load ptr, ptr addrspace(1) %6, align 8, !invariant.load !0
+; CHECK: %8 = addrspacecast ptr %p0 to ptr addrspace(1)
+; CHECK: %9 = load float, ptr addrspace(1) %8, align 16, !invariant.load !0
+;
+  %v1 = call i32 @llvm.nvvm.ldg.global.i.i32.p1(ptr addrspace(1) %p1, i32 4)
+  %v2 = call ptr @llvm.nvvm.ldg.global.p.p1(ptr addrspace(1) %p1, i32 8 )
+  %v3 = call float @llvm.nvvm.ldg.global.f.f32.p1(ptr addrspace(1) %p1, i32 16)
+
+  %v4 = call i32 @llvm.nvvm.ldg.global.i.i32.p0(ptr %p0, i32 4)
+  %v5 = call ptr @llvm.nvvm.ldg.global.p.p0(ptr %p0, i32 8)
+  %v6 = call float @llvm.nvvm.ldg.global.f.f32.p0(ptr %p0, i32 16)
 
   ret void
 }

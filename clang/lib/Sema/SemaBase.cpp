@@ -9,6 +9,7 @@ SemaBase::SemaBase(Sema &S) : SemaRef(S) {}
 ASTContext &SemaBase::getASTContext() const { return SemaRef.Context; }
 DiagnosticsEngine &SemaBase::getDiagnostics() const { return SemaRef.Diags; }
 const LangOptions &SemaBase::getLangOpts() const { return SemaRef.LangOpts; }
+DeclContext *SemaBase::getCurContext() const { return SemaRef.CurContext; }
 
 SemaBase::ImmediateDiagBuilder::~ImmediateDiagBuilder() {
   // If we aren't active, there is nothing to do.

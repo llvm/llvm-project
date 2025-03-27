@@ -1,10 +1,10 @@
 import("//llvm/include/llvm/Config/config.gni")
 import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
-import("//llvm/lib/Target/targets.gni")
 import("//llvm/lib/Target/targets_with_asm_parsers.gni")
 import("//llvm/lib/Target/targets_with_disassemblers.gni")
 import("//llvm/lib/Target/targets_with_exegesis.gni")
 import("//llvm/lib/Target/targets_with_mcas.gni")
+import("//llvm/lib/Target/write_target_def_file.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/buildflags.gni")
 import("//llvm/utils/gn/build/libs/curl/enable.gni")
@@ -81,6 +81,7 @@ write_cmake_config("config") {
   values = [
     "BUG_REPORT_URL=https://github.com/llvm/llvm-project/issues/",
     "ENABLE_BACKTRACES=1",
+    "ENABLE_DEBUGLOC_COVERAGE_TRACKING=",
     "ENABLE_CRASH_OVERRIDES=1",
     "BACKTRACE_HEADER=execinfo.h",
     "HAVE_BUILTIN_THREAD_POINTER=",
@@ -88,9 +89,6 @@ write_cmake_config("config") {
     "HAVE_DECL_FE_ALL_EXCEPT=1",
     "HAVE_DECL_FE_INEXACT=1",
     "LLVM_ENABLE_CRASH_DUMPS=",
-    "HAVE_ERRNO_H=1",
-    "HAVE_FCNTL_H=1",
-    "HAVE_FENV_H=1",
     "HAVE_FFI_CALL=",
     "HAVE_FFI_FFI_H=",
     "HAVE_FFI_H=",
@@ -99,8 +97,6 @@ write_cmake_config("config") {
     "HAVE_MALLCTL=",
     "HAVE_PTHREAD_GET_NAME_NP=",
     "HAVE_PTHREAD_SET_NAME_NP=",
-    "HAVE_SIGNAL_H=1",
-    "HAVE_SYS_STAT_H=1",
     "HAVE_VALGRIND_VALGRIND_H=",
     "HAVE__ALLOCA=",
     "HAVE___ALLOCA=",
@@ -141,12 +137,14 @@ write_cmake_config("config") {
   if (current_os == "linux" || current_os == "android") {
     values += [
       "HAVE_FUTIMENS=1",
+      "HAVE_GETAUXVAL=1",
       "HAVE_MALLINFO=1",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=1",
     ]
   } else {
     values += [
       "HAVE_FUTIMENS=",
+      "HAVE_GETAUXVAL=",
       "HAVE_MALLINFO=",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=",
     ]
@@ -205,12 +203,9 @@ write_cmake_config("config") {
   if (current_os == "win") {
     values += [
       "HAVE_DECL_STRERROR_S=1",
-      "HAVE_DLADDR=",
-      "HAVE_DLFCN_H=",
       "HAVE_DLOPEN=",
       "HAVE_FUTIMES=",
       "HAVE_GETPAGESIZE=",
-      "HAVE_GETRLIMIT=",
       "HAVE_GETRUSAGE=",
       "HAVE_ISATTY=",
       "HAVE_LIBPTHREAD=",
@@ -221,15 +216,10 @@ write_cmake_config("config") {
       "HAVE_PTHREAD_RWLOCK_INIT=",
       "HAVE_SBRK=",
       "HAVE_SETENV=",
-      "HAVE_SETRLIMIT=",
       "HAVE_SIGALTSTACK=",
       "HAVE_STRERROR_R=",
       "HAVE_SYSCONF=",
-      "HAVE_SYS_IOCTL_H=",
       "HAVE_SYS_MMAN_H=",
-      "HAVE_SYS_RESOURCE_H=",
-      "HAVE_SYS_TIME_H=",
-      "HAVE_TERMIOS_H=",
       "HAVE_UNISTD_H=",
       "HAVE__CHSIZE_S=1",
       "HAVE__UNWIND_BACKTRACE=",
@@ -240,12 +230,9 @@ write_cmake_config("config") {
     # POSIX-y system defaults.
     values += [
       "HAVE_DECL_STRERROR_S=",
-      "HAVE_DLADDR=1",
-      "HAVE_DLFCN_H=1",
       "HAVE_DLOPEN=1",
       "HAVE_FUTIMES=1",
       "HAVE_GETPAGESIZE=1",
-      "HAVE_GETRLIMIT=1",
       "HAVE_GETRUSAGE=1",
       "HAVE_ISATTY=1",
       "HAVE_LIBPTHREAD=1",
@@ -256,15 +243,10 @@ write_cmake_config("config") {
       "HAVE_PTHREAD_RWLOCK_INIT=1",
       "HAVE_SBRK=1",
       "HAVE_SETENV=1",
-      "HAVE_SETRLIMIT=1",
       "HAVE_SIGALTSTACK=1",
       "HAVE_STRERROR_R=1",
       "HAVE_SYSCONF=1",
-      "HAVE_SYS_IOCTL_H=1",
       "HAVE_SYS_MMAN_H=1",
-      "HAVE_SYS_RESOURCE_H=1",
-      "HAVE_SYS_TIME_H=1",
-      "HAVE_TERMIOS_H=1",
       "HAVE_UNISTD_H=1",
       "HAVE__CHSIZE_S=",
       "HAVE__UNWIND_BACKTRACE=1",
@@ -310,6 +292,7 @@ write_cmake_config("llvm-config") {
   values = [
     "LLVM_BUILD_LLVM_DYLIB=",
     "LLVM_BUILD_SHARED_LIBS=",
+    "LLVM_ENABLE_TELEMETRY=",
     "LLVM_DEFAULT_TARGET_TRIPLE=$llvm_target_triple",
     "LLVM_ENABLE_DUMP=",
     "LLVM_ENABLE_HTTPLIB=",
@@ -494,65 +477,41 @@ write_cmake_config("llvm-config") {
 ##############################################################################
 # .def files used by llvm/lib/Target
 
-template("write_target_def_file") {
-  assert(defined(invoker.key), "must set 'key' in $target_name")
-  assert(defined(invoker.value), "must set 'value' in $target_name")
-
-  write_cmake_config(target_name) {
-    visibility = [ ":write_target_def_files" ]
-    input = "$target_name.in"
-    output = "$target_gen_dir/$target_name"
-
-    if (defined(invoker.all_targets)) {
-      all_targets = invoker.all_targets
-    } else {
-      all_targets = llvm_targets_to_build
-    }
-
-    # Build something like
-    # `LLVM_ENUM_ASM_PARSERS=LLVM_ASM_PARSER(ARM)\nLLVM_ASM_PARSER(X86)\n`. Note
-    # that \n is a literal '\' followed by a literal 'n', not a newline
-    # character.  (write_cmake_config.py replaces that with a real newline).
-    value = ""
-    foreach(target, all_targets) {
-      value = "$value${invoker.value}($target)\n"
-    }
-    if (all_targets == []) {
-      not_needed(invoker, [ "value" ])
-    }
-    values = [ "${invoker.key}=$value" ]
-  }
-}
-
 write_target_def_file("AsmParsers.def") {
+  visibility = [ ":write_target_def_files" ]
   key = "LLVM_ENUM_ASM_PARSERS"
   value = "LLVM_ASM_PARSER"
   all_targets = targets_with_asm_parsers
 }
 
 write_target_def_file("AsmPrinters.def") {
+  visibility = [ ":write_target_def_files" ]
   key = "LLVM_ENUM_ASM_PRINTERS"
   value = "LLVM_ASM_PRINTER"
 }
 
 write_target_def_file("Disassemblers.def") {
+  visibility = [ ":write_target_def_files" ]
   key = "LLVM_ENUM_DISASSEMBLERS"
   value = "LLVM_DISASSEMBLER"
   all_targets = targets_with_disassemblers
 }
 
 write_target_def_file("Targets.def") {
+  visibility = [ ":write_target_def_files" ]
   key = "LLVM_ENUM_TARGETS"
   value = "LLVM_TARGET"
 }
 
 write_target_def_file("TargetMCAs.def") {
+  visibility = [ ":write_target_def_files" ]
   key = "LLVM_ENUM_TARGETMCAS"
   value = "LLVM_TARGETMCA"
   all_targets = targets_with_mcas
 }
 
 write_target_def_file("TargetExegesis.def") {
+  visibility = [ ":write_target_def_files" ]
   key = "LLVM_ENUM_EXEGESIS"
   value = "LLVM_EXEGESIS"
   all_targets = targets_with_exegesis

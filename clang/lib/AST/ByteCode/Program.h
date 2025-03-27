@@ -64,7 +64,8 @@ public:
   const void *getNativePointer(unsigned Idx);
 
   /// Emits a string literal among global data.
-  unsigned createGlobalString(const StringLiteral *S);
+  unsigned createGlobalString(const StringLiteral *S,
+                              const Expr *Base = nullptr);
 
   /// Returns a pointer to a global.
   Pointer getPtrGlobal(unsigned Idx) const;
@@ -84,7 +85,7 @@ public:
                                             const Expr *Init = nullptr);
 
   /// Returns or creates a dummy value for unknown declarations.
-  std::optional<unsigned> getOrCreateDummy(const DeclTy &D);
+  unsigned getOrCreateDummy(const DeclTy &D);
 
   /// Creates a global and returns its index.
   std::optional<unsigned> createGlobal(const ValueDecl *VD, const Expr *Init);
@@ -114,11 +115,13 @@ public:
   Record *getOrCreateRecord(const RecordDecl *RD);
 
   /// Creates a descriptor for a primitive type.
-  Descriptor *createDescriptor(const DeclTy &D, PrimType Type,
+  Descriptor *createDescriptor(const DeclTy &D, PrimType T,
+                               const Type *SourceTy = nullptr,
                                Descriptor::MetadataSize MDSize = std::nullopt,
                                bool IsConst = false, bool IsTemporary = false,
                                bool IsMutable = false) {
-    return allocateDescriptor(D, Type, MDSize, IsConst, IsTemporary, IsMutable);
+    return allocateDescriptor(D, SourceTy, T, MDSize, IsConst, IsTemporary,
+                              IsMutable);
   }
 
   /// Creates a descriptor for a composite type.
@@ -131,20 +134,22 @@ public:
   /// Context to manage declaration lifetimes.
   class DeclScope {
   public:
-    DeclScope(Program &P, const ValueDecl *VD) : P(P) {
-      P.startDeclaration(VD);
+    DeclScope(Program &P) : P(P), PrevDecl(P.CurrentDeclaration) {
+      ++P.LastDeclaration;
+      P.CurrentDeclaration = P.LastDeclaration;
     }
-    ~DeclScope() { P.endDeclaration(); }
+    ~DeclScope() { P.CurrentDeclaration = PrevDecl; }
 
   private:
     Program &P;
+    unsigned PrevDecl;
   };
 
   /// Returns the current declaration ID.
   std::optional<unsigned> getCurrentDecl() const {
     if (CurrentDeclaration == NoDeclaration)
-      return std::optional<unsigned>{};
-    return LastDeclaration;
+      return std::nullopt;
+    return CurrentDeclaration;
   }
 
 private:
@@ -170,7 +175,7 @@ private:
   llvm::DenseMap<const void *, unsigned> NativePointerIndices;
 
   /// Custom allocator for global storage.
-  using PoolAllocTy = llvm::BumpPtrAllocatorImpl<llvm::MallocAllocator>;
+  using PoolAllocTy = llvm::BumpPtrAllocator;
 
   /// Descriptor + storage for a global object.
   ///
@@ -217,20 +222,11 @@ private:
   }
 
   /// No declaration ID.
-  static constexpr unsigned NoDeclaration = (unsigned)-1;
+  static constexpr unsigned NoDeclaration = ~0u;
   /// Last declaration ID.
   unsigned LastDeclaration = 0;
   /// Current declaration ID.
   unsigned CurrentDeclaration = NoDeclaration;
-
-  /// Starts evaluating a declaration.
-  void startDeclaration(const ValueDecl *Decl) {
-    LastDeclaration += 1;
-    CurrentDeclaration = LastDeclaration;
-  }
-
-  /// Ends a global declaration.
-  void endDeclaration() { CurrentDeclaration = NoDeclaration; }
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().

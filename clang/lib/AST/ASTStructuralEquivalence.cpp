@@ -66,6 +66,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
@@ -76,6 +77,7 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -86,7 +88,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -802,16 +803,6 @@ static bool IsEquivalentExceptionSpec(StructuralEquivalenceContext &Context,
   return true;
 }
 
-// Determine structural equivalence of two instances of
-// HLSLAttributedResourceType::Attributes
-static bool
-IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
-                         const HLSLAttributedResourceType::Attributes &Attrs1,
-                         const HLSLAttributedResourceType::Attributes &Attrs2) {
-  return std::tie(Attrs1.ResourceClass, Attrs1.IsROV, Attrs1.RawBuffer) ==
-         std::tie(Attrs2.ResourceClass, Attrs2.IsROV, Attrs2.RawBuffer);
-}
-
 /// Determine structural equivalence of two types.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      QualType T1, QualType T2) {
@@ -903,8 +894,12 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (!IsStructurallyEquivalent(Context, MemPtr1->getPointeeType(),
                                   MemPtr2->getPointeeType()))
       return false;
-    if (!IsStructurallyEquivalent(Context, QualType(MemPtr1->getClass(), 0),
-                                  QualType(MemPtr2->getClass(), 0)))
+    if (!IsStructurallyEquivalent(Context, MemPtr1->getQualifier(),
+                                  MemPtr2->getQualifier()))
+      return false;
+    if (!IsStructurallyEquivalent(Context,
+                                  MemPtr1->getMostRecentCXXRecordDecl(),
+                                  MemPtr2->getMostRecentCXXRecordDecl()))
       return false;
     break;
   }
@@ -1115,9 +1110,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
             Context, cast<HLSLAttributedResourceType>(T1)->getContainedType(),
             cast<HLSLAttributedResourceType>(T2)->getContainedType()))
       return false;
-    if (!IsStructurallyEquivalent(
-            Context, cast<HLSLAttributedResourceType>(T1)->getAttrs(),
-            cast<HLSLAttributedResourceType>(T2)->getAttrs()))
+    if (cast<HLSLAttributedResourceType>(T1)->getAttrs() !=
+        cast<HLSLAttributedResourceType>(T2)->getAttrs())
       return false;
     break;
 
@@ -2314,7 +2308,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   // Check whether we already know that these two declarations are not
   // structurally equivalent.
-  if (Context.NonEquivalentDecls.count(P))
+  if (Context.NonEquivalentDecls.count(
+          std::make_tuple(D1, D2, Context.IgnoreTemplateParmDepth)))
     return false;
 
   // Check if a check for these declarations is already pending.
@@ -2522,7 +2517,8 @@ bool StructuralEquivalenceContext::Finish() {
     if (!Equivalent) {
       // Note that these two declarations are not equivalent (and we already
       // know about it).
-      NonEquivalentDecls.insert(P);
+      NonEquivalentDecls.insert(
+          std::make_tuple(D1, D2, IgnoreTemplateParmDepth));
 
       return true;
     }

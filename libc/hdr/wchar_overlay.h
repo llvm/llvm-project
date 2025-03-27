@@ -15,7 +15,7 @@
 
 // Overlay mode
 
-// glibc <wchar.h header might provide extern inline definitions for few
+// glibc <wchar.h> header might provide extern inline definitions for few
 // functions, causing external alias errors.  They are guarded by
 // `__USE_EXTERN_INLINES` macro.  We temporarily disable `__USE_EXTERN_INLINES`
 // macro by defining `__NO_INLINE__` before including <wchar.h>.
@@ -32,6 +32,17 @@
 #define LIBC_SET_NO_INLINE
 #endif
 
+#ifdef __USE_EXTERN_INLINES
+#define LIBC_OLD_USE_EXTERN_INLINES
+#undef __USE_EXTERN_INLINES
+#endif
+
+#ifdef __USE_FORTIFY_LEVEL
+#define LIBC_OLD_USE_FORTIFY_LEVEL __USE_FORTIFY_LEVEL
+#undef __USE_FORTIFY_LEVEL
+#define __USE_FORTIFY_LEVEL 0
+#endif
+
 #include <wchar.h>
 
 #ifdef LIBC_OLD_FORTIFY_SOURCE
@@ -42,6 +53,17 @@
 #ifdef LIBC_SET_NO_INLINE
 #undef __NO_INLINE__
 #undef LIBC_SET_NO_INLINE
+#endif
+
+#ifdef LIBC_OLD_USE_FORTIFY_LEVEL
+#undef __USE_FORTIFY_LEVEL
+#define __USE_FORTIFY_LEVEL LIBC_OLD_USE_FORTIFY_LEVEL
+#undef LIBC_OLD_USE_FORTIFY_LEVEL
+#endif
+
+#ifdef LIBC_OLD_USE_EXTERN_INLINES
+#define __USE_EXTERN_INLINES
+#undef LIBC_OLD_USE_EXTERN_INLINES
 #endif
 
 #endif // LLVM_LIBC_HDR_WCHAR_OVERLAY_H

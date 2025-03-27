@@ -71,7 +71,7 @@ CSKYAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
          "Not all fixup kinds added to Infos array");
 
   if (FirstTargetFixupKind <= Kind && Kind < FirstLiteralRelocationKind) {
-    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+    assert(unsigned(Kind - FirstTargetFixupKind) < CSKY::NumTargetFixupKinds &&
            "Invalid kind!");
 
     return Infos[Kind];
