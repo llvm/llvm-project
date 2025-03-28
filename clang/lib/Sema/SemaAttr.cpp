@@ -1334,29 +1334,25 @@ static bool typeListMatches(ASTContext& Context, FunctionDecl *FD,
   for (unsigned i = 0; i != FD->getNumParams(); ++i) {
     const ParmVarDecl *PVD = FD->getParamDecl(i);
     QualType ParmType = PVD->getType().getCanonicalType();
-    fprintf(stderr, "SDP: --- pramtype\n");
-    ParmType->dump();
+#if SDP
+    // SDP QualType ParmType = PVD->getOriginalType().getCanonicalType();
     if (ParmType->isArrayType())
       ParmType = Context.getArrayDecayedType(ParmType);
     else if (ParmType->isFunctionType())
-    { fprintf(stderr, "  - is function\n");
       ParmType = Context.getPointerType(ParmType);
-      }
-    ParmType->dump();
+#endif
 
     QualType MapArgType = (*Label.TypeList)[i].getCanonicalType();
-    fprintf(stderr, "SDP: --- MapArgtype\n");
-    MapArgType->dump();
+#if SDP
     if (MapArgType->isArrayType())
       MapArgType = Context.getArrayDecayedType(MapArgType);
     else if (MapArgType->isFunctionType())
-    { fprintf(stderr, "  - is function\n");
       MapArgType = Context.getPointerType(MapArgType);
-      }
     MapArgType.getDesugaredType(Context)->dump();
 
     assert(!ParmType->canDecayToPointerType());
     assert(!MapArgType->canDecayToPointerType());
+#endif
     if (ParmType != MapArgType)
       return false;
   }

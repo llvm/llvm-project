@@ -7505,18 +7505,18 @@ attribute requires a string literal argument to identify the handle being releas
 def zOSExportDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-Use the _Export keyword with a function name or external variable to declare
+Use the ``_Export`` keyword on a function or external variable to declare
 that it is to be exported (made available to other modules). You must define
-the object name in the same translation unit in which you use the _Export
+the object name in the same translation unit in which you use the ``_Export``
 keyword. For example:
 
 .. code-block:: c
 
   int _Export anthony(float);
 
-This statement exports the function anthony, if you define the function in the
-translation unit. The _Export keyword must immediately precede the object name.
-If you apply the _Export keyword to a class, the compiler automatically exports
+This statement exports the function ``anthony``, if you define the function in the
+translation unit. The ``_Export`` keyword must immediately precede the declaration name.
+If you apply the ``_Export`` keyword to a class, the compiler automatically exports
 all static data members and member functions of the class. However, if you want
 it to apply to individual class members, then you must apply it to each member
 that can be referenced.

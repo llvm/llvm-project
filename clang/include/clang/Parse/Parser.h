@@ -857,7 +857,7 @@ private:
 
   /// Helper functions for handling zOS pragmas.
   NestedNameSpecifier *zOSParseIdentifier(StringRef PragmaName,
-                                          IdentifierInfo *IdentName);
+                                          const IdentifierInfo *IdentName);
   bool zOSParseParameterList(StringRef PragmaName,
                              std::optional<SmallVector<QualType, 4>> &TypeList,
                              Qualifiers &CVQual);

@@ -1417,8 +1417,9 @@ bool Parser::HandlePragmaMSAllocText(StringRef PragmaName,
   return true;
 }
 
-NestedNameSpecifier *Parser::zOSParseIdentifier(StringRef PragmaName,
-                                                IdentifierInfo *IdentName) {
+NestedNameSpecifier *
+Parser::zOSParseIdentifier(StringRef PragmaName,
+                           const IdentifierInfo *IdentName) {
   NestedNameSpecifier *NestedId = nullptr;
   if (Tok.is(tok::coloncolon)) {
     NestedId = NestedNameSpecifier::Create(Actions.Context, IdentName);
@@ -1435,14 +1436,13 @@ NestedNameSpecifier *Parser::zOSParseIdentifier(StringRef PragmaName,
   }
   while (Tok.is(tok::coloncolon)) {
     PP.Lex(Tok);
-    IdentName = Tok.getIdentifierInfo();
+    IdentifierInfo *II = Tok.getIdentifierInfo();
     if (Tok.isNot(tok::identifier)) {
       PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
           << PragmaName;
       return nullptr;
     }
-    NestedId =
-        NestedNameSpecifier::Create(Actions.Context, NestedId, IdentName);
+    NestedId = NestedNameSpecifier::Create(Actions.Context, NestedId, II);
     PP.Lex(Tok);
   }
   return NestedId;
@@ -1455,12 +1455,14 @@ bool Parser::zOSParseParameterList(
     TypeList = SmallVector<QualType, 4>();
     PP.Lex(Tok);
     while (Tok.isNot(tok::eof) && !Tok.is(tok::r_paren)) {
-      //SourceRange MatchingCTypeRange;
       TypeResult TResult = ParseTypeName(nullptr, DeclaratorContext::Prototype);
       if (!TResult.isInvalid()) {
         QualType QT = TResult.get().get();
-        if (!QT.getTypePtr()->isVoidType())
+        if (!QT.getTypePtr()->isVoidType()) {
+          fprintf(stderr, "SDP: paramType -\n");
+          QT.getCanonicalType()->dump();
           TypeList->push_back(QT);
+        }
       }
       if (Tok.is(tok::comma) || Tok.is(tok::identifier))
         PP.Lex(Tok);

@@ -1105,8 +1105,8 @@ bool DeclSpec::setFunctionSpecNoreturn(SourceLocation Loc,
 }
 
 bool DeclSpec::setExportSpec(SourceLocation Loc) {
-  export_specified = true;
-  exportLoc = Loc;
+  ExportSpecified = true;
+  ExportLoc = Loc;
   return false;
 }
 

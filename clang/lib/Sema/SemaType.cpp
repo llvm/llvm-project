@@ -4250,7 +4250,6 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   // The TypeSourceInfo that this function returns will not be a null type.
   // If there is an error, this function will fill in a dummy type as fallback.
   QualType T = declSpecType;
-  fprintf(stderr, "SDP: === GetFullTypeForDeclarator\n"); T->dump(); fprintf(stderr, "SDP: === GetFullTypeForDeclarator\n");
   Declarator &D = state.getDeclarator();
   Sema &S = state.getSema();
   ASTContext &Context = S.Context;
@@ -5723,7 +5722,6 @@ TypeSourceInfo *Sema::GetTypeForDeclarator(Declarator &D) {
 
   TypeSourceInfo *ReturnTypeInfo = nullptr;
   QualType T = GetDeclSpecTypeForDeclarator(state, ReturnTypeInfo);
-  fprintf(stderr, "SDP: === GetTypeForDeclarator\n"); T->dump(); fprintf(stderr, "SDP: === GetTypeForDeclarator\n");
   if (D.isPrototypeContext() && getLangOpts().ObjCAutoRefCount)
     inferARCWriteback(state, T);
 

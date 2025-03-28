@@ -4457,8 +4457,7 @@ void Parser::ParseDeclarationSpecifiers(
       break;
 
     case tok::kw__Export:
-      // If we find kw__Export, it is being applied to a var or function
-      // This will be handled in ParseDeclaratorInternal()
+      // We're done with the declaration-specifiers.
       goto DoneWithDeclSpec;
       break;
 
@@ -6187,7 +6186,9 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw_virtual:
   case tok::kw_explicit:
   case tok::kw__Noreturn:
+#if SDP // need this in declspec?
   case tok::kw__Export:
+#endif
 
     // alignment-specifier
   case tok::kw__Alignas:
