@@ -98,10 +98,6 @@ Value createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
   }
 
   if (ci.clusterSize >= 32) {
-    // auto permArg = builder.getInt32(15);
-    // auto rowMask = builder.getInt32("0xa");
-    // auto bankMask = builder.getInt32("0xf");
-    // auto boundCtrl = builder.getBoolAttr(false);
     auto permArg = b.getIntegerAttr(b.getIntegerType(32), 15);
     Value dppResult = b.create<amdgpu::DPPOp>(
         loc, result.getType(), result, result, amdgpu::DPPPerm::row_bcast_15,
@@ -111,10 +107,6 @@ Value createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
   }
 
   if (ci.clusterSize == 64) {
-    // auto permArg = builder.getInt32(31);
-    // auto rowMask = builder.getInt32("0xc");
-    // auto bankMask = builder.getInt32("0xf");
-    // auto boundCtrl = builder.getBoolAttr(false);
     auto permArg = b.getIntegerAttr(b.getIntegerType(32), 31);
     Value dppResult = b.create<amdgpu::DPPOp>(
         loc, result.getType(), result, result, amdgpu::DPPPerm::row_bcast_31,
@@ -123,9 +115,9 @@ Value createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
                                         result, dppResult);
   }
 
-  // // read lane 63 with the final result.
-  // auto lane = b.getIntegerAttr(b.getIntegerType(32), 63);
-  // result = b.create<ROCDL::ReadLaneOp>(loc, input.getType(), result, lane);
+  auto int32Type = IntegerType::get(b.getContext(), 32);
+  Value lane63 = b.create<LLVM::ConstantOp>(loc, int32Type, 63);
+  result = b.create<ROCDL::ReadlaneOp>(loc, input.getType(), result, lane63);
   assert(result.getType() == input.getType());
   return result;
 }
@@ -170,14 +162,14 @@ struct ConvertGPUToAMDGPUPass
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     int subgroupSizeInt = static_cast<int>(subgroupSize);
-    populateSubgroupReduceLoweringPatterns(patterns, subgroupSizeInt,
+    populateAMDGPUOptimizedSubgroupReducePatterns(patterns, subgroupSizeInt,
                                            PatternBenefit(1));
     walkAndApplyPatterns(getOperation(), std::move(patterns));
   }
 };
 } // namespace
 
-void mlir::populateSubgroupReduceLoweringPatterns(RewritePatternSet &patterns,
+void mlir::populateAMDGPUOptimizedSubgroupReducePatterns(RewritePatternSet &patterns,
                                                   unsigned subgroupSize,
                                                   PatternBenefit benefit) {
   patterns.add<ScalarSubgroupReduceToShuffles>(
