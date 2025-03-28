@@ -571,8 +571,8 @@ def LinalgCopyToMemrefOp :
     Targeted rewrite of a linalg.copy on memrefs to a memref.copy.
     This is useful when bufferizing copies to a linalg.copy, later applying some
     transformations, and then rewriting the copy into a memref.copy.
-    If the input has different element type in the source and destination,
-    the transformation is rejected.
+    If the element types of the source and destination differ, or if the source
+    is a scalar, the transform produces a silenceable failure.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target);
