@@ -310,13 +310,6 @@ def MPI_Barrier : MPI_Op<"barrier", []> {
 
   let results = (outs Optional<MPI_Retval>:$retval);
 
-  // TODO fix assembly format
-  // let assemblyFormat = "("
-  //                      "(attr-dict) ^"
-  //                      "(attr-dict `:` type($retval)) ^"
-  //                      "(`(` $comm `)` attr-dict `:` type($comm)) ^"
-  //                      "(`(` $comm `)` attr-dict `:` type($comm) `->` type($retval))"
-  //                      ")?";
   let assemblyFormat = [{
     `(` $comm  `)` attr-dict
     (`->` type($retval)^)?
