@@ -274,8 +274,8 @@ Error BasicBlockSectionsProfileReader::ReadV0Profile() {
     if (S.consume_front("$node_count")) {
       unsigned long long NodeCount;
       if (getAsUnsignedInteger(S.trim(), 10, NodeCount))
-        return invalidProfileError("Invalid node count value.");
-      if (FI != ProgramBBClusterInfo.end())
+        return createProfileParseError("Invalid node count value.");
+      if (FI != ProgramPathAndClusterInfo.end())
         FI->second.NodeCount = (unsigned)NodeCount;
       continue;
     }
