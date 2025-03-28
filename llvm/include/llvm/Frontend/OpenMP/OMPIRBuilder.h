@@ -30,6 +30,7 @@
 namespace llvm {
 class CanonicalLoopInfo;
 struct TargetRegionEntryInfo;
+class ScanInfo;
 class OffloadEntriesInfoManager;
 class OpenMPIRBuilder;
 
@@ -728,6 +729,11 @@ public:
                       LoopBodyGenCallbackTy BodyGenCB, Value *TripCount,
                       const Twine &Name = "loop");
 
+  Expected<SmallVector<llvm::CanonicalLoopInfo *>> createCanonicalScanLoops(
+      const LocationDescription &Loc, LoopBodyGenCallbackTy BodyGenCB,
+      Value *Start, Value *Stop, Value *Step, bool IsSigned, bool InclusiveStop,
+      InsertPointTy ComputeIP, const Twine &Name, bool InScan);
+
   /// Calculate the trip count of a canonical loop.
   ///
   /// This allows specifying user-defined loop counter values using increment,
@@ -800,10 +806,12 @@ public:
   ///
   /// \returns An object representing the created control flow structure which
   ///          can be used for loop-associated directives.
-  Expected<CanonicalLoopInfo *> createCanonicalLoop(
-      const LocationDescription &Loc, LoopBodyGenCallbackTy BodyGenCB,
-      Value *Start, Value *Stop, Value *Step, bool IsSigned, bool InclusiveStop,
-      InsertPointTy ComputeIP = {}, const Twine &Name = "loop");
+  Expected<CanonicalLoopInfo *>
+  createCanonicalLoop(const LocationDescription &Loc,
+                      LoopBodyGenCallbackTy BodyGenCB, Value *Start,
+                      Value *Stop, Value *Step, bool IsSigned,
+                      bool InclusiveStop, InsertPointTy ComputeIP = {},
+                      const Twine &Name = "loop", bool InScan = false);
 
   /// Collapse a loop nest into a single loop.
   ///
@@ -1530,6 +1538,20 @@ private:
       ArrayRef<OpenMPIRBuilder::ReductionInfo> ReductionInfos,
       Function *ReduceFn, AttributeList FuncAttrs);
 
+  Expected<SmallVector<llvm::CanonicalLoopInfo *>> emitScanBasedDirectiveIR(
+      llvm::function_ref<Expected<CanonicalLoopInfo *>()> FirstGen,
+      llvm::function_ref<Expected<CanonicalLoopInfo *>(LocationDescription loc)>
+          SecondGen);
+  llvm::CallInst *emitNoUnwindRuntimeCall(llvm::FunctionCallee callee,
+                                          ArrayRef<llvm::Value *> args,
+                                          const llvm::Twine &name);
+
+  void createScanBBs();
+  void emitScanBasedDirectiveDeclsIR(llvm::Value *span,
+                                     ArrayRef<llvm::Value *> ScanVars);
+  void emitScanBasedDirectiveFinalsIR(
+      SmallVector<llvm::OpenMPIRBuilder::ReductionInfo> reductionInfos);
+
   /// This function emits a helper that gathers Reduce lists from the first
   /// lane of every active warp to lanes in the first warp.
   ///
@@ -1981,7 +2003,7 @@ public:
   ///                           in reductions.
   /// \param ReductionInfos     A list of info on each reduction variable.
   /// \param IsNoWait           A flag set if the reduction is marked as nowait.
-  /// \param IsByRef            A flag set if the reduction is using reference
+  /// \param IsByRef            At flag set if the reduction is using reference
   /// or direct value.
   InsertPointOrErrorTy createReductions(const LocationDescription &Loc,
                                         InsertPointTy AllocaIP,
@@ -2177,7 +2199,6 @@ public:
   // block, if possible, or else at the end of the function. Also add a branch
   // from current block to BB if current block does not have a terminator.
   void emitBlock(BasicBlock *BB, Function *CurFn, bool IsFinished = false);
-
   /// Emits code for OpenMP 'if' clause using specified \a BodyGenCallbackTy
   /// Here is the logic:
   /// if (Cond) {
@@ -2603,6 +2624,31 @@ public:
                                     BodyGenCallbackTy BodyGenCB,
                                     FinalizeCallbackTy FiniCB, Value *Filter);
 
+  /// Generator for the scan reduction
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param FinalizeIP The IP where the reduction result needs
+  //                   to be copied back to original variable.
+  /// \param ReductionInfos Array type containing the ReductionOps.
+  ///
+  /// \returns The insertion position *after* the masked.
+  InsertPointOrErrorTy emitScanReduction(
+      const LocationDescription &Loc, InsertPointTy &FinalizeIP,
+      SmallVector<llvm::OpenMPIRBuilder::ReductionInfo> reductionInfos);
+
+  /// Generator for the scan reduction
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param AllocaIP The IP where the temporary buffer for scan reduction
+  //                  needs to be allocated.
+  /// \param ScanVars Scan Variables.
+  /// \param IsInclusive Indicates if it is an inclusive or exclusive scan.
+  ///
+  /// \returns The insertion position *after* the masked.
+  InsertPointOrErrorTy createScan(const LocationDescription &Loc,
+                                  InsertPointTy AllocaIP,
+                                  ArrayRef<llvm::Value *> ScanVars,
+                                  bool IsInclusive);
   /// Generator for '#omp critical'
   ///
   /// \param Loc The insert and source location description.
@@ -3709,6 +3755,22 @@ public:
   /// Invalidate this loop. That is, the underlying IR does not fulfill the
   /// requirements of an OpenMP canonical loop anymore.
   void invalidate();
+};
+
+class ScanInfo {
+public:
+  llvm::BasicBlock *OMPBeforeScanBlock = nullptr;
+  llvm::BasicBlock *OMPAfterScanBlock = nullptr;
+  llvm::BasicBlock *OMPScanExitBlock = nullptr;
+  llvm::BasicBlock *OMPScanDispatch = nullptr;
+  llvm::BasicBlock *OMPScanLoopExit = nullptr;
+  bool OMPFirstScanLoop = false;
+  llvm::SmallDenseMap<llvm::Value *, llvm::Value *> ReductionVarToScanBuffs;
+  SmallVector<llvm::Value *> privateReductionVariables;
+  SmallVector<llvm::Value *> originalReductionVariables;
+  llvm::Value *iv;
+  llvm::Value *span;
+  SmallVector<llvm::BasicBlock *> continueBlocks;
 };
 
 } // end namespace llvm
