@@ -1101,12 +1101,7 @@ private:
       if (GenericDevice.isFastReductionEnabled()) {
         // When fast reduction is enabled, the number of teams is capped by
         // the MaxCUMultiplier constant.
-        // When envar is enabled, use it for computing MaxNumGroup.
-        if (EnvarCUMultiplier > 0)
-          MaxNumGroups = DeviceNumCUs * EnvarCUMultiplier;
-        else
-          MaxNumGroups = DeviceNumCUs * llvm::omp::xteam_red::MaxCUMultiplier;
-
+        MaxNumGroups = DeviceNumCUs * llvm::omp::xteam_red::MaxCUMultiplier;
       } else {
         // When fast reduction is not enabled, the number of teams is capped
         // by the metadata that clang CodeGen created. The number of teams
@@ -1117,13 +1112,7 @@ private:
         // ConstWGSize is the block size that CodeGen used.
         uint32_t CUMultiplier =
             llvm::omp::xteam_red::getXteamRedCUMultiplier(ConstWGSize);
-
-        if (EnvarCUMultiplier > 0) {
-          MaxNumGroups =
-              DeviceNumCUs * std::min(CUMultiplier, EnvarCUMultiplier);
-        } else {
-          MaxNumGroups = DeviceNumCUs * CUMultiplier;
-        }
+        MaxNumGroups = DeviceNumCUs * CUMultiplier;
       }
 
       // If envar OMPX_XTEAMREDUCTION_OCCUPANCY_BASED_OPT is set and no
@@ -1178,6 +1167,12 @@ private:
           }
           NumGroups = DesiredNumGroups;
         }
+
+        // Prefer OMPX_AdjustNumTeamsForXteamRedSmallBlockSize over
+        // OMPX_XTeamRedTeamsPerCU.
+        if (AdjustFactor == 0 && EnvarCUMultiplier > 0)
+          NumGroups = DeviceNumCUs * EnvarCUMultiplier;
+
         NumGroups = std::min(NumGroups, MaxNumGroups);
         NumGroups = std::min(NumGroups, NumGroupsFromTripCount);
 
