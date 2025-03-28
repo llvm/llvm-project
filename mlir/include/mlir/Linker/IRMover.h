@@ -25,6 +25,8 @@ struct ConflictPair {
   static ConflictPair noConflict(Operation *src) { return {nullptr, src}; }
 };
 
+using Summary = llvm::StringMap<ConflictPair>;
+
 struct IRMover {
 
   ModuleOp composite;
@@ -36,7 +38,7 @@ struct IRMover {
 
   explicit IRMover(ModuleOp composite) : composite(composite) {}
 
-  LogicalResult move(ArrayRef<ConflictPair> valuesToLink);
+  LogicalResult move(const Summary &summary);
 
 private:
   Operation * remap(ConflictPair pair);
@@ -45,27 +47,5 @@ private:
 };
 
 } // namespace mlir::link
-
-namespace llvm {
-
-template <>
-struct DenseMapInfo<mlir::link::ConflictPair> {
-  static mlir::link::ConflictPair getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return {{}, static_cast<mlir::Operation*>(pointer)};
-  }
-  static mlir::link::ConflictPair getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return {{}, static_cast<mlir::Operation *>(pointer)};
-  }
-  static unsigned getHashValue(mlir::link::ConflictPair val) {
-    return DenseMapInfo<const mlir::Operation *>::getHashValue(val.src);
-  }
-  static bool isEqual(mlir::link::ConflictPair lhs, mlir::link::ConflictPair rhs) {
-    return lhs.src == rhs.src;
-  }
-};
-
-} // namespace llvm
 
 #endif // MLIR_LINKER_IRMOVER_H

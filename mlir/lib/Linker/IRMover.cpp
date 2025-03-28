@@ -14,14 +14,18 @@
 using namespace mlir;
 using namespace mlir::link;
 
-LogicalResult IRMover::move(ArrayRef<ConflictPair> valuesToLink) {
-  worklist.insert(worklist.end(), valuesToLink.rbegin(), valuesToLink.rend());
+LogicalResult IRMover::move(const Summary &summary) {
+  worklist.reserve(summary.size());
+  for (const auto &[_, pair] : summary) {
+    worklist.push_back(pair);
+  }
 
   while (!worklist.empty()) {
     ConflictPair pair = worklist.back();
     worklist.pop_back();
 
-    assert(!mapping.contains(pair.src) && "expected no mapping for source");
+    if (mapping.contains(pair.src))
+      continue;
 
     if (!remap(pair))
       return failure();

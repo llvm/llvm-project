@@ -167,18 +167,21 @@ public:
 
   StringRef getSymbol(Operation *op) const override { return symbol(op); }
 
+  ConflictPair join(ConflictPair existing, Operation *src) const {
+    assert(!existing.hasConflict() && "expected non-conflicting pair");
+    if (isLocalLinkage(getLinkage(existing.src)))
+      return ConflictPair::noConflict(existing.src);
+    return {existing.src, src};
+  }
+
   ConflictPair findConflict(Operation *src) const override {
     assert(canBeLinked(src) && "expected linkable operation");
 
     if (isLocalLinkage(getLinkage(src)))
       return ConflictPair::noConflict(src);
 
-    // TODO: make lookup through module state
     if (auto it = summary.find(getSymbol(src)); it != summary.end()) {
-      Operation *dst = it->second;
-      if (dst != src && !isLocalLinkage(getLinkage(dst))) {
-        return {dst, src};
-      }
+      return join(it->second, src);
     }
 
     return ConflictPair::noConflict(src);
@@ -186,6 +189,8 @@ public:
 
   bool isLinkNeeded(ConflictPair pair, bool forDependency) const override {
     assert(canBeLinked(pair.src) && "expected linkable operation");
+    if (pair.src == pair.dst)
+      return false;
 
     LLVM::Linkage srcLinkage = getLinkage(pair.src);
 
@@ -320,21 +325,13 @@ public:
       valuesToClone.insert(*linkFromSrc ? pair.dst : pair.src);
 
     if (*linkFromSrc)
-      registerForLink(pair);
+      summary[getSymbol(pair.src)] = pair;
     return success();
   }
 
   void registerForLink(Operation *op) override {
     assert(canBeLinked(op) && "expected linkable operation");
-    registerForLink(ConflictPair::noConflict(op));
-  }
-
-  void registerForLink(ConflictPair pair) {
-    StringRef sym = getSymbol(pair.src);
-    assert(!summary.contains(sym) && "expected unique symbol");
-    summary[sym] = pair.src;
-
-    valuesToLink.insert(pair);
+    summary[getSymbol(op)] = ConflictPair::noConflict(op);
   }
 
   LogicalResult initialize(ModuleOp src) override {
@@ -354,7 +351,7 @@ public:
     // }
 
     IRMover mover(dst);
-    return mover.move(valuesToLink.getArrayRef());
+    return mover.move(summary);
   }
 
   Operation *prototype(ConflictPair pair) const {
@@ -374,10 +371,10 @@ public:
   Operation *materialize(ConflictPair pair, ModuleOp dst) const override {
     // Make definition if destination does not have one or has only declaration
     bool forDefinition = !pair.dst || isDeclaration(pair.dst);
-    if (!forDefinition)
+    if (!forDefinition || isDeclaration(pair.src))
       return prototype(pair);
 
-    // Definition laready exists
+    // Definition already exists
     if (pair.dst && !isDeclaration(pair.dst))
       return pair.dst;
 
@@ -411,13 +408,11 @@ public:
   }
 
 private:
-  llvm::StringMap<Operation *> summary;
-
   std::unique_ptr<SymbolTable> symbolTable;
 
   SetVector<Operation *> valuesToClone;
 
-  SetVector<ConflictPair> valuesToLink;
+  llvm::StringMap<ConflictPair> summary;
 };
 
 //===----------------------------------------------------------------------===//

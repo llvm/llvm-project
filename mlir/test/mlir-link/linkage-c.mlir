@@ -1,4 +1,5 @@
 // RUN: mlir-link -sort-symbols -split-input-file %s | FileCheck %s
+// REQUIRES: mlir-link-common, mlir-link-weak
 
 // CHECK: llvm.mlir.global common @test1_a(0 : i8) {addr_space = 0 : i32} : i8
 // CHECK: llvm.mlir.global external @test2_a(0 : i8) {addr_space = 0 : i32} : i8
