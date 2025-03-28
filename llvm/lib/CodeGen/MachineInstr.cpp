@@ -120,7 +120,7 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MCInstrDesc &TID,
 MachineInstr::MachineInstr(MachineFunction &MF, const MachineInstr &MI)
     : MCID(&MI.getDesc()), NumOperands(0), Flags(0), AsmPrinterFlags(0),
       Info(MI.Info), DbgLoc(MI.getDebugLoc()), DebugInstrNum(0),
-      Opcode(MI.getOpcode()) {
+      Opcode(MI.getOpcode()), DeactivationSymbol(MI.getDeactivationSymbol()) {
   assert(DbgLoc.hasTrivialDestructor() && "Expected trivial destructor");
 
   CapOperands = OperandCapacity::get(MI.getNumOperands());
@@ -727,6 +727,8 @@ bool MachineInstr::isIdenticalTo(const MachineInstr &Other,
     return false;
   // Call instructions with different CFI types are not identical.
   if (isCall() && getCFIType() != Other.getCFIType())
+    return false;
+  if (getDeactivationSymbol() != Other.getDeactivationSymbol())
     return false;
 
   return true;
@@ -2009,6 +2011,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << ',';
     OS << " cfi-type " << CFIType;
   }
+  if (getDeactivationSymbol())
+    OS << ", deactivation-symbol " << getDeactivationSymbol()->getName();
 
   if (DebugInstrNum) {
     if (!FirstOp)
