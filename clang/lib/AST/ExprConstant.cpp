@@ -10420,7 +10420,16 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
 
       typedef bool result_type;
       bool failed() { return false; }
+      bool checkConst(QualType QT) {
+        if (QT.isConstQualified()) {
+          Info.FFDiag(E, diag::note_constexpr_modify_const_type) << QT;
+          return false;
+        }
+        return true;
+      }
       bool found(APValue &Subobj, QualType SubobjType) {
+        if (!checkConst(SubobjType))
+          return false;
         // FIXME: Reject the cases where [basic.life]p8 would not permit the
         // old name of the object to be used to name the new object.
         unsigned SubobjectSize = 1;

@@ -6486,6 +6486,7 @@ cc_library(
         ":Pass",
         ":SPIRVCommonAttrToLLVMConversion",
         ":SPIRVDialect",
+        ":SPIRVImageInterfaces",
         ":SPIRVUtils",
         ":Support",
         ":TransformUtils",
@@ -7390,13 +7391,15 @@ cc_library(
 )
 
 td_library(
+    name = "SPIRVImageInterfacesTdFiles",
+    srcs = ["include/mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+td_library(
     name = "SPIRVOpsTdFiles",
-    srcs = glob(["include/mlir/Dialect/SPIRV/IR/*.td"]) + [
-        # TODO: resolve circular dep, e.g.
-        # * SPIRVImageInterfaces.td uses SPIRVBase.td
-        # * SPIRVOps.h uses SPIRVImageInterfaces.h
-        "include/mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.td",
-    ],
+    srcs = glob(["include/mlir/Dialect/SPIRV/IR/*.td"]),
     includes = ["include"],
     deps = [
         ":BuiltinDialectTdFiles",
@@ -7405,7 +7408,40 @@ td_library(
         ":FunctionInterfacesTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
+        ":SPIRVImageInterfacesTdFiles",
         ":SideEffectInterfacesTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "SPIRVImageInterfacesIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.td",
+    deps = [
+        ":SPIRVImageInterfacesTdFiles",
+        ":SPIRVOpsTdFiles",
+    ],
+)
+
+cc_library(
+    name = "SPIRVImageInterfaces",
+    srcs = ["lib/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.cpp"],
+    hdrs = ["include/mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":SPIRVImageInterfacesIncGen",
+        "//llvm:Support",
     ],
 )
 
@@ -7536,33 +7572,14 @@ gentbl_cc_library(
     deps = [":SPIRVOpsTdFiles"],
 )
 
-gentbl_cc_library(
-    name = "SPIRVImageInterfacesIncGen",
-    tbl_outs = [
-        (
-            ["-gen-op-interface-decls"],
-            "include/mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.h.inc",
-        ),
-        (
-            ["-gen-op-interface-defs"],
-            "include/mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.cpp.inc",
-        ),
-    ],
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.td",
-    deps = [":SPIRVOpsTdFiles"],
-)
-
 cc_library(
     name = "SPIRVDialect",
     srcs = glob([
         "lib/Dialect/SPIRV/IR/*.cpp",
         "lib/Dialect/SPIRV/IR/*.h",
-        "lib/Dialect/SPIRV/Interfaces/*.cpp",
     ]),
     hdrs = glob([
         "include/mlir/Dialect/SPIRV/IR/*.h",
-        "include/mlir/Dialect/SPIRV/Interfaces/*.h",
     ]),
     includes = ["include"],
     deps = [
@@ -7580,7 +7597,7 @@ cc_library(
         ":SPIRVAttributesIncGen",
         ":SPIRVAvailabilityIncGen",
         ":SPIRVCanonicalizationIncGen",
-        ":SPIRVImageInterfacesIncGen",
+        ":SPIRVImageInterfaces",
         ":SPIRVOpsIncGen",
         ":SideEffectInterfaces",
         ":Support",
