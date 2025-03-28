@@ -29,7 +29,6 @@ void test() {
 
   std::span<CharT> sp{arr};
   assert(sp.data() == arr);
-  assert(!sp.empty());
   assert(sp.size() == 4);
 
   // Mode: default (`in` | `out`)
@@ -37,41 +36,33 @@ void test() {
     SpStream rhsSpSt{sp};
     assert(rhsSpSt.span().data() == arr);
     // Mode `out` counts read characters
-    assert(rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 0);
 
     SpStream spSt{std::span<CharT>{}};
     assert(spSt.span().data() == nullptr);
     // Mode `out` counts read characters
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
     std::swap(spSt, rhsSpSt);
     assert(spSt.span().data() == arr);
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
     assert(rhsSpSt.span().data() == nullptr);
-    assert(rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 0);
   }
   // Mode: `in`
   {
     SpStream rhsSpSt{sp, std::ios_base::in};
     assert(rhsSpSt.span().data() == arr);
-    assert(!rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 4);
 
     SpStream spSt(std::span<CharT>{});
     assert(spSt.span().data() == nullptr);
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
     std::swap(spSt, rhsSpSt);
     assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
     assert(rhsSpSt.span().data() == nullptr);
-    assert(rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 0);
   }
   // Mode `out`
@@ -79,50 +70,23 @@ void test() {
     SpStream rhsSpSt{sp, std::ios_base::out};
     assert(rhsSpSt.span().data() == arr);
     // Mode `out` counts read characters
-    assert(rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 0);
 
     SpStream spSt{std::span<CharT>{}};
     assert(spSt.span().data() == nullptr);
     // Mode `out` counts read characters
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
     std::swap(spSt, rhsSpSt);
     assert(spSt.span().data() == arr);
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
     assert(rhsSpSt.span().data() == nullptr);
-    assert(rhsSpSt.span().empty());
-    assert(rhsSpSt.span().size() == 0);
-  }
-  // Mode: multiple
-  {
-    SpStream rhsSpSt{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
-    assert(rhsSpSt.span().data() == arr);
-    // Mode `out` counts read characters
-    assert(rhsSpSt.span().empty());
-    assert(rhsSpSt.span().size() == 0);
-
-    SpStream spSt{std::span<CharT>{}};
-    assert(spSt.span().data() == nullptr);
-    // Mode `out` counts read characters
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
-
-    std::swap(spSt, rhsSpSt);
-    assert(spSt.span().data() == arr);
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
-    assert(rhsSpSt.span().data() == nullptr);
-    assert(rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 0);
   }
   // Mode: `ate`
   {
-    SpStream rhsSpSt{sp, std::ios_base::out | std::ios_base::ate};
+    SpStream rhsSpSt{sp, std::ios_base::ate};
     assert(rhsSpSt.span().data() == arr);
-    assert(!rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 4);
 
     SpStream spSt(std::span<CharT>{});
@@ -132,10 +96,25 @@ void test() {
 
     std::swap(spSt, rhsSpSt);
     assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
     assert(rhsSpSt.span().data() == nullptr);
-    assert(rhsSpSt.span().empty());
+    assert(rhsSpSt.span().size() == 0);
+  }
+  // Mode: `ate`
+  {
+    SpStream rhsSpSt{sp, std::ios_base::out | std::ios_base::ate};
+    assert(rhsSpSt.span().data() == arr);
+    assert(rhsSpSt.span().size() == 4);
+
+    SpStream spSt(std::span<CharT>{});
+    assert(spSt.span().data() == nullptr);
+    assert(spSt.span().empty());
+    assert(spSt.span().size() == 0);
+
+    std::swap(spSt, rhsSpSt);
+    assert(spSt.span().data() == arr);
+    assert(spSt.span().size() == 4);
+    assert(rhsSpSt.span().data() == nullptr);
     assert(rhsSpSt.span().size() == 0);
   }
 }

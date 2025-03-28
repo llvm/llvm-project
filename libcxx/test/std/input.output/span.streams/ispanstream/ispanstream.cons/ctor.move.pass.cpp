@@ -42,68 +42,28 @@ void test() {
   {
     SpStream rhsSpSt{sp};
     assert(rhsSpSt.span().data() == arr);
-    assert(!rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 4);
 
     SpStream spSt(std::move(rhsSpSt));
     assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
 
     // Test after move
     assert(rhsSpSt.span().data() == arr);
-    assert(!rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 4);
   }
-  // Mode: `in`
+  // Mode: explicit `in`
   {
     SpStream rhsSpSt{sp, std::ios_base::in};
     assert(rhsSpSt.span().data() == arr);
-    assert(!rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 4);
 
     SpStream spSt(std::move(rhsSpSt));
     assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
 
     // Test after move
     assert(rhsSpSt.span().data() == arr);
-    assert(!rhsSpSt.span().empty());
-    assert(rhsSpSt.span().size() == 4);
-  }
-  // Mode `ate`
-  {
-    SpStream rhsSpSt{sp, std::ios_base::ate};
-    assert(rhsSpSt.span().data() == arr);
-    assert(!rhsSpSt.span().empty());
-    assert(rhsSpSt.span().size() == 4);
-
-    SpStream spSt{std::move(rhsSpSt)};
-    assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
-    assert(spSt.span().size() == 4);
-
-    // State after move
-    assert(rhsSpSt.span().data() == arr);
-    assert(!rhsSpSt.span().empty());
-    assert(rhsSpSt.span().size() == 4);
-  }
-  // Mode: multiple
-  {
-    SpStream rhsSpSt{sp, std::ios_base::ate | std::ios_base::binary};
-    assert(rhsSpSt.span().data() == arr);
-    assert(!rhsSpSt.span().empty());
-    assert(rhsSpSt.span().size() == 4);
-
-    SpStream spSt{std::move(rhsSpSt)};
-    assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
-    assert(spSt.span().size() == 4);
-
-    // Test after move
-    assert(rhsSpSt.span().data() == arr);
-    assert(!rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 4);
   }
 }

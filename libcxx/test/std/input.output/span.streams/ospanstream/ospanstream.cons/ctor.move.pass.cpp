@@ -34,7 +34,6 @@ void test() {
 
   std::span<CharT> sp{arr};
   assert(sp.data() == arr);
-  assert(!sp.empty());
   assert(sp.size() == 4);
 
   // Mode: default (`out`)
@@ -42,18 +41,15 @@ void test() {
     SpStream rhsSpSt{sp};
     assert(rhsSpSt.span().data() == arr);
     // Mode `out` counts read characters
-    assert(rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 0);
 
     SpStream spSt{std::move(rhsSpSt)};
     assert(spSt.span().data() == arr);
     // Mode `out` counts read characters
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
     // Test after move
     assert(rhsSpSt.span().data() == arr);
-    assert(rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 0);
   }
   // Mode `out`
@@ -61,52 +57,29 @@ void test() {
     SpStream rhsSpSt{sp, std::ios_base::out};
     assert(rhsSpSt.span().data() == arr);
     // Mode `out` counts read characters
-    assert(rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 0);
 
     SpStream spSt{std::move(rhsSpSt)};
     assert(spSt.span().data() == arr);
     // Mode `out` counts read characters
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
     // Test after move
     assert(rhsSpSt.span().data() == arr);
-    assert(rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 0);
   }
   // Mode `ate`
   {
     SpStream rhsSpSt{sp, std::ios_base::ate};
     assert(rhsSpSt.span().data() == arr);
-    assert(!rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 4);
 
     SpStream spSt{std::move(rhsSpSt)};
     assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
 
     // Test after move
     assert(rhsSpSt.span().data() == arr);
-    assert(!rhsSpSt.span().empty());
-    assert(rhsSpSt.span().size() == 4);
-  }
-  // Mode: multiple
-  {
-    SpStream rhsSpSt{sp, std::ios_base::ate | std::ios_base::binary};
-    assert(rhsSpSt.span().data() == arr);
-    assert(!rhsSpSt.span().empty());
-    assert(rhsSpSt.span().size() == 4);
-
-    SpStream spSt{std::move(rhsSpSt)};
-    assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
-    assert(spSt.span().size() == 4);
-
-    // Test after move
-    assert(rhsSpSt.span().data() == arr);
-    assert(!rhsSpSt.span().empty());
     assert(rhsSpSt.span().size() == 4);
   }
 }

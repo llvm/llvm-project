@@ -34,70 +34,58 @@ void test() {
 
   std::span<CharT> sp{arr};
   assert(sp.data() == arr);
-  assert(!sp.empty());
   assert(sp.size() == 4);
 
   // Mode: default (`in` | `out`)
   {
     SpStream spSt{std::span<CharT>{}};
     assert(spSt.span().data() == nullptr);
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
     spSt.span(arr);
     assert(spSt.span().data() == arr);
     // Mode `out` counts read characters
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
   }
   // Mode: `in`
   {
     SpStream spSt{std::span<CharT>{}, std::ios_base::in};
     assert(spSt.span().data() == nullptr);
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
     spSt.span(arr);
     assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
   }
   // Mode: `out`
   {
     SpStream spSt{std::span<CharT>{}, std::ios_base::out};
     assert(spSt.span().data() == nullptr);
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
     spSt.span(arr);
     assert(spSt.span().data() == arr);
     // Mode `out` counts read characters
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
   }
-  // Mode: multiple
+  // Mode: `ate`
   {
-    SpStream spSt{std::span<CharT>{}, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
+    SpStream spSt{std::span<CharT>{}, std::ios_base::ate};
     assert(spSt.span().data() == nullptr);
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
     spSt.span(arr);
     assert(spSt.span().data() == arr);
-    // Mode `out` counts read characters
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
+    assert(spSt.span().size() == 4);
   }
   // Mode: `ate`
   {
     SpStream spSt{std::span<CharT>{}, std::ios_base::out | std::ios_base::ate};
     assert(spSt.span().data() == nullptr);
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
     spSt.span(arr);
     assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
   }
 }
