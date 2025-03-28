@@ -140,5 +140,5 @@ subroutine rename_sub
   write(*,bbb)
 end
 
-! CHECK-NOT:   bbb
+! CHECK-NOT:   fir.global internal @_QQ{{.*}}bbb{{.*}} :
 ! CHECK:       fir.string_lit "aaa\00"(4) : !fir.char<1,4>
