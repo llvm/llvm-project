@@ -207,9 +207,7 @@ bool LoopPipelinerInternal::initializeLoopInfo(
 static SetVector<Value> getNestedOperands(Operation *op) {
   SetVector<Value> operands;
   op->walk([&](Operation *nestedOp) {
-    for (Value operand : nestedOp->getOperands()) {
-      operands.insert(operand);
-    }
+    operands.insert_range(nestedOp->getOperands());
   });
   return operands;
 }

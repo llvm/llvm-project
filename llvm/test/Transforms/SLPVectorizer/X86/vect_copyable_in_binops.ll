@@ -192,7 +192,9 @@ define void @addsub0(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 2
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[INCDEC_PTR1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[INCDEC_PTR2]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i32> [[TMP2]], <i32 -2, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i32> [[TMP2]], <i32 -2, i32 -3>
+; CHECK-NEXT:    [[TMP4:%.*]] = sub nsw <2 x i32> [[TMP2]], <i32 -2, i32 -3>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr [[INCDEC_PTR3]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -223,7 +225,9 @@ define void @addsub1(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 2
 ; CHECK-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i32> [[TMP0]], <i32 -1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i32> [[TMP0]], splat (i32 -1)
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw <2 x i32> [[TMP0]], splat (i32 -1)
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[INCDEC_PTR2]], align 4

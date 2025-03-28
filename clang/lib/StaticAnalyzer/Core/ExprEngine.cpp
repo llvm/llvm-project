@@ -3129,16 +3129,10 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
   ProgramStateRef state = Pred->getState();
   const LocationContext *LCtx = Pred->getLocationContext();
 
-  if (const auto *VD = dyn_cast<VarDecl>(D)) {
-    // C permits "extern void v", and if you cast the address to a valid type,
-    // you can even do things with it. We simply pretend
-    assert(Ex->isGLValue() || VD->getType()->isVoidType());
-    const LocationContext *LocCtxt = Pred->getLocationContext();
-    const Decl *D = LocCtxt->getDecl();
-    const auto *MD = dyn_cast_or_null<CXXMethodDecl>(D);
+  auto resolveAsLambdaCapturedVar =
+      [&](const ValueDecl *VD) -> std::optional<std::pair<SVal, QualType>> {
+    const auto *MD = dyn_cast<CXXMethodDecl>(LCtx->getDecl());
     const auto *DeclRefEx = dyn_cast<DeclRefExpr>(Ex);
-    std::optional<std::pair<SVal, QualType>> VInfo;
-
     if (AMgr.options.ShouldInlineLambdas && DeclRefEx &&
         DeclRefEx->refersToEnclosingVariableOrCapture() && MD &&
         MD->getParent()->isLambda()) {
@@ -3151,12 +3145,22 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
       // Sema follows a sequence of complex rules to determine whether the
       // variable should be captured.
       if (const FieldDecl *FD = LambdaCaptureFields[VD]) {
-        Loc CXXThis =
-            svalBuilder.getCXXThis(MD, LocCtxt->getStackFrame());
+        Loc CXXThis = svalBuilder.getCXXThis(MD, LCtx->getStackFrame());
         SVal CXXThisVal = state->getSVal(CXXThis);
-        VInfo = std::make_pair(state->getLValue(FD, CXXThisVal), FD->getType());
+        return std::make_pair(state->getLValue(FD, CXXThisVal), FD->getType());
       }
     }
+
+    return std::nullopt;
+  };
+
+  if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    // C permits "extern void v", and if you cast the address to a valid type,
+    // you can even do things with it. We simply pretend
+    assert(Ex->isGLValue() || VD->getType()->isVoidType());
+    const LocationContext *LocCtxt = Pred->getLocationContext();
+    std::optional<std::pair<SVal, QualType>> VInfo =
+        resolveAsLambdaCapturedVar(VD);
 
     if (!VInfo)
       VInfo = std::make_pair(state->getLValue(VD, LocCtxt), VD->getType());
@@ -3195,6 +3199,23 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
     return;
   }
   if (const auto *BD = dyn_cast<BindingDecl>(D)) {
+    // Handle structured bindings captured by lambda.
+    if (std::optional<std::pair<SVal, QualType>> VInfo =
+            resolveAsLambdaCapturedVar(BD)) {
+      auto [V, T] = VInfo.value();
+
+      if (T->isReferenceType()) {
+        if (const MemRegion *R = V.getAsRegion())
+          V = state->getSVal(R);
+        else
+          V = UnknownVal();
+      }
+
+      Bldr.generateNode(Ex, Pred, state->BindExpr(Ex, LCtx, V), nullptr,
+                        ProgramPoint::PostLValueKind);
+      return;
+    }
+
     const auto *DD = cast<DecompositionDecl>(BD->getDecomposedDecl());
 
     SVal Base = state->getLValue(DD, LCtx);

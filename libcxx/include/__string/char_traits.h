@@ -534,7 +534,7 @@ __str_find_last_not_of(const _CharT* __p, _SizeT __sz, _CharT __c, _SizeT __pos)
 template <class _Ptr>
 inline _LIBCPP_HIDE_FROM_ABI size_t __do_string_hash(_Ptr __p, _Ptr __e) {
   typedef typename iterator_traits<_Ptr>::value_type value_type;
-  return __murmur2_or_cityhash<size_t>()(__p, (__e - __p) * sizeof(value_type));
+  return std::__hash_memory(__p, (__e - __p) * sizeof(value_type));
 }
 
 _LIBCPP_END_NAMESPACE_STD

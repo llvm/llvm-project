@@ -119,6 +119,8 @@ inline bool isFullReplication(MeshSharding sharding) {
 inline mesh::MeshOp
 getMeshOrNull(Operation *op, FlatSymbolRefAttr meshSymbol,
               SymbolTableCollection &symbolTableCollection) {
+  if (!meshSymbol)
+    return nullptr;
   return symbolTableCollection.lookupNearestSymbolFrom<mesh::MeshOp>(
       op, meshSymbol);
 }

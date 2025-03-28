@@ -1073,7 +1073,7 @@ public:
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
   MachineMemOperand *getMachineMemOperand(
-      MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, uint64_t Size,
+      MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, TypeSize Size,
       Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
       const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
@@ -1099,7 +1099,7 @@ public:
             : LLT::scalar(8 * Size.getValue().getKnownMinValue()));
   }
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
-                                          int64_t Offset, uint64_t Size) {
+                                          int64_t Offset, TypeSize Size) {
     return getMachineMemOperand(MMO, Offset, LocationSize::precise(Size));
   }
 
@@ -1115,7 +1115,7 @@ public:
                                           LLT Ty);
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
                                           const MachinePointerInfo &PtrInfo,
-                                          uint64_t Size) {
+                                          TypeSize Size) {
     return getMachineMemOperand(MMO, PtrInfo, LocationSize::precise(Size));
   }
 

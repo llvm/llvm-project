@@ -1398,16 +1398,25 @@ getIntegerPairAttribute(const Function &F, StringRef Name,
 SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
                                              unsigned Size,
                                              unsigned DefaultVal) {
+  std::optional<SmallVector<unsigned>> R =
+      getIntegerVecAttribute(F, Name, Size);
+  return R.has_value() ? *R : SmallVector<unsigned>(Size, DefaultVal);
+}
+
+std::optional<SmallVector<unsigned>>
+getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size) {
   assert(Size > 2);
-  SmallVector<unsigned> Default(Size, DefaultVal);
+  LLVMContext &Ctx = F.getContext();
 
   Attribute A = F.getFnAttribute(Name);
-  if (!A.isStringAttribute())
-    return Default;
+  if (!A.isValid())
+    return std::nullopt;
+  if (!A.isStringAttribute()) {
+    Ctx.emitError(Name + " is not a string attribute");
+    return std::nullopt;
+  }
 
-  SmallVector<unsigned> Vals(Size, DefaultVal);
-
-  LLVMContext &Ctx = F.getContext();
+  SmallVector<unsigned> Vals(Size);
 
   StringRef S = A.getValueAsString();
   unsigned i = 0;
@@ -1417,7 +1426,7 @@ SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
     if (Strs.first.trim().getAsInteger(0, IntVal)) {
       Ctx.emitError("can't parse integer attribute " + Strs.first + " in " +
                     Name);
-      return Default;
+      return std::nullopt;
     }
     Vals[i] = IntVal;
     S = Strs.second;
@@ -1427,7 +1436,7 @@ SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
     Ctx.emitError("attribute " + Name +
                   " has incorrect number of integers; expected " +
                   llvm::utostr(Size));
-    return Default;
+    return std::nullopt;
   }
   return Vals;
 }

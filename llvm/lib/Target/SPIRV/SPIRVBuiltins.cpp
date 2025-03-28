@@ -391,12 +391,9 @@ static MachineInstr *getBlockStructInstr(Register ParamReg,
 // TODO: maybe unify with prelegalizer pass.
 static unsigned getConstFromIntrinsic(Register Reg, MachineRegisterInfo *MRI) {
   MachineInstr *DefMI = MRI->getUniqueVRegDef(Reg);
-  assert(isSpvIntrinsic(*DefMI, Intrinsic::spv_track_constant) &&
-         DefMI->getOperand(2).isReg());
-  MachineInstr *DefMI2 = MRI->getUniqueVRegDef(DefMI->getOperand(2).getReg());
-  assert(DefMI2->getOpcode() == TargetOpcode::G_CONSTANT &&
-         DefMI2->getOperand(1).isCImm());
-  return DefMI2->getOperand(1).getCImm()->getValue().getZExtValue();
+  assert(DefMI->getOpcode() == TargetOpcode::G_CONSTANT &&
+         DefMI->getOperand(1).isCImm());
+  return DefMI->getOperand(1).getCImm()->getValue().getZExtValue();
 }
 
 // Return type of the instruction result from spv_assign_type intrinsic.
@@ -538,10 +535,9 @@ static Register buildBuiltinVariableLoad(
 /// assign SPIRVType to both registers. If SpirvTy is provided, use it as
 /// SPIRVType in ASSIGN_TYPE, otherwise create it from \p Ty. Defined in
 /// SPIRVPreLegalizer.cpp.
-extern Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
-                                  SPIRVGlobalRegistry *GR,
-                                  MachineIRBuilder &MIB,
-                                  MachineRegisterInfo &MRI);
+extern void insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
+                              SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
+                              MachineRegisterInfo &MRI);
 
 // TODO: Move to TableGen.
 static SPIRV::MemorySemantics::MemorySemantics
@@ -1818,20 +1814,23 @@ static bool generateImageSizeQueryInst(const SPIRV::IncomingCall *Call,
   // Query result may either be a vector or a scalar. If return type is not a
   // vector, expect only a single size component. Otherwise get the number of
   // expected components.
-  SPIRVType *RetTy = Call->ReturnType;
-  unsigned NumExpectedRetComponents = RetTy->getOpcode() == SPIRV::OpTypeVector
-                                          ? RetTy->getOperand(2).getImm()
-                                          : 1;
+  unsigned NumExpectedRetComponents =
+      Call->ReturnType->getOpcode() == SPIRV::OpTypeVector
+          ? Call->ReturnType->getOperand(2).getImm()
+          : 1;
   // Get the actual number of query result/size components.
   SPIRVType *ImgType = GR->getSPIRVTypeForVReg(Call->Arguments[0]);
   unsigned NumActualRetComponents = getNumSizeComponents(ImgType);
   Register QueryResult = Call->ReturnRegister;
   SPIRVType *QueryResultType = Call->ReturnType;
   if (NumExpectedRetComponents != NumActualRetComponents) {
+    unsigned Bitwidth = Call->ReturnType->getOpcode() == SPIRV::OpTypeInt
+                            ? Call->ReturnType->getOperand(1).getImm()
+                            : 32;
     QueryResult = MIRBuilder.getMRI()->createGenericVirtualRegister(
-        LLT::fixed_vector(NumActualRetComponents, 32));
+        LLT::fixed_vector(NumActualRetComponents, Bitwidth));
     MIRBuilder.getMRI()->setRegClass(QueryResult, &SPIRV::vIDRegClass);
-    SPIRVType *IntTy = GR->getOrCreateSPIRVIntegerType(32, MIRBuilder);
+    SPIRVType *IntTy = GR->getOrCreateSPIRVIntegerType(Bitwidth, MIRBuilder);
     QueryResultType = GR->getOrCreateSPIRVVectorType(
         IntTy, NumActualRetComponents, MIRBuilder, true);
     GR->assignSPIRVTypeToVReg(QueryResultType, QueryResult, MIRBuilder.getMF());
@@ -1971,8 +1970,7 @@ static bool generateReadImageInst(const StringRef DemangledCall,
       Sampler = GR->buildConstantSampler(
           Register(), getSamplerAddressingModeFromBitmask(SamplerMask),
           getSamplerParamFromBitmask(SamplerMask),
-          getSamplerFilterModeFromBitmask(SamplerMask), MIRBuilder,
-          GR->getSPIRVTypeForVReg(Sampler));
+          getSamplerFilterModeFromBitmask(SamplerMask), MIRBuilder);
     }
     SPIRVType *ImageType = GR->getSPIRVTypeForVReg(Image);
     SPIRVType *SampledImageType =
@@ -2059,7 +2057,7 @@ static bool generateSampleImageInst(const StringRef DemangledCall,
     Register Sampler = GR->buildConstantSampler(
         Call->ReturnRegister, getSamplerAddressingModeFromBitmask(Bitmask),
         getSamplerParamFromBitmask(Bitmask),
-        getSamplerFilterModeFromBitmask(Bitmask), MIRBuilder, Call->ReturnType);
+        getSamplerFilterModeFromBitmask(Bitmask), MIRBuilder);
     return Sampler.isValid();
   } else if (Call->Builtin->Name.contains_insensitive("__spirv_SampledImage")) {
     // Create OpSampledImage.

@@ -102,7 +102,7 @@
 "`P3475R2 <https://wg21.link/P3475R2>`__","Defang and deprecate ``memory_order::consume``","2025-02 (Hagenberg)","","",""
 "`P2786R13 <https://wg21.link/P2786R13>`__","Trivial Relocatability For C++26","2025-02 (Hagenberg)","","",""
 "`P3137R3 <https://wg21.link/P3137R3>`__","``views::to_input``","2025-02 (Hagenberg)","","",""
-"`P0472R3 <https://wg21.link/P0472R3>`__","Put ``std::monostate`` in ``<utility>``","2025-02 (Hagenberg)","","",""
+"`P0472R3 <https://wg21.link/P0472R3>`__","Put ``std::monostate`` in ``<utility>``","2025-02 (Hagenberg)","|Complete|","21",""
 "`P3349R1 <https://wg21.link/P3349R1>`__","Converting contiguous iterators to pointers","2025-02 (Hagenberg)","","",""
 "`P3372R3 <https://wg21.link/P3372R3>`__","constexpr containers and adaptors","2025-02 (Hagenberg)","","",""
 "`P3378R2 <https://wg21.link/P3378R2>`__","constexpr exception types","2025-02 (Hagenberg)","","",""

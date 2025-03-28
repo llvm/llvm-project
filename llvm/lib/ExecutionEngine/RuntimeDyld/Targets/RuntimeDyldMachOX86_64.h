@@ -131,12 +131,12 @@ private:
     assert(RE.IsPCRel);
     assert(RE.Size == 2);
     Value.Offset -= RE.Addend;
-    auto [It, Inserted] = Stubs.try_emplace(Value);
+    RuntimeDyldMachO::StubMap::const_iterator i = Stubs.find(Value);
     uint8_t *Addr;
-    if (!Inserted) {
-      Addr = Section.getAddressWithOffset(It->second);
+    if (i != Stubs.end()) {
+      Addr = Section.getAddressWithOffset(i->second);
     } else {
-      It->second = Section.getStubOffset();
+      Stubs[Value] = Section.getStubOffset();
       uint8_t *GOTEntry = Section.getAddressWithOffset(Section.getStubOffset());
       RelocationEntry GOTRE(RE.SectionID, Section.getStubOffset(),
                             MachO::X86_64_RELOC_UNSIGNED, Value.Offset, false,

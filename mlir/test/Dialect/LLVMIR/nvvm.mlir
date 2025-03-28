@@ -563,6 +563,15 @@ func.func @match_sync(%val32: i32, %val64: i64, %thread_mask: i32) {
   return 
 }
 
+// CHECK-LABEL: @st_bulk
+func.func @st_bulk(%addr_gen: !llvm.ptr, %addr_shared: !llvm.ptr<3>, %size: i64) {
+  // CHECK:   nvvm.st.bulk %{{.*}}, size = %{{.*}} : !llvm.ptr
+  nvvm.st.bulk %addr_gen, size = %size, init = 0 : !llvm.ptr
+  // CHECK:   nvvm.st.bulk %{{.*}}, size = %{{.*}} : !llvm.ptr<3>
+  nvvm.st.bulk %addr_shared, size = %size, init = 0 : !llvm.ptr<3>
+  return
+}
+
 // -----
 
 // Just check these don't emit errors.

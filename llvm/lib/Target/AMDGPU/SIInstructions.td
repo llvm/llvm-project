@@ -2425,6 +2425,13 @@ def : GCNPat <(i1 imm:$imm),
   let WaveSizePredicate = isWave32;
 }
 
+let True16Predicate = UseRealTrue16Insts in
+foreach vt = [i32, v2i16] in
+def : GCNPat <
+  (vt (DivergentBinFrag<srl> VGPR_32:$src, (i32 16))),
+  (REG_SEQUENCE VGPR_32, (i16 (EXTRACT_SUBREG $src, hi16)), lo16, (V_MOV_B16_t16_e64 0, (i16 0x0000), 0), hi16)
+>;
+
 /********** ================== **********/
 /********** Intrinsic Patterns **********/
 /********** ================== **********/

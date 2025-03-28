@@ -251,9 +251,7 @@ static void handleResultImpl(InlinerInterface &interface, OpBuilder &builder,
   SmallVector<DictionaryAttr> resultAttributes;
   for (auto [result, resAttr] : llvm::zip(results, resAttrs)) {
     // Store the original result users before running the handler.
-    DenseSet<Operation *> resultUsers;
-    for (Operation *user : result.getUsers())
-      resultUsers.insert(user);
+    DenseSet<Operation *> resultUsers(llvm::from_range, result.getUsers());
 
     Value newResult =
         interface.handleResult(builder, call, callable, result, resAttr);

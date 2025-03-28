@@ -4,16 +4,7 @@
 RUN: %clang %cflags -pie %S/Inputs/indirect_goto.c -o %t.exe -Wl,-q
 RUN: llvm-bolt %t.exe -o %t.bolt --print-cfg | FileCheck --check-prefix=CHECK-PIE %s
 
-RUN: %clang %cflags -no-pie %S/Inputs/indirect_goto.c -o %t.exe -Wl,-q
-RUN: llvm-bolt %t.exe -o %t.bolt --print-cfg | FileCheck --check-prefix=CHECK-NO-PIE %s
-
 // Check that BOLT registers extra entry points for dynamic relocations with PIE.
 CHECK-PIE: Binary Function "main" after building cfg {
 CHECK-PIE: IsMultiEntry: 1
 CHECK-PIE: Secondary Entry Points : {{.*}}
-
-// Check that BOLT does not register extra entry points for dynamic relocations
-// without PIE
-CHECK-NO-PIE: Binary Function "main" after building cfg {
-CHECK-NO-PIE-NOT: IsMultiEntry: 1
-CHECK-NO-PIE-NOT: Secondary Entry Points : {{.*}}

@@ -104,9 +104,9 @@ public:
                            SmallVectorImpl<MCFixup> &Fixups,
                            const MCSubtargetInfo &STI) const;
 
-  unsigned getRegReg(const MCInst &MI, unsigned OpNo,
-                     SmallVectorImpl<MCFixup> &Fixups,
-                     const MCSubtargetInfo &STI) const;
+  unsigned getRlistS0OpValue(const MCInst &MI, unsigned OpNo,
+                             SmallVectorImpl<MCFixup> &Fixups,
+                             const MCSubtargetInfo &STI) const;
 };
 } // end anonymous namespace
 
@@ -620,18 +620,16 @@ unsigned RISCVMCCodeEmitter::getRlistOpValue(const MCInst &MI, unsigned OpNo,
   assert(Imm >= 4 && "EABI is currently not implemented");
   return Imm;
 }
-
-unsigned RISCVMCCodeEmitter::getRegReg(const MCInst &MI, unsigned OpNo,
-                                       SmallVectorImpl<MCFixup> &Fixups,
-                                       const MCSubtargetInfo &STI) const {
+unsigned
+RISCVMCCodeEmitter::getRlistS0OpValue(const MCInst &MI, unsigned OpNo,
+                                      SmallVectorImpl<MCFixup> &Fixups,
+                                      const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
-  const MCOperand &MO1 = MI.getOperand(OpNo + 1);
-  assert(MO.isReg() && MO1.isReg() && "Expected registers.");
-
-  unsigned Op = Ctx.getRegisterInfo()->getEncodingValue(MO.getReg());
-  unsigned Op1 = Ctx.getRegisterInfo()->getEncodingValue(MO1.getReg());
-
-  return Op | Op1 << 5;
+  assert(MO.isImm() && "Rlist operand must be immediate");
+  auto Imm = MO.getImm();
+  assert(Imm >= 4 && "EABI is currently not implemented");
+  assert(Imm != RISCVZC::RA && "Rlist operand must include s0");
+  return Imm;
 }
 
 #include "RISCVGenMCCodeEmitter.inc"

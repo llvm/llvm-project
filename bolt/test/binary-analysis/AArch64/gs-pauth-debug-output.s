@@ -40,26 +40,26 @@ simple:
 // CHECK-NEXT:     <empty>
 // CHECK-NEXT: End of Function "simple"
 // CHECK-EMPTY:
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   hint    #25, pacret-state<NonAutClobRegs: , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<NonAutClobRegs: LR W30 W30_HI , Insts: >)
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   b       [[BB1]], pacret-state<NonAutClobRegs: LR W30 W30_HI , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<NonAutClobRegs: LR W30 W30_HI , Insts: >)
+// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   hint    #25, pacret-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
+// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   b       [[BB1]], pacret-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: , Insts: >)
 // CHECK-NEXT:  PacRetAnalysis::Confluence(
-// CHECK-NEXT:    State 1: pacret-state<NonAutClobRegs: , Insts: >
-// CHECK-NEXT:    State 2: pacret-state<NonAutClobRegs: LR W30 W30_HI , Insts: >)
-// CHECK-NEXT:    merged state: pacret-state<NonAutClobRegs: LR W30 W30_HI , Insts: >
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   hint    #29, pacret-state<NonAutClobRegs: LR W30 W30_HI , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<NonAutClobRegs: , Insts: >)
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   ret     x30, pacret-state<NonAutClobRegs: , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<NonAutClobRegs: , Insts: >)
+// CHECK-NEXT:    State 1: pacret-state<empty>
+// CHECK-NEXT:    State 2: pacret-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:    merged state: pacret-state<SafeToDerefRegs: , Insts: >
+// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   hint    #29, pacret-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
+// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   ret     x30, pacret-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
+// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
 // CHECK-NEXT:  PacRetAnalysis::Confluence(
-// CHECK-NEXT:    State 1: pacret-state<NonAutClobRegs: LR W30 W30_HI , Insts: >
-// CHECK-NEXT:    State 2: pacret-state<NonAutClobRegs: LR W30 W30_HI , Insts: >)
-// CHECK-NEXT:    merged state: pacret-state<NonAutClobRegs: LR W30 W30_HI , Insts: >
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   hint    #29, pacret-state<NonAutClobRegs: LR W30 W30_HI , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<NonAutClobRegs: , Insts: >)
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   ret     x30, pacret-state<NonAutClobRegs: , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<NonAutClobRegs: , Insts: >)
+// CHECK-NEXT:    State 1: pacret-state<SafeToDerefRegs: , Insts: >
+// CHECK-NEXT:    State 2: pacret-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:    merged state: pacret-state<SafeToDerefRegs: , Insts: >
+// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   hint    #29, pacret-state<SafeToDerefRegs: , Insts: >)
+// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
+// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   ret     x30, pacret-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
+// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
 // CHECK-NEXT:  After PacRetAnalysis:
 // CHECK-NEXT: Binary Function "simple"  {
 // CHECK-NEXT:   Number      : 1
@@ -69,24 +69,23 @@ simple:
 // CHECK-NEXT: }
 // CHECK-NEXT: [[BB0]] (2 instructions, align : 1)
 // CHECK-NEXT:   Entry Point
-// CHECK-NEXT:     00000000:   paciasp # PacRetAnalysis: pacret-state<NonAutClobRegs: BitVector, Insts: >
-// CHECK-NEXT:     00000004:   b       [[BB1]] # PacRetAnalysis: pacret-state<NonAutClobRegs: BitVector, Insts: >
+// CHECK-NEXT:     00000000:   paciasp # PacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:     00000004:   b       [[BB1]] # PacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: >
 // CHECK-NEXT:   Successors: [[BB1]]
 // CHECK-EMPTY:
 // CHECK-NEXT: [[BB1]] (2 instructions, align : 1)
 // CHECK-NEXT:   Predecessors: [[BB0]]
-// CHECK-NEXT:     00000008:   autiasp # PacRetAnalysis: pacret-state<NonAutClobRegs: BitVector, Insts: >
-// CHECK-NEXT:     0000000c:   ret # PacRetAnalysis: pacret-state<NonAutClobRegs: BitVector, Insts: >
+// CHECK-NEXT:     00000008:   autiasp # PacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: >
+// CHECK-NEXT:     0000000c:   ret # PacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: >
 // CHECK-EMPTY:
 // CHECK-NEXT: DWARF CFI Instructions:
 // CHECK-NEXT:     <empty>
 // CHECK-NEXT: End of Function "simple"
 // CHECK-EMPTY:
-// CHECK-NEXT:   Found RET inst:     00000000:         ret # PacRetAnalysis: pacret-state<NonAutClobRegs: BitVector, Insts: >
+// CHECK-NEXT:   Found RET inst:     00000000:         ret # PacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: >
 // CHECK-NEXT:     RetReg: LR
 // CHECK-NEXT:     Authenticated reg: (none)
-// CHECK-NEXT:     NonAutClobRegs at Ret:{{[ \t]*$}}
-// CHECK-NEXT:     Intersection with RetReg:{{[ \t]*$}}
+// CHECK-NEXT:     SafeToDerefRegs: LR W30 W30_HI{{[ \t]*$}}
 
         .globl  clobber
         .type   clobber,@function
@@ -97,10 +96,10 @@ clobber:
 
 // CHECK-LABEL:Analyzing in function clobber, AllocatorId 1
 // ...
-// CHECK:       PacRetAnalysis::ComputeNext(   mov     w30, #0x0, pacret-state<NonAutClobRegs: , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<NonAutClobRegs: W30 , Insts: >)
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   ret     x30, pacret-state<NonAutClobRegs: W30 , Insts: >)
-// CHECK-NEXT:   .. result: (pacret-state<NonAutClobRegs: W30 , Insts: >)
+// CHECK:       PacRetAnalysis::ComputeNext(   mov     w30, #0x0, pacret-state<SafeToDerefRegs: LR W30 W30_HI , Insts: >)
+// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: W30_HI , Insts: >)
+// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   ret     x30, pacret-state<SafeToDerefRegs: W30_HI , Insts: >)
+// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: W30_HI , Insts: >)
 // CHECK-NEXT:  After PacRetAnalysis:
 // CHECK-NEXT: Binary Function "clobber"  {
 // ...
@@ -109,15 +108,14 @@ clobber:
 // The above output was printed after first run of analysis
 
 // CHECK-EMPTY:
-// CHECK-NEXT:   Found RET inst:     00000000:         ret # PacRetAnalysis: pacret-state<NonAutClobRegs: BitVector, Insts: >
+// CHECK-NEXT:   Found RET inst:     00000000:         ret # PacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: >
 // CHECK-NEXT:     RetReg: LR
 // CHECK-NEXT:     Authenticated reg: (none)
-// CHECK-NEXT:     NonAutClobRegs at Ret: W30
-// CHECK-NEXT:     Intersection with RetReg: W30
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   mov     w30, #0x0, pacret-state<NonAutClobRegs: , Insts: [0]()>)
-// CHECK-NEXT:   .. result: (pacret-state<NonAutClobRegs: W30 , Insts: [0](0x{{[0-9a-f]+}} )>)
-// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   ret     x30, pacret-state<NonAutClobRegs: W30 , Insts: [0](0x{{[0-9a-f]+}} )>)
-// CHECK-NEXT:   .. result: (pacret-state<NonAutClobRegs: W30 , Insts: [0](0x{{[0-9a-f]+}} )>)
+// CHECK-NEXT:     SafeToDerefRegs: W30_HI{{[ \t]*$}}
+// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   mov     w30, #0x0, pacret-state<SafeToDerefRegs: LR W30 W30_HI , Insts: [0]()>)
+// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: W30_HI , Insts: [0](0x{{[0-9a-f]+}} )>)
+// CHECK-NEXT:  PacRetAnalysis::ComputeNext(   ret     x30, pacret-state<SafeToDerefRegs: W30_HI , Insts: [0](0x{{[0-9a-f]+}} )>)
+// CHECK-NEXT:   .. result: (pacret-state<SafeToDerefRegs: W30_HI , Insts: [0](0x{{[0-9a-f]+}} )>)
 // CHECK-NEXT:  After detailed PacRetAnalysis:
 // CHECK-NEXT: Binary Function "clobber"  {
 // ...
@@ -127,7 +125,7 @@ clobber:
 // Iterating over the reports and attaching clobbering info:
 
 // CHECK-EMPTY:
-// CHECK-NEXT:   Attaching clobbering info to:     00000000:         ret # PacRetAnalysis: pacret-state<NonAutClobRegs: BitVector, Insts: [0](0x{{[0-9a-f]+}} )>
+// CHECK-NEXT:   Attaching clobbering info to:     00000000:         ret # PacRetAnalysis: pacret-state<SafeToDerefRegs: BitVector, Insts: [0](0x{{[0-9a-f]+}} )>
 
 
 // CHECK-LABEL:Analyzing in function main, AllocatorId 1

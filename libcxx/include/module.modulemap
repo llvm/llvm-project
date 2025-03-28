@@ -418,7 +418,10 @@ module std [system] {
     module copy_backward                          { header "__algorithm/copy_backward.h" }
     module copy_if                                { header "__algorithm/copy_if.h" }
     module copy_move_common                       { header "__algorithm/copy_move_common.h" }
-    module copy_n                                 { header "__algorithm/copy_n.h" }
+    module copy_n                                 {
+      header "__algorithm/copy_n.h"
+      export std.iterator_traits
+    }
     module copy                                   { header "__algorithm/copy.h" }
     module count_if                               { header "__algorithm/count_if.h" }
     module count                                  { header "__algorithm/count.h" }
@@ -1499,6 +1502,7 @@ module std [system] {
     module iterator_traits {
       header "__iterator/iterator_traits.h"
       export std_core.type_traits.integral_constant
+      export std_core.type_traits.is_convertible
     }
     module iterator_with_data         { header "__iterator/iterator_with_data.h" }
     module iterator                   { header "__iterator/iterator.h" }
