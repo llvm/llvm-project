@@ -11,8 +11,8 @@ public:
 
 class DefaultABICall : public ABICall {
 public:
-  ABIBuiltinType classifyReturnType(QualType RetTy) const;
-  ABIBuiltinType classifyArgumentType(QualType RetTy) const;
+  ABIArgInfo classifyReturnType(ABIQualType RetTy) const;
+  ABIArgInfo classifyArgumentType(ABIQualType RetTy) const;
 
   void computeInfo(ABIFunctionInfo FI) const override;
 

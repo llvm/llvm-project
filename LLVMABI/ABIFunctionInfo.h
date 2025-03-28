@@ -2,10 +2,12 @@
 #define LLVM_CLANG_CODEGEN_CGFUNCTIONINFO_H
 
 #include "LLVMABI/Type.h"
+#include <vector>
+
 // Does the leaf leave the tree or the tree let go of the leaf?
+using namespace ABI;
 
 namespace ABIFunction{
-
 
 /// ABIArgInfo - Helper class to encapsulate information about how a
 /// specific C type should be passed to or returned from a function.
@@ -78,13 +80,14 @@ public:
   void dump() const;
 };
 
+// taken from clang, needs to be extended.
 enum CallingConv {
     CC_C,                  // __attribute__((cdecl))
     CC_X86StdCall       // __attribute__((stdcall))
 };
 
 struct ABIFunctionInfoArgInfo {
-  ABI::ABIBuiltinType type;
+  ABIQualType type;
   ABIArgInfo info;
 };
 
@@ -97,10 +100,10 @@ class ABIFunctionInfo {
   ArgInfo RetInfo;
   
   public:
-    ABIFunctionInfo(CallingConv cc, std::vector<ABI::ABIBuiltinType> parameters, ABI::ABIBuiltinType ReturnInfo);
+    ABIFunctionInfo(CallingConv cc, std::vector<ABIQualType> parameters, ABIQualType ReturnInfo);
 
     static ABIFunctionInfo *
-      create(CallingConv cc, std::vector<ABI::ABIBuiltinType> parameters, ABI::ABIBuiltinType ReturnInfo);
+      create(CallingConv cc, std::vector<ABIQualType> parameters, ABIQualType ReturnInfo);
 
     const_arg_iterator arg_begin() const { return getArgsBuffer() + 1; }
     const_arg_iterator arg_end() const { return getArgsBuffer() + 1 + NumArgs; }
