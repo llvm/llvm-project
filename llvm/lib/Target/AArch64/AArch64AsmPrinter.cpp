@@ -69,15 +69,6 @@
 
 using namespace llvm;
 
-enum PtrauthCheckMode { Default, Unchecked, Poison, Trap };
-static cl::opt<PtrauthCheckMode> PtrauthAuthChecks(
-    "aarch64-ptrauth-auth-checks", cl::Hidden,
-    cl::values(clEnumValN(Unchecked, "none", "don't test for failure"),
-               clEnumValN(Poison, "poison", "poison on failure"),
-               clEnumValN(Trap, "trap", "trap on failure")),
-    cl::desc("Check pointer authentication auth/resign failures"),
-    cl::init(Default));
-
 #define DEBUG_TYPE "asm-printer"
 
 namespace {
@@ -2866,7 +2857,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   }
 
-  case AArch64::AUT:
+  case AArch64::AUTx16x17:
   case AArch64::AUTPAC:
     emitPtrauthAuthResign(MI);
     return;

@@ -33,21 +33,27 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 define i64 @test_auth_blend(i64 %arg, i64 %arg1) {
 ; UNCHECKED-LABEL: test_auth_blend:
-; UNCHECKED:       %bb.0:
-; UNCHECKED-NEXT:    mov x16, x0
-; UNCHECKED-NEXT:    mov x17, x1
-; UNCHECKED-NEXT:    movk x17, #65535, lsl #48
-; UNCHECKED-NEXT:    autda x16, x17
-; UNCHECKED-NEXT:    mov x0, x16
-; UNCHECKED-NEXT:    ret
+; UNCHECKED:          %bb.0:
+; UNCHECKED-DARWIN-NEXT: mov x16, x0
+; UNCHECKED-DARWIN-NEXT: mov x17, x1
+; UNCHECKED-DARWIN-NEXT: movk x17, #65535, lsl #48
+; UNCHECKED-DARWIN-NEXT: autda x16, x17
+; UNCHECKED-DARWIN-NEXT: mov x0, x16
+; UNCHECKED-ELF-NEXT:    mov x8, x1
+; UNCHECKED-ELF-NEXT:    movk x8, #65535, lsl #48
+; UNCHECKED-ELF-NEXT:    autda x0, x8
+; UNCHECKED-NEXT:        ret
 ;
 ; CHECKED-LABEL: test_auth_blend:
-; CHECKED:       %bb.0:
-; CHECKED-NEXT:    mov x16, x0
-; CHECKED-NEXT:    mov x17, x1
-; CHECKED-NEXT:    movk x17, #65535, lsl #48
-; CHECKED-NEXT:    autda x16, x17
-; CHECKED-NEXT:    mov x0, x16
+; CHECKED:           %bb.0:
+; CHECKED-DARWIN-NEXT: mov x16, x0
+; CHECKED-DARWIN-NEXT: mov x17, x1
+; CHECKED-DARWIN-NEXT: movk x17, #65535, lsl #48
+; CHECKED-DARWIN-NEXT: autda x16, x17
+; CHECKED-DARWIN-NEXT: mov x0, x16
+; CHECKED-ELF-NEXT:    mov x8, x1
+; CHECKED-ELF-NEXT:    movk x8, #65535, lsl #48
+; CHECKED-ELF-NEXT:    autda x0, x8
 ; CHECKED-NEXT:    ret
 ;
 ; TRAP-LABEL: test_auth_blend:
@@ -146,10 +152,10 @@ define i64 @test_resign_blend_and_const(i64 %arg, i64 %arg1) {
 ; CHECKED-NEXT:    mov x17, x16
 ; CHECKED-NEXT:    xpacd x17
 ; CHECKED-NEXT:    cmp x16, x17
-; CHECKED-NEXT:    b.eq [[L]]auth_success_1
+; CHECKED-NEXT:    b.eq [[L]]auth_success_[[N2:[0-9]]]
 ; CHECKED-NEXT:    mov x16, x17
 ; CHECKED-NEXT:    b [[L]]resign_end_1
-; CHECKED-NEXT:  Lauth_success_1:
+; CHECKED-NEXT:  Lauth_success_[[N2]]:
 ; CHECKED-NEXT:    mov x17, #56789
 ; CHECKED-NEXT:    pacdb x16, x17
 ; CHECKED-NEXT:  Lresign_end_1:
@@ -232,10 +238,10 @@ define i64 @test_auth_too_large_discriminator(i64 %arg, i64 %arg1) {
 ; UNCHECKED-NEXT:        mov w8, #65536
 ; UNCHECKED-DARWIN-NEXT: bfi x1, x8, #48, #16
 ; UNCHECKED-DARWIN-NEXT: mov x16, x0
-; UNCHECKED-ELF-NEXT:    mov x16, x0
+; UNCHECKED-DARWIN-NEXT: autda x16, x1
+; UNCHECKED-DARWIN-NEXT: mov x0, x16
 ; UNCHECKED-ELF-NEXT:    bfi x1, x8, #48, #16
-; UNCHECKED-NEXT:        autda x16, x1
-; UNCHECKED-NEXT:        mov x0, x16
+; UNCHECKED-ELF-NEXT:    autda x0, x1
 ; UNCHECKED-NEXT:        ret
 ;
 ; CHECKED-LABEL: test_auth_too_large_discriminator:
@@ -243,10 +249,10 @@ define i64 @test_auth_too_large_discriminator(i64 %arg, i64 %arg1) {
 ; CHECKED-NEXT:        mov w8, #65536
 ; CHECKED-DARWIN-NEXT: bfi x1, x8, #48, #16
 ; CHECKED-DARWIN-NEXT: mov x16, x0
-; CHECKED-ELF-NEXT:    mov x16, x0
+; CHECKED-DARWIN-NEXT: autda x16, x1
+; CHECKED-DARWIN-NEXT: mov x0, x16
 ; CHECKED-ELF-NEXT:    bfi x1, x8, #48, #16
-; CHECKED-NEXT:        autda x16, x1
-; CHECKED-NEXT:        mov x0, x16
+; CHECKED-ELF-NEXT:    autda x0, x1
 ; CHECKED-NEXT:        ret
 ;
 ; TRAP-LABEL: test_auth_too_large_discriminator:
