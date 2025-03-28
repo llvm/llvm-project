@@ -525,7 +525,9 @@ void ASTDeclReader::ReadFunctionDefinition(FunctionDecl *FD) {
   }
   // Store the offset of the body so we can lazily load it later.
   Reader.PendingBodies[FD] = GetCurrentCursorOffset();
-  Reader.DefinitionSource[FD].ThisDeclarationWasADefinition = true;
+  // For now remember ThisDeclarationWasADefinition only for friend functions.
+  if (FD->getFriendObjectKind())
+    Reader.DefinitionSource[FD].ThisDeclarationWasADefinition = true;
 }
 
 void ASTDeclReader::Visit(Decl *D) {
