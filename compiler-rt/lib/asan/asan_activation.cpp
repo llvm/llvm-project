@@ -58,7 +58,7 @@ static struct AsanDeactivatedFlags {
     cf.verbosity = Verbosity();
     cf.help = false; // this is activation-specific help
 
-    // Check if activation flags need to be overridden.
+    // Check if activation flags need to be overriden.
     if (const char *env = GetEnv("ASAN_ACTIVATION_OPTIONS")) {
       parser.ParseString(env);
     }
