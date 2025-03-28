@@ -57,10 +57,10 @@ static void copyIntegerRange(DataFlowSolver &solver, Value oldVal,
       *oldState);
 }
 
+namespace mlir::dataflow {
 /// Patterned after SCCP
-static LogicalResult maybeReplaceWithConstant(DataFlowSolver &solver,
-                                              PatternRewriter &rewriter,
-                                              Value value) {
+LogicalResult maybeReplaceWithConstant(DataFlowSolver &solver,
+                                       RewriterBase &rewriter, Value value) {
   if (value.use_empty())
     return failure();
   std::optional<APInt> maybeConstValue = getMaybeConstantValue(solver, value);
@@ -95,6 +95,7 @@ static LogicalResult maybeReplaceWithConstant(DataFlowSolver &solver,
   rewriter.replaceAllUsesWith(value, constOp->getResult(0));
   return success();
 }
+} // namespace mlir::dataflow
 
 namespace {
 class DataFlowListener : public RewriterBase::Listener {

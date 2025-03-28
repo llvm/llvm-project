@@ -109,7 +109,7 @@ struct ErrorMessage {
   /// requirement that every user visible error message needs a corresponding
   /// error number, so that users or customer support can find information about
   /// the specific error more easily.
-  uint64_t id;
+  uint64_t id = 0;
 
   /// A format string for the message. Embedded variables have the form
   /// `{name}`. If variable name starts with an underscore character, the
@@ -122,10 +122,10 @@ struct ErrorMessage {
   std::optional<std::map<std::string, std::string>> variables;
 
   /// If true send to telemetry.
-  bool sendTelemetry;
+  bool sendTelemetry = false;
 
   /// If true show user.
-  bool showUser;
+  bool showUser = false;
 
   /// A url where additional information about this message can be found.
   std::optional<std::string> url;
@@ -140,6 +140,13 @@ llvm::json::Value toJSON(const ErrorMessage &);
 using Message = std::variant<Request, Response, Event>;
 bool fromJSON(const llvm::json::Value &, Message &, llvm::json::Path);
 llvm::json::Value toJSON(const Message &);
+
+/// On error (whenever `success` is false), the body can provide more details.
+struct ErrorResponseBody {
+  /// A structured error message.
+  std::optional<ErrorMessage> error;
+};
+llvm::json::Value toJSON(const ErrorResponseBody &);
 
 /// This is just an acknowledgement, so no body field is required.
 using VoidResponse = std::monostate;

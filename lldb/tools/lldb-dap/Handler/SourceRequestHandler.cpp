@@ -29,7 +29,7 @@ SourceRequestHandler::Run(const protocol::SourceArguments &args) const {
       args.source->sourceReference.value_or(args.sourceReference);
 
   if (!source)
-    return llvm::createStringError(
+    return llvm::make_error<DAPError>(
         "invalid arguments, expected source.sourceReference to be set");
 
   lldb::SBProcess process = dap.target.GetProcess();
@@ -39,7 +39,7 @@ SourceRequestHandler::Run(const protocol::SourceArguments &args) const {
   // Lower 32 bits is the frame index
   lldb::SBFrame frame = thread.GetFrameAtIndex(GetLLDBFrameID(source));
   if (!frame.IsValid())
-    return llvm::createStringError("source not found");
+    return llvm::make_error<DAPError>("source not found");
 
   lldb::SBInstructionList insts = frame.GetSymbol().GetInstructions(dap.target);
   lldb::SBStream stream;

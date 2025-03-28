@@ -1257,22 +1257,6 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
   if (!RefA)
     return false;
 
-  MCSymbolRefExpr::VariantKind Kind = RefA->getKind();
-  switch (Kind) {
-  default:
-    break;
-
-  // These VariantKind cause the relocation to refer to something other than
-  // the symbol itself, like a linker generated table. Since the address of
-  // symbol is not relevant, we cannot replace the symbol with the
-  // section and patch the difference in the addend.
-  case MCSymbolRefExpr::VK_GOT:
-  case MCSymbolRefExpr::VK_PLT:
-  case MCSymbolRefExpr::VK_GOTPCREL:
-  case MCSymbolRefExpr::VK_GOTPCREL_NORELAX:
-    return true;
-  }
-
   // An undefined symbol is not in any section, so the relocation has to point
   // to the symbol itself.
   assert(Sym && "Expected a symbol");
@@ -1286,15 +1270,6 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
     return !(Type == ELF::R_PPC64_TOC &&
              TargetObjectWriter->getEMachine() == ELF::EM_PPC64);
   }
-
-  // For memory-tagged symbols, ensure that the relocation uses the symbol. For
-  // tagged symbols, we emit an empty relocation (R_AARCH64_NONE) in a special
-  // section (SHT_AARCH64_MEMTAG_GLOBALS_STATIC) to indicate to the linker that
-  // this global needs to be tagged. In addition, the linker needs to know
-  // whether to emit a special addend when relocating `end` symbols, and this
-  // can only be determined by the attributes of the symbol itself.
-  if (Sym->isMemtag())
-    return true;
 
   unsigned Binding = Sym->getBinding();
   switch(Binding) {
@@ -1401,8 +1376,8 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   MCContext &Ctx = Asm.getContext();
   const MCTargetOptions *TO = Ctx.getTargetOptions();
 
-  if (const MCSymbolRefExpr *RefB = Target.getSymB()) {
-    const auto &SymB = cast<MCSymbolELF>(RefB->getSymbol());
+  if (auto *RefB = Target.getSubSym()) {
+    const auto &SymB = cast<MCSymbolELF>(*RefB);
     if (SymB.isUndefined()) {
       Ctx.reportError(Fixup.getLoc(),
                       Twine("symbol '") + SymB.getName() +
@@ -1465,9 +1440,6 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
     return;
   }
 
-  if (Fixup.getValue())
-    fixSymbolsInTLSFixups(Asm, Fixup.getValue());
-
   const MCSymbolELF *RenamedSymA = SymA;
   if (SymA) {
     if (const MCSymbolELF *R = Renames.lookup(SymA))
@@ -1500,53 +1472,6 @@ bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
       return false;
   }
   return &SymA.getSection() == FB.getParent();
-}
-
-void ELFObjectWriter::fixSymbolsInTLSFixups(MCAssembler &Asm,
-                                            const MCExpr *expr) {
-  switch (expr->getKind()) {
-  case MCExpr::Target:
-    cast<MCTargetExpr>(expr)->fixELFSymbolsInTLSFixups(Asm);
-    break;
-  case MCExpr::Constant:
-    break;
-
-  case MCExpr::Binary: {
-    const MCBinaryExpr *be = cast<MCBinaryExpr>(expr);
-    fixSymbolsInTLSFixups(Asm, be->getLHS());
-    fixSymbolsInTLSFixups(Asm, be->getRHS());
-    break;
-  }
-
-  case MCExpr::SymbolRef: {
-    const MCSymbolRefExpr &symRef = *cast<MCSymbolRefExpr>(expr);
-    switch (symRef.getKind()) {
-    default:
-      return;
-    case MCSymbolRefExpr::VK_GOTTPOFF:
-    case MCSymbolRefExpr::VK_INDNTPOFF:
-    case MCSymbolRefExpr::VK_NTPOFF:
-    case MCSymbolRefExpr::VK_GOTNTPOFF:
-    case MCSymbolRefExpr::VK_TLSCALL:
-    case MCSymbolRefExpr::VK_TLSDESC:
-    case MCSymbolRefExpr::VK_TLSGD:
-    case MCSymbolRefExpr::VK_TLSLD:
-    case MCSymbolRefExpr::VK_TLSLDM:
-    case MCSymbolRefExpr::VK_TPOFF:
-    case MCSymbolRefExpr::VK_TPREL:
-    case MCSymbolRefExpr::VK_DTPOFF:
-    case MCSymbolRefExpr::VK_DTPREL:
-      break;
-    }
-    Asm.registerSymbol(symRef.getSymbol());
-    cast<MCSymbolELF>(symRef.getSymbol()).setType(ELF::STT_TLS);
-    break;
-  }
-
-  case MCExpr::Unary:
-    fixSymbolsInTLSFixups(Asm, cast<MCUnaryExpr>(expr)->getSubExpr());
-    break;
-  }
 }
 
 uint64_t ELFObjectWriter::writeObject(MCAssembler &Asm) {

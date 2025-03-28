@@ -753,12 +753,16 @@ void CodeGenModule::handleAMDGPUFlatWorkGroupSizeAttr(
     int32_t *MaxThreadsVal) {
   unsigned Min = 0;
   unsigned Max = 0;
+  auto Eval = [&](Expr *E) {
+    return E->EvaluateKnownConstInt(getContext()).getExtValue();
+  };
   if (FlatWGS) {
-    Min = FlatWGS->getMin()->EvaluateKnownConstInt(getContext()).getExtValue();
-    Max = FlatWGS->getMax()->EvaluateKnownConstInt(getContext()).getExtValue();
+    Min = Eval(FlatWGS->getMin());
+    Max = Eval(FlatWGS->getMax());
   }
   if (ReqdWGS && Min == 0 && Max == 0)
-    Min = Max = ReqdWGS->getXDim() * ReqdWGS->getYDim() * ReqdWGS->getZDim();
+    Min = Max = Eval(ReqdWGS->getXDim()) * Eval(ReqdWGS->getYDim()) *
+                Eval(ReqdWGS->getZDim());
 
   if (Min != 0) {
     assert(Min <= Max && "Min must be less than or equal Max");

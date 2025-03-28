@@ -261,6 +261,7 @@ if platform.system() not in ["Darwin", "Fuchsia"]:
 
 
 def is_filesystem_case_insensitive():
+    os.makedirs(config.test_exec_root, exist_ok=True)
     handle, path = tempfile.mkstemp(prefix="case-test", dir=config.test_exec_root)
     isInsensitive = os.path.exists(
         os.path.join(os.path.dirname(path), os.path.basename(path).upper())

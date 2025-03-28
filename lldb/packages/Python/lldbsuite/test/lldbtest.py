@@ -772,7 +772,10 @@ class Base(unittest.TestCase):
             'settings set symbols.clang-modules-cache-path "{}"'.format(
                 configuration.lldb_module_cache_dir
             ),
+            # Disable colors by default.
             "settings set use-color false",
+            # Disable the statusline by default.
+            "settings set show-statusline false",
         ]
 
         # Set any user-overridden settings.
@@ -2024,7 +2027,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         """Get the working directory that should be used when launching processes for local or remote processes."""
         if lldb.remote_platform:
             # Remote tests set the platform working directory up in
-            # TestBase.setUp()
+            # Base.setUp()
             return lldb.remote_platform.GetWorkingDirectory()
         else:
             # local tests change directory into each test subdirectory

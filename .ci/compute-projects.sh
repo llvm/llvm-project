@@ -18,14 +18,15 @@ function compute-projects-to-test() {
   shift
   projects=${@}
   for project in ${projects}; do
+    echo "${project}"
     case ${project} in
     lld)
-      for p in lld bolt cross-project-tests; do
+      for p in bolt cross-project-tests; do
         echo $p
       done
     ;;
     llvm)
-      for p in llvm bolt clang clang-tools-extra lld lldb mlir polly; do
+      for p in bolt clang clang-tools-extra lld lldb mlir polly; do
         echo $p
       done
       # Flang is not stable in Windows CI at the moment
@@ -35,30 +36,21 @@ function compute-projects-to-test() {
     ;;
     clang)
       # lldb is temporarily removed to alleviate Linux pre-commit CI waiting times
-      for p in clang clang-tools-extra compiler-rt cross-project-tests; do
+      for p in clang-tools-extra compiler-rt cross-project-tests; do
         echo $p
       done
     ;;
     clang-tools-extra)
-      for p in clang-tools-extra libc; do
-        echo $p
-      done
+      echo libc
     ;;
     mlir)
-      echo mlir
-      # Flang is not stable in Windows CI at the moment
-      if [[ $isForWindows == 0 ]]; then
-        echo flang
-      fi
-    ;;
-    flang-rt)
       # Flang is not stable in Windows CI at the moment
       if [[ $isForWindows == 0 ]]; then
         echo flang
       fi
     ;;
     *)
-      echo "${project}"
+      # Nothing to do
     ;;
     esac
   done
@@ -70,11 +62,6 @@ function compute-runtimes-to-test() {
     case ${project} in
     clang)
       for p in libcxx libcxxabi libunwind; do
-        echo $p
-      done
-    ;;
-    flang)
-      for p in flang-rt; do
         echo $p
       done
     ;;

@@ -33,3 +33,7 @@ qc.cm.pushfp {ra, s0}, -12
 
 # CHECK-ERROR: error: stack adjustment for register list must be a multiple of 16 bytes in the range [16, 64]
 qc.cm.pop {ra, s0-s1}, -40
+
+# CHECK-ERROR: error: register list must include 's0' or 'x8'
+qc.cm.pushfp {ra}, -16
+

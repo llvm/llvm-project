@@ -1542,8 +1542,68 @@ Parser::ParseOpenACCDirective() {
   return ParseInfo;
 }
 
+Parser::DeclGroupPtrTy Parser::ParseOpenACCAfterRoutineDecl(
+    AccessSpecifier &AS, ParsedAttributes &Attrs, DeclSpec::TST TagType,
+    Decl *TagDecl, OpenACCDirectiveParseInfo &DirInfo) {
+  assert(DirInfo.DirKind == OpenACCDirectiveKind::Routine);
+
+  DeclGroupPtrTy Ptr;
+  if (DirInfo.LParenLoc.isInvalid()) {
+    if (Tok.isNot(tok::r_brace) && !isEofOrEom()) {
+      if (AS == AS_none) {
+        // This is either an external declaration, or inside of a C struct. If
+        // the latter, we have to diagnose if this is the 'implicit' named
+        // version.
+        if (TagType == DeclSpec::TST_unspecified) {
+          ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
+          MaybeParseCXX11Attributes(Attrs);
+          ParsingDeclSpec PDS(*this);
+          Ptr = ParseExternalDeclaration(Attrs, EmptyDeclSpecAttrs, &PDS);
+        }
+        // The only way we can have a 'none' access specifier that is in a
+        // not-unspecified tag-type is a C struct. Member functions and
+        // lambdas don't work in C, so we can just count on
+        // ActonRoutineDeclDirective to recognize that Ptr is null and diagnose.
+      } else {
+        Ptr = ParseCXXClassMemberDeclarationWithPragmas(AS, Attrs, TagType,
+                                                        TagDecl);
+      }
+    }
+  }
+
+  return DeclGroupPtrTy::make(
+      getActions().OpenACC().ActOnEndRoutineDeclDirective(
+          DirInfo.StartLoc, DirInfo.DirLoc, DirInfo.LParenLoc,
+          DirInfo.Exprs.empty() ? nullptr : DirInfo.Exprs.front(),
+          DirInfo.RParenLoc, DirInfo.Clauses, DirInfo.EndLoc, Ptr));
+}
+
+StmtResult
+Parser::ParseOpenACCAfterRoutineStmt(OpenACCDirectiveParseInfo &DirInfo) {
+  assert(DirInfo.DirKind == OpenACCDirectiveKind::Routine);
+  // We have to know the next statement for 1 of 2 reasons:
+  // Routine without a name needs an associated DeclStmt.
+  // Routine WITH a name needs to see if it is a DeclStmt to diagnose.
+  StmtResult NextStmt = StmtEmpty();
+
+  // Parse the next statement in the 'implicit' case, not in the 'named' case.
+  // In the 'named' case we will use the creation of the next decl to determine
+  // whether we should warn.
+  if (DirInfo.LParenLoc.isInvalid()) {
+    ParsingOpenACCDirectiveRAII DirScope(*this, /*Value=*/false);
+    NextStmt = ParseStatement();
+  }
+
+  return getActions().OpenACC().ActOnEndRoutineStmtDirective(
+      DirInfo.StartLoc, DirInfo.DirLoc, DirInfo.LParenLoc,
+      DirInfo.Exprs.empty() ? nullptr : DirInfo.Exprs.front(),
+      DirInfo.RParenLoc, DirInfo.Clauses, DirInfo.EndLoc, NextStmt.get());
+}
+
 // Parse OpenACC directive on a declaration.
-Parser::DeclGroupPtrTy Parser::ParseOpenACCDirectiveDecl() {
+Parser::DeclGroupPtrTy
+Parser::ParseOpenACCDirectiveDecl(AccessSpecifier &AS, ParsedAttributes &Attrs,
+                                  DeclSpec::TST TagType, Decl *TagDecl) {
   assert(Tok.is(tok::annot_pragma_openacc) && "expected OpenACC Start Token");
 
   ParsingOpenACCDirectiveRAII DirScope(*this);
@@ -1554,9 +1614,11 @@ Parser::DeclGroupPtrTy Parser::ParseOpenACCDirectiveDecl() {
           DirInfo.DirKind, DirInfo.StartLoc, DirInfo.Clauses))
     return nullptr;
 
+  if (DirInfo.DirKind == OpenACCDirectiveKind::Routine)
+    return ParseOpenACCAfterRoutineDecl(AS, Attrs, TagType, TagDecl, DirInfo);
+
   return DeclGroupPtrTy::make(getActions().OpenACC().ActOnEndDeclDirective(
       DirInfo.DirKind, DirInfo.StartLoc, DirInfo.DirLoc, DirInfo.LParenLoc,
-      DirInfo.Exprs.empty() ? nullptr : DirInfo.Exprs.front(),
       DirInfo.RParenLoc, DirInfo.EndLoc, DirInfo.Clauses));
 }
 
@@ -1570,6 +1632,9 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
   if (getActions().OpenACC().ActOnStartStmtDirective(
           DirInfo.DirKind, DirInfo.StartLoc, DirInfo.Clauses))
     return StmtError();
+
+  if (DirInfo.DirKind == OpenACCDirectiveKind::Routine)
+    return ParseOpenACCAfterRoutineStmt(DirInfo);
 
   StmtResult AssocStmt;
   if (doesDirectiveHaveAssociatedStmt(DirInfo.DirKind)) {

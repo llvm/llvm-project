@@ -154,8 +154,7 @@ struct ConversionValueMapping {
         next = it->second;
       }
     });
-    for (Value v : newVal)
-      mappedTo.insert(v);
+    mappedTo.insert_range(newVal);
 
     mapping[std::forward<OldVal>(oldVal)] = std::forward<NewVal>(newVal);
   }

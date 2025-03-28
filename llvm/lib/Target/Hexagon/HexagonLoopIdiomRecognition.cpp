@@ -1325,7 +1325,7 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
     // Found a cycle.
     C.insert(&I);
     classifyCycle(&I, C, Early, Late);
-    Cycled.insert(C.begin(), C.end());
+    Cycled.insert_range(C);
     RShifts.insert(&I);
   }
 
@@ -2303,8 +2303,7 @@ CleanupAndExit:
 bool HexagonLoopIdiomRecognize::coverLoop(Loop *L,
       SmallVectorImpl<Instruction*> &Insts) const {
   SmallSet<BasicBlock*,8> LoopBlocks;
-  for (auto *B : L->blocks())
-    LoopBlocks.insert(B);
+  LoopBlocks.insert_range(L->blocks());
 
   SetVector<Instruction*> Worklist(Insts.begin(), Insts.end());
 

@@ -14,15 +14,15 @@ float2 test_too_many_arg(float2 p0) {
 
 float builtin_bool_to_float_type_promotion(bool p1) {
   return TEST_FUNC(p1);
-  // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was 'bool')}}
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'bool')}}
 }
 
 float builtin_exp_int_to_float_promotion(int p1) {
   return TEST_FUNC(p1);
-  // expected-error@-1 {{1st argument must be a floating point type (was 'int')}}
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'int')}}
 }
 
 float2 builtin_exp_int2_to_float2_promotion(int2 p1) {
   return TEST_FUNC(p1);
-  // expected-error@-1 {{1st argument must be a floating point type (was 'int2' (aka 'vector<int, 2>'))}}
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'int2' (aka 'vector<int, 2>'))}}
 }

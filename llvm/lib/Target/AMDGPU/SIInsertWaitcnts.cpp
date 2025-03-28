@@ -33,6 +33,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/TargetParser/TargetParser.h"
@@ -349,6 +350,16 @@ public:
     LastFlat[DS_CNT] = ScoreUBs[DS_CNT];
   }
 
+  bool hasPendingGDS() const {
+    return LastGDS > ScoreLBs[DS_CNT] && LastGDS <= ScoreUBs[DS_CNT];
+  }
+
+  unsigned getPendingGDSWait() const {
+    return std::min(getScoreUB(DS_CNT) - LastGDS, getWaitCountMax(DS_CNT) - 1);
+  }
+
+  void setPendingGDS() { LastGDS = ScoreUBs[DS_CNT]; }
+
   // Return true if there might be pending writes to the vgpr-interval by VMEM
   // instructions with types different from V.
   bool hasOtherPendingVmemTypes(RegInterval Interval, VmemType V) const {
@@ -427,6 +438,8 @@ private:
   unsigned PendingEvents = 0;
   // Remember the last flat memory operation.
   unsigned LastFlat[NUM_INST_CNTS] = {0};
+  // Remember the last GDS operation.
+  unsigned LastGDS = 0;
   // wait_cnt scores for every vgpr.
   // Keep track of the VgprUB and SgprUB to make merge at join efficient.
   int VgprUB = -1;
@@ -585,7 +598,7 @@ public:
   AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const override;
 };
 
-class SIInsertWaitcnts : public MachineFunctionPass {
+class SIInsertWaitcnts {
 private:
   const GCNSubtarget *ST = nullptr;
   const SIInstrInfo *TII = nullptr;
@@ -624,9 +637,9 @@ private:
   InstCounterType MaxCounter = NUM_NORMAL_INST_CNTS;
 
 public:
-  static char ID;
-
-  SIInsertWaitcnts() : MachineFunctionPass(ID) {
+  SIInsertWaitcnts(MachineLoopInfo *MLI, MachinePostDominatorTree *PDT,
+                   AliasAnalysis *AA)
+      : MLI(MLI), PDT(PDT), AA(AA) {
     (void)ForceExpCounter;
     (void)ForceLgkmCounter;
     (void)ForceVMCounter;
@@ -636,20 +649,7 @@ public:
   bool isPreheaderToFlush(MachineBasicBlock &MBB,
                           WaitcntBrackets &ScoreBrackets);
   bool isVMEMOrFlatVMEM(const MachineInstr &MI) const;
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  StringRef getPassName() const override {
-    return "SI insert wait instructions";
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<MachineLoopInfoWrapperPass>();
-    AU.addRequired<MachinePostDominatorTreeWrapperPass>();
-    AU.addUsedIfAvailable<AAResultsWrapperPass>();
-    AU.addPreserved<AAResultsWrapperPass>();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
+  bool run(MachineFunction &MF);
 
   bool isForceEmitWaitcnt() const {
     for (auto T : inst_counter_types())
@@ -729,8 +729,33 @@ public:
                        MachineInstr *OldWaitcntInstr);
   void updateEventWaitcntAfter(MachineInstr &Inst,
                                WaitcntBrackets *ScoreBrackets);
+  bool isNextENDPGM(MachineBasicBlock::instr_iterator It,
+                    MachineBasicBlock *Block) const;
+  bool insertForcedWaitAfter(MachineInstr &Inst, MachineBasicBlock &Block,
+                             WaitcntBrackets &ScoreBrackets);
   bool insertWaitcntInBlock(MachineFunction &MF, MachineBasicBlock &Block,
                             WaitcntBrackets &ScoreBrackets);
+};
+
+class SIInsertWaitcntsLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  SIInsertWaitcntsLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  StringRef getPassName() const override {
+    return "SI insert wait instructions";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.addRequired<MachinePostDominatorTreeWrapperPass>();
+    AU.addUsedIfAvailable<AAResultsWrapperPass>();
+    AU.addPreserved<AAResultsWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 };
 
 } // end anonymous namespace
@@ -1117,19 +1142,19 @@ bool WaitcntBrackets::counterOutOfOrder(InstCounterType T) const {
   return hasMixedPendingEvents(T);
 }
 
-INITIALIZE_PASS_BEGIN(SIInsertWaitcnts, DEBUG_TYPE, "SI Insert Waitcnts", false,
-                      false)
+INITIALIZE_PASS_BEGIN(SIInsertWaitcntsLegacy, DEBUG_TYPE, "SI Insert Waitcnts",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(SIInsertWaitcnts, DEBUG_TYPE, "SI Insert Waitcnts", false,
-                    false)
+INITIALIZE_PASS_END(SIInsertWaitcntsLegacy, DEBUG_TYPE, "SI Insert Waitcnts",
+                    false, false)
 
-char SIInsertWaitcnts::ID = 0;
+char SIInsertWaitcntsLegacy::ID = 0;
 
-char &llvm::SIInsertWaitcntsID = SIInsertWaitcnts::ID;
+char &llvm::SIInsertWaitcntsID = SIInsertWaitcntsLegacy::ID;
 
 FunctionPass *llvm::createSIInsertWaitcntsPass() {
-  return new SIInsertWaitcnts();
+  return new SIInsertWaitcntsLegacy();
 }
 
 static bool updateOperandIfDifferent(MachineInstr &MI, AMDGPU::OpName OpName,
@@ -1640,17 +1665,21 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
       (MI.isReturn() && MI.isCall() && !callWaitsOnFunctionEntry(MI))) {
     Wait = Wait.combined(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false));
   }
-  // Identify S_ENDPGM instructions which may have to wait for outstanding VMEM
-  // stores. In this case it can be useful to send a message to explicitly
-  // release all VGPRs before the stores have completed, but it is only safe to
-  // do this if:
-  // * there are no outstanding scratch stores
-  // * we are not in Dynamic VGPR mode
+  // In dynamic VGPR mode, we want to release the VGPRs before the wave exits.
+  // Technically the hardware will do this on its own if we don't, but that
+  // might cost extra cycles compared to doing it explicitly.
+  // When not in dynamic VGPR mode, identify S_ENDPGM instructions which may
+  // have to wait for outstanding VMEM stores. In this case it can be useful to
+  // send a message to explicitly release all VGPRs before the stores have
+  // completed, but it is only safe to do this if there are no outstanding
+  // scratch stores.
   else if (MI.getOpcode() == AMDGPU::S_ENDPGM ||
            MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED) {
-    if (ST->getGeneration() >= AMDGPUSubtarget::GFX11 && !WCG->isOptNone() &&
-        ScoreBrackets.getScoreRange(STORE_CNT) != 0 &&
-        !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS))
+    if (!WCG->isOptNone() &&
+        (ST->isDynamicVGPREnabled() ||
+         (ST->getGeneration() >= AMDGPUSubtarget::GFX11 &&
+          ScoreBrackets.getScoreRange(STORE_CNT) != 0 &&
+          !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS))))
       ReleaseVGPRInsts.insert(&MI);
   }
   // Resolve vm waits before gs-done.
@@ -1677,6 +1706,11 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         Wait.ExpCnt = 0;
       }
     }
+
+    // Wait for any pending GDS instruction to complete before any
+    // "Always GDS" instruction.
+    if (TII->isAlwaysGDS(MI.getOpcode()) && ScoreBrackets.hasPendingGDS())
+      addWait(Wait, DS_CNT, ScoreBrackets.getPendingGDSWait());
 
     if (MI.isCall() && callWaitsOnFunctionEntry(MI)) {
       // The function is going to insert a wait on everything in its prolog.
@@ -1718,10 +1752,12 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
 
       for (const MachineMemOperand *Memop : MI.memoperands()) {
         const Value *Ptr = Memop->getValue();
-        if (Memop->isStore() && SLoadAddresses.count(Ptr)) {
-          addWait(Wait, SmemAccessCounter, 0);
-          if (PDT->dominates(MI.getParent(), SLoadAddresses.find(Ptr)->second))
-            SLoadAddresses.erase(Ptr);
+        if (Memop->isStore()) {
+          if (auto It = SLoadAddresses.find(Ptr); It != SLoadAddresses.end()) {
+            addWait(Wait, SmemAccessCounter, 0);
+            if (PDT->dominates(MI.getParent(), It->second))
+              SLoadAddresses.erase(It);
+          }
         }
         unsigned AS = Memop->getAddrSpace();
         if (AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::FLAT_ADDRESS)
@@ -1732,7 +1768,6 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
 
         // LOAD_CNT is only relevant to vgpr or LDS.
         unsigned RegNo = SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS;
-        bool FoundAliasingStore = false;
         // Only objects with alias scope info were added to LDSDMAScopes array.
         // In the absense of the scope info we will not be able to disambiguate
         // aliasing here. There is no need to try searching for a corresponding
@@ -1742,14 +1777,12 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         if (Ptr && Memop->getAAInfo() && Memop->getAAInfo().Scope) {
           const auto &LDSDMAStores = ScoreBrackets.getLDSDMAStores();
           for (unsigned I = 0, E = LDSDMAStores.size(); I != E; ++I) {
-            if (MI.mayAlias(AA, *LDSDMAStores[I], true)) {
-              FoundAliasingStore = true;
+            if (MI.mayAlias(AA, *LDSDMAStores[I], true))
               ScoreBrackets.determineWait(LOAD_CNT, RegNo + I + 1, Wait);
-            }
           }
-        }
-        if (!FoundAliasingStore)
+        } else {
           ScoreBrackets.determineWait(LOAD_CNT, RegNo, Wait);
+        }
         if (Memop->isStore()) {
           ScoreBrackets.determineWait(EXP_CNT, RegNo, Wait);
         }
@@ -1982,6 +2015,64 @@ static bool isCacheInvOrWBInst(MachineInstr &Inst) {
          Opc == AMDGPU::GLOBAL_WBINV;
 }
 
+// Return true if the next instruction is S_ENDPGM, following fallthrough
+// blocks if necessary.
+bool SIInsertWaitcnts::isNextENDPGM(MachineBasicBlock::instr_iterator It,
+                                    MachineBasicBlock *Block) const {
+  auto BlockEnd = Block->getParent()->end();
+  auto BlockIter = Block->getIterator();
+
+  while (true) {
+    if (It.isEnd()) {
+      if (++BlockIter != BlockEnd) {
+        It = BlockIter->instr_begin();
+        continue;
+      }
+
+      return false;
+    }
+
+    if (!It->isMetaInstruction())
+      break;
+
+    It++;
+  }
+
+  assert(!It.isEnd());
+
+  return It->getOpcode() == AMDGPU::S_ENDPGM;
+}
+
+// Add a wait after an instruction if architecture requirements mandate one.
+bool SIInsertWaitcnts::insertForcedWaitAfter(MachineInstr &Inst,
+                                             MachineBasicBlock &Block,
+                                             WaitcntBrackets &ScoreBrackets) {
+  AMDGPU::Waitcnt Wait;
+  bool NeedsEndPGMCheck = false;
+
+  if (ST->isPreciseMemoryEnabled() && Inst.mayLoadOrStore())
+    Wait = WCG->getAllZeroWaitcnt(Inst.mayStore() &&
+                                  !SIInstrInfo::isAtomicRet(Inst));
+
+  if (TII->isAlwaysGDS(Inst.getOpcode())) {
+    Wait.DsCnt = 0;
+    NeedsEndPGMCheck = true;
+  }
+
+  ScoreBrackets.simplifyWaitcnt(Wait);
+
+  auto SuccessorIt = std::next(Inst.getIterator());
+  bool Result = generateWaitcnt(Wait, SuccessorIt, Block, ScoreBrackets,
+                                /*OldWaitcntInstr=*/nullptr);
+
+  if (Result && NeedsEndPGMCheck && isNextENDPGM(SuccessorIt, &Block)) {
+    BuildMI(Block, SuccessorIt, Inst.getDebugLoc(), TII->get(AMDGPU::S_NOP))
+        .addImm(0);
+  }
+
+  return Result;
+}
+
 void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
                                                WaitcntBrackets *ScoreBrackets) {
   // Now look at the instruction opcode. If it is a memory access
@@ -1994,6 +2085,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
         TII->hasModifiersSet(Inst, AMDGPU::OpName::gds)) {
       ScoreBrackets->updateByEvent(TII, TRI, MRI, GDS_ACCESS, Inst);
       ScoreBrackets->updateByEvent(TII, TRI, MRI, GDS_GPR_LOCK, Inst);
+      ScoreBrackets->setPendingGDS();
     } else {
       ScoreBrackets->updateByEvent(TII, TRI, MRI, LDS_ACCESS, Inst);
     }
@@ -2124,6 +2216,9 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
 
     StrictDom |= mergeScore(M, LastFlat[T], Other.LastFlat[T]);
 
+    if (T == DS_CNT)
+      StrictDom |= mergeScore(M, LastGDS, Other.LastGDS);
+
     for (int J = 0; J <= VgprUB; J++)
       StrictDom |= mergeScore(M, VgprScores[T][J], Other.VgprScores[T][J]);
 
@@ -2249,13 +2344,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
     updateEventWaitcntAfter(Inst, &ScoreBrackets);
 
-    if (ST->isPreciseMemoryEnabled() && Inst.mayLoadOrStore()) {
-      AMDGPU::Waitcnt Wait = WCG->getAllZeroWaitcnt(
-          Inst.mayStore() && !SIInstrInfo::isAtomicRet(Inst));
-      ScoreBrackets.simplifyWaitcnt(Wait);
-      Modified |= generateWaitcnt(Wait, std::next(Inst.getIterator()), Block,
-                                  ScoreBrackets, /*OldWaitcntInstr=*/nullptr);
-    }
+    Modified |= insertForcedWaitAfter(Inst, Block, ScoreBrackets);
 
     LLVM_DEBUG({
       Inst.print(dbgs());
@@ -2398,16 +2487,40 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
   return HasVMemLoad && UsesVgprLoadedOutside && ST->hasVmemWriteVgprInOrder();
 }
 
-bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
+bool SIInsertWaitcntsLegacy::runOnMachineFunction(MachineFunction &MF) {
+  auto *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  auto *PDT =
+      &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
+  AliasAnalysis *AA = nullptr;
+  if (auto *AAR = getAnalysisIfAvailable<AAResultsWrapperPass>())
+    AA = &AAR->getAAResults();
+
+  return SIInsertWaitcnts(MLI, PDT, AA).run(MF);
+}
+
+PreservedAnalyses
+SIInsertWaitcntsPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  auto *MLI = &MFAM.getResult<MachineLoopAnalysis>(MF);
+  auto *PDT = &MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF);
+  auto *AA = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                 .getManager()
+                 .getCachedResult<AAManager>(MF.getFunction());
+
+  if (!SIInsertWaitcnts(MLI, PDT, AA).run(MF))
+    return PreservedAnalyses::all();
+
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserveSet<CFGAnalyses>()
+      .preserve<AAManager>();
+}
+
+bool SIInsertWaitcnts::run(MachineFunction &MF) {
   ST = &MF.getSubtarget<GCNSubtarget>();
   TII = ST->getInstrInfo();
   TRI = &TII->getRegisterInfo();
   MRI = &MF.getRegInfo();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  PDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
-  if (auto *AAR = getAnalysisIfAvailable<AAResultsWrapperPass>())
-    AA = &AAR->getAAResults();
 
   AMDGPU::IsaVersion IV = AMDGPU::getIsaVersion(ST->getCPU());
 
@@ -2593,25 +2706,35 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  // Insert DEALLOC_VGPR messages before previously identified S_ENDPGM
-  // instructions.
+  // Deallocate the VGPRs before previously identified S_ENDPGM instructions.
+  // This is done in different ways depending on how the VGPRs were allocated
+  // (i.e. whether we're in dynamic VGPR mode or not).
   // Skip deallocation if kernel is waveslot limited vs VGPR limited. A short
   // waveslot limited kernel runs slower with the deallocation.
-  if (!ReleaseVGPRInsts.empty() &&
-      (MF.getFrameInfo().hasCalls() ||
-       ST->getOccupancyWithNumVGPRs(
-           TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass)) <
-           AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
+  if (ST->isDynamicVGPREnabled()) {
     for (MachineInstr *MI : ReleaseVGPRInsts) {
-      if (ST->requiresNopBeforeDeallocVGPRs()) {
-        BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-                TII->get(AMDGPU::S_NOP))
-            .addImm(0);
-      }
       BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-              TII->get(AMDGPU::S_SENDMSG))
-          .addImm(AMDGPU::SendMsg::ID_DEALLOC_VGPRS_GFX11Plus);
+              TII->get(AMDGPU::S_ALLOC_VGPR))
+          .addImm(0);
       Modified = true;
+    }
+  } else {
+    if (!ReleaseVGPRInsts.empty() &&
+        (MF.getFrameInfo().hasCalls() ||
+         ST->getOccupancyWithNumVGPRs(
+             TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass)) <
+             AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
+      for (MachineInstr *MI : ReleaseVGPRInsts) {
+        if (ST->requiresNopBeforeDeallocVGPRs()) {
+          BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+                  TII->get(AMDGPU::S_NOP))
+              .addImm(0);
+        }
+        BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+                TII->get(AMDGPU::S_SENDMSG))
+            .addImm(AMDGPU::SendMsg::ID_DEALLOC_VGPRS_GFX11Plus);
+        Modified = true;
+      }
     }
   }
   ReleaseVGPRInsts.clear();

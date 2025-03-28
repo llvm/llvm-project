@@ -31,6 +31,7 @@ define amdgpu_kernel void @i32_24_elements(ptr %out) #0 {
 ; RATIO2-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
 ; RATIO2-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
 ; RATIO2-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
+; RATIO2-NEXT:    [[ALLOCA:%.*]] = freeze <24 x i32> poison
 ; RATIO2-NEXT:    [[TMP1:%.*]] = extractelement <24 x i32> <i32 42, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 43, i32 0, i32 0, i32 0>, i32 [[SEL2]]
 ; RATIO2-NEXT:    store i32 [[TMP1]], ptr [[OUT]], align 4
 ; RATIO2-NEXT:    ret void
@@ -81,6 +82,7 @@ define amdgpu_kernel void @i32_24_elements_attrib(ptr %out) #1 {
 ; DEFAULT-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
 ; DEFAULT-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
 ; DEFAULT-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
+; DEFAULT-NEXT:    [[ALLOCA:%.*]] = freeze <24 x i32> poison
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = extractelement <24 x i32> <i32 42, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 43, i32 0, i32 0, i32 0>, i32 [[SEL2]]
 ; DEFAULT-NEXT:    store i32 [[TMP1]], ptr [[OUT]], align 4
 ; DEFAULT-NEXT:    ret void
@@ -93,6 +95,7 @@ define amdgpu_kernel void @i32_24_elements_attrib(ptr %out) #1 {
 ; RATIO2-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
 ; RATIO2-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
 ; RATIO2-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
+; RATIO2-NEXT:    [[ALLOCA:%.*]] = freeze <24 x i32> poison
 ; RATIO2-NEXT:    [[TMP1:%.*]] = extractelement <24 x i32> <i32 42, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 43, i32 0, i32 0, i32 0>, i32 [[SEL2]]
 ; RATIO2-NEXT:    store i32 [[TMP1]], ptr [[OUT]], align 4
 ; RATIO2-NEXT:    ret void
@@ -143,6 +146,7 @@ define amdgpu_kernel void @i32_16_elements(ptr %out) #0 {
 ; DEFAULT-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
 ; DEFAULT-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
 ; DEFAULT-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
+; DEFAULT-NEXT:    [[ALLOCA:%.*]] = freeze <16 x i32> poison
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> <i32 42, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 43>, i32 [[SEL2]]
 ; DEFAULT-NEXT:    store i32 [[TMP1]], ptr [[OUT]], align 4
 ; DEFAULT-NEXT:    ret void
@@ -155,6 +159,7 @@ define amdgpu_kernel void @i32_16_elements(ptr %out) #0 {
 ; RATIO2-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
 ; RATIO2-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
 ; RATIO2-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
+; RATIO2-NEXT:    [[ALLOCA:%.*]] = freeze <16 x i32> poison
 ; RATIO2-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> <i32 42, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 43>, i32 [[SEL2]]
 ; RATIO2-NEXT:    store i32 [[TMP1]], ptr [[OUT]], align 4
 ; RATIO2-NEXT:    ret void
@@ -224,6 +229,7 @@ define amdgpu_kernel void @i32_16_elements_attrib(ptr %out) #2 {
 ; RATIO2-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
 ; RATIO2-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
 ; RATIO2-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
+; RATIO2-NEXT:    [[ALLOCA:%.*]] = freeze <16 x i32> poison
 ; RATIO2-NEXT:    [[TMP1:%.*]] = extractelement <16 x i32> <i32 42, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 43>, i32 [[SEL2]]
 ; RATIO2-NEXT:    store i32 [[TMP1]], ptr [[OUT]], align 4
 ; RATIO2-NEXT:    ret void

@@ -465,7 +465,7 @@ public:
 
   std::vector<std::pair<uint64_t, uint64_t>>
   findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-                 const Triple &TargetTriple) const override {
+                 const MCSubtargetInfo &STI) const override {
     // Do a lightweight parsing of PLT entries.
     std::vector<std::pair<uint64_t, uint64_t>> Result;
     for (uint64_t Byte = 0, End = PltContents.size(); Byte + 7 < End;

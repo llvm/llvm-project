@@ -161,15 +161,15 @@ define {<2 x i32>, <2 x i32>, <2 x i32>} @vector_deinterleave3_v2i32_v6i32(<6 x 
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 2
+; CHECK-NEXT:    vslidedown.vi v12, v8, 2
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v12, v8, 4
+; CHECK-NEXT:    vslidedown.vi v10, v8, 4
 ; CHECK-NEXT:    srli a0, a0, 3
 ; CHECK-NEXT:    add a1, a0, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vslideup.vx v8, v10, a0
+; CHECK-NEXT:    vslideup.vx v8, v12, a0
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vmv1r.v v9, v12
+; CHECK-NEXT:    vmv1r.v v9, v10
 ; CHECK-NEXT:    vs2r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlseg3e32.v v8, (a0)
@@ -196,22 +196,22 @@ define {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} @vector_deinterle
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 6
-; CHECK-NEXT:    vslidedown.vi v11, v8, 4
-; CHECK-NEXT:    vslidedown.vi v12, v8, 2
+; CHECK-NEXT:    vslidedown.vi v12, v8, 6
+; CHECK-NEXT:    vslidedown.vi v13, v8, 4
+; CHECK-NEXT:    vslidedown.vi v14, v8, 2
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v14, v8, 8
+; CHECK-NEXT:    vslidedown.vi v10, v8, 8
 ; CHECK-NEXT:    srli a1, a0, 3
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    add a2, a1, a1
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vx v11, v10, a1
-; CHECK-NEXT:    vslideup.vx v8, v12, a1
+; CHECK-NEXT:    vslideup.vx v13, v12, a1
+; CHECK-NEXT:    vslideup.vx v8, v14, a1
 ; CHECK-NEXT:    add a1, a0, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vslideup.vx v8, v11, a0
+; CHECK-NEXT:    vslideup.vx v8, v13, a0
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vmv1r.v v9, v14
+; CHECK-NEXT:    vmv1r.v v9, v10
 ; CHECK-NEXT:    vs2r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlseg5e16.v v8, (a0)
@@ -242,7 +242,7 @@ define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>} @v
 ; RV32-NEXT:    sub sp, sp, a0
 ; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 4 * vlenb
 ; RV32-NEXT:    addi a0, sp, 32
-; RV32-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; RV32-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
 ; RV32-NEXT:    csrr s1, vlenb
 ; RV32-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vi v11, v8, 10
@@ -264,7 +264,7 @@ define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>} @v
 ; RV32-NEXT:    slli a2, a2, 1
 ; RV32-NEXT:    add a2, sp, a2
 ; RV32-NEXT:    addi a2, a2, 32
-; RV32-NEXT:    vs1r.v v10, (a2) # Unknown-size Folded Spill
+; RV32-NEXT:    vs1r.v v10, (a2) # vscale x 8-byte Folded Spill
 ; RV32-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vi v9, v8, 4
 ; RV32-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
@@ -272,20 +272,20 @@ define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>} @v
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    add a0, sp, a0
 ; RV32-NEXT:    addi a0, a0, 32
-; RV32-NEXT:    vs1r.v v11, (a0) # Unknown-size Folded Spill
+; RV32-NEXT:    vs1r.v v11, (a0) # vscale x 8-byte Folded Spill
 ; RV32-NEXT:    li a1, 3
 ; RV32-NEXT:    mv a0, s0
 ; RV32-NEXT:    call __mulsi3
 ; RV32-NEXT:    add s0, a0, s0
 ; RV32-NEXT:    addi a1, sp, 32
-; RV32-NEXT:    vl1r.v v8, (a1) # Unknown-size Folded Reload
+; RV32-NEXT:    vl1r.v v8, (a1) # vscale x 8-byte Folded Reload
 ; RV32-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vi v8, v8, 6
 ; RV32-NEXT:    srli s1, s1, 1
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    addi a1, a1, 32
-; RV32-NEXT:    vl1r.v v9, (a1) # Unknown-size Folded Reload
+; RV32-NEXT:    vl1r.v v9, (a1) # vscale x 8-byte Folded Reload
 ; RV32-NEXT:    vsetvli zero, s0, e8, mf2, ta, ma
 ; RV32-NEXT:    vslideup.vx v9, v8, a0
 ; RV32-NEXT:    add a0, s1, s1
@@ -293,7 +293,7 @@ define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>} @v
 ; RV32-NEXT:    slli a1, a1, 1
 ; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    addi a1, a1, 32
-; RV32-NEXT:    vl1r.v v8, (a1) # Unknown-size Folded Reload
+; RV32-NEXT:    vl1r.v v8, (a1) # vscale x 8-byte Folded Reload
 ; RV32-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; RV32-NEXT:    vslideup.vx v9, v8, s1
 ; RV32-NEXT:    csrr a0, vlenb
@@ -333,7 +333,7 @@ define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>} @v
 ; RV64-NEXT:    sub sp, sp, a0
 ; RV64-NEXT:    .cfi_escape 0x0f, 0x0e, 0x72, 0x00, 0x11, 0xc0, 0x00, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 64 + 4 * vlenb
 ; RV64-NEXT:    addi a0, sp, 32
-; RV64-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; RV64-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
 ; RV64-NEXT:    csrr s1, vlenb
 ; RV64-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v11, v8, 10
@@ -355,7 +355,7 @@ define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>} @v
 ; RV64-NEXT:    slli a2, a2, 1
 ; RV64-NEXT:    add a2, sp, a2
 ; RV64-NEXT:    addi a2, a2, 32
-; RV64-NEXT:    vs1r.v v10, (a2) # Unknown-size Folded Spill
+; RV64-NEXT:    vs1r.v v10, (a2) # vscale x 8-byte Folded Spill
 ; RV64-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v9, v8, 4
 ; RV64-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
@@ -363,20 +363,20 @@ define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>} @v
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    add a0, sp, a0
 ; RV64-NEXT:    addi a0, a0, 32
-; RV64-NEXT:    vs1r.v v11, (a0) # Unknown-size Folded Spill
+; RV64-NEXT:    vs1r.v v11, (a0) # vscale x 8-byte Folded Spill
 ; RV64-NEXT:    li a1, 3
 ; RV64-NEXT:    mv a0, s0
 ; RV64-NEXT:    call __muldi3
 ; RV64-NEXT:    add s0, a0, s0
 ; RV64-NEXT:    addi a1, sp, 32
-; RV64-NEXT:    vl1r.v v8, (a1) # Unknown-size Folded Reload
+; RV64-NEXT:    vl1r.v v8, (a1) # vscale x 8-byte Folded Reload
 ; RV64-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 6
 ; RV64-NEXT:    srli s1, s1, 1
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    addi a1, a1, 32
-; RV64-NEXT:    vl1r.v v9, (a1) # Unknown-size Folded Reload
+; RV64-NEXT:    vl1r.v v9, (a1) # vscale x 8-byte Folded Reload
 ; RV64-NEXT:    vsetvli zero, s0, e8, mf2, ta, ma
 ; RV64-NEXT:    vslideup.vx v9, v8, a0
 ; RV64-NEXT:    add a0, s1, s1
@@ -384,7 +384,7 @@ define {<2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>, <2 x i8>} @v
 ; RV64-NEXT:    slli a1, a1, 1
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    addi a1, a1, 32
-; RV64-NEXT:    vl1r.v v8, (a1) # Unknown-size Folded Reload
+; RV64-NEXT:    vl1r.v v8, (a1) # vscale x 8-byte Folded Reload
 ; RV64-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; RV64-NEXT:    vslideup.vx v9, v8, s1
 ; RV64-NEXT:    csrr a0, vlenb
@@ -538,15 +538,15 @@ define {<2 x float>, <2 x float>, <2 x float>} @vector_deinterleave3_v632_v2f32(
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 2
+; CHECK-NEXT:    vslidedown.vi v12, v8, 2
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v12, v8, 4
+; CHECK-NEXT:    vslidedown.vi v10, v8, 4
 ; CHECK-NEXT:    srli a0, a0, 3
 ; CHECK-NEXT:    add a1, a0, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vslideup.vx v8, v10, a0
+; CHECK-NEXT:    vslideup.vx v8, v12, a0
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vmv1r.v v9, v12
+; CHECK-NEXT:    vmv1r.v v9, v10
 ; CHECK-NEXT:    vs2r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlseg3e32.v v8, (a0)
@@ -573,22 +573,22 @@ define {<2 x half>, <2 x half>, <2 x half>, <2 x half>, <2 x half>} @vector_dein
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 6
-; CHECK-NEXT:    vslidedown.vi v11, v8, 4
-; CHECK-NEXT:    vslidedown.vi v12, v8, 2
+; CHECK-NEXT:    vslidedown.vi v12, v8, 6
+; CHECK-NEXT:    vslidedown.vi v13, v8, 4
+; CHECK-NEXT:    vslidedown.vi v14, v8, 2
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v14, v8, 8
+; CHECK-NEXT:    vslidedown.vi v10, v8, 8
 ; CHECK-NEXT:    srli a1, a0, 3
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    add a2, a1, a1
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vx v11, v10, a1
-; CHECK-NEXT:    vslideup.vx v8, v12, a1
+; CHECK-NEXT:    vslideup.vx v13, v12, a1
+; CHECK-NEXT:    vslideup.vx v8, v14, a1
 ; CHECK-NEXT:    add a1, a0, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vslideup.vx v8, v11, a0
+; CHECK-NEXT:    vslideup.vx v8, v13, a0
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vmv1r.v v9, v14
+; CHECK-NEXT:    vmv1r.v v9, v10
 ; CHECK-NEXT:    vs2r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlseg5e16.v v8, (a0)
@@ -615,28 +615,28 @@ define {<1 x half>, <1 x half>, <1 x half>, <1 x half>, <1 x half>, <1 x half>, 
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 3
-; CHECK-NEXT:    vslidedown.vi v10, v8, 2
-; CHECK-NEXT:    vslidedown.vi v11, v8, 1
-; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vslidedown.vi v14, v8, 5
-; CHECK-NEXT:    vslidedown.vi v15, v8, 6
+; CHECK-NEXT:    vslidedown.vi v11, v8, 2
+; CHECK-NEXT:    vslidedown.vi v12, v8, 1
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vslidedown.vi v13, v8, 5
+; CHECK-NEXT:    vslidedown.vi v14, v8, 6
 ; CHECK-NEXT:    srli a1, a0, 3
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    add a2, a1, a1
 ; CHECK-NEXT:    add a3, a0, a0
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vx v10, v9, a1
-; CHECK-NEXT:    vslideup.vx v12, v11, a1
+; CHECK-NEXT:    vslideup.vx v11, v9, a1
+; CHECK-NEXT:    vslideup.vx v10, v12, a1
 ; CHECK-NEXT:    vsetvli zero, a3, e16, m1, ta, ma
-; CHECK-NEXT:    vslideup.vx v12, v10, a0
+; CHECK-NEXT:    vslideup.vx v10, v11, a0
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v13, v8, 4
+; CHECK-NEXT:    vslidedown.vi v11, v8, 4
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vx v13, v14, a1
+; CHECK-NEXT:    vslideup.vx v11, v13, a1
 ; CHECK-NEXT:    vsetvli zero, a3, e16, m1, ta, ma
-; CHECK-NEXT:    vslideup.vx v13, v15, a0
+; CHECK-NEXT:    vslideup.vx v11, v14, a0
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs2r.v v12, (a0)
+; CHECK-NEXT:    vs2r.v v10, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vlseg7e16.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vlenb
