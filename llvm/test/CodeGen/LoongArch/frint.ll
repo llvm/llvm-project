@@ -47,7 +47,8 @@ define double @rint_f64(double %d) nounwind {
 ; LA64F:       # %bb.0: # %entry
 ; LA64F-NEXT:    addi.d $sp, $sp, -16
 ; LA64F-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64F-NEXT:    bl %plt(rint)
+; LA64F-NEXT:    pcaddu18i $ra, %call36(rint)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64F-NEXT:    addi.d $sp, $sp, 16
 ; LA64F-NEXT:    ret

@@ -64,6 +64,34 @@ constexpr auto operator>=(PA checker, PB parser) {
   return lookAhead(checker) >> parser;
 }
 
+// This parser succeeds if the given parser succeeds, and the result
+// satisfies the given condition. Specifically, it succeeds if:
+// 1. The parser given as the argument succeeds, and
+// 2. The condition function (called with PA::resultType) returns true
+//    for the result.
+template <typename PA, typename CF> struct PredicatedParser {
+  using resultType = typename PA::resultType;
+
+  constexpr PredicatedParser(PA parser, CF condition)
+      : parser_(parser), condition_(condition) {}
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    if (auto result{parser_.Parse(state)}; result && condition_(*result)) {
+      return result;
+    }
+    return std::nullopt;
+  }
+
+private:
+  const PA parser_;
+  const CF condition_;
+};
+
+template <typename PA, typename CF>
+constexpr auto predicated(PA parser, CF condition) {
+  return PredicatedParser(parser, condition);
+}
+
 /// Parse OpenMP directive name (this includes compound directives).
 struct OmpDirectiveNameParser {
   using resultType = OmpDirectiveName;
@@ -207,6 +235,9 @@ TYPE_PARSER(sourced( //
     construct<OmpArgument>(Parser<OmpLocator>{})))
 
 TYPE_PARSER(construct<OmpLocatorList>(nonemptyList(Parser<OmpLocator>{})))
+
+TYPE_PARSER(sourced( //
+    construct<OmpArgumentList>(nonemptyList(Parser<OmpArgument>{}))))
 
 TYPE_PARSER( //
     construct<OmpTypeSpecifier>(Parser<DeclarationTypeSpec>{}) ||
@@ -1027,9 +1058,11 @@ TYPE_PARSER(sourced(construct<OmpErrorDirective>(
 
 // --- Parsers for directives and constructs --------------------------
 
-OmpDirectiveSpecification static makeFlushFromOldSyntax1(Verbatim &&text,
+TYPE_PARSER(sourced(construct<OmpDirectiveName>(OmpDirectiveNameParser{})))
+
+OmpDirectiveSpecification static makeFlushFromOldSyntax(Verbatim &&text,
     std::optional<OmpClauseList> &&clauses,
-    std::optional<std::list<OmpArgument>> &&args,
+    std::optional<OmpArgumentList> &&args,
     OmpDirectiveSpecification::Flags &&flags) {
   return OmpDirectiveSpecification{OmpDirectiveName(text), std::move(args),
       std::move(clauses), std::move(flags)};
@@ -1043,15 +1076,15 @@ TYPE_PARSER(sourced(
         // lists absent in the parsed result.
         // E.g. for FLUSH(x) SEQ_CST it would find no clauses following
         // the directive name, parse the argument list "(x)" and stop.
-        applyFunction<OmpDirectiveSpecification>(makeFlushFromOldSyntax1,
+        applyFunction<OmpDirectiveSpecification>(makeFlushFromOldSyntax,
             verbatim("FLUSH"_tok) / !lookAhead("("_tok),
             maybe(Parser<OmpClauseList>{}),
-            maybe(parenthesized(nonemptyList(Parser<OmpArgument>{}))),
+            maybe(parenthesized(Parser<OmpArgumentList>{})),
             pure(OmpDirectiveSpecification::Flags::DeprecatedSyntax))) ||
     // Parse the standard syntax: directive [(arguments)] [clauses]
     construct<OmpDirectiveSpecification>( //
         sourced(OmpDirectiveNameParser{}),
-        maybe(parenthesized(nonemptyList(Parser<OmpArgument>{}))),
+        maybe(parenthesized(Parser<OmpArgumentList>{})),
         maybe(Parser<OmpClauseList>{}),
         pure(OmpDirectiveSpecification::Flags::None))))
 
@@ -1127,14 +1160,6 @@ TYPE_PARSER(sourced(construct<OmpLoopDirective>(first(
 TYPE_PARSER(sourced(construct<OmpBeginLoopDirective>(
     sourced(Parser<OmpLoopDirective>{}), Parser<OmpClauseList>{})))
 
-// 2.14.2 Cancellation Point construct
-TYPE_PARSER(sourced(construct<OpenMPCancellationPointConstruct>(
-    verbatim("CANCELLATION POINT"_tok), Parser<OmpClauseList>{})))
-
-// 2.14.1 Cancel construct
-TYPE_PARSER(sourced(construct<OpenMPCancelConstruct>(
-    verbatim("CANCEL"_tok), Parser<OmpClauseList>{})))
-
 TYPE_PARSER(sourced(construct<OmpFailClause>(
     parenthesized(indirect(Parser<OmpMemoryOrderClause>{})))))
 
@@ -1175,47 +1200,62 @@ TYPE_PARSER(sourced(construct<OmpAtomicClause>(
 TYPE_PARSER(sourced(construct<OmpAtomicClauseList>(
     many(maybe(","_tok) >> sourced(Parser<OmpAtomicClause>{})))))
 
-TYPE_PARSER(sourced(construct<OpenMPDepobjConstruct>(verbatim("DEPOBJ"_tok),
-    parenthesized(Parser<OmpObject>{}), sourced(Parser<OmpClause>{}))))
-
-static OpenMPFlushConstruct makeFlushFromOldSyntax(Verbatim &&text,
-    std::optional<OmpClauseList> &&clauses,
-    std::optional<OmpObjectList> &&objects) {
-  bool oldSyntax{
-      clauses && !clauses->v.empty() && objects && !objects->v.empty()};
-  return OpenMPFlushConstruct{std::move(text), std::move(objects),
-      std::move(clauses),
-      /*TrailingClauses=*/!oldSyntax};
+static bool IsSimpleStandalone(const OmpDirectiveName &name) {
+  switch (name.v) {
+  case llvm::omp::Directive::OMPD_barrier:
+  case llvm::omp::Directive::OMPD_ordered:
+  case llvm::omp::Directive::OMPD_scan:
+  case llvm::omp::Directive::OMPD_target_enter_data:
+  case llvm::omp::Directive::OMPD_target_exit_data:
+  case llvm::omp::Directive::OMPD_target_update:
+  case llvm::omp::Directive::OMPD_taskwait:
+  case llvm::omp::Directive::OMPD_taskyield:
+    return true;
+  default:
+    return false;
+  }
 }
 
 TYPE_PARSER(sourced( //
-    construct<OpenMPFlushConstruct>( //
-        applyFunction<OpenMPFlushConstruct>(makeFlushFromOldSyntax,
-            verbatim("FLUSH"_tok), maybe(Parser<OmpClauseList>{}),
-            maybe(parenthesized(Parser<OmpObjectList>{})))) ||
+    construct<OpenMPSimpleStandaloneConstruct>(
+        predicated(OmpDirectiveNameParser{}, IsSimpleStandalone) >=
+        Parser<OmpDirectiveSpecification>{})))
 
-    construct<OpenMPFlushConstruct>( //
-        verbatim("FLUSH"_tok), maybe(parenthesized(Parser<OmpObjectList>{})),
-        Parser<OmpClauseList>{}, pure(/*TrailingClauses=*/true))))
+static inline constexpr auto IsDirective(llvm::omp::Directive dir) {
+  return [dir](const OmpDirectiveName &name) -> bool { return dir == name.v; };
+}
 
-// Simple Standalone Directives
-TYPE_PARSER(sourced(construct<OmpSimpleStandaloneDirective>(first(
-    "BARRIER" >> pure(llvm::omp::Directive::OMPD_barrier),
-    "ORDERED" >> pure(llvm::omp::Directive::OMPD_ordered),
-    "SCAN" >> pure(llvm::omp::Directive::OMPD_scan),
-    "TARGET ENTER DATA" >> pure(llvm::omp::Directive::OMPD_target_enter_data),
-    "TARGET EXIT DATA" >> pure(llvm::omp::Directive::OMPD_target_exit_data),
-    "TARGET UPDATE" >> pure(llvm::omp::Directive::OMPD_target_update),
-    "TASKWAIT" >> pure(llvm::omp::Directive::OMPD_taskwait),
-    "TASKYIELD" >> pure(llvm::omp::Directive::OMPD_taskyield)))))
+TYPE_PARSER(sourced( //
+    construct<OpenMPFlushConstruct>(
+        predicated(OmpDirectiveNameParser{},
+            IsDirective(llvm::omp::Directive::OMPD_flush)) >=
+        Parser<OmpDirectiveSpecification>{})))
 
-TYPE_PARSER(sourced(construct<OpenMPSimpleStandaloneConstruct>(
-    Parser<OmpSimpleStandaloneDirective>{}, Parser<OmpClauseList>{})))
+// 2.14.2 Cancellation Point construct
+TYPE_PARSER(sourced( //
+    construct<OpenMPCancellationPointConstruct>(
+        predicated(OmpDirectiveNameParser{},
+            IsDirective(llvm::omp::Directive::OMPD_cancellation_point)) >=
+        Parser<OmpDirectiveSpecification>{})))
+
+// 2.14.1 Cancel construct
+TYPE_PARSER(sourced( //
+    construct<OpenMPCancelConstruct>(
+        predicated(OmpDirectiveNameParser{},
+            IsDirective(llvm::omp::Directive::OMPD_cancel)) >=
+        Parser<OmpDirectiveSpecification>{})))
+
+TYPE_PARSER(sourced( //
+    construct<OpenMPDepobjConstruct>(
+        predicated(OmpDirectiveNameParser{},
+            IsDirective(llvm::omp::Directive::OMPD_depobj)) >=
+        Parser<OmpDirectiveSpecification>{})))
 
 // Standalone Constructs
 TYPE_PARSER(
-    sourced(construct<OpenMPStandaloneConstruct>(
-                Parser<OpenMPSimpleStandaloneConstruct>{}) ||
+    sourced( //
+        construct<OpenMPStandaloneConstruct>(
+            Parser<OpenMPSimpleStandaloneConstruct>{}) ||
         construct<OpenMPStandaloneConstruct>(Parser<OpenMPFlushConstruct>{}) ||
         // Try CANCELLATION POINT before CANCEL.
         construct<OpenMPStandaloneConstruct>(

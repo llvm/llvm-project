@@ -108,7 +108,6 @@
 // CHECK-NEXT: optin.cplusplus.UninitializedObject:IgnoreRecordsWithField = ""
 // CHECK-NEXT: optin.cplusplus.UninitializedObject:NotesAsWarnings = false
 // CHECK-NEXT: optin.cplusplus.UninitializedObject:Pedantic = false
-// CHECK-NEXT: optin.cplusplus.VirtualCall:PureOnly = false
 // CHECK-NEXT: optin.cplusplus.VirtualCall:ShowFixIts = false
 // CHECK-NEXT: optin.osx.cocoa.localizability.NonLocalizedStringChecker:AggressiveReport = false
 // CHECK-NEXT: optin.performance.Padding:AllowedPad = 24

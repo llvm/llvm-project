@@ -38,13 +38,13 @@ PPCELFObjectWriter::PPCELFObjectWriter(bool Is64Bit, uint8_t OSABI)
                             Is64Bit ?  ELF::EM_PPC64 : ELF::EM_PPC,
                             /*HasRelocationAddend*/ true) {}
 
-static PPCMCExpr::VariantKind getAccessVariant(const MCValue &Target,
-                                               const MCFixup &Fixup) {
+static PPCMCExpr::Specifier getAccessVariant(const MCValue &Target,
+                                             const MCFixup &Fixup) {
   const MCExpr *Expr = Fixup.getValue();
 
   if (Expr->getKind() != MCExpr::Target)
-    return PPCMCExpr::VariantKind(Target.getAccessVariant());
-  return cast<PPCMCExpr>(Expr)->getKind();
+    return PPCMCExpr::Specifier(Target.getAccessVariant());
+  return cast<PPCMCExpr>(Expr)->getSpecifier();
 }
 
 unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
@@ -53,10 +53,10 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   MCFixupKind Kind = Fixup.getKind();
   if (Kind >= FirstLiteralRelocationKind)
     return Kind - FirstLiteralRelocationKind;
-  auto RefKind = static_cast<PPCMCExpr::VariantKind>(Target.getRefKind());
+  auto RefKind = static_cast<PPCMCExpr::Specifier>(Target.getRefKind());
   auto Modifier = getAccessVariant(Target, Fixup);
 
-  switch (PPCMCExpr::VariantKind(Modifier)) {
+  switch (PPCMCExpr::Specifier(Modifier)) {
   case PPCMCExpr::VK_DTPMOD:
   case PPCMCExpr::VK_DTPREL:
   case PPCMCExpr::VK_DTPREL_HA:

@@ -877,7 +877,7 @@ def Wa_COMMA : CommaJoined<["-"], "Wa,">,
 def warning_suppression_mappings_EQ : Joined<["--"],
   "warning-suppression-mappings=">, Group<Diag_Group>,
   HelpText<"File containing diagnostic suppression mappings. See user manual "
-  "for file format.">, Visibility<[ClangOption, CC1Option]>;
+  "for file format.">, Visibility<[ClangOption, CLOption, CC1Option]>;
 def Wall : Flag<["-"], "Wall">, Group<W_Group>, Flags<[HelpHidden]>,
   Visibility<[ClangOption, CC1Option, FlangOption]>;
 def WCL4 : Flag<["-"], "WCL4">, Group<W_Group>, Flags<[HelpHidden]>,
@@ -1129,13 +1129,12 @@ def fno_convergent_functions : Flag<["-"], "fno-convergent-functions">,
 // Common offloading options
 let Group = offload_Group in {
 def offload_arch_EQ : Joined<["--"], "offload-arch=">,
-  Visibility<[ClangOption, FlangOption]>, Flags<[NoXarchOption]>,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify an offloading device architecture for CUDA, HIP, or OpenMP. (e.g. sm_35). "
            "If 'native' is used the compiler will detect locally installed architectures. "
            "For HIP offloading, the device architecture can be followed by target ID features "
            "delimited by a colon (e.g. gfx908:xnack+:sramecc-). May be specified more than once.">;
 def no_offload_arch_EQ : Joined<["--"], "no-offload-arch=">,
-  Flags<[NoXarchOption]>,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Remove CUDA/HIP offloading device architecture (e.g. sm_35, gfx906) from the list of devices to compile for. "
            "'all' resets the list to its default value.">;
@@ -2978,6 +2977,15 @@ def fapple_link_rtlib : Flag<["-"], "fapple-link-rtlib">, Group<f_Group>,
   HelpText<"Force linking the clang builtins runtime library">;
 
 /// ClangIR-specific options - BEGIN
+def clangir_disable_passes : Flag<["-"], "clangir-disable-passes">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Disable CIR transformations pipeline">,
+  MarshallingInfoFlag<FrontendOpts<"ClangIRDisablePasses">>;
+def clangir_disable_verifier : Flag<["-"], "clangir-disable-verifier">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"ClangIR: Disable MLIR module verifier">,
+  MarshallingInfoFlag<FrontendOpts<"ClangIRDisableCIRVerifier">>;
+
 defm clangir : BoolFOption<"clangir",
   FrontendOpts<"UseClangIRPipeline">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use the ClangIR pipeline to compile">,
@@ -3033,6 +3041,8 @@ defm fat_lto_objects : BoolFOption<"fat-lto-objects",
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Disable">,
   BothFlags<[], [ClangOption, CC1Option], " fat LTO object support">>;
+def flto_partitions_EQ : Joined<["-"], "flto-partitions=">, Group<f_Group>,
+  HelpText<"Number of partitions to use for parallel full LTO codegen, ld.lld only.">;
 def fmacro_backtrace_limit_EQ : Joined<["-"], "fmacro-backtrace-limit=">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Set the maximum number of entries to print in a macro expansion backtrace (0 = no limit)">,
@@ -4020,13 +4030,14 @@ def fvectorize : Flag<["-"], "fvectorize">, Group<f_Group>,
 def fno_vectorize : Flag<["-"], "fno-vectorize">, Group<f_Group>;
 def : Flag<["-"], "ftree-vectorize">, Alias<fvectorize>;
 def : Flag<["-"], "fno-tree-vectorize">, Alias<fno_vectorize>;
-}
 
 def fslp_vectorize : Flag<["-"], "fslp-vectorize">, Group<f_Group>,
   HelpText<"Enable the superword-level parallelism vectorization passes">;
 def fno_slp_vectorize : Flag<["-"], "fno-slp-vectorize">, Group<f_Group>;
 def : Flag<["-"], "ftree-slp-vectorize">, Alias<fslp_vectorize>;
 def : Flag<["-"], "fno-tree-slp-vectorize">, Alias<fno_slp_vectorize>;
+}
+
 def Wlarge_by_value_copy_def : Flag<["-"], "Wlarge-by-value-copy">,
   HelpText<"Warn if a function definition returns or accepts an object larger "
            "in bytes than a given value">, Flags<[HelpHidden]>;
@@ -4678,7 +4689,7 @@ def mqdsp6_compat : Flag<["-"], "mqdsp6-compat">, Group<m_Group>,
   HelpText<"Enable hexagon-qdsp6 backward compatibility">,
   MarshallingInfoFlag<LangOpts<"HexagonQdsp6Compat">>;
 def m64 : Flag<["-"], "m64">, Group<m_Group>, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>;
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
 def maix64 : Flag<["-"], "maix64">, Group<m_Group>, Flags<[NoXarchOption]>;
 def mx32 : Flag<["-"], "mx32">, Group<m_Group>, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption, DXCOption]>;
@@ -4822,8 +4833,9 @@ def : Joined<["-"], "mllvm=">,
   Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>, Alias<mllvm>,
   HelpText<"Alias for -mllvm">, MetaVarName<"<arg>">;
 def mmlir : Separate<["-"], "mmlir">,
-  Visibility<[ClangOption, CLOption, FC1Option, FlangOption]>,
-  HelpText<"Additional arguments to forward to MLIR's option processing">;
+  Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>,
+  HelpText<"Additional arguments to forward to MLIR's option processing">,
+  MarshallingInfoStringVector<FrontendOpts<"MLIRArgs">>;
 def ffuchsia_api_level_EQ : Joined<["-"], "ffuchsia-api-level=">,
   Group<m_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set Fuchsia API level">,
@@ -5152,12 +5164,12 @@ defm amdgpu_ieee : BoolMOption<"amdgpu-ieee",
   NegFlag<SetFalse, [], [ClangOption, CC1Option]>>;
 
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
-  HelpText<"Specify code object ABI version. Defaults to 5. (AMDGPU only)">,
+  HelpText<"Specify code object ABI version. Defaults to 6. (AMDGPU only)">,
   Visibility<[ClangOption, FlangOption, CC1Option, FC1Option]>,
   Values<"none,4,5,6">,
   NormalizedValuesScope<"llvm::CodeObjectVersionKind">,
   NormalizedValues<["COV_None", "COV_4", "COV_5", "COV_6"]>,
-  MarshallingInfoEnum<TargetOpts<"CodeObjectVersion">, "COV_5">;
+  MarshallingInfoEnum<TargetOpts<"CodeObjectVersion">, "COV_6">;
 
 defm cumode : SimpleMFlag<"cumode",
   "Specify CU wavefront", "Specify WGP wavefront",
@@ -7373,6 +7385,9 @@ def mlink_bitcode_file
 def vectorize_loops : Flag<["-"], "vectorize-loops">,
   HelpText<"Run the Loop vectorization passes">,
   MarshallingInfoFlag<CodeGenOpts<"VectorizeLoop">>;
+def vectorize_slp : Flag<["-"], "vectorize-slp">,
+  HelpText<"Run the SLP vectorization passes">,
+  MarshallingInfoFlag<CodeGenOpts<"VectorizeSLP">>;
 } // let Visibility = [CC1Option, FC1Option]
 
 let Visibility = [CC1Option] in {
@@ -7488,9 +7503,6 @@ defm link_builtin_bitcode_postopt: BoolMOption<"link-builtin-bitcode-postopt",
   PosFlag<SetTrue, [], [ClangOption], "Link builtin bitcodes after the "
   "optimization pipeline">,
   NegFlag<SetFalse, [], [ClangOption]>>;
-def vectorize_slp : Flag<["-"], "vectorize-slp">,
-  HelpText<"Run the SLP vectorization passes">,
-  MarshallingInfoFlag<CodeGenOpts<"VectorizeSLP">>;
 def linker_option : Joined<["--"], "linker-option=">,
   HelpText<"Add linker option">,
   MarshallingInfoStringVector<CodeGenOpts<"LinkerOptions">>;
@@ -8161,7 +8173,7 @@ def fapply_global_visibility_to_externs : Flag<["-"], "fapply-global-visibility-
   MarshallingInfoFlag<LangOpts<"SetVisibilityForExternDecls">>;
 def fbracket_depth : Separate<["-"], "fbracket-depth">,
   HelpText<"Maximum nesting level for parentheses, brackets, and braces">,
-  MarshallingInfoInt<LangOpts<"BracketDepth">, "256">;
+  MarshallingInfoInt<LangOpts<"BracketDepth">, "2048">;
 defm const_strings : BoolOption<"f", "const-strings",
   LangOpts<"ConstStrings">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use">,

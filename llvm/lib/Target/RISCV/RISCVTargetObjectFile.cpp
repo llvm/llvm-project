@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVTargetObjectFile.h"
+#include "MCTargetDesc/RISCVMCExpr.h"
 #include "MCTargetDesc/RISCVMCObjectFileInfo.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -26,7 +27,7 @@ void RISCVELFTargetObjectFile::Initialize(MCContext &Ctx,
                                           const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
 
-  PLTRelativeVariantKind = MCSymbolRefExpr::VK_PLT;
+  PLTRelativeSpecifier = RISCVMCExpr::VK_PLT;
   SupportIndirectSymViaGOTPCRel = true;
 
   SmallDataSection = getContext().getELFSection(
@@ -50,7 +51,7 @@ const MCExpr *RISCVELFTargetObjectFile::getIndirectSymViaGOTPCRel(
     int64_t Offset, MachineModuleInfo *MMI, MCStreamer &Streamer) const {
   int64_t FinalOffset = Offset + MV.getConstant();
   const MCExpr *Res =
-      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_GOTPCREL, getContext());
+      MCSymbolRefExpr::create(Sym, RISCVMCExpr::VK_GOTPCREL, getContext());
   const MCExpr *Off = MCConstantExpr::create(FinalOffset, getContext());
   return MCBinaryExpr::createAdd(Res, Off, getContext());
 }

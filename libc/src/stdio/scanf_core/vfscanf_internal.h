@@ -18,6 +18,8 @@
 
 #if defined(LIBC_TARGET_ARCH_IS_GPU)
 #include "src/stdio/ferror.h"
+#include "src/stdio/getc.h"
+#include "src/stdio/ungetc.h"
 #endif
 
 #include "hdr/types/FILE.h"

@@ -62,11 +62,10 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK: Executing best plan with VF=8, UF=2
 ; CHECK-NEXT: VPlan 'Final VPlan for VF={8},UF={2}' {
 ; CHECK-NEXT: Live-in ir<[[VTC:%.+]]> = vector-trip-count
-; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
+; CHECK-NEXT: ir<%and> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   IR %and = and i64 %N, 15
-; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (zext i4 (trunc i64 %N to i4) to i64)
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<vector.ph>:
@@ -77,8 +76,7 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
-; CHECK-NEXT:   vp<[[STEPS1:%.+]]> = SCALAR-STEPS ir<0>, ir<1>
-; CHECK-NEXT:   EMIT vp<[[PADD1:%.+]]> = ptradd ir<%A>, vp<[[STEPS1]]>
+; CHECK-NEXT:   EMIT vp<[[PADD1:%.+]]> = ptradd ir<%A>, ir<0>
 ; CHECK-NEXT:   vp<[[VPTR1:%.]]> = vector-pointer vp<[[PADD1]]>
 ; CHECK-NEXT:   vp<[[VPTR2:%.]]> = vector-pointer vp<[[PADD1]]>, ir<1>
 ; CHECK-NEXT:   WIDEN ir<%l> = load vp<[[VPTR1]]>
@@ -92,7 +90,7 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[C:%.+]]> = icmp eq vp<[[TC]]>, ir<[[VTC]]>
+; CHECK-NEXT:   EMIT vp<[[C:%.+]]> = icmp eq ir<%and>, ir<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[C]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:

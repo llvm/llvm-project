@@ -147,7 +147,7 @@ template <typename T> static T *getPlanEntry(T *Start) {
     if (Current->getNumPredecessors() == 0)
       return Current;
     auto &Predecessors = Current->getPredecessors();
-    WorkList.insert(Predecessors.begin(), Predecessors.end());
+    WorkList.insert_range(Predecessors);
   }
 
   llvm_unreachable("VPlan without any entry node without predecessors");
@@ -752,15 +752,13 @@ void VPRegionBlock::execute(VPTransformState *State) {
 
   if (!isReplicator()) {
     // Create and register the new vector loop.
-    Loop *PrevLoop = State->CurrentParentLoop;
+    Loop *PrevParentLoop = State->CurrentParentLoop;
     State->CurrentParentLoop = State->LI->AllocateLoop();
-    BasicBlock *VectorPH = State->CFG.VPBB2IRBB[getPreheaderVPBB()];
-    Loop *ParentLoop = State->LI->getLoopFor(VectorPH);
 
     // Insert the new loop into the loop nest and register the new basic blocks
     // before calling any utilities such as SCEV that require valid LoopInfo.
-    if (ParentLoop)
-      ParentLoop->addChildLoop(State->CurrentParentLoop);
+    if (PrevParentLoop)
+      PrevParentLoop->addChildLoop(State->CurrentParentLoop);
     else
       State->LI->addTopLevelLoop(State->CurrentParentLoop);
 
@@ -770,7 +768,7 @@ void VPRegionBlock::execute(VPTransformState *State) {
       Block->execute(State);
     }
 
-    State->CurrentParentLoop = PrevLoop;
+    State->CurrentParentLoop = PrevParentLoop;
     return;
   }
 
@@ -900,8 +898,6 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   // FIXME: Model VF * UF computation completely in VPlan.
-  assert((!getVectorLoopRegion() || VFxUF.getNumUsers()) &&
-         "VFxUF expected to always have users");
   unsigned UF = getUF();
   if (VF.getNumUsers()) {
     Value *RuntimeVF = getRuntimeVF(Builder, TCTy, State.VF);
@@ -1229,7 +1225,7 @@ VPIRBasicBlock *VPlan::createVPIRBasicBlock(BasicBlock *IRBB) {
   auto *VPIRBB = createEmptyVPIRBasicBlock(IRBB);
   for (Instruction &I :
        make_range(IRBB->begin(), IRBB->getTerminator()->getIterator()))
-    VPIRBB->appendRecipe(new VPIRInstruction(I));
+    VPIRBB->appendRecipe(VPIRInstruction::create(I));
   return VPIRBB;
 }
 
@@ -1534,12 +1530,13 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
-    auto Plan = buildVPlan(SubRange);
-    VPlanTransforms::optimize(*Plan);
-    // Update the name of the latch of the top-level vector loop region region
-    // after optimizations which includes block folding.
-    Plan->getVectorLoopRegion()->getExiting()->setName("vector.latch");
-    VPlans.push_back(std::move(Plan));
+    if (auto Plan = tryToBuildVPlan(SubRange)) {
+      VPlanTransforms::optimize(*Plan);
+      // Update the name of the latch of the top-level vector loop region region
+      // after optimizations which includes block folding.
+      Plan->getVectorLoopRegion()->getExiting()->setName("vector.latch");
+      VPlans.push_back(std::move(Plan));
+    }
     VF = SubRange.End;
   }
 }

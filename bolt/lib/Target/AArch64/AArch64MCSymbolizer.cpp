@@ -125,13 +125,37 @@ AArch64MCSymbolizer::adjustRelocation(const Relocation &Rel,
     // instruction pairs and will perform necessary adjustments.
     ErrorOr<uint64_t> SymbolValue = BC.getSymbolValue(*Rel.Symbol);
     assert(SymbolValue && "Symbol value should be set");
-    (void)SymbolValue;
+    const uint64_t SymbolPageAddr = *SymbolValue & ~0xfffULL;
 
-    AdjustedRel.Symbol = BC.registerNameAtAddress("__BOLT_got_zero", 0, 0, 0);
-    AdjustedRel.Addend = Rel.Value;
+    // Check if defined symbol and GOT are on the same page. If they are not,
+    // disambiguate the operand.
+    if (BC.MIB->isADRP(Inst) && Rel.Addend == 0 &&
+        SymbolPageAddr == Rel.Value &&
+        !isPageAddressValidForGOT(SymbolPageAddr)) {
+      AdjustedRel.Type = ELF::R_AARCH64_ADR_PREL_PG_HI21;
+    } else {
+      AdjustedRel.Symbol = BC.registerNameAtAddress("__BOLT_got_zero", 0, 0, 0);
+      AdjustedRel.Addend = Rel.Value;
+    }
   }
 
   return AdjustedRel;
+}
+
+bool AArch64MCSymbolizer::isPageAddressValidForGOT(uint64_t PageAddress) const {
+  assert(!(PageAddress & 0xfffULL) && "Page address not aligned at 4KB");
+
+  ErrorOr<BinarySection &> GOT =
+      Function.getBinaryContext().getUniqueSectionByName(".got");
+  if (!GOT || !GOT->getSize())
+    return false;
+
+  const uint64_t GOTFirstPageAddress = GOT->getAddress() & ~0xfffULL;
+  const uint64_t GOTLastPageAddress =
+      (GOT->getAddress() + GOT->getSize() - 1) & ~0xfffULL;
+
+  return PageAddress >= GOTFirstPageAddress &&
+         PageAddress <= GOTLastPageAddress;
 }
 
 void AArch64MCSymbolizer::tryAddingPcLoadReferenceComment(raw_ostream &CStream,

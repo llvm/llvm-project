@@ -37,6 +37,7 @@ extern llvm::cl::opt<unsigned> BucketsPerLine;
 extern llvm::cl::opt<bool> DiffOnly;
 extern llvm::cl::opt<bool> EnableBAT;
 extern llvm::cl::opt<bool> EqualizeBBCounts;
+extern llvm::cl::opt<bool> ForcePatch;
 extern llvm::cl::opt<bool> RemoveSymtab;
 extern llvm::cl::opt<unsigned> ExecutionCountThreshold;
 extern llvm::cl::opt<unsigned> HeatmapBlock;

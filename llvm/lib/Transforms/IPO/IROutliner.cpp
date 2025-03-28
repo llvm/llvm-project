@@ -1539,27 +1539,22 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
 /// \returns The found or newly created BasicBlock to contain the needed
 /// PHINodes to be used as outputs.
 static BasicBlock *findOrCreatePHIBlock(OutlinableGroup &Group, Value *RetVal) {
-  DenseMap<Value *, BasicBlock *>::iterator PhiBlockForRetVal,
-      ReturnBlockForRetVal;
-  PhiBlockForRetVal = Group.PHIBlocks.find(RetVal);
-  ReturnBlockForRetVal = Group.EndBBs.find(RetVal);
+  // Find if a PHIBlock exists for this return value already.  If it is
+  // the first time we are analyzing this, we will not, so we record it.
+  auto [PhiBlockForRetVal, Inserted] = Group.PHIBlocks.try_emplace(RetVal);
+  if (!Inserted)
+    return PhiBlockForRetVal->second;
+
+  auto ReturnBlockForRetVal = Group.EndBBs.find(RetVal);
   assert(ReturnBlockForRetVal != Group.EndBBs.end() &&
          "Could not find output value!");
   BasicBlock *ReturnBB = ReturnBlockForRetVal->second;
 
-  // Find if a PHIBlock exists for this return value already.  If it is
-  // the first time we are analyzing this, we will not, so we record it.
-  PhiBlockForRetVal = Group.PHIBlocks.find(RetVal);
-  if (PhiBlockForRetVal != Group.PHIBlocks.end())
-    return PhiBlockForRetVal->second;
-  
   // If we did not find a block, we create one, and insert it into the
   // overall function and record it.
-  bool Inserted = false;
   BasicBlock *PHIBlock = BasicBlock::Create(ReturnBB->getContext(), "phi_block",
                                             ReturnBB->getParent());
-  std::tie(PhiBlockForRetVal, Inserted) =
-      Group.PHIBlocks.insert(std::make_pair(RetVal, PHIBlock));
+  PhiBlockForRetVal->second = PHIBlock;
 
   // We find the predecessors of the return block in the newly created outlined
   // function in order to point them to the new PHIBlock rather than the already

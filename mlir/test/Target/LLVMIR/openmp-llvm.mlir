@@ -2651,6 +2651,16 @@ llvm.func @omp_task_attrs() -> () attributes {
 // CHECK-LABEL: define void @omp_task_with_deps
 // CHECK-SAME: (ptr %[[zaddr:.+]])
 // CHECK:  %[[dep_arr_addr:.+]] = alloca [1 x %struct.kmp_dep_info], align 8
+// CHECK:  %[[DEP_ARR_ADDR1:.+]] = alloca [1 x %struct.kmp_dep_info], align 8
+// CHECK:  %[[DEP_ARR_ADDR2:.+]] = alloca [1 x %struct.kmp_dep_info], align 8
+// CHECK:  %[[DEP_ARR_ADDR3:.+]] = alloca [1 x %struct.kmp_dep_info], align 8
+// CHECK:  %[[DEP_ARR_ADDR4:.+]] = alloca [1 x %struct.kmp_dep_info], align 8
+
+// CHECK: %[[omp_global_thread_num:.+]] = call i32 @__kmpc_global_thread_num({{.+}})
+// CHECK: %[[task_data:.+]] = call ptr @__kmpc_omp_task_alloc
+// CHECK-SAME: (ptr @{{.+}}, i32 %[[omp_global_thread_num]], i32 1, i64 40,
+// CHECK-SAME:  i64 0, ptr @[[outlined_fn:.+]])
+
 // CHECK:  %[[dep_arr_addr_0:.+]] = getelementptr inbounds [1 x %struct.kmp_dep_info], ptr %[[dep_arr_addr]], i64 0, i64 0
 // CHECK:  %[[dep_arr_addr_0_val:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[dep_arr_addr_0]], i32 0, i32 0
 // CHECK:  %[[dep_arr_addr_0_val_int:.+]] = ptrtoint ptr %0 to i64
@@ -2659,40 +2669,33 @@ llvm.func @omp_task_attrs() -> () attributes {
 // CHECK:  store i64 8, ptr %[[dep_arr_addr_0_size]], align 4
 // CHECK:  %[[dep_arr_addr_0_kind:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[dep_arr_addr_0]], i32 0, i32 2
 // CHECK: store i8 1, ptr %[[dep_arr_addr_0_kind]], align 1
+
+// CHECK: call i32 @__kmpc_omp_task_with_deps(ptr @{{.+}}, i32 %[[omp_global_thread_num]], ptr %[[task_data]], {{.*}})
 // -----
 // dependence_type: Out
-// CHECK:  %[[DEP_ARR_ADDR1:.+]] = alloca [1 x %struct.kmp_dep_info], align 8
 // CHECK:  %[[DEP_ARR_ADDR_1:.+]] = getelementptr inbounds [1 x %struct.kmp_dep_info], ptr %[[DEP_ARR_ADDR1]], i64 0, i64 0
 //         [...]
 // CHECK:  %[[DEP_TYPE_1:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[DEP_ARR_ADDR_1]], i32 0, i32 2
 // CHECK:  store i8 3, ptr %[[DEP_TYPE_1]], align 1
 // -----
 // dependence_type: Inout
-// CHECK:  %[[DEP_ARR_ADDR2:.+]] = alloca [1 x %struct.kmp_dep_info], align 8
 // CHECK:  %[[DEP_ARR_ADDR_2:.+]] = getelementptr inbounds [1 x %struct.kmp_dep_info], ptr %[[DEP_ARR_ADDR2]], i64 0, i64 0
 //         [...]
 // CHECK:  %[[DEP_TYPE_2:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[DEP_ARR_ADDR_2]], i32 0, i32 2
 // CHECK:  store i8 3, ptr %[[DEP_TYPE_2]], align 1
 // -----
 // dependence_type: Mutexinoutset
-// CHECK:  %[[DEP_ARR_ADDR3:.+]] = alloca [1 x %struct.kmp_dep_info], align 8
 // CHECK:  %[[DEP_ARR_ADDR_3:.+]] = getelementptr inbounds [1 x %struct.kmp_dep_info], ptr %[[DEP_ARR_ADDR3]], i64 0, i64 0
 //         [...]
 // CHECK:  %[[DEP_TYPE_3:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[DEP_ARR_ADDR_3]], i32 0, i32 2
 // CHECK:  store i8 4, ptr %[[DEP_TYPE_3]], align 1
 // -----
 // dependence_type: Inoutset
-// CHECK:  %[[DEP_ARR_ADDR4:.+]] = alloca [1 x %struct.kmp_dep_info], align 8
 // CHECK:  %[[DEP_ARR_ADDR_4:.+]] = getelementptr inbounds [1 x %struct.kmp_dep_info], ptr %[[DEP_ARR_ADDR4]], i64 0, i64 0
 //         [...]
 // CHECK:  %[[DEP_TYPE_4:.+]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[DEP_ARR_ADDR_4]], i32 0, i32 2
 // CHECK:  store i8 8, ptr %[[DEP_TYPE_4]], align 1
 llvm.func @omp_task_with_deps(%zaddr: !llvm.ptr) {
-  // CHECK: %[[omp_global_thread_num:.+]] = call i32 @__kmpc_global_thread_num({{.+}})
-  // CHECK: %[[task_data:.+]] = call ptr @__kmpc_omp_task_alloc
-  // CHECK-SAME: (ptr @{{.+}}, i32 %[[omp_global_thread_num]], i32 1, i64 40,
-  // CHECK-SAME:  i64 0, ptr @[[outlined_fn:.+]])
-  // CHECK: call i32 @__kmpc_omp_task_with_deps(ptr @{{.+}}, i32 %[[omp_global_thread_num]], ptr %[[task_data]], {{.*}})
   omp.task depend(taskdependin -> %zaddr : !llvm.ptr) {
     %n = llvm.mlir.constant(1 : i64) : i64
     %valaddr = llvm.alloca %n x i32 : (i64) -> !llvm.ptr
@@ -3373,3 +3376,49 @@ llvm.func @distribute_wsloop(%lb : i32, %ub : i32, %step : i32) {
 // CHECK:         %[[TID:.*]] = call i32 @__kmpc_global_thread_num({{.*}})
 // CHECK:         %[[DIST_UB:.*]] = alloca i32
 // CHECK:         call void @__kmpc_dist_for_static_init_{{.*}}(ptr @{{.*}}, i32 %[[TID]], i32 34, ptr %[[LASTITER]], ptr %[[LB]], ptr %[[UB]], ptr %[[DIST_UB]], ptr %[[STRIDE]], i32 1, i32 0)
+
+// -----
+
+omp.private {type = private} @_QFEx_private_i32 : i32
+llvm.func @nested_task_with_deps() {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x i32 {bindc_name = "x"} : (i64) -> !llvm.ptr
+  %2 = llvm.mlir.constant(1 : i64) : i64
+  omp.parallel private(@_QFEx_private_i32 %1 -> %arg0 : !llvm.ptr) {
+    omp.task depend(taskdependout -> %arg0 : !llvm.ptr) {
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define void @nested_task_with_deps() {
+// CHECK:         %[[PAR_FORK_ARG:.*]] = alloca { ptr }, align 8
+// CHECK:         %[[DEP_ARR:.*]] = alloca [1 x %struct.kmp_dep_info], align 8
+
+// CHECK:       omp_parallel:
+// CHECK-NEXT:    %[[DEP_ARR_GEP:.*]] = getelementptr { ptr }, ptr %[[PAR_FORK_ARG]], i32 0, i32 0
+// CHECK-NEXT:    store ptr %[[DEP_ARR]], ptr %[[DEP_ARR_GEP]], align 8
+// CHECK-NEXT:    call void {{.*}} @__kmpc_fork_call(ptr @{{.*}}, i32 1, ptr @[[PAR_OUTLINED:.*]], ptr %[[PAR_FORK_ARG]])
+// CHECK-NEXT:    br label %[[PAR_EXIT:.*]]
+
+// CHECK:       [[PAR_EXIT]]:
+// CHECK-NEXT:    ret void
+// CHECK:       }
+
+// CHECK:       define internal void @[[PAR_OUTLINED]]{{.*}} {
+// CHECK:       omp.par.entry:
+// CHECK:         %[[DEP_ARR_GEP_2:.*]] = getelementptr { ptr }, ptr %{{.*}}, i32 0, i32 0
+// CHECK:         %[[DEP_ARR_2:.*]] = load ptr, ptr %[[DEP_ARR_GEP_2]], align 8
+// CHECK:         %[[PRIV_ALLOC:omp.private.alloc]] = alloca i32, align 4
+
+// CHECK:         %[[TASK:.*]] = call ptr @__kmpc_omp_task_alloc
+// CHECK:         %[[DEP_STRUCT_GEP:.*]] = getelementptr inbounds [1 x %struct.kmp_dep_info], ptr %[[DEP_ARR_2]], i64 0, i64 0
+// CHECK:         %[[DEP_GEP:.*]] = getelementptr inbounds nuw %struct.kmp_dep_info, ptr %[[DEP_STRUCT_GEP]], i32 0, i32 0
+// CHECK:         %[[PRIV_ALLOC_TO_INT:.*]] = ptrtoint ptr %[[PRIV_ALLOC]] to i64
+// CHECK:         store i64 %[[PRIV_ALLOC_TO_INT]], ptr %[[DEP_GEP]], align 4
+// CHECK:         call i32 @__kmpc_omp_task_with_deps(ptr @{{.*}}, i32 %{{.*}}, ptr %{{.*}}, i32 1, ptr %[[DEP_ARR_2]], i32 0, ptr null)
+
+// CHECK:         ret void
+// CHECK:       }

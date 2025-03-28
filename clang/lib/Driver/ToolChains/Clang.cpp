@@ -2875,6 +2875,17 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
     CmdArgs.push_back("-target-feature");
     CmdArgs.push_back(MipsTargetFeature);
   }
+
+  // Those OSes default to enabling VIS on 64-bit SPARC.
+  // See also the corresponding code for external assemblers in
+  // sparc::getSparcAsmModeForCPU().
+  bool IsSparcV9ATarget =
+      (C.getDefaultToolChain().getArch() == llvm::Triple::sparcv9) &&
+      (Triple.isOSLinux() || Triple.isOSFreeBSD() || Triple.isOSOpenBSD());
+  if (IsSparcV9ATarget && SparcTargetFeatures.empty()) {
+    CmdArgs.push_back("-target-feature");
+    CmdArgs.push_back("+vis");
+  }
   for (const char *Feature : SparcTargetFeatures) {
     CmdArgs.push_back("-target-feature");
     CmdArgs.push_back(Feature);
@@ -5520,6 +5531,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         options::OPT_Wa_COMMA,
         options::OPT_Xassembler,
         options::OPT_mllvm,
+        options::OPT_mmlir,
     };
     for (const auto &A : Args)
       if (llvm::is_contained(kBitcodeOptionIgnorelist, A->getOption().getID()))
@@ -6387,11 +6399,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fconvergent_functions,
                   options::OPT_fno_convergent_functions);
 
-  // NVPTX/AMDGCN doesn't support PGO or coverage. There's no runtime support
-  // for sampling, overhead of call arc collection is way too high and there's
-  // no way to collect the output.
-  if (!Triple.isNVPTX() && !Triple.isAMDGCN())
-    addPGOAndCoverageFlags(TC, C, JA, Output, Args, SanitizeArgs, CmdArgs);
+  addPGOAndCoverageFlags(TC, C, JA, Output, Args, SanitizeArgs, CmdArgs);
 
   Args.AddLastArg(CmdArgs, options::OPT_fclang_abi_compat_EQ);
 
@@ -7589,24 +7597,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptOutFlag(CmdArgs, options::OPT_fgnu_inline_asm,
                      options::OPT_fno_gnu_inline_asm);
 
-  // Enable vectorization per default according to the optimization level
-  // selected. For optimization levels that want vectorization we use the alias
-  // option to simplify the hasFlag logic.
-  bool EnableVec = shouldEnableVectorizerAtOLevel(Args, false);
-  OptSpecifier VectorizeAliasOption =
-      EnableVec ? options::OPT_O_Group : options::OPT_fvectorize;
-  if (Args.hasFlag(options::OPT_fvectorize, VectorizeAliasOption,
-                   options::OPT_fno_vectorize, EnableVec))
-    CmdArgs.push_back("-vectorize-loops");
-
-  // -fslp-vectorize is enabled based on the optimization level selected.
-  bool EnableSLPVec = shouldEnableVectorizerAtOLevel(Args, true);
-  OptSpecifier SLPVectAliasOption =
-      EnableSLPVec ? options::OPT_O_Group : options::OPT_fslp_vectorize;
-  if (Args.hasFlag(options::OPT_fslp_vectorize, SLPVectAliasOption,
-                   options::OPT_fno_slp_vectorize, EnableSLPVec))
-    CmdArgs.push_back("-vectorize-slp");
-
+  handleVectorizeLoopsArgs(Args, CmdArgs);
+  handleVectorizeSLPArgs(Args, CmdArgs);
   ParseMPreferVectorWidth(D, Args, CmdArgs);
 
   Args.AddLastArg(CmdArgs, options::OPT_fshow_overloads_EQ);
@@ -7777,6 +7769,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // This needs to run after -Xclang argument forwarding to pick up the target
   // features enabled through -Xclang -target-feature flags.
   SanitizeArgs.addArgs(TC, Args, CmdArgs, InputType);
+
+#if CLANG_ENABLE_CIR
+  // Forward -mmlir arguments to to the MLIR option parser.
+  for (const Arg *A : Args.filtered(options::OPT_mmlir)) {
+    A->claim();
+    A->render(Args, CmdArgs);
+  }
+#endif // CLANG_ENABLE_CIR
 
   // With -save-temps, we want to save the unoptimized bitcode output from the
   // CompileJobAction, use -disable-llvm-passes to get pristine IR generated
@@ -9217,6 +9217,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_load,
       OPT_fno_lto,
       OPT_flto,
+      OPT_flto_partitions_EQ,
       OPT_flto_EQ};
   const llvm::DenseSet<unsigned> LinkerOptions{OPT_mllvm, OPT_Zlinker_input};
   auto ShouldForward = [&](const llvm::DenseSet<unsigned> &Set, Arg *A) {
@@ -9226,7 +9227,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   };
 
   ArgStringList CmdArgs;
-  for (Action::OffloadKind Kind : {Action::OFK_Cuda, Action::OFK_OpenMP}) {
+  for (Action::OffloadKind Kind : {Action::OFK_Cuda, Action::OFK_OpenMP,
+                                   Action::OFK_HIP, Action::OFK_SYCL}) {
     auto TCRange = C.getOffloadToolChains(Kind);
     for (auto &I : llvm::make_range(TCRange)) {
       const ToolChain *TC = I.second;
@@ -9321,6 +9323,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back(
             Args.MakeArgString("--device-linker=" + TC.getTripleString() + "=" +
                                "-lclang_rt.builtins"));
+      bool HasFlangRT = HasCompilerRT && C.getDriver().IsFlangMode();
+      if (HasFlangRT)
+        CmdArgs.push_back(
+            Args.MakeArgString("--device-linker=" + TC.getTripleString() + "=" +
+                               "-lflang_rt.runtime"));
     });
   }
 

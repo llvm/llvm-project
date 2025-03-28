@@ -3143,21 +3143,12 @@ bool IRTranslator::translateVAArg(const User &U, MachineIRBuilder &MIRBuilder) {
   return true;
 }
 
-bool IRTranslator::translateUnreachable(const User &U, MachineIRBuilder &MIRBuilder) {
-  if (!MF->getTarget().Options.TrapUnreachable)
-    return true;
-
+bool IRTranslator::translateUnreachable(const User &U,
+                                        MachineIRBuilder &MIRBuilder) {
   auto &UI = cast<UnreachableInst>(U);
-
-  // We may be able to ignore unreachable behind a noreturn call.
-  if (const CallInst *Call = dyn_cast_or_null<CallInst>(UI.getPrevNode());
-      Call && Call->doesNotReturn()) {
-    if (MF->getTarget().Options.NoTrapAfterNoreturn)
-      return true;
-    // Do not emit an additional trap instruction.
-    if (Call->isNonContinuableTrap())
-      return true;
-  }
+  if (!UI.shouldLowerToTrap(MF->getTarget().Options.TrapUnreachable,
+                            MF->getTarget().Options.NoTrapAfterNoreturn))
+    return true;
 
   MIRBuilder.buildTrap();
   return true;

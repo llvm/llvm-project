@@ -249,8 +249,7 @@ define void @single_stride_int_scaled(ptr %p, i64 %stride) {
 ; NOSTRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NOSTRIDED:       vector.body:
 ; NOSTRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; NOSTRIDED-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 0
-; NOSTRIDED-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[TMP7]]
+; NOSTRIDED-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[INDEX]]
 ; NOSTRIDED-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[TMP8]], i32 0
 ; NOSTRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP9]], align 4
 ; NOSTRIDED-NEXT:    [[TMP10:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD]], splat (i32 1)
@@ -332,8 +331,7 @@ define void @single_stride_int_iv(ptr %p, i64 %stride) {
 ; NOSTRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NOSTRIDED:       vector.body:
 ; NOSTRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; NOSTRIDED-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 0
-; NOSTRIDED-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[TMP7]]
+; NOSTRIDED-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[INDEX]]
 ; NOSTRIDED-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[TMP8]], i32 0
 ; NOSTRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP9]], align 4
 ; NOSTRIDED-NEXT:    [[TMP10:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD]], splat (i32 1)
@@ -464,12 +462,11 @@ define void @double_stride_int_scaled(ptr %p, ptr %p2, i64 %stride) {
 ; NOSTRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NOSTRIDED:       vector.body:
 ; NOSTRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; NOSTRIDED-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 0
-; NOSTRIDED-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[P]], i64 [[TMP11]]
+; NOSTRIDED-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[P]], i64 [[INDEX]]
 ; NOSTRIDED-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[TMP12]], i32 0
 ; NOSTRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP13]], align 4
 ; NOSTRIDED-NEXT:    [[TMP14:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD]], splat (i32 1)
-; NOSTRIDED-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[P2]], i64 [[TMP11]]
+; NOSTRIDED-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[P2]], i64 [[INDEX]]
 ; NOSTRIDED-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[TMP15]], i32 0
 ; NOSTRIDED-NEXT:    store <vscale x 4 x i32> [[TMP14]], ptr [[TMP16]], align 4
 ; NOSTRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP10]]
@@ -638,8 +635,7 @@ define void @double_stride_int_iv(ptr %p, ptr %p2, i64 %stride) {
 ; NOSTRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NOSTRIDED:       vector.body:
 ; NOSTRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; NOSTRIDED-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 0
-; NOSTRIDED-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[TMP7]]
+; NOSTRIDED-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[INDEX]]
 ; NOSTRIDED-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[TMP8]], i32 0
 ; NOSTRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP9]], align 4
 ; NOSTRIDED-NEXT:    [[TMP10:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD]], splat (i32 1)

@@ -377,49 +377,15 @@ void InitializeRequestHandler::operator()(
   // process and more.
   dap.event_thread = std::thread(EventThreadFunction, std::ref(dap));
 
-  // The debug adapter supports the configurationDoneRequest.
-  body.try_emplace("supportsConfigurationDoneRequest", true);
-  // The debug adapter supports function breakpoints.
-  body.try_emplace("supportsFunctionBreakpoints", true);
-  // The debug adapter supports conditional breakpoints.
-  body.try_emplace("supportsConditionalBreakpoints", true);
-  // The debug adapter supports breakpoints that break execution after a
-  // specified number of hits.
-  body.try_emplace("supportsHitConditionalBreakpoints", true);
-  // The debug adapter supports a (side effect free) evaluate request for
-  // data hovers.
-  body.try_emplace("supportsEvaluateForHovers", true);
+  llvm::StringMap<bool> capabilities = dap.GetCapabilities();
+  for (auto &kv : capabilities)
+    body.try_emplace(kv.getKey(), kv.getValue());
+
   // Available filters or options for the setExceptionBreakpoints request.
   llvm::json::Array filters;
-  for (const auto &exc_bp : *dap.exception_breakpoints) {
+  for (const auto &exc_bp : *dap.exception_breakpoints)
     filters.emplace_back(CreateExceptionBreakpointFilter(exc_bp));
-  }
   body.try_emplace("exceptionBreakpointFilters", std::move(filters));
-  // The debug adapter supports launching a debugee in intergrated VSCode
-  // terminal.
-  body.try_emplace("supportsRunInTerminalRequest", true);
-  // The debug adapter supports stepping back via the stepBack and
-  // reverseContinue requests.
-  body.try_emplace("supportsStepBack", false);
-  // The debug adapter supports setting a variable to a value.
-  body.try_emplace("supportsSetVariable", true);
-  // The debug adapter supports restarting a frame.
-  body.try_emplace("supportsRestartFrame", false);
-  // The debug adapter supports the gotoTargetsRequest.
-  body.try_emplace("supportsGotoTargetsRequest", false);
-  // The debug adapter supports the stepInTargetsRequest.
-  body.try_emplace("supportsStepInTargetsRequest", true);
-  // The debug adapter supports the completions request.
-  body.try_emplace("supportsCompletionsRequest", true);
-  // The debug adapter supports the disassembly request.
-  body.try_emplace("supportsDisassembleRequest", true);
-  // The debug adapter supports the `breakpointLocations` request.
-  body.try_emplace("supportsBreakpointLocationsRequest", true);
-  // The debug adapter supports stepping granularities (argument `granularity`)
-  // for the stepping requests.
-  body.try_emplace("supportsSteppingGranularity", true);
-  // The debug adapter support for instruction breakpoint.
-  body.try_emplace("supportsInstructionBreakpoints", true);
 
   llvm::json::Array completion_characters;
   completion_characters.emplace_back(".");
@@ -427,42 +393,6 @@ void InitializeRequestHandler::operator()(
   completion_characters.emplace_back("\t");
   body.try_emplace("completionTriggerCharacters",
                    std::move(completion_characters));
-
-  // The debug adapter supports the modules request.
-  body.try_emplace("supportsModulesRequest", true);
-  // The set of additional module information exposed by the debug adapter.
-  //   body.try_emplace("additionalModuleColumns"] = ColumnDescriptor
-  // Checksum algorithms supported by the debug adapter.
-  //   body.try_emplace("supportedChecksumAlgorithms"] = ChecksumAlgorithm
-  // The debug adapter supports the RestartRequest. In this case a client
-  // should not implement 'restart' by terminating and relaunching the adapter
-  // but by calling the RestartRequest.
-  body.try_emplace("supportsRestartRequest", true);
-  // The debug adapter supports 'exceptionOptions' on the
-  // setExceptionBreakpoints request.
-  body.try_emplace("supportsExceptionOptions", true);
-  // The debug adapter supports a 'format' attribute on the stackTraceRequest,
-  // variablesRequest, and evaluateRequest.
-  body.try_emplace("supportsValueFormattingOptions", true);
-  // The debug adapter supports the exceptionInfo request.
-  body.try_emplace("supportsExceptionInfoRequest", true);
-  // The debug adapter supports the 'terminateDebuggee' attribute on the
-  // 'disconnect' request.
-  body.try_emplace("supportTerminateDebuggee", true);
-  // The debug adapter supports the delayed loading of parts of the stack,
-  // which requires that both the 'startFrame' and 'levels' arguments and the
-  // 'totalFrames' result of the 'StackTrace' request are supported.
-  body.try_emplace("supportsDelayedStackTraceLoading", true);
-  // The debug adapter supports the 'loadedSources' request.
-  body.try_emplace("supportsLoadedSourcesRequest", false);
-  // The debug adapter supports sending progress reporting events.
-  body.try_emplace("supportsProgressReporting", true);
-  // The debug adapter supports 'logMessage' in breakpoint.
-  body.try_emplace("supportsLogPoints", true);
-  // The debug adapter supports data watchpoints.
-  body.try_emplace("supportsDataBreakpoints", true);
-  // The debug adapter supports the `readMemory` request.
-  body.try_emplace("supportsReadMemoryRequest", true);
 
   // Put in non-DAP specification lldb specific information.
   llvm::json::Object lldb_json;

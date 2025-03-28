@@ -87,8 +87,7 @@ static void addMappingsFromTLI(const TargetLibraryInfo &TLI, CallInst &CI) {
   SmallVector<std::string, 8> Mappings;
   VFABI::getVectorVariantNames(CI, Mappings);
   Module *M = CI.getModule();
-  const SetVector<StringRef> OriginalSetOfMappings(Mappings.begin(),
-                                                   Mappings.end());
+  const SetVector<StringRef> OriginalSetOfMappings(llvm::from_range, Mappings);
 
   auto AddVariantDecl = [&](const ElementCount &VF, bool Predicate) {
     const VecDesc *VD = TLI.getVectorMappingInfo(ScalarName, VF, Predicate);

@@ -5465,6 +5465,14 @@ multiclass sve_int_dup_fpimm_pred<string asm> {
             (!cast<Instruction>(NAME # _S) $zd, $pg, fpimm32:$imm8)>;
   def : Pat<(nxv2f64 (vselect nxv2i1:$pg, (splat_vector fpimm64:$imm8), nxv2f64:$zd)),
             (!cast<Instruction>(NAME # _D) $zd, $pg, fpimm64:$imm8)>;
+
+  // Some half precision immediates alias with bfloat (e.g. f16(1.875) == bf16(1.0)).
+  def : Pat<(nxv8bf16 (vselect nxv8i1:$pg, (splat_vector fpimmbf16:$imm8), nxv8bf16:$zd)),
+            (!cast<Instruction>(NAME # _H) $zd, $pg, (fpimm16XForm bf16:$imm8))>;
+  def : Pat<(nxv4bf16 (vselect nxv4i1:$pg, (splat_vector fpimmbf16:$imm8), nxv4bf16:$zd)),
+            (!cast<Instruction>(NAME # _H) $zd, $pg, (fpimm16XForm bf16:$imm8))>;
+  def : Pat<(nxv2bf16 (vselect nxv2i1:$pg, (splat_vector fpimmbf16:$imm8), nxv2bf16:$zd)),
+            (!cast<Instruction>(NAME # _H) $zd, $pg, (fpimm16XForm bf16:$imm8))>;
 }
 
 class sve_int_dup_imm_pred<bits<2> sz8_64, bit m, string asm,

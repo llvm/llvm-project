@@ -3114,7 +3114,7 @@ public:
   }
   _LIBCPP_HIDE_FROM_ABI wide_string from_bytes(const char* __first, const char* __last);
 
-  _LIBCPP_HIDE_FROM_ABI byte_string to_bytes(_Elem __wchar) { return to_bytes(&__wchar, &__wchar + 1); }
+  _LIBCPP_HIDE_FROM_ABI byte_string to_bytes(_Elem __wchar) { return to_bytes(std::addressof(__wchar), std::addressof(__wchar) + 1); }
   _LIBCPP_HIDE_FROM_ABI byte_string to_bytes(const _Elem* __wptr) {
     return to_bytes(__wptr, __wptr + char_traits<_Elem>::length(__wptr));
   }
@@ -3176,7 +3176,7 @@ wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::from_bytes(const char*
     codecvt_base::result __r = codecvt_base::ok;
     state_type __st          = __cvtstate_;
     if (__frm != __frm_end) {
-      _Elem* __to     = &__ws[0];
+      _Elem* __to     = std::addressof(__ws[0]);
       _Elem* __to_end = __to + __ws.size();
       const char* __frm_nxt;
       do {
@@ -3186,19 +3186,19 @@ wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::from_bytes(const char*
         if (__frm_nxt == __frm) {
           __r = codecvt_base::error;
         } else if (__r == codecvt_base::noconv) {
-          __ws.resize(__to - &__ws[0]);
+          __ws.resize(__to - std::addressof(__ws[0]));
           // This only gets executed if _Elem is char
           __ws.append((const _Elem*)__frm, (const _Elem*)__frm_end);
           __frm = __frm_nxt;
           __r   = codecvt_base::ok;
         } else if (__r == codecvt_base::ok) {
-          __ws.resize(__to_nxt - &__ws[0]);
+          __ws.resize(__to_nxt - std::addressof(__ws[0]));
           __frm = __frm_nxt;
         } else if (__r == codecvt_base::partial) {
-          ptrdiff_t __s = __to_nxt - &__ws[0];
+          ptrdiff_t __s = __to_nxt - std::addressof(__ws[0]);
           __ws.resize(2 * __s);
-          __to     = &__ws[0] + __s;
-          __to_end = &__ws[0] + __ws.size();
+          __to     = std::addressof(__ws[0]) + __s;
+          __to_end = std::addressof(__ws[0]) + __ws.size();
           __frm    = __frm_nxt;
         }
       } while (__r == codecvt_base::partial && __frm_nxt < __frm_end);
@@ -3224,7 +3224,7 @@ wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::to_bytes(const _Elem* 
     codecvt_base::result __r = codecvt_base::ok;
     state_type __st          = __cvtstate_;
     if (__frm != __frm_end) {
-      char* __to     = &__bs[0];
+      char* __to     = std::addressof(__bs[0]);
       char* __to_end = __to + __bs.size();
       const _Elem* __frm_nxt;
       do {
@@ -3234,19 +3234,19 @@ wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::to_bytes(const _Elem* 
         if (__frm_nxt == __frm) {
           __r = codecvt_base::error;
         } else if (__r == codecvt_base::noconv) {
-          __bs.resize(__to - &__bs[0]);
+          __bs.resize(__to - std::addressof(__bs[0]));
           // This only gets executed if _Elem is char
           __bs.append((const char*)__frm, (const char*)__frm_end);
           __frm = __frm_nxt;
           __r   = codecvt_base::ok;
         } else if (__r == codecvt_base::ok) {
-          __bs.resize(__to_nxt - &__bs[0]);
+          __bs.resize(__to_nxt - std::addressof(__bs[0]));
           __frm = __frm_nxt;
         } else if (__r == codecvt_base::partial) {
-          ptrdiff_t __s = __to_nxt - &__bs[0];
+          ptrdiff_t __s = __to_nxt - std::addressof(__bs[0]);
           __bs.resize(2 * __s);
-          __to     = &__bs[0] + __s;
-          __to_end = &__bs[0] + __bs.size();
+          __to     = std::addressof(__bs[0]) + __s;
+          __to_end = std::addressof(__bs[0]) + __bs.size();
           __frm    = __frm_nxt;
         }
       } while (__r == codecvt_base::partial && __frm_nxt < __frm_end);
@@ -3254,21 +3254,21 @@ wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::to_bytes(const _Elem* 
     if (__r == codecvt_base::ok) {
       size_t __s = __bs.size();
       __bs.resize(__bs.capacity());
-      char* __to     = &__bs[0] + __s;
+      char* __to     = std::addressof(__bs[0]) + __s;
       char* __to_end = __to + __bs.size();
       do {
         char* __to_nxt;
         __r = __cvtptr_->unshift(__st, __to, __to_end, __to_nxt);
         if (__r == codecvt_base::noconv) {
-          __bs.resize(__to - &__bs[0]);
+          __bs.resize(__to - std::addressof(__bs[0]));
           __r = codecvt_base::ok;
         } else if (__r == codecvt_base::ok) {
-          __bs.resize(__to_nxt - &__bs[0]);
+          __bs.resize(__to_nxt - std::addressof(__bs[0]));
         } else if (__r == codecvt_base::partial) {
-          ptrdiff_t __sp = __to_nxt - &__bs[0];
+          ptrdiff_t __sp = __to_nxt - std::addressof(__bs[0]);
           __bs.resize(2 * __sp);
-          __to     = &__bs[0] + __sp;
-          __to_end = &__bs[0] + __bs.size();
+          __to     = std::addressof(__bs[0]) + __sp;
+          __to_end = std::addressof(__bs[0]) + __bs.size();
         }
       } while (__r == codecvt_base::partial);
       if (__r == codecvt_base::ok)
@@ -3387,7 +3387,7 @@ typename wbuffer_convert<_Codecvt, _Elem, _Tr>::int_type wbuffer_convert<_Codecv
   bool __initial = __read_mode();
   char_type __1buf;
   if (this->gptr() == 0)
-    this->setg(&__1buf, &__1buf + 1, &__1buf + 1);
+    this->setg(std::addressof(__1buf), std::addressof(__1buf) + 1, std::addressof(__1buf) + 1);
   const size_t __unget_sz = __initial ? 0 : std::min<size_t>((this->egptr() - this->eback()) / 2, 4);
   int_type __c            = traits_type::eof();
   if (this->gptr() == this->egptr()) {
@@ -3429,7 +3429,7 @@ typename wbuffer_convert<_Codecvt, _Elem, _Tr>::int_type wbuffer_convert<_Codecv
     }
   } else
     __c = *this->gptr();
-  if (this->eback() == &__1buf)
+  if (this->eback() == std::addressof(__1buf))
     this->setg(0, 0, 0);
   return __c;
 }
@@ -3465,7 +3465,7 @@ typename wbuffer_convert<_Codecvt, _Elem, _Tr>::int_type wbuffer_convert<_Codecv
   char_type* __epb_save = this->epptr();
   if (!traits_type::eq_int_type(__c, traits_type::eof())) {
     if (this->pptr() == 0)
-      this->setp(&__1buf, &__1buf + 1);
+      this->setp(std::addressof(__1buf), std::addressof(__1buf) + 1);
     *this->pptr() = traits_type::to_char_type(__c);
     this->pbump(1);
   }

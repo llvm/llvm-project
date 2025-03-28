@@ -138,7 +138,7 @@ define half @test_fsub(half %a, half %b) #0 {
 ; CHECK-F16-FTZ-NEXT:   mov.b16        [[Z:%rs[0-9]+]], 0x0000
 ; CHECK-F16-FTZ-NEXT:   sub.rn.ftz.f16     [[R:%rs[0-9]+]], [[Z]], [[A]];
 ; CHECK-NOF16-DAG:  cvt.f32.f16    [[A32:%f[0-9]+]], [[A]]
-; CHECK-NOF16-DAG:  mov.f32        [[Z:%f[0-9]+]], 0f00000000;
+; CHECK-NOF16-DAG:  mov.b32        [[Z:%f[0-9]+]], 0f00000000;
 ; CHECK-NOF16-NEXT: sub.rn.f32     [[R32:%f[0-9]+]], [[Z]], [[A32]];
 ; CHECK-NOF16-NEXT: cvt.rn.f16.f32 [[R:%rs[0-9]+]], [[R32]]
 ; CHECK-NEXT: st.param.b16    [func_retval0], [[R]];
@@ -646,7 +646,7 @@ else:
 ; CHECK:      ld.param.u64    %[[P1:rd[0-9]+]], [test_phi_param_0];
 ; CHECK:      ld.b16  {{%rs[0-9]+}}, [%[[P1]]];
 ; CHECK: [[LOOP:\$L__BB[0-9_]+]]:
-; CHECK:      mov.u16 [[R:%rs[0-9]+]], [[AB:%rs[0-9]+]];
+; CHECK:      mov.b16 [[R:%rs[0-9]+]], [[AB:%rs[0-9]+]];
 ; CHECK:      ld.b16  [[AB:%rs[0-9]+]], [%[[P1]]];
 ; CHECK:      {
 ; CHECK:      st.param.b64    [param0], %[[P1]];

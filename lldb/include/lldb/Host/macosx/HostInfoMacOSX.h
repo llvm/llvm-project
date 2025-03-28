@@ -30,6 +30,8 @@ public:
   static FileSpec GetProgramFileSpec();
   static FileSpec GetXcodeContentsDirectory();
   static FileSpec GetXcodeDeveloperDirectory();
+  static FileSpec GetCurrentXcodeToolchainDirectory();
+  static FileSpec GetCurrentCommandLineToolsDirectory();
 
   /// Query xcrun to find an Xcode SDK directory.
   ///
@@ -50,6 +52,9 @@ protected:
   static bool ComputeHeaderDirectory(FileSpec &file_spec);
   static bool ComputeSystemPluginsDirectory(FileSpec &file_spec);
   static bool ComputeUserPluginsDirectory(FileSpec &file_spec);
+
+  static std::string FindComponentInPath(llvm::StringRef path,
+                                         llvm::StringRef component);
 };
 }
 

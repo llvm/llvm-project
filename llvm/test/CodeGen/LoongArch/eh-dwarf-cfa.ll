@@ -22,7 +22,8 @@ define void @dwarf() {
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    .cfi_offset 1, -8
 ; LA64-NEXT:    addi.d $a0, $sp, 16
-; LA64-NEXT:    bl %plt(foo)
+; LA64-NEXT:    pcaddu18i $ra, %call36(foo)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret

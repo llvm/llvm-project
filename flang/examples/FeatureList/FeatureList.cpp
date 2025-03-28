@@ -533,7 +533,6 @@ public:
   READ_FEATURE(OmpOrderingModifier::Value)
   READ_FEATURE(OmpSectionBlocks)
   READ_FEATURE(OmpSectionsDirective)
-  READ_FEATURE(OmpSimpleStandaloneDirective)
   READ_FEATURE(Only)
   READ_FEATURE(OpenACCAtomicConstruct)
   READ_FEATURE(OpenACCBlockConstruct)

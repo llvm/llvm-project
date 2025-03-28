@@ -356,6 +356,7 @@ public:
     return true;
   }
   void Post(const parser::OmpDirectiveSpecification &) { PopContext(); }
+
   bool Pre(const parser::OmpMetadirectiveDirective &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_metadirective);
     return true;
@@ -397,8 +398,13 @@ public:
 
   bool Pre(const parser::OpenMPDepobjConstruct &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_depobj);
-    auto &object{std::get<parser::OmpObject>(x.t)};
-    ResolveOmpObject(object, Symbol::Flag::OmpDependObject);
+    for (auto &arg : x.v.Arguments().v) {
+      if (auto *locator{std::get_if<parser::OmpLocator>(&arg.u)}) {
+        if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
+          ResolveOmpObject(*object, Symbol::Flag::OmpDependObject);
+        }
+      }
+    }
     return true;
   }
   void Post(const parser::OpenMPDepobjConstruct &) { PopContext(); }
@@ -1652,8 +1658,7 @@ void OmpAttributeVisitor::Post(const parser::OpenMPBlockConstruct &x) {
 
 bool OmpAttributeVisitor::Pre(
     const parser::OpenMPSimpleStandaloneConstruct &x) {
-  const auto &standaloneDir{
-      std::get<parser::OmpSimpleStandaloneDirective>(x.t)};
+  const auto &standaloneDir{std::get<parser::OmpDirectiveName>(x.v.t)};
   switch (standaloneDir.v) {
   case llvm::omp::Directive::OMPD_barrier:
   case llvm::omp::Directive::OMPD_ordered:

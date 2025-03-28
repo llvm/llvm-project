@@ -53,7 +53,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false> _
       unsigned __clz       = __bits_per_word - __first.__ctz_;
       difference_type __dn = std::min(static_cast<difference_type>(__clz), __n);
       __n -= __dn;
-      __storage_type __m = (~__storage_type(0) << __first.__ctz_) & (~__storage_type(0) >> (__clz - __dn));
+      __storage_type __m = std::__middle_mask<__storage_type>(__clz - __dn, __first.__ctz_);
       __storage_type __b = *__first.__seg_ & __m;
       *__result.__seg_ &= ~__m;
       *__result.__seg_ |= __b;
@@ -73,7 +73,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false> _
     // do last word
     if (__n > 0) {
       __first.__seg_ += __nw;
-      __storage_type __m = ~__storage_type(0) >> (__bits_per_word - __n);
+      __storage_type __m = std::__trailing_mask<__storage_type>(__bits_per_word - __n);
       __storage_type __b = *__first.__seg_ & __m;
       *__result.__seg_ &= ~__m;
       *__result.__seg_ |= __b;
@@ -98,11 +98,11 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false> _
       unsigned __clz_f     = __bits_per_word - __first.__ctz_;
       difference_type __dn = std::min(static_cast<difference_type>(__clz_f), __n);
       __n -= __dn;
-      __storage_type __m   = (~__storage_type(0) << __first.__ctz_) & (~__storage_type(0) >> (__clz_f - __dn));
+      __storage_type __m   = std::__middle_mask<__storage_type>(__clz_f - __dn, __first.__ctz_);
       __storage_type __b   = *__first.__seg_ & __m;
       unsigned __clz_r     = __bits_per_word - __result.__ctz_;
       __storage_type __ddn = std::min<__storage_type>(__dn, __clz_r);
-      __m                  = (~__storage_type(0) << __result.__ctz_) & (~__storage_type(0) >> (__clz_r - __ddn));
+      __m                  = std::__middle_mask<__storage_type>(__clz_r - __ddn, __result.__ctz_);
       *__result.__seg_ &= ~__m;
       if (__result.__ctz_ > __first.__ctz_)
         *__result.__seg_ |= __b << (__result.__ctz_ - __first.__ctz_);
@@ -112,7 +112,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false> _
       __result.__ctz_ = static_cast<unsigned>((__ddn + __result.__ctz_) % __bits_per_word);
       __dn -= __ddn;
       if (__dn > 0) {
-        __m = ~__storage_type(0) >> (__bits_per_word - __dn);
+        __m = std::__trailing_mask<__storage_type>(__bits_per_word - __dn);
         *__result.__seg_ &= ~__m;
         *__result.__seg_ |= __b >> (__first.__ctz_ + __ddn);
         __result.__ctz_ = static_cast<unsigned>(__dn);
@@ -123,7 +123,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false> _
     // __first.__ctz_ == 0;
     // do middle words
     unsigned __clz_r   = __bits_per_word - __result.__ctz_;
-    __storage_type __m = ~__storage_type(0) << __result.__ctz_;
+    __storage_type __m = std::__leading_mask<__storage_type>(__result.__ctz_);
     for (; __n >= __bits_per_word; __n -= __bits_per_word, ++__first.__seg_) {
       __storage_type __b = *__first.__seg_;
       *__result.__seg_ &= ~__m;
@@ -134,17 +134,17 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false> _
     }
     // do last word
     if (__n > 0) {
-      __m                 = ~__storage_type(0) >> (__bits_per_word - __n);
+      __m                 = std::__trailing_mask<__storage_type>(__bits_per_word - __n);
       __storage_type __b  = *__first.__seg_ & __m;
       __storage_type __dn = std::min(__n, static_cast<difference_type>(__clz_r));
-      __m                 = (~__storage_type(0) << __result.__ctz_) & (~__storage_type(0) >> (__clz_r - __dn));
+      __m                 = std::__middle_mask<__storage_type>(__clz_r - __dn, __result.__ctz_);
       *__result.__seg_ &= ~__m;
       *__result.__seg_ |= __b << __result.__ctz_;
       __result.__seg_ += (__dn + __result.__ctz_) / __bits_per_word;
       __result.__ctz_ = static_cast<unsigned>((__dn + __result.__ctz_) % __bits_per_word);
       __n -= __dn;
       if (__n > 0) {
-        __m = ~__storage_type(0) >> (__bits_per_word - __n);
+        __m = std::__trailing_mask<__storage_type>(__bits_per_word - __n);
         *__result.__seg_ &= ~__m;
         *__result.__seg_ |= __b >> __dn;
         __result.__ctz_ = static_cast<unsigned>(__n);

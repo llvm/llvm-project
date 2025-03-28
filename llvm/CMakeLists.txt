@@ -1,5 +1,4 @@
 # See docs/CMake.html for instructions about how to build LLVM with CMake.
-
 cmake_minimum_required(VERSION 3.20.0)
 
 include(CMakeDependentOption)
@@ -146,7 +145,8 @@ if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
   endif()
 
   if (NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
-    message(FATAL_ERROR "Clang is not enabled, but is required for the Flang driver")
+    message(STATUS "Enabling clang as a dependency to flang")
+    list(APPEND LLVM_ENABLE_PROJECTS "clang")
   endif()
 endif()
 
@@ -209,10 +209,6 @@ endforeach()
 if("${LIBC_TARGET_TRIPLE}" STREQUAL "amdgcn-amd-amdhsa" OR
    "${LIBC_TARGET_TRIPLE}" STREQUAL "nvptx64-nvidia-cuda")
   set(LLVM_LIBC_GPU_BUILD ON)
-endif()
-if (NOT "libc" IN_LIST LLVM_ENABLE_PROJECTS AND LLVM_LIBC_GPU_BUILD)
-  message(STATUS "Enabling libc project to build libc testing tools")
-  list(APPEND LLVM_ENABLE_PROJECTS "libc")
 endif()
 
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
