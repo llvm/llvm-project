@@ -996,13 +996,13 @@ def MapBoundsOp : OpenMP_Op<"map.bounds",
 def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
   let arguments = (ins OpenMP_PointerLikeType:$var_ptr,
                        TypeAttr:$var_type,
+                       UI64Attr:$map_type,
+                       VariableCaptureKindAttr:$map_capture_type,
                        Optional<OpenMP_PointerLikeType>:$var_ptr_ptr,
                        Variadic<OpenMP_PointerLikeType>:$members,
                        OptionalAttr<IndexListArrayAttr>:$members_index,
                        Variadic<OpenMP_MapBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
-                       OptionalAttr<UI64Attr>:$map_type,
                        OptionalAttr<FlatSymbolRefAttr>:$mapper_id,
-                       OptionalAttr<VariableCaptureKindAttr>:$map_capture_type,
                        OptionalAttr<StrAttr>:$name,
                        DefaultValuedAttr<BoolAttr, "false">:$partial_map);
   let results = (outs OpenMP_PointerLikeType:$omp_ptr);
@@ -1038,6 +1038,11 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
     Description of arguments:
     - `var_ptr`: The address of variable to copy.
     - `var_type`: The type of the variable to copy.
+    - 'map_type': OpenMP map type for this map capture, for example: from, to and
+       always. It's a bitfield composed of the OpenMP runtime flags stored in
+       OpenMPOffloadMappingFlags.
+    - 'map_capture_type': Capture type for the variable e.g. this, byref, byvalue, byvla
+       this can affect how the variable is lowered.
     - `var_ptr_ptr`: Used when the variable copied is a member of a class, structure
       or derived type and refers to the originating struct.
     - `members`: Used to indicate mapped child members for the current MapInfoOp,
@@ -1052,13 +1057,8 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
        objects (e.g. derived types or classes), indicates the bounds to be copied
        of the variable. When it's an array slice it is in rank order where rank 0
        is the inner-most dimension.
-    - 'map_type': OpenMP map type for this map capture, for example: from, to and
-       always. It's a bitfield composed of the OpenMP runtime flags stored in
-       OpenMPOffloadMappingFlags.
     - 'mapper_id': OpenMP mapper map type modifier for this map capture. It's used to
        specify a user defined mapper to be used for mapping.
-    - 'map_capture_type': Capture type for the variable e.g. this, byref, byvalue, byvla
-       this can affect how the variable is lowered.
     - `name`: Holds the name of variable as specified in user clause (including bounds).
     - `partial_map`: The record type being mapped will not be mapped in its entirety,
        it may be used however, in a mapping to bind it's mapped components together.
@@ -1066,15 +1066,17 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
 
   let assemblyFormat = [{
     `var_ptr` `(` $var_ptr `:` type($var_ptr) `,` $var_type `)`
+    `map_clauses` `(` custom<MapClause>($map_type) `)`
+    `capture` `(` custom<CaptureType>($map_capture_type) `)`
     oilist(
         `var_ptr_ptr` `(` $var_ptr_ptr `:` type($var_ptr_ptr) `)`
       | `mapper` `(` $mapper_id `)`
-      | `map_clauses` `(` custom<MapClause>($map_type) `)`
-      | `capture` `(` custom<CaptureType>($map_capture_type) `)`
       | `members` `(` $members `:` custom<MembersIndex>($members_index) `:` type($members) `)`
       | `bounds` `(` $bounds `)`
     ) `->` type($omp_ptr) attr-dict
   }];
+
+  let hasVerifier = 1;
 }
 
 //===---------------------------------------------------------------------===//

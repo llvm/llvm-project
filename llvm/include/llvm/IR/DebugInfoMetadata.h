@@ -1302,15 +1302,15 @@ class DICompositeType : public DIType {
           DIType *VTableHolder, DITemplateParameterArray TemplateParams,
           StringRef Identifier, DIDerivedType *Discriminator,
           Metadata *DataLocation, Metadata *Associated, Metadata *Allocated,
-          Metadata *Rank, DINodeArray Annotations, StorageType Storage,
-          bool ShouldCreate = true) {
-    return getImpl(Context, Tag, getCanonicalMDString(Context, Name), File,
-                   Line, Scope, BaseType, SizeInBits, AlignInBits, OffsetInBits,
-                   Flags, Elements.get(), RuntimeLang, EnumKind, VTableHolder,
-                   TemplateParams.get(),
-                   getCanonicalMDString(Context, Identifier), Discriminator,
-                   DataLocation, Associated, Allocated, Rank, Annotations.get(),
-                   Specification, NumExtraInhabitants, Storage, ShouldCreate);
+          Metadata *Rank, DINodeArray Annotations, Metadata *BitStride,
+          StorageType Storage, bool ShouldCreate = true) {
+    return getImpl(
+        Context, Tag, getCanonicalMDString(Context, Name), File, Line, Scope,
+        BaseType, SizeInBits, AlignInBits, OffsetInBits, Flags, Elements.get(),
+        RuntimeLang, EnumKind, VTableHolder, TemplateParams.get(),
+        getCanonicalMDString(Context, Identifier), Discriminator, DataLocation,
+        Associated, Allocated, Rank, Annotations.get(), Specification,
+        NumExtraInhabitants, BitStride, Storage, ShouldCreate);
   }
   static DICompositeType *
   getImpl(LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
@@ -1322,7 +1322,7 @@ class DICompositeType : public DIType {
           Metadata *Discriminator, Metadata *DataLocation, Metadata *Associated,
           Metadata *Allocated, Metadata *Rank, Metadata *Annotations,
           Metadata *Specification, uint32_t NumExtraInhabitants,
-          StorageType Storage, bool ShouldCreate = true);
+          Metadata *BitStride, StorageType Storage, bool ShouldCreate = true);
 
   TempDICompositeType cloneImpl() const {
     return getTemporary(
@@ -1332,7 +1332,7 @@ class DICompositeType : public DIType {
         getVTableHolder(), getTemplateParams(), getIdentifier(),
         getDiscriminator(), getRawDataLocation(), getRawAssociated(),
         getRawAllocated(), getRawRank(), getAnnotations(), getSpecification(),
-        getNumExtraInhabitants());
+        getNumExtraInhabitants(), getRawBitStride());
   }
 
 public:
@@ -1348,11 +1348,12 @@ public:
        Metadata *DataLocation = nullptr, Metadata *Associated = nullptr,
        Metadata *Allocated = nullptr, Metadata *Rank = nullptr,
        DINodeArray Annotations = nullptr, DIType *Specification = nullptr,
-       uint32_t NumExtraInhabitants = 0),
+       uint32_t NumExtraInhabitants = 0, Metadata *BitStride = nullptr),
       (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
        OffsetInBits, Specification, NumExtraInhabitants, Flags, Elements,
        RuntimeLang, EnumKind, VTableHolder, TemplateParams, Identifier,
-       Discriminator, DataLocation, Associated, Allocated, Rank, Annotations))
+       Discriminator, DataLocation, Associated, Allocated, Rank, Annotations,
+       BitStride))
   DEFINE_MDNODE_GET(
       DICompositeType,
       (unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
@@ -1364,11 +1365,13 @@ public:
        Metadata *Discriminator = nullptr, Metadata *DataLocation = nullptr,
        Metadata *Associated = nullptr, Metadata *Allocated = nullptr,
        Metadata *Rank = nullptr, Metadata *Annotations = nullptr,
-       Metadata *Specification = nullptr, uint32_t NumExtraInhabitants = 0),
+       Metadata *Specification = nullptr, uint32_t NumExtraInhabitants = 0,
+       Metadata *BitStride = nullptr),
       (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
        OffsetInBits, Flags, Elements, RuntimeLang, EnumKind, VTableHolder,
        TemplateParams, Identifier, Discriminator, DataLocation, Associated,
-       Allocated, Rank, Annotations, Specification, NumExtraInhabitants))
+       Allocated, Rank, Annotations, Specification, NumExtraInhabitants,
+       BitStride))
 
   TempDICompositeType clone() const { return cloneImpl(); }
 
@@ -1389,7 +1392,7 @@ public:
              Metadata *VTableHolder, Metadata *TemplateParams,
              Metadata *Discriminator, Metadata *DataLocation,
              Metadata *Associated, Metadata *Allocated, Metadata *Rank,
-             Metadata *Annotations);
+             Metadata *Annotations, Metadata *BitStride);
   static DICompositeType *getODRTypeIfExists(LLVMContext &Context,
                                              MDString &Identifier);
 
@@ -1412,7 +1415,7 @@ public:
                Metadata *VTableHolder, Metadata *TemplateParams,
                Metadata *Discriminator, Metadata *DataLocation,
                Metadata *Associated, Metadata *Allocated, Metadata *Rank,
-               Metadata *Annotations);
+               Metadata *Annotations, Metadata *BitStride);
 
   DIType *getBaseType() const { return cast_or_null<DIType>(getRawBaseType()); }
   DINodeArray getElements() const {
@@ -1477,6 +1480,14 @@ public:
   DIType *getSpecification() const {
     return cast_or_null<DIType>(getRawSpecification());
   }
+
+  Metadata *getRawBitStride() const { return getOperand(15); }
+  ConstantInt *getBitStrideConst() const {
+    if (auto *MD = dyn_cast_or_null<ConstantAsMetadata>(getRawBitStride()))
+      return dyn_cast_or_null<ConstantInt>(MD->getValue());
+    return nullptr;
+  }
+
   /// Replace operands.
   ///
   /// If this \a isUniqued() and not \a isResolved(), on a uniquing collision

@@ -286,4 +286,13 @@ json::Value toJSON(const Message &M) {
   return std::visit([](auto &M) { return toJSON(M); }, M);
 }
 
+json::Value toJSON(const ErrorResponseBody &E) {
+  json::Object result{};
+
+  if (E.error)
+    result.insert({"error", *E.error});
+
+  return result;
+}
+
 } // namespace lldb_dap::protocol

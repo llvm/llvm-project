@@ -60,7 +60,8 @@ __cpp_lib_chrono_udls                                   201304L <chrono>
 __cpp_lib_clamp                                         201603L <algorithm>
 __cpp_lib_complex_udls                                  201309L <complex>
 __cpp_lib_concepts                                      202002L <concepts>
-__cpp_lib_constexpr_algorithms                          201806L <algorithm> <utility>
+__cpp_lib_constexpr_algorithms                          202306L <algorithm> <utility>
+                                                        201806L // C++20
 __cpp_lib_constexpr_bitset                              202207L <bitset>
 __cpp_lib_constexpr_charconv                            202207L <charconv>
 __cpp_lib_constexpr_cmath                               202202L <cmath> <cstdlib>
@@ -536,6 +537,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # undef  __cpp_lib_bind_front
 # define __cpp_lib_bind_front                           202306L
 # define __cpp_lib_bitset                               202306L
+# undef  __cpp_lib_constexpr_algorithms
+# define __cpp_lib_constexpr_algorithms                 202306L
 # if !defined(_LIBCPP_ABI_VCRUNTIME)
 #   define __cpp_lib_constexpr_new                      202406L
 # endif

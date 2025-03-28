@@ -573,13 +573,13 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUIdxRegAllocPass(*PR);
   initializeAMDGPUPrivateObjectVGPRsPass(*PR);
 #endif /* LLPC_BUILD_NPI */
-  initializeSIInsertHardClausesPass(*PR);
-  initializeSIInsertWaitcntsPass(*PR);
+  initializeSIInsertHardClausesLegacyPass(*PR);
+  initializeSIInsertWaitcntsLegacyPass(*PR);
   initializeSIModeRegisterLegacyPass(*PR);
   initializeSIWholeQuadModeLegacyPass(*PR);
   initializeSILowerControlFlowLegacyPass(*PR);
   initializeSIPreEmitPeepholePass(*PR);
-  initializeSILateBranchLoweringPass(*PR);
+  initializeSILateBranchLoweringLegacyPass(*PR);
   initializeSIMemoryLegalizerLegacyPass(*PR);
   initializeSIOptimizeExecMaskingLegacyPass(*PR);
   initializeSIPreAllocateWWMRegsLegacyPass(*PR);
@@ -2240,7 +2240,7 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(AddMachinePass &addPass) const {
   }
 
   addPass(SIMemoryLegalizerPass());
-  // TODO: addPass(SIInsertWaitcntsPass());
+  addPass(SIInsertWaitcntsPass());
 
   // TODO: addPass(SIModeRegisterPass());
 
@@ -2248,7 +2248,8 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(AddMachinePass &addPass) const {
     // TODO: addPass(SIInsertHardClausesPass());
   }
 
-  // addPass(SILateBranchLoweringPass());
+  addPass(SILateBranchLoweringPass());
+
   if (isPassEnabled(EnableSetWavePriority, CodeGenOptLevel::Less)) {
     // TODO: addPass(AMDGPUSetWavePriorityPass());
   }

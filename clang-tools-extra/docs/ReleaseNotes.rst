@@ -91,12 +91,6 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
-- :program:`clang-tidy` no longer processes declarations from system headers
-  by default, greatly improving performance. This behavior is disabled if the
-  `SystemHeaders` option is enabled.
-  Note: this may lead to false negatives; downstream users may need to adjust
-  their checks to preserve existing behavior.
-
 - Improved :program:`clang-tidy-diff.py` script. Add the `-warnings-as-errors`
   argument to treat warnings as errors.
 
@@ -152,7 +146,8 @@ Changes in existing checks
   `AllowedTypes`, that excludes specified types from const-correctness
   checking and fixing false positives when modifying variant by ``operator[]``
   with template in parameters and supporting to check pointee mutation by
-  `AnalyzePointers` option.
+  `AnalyzePointers` option and fixing false positives when using const array
+  type.
 
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` check by providing additional
@@ -174,6 +169,11 @@ Changes in existing checks
 - Improved :doc:`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check by updating suppress 
   warnings logic for ``nullptr`` in ``std::find``.
+
+- Improved :doc:`modernize-use-starts-ends-with
+  <clang-tidy/checks/modernize/use-starts-ends-with>` check by adding more
+  matched scenarios of ``find`` and ``rfind`` methods and fixing false
+  positives when those methods were called with 3 arguments.
 
 - Improved :doc:`modernize-use-std-numbers
   <clang-tidy/checks/modernize/use-std-numbers>` check to support math

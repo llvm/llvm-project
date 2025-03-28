@@ -1006,7 +1006,7 @@ def FeatureFlatAtomicFaddF32Inst
 def FeatureGFX1251GEMMInsts : SubtargetFeature<"gfx1251-gemm-insts",
   "HasGFX1251GEMMInsts",
   "true",
-  "Has additional gfx1251 DGEMM and F16 GEMM instructions"
+  "Has additional gfx1251 DGEMM instructions"
 >;
 
 #endif /* LLPC_BUILD_NPI */

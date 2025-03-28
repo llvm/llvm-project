@@ -806,7 +806,8 @@ void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
 #endif /* LLPC_BUILD_NPI */
 
 #if LLPC_BUILD_NPI
-    if (STI.hasFeature(AMDGPU::Feature64BitLiterals) && Hi_32(Imm))
+    if (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
+        (!isInt<32>(Imm) || !isUInt<32>(Imm)))
       O << "lit64(" << formatHex(static_cast<uint64_t>(Imm)) << ')';
     else
       O << formatHex(static_cast<uint64_t>(Imm));

@@ -41,9 +41,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-insert-single-use-vdst"
 
-#define GET_INSTRMAP_INFO
-#define GET_INSTRINFO_NAMED_OPS
-
 namespace {
 class AMDGPUInsertSingleUseVDST : public MachineFunctionPass {
 private:

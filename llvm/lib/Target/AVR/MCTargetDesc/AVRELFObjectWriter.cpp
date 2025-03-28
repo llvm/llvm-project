@@ -40,7 +40,7 @@ unsigned AVRELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   const unsigned Kind = Fixup.getTargetKind();
   if (Kind >= FirstLiteralRelocationKind)
     return Kind - FirstLiteralRelocationKind;
-  auto Modifier = AVRMCExpr::VariantKind(Target.getAccessVariant());
+  auto Modifier = AVRMCExpr::Specifier(Target.getAccessVariant());
   switch ((unsigned)Fixup.getKind()) {
   case FK_Data_1:
     switch (Modifier) {
