@@ -554,6 +554,22 @@ public:
     return VectorType::get(VTy->getElementType(), EltCnt * 2);
   }
 
+  /// This static method returns a VectorType with the same size-in-bits as
+  /// SizeTy but with an element type that matches the scalar type of EltTy.
+  static VectorType *getWithSizeAndScalar(VectorType *SizeTy, Type *EltTy) {
+    if (SizeTy->getScalarType() == EltTy->getScalarType())
+      return SizeTy;
+
+    unsigned EltSize = EltTy->getScalarSizeInBits();
+    if (!SizeTy->getPrimitiveSizeInBits().isKnownMultipleOf(EltSize))
+      return nullptr;
+
+    ElementCount EC = SizeTy->getElementCount()
+                          .multiplyCoefficientBy(SizeTy->getScalarSizeInBits())
+                          .divideCoefficientBy(EltSize);
+    return VectorType::get(EltTy->getScalarType(), EC);
+  }
+
   /// Return true if the specified type is valid as a element type.
   static bool isValidElementType(Type *ElemTy);
 

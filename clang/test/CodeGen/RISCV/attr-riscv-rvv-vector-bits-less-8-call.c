@@ -26,11 +26,15 @@ typedef vbool64_t fixed_bool64_t __attribute__((riscv_rvv_vector_bits(__riscv_v_
 //
 // CHECK-128-LABEL: @call_bool32_ff(
 // CHECK-128-NEXT:  entry:
+// CHECK-128-NEXT:    [[SAVED_VALUE:%.*]] = alloca <1 x i8>, align 1
+// CHECK-128-NEXT:    [[SAVED_VALUE3:%.*]] = alloca <1 x i8>, align 1
 // CHECK-128-NEXT:    [[SAVED_VALUE4:%.*]] = alloca <vscale x 2 x i1>, align 1
 // CHECK-128-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 2 x i1>, align 1
-// CHECK-128-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.riscv.vmand.nxv2i1.i64(<vscale x 2 x i1> [[OP1_COERCE:%.*]], <vscale x 2 x i1> [[OP2_COERCE:%.*]], i64 4)
-// CHECK-128-NEXT:    store <vscale x 2 x i1> [[TMP0]], ptr [[SAVED_VALUE4]], align 1, !tbaa [[TBAA6:![0-9]+]]
-// CHECK-128-NEXT:    [[TMP1:%.*]] = load <1 x i8>, ptr [[SAVED_VALUE4]], align 1, !tbaa [[TBAA10:![0-9]+]]
+// CHECK-128-NEXT:    [[SAVED_VALUE_0_SAVED_VALUE_0_SAVED_VALUE_0_SAVED_VALUE_0_:%.*]] = load <vscale x 2 x i1>, ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA6:![0-9]+]]
+// CHECK-128-NEXT:    [[SAVED_VALUE3_0_SAVED_VALUE3_0_SAVED_VALUE3_0_SAVED_VALUE3_0_:%.*]] = load <vscale x 2 x i1>, ptr [[SAVED_VALUE3]], align 1, !tbaa [[TBAA6]]
+// CHECK-128-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.riscv.vmand.nxv2i1.i64(<vscale x 2 x i1> [[SAVED_VALUE_0_SAVED_VALUE_0_SAVED_VALUE_0_SAVED_VALUE_0_]], <vscale x 2 x i1> [[SAVED_VALUE3_0_SAVED_VALUE3_0_SAVED_VALUE3_0_SAVED_VALUE3_0_]], i64 4)
+// CHECK-128-NEXT:    store <vscale x 2 x i1> [[TMP0]], ptr [[SAVED_VALUE4]], align 1, !tbaa [[TBAA9:![0-9]+]]
+// CHECK-128-NEXT:    [[TMP1:%.*]] = load <1 x i8>, ptr [[SAVED_VALUE4]], align 1, !tbaa [[TBAA6]]
 // CHECK-128-NEXT:    store <1 x i8> [[TMP1]], ptr [[RETVAL_COERCE]], align 1
 // CHECK-128-NEXT:    [[TMP2:%.*]] = load <vscale x 2 x i1>, ptr [[RETVAL_COERCE]], align 1
 // CHECK-128-NEXT:    ret <vscale x 2 x i1> [[TMP2]]
@@ -52,11 +56,15 @@ fixed_bool32_t call_bool32_ff(fixed_bool32_t op1, fixed_bool32_t op2) {
 //
 // CHECK-128-LABEL: @call_bool64_ff(
 // CHECK-128-NEXT:  entry:
+// CHECK-128-NEXT:    [[SAVED_VALUE:%.*]] = alloca <1 x i8>, align 1
+// CHECK-128-NEXT:    [[SAVED_VALUE3:%.*]] = alloca <1 x i8>, align 1
 // CHECK-128-NEXT:    [[SAVED_VALUE4:%.*]] = alloca <vscale x 1 x i1>, align 1
 // CHECK-128-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 1 x i1>, align 1
-// CHECK-128-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1.i64(<vscale x 1 x i1> [[OP1_COERCE:%.*]], <vscale x 1 x i1> [[OP2_COERCE:%.*]], i64 2)
+// CHECK-128-NEXT:    [[SAVED_VALUE_0_SAVED_VALUE_0_SAVED_VALUE_0_SAVED_VALUE_0_:%.*]] = load <vscale x 1 x i1>, ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA6]]
+// CHECK-128-NEXT:    [[SAVED_VALUE3_0_SAVED_VALUE3_0_SAVED_VALUE3_0_SAVED_VALUE3_0_:%.*]] = load <vscale x 1 x i1>, ptr [[SAVED_VALUE3]], align 1, !tbaa [[TBAA6]]
+// CHECK-128-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1.i64(<vscale x 1 x i1> [[SAVED_VALUE_0_SAVED_VALUE_0_SAVED_VALUE_0_SAVED_VALUE_0_]], <vscale x 1 x i1> [[SAVED_VALUE3_0_SAVED_VALUE3_0_SAVED_VALUE3_0_SAVED_VALUE3_0_]], i64 2)
 // CHECK-128-NEXT:    store <vscale x 1 x i1> [[TMP0]], ptr [[SAVED_VALUE4]], align 1, !tbaa [[TBAA11:![0-9]+]]
-// CHECK-128-NEXT:    [[TMP1:%.*]] = load <1 x i8>, ptr [[SAVED_VALUE4]], align 1, !tbaa [[TBAA10]]
+// CHECK-128-NEXT:    [[TMP1:%.*]] = load <1 x i8>, ptr [[SAVED_VALUE4]], align 1, !tbaa [[TBAA6]]
 // CHECK-128-NEXT:    store <1 x i8> [[TMP1]], ptr [[RETVAL_COERCE]], align 1
 // CHECK-128-NEXT:    [[TMP2:%.*]] = load <vscale x 1 x i1>, ptr [[RETVAL_COERCE]], align 1
 // CHECK-128-NEXT:    ret <vscale x 1 x i1> [[TMP2]]
@@ -82,11 +90,13 @@ fixed_bool64_t call_bool64_ff(fixed_bool64_t op1, fixed_bool64_t op2) {
 //
 // CHECK-128-LABEL: @call_bool32_fs(
 // CHECK-128-NEXT:  entry:
+// CHECK-128-NEXT:    [[SAVED_VALUE:%.*]] = alloca <1 x i8>, align 1
 // CHECK-128-NEXT:    [[SAVED_VALUE2:%.*]] = alloca <vscale x 2 x i1>, align 1
 // CHECK-128-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 2 x i1>, align 1
-// CHECK-128-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.riscv.vmand.nxv2i1.i64(<vscale x 2 x i1> [[OP1_COERCE:%.*]], <vscale x 2 x i1> [[OP2:%.*]], i64 4)
-// CHECK-128-NEXT:    store <vscale x 2 x i1> [[TMP0]], ptr [[SAVED_VALUE2]], align 1, !tbaa [[TBAA6]]
-// CHECK-128-NEXT:    [[TMP1:%.*]] = load <1 x i8>, ptr [[SAVED_VALUE2]], align 1, !tbaa [[TBAA10]]
+// CHECK-128-NEXT:    [[SAVED_VALUE_0_SAVED_VALUE_0_SAVED_VALUE_0_SAVED_VALUE_0_:%.*]] = load <vscale x 2 x i1>, ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA6]]
+// CHECK-128-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.riscv.vmand.nxv2i1.i64(<vscale x 2 x i1> [[SAVED_VALUE_0_SAVED_VALUE_0_SAVED_VALUE_0_SAVED_VALUE_0_]], <vscale x 2 x i1> [[OP2:%.*]], i64 4)
+// CHECK-128-NEXT:    store <vscale x 2 x i1> [[TMP0]], ptr [[SAVED_VALUE2]], align 1, !tbaa [[TBAA9]]
+// CHECK-128-NEXT:    [[TMP1:%.*]] = load <1 x i8>, ptr [[SAVED_VALUE2]], align 1, !tbaa [[TBAA6]]
 // CHECK-128-NEXT:    store <1 x i8> [[TMP1]], ptr [[RETVAL_COERCE]], align 1
 // CHECK-128-NEXT:    [[TMP2:%.*]] = load <vscale x 2 x i1>, ptr [[RETVAL_COERCE]], align 1
 // CHECK-128-NEXT:    ret <vscale x 2 x i1> [[TMP2]]
@@ -108,11 +118,13 @@ fixed_bool32_t call_bool32_fs(fixed_bool32_t op1, vbool32_t op2) {
 //
 // CHECK-128-LABEL: @call_bool64_fs(
 // CHECK-128-NEXT:  entry:
+// CHECK-128-NEXT:    [[SAVED_VALUE:%.*]] = alloca <1 x i8>, align 1
 // CHECK-128-NEXT:    [[SAVED_VALUE2:%.*]] = alloca <vscale x 1 x i1>, align 1
 // CHECK-128-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 1 x i1>, align 1
-// CHECK-128-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1.i64(<vscale x 1 x i1> [[OP1_COERCE:%.*]], <vscale x 1 x i1> [[OP2:%.*]], i64 2)
+// CHECK-128-NEXT:    [[SAVED_VALUE_0_SAVED_VALUE_0_SAVED_VALUE_0_SAVED_VALUE_0_:%.*]] = load <vscale x 1 x i1>, ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA6]]
+// CHECK-128-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1.i64(<vscale x 1 x i1> [[SAVED_VALUE_0_SAVED_VALUE_0_SAVED_VALUE_0_SAVED_VALUE_0_]], <vscale x 1 x i1> [[OP2:%.*]], i64 2)
 // CHECK-128-NEXT:    store <vscale x 1 x i1> [[TMP0]], ptr [[SAVED_VALUE2]], align 1, !tbaa [[TBAA11]]
-// CHECK-128-NEXT:    [[TMP1:%.*]] = load <1 x i8>, ptr [[SAVED_VALUE2]], align 1, !tbaa [[TBAA10]]
+// CHECK-128-NEXT:    [[TMP1:%.*]] = load <1 x i8>, ptr [[SAVED_VALUE2]], align 1, !tbaa [[TBAA6]]
 // CHECK-128-NEXT:    store <1 x i8> [[TMP1]], ptr [[RETVAL_COERCE]], align 1
 // CHECK-128-NEXT:    [[TMP2:%.*]] = load <vscale x 1 x i1>, ptr [[RETVAL_COERCE]], align 1
 // CHECK-128-NEXT:    ret <vscale x 1 x i1> [[TMP2]]
@@ -141,8 +153,8 @@ fixed_bool64_t call_bool64_fs(fixed_bool64_t op1, vbool64_t op2) {
 // CHECK-128-NEXT:    [[SAVED_VALUE:%.*]] = alloca <vscale x 2 x i1>, align 1
 // CHECK-128-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 2 x i1>, align 1
 // CHECK-128-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.riscv.vmand.nxv2i1.i64(<vscale x 2 x i1> [[OP1:%.*]], <vscale x 2 x i1> [[OP2:%.*]], i64 4)
-// CHECK-128-NEXT:    store <vscale x 2 x i1> [[TMP0]], ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA6]]
-// CHECK-128-NEXT:    [[TMP1:%.*]] = load <1 x i8>, ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA10]]
+// CHECK-128-NEXT:    store <vscale x 2 x i1> [[TMP0]], ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA9]]
+// CHECK-128-NEXT:    [[TMP1:%.*]] = load <1 x i8>, ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA6]]
 // CHECK-128-NEXT:    store <1 x i8> [[TMP1]], ptr [[RETVAL_COERCE]], align 1
 // CHECK-128-NEXT:    [[TMP2:%.*]] = load <vscale x 2 x i1>, ptr [[RETVAL_COERCE]], align 1
 // CHECK-128-NEXT:    ret <vscale x 2 x i1> [[TMP2]]
@@ -168,7 +180,7 @@ fixed_bool32_t call_bool32_ss(vbool32_t op1, vbool32_t op2) {
 // CHECK-128-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 1 x i1>, align 1
 // CHECK-128-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.riscv.vmand.nxv1i1.i64(<vscale x 1 x i1> [[OP1:%.*]], <vscale x 1 x i1> [[OP2:%.*]], i64 2)
 // CHECK-128-NEXT:    store <vscale x 1 x i1> [[TMP0]], ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA11]]
-// CHECK-128-NEXT:    [[TMP1:%.*]] = load <1 x i8>, ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA10]]
+// CHECK-128-NEXT:    [[TMP1:%.*]] = load <1 x i8>, ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA6]]
 // CHECK-128-NEXT:    store <1 x i8> [[TMP1]], ptr [[RETVAL_COERCE]], align 1
 // CHECK-128-NEXT:    [[TMP2:%.*]] = load <vscale x 1 x i1>, ptr [[RETVAL_COERCE]], align 1
 // CHECK-128-NEXT:    ret <vscale x 1 x i1> [[TMP2]]

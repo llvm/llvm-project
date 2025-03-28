@@ -6,7 +6,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 
 ; This test checks that SROA runs mem2reg on scalable vectors.
 
-define <vscale x 16 x i1> @alloca_nxv16i1(<vscale x 16 x i1> %pg) {
+define <vscale x 16 x i1> @alloca_nxv16i1(<vscale x 16 x i1> %pg) vscale_range(1) {
 ; CHECK-LABEL: @alloca_nxv16i1(
 ; CHECK-NEXT:    ret <vscale x 16 x i1> [[PG:%.*]]
 ;
@@ -16,7 +16,7 @@ define <vscale x 16 x i1> @alloca_nxv16i1(<vscale x 16 x i1> %pg) {
   ret <vscale x 16 x i1> %1
 }
 
-define <vscale x 16 x i8> @alloca_nxv16i8(<vscale x 16 x i8> %vec) {
+define <vscale x 16 x i8> @alloca_nxv16i8(<vscale x 16 x i8> %vec) vscale_range(1) {
 ; CHECK-LABEL: @alloca_nxv16i8(
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[VEC:%.*]]
 ;
@@ -28,7 +28,7 @@ define <vscale x 16 x i8> @alloca_nxv16i8(<vscale x 16 x i8> %vec) {
 
 ; Test scalable alloca that can't be promoted. Mem2Reg only considers
 ; non-volatile loads and stores for promotion.
-define <vscale x 16 x i8> @unpromotable_alloca(<vscale x 16 x i8> %vec) {
+define <vscale x 16 x i8> @unpromotable_alloca(<vscale x 16 x i8> %vec) vscale_range(1) {
 ; CHECK-LABEL: @unpromotable_alloca(
 ; CHECK-NEXT:    [[VEC_ADDR:%.*]] = alloca <vscale x 16 x i8>, align 16
 ; CHECK-NEXT:    store volatile <vscale x 16 x i8> [[VEC:%.*]], ptr [[VEC_ADDR]], align 16
@@ -43,15 +43,13 @@ define <vscale x 16 x i8> @unpromotable_alloca(<vscale x 16 x i8> %vec) {
 
 ; Test we bail out when using an alloca of a fixed-length vector (VLS) that was
 ; bitcasted to a scalable vector.
-define <vscale x 4 x i32> @cast_alloca_to_svint32_t(<vscale x 4 x i32> %type.coerce) {
+define <vscale x 4 x i32> @cast_alloca_to_svint32_t(<vscale x 4 x i32> %type.coerce) vscale_range(1) {
 ; CHECK-LABEL: @cast_alloca_to_svint32_t(
-; CHECK-NEXT:    [[TYPE:%.*]] = alloca <16 x i32>, align 64
-; CHECK-NEXT:    [[TYPE_ADDR:%.*]] = alloca <16 x i32>, align 64
-; CHECK-NEXT:    store <vscale x 4 x i32> [[TYPE_COERCE:%.*]], ptr [[TYPE]], align 16
-; CHECK-NEXT:    [[TYPE1:%.*]] = load <16 x i32>, ptr [[TYPE]], align 64
-; CHECK-NEXT:    store <16 x i32> [[TYPE1]], ptr [[TYPE_ADDR]], align 64
-; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr [[TYPE_ADDR]], align 64
-; CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 4 x i32>, ptr [[TYPE_ADDR]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.nxv4i32(<vscale x 4 x i32> [[TYPE_COERCE:%.*]], i64 0)
+; CHECK-NEXT:    [[TYPE_0_VEC_EXPAND:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TYPE_0_VECBLEND:%.*]] = select <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <16 x i32> [[TYPE_0_VEC_EXPAND]], <16 x i32> undef
+; CHECK-NEXT:    [[TYPE_ADDR_0_VEC_EXTRACT:%.*]] = shufflevector <16 x i32> [[TYPE_0_VECBLEND]], <16 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> [[TYPE_ADDR_0_VEC_EXTRACT]], i64 0)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
 ;
   %type = alloca <16 x i32>
@@ -66,7 +64,7 @@ define <vscale x 4 x i32> @cast_alloca_to_svint32_t(<vscale x 4 x i32> %type.coe
 
 ; When casting from VLA to VLS via memory check we bail out when producing a
 ; GEP where the element type is a scalable vector.
-define <vscale x 4 x i32> @cast_alloca_from_svint32_t() {
+define <vscale x 4 x i32> @cast_alloca_from_svint32_t() vscale_range(1) {
 ; CHECK-LABEL: @cast_alloca_from_svint32_t(
 ; CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 4 x i32>, align 16
 ; CHECK-NEXT:    store <16 x i32> zeroinitializer, ptr [[RETVAL_COERCE]], align 16
@@ -83,7 +81,7 @@ define <vscale x 4 x i32> @cast_alloca_from_svint32_t() {
 
 ; Test we bail out when using an alloca of a fixed-length vector (VLS) that was
 ; bitcasted to a scalable vector.
-define void @select_load_alloca_to_svdouble_t() {
+define void @select_load_alloca_to_svdouble_t() vscale_range(1) {
 ; CHECK-LABEL: @select_load_alloca_to_svdouble_t(
 ; CHECK-NEXT:    [[Z:%.*]] = alloca <16 x half>, align 32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 0, 0
@@ -98,7 +96,7 @@ define void @select_load_alloca_to_svdouble_t() {
   ret void
 }
 
-define void @select_store_alloca_to_svdouble_t(<vscale x 2 x double> %val) {
+define void @select_store_alloca_to_svdouble_t(<vscale x 2 x double> %val) vscale_range(1) {
 ; CHECK-LABEL: @select_store_alloca_to_svdouble_t(
 ; CHECK-NEXT:    [[Z:%.*]] = alloca <16 x half>, align 32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 0, 0
@@ -113,11 +111,9 @@ define void @select_store_alloca_to_svdouble_t(<vscale x 2 x double> %val) {
   ret void
 }
 
-define <4 x i32> @fixed_alloca_fixed_from_scalable(<vscale x 4 x i32> %a) {
+define <4 x i32> @fixed_alloca_fixed_from_scalable(<vscale x 4 x i32> %a) vscale_range(1) {
 ; CHECK-LABEL: @fixed_alloca_fixed_from_scalable(
-; CHECK-NEXT:    [[TMP:%.*]] = alloca <4 x i32>, align 16
-; CHECK-NEXT:    store <vscale x 4 x i32> [[A:%.*]], ptr [[TMP]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[TMP]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.nxv4i32(<vscale x 4 x i32> [[A:%.*]], i64 0)
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %tmp = alloca <4 x i32>
@@ -126,11 +122,10 @@ define <4 x i32> @fixed_alloca_fixed_from_scalable(<vscale x 4 x i32> %a) {
   ret <4 x i32> %cast
 }
 
-define <2 x i8> @fixed_alloca_fixed_from_scalable_requires_bitcast(<vscale x 16 x i1> %a) {
+define <2 x i8> @fixed_alloca_fixed_from_scalable_requires_bitcast(<vscale x 16 x i1> %a) vscale_range(1) {
 ; CHECK-LABEL: @fixed_alloca_fixed_from_scalable_requires_bitcast(
-; CHECK-NEXT:    [[TMP:%.*]] = alloca <2 x i8>, align 2
-; CHECK-NEXT:    store <vscale x 16 x i1> [[A:%.*]], ptr [[TMP]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i8>, ptr [[TMP]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 16 x i1> [[A:%.*]] to <vscale x 2 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i8> @llvm.vector.extract.v2i8.nxv2i8(<vscale x 2 x i8> [[TMP1]], i64 0)
 ; CHECK-NEXT:    ret <2 x i8> [[TMP2]]
 ;
   %tmp = alloca <2 x i8>
@@ -139,11 +134,11 @@ define <2 x i8> @fixed_alloca_fixed_from_scalable_requires_bitcast(<vscale x 16 
   ret <2 x i8> %cast
 }
 
-define <2 x ptr> @fixed_alloca_fixed_from_scalable_inttoptr(<vscale x 4 x i32> %a) {
+define <2 x ptr> @fixed_alloca_fixed_from_scalable_inttoptr(<vscale x 4 x i32> %a) vscale_range(1) {
 ; CHECK-LABEL: @fixed_alloca_fixed_from_scalable_inttoptr(
-; CHECK-NEXT:    [[TMP:%.*]] = alloca <4 x i32>, align 16
-; CHECK-NEXT:    store <vscale x 4 x i32> [[A:%.*]], ptr [[TMP]], align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x ptr>, ptr [[TMP]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 4 x i32> [[A:%.*]] to <vscale x 2 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.vector.extract.v2i64.nxv2i64(<vscale x 2 x i64> [[TMP1]], i64 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr <2 x i64> [[TMP3]] to <2 x ptr>
 ; CHECK-NEXT:    ret <2 x ptr> [[TMP2]]
 ;
   %tmp = alloca <4 x i32>
@@ -152,11 +147,11 @@ define <2 x ptr> @fixed_alloca_fixed_from_scalable_inttoptr(<vscale x 4 x i32> %
   ret <2 x ptr> %cast
 }
 
-define <4 x i32> @fixed_alloca_fixed_from_scalable_ptrtoint(<vscale x 2 x ptr> %a) {
+define <4 x i32> @fixed_alloca_fixed_from_scalable_ptrtoint(<vscale x 2 x ptr> %a) vscale_range(1) {
 ; CHECK-LABEL: @fixed_alloca_fixed_from_scalable_ptrtoint(
-; CHECK-NEXT:    [[TMP:%.*]] = alloca <4 x i32>, align 16
-; CHECK-NEXT:    store <vscale x 2 x ptr> [[A:%.*]], ptr [[TMP]], align 16
-; CHECK-NEXT:    [[TMP_0_CAST:%.*]] = load <4 x i32>, ptr [[TMP]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <vscale x 2 x ptr> [[A:%.*]] to <vscale x 2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 2 x i64> [[TMP1]] to <vscale x 4 x i32>
+; CHECK-NEXT:    [[TMP_0_CAST:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.nxv4i32(<vscale x 4 x i32> [[TMP2]], i64 0)
 ; CHECK-NEXT:    ret <4 x i32> [[TMP_0_CAST]]
 ;
   %tmp = alloca <4 x i32>
@@ -165,12 +160,10 @@ define <4 x i32> @fixed_alloca_fixed_from_scalable_ptrtoint(<vscale x 2 x ptr> %
   ret <4 x i32> %cast
 }
 
-define <2 x ptr> @fixed_alloca_fixed_from_scalable_ptrtoptr(<vscale x 2 x ptr> %a) {
+define <2 x ptr> @fixed_alloca_fixed_from_scalable_ptrtoptr(<vscale x 2 x ptr> %a) vscale_range(1) {
 ; CHECK-LABEL: @fixed_alloca_fixed_from_scalable_ptrtoptr(
-; CHECK-NEXT:    [[TMP:%.*]] = alloca <2 x ptr>, align 16
-; CHECK-NEXT:    store <vscale x 2 x ptr> [[A:%.*]], ptr [[TMP]], align 16
-; CHECK-NEXT:    [[CAST:%.*]] = load <2 x ptr>, ptr [[TMP]], align 16
-; CHECK-NEXT:    ret <2 x ptr> [[CAST]]
+; CHECK-NEXT:    [[TMP_0_CAST:%.*]] = call <2 x ptr> @llvm.vector.extract.v2p0.nxv2p0(<vscale x 2 x ptr> [[A:%.*]], i64 0)
+; CHECK-NEXT:    ret <2 x ptr> [[TMP_0_CAST]]
 ;
   %tmp = alloca <2 x ptr>
   store <vscale x 2 x ptr> %a, ptr %tmp
@@ -178,11 +171,22 @@ define <2 x ptr> @fixed_alloca_fixed_from_scalable_ptrtoptr(<vscale x 2 x ptr> %
   ret <2 x ptr> %cast
 }
 
-define <vscale x 4 x i32> @fixed_alloca_scalable_from_fixed(<4 x i32> %a) {
+define <2 x ptr> @fixed_alloca_fixed_from_scalable_ptrtoptr_different_addrspace(<vscale x 2 x ptr addrspace(1)> %a) vscale_range(1) {
+; CHECK-LABEL: @fixed_alloca_fixed_from_scalable_ptrtoptr_different_addrspace(
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <vscale x 2 x ptr addrspace(1)> [[A:%.*]] to <vscale x 2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.vector.extract.v2i64.nxv2i64(<vscale x 2 x i64> [[TMP1]], i64 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr <2 x i64> [[TMP2]] to <2 x ptr>
+; CHECK-NEXT:    ret <2 x ptr> [[TMP3]]
+;
+  %tmp = alloca <2 x ptr>
+  store <vscale x 2 x ptr addrspace(1)> %a, ptr %tmp
+  %cast = load <2 x ptr>, ptr %tmp
+  ret <2 x ptr> %cast
+}
+
+define <vscale x 4 x i32> @fixed_alloca_scalable_from_fixed(<4 x i32> %a) vscale_range(1) {
 ; CHECK-LABEL: @fixed_alloca_scalable_from_fixed(
-; CHECK-NEXT:    [[TMP:%.*]] = alloca <4 x i32>, align 16
-; CHECK-NEXT:    store <4 x i32> [[A:%.*]], ptr [[TMP]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 4 x i32>, ptr [[TMP]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> [[A:%.*]], i64 0)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 ;
   %tmp = alloca <4 x i32>
@@ -191,11 +195,10 @@ define <vscale x 4 x i32> @fixed_alloca_scalable_from_fixed(<4 x i32> %a) {
   ret <vscale x 4 x i32> %cast
 }
 
-define <vscale x 16 x i1> @fixed_alloca_scalable_from_fixed_requires_bitcast(<2 x i8> %a) {
+define <vscale x 16 x i1> @fixed_alloca_scalable_from_fixed_requires_bitcast(<2 x i8> %a) vscale_range(1) {
 ; CHECK-LABEL: @fixed_alloca_scalable_from_fixed_requires_bitcast(
-; CHECK-NEXT:    [[TMP:%.*]] = alloca <2 x i8>, align 2
-; CHECK-NEXT:    store <2 x i8> [[A:%.*]], ptr [[TMP]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 16 x i1>, ptr [[TMP]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v2i8(<vscale x 2 x i8> poison, <2 x i8> [[A:%.*]], i64 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 2 x i8> [[TMP1]] to <vscale x 16 x i1>
 ; CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP2]]
 ;
   %tmp = alloca <2 x i8>
@@ -204,11 +207,11 @@ define <vscale x 16 x i1> @fixed_alloca_scalable_from_fixed_requires_bitcast(<2 
   ret <vscale x 16 x i1> %cast
 }
 
-define <vscale x 2 x ptr> @fixed_alloca_scalable_from_fixed_inttoptr(<4 x i32> %a) {
+define <vscale x 2 x ptr> @fixed_alloca_scalable_from_fixed_inttoptr(<4 x i32> %a) vscale_range(1) {
 ; CHECK-LABEL: @fixed_alloca_scalable_from_fixed_inttoptr(
-; CHECK-NEXT:    [[TMP:%.*]] = alloca <4 x i32>, align 16
-; CHECK-NEXT:    store <4 x i32> [[A:%.*]], ptr [[TMP]], align 16
-; CHECK-NEXT:    [[TMP_0_CAST:%.*]] = load <vscale x 2 x ptr>, ptr [[TMP]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> [[A:%.*]], i64 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 4 x i32> [[TMP1]] to <vscale x 2 x i64>
+; CHECK-NEXT:    [[TMP_0_CAST:%.*]] = inttoptr <vscale x 2 x i64> [[TMP2]] to <vscale x 2 x ptr>
 ; CHECK-NEXT:    ret <vscale x 2 x ptr> [[TMP_0_CAST]]
 ;
   %tmp = alloca <4 x i32>
@@ -217,11 +220,11 @@ define <vscale x 2 x ptr> @fixed_alloca_scalable_from_fixed_inttoptr(<4 x i32> %
   ret <vscale x 2 x ptr> %cast
 }
 
-define <vscale x 4 x i32> @fixed_alloca_scalable_from_fixed_ptrtoint(<2 x ptr> %a) {
+define <vscale x 4 x i32> @fixed_alloca_scalable_from_fixed_ptrtoint(<2 x ptr> %a) vscale_range(1) {
 ; CHECK-LABEL: @fixed_alloca_scalable_from_fixed_ptrtoint(
-; CHECK-NEXT:    [[TMP:%.*]] = alloca <4 x i32>, align 16
-; CHECK-NEXT:    store <2 x ptr> [[A:%.*]], ptr [[TMP]], align 16
-; CHECK-NEXT:    [[TMP_0_CAST:%.*]] = load <vscale x 4 x i32>, ptr [[TMP]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <2 x ptr> [[A:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> poison, <2 x i64> [[TMP1]], i64 0)
+; CHECK-NEXT:    [[TMP_0_CAST:%.*]] = bitcast <vscale x 2 x i64> [[TMP2]] to <vscale x 4 x i32>
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP_0_CAST]]
 ;
   %tmp = alloca <4 x i32>
@@ -230,12 +233,10 @@ define <vscale x 4 x i32> @fixed_alloca_scalable_from_fixed_ptrtoint(<2 x ptr> %
   ret <vscale x 4 x i32> %cast
 }
 
-define <vscale x 2 x ptr> @fixed_alloca_scalable_from_fixed_ptrtoptr(<2 x ptr> %a) {
+define <vscale x 2 x ptr> @fixed_alloca_scalable_from_fixed_ptrtoptr(<2 x ptr> %a) vscale_range(1) {
 ; CHECK-LABEL: @fixed_alloca_scalable_from_fixed_ptrtoptr(
-; CHECK-NEXT:    [[TMP:%.*]] = alloca <2 x ptr>, align 16
-; CHECK-NEXT:    store <2 x ptr> [[A:%.*]], ptr [[TMP]], align 16
-; CHECK-NEXT:    [[CAST:%.*]] = load <vscale x 2 x ptr>, ptr [[TMP]], align 16
-; CHECK-NEXT:    ret <vscale x 2 x ptr> [[CAST]]
+; CHECK-NEXT:    [[TMP_0_CAST:%.*]] = call <vscale x 2 x ptr> @llvm.vector.insert.nxv2p0.v2p0(<vscale x 2 x ptr> poison, <2 x ptr> [[A:%.*]], i64 0)
+; CHECK-NEXT:    ret <vscale x 2 x ptr> [[TMP_0_CAST]]
 ;
   %tmp = alloca <2 x ptr>
   store <2 x ptr> %a, ptr %tmp
@@ -243,7 +244,20 @@ define <vscale x 2 x ptr> @fixed_alloca_scalable_from_fixed_ptrtoptr(<2 x ptr> %
   ret <vscale x 2 x ptr> %cast
 }
 
-define <4 x i32> @scalable_alloca_fixed_from_scalable(<vscale x 4 x i32> %a) {
+define <vscale x 2 x ptr addrspace(1)> @fixed_alloca_scalable_from_fixed_ptrtoptr_different_addrspace(<2 x ptr> %a) vscale_range(1) {
+; CHECK-LABEL: @fixed_alloca_scalable_from_fixed_ptrtoptr_different_addrspace(
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <2 x ptr> [[A:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> poison, <2 x i64> [[TMP1]], i64 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr <vscale x 2 x i64> [[TMP2]] to <vscale x 2 x ptr addrspace(1)>
+; CHECK-NEXT:    ret <vscale x 2 x ptr addrspace(1)> [[TMP3]]
+;
+  %tmp = alloca <2 x ptr>
+  store <2 x ptr> %a, ptr %tmp
+  %cast = load <vscale x 2 x ptr addrspace(1)>, ptr %tmp
+  ret <vscale x 2 x ptr addrspace(1)> %cast
+}
+
+define <4 x i32> @scalable_alloca_fixed_from_scalable(<vscale x 4 x i32> %a) vscale_range(1) {
 ; CHECK-LABEL: @scalable_alloca_fixed_from_scalable(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca <vscale x 4 x i32>, align 16
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[A:%.*]], ptr [[TMP]], align 16
@@ -256,7 +270,7 @@ define <4 x i32> @scalable_alloca_fixed_from_scalable(<vscale x 4 x i32> %a) {
   ret <4 x i32> %cast
 }
 
-define <vscale x 4 x i32> @scalable_alloca_scalable_from_fixed(<4 x i32> %a) {
+define <vscale x 4 x i32> @scalable_alloca_scalable_from_fixed(<4 x i32> %a) vscale_range(1) {
 ; CHECK-LABEL: @scalable_alloca_scalable_from_fixed(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca <vscale x 4 x i32>, align 16
 ; CHECK-NEXT:    store <4 x i32> [[A:%.*]], ptr [[TMP]], align 16
@@ -269,7 +283,7 @@ define <vscale x 4 x i32> @scalable_alloca_scalable_from_fixed(<4 x i32> %a) {
   ret <vscale x 4 x i32> %cast
 }
 
-define i16 @scalar_alloca_scalar_from_scalable(<vscale x 16 x i1> %a) {
+define i16 @scalar_alloca_scalar_from_scalable(<vscale x 16 x i1> %a) vscale_range(1) {
 ; CHECK-LABEL: @scalar_alloca_scalar_from_scalable(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca i16, align 2
 ; CHECK-NEXT:    store <vscale x 16 x i1> [[A:%.*]], ptr [[TMP]], align 2
@@ -282,7 +296,7 @@ define i16 @scalar_alloca_scalar_from_scalable(<vscale x 16 x i1> %a) {
   ret i16 %cast
 }
 
-define <vscale x 16 x i1> @scalar_alloca_scalable_from_scalar(i16 %a) {
+define <vscale x 16 x i1> @scalar_alloca_scalable_from_scalar(i16 %a) vscale_range(1) {
 ; CHECK-LABEL: @scalar_alloca_scalable_from_scalar(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca i16, align 2
 ; CHECK-NEXT:    store i16 [[A:%.*]], ptr [[TMP]], align 2
@@ -295,14 +309,13 @@ define <vscale x 16 x i1> @scalar_alloca_scalable_from_scalar(i16 %a) {
   ret <vscale x 16 x i1> %cast
 }
 
-define { <2 x i32>, <2 x i32> } @fixed_struct_alloca_fixed_from_scalable(<vscale x 4 x i32> %a) {
+define { <2 x i32>, <2 x i32> } @fixed_struct_alloca_fixed_from_scalable(<vscale x 4 x i32> %a) vscale_range(1) {
 ; CHECK-LABEL: @fixed_struct_alloca_fixed_from_scalable(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca { <2 x i32>, <2 x i32> }, align 8
-; CHECK-NEXT:    store <vscale x 4 x i32> [[A:%.*]], ptr [[TMP]], align 16
-; CHECK-NEXT:    [[CAST_FCA_0_GEP:%.*]] = getelementptr inbounds { <2 x i32>, <2 x i32> }, ptr [[TMP]], i32 0, i32 0
-; CHECK-NEXT:    [[TMP_0_CAST_FCA_0_LOAD:%.*]] = load <2 x i32>, ptr [[CAST_FCA_0_GEP]], align 8
+; CHECK-NEXT:    store <vscale x 4 x i32> [[A:%.*]], ptr [[TMP]], align 8
+; CHECK-NEXT:    [[TMP_0_CAST_FCA_0_LOAD:%.*]] = load <2 x i32>, ptr [[TMP]], align 8
 ; CHECK-NEXT:    [[CAST_FCA_0_INSERT:%.*]] = insertvalue { <2 x i32>, <2 x i32> } poison, <2 x i32> [[TMP_0_CAST_FCA_0_LOAD]], 0
-; CHECK-NEXT:    [[TMP_8_CAST_FCA_1_GEP_SROA_IDX:%.*]] = getelementptr inbounds { <2 x i32>, <2 x i32> }, ptr [[TMP]], i32 0, i32 1
+; CHECK-NEXT:    [[TMP_8_CAST_FCA_1_GEP_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[TMP]], i64 8
 ; CHECK-NEXT:    [[TMP_8_CAST_FCA_1_LOAD:%.*]] = load <2 x i32>, ptr [[TMP_8_CAST_FCA_1_GEP_SROA_IDX]], align 8
 ; CHECK-NEXT:    [[CAST_FCA_1_INSERT:%.*]] = insertvalue { <2 x i32>, <2 x i32> } [[CAST_FCA_0_INSERT]], <2 x i32> [[TMP_8_CAST_FCA_1_LOAD]], 1
 ; CHECK-NEXT:    ret { <2 x i32>, <2 x i32> } [[CAST_FCA_1_INSERT]]
@@ -313,16 +326,15 @@ define { <2 x i32>, <2 x i32> } @fixed_struct_alloca_fixed_from_scalable(<vscale
   ret { <2 x i32>, <2 x i32> } %cast
 }
 
-define <vscale x 4 x i64> @fixed_struct_alloca_scalable_from_fixed({ <2 x ptr>, <2 x ptr> } %a) {
+define <vscale x 4 x i64> @fixed_struct_alloca_scalable_from_fixed({ <2 x ptr>, <2 x ptr> } %a) vscale_range(1) {
 ; CHECK-LABEL: @fixed_struct_alloca_scalable_from_fixed(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca { <2 x ptr>, <2 x ptr> }, align 16
 ; CHECK-NEXT:    [[A_FCA_0_EXTRACT:%.*]] = extractvalue { <2 x ptr>, <2 x ptr> } [[A:%.*]], 0
-; CHECK-NEXT:    [[A_FCA_0_GEP:%.*]] = getelementptr inbounds { <2 x ptr>, <2 x ptr> }, ptr [[TMP]], i32 0, i32 0
-; CHECK-NEXT:    store <2 x ptr> [[A_FCA_0_EXTRACT]], ptr [[A_FCA_0_GEP]], align 16
+; CHECK-NEXT:    store <2 x ptr> [[A_FCA_0_EXTRACT]], ptr [[TMP]], align 16
 ; CHECK-NEXT:    [[A_FCA_1_EXTRACT:%.*]] = extractvalue { <2 x ptr>, <2 x ptr> } [[A]], 1
-; CHECK-NEXT:    [[TMP_16_A_FCA_1_GEP_SROA_IDX:%.*]] = getelementptr inbounds { <2 x ptr>, <2 x ptr> }, ptr [[TMP]], i32 0, i32 1
+; CHECK-NEXT:    [[TMP_16_A_FCA_1_GEP_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[TMP]], i64 16
 ; CHECK-NEXT:    store <2 x ptr> [[A_FCA_1_EXTRACT]], ptr [[TMP_16_A_FCA_1_GEP_SROA_IDX]], align 16
-; CHECK-NEXT:    [[TMP_0_CAST:%.*]] = load <vscale x 4 x i64>, ptr [[TMP]], align 32
+; CHECK-NEXT:    [[TMP_0_CAST:%.*]] = load <vscale x 4 x i64>, ptr [[TMP]], align 16
 ; CHECK-NEXT:    ret <vscale x 4 x i64> [[TMP_0_CAST]]
 ;
   %tmp = alloca { <2 x ptr>, <2 x ptr> }
