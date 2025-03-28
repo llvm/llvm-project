@@ -2807,10 +2807,12 @@ std::optional<lldb::addr_t> SwiftLanguageRuntime::TrySkipVirtualParentProlog(
   // Get the PC of the parent frame, i.e. the continuation pointer, which is
   // the second field of the CFA.
   addr_t pc_location = cfa + ptr_size;
-  addr_t pc_value = LLDB_INVALID_ADDRESS;
-  process.ReadMemory(pc_location, &pc_value, ptr_size, error);
+  addr_t pc_value = process.ReadPointerFromMemory(pc_location, error);
   if (error.Fail())
     return {};
+  // Clear any high order bits of this code address so that SetLoadAddress works
+  // properly.
+  pc_value = process.FixCodeAddress(pc_value);
 
   Address pc;
   Target &target = process.GetTarget();
@@ -2819,11 +2821,16 @@ std::optional<lldb::addr_t> SwiftLanguageRuntime::TrySkipVirtualParentProlog(
     return {};
 
   SymbolContext sc;
-  if (!pc.CalculateSymbolContext(&sc,
-                                 eSymbolContextFunction | eSymbolContextSymbol))
+  bool sc_ok = pc.CalculateSymbolContext(&sc, eSymbolContextFunction |
+                                                  eSymbolContextSymbol);
+  if (!sc_ok || (!sc.symbol && !sc.function)) {
+    Log *log = GetLog(LLDBLog::Unwind);
+    LLDB_LOGF(log,
+              "SwiftLanguageRuntime::%s Failed to find a symbol context for "
+              "address 0x%" PRIx64,
+              __FUNCTION__, pc_value);
     return {};
-  if (!sc.symbol && !sc.function)
-    return {};
+  }
 
   auto prologue_size = sc.symbol ? sc.symbol->GetPrologueByteSize()
                                  : sc.function->GetPrologueByteSize();
