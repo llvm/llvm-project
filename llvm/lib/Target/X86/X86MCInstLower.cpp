@@ -193,11 +193,11 @@ MCSymbol *X86MCInstLower::GetSymbolFromOperand(const MachineOperand &MO) const {
 
   Name += Suffix;
   if (!Sym) {
-    MCSymbol *S = Ctx.lookupSymbol(Name);
     // If new MCSymbol needs to be created for
-    // MachineOperand::MO_ExternalSymbol, create is as an external symbol.
-    if (!S && MO.getType() == MachineOperand::MO_ExternalSymbol)
-      Sym = AsmPrinter.GetExternalSymbolSymbol(Name);
+    // MachineOperand::MO_ExternalSymbol, create it as an symbol
+    // in AsmPrinter's OutContext.
+    if (MO.isSymbol())
+      Sym = AsmPrinter.OutContext.getOrCreateSymbol(Name);
     else
       Sym = Ctx.getOrCreateSymbol(Name);
   }
