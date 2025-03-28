@@ -598,8 +598,7 @@ void CodeGenRegister::addSubRegsPreOrder(
       SR->addSubRegsPreOrder(OSet, RegBank);
   }
   // Add any secondary sub-registers that weren't part of the explicit tree.
-  for (auto SubReg : SubRegs)
-    OSet.insert(SubReg.second);
+  OSet.insert_range(llvm::make_second_range(SubRegs));
 }
 
 // Get the sum of this register's unit weights.
