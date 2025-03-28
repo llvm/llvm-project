@@ -2555,7 +2555,8 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   Limits.BvhcntMax = AMDGPU::getBvhcntBitMask(IV);
   Limits.KmcntMax = AMDGPU::getKmcntBitMask(IV);
 
-  [[maybe_unused]] unsigned NumVGPRsMax = ST->getAddressableNumVGPRs(MFI->isDynamicVGPREnabled());
+  [[maybe_unused]] unsigned NumVGPRsMax =
+      ST->getAddressableNumVGPRs(MFI->isDynamicVGPREnabled());
   [[maybe_unused]] unsigned NumSGPRsMax = ST->getAddressableNumSGPRs();
   assert(NumVGPRsMax <= SQ_MAX_PGM_VGPRS);
   assert(NumSGPRsMax <= SQ_MAX_PGM_SGPRS);
@@ -2722,7 +2723,8 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
     if (!ReleaseVGPRInsts.empty() &&
         (MF.getFrameInfo().hasCalls() ||
          ST->getOccupancyWithNumVGPRs(
-             TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass), /*IsDynamicVGPR=*/false) <
+             TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass),
+             /*IsDynamicVGPR=*/false) <
              AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
       for (MachineInstr *MI : ReleaseVGPRInsts) {
         if (ST->requiresNopBeforeDeallocVGPRs()) {

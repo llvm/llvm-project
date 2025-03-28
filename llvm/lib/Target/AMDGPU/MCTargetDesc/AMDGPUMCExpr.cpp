@@ -282,12 +282,10 @@ const AMDGPUMCExpr *AMDGPUMCExpr::createTotalNumVGPR(const MCExpr *NumAGPR,
 /// Remove dependency on GCNSubtarget and depend only only the necessary values
 /// for said occupancy computation. Should match computeOccupancy implementation
 /// without passing \p STM on.
-const AMDGPUMCExpr *AMDGPUMCExpr::createOccupancy(unsigned InitOcc,
-                                                  const MCExpr *NumSGPRs,
-                                                  const MCExpr *NumVGPRs,
-                                                  bool IsDynamicVGPR,
-                                                  const GCNSubtarget &STM,
-                                                  MCContext &Ctx) {
+const AMDGPUMCExpr *
+AMDGPUMCExpr::createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
+                              const MCExpr *NumVGPRs, bool IsDynamicVGPR,
+                              const GCNSubtarget &STM, MCContext &Ctx) {
   unsigned MaxWaves = IsaInfo::getMaxWavesPerEU(&STM);
   unsigned Granule = IsaInfo::getVGPRAllocGranule(&STM, IsDynamicVGPR);
   unsigned TargetTotalNumVGPRs = IsaInfo::getTotalNumVGPRs(&STM);

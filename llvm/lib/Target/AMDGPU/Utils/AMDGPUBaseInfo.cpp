@@ -1207,7 +1207,8 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
 
 unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) { return 256; }
 
-unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI, bool IsDynamicVGPR) {
+unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI,
+                                bool IsDynamicVGPR) {
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 512;
   if (IsDynamicVGPR)
@@ -1218,9 +1219,9 @@ unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI, bool IsDynamicVGPR) 
 
 unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo *STI,
                                       unsigned NumVGPRs, bool IsDynamicVGPR) {
-  return getNumWavesPerEUWithNumVGPRs(NumVGPRs, getVGPRAllocGranule(STI, IsDynamicVGPR),
-                                      getMaxWavesPerEU(STI),
-                                      getTotalNumVGPRs(STI));
+  return getNumWavesPerEUWithNumVGPRs(
+      NumVGPRs, getVGPRAllocGranule(STI, IsDynamicVGPR), getMaxWavesPerEU(STI),
+      getTotalNumVGPRs(STI));
 }
 
 unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
@@ -1259,7 +1260,8 @@ unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
   return 5;
 }
 
-unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU, bool IsDynamicVGPR) {
+unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
+                        bool IsDynamicVGPR) {
   assert(WavesPerEU != 0);
 
   unsigned MaxWavesPerEU = getMaxWavesPerEU(STI);
@@ -1274,7 +1276,8 @@ unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU, bool Is
   if (MaxNumVGPRs == alignDown(TotNumVGPRs / MaxWavesPerEU, Granule))
     return 0;
 
-  unsigned MinWavesPerEU = getNumWavesPerEUWithNumVGPRs(STI, AddrsableNumVGPRs, IsDynamicVGPR);
+  unsigned MinWavesPerEU =
+      getNumWavesPerEUWithNumVGPRs(STI, AddrsableNumVGPRs, IsDynamicVGPR);
   if (WavesPerEU < MinWavesPerEU)
     return getMinNumVGPRs(STI, MinWavesPerEU, IsDynamicVGPR);
 
@@ -1283,7 +1286,8 @@ unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU, bool Is
   return std::min(MinNumVGPRs, AddrsableNumVGPRs);
 }
 
-unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU, bool IsDynamicVGPR) {
+unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
+                        bool IsDynamicVGPR) {
   assert(WavesPerEU != 0);
 
   unsigned MaxNumVGPRs = alignDown(getTotalNumVGPRs(STI) / WavesPerEU,

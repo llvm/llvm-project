@@ -792,9 +792,7 @@ public:
     BytesInStackArgArea = Bytes;
   }
 
-  bool isDynamicVGPREnabled() const {
-    return IsDynamicVGPREnabled;
-  }
+  bool isDynamicVGPREnabled() const { return IsDynamicVGPREnabled; }
 
   // This is only used if we need to save any dynamic VGPRs in scratch.
   unsigned getScratchReservedForDynamicVGPRs() const {

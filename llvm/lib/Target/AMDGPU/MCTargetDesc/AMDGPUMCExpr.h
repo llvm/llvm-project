@@ -80,12 +80,10 @@ public:
     return create(VariantKind::AGVK_AlignTo, {Value, Align}, Ctx);
   }
 
-  static const AMDGPUMCExpr *createOccupancy(unsigned InitOcc,
-                                             const MCExpr *NumSGPRs,
-                                             const MCExpr *NumVGPRs,
-                                             bool IsDynamicVGPR,
-                                             const GCNSubtarget &STM,
-                                             MCContext &Ctx);
+  static const AMDGPUMCExpr *
+  createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
+                  const MCExpr *NumVGPRs, bool IsDynamicVGPR,
+                  const GCNSubtarget &STM, MCContext &Ctx);
 
   ArrayRef<const MCExpr *> getArgs() const { return Args; }
   VariantKind getKind() const { return Kind; }

@@ -69,7 +69,8 @@ struct GCNRegPressure {
 
   unsigned getOccupancy(const GCNSubtarget &ST, bool IsDynamicVGPR) const {
     return std::min(ST.getOccupancyWithNumSGPRs(getSGPRNum()),
-             ST.getOccupancyWithNumVGPRs(getVGPRNum(ST.hasGFX90AInsts()), IsDynamicVGPR));
+                    ST.getOccupancyWithNumVGPRs(getVGPRNum(ST.hasGFX90AInsts()),
+                                                IsDynamicVGPR));
   }
 
   void inc(unsigned Reg,
@@ -77,7 +78,8 @@ struct GCNRegPressure {
            LaneBitmask NewMask,
            const MachineRegisterInfo &MRI);
 
-  bool higherOccupancy(const GCNSubtarget &ST, const GCNRegPressure& O, bool IsDynamicVGPR) const {
+  bool higherOccupancy(const GCNSubtarget &ST, const GCNRegPressure &O,
+                       bool IsDynamicVGPR) const {
     return getOccupancy(ST, IsDynamicVGPR) > O.getOccupancy(ST, IsDynamicVGPR);
   }
 
@@ -126,7 +128,8 @@ private:
   friend GCNRegPressure max(const GCNRegPressure &P1,
                             const GCNRegPressure &P2);
 
-  friend Printable print(const GCNRegPressure &RP, const GCNSubtarget *ST, bool IsDynamicVGPR);
+  friend Printable print(const GCNRegPressure &RP, const GCNSubtarget *ST,
+                         bool IsDynamicVGPR);
 };
 
 inline GCNRegPressure max(const GCNRegPressure &P1, const GCNRegPressure &P2) {
@@ -395,7 +398,8 @@ GCNRegPressure getRegPressure(const MachineRegisterInfo &MRI,
 bool isEqual(const GCNRPTracker::LiveRegSet &S1,
              const GCNRPTracker::LiveRegSet &S2);
 
-Printable print(const GCNRegPressure &RP, const GCNSubtarget *ST = nullptr, bool IsDynamicVGPR = false);
+Printable print(const GCNRegPressure &RP, const GCNSubtarget *ST = nullptr,
+                bool IsDynamicVGPR = false);
 
 Printable print(const GCNRPTracker::LiveRegSet &LiveRegs,
                 const MachineRegisterInfo &MRI);

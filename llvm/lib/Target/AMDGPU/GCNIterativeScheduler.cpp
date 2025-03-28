@@ -426,7 +426,8 @@ void GCNIterativeScheduler::sortRegionsByPressure(unsigned TargetOcc) {
 unsigned GCNIterativeScheduler::tryMaximizeOccupancy(unsigned TargetOcc) {
   // TODO: assert Regions are sorted descending by pressure
   const auto &ST = MF.getSubtarget<GCNSubtarget>();
-  const bool IsDynamicVGPR = MF.getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled();
+  const bool IsDynamicVGPR =
+      MF.getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled();
   const auto Occ = Regions.front()->MaxPressure.getOccupancy(ST, IsDynamicVGPR);
   LLVM_DEBUG(dbgs() << "Trying to improve occupancy, target = " << TargetOcc
                     << ", current = " << Occ << '\n');
@@ -498,8 +499,8 @@ void GCNIterativeScheduler::scheduleLegacyMaxOccupancy(
 
       if (RP.getOccupancy(ST, IsDynamicVGPR) < TgtOcc) {
         LLVM_DEBUG(dbgs() << "Didn't fit into target occupancy O" << TgtOcc);
-        if (R->BestSchedule.get() &&
-            R->BestSchedule->MaxPressure.getOccupancy(ST, IsDynamicVGPR) >= TgtOcc) {
+        if (R->BestSchedule.get() && R->BestSchedule->MaxPressure.getOccupancy(
+                                         ST, IsDynamicVGPR) >= TgtOcc) {
           LLVM_DEBUG(dbgs() << ", scheduling minimal register\n");
           scheduleBest(*R);
         } else {
@@ -508,7 +509,8 @@ void GCNIterativeScheduler::scheduleLegacyMaxOccupancy(
           assert(R->MaxPressure.getOccupancy(ST, IsDynamicVGPR) >= TgtOcc);
         }
       }
-      FinalOccupancy = std::min(FinalOccupancy, RP.getOccupancy(ST, IsDynamicVGPR));
+      FinalOccupancy =
+          std::min(FinalOccupancy, RP.getOccupancy(ST, IsDynamicVGPR));
     }
   }
   MFI->limitOccupancy(FinalOccupancy);
@@ -577,15 +579,16 @@ void GCNIterativeScheduler::scheduleILP(
 
     if (RP.getOccupancy(ST, IsDynamicVGPR) < TgtOcc) {
       LLVM_DEBUG(dbgs() << "Didn't fit into target occupancy O" << TgtOcc);
-      if (R->BestSchedule.get() &&
-        R->BestSchedule->MaxPressure.getOccupancy(ST, IsDynamicVGPR) >= TgtOcc) {
+      if (R->BestSchedule.get() && R->BestSchedule->MaxPressure.getOccupancy(
+                                       ST, IsDynamicVGPR) >= TgtOcc) {
         LLVM_DEBUG(dbgs() << ", scheduling minimal register\n");
         scheduleBest(*R);
       }
     } else {
       scheduleRegion(*R, ILPSchedule, RP);
       LLVM_DEBUG(printSchedResult(dbgs(), R, RP));
-      FinalOccupancy = std::min(FinalOccupancy, RP.getOccupancy(ST, IsDynamicVGPR));
+      FinalOccupancy =
+          std::min(FinalOccupancy, RP.getOccupancy(ST, IsDynamicVGPR));
     }
   }
   MFI->limitOccupancy(FinalOccupancy);

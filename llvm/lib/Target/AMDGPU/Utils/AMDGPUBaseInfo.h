@@ -330,11 +330,13 @@ unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI, bool IsDynamicVGPR);
 
 /// \returns Minimum number of VGPRs that meets given number of waves per
 /// execution unit requirement for given subtarget \p STI.
-unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU, bool IsDynamicVGPR);
+unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
+                        bool IsDynamicVGPR);
 
 /// \returns Maximum number of VGPRs that meets given number of waves per
 /// execution unit requirement for given subtarget \p STI.
-unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU, bool IsDynamicVGPR);
+unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
+                        bool IsDynamicVGPR);
 
 /// \returns Number of waves reachable for a given \p NumVGPRs usage for given
 /// subtarget \p STI.
