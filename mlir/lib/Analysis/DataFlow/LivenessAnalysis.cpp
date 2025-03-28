@@ -60,7 +60,7 @@ ChangeResult Liveness::meet(const AbstractSparseLattice &other) {
 ///   (1.b) is a non-forwarded branch operand and its branch op could take the
 ///   control to a block that has an op with memory effects OR
 ///   (1.c) is a non-forwarded branch operand and its branch op could result
-///   in different result OR
+///   in different live result OR
 ///   (1.d) is a non-forwarded call operand.
 ///
 /// A value `A` is said to be "used to compute" value `B` iff `B` cannot be
@@ -120,9 +120,15 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
       // branch operation has a return value, and the non-forwarded operand can
       // determine the region to jump to, it can thereby control the result of
       // the region branch operation.
-      // Therefore, we conservatively consider the non-forwarded operand of the
-      // region branch operation with result may live.
-      mayLive = true;
+      // Therefore, if the result value is live, we conservatively consider the
+      // non-forwarded operand of the region branch operation with result may
+      // live and record all result.
+      for (Value result : op->getResults()) {
+        if (getLatticeElement(result)->isLive) {
+          mayLive = true;
+          break;
+        }
+      }
     } else {
       // When the op is a `RegionBranchOpInterface`, like an `scf.for` or an
       // `scf.index_switch` op, its branch operand controls the flow into this
@@ -148,9 +154,15 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
       // branch operation has a return value, and the non-forwarded operand can
       // determine the region to jump to, it can thereby control the result of
       // the region branch operation.
-      // Therefore, we conservatively consider the non-forwarded operand of the
-      // region branch operation with result may live.
-      mayLive = true;
+      // Therefore, if the result value is live, we conservatively consider the
+      // non-forwarded operand of the region branch operation with result may
+      // live and record all result.
+      for (Value result : parentOp->getResults()) {
+        if (getLatticeElement(result)->isLive) {
+          mayLive = true;
+          break;
+        }
+      }
     } else {
       // When the op is a `RegionBranchTerminatorOpInterface`, like an
       // `scf.condition` op or return-like, like an `scf.yield` op, its branch
