@@ -81,7 +81,7 @@ DAP::DAP(llvm::StringRef path, Log *log, const ReplMode default_repl_mode,
       configuration_done_sent(false), waiting_for_run_in_terminal(false),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
-      reverse_request_seq(0), repl_mode(default_repl_mode) {}
+      reverse_request_seq(0), repl_mode(default_repl_mode), gotos() {}
 
 DAP::~DAP() = default;
 
@@ -841,6 +841,20 @@ lldb::SBError DAP::WaitForProcessToStop(uint32_t seconds) {
   return error;
 }
 
+std::optional<lldb::SBLineEntry> Gotos::GetLineEntry(uint64_t id) const {
+  if (id > line_entries.size())
+    return std::nullopt;
+
+  return line_entries[id - 1]; // id starts at one.
+}
+
+uint64_t Gotos::InsertLineEntry(lldb::SBLineEntry line_entry) {
+  line_entries.emplace_back(line_entry);
+  return line_entries.size();
+}
+
+void Gotos::Clear() { line_entries.clear(); }
+
 void Variables::Clear() {
   locals.Clear();
   globals.Clear();
@@ -1153,13 +1167,13 @@ llvm::StringMap<bool> DAP::GetCapabilities() {
   capabilities["supportsDelayedStackTraceLoading"] = true;
   capabilities["supportsEvaluateForHovers"] = true;
   capabilities["supportsExceptionOptions"] = true;
+  capabilities["supportsGotoTargetsRequest"] = true;
   capabilities["supportsLogPoints"] = true;
   capabilities["supportsProgressReporting"] = true;
   capabilities["supportsSteppingGranularity"] = true;
   capabilities["supportsValueFormattingOptions"] = true;
 
   // Unsupported capabilities.
-  capabilities["supportsGotoTargetsRequest"] = false;
   capabilities["supportsLoadedSourcesRequest"] = false;
   capabilities["supportsRestartFrame"] = false;
   capabilities["supportsStepBack"] = false;

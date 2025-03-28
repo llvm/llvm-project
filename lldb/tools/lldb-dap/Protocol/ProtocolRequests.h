@@ -54,6 +54,43 @@ bool fromJSON(const llvm::json::Value &, DisconnectArguments &,
 /// body field is required.
 using DisconnectResponse = VoidResponse;
 
+/// Arguments for `goto` request.
+struct GotoArguments {
+  /// Set the goto target for this thread.
+  uint64_t threadId;
+
+  /// The location where the debuggee will continue to run.
+  uint64_t targetId;
+};
+bool fromJSON(const llvm::json::Value &, GotoArguments &, llvm::json::Path);
+
+/// Response to goto request. This is just an acknowledgement, so no
+/// body field is required.
+using GotoResponseBody = VoidResponse;
+
+/// Arguments for `gotoTargets` request.
+struct GotoTargetsArguments {
+  /// The source location for which the goto targets are determined.
+  Source source;
+
+  /// The line location for which the goto targets are determined.
+  uint64_t line;
+
+  /// The position within `line` for which the goto targets are determined. It
+  /// is
+  ///  measured in UTF-16 code units and the client capability `columnsStartAt1`
+  ///  determines whether it is 0- or 1-based.
+  std::optional<uint64_t> column;
+};
+bool fromJSON(const llvm::json::Value &, GotoTargetsArguments &,
+              llvm::json::Path);
+
+struct GotoTargetsResponseBody {
+  /// The possible goto targets of the specified location.
+  llvm::SmallVector<GotoTarget> targets;
+};
+llvm::json::Value toJSON(const GotoTargetsResponseBody &);
+
 /// Arguments for `source` request.
 struct SourceArguments {
   /// Specifies the source content to load. Either `source.path` or

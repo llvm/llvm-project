@@ -219,6 +219,8 @@ Changes to LLDB
 
 * Breakpoints can now be set for specific columns within a line.
 * Function return value is now displayed on step-out.
+* Jump to cursor is supported implementing the debug adapter
+  protocol's capability `supportsGotoTargetsRequest`.
 
 Changes to BOLT
 ---------------------------------

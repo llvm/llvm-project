@@ -77,6 +77,24 @@ enum class PacketStatus {
 
 enum class ReplMode { Variable = 0, Command, Auto };
 
+class Gotos {
+public:
+  /// \return the line_entry corresponding with \p id
+  ///
+  /// If \p id is invalid std::nullopt is returned.
+  std::optional<lldb::SBLineEntry> GetLineEntry(uint64_t id) const;
+
+  /// Insert a new \p line_entry.
+  /// \return id assigned to this line_entry.
+  uint64_t InsertLineEntry(lldb::SBLineEntry line_entry);
+
+  /// Clears all line entries and reset the generated ids.
+  void Clear();
+
+private:
+  llvm::SmallVector<lldb::SBLineEntry> line_entries;
+};
+
 struct Variables {
   /// Variable_reference start index of permanent expandable variable.
   static constexpr int64_t PermanentVariableStartIndex = (1ll << 32);
@@ -205,6 +223,7 @@ struct DAP {
   // empty; if the previous expression was a variable expression, this string
   // will contain that expression.
   std::string last_nonempty_var_expression;
+  Gotos gotos;
 
   /// Creates a new DAP sessions.
   ///
@@ -367,7 +386,10 @@ struct DAP {
   llvm::StringMap<bool> GetCapabilities();
 
   /// Debuggee will continue from stopped state.
-  void WillContinue() { variables.Clear(); }
+  void WillContinue() {
+    variables.Clear();
+    gotos.Clear();
+  }
 
   /// Poll the process to wait for it to reach the eStateStopped state.
   ///
