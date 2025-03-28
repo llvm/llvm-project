@@ -24,46 +24,6 @@ using ast_matchers::pointerType;
 using ast_matchers::referenceType;
 using ast_matchers::returns;
 
-CanQualType pointerLikeReturnType(const CXXRecordDecl &RD) {
-  // We may want to cache this search, but in current profiles it hasn't shown
-  // up as a hot spot (possibly because there aren't many hits, relatively).
-  bool HasArrow = false;
-  bool HasStar = false;
-  CanQualType StarReturnType, ArrowReturnType, GetReturnType, ValueReturnType;
-  for (const auto *MD : RD.methods()) {
-    // We only consider methods that are const and have zero parameters.
-    // It may be that there is a non-const overload for the method, but
-    // there should at least be a const overload as well.
-    if (!MD->isConst() || MD->getNumParams() != 0)
-      continue;
-    switch (MD->getOverloadedOperator()) {
-    case OO_Star:
-      if (MD->getReturnType()->isReferenceType()) {
-        HasStar = true;
-        StarReturnType = MD->getReturnType()
-                             .getNonReferenceType()
-                             ->getCanonicalTypeUnqualified()
-                             .getUnqualifiedType();
-      }
-      break;
-    case OO_Arrow:
-      if (MD->getReturnType()->isPointerType()) {
-        HasArrow = true;
-        ArrowReturnType = MD->getReturnType()
-                              ->getPointeeType()
-                              ->getCanonicalTypeUnqualified()
-                              .getUnqualifiedType();
-      }
-      break;
-    default:
-      break;
-    }
-  }
-  if (HasStar && HasArrow && StarReturnType == ArrowReturnType)
-    return StarReturnType;
-
-  return {};
-}
 CanQualType getLikeReturnType(QualType RT) {
   if (!RT.isNull() && RT->isPointerType()) {
     return RT->getPointeeType()
@@ -79,6 +39,34 @@ CanQualType valueLikeReturnType(QualType RT) {
         ->getCanonicalTypeUnqualified()
         .getUnqualifiedType();
   }
+  return {};
+}
+
+CanQualType pointerLikeReturnType(const CXXRecordDecl &RD) {
+  // We may want to cache this search, but in current profiles it hasn't shown
+  // up as a hot spot (possibly because there aren't many hits, relatively).
+  CanQualType StarReturnType, ArrowReturnType, GetReturnType, ValueReturnType;
+  for (const auto *MD : RD.methods()) {
+    // We only consider methods that are const and have zero parameters.
+    // It may be that there is a non-const overload for the method, but
+    // there should at least be a const overload as well.
+    if (!MD->isConst() || MD->getNumParams() != 0)
+      continue;
+    switch (MD->getOverloadedOperator()) {
+    case OO_Star:
+      StarReturnType = valueLikeReturnType(MD->getReturnType());
+      break;
+    case OO_Arrow:
+      ArrowReturnType = getLikeReturnType(MD->getReturnType());
+      break;
+    default:
+      break;
+    }
+  }
+  if (!StarReturnType.isNull() && !ArrowReturnType.isNull() &&
+      StarReturnType == ArrowReturnType)
+    return StarReturnType;
+
   return {};
 }
 
