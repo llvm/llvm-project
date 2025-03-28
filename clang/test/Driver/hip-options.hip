@@ -242,3 +242,9 @@
 // NO-WARN-ATOMIC: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-Werror=atomic-alignment" {{.*}} "-Wno-error=atomic-alignment"
 // NO-WARN-ATOMIC-NOT: clang{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-Werror=atomic-alignment"
 // NO-WARN-ATOMIC-NOT: clang{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-Wno-error=atomic-alignment"
+
+// Check --offload-compress does not cause warning.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --offload-arch=gfx1100 --offload-compress --offload-host-only -M %s \
+// RUN:   2>&1 | FileCheck -check-prefix=COMPRESS %s
+// COMPRESS-NOT: clang: warning: argument unused during compilation: '--offload-compress'
