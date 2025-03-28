@@ -145,6 +145,7 @@ class ROCDL_DimGetterFunctionOp<string mnemonic, string device_function,
 
 //===----------------------------------------------------------------------===//
 // Wave-level primitives
+//===----------------------------------------------------------------------===//
 
 class ROCDL_MbcntOp<string mnemonic> :
     ROCDL_IntrPure1Op<"mbcnt." # mnemonic>,
@@ -205,6 +206,7 @@ def ROCDL_ReadlaneOp : ROCDL_IntrOp<"readlane", [], [0], [AllTypesMatch<["res", 
 
 //===----------------------------------------------------------------------===//
 // Thread index and Block index
+//===----------------------------------------------------------------------===//
 
 def ROCDL_ThreadIdXOp : ROCDL_SpecialIdRegisterOp<"workitem.id.x">;
 def ROCDL_ThreadIdYOp : ROCDL_SpecialIdRegisterOp<"workitem.id.y">;
@@ -216,6 +218,7 @@ def ROCDL_BlockIdZOp : ROCDL_SpecialIdRegisterOp<"workgroup.id.z">;
 
 //===----------------------------------------------------------------------===//
 // Thread range and Block range
+//===----------------------------------------------------------------------===//
 
 def ROCDL_BlockDimXOp : ROCDL_DimGetterFunctionOp<"workgroup.dim.x",
                                                "__ockl_get_local_size", 0>;
@@ -237,6 +240,7 @@ def ROCDL_GridDimZOp : ROCDL_DimGetterFunctionOp<"grid.dim.z",
 
 //===----------------------------------------------------------------------===//
 // Synchronization primitives
+//===----------------------------------------------------------------------===//
 
 // Emits the waintcnt instruction. The bitfield's semantics depend
 // on the target chipset

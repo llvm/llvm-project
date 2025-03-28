@@ -679,6 +679,7 @@ def AnyShaped: ShapedContainerType<[AnyType], IsShapedTypePred, "shaped",
 
 //===----------------------------------------------------------------------===//
 // Tensor types.
+//===----------------------------------------------------------------------===//
 
 // Unranked tensor type whose element type is from the given `allowedTypes`
 // list, and which additionally satisfies an optional list of predicates.
@@ -755,6 +756,7 @@ def AnyStaticShapeTensor : StaticShapeTensorOf<[AnyType]>;
 
 //===----------------------------------------------------------------------===//
 // Memref type.
+//===----------------------------------------------------------------------===//
 
 // Any unranked memref whose element type is from the given `allowedTypes` list.
 class UnrankedMemRefOf<list<Type> allowedTypes> :

@@ -1462,6 +1462,7 @@ def TestDialectCanonicalizerOp : TEST_Op<"dialect_canonicalizable"> {
 
 //===----------------------------------------------------------------------===//
 // Test Patterns (Symbol Binding)
+//===----------------------------------------------------------------------===//
 
 // Test symbol binding.
 def OpSymbolBindingA : TEST_Op<"symbol_binding_a", []> {
@@ -1503,6 +1504,7 @@ def : Pat<(OpSymbolBindingNoResult:$op $operand),
 
 //===----------------------------------------------------------------------===//
 // Test Patterns (Attributes)
+//===----------------------------------------------------------------------===//
 
 // Test matching against op attributes.
 def OpAttrMatch1 : TEST_Op<"match_op_attribute1"> {
@@ -1618,6 +1620,7 @@ def : Pattern<
 
 //===----------------------------------------------------------------------===//
 // Test Patterns (Variadic Ops)
+//===----------------------------------------------------------------------===//
 
 def OneVResOneVOperandOp1 : TEST_Op<"one_variadic_out_one_variadic_in1"> {
   let arguments = (ins Variadic<I32>);
@@ -1803,6 +1806,7 @@ def : Pat<
 
 //===----------------------------------------------------------------------===//
 // Test Patterns (either)
+//===----------------------------------------------------------------------===//
 
 def TestEitherOpA : TEST_Op<"either_op_a"> {
   let arguments = (ins AnyInteger:$arg0, AnyInteger:$arg1, AnyInteger:$arg2);
@@ -1845,6 +1849,7 @@ def : Pat<(TestEitherOpB (either (TestEitherHelperOpA I32:$either_helper_0),
 
 //===----------------------------------------------------------------------===//
 // Test Patterns (Location)
+//===----------------------------------------------------------------------===//
 
 // Test that we can specify locations for generated ops.
 def : Pat<(TestLocationSrcOp:$res1
@@ -1863,6 +1868,7 @@ def : Pat<(TestLocationSrcNoResOp:$loc
 
 //===----------------------------------------------------------------------===//
 // Test Patterns (Type Builders)
+//===----------------------------------------------------------------------===//
 
 def SourceOp : TEST_Op<"source_op"> {
   let arguments = (ins AnyInteger:$arg, AnyI32Attr:$tag);
@@ -1913,6 +1919,7 @@ def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "55">:$attr),
 
 //===----------------------------------------------------------------------===//
 // Test Patterns (Trailing Directives)
+//===----------------------------------------------------------------------===//
 
 // Test that we can specify both `location` and `returnType` directives.
 def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "66">:$attr),
@@ -2079,6 +2086,7 @@ def ParseB64BytesOp : TEST_Op<"parse_b64"> {
 
 //===----------------------------------------------------------------------===//
 // Test region argument list parsing.
+//===----------------------------------------------------------------------===//
 
 def IsolatedRegionOp : TEST_Op<"isolated_region", [IsolatedFromAbove]> {
   let summary =  "isolated region operation";
@@ -2139,6 +2147,7 @@ def AffineScopeOp : TEST_Op<"affine_scope", [AffineScope]> {
 
 //===----------------------------------------------------------------------===//
 // Custom printer/parser
+//===----------------------------------------------------------------------===//
 
 def CustomDimensionListAttrOp : TEST_Op<"custom_dimension_list_attr"> {
   let description = [{
@@ -2164,6 +2173,7 @@ def OptionalCustomAttrOp : TEST_Op<"optional_custom_attr"> {
 
 //===----------------------------------------------------------------------===//
 // Test OpAsmInterface.
+//===----------------------------------------------------------------------===//
 
 def AsmInterfaceOp : TEST_Op<"asm_interface_op"> {
   let results = (outs AnyType:$first, Variadic<AnyType>:$middle_results,

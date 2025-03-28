@@ -65,6 +65,7 @@ static void walkReferencedSymbolNodes(
 
 //===----------------------------------------------------------------------===//
 // CGUseList
+//===----------------------------------------------------------------------===//
 
 namespace {
 /// This struct tracks the uses of callgraph nodes that can be dropped when

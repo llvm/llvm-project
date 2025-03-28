@@ -177,6 +177,7 @@ LLVMArrayType::verify(function_ref<InFlightDiagnostic()> emitError,
 
 //===----------------------------------------------------------------------===//
 // DataLayoutTypeInterface
+//===----------------------------------------------------------------------===//
 
 llvm::TypeSize
 LLVMArrayType::getTypeSizeInBits(const DataLayout &dataLayout,
@@ -255,6 +256,7 @@ LLVMFunctionType::verify(function_ref<InFlightDiagnostic()> emitError,
 
 //===----------------------------------------------------------------------===//
 // DataLayoutTypeInterface
+//===----------------------------------------------------------------------===//
 
 constexpr const static uint64_t kDefaultPointerSizeBits = 64;
 constexpr const static uint64_t kDefaultPointerAlignment = 8;

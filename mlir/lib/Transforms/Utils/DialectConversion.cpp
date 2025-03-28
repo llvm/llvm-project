@@ -1198,6 +1198,7 @@ void ConversionPatternRewriterImpl::applyRewrites() {
 
 //===----------------------------------------------------------------------===//
 // State Management
+//===----------------------------------------------------------------------===//
 
 RewriterState ConversionPatternRewriterImpl::getCurrentState() {
   return RewriterState(rewrites.size(), ignoredOps.size(), replacedOps.size());
@@ -1288,6 +1289,7 @@ bool ConversionPatternRewriterImpl::wasOpReplaced(Operation *op) const {
 
 //===----------------------------------------------------------------------===//
 // Type Conversion
+//===----------------------------------------------------------------------===//
 
 FailureOr<Block *> ConversionPatternRewriterImpl::convertRegionTypes(
     ConversionPatternRewriter &rewriter, Region *region,
@@ -1502,6 +1504,7 @@ Value ConversionPatternRewriterImpl::findOrBuildReplacementValue(
 
 //===----------------------------------------------------------------------===//
 // Rewriter Notification Hooks
+//===----------------------------------------------------------------------===//
 
 void ConversionPatternRewriterImpl::notifyOperationInserted(
     Operation *op, OpBuilder::InsertPoint previous) {
@@ -2336,6 +2339,7 @@ LogicalResult OperationLegalizer::legalizePatternRootUpdates(
 
 //===----------------------------------------------------------------------===//
 // Cost Model
+//===----------------------------------------------------------------------===//
 
 void OperationLegalizer::buildLegalizationGraph(
     LegalizationPatterns &anyOpLegalizerPatterns,
@@ -3355,6 +3359,7 @@ void mlir::registerConversionPDLFunctions(RewritePatternSet &patterns) {
 
 //===----------------------------------------------------------------------===//
 // Partial Conversion
+//===----------------------------------------------------------------------===//
 
 LogicalResult mlir::applyPartialConversion(
     ArrayRef<Operation *> ops, const ConversionTarget &target,
@@ -3372,6 +3377,7 @@ mlir::applyPartialConversion(Operation *op, const ConversionTarget &target,
 
 //===----------------------------------------------------------------------===//
 // Full Conversion
+//===----------------------------------------------------------------------===//
 
 LogicalResult mlir::applyFullConversion(ArrayRef<Operation *> ops,
                                         const ConversionTarget &target,
@@ -3390,6 +3396,7 @@ LogicalResult mlir::applyFullConversion(Operation *op,
 
 //===----------------------------------------------------------------------===//
 // Analysis Conversion
+//===----------------------------------------------------------------------===//
 
 /// Find a common IsolatedFromAbove ancestor of the given ops. If at least one
 /// op is a top-level module op (which is expected to be isolated from above),
