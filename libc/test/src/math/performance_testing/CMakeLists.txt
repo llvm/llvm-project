@@ -341,6 +341,18 @@ add_perf_binary(
 )
 
 add_perf_binary(
+  hypotf16_perf
+  SRCS
+    hypotf16_perf.cpp
+  DEPENDS
+    .binary_op_single_output_diff
+    libc.src.math.hypotf16
+    libc.src.__support.FPUtil.fp_bits
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
   hypotf_perf
   SRCS
     hypotf_perf.cpp
