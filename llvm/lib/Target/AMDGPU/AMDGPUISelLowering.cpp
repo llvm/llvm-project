@@ -4096,8 +4096,8 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
 
   EVT ElementType = VT.getScalarType();
   EVT TargetScalarType = ElementType.getHalfSizedIntegerVT(*DAG.getContext());
-  EVT TargetType = (VT.isVector() ? VT.changeVectorElementType(TargetScalarType)
-                                  : TargetScalarType);
+  EVT TargetType = VT.isVector() ? VT.changeVectorElementType(TargetScalarType)
+                                 : TargetScalarType;
 
   if (Known.getMinValue().getZExtValue() < TargetScalarType.getSizeInBits())
     return SDValue();
@@ -4125,11 +4125,13 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
   if (VT.isVector()) {
     EVT ConcatType = TargetType.getDoubleNumVectorElementsVT(*DAG.getContext());
     unsigned NElts = TargetType.getVectorNumElements();
-    SmallVector<SDValue, 8> Ops;
-    DAG.ExtractVectorElements(NewShift, Ops, 0, NElts);
+    SmallVector<SDValue, 8> HiOps;
+    SmallVector<SDValue, 16> HiAndLoOps(NElts * 2, Zero);
+
+    DAG.ExtractVectorElements(NewShift, HiOps, 0, NElts);
     for (unsigned I = 0; I != NElts; ++I)
-      Ops.insert(Ops.begin() + 2 * I, Zero);
-    Vec = DAG.getNode(ISD::BUILD_VECTOR, SL, ConcatType, Ops);
+      HiAndLoOps[2 * I + 1] = HiOps[I];
+    Vec = DAG.getNode(ISD::BUILD_VECTOR, SL, ConcatType, HiAndLoOps);
   } else {
     EVT ConcatType = EVT::getVectorVT(*DAG.getContext(), TargetType, 2);
     Vec = DAG.getBuildVector(ConcatType, SL, {Zero, NewShift});
