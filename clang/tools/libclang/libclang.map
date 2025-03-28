@@ -423,12 +423,6 @@ LLVM_17 {
     clang_getCursorUnaryOperatorKind;
 };
 
-LLVM_19 {
-  global:
-    clang_Cursor_getBinaryOpcode;
-    clang_Cursor_getBinaryOpcodeStr;
-};
-
 LLVM_20 {
   global:
     clang_getOffsetOfBase;

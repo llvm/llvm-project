@@ -5442,7 +5442,8 @@ CXString clang_getCursorSpelling(CXCursor C) {
 
     if (C.kind == CXCursor_BinaryOperator ||
         C.kind == CXCursor_CompoundAssignOperator) {
-      return clang_Cursor_getBinaryOpcodeStr(clang_Cursor_getBinaryOpcode(C));
+      return clang_getBinaryOperatorKindSpelling(
+          clang_getCursorBinaryOperatorKind(C));
     }
 
     const Decl *D = getDeclFromExpr(getCursorExpr(C));
@@ -9210,35 +9211,6 @@ unsigned clang_Cursor_isExternalSymbol(CXCursor C, CXString *language,
   return 0;
 }
 
-enum CX_BinaryOperatorKind clang_Cursor_getBinaryOpcode(CXCursor C) {
-  if (C.kind != CXCursor_BinaryOperator &&
-      C.kind != CXCursor_CompoundAssignOperator) {
-    return CX_BO_Invalid;
-  }
-
-  const Expr *D = getCursorExpr(C);
-  if (const auto *BinOp = dyn_cast<BinaryOperator>(D)) {
-    switch (BinOp->getOpcode()) {
-#define BINARY_OPERATION(Name, Spelling)                                       \
-  case BO_##Name:                                                              \
-    return CX_BO_##Name;
-#include "clang/AST/OperationKinds.def"
-    }
-  }
-
-  return CX_BO_Invalid;
-}
-
-CXString clang_Cursor_getBinaryOpcodeStr(enum CX_BinaryOperatorKind Op) {
-  if (Op > CX_BO_LAST)
-    return cxstring::createEmpty();
-
-  return cxstring::createDup(
-      // BinaryOperator::getOpcodeStr has no case for CX_BO_Invalid,
-      // so subtract 1
-      BinaryOperator::getOpcodeStr(static_cast<BinaryOperatorKind>(Op - 1)));
-}
-
 CXSourceRange clang_Cursor_getCommentRange(CXCursor C) {
   if (!clang_isDeclaration(C.kind))
     return clang_getNullRange();
@@ -10111,7 +10083,10 @@ cxindex::Logger::~Logger() {
 }
 
 CXString clang_getBinaryOperatorKindSpelling(enum CXBinaryOperatorKind kind) {
-  return cxstring::createRef(
+  if (kind > CXBinaryOperator_Last)
+    return cxstring::createEmpty();
+
+  return cxstring::createDup(
       BinaryOperator::getOpcodeStr(static_cast<BinaryOperatorKind>(kind - 1)));
 }
 
