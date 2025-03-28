@@ -643,7 +643,7 @@ function(add_libc_hermetic test_name)
   cmake_parse_arguments(
     "HERMETIC_TEST"
     "IS_GPU_BENCHMARK" # Optional arguments
-    "SUITE" # Single value arguments
+    "SUITE;CXX_STANDARD" # Single value arguments
     "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;LOADER_ARGS" # Multi-value arguments
     ${ARGN}
   )
@@ -720,10 +720,14 @@ function(add_libc_hermetic test_name)
     ${HERMETIC_TEST_SRCS}
     ${HERMETIC_TEST_HDRS}
   )
+
+  if(NOT HERMETIC_TEST_CXX_STANDARD)
+    set(HERMETIC_TEST_CXX_STANDARD ${CMAKE_CXX_STANDARD})
+  endif()
   set_target_properties(${fq_build_target_name}
     PROPERTIES
       RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-      #OUTPUT_NAME ${fq_target_name}
+      CXX_STANDARD ${HERMETIC_TEST_CXX_STANDARD}
   )
 
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
