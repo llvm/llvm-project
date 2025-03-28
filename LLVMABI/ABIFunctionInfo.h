@@ -1,5 +1,5 @@
-#ifndef LLVM_CLANG_CODEGEN_CGFUNCTIONINFO_H
-#define LLVM_CLANG_CODEGEN_CGFUNCTIONINFO_H
+#ifndef ABIFUNCTIONINFO_H
+#define ABIFUNCTIONINFO_H
 
 #include "LLVMABI/Type.h"
 #include <vector>
@@ -77,6 +77,7 @@ public:
         
   Kind getKind() const { return TheKind; }
 
+  // TODO
   void dump() const;
 };
 
@@ -105,16 +106,16 @@ class ABIFunctionInfo {
     static ABIFunctionInfo *
       create(CallingConv cc, std::vector<ABIQualType> parameters, ABIQualType ReturnInfo);
 
-    const_arg_iterator arg_begin() const { return getArgsBuffer() + 1; }
-    const_arg_iterator arg_end() const { return getArgsBuffer() + 1 + NumArgs; }
-    arg_iterator arg_begin() { return getArgsBuffer() + 1; }
-    arg_iterator arg_end() { return getArgsBuffer() + 1 + NumArgs; }
+    ABIArgInfo &ABIFunctionInfo::getReturnInfo() { return RetInfo.info; }
+    ABIQualType &ABIFunctionInfo::getReturnType() { return RetInfo.type; }
+
+    using arg_iterator = std::vector<ArgInfo>::iterator;
+
+    arg_iterator ABIFunctionInfo::arg_begin() { return Parameters.begin(); }
+    arg_iterator ABIFunctionInfo::arg_end() { return Parameters.end(); }
 
     unsigned getCallingConvention() const { return CC; }
 
-    ABIBuiltinType getReturnType() const { return getArgsBuffer()[0].type; }
-
-    ABIArgInfo &getReturnInfo() { return getArgsBuffer()[0].info; }
 };
 
 }
