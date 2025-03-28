@@ -36,8 +36,6 @@ class OffloadPolicy {
       Kind = MANDATORY;
       return;
     default:
-      // User didn't specify a policy, decide
-      // based on number of devices discovered
       if (PM.getNumDevices()) {
         DP("Default TARGET OFFLOAD policy is now mandatory "
            "(devices were found)\n");
