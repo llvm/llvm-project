@@ -55,6 +55,7 @@ struct MachineIRBuilderState {
   MDNode *PCSections = nullptr;
   /// MMRA Metadata to be set on any instruction we create.
   MDNode *MMRA = nullptr;
+  Value *DS = nullptr;
 
   /// \name Fields describing the insertion point.
   /// @{
@@ -368,6 +369,7 @@ public:
     State.II = MI.getIterator();
     setPCSections(MI.getPCSections());
     setMMRAMetadata(MI.getMMRAMetadata());
+    setDeactivationSymbol(MI.getDeactivationSymbol());
   }
   /// @}
 
@@ -403,6 +405,9 @@ public:
 
   /// Set the PC sections metadata to \p MD for all the next build instructions.
   void setMMRAMetadata(MDNode *MMRA) { State.MMRA = MMRA; }
+
+  Value *getDeactivationSymbol() { return State.DS; }
+  void setDeactivationSymbol(Value *DS) { State.DS = DS; }
 
   /// Get the current instruction's MMRA metadata.
   MDNode *getMMRAMetadata() { return State.MMRA; }
