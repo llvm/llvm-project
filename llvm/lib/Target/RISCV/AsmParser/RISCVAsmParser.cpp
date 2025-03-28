@@ -640,20 +640,12 @@ public:
 
   bool isImmXLenLI() const {
     int64_t Imm;
-    RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
     if (!isImm())
       return false;
-    bool IsConstantImm = evaluateConstantImm(getImm(), Imm);
-    if (VK == RISCVMCExpr::VK_LO || VK == RISCVMCExpr::VK_PCREL_LO ||
-        VK == RISCVMCExpr::VK_TLSDESC_LOAD_LO ||
-        VK == RISCVMCExpr::VK_TLSDESC_ADD_LO)
-      return true;
     // Given only Imm, ensuring that the actually specified constant is either
     // a signed or unsigned 64-bit number is unfortunately impossible.
-    if (IsConstantImm) {
-      return VK == RISCVMCExpr::VK_None &&
-             (isRV64Imm() || (isInt<32>(Imm) || isUInt<32>(Imm)));
-    }
+    if (evaluateConstantImm(getImm(), Imm))
+      return isRV64Imm() || (isInt<32>(Imm) || isUInt<32>(Imm));
 
     return RISCVAsmParser::isSymbolDiff(getImm());
   }
@@ -855,9 +847,8 @@ public:
     else
       IsValid = isInt<12>(fixImmediateForRV32(Imm, isRV64Imm()));
     return IsValid &&
-           ((IsConstantImm && VK == RISCVMCExpr::VK_None) ||
-            VK == RISCVMCExpr::VK_LO || VK == RISCVMCExpr::VK_PCREL_LO ||
-            VK == RISCVMCExpr::VK_TPREL_LO ||
+           (IsConstantImm || VK == RISCVMCExpr::VK_LO ||
+            VK == RISCVMCExpr::VK_PCREL_LO || VK == RISCVMCExpr::VK_TPREL_LO ||
             VK == RISCVMCExpr::VK_TLSDESC_LOAD_LO ||
             VK == RISCVMCExpr::VK_TLSDESC_ADD_LO);
   }
@@ -886,40 +877,29 @@ public:
   bool isUImm20LUI() const {
     RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
     int64_t Imm;
-    bool IsValid;
     if (!isImm())
       return false;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm);
-    if (!IsConstantImm) {
-      IsValid = RISCVAsmParser::classifySymbolRef(getImm(), VK);
-      return IsValid &&
-             (VK == RISCVMCExpr::VK_HI || VK == RISCVMCExpr::VK_TPREL_HI);
-    } else {
-      return isUInt<20>(Imm) &&
-             (VK == RISCVMCExpr::VK_None || VK == RISCVMCExpr::VK_HI ||
-              VK == RISCVMCExpr::VK_TPREL_HI);
-    }
+    if (IsConstantImm)
+      return isUInt<20>(Imm);
+    bool IsValid = RISCVAsmParser::classifySymbolRef(getImm(), VK);
+    return IsValid &&
+           (VK == RISCVMCExpr::VK_HI || VK == RISCVMCExpr::VK_TPREL_HI);
   }
 
   bool isUImm20AUIPC() const {
     RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
     int64_t Imm;
-    bool IsValid;
     if (!isImm())
       return false;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm);
-    if (!IsConstantImm) {
-      IsValid = RISCVAsmParser::classifySymbolRef(getImm(), VK);
-      return IsValid &&
-             (VK == RISCVMCExpr::VK_PCREL_HI || VK == RISCVMCExpr::VK_GOT_HI ||
-              VK == RISCVMCExpr::VK_TLS_GOT_HI ||
-              VK == RISCVMCExpr::VK_TLS_GD_HI ||
-              VK == RISCVMCExpr::VK_TLSDESC_HI);
-    }
+    if (IsConstantImm)
+      return isUInt<20>(Imm);
 
-    return isUInt<20>(Imm) &&
-           (VK == RISCVMCExpr::VK_None || VK == RISCVMCExpr::VK_PCREL_HI ||
-            VK == RISCVMCExpr::VK_GOT_HI || VK == RISCVMCExpr::VK_TLS_GOT_HI ||
+    bool IsValid = RISCVAsmParser::classifySymbolRef(getImm(), VK);
+    return IsValid &&
+           (VK == RISCVMCExpr::VK_PCREL_HI || VK == RISCVMCExpr::VK_GOT_HI ||
+            VK == RISCVMCExpr::VK_TLS_GOT_HI ||
             VK == RISCVMCExpr::VK_TLS_GD_HI ||
             VK == RISCVMCExpr::VK_TLSDESC_HI);
   }

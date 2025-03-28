@@ -103,8 +103,7 @@ jal zero, .
 # CHECK-ASM-AND-OBJ: jalr a0, -2048(a1)
 # CHECK-ASM: encoding: [0x67,0x85,0x05,0x80]
 jalr a0, -2048(a1)
-# CHECK-ASM: jalr a0, %lo(2048)(a1)
-# CHECK-ASM: encoding: [0x67,0x85,0bAAAA0101,A]
+# CHECK-ASM: jalr a0, %lo(2048)(a1) # encoding: [0x67,0x85,0bAAAA0101,A]
 # CHECK-OBJ: jalr a0, -2048(a1)
 jalr a0, %lo(2048)(a1)
 # CHECK-ASM-AND-OBJ: jalr t2, 2047(t1)
@@ -162,8 +161,7 @@ lh t1, ~2047(zero)
 # CHECK-ASM-AND-OBJ: lh t1, 0(zero)
 # CHECK-ASM: encoding: [0x03,0x13,0x00,0x00]
 lh t1, !1(zero)
-# CHECK-ASM: lh t1, %lo(2048)(zero)
-# CHECK-ASM: encoding: [0x03,0x13,0bAAAA0000,A]
+# CHECK-ASM: lh t1, %lo(2048)(zero) # encoding: [0x03,0x13,0bAAAA0000,A]
 # CHECK-OBJ: lh t1, -2048(zero)
 lh t1, %lo(2048)(zero)
 # CHECK-ASM-AND-OBJ: lh sp, 2047(a0)
@@ -172,8 +170,7 @@ lh sp, 2047(a0)
 # CHECK-ASM-AND-OBJ: lw a0, 97(a2)
 # CHECK-ASM: encoding: [0x03,0x25,0x16,0x06]
 lw a0, 97(a2)
-# CHECK-ASM: lbu s5, %lo(foo)(s6)
-# CHECK-ASM: encoding: [0x83,0x4a,0bAAAA1011,A]
+# CHECK-ASM: lbu s5, %lo(foo)(s6) # encoding: [0x83,0x4a,0bAAAA1011,A]
 # CHECK-OBJ: lbu s5, 0(s6)
 # CHECK-OBJ: R_RISCV_LO12
 lbu s5, %lo(foo)(s6)
