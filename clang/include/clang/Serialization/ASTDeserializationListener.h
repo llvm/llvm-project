@@ -27,6 +27,8 @@ class MacroInfo;
 class Module;
 class SourceLocation;
 
+// IMPORTANT: when you add a new interface to this class, please update the
+// DelegatingDeserializationListener in FrontendAction.cpp
 class ASTDeserializationListener {
 public:
   virtual ~ASTDeserializationListener();
@@ -57,6 +59,8 @@ public:
   /// A module import was read from the AST file.
   virtual void ModuleImportRead(serialization::SubmoduleID ID,
                                 SourceLocation ImportLoc) {}
+  /// The deserialization of the AST file was finished.
+  virtual void FinishedDeserializing() {}
 };
 }
 

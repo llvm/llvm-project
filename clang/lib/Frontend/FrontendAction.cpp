@@ -76,6 +76,10 @@ public:
     if (Previous)
       Previous->IdentifierRead(ID, II);
   }
+  void MacroRead(serialization::MacroID ID, MacroInfo *MI) override {
+    if (Previous)
+      Previous->MacroRead(ID, MI);
+  }
   void TypeRead(serialization::TypeIdx Idx, QualType T) override {
     if (Previous)
       Previous->TypeRead(Idx, T);
@@ -93,6 +97,19 @@ public:
     if (Previous)
       Previous->MacroDefinitionRead(PPID, MD);
   }
+  void ModuleRead(serialization::SubmoduleID ID, Module *Mod) override {
+    if (Previous)
+      Previous->ModuleRead(ID, Mod);
+  }
+  void ModuleImportRead(serialization::SubmoduleID ID,
+                        SourceLocation ImportLoc) override {
+    if (Previous)
+      Previous->ModuleImportRead(ID, ImportLoc);
+  }
+  void FinishedDeserializing() override {
+    if (Previous)
+      Previous->FinishedDeserializing();
+  }
 };
 
 /// Dumps deserialized declarations.
@@ -103,15 +120,30 @@ public:
       : DelegatingDeserializationListener(Previous, DeletePrevious) {}
 
   void DeclRead(GlobalDeclID ID, const Decl *D) override {
-    llvm::outs() << "PCH DECL: " << D->getDeclKindName();
-    if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
-      llvm::outs() << " - ";
-      ND->printQualifiedName(llvm::outs());
-    }
-    llvm::outs() << "\n";
-
+    PendingDecls.push_back(D);
     DelegatingDeserializationListener::DeclRead(ID, D);
   }
+  void FinishedDeserializing() override {
+    auto Decls = std::move(PendingDecls);
+    for (const auto *D : Decls) {
+      llvm::outs() << "PCH DECL: " << D->getDeclKindName();
+      if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
+        llvm::outs() << " - ";
+        ND->printQualifiedName(llvm::outs());
+      }
+      llvm::outs() << "\n";
+    }
+
+    if (!PendingDecls.empty()) {
+      llvm::errs() << "Deserialized more decls while printing, total of "
+                   << PendingDecls.size() << "\n";
+      PendingDecls.clear();
+    }
+    DelegatingDeserializationListener::FinishedDeserializing();
+  }
+
+private:
+  std::vector<const Decl *> PendingDecls;
 };
 
 /// Checks deserialized declarations and emits error if a name
