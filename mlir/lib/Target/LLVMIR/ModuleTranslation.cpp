@@ -2157,6 +2157,18 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
           m->getDiscardableAttr(LLVM::LLVMDialect::getTargetTripleAttrName()))
     llvmModule->setTargetTriple(
         llvm::Triple(cast<StringAttr>(targetTripleAttr).getValue()));
+  if (auto dependentLibrariesAttr = m->getDiscardableAttr(
+          LLVM::LLVMDialect::getDependentLibrariesAttrName())) {
+    auto *NMD =
+        llvmModule->getOrInsertNamedMetadata("llvm.dependent-libraries");
+    for (auto lib : cast<ArrayAttr>(dependentLibrariesAttr)) {
+      auto *MD = llvm::MDNode::get(
+          llvmContext,
+          llvm::MDString::get(llvmContext,
+                              mlir::cast<StringAttr>(lib).getValue()));
+      NMD->addOperand(MD);
+    }
+  }
 
   return llvmModule;
 }
