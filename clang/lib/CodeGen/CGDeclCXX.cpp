@@ -818,6 +818,12 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
     Fn->addFnAttr("device-init");
   }
 
+  if (getTarget().isBranchProtectionSupportedArch(
+          getTarget().getTargetOpts().CPU)) {
+    TargetInfo::BranchProtectionInfo BPI(getLangOpts());
+    getTargetCodeGenInfo().setBranchProtectionFnAttributes(BPI, (*Fn));
+  }
+
   // We are done with the inits.
   AllImports.clear();
   PrioritizedCXXGlobalInits.clear();
