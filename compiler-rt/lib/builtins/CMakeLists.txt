@@ -570,6 +570,7 @@ set(aarch64_SOURCES
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
   cpu_model/aarch64.c
+  aarch64/emupac.c
   aarch64/fp_mode.c
 )
 

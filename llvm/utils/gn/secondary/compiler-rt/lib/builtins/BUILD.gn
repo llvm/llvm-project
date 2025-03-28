@@ -500,6 +500,7 @@ static_library("builtins") {
   if (current_cpu == "arm64") {
     sources -= [ "fp_mode.c" ]
     sources += [
+      "aarch64/emupac.c",
       "aarch64/fp_mode.c",
       "cpu_model/aarch64.c",
     ]
