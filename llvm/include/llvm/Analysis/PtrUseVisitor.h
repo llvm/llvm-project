@@ -134,6 +134,7 @@ protected:
 
     UseAndIsOffsetKnownPair UseAndIsOffsetKnown;
     APInt Offset;
+    Value *ProtectedField;
   };
 
   /// The worklist of to-visit uses.
@@ -157,6 +158,8 @@ protected:
 
   /// The constant offset of the use if that is known.
   APInt Offset;
+
+  Value *ProtectedField;
 
   /// @}
 
@@ -230,6 +233,7 @@ public:
     IntegerType *IntIdxTy = cast<IntegerType>(DL.getIndexType(I.getType()));
     IsOffsetKnown = true;
     Offset = APInt(IntIdxTy->getBitWidth(), 0);
+    ProtectedField = nullptr;
     PI.reset();
 
     // Enqueue the uses of this pointer.
@@ -242,6 +246,7 @@ public:
       IsOffsetKnown = ToVisit.UseAndIsOffsetKnown.getInt();
       if (IsOffsetKnown)
         Offset = std::move(ToVisit.Offset);
+      ProtectedField = ToVisit.ProtectedField;
 
       Instruction *I = cast<Instruction>(U->getUser());
       static_cast<DerivedT*>(this)->visit(I);
@@ -301,6 +306,16 @@ protected:
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:
       return; // No-op intrinsics.
+
+    case Intrinsic::protected_field_ptr: {
+      auto *OffsetConst = dyn_cast<ConstantInt>(II.getArgOperand(1));
+      if (!IsOffsetKnown || !OffsetConst)
+        return Base::visitIntrinsicInst(II);
+      Offset += OffsetConst->getValue().sextOrTrunc(Offset.getBitWidth());
+      ProtectedField = II.getArgOperand(2);
+      enqueueUsers(II);
+      break;
+    }
     }
   }
 

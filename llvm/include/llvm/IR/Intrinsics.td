@@ -2534,6 +2534,29 @@ def int_hwasan_check_memaccess_shortgranules_fixedshadow :
   Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty, llvm_i64_ty],
             [ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
+// Returns a pointer which may be used to store a pointer at the address
+// (first argument + second argument) with protection against use-after-free
+// vulnerabilities. Stores via the pointer will cause the stored pointer to be
+// blended with some combination of:
+// - the field identifier (third argument)
+// - the struct address (first argument), if the struct is not trivially
+//   copyable (fourth argument is true)
+// before being stored. When loading from the pointer, the inverse operation
+// is done on the loaded pointer after it is loaded. Specifically, when
+// targeting AArch64 with pointer authentication enabled and when the fourth
+// argument is true, the pointer is signed using the struct address before
+// being stored, and authenticated after being loaded. Otherwise it is rotated
+// left by 16 bits and a hash of the field identifier is subtracted before
+// being stored, and the hash is added and the pointer is rotated right by
+// 16 bits after being loaded. If the pointer is used otherwise than for
+// loading or storing (e.g. its address escapes), it will cause all blending
+// operations using the same field identifier to be disabled throughout the
+// program. This is done using special linker relocations.
+def int_protected_field_ptr :
+  DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_i64_ty,
+                                        llvm_metadata_ty, llvm_i1_ty],
+                        [IntrNoMem, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<3>>]>;
+
 // Xray intrinsics
 //===----------------------------------------------------------------------===//
 // Custom event logging for x-ray.

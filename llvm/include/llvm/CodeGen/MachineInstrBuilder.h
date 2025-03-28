@@ -68,6 +68,47 @@ enum {
 
 } // end namespace RegState
 
+/// Set of metadata that should be preserved when using BuildMI(). This provides
+/// a more convenient way of preserving certain data from the original
+/// instruction.
+class MIMetadata {
+public:
+  MIMetadata() = default;
+  MIMetadata(DebugLoc DL, MDNode *PCSections = nullptr, MDNode *MMRA = nullptr,
+             Value *DeactivationSymbol = nullptr)
+      : DL(std::move(DL)), PCSections(PCSections), MMRA(MMRA),
+        DeactivationSymbol(DeactivationSymbol) {}
+  MIMetadata(const DILocation *DI, MDNode *PCSections = nullptr,
+             MDNode *MMRA = nullptr)
+      : DL(DI), PCSections(PCSections), MMRA(MMRA) {}
+  explicit MIMetadata(const Instruction &From)
+      : DL(From.getDebugLoc()),
+        PCSections(From.getMetadata(LLVMContext::MD_pcsections)),
+        DeactivationSymbol(getDeactivationSymbol(&From)) {}
+  explicit MIMetadata(const MachineInstr &From)
+      : DL(From.getDebugLoc()), PCSections(From.getPCSections()),
+        DeactivationSymbol(From.getDeactivationSymbol()) {}
+
+  const DebugLoc &getDL() const { return DL; }
+  MDNode *getPCSections() const { return PCSections; }
+  MDNode *getMMRAMetadata() const { return MMRA; }
+  Value *getDeactivationSymbol() const { return DeactivationSymbol; }
+
+private:
+  DebugLoc DL;
+  MDNode *PCSections = nullptr;
+  MDNode *MMRA = nullptr;
+  Value *DeactivationSymbol = nullptr;
+
+  static inline Value *getDeactivationSymbol(const Instruction *I) {
+    if (auto *CB = dyn_cast<CallBase>(I))
+      if (auto Bundle =
+              CB->getOperandBundle(llvm::LLVMContext::OB_deactivation_symbol))
+        return Bundle->Inputs[0].get();
+    return nullptr;
+  }
+};
+
 class MachineInstrBuilder {
   MachineFunction *MF = nullptr;
   MachineInstr *MI = nullptr;
@@ -317,15 +358,13 @@ public:
     }
   }
 
-  const MachineInstrBuilder &setPCSections(MDNode *MD) const {
-    if (MD)
-      MI->setPCSections(*MF, MD);
-    return *this;
-  }
-
-  const MachineInstrBuilder &setMMRAMetadata(MDNode *MMRA) const {
-    if (MMRA)
-      MI->setMMRAMetadata(*MF, MMRA);
+  const MachineInstrBuilder &copyMIMetadata(const MIMetadata &MIMD) const {
+    if (MIMD.getPCSections())
+      MI->setPCSections(*MF, MIMD.getPCSections());
+    if (MIMD.getMMRAMetadata())
+      MI->setMMRAMetadata(*MF, MIMD.getMMRAMetadata());
+    if (MIMD.getDeactivationSymbol())
+      MI->setDeactivationSymbol(*MF, MIMD.getDeactivationSymbol());
     return *this;
   }
 
@@ -343,38 +382,11 @@ public:
   }
 };
 
-/// Set of metadata that should be preserved when using BuildMI(). This provides
-/// a more convenient way of preserving DebugLoc, PCSections and MMRA.
-class MIMetadata {
-public:
-  MIMetadata() = default;
-  MIMetadata(DebugLoc DL, MDNode *PCSections = nullptr, MDNode *MMRA = nullptr)
-      : DL(std::move(DL)), PCSections(PCSections), MMRA(MMRA) {}
-  MIMetadata(const DILocation *DI, MDNode *PCSections = nullptr,
-             MDNode *MMRA = nullptr)
-      : DL(DI), PCSections(PCSections), MMRA(MMRA) {}
-  explicit MIMetadata(const Instruction &From)
-      : DL(From.getDebugLoc()),
-        PCSections(From.getMetadata(LLVMContext::MD_pcsections)) {}
-  explicit MIMetadata(const MachineInstr &From)
-      : DL(From.getDebugLoc()), PCSections(From.getPCSections()) {}
-
-  const DebugLoc &getDL() const { return DL; }
-  MDNode *getPCSections() const { return PCSections; }
-  MDNode *getMMRAMetadata() const { return MMRA; }
-
-private:
-  DebugLoc DL;
-  MDNode *PCSections = nullptr;
-  MDNode *MMRA = nullptr;
-};
-
 /// Builder interface. Specify how to create the initial instruction itself.
 inline MachineInstrBuilder BuildMI(MachineFunction &MF, const MIMetadata &MIMD,
                                    const MCInstrDesc &MCID) {
   return MachineInstrBuilder(MF, MF.CreateMachineInstr(MCID, MIMD.getDL()))
-      .setPCSections(MIMD.getPCSections())
-      .setMMRAMetadata(MIMD.getMMRAMetadata());
+      .copyMIMetadata(MIMD);
 }
 
 /// This version of the builder sets up the first operand as a
@@ -382,8 +394,7 @@ inline MachineInstrBuilder BuildMI(MachineFunction &MF, const MIMetadata &MIMD,
 inline MachineInstrBuilder BuildMI(MachineFunction &MF, const MIMetadata &MIMD,
                                    const MCInstrDesc &MCID, Register DestReg) {
   return MachineInstrBuilder(MF, MF.CreateMachineInstr(MCID, MIMD.getDL()))
-      .setPCSections(MIMD.getPCSections())
-      .setMMRAMetadata(MIMD.getMMRAMetadata())
+      .copyMIMetadata(MIMD)
       .addReg(DestReg, RegState::Define);
 }
 
@@ -398,8 +409,7 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
   MachineInstr *MI = MF.CreateMachineInstr(MCID, MIMD.getDL());
   BB.insert(I, MI);
   return MachineInstrBuilder(MF, MI)
-      .setPCSections(MIMD.getPCSections())
-      .setMMRAMetadata(MIMD.getMMRAMetadata())
+      .copyMIMetadata(MIMD)
       .addReg(DestReg, RegState::Define);
 }
 
@@ -417,8 +427,7 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
   MachineInstr *MI = MF.CreateMachineInstr(MCID, MIMD.getDL());
   BB.insert(I, MI);
   return MachineInstrBuilder(MF, MI)
-      .setPCSections(MIMD.getPCSections())
-      .setMMRAMetadata(MIMD.getMMRAMetadata())
+      .copyMIMetadata(MIMD)
       .addReg(DestReg, RegState::Define);
 }
 
@@ -450,8 +459,7 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
   MachineInstr *MI = MF.CreateMachineInstr(MCID, MIMD.getDL());
   BB.insert(I, MI);
   return MachineInstrBuilder(MF, MI)
-      .setPCSections(MIMD.getPCSections())
-      .setMMRAMetadata(MIMD.getMMRAMetadata());
+      .copyMIMetadata(MIMD);
 }
 
 inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
@@ -462,8 +470,7 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
   MachineInstr *MI = MF.CreateMachineInstr(MCID, MIMD.getDL());
   BB.insert(I, MI);
   return MachineInstrBuilder(MF, MI)
-      .setPCSections(MIMD.getPCSections())
-      .setMMRAMetadata(MIMD.getMMRAMetadata());
+      .copyMIMetadata(MIMD);
 }
 
 inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB, MachineInstr &I,

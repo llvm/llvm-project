@@ -304,7 +304,7 @@ using __shared_ptr_nullptr_deleter_ctor_reqs _LIBCPP_NODEBUG =
 #endif
 
 template <class _Tp>
-class _LIBCPP_SHARED_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS shared_ptr {
+class _LIBCPP_SHARED_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS shared_ptr _LIBCPP_MAYBE_FORCE_NONSTANDARD_LAYOUT {
   struct __nullptr_sfinae_tag {};
 
 public:
@@ -1202,7 +1202,7 @@ inline _LIBCPP_HIDE_FROM_ABI _Dp* get_deleter(const shared_ptr<_Tp>& __p) _NOEXC
 #endif // _LIBCPP_HAS_RTTI
 
 template <class _Tp>
-class _LIBCPP_SHARED_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS weak_ptr {
+class _LIBCPP_SHARED_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS weak_ptr _LIBCPP_MAYBE_FORCE_NONSTANDARD_LAYOUT {
 public:
 #if _LIBCPP_STD_VER >= 17
   typedef remove_extent_t<_Tp> element_type;

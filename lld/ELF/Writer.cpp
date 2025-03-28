@@ -2277,6 +2277,19 @@ static uint64_t computeFlags(Ctx &ctx, uint64_t flags) {
     return PF_R | PF_W | PF_X;
   if (ctx.arg.executeOnly && (flags & PF_X))
     return flags & ~PF_R;
+
+  // The -z glibc-228-compat flag is used for binaries utilizing IFUNCs which
+  // need to be compatible with glibc versions containing a bug that was fixed
+  // in commit b5c45e83753b27dc538dff2d55d4410c385cf3a4 which was released in
+  // version 2.29. The bug causes glibc to mprotect the .text section as RW
+  // while calling ifunc resolvers in binaries linked with -z notext, leading to
+  // a SIGSEGV at startup time. By setting the W flag on the executable section
+  // we work around the bug by avoiding the code path that does the mprotect. It
+  // is recommended that binaries linked with this flag contain startup code
+  // (e.g. in .init_array) that remaps the executable section as non-writable.
+  if (ctx.arg.zGlibc228Compat && !ctx.arg.zText && (flags & PF_X))
+    return flags | PF_W;
+
   return flags;
 }
 

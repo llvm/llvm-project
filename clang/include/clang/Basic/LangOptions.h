@@ -365,6 +365,17 @@ public:
     BKey
   };
 
+  enum class PointerFieldProtectionKind {
+    /// Pointer field protection disabled
+    None,
+    /// Pointer field protection enabled, allocator does not tag heap
+    /// allocations.
+    Untagged,
+    /// Pointer field protection enabled, allocator is expected to tag heap
+    /// allocations.
+    Tagged,
+  };
+
   enum class ThreadModelKind {
     /// POSIX Threads.
     POSIX,

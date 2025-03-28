@@ -1611,7 +1611,13 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
           if (!Disc)
             return error("ptrauth disc operand must be ConstantInt");
 
-          C = ConstantPtrAuth::get(ConstOps[0], Key, Disc, ConstOps[3]);
+          auto *DeactivationSymbol =
+              ConstOps.size() > 4 ? ConstOps[4]
+                                  : ConstantPointerNull::get(cast<PointerType>(
+                                        ConstOps[3]->getType()));
+
+          C = ConstantPtrAuth::get(ConstOps[0], Key, Disc, ConstOps[3],
+                                   DeactivationSymbol);
           break;
         }
         case BitcodeConstant::NoCFIOpcode: {
@@ -3809,6 +3815,16 @@ Error BitcodeReader::parseConstants() {
                                   BitcodeConstant::ConstantPtrAuthOpcode,
                                   {(unsigned)Record[0], (unsigned)Record[1],
                                    (unsigned)Record[2], (unsigned)Record[3]});
+      break;
+    }
+    case bitc::CST_CODE_PTRAUTH2: {
+      if (Record.size() < 4)
+        return error("Invalid ptrauth record");
+      // Ptr, Key, Disc, AddrDisc, DeactivationSymbol
+      V = BitcodeConstant::create(
+          Alloc, CurTy, BitcodeConstant::ConstantPtrAuthOpcode,
+          {(unsigned)Record[0], (unsigned)Record[1], (unsigned)Record[2],
+           (unsigned)Record[3], (unsigned)Record[4]});
       break;
     }
     }
