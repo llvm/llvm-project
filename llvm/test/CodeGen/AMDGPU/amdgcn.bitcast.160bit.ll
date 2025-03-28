@@ -5,8 +5,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -amdgpu-codegenprepare-break-large-phis-threshold=4096 < %s | FileCheck -check-prefixes=GFX9 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-codegenprepare-break-large-phis-threshold=4096 < %s | FileCheck -check-prefixes=GFX11 %s
 
-define <5 x float> @v_bitcast_v5i32_to_v5f32(<5 x i32> %a, i32 %b) {
-; GCN-LABEL: v_bitcast_v5i32_to_v5f32:
+define <5 x float> @bitcast_v5i32_to_v5f32(<5 x i32> %a, i32 %b) {
+; GCN-LABEL: bitcast_v5i32_to_v5f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v5
@@ -24,7 +24,7 @@ define <5 x float> @v_bitcast_v5i32_to_v5f32(<5 x i32> %a, i32 %b) {
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-LABEL: v_bitcast_v5i32_to_v5f32:
+; VI-LABEL: bitcast_v5i32_to_v5f32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v5
@@ -41,7 +41,7 @@ define <5 x float> @v_bitcast_v5i32_to_v5f32(<5 x i32> %a, i32 %b) {
 ; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_bitcast_v5i32_to_v5f32:
+; GFX9-LABEL: bitcast_v5i32_to_v5f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v5
@@ -58,7 +58,7 @@ define <5 x float> @v_bitcast_v5i32_to_v5f32(<5 x i32> %a, i32 %b) {
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: v_bitcast_v5i32_to_v5f32:
+; GFX11-LABEL: bitcast_v5i32_to_v5f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
@@ -92,8 +92,8 @@ end:
   ret <5 x float> %phi
 }
 
-define <5 x i32> @v_bitcast_v5f32_to_v5i32(<5 x float> %a, i32 %b) {
-; GCN-LABEL: v_bitcast_v5f32_to_v5i32:
+define <5 x i32> @bitcast_v5f32_to_v5i32(<5 x float> %a, i32 %b) {
+; GCN-LABEL: bitcast_v5f32_to_v5i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v5
@@ -111,7 +111,7 @@ define <5 x i32> @v_bitcast_v5f32_to_v5i32(<5 x float> %a, i32 %b) {
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-LABEL: v_bitcast_v5f32_to_v5i32:
+; VI-LABEL: bitcast_v5f32_to_v5i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v5
@@ -128,7 +128,7 @@ define <5 x i32> @v_bitcast_v5f32_to_v5i32(<5 x float> %a, i32 %b) {
 ; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: v_bitcast_v5f32_to_v5i32:
+; GFX9-LABEL: bitcast_v5f32_to_v5i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v5
@@ -145,7 +145,7 @@ define <5 x i32> @v_bitcast_v5f32_to_v5i32(<5 x float> %a, i32 %b) {
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: v_bitcast_v5f32_to_v5i32:
+; GFX11-LABEL: bitcast_v5f32_to_v5i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
