@@ -29,33 +29,79 @@ struct is_unsigned : bool_constant<(is_arithmetic_v<T> && (T(-1) > T(0)))> {
 // Specializations for unsigned fixed-point types
 template <typename T, bool IsUnsigned>
 struct fixed_point_is_unsigned : bool_constant<IsUnsigned> {
-  LIBC_INLINE constexpr operator bool() const { return fixed_point_is_unsigned::value; }
-  LIBC_INLINE constexpr bool operator()() const { return fixed_point_is_unsigned::value; }
+  LIBC_INLINE constexpr operator bool() const {
+    return fixed_point_is_unsigned::value;
+  }
+  LIBC_INLINE constexpr bool operator()() const {
+    return fixed_point_is_unsigned::value;
+  }
 };
-template <> struct is_unsigned<fract> : fixed_point_is_unsigned<fract, false> {};
-template <> struct is_unsigned<unsigned short fract> : fixed_point_is_unsigned<unsigned short fract, true> {};
-template <> struct is_unsigned<unsigned fract> : fixed_point_is_unsigned<unsigned fract, true> {};
-template <> struct is_unsigned<unsigned long fract> : fixed_point_is_unsigned<unsigned long fract, true> {};
-template <> struct is_unsigned<short fract> : fixed_point_is_unsigned<short fract, false> {};
-template <> struct is_unsigned<long fract> : fixed_point_is_unsigned<long fract, false> {};
-template <> struct is_unsigned<accum> : fixed_point_is_unsigned<accum, false> {};
-template <> struct is_unsigned<unsigned short accum> : fixed_point_is_unsigned<unsigned short accum, true> {};
-template <> struct is_unsigned<unsigned accum> : fixed_point_is_unsigned<unsigned accum, true> {};
-template <> struct is_unsigned<unsigned long accum> : fixed_point_is_unsigned<unsigned long accum, true> {};
-template <> struct is_unsigned<short accum> : fixed_point_is_unsigned<short accum, false> {};
-template <> struct is_unsigned<long accum> : fixed_point_is_unsigned<long accum, false> {};
-template <> struct is_unsigned<sat fract> : fixed_point_is_unsigned<sat fract, false> {};
-template <> struct is_unsigned<unsigned short sat fract> : fixed_point_is_unsigned<unsigned short sat fract, true> {};
-template <> struct is_unsigned<unsigned sat fract> : fixed_point_is_unsigned<unsigned sat fract, true> {};
-template <> struct is_unsigned<unsigned long sat fract> : fixed_point_is_unsigned<unsigned long sat fract, true> {};
-template <> struct is_unsigned<short sat fract> : fixed_point_is_unsigned<short sat fract, false> {};
-template <> struct is_unsigned<long sat fract> : fixed_point_is_unsigned<long sat fract, false> {};
-template <> struct is_unsigned<sat accum> : fixed_point_is_unsigned<sat accum, false> {};
-template <> struct is_unsigned<unsigned short sat accum> : fixed_point_is_unsigned<unsigned short sat accum, true> {};
-template <> struct is_unsigned<unsigned sat accum> : fixed_point_is_unsigned<unsigned sat accum, true> {};
-template <> struct is_unsigned<unsigned long sat accum> : fixed_point_is_unsigned<unsigned long sat accum, true> {};
-template <> struct is_unsigned<short sat accum> : fixed_point_is_unsigned<short sat accum, false> {};
-template <> struct is_unsigned<long sat accum> : fixed_point_is_unsigned<long sat accum, false> {};
+template <>
+struct is_unsigned<fract> : fixed_point_is_unsigned<fract, false> {};
+template <>
+struct is_unsigned<unsigned short fract>
+    : fixed_point_is_unsigned<unsigned short fract, true> {};
+template <>
+struct is_unsigned<unsigned fract>
+    : fixed_point_is_unsigned<unsigned fract, true> {};
+template <>
+struct is_unsigned<unsigned long fract>
+    : fixed_point_is_unsigned<unsigned long fract, true> {};
+template <>
+struct is_unsigned<short fract> : fixed_point_is_unsigned<short fract, false> {
+};
+template <>
+struct is_unsigned<long fract> : fixed_point_is_unsigned<long fract, false> {};
+template <>
+struct is_unsigned<accum> : fixed_point_is_unsigned<accum, false> {};
+template <>
+struct is_unsigned<unsigned short accum>
+    : fixed_point_is_unsigned<unsigned short accum, true> {};
+template <>
+struct is_unsigned<unsigned accum>
+    : fixed_point_is_unsigned<unsigned accum, true> {};
+template <>
+struct is_unsigned<unsigned long accum>
+    : fixed_point_is_unsigned<unsigned long accum, true> {};
+template <>
+struct is_unsigned<short accum> : fixed_point_is_unsigned<short accum, false> {
+};
+template <>
+struct is_unsigned<long accum> : fixed_point_is_unsigned<long accum, false> {};
+template <>
+struct is_unsigned<sat fract> : fixed_point_is_unsigned<sat fract, false> {};
+template <>
+struct is_unsigned<unsigned short sat fract>
+    : fixed_point_is_unsigned<unsigned short sat fract, true> {};
+template <>
+struct is_unsigned<unsigned sat fract>
+    : fixed_point_is_unsigned<unsigned sat fract, true> {};
+template <>
+struct is_unsigned<unsigned long sat fract>
+    : fixed_point_is_unsigned<unsigned long sat fract, true> {};
+template <>
+struct is_unsigned<short sat fract>
+    : fixed_point_is_unsigned<short sat fract, false> {};
+template <>
+struct is_unsigned<long sat fract>
+    : fixed_point_is_unsigned<long sat fract, false> {};
+template <>
+struct is_unsigned<sat accum> : fixed_point_is_unsigned<sat accum, false> {};
+template <>
+struct is_unsigned<unsigned short sat accum>
+    : fixed_point_is_unsigned<unsigned short sat accum, true> {};
+template <>
+struct is_unsigned<unsigned sat accum>
+    : fixed_point_is_unsigned<unsigned sat accum, true> {};
+template <>
+struct is_unsigned<unsigned long sat accum>
+    : fixed_point_is_unsigned<unsigned long sat accum, true> {};
+template <>
+struct is_unsigned<short sat accum>
+    : fixed_point_is_unsigned<short sat accum, false> {};
+template <>
+struct is_unsigned<long sat accum>
+    : fixed_point_is_unsigned<long sat accum, false> {};
 #endif // LIBC_COMPILER_HAS_FIXED_POINT
 
 template <typename T>
