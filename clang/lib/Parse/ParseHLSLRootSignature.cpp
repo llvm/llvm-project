@@ -96,7 +96,7 @@ bool RootSignatureParser::ParseDescriptorTableClause() {
   DescriptorTableClause Clause;
   switch (CurToken.Kind) {
   default:
-    break; // Unreachable given Try + assert pattern
+    llvm_unreachable("Switch for consumed token was not provided");
   case TokenKind::kw_CBV:
     Clause.Type = ClauseType::CBuffer;
     break;
