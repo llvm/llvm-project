@@ -377,16 +377,16 @@ TEST(SmartPointerAccessorCachingTest, Renamed) {
   EXPECT_TRUE(matches(Decls,
                       "int target(std::unique_ptr<S> P) { return P.Get()->i; }",
                       isSmartPointerLikeGetMethodCall("Get")));
-  EXPECT_TRUE(
-      matches(Decls, "int target(UniquePtrAlias<S> P) { return P.Get()->i; }",
-              isSmartPointerLikeGetMethodCall("Get")));
+  EXPECT_TRUE(matches(Decls,
+                      "int target(UniquePtrAlias<S> P) { return P.Get()->i; }",
+                      isSmartPointerLikeGetMethodCall("Get")));
 
   EXPECT_TRUE(
       matches(Decls, "int target(std::unique_ptr<S> P) { return P.Value().i; }",
               isSmartPointerLikeValueMethodCall("Value")));
-  EXPECT_TRUE(
-      matches(Decls, "int target(UniquePtrAlias<S> P) { return P.Value().i; }",
-              isSmartPointerLikeValueMethodCall("Value")));
+  EXPECT_TRUE(matches(Decls,
+                      "int target(UniquePtrAlias<S> P) { return P.Value().i; }",
+                      isSmartPointerLikeValueMethodCall("Value")));
 
   EXPECT_TRUE(matches(Decls, "int target(UniquePtrAlias<S> P) { return P->i; }",
                       isPointerLikeOperatorArrow()));
