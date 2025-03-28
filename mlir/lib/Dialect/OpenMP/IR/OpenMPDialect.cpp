@@ -1961,7 +1961,7 @@ LogicalResult TargetOp::verifyRegions() {
 }
 
 static Operation *
-findCapturedOmpOp(Operation *rootOp,
+findCapturedOmpOp(Operation *rootOp, bool checkSingleMandatoryExec,
                   llvm::function_ref<bool(Operation *)> siblingAllowedFn) {
   assert(rootOp && "expected valid operation");
 
@@ -1989,17 +1989,19 @@ findCapturedOmpOp(Operation *rootOp,
     // (i.e. its block's successors can reach it) or if it's not guaranteed to
     // be executed before all exits of the region (i.e. it doesn't dominate all
     // blocks with no successors reachable from the entry block).
-    Region *parentRegion = op->getParentRegion();
-    Block *parentBlock = op->getBlock();
+    if (checkSingleMandatoryExec) {
+      Region *parentRegion = op->getParentRegion();
+      Block *parentBlock = op->getBlock();
 
-    for (Block *successor : parentBlock->getSuccessors())
-      if (successor->isReachable(parentBlock))
-        return WalkResult::interrupt();
+      for (Block *successor : parentBlock->getSuccessors())
+        if (successor->isReachable(parentBlock))
+          return WalkResult::interrupt();
 
-    for (Block &block : *parentRegion)
-      if (domInfo.isReachableFromEntry(&block) && block.hasNoSuccessors() &&
-          !domInfo.dominates(parentBlock, &block))
-        return WalkResult::interrupt();
+      for (Block &block : *parentRegion)
+        if (domInfo.isReachableFromEntry(&block) && block.hasNoSuccessors() &&
+            !domInfo.dominates(parentBlock, &block))
+          return WalkResult::interrupt();
+    }
 
     // Don't capture this op if it has a not-allowed sibling, and stop recursing
     // into nested operations.
@@ -2022,25 +2024,27 @@ Operation *TargetOp::getInnermostCapturedOmpOp() {
 
   // Only allow OpenMP terminators and non-OpenMP ops that have known memory
   // effects, but don't include a memory write effect.
-  return findCapturedOmpOp(*this, [&](Operation *sibling) {
-    if (!sibling)
-      return false;
+  return findCapturedOmpOp(
+      *this, /*checkSingleMandatoryExec=*/true, [&](Operation *sibling) {
+        if (!sibling)
+          return false;
 
-    if (ompDialect == sibling->getDialect())
-      return sibling->hasTrait<OpTrait::IsTerminator>();
+        if (ompDialect == sibling->getDialect())
+          return sibling->hasTrait<OpTrait::IsTerminator>();
 
-    if (auto memOp = dyn_cast<MemoryEffectOpInterface>(sibling)) {
-      SmallVector<SideEffects::EffectInstance<MemoryEffects::Effect>, 4>
-          effects;
-      memOp.getEffects(effects);
-      return !llvm::any_of(effects, [&](MemoryEffects::EffectInstance &effect) {
-        return isa<MemoryEffects::Write>(effect.getEffect()) &&
-               isa<SideEffects::AutomaticAllocationScopeResource>(
-                   effect.getResource());
+        if (auto memOp = dyn_cast<MemoryEffectOpInterface>(sibling)) {
+          SmallVector<SideEffects::EffectInstance<MemoryEffects::Effect>, 4>
+              effects;
+          memOp.getEffects(effects);
+          return !llvm::any_of(
+              effects, [&](MemoryEffects::EffectInstance &effect) {
+                return isa<MemoryEffects::Write>(effect.getEffect()) &&
+                       isa<SideEffects::AutomaticAllocationScopeResource>(
+                           effect.getResource());
+              });
+        }
+        return true;
       });
-    }
-    return true;
-  });
 }
 
 TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
@@ -2118,8 +2122,9 @@ TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
     // `kmpc_distribute_static_loop` family of functions produced by the
     // OMPIRBuilder for these kernels prevents that from working.
     Dialect *ompDialect = targetOp->getDialect();
-    Operation *nestedCapture =
-        findCapturedOmpOp(capturedOp, [&](Operation *sibling) {
+    Operation *nestedCapture = findCapturedOmpOp(
+        capturedOp, /*checkSingleMandatoryExec=*/false,
+        [&](Operation *sibling) {
           return sibling && (ompDialect != sibling->getDialect() ||
                              sibling->hasTrait<OpTrait::IsTerminator>());
         });
