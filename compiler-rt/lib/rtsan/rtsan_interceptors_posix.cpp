@@ -1359,6 +1359,12 @@ INTERCEPTOR(int, timerfd_gettime, int fd, struct itimerspec *val) {
   __rtsan_notify_intercepted_call("timerfd_gettime");
   return REAL(timerfd_gettime)(fd, val);
 }
+
+/* eventfd wrappers calls SYS_eventfd2 down the line */
+INTERCEPTOR(int, eventfd, unsigned int count, int flags) {
+  __rtsan_notify_intercepted_call("eventfd");
+  return REAL(eventfd)(count, flags);
+}
 #define RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT INTERCEPT_FUNCTION(inotify_init)
 #define RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT1 INTERCEPT_FUNCTION(inotify_init1)
 #define RTSAN_MAYBE_INTERCEPT_INOTIFY_ADD_WATCH                                \
@@ -1370,6 +1376,7 @@ INTERCEPTOR(int, timerfd_gettime, int fd, struct itimerspec *val) {
   INTERCEPT_FUNCTION(timerfd_settime)
 #define RTSAN_MAYBE_INTERCEPT_TIMERFD_GETTIME                                  \
   INTERCEPT_FUNCTION(timerfd_gettime)
+#define RTSAN_MAYBE_INTERCEPT_EVENTFD INTERCEPT_FUNCTION(eventfd)
 #else
 #define RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT
 #define RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT1
@@ -1378,6 +1385,7 @@ INTERCEPTOR(int, timerfd_gettime, int fd, struct itimerspec *val) {
 #define RTSAN_MAYBE_INTERCEPT_TIMERFD_CREATE
 #define RTSAN_MAYBE_INTERCEPT_TIMERFD_SETTIME
 #define RTSAN_MAYBE_INTERCEPT_TIMERFD_GETTIME
+#define RTSAN_MAYBE_INTERCEPT_EVENTFD
 #endif
 
 INTERCEPTOR(int, pipe, int pipefd[2]) {
@@ -1644,6 +1652,7 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_TIMERFD_CREATE;
   RTSAN_MAYBE_INTERCEPT_TIMERFD_SETTIME;
   RTSAN_MAYBE_INTERCEPT_TIMERFD_GETTIME;
+  RTSAN_MAYBE_INTERCEPT_EVENTFD;
 
   INTERCEPT_FUNCTION(pipe);
   INTERCEPT_FUNCTION(mkfifo);
