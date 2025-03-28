@@ -260,7 +260,7 @@ define <2 x half> @test_fneg(<2 x half> %a) #0 {
 ; CHECK-NOF16-NEXT:    ld.param.b32 %r1, [test_fneg_param_0];
 ; CHECK-NOF16-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; CHECK-NOF16-NEXT:    cvt.f32.f16 %f1, %rs2;
-; CHECK-NOF16-NEXT:    mov.f32 %f2, 0f00000000;
+; CHECK-NOF16-NEXT:    mov.b32 %f2, 0f00000000;
 ; CHECK-NOF16-NEXT:    sub.rn.f32 %f3, %f2, %f1;
 ; CHECK-NOF16-NEXT:    cvt.rn.f16.f32 %rs3, %f3;
 ; CHECK-NOF16-NEXT:    cvt.f32.f16 %f4, %rs1;

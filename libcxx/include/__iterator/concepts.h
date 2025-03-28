@@ -80,12 +80,13 @@ concept __specialization_of_projected = requires {
 
 template <class _Tp>
 struct __indirect_value_t_impl {
-  using type = iter_value_t<_Tp>&;
+  using type _LIBCPP_NODEBUG = iter_value_t<_Tp>&;
 };
 template <__specialization_of_projected _Tp>
 struct __indirect_value_t_impl<_Tp> {
-  using type = invoke_result_t<__projected_projection_t<_Tp>&,
-                               typename __indirect_value_t_impl<__projected_iterator_t<_Tp>>::type>;
+  using type _LIBCPP_NODEBUG =
+      invoke_result_t<__projected_projection_t<_Tp>&,
+                      typename __indirect_value_t_impl<__projected_iterator_t<_Tp>>::type>;
 };
 
 template <indirectly_readable _Tp>

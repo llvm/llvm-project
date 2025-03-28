@@ -35,7 +35,7 @@
 
 static llvm::cl::opt<unsigned> DefaultAMDHSACodeObjectVersion(
     "amdhsa-code-object-version", llvm::cl::Hidden,
-    llvm::cl::init(llvm::AMDGPU::AMDHSA_COV5),
+    llvm::cl::init(llvm::AMDGPU::AMDHSA_COV6),
     llvm::cl::desc("Set default AMDHSA Code Object Version (module flag "
                    "or asm directive still take priority if present)"));
 
@@ -1679,16 +1679,25 @@ getIntegerPairAttribute(const Function &F, StringRef Name,
 SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
                                              unsigned Size,
                                              unsigned DefaultVal) {
+  std::optional<SmallVector<unsigned>> R =
+      getIntegerVecAttribute(F, Name, Size);
+  return R.has_value() ? *R : SmallVector<unsigned>(Size, DefaultVal);
+}
+
+std::optional<SmallVector<unsigned>>
+getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size) {
   assert(Size > 2);
-  SmallVector<unsigned> Default(Size, DefaultVal);
+  LLVMContext &Ctx = F.getContext();
 
   Attribute A = F.getFnAttribute(Name);
-  if (!A.isStringAttribute())
-    return Default;
+  if (!A.isValid())
+    return std::nullopt;
+  if (!A.isStringAttribute()) {
+    Ctx.emitError(Name + " is not a string attribute");
+    return std::nullopt;
+  }
 
-  SmallVector<unsigned> Vals(Size, DefaultVal);
-
-  LLVMContext &Ctx = F.getContext();
+  SmallVector<unsigned> Vals(Size);
 
   StringRef S = A.getValueAsString();
   unsigned i = 0;
@@ -1698,7 +1707,7 @@ SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
     if (Strs.first.trim().getAsInteger(0, IntVal)) {
       Ctx.emitError("can't parse integer attribute " + Strs.first + " in " +
                     Name);
-      return Default;
+      return std::nullopt;
     }
     Vals[i] = IntVal;
     S = Strs.second;
@@ -1708,7 +1717,7 @@ SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
     Ctx.emitError("attribute " + Name +
                   " has incorrect number of integers; expected " +
                   llvm::utostr(Size));
-    return Default;
+    return std::nullopt;
   }
   return Vals;
 }
@@ -3757,6 +3766,20 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST) {
 
 unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
   return ST.hasFeature(AMDGPU::FeatureAddressableLocalMemorySize327680) ? 256 : 128;
+}
+
+bool isPackedFP32Inst(unsigned Opc) {
+  switch (Opc) {
+    case AMDGPU::V_PK_ADD_F32:
+    case AMDGPU::V_PK_ADD_F32_gfx12:
+    case AMDGPU::V_PK_MUL_F32:
+    case AMDGPU::V_PK_MUL_F32_gfx12:
+    case AMDGPU::V_PK_FMA_F32:
+    case AMDGPU::V_PK_FMA_F32_gfx12:
+      return true;
+    default:
+    return false;
+  }
 }
 
 } // namespace AMDGPU

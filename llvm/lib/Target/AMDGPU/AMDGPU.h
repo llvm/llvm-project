@@ -249,7 +249,7 @@ extern char &SILowerControlFlowLegacyID;
 void initializeSIPreEmitPeepholePass(PassRegistry &);
 extern char &SIPreEmitPeepholeID;
 
-void initializeSILateBranchLoweringPass(PassRegistry &);
+void initializeSILateBranchLoweringLegacyPass(PassRegistry &);
 extern char &SILateBranchLoweringPassID;
 
 void initializeSIOptimizeExecMaskingLegacyPass(PassRegistry &);
@@ -423,6 +423,27 @@ public:
                         MachineFunctionAnalysisManager &AM);
 };
 
+class SIInsertWaitcntsPass : public PassInfoMixin<SIInsertWaitcntsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
+
+class SIInsertHardClausesPass : public PassInfoMixin<SIInsertHardClausesPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class SILateBranchLoweringPass
+    : public PassInfoMixin<SILateBranchLoweringPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
+
 FunctionPass *createAMDGPUAnnotateUniformValuesLegacy();
 
 ModulePass *createAMDGPUPrintfRuntimeBinding();
@@ -502,10 +523,10 @@ extern char &AMDGPUInsertSingleUseVDSTID;
 void initializeAMDGPULowerVGPREncodingPass(PassRegistry &);
 extern char &AMDGPULowerVGPREncodingID;
 
-void initializeSIInsertHardClausesPass(PassRegistry &);
+void initializeSIInsertHardClausesLegacyPass(PassRegistry &);
 extern char &SIInsertHardClausesID;
 
-void initializeSIInsertWaitcntsPass(PassRegistry&);
+void initializeSIInsertWaitcntsLegacyPass(PassRegistry &);
 extern char &SIInsertWaitcntsID;
 
 void initializeSIFormMemoryClausesLegacyPass(PassRegistry &);

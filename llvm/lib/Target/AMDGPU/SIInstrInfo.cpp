@@ -18,6 +18,7 @@
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -4377,7 +4378,9 @@ bool SIInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
 }
 
 bool SIInstrInfo::isAlwaysGDS(uint16_t Opcode) const {
-  return Opcode == AMDGPU::DS_ORDERED_COUNT || isGWS(Opcode);
+  return Opcode == AMDGPU::DS_ORDERED_COUNT ||
+         Opcode == AMDGPU::DS_ADD_GS_REG_RTN ||
+         Opcode == AMDGPU::DS_SUB_GS_REG_RTN || isGWS(Opcode);
 }
 
 bool SIInstrInfo::modifiesModeRegister(const MachineInstr &MI) {
@@ -5664,6 +5667,15 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
+  // See SIInstrInfo::isLegalGFX12PlusPackedMathFP32Operand for more
+  // information.
+  if (AMDGPU::isPackedFP32Inst(Opcode) && AMDGPU::isGFX12Plus(ST)) {
+    for (unsigned I = 0; I < 3; ++I) {
+      if (!isLegalGFX12PlusPackedMathFP32Operand(MRI, MI, I))
+        return false;
+    }
+  }
+
   return true;
 }
 
@@ -6145,6 +6157,21 @@ bool SIInstrInfo::isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
   const MCOperandInfo OpInfo = MI.getDesc().operands()[OpIdx];
   unsigned Opc = MI.getOpcode();
 
+  // See SIInstrInfo::isLegalGFX12PlusPackedMathFP32Operand for more
+  // information.
+  if (AMDGPU::isPackedFP32Inst(MI.getOpcode()) && AMDGPU::isGFX12Plus(ST) &&
+      MO.isReg() && RI.isSGPRReg(MRI, MO.getReg())) {
+    constexpr const AMDGPU::OpName OpNames[] = {
+        AMDGPU::OpName::src0, AMDGPU::OpName::src1, AMDGPU::OpName::src2};
+
+    for (auto [I, OpName] : enumerate(OpNames)) {
+      int SrcIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), OpNames[I]);
+      if (static_cast<unsigned>(SrcIdx) == OpIdx &&
+          !isLegalGFX12PlusPackedMathFP32Operand(MRI, MI, I, &MO))
+        return false;
+    }
+  }
+
   if (!isLegalRegOperand(MRI, OpInfo, MO))
     return false;
 
@@ -6191,6 +6218,39 @@ bool SIInstrInfo::isLegalVSrcOperand(const MachineRegisterInfo &MRI,
   // Handle non-register types that are treated like immediates.
   assert(MO.isImm() || MO.isTargetIndex() || MO.isFI() || MO.isGlobal());
   return true;
+}
+
+bool SIInstrInfo::isLegalGFX12PlusPackedMathFP32Operand(
+    const MachineRegisterInfo &MRI, const MachineInstr &MI, unsigned SrcN,
+    const MachineOperand *MO) const {
+  constexpr const unsigned NumOps = 3;
+  constexpr const AMDGPU::OpName OpNames[NumOps * 2] = {
+      AMDGPU::OpName::src0,           AMDGPU::OpName::src1,
+      AMDGPU::OpName::src2,           AMDGPU::OpName::src0_modifiers,
+      AMDGPU::OpName::src1_modifiers, AMDGPU::OpName::src2_modifiers};
+
+  assert(SrcN < NumOps);
+
+  if (!MO) {
+    int SrcIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), OpNames[SrcN]);
+    if (SrcIdx == -1)
+      return true;
+    MO = &MI.getOperand(SrcIdx);
+  }
+
+  if (!MO->isReg() || !RI.isSGPRReg(MRI, MO->getReg()))
+    return true;
+
+  int ModsIdx =
+      AMDGPU::getNamedOperandIdx(MI.getOpcode(), OpNames[NumOps + SrcN]);
+  if (ModsIdx == -1)
+    return true;
+
+  unsigned Mods = MI.getOperand(ModsIdx).getImm();
+  bool OpSel = Mods & SISrcMods::OP_SEL_0;
+  bool OpSelHi = Mods & SISrcMods::OP_SEL_1;
+
+  return OpSel == OpSelHi;
 }
 
 bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
@@ -6536,6 +6596,15 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
         legalizeOpWithMove(MI, ScaleSrc0Idx);
       if (!isOperandLegal(MI, ScaleSrc1Idx))
         legalizeOpWithMove(MI, ScaleSrc1Idx);
+    }
+  }
+
+  // Fix the register class of packed FP32 instructions on gfx12+. See
+  // SIInstrInfo::isLegalGFX12PlusPackedMathFP32Operand for more information.
+  if (AMDGPU::isPackedFP32Inst(Opc) && AMDGPU::isGFX12Plus(ST)) {
+    for (unsigned I = 0; I < 3; ++I) {
+      if (!isLegalGFX12PlusPackedMathFP32Operand(MRI, MI, /*SrcN=*/I))
+        legalizeOpWithMove(MI, VOP3Idx[I]);
     }
   }
 }

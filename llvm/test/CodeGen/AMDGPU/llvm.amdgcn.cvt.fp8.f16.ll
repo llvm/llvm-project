@@ -11,14 +11,14 @@ define amdgpu_ps void @test_cvt_pk_bf8_f16_v(<2 x half> %a, ptr addrspace(1) %ou
 ; GFX1250-SDAG-LABEL: test_cvt_pk_bf8_f16_v:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    v_cvt_pk_bf8_f16 v0, v0, 0
+; GFX1250-SDAG-NEXT:    v_cvt_pk_bf8_f16 v0, v0
 ; GFX1250-SDAG-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: test_cvt_pk_bf8_f16_v:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_cvt_pk_bf8_f16 v0, v0, 0
+; GFX1250-GISEL-NEXT:    v_cvt_pk_bf8_f16 v0, v0
 ; GFX1250-GISEL-NEXT:    global_store_b16 v[4:5], v0, off
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %cvt = tail call i16 @llvm.amdgcn.cvt.pk.bf8.f16(<2 x half> %a)
@@ -29,7 +29,7 @@ define amdgpu_ps void @test_cvt_pk_bf8_f16_v(<2 x half> %a, ptr addrspace(1) %ou
 define amdgpu_ps void @test_cvt_pk_bf8_f16_s(<2 x half> inreg %a, ptr addrspace(1) %out) {
 ; GFX1250-LABEL: test_cvt_pk_bf8_f16_s:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_cvt_pk_bf8_f16 v2, s0, 0
+; GFX1250-NEXT:    v_cvt_pk_bf8_f16 v2, s0
 ; GFX1250-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-NEXT:    s_endpgm
   %cvt = tail call i16 @llvm.amdgcn.cvt.pk.bf8.f16(<2 x half> %a)
@@ -40,7 +40,7 @@ define amdgpu_ps void @test_cvt_pk_bf8_f16_s(<2 x half> inreg %a, ptr addrspace(
 define amdgpu_ps void @test_cvt_pk_bf8_f16_l(ptr addrspace(1) %out) {
 ; GFX1250-LABEL: test_cvt_pk_bf8_f16_l:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_cvt_pk_bf8_f16 v2, 0x56400000, 0
+; GFX1250-NEXT:    v_cvt_pk_bf8_f16 v2, 0x56400000
 ; GFX1250-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-NEXT:    s_endpgm
   %cvt = tail call i16 @llvm.amdgcn.cvt.pk.bf8.f16(<2 x half> <half 0.0, half 100.0>)
@@ -52,14 +52,14 @@ define amdgpu_ps void @test_cvt_pk_fp8_f16_v(<2 x half> %a, ptr addrspace(1) %ou
 ; GFX1250-SDAG-LABEL: test_cvt_pk_fp8_f16_v:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    v_cvt_pk_fp8_f16 v0, v0, 0
+; GFX1250-SDAG-NEXT:    v_cvt_pk_fp8_f16 v0, v0
 ; GFX1250-SDAG-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: test_cvt_pk_fp8_f16_v:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    v_cvt_pk_fp8_f16 v0, v0, 0
+; GFX1250-GISEL-NEXT:    v_cvt_pk_fp8_f16 v0, v0
 ; GFX1250-GISEL-NEXT:    global_store_b16 v[4:5], v0, off
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %cvt = tail call i16 @llvm.amdgcn.cvt.pk.fp8.f16(<2 x half> %a)
@@ -70,7 +70,7 @@ define amdgpu_ps void @test_cvt_pk_fp8_f16_v(<2 x half> %a, ptr addrspace(1) %ou
 define amdgpu_ps void @test_cvt_pk_fp8_f16_s(<2 x half> inreg %a, ptr addrspace(1) %out) {
 ; GFX1250-LABEL: test_cvt_pk_fp8_f16_s:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_cvt_pk_fp8_f16 v2, s0, 0
+; GFX1250-NEXT:    v_cvt_pk_fp8_f16 v2, s0
 ; GFX1250-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-NEXT:    s_endpgm
   %cvt = tail call i16 @llvm.amdgcn.cvt.pk.fp8.f16(<2 x half> %a)
@@ -81,7 +81,7 @@ define amdgpu_ps void @test_cvt_pk_fp8_f16_s(<2 x half> inreg %a, ptr addrspace(
 define amdgpu_ps void @test_cvt_pk_fp8_f16_l(ptr addrspace(1) %out) {
 ; GFX1250-LABEL: test_cvt_pk_fp8_f16_l:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_cvt_pk_fp8_f16 v2, 0x56400000, 0
+; GFX1250-NEXT:    v_cvt_pk_fp8_f16 v2, 0x56400000
 ; GFX1250-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1250-NEXT:    s_endpgm
   %cvt = tail call i16 @llvm.amdgcn.cvt.pk.fp8.f16(<2 x half> <half 0.0, half 100.0>)

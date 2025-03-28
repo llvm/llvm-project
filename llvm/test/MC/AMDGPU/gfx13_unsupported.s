@@ -241,24 +241,6 @@ flat_atomic_csub v1, v[0:1], v2 offset:64 th:TH_ATOMIC_RETURN
 ds_add_f32 v255, v255 offset:4 gds
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: gds modifier is not supported on this GPU
 
-buffer_load_lds_b32 off, s[8:11], s3
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-buffer_load_lds_format_x off, s[8:11], s3
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-buffer_load_lds_i8 off, s[8:11], s3
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-buffer_load_lds_i16 off, s[8:11], s3
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-buffer_load_lds_u8 off, s[8:11], s3
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-buffer_load_lds_u16 off, s[8:11], s3
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
 v_movreld_b32 v5, v1
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 

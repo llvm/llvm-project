@@ -7,7 +7,7 @@
 
 // CHECK-DAG: @b = external addrspace(2) global float, align 4
 // CHECK-DAG: @d = external addrspace(2) global <4 x i32>, align 16
-// CHECK-DAG: @"$Globals.cb" = external constant target("dx.CBuffer",
+// CHECK-DAG: @"$Globals.cb" = global target("dx.CBuffer",
 // CHECK-DAG-SAME: target("dx.Layout", %"__cblayout_$Globals", 144, 120, 16, 32, 64, 128, 112))
 // CHECK-DAG: @a = external addrspace(2) global i32, align 4
 // CHECK-DAG: @c = external addrspace(2) global [4 x double], align 8

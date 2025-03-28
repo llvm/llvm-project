@@ -2667,7 +2667,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     for (const CXXRecordDecl *Base : getMostBaseClasses(MD->getParent())) {
       llvm::Metadata *Id =
           CreateMetadataIdentifierForType(Context.getMemberPointerType(
-              MD->getType(), Context.getRecordType(Base).getTypePtr()));
+              MD->getType(), /*Qualifier=*/nullptr, Base));
       F->addTypeMetadata(0, Id);
     }
   }
@@ -2935,7 +2935,7 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
                                           bool IsIncompleteFunction,
                                           bool IsThunk) {
 
-  if (llvm::Intrinsic::ID IID = F->getIntrinsicID()) {
+  if (F->getIntrinsicID() != llvm::Intrinsic::not_intrinsic) {
     // If this is an intrinsic function, the attributes will have been set
     // when the function was created.
     return;
