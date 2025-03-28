@@ -24,7 +24,7 @@ define void @bar1(ptr %f, i32 %n) nounwind ssp {
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr [[F:%.*]], i32 2, i64 [[TMP1]], i1 false)
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr align 4 [[F:%.*]], i32 2, i64 [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -78,7 +78,7 @@ define void @bar2(ptr %f, i32 %n) nounwind ssp {
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
-; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr [[F:%.*]], i32 2, i64 [[TMP1]], i1 false)
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr align 4 [[F:%.*]], i32 2, i64 [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -138,7 +138,7 @@ define void @bar3(ptr nocapture %f, i32 %n) nounwind ssp {
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP1]], [[TMP4]]
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[F:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP0]], 2
-; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr [[UGLYGEP]], i32 2, i64 [[TMP7]], i1 false)
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr align 4 [[UGLYGEP]], i32 2, i64 [[TMP7]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]

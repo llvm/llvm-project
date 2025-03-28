@@ -9,7 +9,7 @@ target triple = "x86_64-apple-darwin10.0.0"
 define dso_local void @double_memset(ptr nocapture %p) {
 ; CHECK-LABEL: @double_memset(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i64.i64(ptr [[P:%.*]], i64 4614256650576692846, i64 16, i1 false), !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i64.i64(ptr align 1 [[P:%.*]], i64 4614256650576692846, i64 16, i1 false), !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
@@ -39,7 +39,7 @@ for.body:
 define dso_local void @struct_memset(ptr nocapture %p) {
 ; CHECK-LABEL: @struct_memset(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i64.i64(ptr [[P:%.*]], i64 4614256650576692846, i64 16, i1 false), !tbaa [[TBAA4:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i64.i64(ptr align 1 [[P:%.*]], i64 4614256650576692846, i64 16, i1 false), !tbaa [[TBAA4:![0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
@@ -68,7 +68,7 @@ for.body:
 define dso_local void @var_memset(ptr nocapture %p, i64 %len) {
 ; CHECK-LABEL: @var_memset(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i64.i64(ptr [[P:%.*]], i64 4614256650576692846, i64 [[TMP0:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i64.i64(ptr align 1 [[P:%.*]], i64 4614256650576692846, i64 [[TMP0:%.*]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void

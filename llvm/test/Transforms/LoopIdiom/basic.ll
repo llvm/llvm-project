@@ -531,7 +531,7 @@ for.end13:                                        ; preds = %for.inc10
 define void @test11_pattern(ptr nocapture %P) nounwind ssp {
 ; CHECK-LABEL: @test11_pattern(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr [[P:%.*]], i32 1, i64 10000, i1 false)
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr align 4 [[P:%.*]], i32 1, i64 10000, i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ]
@@ -594,7 +594,7 @@ for.end:                                          ; preds = %for.body
 define void @test13_pattern(ptr nocapture %P) nounwind ssp {
 ; CHECK-LABEL: @test13_pattern(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i64.i64(ptr [[P:%.*]], i64 ptrtoint (ptr @G to i64), i64 10000, i1 false)
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i64.i64(ptr align 4 [[P:%.*]], i64 ptrtoint (ptr @G to i64), i64 10000, i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ]

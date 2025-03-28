@@ -80,7 +80,7 @@ define void @test_pattern(ptr %f, i32 %n) nounwind ssp {
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i32 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP2]], 2
-; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i32(ptr [[F:%.*]], i32 2, i32 [[TMP3]], i1 false)
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i32(ptr align 4 [[F:%.*]], i32 2, i32 [[TMP3]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]

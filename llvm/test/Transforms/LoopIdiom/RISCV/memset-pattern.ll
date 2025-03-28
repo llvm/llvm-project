@@ -19,7 +19,7 @@ define dso_local void @double_memset(ptr nocapture %p) {
 ;
 ; CHECK-INTRIN-LABEL: @double_memset(
 ; CHECK-INTRIN-NEXT:  entry:
-; CHECK-INTRIN-NEXT:    call void @llvm.experimental.memset.pattern.p0.i64.i64(ptr [[P:%.*]], i64 4614256650576692846, i64 16, i1 false)
+; CHECK-INTRIN-NEXT:    call void @llvm.experimental.memset.pattern.p0.i64.i64(ptr align 1 [[P:%.*]], i64 4614256650576692846, i64 16, i1 false)
 ; CHECK-INTRIN-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-INTRIN:       for.cond.cleanup:
 ; CHECK-INTRIN-NEXT:    ret void

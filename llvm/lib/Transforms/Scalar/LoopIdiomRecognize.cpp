@@ -1179,6 +1179,8 @@ bool LoopIdiomRecognize::processLoopStridedStore(
                                       {DestInt8PtrTy, PatternArgTy, IntIdxTy},
                                       {BasePtr, PatternArg, MemsetArg,
                                        ConstantInt::getFalse(M->getContext())});
+    if (StoreAlignment)
+      cast<MemSetPatternInst>(NewCall)->setDestAlignment(*StoreAlignment);
 
     // Set the TBAA info if present.
     if (AATags.TBAA)
