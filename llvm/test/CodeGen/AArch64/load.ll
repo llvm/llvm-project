@@ -328,9 +328,10 @@ define <3 x i8> @load_v3i8(ptr %ptr) {
 ; CHECK-SD-LABEL: load_v3i8:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ldr s0, [x0]
-; CHECK-SD-NEXT:    umov w0, v0.b[0]
-; CHECK-SD-NEXT:    umov w1, v0.b[1]
-; CHECK-SD-NEXT:    umov w2, v0.b[2]
+; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-SD-NEXT:    umov w0, v0.h[0]
+; CHECK-SD-NEXT:    umov w1, v0.h[1]
+; CHECK-SD-NEXT:    umov w2, v0.h[2]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: load_v3i8:
