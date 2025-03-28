@@ -3485,10 +3485,19 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
 
   APValue::LValueBase Base(VD, Frame ? Frame->Index : 0, Version);
 
-  auto CheckUninitReference = [&] {
+  auto CheckUninitReference = [&] (bool IsLocalVariable) {
     if (!Result->hasValue() && VD->getType()->isReferenceType()) {
-      // We can't use an uninitialized reference directly.
-      if (!AllowConstexprUnknown) {
+      // C++23 [expr.const]p8
+      // ... For such an object that is not usable in constant expressions, the
+      // dynamic type of the object is constexpr-unknown. For such a reference
+      // that is not usable in constant expressions, the reference is treated
+      // as binding to an unspecified object of the referenced type whose
+      // lifetime and that of all subobjects includes the entire constant
+      // evaluation and whose dynamic type is constexpr-unknown.
+      //
+      // Variables that are part of the current evaluation are not
+      // constexpr-unknown.
+      if (!AllowConstexprUnknown || IsLocalVariable) {
         if (!Info.checkingPotentialConstantExpression())
           Info.FFDiag(E, diag::note_constexpr_use_uninit_reference);
         return false;
@@ -3501,11 +3510,8 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // If this is a local variable, dig out its value.
   if (Frame) {
     Result = Frame->getTemporary(VD, Version);
-    if (Result) {
-      if (!CheckUninitReference())
-        return false;
-      return true;
-    }
+    if (Result)
+      return CheckUninitReference(/*IsLocalVariable=*/true);
 
     if (!isa<ParmVarDecl>(VD)) {
       // Assume variables referenced within a lambda's call operator that were
@@ -3530,10 +3536,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // in-flight value.
   if (Info.EvaluatingDecl == Base) {
     Result = Info.EvaluatingDeclValue;
-    if (!CheckUninitReference())
-      return false;
-
-    return true;
+    return CheckUninitReference(/*IsLocalVariable=*/false);
   }
 
   // P2280R4 struck the restriction that variable of reference type lifetime
@@ -3652,10 +3655,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
     }
   }
 
-  if (!CheckUninitReference())
-    return false;
-
-  return true;
+  return CheckUninitReference(/*IsLocalVariable=*/false);
 }
 
 /// Get the base index of the given base class within an APValue representing
