@@ -23,11 +23,9 @@ class Pass;
 #define GEN_PASS_DECL_CONVERTGPUTOAMDGPUPASS
 #include "mlir/Conversion/Passes.h.inc"
 
-void populateSubgroupReduceLoweringPatterns(RewritePatternSet &patterns,
+void populateAMDGPUOptimizedSubgroupReducePatterns(RewritePatternSet &patterns,
                                             unsigned subgroupSize,
                                             PatternBenefit benefit);
-// void populateGPUToAMDGPUConversionPatterns(LLVMTypeConverter &converter,
-//                                             RewritePatternSet &patterns);
 
 } // namespace mlir
 
