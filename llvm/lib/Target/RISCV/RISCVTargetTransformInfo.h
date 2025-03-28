@@ -388,6 +388,8 @@ public:
 
   bool enableInterleavedAccessVectorization() { return true; }
 
+  unsigned getMinTripCountTailFoldingThreshold() const;
+
   enum RISCVRegisterClass { GPRRC, FPRRC, VRRC };
   unsigned getNumberOfRegisters(unsigned ClassID) const {
     switch (ClassID) {
