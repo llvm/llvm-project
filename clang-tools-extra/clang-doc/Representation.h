@@ -508,8 +508,7 @@ struct ClangDocContext {
   ClangDocContext(tooling::ExecutionContext *ECtx, StringRef ProjectName,
                   bool PublicOnly, StringRef OutDirectory, StringRef SourceRoot,
                   StringRef RepositoryUrl, StringRef RepositoryCodeLinePrefix,
-                  StringRef Base,
-                  std::vector<std::string> UserStylesheets);
+                  StringRef Base, std::vector<std::string> UserStylesheets);
   tooling::ExecutionContext *ECtx;
   std::string ProjectName; // Name of project clang-doc is documenting.
   bool PublicOnly; // Indicates if only public declarations are documented.

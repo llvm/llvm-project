@@ -368,8 +368,7 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
                                  StringRef ProjectName, bool PublicOnly,
                                  StringRef OutDirectory, StringRef SourceRoot,
                                  StringRef RepositoryUrl,
-                                 StringRef RepositoryLinePrefix,
-                                 StringRef Base,
+                                 StringRef RepositoryLinePrefix, StringRef Base,
                                  std::vector<std::string> UserStylesheets)
     : ECtx(ECtx), ProjectName(ProjectName), PublicOnly(PublicOnly),
       OutDirectory(OutDirectory), UserStylesheets(UserStylesheets), Base(Base) {
