@@ -341,33 +341,33 @@ let SMETargetGuard = "sme2,sme-mop4,sme-i16i64" in {
 // SME2 - SUMOP4A, SUMOP4S, USMOP4A, USMOP4S
 
 multiclass SUMOP4<string mode, string za, string t, string i, list<ImmCheck> checks> {
-  def _1x1 : SInst<"svmop4" # mode # "[_1x1]_" # za # "[_{d}_{3}]",
+  def _1x1 : SInst<"svmop4" # mode # "[_1x1]" # za # "[_{d}_{3}]",
                               "vidu", t, MergeNone, "aarch64_sme_sumop4" # mode # i # "_wide_1x1",
                               [IsStreaming, IsInOutZA],
                               checks>;
 }
 
 multiclass USMOP4<string mode, string za, string t, string i, list<ImmCheck> checks> {
-  def _1x1 : SInst<"svmop4" # mode # "[_1x1]_" # za # "[_{d}_{3}]",
+  def _1x1 : SInst<"svmop4" # mode # "[_1x1]" # za # "[_{d}_{3}]",
                               "vidx", t, MergeNone, "aarch64_sme_usmop4" # mode # i # "_wide_1x1",
                               [IsStreaming, IsInOutZA],
                               checks>;
 }
 
 let SMETargetGuard = "sme2,sme-mop4" in {
-  defm SVSUMOP4A_S : SUMOP4<"a", "za32", "c", "", [ImmCheck<0, ImmCheck0_3>]>;
-  defm SVSUMOP4S_S : SUMOP4<"s", "za32", "c", "", [ImmCheck<0, ImmCheck0_3>]>;
+  defm SVSUMOP4A_S : SUMOP4<"a", "_za32", "c", "", [ImmCheck<0, ImmCheck0_3>]>;
+  defm SVSUMOP4S_S : SUMOP4<"s", "_za32", "c", "", [ImmCheck<0, ImmCheck0_3>]>;
 
-  defm SVUSMOP4A_S : USMOP4<"a", "za32", "Uc", "", [ImmCheck<0, ImmCheck0_3>]>;
-  defm SVUSMOP4S_S : USMOP4<"s", "za32", "Uc", "", [ImmCheck<0, ImmCheck0_3>]>;
+  defm SVUSMOP4A_S : USMOP4<"a", "_za32", "Uc", "", [ImmCheck<0, ImmCheck0_3>]>;
+  defm SVUSMOP4S_S : USMOP4<"s", "_za32", "Uc", "", [ImmCheck<0, ImmCheck0_3>]>;
 }
 
 let SMETargetGuard = "sme2,sme-mop4,sme-i16i64" in {
-  defm SVSUMOP4A_D : SUMOP4<"a", "za64", "s", "_za64", [ImmCheck<0, ImmCheck0_7>]>;
-  defm SVSUMOP4S_D : SUMOP4<"s", "za64", "s", "_za64", [ImmCheck<0, ImmCheck0_7>]>;
+  defm SVSUMOP4A_D : SUMOP4<"a", "_za64", "s", "_za64", [ImmCheck<0, ImmCheck0_7>]>;
+  defm SVSUMOP4S_D : SUMOP4<"s", "_za64", "s", "_za64", [ImmCheck<0, ImmCheck0_7>]>;
 
-  defm SVUSMOP4A_D : USMOP4<"a", "za64", "Us", "_za64", [ImmCheck<0, ImmCheck0_7>]>;
-  defm SVUSMOP4S_D : USMOP4<"s", "za64", "Us", "_za64", [ImmCheck<0, ImmCheck0_7>]>;
+  defm SVUSMOP4A_D : USMOP4<"a", "_za64", "Us", "_za64", [ImmCheck<0, ImmCheck0_7>]>;
+  defm SVUSMOP4S_D : USMOP4<"s", "_za64", "Us", "_za64", [ImmCheck<0, ImmCheck0_7>]>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
