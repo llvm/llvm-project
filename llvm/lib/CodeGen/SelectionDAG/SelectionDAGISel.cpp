@@ -3258,6 +3258,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
   case ISD::LIFETIME_START:
   case ISD::LIFETIME_END:
   case ISD::PSEUDO_PROBE:
+  case ISD::DEACTIVATION_SYMBOL:
     NodeToMatch->setNodeId(-1); // Mark selected.
     return;
   case ISD::AssertSext:
@@ -3334,7 +3335,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
   // These are the current input chain and glue for use when generating nodes.
   // Various Emit operations change these.  For example, emitting a copytoreg
   // uses and updates these.
-  SDValue InputChain, InputGlue;
+  SDValue InputChain, InputGlue, DeactivationSymbol;
 
   // ChainNodesMatched - If a pattern matches nodes that have input/output
   // chains, the OPC_EmitMergeInputChains operation is emitted which indicates
@@ -3485,6 +3486,15 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       if (N->getNumOperands() != 0 &&
           N->getOperand(N->getNumOperands()-1).getValueType() == MVT::Glue)
         InputGlue = N->getOperand(N->getNumOperands()-1);
+      continue;
+
+    case OPC_CaptureDeactivationSymbol:
+      // If the current node has a deactivation symbol, capture it in
+      // DeactivationSymbol.
+      if (N->getNumOperands() != 0 &&
+          N->getOperand(N->getNumOperands() - 1).getOpcode() ==
+              ISD::DEACTIVATION_SYMBOL)
+        DeactivationSymbol = N->getOperand(N->getNumOperands()-1);
       continue;
 
     case OPC_MoveChild: {
@@ -4169,6 +4179,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       // If this has chain/glue inputs, add them.
       if (EmitNodeInfo & OPFL_Chain)
         Ops.push_back(InputChain);
+      if (DeactivationSymbol.getNode() != nullptr)
+        Ops.push_back(DeactivationSymbol);
       if ((EmitNodeInfo & OPFL_GlueInput) && InputGlue.getNode() != nullptr)
         Ops.push_back(InputGlue);
 

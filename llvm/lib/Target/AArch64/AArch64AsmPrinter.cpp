@@ -54,6 +54,7 @@
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -68,15 +69,6 @@
 #include <memory>
 
 using namespace llvm;
-
-enum PtrauthCheckMode { Default, Unchecked, Poison, Trap };
-static cl::opt<PtrauthCheckMode> PtrauthAuthChecks(
-    "aarch64-ptrauth-auth-checks", cl::Hidden,
-    cl::values(clEnumValN(Unchecked, "none", "don't test for failure"),
-               clEnumValN(Poison, "poison", "poison on failure"),
-               clEnumValN(Trap, "trap", "trap on failure")),
-    cl::desc("Check pointer authentication auth/resign failures"),
-    cl::init(Default));
 
 #define DEBUG_TYPE "asm-printer"
 
@@ -93,6 +85,7 @@ class AArch64AsmPrinter : public AsmPrinter {
   bool EnableImportCallOptimization = false;
   DenseMap<MCSection *, std::vector<std::pair<MCSymbol *, MCSymbol *>>>
       SectionToImportedFunctionCalls;
+  unsigned PAuthIFuncNextUniqueID = 1;
 
 public:
   AArch64AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
@@ -199,6 +192,10 @@ public:
   // and authenticate it with, if FPAC bit is not set, check+trap sequence after
   // authenticating)
   void LowerLOADgotAUTH(const MachineInstr &MI);
+
+  const MCExpr *emitPAuthRelocationAsIRelative(
+      const MCExpr *Target, uint16_t Disc, AArch64PACKey::ID KeyID,
+      bool HasAddressDiversity, bool IsDSOLocal);
 
   /// tblgen'erated driver function for lowering simple MI->MC
   /// pseudo instructions.
@@ -2227,6 +2224,145 @@ void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, BRInst);
 }
 
+static void emitAddress(MCStreamer &Streamer, MCRegister Reg,
+                        const MCExpr *Expr, bool DSOLocal,
+                        const MCSubtargetInfo &STI) {
+  MCValue Val;
+  if (!Expr->evaluateAsRelocatable(Val, nullptr))
+    report_fatal_error("emitAddress could not evaluate");
+  if (DSOLocal) {
+    Streamer.emitInstruction(
+        MCInstBuilder(AArch64::ADRP)
+            .addReg(Reg)
+            .addExpr(AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS_PAGE,
+                                           Streamer.getContext())),
+        STI);
+    Streamer.emitInstruction(
+        MCInstBuilder(AArch64::ADDXri)
+            .addReg(Reg)
+            .addReg(Reg)
+            .addExpr(AArch64MCExpr::create(Expr, AArch64MCExpr::VK_LO12,
+                                           Streamer.getContext()))
+            .addImm(0),
+        STI);
+  } else {
+    Streamer.emitInstruction(MCInstBuilder(AArch64::ADRP)
+                                 .addReg(Reg)
+                                 .addExpr(AArch64MCExpr::create(
+                                     Val.getSymA(), AArch64MCExpr::VK_GOT_PAGE,
+                                     Streamer.getContext())),
+                             STI);
+    Streamer.emitInstruction(MCInstBuilder(AArch64::LDRXui)
+                                 .addReg(Reg)
+                                 .addReg(Reg)
+                                 .addExpr(AArch64MCExpr::create(
+                                     Val.getSymA(), AArch64MCExpr::VK_GOT_LO12,
+                                     Streamer.getContext())),
+                             STI);
+    if (Val.getConstant())
+      Streamer.emitInstruction(MCInstBuilder(AArch64::ADDXri)
+                                   .addReg(Reg)
+                                   .addReg(Reg)
+                                   .addImm(Val.getConstant())
+                                   .addImm(0),
+                               STI);
+  }
+}
+
+static bool targetSupportsPAuthRelocation(const Triple &TT,
+                                          const MCExpr *Target) {
+  // No released version of glibc supports PAuth relocations.
+  if (TT.isOSGlibc())
+    return false;
+
+  // We emit PAuth constants as IRELATIVE relocations in cases where the
+  // constant cannot be represented as a PAuth relocation:
+  // 1) The signed value is not a symbol.
+  return !isa<MCConstantExpr>(Target);
+}
+
+static bool targetSupportsIRelativeRelocation(const Triple &TT) {
+  // IFUNCs are ELF-only.
+  if (!TT.isOSBinFormatELF())
+    return false;
+
+  // musl doesn't support IFUNCs.
+  if (TT.isMusl())
+    return false;
+
+  return true;
+}
+
+const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
+    const MCExpr *Target, uint16_t Disc, AArch64PACKey::ID KeyID,
+    bool HasAddressDiversity, bool IsDSOLocal) {
+  const Triple &TT = TM.getTargetTriple();
+
+  // We only emit an IRELATIVE relocation if the target supports IRELATIVE and
+  // does not support the kind of PAuth relocation that we are trying to emit.
+  if (targetSupportsPAuthRelocation(TT, Target, DSExpr) ||
+      !targetSupportsIRelativeRelocation(TT))
+    return nullptr;
+
+  // For now, only the DA key is supported.
+  if (KeyID != AArch64PACKey::DA)
+    return nullptr;
+
+  std::unique_ptr<MCSubtargetInfo> STI(
+      TM.getTarget().createMCSubtargetInfo(TT.str(), "", ""));
+  assert(STI && "Unable to create subtarget info");
+
+  MCSymbol *Place = OutStreamer->getContext().createTempSymbol();
+  OutStreamer->emitLabel(Place);
+  OutStreamer->pushSection();
+
+  OutStreamer->switchSection(OutStreamer->getContext().getELFSection(
+      ".text.startup", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_EXECINSTR,
+      0, "", true, PAuthIFuncNextUniqueID++, nullptr));
+
+  MCSymbol *IFuncSym =
+      OutStreamer->getContext().createLinkerPrivateSymbol("pauth_ifunc");
+  OutStreamer->emitSymbolAttribute(IFuncSym, MCSA_ELF_TypeIndFunction);
+  OutStreamer->emitLabel(IFuncSym);
+  if (isa<MCConstantExpr>(Target)) {
+    OutStreamer->emitInstruction(MCInstBuilder(AArch64::MOVZXi)
+                                 .addReg(AArch64::X0)
+                                 .addExpr(Target)
+                                 .addImm(0),
+                             *STI);
+  } else {
+    emitAddress(*OutStreamer, AArch64::X0, Target, IsDSOLocal, *STI);
+  }
+  if (HasAddressDiversity) {
+    auto *PlacePlusDisc = MCBinaryExpr::createAdd(
+        MCSymbolRefExpr::create(Place, OutStreamer->getContext()),
+        MCConstantExpr::create(static_cast<int16_t>(Disc),
+                               OutStreamer->getContext()),
+        OutStreamer->getContext());
+    emitAddress(*OutStreamer, AArch64::X1, PlacePlusDisc, /*IsDSOLocal=*/true,
+                *STI);
+  } else {
+    emitMOVZ(AArch64::X1, Disc, 0);
+  }
+
+  MCSymbol *PrePACInst = OutStreamer->getContext().createTempSymbol();
+  OutStreamer->emitLabel(PrePACInst);
+
+  // We don't know the subtarget because this is being emitted for a global
+  // initializer. Because the performance of IFUNC resolvers is unimportant, we
+  // always call the EmuPAC runtime, which will end up using the PAC instruction
+  // if the target supports PAC.
+  MCSymbol *EmuPAC =
+      OutStreamer->getContext().getOrCreateSymbol("__emupac_pacda");
+  const MCSymbolRefExpr *EmuPACRef =
+      MCSymbolRefExpr::create(EmuPAC, OutStreamer->getContext());
+  OutStreamer->emitInstruction(MCInstBuilder(AArch64::B).addExpr(EmuPACRef),
+                               *STI);
+  OutStreamer->popSection();
+
+  return MCSymbolRefExpr::create(IFuncSym, OutStreamer->getContext());
+}
+
 const MCExpr *
 AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
   MCContext &Ctx = OutContext;
@@ -2238,22 +2374,19 @@ AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
 
   auto *BaseGVB = dyn_cast<GlobalValue>(BaseGV);
 
-  // If we can't understand the referenced ConstantExpr, there's nothing
-  // else we can do: emit an error.
-  if (!BaseGVB) {
-    BaseGV->getContext().emitError(
-        "cannot resolve target base/addend of ptrauth constant");
-    return nullptr;
+  const MCExpr *Sym;
+  if (BaseGVB) {
+    // If there is an addend, turn that into the appropriate MCExpr.
+    Sym = MCSymbolRefExpr::create(getSymbol(BaseGVB), Ctx);
+    if (Offset.sgt(0))
+      Sym = MCBinaryExpr::createAdd(
+          Sym, MCConstantExpr::create(Offset.getSExtValue(), Ctx), Ctx);
+    else if (Offset.slt(0))
+      Sym = MCBinaryExpr::createSub(
+          Sym, MCConstantExpr::create((-Offset).getSExtValue(), Ctx), Ctx);
+  } else {
+    Sym = MCConstantExpr::create(Offset.getSExtValue(), Ctx);
   }
-
-  // If there is an addend, turn that into the appropriate MCExpr.
-  const MCExpr *Sym = MCSymbolRefExpr::create(getSymbol(BaseGVB), Ctx);
-  if (Offset.sgt(0))
-    Sym = MCBinaryExpr::createAdd(
-        Sym, MCConstantExpr::create(Offset.getSExtValue(), Ctx), Ctx);
-  else if (Offset.slt(0))
-    Sym = MCBinaryExpr::createSub(
-        Sym, MCConstantExpr::create((-Offset).getSExtValue(), Ctx), Ctx);
 
   uint64_t KeyID = CPA.getKey()->getZExtValue();
   // We later rely on valid KeyID value in AArch64PACKeyIDToString call from
@@ -2267,6 +2400,12 @@ AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
   if (!isUInt<16>(Disc))
     report_fatal_error("AArch64 PAC Discriminator '" + Twine(Disc) +
                        "' out of range [0, 0xFFFF]");
+
+  // Check if we need to represent this with an IRELATIVE and emit it if so.
+  if (auto *IFuncSym = emitPAuthRelocationAsIRelative(
+          Sym, Disc, AArch64PACKey::ID(KeyID), CPA.hasAddressDiscriminator(),
+          BaseGVB && BaseGVB->isDSOLocal()))
+    return IFuncSym;
 
   // Finally build the complete @AUTH expr.
   return AArch64AuthMCExpr::create(Sym, Disc, AArch64PACKey::ID(KeyID),
@@ -2757,6 +2896,18 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     OutStreamer->emitLabel(LOHLabel);
   }
 
+  const MCExpr *DeactDotExpr = nullptr;
+  if (MI->getDeactivationSymbol()) {
+    if (isa<GlobalAlias>(MI->getDeactivationSymbol())) {
+      // Just emit the nop directly.
+      EmitToStreamer(MCInstBuilder(AArch64::HINT).addImm(0));
+      return;
+    }
+    MCSymbol *Dot = OutContext.createTempSymbol();
+    OutStreamer->emitLabel(Dot);
+    DeactDotExpr = MCSymbolRefExpr::create(Dot, OutContext);
+  }
+
   AArch64TargetStreamer *TS =
     static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
   // Do any manual lowerings.
@@ -2866,7 +3017,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   }
 
-  case AArch64::AUT:
+  case AArch64::AUTx16x17:
   case AArch64::AUTPAC:
     emitPtrauthAuthResign(MI);
     return;
@@ -3298,6 +3449,17 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   MCInst TmpInst;
   MCInstLowering.Lower(MI, TmpInst);
   EmitToStreamer(*OutStreamer, TmpInst);
+
+  // Emit deactivation symbol relocation *after* any other relocations
+  // required by the instruction. Otherwise the other relocation may
+  // corrupt the NOP placed by the deactivation symbol relocation.
+  if (DeactDotExpr) {
+    MCSymbol *DS =
+        OutContext.getOrCreateSymbol(MI->getDeactivationSymbol()->getName());
+    const MCExpr *DSExpr = MCSymbolRefExpr::create(DS, OutContext);
+    OutStreamer->emitRelocDirective(*DeactDotExpr, "R_AARCH64_INST32", DSExpr,
+                                    SMLoc(), *TM.getMCSubtargetInfo());
+  }
 }
 
 void AArch64AsmPrinter::recordIfImportCall(
