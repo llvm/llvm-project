@@ -72,8 +72,7 @@ BasicBlockSectionsProfileReader::getClusterInfoForFunction(
 unsigned BasicBlockSectionsProfileReader::getCfgNodeNumForFunction(
     StringRef FuncName) const {
   auto R = ProgramPathAndClusterInfo.find(getAliasName(FuncName));
-  return R != ProgramPathAndClusterInfo.end()
-             ? R->second.NodeCount : 0;
+  return R != ProgramPathAndClusterInfo.end() ? R->second.NodeCount : 0;
 }
 
 SmallVector<SmallVector<unsigned>>

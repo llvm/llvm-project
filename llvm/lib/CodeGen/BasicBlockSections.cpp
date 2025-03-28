@@ -79,8 +79,8 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/Target/TargetMachine.h"
 #include <optional>
 
 using namespace llvm;
@@ -320,13 +320,13 @@ bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
             .getClusterInfoForFunction(MF.getName());
     if (!HasProfile)
       return false;
-    
+
     NodeCount = getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>()
                     .getCfgNodeNumForFunction(MF.getName());
     if ((NodeCount != 0) && (NodeCount != MF.size())) {
       WithColor::warning() << "MF " << MF.getName() << ": node count mismatch "
-                        << "(profile=" << NodeCount
-                        << " actual=" << MF.size() << ")\n";
+                           << "(profile=" << NodeCount
+                           << " actual=" << MF.size() << ")\n";
       return false;
     }
 
