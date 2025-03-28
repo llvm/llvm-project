@@ -160,6 +160,15 @@ C23 Feature Support
   treated as if the compound literal were within the body rather than at file
   scope.
 
+C11 Feature Support
+^^^^^^^^^^^^^^^^^^^
+- Implemented `WG14 N1285 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1285.htm>`_
+  which introduces the notion of objects with a temporary lifetime. When an
+  expression resulting in an rvalue with structure or union type and that type
+  contains a member of array type, the expression result is an automatic storage
+  duration object with temporary lifetime which begins when the expression is
+  evaluated and ends at the evaluation of the containing full expression.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 

@@ -741,10 +741,11 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
   if (Kind == CK_ArrayToPointerDecay) {
     // C++1z [conv.array]: The temporary materialization conversion is applied.
     // We also use this to fuel C++ DR1213, which applies to C++11 onwards.
-    if (getLangOpts().CPlusPlus && E->isPRValue()) {
+    if ((getLangOpts().C11 || getLangOpts().CPlusPlus) && E->isPRValue()) {
       // The temporary is an lvalue in C++98 and an xvalue otherwise.
       ExprResult Materialized = CreateMaterializeTemporaryExpr(
-          E->getType(), E, !getLangOpts().CPlusPlus11);
+          E->getType(), E,
+          getLangOpts().CPlusPlus && !getLangOpts().CPlusPlus11);
       if (Materialized.isInvalid())
         return ExprError();
       E = Materialized.get();

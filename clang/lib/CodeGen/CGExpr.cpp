@@ -387,8 +387,8 @@ pushTemporaryCleanup(CodeGenFunction &CGF, const MaterializeTemporaryExpr *M,
   if (const RecordType *RT =
           E->getType()->getBaseElementTypeUnsafe()->getAs<RecordType>()) {
     // Get the destructor for the reference temporary.
-    auto *ClassDecl = cast<CXXRecordDecl>(RT->getDecl());
-    if (!ClassDecl->hasTrivialDestructor())
+    if (auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl());
+        ClassDecl && !ClassDecl->hasTrivialDestructor())
       ReferenceTemporaryDtor = ClassDecl->getDestructor();
   }
 

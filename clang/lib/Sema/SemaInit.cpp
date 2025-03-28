@@ -7654,7 +7654,7 @@ ExprResult Sema::TemporaryMaterializationConversion(Expr *E) {
   // FIXME: This means that AST consumers need to deal with "prvalues" that
   // denote materialized temporaries. Maybe we should add another ValueKind
   // for "xvalue pretending to be a prvalue" for C++98 support.
-  if (!E->isPRValue() || !getLangOpts().CPlusPlus11)
+  if (!E->isPRValue() || (!getLangOpts().CPlusPlus11 && !getLangOpts().C11))
     return E;
 
   // C++1z [conv.rval]/1: T shall be a complete type.
