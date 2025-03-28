@@ -69,6 +69,7 @@ PUNCTUATOR(plus,    '+')
 PUNCTUATOR(minus,   '-')
 
 // RootElement Keywords:
+KEYWORD(RootSignature) // used only for diagnostic messaging
 KEYWORD(DescriptorTable)
 
 // DescriptorTable Keywords:

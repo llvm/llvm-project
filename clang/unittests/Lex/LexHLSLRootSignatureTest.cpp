@@ -85,6 +85,8 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
 
     (),|=+-
 
+    RootSignature
+
     DescriptorTable
 
     CBV SRV UAV Sampler
