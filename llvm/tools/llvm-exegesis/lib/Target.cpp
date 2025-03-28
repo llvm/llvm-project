@@ -39,12 +39,22 @@ const char *
 ExegesisTarget::getIgnoredOpcodeReasonOrNull(const LLVMState &State,
                                              unsigned Opcode) const {
   const MCInstrDesc &InstrDesc = State.getIC().getInstr(Opcode).Description;
-  if (InstrDesc.isPseudo() || InstrDesc.usesCustomInsertionHook())
-    return "Unsupported opcode: isPseudo/usesCustomInserter";
-  if (InstrDesc.isBranch() || InstrDesc.isIndirectBranch())
-    return "Unsupported opcode: isBranch/isIndirectBranch";
-  if (InstrDesc.isCall() || InstrDesc.isReturn())
-    return "Unsupported opcode: isCall/isReturn";
+  if (InstrDesc.isPseudo())
+    return "Unsupported opcode: isPseudo";
+  if ( InstrDesc.usesCustomInsertionHook())
+    return "Unsupported opcode: usesCustomInserter";
+  if (InstrDesc.isBranch())
+    return "Unsupported opcode: isBranch";
+  if (InstrDesc.isIndirectBranch())
+    return "Unsupported opcode: isIndirectBranch";
+  if (InstrDesc.isCall())
+    return "Unsupported opcode: isCall";
+  if (InstrDesc.isReturn())
+    return "Unsupported opcode: isReturn";
+  if (isPointerAuth(Opcode))
+    return "Unsupported opcode: isPointerAuth";
+  if (isLoadTagMultiple(Opcode))
+    return "Unsupported opcode: load tag multiple";
   return nullptr;
 }
 
