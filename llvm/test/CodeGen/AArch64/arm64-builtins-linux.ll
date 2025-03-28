@@ -4,6 +4,7 @@
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=+tpidr-el1 | FileCheck --check-prefix=USEEL1 %s
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=+tpidr-el2 | FileCheck --check-prefix=USEEL2 %s
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=+tpidr-el3 | FileCheck --check-prefix=USEEL3 %s
+; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=+read-tp-soft | FileCheck --check-prefix=SOFT %s
 
 ; Function Attrs: nounwind readnone
 declare ptr @llvm.thread.pointer() #1
@@ -19,6 +20,8 @@ define ptr @thread_pointer() {
 ; USEEL2: mrs {{x[0-9]+}}, TPIDR_EL2
 ; USEEL3: thread_pointer:
 ; USEEL3: mrs {{x[0-9]+}}, TPIDR_EL3
+; SOFT: thread_pointer:
+; SOFT: bl __aarch64_read_tp
   %1 = tail call ptr @llvm.thread.pointer()
   ret ptr %1
 }
