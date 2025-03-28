@@ -4845,7 +4845,7 @@ static void TryListInitialization(Sema &S,
   QualType DestType = Entity.getType();
 
   if (S.getLangOpts().HLSL &&
-      !S.HLSL().TransformInitList(Entity, Kind, InitList))
+      !S.HLSL().transformInitList(Entity, InitList))
     return;
 
   // C++ doesn't allow scalar initialization with more than one argument.

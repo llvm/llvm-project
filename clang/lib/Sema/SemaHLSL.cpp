@@ -3439,8 +3439,7 @@ public:
 };
 } // namespace
 
-bool SemaHLSL::TransformInitList(const InitializedEntity &Entity,
-                                 const InitializationKind &Kind,
+bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
                                  InitListExpr *Init) {
   // If the initializer is a scalar, just return it.
   if (Init->getType()->isScalarType())
