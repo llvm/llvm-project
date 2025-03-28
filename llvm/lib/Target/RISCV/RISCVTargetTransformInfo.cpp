@@ -37,6 +37,12 @@ static cl::opt<unsigned> SLPMaxVF(
         "exclusively by SLP vectorizer."),
     cl::Hidden);
 
+static cl::opt<unsigned>
+    RVVMinTripCount("riscv-v-min-trip-count",
+                    cl::desc("Set the lower bound of a trip count to decide on "
+                             "vectorization while tail-folding."),
+                    cl::init(5), cl::Hidden);
+
 InstructionCost
 RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
                                       TTI::TargetCostKind CostKind) {
@@ -2596,6 +2602,10 @@ unsigned RISCVTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
   // If no vector registers, or absurd element widths, disable
   // vectorization by returning 1.
   return std::max<unsigned>(1U, RegWidth.getFixedValue() / ElemWidth);
+}
+
+unsigned RISCVTTIImpl::getMinTripCountTailFoldingThreshold() const {
+  return RVVMinTripCount;
 }
 
 TTI::AddressingModeKind
