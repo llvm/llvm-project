@@ -1,0 +1,35 @@
+=====================
+LLVM-libc Maintainers
+=====================
+
+This file is a list of the
+`maintainers <https://llvm.org/docs/DeveloperPolicy.html#maintainers>`_ for
+LLVM-libc. The following people are the active maintainers for the project.
+Please reach out to them for code reviews, questions about their area of
+expertise, or other assistance.
+
+.. contents::
+   :depth: 1
+   :local:
+
+Lead Maintainer
+---------------
+| Michael Jones
+| michaelrj\@google.com (email), `michaelrj-google <https://github.com/michaelrj-google>`_ (github)
+
+GPU
+---
+| Joseph Huber
+| joseph.huber\@amd.com (email), `jhuber6 <https://github.com/jhuber6>`_ (github)
+
+Math
+----
+| Tue Ly
+| lntue\@google.com (email), `lntue <https://github.com/lntue>`_ (github)
+
+Threading
+---------
+| Yifan Zhu
+| yifanzhu\@rochester.edu (email), `Schrodinger ZHU Yifan <https://github.com/schrodingerzhu>`_ (github)
+
+.. TODO: add "Inactive Maintainers" section when needed.
