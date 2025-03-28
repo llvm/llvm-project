@@ -507,8 +507,8 @@ static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
 static DecodeStatus decodeZcmpRlist(MCInst &Inst, uint32_t Imm,
                                     uint64_t Address, const void *Decoder);
 
-static DecodeStatus decodeRegReg(MCInst &Inst, uint32_t Insn, uint64_t Address,
-                                 const MCDisassembler *Decoder);
+static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
+                                        uint64_t Address, const void *Decoder);
 
 static DecodeStatus decodeZcmpSpimm(MCInst &Inst, uint32_t Imm,
                                     uint64_t Address, const void *Decoder);
@@ -615,18 +615,17 @@ static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
 
 static DecodeStatus decodeZcmpRlist(MCInst &Inst, uint32_t Imm,
                                     uint64_t Address, const void *Decoder) {
-  if (Imm <= 3)
+  if (Imm < RISCVZC::RA)
     return MCDisassembler::Fail;
   Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeRegReg(MCInst &Inst, uint32_t Insn, uint64_t Address,
-                                 const MCDisassembler *Decoder) {
-  uint32_t Rs1 = fieldFromInstruction(Insn, 0, 5);
-  uint32_t Rs2 = fieldFromInstruction(Insn, 5, 5);
-  DecodeGPRRegisterClass(Inst, Rs1, Address, Decoder);
-  DecodeGPRRegisterClass(Inst, Rs2, Address, Decoder);
+static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
+                                        uint64_t Address, const void *Decoder) {
+  if (Imm < RISCVZC::RA_S0)
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
 
