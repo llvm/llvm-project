@@ -192,13 +192,13 @@ public:
   bool operator==(const TypeSize &Other) const {
     return (*this == LocationSize::precise(Other));
   }
-  bool operator==(const uint64_t &Other) const {
+  bool operator==(uint64_t Other) const {
     return (*this == LocationSize::precise(Other));
   }
 
   bool operator!=(const LocationSize &Other) const { return !(*this == Other); }
   bool operator!=(const TypeSize &Other) const { return !(*this == Other); }
-  bool operator!=(const uint64_t &Other) const { return !(*this == Other); }
+  bool operator!=(uint64_t Other) const { return !(*this == Other); }
 
   // Ordering operators are not provided, since it's unclear if there's only one
   // reasonable way to compare:
