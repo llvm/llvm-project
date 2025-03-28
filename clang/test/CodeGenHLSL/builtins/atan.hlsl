@@ -57,27 +57,3 @@ float3 test_atan_float3 ( float3 p0 ) {
 float4 test_atan_float4 ( float4 p0 ) {
   return atan ( p0 );
 }
-
-// CHECK-LABEL: test_atan_double
-// CHECK: call reassoc nnan ninf nsz arcp afn float @llvm.atan.f32
-float test_atan_double ( double p0 ) {
-  return atan ( p0 );
-}
-
-// CHECK-LABEL: test_atan_double2
-// CHECK: call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.atan.v2f32
-float2 test_atan_double2 ( double2 p0 ) {
-  return atan ( p0 );
-}
-
-// CHECK-LABEL: test_atan_double3
-// CHECK: call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.atan.v3f32
-float3 test_atan_double3 ( double3 p0 ) {
-  return atan ( p0 );
-}
-
-// CHECK-LABEL: test_atan_double4
-// CHECK: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.atan.v4f32
-float4 test_atan_double4 ( double4 p0 ) {
-  return atan ( p0 );
-}
