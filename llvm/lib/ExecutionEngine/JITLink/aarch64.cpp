@@ -324,11 +324,18 @@ Error lowerPointer64AuthEdgesToSigningFunction(LinkGraph &G) {
 
       uint64_t EncodedInfo = E.getAddend();
       int32_t RealAddend = (uint32_t)(EncodedInfo & 0xffffffff);
+      auto ValueToSign = E.getTarget().getAddress() + RealAddend;
+      if (!ValueToSign) {
+        LLVM_DEBUG(dbgs() << "  " << B->getFixupAddress(E) << " <- null\n");
+        E.setAddend(RealAddend);
+        E.setKind(aarch64::Pointer64);
+        continue;
+      }
+
       uint32_t InitialDiscriminator = (EncodedInfo >> 32) & 0xffff;
       bool AddressDiversify = (EncodedInfo >> 48) & 0x1;
       uint32_t Key = (EncodedInfo >> 49) & 0x3;
       uint32_t HighBits = EncodedInfo >> 51;
-      auto ValueToSign = E.getTarget().getAddress() + RealAddend;
 
       if (HighBits != 0x1000)
         return make_error<JITLinkError>(

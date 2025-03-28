@@ -292,7 +292,8 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     DataMember,
     InlineVariable,
     TemplatedVariable,
-    Concept
+    Concept,
+    NonInlineInModulePurview
   } Kind = Normal;
 
   bool IsInNonspecializedTemplate =
@@ -301,29 +302,50 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   // Default arguments of member function parameters that appear in a class
   // definition, as well as the initializers of data members, receive special
   // treatment. Identify them.
-  if (ManglingContextDecl) {
+  Kind = [&]() {
+    if (!ManglingContextDecl)
+      return Normal;
+
+    if (auto *ND = dyn_cast<NamedDecl>(ManglingContextDecl)) {
+      // See discussion in https://github.com/itanium-cxx-abi/cxx-abi/issues/186
+      //
+      // zygoloid:
+      //    Yeah, I think the only cases left where lambdas don't need a
+      //    mangling are when they have (effectively) internal linkage or appear
+      //    in a non-inline function in a non-module translation unit.
+      Module *M = ManglingContextDecl->getOwningModule();
+      if (M && M->getTopLevelModule()->isNamedModuleUnit() &&
+          ND->isExternallyVisible())
+        return NonInlineInModulePurview;
+    }
+
     if (ParmVarDecl *Param = dyn_cast<ParmVarDecl>(ManglingContextDecl)) {
       if (const DeclContext *LexicalDC
           = Param->getDeclContext()->getLexicalParent())
         if (LexicalDC->isRecord())
-          Kind = DefaultArgument;
+          return DefaultArgument;
     } else if (VarDecl *Var = dyn_cast<VarDecl>(ManglingContextDecl)) {
       if (Var->getMostRecentDecl()->isInline())
-        Kind = InlineVariable;
-      else if (Var->getDeclContext()->isRecord() && IsInNonspecializedTemplate)
-        Kind = TemplatedVariable;
-      else if (Var->getDescribedVarTemplate())
-        Kind = TemplatedVariable;
-      else if (auto *VTS = dyn_cast<VarTemplateSpecializationDecl>(Var)) {
+        return InlineVariable;
+
+      if (Var->getDeclContext()->isRecord() && IsInNonspecializedTemplate)
+        return TemplatedVariable;
+
+      if (Var->getDescribedVarTemplate())
+        return TemplatedVariable;
+
+      if (auto *VTS = dyn_cast<VarTemplateSpecializationDecl>(Var)) {
         if (!VTS->isExplicitSpecialization())
-          Kind = TemplatedVariable;
+          return TemplatedVariable;
       }
     } else if (isa<FieldDecl>(ManglingContextDecl)) {
-      Kind = DataMember;
+      return DataMember;
     } else if (isa<ImplicitConceptSpecializationDecl>(ManglingContextDecl)) {
-      Kind = Concept;
+      return Concept;
     }
-  }
+
+    return Normal;
+  }();
 
   // Itanium ABI [5.1.7]:
   //   In the following contexts [...] the one-definition rule requires closure
@@ -342,6 +364,7 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     return std::make_tuple(nullptr, nullptr);
   }
 
+  case NonInlineInModulePurview:
   case Concept:
     // Concept definitions aren't code generated and thus aren't mangled,
     // however the ManglingContextDecl is important for the purposes of

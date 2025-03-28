@@ -353,7 +353,7 @@ namespace llvm {
   extern char &EarlyMachineLICMID;
 
   /// MachineSinking - This pass performs sinking on machine instructions.
-  extern char &MachineSinkingID;
+  extern char &MachineSinkingLegacyID;
 
   /// MachineCopyPropagation - This pass performs copy propagation on
   /// machine instructions.
@@ -529,7 +529,7 @@ namespace llvm {
   FunctionPass *createExpandLargeDivRemPass();
 
   // Expands large div/rem instructions.
-  FunctionPass *createExpandLargeFpConvertPass();
+  FunctionPass *createExpandFpPass();
 
   // This pass expands memcmp() to load/stores.
   FunctionPass *createExpandMemCmpLegacyPass();
@@ -550,9 +550,9 @@ namespace llvm {
   /// \see CFGuardLongjmp.cpp
   FunctionPass *createCFGuardLongjmpPass();
 
-  /// Creates EHContGuard catchret target identification pass.
-  /// \see EHContGuardCatchret.cpp
-  FunctionPass *createEHContGuardCatchretPass();
+  /// Creates Windows EH Continuation Guard target identification pass.
+  /// \see EHContGuardTargets.cpp
+  FunctionPass *createEHContGuardTargetsPass();
 
   /// Create Hardware Loop pass. \see HardwareLoops.cpp
   FunctionPass *createHardwareLoopsLegacyPass();

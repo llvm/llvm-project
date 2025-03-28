@@ -910,22 +910,25 @@ public:
     }
 
     auto inlineSource =
-        [elemental, &designate](
-            fir::FirOpBuilder builder, mlir::Location loc,
-            const llvm::SmallVectorImpl<mlir::Value> &indices) -> mlir::Value {
+        [elemental,
+         &designate](fir::FirOpBuilder builder, mlir::Location loc,
+                     const llvm::SmallVectorImpl<mlir::Value> &oneBasedIndices)
+        -> mlir::Value {
       if (elemental) {
         // Inline the elemental and get the value from it.
-        auto yield = inlineElementalOp(loc, builder, elemental, indices);
+        auto yield =
+            inlineElementalOp(loc, builder, elemental, oneBasedIndices);
         auto tmp = yield.getElementValue();
         yield->erase();
         return tmp;
       }
       if (designate) {
-        // Create a designator over designator, then load the reference.
-        auto resEntity = hlfir::Entity{designate.getResult()};
-        auto tmp = builder.create<hlfir::DesignateOp>(
-            loc, getVariableElementType(resEntity), designate, indices);
-        return builder.create<fir::LoadOp>(loc, tmp);
+        // Create a designator over the array designator, then load the
+        // reference.
+        mlir::Value elementAddr = hlfir::getElementAt(
+            loc, builder, hlfir::Entity{designate.getResult()},
+            oneBasedIndices);
+        return builder.create<fir::LoadOp>(loc, elementAddr);
       }
       llvm_unreachable("unsupported type");
     };
@@ -936,38 +939,41 @@ public:
     GenBodyFn genBodyFn;
     if constexpr (std::is_same_v<Op, hlfir::AnyOp>) {
       init = builder.createIntegerConstant(loc, builder.getI1Type(), 0);
-      genBodyFn =
-          [inlineSource](fir::FirOpBuilder builder, mlir::Location loc,
-                         mlir::Value reduction,
-                         const llvm::SmallVectorImpl<mlir::Value> &indices)
+      genBodyFn = [inlineSource](
+                      fir::FirOpBuilder builder, mlir::Location loc,
+                      mlir::Value reduction,
+                      const llvm::SmallVectorImpl<mlir::Value> &oneBasedIndices)
           -> mlir::Value {
         // Conditionally set the reduction variable.
         mlir::Value cond = builder.create<fir::ConvertOp>(
-            loc, builder.getI1Type(), inlineSource(builder, loc, indices));
+            loc, builder.getI1Type(),
+            inlineSource(builder, loc, oneBasedIndices));
         return builder.create<mlir::arith::OrIOp>(loc, reduction, cond);
       };
     } else if constexpr (std::is_same_v<Op, hlfir::AllOp>) {
       init = builder.createIntegerConstant(loc, builder.getI1Type(), 1);
-      genBodyFn =
-          [inlineSource](fir::FirOpBuilder builder, mlir::Location loc,
-                         mlir::Value reduction,
-                         const llvm::SmallVectorImpl<mlir::Value> &indices)
+      genBodyFn = [inlineSource](
+                      fir::FirOpBuilder builder, mlir::Location loc,
+                      mlir::Value reduction,
+                      const llvm::SmallVectorImpl<mlir::Value> &oneBasedIndices)
           -> mlir::Value {
         // Conditionally set the reduction variable.
         mlir::Value cond = builder.create<fir::ConvertOp>(
-            loc, builder.getI1Type(), inlineSource(builder, loc, indices));
+            loc, builder.getI1Type(),
+            inlineSource(builder, loc, oneBasedIndices));
         return builder.create<mlir::arith::AndIOp>(loc, reduction, cond);
       };
     } else if constexpr (std::is_same_v<Op, hlfir::CountOp>) {
       init = builder.createIntegerConstant(loc, op.getType(), 0);
-      genBodyFn =
-          [inlineSource](fir::FirOpBuilder builder, mlir::Location loc,
-                         mlir::Value reduction,
-                         const llvm::SmallVectorImpl<mlir::Value> &indices)
+      genBodyFn = [inlineSource](
+                      fir::FirOpBuilder builder, mlir::Location loc,
+                      mlir::Value reduction,
+                      const llvm::SmallVectorImpl<mlir::Value> &oneBasedIndices)
           -> mlir::Value {
         // Conditionally add one to the current value
         mlir::Value cond = builder.create<fir::ConvertOp>(
-            loc, builder.getI1Type(), inlineSource(builder, loc, indices));
+            loc, builder.getI1Type(),
+            inlineSource(builder, loc, oneBasedIndices));
         mlir::Value one =
             builder.createIntegerConstant(loc, reduction.getType(), 1);
         mlir::Value add1 =
@@ -984,12 +990,12 @@ public:
                          std::is_same_v<Op, hlfir::MinvalOp>) {
       bool isMax = std::is_same_v<Op, hlfir::MaxvalOp>;
       init = makeMinMaxInitValGenerator(isMax)(builder, loc, op.getType());
-      genBodyFn = [inlineSource,
-                   isMax](fir::FirOpBuilder builder, mlir::Location loc,
-                          mlir::Value reduction,
-                          const llvm::SmallVectorImpl<mlir::Value> &indices)
+      genBodyFn = [inlineSource, isMax](
+                      fir::FirOpBuilder builder, mlir::Location loc,
+                      mlir::Value reduction,
+                      const llvm::SmallVectorImpl<mlir::Value> &oneBasedIndices)
           -> mlir::Value {
-        mlir::Value val = inlineSource(builder, loc, indices);
+        mlir::Value val = inlineSource(builder, loc, oneBasedIndices);
         mlir::Value cmp =
             generateMinMaxComparison(builder, loc, val, reduction, isMax);
         return builder.create<mlir::arith::SelectOp>(loc, cmp, val, reduction);

@@ -63,8 +63,7 @@ contains
 ! CHECK: ^[[CLASS_IS_P1_BLK]]
 ! CHECK: ^[[CLASS_IS_P2_BLK]]
 ! CHECK: %[[P2:.*]] = fir.convert %[[ARG0:.*]] : (!fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.class<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>
-! CHECK: %[[FIELD:.*]] = fir.field_index c, !fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>
-! CHECK: %{{.*}} = fir.coordinate_of %[[P2]], %[[FIELD]] : (!fir.class<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>, !fir.field) -> !fir.ref<i32>
+! CHECK: %{{.*}} = fir.coordinate_of %[[P2]], c : (!fir.class<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>) -> !fir.ref<i32>
 ! CHECK: ^[[DEFAULT_BLOCK]]
 
 ! CFG-LABEL: func.func @_QMselect_type_lower_testPselect_type1(
@@ -663,21 +662,18 @@ contains
 ! CHECK: ^bb{{.*}}:
 ! CHECK:  %[[EXACT_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.box<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>
 ! CHECK:  %[[C1:.*]] = arith.constant 1 : i32
-! CHECK:  %[[FIELD_A:.*]] = fir.field_index a, !fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>
-! CHECK:  %[[COORD_A:.*]] = fir.coordinate_of %[[EXACT_BOX]], %[[FIELD_A]] : (!fir.box<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.field) -> !fir.ref<i32>
+! CHECK:  %[[COORD_A:.*]] = fir.coordinate_of %[[EXACT_BOX]], a : (!fir.box<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.ref<i32>
 ! CHECK:  fir.store %[[C1]] to %[[COORD_A]] : !fir.ref<i32>
 ! CHECK:  cf.br ^bb{{.*}}
 ! CHECK: ^bb{{.*}}:
 ! CHECK:  %[[EXACT_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.box<!fir.ptr<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>
 ! CHECK:  %[[C3:.*]] = arith.constant 3 : i32
-! CHECK:  %[[FIELD_C:.*]] = fir.field_index c, !fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>
-! CHECK:  %[[COORD_C:.*]] = fir.coordinate_of %[[EXACT_BOX]], %[[FIELD_C]] : (!fir.box<!fir.ptr<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>, !fir.field) -> !fir.ref<i32>
+! CHECK:  %[[COORD_C:.*]] = fir.coordinate_of %[[EXACT_BOX]], c : (!fir.box<!fir.ptr<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>) -> !fir.ref<i32>
 ! CHECK:  fir.store %[[C3]] to %[[COORD_C]] : !fir.ref<i32>
 ! CHECK:  cf.br ^bb{{.*}}
 ! CHECK: ^bb{{.*}}
 ! CHECK:  %[[C5:.*]] = arith.constant 5 : i32
-! CHECK:  %[[FIELD_A:.*]] = fir.field_index a, !fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>
-! CHECK:  %[[COORD_A:.*]] = fir.coordinate_of %[[SELECTOR]], %[[FIELD_A]] : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.field) -> !fir.ref<i32>
+! CHECK:  %[[COORD_A:.*]] = fir.coordinate_of %[[SELECTOR]], a : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.ref<i32>
 ! CHECK:  fir.store %[[C5]] to %[[COORD_A]] : !fir.ref<i32>
 ! CHECK:  cf.br ^bb{{.*}}
 
@@ -699,15 +695,13 @@ contains
 ! CHECK: ^bb{{.*}}:
 ! CHECK:  %[[EXACT_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.box<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>
 ! CHECK:  %[[C1:.*]] = arith.constant 1 : i32
-! CHECK:  %[[FIELD_A:.*]] = fir.field_index a, !fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>
-! CHECK:  %[[COORD_A:.*]] = fir.coordinate_of %[[EXACT_BOX]], %[[FIELD_A]] : (!fir.box<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.field) -> !fir.ref<i32>
+! CHECK:  %[[COORD_A:.*]] = fir.coordinate_of %[[EXACT_BOX]], a : (!fir.box<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.ref<i32>
 ! CHECK:  fir.store %[[C1]] to %[[COORD_A]] : !fir.ref<i32>
 ! CHECK:  cf.br ^bb{{.*}}
 ! CHECK: ^bb{{.*}}:
 ! CHECK:  %[[EXACT_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.box<!fir.heap<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>
 ! CHECK:  %[[C3:.*]] = arith.constant 3 : i32
-! CHECK:  %[[FIELD_C:.*]] = fir.field_index c, !fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>
-! CHECK:  %[[COORD_C:.*]] = fir.coordinate_of %[[EXACT_BOX]], %[[FIELD_C]] : (!fir.box<!fir.heap<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>, !fir.field) -> !fir.ref<i32>
+! CHECK:  %[[COORD_C:.*]] = fir.coordinate_of %[[EXACT_BOX]], c : (!fir.box<!fir.heap<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>) -> !fir.ref<i32>
 ! CHECK:  fir.store %[[C3]] to %[[COORD_C]] : !fir.ref<i32>
 ! CHECK:  cf.br ^bb{{.*}}
 

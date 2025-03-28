@@ -632,7 +632,7 @@ public:
                                          StringRef Suffix) const;
 
   /// Return the MCSymbol for the specified ExternalSymbol.
-  MCSymbol *GetExternalSymbolSymbol(Twine Sym) const;
+  MCSymbol *GetExternalSymbolSymbol(const Twine &Sym) const;
 
   /// Return the symbol for the specified jump table entry.
   MCSymbol *GetJTISymbol(unsigned JTID, bool isLinkerPrivate = false) const;
@@ -896,8 +896,6 @@ private:
   void emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
                          ArrayRef<unsigned> JumpTableIndices,
                          bool JTInDiffSection);
-  void emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
-                          const MachineBasicBlock *MBB, unsigned uid) const;
 
   void emitJumpTableSizesSection(const MachineJumpTableInfo &MJTI,
                                  const Function &F) const;
@@ -911,11 +909,13 @@ private:
   GCMetadataPrinter *getOrCreateGCPrinter(GCStrategy &S);
   void emitGlobalIFunc(Module &M, const GlobalIFunc &GI);
 
-private:
   /// This method decides whether the specified basic block requires a label.
   bool shouldEmitLabelForBasicBlock(const MachineBasicBlock &MBB) const;
 
 protected:
+  virtual void emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
+                                  const MachineBasicBlock *MBB,
+                                  unsigned uid) const;
   virtual void emitGlobalAlias(const Module &M, const GlobalAlias &GA);
   virtual bool shouldEmitWeakSwiftAsyncExtendedFramePointerFlags() const {
     return false;

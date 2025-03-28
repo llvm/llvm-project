@@ -9,10 +9,11 @@
 #include <cstdint>
 #include <vector>
 
+#include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/Dialect/Quant.h"
 #include "mlir-c/IR.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace nb = nanobind;
 using namespace llvm;
@@ -283,6 +284,79 @@ static void populateDialectQuantSubmodule(const nb::module_ &m) {
         return mlirUniformQuantizedPerAxisTypeIsFixedPoint(type);
       },
       "Fixed point values are real numbers divided by a scale.");
+
+  //===-------------------------------------------------------------------===//
+  // UniformQuantizedSubChannelType
+  //===-------------------------------------------------------------------===//
+  auto uniformQuantizedSubChannelType = mlir_type_subclass(
+      m, "UniformQuantizedSubChannelType",
+      mlirTypeIsAUniformQuantizedSubChannelType, quantizedType.get_class());
+  uniformQuantizedSubChannelType.def_classmethod(
+      "get",
+      [](nb::object cls, unsigned flags, MlirType storageType,
+         MlirType expressedType, MlirAttribute scales, MlirAttribute zeroPoints,
+         std::vector<int32_t> quantizedDimensions,
+         std::vector<int64_t> blockSizes, int64_t storageTypeMin,
+         int64_t storageTypeMax) {
+        return cls(mlirUniformQuantizedSubChannelTypeGet(
+            flags, storageType, expressedType, scales, zeroPoints,
+            static_cast<intptr_t>(blockSizes.size()),
+            quantizedDimensions.data(), blockSizes.data(), storageTypeMin,
+            storageTypeMax));
+      },
+      "Gets an instance of UniformQuantizedSubChannel in the same context as "
+      "the provided storage type.",
+      nb::arg("cls"), nb::arg("flags"), nb::arg("storage_type"),
+      nb::arg("expressed_type"), nb::arg("scales"), nb::arg("zero_points"),
+      nb::arg("quantized_dimensions"), nb::arg("block_sizes"),
+      nb::arg("storage_type_min"), nb::arg("storage_type_max"));
+  uniformQuantizedSubChannelType.def_property_readonly(
+      "quantized_dimensions",
+      [](MlirType type) {
+        intptr_t nDim =
+            mlirUniformQuantizedSubChannelTypeGetNumBlockSizes(type);
+        std::vector<int32_t> quantizedDimensions;
+        quantizedDimensions.reserve(nDim);
+        for (intptr_t i = 0; i < nDim; ++i) {
+          quantizedDimensions.push_back(
+              mlirUniformQuantizedSubChannelTypeGetQuantizedDimension(type, i));
+        }
+        return quantizedDimensions;
+      },
+      "Gets the quantized dimensions. Each element in the returned list "
+      "represents an axis of the quantized data tensor that has a specified "
+      "block size. The order of elements corresponds to the order of block "
+      "sizes returned by 'block_sizes' method. It means that the data tensor "
+      "is quantized along the i-th dimension in the returned list using the "
+      "i-th block size from block_sizes method.");
+  uniformQuantizedSubChannelType.def_property_readonly(
+      "block_sizes",
+      [](MlirType type) {
+        intptr_t nDim =
+            mlirUniformQuantizedSubChannelTypeGetNumBlockSizes(type);
+        std::vector<int64_t> blockSizes;
+        blockSizes.reserve(nDim);
+        for (intptr_t i = 0; i < nDim; ++i) {
+          blockSizes.push_back(
+              mlirUniformQuantizedSubChannelTypeGetBlockSize(type, i));
+        }
+        return blockSizes;
+      },
+      "Gets the block sizes for the quantized dimensions. The i-th element in "
+      "the returned list corresponds to the block size for the i-th dimension "
+      "in the list returned by quantized_dimensions method.");
+  uniformQuantizedSubChannelType.def_property_readonly(
+      "scales",
+      [](MlirType type) -> MlirAttribute {
+        return mlirUniformQuantizedSubChannelTypeGetScales(type);
+      },
+      "The scales of the quantized type.");
+  uniformQuantizedSubChannelType.def_property_readonly(
+      "zero_points",
+      [](MlirType type) -> MlirAttribute {
+        return mlirUniformQuantizedSubChannelTypeGetZeroPoints(type);
+      },
+      "The zero points of the quantized type.");
 
   //===-------------------------------------------------------------------===//
   // CalibratedQuantizedType

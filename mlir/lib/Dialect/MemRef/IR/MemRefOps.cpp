@@ -471,7 +471,7 @@ static bool isOpItselfPotentialAutomaticAllocation(Operation *op) {
 /// extending the lifetime of allocations.
 static bool lastNonTerminatorInRegion(Operation *op) {
   return op->getNextNode() == op->getBlock()->getTerminator() &&
-         op->getParentRegion()->getBlocks().size() == 1;
+         llvm::hasSingleElement(op->getParentRegion()->getBlocks());
 }
 
 /// Inline an AllocaScopeOp if either the direct parent is an allocation scope

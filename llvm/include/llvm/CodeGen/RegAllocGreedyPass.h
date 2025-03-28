@@ -5,6 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#ifndef LLVM_CODEGEN_REGALLOC_GREEDY_PASS_H
+#define LLVM_CODEGEN_REGALLOC_GREEDY_PASS_H
+
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/RegAllocCommon.h"
 #include "llvm/CodeGen/RegAllocFast.h"
@@ -42,3 +45,5 @@ public:
 private:
   Options Opts;
 };
+
+#endif // LLVM_CODEGEN_REGALLOC_GREEDY_PASS_H

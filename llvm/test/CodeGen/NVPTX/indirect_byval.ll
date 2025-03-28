@@ -20,7 +20,7 @@ define internal i32 @foo() {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    mov.u64 %SPL, __local_depot0;
+; CHECK-NEXT:    mov.b64 %SPL, __local_depot0;
 ; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.global.u64 %rd1, [ptr];
 ; CHECK-NEXT:    add.u64 %rd3, %SPL, 1;
@@ -63,7 +63,7 @@ define internal i32 @bar() {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    mov.u64 %SPL, __local_depot1;
+; CHECK-NEXT:    mov.b64 %SPL, __local_depot1;
 ; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.global.u64 %rd1, [ptr];
 ; CHECK-NEXT:    add.u64 %rd3, %SPL, 8;

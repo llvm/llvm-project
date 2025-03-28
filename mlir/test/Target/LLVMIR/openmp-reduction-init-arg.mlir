@@ -46,9 +46,7 @@ module {
 // CHECK:         store ptr %[[VAL_2]], ptr %[[VAL_8]], align 8
 // CHECK:         call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @1, i32 1, ptr @_QFPreduce..omp_par, ptr %[[VAL_0]])
 // CHECK:         br label %[[VAL_9:.*]]
-// CHECK:       omp.par.outlined.exit:                            ; preds = %[[VAL_6]]
-// CHECK:         br label %[[VAL_10:.*]]
-// CHECK:       omp.par.exit.split:                               ; preds = %[[VAL_9]]
+// CHECK:       omp.par.exit:                                     ; preds = %[[VAL_6]]
 // CHECK:         ret void
 // CHECK:       [[PAR_ENTRY:omp.par.entry]]:
 // CHECK:         %[[VAL_11:.*]] = getelementptr { ptr, ptr }, ptr %[[VAL_12:.*]], i32 0, i32 0
@@ -99,7 +97,7 @@ module {
 // CHECK:         br label %[[VAL_38:.*]]
 // CHECK:       omp.par.pre_finalize:                             ; preds = %[[VAL_33]]
 // CHECK:         br label %[[VAL_39:.*]]
-// CHECK:       omp.par.outlined.exit.exitStub:                   ; preds = %[[VAL_38]]
+// CHECK:       omp.par.exit.exitStub:                            ; preds = %[[VAL_38]]
 // CHECK:         ret void
 // CHECK:         %[[VAL_40:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_41:.*]], i64 0, i64 0
 // CHECK:         %[[VAL_42:.*]] = load ptr, ptr %[[VAL_40]], align 8

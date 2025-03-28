@@ -12,7 +12,7 @@ define void @value_finder_bug(ptr addrspace(5) %store_ptr, ptr addrspace(4) %ptr
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %vec = load <4 x float>, ptr addrspace(4) %ptr, align 4
   %vec.3 = extractelement <4 x float> %vec, i32 3
-  %shuffle = shufflevector <4 x float> %vec, <4 x float> undef, <2 x i32> <i32 2, i32 undef>
+  %shuffle = shufflevector <4 x float> %vec, <4 x float> poison, <2 x i32> <i32 2, i32 poison>
   %new_vec = insertelement <2 x float> %shuffle, float %vec.3, i32 1
   store <2 x float> %new_vec, ptr addrspace(5) %store_ptr, align 8
   ret void

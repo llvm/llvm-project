@@ -15,7 +15,7 @@ subroutine test_no_clauses()
   ! CHECK: omp.simd private(@[[I_PRIV]] %{{.*}}#0 -> %[[ARG:.*]] : !fir.ref<i32>) {
   ! CHECK-NEXT:   omp.loop_nest (%[[IV:.*]]) : i32 = (%{{.*}}) to (%{{.*}}) {{.*}} {
   ! CHECK:          %[[ARG_DECL:.*]]:2 = hlfir.declare %[[ARG]]
-  ! CHECK:          fir.store %[[IV]] to %[[ARG_DECL]]#1 : !fir.ref<i32>
+  ! CHECK:          hlfir.assign %[[IV]] to %[[ARG_DECL]]#0 : i32, !fir.ref<i32>
   ! CHECK:        }
   ! CHECK: }
   !$omp loop
@@ -75,7 +75,7 @@ end subroutine
 subroutine test_reduction()
   integer :: i, dummy = 1
 
-  ! CHECK: omp.loop private(@{{.*}} %{{.*}}#0 -> %{{.*}} : !{{.*}}) reduction
+  ! CHECK: omp.simd private(@{{.*}} %{{.*}}#0 -> %{{.*}} : !{{.*}}) reduction
   ! CHECK-SAME:  (@[[RED]] %{{.*}}#0 -> %[[DUMMY_ARG:.*]] : !{{.*}}) {
   ! CHECK-NEXT:   omp.loop_nest (%{{.*}}) : i32 = (%{{.*}}) to (%{{.*}}) {{.*}} {
   ! CHECK:          %[[DUMMY_DECL:.*]]:2 = hlfir.declare %[[DUMMY_ARG]] {uniq_name = "_QFtest_reductionEdummy"}
@@ -293,4 +293,68 @@ subroutine teams_loop_cannot_be_parallel_for_4
     END DO
     !$omp end parallel
   END DO
+end subroutine
+
+! CHECK-LABEL: func.func @_QPloop_parallel_bind_reduction
+subroutine loop_parallel_bind_reduction
+  implicit none
+  integer :: x, i
+
+  ! CHECK: omp.wsloop
+  ! CHECK-SAME: private(@{{[^[:space:]]+}} %{{[^[:space:]]+}}#0 -> %[[PRIV_ARG:[^[:space:]]+]] : !fir.ref<i32>)
+  ! CHECK-SAME: reduction(@add_reduction_i32 %{{.*}}#0 -> %[[RED_ARG:.*]] : !fir.ref<i32>) {
+  ! CHECK-NEXT: omp.loop_nest {{.*}} {
+  ! CHECK-NEXT:   hlfir.declare %[[PRIV_ARG]] {uniq_name = "_QF{{.*}}Ei"}
+  ! CHECK-NEXT:   hlfir.declare %[[RED_ARG]] {uniq_name = "_QF{{.*}}Ex"}
+  ! CHECK:      }
+  ! CHECK: }
+  !$omp loop bind(parallel) reduction(+: x)
+  do i = 0, 10
+    x = x + i
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPloop_teams_loop_reduction
+subroutine loop_teams_loop_reduction
+  implicit none
+  integer :: x, i
+  ! CHECK: omp.teams reduction(@add_reduction_i32 %{{.*}}#0 -> %[[TEAMS_RED_ARG:.*]] : !fir.ref<i32>) {
+  ! CHECK:   omp.parallel
+  ! CHECK-SAME: private(@{{[^[:space:]]+}} %{{[^[:space:]]+}}#0 -> %[[PRIV_ARG:[^[:space:]]+]] : !fir.ref<i32>) {
+  ! CHECK:      omp.distribute {
+  ! CHECK:        omp.wsloop
+  ! CHECK-SAME:     reduction(@add_reduction_i32 %[[TEAMS_RED_ARG]] -> %[[RED_ARG:.*]] : !fir.ref<i32>) {
+  ! CHECK-NEXT:     omp.loop_nest {{.*}} {
+  ! CHECK-NEXT:       hlfir.declare %[[PRIV_ARG]] {uniq_name = "_QF{{.*}}Ei"}
+  ! CHECK-NEXT:       hlfir.declare %[[RED_ARG]] {uniq_name = "_QF{{.*}}Ex"}
+  ! CHECK:          }
+  ! CHECK:        }
+  ! CHECK:      }
+  ! CHECK:    }
+  ! CHECK: }
+  !$omp teams loop reduction(+: x)
+  do i = 0, 10
+    x = x + i
+  end do
+end subroutine
+
+
+! Tests a regression when the pass encounters a multi-block `teams` region.
+subroutine multi_block_teams
+  implicit none
+  integer :: i
+
+  ! CHECK: omp.target {{.*}} {
+  ! CHECK:   omp.teams {
+  ! CHECK:   ^bb1:
+  ! CHECK:     cf.br ^bb2
+  ! CHECK:   ^bb2:
+  ! CHECK:     omp.terminator
+  ! CHECK:   }
+  ! CHECK: }
+  !$omp target teams
+  select case (i)
+  case(1)
+  end select
+  !$omp end target teams
 end subroutine

@@ -709,6 +709,14 @@ flat_map initializer_list
 flat_map limits
 flat_map type_traits
 flat_map version
+flat_set cmath
+flat_set compare
+flat_set cstddef
+flat_set cstdint
+flat_set initializer_list
+flat_set limits
+flat_set type_traits
+flat_set version
 format algorithm
 format array
 format atomic

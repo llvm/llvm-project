@@ -6,7 +6,7 @@
 declare void @llvm.va_start(ptr)
 declare void @llvm.va_end(ptr)
 
-define void @va_func(ptr readonly %b, ...) readonly nounwind {
+define void @va_func(ptr readonly %b, ...) readonly nounwind willreturn {
 ; CHECK-LABEL: define void @va_func(ptr readonly captures(none) %b, ...)
  entry:
   %valist = alloca i8

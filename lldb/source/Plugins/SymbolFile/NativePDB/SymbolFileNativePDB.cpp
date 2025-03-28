@@ -552,8 +552,8 @@ lldb::TypeSP SymbolFileNativePDB::CreateModifierType(PdbTypeSymId type_id,
   lldb::TypeSP modified_type = GetOrCreateType(mr.ModifiedType);
 
   return MakeType(toOpaqueUid(type_id), ConstString(name),
-                  modified_type->GetByteSize(nullptr), nullptr,
-                  LLDB_INVALID_UID, Type::eEncodingIsUID, decl, ct,
+                  llvm::expectedToOptional(modified_type->GetByteSize(nullptr)),
+                  nullptr, LLDB_INVALID_UID, Type::eEncodingIsUID, decl, ct,
                   Type::ResolveState::Full);
 }
 
@@ -670,10 +670,11 @@ lldb::TypeSP SymbolFileNativePDB::CreateTagType(PdbTypeSymId type_id,
   Declaration decl;
   TypeSP underlying_type = GetOrCreateType(er.UnderlyingType);
 
-  return MakeType(toOpaqueUid(type_id), ConstString(uname),
-                  underlying_type->GetByteSize(nullptr), nullptr,
-                  LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl,
-                  ct, lldb_private::Type::ResolveState::Forward);
+  return MakeType(
+      toOpaqueUid(type_id), ConstString(uname),
+      llvm::expectedToOptional(underlying_type->GetByteSize(nullptr)), nullptr,
+      LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl, ct,
+      lldb_private::Type::ResolveState::Forward);
 }
 
 TypeSP SymbolFileNativePDB::CreateArrayType(PdbTypeSymId type_id,
@@ -1915,11 +1916,12 @@ TypeSP SymbolFileNativePDB::CreateTypedef(PdbGlobalSymId id) {
   ts->GetNativePDBParser()->GetOrCreateTypedefDecl(id);
 
   Declaration decl;
-  return MakeType(
-      toOpaqueUid(id), ConstString(udt.Name), target_type->GetByteSize(nullptr),
-      nullptr, target_type->GetID(), lldb_private::Type::eEncodingIsTypedefUID,
-      decl, target_type->GetForwardCompilerType(),
-      lldb_private::Type::ResolveState::Forward);
+  return MakeType(toOpaqueUid(id), ConstString(udt.Name),
+                  llvm::expectedToOptional(target_type->GetByteSize(nullptr)),
+                  nullptr, target_type->GetID(),
+                  lldb_private::Type::eEncodingIsTypedefUID, decl,
+                  target_type->GetForwardCompilerType(),
+                  lldb_private::Type::ResolveState::Forward);
 }
 
 TypeSP SymbolFileNativePDB::GetOrCreateTypedef(PdbGlobalSymId id) {

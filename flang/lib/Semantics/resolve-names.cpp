@@ -1440,11 +1440,13 @@ public:
   static bool NeedsScope(const parser::OpenMPBlockConstruct &);
   static bool NeedsScope(const parser::OmpClause &);
 
-  bool Pre(const parser::OpenMPRequiresConstruct &x) {
-    AddOmpSourceRange(x.source);
+  bool Pre(const parser::OmpMetadirectiveDirective &) {
+    ++metaLevel_;
     return true;
   }
-  bool Pre(const parser::OmpSimpleStandaloneDirective &x) {
+  void Post(const parser::OmpMetadirectiveDirective &) { --metaLevel_; }
+
+  bool Pre(const parser::OpenMPRequiresConstruct &x) {
     AddOmpSourceRange(x.source);
     return true;
   }
@@ -1482,13 +1484,23 @@ public:
     return false;
   }
 
+  bool Pre(const parser::OmpInitializerProc &x) {
+    auto &procDes = std::get<parser::ProcedureDesignator>(x.t);
+    auto &name = std::get<parser::Name>(procDes.u);
+    auto *symbol{FindSymbol(NonDerivedTypeScope(), name)};
+    if (!symbol) {
+      context().Say(name.source,
+          "Implicit subroutine declaration '%s' in !$OMP DECLARE REDUCTION"_err_en_US,
+          name.source);
+    }
+    return true;
+  }
+
   bool Pre(const parser::OpenMPDeclareReductionConstruct &x) {
     AddOmpSourceRange(x.source);
-    parser::OmpClauseList emptyList{std::list<parser::OmpClause>{}};
     ProcessReductionSpecifier(
         std::get<Indirection<parser::OmpReductionSpecifier>>(x.t).value(),
-        emptyList);
-    Walk(std::get<std::optional<parser::OmpReductionInitializerClause>>(x.t));
+        std::get<std::optional<parser::OmpClauseList>>(x.t));
     return false;
   }
   bool Pre(const parser::OmpMapClause &);
@@ -1645,7 +1657,8 @@ private:
   void ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
       const parser::OmpClauseList &clauses);
   void ProcessReductionSpecifier(const parser::OmpReductionSpecifier &spec,
-      const parser::OmpClauseList &clauses);
+      const std::optional<parser::OmpClauseList> &clauses);
+  int metaLevel_{0};
 };
 
 bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
@@ -1740,8 +1753,7 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
 
 void OmpVisitor::ProcessReductionSpecifier(
     const parser::OmpReductionSpecifier &spec,
-    const parser::OmpClauseList &clauses) {
-  BeginDeclTypeSpec();
+    const std::optional<parser::OmpClauseList> &clauses) {
   const auto &id{std::get<parser::OmpReductionIdentifier>(spec.t)};
   if (auto procDes{std::get_if<parser::ProcedureDesignator>(&id.u)}) {
     if (auto *name{std::get_if<parser::Name>(&procDes->u)}) {
@@ -1749,32 +1761,66 @@ void OmpVisitor::ProcessReductionSpecifier(
           &MakeSymbol(*name, MiscDetails{MiscDetails::Kind::ConstructName});
     }
   }
-  EndDeclTypeSpec();
-  // Creating a new scope in case the combiner expression (or clauses) use
-  // reerved identifiers, like "omp_in". This is a temporary solution until
-  // we deal with these in a more thorough way.
-  PushScope(Scope::Kind::OtherConstruct, nullptr);
-  Walk(std::get<parser::OmpTypeNameList>(spec.t));
-  Walk(std::get<std::optional<parser::OmpReductionCombiner>>(spec.t));
-  Walk(clauses);
-  PopScope();
+
+  auto &typeList{std::get<parser::OmpTypeNameList>(spec.t)};
+
+  // Create a temporary variable declaration for the four variables
+  // used in the reduction specifier and initializer (omp_out, omp_in,
+  // omp_priv and omp_orig), with the type in the  typeList.
+  //
+  // In theory it would be possible to create only variables that are
+  // actually used, but that requires walking the entire parse-tree of the
+  // expressions, and finding the relevant variables [there may well be other
+  // variables involved too].
+  //
+  // This allows doing semantic analysis where the type is a derived type
+  // e.g omp_out%x = omp_out%x + omp_in%x.
+  //
+  // These need to be temporary (in their own scope). If they are created
+  // as variables in the outer scope, if there's more than one type in the
+  // typelist, duplicate symbols will be reported.
+  const parser::CharBlock ompVarNames[]{
+      {"omp_in", 6}, {"omp_out", 7}, {"omp_priv", 8}, {"omp_orig", 8}};
+
+  for (auto &t : typeList.v) {
+    PushScope(Scope::Kind::OtherConstruct, nullptr);
+    BeginDeclTypeSpec();
+    // We need to walk t.u because Walk(t) does it's own BeginDeclTypeSpec.
+    Walk(t.u);
+
+    const DeclTypeSpec *typeSpec{GetDeclTypeSpec()};
+    assert(typeSpec && "We should have a type here");
+
+    for (auto &nm : ompVarNames) {
+      ObjectEntityDetails details{};
+      details.set_type(*typeSpec);
+      MakeSymbol(nm, Attrs{}, std::move(details));
+    }
+    EndDeclTypeSpec();
+    Walk(std::get<std::optional<parser::OmpReductionCombiner>>(spec.t));
+    Walk(clauses);
+    PopScope();
+  }
 }
 
 bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
-  // OmpDirectiveSpecification is only used in METADIRECTIVE at the moment.
-  // Since it contains directives and clauses, some semantic checks may
-  // not be applicable.
-  // Disable the semantic analysis for it for now to allow the compiler to
-  // parse METADIRECTIVE without flagging errors.
   AddOmpSourceRange(x.source);
-  auto dirId{std::get<llvm::omp::Directive>(x.t)};
-  auto &maybeArgs{std::get<std::optional<std::list<parser::OmpArgument>>>(x.t)};
+  if (metaLevel_ == 0) {
+    // Not in METADIRECTIVE.
+    return true;
+  }
+
+  // If OmpDirectiveSpecification (which contains clauses) is a part of
+  // METADIRECTIVE, some semantic checks may not be applicable.
+  // Disable the semantic analysis for it in such cases to allow the compiler
+  // to parse METADIRECTIVE without flagging errors.
+  auto &maybeArgs{std::get<std::optional<parser::OmpArgumentList>>(x.t)};
   auto &maybeClauses{std::get<std::optional<parser::OmpClauseList>>(x.t)};
 
-  switch (dirId) {
+  switch (x.DirId()) {
   case llvm::omp::Directive::OMPD_declare_mapper:
     if (maybeArgs && maybeClauses) {
-      const parser::OmpArgument &first{maybeArgs->front()};
+      const parser::OmpArgument &first{maybeArgs->v.front()};
       if (auto *spec{std::get_if<parser::OmpMapperSpecifier>(&first.u)}) {
         ProcessMapperSpecifier(*spec, *maybeClauses);
       }
@@ -1782,9 +1828,9 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
     break;
   case llvm::omp::Directive::OMPD_declare_reduction:
     if (maybeArgs && maybeClauses) {
-      const parser::OmpArgument &first{maybeArgs->front()};
+      const parser::OmpArgument &first{maybeArgs->v.front()};
       if (auto *spec{std::get_if<parser::OmpReductionSpecifier>(&first.u)}) {
-        ProcessReductionSpecifier(*spec, *maybeClauses);
+        ProcessReductionSpecifier(*spec, maybeClauses);
       }
     }
     break;
@@ -6213,7 +6259,8 @@ bool DeclarationVisitor::Pre(const parser::ProcPointerInit &x) {
     const auto &null{DEREF(std::get_if<parser::NullInit>(&x.u))};
     Walk(null);
     if (auto nullInit{EvaluateExpr(null)}) {
-      if (!evaluate::IsNullPointer(*nullInit)) {
+      if (!evaluate::IsNullProcedurePointer(&*nullInit) &&
+          !evaluate::IsBareNullPointer(&*nullInit)) {
         Say(null.v.value().source,
             "Procedure pointer initializer must be a name or intrinsic NULL()"_err_en_US);
       }
@@ -7477,15 +7524,10 @@ bool ConstructVisitor::Pre(const parser::DataImpliedDo &x) {
   Walk(bounds.upper);
   Walk(bounds.step);
   EndCheckOnIndexUseInOwnBounds(restore);
-  bool pushScope{currScope().kind() != Scope::Kind::ImpliedDos};
-  if (pushScope) {
-    PushScope(Scope::Kind::ImpliedDos, nullptr);
-  }
+  PushScope(Scope::Kind::ImpliedDos, nullptr);
   DeclareStatementEntity(bounds.name, type);
   Walk(objects);
-  if (pushScope) {
-    PopScope();
-  }
+  PopScope();
   return false;
 }
 
@@ -7526,9 +7568,9 @@ bool ConstructVisitor::Pre(const parser::DataStmtObject &x) {
             }
           },
           [&](const parser::DataImpliedDo &y) {
-            PushScope(Scope::Kind::ImpliedDos, nullptr);
+            // Don't push scope here, since it's done when visiting
+            // DataImpliedDo.
             Walk(y);
-            PopScope();
           },
       },
       x.u);
@@ -8622,7 +8664,7 @@ void DeclarationVisitor::Initialization(const parser::Name &name,
           [&](const parser::NullInit &null) { // => NULL()
             Walk(null);
             if (auto nullInit{EvaluateExpr(null)}) {
-              if (!evaluate::IsNullPointer(*nullInit)) { // C813
+              if (!evaluate::IsNullPointer(&*nullInit)) { // C813
                 Say(null.v.value().source,
                     "Pointer initializer must be intrinsic NULL()"_err_en_US);
               } else if (IsPointer(ultimate)) {
@@ -8672,7 +8714,7 @@ void DeclarationVisitor::PointerInitialization(
             ultimate.set(Symbol::Flag::InDataStmt, false);
           } else if (auto *details{ultimate.detailsIf<ProcEntityDetails>()}) {
             // something like "REAL, EXTERNAL, POINTER :: p => t"
-            if (evaluate::IsNullProcedurePointer(*expr)) {
+            if (evaluate::IsNullProcedurePointer(&*expr)) {
               CHECK(!details->init());
               details->set_init(nullptr);
             } else if (const Symbol *

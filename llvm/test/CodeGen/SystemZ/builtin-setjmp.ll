@@ -26,14 +26,14 @@ define void @foo() {
 ; CHECK-NEXT:    .cfi_offset %r15, -40
 ; CHECK-NEXT:    aghi %r15, -64
 ; CHECK-NEXT:    .cfi_def_cfa_offset 224
-; CHECK-NEXT:    std %f8, 56(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f9, 48(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f10, 40(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f11, 32(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f12, 24(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f13, 16(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f14, 8(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f15, 0(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    std %f8, 56(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f9, 48(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f10, 40(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f11, 32(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f12, 24(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f13, 16(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f14, 8(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f15, 0(%r15) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset %f8, -168
 ; CHECK-NEXT:    .cfi_offset %f9, -176
 ; CHECK-NEXT:    .cfi_offset %f10, -184
@@ -49,14 +49,14 @@ define void @foo() {
 ; CHECK-NEXT:  .LBB0_1: # Block address taken
 ; CHECK-NEXT:    # %entry
 ; CHECK-NEXT:  .LBB0_2: # %entry
-; CHECK-NEXT:    ld %f8, 56(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f9, 48(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f10, 40(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f11, 32(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f12, 24(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f13, 16(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f14, 8(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f15, 0(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %f8, 56(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f9, 48(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f10, 40(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f11, 32(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f12, 24(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f13, 16(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f14, 8(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f15, 0(%r15) # 8-byte Reload
 ; CHECK-NEXT:    lmg %r6, %r15, 112(%r15)
 ; CHECK-NEXT:    br %r14
 entry:
@@ -82,14 +82,14 @@ define void @foo1() "backchain" {
 ; CHECK-NEXT:    aghi %r15, -64
 ; CHECK-NEXT:    .cfi_def_cfa_offset 224
 ; CHECK-NEXT:    stg %r1, 0(%r15)
-; CHECK-NEXT:    std %f8, 56(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f9, 48(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f10, 40(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f11, 32(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f12, 24(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f13, 16(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f14, 8(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f15, 0(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    std %f8, 56(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f9, 48(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f10, 40(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f11, 32(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f12, 24(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f13, 16(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f14, 8(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f15, 0(%r15) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset %f8, -168
 ; CHECK-NEXT:    .cfi_offset %f9, -176
 ; CHECK-NEXT:    .cfi_offset %f10, -184
@@ -107,14 +107,14 @@ define void @foo1() "backchain" {
 ; CHECK-NEXT:  .LBB1_1: # Block address taken
 ; CHECK-NEXT:    # %entry
 ; CHECK-NEXT:  .LBB1_2: # %entry
-; CHECK-NEXT:    ld %f8, 56(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f9, 48(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f10, 40(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f11, 32(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f12, 24(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f13, 16(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f14, 8(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f15, 0(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %f8, 56(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f9, 48(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f10, 40(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f11, 32(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f12, 24(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f13, 16(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f14, 8(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f15, 0(%r15) # 8-byte Reload
 ; CHECK-NEXT:    lmg %r6, %r15, 112(%r15)
 ; CHECK-NEXT:    br %r14
 entry:

@@ -796,8 +796,8 @@ EVT AMDGPUTargetLowering::getTypeForExtReturn(LLVMContext &Context, EVT VT,
   return EVT::getIntegerVT(Context, 32 * ((Size + 31) / 32));
 }
 
-MVT AMDGPUTargetLowering::getVectorIdxTy(const DataLayout &) const {
-  return MVT::i32;
+unsigned AMDGPUTargetLowering::getVectorIdxWidth(const DataLayout &) const {
+  return 32;
 }
 
 bool AMDGPUTargetLowering::isSelectSupported(SelectSupportKind SelType) const {
@@ -1041,7 +1041,7 @@ bool AMDGPUTargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
   case ISD::SETCC:
   case ISD::SELECT:
     if (Subtarget->has16BitInsts() &&
-        (DestVT.isVector() ? !Subtarget->hasVOP3PInsts() : true)) {
+        (!DestVT.isVector() || !Subtarget->hasVOP3PInsts())) {
       // Don't narrow back down to i16 if promoted to i32 already.
       if (!N->isDivergent() && DestVT.isInteger() &&
           DestVT.getScalarSizeInBits() > 1 &&
@@ -5492,6 +5492,7 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(TC_RETURN)
   NODE_NAME_CASE(TC_RETURN_GFX)
   NODE_NAME_CASE(TC_RETURN_CHAIN)
+  NODE_NAME_CASE(TC_RETURN_CHAIN_DVGPR)
   NODE_NAME_CASE(TRAP)
   NODE_NAME_CASE(RET_GLUE)
   NODE_NAME_CASE(WAVE_ADDRESS)

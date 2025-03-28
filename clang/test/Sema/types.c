@@ -78,7 +78,7 @@ typedef int __attribute__((ext_vector_type(0))) e4;                // expected-e
 // no support for vector enum type
 enum { e_2 } x3 __attribute__((vector_size(64))); // expected-error {{invalid vector element type}}
 
-int x4 __attribute__((ext_vector_type(64)));  // expected-error {{'ext_vector_type' attribute only applies to typedefs}}
+int x4 __attribute__((ext_vector_type(64)));
 
 typedef __attribute__ ((ext_vector_type(32),__aligned__(32))) unsigned char uchar32;
 

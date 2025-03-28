@@ -263,7 +263,7 @@ MPFRNumber MPFRNumber::frexp(int &exp) {
   MPFRNumber result(*this);
   mpfr_exp_t resultExp;
   mpfr_frexp(&resultExp, result.value, value, mpfr_rounding);
-  exp = resultExp;
+  exp = static_cast<int>(resultExp);
   return result;
 }
 
@@ -307,7 +307,7 @@ MPFRNumber MPFRNumber::remquo(const MPFRNumber &divisor, int &quotient) {
   MPFRNumber remainder(*this);
   long q;
   mpfr_remquo(remainder.value, &q, value, divisor.value, mpfr_rounding);
-  quotient = q;
+  quotient = static_cast<int>(q);
   return remainder;
 }
 

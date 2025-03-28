@@ -441,9 +441,7 @@ public:
   bool mayHaveSideEffects() const;
 
   /// Returns true for PHI-like recipes.
-  bool isPhi() const {
-    return getVPDefID() >= VPFirstPHISC && getVPDefID() <= VPLastPHISC;
-  }
+  bool isPhi() const;
 
   /// Returns true if the recipe may read from memory.
   bool mayReadFromMemory() const;
@@ -516,7 +514,7 @@ public:
     case VPRecipeBase::VPReplicateSC:
     case VPRecipeBase::VPScalarIVStepsSC:
     case VPRecipeBase::VPVectorPointerSC:
-    case VPRecipeBase::VPReverseVectorPointerSC:
+    case VPRecipeBase::VPVectorEndPointerSC:
     case VPRecipeBase::VPWidenCallSC:
     case VPRecipeBase::VPWidenCanonicalIVSC:
     case VPRecipeBase::VPWidenCastSC:
@@ -712,8 +710,10 @@ public:
            R->getVPDefID() == VPRecipeBase::VPWidenGEPSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenIntrinsicSC ||
+           R->getVPDefID() == VPRecipeBase::VPReductionSC ||
+           R->getVPDefID() == VPRecipeBase::VPReductionEVLSC ||
            R->getVPDefID() == VPRecipeBase::VPReplicateSC ||
-           R->getVPDefID() == VPRecipeBase::VPReverseVectorPointerSC ||
+           R->getVPDefID() == VPRecipeBase::VPVectorEndPointerSC ||
            R->getVPDefID() == VPRecipeBase::VPVectorPointerSC;
   }
 
@@ -865,6 +865,7 @@ public:
     BranchOnCount,
     BranchOnCond,
     Broadcast,
+    ComputeFindLastIVResult,
     ComputeReductionResult,
     // Takes the VPValue to extract from as first operand and the lane or part
     // to extract as second operand, counting from the end starting with 1 for
@@ -878,9 +879,8 @@ public:
     // Returns a scalar boolean value, which is true if any lane of its (only
     // boolean) vector operand is true.
     AnyOf,
-    // Extracts the first active lane of a vector, where the first operand is
-    // the predicate, and the second operand is the vector to extract.
-    ExtractFirstActive,
+    // Calculates the first active lane index of the vector predicate operand.
+    FirstActiveLane,
   };
 
 private:
@@ -1111,14 +1111,7 @@ public:
     return R;
   }
 
-  static inline bool classof(const VPRecipeBase *R) {
-    return R->getVPDefID() == VPRecipeBase::VPWidenSC;
-  }
-
-  static inline bool classof(const VPUser *U) {
-    auto *R = dyn_cast<VPRecipeBase>(U);
-    return R && classof(R);
-  }
+  VP_CLASSOF_IMPL(VPDef::VPWidenSC)
 
   /// Produce a widened instruction using the opcode and operands of the recipe,
   /// processing State.VF elements.
@@ -1270,20 +1263,14 @@ public:
       : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, DL),
         VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {
     LLVMContext &Ctx = Ty->getContext();
-    AttributeList Attrs = Intrinsic::getAttributes(Ctx, VectorIntrinsicID);
+    AttributeSet Attrs = Intrinsic::getFnAttributes(Ctx, VectorIntrinsicID);
     MemoryEffects ME = Attrs.getMemoryEffects();
     MayReadFromMemory = ME.onlyWritesMemory();
     MayWriteToMemory = ME.onlyReadsMemory();
     MayHaveSideEffects = MayWriteToMemory ||
-                         !Attrs.hasFnAttr(Attribute::NoUnwind) ||
-                         !Attrs.hasFnAttr(Attribute::WillReturn);
+                         !Attrs.hasAttribute(Attribute::NoUnwind) ||
+                         !Attrs.hasAttribute(Attribute::WillReturn);
   }
-
-  VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
-                         std::initializer_list<VPValue *> CallArguments,
-                         Type *Ty, DebugLoc DL = {})
-      : VPWidenIntrinsicRecipe(VectorIntrinsicID,
-                               ArrayRef<VPValue *>(CallArguments), Ty, DL) {}
 
   ~VPWidenIntrinsicRecipe() override = default;
 
@@ -1524,20 +1511,21 @@ public:
   }
 };
 
-/// A recipe to compute the pointers for widened memory accesses of IndexTy
-/// in reverse order.
-class VPReverseVectorPointerRecipe : public VPRecipeWithIRFlags,
-                                     public VPUnrollPartAccessor<2> {
+/// A recipe to compute a pointer to the last element of each part of a widened
+/// memory access for widened memory accesses of IndexedTy. Used for
+/// VPWidenMemoryRecipes that are reversed.
+class VPVectorEndPointerRecipe : public VPRecipeWithIRFlags,
+                                 public VPUnrollPartAccessor<2> {
   Type *IndexedTy;
 
 public:
-  VPReverseVectorPointerRecipe(VPValue *Ptr, VPValue *VF, Type *IndexedTy,
-                               GEPNoWrapFlags GEPFlags, DebugLoc DL)
-      : VPRecipeWithIRFlags(VPDef::VPReverseVectorPointerSC,
+  VPVectorEndPointerRecipe(VPValue *Ptr, VPValue *VF, Type *IndexedTy,
+                           GEPNoWrapFlags GEPFlags, DebugLoc DL)
+      : VPRecipeWithIRFlags(VPDef::VPVectorEndPointerSC,
                             ArrayRef<VPValue *>({Ptr, VF}), GEPFlags, DL),
         IndexedTy(IndexedTy) {}
 
-  VP_CLASSOF_IMPL(VPDef::VPReverseVectorPointerSC)
+  VP_CLASSOF_IMPL(VPDef::VPVectorEndPointerSC)
 
   VPValue *getVFValue() { return getOperand(1); }
   const VPValue *getVFValue() const { return getOperand(1); }
@@ -1565,10 +1553,9 @@ public:
     return true;
   }
 
-  VPReverseVectorPointerRecipe *clone() override {
-    return new VPReverseVectorPointerRecipe(getOperand(0), getVFValue(),
-                                            IndexedTy, getGEPNoWrapFlags(),
-                                            getDebugLoc());
+  VPVectorEndPointerRecipe *clone() override {
+    return new VPVectorEndPointerRecipe(getOperand(0), getVFValue(), IndexedTy,
+                                        getGEPNoWrapFlags(), getDebugLoc());
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1653,10 +1640,8 @@ public:
 class VPHeaderPHIRecipe : public VPSingleDefRecipe {
 protected:
   VPHeaderPHIRecipe(unsigned char VPDefID, Instruction *UnderlyingInstr,
-                    VPValue *Start = nullptr, DebugLoc DL = {})
-      : VPSingleDefRecipe(VPDefID, ArrayRef<VPValue *>(), UnderlyingInstr, DL) {
-    if (Start)
-      addOperand(Start);
+                    VPValue *Start, DebugLoc DL = {})
+      : VPSingleDefRecipe(VPDefID, ArrayRef<VPValue *>({Start}), UnderlyingInstr, DL) {
   }
 
 public:
@@ -1761,6 +1746,16 @@ public:
     llvm_unreachable(
         "VPWidenIntOrFpInductionRecipe generates its own backedge value");
   }
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    // The recipe creates its own wide start value, so it only requests the
+    // first lane of the operand.
+    // TODO: Remove once creating the start value is modeled separately.
+    return Op == getStartValue() || Op == getStepValue();
+  }
 };
 
 /// A recipe for handling phi nodes of integer and floating-point inductions,
@@ -1837,16 +1832,6 @@ public:
   VPValue *getLastUnrolledPartOperand() {
     return getNumOperands() == 5 ? getOperand(4) : this;
   }
-
-  /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    // The recipe creates its own wide start value, so it only requests the
-    // first lane of the operand.
-    // TODO: Remove once creating the start value is modeled separately.
-    return Op == getStartValue();
-  }
 };
 
 class VPWidenPointerInductionRecipe : public VPWidenInductionRecipe,
@@ -1879,57 +1864,11 @@ public:
   /// Returns true if only scalar values will be generated.
   bool onlyScalarsGenerated(bool IsScalable);
 
-  /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return Op == getOperand(0);
-  }
-
   /// Returns the VPValue representing the value of this induction at
   /// the first unrolled part, if it exists. Returns itself if unrolling did not
   /// take place.
   VPValue *getFirstUnrolledPartOperand() {
     return getUnrollPart(*this) == 0 ? this : getOperand(2);
-  }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-};
-
-/// Recipe to generate a scalar PHI. Used to generate code for recipes that
-/// produce scalar header phis, including VPCanonicalIVPHIRecipe and
-/// VPEVLBasedIVPHIRecipe.
-class VPScalarPHIRecipe : public VPHeaderPHIRecipe {
-  std::string Name;
-
-public:
-  VPScalarPHIRecipe(VPValue *Start, VPValue *BackedgeValue, DebugLoc DL,
-                    StringRef Name)
-      : VPHeaderPHIRecipe(VPDef::VPScalarPHISC, nullptr, Start, DL),
-        Name(Name.str()) {
-    addOperand(BackedgeValue);
-  }
-
-  ~VPScalarPHIRecipe() override = default;
-
-  VPScalarPHIRecipe *clone() override {
-    llvm_unreachable("cloning not implemented yet");
-  }
-
-  VP_CLASSOF_IMPL(VPDef::VPScalarPHISC)
-
-  /// Generate the phi/select nodes.
-  void execute(VPTransformState &State) override;
-
-  /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return true;
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1945,11 +1884,16 @@ public:
 /// exactly 2 incoming values, the first from the predecessor of the region and
 /// the second from the exiting block of the region.
 class VPWidenPHIRecipe : public VPSingleDefRecipe {
+  /// Name to use for the generated IR instruction for the widened phi.
+  std::string Name;
+
 public:
   /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start and
   /// debug location \p DL.
-  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr, DebugLoc DL = {})
-      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi, DL) {
+  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr, DebugLoc DL = {},
+                   const Twine &Name = "")
+      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi, DL),
+        Name(Name.str()) {
     if (Start)
       addOperand(Start);
   }
@@ -1986,10 +1930,6 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
       : VPHeaderPHIRecipe(VPDef::VPFirstOrderRecurrencePHISC, Phi, &Start) {}
 
   VP_CLASSOF_IMPL(VPDef::VPFirstOrderRecurrencePHISC)
-
-  static inline bool classof(const VPHeaderPHIRecipe *R) {
-    return R->getVPDefID() == VPDef::VPFirstOrderRecurrencePHISC;
-  }
 
   VPFirstOrderRecurrencePHIRecipe *clone() override {
     return new VPFirstOrderRecurrencePHIRecipe(
@@ -2057,10 +1997,6 @@ public:
   }
 
   VP_CLASSOF_IMPL(VPDef::VPReductionPHISC)
-
-  static inline bool classof(const VPHeaderPHIRecipe *R) {
-    return R->getVPDefID() == VPDef::VPReductionPHISC;
-  }
 
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
@@ -2302,39 +2238,41 @@ public:
 /// A recipe to represent inloop reduction operations, performing a reduction on
 /// a vector operand into a scalar value, and adding the result to a chain.
 /// The Operands are {ChainOp, VecOp, [Condition]}.
-class VPReductionRecipe : public VPSingleDefRecipe {
-  /// The recurrence decriptor for the reduction in question.
-  const RecurrenceDescriptor &RdxDesc;
+class VPReductionRecipe : public VPRecipeWithIRFlags {
+  /// The recurrence kind for the reduction in question.
+  RecurKind RdxKind;
   bool IsOrdered;
   /// Whether the reduction is conditional.
   bool IsConditional = false;
 
 protected:
-  VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
-                    Instruction *I, ArrayRef<VPValue *> Operands,
-                    VPValue *CondOp, bool IsOrdered, DebugLoc DL)
-      : VPSingleDefRecipe(SC, Operands, I, DL), RdxDesc(R),
+  VPReductionRecipe(const unsigned char SC, RecurKind RdxKind,
+                    FastMathFlags FMFs, Instruction *I,
+                    ArrayRef<VPValue *> Operands, VPValue *CondOp,
+                    bool IsOrdered, DebugLoc DL)
+      : VPRecipeWithIRFlags(SC, Operands, FMFs, DL), RdxKind(RdxKind),
         IsOrdered(IsOrdered) {
     if (CondOp) {
       IsConditional = true;
       addOperand(CondOp);
     }
+    setUnderlyingValue(I);
   }
 
 public:
-  VPReductionRecipe(const RecurrenceDescriptor &R, Instruction *I,
+  VPReductionRecipe(RecurKind RdxKind, FastMathFlags FMFs, Instruction *I,
                     VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
                     bool IsOrdered, DebugLoc DL = {})
-      : VPReductionRecipe(VPDef::VPReductionSC, R, I,
+      : VPReductionRecipe(VPDef::VPReductionSC, RdxKind, FMFs, I,
                           ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
                           IsOrdered, DL) {}
 
   ~VPReductionRecipe() override = default;
 
   VPReductionRecipe *clone() override {
-    return new VPReductionRecipe(RdxDesc, getUnderlyingInstr(), getChainOp(),
-                                 getVecOp(), getCondOp(), IsOrdered,
-                                 getDebugLoc());
+    return new VPReductionRecipe(RdxKind, getFastMathFlags(),
+                                 getUnderlyingInstr(), getChainOp(), getVecOp(),
+                                 getCondOp(), IsOrdered, getDebugLoc());
   }
 
   static inline bool classof(const VPRecipeBase *R) {
@@ -2360,10 +2298,8 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  /// Return the recurrence decriptor for the in-loop reduction.
-  const RecurrenceDescriptor &getRecurrenceDescriptor() const {
-    return RdxDesc;
-  }
+  /// Return the recurrence kind for the in-loop reduction.
+  RecurKind getRecurrenceKind() const { return RdxKind; }
   /// Return true if the in-loop reduction is ordered.
   bool isOrdered() const { return IsOrdered; };
   /// Return true if the in-loop reduction is conditional.
@@ -2384,12 +2320,14 @@ public:
 /// The Operands are {ChainOp, VecOp, EVL, [Condition]}.
 class VPReductionEVLRecipe : public VPReductionRecipe {
 public:
-  VPReductionEVLRecipe(VPReductionRecipe &R, VPValue &EVL, VPValue *CondOp)
+  VPReductionEVLRecipe(VPReductionRecipe &R, VPValue &EVL, VPValue *CondOp,
+                       DebugLoc DL = {})
       : VPReductionRecipe(
-            VPDef::VPReductionEVLSC, R.getRecurrenceDescriptor(),
+            VPDef::VPReductionEVLSC, R.getRecurrenceKind(),
+            R.getFastMathFlags(),
             cast_or_null<Instruction>(R.getUnderlyingValue()),
             ArrayRef<VPValue *>({R.getChainOp(), R.getVecOp(), &EVL}), CondOp,
-            R.isOrdered(), R.getDebugLoc()) {}
+            R.isOrdered(), DL) {}
 
   ~VPReductionEVLRecipe() override = default;
 
@@ -2880,13 +2818,9 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPCanonicalIVPHISC)
 
-  static inline bool classof(const VPHeaderPHIRecipe *D) {
-    return D->getVPDefID() == VPDef::VPCanonicalIVPHISC;
-  }
-
   void execute(VPTransformState &State) override {
-    llvm_unreachable(
-        "cannot execute this recipe, should be replaced by VPScalarPHIRecipe");
+    llvm_unreachable("cannot execute this recipe, should be replaced by a "
+                     "scalar phi recipe");
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2943,10 +2877,6 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPActiveLaneMaskPHISC)
 
-  static inline bool classof(const VPHeaderPHIRecipe *D) {
-    return D->getVPDefID() == VPDef::VPActiveLaneMaskPHISC;
-  }
-
   /// Generate the active lane mask phi of the vector loop.
   void execute(VPTransformState &State) override;
 
@@ -2974,13 +2904,9 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPEVLBasedIVPHISC)
 
-  static inline bool classof(const VPHeaderPHIRecipe *D) {
-    return D->getVPDefID() == VPDef::VPEVLBasedIVPHISC;
-  }
-
   void execute(VPTransformState &State) override {
-    llvm_unreachable(
-        "cannot execute this recipe, should be replaced by VPScalarPHIRecipe");
+    llvm_unreachable("cannot execute this recipe, should be replaced by a "
+                     "scalar phi recipe");
   }
 
   /// Return the cost of this VPEVLBasedIVPHIRecipe.
@@ -3136,6 +3062,10 @@ public:
         getOperand(0), getOperand(1), InductionOpcode,
         hasFastMathFlags() ? getFastMathFlags() : FastMathFlags());
   }
+
+  /// Return true if this VPScalarIVStepsRecipe corresponds to part 0. Note that
+  /// this is only accurate after the VPlan has been unrolled.
+  bool isPart0() { return getUnrollPart(*this) == 0; }
 
   VP_CLASSOF_IMPL(VPDef::VPScalarIVStepsSC)
 
@@ -3537,21 +3467,6 @@ public:
     VPBB->setPlan(this);
   }
 
-  /// Create initial VPlan, having an "entry" VPBasicBlock (wrapping
-  /// original scalar pre-header) which contains SCEV expansions that need
-  /// to happen before the CFG is modified (when executing a VPlan for the
-  /// epilogue vector loop, the original entry needs to be replaced by a new
-  /// one); a VPBasicBlock for the vector pre-header, followed by a region for
-  /// the vector loop, followed by the middle VPBasicBlock. If a check is needed
-  /// to guard executing the scalar epilogue loop, it will be added to the
-  /// middle block, together with VPBasicBlocks for the scalar preheader and
-  /// exit blocks. \p InductionTy is the type of the canonical induction and
-  /// used for related values, like the trip count expression.
-  static VPlanPtr createInitialVPlan(Type *InductionTy,
-                                     PredicatedScalarEvolution &PSE,
-                                     bool RequiresScalarEpilogueCheck,
-                                     bool TailFolded, Loop *TheLoop);
-
   /// Prepare the plan for execution, setting up the required live-in values.
   void prepareToExecute(Value *TripCount, Value *VectorTripCount,
                         VPTransformState &State);
@@ -3613,11 +3528,18 @@ public:
     return TripCount;
   }
 
+  /// Set the trip count assuming it is currently null; if it is not - use
+  /// resetTripCount().
+  void setTripCount(VPValue *NewTripCount) {
+    assert(!TripCount && NewTripCount && "TripCount should not be set yet.");
+    TripCount = NewTripCount;
+  }
+
   /// Resets the trip count for the VPlan. The caller must make sure all uses of
   /// the original trip count have been replaced.
   void resetTripCount(VPValue *NewTripCount) {
     assert(TripCount && NewTripCount && TripCount->getNumUsers() == 0 &&
-           "TripCount always must be set");
+           "TripCount must be set when resetting");
     TripCount = NewTripCount;
   }
 
@@ -3675,6 +3597,10 @@ public:
     UFs.clear();
     UFs.insert(UF);
   }
+
+  /// Returns true if the VPlan already has been unrolled, i.e. it has a single
+  /// concrete UF.
+  bool isUnrolled() const { return UFs.size() == 1; }
 
   /// Return a string with the name of the plan and the applicable VFs and UFs.
   std::string getName() const;
@@ -3792,19 +3718,6 @@ public:
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-struct VPlanIngredient {
-  const Value *V;
-
-  VPlanIngredient(const Value *V) : V(V) {}
-
-  void print(raw_ostream &O) const;
-};
-
-inline raw_ostream &operator<<(raw_ostream &OS, const VPlanIngredient &I) {
-  I.print(OS);
-  return OS;
-}
-
 inline raw_ostream &operator<<(raw_ostream &OS, const VPlan &Plan) {
   Plan.print(OS);
   return OS;

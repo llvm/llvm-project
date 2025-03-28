@@ -393,3 +393,183 @@ body:             |
     SI_RETURN implicit $vgpr0, implicit $vgpr1
 
 ...
+
+---
+name:  fold_frame_index__through_reg_sequence_to_user_subreg
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    4
+  localFrameSize:  16384
+stack:
+  - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
+body:             |
+  bb.0:
+    liveins: $sgpr8
+    ; CHECK-LABEL: name: fold_frame_index__through_reg_sequence_to_user_subreg
+    ; CHECK: liveins: $sgpr8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr8
+    ; CHECK-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 123
+    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 %stack.0
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
+    ; CHECK-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY]], %stack.0, implicit-def $scc
+    ; CHECK-NEXT: [[S_ADD_I32_1:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY]], 123, implicit-def $scc
+    ; CHECK-NEXT: $sgpr4 = COPY [[S_ADD_I32_]]
+    ; CHECK-NEXT: $sgpr5 = COPY [[S_ADD_I32_1]]
+    ; CHECK-NEXT: SI_RETURN implicit $sgpr4, implicit $sgpr5
+    %0:sreg_32 = COPY $sgpr8
+    %1:sreg_32 = S_MOV_B32 123
+    %2:sreg_32 = S_MOV_B32 %stack.0
+    %3:sreg_64 = REG_SEQUENCE %1, %subreg.sub0, %2, %subreg.sub1
+    %4:sreg_32 = S_ADD_I32 %0, %3.sub1, implicit-def $scc
+    %5:sreg_32 = S_ADD_I32 %0, %3.sub0, implicit-def $scc
+    $sgpr4 = COPY %4
+    $sgpr5 = COPY %5
+    SI_RETURN implicit $sgpr4, implicit $sgpr5
+
+...
+
+name:  fold_frame_index__s_add_u32__fi_const
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    4
+  localFrameSize:  16384
+stack:
+  - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: fold_frame_index__s_add_u32__fi_const
+    ; CHECK: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 %stack.0, 128, implicit-def $scc
+    ; CHECK-NEXT: $sgpr4 = COPY [[S_ADD_U32_]]
+    ; CHECK-NEXT: SI_RETURN implicit $sgpr4
+    %0:sreg_32 = S_MOV_B32 %stack.0
+    %1:sreg_32 = S_ADD_U32 %0, 128, implicit-def $scc
+    $sgpr4 = COPY %1
+    SI_RETURN implicit $sgpr4
+...
+
+---
+name:  fold_frame_index__s_add_u32__const_fi
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    4
+  localFrameSize:  16384
+stack:
+  - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: fold_frame_index__s_add_u32__const_fi
+    ; CHECK: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 128, %stack.0, implicit-def $scc
+    ; CHECK-NEXT: $sgpr4 = COPY [[S_ADD_U32_]]
+    ; CHECK-NEXT: SI_RETURN implicit $sgpr4
+    %0:sreg_32 = S_MOV_B32 %stack.0
+    %1:sreg_32 = S_ADD_U32 128, %0, implicit-def $scc
+    $sgpr4 = COPY %1
+    SI_RETURN implicit $sgpr4
+...
+
+---
+name:  fold_frame_index__s_add_u32__fi_inlineimm
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    4
+  localFrameSize:  16384
+stack:
+  - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: fold_frame_index__s_add_u32__fi_inlineimm
+    ; CHECK: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 %stack.0, 16, implicit-def $scc
+    ; CHECK-NEXT: $sgpr4 = COPY [[S_ADD_U32_]]
+    ; CHECK-NEXT: SI_RETURN implicit $sgpr4
+    %0:sreg_32 = S_MOV_B32 %stack.0
+    %1:sreg_32 = S_ADD_U32 %0, 16, implicit-def $scc
+    $sgpr4 = COPY %1
+    SI_RETURN implicit $sgpr4
+...
+
+---
+name:  fold_frame_index__s_add_u32__inlineimm_fi
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    4
+  localFrameSize:  16384
+stack:
+  - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: fold_frame_index__s_add_u32__inlineimm_fi
+    ; CHECK: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 16, %stack.0, implicit-def $scc
+    ; CHECK-NEXT: $sgpr4 = COPY [[S_ADD_U32_]]
+    ; CHECK-NEXT: SI_RETURN implicit $sgpr4
+    %0:sreg_32 = S_MOV_B32 %stack.0
+    %1:sreg_32 = S_ADD_U32 16, %0, implicit-def $scc
+    $sgpr4 = COPY %1
+    SI_RETURN implicit $sgpr4
+...
+
+---
+name:            no_fold_literal_and_fi_s_or_b32
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    16
+  localFrameSize:  8192
+stack:
+  - { id: 0, size: 4096, alignment: 4, local-offset: 0 }
+  - { id: 1, size: 4096, alignment: 16, local-offset: 4096 }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: no_fold_literal_and_fi_s_or_b32
+    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 %stack.1
+    ; CHECK-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 killed [[S_MOV_B32_]], 12345, implicit-def dead $scc
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_AND_B32_]]
+    %0:sreg_32 = S_MOV_B32 12345
+    %1:sreg_32 = S_MOV_B32 %stack.1
+    %2:sreg_32 = S_AND_B32 killed %1, killed %0, implicit-def dead $scc
+    S_ENDPGM 0, implicit %2
+
+...
+
+---
+name:            no_fold_literal_or_fi_s_or_b32
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    16
+  localFrameSize:  8192
+stack:
+  - { id: 0, size: 4096, alignment: 4, local-offset: 0 }
+  - { id: 1, size: 4096, alignment: 16, local-offset: 4096 }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: no_fold_literal_or_fi_s_or_b32
+    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 %stack.1
+    ; CHECK-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 killed [[S_MOV_B32_]], 12345, implicit-def dead $scc
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_OR_B32_]]
+    %0:sreg_32 = S_MOV_B32 12345
+    %1:sreg_32 = S_MOV_B32 %stack.1
+    %2:sreg_32 = S_OR_B32 killed %1, killed %0, implicit-def dead $scc
+    S_ENDPGM 0, implicit %2
+
+...
+
+---
+name:            no_fold_literal_and_fi_s_mul_i32
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    16
+  localFrameSize:  8192
+stack:
+  - { id: 0, size: 4096, alignment: 4, local-offset: 0 }
+  - { id: 1, size: 4096, alignment: 16, local-offset: 4096 }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: no_fold_literal_and_fi_s_mul_i32
+    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 %stack.1
+    ; CHECK-NEXT: [[S_MUL_I32_:%[0-9]+]]:sreg_32 = S_MUL_I32 killed [[S_MOV_B32_]], 12345, implicit-def dead $scc
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_MUL_I32_]]
+    %0:sreg_32 = S_MOV_B32 12345
+    %1:sreg_32 = S_MOV_B32 %stack.1
+    %2:sreg_32 = S_MUL_I32 killed %1, killed %0, implicit-def dead $scc
+    S_ENDPGM 0, implicit %2
+
+...

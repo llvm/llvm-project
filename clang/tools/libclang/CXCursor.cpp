@@ -910,6 +910,9 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::OpenACCWaitConstructClass:
     K = CXCursor_OpenACCWaitConstruct;
     break;
+  case Stmt::OpenACCCacheConstructClass:
+    K = CXCursor_OpenACCCacheConstruct;
+    break;
   case Stmt::OpenACCInitConstructClass:
     K = CXCursor_OpenACCInitConstruct;
     break;

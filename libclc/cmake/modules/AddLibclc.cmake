@@ -107,9 +107,13 @@ function(link_bc)
     set( LINK_INPUT_ARG "@${RSP_FILE}" )
   endif()
 
+  if( ARG_INTERNALIZE )
+    set( link_flags --internalize --only-needed )
+  endif()
+
   add_custom_command(
     OUTPUT ${ARG_TARGET}.bc
-    COMMAND ${llvm-link_exe} $<$<BOOL:${ARG_INTERNALIZE}>:--internalize> -o ${ARG_TARGET}.bc ${LINK_INPUT_ARG}
+    COMMAND ${llvm-link_exe} ${link_flags} -o ${ARG_TARGET}.bc ${LINK_INPUT_ARG}
     DEPENDS ${llvm-link_target} ${ARG_DEPENDENCIES} ${ARG_INPUTS} ${RSP_FILE}
   )
 
@@ -210,9 +214,10 @@ endfunction()
 #      Optimization options (for opt)
 #  * ALIASES <string> ...
 #      List of aliases
-#  * INTERNAL_LINK_DEPENDENCIES <string> ...
-#      A list of extra bytecode files to link into the builtin library. Symbols
-#      from these link dependencies will be internalized during linking.
+#  * INTERNAL_LINK_DEPENDENCIES <target> ...
+#      A list of extra bytecode file's targets. The bitcode files will be linked
+#      into the builtin library. Symbols from these link dependencies will be
+#      internalized during linking.
 function(add_libclc_builtin_set)
   cmake_parse_arguments(ARG
     "CLC_INTERNAL"
@@ -309,12 +314,16 @@ function(add_libclc_builtin_set)
       INPUTS ${bytecode_files}
       DEPENDENCIES ${builtins_comp_lib_tgt}
     )
+    set( internal_link_depend_files )
+    foreach( tgt ${ARG_INTERNAL_LINK_DEPENDENCIES} )
+      list( APPEND internal_link_depend_files $<TARGET_PROPERTY:${tgt},TARGET_FILE> )
+    endforeach()
     link_bc(
       INTERNALIZE
       TARGET ${builtins_link_lib_tgt}
       INPUTS $<TARGET_PROPERTY:${builtins_link_lib_tmp_tgt},TARGET_FILE>
-        ${ARG_INTERNAL_LINK_DEPENDENCIES}
-      DEPENDENCIES ${builtins_link_lib_tmp_tgt}
+        ${internal_link_depend_files}
+      DEPENDENCIES ${builtins_link_lib_tmp_tgt} ${ARG_INTERNAL_LINK_DEPENDENCIES}
     )
   endif()
 

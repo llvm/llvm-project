@@ -1278,16 +1278,16 @@ void Writer::createImportTables() {
       continue;
 
     std::string dll = StringRef(file->dllName).lower();
-    if (ctx.config.dllOrder.count(dll) == 0)
-      ctx.config.dllOrder[dll] = ctx.config.dllOrder.size();
+    ctx.config.dllOrder.try_emplace(dll, ctx.config.dllOrder.size());
 
     if (file->impSym && !isa<DefinedImportData>(file->impSym))
-      Fatal(ctx) << file->impSym << " was replaced";
+      Fatal(ctx) << file->symtab.printSymbol(file->impSym) << " was replaced";
     DefinedImportData *impSym = cast_or_null<DefinedImportData>(file->impSym);
     if (ctx.config.delayLoads.count(StringRef(file->dllName).lower())) {
       if (!file->thunkSym)
         Fatal(ctx) << "cannot delay-load " << toString(file)
-                   << " due to import of data: " << impSym;
+                   << " due to import of data: "
+                   << file->symtab.printSymbol(impSym);
       delayIdata.add(impSym);
     } else {
       idata.add(impSym);
@@ -1306,7 +1306,8 @@ void Writer::appendImportThunks() {
 
     if (file->thunkSym) {
       if (!isa<DefinedImportThunk>(file->thunkSym))
-        Fatal(ctx) << file->thunkSym << " was replaced";
+        Fatal(ctx) << file->symtab.printSymbol(file->thunkSym)
+                   << " was replaced";
       auto *chunk = cast<DefinedImportThunk>(file->thunkSym)->getChunk();
       if (chunk->live)
         textSec->addChunk(chunk);
@@ -1314,7 +1315,8 @@ void Writer::appendImportThunks() {
 
     if (file->auxThunkSym) {
       if (!isa<DefinedImportThunk>(file->auxThunkSym))
-        Fatal(ctx) << file->auxThunkSym << " was replaced";
+        Fatal(ctx) << file->symtab.printSymbol(file->auxThunkSym)
+                   << " was replaced";
       auto *chunk = cast<DefinedImportThunk>(file->auxThunkSym)->getChunk();
       if (chunk->live)
         textSec->addChunk(chunk);
@@ -2288,49 +2290,53 @@ void Writer::createECChunks() {
 // uses for fixing them up, and provide the synthetic symbols that the
 // runtime uses for finding the table.
 void Writer::createRuntimePseudoRelocs() {
-  std::vector<RuntimePseudoReloc> rels;
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    std::vector<RuntimePseudoReloc> rels;
 
-  for (Chunk *c : ctx.driver.getChunks()) {
-    auto *sc = dyn_cast<SectionChunk>(c);
-    if (!sc || !sc->live)
-      continue;
-    // Don't create pseudo relocations for sections that won't be
-    // mapped at runtime.
-    if (sc->header->Characteristics & IMAGE_SCN_MEM_DISCARDABLE)
-      continue;
-    sc->getRuntimePseudoRelocs(rels);
-  }
+    for (Chunk *c : ctx.driver.getChunks()) {
+      auto *sc = dyn_cast<SectionChunk>(c);
+      if (!sc || !sc->live || &sc->file->symtab != &symtab)
+        continue;
+      // Don't create pseudo relocations for sections that won't be
+      // mapped at runtime.
+      if (sc->header->Characteristics & IMAGE_SCN_MEM_DISCARDABLE)
+        continue;
+      sc->getRuntimePseudoRelocs(rels);
+    }
 
-  if (!ctx.config.pseudoRelocs) {
-    // Not writing any pseudo relocs; if some were needed, error out and
-    // indicate what required them.
-    for (const RuntimePseudoReloc &rpr : rels)
-      Err(ctx) << "automatic dllimport of " << rpr.sym->getName() << " in "
-               << toString(rpr.target->file) << " requires pseudo relocations";
-    return;
-  }
+    if (!ctx.config.pseudoRelocs) {
+      // Not writing any pseudo relocs; if some were needed, error out and
+      // indicate what required them.
+      for (const RuntimePseudoReloc &rpr : rels)
+        Err(ctx) << "automatic dllimport of " << rpr.sym->getName() << " in "
+                 << toString(rpr.target->file)
+                 << " requires pseudo relocations";
+      return;
+    }
 
-  if (!rels.empty()) {
-    Log(ctx) << "Writing " << rels.size() << " runtime pseudo relocations";
-    const char *symbolName = "_pei386_runtime_relocator";
-    Symbol *relocator = ctx.symtab.findUnderscore(symbolName);
-    if (!relocator)
-      Err(ctx)
-          << "output image has runtime pseudo relocations, but the function "
-          << symbolName
-          << " is missing; it is needed for fixing the relocations at runtime";
-  }
+    if (!rels.empty()) {
+      Log(ctx) << "Writing " << Twine(rels.size())
+               << " runtime pseudo relocations";
+      const char *symbolName = "_pei386_runtime_relocator";
+      Symbol *relocator = symtab.findUnderscore(symbolName);
+      if (!relocator)
+        Err(ctx)
+            << "output image has runtime pseudo relocations, but the function "
+            << symbolName
+            << " is missing; it is needed for fixing the relocations at "
+               "runtime";
+    }
 
-  PseudoRelocTableChunk *table = make<PseudoRelocTableChunk>(rels);
-  rdataSec->addChunk(table);
-  EmptyChunk *endOfList = make<EmptyChunk>();
-  rdataSec->addChunk(endOfList);
+    PseudoRelocTableChunk *table = make<PseudoRelocTableChunk>(rels);
+    rdataSec->addChunk(table);
+    EmptyChunk *endOfList = make<EmptyChunk>();
+    rdataSec->addChunk(endOfList);
 
-  Symbol *headSym = ctx.symtab.findUnderscore("__RUNTIME_PSEUDO_RELOC_LIST__");
-  Symbol *endSym =
-      ctx.symtab.findUnderscore("__RUNTIME_PSEUDO_RELOC_LIST_END__");
-  replaceSymbol<DefinedSynthetic>(headSym, headSym->getName(), table);
-  replaceSymbol<DefinedSynthetic>(endSym, endSym->getName(), endOfList);
+    Symbol *headSym = symtab.findUnderscore("__RUNTIME_PSEUDO_RELOC_LIST__");
+    Symbol *endSym = symtab.findUnderscore("__RUNTIME_PSEUDO_RELOC_LIST_END__");
+    replaceSymbol<DefinedSynthetic>(headSym, headSym->getName(), table);
+    replaceSymbol<DefinedSynthetic>(endSym, endSym->getName(), endOfList);
+  });
 }
 
 // MinGW specific.

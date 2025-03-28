@@ -985,3 +985,19 @@ func.func @invalid_schedule3(%A: memref<?xf32>, %result: memref<?xf32>, %ext: in
   }  { __test_pipelining_loop__ }
   return
 }
+
+// -----
+
+// Ensure this case not crash when step is zero.
+
+// CHECK-LABEL: @invalid_loop_step
+func.func @invalid_loop_step(%A: memref<?xf32>, %result: memref<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %cf = arith.constant 1.0 : f32
+  scf.for %i0 = %c0 to %c0 step %c0 {
+    %A_elem = memref.load %A[%i0] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 2 } : memref<?xf32>
+    %A1_elem = arith.addf %A_elem, %cf { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 0 } : f32
+    memref.store %A1_elem, %result[%i0] { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 1 } : memref<?xf32>
+  }  { __test_pipelining_loop__ }
+  return
+}

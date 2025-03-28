@@ -10,7 +10,6 @@
 #include "DXILConstants.h"
 #include "DXILIntrinsicExpansion.h"
 #include "DXILOpBuilder.h"
-#include "DXILResourceAnalysis.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
@@ -358,7 +357,7 @@ public:
   /// model and taking into account binding information from
   /// DXILResourceBindingAnalysis.
   bool lowerHandleFromBinding(Function &F) {
-    Triple TT(Triple(M.getTargetTriple()));
+    const Triple &TT = M.getTargetTriple();
     if (TT.getDXILVersion() < VersionTuple(1, 6))
       return lowerToCreateHandle(F);
     return lowerToBindAndAnnotateHandle(F);
@@ -483,7 +482,7 @@ public:
         if (!Extracts[I])
           Extracts[I] = IRB.CreateExtractValue(Op, I);
 
-      Value *Vec = UndefValue::get(OldTy);
+      Value *Vec = PoisonValue::get(OldTy);
       for (int I = 0, E = N; I != E; ++I)
         Vec = IRB.CreateInsertElement(Vec, Extracts[I], I);
       OldResult->replaceAllUsesWith(Vec);
@@ -528,7 +527,7 @@ public:
   }
 
   [[nodiscard]] bool lowerRawBufferLoad(Function &F) {
-    Triple TT(Triple(M.getTargetTriple()));
+    const Triple &TT = M.getTargetTriple();
     VersionTuple DXILVersion = TT.getDXILVersion();
     const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();
@@ -628,7 +627,7 @@ public:
   }
 
   [[nodiscard]] bool lowerBufferStore(Function &F, bool IsRaw) {
-    Triple TT(Triple(M.getTargetTriple()));
+    const Triple &TT = M.getTargetTriple();
     VersionTuple DXILVersion = TT.getDXILVersion();
     const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();
@@ -649,16 +648,13 @@ public:
 
       uint64_t NumElements =
           DL.getTypeSizeInBits(DataTy) / DL.getTypeSizeInBits(ScalarTy);
-      Value *Mask = ConstantInt::get(Int8Ty, ~(~0U << NumElements));
+      Value *Mask =
+          ConstantInt::get(Int8Ty, IsRaw ? ~(~0U << NumElements) : 15U);
 
       // TODO: check that we only have vector or scalar...
-      if (!IsRaw && NumElements != 4)
+      if (NumElements > 4)
         return make_error<StringError>(
-            "typedBufferStore data must be a vector of 4 elements",
-            inconvertibleErrorCode());
-      else if (NumElements > 4)
-        return make_error<StringError>(
-            "rawBufferStore data must have at most 4 elements",
+            "Buffer store data must have at most 4 elements",
             inconvertibleErrorCode());
 
       std::array<Value *, 4> DataElements{nullptr, nullptr, nullptr, nullptr};
@@ -687,10 +683,13 @@ public:
         if (DataElements[I] == nullptr)
           DataElements[I] =
               IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, I));
-      // For any elements beyond the length of the vector, fill up with undef.
+
+      // For any elements beyond the length of the vector, we should fill it up
+      // with undef - however, for typed buffers we repeat the first element to
+      // match DXC.
       for (int I = NumElements, E = 4; I < E; ++I)
         if (DataElements[I] == nullptr)
-          DataElements[I] = UndefValue::get(ScalarTy);
+          DataElements[I] = IsRaw ? UndefValue::get(ScalarTy) : DataElements[0];
 
       dxil::OpCode Op = OpCode::BufferStore;
       SmallVector<Value *, 9> Args{
@@ -889,7 +888,6 @@ public:
     AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addRequired<DXILResourceBindingWrapperPass>();
     AU.addPreserved<DXILResourceBindingWrapperPass>();
-    AU.addPreserved<DXILResourceMDWrapper>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
   }

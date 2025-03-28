@@ -47,7 +47,7 @@
 ; NOWORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 0
 define amdgpu_kernel void @minimal_kernel_inputs() #0 {
   %id = call i32 @llvm.amdgcn.workgroup.id.x()
-  store volatile i32 %id, ptr addrspace(1) undef
+  store volatile i32 %id, ptr addrspace(1) poison
   ret void
 }
 
@@ -77,7 +77,7 @@ define amdgpu_kernel void @minimal_kernel_inputs() #0 {
 define amdgpu_kernel void @minimal_kernel_inputs_with_stack() #0 {
   %alloca = alloca i32, addrspace(5)
   %id = call i32 @llvm.amdgcn.workgroup.id.x()
-  store volatile i32 %id, ptr addrspace(1) undef
+  store volatile i32 %id, ptr addrspace(1) poison
   store volatile i32 0, ptr addrspace(5) %alloca
   ret void
 }
@@ -111,7 +111,7 @@ define amdgpu_kernel void @queue_ptr() #1 {
   %queue.ptr = call noalias ptr addrspace(4) @llvm.amdgcn.queue.ptr() #0
   %load = load volatile i8, ptr addrspace(4) %queue.ptr
   %id = call i32 @llvm.amdgcn.workgroup.id.x()
-  store volatile i32 %id, ptr addrspace(1) undef
+  store volatile i32 %id, ptr addrspace(1) poison
   ret void
 }
 
@@ -168,16 +168,16 @@ define amdgpu_kernel void @all_inputs() #2 {
   %load.implicitarg = load volatile i8, ptr addrspace(4) %implicitarg.ptr
 
   %id.x = call i32 @llvm.amdgcn.workgroup.id.x()
-  store volatile i32 %id.x, ptr addrspace(1) undef
+  store volatile i32 %id.x, ptr addrspace(1) poison
 
   %id.y = call i32 @llvm.amdgcn.workgroup.id.y()
-  store volatile i32 %id.y, ptr addrspace(1) undef
+  store volatile i32 %id.y, ptr addrspace(1) poison
 
   %id.z = call i32 @llvm.amdgcn.workgroup.id.z()
-  store volatile i32 %id.z, ptr addrspace(1) undef
+  store volatile i32 %id.z, ptr addrspace(1) poison
 
   %dispatch.id = call i64 @llvm.amdgcn.dispatch.id()
-  store volatile i64 %dispatch.id, ptr addrspace(1) undef
+  store volatile i64 %dispatch.id, ptr addrspace(1) poison
 
   ret void
 }

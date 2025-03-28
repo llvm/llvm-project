@@ -15,6 +15,15 @@
 
 using namespace mlir;
 
+/// Conditions the deletion of the operation to the removal of all its uses.
+static bool forwardToUsers(Operation *op,
+                           SmallVectorImpl<OpOperand *> &newBlockingUses) {
+  for (Value result : op->getResults())
+    for (OpOperand &use : result.getUses())
+      newBlockingUses.push_back(&use);
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Interfaces for AllocaOp
 //===----------------------------------------------------------------------===//
@@ -73,5 +82,56 @@ DeletionKind cir::LoadOp::removeBlockingUses(
     OpBuilder &builder, Value reachingDefinition,
     const DataLayout &dataLayout) {
   getResult().replaceAllUsesWith(reachingDefinition);
+  return DeletionKind::Delete;
+}
+
+//===----------------------------------------------------------------------===//
+// Interfaces for StoreOp
+//===----------------------------------------------------------------------===//
+
+bool cir::StoreOp::loadsFrom(const MemorySlot &slot) { return false; }
+
+bool cir::StoreOp::storesTo(const MemorySlot &slot) {
+  return getAddr() == slot.ptr;
+}
+
+Value cir::StoreOp::getStored(const MemorySlot &slot, OpBuilder &builder,
+                              Value reachingDef, const DataLayout &dataLayout) {
+  return getValue();
+}
+
+bool cir::StoreOp::canUsesBeRemoved(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  if (blockingUses.size() != 1)
+    return false;
+  Value blockingUse = (*blockingUses.begin())->get();
+  return blockingUse == slot.ptr && getAddr() == slot.ptr &&
+         getValue() != slot.ptr && slot.elemType == getValue().getType();
+}
+
+DeletionKind cir::StoreOp::removeBlockingUses(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    OpBuilder &builder, Value reachingDefinition,
+    const DataLayout &dataLayout) {
+  return DeletionKind::Delete;
+}
+
+//===----------------------------------------------------------------------===//
+// Interfaces for CastOp
+//===----------------------------------------------------------------------===//
+
+bool cir::CastOp::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  if (getKind() == cir::CastKind::bitcast)
+    return forwardToUsers(*this, newBlockingUses);
+  return false;
+}
+
+DeletionKind cir::CastOp::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
   return DeletionKind::Delete;
 }

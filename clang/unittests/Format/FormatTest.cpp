@@ -3501,46 +3501,47 @@ TEST_F(FormatTest, UnderstandsAccessSpecifiers) {
                "label:\n"
                "  signals.baz();\n"
                "}");
-  verifyFormat("private[1];");
+
+  const auto Style = getLLVMStyle(FormatStyle::LK_C);
+  verifyFormat("private[1];", Style);
   verifyFormat("testArray[public] = 1;");
-  verifyFormat("public();");
+  verifyFormat("public();", Style);
   verifyFormat("myFunc(public);");
   verifyFormat("std::vector<int> testVec = {private};");
-  verifyFormat("private.p = 1;");
+  verifyFormat("private.p = 1;", Style);
   verifyFormat("void function(private...) {};");
   verifyFormat("if (private && public)");
-  verifyFormat("private &= true;");
+  verifyFormat("private &= true;", Style);
   verifyFormat("int x = private * public;");
-  verifyFormat("public *= private;");
+  verifyFormat("public *= private;", Style);
   verifyFormat("int x = public + private;");
-  verifyFormat("private++;");
+  verifyFormat("private++;", Style);
   verifyFormat("++private;");
-  verifyFormat("public += private;");
-  verifyFormat("public = public - private;");
-  verifyFormat("public->foo();");
-  verifyFormat("private--;");
+  verifyFormat("public += private;", Style);
+  verifyFormat("public = public - private;", Style);
+  verifyFormat("public->foo();", Style);
+  verifyFormat("private--;", Style);
   verifyFormat("--private;");
-  verifyFormat("public -= 1;");
+  verifyFormat("public -= 1;", Style);
   verifyFormat("if (!private && !public)");
-  verifyFormat("public != private;");
+  verifyFormat("public != private;", Style);
   verifyFormat("int x = public / private;");
-  verifyFormat("public /= 2;");
-  verifyFormat("public = public % 2;");
-  verifyFormat("public %= 2;");
+  verifyFormat("public /= 2;", Style);
+  verifyFormat("public = public % 2;", Style);
+  verifyFormat("public %= 2;", Style);
   verifyFormat("if (public < private)");
-  verifyFormat("public << private;");
-  verifyFormat("public <<= private;");
+  verifyFormat("public << private;", Style);
+  verifyFormat("public <<= private;", Style);
   verifyFormat("if (public > private)");
-  verifyFormat("public >> private;");
-  verifyFormat("public >>= private;");
-  verifyFormat("public ^ private;");
-  verifyFormat("public ^= private;");
-  verifyFormat("public | private;");
-  verifyFormat("public |= private;");
+  verifyFormat("public >> private;", Style);
+  verifyFormat("public >>= private;", Style);
+  verifyFormat("public ^ private;", Style);
+  verifyFormat("public ^= private;", Style);
+  verifyFormat("public | private;", Style);
+  verifyFormat("public |= private;", Style);
   verifyFormat("auto x = private ? 1 : 2;");
   verifyFormat("if (public == private)");
   verifyFormat("void foo(public, private)");
-  verifyFormat("public::foo();");
 
   verifyFormat("class A {\n"
                "public:\n"
@@ -6832,6 +6833,11 @@ TEST_F(FormatTest, LayoutStatementsAroundPreprocessorDirectives) {
                "                  param3) {\n"
                "  f();\n"
                "}");
+
+  verifyFormat("#ifdef __cplusplus\n"
+               "extern \"C\"\n"
+               "#endif\n"
+               "    void f();");
 }
 
 TEST_F(FormatTest, GraciouslyHandleIncorrectPreprocessorConditions) {
@@ -8539,6 +8545,7 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
   verifyGoogleFormat(
       "SomeLoooooooooooooooooooooooooooooogType operator<<(\n"
       "    const SomeLooooooooogType &a, const SomeLooooooooogType &b);");
+
   verifyFormat("void aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
                "    int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa = 1);");
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaa\n"
@@ -8551,6 +8558,9 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
                      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                      "aaaaaaaaaaaaaaaaaaaaaaa<T>::aaaaaaaaaaaaa(\n"
                      "    aaaaaaaaaaaaaaaaaaaaaaa aaaaaaaaaaaaaaa);");
+
+  verifyFormat("extern \"C\" //\n"
+               "    void f();");
 
   FormatStyle Style = getLLVMStyle();
   Style.PointerAlignment = FormatStyle::PAS_Left;
@@ -10433,27 +10443,17 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "void\n"
                "A::operator->() {}\n"
                "void\n"
-               "A::operator void *() {}\n"
+               "A::operator&() {}\n"
                "void\n"
-               "A::operator void &() {}\n"
-               "void\n"
-               "A::operator void &&() {}\n"
-               "void\n"
-               "A::operator char *() {}\n"
+               "A::operator&&() {}\n"
                "void\n"
                "A::operator[]() {}\n"
                "void\n"
                "A::operator!() {}\n"
                "void\n"
-               "A::operator**() {}\n"
-               "void\n"
                "A::operator<Foo> *() {}\n"
                "void\n"
-               "A::operator<Foo> **() {}\n"
-               "void\n"
-               "A::operator<Foo> &() {}\n"
-               "void\n"
-               "A::operator void **() {}",
+               "A::operator<Foo> &() {}\n",
                Style);
   verifyFormat("constexpr auto\n"
                "operator()() const -> reference {}\n"
@@ -10476,7 +10476,7 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "constexpr auto\n"
                "operator void &() const -> reference {}\n"
                "constexpr auto\n"
-               "operator void &&() const -> reference {}\n"
+               "operator&&() const -> reference {}\n"
                "constexpr auto\n"
                "operator char *() const -> reference {}\n"
                "constexpr auto\n"
@@ -12091,6 +12091,7 @@ TEST_F(FormatTest, PointerAlignmentFallback) {
 }
 
 TEST_F(FormatTest, UnderstandsNewAndDelete) {
+  verifyFormat("A(void *p) : a(new (p) int) {}");
   verifyFormat("void f() {\n"
                "  A *a = new A;\n"
                "  A *a = new (placement) A;\n"
@@ -12113,7 +12114,8 @@ TEST_F(FormatTest, UnderstandsNewAndDelete) {
   verifyFormat("void new(link p);\n"
                "void delete(link p);",
                "void new (link p);\n"
-               "void delete (link p);");
+               "void delete (link p);",
+               getLLVMStyle(FormatStyle::LK_C));
 
   verifyFormat("{\n"
                "  p->new();\n"
@@ -12363,6 +12365,9 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("vector<a *_Nonnull> v;");
   verifyFormat("vector<a *_Nullable> v;");
   verifyFormat("vector<a *_Null_unspecified> v;");
+  verifyGoogleFormat("vector<a* absl_nonnull> v;");
+  verifyGoogleFormat("vector<a* absl_nullable> v;");
+  verifyGoogleFormat("vector<a* absl_nullability_unknown> v;");
   verifyFormat("vector<a *__ptr32> v;");
   verifyFormat("vector<a *__ptr64> v;");
   verifyFormat("vector<a *__capability> v;");
@@ -12506,6 +12511,12 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyIndependentOfContext("MACRO(A *_Nonnull a);");
   verifyIndependentOfContext("MACRO(A *_Nullable a);");
   verifyIndependentOfContext("MACRO(A *_Null_unspecified a);");
+
+  Style = getGoogleStyle();
+  verifyIndependentOfContext("MACRO(A* absl_nonnull a);", Style);
+  verifyIndependentOfContext("MACRO(A* absl_nullable a);", Style);
+  verifyIndependentOfContext("MACRO(A* absl_nullability_unknown a);", Style);
+
   verifyIndependentOfContext("MACRO(A *__attribute__((foo)) a);");
   verifyIndependentOfContext("MACRO(A *__attribute((foo)) a);");
   verifyIndependentOfContext("MACRO(A *[[clang::attr]] a);");
@@ -12629,6 +12640,12 @@ TEST_F(FormatTest, UnderstandsAttributes) {
                AfterType);
 
   FormatStyle CustomAttrs = getLLVMStyle();
+  CustomAttrs.AttributeMacros.push_back("my_attr_name");
+  verifyFormat("void MyGoodOldFunction(\n"
+               "    void *const long_enough = nullptr,\n"
+               "    void *my_attr_name even_longeeeeeeeeeeeeeeeeer = nullptr);",
+               CustomAttrs);
+
   CustomAttrs.AttributeMacros.push_back("__unused");
   CustomAttrs.AttributeMacros.push_back("__attr1");
   CustomAttrs.AttributeMacros.push_back("__attr2");
@@ -12664,6 +12681,12 @@ TEST_F(FormatTest, UnderstandsAttributes) {
   verifyFormat("SomeType s __unused{InitValue};", CustomAttrs);
   verifyFormat("SomeType *__capability s(InitValue);", CustomAttrs);
   verifyFormat("SomeType *__capability s{InitValue};", CustomAttrs);
+  verifyGoogleFormat("SomeType* absl_nonnull s(InitValue);");
+  verifyGoogleFormat("SomeType* absl_nonnull s{InitValue};");
+  verifyGoogleFormat("SomeType* absl_nullable s(InitValue);");
+  verifyGoogleFormat("SomeType* absl_nullable s{InitValue};");
+  verifyGoogleFormat("SomeType* absl_nullability_unknown s(InitValue);");
+  verifyGoogleFormat("SomeType* absl_nullability_unknown s{InitValue};");
 }
 
 TEST_F(FormatTest, UnderstandsPointerQualifiersInCast) {
@@ -12675,7 +12698,9 @@ TEST_F(FormatTest, UnderstandsPointerQualifiersInCast) {
   verifyFormat("x = (foo *_Nonnull)*v;");
   verifyFormat("x = (foo *_Nullable)*v;");
   verifyFormat("x = (foo *_Null_unspecified)*v;");
-  verifyFormat("x = (foo *_Nonnull)*v;");
+  verifyGoogleFormat("x = (foo* absl_nonnull)*v;");
+  verifyGoogleFormat("x = (foo* absl_nullable)*v;");
+  verifyGoogleFormat("x = (foo* absl_nullability_unknown)*v;");
   verifyFormat("x = (foo *[[clang::attr]])*v;");
   verifyFormat("x = (foo *[[clang::attr(\"foo\")]])*v;");
   verifyFormat("x = (foo *__ptr32)*v;");
@@ -12689,7 +12714,7 @@ TEST_F(FormatTest, UnderstandsPointerQualifiersInCast) {
   LongPointerLeft.PointerAlignment = FormatStyle::PAS_Left;
   StringRef AllQualifiers =
       "const volatile restrict __attribute__((foo)) _Nonnull _Null_unspecified "
-      "_Nonnull [[clang::attr]] __ptr32 __ptr64 __capability";
+      "_Nullable [[clang::attr]] __ptr32 __ptr64 __capability";
   verifyFormat(("x = (foo *" + AllQualifiers + ")*v;").str(), LongPointerRight);
   verifyFormat(("x = (foo* " + AllQualifiers + ")*v;").str(), LongPointerLeft);
 
@@ -28003,6 +28028,16 @@ TEST_F(FormatTest, BreakAfterAttributes) {
                "  --d;",
                CtrlStmtCode, Style);
 
+  verifyFormat("[[nodiscard]]\n"
+               "operator bool();\n"
+               "[[nodiscard]]\n"
+               "operator bool() {\n"
+               "  return true;\n"
+               "}",
+               "[[nodiscard]] operator bool();\n"
+               "[[nodiscard]] operator bool() { return true; }",
+               Style);
+
   constexpr StringRef CtorDtorCode("struct Foo {\n"
                                    "  [[deprecated]] Foo();\n"
                                    "  [[deprecated]] Foo() {}\n"
@@ -28175,6 +28210,10 @@ TEST_F(FormatTest, RemoveParentheses) {
   verifyFormat("foo((a, b));", "foo(((a), b));", Style);
   verifyFormat("foo((a, b));", "foo((a, (b)));", Style);
   verifyFormat("foo((a, b, c));", "foo((a, ((b)), c));", Style);
+  verifyFormat("(..., (hash_a = hash_combine(hash_a, hash_b)));",
+               "(..., ((hash_a = hash_combine(hash_a, hash_b))));", Style);
+  verifyFormat("((hash_a = hash_combine(hash_a, hash_b)), ...);",
+               "(((hash_a = hash_combine(hash_a, hash_b))), ...);", Style);
   verifyFormat("return (0);", "return (((0)));", Style);
   verifyFormat("return (({ 0; }));", "return ((({ 0; })));", Style);
   verifyFormat("return ((... && std::is_convertible_v<TArgsLocal, TArgs>));",

@@ -83,7 +83,19 @@ def BREG : SRReg<4, "br", ["BR","4"]>;
 def WINDOWBASE : SRReg<72, "windowbase", ["WINDOWBASE", "72"]>;
 def WINDOWSTART : SRReg<73, "windowstart", ["WINDOWSTART", "73"]>;
 
-def SR :  RegisterClass<"Xtensa", [i32], 32, (add SAR, BREG,
+// MAC16 Option registers
+def ACCLO : SRReg<16, "acclo", ["ACCLO", "16"]>;
+def ACCHI : SRReg<17, "acchi", ["ACCHI", "17"]>;
+def M0    : SRReg<32, "m0", ["M0", "32"]>;
+def M1    : SRReg<33, "m1", ["M1", "33"]>;
+def M2    : SRReg<34, "m2", ["M2", "34"]>;
+def M3    : SRReg<35, "m3", ["M3", "35"]>;
+
+def MR01 :  RegisterClass<"Xtensa", [i32], 32, (add M0, M1)>;
+def MR23 :  RegisterClass<"Xtensa", [i32], 32, (add M2, M3)>;
+def MR   :  RegisterClass<"Xtensa", [i32], 32, (add MR01, MR23)>;
+
+def SR :  RegisterClass<"Xtensa", [i32], 32, (add SAR, BREG, MR,
   WINDOWBASE, WINDOWSTART)>;
 
 //===----------------------------------------------------------------------===//

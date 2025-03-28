@@ -118,7 +118,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     def test_runInTerminalInvalidTarget(self):
         if not self.isTestSupported():
             return
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         response = self.launch(
             "INVALIDPROGRAM",
             runInTerminal=True,
@@ -247,4 +247,4 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         self.readPidMessage(comm_file)
 
         _, stderr = proc.communicate()
-        self.assertIn("Timed out trying to get messages from the debug adaptor", stderr)
+        self.assertIn("Timed out trying to get messages from the debug adapter", stderr)

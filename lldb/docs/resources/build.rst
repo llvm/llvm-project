@@ -340,7 +340,7 @@ On macOS the LLDB test suite requires libc++. Either add
   code-signed with identity ``lldb_codesign`` (see :ref:`CodeSigning`).
 * ``LLDB_USE_SYSTEM_DEBUGSERVER:BOOL``: Use the system's debugserver, so lldb is
   functional without setting up code-signing.
-
+* ``LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS:BOOL``: Detect missing packages or modules at configuration time.
 
 .. _CMakeCaches:
 

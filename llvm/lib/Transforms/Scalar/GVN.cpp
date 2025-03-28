@@ -505,95 +505,95 @@ uint32_t GVNPass::ValueTable::lookupOrAddCall(CallInst *C) {
   }
 
   if (MD && AA->onlyReadsMemory(C)) {
-    Expression exp = createExpr(C);
-    auto ValNum = assignExpNewValueNum(exp);
+    Expression Exp = createExpr(C);
+    auto ValNum = assignExpNewValueNum(Exp);
     if (ValNum.second) {
       valueNumbering[C] = ValNum.first;
       return ValNum.first;
     }
 
-    MemDepResult local_dep = MD->getDependency(C);
+    MemDepResult LocalDep = MD->getDependency(C);
 
-    if (!local_dep.isDef() && !local_dep.isNonLocal()) {
+    if (!LocalDep.isDef() && !LocalDep.isNonLocal()) {
       valueNumbering[C] =  nextValueNumber;
       return nextValueNumber++;
     }
 
-    if (local_dep.isDef()) {
+    if (LocalDep.isDef()) {
       // For masked load/store intrinsics, the local_dep may actually be
       // a normal load or store instruction.
-      CallInst *local_cdep = dyn_cast<CallInst>(local_dep.getInst());
+      CallInst *LocalDepCall = dyn_cast<CallInst>(LocalDep.getInst());
 
-      if (!local_cdep || local_cdep->arg_size() != C->arg_size()) {
+      if (!LocalDepCall || LocalDepCall->arg_size() != C->arg_size()) {
         valueNumbering[C] = nextValueNumber;
         return nextValueNumber++;
       }
 
-      for (unsigned i = 0, e = C->arg_size(); i < e; ++i) {
-        uint32_t c_vn = lookupOrAdd(C->getArgOperand(i));
-        uint32_t cd_vn = lookupOrAdd(local_cdep->getArgOperand(i));
-        if (c_vn != cd_vn) {
+      for (unsigned I = 0, E = C->arg_size(); I < E; ++I) {
+        uint32_t CVN = lookupOrAdd(C->getArgOperand(I));
+        uint32_t LocalDepCallVN = lookupOrAdd(LocalDepCall->getArgOperand(I));
+        if (CVN != LocalDepCallVN) {
           valueNumbering[C] = nextValueNumber;
           return nextValueNumber++;
         }
       }
 
-      uint32_t v = lookupOrAdd(local_cdep);
-      valueNumbering[C] = v;
-      return v;
+      uint32_t V = lookupOrAdd(LocalDepCall);
+      valueNumbering[C] = V;
+      return V;
     }
 
     // Non-local case.
-    const MemoryDependenceResults::NonLocalDepInfo &deps =
+    const MemoryDependenceResults::NonLocalDepInfo &Deps =
         MD->getNonLocalCallDependency(C);
     // FIXME: Move the checking logic to MemDep!
-    CallInst* cdep = nullptr;
+    CallInst *CDep = nullptr;
 
     // Check to see if we have a single dominating call instruction that is
     // identical to C.
-    for (const NonLocalDepEntry &I : deps) {
+    for (const NonLocalDepEntry &I : Deps) {
       if (I.getResult().isNonLocal())
         continue;
 
       // We don't handle non-definitions.  If we already have a call, reject
       // instruction dependencies.
-      if (!I.getResult().isDef() || cdep != nullptr) {
-        cdep = nullptr;
+      if (!I.getResult().isDef() || CDep != nullptr) {
+        CDep = nullptr;
         break;
       }
 
       CallInst *NonLocalDepCall = dyn_cast<CallInst>(I.getResult().getInst());
       // FIXME: All duplicated with non-local case.
       if (NonLocalDepCall && DT->properlyDominates(I.getBB(), C->getParent())) {
-        cdep = NonLocalDepCall;
+        CDep = NonLocalDepCall;
         continue;
       }
 
-      cdep = nullptr;
+      CDep = nullptr;
       break;
     }
 
-    if (!cdep) {
+    if (!CDep) {
       valueNumbering[C] = nextValueNumber;
       return nextValueNumber++;
     }
 
-    if (cdep->arg_size() != C->arg_size()) {
+    if (CDep->arg_size() != C->arg_size()) {
       valueNumbering[C] = nextValueNumber;
       return nextValueNumber++;
     }
-    for (unsigned i = 0, e = C->arg_size(); i < e; ++i) {
-      uint32_t c_vn = lookupOrAdd(C->getArgOperand(i));
-      uint32_t cd_vn = lookupOrAdd(cdep->getArgOperand(i));
-      if (c_vn != cd_vn) {
+    for (unsigned I = 0, E = C->arg_size(); I < E; ++I) {
+      uint32_t CVN = lookupOrAdd(C->getArgOperand(I));
+      uint32_t CDepVN = lookupOrAdd(CDep->getArgOperand(I));
+      if (CVN != CDepVN) {
         valueNumbering[C] = nextValueNumber;
         return nextValueNumber++;
       }
     }
 
-    uint32_t v = lookupOrAdd(cdep);
-    valueNumbering[C] = v;
-    return v;
+    uint32_t V = lookupOrAdd(CDep);
+    valueNumbering[C] = V;
+    return V;
   }
 
   valueNumbering[C] = nextValueNumber;
@@ -618,7 +618,7 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
     return nextValueNumber++;
   }
 
-  Expression exp;
+  Expression Exp;
   switch (I->getOpcode()) {
     case Instruction::Call:
       return lookupOrAddCall(cast<CallInst>(I));
@@ -662,13 +662,13 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
     case Instruction::InsertElement:
     case Instruction::ShuffleVector:
     case Instruction::InsertValue:
-      exp = createExpr(I);
+      Exp = createExpr(I);
       break;
     case Instruction::GetElementPtr:
-      exp = createGEPExpr(cast<GetElementPtrInst>(I));
+      Exp = createGEPExpr(cast<GetElementPtrInst>(I));
       break;
     case Instruction::ExtractValue:
-      exp = createExtractvalueExpr(cast<ExtractValueInst>(I));
+      Exp = createExtractvalueExpr(cast<ExtractValueInst>(I));
       break;
     case Instruction::PHI:
       valueNumbering[V] = nextValueNumber;
@@ -679,9 +679,9 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
       return nextValueNumber++;
   }
 
-  uint32_t e = assignExpNewValueNum(exp).first;
-  valueNumbering[V] = e;
-  return e;
+  uint32_t E = assignExpNewValueNum(Exp).first;
+  valueNumbering[V] = E;
+  return E;
 }
 
 /// Returns the value number of the specified value. Fails if
@@ -702,8 +702,8 @@ uint32_t GVNPass::ValueTable::lookup(Value *V, bool Verify) const {
 uint32_t GVNPass::ValueTable::lookupOrAddCmp(unsigned Opcode,
                                              CmpInst::Predicate Predicate,
                                              Value *LHS, Value *RHS) {
-  Expression exp = createCmpExpr(Opcode, Predicate, LHS, RHS);
-  return assignExpNewValueNum(exp).first;
+  Expression Exp = createCmpExpr(Opcode, Predicate, LHS, RHS);
+  return assignExpNewValueNum(Exp).first;
 }
 
 /// Remove all entries from the ValueTable.
@@ -1591,8 +1591,7 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
   // that we only have to insert *one* load (which means we're basically moving
   // the load, not inserting a new one).
 
-  SmallPtrSet<BasicBlock *, 4> Blockers(UnavailableBlocks.begin(),
-                                        UnavailableBlocks.end());
+  SmallPtrSet<BasicBlock *, 4> Blockers(llvm::from_range, UnavailableBlocks);
 
   // Let's find the first basic block with more than one predecessor.  Walk
   // backwards through predecessors if needed.
@@ -2317,15 +2316,15 @@ uint32_t GVNPass::ValueTable::phiTranslateImpl(const BasicBlock *Pred,
     return Num;
   Expression Exp = Expressions[ExprIdx[Num]];
 
-  for (unsigned i = 0; i < Exp.varargs.size(); i++) {
+  for (unsigned I = 0; I < Exp.varargs.size(); I++) {
     // For InsertValue and ExtractValue, some varargs are index numbers
     // instead of value numbers. Those index numbers should not be
     // translated.
-    if ((i > 1 && Exp.opcode == Instruction::InsertValue) ||
-        (i > 0 && Exp.opcode == Instruction::ExtractValue) ||
-        (i > 1 && Exp.opcode == Instruction::ShuffleVector))
+    if ((I > 1 && Exp.opcode == Instruction::InsertValue) ||
+        (I > 0 && Exp.opcode == Instruction::ExtractValue) ||
+        (I > 1 && Exp.opcode == Instruction::ShuffleVector))
       continue;
-    Exp.varargs[i] = phiTranslate(Pred, PhiBlock, Exp.varargs[i], Gvn);
+    Exp.varargs[I] = phiTranslate(Pred, PhiBlock, Exp.varargs[I], Gvn);
   }
 
   if (Exp.commutative) {
@@ -3194,7 +3193,7 @@ void GVNPass::addDeadBlock(BasicBlock *BB) {
     // All blocks dominated by D are dead.
     SmallVector<BasicBlock *, 8> Dom;
     DT->getDescendants(D, Dom);
-    DeadBlocks.insert(Dom.begin(), Dom.end());
+    DeadBlocks.insert_range(Dom);
 
     // Figure out the dominance-frontier(D).
     for (BasicBlock *B : Dom) {

@@ -41,7 +41,7 @@
 
 using namespace llvm;
 
-cl::OptionCategory ExtractCat("llvm-extract Options");
+static cl::OptionCategory ExtractCat("llvm-extract Options");
 
 // InputFilename - The filename to read from.
 static cl::opt<std::string> InputFilename(cl::Positional,

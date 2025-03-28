@@ -5,6 +5,7 @@ types:
   - type_name: struct_hsearch_data
   - type_name: ENTRY
   - type_name: ACTION
+  - type_name: VISIT
   - type_name: __lsearchcompare_t
 enums: []
 objects: []
@@ -66,6 +67,16 @@ functions:
     arguments:
       - type: const void *
       - type: const void *
+      - type: size_t *
+      - type: size_t
+      - type: __lsearchcompare_t
+  - name: lsearch
+    standards:
+      - POSIX
+    return_type: void *
+    arguments:
+      - type: const void *
+      - type: void *
       - type: size_t *
       - type: size_t
       - type: __lsearchcompare_t

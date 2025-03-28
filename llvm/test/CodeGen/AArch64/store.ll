@@ -147,22 +147,13 @@ define void @store_v32i8(<32 x i8> %a, ptr %ptr){
 }
 
 define void @store_v2i16(<2 x i16> %a, ptr %ptr){
-; CHECK-SD-LABEL: store_v2i16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    strh w9, [x0]
-; CHECK-SD-NEXT:    strh w8, [x0, #2]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: store_v2i16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    str h0, [x0]
-; CHECK-GI-NEXT:    str h1, [x0, #2]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: store_v2i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    mov s1, v0.s[1]
+; CHECK-NEXT:    str h0, [x0]
+; CHECK-NEXT:    str h1, [x0, #2]
+; CHECK-NEXT:    ret
     store <2 x i16> %a, ptr %ptr
     ret void
 }

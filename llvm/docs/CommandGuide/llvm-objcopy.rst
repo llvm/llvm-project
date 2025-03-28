@@ -57,9 +57,10 @@ multiple file formats.
 
 .. option:: --discard-all, -x
 
- Remove most local symbols from the output. Different file formats may limit
- this to a subset of the local symbols. For example, file and section symbols in
- ELF objects will not be discarded. Additionally, remove all debug sections.
+ Remove most local symbols not referenced by relocations from the output.
+ Different file formats may limit this to a subset of the local symbols. For
+ example, file and section symbols in ELF objects will not be discarded.
+ Additionally, remove all debug sections.
 
 .. option:: --dump-section <section>=<file>
 
@@ -386,7 +387,7 @@ them.
 
 .. option:: --discard-locals, -X
 
- Remove local symbols starting with ".L" from the output.
+ Remove local symbols starting with ".L" not referenced by relocations from the output.
 
 .. option:: --extract-dwo
 

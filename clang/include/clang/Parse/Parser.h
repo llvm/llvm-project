@@ -91,6 +91,8 @@ class Parser : public CodeCompletionHandler {
 
   DiagnosticsEngine &Diags;
 
+  StackExhaustionHandler StackHandler;
+
   /// ScopeCache - Cache scopes to reduce malloc traffic.
   enum { ScopeCacheSize = 16 };
   unsigned NumCachedScopes;
@@ -518,7 +520,7 @@ public:
   typedef Sema::FullExprArg FullExprArg;
 
   /// A SmallVector of statements.
-  typedef SmallVector<Stmt *, 32> StmtVector;
+  typedef SmallVector<Stmt *, 24> StmtVector;
 
   // Parsing methods.
 
@@ -3695,7 +3697,10 @@ public:
   /// diagnostic. Eventually will be split into a few functions to parse
   /// different situations.
 public:
-  DeclGroupPtrTy ParseOpenACCDirectiveDecl();
+  DeclGroupPtrTy ParseOpenACCDirectiveDecl(AccessSpecifier &AS,
+                                           ParsedAttributes &Attrs,
+                                           DeclSpec::TST TagType,
+                                           Decl *TagDecl);
   StmtResult ParseOpenACCDirectiveStmt();
 
 private:
@@ -3730,6 +3735,11 @@ private:
       return Out;
     }
   };
+  struct OpenACCCacheParseInfo {
+    bool Failed = false;
+    SourceLocation ReadOnlyLoc;
+    SmallVector<Expr *> Vars;
+  };
 
   /// Represents the 'error' state of parsing an OpenACC Clause, and stores
   /// whether we can continue parsing, or should give up on the directive.
@@ -3752,13 +3762,15 @@ private:
   /// Helper that parses an ID Expression based on the language options.
   ExprResult ParseOpenACCIDExpression();
   /// Parses the variable list for the `cache` construct.
-  void ParseOpenACCCacheVarList();
+  OpenACCCacheParseInfo ParseOpenACCCacheVarList();
 
   using OpenACCVarParseResult = std::pair<ExprResult, OpenACCParseCanContinue>;
   /// Parses a single variable in a variable list for OpenACC.
-  OpenACCVarParseResult ParseOpenACCVar(OpenACCClauseKind CK);
+  OpenACCVarParseResult ParseOpenACCVar(OpenACCDirectiveKind DK,
+                                        OpenACCClauseKind CK);
   /// Parses the variable list for the variety of places that take a var-list.
-  llvm::SmallVector<Expr *> ParseOpenACCVarList(OpenACCClauseKind CK);
+  llvm::SmallVector<Expr *> ParseOpenACCVarList(OpenACCDirectiveKind DK,
+                                                OpenACCClauseKind CK);
   /// Parses any parameters for an OpenACC Clause, including required/optional
   /// parens.
   OpenACCClauseParseResult
@@ -3776,8 +3788,9 @@ private:
   OpenACCWaitParseInfo ParseOpenACCWaitArgument(SourceLocation Loc,
                                                 bool IsDirective);
   /// Parses the clause of the 'bind' argument, which can be a string literal or
-  /// an ID expression.
-  ExprResult ParseOpenACCBindClauseArgument();
+  /// an identifier.
+  std::variant<std::monostate, StringLiteral *, IdentifierInfo *>
+  ParseOpenACCBindClauseArgument();
 
   /// A type to represent the state of parsing after an attempt to parse an
   /// OpenACC int-expr. This is useful to determine whether an int-expr list can
@@ -3821,6 +3834,11 @@ private:
   OpenACCGangArgRes ParseOpenACCGangArg(SourceLocation GangLoc);
   /// Parses a 'condition' expr, ensuring it results in a
   ExprResult ParseOpenACCConditionExpr();
+  DeclGroupPtrTy
+  ParseOpenACCAfterRoutineDecl(AccessSpecifier &AS, ParsedAttributes &Attrs,
+                               DeclSpec::TST TagType, Decl *TagDecl,
+                               OpenACCDirectiveParseInfo &DirInfo);
+  StmtResult ParseOpenACCAfterRoutineStmt(OpenACCDirectiveParseInfo &DirInfo);
 
 private:
   //===--------------------------------------------------------------------===//
@@ -3834,6 +3852,8 @@ private:
   DeclGroupPtrTy ParseTemplateDeclarationOrSpecialization(
       DeclaratorContext Context, SourceLocation &DeclEnd,
       ParsedAttributes &AccessAttrs, AccessSpecifier AS);
+  clang::Parser::DeclGroupPtrTy ParseTemplateDeclarationOrSpecialization(
+      DeclaratorContext Context, SourceLocation &DeclEnd, AccessSpecifier AS);
   DeclGroupPtrTy ParseDeclarationAfterTemplate(
       DeclaratorContext Context, ParsedTemplateInfo &TemplateInfo,
       ParsingDeclRAIIObject &DiagsFromParams, SourceLocation &DeclEnd,

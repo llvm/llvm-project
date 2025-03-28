@@ -847,6 +847,10 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::IsDOT;
   }
 
+  bool isXDL(const MachineInstr &MI) const;
+
+  static bool isDGEMM(unsigned Opcode) { return AMDGPU::getMAIIsDGEMM(Opcode); }
+
   static bool isLDSDIR(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::LDSDIR;
   }
@@ -955,11 +959,6 @@ public:
 
   bool isBarrier(unsigned Opcode) const {
     return isBarrierStart(Opcode) || Opcode == AMDGPU::S_BARRIER_WAIT ||
-           Opcode == AMDGPU::S_BARRIER_INIT_M0 ||
-           Opcode == AMDGPU::S_BARRIER_INIT_IMM ||
-           Opcode == AMDGPU::S_BARRIER_JOIN_IMM ||
-           Opcode == AMDGPU::S_BARRIER_LEAVE ||
-           Opcode == AMDGPU::S_BARRIER_LEAVE_IMM ||
            Opcode == AMDGPU::DS_GWS_INIT || Opcode == AMDGPU::DS_GWS_BARRIER;
   }
 

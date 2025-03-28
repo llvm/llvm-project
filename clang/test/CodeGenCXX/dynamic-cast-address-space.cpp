@@ -13,7 +13,7 @@ B fail;
 // CHECK: @_ZTI1B = linkonce_odr addrspace(1) constant { ptr addrspace(1), ptr addrspace(1), ptr addrspace(1) } { ptr addrspace(1) getelementptr inbounds (ptr addrspace(1), ptr addrspace(1) @_ZTVN10__cxxabiv120__si_class_type_infoE, i64 2), ptr addrspace(1) @_ZTS1B, ptr addrspace(1) @_ZTI1A }, comdat, align 8
 // CHECK: @_ZTVN10__cxxabiv120__si_class_type_infoE = external addrspace(1) global [0 x ptr addrspace(1)]
 // CHECK: @_ZTS1B = linkonce_odr addrspace(1) constant [3 x i8] c"1B\00", comdat, align 1
-// CHECK: @__oclc_ABI_version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 500
+// CHECK: @__oclc_ABI_version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 600
 //.
 // WITH-NONZERO-DEFAULT-AS: @_ZTV1B = linkonce_odr unnamed_addr addrspace(1) constant { [3 x ptr addrspace(1)] } { [3 x ptr addrspace(1)] [ptr addrspace(1) null, ptr addrspace(1) @_ZTI1B, ptr addrspace(1) addrspacecast (ptr addrspace(4) @_ZN1A1fEv to ptr addrspace(1))] }, comdat, align 8
 // WITH-NONZERO-DEFAULT-AS: @fail = addrspace(1) global { ptr addrspace(1) } { ptr addrspace(1) getelementptr inbounds inrange(-16, 8) ({ [3 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTV1B, i32 0, i32 0, i32 2) }, align 8
@@ -118,11 +118,11 @@ const B& f(A *a) {
 // WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR3]] = { nounwind }
 // WITH-NONZERO-DEFAULT-AS: attributes #[[ATTR4]] = { noreturn }
 //.
-// CHECK: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 500}
+// CHECK: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
 // CHECK: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // CHECK: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.
-// WITH-NONZERO-DEFAULT-AS: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 500}
+// WITH-NONZERO-DEFAULT-AS: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
 // WITH-NONZERO-DEFAULT-AS: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // WITH-NONZERO-DEFAULT-AS: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

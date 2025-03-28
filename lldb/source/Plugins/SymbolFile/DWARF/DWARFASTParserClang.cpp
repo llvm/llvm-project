@@ -290,9 +290,10 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
 
   SymbolFileDWARF *dwarf = die.GetDWARF();
   auto type_sp = dwarf->MakeType(
-      die.GetID(), pcm_type_sp->GetName(), pcm_type_sp->GetByteSize(nullptr),
-      nullptr, LLDB_INVALID_UID, Type::eEncodingInvalid,
-      &pcm_type_sp->GetDeclaration(), type, Type::ResolveState::Forward,
+      die.GetID(), pcm_type_sp->GetName(),
+      llvm::expectedToOptional(pcm_type_sp->GetByteSize(nullptr)), nullptr,
+      LLDB_INVALID_UID, Type::eEncodingInvalid, &pcm_type_sp->GetDeclaration(),
+      type, Type::ResolveState::Forward,
       TypePayloadClang(GetOwningClangModule(die)));
   clang::TagDecl *tag_decl = TypeSystemClang::GetAsTagDecl(type);
   if (tag_decl) {
@@ -1463,7 +1464,8 @@ DWARFASTParserClang::ParseArrayType(const DWARFDIE &die,
     bit_stride = array_info->bit_stride;
   }
   if (byte_stride == 0 && bit_stride == 0)
-    byte_stride = element_type->GetByteSize(nullptr).value_or(0);
+    byte_stride = llvm::expectedToOptional(element_type->GetByteSize(nullptr))
+                      .value_or(0);
   CompilerType array_element_type = element_type->GetForwardCompilerType();
   TypeSystemClang::RequireCompleteType(array_element_type);
 
@@ -1515,7 +1517,7 @@ TypeSP DWARFASTParserClang::ParsePointerToMemberType(
       class_clang_type, pointee_clang_type);
 
   if (std::optional<uint64_t> clang_type_size =
-          clang_type.GetByteSize(nullptr)) {
+          llvm::expectedToOptional(clang_type.GetByteSize(nullptr))) {
     return dwarf->MakeType(die.GetID(), attrs.name, *clang_type_size, nullptr,
                            LLDB_INVALID_UID, Type::eEncodingIsUID, nullptr,
                            clang_type, Type::ResolveState::Forward);
@@ -1976,7 +1978,8 @@ private:
 static std::optional<clang::APValue> MakeAPValue(const clang::ASTContext &ast,
                                                  CompilerType clang_type,
                                                  uint64_t value) {
-  std::optional<uint64_t> bit_width = clang_type.GetBitSize(nullptr);
+  std::optional<uint64_t> bit_width =
+      llvm::expectedToOptional(clang_type.GetBitSize(nullptr));
   if (!bit_width)
     return std::nullopt;
 
@@ -2246,9 +2249,10 @@ bool DWARFASTParserClang::CompleteEnumType(const DWARFDIE &die,
 
   if (TypeSystemClang::StartTagDeclarationDefinition(clang_type)) {
     if (die.HasChildren())
-      ParseChildEnumerators(clang_type,
-                            clang_type.IsEnumerationIntegerTypeSigned(),
-                            type->GetByteSize(nullptr).value_or(0), die);
+      ParseChildEnumerators(
+          clang_type, clang_type.IsEnumerationIntegerTypeSigned(),
+          llvm::expectedToOptional(type->GetByteSize(nullptr)).value_or(0),
+          die);
 
     TypeSystemClang::CompleteTagDeclarationDefinition(clang_type);
   }
@@ -2981,7 +2985,7 @@ void DWARFASTParserClang::ParseSingleMember(
     } else {
       auto byte_size = attrs.byte_size;
       if (!byte_size)
-        byte_size = member_type->GetByteSize(nullptr);
+        byte_size = llvm::expectedToOptional(member_type->GetByteSize(nullptr));
 
       ObjectFile *objfile = die.GetDWARF()->GetObjectFile();
       if (objfile->GetByteOrder() == eByteOrderLittle) {
@@ -3042,7 +3046,7 @@ void DWARFASTParserClang::ParseSingleMember(
     // TODO: we shouldn't silently ignore the bit_size if we fail
     //       to GetByteSize.
     if (std::optional<uint64_t> clang_type_size =
-            member_type->GetByteSize(nullptr)) {
+            llvm::expectedToOptional(member_type->GetByteSize(nullptr))) {
       this_field_info.bit_size = *clang_type_size * character_width;
     }
 
@@ -3851,7 +3855,9 @@ void DWARFASTParserClang::ParseRustVariantPart(
       m_ast.AddFieldToRecordType(
           field_type, "$discr$", discriminant_type->GetFullCompilerType(),
           lldb::eAccessPublic, variants.discriminant().byte_offset);
-      offset += discriminant_type->GetByteSize(nullptr).value_or(0);
+      offset +=
+          llvm::expectedToOptional(discriminant_type->GetByteSize(nullptr))
+              .value_or(0);
     }
 
     m_ast.AddFieldToRecordType(field_type, "value",

@@ -473,9 +473,7 @@ define void @test_med3_f32(ptr addrspace(1) %arg, float %x, float %y, float %z) 
 define amdgpu_ps half @test_minmax_f16_ieee_false(half %a, half %b, half %c) {
 ; SDAG-GFX11-TRUE16-LABEL: test_minmax_f16_ieee_false:
 ; SDAG-GFX11-TRUE16:       ; %bb.0:
-; SDAG-GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
-; SDAG-GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v2.l
-; SDAG-GFX11-TRUE16-NEXT:    v_maxmin_f16 v0.l, v0.l, v0.h, v1.l
+; SDAG-GFX11-TRUE16-NEXT:    v_maxmin_f16 v0.l, v0.l, v1.l, v2.l
 ; SDAG-GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; SDAG-GFX11-FAKE16-LABEL: test_minmax_f16_ieee_false:
@@ -495,9 +493,7 @@ define amdgpu_ps half @test_minmax_f16_ieee_false(half %a, half %b, half %c) {
 ;
 ; SDAG-GFX12-TRUE16-LABEL: test_minmax_f16_ieee_false:
 ; SDAG-GFX12-TRUE16:       ; %bb.0:
-; SDAG-GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
-; SDAG-GFX12-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v2.l
-; SDAG-GFX12-TRUE16-NEXT:    v_maxmin_num_f16 v0.l, v0.l, v0.h, v1.l
+; SDAG-GFX12-TRUE16-NEXT:    v_maxmin_num_f16 v0.l, v0.l, v1.l, v2.l
 ; SDAG-GFX12-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; SDAG-GFX12-FAKE16-LABEL: test_minmax_f16_ieee_false:
@@ -608,11 +604,10 @@ define half @test_minmax_commuted_f16_ieee_true(half %a, half %b, half %c) {
 ; SDAG-GFX11-TRUE16-LABEL: test_minmax_commuted_f16_ieee_true:
 ; SDAG-GFX11-TRUE16:       ; %bb.0:
 ; SDAG-GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v2.l
-; SDAG-GFX11-TRUE16-NEXT:    v_max_f16_e32 v1.l, v1.l, v1.l
+; SDAG-GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.h, v1.l, v1.l
 ; SDAG-GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
-; SDAG-GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.h, v0.h, v0.h
-; SDAG-GFX11-TRUE16-NEXT:    v_maxmin_f16 v0.l, v0.l, v1.l, v0.h
+; SDAG-GFX11-TRUE16-NEXT:    v_max_f16_e32 v1.l, v2.l, v2.l
+; SDAG-GFX11-TRUE16-NEXT:    v_maxmin_f16 v0.l, v0.l, v0.h, v1.l
 ; SDAG-GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX11-FAKE16-LABEL: test_minmax_commuted_f16_ieee_true:
@@ -649,11 +644,10 @@ define half @test_minmax_commuted_f16_ieee_true(half %a, half %b, half %c) {
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v2.l
-; SDAG-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v1.l, v1.l, v1.l
+; SDAG-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v0.h, v1.l, v1.l
 ; SDAG-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v0.l
-; SDAG-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v0.h, v0.h, v0.h
-; SDAG-GFX12-TRUE16-NEXT:    v_maxmin_num_f16 v0.l, v0.l, v1.l, v0.h
+; SDAG-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v1.l, v2.l, v2.l
+; SDAG-GFX12-TRUE16-NEXT:    v_maxmin_num_f16 v0.l, v0.l, v0.h, v1.l
 ; SDAG-GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX12-FAKE16-LABEL: test_minmax_commuted_f16_ieee_true:
@@ -702,9 +696,7 @@ define half @test_minmax_commuted_f16_ieee_true(half %a, half %b, half %c) {
 define amdgpu_ps half @test_maxmin_f16_ieee_false(half %a, half %b, half %c) {
 ; SDAG-GFX11-TRUE16-LABEL: test_maxmin_f16_ieee_false:
 ; SDAG-GFX11-TRUE16:       ; %bb.0:
-; SDAG-GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
-; SDAG-GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v2.l
-; SDAG-GFX11-TRUE16-NEXT:    v_minmax_f16 v0.l, v0.l, v0.h, v1.l
+; SDAG-GFX11-TRUE16-NEXT:    v_minmax_f16 v0.l, v0.l, v1.l, v2.l
 ; SDAG-GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; SDAG-GFX11-FAKE16-LABEL: test_maxmin_f16_ieee_false:
@@ -724,9 +716,7 @@ define amdgpu_ps half @test_maxmin_f16_ieee_false(half %a, half %b, half %c) {
 ;
 ; SDAG-GFX12-TRUE16-LABEL: test_maxmin_f16_ieee_false:
 ; SDAG-GFX12-TRUE16:       ; %bb.0:
-; SDAG-GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
-; SDAG-GFX12-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v2.l
-; SDAG-GFX12-TRUE16-NEXT:    v_minmax_num_f16 v0.l, v0.l, v0.h, v1.l
+; SDAG-GFX12-TRUE16-NEXT:    v_minmax_num_f16 v0.l, v0.l, v1.l, v2.l
 ; SDAG-GFX12-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; SDAG-GFX12-FAKE16-LABEL: test_maxmin_f16_ieee_false:
@@ -752,11 +742,10 @@ define half @test_maxmin_commuted_f16_ieee_true(half %a, half %b, half %c) {
 ; SDAG-GFX11-TRUE16-LABEL: test_maxmin_commuted_f16_ieee_true:
 ; SDAG-GFX11-TRUE16:       ; %bb.0:
 ; SDAG-GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v2.l
-; SDAG-GFX11-TRUE16-NEXT:    v_max_f16_e32 v1.l, v1.l, v1.l
+; SDAG-GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.h, v1.l, v1.l
 ; SDAG-GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
-; SDAG-GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.h, v0.h, v0.h
-; SDAG-GFX11-TRUE16-NEXT:    v_minmax_f16 v0.l, v0.l, v1.l, v0.h
+; SDAG-GFX11-TRUE16-NEXT:    v_max_f16_e32 v1.l, v2.l, v2.l
+; SDAG-GFX11-TRUE16-NEXT:    v_minmax_f16 v0.l, v0.l, v0.h, v1.l
 ; SDAG-GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX11-FAKE16-LABEL: test_maxmin_commuted_f16_ieee_true:
@@ -793,11 +782,10 @@ define half @test_maxmin_commuted_f16_ieee_true(half %a, half %b, half %c) {
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v2.l
-; SDAG-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v1.l, v1.l, v1.l
+; SDAG-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v0.h, v1.l, v1.l
 ; SDAG-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v0.l
-; SDAG-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v0.h, v0.h, v0.h
-; SDAG-GFX12-TRUE16-NEXT:    v_minmax_num_f16 v0.l, v0.l, v1.l, v0.h
+; SDAG-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v1.l, v2.l, v2.l
+; SDAG-GFX12-TRUE16-NEXT:    v_minmax_num_f16 v0.l, v0.l, v0.h, v1.l
 ; SDAG-GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX12-FAKE16-LABEL: test_maxmin_commuted_f16_ieee_true:
@@ -847,9 +835,7 @@ define void @test_med3_f16(ptr addrspace(1) %arg, half %x, half %y, half %z) #0 
 ; SDAG-GFX11-TRUE16-LABEL: test_med3_f16:
 ; SDAG-GFX11-TRUE16:       ; %bb.0:
 ; SDAG-GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v3.l
-; SDAG-GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v4.l
-; SDAG-GFX11-TRUE16-NEXT:    v_med3_f16 v2.l, v2.l, v2.h, v3.l
+; SDAG-GFX11-TRUE16-NEXT:    v_med3_f16 v2.l, v2.l, v3.l, v4.l
 ; SDAG-GFX11-TRUE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; SDAG-GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -881,9 +867,7 @@ define void @test_med3_f16(ptr addrspace(1) %arg, half %x, half %y, half %z) #0 
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX12-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v3.l
-; SDAG-GFX12-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v4.l
-; SDAG-GFX12-TRUE16-NEXT:    v_med3_num_f16 v2.l, v2.l, v2.h, v3.l
+; SDAG-GFX12-TRUE16-NEXT:    v_med3_num_f16 v2.l, v2.l, v3.l, v4.l
 ; SDAG-GFX12-TRUE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; SDAG-GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;

@@ -44,8 +44,9 @@ unsigned ARMWinCOFFObjectWriter::getRelocType(MCContext &Ctx,
                                               const MCFixup &Fixup,
                                               bool IsCrossSection,
                                               const MCAsmBackend &MAB) const {
-  MCSymbolRefExpr::VariantKind Modifier =
-    Target.isAbsolute() ? MCSymbolRefExpr::VK_None : Target.getSymA()->getKind();
+  MCSymbolRefExpr::VariantKind Modifier = Target.isAbsolute()
+                                              ? MCSymbolRefExpr::VK_None
+                                              : Target.getSymA()->getKind();
 
   unsigned FixupKind = Fixup.getKind();
   if (IsCrossSection) {

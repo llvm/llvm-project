@@ -175,12 +175,7 @@ public:
   /// Returns the underlying IR value, if this VPValue is defined outside the
   /// scope of VPlan. Returns nullptr if the VPValue is defined by a VPDef
   /// inside a VPlan.
-  Value *getLiveInIRValue() {
-    assert(isLiveIn() &&
-           "VPValue is not a live-in; it is defined by a VPDef inside a VPlan");
-    return getUnderlyingValue();
-  }
-  const Value *getLiveInIRValue() const {
+  Value *getLiveInIRValue() const {
     assert(isLiveIn() &&
            "VPValue is not a live-in; it is defined by a VPDef inside a VPlan");
     return getUnderlyingValue();
@@ -340,7 +335,7 @@ public:
     VPScalarCastSC,
     VPScalarIVStepsSC,
     VPVectorPointerSC,
-    VPReverseVectorPointerSC,
+    VPVectorEndPointerSC,
     VPWidenCallSC,
     VPWidenCanonicalIVSC,
     VPWidenCastSC,
@@ -365,7 +360,6 @@ public:
     VPFirstOrderRecurrencePHISC,
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
-    VPScalarPHISC,
     VPReductionPHISC,
     // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
     // END: Phi-like recipes

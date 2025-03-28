@@ -31,9 +31,8 @@ struct Foo {
   EmptyStruct es;
 };
 
-// CHECK: HLSLBufferDecl {{.*}}  line:37:9 cbuffer CB1
+// CHECK: HLSLBufferDecl {{.*}}  line:[[# @LINE + 2]]:9 cbuffer CB1
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
-// CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB1 {
   // CHECK: VarDecl {{.*}} foo1 'hlsl_constant Foo'
   Foo foo1;
@@ -61,9 +60,8 @@ namespace NS2 {
     float d[4];
     EmptyStruct es;
   };
-  // CHECK: HLSLBufferDecl {{.*}} line:67:11 cbuffer CB2
+  // CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 2]]:11 cbuffer CB2
   // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
-  // CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
   cbuffer CB2 {
     // CHECK: VarDecl {{.*}} foo0 'hlsl_constant ::Foo':'hlsl_constant Foo'
     ::Foo foo0;

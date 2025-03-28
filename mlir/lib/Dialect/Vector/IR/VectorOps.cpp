@@ -560,11 +560,9 @@ struct ElideUnitDimsInMultiDimReduction
     } else {
       // This means we are reducing all the dimensions, and all reduction
       // dimensions are of size 1. So a simple extraction would do.
-      SmallVector<int64_t> zeroIdx(shape.size(), 0);
       if (mask)
-        mask = rewriter.create<vector::ExtractOp>(loc, mask, zeroIdx);
-      cast = rewriter.create<vector::ExtractOp>(loc, reductionOp.getSource(),
-                                                zeroIdx);
+        mask = rewriter.create<vector::ExtractOp>(loc, mask);
+      cast = rewriter.create<vector::ExtractOp>(loc, reductionOp.getSource());
     }
 
     Value result =
@@ -698,16 +696,9 @@ struct ElideSingleElementReduction : public OpRewritePattern<ReductionOp> {
       return failure();
 
     Location loc = reductionOp.getLoc();
-    Value result;
-    if (vectorType.getRank() == 0) {
-      if (mask)
-        mask = rewriter.create<ExtractElementOp>(loc, mask);
-      result = rewriter.create<ExtractElementOp>(loc, reductionOp.getVector());
-    } else {
-      if (mask)
-        mask = rewriter.create<ExtractOp>(loc, mask, 0);
-      result = rewriter.create<ExtractOp>(loc, reductionOp.getVector(), 0);
-    }
+    if (mask)
+      mask = rewriter.create<ExtractOp>(loc, mask);
+    Value result = rewriter.create<ExtractOp>(loc, reductionOp.getVector());
 
     if (Value acc = reductionOp.getAcc())
       result = vector::makeArithReduction(rewriter, loc, reductionOp.getKind(),
@@ -838,7 +829,7 @@ void ContractionOp::print(OpAsmPrinter &p) {
   // TODO: Unify printing code with linalg ops.
   auto attrNames = getTraitAttrNames();
   llvm::StringSet<> traitAttrsSet;
-  traitAttrsSet.insert(attrNames.begin(), attrNames.end());
+  traitAttrsSet.insert_range(attrNames);
   SmallVector<NamedAttribute, 8> attrs;
   for (auto attr : (*this)->getAttrs()) {
     if (attr.getName() == getIteratorTypesAttrName()) {
@@ -891,9 +882,8 @@ static LogicalResult verifyOutputShape(
     lhsContractingDimSet.insert(dimPair.first);
     rhsContractingDimSet.insert(dimPair.second);
   }
-  DenseSet<int64_t> rhsBatchDimSet;
-  for (auto &dimPair : batchDimMap)
-    rhsBatchDimSet.insert(dimPair.second);
+  DenseSet<int64_t> rhsBatchDimSet(llvm::from_range,
+                                   llvm::make_second_range(batchDimMap));
 
   // Add free and batch dimensions from 'lhsType' to 'expectedResultDims'.
   SmallVector<int64_t, 4> expectedResultDims;
@@ -1295,6 +1285,12 @@ void ExtractOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 }
 
 void vector::ExtractOp::build(OpBuilder &builder, OperationState &result,
+                              Value source) {
+  auto vectorTy = cast<VectorType>(source.getType());
+  build(builder, result, source, SmallVector<int64_t>(vectorTy.getRank(), 0));
+}
+
+void vector::ExtractOp::build(OpBuilder &builder, OperationState &result,
                               Value source, int64_t position) {
   build(builder, result, source, ArrayRef<int64_t>{position});
 }
@@ -1678,7 +1674,7 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
     return source;
 
   unsigned extractResultRank = getRank(extractOp.getType());
-  if (extractResultRank >= broadcastSrcRank)
+  if (extractResultRank > broadcastSrcRank)
     return Value();
   // Check that the dimension of the result haven't been broadcasted.
   auto extractVecType = llvm::dyn_cast<VectorType>(extractOp.getType());
@@ -2159,13 +2155,11 @@ public:
     // folding patterns.
     if (extractResultRank < broadcastSrcRank)
       return failure();
+    // For scalar result, the input can only be a rank-0 vector, which will
+    // be handled by the folder.
+    if (extractResultRank == 0)
+      return failure();
 
-    // Special case if broadcast src is a 0D vector.
-    if (extractResultRank == 0) {
-      assert(broadcastSrcRank == 0 && llvm::isa<VectorType>(source.getType()));
-      rewriter.replaceOpWithNewOp<vector::ExtractElementOp>(extractOp, source);
-      return success();
-    }
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
         extractOp, extractOp.getType(), source);
     return success();
@@ -2917,6 +2911,13 @@ void vector::InsertOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 }
 
 void vector::InsertOp::build(OpBuilder &builder, OperationState &result,
+                             Value source, Value dest) {
+  auto vectorTy = cast<VectorType>(dest.getType());
+  build(builder, result, source, dest,
+        SmallVector<int64_t>(vectorTy.getRank(), 0));
+}
+
+void vector::InsertOp::build(OpBuilder &builder, OperationState &result,
                              Value source, Value dest, int64_t position) {
   build(builder, result, source, dest, ArrayRef<int64_t>{position});
 }
@@ -3019,94 +3020,78 @@ public:
   }
 };
 
-// Pattern to rewrite a InsertOp(ConstantOp into ConstantOp) -> ConstantOp.
-class InsertOpConstantFolder final : public OpRewritePattern<InsertOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
+} // namespace
 
-  // Do not create constants with more than `vectorSizeFoldThreashold` elements,
-  // unless the source vector constant has a single use.
-  static constexpr int64_t vectorSizeFoldThreshold = 256;
+static Attribute
+foldDenseElementsAttrDestInsertOp(InsertOp insertOp, Attribute srcAttr,
+                                  Attribute dstAttr,
+                                  int64_t maxVectorSizeFoldThreshold) {
+  if (insertOp.hasDynamicPosition())
+    return {};
 
-  LogicalResult matchAndRewrite(InsertOp op,
-                                PatternRewriter &rewriter) const override {
-    // TODO: Canonicalization for dynamic position not implemented yet.
-    if (op.hasDynamicPosition())
-      return failure();
+  auto denseDst = llvm::dyn_cast_if_present<DenseElementsAttr>(dstAttr);
+  if (!denseDst)
+    return {};
 
-    // Return if 'InsertOp' operand is not defined by a compatible vector
-    // ConstantOp.
-    TypedValue<VectorType> destVector = op.getDest();
-    Attribute vectorDestCst;
-    if (!matchPattern(destVector, m_Constant(&vectorDestCst)))
-      return failure();
-    auto denseDest = llvm::dyn_cast<DenseElementsAttr>(vectorDestCst);
-    if (!denseDest)
-      return failure();
-
-    VectorType destTy = destVector.getType();
-    if (destTy.isScalable())
-      return failure();
-
-    // Make sure we do not create too many large constants.
-    if (destTy.getNumElements() > vectorSizeFoldThreshold &&
-        !destVector.hasOneUse())
-      return failure();
-
-    Value sourceValue = op.getSource();
-    Attribute sourceCst;
-    if (!matchPattern(sourceValue, m_Constant(&sourceCst)))
-      return failure();
-
-    // Calculate the linearized position of the continuous chunk of elements to
-    // insert.
-    llvm::SmallVector<int64_t> completePositions(destTy.getRank(), 0);
-    copy(op.getStaticPosition(), completePositions.begin());
-    int64_t insertBeginPosition =
-        linearize(completePositions, computeStrides(destTy.getShape()));
-
-    SmallVector<Attribute> insertedValues;
-    Type destEltType = destTy.getElementType();
-
-    // The `convertIntegerAttr` method specifically handles the case
-    // for `llvm.mlir.constant` which can hold an attribute with a
-    // different type than the return type.
-    if (auto denseSource = llvm::dyn_cast<DenseElementsAttr>(sourceCst)) {
-      for (auto value : denseSource.getValues<Attribute>())
-        insertedValues.push_back(convertIntegerAttr(value, destEltType));
-    } else {
-      insertedValues.push_back(convertIntegerAttr(sourceCst, destEltType));
-    }
-
-    auto allValues = llvm::to_vector(denseDest.getValues<Attribute>());
-    copy(insertedValues, allValues.begin() + insertBeginPosition);
-    auto newAttr = DenseElementsAttr::get(destTy, allValues);
-
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, newAttr);
-    return success();
+  if (!srcAttr) {
+    return {};
   }
 
-private:
+  VectorType destTy = insertOp.getDestVectorType();
+  if (destTy.isScalable())
+    return {};
+
+  // Make sure we do not create too many large constants.
+  if (destTy.getNumElements() > maxVectorSizeFoldThreshold &&
+      !insertOp->hasOneUse())
+    return {};
+
+  // Calculate the linearized position of the continuous chunk of elements to
+  // insert.
+  llvm::SmallVector<int64_t> completePositions(destTy.getRank(), 0);
+  copy(insertOp.getStaticPosition(), completePositions.begin());
+  int64_t insertBeginPosition =
+      linearize(completePositions, computeStrides(destTy.getShape()));
+
+  SmallVector<Attribute> insertedValues;
+  Type destEltType = destTy.getElementType();
+
   /// Converts the expected type to an IntegerAttr if there's
   /// a mismatch.
-  Attribute convertIntegerAttr(Attribute attr, Type expectedType) const {
+  auto convertIntegerAttr = [](Attribute attr, Type expectedType) -> Attribute {
     if (auto intAttr = mlir::dyn_cast<IntegerAttr>(attr)) {
       if (intAttr.getType() != expectedType)
         return IntegerAttr::get(expectedType, intAttr.getInt());
     }
     return attr;
-  }
-};
+  };
 
-} // namespace
+  // The `convertIntegerAttr` method specifically handles the case
+  // for `llvm.mlir.constant` which can hold an attribute with a
+  // different type than the return type.
+  if (auto denseSource = llvm::dyn_cast<DenseElementsAttr>(srcAttr)) {
+    for (auto value : denseSource.getValues<Attribute>())
+      insertedValues.push_back(convertIntegerAttr(value, destEltType));
+  } else {
+    insertedValues.push_back(convertIntegerAttr(srcAttr, destEltType));
+  }
+
+  auto allValues = llvm::to_vector(denseDst.getValues<Attribute>());
+  copy(insertedValues, allValues.begin() + insertBeginPosition);
+  auto newAttr = DenseElementsAttr::get(destTy, allValues);
+
+  return newAttr;
+}
 
 void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat,
-              InsertOpConstantFolder>(context);
+  results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat>(context);
 }
 
 OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
+  // Do not create constants with more than `vectorSizeFoldThreashold` elements,
+  // unless the source vector constant has a single use.
+  constexpr int64_t vectorSizeFoldThreshold = 256;
   // Fold "vector.insert %v, %dest [] : vector<2x2xf32> from vector<2x2xf32>" to
   // %v. Note: Do not fold "vector.insert %v, %dest [] : f32 into vector<f32>"
   // (type mismatch).
@@ -3118,6 +3103,11 @@ OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
   if (auto res = foldPoisonIndexInsertExtractOp(
           getContext(), adaptor.getStaticPosition(), kPoisonIndex))
     return res;
+  if (auto res = foldDenseElementsAttrDestInsertOp(*this, adaptor.getSource(),
+                                                   adaptor.getDest(),
+                                                   vectorSizeFoldThreshold)) {
+    return res;
+  }
 
   return {};
 }
@@ -5351,9 +5341,9 @@ LogicalResult ScatterOp::verify() {
     return emitOpError("base and valueToStore element type should match");
   if (llvm::size(getIndices()) != memType.getRank())
     return emitOpError("requires ") << memType.getRank() << " indices";
-  if (valueVType.getDimSize(0) != indVType.getDimSize(0))
+  if (valueVType.getShape() != indVType.getShape())
     return emitOpError("expected valueToStore dim to match indices dim");
-  if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
+  if (valueVType.getShape() != maskVType.getShape())
     return emitOpError("expected valueToStore dim to match mask dim");
   return success();
 }

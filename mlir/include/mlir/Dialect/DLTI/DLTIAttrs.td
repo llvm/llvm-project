@@ -74,8 +74,14 @@ def DLTI_DataLayoutSpecAttr :
     /// Returns the endiannes identifier.
     StringAttr getEndiannessIdentifier(MLIRContext *context) const;
 
+    /// Returns the default memory space identifier.
+    StringAttr getDefaultMemorySpaceIdentifier(MLIRContext *context) const;
+
     /// Returns the alloca memory space identifier.
     StringAttr getAllocaMemorySpaceIdentifier(MLIRContext *context) const;
+
+    /// Returns the mangling mode identifier.
+    StringAttr getManglingModeIdentifier(MLIRContext *context) const;
 
     /// Returns the program memory space identifier.
     StringAttr getProgramMemorySpaceIdentifier(MLIRContext *context) const;

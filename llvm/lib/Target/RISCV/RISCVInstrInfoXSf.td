@@ -30,8 +30,6 @@ def VCIX_XVW : VCIXType<0b1111>;
 // The payload and tsimm5 operands are all marked as ImmArg in the IR
 // intrinsic and will be target constant, so use TImmLeaf rather than ImmLeaf.
 class PayloadOp<int bitsNum> : RISCVOp, TImmLeaf<XLenVT, "return isUInt<" # bitsNum # ">(Imm);"> {
-  let ParserMatchClass = UImmAsmOperand<bitsNum>;
-  let DecoderMethod = "decodeUImmOperand<"# bitsNum # ">";
   let OperandType = "OPERAND_UIMM" # bitsNum;
 }
 
@@ -223,7 +221,7 @@ let Predicates = [HasVendorXSfvfwmaccqqq], DecoderNamespace = "XSfvector",
 }
 
 let Predicates = [HasVendorXSfvfnrclipxfqf], DecoderNamespace = "XSfvector",
-    Uses = [FRM] in {
+    Uses = [FRM, VL, VTYPE] in {
   def VFNRCLIP_XU_F_QF : CustomSiFiveVFNRCLIP<0b100010, OPFVF, "sf.vfnrclip.xu.f.qf">;
   def VFNRCLIP_X_F_QF : CustomSiFiveVFNRCLIP<0b100011, OPFVF, "sf.vfnrclip.x.f.qf">;
 }

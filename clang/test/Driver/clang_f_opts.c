@@ -110,8 +110,6 @@
 // RUN: %clang -### -S -fcoverage-mapping -fno-coverage-mapping %s 2>&1 | FileCheck -check-prefix=CHECK-DISABLE-COVERAGE %s
 // RUN: %clang -### -S -fprofile-instr-generate -fcoverage-mapping -fno-coverage-mapping %s 2>&1 | FileCheck -check-prefix=CHECK-DISABLE-COVERAGE %s
 // RUN: %clang -### -S -fprofile-remapping-file=foo/bar.txt %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-REMAP %s
-// RUN: %clang -### -S -forder-file-instrumentation %s 2>&1 | FileCheck -check-prefix=CHECK-ORDERFILE-INSTR %s
-// RUN: %clang -### --target=x86_64-linux-gnu -flto -forder-file-instrumentation %s 2>&1 | FileCheck -check-prefix=CHECK-ORDERFILE-INSTR-LTO %s
 // CHECK-PROFILE-GENERATE: "-fprofile-instrument=clang"
 // CHECK-PROFILE-GENERATE-LLVM: "-fprofile-instrument=llvm"
 // CHECK-PROFILE-GENERATE-DIR: "-fprofile-instrument-path=/some/dir{{/|\\\\}}{{.*}}"
@@ -123,10 +121,6 @@
 // CHECK-COVERAGE-AND-GEN: '-fcoverage-mapping' only allowed with '-fprofile-instr-generate'
 // CHECK-DISABLE-COVERAGE-NOT: "-fcoverage-mapping"
 // CHECK-PROFILE-REMAP: "-fprofile-remapping-file=foo/bar.txt"
-// CHECK-ORDERFILE-INSTR: "-forder-file-instrumentation"
-// CHECK-ORDERFILE-INSTR: "-enable-order-file-instrumentation"
-// CHECK-ORDERFILE-INSTR-LTO: "-forder-file-instrumentation"
-// CHECK-ORDERFILE-INSTR-LTO-NOT: "-enable-order-file-instrumentation"
 
 // RUN: %clang -### -S -fprofile-use %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE %s
 // RUN: %clang -### -S -fprofile-instr-use %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE %s
@@ -371,7 +365,6 @@
 // RUN: -fno-devirtualize-speculatively                                       \
 // RUN: -fslp-vectorize-aggressive                                            \
 // RUN: -fno-slp-vectorize-aggressive                                         \
-// RUN: -forder-file-instrumentation                                          \
 // RUN: %s 2>&1 | FileCheck --check-prefix=CHECK-WARNING %s
 // CHECK-WARNING-DAG: optimization flag '-finline-limit=1000' is not supported
 // CHECK-WARNING-DAG: optimization flag '-finline-limit' is not supported
@@ -431,7 +424,6 @@
 // CHECK-WARNING-DAG: optimization flag '-fno-devirtualize-speculatively' is not supported
 // CHECK-WARNING-DAG: the flag '-fslp-vectorize-aggressive' has been deprecated and will be ignored
 // CHECK-WARNING-DAG: the flag '-fno-slp-vectorize-aggressive' has been deprecated and will be ignored
-// CHECK-WARNING-DAG: argument '-forder-file-instrumentation' is deprecated, use '-ftemporal-profile' instead
 
 // Test that we mute the warning on these
 // RUN: %clang -### -finline-limit=1000 -Wno-invalid-command-line-argument              \

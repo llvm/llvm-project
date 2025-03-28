@@ -388,29 +388,29 @@ define <5 x i32> @test_signed_v5f64_v5i32(<5 x double> %f) {
 ; CHECK-GI-NEXT:    fcvtzs v1.2d, v2.2d
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI12_1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI12_0
+; CHECK-GI-NEXT:    cmgt v6.2d, v2.2d, v3.2d
 ; CHECK-GI-NEXT:    cmgt v4.2d, v2.2d, v0.2d
 ; CHECK-GI-NEXT:    cmgt v5.2d, v2.2d, v1.2d
 ; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
 ; CHECK-GI-NEXT:    bif v1.16b, v2.16b, v5.16b
-; CHECK-GI-NEXT:    cmgt v4.2d, v2.2d, v3.2d
-; CHECK-GI-NEXT:    ldr q5, [x8, :lo12:.LCPI12_0]
-; CHECK-GI-NEXT:    bit v2.16b, v3.16b, v4.16b
-; CHECK-GI-NEXT:    cmgt v3.2d, v0.2d, v5.2d
-; CHECK-GI-NEXT:    cmgt v4.2d, v1.2d, v5.2d
-; CHECK-GI-NEXT:    bif v0.16b, v5.16b, v3.16b
-; CHECK-GI-NEXT:    bif v1.16b, v5.16b, v4.16b
-; CHECK-GI-NEXT:    cmgt v3.2d, v2.2d, v5.2d
-; CHECK-GI-NEXT:    bif v2.16b, v5.16b, v3.16b
+; CHECK-GI-NEXT:    ldr q4, [x8, :lo12:.LCPI12_0]
+; CHECK-GI-NEXT:    bit v2.16b, v3.16b, v6.16b
+; CHECK-GI-NEXT:    cmgt v3.2d, v0.2d, v4.2d
+; CHECK-GI-NEXT:    cmgt v5.2d, v1.2d, v4.2d
+; CHECK-GI-NEXT:    cmgt v6.2d, v2.2d, v4.2d
+; CHECK-GI-NEXT:    bif v0.16b, v4.16b, v3.16b
+; CHECK-GI-NEXT:    bif v1.16b, v4.16b, v5.16b
+; CHECK-GI-NEXT:    bif v2.16b, v4.16b, v6.16b
 ; CHECK-GI-NEXT:    mov d3, v0.d[1]
 ; CHECK-GI-NEXT:    mov d4, v1.d[1]
 ; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    fmov x4, d2
 ; CHECK-GI-NEXT:    fmov x2, d1
 ; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-GI-NEXT:    // kill: def $w2 killed $w2 killed $x2
-; CHECK-GI-NEXT:    fmov x4, d2
+; CHECK-GI-NEXT:    // kill: def $w4 killed $w4 killed $x4
 ; CHECK-GI-NEXT:    fmov x1, d3
 ; CHECK-GI-NEXT:    fmov x3, d4
-; CHECK-GI-NEXT:    // kill: def $w4 killed $w4 killed $x4
 ; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 killed $x1
 ; CHECK-GI-NEXT:    // kill: def $w3 killed $w3 killed $x3
 ; CHECK-GI-NEXT:    ret
@@ -5236,6 +5236,7 @@ define <16 x i8> @test_signed_v16f64_v16i8(<16 x double> %f) {
 ; CHECK-GI-NEXT:    adrp x8, .LCPI83_0
 ; CHECK-GI-NEXT:    fcvtzs v6.2d, v6.2d
 ; CHECK-GI-NEXT:    fcvtzs v7.2d, v7.2d
+; CHECK-GI-NEXT:    ldr q25, [x8, :lo12:.LCPI83_0]
 ; CHECK-GI-NEXT:    cmgt v17.2d, v16.2d, v0.2d
 ; CHECK-GI-NEXT:    cmgt v18.2d, v16.2d, v1.2d
 ; CHECK-GI-NEXT:    cmgt v19.2d, v16.2d, v2.2d
@@ -5246,29 +5247,28 @@ define <16 x i8> @test_signed_v16f64_v16i8(<16 x double> %f) {
 ; CHECK-GI-NEXT:    cmgt v24.2d, v16.2d, v7.2d
 ; CHECK-GI-NEXT:    bif v0.16b, v16.16b, v17.16b
 ; CHECK-GI-NEXT:    bif v1.16b, v16.16b, v18.16b
-; CHECK-GI-NEXT:    ldr q17, [x8, :lo12:.LCPI83_0]
 ; CHECK-GI-NEXT:    bif v2.16b, v16.16b, v19.16b
 ; CHECK-GI-NEXT:    bif v3.16b, v16.16b, v20.16b
 ; CHECK-GI-NEXT:    bif v4.16b, v16.16b, v21.16b
 ; CHECK-GI-NEXT:    bif v5.16b, v16.16b, v22.16b
 ; CHECK-GI-NEXT:    bif v6.16b, v16.16b, v23.16b
 ; CHECK-GI-NEXT:    bif v7.16b, v16.16b, v24.16b
-; CHECK-GI-NEXT:    cmgt v16.2d, v0.2d, v17.2d
-; CHECK-GI-NEXT:    cmgt v18.2d, v1.2d, v17.2d
-; CHECK-GI-NEXT:    cmgt v19.2d, v2.2d, v17.2d
-; CHECK-GI-NEXT:    cmgt v20.2d, v3.2d, v17.2d
-; CHECK-GI-NEXT:    cmgt v21.2d, v4.2d, v17.2d
-; CHECK-GI-NEXT:    cmgt v22.2d, v5.2d, v17.2d
-; CHECK-GI-NEXT:    cmgt v23.2d, v6.2d, v17.2d
-; CHECK-GI-NEXT:    cmgt v24.2d, v7.2d, v17.2d
-; CHECK-GI-NEXT:    bif v0.16b, v17.16b, v16.16b
-; CHECK-GI-NEXT:    bif v1.16b, v17.16b, v18.16b
-; CHECK-GI-NEXT:    bif v2.16b, v17.16b, v19.16b
-; CHECK-GI-NEXT:    bif v3.16b, v17.16b, v20.16b
-; CHECK-GI-NEXT:    bif v4.16b, v17.16b, v21.16b
-; CHECK-GI-NEXT:    bif v5.16b, v17.16b, v22.16b
-; CHECK-GI-NEXT:    bif v6.16b, v17.16b, v23.16b
-; CHECK-GI-NEXT:    bif v7.16b, v17.16b, v24.16b
+; CHECK-GI-NEXT:    cmgt v16.2d, v0.2d, v25.2d
+; CHECK-GI-NEXT:    cmgt v17.2d, v1.2d, v25.2d
+; CHECK-GI-NEXT:    cmgt v18.2d, v2.2d, v25.2d
+; CHECK-GI-NEXT:    cmgt v19.2d, v3.2d, v25.2d
+; CHECK-GI-NEXT:    cmgt v20.2d, v4.2d, v25.2d
+; CHECK-GI-NEXT:    cmgt v21.2d, v5.2d, v25.2d
+; CHECK-GI-NEXT:    cmgt v22.2d, v6.2d, v25.2d
+; CHECK-GI-NEXT:    cmgt v23.2d, v7.2d, v25.2d
+; CHECK-GI-NEXT:    bif v0.16b, v25.16b, v16.16b
+; CHECK-GI-NEXT:    bif v1.16b, v25.16b, v17.16b
+; CHECK-GI-NEXT:    bif v2.16b, v25.16b, v18.16b
+; CHECK-GI-NEXT:    bif v3.16b, v25.16b, v19.16b
+; CHECK-GI-NEXT:    bif v4.16b, v25.16b, v20.16b
+; CHECK-GI-NEXT:    bif v5.16b, v25.16b, v21.16b
+; CHECK-GI-NEXT:    bif v6.16b, v25.16b, v22.16b
+; CHECK-GI-NEXT:    bif v7.16b, v25.16b, v23.16b
 ; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    uzp1 v1.4s, v2.4s, v3.4s
 ; CHECK-GI-NEXT:    uzp1 v2.4s, v4.4s, v5.4s
@@ -5505,6 +5505,7 @@ define <16 x i16> @test_signed_v16f64_v16i16(<16 x double> %f) {
 ; CHECK-GI-NEXT:    adrp x8, .LCPI85_0
 ; CHECK-GI-NEXT:    fcvtzs v6.2d, v6.2d
 ; CHECK-GI-NEXT:    fcvtzs v7.2d, v7.2d
+; CHECK-GI-NEXT:    ldr q25, [x8, :lo12:.LCPI85_0]
 ; CHECK-GI-NEXT:    cmgt v17.2d, v16.2d, v0.2d
 ; CHECK-GI-NEXT:    cmgt v18.2d, v16.2d, v1.2d
 ; CHECK-GI-NEXT:    cmgt v19.2d, v16.2d, v2.2d
@@ -5515,29 +5516,28 @@ define <16 x i16> @test_signed_v16f64_v16i16(<16 x double> %f) {
 ; CHECK-GI-NEXT:    cmgt v24.2d, v16.2d, v7.2d
 ; CHECK-GI-NEXT:    bif v0.16b, v16.16b, v17.16b
 ; CHECK-GI-NEXT:    bif v1.16b, v16.16b, v18.16b
-; CHECK-GI-NEXT:    ldr q17, [x8, :lo12:.LCPI85_0]
 ; CHECK-GI-NEXT:    bif v2.16b, v16.16b, v19.16b
 ; CHECK-GI-NEXT:    bif v3.16b, v16.16b, v20.16b
 ; CHECK-GI-NEXT:    bif v4.16b, v16.16b, v21.16b
 ; CHECK-GI-NEXT:    bif v5.16b, v16.16b, v22.16b
 ; CHECK-GI-NEXT:    bif v6.16b, v16.16b, v23.16b
 ; CHECK-GI-NEXT:    bif v7.16b, v16.16b, v24.16b
-; CHECK-GI-NEXT:    cmgt v16.2d, v0.2d, v17.2d
-; CHECK-GI-NEXT:    cmgt v18.2d, v1.2d, v17.2d
-; CHECK-GI-NEXT:    cmgt v19.2d, v2.2d, v17.2d
-; CHECK-GI-NEXT:    cmgt v20.2d, v3.2d, v17.2d
-; CHECK-GI-NEXT:    cmgt v21.2d, v4.2d, v17.2d
-; CHECK-GI-NEXT:    cmgt v22.2d, v5.2d, v17.2d
-; CHECK-GI-NEXT:    cmgt v23.2d, v6.2d, v17.2d
-; CHECK-GI-NEXT:    cmgt v24.2d, v7.2d, v17.2d
-; CHECK-GI-NEXT:    bif v0.16b, v17.16b, v16.16b
-; CHECK-GI-NEXT:    bif v1.16b, v17.16b, v18.16b
-; CHECK-GI-NEXT:    bif v2.16b, v17.16b, v19.16b
-; CHECK-GI-NEXT:    bif v3.16b, v17.16b, v20.16b
-; CHECK-GI-NEXT:    bif v4.16b, v17.16b, v21.16b
-; CHECK-GI-NEXT:    bif v5.16b, v17.16b, v22.16b
-; CHECK-GI-NEXT:    bif v6.16b, v17.16b, v23.16b
-; CHECK-GI-NEXT:    bif v7.16b, v17.16b, v24.16b
+; CHECK-GI-NEXT:    cmgt v16.2d, v0.2d, v25.2d
+; CHECK-GI-NEXT:    cmgt v17.2d, v1.2d, v25.2d
+; CHECK-GI-NEXT:    cmgt v18.2d, v2.2d, v25.2d
+; CHECK-GI-NEXT:    cmgt v19.2d, v3.2d, v25.2d
+; CHECK-GI-NEXT:    cmgt v20.2d, v4.2d, v25.2d
+; CHECK-GI-NEXT:    cmgt v21.2d, v5.2d, v25.2d
+; CHECK-GI-NEXT:    cmgt v22.2d, v6.2d, v25.2d
+; CHECK-GI-NEXT:    cmgt v23.2d, v7.2d, v25.2d
+; CHECK-GI-NEXT:    bif v0.16b, v25.16b, v16.16b
+; CHECK-GI-NEXT:    bif v1.16b, v25.16b, v17.16b
+; CHECK-GI-NEXT:    bif v2.16b, v25.16b, v18.16b
+; CHECK-GI-NEXT:    bif v3.16b, v25.16b, v19.16b
+; CHECK-GI-NEXT:    bif v4.16b, v25.16b, v20.16b
+; CHECK-GI-NEXT:    bif v5.16b, v25.16b, v21.16b
+; CHECK-GI-NEXT:    bif v6.16b, v25.16b, v22.16b
+; CHECK-GI-NEXT:    bif v7.16b, v25.16b, v23.16b
 ; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    uzp1 v1.4s, v2.4s, v3.4s
 ; CHECK-GI-NEXT:    uzp1 v2.4s, v4.4s, v5.4s

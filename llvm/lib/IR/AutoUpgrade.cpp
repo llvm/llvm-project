@@ -1292,7 +1292,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       if (Name.consume_front("abs."))
         // nvvm.abs.{i,ii}
         Expand = Name == "i" || Name == "ll";
-      else if (Name == "clz.ll" || Name == "popc.ll" || Name == "h2f")
+      else if (Name == "clz.ll" || Name == "popc.ll" || Name == "h2f" ||
+               Name == "swap.lo.hi.b64")
         Expand = true;
       else if (Name.consume_front("max.") || Name.consume_front("min."))
         // nvvm.{min,max}.{i,ii,ui,ull}
@@ -2370,6 +2371,11 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Value *ZExtShiftAmt = Builder.CreateZExt(CI->getOperand(1), Int64Ty);
     Rep = Builder.CreateIntrinsic(Int64Ty, Intrinsic::fshr,
                                   {Arg, Arg, ZExtShiftAmt});
+  } else if (Name == "swap.lo.hi.b64") {
+    Type *Int64Ty = Builder.getInt64Ty();
+    Value *Arg = CI->getOperand(0);
+    Rep = Builder.CreateIntrinsic(Int64Ty, Intrinsic::fshl,
+                                  {Arg, Arg, Builder.getInt64(32)});
   } else if ((Name.consume_front("ptr.gen.to.") &&
               (Name.starts_with("local") || Name.starts_with("shared") ||
                Name.starts_with("global") || Name.starts_with("constant"))) ||
@@ -3755,7 +3761,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
         IID = Intrinsic::x86_avx512_vfmadd_f32;
       Rep = Builder.CreateIntrinsic(IID, {}, Ops);
     } else {
-      Rep = Builder.CreateIntrinsic(Intrinsic::fma, A->getType(), {A, B, C});
+      Rep = Builder.CreateFMA(A, B, C);
     }
 
     Value *PassThru = IsMaskZ   ? Constant::getNullValue(Rep->getType())
@@ -3808,7 +3814,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 
       Rep = Builder.CreateIntrinsic(IID, {}, {A, B, C, CI->getArgOperand(4)});
     } else {
-      Rep = Builder.CreateIntrinsic(Intrinsic::fma, A->getType(), {A, B, C});
+      Rep = Builder.CreateFMA(A, B, C);
     }
 
     Value *PassThru = IsMaskZ   ? llvm::Constant::getNullValue(CI->getType())
@@ -5044,7 +5050,7 @@ static void upgradeNVVMFnVectorAttr(const StringRef Attr, const char DimC,
   }
 
   const unsigned Dim = DimC - 'x';
-  assert(Dim >= 0 && Dim < 3 && "Unexpected dim char");
+  assert(Dim < 3 && "Unexpected dim char");
 
   const uint64_t VInt = mdconst::extract<ConstantInt>(V)->getZExtValue();
 
@@ -5077,9 +5083,6 @@ bool static upgradeSingleNVVMAnnotation(GlobalValue *GV, StringRef K,
         mdconst::extract<ConstantInt>(V)->getZExtValue();
     const unsigned Idx = (AlignIdxValuePair >> 16);
     const Align StackAlign = Align(AlignIdxValuePair & 0xFFFF);
-    // TODO: Skip adding the stackalign attribute for returns, for now.
-    if (!Idx)
-      return false;
     cast<Function>(GV)->addAttributeAtIndex(
         Idx, Attribute::getWithStackAlignment(GV->getContext(), StackAlign));
     return true;

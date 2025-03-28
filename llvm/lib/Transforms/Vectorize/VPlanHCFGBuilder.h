@@ -24,7 +24,7 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLAN_VPLANHCFGBUILDER_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_VPLANHCFGBUILDER_H
 
-#include "VPlanDominatorTree.h"
+#include "llvm/ADT/DenseMap.h"
 
 namespace llvm {
 
@@ -33,6 +33,8 @@ class LoopInfo;
 class VPRegionBlock;
 class VPlan;
 class VPlanTestIRBase;
+class VPBlockBase;
+class BasicBlock;
 
 /// Main class to build the VPlan H-CFG for an incoming IR.
 class VPlanHCFGBuilder {
@@ -47,11 +49,6 @@ private:
 
   // The VPlan that will contain the H-CFG we are building.
   VPlan &Plan;
-
-  // Dominator analysis for VPlan plain CFG to be used in the
-  // construction of the H-CFG. This analysis is no longer valid once regions
-  // are introduced.
-  VPDominatorTree VPDomTree;
 
   /// Map of create VP blocks to their input IR basic blocks, if they have been
   /// created for a input IR basic block.

@@ -693,6 +693,10 @@ class Attr {
   // content. Eg) It parses 3 args, but semantically takes 4 args.  Opts out of
   // common attribute error checking.
   bit HasCustomParsing = 0;
+  // Set to true if this attribute requires custom serialization after the
+  // typical attribute serialization. This will cause tablegen to emit a call to
+  // ASTRecordWriter::Add<Name>Attr and ASTRecordReader::read<Name>Attr.
+  bit HasCustomSerialization = 0;
   // Set to true if all of the attribute's arguments should be parsed in an
   // unevaluated context.
   bit ParseArgumentsAsUnevaluated = 0;
@@ -1721,17 +1725,10 @@ def EnableIf : InheritableAttr {
   let Documentation = [EnableIfDocs];
 }
 
-def ExtVectorType : Attr {
-  // This is an OpenCL-related attribute and does not receive a [[]] spelling.
-  let Spellings = [GNU<"ext_vector_type">];
-  // FIXME: This subject list is wrong; this is a type attribute.
-  let Subjects = SubjectList<[TypedefName], ErrorDiag>;
+def ExtVectorType : TypeAttr {
+  let Spellings = [Clang<"ext_vector_type">];
   let Args = [ExprArgument<"NumElements">];
-  let ASTNode = 0;
-  let Documentation = [Undocumented];
-  // This is a type attribute with an incorrect subject list, so should not be
-  // permitted by #pragma clang attribute.
-  let PragmaAttributeSupport = 0;
+  let Documentation = [ExtVectorTypeDocs];
 }
 
 def FallThrough : StmtAttr {
@@ -2232,8 +2229,8 @@ def RISCVInterrupt : InheritableAttr, TargetSpecificAttr<TargetRISCV> {
   let Spellings = [GCC<"interrupt">];
   let Subjects = SubjectList<[Function]>;
   let Args = [EnumArgument<"Interrupt", "InterruptType", /*is_string=*/true,
-                           ["supervisor", "machine"],
-                           ["supervisor", "machine"],
+                           ["supervisor", "machine", "qci-nest", "qci-nonest"],
+                           ["supervisor", "machine", "qcinest", "qcinonest"],
                            1>];
   let ParseKind = "Interrupt";
   let Documentation = [RISCVInterruptDocs];
@@ -3051,8 +3048,7 @@ def NoDeref : TypeAttr {
 def ReqdWorkGroupSize : InheritableAttr {
   // Does not have a [[]] spelling because it is an OpenCL-related attribute.
   let Spellings = [GNU<"reqd_work_group_size">];
-  let Args = [UnsignedArgument<"XDim">, UnsignedArgument<"YDim">,
-              UnsignedArgument<"ZDim">];
+  let Args = [ExprArgument<"XDim">, ExprArgument<"YDim">, ExprArgument<"ZDim">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [Undocumented];
 }
@@ -3060,9 +3056,7 @@ def ReqdWorkGroupSize : InheritableAttr {
 def WorkGroupSizeHint :  InheritableAttr {
   // Does not have a [[]] spelling because it is an OpenCL-related attribute.
   let Spellings = [GNU<"work_group_size_hint">];
-  let Args = [UnsignedArgument<"XDim">,
-              UnsignedArgument<"YDim">,
-              UnsignedArgument<"ZDim">];
+  let Args = [ExprArgument<"XDim">, ExprArgument<"YDim">, ExprArgument<"ZDim">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [Undocumented];
 }
@@ -3314,6 +3308,14 @@ def RISCVVectorCC: DeclOrTypeAttr, TargetSpecificAttr<TargetRISCV> {
                   C23<"riscv", "vector_cc">,
                   Clang<"riscv_vector_cc">];
  let Documentation = [RISCVVectorCCDocs];
+}
+
+def RISCVVLSCC: DeclOrTypeAttr, TargetSpecificAttr<TargetRISCV> {
+ let Spellings = [CXX11<"riscv", "vls_cc">,
+                  C23<"riscv", "vls_cc">,
+                  Clang<"riscv_vls_cc">];
+ let Args = [UnsignedArgument<"VectorWidth", /*opt*/1>];
+ let Documentation = [RISCVVLSCCDocs];
 }
 
 def Target : InheritableAttr {
@@ -4393,8 +4395,8 @@ def HLSLControlFlowHint: StmtAttr {
   /// [branch]
   /// [flatten]
   let Spellings = [Microsoft<"branch">, Microsoft<"flatten">];
-  let Subjects = SubjectList<[IfStmt],
-                              ErrorDiag, "'if' statements">;
+  let Subjects = SubjectList<[IfStmt, SwitchStmt],
+                              ErrorDiag, "'if' and 'switch' statements">;
   let LangOpts = [HLSL];
   let Documentation = [InternalOnly];
 }
@@ -4716,21 +4718,21 @@ def HLSLNumThreads: InheritableAttr {
 }
 
 def HLSLSV_GroupThreadID: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"SV_GroupThreadID">];
+  let Spellings = [HLSLAnnotation<"sv_groupthreadid">];
   let Subjects = SubjectList<[ParmVar, Field]>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLSV_GroupThreadIDDocs];
 }
 
 def HLSLSV_GroupID: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"SV_GroupID">];
+  let Spellings = [HLSLAnnotation<"sv_groupid">];
   let Subjects = SubjectList<[ParmVar, Field]>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLSV_GroupIDDocs];
 }
 
 def HLSLSV_GroupIndex: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"SV_GroupIndex">];
+  let Spellings = [HLSLAnnotation<"sv_groupindex">];
   let Subjects = SubjectList<[ParmVar, GlobalVar]>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLSV_GroupIndexDocs];
@@ -4782,7 +4784,7 @@ def HLSLPackOffset: HLSLAnnotationAttr {
 }
 
 def HLSLSV_DispatchThreadID: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"SV_DispatchThreadID">];
+  let Spellings = [HLSLAnnotation<"sv_dispatchthreadid">];
   let Subjects = SubjectList<[ParmVar, Field]>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLSV_DispatchThreadIDDocs];
@@ -4809,33 +4811,6 @@ def HLSLShader : InheritableAttr {
     return ShaderType >= llvm::Triple::Pixel && ShaderType <= llvm::Triple::Amplification;
   }
 }];
-}
-
-def HLSLResource : InheritableAttr {
-  let Spellings = [];
-  let Subjects = SubjectList<[Struct]>;
-  let LangOpts = [HLSL];
-  let Args = [
-    EnumArgument<
-        "ResourceKind", "llvm::hlsl::ResourceKind",
-        /*is_string=*/0,
-        [
-          "Texture1D", "Texture2D", "Texture2DMS", "Texture3D", "TextureCube",
-          "Texture1DArray", "Texture2DArray", "Texture2DMSArray",
-          "TextureCubeArray", "TypedBuffer", "RawBuffer", "StructuredBuffer",
-          "CBuffer", "Sampler", "TBuffer", "RTAccelerationStructure",
-          "FeedbackTexture2D", "FeedbackTexture2DArray"
-        ],
-        [
-          "Texture1D", "Texture2D", "Texture2DMS", "Texture3D", "TextureCube",
-          "Texture1DArray", "Texture2DArray", "Texture2DMSArray",
-          "TextureCubeArray", "TypedBuffer", "RawBuffer", "StructuredBuffer",
-          "CBuffer", "Sampler", "TBuffer", "RTAccelerationStructure",
-          "FeedbackTexture2D", "FeedbackTexture2DArray"
-        ],
-        /*opt=*/0, /*fake=*/0, /*isExternalType=*/1, /*isCovered=*/0>
-  ];
-  let Documentation = [InternalOnly];
 }
 
 def HLSLROV : TypeAttr {
@@ -5017,4 +4992,33 @@ def Atomic : StmtAttr {
   let Subjects = SubjectList<[CompoundStmt], ErrorDiag, "compound statements">;
   let Documentation = [AtomicDocs];
   let StrictEnumParameters = 1;
+}
+
+def OpenACCRoutineAnnot : InheritableAttr {
+  // This attribute is used to mark that a function is targeted by a `routine`
+  // directive with a name for the purposes of checking the declaration later.
+  // We don't really need a link back to the declaration, as location is
+  // sufficient.
+  // We abuse the source locations on this a little, since we need two locations
+  // for various diagnostic purposes.  The 'begin' location is the location of
+  // the Routine directive. We are using the 'end' location for any 'bind'
+  // clauses, since this is needed for a diagnostic.
+  let Spellings = [];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [InternalOnly];
+}
+
+def OpenACCRoutineDecl :InheritableAttr {
+  // This attribute represents the 'routine' directive when spelled without a
+  // 'name'.
+  let Spellings = [Pragma<"acc", "routine">];
+  let Subjects = SubjectList<[Function]>;
+  let SemaHandler = 0;
+  let HasCustomParsing = 1;
+  let HasCustomSerialization = 1;
+  let Documentation = [InternalOnly];
+  let AdditionalMembers = [{
+    llvm::SmallVector<const OpenACCClause *> Clauses;
+    void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const;
+  }];
 }

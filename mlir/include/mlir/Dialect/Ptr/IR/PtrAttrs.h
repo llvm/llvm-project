@@ -18,4 +18,6 @@
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/Ptr/IR/PtrOpsAttrs.h.inc"
 
+#include "mlir/Dialect/Ptr/IR/PtrOpsEnums.h.inc"
+
 #endif // MLIR_DIALECT_PTR_IR_PTRATTRS_H
