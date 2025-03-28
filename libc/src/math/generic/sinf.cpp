@@ -140,7 +140,7 @@ LLVM_LIBC_FUNCTION(float, sinf, (float x)) {
       fputil::raise_except_if_required(FE_INVALID);
       return FPBits::quiet_nan().get_val();
     }
-    
+
     if (x_abs == 0x7f80'0000U) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);

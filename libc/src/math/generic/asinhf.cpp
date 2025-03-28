@@ -64,7 +64,7 @@ LLVM_LIBC_FUNCTION(float, asinhf, (float x)) {
     if (LIBC_UNLIKELY(xbits.is_inf_or_nan())) {
       if (xbits.is_signaling_nan()) {
         fputil::raise_except_if_required(FE_INVALID);
-	return FPBits_t::quiet_nan().get_val();
+        return FPBits_t::quiet_nan().get_val();
       }
 
       return x;

@@ -137,7 +137,7 @@ LLVM_LIBC_FUNCTION(float, erff, (float x)) {
     if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
       if (xbits.is_signaling_nan()) {
         fputil::raise_except_if_required(FE_INVALID);
-	return FPBits::quiet_nan().get_val();
+        return FPBits::quiet_nan().get_val();
       }
       return (x_abs > 0x7f80'0000) ? x : ONE[sign];
     }

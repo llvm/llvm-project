@@ -20,7 +20,7 @@ using LlvmLibcCoshfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcCoshfTest, SpecialNumbers) {
   LIBC_NAMESPACE::libc_errno = 0;
-  
+
   EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::coshf(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);
 

@@ -222,7 +222,7 @@ LLVM_LIBC_FUNCTION(double, pow, (double x, double y)) {
     fputil::raise_except_if_required(FE_INVALID);
     return FPBits::quiet_nan().get_val();
   }
-  
+
   // The double precision number that is closest to 1 is (1 - 2^-53), which has
   //   log2(1 - 2^-53) ~ -1.715...p-53.
   // So if |y| > |1075 / log2(1 - 2^-53)|, and x is finite:

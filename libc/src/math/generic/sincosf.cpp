@@ -150,7 +150,7 @@ LLVM_LIBC_FUNCTION(void, sincosf, (float x, float *sinp, float *cosp)) {
       *sinp = *cosp = FPBits::quiet_nan().get_val();
       return;
     }
-    
+
     if (x_abs == 0x7f80'0000U) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);

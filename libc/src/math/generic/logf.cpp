@@ -134,7 +134,7 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
       // x is +inf or nan
       if (xbits.is_signaling_nan()) {
         fputil::raise_except_if_required(FE_INVALID);
-	return FPBits::quiet_nan().get_val();
+        return FPBits::quiet_nan().get_val();
       }
 
       return x;

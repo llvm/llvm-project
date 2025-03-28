@@ -71,7 +71,7 @@ LLVM_LIBC_FUNCTION(float16, cosf16, (float16 x)) {
       fputil::raise_except_if_required(FE_INVALID);
       return FPBits::quiet_nan().get_val();
     }
-    
+
     if (xbits.is_inf()) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
