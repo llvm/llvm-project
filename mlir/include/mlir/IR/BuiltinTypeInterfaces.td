@@ -16,7 +16,30 @@
 
 include "mlir/IR/OpBase.td"
 
-def FloatTypeInterface : TypeInterface<"FloatType"> {
+//===----------------------------------------------------------------------===//
+// VectorElementTypeInterface
+//===----------------------------------------------------------------------===//
+
+def VectorElementTypeInterface : TypeInterface<"VectorElementTypeInterface"> {
+  let cppNamespace = "::mlir";
+  let description = [{
+    Indication that this type can be used as element in vector types.
+
+    Implementing this interface establishes a contract between this type and the
+    vector type indicating that this type can be used as element of vectors.
+
+    The interface currently has no methods and is used by types to opt into
+    being vector elements. This may change in the future, in particular to
+    require types to provide their size or alignment given a data layout.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// FloatTypeInterface
+//===----------------------------------------------------------------------===//
+
+def FloatTypeInterface : TypeInterface<"FloatType",
+    [VectorElementTypeInterface]> {
   let cppNamespace = "::mlir";
   let description = [{
     This type interface should be implemented by all floating-point types. It
