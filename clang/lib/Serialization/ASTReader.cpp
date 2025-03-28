@@ -10877,6 +10877,8 @@ void ASTReader::FinishedDeserializing() {
     // decls to the consumer.
     if (Consumer)
       PassInterestingDeclsToConsumer();
+    if (DeserializationListener)
+      DeserializationListener->FinishedDeserializing();
   }
 }
 
