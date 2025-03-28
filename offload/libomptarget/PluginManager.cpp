@@ -30,6 +30,11 @@ PluginManager *PM = nullptr;
 
 void PluginManager::init() {
   TIMESCOPE();
+  if (OffloadPolicy::isOffloadDisabled()) {
+    DP("Offload is disabled. Skipping plugin initialization\n");
+    return;
+  }
+
   DP("Loading RTLs...\n");
 
   // Attempt to create an instance of each supported plugin.

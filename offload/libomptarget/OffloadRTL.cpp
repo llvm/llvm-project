@@ -40,10 +40,6 @@ void initRuntime() {
     llvm::omp::target::ompt::connectLibrary();
 #endif
 
-    if (OffloadPolicy::isOffloadDisabled()) {
-      DP("Offload is disabled. Skipping plugin initialization\n");
-      return;
-    }
     PM->init();
     PM->registerDelayedLibraries();
   }
