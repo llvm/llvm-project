@@ -9657,7 +9657,14 @@ ExternalASTSource::ExtKind ASTReader::hasExternalDefinitions(const Decl *FD) {
   auto I = DefinitionSource.find(FD);
   if (I == DefinitionSource.end())
     return EK_ReplyHazy;
-  return I->second ? EK_Never : EK_Always;
+  return I->second.HasExternalDefinitions;
+}
+
+bool ASTReader::wasThisDeclarationADefinition(const FunctionDecl *FD) {
+  auto I = DefinitionSource.find(FD);
+  if (I == DefinitionSource.end())
+    return false;
+  return I->second.ThisDeclarationWasADefinition;
 }
 
 Selector ASTReader::getLocalSelector(ModuleFile &M, unsigned LocalID) {
@@ -10432,7 +10439,6 @@ void ASTReader::finishPendingActions() {
       if (!getContext().getLangOpts().Modules || !FD->hasBody(Defn)) {
         FD->setLazyBody(PB->second);
       } else {
-        FD->setThisDeclarationWasADefinition();
         auto *NonConstDefn = const_cast<FunctionDecl*>(Defn);
         mergeDefinitionVisibility(NonConstDefn, FD);
 

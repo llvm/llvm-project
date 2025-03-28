@@ -1390,7 +1390,19 @@ private:
   /// predefines buffer may contain additional definitions.
   std::string SuggestedPredefines;
 
-  llvm::DenseMap<const Decl *, bool> DefinitionSource;
+  struct DefinitionSourceFlags {
+    ExtKind HasExternalDefinitions : 2;
+
+    /// Indicates if given function declaration was a definition but its body
+    /// was removed due to declaration merging.
+    bool ThisDeclarationWasADefinition : 1;
+
+    DefinitionSourceFlags()
+        : HasExternalDefinitions(EK_ReplyHazy),
+          ThisDeclarationWasADefinition(false) {}
+  };
+
+  llvm::DenseMap<const Decl *, DefinitionSourceFlags> DefinitionSource;
 
   bool shouldDisableValidationForFile(const serialization::ModuleFile &M) const;
 
@@ -2373,6 +2385,8 @@ public:
   std::optional<ASTSourceDescriptor> getSourceDescriptor(unsigned ID) override;
 
   ExtKind hasExternalDefinitions(const Decl *D) override;
+
+  bool wasThisDeclarationADefinition(const FunctionDecl *FD) override;
 
   /// Retrieve a selector from the given module with its local ID
   /// number.

@@ -2005,10 +2005,6 @@ private:
 
   unsigned ODRHash;
 
-  /// Indicates if given function declaration was a definition but its body
-  /// was removed due to declaration merging.
-  bool ThisDeclarationWasADefinition : 1;
-
   /// End part of this FunctionDecl's source range.
   ///
   /// We could compute the full range in getSourceRange(). However, when we're
@@ -2193,12 +2189,6 @@ public:
     const FunctionDecl* Definition;
     return hasBody(Definition);
   }
-
-  void setThisDeclarationWasADefinition() {
-    ThisDeclarationWasADefinition = true;
-  }
-
-  bool wasThisDeclarationADefinition() { return ThisDeclarationWasADefinition; }
 
   /// Returns whether the function has a trivial body that does not require any
   /// specific codegen.

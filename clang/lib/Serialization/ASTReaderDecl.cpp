@@ -512,9 +512,11 @@ uint64_t ASTDeclReader::GetCurrentCursorOffset() {
 
 void ASTDeclReader::ReadFunctionDefinition(FunctionDecl *FD) {
   if (Record.readInt()) {
-    Reader.DefinitionSource[FD] =
-        Loc.F->Kind == ModuleKind::MK_MainFile ||
-        Reader.getContext().getLangOpts().BuildingPCHWithObjectFile;
+    Reader.DefinitionSource[FD].HasExternalDefinitions =
+        (Loc.F->Kind == ModuleKind::MK_MainFile ||
+         Reader.getContext().getLangOpts().BuildingPCHWithObjectFile)
+            ? ExternalASTSource::EK_Never
+            : ExternalASTSource::EK_Always;
   }
   if (auto *CD = dyn_cast<CXXConstructorDecl>(FD)) {
     CD->setNumCtorInitializers(Record.readInt());
@@ -523,6 +525,7 @@ void ASTDeclReader::ReadFunctionDefinition(FunctionDecl *FD) {
   }
   // Store the offset of the body so we can lazily load it later.
   Reader.PendingBodies[FD] = GetCurrentCursorOffset();
+  Reader.DefinitionSource[FD].ThisDeclarationWasADefinition = true;
 }
 
 void ASTDeclReader::Visit(Decl *D) {
@@ -1652,9 +1655,11 @@ RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
     VD->setLocalExternDecl();
 
   if (DefGeneratedInModule) {
-    Reader.DefinitionSource[VD] =
-        Loc.F->Kind == ModuleKind::MK_MainFile ||
-        Reader.getContext().getLangOpts().BuildingPCHWithObjectFile;
+    Reader.DefinitionSource[VD].HasExternalDefinitions =
+        (Loc.F->Kind == ModuleKind::MK_MainFile ||
+         Reader.getContext().getLangOpts().BuildingPCHWithObjectFile)
+            ? ExternalASTSource::EK_Never
+            : ExternalASTSource::EK_Always;
   }
 
   if (VD->hasAttr<BlocksAttr>()) {
@@ -1996,9 +2001,11 @@ void ASTDeclReader::ReadCXXDefinitionData(
   Data.HasODRHash = true;
 
   if (Record.readInt()) {
-    Reader.DefinitionSource[D] =
-        Loc.F->Kind == ModuleKind::MK_MainFile ||
-        Reader.getContext().getLangOpts().BuildingPCHWithObjectFile;
+    Reader.DefinitionSource[D].HasExternalDefinitions =
+        (Loc.F->Kind == ModuleKind::MK_MainFile ||
+         Reader.getContext().getLangOpts().BuildingPCHWithObjectFile)
+            ? ExternalASTSource::EK_Never
+            : ExternalASTSource::EK_Always;
   }
 
   Record.readUnresolvedSet(Data.Conversions);
