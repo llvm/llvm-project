@@ -4319,8 +4319,11 @@ enum class SrcStatus {
   IS_UPPER_HALF,
   IS_LOWER_HALF,
   IS_UPPER_HALF_NEG,
+  // This means current op = [op_upper, op_lower] and src = -op_lower
   IS_LOWER_HALF_NEG,
   IS_HI_NEG,
+  // This means current op = [op_upper, op_lower] and src = [op_upper,
+  // -op_lower]
   IS_LO_NEG,
   IS_BOTH_NEG,
   INVALID,
@@ -4383,18 +4386,18 @@ retOpStat(const MachineOperand *Op, SrcStatus Stat,
   return std::nullopt;
 }
 
-enum class TypeClass { VECTOR_OF_TWO, SCALAR, NON_OF_LISTED };
+enum class TypeClass { VECTOR_OF_TWO, SCALAR, NONE_OF_LISTED };
 
 static TypeClass isVectorOfTwoOrScalar(const MachineOperand *Op,
                                        const MachineRegisterInfo &MRI) {
   if (!Op->isReg() || Op->getReg().isPhysical())
-    return TypeClass::NON_OF_LISTED;
+    return TypeClass::NONE_OF_LISTED;
   LLT OpTy = MRI.getType(Op->getReg());
   if (OpTy.isScalar())
     return TypeClass::SCALAR;
   if (OpTy.isVector() && OpTy.getNumElements() == 2)
     return TypeClass::VECTOR_OF_TWO;
-  return TypeClass::NON_OF_LISTED;
+  return TypeClass::NONE_OF_LISTED;
 }
 
 static SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
@@ -4615,19 +4618,19 @@ calcNextStatus(std::pair<const MachineOperand *, SrcStatus> Curr,
   return std::nullopt;
 }
 
-class statOptions {
+class searchOptions {
 private:
-  bool HasNeg;
-  bool HasOpsel;
+  bool HasNeg = false;
+  // Assume all complex pattern of VOP3P has opsel
+  bool HasOpsel = true;
 
 public:
-  statOptions(const MachineOperand *RootOp, const MachineRegisterInfo &MRI) {
+  searchOptions(const MachineOperand *RootOp, const MachineRegisterInfo &MRI) {
     const MachineInstr *MI = RootOp->getParent();
     unsigned Opc = MI->getOpcode();
-    HasNeg = false;
-    HasOpsel = false;
+
     if (Opc < TargetOpcode::GENERIC_OP_END) {
-      // Keep same for gerneric op
+      // Keep same for generic op
       HasNeg = true;
     } else if (Opc == TargetOpcode::G_INTRINSIC) {
       Intrinsic::ID IntrinsicID = cast<GIntrinsic>(*MI).getIntrinsicID();
@@ -4635,9 +4638,6 @@ public:
       if (IntrinsicID == Intrinsic::amdgcn_fdot2)
         HasNeg = true;
     }
-
-    // Assume all complex pattern of VOP3P has opsel
-    HasOpsel = true;
   }
   bool checkOptions(SrcStatus Stat) const {
     if (!HasNeg &&
@@ -4654,14 +4654,14 @@ public:
 
 static SmallVector<std::pair<const MachineOperand *, SrcStatus>>
 getSrcStats(const MachineOperand *Op, const MachineRegisterInfo &MRI,
-            statOptions StatOptions, int MaxDepth = 6) {
+            searchOptions SearchOptions, int MaxDepth = 6) {
   int Depth = 0;
   auto Curr = calcNextStatus({Op, SrcStatus::IS_SAME}, MRI);
   SmallVector<std::pair<const MachineOperand *, SrcStatus>, 4> Statlist;
 
   while (Depth <= MaxDepth && Curr.has_value()) {
     Depth++;
-    if (StatOptions.checkOptions(Curr.value().second)) {
+    if (SearchOptions.checkOptions(Curr.value().second)) {
       Statlist.push_back(Curr.value());
     }
     Curr = calcNextStatus(Curr.value(), MRI);
@@ -4672,7 +4672,7 @@ getSrcStats(const MachineOperand *Op, const MachineRegisterInfo &MRI,
 
 static std::pair<const MachineOperand *, SrcStatus>
 getLastSameOrNeg(const MachineOperand *Op, const MachineRegisterInfo &MRI,
-                 statOptions StatOptions, int MaxDepth = 6) {
+                 searchOptions SearchOptions, int MaxDepth = 6) {
   int Depth = 0;
   std::pair<const MachineOperand *, SrcStatus> LastSameOrNeg = {
       Op, SrcStatus::IS_SAME};
@@ -4680,7 +4680,7 @@ getLastSameOrNeg(const MachineOperand *Op, const MachineRegisterInfo &MRI,
 
   while (Depth <= MaxDepth && Curr.has_value()) {
     Depth++;
-    if (StatOptions.checkOptions(Curr.value().second)) {
+    if (SearchOptions.checkOptions(Curr.value().second)) {
       if (Curr.value().second == SrcStatus::IS_SAME ||
           Curr.value().second == SrcStatus::IS_HI_NEG ||
           Curr.value().second == SrcStatus::IS_LO_NEG ||
@@ -4770,10 +4770,10 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *RootOp,
     return {Op, Mods};
   }
 
-  statOptions StatOptions(Op, MRI);
+  searchOptions SearchOptions(Op, MRI);
 
   std::pair<const MachineOperand *, SrcStatus> Stat =
-      getLastSameOrNeg(Op, MRI, StatOptions);
+      getLastSameOrNeg(Op, MRI, SearchOptions);
   if (!Stat.first->isReg()) {
     Mods |= SISrcMods::OP_SEL_1;
     return {Op, Mods};
@@ -4795,7 +4795,7 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *RootOp,
   }
 
   SmallVector<std::pair<const MachineOperand *, SrcStatus>> StatlistHi =
-      getSrcStats(&MI->getOperand(2), MRI, StatOptions);
+      getSrcStats(&MI->getOperand(2), MRI, SearchOptions);
 
   if (StatlistHi.size() == 0) {
     Mods |= SISrcMods::OP_SEL_1;
@@ -4803,7 +4803,7 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *RootOp,
   }
 
   SmallVector<std::pair<const MachineOperand *, SrcStatus>> StatlistLo =
-      getSrcStats(&MI->getOperand(1), MRI, StatOptions);
+      getSrcStats(&MI->getOperand(1), MRI, SearchOptions);
 
   if (StatlistLo.size() == 0) {
     Mods |= SISrcMods::OP_SEL_1;
@@ -4846,10 +4846,17 @@ static bool checkRB(const MachineOperand *Op, unsigned int RBNo,
   return RB->getID() == RBNo;
 }
 
-const MachineOperand *
-getVReg(const MachineOperand *NewOp, const MachineOperand *RootOp,
-        const AMDGPURegisterBankInfo &RBI, MachineRegisterInfo &MRI,
-        const TargetRegisterInfo &TRI, const SIInstrInfo &TII) {
+// This function is used to get the correct register bank for returned reg
+// Assume:
+// 1. VOP3P is always legal for VGPR
+// 2. RootOp's regbank is legal
+// Thus
+// 1. If RootOp is SGPR, then NewOp can be SGPR or VGPR
+// 2. If RootOp is VGPR, then NewOp must be VGPR
+static const MachineOperand *
+getLegalRegBank(const MachineOperand *NewOp, const MachineOperand *RootOp,
+                const AMDGPURegisterBankInfo &RBI, MachineRegisterInfo &MRI,
+                const TargetRegisterInfo &TRI, const SIInstrInfo &TII) {
   // RootOp can only be VGPR or SGPR (some hand written cases such as
   // inst-select-ashr.v2s16.mir::ashr_v2s16_vs).
   if (checkRB(RootOp, AMDGPU::SGPRRegBankID, RBI, MRI, TRI) ||
@@ -4877,18 +4884,18 @@ getVReg(const MachineOperand *NewOp, const MachineOperand *RootOp,
 }
 
 InstructionSelector::ComplexRendererFns
-AMDGPUInstructionSelector::selectVOP3PMods(MachineOperand &Root) const {
-  MachineRegisterInfo &MRI
-    = Root.getParent()->getParent()->getParent()->getRegInfo();
-
-  auto [Op, Mods] = selectVOP3PModsImpl(&Root, MRI);
+AMDGPUInstructionSelector::selectVOP3PRetHelper(MachineOperand &Root,
+                                                bool IsDOT) const {
+  MachineRegisterInfo &MRI =
+      Root.getParent()->getParent()->getParent()->getRegInfo();
+  auto [Op, Mods] = selectVOP3PModsImpl(&Root, MRI, IsDOT);
   if (!(Op->isReg()))
     return {{
         [=](MachineInstrBuilder &MIB) { MIB.addImm(getAllKindImm(Op)); },
         [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
     }};
 
-  Op = getVReg(Op, &Root, RBI, MRI, TRI, TII);
+  Op = getLegalRegBank(Op, &Root, RBI, MRI, TRI, TII);
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.addReg(Op->getReg()); },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
@@ -4896,22 +4903,15 @@ AMDGPUInstructionSelector::selectVOP3PMods(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVOP3PMods(MachineOperand &Root) const {
+
+  return selectVOP3PRetHelper(Root);
+}
+
+InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3PModsDOT(MachineOperand &Root) const {
-  MachineRegisterInfo &MRI
-    = Root.getParent()->getParent()->getParent()->getRegInfo();
 
-  auto [Op, Mods] = selectVOP3PModsImpl(&Root, MRI, true);
-  if (!(Op->isReg()))
-    return {{
-        [=](MachineInstrBuilder &MIB) { MIB.addImm(getAllKindImm(Op)); },
-        [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
-    }};
-
-  Op = getVReg(Op, &Root, RBI, MRI, TRI, TII);
-  return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Op->getReg()); },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
-  }};
+  return selectVOP3PRetHelper(Root, true);
 }
 
 InstructionSelector::ComplexRendererFns
