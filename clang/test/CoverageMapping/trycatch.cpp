@@ -33,5 +33,5 @@ int main() {                          // CHECK-NEXT: File 0, [[@LINE]]:12 -> [[@
   catch(const Warning &w) {           // CHECK-NEXT: File 0, [[@LINE]]:27 -> [[@LINE+2]]:4 = #4
     j = 0;
   }
-  return 0;                           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE]]:11 = #1
-}
+  return 0;                           // CHECK-NOT: File 0
+}                                     // CHECK-NOT: File 0
