@@ -26,10 +26,17 @@ Math
 ----
 | Tue Ly
 | lntue\@google.com (email), `lntue <https://github.com/lntue>`_ (github)
+| Nicolas Celik
+| its.overmighty\@gmail.com (email), `OverMighty <https://github.com/overmighty>`_ (github)
 
 Threading
 ---------
 | Yifan Zhu
 | yifanzhu\@rochester.edu (email), `Schrodinger ZHU Yifan <https://github.com/schrodingerzhu>`_ (github)
+
+UEFI
+----
+| Tristan Ross
+| tristan.ross\@midstall.com (email), `RossComputerGuy <https://github.com/RossComputerGuy>`_ (github)
 
 .. TODO: add "Inactive Maintainers" section when needed.
