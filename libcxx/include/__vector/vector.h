@@ -84,7 +84,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
-class _LIBCPP_TEMPLATE_VIS vector {
+class _LIBCPP_TEMPLATE_VIS vector _LIBCPP_MAYBE_FORCE_NONSTANDARD_LAYOUT {
 public:
   //
   // Types

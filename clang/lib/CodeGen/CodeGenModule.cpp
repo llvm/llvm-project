@@ -860,6 +860,7 @@ void CodeGenModule::Release() {
   applyGlobalValReplacements();
   applyReplacements();
   emitMultiVersionFunctions();
+  emitPFPFieldsWithEvaluatedOffset();
 
   if (Context.getLangOpts().IncrementalExtensions &&
       GlobalTopLevelStmtBlockInFlight.first) {
@@ -4410,6 +4411,35 @@ void CodeGenModule::emitMultiVersionFunctions() {
     emitMultiVersionFunctions();
 }
 
+llvm::GlobalValue *CodeGenModule::getPFPDeactivationSymbol(FieldDecl *FD) {
+  std::string DSName = "__pfp_ds_" + getPFPFieldName(FD);
+  llvm::GlobalValue *DS = TheModule.getNamedValue(DSName);
+  if (!DS) {
+    DS = new llvm::GlobalVariable(TheModule, Int8Ty, false,
+                                  llvm::GlobalVariable::ExternalWeakLinkage,
+                                  nullptr, DSName);
+    DS->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  }
+  return DS;
+}
+
+void CodeGenModule::emitPFPFieldsWithEvaluatedOffset() {
+  llvm::Constant *Nop = llvm::ConstantExpr::getIntToPtr(
+      llvm::ConstantInt::get(Int64Ty, 0xd503201f), VoidPtrTy);
+  for (auto *FD : getContext().PFPFieldsWithEvaluatedOffset) {
+    std::string DSName = "__pfp_ds_" + getPFPFieldName(FD);
+    llvm::GlobalValue *OldDS = TheModule.getNamedValue(DSName);
+    llvm::GlobalValue *DS = llvm::GlobalAlias::create(
+        Int8Ty, 0, llvm::GlobalValue::ExternalLinkage, DSName, Nop, &TheModule);
+    DS->setVisibility(llvm::GlobalValue::HiddenVisibility);
+    if (OldDS) {
+      DS->takeName(OldDS);
+      OldDS->replaceAllUsesWith(DS);
+      OldDS->eraseFromParent();
+    }
+  }
+}
+
 static void replaceDeclarationWith(llvm::GlobalValue *Old,
                                    llvm::Constant *New) {
   assert(cast<llvm::Function>(Old)->isDeclaration() && "Not a declaration");
@@ -7937,4 +7967,13 @@ void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
   NewBuilder->WeakRefReferences = std::move(WeakRefReferences);
 
   NewBuilder->ABI->MangleCtx = std::move(ABI->MangleCtx);
+}
+
+std::string CodeGenModule::getPFPFieldName(const FieldDecl *FD) {
+  std::string OutName;
+  llvm::raw_string_ostream Out(OutName);
+  getCXXABI().getMangleContext().mangleCanonicalTypeName(
+      QualType(FD->getParent()->getTypeForDecl(), 0), Out, false);
+  Out << "." << FD->getName();
+  return OutName;
 }

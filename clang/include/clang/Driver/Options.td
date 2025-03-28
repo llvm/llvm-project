@@ -2957,6 +2957,12 @@ defm experimental_omit_vtable_rtti : BoolFOption<"experimental-omit-vtable-rtti"
   NegFlag<SetFalse, [], [CC1Option], "Do not omit">,
   BothFlags<[], [CC1Option], " the RTTI component from virtual tables">>;
 
+def experimental_pointer_field_protection_EQ : Joined<["-"], "fexperimental-pointer-field-protection=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  Values<"none,untagged,tagged">, NormalizedValuesScope<"LangOptions::PointerFieldProtectionKind">,
+  NormalizedValues<["None", "Untagged", "Tagged"]>,
+  MarshallingInfoEnum<LangOpts<"PointerFieldProtection">, "None">;
+
 def fcxx_abi_EQ : Joined<["-"], "fc++-abi=">,
                   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
                   HelpText<"C++ ABI to use. This will override the target C++ ABI.">;

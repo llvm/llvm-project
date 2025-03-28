@@ -4904,9 +4904,15 @@ static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
     return emitAddrOfZeroSizeField(CGF, base, field);
 
   const RecordDecl *rec = field->getParent();
-
   unsigned idx =
     CGF.CGM.getTypes().getCGRecordLayout(rec).getLLVMFieldNo(field);
+
+  if (CGF.getContext().isPFPField(field)) {
+    const ASTRecordLayout &RL = CGF.getContext().getASTRecordLayout(rec);
+    auto Offset = CGF.getContext().toCharUnitsFromBits(
+        RL.getFieldOffset(field->getFieldIndex()));
+    return CGF.EmitAddressOfPFPField(base, field, Offset);
+  }
 
   return CGF.Builder.CreateStructGEP(base, idx, field->getName());
 }

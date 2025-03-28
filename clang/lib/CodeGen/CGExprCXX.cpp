@@ -261,6 +261,16 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
       (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator()) &&
       !MD->getParent()->mayInsertExtraPadding();
 
+  // Assignment operators for objects with non-trivially-relocatable PFP fields
+  // aren't trivial, we need to auth and sign the fields one by one.
+  if (TrivialAssignment &&
+      !CGM.getContext().arePFPFieldsTriviallyRelocatable(MD->getParent()) &&
+      CGM.getContext().hasPFPFields(
+          QualType(MD->getParent()->getTypeForDecl(), 0))) {
+    TrivialForCodegen = false;
+    TrivialAssignment = false;
+  }
+
   // C++17 demands that we evaluate the RHS of a (possibly-compound) assignment
   // operator before the LHS.
   CallArgList RtlArgStorage;

@@ -875,7 +875,7 @@ _LIBCPP_DIAGNOSE_WARNING(!__is_invocable_v<_Compare const&, _Tp const&, _Tp cons
 int __diagnose_non_const_comparator();
 
 template <class _Tp, class _Compare, class _Allocator>
-class __tree {
+class __tree _LIBCPP_MAYBE_FORCE_NONSTANDARD_LAYOUT {
 public:
   typedef _Tp value_type;
   typedef _Compare value_compare;

@@ -594,10 +594,18 @@ static void EmitBaseInitializer(CodeGenFunction &CGF,
                                           isBaseVirtual);
 }
 
-static bool isMemcpyEquivalentSpecialMember(const CXXMethodDecl *D) {
+static bool isMemcpyEquivalentSpecialMember(CodeGenModule &CGM,
+                                            const CXXMethodDecl *D) {
   auto *CD = dyn_cast<CXXConstructorDecl>(D);
   if (!(CD && CD->isCopyOrMoveConstructor()) &&
       !D->isCopyAssignmentOperator() && !D->isMoveAssignmentOperator())
+    return false;
+
+  // Non-trivially-copyable fields with pointer field protection need to be
+  // copied one by one.
+  if (!CGM.getContext().arePFPFieldsTriviallyRelocatable(D->getParent()) &&
+      CGM.getContext().hasPFPFields(
+          QualType(D->getParent()->getTypeForDecl(), 0)))
     return false;
 
   // We can emit a memcpy for a trivial copy or move constructor/assignment.
@@ -664,7 +672,7 @@ static void EmitMemberInitializer(CodeGenFunction &CGF,
     QualType BaseElementTy = CGF.getContext().getBaseElementType(Array);
     CXXConstructExpr *CE = dyn_cast<CXXConstructExpr>(MemberInit->getInit());
     if (BaseElementTy.isPODType(CGF.getContext()) ||
-        (CE && isMemcpyEquivalentSpecialMember(CE->getConstructor()))) {
+        (CE && isMemcpyEquivalentSpecialMember(CGF.CGM, CE->getConstructor()))) {
       unsigned SrcArgIndex =
           CGF.CGM.getCXXABI().getSrcArgforCopyCtor(Constructor, Args);
       llvm::Value *SrcPtr
@@ -928,6 +936,11 @@ namespace {
       Qualifiers Qual = F->getType().getQualifiers();
       if (Qual.hasVolatile() || Qual.hasObjCLifetime())
         return false;
+      // Non-trivially-copyable fields with pointer field protection need to be
+      // copied one by one.
+      if (!CGF.getContext().arePFPFieldsTriviallyRelocatable(ClassDecl) &&
+          CGF.getContext().isPFPField(F))
+        return false;
       return true;
     }
 
@@ -1064,7 +1077,8 @@ namespace {
       CXXConstructExpr *CE = dyn_cast<CXXConstructExpr>(MemberInit->getInit());
 
       // Bail out on non-memcpyable, not-trivially-copyable members.
-      if (!(CE && isMemcpyEquivalentSpecialMember(CE->getConstructor())) &&
+      if (!(CE &&
+            isMemcpyEquivalentSpecialMember(CGF.CGM, CE->getConstructor())) &&
           !(FieldType.isTriviallyCopyableType(CGF.getContext()) ||
             FieldType->isReferenceType()))
         return false;
@@ -1174,7 +1188,7 @@ namespace {
         return nullptr;
       } else if (CXXMemberCallExpr *MCE = dyn_cast<CXXMemberCallExpr>(S)) {
         CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(MCE->getCalleeDecl());
-        if (!(MD && isMemcpyEquivalentSpecialMember(MD)))
+        if (!(MD && isMemcpyEquivalentSpecialMember(CGF.CGM, MD)))
           return nullptr;
         MemberExpr *IOA = dyn_cast<MemberExpr>(MCE->getImplicitObjectArgument());
         if (!IOA)
@@ -2142,7 +2156,7 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
   // If this is a trivial constructor, emit a memcpy now before we lose
   // the alignment information on the argument.
   // FIXME: It would be better to preserve alignment information into CallArg.
-  if (isMemcpyEquivalentSpecialMember(D)) {
+  if (isMemcpyEquivalentSpecialMember(CGM, D)) {
     assert(E->getNumArgs() == 1 && "unexpected argcount for trivial ctor");
 
     const Expr *Arg = E->getArg(0);
@@ -2201,6 +2215,22 @@ void CodeGenFunction::EmitCXXConstructorCall(
     EmitTypeCheck(CodeGenFunction::TCK_ConstructorCall, Loc, This,
                   getContext().getRecordType(ClassDecl), CharUnits::Zero());
 
+  // When initializing an object that has pointer field protection and whose
+  // fields are not trivially relocatable we must initialize any pointer fields
+  // to a valid signed pointer (any pointer value will do, but we just use null
+  // pointers). This is because if the object is subsequently copied, its copy
+  // constructor will need to read and authenticate any pointer fields in order
+  // to copy the object to a new address, which will fail if the pointers are
+  // uninitialized.
+  if (!getContext().arePFPFieldsTriviallyRelocatable(D->getParent())) {
+    std::vector<PFPField> PFPFields;
+    getContext().findPFPFields(QualType(ClassDecl->getTypeForDecl(), 0),
+                               CharUnits::Zero(), PFPFields, Type != Ctor_Base);
+    for (auto &Field : PFPFields)
+      Builder.CreateStore(llvm::ConstantPointerNull::get(VoidPtrTy),
+                          EmitAddressOfPFPField(This, Field));
+  }
+
   if (D->isTrivial() && D->isDefaultConstructor()) {
     assert(Args.size() == 1 && "trivial default ctor with args");
     return;
@@ -2209,7 +2239,7 @@ void CodeGenFunction::EmitCXXConstructorCall(
   // If this is a trivial constructor, just emit what's needed. If this is a
   // union copy constructor, we must emit a memcpy, because the AST does not
   // model that copy.
-  if (isMemcpyEquivalentSpecialMember(D)) {
+  if (isMemcpyEquivalentSpecialMember(CGM, D)) {
     assert(Args.size() == 2 && "unexpected argcount for trivial ctor");
     QualType SrcTy = D->getParamDecl(0)->getType().getNonReferenceType();
     Address Src = makeNaturalAddressForPointer(
@@ -2975,7 +3005,15 @@ void CodeGenFunction::EmitForwardingCallToLambda(
   QualType resultType = FPT->getReturnType();
   ReturnValueSlot returnSlot;
   if (!resultType->isVoidType() &&
-      calleeFnInfo->getReturnInfo().getKind() == ABIArgInfo::Indirect &&
+      (calleeFnInfo->getReturnInfo().getKind() == ABIArgInfo::Indirect ||
+       // With pointer field protection, we need to set up the return slot when
+       // returning an object with trivial ABI to avoid the memcpy that would
+       // otherwise be generated by the call to EmitReturnOfRValue() below, as
+       // that may corrupt the pointer signature. It doesn't hurt to do this all
+       // the time as it results in slightly simpler codegen.
+       (resultType->isRecordType() &&
+        resultType->getAsCXXRecordDecl()
+            ->hasTrivialCopyConstructorForCall())) &&
       !hasScalarEvaluationKind(calleeFnInfo->getReturnType()))
     returnSlot =
         ReturnValueSlot(ReturnValue, resultType.isVolatileQualified(),

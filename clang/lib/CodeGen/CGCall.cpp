@@ -1298,13 +1298,65 @@ static llvm::Value *CoerceIntOrPtrToIntOrPtr(llvm::Value *Val,
 /// This safely handles the case when the src type is smaller than the
 /// destination type; in this situation the values of bits which not
 /// present in the src are undefined.
-static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
+static llvm::Value *CreateCoercedLoad(Address Src, QualType SrcFETy,
+                                      llvm::Type *Ty,
                                       CodeGenFunction &CGF) {
   llvm::Type *SrcTy = Src.getElementType();
 
   // If SrcTy and Ty are the same, just do a load.
   if (SrcTy == Ty)
     return CGF.Builder.CreateLoad(Src);
+
+  // Coercion directly through memory does not work if the structure has pointer
+  // field protection because the struct in registers has a different bit
+  // pattern to the struct in memory, so we must read the elements one by one
+  // and use them to form the coerced structure.
+  std::vector<PFPField> PFPFields;
+  CGF.getContext().findPFPFields(SrcFETy, CharUnits::Zero(), PFPFields, true);
+  if (!PFPFields.empty()) {
+    auto LoadCoercedField = [&](CharUnits Offset,
+                                llvm::Type *FieldType) -> llvm::Value * {
+      if (!PFPFields.empty() && PFPFields[0].offset == Offset) {
+        auto fieldAddr = CGF.EmitAddressOfPFPField(Src, PFPFields[0]);
+        llvm::Value *FieldVal = CGF.Builder.CreateLoad(fieldAddr);
+        if (isa<llvm::IntegerType>(FieldType))
+          FieldVal = CGF.Builder.CreatePtrToInt(FieldVal, FieldType);
+        PFPFields.erase(PFPFields.begin());
+        return FieldVal;
+      }
+      auto FieldAddr = CGF.Builder
+                           .CreateConstInBoundsByteGEP(
+                               Src.withElementType(CGF.Int8Ty), Offset)
+                           .withElementType(FieldType);
+      return CGF.Builder.CreateLoad(FieldAddr);
+    };
+    if (isa<llvm::IntegerType>(Ty) || isa<llvm::PointerType>(Ty)) {
+      auto Addr = CGF.EmitAddressOfPFPField(Src, PFPFields[0]);
+      llvm::Value *Val = CGF.Builder.CreateLoad(Addr);
+      if (isa<llvm::IntegerType>(Ty))
+        Val = CGF.Builder.CreatePtrToInt(Val, Ty);
+      return Val;
+    }
+    if (auto *AT = dyn_cast<llvm::ArrayType>(Ty)) {
+      auto *ET = AT->getElementType();
+      CharUnits wordSize = CGF.getContext().toCharUnitsFromBits(
+          CGF.CGM.getDataLayout().getTypeSizeInBits(ET));
+      CharUnits Offset = CharUnits::Zero();
+      llvm::Value *Val = llvm::UndefValue::get(AT);
+      for (unsigned i = 0; i != AT->getNumElements(); ++i, Offset += wordSize)
+        Val = CGF.Builder.CreateInsertValue(Val, LoadCoercedField(Offset, ET), i);
+      return Val;
+    }
+    auto *ST = cast<llvm::StructType>(Ty);
+    llvm::Value *Val = llvm::UndefValue::get(ST);
+    auto *SL = CGF.CGM.getDataLayout().getStructLayout(ST);
+    for (unsigned i = 0; i != ST->getNumElements(); ++i) {
+      CharUnits Offset = CharUnits::fromQuantity(SL->getElementOffset(i));
+      Val = CGF.Builder.CreateInsertValue(
+          Val, LoadCoercedField(Offset, ST->getElementType(i)), i);
+    }
+    return Val;
+  }
 
   llvm::TypeSize DstSize = CGF.CGM.getDataLayout().getTypeAllocSize(Ty);
 
@@ -1374,7 +1426,9 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
   return CGF.Builder.CreateLoad(Tmp);
 }
 
-void CodeGenFunction::CreateCoercedStore(llvm::Value *Src, Address Dst,
+void CodeGenFunction::CreateCoercedStore(llvm::Value *Src,
+                                         QualType SrcFETy,
+                                         Address Dst,
                                          llvm::TypeSize DstSize,
                                          bool DstIsVolatile) {
   if (!DstSize)
@@ -1393,6 +1447,52 @@ void CodeGenFunction::CreateCoercedStore(llvm::Value *Src, Address Dst,
       Dst = EnterStructPointerForCoercedAccess(Dst, DstSTy,
                                                SrcSize.getFixedValue(), *this);
     }
+  }
+
+  // Coercion directly through memory does not work if the structure has pointer
+  // field protection because the struct passed by value has a different bit
+  // pattern to the struct in memory, so we must read the elements one by one
+  // and use them to form the coerced structure.
+  std::vector<PFPField> PFPFields;
+  getContext().findPFPFields(SrcFETy, CharUnits::Zero(), PFPFields, true);
+  if (!PFPFields.empty()) {
+    auto StoreCoercedField = [&](CharUnits Offset, llvm::Value *FieldVal) {
+      if (!PFPFields.empty() && PFPFields[0].offset == Offset) {
+        auto fieldAddr = EmitAddressOfPFPField(Dst, PFPFields[0]);
+        if (isa<llvm::IntegerType>(FieldVal->getType()))
+          FieldVal = Builder.CreateIntToPtr(FieldVal, VoidPtrTy);
+        Builder.CreateStore(FieldVal, fieldAddr);
+        PFPFields.erase(PFPFields.begin());
+      } else {
+        auto fieldAddr =
+            Builder
+                .CreateConstInBoundsByteGEP(Dst.withElementType(Int8Ty), Offset)
+                .withElementType(FieldVal->getType());
+        Builder.CreateStore(FieldVal, fieldAddr);
+      }
+    };
+
+    if (isa<llvm::IntegerType>(SrcTy) || isa<llvm::PointerType>(SrcTy)) {
+      if (isa<llvm::IntegerType>(SrcTy))
+        Src = Builder.CreateIntToPtr(Src, VoidPtrTy);
+      auto Addr = EmitAddressOfPFPField(Dst, PFPFields[0]);
+      Builder.CreateStore(Src, Addr);
+    } else if (auto *at = dyn_cast<llvm::ArrayType>(SrcTy)) {
+      auto *et = at->getElementType();
+      CharUnits wordSize = getContext().toCharUnitsFromBits(
+          CGM.getDataLayout().getTypeSizeInBits(et));
+      CharUnits Offset = CharUnits::Zero();
+      for (unsigned i = 0; i != at->getNumElements(); ++i, Offset += wordSize)
+        StoreCoercedField(Offset, Builder.CreateExtractValue(Src, i));
+    } else {
+      auto *ST = cast<llvm::StructType>(SrcTy);
+      auto *SL = CGM.getDataLayout().getStructLayout(ST);
+      for (unsigned i = 0; i != ST->getNumElements(); ++i) {
+        CharUnits Offset = CharUnits::fromQuantity(SL->getElementOffset(i));
+        StoreCoercedField(Offset, Builder.CreateExtractValue(Src, i));
+      }
+    }
+    return;
   }
 
   if (SrcSize.isScalable() || SrcSize <= DstSize) {
@@ -3347,7 +3447,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
         auto AI = Fn->getArg(FirstIRArg);
         AI->setName(Arg->getName() + ".coerce");
         CreateCoercedStore(
-            AI, Ptr,
+            AI, Ty, Ptr,
             llvm::TypeSize::getFixed(
                 getContext().getTypeSizeInChars(Ty).getQuantity() -
                 ArgI.getDirectOffset()),
@@ -3969,7 +4069,7 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
       // If the value is offset in memory, apply the offset now.
       Address V = emitAddressAtOffset(*this, ReturnValue, RetAI);
 
-      RV = CreateCoercedLoad(V, RetAI.getCoerceToType(), *this);
+      RV = CreateCoercedLoad(V, RetTy, RetAI.getCoerceToType(), *this);
     }
 
     // In ARC, end functions that return a retainable type with a call
@@ -4020,6 +4120,7 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
       auto eltAddr = Builder.CreateStructGEP(addr, i);
       llvm::Value *elt = CreateCoercedLoad(
           eltAddr,
+          RetTy,
           unpaddedStruct ? unpaddedStruct->getElementType(unpaddedIndex++)
                          : unpaddedCoercionType,
           *this);
@@ -5550,7 +5651,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         // In the simple case, just pass the coerced loaded value.
         assert(NumIRArgs == 1);
         llvm::Value *Load =
-            CreateCoercedLoad(Src, ArgInfo.getCoerceToType(), *this);
+            CreateCoercedLoad(Src, I->Ty, ArgInfo.getCoerceToType(), *this);
 
         if (CallInfo.isCmseNSCall()) {
           // For certain parameter types, clear padding bits, as they may reveal
@@ -5611,6 +5712,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         Address eltAddr = Builder.CreateStructGEP(addr, i);
         llvm::Value *elt = CreateCoercedLoad(
             eltAddr,
+            I->Ty,
             unpaddedStruct ? unpaddedStruct->getElementType(unpaddedIndex++)
                            : unpaddedCoercionType,
             *this);
@@ -6105,7 +6207,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           // If the value is offset in memory, apply the offset now.
           Address StorePtr = emitAddressAtOffset(*this, DestPtr, RetAI);
           CreateCoercedStore(
-              CI, StorePtr,
+              CI, RetTy, StorePtr,
               llvm::TypeSize::getFixed(DestSize - RetAI.getDirectOffset()),
               DestIsVolatile);
         }

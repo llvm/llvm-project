@@ -6441,6 +6441,10 @@ static void handleZeroCallUsedRegsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(ZeroCallUsedRegsAttr::Create(S.Context, Kind, AL));
 }
 
+static void handleNoPFPAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
+  D->addAttr(NoPointerFieldProtectionAttr::Create(S.Context, AL));
+}
+
 static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
   auto *FD = dyn_cast<FieldDecl>(D);
   assert(FD);
@@ -7450,6 +7454,10 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_SizedBy:
   case ParsedAttr::AT_SizedByOrNull:
     handleCountedByAttrField(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_NoPointerFieldProtection:
+    handleNoPFPAttrField(S, D, AL);
     break;
 
   // Microsoft attributes:

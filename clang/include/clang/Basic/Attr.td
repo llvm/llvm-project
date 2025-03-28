@@ -2460,6 +2460,12 @@ def CountedByOrNull : DeclOrTypeAttr {
   let LangOpts = [COnly];
 }
 
+def NoPointerFieldProtection : DeclOrTypeAttr {
+  let Spellings = [Clang<"no_field_protection">];
+  let Subjects = SubjectList<[Field], ErrorDiag>;
+  let Documentation = [Undocumented];
+}
+
 def SizedBy : DeclOrTypeAttr {
   let Spellings = [Clang<"sized_by">];
   let Subjects = SubjectList<[Field], ErrorDiag>;

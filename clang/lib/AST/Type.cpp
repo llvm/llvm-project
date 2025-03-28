@@ -2852,7 +2852,9 @@ bool QualType::isTriviallyRelocatableType(const ASTContext &Context) const {
   } else if (!BaseElementType->isObjectType()) {
     return false;
   } else if (const auto *RD = BaseElementType->getAsRecordDecl()) {
-    return RD->canPassInRegisters();
+    return RD->canPassInRegisters() &&
+           (Context.arePFPFieldsTriviallyRelocatable(RD) ||
+            !Context.hasPFPFields(BaseElementType));
   } else if (BaseElementType.isTriviallyCopyableType(Context)) {
     return true;
   } else {

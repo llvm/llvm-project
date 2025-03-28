@@ -1215,6 +1215,29 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER 0
 #  endif
 
+#  if __has_feature(pointer_field_protection)
+// Force a class to be non-standard layout by giving it two bases with the same
+// type. This is useful when structure protection is enabled because structure
+// protection cannot be applied to standard layout classes. We may use this in
+// cases where the standard does not specify whether a standard library class is
+// standard layout. See C++2a [class]p7:
+//   A class S is a standard-layout class if it:
+//     -- has at most one base class subobject of any given type
+_LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Winaccessible-base")
+class __force_nonstandard_layout_base1 {};
+class __force_nonstandard_layout_base2 : __force_nonstandard_layout_base1 {};
+class __force_nonstandard_layout : __force_nonstandard_layout_base1, __force_nonstandard_layout_base2 {};
+_LIBCPP_DIAGNOSTIC_POP
+_LIBCPP_END_NAMESPACE_STD
+#    define _LIBCPP_MAYBE_FORCE_NONSTANDARD_LAYOUT : __force_nonstandard_layout
+#    define _LIBCPP_NO_PFP [[clang::no_field_protection]]
+#  else
+#    define _LIBCPP_MAYBE_FORCE_NONSTANDARD_LAYOUT
+#    define _LIBCPP_NO_PFP
+#  endif
+
 #endif // __cplusplus
 
 #endif // _LIBCPP___CONFIG

@@ -21,9 +21,11 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -35,6 +37,8 @@
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
 #include "llvm/Transforms/Utils/LowerVectorIntrinsics.h"
+
+#include <set>
 
 using namespace llvm;
 
@@ -441,6 +445,245 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
   return Changed;
 }
 
+namespace {
+
+enum class PointerEncoding {
+  Rotate,
+  PACCopyable,
+  PACNonCopyable,
+};
+
+bool expandProtectedFieldPtr(Function &Intr) {
+  Module &M = *Intr.getParent();
+  bool IsAArch64 = Triple(M.getTargetTriple()).isAArch64();
+
+  std::set<Metadata *> NonPFPFields;
+  std::set<Instruction *> LoadsStores;
+
+  Type *Int8Ty = Type::getInt8Ty(M.getContext());
+  Type *Int64Ty = Type::getInt64Ty(M.getContext());
+  PointerType *PtrTy = PointerType::get(M.getContext(), 0);
+
+  Function *SignIntr =
+      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::ptrauth_sign, {});
+  Function *AuthIntr =
+      Intrinsic::getOrInsertDeclaration(&M, Intrinsic::ptrauth_auth, {});
+
+  auto *EmuFnTy = FunctionType::get(Int64Ty, {Int64Ty, Int64Ty}, false);
+  FunctionCallee EmuSignIntr = M.getOrInsertFunction("__emupac_pacda", EmuFnTy);
+  FunctionCallee EmuAuthIntr = M.getOrInsertFunction("__emupac_autda", EmuFnTy);
+
+  auto CreateSign = [&](IRBuilder<> &B, Value *Val, Value *Disc,
+                       OperandBundleDef DSBundle) {
+    Function *F = B.GetInsertBlock()->getParent();
+    Attribute FSAttr = F->getFnAttribute("target-features");
+    if (FSAttr.isValid() && FSAttr.getValueAsString().contains("+pauth"))
+      return B.CreateCall(SignIntr, {Val, B.getInt32(2), Disc}, DSBundle);
+    return B.CreateCall(EmuSignIntr, {Val, Disc}, DSBundle);
+  };
+
+  auto CreateAuth = [&](IRBuilder<> &B, Value *Val, Value *Disc,
+                       OperandBundleDef DSBundle) {
+    Function *F = B.GetInsertBlock()->getParent();
+    Attribute FSAttr = F->getFnAttribute("target-features");
+    if (FSAttr.isValid() && FSAttr.getValueAsString().contains("+pauth"))
+      return B.CreateCall(AuthIntr, {Val, B.getInt32(2), Disc}, DSBundle);
+    return B.CreateCall(EmuAuthIntr, {Val, Disc}, DSBundle);
+  };
+
+  for (User *U : Intr.users()) {
+    auto *Call = cast<CallInst>(U);
+    auto *FieldName = cast<Metadata>(
+        cast<MetadataAsValue>(Call->getArgOperand(2))->getMetadata());
+    std::set<PHINode *> VisitedPhis;
+
+    std::function<void(Instruction *)> FindLoadsStores;
+    FindLoadsStores = [&](Instruction *I) {
+      for (Use &U : I->uses()) {
+        if (auto *LI = dyn_cast<LoadInst>(U.getUser())) {
+          if (isa<PointerType>(LI->getType())) {
+            LoadsStores.insert(LI);
+            continue;
+          }
+        }
+        if (auto *SI = dyn_cast<StoreInst>(U.getUser())) {
+          if (U.getOperandNo() == 1 &&
+              isa<PointerType>(SI->getValueOperand()->getType())) {
+            LoadsStores.insert(SI);
+            continue;
+          }
+        }
+        if (auto *P = dyn_cast<PHINode>(U.getUser())) {
+          if (VisitedPhis.insert(P).second)
+            FindLoadsStores(P);
+          continue;
+        }
+        NonPFPFields.insert(FieldName);
+      }
+    };
+
+    FindLoadsStores(Call);
+  }
+
+  for (Instruction *I : LoadsStores) {
+    std::set<Value *> Offsets;
+    std::set<Metadata *> Fields;
+    std::set<PHINode *> VisitedPhis;
+    bool IsNonTriviallyCopyable = false;
+
+    std::function<void(Value *)> FindFields;
+    FindFields = [&](Value *V) {
+      if (auto *Call = dyn_cast<CallInst>(V)) {
+        if (Call->getCalledOperand() == &Intr) {
+          Offsets.insert(Call->getArgOperand(1));
+          auto *Field = cast<Metadata>(
+              cast<MetadataAsValue>(Call->getArgOperand(2))->getMetadata());
+          Fields.insert(Field);
+          if (cast<ConstantInt>(Call->getArgOperand(3))->getZExtValue())
+            IsNonTriviallyCopyable = true;
+          return;
+        }
+      }
+      if (auto *P = dyn_cast<PHINode>(V)) {
+        if (VisitedPhis.insert(P).second)
+          for (Value *V : P->incoming_values())
+            FindFields(V);
+        return;
+      }
+      Fields.insert(nullptr);
+    };
+    FindFields(isa<StoreInst>(I) ? cast<StoreInst>(I)->getPointerOperand()
+                                 : cast<LoadInst>(I)->getPointerOperand());
+    if (Fields.size() != 1 || Offsets.size() != 1) {
+      for (Metadata *Field : Fields)
+        if (Field)
+          NonPFPFields.insert(Field);
+      continue;
+    }
+
+    std::string FieldName = cast<MDString>(*Fields.begin())->getString().str();
+    uint64_t FieldSignature = std::hash<std::string>()(FieldName);
+
+    std::string DSName = "__pfp_ds_" + FieldName;
+    GlobalValue *DS = M.getNamedValue(DSName);
+    if (!DS) {
+      DS = new GlobalVariable(M, Int8Ty, false,
+                              GlobalVariable::ExternalWeakLinkage, nullptr,
+                              DSName);
+      DS->setVisibility(GlobalValue::HiddenVisibility);
+    }
+    OperandBundleDef DSBundle("deactivation-symbol", DS);
+
+    PointerEncoding Encoding;
+    if (!IsAArch64)
+      Encoding = PointerEncoding::Rotate;
+    else if (IsNonTriviallyCopyable)
+      Encoding = PointerEncoding::PACNonCopyable;
+    else
+      Encoding = PointerEncoding::PACCopyable;
+
+    if (auto *LI = dyn_cast<LoadInst>(I)) {
+      auto *FieldAddr = LI->getPointerOperand();
+      IRBuilder<> B(LI->getNextNode());
+      auto *LIInt = cast<Instruction>(B.CreatePtrToInt(LI, B.getInt64Ty()));
+      Value *Auth;
+      switch (Encoding) {
+      case PointerEncoding::Rotate:
+        Auth = B.CreateAdd(LIInt, B.getInt64(FieldSignature & 0xff));
+        Auth = B.CreateOr(B.CreateLShr(Auth, 16), B.CreateShl(Auth, 48));
+        break;
+      case PointerEncoding::PACNonCopyable: {
+        Value *Struct;
+        if (auto *Call = dyn_cast<CallInst>(FieldAddr))
+          Struct = Call->getArgOperand(0);
+        else if (cast<ConstantInt>(*Offsets.begin())->getZExtValue() == 0)
+          Struct = FieldAddr;
+        else
+          Struct = B.CreateGEP(B.getInt8Ty(), FieldAddr,
+                               {B.CreateNeg(*Offsets.begin())});
+        auto *StructInt = B.CreatePtrToInt(Struct, B.getInt64Ty());
+        Auth = CreateAuth(B, LIInt, StructInt, DSBundle);
+        break;
+      }
+      case PointerEncoding::PACCopyable:
+        Auth =
+            CreateAuth(B, LIInt, B.getInt64(FieldSignature & 0xffff), DSBundle);
+        break;
+      }
+      LI->replaceAllUsesWith(B.CreateIntToPtr(Auth, B.getPtrTy()));
+      LIInt->setOperand(0, LI);
+    } else {
+      auto *SI = cast<StoreInst>(I);
+      IRBuilder<> B(SI);
+      auto *FieldAddr = SI->getPointerOperand();
+      auto *SIValInt =
+          B.CreatePtrToInt(SI->getValueOperand(), B.getInt64Ty());
+      Value *Sign;
+      switch (Encoding) {
+      case PointerEncoding::Rotate:
+        Sign =
+            B.CreateOr(B.CreateLShr(SIValInt, 48), B.CreateShl(SIValInt, 16));
+        Sign = B.CreateSub(Sign, B.getInt64(FieldSignature & 0xff));
+        break;
+      case PointerEncoding::PACNonCopyable: {
+        Value *Struct;
+        if (auto *Call = dyn_cast<CallInst>(FieldAddr))
+          Struct = Call->getArgOperand(0);
+        else if (cast<ConstantInt>(*Offsets.begin())->getZExtValue() == 0)
+          Struct = FieldAddr;
+        else
+          Struct = B.CreateGEP(B.getInt8Ty(), FieldAddr,
+                               {B.CreateNeg(*Offsets.begin())});
+        auto *StructInt = B.CreatePtrToInt(Struct, B.getInt64Ty());
+        Sign = CreateSign(B, SIValInt, StructInt, DSBundle);
+        break;
+      }
+      case PointerEncoding::PACCopyable:
+        Sign = CreateSign(B, SIValInt, B.getInt64(FieldSignature & 0xffff),
+                          DSBundle);
+        break;
+      }
+      SI->setOperand(0, B.CreateIntToPtr(Sign, B.getPtrTy()));
+    }
+  }
+
+  for (User *U : llvm::make_early_inc_range(Intr.users())) {
+    auto *Call = cast<CallInst>(U);
+    auto *Struct = Call->getArgOperand(0);
+    auto *Offset = Call->getArgOperand(1);
+
+    IRBuilder<> B(Call);
+    if (cast<ConstantInt>(Offset)->getZExtValue() == 0)
+      Call->replaceAllUsesWith(Struct);
+    else
+      Call->replaceAllUsesWith(B.CreateGEP(B.getInt8Ty(), Struct, {Offset}));
+    Call->eraseFromParent();
+  }
+
+  if (!NonPFPFields.empty()) {
+    Constant *Nop =
+        ConstantExpr::getIntToPtr(ConstantInt::get(Int64Ty, 0xd503201f), PtrTy);
+    std::set<std::string> LocalNonPFPFieldNames;
+    for (auto *Field : NonPFPFields)
+      LocalNonPFPFieldNames.insert(cast<MDString>(Field)->getString().str());
+    for (auto &FieldName : LocalNonPFPFieldNames) {
+      std::string DSName = "__pfp_ds_" + FieldName;
+      GlobalValue *OldDS = M.getNamedValue(DSName);
+      GlobalValue *DS = GlobalAlias::create(
+          Int8Ty, 0, GlobalValue::ExternalLinkage, DSName, Nop, &M);
+      DS->setVisibility(GlobalValue::HiddenVisibility);
+      if (OldDS) {
+        DS->takeName(OldDS);
+        OldDS->replaceAllUsesWith(DS);
+        OldDS->eraseFromParent();
+      }
+    }
+  }
+  return true;
+}
+
+}
+
 bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
   bool Changed = false;
   for (Function &F : M) {
@@ -571,6 +814,9 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
           return false;
         return lowerUnaryVectorIntrinsicAsLoop(M, CI);
       });
+      break;
+    case Intrinsic::protected_field_ptr:
+      Changed |= expandProtectedFieldPtr(F);
       break;
     }
   }

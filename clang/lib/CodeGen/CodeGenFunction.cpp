@@ -2180,6 +2180,30 @@ static void emitNonZeroVLAInit(CodeGenFunction &CGF, QualType baseType,
   CGF.EmitBlock(contBB);
 }
 
+Address CodeGenFunction::EmitAddressOfPFPField(Address RecordPtr,
+                                               const PFPField &Field) {
+  return EmitAddressOfPFPField(
+      Builder.CreateConstInBoundsByteGEP(RecordPtr.withElementType(Int8Ty),
+                                         Field.structOffset),
+      Field.field, Field.offset - Field.structOffset);
+}
+
+Address CodeGenFunction::EmitAddressOfPFPField(Address RecordPtr,
+                                               const FieldDecl *Field,
+                                               CharUnits Offset) {
+  return Address(
+      EmitRuntimeCall(
+          CGM.getIntrinsic(llvm::Intrinsic::protected_field_ptr),
+          {RecordPtr.getBasePointer(), Builder.getInt64(Offset.getQuantity()),
+           llvm::MetadataAsValue::get(
+               getLLVMContext(),
+               llvm::MDString::get(getLLVMContext(), CGM.getPFPFieldName(Field))),
+           getContext().arePFPFieldsTriviallyRelocatable(Field->getParent())
+               ? Builder.getFalse()
+               : Builder.getTrue()}),
+      VoidPtrTy, RecordPtr.getAlignment());
+}
+
 void
 CodeGenFunction::EmitNullInitialization(Address DestPtr, QualType Ty) {
   // Ignore empty classes in C++.
@@ -2242,13 +2266,22 @@ CodeGenFunction::EmitNullInitialization(Address DestPtr, QualType Ty) {
 
     // Get and call the appropriate llvm.memcpy overload.
     Builder.CreateMemCpy(DestPtr, SrcPtr, SizeVal, false);
-    return;
+  } else {
+    // Otherwise, just memset the whole thing to zero.  This is legal
+    // because in LLVM, all default initializers (other than the ones we just
+    // handled above, and the case handled below) are guaranteed to have a bit
+    // pattern of all zeros.
+    Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
   }
 
-  // Otherwise, just memset the whole thing to zero.  This is legal
-  // because in LLVM, all default initializers (other than the ones we just
-  // handled above) are guaranteed to have a bit pattern of all zeros.
-  Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
+  // With the pointer field protection feature, null pointers do not have a bit
+  // pattern of zero in memory, so we must initialize them separately.
+  std::vector<PFPField> PFPFields;
+  getContext().findPFPFields(Ty, CharUnits::Zero(), PFPFields, true);
+  for (auto &Field : PFPFields) {
+    auto addr = EmitAddressOfPFPField(DestPtr, Field);
+    Builder.CreateStore(llvm::ConstantPointerNull::get(VoidPtrTy), addr);
+  }
 }
 
 llvm::BlockAddress *CodeGenFunction::GetAddrOfLabel(const LabelDecl *L) {

@@ -534,9 +534,9 @@ class Slice {
 public:
   Slice() = default;
 
-  Slice(uint64_t BeginOffset, uint64_t EndOffset, Use *U, bool IsSplittable)
+  Slice(uint64_t BeginOffset, uint64_t EndOffset, Use *U, bool IsSplittable, Value *ProtectedField)
       : BeginOffset(BeginOffset), EndOffset(EndOffset),
-        UseAndIsSplittable(U, IsSplittable) {}
+        UseAndIsSplittable(U, IsSplittable), ProtectedField(ProtectedField) {}
 
   uint64_t beginOffset() const { return BeginOffset; }
   uint64_t endOffset() const { return EndOffset; }
@@ -548,6 +548,8 @@ public:
 
   bool isDead() const { return getUse() == nullptr; }
   void kill() { UseAndIsSplittable.setPointer(nullptr); }
+
+  Value *ProtectedField;
 
   /// Support for ordering ranges.
   ///
@@ -1075,7 +1077,7 @@ private:
       EndOffset = AllocSize;
     }
 
-    AS.Slices.push_back(Slice(BeginOffset, EndOffset, U, IsSplittable));
+    AS.Slices.push_back(Slice(BeginOffset, EndOffset, U, IsSplittable, ProtectedField));
   }
 
   void visitBitCastInst(BitCastInst &BC) {
@@ -4595,7 +4597,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
       NewSlices.push_back(
           Slice(BaseOffset + PartOffset, BaseOffset + PartOffset + PartSize,
                 &PLoad->getOperandUse(PLoad->getPointerOperandIndex()),
-                /*IsSplittable*/ false));
+                /*IsSplittable*/ false, nullptr));
       LLVM_DEBUG(dbgs() << "    new slice [" << NewSlices.back().beginOffset()
                         << ", " << NewSlices.back().endOffset()
                         << "): " << *PLoad << "\n");
@@ -4751,10 +4753,12 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
                                  LLVMContext::MD_access_group});
 
       // Now build a new slice for the alloca.
+      // ProtectedField==nullptr is a lie, but it doesn't matter because we
+      // already determined that all accesses are consistent.
       NewSlices.push_back(
           Slice(BaseOffset + PartOffset, BaseOffset + PartOffset + PartSize,
                 &PStore->getOperandUse(PStore->getPointerOperandIndex()),
-                /*IsSplittable*/ false));
+                /*IsSplittable*/ false, nullptr));
       LLVM_DEBUG(dbgs() << "    new slice [" << NewSlices.back().beginOffset()
                         << ", " << NewSlices.back().endOffset()
                         << "): " << *PStore << "\n");
@@ -5600,6 +5604,32 @@ SROA::runOnAlloca(AllocaInst &AI) {
   if (AS.isEscapedReadOnly()) {
     Changed |= propagateStoredValuesToLoads(AI, AS);
     return {Changed, CFGChanged};
+  }
+
+  for (auto &P : AS.partitions()) {
+    std::optional<Value *> ProtectedField;
+    // For now, we can't split if a field is accessed both via protected
+    // field and not.
+    for (Slice &S : P) {
+      if (auto *II = dyn_cast<IntrinsicInst>(S.getUse()->getUser()))
+        if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
+            II->getIntrinsicID() == Intrinsic::lifetime_end)
+          continue;
+      if (!ProtectedField)
+        ProtectedField = S.ProtectedField;
+      if (*ProtectedField != S.ProtectedField)
+        return {Changed, CFGChanged};
+    }
+    for (Slice *S : P.splitSliceTails()) {
+      if (auto *II = dyn_cast<IntrinsicInst>(S->getUse()->getUser()))
+        if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
+            II->getIntrinsicID() == Intrinsic::lifetime_end)
+          continue;
+      if (!ProtectedField)
+        ProtectedField = S->ProtectedField;
+      if (*ProtectedField != S->ProtectedField)
+        return {Changed, CFGChanged};
+    }
   }
 
   // Delete all the dead users of this alloca before splitting and rewriting it.
