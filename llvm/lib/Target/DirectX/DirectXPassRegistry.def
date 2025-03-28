@@ -26,6 +26,7 @@ MODULE_ANALYSIS("dxil-root-signature-analysis", dxil::RootSignatureAnalysis())
 MODULE_PASS("dxil-data-scalarization", DXILDataScalarization())
 MODULE_PASS("dxil-flatten-arrays", DXILFlattenArrays())
 MODULE_PASS("dxil-intrinsic-expansion", DXILIntrinsicExpansion())
+MODULE_PASS("dxil-legalize", DXILLegalizePass())
 MODULE_PASS("dxil-op-lower", DXILOpLowering())
 MODULE_PASS("dxil-pretty-printer", DXILPrettyPrinterPass(dbgs()))
 MODULE_PASS("dxil-translate-metadata", DXILTranslateMetadata())
@@ -38,5 +39,4 @@ MODULE_PASS("print<dxil-root-signature>", dxil::RootSignatureAnalysisPrinter(dbg
 #define FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
 FUNCTION_PASS("dxil-resource-access", DXILResourceAccess())
-FUNCTION_PASS("dxil-legalize", DXILLegalizePass())
 #undef FUNCTION_PASS

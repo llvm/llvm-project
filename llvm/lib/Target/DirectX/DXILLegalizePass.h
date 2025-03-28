@@ -15,7 +15,7 @@ namespace llvm {
 
 class DXILLegalizePass : public PassInfoMixin<DXILLegalizePass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 } // namespace llvm
 
