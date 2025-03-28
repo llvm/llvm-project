@@ -31,7 +31,6 @@ void test() {
   {
     SpBuf spBuf;
     assert(spBuf.span().data() == nullptr);
-    assert(spBuf.span().empty());
     assert(spBuf.span().size() == 0);
   }
 }

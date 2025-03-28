@@ -42,14 +42,12 @@ void test() {
     SpStream spSt{sp};
     assert(spSt.span().data() == arr);
     // Mode `out` counts read characters
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
   }
   // Mode: `in`
   {
     SpStream spSt{sp, std::ios_base::in};
     assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
   }
   // Mode: `out`
@@ -57,22 +55,18 @@ void test() {
     SpStream spSt{sp, std::ios_base::out};
     assert(spSt.span().data() == arr);
     // Mode `out` counts read characters
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
   }
-  // Mode: multiple
+  // Mode: `ate`
   {
-    SpStream spSt{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
+    SpStream spSt{sp, std::ios_base::ate};
     assert(spSt.span().data() == arr);
-    // Mode `out` counts read characters
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
+    assert(spSt.span().size() == 4);
   }
   // Mode: `ate`
   {
     SpStream spSt{sp, std::ios_base::out | std::ios_base::ate};
     assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
   }
 }

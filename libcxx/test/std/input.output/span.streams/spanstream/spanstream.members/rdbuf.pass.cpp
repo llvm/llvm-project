@@ -33,7 +33,6 @@ void test() {
 
   std::span<CharT> sp{arr};
   assert(sp.data() == arr);
-  assert(!sp.empty());
   assert(sp.size() == 4);
 
   // Mode: default (`in` | `out`)
@@ -41,14 +40,12 @@ void test() {
     SpStream spSt{sp};
     assert(spSt.rdbuf()->span().data() == arr);
     // Mode `out` counts read characters
-    assert(spSt.rdbuf()->span().empty());
     assert(spSt.rdbuf()->span().size() == 0);
   }
   // Mode: `in`
   {
     SpStream spSt{sp, std::ios_base::in};
     assert(spSt.rdbuf()->span().data() == arr);
-    assert(!spSt.rdbuf()->span().empty());
     assert(spSt.rdbuf()->span().size() == 4);
   }
   // Mode: `out`
@@ -56,22 +53,18 @@ void test() {
     SpStream spSt{sp, std::ios_base::out};
     assert(spSt.rdbuf()->span().data() == arr);
     // Mode `out` counts read characters
-    assert(spSt.rdbuf()->span().empty());
     assert(spSt.rdbuf()->span().size() == 0);
   }
-  // Mode: multiple
+  // Mode: `ate`
   {
-    SpStream spSt{sp, std::ios_base::in | std::ios_base::out | std::ios_base::binary};
+    SpStream spSt{sp, std::ios_base::ate};
     assert(spSt.rdbuf()->span().data() == arr);
-    // Mode `out` counts read characters
-    assert(spSt.rdbuf()->span().empty());
-    assert(spSt.rdbuf()->span().size() == 0);
+    assert(spSt.rdbuf()->span().size() == 4);
   }
   // Mode: `ate`
   {
     SpStream spSt{sp, std::ios_base::out | std::ios_base::ate};
     assert(spSt.rdbuf()->span().data() == arr);
-    assert(!spSt.rdbuf()->span().empty());
     assert(spSt.rdbuf()->span().size() == 4);
   }
 }

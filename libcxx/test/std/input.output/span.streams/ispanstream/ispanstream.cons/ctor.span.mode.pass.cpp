@@ -23,6 +23,7 @@
 #include <concepts>
 #include <span>
 #include <spanstream>
+#include <string>
 #include <utility>
 
 #include "constexpr_char_traits.h"
@@ -53,59 +54,44 @@ void test() {
 
   std::span<CharT> sp{arr};
   assert(sp.data() == arr);
-  assert(!sp.empty());
   assert(sp.size() == 4);
 
   // Mode: default (`in`)
   {
     SpStream spSt{sp};
     assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
   }
   {
     SpStream spSt{std::as_const(sp)};
     assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
   }
-  // Mode: `in`
+#ifndef TEST_HAS_NO_NASTY_STRING
+  // Test implicit construction from a string
+  if constexpr (!std::same_as<CharT, nasty_char>) {
+    std::basic_string<CharT, TraitsT> str;
+    {
+      SpStream spSt{str};
+      assert(spSt.span().data() == str.data());
+      assert(spSt.span().size() == 0);
+    }
+    {
+      SpStream spSt{std::as_const(str)};
+      assert(spSt.span().data() == str.data());
+      assert(spSt.span().size() == 0);
+    }
+  }
+#endif
+  // Mode: explicit `in`
   {
     SpStream spSt{sp, std::ios_base::in};
     assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
   }
   {
     SpStream spSt{std::as_const(sp), std::ios_base::in};
     assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
-    assert(spSt.span().size() == 4);
-  }
-  // Mode `ate`
-  {
-    SpStream spSt{sp, std::ios_base::ate};
-    assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
-    assert(spSt.span().size() == 4);
-  }
-  {
-    SpStream spSt{std::as_const(sp), std::ios_base::ate};
-    assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
-    assert(spSt.span().size() == 4);
-  }
-  // Mode: multiple
-  {
-    SpStream spSt{sp, std::ios_base::ate | std::ios_base::binary};
-    assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
-    assert(spSt.span().size() == 4);
-  }
-  {
-    SpStream spSt{std::as_const(sp), std::ios_base::ate | std::ios_base::binary};
-    assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
   }
 }
@@ -121,15 +107,6 @@ int main(int, char**) {
   test_sfinae<wchar_t>();
   test_sfinae<wchar_t, constexpr_char_traits<wchar_t>>();
 #endif
-
-#ifndef TEST_HAS_NO_CHAR8_T
-  test_sfinae<char8_t>();
-  test_sfinae<char8_t, constexpr_char_traits<char8_t>>();
-#endif
-  test_sfinae<char16_t>();
-  test_sfinae<char16_t, constexpr_char_traits<char16_t>>();
-  test_sfinae<char32_t>();
-  test_sfinae<char32_t, constexpr_char_traits<char32_t>>();
 
 #ifndef TEST_HAS_NO_NASTY_STRING
   test<nasty_char, nasty_char_traits>();

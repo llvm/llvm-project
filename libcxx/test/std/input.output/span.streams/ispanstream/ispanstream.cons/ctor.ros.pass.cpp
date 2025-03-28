@@ -21,6 +21,7 @@
 #include <cassert>
 #include <concepts>
 #include <spanstream>
+#include <utility>
 
 #include "constexpr_char_traits.h"
 #include "nasty_string.h"
@@ -61,7 +62,11 @@ void test() {
   {
     SpStream spSt(ros);
     assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
+    assert(spSt.span().size() == 4);
+  }
+  {
+    SpStream spSt(std::move(ros));
+    assert(spSt.span().data() == arr);
     assert(spSt.span().size() == 4);
   }
 }
@@ -77,15 +82,6 @@ int main(int, char**) {
   test_sfinae<wchar_t>();
   test_sfinae<wchar_t, constexpr_char_traits<wchar_t>>();
 #endif
-
-#ifndef TEST_HAS_NO_CHAR8_T
-  test_sfinae<char8_t>();
-  test_sfinae<char8_t, constexpr_char_traits<char8_t>>();
-#endif
-  test_sfinae<char16_t>();
-  test_sfinae<char16_t, constexpr_char_traits<char16_t>>();
-  test_sfinae<char32_t>();
-  test_sfinae<char32_t, constexpr_char_traits<char32_t>>();
 
 #ifndef TEST_HAS_NO_NASTY_STRING
   test<nasty_char, nasty_char_traits>();

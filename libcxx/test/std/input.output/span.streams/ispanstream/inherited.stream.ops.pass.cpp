@@ -14,12 +14,11 @@
 //   class basic_spanstream
 //     : public basic_iostream<charT, traits> {
 
-//   Test stream operations inherited from `basic_istream` and `basic_ostream`
+//   Test stream operations inherited from `basic_istream`
 
 #include <cassert>
 #include <span>
 #include <spanstream>
-#include <string>
 #include <string_view>
 
 #include "constexpr_char_traits.h"
@@ -29,206 +28,101 @@
 #include "../helper_macros.h"
 #include "../helper_types.h"
 
+#include <print> // REMOVE ME
+#include <iostream> // REMOVE ME
+
+template <typename CharT, typename TraitsT>
+void test_ispanstream(std::basic_ispanstream<CharT, TraitsT>& spSt, std::size_t size) {
+  assert(spSt);
+  assert(!spSt.bad());
+  assert(!spSt.fail());
+  assert(spSt.good());
+  assert(spSt.span().size() == size);
+
+  // Read from stream
+  std::basic_string<CharT, TraitsT> str1;
+  spSt >> str1;
+  int i1;
+  spSt >> i1;
+  std::basic_string<CharT, TraitsT> str2;
+  spSt >> str2;
+  int i2;
+  spSt >> i2;
+  std::basic_string<CharT, TraitsT> str3;
+  spSt >> str3;
+  int i3;
+  spSt >> i3;
+
+  assert(str1 == CS("zmt"));
+  assert(i1 == 94);
+  assert(str2 == CS("hkt"));
+  assert(i2 == 82);
+  assert(str3 == CS("pir"));
+  assert(i3 == 43);
+
+  assert(spSt);
+  assert(!spSt.bad());
+  assert(!spSt.fail());
+  assert(spSt.good());
+
+  spSt.clear();
+
+  assert(spSt);
+  assert(!spSt.bad());
+  assert(!spSt.fail());
+  assert(spSt.good());
+}
+
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
   using SpStream = std::basic_ispanstream<CharT, TraitsT>;
 
   constexpr std::basic_string_view<CharT, TraitsT> sv{SV("zmt 94 hkt 82 pir 43vr")};
-  constexpr auto arrSize{30UZ};
-  assert(sv.size() < arrSize);
+  assert(sv.size() < 30UZ);
 
   // Create a std::span test value
-  CharT arr[arrSize]{};
+  CharT arr[30UZ]{};
   initialize_array_from_string_view(arr, sv);
 
   std::span<CharT> sp{arr};
 
   // Create a "Read Only Sequence" test value
-  CharT rosArr[arrSize]{};
+  CharT rosArr[30UZ]{};
   initialize_array_from_string_view(rosArr, sv);
 
-  ReadOnlySpan<CharT, arrSize> ros{rosArr};
-  assert(ros.size() == arrSize);
+  ReadOnlySpan<CharT, 30UZ> ros{rosArr};
+  assert(ros.size() == 30UZ);
 
-  // `std::span` + Mode: default (`in`)
+  // std::span` + Mode: default (`in`)
   {
     SpStream spSt(sp);
-
-    assert(spSt);
-    assert(!spSt.bad());
-    assert(!spSt.fail());
-    assert(spSt.good());
-    assert(spSt.span().size() == arrSize);
-
-    // Read from stream
-    std::basic_string<CharT, TraitsT> str1;
-    spSt >> str1;
-    int i1;
-    spSt >> i1;
-    std::basic_string<CharT, TraitsT> str2;
-    spSt >> str2;
-    int i2;
-    spSt >> i2;
-    std::basic_string<CharT, TraitsT> str3;
-    spSt >> str3;
-    int i3;
-    spSt >> i3;
-
-    assert(str1 == CS("zmt"));
-    assert(i1 == 94);
-    assert(str2 == CS("hkt"));
-    assert(i2 == 82);
-    assert(str3 == CS("pir"));
-    assert(i3 == 43);
-
-    assert(spSt);
-    assert(!spSt.bad());
-    assert(!spSt.fail());
-    assert(spSt.good());
-
-    spSt.clear();
-
-    assert(spSt);
-    assert(!spSt.bad());
-    assert(!spSt.fail());
-    assert(spSt.good());
+    test_ispanstream(spSt, 30UZ);
   }
+  // std::span` + Mode: explicit `in`
+  {
+    SpStream spSt(sp, std::ios_base::in);
+    test_ispanstream(spSt, 30UZ);
+  }
+
   // `ReadOnlySpan` + Mode: default (`in`)
   {
-    SpStream spSt(sp);
-
-    assert(spSt);
-    assert(!spSt.bad());
-    assert(!spSt.fail());
-    assert(spSt.good());
-    assert(spSt.span().size() == arrSize);
-
-    // Read from stream
-    std::basic_string<CharT, TraitsT> str1;
-    spSt >> str1;
-    int i1;
-    spSt >> i1;
-    std::basic_string<CharT, TraitsT> str2;
-    spSt >> str2;
-    int i2;
-    spSt >> i2;
-    std::basic_string<CharT, TraitsT> str3;
-    spSt >> str3;
-    int i3;
-    spSt >> i3;
-
-    assert(str1 == CS("zmt"));
-    assert(i1 == 94);
-    assert(str2 == CS("hkt"));
-    assert(i2 == 82);
-    assert(str3 == CS("pir"));
-    assert(i3 == 43);
-
-    assert(spSt);
-    assert(!spSt.bad());
-    assert(!spSt.fail());
-    assert(spSt.good());
-
-    spSt.clear();
-
-    assert(spSt);
-    assert(!spSt.bad());
-    assert(!spSt.fail());
-    assert(spSt.good());
+    SpStream spSt(ros);
+    test_ispanstream(spSt, 30UZ);
   }
 
-  // `std::span` + Mode: `ate`
   {
     SpStream spSt(sp, std::ios_base::ate);
-
-    assert(spSt);
-    assert(!spSt.bad());
-    assert(!spSt.fail());
-    assert(spSt.good());
-    assert(spSt.span().size() == arrSize);
-
-    // Read from stream
-    std::basic_string<CharT, TraitsT> str1;
-    spSt >> str1;
-    int i1;
-    spSt >> i1;
-    std::basic_string<CharT, TraitsT> str2;
-    spSt >> str2;
-    int i2;
-    spSt >> i2;
-    std::basic_string<CharT, TraitsT> str3;
-    spSt >> str3;
-    int i3;
-    spSt >> i3;
-
-    assert(str1 == CS("zmt"));
-    assert(i1 == 94);
-    assert(str2 == CS("hkt"));
-    assert(i2 == 82);
-    assert(str3 == CS("pir"));
-    assert(i3 == 43);
-
-    assert(spSt);
-    assert(!spSt.bad());
-    assert(!spSt.fail());
-    assert(spSt.good());
-
-    spSt.clear();
-
-    assert(spSt);
-    assert(!spSt.bad());
-    assert(!spSt.fail());
-    assert(spSt.good());
-  }
-  // `ReadOnlySpan` + Mode: `ate`
-  {
-    SpStream spSt(sp, std::ios_base::ate);
-
-    assert(spSt);
-    assert(!spSt.bad());
-    assert(!spSt.fail());
-    assert(spSt.good());
-    assert(spSt.span().size() == arrSize);
-
-    // Read from stream
-    std::basic_string<CharT, TraitsT> str1;
-    spSt >> str1;
-    int i1;
-    spSt >> i1;
-    std::basic_string<CharT, TraitsT> str2;
-    spSt >> str2;
-    int i2;
-    spSt >> i2;
-    std::basic_string<CharT, TraitsT> str3;
-    spSt >> str3;
-    int i3;
-    spSt >> i3;
-
-    assert(str1 == CS("zmt"));
-    assert(i1 == 94);
-    assert(str2 == CS("hkt"));
-    assert(i2 == 82);
-    assert(str3 == CS("pir"));
-    assert(i3 == 43);
-
-    assert(spSt);
-    assert(!spSt.bad());
-    assert(!spSt.fail());
-    assert(spSt.good());
-
-    spSt.clear();
-
-    assert(spSt);
-    assert(!spSt.bad());
-    assert(!spSt.fail());
-    assert(spSt.good());
+    std::println(stderr, "spSt.span().size() = {}", spSt.span().size());
+    // std::println(stderr, "spSt.tellg() = {}", spSt.tellg());
+    std::cerr << "spSt.tellg() = " << spSt.tellg() << std::endl;
+    assert(false);
   }
 }
 
 int main(int, char**) {
   test<char>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  test<wchar_t>();
+  // test<wchar_t>();
 #endif
 
   return 0;

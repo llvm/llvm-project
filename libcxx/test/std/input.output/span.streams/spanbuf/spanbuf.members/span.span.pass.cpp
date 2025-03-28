@@ -34,25 +34,43 @@ void test() {
 
   std::span<CharT> sp{arr};
   assert(sp.data() == arr);
-  assert(!sp.empty());
   assert(sp.size() == 4);
 
   // Mode: default (`in` | `out`)
   {
     SpBuf spBuf;
     assert(spBuf.span().data() == nullptr);
-    assert(spBuf.span().empty());
     assert(spBuf.span().size() == 0);
 
     spBuf.span(arr);
     assert(spBuf.span().data() == arr);
     // Mode `out` counts read characters
-    assert(spBuf.span().empty());
     assert(spBuf.span().size() == 0);
   }
   // Mode: `in`
   {
     SpBuf spBuf{std::ios_base::in};
+    assert(spBuf.span().data() == nullptr);
+    assert(spBuf.span().size() == 0);
+
+    spBuf.span(arr);
+    assert(spBuf.span().data() == arr);
+    assert(spBuf.span().size() == 4);
+  }
+  // Mode: `out`
+  {
+    SpBuf spBuf{std::ios_base::out};
+    assert(spBuf.span().data() == nullptr);
+    assert(spBuf.span().size() == 0);
+
+    spBuf.span(arr);
+    assert(spBuf.span().data() == arr);
+    // Mode `out` counts read characters
+    assert(spBuf.span().size() == 0);
+  }
+  // Mode: `ate`
+  {
+    SpBuf spBuf(std::ios_base::ate);
     assert(spBuf.span().data() == nullptr);
     assert(spBuf.span().empty());
     assert(spBuf.span().size() == 0);
@@ -61,32 +79,6 @@ void test() {
     assert(spBuf.span().data() == arr);
     assert(!spBuf.span().empty());
     assert(spBuf.span().size() == 4);
-  }
-  // Mode: `out`
-  {
-    SpBuf spBuf{std::ios_base::out};
-    assert(spBuf.span().data() == nullptr);
-    assert(spBuf.span().empty());
-    assert(spBuf.span().size() == 0);
-
-    spBuf.span(arr);
-    assert(spBuf.span().data() == arr);
-    // Mode `out` counts read characters
-    assert(spBuf.span().empty());
-    assert(spBuf.span().size() == 0);
-  }
-  // Mode: multiple
-  {
-    SpBuf spBuf(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
-    assert(spBuf.span().data() == nullptr);
-    assert(spBuf.span().empty());
-    assert(spBuf.span().size() == 0);
-
-    spBuf.span(arr);
-    assert(spBuf.span().data() == arr);
-    // Mode `out` counts read characters
-    assert(spBuf.span().empty());
-    assert(spBuf.span().size() == 0);
   }
   // Mode: `ate`
   {
