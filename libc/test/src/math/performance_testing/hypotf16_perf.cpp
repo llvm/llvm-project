@@ -13,4 +13,4 @@
 
 BINARY_OP_SINGLE_OUTPUT_PERF(float16, float16, LIBC_NAMESPACE::hypotf16,
                              LIBC_NAMESPACE::fputil::hypot<float16>,
-                             "hypotf16_perf.log");
+                             "hypotf16_perf.log")
