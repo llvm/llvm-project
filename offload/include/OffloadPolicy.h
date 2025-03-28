@@ -51,8 +51,8 @@ class OffloadPolicy {
 
 public:
   static bool isOffloadDisabled() {
-    return static_cast<kmp_target_offload_kind_t>(__kmpc_get_target_offload())
-            ==  tgt_disabled;
+    return static_cast<kmp_target_offload_kind_t>(
+               __kmpc_get_target_offload()) == tgt_disabled;
   }
 
   static const OffloadPolicy &get(PluginManager &PM) {
