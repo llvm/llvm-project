@@ -6,9 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_powr.h>
+#include <clc/utils.h>
 
-#define FUNCTION powr
-#define __CLC_BODY <clc/shared/binary_def.inc>
-#include <clc/math/gentype.inc>
+#ifndef __CLC_FUNCTION
+#define __CLC_FUNCTION(x) __CLC_CONCAT(__clc_, x)
+#endif
+
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE FUNCTION(__CLC_GENTYPE x, __CLC_INTN y) {
+  return __CLC_FUNCTION(FUNCTION)(x, y);
+}
