@@ -179,6 +179,26 @@ TEST_P(RISCVInstrInfoTest, IsCopyInstrImpl) {
   ASSERT_TRUE(MI9Res.has_value());
   EXPECT_EQ(MI9Res->Destination->getReg(), RISCV::X1);
   EXPECT_EQ(MI9Res->Source->getReg(), RISCV::X2);
+
+  // SH1ADD(_UW), SH2ADD(_UW), SH3ADD(_UW).
+  for (unsigned Opc : {RISCV::SH1ADD, RISCV::SH1ADD_UW, RISCV::SH2ADD,
+                       RISCV::SH2ADD_UW, RISCV::SH3ADD, RISCV::SH3ADD_UW}) {
+    MachineInstr *MI10 = BuildMI(*MF, DL, TII->get(Opc), RISCV::X1)
+                             .addReg(RISCV::X2)
+                             .addReg(RISCV::X3)
+                             .getInstr();
+    auto MI10Res = TII->isCopyInstrImpl(*MI10);
+    EXPECT_FALSE(MI10Res.has_value());
+
+    MachineInstr *MI11 = BuildMI(*MF, DL, TII->get(Opc), RISCV::X1)
+                             .addReg(RISCV::X0)
+                             .addReg(RISCV::X2)
+                             .getInstr();
+    auto MI11Res = TII->isCopyInstrImpl(*MI11);
+    ASSERT_TRUE(MI11Res.has_value());
+    EXPECT_EQ(MI11Res->Destination->getReg(), RISCV::X1);
+    EXPECT_EQ(MI11Res->Source->getReg(), RISCV::X2);
+  }
 }
 
 TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
