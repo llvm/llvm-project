@@ -965,12 +965,9 @@ SBTarget SBDebugger::GetDummyTarget() {
   return sb_target;
 }
 
+#if ENABLE_CLIENT_TELEMETRY
 void SBDebugger::DispatchClientTelemetry(const lldb::SBStructuredData &entry) {
   LLDB_INSTRUMENT_VA(this);
-  // Disable client-telemetry for SWIG.
-  // This prevent arbitrary python client (pretty printers, whatnot) from
-  // sending telemetry without vendors knowing.
-#ifndef SWIG
   if (m_opaque_sp) {
     m_opaque_sp->DispatchClientTelemetry(*entry.m_impl_up);
   } else {
@@ -978,8 +975,8 @@ void SBDebugger::DispatchClientTelemetry(const lldb::SBStructuredData &entry) {
     LLDB_LOGF(log,
               "Could not send telemetry from SBDebugger - debugger was null.");
   }
-#endif
 }
+#endif
 
 bool SBDebugger::DeleteTarget(lldb::SBTarget &target) {
   LLDB_INSTRUMENT_VA(this, target);
