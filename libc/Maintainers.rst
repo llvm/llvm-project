@@ -17,6 +17,16 @@ Lead Maintainer
 | Michael Jones
 | michaelrj\@google.com (email), `michaelrj-google <https://github.com/michaelrj-google>`_ (github)
 
+Baremetal
+---------
+| Petr Hosek
+| phosek\@google.com (email), `petrhosek <https://github.com/petrhosek>`_ (github)
+
+Fixed Point
+-----------
+| Leonard Chan
+| leonardchan\@google.com (email), `PiJoules <https://github.com/PiJoules>`_ (github)
+
 GPU
 ---
 | Joseph Huber
