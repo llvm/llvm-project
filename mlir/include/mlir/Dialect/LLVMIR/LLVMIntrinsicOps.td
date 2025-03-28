@@ -121,7 +121,15 @@ def LLVM_CopySignOp : LLVM_BinarySameArgsIntrOpF<"copysign">;
 def LLVM_ExpOp : LLVM_UnaryIntrOpF<"exp">;
 def LLVM_Exp2Op : LLVM_UnaryIntrOpF<"exp2">;
 def LLVM_Exp10Op : LLVM_UnaryIntrOpF<"exp10">;
-def LLVM_LoadExpOp: LLVM_PowFI<"ldexp">;
+def LLVM_LoadExpOp : LLVM_PowFI<"ldexp">;
+def LLVM_FractionExpOp : LLVM_TwoResultIntrOp<"frexp", [0, 1], [],
+    [Pure], /*requiresFastmath=*/1> {
+    let arguments =
+        (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
+        DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+    let assemblyFormat = "`(` operands `)` attr-dict `:` "
+        "functional-type(operands, results)";
+}
 def LLVM_FAbsOp : LLVM_UnaryIntrOpF<"fabs">;
 def LLVM_FCeilOp : LLVM_UnaryIntrOpF<"ceil">;
 def LLVM_FFloorOp : LLVM_UnaryIntrOpF<"floor">;
@@ -461,6 +469,15 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
     $res = $_builder.create<$_qualCppClassName>($_location,
       $_resultType, mlirOperands, mlirAttrs);
   }];
+}
+
+def LLVM_ConstrainedUIToFP
+    : LLVM_ConstrainedIntr<"uitofp", /*numArgs=*/1,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[0],
+        /*hasRoundingMode=*/1> {
+    let assemblyFormat = [{
+        $arg_0 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0) `to` type(results)
+    }];
 }
 
 def LLVM_ConstrainedSIToFP
