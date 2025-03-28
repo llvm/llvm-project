@@ -294,8 +294,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          {MVT::i8, MVT::i16, MVT::i32}, Legal);
   setAtomicLoadExtAction({ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i32,
                          {MVT::i8, MVT::i16}, Legal);
-  setAtomicLoadExtAction({ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i16,
-                         MVT::i8, Legal);
+  setAtomicLoadExtAction({ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i16, MVT::i8,
+                         Legal);
 
   setCondCodeAction(ISD::SETGT, XLenVT, Custom);
   setCondCodeAction(ISD::SETGE, XLenVT, Expand);
