@@ -841,7 +841,8 @@ struct AddressSanitizer {
   void instrumentMemIntrinsic(MemIntrinsic *MI, RuntimeCallInserter &RTCI);
   Value *memToShadow(Value *Shadow, IRBuilder<> &IRB);
   bool suppressInstrumentationSiteForDebug(int &Instrumented);
-  bool instrumentFunction(Function &F, const TargetLibraryInfo *TLI, const TargetTransformInfo *TTI);
+  bool instrumentFunction(Function &F, const TargetLibraryInfo *TLI,
+                          const TargetTransformInfo *TTI);
   bool maybeInsertAsanInitAtFunctionEntry(Function &F);
   bool maybeInsertDynamicShadowAtFunctionEntry(Function &F);
   void markEscapedLocalAllocas(Function &F);
@@ -3006,7 +3007,7 @@ bool AddressSanitizer::suppressInstrumentationSiteForDebug(int &Instrumented) {
 
 bool AddressSanitizer::instrumentFunction(Function &F,
                                           const TargetLibraryInfo *TLI,
-					  const TargetTransformInfo *TTI) {
+                                          const TargetTransformInfo *TTI) {
   bool FunctionModified = false;
 
   // Do not apply any instrumentation for naked functions.

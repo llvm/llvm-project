@@ -15,8 +15,8 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
+#include "llvm/IR/PatternMatch.h"
 #include <cmath>
 #include <optional>
 using namespace llvm;
@@ -38,8 +38,9 @@ static cl::opt<unsigned> SLPMaxVF(
         "exclusively by SLP vectorizer."),
     cl::Hidden);
 
-bool RISCVTTIImpl::getTgtMemIntrinsicOperand(IntrinsicInst *Inst, 
-                                      SmallVectorImpl<InterestingMemoryOperand> &Interesting) const {
+bool RISCVTTIImpl::getTgtMemIntrinsicOperand(
+    IntrinsicInst *Inst, 
+    SmallVectorImpl<InterestingMemoryOperand> &Interesting) const {
   const DataLayout &DL = getDataLayout();
   Intrinsic::ID IID = Inst->getIntrinsicID();
   LLVMContext &C = Inst->getContext();

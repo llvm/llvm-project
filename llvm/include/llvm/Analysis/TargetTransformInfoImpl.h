@@ -905,7 +905,9 @@ public:
   bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info) const {
     return false;
   }
-  bool getTgtMemIntrinsicOperand(IntrinsicInst *Inst, SmallVectorImpl<InterestingMemoryOperand> &Interesting) const {
+  bool getTgtMemIntrinsicOperand(
+      IntrinsicInst *Inst,
+      SmallVectorImpl<InterestingMemoryOperand> &Interesting) const {
     return false;
   } 
   unsigned getAtomicMemIntrinsicMaxElementSize() const {

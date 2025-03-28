@@ -1668,7 +1668,9 @@ public:
   /// \returns True if the intrinsic is a supported memory instrinsic, 
   /// and store the \p InterestingMemoryOperand into array \p Interesting
   /// for Asan instrumentation.
-  bool getTgtMemIntrinsicOperand(IntrinsicInst *Inst, SmallVectorImpl<InterestingMemoryOperand> &Interesting) const; 
+  bool getTgtMemIntrinsicOperand(
+      IntrinsicInst *Inst,
+      SmallVectorImpl<InterestingMemoryOperand> &Interesting) const; 
 
   /// \returns The maximum element size, in bytes, for an element
   /// unordered-atomic memory intrinsic.
@@ -2291,8 +2293,9 @@ public:
   getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) = 0;
   virtual bool getTgtMemIntrinsic(IntrinsicInst *Inst,
                                   MemIntrinsicInfo &Info) = 0;
-  virtual bool getTgtMemIntrinsicOperand(IntrinsicInst *Inst,
-                                  SmallVectorImpl<InterestingMemoryOperand> &Interesting) = 0;
+  virtual bool getTgtMemIntrinsicOperand(
+      IntrinsicInst *Inst,
+      SmallVectorImpl<InterestingMemoryOperand> &Interesting) = 0;
   virtual unsigned getAtomicMemIntrinsicMaxElementSize() const = 0;
   virtual Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
                                                    Type *ExpectedType) = 0;
@@ -3064,8 +3067,9 @@ public:
                           MemIntrinsicInfo &Info) override {
     return Impl.getTgtMemIntrinsic(Inst, Info);
   }
-  bool getTgtMemIntrinsicOperand(IntrinsicInst *Inst,
-                          SmallVectorImpl<InterestingMemoryOperand> &Interesting) override {
+  bool getTgtMemIntrinsicOperand(
+      IntrinsicInst *Inst,
+      SmallVectorImpl<InterestingMemoryOperand> &Interesting) override {
     return Impl.getTgtMemIntrinsicOperand(Inst, Interesting);
   }
   unsigned getAtomicMemIntrinsicMaxElementSize() const override {

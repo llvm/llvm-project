@@ -152,9 +152,10 @@ public:
                              TTI::PeelingPreferences &PP);
 
   
-  bool getTgtMemIntrinsicOperand(IntrinsicInst *Inst,
-                           SmallVectorImpl<InterestingMemoryOperand> &Interesting) const;
-  
+  bool getTgtMemIntrinsicOperand(
+      IntrinsicInst *Inst,
+      SmallVectorImpl<InterestingMemoryOperand> &Interesting) const;
+
   unsigned getMinVectorRegisterBitWidth() const {
     return ST->useRVVForFixedLengthVectors() ? 16 : 0;
   }
