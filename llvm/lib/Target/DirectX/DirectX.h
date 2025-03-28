@@ -52,7 +52,7 @@ void initializeDXILLegalizeLegacyPass(PassRegistry &);
 
 /// Pass to Legalize DXIL by remove i8 truncations and i64 insert/extract
 /// elements
-ModulePass *createDXILLegalizeLegacyPass();
+FunctionPass *createDXILLegalizeLegacyPass();
 
 /// Initializer for DXILOpLowering
 void initializeDXILOpLoweringLegacyPass(PassRegistry &);

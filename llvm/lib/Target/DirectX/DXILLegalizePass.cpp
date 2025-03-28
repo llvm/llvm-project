@@ -12,7 +12,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <functional>
@@ -20,12 +19,6 @@
 #define DEBUG_TYPE "dxil-legalize"
 
 using namespace llvm;
-
-static void removeDeadIntrinsics(Function &F,
-                                 SmallVectorImpl<Function *> &ToRemove) {
-  if (F.isIntrinsic() && F.use_empty())
-    ToRemove.push_back(&F);
-}
 
 static void fixI8TruncUseChain(Instruction &I,
                                SmallVectorImpl<Instruction *> &ToRemove,
@@ -153,26 +146,11 @@ class DXILLegalizationPipeline {
 public:
   DXILLegalizationPipeline() { initializeLegalizationPipeline(); }
 
-  bool runLegalizationPipeline(Module &M) {
-    bool Changes = false;
-    SmallVector<Function *> ToRemove;
-    for (auto &F : make_early_inc_range(M.functions())) {
-      Changes |= runFunctionLegalizationPipeline(F);
-      for (auto &LegalizationFn : ModuleLegalizationPipeline)
-        LegalizationFn(F, ToRemove);
-    }
-
-    for (Function *F : ToRemove)
-      F->eraseFromParent();
-
-    return Changes && !ToRemove.empty();
-  }
-
-  bool runFunctionLegalizationPipeline(Function &F) {
+  bool runLegalizationPipeline(Function &F) {
     SmallVector<Instruction *> ToRemove;
     DenseMap<Value *, Value *> ReplacedValues;
     for (auto &I : instructions(F)) {
-      for (auto &LegalizationFn : FunctionLegalizationPipeline)
+      for (auto &LegalizationFn : LegalizationPipeline)
         LegalizationFn(I, ToRemove, ReplacedValues);
     }
 
@@ -186,40 +164,37 @@ private:
   SmallVector<
       std::function<void(Instruction &, SmallVectorImpl<Instruction *> &,
                          DenseMap<Value *, Value *> &)>>
-      FunctionLegalizationPipeline;
-  SmallVector<std::function<void(Function &, SmallVectorImpl<Function *> &)>>
-      ModuleLegalizationPipeline;
+      LegalizationPipeline;
 
   void initializeLegalizationPipeline() {
-    FunctionLegalizationPipeline.push_back(fixI8TruncUseChain);
-    FunctionLegalizationPipeline.push_back(
-        downcastI64toI32InsertExtractElements);
-    ModuleLegalizationPipeline.push_back(removeDeadIntrinsics);
+    LegalizationPipeline.push_back(fixI8TruncUseChain);
+    LegalizationPipeline.push_back(downcastI64toI32InsertExtractElements);
   }
 };
 
-class DXILLegalizeLegacy : public ModulePass {
+class DXILLegalizeLegacy : public FunctionPass {
 
 public:
-  bool runOnModule(Module &M) override;
-  DXILLegalizeLegacy() : ModulePass(ID) {}
+  bool runOnFunction(Function &F) override;
+  DXILLegalizeLegacy() : FunctionPass(ID) {}
 
   static char ID; // Pass identification.
 };
 } // namespace
 
-PreservedAnalyses DXILLegalizePass::run(Module &M, ModuleAnalysisManager &MAM) {
+PreservedAnalyses DXILLegalizePass::run(Function &F,
+                                        FunctionAnalysisManager &FAM) {
   DXILLegalizationPipeline DXLegalize;
-  bool MadeChanges = DXLegalize.runLegalizationPipeline(M);
+  bool MadeChanges = DXLegalize.runLegalizationPipeline(F);
   if (!MadeChanges)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   return PA;
 }
 
-bool DXILLegalizeLegacy::runOnModule(Module &M) {
+bool DXILLegalizeLegacy::runOnFunction(Function &F) {
   DXILLegalizationPipeline DXLegalize;
-  return DXLegalize.runLegalizationPipeline(M);
+  return DXLegalize.runLegalizationPipeline(F);
 }
 
 char DXILLegalizeLegacy::ID = 0;
@@ -229,6 +204,6 @@ INITIALIZE_PASS_BEGIN(DXILLegalizeLegacy, DEBUG_TYPE, "DXIL Legalizer", false,
 INITIALIZE_PASS_END(DXILLegalizeLegacy, DEBUG_TYPE, "DXIL Legalizer", false,
                     false)
 
-ModulePass *llvm::createDXILLegalizeLegacyPass() {
+FunctionPass *llvm::createDXILLegalizeLegacyPass() {
   return new DXILLegalizeLegacy();
 }
