@@ -1346,6 +1346,61 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     ID = Intrinsic::riscv_cv_alu_subuRN;
     break;
 
+    // XCVmac
+  case RISCV::BI__builtin_riscv_cv_mac_mac:
+    ID = Intrinsic::riscv_cv_mac_mac;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_msu:
+    ID = Intrinsic::riscv_cv_mac_msu;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_muluN:
+    ID = Intrinsic::riscv_cv_mac_muluN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_mulhhuN:
+    ID = Intrinsic::riscv_cv_mac_mulhhuN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_mulsN:
+    ID = Intrinsic::riscv_cv_mac_mulsN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_mulhhsN:
+    ID = Intrinsic::riscv_cv_mac_mulhhsN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_muluRN:
+    ID = Intrinsic::riscv_cv_mac_muluRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_mulhhuRN:
+    ID = Intrinsic::riscv_cv_mac_mulhhuRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_mulsRN:
+    ID = Intrinsic::riscv_cv_mac_mulsRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_mulhhsRN:
+    ID = Intrinsic::riscv_cv_mac_mulhhsRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_macuN:
+    ID = Intrinsic::riscv_cv_mac_macuN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_machhuN:
+    ID = Intrinsic::riscv_cv_mac_machhuN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_macsN:
+    ID = Intrinsic::riscv_cv_mac_macsN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_machhsN:
+    ID = Intrinsic::riscv_cv_mac_machhsN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_macuRN:
+    ID = Intrinsic::riscv_cv_mac_macuRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_machhuRN:
+    ID = Intrinsic::riscv_cv_mac_machhuRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_macsRN:
+    ID = Intrinsic::riscv_cv_mac_macsRN;
+    break;
+  case RISCV::BI__builtin_riscv_cv_mac_machhsRN:
+    ID = Intrinsic::riscv_cv_mac_machhsRN;
+    break;
   // XAndesBFHCvt
   case RISCV::BI__builtin_riscv_nds_fcvt_s_bf16:
     return Builder.CreateFPExt(Ops[0], FloatTy);
