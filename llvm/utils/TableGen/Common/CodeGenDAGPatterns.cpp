@@ -217,10 +217,8 @@ bool TypeSetByHwMode::operator==(const TypeSetByHwMode &VTS) const {
     return false;
 
   SmallSet<unsigned, 4> Modes;
-  for (auto &I : *this)
-    Modes.insert(I.first);
-  for (const auto &I : VTS)
-    Modes.insert(I.first);
+  Modes.insert_range(llvm::make_first_range(*this));
+  Modes.insert_range(llvm::make_first_range(VTS));
 
   if (HaveDefault) {
     // Both sets have default mode.
@@ -3321,8 +3319,7 @@ void CodeGenDAGPatterns::ParsePatternFragments(bool OutFrags) {
     std::vector<std::string> &Args = P->getArgList();
     // Copy the args so we can take StringRefs to them.
     auto ArgsCopy = Args;
-    SmallDenseSet<StringRef, 4> OperandsSet;
-    OperandsSet.insert(ArgsCopy.begin(), ArgsCopy.end());
+    SmallDenseSet<StringRef, 4> OperandsSet(llvm::from_range, ArgsCopy);
 
     if (OperandsSet.count(""))
       P->error("Cannot have unnamed 'node' values in pattern fragment!");

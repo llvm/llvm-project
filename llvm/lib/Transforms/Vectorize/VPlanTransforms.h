@@ -192,6 +192,15 @@ struct VPlanTransforms {
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
+
+  /// Try to convert a plan with interleave groups with VF elements to a plan
+  /// with the interleave groups replaced by wide loads and stores processing VF
+  /// elements, if all transformed interleave groups access the full vector
+  /// width (checked via \o VectorRegWidth). This effectively is a very simple
+  /// form of loop-aware SLP, where we use interleave groups to identify
+  /// candidates.
+  static void narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
+                                     unsigned VectorRegWidth);
 };
 
 } // namespace llvm

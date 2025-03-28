@@ -469,6 +469,10 @@ createIRLevelProfileFlagVar(Module &M,
       M, IntTy64, true, GlobalValue::WeakAnyLinkage,
       Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)), VarName);
   IRLevelVersionVariable->setVisibility(GlobalValue::HiddenVisibility);
+  if (isGPUProfTarget(M))
+    IRLevelVersionVariable->setVisibility(
+        llvm::GlobalValue::ProtectedVisibility);
+
   Triple TT(M.getTargetTriple());
   if (TT.supportsCOMDAT()) {
     IRLevelVersionVariable->setLinkage(GlobalValue::ExternalLinkage);
@@ -963,9 +967,7 @@ void FunctionInstrumenter::instrument() {
       InstrumentBBs.size() + FuncInfo.SIVisitor.getNumOfSelectInsts();
 
   if (IsCtxProf) {
-    StringSet<> SkipCSInstr;
-    SkipCSInstr.insert(CtxPGOSkipCallsiteInstrument.begin(),
-                       CtxPGOSkipCallsiteInstrument.end());
+    StringSet<> SkipCSInstr(llvm::from_range, CtxPGOSkipCallsiteInstrument);
 
     auto *CSIntrinsic =
         Intrinsic::getOrInsertDeclaration(&M, Intrinsic::instrprof_callsite);

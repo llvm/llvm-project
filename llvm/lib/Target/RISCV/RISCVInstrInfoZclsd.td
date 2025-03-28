@@ -60,7 +60,7 @@ class PairCStore_rri<bits<3> funct3, string OpcodeStr,
                      DAGOperand RC, DAGOperand opnd>
     : RVInst16CS<funct3, 0b00, (outs), (ins RC:$rs2,GPRCMem:$rs1, opnd:$imm),
                  OpcodeStr, "$rs2, ${imm}(${rs1})">;
-                 
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -90,6 +90,21 @@ def C_SD_RV32 : PairCStore_rri<0b111, "c.sd", GPRPairCRV32, uimm8_lsb000>,
   let Inst{6-5} = imm{7-6};
 }
 }// Predicates = [HasStdExtZclsd, IsRV32], DecoderNamespace = "ZcOverlap"
+
+//===----------------------------------------------------------------------===//
+// Assembler Pseudo Instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtZclsd, IsRV32] in {
+def : InstAlias<"c.ld $rd, (${rs1})",
+                (C_LD_RV32 GPRPairCRV32:$rd, GPRCMem:$rs1, 0), 0>;
+def : InstAlias<"c.sd $rs2, (${rs1})",
+                (C_SD_RV32 GPRPairCRV32:$rs2, GPRCMem:$rs1, 0), 0>;
+def : InstAlias<"c.ldsp $rd, (${rs1})",
+                (C_LDSP_RV32 GPRPairNoX0RV32:$rd, SPMem:$rs1, 0), 0>;
+def : InstAlias<"c.sdsp $rs2, (${rs1})",
+                (C_SDSP_RV32 GPRPairRV32:$rs2, SPMem:$rs1, 0), 0>;
+}
 
 //===----------------------------------------------------------------------===//
 // Compress Instruction tablegen backend.

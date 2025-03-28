@@ -506,7 +506,7 @@ void TemplUses(T t, U u) {
 
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}}kernels
   // CHECK-NEXT: num_workers clause
-  // CHECK-NEXT: CXXFunctionalCastExpr{{.*}} 'typename HasInt::IntTy':'int' functional cast to typename struct HasInt::IntTy <NoOp>
+  // CHECK-NEXT: CXXFunctionalCastExpr{{.*}} 'typename HasInt::IntTy':'int' functional cast to typename HasInt::IntTy <NoOp>
   // CHECK-NEXT: InitListExpr{{.*}}'typename HasInt::IntTy':'int'
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
@@ -514,7 +514,7 @@ void TemplUses(T t, U u) {
 
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
   // CHECK-NEXT: num_workers clause
-  // CHECK-NEXT: CXXFunctionalCastExpr{{.*}} 'typename HasInt::ShortTy':'short' functional cast to typename struct HasInt::ShortTy <NoOp>
+  // CHECK-NEXT: CXXFunctionalCastExpr{{.*}} 'typename HasInt::ShortTy':'short' functional cast to typename HasInt::ShortTy <NoOp>
   // CHECK-NEXT: InitListExpr{{.*}}'typename HasInt::ShortTy':'short'
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr

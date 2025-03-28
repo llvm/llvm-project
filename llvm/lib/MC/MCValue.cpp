@@ -44,12 +44,6 @@ LLVM_DUMP_METHOD void MCValue::dump() const {
 #endif
 
 MCSymbolRefExpr::VariantKind MCValue::getAccessVariant() const {
-  const MCSymbolRefExpr *B = getSymB();
-  if (B) {
-    if (B->getKind() != MCSymbolRefExpr::VK_None)
-      llvm_unreachable("unsupported");
-  }
-
   const MCSymbolRefExpr *A = getSymA();
   if (!A)
     return MCSymbolRefExpr::VK_None;

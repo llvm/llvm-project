@@ -147,7 +147,7 @@ template <typename T> static T *getPlanEntry(T *Start) {
     if (Current->getNumPredecessors() == 0)
       return Current;
     auto &Predecessors = Current->getPredecessors();
-    WorkList.insert(Predecessors.begin(), Predecessors.end());
+    WorkList.insert_range(Predecessors);
   }
 
   llvm_unreachable("VPlan without any entry node without predecessors");
@@ -898,8 +898,6 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   // FIXME: Model VF * UF computation completely in VPlan.
-  assert((!getVectorLoopRegion() || VFxUF.getNumUsers()) &&
-         "VFxUF expected to always have users");
   unsigned UF = getUF();
   if (VF.getNumUsers()) {
     Value *RuntimeVF = getRuntimeVF(Builder, TCTy, State.VF);
@@ -1227,7 +1225,7 @@ VPIRBasicBlock *VPlan::createVPIRBasicBlock(BasicBlock *IRBB) {
   auto *VPIRBB = createEmptyVPIRBasicBlock(IRBB);
   for (Instruction &I :
        make_range(IRBB->begin(), IRBB->getTerminator()->getIterator()))
-    VPIRBB->appendRecipe(new VPIRInstruction(I));
+    VPIRBB->appendRecipe(VPIRInstruction::create(I));
   return VPIRBB;
 }
 
