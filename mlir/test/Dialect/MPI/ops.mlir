@@ -23,11 +23,11 @@ func.func @mpi_test(%ref : memref<100xf32>) -> () {
     // CHECK-NEXT: [[vretval_1:%.*]], [[vsize_2:%.*]] = mpi.comm_size([[v1]]) : !mpi.retval, i32
     %retval_0, %size_1 = mpi.comm_size(%comm) : !mpi.retval, i32
 
-    // CHECK-NEXT: [[vnewcomm:%.*]] = mpi.comm_split([[v1]], [[vrank]], [[vrank]]) : i32, i32 -> !mpi.comm
-    %new_comm = mpi.comm_split(%comm, %rank, %rank) : i32, i32 -> !mpi.comm
+    // CHECK-NEXT: [[vnewcomm:%.*]] = mpi.comm_split([[v1]], [[vrank]], [[vrank]]) : !mpi.comm
+    %new_comm = mpi.comm_split(%comm, %rank, %rank) : !mpi.comm
 
-    // CHECK-NEXT: [[vretval_3:%.*]], [[vnewcomm_4:%.*]] = mpi.comm_split([[v1]], [[vrank]], [[vrank]]) : i32, i32 -> !mpi.retval, !mpi.comm
-    %retval_1, %new_comm_1 = mpi.comm_split(%comm, %rank, %rank) : i32, i32 -> !mpi.retval, !mpi.comm
+    // CHECK-NEXT: [[vretval_3:%.*]], [[vnewcomm_4:%.*]] = mpi.comm_split([[v1]], [[vrank]], [[vrank]]) : !mpi.retval, !mpi.comm
+    %retval_1, %new_comm_1 = mpi.comm_split(%comm, %rank, %rank) : !mpi.retval, !mpi.comm
 
     // CHECK-NEXT: mpi.send([[varg0]], [[vrank]], [[vrank]], [[v1]]) : memref<100xf32>, i32, i32
     mpi.send(%ref, %rank, %rank, %comm) : memref<100xf32>, i32, i32

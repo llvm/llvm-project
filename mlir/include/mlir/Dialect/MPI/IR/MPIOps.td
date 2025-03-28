@@ -100,7 +100,7 @@ def MPI_CommSizeOp : MPI_Op<"comm_size", []> {
 // CommSplitOp
 //===----------------------------------------------------------------------===//
 
-def MPI_CommSplit : MPI_Op<"comm_split", []> {
+def MPI_CommSplitOp : MPI_Op<"comm_split", []> {
   let summary = "Partition the group associated to the given communicator into "
                 "disjoint subgroups";
   let description = [{
@@ -121,7 +121,6 @@ def MPI_CommSplit : MPI_Op<"comm_split", []> {
   );
 
   let assemblyFormat = "`(` $comm `,` $color `,` $key `)` attr-dict `:` "
-                       "type($color) `,` type($key) `->` "
                        "type(results)";
 }
 
