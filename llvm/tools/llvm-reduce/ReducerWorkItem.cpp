@@ -776,7 +776,11 @@ void ReducerWorkItem::readBitcode(MemoryBufferRef Data, LLVMContext &Ctx,
 }
 
 void ReducerWorkItem::writeBitcode(raw_ostream &OutStream) const {
+  const bool ShouldPreserveUseListOrder = true;
+
   if (LTOInfo && LTOInfo->IsThinLTO && LTOInfo->EnableSplitLTOUnit) {
+    // FIXME: This should not depend on the pass manager. There are hidden
+    // transforms that may happen inside ThinLTOBitcodeWriterPass
     PassBuilder PB;
     LoopAnalysisManager LAM;
     FunctionAnalysisManager FAM;
@@ -788,7 +792,8 @@ void ReducerWorkItem::writeBitcode(raw_ostream &OutStream) const {
     PB.registerLoopAnalyses(LAM);
     PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
     ModulePassManager MPM;
-    MPM.addPass(ThinLTOBitcodeWriterPass(OutStream, nullptr));
+    MPM.addPass(ThinLTOBitcodeWriterPass(OutStream, nullptr,
+                                         ShouldPreserveUseListOrder));
     MPM.run(*M, MAM);
   } else {
     std::unique_ptr<ModuleSummaryIndex> Index;
@@ -797,8 +802,8 @@ void ReducerWorkItem::writeBitcode(raw_ostream &OutStream) const {
       Index = std::make_unique<ModuleSummaryIndex>(
           buildModuleSummaryIndex(*M, nullptr, &PSI));
     }
-    WriteBitcodeToFile(getModule(), OutStream,
-                       /*ShouldPreserveUseListOrder=*/true, Index.get());
+    WriteBitcodeToFile(getModule(), OutStream, ShouldPreserveUseListOrder,
+                       Index.get());
   }
 }
 
