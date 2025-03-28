@@ -254,7 +254,7 @@ llvm::Expected<InitializeResponseBody> InitializeRequestHandler::Run(
 
   // The sourceInitFile option is not part of the DAP specification. It is an
   // extension used by the test suite to prevent sourcing `.lldbinit` and
-  // changing its behavior .
+  // changing its behavior.
   if (arguments.lldbExtSourceInitFile.value_or(true)) {
     dap.debugger.SkipLLDBInitFiles(false);
     dap.debugger.SkipAppInitFiles(false);
