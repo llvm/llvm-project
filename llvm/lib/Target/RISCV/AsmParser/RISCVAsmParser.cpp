@@ -882,8 +882,7 @@ public:
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm);
     if (IsConstantImm)
       return isUInt<20>(Imm);
-    bool IsValid = RISCVAsmParser::classifySymbolRef(getImm(), VK);
-    return IsValid &&
+    return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
            (VK == RISCVMCExpr::VK_HI || VK == RISCVMCExpr::VK_TPREL_HI);
   }
 
@@ -896,8 +895,7 @@ public:
     if (IsConstantImm)
       return isUInt<20>(Imm);
 
-    bool IsValid = RISCVAsmParser::classifySymbolRef(getImm(), VK);
-    return IsValid &&
+    return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
            (VK == RISCVMCExpr::VK_PCREL_HI || VK == RISCVMCExpr::VK_GOT_HI ||
             VK == RISCVMCExpr::VK_TLS_GOT_HI ||
             VK == RISCVMCExpr::VK_TLS_GD_HI ||
