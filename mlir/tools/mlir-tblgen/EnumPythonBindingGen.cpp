@@ -85,17 +85,6 @@ static void emitEnumClass(EnumInfo enumInfo, raw_ostream &os) {
   os << "\n";
 }
 
-/// Attempts to extract the bitwidth B from string "uintB_t" describing the
-/// type. This bitwidth information is not readily available in ODS. Returns
-/// `false` on success, `true` on failure.
-static bool extractUIntBitwidth(StringRef uintType, int64_t &bitwidth) {
-  if (!uintType.consume_front("uint"))
-    return true;
-  if (!uintType.consume_back("_t"))
-    return true;
-  return uintType.getAsInteger(/*Radix=*/10, bitwidth);
-}
-
 /// Emits an attribute builder for the given enum attribute to support automatic
 /// conversion between enum values and attributes in Python. Returns
 /// `false` on success, `true` on failure.
@@ -104,12 +93,7 @@ static bool emitAttributeBuilder(const EnumInfo &enumInfo, raw_ostream &os) {
   if (!enumAttrInfo)
     return false;
 
-  int64_t bitwidth;
-  if (extractUIntBitwidth(enumInfo.getUnderlyingType(), bitwidth)) {
-    llvm::errs() << "failed to identify bitwidth of "
-                 << enumInfo.getUnderlyingType();
-    return true;
-  }
+  int64_t bitwidth = enumInfo.getBitwidth();
   os << formatv("@register_attribute_builder(\"{0}\")\n",
                 enumAttrInfo->getAttrDefName());
   os << formatv("def _{0}(x, context):\n",
@@ -140,7 +124,7 @@ static bool emitDialectEnumAttributeBuilder(StringRef attrDefName,
 static bool emitPythonEnums(const RecordKeeper &records, raw_ostream &os) {
   os << fileHeader;
   for (const Record *it :
-       records.getAllDerivedDefinitionsIfDefined("EnumAttrInfo")) {
+       records.getAllDerivedDefinitionsIfDefined("EnumInfo")) {
     EnumInfo enumInfo(*it);
     emitEnumClass(enumInfo, os);
     emitAttributeBuilder(enumInfo, os);

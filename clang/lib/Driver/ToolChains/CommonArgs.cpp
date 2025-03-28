@@ -899,6 +899,17 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     // files
     if (IsFatLTO)
       CmdArgs.push_back("--fat-lto-objects");
+
+    if (Args.hasArg(options::OPT_flto_partitions_EQ)) {
+      int Value = 0;
+      StringRef A = Args.getLastArgValue(options::OPT_flto_partitions_EQ, "8");
+      if (A.getAsInteger(10, Value) || (Value < 1)) {
+        Arg *Arg = Args.getLastArg(options::OPT_flto_partitions_EQ);
+        D.Diag(diag::err_drv_invalid_int_value)
+            << Arg->getAsString(Args) << Arg->getValue();
+      }
+      CmdArgs.push_back(Args.MakeArgString("--lto-partitions=" + A));
+    }
   }
 
   const char *PluginOptPrefix = IsOSAIX ? "-bplugin_opt:" : "-plugin-opt=";

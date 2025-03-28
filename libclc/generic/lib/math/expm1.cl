@@ -34,10 +34,11 @@ _CLC_OVERLOAD _CLC_DEF float expm1(float x) {
     float z2 = mad(r*r, mad(r, mad(r, 0x1.555556p-5f,  0x1.555556p-3f), 0.5f), r);
 
     float m2 = as_float((m + EXPBIAS_SP32) << EXPSHIFTBITS_SP32);
-    float2 tv = USE_TABLE(exp_tbl_ep, j);
+    float exp_head = USE_TABLE(exp_tbl_ep_head, j);
+    float exp_tail = USE_TABLE(exp_tbl_ep_tail, j);
 
-    float two_to_jby64_h = tv.s0 * m2;
-    float two_to_jby64_t = tv.s1 * m2;
+    float two_to_jby64_h = exp_head * m2;
+    float two_to_jby64_t = exp_tail * m2;
     float two_to_jby64 = two_to_jby64_h + two_to_jby64_t;
 
     z2 = mad(z2, two_to_jby64, two_to_jby64_t) + (two_to_jby64_h - 1.0f);
@@ -99,9 +100,8 @@ _CLC_OVERLOAD _CLC_DEF double expm1(double x) {
     int j = n & 0x3f;
     int m = n >> 6;
 
-    double2 tv = USE_TABLE(two_to_jby64_ep_tbl, j);
-    double f1 = tv.s0;
-    double f2 = tv.s1;
+    double f1 = USE_TABLE(two_to_jby64_ep_tbl_head, j);
+    double f2 = USE_TABLE(two_to_jby64_ep_tbl_tail, j);
     double f = f1 + f2;
 
     double dn = -n;

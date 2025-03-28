@@ -63,7 +63,6 @@ define fastcc i32 @S_regrepeat(ptr %startposp, i32 %max, i8 %0, i1 %cmp343) noun
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_10:
-; CHECK-NEXT:    bnez zero, .LBB0_9
 ; CHECK-NEXT:    j .LBB0_8
 entry:
   switch i8 %0, label %if.else1492 [
@@ -129,7 +128,7 @@ define ptr @Perl_pp_refassign(ptr %PL_stack_sp, i1 %tobool.not, i1 %tobool3.not,
 ; CHECK-NEXT:    andi a2, a2, 1
 ; CHECK-NEXT:    beqz a2, .LBB1_2
 ; CHECK-NEXT:  .LBB1_4:
-; CHECK-NEXT:    beqz zero, .LBB1_6
+; CHECK-NEXT:    j .LBB1_6
 ; CHECK-NEXT:  .LBB1_5: # %sw.bb85
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
