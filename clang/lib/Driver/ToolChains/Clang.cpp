@@ -9396,7 +9396,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
   if (isAMDGPU && Args.hasFlag(options::OPT_opaque_offload_linker,
-                               options::OPT_no_opaque_offload_linker, true)) {
+                               options::OPT_no_opaque_offload_linker, false)) {
     ConstructOpaqueJob(C, JA, Output, Inputs, Args, OTC->getTriple(),
                        LinkingOutput);
     return;
