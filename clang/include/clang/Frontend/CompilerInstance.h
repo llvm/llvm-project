@@ -316,9 +316,6 @@ public:
   const HeaderSearchOptions &getHeaderSearchOpts() const {
     return Invocation->getHeaderSearchOpts();
   }
-  std::shared_ptr<HeaderSearchOptions> getHeaderSearchOptsPtr() const {
-    return Invocation->getHeaderSearchOptsPtr();
-  }
 
   APINotesOptions &getAPINotesOpts() { return Invocation->getAPINotesOpts(); }
   const APINotesOptions &getAPINotesOpts() const {
