@@ -338,9 +338,9 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
                                               llvm::Type *Ty) {
   assert(D.hasAttrs() && "Entry parameter missing annotation attribute!");
   if (D.hasAttr<HLSLSV_GroupIndexAttr>()) {
-    llvm::Function *DxGroupIndex =
-        CGM.getIntrinsic(Intrinsic::dx_flattened_thread_id_in_group);
-    return B.CreateCall(FunctionCallee(DxGroupIndex));
+    llvm::Function *GroupIndex =
+        CGM.getIntrinsic(getFlattenedThreadIdInGroupIntrinsic());
+    return B.CreateCall(FunctionCallee(GroupIndex));
   }
   if (D.hasAttr<HLSLSV_DispatchThreadIDAttr>()) {
     llvm::Function *ThreadIDIntrinsic =

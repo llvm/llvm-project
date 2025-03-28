@@ -231,7 +231,8 @@ public:
     if (BR->getSourceManager().isInSystemHeader(E->getExprLoc()))
       return;
 
-    if (auto *Receiver = E->getInstanceReceiver()->IgnoreParenCasts()) {
+    if (auto *Receiver = E->getInstanceReceiver()) {
+      Receiver = Receiver->IgnoreParenCasts();
       if (isUnknownType(E->getReceiverType()))
         reportUnknownRecieverType(Receiver, DeclWithIssue);
     }

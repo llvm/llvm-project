@@ -1161,4 +1161,31 @@ def SPIRV_GLFindUMsbOp : SPIRV_GLUnaryArithmeticOp<"FindUMsb", 75, SPIRV_Int32> 
   }];
 }
 
+// ----
+
+def SPIRV_GLFractOp : SPIRV_GLUnaryArithmeticOp<"Fract", 10, SPIRV_Float> {
+  let summary = "Returns the `x - floor(x)` of the operand";
+
+  let description = [{
+    Result is:
+
+    ```
+    fract(x) = x - floor(x)
+    fract(±0) = +0
+    fract(±Inf) = NaN
+    ```
+
+    The operand x must be a scalar or vector whose component type is floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed per component.
+
+    #### Example:
+
+    ```mlir
+    %result = spirv.GL.Sqrt %x : f32
+    %result = spirv.GL.Sqrt %x : vector<3xf16>
+    ```
+  }];
+}
+
 #endif // MLIR_DIALECT_SPIRV_IR_GL_OPS

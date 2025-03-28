@@ -431,8 +431,7 @@ bool LoadStoreOpt::doSingleStoreMerge(SmallVectorImpl<GStore *> &Stores) {
     return R;
   });
 
-  for (auto *MI : Stores)
-    InstsToErase.insert(MI);
+  InstsToErase.insert_range(Stores);
   return true;
 }
 

@@ -356,7 +356,7 @@ MCOperand X86MCInstLower::LowerMachineOperand(const MachineInstr *MI,
     return MCOperand::createImm(MO.getImm());
   case MachineOperand::MO_MachineBasicBlock:
   case MachineOperand::MO_GlobalAddress:
-  case MachineOperand::MO_ExternalSymbol: {
+  case MachineOperand::MO_ExternalSymbol:
     return LowerSymbolOperand(MO, GetSymbolFromOperand(MO));
   case MachineOperand::MO_MCSymbol:
     return LowerSymbolOperand(MO, MO.getMCSymbol());
@@ -1583,7 +1583,7 @@ static void printConstant(const Constant *COp, unsigned BitWidth,
     bool IsInteger = EltTy->isIntegerTy();
     bool IsFP = EltTy->isHalfTy() || EltTy->isFloatTy() || EltTy->isDoubleTy();
     unsigned EltBits = EltTy->getPrimitiveSizeInBits();
-    unsigned E = std::min(BitWidth / EltBits, CDS->getNumElements());
+    unsigned E = std::min(BitWidth / EltBits, (unsigned)CDS->getNumElements());
     if ((BitWidth % EltBits) == 0) {
       for (unsigned I = 0; I != E; ++I) {
         if (I != 0)

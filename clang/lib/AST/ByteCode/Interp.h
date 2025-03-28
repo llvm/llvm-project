@@ -765,7 +765,8 @@ enum class IncDecOp {
 };
 
 template <typename T, IncDecOp Op, PushVal DoPush>
-bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                  bool CanOverflow) {
   assert(!Ptr.isDummy());
 
   if constexpr (std::is_same_v<T, Boolean>) {
@@ -780,16 +781,17 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     S.Stk.push<T>(Value);
 
   if constexpr (Op == IncDecOp::Inc) {
-    if (!T::increment(Value, &Result)) {
+    if (!T::increment(Value, &Result) || !CanOverflow) {
       Ptr.deref<T>() = Result;
       return true;
     }
   } else {
-    if (!T::decrement(Value, &Result)) {
+    if (!T::decrement(Value, &Result) || !CanOverflow) {
       Ptr.deref<T>() = Result;
       return true;
     }
   }
+  assert(CanOverflow);
 
   // Something went wrong with the previous operation. Compute the
   // result with another bit of precision.
@@ -812,7 +814,6 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
         << Trunc << Type << E->getSourceRange();
     return true;
   }
-
   return handleOverflow(S, OpPC, APResult);
 }
 
@@ -821,24 +822,34 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 /// 3) Writes the value increased by one back to the pointer
 /// 4) Pushes the original (pre-inc) value on the stack.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool Inc(InterpState &S, CodePtr OpPC) {
+bool Inc(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
-  return IncDecHelper<T, IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr);
+  return IncDecHelper<T, IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr,
+                                                      CanOverflow);
 }
 
 /// 1) Pops a pointer from the stack
 /// 2) Load the value from the pointer
 /// 3) Writes the value increased by one back to the pointer
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool IncPop(InterpState &S, CodePtr OpPC) {
+bool IncPop(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
-  return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr);
+  return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, CanOverflow);
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool PreInc(InterpState &S, CodePtr OpPC, bool CanOverflow) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
+    return false;
+
+  return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, CanOverflow);
 }
 
 /// 1) Pops a pointer from the stack
@@ -846,24 +857,34 @@ bool IncPop(InterpState &S, CodePtr OpPC) {
 /// 3) Writes the value decreased by one back to the pointer
 /// 4) Pushes the original (pre-dec) value on the stack.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool Dec(InterpState &S, CodePtr OpPC) {
+bool Dec(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
 
-  return IncDecHelper<T, IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr);
+  return IncDecHelper<T, IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr,
+                                                      CanOverflow);
 }
 
 /// 1) Pops a pointer from the stack
 /// 2) Load the value from the pointer
 /// 3) Writes the value decreased by one back to the pointer
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool DecPop(InterpState &S, CodePtr OpPC) {
+bool DecPop(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
 
-  return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr);
+  return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, CanOverflow);
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool PreDec(InterpState &S, CodePtr OpPC, bool CanOverflow) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
+    return false;
+
+  return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, CanOverflow);
 }
 
 template <IncDecOp Op, PushVal DoPush>

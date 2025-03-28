@@ -197,20 +197,8 @@ public:
     VK_None,
 
     VK_GOT,
-    VK_GOTENT,
-    VK_GOTOFF,
     VK_GOTPCREL,
-    VK_GOTTPOFF,
-    VK_INDNTPOFF,
-    VK_NTPOFF,
     VK_PLT,
-    VK_TLSGD,
-    VK_TLSLD,
-    VK_TLSLDM,
-    VK_TPOFF,
-    VK_DTPOFF,
-    VK_TLSCALL, // symbol(tlscall)
-    VK_TLSDESC, // symbol(tlsdesc)
     VK_TLVP,    // Mach-O thread local variable relocations
     VK_TLVPPAGE,
     VK_TLVPPAGEOFF,
@@ -220,21 +208,6 @@ public:
     VK_GOTPAGEOFF,
     VK_SECREL,
     VK_WEAKREF, // The link between the symbols in .weakref foo, bar
-    VK_FUNCDESC,
-    VK_GOTFUNCDESC,
-    VK_GOTOFFFUNCDESC,
-    VK_TLSGD_FDPIC,
-    VK_TLSLDM_FDPIC,
-    VK_GOTTPOFF_FDPIC,
-
-    VK_ARM_NONE,
-    VK_ARM_GOT_PREL,
-    VK_ARM_TARGET1,
-    VK_ARM_TARGET2,
-    VK_ARM_PREL31,
-    VK_ARM_SBREL,  // symbol(sbrel)
-    VK_ARM_TLSLDO, // symbol(tlsldo)
-    VK_ARM_TLSDESCSEQ,
 
     VK_COFF_IMGREL32, // symbol@imgrel (image-relative)
 
@@ -558,10 +531,6 @@ public:
   virtual bool inlineAssignedExpr() const { return false; }
   virtual void visitUsedExpr(MCStreamer& Streamer) const = 0;
   virtual MCFragment *findAssociatedFragment() const = 0;
-
-  // Deprecated way to set the type of referenced ELF symbols to STT_TLS when
-  // the derived MCELFObjectTargetWriter::getRelocType does not update symbols.
-  virtual void fixELFSymbolsInTLSFixups(MCAssembler &) const {}
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;

@@ -2243,9 +2243,8 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
         assert(cast<UnaryOperator>(From->IgnoreParens())->getOpcode()
                == UO_AddrOf &&
                "Non-address-of operator on non-static member address");
-        const Type *ClassType
-          = S.Context.getTypeDeclType(Method->getParent()).getTypePtr();
-        FromType = S.Context.getMemberPointerType(FromType, ClassType);
+        FromType = S.Context.getMemberPointerType(
+            FromType, /*Qualifier=*/nullptr, Method->getParent());
       } else if (isa<UnaryOperator>(From->IgnoreParens())) {
         assert(cast<UnaryOperator>(From->IgnoreParens())->getOpcode() ==
                UO_AddrOf &&
@@ -3293,8 +3292,17 @@ void Sema::HandleFunctionTypeMismatch(PartialDiagnostic &PDiag,
                *ToMember = ToType->castAs<MemberPointerType>();
     if (!declaresSameEntity(FromMember->getMostRecentCXXRecordDecl(),
                             ToMember->getMostRecentCXXRecordDecl())) {
-      PDiag << ft_different_class << QualType(ToMember->getClass(), 0)
-            << QualType(FromMember->getClass(), 0);
+      PDiag << ft_different_class;
+      if (ToMember->isSugared())
+        PDiag << Context.getTypeDeclType(
+            ToMember->getMostRecentCXXRecordDecl());
+      else
+        PDiag << ToMember->getQualifier();
+      if (FromMember->isSugared())
+        PDiag << Context.getTypeDeclType(
+            FromMember->getMostRecentCXXRecordDecl());
+      else
+        PDiag << FromMember->getQualifier();
       return;
     }
     FromType = FromMember->getPointeeType();
@@ -3535,13 +3543,13 @@ bool Sema::IsMemberPointerConversion(Expr *From, QualType FromType,
 
   // A pointer to member of B can be converted to a pointer to member of D,
   // where D is derived from B (C++ 4.11p2).
-  QualType FromClass(FromTypePtr->getClass(), 0);
-  QualType ToClass(ToTypePtr->getClass(), 0);
+  CXXRecordDecl *FromClass = FromTypePtr->getMostRecentCXXRecordDecl();
+  CXXRecordDecl *ToClass = ToTypePtr->getMostRecentCXXRecordDecl();
 
-  if (!Context.hasSameUnqualifiedType(FromClass, ToClass) &&
+  if (!declaresSameEntity(FromClass, ToClass) &&
       IsDerivedFrom(From->getBeginLoc(), ToClass, FromClass)) {
-    ConvertedType = Context.getMemberPointerType(FromTypePtr->getPointeeType(),
-                                                 ToClass.getTypePtr());
+    ConvertedType = Context.getMemberPointerType(
+        FromTypePtr->getPointeeType(), FromTypePtr->getQualifier(), ToClass);
     return true;
   }
 
@@ -3572,10 +3580,23 @@ Sema::MemberPointerConversionResult Sema::CheckMemberPointerConversion(
                                       ToPtrType->getPointeeType()))
     return MemberPointerConversionResult::DifferentPointee;
 
-  QualType FromClass = QualType(FromPtrType->getClass(), 0),
-           ToClass = QualType(ToPtrType->getClass(), 0);
+  CXXRecordDecl *FromClass = FromPtrType->getMostRecentCXXRecordDecl(),
+                *ToClass = ToPtrType->getMostRecentCXXRecordDecl();
 
-  QualType Base = FromClass, Derived = ToClass;
+  auto DiagCls = [](PartialDiagnostic &PD, NestedNameSpecifier *Qual,
+                    const CXXRecordDecl *Cls) {
+    if (declaresSameEntity(Qual->getAsRecordDecl(), Cls))
+      PD << Qual;
+    else
+      PD << QualType(Cls->getTypeForDecl(), 0);
+  };
+  auto DiagFromTo = [&](PartialDiagnostic &PD) -> PartialDiagnostic & {
+    DiagCls(PD, FromPtrType->getQualifier(), FromClass);
+    DiagCls(PD, ToPtrType->getQualifier(), ToClass);
+    return PD;
+  };
+
+  CXXRecordDecl *Base = FromClass, *Derived = ToClass;
   if (Direction == MemberPointerConversionDirection::Upcast)
     std::swap(Base, Derived);
 
@@ -3584,16 +3605,19 @@ Sema::MemberPointerConversionResult Sema::CheckMemberPointerConversion(
   if (!IsDerivedFrom(OpRange.getBegin(), Derived, Base, Paths))
     return MemberPointerConversionResult::NotDerived;
 
-  if (Paths.isAmbiguous(Base->getCanonicalTypeUnqualified())) {
-    Diag(CheckLoc, diag::err_ambiguous_memptr_conv)
-        << int(Direction) << FromClass << ToClass
-        << getAmbiguousPathsDisplayString(Paths) << OpRange;
+  if (Paths.isAmbiguous(
+          Base->getTypeForDecl()->getCanonicalTypeUnqualified())) {
+    PartialDiagnostic PD = PDiag(diag::err_ambiguous_memptr_conv);
+    PD << int(Direction);
+    DiagFromTo(PD) << getAmbiguousPathsDisplayString(Paths) << OpRange;
+    Diag(CheckLoc, PD);
     return MemberPointerConversionResult::Ambiguous;
   }
 
   if (const RecordType *VBase = Paths.getDetectedVirtual()) {
-    Diag(CheckLoc, diag::err_memptr_conv_via_virtual)
-        << FromClass << ToClass << QualType(VBase, 0) << OpRange;
+    PartialDiagnostic PD = PDiag(diag::err_memptr_conv_via_virtual);
+    DiagFromTo(PD) << QualType(VBase, 0) << OpRange;
+    Diag(CheckLoc, PD);
     return MemberPointerConversionResult::Virtual;
   }
 
@@ -3608,7 +3632,15 @@ Sema::MemberPointerConversionResult Sema::CheckMemberPointerConversion(
         CheckLoc, Base, Derived, Paths.front(),
         Direction == MemberPointerConversionDirection::Upcast
             ? diag::err_upcast_to_inaccessible_base
-            : diag::err_downcast_from_inaccessible_base)) {
+            : diag::err_downcast_from_inaccessible_base,
+        [&](PartialDiagnostic &PD) {
+          NestedNameSpecifier *BaseQual = FromPtrType->getQualifier(),
+                              *DerivedQual = ToPtrType->getQualifier();
+          if (Direction == MemberPointerConversionDirection::Upcast)
+            std::swap(BaseQual, DerivedQual);
+          DiagCls(PD, DerivedQual, Derived);
+          DiagCls(PD, BaseQual, Base);
+        })) {
     case Sema::AR_accessible:
     case Sema::AR_delayed:
     case Sema::AR_dependent:
@@ -8727,7 +8759,7 @@ BuiltinCandidateTypeSet::AddMemberPointerWithMoreQualifiedTypeVariants(
   // and those shouldn't have qualifier variants anyway.
   if (PointeeTy->isArrayType())
     return true;
-  const Type *ClassTy = PointerTy->getClass();
+  CXXRecordDecl *Cls = PointerTy->getMostRecentCXXRecordDecl();
 
   // Iterate through all strict supersets of the pointee type's CVR
   // qualifiers.
@@ -8737,7 +8769,7 @@ BuiltinCandidateTypeSet::AddMemberPointerWithMoreQualifiedTypeVariants(
 
     QualType QPointeeTy = Context.getCVRQualifiedType(PointeeTy, CVR);
     MemberPointerTypes.insert(
-      Context.getMemberPointerType(QPointeeTy, ClassTy));
+        Context.getMemberPointerType(QPointeeTy, /*Qualifier=*/nullptr, Cls));
   }
 
   return true;
@@ -16446,16 +16478,17 @@ ExprResult Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
 
         assert(isa<DeclRefExpr>(SubExpr.get()) &&
                "fixed to something other than a decl ref");
-        assert(cast<DeclRefExpr>(SubExpr.get())->getQualifier() &&
+        NestedNameSpecifier *Qualifier =
+            cast<DeclRefExpr>(SubExpr.get())->getQualifier();
+        assert(Qualifier &&
                "fixed to a member ref with no nested name qualifier");
 
         // We have taken the address of a pointer to member
         // function. Perform the computation here so that we get the
         // appropriate pointer to member type.
-        QualType ClassType
-          = Context.getTypeDeclType(cast<RecordDecl>(Method->getDeclContext()));
-        QualType MemPtrType
-          = Context.getMemberPointerType(Fn->getType(), ClassType.getTypePtr());
+        QualType MemPtrType = Context.getMemberPointerType(
+            Fn->getType(), Qualifier,
+            cast<CXXRecordDecl>(Method->getDeclContext()));
         // Under the MS ABI, lock down the inheritance model now.
         if (Context.getTargetInfo().getCXXABI().isMicrosoft())
           (void)isCompleteType(UnOp->getOperatorLoc(), MemPtrType);

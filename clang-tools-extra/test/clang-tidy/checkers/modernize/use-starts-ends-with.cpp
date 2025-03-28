@@ -236,6 +236,42 @@ void test(std::string s, std::string_view sv, sub_string ss, sub_sub_string sss,
   // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
   // CHECK-FIXES: s.ends_with(suffix);
 
+  s.find("a", 0) == 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
+  // CHECK-FIXES: s.starts_with("a");
+
+  s.find(s, ZERO) == 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
+  // CHECK-FIXES: s.starts_with(s);
+
+  s.find(s, 0) == ZERO;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
+  // CHECK-FIXES: s.starts_with(s);
+
+  s.find("aaa", 0, 3) == 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
+  // CHECK-FIXES: s.starts_with("aaa");
+
+  s.find("aaa", ZERO, 3) == 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
+  // CHECK-FIXES: s.starts_with("aaa");
+
+  s.find("aaa", ZERO, strlen(("aaa"))) == ZERO;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
+  // CHECK-FIXES: s.starts_with("aaa");
+
+  s.rfind("aaa", 0, 3) != 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
+  // CHECK-FIXES: !s.starts_with("aaa");
+
+  s.rfind("aaa", ZERO, 3) != 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
+  // CHECK-FIXES: !s.starts_with("aaa");
+
+  s.rfind("aaa", ZERO, strlen(("aaa"))) == ZERO;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
+  // CHECK-FIXES: s.starts_with("aaa");
+
   struct S {
     std::string s;
   } t;
@@ -261,6 +297,12 @@ void test(std::string s, std::string_view sv, sub_string ss, sub_sub_string sss,
 
   #define STRING s
   if (0 == STRING.find("ala")) { /* do something */}
+
+  // Cases when literal-size and size parameters are different are not being matched.
+  s.find("aaa", 0, 2) == 0;
+  s.find("aaa", 0, strlen("aa")) == 0;
+  s.rfind("aaa", 0, 2) == 0;
+  s.rfind("aaa", 0, strlen("aa")) == 0;
 }
 
 void test_substr() {

@@ -409,7 +409,7 @@ void TypeLocWriter::VisitRValueReferenceTypeLoc(RValueReferenceTypeLoc TL) {
 
 void TypeLocWriter::VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
   addSourceLocation(TL.getStarLoc());
-  Record.AddTypeSourceInfo(TL.getClassTInfo());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
 }
 
 void TypeLocWriter::VisitArrayTypeLoc(ArrayTypeLoc TL) {
@@ -4438,7 +4438,7 @@ void ASTWriter::GenerateSpecializationInfoLookupTable(
       Generator;
   LazySpecializationInfoLookupTrait Trait(*this);
 
-  llvm::DenseMap<unsigned, llvm::SmallVector<const NamedDecl *, 4>>
+  llvm::MapVector<unsigned, llvm::SmallVector<const NamedDecl *, 4>>
       SpecializationMaps;
 
   for (auto *Specialization : Specializations) {

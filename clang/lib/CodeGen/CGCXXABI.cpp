@@ -107,7 +107,7 @@ CGCXXABI::EmitNullMemberPointer(const MemberPointerType *MPT) {
 
 llvm::Constant *CGCXXABI::EmitMemberFunctionPointer(const CXXMethodDecl *MD) {
   return GetBogusMemberPointer(CGM.getContext().getMemberPointerType(
-      MD->getType(), MD->getParent()->getTypeForDecl()));
+      MD->getType(), /*Qualifier=*/nullptr, MD->getParent()));
 }
 
 llvm::Constant *CGCXXABI::EmitMemberDataPointer(const MemberPointerType *MPT,

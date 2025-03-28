@@ -19,6 +19,11 @@ void good_insert4(std::vector<int> &V, int len, int n) {
   V.insert(V.cbegin(), {n-1, n, n+1}); // no-warning
 }
 
+void good_insert5(std::vector<int> &V, int len, int n) {
+  std::unordered_set<int> us;
+  us.insert(V.cbegin(), V.cend()); // no-warning
+}
+
 void good_insert_find(std::vector<int> &V, int n, int m) {
   auto i = std::find(V.cbegin(), V.cend(), n);
   V.insert(i, m); // no-warning
@@ -68,6 +73,11 @@ void bad_insert3(std::vector<int> &V1, std::vector<int> &V2) {
 
 void bad_insert4(std::vector<int> &V1, std::vector<int> &V2, int len, int n) {
   V2.insert(V1.cbegin(), {n-1, n, n+1}); // expected-warning{{Container accessed using foreign iterator argument}}
+}
+
+void bad_insert5(std::vector<int> &V1, std::vector<int> &V2, int len, int n) {
+  std::unordered_set<int> us;
+  us.insert(V1.cbegin(), V2.cend()); // expected-warning{{Iterators of different containers used where the same container is expected}}
 }
 
 void bad_erase1(std::vector<int> &V1, std::vector<int> &V2) {

@@ -490,9 +490,8 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
   MCContext &Ctx = Asm.getContext();
   bool IsLocRel = false;
 
-  if (const MCSymbolRefExpr *RefB = Target.getSymB()) {
-
-    const auto &SymB = cast<MCSymbolWasm>(RefB->getSymbol());
+  if (const auto *RefB = Target.getSubSym()) {
+    const auto &SymB = cast<MCSymbolWasm>(*RefB);
 
     if (FixupSection.isText()) {
       Ctx.reportError(Fixup.getLoc(),

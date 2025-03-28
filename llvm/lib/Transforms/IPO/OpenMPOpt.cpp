@@ -5874,7 +5874,7 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
   bool PostLink = LTOPhase == ThinOrFullLTOPhase::FullLTOPostLink ||
                   LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink ||
                   LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink;
-  SetVector<Function *> Functions(SCC.begin(), SCC.end());
+  SetVector<Function *> Functions(llvm::from_range, SCC);
   OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG, Allocator,
                                 /*CGSCC*/ &Functions, PostLink);
 

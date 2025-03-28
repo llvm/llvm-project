@@ -810,6 +810,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
       setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
+      setOperationAction(ISD::EXPERIMENTAL_VP_SPLAT, VT, Custom);
 
       setOperationPromotedToType(
           ISD::VECTOR_SPLICE, VT,
@@ -1633,7 +1634,7 @@ bool RISCVTargetLowering::shouldExpandGetVectorLength(EVT TripCountVT,
 
   // The maximum VF is for the smallest element width with LMUL=8.
   // VF must be a power of 2.
-  unsigned MaxVF = (RISCV::RVVBitsPerBlock / 8) * 8;
+  unsigned MaxVF = RISCV::RVVBytesPerBlock * 8;
   return VF > MaxVF || !isPowerOf2_32(VF);
 }
 
@@ -2051,12 +2052,20 @@ bool RISCVTargetLowering::isMaskAndCmp0FoldingBeneficial(
 bool RISCVTargetLowering::hasAndNotCompare(SDValue Y) const {
   EVT VT = Y.getValueType();
 
-  // FIXME: Support vectors once we have tests.
   if (VT.isVector())
     return false;
 
   return (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb()) &&
          (!isa<ConstantSDNode>(Y) || cast<ConstantSDNode>(Y)->isOpaque());
+}
+
+bool RISCVTargetLowering::hasAndNot(SDValue Y) const {
+  EVT VT = Y.getValueType();
+
+  if (!VT.isVector())
+    return hasAndNotCompare(Y);
+
+  return Subtarget.hasStdExtZvkb();
 }
 
 bool RISCVTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
@@ -2622,7 +2631,7 @@ static bool useRVVForFixedLengthVectorVT(MVT VT,
   // across all supported vector element types to avoid legalization issues.
   // Therefore -- since the largest is v1024i8/v512i16/etc -- the largest
   // fixed-length vector type we support is 1024 bytes.
-  if (VT.getFixedSizeInBits() > 1024 * 8)
+  if (VT.getVectorNumElements() > 1024 || VT.getFixedSizeInBits() > 1024 * 8)
     return false;
 
   unsigned MinVLen = Subtarget.getRealMinVLen();
@@ -3557,7 +3566,8 @@ static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
   // FIXME: Support i1 vectors, maybe by promoting to i8?
   MVT EltTy = VT.getVectorElementType();
   MVT SrcVT = Src.getSimpleValueType();
-  if (EltTy == MVT::i1 || EltTy != SrcVT.getVectorElementType())
+  if (EltTy == MVT::i1 || EltTy != SrcVT.getVectorElementType() ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(SrcVT))
     return SDValue();
   SDValue Idx = SplatVal.getOperand(1);
   // The index must be a legal type.
@@ -4603,7 +4613,7 @@ static bool isMaskedSlidePair(ArrayRef<int> Mask,
 
 // Exactly matches the semantics of a previously existing custom matcher
 // to allow migration to new matcher without changing output.
-static bool isElementRotate(std::array<std::pair<int, int>, 2> &SrcInfo,
+static bool isElementRotate(const std::array<std::pair<int, int>, 2> &SrcInfo,
                             unsigned NumElts) {
   if (SrcInfo[1].first == -1)
     return true;
@@ -12786,8 +12796,26 @@ SDValue RISCVTargetLowering::lowerVPSplatExperimental(SDValue Op,
     Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
   }
 
-  SDValue Result =
-      lowerScalarSplat(SDValue(), Val, VL, ContainerVT, DL, DAG, Subtarget);
+  SDValue Result;
+  if (VT.getScalarType() == MVT::i1) {
+    if (auto *C = dyn_cast<ConstantSDNode>(Val)) {
+      Result =
+          DAG.getNode(C->isZero() ? RISCVISD::VMCLR_VL : RISCVISD::VMSET_VL, DL,
+                      ContainerVT, VL);
+    } else {
+      MVT WidenVT = ContainerVT.changeVectorElementType(MVT::i8);
+      SDValue LHS =
+          DAG.getNode(RISCVISD::VMV_V_X_VL, DL, WidenVT, DAG.getUNDEF(WidenVT),
+                      DAG.getZExtOrTrunc(Val, DL, Subtarget.getXLenVT()), VL);
+      SDValue RHS = DAG.getConstant(0, DL, WidenVT);
+      Result = DAG.getNode(RISCVISD::SETCC_VL, DL, ContainerVT,
+                           {LHS, RHS, DAG.getCondCode(ISD::SETNE),
+                            DAG.getUNDEF(ContainerVT), Mask, VL});
+    }
+  } else {
+    Result =
+        lowerScalarSplat(SDValue(), Val, VL, ContainerVT, DL, DAG, Subtarget);
+  }
 
   if (!VT.isFixedLengthVector())
     return Result;
@@ -22713,7 +22741,7 @@ EVT RISCVTargetLowering::getOptimalMemOpType(const MemOp &Op,
 
   // If the minimum VLEN is less than RISCV::RVVBitsPerBlock we don't support
   // fixed vectors.
-  if (MinVLenInBytes <= RISCV::RVVBitsPerBlock / 8)
+  if (MinVLenInBytes <= RISCV::RVVBytesPerBlock)
     return MVT::Other;
 
   // Prefer i8 for non-zero memset as it allows us to avoid materializing
@@ -23255,8 +23283,7 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
         SI->getModule(), FixedVssegIntrIds[Factor - 2],
         {InVTy, SI->getPointerOperandType(), XLenTy});
 
-    SmallVector<Value *, 10> Ops(InterleaveValues.begin(),
-                                 InterleaveValues.end());
+    SmallVector<Value *, 10> Ops(InterleaveValues);
     Value *VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
     Ops.append({SI->getPointerOperand(), VL});
 

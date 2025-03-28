@@ -629,7 +629,8 @@ inline void SampleProfileInference<Function>::findUnlikelyJumps(
     const Instruction *TI = BB->getTerminator();
     // Check if a block ends with InvokeInst and mark non-taken branch unlikely.
     // In that case block Succ should be a landing pad
-    if (Successors[BB].size() == 2 && Successors[BB].back() == Succ) {
+    const auto &Succs = Successors[BB];
+    if (Succs.size() == 2 && Succs.back() == Succ) {
       if (isa<InvokeInst>(TI)) {
         Jump.IsUnlikely = true;
       }

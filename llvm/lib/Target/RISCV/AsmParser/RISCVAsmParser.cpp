@@ -199,7 +199,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parseRegister(OperandVector &Operands, bool AllowParens = false);
   ParseStatus parseMemOpBaseReg(OperandVector &Operands);
   ParseStatus parseZeroOffsetMemOp(OperandVector &Operands);
-  ParseStatus parseOperandWithModifier(OperandVector &Operands);
+  ParseStatus parseOperandWithSpecifier(OperandVector &Operands);
   ParseStatus parseBareSymbol(OperandVector &Operands);
   ParseStatus parseCallSymbol(OperandVector &Operands);
   ParseStatus parsePseudoJumpSymbol(OperandVector &Operands);
@@ -215,7 +215,14 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parseGPRPair(OperandVector &Operands, bool IsRV64Inst);
   ParseStatus parseFRMArg(OperandVector &Operands);
   ParseStatus parseFenceArg(OperandVector &Operands);
-  ParseStatus parseReglist(OperandVector &Operands);
+  ParseStatus parseReglist(OperandVector &Operands) {
+    return parseRegListCommon(Operands, /*MustIncludeS0=*/false);
+  }
+  ParseStatus parseReglistS0(OperandVector &Operands) {
+    return parseRegListCommon(Operands, /*MustIncludeS0=*/true);
+  }
+  ParseStatus parseRegListCommon(OperandVector &Operands, bool MustIncludeS0);
+
   ParseStatus parseRegReg(OperandVector &Operands);
   ParseStatus parseRetval(OperandVector &Operands);
   ParseStatus parseZcmpStackAdj(OperandVector &Operands,
@@ -398,13 +405,13 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     RegOp Reg;
     ImmOp Imm;
     FPImmOp FPImm;
-    struct SysRegOp SysReg;
-    struct VTypeOp VType;
-    struct FRMOp FRM;
-    struct FenceOp Fence;
-    struct RlistOp Rlist;
-    struct SpimmOp Spimm;
-    struct RegRegOp RegReg;
+    SysRegOp SysReg;
+    VTypeOp VType;
+    FRMOp FRM;
+    FenceOp Fence;
+    RlistOp Rlist;
+    SpimmOp Spimm;
+    RegRegOp RegReg;
   };
 
   RISCVOperand(KindTy K) : Kind(K) {}
@@ -474,6 +481,9 @@ public:
   bool isSystemRegister() const { return Kind == KindTy::SystemRegister; }
   bool isRegReg() const { return Kind == KindTy::RegReg; }
   bool isRlist() const { return Kind == KindTy::Rlist; }
+  bool isRlistS0() const {
+    return Kind == KindTy::Rlist && Rlist.Val != RISCVZC::RA;
+  }
   bool isSpimm() const { return Kind == KindTy::Spimm; }
 
   bool isGPR() const {
@@ -769,6 +779,18 @@ public:
     int64_t Imm;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
     return IsConstantImm && ((isUInt<5>(Imm) && (Imm >= 6)) || (Imm == 32)) &&
+           VK == RISCVMCExpr::VK_None;
+  }
+
+  bool isUImm5Slist() const {
+    if (!isImm())
+      return false;
+    RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
+    int64_t Imm;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm &&
+           ((Imm == 0) || (Imm == 1) || (Imm == 2) || (Imm == 4) ||
+            (Imm == 8) || (Imm == 16) || (Imm == 15) || (Imm == 31)) &&
            VK == RISCVMCExpr::VK_None;
   }
 
@@ -1274,7 +1296,7 @@ public:
   static std::unique_ptr<RISCVOperand>
   createReg(MCRegister Reg, SMLoc S, SMLoc E, bool IsGPRAsFPR = false) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::Register);
-    Op->Reg.RegNum = Reg.id();
+    Op->Reg.RegNum = Reg;
     Op->Reg.IsGPRAsFPR = IsGPRAsFPR;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -1346,8 +1368,8 @@ public:
   static std::unique_ptr<RISCVOperand> createRegReg(MCRegister Reg1,
                                                     MCRegister Reg2, SMLoc S) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::RegReg);
-    Op->RegReg.Reg1 = Reg1.id();
-    Op->RegReg.Reg2 = Reg2.id();
+    Op->RegReg.Reg1 = Reg1;
+    Op->RegReg.Reg2 = Reg2;
     Op->StartLoc = S;
     Op->EndLoc = S;
     return Op;
@@ -1655,6 +1677,11 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 5));
   case Match_InvalidUImm5GE6Plus1:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 6, (1 << 5));
+  case Match_InvalidUImm5Slist: {
+    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc,
+                 "immediate must be one of: 0, 1, 2, 4, 8, 15, 16, 31");
+  }
   case Match_InvalidUImm6:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 6) - 1);
   case Match_InvalidUImm7:
@@ -1729,7 +1756,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSImm12:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 11), (1 << 11) - 1,
-        "operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an "
+        "operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an "
         "integer in the range");
   case Match_InvalidSImm12Lsb0:
     return generateImmOutOfRangeError(
@@ -1748,17 +1775,19 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         Operands, ErrorInfo, -(1 << 15), (1 << 15) - 1,
         "immediate must be non-zero in the range");
   case Match_InvalidUImm20LUI:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 20) - 1,
-                                      "operand must be a symbol with "
-                                      "%hi/%tprel_hi modifier or an integer in "
-                                      "the range");
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, 0, (1 << 20) - 1,
+        "operand must be a symbol with "
+        "%hi/%tprel_hi specifier or an integer in "
+        "the range");
   case Match_InvalidUImm20:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 20) - 1);
   case Match_InvalidUImm20AUIPC:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 20) - 1,
         "operand must be a symbol with a "
-        "%pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi modifier or "
+        "%pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier "
+        "or "
         "an integer in the range");
   case Match_InvalidSImm21Lsb0JAL:
     return generateImmOutOfRangeError(
@@ -2203,26 +2232,24 @@ ParseStatus RISCVAsmParser::parseImmediate(OperandVector &Operands) {
       return ParseStatus::Failure;
     break;
   case AsmToken::Percent:
-    return parseOperandWithModifier(Operands);
+    return parseOperandWithSpecifier(Operands);
   }
 
   Operands.push_back(RISCVOperand::createImm(Res, S, E, isRV64()));
   return ParseStatus::Success;
 }
 
-ParseStatus RISCVAsmParser::parseOperandWithModifier(OperandVector &Operands) {
+ParseStatus RISCVAsmParser::parseOperandWithSpecifier(OperandVector &Operands) {
   SMLoc S = getLoc();
   SMLoc E;
 
-  if (parseToken(AsmToken::Percent, "expected '%' for operand modifier"))
-    return ParseStatus::Failure;
-
-  if (getLexer().getKind() != AsmToken::Identifier)
-    return Error(getLoc(), "expected valid identifier for operand modifier");
+  if (!parseOptionalToken(AsmToken::Percent) ||
+      getLexer().getKind() != AsmToken::Identifier)
+    return Error(getLoc(), "expected '%' relocation specifier");
   StringRef Identifier = getParser().getTok().getIdentifier();
   auto Spec = RISCVMCExpr::getSpecifierForName(Identifier);
   if (!Spec)
-    return Error(getLoc(), "unrecognized operand modifier");
+    return Error(getLoc(), "invalid relocation specifier");
 
   getParser().Lex(); // Eat the identifier
   if (parseToken(AsmToken::LParen, "expected '('"))
@@ -2326,7 +2353,7 @@ ParseStatus RISCVAsmParser::parsePseudoJumpSymbol(OperandVector &Operands) {
     return ParseStatus::Failure;
 
   if (Res->getKind() != MCExpr::ExprKind::SymbolRef ||
-      cast<MCSymbolRefExpr>(Res)->getKind() == MCSymbolRefExpr::VK_PLT)
+      getSpecifier(cast<MCSymbolRefExpr>(Res)) == RISCVMCExpr::VK_PLT)
     return Error(S, "operand must be a valid jump target");
 
   Res = RISCVMCExpr::create(Res, RISCVMCExpr::VK_CALL, getContext());
@@ -2751,9 +2778,9 @@ ParseStatus RISCVAsmParser::parseRegReg(OperandVector &Operands) {
   if (getLexer().getKind() != AsmToken::Identifier)
     return ParseStatus::NoMatch;
 
-  StringRef RegName = getLexer().getTok().getIdentifier();
-  MCRegister Reg = matchRegisterNameHelper(RegName);
-  if (!Reg)
+  StringRef OffsetRegName = getLexer().getTok().getIdentifier();
+  MCRegister OffsetReg = matchRegisterNameHelper(OffsetRegName);
+  if (!OffsetReg)
     return Error(getLoc(), "invalid register");
   getLexer().Lex();
 
@@ -2763,23 +2790,29 @@ ParseStatus RISCVAsmParser::parseRegReg(OperandVector &Operands) {
   if (getLexer().getKind() != AsmToken::Identifier)
     return Error(getLoc(), "expected register");
 
-  StringRef Reg2Name = getLexer().getTok().getIdentifier();
-  MCRegister Reg2 = matchRegisterNameHelper(Reg2Name);
-  if (!Reg2)
+  StringRef BaseRegName = getLexer().getTok().getIdentifier();
+  MCRegister BaseReg = matchRegisterNameHelper(BaseRegName);
+  if (!BaseReg)
     return Error(getLoc(), "invalid register");
   getLexer().Lex();
 
   if (parseToken(AsmToken::RParen, "expected ')'"))
     return ParseStatus::Failure;
 
-  Operands.push_back(RISCVOperand::createRegReg(Reg, Reg2, getLoc()));
+  Operands.push_back(RISCVOperand::createRegReg(BaseReg, OffsetReg, getLoc()));
 
   return ParseStatus::Success;
 }
 
-ParseStatus RISCVAsmParser::parseReglist(OperandVector &Operands) {
+ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
+                                               bool MustIncludeS0) {
   // Rlist: {ra [, s0[-sN]]}
   // XRlist: {x1 [, x8[-x9][, x18[-xN]]]}
+
+  // When MustIncludeS0 = true (not the default) (used for `qc.cm.pushfp`) which
+  // must include `fp`/`s0` in the list:
+  // Rlist: {ra, s0[-sN]}
+  // XRlist: {x1, x8[-x9][, x18[-xN]]}
   SMLoc S = getLoc();
 
   if (parseToken(AsmToken::LCurly, "register list must start with '{'"))
@@ -2797,8 +2830,20 @@ ParseStatus RISCVAsmParser::parseReglist(OperandVector &Operands) {
     return Error(getLoc(), "register list must start from 'ra' or 'x1'");
   getLexer().Lex();
 
-  // parse case like ,s0
-  if (parseOptionalToken(AsmToken::Comma)) {
+  bool SeenComma = parseOptionalToken(AsmToken::Comma);
+
+  // There are two choices here:
+  // - `s0` is not required (usual case), so only try to parse `s0` if there is
+  //   a comma
+  // - `s0` is required (qc.cm.pushfp), and so we must see the comma between
+  //   `ra` and `s0` and must always try to parse `s0`, below
+  if (MustIncludeS0 && !SeenComma) {
+    Error(getLoc(), "register list must include 's0' or 'x8'");
+    return ParseStatus::Failure;
+  }
+
+  // parse case like ,s0 (knowing the comma must be there if required)
+  if (SeenComma) {
     if (getLexer().isNot(AsmToken::Identifier))
       return Error(getLoc(), "invalid register");
     StringRef RegName = getLexer().getTok().getIdentifier();
@@ -2867,6 +2912,8 @@ ParseStatus RISCVAsmParser::parseReglist(OperandVector &Operands) {
 
   auto Encode = RISCVZC::encodeRlist(RegEnd, IsEABI);
   assert(Encode != RISCVZC::INVALID_RLIST);
+  if (MustIncludeS0)
+    assert(Encode != RISCVZC::RA);
   Operands.push_back(RISCVOperand::createRlist(Encode, S));
 
   return ParseStatus::Success;
@@ -3188,6 +3235,26 @@ bool RISCVAsmParser::parseDirectiveOption() {
     return false;
   }
 
+  if (Option == "exact") {
+    if (Parser.parseEOL())
+      return true;
+
+    getTargetStreamer().emitDirectiveOptionExact();
+    setFeatureBits(RISCV::FeatureExactAssembly, "exact-asm");
+    clearFeatureBits(RISCV::FeatureRelax, "relax");
+    return false;
+  }
+
+  if (Option == "noexact") {
+    if (Parser.parseEOL())
+      return true;
+
+    getTargetStreamer().emitDirectiveOptionNoExact();
+    clearFeatureBits(RISCV::FeatureExactAssembly, "exact-asm");
+    setFeatureBits(RISCV::FeatureRelax, "relax");
+    return false;
+  }
+
   if (Option == "rvc") {
     if (Parser.parseEOL())
       return true;
@@ -3244,9 +3311,10 @@ bool RISCVAsmParser::parseDirectiveOption() {
   }
 
   // Unknown option.
-  Warning(Parser.getTok().getLoc(), "unknown option, expected 'push', 'pop', "
-                                    "'rvc', 'norvc', 'arch', 'relax' or "
-                                    "'norelax'");
+  Warning(Parser.getTok().getLoc(),
+          "unknown option, expected 'push', 'pop', "
+          "'rvc', 'norvc', 'arch', 'relax', 'norelax', "
+          "'exact', or 'noexact'");
   Parser.eatToEndOfStatement();
   return false;
 }
@@ -3456,10 +3524,13 @@ bool RISCVAsmParser::parseDirectiveVariantCC() {
 
 void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
   MCInst CInst;
-  bool Res = RISCVRVC::compress(CInst, Inst, getSTI());
+  bool Res = false;
+  const MCSubtargetInfo &STI = getSTI();
+  if (!STI.hasFeature(RISCV::FeatureExactAssembly))
+    Res = RISCVRVC::compress(CInst, Inst, STI);
   if (Res)
     ++RISCVNumInstrsCompressed;
-  S.emitInstruction((Res ? CInst : Inst), getSTI());
+  S.emitInstruction((Res ? CInst : Inst), STI);
 }
 
 void RISCVAsmParser::emitLoadImm(MCRegister DestReg, int64_t Value,
@@ -3715,7 +3786,7 @@ bool RISCVAsmParser::checkPseudoAddTPRel(MCInst &Inst,
   if (Inst.getOperand(2).getReg() != RISCV::X4) {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[3]).getStartLoc();
     return Error(ErrorLoc, "the second input operand must be tp/x4 when using "
-                           "%tprel_add modifier");
+                           "%tprel_add specifier");
   }
 
   return false;
@@ -3728,7 +3799,7 @@ bool RISCVAsmParser::checkPseudoTLSDESCCall(MCInst &Inst,
   if (Inst.getOperand(0).getReg() != RISCV::X5) {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[3]).getStartLoc();
     return Error(ErrorLoc, "the output operand must be t0/x5 when using "
-                           "%tlsdesc_call modifier");
+                           "%tlsdesc_call specifier");
   }
 
   return false;

@@ -5113,72 +5113,72 @@ let TargetPrefix = "x86" in {
   def int_x86_avx10_mask_vcvttpd2dqs_128 : ClangBuiltin<"__builtin_ia32_vcvttpd2dqs128_mask">,
       DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v2f64_ty, llvm_v4i32_ty, llvm_i8_ty],
                             [IntrNoMem]>;
-  def int_x86_avx10_mask_vcvttpd2dqs_round_256: ClangBuiltin<"__builtin_ia32_vcvttpd2dqs256_round_mask">,
-      DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v4f64_ty, llvm_v4i32_ty, llvm_i8_ty, llvm_i32_ty],
-                            [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+  def int_x86_avx10_mask_vcvttpd2dqs_256: ClangBuiltin<"__builtin_ia32_vcvttpd2dqs256_mask">,
+      DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v4f64_ty, llvm_v4i32_ty, llvm_i8_ty],
+                            [IntrNoMem]>;
   def int_x86_avx10_mask_vcvttpd2dqs_round_512 : ClangBuiltin<"__builtin_ia32_vcvttpd2dqs512_round_mask">,
       DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v8f64_ty, llvm_v8i32_ty, llvm_i8_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<3>>]>;
   def int_x86_avx10_mask_vcvttpd2udqs_128 : ClangBuiltin<"__builtin_ia32_vcvttpd2udqs128_mask">,
       DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v2f64_ty,llvm_v4i32_ty, llvm_i8_ty],
                                         [IntrNoMem]>;
-  def int_x86_avx10_mask_vcvttpd2udqs_round_256: ClangBuiltin<"__builtin_ia32_vcvttpd2udqs256_round_mask">,
-      DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v4f64_ty, llvm_v4i32_ty, llvm_i8_ty, llvm_i32_ty],
-                            [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+  def int_x86_avx10_mask_vcvttpd2udqs_256: ClangBuiltin<"__builtin_ia32_vcvttpd2udqs256_mask">,
+      DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v4f64_ty, llvm_v4i32_ty, llvm_i8_ty],
+                            [IntrNoMem]>;
   def int_x86_avx10_mask_vcvttpd2udqs_round_512 : ClangBuiltin<"__builtin_ia32_vcvttpd2udqs512_round_mask">,
       DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v8f64_ty, llvm_v8i32_ty, llvm_i8_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<3>>]>;
   def int_x86_avx10_mask_vcvttpd2qqs_128 : ClangBuiltin<"__builtin_ia32_vcvttpd2qqs128_mask">,
       DefaultAttrsIntrinsic<[llvm_v2i64_ty], [llvm_v2f64_ty,llvm_v2i64_ty, llvm_i8_ty],
                             [IntrNoMem]>;
-  def int_x86_avx10_mask_vcvttpd2qqs_round_256: ClangBuiltin<"__builtin_ia32_vcvttpd2qqs256_round_mask">,
-      DefaultAttrsIntrinsic<[llvm_v4i64_ty], [llvm_v4f64_ty, llvm_v4i64_ty, llvm_i8_ty, llvm_i32_ty],
-                            [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+  def int_x86_avx10_mask_vcvttpd2qqs_256: ClangBuiltin<"__builtin_ia32_vcvttpd2qqs256_mask">,
+      DefaultAttrsIntrinsic<[llvm_v4i64_ty], [llvm_v4f64_ty, llvm_v4i64_ty, llvm_i8_ty],
+                            [IntrNoMem]>;
   def int_x86_avx10_mask_vcvttpd2qqs_round_512 : ClangBuiltin<"__builtin_ia32_vcvttpd2qqs512_round_mask">,
       DefaultAttrsIntrinsic<[llvm_v8i64_ty], [llvm_v8f64_ty, llvm_v8i64_ty, llvm_i8_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<3>>]>;
   def int_x86_avx10_mask_vcvttpd2uqqs_128 : ClangBuiltin<"__builtin_ia32_vcvttpd2uqqs128_mask">,
       DefaultAttrsIntrinsic<[llvm_v2i64_ty], [llvm_v2f64_ty,llvm_v2i64_ty, llvm_i8_ty],
                             [IntrNoMem]>;
-  def int_x86_avx10_mask_vcvttpd2uqqs_round_256: ClangBuiltin<"__builtin_ia32_vcvttpd2uqqs256_round_mask">,
-      DefaultAttrsIntrinsic<[llvm_v4i64_ty], [llvm_v4f64_ty, llvm_v4i64_ty, llvm_i8_ty, llvm_i32_ty],
-                            [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+  def int_x86_avx10_mask_vcvttpd2uqqs_256: ClangBuiltin<"__builtin_ia32_vcvttpd2uqqs256_mask">,
+      DefaultAttrsIntrinsic<[llvm_v4i64_ty], [llvm_v4f64_ty, llvm_v4i64_ty, llvm_i8_ty],
+                            [IntrNoMem]>;
   def int_x86_avx10_mask_vcvttpd2uqqs_round_512 : ClangBuiltin<"__builtin_ia32_vcvttpd2uqqs512_round_mask">,
       DefaultAttrsIntrinsic<[llvm_v8i64_ty], [llvm_v8f64_ty, llvm_v8i64_ty, llvm_i8_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<3>>]>;
   def int_x86_avx10_mask_vcvttps2dqs_128 : ClangBuiltin<"__builtin_ia32_vcvttps2dqs128_mask">,
       DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v4f32_ty, llvm_v4i32_ty, llvm_i8_ty],
                             [IntrNoMem]>;
-  def int_x86_avx10_mask_vcvttps2dqs_round_256: ClangBuiltin<"__builtin_ia32_vcvttps2dqs256_round_mask">,
-      DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v8f32_ty, llvm_v8i32_ty, llvm_i8_ty, llvm_i32_ty],
-                            [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+  def int_x86_avx10_mask_vcvttps2dqs_256: ClangBuiltin<"__builtin_ia32_vcvttps2dqs256_mask">,
+      DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v8f32_ty, llvm_v8i32_ty, llvm_i8_ty],
+                            [IntrNoMem]>;
   def int_x86_avx10_mask_vcvttps2dqs_round_512 : ClangBuiltin<"__builtin_ia32_vcvttps2dqs512_round_mask">,
       DefaultAttrsIntrinsic<[llvm_v16i32_ty], [llvm_v16f32_ty, llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<3>>]>;
   def int_x86_avx10_mask_vcvttps2udqs_128 : ClangBuiltin<"__builtin_ia32_vcvttps2udqs128_mask">,
       DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v4f32_ty, llvm_v4i32_ty, llvm_i8_ty],
                             [IntrNoMem]>;
-  def int_x86_avx10_mask_vcvttps2udqs_round_256: ClangBuiltin<"__builtin_ia32_vcvttps2udqs256_round_mask">,
-      DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v8f32_ty, llvm_v8i32_ty, llvm_i8_ty, llvm_i32_ty],
-                            [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+  def int_x86_avx10_mask_vcvttps2udqs_256: ClangBuiltin<"__builtin_ia32_vcvttps2udqs256_mask">,
+      DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v8f32_ty, llvm_v8i32_ty, llvm_i8_ty],
+                            [IntrNoMem]>;
   def int_x86_avx10_mask_vcvttps2udqs_round_512 : ClangBuiltin<"__builtin_ia32_vcvttps2udqs512_round_mask">,
       DefaultAttrsIntrinsic<[llvm_v16i32_ty], [llvm_v16f32_ty, llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<3>>]>;
   def int_x86_avx10_mask_vcvttps2qqs_128 : ClangBuiltin<"__builtin_ia32_vcvttps2qqs128_mask">,
       DefaultAttrsIntrinsic<[llvm_v2i64_ty], [llvm_v4f32_ty, llvm_v2i64_ty, llvm_i8_ty],
                             [IntrNoMem]>;
-  def int_x86_avx10_mask_vcvttps2qqs_round_256: ClangBuiltin<"__builtin_ia32_vcvttps2qqs256_round_mask">,
-      DefaultAttrsIntrinsic<[llvm_v4i64_ty], [llvm_v4f32_ty, llvm_v4i64_ty, llvm_i8_ty, llvm_i32_ty],
-                            [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+  def int_x86_avx10_mask_vcvttps2qqs_256: ClangBuiltin<"__builtin_ia32_vcvttps2qqs256_mask">,
+      DefaultAttrsIntrinsic<[llvm_v4i64_ty], [llvm_v4f32_ty, llvm_v4i64_ty, llvm_i8_ty],
+                            [IntrNoMem]>;
   def int_x86_avx10_mask_vcvttps2qqs_round_512 : ClangBuiltin<"__builtin_ia32_vcvttps2qqs512_round_mask">,
       DefaultAttrsIntrinsic<[llvm_v8i64_ty], [llvm_v8f32_ty, llvm_v8i64_ty, llvm_i8_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<3>>]>;
   def int_x86_avx10_mask_vcvttps2uqqs_128 : ClangBuiltin<"__builtin_ia32_vcvttps2uqqs128_mask">,
       DefaultAttrsIntrinsic<[llvm_v2i64_ty], [llvm_v4f32_ty,llvm_v2i64_ty, llvm_i8_ty],
                             [IntrNoMem]>;
-  def int_x86_avx10_mask_vcvttps2uqqs_round_256: ClangBuiltin<"__builtin_ia32_vcvttps2uqqs256_round_mask">,
-      DefaultAttrsIntrinsic<[llvm_v4i64_ty], [llvm_v4f32_ty, llvm_v4i64_ty, llvm_i8_ty, llvm_i32_ty],
-                            [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+  def int_x86_avx10_mask_vcvttps2uqqs_256: ClangBuiltin<"__builtin_ia32_vcvttps2uqqs256_mask">,
+      DefaultAttrsIntrinsic<[llvm_v4i64_ty], [llvm_v4f32_ty, llvm_v4i64_ty, llvm_i8_ty],
+                            [IntrNoMem]>;
   def int_x86_avx10_mask_vcvttps2uqqs_round_512 : ClangBuiltin<"__builtin_ia32_vcvttps2uqqs512_round_mask">,
       DefaultAttrsIntrinsic<[llvm_v8i64_ty], [llvm_v8f32_ty, llvm_v8i64_ty, llvm_i8_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<3>>]>;
@@ -6861,9 +6861,9 @@ def int_x86_avx10_mask_vminmaxpd128 : ClangBuiltin<"__builtin_ia32_vminmaxpd128_
 def int_x86_avx10_vminmaxpd256 : ClangBuiltin<"__builtin_ia32_vminmaxpd256">,
         DefaultAttrsIntrinsic<[llvm_v4f64_ty], [llvm_v4f64_ty, llvm_v4f64_ty, llvm_i32_ty],
                   [IntrNoMem, ImmArg<ArgIndex<2>>]>;
-def int_x86_avx10_mask_vminmaxpd256_round : ClangBuiltin<"__builtin_ia32_vminmaxpd256_round_mask">,
-        DefaultAttrsIntrinsic<[llvm_v4f64_ty], [llvm_v4f64_ty, llvm_v4f64_ty, llvm_i32_ty, llvm_v4f64_ty, llvm_i8_ty, llvm_i32_ty],
-                  [IntrNoMem, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>]>;
+def int_x86_avx10_mask_vminmaxpd256 : ClangBuiltin<"__builtin_ia32_vminmaxpd256_mask">,
+        DefaultAttrsIntrinsic<[llvm_v4f64_ty], [llvm_v4f64_ty, llvm_v4f64_ty, llvm_i32_ty, llvm_v4f64_ty, llvm_i8_ty],
+                  [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 def int_x86_avx10_mask_vminmaxpd_round : ClangBuiltin<"__builtin_ia32_vminmaxpd512_round_mask">,
         DefaultAttrsIntrinsic<[llvm_v8f64_ty], [llvm_v8f64_ty, llvm_v8f64_ty, llvm_i32_ty, llvm_v8f64_ty, llvm_i8_ty, llvm_i32_ty],
                   [IntrNoMem, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>]>;
@@ -6876,8 +6876,8 @@ def int_x86_avx10_mask_vminmaxph128 : ClangBuiltin<"__builtin_ia32_vminmaxph128_
 def int_x86_avx10_vminmaxph256 : ClangBuiltin<"__builtin_ia32_vminmaxph256">,
         DefaultAttrsIntrinsic<[llvm_v16f16_ty], [llvm_v16f16_ty, llvm_v16f16_ty, llvm_i32_ty],
                   [IntrNoMem, ImmArg<ArgIndex<2>>]>;
-def int_x86_avx10_mask_vminmaxph256_round : ClangBuiltin<"__builtin_ia32_vminmaxph256_round_mask">,
-        DefaultAttrsIntrinsic<[llvm_v16f16_ty], [llvm_v16f16_ty, llvm_v16f16_ty, llvm_i32_ty, llvm_v16f16_ty, llvm_i16_ty, llvm_i32_ty],
+def int_x86_avx10_mask_vminmaxph256 : ClangBuiltin<"__builtin_ia32_vminmaxph256_mask">,
+        DefaultAttrsIntrinsic<[llvm_v16f16_ty], [llvm_v16f16_ty, llvm_v16f16_ty, llvm_i32_ty, llvm_v16f16_ty, llvm_i16_ty],
                   [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 def int_x86_avx10_mask_vminmaxph_round : ClangBuiltin<"__builtin_ia32_vminmaxph512_round_mask">,
         DefaultAttrsIntrinsic<[llvm_v32f16_ty], [llvm_v32f16_ty, llvm_v32f16_ty, llvm_i32_ty, llvm_v32f16_ty, llvm_i32_ty, llvm_i32_ty],
@@ -6891,9 +6891,9 @@ def int_x86_avx10_mask_vminmaxps128 : ClangBuiltin<"__builtin_ia32_vminmaxps128_
 def int_x86_avx10_vminmaxps256 : ClangBuiltin<"__builtin_ia32_vminmaxps256">,
         DefaultAttrsIntrinsic<[llvm_v8f32_ty], [llvm_v8f32_ty, llvm_v8f32_ty, llvm_i32_ty],
                   [IntrNoMem, ImmArg<ArgIndex<2>>]>;
-def int_x86_avx10_mask_vminmaxps256_round : ClangBuiltin<"__builtin_ia32_vminmaxps256_round_mask">,
-        DefaultAttrsIntrinsic<[llvm_v8f32_ty], [llvm_v8f32_ty, llvm_v8f32_ty, llvm_i32_ty, llvm_v8f32_ty, llvm_i8_ty, llvm_i32_ty],
-                  [IntrNoMem, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>]>;
+def int_x86_avx10_mask_vminmaxps256 : ClangBuiltin<"__builtin_ia32_vminmaxps256_mask">,
+        DefaultAttrsIntrinsic<[llvm_v8f32_ty], [llvm_v8f32_ty, llvm_v8f32_ty, llvm_i32_ty, llvm_v8f32_ty, llvm_i8_ty],
+                  [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 def int_x86_avx10_mask_vminmaxps_round : ClangBuiltin<"__builtin_ia32_vminmaxps512_round_mask">,
         DefaultAttrsIntrinsic<[llvm_v16f32_ty], [llvm_v16f32_ty, llvm_v16f32_ty, llvm_i32_ty, llvm_v16f32_ty, llvm_i16_ty, llvm_i32_ty],
                   [IntrNoMem, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>]>;
@@ -6932,8 +6932,8 @@ def int_x86_avx10_mask_vcvtph2ibs128 : ClangBuiltin<"__builtin_ia32_vcvtph2ibs12
         DefaultAttrsIntrinsic<[llvm_v8i16_ty], [llvm_v8f16_ty, llvm_v8i16_ty, llvm_i8_ty],
                   [IntrNoMem]>;
 def int_x86_avx10_mask_vcvtph2ibs256 : ClangBuiltin<"__builtin_ia32_vcvtph2ibs256_mask">,
-        DefaultAttrsIntrinsic<[llvm_v16i16_ty], [llvm_v16f16_ty, llvm_v16i16_ty, llvm_i16_ty, llvm_i32_ty],
-                  [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+        DefaultAttrsIntrinsic<[llvm_v16i16_ty], [llvm_v16f16_ty, llvm_v16i16_ty, llvm_i16_ty],
+                  [IntrNoMem]>;
 def int_x86_avx10_mask_vcvtph2ibs512 : ClangBuiltin<"__builtin_ia32_vcvtph2ibs512_mask">,
         DefaultAttrsIntrinsic<[llvm_v32i16_ty], [llvm_v32f16_ty, llvm_v32i16_ty, llvm_i32_ty, llvm_i32_ty],
                   [IntrNoMem, ImmArg<ArgIndex<3>>]>;
@@ -6941,8 +6941,8 @@ def int_x86_avx10_mask_vcvtph2iubs128 : ClangBuiltin<"__builtin_ia32_vcvtph2iubs
         DefaultAttrsIntrinsic<[llvm_v8i16_ty], [llvm_v8f16_ty, llvm_v8i16_ty, llvm_i8_ty],
                   [IntrNoMem]>;
 def int_x86_avx10_mask_vcvtph2iubs256 : ClangBuiltin<"__builtin_ia32_vcvtph2iubs256_mask">,
-        DefaultAttrsIntrinsic<[llvm_v16i16_ty], [llvm_v16f16_ty, llvm_v16i16_ty, llvm_i16_ty, llvm_i32_ty],
-                  [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+        DefaultAttrsIntrinsic<[llvm_v16i16_ty], [llvm_v16f16_ty, llvm_v16i16_ty, llvm_i16_ty],
+                  [IntrNoMem]>;
 def int_x86_avx10_mask_vcvtph2iubs512 : ClangBuiltin<"__builtin_ia32_vcvtph2iubs512_mask">,
         DefaultAttrsIntrinsic<[llvm_v32i16_ty], [llvm_v32f16_ty, llvm_v32i16_ty, llvm_i32_ty, llvm_i32_ty],
                   [IntrNoMem, ImmArg<ArgIndex<3>>]>;
@@ -6950,8 +6950,8 @@ def int_x86_avx10_mask_vcvtps2ibs128 : ClangBuiltin<"__builtin_ia32_vcvtps2ibs12
         DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v4f32_ty, llvm_v4i32_ty, llvm_i8_ty],
                   [IntrNoMem]>;
 def int_x86_avx10_mask_vcvtps2ibs256 : ClangBuiltin<"__builtin_ia32_vcvtps2ibs256_mask">,
-        DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v8f32_ty, llvm_v8i32_ty, llvm_i8_ty, llvm_i32_ty],
-                  [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+        DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v8f32_ty, llvm_v8i32_ty, llvm_i8_ty],
+                  [IntrNoMem]>;
 def int_x86_avx10_mask_vcvtps2ibs512 : ClangBuiltin<"__builtin_ia32_vcvtps2ibs512_mask">,
         DefaultAttrsIntrinsic<[llvm_v16i32_ty], [llvm_v16f32_ty, llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty],
                   [IntrNoMem, ImmArg<ArgIndex<3>>]>;
@@ -6959,8 +6959,8 @@ def int_x86_avx10_mask_vcvtps2iubs128 : ClangBuiltin<"__builtin_ia32_vcvtps2iubs
         DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v4f32_ty, llvm_v4i32_ty, llvm_i8_ty],
                   [IntrNoMem]>;
 def int_x86_avx10_mask_vcvtps2iubs256 : ClangBuiltin<"__builtin_ia32_vcvtps2iubs256_mask">,
-        DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v8f32_ty, llvm_v8i32_ty, llvm_i8_ty, llvm_i32_ty],
-                  [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+        DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v8f32_ty, llvm_v8i32_ty, llvm_i8_ty],
+                  [IntrNoMem]>;
 def int_x86_avx10_mask_vcvtps2iubs512 : ClangBuiltin<"__builtin_ia32_vcvtps2iubs512_mask">,
         DefaultAttrsIntrinsic<[llvm_v16i32_ty], [llvm_v16f32_ty, llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty],
                   [IntrNoMem, ImmArg<ArgIndex<3>>]>;
@@ -6986,8 +6986,8 @@ def int_x86_avx10_mask_vcvttph2ibs128 : ClangBuiltin<"__builtin_ia32_vcvttph2ibs
         DefaultAttrsIntrinsic<[llvm_v8i16_ty], [llvm_v8f16_ty, llvm_v8i16_ty, llvm_i8_ty],
                 [IntrNoMem]>;
 def int_x86_avx10_mask_vcvttph2ibs256 : ClangBuiltin<"__builtin_ia32_vcvttph2ibs256_mask">,
-        DefaultAttrsIntrinsic<[llvm_v16i16_ty], [llvm_v16f16_ty, llvm_v16i16_ty, llvm_i16_ty, llvm_i32_ty],
-                  [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+        DefaultAttrsIntrinsic<[llvm_v16i16_ty], [llvm_v16f16_ty, llvm_v16i16_ty, llvm_i16_ty],
+                  [IntrNoMem]>;
 def int_x86_avx10_mask_vcvttph2ibs512 : ClangBuiltin<"__builtin_ia32_vcvttph2ibs512_mask">,
         DefaultAttrsIntrinsic<[llvm_v32i16_ty], [llvm_v32f16_ty, llvm_v32i16_ty, llvm_i32_ty, llvm_i32_ty],
                   [IntrNoMem, ImmArg<ArgIndex<3>>]>;
@@ -6995,8 +6995,8 @@ def int_x86_avx10_mask_vcvttph2iubs128 : ClangBuiltin<"__builtin_ia32_vcvttph2iu
         DefaultAttrsIntrinsic<[llvm_v8i16_ty], [llvm_v8f16_ty, llvm_v8i16_ty, llvm_i8_ty],
                    [IntrNoMem]>;
 def int_x86_avx10_mask_vcvttph2iubs256 : ClangBuiltin<"__builtin_ia32_vcvttph2iubs256_mask">,
-        DefaultAttrsIntrinsic<[llvm_v16i16_ty], [llvm_v16f16_ty, llvm_v16i16_ty, llvm_i16_ty, llvm_i32_ty],
-                  [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+        DefaultAttrsIntrinsic<[llvm_v16i16_ty], [llvm_v16f16_ty, llvm_v16i16_ty, llvm_i16_ty],
+                  [IntrNoMem]>;
 def int_x86_avx10_mask_vcvttph2iubs512 : ClangBuiltin<"__builtin_ia32_vcvttph2iubs512_mask">,
         DefaultAttrsIntrinsic<[llvm_v32i16_ty], [llvm_v32f16_ty, llvm_v32i16_ty, llvm_i32_ty, llvm_i32_ty],
                   [IntrNoMem, ImmArg<ArgIndex<3>>]>;
@@ -7004,8 +7004,8 @@ def int_x86_avx10_mask_vcvttps2ibs128 : ClangBuiltin<"__builtin_ia32_vcvttps2ibs
         DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v4f32_ty, llvm_v4i32_ty, llvm_i8_ty],
                   [IntrNoMem]>;
 def int_x86_avx10_mask_vcvttps2ibs256 : ClangBuiltin<"__builtin_ia32_vcvttps2ibs256_mask">,
-        DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v8f32_ty, llvm_v8i32_ty, llvm_i8_ty, llvm_i32_ty],
-                  [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+        DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v8f32_ty, llvm_v8i32_ty, llvm_i8_ty],
+                  [IntrNoMem]>;
 def int_x86_avx10_mask_vcvttps2ibs512 : ClangBuiltin<"__builtin_ia32_vcvttps2ibs512_mask">,
         DefaultAttrsIntrinsic<[llvm_v16i32_ty], [llvm_v16f32_ty, llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty],
                   [IntrNoMem, ImmArg<ArgIndex<3>>]>;
@@ -7013,8 +7013,8 @@ def int_x86_avx10_mask_vcvttps2iubs128 : ClangBuiltin<"__builtin_ia32_vcvttps2iu
         DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v4f32_ty, llvm_v4i32_ty, llvm_i8_ty],
                 [IntrNoMem]>;
 def int_x86_avx10_mask_vcvttps2iubs256 : ClangBuiltin<"__builtin_ia32_vcvttps2iubs256_mask">,
-        DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v8f32_ty, llvm_v8i32_ty, llvm_i8_ty, llvm_i32_ty],
-                  [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+        DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v8f32_ty, llvm_v8i32_ty, llvm_i8_ty],
+                  [IntrNoMem]>;
 def int_x86_avx10_mask_vcvttps2iubs512 : ClangBuiltin<"__builtin_ia32_vcvttps2iubs512_mask">,
         DefaultAttrsIntrinsic<[llvm_v16i32_ty], [llvm_v16f32_ty, llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty],
                   [IntrNoMem, ImmArg<ArgIndex<3>>]>;

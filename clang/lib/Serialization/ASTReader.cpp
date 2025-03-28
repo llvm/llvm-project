@@ -4901,7 +4901,8 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
     }
   }
 
-  HeaderSearchOptions &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
+  const HeaderSearchOptions &HSOpts =
+      PP.getHeaderSearchInfo().getHeaderSearchOpts();
   if (HSOpts.ModulesValidateOncePerBuildSession) {
     // Now we are certain that the module and all modules it depends on are
     // up-to-date. For implicitly-built module files, ensure the corresponding
@@ -7103,7 +7104,7 @@ void TypeLocReader::VisitRValueReferenceTypeLoc(RValueReferenceTypeLoc TL) {
 
 void TypeLocReader::VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
   TL.setStarLoc(readSourceLocation());
-  TL.setClassTInfo(GetTypeSourceInfo());
+  TL.setQualifierLoc(ReadNestedNameSpecifierLoc());
 }
 
 void TypeLocReader::VisitArrayTypeLoc(ArrayTypeLoc TL) {
@@ -9612,9 +9613,9 @@ ModuleFile *ASTReader::getLocalModuleFile(ModuleFile &M, unsigned ID) const {
     return I == GlobalSubmoduleMap.end() ? nullptr : I->second;
   } else {
     // It's a prefix (preamble, PCH, ...). Look it up by index.
-    unsigned IndexFromEnd = ID >> 1;
+   int IndexFromEnd = static_cast<int>(ID >> 1);
     assert(IndexFromEnd && "got reference to unknown module file");
-    return getModuleManager().pch_modules().end()[-IndexFromEnd];
+    return getModuleManager().pch_modules().end()[-static_cast<int>(IndexFromEnd)];
   }
 }
 
@@ -9632,7 +9633,7 @@ unsigned ASTReader::getModuleFileID(ModuleFile *M) {
   auto PCHModules = getModuleManager().pch_modules();
   auto I = llvm::find(PCHModules, M);
   assert(I != PCHModules.end() && "emitting reference to unknown file");
-  return (I - PCHModules.end()) << 1;
+  return std::distance(I, PCHModules.end()) << 1;
 }
 
 std::optional<ASTSourceDescriptor> ASTReader::getSourceDescriptor(unsigned ID) {
