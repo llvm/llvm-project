@@ -390,19 +390,17 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
            "Rasterizer order views not implemented for SPIR-V yet");
 
     llvm::Type *ElemType = CGM.getTypes().ConvertType(ContainedTy);
-    if (ResAttrs.RawBuffer) {
-      llvm::ArrayType *RuntimeArrayType = llvm::ArrayType::get(ElemType, 0);
-
-      uint32_t StorageClass = /* StorageBuffer storage class */ 12;
-      bool IsWritable =
-          ResAttrs.ResourceClass == llvm::dxil::ResourceClass::UAV;
-      return llvm::TargetExtType::get(Ctx, "spirv.VulkanBuffer",
-                                      {RuntimeArrayType},
-                                      {StorageClass, IsWritable});
+    if (!ResAttrs.RawBuffer) {
+      // convert element type
+      return getSPIRVImageTypeFromHLSLResource(ResAttrs, ElemType, Ctx);
     }
 
-    // convert element type
-    return getSPIRVImageTypeFromHLSLResource(ResAttrs, ElemType, Ctx);
+    llvm::ArrayType *RuntimeArrayType = llvm::ArrayType::get(ElemType, 0);
+    uint32_t StorageClass = /* StorageBuffer storage class */ 12;
+    bool IsWritable = ResAttrs.ResourceClass == llvm::dxil::ResourceClass::UAV;
+    return llvm::TargetExtType::get(Ctx, "spirv.VulkanBuffer",
+                                    {RuntimeArrayType},
+                                    {StorageClass, IsWritable});
   }
   case llvm::dxil::ResourceClass::CBuffer:
     llvm_unreachable("CBuffer handles are not implemented for SPIR-V yet");
