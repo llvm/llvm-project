@@ -195,7 +195,7 @@ public:
 
   const MCExpr *emitPAuthRelocationAsIRelative(
       const MCExpr *Target, uint16_t Disc, AArch64PACKey::ID KeyID,
-      bool HasAddressDiversity, bool IsDSOLocal);
+      bool HasAddressDiversity, bool IsDSOLocal, const MCExpr *DSExpr);
 
   /// tblgen'erated driver function for lowering simple MI->MC
   /// pseudo instructions.
@@ -2270,15 +2270,17 @@ static void emitAddress(MCStreamer &Streamer, MCRegister Reg,
 }
 
 static bool targetSupportsPAuthRelocation(const Triple &TT,
-                                          const MCExpr *Target) {
+                                          const MCExpr *Target,
+                                          const MCExpr *DSExpr) {
   // No released version of glibc supports PAuth relocations.
   if (TT.isOSGlibc())
     return false;
 
   // We emit PAuth constants as IRELATIVE relocations in cases where the
   // constant cannot be represented as a PAuth relocation:
-  // 1) The signed value is not a symbol.
-  return !isa<MCConstantExpr>(Target);
+  // 1) There is a deactivation symbol.
+  // 2) The signed value is not a symbol.
+  return !DSExpr && !isa<MCConstantExpr>(Target);
 }
 
 static bool targetSupportsIRelativeRelocation(const Triple &TT) {
@@ -2295,7 +2297,7 @@ static bool targetSupportsIRelativeRelocation(const Triple &TT) {
 
 const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
     const MCExpr *Target, uint16_t Disc, AArch64PACKey::ID KeyID,
-    bool HasAddressDiversity, bool IsDSOLocal) {
+    bool HasAddressDiversity, bool IsDSOLocal, const MCExpr *DSExpr) {
   const Triple &TT = TM.getTargetTriple();
 
   // We only emit an IRELATIVE relocation if the target supports IRELATIVE and
@@ -2358,6 +2360,18 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
       MCSymbolRefExpr::create(EmuPAC, OutStreamer->getContext());
   OutStreamer->emitInstruction(MCInstBuilder(AArch64::B).addExpr(EmuPACRef),
                                *STI);
+
+  if (DSExpr) {
+    auto *PrePACInstExpr =
+        MCSymbolRefExpr::create(PrePACInst, OutStreamer->getContext());
+    OutStreamer->emitRelocDirective(*PrePACInstExpr, "R_AARCH64_INST32", DSExpr,
+                                    SMLoc(), *STI);
+  }
+
+  // We need a RET despite the above tail call because the deactivation symbol
+  // may replace it with a NOP.
+  OutStreamer->emitInstruction(MCInstBuilder(AArch64::RET).addReg(AArch64::LR),
+                               *STI);
   OutStreamer->popSection();
 
   return MCSymbolRefExpr::create(IFuncSym, OutStreamer->getContext());
@@ -2388,6 +2402,13 @@ AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
     Sym = MCConstantExpr::create(Offset.getSExtValue(), Ctx);
   }
 
+  const MCExpr *DSExpr = nullptr;
+  if (auto *DS = dyn_cast<GlobalValue>(CPA.getDeactivationSymbol())) {
+    if (isa<GlobalAlias>(DS))
+      return Sym;
+    DSExpr = MCSymbolRefExpr::create(getSymbol(DS), Ctx);
+  }
+
   uint64_t KeyID = CPA.getKey()->getZExtValue();
   // We later rely on valid KeyID value in AArch64PACKeyIDToString call from
   // AArch64AuthMCExpr::printImpl, so fail fast.
@@ -2404,8 +2425,12 @@ AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
   // Check if we need to represent this with an IRELATIVE and emit it if so.
   if (auto *IFuncSym = emitPAuthRelocationAsIRelative(
           Sym, Disc, AArch64PACKey::ID(KeyID), CPA.hasAddressDiscriminator(),
-          BaseGVB && BaseGVB->isDSOLocal()))
+          BaseGVB && BaseGVB->isDSOLocal(), DSExpr))
     return IFuncSym;
+
+  if (DSExpr)
+    report_fatal_error("deactivation symbols unsupported in constant "
+                       "expressions on this target");
 
   // Finally build the complete @AUTH expr.
   return AArch64AuthMCExpr::create(Sym, Disc, AArch64PACKey::ID(KeyID),
