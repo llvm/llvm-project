@@ -1791,7 +1791,7 @@ CGDebugInfo::createInlinedTrapSubprogram(StringRef FuncName,
   // We are caching the subprogram because we don't want to duplicate
   // subprograms with the same message. Note that `SPFlagDefinition` prevents
   // subprograms from being uniqued.
-  llvm::DISubprogram *&SP = InlinedTrapFuncMap[FuncName];
+  llvm::DISubprogram *&SP = InlinedSubprogramMap[FuncName];
 
   if (!SP) {
     llvm::DISubroutineType *DIFnTy = DBuilder.createSubroutineType(nullptr);

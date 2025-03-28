@@ -5320,6 +5320,20 @@ convertTargetOpsInNest(Operation *op, llvm::IRBuilderBase &builder,
             if (auto blockArgsIface =
                     dyn_cast<omp::BlockArgOpenMPOpInterface>(oper))
               forwardArgs(moduleTranslation, blockArgsIface);
+            else {
+              // Here we map entry block arguments of
+              // non-BlockArgOpenMPOpInterface ops if they can be encountered
+              // inside of a function and they define any of these arguments.
+              if (isa<mlir::omp::AtomicUpdateOp>(oper))
+                for (auto [operand, arg] :
+                     llvm::zip_equal(oper->getOperands(),
+                                     oper->getRegion(0).getArguments())) {
+                  moduleTranslation.mapValue(
+                      arg, builder.CreateLoad(
+                               moduleTranslation.convertType(arg.getType()),
+                               moduleTranslation.lookupValue(operand)));
+                }
+            }
 
             if (auto loopNest = dyn_cast<omp::LoopNestOp>(oper)) {
               assert(builder.GetInsertBlock() &&
@@ -5337,9 +5351,10 @@ convertTargetOpsInNest(Operation *op, llvm::IRBuilderBase &builder,
               // translation of the OpenMP construct being converted (e.g. no
               // OpenMP runtime calls will be generated). We just need this to
               // prepare the kernel invocation args.
+              SmallVector<llvm::PHINode *> phis;
               auto result = convertOmpOpRegions(
                   region, oper->getName().getStringRef().str() + ".fake.region",
-                  builder, moduleTranslation);
+                  builder, moduleTranslation, &phis);
               if (failed(handleError(result, *oper)))
                 return WalkResult::interrupt();
 

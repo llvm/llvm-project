@@ -102,6 +102,16 @@ static cl::opt<bool>
     UseScalarIncVL("sve-use-scalar-inc-vl", cl::init(false), cl::Hidden,
                    cl::desc("Prefer add+cnt over addvl/inc/dec"));
 
+cl::opt<PtrauthCheckMode> llvm::PtrauthAuthChecks(
+    "aarch64-ptrauth-auth-checks", cl::Hidden,
+    cl::values(clEnumValN(PtrauthCheckMode::Unchecked, "none",
+                          "don't test for failure"),
+               clEnumValN(PtrauthCheckMode::Poison, "poison",
+                          "poison on failure"),
+               clEnumValN(PtrauthCheckMode::Trap, "trap", "trap on failure")),
+    cl::desc("Check pointer authentication auth/resign failures"),
+    cl::init(PtrauthCheckMode::Default));
+
 unsigned AArch64Subtarget::getVectorInsertExtractBaseCost() const {
   if (OverrideVectorInsertExtractBaseCost.getNumOccurrences() > 0)
     return OverrideVectorInsertExtractBaseCost;
@@ -349,6 +359,15 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
     break;
+  case Olympus:
+    EpilogueVectorizationMinVF = 8;
+    MaxInterleaveFactor = 4;
+    ScatterOverhead = 13;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(32);
+    MaxBytesForLoopAlignment = 16;
+    VScaleForTuning = 1;
+    break;
   }
 
   if (AArch64MinimumJumpTableEntries.getNumOccurrences() > 0 || !HasMinSize)
@@ -394,8 +413,7 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
   RegBankInfo.reset(RBI);
 
   auto TRI = getRegisterInfo();
-  StringSet<> ReservedRegNames;
-  ReservedRegNames.insert_range(ReservedRegsForRA);
+  StringSet<> ReservedRegNames(llvm::from_range, ReservedRegsForRA);
   for (unsigned i = 0; i < 29; ++i) {
     if (ReservedRegNames.count(TRI->getName(AArch64::X0 + i)))
       ReserveXRegisterForRA.set(i);
@@ -653,6 +671,19 @@ AArch64Subtarget::getPtrAuthBlockAddressDiscriminatorIfEnabled(
   // This isn't ABI, so we can always do better in the future.
   return getPointerAuthStableSipHash(
       (Twine(ParentFn.getName()) + " blockaddress").str());
+}
+
+bool AArch64Subtarget::isX16X17Safer(const MachineFunction &MF) const {
+  // The Darwin kernel implements special protections for x16 and x17 so we
+  // should prefer to use those registers on that platform.
+  if (isTargetDarwin())
+    return true;
+  // Traps are only implemented for the pseudo instructions, but are only
+  // necessary if FEAT_FPAC is not implemented.
+  if (hasFPAC())
+    return false;
+  return MF.getFunction().hasFnAttribute("ptrauth-auth-traps") ||
+         PtrauthAuthChecks == PtrauthCheckMode::Trap;
 }
 
 bool AArch64Subtarget::enableMachinePipeliner() const {

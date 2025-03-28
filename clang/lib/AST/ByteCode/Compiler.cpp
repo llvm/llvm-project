@@ -1818,7 +1818,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     for (const Expr *Init : Inits) {
       // Skip unnamed bitfields.
       while (InitIndex < R->getNumFields() &&
-             R->getField(InitIndex)->Decl->isUnnamedBitField())
+             R->getField(InitIndex)->isUnnamedBitField())
         ++InitIndex;
 
       if (std::optional<PrimType> T = classify(Init)) {
@@ -3356,7 +3356,8 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
       if (E->isArray())
         Desc = nullptr; // We're not going to use it in this case.
       else
-        Desc = P.createDescriptor(E, *ElemT, Descriptor::InlineDescMD,
+        Desc = P.createDescriptor(E, *ElemT, /*SourceTy=*/nullptr,
+                                  Descriptor::InlineDescMD,
                                   /*IsConst=*/false, /*IsTemporary=*/false,
                                   /*IsMutable=*/false);
     } else {
@@ -3517,7 +3518,7 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
         // ++Iter;
         if (!this->emitGetPtrLocal(Iter, E))
           return false;
-        if (!this->emitIncPop(SizeT, E))
+        if (!this->emitIncPop(SizeT, false, E))
           return false;
 
         if (!this->jump(StartLabel))
@@ -4032,6 +4033,9 @@ template <class Emitter> bool Compiler<Emitter>::visitBool(const Expr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
                                              const Expr *E) {
+  if (const auto *AT = QT->getAs<AtomicType>())
+    QT = AT->getValueType();
+
   switch (T) {
   case PT_Bool:
     return this->emitZeroBool(E);
@@ -4080,7 +4084,7 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
   assert(R);
   // Fields
   for (const Record::Field &Field : R->fields()) {
-    if (Field.Decl->isUnnamedBitField())
+    if (Field.isUnnamedBitField())
       continue;
 
     const Descriptor *D = Field.Desc;
@@ -4260,8 +4264,8 @@ unsigned Compiler<Emitter>::allocateLocalPrimitive(
   // FIXME: There are cases where Src.is<Expr*>() is wrong, e.g.
   //   (int){12} in C. Consider using Expr::isTemporaryObject() instead
   //   or isa<MaterializeTemporaryExpr>().
-  Descriptor *D = P.createDescriptor(Src, Ty, Descriptor::InlineDescMD, IsConst,
-                                     isa<const Expr *>(Src));
+  Descriptor *D = P.createDescriptor(Src, Ty, nullptr, Descriptor::InlineDescMD,
+                                     IsConst, isa<const Expr *>(Src));
   Scope::Local Local = this->createLocal(D);
   if (auto *VD = dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>()))
     Locals.insert({VD, Local});
@@ -5956,7 +5960,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
                            : this->emitIncf(getFPOptions(E), E);
     }
 
-    return DiscardResult ? this->emitIncPop(*T, E) : this->emitInc(*T, E);
+    return DiscardResult ? this->emitIncPop(*T, E->canOverflow(), E)
+                         : this->emitInc(*T, E->canOverflow(), E);
   }
   case UO_PostDec: { // x--
     if (!Ctx.getLangOpts().CPlusPlus14)
@@ -5979,7 +5984,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
                            : this->emitDecf(getFPOptions(E), E);
     }
 
-    return DiscardResult ? this->emitDecPop(*T, E) : this->emitDec(*T, E);
+    return DiscardResult ? this->emitDecPop(*T, E->canOverflow(), E)
+                         : this->emitDec(*T, E->canOverflow(), E);
   }
   case UO_PreInc: { // ++x
     if (!Ctx.getLangOpts().CPlusPlus14)
@@ -6004,7 +6010,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (DiscardResult) {
       if (T == PT_Float)
         return this->emitIncfPop(getFPOptions(E), E);
-      return this->emitIncPop(*T, E);
+      return this->emitIncPop(*T, E->canOverflow(), E);
     }
 
     if (T == PT_Float) {
@@ -6019,13 +6025,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
         return false;
     } else {
       assert(isIntegralType(*T));
-      if (!this->emitLoad(*T, E))
-        return false;
-      if (!this->emitConst(1, E))
-        return false;
-      if (!this->emitAdd(*T, E))
-        return false;
-      if (!this->emitStore(*T, E))
+      if (!this->emitPreInc(*T, E->canOverflow(), E))
         return false;
     }
     return E->isGLValue() || this->emitLoadPop(*T, E);
@@ -6053,7 +6053,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (DiscardResult) {
       if (T == PT_Float)
         return this->emitDecfPop(getFPOptions(E), E);
-      return this->emitDecPop(*T, E);
+      return this->emitDecPop(*T, E->canOverflow(), E);
     }
 
     if (T == PT_Float) {
@@ -6068,13 +6068,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
         return false;
     } else {
       assert(isIntegralType(*T));
-      if (!this->emitLoad(*T, E))
-        return false;
-      if (!this->emitConst(1, E))
-        return false;
-      if (!this->emitSub(*T, E))
-        return false;
-      if (!this->emitStore(*T, E))
+      if (!this->emitPreDec(*T, E->canOverflow(), E))
         return false;
     }
     return E->isGLValue() || this->emitLoadPop(*T, E);

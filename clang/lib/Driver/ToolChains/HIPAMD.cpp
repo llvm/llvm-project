@@ -116,6 +116,8 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
 
   addLinkerCompressDebugSectionsOption(TC, Args, LldArgs);
 
+  amdgpu::addFullLTOPartitionOption(D, Args, LldArgs);
+
   // Given that host and device linking happen in separate processes, the device
   // linker doesn't always have the visibility as to which device symbols are
   // needed by a program, especially for the device symbol dependencies that are

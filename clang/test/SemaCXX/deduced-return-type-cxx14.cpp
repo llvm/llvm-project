@@ -703,6 +703,48 @@ auto f(auto x) { // cxx14-error {{'auto' not allowed in function prototype}}
   return f(1) + 1;
 }
 
+namespace GH122892 {
+  struct NonTemplate {
+    void caller() {
+        c1(int{}); // since-cxx20-error {{cannot be used before it is defined}}
+        c2(int{}); // since-cxx14-error {{cannot be used before it is defined}}
+    }
+
+    static auto c1(auto x) { // since-cxx20-note {{declared here}} // cxx14-error {{'auto' not allowed in function prototype}}
+    }
+
+    template <typename T>
+    static auto c2(T x) { // since-cxx14-note {{declared here}}
+        return x;
+    }
+  };
+
+  struct FunctionTemplateSpecialized {
+    template <typename T>
+    void specialized(){}
+
+    template <>
+    void specialized<int>() {
+      c1(int{}); // since-cxx20-error {{cannot be used before it is defined}}
+      c2(int{}); // since-cxx14-error {{cannot be used before it is defined}}
+    }
+
+    static auto c1(auto x) { // since-cxx20-note {{declared here}} // cxx14-error {{'auto' not allowed in function prototype}}
+    }
+
+    template <typename T>
+    static auto c2(T x) { // since-cxx14-note {{declared here}}
+        return x;
+    }
+  };
+
+  struct MemberInit {
+    int x1 = c1(int{}); // since-cxx20-error {{cannot be used before it is defined}}
+
+    static auto c1(auto x) { return x; } // since-cxx20-note {{declared here}} // cxx14-error {{'auto' not allowed in function prototype}}
+  };
+
+}
 }
 
 #if __cplusplus >= 202002L

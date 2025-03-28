@@ -126,9 +126,9 @@ static const MCPhysReg FixedCSRFIMap[] = {
 static constexpr uint64_t QCIInterruptPushAmount = 96;
 
 static const std::pair<MCPhysReg, int8_t> FixedCSRFIQCIInterruptMap[] = {
-    /* -1 is a gap for mepc/qc.mnepc */
+    /* -1 is a gap for mepc/mnepc */
     {/*fp*/ FPReg, -2},
-    /* -3 is a gap for mcause */
+    /* -3 is a gap for qc.mcause */
     {/*ra*/ RAReg, -4},
     /* -5 is reserved */
     {/*t0*/ RISCV::X5, -6},
@@ -526,7 +526,7 @@ void RISCVFrameLowering::allocateAndProbeStackForRVV(
   // Get VLEN in TargetReg
   const RISCVInstrInfo *TII = STI.getInstrInfo();
   Register TargetReg = RISCV::X6;
-  uint32_t NumOfVReg = Amount / (RISCV::RVVBitsPerBlock / 8);
+  uint32_t NumOfVReg = Amount / RISCV::RVVBytesPerBlock;
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::PseudoReadVLENB), TargetReg)
       .setMIFlag(Flag);
   TII->mulImm(MF, MBB, MBBI, DL, TargetReg, NumOfVReg, Flag);
@@ -1544,11 +1544,11 @@ RISCVFrameLowering::assignRVVStackObjectOffsets(MachineFunction &MF) const {
     // ObjectSize in bytes.
     int64_t ObjectSize = MFI.getObjectSize(FI);
     auto ObjectAlign =
-        std::max(Align(RISCV::RVVBitsPerBlock / 8), MFI.getObjectAlign(FI));
+        std::max(Align(RISCV::RVVBytesPerBlock), MFI.getObjectAlign(FI));
     // If the data type is the fractional vector type, reserve one vector
     // register for it.
-    if (ObjectSize < (RISCV::RVVBitsPerBlock / 8))
-      ObjectSize = (RISCV::RVVBitsPerBlock / 8);
+    if (ObjectSize < RISCV::RVVBytesPerBlock)
+      ObjectSize = RISCV::RVVBytesPerBlock;
     Offset = alignTo(Offset + ObjectSize, ObjectAlign);
     MFI.setObjectOffset(FI, -Offset);
     // Update the maximum alignment of the RVV stack section
@@ -2194,6 +2194,17 @@ bool RISCVFrameLowering::canUseAsPrologue(const MachineBasicBlock &MBB) const {
   MachineBasicBlock *TmpMBB = const_cast<MachineBasicBlock *>(&MBB);
   const MachineFunction *MF = MBB.getParent();
   const auto *RVFI = MF->getInfo<RISCVMachineFunctionInfo>();
+
+  // Make sure VTYPE and VL are not live-in since we will use vsetvli in the
+  // prologue to get the VLEN, and that will clobber these registers.
+  //
+  // We may do also check the stack contains objects with scalable vector type,
+  // but this will require iterating over all the stack objects, but this may
+  // not worth since the situation is rare, we could do further check in future
+  // if we find it is necessary.
+  if (STI.preferVsetvliOverReadVLENB() &&
+      (MBB.isLiveIn(RISCV::VTYPE) || MBB.isLiveIn(RISCV::VL)))
+    return false;
 
   if (!RVFI->useSaveRestoreLibCalls(*MF))
     return true;

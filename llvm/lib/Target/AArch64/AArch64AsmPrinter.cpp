@@ -69,15 +69,6 @@
 
 using namespace llvm;
 
-enum PtrauthCheckMode { Default, Unchecked, Poison, Trap };
-static cl::opt<PtrauthCheckMode> PtrauthAuthChecks(
-    "aarch64-ptrauth-auth-checks", cl::Hidden,
-    cl::values(clEnumValN(Unchecked, "none", "don't test for failure"),
-               clEnumValN(Poison, "poison", "poison on failure"),
-               clEnumValN(Trap, "trap", "trap on failure")),
-    cl::desc("Check pointer authentication auth/resign failures"),
-    cl::init(Default));
-
 #define DEBUG_TYPE "asm-printer"
 
 namespace {
@@ -919,19 +910,17 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
       // Intentionally load the GOT entry and branch to it, rather than possibly
       // late binding the function, which may clobber the registers before we
       // have a chance to save them.
-      EmitToStreamer(
-          MCInstBuilder(AArch64::ADRP)
-              .addReg(AArch64::X16)
-              .addExpr(AArch64MCExpr::create(
-                  HwasanTagMismatchRef, AArch64MCExpr::VariantKind::VK_GOT_PAGE,
-                  OutContext)));
-      EmitToStreamer(
-          MCInstBuilder(AArch64::LDRXui)
-              .addReg(AArch64::X16)
-              .addReg(AArch64::X16)
-              .addExpr(AArch64MCExpr::create(
-                  HwasanTagMismatchRef, AArch64MCExpr::VariantKind::VK_GOT_LO12,
-                  OutContext)));
+      EmitToStreamer(MCInstBuilder(AArch64::ADRP)
+                         .addReg(AArch64::X16)
+                         .addExpr(AArch64MCExpr::create(
+                             HwasanTagMismatchRef, AArch64MCExpr::VK_GOT_PAGE,
+                             OutContext)));
+      EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
+                         .addReg(AArch64::X16)
+                         .addReg(AArch64::X16)
+                         .addExpr(AArch64MCExpr::create(
+                             HwasanTagMismatchRef, AArch64MCExpr::VK_GOT_LO12,
+                             OutContext)));
       EmitToStreamer(MCInstBuilder(AArch64::BR).addReg(AArch64::X16));
     }
   }
@@ -2868,7 +2857,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   }
 
-  case AArch64::AUT:
+  case AArch64::AUTx16x17:
   case AArch64::AUTPAC:
     emitPtrauthAuthResign(MI);
     return;

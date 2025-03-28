@@ -877,7 +877,7 @@ def Wa_COMMA : CommaJoined<["-"], "Wa,">,
 def warning_suppression_mappings_EQ : Joined<["--"],
   "warning-suppression-mappings=">, Group<Diag_Group>,
   HelpText<"File containing diagnostic suppression mappings. See user manual "
-  "for file format.">, Visibility<[ClangOption, CC1Option]>;
+  "for file format.">, Visibility<[ClangOption, CLOption, CC1Option]>;
 def Wall : Flag<["-"], "Wall">, Group<W_Group>, Flags<[HelpHidden]>,
   Visibility<[ClangOption, CC1Option, FlangOption]>;
 def WCL4 : Flag<["-"], "WCL4">, Group<W_Group>, Flags<[HelpHidden]>,
@@ -1129,13 +1129,12 @@ def fno_convergent_functions : Flag<["-"], "fno-convergent-functions">,
 // Common offloading options
 let Group = offload_Group in {
 def offload_arch_EQ : Joined<["--"], "offload-arch=">,
-  Visibility<[ClangOption, FlangOption]>, Flags<[NoXarchOption]>,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify an offloading device architecture for CUDA, HIP, or OpenMP. (e.g. sm_35). "
            "If 'native' is used the compiler will detect locally installed architectures. "
            "For HIP offloading, the device architecture can be followed by target ID features "
            "delimited by a colon (e.g. gfx908:xnack+:sramecc-). May be specified more than once.">;
 def no_offload_arch_EQ : Joined<["--"], "no-offload-arch=">,
-  Flags<[NoXarchOption]>,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Remove CUDA/HIP offloading device architecture (e.g. sm_35, gfx906) from the list of devices to compile for. "
            "'all' resets the list to its default value.">;
@@ -1393,6 +1392,8 @@ def fhip_emit_relocatable : Flag<["-"], "fhip-emit-relocatable">,
   HelpText<"Compile HIP source to relocatable">;
 def fno_hip_emit_relocatable : Flag<["-"], "fno-hip-emit-relocatable">,
   HelpText<"Do not override toolchain to compile HIP source to relocatable">;
+def flto_partitions_EQ : Joined<["--"], "flto-partitions=">, Group<hip_Group>,
+  HelpText<"Number of partitions to use for parallel full LTO codegen. Use 1 to disable partitioning.">;
 }
 
 // Clang specific/exclusive options for OpenACC.
@@ -4029,13 +4030,14 @@ def fvectorize : Flag<["-"], "fvectorize">, Group<f_Group>,
 def fno_vectorize : Flag<["-"], "fno-vectorize">, Group<f_Group>;
 def : Flag<["-"], "ftree-vectorize">, Alias<fvectorize>;
 def : Flag<["-"], "fno-tree-vectorize">, Alias<fno_vectorize>;
-}
 
 def fslp_vectorize : Flag<["-"], "fslp-vectorize">, Group<f_Group>,
   HelpText<"Enable the superword-level parallelism vectorization passes">;
 def fno_slp_vectorize : Flag<["-"], "fno-slp-vectorize">, Group<f_Group>;
 def : Flag<["-"], "ftree-slp-vectorize">, Alias<fslp_vectorize>;
 def : Flag<["-"], "fno-tree-slp-vectorize">, Alias<fno_slp_vectorize>;
+}
+
 def Wlarge_by_value_copy_def : Flag<["-"], "Wlarge-by-value-copy">,
   HelpText<"Warn if a function definition returns or accepts an object larger "
            "in bytes than a given value">, Flags<[HelpHidden]>;
@@ -5162,12 +5164,12 @@ defm amdgpu_ieee : BoolMOption<"amdgpu-ieee",
   NegFlag<SetFalse, [], [ClangOption, CC1Option]>>;
 
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
-  HelpText<"Specify code object ABI version. Defaults to 5. (AMDGPU only)">,
+  HelpText<"Specify code object ABI version. Defaults to 6. (AMDGPU only)">,
   Visibility<[ClangOption, FlangOption, CC1Option, FC1Option]>,
   Values<"none,4,5,6">,
   NormalizedValuesScope<"llvm::CodeObjectVersionKind">,
   NormalizedValues<["COV_None", "COV_4", "COV_5", "COV_6"]>,
-  MarshallingInfoEnum<TargetOpts<"CodeObjectVersion">, "COV_5">;
+  MarshallingInfoEnum<TargetOpts<"CodeObjectVersion">, "COV_6">;
 
 defm cumode : SimpleMFlag<"cumode",
   "Specify CU wavefront", "Specify WGP wavefront",
@@ -7383,6 +7385,9 @@ def mlink_bitcode_file
 def vectorize_loops : Flag<["-"], "vectorize-loops">,
   HelpText<"Run the Loop vectorization passes">,
   MarshallingInfoFlag<CodeGenOpts<"VectorizeLoop">>;
+def vectorize_slp : Flag<["-"], "vectorize-slp">,
+  HelpText<"Run the SLP vectorization passes">,
+  MarshallingInfoFlag<CodeGenOpts<"VectorizeSLP">>;
 } // let Visibility = [CC1Option, FC1Option]
 
 let Visibility = [CC1Option] in {
@@ -7498,9 +7503,6 @@ defm link_builtin_bitcode_postopt: BoolMOption<"link-builtin-bitcode-postopt",
   PosFlag<SetTrue, [], [ClangOption], "Link builtin bitcodes after the "
   "optimization pipeline">,
   NegFlag<SetFalse, [], [ClangOption]>>;
-def vectorize_slp : Flag<["-"], "vectorize-slp">,
-  HelpText<"Run the SLP vectorization passes">,
-  MarshallingInfoFlag<CodeGenOpts<"VectorizeSLP">>;
 def linker_option : Joined<["--"], "linker-option=">,
   HelpText<"Add linker option">,
   MarshallingInfoStringVector<CodeGenOpts<"LinkerOptions">>;

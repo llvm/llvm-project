@@ -24,6 +24,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
@@ -81,6 +82,10 @@ public:
   SetVector(It Start, It End) {
     insert(Start, End);
   }
+
+  template <typename Range>
+  SetVector(llvm::from_range_t, Range &&R)
+      : SetVector(adl_begin(R), adl_end(R)) {}
 
   ArrayRef<value_type> getArrayRef() const { return vector_; }
 
@@ -381,6 +386,10 @@ public:
   SmallSetVector(It Start, It End) {
     this->insert(Start, End);
   }
+
+  template <typename Range>
+  SmallSetVector(llvm::from_range_t, Range &&R)
+      : SmallSetVector(adl_begin(R), adl_end(R)) {}
 };
 
 } // end namespace llvm

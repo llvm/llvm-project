@@ -247,22 +247,22 @@ struct tuple_size<ranges::subrange<_Ip, _Sp, _Kp>> : integral_constant<size_t, 2
 
 template <class _Ip, class _Sp, ranges::subrange_kind _Kp>
 struct tuple_element<0, ranges::subrange<_Ip, _Sp, _Kp>> {
-  using type = _Ip;
+  using type _LIBCPP_NODEBUG = _Ip;
 };
 
 template <class _Ip, class _Sp, ranges::subrange_kind _Kp>
 struct tuple_element<1, ranges::subrange<_Ip, _Sp, _Kp>> {
-  using type = _Sp;
+  using type _LIBCPP_NODEBUG = _Sp;
 };
 
 template <class _Ip, class _Sp, ranges::subrange_kind _Kp>
 struct tuple_element<0, const ranges::subrange<_Ip, _Sp, _Kp>> {
-  using type = _Ip;
+  using type _LIBCPP_NODEBUG = _Ip;
 };
 
 template <class _Ip, class _Sp, ranges::subrange_kind _Kp>
 struct tuple_element<1, const ranges::subrange<_Ip, _Sp, _Kp>> {
-  using type = _Sp;
+  using type _LIBCPP_NODEBUG = _Sp;
 };
 
 #endif // _LIBCPP_STD_VER >= 20

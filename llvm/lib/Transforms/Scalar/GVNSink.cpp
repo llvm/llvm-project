@@ -566,8 +566,7 @@ private:
     for (PHINode &PN : BB->phis()) {
       auto MPHI = ModelledPHI(&PN, RPOTOrder);
       PHIs.insert(MPHI);
-      for (auto *V : MPHI.getValues())
-        PHIContents.insert(V);
+      PHIContents.insert_range(MPHI.getValues());
     }
   }
 

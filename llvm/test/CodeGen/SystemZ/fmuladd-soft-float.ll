@@ -101,9 +101,9 @@ define <4 x float> @fmuladd_contract_v4f32(<4 x float> %a, <4 x float> %b, <4 x 
 ; SOFT-FLOAT-NEXT:    aghi %r15, -176
 ; SOFT-FLOAT-NEXT:    .cfi_def_cfa_offset 336
 ; SOFT-FLOAT-NEXT:    llgf %r0, 388(%r15)
-; SOFT-FLOAT-NEXT:    stg %r0, 168(%r15) # 8-byte Folded Spill
+; SOFT-FLOAT-NEXT:    stg %r0, 168(%r15) # 8-byte Spill
 ; SOFT-FLOAT-NEXT:    llgf %r0, 380(%r15)
-; SOFT-FLOAT-NEXT:    stg %r0, 160(%r15) # 8-byte Folded Spill
+; SOFT-FLOAT-NEXT:    stg %r0, 160(%r15) # 8-byte Spill
 ; SOFT-FLOAT-NEXT:    llgf %r11, 372(%r15)
 ; SOFT-FLOAT-NEXT:    llgf %r10, 364(%r15)
 ; SOFT-FLOAT-NEXT:    llgf %r8, 340(%r15)
@@ -139,11 +139,11 @@ define <4 x float> @fmuladd_contract_v4f32(<4 x float> %a, <4 x float> %b, <4 x 
 ; SOFT-FLOAT-NEXT:    brasl %r14, __addsf3@PLT
 ; SOFT-FLOAT-NEXT:    lgr %r12, %r2
 ; SOFT-FLOAT-NEXT:    lgr %r2, %r13
-; SOFT-FLOAT-NEXT:    lg %r3, 160(%r15) # 8-byte Folded Reload
+; SOFT-FLOAT-NEXT:    lg %r3, 160(%r15) # 8-byte Reload
 ; SOFT-FLOAT-NEXT:    brasl %r14, __addsf3@PLT
 ; SOFT-FLOAT-NEXT:    lgr %r13, %r2
 ; SOFT-FLOAT-NEXT:    lgr %r2, %r9
-; SOFT-FLOAT-NEXT:    lg %r3, 168(%r15) # 8-byte Folded Reload
+; SOFT-FLOAT-NEXT:    lg %r3, 168(%r15) # 8-byte Reload
 ; SOFT-FLOAT-NEXT:    brasl %r14, __addsf3@PLT
 ; SOFT-FLOAT-NEXT:    lgr %r5, %r2
 ; SOFT-FLOAT-NEXT:    lr %r2, %r10
@@ -203,15 +203,15 @@ define <4 x double> @fmuladd_contract_v4f64(<4 x double> %a, <4 x double> %b, <4
 ; SOFT-FLOAT-NEXT:    brasl %r14, __adddf3@PLT
 ; SOFT-FLOAT-NEXT:    lgr %r10, %r2
 ; SOFT-FLOAT-NEXT:    lgr %r2, %r12
-; SOFT-FLOAT-NEXT:    lg %r3, 160(%r15) # 8-byte Folded Reload
+; SOFT-FLOAT-NEXT:    lg %r3, 160(%r15) # 8-byte Reload
 ; SOFT-FLOAT-NEXT:    brasl %r14, __adddf3@PLT
 ; SOFT-FLOAT-NEXT:    lgr %r12, %r2
 ; SOFT-FLOAT-NEXT:    lgr %r2, %r13
-; SOFT-FLOAT-NEXT:    lg %r3, 168(%r15) # 8-byte Folded Reload
+; SOFT-FLOAT-NEXT:    lg %r3, 168(%r15) # 8-byte Reload
 ; SOFT-FLOAT-NEXT:    brasl %r14, __adddf3@PLT
 ; SOFT-FLOAT-NEXT:    lgr %r13, %r2
 ; SOFT-FLOAT-NEXT:    lgr %r2, %r11
-; SOFT-FLOAT-NEXT:    lg %r3, 176(%r15) # 8-byte Folded Reload
+; SOFT-FLOAT-NEXT:    lg %r3, 176(%r15) # 8-byte Reload
 ; SOFT-FLOAT-NEXT:    brasl %r14, __adddf3@PLT
 ; SOFT-FLOAT-NEXT:    lgr %r5, %r2
 ; SOFT-FLOAT-NEXT:    lgr %r2, %r10

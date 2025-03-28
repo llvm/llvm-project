@@ -122,7 +122,7 @@ class CompressInstEmitter {
   enum EmitterType { Compress, Uncompress, CheckCompress };
   const RecordKeeper &Records;
   const CodeGenTarget Target;
-  SmallVector<CompressPat, 4> CompressPatterns;
+  std::vector<CompressPat> CompressPatterns;
 
   void addDagOperandMapping(const Record *Rec, const DagInit *Dag,
                             const CodeGenInstruction &Inst,

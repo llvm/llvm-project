@@ -31,6 +31,7 @@
 namespace clang {
 class IdentifierInfo;
 class OpenACCClause;
+class Scope;
 
 class SemaOpenACC : public SemaBase {
 public:
@@ -172,6 +173,9 @@ private:
   // check them later.
   llvm::SmallDenseMap<const clang::FunctionDecl *, SourceLocation>
       MagicStaticLocs;
+  OpenACCRoutineDecl *LastRoutineDecl = nullptr;
+
+  void CheckLastRoutineDeclNameConflict(const NamedDecl *ND);
 
 public:
   ComputeConstructInfo &getActiveComputeConstructInfo() {
@@ -763,10 +767,37 @@ public:
 
   /// Called after the directive has been completely parsed, including the
   /// declaration group or associated statement.
-  DeclGroupRef ActOnEndDeclDirective(
-      OpenACCDirectiveKind K, SourceLocation StartLoc, SourceLocation DirLoc,
-      SourceLocation LParenLoc, Expr *FuncRef, SourceLocation RParenLoc,
-      SourceLocation EndLoc, ArrayRef<OpenACCClause *> Clauses);
+  DeclGroupRef
+  ActOnEndDeclDirective(OpenACCDirectiveKind K, SourceLocation StartLoc,
+                        SourceLocation DirLoc, SourceLocation LParenLoc,
+                        SourceLocation RParenLoc, SourceLocation EndLoc,
+                        ArrayRef<OpenACCClause *> Clauses);
+
+  // Helper functions for ActOnEndRoutine*Directive, which does all the checking
+  // given the proper list of declarations.
+  void CheckRoutineDecl(SourceLocation DirLoc,
+                        ArrayRef<const OpenACCClause *> Clauses,
+                        Decl *NextParsedDecl);
+  OpenACCRoutineDecl *CheckRoutineDecl(SourceLocation StartLoc,
+                                       SourceLocation DirLoc,
+                                       SourceLocation LParenLoc, Expr *FuncRef,
+                                       SourceLocation RParenLoc,
+                                       ArrayRef<const OpenACCClause *> Clauses,
+                                       SourceLocation EndLoc);
+  OpenACCRoutineDeclAttr *
+  mergeRoutineDeclAttr(const OpenACCRoutineDeclAttr &Old);
+  DeclGroupRef
+  ActOnEndRoutineDeclDirective(SourceLocation StartLoc, SourceLocation DirLoc,
+                               SourceLocation LParenLoc, Expr *ReferencedFunc,
+                               SourceLocation RParenLoc,
+                               ArrayRef<const OpenACCClause *> Clauses,
+                               SourceLocation EndLoc, DeclGroupPtrTy NextDecl);
+  StmtResult
+  ActOnEndRoutineStmtDirective(SourceLocation StartLoc, SourceLocation DirLoc,
+                               SourceLocation LParenLoc, Expr *ReferencedFunc,
+                               SourceLocation RParenLoc,
+                               ArrayRef<const OpenACCClause *> Clauses,
+                               SourceLocation EndLoc, Stmt *NextStmt);
 
   /// Called when encountering an 'int-expr' for OpenACC, and manages
   /// conversions and diagnostics to 'int'.
@@ -780,8 +811,14 @@ public:
   /// Helper function called by ActonVar that is used to check a 'cache' var.
   ExprResult ActOnCacheVar(Expr *VarExpr);
   /// Function called when a variable declarator is created, which lets us
-  /// impelment the 'routine' 'function static variables' restriction.
+  /// implement the 'routine' 'function static variables' restriction.
   void ActOnVariableDeclarator(VarDecl *VD);
+  /// Called when a function decl is created, which lets us implement the
+  /// 'routine' 'doesn't match next thing' warning.
+  void ActOnFunctionDeclarator(FunctionDecl *FD);
+  /// Called when a variable is initialized, so we can implement the 'routine
+  /// 'doesn't match the next thing' warning for lambda init.
+  void ActOnVariableInit(VarDecl *VD, QualType InitType);
 
   // Called after 'ActOnVar' specifically for a 'link' clause, which has to do
   // some minor additional checks.

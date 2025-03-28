@@ -99,6 +99,37 @@ Register RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   return isLoadFromStackSlot(MI, FrameIndex, Dummy);
 }
 
+static std::optional<unsigned> getLMULForRVVWholeLoadStore(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return std::nullopt;
+  case RISCV::VS1R_V:
+  case RISCV::VL1RE8_V:
+  case RISCV::VL1RE16_V:
+  case RISCV::VL1RE32_V:
+  case RISCV::VL1RE64_V:
+    return 1;
+  case RISCV::VS2R_V:
+  case RISCV::VL2RE8_V:
+  case RISCV::VL2RE16_V:
+  case RISCV::VL2RE32_V:
+  case RISCV::VL2RE64_V:
+    return 2;
+  case RISCV::VS4R_V:
+  case RISCV::VL4RE8_V:
+  case RISCV::VL4RE16_V:
+  case RISCV::VL4RE32_V:
+  case RISCV::VL4RE64_V:
+    return 4;
+  case RISCV::VS8R_V:
+  case RISCV::VL8RE8_V:
+  case RISCV::VL8RE16_V:
+  case RISCV::VL8RE32_V:
+  case RISCV::VL8RE64_V:
+    return 8;
+  }
+}
+
 Register RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                              int &FrameIndex,
                                              TypeSize &MemBytes) const {
@@ -125,6 +156,16 @@ Register RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   case RISCV::FLD:
     MemBytes = TypeSize::getFixed(8);
     break;
+  case RISCV::VL1RE8_V:
+  case RISCV::VL2RE8_V:
+  case RISCV::VL4RE8_V:
+  case RISCV::VL8RE8_V:
+    if (!MI.getOperand(1).isFI())
+      return Register();
+    FrameIndex = MI.getOperand(1).getIndex();
+    unsigned LMUL = *getLMULForRVVWholeLoadStore(MI.getOpcode());
+    MemBytes = TypeSize::getScalable(RISCV::RVVBytesPerBlock * LMUL);
+    return MI.getOperand(0).getReg();
   }
 
   if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
@@ -165,6 +206,16 @@ Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   case RISCV::FSD:
     MemBytes = TypeSize::getFixed(8);
     break;
+  case RISCV::VS1R_V:
+  case RISCV::VS2R_V:
+  case RISCV::VS4R_V:
+  case RISCV::VS8R_V:
+    if (!MI.getOperand(1).isFI())
+      return Register();
+    FrameIndex = MI.getOperand(1).getIndex();
+    unsigned LMUL = *getLMULForRVVWholeLoadStore(MI.getOpcode());
+    MemBytes = TypeSize::getScalable(RISCV::RVVBytesPerBlock * LMUL);
+    return MI.getOperand(0).getReg();
   }
 
   if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
@@ -654,9 +705,11 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     llvm_unreachable("Can't store this register to stack slot");
 
   if (IsScalableVector) {
+    LocationSize LocSize =
+        LocationSize::precise(TypeSize::getScalable(MFI.getObjectSize(FI)));
     MachineMemOperand *MMO = MF->getMachineMemOperand(
         MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOStore,
-        LocationSize::beforeOrAfterPointer(), MFI.getObjectAlign(FI));
+        LocSize, MFI.getObjectAlign(FI));
 
     MFI.setStackID(FI, TargetStackID::ScalableVector);
     BuildMI(MBB, I, DebugLoc(), get(Opcode))
@@ -746,9 +799,11 @@ void RISCVInstrInfo::loadRegFromStackSlot(
     llvm_unreachable("Can't load this register from stack slot");
 
   if (IsScalableVector) {
+    LocationSize LocSize =
+        LocationSize::precise(TypeSize::getScalable(MFI.getObjectSize(FI)));
     MachineMemOperand *MMO = MF->getMachineMemOperand(
         MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOLoad,
-        LocationSize::beforeOrAfterPointer(), MFI.getObjectAlign(FI));
+        LocSize, MFI.getObjectAlign(FI));
 
     MFI.setStackID(FI, TargetStackID::ScalableVector);
     BuildMI(MBB, I, DL, get(Opcode), DstReg)
@@ -768,92 +823,87 @@ void RISCVInstrInfo::loadRegFromStackSlot(
         .setMIFlag(Flags);
   }
 }
+std::optional<unsigned> getFoldedOpcode(MachineFunction &MF, MachineInstr &MI,
+                                        ArrayRef<unsigned> Ops,
+                                        const RISCVSubtarget &ST) {
 
-MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
-    MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, int FrameIndex, LiveIntervals *LIS,
-    VirtRegMap *VRM) const {
   // The below optimizations narrow the load so they are only valid for little
   // endian.
   // TODO: Support big endian by adding an offset into the frame object?
   if (MF.getDataLayout().isBigEndian())
-    return nullptr;
+    return std::nullopt;
 
   // Fold load from stack followed by sext.b/sext.h/sext.w/zext.b/zext.h/zext.w.
   if (Ops.size() != 1 || Ops[0] != 1)
-   return nullptr;
+    return std::nullopt;
 
-  unsigned LoadOpc;
   switch (MI.getOpcode()) {
   default:
-    if (RISCV::isSEXT_W(MI)) {
-      LoadOpc = RISCV::LW;
-      break;
-    }
-    if (RISCV::isZEXT_W(MI)) {
-      LoadOpc = RISCV::LWU;
-      break;
-    }
-    if (RISCV::isZEXT_B(MI)) {
-      LoadOpc = RISCV::LBU;
-      break;
-    }
-    if (RISCV::getRVVMCOpcode(MI.getOpcode()) == RISCV::VMV_X_S) {
-      unsigned Log2SEW =
-          MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
-      if (STI.getXLen() < (1U << Log2SEW))
-        return nullptr;
-      switch (Log2SEW) {
-      case 3:
-        LoadOpc = RISCV::LB;
-        break;
-      case 4:
-        LoadOpc = RISCV::LH;
-        break;
-      case 5:
-        LoadOpc = RISCV::LW;
-        break;
-      case 6:
-        LoadOpc = RISCV::LD;
-        break;
-      default:
-        llvm_unreachable("Unexpected SEW");
-      }
-      break;
-    }
-    if (RISCV::getRVVMCOpcode(MI.getOpcode()) == RISCV::VFMV_F_S) {
-      unsigned Log2SEW =
-          MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
-      switch (Log2SEW) {
-      case 4:
-        LoadOpc = RISCV::FLH;
-        break;
-      case 5:
-        LoadOpc = RISCV::FLW;
-        break;
-      case 6:
-        LoadOpc = RISCV::FLD;
-        break;
-      default:
-        llvm_unreachable("Unexpected SEW");
-      }
-      break;
-    }
-    return nullptr;
+    if (RISCV::isSEXT_W(MI))
+      return RISCV::LW;
+    if (RISCV::isZEXT_W(MI))
+      return RISCV::LWU;
+    if (RISCV::isZEXT_B(MI))
+      return RISCV::LBU;
+    break;
   case RISCV::SEXT_H:
-    LoadOpc = RISCV::LH;
-    break;
+    return RISCV::LH;
   case RISCV::SEXT_B:
-    LoadOpc = RISCV::LB;
-    break;
+    return RISCV::LB;
   case RISCV::ZEXT_H_RV32:
   case RISCV::ZEXT_H_RV64:
-    LoadOpc = RISCV::LHU;
-    break;
+    return RISCV::LHU;
   }
 
+  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
+  default:
+    return std::nullopt;
+  case RISCV::VMV_X_S: {
+    unsigned Log2SEW =
+        MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
+    if (ST.getXLen() < (1U << Log2SEW))
+      return std::nullopt;
+    switch (Log2SEW) {
+    case 3:
+      return RISCV::LB;
+    case 4:
+      return RISCV::LH;
+    case 5:
+      return RISCV::LW;
+    case 6:
+      return RISCV::LD;
+    default:
+      llvm_unreachable("Unexpected SEW");
+    }
+  }
+  case RISCV::VFMV_F_S: {
+    unsigned Log2SEW =
+        MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
+    switch (Log2SEW) {
+    case 4:
+      return RISCV::FLH;
+    case 5:
+      return RISCV::FLW;
+    case 6:
+      return RISCV::FLD;
+    default:
+      llvm_unreachable("Unexpected SEW");
+    }
+  }
+  }
+}
+
+// This is the version used during inline spilling
+MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
+    MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
+    MachineBasicBlock::iterator InsertPt, int FrameIndex, LiveIntervals *LIS,
+    VirtRegMap *VRM) const {
+
+  std::optional<unsigned> LoadOpc = getFoldedOpcode(MF, MI, Ops, STI);
+  if (!LoadOpc)
+    return nullptr;
   Register DstReg = MI.getOperand(0).getReg();
-  return BuildMI(*MI.getParent(), InsertPt, MI.getDebugLoc(), get(LoadOpc),
+  return BuildMI(*MI.getParent(), InsertPt, MI.getDebugLoc(), get(*LoadOpc),
                  DstReg)
       .addFrameIndex(FrameIndex)
       .addImm(0);
@@ -2552,8 +2602,11 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           // clang-format off
         CASE_OPERAND_SIMM(5)
         CASE_OPERAND_SIMM(6)
+        CASE_OPERAND_SIMM(11)
         CASE_OPERAND_SIMM(12)
+        CASE_OPERAND_SIMM(20)
         CASE_OPERAND_SIMM(26)
+        CASE_OPERAND_SIMM(32)
         // clang-format on
         case RISCVOp::OPERAND_SIMM5_PLUS1:
           Ok = (isInt<5>(Imm) && Imm != -16) || Imm == 16;
@@ -4071,40 +4124,12 @@ bool RISCV::isZEXT_B(const MachineInstr &MI) {
          MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 255;
 }
 
-static bool isRVVWholeLoadStore(unsigned Opcode) {
-  switch (Opcode) {
-  default:
-    return false;
-  case RISCV::VS1R_V:
-  case RISCV::VS2R_V:
-  case RISCV::VS4R_V:
-  case RISCV::VS8R_V:
-  case RISCV::VL1RE8_V:
-  case RISCV::VL2RE8_V:
-  case RISCV::VL4RE8_V:
-  case RISCV::VL8RE8_V:
-  case RISCV::VL1RE16_V:
-  case RISCV::VL2RE16_V:
-  case RISCV::VL4RE16_V:
-  case RISCV::VL8RE16_V:
-  case RISCV::VL1RE32_V:
-  case RISCV::VL2RE32_V:
-  case RISCV::VL4RE32_V:
-  case RISCV::VL8RE32_V:
-  case RISCV::VL1RE64_V:
-  case RISCV::VL2RE64_V:
-  case RISCV::VL4RE64_V:
-  case RISCV::VL8RE64_V:
-    return true;
-  }
-}
-
 bool RISCV::isRVVSpill(const MachineInstr &MI) {
   // RVV lacks any support for immediate addressing for stack addresses, so be
   // conservative.
   unsigned Opcode = MI.getOpcode();
   if (!RISCVVPseudosTable::getPseudoInfo(Opcode) &&
-      !isRVVWholeLoadStore(Opcode) && !isRVVSpillForZvlsseg(Opcode))
+      !getLMULForRVVWholeLoadStore(Opcode) && !isRVVSpillForZvlsseg(Opcode))
     return false;
   return true;
 }
