@@ -22,6 +22,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <functional>
@@ -117,9 +118,21 @@ struct ClonedCodeInfo {
 /// If you would like to collect additional information about the cloned
 /// function, you can specify a ClonedCodeInfo object with the optional fifth
 /// parameter.
+///
+/// Set \p MapAtoms to false to skip mapping source atoms for later remapping.
+/// Incorrectly setting false may harm the debugging experience. It's safe to
+/// set false if the cloned basic block is destined for a different function or
+/// if the original block is deleted. Setting true (default) is always safe
+/// (correct) but sometimes unecessary; this option reduces the compile-time
+/// impact of Key Instruction in such cases.
 BasicBlock *CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
                             const Twine &NameSuffix = "", Function *F = nullptr,
-                            ClonedCodeInfo *CodeInfo = nullptr);
+                            ClonedCodeInfo *CodeInfo = nullptr,
+                            bool MapAtoms = true);
+
+/// Mark a cloned instruction as a new instance so that its source loc can
+/// be updated when remapped.
+void mapAtomInstance(const DebugLoc &DL, ValueToValueMapTy &VMap);
 
 /// Return a copy of the specified function and add it to that
 /// function's module.  Also, any references specified in the VMap are changed
