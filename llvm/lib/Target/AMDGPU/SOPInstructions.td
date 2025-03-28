@@ -1925,6 +1925,20 @@ def : ScalarNot2Pat<S_ORN2_B32, or, v2i16>;
 def : ScalarNot2Pat<S_ORN2_B64, or, v4i16>;
 def : ScalarNot2Pat<S_ORN2_B64, or, v2i32>;
 
+let WaveSizePredicate = isWave32 in {
+def : GCNPat<
+  (i1 (not (or_oneuse i1:$src0, i1:$src1))),
+  (S_NOR_B32 i1:$src0, i1:$src1)
+>;
+}
+
+let WaveSizePredicate = isWave64 in {
+def : GCNPat<
+  (i1 (not (or_oneuse i1:$src0, i1:$src1))),
+  (S_NOR_B64 i1:$src0, i1:$src1)
+>;
+}
+
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.
 //===----------------------------------------------------------------------===//
