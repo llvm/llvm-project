@@ -93,39 +93,37 @@ QualType findReturnType(const CXXRecordDecl &RD, StringRef MethodName) {
 // its own anonymous namespace instead of in clang::dataflow.
 namespace {
 
+using clang::dataflow::findReturnType;
+using clang::dataflow::getLikeReturnType;
+using clang::dataflow::pointerLikeReturnType;
+using clang::dataflow::valueLikeReturnType;
+
 AST_MATCHER_P(clang::CXXRecordDecl, smartPointerClassWithGetLike,
               clang::StringRef, MethodName) {
-  auto RT = clang::dataflow::pointerLikeReturnType(Node);
+  auto RT = pointerLikeReturnType(Node);
   if (RT.isNull())
     return false;
-  return clang::dataflow::getLikeReturnType(
-             clang::dataflow::findReturnType(Node, MethodName)) == RT;
+  return getLikeReturnType(findReturnType(Node, MethodName)) == RT;
 }
 
 AST_MATCHER_P(clang::CXXRecordDecl, smartPointerClassWithValueLike,
               clang::StringRef, MethodName) {
-  auto RT = clang::dataflow::pointerLikeReturnType(Node);
+  auto RT = pointerLikeReturnType(Node);
   if (RT.isNull())
     return false;
-  return clang::dataflow::valueLikeReturnType(
-             clang::dataflow::findReturnType(Node, MethodName)) == RT;
+  return valueLikeReturnType(findReturnType(Node, MethodName)) == RT;
 }
 
 AST_MATCHER(clang::CXXRecordDecl, smartPointerClassWithGetOrValue) {
-  auto RT = clang::dataflow::pointerLikeReturnType(Node);
+  auto RT = pointerLikeReturnType(Node);
   if (RT.isNull())
     return false;
-  if (clang::dataflow::getLikeReturnType(
-          clang::dataflow::findReturnType(Node, "get")) == RT)
-    return true;
-  if (clang::dataflow::valueLikeReturnType(
-          clang::dataflow::findReturnType(Node, "value")) == RT)
-    return true;
-  return false;
+  return getLikeReturnType(findReturnType(Node, "get")) == RT ||
+         valueLikeReturnType(findReturnType(Node, "value")) == RT;
 }
 
 AST_MATCHER(clang::CXXRecordDecl, pointerClass) {
-  return !clang::dataflow::pointerLikeReturnType(Node).isNull();
+  return !pointerLikeReturnType(Node).isNull();
 }
 
 } // namespace
