@@ -263,6 +263,12 @@ m_BranchOnCond(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::BranchOnCond>(Op0);
 }
 
+template <typename Op0_t>
+inline UnaryVPInstruction_match<Op0_t, VPInstruction::Broadcast>
+m_Broadcast(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::Broadcast>(Op0);
+}
+
 template <typename Op0_t, typename Op1_t>
 inline BinaryVPInstruction_match<Op0_t, Op1_t, VPInstruction::ActiveLaneMask>
 m_ActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1) {
