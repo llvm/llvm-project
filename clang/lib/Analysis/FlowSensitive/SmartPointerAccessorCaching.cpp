@@ -45,7 +45,7 @@ CanQualType valueLikeReturnType(QualType RT) {
 CanQualType pointerLikeReturnType(const CXXRecordDecl &RD) {
   // We may want to cache this search, but in current profiles it hasn't shown
   // up as a hot spot (possibly because there aren't many hits, relatively).
-  CanQualType StarReturnType, ArrowReturnType, GetReturnType, ValueReturnType;
+  CanQualType StarReturnType, ArrowReturnType;
   for (const auto *MD : RD.methods()) {
     // We only consider methods that are const and have zero parameters.
     // It may be that there is a non-const overload for the method, but
