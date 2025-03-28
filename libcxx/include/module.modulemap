@@ -1304,6 +1304,7 @@ module std [system] {
   module flat_set {
     module flat_set                       {
       header "__flat_set/flat_set.h"
+      header "__flat_set/flat_multiset.h"
       export std.vector.vector
       export std.vector.fwd
     }

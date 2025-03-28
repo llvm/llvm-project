@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___FLAT_SET_FLAT_SET_H
 #define _LIBCPP___FLAT_SET_FLAT_SET_H
 
-#include "utils.h"
 #include <__algorithm/lexicographical_compare_three_way.h>
 #include <__algorithm/lower_bound.h>
 #include <__algorithm/min.h>
