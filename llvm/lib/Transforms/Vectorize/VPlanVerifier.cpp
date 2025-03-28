@@ -156,16 +156,6 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
             errs() << "EVL is used as an operand in non-VPInstruction::Add\n";
             return false;
           }
-          if (I->getNumUsers() != 1) {
-            errs() << "EVL is used in VPInstruction:Add with multiple "
-                      "users\n";
-            return false;
-          }
-          if (!isa<VPEVLBasedIVPHIRecipe>(*I->users().begin())) {
-            errs() << "Result of VPInstruction::Add with EVL operand is "
-                      "not used by VPEVLBasedIVPHIRecipe\n";
-            return false;
-          }
           return true;
         })
         .Default([&](const VPUser *U) {

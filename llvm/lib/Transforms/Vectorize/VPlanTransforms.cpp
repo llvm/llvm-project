@@ -1889,10 +1889,9 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   }
 }
 
-/// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
-/// replaces all uses except the canonical IV increment of
-/// VPCanonicalIVPHIRecipe with a VPEVLBasedIVPHIRecipe. VPCanonicalIVPHIRecipe
-/// is used only for loop iterations counting after this transformation.
+/// Add a VPInstruction::ExplicitVectorLength and related recipes to \p Plan and
+/// adjust the increment of the canonical induction variable to an explicit
+/// vector length.
 ///
 /// The function uses the following definitions:
 ///  %StartV is the canonical induction start value.
@@ -1903,13 +1902,11 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 /// ...
 ///
 /// vector.body:
-/// ...
-/// %EVLPhi = EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI [ %StartV, %vector.ph ],
-///                                               [ %NextEVLIV, %vector.body ]
-/// %AVL = sub original TC, %EVLPhi
+/// %IVPhi = CANONICAL-INDUCTION ir<0>, %IV.NEXT
+/// %AVL = sub original TC, %IVPhi
 /// %VPEVL = EXPLICIT-VECTOR-LENGTH %AVL
 /// ...
-/// %NextEVLIV = add IVSize (cast i32 %VPEVVL to IVSize), %EVLPhi
+/// %IV.NEXT = add %IVPhi IVSize (cast i32 %VPEVL to IVSize)
 /// ...
 ///
 /// If MaxSafeElements is provided, the function adds the following recipes:
@@ -1917,15 +1914,13 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 /// ...
 ///
 /// vector.body:
-/// ...
-/// %EVLPhi = EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI [ %StartV, %vector.ph ],
-///                                               [ %NextEVLIV, %vector.body ]
+/// %IVPhi = CANONICAL-INDUCTION ir<0>, %IV.NEXT
 /// %AVL = sub original TC, %EVLPhi
 /// %cmp = cmp ult %AVL, MaxSafeElements
 /// %SAFE_AVL = select %cmp, %AVL, MaxSafeElements
 /// %VPEVL = EXPLICIT-VECTOR-LENGTH %SAFE_AVL
 /// ...
-/// %NextEVLIV = add IVSize (cast i32 %VPEVL to IVSize), %EVLPhi
+/// %IV.NEXT = add %IVPhi IVSize (cast i32 %VPEVL to IVSize)
 /// ...
 ///
 bool VPlanTransforms::tryAddExplicitVectorLength(
@@ -1941,15 +1936,11 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
     return false;
 
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
-  VPValue *StartV = CanonicalIVPHI->getStartValue();
-
-  // Create the ExplicitVectorLengthPhi recipe in the main loop.
-  auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc());
-  EVLPhi->insertAfter(CanonicalIVPHI);
   VPBuilder Builder(Header, Header->getFirstNonPhi());
   // Compute original TC - IV as the AVL (application vector length).
   VPValue *AVL = Builder.createNaryOp(
-      Instruction::Sub, {Plan.getTripCount(), EVLPhi}, DebugLoc(), "avl");
+      Instruction::Sub, {&Plan.getVectorTripCount(), CanonicalIVPHI},
+      DebugLoc(), "avl");
   if (MaxSafeElements) {
     // Support for MaxSafeDist for correct loop emission.
     VPValue *AVLSafe = Plan.getOrAddLiveIn(
@@ -1962,7 +1953,6 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
 
   auto *CanonicalIVIncrement =
       cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
-  Builder.setInsertPoint(CanonicalIVIncrement);
   VPSingleDefRecipe *OpVPEVL = VPEVL;
   if (unsigned IVSize = CanonicalIVPHI->getScalarType()->getScalarSizeInBits();
       IVSize != 32) {
@@ -1970,19 +1960,13 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
         IVSize < 32 ? Instruction::Trunc : Instruction::ZExt, OpVPEVL,
         CanonicalIVPHI->getScalarType(), CanonicalIVIncrement->getDebugLoc());
   }
-  auto *NextEVLIV = Builder.createOverflowingOp(
-      Instruction::Add, {OpVPEVL, EVLPhi},
-      {CanonicalIVIncrement->hasNoUnsignedWrap(),
-       CanonicalIVIncrement->hasNoSignedWrap()},
-      CanonicalIVIncrement->getDebugLoc(), "index.evl.next");
-  EVLPhi->addOperand(NextEVLIV);
 
   transformRecipestoEVLRecipes(Plan, *VPEVL);
 
-  // Replace all uses of VPCanonicalIVPHIRecipe by
-  // VPEVLBasedIVPHIRecipe except for the canonical IV increment.
-  CanonicalIVPHI->replaceAllUsesWith(EVLPhi);
+  // Adjust the increment of the canonical induction variable to an explicit
+  // vector length.
   CanonicalIVIncrement->setOperand(0, CanonicalIVPHI);
+  CanonicalIVIncrement->setOperand(1, OpVPEVL);
   // TODO: support unroll factor > 1.
   Plan.setUF(1);
   return true;
@@ -2166,17 +2150,14 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(VPBB->phis())) {
-      if (!isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(&R))
-        continue;
-      auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
-      StringRef Name =
-          isa<VPCanonicalIVPHIRecipe>(PhiR) ? "index" : "evl.based.iv";
-      auto *ScalarR = new VPInstruction(
-          Instruction::PHI, {PhiR->getStartValue(), PhiR->getBackedgeValue()},
-          PhiR->getDebugLoc(), Name);
-      ScalarR->insertBefore(PhiR);
-      PhiR->replaceAllUsesWith(ScalarR);
-      PhiR->eraseFromParent();
+      if (auto *PhiR = dyn_cast<VPCanonicalIVPHIRecipe>(&R)) {
+        auto *ScalarR = new VPInstruction(
+            Instruction::PHI, {PhiR->getStartValue(), PhiR->getBackedgeValue()},
+            PhiR->getDebugLoc(), "index");
+        ScalarR->insertBefore(PhiR);
+        PhiR->replaceAllUsesWith(ScalarR);
+        PhiR->eraseFromParent();
+      }
     }
   }
 }
