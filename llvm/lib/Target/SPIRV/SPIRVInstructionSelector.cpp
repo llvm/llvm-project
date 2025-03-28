@@ -185,6 +185,8 @@ private:
                  unsigned comparisonOpcode, MachineInstr &I) const;
   bool selectDiscard(Register ResVReg, const SPIRVType *ResType,
                      MachineInstr &I) const;
+  bool selectFpga(Register ResVReg, const SPIRVType *ResType,
+                  MachineInstr &I) const;
 
   bool selectICmp(Register ResVReg, const SPIRVType *ResType,
                   MachineInstr &I) const;
@@ -2407,6 +2409,16 @@ bool SPIRVInstructionSelector::selectSplatVector(Register ResVReg,
   return MIB.constrainAllUses(TII, TRI, RBI);
 }
 
+bool SPIRVInstructionSelector::selectFpga(Register ResVReg,
+                                          const SPIRVType *ResType,
+                                          MachineInstr &I) const {
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpFPGARegINTEL))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(I.getOperand(2).getReg());
+  return true;
+}
+
 bool SPIRVInstructionSelector::selectDiscard(Register ResVReg,
                                              const SPIRVType *ResType,
                                              MachineInstr &I) const {
@@ -3190,6 +3202,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   }
   case Intrinsic::spv_discard: {
     return selectDiscard(ResVReg, ResType, I);
+  }
+  case Intrinsic::spv_fpga: {
+    return selectFpga(ResVReg, ResType, I);
   }
   default: {
     std::string DiagMsg;

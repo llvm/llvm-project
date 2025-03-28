@@ -238,6 +238,22 @@ static SmallVector<Metadata *> parseAnnotation(Value *I,
                                                 : SmallVector<Metadata *>{};
 }
 
+static bool lowerAnnotation(IntrinsicInst *II) {
+  std::string Anno =
+      getAnnotation(II->getArgOperand(1),
+                    4 < II->arg_size() ? II->getArgOperand(4) : nullptr);
+  if (Anno == "__builtin_intel_fpga_reg") {
+    Value *val = II->getOperand(0);
+    IRBuilder<> IRB(II->getParent());
+    IRB.SetInsertPoint(II);
+    Value *intrinsicVal = IRB.CreateIntrinsic(II->getOperand(0)->getType(),
+                                              Intrinsic::spv_fpga, {val});
+    II->replaceAllUsesWith(intrinsicVal);
+    return true;
+  }
+  return false;
+}
+
 static void lowerPtrAnnotation(IntrinsicInst *II) {
   LLVMContext &Ctx = II->getContext();
   Type *Int32Ty = Type::getInt32Ty(Ctx);
@@ -251,6 +267,7 @@ static void lowerPtrAnnotation(IntrinsicInst *II) {
   std::string Anno =
       getAnnotation(II->getArgOperand(1),
                     4 < II->arg_size() ? II->getArgOperand(4) : nullptr);
+  Value *ReplacementValue = PtrArg;
 
   // Parse the annotation.
   SmallVector<Metadata *> MDs = parseAnnotation(II, Anno, Ctx, Int32Ty);
@@ -259,6 +276,14 @@ static void lowerPtrAnnotation(IntrinsicInst *II) {
   // format used and output it as a general UserSemantic decoration.
   // Otherwise MDs is a Metadata tuple (a decoration list) in the format
   // expected by `spirv.Decorations`.
+
+  if (Anno == "__builtin_intel_fpga_reg") {
+    Value *val = II->getOperand(0);
+    IRBuilder<> IRB(II->getParent());
+    IRB.SetInsertPoint(II);
+    ReplacementValue =
+        IRB.CreateIntrinsic(PtrArg->getType(), Intrinsic::spv_fpga, {val});
+  }
   if (MDs.size() == 0) {
     auto UserSemantic = ConstantAsMetadata::get(ConstantInt::get(
         Int32Ty, static_cast<uint32_t>(SPIRV::Decoration::UserSemantic)));
@@ -271,7 +296,7 @@ static void lowerPtrAnnotation(IntrinsicInst *II) {
   IRB.CreateIntrinsic(
       Intrinsic::spv_assign_decoration, {PtrArg->getType()},
       {PtrArg, MetadataAsValue::get(Ctx, MDNode::get(Ctx, MDs))});
-  II->replaceAllUsesWith(II->getOperand(0));
+  II->replaceAllUsesWith(ReplacementValue);
 }
 
 static void lowerFunnelShifts(IntrinsicInst *FSHIntrinsic) {
@@ -420,6 +445,14 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         lowerPtrAnnotation(II);
         Changed = true;
         break;
+      case Intrinsic::annotation: {
+        const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
+        if (STI.canUseExtension(SPIRV::Extension::SPV_INTEL_fpga_reg)) {
+          if (lowerAnnotation(II))
+            Changed = true;
+        }
+        break;
+      }
       }
     }
   }
