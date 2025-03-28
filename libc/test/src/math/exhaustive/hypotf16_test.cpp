@@ -32,7 +32,7 @@ struct Hypotf16Checker : public virtual LIBC_NAMESPACE::testing::Test {
       uint16_t ybits = xbits;
       do {
         float16 y = FPBits(ybits).get_val();
-        bool correct = TEST_FP_EQ(LIBC_NAMESPACE::fputil::hypot(x, y),
+        bool correct = TEST_FP_EQ(LIBC_NAMESPACE::fputil::hypot<float16>(x, y),
                                   LIBC_NAMESPACE::hypotf16(x, y));
         // Using MPFR will be much slower.
         // mpfr::BinaryInput<float16> input{x, y};
