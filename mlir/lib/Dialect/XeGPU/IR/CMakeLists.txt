@@ -20,6 +20,7 @@ add_mlir_dialect_library(MLIRXeGPUDialect
   MLIRGPUDialect
   MLIRXeVMDialect
   MLIRIR
+  MLIRXeGPUuArch
   MLIRViewLikeInterface
   MLIRVectorDialect
 )

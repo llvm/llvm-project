@@ -8,6 +8,7 @@
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -380,6 +381,14 @@ XeVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError, int O,
 }
 
 void XeVMDialect::initialize() {
+  // Populate the uArchMap with the supported target devices
+  auto pvcuArch =
+      std::make_shared<mlir::xegpu::uArch::Xe2Plus::PVCuArch::PVCuArch>();
+  mlir::xegpu::uArch::uArchMap::instance().insert("pvc", pvcuArch);
+  auto bmguArch =
+      std::make_shared<mlir::xegpu::uArch::Xe2Plus::BMGuArch::BMGuArch>();
+  mlir::xegpu::uArch::uArchMap::instance().insert("bmg", bmguArch);
+
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/LLVMIR/XeVMOps.cpp.inc"
