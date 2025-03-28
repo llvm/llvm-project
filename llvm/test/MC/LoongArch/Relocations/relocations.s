@@ -3,6 +3,9 @@
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 < %s \
 # RUN:     | llvm-readobj -r - | FileCheck --check-prefix=RELOC %s
 
+# RUN: not llvm-mc --triple=loongarch64 --defsym=FIXME=1 < %s 2>&1 \
+# RUN:     | FileCheck --check-prefix=ERROR %s
+
 ## Check prefixes:
 ## RELOC - Check the relocation in the object.
 ## FIXUP - Check the fixup on the instruction.
@@ -308,3 +311,25 @@ pcaddi $t1, %desc_pcrel_20(foo)
 # RELOC: R_LARCH_TLS_DESC_PCREL20_S2 foo 0x0
 # INSTR: pcaddi $t1, %desc_pcrel_20(foo)
 # FIXUP: fixup A - offset: 0, value: %desc_pcrel_20(foo), kind: FK_NONE
+
+.ifdef FIXME
+
+fld.s $ft1, $a0, %pc_lo12(foo)
+# ERROR: :[[#@LINE-1]]:18: error: immediate must be an integer in the range [-2048, 2047]
+
+fst.d $ft1, $a0, %pc_lo12(foo)
+# ERROR: :[[#@LINE-1]]:18: error: immediate must be an integer in the range [-2048, 2047]
+
+vld $vr9, $a0, %pc_lo12(foo)
+# ERROR: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
+
+vst $vr9, $a0, %pc_lo12(foo)
+# ERROR: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
+
+xvld $xr9, $a0, %pc_lo12(foo)
+# ERROR: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [-2048, 2047]
+
+xvst $xr9, $a0, %pc_lo12(foo)
+# ERROR: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [-2048, 2047]
+
+.endif
