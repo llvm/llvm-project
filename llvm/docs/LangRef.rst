@@ -8221,6 +8221,14 @@ Example:
 Clang emits ``kcfi_type`` metadata nodes for address-taken functions with
 ``-fsanitize=kcfi``.
 
+'``pcsections``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``pcsections`` metadata can be attached to instructions and functions, for
+which addresses, viz. program counters (PCs), are to be emitted in specially
+encoded binary sections. More details can be found in the `PC Sections Metadata
+<PCSectionsMetadata.html>`_ documentation.
+
 .. _md_memprof:
 
 '``memprof``' Metadata
