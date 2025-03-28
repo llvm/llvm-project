@@ -7325,8 +7325,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
       continue;
 
     const auto &ChainOps = RdxDesc.getReductionOpChain(RedPhi, OrigLoop);
-    SetVector<Instruction *> ChainOpsAndOperands(ChainOps.begin(),
-                                                 ChainOps.end());
+    SetVector<Instruction *> ChainOpsAndOperands(llvm::from_range, ChainOps);
     auto IsZExtOrSExt = [](const unsigned Opcode) -> bool {
       return Opcode == Instruction::ZExt || Opcode == Instruction::SExt;
     };
@@ -9080,14 +9079,14 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
   VPValue *OneVPV = Plan.getOrAddLiveIn(
       ConstantInt::get(Plan.getCanonicalIV()->getScalarType(), 1));
   for (VPRecipeBase &ScalarPhiR : *Plan.getScalarHeader()) {
-    auto *ScalarPhiIRI = cast<VPIRInstruction>(&ScalarPhiR);
-    auto *ScalarPhiI = dyn_cast<PHINode>(&ScalarPhiIRI->getInstruction());
-    if (!ScalarPhiI)
+    auto *ScalarPhiIRI = dyn_cast<VPIRPhi>(&ScalarPhiR);
+    if (!ScalarPhiIRI)
       break;
 
     // TODO: Extract final value from induction recipe initially, optimize to
     // pre-computed end value together in optimizeInductionExitUsers.
-    auto *VectorPhiR = cast<VPHeaderPHIRecipe>(Builder.getRecipe(ScalarPhiI));
+    auto *VectorPhiR =
+        cast<VPHeaderPHIRecipe>(Builder.getRecipe(&ScalarPhiIRI->getIRPhi()));
     if (auto *WideIVR = dyn_cast<VPWidenInductionRecipe>(VectorPhiR)) {
       if (VPInstruction *ResumePhi = addResumePhiRecipeForInduction(
               WideIVR, VectorPHBuilder, ScalarPHBuilder, TypeInfo,
@@ -9137,11 +9136,8 @@ collectUsersInExitBlocks(Loop *OrigLoop, VPRecipeBuilder &Builder,
       continue;
 
     for (VPRecipeBase &R : *ExitVPBB) {
-      auto *ExitIRI = dyn_cast<VPIRInstruction>(&R);
+      auto *ExitIRI = dyn_cast<VPIRPhi>(&R);
       if (!ExitIRI)
-        continue;
-      auto *ExitPhi = dyn_cast<PHINode>(&ExitIRI->getInstruction());
-      if (!ExitPhi)
         break;
       if (ExitVPBB->getSinglePredecessor() != Plan.getMiddleBlock()) {
         assert(ExitIRI->getNumOperands() ==
@@ -9149,8 +9145,10 @@ collectUsersInExitBlocks(Loop *OrigLoop, VPRecipeBuilder &Builder,
                "early-exit must update exit values on construction");
         continue;
       }
+
+      PHINode &ExitPhi = ExitIRI->getIRPhi();
       BasicBlock *ExitingBB = OrigLoop->getLoopLatch();
-      Value *IncomingValue = ExitPhi->getIncomingValueForBlock(ExitingBB);
+      Value *IncomingValue = ExitPhi.getIncomingValueForBlock(ExitingBB);
       VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue);
       ExitIRI->addOperand(V);
       if (V->isLiveIn())
@@ -9891,14 +9889,19 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // bc.merge.rdx phi nodes, hence it needs to be created unconditionally here
     // even for in-loop reductions, until the reduction resume value handling is
     // also modeled in VPlan.
+    VPInstruction *FinalReductionResult;
     VPBuilder::InsertPointGuard Guard(Builder);
     Builder.setInsertPoint(MiddleVPBB, IP);
-    auto *FinalReductionResult =
-        Builder.createNaryOp(RecurrenceDescriptor::isFindLastIVRecurrenceKind(
-                                 RdxDesc.getRecurrenceKind())
-                                 ? VPInstruction::ComputeFindLastIVResult
-                                 : VPInstruction::ComputeReductionResult,
-                             {PhiR, NewExitingVPV}, ExitDL);
+    if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+            RdxDesc.getRecurrenceKind())) {
+      VPValue *Start = PhiR->getStartValue();
+      FinalReductionResult =
+          Builder.createNaryOp(VPInstruction::ComputeFindLastIVResult,
+                               {PhiR, Start, NewExitingVPV}, ExitDL);
+    } else {
+      FinalReductionResult = Builder.createNaryOp(
+          VPInstruction::ComputeReductionResult, {PhiR, NewExitingVPV}, ExitDL);
+    }
     // Update all users outside the vector region.
     OrigExitingVPV->replaceUsesWithIf(
         FinalReductionResult, [FinalReductionResult](VPUser &User, unsigned) {
@@ -10343,11 +10346,10 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
         cast<PHINode>(R.getVPSingleValue()->getUnderlyingValue()));
   }
   for (VPRecipeBase &R : make_early_inc_range(*MainPlan.getScalarHeader())) {
-    auto *VPIRInst = cast<VPIRInstruction>(&R);
-    auto *IRI = dyn_cast<PHINode>(&VPIRInst->getInstruction());
-    if (!IRI)
+    auto *VPIRInst = dyn_cast<VPIRPhi>(&R);
+    if (!VPIRInst)
       break;
-    if (EpiWidenedPhis.contains(IRI))
+    if (EpiWidenedPhis.contains(&VPIRInst->getIRPhi()))
       continue;
     // There is no corresponding wide induction in the epilogue plan that would
     // need a resume value. Remove the VPIRInst wrapping the scalar header phi

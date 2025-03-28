@@ -237,15 +237,8 @@ protected:
   /// If closure returns \ref IterationAction::Continue, iteration
   /// continues. Otherwise, iteration terminates.
   void
-  ForEachSymbolFile(std::function<IterationAction(SymbolFileDWARF *)> closure) {
-    for (uint32_t oso_idx = 0, num_oso_idxs = m_compile_unit_infos.size();
-         oso_idx < num_oso_idxs; ++oso_idx) {
-      if (SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx)) {
-        if (closure(oso_dwarf) == IterationAction::Stop)
-          return;
-      }
-    }
-  }
+  ForEachSymbolFile(std::string description,
+                    std::function<IterationAction(SymbolFileDWARF &)> closure);
 
   CompileUnitInfo *GetCompileUnitInfoForSymbolWithIndex(uint32_t symbol_idx,
                                                         uint32_t *oso_idx_ptr);

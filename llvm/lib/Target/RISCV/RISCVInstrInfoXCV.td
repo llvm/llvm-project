@@ -25,7 +25,7 @@ def CVrr : Operand<i32>,
            ComplexPattern<i32, 2, "SelectAddrRegReg",[]> {
    let ParserMatchClass = CVrrAsmOperand;
    let PrintMethod = "printRegReg";
-   let MIOperandInfo = (ops GPR:$offset, GPR:$base);
+   let MIOperandInfo = (ops GPR:$base, GPR:$offset);
 }
 
 def cv_tuimm2 : TImmLeaf<XLenVT, [{return isUInt<2>(Imm);}]>;
@@ -287,7 +287,7 @@ class CVLoad_rr_inc<bits<7> funct7, bits<3> funct3, string opcodestr>
 
 class CVLoad_rr<bits<7> funct7, bits<3> funct3, string opcodestr>
     : RVInstR<funct7, funct3, OPC_CUSTOM_1, (outs GPR:$rd),
-              (ins (CVrr $rs2, $rs1):$addr),
+              (ins (CVrr $rs1, $rs2):$addr),
               opcodestr, "$rd, $addr">;
 } // hasSideEffects = 0, mayLoad = 1, mayStore = 0
 
@@ -317,7 +317,7 @@ class CVStore_rr_inc<bits<3> funct3, bits<7> funct7, string opcodestr>
 
 
 class CVStore_rr<bits<3> funct3, bits<7> funct7, string opcodestr>
-    : RVInst<(outs), (ins GPR:$rs2, (CVrr $rs3, $rs1):$addr), opcodestr,
+    : RVInst<(outs), (ins GPR:$rs2, (CVrr $rs1, $rs3):$addr), opcodestr,
              "$rs2, $addr", [], InstFormatOther> {
   bits<5> rs1;
   bits<5> rs2;
