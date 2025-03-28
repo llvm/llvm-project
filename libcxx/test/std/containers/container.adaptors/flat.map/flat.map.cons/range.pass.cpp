@@ -117,9 +117,18 @@ int main(int, char**) {
     static_assert(!std::is_constructible_v<M, std::from_range_t, std::vector<NonPairLike>&, const C&, const A1&>);
   }
 
-  using P      = std::pair<int, short>;
-  P ar[]       = {{1, 1}, {1, 2}, {1, 3}, {2, 4}, {2, 5}, {3, 6}, {2, 7}, {3, 8}, {3, 9}};
-  P expected[] = {{1, 1}, {2, 4}, {3, 6}};
+  using P = std::pair<int, short>;
+  P ar[]  = {
+      {1, short{1}},
+      {1, short{2}},
+      {1, short{3}},
+      {2, short{4}},
+      {2, short{5}},
+      {3, short{6}},
+      {2, short{7}},
+      {3, short{8}},
+      {3, short{9}}};
+  P expected[] = {{1, short{1}}, {2, short{4}}, {3, short{6}}};
   {
     // flat_map(from_range_t, R&&)
     // input_range && !common
