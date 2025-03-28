@@ -1575,7 +1575,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zNodlopen = hasZOption(args, "nodlopen");
   ctx.arg.zNow = getZFlag(args, "now", "lazy", false);
   ctx.arg.zOrigin = hasZOption(args, "origin");
-  ctx.arg.zPacPlt = hasZOption(args, "pac-plt");
+  ctx.arg.zPacPlt = getZFlag(args, "pac-plt", "nopac-plt", false);
   ctx.arg.zRelro = getZFlag(args, "relro", "norelro", true);
   ctx.arg.zRetpolineplt = hasZOption(args, "retpolineplt");
   ctx.arg.zRodynamic = hasZOption(args, "rodynamic");
