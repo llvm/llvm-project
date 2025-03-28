@@ -82,8 +82,6 @@ def MPI_CommSizeOp : MPI_Op<"comm_size", []> {
   let summary = "Get the size of the group associated to the communicator, "
                 "equivalent to `MPI_Comm_size(comm, &size)`";
   let description = [{
-    If communicator is not specified, `MPI_COMM_WORLD` is used by default.
-
     This operation can optionally return an `!mpi.retval` value that can be used
     to check for errors.
   }];
@@ -139,8 +137,6 @@ def MPI_SendOp : MPI_Op<"send", []> {
     `dest`. The `tag` value and communicator enables the library to determine 
     the matching of multiple sends and receives between the same ranks.
 
-    If communicator is not specified, `MPI_COMM_WORLD` is used by default.
-
     This operation can optionally return an `!mpi.retval` value that can be used
     to check for errors.
   }];
@@ -173,8 +169,6 @@ def MPI_ISendOp : MPI_Op<"isend", []> {
     determine the matching of multiple sends and receives between the same
     ranks.
 
-    If communicator is not specified, `MPI_COMM_WORLD` is used by default.
-
     This operation can optionally return an `!mpi.retval` value that can be used
     to check for errors.
   }];
@@ -202,7 +196,7 @@ def MPI_ISendOp : MPI_Op<"isend", []> {
 //===----------------------------------------------------------------------===//
 
 def MPI_RecvOp : MPI_Op<"recv", []> {
-  let summary = "Equivalent to `MPI_Recv(ptr, size, dtype, dest, tag, "
+  let summary = "Equivalent to `MPI_Recv(ptr, size, dtype, source, tag, "
                 "comm, MPI_STATUS_IGNORE)`";
   let description = [{
     MPI_Recv performs a blocking receive of `size` elements of type `dtype` 
@@ -210,7 +204,6 @@ def MPI_RecvOp : MPI_Op<"recv", []> {
     determine the matching of multiple sends and receives between the same 
     ranks.
 
-    If communicator is not specified, `MPI_COMM_WORLD` is used by default.
     The MPI_Status is set to `MPI_STATUS_IGNORE`, as the status object 
     is not yet ported to MLIR.
 
@@ -244,8 +237,6 @@ def MPI_IRecvOp : MPI_Op<"irecv", []> {
     from rank `dest`. The `tag` value and communicator enables the library to 
     determine the matching of multiple sends and receives between the same 
     ranks.
-
-    If communicator is not specified, `MPI_COMM_WORLD` is used by default.
 
     This operation can optionally return an `!mpi.retval` value that can be used
     to check for errors.
@@ -284,8 +275,6 @@ def MPI_AllReduceOp : MPI_Op<"allreduce", []> {
     Currently only the `MPI_Op` predefined in the standard (e.g. `MPI_SUM`) are
     supported.
 
-    If communicator is not specified, `MPI_COMM_WORLD` is used by default.
-
     This operation can optionally return an `!mpi.retval` value that can be used
     to check for errors.
   }];
@@ -313,8 +302,6 @@ def MPI_Barrier : MPI_Op<"barrier", []> {
   let description = [{
     MPI_Barrier blocks execution until all processes in the communicator have
     reached this routine.
-
-    If communicator is not specified, `MPI_COMM_WORLD` is used by default.
 
     This operation can optionally return an `!mpi.retval` value that can be used
     to check for errors.
