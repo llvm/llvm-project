@@ -610,7 +610,7 @@ def : InstRW<[Zn3SlowLEA16r], (instrs LEA16r)>;
 
 // Integer multiplication
 defm : Zn3WriteResIntPair<WriteIMul8, [Zn3Multiplier], 3, [3], 1>; // Integer 8-bit multiplication.
-defm : Zn3WriteResIntPair<WriteIMul16, [Zn3Multiplier], 3, [3], 3, /*LoadUOps=*/1>; // Integer 16-bit multiplication.
+defm : Zn3WriteResIntPair<WriteIMul16, [Zn3Multiplier], 3, [3], 3, LoadUOps = 1>; // Integer 16-bit multiplication.
 defm : Zn3WriteResIntPair<WriteIMul16Imm, [Zn3Multiplier], 4, [4], 2>; // Integer 16-bit multiplication by immediate.
 defm : Zn3WriteResIntPair<WriteIMul16Reg, [Zn3Multiplier], 3, [1], 1>; // Integer 16-bit multiplication by register.
 defm : Zn3WriteResIntPair<WriteIMul32, [Zn3Multiplier], 3, [3], 2>;    // Integer 32-bit multiplication.
@@ -692,8 +692,8 @@ defm : Zn3WriteResIntPair<WriteIDiv16, [Zn3Divider], 11, [11], 2>;
 defm : Zn3WriteResIntPair<WriteIDiv32, [Zn3Divider], 13, [13], 2>;
 defm : Zn3WriteResIntPair<WriteIDiv64, [Zn3Divider], 17, [17], 2>;
 
-defm : Zn3WriteResIntPair<WriteBSF, [Zn3ALU1], 3, [3], 6, /*LoadUOps=*/2>; // Bit scan forward.
-defm : Zn3WriteResIntPair<WriteBSR, [Zn3ALU1], 4, [4], 6, /*LoadUOps=*/2>; // Bit scan reverse.
+defm : Zn3WriteResIntPair<WriteBSF, [Zn3ALU1], 3, [3], 6, LoadUOps = 2>; // Bit scan forward.
+defm : Zn3WriteResIntPair<WriteBSR, [Zn3ALU1], 4, [4], 6, LoadUOps = 2>; // Bit scan reverse.
 
 defm : Zn3WriteResIntPair<WritePOPCNT, [Zn3ALU0123], 1, [1], 1>; // Bit population count.
 
@@ -737,9 +737,9 @@ defm : Zn3WriteResInt<WriteBitTestSetImmLd, [Zn3AGU012, Zn3Load, Zn3ALU12], !add
 defm : Zn3WriteResInt<WriteBitTestSetRegLd, [Zn3AGU012, Zn3Load, Zn3ALU12], !add(Znver3Model.LoadLatency, 2), [1, 1, 1], 9>;
 
 // Integer shifts and rotates.
-defm : Zn3WriteResIntPair<WriteShift, [Zn3ALU12], 1, [1], 1, /*LoadUOps=*/1>;
-defm : Zn3WriteResIntPair<WriteShiftCL, [Zn3ALU12], 1, [1], 1, /*LoadUOps=*/1>;
-defm : Zn3WriteResIntPair<WriteRotate, [Zn3ALU12], 1, [1], 1, /*LoadUOps=*/1>;
+defm : Zn3WriteResIntPair<WriteShift, [Zn3ALU12], 1, [1], 1, LoadUOps = 1>;
+defm : Zn3WriteResIntPair<WriteShiftCL, [Zn3ALU12], 1, [1], 1, LoadUOps = 1>;
+defm : Zn3WriteResIntPair<WriteRotate, [Zn3ALU12], 1, [1], 1, LoadUOps = 1>;
 
 def Zn3WriteRotateR1 : SchedWriteRes<[Zn3ALU12]> {
   let Latency = 1;
@@ -785,7 +785,7 @@ def Zn3WriteRotateLeftMI : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3ALU12]> {
 }
 def : InstRW<[Zn3WriteRotateLeftMI], (instrs RCL8mi, RCL16mi, RCL32mi, RCL64mi)>;
 
-defm : Zn3WriteResIntPair<WriteRotateCL, [Zn3ALU12], 1, [1], 1, /*LoadUOps=*/1>;
+defm : Zn3WriteResIntPair<WriteRotateCL, [Zn3ALU12], 1, [1], 1, LoadUOps = 1>;
 
 def Zn3WriteRotateRightRCL : SchedWriteRes<[Zn3ALU12]> {
   let Latency = 3;
@@ -822,9 +822,9 @@ defm : Zn3WriteResInt<WriteSHDmri, [Zn3AGU012, Zn3Load, Zn3ALU12], !add(Znver3Mo
 defm : Zn3WriteResInt<WriteSHDmrcl, [Zn3AGU012, Zn3Load, Zn3ALU12], !add(Znver3Model.LoadLatency, 2), [1, 1, 4], 6>;
 
 // BMI1 BEXTR/BLS, BMI2 BZHI
-defm : Zn3WriteResIntPair<WriteBEXTR, [Zn3ALU12], 1, [1], 1, /*LoadUOps=*/1>;
-defm : Zn3WriteResIntPair<WriteBLS, [Zn3ALU0123], 2, [2], 2, /*LoadUOps=*/1>;
-defm : Zn3WriteResIntPair<WriteBZHI, [Zn3ALU12], 1, [1], 1, /*LoadUOps=*/1>;
+defm : Zn3WriteResIntPair<WriteBEXTR, [Zn3ALU12], 1, [1], 1, LoadUOps = 1>;
+defm : Zn3WriteResIntPair<WriteBLS, [Zn3ALU0123], 2, [2], 2, LoadUOps = 1>;
+defm : Zn3WriteResIntPair<WriteBZHI, [Zn3ALU12], 1, [1], 1, LoadUOps = 1>;
 
 // Idioms that clear a register, like xorps %xmm0, %xmm0.
 // These can often bypass execution ports completely.
@@ -938,9 +938,9 @@ defm : Zn3WriteResXMMPair<WriteFMA, [Zn3FPFMul01], 4, [1], 1>;  // Fused Multipl
 defm : Zn3WriteResXMMPair<WriteFMAX, [Zn3FPFMul01], 4, [1], 1>; // Fused Multiply Add (XMM).
 defm : Zn3WriteResYMMPair<WriteFMAY, [Zn3FPFMul01], 4, [1], 1>; // Fused Multiply Add (YMM).
 defm : X86WriteResPairUnsupported<WriteFMAZ>; // Fused Multiply Add (ZMM).
-defm : Zn3WriteResXMMPair<WriteDPPD, [Zn3FPFMul01], 9, [6], 3, /*LoadUOps=*/2>; // Floating point double dot product.
-defm : Zn3WriteResXMMPair<WriteDPPS, [Zn3FPFMul01], 15, [8], 8, /*LoadUOps=*/2>; // Floating point single dot product.
-defm : Zn3WriteResYMMPair<WriteDPPSY, [Zn3FPFMul01], 15, [8], 7, /*LoadUOps=*/1>; // Floating point single dot product (YMM).
+defm : Zn3WriteResXMMPair<WriteDPPD, [Zn3FPFMul01], 9, [6], 3, LoadUOps = 2>; // Floating point double dot product.
+defm : Zn3WriteResXMMPair<WriteDPPS, [Zn3FPFMul01], 15, [8], 8, LoadUOps = 2>; // Floating point single dot product.
+defm : Zn3WriteResYMMPair<WriteDPPSY, [Zn3FPFMul01], 15, [8], 7, LoadUOps = 1>; // Floating point single dot product (YMM).
 defm : Zn3WriteResXMMPair<WriteFSign, [Zn3FPFMul01], 1, [2], 1>; // FIXME: latency not from llvm-exegesis  // Floating point fabs/fchs.
 defm : Zn3WriteResXMMPair<WriteFRnd, [Zn3FPFCvt01], 3, [1], 1>; // Floating point rounding.
 defm : Zn3WriteResYMMPair<WriteFRndY, [Zn3FPFCvt01], 3, [1], 1>; // Floating point rounding (YMM).
@@ -966,11 +966,11 @@ defm : X86WriteResPairUnsupported<WriteFVarBlendZ>; // Fp vector variable blends
 
 // Horizontal Add/Sub (float and integer)
 defm : Zn3WriteResXMMPair<WriteFHAdd, [Zn3FPFAdd0], 6, [2], 4>;
-defm : Zn3WriteResYMMPair<WriteFHAddY, [Zn3FPFAdd0], 6, [2], 3, /*LoadUOps=*/1>;
+defm : Zn3WriteResYMMPair<WriteFHAddY, [Zn3FPFAdd0], 6, [2], 3, LoadUOps = 1>;
 defm : X86WriteResPairUnsupported<WriteFHAddZ>;
-defm : Zn3WriteResXMMPair<WritePHAdd, [Zn3FPVAdd0], 2, [2], 3, /*LoadUOps=*/1>;
+defm : Zn3WriteResXMMPair<WritePHAdd, [Zn3FPVAdd0], 2, [2], 3, LoadUOps = 1>;
 defm : Zn3WriteResXMMPair<WritePHAddX, [Zn3FPVAdd0], 2, [2], 4>;
-defm : Zn3WriteResYMMPair<WritePHAddY, [Zn3FPVAdd0], 2, [2], 3, /*LoadUOps=*/1>;
+defm : Zn3WriteResYMMPair<WritePHAddY, [Zn3FPVAdd0], 2, [2], 3, LoadUOps = 1>;
 defm : X86WriteResPairUnsupported<WritePHAddZ>;
 
 // Vector integer operations.
@@ -1130,13 +1130,13 @@ defm : Zn3WriteResXMMPair<WritePSADBW, [Zn3FPVAdd0123], 3, [2], 1>;  // Vector P
 defm : Zn3WriteResXMMPair<WritePSADBWX, [Zn3FPVAdd0123], 3, [2], 1>; // Vector PSADBW (XMM).
 defm : Zn3WriteResYMMPair<WritePSADBWY, [Zn3FPVAdd0123], 3, [2], 1>; // Vector PSADBW (YMM).
 defm : X86WriteResPairUnsupported<WritePSADBWZ>; // Vector PSADBW (ZMM).
-defm : Zn3WriteResXMMPair<WriteMPSAD, [Zn3FPVAdd0123], 4, [8], 4, /*LoadUOps=*/2>; // Vector MPSAD.
-defm : Zn3WriteResYMMPair<WriteMPSADY, [Zn3FPVAdd0123], 4, [8], 3, /*LoadUOps=*/1>; // Vector MPSAD (YMM).
+defm : Zn3WriteResXMMPair<WriteMPSAD, [Zn3FPVAdd0123], 4, [8], 4, LoadUOps = 2>; // Vector MPSAD.
+defm : Zn3WriteResYMMPair<WriteMPSADY, [Zn3FPVAdd0123], 4, [8], 3, LoadUOps = 1>; // Vector MPSAD (YMM).
 defm : X86WriteResPairUnsupported<WriteMPSADZ>; // Vector MPSAD (ZMM).
 defm : Zn3WriteResXMMPair<WritePHMINPOS, [Zn3FPVAdd01], 3, [1], 1>;  // Vector PHMINPOS.
 
 // Vector insert/extract operations.
-defm : Zn3WriteResXMMPair<WriteVecInsert, [Zn3FPLd01], 1, [2], 2, /*LoadUOps=*/-1>; // Insert gpr to vector element.
+defm : Zn3WriteResXMMPair<WriteVecInsert, [Zn3FPLd01], 1, [2], 2, LoadUOps = -1>; // Insert gpr to vector element.
 defm : Zn3WriteResXMM<WriteVecExtract, [Zn3FPLd01], 1, [2], 2>; // Extract vector element to gpr.
 defm : Zn3WriteResXMM<WriteVecExtractSt, [Zn3FPSt, Zn3Store], !add(1, Znver3Model.StoreLatency), [1, 1], 2>; // Extract vector element and store.
 
@@ -1165,9 +1165,9 @@ defm : Zn3WriteResXMMPair<WriteCvtPS2I, [Zn3FPFCvt01], 3, [1], 1>; // Float -> I
 defm : Zn3WriteResYMMPair<WriteCvtPS2IY, [Zn3FPFCvt01], 3, [1], 1>; // Float -> Integer (YMM).
 defm : X86WriteResPairUnsupported<WriteCvtPS2IZ>; // Float -> Integer (ZMM).
 
-defm : Zn3WriteResXMMPair<WriteCvtI2SD, [Zn3FPFCvt01], 3, [2], 2, /*LoadUOps=*/-1>;  // Integer -> Double.
+defm : Zn3WriteResXMMPair<WriteCvtI2SD, [Zn3FPFCvt01], 3, [2], 2, LoadUOps = -1>;  // Integer -> Double.
 defm : Zn3WriteResXMMPair<WriteCvtI2PD, [Zn3FPFCvt01], 3, [1], 1>; // Integer -> Double (XMM).
-defm : Zn3WriteResYMMPair<WriteCvtI2PDY, [Zn3FPFCvt01], 4, [2], 2, /*LoadUOps=*/-1>; // Integer -> Double (YMM).
+defm : Zn3WriteResYMMPair<WriteCvtI2PDY, [Zn3FPFCvt01], 4, [2], 2, LoadUOps = -1>; // Integer -> Double (YMM).
 defm : X86WriteResPairUnsupported<WriteCvtI2PDZ>; // Integer -> Double (ZMM).
 
 def Zn3WriteCvtI2PDMMX : SchedWriteRes<[Zn3FPFCvt01]> {
@@ -1177,7 +1177,7 @@ def Zn3WriteCvtI2PDMMX : SchedWriteRes<[Zn3FPFCvt01]> {
 }
 def : InstRW<[Zn3WriteCvtI2PDMMX], (instrs MMX_CVTPI2PDrm, MMX_CVTPI2PDrr)>;
 
-defm : Zn3WriteResXMMPair<WriteCvtI2SS, [Zn3FPFCvt01], 3, [2], 2, /*LoadUOps=*/-1>;  // Integer -> Float.
+defm : Zn3WriteResXMMPair<WriteCvtI2SS, [Zn3FPFCvt01], 3, [2], 2, LoadUOps = -1>;  // Integer -> Float.
 defm : Zn3WriteResXMMPair<WriteCvtI2PS, [Zn3FPFCvt01], 3, [1], 1>; // Integer -> Float (XMM).
 defm : Zn3WriteResYMMPair<WriteCvtI2PSY, [Zn3FPFCvt01], 3, [1], 1>; // Integer -> Float (YMM).
 defm : X86WriteResPairUnsupported<WriteCvtI2PSZ>; // Integer -> Float (ZMM).
@@ -1191,7 +1191,7 @@ def : InstRW<[Zn3WriteCvtI2PSMMX], (instrs MMX_CVTPI2PSrr)>;
 
 defm : Zn3WriteResXMMPair<WriteCvtSS2SD, [Zn3FPFCvt01], 3, [1], 1>;  // Float -> Double size conversion.
 defm : Zn3WriteResXMMPair<WriteCvtPS2PD, [Zn3FPFCvt01], 3, [1], 1>; // Float -> Double size conversion (XMM).
-defm : Zn3WriteResYMMPair<WriteCvtPS2PDY, [Zn3FPFCvt01], 4, [2], 2, /*LoadUOps=*/-1>; // Float -> Double size conversion (YMM).
+defm : Zn3WriteResYMMPair<WriteCvtPS2PDY, [Zn3FPFCvt01], 4, [2], 2, LoadUOps = -1>; // Float -> Double size conversion (YMM).
 defm : X86WriteResPairUnsupported<WriteCvtPS2PDZ>; // Float -> Double size conversion (ZMM).
 
 defm : Zn3WriteResXMMPair<WriteCvtSD2SS, [Zn3FPFCvt01], 3, [1], 1>;  // Double -> Float size conversion.
@@ -1200,7 +1200,7 @@ defm : Zn3WriteResYMMPair<WriteCvtPD2PSY, [Zn3FPFCvt01], 6, [2], 2>; // Double -
 defm : X86WriteResPairUnsupported<WriteCvtPD2PSZ>; // Double -> Float size conversion (ZMM).
 
 defm : Zn3WriteResXMMPair<WriteCvtPH2PS, [Zn3FPFCvt01], 3, [1], 1>; // Half -> Float size conversion.
-defm : Zn3WriteResYMMPair<WriteCvtPH2PSY, [Zn3FPFCvt01], 4, [2], 2, /*LoadUOps=*/-1>; // Half -> Float size conversion (YMM).
+defm : Zn3WriteResYMMPair<WriteCvtPH2PSY, [Zn3FPFCvt01], 4, [2], 2, LoadUOps = -1>; // Half -> Float size conversion (YMM).
 defm : X86WriteResPairUnsupported<WriteCvtPH2PSZ>; // Half -> Float size conversion (ZMM).
 
 defm : Zn3WriteResXMM<WriteCvtPS2PH, [Zn3FPFCvt01], 3, [2], 1>; // Float -> Half size conversion.
@@ -1285,13 +1285,13 @@ def : InstRW<[Zn3WriteSHA256RNDS2rr], (instrs SHA256RNDS2rr)>;
 
 // Strings instructions.
 // Packed Compare Implicit Length Strings, Return Mask
-defm : Zn3WriteResXMMPair<WritePCmpIStrM, [Zn3FPVAdd0123], 6, [8], 3, /*LoadUOps=*/1>;
+defm : Zn3WriteResXMMPair<WritePCmpIStrM, [Zn3FPVAdd0123], 6, [8], 3, LoadUOps = 1>;
 // Packed Compare Explicit Length Strings, Return Mask
-defm : Zn3WriteResXMMPair<WritePCmpEStrM, [Zn3FPVAdd0123], 6, [12], 7, /*LoadUOps=*/5>;
+defm : Zn3WriteResXMMPair<WritePCmpEStrM, [Zn3FPVAdd0123], 6, [12], 7, LoadUOps = 5>;
 // Packed Compare Implicit Length Strings, Return Index
 defm : Zn3WriteResXMMPair<WritePCmpIStrI, [Zn3FPVAdd0123], 2, [8], 4>;
 // Packed Compare Explicit Length Strings, Return Index
-defm : Zn3WriteResXMMPair<WritePCmpEStrI, [Zn3FPVAdd0123], 6, [12], 8, /*LoadUOps=*/4>;
+defm : Zn3WriteResXMMPair<WritePCmpEStrI, [Zn3FPVAdd0123], 6, [12], 8, LoadUOps = 4>;
 
 // AES instructions.
 defm : Zn3WriteResXMMPair<WriteAESDecEnc, [Zn3FPAES01], 4, [1], 1>; // Decryption, encryption.
@@ -1326,8 +1326,8 @@ def Zn3WriteVZEROALL : SchedWriteRes<[Zn3FPU0123]> {
 def : InstRW<[Zn3WriteVZEROALL], (instrs VZEROALL)>;
 
 // AVX2.
-defm : Zn3WriteResYMMPair<WriteFShuffle256, [Zn3FPVShuf], 2, [1], 1, /*LoadUOps=*/2>; // Fp 256-bit width vector shuffles.
-defm : Zn3WriteResYMMPair<WriteFVarShuffle256, [Zn3FPVShuf], 7, [1], 2, /*LoadUOps=*/1>; // Fp 256-bit width variable shuffles.
+defm : Zn3WriteResYMMPair<WriteFShuffle256, [Zn3FPVShuf], 2, [1], 1, LoadUOps = 2>; // Fp 256-bit width vector shuffles.
+defm : Zn3WriteResYMMPair<WriteFVarShuffle256, [Zn3FPVShuf], 7, [1], 2, LoadUOps = 1>; // Fp 256-bit width variable shuffles.
 defm : Zn3WriteResYMMPair<WriteShuffle256, [Zn3FPVShuf], 2, [1], 1>; // 256-bit width vector shuffles.
 
 def Zn3WriteVPERM2I128rr_VPERM2F128rr : SchedWriteRes<[Zn3FPVShuf]> {
@@ -1372,8 +1372,8 @@ def Zn3WriteVPERMDYm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPVShuf]> {
 }
 def : InstRW<[Zn3WriteVPERMDYm], (instrs VPERMQYmi, VPERMDYrm)>;
 
-defm : Zn3WriteResYMMPair<WriteVPMOV256, [Zn3FPVShuf01], 4, [3], 2, /*LoadUOps=*/-1>; // 256-bit width packed vector width-changing move.
-defm : Zn3WriteResYMMPair<WriteVarShuffle256, [Zn3FPVShuf], 5, [1], 2, /*LoadUOps=*/1>; // 256-bit width vector variable shuffles.
+defm : Zn3WriteResYMMPair<WriteVPMOV256, [Zn3FPVShuf01], 4, [3], 2, LoadUOps = -1>; // 256-bit width packed vector width-changing move.
+defm : Zn3WriteResYMMPair<WriteVarShuffle256, [Zn3FPVShuf], 5, [1], 2, LoadUOps = 1>; // 256-bit width vector variable shuffles.
 defm : Zn3WriteResXMMPair<WriteVarVecShift, [Zn3FPVShift01], 1, [1], 1>; // Variable vector shifts.
 defm : Zn3WriteResYMMPair<WriteVarVecShiftY, [Zn3FPVShift01], 1, [1], 1>; // Variable vector shifts (YMM).
 defm : X86WriteResPairUnsupported<WriteVarVecShiftZ>; // Variable vector shifts (ZMM).

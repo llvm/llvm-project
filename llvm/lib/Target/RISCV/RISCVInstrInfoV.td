@@ -1699,10 +1699,10 @@ def VFMV_S_F : RVInstV2<0b010000, 0b00000, OPFVF, (outs VR:$vd_wb),
 let Predicates = [HasVInstructions] in {
 // Vector Slide Instructions
 let Constraints = "@earlyclobber $vd", RVVConstraint = SlideUp in {
-defm VSLIDEUP_V : VSLD_IV_X_I<"vslideup", 0b001110, /*slidesUp=*/true>;
+defm VSLIDEUP_V : VSLD_IV_X_I<"vslideup", 0b001110, slidesUp = true>;
 defm VSLIDE1UP_V : VSLD1_MV_X<"vslide1up", 0b001110>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = SlideUp
-defm VSLIDEDOWN_V : VSLD_IV_X_I<"vslidedown", 0b001111, /*slidesUp=*/false>;
+defm VSLIDEDOWN_V : VSLD_IV_X_I<"vslidedown", 0b001111, slidesUp = false>;
 let ElementsDependOn = EltDepsVL in
 defm VSLIDE1DOWN_V : VSLD1_MV_X<"vslide1down", 0b001111>;
 } // Predicates = [HasVInstructions]

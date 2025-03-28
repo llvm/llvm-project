@@ -604,7 +604,7 @@ def VOP_DOT_ACC_I32_I32   : VOP_DOT_ACC<i32, i32> {
 }
 
 // Write out to vcc or arbitrary SGPR.
-def VOP2b_I32_I1_I32_I32 : VOPProfile<[i32, i32, i32, untyped], /*EnableClamp=*/1> {
+def VOP2b_I32_I1_I32_I32 : VOPProfile<[i32, i32, i32, untyped], _EnableClamp = 1> {
   let Asm32 = "$vdst, vcc, $src0, $src1";
   let AsmVOP3Base = "$vdst, $sdst, $src0, $src1$clamp";
   let AsmSDWA = "$vdst, vcc, $src0_modifiers, $src1_modifiers$clamp $dst_sel $dst_unused $src0_sel $src1_sel";
@@ -630,7 +630,7 @@ def VOP2b_I32_I1_I32_I32 : VOPProfile<[i32, i32, i32, untyped], /*EnableClamp=*/
 
 // Write out to vcc or arbitrary SGPR and read in from vcc or
 // arbitrary SGPR.
-def VOP2b_I32_I1_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1], /*EnableClamp=*/1> {
+def VOP2b_I32_I1_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1], _EnableClamp = 1> {
   let HasSrc2Mods = 0;
   let Asm32 = "$vdst, vcc, $src0, $src1, vcc";
   let AsmSDWA = "$vdst, vcc, $src0_modifiers, $src1_modifiers, vcc$clamp $dst_sel $dst_unused $src0_sel $src1_sel";

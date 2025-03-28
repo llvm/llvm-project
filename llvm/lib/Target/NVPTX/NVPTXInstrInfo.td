@@ -819,8 +819,8 @@ defm SUB_i1 : ADD_SUB_i1<sub>;
 
 // int16, int32, and int64 signed addition.  Since nvptx is 2's complement, we
 // also use these for unsigned arithmetic.
-defm ADD : I3<"add.s", add, /*commutative=*/ true>;
-defm SUB : I3<"sub.s", sub, /*commutative=*/ false>;
+defm ADD : I3<"add.s", add, commutative = true>;
+defm SUB : I3<"sub.s", sub, commutative = false>;
 
 def ADD16x2 : I16x2<"add.s", add>;
 
@@ -832,18 +832,18 @@ defm SUBCC : ADD_SUB_INT_CARRY<"sub.cc", subc>;
 defm ADDCCC : ADD_SUB_INT_CARRY<"addc.cc", adde>;
 defm SUBCCC : ADD_SUB_INT_CARRY<"subc.cc", sube>;
 
-defm MULT : I3<"mul.lo.s", mul, /*commutative=*/ true>;
+defm MULT : I3<"mul.lo.s", mul, commutative = true>;
 
-defm MULTHS : I3<"mul.hi.s", mulhs, /*commutative=*/ true>;
-defm MULTHU : I3<"mul.hi.u", mulhu, /*commutative=*/ true>;
+defm MULTHS : I3<"mul.hi.s", mulhs, commutative = true>;
+defm MULTHU : I3<"mul.hi.u", mulhu, commutative = true>;
 
-defm SDIV : I3<"div.s", sdiv, /*commutative=*/ false>;
-defm UDIV : I3<"div.u", udiv, /*commutative=*/ false>;
+defm SDIV : I3<"div.s", sdiv, commutative = false>;
+defm UDIV : I3<"div.u", udiv, commutative = false>;
 
 // The ri versions of rem.s and rem.u won't be selected; DAGCombiner::visitSREM
 // will lower it.
-defm SREM : I3<"rem.s", srem, /*commutative=*/ false>;
-defm UREM : I3<"rem.u", urem, /*commutative=*/ false>;
+defm SREM : I3<"rem.s", srem, commutative = false>;
+defm UREM : I3<"rem.u", urem, commutative = false>;
 
 // Integer absolute value.  NumBits should be one minus the bit width of RC.
 // This idiom implements the algorithm at
@@ -858,10 +858,10 @@ defm ABS_32 : ABS<i32, Int32Regs, ".s32">;
 defm ABS_64 : ABS<i64, Int64Regs, ".s64">;
 
 // Integer min/max.
-defm SMAX : I3<"max.s", smax, /*commutative=*/ true>;
-defm UMAX : I3<"max.u", umax, /*commutative=*/ true>;
-defm SMIN : I3<"min.s", smin, /*commutative=*/ true>;
-defm UMIN : I3<"min.u", umin, /*commutative=*/ true>;
+defm SMAX : I3<"max.s", smax, commutative = true>;
+defm UMAX : I3<"max.u", umax, commutative = true>;
+defm SMIN : I3<"min.s", smin, commutative = true>;
+defm UMIN : I3<"min.u", umin, commutative = true>;
 
 def SMAX16x2 : I16x2<"max.s", smax>;
 def UMAX16x2 : I16x2<"max.u", umax>;

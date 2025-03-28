@@ -1308,7 +1308,7 @@ multiclass DS_Real_gfx12<bits<8> op, string name = !tolower(NAME), bit needAlias
     let DecoderNamespace = "GFX12" in
       def _gfx12 :
         Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op, ps, SIEncodingFamily.GFX12,
-                                               name, /*hasGDS=*/false>;
+                                               name, hasGDS = false>;
     if !and(needAlias, !ne(ps.Mnemonic, name)) then
       def : AMDGPUMnemonicAlias<ps.Mnemonic, name>;
   } // End AssemblerPredicate
