@@ -2434,10 +2434,10 @@ private:
 namespace WarnNoDecl {
 
 class Foo {
-  void foo(int a);  __attribute__(( // \
-    // expected-warning {{declaration does not declare anything}}
-    exclusive_locks_required(a))); // \
-    // expected-warning {{attribute exclusive_locks_required ignored}}
+  void foo(int a);  __attribute__((
+    exclusive_locks_required(a))); // expected-warning {{declaration does not declare anything}} \
+                                   // expected-warning {{attribute exclusive_locks_required ignored}}
+
 };
 
 } // end namespace WarnNoDecl

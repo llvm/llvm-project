@@ -71,6 +71,12 @@ namespace test_misplacement {
 [[]] union union_attr2; //expected-error{{misplaced attributes}}
 [[]] enum  E2 { }; //expected-error{{misplaced attributes}}
 }
+struct S1 { __attribute__((deprecated)) alignas(16) int x; }; // expected-none
+class C1 { __attribute__((deprecated)) alignas(16) int x; }; // expected-none
+
+void fn_with_decl() {
+  __attribute__((deprecated)) alignas(16) int x; // expected-none
+}
 
 // Checks attributes placed at wrong syntactic locations of class specifiers.
 class [[]] [[]]
