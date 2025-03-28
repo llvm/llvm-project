@@ -1,11 +1,32 @@
+set(disas_srcs "")
+
 if("ARM" IN_LIST LLVM_TARGETS_TO_BUILD)
-  add_subdirectory(ARM)
+  set(disas_srcs ${disas_srcs}
+    ARM/TestArm64Disassembly.cpp
+    ARM/TestArmv7Disassembly.cpp
+  )
 endif()
 
 if("X86" IN_LIST LLVM_TARGETS_TO_BUILD)
-  add_subdirectory(x86)
+  set(disas_srcs ${disas_srcs}
+    x86/TestGetControlFlowKindx86.cpp
+  )
 endif()
 
 if("RISCV" IN_LIST LLVM_TARGETS_TO_BUILD)
-	add_subdirectory(RISCV)
+  set(disas_srcs ${disas_srcs}
+    RISCV/TestMCDisasmInstanceRISCV.cpp
+  )
 endif()
+
+add_lldb_unittest(DisassemblerTests
+  ${disas_srcs}
+  LINK_LIBS
+    lldbCore
+    lldbSymbol
+    lldbTarget
+    lldbPluginDisassemblerLLVMC
+    lldbPluginProcessUtility
+  LINK_COMPONENTS
+    Support
+    ${LLVM_TARGETS_TO_BUILD})
