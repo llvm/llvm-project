@@ -353,7 +353,7 @@ add_entrypoint_object(
     memalignment.h
   DEPENDS
     libc.src.__support.common
-    libc.src.__support.CPP.cstddef
+    libc.hdr.types.size_t
 )
 
 if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
