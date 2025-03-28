@@ -943,3 +943,71 @@ end:
   call void @use(i1 %t.4)
   ret void
 }
+
+define void @test_decompose_bitwise_or_negative(i4 %x, i4 %y) {
+; CHECK-LABEL: @test_decompose_bitwise_or_negative(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[OR_1:%.*]] = or i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sgt i4 [[OR_1]], -1
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp slt i4 [[X]], 0
+; CHECK-NEXT:    [[C_3:%.*]] = icmp slt i4 [[Y]], 0
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %or.1 = or i4 %x, %y
+  %c.1 = icmp sgt i4 %or.1, -1
+  br i1 %c.1, label %then, label %end
+
+then:
+  ; fact: %or.1 > -1
+  ret void
+
+end:
+  ; fact: %or.1 <= -1
+  ; %c.2, %c.3 should only be replaced in the bitwise AND case
+  %c.2 = icmp slt i4 %x, 0
+  %c.3 = icmp slt i4 %y, 0
+  call void @use(i1 %c.2)
+  call void @use(i1 %c.3)
+  ret void
+}
+
+define void @test_decompose_bitwise_or_negative2(i4 %x, i4 %y) {
+; CHECK-LABEL: @test_decompose_bitwise_or_negative2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[OR_1:%.*]] = or i4 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i4 [[OR_1]], 0
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp slt i4 [[X]], 0
+; CHECK-NEXT:    [[C_3:%.*]] = icmp slt i4 [[Y]], 0
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %or.1 = or i4 %y, %x
+  %c.1 = icmp slt i4 %or.1, 0
+  br i1 %c.1, label %then, label %end
+
+then:
+  ; fact: %or.1 < 0
+  ; %c.2, %c.3 should only be replaced in the bitwise AND case
+  %c.2 = icmp slt i4 %x, 0
+  %c.3 = icmp slt i4 %y, 0
+  call void @use(i1 %c.2)
+  call void @use(i1 %c.3)
+  ret void
+
+end:
+  ; fact: %or.1 >= 0
+  ret void
+}

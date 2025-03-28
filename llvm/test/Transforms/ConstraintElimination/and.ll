@@ -740,3 +740,71 @@ end:
   call void @use(i1 %t.3)
   ret void
 }
+
+define void @test_decompose_bitwise_and_negative(i4 %x, i4 %y) {
+; CHECK-LABEL: @test_decompose_bitwise_and_negative(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND_1:%.*]] = and i4 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i4 [[AND_1]], 0
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i4 [[X]], 0
+; CHECK-NEXT:    [[C_3:%.*]] = icmp sgt i4 [[Y]], 0
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %and.1 = and i4 %y, %x
+  %c.1= icmp slt i4 %and.1, 0
+  br i1 %c.1, label %then, label %end
+
+then:
+  ; fact: %and.1 < 0
+  ret void
+
+end:
+  ; fact: %and.1 >= 0
+  ; %c.2, %c.3 should only be replaced in the bitwise OR case
+  %c.2 = icmp sgt i4 %x, 0
+  %c.3 = icmp sgt i4 %y, 0
+  call void @use(i1 %c.2)
+  call void @use(i1 %c.3)
+  ret void
+}
+
+define void @test_decompose_bitwise_and_negative_2(i4 %x, i4 %y) {
+; CHECK-LABEL: @test_decompose_bitwise_and_negative_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND_1:%.*]] = and i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sgt i4 [[AND_1]], -1
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[END:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i4 [[X]], 0
+; CHECK-NEXT:    [[C_3:%.*]] = icmp sgt i4 [[Y]], 0
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %and.1 = and i4 %x, %y
+  %c.1 = icmp sgt i4 %and.1, -1
+  br i1 %c.1, label %then, label %end
+
+then:
+  ; fact: %and.1 > -1
+  ; %c.1, %c.2 should only be replaced in the bitwise OR case
+  %c.2 = icmp sgt i4 %x, 0
+  %c.3 = icmp sgt i4 %y, 0
+  call void @use(i1 %c.2)
+  call void @use(i1 %c.3)
+  ret void
+
+end:
+  ; fact: %and.1 <= -1
+  ret void
+}
