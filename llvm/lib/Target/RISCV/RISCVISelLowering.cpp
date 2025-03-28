@@ -4614,9 +4614,8 @@ static bool isElementRotate(std::array<std::pair<int, int>, 2> &SrcInfo,
 }
 
 static bool isAlternating(const std::array<std::pair<int, int>, 2> &SrcInfo,
-                          ArrayRef<int> Mask, bool &Polarity) {
+                          const ArrayRef<int> Mask, bool RequiredPolarity) {
   int NumElts = Mask.size();
-  bool NonUndefFound = false;
   for (unsigned i = 0; i != Mask.size(); ++i) {
     int M = Mask[i];
     if (M < 0)
@@ -4624,29 +4623,24 @@ static bool isAlternating(const std::array<std::pair<int, int>, 2> &SrcInfo,
     int Src = M >= NumElts;
     int Diff = (int)i - (M % NumElts);
     bool C = Src == SrcInfo[1].first && Diff == SrcInfo[1].second;
-    if (!NonUndefFound) {
-      NonUndefFound = true;
-      Polarity = (C == i % 2);
-      continue;
-    }
-    if (Polarity != (C == i % 2))
+    assert(C ^ (Src == SrcInfo[0].first && Diff == SrcInfo[0].second) &&
+           "Must match exactly one of the two slides");
+    if (RequiredPolarity != (C == i % 2))
       return false;
   }
   return true;
 }
 
 static bool isZipEven(const std::array<std::pair<int, int>, 2> &SrcInfo,
-                      ArrayRef<int> Mask) {
-  bool Polarity;
+                      const ArrayRef<int> Mask) {
   return SrcInfo[0].second == 0 && SrcInfo[1].second == 1 &&
-         isAlternating(SrcInfo, Mask, Polarity) && Polarity;
+         isAlternating(SrcInfo, Mask, true);
 }
 
 static bool isZipOdd(const std::array<std::pair<int, int>, 2> &SrcInfo,
-                     ArrayRef<int> Mask) {
-  bool Polarity;
+                     const ArrayRef<int> Mask) {
   return SrcInfo[0].second == 0 && SrcInfo[1].second == -1 &&
-         isAlternating(SrcInfo, Mask, Polarity) && !Polarity;
+         isAlternating(SrcInfo, Mask, false);
 }
 
 // Lower a deinterleave shuffle to SRL and TRUNC.  Factor must be
