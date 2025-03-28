@@ -32,12 +32,6 @@ void initRuntime() {
   if (PM == nullptr)
     PM = new PluginManager();
 
-  if (OffloadPolicy::isOffloadDisabled()) {
-    DP("Offload is disabled. Skipping library initialization\n");
-    // Do only absolutely needed initialization
-    return;
-  }
-
   RefCount++;
   if (RefCount == 1) {
     DP("Init offload library!\n");
@@ -46,6 +40,10 @@ void initRuntime() {
     llvm::omp::target::ompt::connectLibrary();
 #endif
 
+    if (OffloadPolicy::isOffloadDisabled()) {
+      DP("Offload is disabled. Skipping plugin initialization\n");
+      return;
+    }
     PM->init();
     PM->registerDelayedLibraries();
   }
