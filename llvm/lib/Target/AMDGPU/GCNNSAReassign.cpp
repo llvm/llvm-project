@@ -251,7 +251,7 @@ bool GCNNSAReassignImpl::run(MachineFunction &MF) {
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   MaxNumVGPRs = ST->getMaxNumVGPRs(MF);
-  MaxNumVGPRs = std::min(ST->getMaxNumVGPRs(MFI->getOccupancy()), MaxNumVGPRs);
+  MaxNumVGPRs = std::min(ST->getMaxNumVGPRs(MFI->getOccupancy(), MFI->isDynamicVGPREnabled()), MaxNumVGPRs);
   CSRegs = MRI->getCalleeSavedRegs();
 
   using Candidate = std::pair<const MachineInstr*, bool>;

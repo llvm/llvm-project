@@ -715,8 +715,8 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     Register FPReg = MFI->getFrameOffsetReg();
     assert(FPReg != AMDGPU::FP_REG);
     unsigned VGPRSize =
-        llvm::alignTo((ST.getAddressableNumVGPRs() -
-                       AMDGPU::IsaInfo::getVGPRAllocGranule(&ST)) *
+        llvm::alignTo((ST.getAddressableNumVGPRs(MFI->isDynamicVGPREnabled()) -
+                       AMDGPU::IsaInfo::getVGPRAllocGranule(&ST, MFI->isDynamicVGPREnabled())) *
                           4,
                       FrameInfo.getMaxAlign());
     MFI->setScratchReservedForDynamicVGPRs(VGPRSize);
@@ -1882,7 +1882,7 @@ bool SIFrameLowering::hasFPImpl(const MachineFunction &MF) const {
 
 bool SIFrameLowering::mayReserveScratchForCWSR(
     const MachineFunction &MF) const {
-  return MF.getSubtarget<GCNSubtarget>().isDynamicVGPREnabled() &&
+  return MF.getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled() &&
          AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv()) &&
          AMDGPU::isCompute(MF.getFunction().getCallingConv());
 }

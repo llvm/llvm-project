@@ -83,6 +83,7 @@ public:
   static const AMDGPUMCExpr *createOccupancy(unsigned InitOcc,
                                              const MCExpr *NumSGPRs,
                                              const MCExpr *NumVGPRs,
+                                             bool IsDynamicVGPR,
                                              const GCNSubtarget &STM,
                                              MCContext &Ctx);
 

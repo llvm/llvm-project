@@ -13,6 +13,7 @@
 
 #include "GCNRegPressure.h"
 #include "AMDGPU.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 
 using namespace llvm;
@@ -92,17 +93,18 @@ void GCNRegPressure::inc(unsigned Reg,
 bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
                           unsigned MaxOccupancy) const {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  bool IsDynamicVGPR = MF.getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled();
 
   const auto SGPROcc = std::min(MaxOccupancy,
                                 ST.getOccupancyWithNumSGPRs(getSGPRNum()));
   const auto VGPROcc =
     std::min(MaxOccupancy,
-             ST.getOccupancyWithNumVGPRs(getVGPRNum(ST.hasGFX90AInsts())));
+             ST.getOccupancyWithNumVGPRs(getVGPRNum(ST.hasGFX90AInsts()), IsDynamicVGPR));
   const auto OtherSGPROcc = std::min(MaxOccupancy,
                                 ST.getOccupancyWithNumSGPRs(O.getSGPRNum()));
   const auto OtherVGPROcc =
     std::min(MaxOccupancy,
-             ST.getOccupancyWithNumVGPRs(O.getVGPRNum(ST.hasGFX90AInsts())));
+             ST.getOccupancyWithNumVGPRs(O.getVGPRNum(ST.hasGFX90AInsts()), IsDynamicVGPR));
 
   const auto Occ = std::min(SGPROcc, VGPROcc);
   const auto OtherOcc = std::min(OtherSGPROcc, OtherVGPROcc);
@@ -224,13 +226,13 @@ bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
                           O.getVGPRNum(ST.hasGFX90AInsts()));
 }
 
-Printable llvm::print(const GCNRegPressure &RP, const GCNSubtarget *ST) {
-  return Printable([&RP, ST](raw_ostream &OS) {
+Printable llvm::print(const GCNRegPressure &RP, const GCNSubtarget *ST, bool IsDynamicVGPR) {
+  return Printable([&RP, ST, IsDynamicVGPR](raw_ostream &OS) {
     OS << "VGPRs: " << RP.Value[GCNRegPressure::VGPR32] << ' '
        << "AGPRs: " << RP.getAGPRNum();
     if (ST)
       OS << "(O"
-         << ST->getOccupancyWithNumVGPRs(RP.getVGPRNum(ST->hasGFX90AInsts()))
+         << ST->getOccupancyWithNumVGPRs(RP.getVGPRNum(ST->hasGFX90AInsts()), IsDynamicVGPR)
          << ')';
     OS << ", SGPRs: " << RP.getSGPRNum();
     if (ST)
@@ -238,7 +240,7 @@ Printable llvm::print(const GCNRegPressure &RP, const GCNSubtarget *ST) {
     OS << ", LVGPR WT: " << RP.getVGPRTuplesWeight()
        << ", LSGPR WT: " << RP.getSGPRTuplesWeight();
     if (ST)
-      OS << " -> Occ: " << RP.getOccupancy(*ST);
+      OS << " -> Occ: " << RP.getOccupancy(*ST, IsDynamicVGPR);
     OS << '\n';
   });
 }

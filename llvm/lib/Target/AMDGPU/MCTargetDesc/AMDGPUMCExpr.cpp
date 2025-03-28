@@ -285,10 +285,11 @@ const AMDGPUMCExpr *AMDGPUMCExpr::createTotalNumVGPR(const MCExpr *NumAGPR,
 const AMDGPUMCExpr *AMDGPUMCExpr::createOccupancy(unsigned InitOcc,
                                                   const MCExpr *NumSGPRs,
                                                   const MCExpr *NumVGPRs,
+                                                  bool IsDynamicVGPR,
                                                   const GCNSubtarget &STM,
                                                   MCContext &Ctx) {
   unsigned MaxWaves = IsaInfo::getMaxWavesPerEU(&STM);
-  unsigned Granule = IsaInfo::getVGPRAllocGranule(&STM);
+  unsigned Granule = IsaInfo::getVGPRAllocGranule(&STM, IsDynamicVGPR);
   unsigned TargetTotalNumVGPRs = IsaInfo::getTotalNumVGPRs(&STM);
   unsigned Generation = STM.getGeneration();
 

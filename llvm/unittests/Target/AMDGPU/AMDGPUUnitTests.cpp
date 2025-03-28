@@ -94,15 +94,15 @@ static const std::pair<StringRef, StringRef>
   W64FS = {"+wavefrontsize64", "w64"};
 
 using TestFuncTy =
-    function_ref<bool(std::stringstream &, unsigned, const GCNSubtarget &)>;
+    function_ref<bool(std::stringstream &, unsigned, const GCNSubtarget &, bool)>;
 
 static bool testAndRecord(std::stringstream &Table, const GCNSubtarget &ST,
-                          TestFuncTy test) {
+                          TestFuncTy test, bool IsDynamicVGPR) {
   bool Success = true;
   unsigned MaxOcc = ST.getMaxWavesPerEU();
   for (unsigned Occ = MaxOcc; Occ > 0; --Occ) {
     Table << std::right << std::setw(3) << Occ << "    ";
-    Success = test(Table, Occ, ST) && Success;
+    Success = test(Table, Occ, ST, IsDynamicVGPR) && Success;
     Table << '\n';
   }
   return Success;
@@ -132,7 +132,7 @@ static void testGPRLimits(const char *RegName, bool TestW32W64,
         FS = &W32FS;
 
       std::stringstream Table;
-      bool Success = testAndRecord(Table, ST, test);
+      bool Success = testAndRecord(Table, ST, test, /*IsDynamicVGPR=*/false);
       if (!Success || PrintCpuRegLimits)
         TablePerCPUs[Table.str()].push_back((CanonCPUName + FS->second).str());
 
@@ -155,16 +155,14 @@ static void testGPRLimits(const char *RegName, bool TestW32W64,
 
 static void testDynamicVGPRLimits(StringRef CPUName, StringRef FS,
                                   TestFuncTy test) {
-  auto TM = createAMDGPUTargetMachine("amdgcn-amd-", CPUName,
-                                      "+dynamic-vgpr," + FS.str());
+  auto TM = createAMDGPUTargetMachine("amdgcn-amd-", CPUName, FS);
   ASSERT_TRUE(TM) << "No target machine";
 
   GCNSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()), *TM);
-  ASSERT_TRUE(ST.getFeatureBits().test(AMDGPU::FeatureDynamicVGPR));
 
   std::stringstream Table;
-  bool Success = testAndRecord(Table, ST, test);
+  bool Success = testAndRecord(Table, ST, test, /*IsDynamicVGPR=*/true);
   EXPECT_TRUE(Success && !PrintCpuRegLimits)
       << CPUName << " dynamic VGPR " << FS
       << ":\nOcc    MinVGPR        MaxVGPR\n"
@@ -172,13 +170,13 @@ static void testDynamicVGPRLimits(StringRef CPUName, StringRef FS,
 }
 
 TEST(AMDGPU, TestVGPRLimitsPerOccupancy) {
-  auto test = [](std::stringstream &OS, unsigned Occ, const GCNSubtarget &ST) {
-    unsigned MaxVGPRNum = ST.getAddressableNumVGPRs();
+  auto test = [](std::stringstream &OS, unsigned Occ, const GCNSubtarget &ST, bool IsDynamicVGPR) {
+    unsigned MaxVGPRNum = ST.getAddressableNumVGPRs(IsDynamicVGPR);
     return checkMinMax(
-        OS, Occ, ST.getOccupancyWithNumVGPRs(MaxVGPRNum), ST.getMaxWavesPerEU(),
-        [&](unsigned NumGPRs) { return ST.getOccupancyWithNumVGPRs(NumGPRs); },
-        [&](unsigned Occ) { return ST.getMinNumVGPRs(Occ); },
-        [&](unsigned Occ) { return ST.getMaxNumVGPRs(Occ); });
+        OS, Occ, ST.getOccupancyWithNumVGPRs(MaxVGPRNum, IsDynamicVGPR), ST.getMaxWavesPerEU(),
+        [&](unsigned NumGPRs) { return ST.getOccupancyWithNumVGPRs(NumGPRs, IsDynamicVGPR); },
+        [&](unsigned Occ) { return ST.getMinNumVGPRs(Occ, IsDynamicVGPR); },
+        [&](unsigned Occ) { return ST.getMaxNumVGPRs(Occ, IsDynamicVGPR); });
   };
 
   testGPRLimits("VGPR", true, test);
@@ -188,7 +186,7 @@ TEST(AMDGPU, TestVGPRLimitsPerOccupancy) {
                         "+wavefrontsize32,+dynamic-vgpr-block-size-32", test);
 }
 
-static void testAbsoluteLimits(StringRef CPUName, StringRef FS,
+static void testAbsoluteLimits(StringRef CPUName, StringRef FS, bool IsDynamicVGPR,
                                unsigned ExpectedMinOcc, unsigned ExpectedMaxOcc,
                                unsigned ExpectedMaxVGPRs) {
   auto TM = createAMDGPUTargetMachine("amdgcn-amd-", CPUName, FS);
@@ -205,12 +203,14 @@ static void testAbsoluteLimits(StringRef CPUName, StringRef FS,
                        GlobalValue::ExternalLinkage, "testFunc", &M);
   Func->setCallingConv(CallingConv::AMDGPU_CS_Chain);
   Func->addFnAttr("amdgpu-flat-work-group-size", "1,32");
+  if (IsDynamicVGPR)
+    Func->addFnAttr("amdgpu-dynamic-vgpr", "true");
 
   auto Range = ST.getWavesPerEU(*Func);
   EXPECT_EQ(ExpectedMinOcc, Range.first) << CPUName << ' ' << FS;
   EXPECT_EQ(ExpectedMaxOcc, Range.second) << CPUName << ' ' << FS;
   EXPECT_EQ(ExpectedMaxVGPRs, ST.getMaxNumVGPRs(*Func)) << CPUName << ' ' << FS;
-  EXPECT_EQ(ExpectedMaxVGPRs, ST.getAddressableNumVGPRs())
+  EXPECT_EQ(ExpectedMaxVGPRs, ST.getAddressableNumVGPRs(IsDynamicVGPR))
       << CPUName << ' ' << FS;
 
   // Function with requested 'amdgpu-waves-per-eu' in a valid range.
@@ -221,10 +221,10 @@ static void testAbsoluteLimits(StringRef CPUName, StringRef FS,
 }
 
 TEST(AMDGPU, TestOccupancyAbsoluteLimits) {
-  testAbsoluteLimits("gfx1200", "+wavefrontsize32", 1, 16, 256);
-  testAbsoluteLimits("gfx1200", "+wavefrontsize32,+dynamic-vgpr", 1, 16, 128);
+  testAbsoluteLimits("gfx1200", "+wavefrontsize32", false, 1, 16, 256);
+  testAbsoluteLimits("gfx1200", "+wavefrontsize32", true, 1, 16, 128);
   testAbsoluteLimits(
-      "gfx1200", "+wavefrontsize32,+dynamic-vgpr,+dynamic-vgpr-block-size-32",
+      "gfx1200", "+wavefrontsize32,+dynamic-vgpr-block-size-32", true,
       1, 16, 256);
 }
 

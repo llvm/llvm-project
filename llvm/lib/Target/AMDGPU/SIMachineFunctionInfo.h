@@ -299,6 +299,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
 
   bool HasInitWholeWave = false;
 
+  bool IsDynamicVGPREnabled = false;
   unsigned ScratchReservedForDynamicVGPRs = 0;
 
   SIMachineFunctionInfo() = default;
@@ -352,6 +353,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("longBranchReservedReg", MFI.LongBranchReservedReg,
                        StringValue());
     YamlIO.mapOptional("hasInitWholeWave", MFI.HasInitWholeWave, false);
+    YamlIO.mapOptional("isDynamicVGPREnabled", MFI.IsDynamicVGPREnabled, false);
     YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
                        MFI.ScratchReservedForDynamicVGPRs, 0);
   }
@@ -458,6 +460,8 @@ private:
 
   unsigned NumSpilledSGPRs = 0;
   unsigned NumSpilledVGPRs = 0;
+
+  bool IsDynamicVGPREnabled = false;
 
   // The size in bytes of the scratch space reserved for the CWSR trap handler
   // to spill some of the dynamic VGPRs.
@@ -786,6 +790,10 @@ public:
 
   void setBytesInStackArgArea(unsigned Bytes) {
     BytesInStackArgArea = Bytes;
+  }
+
+  bool isDynamicVGPREnabled() const {
+    return IsDynamicVGPREnabled;
   }
 
   // This is only used if we need to save any dynamic VGPRs in scratch.

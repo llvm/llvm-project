@@ -48,6 +48,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   MaxNumWorkGroups = ST.getMaxNumWorkGroups(F);
   assert(MaxNumWorkGroups.size() == 3);
 
+  if (F.hasFnAttribute("amdgpu-dynamic-vgpr"))
+    IsDynamicVGPREnabled = F.getFnAttribute("amdgpu-dynamic-vgpr").getValueAsBool();
+
   Occupancy = ST.computeOccupancy(F, getLDSSize()).second;
   CallingConv::ID CC = F.getCallingConv();
 
@@ -716,6 +719,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       PSInputAddr(MFI.getPSInputAddr()), PSInputEnable(MFI.getPSInputEnable()),
       MaxMemoryClusterDWords(MFI.getMaxMemoryClusterDWords()),
       Mode(MFI.getMode()), HasInitWholeWave(MFI.hasInitWholeWave()),
+      IsDynamicVGPREnabled(MFI.isDynamicVGPREnabled()),
       ScratchReservedForDynamicVGPRs(MFI.getScratchReservedForDynamicVGPRs()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
     SpillPhysVGPRS.push_back(regToString(Reg, TRI));

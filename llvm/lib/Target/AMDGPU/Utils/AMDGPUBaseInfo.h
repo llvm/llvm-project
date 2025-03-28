@@ -307,7 +307,7 @@ unsigned getNumSGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs);
 /// For subtargets which support it, \p EnableWavefrontSize32 should match
 /// the ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
 unsigned
-getVGPRAllocGranule(const MCSubtargetInfo *STI,
+getVGPRAllocGranule(const MCSubtargetInfo *STI, bool IsDynamicVGPR,
                     std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
 /// \returns VGPR encoding granularity for given subtarget \p STI.
@@ -326,20 +326,20 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI);
 unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI);
 
 /// \returns Addressable number of VGPRs for given subtarget \p STI.
-unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI);
+unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI, bool IsDynamicVGPR);
 
 /// \returns Minimum number of VGPRs that meets given number of waves per
 /// execution unit requirement for given subtarget \p STI.
-unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
+unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU, bool IsDynamicVGPR);
 
 /// \returns Maximum number of VGPRs that meets given number of waves per
 /// execution unit requirement for given subtarget \p STI.
-unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
+unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU, bool IsDynamicVGPR);
 
 /// \returns Number of waves reachable for a given \p NumVGPRs usage for given
 /// subtarget \p STI.
 unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo *STI,
-                                      unsigned NumVGPRs);
+                                      unsigned NumVGPRs, bool IsDynamicVGPR);
 
 /// \returns Number of waves reachable for a given \p NumVGPRs usage, \p Granule
 /// size, \p MaxWaves possible, and \p TotalNumVGPRs available.
@@ -365,7 +365,7 @@ unsigned getEncodedNumVGPRBlocks(
 /// \returns Number of VGPR blocks that need to be allocated for the given
 /// subtarget \p STI when \p NumVGPRs are used.
 unsigned getAllocatedNumVGPRBlocks(
-    const MCSubtargetInfo *STI, unsigned NumVGPRs,
+    const MCSubtargetInfo *STI, unsigned NumVGPRs, bool IsDynamicVGPR,
     std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
 } // end namespace IsaInfo
