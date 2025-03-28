@@ -9,6 +9,9 @@
 #include "test/UnitTest/Test.h"
 
 #include "src/__support/fixed_point/fx_rep.h"
+#include "src/__support/macros/sanitizer.h"
+
+#include <signal.h>
 
 template <typename T, typename XType>
 class IdivTest : public LIBC_NAMESPACE::testing::Test {
@@ -45,19 +48,44 @@ public:
       EXPECT_EQ(func(4.2, 6.9), static_cast<XType>(0));
       EXPECT_EQ(func(4.5, 2.2), static_cast<XType>(2));
       EXPECT_EQ(func(2.2, 1.1), static_cast<XType>(2));
+      EXPECT_EQ(func(2.25, 1.0), static_cast<XType>(2));
+      EXPECT_EQ(func(2.25, 3.0), static_cast<XType>(0));
 
       if constexpr (is_signed) {
         EXPECT_EQ(func(4.2, -6.9), static_cast<XType>(0));
         EXPECT_EQ(func(-6.9, 4.2), static_cast<XType>(-1));
         EXPECT_EQ(func(-2.5, 1.25), static_cast<XType>(-2));
+        EXPECT_EQ(func(-2.25, 1.0), static_cast<XType>(-2));
+        EXPECT_EQ(func(2.25, -3.0), static_cast<XType>(0));
       }
+    }
+  }
+
+  void testInvalidNumbers(IdivFunc func) {
+    constexpr bool has_integral = (FXRep::INTEGRAL_LEN > 0);
+
+    EXPECT_DEATH([func] { func(0.5, 0.0); }, WITH_SIGNAL(SIGILL));
+    if constexpr (has_integral) {
+      EXPECT_DEATH([func] { func(2.5, 0.0); }, WITH_SIGNAL(SIGSEGV));
     }
   }
 };
 
+#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+#define LIST_IDIV_TESTS(Name, T, XTYpe, func)                                  \
+  using LlvmLibcIdiv##Name##Test = IdivTest<T, XType>;                         \
+  TEST_F(LlvmLibcIdiv##Name##Test, InvalidNumbers) {                           \
+    testInvalidNumbers(&func);                                                 \
+  }                                                                            \
+  TEST_F(LlvmLibcIdiv##Name##Test, SpecialNumbers) {                           \
+    testSpecialNumbers(&func);                                                 \
+  }                                                                            \
+  static_assert(true, "Require semicolon.")
+#else
 #define LIST_IDIV_TESTS(Name, T, XType, func)                                  \
   using LlvmLibcIdiv##Name##Test = IdivTest<T, XType>;                         \
   TEST_F(LlvmLibcIdiv##Name##Test, SpecialNumbers) {                           \
     testSpecialNumbers(&func);                                                 \
   }                                                                            \
   static_assert(true, "Require semicolon.")
+#endif // LIBC_HAS_ADDRESS_SANITIZER
