@@ -3341,8 +3341,6 @@ FinishTemplateArgumentDeduction(
     return ConstraintsNotSatisfied
                ? TemplateDeductionResult::ConstraintsNotSatisfied
                : TemplateDeductionResult::SubstitutionFailure;
-  if (InstCTAI.MatchedPackOnParmToNonPackOnArg)
-    Info.setMatchedPackOnParmToNonPackOnArg();
 
   TemplateParameterList *TemplateParams = Template->getTemplateParameters();
   for (unsigned I = 0, E = TemplateParams->size(); I != E; ++I) {
@@ -3429,9 +3427,9 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
       if (!P.isPackExpansion() && !A.isPackExpansion()) {
         Info.Param =
             makeTemplateParameter(Template->getTemplateParameters()->getParam(
-                (PsStack.empty() ? TemplateArgs.end()
-                                 : PsStack.front().begin()) -
-                TemplateArgs.begin()));
+                (AsStack.empty() ? CTAI.CanonicalConverted.end()
+                                 : AsStack.front().begin()) -
+                1 - CTAI.CanonicalConverted.begin()));
         Info.FirstArg = P;
         Info.SecondArg = A;
         return TemplateDeductionResult::NonDeducedMismatch;
@@ -4074,22 +4072,7 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   if (FunctionTemplate->getFriendObjectKind())
     Owner = FunctionTemplate->getLexicalDeclContext();
   FunctionDecl *FD = FunctionTemplate->getTemplatedDecl();
-  // additional check for inline friend,
-  // ```
-  //   template <class F1> int foo(F1 X);
-  //   template <int A1> struct A {
-  //     template <class F1> friend int foo(F1 X) { return A1; }
-  //   };
-  //   template struct A<1>;
-  //   int a = foo(1.0);
-  // ```
-  const FunctionDecl *FDFriend;
-  if (FD->getFriendObjectKind() == Decl::FriendObjectKind::FOK_None &&
-      FD->isDefined(FDFriend, /*CheckForPendingFriendDefinition*/ true) &&
-      FDFriend->getFriendObjectKind() != Decl::FriendObjectKind::FOK_None) {
-    FD = const_cast<FunctionDecl *>(FDFriend);
-    Owner = FD->getLexicalDeclContext();
-  }
+
   MultiLevelTemplateArgumentList SubstArgs(
       FunctionTemplate, CanonicalDeducedArgumentList->asArray(),
       /*Final=*/false);
@@ -6642,17 +6625,19 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
 
   TemplateDeductionResult TDK;
   runWithSufficientStackSpace(Info.getLocation(), [&] {
-    TDK = ::FinishTemplateArgumentDeduction(
-        *this, AArg, /*IsPartialOrdering=*/true, PArgs, Deduced, Info);
+    TDK = ::FinishTemplateArgumentDeduction(*this, AArg, PartialOrdering, PArgs,
+                                            Deduced, Info);
   });
   switch (TDK) {
   case TemplateDeductionResult::Success:
     return true;
 
   // It doesn't seem possible to get a non-deduced mismatch when partial
-  // ordering TTPs.
+  // ordering TTPs, except with an invalid template parameter list which has
+  // a parameter after a pack.
   case TemplateDeductionResult::NonDeducedMismatch:
-    llvm_unreachable("Unexpected NonDeducedMismatch");
+    assert(PArg->isInvalidDecl() && "Unexpected NonDeducedMismatch");
+    return false;
 
   // Substitution failures should have already been diagnosed.
   case TemplateDeductionResult::AlreadyDiagnosed:

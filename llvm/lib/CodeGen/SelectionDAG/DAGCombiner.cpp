@@ -12547,9 +12547,10 @@ SDValue DAGCombiner::foldVSelectOfConstants(SDNode *N) {
   for (unsigned i = 0; i != Elts; ++i) {
     SDValue N1Elt = N1.getOperand(i);
     SDValue N2Elt = N2.getOperand(i);
-    if (N1Elt.isUndef() || N2Elt.isUndef())
+    if (N1Elt.isUndef())
       continue;
-    if (N1Elt.getValueType() != N2Elt.getValueType()) {
+    // N2 should not contain undef values since it will be reused in the fold.
+    if (N2Elt.isUndef() || N1Elt.getValueType() != N2Elt.getValueType()) {
       AllAddOne = false;
       AllSubOne = false;
       break;
@@ -16170,11 +16171,13 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
       DAG.UpdateNodeOperands(FrozenMaybePoisonOperand.getNode(),
                              MaybePoisonOperand);
     }
+
+    // This node has been merged with another.
+    if (N->getOpcode() == ISD::DELETED_NODE)
+      return SDValue(N, 0);
   }
 
-  // This node has been merged with another.
-  if (N->getOpcode() == ISD::DELETED_NODE)
-    return SDValue(N, 0);
+  assert(N->getOpcode() != ISD::DELETED_NODE && "Node was deleted!");
 
   // The whole node may have been updated, so the value we were holding
   // may no longer be valid. Re-fetch the operand we're `freeze`ing.
@@ -17281,6 +17284,9 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
 // prefer it.
 SDValue DAGCombiner::combineFMulOrFDivWithIntPow2(SDNode *N) {
   EVT VT = N->getValueType(0);
+  if (!APFloat::isIEEELikeFP(VT.getFltSemantics()))
+    return SDValue();
+
   SDValue ConstOp, Pow2Op;
 
   std::optional<int> Mantissa;
@@ -17307,8 +17313,8 @@ SDValue DAGCombiner::combineFMulOrFDivWithIntPow2(SDNode *N) {
 
       const APFloat &APF = CFP->getValueAPF();
 
-      // Make sure we have normal/ieee constant.
-      if (!APF.isNormal() || !APF.isIEEE())
+      // Make sure we have normal constant.
+      if (!APF.isNormal())
         return false;
 
       // Make sure the floats exponent is within the bounds that this transform

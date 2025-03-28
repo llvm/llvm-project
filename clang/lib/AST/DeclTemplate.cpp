@@ -957,18 +957,20 @@ FunctionTemplateSpecializationInfo *FunctionTemplateSpecializationInfo::Create(
 // ClassTemplateSpecializationDecl Implementation
 //===----------------------------------------------------------------------===//
 
-ClassTemplateSpecializationDecl::
-ClassTemplateSpecializationDecl(ASTContext &Context, Kind DK, TagKind TK,
-                                DeclContext *DC, SourceLocation StartLoc,
-                                SourceLocation IdLoc,
-                                ClassTemplateDecl *SpecializedTemplate,
-                                ArrayRef<TemplateArgument> Args,
-                                ClassTemplateSpecializationDecl *PrevDecl)
+ClassTemplateSpecializationDecl::ClassTemplateSpecializationDecl(
+    ASTContext &Context, Kind DK, TagKind TK, DeclContext *DC,
+    SourceLocation StartLoc, SourceLocation IdLoc,
+    ClassTemplateDecl *SpecializedTemplate, ArrayRef<TemplateArgument> Args,
+    bool MatchedPackOnParmToNonPackOnArg,
+    ClassTemplateSpecializationDecl *PrevDecl)
     : CXXRecordDecl(DK, TK, Context, DC, StartLoc, IdLoc,
                     SpecializedTemplate->getIdentifier(), PrevDecl),
-    SpecializedTemplate(SpecializedTemplate),
-    TemplateArgs(TemplateArgumentList::CreateCopy(Context, Args)),
-    SpecializationKind(TSK_Undeclared) {
+      SpecializedTemplate(SpecializedTemplate),
+      TemplateArgs(TemplateArgumentList::CreateCopy(Context, Args)),
+      SpecializationKind(TSK_Undeclared),
+      MatchedPackOnParmToNonPackOnArg(MatchedPackOnParmToNonPackOnArg) {
+  assert(DK == Kind::ClassTemplateSpecialization ||
+         MatchedPackOnParmToNonPackOnArg == false);
 }
 
 ClassTemplateSpecializationDecl::ClassTemplateSpecializationDecl(ASTContext &C,
@@ -977,18 +979,14 @@ ClassTemplateSpecializationDecl::ClassTemplateSpecializationDecl(ASTContext &C,
                     SourceLocation(), nullptr, nullptr),
       SpecializationKind(TSK_Undeclared) {}
 
-ClassTemplateSpecializationDecl *
-ClassTemplateSpecializationDecl::Create(ASTContext &Context, TagKind TK,
-                                        DeclContext *DC,
-                                        SourceLocation StartLoc,
-                                        SourceLocation IdLoc,
-                                        ClassTemplateDecl *SpecializedTemplate,
-                                        ArrayRef<TemplateArgument> Args,
-                                   ClassTemplateSpecializationDecl *PrevDecl) {
-  auto *Result =
-      new (Context, DC) ClassTemplateSpecializationDecl(
-          Context, ClassTemplateSpecialization, TK, DC, StartLoc, IdLoc,
-          SpecializedTemplate, Args, PrevDecl);
+ClassTemplateSpecializationDecl *ClassTemplateSpecializationDecl::Create(
+    ASTContext &Context, TagKind TK, DeclContext *DC, SourceLocation StartLoc,
+    SourceLocation IdLoc, ClassTemplateDecl *SpecializedTemplate,
+    ArrayRef<TemplateArgument> Args, bool MatchedPackOnParmToNonPackOnArg,
+    ClassTemplateSpecializationDecl *PrevDecl) {
+  auto *Result = new (Context, DC) ClassTemplateSpecializationDecl(
+      Context, ClassTemplateSpecialization, TK, DC, StartLoc, IdLoc,
+      SpecializedTemplate, Args, MatchedPackOnParmToNonPackOnArg, PrevDecl);
   Result->setMayHaveOutOfDateDef(false);
 
   // If the template decl is incomplete, copy the external lexical storage from
@@ -1175,7 +1173,10 @@ ClassTemplatePartialSpecializationDecl::ClassTemplatePartialSpecializationDecl(
     ClassTemplatePartialSpecializationDecl *PrevDecl)
     : ClassTemplateSpecializationDecl(
           Context, ClassTemplatePartialSpecialization, TK, DC, StartLoc, IdLoc,
-          SpecializedTemplate, Args, PrevDecl),
+          // Tracking MatchedPackOnParmToNonPackOnArg for Partial
+          // Specializations is not needed.
+          SpecializedTemplate, Args, /*MatchedPackOnParmToNonPackOnArg=*/false,
+          PrevDecl),
       TemplateParams(Params), InstantiatedFromMember(nullptr, false) {
   if (AdoptTemplateParameterList(Params, this))
     setInvalidDecl();

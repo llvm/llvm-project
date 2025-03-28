@@ -897,6 +897,8 @@ Bug Fixes in This Version
 - No longer return ``false`` for ``noexcept`` expressions involving a
   ``delete`` which resolves to a destroying delete but the type of the object
   being deleted has a potentially throwing destructor (#GH118660).
+- Clang now outputs correct values when #embed data contains bytes with negative
+  signed char values (#GH102798).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1053,6 +1055,16 @@ Bug Fixes to C++ Support
   template parameter. Now, such expression can be used with ``static_assert`` and ``constexpr``. (#GH123498)
 - Correctly determine the implicit constexprness of lambdas in dependent contexts. (#GH97958) (#GH114234)
 - Fix that some dependent immediate expressions did not cause immediate escalation (#GH119046)
+- Fixed a substitution bug in transforming CTAD aliases when the type alias contains a non-pack template argument
+  corresponding to a pack parameter (#GH124715)
+- Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
+- Fixes matching of nested template template parameters. (#GH130362)
+- Correctly diagnoses template template paramters which have a pack parameter
+  not in the last position.
+- Fixed an integer overflow bug in computing template parameter depths when synthesizing CTAD guides. (#GH128691)
+- Fixed an incorrect pointer access when checking access-control on concepts. (#GH131530)
+- Fixed various alias CTAD bugs involving variadic template arguments. (#GH123591), (#GH127539), (#GH129077),
+  (#GH129620), and (#GH129998).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1264,6 +1276,8 @@ CUDA Support
 
 AIX Support
 ^^^^^^^^^^^
+- Fixed the ``-print-runtime-dir`` option.
+- Enable continuous profile syncing feature on AIX.
 
 NetBSD Support
 ^^^^^^^^^^^^^^
@@ -1290,6 +1304,11 @@ AVR Support
 ^^^^^^^^^^^
 
 - Reject C/C++ compilation for avr1 devices which have no SRAM.
+
+BPF Support
+^^^^^^^^^^^
+
+- Make ``-mcpu=v3`` as the default.
 
 DWARF Support in Clang
 ----------------------
@@ -1351,6 +1370,10 @@ clang-format
 - Adds ``WrapNamespaceBodyWithEmptyLines`` option.
 - Adds the ``IndentExportBlock`` option.
 - Adds ``PenaltyBreakBeforeMemberAccess`` option.
+- Add the C language instead of treating it like C++.
+- Allow specifying the language (C, C++, or Objective-C) for a ``.h`` file by
+  adding a special comment (e.g. ``// clang-format Language: ObjC``) near the
+  top of the file.
 
 libclang
 --------

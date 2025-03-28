@@ -20,7 +20,7 @@ void test_global_add_f64(__global double *addr, double x) {
 // CHECK-LABEL: test_global_add_half2
 // CHECK: = atomicrmw fadd ptr addrspace(1) %{{.+}}, <2 x half> %{{.+}} syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
 // GFX90A-LABEL:  test_global_add_half2
-// GFX90A:  global_atomic_pk_add_f16 v2, v[{{[0-9]+:[0-9]+}}], v{{[0-9]+}}, off glc
+// GFX90A:  global_atomic_pk_add_f16 v2, v[0:1], v2, off glc
 void test_global_add_half2(__global half2 *addr, half2 x) {
   half2 *rtn;
   *rtn = __builtin_amdgcn_global_atomic_fadd_v2f16(addr, x);

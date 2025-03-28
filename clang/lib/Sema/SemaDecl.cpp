@@ -4803,7 +4803,8 @@ bool Sema::checkVarDeclRedefinition(VarDecl *Old, VarDecl *New) {
       (New->getFormalLinkage() == Linkage::Internal || New->isInline() ||
        isa<VarTemplateSpecializationDecl>(New) ||
        New->getDescribedVarTemplate() || New->getNumTemplateParameterLists() ||
-       New->getDeclContext()->isDependentContext())) {
+       New->getDeclContext()->isDependentContext() ||
+       New->hasAttr<SelectAnyAttr>())) {
     // The previous definition is hidden, and multiple definitions are
     // permitted (in separate TUs). Demote this to a declaration.
     New->demoteThisDefinitionToDeclaration();
@@ -8144,7 +8145,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
               (D.getCXXScopeSpec().isSet() && DC && DC->isRecord() &&
                DC->isDependentContext())
                   ? TPC_ClassTemplateMember
-                  : TPC_VarTemplate))
+                  : TPC_Other))
         NewVD->setInvalidDecl();
 
       // If we are providing an explicit specialization of a static variable
@@ -20387,6 +20388,21 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
 
     if (IsEmittedForExternalSymbol())
       return FunctionEmissionStatus::Emitted;
+
+    // If FD is a virtual destructor of an explicit instantiation
+    // of a template class, return Emitted.
+    if (auto *Destructor = dyn_cast<CXXDestructorDecl>(FD)) {
+      if (Destructor->isVirtual()) {
+        if (auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(
+                Destructor->getParent())) {
+          TemplateSpecializationKind TSK =
+              Spec->getTemplateSpecializationKind();
+          if (TSK == TSK_ExplicitInstantiationDeclaration ||
+              TSK == TSK_ExplicitInstantiationDefinition)
+            return FunctionEmissionStatus::Emitted;
+        }
+      }
+    }
   }
 
   // Otherwise, the function is known-emitted if it's in our set of

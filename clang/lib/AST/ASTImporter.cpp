@@ -6321,9 +6321,9 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
     updateLookupTableForTemplateParameters(*ToTPList);
   } else { // Not a partial specialization.
     if (GetImportedOrCreateDecl(
-            D2, D, Importer.getToContext(), D->getTagKind(), DC,
-            *BeginLocOrErr, *IdLocOrErr, ClassTemplate, TemplateArgs,
-            PrevDecl))
+            D2, D, Importer.getToContext(), D->getTagKind(), DC, *BeginLocOrErr,
+            *IdLocOrErr, ClassTemplate, TemplateArgs,
+            D->hasMatchedPackOnParmToNonPackOnArg(), PrevDecl))
       return D2;
 
     // Update InsertPos, because preceding import calls may have invalidated

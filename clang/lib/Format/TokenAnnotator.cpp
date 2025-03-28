@@ -129,7 +129,7 @@ public:
       : Style(Style), Line(Line), CurrentToken(Line.First), AutoFound(false),
         IsCpp(Style.isCpp()), LangOpts(getFormattingLangOpts(Style)),
         Keywords(Keywords), Scopes(Scopes), TemplateDeclarationDepth(0) {
-    assert(IsCpp == LangOpts.CXXOperatorNames);
+    assert(IsCpp == (LangOpts.CXXOperatorNames || LangOpts.C17));
     Contexts.push_back(Context(tok::unknown, 1, /*IsExpression=*/false));
     resetTokenMetadata();
   }
@@ -2583,14 +2583,19 @@ private:
     if (Style.isVerilog())
       return false;
 
-    if (Tok.isNot(tok::identifier) || !Tok.Previous)
+    if (!Tok.Previous || Tok.isNot(tok::identifier) || Tok.is(TT_ClassHeadName))
       return false;
+
+    if ((Style.isJavaScript() || Style.Language == FormatStyle::LK_Java) &&
+        Tok.is(Keywords.kw_extends)) {
+      return false;
+    }
 
     if (const auto *NextNonComment = Tok.getNextNonComment();
         (!NextNonComment && !Line.InMacroBody) ||
         (NextNonComment &&
          (NextNonComment->isPointerOrReference() ||
-          NextNonComment->is(tok::string_literal) ||
+          NextNonComment->isOneOf(TT_ClassHeadName, tok::string_literal) ||
           (Line.InPragmaDirective && NextNonComment->is(tok::identifier))))) {
       return false;
     }
@@ -3815,7 +3820,7 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
   };
 
   const auto *Next = Current.Next;
-  const bool IsCpp = LangOpts.CXXOperatorNames;
+  const bool IsCpp = LangOpts.CXXOperatorNames || LangOpts.C17;
 
   // Find parentheses of parameter list.
   if (Current.is(tok::kw_operator)) {
@@ -6189,8 +6194,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
                 FormatStyle::PAS_Right &&
             (!Right.Next || Right.Next->isNot(TT_FunctionDeclarationName)));
   }
-  if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName) ||
-      Right.is(tok::kw_operator)) {
+  if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName,
+                    TT_ClassHeadName, tok::kw_operator)) {
     return true;
   }
   if (Left.is(TT_PointerOrReference))

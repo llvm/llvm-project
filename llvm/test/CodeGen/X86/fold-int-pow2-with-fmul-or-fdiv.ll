@@ -1662,3 +1662,31 @@ define float @fdiv_pow_shl_cnt32_okay(i32 %cnt) nounwind {
   %mul = fdiv float 0x3a20000000000000, %conv
   ret float %mul
 }
+
+define x86_fp80 @pr128528(i1 %cond) {
+; CHECK-SSE-LABEL: pr128528:
+; CHECK-SSE:       # %bb.0:
+; CHECK-SSE-NEXT:    testb $1, %dil
+; CHECK-SSE-NEXT:    movl $8, %eax
+; CHECK-SSE-NEXT:    movl $1, %ecx
+; CHECK-SSE-NEXT:    cmovnel %eax, %ecx
+; CHECK-SSE-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
+; CHECK-SSE-NEXT:    fildl -{{[0-9]+}}(%rsp)
+; CHECK-SSE-NEXT:    fmull {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; CHECK-SSE-NEXT:    retq
+;
+; CHECK-AVX-LABEL: pr128528:
+; CHECK-AVX:       # %bb.0:
+; CHECK-AVX-NEXT:    testb $1, %dil
+; CHECK-AVX-NEXT:    movl $8, %eax
+; CHECK-AVX-NEXT:    movl $1, %ecx
+; CHECK-AVX-NEXT:    cmovnel %eax, %ecx
+; CHECK-AVX-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
+; CHECK-AVX-NEXT:    fildl -{{[0-9]+}}(%rsp)
+; CHECK-AVX-NEXT:    fmull {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; CHECK-AVX-NEXT:    retq
+  %sub9 = select i1 %cond, i32 8, i32 1
+  %conv = uitofp i32 %sub9 to x86_fp80
+  %mul = fmul x86_fp80 %conv, 0xK4007D055555555555800
+  ret x86_fp80 %mul
+}

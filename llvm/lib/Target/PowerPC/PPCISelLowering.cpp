@@ -223,13 +223,19 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i8, Expand);
   }
 
+  setTruncStoreAction(MVT::f128, MVT::f16, Expand);
+  setOperationAction(ISD::FP_TO_FP16, MVT::f128, Expand);
+
   if (Subtarget.isISA3_0()) {
+    setLoadExtAction(ISD::EXTLOAD, MVT::f128, MVT::f16, Legal);
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Legal);
     setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Legal);
     setTruncStoreAction(MVT::f64, MVT::f16, Legal);
     setTruncStoreAction(MVT::f32, MVT::f16, Legal);
   } else {
     // No extending loads from f16 or HW conversions back and forth.
+    setLoadExtAction(ISD::EXTLOAD, MVT::f128, MVT::f16, Expand);
+    setOperationAction(ISD::FP16_TO_FP, MVT::f128, Expand);
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
     setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
     setOperationAction(ISD::FP_TO_FP16, MVT::f64, Expand);
@@ -19050,8 +19056,8 @@ PPC::AddrMode PPCTargetLowering::SelectOptimalAddrMode(const SDNode *Parent,
         int32_t Addr = (int32_t)CNImm;
         // Otherwise, break this down into LIS + Disp.
         Disp = DAG.getSignedTargetConstant((int16_t)Addr, DL, MVT::i32);
-        Base =
-            DAG.getTargetConstant((Addr - (int16_t)Addr) >> 16, DL, MVT::i32);
+        Base = DAG.getSignedTargetConstant((Addr - (int16_t)Addr) >> 16, DL,
+                                           MVT::i32);
         uint32_t LIS = CNType == MVT::i32 ? PPC::LIS : PPC::LIS8;
         Base = SDValue(DAG.getMachineNode(LIS, DL, CNType, Base), 0);
         break;

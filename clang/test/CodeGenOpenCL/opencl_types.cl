@@ -42,7 +42,7 @@ kernel void foo(image1d_t img) {
   // CHECK-AMDGCN: alloca ptr addrspace(4)
   event_t evt;
   // CHECK-SPIR: alloca target("spirv.Event")
-  // CHECK-AMDGCN: alloca ptr
+  // CHECK-AMDGCN: alloca ptr addrspace(5)
   clk_event_t clk_evt;
   // CHECK-SPIR: alloca target("spirv.DeviceEvent")
   // CHECK-AMDGCN: alloca ptr addrspace(1)

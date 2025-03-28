@@ -168,7 +168,7 @@ UnwrappedLineParser::UnwrappedLineParser(
                        : IG_Inited),
       IncludeGuardToken(nullptr), FirstStartColumn(FirstStartColumn),
       Macros(Style.Macros, SourceMgr, Style, Allocator, IdentTable) {
-  assert(IsCpp == LangOpts.CXXOperatorNames);
+  assert(IsCpp == (LangOpts.CXXOperatorNames || LangOpts.C17));
 }
 
 void UnwrappedLineParser::reset() {
@@ -1712,12 +1712,6 @@ void UnwrappedLineParser::parseStructuralElement(
            OpeningBrace && OpeningBrace->isOneOf(TT_RequiresExpressionLBrace,
                                                  TT_CompoundRequirementLBrace);
        !eof();) {
-    if (IsCpp && FormatTok->isCppAlternativeOperatorKeyword()) {
-      if (auto *Next = Tokens->peekNextToken(/*SkipComment=*/true);
-          Next && Next->isBinaryOperator()) {
-        FormatTok->Tok.setKind(tok::identifier);
-      }
-    }
     const FormatToken *Previous = FormatTok->Previous;
     switch (FormatTok->Tok.getKind()) {
     case tok::at:
@@ -2568,12 +2562,12 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
 /// Returns whether there is a `=` token between the parentheses.
 bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
   assert(FormatTok->is(tok::l_paren) && "'(' expected.");
-  auto *LeftParen = FormatTok;
+  auto *LParen = FormatTok;
   bool SeenComma = false;
   bool SeenEqual = false;
   bool MightBeFoldExpr = false;
-  const bool MightBeStmtExpr = Tokens->peekNextToken()->is(tok::l_brace);
   nextToken();
+  const bool MightBeStmtExpr = FormatTok->is(tok::l_brace);
   do {
     switch (FormatTok->Tok.getKind()) {
     case tok::l_paren:
@@ -2583,44 +2577,60 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
         parseChildBlock();
       break;
     case tok::r_paren: {
-      auto *Prev = LeftParen->Previous;
-      if (!MightBeStmtExpr && !MightBeFoldExpr && !Line->InMacroBody &&
-          Style.RemoveParentheses > FormatStyle::RPS_Leave) {
-        const auto *Next = Tokens->peekNextToken();
-        const bool DoubleParens =
-            Prev && Prev->is(tok::l_paren) && Next && Next->is(tok::r_paren);
-        const bool CommaSeparated =
-            !DoubleParens && Prev && Prev->isOneOf(tok::l_paren, tok::comma) &&
-            Next && Next->isOneOf(tok::comma, tok::r_paren);
-        const auto *PrevPrev = Prev ? Prev->getPreviousNonComment() : nullptr;
-        const bool Excluded =
-            PrevPrev &&
-            (PrevPrev->isOneOf(tok::kw___attribute, tok::kw_decltype) ||
-             SeenComma ||
-             (SeenEqual &&
-              (PrevPrev->isOneOf(tok::kw_if, tok::kw_while) ||
-               PrevPrev->endsSequence(tok::kw_constexpr, tok::kw_if))));
-        const bool ReturnParens =
-            Style.RemoveParentheses == FormatStyle::RPS_ReturnStatement &&
-            ((NestedLambdas.empty() && !IsDecltypeAutoFunction) ||
-             (!NestedLambdas.empty() && !NestedLambdas.back())) &&
-            Prev && Prev->isOneOf(tok::kw_return, tok::kw_co_return) && Next &&
-            Next->is(tok::semi);
-        if ((DoubleParens && !Excluded) || (CommaSeparated && !SeenComma) ||
-            ReturnParens) {
-          LeftParen->Optional = true;
-          FormatTok->Optional = true;
-        }
-      }
-      if (Prev) {
-        if (Prev->is(TT_TypenameMacro)) {
-          LeftParen->setFinalizedType(TT_TypeDeclarationParen);
-          FormatTok->setFinalizedType(TT_TypeDeclarationParen);
-        } else if (Prev->is(tok::greater) && FormatTok->Previous == LeftParen) {
-          Prev->setFinalizedType(TT_TemplateCloser);
-        }
-      }
+      auto *Prev = LParen->Previous;
+      auto *RParen = FormatTok;
       nextToken();
+      if (Prev) {
+        auto OptionalParens = [&] {
+          if (MightBeStmtExpr || MightBeFoldExpr || Line->InMacroBody ||
+              SeenComma || Style.RemoveParentheses == FormatStyle::RPS_Leave) {
+            return false;
+          }
+          const bool DoubleParens =
+              Prev->is(tok::l_paren) && FormatTok->is(tok::r_paren);
+          if (DoubleParens) {
+            const auto *PrevPrev = Prev->getPreviousNonComment();
+            const bool Excluded =
+                PrevPrev &&
+                (PrevPrev->isOneOf(tok::kw___attribute, tok::kw_decltype) ||
+                 (SeenEqual &&
+                  (PrevPrev->isOneOf(tok::kw_if, tok::kw_while) ||
+                   PrevPrev->endsSequence(tok::kw_constexpr, tok::kw_if))));
+            if (!Excluded)
+              return true;
+          } else {
+            const bool CommaSeparated =
+                Prev->isOneOf(tok::l_paren, tok::comma) &&
+                FormatTok->isOneOf(tok::comma, tok::r_paren);
+            if (CommaSeparated &&
+                // LParen is not preceded by ellipsis, comma.
+                !Prev->endsSequence(tok::comma, tok::ellipsis) &&
+                // RParen is not followed by comma, ellipsis.
+                !(FormatTok->is(tok::comma) &&
+                  Tokens->peekNextToken()->is(tok::ellipsis))) {
+              return true;
+            }
+            const bool ReturnParens =
+                Style.RemoveParentheses == FormatStyle::RPS_ReturnStatement &&
+                ((NestedLambdas.empty() && !IsDecltypeAutoFunction) ||
+                 (!NestedLambdas.empty() && !NestedLambdas.back())) &&
+                Prev->isOneOf(tok::kw_return, tok::kw_co_return) &&
+                FormatTok->is(tok::semi);
+            if (ReturnParens)
+              return true;
+          }
+          return false;
+        };
+        if (Prev->is(TT_TypenameMacro)) {
+          LParen->setFinalizedType(TT_TypeDeclarationParen);
+          RParen->setFinalizedType(TT_TypeDeclarationParen);
+        } else if (Prev->is(tok::greater) && RParen->Previous == LParen) {
+          Prev->setFinalizedType(TT_TemplateCloser);
+        } else if (OptionalParens()) {
+          LParen->Optional = true;
+          RParen->Optional = true;
+        }
+      }
       return SeenEqual;
     }
     case tok::r_brace:
@@ -4029,7 +4039,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   const FormatToken &InitialToken = *FormatTok;
   nextToken();
 
-  const FormatToken *ClassName = nullptr;
+  FormatToken *ClassName = nullptr;
   bool IsDerived = false;
   auto IsNonMacroIdentifier = [](const FormatToken *Tok) {
     return Tok->is(tok::identifier) && Tok->TokenText != Tok->TokenText.upper();
@@ -4059,7 +4069,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
     }
     if (FormatTok->is(tok::l_square) && handleCppAttributes())
       continue;
-    const auto *Previous = FormatTok;
+    auto *Previous = FormatTok;
     nextToken();
     switch (FormatTok->Tok.getKind()) {
     case tok::l_paren:
@@ -4074,9 +4084,12 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
     case tok::hashhash:
       break;
     default:
-      if (!JSPastExtendsOrImplements && !ClassName &&
-          Previous->is(tok::identifier) && Previous->isNot(TT_AttributeMacro) &&
-          Previous->TokenText != Previous->TokenText.upper()) {
+      if (JSPastExtendsOrImplements || ClassName ||
+          Previous->isNot(tok::identifier) || Previous->is(TT_AttributeMacro)) {
+        break;
+      }
+      if (const auto Text = Previous->TokenText;
+          Text.size() == 1 || Text != Text.upper()) {
         ClassName = Previous;
       }
     }
@@ -4160,6 +4173,8 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   if (FormatTok->is(tok::l_brace)) {
     if (IsListInitialization())
       return;
+    if (ClassName)
+      ClassName->setFinalizedType(TT_ClassHeadName);
     auto [OpenBraceType, ClosingBraceType] = GetBraceTypes(InitialToken);
     FormatTok->setFinalizedType(OpenBraceType);
     if (ParseAsExpr) {

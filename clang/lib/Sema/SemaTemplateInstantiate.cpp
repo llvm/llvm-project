@@ -479,9 +479,6 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
   using namespace TemplateInstArgsHelpers;
   const Decl *CurDecl = ND;
 
-  if (!CurDecl)
-    CurDecl = Decl::castFromDeclContext(DC);
-
   if (Innermost) {
     Result.addOuterTemplateArguments(const_cast<NamedDecl *>(ND), *Innermost,
                                      Final);
@@ -495,8 +492,10 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
     // has a depth of 0.
     if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(CurDecl))
       HandleDefaultTempArgIntoTempTempParam(TTP, Result);
-    CurDecl = Response::UseNextDecl(CurDecl).NextDecl;
-  }
+    CurDecl = DC ? Decl::castFromDeclContext(DC)
+                 : Response::UseNextDecl(CurDecl).NextDecl;
+  } else if (!CurDecl)
+    CurDecl = Decl::castFromDeclContext(DC);
 
   while (!CurDecl->isFileContextDecl()) {
     Response R;
@@ -1348,6 +1347,16 @@ std::optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
   return std::nullopt;
 }
 
+static TemplateArgument
+getPackSubstitutedTemplateArgument(Sema &S, TemplateArgument Arg) {
+  assert(S.ArgumentPackSubstitutionIndex >= 0);
+  assert(S.ArgumentPackSubstitutionIndex < (int)Arg.pack_size());
+  Arg = Arg.pack_begin()[S.ArgumentPackSubstitutionIndex];
+  if (Arg.isPackExpansion())
+    Arg = Arg.getPackExpansionPattern();
+  return Arg;
+}
+
 //===----------------------------------------------------------------------===/
 // Template Instantiation for Types
 //===----------------------------------------------------------------------===/
@@ -1465,6 +1474,20 @@ namespace {
         std::tie(Depth, Index) = getDepthAndIndex(PartialPack);
         TemplateArgs.setArgument(Depth, Index, Arg);
       }
+    }
+
+    TemplateArgument
+    getTemplateArgumentPackPatternForRewrite(const TemplateArgument &TA) {
+      if (TA.getKind() != TemplateArgument::Pack)
+        return TA;
+      if (SemaRef.ArgumentPackSubstitutionIndex != -1)
+        return getPackSubstitutedTemplateArgument(SemaRef, TA);
+      assert(TA.pack_size() == 1 && TA.pack_begin()->isPackExpansion() &&
+             "unexpected pack arguments in template rewrite");
+      TemplateArgument Arg = *TA.pack_begin();
+      if (Arg.isPackExpansion())
+        Arg = Arg.getPackExpansionPattern();
+      return Arg;
     }
 
     /// Transform the given declaration by instantiating a reference to
@@ -1618,13 +1641,16 @@ namespace {
       std::vector<TemplateArgument> TArgs;
       switch (Arg.getKind()) {
       case TemplateArgument::Pack:
+        assert(SemaRef.CodeSynthesisContexts.empty() ||
+               SemaRef.CodeSynthesisContexts.back().Kind ==
+                   Sema::CodeSynthesisContext::BuildingDeductionGuides);
         // Literally rewrite the template argument pack, instead of unpacking
         // it.
         for (auto &pack : Arg.getPackAsArray()) {
           TemplateArgumentLoc Input = SemaRef.getTrivialTemplateArgumentLoc(
               pack, QualType(), SourceLocation{});
           TemplateArgumentLoc Output;
-          if (SemaRef.SubstTemplateArgument(Input, TemplateArgs, Output))
+          if (TransformTemplateArgument(Input, Output, Uneval))
             return true; // fails
           TArgs.push_back(Output.getArgument());
         }
@@ -1636,6 +1662,23 @@ namespace {
         break;
       }
       return inherited::TransformTemplateArgument(Input, Output, Uneval);
+    }
+
+    std::optional<unsigned> ComputeSizeOfPackExprWithoutSubstitution(
+        ArrayRef<TemplateArgument> PackArgs) {
+      // Don't do this when rewriting template parameters for CTAD:
+      //   1) The heuristic needs the unpacked Subst* nodes to figure out the
+      //   expanded size, but this never applies since Subst* nodes are not
+      //   created in rewrite scenarios.
+      //
+      //   2) The heuristic substitutes into the pattern with pack expansion
+      //   suppressed, which does not meet the requirements for argument
+      //   rewriting when template arguments include a non-pack matching against
+      //   a pack, particularly when rewriting an alias CTAD.
+      if (TemplateArgs.isRewrite())
+        return std::nullopt;
+
+      return inherited::ComputeSizeOfPackExprWithoutSubstitution(PackArgs);
     }
 
     template<typename Fn>
@@ -1856,16 +1899,6 @@ bool TemplateInstantiator::AlreadyTransformed(QualType T) {
   return true;
 }
 
-static TemplateArgument
-getPackSubstitutedTemplateArgument(Sema &S, TemplateArgument Arg) {
-  assert(S.ArgumentPackSubstitutionIndex >= 0);
-  assert(S.ArgumentPackSubstitutionIndex < (int)Arg.pack_size());
-  Arg = Arg.pack_begin()[S.ArgumentPackSubstitutionIndex];
-  if (Arg.isPackExpansion())
-    Arg = Arg.getPackExpansionPattern();
-  return Arg;
-}
-
 Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
   if (!D)
     return nullptr;
@@ -2036,11 +2069,7 @@ TemplateName TemplateInstantiator::TransformTemplateName(
       if (TemplateArgs.isRewrite()) {
         // We're rewriting the template parameter as a reference to another
         // template parameter.
-        if (Arg.getKind() == TemplateArgument::Pack) {
-          assert(Arg.pack_size() == 1 && Arg.pack_begin()->isPackExpansion() &&
-                 "unexpected pack arguments in template rewrite");
-          Arg = Arg.pack_begin()->getPackExpansionPattern();
-        }
+        Arg = getTemplateArgumentPackPatternForRewrite(Arg);
         assert(Arg.getKind() == TemplateArgument::Template &&
                "unexpected nontype template argument kind in template rewrite");
         return Arg.getAsTemplate();
@@ -2121,11 +2150,7 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
   if (TemplateArgs.isRewrite()) {
     // We're rewriting the template parameter as a reference to another
     // template parameter.
-    if (Arg.getKind() == TemplateArgument::Pack) {
-      assert(Arg.pack_size() == 1 && Arg.pack_begin()->isPackExpansion() &&
-             "unexpected pack arguments in template rewrite");
-      Arg = Arg.pack_begin()->getPackExpansionPattern();
-    }
+    Arg = getTemplateArgumentPackPatternForRewrite(Arg);
     assert(Arg.getKind() == TemplateArgument::Expression &&
            "unexpected nontype template argument kind in template rewrite");
     // FIXME: This can lead to the same subexpression appearing multiple times
@@ -2578,11 +2603,7 @@ TemplateInstantiator::TransformTemplateTypeParmType(TypeLocBuilder &TLB,
     if (TemplateArgs.isRewrite()) {
       // We're rewriting the template parameter as a reference to another
       // template parameter.
-      if (Arg.getKind() == TemplateArgument::Pack) {
-        assert(Arg.pack_size() == 1 && Arg.pack_begin()->isPackExpansion() &&
-               "unexpected pack arguments in template rewrite");
-        Arg = Arg.pack_begin()->getPackExpansionPattern();
-      }
+      Arg = getTemplateArgumentPackPatternForRewrite(Arg);
       assert(Arg.getKind() == TemplateArgument::Type &&
              "unexpected nontype template argument kind in template rewrite");
       QualType NewT = Arg.getAsType();

@@ -377,8 +377,13 @@ struct ConvertConstructorToDeductionGuideTransform {
         if (NestedPattern)
           Args.addOuterRetainedLevels(NestedPattern->getTemplateDepth());
         auto [Depth, Index] = getDepthAndIndex(Param);
+        // Depth can be 0 if FTD belongs to a non-template class/a class
+        // template specialization with an empty template parameter list. In
+        // that case, we don't want the NewDepth to overflow, and it should
+        // remain 0.
         NamedDecl *NewParam = transformTemplateParameter(
-            SemaRef, DC, Param, Args, Index + Depth1IndexAdjustment, Depth - 1);
+            SemaRef, DC, Param, Args, Index + Depth1IndexAdjustment,
+            Depth ? Depth - 1 : 0);
         if (!NewParam)
           return nullptr;
         // Constraints require that we substitute depth-1 arguments
@@ -982,6 +987,19 @@ getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate) {
   return {Template, AliasRhsTemplateArgs};
 }
 
+bool IsNonDeducedArgument(const TemplateArgument &TA) {
+  // The following cases indicate the template argument is non-deducible:
+  //   1. The result is null. E.g. When it comes from a default template
+  //   argument that doesn't appear in the alias declaration.
+  //   2. The template parameter is a pack and that cannot be deduced from
+  //   the arguments within the alias declaration.
+  // Non-deducible template parameters will persist in the transformed
+  // deduction guide.
+  return TA.isNull() ||
+         (TA.getKind() == TemplateArgument::Pack &&
+          llvm::any_of(TA.pack_elements(), IsNonDeducedArgument));
+}
+
 // Build deduction guides for a type alias template from the given underlying
 // deduction guide F.
 FunctionTemplateDecl *
@@ -1050,7 +1068,8 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   // !!NOTE: DeduceResults respects the sequence of template parameters of
   // the deduction guide f.
   for (unsigned Index = 0; Index < DeduceResults.size(); ++Index) {
-    if (const auto &D = DeduceResults[Index]; !D.isNull()) // Deduced
+    const auto &D = DeduceResults[Index];
+    if (!IsNonDeducedArgument(D))
       DeducedArgs.push_back(D);
     else
       NonDeducedTemplateParamsInFIndex.push_back(Index);
@@ -1114,7 +1133,7 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   Args.addOuterTemplateArguments(TransformedDeducedAliasArgs);
   for (unsigned Index = 0; Index < DeduceResults.size(); ++Index) {
     const auto &D = DeduceResults[Index];
-    if (D.isNull()) {
+    if (IsNonDeducedArgument(D)) {
       // 2): Non-deduced template parameters would be substituted later.
       continue;
     }

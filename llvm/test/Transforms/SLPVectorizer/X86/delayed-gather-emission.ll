@@ -31,7 +31,7 @@ define void @test() {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = fcmp une float [[I2]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <2 x i32> <i32 poison, i32 0>
 ; CHECK-NEXT:    [[TMP9]] = insertelement <2 x float> [[TMP8]], float [[I2]], i32 0
-; CHECK-NEXT:    [[TMP10]] = shufflevector <2 x float> [[TMP9]], <2 x float> [[TMP2]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP10]] = insertelement <2 x float> [[TMP2]], float [[I2]], i32 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[BB1]], label [[BB2]]
 ;
 entry:

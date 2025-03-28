@@ -17784,9 +17784,11 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeAssignmentOperators) {
   verifyFormat("int a = 5;");
   verifyFormat("a += 42;");
   verifyFormat("a or_eq 8;");
-  verifyFormat("xor = foo;");
 
-  FormatStyle Spaces = getLLVMStyle();
+  auto Spaces = getLLVMStyle(FormatStyle::LK_C);
+  verifyFormat("xor = foo;", Spaces);
+
+  Spaces.Language = FormatStyle::LK_Cpp;
   Spaces.SpaceBeforeAssignmentOperators = false;
   verifyFormat("int a= 5;", Spaces);
   verifyFormat("a+= 42;", Spaces);
@@ -24683,6 +24685,7 @@ TEST_F(FormatTest, StructuredBindings) {
 }
 
 TEST_F(FormatTest, FileAndCode) {
+  EXPECT_EQ(FormatStyle::LK_C, guessLanguage("foo.c", ""));
   EXPECT_EQ(FormatStyle::LK_Cpp, guessLanguage("foo.cc", ""));
   EXPECT_EQ(FormatStyle::LK_ObjC, guessLanguage("foo.m", ""));
   EXPECT_EQ(FormatStyle::LK_ObjC, guessLanguage("foo.mm", ""));
@@ -24846,6 +24849,18 @@ TEST_F(FormatTest, GuessLanguageWithChildLines) {
   EXPECT_EQ(
       FormatStyle::LK_ObjC,
       guessLanguage("foo.h", "#define FOO ({ foo(); ({ NSString *s; }) })"));
+}
+
+TEST_F(FormatTest, GetLanguageByComment) {
+  EXPECT_EQ(FormatStyle::LK_C,
+            guessLanguage("foo.h", "// clang-format Language: C\n"
+                                   "int i;"));
+  EXPECT_EQ(FormatStyle::LK_Cpp,
+            guessLanguage("foo.h", "// clang-format Language: Cpp\n"
+                                   "int DoStuff(CGRect rect);"));
+  EXPECT_EQ(FormatStyle::LK_ObjC,
+            guessLanguage("foo.h", "// clang-format Language: ObjC\n"
+                                   "int i;"));
 }
 
 TEST_F(FormatTest, TypenameMacros) {
@@ -27866,6 +27881,10 @@ TEST_F(FormatTest, RemoveParentheses) {
   verifyFormat("foo((a, b));", "foo(((a), b));", Style);
   verifyFormat("foo((a, b));", "foo((a, (b)));", Style);
   verifyFormat("foo((a, b, c));", "foo((a, ((b)), c));", Style);
+  verifyFormat("(..., (hash_a = hash_combine(hash_a, hash_b)));",
+               "(..., ((hash_a = hash_combine(hash_a, hash_b))));", Style);
+  verifyFormat("((hash_a = hash_combine(hash_a, hash_b)), ...);",
+               "(((hash_a = hash_combine(hash_a, hash_b))), ...);", Style);
   verifyFormat("return (0);", "return (((0)));", Style);
   verifyFormat("return (({ 0; }));", "return ((({ 0; })));", Style);
   verifyFormat("return ((... && std::is_convertible_v<TArgsLocal, TArgs>));",
@@ -28718,6 +28737,11 @@ TEST_F(FormatTest, WrapNamespaceBodyWithEmptyLinesAlways) {
                "int a = 1;\n"
                "}}",
                Style);
+}
+
+TEST_F(FormatTest, BreakBeforeClassName) {
+  verifyFormat("class ABSL_ATTRIBUTE_TRIVIAL_ABI ABSL_NULLABILITY_COMPATIBLE\n"
+               "    ArenaSafeUniquePtr {};");
 }
 
 } // namespace

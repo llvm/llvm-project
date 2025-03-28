@@ -1265,11 +1265,15 @@ HexagonTargetLowering::extractHvxSubvectorReg(SDValue OrigOp, SDValue VecV,
   // the subvector of interest. The subvector will never overlap two single
   // vectors.
   if (isHvxPairTy(VecTy)) {
-    if (Idx * ElemWidth >= 8*HwLen)
+    unsigned SubIdx = Hexagon::vsub_lo;
+    if (Idx * ElemWidth >= 8 * HwLen) {
+      SubIdx = Hexagon::vsub_hi;
       Idx -= VecTy.getVectorNumElements() / 2;
+    }
 
-    VecV = OrigOp;
-    if (typeSplit(VecTy).first == ResTy)
+    VecTy = typeSplit(VecTy).first;
+    VecV = DAG.getTargetExtractSubreg(SubIdx, dl, VecTy, VecV);
+    if (VecTy == ResTy)
       return VecV;
   }
 
@@ -1614,17 +1618,6 @@ HexagonTargetLowering::LowerHvxBuildVector(SDValue Op, SelectionDAG &DAG)
   for (unsigned i = 0; i != Size; ++i)
     Ops.push_back(Op.getOperand(i));
 
-  // First, split the BUILD_VECTOR for vector pairs. We could generate
-  // some pairs directly (via splat), but splats should be generated
-  // by the combiner prior to getting here.
-  if (VecTy.getSizeInBits() == 16*Subtarget.getVectorLength()) {
-    ArrayRef<SDValue> A(Ops);
-    MVT SingleTy = typeSplit(VecTy).first;
-    SDValue V0 = buildHvxVectorReg(A.take_front(Size/2), dl, SingleTy, DAG);
-    SDValue V1 = buildHvxVectorReg(A.drop_front(Size/2), dl, SingleTy, DAG);
-    return DAG.getNode(ISD::CONCAT_VECTORS, dl, VecTy, V0, V1);
-  }
-
   if (VecTy.getVectorElementType() == MVT::i1)
     return buildHvxVectorPred(Ops, dl, VecTy, DAG);
 
@@ -1639,6 +1632,17 @@ HexagonTargetLowering::LowerHvxBuildVector(SDValue Op, SelectionDAG &DAG)
     SDValue T0 = DAG.getNode(ISD::BUILD_VECTOR, dl,
         tyVector(VecTy, MVT::i16), NewOps);
     return DAG.getBitcast(tyVector(VecTy, MVT::f16), T0);
+  }
+
+  // First, split the BUILD_VECTOR for vector pairs. We could generate
+  // some pairs directly (via splat), but splats should be generated
+  // by the combiner prior to getting here.
+  if (VecTy.getSizeInBits() == 16 * Subtarget.getVectorLength()) {
+    ArrayRef<SDValue> A(Ops);
+    MVT SingleTy = typeSplit(VecTy).first;
+    SDValue V0 = buildHvxVectorReg(A.take_front(Size / 2), dl, SingleTy, DAG);
+    SDValue V1 = buildHvxVectorReg(A.drop_front(Size / 2), dl, SingleTy, DAG);
+    return DAG.getNode(ISD::CONCAT_VECTORS, dl, VecTy, V0, V1);
   }
 
   return buildHvxVectorReg(Ops, dl, VecTy, DAG);

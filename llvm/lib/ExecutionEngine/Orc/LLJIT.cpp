@@ -1241,8 +1241,8 @@ Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J) {
 
       // If UseEHFrames hasn't been set then we're good to use compact-unwind.
       if (!UseEHFrames) {
-        if (auto UIRP = UnwindInfoRegistrationPlugin::Create(
-                J.getIRCompileLayer(), PlatformJD)) {
+        if (auto UIRP =
+                UnwindInfoRegistrationPlugin::Create(J.getExecutionSession())) {
           OLL->addPlugin(std::move(*UIRP));
           LLVM_DEBUG(dbgs() << "Enabled compact-unwind support.\n");
         } else
