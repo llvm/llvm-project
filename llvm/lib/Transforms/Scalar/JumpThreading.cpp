@@ -524,9 +524,7 @@ static unsigned getJumpThreadDuplicationCost(const TargetTransformInfo *TTI,
 void JumpThreadingPass::findLoopHeaders(Function &F) {
   SmallVector<std::pair<const BasicBlock*,const BasicBlock*>, 32> Edges;
   FindFunctionBackedges(F, Edges);
-
-  for (const auto &Edge : Edges)
-    LoopHeaders.insert(Edge.second);
+  LoopHeaders.insert_range(llvm::make_second_range(Edges));
 }
 
 /// getKnownConstant - Helper method to determine if we can thread over a
@@ -1379,10 +1377,8 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
     // Otherwise, we had multiple unavailable predecessors or we had a critical
     // edge from the one.
     SmallVector<BasicBlock*, 8> PredsToSplit;
-    SmallPtrSet<BasicBlock*, 8> AvailablePredSet;
-
-    for (const auto &AvailablePred : AvailablePreds)
-      AvailablePredSet.insert(AvailablePred.first);
+    SmallPtrSet<BasicBlock *, 8> AvailablePredSet(
+        llvm::from_range, llvm::make_first_range(AvailablePreds));
 
     // Add all the unavailable predecessors to the PredsToSplit list.
     for (BasicBlock *P : predecessors(LoadBB)) {
