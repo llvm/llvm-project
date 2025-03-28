@@ -130,6 +130,11 @@ void llvm::reduceOperandsZeroDeltaPass(TestRunner &Test) {
   auto ReduceValue = [](Use &Op) -> Value * {
     if (!shouldReduceOperand(Op))
       return nullptr;
+
+    // Avoid introducing 0-sized allocations.
+    if (isa<AllocaInst>(Op.getUser()))
+      return nullptr;
+
     // Don't duplicate an existing switch case.
     if (auto *IntTy = dyn_cast<IntegerType>(Op->getType()))
       if (switchCaseExists(Op, ConstantInt::get(IntTy, 0)))
