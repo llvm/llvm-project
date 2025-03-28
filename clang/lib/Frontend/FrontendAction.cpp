@@ -49,52 +49,6 @@ LLVM_INSTANTIATE_REGISTRY(FrontendPluginRegistry)
 
 namespace {
 
-class DelegatingDeserializationListener : public ASTDeserializationListener {
-  ASTDeserializationListener *Previous;
-  bool DeletePrevious;
-
-public:
-  explicit DelegatingDeserializationListener(
-      ASTDeserializationListener *Previous, bool DeletePrevious)
-      : Previous(Previous), DeletePrevious(DeletePrevious) {}
-  ~DelegatingDeserializationListener() override {
-    if (DeletePrevious)
-      delete Previous;
-  }
-
-  DelegatingDeserializationListener(const DelegatingDeserializationListener &) =
-      delete;
-  DelegatingDeserializationListener &
-  operator=(const DelegatingDeserializationListener &) = delete;
-
-  void ReaderInitialized(ASTReader *Reader) override {
-    if (Previous)
-      Previous->ReaderInitialized(Reader);
-  }
-  void IdentifierRead(serialization::IdentifierID ID,
-                      IdentifierInfo *II) override {
-    if (Previous)
-      Previous->IdentifierRead(ID, II);
-  }
-  void TypeRead(serialization::TypeIdx Idx, QualType T) override {
-    if (Previous)
-      Previous->TypeRead(Idx, T);
-  }
-  void DeclRead(GlobalDeclID ID, const Decl *D) override {
-    if (Previous)
-      Previous->DeclRead(ID, D);
-  }
-  void SelectorRead(serialization::SelectorID ID, Selector Sel) override {
-    if (Previous)
-      Previous->SelectorRead(ID, Sel);
-  }
-  void MacroDefinitionRead(serialization::PreprocessedEntityID PPID,
-                           MacroDefinitionRecord *MD) override {
-    if (Previous)
-      Previous->MacroDefinitionRead(PPID, MD);
-  }
-};
-
 /// Dumps deserialized declarations.
 class DeserializedDeclsDumper : public DelegatingDeserializationListener {
 public:
