@@ -268,7 +268,7 @@ LLVM_LIBC_FUNCTION(float, atan2f, (float y, float x)) {
   if (LIBC_UNLIKELY(max_abs >= 0x7f80'0000U || num_d == 0.0)) {
     if (x_bits.is_nan() || y_bits.is_nan()) {
       if (x_bits.is_signaling_nan() || y_bits.is_signaling_nan())
-	      fputil::raise_except_if_required(FE_INVALID);
+        fputil::raise_except_if_required(FE_INVALID);
       return FPBits::quiet_nan().get_val();
     }
     double x_d = static_cast<double>(x);
