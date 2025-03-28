@@ -160,7 +160,6 @@ public:
       return;
     if (auto *PropCXXRD = PropType->getPointeeCXXRecordDecl()) {
       std::optional<bool> IsCompatible = isPtrCompatible(QT, PropCXXRD);
-      fprintf(stderr, "IsCompatible=%d\n", IsCompatible ? *IsCompatible : -1);
       if (IsCompatible && *IsCompatible)
         reportBug(PD, PropType, PropCXXRD, CD);
     } else {
