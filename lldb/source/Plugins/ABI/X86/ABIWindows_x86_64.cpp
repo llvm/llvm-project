@@ -675,7 +675,10 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectImpl(
       uint32_t count;
 
       CompilerType field_compiler_type = aggregate_compiler_types[idx];
-      uint32_t field_byte_width = (uint32_t) (*field_compiler_type.GetByteSize(&thread));
+      uint32_t field_byte_width =
+          (uint32_t)(llvm::expectedToOptional(
+                         field_compiler_type.GetByteSize(&thread))
+                         .value_or(0));
       uint32_t field_byte_offset = aggregate_field_offsets[idx];
 
       // this is unlikely w/o the overall size being greater than 8 bytes
@@ -744,13 +747,13 @@ UnwindPlanSP ABIWindows_x86_64::CreateFunctionEntryUnwindPlan() {
   uint32_t sp_reg_num = dwarf_rsp;
   uint32_t pc_reg_num = dwarf_rip;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
-  row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 8);
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, -8, false);
-  row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
+  UnwindPlan::Row row;
+  row.GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 8);
+  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, -8, false);
+  row.SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("x86_64 at-func-entry default");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   return plan_sp;
@@ -764,19 +767,19 @@ UnwindPlanSP ABIWindows_x86_64::CreateDefaultUnwindPlan() {
   uint32_t sp_reg_num = dwarf_rsp;
   uint32_t pc_reg_num = dwarf_rip;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   const int32_t ptr_size = 8;
-  row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_rbp, 2 * ptr_size);
-  row->SetOffset(0);
-  row->SetUnspecifiedRegistersAreUndefined(true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_rbp, 2 * ptr_size);
+  row.SetOffset(0);
+  row.SetUnspecifiedRegistersAreUndefined(true);
 
-  row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
-  row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
+  row.SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("x86_64 default unwind plan");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);

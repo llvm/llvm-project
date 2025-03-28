@@ -29,7 +29,7 @@
 ; GFX1200-MESA: .long 45100
 ; GFX1200-MESA-NEXT: .long 1024
 
-@lds = internal addrspace(3) global [4096 x i8] undef
+@lds = internal addrspace(3) global [4096 x i8] poison
 
 define amdgpu_ps void @global_store_saddr_uniform_ptr_in_vgprs(i32 %voffset) {
   %ptr = getelementptr [4096 x i8], ptr addrspace(3) @lds, i32 0, i32 %voffset

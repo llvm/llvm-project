@@ -2,6 +2,15 @@
 
 #include "mock-types.h"
 
+namespace std {
+
+template <typename T>
+T&& move(T& t) {
+  return static_cast<T&&>(t);
+}
+
+}
+
 namespace WTF {
 
 namespace Detail {
@@ -321,7 +330,7 @@ struct RefCountableWithLambdaCapturingThis {
 
   void method_nested_lambda2() {
     callAsync([this, protectedThis = RefPtr { this }] {
-      callAsync([this, protectedThis = static_cast<const Ref<RefCountableWithLambdaCapturingThis>&&>(*protectedThis)] {
+      callAsync([this, protectedThis = std::move(*protectedThis)] {
         nonTrivial();
       });
     });

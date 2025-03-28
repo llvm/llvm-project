@@ -958,14 +958,14 @@ getIntegerPairAttribute(const Function &F, StringRef Name,
 
 /// \returns Generate a vector of integer values requested using \p F's \p Name
 /// attribute.
-///
-/// \returns true if exactly Size (>2) number of integers are found in the
-/// attribute.
-///
-/// \returns false if any error occurs.
+/// \returns A vector of size \p Size, with all elements set to \p DefaultVal,
+/// if any error occurs. The corresponding error will also be emitted.
 SmallVector<unsigned> getIntegerVecAttribute(const Function &F, StringRef Name,
                                              unsigned Size,
-                                             unsigned DefaultVal = 0);
+                                             unsigned DefaultVal);
+/// Similar to the function above, but returns std::nullopt if any error occurs.
+std::optional<SmallVector<unsigned>>
+getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size);
 
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///
@@ -1180,6 +1180,12 @@ unsigned decodeFieldVaSdst(unsigned Encoded);
 /// \returns Decoded VaVcc from given immediate \p Encoded.
 unsigned decodeFieldVaVcc(unsigned Encoded);
 
+/// \returns Decoded SaSrc from given immediate \p Encoded.
+unsigned decodeFieldVaSsrc(unsigned Encoded);
+
+/// \returns Decoded HoldCnt from given immediate \p Encoded.
+unsigned decodeFieldHoldCnt(unsigned Encoded);
+
 /// \returns \p VmVsrc as an encoded Depctr immediate.
 unsigned encodeFieldVmVsrc(unsigned VmVsrc);
 
@@ -1209,6 +1215,18 @@ unsigned encodeFieldVaVcc(unsigned VaVcc);
 
 /// \returns \p Encoded combined with encoded \p VaVcc.
 unsigned encodeFieldVaVcc(unsigned Encoded, unsigned VaVcc);
+
+/// \returns \p HoldCnt as an encoded Depctr immediate.
+unsigned encodeFieldHoldCnt(unsigned HoldCnt);
+
+/// \returns \p Encoded combined with encoded \p HoldCnt.
+unsigned encodeFieldHoldCnt(unsigned HoldCnt, unsigned Encoded);
+
+/// \returns \p VaSsrc as an encoded Depctr immediate.
+unsigned encodeFieldVaSsrc(unsigned VaSsrc);
+
+/// \returns \p Encoded combined with encoded \p VaSsrc.
+unsigned encodeFieldVaSsrc(unsigned Encoded, unsigned VaSsrc);
 
 } // namespace DepCtr
 

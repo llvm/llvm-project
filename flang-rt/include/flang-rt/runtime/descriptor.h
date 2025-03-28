@@ -481,5 +481,8 @@ private:
   char storage_[byteSize]{};
 };
 
+// Deduction guide to avoid warnings from older versions of clang.
+StaticDescriptor() -> StaticDescriptor<maxRank, false, 0>;
+
 } // namespace Fortran::runtime
 #endif // FLANG_RT_RUNTIME_DESCRIPTOR_H_

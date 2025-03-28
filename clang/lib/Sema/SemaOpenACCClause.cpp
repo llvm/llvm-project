@@ -1991,6 +1991,9 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitCollapseClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitBindClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
+  if (checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
+    return nullptr;
+
   if (std::holds_alternative<StringLiteral *>(Clause.getBindDetails()))
     return OpenACCBindClause::Create(
         Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(),
@@ -2468,14 +2471,14 @@ bool SemaOpenACC::CheckDeclareClause(SemaOpenACC::OpenACCParsedClause &Clause) {
       // directives for a function, subroutine, program, or module.
 
       if (CurDecl) {
-        auto Itr = DeclareVarReferences.find(CurDecl);
-        if (Itr != DeclareVarReferences.end()) {
+        auto [Itr, Inserted] = DeclareVarReferences.try_emplace(CurDecl);
+        if (!Inserted) {
           Diag(VarExpr->getBeginLoc(), diag::err_acc_multiple_references)
               << Clause.getClauseKind();
           Diag(Itr->second, diag::note_acc_previous_reference);
           continue;
         } else {
-          DeclareVarReferences[CurDecl] = VarExpr->getBeginLoc();
+          Itr->second = VarExpr->getBeginLoc();
         }
       }
     }

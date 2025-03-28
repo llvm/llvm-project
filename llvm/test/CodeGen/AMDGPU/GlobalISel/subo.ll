@@ -640,7 +640,6 @@ define amdgpu_ps i32 @s_ssubo_i32(i32 inreg %a, i32 inreg %b) {
 ; GFX7-NEXT:    s_cmp_gt_i32 s1, 0
 ; GFX7-NEXT:    s_cselect_b32 s1, 1, 0
 ; GFX7-NEXT:    s_xor_b32 s0, s1, s0
-; GFX7-NEXT:    s_and_b32 s0, s0, 1
 ; GFX7-NEXT:    s_sub_i32 s0, s2, s0
 ; GFX7-NEXT:    ; return to shader part epilog
 ;
@@ -652,7 +651,6 @@ define amdgpu_ps i32 @s_ssubo_i32(i32 inreg %a, i32 inreg %b) {
 ; GFX8-NEXT:    s_cmp_gt_i32 s1, 0
 ; GFX8-NEXT:    s_cselect_b32 s1, 1, 0
 ; GFX8-NEXT:    s_xor_b32 s0, s1, s0
-; GFX8-NEXT:    s_and_b32 s0, s0, 1
 ; GFX8-NEXT:    s_sub_i32 s0, s2, s0
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
@@ -664,7 +662,6 @@ define amdgpu_ps i32 @s_ssubo_i32(i32 inreg %a, i32 inreg %b) {
 ; GFX9-NEXT:    s_cmp_gt_i32 s1, 0
 ; GFX9-NEXT:    s_cselect_b32 s1, 1, 0
 ; GFX9-NEXT:    s_xor_b32 s0, s1, s0
-; GFX9-NEXT:    s_and_b32 s0, s0, 1
 ; GFX9-NEXT:    s_sub_i32 s0, s2, s0
 ; GFX9-NEXT:    ; return to shader part epilog
   %ssubo = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %a, i32 %b)
@@ -749,8 +746,6 @@ define amdgpu_ps <2 x i32> @s_ssubo_v2i32(<2 x i32> inreg %a, <2 x i32> inreg %b
 ; GFX7-NEXT:    s_cselect_b32 s3, 1, 0
 ; GFX7-NEXT:    s_xor_b32 s0, s2, s0
 ; GFX7-NEXT:    s_xor_b32 s1, s3, s1
-; GFX7-NEXT:    s_and_b32 s0, s0, 1
-; GFX7-NEXT:    s_and_b32 s1, s1, 1
 ; GFX7-NEXT:    s_sub_i32 s0, s4, s0
 ; GFX7-NEXT:    s_sub_i32 s1, s5, s1
 ; GFX7-NEXT:    ; return to shader part epilog
@@ -769,8 +764,6 @@ define amdgpu_ps <2 x i32> @s_ssubo_v2i32(<2 x i32> inreg %a, <2 x i32> inreg %b
 ; GFX8-NEXT:    s_cselect_b32 s3, 1, 0
 ; GFX8-NEXT:    s_xor_b32 s0, s2, s0
 ; GFX8-NEXT:    s_xor_b32 s1, s3, s1
-; GFX8-NEXT:    s_and_b32 s0, s0, 1
-; GFX8-NEXT:    s_and_b32 s1, s1, 1
 ; GFX8-NEXT:    s_sub_i32 s0, s4, s0
 ; GFX8-NEXT:    s_sub_i32 s1, s5, s1
 ; GFX8-NEXT:    ; return to shader part epilog
@@ -789,8 +782,6 @@ define amdgpu_ps <2 x i32> @s_ssubo_v2i32(<2 x i32> inreg %a, <2 x i32> inreg %b
 ; GFX9-NEXT:    s_cselect_b32 s3, 1, 0
 ; GFX9-NEXT:    s_xor_b32 s0, s2, s0
 ; GFX9-NEXT:    s_xor_b32 s1, s3, s1
-; GFX9-NEXT:    s_and_b32 s0, s0, 1
-; GFX9-NEXT:    s_and_b32 s1, s1, 1
 ; GFX9-NEXT:    s_sub_i32 s0, s4, s0
 ; GFX9-NEXT:    s_sub_i32 s1, s5, s1
 ; GFX9-NEXT:    ; return to shader part epilog

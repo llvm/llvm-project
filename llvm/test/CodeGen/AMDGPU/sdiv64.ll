@@ -607,22 +607,19 @@ define amdgpu_kernel void @s_test_sdiv32_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-NEXT:    v_mul_hi_u32 v1, v0, v1
 ; GCN-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
 ; GCN-NEXT:    v_mul_hi_u32 v0, s0, v0
-; GCN-NEXT:    v_readfirstlane_b32 s2, v0
-; GCN-NEXT:    s_mul_i32 s3, s2, s9
-; GCN-NEXT:    s_sub_i32 s0, s0, s3
-; GCN-NEXT:    s_add_i32 s8, s2, 1
-; GCN-NEXT:    s_sub_i32 s3, s0, s9
-; GCN-NEXT:    s_cmp_ge_u32 s0, s9
-; GCN-NEXT:    s_cselect_b32 s2, s8, s2
-; GCN-NEXT:    s_cselect_b32 s0, s3, s0
-; GCN-NEXT:    s_add_i32 s3, s2, 1
-; GCN-NEXT:    s_cmp_ge_u32 s0, s9
-; GCN-NEXT:    s_cselect_b32 s0, s3, s2
-; GCN-NEXT:    s_xor_b32 s0, s0, s1
-; GCN-NEXT:    s_sub_i32 s0, s0, s1
-; GCN-NEXT:    s_ashr_i32 s1, s0, 31
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NEXT:    v_mul_lo_u32 v1, v0, s9
+; GCN-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
+; GCN-NEXT:    v_sub_i32_e32 v1, vcc, s0, v1
+; GCN-NEXT:    v_subrev_i32_e32 v3, vcc, s9, v1
+; GCN-NEXT:    v_cmp_le_u32_e32 vcc, s9, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
+; GCN-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
+; GCN-NEXT:    v_cmp_le_u32_e32 vcc, s9, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GCN-NEXT:    v_xor_b32_e32 v0, s1, v0
+; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, s1, v0
+; GCN-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
 ;
@@ -648,22 +645,19 @@ define amdgpu_kernel void @s_test_sdiv32_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-IR-NEXT:    v_mul_hi_u32 v1, v0, v1
 ; GCN-IR-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
 ; GCN-IR-NEXT:    v_mul_hi_u32 v0, s0, v0
-; GCN-IR-NEXT:    v_readfirstlane_b32 s2, v0
-; GCN-IR-NEXT:    s_mul_i32 s3, s2, s9
-; GCN-IR-NEXT:    s_sub_i32 s0, s0, s3
-; GCN-IR-NEXT:    s_add_i32 s8, s2, 1
-; GCN-IR-NEXT:    s_sub_i32 s3, s0, s9
-; GCN-IR-NEXT:    s_cmp_ge_u32 s0, s9
-; GCN-IR-NEXT:    s_cselect_b32 s2, s8, s2
-; GCN-IR-NEXT:    s_cselect_b32 s0, s3, s0
-; GCN-IR-NEXT:    s_add_i32 s3, s2, 1
-; GCN-IR-NEXT:    s_cmp_ge_u32 s0, s9
-; GCN-IR-NEXT:    s_cselect_b32 s0, s3, s2
-; GCN-IR-NEXT:    s_xor_b32 s0, s0, s1
-; GCN-IR-NEXT:    s_sub_i32 s0, s0, s1
-; GCN-IR-NEXT:    s_ashr_i32 s1, s0, 31
-; GCN-IR-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-IR-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-IR-NEXT:    v_mul_lo_u32 v1, v0, s9
+; GCN-IR-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
+; GCN-IR-NEXT:    v_sub_i32_e32 v1, vcc, s0, v1
+; GCN-IR-NEXT:    v_subrev_i32_e32 v3, vcc, s9, v1
+; GCN-IR-NEXT:    v_cmp_le_u32_e32 vcc, s9, v1
+; GCN-IR-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GCN-IR-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
+; GCN-IR-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
+; GCN-IR-NEXT:    v_cmp_le_u32_e32 vcc, s9, v1
+; GCN-IR-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GCN-IR-NEXT:    v_xor_b32_e32 v0, s1, v0
+; GCN-IR-NEXT:    v_subrev_i32_e32 v0, vcc, s1, v0
+; GCN-IR-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GCN-IR-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GCN-IR-NEXT:    s_endpgm
   %1 = ashr i64 %x, 32
@@ -699,22 +693,19 @@ define amdgpu_kernel void @s_test_sdiv31_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-NEXT:    s_ashr_i32 s1, s1, 31
 ; GCN-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
 ; GCN-NEXT:    v_mul_hi_u32 v0, s0, v0
-; GCN-NEXT:    v_readfirstlane_b32 s2, v0
-; GCN-NEXT:    s_mul_i32 s3, s2, s9
-; GCN-NEXT:    s_sub_i32 s0, s0, s3
-; GCN-NEXT:    s_add_i32 s8, s2, 1
-; GCN-NEXT:    s_sub_i32 s3, s0, s9
-; GCN-NEXT:    s_cmp_ge_u32 s0, s9
-; GCN-NEXT:    s_cselect_b32 s2, s8, s2
-; GCN-NEXT:    s_cselect_b32 s0, s3, s0
-; GCN-NEXT:    s_add_i32 s3, s2, 1
-; GCN-NEXT:    s_cmp_ge_u32 s0, s9
-; GCN-NEXT:    s_cselect_b32 s0, s3, s2
-; GCN-NEXT:    s_xor_b32 s0, s0, s1
-; GCN-NEXT:    s_sub_i32 s0, s0, s1
-; GCN-NEXT:    s_ashr_i32 s1, s0, 31
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NEXT:    v_mul_lo_u32 v1, v0, s9
+; GCN-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
+; GCN-NEXT:    v_sub_i32_e32 v1, vcc, s0, v1
+; GCN-NEXT:    v_subrev_i32_e32 v3, vcc, s9, v1
+; GCN-NEXT:    v_cmp_le_u32_e32 vcc, s9, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
+; GCN-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
+; GCN-NEXT:    v_cmp_le_u32_e32 vcc, s9, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GCN-NEXT:    v_xor_b32_e32 v0, s1, v0
+; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, s1, v0
+; GCN-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
 ;
@@ -743,22 +734,19 @@ define amdgpu_kernel void @s_test_sdiv31_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-IR-NEXT:    s_ashr_i32 s1, s1, 31
 ; GCN-IR-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
 ; GCN-IR-NEXT:    v_mul_hi_u32 v0, s0, v0
-; GCN-IR-NEXT:    v_readfirstlane_b32 s2, v0
-; GCN-IR-NEXT:    s_mul_i32 s3, s2, s9
-; GCN-IR-NEXT:    s_sub_i32 s0, s0, s3
-; GCN-IR-NEXT:    s_add_i32 s8, s2, 1
-; GCN-IR-NEXT:    s_sub_i32 s3, s0, s9
-; GCN-IR-NEXT:    s_cmp_ge_u32 s0, s9
-; GCN-IR-NEXT:    s_cselect_b32 s2, s8, s2
-; GCN-IR-NEXT:    s_cselect_b32 s0, s3, s0
-; GCN-IR-NEXT:    s_add_i32 s3, s2, 1
-; GCN-IR-NEXT:    s_cmp_ge_u32 s0, s9
-; GCN-IR-NEXT:    s_cselect_b32 s0, s3, s2
-; GCN-IR-NEXT:    s_xor_b32 s0, s0, s1
-; GCN-IR-NEXT:    s_sub_i32 s0, s0, s1
-; GCN-IR-NEXT:    s_ashr_i32 s1, s0, 31
-; GCN-IR-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-IR-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-IR-NEXT:    v_mul_lo_u32 v1, v0, s9
+; GCN-IR-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
+; GCN-IR-NEXT:    v_sub_i32_e32 v1, vcc, s0, v1
+; GCN-IR-NEXT:    v_subrev_i32_e32 v3, vcc, s9, v1
+; GCN-IR-NEXT:    v_cmp_le_u32_e32 vcc, s9, v1
+; GCN-IR-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GCN-IR-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
+; GCN-IR-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
+; GCN-IR-NEXT:    v_cmp_le_u32_e32 vcc, s9, v1
+; GCN-IR-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GCN-IR-NEXT:    v_xor_b32_e32 v0, s1, v0
+; GCN-IR-NEXT:    v_subrev_i32_e32 v0, vcc, s1, v0
+; GCN-IR-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GCN-IR-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GCN-IR-NEXT:    s_endpgm
   %1 = ashr i64 %x, 33
@@ -861,22 +849,19 @@ define amdgpu_kernel void @s_test_sdiv25_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-NEXT:    s_ashr_i32 s1, s1, 31
 ; GCN-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
 ; GCN-NEXT:    v_mul_hi_u32 v0, s0, v0
-; GCN-NEXT:    v_readfirstlane_b32 s2, v0
-; GCN-NEXT:    s_mul_i32 s3, s2, s9
-; GCN-NEXT:    s_sub_i32 s0, s0, s3
-; GCN-NEXT:    s_add_i32 s8, s2, 1
-; GCN-NEXT:    s_sub_i32 s3, s0, s9
-; GCN-NEXT:    s_cmp_ge_u32 s0, s9
-; GCN-NEXT:    s_cselect_b32 s2, s8, s2
-; GCN-NEXT:    s_cselect_b32 s0, s3, s0
-; GCN-NEXT:    s_add_i32 s3, s2, 1
-; GCN-NEXT:    s_cmp_ge_u32 s0, s9
-; GCN-NEXT:    s_cselect_b32 s0, s3, s2
-; GCN-NEXT:    s_xor_b32 s0, s0, s1
-; GCN-NEXT:    s_sub_i32 s0, s0, s1
-; GCN-NEXT:    s_ashr_i32 s1, s0, 31
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NEXT:    v_mul_lo_u32 v1, v0, s9
+; GCN-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
+; GCN-NEXT:    v_sub_i32_e32 v1, vcc, s0, v1
+; GCN-NEXT:    v_subrev_i32_e32 v3, vcc, s9, v1
+; GCN-NEXT:    v_cmp_le_u32_e32 vcc, s9, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
+; GCN-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
+; GCN-NEXT:    v_cmp_le_u32_e32 vcc, s9, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GCN-NEXT:    v_xor_b32_e32 v0, s1, v0
+; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, s1, v0
+; GCN-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
 ;
@@ -905,22 +890,19 @@ define amdgpu_kernel void @s_test_sdiv25_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-IR-NEXT:    s_ashr_i32 s1, s1, 31
 ; GCN-IR-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
 ; GCN-IR-NEXT:    v_mul_hi_u32 v0, s0, v0
-; GCN-IR-NEXT:    v_readfirstlane_b32 s2, v0
-; GCN-IR-NEXT:    s_mul_i32 s3, s2, s9
-; GCN-IR-NEXT:    s_sub_i32 s0, s0, s3
-; GCN-IR-NEXT:    s_add_i32 s8, s2, 1
-; GCN-IR-NEXT:    s_sub_i32 s3, s0, s9
-; GCN-IR-NEXT:    s_cmp_ge_u32 s0, s9
-; GCN-IR-NEXT:    s_cselect_b32 s2, s8, s2
-; GCN-IR-NEXT:    s_cselect_b32 s0, s3, s0
-; GCN-IR-NEXT:    s_add_i32 s3, s2, 1
-; GCN-IR-NEXT:    s_cmp_ge_u32 s0, s9
-; GCN-IR-NEXT:    s_cselect_b32 s0, s3, s2
-; GCN-IR-NEXT:    s_xor_b32 s0, s0, s1
-; GCN-IR-NEXT:    s_sub_i32 s0, s0, s1
-; GCN-IR-NEXT:    s_ashr_i32 s1, s0, 31
-; GCN-IR-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-IR-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-IR-NEXT:    v_mul_lo_u32 v1, v0, s9
+; GCN-IR-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
+; GCN-IR-NEXT:    v_sub_i32_e32 v1, vcc, s0, v1
+; GCN-IR-NEXT:    v_subrev_i32_e32 v3, vcc, s9, v1
+; GCN-IR-NEXT:    v_cmp_le_u32_e32 vcc, s9, v1
+; GCN-IR-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GCN-IR-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
+; GCN-IR-NEXT:    v_add_i32_e32 v2, vcc, 1, v0
+; GCN-IR-NEXT:    v_cmp_le_u32_e32 vcc, s9, v1
+; GCN-IR-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GCN-IR-NEXT:    v_xor_b32_e32 v0, s1, v0
+; GCN-IR-NEXT:    v_subrev_i32_e32 v0, vcc, s1, v0
+; GCN-IR-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GCN-IR-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GCN-IR-NEXT:    s_endpgm
   %1 = ashr i64 %x, 39

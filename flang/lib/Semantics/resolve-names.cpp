@@ -1440,11 +1440,13 @@ public:
   static bool NeedsScope(const parser::OpenMPBlockConstruct &);
   static bool NeedsScope(const parser::OmpClause &);
 
-  bool Pre(const parser::OpenMPRequiresConstruct &x) {
-    AddOmpSourceRange(x.source);
+  bool Pre(const parser::OmpMetadirectiveDirective &) {
+    ++metaLevel_;
     return true;
   }
-  bool Pre(const parser::OmpSimpleStandaloneDirective &x) {
+  void Post(const parser::OmpMetadirectiveDirective &) { --metaLevel_; }
+
+  bool Pre(const parser::OpenMPRequiresConstruct &x) {
     AddOmpSourceRange(x.source);
     return true;
   }
@@ -1656,6 +1658,7 @@ private:
       const parser::OmpClauseList &clauses);
   void ProcessReductionSpecifier(const parser::OmpReductionSpecifier &spec,
       const std::optional<parser::OmpClauseList> &clauses);
+  int metaLevel_{0};
 };
 
 bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
@@ -1758,30 +1761,66 @@ void OmpVisitor::ProcessReductionSpecifier(
           &MakeSymbol(*name, MiscDetails{MiscDetails::Kind::ConstructName});
     }
   }
-  // Creating a new scope in case the combiner expression (or clauses) use
-  // reerved identifiers, like "omp_in". This is a temporary solution until
-  // we deal with these in a more thorough way.
-  PushScope(Scope::Kind::OtherConstruct, nullptr);
-  Walk(std::get<parser::OmpTypeNameList>(spec.t));
-  Walk(std::get<std::optional<parser::OmpReductionCombiner>>(spec.t));
-  Walk(clauses);
-  PopScope();
+
+  auto &typeList{std::get<parser::OmpTypeNameList>(spec.t)};
+
+  // Create a temporary variable declaration for the four variables
+  // used in the reduction specifier and initializer (omp_out, omp_in,
+  // omp_priv and omp_orig), with the type in the  typeList.
+  //
+  // In theory it would be possible to create only variables that are
+  // actually used, but that requires walking the entire parse-tree of the
+  // expressions, and finding the relevant variables [there may well be other
+  // variables involved too].
+  //
+  // This allows doing semantic analysis where the type is a derived type
+  // e.g omp_out%x = omp_out%x + omp_in%x.
+  //
+  // These need to be temporary (in their own scope). If they are created
+  // as variables in the outer scope, if there's more than one type in the
+  // typelist, duplicate symbols will be reported.
+  const parser::CharBlock ompVarNames[]{
+      {"omp_in", 6}, {"omp_out", 7}, {"omp_priv", 8}, {"omp_orig", 8}};
+
+  for (auto &t : typeList.v) {
+    PushScope(Scope::Kind::OtherConstruct, nullptr);
+    BeginDeclTypeSpec();
+    // We need to walk t.u because Walk(t) does it's own BeginDeclTypeSpec.
+    Walk(t.u);
+
+    const DeclTypeSpec *typeSpec{GetDeclTypeSpec()};
+    assert(typeSpec && "We should have a type here");
+
+    for (auto &nm : ompVarNames) {
+      ObjectEntityDetails details{};
+      details.set_type(*typeSpec);
+      MakeSymbol(nm, Attrs{}, std::move(details));
+    }
+    EndDeclTypeSpec();
+    Walk(std::get<std::optional<parser::OmpReductionCombiner>>(spec.t));
+    Walk(clauses);
+    PopScope();
+  }
 }
 
 bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
-  // OmpDirectiveSpecification is only used in METADIRECTIVE at the moment.
-  // Since it contains directives and clauses, some semantic checks may
-  // not be applicable.
-  // Disable the semantic analysis for it for now to allow the compiler to
-  // parse METADIRECTIVE without flagging errors.
   AddOmpSourceRange(x.source);
-  auto &maybeArgs{std::get<std::optional<std::list<parser::OmpArgument>>>(x.t)};
+  if (metaLevel_ == 0) {
+    // Not in METADIRECTIVE.
+    return true;
+  }
+
+  // If OmpDirectiveSpecification (which contains clauses) is a part of
+  // METADIRECTIVE, some semantic checks may not be applicable.
+  // Disable the semantic analysis for it in such cases to allow the compiler
+  // to parse METADIRECTIVE without flagging errors.
+  auto &maybeArgs{std::get<std::optional<parser::OmpArgumentList>>(x.t)};
   auto &maybeClauses{std::get<std::optional<parser::OmpClauseList>>(x.t)};
 
   switch (x.DirId()) {
   case llvm::omp::Directive::OMPD_declare_mapper:
     if (maybeArgs && maybeClauses) {
-      const parser::OmpArgument &first{maybeArgs->front()};
+      const parser::OmpArgument &first{maybeArgs->v.front()};
       if (auto *spec{std::get_if<parser::OmpMapperSpecifier>(&first.u)}) {
         ProcessMapperSpecifier(*spec, *maybeClauses);
       }
@@ -1789,7 +1828,7 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
     break;
   case llvm::omp::Directive::OMPD_declare_reduction:
     if (maybeArgs && maybeClauses) {
-      const parser::OmpArgument &first{maybeArgs->front()};
+      const parser::OmpArgument &first{maybeArgs->v.front()};
       if (auto *spec{std::get_if<parser::OmpReductionSpecifier>(&first.u)}) {
         ProcessReductionSpecifier(*spec, maybeClauses);
       }

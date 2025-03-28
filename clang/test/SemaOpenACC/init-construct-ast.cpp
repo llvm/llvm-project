@@ -15,6 +15,8 @@ void NormalFunc() {
 
 #pragma acc init
   // CHECK-NEXT: OpenACCInitConstruct{{.*}}init
+_Pragma("acc init")
+  // CHECK-NEXT: OpenACCInitConstruct{{.*}}init
 #pragma acc init if (some_int() < some_long())
   // CHECK-NEXT: OpenACCInitConstruct{{.*}}init
   // CHECK-NEXT: if clause

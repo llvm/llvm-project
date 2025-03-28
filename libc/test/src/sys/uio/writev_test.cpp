@@ -27,8 +27,8 @@ TEST(LlvmLibcSysUioWritevTest, SmokeTest) {
   iov[1].iov_base = const_cast<char *>(data + 7);
   iov[1].iov_len = 8;
   ASSERT_THAT(LIBC_NAMESPACE::writev(fd, iov, 2),
-              returns(EQ(15)).with_errno(EQ(0)));
+              returns(EQ(ssize_t(15))).with_errno(EQ(0)));
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds());
   ASSERT_THAT(LIBC_NAMESPACE::unlink(filename),
-              returns(EQ(0)).with_errno(EQ(0)));
+              returns(EQ(ssize_t(0))).with_errno(EQ(0)));
 }

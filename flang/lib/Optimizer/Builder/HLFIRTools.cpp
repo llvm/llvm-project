@@ -186,14 +186,24 @@ static fir::CharBoxValue genUnboxChar(mlir::Location loc,
   return {addr, len};
 }
 
+// To maximize chances of identifying usage of a same variables in the IR,
+// always return the hlfirBase result of declare/associate if it is a raw
+// pointer.
+static mlir::Value getFirBaseHelper(mlir::Value hlfirBase,
+                                    mlir::Value firBase) {
+  if (fir::isa_ref_type(hlfirBase.getType()))
+    return hlfirBase;
+  return firBase;
+}
+
 mlir::Value hlfir::Entity::getFirBase() const {
   if (fir::FortranVariableOpInterface variable = getIfVariableInterface()) {
     if (auto declareOp =
             mlir::dyn_cast<hlfir::DeclareOp>(variable.getOperation()))
-      return declareOp.getOriginalBase();
+      return getFirBaseHelper(declareOp.getBase(), declareOp.getOriginalBase());
     if (auto associateOp =
             mlir::dyn_cast<hlfir::AssociateOp>(variable.getOperation()))
-      return associateOp.getFirBase();
+      return getFirBaseHelper(associateOp.getBase(), associateOp.getFirBase());
   }
   return getBase();
 }

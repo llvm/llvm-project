@@ -126,6 +126,7 @@ enum TokKind {
   XInterleave,
   XSubstr,
   XFind,
+  XMatch,
   XCast,
   XSubst,
   XForEach,

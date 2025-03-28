@@ -64,17 +64,6 @@ define void @unsupported_argument(i64 %arg1) {
 
 ; // -----
 
-; global_dtors with non-null data fields cannot be represented in MLIR.
-; CHECK:      <unknown>
-; CHECK-SAME: error: unhandled global variable: @llvm.global_dtors
-@llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @foo, ptr @foo }]
-
-define void @foo() {
-  ret void
-}
-
-; // -----
-
 ; CHECK:      import-failure.ll
 ; CHECK-SAME: error: unsupported TBAA node format: !{{.*}} = !{!{{.*}}, i64 1, !"omnipotent char"}
 define dso_local void @tbaa(ptr %0) {
@@ -335,6 +324,17 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 !0 = !{!1}
 !1 = !{!1, !2}
 !2 = distinct !{!2, !"The domain"}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: dereferenceable metadata operand must be a non-negative constant integer
+define void @deref(i64 %0) {
+  %2 = inttoptr i64 %0 to ptr, !dereferenceable !0
+  ret void
+}
+
+!0 = !{i64 -4}
 
 ; // -----
 

@@ -19,8 +19,8 @@
 using namespace llvm;
 
 const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
-    {MCSymbolRefExpr::VK_GOTPCREL, "GOTPCREL"},
-    {MCSymbolRefExpr::VK_PLT, "PLT"},
+    {RISCVMCExpr::VK_GOTPCREL, "GOTPCREL"},
+    {RISCVMCExpr::VK_PLT, "PLT"},
 };
 
 void RISCVMCAsmInfo::anchor() {}
@@ -50,5 +50,5 @@ const MCExpr *RISCVMCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
   MCContext &Ctx = Streamer.getContext();
   const MCExpr *ME = MCSymbolRefExpr::create(Sym, Ctx);
   assert(Encoding & dwarf::DW_EH_PE_sdata4 && "Unexpected encoding");
-  return RISCVMCExpr::create(ME, RISCVMCExpr::VK_RISCV_32_PCREL, Ctx);
+  return RISCVMCExpr::create(ME, RISCVMCExpr::VK_32_PCREL, Ctx);
 }

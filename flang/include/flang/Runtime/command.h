@@ -59,6 +59,10 @@ std::int32_t RTNAME(GetEnvVariable)(const Descriptor &name,
 // Calls getcwd()
 std::int32_t RTNAME(GetCwd)(
     const Descriptor &cwd, const char *sourceFile, int line);
+
+// Calls hostnm()
+std::int32_t RTNAME(Hostnm)(
+    const Descriptor &res, const char *sourceFile, int line);
 }
 } // namespace Fortran::runtime
 

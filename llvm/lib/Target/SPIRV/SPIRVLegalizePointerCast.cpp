@@ -103,12 +103,8 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     auto *GEP = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
     GR->buildAssignPtr(B, ElementType, GEP);
 
-    const auto *TLI = TM->getSubtargetImpl()->getTargetLowering();
-    MachineMemOperand::Flags Flags = TLI->getLoadMemOperandFlags(
-        *BadLoad, BadLoad->getFunction()->getDataLayout());
-    Instruction *LI = B.CreateIntrinsic(
-        Intrinsic::spv_load, {BadLoad->getOperand(0)->getType()},
-        {GEP, B.getInt16(Flags), B.getInt8(BadLoad->getAlign().value())});
+    LoadInst *LI = B.CreateLoad(ElementType, GEP);
+    LI->setAlignment(BadLoad->getAlign());
     buildAssignType(B, ElementType, LI);
     return LI;
   }
@@ -123,6 +119,7 @@ class SPIRVLegalizePointerCast : public FunctionPass {
 
     auto *SAT = dyn_cast<ArrayType>(FromTy);
     auto *SVT = dyn_cast<FixedVectorType>(FromTy);
+    auto *SST = dyn_cast<StructType>(FromTy);
     auto *DVT = dyn_cast<FixedVectorType>(ToTy);
 
     B.SetInsertPoint(LI);
@@ -144,6 +141,11 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     // - float3 v3 = vector4;
     else if (SVT && DVT)
       Output = loadVectorFromVector(B, SVT, DVT, OriginalOperand);
+    // Destination is the scalar type stored at the start of an aggregate.
+    // - struct S { float m };
+    // - float v = s.m;
+    else if (SST && SST->getTypeAtIndex(0u) == ToTy)
+      Output = loadFirstValueFromAggregate(B, ToTy, OriginalOperand, LI);
     else
       llvm_unreachable("Unimplemented implicit down-cast from load.");
 
@@ -166,10 +168,11 @@ class SPIRVLegalizePointerCast : public FunctionPass {
         continue;
       }
 
-      IntrinsicInst *Intrin = dyn_cast<IntrinsicInst>(User);
-      if (Intrin->getIntrinsicID() == Intrinsic::spv_assign_ptr_type) {
-        DeadInstructions.push_back(Intrin);
-        continue;
+      if (IntrinsicInst *Intrin = dyn_cast<IntrinsicInst>(User)) {
+        if (Intrin->getIntrinsicID() == Intrinsic::spv_assign_ptr_type) {
+          DeadInstructions.push_back(Intrin);
+          continue;
+        }
       }
 
       llvm_unreachable("Unsupported ptrcast user. Please fix.");

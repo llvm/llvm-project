@@ -270,6 +270,15 @@ static void convertLinkerOptionsOp(ArrayAttr options,
   linkerMDNode->addOperand(listMDNode);
 }
 
+static void convertModuleFlagsOp(ArrayAttr flags, llvm::IRBuilderBase &builder,
+                                 LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+  for (auto flagAttr : flags.getAsRange<ModuleFlagAttr>())
+    llvmModule->addModuleFlag(
+        convertModFlagBehaviorToLLVM(flagAttr.getBehavior()),
+        flagAttr.getKey().getValue(), flagAttr.getValue());
+}
+
 static LogicalResult
 convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
@@ -514,6 +523,31 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
       llvmValue = moduleTranslation.lookupFunction(function.getName());
 
     moduleTranslation.mapValue(addressOfOp.getResult(), llvmValue);
+    return success();
+  }
+
+  // Emit dso_local_equivalent. We need to look up the global value referenced
+  // by the operation and store it in the MLIR-to-LLVM value mapping.
+  if (auto dsoLocalEquivalentOp =
+          dyn_cast<LLVM::DSOLocalEquivalentOp>(opInst)) {
+    LLVM::LLVMFuncOp function =
+        dsoLocalEquivalentOp.getFunction(moduleTranslation.symbolTable());
+    LLVM::AliasOp alias =
+        dsoLocalEquivalentOp.getAlias(moduleTranslation.symbolTable());
+
+    // The verifier should not have allowed this.
+    assert((function || alias) &&
+           "referencing an undefined function, or alias");
+
+    llvm::Value *llvmValue = nullptr;
+    if (alias)
+      llvmValue = moduleTranslation.lookupAlias(alias);
+    else
+      llvmValue = moduleTranslation.lookupFunction(function.getName());
+
+    moduleTranslation.mapValue(
+        dsoLocalEquivalentOp.getResult(),
+        llvm::DSOLocalEquivalent::get(cast<llvm::GlobalValue>(llvmValue)));
     return success();
   }
 

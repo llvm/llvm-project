@@ -616,6 +616,11 @@ public:
     }
   }
 
+  unsigned getVectorIdxWidth(const DataLayout &DL) const override {
+    // The VectorIdx type is i64, with both normal and ilp32.
+    return 64;
+  }
+
   bool targetShrinkDemandedConstant(SDValue Op, const APInt &DemandedBits,
                                     const APInt &DemandedElts,
                                     TargetLoweringOpt &TLO) const override;

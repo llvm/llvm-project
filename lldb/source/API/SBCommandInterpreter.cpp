@@ -77,7 +77,7 @@ protected:
     SBDebugger debugger_sb(m_interpreter.GetDebugger().shared_from_this());
     m_backend->DoExecute(debugger_sb, command.GetArgumentVector(), sb_return);
   }
-  std::shared_ptr<lldb::SBCommandPluginInterface> m_backend;
+  lldb::SBCommandPluginInterface *m_backend;
   std::optional<std::string> m_auto_repeat_command;
 };
 } // namespace lldb_private

@@ -1295,7 +1295,7 @@ public:
   void foldFunction(BinaryFunction &ChildBF, BinaryFunction &ParentBF);
 
   /// Add a Section relocation at a given \p Address.
-  void addRelocation(uint64_t Address, MCSymbol *Symbol, uint64_t Type,
+  void addRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t Type,
                      uint64_t Addend = 0, uint64_t Value = 0);
 
   /// Return a relocation registered at a given \p Address, or nullptr if there
@@ -1308,7 +1308,7 @@ public:
   }
 
   /// Register dynamic relocation at \p Address.
-  void addDynamicRelocation(uint64_t Address, MCSymbol *Symbol, uint64_t Type,
+  void addDynamicRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t Type,
                             uint64_t Addend, uint64_t Value = 0);
 
   /// Return a dynamic relocation registered at a given \p Address, or nullptr

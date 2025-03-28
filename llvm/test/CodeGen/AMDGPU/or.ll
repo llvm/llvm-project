@@ -401,7 +401,7 @@ define amdgpu_kernel void @scalar_or_literal_multi_use_i64(ptr addrspace(1) %out
   store i64 %or, ptr addrspace(1) %out
 
   %foo = add i64 %b, 4261135838621753
-  store volatile i64 %foo, ptr addrspace(1) undef
+  store volatile i64 %foo, ptr addrspace(1) poison
   ret void
 }
 
@@ -514,7 +514,7 @@ define amdgpu_kernel void @scalar_or_inline_imm_multi_use_i64(ptr addrspace(1) %
   %or = or i64 %a, 63
   store i64 %or, ptr addrspace(1) %out
   %foo = add i64 %b, 63
-  store volatile i64 %foo, ptr addrspace(1) undef
+  store volatile i64 %foo, ptr addrspace(1) poison
   ret void
 }
 

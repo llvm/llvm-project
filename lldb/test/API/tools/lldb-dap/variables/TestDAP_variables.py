@@ -313,10 +313,20 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         # Set a variable value whose name is synthetic, like a variable index
         # and verify the value by reading it
-        self.dap_server.request_setVariable(varRef, "[0]", 100)
+        variable_value = 100
+        response = self.dap_server.request_setVariable(varRef, "[0]", variable_value)
+        # Verify dap sent the correct response
+        verify_response = {
+            "type": "int",
+            "value": str(variable_value),
+            "variablesReference": 0,
+        }
+        for key, value in verify_response.items():
+            self.assertEqual(value, response["body"][key])
+
         response = self.dap_server.request_variables(varRef, start=0, count=1)
         self.verify_variables(
-            make_buffer_verify_dict(0, 1, 100), response["body"]["variables"]
+            make_buffer_verify_dict(0, 1, variable_value), response["body"]["variables"]
         )
 
         # Set a variable value whose name is a real child value, like "pt.x"

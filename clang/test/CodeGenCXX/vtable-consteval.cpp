@@ -26,7 +26,7 @@ struct B {
 B b;
 
 // ITANIUM-DAG: @_ZTV1C = {{.*}} constant { [4 x ptr] } {{.*}} null, ptr @_ZTI1C, ptr @_ZN1CD1Ev, ptr @_ZN1CD0Ev
-// MSABI-DAG: @[[C_VFTABLE:.*]] = {{.*}} constant { [2 x ptr] } {{.*}} @"??_R4C@@6B@", ptr @"??_EC@@UEAAPEAXI@Z"
+// MSABI-DAG: @[[C_VFTABLE:.*]] = {{.*}} constant { [2 x ptr] } {{.*}} @"??_R4C@@6B@", ptr @"??_GC@@UEAAPEAXI@Z"
 struct C {
   virtual ~C() = default;
   virtual consteval C &operator=(const C&) = default;
@@ -36,7 +36,7 @@ struct C {
 C c;
 
 // ITANIUM-DAG: @_ZTV1D = {{.*}} constant { [4 x ptr] } {{.*}} null, ptr @_ZTI1D, ptr @_ZN1DD1Ev, ptr @_ZN1DD0Ev
-// MSABI-DAG: @[[D_VFTABLE:.*]] = {{.*}} constant { [2 x ptr] } {{.*}} @"??_R4D@@6B@", ptr @"??_ED@@UEAAPEAXI@Z"
+// MSABI-DAG: @[[D_VFTABLE:.*]] = {{.*}} constant { [2 x ptr] } {{.*}} @"??_R4D@@6B@", ptr @"??_GD@@UEAAPEAXI@Z"
 struct D : C {};
 // ITANIUM-DAG: @d = {{.*}}global { ptr } { {{.*}} @_ZTV1D,
 // MSABI-DAG: @"?d@@3UD@@A" = {{.*}}global { ptr } { ptr @"??_7D@@6B@" }

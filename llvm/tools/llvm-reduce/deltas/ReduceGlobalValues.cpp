@@ -38,7 +38,7 @@ static bool shouldReduceThreadLocal(GlobalValue &GV) {
 }
 
 static bool shouldReduceLinkage(GlobalValue &GV) {
-  return !GV.hasExternalLinkage();
+  return !GV.hasExternalLinkage() && !GV.hasAppendingLinkage();
 }
 
 static void reduceGVs(Oracle &O, ReducerWorkItem &Program) {

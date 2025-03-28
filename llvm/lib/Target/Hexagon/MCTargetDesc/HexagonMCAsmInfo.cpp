@@ -11,23 +11,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonMCAsmInfo.h"
+#include "MCTargetDesc/HexagonMCExpr.h"
 #include "llvm/MC/MCExpr.h"
 
 using namespace llvm;
 
 const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
-    {MCSymbolRefExpr::VK_DTPREL, "DTPREL"},
-    {MCSymbolRefExpr::VK_Hexagon_GD_GOT, "GDGOT"},
-    {MCSymbolRefExpr::VK_Hexagon_GD_PLT, "GDPLT"},
-    {MCSymbolRefExpr::VK_GOT, "GOT"},
-    {MCSymbolRefExpr::VK_GOTREL, "GOTREL"},
-    {MCSymbolRefExpr::VK_Hexagon_IE, "IE"},
-    {MCSymbolRefExpr::VK_Hexagon_IE_GOT, "IEGOT"},
-    {MCSymbolRefExpr::VK_Hexagon_LD_GOT, "LDGOT"},
-    {MCSymbolRefExpr::VK_Hexagon_LD_PLT, "LDPLT"},
-    {MCSymbolRefExpr::VK_PCREL, "PCREL"},
-    {MCSymbolRefExpr::VK_PLT, "PLT"},
-    {MCSymbolRefExpr::VK_TPREL, "TPREL"},
+    {HexagonMCExpr::VK_DTPREL, "DTPREL"}, {HexagonMCExpr::VK_GD_GOT, "GDGOT"},
+    {HexagonMCExpr::VK_GD_PLT, "GDPLT"},  {HexagonMCExpr::VK_GOT, "GOT"},
+    {HexagonMCExpr::VK_GOTREL, "GOTREL"}, {HexagonMCExpr::VK_IE, "IE"},
+    {HexagonMCExpr::VK_IE_GOT, "IEGOT"},  {HexagonMCExpr::VK_LD_GOT, "LDGOT"},
+    {HexagonMCExpr::VK_LD_PLT, "LDPLT"},  {HexagonMCExpr::VK_PCREL, "PCREL"},
+    {HexagonMCExpr::VK_PLT, "PLT"},       {HexagonMCExpr::VK_TPREL, "TPREL"},
 };
 
 // Pin the vtable to this file.

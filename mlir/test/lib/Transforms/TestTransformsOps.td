@@ -38,4 +38,26 @@ def TestMoveOperandDeps :
   }];
 }
 
+def TestMoveValueDefns :
+    Op<Transform_Dialect, "test.move_value_defns",
+        [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+         DeclareOpInterfaceMethods<TransformOpInterface>,
+         ReportTrackingListenerFailuresOpTrait]> {
+  let description = [{
+    Moves all dependencies of on operation before another operation.
+  }];
+
+  let arguments =
+    (ins Variadic<TransformValueHandleTypeInterface>:$values,
+         TransformHandleTypeInterface:$insertion_point);
+  
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $values `before` $insertion_point attr-dict
+    `:` `(` type($values) `)` `` `,` type($insertion_point)
+  }];
+}
+
+
 #endif // TEST_TRANSFORM_OPS

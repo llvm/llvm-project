@@ -1361,7 +1361,7 @@ void CodeViewDebug::calculateRanges(
     }
 
     // We can only handle a register or an offseted load of a register.
-    if (Location->Register == 0 || Location->LoadChain.size() > 1)
+    if (!Location->Register || Location->LoadChain.size() > 1)
       continue;
 
     // Codeview can only express byte-aligned offsets, ensure that we have a

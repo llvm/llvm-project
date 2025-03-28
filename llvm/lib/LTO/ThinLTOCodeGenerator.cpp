@@ -588,7 +588,7 @@ std::unique_ptr<TargetMachine> TargetMachineBuilder::create() const {
   std::string FeatureStr = Features.getString();
 
   std::unique_ptr<TargetMachine> TM(
-      TheTarget->createTargetMachine(TheTriple.str(), MCpu, FeatureStr, Options,
+      TheTarget->createTargetMachine(TheTriple, MCpu, FeatureStr, Options,
                                      RelocModel, std::nullopt, CGOptLevel));
   assert(TM && "Cannot create target machine");
 
@@ -1057,8 +1057,7 @@ void ThinLTOCodeGenerator::run() {
   std::map<ValueInfo, std::vector<VTableSlotSummary>> LocalWPDTargetsMap;
   std::set<GlobalValue::GUID> ExportedGUIDs;
   runWholeProgramDevirtOnIndex(*Index, ExportedGUIDs, LocalWPDTargetsMap);
-  for (auto GUID : ExportedGUIDs)
-    GUIDPreservedSymbols.insert(GUID);
+  GUIDPreservedSymbols.insert_range(ExportedGUIDs);
 
   // Compute prevailing symbols
   DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;

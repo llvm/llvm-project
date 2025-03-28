@@ -910,6 +910,7 @@ public:
     STRCONCAT,
     INTERLEAVE,
     CONCAT,
+    MATCH,
     EQ,
     NE,
     LE,

@@ -3733,8 +3733,8 @@ define <4 x i64> @mgather_truemask_v4i64(<4 x ptr> %ptrs, <4 x i64> %passthru) {
 ; RV32V-LABEL: mgather_truemask_v4i64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32V-NEXT:    vluxei32.v v10, (zero), v8
-; RV32V-NEXT:    vmv.v.v v8, v10
+; RV32V-NEXT:    vmv1r.v v10, v8
+; RV32V-NEXT:    vluxei32.v v8, (zero), v10
 ; RV32V-NEXT:    ret
 ;
 ; RV64V-LABEL: mgather_truemask_v4i64:
@@ -11010,8 +11010,8 @@ define <4 x double> @mgather_truemask_v4f64(<4 x ptr> %ptrs, <4 x double> %passt
 ; RV32V-LABEL: mgather_truemask_v4f64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32V-NEXT:    vluxei32.v v10, (zero), v8
-; RV32V-NEXT:    vmv.v.v v8, v10
+; RV32V-NEXT:    vmv1r.v v10, v8
+; RV32V-NEXT:    vluxei32.v v8, (zero), v10
 ; RV32V-NEXT:    ret
 ;
 ; RV64V-LABEL: mgather_truemask_v4f64:

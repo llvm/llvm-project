@@ -114,9 +114,9 @@ createTargetMachine(Module &M, std::string CPU, unsigned OptLevel) {
 
   TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags(TT);
 
-  std::unique_ptr<TargetMachine> TM(T->createTargetMachine(
-      M.getTargetTriple().str(), CPU, Features.getString(), Options, RelocModel,
-      CodeModel, CGOptLevel));
+  std::unique_ptr<TargetMachine> TM(
+      T->createTargetMachine(M.getTargetTriple(), CPU, Features.getString(),
+                             Options, RelocModel, CodeModel, CGOptLevel));
   if (!TM)
     return make_error<StringError>("Failed to create target machine",
                                    inconvertibleErrorCode());

@@ -909,6 +909,11 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   Style.AttributeMacros.clear();
   CHECK_PARSE("BasedOnStyle: LLVM", AttributeMacros,
               std::vector<std::string>{"__capability"});
+  CHECK_PARSE(
+      "BasedOnStyle: Google", AttributeMacros,
+      std::vector<std::string>({"__capability", "absl_nonnull", "absl_nullable",
+                                "absl_nullability_unknown"}));
+  Style.AttributeMacros.clear();
   CHECK_PARSE("AttributeMacros: [attr1, attr2]", AttributeMacros,
               std::vector<std::string>({"attr1", "attr2"}));
 
@@ -1223,6 +1228,26 @@ TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {
               "IndentWidth: 56\n"
               "...\n",
               IndentWidth, 56u);
+}
+
+TEST(ConfigParseTest, AllowCppForC) {
+  FormatStyle Style = {};
+  Style.Language = FormatStyle::LK_C;
+  EXPECT_EQ(parseConfiguration("Language: Cpp", &Style), ParseError::Success);
+
+  CHECK_PARSE("---\n"
+              "IndentWidth: 4\n"
+              "---\n"
+              "Language: Cpp\n"
+              "IndentWidth: 8\n",
+              IndentWidth, 8u);
+
+  EXPECT_EQ(parseConfiguration("---\n"
+                               "Language: ObjC\n"
+                               "---\n"
+                               "Language: Cpp\n",
+                               &Style),
+            ParseError::Success);
 }
 
 TEST(ConfigParseTest, UsesLanguageForBasedOnStyle) {

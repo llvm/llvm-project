@@ -225,11 +225,11 @@ TableGen provides "bang operators" that have a wide variety of uses:
                : !getdagname  !getdagop    !gt          !head        !if
                : !initialized !interleave  !isa         !le          !listconcat
                : !listflatten !listremove  !listsplat   !logtwo      !lt
-               : !mul         !ne          !not         !or          !range
-               : !repr        !setdagarg   !setdagname  !setdagop    !shl
-               : !size        !sra         !srl         !strconcat   !sub
-               : !subst       !substr      !tail        !tolower     !toupper
-               : !xor
+               : !match       !mul         !ne          !not         !or
+               : !range       !repr        !setdagarg   !setdagname  !setdagop
+               : !shl         !size        !sra         !srl         !strconcat
+               : !sub         !subst       !substr      !tail        !tolower
+               : !toupper     !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -1877,6 +1877,10 @@ and non-0 as true.
 ``!lt(``\ *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is less than *b*; 0 otherwise.
     The arguments must be ``bit``, ``bits``, ``int``, or ``string`` values.
+
+``!match(``\ *str*\ `,` *regex*\ ``)``
+    This operator produces 1 if the *str* matches the regular expression
+    *regex*. The format of *regex* is ERE (Extended POSIX Regular Expressions).
 
 ``!mul(``\ *a*\ ``,`` *b*\ ``, ...)``
     This operator multiplies *a*, *b*, etc., and produces the product.

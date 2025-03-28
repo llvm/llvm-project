@@ -123,6 +123,8 @@ public:
 
   DumpValueObjectOptions &SetRevealEmptyAggregates(bool reveal = true);
 
+  DumpValueObjectOptions &SetExpandPointerTypeFlags(unsigned flags);
+
   DumpValueObjectOptions &SetElementCount(uint32_t element_count = 0);
 
   DumpValueObjectOptions &
@@ -140,6 +142,7 @@ public:
   DeclPrintingHelper m_decl_printing_helper;
   ChildPrintingDecider m_child_printing_decider;
   PointerAsArraySettings m_pointer_as_array;
+  unsigned m_expand_ptr_type_flags = 0;
   bool m_use_synthetic : 1;
   bool m_scope_already_checked : 1;
   bool m_flat_output : 1;

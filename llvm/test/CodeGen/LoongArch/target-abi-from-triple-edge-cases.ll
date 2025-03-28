@@ -71,7 +71,8 @@ define float @f(float %a) {
 ; LP64D-NEXT:    ret
 ;
 ; LP64S-LP64F-NOF-LABEL: f:
-; LP64S-LP64F-NOF:    bl %plt(__addsf3)
+; LP64S-LP64F-NOF:    pcaddu18i $ra, %call36(__addsf3)
+; LP64S-LP64F-NOF-NEXT:    jirl $ra, $ra, 0
 ;
 ; LP64S-LP64D-NOD-LABEL: f:
 ; LP64S-LP64D-NOD:       # %bb.0:
@@ -84,10 +85,12 @@ define float @f(float %a) {
 ; LP64S-LP64D-NOD-NEXT:    ret
 ;
 ; LP64D-LP64F-NOF-LABEL: f:
-; LP64D-LP64F-NOF:    bl %plt(__addsf3)
+; LP64D-LP64F-NOF:    pcaddu18i $ra, %call36(__addsf3)
+; LP64D-LP64F-NOF-NEXT:    jirl $ra, $ra, 0
 ;
 ; LP64D-NONE-NOF-LABEL: f:
-; LP64D-NONE-NOF:    bl %plt(__addsf3)
+; LP64D-NONE-NOF:    pcaddu18i $ra, %call36(__addsf3)
+; LP64D-NONE-NOF-NEXT:    jirl $ra, $ra, 0
   %1 = fadd float %a, 1.0
   ret float %1
 }
@@ -109,7 +112,8 @@ define double @g(double %a) {
 ; LP64D-NEXT:    ret
 ;
 ; LP64S-LABEL: g:
-; LP64S:         bl %plt(__adddf3)
+; LP64S:    pcaddu18i $ra, %call36(__adddf3)
+; LP64S-NEXT:    jirl $ra, $ra, 0
   %1 = fadd double %a, 1.0
   ret double %1
 }

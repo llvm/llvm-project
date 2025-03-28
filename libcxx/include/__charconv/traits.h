@@ -30,13 +30,15 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if _LIBCPP_STD_VER >= 17
+
 namespace __itoa {
 
 template <typename _Tp, typename = void>
 struct _LIBCPP_HIDDEN __traits_base;
 
 template <typename _Tp>
-struct _LIBCPP_HIDDEN __traits_base<_Tp, __enable_if_t<sizeof(_Tp) <= sizeof(uint32_t)> > {
+struct _LIBCPP_HIDDEN __traits_base<_Tp, __enable_if_t<sizeof(_Tp) <= sizeof(uint32_t)>> {
   using type = uint32_t;
 
   /// The width estimation using a log10 algorithm.
@@ -62,7 +64,7 @@ struct _LIBCPP_HIDDEN __traits_base<_Tp, __enable_if_t<sizeof(_Tp) <= sizeof(uin
 };
 
 template <typename _Tp>
-struct _LIBCPP_HIDDEN __traits_base<_Tp, __enable_if_t<sizeof(_Tp) == sizeof(uint64_t)> > {
+struct _LIBCPP_HIDDEN __traits_base<_Tp, __enable_if_t<sizeof(_Tp) == sizeof(uint64_t)>> {
   using type = uint64_t;
 
   /// The width estimation using a log10 algorithm.
@@ -151,7 +153,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool _LIBCPP_CONSTEXPR_SINCE_CXX23 __mul_overflowed
 
 template <typename _Tp>
 struct _LIBCPP_HIDDEN __traits : __traits_base<_Tp> {
-  static _LIBCPP_CONSTEXPR const int digits = numeric_limits<_Tp>::digits10 + 1;
+  static constexpr int digits = numeric_limits<_Tp>::digits10 + 1;
   using __traits_base<_Tp>::__pow;
   using typename __traits_base<_Tp>::type;
 
@@ -189,6 +191,8 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI _Tp __complement(_Tp 
   static_assert(is_unsigned<_Tp>::value, "cast to unsigned first");
   return _Tp(~__x + 1);
 }
+
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
 

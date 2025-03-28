@@ -207,6 +207,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Allows support for additional group operations within uniform control flow.
    * - ``SPV_KHR_non_semantic_info``
      - Adds the ability to declare extended instruction sets that have no semantic impact and can be safely removed from a module.
+   * - ``SPV_INTEL_fp_max_error``
+     - Adds the ability to specify the maximum error for floating-point operations.
 
 To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
 
@@ -264,6 +266,54 @@ parameters of its underlying image type, so that a sampled image for the
 previous type has the representation
 ``target("spirv.SampledImage, void, 1, 1, 0, 0, 0, 0, 0)``.
 
+.. _inline-spirv-types:
+
+Inline SPIR-V Types
+-------------------
+
+HLSL allows users to create types representing specific SPIR-V types, using ``vk::SpirvType`` and
+``vk::SpirvOpaqueType``. These are specified in the `Inline SPIR-V`_ proposal. They may be
+represented using target extension types:
+
+.. _Inline SPIR-V: https://microsoft.github.io/hlsl-specs/proposals/0011-inline-spirv.html#types
+
+  .. table:: Inline SPIR-V Types
+
+    ========================== =================== =========================
+    LLVM type name             LLVM type arguments LLVM integer arguments
+    ========================== =================== =========================
+    ``spirv.Type``             SPIR-V operands     opcode, size, alignment
+    ``spirv.IntegralConstant`` integral type       value
+    ``spirv.Literal``          (none)              value
+    ========================== =================== =========================
+
+The operand arguments to ``spirv.Type`` may be either a ``spirv.IntegralConstant`` type,
+representing an ``OpConstant`` id operand, a ``spirv.Literal`` type, representing an immediate
+literal operand, or any other type, representing the id of that type as an operand.
+``spirv.IntegralConstant`` and ``spirv.Literal`` may not be used outside of this context.
+
+For example, ``OpTypeArray`` (opcode 28) takes an id for the element type and an id for the element
+length, so an array of 16 integers could be declared as:
+
+``target("spirv.Type", i32, target("spirv.IntegralConstant", i32, 16), 28, 64, 32)``
+
+This will be lowered to:
+
+``OpTypeArray %int %int_16``
+
+``OpTypeVector`` takes an id for the component type and a literal for the component count, so a
+4-integer vector could be declared as:
+
+``target("spirv.Type", i32, target("spirv.Literal", 4), 23, 16, 32)``
+
+This will be lowered to:
+
+``OpTypeVector %int 4``
+
+See `Target Extension Types for Inline SPIR-V and Decorated Types`_ for further details.
+
+.. _Target Extension Types for Inline SPIR-V and Decorated Types: https://github.com/llvm/wg-hlsl/blob/main/proposals/0017-inline-spirv-and-decorated-types.md
+
 .. _spirv-intrinsics:
 
 Target Intrinsics
@@ -307,6 +357,10 @@ SPIR-V backend, along with their descriptions and argument details.
      - None
      - `[Type, 32-bit Integer, Metadata]`
      - Assigns one of two memory aliasing decorations (specified by the second argument) to instructions using original aliasing metadata node. Not emitted directly but used to support SPIR-V representation in LLVM IR.
+   * - `int_spv_assign_fpmaxerror_decoration`
+     - None
+     - `[Type, Metadata]`
+     - Assigns the maximum error decoration to floating-point instructions using the original metadata node. Not emitted directly but used to support SPIR-V representation in LLVM IR.
    * - `int_spv_track_constant`
      - Type
      - `[Type, Metadata]`
@@ -399,6 +453,10 @@ SPIR-V backend, along with their descriptions and argument details.
      - 32-bit Integer
      - `[32-bit Integer]`
      - Retrieves the thread ID within a workgroup. Essential for identifying execution context in parallel compute operations.
+   * - `int_spv_flattened_thread_id_in_group`
+     - 32-bit Integer
+     - `[32-bit Integer]`
+     - Provides a flattened index for a given thread within a given group (SV_GroupIndex)
    * - `int_spv_create_handle`
      - Pointer
      - `[8-bit Integer]`
