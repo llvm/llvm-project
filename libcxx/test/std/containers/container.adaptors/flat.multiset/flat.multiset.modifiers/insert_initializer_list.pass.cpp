@@ -26,7 +26,6 @@ template <class KeyContainer>
 void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_multiset<Key, std::less<Key>, KeyContainer>;
-  using V   = typename M::value_type;
 
   {
     M m = {1, 1, 1, 3, 3, 3};

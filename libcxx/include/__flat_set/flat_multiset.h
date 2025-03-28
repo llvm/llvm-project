@@ -68,7 +68,6 @@
 #include <__utility/pair.h>
 #include <__utility/scope_guard.h>
 #include <__vector/vector.h>
-#include <algorithm>
 #include <initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
