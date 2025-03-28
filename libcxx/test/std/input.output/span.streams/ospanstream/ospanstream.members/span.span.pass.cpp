@@ -41,50 +41,42 @@ void test() {
   {
     SpStream spSt{std::span<CharT>{}};
     assert(spSt.span().data() == nullptr);
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
     spSt.span(arr);
     assert(spSt.span().data() == arr);
     // Mode `out` counts read characters
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
   }
   // Mode: `out`
   {
     SpStream spSt{std::span<CharT>{}, std::ios_base::out};
     assert(spSt.span().data() == nullptr);
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
     spSt.span(arr);
     assert(spSt.span().data() == arr);
     // Mode `out` counts read characters
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
   }
   // Mode: `ate`
   {
     SpStream spSt{std::span<CharT>{}, std::ios_base::ate};
     assert(spSt.span().data() == nullptr);
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
     spSt.span(arr);
     assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
   }
   // Mode: multiple
   {
     SpStream spSt{std::span<CharT>{}, std::ios_base::ate | std::ios_base::binary};
     assert(spSt.span().data() == nullptr);
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
     spSt.span(arr);
     assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
   }
 }
