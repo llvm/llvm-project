@@ -44,10 +44,7 @@ static cl::list<SPIRV::Capability::Capability>
 // Use sets instead of cl::list to check "if contains" condition
 struct AvoidCapabilitiesSet {
   SmallSet<SPIRV::Capability::Capability, 4> S;
-  AvoidCapabilitiesSet() {
-    for (auto Cap : AvoidCapabilities)
-      S.insert(Cap);
-  }
+  AvoidCapabilitiesSet() { S.insert_range(AvoidCapabilities); }
 };
 
 char llvm::SPIRVModuleAnalysis::ID = 0;

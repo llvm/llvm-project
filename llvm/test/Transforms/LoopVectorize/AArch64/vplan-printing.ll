@@ -88,12 +88,11 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[EP_IV:%.+]]> = phi ir<0>, vp<%index.next>
 ; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%accum> = phi ir<0>, ir<%add> (VF scaled by 1/4)
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[EP_IV]]>, ir<1>
-; CHECK-NEXT:     CLONE ir<%gep.a> = getelementptr ir<%a>, vp<[[STEPS]]>
+; CHECK-NEXT:     CLONE ir<%gep.a> = getelementptr ir<%a>, vp<[[EP_IV]]>
 ; CHECK-NEXT:     vp<[[PTR_A:%.+]]> = vector-pointer ir<%gep.a>
 ; CHECK-NEXT:     WIDEN ir<%load.a> = load vp<[[PTR_A]]>
 ; CHECK-NEXT:     WIDEN-CAST ir<%ext.a> = zext ir<%load.a> to i32
-; CHECK-NEXT:     CLONE ir<%gep.b> = getelementptr ir<%b>, vp<[[STEPS]]>
+; CHECK-NEXT:     CLONE ir<%gep.b> = getelementptr ir<%b>, vp<[[EP_IV]]>
 ; CHECK-NEXT:     vp<[[PTR_B:%.+]]> = vector-pointer ir<%gep.b>
 ; CHECK-NEXT:     WIDEN ir<%load.b> = load vp<[[PTR_B]]>
 ; CHECK-NEXT:     WIDEN-CAST ir<%ext.b> = zext ir<%load.b> to i32

@@ -794,8 +794,7 @@ bool LowOverheadLoop::ValidateTailPredicate() {
       !RDA.hasLocalDefBefore(VCTP, VCTP->getOperand(1).getReg())) {
     if (auto *Def = RDA.getUniqueReachingMIDef(
             &Preheader->back(), VCTP->getOperand(1).getReg().asMCReg())) {
-      SmallPtrSet<MachineInstr*, 2> Ignore;
-      Ignore.insert_range(VCTPs);
+      SmallPtrSet<MachineInstr *, 2> Ignore(llvm::from_range, VCTPs);
       TryRemove(Def, RDA, ToRemove, Ignore);
     }
   }

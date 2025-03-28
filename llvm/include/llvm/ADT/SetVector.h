@@ -386,6 +386,10 @@ public:
   SmallSetVector(It Start, It End) {
     this->insert(Start, End);
   }
+
+  template <typename Range>
+  SmallSetVector(llvm::from_range_t, Range &&R)
+      : SmallSetVector(adl_begin(R), adl_end(R)) {}
 };
 
 } // end namespace llvm

@@ -215,6 +215,17 @@ MACHINE_FUNCTION_PASS_WITH_PARAMS(
     "enable-tail-merge")
 
 MACHINE_FUNCTION_PASS_WITH_PARAMS(
+    "live-debug-values", "LiveDebugValuesPass",
+    [](bool ShouldEmitDebugEntryValues) {
+      return LiveDebugValuesPass(ShouldEmitDebugEntryValues);
+    },
+    [](StringRef Params) {
+      return parseSinglePassOption(Params, "emit-debug-entry-values",
+                                   "LiveDebugValuesPass");
+    },
+    "emit-debug-entry-values")
+
+MACHINE_FUNCTION_PASS_WITH_PARAMS(
     "machine-sink", "MachineSinkingPass",
     [](bool EnableSinkAndFold) {
       return MachineSinkingPass(EnableSinkAndFold);
@@ -278,7 +289,6 @@ DUMMY_MACHINE_FUNCTION_PASS("instruction-select", InstructionSelectPass)
 DUMMY_MACHINE_FUNCTION_PASS("irtranslator", IRTranslatorPass)
 DUMMY_MACHINE_FUNCTION_PASS("kcfi", MachineKCFIPass)
 DUMMY_MACHINE_FUNCTION_PASS("legalizer", LegalizerPass)
-DUMMY_MACHINE_FUNCTION_PASS("livedebugvalues", LiveDebugValuesPass)
 DUMMY_MACHINE_FUNCTION_PASS("lrshrink", LiveRangeShrinkPass)
 DUMMY_MACHINE_FUNCTION_PASS("machine-combiner", MachineCombinerPass)
 DUMMY_MACHINE_FUNCTION_PASS("static-data-splitter", StaticDataSplitter)

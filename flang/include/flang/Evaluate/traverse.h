@@ -159,9 +159,6 @@ public:
   template <typename T> Result operator()(const Designator<T> &x) const {
     return visitor_(x.u);
   }
-  template <typename T> Result operator()(const Variable<T> &x) const {
-    return visitor_(x.u);
-  }
   Result operator()(const DescriptorInquiry &x) const {
     return visitor_(x.base());
   }

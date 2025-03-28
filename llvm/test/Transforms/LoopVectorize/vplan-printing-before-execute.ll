@@ -76,8 +76,7 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
-; CHECK-NEXT:   vp<[[STEPS1:%.+]]> = SCALAR-STEPS ir<0>, ir<1>
-; CHECK-NEXT:   EMIT vp<[[PADD1:%.+]]> = ptradd ir<%A>, vp<[[STEPS1]]>
+; CHECK-NEXT:   EMIT vp<[[PADD1:%.+]]> = ptradd ir<%A>, ir<0>
 ; CHECK-NEXT:   vp<[[VPTR1:%.]]> = vector-pointer vp<[[PADD1]]>
 ; CHECK-NEXT:   vp<[[VPTR2:%.]]> = vector-pointer vp<[[PADD1]]>, ir<1>
 ; CHECK-NEXT:   WIDEN ir<%l> = load vp<[[VPTR1]]>

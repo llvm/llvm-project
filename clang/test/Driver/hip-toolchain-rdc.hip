@@ -147,6 +147,7 @@
 // CHECK-NOT: ".*llc"
 // CHECK: {{".*lld.*"}} {{.*}} "-plugin-opt=-amdgpu-internalize-symbols"
 // CHECK-SAME: "-plugin-opt=mcpu=gfx900"
+// CHECK-SAME: "--lto-partitions={{[0-9]+}}"
 // CHECK-SAME: "-o" "[[IMG_DEV2:.*.out]]" [[A_BC2]] [[B_BC2]]
 
 // combine images generated into hip fat binary object
