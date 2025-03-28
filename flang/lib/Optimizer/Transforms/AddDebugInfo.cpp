@@ -206,8 +206,13 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
   // a dummy_scope operand).
   unsigned argNo = 0;
   if (declOp.getDummyScope()) {
-    if (auto arg = llvm::dyn_cast<mlir::BlockArgument>(declOp.getMemref()))
-      argNo = arg.getArgNumber() + 1;
+    if (auto arg = llvm::dyn_cast<mlir::BlockArgument>(declOp.getMemref())) {
+      // Check if it is the BlockArgument of the function's entry block.
+      if (auto funcLikeOp =
+              declOp->getParentOfType<mlir::FunctionOpInterface>())
+        if (arg.getOwner() == &funcLikeOp.front())
+          argNo = arg.getArgNumber() + 1;
+    }
   }
 
   auto tyAttr = typeGen.convertType(fir::unwrapRefType(declOp.getType()),

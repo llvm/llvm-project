@@ -1326,7 +1326,8 @@ changeTypeShape(mlir::Type type,
       })
       .Default([&](mlir::Type t) -> mlir::Type {
         assert((fir::isa_trivial(t) || llvm::isa<fir::RecordType>(t) ||
-                llvm::isa<mlir::NoneType>(t)) &&
+                llvm::isa<mlir::NoneType>(t) ||
+                llvm::isa<fir::CharacterType>(t)) &&
                "unexpected FIR leaf type");
         if (newShape)
           return fir::SequenceType::get(*newShape, t);

@@ -416,7 +416,7 @@ bool X86CmovConverterPass::checkForProfitableCmovCandidates(
 
   SmallPtrSet<MachineInstr *, 4> CmovInstructions;
   for (auto &Group : CmovInstGroups)
-    CmovInstructions.insert(Group.begin(), Group.end());
+    CmovInstructions.insert_range(Group);
 
   //===--------------------------------------------------------------------===//
   // Step 1: Calculate instruction depth and loop depth.
@@ -555,7 +555,7 @@ bool X86CmovConverterPass::checkForProfitableCmovCandidates(
       // This is another conservative check to avoid converting CMOV instruction
       // used with tree-search like algorithm, where the branch is unpredicted.
       auto UIs = MRI->use_instructions(MI->defs().begin()->getReg());
-      if (!UIs.empty() && ++UIs.begin() == UIs.end()) {
+      if (hasSingleElement(UIs)) {
         unsigned Op = UIs.begin()->getOpcode();
         if (Op == X86::MOV64rm || Op == X86::MOV32rm) {
           WorthOpGroup = false;

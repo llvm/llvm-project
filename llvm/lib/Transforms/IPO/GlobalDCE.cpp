@@ -73,7 +73,7 @@ void GlobalDCEPass::ComputeDependencies(Value *V,
       for (User *CEUser : CE->users())
         ComputeDependencies(CEUser, LocalDeps);
     }
-    Deps.insert(LocalDeps.begin(), LocalDeps.end());
+    Deps.insert_range(LocalDeps);
   }
 }
 

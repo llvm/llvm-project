@@ -344,7 +344,7 @@ static inline RT_API_ATTRS void CheckConformabilityForShallowCopy(
   if (d1.type() != d2.type()) {
     terminator.Crash("Incompatible arguments to %s: %s has type code %d, %s "
                      "has type code %d",
-        funcName, d1Name, d1.type(), d2Name, d2.type());
+        funcName, d1Name, d1.type().raw(), d2Name, d2.type().raw());
   }
   const DescriptorAddendum *d1Addendum{d1.Addendum()};
   const typeInfo::DerivedType *d1Derived{

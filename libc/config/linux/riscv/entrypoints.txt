@@ -401,6 +401,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.asinhf
     libc.src.math.atan2
     libc.src.math.atan2f
+    libc.src.math.atan
     libc.src.math.atanf
     libc.src.math.atanhf
     libc.src.math.canonicalize
@@ -858,6 +859,9 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # sched.h entrypoints
     libc.src.sched.__sched_getcpucount
+    libc.src.sched.__sched_setcpuzero
+    libc.src.sched.__sched_setcpuset
+    libc.src.sched.__sched_getcpuisset
 
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
@@ -943,6 +947,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.search.hsearch_r
     libc.src.search.insque
     libc.src.search.lfind
+    libc.src.search.lsearch
     libc.src.search.remque
 
     # threads.h entrypoints

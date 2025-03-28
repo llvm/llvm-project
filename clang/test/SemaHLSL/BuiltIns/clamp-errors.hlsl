@@ -59,16 +59,14 @@ float2 test_clamp_builtin_vector_size_mismatch(float3 p0, float2 p1) {
   // expected-error@-1 {{all arguments to '__builtin_hlsl_elementwise_clamp' must have the same type}}
 }
 
-// allowed by the overloads in hlsl_compat_overloads.h
-// support for this overload might be removed in a future version of hlsl
 float test_clamp_scalar_mismatch(float p0, half p1) {
   return clamp(p1, p0, p1);
+  // expected-error@-1 {{call to 'clamp' is ambiguous}}
 }
 
-// allowed by the overloads in hlsl_compat_overloads.h
-// support for this overload might be removed in a future version of hlsl
 float2 test_clamp_element_type_mismatch(half2 p0, float2 p1) {
   return clamp(p1, p0, p1);
+  // expected-error@-1 {{call to 'clamp' is ambiguous}}
 }
 
 float2 test_builtin_clamp_float2_splat(float p0, float2 p1) {

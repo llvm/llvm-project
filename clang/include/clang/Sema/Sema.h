@@ -1348,6 +1348,12 @@ public:
                                     unsigned DiagID, bool ForceCheck = false,
                                     bool ForceUnprivileged = false);
 
+  AccessResult CheckBaseClassAccess(
+      SourceLocation AccessLoc, CXXRecordDecl *Base, CXXRecordDecl *Derived,
+      const CXXBasePath &Path, unsigned DiagID,
+      llvm::function_ref<void(PartialDiagnostic &PD)> SetupPDiag,
+      bool ForceCheck = false, bool ForceUnprivileged = false);
+
   /// Checks access to all the declarations in the given result set.
   void CheckLookupAccess(const LookupResult &R);
 
@@ -5769,10 +5775,11 @@ public:
 
   /// Determine whether the type \p Derived is a C++ class that is
   /// derived from the type \p Base.
+  bool IsDerivedFrom(SourceLocation Loc, CXXRecordDecl *Derived,
+                     CXXRecordDecl *Base, CXXBasePaths &Paths);
+  bool IsDerivedFrom(SourceLocation Loc, CXXRecordDecl *Derived,
+                     CXXRecordDecl *Base);
   bool IsDerivedFrom(SourceLocation Loc, QualType Derived, QualType Base);
-
-  /// Determine whether the type \p Derived is a C++ class that is
-  /// derived from the type \p Base.
   bool IsDerivedFrom(SourceLocation Loc, QualType Derived, QualType Base,
                      CXXBasePaths &Paths);
 
@@ -10056,15 +10063,24 @@ public:
                                  bool InOverloadResolution,
                                  QualType &ConvertedType);
 
+  enum class MemberPointerConversionResult {
+    Success,
+    DifferentPointee,
+    NotDerived,
+    Ambiguous,
+    Virtual,
+    Inaccessible
+  };
+  enum class MemberPointerConversionDirection : bool { Downcast, Upcast };
   /// CheckMemberPointerConversion - Check the member pointer conversion from
   /// the expression From to the type ToType. This routine checks for ambiguous
   /// or virtual or inaccessible base-to-derived member pointer conversions for
-  /// which IsMemberPointerConversion has already returned true. It returns true
-  /// and produces a diagnostic if there was an error, or returns false
-  /// otherwise.
-  bool CheckMemberPointerConversion(Expr *From, QualType ToType, CastKind &Kind,
-                                    CXXCastPath &BasePath,
-                                    bool IgnoreBaseAccess);
+  /// which IsMemberPointerConversion has already returned true. It produces a
+  // diagnostic if there was an error.
+  MemberPointerConversionResult CheckMemberPointerConversion(
+      QualType FromType, const MemberPointerType *ToPtrType, CastKind &Kind,
+      CXXCastPath &BasePath, SourceLocation CheckLoc, SourceRange OpRange,
+      bool IgnoreBaseAccess, MemberPointerConversionDirection Direction);
 
   /// IsQualificationConversion - Determines whether the conversion from
   /// an rvalue of type FromType to ToType is a qualification conversion
@@ -11268,13 +11284,11 @@ public:
 
   /// Determine whether we would be unable to instantiate this template (because
   /// it either has no definition, or is in the process of being instantiated).
-  bool DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
-                                      NamedDecl *Instantiation,
-                                      bool InstantiatedFromMember,
-                                      const NamedDecl *Pattern,
-                                      const NamedDecl *PatternDef,
-                                      TemplateSpecializationKind TSK,
-                                      bool Complain = true);
+  bool DiagnoseUninstantiableTemplate(
+      SourceLocation PointOfInstantiation, NamedDecl *Instantiation,
+      bool InstantiatedFromMember, const NamedDecl *Pattern,
+      const NamedDecl *PatternDef, TemplateSpecializationKind TSK,
+      bool Complain = true, bool *Unreachable = nullptr);
 
   /// DiagnoseTemplateParameterShadow - Produce a diagnostic complaining
   /// that the template parameter 'PrevDecl' is being shadowed by a new
@@ -12606,6 +12620,10 @@ public:
   void MarkUsedTemplateParameters(const TemplateArgumentList &TemplateArgs,
                                   bool OnlyDeduced, unsigned Depth,
                                   llvm::SmallBitVector &Used);
+
+  void MarkUsedTemplateParameters(ArrayRef<TemplateArgument> TemplateArgs,
+                                  unsigned Depth, llvm::SmallBitVector &Used);
+
   void
   MarkDeducedTemplateParameters(const FunctionTemplateDecl *FunctionTemplate,
                                 llvm::SmallBitVector &Deduced) {
@@ -14871,8 +14889,9 @@ public:
   ///
   /// \returns a member pointer type, if successful, or a NULL type if there was
   /// an error.
-  QualType BuildMemberPointerType(QualType T, QualType Class,
-                                  SourceLocation Loc, DeclarationName Entity);
+  QualType BuildMemberPointerType(QualType T, const CXXScopeSpec &SS,
+                                  CXXRecordDecl *Cls, SourceLocation Loc,
+                                  DeclarationName Entity);
 
   /// Build a block pointer type.
   ///

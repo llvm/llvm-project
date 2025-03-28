@@ -3296,7 +3296,7 @@ static DWARFExpressionList GetExprListFromAtLocation(DWARFFormValue form_value,
   if (data.ValidOffset(offset)) {
     data = DataExtractor(data, offset, data.GetByteSize() - offset);
     const DWARFUnit *dwarf_cu = form_value.GetUnit();
-    if (DWARFExpression::ParseDWARFLocationList(dwarf_cu, data, &location_list))
+    if (dwarf_cu->ParseDWARFLocationList(data, location_list))
       location_list.SetFuncFileAddress(func_low_pc);
   }
 

@@ -6336,7 +6336,10 @@ array is currently associated.  The optional ``allocated`` is a
 DIExpression that describes whether the allocatable array is currently
 allocated.  The optional ``rank`` is a DIExpression that describes the
 rank (number of dimensions) of fortran assumed rank array (rank is
-known at runtime).
+known at runtime).  The optional ``bitStride`` is an unsigned constant
+that describes the number of bits occupied by an element of the array;
+this is only needed if it differs from the element type's natural
+size, and is normally used for packed arrays.
 
 For ``DW_TAG_enumeration_type``, the ``elements:`` should be :ref:`enumerator
 descriptors <DIEnumerator>`, each representing the definition of an enumeration
@@ -14562,6 +14565,33 @@ is lowered to a constant 0.
 Note that runtime support may be conditional on the privilege-level code is
 running at and the host platform.
 
+'``llvm.readsteadycounter``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare i64 @llvm.readsteadycounter()
+
+Overview:
+"""""""""
+
+The '``llvm.readsteadycounter``' intrinsic provides access to the fixed
+frequency clock on targets that support it. Unlike '``llvm.readcyclecounter``',
+this clock is expected to tick at a constant rate, making it suitable for
+measuring elapsed time. The actual frequency of the clock is implementation
+defined.
+
+Semantics:
+""""""""""
+
+When directly supported, reading the steady counter should not modify any
+memory. Implementations are allowed to either return an application
+specific value or a system wide value. On backends without support, this
+is lowered to a constant 0.
+
 '``llvm.clear_cache``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -15640,8 +15670,8 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use
-``llvm.experimental.memset.pattern`` on any integer bit width and for
-different address spaces. Not all targets support all bit widths however.
+``llvm.experimental.memset.pattern`` on any sized type and for different
+address spaces.
 
 ::
 

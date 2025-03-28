@@ -383,6 +383,12 @@ define void @debugtrap_requires_queue() #0 {
   unreachable
 }
 
+; FIXME: Broken in globalisel
+; define void @ubsantrap_requires_queue() #0 {
+;   call void @llvm.ubsantrap(i8 0)
+;   unreachable
+; }
+
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare i32 @llvm.amdgcn.workitem.id.y()
 declare i32 @llvm.amdgcn.workitem.id.z()

@@ -2076,10 +2076,9 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(DeclaratorContext Context,
     ProhibitAttributes(DeclSpecAttrs);
     return ParseNamespace(Context, DeclEnd);
   case tok::kw_using: {
-    ParsedAttributes Attrs(AttrFactory);
-    takeAndConcatenateAttrs(DeclAttrs, DeclSpecAttrs, Attrs);
+    takeAndConcatenateAttrs(DeclAttrs, std::move(DeclSpecAttrs));
     return ParseUsingDirectiveOrDeclaration(Context, ParsedTemplateInfo(),
-                                            DeclEnd, Attrs);
+                                            DeclEnd, DeclAttrs);
   }
   case tok::kw_static_assert:
   case tok::kw__Static_assert:
@@ -5174,7 +5173,9 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
     }
 
     if (Tok.is(tok::annot_pragma_openacc)) {
-      ParseOpenACCDirectiveDecl();
+      AccessSpecifier AS = AS_none;
+      ParsedAttributes Attrs(AttrFactory);
+      ParseOpenACCDirectiveDecl(AS, Attrs, TagType, TagDecl);
       continue;
     }
 

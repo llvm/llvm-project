@@ -238,8 +238,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     const auto *FromMP = SubExpr->getType()->getAs<MemberPointerType>();
     const auto *ToMP = CE->getType()->getAs<MemberPointerType>();
 
-    unsigned DerivedOffset = collectBaseOffset(QualType(ToMP->getClass(), 0),
-                                               QualType(FromMP->getClass(), 0));
+    unsigned DerivedOffset =
+        Ctx.collectBaseOffset(ToMP->getMostRecentCXXRecordDecl(),
+                              FromMP->getMostRecentCXXRecordDecl());
 
     if (!this->delegate(SubExpr))
       return false;
@@ -253,8 +254,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     const auto *FromMP = SubExpr->getType()->getAs<MemberPointerType>();
     const auto *ToMP = CE->getType()->getAs<MemberPointerType>();
 
-    unsigned DerivedOffset = collectBaseOffset(QualType(FromMP->getClass(), 0),
-                                               QualType(ToMP->getClass(), 0));
+    unsigned DerivedOffset =
+        Ctx.collectBaseOffset(FromMP->getMostRecentCXXRecordDecl(),
+                              ToMP->getMostRecentCXXRecordDecl());
 
     if (!this->delegate(SubExpr))
       return false;
@@ -1816,7 +1818,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     for (const Expr *Init : Inits) {
       // Skip unnamed bitfields.
       while (InitIndex < R->getNumFields() &&
-             R->getField(InitIndex)->Decl->isUnnamedBitField())
+             R->getField(InitIndex)->isUnnamedBitField())
         ++InitIndex;
 
       if (std::optional<PrimType> T = classify(Init)) {
@@ -2082,6 +2084,37 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
       return true;
 
     return this->emitConst(Size.getQuantity(), E);
+  }
+
+  if (Kind == UETT_CountOf) {
+    QualType Ty = E->getTypeOfArgument();
+    assert(Ty->isArrayType());
+
+    // We don't need to worry about array element qualifiers, so getting the
+    // unsafe array type is fine.
+    if (const auto *CAT =
+            dyn_cast<ConstantArrayType>(Ty->getAsArrayTypeUnsafe())) {
+      if (DiscardResult)
+        return true;
+      return this->emitConst(CAT->getSize(), E);
+    }
+
+    assert(!Ty->isConstantSizeType());
+
+    // If it's a variable-length array type, we need to check whether it is a
+    // multidimensional array. If so, we need to check the size expression of
+    // the VLA to see if it's a constant size. If so, we can return that value.
+    const auto *VAT = ASTCtx.getAsVariableArrayType(Ty);
+    assert(VAT);
+    if (VAT->getElementType()->isArrayType()) {
+      std::optional<APSInt> Res =
+          VAT->getSizeExpr()->getIntegerConstantExpr(ASTCtx);
+      if (Res) {
+        if (DiscardResult)
+          return true;
+        return this->emitConst(*Res, E);
+      }
+    }
   }
 
   if (Kind == UETT_AlignOf || Kind == UETT_PreferredAlignOf) {
@@ -3354,7 +3387,8 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
       if (E->isArray())
         Desc = nullptr; // We're not going to use it in this case.
       else
-        Desc = P.createDescriptor(E, *ElemT, Descriptor::InlineDescMD,
+        Desc = P.createDescriptor(E, *ElemT, /*SourceTy=*/nullptr,
+                                  Descriptor::InlineDescMD,
                                   /*IsConst=*/false, /*IsTemporary=*/false,
                                   /*IsMutable=*/false);
     } else {
@@ -3515,7 +3549,7 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
         // ++Iter;
         if (!this->emitGetPtrLocal(Iter, E))
           return false;
-        if (!this->emitIncPop(SizeT, E))
+        if (!this->emitIncPop(SizeT, false, E))
           return false;
 
         if (!this->jump(StartLabel))
@@ -3654,7 +3688,7 @@ bool Compiler<Emitter>::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
 
   assert(V.isStruct());
   assert(V.getStructNumBases() == 0);
-  if (!this->visitAPValueInitializer(V, E))
+  if (!this->visitAPValueInitializer(V, E, E->getType()))
     return false;
 
   return this->emitFinishInit(E);
@@ -4030,6 +4064,9 @@ template <class Emitter> bool Compiler<Emitter>::visitBool(const Expr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
                                              const Expr *E) {
+  if (const auto *AT = QT->getAs<AtomicType>())
+    QT = AT->getValueType();
+
   switch (T) {
   case PT_Bool:
     return this->emitZeroBool(E);
@@ -4078,7 +4115,7 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
   assert(R);
   // Fields
   for (const Record::Field &Field : R->fields()) {
-    if (Field.Decl->isUnnamedBitField())
+    if (Field.isUnnamedBitField())
       continue;
 
     const Descriptor *D = Field.Desc;
@@ -4258,8 +4295,8 @@ unsigned Compiler<Emitter>::allocateLocalPrimitive(
   // FIXME: There are cases where Src.is<Expr*>() is wrong, e.g.
   //   (int){12} in C. Consider using Expr::isTemporaryObject() instead
   //   or isa<MaterializeTemporaryExpr>().
-  Descriptor *D = P.createDescriptor(Src, Ty, Descriptor::InlineDescMD, IsConst,
-                                     isa<const Expr *>(Src));
+  Descriptor *D = P.createDescriptor(Src, Ty, nullptr, Descriptor::InlineDescMD,
+                                     IsConst, isa<const Expr *>(Src));
   Scope::Local Local = this->createLocal(D);
   if (auto *VD = dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>()))
     Locals.insert({VD, Local});
@@ -4641,48 +4678,27 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
 
 template <class Emitter>
 bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
-                                                const Expr *E) {
-
+                                                const Expr *E, QualType T) {
   if (Val.isStruct()) {
-    const Record *R = this->getRecord(E->getType());
+    const Record *R = this->getRecord(T);
     assert(R);
     for (unsigned I = 0, N = Val.getStructNumFields(); I != N; ++I) {
       const APValue &F = Val.getStructField(I);
       const Record::Field *RF = R->getField(I);
+      QualType FieldType = RF->Decl->getType();
 
-      if (F.isInt() || F.isFloat() || F.isLValue() || F.isMemberPointer()) {
-        PrimType T = classifyPrim(RF->Decl->getType());
-        if (!this->visitAPValue(F, T, E))
+      if (std::optional<PrimType> PT = classify(FieldType)) {
+        if (!this->visitAPValue(F, *PT, E))
           return false;
-        if (!this->emitInitField(T, RF->Offset, E))
-          return false;
-      } else if (F.isArray()) {
-        assert(RF->Desc->isPrimitiveArray());
-        const auto *ArrType = RF->Decl->getType()->getAsArrayTypeUnsafe();
-        PrimType ElemT = classifyPrim(ArrType->getElementType());
-        assert(ArrType);
-
-        if (!this->emitGetPtrField(RF->Offset, E))
-          return false;
-
-        for (unsigned A = 0, AN = F.getArraySize(); A != AN; ++A) {
-          if (!this->visitAPValue(F.getArrayInitializedElt(A), ElemT, E))
-            return false;
-          if (!this->emitInitElem(ElemT, A, E))
-            return false;
-        }
-
-        if (!this->emitPopPtr(E))
-          return false;
-      } else if (F.isStruct() || F.isUnion()) {
-        if (!this->emitGetPtrField(RF->Offset, E))
-          return false;
-        if (!this->visitAPValueInitializer(F, E))
-          return false;
-        if (!this->emitPopPtr(E))
+        if (!this->emitInitField(*PT, RF->Offset, E))
           return false;
       } else {
-        assert(false && "I don't think this should be possible");
+        if (!this->emitGetPtrField(RF->Offset, E))
+          return false;
+        if (!this->visitAPValueInitializer(F, E, FieldType))
+          return false;
+        if (!this->emitPopPtr(E))
+          return false;
       }
     }
     return true;
@@ -4696,6 +4712,28 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
     if (!this->visitAPValue(F, T, E))
       return false;
     return this->emitInitField(T, RF->Offset, E);
+  } else if (Val.isArray()) {
+    const auto *ArrType = T->getAsArrayTypeUnsafe();
+    QualType ElemType = ArrType->getElementType();
+    for (unsigned A = 0, AN = Val.getArraySize(); A != AN; ++A) {
+      const APValue &Elem = Val.getArrayInitializedElt(A);
+      if (std::optional<PrimType> ElemT = classify(ElemType)) {
+        if (!this->visitAPValue(Elem, *ElemT, E))
+          return false;
+        if (!this->emitInitElem(*ElemT, A, E))
+          return false;
+      } else {
+        if (!this->emitConstUint32(A, E))
+          return false;
+        if (!this->emitArrayElemPtrUint32(E))
+          return false;
+        if (!this->visitAPValueInitializer(Elem, E, ElemType))
+          return false;
+        if (!this->emitPopPtr(E))
+          return false;
+      }
+    }
+    return true;
   }
   // TODO: Other types.
 
@@ -5953,7 +5991,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
                            : this->emitIncf(getFPOptions(E), E);
     }
 
-    return DiscardResult ? this->emitIncPop(*T, E) : this->emitInc(*T, E);
+    return DiscardResult ? this->emitIncPop(*T, E->canOverflow(), E)
+                         : this->emitInc(*T, E->canOverflow(), E);
   }
   case UO_PostDec: { // x--
     if (!Ctx.getLangOpts().CPlusPlus14)
@@ -5976,7 +6015,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
                            : this->emitDecf(getFPOptions(E), E);
     }
 
-    return DiscardResult ? this->emitDecPop(*T, E) : this->emitDec(*T, E);
+    return DiscardResult ? this->emitDecPop(*T, E->canOverflow(), E)
+                         : this->emitDec(*T, E->canOverflow(), E);
   }
   case UO_PreInc: { // ++x
     if (!Ctx.getLangOpts().CPlusPlus14)
@@ -6001,7 +6041,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (DiscardResult) {
       if (T == PT_Float)
         return this->emitIncfPop(getFPOptions(E), E);
-      return this->emitIncPop(*T, E);
+      return this->emitIncPop(*T, E->canOverflow(), E);
     }
 
     if (T == PT_Float) {
@@ -6016,13 +6056,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
         return false;
     } else {
       assert(isIntegralType(*T));
-      if (!this->emitLoad(*T, E))
-        return false;
-      if (!this->emitConst(1, E))
-        return false;
-      if (!this->emitAdd(*T, E))
-        return false;
-      if (!this->emitStore(*T, E))
+      if (!this->emitPreInc(*T, E->canOverflow(), E))
         return false;
     }
     return E->isGLValue() || this->emitLoadPop(*T, E);
@@ -6050,7 +6084,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (DiscardResult) {
       if (T == PT_Float)
         return this->emitDecfPop(getFPOptions(E), E);
-      return this->emitDecPop(*T, E);
+      return this->emitDecPop(*T, E->canOverflow(), E);
     }
 
     if (T == PT_Float) {
@@ -6065,13 +6099,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
         return false;
     } else {
       assert(isIntegralType(*T));
-      if (!this->emitLoad(*T, E))
-        return false;
-      if (!this->emitConst(1, E))
-        return false;
-      if (!this->emitSub(*T, E))
-        return false;
-      if (!this->emitStore(*T, E))
+      if (!this->emitPreDec(*T, E->canOverflow(), E))
         return false;
     }
     return E->isGLValue() || this->emitLoadPop(*T, E);
@@ -6385,7 +6413,8 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
           return false;
         return this->emitInitGlobal(*T, *Index, E);
       }
-      return this->visitAPValueInitializer(TPOD->getValue(), E);
+      return this->visitAPValueInitializer(TPOD->getValue(), E,
+                                           TPOD->getType());
     }
     return false;
   }

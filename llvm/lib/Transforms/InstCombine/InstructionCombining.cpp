@@ -94,6 +94,7 @@
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -4812,19 +4813,23 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
   //
   // TODO: This could use getBinopAbsorber() / getBinopIdentity() to avoid
   //       duplicating logic for binops at least.
-  auto getUndefReplacement = [&I](Type *Ty) {
-    Constant *BestValue = nullptr;
-    Constant *NullValue = Constant::getNullValue(Ty);
+  auto getUndefReplacement = [&](Type *Ty) {
+    Value *BestValue = nullptr;
+    Value *NullValue = Constant::getNullValue(Ty);
     for (const auto *U : I.users()) {
-      Constant *C = NullValue;
+      Value *V = NullValue;
       if (match(U, m_Or(m_Value(), m_Value())))
-        C = ConstantInt::getAllOnesValue(Ty);
+        V = ConstantInt::getAllOnesValue(Ty);
       else if (match(U, m_Select(m_Specific(&I), m_Constant(), m_Value())))
-        C = ConstantInt::getTrue(Ty);
+        V = ConstantInt::getTrue(Ty);
+      else if (match(U, m_c_Select(m_Specific(&I), m_Value(V)))) {
+        if (!isGuaranteedNotToBeUndefOrPoison(V, &AC, &I, &DT))
+          V = NullValue;
+      }
 
       if (!BestValue)
-        BestValue = C;
-      else if (BestValue != C)
+        BestValue = V;
+      else if (BestValue != V)
         BestValue = NullValue;
     }
     assert(BestValue && "Must have at least one use");
@@ -4840,10 +4845,28 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
     return replaceInstUsesWith(I, getUndefReplacement(I.getType()));
   }
 
+  auto getFreezeVectorReplacement = [](Constant *C) -> Constant * {
+    Type *Ty = C->getType();
+    auto *VTy = dyn_cast<FixedVectorType>(Ty);
+    if (!VTy)
+      return nullptr;
+    unsigned NumElts = VTy->getNumElements();
+    Constant *BestValue = Constant::getNullValue(VTy->getScalarType());
+    for (unsigned i = 0; i != NumElts; ++i) {
+      Constant *EltC = C->getAggregateElement(i);
+      if (EltC && !match(EltC, m_Undef())) {
+        BestValue = EltC;
+        break;
+      }
+    }
+    return Constant::replaceUndefsWith(C, BestValue);
+  };
+
   Constant *C;
-  if (match(Op0, m_Constant(C)) && C->containsUndefOrPoisonElement()) {
-    Constant *ReplaceC = getUndefReplacement(I.getType()->getScalarType());
-    return replaceInstUsesWith(I, Constant::replaceUndefsWith(C, ReplaceC));
+  if (match(Op0, m_Constant(C)) && C->containsUndefOrPoisonElement() &&
+      !C->containsConstantExpression()) {
+    if (Constant *Repl = getFreezeVectorReplacement(C))
+      return replaceInstUsesWith(I, Repl);
   }
 
   // Replace uses of Op with freeze(Op).

@@ -360,8 +360,7 @@ public:
                            ? CallerEdges
                            : std::vector<std::shared_ptr<ContextEdge>>());
       for (const auto &Edge : Edges)
-        ContextIds.insert(Edge->getContextIds().begin(),
-                          Edge->getContextIds().end());
+        ContextIds.insert_range(Edge->getContextIds());
       return ContextIds;
     }
 
@@ -1372,7 +1371,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     for (auto Id : ContextIds)
       if (auto NewId = OldToNewContextIds.find(Id);
           NewId != OldToNewContextIds.end())
-        NewIds.insert(NewId->second.begin(), NewId->second.end());
+        NewIds.insert_range(NewId->second);
     return NewIds;
   };
 
@@ -1389,7 +1388,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
       // Only need to recursively iterate to NextNode via this caller edge if
       // it resulted in any added ids to NextNode.
       if (!NewIdsToAdd.empty()) {
-        Edge->getContextIds().insert(NewIdsToAdd.begin(), NewIdsToAdd.end());
+        Edge->getContextIds().insert_range(NewIdsToAdd);
         UpdateCallers(NextNode, Visited, UpdateCallers);
       }
     }
@@ -2534,8 +2533,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::calleesMatch(
     // If there is already an edge between these nodes, simply update it and
     // return.
     if (CurEdge) {
-      CurEdge->ContextIds.insert(Edge->ContextIds.begin(),
-                                 Edge->ContextIds.end());
+      CurEdge->ContextIds.insert_range(Edge->ContextIds);
       CurEdge->AllocTypes |= Edge->AllocTypes;
       return;
     }
@@ -3281,8 +3279,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     if (ExistingEdgeToNewCallee) {
       // Since we already have an edge to NewCallee, simply move the ids
       // onto it, and remove the existing Edge.
-      ExistingEdgeToNewCallee->getContextIds().insert(ContextIdsToMove.begin(),
-                                                      ContextIdsToMove.end());
+      ExistingEdgeToNewCallee->getContextIds().insert_range(ContextIdsToMove);
       ExistingEdgeToNewCallee->AllocTypes |= Edge->AllocTypes;
       assert(Edge->ContextIds == ContextIdsToMove);
       removeEdgeFromGraph(Edge.get());
@@ -3302,8 +3299,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     if (ExistingEdgeToNewCallee) {
       // Since we already have an edge to NewCallee, simply move the ids
       // onto it.
-      ExistingEdgeToNewCallee->getContextIds().insert(ContextIdsToMove.begin(),
-                                                      ContextIdsToMove.end());
+      ExistingEdgeToNewCallee->getContextIds().insert_range(ContextIdsToMove);
       ExistingEdgeToNewCallee->AllocTypes |= CallerEdgeAllocType;
     } else {
       // Otherwise, create a new edge to NewCallee for the ids being moved.
@@ -3350,8 +3346,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
       // removed none type edges after creating the clone. If we can't find
       // a corresponding edge there, fall through to the cloning below.
       if (auto *NewCalleeEdge = NewCallee->findEdgeFromCallee(CalleeToUse)) {
-        NewCalleeEdge->getContextIds().insert(EdgeContextIdsToMove.begin(),
-                                              EdgeContextIdsToMove.end());
+        NewCalleeEdge->getContextIds().insert_range(EdgeContextIdsToMove);
         NewCalleeEdge->AllocTypes |= computeAllocType(EdgeContextIdsToMove);
         continue;
       }
@@ -3402,8 +3397,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   if (ExistingEdgeToNewCaller) {
     // Since we already have an edge to NewCaller, simply move the ids
     // onto it, and remove the existing Edge.
-    ExistingEdgeToNewCaller->getContextIds().insert(
-        Edge->getContextIds().begin(), Edge->getContextIds().end());
+    ExistingEdgeToNewCaller->getContextIds().insert_range(
+        Edge->getContextIds());
     ExistingEdgeToNewCaller->AllocTypes |= Edge->AllocTypes;
     Edge->ContextIds.clear();
     Edge->AllocTypes = (uint8_t)AllocationType::None;
@@ -3465,8 +3460,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
       // edge, this may not hold true when recursive handling enabled.
       assert(IsNewNode || ExistingCallerEdge || AllowRecursiveCallsites);
       if (ExistingCallerEdge) {
-        ExistingCallerEdge->getContextIds().insert(EdgeContextIdsToMove.begin(),
-                                                   EdgeContextIdsToMove.end());
+        ExistingCallerEdge->getContextIds().insert_range(EdgeContextIdsToMove);
         ExistingCallerEdge->AllocTypes |=
             computeAllocType(EdgeContextIdsToMove);
         continue;

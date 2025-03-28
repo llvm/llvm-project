@@ -102,6 +102,8 @@ public:
   static bool classofKind(Kind K) { return K == OpenACCDeclare; }
 };
 
+// Reprents a 'routine' directive with a name. When this has no name, it is
+// represented as an attribute.
 class OpenACCRoutineDecl final
     : public OpenACCConstructDecl,
       private llvm::TrailingObjects<OpenACCRoutineDecl, const OpenACCClause *> {
@@ -129,6 +131,8 @@ class OpenACCRoutineDecl final
       : OpenACCConstructDecl(OpenACCRoutine, DC, OpenACCDirectiveKind::Routine,
                              StartLoc, DirLoc, EndLoc),
         FuncRef(FuncRef), ParensLoc(LParenLoc, RParenLoc) {
+    assert(LParenLoc.isValid() &&
+           "Cannot represent implicit name with this declaration");
     // Initialize the trailing storage.
     std::uninitialized_copy(Clauses.begin(), Clauses.end(),
                             getTrailingObjects<const OpenACCClause *>());
@@ -148,13 +152,10 @@ public:
   static bool classofKind(Kind K) { return K == OpenACCRoutine; }
 
   const Expr *getFunctionReference() const { return FuncRef; }
-
   Expr *getFunctionReference() { return FuncRef; }
 
   SourceLocation getLParenLoc() const { return ParensLoc.getBegin(); }
   SourceLocation getRParenLoc() const { return ParensLoc.getEnd(); }
-
-  bool hasNameSpecified() const { return !ParensLoc.getBegin().isInvalid(); }
 };
 } // namespace clang
 

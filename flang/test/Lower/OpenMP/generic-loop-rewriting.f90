@@ -50,7 +50,7 @@ end subroutine target_teams_loop
 !CHECK:                   omp.loop_nest (%{{.*}}) : i32 = 
 !CHECK-SAME:                (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
 !CHECK:                     %[[I_PRIV_DECL:.*]]:2 = hlfir.declare %[[I_PRIV_ARG]]
-!CHECK:                     hlfir.assign %{{.*}} to %[[I_PRIV_DECL]]#1 : i32, !fir.ref<i32>
+!CHECK:                     hlfir.assign %{{.*}} to %[[I_PRIV_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK:                   }
 !CHECK:                 }
 !CHECK:               }
