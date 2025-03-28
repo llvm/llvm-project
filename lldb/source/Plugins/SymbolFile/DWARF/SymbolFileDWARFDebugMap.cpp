@@ -718,6 +718,15 @@ bool SymbolFileDWARFDebugMap::ParseDebugMacros(CompileUnit &comp_unit) {
   return false;
 }
 
+static std::string GetObjectName(SymbolFileDWARF &oso_dwarf) {
+  if (ObjectFile *object_file = oso_dwarf.GetObjectFile()) {
+    if (ModuleSP module_sp = object_file->GetModule()) {
+      return module_sp->GetObjectName().GetString();
+    }
+  }
+  return "";
+}
+
 void SymbolFileDWARFDebugMap::ForEachSymbolFile(
     std::string description,
     std::function<IterationAction(SymbolFileDWARF &)> closure) {
@@ -727,12 +736,7 @@ void SymbolFileDWARFDebugMap::ForEachSymbolFile(
                     /*minimum_report_time=*/std::chrono::milliseconds(20));
   for (uint32_t oso_idx = 0; oso_idx < num_oso_idxs; ++oso_idx) {
     if (SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx)) {
-      progress.Increment(oso_idx, oso_dwarf->GetObjectFile()
-                                      ? oso_dwarf->GetObjectFile()
-                                            ->GetFileSpec()
-                                            .GetFilename()
-                                            .GetString()
-                                      : "");
+      progress.Increment(oso_idx, GetObjectName(*oso_dwarf));
       if (closure(*oso_dwarf) == IterationAction::Stop)
         return;
     }
