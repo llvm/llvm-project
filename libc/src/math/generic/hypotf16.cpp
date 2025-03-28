@@ -51,8 +51,8 @@ LLVM_LIBC_FUNCTION(float16, hypotf16, (float16 x, float16 y)) {
                                           << FPBits::FRACTION_LEN)))
     return x_abs.get_val() + y_abs.get_val();
 
-  float af = static_cast<float>(a_bits.get_val());
-  float bf = static_cast<float>(b_bits.get_val());
+  float af = fputil::cast<float>(a_bits.get_val());
+  float bf = fputil::cast<float>(b_bits.get_val());
 
   // These squares are exact.
   float a_sq = af * af;
@@ -81,7 +81,7 @@ LLVM_LIBC_FUNCTION(float16, hypotf16, (float16 x, float16 y)) {
     return fputil::cast<float16>(FloatBits(r_u).get_val());
   }
 
-  return static_cast<float16>(result.get_val());
+  return fputil::cast<float16>(result.get_val());
 }
 
 } // namespace LIBC_NAMESPACE_DECL
