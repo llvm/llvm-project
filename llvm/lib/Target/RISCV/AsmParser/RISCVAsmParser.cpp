@@ -215,7 +215,14 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parseGPRPair(OperandVector &Operands, bool IsRV64Inst);
   ParseStatus parseFRMArg(OperandVector &Operands);
   ParseStatus parseFenceArg(OperandVector &Operands);
-  ParseStatus parseReglist(OperandVector &Operands);
+  ParseStatus parseReglist(OperandVector &Operands) {
+    return parseRegListCommon(Operands, /*MustIncludeS0=*/false);
+  }
+  ParseStatus parseReglistS0(OperandVector &Operands) {
+    return parseRegListCommon(Operands, /*MustIncludeS0=*/true);
+  }
+  ParseStatus parseRegListCommon(OperandVector &Operands, bool MustIncludeS0);
+
   ParseStatus parseRegReg(OperandVector &Operands);
   ParseStatus parseRetval(OperandVector &Operands);
   ParseStatus parseZcmpStackAdj(OperandVector &Operands,
@@ -474,6 +481,9 @@ public:
   bool isSystemRegister() const { return Kind == KindTy::SystemRegister; }
   bool isRegReg() const { return Kind == KindTy::RegReg; }
   bool isRlist() const { return Kind == KindTy::Rlist; }
+  bool isRlistS0() const {
+    return Kind == KindTy::Rlist && Rlist.Val != RISCVZC::RA;
+  }
   bool isSpimm() const { return Kind == KindTy::Spimm; }
 
   bool isGPR() const {
@@ -2794,9 +2804,15 @@ ParseStatus RISCVAsmParser::parseRegReg(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-ParseStatus RISCVAsmParser::parseReglist(OperandVector &Operands) {
+ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
+                                               bool MustIncludeS0) {
   // Rlist: {ra [, s0[-sN]]}
   // XRlist: {x1 [, x8[-x9][, x18[-xN]]]}
+
+  // When MustIncludeS0 = true (not the default) (used for `qc.cm.pushfp`) which
+  // must include `fp`/`s0` in the list:
+  // Rlist: {ra, s0[-sN]}
+  // XRlist: {x1, x8[-x9][, x18[-xN]]}
   SMLoc S = getLoc();
 
   if (parseToken(AsmToken::LCurly, "register list must start with '{'"))
@@ -2814,8 +2830,20 @@ ParseStatus RISCVAsmParser::parseReglist(OperandVector &Operands) {
     return Error(getLoc(), "register list must start from 'ra' or 'x1'");
   getLexer().Lex();
 
-  // parse case like ,s0
-  if (parseOptionalToken(AsmToken::Comma)) {
+  bool SeenComma = parseOptionalToken(AsmToken::Comma);
+
+  // There are two choices here:
+  // - `s0` is not required (usual case), so only try to parse `s0` if there is
+  //   a comma
+  // - `s0` is required (qc.cm.pushfp), and so we must see the comma between
+  //   `ra` and `s0` and must always try to parse `s0`, below
+  if (MustIncludeS0 && !SeenComma) {
+    Error(getLoc(), "register list must include 's0' or 'x8'");
+    return ParseStatus::Failure;
+  }
+
+  // parse case like ,s0 (knowing the comma must be there if required)
+  if (SeenComma) {
     if (getLexer().isNot(AsmToken::Identifier))
       return Error(getLoc(), "invalid register");
     StringRef RegName = getLexer().getTok().getIdentifier();
@@ -2884,6 +2912,8 @@ ParseStatus RISCVAsmParser::parseReglist(OperandVector &Operands) {
 
   auto Encode = RISCVZC::encodeRlist(RegEnd, IsEABI);
   assert(Encode != RISCVZC::INVALID_RLIST);
+  if (MustIncludeS0)
+    assert(Encode != RISCVZC::RA);
   Operands.push_back(RISCVOperand::createRlist(Encode, S));
 
   return ParseStatus::Success;

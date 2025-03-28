@@ -3435,8 +3435,8 @@ InstructionCost AArch64TTIImpl::getCFInstrCost(unsigned Opcode,
 }
 
 InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
-    unsigned Opcode, Type *Val, unsigned Index, bool HasRealUse,
-    const Instruction *I, Value *Scalar,
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    bool HasRealUse, const Instruction *I, Value *Scalar,
     ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) {
   assert(Val->isVectorTy() && "This must be a vector type");
 
@@ -3469,12 +3469,16 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     // and its second operand is a load, then we will generate a LD1, which
     // are expensive instructions.
     if (I && dyn_cast<LoadInst>(I->getOperand(1)))
-      return ST->getVectorInsertExtractBaseCost() + 1;
+      return CostKind == TTI::TCK_CodeSize
+                 ? 0
+                 : ST->getVectorInsertExtractBaseCost() + 1;
 
     // i1 inserts and extract will include an extra cset or cmp of the vector
     // value. Increase the cost by 1 to account.
     if (Val->getScalarSizeInBits() == 1)
-      return ST->getVectorInsertExtractBaseCost() + 1;
+      return CostKind == TTI::TCK_CodeSize
+                 ? 2
+                 : ST->getVectorInsertExtractBaseCost() + 1;
 
     // FIXME:
     // If the extract-element and insert-element instructions could be
@@ -3598,7 +3602,8 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     return 0;
 
   // All other insert/extracts cost this much.
-  return ST->getVectorInsertExtractBaseCost();
+  return CostKind == TTI::TCK_CodeSize ? 1
+                                       : ST->getVectorInsertExtractBaseCost();
 }
 
 InstructionCost AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
@@ -3607,22 +3612,22 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                    Value *Op1) {
   bool HasRealUse =
       Opcode == Instruction::InsertElement && Op0 && !isa<UndefValue>(Op0);
-  return getVectorInstrCostHelper(Opcode, Val, Index, HasRealUse);
+  return getVectorInstrCostHelper(Opcode, Val, CostKind, Index, HasRealUse);
 }
 
 InstructionCost AArch64TTIImpl::getVectorInstrCost(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
     Value *Scalar,
     ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) {
-  return getVectorInstrCostHelper(Opcode, Val, Index, false, nullptr, Scalar,
-                                  ScalarUserAndIdx);
+  return getVectorInstrCostHelper(Opcode, Val, CostKind, Index, false, nullptr,
+                                  Scalar, ScalarUserAndIdx);
 }
 
 InstructionCost AArch64TTIImpl::getVectorInstrCost(const Instruction &I,
                                                    Type *Val,
                                                    TTI::TargetCostKind CostKind,
                                                    unsigned Index) {
-  return getVectorInstrCostHelper(I.getOpcode(), Val, Index,
+  return getVectorInstrCostHelper(I.getOpcode(), Val, CostKind, Index,
                                   true /* HasRealUse */, &I);
 }
 
