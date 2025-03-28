@@ -3,6 +3,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/Pass.h"
 
@@ -20,6 +21,9 @@ public:
   /// counts.
   DenseSet<const Constant *> ConstantWithoutCounts;
 
+  /// If \p C has a count, return it. Otherwise, return std::nullopt.
+  std::optional<uint64_t> getConstantProfileCount(const Constant *C) const;
+
 public:
   StaticDataProfileInfo() = default;
 
@@ -30,13 +34,16 @@ public:
   void addConstantProfileCount(const Constant *C,
                                std::optional<uint64_t> Count);
 
-  /// If \p C has a count, return it. Otherwise, return std::nullopt.
-  std::optional<uint64_t> getConstantProfileCount(const Constant *C) const;
-
-  /// Return true if the constant \p C is seen at least once without profiles.
-  bool hasUnknownCount(const Constant *C) const {
-    return ConstantWithoutCounts.count(C);
-  }
+  /// Return a section prefix for the constant \p C based on its profile count.
+  /// - If a constant doesn't have a counter, return an empty string.
+  /// - Otherwise,
+  ///   - If it has a hot count, return "hot".
+  ///   - If it is seen by unprofiled function, return an empty string.
+  ///   - If it has a cold count, return "unlikely".
+  ///   - Otherwise (e.g. it's used by lukewarm functions), return an empty
+  ///     string.
+  StringRef getConstantSectionPrefix(const Constant *C,
+                                     const ProfileSummaryInfo *PSI) const;
 };
 
 /// This wraps the StaticDataProfileInfo object as an immutable pass, for a

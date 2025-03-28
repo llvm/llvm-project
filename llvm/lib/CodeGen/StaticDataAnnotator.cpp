@@ -82,28 +82,12 @@ bool StaticDataAnnotator::runOnModule(Module &M) {
     if (GV.isDeclarationForLinker())
       continue;
 
-    // Skip global variables without profile counts. The module may not be
-    // profiled or instrumented.
-    auto Count = SDPI->getConstantProfileCount(&GV);
-    if (!Count)
+    StringRef SectionPrefix = SDPI->getConstantSectionPrefix(&GV, PSI);
+    if (SectionPrefix.empty() || alreadyHasSectionPrefix(GV, SectionPrefix))
       continue;
 
-    if (PSI->isHotCount(*Count) && !alreadyHasSectionPrefix(GV, "hot")) {
-      // The variable counter is hot, set 'hot' section prefix if the section
-      // prefix isn't hot already.
-      GV.setSectionPrefix("hot");
-      Changed = true;
-    } else if (PSI->isColdCount(*Count) && !SDPI->hasUnknownCount(&GV) &&
-               !alreadyHasSectionPrefix(GV, "unlikely")) {
-      // The variable counter is cold, set 'unlikely' section prefix when
-      // 1) the section prefix isn't unlikely already, and
-      // 2) the variable is not seen without profile counts. The reason is that
-      // a variable without profile counts doesn't have all its uses profiled,
-      // for example when a function is not instrumented, or not sampled (new
-      // code paths).
-      GV.setSectionPrefix("unlikely");
-      Changed = true;
-    }
+    GV.setSectionPrefix(SectionPrefix);
+    Changed = true;
   }
 
   return Changed;
