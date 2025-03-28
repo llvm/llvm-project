@@ -158,15 +158,16 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
   return true;
 }
 
-static bool parseDoConcurrentMapping(Fortran::frontend::CodeGenOptions &opts,
+static void parseDoConcurrentMapping(Fortran::frontend::CodeGenOptions &opts,
                                      llvm::opt::ArgList &args,
                                      clang::DiagnosticsEngine &diags) {
   llvm::opt::Arg *arg =
-      args.getLastArg(clang::driver::options::OPT_do_concurrent_parallel_EQ);
+      args.getLastArg(clang::driver::options::OPT_fdo_concurrent_to_openmp_EQ);
   if (!arg)
-    return true;
+    return;
 
-  using DoConcurrentMappingKind = Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
+  using DoConcurrentMappingKind =
+      Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
   std::optional<DoConcurrentMappingKind> val =
       llvm::StringSwitch<std::optional<DoConcurrentMappingKind>>(
           arg->getValue())
@@ -178,10 +179,9 @@ static bool parseDoConcurrentMapping(Fortran::frontend::CodeGenOptions &opts,
   if (!val.has_value()) {
     diags.Report(clang::diag::err_drv_invalid_value)
         << arg->getAsString(args) << arg->getValue();
-    return false;
   }
+
   opts.setDoConcurrentMapping(val.value());
-  return true;
 }
 
 static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
@@ -271,6 +271,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   if (args.getLastArg(clang::driver::options::OPT_vectorize_loops))
     opts.VectorizeLoop = 1;
+
+  if (args.getLastArg(clang::driver::options::OPT_vectorize_slp))
+    opts.VectorizeSLP = 1;
 
   if (args.hasFlag(clang::driver::options::OPT_floop_versioning,
                    clang::driver::options::OPT_fno_loop_versioning, false))

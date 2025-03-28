@@ -85,6 +85,7 @@ set(SOURCES
   src/comgr-spirv-command.cpp
   src/comgr-symbol.cpp
   src/comgr-symbolizer.cpp
+  src/comgr-unbundle-command.cpp
   src/time-stat/time-stat.cpp)
 
 if(COMGR_BUILD_SHARED_LIBS)
