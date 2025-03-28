@@ -175,6 +175,15 @@ protected:
   /// The currently selected frame. An optional is used to record whether anyone
   /// has set the selected frame on this stack yet. We only let recognizers
   /// change the frame if this is the first time GetSelectedFrame is called.
+  ///
+  /// Thread-safety:
+  /// This member is not protected by a mutex.
+  /// LLDB really only should have an opinion about the selected frame index
+  /// when a process stops, before control gets handed back to the user.
+  /// After that, it's up to them to change it whenever they feel like it.
+  /// If two parts of lldb decided they wanted to be in control of the selected
+  /// frame index on stop the right way to fix it would need to be some explicit
+  /// negotiation for who gets to control this.
   std::optional<uint32_t> m_selected_frame_idx;
 
   /// The number of concrete frames fetched while filling the frame list. This
