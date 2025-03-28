@@ -67,6 +67,16 @@ class ProgressTesterCommand:
     def get_long_help(self):
         return self.help_string
 
+    def __get__progress(self, debugger, total):
+        if total is None:
+            progress = lldb.SBProgress(
+                "Progress tester", "Initial Indeterminate Detail", debugger
+            )
+        else:
+            progress = lldb.SBProgress(
+                "Progress tester", "Initial Detail", total, debugger
+            )
+
     def __init__(self, debugger, unused):
         self.parser = self.create_options()
         self.help_string = self.parser.format_help()
@@ -80,26 +90,18 @@ class ProgressTesterCommand:
             return
 
         total = cmd_options.total
-        if total is None:
-            progress = lldb.SBProgress(
-                "Progress tester", "Initial Indeterminate Detail", debugger
-            )
-        else:
-            progress = lldb.SBProgress(
-                "Progress tester", "Initial Detail", total, debugger
-            )
-
         # Check to see if total is set to None to indicate an indeterminate progress
         # then default to 10 steps.
-        if total is None:
-            total = 10
+        with self.__get_progress(debugger, total) as progress:
+            if total is None:
+                total = 10
 
-        for i in range(1, total):
-            if cmd_options.no_details:
-                progress.Increment(1)
-            else:
-                progress.Increment(1, f"Step {i}")
-            time.sleep(cmd_options.seconds)
+            for i in range(1, total):
+                if cmd_options.no_details:
+                    progress.Increment(1)
+                else:
+                    progress.Increment(1, f"Step {i}")
+                time.sleep(cmd_options.seconds)
 
         # Not required for deterministic progress, but required for indeterminate progress.
         progress.Finalize()
