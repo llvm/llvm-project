@@ -19,6 +19,7 @@
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
+#include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -755,6 +756,34 @@ private:
   size_t m_child_index;
 };
 
+static std::string mangledTypenameForTasksTuple(size_t count) {
+  /*
+  Global > TypeMangling > Type > Tuple
+    TupleElement > Type > Structure
+      Module, text="Swift"
+      Identifier, text="UnsafeCurrentTask"
+  */
+  using namespace ::swift::Demangle;
+  using Kind = Node::Kind;
+  NodeFactory factory;
+  auto [root, tuple] = swift_demangle::MakeNodeChain(
+      {Kind::TypeMangling, Kind::Type, Kind::Tuple}, factory);
+
+  // Make a TupleElement subtree N times, where N is the number of subtasks.
+  for (size_t i = 0; i < count; ++i) {
+    auto *structure = swift_demangle::MakeNodeChain(
+        tuple, {Kind::TupleElement, Kind::Type, Kind::Structure}, factory);
+    if (structure) {
+      structure->addChild(
+          factory.createNode(Kind::Module, ::swift::STDLIB_NAME), factory);
+      structure->addChild(
+          factory.createNode(Kind::Identifier, "UnsafeCurrentTask"), factory);
+    }
+  }
+
+  return mangleNode(root).result();
+}
+
 /// Synthetic provider for `Swift.Task`.
 ///
 /// As seen by lldb, a `Task` instance is an opaque pointer, with neither type
@@ -935,35 +964,6 @@ public:
     if (it == children.end())
       return UINT32_MAX;
     return std::distance(children.begin(), it);
-  }
-
-private:
-  std::string mangledTypenameForTasksTuple(size_t count) {
-    /*
-    Global > TypeMangling > Type > Tuple
-      TupleElement > Type > Structure
-        Module, text="Swift"
-        Identifier, text="UnsafeCurrentTask"
-    */
-    using namespace ::swift::Demangle;
-    using Kind = Node::Kind;
-    NodeFactory factory;
-    auto [root, tuple] = swift_demangle::MakeNodeChain(
-        {Kind::TypeMangling, Kind::Type, Kind::Tuple}, factory);
-
-    // Make a TupleElement subtree N times, where N is the number of subtasks.
-    for (size_t i = 0; i < count; ++i) {
-      auto *structure = swift_demangle::MakeNodeChain(
-          tuple, {Kind::TupleElement, Kind::Type, Kind::Structure}, factory);
-      if (structure) {
-        structure->addChild(
-            factory.createNode(Kind::Module, ::swift::STDLIB_NAME), factory);
-        structure->addChild(
-            factory.createNode(Kind::Identifier, "UnsafeCurrentTask"), factory);
-      }
-    }
-
-    return mangleNode(root).result();
   }
 
 private:
@@ -1320,6 +1320,177 @@ private:
   // Cache and storage of constructed child values.
   std::vector<ValueObjectSP> m_children;
 };
+
+class ActorSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
+public:
+  ActorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
+      : SyntheticChildrenFrontEnd(*valobj_sp.get()) {
+    bool is_64bit = false;
+    if (auto target_sp = m_backend.GetTargetSP())
+      is_64bit = target_sp->GetArchitecture().GetTriple().isArch64Bit();
+
+    std::optional<uint32_t> concurrency_version;
+    if (auto process_sp = m_backend.GetProcessSP())
+      concurrency_version =
+          SwiftLanguageRuntime::FindConcurrencyDebugVersion(*process_sp);
+
+    m_is_supported_target = is_64bit && concurrency_version.value_or(0) == 1;
+    if (!m_is_supported_target)
+      return;
+
+    auto target_sp = m_backend.GetTargetSP();
+    auto ts_or_err =
+        target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeSwift);
+    if (auto err = ts_or_err.takeError()) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters | LLDBLog::Types),
+                     std::move(err),
+                     "could not get Swift type system for Task synthetic "
+                     "provider: {0}");
+      return;
+    }
+    m_ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(ts_or_err->get());
+  }
+
+  llvm::Expected<uint32_t> CalculateNumChildren() override {
+    return m_is_supported_target ? 1 : 0;
+  }
+
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
+    if (!m_is_supported_target || idx != 0)
+      return {};
+
+    if (!m_unprioritised_jobs_sp) {
+      std::string mangled_typename =
+          mangledTypenameForTasksTuple(m_job_addrs.size());
+      CompilerType tasks_tuple_type =
+          m_ts->GetTypeFromMangledTypename(ConstString(mangled_typename));
+      DataExtractor data{m_job_addrs.data(),
+                         m_job_addrs.size() * sizeof(addr_t),
+                         endian::InlHostByteOrder(), sizeof(void *)};
+      m_unprioritised_jobs_sp = ValueObject::CreateValueObjectFromData(
+          "unprioritised_jobs", data, m_backend.GetExecutionContextRef(),
+          tasks_tuple_type);
+    }
+    return m_unprioritised_jobs_sp;
+  }
+
+  size_t GetIndexOfChildWithName(ConstString name) override {
+    if (m_is_supported_target && name == "unprioritised_jobs")
+      return 0;
+    return UINT32_MAX;
+  }
+
+  lldb::ChildCacheState Update() override {
+    if (!m_is_supported_target)
+      return ::eReuse;
+
+    m_job_addrs.clear();
+
+    if (!m_task_type)
+      if (auto target_sp = m_backend.GetTargetSP()) {
+        if (auto ts_or_err = target_sp->GetScratchTypeSystemForLanguage(
+                eLanguageTypeSwift)) {
+          if (auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
+                  ts_or_err->get()))
+            // TypeMangling for "Swift.UnsafeCurrentTask"
+            m_task_type = ts->GetTypeFromMangledTypename(ConstString("$sSctD"));
+        } else {
+          LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters | LLDBLog::Types),
+                         ts_or_err.takeError(),
+                         "could not get Swift type system for Task synthetic "
+                         "provider: {0}");
+          return ChildCacheState::eReuse;
+        }
+      }
+
+    if (!m_task_type)
+      return ChildCacheState::eReuse;
+
+    // Get the actor's queue of unprioritized jobs (tasks) by following the
+    // "linked list" embedded in storage provided by SchedulerPrivate.
+    DefaultActorImpl actor{m_backend.GetProcessSP(),
+                           m_backend.GetLoadAddress()};
+    Status status;
+    Job first_job = actor.getFirstJob(status);
+    Job current_job = first_job;
+    while (current_job) {
+      m_job_addrs.push_back(current_job.addr);
+      current_job = current_job.getNextScheduledJob(status);
+    }
+
+    if (status.Fail()) {
+      LLDB_LOG(GetLog(LLDBLog::DataFormatters | LLDBLog::Types),
+               "could not read actor's job pointers: {0}", status.AsCString());
+      return ChildCacheState::eReuse;
+    }
+
+    return ChildCacheState::eRefetch;
+  }
+
+  bool MightHaveChildren() override { return m_is_supported_target; }
+
+private:
+  /// Lightweight wrapper around Job pointers, for the purpose of traversing to
+  /// the next scheduled Job.
+  struct Job {
+    ProcessSP process_sp;
+    addr_t addr;
+
+    operator bool() const { return addr && addr != LLDB_INVALID_ADDRESS; }
+
+    // void *SchedulerPrivate[2] is the first Job specific field, its layout
+    // follows the HeapObject base class (size 16).
+    static constexpr offset_t SchedulerPrivateOffset = 16;
+    static constexpr offset_t NextJobOffset = SchedulerPrivateOffset;
+
+    Job getNextScheduledJob(Status &status) {
+      addr_t next_job = LLDB_INVALID_ADDRESS;
+      if (status.Success())
+        next_job =
+            process_sp->ReadPointerFromMemory(addr + NextJobOffset, status);
+      return {process_sp, next_job};
+    }
+  };
+
+  /// Lightweight wrapper around DefaultActorImpl/$defaultActor, for the purpose
+  /// of accessing contents of ActiveActorStatus.
+  struct DefaultActorImpl {
+    ProcessSP process_sp;
+    addr_t addr;
+
+    // `$defaultActor`'s offset within the actor object.
+    //
+    // The $defaultActor field does not point to the start of DefaultActorImpl,
+    // it has as an address that points past the HeapObject layout.
+    static constexpr offset_t DefaultActorFieldOffset = 16;
+    // ActiveActorStatus's offset within DefaultActorImpl.
+    //
+    // ActiveActorStatus is declared alignas(2*sizeof(void*)). The layout of
+    // DefaultActorImpl puts the status record after HeapObject (size 16), and
+    // its first field (bool size 1), an offset of +32 from the start of the
+    // actor. This offset is relative to DefaultActorImpl, but this code needs
+    // an offset relative to the $defaultActor field, and is adjusted as such.
+    static constexpr offset_t ActiveActorStatusOffset =
+        32 - DefaultActorFieldOffset;
+    // FirstJob's offset within ActiveActorStatus.
+    static constexpr offset_t FirstJobOffset = ActiveActorStatusOffset + 8;
+
+    Job getFirstJob(Status &status) {
+      addr_t first_job = LLDB_INVALID_ADDRESS;
+      if (status.Success())
+        first_job =
+            process_sp->ReadPointerFromMemory(addr + FirstJobOffset, status);
+      return {process_sp, first_job};
+    }
+  };
+
+private:
+  bool m_is_supported_target = false;
+  TypeSystemSwiftTypeRef *m_ts = nullptr;
+  std::vector<addr_t> m_job_addrs;
+  CompilerType m_task_type;
+  ValueObjectSP m_unprioritised_jobs_sp;
+};
 }
 }
 }
@@ -1408,6 +1579,14 @@ lldb_private::formatters::swift::TaskGroupSyntheticFrontEndCreator(
   if (!valobj_sp)
     return nullptr;
   return new TaskGroupSyntheticFrontEnd(valobj_sp);
+}
+
+SyntheticChildrenFrontEnd *
+lldb_private::formatters::swift::ActorSyntheticFrontEndCreator(
+    CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+  return new ActorSyntheticFrontEnd(valobj_sp);
 }
 
 bool lldb_private::formatters::swift::ObjC_Selector_SummaryProvider(

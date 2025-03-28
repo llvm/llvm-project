@@ -136,6 +136,9 @@ CheckedContinuationSyntheticFrontEndCreator(CXXSyntheticChildren *,
 
 SyntheticChildrenFrontEnd *
 TaskGroupSyntheticFrontEndCreator(CXXSyntheticChildren *, lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *ActorSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                                         lldb::ValueObjectSP);
 }
 }
 }

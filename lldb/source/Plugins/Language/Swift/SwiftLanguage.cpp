@@ -436,6 +436,12 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
 
   AddCXXSynthetic(
       swift_category_sp,
+      lldb_private::formatters::swift::ActorSyntheticFrontEndCreator,
+      "Actor synthetic children", ConstString("Builtin.DefaultActorStorage"),
+      synth_flags);
+
+  AddCXXSynthetic(
+      swift_category_sp,
       lldb_private::formatters::swift::SwiftBasicTypeSyntheticFrontEndCreator,
       "Swift.Bool", ConstString("Swift.Bool"), basic_synth_flags);
   AddCXXSummary(
