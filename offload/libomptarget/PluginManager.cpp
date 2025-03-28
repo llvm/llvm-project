@@ -14,6 +14,7 @@
 #include "Shared/Debug.h"
 #include "Shared/Profile.h"
 #include "device.h"
+#include "OffloadPolicy.h"
 
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"

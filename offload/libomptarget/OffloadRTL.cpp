@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OffloadPolicy.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginManager.h"
 
