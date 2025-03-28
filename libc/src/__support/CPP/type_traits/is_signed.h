@@ -8,7 +8,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_SIGNED_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_SIGNED_H
 
-#include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/type_traits/bool_constant.h"
 #include "src/__support/CPP/type_traits/is_arithmetic.h"
 #include "src/__support/CPP/type_traits/is_fixed_point.h"
