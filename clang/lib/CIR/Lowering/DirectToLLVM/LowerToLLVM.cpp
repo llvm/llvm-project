@@ -126,21 +126,6 @@ static mlir::Value emitToMemory(mlir::ConversionPatternRewriter &rewriter,
   return value;
 }
 
-static mlir::Value
-emitCirAttrToMemory(mlir::Operation *parentOp, mlir::Attribute attr,
-                    mlir::ConversionPatternRewriter &rewriter,
-                    const mlir::TypeConverter *converter,
-                    mlir::DataLayout const &dataLayout) {
-
-  mlir::Value loweredValue =
-      lowerCirAttrAsValue(parentOp, attr, rewriter, converter);
-  if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(attr)) {
-    return emitToMemory(rewriter, dataLayout, boolAttr.getType(), loweredValue);
-  }
-
-  return loweredValue;
-}
-
 mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage) {
   using CIR = cir::GlobalLinkageKind;
   using LLVM = mlir::LLVM::Linkage;
@@ -261,7 +246,7 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
   mlir::Location loc = parentOp->getLoc();
   mlir::Value result;
 
-  if (auto zeros = attr.getTrailingZerosNum()) {
+  if (attr.hasTrailingZeros()) {
     mlir::Type arrayTy = attr.getType();
     result = rewriter.create<mlir::LLVM::ZeroOp>(
         loc, converter->convertType(arrayTy));
@@ -1251,13 +1236,12 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   patterns.add<CIRToLLVMStoreOpLowering>(converter, patterns.getContext(), dl);
   patterns.add<CIRToLLVMGlobalOpLowering>(converter, patterns.getContext(), dl);
   patterns.add<CIRToLLVMCastOpLowering>(converter, patterns.getContext(), dl);
-  patterns.add<CIRToLLVMConstantOpLowering>(converter, patterns.getContext(),
-                                            dl);
   patterns.add<
       // clang-format off
                CIRToLLVMBinOpLowering,
                CIRToLLVMBrCondOpLowering,
                CIRToLLVMBrOpLowering,
+               CIRToLLVMConstantOpLowering,
                CIRToLLVMFuncOpLowering,
                CIRToLLVMTrapOpLowering,
                CIRToLLVMUnaryOpLowering

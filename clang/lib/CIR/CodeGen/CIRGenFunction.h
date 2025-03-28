@@ -243,10 +243,6 @@ public:
     // class is upstreamed.
     CIRGenFunction &cgf;
 
-    // Block containing cleanup code for things initialized in this lexical
-    // context (scope).
-    mlir::Block *cleanupBlock = nullptr;
-
     // Points to the scope entry block. This is useful, for instance, for
     // helping to insert allocas before finalizing any recursive CodeGen from
     // switches.
