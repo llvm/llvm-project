@@ -363,18 +363,22 @@ def fir_ReferenceType : FIR_Type<"Reference", "ref"> {
     The type of a reference to an entity in memory.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy);
+  let parameters = (ins
+    "mlir::Type":$eleTy,
+    DefaultValuedParameter<"bool", "false">:$isVol);
 
   let skipDefaultBuilders = 1;
 
   let builders = [
-    TypeBuilderWithInferredContext<(ins "mlir::Type":$elementType), [{
-      return Base::get(elementType.getContext(), elementType);
+    TypeBuilderWithInferredContext<(ins "mlir::Type":$elementType, CArg<"bool", "false">:$isVol), [{
+      return Base::get(elementType.getContext(), elementType, isVol);
     }]>,
   ];
 
   let extraClassDeclaration = [{
     mlir::Type getElementType() const { return getEleTy(); }
+    bool isVolatile() const { return (bool)getIsVol(); }
+    static llvm::StringRef getVolatileKeyword() { return "volatile"; }
   }];
 
   let genVerifyDecl = 1;

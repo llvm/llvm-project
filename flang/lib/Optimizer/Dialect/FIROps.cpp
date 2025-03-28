@@ -37,6 +37,15 @@ namespace {
 #include "flang/Optimizer/Dialect/CanonicalizationPatterns.inc"
 } // namespace
 
+static void addVolatileMemoryEffects(
+    mlir::Type type, llvm::SmallVectorImpl<mlir::SideEffects::EffectInstance<
+                         mlir::MemoryEffects::Effect>> &effects) {
+  if (fir::isa_volatile_ref_type(type)) {
+    effects.emplace_back(mlir::MemoryEffects::Read::get());
+    effects.emplace_back(mlir::MemoryEffects::Write::get());
+  }
+}
+
 static void propagateAttributes(mlir::Operation *fromOp,
                                 mlir::Operation *toOp) {
   if (!fromOp || !toOp)
@@ -851,6 +860,16 @@ std::vector<mlir::Value> fir::ArrayLoadOp::getExtents() {
       return mlir::cast<fir::ShapeShiftOp>(op).getExtents();
     }
   return {};
+}
+
+void fir::ArrayLoadOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(mlir::MemoryEffects::Read::get(),
+                       &getOperation()->getOpOperand(0),
+                       mlir::SideEffects::DefaultResource::get());
+  addVolatileMemoryEffects(getMemref().getType(), effects);
 }
 
 llvm::LogicalResult fir::ArrayLoadOp::verify() {
@@ -2599,6 +2618,16 @@ void fir::LoadOp::print(mlir::OpAsmPrinter &p) {
   p << " : " << getMemref().getType();
 }
 
+void fir::LoadOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(mlir::MemoryEffects::Read::get(),
+                       &getOperation()->getOpOperand(0),
+                       mlir::SideEffects::DefaultResource::get());
+  addVolatileMemoryEffects(getMemref().getType(), effects);
+}
+
 //===----------------------------------------------------------------------===//
 // DoLoopOp
 //===----------------------------------------------------------------------===//
@@ -3949,6 +3978,16 @@ llvm::LogicalResult fir::StoreOp::verify() {
 void fir::StoreOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
                          mlir::Value value, mlir::Value memref) {
   build(builder, result, value, memref, {});
+}
+
+void fir::StoreOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(mlir::MemoryEffects::Write::get(),
+                       &getOperation()->getOpOperand(1),
+                       mlir::SideEffects::DefaultResource::get());
+  addVolatileMemoryEffects(getMemref().getType(), effects);
 }
 
 //===----------------------------------------------------------------------===//
