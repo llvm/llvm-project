@@ -316,3 +316,58 @@ loop:
 exit:
   ret void
 }
+
+define void @retry_after_dep_check_with_unknown_offset(ptr %A, i32 %offset) {
+; CHECK-LABEL: 'retry_after_dep_check_with_unknown_offset'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            %l.A = load float, ptr %A, align 4 ->
+; CHECK-NEXT:            store float 0.000000e+00, ptr %A.100.iv.offset.3, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            %l.A = load float, ptr %A, align 4 ->
+; CHECK-NEXT:            store float %l.A, ptr %A.100.iv, align 8
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP16:0x[0-9a-f]+]]:
+; CHECK-NEXT:          (Low: %A High: (4 + %A))
+; CHECK-NEXT:            Member: %A
+; CHECK-NEXT:        Group [[GRP17:0x[0-9a-f]+]]:
+; CHECK-NEXT:          (Low: (100 + (8 * (zext i32 %offset to i64))<nuw><nsw> + %A) High: (96 + (16 * (zext i32 %offset to i64))<nuw><nsw> + %A))
+; CHECK-NEXT:            Member: {(100 + (8 * (zext i32 %offset to i64))<nuw><nsw> + %A),+,8}<%loop>
+; CHECK-NEXT:        Group [[GRP18:0x[0-9a-f]+]]:
+; CHECK-NEXT:          (Low: (100 + %A) High: (96 + (8 * (zext i32 %offset to i64))<nuw><nsw> + %A))
+; CHECK-NEXT:            Member: {(100 + %A),+,8}<%loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      {(100 + %A),+,8}<%loop> Added Flags: <nusw>
+; CHECK-NEXT:      {(100 + (8 * (zext i32 %offset to i64))<nuw><nsw> + %A),+,8}<%loop> Added Flags: <nusw>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %A.100 = getelementptr i8, ptr %A, i64 100
+  %offset.ext = zext i32 %offset to i64
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %l.A = load float, ptr %A, align 4
+  %A.100.iv = getelementptr { float, float }, ptr %A.100, i64 %iv
+  store float %l.A, ptr %A.100.iv, align 8
+  %iv.offset = add i64 %iv, %offset.ext
+  %iv.offset.3 = shl i64 %iv.offset, 3
+  %A.100.iv.offset.3 = getelementptr i8, ptr %A.100, i64 %iv.offset.3
+  store float 0.0, ptr %A.100.iv.offset.3, align 4
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %offset.ext
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}

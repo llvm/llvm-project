@@ -1,16 +1,14 @@
-# Script to parse many JUnit XML result files and send a report to the buildkite
-# agent as an annotation.
-#
-# To run the unittests:
-# python3 -m unittest discover -p generate_test_report.py
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-import argparse
-import os
-import subprocess
 import unittest
 from io import StringIO
-from junitparser import JUnitXml, Failure
 from textwrap import dedent
+
+from junitparser import JUnitXml
+
+import generate_test_report_lib
 
 
 def junit_from_xml(xml):
@@ -19,11 +17,13 @@ def junit_from_xml(xml):
 
 class TestReports(unittest.TestCase):
     def test_title_only(self):
-        self.assertEqual(_generate_report("Foo", 0, []), ("", "success"))
+        self.assertEqual(
+            generate_test_report_lib.generate_report("Foo", 0, []), ("", "success")
+        )
 
     def test_no_tests_in_testsuite(self):
         self.assertEqual(
-            _generate_report(
+            generate_test_report_lib.generate_report(
                 "Foo",
                 1,
                 [
@@ -44,7 +44,7 @@ class TestReports(unittest.TestCase):
 
     def test_no_failures(self):
         self.assertEqual(
-            _generate_report(
+            generate_test_report_lib.generate_report(
                 "Foo",
                 0,
                 [
@@ -74,7 +74,7 @@ class TestReports(unittest.TestCase):
 
     def test_no_failures_build_failed(self):
         self.assertEqual(
-            _generate_report(
+            generate_test_report_lib.generate_report(
                 "Foo",
                 1,
                 [
@@ -114,7 +114,7 @@ class TestReports(unittest.TestCase):
 
     def test_report_single_file_single_testsuite(self):
         self.assertEqual(
-            _generate_report(
+            generate_test_report_lib.generate_report(
                 "Foo",
                 1,
                 [
@@ -207,7 +207,7 @@ class TestReports(unittest.TestCase):
 
     def test_report_single_file_multiple_testsuites(self):
         self.assertEqual(
-            _generate_report(
+            generate_test_report_lib.generate_report(
                 "ABC and DEF",
                 1,
                 [
@@ -240,7 +240,7 @@ class TestReports(unittest.TestCase):
 
     def test_report_multiple_files_multiple_testsuites(self):
         self.assertEqual(
-            _generate_report(
+            generate_test_report_lib.generate_report(
                 "ABC and DEF",
                 1,
                 [
@@ -281,7 +281,7 @@ class TestReports(unittest.TestCase):
 
     def test_report_dont_list_failures(self):
         self.assertEqual(
-            _generate_report(
+            generate_test_report_lib.generate_report(
                 "Foo",
                 1,
                 [
@@ -316,7 +316,7 @@ class TestReports(unittest.TestCase):
 
     def test_report_dont_list_failures_link_to_log(self):
         self.assertEqual(
-            _generate_report(
+            generate_test_report_lib.generate_report(
                 "Foo",
                 1,
                 [
@@ -357,7 +357,7 @@ class TestReports(unittest.TestCase):
 
     def test_report_size_limit(self):
         self.assertEqual(
-            _generate_report(
+            generate_test_report_lib.generate_report(
                 "Foo",
                 1,
                 [
@@ -389,187 +389,3 @@ class TestReports(unittest.TestCase):
                 "error",
             ),
         )
-
-
-# Set size_limit to limit the byte size of the report. The default is 1MB as this
-# is the most that can be put into an annotation. If the generated report exceeds
-# this limit and failures are listed, it will be generated again without failures
-# listed. This minimal report will always fit into an annotation.
-# If include failures is False, total number of test will be reported but their names
-# and output will not be.
-def _generate_report(
-    title,
-    return_code,
-    junit_objects,
-    size_limit=1024 * 1024,
-    list_failures=True,
-    buildkite_info=None,
-):
-    if not junit_objects:
-        # Note that we do not post an empty report, therefore we can ignore a
-        # non-zero return code in situations like this.
-        #
-        # If we were going to post a report, then yes, it would be misleading
-        # to say we succeeded when the final return code was non-zero.
-        return ("", "success")
-
-    failures = {}
-    tests_run = 0
-    tests_skipped = 0
-    tests_failed = 0
-
-    for results in junit_objects:
-        for testsuite in results:
-            tests_run += testsuite.tests
-            tests_skipped += testsuite.skipped
-            tests_failed += testsuite.failures
-
-            for test in testsuite:
-                if (
-                    not test.is_passed
-                    and test.result
-                    and isinstance(test.result[0], Failure)
-                ):
-                    if failures.get(testsuite.name) is None:
-                        failures[testsuite.name] = []
-                    failures[testsuite.name].append(
-                        (test.classname + "/" + test.name, test.result[0].text)
-                    )
-
-    if not tests_run:
-        return ("", None)
-
-    style = "success"
-    # Either tests failed, or all tests passed but something failed to build.
-    if tests_failed or return_code != 0:
-        style = "error"
-
-    report = [f"# {title}", ""]
-
-    tests_passed = tests_run - tests_skipped - tests_failed
-
-    def plural(num_tests):
-        return "test" if num_tests == 1 else "tests"
-
-    if tests_passed:
-        report.append(f"* {tests_passed} {plural(tests_passed)} passed")
-    if tests_skipped:
-        report.append(f"* {tests_skipped} {plural(tests_skipped)} skipped")
-    if tests_failed:
-        report.append(f"* {tests_failed} {plural(tests_failed)} failed")
-
-    if buildkite_info is not None:
-        log_url = (
-            "https://buildkite.com/organizations/{BUILDKITE_ORGANIZATION_SLUG}/"
-            "pipelines/{BUILDKITE_PIPELINE_SLUG}/builds/{BUILDKITE_BUILD_NUMBER}/"
-            "jobs/{BUILDKITE_JOB_ID}/download.txt".format(**buildkite_info)
-        )
-        download_text = f"[Download]({log_url})"
-    else:
-        download_text = "Download"
-
-    if not list_failures:
-        report.extend(
-            [
-                "",
-                "Failed tests and their output was too large to report. "
-                f"{download_text} the build's log file to see the details.",
-            ]
-        )
-    elif failures:
-        report.extend(["", "## Failed Tests", "(click to see output)"])
-
-        for testsuite_name, failures in failures.items():
-            report.extend(["", f"### {testsuite_name}"])
-            for name, output in failures:
-                report.extend(
-                    [
-                        "<details>",
-                        f"<summary>{name}</summary>",
-                        "",
-                        "```",
-                        output,
-                        "```",
-                        "</details>",
-                    ]
-                )
-    elif return_code != 0:
-        # No tests failed but the build was in a failed state. Bring this to the user's
-        # attention.
-        report.extend(
-            [
-                "",
-                "All tests passed but another part of the build **failed**.",
-                "",
-                f"{download_text} the build's log file to see the details.",
-            ]
-        )
-
-    report = "\n".join(report)
-    if len(report.encode("utf-8")) > size_limit:
-        return _generate_report(
-            title,
-            return_code,
-            junit_objects,
-            size_limit,
-            list_failures=False,
-            buildkite_info=buildkite_info,
-        )
-
-    return report, style
-
-
-def generate_report(title, return_code, junit_files, buildkite_info):
-    return _generate_report(
-        title,
-        return_code,
-        [JUnitXml.fromfile(p) for p in junit_files],
-        buildkite_info=buildkite_info,
-    )
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "title", help="Title of the test report, without Markdown formatting."
-    )
-    parser.add_argument("context", help="Annotation context to write to.")
-    parser.add_argument("return_code", help="The build's return code.", type=int)
-    parser.add_argument("junit_files", help="Paths to JUnit report files.", nargs="*")
-    args = parser.parse_args()
-
-    # All of these are required to build a link to download the log file.
-    env_var_names = [
-        "BUILDKITE_ORGANIZATION_SLUG",
-        "BUILDKITE_PIPELINE_SLUG",
-        "BUILDKITE_BUILD_NUMBER",
-        "BUILDKITE_JOB_ID",
-    ]
-    buildkite_info = {k: v for k, v in os.environ.items() if k in env_var_names}
-    if len(buildkite_info) != len(env_var_names):
-        buildkite_info = None
-
-    report, style = generate_report(
-        args.title, args.return_code, args.junit_files, buildkite_info
-    )
-
-    if report:
-        p = subprocess.Popen(
-            [
-                "buildkite-agent",
-                "annotate",
-                "--context",
-                args.context,
-                "--style",
-                style,
-            ],
-            stdin=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True,
-        )
-
-        # The report can be larger than the buffer for command arguments so we send
-        # it over stdin instead.
-        _, err = p.communicate(input=report)
-        if p.returncode:
-            raise RuntimeError(f"Failed to send report to buildkite-agent:\n{err}")
