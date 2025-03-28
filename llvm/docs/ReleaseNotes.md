@@ -216,7 +216,8 @@ Changes to LLDB
   wouldn't step into multiple inheritance virtual functions.
 * A statusline was added to command-line LLDB to show progress events and
   information about the current state of the debugger at the bottom of the
-  terminal.
+  terminal. This is on by default and can be configured using the
+  `show-statusline` and `statusline-format` settings.
 
 ### Changes to lldb-dap
 
