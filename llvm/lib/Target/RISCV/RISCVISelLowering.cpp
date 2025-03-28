@@ -1286,7 +1286,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         if (VT.getVectorElementType() != MVT::i64 || Subtarget.hasStdExtV()) {
           setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Custom);
         } else {
-          setOperationAction({ISD::VP_MULHU, ISD::VP_MULHS}, VT, Expand);
+          setOperationAction({ISD::VP_MULHS, ISD::VP_MULHU}, VT, Expand);
         }
 
         setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGCEILS,

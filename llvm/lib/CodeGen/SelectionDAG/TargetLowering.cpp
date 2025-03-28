@@ -6566,7 +6566,8 @@ SDValue TargetLowering::BuildVPSDIV(SDNode *N, SelectionDAG &DAG,
     Factor = DAG.getBuildVector(VT, DL, Factors);
     Shift = DAG.getBuildVector(ShVT, DL, Shifts);
     ShiftMask = DAG.getBuildVector(VT, DL, ShiftMasks);
-  } else if (N1.getOpcode() == ISD::SPLAT_VECTOR) {
+  } else {
+    assert(N1.getOpcode() == ISD::SPLAT_VECTOR && "Expected a splat_vector");
     assert(MagicFactors.size() == 1 && Factors.size() == 1 &&
            Shifts.size() == 1 && ShiftMasks.size() == 1 &&
            "Expected matchUnaryPredicate to return one element for scalable "
@@ -6897,7 +6898,8 @@ SDValue TargetLowering::BuildVPUDIV(SDNode *N, SelectionDAG &DAG,
     MagicFactor = DAG.getBuildVector(VT, DL, MagicFactors);
     NPQFactor = DAG.getBuildVector(VT, DL, NPQFactors);
     PostShift = DAG.getBuildVector(ShVT, DL, PostShifts);
-  } else if (N1.getOpcode() == ISD::SPLAT_VECTOR) {
+  } else {
+    assert(N1.getOpcode() == ISD::SPLAT_VECTOR && "Expected a splat_vector");
     assert(PreShifts.size() == 1 && MagicFactors.size() == 1 &&
            NPQFactors.size() == 1 && PostShifts.size() == 1 &&
            "Expected matchUnaryPredicate to return one for scalable vectors");
