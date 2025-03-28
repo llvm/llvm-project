@@ -131,7 +131,6 @@ struct ScalarSubgroupReduceToShuffles final
 
   LogicalResult matchAndRewrite(gpu::SubgroupReduceOp op,
                                 PatternRewriter &rewriter) const override {
-    llvm::errs() << "ScalarSubgroupReduceToShuffles" << "\n";
     if (op.getClusterSize().has_value() != matchClustered) {
       return rewriter.notifyMatchFailure(
           op, llvm::formatv("op is {0}clustered but pattern is configured to "
