@@ -121,6 +121,8 @@ struct __mask_operations<_Tp, simd_abi::__vec_ext<_Np>> {
     for (size_t __i = 0; __i < _Np; __i++)
       __mem[__i] = static_cast<bool>(__s.__data[__i]);
   }
+
+  static _LIBCPP_HIDE_FROM_ABI _MaskStorage __negate(_MaskStorage __s) noexcept { return {{~__s.__data}}; }
 };
 
 } // namespace parallelism_v2
