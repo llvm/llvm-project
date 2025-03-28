@@ -2,11 +2,11 @@
 ;
 ;; Profile for version 0 check node num:
 ; RUN: echo '!foo' > %t1
-; RUN: echo '#wrong node_count given' >> %t1
+; RUN: echo '#correct node_count given' >> %t1
 ; RUN: echo '$node_count 14' >> %t1
 ; RUN: echo '!!0 5 6 18 3 4 8 9 11 15 16 12 13' >> %t1
 ; RUN: echo '!bar' >> %t1
-; RUN: echo '#correct node_count given' >> %t1
+; RUN: echo '#wrong node_count given' >> %t1
 ; RUN: echo '$node_count 4' >> %t1
 ; RUN: echo '!!0 1 2' >> %t1
 ; RUN: echo '!main' >> %t1
