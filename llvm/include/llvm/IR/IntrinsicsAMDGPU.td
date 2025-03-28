@@ -2313,15 +2313,16 @@ def int_amdgcn_s_quadmask :
 def int_amdgcn_s_wqm :
   DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyint_ty], [IntrNoMem, IntrConvergent]>;
 
-class AMDGPUWaveReduce<LLVMType data_ty = llvm_anyint_ty> : Intrinsic<
+class AMDGPUWaveReduce<LLVMType data_ty = llvm_i32_ty> : Intrinsic<
     [data_ty],
     [
-      LLVMMatchType<0>,   // llvm value to reduce (SGPR/VGPR)
+      llvm_i32_ty,   // llvm value to reduce (SGPR/VGPR),
+      llvm_i64_ty,        // Divergent mask
       llvm_i32_ty         // Reduction Strategy Switch for lowering ( 0: Default,
                           //                                          1: Iterative strategy, and
                           //                                          2. DPP)
     ],
-    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<1>>]>;
+    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<2>>]>;
 
 def int_amdgcn_wave_reduce_umin : AMDGPUWaveReduce;
 def int_amdgcn_wave_reduce_umax : AMDGPUWaveReduce;
