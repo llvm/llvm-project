@@ -18,7 +18,7 @@
 #ifdef SWIG
 #define ENABLE_CLIENT_TELEMETRY 0
 #else
-#deefine ENABLE_CLIENT_TELEMETRY 1
+#define ENABLE_CLIENT_TELEMETRY 1
 #endif
 
 namespace lldb_private {
