@@ -14,89 +14,114 @@ target triple = "x86_64-unknown-linux-gnu"
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions \
 ; RUN:     -partition-static-data-sections=true -data-sections=true \
 ; RUN:     -unique-section-names=true -relocation-model=pic \
-; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=SYM,DATA
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=SYM,COMMON --dump-input=always
 
 ; This RUN command sets `-data-sections=true -unique-section-names=false` so
 ; data sections are uniqufied by variable names.
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions \
 ; RUN:     -partition-static-data-sections=true -data-sections=true \
 ; RUN:     -unique-section-names=false -relocation-model=pic \
-; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=UNIQ,DATA
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=UNIQ,COMMON --dump-input=always
 
 ; This RUN command sets `-data-sections=false -unique-section-names=false`.
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions \
 ; RUN:     -partition-static-data-sections=true -data-sections=false \
 ; RUN:     -unique-section-names=false -relocation-model=pic \
-; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=AGG,DATA
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=AGG,COMMON --dump-input=always
 
 ; For @.str and @.str.1
-; SYM: .section .rodata.str1.1.hot.
-; UNIQ: .section	.rodata.str1.1.hot.,"aMS",@progbits,1
-; AGG: .section	.rodata.str1.1.hot
-; DATA: .L.str
-; DATA:    "hot\t"
-; DATA: .L.str.1
-; DATA:    "%d\t%d\t%d\n"
+; COMMON:      .type .L.str,@object
+; SYM-NEXT:    .section .rodata.str1.1.hot.
+; UNIQ-NEXT:   .section	.rodata.str1.1.hot.,"aMS",@progbits,1
+; AGG-NEXT:    .section	.rodata.str1.1.hot
+; COMMON-NEXT: .L.str:
+; COMMON-NEXT:    "hot\t"
+; COMMON:      .L.str.1:
+; COMMON-NEXT:    "%d\t%d\t%d\n"
 
 ; For @hot_relro_array
-; SYM: .section	.data.rel.ro.hot.hot_relro_array
-; UNIQ: .section	.data.rel.ro.hot.,"aw",@progbits,unique,3
-; AGG: .section	.data.rel.ro.hot.,"aw",@progbits
+; COMMON:      .type hot_relro_array,@object
+; SYM-NEXT:    .section	.data.rel.ro.hot.hot_relro_array
+; UNIQ-NEXT:   .section	.data.rel.ro.hot.,"aw",@progbits,unique,3
+; AGG-NEXT:    .section	.data.rel.ro.hot.,"aw",@progbits
 
 ; For @hot_data, which is accessed by {cold_func, unprofiled_func, hot_func}.
-; SYM: .section	.data.hot.hot_data,"aw",@progbits
-; UNIQ: .section	.data.hot.,"aw",@progbits,unique,4
-; AGG: .section	.data.hot.,"aw",@progbits
+; COMMON:      .type hot_data,@object
+; SYM-NEXT:    .section	.data.hot.hot_data,"aw",@progbits
+; UNIQ-NEXT:   .section	.data.hot.,"aw",@progbits,unique,4
+; AGG-NEXT:    .section	.data.hot.,"aw",@progbits
 
 ; For @hot_bss, which is accessed by {unprofiled_func, hot_func}.
-; SYM: .section	.bss.hot.hot_bss,"aw",@nobits
-; UNIQ: .section	.bss.hot.,"aw",@nobits,unique,5
-; AGG: .section .bss.hot.,"aw",@nobits
+; COMMON:      .type hot_bss,@object
+; SYM-NEXT:    .section	.bss.hot.hot_bss,"aw",@nobits
+; UNIQ-NEXT:   .section	.bss.hot.,"aw",@nobits,unique,5
+; AGG-NEXT:    .section .bss.hot.,"aw",@nobits
 
 ; For @.str.2
-; SYM: .section	.rodata.str1.1.unlikely.,"aMS",@progbits,1
-; UNIQ: section	.rodata.str1.1.unlikely.,"aMS",@progbits,1
-; AGG: .section	.rodata.str1.1.unlikely.,"aMS",@progbits,1
-; DATA: .L.str.2:
-; DATA:    "cold%d\t%d\t%d\n"
+; COMMON:      .type .L.str.2,@object
+; SYM-NEXT:    .section	.rodata.str1.1.unlikely.,"aMS",@progbits,1
+; UNIQ-NEXT:   .section	.rodata.str1.1.unlikely.,"aMS",@progbits,1
+; AGG-NEXT:    .section	.rodata.str1.1.unlikely.,"aMS",@progbits,1
+; COMMON-NEXT: .L.str.2:
+; COMMON-NEXT:    "cold%d\t%d\t%d\n"
 
 ; For @cold_bss
-; SYM: .section	.bss.unlikely.cold_bss,"aw",@nobits
-; UNIQ: .section	.bss.unlikely.,"aw",@nobits,unique,6
-; AGG: .section	.bss.unlikely.,"aw",@nobits
+; COMMON:      .type cold_bss,@object
+; SYM-NEXT:    .section	.bss.unlikely.cold_bss,"aw",@nobits
+; UNIQ-NEXT:   .section	.bss.unlikely.,"aw",@nobits,unique,6
+; AGG-NEXT:    .section	.bss.unlikely.,"aw",@nobits
 
 ; For @cold_data
-; SYM: .section	.data.unlikely.cold_data,"aw",@progbits
-; UNIQ: .section	.data.unlikely.,"aw",@progbits,unique,7
-; AGG: .section	.data.unlikely.,"aw",@progbits
+; COMMON:      .type cold_data,@object
+; SYM-NEXT:    .section	.data.unlikely.cold_data,"aw",@progbits
+; UNIQ-NEXT:   .section	.data.unlikely.,"aw",@progbits,unique,7
+; AGG-NEXT:    .section	.data.unlikely.,"aw",@progbits
+
+; For @cold_data_custom_foo_section
+; It has an explicit section 'foo' and shouldn't have hot or unlikely suffix.
+; COMMON:      .type cold_data_custom_foo_section,@object
+; SYM-NEXT:    .section foo,"aw",@progbits
+; UNIQ-NEXT:   .section foo,"aw",@progbits
+; AGG-NEXT:    .section foo,"aw",@progbits
 
 ; For @cold_relro_array
-; SYM: .section	.data.rel.ro.unlikely.cold_relro_array,"aw",@progbits
-; UNIQ: .section	.data.rel.ro.unlikely.,"aw",@progbits,unique,8
-; AGG: .section	.data.rel.ro.unlikely.,"aw",@progbits
+; COMMON:      .type cold_relro_array,@object
+; SYM-NEXT:    .section	.data.rel.ro.unlikely.cold_relro_array,"aw",@progbits
+; UNIQ-NEXT:   .section	.data.rel.ro.unlikely.,"aw",@progbits,unique,8
+; AGG-NEXT:    .section	.data.rel.ro.unlikely.,"aw",@progbits
 
 ; Currently static-data-splitter only analyzes access from code.
 ; @bss2 and @data3 are indirectly accessed by code through @hot_relro_array
 ; and @cold_relro_array. A follow-up item is to analyze indirect access via data
 ; and prune the unlikely list.
 ; For @bss2
-; SYM: .section	.bss.unlikely.bss2,"aw",@nobits
-; UNIQ: .section	.bss.unlikely.,"aw",@nobits,unique,9
-; AGG: .section	.bss.unlikely.,"aw",@nobits
+; COMMON:      .type bss2,@object
+; SYM-NEXT:    .section	.bss.unlikely.bss2,"aw",@nobits
+; UNIQ-NEXT:   .section	.bss.unlikely.,"aw",@nobits,unique,9
+; AGG-NEXT:    .section	.bss.unlikely.,"aw",@nobits
 
 ; For @data3
-; SYM: .section	.data.unlikely.data3,"aw",@progbits
-; UNIQ: .section	.data.unlikely.,"aw",@progbits,unique,10
-; AGG: .section	.data.unlikely.,"aw",@progbits
+; COMMON:      .type data3,@object
+; SYM-NEXT:    .section	.data.unlikely.data3,"aw",@progbits
+; UNIQ-NEXT:   .section	.data.unlikely.,"aw",@progbits,unique,10
+; AGG-NEXT:    .section	.data.unlikely.,"aw",@progbits
 
 ; For @data_with_unknown_hotness
-; SYM: 	.type	.Ldata_with_unknown_hotness,@object          # @data_with_unknown_hotness
-; SYM: .section .data..Ldata_with_unknown_hotness,"aw",@progbits
-; UNIQ: .section  .data,"aw",@progbits,unique,11
+; SYM: 	       .type	.Ldata_with_unknown_hotness,@object          # @data_with_unknown_hotness
+; SYM:         .section .data..Ldata_with_unknown_hotness,"aw",@progbits
+; UNIQ:        .section  .data,"aw",@progbits,unique,11
 ; The `.section` directive is omitted for .data with -unique-section-names=false.
 ; See MCSectionELF::shouldOmitSectionDirective for the implementation details.
-; AGG: .data
-; DATA: .Ldata_with_unknown_hotness:
+; AGG:         .data
+; COMMON:      .Ldata_with_unknown_hotness:
+
+; For @hot_data_custom_bar_section
+; It has an explicit section attribute 'var' and shouldn't have hot or unlikely suffix.
+; COMMON:      .type hot_data_custom_bar_section,@object
+; SYM-NEXT:    .section bar,"aw",@progbits
+; SYM:         hot_data_custom_bar_section
+; UNIQ:        .section bar,"aw",@progbits
+; AGG:         .section bar,"aw",@progbits
 
 @.str = private unnamed_addr constant [5 x i8] c"hot\09\00", align 1
 @.str.1 = private unnamed_addr constant [10 x i8] c"%d\09%d\09%d\0A\00", align 1
@@ -106,10 +131,12 @@ target triple = "x86_64-unknown-linux-gnu"
 @.str.2 = private unnamed_addr constant [14 x i8] c"cold%d\09%d\09%d\0A\00", align 1
 @cold_bss = internal global i32 0
 @cold_data = internal global i32 4
+@cold_data_custom_foo_section = internal global i32 100, section "foo"
 @cold_relro_array = internal constant [2 x ptr] [ptr @data3, ptr @bss2]
 @bss2 = internal global i32 0
 @data3 = internal global i32 3
 @data_with_unknown_hotness = private global i32 5
+@hot_data_custom_bar_section = internal global i32 101 #0
 
 define void @cold_func(i32 %0) !prof !15 {
   %2 = load i32, ptr @cold_bss
@@ -121,7 +148,8 @@ define void @cold_func(i32 %0) !prof !15 {
   %8 = load i32, ptr %7
   %9 = load i32, ptr @data_with_unknown_hotness
   %11 = load i32, ptr @hot_data
-  %12 = call i32 (...) @func_taking_arbitrary_param(ptr @.str.2, i32 %2, i32 %3, i32 %8, i32 %9, i32 %11)
+  %12 = load i32, ptr @cold_data_custom_foo_section
+  %13 = call i32 (...) @func_taking_arbitrary_param(ptr @.str.2, i32 %2, i32 %3, i32 %8, i32 %9, i32 %11, i32 %12)
   ret void
 }
 
@@ -142,7 +170,8 @@ define void @hot_func(i32 %0) !prof !14 {
   %7 = load i32, ptr %6
   %8 = load i32, ptr @hot_data
   %9 = load i32, ptr @hot_bss
-  %10 = call i32 (...) @func_taking_arbitrary_param(ptr @.str.1, i32 %7, i32 %8, i32 %9)
+  %10 = load i32, ptr @hot_data_custom_bar_section
+  %11 = call i32 (...) @func_taking_arbitrary_param(ptr @.str.1, i32 %7, i32 %8, i32 %9, i32 %10)
   ret void
 }
 
@@ -177,6 +206,8 @@ define i32 @main(i32 %0, ptr %1) !prof !15 {
 
 declare i32 @rand()
 declare i32 @func_taking_arbitrary_param(...)
+
+attributes #0 = {"data-section"="bar"}
 
 !llvm.module.flags = !{!1}
 
