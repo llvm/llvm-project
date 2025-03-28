@@ -1707,9 +1707,13 @@ void RelocationBaseSection::mergeRels() {
 }
 
 void RelocationBaseSection::partitionRels() {
+  const RelType relativeRel = ctx.target->relativeRel;
+  const RelType iRelativeRel = ctx.target->iRelativeRel;
+  for (auto &r : relocs)
+    if (r.type == relativeRel && r.sym->isGnuIFunc())
+      r.type = iRelativeRel;
   if (!combreloc)
     return;
-  const RelType relativeRel = ctx.target->relativeRel;
   numRelativeRelocs =
       std::stable_partition(relocs.begin(), relocs.end(),
                             [=](auto &r) { return r.type == relativeRel; }) -
