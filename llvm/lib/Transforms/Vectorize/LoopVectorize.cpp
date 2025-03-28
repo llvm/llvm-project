@@ -979,7 +979,7 @@ public:
   /// Setup cost-based decisions for user vectorization factor.
   /// \return true if the UserVF is a feasible VF to be chosen.
   bool selectUserVectorizationFactor(ElementCount UserVF) {
-    collectNonVectorizedSetWideningDecisions(UserVF);
+    collectNonVectorizedAndSetWideningDecisions(UserVF);
     return expectedCost(UserVF).isValid();
   }
 
@@ -1242,7 +1242,7 @@ public:
   /// Also make a decision on what to do about call instructions in the loop
   /// at that VF -- scalarize, call a known vector routine, or call a
   /// vector intrinsic.
-  void collectNonVectorizedSetWideningDecisions(ElementCount VF) {
+  void collectNonVectorizedAndSetWideningDecisions(ElementCount VF) {
     // Do the analysis once.
     if (VF.isScalar() || Uniforms.contains(VF))
       return;
@@ -5286,7 +5286,7 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<ElementCount> VFs) {
           RegUsage[ClassID] += 1;
         }
       } else {
-        collectNonVectorizedSetWideningDecisions(VFs[J]);
+        collectNonVectorizedAndSetWideningDecisions(VFs[J]);
         for (auto *Inst : OpenIntervals) {
           // Skip ignored values for VF > 1.
           if (VecValuesToIgnore.count(Inst))
@@ -7189,7 +7189,7 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   CM.collectInLoopReductions();
   for (const auto &VF : VFCandidates) {
     // Collect Uniform and Scalar instructions after vectorization with VF.
-    CM.collectNonVectorizedSetWideningDecisions(VF);
+    CM.collectNonVectorizedAndSetWideningDecisions(VF);
   }
 
   buildVPlansWithVPRecipes(ElementCount::getFixed(1), MaxFactors.FixedVF);
