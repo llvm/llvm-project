@@ -1289,6 +1289,7 @@ def WaitVMVSrc : NamedIntOperand<"wait_vm_vsrc"> {
 def ByteSel : NamedIntOperand<"byte_sel"> {
   let Validator = "isUInt<2>";
 }
+def ByteSel0 : DefaultOperand<ByteSel, 0>;
 
 let PrintMethod = "printBitOp3" in
 def BitOp3 : NamedIntOperand<"bitop3">;

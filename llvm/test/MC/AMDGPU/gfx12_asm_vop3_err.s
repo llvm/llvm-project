@@ -106,3 +106,13 @@ v_cvt_sr_bf8_f32 v1, v2, v3 byte_sel:4
 // GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid byte_sel value.
 // GFX12-NEXT:{{^}}v_cvt_sr_bf8_f32 v1, v2, v3 byte_sel:4
 // GFX12-NEXT:{{^}}                            ^
+
+v_cvt_pk_fp8_f32 v1, v2, v3 clamp
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX12-NEXT:{{^}}v_cvt_pk_fp8_f32 v1, v2, v3 clamp
+// GFX12-NEXT:{{^}}                            ^
+
+v_cvt_sr_fp8_f32 v1, v2, v3 clamp
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX12-NEXT:{{^}}v_cvt_sr_fp8_f32 v1, v2, v3 clamp
+// GFX12-NEXT:{{^}}                            ^
