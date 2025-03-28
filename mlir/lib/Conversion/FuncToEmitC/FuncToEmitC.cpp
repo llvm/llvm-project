@@ -88,7 +88,8 @@ public:
     for (const auto &argType : enumerate(fnType.getInputs())) {
       auto convertedType = getTypeConverter()->convertType(argType.value());
       if (!convertedType)
-        return rewriter.notifyMatchFailure(funcOp, "argument type conversion failed");
+        return rewriter.notifyMatchFailure(funcOp,
+                                           "argument type conversion failed");
       signatureConverter.addInputs(argType.index(), convertedType);
     }
 
@@ -96,7 +97,8 @@ public:
     if (fnType.getNumResults() == 1) {
       resultType = getTypeConverter()->convertType(fnType.getResult(0));
       if (!resultType)
-        return rewriter.notifyMatchFailure(funcOp, "result type conversion failed");
+        return rewriter.notifyMatchFailure(funcOp,
+                                           "result type conversion failed");
     }
 
     // Create the converted `emitc.func` op.
