@@ -1855,6 +1855,15 @@ public:
               Word("!DIR$ UNROLL_AND_JAM");
               Walk(" ", unrollAndJam.v);
             },
+            [&](const CompilerDirective::NoVector &) {
+              Word("!DIR$ NOVECTOR");
+            },
+            [&](const CompilerDirective::NoUnroll &) {
+              Word("!DIR$ NOUNROLL");
+            },
+            [&](const CompilerDirective::NoUnrollAndJam &) {
+              Word("!DIR$ NOUNROLL_AND_JAM");
+            },
             [&](const CompilerDirective::Unrecognized &) {
               Word("!DIR$ ");
               Word(x.source.ToString());
