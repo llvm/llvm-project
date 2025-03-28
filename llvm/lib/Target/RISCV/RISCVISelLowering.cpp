@@ -4626,7 +4626,7 @@ static bool isElementRotate(const std::array<std::pair<int, int>, 2> &SrcInfo,
 static bool isAlternating(const std::array<std::pair<int, int>, 2> &SrcInfo,
                           const ArrayRef<int> Mask, bool RequiredPolarity) {
   int NumElts = Mask.size();
-  for (unsigned i = 0; i != Mask.size(); ++i) {
+  for (unsigned i = 0; i != NumElts; ++i) {
     int M = Mask[i];
     if (M < 0)
       continue;
