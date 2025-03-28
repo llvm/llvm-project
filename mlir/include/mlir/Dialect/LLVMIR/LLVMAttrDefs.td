@@ -1337,6 +1337,9 @@ def LLVM_DependentLibrariesAttr
     Represents the list of dependent libraries for the current module.
     This attribute is used to specify the libraries that the module depends
     on, and it can be used for linking purposes.
+
+    See the following links for more details:
+    https://llvm.org/docs/LangRef.html#dependent-libs-named-metadata
   }];
   let parameters = (ins OptionalArrayRefParameter<"StringAttr">:$libs);
   let assemblyFormat = "`<` $libs `>`";

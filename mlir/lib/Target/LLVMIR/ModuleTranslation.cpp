@@ -2036,6 +2036,22 @@ LogicalResult ModuleTranslation::createCommandlineMetadata() {
   return success();
 }
 
+LogicalResult ModuleTranslation::createDependentLibrariesMetadata() {
+  if (auto dependentLibrariesAttr = mlirModule->getDiscardableAttr(
+          LLVM::LLVMDialect::getDependentLibrariesAttrName())) {
+    auto *nmd =
+        llvmModule->getOrInsertNamedMetadata("llvm.dependent-libraries");
+    llvm::LLVMContext &ctx = llvmModule->getContext();
+    for (auto lib : cast<ArrayAttr>(dependentLibrariesAttr)) {
+      auto *md = llvm::MDNode::get(
+          ctx,
+          llvm::MDString::get(ctx, mlir::cast<StringAttr>(lib).getValue()));
+      nmd->addOperand(md);
+    }
+  }
+  return success();
+}
+
 void ModuleTranslation::setLoopMetadata(Operation *op,
                                         llvm::Instruction *inst) {
   LoopAnnotationAttr attr =
@@ -2157,18 +2173,6 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
           m->getDiscardableAttr(LLVM::LLVMDialect::getTargetTripleAttrName()))
     llvmModule->setTargetTriple(
         llvm::Triple(cast<StringAttr>(targetTripleAttr).getValue()));
-  if (auto dependentLibrariesAttr = m->getDiscardableAttr(
-          LLVM::LLVMDialect::getDependentLibrariesAttrName())) {
-    auto *NMD =
-        llvmModule->getOrInsertNamedMetadata("llvm.dependent-libraries");
-    for (auto lib : cast<ArrayAttr>(dependentLibrariesAttr)) {
-      auto *MD = llvm::MDNode::get(
-          llvmContext,
-          llvm::MDString::get(llvmContext,
-                              mlir::cast<StringAttr>(lib).getValue()));
-      NMD->addOperand(MD);
-    }
-  }
 
   return llvmModule;
 }
@@ -2212,6 +2216,8 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   if (failed(translator.createIdentMetadata()))
     return nullptr;
   if (failed(translator.createCommandlineMetadata()))
+    return nullptr;
+  if (failed(translator.createDependentLibrariesMetadata()))
     return nullptr;
 
   // Convert other top-level operations if possible.
