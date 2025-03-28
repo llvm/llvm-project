@@ -24,6 +24,7 @@ struct is_signed : bool_constant<((is_fixed_point_v<T> || is_arithmetic_v<T>) &&
   LIBC_INLINE constexpr bool operator()() const { return is_signed::value; }
 };
 
+#ifdef LIBC_COMPILER_HAS_FIXED_POINT
 // Specializations for unsigned fixed-point types
 template <>
 struct is_signed<unsigned short _Fract> : bool_constant<false> {
@@ -85,6 +86,7 @@ struct is_signed<unsigned long sat _Accum> : bool_constant<false> {
   LIBC_INLINE constexpr operator bool() const { return is_signed::value; }
   LIBC_INLINE constexpr bool operator()() const { return is_signed::value; }
 };
+#endif // LIBC_COMPILER_HAS_FIXED_POINT
 
 template <typename T>
 LIBC_INLINE_VAR constexpr bool is_signed_v = is_signed<T>::value;

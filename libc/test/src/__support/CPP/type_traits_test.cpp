@@ -421,6 +421,7 @@ TEST(LlvmLibcTypeTraitsTest, is_signed) {
   EXPECT_TRUE((is_signed_v<double>));
   EXPECT_TRUE((is_signed_v<long double>));
 
+  #ifdef LIBC_COMPILER_HAS_FIXED_POINT
   // for fixed point types
   EXPECT_TRUE((is_signed_v<fract>));
   EXPECT_FALSE((is_signed_v<unsigned fract>));
@@ -438,6 +439,7 @@ TEST(LlvmLibcTypeTraitsTest, is_signed) {
   EXPECT_FALSE((is_signed_v<unsigned long fract>));
   EXPECT_TRUE((is_signed_v<long accum>));
   EXPECT_FALSE((is_signed_v<unsigned long accum>));
+  #endif
 }
 
 // TODO is_trivially_constructible
@@ -459,6 +461,7 @@ TEST(LlvmLibcTypeTraitsTest, is_unsigned) {
   EXPECT_FALSE((is_unsigned_v<double>));
   EXPECT_FALSE((is_unsigned_v<long double>));
 
+  #ifdef LIBC_COMPILER_HAS_FIXED_POINT
   // for fixed point types
   EXPECT_FALSE((is_unsigned_v<fract>));
   EXPECT_TRUE((is_unsigned_v<unsigned fract>));
@@ -476,6 +479,7 @@ TEST(LlvmLibcTypeTraitsTest, is_unsigned) {
   EXPECT_TRUE((is_unsigned_v<unsigned long fract>));
   EXPECT_FALSE((is_unsigned_v<long accum>));
   EXPECT_TRUE((is_unsigned_v<unsigned long accum>));
+  #endif
 }
 
 // TODO is_void
