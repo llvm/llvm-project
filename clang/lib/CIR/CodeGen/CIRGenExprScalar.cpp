@@ -17,6 +17,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/CIR/MissingFeatures.h"
 
+#include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
 
 #include <cassert>
@@ -26,6 +27,53 @@ using namespace clang::CIRGen;
 
 namespace {
 
+struct BinOpInfo {
+  mlir::Value lhs;
+  mlir::Value rhs;
+  SourceRange loc;
+  QualType fullType;             // Type of operands and result
+  QualType compType;             // Type used for computations. Element type
+                                 // for vectors, otherwise same as FullType.
+  BinaryOperator::Opcode opcode; // Opcode of BinOp to perform
+  FPOptions fpfeatures;
+  const Expr *e; // Entire expr, for error unsupported.  May not be binop.
+
+  /// Check if the binop computes a division or a remainder.
+  bool isDivRemOp() const {
+    return opcode == BO_Div || opcode == BO_Rem || opcode == BO_DivAssign ||
+           opcode == BO_RemAssign;
+  }
+
+  /// Check if the binop can result in integer overflow.
+  bool mayHaveIntegerOverflow() const {
+    // Without constant input, we can't rule out overflow.
+    auto lhsci = dyn_cast<cir::ConstantOp>(lhs.getDefiningOp());
+    auto rhsci = dyn_cast<cir::ConstantOp>(rhs.getDefiningOp());
+    if (!lhsci || !rhsci)
+      return true;
+
+    assert(!cir::MissingFeatures::mayHaveIntegerOverflow());
+    // TODO(cir): For now we just assume that we might overflow
+    return true;
+  }
+
+  /// Check if at least one operand is a fixed point type. In such cases,
+  /// this operation did not follow usual arithmetic conversion and both
+  /// operands might not be of the same type.
+  bool isFixedPointOp() const {
+    // We cannot simply check the result type since comparison operations
+    // return an int.
+    if (const auto *binOp = llvm::dyn_cast<BinaryOperator>(e)) {
+      QualType lhstype = binOp->getLHS()->getType();
+      QualType rhstype = binOp->getRHS()->getType();
+      return lhstype->isFixedPointType() || rhstype->isFixedPointType();
+    }
+    if (const auto *unop = llvm::dyn_cast<UnaryOperator>(e))
+      return unop->getSubExpr()->getType()->isFixedPointType();
+    return false;
+  }
+};
+
 class ScalarExprEmitter : public StmtVisitor<ScalarExprEmitter, mlir::Value> {
   CIRGenFunction &cgf;
   CIRGenBuilderTy &builder;
@@ -34,6 +82,22 @@ class ScalarExprEmitter : public StmtVisitor<ScalarExprEmitter, mlir::Value> {
 public:
   ScalarExprEmitter(CIRGenFunction &cgf, CIRGenBuilderTy &builder)
       : cgf(cgf), builder(builder) {}
+
+  //===--------------------------------------------------------------------===//
+  //                               Utilities
+  //===--------------------------------------------------------------------===//
+
+  mlir::Value emitPromotedValue(mlir::Value result, QualType promotionType) {
+    cgf.cgm.errorNYI(result.getLoc(), "floating cast for promoted value");
+    return {};
+  }
+
+  mlir::Value emitUnPromotedValue(mlir::Value result, QualType exprType) {
+    cgf.cgm.errorNYI(result.getLoc(), "floating cast for unpromoted value");
+    return {};
+  }
+
+  mlir::Value emitPromoted(const Expr *e, QualType promotionType);
 
   //===--------------------------------------------------------------------===//
   //                            Visitor Methods
@@ -58,6 +122,10 @@ public:
     LValue lv = cgf.emitLValue(e);
     // FIXME: add some akin to EmitLValueAlignmentAssumption(E, V);
     return cgf.emitLoadOfLValue(lv, e->getExprLoc()).getScalarVal();
+  }
+
+  mlir::Value emitLoadOfLValue(LValue lv, SourceLocation loc) {
+    return cgf.emitLoadOfLValue(lv, loc).getScalarVal();
   }
 
   // l-values
@@ -308,14 +376,14 @@ public:
         // NOTE(CIR): clang calls CreateAdd but folds this to a unary op
         value = emitUnaryOp(e, kind, input);
       }
-    } else if (const PointerType *ptr = type->getAs<PointerType>()) {
+    } else if (isa<PointerType>(type)) {
       cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec pointer");
       return {};
     } else if (type->isVectorType()) {
       cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec vector");
       return {};
     } else if (type->isRealFloatingType()) {
-      assert(!cir::MissingFeatures::CGFPOptionsRAII());
+      assert(!cir::MissingFeatures::cgFPOptionsRAII());
 
       if (type->isHalfType() &&
           !cgf.getContext().getLangOpts().NativeHalfType) {
@@ -558,7 +626,222 @@ public:
 
     return res;
   }
+
+  BinOpInfo emitBinOps(const BinaryOperator *e,
+                       QualType promotionType = QualType()) {
+    BinOpInfo result;
+    result.lhs = cgf.emitPromotedScalarExpr(e->getLHS(), promotionType);
+    result.rhs = cgf.emitPromotedScalarExpr(e->getRHS(), promotionType);
+    if (!promotionType.isNull())
+      result.fullType = promotionType;
+    else
+      result.fullType = e->getType();
+    result.compType = result.fullType;
+    if (const auto *vecType = dyn_cast_or_null<VectorType>(result.fullType)) {
+      result.compType = vecType->getElementType();
+    }
+    result.opcode = e->getOpcode();
+    result.loc = e->getSourceRange();
+    // TODO(cir): Result.FPFeatures
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
+    result.e = e;
+    return result;
+  }
+
+  mlir::Value emitMul(const BinOpInfo &ops);
+  mlir::Value emitDiv(const BinOpInfo &ops);
+  mlir::Value emitRem(const BinOpInfo &ops);
+  mlir::Value emitAdd(const BinOpInfo &ops);
+  mlir::Value emitSub(const BinOpInfo &ops);
+  mlir::Value emitShl(const BinOpInfo &ops);
+  mlir::Value emitShr(const BinOpInfo &ops);
+  mlir::Value emitAnd(const BinOpInfo &ops);
+  mlir::Value emitXor(const BinOpInfo &ops);
+  mlir::Value emitOr(const BinOpInfo &ops);
+
+  LValue emitCompoundAssignLValue(
+      const CompoundAssignOperator *e,
+      mlir::Value (ScalarExprEmitter::*f)(const BinOpInfo &),
+      mlir::Value &result);
+  mlir::Value
+  emitCompoundAssign(const CompoundAssignOperator *e,
+                     mlir::Value (ScalarExprEmitter::*f)(const BinOpInfo &));
+
+  // TODO(cir): Candidate to be in a common AST helper between CIR and LLVM
+  // codegen.
+  QualType getPromotionType(QualType ty) {
+    if (ty->getAs<ComplexType>()) {
+      assert(!cir::MissingFeatures::complexType());
+      cgf.cgm.errorNYI("promotion to complex type");
+      return QualType();
+    }
+    if (ty.UseExcessPrecision(cgf.getContext())) {
+      if (ty->getAs<VectorType>()) {
+        assert(!cir::MissingFeatures::vectorType());
+        cgf.cgm.errorNYI("promotion to vector type");
+        return QualType();
+      }
+      return cgf.getContext().FloatTy;
+    }
+    return QualType();
+  }
+
+// Binary operators and binary compound assignment operators.
+#define HANDLEBINOP(OP)                                                        \
+  mlir::Value VisitBin##OP(const BinaryOperator *e) {                          \
+    QualType promotionTy = getPromotionType(e->getType());                     \
+    auto result = emit##OP(emitBinOps(e, promotionTy));                        \
+    if (result && !promotionTy.isNull())                                       \
+      result = emitUnPromotedValue(result, e->getType());                      \
+    return result;                                                             \
+  }                                                                            \
+  mlir::Value VisitBin##OP##Assign(const CompoundAssignOperator *e) {          \
+    return emitCompoundAssign(e, &ScalarExprEmitter::emit##OP);                \
+  }
+
+  HANDLEBINOP(Mul)
+  HANDLEBINOP(Div)
+  HANDLEBINOP(Rem)
+  HANDLEBINOP(Add)
+  HANDLEBINOP(Sub)
+  HANDLEBINOP(Shl)
+  HANDLEBINOP(Shr)
+  HANDLEBINOP(And)
+  HANDLEBINOP(Xor)
+  HANDLEBINOP(Or)
+#undef HANDLEBINOP
 };
+
+LValue ScalarExprEmitter::emitCompoundAssignLValue(
+    const CompoundAssignOperator *e,
+    mlir::Value (ScalarExprEmitter::*func)(const BinOpInfo &),
+    mlir::Value &result) {
+  QualType lhsTy = e->getLHS()->getType();
+  BinOpInfo opInfo;
+
+  if (e->getComputationResultType()->isAnyComplexType()) {
+    cgf.cgm.errorNYI(result.getLoc(), "complex lvalue assign");
+    return LValue();
+  }
+
+  // Emit the RHS first.  __block variables need to have the rhs evaluated
+  // first, plus this should improve codegen a little.
+
+  QualType promotionTypeCR = getPromotionType(e->getComputationResultType());
+  if (promotionTypeCR.isNull())
+    promotionTypeCR = e->getComputationResultType();
+
+  QualType promotionTypeLHS = getPromotionType(e->getComputationLHSType());
+  QualType promotionTypeRHS = getPromotionType(e->getRHS()->getType());
+
+  if (!promotionTypeRHS.isNull())
+    opInfo.rhs = cgf.emitPromotedScalarExpr(e->getRHS(), promotionTypeRHS);
+  else
+    opInfo.rhs = Visit(e->getRHS());
+
+  opInfo.fullType = promotionTypeCR;
+  opInfo.compType = opInfo.fullType;
+  if (const auto *vecType = dyn_cast_or_null<VectorType>(opInfo.fullType))
+    opInfo.compType = vecType->getElementType();
+  opInfo.opcode = e->getOpcode();
+  opInfo.fpfeatures = e->getFPFeaturesInEffect(cgf.getLangOpts());
+  opInfo.e = e;
+  opInfo.loc = e->getSourceRange();
+
+  // Load/convert the LHS
+  LValue lhsLV = cgf.emitLValue(e->getLHS());
+
+  if (lhsTy->getAs<AtomicType>()) {
+    cgf.cgm.errorNYI(result.getLoc(), "atomic lvalue assign");
+    return LValue();
+  }
+
+  opInfo.lhs = emitLoadOfLValue(lhsLV, e->getExprLoc());
+
+  CIRGenFunction::SourceLocRAIIObject sourceloc{
+      cgf, cgf.getLoc(e->getSourceRange())};
+  SourceLocation loc = e->getExprLoc();
+  if (!promotionTypeLHS.isNull())
+    opInfo.lhs = emitScalarConversion(opInfo.lhs, lhsTy, promotionTypeLHS, loc);
+  else
+    opInfo.lhs = emitScalarConversion(opInfo.lhs, lhsTy,
+                                      e->getComputationLHSType(), loc);
+
+  // Expand the binary operator.
+  result = (this->*func)(opInfo);
+
+  // Convert the result back to the LHS type,
+  // potentially with Implicit Conversion sanitizer check.
+  result = emitScalarConversion(result, promotionTypeCR, lhsTy, loc,
+                                ScalarConversionOpts(cgf.sanOpts));
+
+  // Store the result value into the LHS lvalue. Bit-fields are handled
+  // specially because the result is altered by the store, i.e., [C99 6.5.16p1]
+  // 'An assignment expression has the value of the left operand after the
+  // assignment...'.
+  if (lhsLV.isBitField())
+    cgf.cgm.errorNYI(e->getSourceRange(), "store through bitfield lvalue");
+  else
+    cgf.emitStoreThroughLValue(RValue::get(result), lhsLV);
+
+  if (cgf.getLangOpts().OpenMP)
+    cgf.cgm.errorNYI(e->getSourceRange(), "openmp");
+
+  return lhsLV;
+}
+
+mlir::Value ScalarExprEmitter::emitPromoted(const Expr *e,
+                                            QualType promotionType) {
+  e = e->IgnoreParens();
+  if (const auto *bo = dyn_cast<BinaryOperator>(e)) {
+    switch (bo->getOpcode()) {
+#define HANDLE_BINOP(OP)                                                       \
+  case BO_##OP:                                                                \
+    return emit##OP(emitBinOps(bo, promotionType));
+      HANDLE_BINOP(Add)
+      HANDLE_BINOP(Sub)
+      HANDLE_BINOP(Mul)
+      HANDLE_BINOP(Div)
+#undef HANDLE_BINOP
+    default:
+      break;
+    }
+  } else if (isa<UnaryOperator>(e)) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "unary operators");
+    return {};
+  }
+  mlir::Value result = Visit(const_cast<Expr *>(e));
+  if (result) {
+    if (!promotionType.isNull())
+      return emitPromotedValue(result, promotionType);
+    return emitUnPromotedValue(result, e->getType());
+  }
+  return result;
+}
+
+mlir::Value ScalarExprEmitter::emitCompoundAssign(
+    const CompoundAssignOperator *e,
+    mlir::Value (ScalarExprEmitter::*func)(const BinOpInfo &)) {
+
+  bool ignore = std::exchange(ignoreResultAssign, false);
+  mlir::Value rhs;
+  LValue lhs = emitCompoundAssignLValue(e, func, rhs);
+
+  // If the result is clearly ignored, return now.
+  if (ignore)
+    return {};
+
+  // The result of an assignment in C is the assigned r-value.
+  if (!cgf.getLangOpts().CPlusPlus)
+    return rhs;
+
+  // If the lvalue is non-volatile, return the computed value of the assignment.
+  if (!lhs.isVolatile())
+    return rhs;
+
+  // Otherwise, reload the value.
+  return emitLoadOfLValue(lhs, e->getExprLoc());
+}
 
 } // namespace
 
@@ -570,11 +853,334 @@ mlir::Value CIRGenFunction::emitScalarExpr(const Expr *e) {
   return ScalarExprEmitter(*this, builder).Visit(const_cast<Expr *>(e));
 }
 
-[[maybe_unused]] static bool MustVisitNullValue(const Expr *e) {
+mlir::Value CIRGenFunction::emitPromotedScalarExpr(const Expr *e,
+                                                   QualType promotionType) {
+  if (!promotionType.isNull())
+    return ScalarExprEmitter(*this, builder).emitPromoted(e, promotionType);
+  return ScalarExprEmitter(*this, builder).Visit(const_cast<Expr *>(e));
+}
+
+[[maybe_unused]] static bool mustVisitNullValue(const Expr *e) {
   // If a null pointer expression's type is the C++0x nullptr_t, then
   // it's not necessarily a simple constant and it must be evaluated
   // for its potential side effects.
   return e->getType()->isNullPtrType();
+}
+
+/// If \p e is a widened promoted integer, get its base (unpromoted) type.
+static std::optional<QualType>
+getUnwidenedIntegerType(const ASTContext &astContext, const Expr *e) {
+  const Expr *base = e->IgnoreImpCasts();
+  if (e == base)
+    return std::nullopt;
+
+  QualType baseTy = base->getType();
+  if (!astContext.isPromotableIntegerType(baseTy) ||
+      astContext.getTypeSize(baseTy) >= astContext.getTypeSize(e->getType()))
+    return std::nullopt;
+
+  return baseTy;
+}
+
+/// Check if \p e is a widened promoted integer.
+[[maybe_unused]] static bool isWidenedIntegerOp(const ASTContext &astContext,
+                                                const Expr *e) {
+  return getUnwidenedIntegerType(astContext, e).has_value();
+}
+
+/// Check if we can skip the overflow check for \p Op.
+[[maybe_unused]] static bool canElideOverflowCheck(const ASTContext &astContext,
+                                                   const BinOpInfo &op) {
+  assert((isa<UnaryOperator>(op.e) || isa<BinaryOperator>(op.e)) &&
+         "Expected a unary or binary operator");
+
+  // If the binop has constant inputs and we can prove there is no overflow,
+  // we can elide the overflow check.
+  if (!op.mayHaveIntegerOverflow())
+    return true;
+
+  // If a unary op has a widened operand, the op cannot overflow.
+  if (const auto *uo = dyn_cast<UnaryOperator>(op.e))
+    return !uo->canOverflow();
+
+  // We usually don't need overflow checks for binops with widened operands.
+  // Multiplication with promoted unsigned operands is a special case.
+  const auto *bo = cast<BinaryOperator>(op.e);
+  std::optional<QualType> optionalLHSTy =
+      getUnwidenedIntegerType(astContext, bo->getLHS());
+  if (!optionalLHSTy)
+    return false;
+
+  std::optional<QualType> optionalRHSTy =
+      getUnwidenedIntegerType(astContext, bo->getRHS());
+  if (!optionalRHSTy)
+    return false;
+
+  QualType lhsTy = *optionalLHSTy;
+  QualType rhsTy = *optionalRHSTy;
+
+  // This is the simple case: binops without unsigned multiplication, and with
+  // widened operands. No overflow check is needed here.
+  if ((op.opcode != BO_Mul && op.opcode != BO_MulAssign) ||
+      !lhsTy->isUnsignedIntegerType() || !rhsTy->isUnsignedIntegerType())
+    return true;
+
+  // For unsigned multiplication the overflow check can be elided if either one
+  // of the unpromoted types are less than half the size of the promoted type.
+  unsigned promotedSize = astContext.getTypeSize(op.e->getType());
+  return (2 * astContext.getTypeSize(lhsTy)) < promotedSize ||
+         (2 * astContext.getTypeSize(rhsTy)) < promotedSize;
+}
+
+/// Emit pointer + index arithmetic.
+static mlir::Value emitPointerArithmetic(CIRGenFunction &cgf,
+                                         const BinOpInfo &op,
+                                         bool isSubtraction) {
+  cgf.cgm.errorNYI(op.loc, "pointer arithmetic");
+  return {};
+}
+
+mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
+  const mlir::Location loc = cgf.getLoc(ops.loc);
+  if (ops.compType->isSignedIntegerOrEnumerationType()) {
+    switch (cgf.getLangOpts().getSignedOverflowBehavior()) {
+    case LangOptions::SOB_Defined:
+      if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflow))
+        return builder.createMul(loc, ops.lhs, ops.rhs);
+      [[fallthrough]];
+    case LangOptions::SOB_Undefined:
+      if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflow))
+        return builder.createNSWMul(loc, ops.lhs, ops.rhs);
+      [[fallthrough]];
+    case LangOptions::SOB_Trapping:
+      if (canElideOverflowCheck(cgf.getContext(), ops))
+        return builder.createNSWMul(loc, ops.lhs, ops.rhs);
+      cgf.cgm.errorNYI("sanitizers");
+    }
+  }
+  if (ops.fullType->isConstantMatrixType()) {
+    assert(!cir::MissingFeatures::matrixType());
+    cgf.cgm.errorNYI("matrix types");
+    return nullptr;
+  }
+  if (ops.compType->isUnsignedIntegerType() &&
+      cgf.sanOpts.has(SanitizerKind::UnsignedIntegerOverflow) &&
+      !canElideOverflowCheck(cgf.getContext(), ops))
+    cgf.cgm.errorNYI("unsigned int overflow sanitizer");
+
+  if (cir::isFPOrFPVectorTy(ops.lhs.getType())) {
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
+    return builder.createFMul(loc, ops.lhs, ops.rhs);
+  }
+
+  if (ops.isFixedPointOp()) {
+    assert(!cir::MissingFeatures::fixedPointType());
+    cgf.cgm.errorNYI("fixed point");
+    return nullptr;
+  }
+
+  return builder.create<cir::BinOp>(cgf.getLoc(ops.loc),
+                                    cgf.convertType(ops.fullType),
+                                    cir::BinOpKind::Mul, ops.lhs, ops.rhs);
+}
+mlir::Value ScalarExprEmitter::emitDiv(const BinOpInfo &ops) {
+  return builder.create<cir::BinOp>(cgf.getLoc(ops.loc),
+                                    cgf.convertType(ops.fullType),
+                                    cir::BinOpKind::Div, ops.lhs, ops.rhs);
+}
+mlir::Value ScalarExprEmitter::emitRem(const BinOpInfo &ops) {
+  return builder.create<cir::BinOp>(cgf.getLoc(ops.loc),
+                                    cgf.convertType(ops.fullType),
+                                    cir::BinOpKind::Rem, ops.lhs, ops.rhs);
+}
+
+mlir::Value ScalarExprEmitter::emitAdd(const BinOpInfo &ops) {
+  if (mlir::isa<cir::PointerType>(ops.lhs.getType()) ||
+      mlir::isa<cir::PointerType>(ops.rhs.getType()))
+    return emitPointerArithmetic(cgf, ops, /*isSubtraction=*/false);
+
+  const mlir::Location loc = cgf.getLoc(ops.loc);
+  if (ops.compType->isSignedIntegerOrEnumerationType()) {
+    switch (cgf.getLangOpts().getSignedOverflowBehavior()) {
+    case LangOptions::SOB_Defined:
+      if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflow))
+        return builder.createAdd(loc, ops.lhs, ops.rhs);
+      [[fallthrough]];
+    case LangOptions::SOB_Undefined:
+      if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflow))
+        return builder.createNSWAdd(loc, ops.lhs, ops.rhs);
+      [[fallthrough]];
+    case LangOptions::SOB_Trapping:
+      if (canElideOverflowCheck(cgf.getContext(), ops))
+        return builder.createNSWAdd(loc, ops.lhs, ops.rhs);
+      cgf.cgm.errorNYI("sanitizers");
+    }
+  }
+  if (ops.fullType->isConstantMatrixType()) {
+    assert(!cir::MissingFeatures::matrixType());
+    cgf.cgm.errorNYI("matrix types");
+    return nullptr;
+  }
+
+  if (ops.compType->isUnsignedIntegerType() &&
+      cgf.sanOpts.has(SanitizerKind::UnsignedIntegerOverflow) &&
+      !canElideOverflowCheck(cgf.getContext(), ops))
+    cgf.cgm.errorNYI("unsigned int overflow sanitizer");
+
+  if (cir::isFPOrFPVectorTy(ops.lhs.getType())) {
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
+    return builder.createFAdd(loc, ops.lhs, ops.rhs);
+  }
+
+  if (ops.isFixedPointOp()) {
+    assert(!cir::MissingFeatures::fixedPointType());
+    cgf.cgm.errorNYI("fixed point");
+    return {};
+  }
+
+  return builder.create<cir::BinOp>(loc, cgf.convertType(ops.fullType),
+                                    cir::BinOpKind::Add, ops.lhs, ops.rhs);
+}
+
+mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
+  const mlir::Location loc = cgf.getLoc(ops.loc);
+  // The LHS is always a pointer if either side is.
+  if (!mlir::isa<cir::PointerType>(ops.lhs.getType())) {
+    if (ops.compType->isSignedIntegerOrEnumerationType()) {
+      switch (cgf.getLangOpts().getSignedOverflowBehavior()) {
+      case LangOptions::SOB_Defined: {
+        if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflow))
+          return builder.createSub(loc, ops.lhs, ops.rhs);
+        [[fallthrough]];
+      }
+      case LangOptions::SOB_Undefined:
+        if (!cgf.sanOpts.has(SanitizerKind::SignedIntegerOverflow))
+          return builder.createNSWSub(loc, ops.lhs, ops.rhs);
+        [[fallthrough]];
+      case LangOptions::SOB_Trapping:
+        if (canElideOverflowCheck(cgf.getContext(), ops))
+          return builder.createNSWSub(loc, ops.lhs, ops.rhs);
+        cgf.cgm.errorNYI("sanitizers");
+      }
+    }
+
+    if (ops.fullType->isConstantMatrixType()) {
+      assert(!cir::MissingFeatures::matrixType());
+      cgf.cgm.errorNYI("matrix types");
+      return nullptr;
+    }
+
+    if (ops.compType->isUnsignedIntegerType() &&
+        cgf.sanOpts.has(SanitizerKind::UnsignedIntegerOverflow) &&
+        !canElideOverflowCheck(cgf.getContext(), ops))
+      cgf.cgm.errorNYI("unsigned int overflow sanitizer");
+
+    if (cir::isFPOrFPVectorTy(ops.lhs.getType())) {
+      assert(!cir::MissingFeatures::cgFPOptionsRAII());
+      return builder.createFSub(loc, ops.lhs, ops.rhs);
+    }
+
+    if (ops.isFixedPointOp()) {
+      assert(!cir::MissingFeatures::fixedPointType());
+      cgf.cgm.errorNYI("fixed point");
+      return {};
+    }
+
+    return builder.create<cir::BinOp>(cgf.getLoc(ops.loc),
+                                      cgf.convertType(ops.fullType),
+                                      cir::BinOpKind::Sub, ops.lhs, ops.rhs);
+  }
+
+  // If the RHS is not a pointer, then we have normal pointer
+  // arithmetic.
+  if (!mlir::isa<cir::PointerType>(ops.rhs.getType()))
+    return emitPointerArithmetic(cgf, ops, /*isSubtraction=*/true);
+
+  // Otherwise, this is a pointer subtraction
+
+  // Do the raw subtraction part.
+  //
+  // TODO(cir): note for LLVM lowering out of this; when expanding this into
+  // LLVM we shall take VLA's, division by element size, etc.
+  //
+  // See more in `EmitSub` in CGExprScalar.cpp.
+  assert(!cir::MissingFeatures::ptrDiffOp());
+  cgf.cgm.errorNYI("ptrdiff");
+  return {};
+}
+
+mlir::Value ScalarExprEmitter::emitShl(const BinOpInfo &ops) {
+  // TODO: This misses out on the sanitizer check below.
+  if (ops.isFixedPointOp()) {
+    assert(cir::MissingFeatures::fixedPointType());
+    cgf.cgm.errorNYI("fixed point");
+    return {};
+  }
+
+  // CIR accepts shift between different types, meaning nothing special
+  // to be done here. OTOH, LLVM requires the LHS and RHS to be the same type:
+  // promote or truncate the RHS to the same size as the LHS.
+
+  bool sanitizeSignedBase = cgf.sanOpts.has(SanitizerKind::ShiftBase) &&
+                            ops.compType->hasSignedIntegerRepresentation() &&
+                            !cgf.getLangOpts().isSignedOverflowDefined() &&
+                            !cgf.getLangOpts().CPlusPlus20;
+  bool sanitizeUnsignedBase =
+      cgf.sanOpts.has(SanitizerKind::UnsignedShiftBase) &&
+      ops.compType->hasUnsignedIntegerRepresentation();
+  bool sanitizeBase = sanitizeSignedBase || sanitizeUnsignedBase;
+  bool sanitizeExponent = cgf.sanOpts.has(SanitizerKind::ShiftExponent);
+
+  // OpenCL 6.3j: shift values are effectively % word size of LHS.
+  if (cgf.getLangOpts().OpenCL)
+    cgf.cgm.errorNYI("opencl");
+  else if ((sanitizeBase || sanitizeExponent) &&
+           mlir::isa<cir::IntType>(ops.lhs.getType()))
+    cgf.cgm.errorNYI("sanitizers");
+
+  cgf.cgm.errorNYI("shift ops");
+  return {};
+}
+
+mlir::Value ScalarExprEmitter::emitShr(const BinOpInfo &ops) {
+  // TODO: This misses out on the sanitizer check below.
+  if (ops.isFixedPointOp()) {
+    assert(cir::MissingFeatures::fixedPointType());
+    cgf.cgm.errorNYI("fixed point");
+    return {};
+  }
+
+  // CIR accepts shift between different types, meaning nothing special
+  // to be done here. OTOH, LLVM requires the LHS and RHS to be the same type:
+  // promote or truncate the RHS to the same size as the LHS.
+
+  // OpenCL 6.3j: shift values are effectively % word size of LHS.
+  if (cgf.getLangOpts().OpenCL)
+    cgf.cgm.errorNYI("opencl");
+  else if (cgf.sanOpts.has(SanitizerKind::ShiftExponent) &&
+           mlir::isa<cir::IntType>(ops.lhs.getType()))
+    cgf.cgm.errorNYI("sanitizers");
+
+  // Note that we don't need to distinguish unsigned treatment at this
+  // point since it will be handled later by LLVM lowering.
+  cgf.cgm.errorNYI("shift ops");
+  return {};
+}
+
+mlir::Value ScalarExprEmitter::emitAnd(const BinOpInfo &ops) {
+  return builder.create<cir::BinOp>(cgf.getLoc(ops.loc),
+                                    cgf.convertType(ops.fullType),
+                                    cir::BinOpKind::And, ops.lhs, ops.rhs);
+}
+mlir::Value ScalarExprEmitter::emitXor(const BinOpInfo &ops) {
+  return builder.create<cir::BinOp>(cgf.getLoc(ops.loc),
+                                    cgf.convertType(ops.fullType),
+                                    cir::BinOpKind::Xor, ops.lhs, ops.rhs);
+}
+mlir::Value ScalarExprEmitter::emitOr(const BinOpInfo &ops) {
+  return builder.create<cir::BinOp>(cgf.getLoc(ops.loc),
+                                    cgf.convertType(ops.fullType),
+                                    cir::BinOpKind::Or, ops.lhs, ops.rhs);
 }
 
 // Emit code for an explicit or implicit cast.  Implicit
@@ -661,7 +1267,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
   }
 
   case CK_NullToPointer: {
-    if (MustVisitNullValue(subExpr))
+    if (mustVisitNullValue(subExpr))
       cgf.emitIgnoredExpr(subExpr);
 
     // Note that DestTy is used as the MLIR type instead of a custom
@@ -790,9 +1396,9 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
                cgf.cgm.UInt64Ty, e->EvaluateKnownConstInt(cgf.getContext())));
 }
 
-mlir::Value CIRGenFunction::emitScalarPrePostIncDec(const UnaryOperator *E,
-                                                    LValue LV, bool isInc,
+mlir::Value CIRGenFunction::emitScalarPrePostIncDec(const UnaryOperator *e,
+                                                    LValue lv, bool isInc,
                                                     bool isPre) {
   return ScalarExprEmitter(*this, builder)
-      .emitScalarPrePostIncDec(E, LV, isInc, isPre);
+      .emitScalarPrePostIncDec(e, lv, isInc, isPre);
 }
