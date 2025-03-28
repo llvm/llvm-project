@@ -26,8 +26,8 @@ extractOperandsFromModule(Oracle &O, ReducerWorkItem &WorkItem,
     for (auto &I : instructions(&F)) {
       if (PHINode *Phi = dyn_cast<PHINode>(&I)) {
         for (auto &Op : Phi->incoming_values()) {
-          if (!O.shouldKeep()) {
-            if (Value *Reduced = ReduceValue(Op))
+          if (Value *Reduced = ReduceValue(Op)) {
+            if (!O.shouldKeep())
               Phi->setIncomingValueForBlock(Phi->getIncomingBlock(Op), Reduced);
           }
         }
