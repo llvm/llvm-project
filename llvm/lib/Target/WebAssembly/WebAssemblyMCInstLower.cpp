@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyMCInstLower.h"
+#include "MCTargetDesc/WebAssemblyMCExpr.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
@@ -91,32 +92,32 @@ MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
 
 MCOperand WebAssemblyMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
                                                      MCSymbol *Sym) const {
-  MCSymbolRefExpr::VariantKind Kind = MCSymbolRefExpr::VK_None;
+  auto Spec = WebAssemblyMCExpr::VK_None;
   unsigned TargetFlags = MO.getTargetFlags();
 
   switch (TargetFlags) {
     case WebAssemblyII::MO_NO_FLAG:
       break;
     case WebAssemblyII::MO_GOT_TLS:
-      Kind = MCSymbolRefExpr::VK_WASM_GOT_TLS;
+      Spec = WebAssemblyMCExpr::VK_GOT_TLS;
       break;
     case WebAssemblyII::MO_GOT:
-      Kind = MCSymbolRefExpr::VK_GOT;
+      Spec = WebAssemblyMCExpr::VK_GOT;
       break;
     case WebAssemblyII::MO_MEMORY_BASE_REL:
-      Kind = MCSymbolRefExpr::VK_WASM_MBREL;
+      Spec = WebAssemblyMCExpr::VK_MBREL;
       break;
     case WebAssemblyII::MO_TLS_BASE_REL:
-      Kind = MCSymbolRefExpr::VK_WASM_TLSREL;
+      Spec = WebAssemblyMCExpr::VK_TLSREL;
       break;
     case WebAssemblyII::MO_TABLE_BASE_REL:
-      Kind = MCSymbolRefExpr::VK_WASM_TBREL;
+      Spec = WebAssemblyMCExpr::VK_TBREL;
       break;
     default:
       llvm_unreachable("Unknown target flag on GV operand");
   }
 
-  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Kind, Ctx);
+  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Spec, Ctx);
 
   if (MO.getOffset() != 0) {
     const auto *WasmSym = cast<MCSymbolWasm>(Sym);
@@ -149,7 +150,7 @@ MCOperand WebAssemblyMCInstLower::lowerTypeIndexOperand(
   WasmSym->setSignature(Signature);
   WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
   const MCExpr *Expr =
-      MCSymbolRefExpr::create(WasmSym, MCSymbolRefExpr::VK_WASM_TYPEINDEX, Ctx);
+      MCSymbolRefExpr::create(WasmSym, WebAssemblyMCExpr::VK_TYPEINDEX, Ctx);
   return MCOperand::createExpr(Expr);
 }
 

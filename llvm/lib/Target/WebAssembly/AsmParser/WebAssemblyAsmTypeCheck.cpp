@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AsmParser/WebAssemblyAsmTypeCheck.h"
+#include "MCTargetDesc/WebAssemblyMCExpr.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
@@ -264,9 +265,9 @@ bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc,
     break;
   case wasm::WASM_SYMBOL_TYPE_FUNCTION:
   case wasm::WASM_SYMBOL_TYPE_DATA:
-    switch (SymRef->getKind()) {
-    case MCSymbolRefExpr::VK_GOT:
-    case MCSymbolRefExpr::VK_WASM_GOT_TLS:
+    switch (getSpecifier(SymRef)) {
+    case WebAssemblyMCExpr::VK_GOT:
+    case WebAssemblyMCExpr::VK_GOT_TLS:
       Type = Is64 ? wasm::ValType::I64 : wasm::ValType::I32;
       return false;
     default:
