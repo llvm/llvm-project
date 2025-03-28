@@ -76,6 +76,7 @@ void ConstructReusableObjectsOnceCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       varDecl(unless(hasGlobalStorage()), hasInitializer(ConstructorCall),
+              hasType(isConstQualified()),
               hasAncestor(functionDecl(unless(hasAnyName(IgnoredFunctions)))
                               .bind("function")))
           .bind("var"),
