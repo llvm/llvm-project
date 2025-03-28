@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=52
+! RUN: %python %S/../test_errors.py %s %flang %openmp_flags -fopenmp-version=52
 ! OpenMP Version 5.2
 ! 14.1 Interop construct
 ! To check various semantic errors for inteorp construct.
