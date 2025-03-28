@@ -57,10 +57,9 @@ struct MissingIncludeInfo {
 IncludeCleanerCheck::IncludeCleanerCheck(StringRef Name,
                                          ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreHeaders(utils::options::parseStringList(
-          Options.getLocalOrGlobal("IgnoreHeaders", ""))),
-      DeduplicateFindings(
-          Options.getLocalOrGlobal("DeduplicateFindings", true)) {
+      IgnoreHeaders(
+          utils::options::parseStringList(Options.get("IgnoreHeaders", ""))),
+      DeduplicateFindings(Options.get("DeduplicateFindings", true)) {
   for (const auto &Header : IgnoreHeaders) {
     if (!llvm::Regex{Header}.isValid())
       configurationDiag("Invalid ignore headers regex '%0'") << Header;

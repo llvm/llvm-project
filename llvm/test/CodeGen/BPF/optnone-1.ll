@@ -1,4 +1,4 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -mtriple=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
 ; Source Code:
 ;   int test(int a, int b) { return a + b; }
 ; Compilation flag:

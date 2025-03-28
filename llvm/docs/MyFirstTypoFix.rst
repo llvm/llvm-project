@@ -378,7 +378,7 @@ your branch with more commits and push to your GitHub fork of ``llvm-project``.
 It is best if you answer comments from the reviewer directly instead of expecting
 them to read through all the changes again.
 
-For example you might comment "I have done this." or "I was able to this part
+For example you might comment "I have done this." or "I was able to do this part
 but have a question about...".
 
 Review expectations

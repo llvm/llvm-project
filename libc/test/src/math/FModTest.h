@@ -54,7 +54,7 @@ public:
 
     // fmod (+inf, y) == aNaN plus invalid exception.
     TEST_SPECIAL(inf, 3.0, aNaN, true, FE_INVALID);
-    TEST_SPECIAL(inf, -1.1L, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(inf, static_cast<float>(-1.1L), aNaN, true, FE_INVALID);
     TEST_SPECIAL(inf, 0.0, aNaN, true, FE_INVALID);
     TEST_SPECIAL(inf, neg_zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(inf, min_denormal, aNaN, true, FE_INVALID);
@@ -65,7 +65,7 @@ public:
 
     // fmod (-inf, y) == aNaN plus invalid exception.
     TEST_SPECIAL(neg_inf, 3.0, aNaN, true, FE_INVALID);
-    TEST_SPECIAL(neg_inf, -1.1L, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(neg_inf, static_cast<float>(-1.1L), aNaN, true, FE_INVALID);
     TEST_SPECIAL(neg_inf, 0.0, aNaN, true, FE_INVALID);
     TEST_SPECIAL(neg_inf, neg_zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(neg_inf, min_denormal, aNaN, true, FE_INVALID);
@@ -76,7 +76,7 @@ public:
 
     // fmod (x, +0) == aNaN plus invalid exception.
     TEST_SPECIAL(3.0, 0.0, aNaN, true, FE_INVALID);
-    TEST_SPECIAL(-1.1L, 0.0, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(static_cast<float>(-1.1L), 0.0, aNaN, true, FE_INVALID);
     TEST_SPECIAL(0.0, 0.0, aNaN, true, FE_INVALID);
     TEST_SPECIAL(neg_zero, 0.0, aNaN, true, FE_INVALID);
     TEST_SPECIAL(min_denormal, 0.0, aNaN, true, FE_INVALID);
@@ -85,7 +85,7 @@ public:
 
     // fmod (x, -0) == aNaN plus invalid exception.
     TEST_SPECIAL(3.0, neg_zero, aNaN, true, FE_INVALID);
-    TEST_SPECIAL(-1.1L, neg_zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(static_cast<float>(-1.1L), neg_zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(0.0, neg_zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(neg_zero, neg_zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(min_denormal, neg_zero, aNaN, true, FE_INVALID);

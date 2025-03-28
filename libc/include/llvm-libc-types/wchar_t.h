@@ -9,6 +9,11 @@
 #ifndef LLVM_LIBC_TYPES_WCHAR_T_H
 #define LLVM_LIBC_TYPES_WCHAR_T_H
 
+// wchar_t is a fundamental type in C++.
+#ifndef __cplusplus
+
 typedef __WCHAR_TYPE__ wchar_t;
+
+#endif
 
 #endif // LLVM_LIBC_TYPES_WCHAR_T_H

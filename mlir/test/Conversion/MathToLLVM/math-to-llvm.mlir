@@ -161,11 +161,33 @@ func.func @rsqrt(%arg0 : f32) {
 
 // -----
 
-// CHECK-LABEL: func @sine(
-// CHECK-SAME: f32
-func.func @sine(%arg0 : f32) {
-  // CHECK: llvm.intr.sin(%arg0) : (f32) -> f32
+// CHECK-LABEL: func @trigonometrics
+// CHECK-SAME: [[ARG0:%.+]]: f32
+func.func @trigonometrics(%arg0: f32) {
+  // CHECK: llvm.intr.sin([[ARG0]]) : (f32) -> f32
   %0 = math.sin %arg0 : f32
+
+  // CHECK: llvm.intr.cos([[ARG0]]) : (f32) -> f32
+  %1 = math.cos %arg0 : f32
+
+  // CHECK: llvm.intr.tan([[ARG0]]) : (f32) -> f32
+  %2 = math.tan %arg0 : f32
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @hyperbolics
+// CHECK-SAME: [[ARG0:%.+]]: f32
+func.func @hyperbolics(%arg0: f32) {
+  // CHECK: llvm.intr.sinh([[ARG0]]) : (f32) -> f32
+  %0 = math.sinh %arg0 : f32
+
+  // CHECK: llvm.intr.cosh([[ARG0]]) : (f32) -> f32
+  %1 = math.cosh %arg0 : f32
+
+  // CHECK: llvm.intr.tanh([[ARG0]]) : (f32) -> f32
+  %2 = math.tanh %arg0 : f32
   func.return
 }
 
@@ -237,6 +259,26 @@ func.func @ctpop_scalable_vector(%arg0 : vector<[4]xi32>) -> vector<[4]xi32> {
   // CHECK: llvm.intr.ctpop(%[[VEC]]) : (vector<[4]xi32>) -> vector<[4]xi32>
   %0 = math.ctpop %arg0 : vector<[4]xi32>
   func.return %0 : vector<[4]xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @isnan_double(
+// CHECK-SAME: f64
+func.func @isnan_double(%arg0 : f64) {
+  // CHECK: "llvm.intr.is.fpclass"(%arg0) <{bit = 3 : i32}> : (f64) -> i1
+  %0 = math.isnan %arg0 : f64
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @isfinite_double(
+// CHECK-SAME: f64
+func.func @isfinite_double(%arg0 : f64) {
+  // CHECK: "llvm.intr.is.fpclass"(%arg0) <{bit = 504 : i32}> : (f64) -> i1
+  %0 = math.isfinite %arg0 : f64
+  func.return
 }
 
 // -----

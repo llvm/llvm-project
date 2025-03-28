@@ -26,11 +26,8 @@
 
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
-#include "NVPTXUtilities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
 
@@ -93,14 +90,16 @@ bool NVPTXLowerAlloca::runOnFunction(Function &F) {
         // addrspacecast to ADDRESS_SPACE_GENERIC.
         if (AllocAddrSpace == ADDRESS_SPACE_GENERIC) {
           auto ASCastToLocalAS = new AddrSpaceCastInst(
-              allocaInst, PointerType::get(ETy, ADDRESS_SPACE_LOCAL), "");
-          ASCastToLocalAS->insertAfter(allocaInst);
+              allocaInst,
+              PointerType::get(ETy->getContext(), ADDRESS_SPACE_LOCAL), "");
+          ASCastToLocalAS->insertAfter(allocaInst->getIterator());
           AllocaInLocalAS = ASCastToLocalAS;
         }
 
         auto AllocaInGenericAS = new AddrSpaceCastInst(
-            AllocaInLocalAS, PointerType::get(ETy, ADDRESS_SPACE_GENERIC), "");
-        AllocaInGenericAS->insertAfter(AllocaInLocalAS);
+            AllocaInLocalAS,
+            PointerType::get(ETy->getContext(), ADDRESS_SPACE_GENERIC), "");
+        AllocaInGenericAS->insertAfter(AllocaInLocalAS->getIterator());
 
         for (Use &AllocaUse : llvm::make_early_inc_range(allocaInst->uses())) {
           // Check Load, Store, GEP, and BitCast Uses on alloca and make them

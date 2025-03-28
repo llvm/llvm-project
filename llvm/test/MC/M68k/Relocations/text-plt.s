@@ -1,6 +1,6 @@
-; RUN: llvm-mc -triple m68k -filetype=obj %s -o - \
+; RUN: llvm-mc -triple m68k --mcpu=M68020 -filetype=obj %s -o - \
 ; RUN:   | llvm-readobj -r - | FileCheck -check-prefix=RELOC %s
-; RUN: llvm-mc -triple m68k -show-encoding %s -o - \
+; RUN: llvm-mc -triple m68k --mcpu=M68020 -show-encoding %s -o - \
 ; RUN:   | FileCheck -check-prefix=INSTR -check-prefix=FIXUP %s
 
 ; RELOC: R_68K_PLT16 target 0x0

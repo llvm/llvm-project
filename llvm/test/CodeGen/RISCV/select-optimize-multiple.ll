@@ -70,10 +70,10 @@ define i128 @cmovcc128(i64 signext %a, i128 %b, i128 %c) nounwind {
 ; RV32I-NEXT:    addi a3, a3, 12
 ; RV32I-NEXT:  .LBB1_10: # %entry
 ; RV32I-NEXT:    lw a1, 0(a3)
-; RV32I-NEXT:    sw a1, 12(a0)
-; RV32I-NEXT:    sw a6, 8(a0)
-; RV32I-NEXT:    sw a5, 4(a0)
 ; RV32I-NEXT:    sw a2, 0(a0)
+; RV32I-NEXT:    sw a5, 4(a0)
+; RV32I-NEXT:    sw a6, 8(a0)
+; RV32I-NEXT:    sw a1, 12(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: cmovcc128:
@@ -153,10 +153,10 @@ define i128 @cmov128(i1 %a, i128 %b, i128 %c) nounwind {
 ; RV32I-NEXT:    addi a2, a2, 12
 ; RV32I-NEXT:  .LBB3_10: # %entry
 ; RV32I-NEXT:    lw a1, 0(a2)
-; RV32I-NEXT:    sw a1, 12(a0)
-; RV32I-NEXT:    sw a6, 8(a0)
-; RV32I-NEXT:    sw a5, 4(a0)
 ; RV32I-NEXT:    sw a4, 0(a0)
+; RV32I-NEXT:    sw a5, 4(a0)
+; RV32I-NEXT:    sw a6, 8(a0)
+; RV32I-NEXT:    sw a1, 12(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: cmov128:
@@ -221,8 +221,8 @@ define double @cmovdouble(i1 %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    sw a3, 8(sp)
 ; RV32I-NEXT:    sw a4, 12(sp)
 ; RV32I-NEXT:    fld fa5, 8(sp)
-; RV32I-NEXT:    sw a1, 8(sp)
 ; RV32I-NEXT:    andi a0, a0, 1
+; RV32I-NEXT:    sw a1, 8(sp)
 ; RV32I-NEXT:    sw a2, 12(sp)
 ; RV32I-NEXT:    beqz a0, .LBB5_2
 ; RV32I-NEXT:  # %bb.1:

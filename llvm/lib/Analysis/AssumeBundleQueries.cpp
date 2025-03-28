@@ -85,13 +85,14 @@ void llvm::fillMapFromAssume(AssumeInst &Assume, RetainedKnowledgeMap &Result) {
     if (!CI)
       continue;
     uint64_t Val = CI->getZExtValue();
-    auto Lookup = Result.find(Key);
-    if (Lookup == Result.end() || !Lookup->second.count(&Assume)) {
-      Result[Key][&Assume] = {Val, Val};
+    auto [It, Inserted] = Result[Key].try_emplace(&Assume);
+    if (Inserted) {
+      It->second = {Val, Val};
       continue;
     }
-    Lookup->second[&Assume].Min = std::min(Val, Lookup->second[&Assume].Min);
-    Lookup->second[&Assume].Max = std::max(Val, Lookup->second[&Assume].Max);
+    auto &MinMax = It->second;
+    MinMax.Min = std::min(Val, MinMax.Min);
+    MinMax.Max = std::max(Val, MinMax.Max);
   }
 }
 

@@ -69,6 +69,7 @@ source_set("sources") {
     "tsd.h",
     "tsd_exclusive.h",
     "tsd_shared.h",
+    "type_traits.h",
     "vector.h",
     "wrappers_c.h",
     "wrappers_c_checks.h",

@@ -17,6 +17,11 @@ module Fields {
   export *
 }
 
+module Lifetimebound {
+  header "Lifetimebound.h"
+  export *
+}
+
 module HeaderLib {
   header "HeaderLib.h"
 }
@@ -51,4 +56,8 @@ module Templates {
 
 module SwiftImportAs {
   header "SwiftImportAs.h"
+}
+
+module SwiftReturnOwnershipForObjC {
+  header "SwiftReturnOwnershipForObjC.h"
 }

@@ -41,7 +41,7 @@ define void @foo(double %i) {
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[OP_RDX]], i32 [[TMP31]], i32 32000
 ; CHECK-NEXT:    [[I163:%.*]] = fcmp ogt double [[I118]], 0.000000e+00
 ; CHECK-NEXT:    [[I164:%.*]] = icmp slt i32 0, [[OP_RDX1]]
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    ret void
 ; CHECK:       bb58:
 ; CHECK-NEXT:    ret void
 ;
@@ -134,7 +134,7 @@ bb115:
   %i159 = select i1 %i158, i32 %i157, i32 %i152
   %i163 = fcmp ogt double %i118, 0.000000e+00
   %i164 = icmp slt i32 0, %i159
-  unreachable
+  ret void
 
 bb58:
   ret void

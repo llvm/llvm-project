@@ -4,7 +4,7 @@
 @bar = external global [4 x [4 x i32]], align 4
 @dct_luma = external global [4 x [4 x i32]], align 4
 
-define void @foo() local_unnamed_addr {
+define void @foo() {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD277:%.*]] = add nsw i32 undef, undef
@@ -16,9 +16,9 @@ define void @foo() local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> [[TMP2]], <2 x i32> [[TMP1]], i64 2)
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> <i32 undef, i32 poison, i32 undef, i32 undef>, i32 [[ADD277]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr <4 x i32> [[TMP5]], <i32 6, i32 6, i32 6, i32 6>
+; CHECK-NEXT:    [[TMP6:%.*]] = ashr <4 x i32> [[TMP5]], splat (i32 6)
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[ARRAYIDX372]], align 4
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    ret void
 ;
 entry:
   %add277 = add nsw i32 undef, undef
@@ -42,5 +42,5 @@ entry:
   %shr.i.3 = ashr i32 %sub355.3, 6
   %arrayidx372.3 = getelementptr inbounds [4 x [4 x i32]], ptr @dct_luma, i64 0, i64 3, i64 3
   store i32 %shr.i.3, ptr %arrayidx372.3, align 4
-  unreachable
+  ret void
 }

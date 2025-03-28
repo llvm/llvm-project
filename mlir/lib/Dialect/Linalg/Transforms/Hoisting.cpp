@@ -199,7 +199,8 @@ static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
   return true;
 }
 
-void mlir::linalg::hoistRedundantVectorTransfers(Operation *root) {
+void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
+                                                 bool verifyNonZeroTrip) {
   bool changed = true;
   while (changed) {
     changed = false;
@@ -207,6 +208,43 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root) {
     // done before as we cannot move ops without interrupting the function walk.
     root->walk(
         [&](LoopLikeOpInterface loopLike) { moveLoopInvariantCode(loopLike); });
+
+    // Find all loops that are certain to have non zero trip count. Any loops
+    // that are not part of this set cannot be hoisted from, since hoisting from
+    // a potentially zero trip count loop may cause a vector transfer to be
+    // executed when it shouldn't be.
+    llvm::DenseSet<LoopLikeOpInterface> definiteNonZeroTripCountLoops;
+    if (verifyNonZeroTrip) {
+      root->walk([&](LoopLikeOpInterface loopLike) {
+        std::optional<SmallVector<OpFoldResult>> lbs =
+            loopLike.getLoopLowerBounds();
+        std::optional<SmallVector<OpFoldResult>> ubs =
+            loopLike.getLoopUpperBounds();
+        // If loop bounds cannot be found, assume possibly zero trip count.
+        if (!lbs || !ubs)
+          return;
+
+        // Otherwise, use ValueBounds to find the maximum lower bound and
+        // minimum upper bound. If the bounds are found, and maxLb is less
+        // than the minUb, then the loop will not have zero trip count.
+        for (auto [lb, ub] : llvm::zip_equal(lbs.value(), ubs.value())) {
+          FailureOr<int64_t> maxLb =
+              ValueBoundsConstraintSet::computeConstantBound(
+                  presburger::BoundType::UB, lb,
+                  /*stopCondition=*/nullptr, /*closedUB=*/true);
+          if (failed(maxLb))
+            return;
+          FailureOr<int64_t> minUb =
+              ValueBoundsConstraintSet::computeConstantBound(
+                  presburger::BoundType::LB, ub);
+          if (failed(minUb))
+            return;
+          if (minUb.value() <= maxLb.value())
+            return;
+          definiteNonZeroTripCountLoops.insert(loopLike);
+        }
+      });
+    }
 
     root->walk([&](vector::TransferReadOp transferRead) {
       if (!isa<MemRefType>(transferRead.getShapedType()))
@@ -219,6 +257,12 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root) {
                         << "\n");
       if (!isa_and_nonnull<scf::ForOp, affine::AffineForOp>(loop))
         return WalkResult::advance();
+
+      if (verifyNonZeroTrip && !definiteNonZeroTripCountLoops.contains(loop)) {
+        LLVM_DEBUG(DBGS() << "Loop may have zero trip count: " << *loop
+                          << "\n");
+        return WalkResult::advance();
+      }
 
       LLVM_DEBUG(DBGS() << "Candidate read: " << *transferRead.getOperation()
                         << "\n");

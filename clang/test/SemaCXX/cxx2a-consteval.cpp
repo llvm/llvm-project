@@ -158,17 +158,17 @@ int i3 = f1(f1(f1(&f1, &f1), f1(&f1, &f1), f1(f1(&f1, &f1), &f1)));
 
 namespace user_defined_literal {
 
-consteval int operator"" _test(unsigned long long i) {
+consteval int operator""_test(unsigned long long i) {
 // expected-note@-1+ {{declared here}}
   return 0;
 }
 
 int i = 0_test;
 
-auto ptr = &operator"" _test;
+auto ptr = &operator""_test;
 // expected-error@-1 {{take address}}
 
-consteval auto operator"" _test1(unsigned long long i) {
+consteval auto operator""_test1(unsigned long long i) {
   return &f_eval;
 }
 

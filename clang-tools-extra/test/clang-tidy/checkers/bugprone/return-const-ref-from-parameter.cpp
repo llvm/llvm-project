@@ -27,6 +27,10 @@ int const &f3(TConstRef a) { return a; }
 int const &f4(TConst &a) { return a; }
 // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: returning a constant reference parameter
 
+int const &f5(TConst &a) { return true ? a : a; }
+// CHECK-MESSAGES: :[[@LINE-1]]:42: warning: returning a constant reference parameter
+// CHECK-MESSAGES: :[[@LINE-2]]:46: warning: returning a constant reference parameter
+
 template <typename T>
 const T& tf1(const T &a) { return a; }
 // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: returning a constant reference parameter
@@ -47,6 +51,11 @@ template <typename T>
 const T& itf4(typename ConstRef<T>::type a) { return a; }
 // CHECK-MESSAGES: :[[@LINE-1]]:54: warning: returning a constant reference parameter
 
+template <typename T>
+const T& itf5(const T &a) { return true ? a : a; }
+// CHECK-MESSAGES: :[[@LINE-1]]:43: warning: returning a constant reference parameter
+// CHECK-MESSAGES: :[[@LINE-2]]:47: warning: returning a constant reference parameter
+
 void instantiate(const int &param, const float &paramf, int &mut_param, float &mut_paramf) {
         itf1(0);
         itf1(param);
@@ -66,6 +75,9 @@ struct C {
     const C& foo(const C&c) { return c; }
 // CHECK-MESSAGES: :[[@LINE-1]]:38: warning: returning a constant reference parameter
 };
+
+const auto Lf1 = [](const T& t) -> const T& { return t; };
+// CHECK-MESSAGES: :[[@LINE-1]]:54: warning: returning a constant reference parameter
 
 } // namespace invalid
 
@@ -142,6 +154,14 @@ void instantiate(const int &param, const float &paramf, int &mut_param, float &m
         itf6(mut_paramf);
 }
 
+template<class T>
+void f(const T& t) {
+    const auto get = [&t] -> const T& { return t; };
+    return T{};
+}
+
+const auto Lf1 = [](T& t) -> const T& { return t; };
+
 } // namespace valid
 
 namespace overload {
@@ -177,3 +197,32 @@ int const &overload_params_difference3(int p1, int const &a, int p2) { return a;
 int const &overload_params_difference3(int p1, long &&a, int p2);
 
 } // namespace overload
+
+namespace gh117696 {
+namespace use_lifetime_bound_attr {
+int const &f(int const &a [[clang::lifetimebound]]) { return a; }
+} // namespace use_lifetime_bound_attr
+} // namespace gh117696
+
+
+namespace lambda {
+using T = const int &;
+using K = const float &;
+T inner_valid_lambda(T a) {
+  [&]() -> T { return a; };
+  return a;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: returning a constant reference parameter
+}
+T inner_invalid_lambda(T a) {
+  [&](T a) -> T { return a; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: returning a constant reference parameter
+  return a;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: returning a constant reference parameter
+}
+T inner_invalid_lambda2(T a) {
+  [&](K a) -> K { return a; };
+  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: returning a constant reference parameter
+  return a;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: returning a constant reference parameter
+}
+} // namespace lambda

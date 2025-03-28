@@ -14,6 +14,7 @@
 #define MLIR_TARGET_SPIRV_SERIALIZATION_H
 
 #include "mlir/Support/LLVM.h"
+#include <cstdint>
 
 namespace mlir {
 class MLIRContext;

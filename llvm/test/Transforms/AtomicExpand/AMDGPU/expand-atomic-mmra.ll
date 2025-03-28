@@ -126,12 +126,12 @@ define i16 @test_cmpxchg_i16_global_agent_align4(ptr addrspace(1) %out, i16 %in,
 
 define void @syncscope_workgroup_nortn(ptr %addr, float %val) {
 ; GFX90A-LABEL: define void @syncscope_workgroup_nortn(
-; GFX90A-SAME: ptr [[ADDR:%.*]], float [[VAL:%.*]]) #[[ATTR1:[0-9]+]] {
+; GFX90A-SAME: ptr [[ADDR:%.*]], float [[VAL:%.*]]) #[[ATTR0]] {
 ; GFX90A-NEXT:    [[IS_SHARED:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[ADDR]])
 ; GFX90A-NEXT:    br i1 [[IS_SHARED]], label [[ATOMICRMW_SHARED:%.*]], label [[ATOMICRMW_CHECK_PRIVATE:%.*]]
 ; GFX90A:       atomicrmw.shared:
 ; GFX90A-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(3)
-; GFX90A-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP1]], float [[VAL]] syncscope("workgroup") seq_cst, align 4, !mmra [[META0]]
+; GFX90A-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(3) [[TMP1]], float [[VAL]] syncscope("workgroup") seq_cst, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.memory [[META3:![0-9]+]], !amdgpu.ignore.denormal.mode [[META3]]
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
 ; GFX90A:       atomicrmw.check.private:
 ; GFX90A-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[ADDR]])
@@ -144,7 +144,7 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) {
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX90A:       atomicrmw.global:
 ; GFX90A-NEXT:    [[TMP4:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(1)
-; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP4]], float [[VAL]] syncscope("workgroup") seq_cst, align 4, !mmra [[META0]]
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP4]], float [[VAL]] syncscope("workgroup") seq_cst, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.ignore.denormal.mode [[META3]]
 ; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
 ; GFX90A:       atomicrmw.phi:
 ; GFX90A-NEXT:    br label [[ATOMICRMW_END:%.*]]
@@ -152,8 +152,8 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) {
 ; GFX90A-NEXT:    ret void
 ;
 ; GFX1100-LABEL: define void @syncscope_workgroup_nortn(
-; GFX1100-SAME: ptr [[ADDR:%.*]], float [[VAL:%.*]]) #[[ATTR1:[0-9]+]] {
-; GFX1100-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[ADDR]], float [[VAL]] syncscope("workgroup") seq_cst, align 4, !mmra [[META0]]
+; GFX1100-SAME: ptr [[ADDR:%.*]], float [[VAL:%.*]]) #[[ATTR0]] {
+; GFX1100-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[ADDR]], float [[VAL]] syncscope("workgroup") seq_cst, align 4, !mmra [[META0]], !amdgpu.no.fine.grained.memory [[META3:![0-9]+]], !amdgpu.ignore.denormal.mode [[META3]]
 ; GFX1100-NEXT:    ret void
 ;
   %res = atomicrmw fadd ptr %addr, float %val syncscope("workgroup") seq_cst, !mmra !2, !amdgpu.no.fine.grained.memory !3, !amdgpu.ignore.denormal.mode !3
@@ -193,8 +193,10 @@ define i32 @atomic_load_global_align1(ptr addrspace(1) %ptr) {
 ; GFX90A: [[META0]] = !{[[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; GFX90A: [[META1]] = !{!"foo", !"bar"}
 ; GFX90A: [[META2]] = !{!"bux", !"baz"}
+; GFX90A: [[META3]] = !{}
 ;.
 ; GFX1100: [[META0]] = !{[[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; GFX1100: [[META1]] = !{!"foo", !"bar"}
 ; GFX1100: [[META2]] = !{!"bux", !"baz"}
+; GFX1100: [[META3]] = !{}
 ;.

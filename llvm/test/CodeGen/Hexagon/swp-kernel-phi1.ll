@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner-opt-size -hexagon-initial-cfg-cleanup=0 < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -mtriple=hexagon -enable-pipeliner-opt-size -hexagon-initial-cfg-cleanup=0 < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; Test that we generate the correct names for the phis in the kernel for the
 ; incoming values. In this case, the loop contains a phi and has another phi

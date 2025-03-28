@@ -57,7 +57,7 @@ module attributes {transform.with_named_sequence} {
     // Pad linalg.matmul.
     %padded, %pad, %copy_back = transform.structured.pad %tiled_linalg_op
         {padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
-         padding_dimensions=[0, 1, 2], pack_paddings=[1, 1, 1],
+         padding_dimensions=[0, 1, 2], nofold_flags=[1, 1, 1],
          copy_back_op = "linalg.copy"}
         : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
@@ -176,7 +176,7 @@ module attributes {transform.with_named_sequence} {
     // Pad linalg.matmul.
     %padded, %pad, %copy_back = transform.structured.pad %tiled_linalg_op
         {padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
-         padding_dimensions=[0, 1, 2], pack_paddings=[1, 1, 1],
+         padding_dimensions=[0, 1, 2], nofold_flags=[1, 1, 1],
          copy_back_op = "linalg.copy"}
         : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 

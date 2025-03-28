@@ -14,12 +14,12 @@
 #include "rtsan/rtsan_flags.h"
 #include "rtsan/rtsan_interceptors.h"
 #include "rtsan/rtsan_stats.h"
+#include "rtsan/rtsan_suppressions.h"
 
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
-#include "sanitizer_common/sanitizer_stacktrace.h"
 
 using namespace __rtsan;
 using namespace __sanitizer;
@@ -46,38 +46,33 @@ static InitializationState GetInitializationState() {
       atomic_load(&rtsan_initialized, memory_order_acquire));
 }
 
-static auto OnViolationAction(DiagnosticsInfo info) {
-  return [info]() {
-    IncrementTotalErrorCount();
+static void OnViolation(const BufferedStackTrace &stack,
+                        const DiagnosticsInfo &info) {
+  IncrementTotalErrorCount();
 
-    BufferedStackTrace stack;
+  // If in the future we interop with other sanitizers, we will
+  // need to make our own stackdepot
+  StackDepotHandle handle = StackDepotPut_WithHandle(stack);
 
-    // We use the unwind_on_fatal flag here because of precedent with other
-    // sanitizers, this action is not necessarily fatal if halt_on_error=false
-    stack.Unwind(info.pc, info.bp, nullptr,
-                 common_flags()->fast_unwind_on_fatal);
+  const bool is_stack_novel = handle.use_count() == 0;
+  if (is_stack_novel || !flags().suppress_equal_stacks) {
+    IncrementUniqueErrorCount();
 
-    // If in the future we interop with other sanitizers, we will
-    // need to make our own stackdepot
-    StackDepotHandle handle = StackDepotPut_WithHandle(stack);
-
-    const bool is_stack_novel = handle.use_count() == 0;
-
-    // Marked UNLIKELY as if user is runing with halt_on_error=false
-    // we expect a high number of duplicate stacks. We are willing
-    // To pay for the first insertion.
-    if (UNLIKELY(is_stack_novel)) {
-      IncrementUniqueErrorCount();
-
+    {
+      ScopedErrorReportLock l;
       PrintDiagnostics(info);
       stack.Print();
-
-      handle.inc_use_count_unsafe();
+      PrintErrorSummary(info, stack);
     }
 
-    if (flags().halt_on_error)
-      Die();
-  };
+    handle.inc_use_count_unsafe();
+  }
+
+  if (flags().halt_on_error) {
+    if (flags().print_stats_on_exit)
+      PrintStatisticsSummary();
+    Die();
+  }
 }
 
 extern "C" {
@@ -88,7 +83,12 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_init() {
 
   SanitizerToolName = "RealtimeSanitizer";
   InitializeFlags();
+
+  InitializePlatformEarly();
+
   InitializeInterceptors();
+
+  InitializeSuppressions();
 
   if (flags().print_stats_on_exit)
     Atexit(PrintStatisticsSummary);
@@ -138,8 +138,8 @@ __rtsan_notify_intercepted_call(const char *func_name) {
   __rtsan_ensure_initialized();
   GET_CALLER_PC_BP;
   ExpectNotRealtime(GetContextForThisThread(),
-                    OnViolationAction({DiagnosticsInfoType::InterceptedCall,
-                                       func_name, pc, bp}));
+                    {DiagnosticsInfoType::InterceptedCall, func_name, pc, bp},
+                    OnViolation);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void
@@ -147,8 +147,8 @@ __rtsan_notify_blocking_call(const char *func_name) {
   __rtsan_ensure_initialized();
   GET_CALLER_PC_BP;
   ExpectNotRealtime(GetContextForThisThread(),
-                    OnViolationAction({DiagnosticsInfoType::BlockingCall,
-                                       func_name, pc, bp}));
+                    {DiagnosticsInfoType::BlockingCall, func_name, pc, bp},
+                    OnViolation);
 }
 
 } // extern "C"

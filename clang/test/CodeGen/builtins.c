@@ -69,6 +69,13 @@ int main(void) {
   P(issignaling, (1.));
   P(isfpclass, (1., 1));
 
+  Q(fmaximum_num, (1.0, 2.0));
+  Q(fmaximum_numf, (1.0, 2.0));
+  Q(fmaximum_numl, (1.0, 2.0));
+  Q(fminimum_num, (1.0, 2.0));
+  Q(fminimum_numf, (1.0, 2.0));
+  Q(fminimum_numl, (1.0, 2.0));
+
   // Bitwise & Numeric Functions
 
   P(abs, (N));
@@ -305,7 +312,7 @@ void test_float_builtins(__fp16 *H, float F, double D, long double LD) {
 }
 
 // CHECK-LABEL: define{{.*}} void @test_float_builtin_ops
-void test_float_builtin_ops(float F, double D, long double LD) {
+void test_float_builtin_ops(float F, double D, long double LD, int I) {
   volatile float resf;
   volatile double resd;
   volatile long double resld;
@@ -352,6 +359,58 @@ void test_float_builtin_ops(float F, double D, long double LD) {
 
   resld = __builtin_fmaxl(LD, LD);
   // CHECK: call x86_fp80 @llvm.maxnum.f80
+
+  resf = __builtin_fminimum_numf(F, F);
+  // CHECK: call float @llvm.minimumnum.f32
+
+  resf = __builtin_fminimum_numf(I, I);
+  // CHECK: sitofp i32 {{%[0-9]+}} to float
+  // CHECK: sitofp i32 {{%[0-9]+}} to float
+  // CHECK: call float @llvm.minimumnum.f32
+
+  resf = __builtin_fminimum_numf(1.0, 2.0);
+  // CHECK: store volatile float 1.000000e+00, ptr %resf
+
+  resd = __builtin_fminimum_num(D, D);
+  // CHECK: call double @llvm.minimumnum.f64
+
+  resd = __builtin_fminimum_num(I, I);
+  // CHECK: sitofp i32 {{%[0-9]+}} to double
+  // CHECK: sitofp i32 {{%[0-9]+}} to double
+  // CHECK: call double @llvm.minimumnum.f64
+
+  resd = __builtin_fminimum_num(1.0, 2.0);
+  // CHECK: store volatile double 1.000000e+00, ptr %resd
+
+  //FIXME: __builtin_fminimum_numl is not supported well yet.
+  resld = __builtin_fminimum_numl(1.0, 2.0);
+  // CHECK: store volatile x86_fp80 0xK3FFF8000000000000000, ptr %resld, align 16
+
+  resf = __builtin_fmaximum_numf(F, F);
+  // CHECK: call float @llvm.maximumnum.f32
+
+  resf = __builtin_fmaximum_numf(I, I);
+  // CHECK: sitofp i32 {{%[0-9]+}} to float
+  // CHECK: sitofp i32 {{%[0-9]+}} to float
+  // CHECK: call float @llvm.maximumnum.f32
+
+  resf = __builtin_fmaximum_numf(1.0, 2.0);
+  // CHECK: store volatile float 2.000000e+00, ptr %resf
+
+  resd = __builtin_fmaximum_num(D, D);
+  // CHECK: call double @llvm.maximumnum.f64
+
+  resd = __builtin_fmaximum_num(I, I);
+  // CHECK: sitofp i32 {{%[0-9]+}} to double
+  // CHECK: sitofp i32 {{%[0-9]+}} to double
+  // CHECK: call double @llvm.maximumnum.f64
+
+  resd = __builtin_fmaximum_num(1.0, 2.0);
+  // CHECK: store volatile double 2.000000e+00, ptr %resd
+
+  //FIXME: __builtin_fmaximum_numl is not supported well yet.
+  resld = __builtin_fmaximum_numl(1.0, 2.0);
+  // CHECK: store volatile x86_fp80 0xK40008000000000000000, ptr %resld, align 16
 
   resf = __builtin_fabsf(F);
   // CHECK: call float @llvm.fabs.f32

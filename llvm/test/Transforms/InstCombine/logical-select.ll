@@ -350,7 +350,7 @@ define <2 x i64> @bitcast_select_multi_uses(<4 x i1> %cmp, <2 x i64> %a, <2 x i6
 ; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x i32> [[SEXT]] to <2 x i64>
 ; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i64> [[A:%.*]], [[BC1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[SEXT]] to <2 x i64>
-; CHECK-NEXT:    [[BC2:%.*]] = xor <2 x i64> [[TMP1]], <i64 -1, i64 -1>
+; CHECK-NEXT:    [[BC2:%.*]] = xor <2 x i64> [[TMP1]], splat (i64 -1)
 ; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i64> [[B:%.*]], [[BC2]]
 ; CHECK-NEXT:    [[OR:%.*]] = or <2 x i64> [[AND2]], [[AND1]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i64> [[AND2]], [[BC2]]
@@ -764,7 +764,7 @@ define <8 x i3> @bitcast_vec_cond_commute1(<3 x i1> noundef %cond, <8 x i3> %pc,
 ; CHECK-NEXT:    [[C:%.*]] = mul <8 x i3> [[PC:%.*]], [[PC]]
 ; CHECK-NEXT:    [[S:%.*]] = sext <3 x i1> [[COND:%.*]] to <3 x i8>
 ; CHECK-NEXT:    [[T9:%.*]] = bitcast <3 x i8> [[S]] to <8 x i3>
-; CHECK-NEXT:    [[NOTT9:%.*]] = xor <8 x i3> [[T9]], <i3 -1, i3 -1, i3 -1, i3 -1, i3 -1, i3 -1, i3 -1, i3 -1>
+; CHECK-NEXT:    [[NOTT9:%.*]] = xor <8 x i3> [[T9]], splat (i3 -1)
 ; CHECK-NEXT:    [[T11:%.*]] = and <8 x i3> [[C]], [[NOTT9]]
 ; CHECK-NEXT:    [[T12:%.*]] = and <8 x i3> [[D:%.*]], [[T9]]
 ; CHECK-NEXT:    [[R:%.*]] = or disjoint <8 x i3> [[T11]], [[T12]]
@@ -830,7 +830,7 @@ define <2 x i16> @bitcast_vec_cond_commute3(<4 x i8> %cond, <2 x i16> %pc, <2 x 
 define <2 x i64> @bitcast_fp_vec_cond(<2 x double> noundef %s, <2 x i64> %c, <2 x i64> %d) {
 ; CHECK-LABEL: @bitcast_fp_vec_cond(
 ; CHECK-NEXT:    [[T9:%.*]] = bitcast <2 x double> [[S:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[NOTT9:%.*]] = xor <2 x i64> [[T9]], <i64 -1, i64 -1>
+; CHECK-NEXT:    [[NOTT9:%.*]] = xor <2 x i64> [[T9]], splat (i64 -1)
 ; CHECK-NEXT:    [[T11:%.*]] = and <2 x i64> [[C:%.*]], [[NOTT9]]
 ; CHECK-NEXT:    [[T12:%.*]] = and <2 x i64> [[D:%.*]], [[T9]]
 ; CHECK-NEXT:    [[R:%.*]] = or disjoint <2 x i64> [[T11]], [[T12]]
@@ -850,7 +850,7 @@ define <2 x i64> @bitcast_int_vec_cond(i1 noundef %b, <2 x i64> %c, <2 x i64> %d
 ; CHECK-LABEL: @bitcast_int_vec_cond(
 ; CHECK-NEXT:    [[S:%.*]] = sext i1 [[B:%.*]] to i128
 ; CHECK-NEXT:    [[T9:%.*]] = bitcast i128 [[S]] to <2 x i64>
-; CHECK-NEXT:    [[NOTT9:%.*]] = xor <2 x i64> [[T9]], <i64 -1, i64 -1>
+; CHECK-NEXT:    [[NOTT9:%.*]] = xor <2 x i64> [[T9]], splat (i64 -1)
 ; CHECK-NEXT:    [[T11:%.*]] = and <2 x i64> [[C:%.*]], [[NOTT9]]
 ; CHECK-NEXT:    [[T12:%.*]] = and <2 x i64> [[D:%.*]], [[T9]]
 ; CHECK-NEXT:    [[R:%.*]] = or disjoint <2 x i64> [[T11]], [[T12]]
@@ -1043,7 +1043,7 @@ define i1 @not_d_bools_commute11(i1 %c, i1 %x, i1 %y) {
 
 define <2 x i1> @not_d_bools_vector(<2 x i1> %c, <2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @not_d_bools_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[Y:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[Y:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> [[X:%.*]], <2 x i1> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
@@ -1056,7 +1056,7 @@ define <2 x i1> @not_d_bools_vector(<2 x i1> %c, <2 x i1> %x, <2 x i1> %y) {
 
 define <2 x i1> @not_d_bools_vector_poison(<2 x i1> %c, <2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @not_d_bools_vector_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[Y:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[Y:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> [[X:%.*]], <2 x i1> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
@@ -1181,8 +1181,8 @@ define i1 @logical_and_or_with_common_not_op_variant3(i1 %a, i1 %b) {
 ; A & (~A | B) --> A & B
 define <2 x i1> @logical_and_or_with_common_not_op_variant4(<2 x i1> %a, <2 x i1> %b) {
 ; CHECK-LABEL: @logical_and_or_with_common_not_op_variant4(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
-; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[NOT]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[B:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], splat (i1 true)
+; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[NOT]], <2 x i1> splat (i1 true), <2 x i1> [[B:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[A]], <2 x i1> [[B]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    call void @use2(<2 x i1> [[A]])
 ; CHECK-NEXT:    call void @use2(<2 x i1> [[B]])
@@ -1244,7 +1244,7 @@ define i1 @logical_or_and_with_common_not_op_variant1(i1 %a, i1 %b) {
 ; A | (~A & B) --> A | B
 define <2 x i1> @logical_or_and_with_common_not_op_variant2(<2 x i1> %a, <2 x i1> %b) {
 ; CHECK-LABEL: @logical_or_and_with_common_not_op_variant2(
-; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[A:%.*]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[A:%.*]], <2 x i1> splat (i1 true), <2 x i1> [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %not = xor <2 x i1> %a, <i1 true, i1 true>
@@ -1272,9 +1272,9 @@ define i1 @logical_or_and_with_common_not_op_variant3(i1 %a, i1 %b) {
 ; A | (~A & B) --> A | B
 define <2 x i1> @logical_or_and_with_common_not_op_variant4(<2 x i1> %a, <2 x i1> %b) {
 ; CHECK-LABEL: @logical_or_and_with_common_not_op_variant4(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[NOT]], <2 x i1> [[B:%.*]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[A]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[B]]
+; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[A]], <2 x i1> splat (i1 true), <2 x i1> [[B]]
 ; CHECK-NEXT:    call void @use2(<2 x i1> [[A]])
 ; CHECK-NEXT:    call void @use2(<2 x i1> [[B]])
 ; CHECK-NEXT:    call void @use2(<2 x i1> [[AND]])
@@ -1520,4 +1520,122 @@ bb:
   %and1 = select i1 %a, i1 %cmp1, i1 false
   %and2 = or i1 %and1, %cmp
   ret i1 %and2
+}
+
+define i1 @test_logical_and_icmp_samesign(i8 %x) {
+; CHECK-LABEL: @test_logical_and_icmp_samesign(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[X:%.*]], 9
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i8 [[X]], 11
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %cmp1 = icmp ne i8 %x, 9
+  %cmp2 = icmp samesign ult i8 %x, 11
+  %and = select i1 %cmp1, i1 %cmp2, i1 false
+  ret i1 %and
+}
+
+define i1 @test_logical_or_icmp_samesign(i8 %x) {
+; CHECK-LABEL: @test_logical_or_icmp_samesign(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], -9
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i8 [[X]], -11
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %cmp1 = icmp eq i8 %x, -9
+  %cmp2 = icmp samesign ult i8 %x, -11
+  %or = select i1 %cmp1, i1 true, i1 %cmp2
+  ret i1 %or
+}
+
+define i1 @test_double_logical_and_icmp_samesign1(i1 %cond, i32 %y) {
+; CHECK-LABEL: @test_double_logical_and_icmp_samesign1(
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i32 [[Y:%.*]], 4
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[SEL1:%.*]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:    ret i1 [[SEL2]]
+;
+  %cmp1 = icmp ne i32 %y, 5
+  %sel1 = select i1 %cond, i1 %cmp1, i1 false
+  %cmp2 = icmp samesign ult i32 %y, 4
+  %sel2 = select i1 %sel1, i1 %cmp2, i1 false
+  ret i1 %sel2
+}
+
+define i1 @test_double_logical_and_icmp_samesign2(i1 %cond, i32 %y) {
+; CHECK-LABEL: @test_double_logical_and_icmp_samesign2(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[Y:%.*]], -65536
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[TMP1]], 1048576
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[SEL1:%.*]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:    ret i1 [[SEL2]]
+;
+  %cmp1 = icmp samesign ugt i32 %y, 65535
+  %sel1 = select i1 %cond, i1 %cmp1, i1 false
+  %cmp2 = icmp samesign ult i32 %y, 1114112
+  %sel2 = select i1 %sel1, i1 %cmp2, i1 false
+  ret i1 %sel2
+}
+
+define <2 x i1> @test_logical_and_icmp_samesign_vec(<2 x i8> %x) {
+; CHECK-LABEL: @test_logical_and_icmp_samesign_vec(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i8> [[X:%.*]], splat (i8 9)
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult <2 x i8> [[X]], splat (i8 11)
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i1> [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret <2 x i1> [[AND]]
+;
+  %cmp1 = icmp ne <2 x i8> %x, splat(i8 9)
+  %cmp2 = icmp samesign ult <2 x i8> %x, splat(i8 11)
+  %and = select <2 x i1> %cmp1, <2 x i1> %cmp2, <2 x i1> zeroinitializer
+  ret <2 x i1> %and
+}
+
+define <2 x i1> @test_logical_and_icmp_samesign_vec_with_poison_cond(<2 x i8> %x) {
+; CHECK-LABEL: @test_logical_and_icmp_samesign_vec_with_poison_cond(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i8> [[X:%.*]], <i8 9, i8 poison>
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult <2 x i8> [[X]], splat (i8 11)
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i1> [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret <2 x i1> [[AND]]
+;
+  %cmp1 = icmp ne <2 x i8> %x, <i8 9, i8 poison>
+  %cmp2 = icmp samesign ult <2 x i8> %x, splat(i8 11)
+  %and = select <2 x i1> %cmp1, <2 x i1> %cmp2, <2 x i1> zeroinitializer
+  ret <2 x i1> %and
+}
+
+define i1 @test_logical_and_icmp_samesign_do_not_imply(i8 %x) {
+; CHECK-LABEL: @test_logical_and_icmp_samesign_do_not_imply(
+; CHECK-NEXT:    [[AND:%.*]] = icmp ult i8 [[X:%.*]], 11
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %cmp1 = icmp ne i8 %x, -9
+  %cmp2 = icmp samesign ult i8 %x, 11
+  %and = select i1 %cmp1, i1 %cmp2, i1 false
+  ret i1 %and
+}
+
+define i1 @test_logical_and_icmp_no_samesign(i8 %x) {
+; CHECK-LABEL: @test_logical_and_icmp_no_samesign(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[X:%.*]], 9
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i8 [[X]], 11
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %cmp1 = icmp ne i8 %x, 9
+  %cmp2 = icmp ult i8 %x, 11
+  %and = select i1 %cmp1, i1 %cmp2, i1 false
+  ret i1 %and
+}
+
+; Negative tests
+
+define <2 x i1> @test_logical_and_icmp_samesign_vec_with_poison_tv(<2 x i8> %x) {
+; CHECK-LABEL: @test_logical_and_icmp_samesign_vec_with_poison_tv(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i8> [[X:%.*]], splat (i8 9)
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult <2 x i8> [[X]], <i8 11, i8 poison>
+; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[CMP1]], <2 x i1> [[CMP2]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[AND]]
+;
+  %cmp1 = icmp ne <2 x i8> %x, splat(i8 9)
+  %cmp2 = icmp samesign ult <2 x i8> %x, <i8 11, i8 poison>
+  %and = select <2 x i1> %cmp1, <2 x i1> %cmp2, <2 x i1> zeroinitializer
+  ret <2 x i1> %and
 }

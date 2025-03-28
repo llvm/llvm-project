@@ -5,7 +5,7 @@
 #    COMPILER_RT_LIBRARY-<name>-<target> to NOTFOUND
 function(cache_compiler_rt_library err_flag name target library_file)
   if(err_flag OR NOT EXISTS "${library_file}")
-    message(STATUS "Failed to find compiler-rt ${name} library for ${target}")
+    message(WARNING "Failed to find compiler-rt ${name} library for ${target}")
     set(COMPILER_RT_LIBRARY_${name}_${target} "NOTFOUND" CACHE INTERNAL
         "compiler-rt ${name} library for ${target}")
   else()

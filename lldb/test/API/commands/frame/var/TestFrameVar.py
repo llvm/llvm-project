@@ -2,7 +2,6 @@
 Make sure the frame variable -g, -a, and -l flags work.
 """
 
-
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
@@ -79,6 +78,14 @@ class TestFrameVar(TestBase):
         self.assertNotIn("test_var", output, "Args found a local")
         self.assertNotIn("g_var", output, "Args found a global")
 
+        value_list = command_result.GetValues(lldb.eNoDynamicValues)
+        self.assertGreaterEqual(value_list.GetSize(), 2)
+        value_names = []
+        for value in value_list:
+            value_names.append(value.GetName())
+        self.assertIn("argc", value_names)
+        self.assertIn("argv", value_names)
+
         # Just get locals:
         result = interp.HandleCommand("frame var -a", command_result)
         self.assertEqual(
@@ -113,12 +120,23 @@ class TestFrameVar(TestBase):
         frame = thread.GetFrameAtIndex(0)
         var_list = frame.GetVariables(True, True, False, True)
         self.assertEqual(var_list.GetSize(), 0)
-        api_error = var_list.GetError().GetCString()
+        api_error = var_list.GetError()
+        api_error_str = api_error.GetCString()
 
         for s in error_strings:
             self.assertIn(s, command_error)
         for s in error_strings:
-            self.assertIn(s, api_error)
+            self.assertIn(s, api_error_str)
+
+        # Check the structured error data.
+        data = api_error.GetErrorData()
+        version = data.GetValueForKey("version")
+        self.assertEqual(version.GetIntegerValue(), 1)
+        err_ty = data.GetValueForKey("type")
+        self.assertEqual(err_ty.GetIntegerValue(), lldb.eErrorTypeGeneric)
+        message = str(data.GetValueForKey("errors").GetItemAtIndex(0))
+        for s in error_strings:
+            self.assertIn(s, message)
 
     @skipIfRemote
     @skipUnlessDarwin

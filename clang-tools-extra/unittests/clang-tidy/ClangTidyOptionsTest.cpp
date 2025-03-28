@@ -417,13 +417,6 @@ TEST(ValidConfiguration, ValidEnumOptions) {
   CHECK_VAL(TestCheck.getIntLocal<Colours>("Valid"), Colours::Red);
   CHECK_VAL(TestCheck.getIntGlobal<Colours>("GlobalValid"), Colours::Violet);
 
-  CHECK_VAL(
-      TestCheck.getIntLocal<Colours>("ValidWrongCase", /*IgnoreCase*/ true),
-      Colours::Red);
-  CHECK_VAL(TestCheck.getIntGlobal<Colours>("GlobalValidWrongCase",
-                                            /*IgnoreCase*/ true),
-            Colours::Violet);
-
   EXPECT_FALSE(TestCheck.getIntLocal<Colours>("ValidWrongCase").has_value());
   EXPECT_FALSE(TestCheck.getIntLocal<Colours>("NearMiss").has_value());
   EXPECT_FALSE(TestCheck.getIntGlobal<Colours>("GlobalInvalid").has_value());

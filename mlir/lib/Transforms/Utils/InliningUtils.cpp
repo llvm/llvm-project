@@ -25,6 +25,29 @@
 
 using namespace mlir;
 
+/// Combine `callee` location with `caller` location to create a stack that
+/// represents the call chain.
+/// If `callee` location is a `CallSiteLoc`, indicating an existing stack of
+/// locations, the `caller` location is appended to the end of it, extending
+/// the chain.
+/// Otherwise, a single `CallSiteLoc` is created, representing a direct call
+/// from `caller` to `callee`.
+static LocationAttr stackLocations(Location callee, Location caller) {
+  Location lastCallee = callee;
+  SmallVector<CallSiteLoc> calleeInliningStack;
+  while (auto nextCallSite = dyn_cast<CallSiteLoc>(lastCallee)) {
+    calleeInliningStack.push_back(nextCallSite);
+    lastCallee = nextCallSite.getCaller();
+  }
+
+  CallSiteLoc firstCallSite = CallSiteLoc::get(lastCallee, caller);
+  for (CallSiteLoc currentCallSite : reverse(calleeInliningStack))
+    firstCallSite =
+        CallSiteLoc::get(currentCallSite.getCallee(), firstCallSite);
+
+  return firstCallSite;
+}
+
 /// Remap all locations reachable from the inlined blocks with CallSiteLoc
 /// locations with the provided caller location.
 static void
@@ -35,7 +58,7 @@ remapInlinedLocations(iterator_range<Region::iterator> inlinedBlocks,
     auto [it, inserted] = mappedLocations.try_emplace(loc);
     // Only query the attribute uniquer once per callsite attribute.
     if (inserted) {
-      auto newLoc = CallSiteLoc::get(loc, callerLoc);
+      LocationAttr newLoc = stackLocations(loc, callerLoc);
       it->getSecond() = newLoc;
     }
     return it->second;
@@ -116,6 +139,18 @@ void InlinerInterface::handleTerminator(Operation *op,
   auto *handler = getInterfaceFor(op);
   assert(handler && "expected valid dialect handler");
   handler->handleTerminator(op, valuesToRepl);
+}
+
+/// Returns true if the inliner can assume a fast path of not creating a
+/// new block, if there is only one block.
+bool InlinerInterface::allowSingleBlockOptimization(
+    iterator_range<Region::iterator> inlinedBlocks) const {
+  if (inlinedBlocks.empty()) {
+    return true;
+  }
+  auto *handler = getInterfaceFor(inlinedBlocks.begin()->getParentOp());
+  assert(handler && "expected valid dialect handler");
+  return handler->allowSingleBlockOptimization(inlinedBlocks);
 }
 
 Value InlinerInterface::handleArgument(OpBuilder &builder, Operation *call,
@@ -216,9 +251,7 @@ static void handleResultImpl(InlinerInterface &interface, OpBuilder &builder,
   SmallVector<DictionaryAttr> resultAttributes;
   for (auto [result, resAttr] : llvm::zip(results, resAttrs)) {
     // Store the original result users before running the handler.
-    DenseSet<Operation *> resultUsers;
-    for (Operation *user : result.getUsers())
-      resultUsers.insert(user);
+    DenseSet<Operation *> resultUsers(llvm::from_range, result.getUsers());
 
     Value newResult =
         interface.handleResult(builder, call, callable, result, resAttr);
@@ -294,8 +327,10 @@ inlineRegionImpl(InlinerInterface &interface, Region *src, Block *inlineBlock,
     interface.processInlinedCallBlocks(call, newBlocks);
   interface.processInlinedBlocks(newBlocks);
 
+  bool singleBlockFastPath = interface.allowSingleBlockOptimization(newBlocks);
+
   // Handle the case where only a single block was inlined.
-  if (std::next(newBlocks.begin()) == newBlocks.end()) {
+  if (singleBlockFastPath && std::next(newBlocks.begin()) == newBlocks.end()) {
     // Run the result attribute handler on the terminator operands.
     Operation *firstBlockTerminator = firstNewBlock->getTerminator();
     builder.setInsertionPoint(firstBlockTerminator);

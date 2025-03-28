@@ -1,7 +1,8 @@
-import lldb
 import json
 import os
 import re
+
+import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -540,7 +541,7 @@ class TestCase(TestBase):
         # in the stats.
         self.runCmd("b main.cpp:7")
 
-        debug_stats = self.get_stats()
+        debug_stats = self.get_stats("--all-targets")
 
         exe_stats = self.find_module_in_metrics(exe, debug_stats)
         # If we don't have a dSYM file, there should not be a key/value pair in
@@ -986,3 +987,38 @@ class TestCase(TestBase):
         # We may hit the std::vector C++ provider, or a summary provider string
         if "c++" in summary_provider_str:
             self.assertIn("std::vector", summary_provider_str)
+
+    @skipIfWindows
+    def test_multiple_targets(self):
+        """
+        Test statistics dump only reports the stats from current target and
+        "statistics dump --all-targets" includes all target stats.
+        """
+        da = {"CXX_SOURCES": "main.cpp", "EXE": self.getBuildArtifact("a.out")}
+        self.build(dictionary=da)
+        self.addTearDownCleanup(dictionary=da)
+
+        db = {"CXX_SOURCES": "second.cpp", "EXE": self.getBuildArtifact("second.out")}
+        self.build(dictionary=db)
+        self.addTearDownCleanup(dictionary=db)
+
+        main_exe = self.getBuildArtifact("a.out")
+        second_exe = self.getBuildArtifact("second.out")
+
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp"), None, "a.out"
+        )
+        debugger_stats1 = self.get_stats()
+        self.assertIsNotNone(self.find_module_in_metrics(main_exe, debugger_stats1))
+        self.assertIsNone(self.find_module_in_metrics(second_exe, debugger_stats1))
+
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("second.cpp"), None, "second.out"
+        )
+        debugger_stats2 = self.get_stats()
+        self.assertIsNone(self.find_module_in_metrics(main_exe, debugger_stats2))
+        self.assertIsNotNone(self.find_module_in_metrics(second_exe, debugger_stats2))
+
+        all_targets_stats = self.get_stats("--all-targets")
+        self.assertIsNotNone(self.find_module_in_metrics(main_exe, all_targets_stats))
+        self.assertIsNotNone(self.find_module_in_metrics(second_exe, all_targets_stats))

@@ -816,7 +816,7 @@ define <2 x i32> @splatvar_shift_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm2 = xmm1[0],xmm2[1,2,3]
 ; X86-SSE-NEXT:    pslld %xmm2, %xmm0
 ; X86-SSE-NEXT:    retl
-  %splat = shufflevector <2 x i32> %b, <2 x i32> undef, <2 x i32> zeroinitializer
+  %splat = shufflevector <2 x i32> %b, <2 x i32> poison, <2 x i32> zeroinitializer
   %shift = shl <2 x i32> %a, %splat
   ret <2 x i32> %shift
 }
@@ -865,7 +865,7 @@ define <4 x i16> @splatvar_shift_v4i16(<4 x i16> %a, <4 x i16> %b) nounwind {
 ; X86-SSE-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X86-SSE-NEXT:    psllw %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
-  %splat = shufflevector <4 x i16> %b, <4 x i16> undef, <4 x i32> zeroinitializer
+  %splat = shufflevector <4 x i16> %b, <4 x i16> poison, <4 x i32> zeroinitializer
   %shift = shl <4 x i16> %a, %splat
   ret <4 x i16> %shift
 }
@@ -914,7 +914,7 @@ define <2 x i16> @splatvar_shift_v2i16(<2 x i16> %a, <2 x i16> %b) nounwind {
 ; X86-SSE-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X86-SSE-NEXT:    psllw %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
-  %splat = shufflevector <2 x i16> %b, <2 x i16> undef, <2 x i32> zeroinitializer
+  %splat = shufflevector <2 x i16> %b, <2 x i16> poison, <2 x i32> zeroinitializer
   %shift = shl <2 x i16> %a, %splat
   ret <2 x i16> %shift
 }
@@ -929,7 +929,7 @@ define <8 x i8> @splatvar_shift_v8i8(<8 x i8> %a, <8 x i8> %b) nounwind {
 ; SSE2-NEXT:    psllw %xmm1, %xmm2
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm2[0,0,0,0,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -1024,10 +1024,10 @@ define <8 x i8> @splatvar_shift_v8i8(<8 x i8> %a, <8 x i8> %b) nounwind {
 ; X86-SSE-NEXT:    psllw %xmm1, %xmm2
 ; X86-SSE-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X86-SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm2[0,0,0,0,4,5,6,7]
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; X86-SSE-NEXT:    pand %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
-  %splat = shufflevector <8 x i8> %b, <8 x i8> undef, <8 x i32> zeroinitializer
+  %splat = shufflevector <8 x i8> %b, <8 x i8> poison, <8 x i32> zeroinitializer
   %shift = shl <8 x i8> %a, %splat
   ret <8 x i8> %shift
 }
@@ -1042,7 +1042,7 @@ define <4 x i8> @splatvar_shift_v4i8(<4 x i8> %a, <4 x i8> %b) nounwind {
 ; SSE2-NEXT:    psllw %xmm1, %xmm2
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm2[0,0,0,0,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -1137,10 +1137,10 @@ define <4 x i8> @splatvar_shift_v4i8(<4 x i8> %a, <4 x i8> %b) nounwind {
 ; X86-SSE-NEXT:    psllw %xmm1, %xmm2
 ; X86-SSE-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X86-SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm2[0,0,0,0,4,5,6,7]
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; X86-SSE-NEXT:    pand %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
-  %splat = shufflevector <4 x i8> %b, <4 x i8> undef, <4 x i32> zeroinitializer
+  %splat = shufflevector <4 x i8> %b, <4 x i8> poison, <4 x i32> zeroinitializer
   %shift = shl <4 x i8> %a, %splat
   ret <4 x i8> %shift
 }
@@ -1155,7 +1155,7 @@ define <2 x i8> @splatvar_shift_v2i8(<2 x i8> %a, <2 x i8> %b) nounwind {
 ; SSE2-NEXT:    psllw %xmm1, %xmm2
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm2[0,0,0,0,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -1243,10 +1243,10 @@ define <2 x i8> @splatvar_shift_v2i8(<2 x i8> %a, <2 x i8> %b) nounwind {
 ; X86-SSE-NEXT:    psllw %xmm1, %xmm2
 ; X86-SSE-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X86-SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm2[0,0,0,0,4,5,6,7]
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; X86-SSE-NEXT:    pand %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
-  %splat = shufflevector <2 x i8> %b, <2 x i8> undef, <2 x i32> zeroinitializer
+  %splat = shufflevector <2 x i8> %b, <2 x i8> poison, <2 x i32> zeroinitializer
   %shift = shl <2 x i8> %a, %splat
   ret <2 x i8> %shift
 }

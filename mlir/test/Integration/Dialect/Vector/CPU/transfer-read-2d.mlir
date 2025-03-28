@@ -1,10 +1,10 @@
-// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-vector-to-scf,lower-affine,convert-scf-to-cf),convert-vector-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)" | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-vector-to-scf,lower-affine,convert-scf-to-cf),convert-vector-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-arith-to-llvm,convert-cf-to-llvm,convert-ub-to-llvm,reconcile-unrealized-casts)" | \
+// RUN: mlir-runner -e entry -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
-// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-vector-to-scf{full-unroll=true},lower-affine,convert-scf-to-cf),convert-vector-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)" | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-vector-to-scf{full-unroll=true},lower-affine,convert-scf-to-cf),convert-vector-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-arith-to-llvm,convert-cf-to-llvm,convert-ub-to-llvm,reconcile-unrealized-casts)" | \
+// RUN: mlir-runner -e entry -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
@@ -57,7 +57,7 @@ func.func @transfer_read_2d_mask_broadcast(
   %fm42 = arith.constant -42.0: f32
   %mask = arith.constant dense<[1, 0, 1, 0, 1, 1, 1, 0, 1]> : vector<9xi1>
   %f = vector.transfer_read %A[%base1, %base2], %fm42, %mask
-      {in_bounds = [true, false], permutation_map = affine_map<(d0, d1) -> (0, d1)>} :
+      {permutation_map = affine_map<(d0, d1) -> (0, d1)>} :
     memref<?x?xf32>, vector<4x9xf32>
   vector.print %f: vector<4x9xf32>
   return
@@ -69,7 +69,7 @@ func.func @transfer_read_2d_mask_transpose_broadcast_last_dim(
   %fm42 = arith.constant -42.0: f32
   %mask = arith.constant dense<[1, 0, 1, 1]> : vector<4xi1>
   %f = vector.transfer_read %A[%base1, %base2], %fm42, %mask
-      {in_bounds = [false, true], permutation_map = affine_map<(d0, d1) -> (d1, 0)>} :
+      {permutation_map = affine_map<(d0, d1) -> (d1, 0)>} :
     memref<?x?xf32>, vector<4x9xf32>
   vector.print %f: vector<4x9xf32>
   return
@@ -91,7 +91,7 @@ func.func @transfer_read_2d_broadcast(
     %A : memref<?x?xf32>, %base1: index, %base2: index) {
   %fm42 = arith.constant -42.0: f32
   %f = vector.transfer_read %A[%base1, %base2], %fm42
-      {in_bounds = [false, true], permutation_map = affine_map<(d0, d1) -> (d1, 0)>} :
+      {permutation_map = affine_map<(d0, d1) -> (d1, 0)>} :
     memref<?x?xf32>, vector<4x9xf32>
   vector.print %f: vector<4x9xf32>
   return

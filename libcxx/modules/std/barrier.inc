@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-#ifndef _LIBCPP_HAS_NO_THREADS
+#if _LIBCPP_HAS_THREADS
   using std::barrier;
-#endif // _LIBCPP_HAS_NO_THREADS
+#endif
 } // namespace std

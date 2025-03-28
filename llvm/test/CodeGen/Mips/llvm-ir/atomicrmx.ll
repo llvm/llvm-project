@@ -1,6 +1,6 @@
-; RUN: llc -asm-show-inst  -march=mipsel -mcpu=mips32r6 < %s | \
+; RUN: llc -asm-show-inst  -mtriple=mipsel -mcpu=mips32r6 < %s | \
 ; RUN:    FileCheck %s -check-prefix=CHK32
-; RUN: llc -asm-show-inst  -march=mips64el -mcpu=mips64r6 < %s | \
+; RUN: llc -asm-show-inst  -mtriple=mips64el -mcpu=mips64r6 < %s | \
 ; RUN:    FileCheck %s -check-prefix=CHK64
 
 @a = common global i32 0, align 4

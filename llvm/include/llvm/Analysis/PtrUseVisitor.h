@@ -64,6 +64,9 @@ public:
     /// Is the pointer escaped at some point?
     bool isEscaped() const { return EscapedInfo != nullptr; }
 
+    /// Is the pointer escaped into a read-only nocapture call at some point?
+    bool isEscapedReadOnly() const { return EscapedReadOnly != nullptr; }
+
     /// Get the instruction causing the visit to abort.
     /// \returns a pointer to the instruction causing the abort if one is
     /// available; otherwise returns null.
@@ -73,6 +76,10 @@ public:
     /// \returns a pointer to the instruction which escapes the pointer if one
     /// is available; otherwise returns null.
     Instruction *getEscapingInst() const { return EscapedInfo; }
+
+    /// Get the instruction causing the pointer to escape which is a read-only
+    /// nocapture call.
+    Instruction *getEscapedReadOnlyInst() const { return EscapedReadOnly; }
 
     /// Mark the visit as aborted. Intended for use in a void return.
     /// \param I The instruction which caused the visit to abort, if available.
@@ -88,6 +95,12 @@ public:
       EscapedInfo = I;
     }
 
+    /// Mark the pointer as escaped into a readonly-nocapture call.
+    void setEscapedReadOnly(Instruction *I) {
+      assert(I && "Expected a valid pointer in setEscapedReadOnly");
+      EscapedReadOnly = I;
+    }
+
     /// Mark the pointer as escaped, and the visit as aborted. Intended
     /// for use in a void return.
     /// \param I The instruction which both escapes the pointer and aborts the
@@ -100,6 +113,7 @@ public:
   private:
     Instruction *AbortedInfo = nullptr;
     Instruction *EscapedInfo = nullptr;
+    Instruction *EscapedReadOnly = nullptr;
   };
 
 protected:

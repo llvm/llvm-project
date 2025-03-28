@@ -38,12 +38,12 @@ attributes #0 = { noreturn nounwind }
 ; CHECK: store
 ; CHECK-NOT: store
 
-define void @fun() {
+define void @fun(i1 %arg) {
 entry:
   br label %if.then
 
 if.then:                                          ; preds = %entry
-  br i1 undef, label %sw0, label %sw1
+  br i1 %arg, label %sw0, label %sw1
 
 sw0:
   store i32 1, ptr @G

@@ -75,10 +75,7 @@ body:             |
     ; CHECK-NEXT: %b:_(s32) = G_LOAD %a(p0) :: (load (s32))
     ; CHECK-NEXT: %c:_(<4 x s8>) = G_BITCAST %b(s32)
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY [[DEF]](s16)
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s16) = COPY [[DEF]](s16)
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s16) = COPY [[DEF]](s16)
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[COPY]](s16), [[COPY1]](s16), [[COPY2]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[BUILD_VECTOR]](<8 x s16>)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<4 x s8>), [[UV1:%[0-9]+]]:_(<4 x s8>) = G_UNMERGE_VALUES [[TRUNC]](<8 x s8>)
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST %c(<4 x s8>)
@@ -113,8 +110,7 @@ body:             |
     ; CHECK-NEXT: %b:_(s32) = G_LOAD %a(p0) :: (load (s32))
     ; CHECK-NEXT: %c:_(<2 x s16>) = G_BITCAST %b(s32)
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[DEF]](s32)
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[BUILD_VECTOR]](<4 x s32>)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[TRUNC]](<4 x s16>)
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST %c(<2 x s16>)

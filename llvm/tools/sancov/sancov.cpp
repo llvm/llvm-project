@@ -67,12 +67,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -82,7 +83,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class SancovOptTable : public opt::GenericOptTable {
 public:
-  SancovOptTable() : GenericOptTable(InfoTable) {}
+  SancovOptTable()
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
 };
 } // namespace
 
@@ -961,10 +963,9 @@ static FunctionLocs resolveFunctions(const SymbolizedCoverage &Coverage,
         continue;
 
       auto P = std::make_pair(Loc.Line, Loc.Column);
-      auto I = Result.find(Fn);
-      if (I == Result.end() || I->second > P) {
-        Result[Fn] = P;
-      }
+      auto [It, Inserted] = Result.try_emplace(Fn, P);
+      if (!Inserted && It->second > P)
+        It->second = P;
     }
   }
   return Result;
@@ -1050,7 +1051,7 @@ readSymbolizeAndMergeCmdArguments(std::vector<std::string> FileNames) {
 
   {
     // Short name => file name.
-    std::map<std::string, std::string> ObjFiles;
+    std::map<std::string, std::string, std::less<>> ObjFiles;
     std::string FirstObjFile;
     std::set<std::string> CovFiles;
 
@@ -1067,7 +1068,7 @@ readSymbolizeAndMergeCmdArguments(std::vector<std::string> FileNames) {
         CovFiles.insert(FileName);
       } else {
         auto ShortFileName = llvm::sys::path::filename(FileName);
-        if (ObjFiles.find(std::string(ShortFileName)) != ObjFiles.end()) {
+        if (ObjFiles.find(ShortFileName) != ObjFiles.end()) {
           fail("Duplicate binary file with a short name: " + ShortFileName);
         }
 
@@ -1090,7 +1091,7 @@ readSymbolizeAndMergeCmdArguments(std::vector<std::string> FileNames) {
              FileName);
       }
 
-      auto Iter = ObjFiles.find(std::string(Components[1]));
+      auto Iter = ObjFiles.find(Components[1]);
       if (Iter == ObjFiles.end()) {
         fail("Object file for coverage not found: " + FileName);
       }

@@ -10,14 +10,14 @@
 #define LLDB_TOOLS_LLDB_DAP_FUNCTIONBREAKPOINT_H
 
 #include "Breakpoint.h"
+#include "DAPForward.h"
 
 namespace lldb_dap {
 
 struct FunctionBreakpoint : public Breakpoint {
   std::string functionName;
 
-  FunctionBreakpoint() = default;
-  FunctionBreakpoint(const llvm::json::Object &obj);
+  FunctionBreakpoint(DAP &dap, const llvm::json::Object &obj);
 
   // Set this breakpoint in LLDB as a new breakpoint
   void SetBreakpoint();

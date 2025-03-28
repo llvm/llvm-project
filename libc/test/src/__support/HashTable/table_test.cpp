@@ -43,11 +43,11 @@ TEST(LlvmLibcTableTest, Iteration) {
     counter[i] = 0;
     if (i >= 256) {
       keys[i].bytes[0] = 2;
-      keys[i].bytes[1] = i % 256;
+      keys[i].bytes[1] = static_cast<uint8_t>(i % 256);
       keys[i].bytes[2] = 0;
     } else {
       keys[i].bytes[0] = 1;
-      keys[i].bytes[1] = i;
+      keys[i].bytes[1] = static_cast<uint8_t>(i);
       keys[i].bytes[2] = 0;
     }
     HashTable::insert(table, {reinterpret_cast<char *>(keys[i].bytes),
@@ -82,7 +82,7 @@ TEST(LlvmLibcTableTest, GrowthSequence) {
 }
 
 TEST(LlvmLibcTableTest, Insertion) {
-  union key {
+  struct key {
     char bytes[2];
   } keys[256];
   for (size_t k = 0; k < 256; ++k) {

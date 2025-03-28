@@ -55,14 +55,14 @@ define void @test(ptr %0, ptr %1) nounwind {
 ; CHECK-NEXT:    fcvt.d.s fs0, fs0
 ; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    fcvt.d.s fa5, fa0
-; CHECK-NEXT:    fsd fa5, 56(s0)
-; CHECK-NEXT:    fsd fs0, 48(s0)
-; CHECK-NEXT:    fsd fs1, 40(s0)
 ; CHECK-NEXT:    fsd fs2, 32(s0)
-; CHECK-NEXT:    fsd fs3, 24(s0)
-; CHECK-NEXT:    fsd fs4, 16(s0)
-; CHECK-NEXT:    fsd fs5, 8(s0)
+; CHECK-NEXT:    fsd fs1, 40(s0)
+; CHECK-NEXT:    fsd fs0, 48(s0)
+; CHECK-NEXT:    fsd fa5, 56(s0)
 ; CHECK-NEXT:    fsd fs6, 0(s0)
+; CHECK-NEXT:    fsd fs5, 8(s0)
+; CHECK-NEXT:    fsd fs4, 16(s0)
+; CHECK-NEXT:    fsd fs3, 24(s0)
 ; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload

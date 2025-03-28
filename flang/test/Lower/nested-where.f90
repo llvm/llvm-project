@@ -310,9 +310,9 @@ program nested_where
   ! CHECK:  }
   ! CHECK:  fir.array_merge_store %[[VAL_35]], %[[VAL_277:.*]] to %[[VAL_5]] : !fir.array<3xi32>, !fir.array<3xi32>, !fir.ref<!fir.array<3xi32>>
   ! CHECK:  %[[VAL_278:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<tuple<i64, !fir.heap<!fir.array<?xi8>>, !fir.heap<!fir.array<?xi64>>>>) -> !fir.llvm_ptr<i8>
-  ! CHECK:  %[[VAL_279:.*]] = fir.call @_FortranARaggedArrayDeallocate(%[[VAL_278]]) {{.*}}: (!fir.llvm_ptr<i8>) -> none
+  ! CHECK:  fir.call @_FortranARaggedArrayDeallocate(%[[VAL_278]]) {{.*}}: (!fir.llvm_ptr<i8>) -> ()
   ! CHECK:  %[[VAL_280:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<tuple<i64, !fir.heap<!fir.array<?xi8>>, !fir.heap<!fir.array<?xi64>>>>) -> !fir.llvm_ptr<i8>
-  ! CHECK:  %[[VAL_281:.*]] = fir.call @_FortranARaggedArrayDeallocate(%[[VAL_280]]) {{.*}}: (!fir.llvm_ptr<i8>) -> none
+  ! CHECK:  fir.call @_FortranARaggedArrayDeallocate(%[[VAL_280]]) {{.*}}: (!fir.llvm_ptr<i8>) -> ()
   
   integer :: a(3) = 0
   logical :: mask1(3) = (/ .true.,.false.,.true. /)

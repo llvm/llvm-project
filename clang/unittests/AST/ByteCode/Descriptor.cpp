@@ -251,7 +251,7 @@ TEST(Descriptor, Primitives) {
     ASSERT_TRUE(NE1.isLive());
     ASSERT_EQ(NE1.getIndex(), 0);
     ASSERT_TRUE(NE1.isInitialized());
-    ASSERT_FALSE(NE1.isArrayElement());
+    ASSERT_TRUE(NE1.isArrayElement());
     ASSERT_TRUE(NE1.isField());
     ASSERT_FALSE(NE1.inArray());
     ASSERT_FALSE(NE1.isArrayRoot());
@@ -279,7 +279,7 @@ TEST(Descriptor, Primitives) {
     ASSERT_TRUE(NE2.isLive());
     ASSERT_EQ(NE2.getIndex(), 0);
     ASSERT_TRUE(NE2.isInitialized());
-    ASSERT_FALSE(NE2.isArrayElement());
+    ASSERT_TRUE(NE2.isArrayElement());
     ASSERT_TRUE(NE2.isField());
     ASSERT_FALSE(NE2.inArray());
     ASSERT_FALSE(NE2.isArrayRoot());
@@ -344,7 +344,7 @@ TEST(Descriptor, Primitives) {
     ASSERT_NE(NE1, PF4);
     ASSERT_NE(NE1, E1);
     ASSERT_TRUE(NE1.isLive());
-    ASSERT_FALSE(NE1.isArrayElement());
+    ASSERT_TRUE(NE1.isArrayElement());
     ASSERT_TRUE(NE1.isArrayRoot());
     ASSERT_FALSE(NE1.getFieldDesc()->isCompositeArray());
     ASSERT_TRUE(NE1.getFieldDesc()->isPrimitiveArray());
@@ -375,7 +375,7 @@ TEST(Descriptor, Primitives) {
     ASSERT_NE(NE3, PF4);
     ASSERT_NE(NE3, E1);
     ASSERT_TRUE(NE3.isLive());
-    ASSERT_FALSE(NE3.isArrayElement());
+    ASSERT_TRUE(NE3.isArrayElement());
     ASSERT_TRUE(NE3.isArrayRoot());
     ASSERT_FALSE(NE3.getFieldDesc()->isCompositeArray());
     ASSERT_TRUE(NE3.getFieldDesc()->isPrimitiveArray());

@@ -173,9 +173,11 @@ private:
     if (!HTMLReportPath.empty())
       writeHTML();
 
-    llvm::StringRef Path =
-        SM.getFileEntryRefForID(SM.getMainFileID())->getName();
-    assert(!Path.empty() && "Main file path not known?");
+    // Source File's path of compiler invocation, converted to absolute path.
+    llvm::SmallString<256> AbsPath(
+        SM.getFileEntryRefForID(SM.getMainFileID())->getName());
+    assert(!AbsPath.empty() && "Main file path not known?");
+    SM.getFileManager().makeAbsolutePath(AbsPath);
     llvm::StringRef Code = SM.getBufferData(SM.getMainFileID());
 
     auto Results =
@@ -185,7 +187,7 @@ private:
       Results.Missing.clear();
     if (!Remove)
       Results.Unused.clear();
-    std::string Final = fixIncludes(Results, Path, Code, getStyle(Path));
+    std::string Final = fixIncludes(Results, AbsPath, Code, getStyle(AbsPath));
 
     if (Print.getNumOccurrences()) {
       switch (Print) {
@@ -202,7 +204,7 @@ private:
     }
 
     if (!Results.Missing.empty() || !Results.Unused.empty())
-      EditedFiles.try_emplace(Path, Final);
+      EditedFiles.try_emplace(AbsPath, Final);
   }
 
   void writeHTML() {
@@ -214,10 +216,9 @@ private:
       ++Errors;
       return;
     }
-    writeHTMLReport(
-        AST.Ctx->getSourceManager().getMainFileID(), PP.Includes, AST.Roots,
-        PP.MacroReferences, *AST.Ctx,
-        getCompilerInstance().getPreprocessor().getHeaderSearchInfo(), &PI, OS);
+    writeHTMLReport(AST.Ctx->getSourceManager().getMainFileID(), PP.Includes,
+                    AST.Roots, PP.MacroReferences, *AST.Ctx,
+                    getCompilerInstance().getPreprocessor(), &PI, OS);
   }
 };
 class ActionFactory : public tooling::FrontendActionFactory {
@@ -280,6 +281,48 @@ std::function<bool(llvm::StringRef)> headerFilter() {
   };
 }
 
+// Maps absolute path of each files of each compilation commands to the
+// absolute path of the input file.
+llvm::Expected<std::map<std::string, std::string>>
+mapInputsToAbsPaths(clang::tooling::CompilationDatabase &CDB,
+                    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+                    const std::vector<std::string> &Inputs) {
+  std::map<std::string, std::string> CDBToAbsPaths;
+  // Factory.editedFiles()` will contain the final code, along with the
+  // path given in the compilation database. That path can be
+  // absolute or relative, and if it is relative, it is relative to the
+  // "Directory" field in the compilation database. We need to make it
+  // absolute to write the final code to the correct path.
+  for (auto &Source : Inputs) {
+    llvm::SmallString<256> AbsPath(Source);
+    if (auto Err = VFS->makeAbsolute(AbsPath)) {
+      llvm::errs() << "Failed to get absolute path for " << Source << " : "
+                   << Err.message() << '\n';
+      return llvm::errorCodeToError(Err);
+    }
+    std::vector<clang::tooling::CompileCommand> Cmds =
+        CDB.getCompileCommands(AbsPath);
+    if (Cmds.empty()) {
+      // It should be found in the compilation database, even user didn't
+      // specify the compilation database, the `FixedCompilationDatabase` will
+      // create an entry from the arguments. So it is an error if we can't
+      // find the compile commands.
+      std::string ErrorMsg =
+          llvm::formatv("No compile commands found for {0}", AbsPath).str();
+      llvm::errs() << ErrorMsg << '\n';
+      return llvm::make_error<llvm::StringError>(
+          ErrorMsg, llvm::inconvertibleErrorCode());
+    }
+    for (const auto &Cmd : Cmds) {
+      llvm::SmallString<256> CDBPath(Cmd.Filename);
+      std::string Directory(Cmd.Directory);
+      llvm::sys::fs::make_absolute(Cmd.Directory, CDBPath);
+      CDBToAbsPaths[std::string(CDBPath)] = std::string(AbsPath);
+    }
+  }
+  return CDBToAbsPaths;
+}
+
 } // namespace
 } // namespace include_cleaner
 } // namespace clang
@@ -305,8 +348,16 @@ int main(int argc, const char **argv) {
     }
   }
 
-  clang::tooling::ClangTool Tool(OptionsParser->getCompilations(),
-                                 OptionsParser->getSourcePathList());
+  auto VFS = llvm::vfs::getRealFileSystem();
+  auto &CDB = OptionsParser->getCompilations();
+  // CDBToAbsPaths is a map from the path in the compilation database to the
+  // writable absolute path of the file.
+  auto CDBToAbsPaths =
+      mapInputsToAbsPaths(CDB, VFS, OptionsParser->getSourcePathList());
+  if (!CDBToAbsPaths)
+    return 1;
+
+  clang::tooling::ClangTool Tool(CDB, OptionsParser->getSourcePathList());
 
   auto HeaderFilter = headerFilter();
   if (!HeaderFilter)
@@ -316,6 +367,10 @@ int main(int argc, const char **argv) {
   if (Edit) {
     for (const auto &NameAndContent : Factory.editedFiles()) {
       llvm::StringRef FileName = NameAndContent.first();
+      if (auto It = CDBToAbsPaths->find(FileName.str());
+          It != CDBToAbsPaths->end())
+        FileName = It->second;
+
       const std::string &FinalCode = NameAndContent.second;
       if (auto Err = llvm::writeToOutput(
               FileName, [&](llvm::raw_ostream &OS) -> llvm::Error {

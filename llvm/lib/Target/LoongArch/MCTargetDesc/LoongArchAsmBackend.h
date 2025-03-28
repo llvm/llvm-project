@@ -60,9 +60,6 @@ public:
                              const MCValue &Target,
                              const MCSubtargetInfo *STI) override;
 
-  unsigned getNumFixupKinds() const override {
-    return LoongArch::NumTargetFixupKinds;
-  }
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 

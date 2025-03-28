@@ -36,14 +36,16 @@ private:
   IntrType intrType;
 
 public:
-  explicit OpLowering(LLVMTypeConverter &typeConverter)
-      : ConvertOpToLLVMPattern<Op>(typeConverter),
+  explicit OpLowering(const LLVMTypeConverter &typeConverter,
+                      PatternBenefit benefit = 1)
+      : ConvertOpToLLVMPattern<Op>(typeConverter, benefit),
         indexBitwidth(typeConverter.getIndexTypeBitwidth()),
         indexKind(IndexKind::Other), intrType(IntrType::None) {}
 
-  explicit OpLowering(LLVMTypeConverter &typeConverter, IndexKind indexKind,
-                      IntrType intrType)
-      : ConvertOpToLLVMPattern<Op>(typeConverter),
+  explicit OpLowering(const LLVMTypeConverter &typeConverter,
+                      IndexKind indexKind, IntrType intrType,
+                      PatternBenefit benefit = 1)
+      : ConvertOpToLLVMPattern<Op>(typeConverter, benefit),
         indexBitwidth(typeConverter.getIndexTypeBitwidth()),
         indexKind(indexKind), intrType(intrType) {}
 

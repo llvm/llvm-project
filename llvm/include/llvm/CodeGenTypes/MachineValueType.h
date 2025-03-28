@@ -124,7 +124,7 @@ namespace llvm {
 
     /// Return true if this is a custom target type that has a scalable size.
     bool isScalableTargetExtVT() const {
-      return SimpleTy == MVT::aarch64svcount;
+      return SimpleTy == MVT::aarch64svcount || isRISCVVectorTuple();
     }
 
     /// Return true if the type is a scalable type.
@@ -308,7 +308,8 @@ namespace llvm {
     TypeSize getSizeInBits() const {
       static constexpr TypeSize SizeTable[] = {
 #define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy) \
-    TypeSize(Sz, Sc || Ty == aarch64svcount /* FIXME: Not in the td. */),
+    TypeSize(Sz, Sc || Tup || Ty == aarch64svcount /* FIXME: Not in the td.    \
+                                                    */),
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
       };
@@ -320,7 +321,7 @@ namespace llvm {
         llvm_unreachable("Value type is non-standard value, Other.");
       case iPTR:
         llvm_unreachable("Value type size is target-dependent. Ask TLI.");
-      case iPTRAny:
+      case pAny:
       case iAny:
       case fAny:
       case vAny:

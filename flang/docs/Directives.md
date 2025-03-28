@@ -39,15 +39,27 @@ A list of non-standard directives supported by Flang
 * `!dir$ vector always` forces vectorization on the following loop regardless
   of cost model decisions. The loop must still be vectorizable.
   [This directive currently only works on plain do loops without labels].
+* `!dir$ unroll [n]` specifies that the compiler ought to unroll the immediately
+  following loop `n` times. When `n` is `0` or `1`, the loop should not be unrolled
+  at all. When `n` is `2` or greater, the loop should be unrolled exactly `n`
+  times if possible. When `n` is omitted, the compiler should attempt to fully
+  unroll the loop. Some compilers accept an optional `=` before the `n` when `n`
+  is present in the directive. Flang does not.
+* `!dir$ unroll_and_jam [N]` control how many times a loop should be unrolled and
+  jammed. It must be placed immediately before a loop that follows. `N` is an optional 
+  integer that specifying the unrolling factor. When `N` is `0` or `1`, the loop 
+  should not be unrolled at all. If `N` is omitted the optimizer will
+  selects the number of times to unroll the loop.
 
 # Directive Details
 
 ## Introduction
 Directives are commonly used in Fortran programs to specify additional actions 
 to be performed by the compiler. The directives are always specified with the 
-`!dir$` or `cdir$` prefix. 
+`!dir$` or `cdir$` prefix.
 
 ## Loop Directives
+
 Some directives are associated with the following construct, for example loop
 directives. Directives on loops are used to specify additional transformation to
 be performed by the compiler like enabling vectorisation, unrolling, interchange

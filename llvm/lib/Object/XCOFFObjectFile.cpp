@@ -1414,7 +1414,7 @@ TBVectorExt::TBVectorExt(StringRef TBvectorStrRef, Error &Err) {
   unsigned ParmsNum =
       GETVALUEWITHMASKSHIFT(NumberOfVectorParmsMask, NumberOfVectorParmsShift);
 
-  ErrorAsOutParameter EAO(&Err);
+  ErrorAsOutParameter EAO(Err);
   Expected<SmallString<32>> VecParmsTypeOrError =
       parseVectorParmsType(VecParmsTypeValue, ParmsNum);
   if (!VecParmsTypeOrError)
@@ -1458,7 +1458,7 @@ XCOFFTracebackTable::create(const uint8_t *Ptr, uint64_t &Size, bool Is64Bit) {
 XCOFFTracebackTable::XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size,
                                          Error &Err, bool Is64Bit)
     : TBPtr(Ptr), Is64BitObj(Is64Bit) {
-  ErrorAsOutParameter EAO(&Err);
+  ErrorAsOutParameter EAO(Err);
   DataExtractor DE(ArrayRef<uint8_t>(Ptr, Size), /*IsLittleEndian=*/false,
                    /*AddressSize=*/0);
   DataExtractor::Cursor Cur(/*Offset=*/0);

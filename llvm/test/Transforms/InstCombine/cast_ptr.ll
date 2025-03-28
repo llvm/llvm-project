@@ -407,7 +407,7 @@ define i32 @ptr_add_in_int_extra_use1(i32 %x) {
 ; CHECK-LABEL: @ptr_add_in_int_extra_use1(
 ; CHECK-NEXT:    [[PTR:%.*]] = inttoptr i32 [[X:%.*]] to ptr
 ; CHECK-NEXT:    call void @use_ptr(ptr [[PTR]])
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i32 4096
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i32 4096
 ; CHECK-NEXT:    [[R:%.*]] = ptrtoint ptr [[P2]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -421,7 +421,7 @@ define i32 @ptr_add_in_int_extra_use1(i32 %x) {
 define i32 @ptr_add_in_int_extra_use2(i32 %x) {
 ; CHECK-LABEL: @ptr_add_in_int_extra_use2(
 ; CHECK-NEXT:    [[PTR:%.*]] = inttoptr i32 [[X:%.*]] to ptr
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i32 4096
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i32 4096
 ; CHECK-NEXT:    call void @use_ptr(ptr nonnull [[P2]])
 ; CHECK-NEXT:    [[R:%.*]] = ptrtoint ptr [[P2]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]

@@ -312,16 +312,21 @@ struct DNBRegisterValue {
     uint64_t uint64;
     float float32;
     double float64;
-    int8_t v_sint8[64];
-    int16_t v_sint16[32];
-    int32_t v_sint32[16];
-    int64_t v_sint64[8];
-    uint8_t v_uint8[64];
-    uint16_t v_uint16[32];
-    uint32_t v_uint32[16];
-    uint64_t v_uint64[8];
-    float v_float32[16];
-    double v_float64[8];
+    // AArch64 SME's ZA register max size is 64k, this object must be
+    // large enough to hold that much data.  The current Apple cores
+    // have a much smaller maximum ZA reg size, but there are not
+    // multiple copies of this object so increase the static size to
+    // maximum possible.
+    int8_t v_sint8[65536];
+    int16_t v_sint16[32768];
+    int32_t v_sint32[16384];
+    int64_t v_sint64[8192];
+    uint8_t v_uint8[65536];
+    uint16_t v_uint16[32768];
+    uint32_t v_uint32[16384];
+    uint64_t v_uint64[8192];
+    float v_float32[16384];
+    double v_float64[8192];
     void *pointer;
     char *c_str;
   } value;

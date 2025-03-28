@@ -15,7 +15,7 @@ define i16 @test() {
 ; CHECK-NEXT:    [[PEDGE_061_I:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], [[WHILE_BODY_I]] ], [ null, [[ENTRY]] ]
 ; CHECK-NEXT:    [[INCDEC_PTR_I]] = getelementptr [[S]], ptr [[PEDGE_061_I]], i64 -1
 ; CHECK-NEXT:    [[PPREV_0_I]] = getelementptr [[S]], ptr [[PPREV_062_I]], i64 -1
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i16> @llvm.experimental.vp.strided.load.v2i16.p0.i64(ptr align 2 [[PPREV_0_I]], i64 4, <2 x i1> <i1 true, i1 true>, i32 2)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i16> @llvm.experimental.vp.strided.load.v2i16.p0.i64(ptr align 2 [[PPREV_0_I]], i64 4, <2 x i1> splat (i1 true), i32 2)
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i16> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i16> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[CMP_I178:%.*]] = icmp ult i16 [[TMP3]], [[TMP2]]

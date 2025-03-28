@@ -105,13 +105,13 @@ static ReductionKind getReductionKindOfLinalgOp(LinalgOp op) {
 static MeshOp getMesh(Operation *op, ArrayRef<MeshSharding> operandShardings,
                       ArrayRef<MeshSharding> resultShardings,
                       SymbolTableCollection &symbolTable) {
-  for (const MeshSharding& sharding : operandShardings) {
+  for (const MeshSharding &sharding : operandShardings) {
     if (sharding) {
       return mesh::getMesh(op, sharding.getMeshAttr(), symbolTable);
     }
   }
 
-  for (const MeshSharding& sharding : resultShardings) {
+  for (const MeshSharding &sharding : resultShardings) {
     if (sharding) {
       return mesh::getMesh(op, sharding.getMeshAttr(), symbolTable);
     }
@@ -129,8 +129,9 @@ static MeshOp getMesh(Operation *op, ArrayRef<MeshSharding> operandShardings,
 // the original operand.
 // The other processes would use the reduction operation neutral tensor.
 static Value createDestinationPassingStyleInitOperand(
-    LinalgOp op, Value spmdizedOperand, ArrayRef<MeshAxis> reductionMeshAxes,
-    MeshOp meshOp, ImplicitLocOpBuilder &builder) {
+    LinalgOp op, int operandNumber, Value spmdizedOperand,
+    ArrayRef<MeshAxis> reductionMeshAxes, MeshOp meshOp,
+    ImplicitLocOpBuilder &builder) {
   Value processLinearIndexInReductionGroup = mesh::createProcessLinearIndex(
       meshOp.getSymName(), reductionMeshAxes, builder);
   Value zero = builder.create<arith::ConstantIndexOp>(0);
@@ -152,14 +153,21 @@ static Value createDestinationPassingStyleInitOperand(
     builder.setInsertionPointToEnd(&ifOp.getElseRegion().front());
     SmallVector<OpFoldResult> shape =
         tensor::getMixedSizes(builder, builder.getLoc(), spmdizedOperand);
-    PartialReductionOpInterface partialReductionIface =
-        llvm::cast<PartialReductionOpInterface>(op.getOperation());
-    assert(op->getNumResults() == 1 && "Multiple results not supported.");
-    FailureOr<SmallVector<Value>> reductionNeutralTensor =
-        partialReductionIface.generateInitialTensorForPartialReduction(
-            builder, builder.getLoc(), shape, {});
-    assert(succeeded(reductionNeutralTensor));
-    builder.create<scf::YieldOp>(reductionNeutralTensor.value());
+
+    SmallVector<Operation *> combinerOps;
+    matchReduction(op.getRegionOutputArgs(), operandNumber, combinerOps);
+    assert(combinerOps.size() == 1);
+    std::optional<TypedAttr> neutralEl =
+        arith::getNeutralElement(combinerOps[0]);
+
+    Value init = builder.create<tensor::EmptyOp>(op.getLoc(), shape,
+                                                 neutralEl.value().getType());
+    Value constant =
+        builder.create<arith::ConstantOp>(op.getLoc(), neutralEl.value());
+    Value fill = builder.create<linalg::FillOp>(op.getLoc(), constant, init)
+                     .getResult(0);
+
+    builder.create<scf::YieldOp>(fill);
   }
   return ifOp.getResult(0);
 }
@@ -178,7 +186,7 @@ static SmallVector<Value> createDestinationPassingStyleInitOperands(
   Value spmdizedInitOperand =
       spmdizationMap.lookup(op->getOperands()[operandIdx]);
   newOperands[operandIdx] = createDestinationPassingStyleInitOperand(
-      op, spmdizedInitOperand, reductionMeshAxes, meshOp, builder);
+      op, 0, spmdizedInitOperand, reductionMeshAxes, meshOp, builder);
   return newOperands;
 }
 

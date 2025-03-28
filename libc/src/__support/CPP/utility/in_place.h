@@ -27,11 +27,11 @@ template <class T> struct in_place_type_t {
 };
 template <class T> LIBC_INLINE_VAR constexpr in_place_type_t<T> in_place_type{};
 
-template <size_t I> struct in_place_index_t {
+template <size_t IDX> struct in_place_index_t {
   LIBC_INLINE explicit in_place_index_t() = default;
 };
-template <size_t I>
-LIBC_INLINE_VAR constexpr in_place_index_t<I> in_place_index{};
+template <size_t IDX>
+LIBC_INLINE_VAR constexpr in_place_index_t<IDX> in_place_index{};
 
 } // namespace cpp
 } // namespace LIBC_NAMESPACE_DECL

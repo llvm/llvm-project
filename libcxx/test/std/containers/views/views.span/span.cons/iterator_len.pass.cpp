@@ -14,10 +14,10 @@
 //  If Extent is not equal to dynamic_extent, then count shall be equal to Extent.
 //
 
-
-#include <span>
 #include <cassert>
+#include <cstddef>
 #include <iterator>
+#include <span>
 #include <type_traits>
 
 template <std::size_t Extent>
@@ -42,8 +42,8 @@ constexpr void test_constructibility() {
 template <class T>
 constexpr bool test_ctor() {
   T val[2] = {};
-  auto s1 = std::span<T>(val, 2);
-  auto s2 = std::span<T, 2>(val, 2);
+  auto s1  = std::span<T>(val, 2);
+  auto s2  = std::span<T, 2>(val, 2);
   assert(s1.data() == std::data(val) && s1.size() == std::size(val));
   assert(s2.data() == std::data(val) && s2.size() == std::size(val));
   return true;

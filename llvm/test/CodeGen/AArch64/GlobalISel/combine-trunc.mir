@@ -32,20 +32,12 @@ legalized: true
 body:             |
   bb.1:
   liveins: $h0
-    ; CHECK-PRE-LABEL: name: test_combine_trunc_anyext_s32_s16
-    ; CHECK-PRE: liveins: $h0
-    ; CHECK-PRE-NEXT: {{  $}}
-    ; CHECK-PRE-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
-    ; CHECK-PRE-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s16)
-    ; CHECK-PRE-NEXT: $w0 = COPY [[ANYEXT]](s32)
-    ;
-    ; CHECK-POST-LABEL: name: test_combine_trunc_anyext_s32_s16
-    ; CHECK-POST: liveins: $h0
-    ; CHECK-POST-NEXT: {{  $}}
-    ; CHECK-POST-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
-    ; CHECK-POST-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[COPY]](s16)
-    ; CHECK-POST-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[ANYEXT]](s64)
-    ; CHECK-POST-NEXT: $w0 = COPY [[TRUNC]](s32)
+    ; CHECK-LABEL: name: test_combine_trunc_anyext_s32_s16
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s16)
+    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
     %0:_(s16) = COPY $h0
     %1:_(s64) = G_ANYEXT %0(s16)
     %2:_(s32) = G_TRUNC %1(s64)
@@ -82,20 +74,12 @@ legalized: true
 body:             |
   bb.1:
   liveins: $h0
-    ; CHECK-PRE-LABEL: name: test_combine_trunc_sext_s32_s16
-    ; CHECK-PRE: liveins: $h0
-    ; CHECK-PRE-NEXT: {{  $}}
-    ; CHECK-PRE-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
-    ; CHECK-PRE-NEXT: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[COPY]](s16)
-    ; CHECK-PRE-NEXT: $w0 = COPY [[SEXT]](s32)
-    ;
-    ; CHECK-POST-LABEL: name: test_combine_trunc_sext_s32_s16
-    ; CHECK-POST: liveins: $h0
-    ; CHECK-POST-NEXT: {{  $}}
-    ; CHECK-POST-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
-    ; CHECK-POST-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY]](s16)
-    ; CHECK-POST-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[SEXT]](s64)
-    ; CHECK-POST-NEXT: $w0 = COPY [[TRUNC]](s32)
+    ; CHECK-LABEL: name: test_combine_trunc_sext_s32_s16
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[COPY]](s16)
+    ; CHECK-NEXT: $w0 = COPY [[SEXT]](s32)
     %0:_(s16) = COPY $h0
     %1:_(s64) = G_SEXT %0(s16)
     %2:_(s32) = G_TRUNC %1(s64)
@@ -107,20 +91,12 @@ legalized: true
 body:             |
   bb.1:
   liveins: $h0
-    ; CHECK-PRE-LABEL: name: test_combine_trunc_zext_s32_s16
-    ; CHECK-PRE: liveins: $h0
-    ; CHECK-PRE-NEXT: {{  $}}
-    ; CHECK-PRE-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
-    ; CHECK-PRE-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[COPY]](s16)
-    ; CHECK-PRE-NEXT: $w0 = COPY [[ZEXT]](s32)
-    ;
-    ; CHECK-POST-LABEL: name: test_combine_trunc_zext_s32_s16
-    ; CHECK-POST: liveins: $h0
-    ; CHECK-POST-NEXT: {{  $}}
-    ; CHECK-POST-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
-    ; CHECK-POST-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s16)
-    ; CHECK-POST-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[ZEXT]](s64)
-    ; CHECK-POST-NEXT: $w0 = COPY [[TRUNC]](s32)
+    ; CHECK-LABEL: name: test_combine_trunc_zext_s32_s16
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[COPY]](s16)
+    ; CHECK-NEXT: $w0 = COPY [[ZEXT]](s32)
     %0:_(s16) = COPY $h0
     %1:_(s64) = G_ZEXT %0(s16)
     %2:_(s32) = G_TRUNC %1(s64)
@@ -132,19 +108,11 @@ legalized: true
 body:             |
   bb.1:
   liveins: $w0
-    ; CHECK-PRE-LABEL: name: test_combine_trunc_anyext_s32_s32
-    ; CHECK-PRE: liveins: $w0
-    ; CHECK-PRE-NEXT: {{  $}}
-    ; CHECK-PRE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-PRE-NEXT: $w0 = COPY [[COPY]](s32)
-    ;
-    ; CHECK-POST-LABEL: name: test_combine_trunc_anyext_s32_s32
-    ; CHECK-POST: liveins: $w0
-    ; CHECK-POST-NEXT: {{  $}}
-    ; CHECK-POST-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-POST-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[COPY]](s32)
-    ; CHECK-POST-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[ANYEXT]](s64)
-    ; CHECK-POST-NEXT: $w0 = COPY [[TRUNC]](s32)
+    ; CHECK-LABEL: name: test_combine_trunc_anyext_s32_s32
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: $w0 = COPY [[COPY]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s64) = G_ANYEXT %0(s32)
     %2:_(s32) = G_TRUNC %1(s64)
@@ -156,20 +124,12 @@ legalized: true
 body:             |
   bb.1:
   liveins: $x0
-    ; CHECK-PRE-LABEL: name: test_combine_trunc_anyext_s32_s64
-    ; CHECK-PRE: liveins: $x0
-    ; CHECK-PRE-NEXT: {{  $}}
-    ; CHECK-PRE-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK-PRE-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-PRE-NEXT: $w0 = COPY [[TRUNC]](s32)
-    ;
-    ; CHECK-POST-LABEL: name: test_combine_trunc_anyext_s32_s64
-    ; CHECK-POST: liveins: $x0
-    ; CHECK-POST-NEXT: {{  $}}
-    ; CHECK-POST-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK-POST-NEXT: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[COPY]](s64)
-    ; CHECK-POST-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[ANYEXT]](s128)
-    ; CHECK-POST-NEXT: $w0 = COPY [[TRUNC]](s32)
+    ; CHECK-LABEL: name: test_combine_trunc_anyext_s32_s64
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: $w0 = COPY [[TRUNC]](s32)
     %0:_(s64) = COPY $x0
     %1:_(s128) = G_ANYEXT %0(s64)
     %2:_(s32) = G_TRUNC %1(s128)

@@ -43,7 +43,6 @@ char CloneableError::ID;
 char CloneableECError::ID;
 char MachKernelError::ID;
 char Win32Error::ID;
-char ExpressionErrorBase::ID;
 
 namespace {
 /// A std::error_code category for eErrorTypeGeneric.
@@ -253,8 +252,28 @@ lldb::ErrorType Win32Error::GetErrorType() const {
   return lldb::eErrorTypeWin32;
 }
 
-lldb::ErrorType ExpressionErrorBase::GetErrorType() const {
-  return lldb::eErrorTypeExpression;
+StructuredData::ObjectSP Status::GetAsStructuredData() const {
+  auto dict_up = std::make_unique<StructuredData::Dictionary>();
+  auto array_up = std::make_unique<StructuredData::Array>();
+  llvm::visitErrors(m_error, [&](const llvm::ErrorInfoBase &error) {
+    if (error.isA<CloneableError>())
+      array_up->AddItem(
+          static_cast<const CloneableError &>(error).GetAsStructuredData());
+    else
+      array_up->AddStringItem(error.message());
+  });
+  dict_up->AddIntegerItem("version", 1u);
+  dict_up->AddIntegerItem("type", (unsigned)GetType());
+  dict_up->AddItem("errors", std::move(array_up));
+  return dict_up;
+}
+
+StructuredData::ObjectSP CloneableECError::GetAsStructuredData() const {
+  auto dict_up = std::make_unique<StructuredData::Dictionary>();
+  dict_up->AddIntegerItem("version", 1u);
+  dict_up->AddIntegerItem("error_code", EC.value());
+  dict_up->AddStringItem("message", message());
+  return dict_up;
 }
 
 ErrorType Status::GetType() const {
@@ -263,7 +282,11 @@ ErrorType Status::GetType() const {
     // Return the first only.
     if (result != eErrorTypeInvalid)
       return;
-    result = ErrorCodeToErrorType(error.convertToErrorCode());
+    if (error.isA<CloneableError>())
+      result = static_cast<const CloneableError &>(error).GetErrorType();
+    else
+      result = ErrorCodeToErrorType(error.convertToErrorCode());
+
   });
   return result;
 }
@@ -285,30 +308,4 @@ void llvm::format_provider<lldb_private::Status>::format(
     llvm::StringRef Options) {
   llvm::format_provider<llvm::StringRef>::format(error.AsCString(), OS,
                                                  Options);
-}
-
-const char *lldb_private::ExpressionResultAsCString(ExpressionResults result) {
-  switch (result) {
-  case eExpressionCompleted:
-    return "eExpressionCompleted";
-  case eExpressionDiscarded:
-    return "eExpressionDiscarded";
-  case eExpressionInterrupted:
-    return "eExpressionInterrupted";
-  case eExpressionHitBreakpoint:
-    return "eExpressionHitBreakpoint";
-  case eExpressionSetupError:
-    return "eExpressionSetupError";
-  case eExpressionParseError:
-    return "eExpressionParseError";
-  case eExpressionResultUnavailable:
-    return "eExpressionResultUnavailable";
-  case eExpressionTimedOut:
-    return "eExpressionTimedOut";
-  case eExpressionStoppedForDebug:
-    return "eExpressionStoppedForDebug";
-  case eExpressionThreadVanished:
-    return "eExpressionThreadVanished";
-  }
-  return "<unknown>";
 }

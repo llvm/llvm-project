@@ -638,13 +638,13 @@ func.func @vecdim_reduction_complex_ub(%in: memref<256x512xf32>, %out: memref<25
  return
 }
 
-// CHECK:       #[[$map3:.*]] = affine_map<([[d0:.*]], [[d1:.*]]) -> ([[d0]], [[d1]] * 2)>
-// CHECK:       #[[$map3_sub:.*]] = affine_map<([[d0:.*]], [[d1:.*]]) -> ([[d0]] - [[d1]])>
+// CHECK:       #[[$map3:.*]] = affine_map<(d0, d1) -> (d0, d1 * 2)>
+// CHECK:       #[[$map3_sub:.*]] = affine_map<(d0)[s0] -> (-d0 + s0)>
 // CHECK-LABEL: @vecdim_reduction_complex_ub
 // CHECK:         %[[vzero:.*]] = arith.constant dense<0.000000e+00> : vector<128xf32>
 // CHECK:         %{{.*}} = affine.for %[[iv:.*]] = 0 to min #[[$map3]](%[[M:.*]], %[[N:.*]]) step 128 iter_args(%[[red_iter:.*]] = {{.*}}) -> (vector<128xf32>) {
 // CHECK:           %[[ub:.*]] = affine.min #[[$map3]](%[[M]], %[[N]])
-// CHECK:           %[[elems_left:.*]] = affine.apply #[[$map3_sub]](%[[ub]], %[[iv]])
+// CHECK:           %[[elems_left:.*]] = affine.apply #[[$map3_sub]](%[[iv]])[%[[ub]]]
 // CHECK:           %[[mask:.*]] = vector.create_mask %[[elems_left]] : vector<128xi1>
 // CHECK:           %[[ld:.*]] = vector.transfer_read %{{.*}} : memref<256x512xf32>, vector<128xf32>
 // CHECK:           %[[select:.*]] = arith.select %[[mask]], %[[ld]], %[[vzero]] : vector<128xi1>, vector<128xf32>

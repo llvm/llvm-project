@@ -23,7 +23,7 @@ func.func @test_math(%arg0 : f32) {
         threads(%6, %7, %8) in (%9 = %c2, %10 = %c1, %11 = %c1) { 
         // CHECK-NVVM: __nv_expf 
         %s1 = math.exp %arg0 : f32
-        gpu.printf "%f" %s1 : f32
+        gpu.printf "%f", %s1 : f32
         gpu.terminator
     }
     return

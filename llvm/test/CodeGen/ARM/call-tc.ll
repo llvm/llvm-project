@@ -17,7 +17,7 @@ define void @t1() "frame-pointer"="all" {
         ret void
 }
 
-define void @t2() "frame-pointer"="all" {
+define void @t2() "frame-pointer"="none" {
 ; CHECKV6-LABEL: t2:
 ; CHECKV6: bx r0
 ; CHECKT2D-LABEL: t2:
@@ -102,7 +102,7 @@ bb:
 
 ; Make sure codegenprep is duplicating ret instructions to enable tail calls.
 ; rdar://11140249
-define i32 @t8(i32 %x) nounwind ssp "frame-pointer"="all" {
+define i32 @t8(i32 %x) nounwind ssp "frame-pointer"="none" {
 entry:
 ; CHECKT2D-LABEL: t8:
 ; CHECKT2D-NOT: push

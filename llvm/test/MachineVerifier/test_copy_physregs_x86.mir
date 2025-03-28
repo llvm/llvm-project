@@ -1,4 +1,4 @@
-# RUN: not --crash llc -march=x86-64 -run-pass=none -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s -implicit-check-not="Bad machine code"
+# RUN: not --crash llc -mtriple=x86_64 -run-pass=none -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s -implicit-check-not="Bad machine code"
 # REQUIRES: x86-registered-target
 
 # These copies have mismatched type sizes that are allowed because the

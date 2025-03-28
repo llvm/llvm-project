@@ -15,6 +15,7 @@
 #include "clang/Tooling/JSONCompilationDatabase.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
@@ -25,7 +26,7 @@ namespace dependencies {
 
 /// A callback to lookup module outputs for "-fmodule-file=", "-o" etc.
 using LookupModuleOutputCallback =
-    llvm::function_ref<std::string(const ModuleID &, ModuleOutputKind)>;
+    llvm::function_ref<std::string(const ModuleDeps &, ModuleOutputKind)>;
 
 /// Graph of modular dependencies.
 using ModuleDepsGraph = std::vector<ModuleDeps>;
@@ -78,6 +79,9 @@ struct P1689Rule {
 class DependencyScanningTool {
 public:
   /// Construct a dependency scanning tool.
+  ///
+  /// @param Service  The parent service. Must outlive the tool.
+  /// @param FS The filesystem for the tool to use. Defaults to the physical FS.
   DependencyScanningTool(DependencyScanningService &Service,
                          llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
                              llvm::vfs::createPhysicalFileSystem());
@@ -127,14 +131,17 @@ public:
   /// \param LookupModuleOutput This function is called to fill in
   ///                           "-fmodule-file=", "-o" and other output
   ///                           arguments for dependencies.
+  /// \param TUBuffer Optional memory buffer for translation unit input. If
+  ///                 TUBuffer is nullopt, the input should be included in the
+  ///                 Commandline already.
   ///
   /// \returns a \c StringError with the diagnostic output if clang errors
   /// occurred, \c TranslationUnitDeps otherwise.
-  llvm::Expected<TranslationUnitDeps>
-  getTranslationUnitDependencies(const std::vector<std::string> &CommandLine,
-                                 StringRef CWD,
-                                 const llvm::DenseSet<ModuleID> &AlreadySeen,
-                                 LookupModuleOutputCallback LookupModuleOutput);
+  llvm::Expected<TranslationUnitDeps> getTranslationUnitDependencies(
+      const std::vector<std::string> &CommandLine, StringRef CWD,
+      const llvm::DenseSet<ModuleID> &AlreadySeen,
+      LookupModuleOutputCallback LookupModuleOutput,
+      std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
 
   /// Given a compilation context specified via the Clang driver command-line,
   /// gather modular dependencies of module with the given name, and return the
@@ -201,19 +208,21 @@ class CallbackActionController : public DependencyActionController {
 public:
   virtual ~CallbackActionController();
 
+  static std::string lookupUnreachableModuleOutput(const ModuleDeps &MD,
+                                                   ModuleOutputKind Kind) {
+    llvm::report_fatal_error("unexpected call to lookupModuleOutput");
+  };
+
   CallbackActionController(LookupModuleOutputCallback LMO)
       : LookupModuleOutput(std::move(LMO)) {
     if (!LookupModuleOutput) {
-      LookupModuleOutput = [](const ModuleID &,
-                              ModuleOutputKind) -> std::string {
-        llvm::report_fatal_error("unexpected call to lookupModuleOutput");
-      };
+      LookupModuleOutput = lookupUnreachableModuleOutput;
     }
   }
 
-  std::string lookupModuleOutput(const ModuleID &ID,
+  std::string lookupModuleOutput(const ModuleDeps &MD,
                                  ModuleOutputKind Kind) override {
-    return LookupModuleOutput(ID, Kind);
+    return LookupModuleOutput(MD, Kind);
   }
 
 private:

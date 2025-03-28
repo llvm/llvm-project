@@ -22,12 +22,12 @@ void kernel ker() {
 
   uchar4 vc;
   vc = (uchar4)true;
-// CHECK: store <4 x i8> <i8 -1, i8 -1, i8 -1, i8 -1>, ptr %vc, align 4
+// CHECK: store <4 x i8> splat (i8 -1), ptr %vc, align 4
   unsigned char c;
   c = (unsigned char)true;
 // CHECK: store i8 1, ptr %c, align 1
 
   float4 vf;
   vf = (float4)true;
-// CHECK: store <4 x float> <float -1.000000e+00, float -1.000000e+00, float -1.000000e+00, float -1.000000e+00>
+// CHECK: store <4 x float> splat (float -1.000000e+00)
 }

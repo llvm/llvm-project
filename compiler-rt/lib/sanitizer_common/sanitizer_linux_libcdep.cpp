@@ -57,7 +57,7 @@
 // that, it was never implemented. So just define it to zero.
 #    undef MAP_NORESERVE
 #    define MAP_NORESERVE 0
-extern const Elf_Auxinfo *__elf_aux_vector;
+extern const Elf_Auxinfo *__elf_aux_vector __attribute__((weak));
 extern "C" int __sys_sigaction(int signum, const struct sigaction *act,
                                struct sigaction *oldact);
 #  endif
@@ -72,20 +72,6 @@ extern "C" int __sys_sigaction(int signum, const struct sigaction *act,
 #    include <stddef.h>
 #    include <stdlib.h>
 #    include <thread.h>
-#  endif
-
-#  if SANITIZER_ANDROID
-#    include <android/api-level.h>
-#    if !defined(CPU_COUNT) && !defined(__aarch64__)
-#      include <dirent.h>
-#      include <fcntl.h>
-struct __sanitizer::linux_dirent {
-  long d_ino;
-  off_t d_off;
-  unsigned short d_reclen;
-  char d_name[];
-};
-#    endif
 #  endif
 
 #  if !SANITIZER_ANDROID
@@ -773,11 +759,6 @@ static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *arg) {
   return 0;
 }
 
-#  if SANITIZER_ANDROID && __ANDROID_API__ < 21
-extern "C" __attribute__((weak)) int dl_iterate_phdr(
-    int (*)(struct dl_phdr_info *, size_t, void *), void *);
-#  endif
-
 static bool requiresProcmaps() {
 #  if SANITIZER_ANDROID && __ANDROID_API__ <= 22
   // Fall back to /proc/maps if dl_iterate_phdr is unavailable or broken.
@@ -862,42 +843,6 @@ u32 GetNumberOfCPUs() {
   req[1] = HW_NCPU;
   CHECK_EQ(internal_sysctl(req, 2, &ncpu, &len, NULL, 0), 0);
   return ncpu;
-#  elif SANITIZER_ANDROID && !defined(CPU_COUNT) && !defined(__aarch64__)
-  // Fall back to /sys/devices/system/cpu on Android when cpu_set_t doesn't
-  // exist in sched.h. That is the case for toolchains generated with older
-  // NDKs.
-  // This code doesn't work on AArch64 because internal_getdents makes use of
-  // the 64bit getdents syscall, but cpu_set_t seems to always exist on AArch64.
-  uptr fd = internal_open("/sys/devices/system/cpu", O_RDONLY | O_DIRECTORY);
-  if (internal_iserror(fd))
-    return 0;
-  InternalMmapVector<u8> buffer(4096);
-  uptr bytes_read = buffer.size();
-  uptr n_cpus = 0;
-  u8 *d_type;
-  struct linux_dirent *entry = (struct linux_dirent *)&buffer[bytes_read];
-  while (true) {
-    if ((u8 *)entry >= &buffer[bytes_read]) {
-      bytes_read = internal_getdents(fd, (struct linux_dirent *)buffer.data(),
-                                     buffer.size());
-      if (internal_iserror(bytes_read) || !bytes_read)
-        break;
-      entry = (struct linux_dirent *)buffer.data();
-    }
-    d_type = (u8 *)entry + entry->d_reclen - 1;
-    if (d_type >= &buffer[bytes_read] ||
-        (u8 *)&entry->d_name[3] >= &buffer[bytes_read])
-      break;
-    if (entry->d_ino != 0 && *d_type == DT_DIR) {
-      if (entry->d_name[0] == 'c' && entry->d_name[1] == 'p' &&
-          entry->d_name[2] == 'u' && entry->d_name[3] >= '0' &&
-          entry->d_name[3] <= '9')
-        n_cpus++;
-    }
-    entry = (struct linux_dirent *)(((u8 *)entry) + entry->d_reclen);
-  }
-  internal_close(fd);
-  return n_cpus;
 #  elif SANITIZER_SOLARIS
   return sysconf(_SC_NPROCESSORS_ONLN);
 #  else
@@ -940,11 +885,8 @@ extern "C" SANITIZER_WEAK_ATTRIBUTE int __android_log_write(int prio,
 void WriteOneLineToSyslog(const char *s) {
   if (&async_safe_write_log) {
     async_safe_write_log(SANITIZER_ANDROID_LOG_INFO, GetProcessName(), s);
-  } else if (AndroidGetApiLevel() > ANDROID_KITKAT) {
-    syslog(LOG_INFO, "%s", s);
   } else {
-    CHECK(&__android_log_write);
-    __android_log_write(SANITIZER_ANDROID_LOG_INFO, nullptr, s);
+    syslog(LOG_INFO, "%s", s);
   }
 }
 

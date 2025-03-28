@@ -1,4 +1,4 @@
-; RUN: llc -O1 < %s -march=avr | FileCheck %s
+; RUN: llc -O1 < %s -mtriple=avr | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9"

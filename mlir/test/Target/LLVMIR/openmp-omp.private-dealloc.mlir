@@ -10,12 +10,7 @@ llvm.func @parallel_op_dealloc(%arg0: !llvm.ptr) {
   llvm.return
 }
 
-omp.private {type = firstprivate} @x.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %c1 = llvm.mlir.constant(1 : i32) : i32
-  %0 = llvm.alloca %c1 x f32 : (i32) -> !llvm.ptr
-  omp.yield(%0 : !llvm.ptr)
-} copy {
+omp.private {type = firstprivate} @x.privatizer : f32 copy {
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   %0 = llvm.load %arg0 : !llvm.ptr -> f32
   llvm.store %0, %arg1 : f32, !llvm.ptr

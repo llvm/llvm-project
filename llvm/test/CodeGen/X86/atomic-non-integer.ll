@@ -440,7 +440,7 @@ define double @exchange_double(ptr %fptr, double %x) {
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE1-NEXT:    movl (%esi), %eax
 ; X86-SSE1-NEXT:    movl 4(%esi), %edx
-; X86-SSE1-NEXT:    .p2align 4, 0x90
+; X86-SSE1-NEXT:    .p2align 4
 ; X86-SSE1-NEXT:  .LBB8_1: # %atomicrmw.start
 ; X86-SSE1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-SSE1-NEXT:    lock cmpxchg8b (%esi)
@@ -472,7 +472,7 @@ define double @exchange_double(ptr %fptr, double %x) {
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    movl (%esi), %eax
 ; X86-SSE2-NEXT:    movl 4(%esi), %edx
-; X86-SSE2-NEXT:    .p2align 4, 0x90
+; X86-SSE2-NEXT:    .p2align 4
 ; X86-SSE2-NEXT:  .LBB8_1: # %atomicrmw.start
 ; X86-SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-SSE2-NEXT:    lock cmpxchg8b (%esi)
@@ -506,7 +506,7 @@ define double @exchange_double(ptr %fptr, double %x) {
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX-NEXT:    movl (%esi), %eax
 ; X86-AVX-NEXT:    movl 4(%esi), %edx
-; X86-AVX-NEXT:    .p2align 4, 0x90
+; X86-AVX-NEXT:    .p2align 4
 ; X86-AVX-NEXT:  .LBB8_1: # %atomicrmw.start
 ; X86-AVX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-AVX-NEXT:    lock cmpxchg8b (%esi)
@@ -539,7 +539,7 @@ define double @exchange_double(ptr %fptr, double %x) {
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOSSE-NEXT:    movl (%esi), %eax
 ; X86-NOSSE-NEXT:    movl 4(%esi), %edx
-; X86-NOSSE-NEXT:    .p2align 4, 0x90
+; X86-NOSSE-NEXT:    .p2align 4
 ; X86-NOSSE-NEXT:  .LBB8_1: # %atomicrmw.start
 ; X86-NOSSE-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NOSSE-NEXT:    lock cmpxchg8b (%esi)

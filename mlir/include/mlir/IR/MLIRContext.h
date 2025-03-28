@@ -197,6 +197,11 @@ public:
   /// operations.
   ArrayRef<RegisteredOperationName> getRegisteredOperations();
 
+  /// Return a sorted array containing the information for registered operations
+  /// filtered by dialect name.
+  ArrayRef<RegisteredOperationName>
+  getRegisteredOperationsByDialect(StringRef dialectName);
+
   /// Return true if this operation name is registered in this context.
   bool isOperationRegistered(StringRef name);
 

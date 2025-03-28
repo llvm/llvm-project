@@ -18,6 +18,8 @@ struct Flags {
   Type Name{DefaultValue};
 #include "rtsan_flags.inc"
 #undef RTSAN_FLAG
+
+  bool ContainsSuppresionFile() { return suppressions[0] != '\0'; }
 };
 
 extern Flags flags_data;

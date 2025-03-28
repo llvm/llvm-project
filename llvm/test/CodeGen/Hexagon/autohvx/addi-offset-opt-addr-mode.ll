@@ -1,6 +1,6 @@
-; RUN: llc -march=hexagon -disable-hexagon-amodeopt < %s | FileCheck %s --check-prefix=CHECK-NO-AMODE1
+; RUN: llc -mtriple=hexagon -disable-hexagon-amodeopt < %s | FileCheck %s --check-prefix=CHECK-NO-AMODE1
 
-; RUN: llc -march=hexagon -disable-hexagon-amodeopt=0 < %s | FileCheck %s --check-prefix=CHECK-AMODE
+; RUN: llc -mtriple=hexagon -disable-hexagon-amodeopt=0 < %s | FileCheck %s --check-prefix=CHECK-AMODE
 
 ; CHECK-NO-AMODE1: r{{[0-9]+}} = add([[REG1:(r[0-9]+)]],#{{[0-9]+}})
 ; CHECK-NO-AMODE1: r{{[0-9]+}} = add([[REG1]],#{{[0-9]+}})

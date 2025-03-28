@@ -80,16 +80,10 @@ define half @reduce_fast_half8(<8 x half> %vec8) {
 ; NOFP16-LABEL: define half @reduce_fast_half8(
 ; NOFP16-SAME: <8 x half> [[VEC8:%.*]]) #[[ATTR0]] {
 ; NOFP16-NEXT:  [[ENTRY:.*:]]
-; NOFP16-NEXT:    [[ELT4:%.*]] = extractelement <8 x half> [[VEC8]], i64 4
-; NOFP16-NEXT:    [[ELT5:%.*]] = extractelement <8 x half> [[VEC8]], i64 5
-; NOFP16-NEXT:    [[ELT6:%.*]] = extractelement <8 x half> [[VEC8]], i64 6
-; NOFP16-NEXT:    [[ELT7:%.*]] = extractelement <8 x half> [[VEC8]], i64 7
 ; NOFP16-NEXT:    [[TMP0:%.*]] = shufflevector <8 x half> [[VEC8]], <8 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; NOFP16-NEXT:    [[TMP1:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> [[TMP0]])
-; NOFP16-NEXT:    [[OP_RDX:%.*]] = fadd fast half [[TMP1]], [[ELT4]]
-; NOFP16-NEXT:    [[OP_RDX1:%.*]] = fadd fast half [[ELT5]], [[ELT6]]
-; NOFP16-NEXT:    [[OP_RDX2:%.*]] = fadd fast half [[OP_RDX]], [[OP_RDX1]]
-; NOFP16-NEXT:    [[OP_RDX3:%.*]] = fadd fast half [[OP_RDX2]], [[ELT7]]
+; NOFP16-NEXT:    [[TMP2:%.*]] = shufflevector <8 x half> [[VEC8]], <8 x half> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; NOFP16-NEXT:    [[RDX_OP:%.*]] = fadd fast <4 x half> [[TMP0]], [[TMP2]]
+; NOFP16-NEXT:    [[OP_RDX3:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> [[RDX_OP]])
 ; NOFP16-NEXT:    ret half [[OP_RDX3]]
 ;
 ; FULLFP16-LABEL: define half @reduce_fast_half8(

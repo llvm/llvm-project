@@ -20,18 +20,18 @@ def OpWithAttr : NS_Op<"op_with_attr">{
 // Test required and optional properties
 // ---
 
-def DefaultI64Array : IntArrayProperty<"int64_t"> {
+def DefaultI64Array : IntArrayProp<I64Prop> {
   let defaultValue = "::llvm::ArrayRef<int64_t>{}";
   let storageTypeValueOverride = "::llvm::SmallVector<int64_t>{}";
 }
 
 def OpWithProps : NS_Op<"op_with_props"> {
   let arguments = (ins
-    BoolProperty:$flag,
-    StringProperty:$string,
-    ArrayProperty<StringProperty>:$strings,
-    DefaultValuedProperty<I32Property, "0">:$default_int,
-    OptionalProperty<I64Property>:$optional,
+    BoolProp:$flag,
+    StringProp:$string,
+    ArrayProp<StringProp>:$strings,
+    DefaultValuedProp<I32Prop, "0">:$default_int,
+    OptionalProp<I64Prop>:$optional,
     DefaultI64Array:$intArray
   );
 }
@@ -39,10 +39,10 @@ def OpWithProps : NS_Op<"op_with_props"> {
 /// Check that optional arguments to builders only go at the end.
 def OpWithSomeOptionalProperties : NS_Op<"op_with_some_optional_props"> {
   let arguments = (ins
-    OptionalProperty<I64Property>:$mustSpecify,
-    I64Property:$required,
-    OptionalProperty<StringProperty>:$canOmit,
-    DefaultValuedProperty<I64Property, "-1">:$canOmit2
+    OptionalProp<I64Prop>:$mustSpecify,
+    I64Prop:$required,
+    OptionalProp<StringProp>:$canOmit,
+    DefaultValuedProp<I64Prop, "-1">:$canOmit2
   );
 }
 
@@ -51,10 +51,10 @@ def OpWithSomeOptionalProperties : NS_Op<"op_with_some_optional_props"> {
 def OpWithOptionalPropsAndAttrs :
     NS_Op<"with_some_optional_props_and_atts"> {
   let arguments = (ins
-    OptionalProperty<BoolProperty>:$mustSpecify,
+    OptionalProp<BoolProp>:$mustSpecify,
     OptionalAttr<BoolAttr>:$ambiguous,
     OptionalAttr<I32Attr>:$canOmit,
-    OptionalProperty<I32Property>:$canOmitProp
+    OptionalProp<I32Prop>:$canOmitProp
   );
 }
 

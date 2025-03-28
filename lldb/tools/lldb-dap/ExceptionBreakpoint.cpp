@@ -9,6 +9,7 @@
 #include "ExceptionBreakpoint.h"
 #include "BreakpointBase.h"
 #include "DAP.h"
+#include "lldb/API/SBTarget.h"
 
 namespace lldb_dap {
 
@@ -17,8 +18,8 @@ void ExceptionBreakpoint::SetBreakpoint() {
     return;
   bool catch_value = filter.find("_catch") != std::string::npos;
   bool throw_value = filter.find("_throw") != std::string::npos;
-  bp = g_dap.target.BreakpointCreateForException(language, catch_value,
-                                                 throw_value);
+  bp = dap.target.BreakpointCreateForException(language, catch_value,
+                                               throw_value);
   // See comments in BreakpointBase::GetBreakpointLabel() for details of why
   // we add a label to our breakpoints.
   bp.AddName(BreakpointBase::GetBreakpointLabel());
@@ -27,7 +28,7 @@ void ExceptionBreakpoint::SetBreakpoint() {
 void ExceptionBreakpoint::ClearBreakpoint() {
   if (!bp.IsValid())
     return;
-  g_dap.target.BreakpointDelete(bp.GetID());
+  dap.target.BreakpointDelete(bp.GetID());
   bp = lldb::SBBreakpoint();
 }
 

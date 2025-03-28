@@ -1,7 +1,10 @@
 # REQUIRES: x86, shell
 
 # RUN: rm -rf %t.dir
+# RUN: split-file %s %t.dir
+
 # RUN: yaml2obj %p/Inputs/hello32.yaml -o %t.obj
+# RUN: llvm-mc -filetype=obj -triple=i386-windows %t.dir/drectve.s -o %t.dir/drectve.obj
 # RUN: echo '_main@0' > %t.order
 # RUN: touch %t.def
 # RUN: touch %t.cg
@@ -46,7 +49,7 @@ and various other flags.
 # RUN: diff %t.order repro/%:t.order
 # RUN: diff %t.def repro/%:t.def
 # RUN: diff %p/Inputs/std32.lib repro/%:p/Inputs/std32.lib
-# RUN: FileCheck %s --check-prefix=RSP < repro/response.txt
+# RUN: FileCheck %s --check-prefix=RSP-DEFAULTLIB < repro/response.txt
 # RUN: cd repro; lld-link @response.txt
 
 Test adding .lib files with LIB env var to repro archive,
@@ -61,7 +64,7 @@ and various other flags.
 # RUN: diff %t.order repro/%:t.order
 # RUN: diff %t.def repro/%:t.def
 # RUN: diff %p/Inputs/std32.lib repro/%:p/Inputs/std32.lib
-# RUN: FileCheck %s --check-prefix=RSP < repro/response.txt
+# RUN: FileCheck %s --check-prefix=RSP-DEFAULTLIB < repro/response.txt
 # RUN: cd repro; lld-link @response.txt
 
 # LIST: .obj
@@ -70,14 +73,21 @@ and various other flags.
 # LIST: .def
 # LIST: .order
 
+# RSP: linkrepro.test.tmp.obj
+# RSP: std32.lib
 # RSP: /subsystem:console
 # RSP: /entry:main@0
 # RSP: /out:
 # RSP-NOT: /order:@/
 # RSP-NOT: /def:/
-# RSP: linkrepro.test.tmp.obj
-# RSP-NOT: defaultlib
-# RSP: std32.lib
+
+# RSP-DEFAULTLIB: linkrepro.test.tmp.obj
+# RSP-DEFAULTLIB: /defaultlib:std32
+# RSP-DEFAULTLIB: /subsystem:console
+# RSP-DEFAULTLIB: /entry:main@0
+# RSP-DEFAULTLIB: /out:
+# RSP-DEFAULTLIB-NOT: /order:@/
+# RSP-DEFAULTLIB-NOT: /def:/
 
 Test /call-graph-ordering-file (can't be used with /order:, needs separate test)
 # RUN: mkdir -p %t.dir/build5
@@ -96,3 +106,90 @@ Test /call-graph-ordering-file (can't be used with /order:, needs separate test)
 # LISTCG: .cg
 
 # RSPCG-NOT: /call-graph-ordering-file:/
+
+Test /defaultlib: from a .drectve section
+# RUN: mkdir -p %t.dir/build6
+# RUN: cd %t.dir/build6
+# RUN: lld-link %t.obj %t.dir/drectve.obj /libpath:%p/Inputs /subsystem:console \
+# RUN:   /entry:main@0 /linkrepro:. -safeseh:no /out:%t.exe /order:@%t.order /def:%t.def
+# RUN: tar tf repro.tar | FileCheck --check-prefix=LIST %s
+# RUN: tar xf repro.tar
+# RUN: diff %t.obj repro/%:t.obj
+# RUN: diff %t.order repro/%:t.order
+# RUN: diff %t.def repro/%:t.def
+# RUN: diff %p/Inputs/std32.lib repro/%:p/Inputs/std32.lib
+# RUN: FileCheck %s --check-prefix=RSP-DRECTVE < repro/response.txt
+# RUN: cd repro; lld-link @response.txt
+
+# RSP-DRECTVE: linkrepro.test.tmp.obj
+# RSP-DRECTVE: drectve.obj
+# RSP-DRECTVE: /subsystem:console
+# RSP-DRECTVE: /entry:main@0
+# RSP-DRECTVE: -safeseh:no
+# RSP-DRECTVE: /out:
+
+Test /wholearchive: with /linkrepro:
+# RUN: llvm-mc -filetype=obj -triple=i386-windows %t.dir/archive.s -o %t.dir/archive.obj
+# RUN: rm -f %t.dir/build7/archive.lib
+# RUN: llvm-ar rcs %t.dir/archive.lib %t.dir/archive.obj
+# RUN: mkdir -p %t.dir/build7
+# RUN: cd %t.dir/build7
+ RUN: lld-link %t.obj /defaultlib:std32 /libpath:%p/Inputs /subsystem:console \
+# RUN:   /entry:main@0 /linkrepro:. -safeseh:no /wholearchive:%t.dir/archive.lib \
+# RUN:   /out:%t.exe /order:@%t.order /def:%t.def
+# RUN: tar tf repro.tar | FileCheck --check-prefix=LIST %s
+# RUN: tar xf repro.tar
+# RUN: diff %t.obj repro/%:t.obj
+# RUN: diff %t.order repro/%:t.order
+# RUN: diff %t.def repro/%:t.def
+# RUN: diff %p/Inputs/std32.lib repro/%:p/Inputs/std32.lib
+# RUN: FileCheck %s --check-prefix=RSP-WHOLEARCHIVE < repro/response.txt
+# RUN: cd repro; lld-link @response.txt
+
+# RSP-WHOLEARCHIVE: linkrepro.test.tmp.obj
+# RSP-WHOLEARCHIVE: /defaultlib:std32
+# RSP-WHOLEARCHIVE: /subsystem:console
+# RSP-WHOLEARCHIVE: /entry:main@0
+# RSP-WHOLEARCHIVE: -safeseh:no
+# RSP-WHOLEARCHIVE: /wholearchive:{{.*}}archive.lib
+# RSP-WHOLEARCHIVE: /out:
+
+Test /start-lib / /end-lib with /linkrepro:
+# RUN: mkdir -p %t.dir/build8
+# RUN: cd %t.dir/build8
+# RUN: lld-link %t.obj /defaultlib:std32 /libpath:%p/Inputs /subsystem:console \
+# RUN:   /entry:main@0 /linkrepro:. -safeseh:no /start-lib %t.dir/drectve.obj /end-lib \
+# RUN:   /out:%t.exe /order:@%t.order /def:%t.def
+# RUN: tar tf repro.tar | FileCheck --check-prefix=LIST %s
+# RUN: tar xf repro.tar
+# RUN: diff %t.obj repro/%:t.obj
+# RUN: diff %t.order repro/%:t.order
+# RUN: diff %t.def repro/%:t.def
+# RUN: diff %p/Inputs/std32.lib repro/%:p/Inputs/std32.lib
+# RUN: FileCheck %s --check-prefix=RSP-STARTLIB < repro/response.txt
+# RUN: cd repro; lld-link @response.txt
+
+# RSP-STARTLIB: linkrepro.test.tmp.obj
+# RSP-STARTLIB: /defaultlib:std32
+# RSP-STARTLIB: /subsystem:console
+# RSP-STARTLIB: /entry:main@0
+# RSP-STARTLIB: -safeseh:no
+# RSP-STARTLIB: /start-lib
+# RSP-STARTLIB-NEXT: drectve.obj
+# RSP-STARTLIB-NEXT: /end-lib
+# RSP-STARTLIB: /out:
+
+#--- drectve.s
+        .section .drectve, "yn"
+        .ascii "/defaultlib:std32"
+
+#--- archive.s
+	.text
+	.intel_syntax noprefix
+	.globl	exportfn3
+	.p2align	4
+exportfn3:
+	ret
+
+	.section	.drectve,"yni"
+	.ascii	" /EXPORT:exportfn3"

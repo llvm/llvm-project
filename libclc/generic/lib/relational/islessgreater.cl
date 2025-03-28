@@ -1,36 +1,15 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include <clc/clc.h>
-#include "relational.h"
+#include <clc/relational/clc_islessgreater.h>
 
-//Note: It would be nice to use __builtin_islessgreater with vector inputs, but it seems to only take scalar values as
-//      input, which will produce incorrect output for vector input types.
+#define FUNCTION islessgreater
+#define __CLC_BODY "binary_def.inc"
 
-_CLC_DEFINE_RELATIONAL_BINARY(int, islessgreater, __builtin_islessgreater, float, float)
-
-#ifdef cl_khr_fp64
-
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-
-// The scalar version of islessgreater(double, double) returns an int, but the vector versions
-// return long.
-
-_CLC_DEF _CLC_OVERLOAD int islessgreater(double x, double y){
-	return __builtin_islessgreater(x, y);
-}
-
-_CLC_DEFINE_RELATIONAL_BINARY_VEC_ALL(long, islessgreater, double, double)
-
-#endif
-#ifdef cl_khr_fp16
-
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
-
-// The scalar version of islessgreater(half, half) returns an int, but the vector versions
-// return short.
-
-_CLC_DEF _CLC_OVERLOAD int islessgreater(half x, half y){
-	return __builtin_islessgreater(x, y);
-}
-
-_CLC_DEFINE_RELATIONAL_BINARY_VEC_ALL(short, islessgreater, half, half)
-
-#endif
+#include <clc/relational/floatn.inc>

@@ -13,7 +13,8 @@
 #include <ranges>
 
 #include <cassert>
-#include "test_macros.h"
+#include <cstddef>
+
 #include "test_iterators.h"
 
 using FI = forward_iterator<int*>;

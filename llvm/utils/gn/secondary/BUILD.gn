@@ -1,4 +1,3 @@
-import("//clang/lib/ARCMigrate/enable.gni")
 import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 
@@ -100,6 +99,9 @@ group("llvm-libtool-darwin") {
 }
 group("llvm-lipo") {
   deps = [ "//llvm/tools/llvm-lipo:symlinks" ]
+}
+group("llvm-ml") {
+  deps = [ "//llvm/tools/llvm-ml:symlinks" ]
 }
 group("llvm-objcopy") {
   deps = [ "//llvm/tools/llvm-objcopy:symlinks" ]

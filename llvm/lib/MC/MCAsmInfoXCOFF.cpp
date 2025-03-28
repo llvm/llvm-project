@@ -19,29 +19,17 @@ extern cl::opt<cl::boolOrDefault> UseLEB128Directives;
 void MCAsmInfoXCOFF::anchor() {}
 
 MCAsmInfoXCOFF::MCAsmInfoXCOFF() {
+  IsAIX = true;
   IsLittleEndian = false;
-  HasVisibilityOnlyWithLinkage = true;
-  HasBasenameOnlyForFileDirective = false;
-  HasFourStringsDotFile = true;
-
-  // For XCOFF, string constant consists of any number of characters enclosed in
-  // "" (double quotation marks).
-  HasPairedDoubleQuoteStringConstants = true;
 
   PrivateGlobalPrefix = "L..";
   PrivateLabelPrefix = "L..";
   SupportsQuotedNames = false;
-  UseDotAlignForAlignment = true;
-  UsesDwarfFileAndLocDirectives = false;
-  DwarfSectionSizeRequired = false;
   if (UseLEB128Directives == cl::BOU_UNSET)
     HasLEB128Directives = false;
   ZeroDirective = "\t.space\t";
-  ZeroDirectiveSupportsNonZeroValue = false;
   AsciiDirective = nullptr; // not supported
   AscizDirective = nullptr; // not supported
-  ByteListDirective = "\t.byte\t";
-  PlainStringDirective = "\t.string\t";
   CharacterLiteralSyntax = ACLS_SingleQuotePrefix;
 
   // Use .vbyte for data definition to avoid directives that apply an implicit
@@ -53,7 +41,6 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF() {
   LCOMMDirectiveAlignmentType = LCOMM::Log2Alignment;
   HasDotTypeDotSizeDirective = false;
   ParseInlineAsmUsingAsmParser = true;
-  NeedsFunctionDescriptors = true;
 
   ExceptionsType = ExceptionHandling::AIX;
 }

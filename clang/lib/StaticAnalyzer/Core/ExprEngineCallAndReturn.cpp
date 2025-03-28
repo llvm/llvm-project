@@ -19,9 +19,9 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/EntryPointStats.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -32,14 +32,14 @@ using namespace ento;
 
 #define DEBUG_TYPE "ExprEngine"
 
-STATISTIC(NumOfDynamicDispatchPathSplits,
-  "The # of times we split the path due to imprecise dynamic dispatch info");
+STAT_COUNTER(
+    NumOfDynamicDispatchPathSplits,
+    "The # of times we split the path due to imprecise dynamic dispatch info");
 
-STATISTIC(NumInlinedCalls,
-  "The # of times we inlined a call");
+STAT_COUNTER(NumInlinedCalls, "The # of times we inlined a call");
 
-STATISTIC(NumReachedInlineCountMax,
-  "The # of times we reached inline count maximum");
+STAT_COUNTER(NumReachedInlineCountMax,
+             "The # of times we reached inline count maximum");
 
 void ExprEngine::processCallEnter(NodeBuilderContext& BC, CallEnter CE,
                                   ExplodedNode *Pred) {
@@ -353,14 +353,19 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   ExplodedNodeSet CleanedNodes;
   if (LastSt && Blk && AMgr.options.AnalysisPurgeOpt != PurgeNone) {
     static SimpleProgramPointTag retValBind("ExprEngine", "Bind Return Value");
-    PostStmt Loc(LastSt, calleeCtx, &retValBind);
+    auto Loc = isa<ReturnStmt>(LastSt)
+                   ? ProgramPoint{PostStmt(LastSt, calleeCtx, &retValBind)}
+                   : ProgramPoint{EpsilonPoint(calleeCtx, /*Data1=*/nullptr,
+                                               /*Data2=*/nullptr, &retValBind)};
+    const CFGBlock *PrePurgeBlock =
+        isa<ReturnStmt>(LastSt) ? Blk : &CEBNode->getCFG().getExit();
     bool isNew;
     ExplodedNode *BindedRetNode = G.getNode(Loc, state, false, &isNew);
     BindedRetNode->addPredecessor(CEBNode, G);
     if (!isNew)
       return;
 
-    NodeBuilderContext Ctx(getCoreEngine(), Blk, BindedRetNode);
+    NodeBuilderContext Ctx(getCoreEngine(), PrePurgeBlock, BindedRetNode);
     currBldrCtx = &Ctx;
     // Here, we call the Symbol Reaper with 0 statement and callee location
     // context, telling it to clean up everything in the callee's context

@@ -1231,7 +1231,7 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
                 # the shell's execution trace for the 'set' commands by
                 # redirecting their stderr to /dev/null.
                 if command:
-                    msg = f"'{dbg}': {shlex.quote(command.lstrip())}"
+                    msg = f"{shlex.quote(command.lstrip())} \\# '{dbg}'"
                 else:
                     msg = f"'{dbg}' has no command after substitutions"
                 commands[i] = (
@@ -1394,10 +1394,14 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     substitutions = []
     substitutions.extend(test.config.substitutions)
     tmpName = tmpBase + ".tmp"
-    baseName = os.path.basename(tmpBase)
+    tmpBaseName = os.path.basename(tmpBase)
+    sourceBaseName = os.path.basename(sourcepath)
 
     substitutions.append(("%{pathsep}", os.pathsep))
-    substitutions.append(("%basename_t", baseName))
+    substitutions.append(("%basename_t", tmpBaseName))
+
+    substitutions.append(("%{s:basename}", sourceBaseName))
+    substitutions.append(("%{t:stem}", tmpBaseName))
 
     substitutions.extend(
         [

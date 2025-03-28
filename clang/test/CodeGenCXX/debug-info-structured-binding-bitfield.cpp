@@ -248,8 +248,8 @@ struct S15 {
 };
 
 // CHECK-LABEL: define dso_local void @_Z4fS15v
-// CHECK:                        alloca %struct.S15, align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = alloca %struct.S15, align 8
+// CHECK:                        alloca %struct.S15, align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = alloca %struct.S15, align 16
 // CHECK:         #dbg_declare(ptr [[TMP0]], [[S15_A:![0-9]+]], !DIExpression(DW_OP_LLVM_extract_bits_sext, 0, 32),
 // CHECK-NEXT:    #dbg_declare(ptr [[TMP0]], [[S15_B:![0-9]+]], !DIExpression(DW_OP_plus_uconst, 16, DW_OP_LLVM_extract_bits_zext, 0, 32),
 //

@@ -31,7 +31,7 @@ using namespace llvm;
 // pointer register.  This is true if frame pointer elimination is
 // disabled, if it needs dynamic stack realignment, if the function has
 // variable sized allocas, or if the frame address is taken.
-bool LoongArchFrameLowering::hasFP(const MachineFunction &MF) const {
+bool LoongArchFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -167,8 +167,8 @@ void LoongArchFrameLowering::processFunctionBeforeFrameFinalized(
 
   // Create emergency spill slots.
   for (unsigned i = 0; i < ScavSlotsNum; ++i) {
-    int FI = MFI.CreateStackObject(RI->getSpillSize(RC), RI->getSpillAlign(RC),
-                                   false);
+    int FI =
+        MFI.CreateSpillStackObject(RI->getSpillSize(RC), RI->getSpillAlign(RC));
     RS->addScavengingFrameIndex(FI);
     if (IsLargeFunction && LAFI->getBranchRelaxationSpillFrameIndex() == -1)
       LAFI->setBranchRelaxationSpillFrameIndex(FI);
@@ -438,7 +438,7 @@ bool LoongArchFrameLowering::spillCalleeSavedRegisters(
 
   // Insert the spill to the stack frame.
   for (auto &CS : CSI) {
-    Register Reg = CS.getReg();
+    MCRegister Reg = CS.getReg();
     // If the register is RA and the return address is taken by method
     // LoongArchTargetLowering::lowerRETURNADDR, don't set kill flag.
     bool IsKill =

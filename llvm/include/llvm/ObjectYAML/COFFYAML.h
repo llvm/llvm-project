@@ -179,6 +179,10 @@ struct ScalarEnumerationTraits<COFF::RelocationTypeAMD64> {
   static void enumeration(IO &IO, COFF::RelocationTypeAMD64 &Value);
 };
 
+template <> struct ScalarEnumerationTraits<COFF::RelocationTypesMips> {
+  static void enumeration(IO &IO, COFF::RelocationTypesMips &Value);
+};
+
 template <>
 struct ScalarEnumerationTraits<COFF::RelocationTypesARM> {
   static void enumeration(IO &IO, COFF::RelocationTypesARM &Value);

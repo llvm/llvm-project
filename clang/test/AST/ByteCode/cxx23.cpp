@@ -263,7 +263,7 @@ namespace AnonUnionDtor {
   template <class T>
   struct opt
   {
-    union { // all20-note {{is not literal}}
+    union {
       char c;
       T data;
     };
@@ -279,7 +279,7 @@ namespace AnonUnionDtor {
   };
 
   consteval void foo() {
-    opt<A> a; // all20-error {{variable of non-literal type}}
+    opt<A> a;
   }
 
   void bar() { foo(); }

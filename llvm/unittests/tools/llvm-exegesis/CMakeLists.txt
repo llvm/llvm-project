@@ -53,6 +53,9 @@ endif()
 if(LLVM_TARGETS_TO_BUILD MATCHES "Mips")
   include(Mips/CMakeLists.txt)
 endif()
+if(LLVM_TARGETS_TO_BUILD MATCHES "RISCV")
+  include(RISCV/CMakeLists.txt)
+endif()
 
 include_directories(${exegesis_includes})
 

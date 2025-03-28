@@ -62,7 +62,6 @@
 #include "llvm/Transforms/Utils/LoopVersioning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cassert>
-#include <functional>
 #include <list>
 #include <tuple>
 #include <utility>
@@ -144,7 +143,7 @@ public:
   /// Moves this partition into \p Other.  This partition becomes empty
   /// after this.
   void moveTo(InstPartition &Other) {
-    Other.Set.insert(Set.begin(), Set.end());
+    Other.Set.insert_range(Set);
     Set.clear();
     Other.DepCycle |= DepCycle;
   }

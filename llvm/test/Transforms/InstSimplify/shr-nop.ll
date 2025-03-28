@@ -381,6 +381,19 @@ define i32 @exact_lshr_lowbit(i32 %shiftval) {
   ret i32 %shr
 }
 
+define i8 @exact_lshr_lowbit_set_assume_trunc(i8 %x) {
+; CHECK-LABEL: @exact_lshr_lowbit_set_assume_trunc(
+; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[SHR:%.*]] = lshr exact i8 [[X]], 1
+; CHECK-NEXT:    ret i8 [[SHR]]
+;
+  %cond = trunc i8 %x to i1
+  call void @llvm.assume(i1 %cond)
+  %shr = lshr exact i8 %x, 1
+  ret i8 %shr
+}
+
 define i32 @exact_ashr_lowbit(i32 %shiftval) {
 ; CHECK-LABEL: @exact_ashr_lowbit(
 ; CHECK-NEXT:    ret i32 7
@@ -415,7 +428,7 @@ define <2 x i4097> @ashr_zero_vec(<2 x i4097> %shiftval) {
 
 define <2 x i64> @ashr_minus1_vec(<2 x i64> %shiftval) {
 ; CHECK-LABEL: @ashr_minus1_vec(
-; CHECK-NEXT:    ret <2 x i64> <i64 -1, i64 -1>
+; CHECK-NEXT:    ret <2 x i64> splat (i64 -1)
 ;
   %shr = ashr <2 x i64> <i64 -1, i64 -1>, %shiftval
   ret <2 x i64> %shr

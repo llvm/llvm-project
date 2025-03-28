@@ -71,9 +71,11 @@ public:
   }
 
   MCSymbol *getSymbol(StringRef FuncName, ResourceInfoKind RIK,
-                      MCContext &OutContext);
+                      MCContext &OutContext, bool IsLocal);
   const MCExpr *getSymRefExpr(StringRef FuncName, ResourceInfoKind RIK,
-                              MCContext &Ctx);
+                              MCContext &Ctx, bool IsLocal);
+
+  void reset();
 
   // Resolves the final symbols that requires the inter-function resource info
   // to be resolved.

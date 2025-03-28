@@ -30,7 +30,7 @@ struct two_fields {
   double d, e;
 };
 test(two_fields);
-// CHECK: define void @_Z7forward10two_fields(ptr dead_on_unwind noalias nocapture writable writeonly sret(%struct.two_fields) align 8 %{{.*}}, ptr nocapture readonly byval(%struct.two_fields) align 8 %{{.*}})
+// CHECK: define void @_Z7forward10two_fields(ptr dead_on_unwind noalias writable writeonly sret(%struct.two_fields) align 8 captures(none) initializes((0, 16)) %{{.*}}, ptr readonly byval(%struct.two_fields) align 8 captures(none) %{{.*}})
 //
 // CHECK: define void @_Z15test_two_fieldsv()
 // CHECK: %[[tmp:.*]] = alloca %struct.two_fields, align 8

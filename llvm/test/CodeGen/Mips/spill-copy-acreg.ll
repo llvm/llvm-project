@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -mattr=+dsp < %s
+; RUN: llc -mtriple=mipsel -mattr=+dsp < %s
 
 @g1 = common global i64 0, align 8
 @g2 = common global i64 0, align 8

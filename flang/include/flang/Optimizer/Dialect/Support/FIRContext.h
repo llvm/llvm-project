@@ -77,6 +77,12 @@ void setIdent(mlir::ModuleOp mod, llvm::StringRef ident);
 /// Get the compiler identifier from the Module.
 llvm::StringRef getIdent(mlir::ModuleOp mod);
 
+/// Set the command line used in this invocation.
+void setCommandline(mlir::ModuleOp mod, llvm::StringRef cmdLine);
+
+/// Get the command line used in this invocation.
+llvm::StringRef getCommandline(mlir::ModuleOp mod);
+
 /// Helper for determining the target from the host, etc. Tools may use this
 /// function to provide a consistent interpretation of the `--target=<string>`
 /// command-line option.

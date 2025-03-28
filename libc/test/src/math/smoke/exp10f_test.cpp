@@ -54,3 +54,30 @@ TEST_F(LlvmLibcExp10fTest, Overflow) {
       inf, LIBC_NAMESPACE::exp10f(FPBits(0x43000001U).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcExp10fTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::exp10f(min_denormal));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::exp10f(max_denormal));
+}
+
+TEST_F(LlvmLibcExp10fTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::exp10f(min_denormal));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::exp10f(max_denormal));
+}
+
+TEST_F(LlvmLibcExp10fTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::exp10f(min_denormal));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::exp10f(max_denormal));
+}
+
+#endif

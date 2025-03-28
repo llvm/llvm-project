@@ -2,6 +2,10 @@
 ! RUN: %flang -emit-llvm -flang-deprecated-no-hlfir -S -mmlir -disable-external-name-interop %s -o - | FileCheck %s
 ! Test from Fortran source through to LLVM IR.
 ! UNSUPPORTED: system-windows
+! Disabled on 32-bit targets due to the additional `trunc` opcodes required
+! UNSUPPORTED: target-x86
+! UNSUPPORTED: target=sparc-{{.*}}
+! UNSUPPORTED: target=sparcel-{{.*}}
 
 ! Assumed size array of assumed length character.
 program test
@@ -23,7 +27,7 @@ end program test
 ! CHECK: %[[extval:.*]] = load i64, ptr %[[extent]]
 ! CHECK: %[[elesize:.*]] = getelementptr { {{.*}}, [1 x [3 x i64]] }, ptr %[[arg]], i32 0, i32 1
 ! CHECK: %[[esval:.*]] = load i64, ptr %[[elesize]]
-! CHECK: %[[mul:.*]] = mul i64 ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64), %[[esval]]
+! CHECK: %[[mul:.*]] = mul i64 1, %[[esval]]
 ! CHECK: %[[mul2:.*]] = mul i64 %[[mul]], %[[extval]]
 ! CHECK: %[[buff:.*]] = call ptr @malloc(i64 %[[mul2]])
 ! CHECK: %[[to:.*]] = getelementptr i8, ptr %[[buff]], i64 %

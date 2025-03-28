@@ -40,6 +40,9 @@ enum Fixups {
   // FIXME: comment
   fixup_aarch64_movw,
 
+  // The high 9 bits of a 11-bit pc-relative immediate.
+  fixup_aarch64_pcrel_branch9,
+
   // The high 14 bits of a 21-bit pc-relative immediate.
   fixup_aarch64_pcrel_branch14,
 

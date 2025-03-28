@@ -8,6 +8,7 @@ static_library("Symbol") {
 
     #"//lldb/source/Target", # FIXME: Dependency cycle.
     "//lldb/source/Utility",
+    "//lldb/source/ValueObject",
     "//llvm/lib/Support",
   ]
   include_dirs = [ ".." ]  # FIXME: Reaches into Utility and Host internals.

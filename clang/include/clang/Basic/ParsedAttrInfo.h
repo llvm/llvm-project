@@ -17,6 +17,7 @@
 
 #include "clang/Basic/AttrSubjectMatchRules.h"
 #include "clang/Basic/AttributeCommonInfo.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Registry.h"
 #include <climits>
@@ -24,6 +25,7 @@
 
 namespace clang {
 
+class Attr;
 class Decl;
 class LangOptions;
 class ParsedAttr;
@@ -154,6 +156,15 @@ public:
                                            const ParsedAttr &Attr) const {
     return NotHandled;
   }
+  /// If this ParsedAttrInfo knows how to handle this ParsedAttr applied to this
+  /// Stmt then do so (referencing the resulting Attr in Result) and return
+  /// either AttributeApplied if it was applied or AttributeNotApplied if it
+  /// wasn't. Otherwise return NotHandled.
+  virtual AttrHandling handleStmtAttribute(Sema &S, Stmt *St,
+                                           const ParsedAttr &Attr,
+                                           class Attr *&Result) const {
+    return NotHandled;
+  }
 
   static const ParsedAttrInfo &get(const AttributeCommonInfo &A);
   static ArrayRef<const ParsedAttrInfo *> getAllBuiltin();
@@ -164,5 +175,9 @@ typedef llvm::Registry<ParsedAttrInfo> ParsedAttrInfoRegistry;
 const std::list<std::unique_ptr<ParsedAttrInfo>> &getAttributePluginInstances();
 
 } // namespace clang
+
+namespace llvm {
+extern template class CLANG_TEMPLATE_ABI Registry<clang::ParsedAttrInfo>;
+} // namespace llvm
 
 #endif // LLVM_CLANG_BASIC_PARSEDATTRINFO_H

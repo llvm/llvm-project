@@ -60,7 +60,7 @@ struct TosaLayerwiseConstantFoldPass
                                               aggressiveReduceConstant);
     populateTosaOpsCanonicalizationPatterns(ctx, patterns);
 
-    if (applyPatternsAndFoldGreedily(func, std::move(patterns)).failed())
+    if (applyPatternsGreedily(func, std::move(patterns)).failed())
       signalPassFailure();
   }
 };

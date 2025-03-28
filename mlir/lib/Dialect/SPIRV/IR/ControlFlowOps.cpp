@@ -205,7 +205,7 @@ CallInterfaceCallable FunctionCallOp::getCallableForCallee() {
 }
 
 void FunctionCallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
-  (*this)->setAttr(getCalleeAttrName(), callee.get<SymbolRefAttr>());
+  (*this)->setAttr(getCalleeAttrName(), cast<SymbolRefAttr>(callee));
 }
 
 Operation::operand_range FunctionCallOp::getArgOperands() {

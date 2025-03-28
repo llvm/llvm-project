@@ -1,4 +1,4 @@
-! Ensure that supplying -Wextra into flang-new does not raise error
+! Ensure that supplying -Wextra into flang does not raise error
 ! The first check should be changed if -Wextra is implemented
 
 ! RUN: %flang -std=f2018 -Wextra %s -c 2>&1 | FileCheck %s --check-prefix=CHECK-OK

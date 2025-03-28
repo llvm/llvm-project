@@ -61,6 +61,10 @@ namespace llvm {
   /// module is modified.
   bool UpgradeModuleFlags(Module &M);
 
+  /// Convert legacy nvvm.annotations metadata to appropriate function
+  /// attributes.
+  void UpgradeNVVMAnnotations(Module &M);
+
   /// Convert calls to ARC runtime functions to intrinsic calls and upgrade the
   /// old retain release marker to new module flag format.
   void UpgradeARCRuntime(Module &M);

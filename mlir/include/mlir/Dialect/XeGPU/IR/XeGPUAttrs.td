@@ -59,19 +59,29 @@ def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_td
 
 def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scatter_tdesc_attr"> {
   let summary = [{a composite attribute for `TensorDescType`}];
-  let description = [{`ScatterTensorDesc` (or `scatter_tdesc_attr`) is a composite
-    attribute defined for `TensorDescType` for describing following
-    properties of a `TensorDesc`.
+  let description = [{
+    `ScatterTensorDesc` is a composite attribute defined for `TensorDescType`
+    for describing following properties of a `TensorDesc`:
+
     1. `memory_space`: It describes where the data block described by the
         TensorDesc is located, `Global` device memory or `Shared` local memory.
         It is default to `Global`.
-    2.  `chunk_size`: indicates number of continious elements accessed for each
+
+    2.  `chunk_size`: indicates number of contiguous elements accessed for each
         offset, default is 1. It is used with `scattered` attr only.
   }];
 
   let parameters = (ins
-    OptionalParameter<"MemorySpaceAttr">: $memory_space,
-    OptionalParameter<"IntegerAttr", "1">: $chunk_size
+    DefaultValuedParameter<
+      "MemorySpaceAttr",
+      "MemorySpaceAttr::get($_ctxt, xegpu::MemorySpace::Global)",
+      "Data memory location"
+    >: $memory_space,
+    DefaultValuedParameter<
+      "IntegerAttr",
+      "IntegerAttr::get(IntegerType::get($_ctxt, 64), 1)",
+      "Number of contiguous elements"
+    >: $chunk_size
   );
 
   let builders = [
@@ -80,6 +90,8 @@ def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scat
       CArg<"int", "1">: $chunk_size
     )>
   ];
+
+  let genVerifyDecl = 1;
  }
 
 //===----------------------------------------------------------------------===//
@@ -140,6 +152,36 @@ def XeGPU_FenceScopeAttr:
                     "workgroup" means that the scope is within each work group.
                     "gpu" means the scope is across work groups within the gpu.}];
     let assemblyFormat = "$value";
+}
+
+def XeGPU_SGMapAttr : XeGPUAttr<"SGMap", "sg_map"> {
+  let summary = [{
+    Describes the mapping between work item (WI) and the 2D tensor specified by the tensor descriptor.
+  }];
+  let description = [{
+    To distribute the XeGPU operation to work items, the tensor_desc must be specified with the sg_map
+    attribute at the tensor description creation time.
+    Within the `sg_map`, `wi_layout` specifies the layout of work items,
+    describing the mapping of work items to the tensor.
+    wi_layout[0] x wi_layout[1] must be equal to the total number of work items within a subgroup.
+    `wi_data` specifies the minimum number of data elements assigned to each work item for a single distribution.
+
+    E.g., #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>
+    In this example, the subgroup has 16 work items in wi_layout=[1, 16],
+    each accessing 1 element as specified by wi_data=[1, 1].
+
+    `wi_data[0] * wi_data[1]` can be greater than 1, meaning that each work item operates on multiple elements,
+    which is eventually lowered to "SIMT-flavor" vector, like SPIR-V vector or llvm vector, or packed to a storage data type.
+    The multiple elements indicated by `wi_data` can only be from one dimension and must be contiguous in the memory along either dimension.
+  }];
+  let parameters = (ins
+    ArrayRefParameter<"uint32_t">:$wi_layout,
+    ArrayRefParameter<"uint32_t">:$wi_data
+  );
+
+
+  let hasCustomAssemblyFormat = 1;
+  let genVerifyDecl = 1;
 }
 
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUATTRS_TD

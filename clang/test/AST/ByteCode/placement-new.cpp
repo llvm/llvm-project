@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -fexperimental-new-constant-interpreter -verify=expected,both %s -DBYTECODE
 // RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -verify=ref,both %s
 
 namespace std {
@@ -14,7 +14,9 @@ namespace std {
   template<typename T, typename ...Args>
   constexpr void construct_at(void *p, Args &&...args) {
     new (p) T((Args&&)args...); // both-note {{in call to}} \
-                                // both-note {{placement new would change type of storage from 'int' to 'float'}}
+                                // both-note {{placement new would change type of storage from 'int' to 'float'}} \
+                                // both-note {{construction of subobject of member 'x' of union with active member 'a' is not allowed in a constant expression}}
+
   }
 }
 
@@ -51,6 +53,20 @@ consteval auto ok4() {
   return b;
 }
 static_assert(ok4() == 37);
+
+consteval int ok5() {
+  int i;
+  new (&i) int[1]{1};
+
+  struct S {
+    int a; int b;
+  } s;
+  new (&s) S[1]{{12, 13}};
+
+  return 25;
+  // return s.a + s.b; FIXME: Broken in the current interpreter.
+}
+static_assert(ok5() == 25);
 
 /// FIXME: Broken in both interpreters.
 #if 0
@@ -270,6 +286,18 @@ namespace ConstructAt {
   static_assert(bad_construct_at_type()); // both-error {{not an integral constant expression}} \
                                           // both-note {{in call}}
 
+  constexpr bool bad_construct_at_subobject() {
+    struct X { int a, b; };
+    union A {
+      int a;
+      X x;
+    };
+    A a = {1};
+    std::construct_at<int>(&a.x.a, 1); // both-note {{in call}}
+    return true;
+  }
+  static_assert(bad_construct_at_subobject()); // both-error{{not an integral constant expression}} \
+                                               // both-note {{in call}}
 }
 
 namespace UsedToCrash {
@@ -285,4 +313,81 @@ namespace UsedToCrash {
       delete s;
   }
   int alloc1 = (alloc(), 0);
+}
+
+constexpr bool change_union_member() {
+  union U {
+    int a;
+    int b;
+  };
+  U u = {.a = 1};
+  std::construct_at<int>(&u.b, 2);
+  return u.b == 2;
+}
+static_assert(change_union_member());
+
+namespace PR48606 {
+  struct A { mutable int n = 0; };
+
+  constexpr bool f() {
+    A a;
+    A *p = &a;
+    p->~A();
+    std::construct_at<A>(p);
+    return true;
+  }
+  static_assert(f());
+}
+
+/// This used to crash because of an assertion in the implementation
+/// of the This instruction.
+namespace ExplicitThisOnArrayElement {
+  struct S {
+    int a = 12;
+    constexpr S(int a) {
+      this->a = a;
+    }
+  };
+
+  template <class _Tp, class... _Args>
+  constexpr void construct_at(_Tp *__location, _Args &&...__args) {
+    new (__location) _Tp(__args...);
+  }
+
+  constexpr bool foo() {
+    auto *M = std::allocator<S>().allocate(13); // both-note {{allocation performed here was not deallocated}}
+    construct_at(M, 12);
+    return true;
+  }
+
+  static_assert(foo()); // both-error {{not an integral constant expression}}
+}
+
+#ifdef BYTECODE
+constexpr int N = [] // expected-error {{must be initialized by a constant expression}} \
+                     // expected-note {{assignment to dereferenced one-past-the-end pointer is not allowed in a constant expression}} \
+                     // expected-note {{in call to}}
+{
+    struct S {
+        int a[1];
+    };
+    S s;
+    ::new (s.a) int[1][2][3][4]();
+    return s.a[0];
+}();
+#endif
+
+namespace MemMove {
+  constexpr int foo() {
+    int *a = std::allocator<int>{}.allocate(1);
+    new(a) int{123};
+
+    int b;
+    __builtin_memmove(&b, a, sizeof(int));
+
+    std::allocator<int>{}.deallocate(a);
+    return b;
+  }
+
+  static_assert(foo() == 123);
 }

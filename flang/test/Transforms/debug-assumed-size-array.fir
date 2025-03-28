@@ -16,7 +16,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
 #loc1 = loc("test.f90":3:1)
 #loc2 = loc("test.f90":4:1)
 
-// CHECK-DAG: #[[TY1:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}elements = #llvm.di_subrange<count = 5 : i64, lowerBound = 1 : i64>, #llvm.di_subrange<>>
+// CHECK-DAG: #[[TY1:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}elements = #llvm.di_subrange<count = 5 : i64>, #llvm.di_subrange<>>
 // CHECK-DAG: #[[TY2:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}elements = #llvm.di_subrange<lowerBound = 2 : i64>>
 // CHECK-DAG: #llvm.di_local_variable<{{.*}}name = "a1"{{.*}}type = #[[TY1]]>
 // CHECK-DAG: #llvm.di_local_variable<{{.*}}name = "a2"{{.*}}type = #[[TY2]]>

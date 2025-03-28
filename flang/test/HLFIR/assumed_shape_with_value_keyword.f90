@@ -64,12 +64,12 @@ subroutine test_complex_value1(x)
   call internal_call5(x)
 end
 ! CHECK-LABEL:  func.func @_QPtest_complex_value1(
-! CHECK-SAME:     %[[ARG0:.*]]: !fir.box<!fir.array<?x!fir.complex<4>>> {fir.bindc_name = "x"}) {
-! CHECK:          %[[VAL_0:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<value>, uniq_name = "_QFtest_complex_value1Ex"} : (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.box<!fir.array<?x!fir.complex<4>>>)
-! CHECK:          %[[VAL_1:.*]]:2 = hlfir.copy_in %[[VAL_0]]#0 to %[[TMP_BOX:.*]] : (!fir.box<!fir.array<?x!fir.complex<4>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.complex<4>>>>>) -> (!fir.box<!fir.array<?x!fir.complex<4>>>, i1)
-! CHECK:          %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]]#0 : (!fir.box<!fir.array<?x!fir.complex<4>>>) -> !fir.ref<!fir.array<?x!fir.complex<4>>>
-! CHECK:          fir.call @_QPinternal_call5(%[[VAL_2]]) fastmath<contract> : (!fir.ref<!fir.array<?x!fir.complex<4>>>) -> ()
-! CHECK:          hlfir.copy_out %[[TMP_BOX]], %[[VAL_1]]#1 to %[[VAL_0]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.complex<4>>>>>, i1, !fir.box<!fir.array<?x!fir.complex<4>>>) -> ()
+! CHECK-SAME:     %[[ARG0:.*]]: !fir.box<!fir.array<?xcomplex<f32>>> {fir.bindc_name = "x"}) {
+! CHECK:          %[[VAL_0:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<value>, uniq_name = "_QFtest_complex_value1Ex"} : (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.dscope) -> (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.box<!fir.array<?xcomplex<f32>>>)
+! CHECK:          %[[VAL_1:.*]]:2 = hlfir.copy_in %[[VAL_0]]#0 to %[[TMP_BOX:.*]] : (!fir.box<!fir.array<?xcomplex<f32>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>) -> (!fir.box<!fir.array<?xcomplex<f32>>>, i1)
+! CHECK:          %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]]#0 : (!fir.box<!fir.array<?xcomplex<f32>>>) -> !fir.ref<!fir.array<?xcomplex<f32>>>
+! CHECK:          fir.call @_QPinternal_call5(%[[VAL_2]]) fastmath<contract> : (!fir.ref<!fir.array<?xcomplex<f32>>>) -> ()
+! CHECK:          hlfir.copy_out %[[TMP_BOX]], %[[VAL_1]]#1 to %[[VAL_0]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>, i1, !fir.box<!fir.array<?xcomplex<f32>>>) -> ()
 ! CHECK:          return
 ! CHECK:        }
 
@@ -78,12 +78,12 @@ subroutine test_complex_value2(x)
   call internal_call6(x)
 end
 ! CHECK-LABEL:  func.func @_QPtest_complex_value2(
-! CHECK-SAME:     %[[ARG0:.*]]: !fir.box<!fir.array<?x?x!fir.complex<4>>> {fir.bindc_name = "x"}) {
-! CHECK:          %[[VAL_0:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<value>, uniq_name = "_QFtest_complex_value2Ex"} : (!fir.box<!fir.array<?x?x!fir.complex<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.complex<4>>>, !fir.box<!fir.array<?x?x!fir.complex<4>>>)
-! CHECK:          %[[VAL_1:.*]]:2 = hlfir.copy_in %[[VAL_0]]#0 to %[[TMP_BOX:.*]] : (!fir.box<!fir.array<?x?x!fir.complex<4>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.complex<4>>>>>) -> (!fir.box<!fir.array<?x?x!fir.complex<4>>>, i1)
-! CHECK:          %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]]#0 : (!fir.box<!fir.array<?x?x!fir.complex<4>>>) -> !fir.ref<!fir.array<?x?x!fir.complex<4>>>
-! CHECK:          fir.call @_QPinternal_call6(%[[VAL_2]]) fastmath<contract> : (!fir.ref<!fir.array<?x?x!fir.complex<4>>>) -> ()
-! CHECK:          hlfir.copy_out %[[TMP_BOX]], %[[VAL_1]]#1 to %[[VAL_0]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.complex<4>>>>>, i1, !fir.box<!fir.array<?x?x!fir.complex<4>>>) -> ()
+! CHECK-SAME:     %[[ARG0:.*]]: !fir.box<!fir.array<?x?xcomplex<f32>>> {fir.bindc_name = "x"}) {
+! CHECK:          %[[VAL_0:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<value>, uniq_name = "_QFtest_complex_value2Ex"} : (!fir.box<!fir.array<?x?xcomplex<f32>>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xcomplex<f32>>>, !fir.box<!fir.array<?x?xcomplex<f32>>>)
+! CHECK:          %[[VAL_1:.*]]:2 = hlfir.copy_in %[[VAL_0]]#0 to %[[TMP_BOX:.*]] : (!fir.box<!fir.array<?x?xcomplex<f32>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xcomplex<f32>>>>>) -> (!fir.box<!fir.array<?x?xcomplex<f32>>>, i1)
+! CHECK:          %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]]#0 : (!fir.box<!fir.array<?x?xcomplex<f32>>>) -> !fir.ref<!fir.array<?x?xcomplex<f32>>>
+! CHECK:          fir.call @_QPinternal_call6(%[[VAL_2]]) fastmath<contract> : (!fir.ref<!fir.array<?x?xcomplex<f32>>>) -> ()
+! CHECK:          hlfir.copy_out %[[TMP_BOX]], %[[VAL_1]]#1 to %[[VAL_0]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xcomplex<f32>>>>>, i1, !fir.box<!fir.array<?x?xcomplex<f32>>>) -> ()
 ! CHECK:          return
 ! CHECK:        }
 
@@ -140,7 +140,7 @@ end
 ! CHECK:          %[[C0_I32:.*]] = arith.constant 0 : i32
 ! CHECK:          %[[FALSE:.*]] = arith.constant false
 ! CHECK:          %[[FALSE_0:.*]] = arith.constant false
-! CHECK:          %[[VAL_2:.*]] = fir.call @_FortranAStopStatement(%[[C0_I32]], %[[FALSE]], %[[FALSE]]_0) fastmath<contract> : (i32, i1, i1) -> none
+! CHECK:          fir.call @_FortranAStopStatement(%[[C0_I32]], %[[FALSE]], %[[FALSE]]_0) fastmath<contract> : (i32, i1, i1) -> ()
 ! CHECK:          fir.unreachable
 ! CHECK:          b2:  // pred: ^bb0
 ! CHECK:          return

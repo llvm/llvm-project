@@ -132,8 +132,10 @@ static void rotateTokens(const SourceManager &SourceMgr,
   // Then move through the other tokens.
   auto *Tok = Begin;
   while (Tok != End) {
-    if (!NewText.empty() && !endsWithSpace(NewText))
+    if (!NewText.empty() && !endsWithSpace(NewText) &&
+        Tok->isNot(tok::coloncolon)) {
       NewText += " ";
+    }
 
     NewText += Tok->TokenText;
     Tok = Tok->Next;
@@ -348,7 +350,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
       }
     }
 
-    if (Next->is(tok::kw_auto))
+    if (Next && Next->is(tok::kw_auto))
       TypeToken = Next;
 
     // Place the Qualifier at the end of the list of qualifiers.
@@ -386,7 +388,8 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
   // For left qualifiers preceeded by nothing, a template declaration, or *,&,&&
   // we only perform sorting.
   if (!TypeToken || TypeToken->isPointerOrReference() ||
-      TypeToken->ClosesRequiresClause || TypeToken->ClosesTemplateDeclaration) {
+      TypeToken->ClosesRequiresClause || TypeToken->ClosesTemplateDeclaration ||
+      TypeToken->is(tok::r_square)) {
 
     // Don't sort past a non-configured qualifier token.
     const FormatToken *FirstQual = Tok;
@@ -411,6 +414,14 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
   // The case `const long long volatile int` -> `const volatile long long int`
   // The case `long volatile long int const` -> `const volatile long long int`
   if (TypeToken->isTypeName(LangOpts)) {
+    for (const auto *Prev = TypeToken->Previous;
+         Prev && Prev->is(tok::coloncolon); Prev = Prev->Previous) {
+      TypeToken = Prev;
+      Prev = Prev->Previous;
+      if (!(Prev && Prev->is(tok::identifier)))
+        break;
+      TypeToken = Prev;
+    }
     const FormatToken *LastSimpleTypeSpecifier = TypeToken;
     while (isConfiguredQualifierOrType(
         LastSimpleTypeSpecifier->getPreviousNonComment(),

@@ -16,11 +16,11 @@
 // fixed form character literals on truncated card images, file
 // inclusion, and driving the Fortran source preprocessor.
 
-#include "flang/Common/Fortran-features.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Parser/token-sequence.h"
+#include "flang/Support/Fortran-features.h"
 #include <bitset>
 #include <optional>
 #include <string>
@@ -48,6 +48,10 @@ public:
   Preprocessor &preprocessor() { return preprocessor_; }
   common::LanguageFeatureControl &features() { return features_; }
 
+  Prescanner &set_preprocessingOnly(bool yes) {
+    preprocessingOnly_ = yes;
+    return *this;
+  }
   Prescanner &set_expandIncludeLines(bool yes) {
     expandIncludeLines_ = yes;
     return *this;
@@ -178,10 +182,13 @@ private:
   void SkipCComments();
   void SkipSpaces();
   static const char *SkipWhiteSpace(const char *);
+  const char *SkipWhiteSpaceIncludingEmptyMacros(const char *) const;
   const char *SkipWhiteSpaceAndCComments(const char *) const;
   const char *SkipCComment(const char *) const;
   bool NextToken(TokenSequence &);
-  bool ExponentAndKind(TokenSequence &);
+  bool HandleExponent(TokenSequence &);
+  bool HandleKindSuffix(TokenSequence &);
+  bool HandleExponentAndOrKindSuffix(TokenSequence &);
   void QuotedCharacterLiteral(TokenSequence &, const char *start);
   void Hollerith(TokenSequence &, int count, const char *start);
   bool PadOutCharacterLiteral(TokenSequence &);
@@ -213,6 +220,7 @@ private:
   Preprocessor &preprocessor_;
   AllSources &allSources_;
   common::LanguageFeatureControl features_;
+  bool preprocessingOnly_{false};
   bool expandIncludeLines_{true};
   bool isNestedInIncludeDirective_{false};
   bool backslashFreeFormContinuation_{false};

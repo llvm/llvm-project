@@ -6,10 +6,10 @@ define i16 @narrow_load(ptr %p1, ptr %p2) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lhu a2, 0(a0)
 ; CHECK-NEXT:    lui a3, 2
-; CHECK-NEXT:    addiw a3, a3, -1
-; CHECK-NEXT:    xor a2, a2, a3
 ; CHECK-NEXT:    lui a4, 16
+; CHECK-NEXT:    addiw a3, a3, -1
 ; CHECK-NEXT:    addi a4, a4, -1
+; CHECK-NEXT:    xor a2, a2, a3
 ; CHECK-NEXT:    xor a4, a3, a4
 ; CHECK-NEXT:    or a2, a2, a4
 ; CHECK-NEXT:    sw a2, 0(a1)

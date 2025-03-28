@@ -568,8 +568,8 @@ define void @can_reorder_vec3_op_with_padding(ptr %A, <3 x float> %in) {
 ; NON-POW2-SAME: ptr [[A:%.*]], <3 x float> [[IN:%.*]]) {
 ; NON-POW2-NEXT:  entry:
 ; NON-POW2-NEXT:    [[TMP1:%.*]] = fsub <3 x float> [[IN]], [[IN]]
-; NON-POW2-NEXT:    [[TMP2:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP1]], <3 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>, <3 x float> <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>)
-; NON-POW2-NEXT:    [[TMP3:%.*]] = fmul <3 x float> [[TMP2]], <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
+; NON-POW2-NEXT:    [[TMP2:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP1]], <3 x float> splat (float 2.000000e+00), <3 x float> splat (float 3.000000e+00))
+; NON-POW2-NEXT:    [[TMP3:%.*]] = fmul <3 x float> [[TMP2]], splat (float 3.000000e+00)
 ; NON-POW2-NEXT:    [[TMP4:%.*]] = shufflevector <3 x float> [[TMP3]], <3 x float> poison, <3 x i32> <i32 1, i32 2, i32 0>
 ; NON-POW2-NEXT:    store <3 x float> [[TMP4]], ptr [[A]], align 4
 ; NON-POW2-NEXT:    ret void
@@ -584,8 +584,8 @@ define void @can_reorder_vec3_op_with_padding(ptr %A, <3 x float> %in) {
 ; POW2-ONLY-NEXT:    [[MUL6_I_I_I_I:%.*]] = fmul float [[TMP1]], 3.000000e+00
 ; POW2-ONLY-NEXT:    [[TMP2:%.*]] = shufflevector <3 x float> [[IN]], <3 x float> poison, <2 x i32> <i32 1, i32 2>
 ; POW2-ONLY-NEXT:    [[TMP3:%.*]] = fsub <2 x float> [[TMP2]], [[TMP2]]
-; POW2-ONLY-NEXT:    [[TMP4:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP3]], <2 x float> <float 2.000000e+00, float 2.000000e+00>, <2 x float> <float 3.000000e+00, float 3.000000e+00>)
-; POW2-ONLY-NEXT:    [[TMP5:%.*]] = fmul <2 x float> [[TMP4]], <float 3.000000e+00, float 3.000000e+00>
+; POW2-ONLY-NEXT:    [[TMP4:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP3]], <2 x float> splat (float 2.000000e+00), <2 x float> splat (float 3.000000e+00))
+; POW2-ONLY-NEXT:    [[TMP5:%.*]] = fmul <2 x float> [[TMP4]], splat (float 3.000000e+00)
 ; POW2-ONLY-NEXT:    store <2 x float> [[TMP5]], ptr [[A]], align 4
 ; POW2-ONLY-NEXT:    store float [[MUL6_I_I_I_I]], ptr [[ARRAYIDX42_I]], align 4
 ; POW2-ONLY-NEXT:    ret void

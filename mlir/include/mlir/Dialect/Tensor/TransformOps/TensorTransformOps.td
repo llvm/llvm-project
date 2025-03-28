@@ -53,16 +53,6 @@ def ApplyFoldTensorEmptyPatternsOp : Op<Transform_Dialect,
   let arguments = (ins DefaultValuedAttr<BoolAttr, "false">:$fold_single_use_only);
   let assemblyFormat = "attr-dict";
 }
-def ApplyFoldIntoPackAndUnpackPatternsOp : Op<Transform_Dialect,
-    "apply_patterns.tensor.fold_into_pack_and_unpack",
-    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
-  let description = [{
-    Indicates that operations like tensor.pad and tensor.extract_slice should
-    be folded into tensor.pack and tensor.unpack operations, respectively.
-  }];
-
-  let assemblyFormat = "attr-dict";
-}
 
 def ApplyFoldTensorSubsetOpsPatternsOp : Op<Transform_Dialect,
     "apply_patterns.tensor.fold_tensor_subset_ops",
@@ -106,6 +96,17 @@ def ApplyReassociativeReshapeFoldingPatternsOp : Op<Transform_Dialect,
     Indicates that reassociative reshapes (tensor.collapse_shape /
     tensor.expand_shape) should be folded with inverse rank expansions / rank
     reductions (via tensor.insert_slice / tensor.extract_slice).
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyBubbleUpExtractSlicePatternsOp : Op<Transform_Dialect,
+    "apply_patterns.tensor.bubble_up_extract_slice",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that producers of tensor.extract_slice should swap and operate on 
+    the result of the slice.
   }];
 
   let assemblyFormat = "attr-dict";

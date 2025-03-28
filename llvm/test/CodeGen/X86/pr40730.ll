@@ -20,7 +20,7 @@ define <8 x i32> @shuffle_v8i32_0dcd3f14(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-NEXT: .quad   0x0000000e0000000d
 ; CHECK-NEXT: .quad   0x0000000e0000000d
 ; CHECK-NEXT: .quad   0x0000001000000000
-; CHECK-NEXT: .quad   0x0000000e0000000d
+; CHECK-NEXT: .zero   8
 
 define <8 x i32> @shuffle_v8i32_0dcd3f14_constant(<8 x i32> %a0)  {
 ; CHECK-LABEL: shuffle_v8i32_0dcd3f14_constant:

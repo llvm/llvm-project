@@ -46,7 +46,7 @@ entry:
 define <16 x i1> @v16i1_16() {
 ; CHECK-LABEL: @v16i1_16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <16 x i1> splat (i1 true)
 ;
 entry:
   %int = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 0, i32 16)
@@ -56,7 +56,7 @@ entry:
 define <16 x i1> @v16i1_100() {
 ; CHECK-LABEL: @v16i1_100(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <16 x i1> splat (i1 true)
 ;
 entry:
   %int = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 0, i32 100)
@@ -66,7 +66,7 @@ entry:
 define <16 x i1> @v16i1_m1() {
 ; CHECK-LABEL: @v16i1_m1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <16 x i1> splat (i1 true)
 ;
 entry:
   %int = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 0, i32 -1)
@@ -138,7 +138,7 @@ entry:
 define <8 x i1> @v8i1_8() {
 ; CHECK-LABEL: @v8i1_8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <8 x i1> splat (i1 true)
 ;
 entry:
   %int = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 0, i32 8)
@@ -148,7 +148,7 @@ entry:
 define <8 x i1> @v8i1_100() {
 ; CHECK-LABEL: @v8i1_100(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <8 x i1> splat (i1 true)
 ;
 entry:
   %int = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 0, i32 100)
@@ -158,7 +158,7 @@ entry:
 define <8 x i1> @v8i1_m1() {
 ; CHECK-LABEL: @v8i1_m1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <8 x i1> splat (i1 true)
 ;
 entry:
   %int = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 0, i32 -1)
@@ -220,7 +220,7 @@ entry:
 define <4 x i1> @v4i1_4() {
 ; CHECK-LABEL: @v4i1_4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <4 x i1> splat (i1 true)
 ;
 entry:
   %int = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 0, i32 4)
@@ -230,7 +230,7 @@ entry:
 define <4 x i1> @v4i1_100() {
 ; CHECK-LABEL: @v4i1_100(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <4 x i1> splat (i1 true)
 ;
 entry:
   %int = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 0, i32 100)
@@ -240,7 +240,7 @@ entry:
 define <4 x i1> @v4i1_m1() {
 ; CHECK-LABEL: @v4i1_m1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <4 x i1> splat (i1 true)
 ;
 entry:
   %int = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 0, i32 -1)
@@ -293,6 +293,12 @@ entry:
 
 
 define <4 x float> @poisonc(<4 x float> %a, i32 %n) {
+; CHECK-LABEL: @poisonc(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAR27:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 poison, i32 1024)
+; CHECK-NEXT:    [[VAR33:%.*]] = select <4 x i1> [[VAR27]], <4 x float> [[A:%.*]], <4 x float> zeroinitializer
+; CHECK-NEXT:    ret <4 x float> [[VAR33]]
+;
 entry:
   %new0 = shl i1 0, 1
   %last = zext i1 %new0 to i32

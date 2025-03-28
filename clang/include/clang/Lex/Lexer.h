@@ -554,7 +554,14 @@ public:
   /// Returns the next token, or std::nullopt if the location is inside a macro.
   static std::optional<Token> findNextToken(SourceLocation Loc,
                                             const SourceManager &SM,
-                                            const LangOptions &LangOpts);
+                                            const LangOptions &LangOpts,
+                                            bool IncludeComments = false);
+
+  /// Finds the token that comes before the given location.
+  static std::optional<Token> findPreviousToken(SourceLocation Loc,
+                                                const SourceManager &SM,
+                                                const LangOptions &LangOpts,
+                                                bool IncludeComments);
 
   /// Checks that the given token is the first token that occurs after
   /// the given location (this excludes comments and whitespace). Returns the
@@ -574,6 +581,12 @@ public:
   /// Checks whether new line pointed by Str is preceded by escape
   /// sequence.
   static bool isNewLineEscaped(const char *BufferStart, const char *Str);
+
+  /// Diagnose use of a delimited or named escape sequence.
+  static void DiagnoseDelimitedOrNamedEscapeSequence(SourceLocation Loc,
+                                                     bool Named,
+                                                     const LangOptions &Opts,
+                                                     DiagnosticsEngine &Diags);
 
   /// Represents a char and the number of bytes parsed to produce it.
   struct SizedChar {

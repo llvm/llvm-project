@@ -741,7 +741,7 @@ AArch64Arm64ECCallLowering::buildPatchableThunk(GlobalAlias *UnmangledAlias,
 
 // Lower an indirect call with inline code.
 void AArch64Arm64ECCallLowering::lowerCall(CallBase *CB) {
-  assert(Triple(CB->getModule()->getTargetTriple()).isOSWindows() &&
+  assert(CB->getModule()->getTargetTriple().isOSWindows() &&
          "Only applicable for Windows targets");
 
   IRBuilder<> B(CB);
@@ -793,9 +793,9 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
   VoidTy = Type::getVoidTy(M->getContext());
 
   GuardFnType = FunctionType::get(PtrTy, {PtrTy, PtrTy}, false);
-  GuardFnPtrType = PointerType::get(GuardFnType, 0);
+  GuardFnPtrType = PointerType::get(M->getContext(), 0);
   DispatchFnType = FunctionType::get(PtrTy, {PtrTy, PtrTy, PtrTy}, false);
-  DispatchFnPtrType = PointerType::get(DispatchFnType, 0);
+  DispatchFnPtrType = PointerType::get(M->getContext(), 0);
   GuardFnCFGlobal =
       M->getOrInsertGlobal("__os_arm64x_check_icall_cfg", GuardFnPtrType);
   GuardFnGlobal =
@@ -807,6 +807,17 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
   SetVector<GlobalAlias *> PatchableFns;
 
   for (Function &F : Mod) {
+    if (F.hasPersonalityFn()) {
+      GlobalValue *PersFn =
+          cast<GlobalValue>(F.getPersonalityFn()->stripPointerCasts());
+      if (PersFn->getValueType() && PersFn->getValueType()->isFunctionTy()) {
+        if (std::optional<std::string> MangledName =
+                getArm64ECMangledFunctionName(PersFn->getName().str())) {
+          PersFn->setName(MangledName.value());
+        }
+      }
+    }
+
     if (!F.hasFnAttribute(Attribute::HybridPatchable) || F.isDeclaration() ||
         F.hasLocalLinkage() || F.getName().ends_with("$hp_target"))
       continue;

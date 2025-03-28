@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Function.h"
+#include "llvm/Transforms/Utils/SizeOpts.h"
 #include <bitset>
 #include <cstddef>
 #include <cstdint>
@@ -619,7 +620,7 @@ protected:
   struct MatcherState {
     std::vector<ComplexRendererFns::value_type> Renderers;
     RecordedMIVector MIs;
-    DenseMap<unsigned, unsigned> TempRegisters;
+    DenseMap<unsigned, Register> TempRegisters;
     /// Named operands that predicate with 'let PredicateCodeUsesOperands = 1'
     /// referenced in its argument list. Operands are inserted at index set by
     /// emitter, it corresponds to the order in which names appear in argument
@@ -635,8 +636,12 @@ protected:
 
   bool shouldOptForSize(const MachineFunction *MF) const {
     const auto &F = MF->getFunction();
-    return F.hasOptSize() || F.hasMinSize() ||
-           (PSI && BFI && CurMBB && llvm::shouldOptForSize(*CurMBB, PSI, BFI));
+    if (F.hasOptSize())
+      return true;
+    if (CurMBB)
+      if (auto *BB = CurMBB->getBasicBlock())
+        return llvm::shouldOptimizeForSize(BB, PSI, BFI);
+    return false;
   }
 
 public:

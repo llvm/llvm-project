@@ -132,6 +132,30 @@
 // CHECK-V7VE-DEFAULT-ABI-SOFT: #define __ARM_ARCH_EXT_IDIV__ 1
 // CHECK-V7VE-DEFAULT-ABI-SOFT: #define __ARM_FP 0xc
 
+// RUN: %clang -target x86_64-apple-macosx10.10 -arch armv7 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-DARWIN-V7 %s
+// CHECK-DARWIN-V7: #define __ARMEL__ 1
+// CHECK-DARWIN-V7: #define __ARM_ARCH 7
+// CHECK-DARWIN-V7: #define __ARM_ARCH_7A__ 1
+// CHECK-DARWIN-V7-NOT: __ARM_FEATURE_CRC32
+// CHECK-DARWIN-V7-NOT: __ARM_FEATURE_NUMERIC_MAXMIN
+// CHECK-DARWIN-V7-NOT: __ARM_FEATURE_DIRECTED_ROUNDING
+// CHECK-DARWIN-V7: #define __ARM_FP 0xc
+// CHECK-DARWIN-V7: #define __ARM_NEON 1
+// CHECK-DARWIN-V7: #define __ARM_NEON_FP 0x4
+// CHECK-DARWIN-V7: #define __ARM_NEON__ 1
+
+// RUN: %clang -target armv7-windows -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-WINDOWS-V7 %s
+// CHECK-WINDOWS-V7: #define __ARMEL__ 1
+// CHECK-WINDOWS-V7: #define __ARM_ARCH 7
+// CHECK-WINDOWS-V7: #define __ARM_ARCH_7A__ 1
+// CHECK-WINDOWS-V7-NOT: __ARM_FEATURE_CRC32
+// CHECK-WINDOWS-V7-NOT: __ARM_FEATURE_NUMERIC_MAXMIN
+// CHECK-WINDOWS-V7-NOT: __ARM_FEATURE_DIRECTED_ROUNDING
+// CHECK-WINDOWS-V7: #define __ARM_FP 0xe
+// CHECK-WINDOWS-V7: #define __ARM_NEON 1
+// CHECK-WINDOWS-V7: #define __ARM_NEON_FP 0x6
+// CHECK-WINDOWS-V7: #define __ARM_NEON__ 1
+
 // RUN: %clang -target x86_64-apple-macosx10.10 -arch armv7s -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V7S %s
 // CHECK-V7S: #define __ARMEL__ 1
 // CHECK-V7S: #define __ARM_ARCH 7
@@ -140,6 +164,9 @@
 // CHECK-V7S-NOT: __ARM_FEATURE_NUMERIC_MAXMIN
 // CHECK-V7S-NOT: __ARM_FEATURE_DIRECTED_ROUNDING
 // CHECK-V7S: #define __ARM_FP 0xe
+// CHECK-V7S: #define __ARM_NEON 1
+// CHECK-V7S: #define __ARM_NEON_FP 0x6
+// CHECK-V7S: #define __ARM_NEON__ 1
 
 // RUN: %clang -target arm-arm-none-eabi -march=armv7-m -mfloat-abi=soft -x c -E -dM %s | FileCheck -match-full-lines --check-prefix=CHECK-VFP-FP %s
 // RUN: %clang -target arm-arm-none-eabi -march=armv7-m -mfloat-abi=softfp -x c -E -dM %s | FileCheck -match-full-lines --check-prefix=CHECK-VFP-FP %s
@@ -902,6 +929,11 @@
 // CHECK-V95A: #define __ARM_ARCH_9_5A__ 1
 // CHECK-V95A: #define __ARM_ARCH_PROFILE 'A'
 
+// RUN: %clang -target armv9.6a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V96A %s
+// CHECK-V96A: #define __ARM_ARCH 9
+// CHECK-V96A: #define __ARM_ARCH_9_6A__ 1
+// CHECK-V96A: #define __ARM_ARCH_PROFILE 'A'
+
 // RUN: %clang -target arm-none-none-eabi -march=armv7-m -mfpu=softvfp -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SOFTVFP %s
 // CHECK-SOFTVFP-NOT: #define __ARM_FP 0x
 
@@ -973,3 +1005,25 @@
 // CHECK-V83-OR-LATER: __ARM_FEATURE_COMPLEX 1
 // CHECK-V81-OR-LATER: __ARM_FEATURE_QRDMX 1
 // CHECK-BEFORE-V83-NOT: __ARM_FEATURE_COMPLEX 1
+
+// Check if MVE floating-point feature is disabled (-mve.fp) during explicit fpv5-d16 or fpv5-sp-d16
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve.fp -mfpu=fpv5-d16 -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-MVE1 %s
+// CHECK-MVE1: #define __ARM_FEATURE_MVE 1
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve.fp -mfpu=fpv5-sp-d16 -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-MVE1_2 %s
+// CHECK-MVE1_2: #define __ARM_FEATURE_MVE 1
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve.fp -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-MVE3 %s
+// CHECK-MVE3: #define __ARM_FEATURE_MVE 3
+
+// Cortex-R52 and Cortex-R52Plus correctly enable the `fpv5-sp-d16` FPU when compiling for the SP only version of the CPU.
+// RUN: %clang -target arm-none-eabi -mcpu=cortex-r52+nosimd+nofp.dp -mfloat-abi=hard -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-R52 %s
+// RUN: %clang -target arm-none-eabi -mcpu=cortex-r52plus+nosimd+nofp.dp -mfloat-abi=hard -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-R52 %s
+// RUN: %clang -target arm-none-eabi -mcpu=cortex-r52+nofp.dp -mfloat-abi=hard -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-R52 %s
+// RUN: %clang -target arm-none-eabi -mcpu=cortex-r52plus+nofp.dp -mfloat-abi=hard -x c -E -dM -o - %s | FileCheck -check-prefix=CHECK-R52 %s
+// CHECK-R52: #define __ARM_FEATURE_FMA 1
+// CHECK-R52: #define __ARM_FP 0x6
+// CHECK-R52: #define __ARM_FPV5__ 1
+// CHECK-R52: #define __ARM_VFPV2__ 1
+// CHECK-R52-NEXT: #define __ARM_VFPV3__ 1
+// CHECK-R52-NEXT: #define __ARM_VFPV4__ 1
+// CHECK-R52-NOT: #define __ARM_NEON 1
+// CHECK-R52-NOT: #define __ARM_NEON__

@@ -1,0 +1,24 @@
+#
+# This testing configuration handles running the test suite against the
+# native C++ Standard Library, i.e. whatever standard library is used by
+# default when no special compiler flags are provided.
+#
+
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+config.substitutions.append(('%{flags}',
+    '-pthread' + (' -isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else '')
+))
+config.substitutions.append(('%{compile_flags}', '-I %{libcxx-dir}/test/support'))
+config.substitutions.append(('%{link_flags}', ''))
+config.substitutions.append(('%{exec}', '%{executor} --execdir %T -- '))
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
+import libcxx.test.params, libcxx.test.config
+libcxx.test.config.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)

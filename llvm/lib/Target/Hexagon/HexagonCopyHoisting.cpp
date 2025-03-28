@@ -180,14 +180,15 @@ bool HexagonCopyHoisting::analyzeCopy(MachineBasicBlock *BB) {
     bool IsSafetoMove = true;
     for (MachineBasicBlock *SuccBB : BB->successors()) {
       auto &SuccBBCopyInst = CopyMIList[SuccBB->getNumber()];
-      if (!SuccBBCopyInst.count(Key)) {
+      auto It = SuccBBCopyInst.find(Key);
+      if (It == SuccBBCopyInst.end()) {
         // Same copy not present in this successor
         IsSafetoMove = false;
         break;
       }
       // If present, make sure that it's safe to pull this copy instruction
       // into the predecessor.
-      MachineInstr *SuccMI = SuccBBCopyInst[Key];
+      MachineInstr *SuccMI = It->second;
       if (!isSafetoMove(SuccMI)) {
         IsSafetoMove = false;
         break;

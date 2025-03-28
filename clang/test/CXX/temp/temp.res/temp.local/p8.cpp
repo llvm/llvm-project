@@ -69,7 +69,7 @@ namespace SearchClassBetweenTemplateParameterLists {
 
   template<typename T> struct A {
     using AA = void;
-    template<typename U> struct B {
+    template<typename U> struct B { // #defined-here
       using BB = void;
       void f(U);
       void g(U);
@@ -127,19 +127,19 @@ namespace SearchClassBetweenTemplateParameterLists {
   template<typename T> template<typename BB>
   void A<T>::B<BB>::g(BB) { // expected-error {{does not match}}
     BB bb; // expected-error {{incomplete type}}
-  }
+  } // expected-note@#defined-here {{defined here}}
 
   // error, 'AA' found in (4)
   template<typename AA> template<typename U>
   void A<AA>::B<U>::h(AA) { // expected-error {{does not match}}
     AA aa; // expected-error {{incomplete type}}
-  }
+  } // expected-note@#defined-here {{defined here}}
 
   // error, 'BB' found in (2)
   template<typename BB> template<typename U>
   void A<BB>::B<U>::i(BB) { // expected-error {{does not match}}
     BB bb; // expected-error {{incomplete type}}
-  }
+  } // expected-note@#defined-here {{defined here}}
 
   // OK, 'BB' found in (1)
   template<typename T> template<typename U> template<typename BB>
@@ -151,7 +151,7 @@ namespace SearchClassBetweenTemplateParameterLists {
   template<typename T> template<typename BB> template<typename V>
   void A<T>::B<BB>::k(V) { // expected-error {{does not match}}
     BB bb; // expected-error {{incomplete type}}
-  }
+  } // expected-note@#defined-here {{defined here}}
 
   int CC;
   template <typename> struct C;

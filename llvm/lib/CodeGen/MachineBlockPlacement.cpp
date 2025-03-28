@@ -24,6 +24,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/MachineBlockPlacement.h"
 #include "BranchFolding.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -149,7 +150,7 @@ static cl::opt<unsigned> JumpInstCost("jump-inst-cost",
 static cl::opt<bool>
     TailDupPlacement("tail-dup-placement",
                      cl::desc("Perform tail duplication during placement. "
-                              "Creates more fallthrough opportunites in "
+                              "Creates more fallthrough opportunities in "
                               "outline branches."),
                      cl::init(true), cl::Hidden);
 
@@ -217,6 +218,11 @@ static cl::opt<unsigned> ExtTspBlockPlacementMaxBlocks(
     cl::desc("Maximum number of basic blocks in a function to run ext-TSP "
              "block placement."),
     cl::init(UINT_MAX), cl::Hidden);
+
+// Apply the ext-tsp algorithm minimizing the size of a binary.
+static cl::opt<bool>
+    ApplyExtTspForSize("apply-ext-tsp-for-size", cl::init(false), cl::Hidden,
+                       cl::desc("Use ext-tsp for size-aware block placement."));
 
 namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
@@ -352,7 +358,7 @@ public:
   unsigned UnscheduledPredecessors = 0;
 };
 
-class MachineBlockPlacement : public MachineFunctionPass {
+class MachineBlockPlacement {
   /// A type for a block filter set.
   using BlockFilterSet = SmallSetVector<const MachineBasicBlock *, 16>;
 
@@ -404,7 +410,11 @@ class MachineBlockPlacement : public MachineFunctionPass {
 
   ProfileSummaryInfo *PSI = nullptr;
 
-  TargetPassConfig *PassConfig = nullptr;
+  // Tail merging is also determined based on
+  // whether structured CFG is required.
+  bool AllowTailMerge;
+
+  CodeGenOptLevel OptLevel;
 
   /// Duplicator used to duplicate tails during placement.
   ///
@@ -595,7 +605,7 @@ class MachineBlockPlacement : public MachineFunctionPass {
   void precomputeTriangleChains();
 
   /// Apply a post-processing step optimizing block placement.
-  void applyExtTsp();
+  void applyExtTsp(bool OptForSize);
 
   /// Modify the existing block placement in the function and adjust all jumps.
   void assignBlockOrder(const std::vector<const MachineBasicBlock *> &NewOrder);
@@ -604,17 +614,47 @@ class MachineBlockPlacement : public MachineFunctionPass {
   void createCFGChainExtTsp();
 
 public:
+  MachineBlockPlacement(const MachineBranchProbabilityInfo *MBPI,
+                        MachineLoopInfo *MLI, ProfileSummaryInfo *PSI,
+                        std::unique_ptr<MBFIWrapper> MBFI,
+                        MachinePostDominatorTree *MPDT, bool AllowTailMerge)
+      : MBPI(MBPI), MBFI(std::move(MBFI)), MLI(MLI), MPDT(MPDT), PSI(PSI),
+        AllowTailMerge(AllowTailMerge) {};
+
+  bool run(MachineFunction &F);
+
+  static bool allowTailDupPlacement(MachineFunction &MF) {
+    return TailDupPlacement && !MF.getTarget().requiresStructuredCFG();
+  }
+};
+
+class MachineBlockPlacementLegacy : public MachineFunctionPass {
+public:
   static char ID; // Pass identification, replacement for typeid
 
-  MachineBlockPlacement() : MachineFunctionPass(ID) {
-    initializeMachineBlockPlacementPass(*PassRegistry::getPassRegistry());
+  MachineBlockPlacementLegacy() : MachineFunctionPass(ID) {
+    initializeMachineBlockPlacementLegacyPass(*PassRegistry::getPassRegistry());
   }
 
-  bool runOnMachineFunction(MachineFunction &F) override;
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(MF.getFunction()))
+      return false;
 
-  bool allowTailDupPlacement() const {
-    assert(F);
-    return TailDupPlacement && !F->getTarget().requiresStructuredCFG();
+    auto *MBPI =
+        &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+    auto MBFI = std::make_unique<MBFIWrapper>(
+        getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI());
+    auto *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+    auto *MPDT = MachineBlockPlacement::allowTailDupPlacement(MF)
+                     ? &getAnalysis<MachinePostDominatorTreeWrapperPass>()
+                            .getPostDomTree()
+                     : nullptr;
+    auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+    auto *PassConfig = &getAnalysis<TargetPassConfig>();
+    bool AllowTailMerge = PassConfig->getEnableTailMerge();
+    return MachineBlockPlacement(MBPI, MLI, PSI, std::move(MBFI), MPDT,
+                                 AllowTailMerge)
+        .run(MF);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -631,18 +671,18 @@ public:
 
 } // end anonymous namespace
 
-char MachineBlockPlacement::ID = 0;
+char MachineBlockPlacementLegacy::ID = 0;
 
-char &llvm::MachineBlockPlacementID = MachineBlockPlacement::ID;
+char &llvm::MachineBlockPlacementID = MachineBlockPlacementLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(MachineBlockPlacement, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(MachineBlockPlacementLegacy, DEBUG_TYPE,
                       "Branch Probability Basic Block Placement", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
-INITIALIZE_PASS_END(MachineBlockPlacement, DEBUG_TYPE,
+INITIALIZE_PASS_END(MachineBlockPlacementLegacy, DEBUG_TYPE,
                     "Branch Probability Basic Block Placement", false, false)
 
 #ifndef NDEBUG
@@ -1125,7 +1165,7 @@ MachineBlockPlacement::getBestTrellisSuccessor(
     MachineBasicBlock *Succ1 = BestA.Dest;
     MachineBasicBlock *Succ2 = BestB.Dest;
     // Check to see if tail-duplication would be profitable.
-    if (allowTailDupPlacement() && shouldTailDuplicate(Succ2) &&
+    if (allowTailDupPlacement(*F) && shouldTailDuplicate(Succ2) &&
         canTailDuplicateUnplacedPreds(BB, Succ2, Chain, BlockFilter) &&
         isProfitableToTailDup(BB, Succ2, MBPI->getEdgeProbability(BB, Succ1),
                               Chain, BlockFilter)) {
@@ -1650,7 +1690,7 @@ MachineBlockPlacement::selectBestSuccessor(const MachineBasicBlock *BB,
     if (hasBetterLayoutPredecessor(BB, Succ, SuccChain, SuccProb, RealSuccProb,
                                    Chain, BlockFilter)) {
       // If tail duplication would make Succ profitable, place it.
-      if (allowTailDupPlacement() && shouldTailDuplicate(Succ))
+      if (allowTailDupPlacement(*F) && shouldTailDuplicate(Succ))
         DupCandidates.emplace_back(SuccProb, Succ);
       continue;
     }
@@ -1787,12 +1827,12 @@ MachineBasicBlock *MachineBlockPlacement::getFirstUnplacedBlock(
 
   for (MachineFunction::iterator I = PrevUnplacedBlockIt, E = F->end(); I != E;
        ++I) {
-    if (BlockToChain[&*I] != &PlacedChain) {
+    if (BlockChain *Chain = BlockToChain[&*I]; Chain != &PlacedChain) {
       PrevUnplacedBlockIt = I;
       // Now select the head of the chain to which the unplaced block belongs
       // as the block to place. This will force the entire chain to be placed,
       // and satisfies the requirements of merging chains.
-      return *BlockToChain[&*I]->begin();
+      return *Chain->begin();
     }
   }
   return nullptr;
@@ -1878,7 +1918,7 @@ void MachineBlockPlacement::buildChain(const MachineBasicBlock *HeadBB,
     auto Result = selectBestSuccessor(BB, Chain, BlockFilter);
     MachineBasicBlock *BestSucc = Result.BB;
     bool ShouldTailDup = Result.ShouldTailDup;
-    if (allowTailDupPlacement())
+    if (allowTailDupPlacement(*F))
       ShouldTailDup |= (BestSucc && canTailDuplicateUnplacedPreds(
                                         BB, BestSucc, Chain, BlockFilter));
 
@@ -1905,7 +1945,7 @@ void MachineBlockPlacement::buildChain(const MachineBasicBlock *HeadBB,
 
     // Placement may have changed tail duplication opportunities.
     // Check for that now.
-    if (allowTailDupPlacement() && BestSucc && ShouldTailDup) {
+    if (allowTailDupPlacement(*F) && BestSucc && ShouldTailDup) {
       repeatedlyTailDuplicateBlock(BestSucc, BB, LoopHeaderBB, Chain,
                                    BlockFilter, PrevUnplacedBlockIt,
                                    PrevUnplacedBlockInFilterIt);
@@ -2184,9 +2224,7 @@ MachineBlockPlacement::findBestLoopTop(const MachineLoop &L,
   // i.e. when the layout predecessor does not fallthrough to the loop header.
   // In practice this never happens though: there always seems to be a preheader
   // that can fallthrough and that is also placed before the header.
-  bool OptForSize = F->getFunction().hasOptSize() ||
-                    llvm::shouldOptimizeForSize(L.getHeader(), PSI, MBFI.get());
-  if (OptForSize)
+  if (llvm::shouldOptimizeForSize(L.getHeader(), PSI, MBFI.get()))
     return L.getHeader();
 
   MachineBasicBlock *OldTop = nullptr;
@@ -2903,7 +2941,7 @@ void MachineBlockPlacement::buildCFGChains() {
 
 void MachineBlockPlacement::optimizeBranches() {
   BlockChain &FunctionChain = *BlockToChain[&F->front()];
-  SmallVector<MachineOperand, 4> Cond; // For analyzeBranch.
+  SmallVector<MachineOperand, 4> Cond;
 
   // Now that all the basic blocks in the chain have the proper layout,
   // make a final call to analyzeBranch with AllowModify set.
@@ -2913,24 +2951,30 @@ void MachineBlockPlacement::optimizeBranches() {
   // a fallthrough when it occurs after predicated terminators.
   for (MachineBasicBlock *ChainBB : FunctionChain) {
     Cond.clear();
-    MachineBasicBlock *TBB = nullptr, *FBB = nullptr; // For analyzeBranch.
-    if (!TII->analyzeBranch(*ChainBB, TBB, FBB, Cond, /*AllowModify*/ true)) {
-      // If PrevBB has a two-way branch, try to re-order the branches
-      // such that we branch to the successor with higher probability first.
-      if (TBB && !Cond.empty() && FBB &&
-          MBPI->getEdgeProbability(ChainBB, FBB) >
-              MBPI->getEdgeProbability(ChainBB, TBB) &&
-          !TII->reverseBranchCondition(Cond)) {
-        LLVM_DEBUG(dbgs() << "Reverse order of the two branches: "
-                          << getBlockName(ChainBB) << "\n");
-        LLVM_DEBUG(dbgs() << "    Edge probability: "
-                          << MBPI->getEdgeProbability(ChainBB, FBB) << " vs "
-                          << MBPI->getEdgeProbability(ChainBB, TBB) << "\n");
-        DebugLoc dl; // FIXME: this is nowhere
-        TII->removeBranch(*ChainBB);
-        TII->insertBranch(*ChainBB, FBB, TBB, Cond, dl);
-      }
-    }
+    MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+    if (TII->analyzeBranch(*ChainBB, TBB, FBB, Cond, /*AllowModify*/ true))
+      continue;
+    if (!TBB || !FBB || Cond.empty())
+      continue;
+    // If we are optimizing for size we do not consider the runtime performance.
+    // Instead, we retain the original branch condition so we have more uniform
+    // instructions which will benefit ICF.
+    if (llvm::shouldOptimizeForSize(ChainBB, PSI, MBFI.get()))
+      continue;
+    // If ChainBB has a two-way branch, try to re-order the branches
+    // such that we branch to the successor with higher probability first.
+    if (MBPI->getEdgeProbability(ChainBB, TBB) >=
+        MBPI->getEdgeProbability(ChainBB, FBB))
+      continue;
+    if (TII->reverseBranchCondition(Cond))
+      continue;
+    LLVM_DEBUG(dbgs() << "Reverse order of the two branches: "
+                      << getBlockName(ChainBB) << "\n");
+    LLVM_DEBUG(dbgs() << "  " << getBlockName(TBB) << " < " << getBlockName(FBB)
+                      << "\n");
+    auto Dl = ChainBB->findBranchDebugLoc();
+    TII->removeBranch(*ChainBB);
+    TII->insertBranch(*ChainBB, FBB, TBB, Cond, Dl);
   }
 }
 
@@ -3169,11 +3213,11 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
     // Conservative default.
     bool InWorkList = true;
     // Remove from the Chain and Chain Map
-    if (BlockToChain.count(RemBB)) {
-      BlockChain *Chain = BlockToChain[RemBB];
+    if (auto It = BlockToChain.find(RemBB); It != BlockToChain.end()) {
+      BlockChain *Chain = It->second;
       InWorkList = Chain->UnscheduledPredecessors == 0;
       Chain->remove(RemBB);
-      BlockToChain.erase(RemBB);
+      BlockToChain.erase(It);
     }
 
     // Handle the unplaced block iterator
@@ -3457,7 +3501,7 @@ void MachineBlockPlacement::initTailDupThreshold() {
 
   // For aggressive optimization, we can adjust some thresholds to be less
   // conservative.
-  if (PassConfig->getOptLevel() >= CodeGenOptLevel::Aggressive) {
+  if (OptLevel >= CodeGenOptLevel::Aggressive) {
     // At O3 we should be more willing to copy blocks for tail duplication. This
     // increases size pressure, so we only do it at O3
     // Do this unless only the regular threshold is explicitly set.
@@ -3469,29 +3513,56 @@ void MachineBlockPlacement::initTailDupThreshold() {
   // If there's no threshold provided through options, query the target
   // information for a threshold instead.
   if (TailDupPlacementThreshold.getNumOccurrences() == 0 &&
-      (PassConfig->getOptLevel() < CodeGenOptLevel::Aggressive ||
+      (OptLevel < CodeGenOptLevel::Aggressive ||
        TailDupPlacementAggressiveThreshold.getNumOccurrences() == 0))
-    TailDupSize = TII->getTailDuplicateSize(PassConfig->getOptLevel());
+    TailDupSize = TII->getTailDuplicateSize(OptLevel);
 }
 
-bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
+PreservedAnalyses
+MachineBlockPlacementPass::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &MFAM) {
+  auto *MBPI = &MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
+  auto MBFI = std::make_unique<MBFIWrapper>(
+      MFAM.getResult<MachineBlockFrequencyAnalysis>(MF));
+  auto *MLI = &MFAM.getResult<MachineLoopAnalysis>(MF);
+  auto *MPDT = MachineBlockPlacement::allowTailDupPlacement(MF)
+                   ? &MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF)
+                   : nullptr;
+  auto *PSI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+                  .getCachedResult<ProfileSummaryAnalysis>(
+                      *MF.getFunction().getParent());
+  if (!PSI)
+    report_fatal_error("MachineBlockPlacement requires ProfileSummaryAnalysis",
+                       false);
+
+  MachineBlockPlacement MBP(MBPI, MLI, PSI, std::move(MBFI), MPDT,
+                            AllowTailMerge);
+
+  if (!MBP.run(MF))
+    return PreservedAnalyses::all();
+
+  return getMachineFunctionPassPreservedAnalyses();
+}
+
+void MachineBlockPlacementPass::printPipeline(
+    raw_ostream &OS,
+    function_ref<StringRef(StringRef)> MapClassName2PassName) const {
+  OS << MapClassName2PassName(name());
+  if (!AllowTailMerge)
+    OS << "<no-tail-merge>";
+}
+
+bool MachineBlockPlacement::run(MachineFunction &MF) {
 
   // Check for single-block functions and skip them.
   if (std::next(MF.begin()) == MF.end())
     return false;
 
   F = &MF;
-  MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
-  MBFI = std::make_unique<MBFIWrapper>(
-      getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI());
-  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  OptLevel = F->getTarget().getOptLevel();
+
   TII = MF.getSubtarget().getInstrInfo();
   TLI = MF.getSubtarget().getTargetLowering();
-  MPDT = nullptr;
-  PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  PassConfig = &getAnalysis<TargetPassConfig>();
 
   // Initialize PreferredLoopExit to nullptr here since it may never be set if
   // there are no MachineLoops.
@@ -3505,27 +3576,41 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   // Initialize tail duplication thresholds.
   initTailDupThreshold();
 
+  const bool OptForSize =
+      llvm::shouldOptimizeForSize(&MF, PSI, &MBFI->getMBFI());
+  // Determine whether to use ext-tsp for perf/size optimization. The method
+  // is beneficial only for instances with at least 3 basic blocks and it can be
+  // disabled for huge functions (exceeding a certain size).
+  bool UseExtTspForPerf = false;
+  bool UseExtTspForSize = false;
+  if (3 <= MF.size() && MF.size() <= ExtTspBlockPlacementMaxBlocks) {
+    UseExtTspForPerf =
+        EnableExtTspBlockPlacement &&
+        (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData());
+    UseExtTspForSize = OptForSize && ApplyExtTspForSize;
+  }
+
   // Apply tail duplication.
-  if (allowTailDupPlacement()) {
-    MPDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
-    bool OptForSize = MF.getFunction().hasOptSize() ||
-                      llvm::shouldOptimizeForSize(&MF, PSI, &MBFI->getMBFI());
+  if (allowTailDupPlacement(*F)) {
     if (OptForSize)
       TailDupSize = 1;
     const bool PreRegAlloc = false;
     TailDup.initMF(MF, PreRegAlloc, MBPI, MBFI.get(), PSI,
                    /* LayoutMode */ true, TailDupSize);
-    precomputeTriangleChains();
+    if (!UseExtTspForSize)
+      precomputeTriangleChains();
   }
 
-  buildCFGChains();
+  // Run the main block placement.
+  if (!UseExtTspForSize)
+    buildCFGChains();
 
   // Changing the layout can create new tail merging opportunities.
   // TailMerge can create jump into if branches that make CFG irreducible for
   // HW that requires structured CFG.
   const bool EnableTailMerge = !MF.getTarget().requiresStructuredCFG() &&
-                               PassConfig->getEnableTailMerge() &&
-                               BranchFoldPlacement && MF.size() > 3;
+                               AllowTailMerge && BranchFoldPlacement &&
+                               MF.size() > 3;
   // No tail merging opportunities if the block number is less than four.
   if (EnableTailMerge) {
     const unsigned TailMergeSize = TailDupSize + 1;
@@ -3534,25 +3619,27 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
 
     if (BF.OptimizeFunction(MF, TII, MF.getSubtarget().getRegisterInfo(), MLI,
                             /*AfterPlacement=*/true)) {
-      // Redo the layout if tail merging creates/removes/moves blocks.
-      BlockToChain.clear();
-      ComputedEdges.clear();
       // Must redo the post-dominator tree if blocks were changed.
       if (MPDT)
         MPDT->recalculate(MF);
-      ChainAllocator.DestroyAll();
-      buildCFGChains();
+      if (!UseExtTspForSize) {
+        // Redo the layout if tail merging creates/removes/moves blocks.
+        BlockToChain.clear();
+        ComputedEdges.clear();
+        ChainAllocator.DestroyAll();
+        buildCFGChains();
+      }
     }
   }
 
-  // Apply a post-processing optimizing block placement.
-  if (MF.size() >= 3 && EnableExtTspBlockPlacement &&
-      (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData()) &&
-      MF.size() <= ExtTspBlockPlacementMaxBlocks) {
-    // Find a new placement and modify the layout of the blocks in the function.
-    applyExtTsp();
-
-    // Re-create CFG chain so that we can optimizeBranches and alignBlocks.
+  // Apply a post-processing optimizing block placement:
+  // - find a new placement and modify the layout of the blocks in the function;
+  // - re-create CFG chains so that we can optimizeBranches and alignBlocks.
+  if (UseExtTspForPerf || UseExtTspForSize) {
+    assert(
+        !(UseExtTspForPerf && UseExtTspForSize) &&
+        "UseExtTspForPerf and UseExtTspForSize can not be set simultaneously");
+    applyExtTsp(/*OptForSize=*/UseExtTspForSize);
     createCFGChainExtTsp();
   }
 
@@ -3577,7 +3664,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-void MachineBlockPlacement::applyExtTsp() {
+void MachineBlockPlacement::applyExtTsp(bool OptForSize) {
   // Prepare data; blocks are indexed by their index in the current ordering.
   DenseMap<const MachineBasicBlock *, uint64_t> BlockIndex;
   BlockIndex.reserve(F->size());
@@ -3589,13 +3676,15 @@ void MachineBlockPlacement::applyExtTsp() {
     CurrentBlockOrder.push_back(&MBB);
   }
 
-  auto BlockSizes = std::vector<uint64_t>(F->size());
-  auto BlockCounts = std::vector<uint64_t>(F->size());
-  std::vector<codelayout::EdgeCount> JumpCounts;
+  SmallVector<uint64_t, 0> BlockCounts(F->size());
+  SmallVector<uint64_t, 0> BlockSizes(F->size());
+  SmallVector<codelayout::EdgeCount, 0> JumpCounts;
+  SmallVector<MachineOperand, 4> Cond; // For analyzeBranch.
+  SmallVector<const MachineBasicBlock *, 4> Succs;
   for (MachineBasicBlock &MBB : *F) {
     // Getting the block frequency.
     BlockFrequency BlockFreq = MBFI->getBlockFreq(&MBB);
-    BlockCounts[BlockIndex[&MBB]] = BlockFreq.getFrequency();
+    BlockCounts[BlockIndex[&MBB]] = OptForSize ? 1 : BlockFreq.getFrequency();
     // Getting the block size:
     // - approximate the size of an instruction by 4 bytes, and
     // - ignore debug instructions.
@@ -3604,23 +3693,49 @@ void MachineBlockPlacement::applyExtTsp() {
     // not see a perf improvement with the exact block sizes.
     auto NonDbgInsts =
         instructionsWithoutDebug(MBB.instr_begin(), MBB.instr_end());
-    int NumInsts = std::distance(NonDbgInsts.begin(), NonDbgInsts.end());
+    size_t NumInsts = std::distance(NonDbgInsts.begin(), NonDbgInsts.end());
     BlockSizes[BlockIndex[&MBB]] = 4 * NumInsts;
+
     // Getting jump frequencies.
-    for (MachineBasicBlock *Succ : MBB.successors()) {
-      auto EP = MBPI->getEdgeProbability(&MBB, Succ);
-      BlockFrequency JumpFreq = BlockFreq * EP;
-      JumpCounts.push_back(
-          {BlockIndex[&MBB], BlockIndex[Succ], JumpFreq.getFrequency()});
+    if (OptForSize) {
+      Cond.clear();
+      MachineBasicBlock *TBB = nullptr, *FBB = nullptr; // For analyzeBranch.
+      if (TII->analyzeBranch(MBB, TBB, FBB, Cond))
+        continue;
+
+      const MachineBasicBlock *FTB = MBB.getFallThrough();
+      // Succs is a collection of distinct destinations of the block reachable
+      // from MBB via a jump instruction; initialize the list using the three
+      // (non-necessarily distinct) blocks, FTB, TBB, and FBB.
+      Succs.clear();
+      if (TBB && TBB != FTB)
+        Succs.push_back(TBB);
+      if (FBB && FBB != FTB)
+        Succs.push_back(FBB);
+      if (FTB)
+        Succs.push_back(FTB);
+      // Absolute magnitude of non-zero counts does not matter for the
+      // optimization; prioritize slightly jumps with a single successor, since
+      // the corresponding jump instruction will be removed from the binary.
+      const uint64_t Freq = Succs.size() == 1 ? 110 : 100;
+      for (const MachineBasicBlock *Succ : Succs)
+        JumpCounts.push_back({BlockIndex[&MBB], BlockIndex[Succ], Freq});
+    } else {
+      for (MachineBasicBlock *Succ : MBB.successors()) {
+        auto EP = MBPI->getEdgeProbability(&MBB, Succ);
+        BlockFrequency JumpFreq = BlockFreq * EP;
+        JumpCounts.push_back(
+            {BlockIndex[&MBB], BlockIndex[Succ], JumpFreq.getFrequency()});
+      }
     }
   }
 
   LLVM_DEBUG(dbgs() << "Applying ext-tsp layout for |V| = " << F->size()
                     << " with profile = " << F->getFunction().hasProfileData()
-                    << " (" << F->getName().str() << ")"
-                    << "\n");
-  LLVM_DEBUG(dbgs() << format("  original  layout score: %0.2f\n",
-                              calcExtTspScore(BlockSizes, JumpCounts)));
+                    << " (" << F->getName() << ")" << "\n");
+
+  const double OrgScore = calcExtTspScore(BlockSizes, JumpCounts);
+  LLVM_DEBUG(dbgs() << format("  original  layout score: %0.2f\n", OrgScore));
 
   // Run the layout algorithm.
   auto NewOrder = computeExtTspLayout(BlockSizes, BlockCounts, JumpCounts);
@@ -3629,12 +3744,14 @@ void MachineBlockPlacement::applyExtTsp() {
   for (uint64_t Node : NewOrder) {
     NewBlockOrder.push_back(CurrentBlockOrder[Node]);
   }
-  LLVM_DEBUG(
-      dbgs() << format("  optimized layout score: %0.2f\n",
-                       calcExtTspScore(NewOrder, BlockSizes, JumpCounts)));
+  const double OptScore = calcExtTspScore(NewOrder, BlockSizes, JumpCounts);
+  LLVM_DEBUG(dbgs() << format("  optimized layout score: %0.2f\n", OptScore));
 
-  // Assign new block order.
-  assignBlockOrder(NewBlockOrder);
+  // If the optimization is unsuccessful, fall back to the original block order.
+  if (OptForSize && OrgScore > OptScore)
+    assignBlockOrder(CurrentBlockOrder);
+  else
+    assignBlockOrder(NewBlockOrder);
 }
 
 void MachineBlockPlacement::assignBlockOrder(
@@ -3694,11 +3811,6 @@ void MachineBlockPlacement::assignBlockOrder(
       continue;
     MBB.updateTerminator(FTMBB);
   }
-
-#ifndef NDEBUG
-  // Make sure we correctly constructed all branches.
-  F->verify(this, "After optimized block reordering", &errs());
-#endif
 }
 
 void MachineBlockPlacement::createCFGChainExtTsp() {

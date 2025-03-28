@@ -46,6 +46,11 @@ struct WithNonTrivialDtor {
 template <class T>
 struct CustomDeleter : std::default_delete<T> {};
 
+struct NoopDeleter {
+  template <class T>
+  TEST_CONSTEXPR_CXX23 void operator()(T*) const {}
+};
+
 TEST_CONSTEXPR_CXX23 bool test() {
   // Basic test
   {
@@ -112,12 +117,33 @@ TEST_CONSTEXPR_CXX23 bool test() {
         WithNonTrivialDtor<16>,
         WithNonTrivialDtor<256>>;
     types::for_each(TrickyCookieTypes(), []<class T> {
-      types::for_each(types::type_list<std::default_delete<T[]>, CustomDeleter<T[]>>(), []<class Deleter> {
-        std::unique_ptr<T[], Deleter> p(new T[3]);
+      // Array allocated with `new T[n]`, default deleter
+      {
+        std::unique_ptr<T[], std::default_delete<T[]>> p(new T[3]);
         assert(p[0] == T());
         assert(p[1] == T());
         assert(p[2] == T());
-      });
+      }
+
+      // Array allocated with `new T[n]`, custom deleter
+      {
+        std::unique_ptr<T[], CustomDeleter<T[]>> p(new T[3]);
+        assert(p[0] == T());
+        assert(p[1] == T());
+        assert(p[2] == T());
+      }
+
+      // Array not allocated with `new T[n]`, custom deleter
+      //
+      // This test aims to ensure that the implementation doesn't try to use an array cookie
+      // when there is none.
+      {
+        T array[50] = {};
+        std::unique_ptr<T[], NoopDeleter> p(&array[0]);
+        assert(p[0] == T());
+        assert(p[1] == T());
+        assert(p[2] == T());
+      }
     });
   }
 #endif // C++20

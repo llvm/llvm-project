@@ -9,15 +9,16 @@
 #ifndef FORTRAN_SEMANTICS_SEMANTICS_H_
 #define FORTRAN_SEMANTICS_SEMANTICS_H_
 
+#include "module-dependences.h"
+#include "program-tree.h"
 #include "scope.h"
 #include "symbol.h"
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/LangOptions.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/target.h"
 #include "flang/Parser/message.h"
-#include "flang/Semantics/module-dependences.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/LangOptions.h"
 #include <iosfwd>
 #include <set>
 #include <string>
@@ -109,6 +110,12 @@ public:
   }
   Scope &globalScope() { return globalScope_; }
   Scope &intrinsicModulesScope() { return intrinsicModulesScope_; }
+  Scope *currentHermeticModuleFileScope() {
+    return currentHermeticModuleFileScope_;
+  }
+  void set_currentHermeticModuleFileScope(Scope *scope) {
+    currentHermeticModuleFileScope_ = scope;
+  }
   parser::Messages &messages() { return messages_; }
   evaluate::FoldingContext &foldingContext() { return foldingContext_; }
   parser::AllCookedSources &allCookedSources() { return allCookedSources_; }
@@ -188,6 +195,24 @@ public:
     return message;
   }
 
+  template <typename FeatureOrUsageWarning, typename... A>
+  parser::Message *Warn(
+      FeatureOrUsageWarning warning, parser::CharBlock at, A &&...args) {
+    if (languageFeatures_.ShouldWarn(warning) && !IsInModuleFile(at)) {
+      parser::Message &msg{
+          messages_.Say(warning, at, std::forward<A>(args)...)};
+      return &msg;
+    } else {
+      return nullptr;
+    }
+  }
+
+  template <typename FeatureOrUsageWarning, typename... A>
+  parser::Message *Warn(FeatureOrUsageWarning warning, A &&...args) {
+    CHECK(location_);
+    return Warn(warning, *location_, std::forward<A>(args)...);
+  }
+
   const Scope &FindScope(parser::CharBlock) const;
   Scope &FindScope(parser::CharBlock);
   void UpdateScopeIndex(Scope &, parser::CharBlock);
@@ -262,6 +287,9 @@ public:
 
   void DumpSymbols(llvm::raw_ostream &);
 
+  // Top-level ProgramTrees are owned by the SemanticsContext for persistence.
+  ProgramTree &SaveProgramTree(ProgramTree &&);
+
 private:
   struct ScopeIndexComparator {
     bool operator()(parser::CharBlock, parser::CharBlock) const;
@@ -270,7 +298,7 @@ private:
       std::multimap<parser::CharBlock, Scope &, ScopeIndexComparator>;
   ScopeIndex::iterator SearchScopeIndex(parser::CharBlock);
 
-  void CheckIndexVarRedefine(
+  parser::Message *CheckIndexVarRedefine(
       const parser::CharBlock &, const Symbol &, parser::MessageFixedText &&);
   void CheckError(const Symbol &);
 
@@ -291,6 +319,7 @@ private:
   evaluate::TargetCharacteristics targetCharacteristics_;
   Scope globalScope_;
   Scope &intrinsicModulesScope_;
+  Scope *currentHermeticModuleFileScope_{nullptr};
   ScopeIndex scopeIndex_;
   parser::Messages messages_;
   evaluate::FoldingContext foldingContext_;
@@ -313,6 +342,7 @@ private:
   ModuleDependences moduleDependences_;
   std::map<const Symbol *, SourceName> moduleFileOutputRenamings_;
   UnorderedSymbolSet isDefined_;
+  std::list<ProgramTree> programTrees_;
 };
 
 class Semantics {

@@ -268,6 +268,8 @@ Function Name  Available  RPC Required
 clock          |check|
 clock_gettime  |check|
 nanosleep      |check|
+strftime       |check|
+strftime_l     |check|
 =============  =========  ============
 
 assert.h

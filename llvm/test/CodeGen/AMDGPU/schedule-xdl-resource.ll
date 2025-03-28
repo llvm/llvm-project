@@ -3,9 +3,8 @@
 
 declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x4f16(<4 x half>, <4 x half>, <32 x float>, i32, i32, i32)
 
-; CHECK: CritRes: {{[0-9]+}} HWXDL
-; CHECK: Picking: Cand SU([[nid:[0-9]+]]) RES-DEMAND
-; CHECK: Scheduling SU([[nid]]) {{.*}} V_MFMA_F32_32X32X4F16
+; CHECK: Scheduling SU({{[0-9]+}}) {{.*}} V_MFMA_F32_32X32X4F16
+; CHECK: HWXDL +16x1u
 define amdgpu_kernel void @schedule-xdl-resource(ptr addrspace(1) %in, ptr addrspace(1) %out, ptr addrspace(3) %lds, i32 %stride) #0 {
   %in_ptr.1 = getelementptr <32 x float>, ptr addrspace(1) %in, i32 %stride
   %in_ptr.2 = getelementptr <32 x float>, ptr addrspace(1) %in_ptr.1, i32 %stride

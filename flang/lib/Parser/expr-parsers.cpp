@@ -68,7 +68,7 @@ TYPE_PARSER(construct<AcImpliedDoControl>(
 // type-param-inquiry is parsed as a structure component, except for
 // substring%KIND/LEN
 constexpr auto primary{instrumented("primary"_en_US,
-    first(construct<Expr>(indirect(Parser<CharLiteralConstantSubstring>{})),
+    first(construct<Expr>(indirect(charLiteralConstantSubstring)),
         construct<Expr>(literalConstant),
         construct<Expr>(construct<Expr::Parentheses>("(" >>
             expr / !","_tok / recovery(")"_tok, SkipPastNested<'(', ')'>{}))),

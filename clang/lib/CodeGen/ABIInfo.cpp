@@ -106,7 +106,7 @@ bool ABIInfo::isHomogeneousAggregate(QualType Ty, const Type *&Base,
         continue;
 
       if (isZeroLengthBitfieldPermittedInHomogeneousAggregate() &&
-          FD->isZeroLengthBitField(getContext()))
+          FD->isZeroLengthBitField())
         continue;
 
       uint64_t FldMembers;
@@ -171,11 +171,11 @@ bool ABIInfo::isPromotableIntegerTypeForABI(QualType Ty) const {
   return false;
 }
 
-ABIArgInfo ABIInfo::getNaturalAlignIndirect(QualType Ty, bool ByVal,
-                                            bool Realign,
+ABIArgInfo ABIInfo::getNaturalAlignIndirect(QualType Ty, unsigned AddrSpace,
+                                            bool ByVal, bool Realign,
                                             llvm::Type *Padding) const {
-  return ABIArgInfo::getIndirect(getContext().getTypeAlignInChars(Ty), ByVal,
-                                 Realign, Padding);
+  return ABIArgInfo::getIndirect(getContext().getTypeAlignInChars(Ty),
+                                 AddrSpace, ByVal, Realign, Padding);
 }
 
 ABIArgInfo ABIInfo::getNaturalAlignIndirectInReg(QualType Ty,
@@ -218,8 +218,8 @@ void ABIInfo::appendAttributeMangling(StringRef AttrStr,
     // only have "+" prefixes here.
     assert(LHS.starts_with("+") && RHS.starts_with("+") &&
            "Features should always have a prefix.");
-    return TI.multiVersionSortPriority(LHS.substr(1)) >
-           TI.multiVersionSortPriority(RHS.substr(1));
+    return TI.getFMVPriority({LHS.substr(1)}) >
+           TI.getFMVPriority({RHS.substr(1)});
   });
 
   bool IsFirst = true;
@@ -234,6 +234,14 @@ void ABIInfo::appendAttributeMangling(StringRef AttrStr,
     IsFirst = false;
     Out << Feat.substr(1);
   }
+}
+
+llvm::FixedVectorType *
+ABIInfo::getOptimalVectorMemoryType(llvm::FixedVectorType *T,
+                                    const LangOptions &Opt) const {
+  if (T->getNumElements() == 3 && !Opt.PreserveVec3Type)
+    return llvm::FixedVectorType::get(T->getElementType(), 4);
+  return T;
 }
 
 // Pin the vtable to this file.

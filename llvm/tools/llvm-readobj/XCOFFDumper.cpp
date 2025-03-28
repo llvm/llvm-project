@@ -692,22 +692,26 @@ static StringRef GetSymbolValueName(XCOFF::StorageClass SC) {
   case XCOFF::C_BLOCK:
     return "Value (RelocatableAddress)";
   case XCOFF::C_FILE:
+  case XCOFF::C_BSTAT:
     return "Value (SymbolTableIndex)";
   case XCOFF::C_DWARF:
     return "Value (OffsetInDWARF)";
   case XCOFF::C_FUN:
   case XCOFF::C_STSYM:
+    return "Value (OffsetInCSect)";
   case XCOFF::C_BINCL:
   case XCOFF::C_EINCL:
+    return "Value (OffsetInFile)";
   case XCOFF::C_INFO:
-  case XCOFF::C_BSTAT:
+    return "Value (OffsetInCommentSection)";
   case XCOFF::C_LSYM:
   case XCOFF::C_PSYM:
+    return "Value (OffsetRelToStackFrame)";
   case XCOFF::C_RPSYM:
   case XCOFF::C_RSYM:
+    return "Value (RegisterNumber)";
   case XCOFF::C_ECOML:
-    assert(false && "This StorageClass for the symbol is not yet implemented.");
-    return "";
+    return "Value (OffsetInCommBlock)";
   default:
     return "Value";
   }
@@ -723,7 +727,12 @@ const EnumEntry<XCOFF::CFileLangId> CFileLangIdClass[] = {
 const EnumEntry<XCOFF::CFileCpuId> CFileCpuIdClass[] = {
 #define ECase(X)                                                               \
   { #X, XCOFF::X }
-    ECase(TCPU_PPC64), ECase(TCPU_COM), ECase(TCPU_970)
+    ECase(TCPU_INVALID), ECase(TCPU_PPC),  ECase(TCPU_PPC64), ECase(TCPU_COM),
+    ECase(TCPU_PWR),     ECase(TCPU_ANY),  ECase(TCPU_601),   ECase(TCPU_603),
+    ECase(TCPU_604),     ECase(TCPU_620),  ECase(TCPU_A35),   ECase(TCPU_970),
+    ECase(TCPU_PWR5),    ECase(TCPU_PWR6), ECase(TCPU_PWR5X), ECase(TCPU_PWR6E),
+    ECase(TCPU_PWR7),    ECase(TCPU_PWR8), ECase(TCPU_PWR9),  ECase(TCPU_PWR10),
+    ECase(TCPU_PWRX)
 #undef ECase
 };
 

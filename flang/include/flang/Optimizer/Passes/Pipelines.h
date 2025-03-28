@@ -20,6 +20,7 @@
 #include "flang/Tools/CrossToolHelpers.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -32,16 +33,16 @@ namespace fir {
 
 using PassConstructor = std::unique_ptr<mlir::Pass>();
 
-template <typename OP>
-void addNestedPassToOps(mlir::PassManager &pm, PassConstructor ctor) {
+template <typename F, typename OP>
+void addNestedPassToOps(mlir::PassManager &pm, F ctor) {
   pm.addNestedPass<OP>(ctor());
 }
 
-template <typename OP, typename... OPS,
+template <typename F, typename OP, typename... OPS,
           typename = std::enable_if_t<sizeof...(OPS) != 0>>
-void addNestedPassToOps(mlir::PassManager &pm, PassConstructor ctor) {
-  addNestedPassToOps<OP>(pm, ctor);
-  addNestedPassToOps<OPS...>(pm, ctor);
+void addNestedPassToOps(mlir::PassManager &pm, F ctor) {
+  addNestedPassToOps<F, OP>(pm, ctor);
+  addNestedPassToOps<F, OPS...>(pm, ctor);
 }
 
 /// Generic for adding a pass to the pass manager if it is not disabled.
@@ -59,11 +60,12 @@ void addNestedPassConditionally(mlir::PassManager &pm,
     pm.addNestedPass<OP>(ctor());
 }
 
-void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm,
-                                          PassConstructor ctor);
+template <typename F>
+void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm, F ctor);
 
+template <typename F>
 void addNestedPassToAllTopLevelOperationsConditionally(
-    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled, PassConstructor ctor);
+    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled, F ctor);
 
 /// Add MLIR Canonicalizer pass with region simplification disabled.
 /// FIR does not support the promotion of some SSA value to block arguments (or
@@ -123,7 +125,8 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 /// \param optLevel - optimization level used for creating FIR optimization
 ///   passes pipeline
 void createHLFIRToFIRPassPipeline(
-    mlir::PassManager &pm, llvm::OptimizationLevel optLevel = defaultOptLevel);
+    mlir::PassManager &pm, bool enableOpenMP,
+    llvm::OptimizationLevel optLevel = defaultOptLevel);
 
 /// Create a pass pipeline for handling certain OpenMP transformations needed
 /// prior to FIR lowering.

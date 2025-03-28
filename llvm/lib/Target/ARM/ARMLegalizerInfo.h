@@ -59,6 +59,8 @@ private:
   // Get the libcall(s) corresponding to \p Predicate for operands of \p Size
   // bits.
   FCmpLibcallsList getFCmpLibcalls(CmpInst::Predicate, unsigned Size) const;
+
+  const ARMSubtarget &ST;
 };
 } // End llvm namespace.
 #endif

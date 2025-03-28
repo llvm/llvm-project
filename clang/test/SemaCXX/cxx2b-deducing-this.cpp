@@ -142,8 +142,8 @@ struct Corresponding {
     void d(this Corresponding&&);
     void d(this const Corresponding&);
     void d(this const int&);
-    void d(this const int);
-    void d(this int);
+    void d(this const int);  // expected-note {{previous declaration is here}}
+    void d(this int);        // expected-error {{class member cannot be redeclared}}
 
     void e(this const Corresponding&&); // expected-note {{here}}
     void e() const &&; // expected-error{{cannot be redeclared}}
@@ -171,9 +171,8 @@ struct CorrespondingTpl {
     void d(this Corresponding&&);
     void d(this const Corresponding&);
     void d(this const int&);
-    void d(this const int);
-    void d(this int);
-
+    void d(this const int); // expected-note {{previous declaration is here}}
+    void d(this int);       // expected-error {{class member cannot be redeclared}}
     void e(this const CorrespondingTpl&&); // expected-note {{here}}
     void e() const &&; // expected-error{{cannot be redeclared}}
 };
@@ -438,6 +437,10 @@ namespace std {
   constexpr strong_ordering strong_ordering::equal = {0};
   constexpr strong_ordering strong_ordering::greater = {1};
   constexpr strong_ordering strong_ordering::less = {-1};
+
+  template<typename T> constexpr __remove_reference_t(T)&& move(T&& t) noexcept {
+    return static_cast<__remove_reference_t(T)&&>(t);
+  }
 }
 
 namespace operators_deduction {
@@ -966,6 +969,22 @@ void f();
 void a::f(this auto) {} // expected-error {{an explicit object parameter cannot appear in a non-member function}}
 }
 
+namespace GH100341 {
+struct X {
+    X() = default;
+    X(X&&) = default;
+    void operator()(this X);
+};
+
+void fail() {
+    X()();
+    [x = X{}](this auto) {}();
+}
+void pass() {
+    std::move(X())();
+    std::move([x = X{}](this auto) {})();
+}
+} // namespace GH100341
 struct R {
   void f(this auto &&self, int &&r_value_ref) {} // expected-note {{candidate function template not viable: expects an rvalue for 2nd argument}}
   void g(int &&r_value_ref) {
@@ -1072,4 +1091,46 @@ int main() {
   Foo foo;
   return foo[]; // expected-error {{no viable overloaded operator[] for type 'Foo'}}
 }
+}
+
+namespace GH100394 {
+struct C1 {
+  void f(this const C1);
+  void f() const;        // ok
+};
+
+struct C2 {
+  void f(this const C2);    // expected-note {{previous declaration is here}}
+  void f(this volatile C2); // expected-error {{class member cannot be redeclared}} \
+                            // expected-warning {{volatile-qualified parameter type 'volatile C2' is deprecated}}
+};
+
+struct C3 {
+  void f(this volatile C3); // expected-note {{previous declaration is here}} \
+                            // expected-warning {{volatile-qualified parameter type 'volatile C3' is deprecated}}
+  void f(this const C3);    // expected-error {{class member cannot be redeclared}}
+};
+
+struct C4 {
+  void f(this const C4);          // expected-note {{previous declaration is here}}
+  void f(this const volatile C4); // expected-error {{class member cannot be redeclared}} \
+                                  // expected-warning {{volatile-qualified parameter type 'const volatile C4' is deprecated}}
+};
+}
+
+
+namespace GH112559 {
+struct Wrap  {};
+struct S {
+    constexpr operator Wrap (this const S& self) {
+        return Wrap{};
+    };
+    constexpr int operator <<(this Wrap self, int i) {
+        return 0;
+    }
+};
+// Purposefully invalid expression to check an assertion in the
+// expression recovery machinery.
+static_assert((S{} << 11) == a);
+// expected-error@-1 {{use of undeclared identifier 'a'}}
 }

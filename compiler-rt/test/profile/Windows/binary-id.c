@@ -62,6 +62,8 @@ int main() {
 // BINARY-ID-RAW-PROF-NEXT: Total functions: 3
 // BINARY-ID-RAW-PROF-NEXT: Maximum function count: 1
 // BINARY-ID-RAW-PROF-NEXT: Maximum internal block count: 0
+// BINARY-ID-RAW-PROF-NEXT: Total number of blocks:
+// BINARY-ID-RAW-PROF-NEXT: Total count:
 // BINARY-ID-RAW-PROF-NEXT: Binary IDs:
 // BINARY-ID-RAW-PROF-NEXT: {{[0-9a-f]+}}
 
@@ -69,6 +71,8 @@ int main() {
 // ONE-BINARY-ID-NEXT: Total functions: 3
 // ONE-BINARY-ID-NEXT: Maximum function count: 3
 // ONE-BINARY-ID-NEXT: Maximum internal block count: 0
+// ONE-BINARY-ID-NEXT: Total number of blocks:
+// ONE-BINARY-ID-NEXT: Total count:
 // ONE-BINARY-ID-NEXT: Binary IDs:
 // ONE-BINARY-ID-NEXT: {{[0-9a-f]+}}
 
@@ -76,6 +80,8 @@ int main() {
 // MULTI-BINARY-ID-NEXT: Total functions: 3
 // MULTI-BINARY-ID-NEXT: Maximum function count: 1
 // MULTI-BINARY-ID-NEXT: Maximum internal block count: 0
+// MULTI-BINARY-ID-NEXT: Total number of blocks:
+// MULTI-BINARY-ID-NEXT: Total count:
 // MULTI-BINARY-ID-NEXT: Binary IDs:
 // MULTI-BINARY-ID-NEXT: {{[0-9a-f]+}}
 // MULTI-BINARY-ID-NEXT: {{[0-9a-f]+}}

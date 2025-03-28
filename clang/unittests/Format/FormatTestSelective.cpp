@@ -388,6 +388,17 @@ TEST_F(FormatTestSelective, WrongIndent) {
                    "  int j;\n" // Format here.
                    "}",
                    24, 0));
+  EXPECT_EQ("namespace {\n"
+            "class C {\n"
+            "  int i;\n"
+            "};\n"
+            "} // namespace",
+            format("namespace {\n" // Format here.
+                   "  class C {\n"
+                   "    int i;\n"
+                   "  };\n"
+                   "}",
+                   1, 0));
 }
 
 TEST_F(FormatTestSelective, AlwaysFormatsEntireMacroDefinitions) {

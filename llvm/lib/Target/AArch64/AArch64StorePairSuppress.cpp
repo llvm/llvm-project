@@ -53,8 +53,8 @@ private:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineTraceMetrics>();
-    AU.addPreserved<MachineTraceMetrics>();
+    AU.addRequired<MachineTraceMetricsWrapperPass>();
+    AU.addPreserved<MachineTraceMetricsWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -139,7 +139,7 @@ bool AArch64StorePairSuppress::runOnMachineFunction(MachineFunction &MF) {
   TRI = ST.getRegisterInfo();
   MRI = &MF.getRegInfo();
   SchedModel.init(&ST);
-  Traces = &getAnalysis<MachineTraceMetrics>();
+  Traces = &getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
   MinInstr = nullptr;
 
   LLVM_DEBUG(dbgs() << "*** " << getPassName() << ": " << MF.getName() << '\n');

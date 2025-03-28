@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 -disable-block-placement < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 -disable-block-placement < %s | FileCheck %s
 ; Disable block placement because it intereferes with the generated code.
 
 ; CHECK:      if (p{{[0-9]*}}) jump:nt .LBB0_2

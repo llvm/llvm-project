@@ -300,8 +300,7 @@ Example usage for a project using a compile commands database:
   llvm::StringMap<std::vector<StringRef>> USRToBitcode;
   Executor->get()->getToolResults()->forEachResult(
       [&](StringRef Key, StringRef Value) {
-        auto R = USRToBitcode.try_emplace(Key, std::vector<StringRef>());
-        R.first->second.emplace_back(Value);
+        USRToBitcode[Key].emplace_back(Value);
       });
 
   // Collects all Infos according to their unique USR value. This map is added

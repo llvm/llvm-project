@@ -1029,6 +1029,122 @@ def SPIRV_GLFMixOp :
   let hasVerifier = 0;
 }
 
+// -----
+
+def SPIRV_GLDistanceOp : SPIRV_GLOp<"Distance", 67, [
+    Pure,
+    AllTypesMatch<["p0", "p1"]>,
+    TypesMatchWith<"result type must match operand element type",
+                  "p0", "result",
+                  "::mlir::getElementTypeOrSelf($_self)">
+  ]> {
+  let summary = "Return distance between two points";
+
+  let description = [{
+    Result is the distance between p0 and p1, i.e., length(p0 - p1).
+
+    The operands must all be a scalar or vector whose component type is floating-point.
+
+    Result Type must be a scalar of the same type as the component type of the operands.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Distance %0, %1 : vector<3xf32>, vector<3xf32> -> f32
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$p0,
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$p1
+  );
+
+  let results = (outs
+    SPIRV_Float:$result
+  );
+
+  let assemblyFormat = [{
+    operands attr-dict `:` type($p0) `,` type($p1) `->` type($result)
+  }];
+
+  let hasVerifier = 0;
+}
+
+// -----
+
+def SPIRV_GLCrossOp : SPIRV_GLBinaryArithmeticOp<"Cross", 68, SPIRV_Float> {
+  let summary = "Return the cross product of two 3-component vectors";
+
+  let description = [{
+    Result is the cross product of x and y, i.e., the resulting components are, in order:
+
+    x[1] * y[2] - y[1] * x[2]
+
+    x[2] * y[0] - y[2] * x[0]
+
+    x[0] * y[1] - y[0] * x[1]
+
+    All the operands must be vectors of 3 components of a floating-point type.
+
+    Result Type and the type of all operands must be the same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Cross %0, %1 : vector<3xf32>
+    %3 = spirv.GL.Cross %0, %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLNormalizeOp : SPIRV_GLUnaryArithmeticOp<"Normalize", 69, SPIRV_Float> {
+  let summary = "Normalizes a vector operand";
+
+  let description = [{
+    Result is the vector in the same direction as x but with a length of 1.
+
+    The operand x must be a scalar or vector whose component type is floating-point.
+
+    Result Type and the type of x must be the same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Normalize %0 : vector<3xf32>
+    %3 = spirv.GL.Normalize %1 : vector<4xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLReflectOp : SPIRV_GLBinaryArithmeticOp<"Reflect", 71, SPIRV_Float> {
+  let summary = "Calculate reflection direction vector";
+
+  let description = [{
+    For the incident vector I and surface orientation N, the result is the reflection direction:
+
+    I - 2 * dot(N, I) * N
+
+    N must already be normalized in order to achieve the desired result.
+
+    The operands must all be a scalar or vector whose component type is floating-point.
+
+    Result Type and the type of all operands must be the same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Reflect %0, %1 : f32
+    %3 = spirv.GL.Reflect %0, %1 : vector<3xf32>
+    ```
+  }];
+}
+
+// ----
+
 def SPIRV_GLFindUMsbOp : SPIRV_GLUnaryArithmeticOp<"FindUMsb", 75, SPIRV_Int32> {
   let summary = "Unsigned-integer most-significant bit";
 
@@ -1042,6 +1158,33 @@ def SPIRV_GLFindUMsbOp : SPIRV_GLUnaryArithmeticOp<"FindUMsb", 75, SPIRV_Int32> 
     computed per component.
 
     This instruction is currently limited to 32-bit width components.
+  }];
+}
+
+// ----
+
+def SPIRV_GLFractOp : SPIRV_GLUnaryArithmeticOp<"Fract", 10, SPIRV_Float> {
+  let summary = "Returns the `x - floor(x)` of the operand";
+
+  let description = [{
+    Result is:
+
+    ```
+    fract(x) = x - floor(x)
+    fract(±0) = +0
+    fract(±Inf) = NaN
+    ```
+
+    The operand x must be a scalar or vector whose component type is floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed per component.
+
+    #### Example:
+
+    ```mlir
+    %result = spirv.GL.Sqrt %x : f32
+    %result = spirv.GL.Sqrt %x : vector<3xf16>
+    ```
   }];
 }
 

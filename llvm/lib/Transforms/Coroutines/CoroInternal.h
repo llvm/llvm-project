@@ -11,10 +11,10 @@
 #ifndef LLVM_LIB_TRANSFORMS_COROUTINES_COROINTERNAL_H
 #define LLVM_LIB_TRANSFORMS_COROUTINES_COROINTERNAL_H
 
-#include "CoroInstr.h"
-#include "CoroShape.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Transforms/Coroutines/CoroInstr.h"
+#include "llvm/Transforms/Coroutines/CoroShape.h"
 
 namespace llvm {
 
@@ -62,9 +62,6 @@ struct LowererBase {
 bool defaultMaterializable(Instruction &V);
 void normalizeCoroutine(Function &F, coro::Shape &Shape,
                         TargetTransformInfo &TTI);
-void buildCoroutineFrame(
-    Function &F, Shape &Shape,
-    const std::function<bool(Instruction &)> &MaterializableCallback);
 CallInst *createMustTailCall(DebugLoc Loc, Function *MustTailCallFn,
                              TargetTransformInfo &TTI,
                              ArrayRef<Value *> Arguments, IRBuilder<> &);

@@ -92,13 +92,13 @@ func.func @array_substring(%arg0 : !fir.box<!fir.array<10x!fir.char<1,?>>>) {
 // CHECK:  %[[VAL_4:.*]] = fir.undefined !fir.shape<1>
 // CHECK:  %[[VAL_5:.*]] = hlfir.designate %[[VAL_0]] substr %[[VAL_2]], %[[VAL_3]] shape %[[VAL_4]] typeparams %[[VAL_1]] : (!fir.box<!fir.array<10x!fir.char<1,?>>>, index, index, !fir.shape<1>, index) -> !fir.box<!fir.array<10x!fir.char<1,?>>>
 
-func.func @real_part(%arg0 : !fir.ref<!fir.complex<4>>) {
-  %0 = hlfir.designate %arg0 real :  (!fir.ref<!fir.complex<4>>) -> !fir.ref<!fir.real<4>>
+func.func @real_part(%arg0 : !fir.ref<complex<f32>>) {
+  %0 = hlfir.designate %arg0 real :  (!fir.ref<complex<f32>>) -> !fir.ref<f32>
   return
 }
 // CHECK-LABEL: func.func @real_part(
-// CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.complex<4>>) {
-// CHECK:  %[[VAL_1:.*]] = hlfir.designate %[[VAL_0]] real :  (!fir.ref<!fir.complex<4>>) -> !fir.ref<!fir.real<4>>
+// CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<complex<f32>>) {
+// CHECK:  %[[VAL_1:.*]] = hlfir.designate %[[VAL_0]] real :  (!fir.ref<complex<f32>>) -> !fir.ref<f32>
 
 func.func @imag_part_mlir_complex(%arg0 : !fir.ref<complex<f32>>) {
   %0 = hlfir.designate %arg0 imag :  (!fir.ref<complex<f32>>) -> !fir.ref<f32>
@@ -109,19 +109,19 @@ func.func @imag_part_mlir_complex(%arg0 : !fir.ref<complex<f32>>) {
 // CHECK:  %[[VAL_1:.*]] = hlfir.designate %[[VAL_0]] imag :  (!fir.ref<complex<f32>>) -> !fir.ref<f32>
 
 // array%array_complex_comp(1)%im
-func.func @component_array_ref_cplx_part(%arg0 : !fir.box<!fir.array<10x!fir.type<t3{array_comp:!fir.array<100x!fir.complex<8>>}>>>) {
+func.func @component_array_ref_cplx_part(%arg0 : !fir.box<!fir.array<10x!fir.type<t3{array_comp:!fir.array<100xcomplex<f64>>}>>>) {
   %c1 = arith.constant 1 : index
   %component_shape = fir.undefined !fir.shapeshift<1>
   %result_shape = fir.undefined !fir.shape<1>
-  %0 = hlfir.designate %arg0 {"array_comp"}<%component_shape>(%c1) imag shape %result_shape : (!fir.box<!fir.array<10x!fir.type<t3{array_comp:!fir.array<100x!fir.complex<8>>}>>>, !fir.shapeshift<1>, index, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.real<8>>>
+  %0 = hlfir.designate %arg0 {"array_comp"}<%component_shape>(%c1) imag shape %result_shape : (!fir.box<!fir.array<10x!fir.type<t3{array_comp:!fir.array<100xcomplex<f64>>}>>>, !fir.shapeshift<1>, index, !fir.shape<1>) -> !fir.box<!fir.array<10xf64>>
   return
 }
 // CHECK-LABEL: func.func @component_array_ref_cplx_part(
-// CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<10x!fir.type<t3{array_comp:!fir.array<100x!fir.complex<8>>}>>>) {
+// CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<10x!fir.type<t3{array_comp:!fir.array<100xcomplex<f64>>}>>>) {
 // CHECK:  %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:  %[[VAL_2:.*]] = fir.undefined !fir.shapeshift<1>
 // CHECK:  %[[VAL_3:.*]] = fir.undefined !fir.shape<1>
-// CHECK:  %[[VAL_4:.*]] = hlfir.designate %[[VAL_0]]{"array_comp"} <%[[VAL_2]]> (%[[VAL_1]]) imag shape %[[VAL_3]] : (!fir.box<!fir.array<10x!fir.type<t3{array_comp:!fir.array<100x!fir.complex<8>>}>>>, !fir.shapeshift<1>, index, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.real<8>>>
+// CHECK:  %[[VAL_4:.*]] = hlfir.designate %[[VAL_0]]{"array_comp"} <%[[VAL_2]]> (%[[VAL_1]]) imag shape %[[VAL_3]] : (!fir.box<!fir.array<10x!fir.type<t3{array_comp:!fir.array<100xcomplex<f64>>}>>>, !fir.shapeshift<1>, index, !fir.shape<1>) -> !fir.box<!fir.array<10xf64>>
 
 // pdt_array(1)
 func.func @pdt(%arg0 : !fir.box<!fir.array<?x!fir.type<pdt(param:i32){field:i32}>>>) {

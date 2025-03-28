@@ -8,7 +8,6 @@
 
 #include "src/string/strndup.h"
 #include "test/UnitTest/Test.h"
-#include <stdlib.h>
 
 TEST(LlvmLibcstrndupTest, EmptyString) {
   const char *empty = "";

@@ -75,6 +75,138 @@ TEST_F(AArch64GISelMITest, TestCSE) {
   auto MIBUnmerge2 = CSEB.buildUnmerge({s32, s32}, Copies[0]);
   EXPECT_TRUE(&*MIBUnmerge == &*MIBUnmerge2);
 
+  // Check G_FADD
+  {
+    auto MIBFAdd = CSEB.buildFAdd(s32, Copies[0], Copies[1]);
+    auto MIBFAdd2 = CSEB.buildFAdd(s32, Copies[0], Copies[1]);
+    EXPECT_TRUE(&*MIBFAdd == &*MIBFAdd2);
+
+    auto MIBFAdd3 =
+        CSEB.buildFAdd(s32, Copies[0], Copies[1], MachineInstr::FmNsz);
+    EXPECT_FALSE(&*MIBFAdd == &*MIBFAdd3);
+
+    MIBFAdd2->setFlag(MachineInstr::FmNsz);
+    MIBFAdd2->clearFlag(MachineInstr::FmNsz);
+    EXPECT_TRUE(&*MIBFAdd == &*MIBFAdd2);
+  }
+
+  // Check G_FSUB
+  {
+    auto MIBFSub = CSEB.buildFSub(s32, Copies[0], Copies[1]);
+    auto MIBFSub2 = CSEB.buildFSub(s32, Copies[0], Copies[1]);
+    EXPECT_TRUE(&*MIBFSub == &*MIBFSub2);
+
+    auto MIBFSub3 =
+        CSEB.buildFSub(s32, Copies[0], Copies[1], MachineInstr::FmNoNans);
+    EXPECT_FALSE(&*MIBFSub == &*MIBFSub3);
+
+    MIBFSub2->setFlag(MachineInstr::FmNoNans);
+    MIBFSub2->clearFlag(MachineInstr::FmNoNans);
+    EXPECT_TRUE(&*MIBFSub == &*MIBFSub2);
+  }
+
+  // Check G_FMUL
+  {
+    auto MIBFMul = CSEB.buildFMul(s32, Copies[0], Copies[1]);
+    auto MIBFMul2 = CSEB.buildFMul(s32, Copies[0], Copies[1]);
+    EXPECT_TRUE(&*MIBFMul == &*MIBFMul2);
+
+    auto MIBFMul3 =
+        CSEB.buildFMul(s32, Copies[0], Copies[1], MachineInstr::FmNoNans);
+    EXPECT_FALSE(&*MIBFMul == &*MIBFMul3);
+
+    MIBFMul2->setFlag(MachineInstr::FmNoNans);
+    MIBFMul2->clearFlag(MachineInstr::FmNoNans);
+    EXPECT_TRUE(&*MIBFMul == &*MIBFMul2);
+  }
+
+  // Check G_FDIV
+  {
+    auto MIBFDiv = CSEB.buildFDiv(s32, Copies[0], Copies[1]);
+    auto MIBFDiv2 = CSEB.buildFDiv(s32, Copies[0], Copies[1]);
+    EXPECT_TRUE(&*MIBFDiv == &*MIBFDiv2);
+
+    auto MIBFDiv3 =
+        CSEB.buildFDiv(s32, Copies[0], Copies[1], MachineInstr::FmNoNans);
+    EXPECT_FALSE(&*MIBFDiv == &*MIBFDiv3);
+
+    MIBFDiv2->setFlag(MachineInstr::FmNoNans);
+    MIBFDiv2->clearFlag(MachineInstr::FmNoNans);
+    EXPECT_TRUE(&*MIBFDiv == &*MIBFDiv2);
+  }
+
+  // Check G_FABS
+  {
+    auto MIBFAbs = CSEB.buildFAbs(s32, Copies[0]);
+    auto MIBFAbs2 = CSEB.buildFAbs(s32, Copies[0]);
+    EXPECT_TRUE(&*MIBFAbs == &*MIBFAbs2);
+
+    auto MIBFAbs3 = CSEB.buildFAbs(s32, Copies[0], MachineInstr::FmNsz);
+    EXPECT_FALSE(&*MIBFAbs == &*MIBFAbs3);
+
+    MIBFAbs2->setFlag(MachineInstr::FmNsz);
+    MIBFAbs2->clearFlag(MachineInstr::FmNsz);
+    EXPECT_TRUE(&*MIBFAbs == &*MIBFAbs2);
+  }
+
+  // Check G_FMINNUM/F_MAXNUM:
+  {
+    auto MIBFMinNum = CSEB.buildFMinNum(s32, Copies[0], Copies[1]);
+    auto MIBFMinNum2 = CSEB.buildFMinNum(s32, Copies[0], Copies[1]);
+    EXPECT_TRUE(&*MIBFMinNum == &*MIBFMinNum2);
+
+    auto MIBFMinNum3 =
+        CSEB.buildFMinNum(s32, Copies[0], Copies[1], MachineInstr::FmNsz);
+    EXPECT_FALSE(&*MIBFMinNum == &*MIBFMinNum3);
+
+    MIBFMinNum2->setFlag(MachineInstr::FmNsz);
+    MIBFMinNum2->clearFlag(MachineInstr::FmNsz);
+    EXPECT_TRUE(&*MIBFMinNum == &*MIBFMinNum2);
+  }
+
+  {
+    auto MIBFMaxNum = CSEB.buildFMaxNum(s32, Copies[0], Copies[1]);
+    auto MIBFMaxNum2 = CSEB.buildFMaxNum(s32, Copies[0], Copies[1]);
+    EXPECT_TRUE(&*MIBFMaxNum == &*MIBFMaxNum2);
+
+    auto MIBFMaxNum3 =
+        CSEB.buildFMaxNum(s32, Copies[0], Copies[1], MachineInstr::FmNsz);
+    EXPECT_FALSE(&*MIBFMaxNum == &*MIBFMaxNum3);
+
+    MIBFMaxNum2->setFlag(MachineInstr::FmNsz);
+    MIBFMaxNum2->clearFlag(MachineInstr::FmNsz);
+    EXPECT_TRUE(&*MIBFMaxNum == &*MIBFMaxNum2);
+  }
+
+  // Check G_FMINNUM_IEEE/F_MAXNUM_IEEE:
+  {
+    auto MIBFMinNumIEEE = CSEB.buildFMinNumIEEE(s32, Copies[0], Copies[1]);
+    auto MIBFMinNumIEEE2 = CSEB.buildFMinNumIEEE(s32, Copies[0], Copies[1]);
+    EXPECT_TRUE(&*MIBFMinNumIEEE == &*MIBFMinNumIEEE2);
+
+    auto MIBFMinNumIEEE3 =
+        CSEB.buildFMinNumIEEE(s32, Copies[0], Copies[1], MachineInstr::FmNsz);
+    EXPECT_FALSE(&*MIBFMinNumIEEE == &*MIBFMinNumIEEE3);
+
+    MIBFMinNumIEEE2->setFlag(MachineInstr::FmNsz);
+    MIBFMinNumIEEE2->clearFlag(MachineInstr::FmNsz);
+    EXPECT_TRUE(&*MIBFMinNumIEEE == &*MIBFMinNumIEEE2);
+  }
+
+  {
+    auto MIBFMaxNumIEEE = CSEB.buildFMaxNumIEEE(s32, Copies[0], Copies[1]);
+    auto MIBFMaxNumIEEE2 = CSEB.buildFMaxNumIEEE(s32, Copies[0], Copies[1]);
+    EXPECT_TRUE(&*MIBFMaxNumIEEE == &*MIBFMaxNumIEEE2);
+
+    auto MIBFMaxNumIEEE3 =
+        CSEB.buildFMaxNumIEEE(s32, Copies[0], Copies[1], MachineInstr::FmNsz);
+    EXPECT_FALSE(&*MIBFMaxNumIEEE == &*MIBFMaxNumIEEE3);
+
+    MIBFMaxNumIEEE2->setFlag(MachineInstr::FmNsz);
+    MIBFMaxNumIEEE2->clearFlag(MachineInstr::FmNsz);
+    EXPECT_TRUE(&*MIBFMaxNumIEEE == &*MIBFMaxNumIEEE2);
+  }
+
   // Check G_BUILD_VECTOR
   Register Reg1 = MRI->createGenericVirtualRegister(s32);
   Register Reg2 = MRI->createGenericVirtualRegister(s32);

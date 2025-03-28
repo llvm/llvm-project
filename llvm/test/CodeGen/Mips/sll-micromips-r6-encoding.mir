@@ -1,4 +1,4 @@
-# RUN: llc -march=mips -mcpu=mips32r6 -mattr=+micromips %s -start-after=xray-instrumentation -o - -show-mc-encoding | FileCheck %s
+# RUN: llc -mtriple=mips -mcpu=mips32r6 -mattr=+micromips %s -start-after=xray-instrumentation -o - -show-mc-encoding | FileCheck %s
 
 # Test that the 'sll $zero, $zero, 0' is correctly recognized as a real
 # instruction rather than some unimplemented opcode for the purposes of

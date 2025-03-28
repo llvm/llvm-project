@@ -623,7 +623,7 @@ struct SymbolScope {
   std::optional<WalkResult> walk(CallbackT cback) {
     if (Region *region = llvm::dyn_cast_if_present<Region *>(limit))
       return walkSymbolUses(*region, cback);
-    return walkSymbolUses(limit.get<Operation *>(), cback);
+    return walkSymbolUses(cast<Operation *>(limit), cback);
   }
   /// This variant is used when the callback type matches a stripped down type:
   /// void(SymbolTable::SymbolUse use)
@@ -643,7 +643,7 @@ struct SymbolScope {
   std::optional<WalkResult> walkSymbolTable(CallbackT &&cback) {
     if (Region *region = llvm::dyn_cast_if_present<Region *>(limit))
       return ::walkSymbolTable(*region, cback);
-    return ::walkSymbolTable(limit.get<Operation *>(), cback);
+    return ::walkSymbolTable(cast<Operation *>(limit), cback);
   }
 
   /// The representation of the symbol within this scope.

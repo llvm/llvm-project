@@ -21,7 +21,7 @@ class TypeConverter;
 #define GEN_PASS_DECL_CONVERTGPUOPSTOLLVMSPVOPS
 #include "mlir/Conversion/Passes.h.inc"
 
-void populateGpuToLLVMSPVConversionPatterns(LLVMTypeConverter &converter,
+void populateGpuToLLVMSPVConversionPatterns(const LLVMTypeConverter &converter,
                                             RewritePatternSet &patterns);
 
 /// Populates memory space attribute conversion rules for lowering

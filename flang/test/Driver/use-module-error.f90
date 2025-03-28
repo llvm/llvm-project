@@ -1,7 +1,7 @@
 ! Ensure that multiple module directories are not allowed
 
 !--------------------------
-! FLANG DRIVER (flang-new)
+! FLANG DRIVER (flang)
 !--------------------------
 ! RUN: %flang -fsyntax-only -J %S/Inputs/ %s 2>&1 | FileCheck %s --allow-empty --check-prefix=SINGLEINCLUDE
 ! RUN: %flang -fsyntax-only -J %S/Inputs/ -J %S/Inputs/ %s  2>&1 | FileCheck %s --allow-empty --check-prefix=SINGLEINCLUDE
@@ -13,7 +13,7 @@
 ! RUN: not %flang -fsyntax-only -module-dir %S/Inputs/module-dir -J%S/Inputs/ %s 2>&1 | FileCheck %s --check-prefix=DOUBLEINCLUDE
 
 !-----------------------------------------
-! FRONTEND FLANG DRIVER (flang-new -fc1)
+! FRONTEND FLANG DRIVER (flang -fc1)
 !-----------------------------------------
 ! RUN: %flang_fc1 -fsyntax-only -J %S/Inputs/ %s 2>&1 | FileCheck %s --allow-empty --check-prefix=SINGLEINCLUDE
 ! RUN: %flang_fc1 -fsyntax-only -J %S/Inputs/ -J %S/Inputs/ %s 2>&1 | FileCheck %s --allow-empty --check-prefix=SINGLEINCLUDE

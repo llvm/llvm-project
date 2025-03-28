@@ -98,10 +98,13 @@ const unsigned struct_kernel_stat64_sz = 104;
 const unsigned struct_kernel_stat_sz = 144;
 const unsigned struct_kernel_stat64_sz = 104;
 #elif defined(__mips__)
-const unsigned struct_kernel_stat_sz =
-    SANITIZER_ANDROID
-        ? FIRST_32_SECOND_64(104, 128)
-        : FIRST_32_SECOND_64((_MIPS_SIM == _ABIN32) ? 176 : 160, 216);
+const unsigned struct_kernel_stat_sz = SANITIZER_ANDROID
+                                           ? FIRST_32_SECOND_64(104, 128)
+#      if defined(_ABIN32) && _MIPS_SIM == _ABIN32
+                                           : FIRST_32_SECOND_64(176, 216);
+#      else
+                                           : FIRST_32_SECOND_64(160, 216);
+#      endif
 const unsigned struct_kernel_stat64_sz = 104;
 #elif defined(__s390__) && !defined(__s390x__)
 const unsigned struct_kernel_stat_sz = 64;
@@ -313,7 +316,7 @@ extern unsigned struct_statvfs_sz;
 
 struct __sanitizer_iovec {
   void *iov_base;
-  uptr iov_len;
+  usize iov_len;
 };
 
 #if !SANITIZER_ANDROID
@@ -388,6 +391,16 @@ typedef long __sanitizer_time_t;
 #endif
 
 typedef long __sanitizer_suseconds_t;
+
+struct __sanitizer_timespec {
+  __sanitizer_time_t tv_sec; /* seconds */
+  u64 tv_nsec;               /* nanoseconds */
+};
+
+struct __sanitizer_itimerspec {
+  struct __sanitizer_timespec it_interval; /* timer period */
+  struct __sanitizer_timespec it_value;    /* timer expiration */
+};
 
 struct __sanitizer_timeval {
   __sanitizer_time_t tv_sec;
@@ -513,6 +526,7 @@ struct __sanitizer_dirent64 {
   unsigned short d_reclen;
   // more fields that we don't care about
 };
+extern unsigned struct_sock_fprog_sz;
 #endif
 
 #if defined(__x86_64__) && !defined(_LP64)
@@ -590,7 +604,7 @@ struct __sanitizer_siginfo_pad {
 #if SANITIZER_LINUX
 # define SANITIZER_HAS_SIGINFO 1
 union __sanitizer_siginfo {
-  struct {
+  __extension__ struct {
     int si_signo;
 # if SANITIZER_MIPS
     int si_code;
@@ -644,49 +658,49 @@ struct __sanitizer_sigaction {
 };
 #else // !SANITIZER_ANDROID
 struct __sanitizer_sigaction {
-#if defined(__mips__) && !SANITIZER_FREEBSD
+#    if defined(__mips__) && !SANITIZER_FREEBSD && !SANITIZER_MUSL
   unsigned int sa_flags;
-#endif
+#    endif
   union {
     __sanitizer_sigactionhandler_ptr sigaction;
     __sanitizer_sighandler_ptr handler;
   };
-#if SANITIZER_FREEBSD
+#    if SANITIZER_FREEBSD
   int sa_flags;
   __sanitizer_sigset_t sa_mask;
-#else
-#if defined(__s390x__)
+#    else
+#      if defined(__s390x__)
   int sa_resv;
-#else
+#      else
   __sanitizer_sigset_t sa_mask;
-#endif
-#ifndef __mips__
-#if defined(__sparc__)
-#if __GLIBC_PREREQ (2, 20)
+#      endif
+#      if !defined(__mips__) || SANITIZER_MUSL
+#        if defined(__sparc__)
+#          if __GLIBC_PREREQ(2, 20)
   // On sparc glibc 2.19 and earlier sa_flags was unsigned long.
-#if defined(__arch64__)
+#            if defined(__arch64__)
   // To maintain ABI compatibility on sparc64 when switching to an int,
   // __glibc_reserved0 was added.
   int __glibc_reserved0;
-#endif
+#            endif
   int sa_flags;
-#else
+#          else
   unsigned long sa_flags;
-#endif
-#else
+#          endif
+#        else
   int sa_flags;
-#endif
-#endif
-#endif
-#if SANITIZER_LINUX
+#        endif
+#      endif
+#    endif
+#    if SANITIZER_LINUX
   void (*sa_restorer)();
-#endif
-#if defined(__mips__) && (SANITIZER_WORDSIZE == 32)
+#    endif
+#    if defined(__mips__) && (SANITIZER_WORDSIZE == 32) && !SANITIZER_MUSL
   int sa_resv[1];
-#endif
-#if defined(__s390x__)
+#    endif
+#    if defined(__s390x__)
   __sanitizer_sigset_t sa_mask;
-#endif
+#    endif
 };
 #endif // !SANITIZER_ANDROID
 
@@ -1066,7 +1080,6 @@ extern unsigned struct_serial_struct_sz;
 extern unsigned struct_sockaddr_ax25_sz;
 extern unsigned struct_unimapdesc_sz;
 extern unsigned struct_unimapinit_sz;
-extern unsigned struct_sock_fprog_sz;
 #  endif  // SANITIZER_LINUX && !SANITIZER_ANDROID
 
 extern const unsigned long __sanitizer_bufsiz;
@@ -1080,6 +1093,8 @@ extern unsigned struct_ppp_stats_sz;
 extern unsigned struct_sioc_sg_req_sz;
 extern unsigned struct_sioc_vif_req_sz;
 #endif
+
+extern unsigned fpos_t_sz;
 
 // ioctl request identifiers
 
@@ -1516,6 +1531,10 @@ extern const int si_SEGV_ACCERR;
                  offsetof(struct CLASS, MEMBER))
 
 #define SIGACTION_SYMNAME sigaction
+
+#  if SANITIZER_LINUX
+typedef void *__sanitizer_timer_t;
+#  endif
 
 #endif  // SANITIZER_LINUX || SANITIZER_APPLE
 

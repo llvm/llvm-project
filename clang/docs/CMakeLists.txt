@@ -117,7 +117,7 @@ if (LLVM_ENABLE_SPHINX)
       "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
 
       COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-      "${CMAKE_CURRENT_SOURCE_DIR}/../CodeOwners.rst"
+      "${CMAKE_CURRENT_SOURCE_DIR}/../Maintainers.rst"
       "${CMAKE_CURRENT_BINARY_DIR}"
     )
 

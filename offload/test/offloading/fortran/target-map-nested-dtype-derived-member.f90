@@ -1,7 +1,5 @@
-! Offloading test checking interaction of an
-! nested derived type member map with the
-! inclusion of an entire nested derived
-! type being mapped
+! Offloading test checking interaction of an nested derived type member map
+! with the inclusion of an entire nested derived type being mapped
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic

@@ -22,8 +22,6 @@ public:
   RegionReleaseRecorder(MemMapT *RegionMemMap, uptr Base, uptr Offset = 0)
       : RegionMemMap(RegionMemMap), Base(Base), Offset(Offset) {}
 
-  uptr getReleasedRangesCount() const { return ReleasedRangesCount; }
-
   uptr getReleasedBytes() const { return ReleasedBytes; }
 
   uptr getBase() const { return Base; }
@@ -33,12 +31,10 @@ public:
   void releasePageRangeToOS(uptr From, uptr To) {
     const uptr Size = To - From;
     RegionMemMap->releasePagesToOS(getBase() + Offset + From, Size);
-    ReleasedRangesCount++;
     ReleasedBytes += Size;
   }
 
 private:
-  uptr ReleasedRangesCount = 0;
   uptr ReleasedBytes = 0;
   MemMapT *RegionMemMap = nullptr;
   uptr Base = 0;
@@ -52,8 +48,6 @@ public:
   ReleaseRecorder(uptr Base, uptr Offset = 0, MapPlatformData *Data = nullptr)
       : Base(Base), Offset(Offset), Data(Data) {}
 
-  uptr getReleasedRangesCount() const { return ReleasedRangesCount; }
-
   uptr getReleasedBytes() const { return ReleasedBytes; }
 
   uptr getBase() const { return Base; }
@@ -62,12 +56,10 @@ public:
   void releasePageRangeToOS(uptr From, uptr To) {
     const uptr Size = To - From;
     releasePagesToOS(Base, From + Offset, Size, Data);
-    ReleasedRangesCount++;
     ReleasedBytes += Size;
   }
 
 private:
-  uptr ReleasedRangesCount = 0;
   uptr ReleasedBytes = 0;
   // The starting address to release. Note that we may want to combine (Base +
   // Offset) as a new Base. However, the Base is retrieved from

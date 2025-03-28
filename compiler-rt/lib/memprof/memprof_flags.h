@@ -17,13 +17,15 @@
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 
-// MemProf flag values can be defined in four ways:
-// 1) initialized with default values at startup.
-// 2) overriden during compilation of MemProf runtime by providing
-//    compile definition MEMPROF_DEFAULT_OPTIONS.
-// 3) overriden from string returned by user-specified function
-//    __memprof_default_options().
-// 4) overriden from env variable MEMPROF_OPTIONS.
+// Default MemProf flags are defined in memprof_flags.inc and sancov_flags.inc.
+// These values can be overridded in a number of ways, each option overrides the
+// prior one:
+//  1) by setting MEMPROF_DEFAULT_OPTIONS during the compilation of the MemProf
+//     runtime
+//  2) by setting the LLVM flag -memprof-runtime-default-options during the
+//     compilation of your binary
+//  3) by overriding the user-specified function __memprof_default_options()
+//  4) by setting the environment variable MEMPROF_OPTIONS during runtime
 
 namespace __memprof {
 

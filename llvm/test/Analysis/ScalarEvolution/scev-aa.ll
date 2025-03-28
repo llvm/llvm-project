@@ -223,7 +223,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; different loops where neither dominates the other.  This used to crash
 ; because we expected the arguments to an AddExpr to have a strict
 ; dominance order.
-define void @test_no_dom(ptr %data) {
+define void @test_no_dom(ptr %data, i1 %arg) {
 entry:
   load double, ptr %data
   br label %for.body
@@ -231,7 +231,7 @@ entry:
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.latch ]
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  br i1 undef, label %subloop1, label %subloop2
+  br i1 %arg, label %subloop1, label %subloop2
 
 subloop1:
   %iv1 = phi i32 [0, %for.body], [%iv1.next, %subloop1]
@@ -266,7 +266,7 @@ declare ptr @get_addr(i32 %i)
 ; In this case, checking %addr1 and %add2 involves two addrecs in two
 ; different loops where neither dominates the other.  This is analogous
 ; to test_no_dom, but involves SCEVUnknown as opposed to SCEVAddRecExpr.
-define void @test_no_dom2(ptr %data) {
+define void @test_no_dom2(ptr %data, i1 %arg) {
 entry:
   load double, ptr %data
   br label %for.body
@@ -274,7 +274,7 @@ entry:
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.latch ]
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  br i1 undef, label %subloop1, label %subloop2
+  br i1 %arg, label %subloop1, label %subloop2
 
 subloop1:
   %iv1 = phi i32 [0, %for.body], [%iv1.next, %subloop1]

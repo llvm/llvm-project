@@ -1,10 +1,10 @@
-; RUN: opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
+; RUN: opt -S -dxil-intrinsic-expansion -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
 
 ; Make sure dxil operation function calls for exp are generated for float and half.
 
 ; CHECK-LABEL: exp_float
 ; CHECK: fmul float 0x3FF7154760000000, %{{.*}}
-; CHECK: call float @dx.op.unary.f32(i32 21, float %{{.*}})
+; CHECK: call float @dx.op.unary.f32(i32 21, float %{{.*}}) #[[#ATTR:]]
 define noundef float @exp_float(float noundef %a) {
 entry:
   %a.addr = alloca float, align 4
@@ -16,7 +16,7 @@ entry:
 
 ; CHECK-LABEL: exp_half
 ; CHECK: fmul half 0xH3DC5, %{{.*}}
-; CHECK: call half @dx.op.unary.f16(i32 21, half %{{.*}})
+; CHECK: call half @dx.op.unary.f16(i32 21, half %{{.*}}) #[[#ATTR]]
 ; Function Attrs: noinline nounwind optnone
 define noundef half @exp_half(half noundef %a) {
 entry:
@@ -26,6 +26,8 @@ entry:
   %elt.exp = call half @llvm.exp.f16(half %0)
   ret half %elt.exp
 }
+
+; CHECK: attributes #[[#ATTR]] = {{{.*}} memory(none) {{.*}}}
 
 declare half @llvm.exp.f16(half)
 declare float @llvm.exp.f32(float)

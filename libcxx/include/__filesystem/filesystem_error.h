@@ -67,7 +67,7 @@ private:
   shared_ptr<_Storage> __storage_;
 };
 
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
 template <class... _Args>
 [[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY void
 __throw_filesystem_error(_Args&&... __args) {

@@ -47,7 +47,7 @@ func.func @foo3(%arg0: !fir.boxchar<1>) -> i1 {
 // CHECK-LABEL: @bar3
 func.func @bar3() -> i1 {
   %0 = fir.absent !fir.boxchar<1>
-  // CHECK: call i1 @foo3(ptr null, i64 undef)
+  // CHECK: call i1 @foo3(ptr null, i64 0)
   %1 = fir.call @foo3(%0) : (!fir.boxchar<1>) -> i1
   return %1 : i1
 }

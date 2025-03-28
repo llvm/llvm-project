@@ -1,4 +1,4 @@
-; RUN: llc -disable-lsr -march=hexagon -enable-pipeliner  \
+; RUN: llc -disable-lsr -mtriple=hexagon -enable-pipeliner \
 ; RUN:     -debug-only=pipeliner < %s 2>&1 > /dev/null -pipeliner-experimental-cg=true | FileCheck %s
 ; REQUIRES: asserts
 ;

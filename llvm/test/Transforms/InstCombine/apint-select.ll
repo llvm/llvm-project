@@ -63,7 +63,7 @@ define <2 x i32> @sext_vec(<2 x i1> %C) {
 
 define <2 x i999> @not_zext_vec(<2 x i1> %C) {
 ; CHECK-LABEL: @not_zext_vec(
-; CHECK-NEXT:    [[NOT_C:%.*]] = xor <2 x i1> [[C:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor <2 x i1> [[C:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[V:%.*]] = zext <2 x i1> [[NOT_C]] to <2 x i999>
 ; CHECK-NEXT:    ret <2 x i999> [[V]]
 ;
@@ -73,7 +73,7 @@ define <2 x i999> @not_zext_vec(<2 x i1> %C) {
 
 define <2 x i64> @not_sext_vec(<2 x i1> %C) {
 ; CHECK-LABEL: @not_sext_vec(
-; CHECK-NEXT:    [[NOT_C:%.*]] = xor <2 x i1> [[C:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor <2 x i1> [[C:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[V:%.*]] = sext <2 x i1> [[NOT_C]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[V]]
 ;
@@ -85,7 +85,7 @@ define <2 x i64> @not_sext_vec(<2 x i1> %C) {
 
 define <2 x i32> @scalar_select_of_vectors(i1 %c) {
 ; CHECK-LABEL: @scalar_select_of_vectors(
-; CHECK-NEXT:    [[V:%.*]] = select i1 [[C:%.*]], <2 x i32> <i32 1, i32 1>, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[V:%.*]] = select i1 [[C:%.*]], <2 x i32> splat (i32 1), <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i32> [[V]]
 ;
   %V = select i1 %c, <2 x i32> <i32 1, i32 1>, <2 x i32> zeroinitializer

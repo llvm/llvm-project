@@ -1,49 +1,59 @@
-#include "llvm-libc-macros/linux/fcntl-macros.h"
+//===-- Unittests for fstatvfs --------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "hdr/fcntl_macros.h"
 #include "src/__support/macros/config.h"
 #include "src/fcntl/open.h"
+#include "src/sys/stat/mkdirat.h"
 #include "src/sys/statvfs/fstatvfs.h"
-#include "src/sys/statvfs/linux/statfs_utils.h"
 #include "src/unistd/close.h"
+#include "src/unistd/rmdir.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
-#include "test/UnitTest/LibcTest.h"
-#include <linux/magic.h>
+#include "test/UnitTest/Test.h"
+
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
-#ifdef SYS_statfs64
-using StatFs = statfs64;
-#else
-using StatFs = statfs;
-#endif
-
-namespace LIBC_NAMESPACE_DECL {
-static int fstatfs(int fd, StatFs *buf) {
-  using namespace statfs_utils;
-  if (cpp::optional<StatFs> result = linux_fstatfs(fd)) {
-    *buf = *result;
-    return 0;
-  }
-  return -1;
-}
-} // namespace LIBC_NAMESPACE_DECL
-
-struct PathFD {
-  int fd;
-  explicit PathFD(const char *path)
-      : fd(LIBC_NAMESPACE::open(path, O_CLOEXEC | O_PATH)) {}
-  ~PathFD() { LIBC_NAMESPACE::close(fd); }
-  operator int() const { return fd; }
-};
-
-TEST(LlvmLibcSysStatvfsTest, FstatfsBasic) {
-  StatFs buf;
-  ASSERT_THAT(LIBC_NAMESPACE::fstatfs(PathFD("/"), &buf), Succeeds());
-  ASSERT_THAT(LIBC_NAMESPACE::fstatfs(PathFD("/proc"), &buf), Succeeds());
-  ASSERT_EQ(buf.f_type, static_cast<decltype(buf.f_type)>(PROC_SUPER_MAGIC));
-  ASSERT_THAT(LIBC_NAMESPACE::fstatfs(PathFD("/sys"), &buf), Succeeds());
-  ASSERT_EQ(buf.f_type, static_cast<decltype(buf.f_type)>(SYSFS_MAGIC));
-}
-
-TEST(LlvmLibcSysStatvfsTest, FstatvfsInvalidFD) {
+TEST(LlvmLibcSysFStatvfsTest, FStatvfsBasic) {
   struct statvfs buf;
-  ASSERT_THAT(LIBC_NAMESPACE::fstatvfs(-1, &buf), Fails(EBADF));
+
+  int fd = LIBC_NAMESPACE::open("/", O_PATH);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_GT(fd, 0);
+
+  // The root of the file directory must always exist
+  ASSERT_THAT(LIBC_NAMESPACE::fstatvfs(fd, &buf), Succeeds());
+  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
+}
+
+TEST(LlvmLibcSysFStatvfsTest, FStatvfsInvalidPath) {
+  struct statvfs buf;
+
+  constexpr const char *FILENAME = "fstatvfs.testdir";
+  auto TEST_DIR = libc_make_test_file_path(FILENAME);
+
+  // Always delete the folder so that we start in a consistent state.
+  LIBC_NAMESPACE::rmdir(TEST_DIR);
+  LIBC_NAMESPACE::libc_errno = 0; // Reset errno
+
+  ASSERT_THAT(LIBC_NAMESPACE::mkdirat(AT_FDCWD, TEST_DIR, S_IRWXU),
+              Succeeds(0));
+
+  int fd = LIBC_NAMESPACE::open(TEST_DIR, O_PATH);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_GT(fd, 0);
+
+  // create the file, assert it exists, then delete it and assert it doesn't
+  // exist anymore.
+
+  ASSERT_THAT(LIBC_NAMESPACE::fstatvfs(fd, &buf), Succeeds());
+  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
+
+  ASSERT_THAT(LIBC_NAMESPACE::rmdir(TEST_DIR), Succeeds(0));
+
+  ASSERT_THAT(LIBC_NAMESPACE::fstatvfs(fd, &buf), Fails(EBADF));
 }

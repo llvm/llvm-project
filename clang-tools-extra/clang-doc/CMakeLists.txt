@@ -4,7 +4,7 @@ set(LLVM_LINK_COMPONENTS
   FrontendOpenMP
   )
 
-add_clang_library(clangDoc
+add_clang_library(clangDoc STATIC
   BitcodeReader.cpp
   BitcodeWriter.cpp
   ClangDoc.cpp

@@ -61,6 +61,10 @@ void PointerSubChecker::checkPreStmt(const BinaryOperator *B,
   if (LR->getSymbolicBase() || RR->getSymbolicBase())
     return;
 
+  if (!B->getLHS()->getType()->isPointerType() ||
+      !B->getRHS()->getType()->isPointerType())
+    return;
+
   const auto *ElemLR = dyn_cast<ElementRegion>(LR);
   const auto *ElemRR = dyn_cast<ElementRegion>(RR);
 

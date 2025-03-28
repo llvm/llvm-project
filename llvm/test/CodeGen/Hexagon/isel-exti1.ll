@@ -1,4 +1,4 @@
-; RUN: llc -O0 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O0 -mtriple=hexagon < %s | FileCheck %s
 
 ; CHECK-LABEL: sexti1
 ; CHECK: r[[REG:[0-9]+]] = mux(p{{[0-3]}},#-1,#0)

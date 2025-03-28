@@ -16,7 +16,7 @@
 
 namespace mlir {
 namespace LLVM {
-#define GEN_PASS_DEF_DISCOPEFORLLVMFUNCOP
+#define GEN_PASS_DEF_DISCOPEFORLLVMFUNCOPPASS
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h.inc"
 } // namespace LLVM
 } // namespace mlir
@@ -78,19 +78,26 @@ static void addScopeToFunction(LLVM::LLVMFuncOp llvmFunc,
   auto subprogramAttr = LLVM::DISubprogramAttr::get(
       context, id, compileUnitAttr, fileAttr, funcName, funcName, fileAttr,
       /*line=*/line, /*scopeline=*/col, subprogramFlags, subroutineTypeAttr,
-      /*retainedNodes=*/{});
+      /*retainedNodes=*/{}, /*annotations=*/{});
   llvmFunc->setLoc(FusedLoc::get(context, {loc}, subprogramAttr));
 }
 
 namespace {
 /// Add a debug info scope to LLVMFuncOp that are missing it.
-struct DIScopeForLLVMFuncOp
-    : public LLVM::impl::DIScopeForLLVMFuncOpBase<DIScopeForLLVMFuncOp> {
+struct DIScopeForLLVMFuncOpPass
+    : public LLVM::impl::DIScopeForLLVMFuncOpPassBase<
+          DIScopeForLLVMFuncOpPass> {
+  using Base::Base;
+
   void runOnOperation() override {
     ModuleOp module = getOperation();
     Location loc = module.getLoc();
 
     MLIRContext *context = &getContext();
+    if (!context->getLoadedDialect<LLVM::LLVMDialect>()) {
+      emitError(loc, "LLVM dialect is not loaded.");
+      return signalPassFailure();
+    }
 
     // To find a DICompileUnitAttr attached to a parent (the module for
     // example), otherwise create a default one.
@@ -127,7 +134,3 @@ struct DIScopeForLLVMFuncOp
 };
 
 } // end anonymous namespace
-
-std::unique_ptr<Pass> mlir::LLVM::createDIScopeForLLVMFuncOpPass() {
-  return std::make_unique<DIScopeForLLVMFuncOp>();
-}

@@ -15,7 +15,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-ssize_t recvmsg(int sockfd, const struct msghdr *msg, int flags);
+ssize_t recvmsg(int sockfd, struct msghdr *msg, int flags);
 
 } // namespace LIBC_NAMESPACE_DECL
 

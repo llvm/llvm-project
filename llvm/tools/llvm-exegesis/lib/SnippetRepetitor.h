@@ -30,7 +30,7 @@ class SnippetRepetitor {
 public:
   static std::unique_ptr<const SnippetRepetitor>
   Create(Benchmark::RepetitionModeE Mode, const LLVMState &State,
-         unsigned LoopRegister);
+         MCRegister LoopRegister);
 
   virtual ~SnippetRepetitor();
 

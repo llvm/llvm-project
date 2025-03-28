@@ -27,9 +27,9 @@ define <2 x ptr addrspace(7)> @gep_vectors(<2 x ptr addrspace(7)> %in, <2 x i32>
 ; CHECK-SAME: ({ <2 x ptr addrspace(8)>, <2 x i32> } [[IN:%.*]], <2 x i32> [[IDX:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[IN_RSRC:%.*]] = extractvalue { <2 x ptr addrspace(8)>, <2 x i32> } [[IN]], 0
 ; CHECK-NEXT:    [[IN_OFF:%.*]] = extractvalue { <2 x ptr addrspace(8)>, <2 x i32> } [[IN]], 1
-; CHECK-NEXT:    [[RET_IDX:%.*]] = mul nsw <2 x i32> [[IDX]], <i32 40, i32 40>
-; CHECK-NEXT:    [[RET_OFFS:%.*]] = add nsw <2 x i32> [[RET_IDX]], <i32 8, i32 8>
-; CHECK-NEXT:    [[RET_OFFS1:%.*]] = add nsw <2 x i32> [[RET_OFFS]], <i32 24, i32 24>
+; CHECK-NEXT:    [[RET_IDX:%.*]] = mul nsw <2 x i32> [[IDX]], splat (i32 40)
+; CHECK-NEXT:    [[RET_OFFS:%.*]] = add nsw <2 x i32> [[RET_IDX]], splat (i32 8)
+; CHECK-NEXT:    [[RET_OFFS1:%.*]] = add nsw <2 x i32> [[RET_OFFS]], splat (i32 24)
 ; CHECK-NEXT:    [[RET:%.*]] = add <2 x i32> [[IN_OFF]], [[RET_OFFS1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <2 x ptr addrspace(8)>, <2 x i32> } poison, <2 x ptr addrspace(8)> [[IN_RSRC]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <2 x ptr addrspace(8)>, <2 x i32> } [[TMP1]], <2 x i32> [[RET]], 1
@@ -47,15 +47,33 @@ define <2 x ptr addrspace(7)> @gep_vector_scalar(<2 x ptr addrspace(7)> %in, i64
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[IDX]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i64> [[DOTSPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[DOTSPLAT_C:%.*]] = trunc <2 x i64> [[DOTSPLAT]] to <2 x i32>
-; CHECK-NEXT:    [[RET_IDX:%.*]] = mul nsw <2 x i32> [[DOTSPLAT_C]], <i32 40, i32 40>
-; CHECK-NEXT:    [[RET_OFFS:%.*]] = add nsw <2 x i32> [[RET_IDX]], <i32 8, i32 8>
-; CHECK-NEXT:    [[RET_OFFS1:%.*]] = add nsw <2 x i32> [[RET_OFFS]], <i32 24, i32 24>
+; CHECK-NEXT:    [[RET_IDX:%.*]] = mul nsw <2 x i32> [[DOTSPLAT_C]], splat (i32 40)
+; CHECK-NEXT:    [[RET_OFFS:%.*]] = add nsw <2 x i32> [[RET_IDX]], splat (i32 8)
+; CHECK-NEXT:    [[RET_OFFS1:%.*]] = add nsw <2 x i32> [[RET_OFFS]], splat (i32 24)
 ; CHECK-NEXT:    [[RET:%.*]] = add <2 x i32> [[IN_OFF]], [[RET_OFFS1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <2 x ptr addrspace(8)>, <2 x i32> } poison, <2 x ptr addrspace(8)> [[IN_RSRC]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <2 x ptr addrspace(8)>, <2 x i32> } [[TMP1]], <2 x i32> [[RET]], 1
 ; CHECK-NEXT:    ret { <2 x ptr addrspace(8)>, <2 x i32> } [[TMP2]]
 ;
   %ret = getelementptr inbounds {i32, [4 x ptr]}, <2 x ptr addrspace(7)> %in, i64 %idx, i32 1, i32 3
+  ret <2 x ptr addrspace(7)> %ret
+}
+
+define <2 x ptr addrspace(7)> @gep_scalar_vector(ptr addrspace(7) %in, <2 x i32> %idxs) {
+; CHECK-LABEL: define { <2 x ptr addrspace(8)>, <2 x i32> } @gep_scalar_vector
+; CHECK-SAME: ({ ptr addrspace(8), i32 } [[IN:%.*]], <2 x i32> [[IDXS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[IN_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[IN]], 0
+; CHECK-NEXT:    [[IN_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[IN]], 1
+; CHECK-NEXT:    [[IN_RSRC_SPLATINSERT:%.*]] = insertelement <2 x ptr addrspace(8)> poison, ptr addrspace(8) [[IN_RSRC]], i64 0
+; CHECK-NEXT:    [[IN_RSRC_SPLAT:%.*]] = shufflevector <2 x ptr addrspace(8)> [[IN_RSRC_SPLATINSERT]], <2 x ptr addrspace(8)> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[IN_OFF_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[IN_OFF]], i64 0
+; CHECK-NEXT:    [[IN_OFF_SPLAT:%.*]] = shufflevector <2 x i32> [[IN_OFF_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[RET:%.*]] = add <2 x i32> [[IN_OFF_SPLAT]], [[IDXS]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <2 x ptr addrspace(8)>, <2 x i32> } poison, <2 x ptr addrspace(8)> [[IN_RSRC_SPLAT]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <2 x ptr addrspace(8)>, <2 x i32> } [[TMP1]], <2 x i32> [[RET]], 1
+; CHECK-NEXT:    ret { <2 x ptr addrspace(8)>, <2 x i32> } [[TMP2]]
+;
+  %ret = getelementptr inbounds i8, ptr addrspace(7) %in, <2 x i32> %idxs
   ret <2 x ptr addrspace(7)> %ret
 }
 
@@ -86,6 +104,53 @@ define ptr addrspace(7) @simple_inbounds_gep(ptr addrspace(7) %ptr, i32 %off) {
 ; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[TMP2]]
 ;
   %ret = getelementptr inbounds i32, ptr addrspace(7) %ptr, i32 %off
+  ret ptr addrspace(7) %ret
+}
+
+define ptr addrspace(7) @simple_nuw_gep(ptr addrspace(7) %ptr, i32 %off) {
+; CHECK-LABEL: define { ptr addrspace(8), i32 } @simple_nuw_gep
+; CHECK-SAME: ({ ptr addrspace(8), i32 } [[PTR:%.*]], i32 [[OFF:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 0
+; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
+; CHECK-NEXT:    [[RET_IDX:%.*]] = mul nuw i32 [[OFF]], 4
+; CHECK-NEXT:    [[RET:%.*]] = add nuw i32 [[PTR_OFF]], [[RET_IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[PTR_RSRC]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP1]], i32 [[RET]], 1
+; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[TMP2]]
+;
+  %ret = getelementptr nuw i32, ptr addrspace(7) %ptr, i32 %off
+  ret ptr addrspace(7) %ret
+}
+
+define ptr addrspace(7) @simple_nusw_gep(ptr addrspace(7) %ptr, i32 %off) {
+; CHECK-LABEL: define { ptr addrspace(8), i32 } @simple_nusw_gep
+; CHECK-SAME: ({ ptr addrspace(8), i32 } [[PTR:%.*]], i32 [[OFF:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 0
+; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
+; CHECK-NEXT:    [[RET_IDX:%.*]] = mul nsw i32 [[OFF]], 4
+; CHECK-NEXT:    [[RET:%.*]] = add i32 [[PTR_OFF]], [[RET_IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[PTR_RSRC]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP1]], i32 [[RET]], 1
+; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[TMP2]]
+;
+  %ret = getelementptr nusw i32, ptr addrspace(7) %ptr, i32 %off
+  ret ptr addrspace(7) %ret
+}
+
+define ptr addrspace(7) @nusw_gep_pair(ptr addrspace(7) %ptr, i32 %off) {
+; CHECK-LABEL: define { ptr addrspace(8), i32 } @nusw_gep_pair
+; CHECK-SAME: ({ ptr addrspace(8), i32 } [[PTR:%.*]], i32 [[OFF:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 0
+; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
+; CHECK-NEXT:    [[P1_IDX:%.*]] = mul nsw i32 [[OFF]], 4
+; CHECK-NEXT:    [[P1:%.*]] = add i32 [[PTR_OFF]], [[P1_IDX]]
+; CHECK-NEXT:    [[RET:%.*]] = add nuw i32 [[P1]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[PTR_RSRC]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP1]], i32 [[RET]], 1
+; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[TMP2]]
+;
+  %p1 = getelementptr nusw i32, ptr addrspace(7) %ptr, i32 %off
+  %ret = getelementptr nusw i32, ptr addrspace(7) %p1, i32 4
   ret ptr addrspace(7) %ret
 }
 
@@ -153,7 +218,7 @@ define <2 x i160> @ptrtoint_vec(<2 x ptr addrspace(7)> %ptr) {
 ; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { <2 x ptr addrspace(8)>, <2 x i32> } [[PTR]], 0
 ; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { <2 x ptr addrspace(8)>, <2 x i32> } [[PTR]], 1
 ; CHECK-NEXT:    [[RET_RSRC:%.*]] = ptrtoint <2 x ptr addrspace(8)> [[PTR_RSRC]] to <2 x i160>
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw <2 x i160> [[RET_RSRC]], <i160 32, i160 32>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw <2 x i160> [[RET_RSRC]], splat (i160 32)
 ; CHECK-NEXT:    [[RET_OFF:%.*]] = zext <2 x i32> [[PTR_OFF]] to <2 x i160>
 ; CHECK-NEXT:    [[RET:%.*]] = or <2 x i160> [[TMP1]], [[RET_OFF]]
 ; CHECK-NEXT:    ret <2 x i160> [[RET]]
@@ -221,7 +286,7 @@ define ptr addrspace(7) @inttoptr(i160 %v) {
 define <2 x ptr addrspace(7)> @inttoptr_vec(<2 x i160> %v) {
 ; CHECK-LABEL: define { <2 x ptr addrspace(8)>, <2 x i32> } @inttoptr_vec
 ; CHECK-SAME: (<2 x i160> [[V:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i160> [[V]], <i160 32, i160 32>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i160> [[V]], splat (i160 32)
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i160> [[TMP1]] to <2 x i128>
 ; CHECK-NEXT:    [[RET_RSRC:%.*]] = inttoptr <2 x i128> [[TMP2]] to <2 x ptr addrspace(8)>
 ; CHECK-NEXT:    [[RET_OFF:%.*]] = trunc <2 x i160> [[V]] to <2 x i32>
@@ -282,6 +347,20 @@ define <2 x ptr addrspace(7)> @addrspacecast_vec(<2 x ptr addrspace(8)> %buf) {
 ;
   %ret = addrspacecast <2 x ptr addrspace(8)> %buf to <2 x ptr addrspace(7)>
   ret <2 x ptr addrspace(7)> %ret
+}
+
+declare ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1), i16, i32, i32)
+
+define ptr addrspace(7) @make_buffer_rsrc(ptr addrspace(1) %buf, i16 %stride, i32 %numRecords, i32 %flags) {
+; CHECK-LABEL: define { ptr addrspace(8), i32 } @make_buffer_rsrc
+; CHECK-SAME: (ptr addrspace(1) [[BUF:%.*]], i16 [[STRIDE:%.*]], i32 [[NUMRECORDS:%.*]], i32 [[FLAGS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RET:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) [[BUF]], i16 [[STRIDE]], i32 [[NUMRECORDS]], i32 [[FLAGS]])
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[RET]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP1]], i32 0, 1
+; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[TMP2]]
+;
+  %ret = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) %buf, i16 %stride, i32 %numRecords, i32 %flags)
+  ret ptr addrspace(7) %ret
 }
 
 define i1 @icmp_eq(ptr addrspace(7) %a, ptr addrspace(7) %b) {

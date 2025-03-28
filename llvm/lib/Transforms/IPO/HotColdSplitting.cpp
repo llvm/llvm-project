@@ -53,7 +53,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
-#include <algorithm>
 #include <cassert>
 #include <limits>
 #include <string>
@@ -734,7 +733,7 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
             none_of(SubRegion, [&](BasicBlock *Block) {
               return ColdBlocks.contains(Block);
             })) {
-          ColdBlocks.insert(SubRegion.begin(), SubRegion.end());
+          ColdBlocks.insert_range(SubRegion);
 
           LLVM_DEBUG({
             for (auto *Block : SubRegion)

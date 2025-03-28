@@ -9,7 +9,6 @@
 #include "EvaluationResult.h"
 #include "InterpState.h"
 #include "Record.h"
-#include "clang/AST/ExprCXX.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include <iterator>
@@ -130,8 +129,9 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
       const Descriptor *Desc = BasePtr.getDeclDesc();
       if (const auto *CD = dyn_cast_if_present<CXXRecordDecl>(R->getDecl())) {
         const auto &BS = *std::next(CD->bases_begin(), I);
-        S.FFDiag(BS.getBaseTypeLoc(), diag::note_constexpr_uninitialized_base)
-            << B.Desc->getType() << BS.getSourceRange();
+        SourceLocation TypeBeginLoc = BS.getBaseTypeLoc();
+        S.FFDiag(TypeBeginLoc, diag::note_constexpr_uninitialized_base)
+            << B.Desc->getType() << SourceRange(TypeBeginLoc, BS.getEndLoc());
       } else {
         S.FFDiag(Desc->getLocation(), diag::note_constexpr_uninitialized_base)
             << B.Desc->getType();
@@ -160,9 +160,9 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S,
     return true;
 
   SourceLocation InitLoc;
-  if (const auto *D = Source.dyn_cast<const Decl *>())
+  if (const auto *D = dyn_cast<const Decl *>(Source))
     InitLoc = cast<VarDecl>(D)->getAnyInitializer()->getExprLoc();
-  else if (const auto *E = Source.dyn_cast<const Expr *>())
+  else if (const auto *E = dyn_cast<const Expr *>(Source))
     InitLoc = E->getExprLoc();
 
   if (const Record *R = Ptr.getRecord())

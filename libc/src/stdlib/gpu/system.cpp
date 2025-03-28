@@ -17,10 +17,11 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, system, (const char *command)) {
   int ret;
-  rpc::Client::Port port = rpc::client.open<RPC_SYSTEM>();
+  rpc::Client::Port port = rpc::client.open<LIBC_SYSTEM>();
   port.send_n(command, internal::string_length(command) + 1);
-  port.recv(
-      [&](rpc::Buffer *buffer) { ret = static_cast<int>(buffer->data[0]); });
+  port.recv([&](rpc::Buffer *buffer, uint32_t) {
+    ret = static_cast<int>(buffer->data[0]);
+  });
   port.close();
 
   return ret;

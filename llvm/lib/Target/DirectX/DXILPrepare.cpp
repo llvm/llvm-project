@@ -11,7 +11,6 @@
 /// Language (DXIL).
 //===----------------------------------------------------------------------===//
 
-#include "DXILResourceAnalysis.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "DirectXIRPasses/PointerTypeAnalysis.h"
@@ -53,7 +52,6 @@ constexpr bool isValidForDXIL(Attribute::AttrKind Attr) {
                        Attribute::Nest,
                        Attribute::NoAlias,
                        Attribute::NoBuiltin,
-                       Attribute::NoCapture,
                        Attribute::NoDuplicate,
                        Attribute::NoImplicitFloat,
                        Attribute::NoInline,
@@ -249,9 +247,8 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
-    AU.addPreserved<DXILResourceMDWrapper>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
-    AU.addPreserved<DXILResourceWrapperPass>();
+    AU.addPreserved<DXILResourceBindingWrapperPass>();
   }
   static char ID; // Pass identification.
 };

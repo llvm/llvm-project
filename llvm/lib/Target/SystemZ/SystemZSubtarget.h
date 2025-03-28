@@ -106,6 +106,8 @@ public:
   bool GETTER() const { return ATTRIBUTE; }
 #include "SystemZGenSubtargetInfo.inc"
 
+  bool isXRaySupported() const override { return true; }
+
   bool isAddressedViaADA(const GlobalValue *GV) const;
 
   // Return true if GV can be accessed using LARL for reloc model RM

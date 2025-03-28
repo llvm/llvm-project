@@ -112,6 +112,27 @@ int3 test_sign_int16_t3(int16_t3 p0) { return sign(p0); }
 // NATIVE_HALF: %hlsl.sign = call <4 x i32> @llvm.[[TARGET]].sign.v4i16(
 // NATIVE_HALF: ret <4 x i32> %hlsl.sign
 int4 test_sign_int16_t4(int16_t4 p0) { return sign(p0); }
+
+
+// NATIVE_HALF: define [[FNATTRS]] i32 @
+// NATIVE_HALF: [[CMP:%.*]] = icmp eq i16 [[ARG:%.*]], 0
+// NATIVE_HALF: %hlsl.sign = select i1 [[CMP]], i32 0, i32 1
+int test_sign_uint16_t(uint16_t p0) { return sign(p0); }
+
+// NATIVE_HALF: define [[FNATTRS]] <2 x i32> @
+// NATIVE_HALF: [[CMP:%.*]] = icmp eq <2 x i16> [[ARG:%.*]], zeroinitializer
+// NATIVE_HALF: %hlsl.sign = select <2 x i1> [[CMP]], <2 x i32> zeroinitializer, <2 x i32> splat (i32 1)
+int2 test_sign_uint16_t2(uint16_t2 p0) { return sign(p0); }
+
+// NATIVE_HALF: define [[FNATTRS]] <3 x i32> @
+// NATIVE_HALF: [[CMP:%.*]] = icmp eq <3 x i16> [[ARG:%.*]], zeroinitializer
+// NATIVE_HALF: %hlsl.sign = select <3 x i1> [[CMP]], <3 x i32> zeroinitializer, <3 x i32> splat (i32 1)
+int3 test_sign_uint16_t3(uint16_t3 p0) { return sign(p0); }
+
+// NATIVE_HALF: define [[FNATTRS]] <4 x i32> @
+// NATIVE_HALF: [[CMP:%.*]] = icmp eq <4 x i16> [[ARG:%.*]], zeroinitializer
+// NATIVE_HALF: %hlsl.sign = select <4 x i1> [[CMP]], <4 x i32> zeroinitializer, <4 x i32> splat (i32 1)
+int4 test_sign_uint16_t4(uint16_t4 p0) { return sign(p0); }
 #endif // __HLSL_ENABLE_16_BIT
 
 
@@ -137,6 +158,27 @@ int4 test_sign_int4(int4 p0) { return sign(p0); }
 
 
 // CHECK: define [[FNATTRS]] i32 @
+// CHECK: [[CMP:%.*]] = icmp eq i32 [[ARG:%.*]], 0
+// CHECK: %hlsl.sign = select i1 [[CMP]], i32 0, i32 1
+int test_sign_uint(uint p0) { return sign(p0); }
+
+// CHECK: define [[FNATTRS]] <2 x i32> @
+// CHECK: [[CMP:%.*]] = icmp eq <2 x i32> [[ARG:%.*]], zeroinitializer
+// CHECK: %hlsl.sign = select <2 x i1> [[CMP]], <2 x i32> zeroinitializer, <2 x i32> splat (i32 1)
+int2 test_sign_uint2(uint2 p0) { return sign(p0); }
+
+// CHECK: define [[FNATTRS]] <3 x i32> @
+// CHECK: [[CMP:%.*]] = icmp eq <3 x i32> [[ARG:%.*]], zeroinitializer
+// CHECK: %hlsl.sign = select <3 x i1> [[CMP]], <3 x i32> zeroinitializer, <3 x i32> splat (i32 1)
+int3 test_sign_uint3(uint3 p0) { return sign(p0); }
+
+// CHECK: define [[FNATTRS]] <4 x i32> @
+// CHECK: [[CMP:%.*]] = icmp eq <4 x i32> [[ARG:%.*]], zeroinitializer
+// CHECK: %hlsl.sign = select <4 x i1> [[CMP]], <4 x i32> zeroinitializer, <4 x i32> splat (i32 1)
+int4 test_sign_uint4(uint4 p0) { return sign(p0); }
+
+
+// CHECK: define [[FNATTRS]] i32 @
 // CHECK: %hlsl.sign = call i32 @llvm.[[TARGET]].sign.i64(
 // CHECK: ret i32 %hlsl.sign
 int test_sign_int64_t(int64_t p0) { return sign(p0); }
@@ -155,3 +197,24 @@ int3 test_sign_int64_t3(int64_t3 p0) { return sign(p0); }
 // CHECK: %hlsl.sign = call <4 x i32> @llvm.[[TARGET]].sign.v4i64(
 // CHECK: ret <4 x i32> %hlsl.sign
 int4 test_sign_int64_t4(int64_t4 p0) { return sign(p0); }
+
+
+// CHECK: define [[FNATTRS]] i32 @
+// CHECK: [[CMP:%.*]] = icmp eq i64 [[ARG:%.*]], 0
+// CHECK: %hlsl.sign = select i1 [[CMP]], i32 0, i32 1
+int test_sign_uint64_t(uint64_t p0) { return sign(p0); }
+
+// CHECK: define [[FNATTRS]] <2 x i32> @
+// CHECK: [[CMP:%.*]] = icmp eq <2 x i64> [[ARG:%.*]], zeroinitializer
+// CHECK: %hlsl.sign = select <2 x i1> [[CMP]], <2 x i32> zeroinitializer, <2 x i32> splat (i32 1)
+int2 test_sign_uint64_t2(uint64_t2 p0) { return sign(p0); }
+
+// CHECK: define [[FNATTRS]] <3 x i32> @
+// CHECK: [[CMP:%.*]] = icmp eq <3 x i64> [[ARG:%.*]], zeroinitializer
+// CHECK: %hlsl.sign = select <3 x i1> [[CMP]], <3 x i32> zeroinitializer, <3 x i32> splat (i32 1)
+int3 test_sign_uint64_t3(uint64_t3 p0) { return sign(p0); }
+
+// CHECK: define [[FNATTRS]] <4 x i32> @
+// CHECK: [[CMP:%.*]] = icmp eq <4 x i64> [[ARG:%.*]], zeroinitializer
+// CHECK: %hlsl.sign = select <4 x i1> [[CMP]], <4 x i32> zeroinitializer, <4 x i32> splat (i32 1)
+int4 test_sign_uint64_t4(uint64_t4 p0) { return sign(p0); }
