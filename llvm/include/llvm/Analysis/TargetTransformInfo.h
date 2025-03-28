@@ -1665,7 +1665,9 @@ public:
   /// if false is returned.
   bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info) const;
 
-  /// \Overload function of getTgtMemIntrinsic for Asan instrumentation.
+  /// \returns True if the intrinsic is a supported memory instrinsic, 
+  /// and store the \p InterestingMemoryOperand into array \p Interesting
+  /// for Asan instrumentation.
   bool getTgtMemIntrinsicOperand(IntrinsicInst *Inst, SmallVectorImpl<InterestingMemoryOperand> &Interesting) const; 
 
   /// \returns The maximum element size, in bytes, for an element
