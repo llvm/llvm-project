@@ -22,6 +22,7 @@ add_mlir_dialect_library(MLIRXeGPUTransforms
   MLIRTransforms
   MLIRGPUDialect
   MLIRXeGPUUtils
+  MLIRXeGPUuArch
   MLIRGPUUtils
   MLIRVectorTransforms
 )
