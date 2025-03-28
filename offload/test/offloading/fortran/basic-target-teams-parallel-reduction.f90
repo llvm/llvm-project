@@ -18,8 +18,8 @@ program main
    if (sum /= 500500) then
      error = 1
   endif
-  
-   print *,"number of errors: ", error
+
+  print *,"number of errors: ", error
 
 end program main
 
