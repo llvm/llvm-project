@@ -51,7 +51,6 @@ void test() {
   {
     SpBuf spBuf{std::ios_base::in};
     assert(spBuf.span().data() == nullptr);
-    assert(spBuf.span().empty());
     assert(spBuf.span().size() == 0);
   }
   // Mode: `out`
@@ -59,22 +58,18 @@ void test() {
     SpBuf spBuf{std::ios_base::out};
     assert(spBuf.span().data() == nullptr);
     // Mode `out` counts read characters
-    assert(spBuf.span().empty());
     assert(spBuf.span().size() == 0);
   }
-  // Mode: multiple
+  // Mode: `ate`
   {
-    SpBuf spBuf{std::ios_base::in | std::ios_base::out | std::ios_base::binary};
+    SpBuf spBuf{std::ios_base::ate};
     assert(spBuf.span().data() == nullptr);
-    // Mode `out` counts read character
-    assert(spBuf.span().empty());
     assert(spBuf.span().size() == 0);
   }
   // Mode: `ate`
   {
     SpBuf spBuf{std::ios_base::out | std::ios_base::ate};
     assert(spBuf.span().data() == nullptr);
-    assert(spBuf.span().empty());
     assert(spBuf.span().size() == 0);
   }
 }
@@ -85,6 +80,7 @@ int main(int, char**) {
 #endif
   test_sfinae<char>();
   test_sfinae<char, constexpr_char_traits<char>>();
+
 #ifndef TEST_HAS_NO_NASTY_STRING
   test<nasty_char, nasty_char_traits>();
 #endif

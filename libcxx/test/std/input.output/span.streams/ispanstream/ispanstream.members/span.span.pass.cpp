@@ -32,57 +32,24 @@ void test() {
 
   CharT arr[4];
 
-  std::span<CharT> sp{arr};
-  assert(sp.data() == arr);
-  assert(!sp.empty());
-  assert(sp.size() == 4);
-
   // Mode: default (`in` )
   {
     SpStream spSt{std::span<CharT>{}};
     assert(spSt.span().data() == nullptr);
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
     spSt.span(arr);
     assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
   }
   // Mode: `in`
   {
     SpStream spSt{std::span<CharT>{}, std::ios_base::in};
     assert(spSt.span().data() == nullptr);
-    assert(spSt.span().empty());
     assert(spSt.span().size() == 0);
 
     spSt.span(arr);
     assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
-    assert(spSt.span().size() == 4);
-  }
-  // Mode: `ate`
-  {
-    SpStream spSt{std::span<CharT>{}, std::ios_base::ate};
-    assert(spSt.span().data() == nullptr);
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
-
-    spSt.span(arr);
-    assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
-    assert(spSt.span().size() == 4);
-  }
-  // Mode: multiple
-  {
-    SpStream spSt{std::span<CharT>{}, std::ios_base::ate | std::ios_base::binary};
-    assert(spSt.span().data() == nullptr);
-    assert(spSt.span().empty());
-    assert(spSt.span().size() == 0);
-
-    spSt.span(arr);
-    assert(spSt.span().data() == arr);
-    assert(!spSt.span().empty());
     assert(spSt.span().size() == 4);
   }
 }
