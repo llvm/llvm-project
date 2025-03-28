@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines the ParseHLSLRootSignature interface.
+//  This file defines the RootSignatureParser interface.
 //
 //===----------------------------------------------------------------------===//
 
