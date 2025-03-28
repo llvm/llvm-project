@@ -59,18 +59,20 @@
 
 #define USE_TABLE(NAME, IDX) TABLE_MANGLE(NAME)(IDX)
 
-TABLE_FUNCTION_DECL(float2, log_inv_tbl_ep);
 TABLE_FUNCTION_DECL(float2, log2_tbl);
 TABLE_FUNCTION_DECL(float2, log10_tbl);
 TABLE_FUNCTION_DECL(uint4, pibits_tbl);
 TABLE_FUNCTION_DECL(float2, sinhcosh_tbl);
 TABLE_FUNCTION_DECL(float2, cbrt_tbl);
 TABLE_FUNCTION_DECL(float, exp_tbl);
-TABLE_FUNCTION_DECL(float2, exp_tbl_ep);
 
+CLC_TABLE_FUNCTION_DECL(float, log_inv_tbl_ep_head);
+CLC_TABLE_FUNCTION_DECL(float, log_inv_tbl_ep_tail);
 CLC_TABLE_FUNCTION_DECL(float, loge_tbl_lo);
 CLC_TABLE_FUNCTION_DECL(float, loge_tbl_hi);
 CLC_TABLE_FUNCTION_DECL(float, log_inv_tbl);
+CLC_TABLE_FUNCTION_DECL(float, exp_tbl_ep_head);
+CLC_TABLE_FUNCTION_DECL(float, exp_tbl_ep_tail);
 
 #ifdef cl_khr_fp64
 
@@ -81,14 +83,17 @@ CLC_TABLE_FUNCTION_DECL(double, ln_tbl_lo);
 CLC_TABLE_FUNCTION_DECL(double, ln_tbl_hi);
 CLC_TABLE_FUNCTION_DECL(double, atan_jby256_tbl_head);
 CLC_TABLE_FUNCTION_DECL(double, atan_jby256_tbl_tail);
-TABLE_FUNCTION_DECL(double2, two_to_jby64_ep_tbl);
+CLC_TABLE_FUNCTION_DECL(double, two_to_jby64_ep_tbl_head);
+CLC_TABLE_FUNCTION_DECL(double, two_to_jby64_ep_tbl_tail);
 TABLE_FUNCTION_DECL(double2, sinh_tbl);
 TABLE_FUNCTION_DECL(double2, cosh_tbl);
 TABLE_FUNCTION_DECL(double, cbrt_inv_tbl);
 TABLE_FUNCTION_DECL(double2, cbrt_dbl_tbl);
 TABLE_FUNCTION_DECL(double2, cbrt_rem_tbl);
-TABLE_FUNCTION_DECL(double2, powlog_tbl);
-TABLE_FUNCTION_DECL(double2, log_f_inv_tbl);
+CLC_TABLE_FUNCTION_DECL(double, powlog_tbl_head);
+CLC_TABLE_FUNCTION_DECL(double, powlog_tbl_tail);
+CLC_TABLE_FUNCTION_DECL(double, log_f_inv_tbl_head);
+CLC_TABLE_FUNCTION_DECL(double, log_f_inv_tbl_tail);
 
 #endif // cl_khr_fp64
 
