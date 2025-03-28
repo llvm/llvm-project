@@ -1764,6 +1764,10 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
   using namespace llvm::VPlanPatternMatch;
   auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
     assert(OrigMask && "Unmasked recipe when folding tail");
+    using namespace llvm::VPlanPatternMatch;
+    VPValue *Mask;
+    if (match(OrigMask, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(Mask))))
+      return Mask;
     return HeaderMask == OrigMask ? nullptr : OrigMask;
   };
 
