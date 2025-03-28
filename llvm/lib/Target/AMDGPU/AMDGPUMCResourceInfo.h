@@ -90,10 +90,10 @@ public:
   /// transitive maximum or accumulative. For example, if A calls B and B's VGPR
   /// usage exceeds A's, A should be assigned B's VGPR usage. Furthermore,
   /// functions with indirect calls should be assigned the module level maximum.
-  void
-  gatherResourceInfo(const MachineFunction &MF,
-                     const AMDGPUResourceUsageAnalysisWrapperPass::ResultT &FRI,
-                     MCContext &OutContext);
+  void gatherResourceInfo(
+      const MachineFunction &MF,
+      const AMDGPUResourceUsageAnalysisWrapperPass::FunctionResourceInfo &FRI,
+      MCContext &OutContext);
 
   const MCExpr *createTotalNumVGPRs(const MachineFunction &MF, MCContext &Ctx);
   const MCExpr *createTotalNumSGPRs(const MachineFunction &MF, bool hasXnack,

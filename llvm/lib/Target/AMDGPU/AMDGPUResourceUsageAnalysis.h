@@ -52,8 +52,9 @@ public:
 };
 
 struct AMDGPUResourceUsageAnalysisWrapperPass : public MachineFunctionPass {
-  using ResultT = AMDGPUResourceUsageAnalysisImpl::SIFunctionResourceInfo;
-  ResultT ResourceInfo;
+  using FunctionResourceInfo =
+      AMDGPUResourceUsageAnalysisImpl::SIFunctionResourceInfo;
+  FunctionResourceInfo ResourceInfo;
 
 public:
   static char ID;
@@ -61,7 +62,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  const ResultT &getResourceInfo() const { return ResourceInfo; }
+  const FunctionResourceInfo &getResourceInfo() const { return ResourceInfo; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
