@@ -27,17 +27,17 @@ struct is_unsigned : bool_constant<((is_fixed_point_v<T> || is_arithmetic_v<T>) 
 
 // Specializations for unsigned fixed-point types
 template <>
-struct is_unsigned<unsigned short fract> : bool_constant<true> {
+struct is_unsigned<unsigned short _Fract> : bool_constant<true> {
   LIBC_INLINE constexpr operator bool() const { return is_unsigned::value; }
   LIBC_INLINE constexpr bool operator()() const { return is_unsigned::value; }
 };
 template <>
-struct is_unsigned<unsigned fract> : bool_constant<true> {
+struct is_unsigned<unsigned _Fract> : bool_constant<true> {
   LIBC_INLINE constexpr operator bool() const { return is_unsigned::value; }
   LIBC_INLINE constexpr bool operator()() const { return is_unsigned::value; }
 };
 template <>
-struct is_unsigned<unsigned long fract> : bool_constant<true> {
+struct is_unsigned<unsigned long _Fract> : bool_constant<true> {
   LIBC_INLINE constexpr operator bool() const { return is_unsigned::value; }
   LIBC_INLINE constexpr bool operator()() const { return is_unsigned::value; }
 };
@@ -57,17 +57,17 @@ struct is_unsigned<unsigned long accum> : bool_constant<true> {
   LIBC_INLINE constexpr bool operator()() const { return is_unsigned::value; }
 };
 template <>
-struct is_unsigned<unsigned short sat fract> : bool_constant<true> {
+struct is_unsigned<unsigned short sat _Fract> : bool_constant<true> {
   LIBC_INLINE constexpr operator bool() const { return is_unsigned::value; }
   LIBC_INLINE constexpr bool operator()() const { return is_unsigned::value; }
 };
 template <>
-struct is_unsigned<unsigned sat fract> : bool_constant<true> {
+struct is_unsigned<unsigned sat _Fract> : bool_constant<true> {
   LIBC_INLINE constexpr operator bool() const { return is_unsigned::value; }
   LIBC_INLINE constexpr bool operator()() const { return is_unsigned::value; }
 };
 template <>
-struct is_unsigned<unsigned long sat fract> : bool_constant<true> {
+struct is_unsigned<unsigned long sat _Fract> : bool_constant<true> {
   LIBC_INLINE constexpr operator bool() const { return is_unsigned::value; }
   LIBC_INLINE constexpr bool operator()() const { return is_unsigned::value; }
 };
