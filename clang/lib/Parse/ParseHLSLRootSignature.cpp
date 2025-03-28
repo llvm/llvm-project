@@ -37,20 +37,17 @@ RootSignatureParser::RootSignatureParser(SmallVector<RootElement> &Elements,
 bool RootSignatureParser::Parse() {
   // Iterate as many RootElements as possible
   while (TryConsumeExpectedToken(TokenKind::kw_DescriptorTable)) {
-    bool Error = false;
     // Dispatch onto parser method.
     // We guard against the unreachable here as we just ensured that CurToken
     // will be one of the kinds in the while condition
     switch (CurToken.Kind) {
     case TokenKind::kw_DescriptorTable:
-      Error = ParseDescriptorTable();
+      if (ParseDescriptorTable())
+        return true;
       break;
     default:
       llvm_unreachable("Switch for consumed token was not provided");
     }
-
-    if (Error)
-      return true;
 
     if (!TryConsumeExpectedToken(TokenKind::pu_comma))
       break;
