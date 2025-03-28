@@ -67,6 +67,12 @@ static llvm::cl::opt<std::string>
                  llvm::cl::desc("Directory for outputting generated files."),
                  llvm::cl::init("docs"), llvm::cl::cat(ClangDocCategory));
 
+static llvm::cl::opt<std::string>
+    BaseDirectory("base",
+                  llvm::cl::desc(R"(Base Directory for generated documentation.
+URLs will be rooted at this directory for HTML links.)"),
+                  llvm::cl::init(""), llvm::cl::cat(ClangDocCategory));
+
 static llvm::cl::opt<bool>
     PublicOnly("public", llvm::cl::desc("Document only public declarations."),
                llvm::cl::init(false), llvm::cl::cat(ClangDocCategory));
@@ -273,6 +279,7 @@ Example usage for a project using a compile commands database:
       SourceRoot,
       RepositoryUrl,
       RepositoryCodeLinePrefix,
+      BaseDirectory,
       {UserStylesheets.begin(), UserStylesheets.end()}};
 
   if (Format == "html") {
