@@ -75,10 +75,10 @@ public:
   bool select(MachineInstr &I) override;
   static const char *getName() { return DEBUG_TYPE; }
 
-  void setupMF(MachineFunction &MF, GISelKnownBits *KB,
+  void setupMF(MachineFunction &MF, GISelValueTracking *VT,
                CodeGenCoverage *CoverageInfo, ProfileSummaryInfo *PSI,
                BlockFrequencyInfo *BFI) override {
-    InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
+    InstructionSelector::setupMF(MF, VT, CoverageInfo, PSI, BFI);
     MIB.setMF(MF);
 
     // hasFnAttribute() is expensive to call on every BRCOND selection, so
