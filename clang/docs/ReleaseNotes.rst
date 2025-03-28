@@ -389,6 +389,8 @@ Miscellaneous Bug Fixes
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fixed crash when ``-print-stats`` is enabled in compiling IR files. (#GH131608)
+
 OpenACC Specific Changes
 ------------------------
 
