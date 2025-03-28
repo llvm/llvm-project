@@ -77,11 +77,22 @@ static void emitParserPrinter(const EnumInfo &enumInfo, StringRef qualName,
 
   // Check which cases shouldn't be printed using a keyword.
   llvm::BitVector nonKeywordCases(cases.size());
-  for (auto [index, caseVal] : llvm::enumerate(cases))
-    if (!mlir::tblgen::canFormatStringAsKeyword(caseVal.getStr()))
-      nonKeywordCases.set(index);
+  std::string casesList;
+  llvm::raw_string_ostream caseListOs(casesList);
+  caseListOs << "[";
+  llvm::interleaveComma(llvm::enumerate(cases), caseListOs,
+                        [&](auto enumerant) {
+                          StringRef name = enumerant.value().getStr();
+                          if (!mlir::tblgen::canFormatStringAsKeyword(name)) {
+                            nonKeywordCases.set(enumerant.index());
+                            caseListOs << "\\\"" << name << "\\\"";
+                          }
+                          caseListOs << name;
+                        });
+  caseListOs << "]";
 
-  // Generate the parser and the start of the printer for the enum.
+  // Generate the parser and the start of the printer for the enum, excluding
+  // non-quoted bit enums.
   const char *parsedAndPrinterStart = R"(
 namespace mlir {
 template <typename T, typename>
@@ -100,7 +111,7 @@ struct FieldParser<{0}, {0}> {{
     // Symbolize the keyword.
     if (::std::optional<{0}> attr = {1}::symbolizeEnum<{0}>(enumKeyword))
       return *attr;
-    return parser.emitError(loc, "invalid {2} specification: ") << enumKeyword;
+    return parser.emitError(loc, "expected one of {3} for {2}, got: ") << enumKeyword;
   }
 };
 
@@ -121,7 +132,7 @@ struct FieldParser<std::optional<{0}>, std::optional<{0}>> {{
     // Symbolize the keyword.
     if (::std::optional<{0}> attr = {1}::symbolizeEnum<{0}>(enumKeyword))
       return attr;
-    return parser.emitError(loc, "invalid {2} specification: ") << enumKeyword;
+    return parser.emitError(loc, "expected one of {3} for {2}, got: ") << enumKeyword;
   }
 };
 } // namespace mlir
@@ -131,8 +142,94 @@ inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
   auto valueStr = stringifyEnum(value);
 )";
 
-  os << formatv(parsedAndPrinterStart, qualName, cppNamespace,
-                enumInfo.getSummary());
+  const char *parsedAndPrinterStartUnquotedBitEnum = R"(
+  namespace mlir {
+  template <typename T, typename>
+  struct FieldParser;
+
+  template<>
+  struct FieldParser<{0}, {0}> {{
+    template <typename ParserT>
+    static FailureOr<{0}> parse(ParserT &parser) {{
+      {0} flags = {{};
+      do {{
+        // Parse the keyword containing a part of the enum.
+        ::llvm::StringRef enumKeyword;
+        auto loc = parser.getCurrentLocation();
+        if (failed(parser.parseOptionalKeyword(&enumKeyword))) {{
+          return parser.emitError(loc, "expected keyword for {2}");
+        }
+
+        // Symbolize the keyword.
+        if (::std::optional<{0}> flag = {1}::symbolizeEnum<{0}>(enumKeyword)) {{
+          flags = flags | *flag;
+        } else {{
+          return parser.emitError(loc, "expected one of {3} for {2}, got: ") << enumKeyword;
+        }
+      } while (::mlir::succeeded(parser.{5}()));
+      return flags;
+    }
+  };
+
+  /// Support for std::optional, useful in attribute/type definition where the enum is
+  /// used as:
+  ///
+  ///    let parameters = (ins OptionalParameter<"std::optional<TheEnumName>">:$value);
+  template<>
+  struct FieldParser<std::optional<{0}>, std::optional<{0}>> {{
+    template <typename ParserT>
+    static FailureOr<std::optional<{0}>> parse(ParserT &parser) {{
+      {0} flags = {{};
+      bool firstIter = true;
+      do {{
+        // Parse the keyword containing a part of the enum.
+        ::llvm::StringRef enumKeyword;
+        auto loc = parser.getCurrentLocation();
+        if (failed(parser.parseOptionalKeyword(&enumKeyword))) {{
+          if (firstIter)
+            return std::optional<{0}>{{};
+          return parser.emitError(loc, "expected keyword for {2} after '{4}'");
+        }
+        firstIter = false;
+
+        // Symbolize the keyword.
+        if (::std::optional<{0}> flag = {1}::symbolizeEnum<{0}>(enumKeyword)) {{
+          flags = flags | *flag;
+        } else {{
+          return parser.emitError(loc, "expected one of {3} for {2}, got: ") << enumKeyword;
+        }
+      } while(::mlir::succeeded(parser.{5}()));
+      return std::optional<{0}>{{flags};
+    }
+  };
+  } // namespace mlir
+
+  namespace llvm {
+  inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
+    auto valueStr = stringifyEnum(value);
+  )";
+
+  bool isNewStyleBitEnum =
+      enumInfo.isBitEnum() && !enumInfo.printBitEnumQuoted();
+
+  if (isNewStyleBitEnum) {
+    if (nonKeywordCases.any())
+      return PrintFatalError(
+          "bit enum " + qualName +
+          " cannot be printed unquoted with cases that cannot be keywords");
+    StringRef separator = enumInfo.getDef().getValueAsString("separator");
+    StringRef parseSeparatorFn =
+        llvm::StringSwitch<StringRef>(separator.trim())
+            .Case("|", "parseOptionalVerticalBar")
+            .Case(",", "parseOptionalComma")
+            .Default("error, enum seperator must be '|' or ','");
+    os << formatv(parsedAndPrinterStartUnquotedBitEnum, qualName, cppNamespace,
+                  enumInfo.getSummary(), casesList, separator,
+                  parseSeparatorFn);
+  } else {
+    os << formatv(parsedAndPrinterStart, qualName, cppNamespace,
+                  enumInfo.getSummary(), casesList);
+  }
 
   // If all cases require a string, always wrap.
   if (nonKeywordCases.all()) {
@@ -160,7 +257,10 @@ inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
 
     // If this is a bit enum, conservatively print the string form if the value
     // is not a power of two (i.e. not a single bit case) and not a known case.
-  } else if (enumInfo.isBitEnum()) {
+    // Only do this if we're using the old-style parser that parses the enum as
+    // one keyword, as opposed to the new form, where we can print the value
+    // as-is.
+  } else if (enumInfo.isBitEnum() && !isNewStyleBitEnum) {
     // Process the known multi-bit cases that use valid keywords.
     SmallVector<EnumCase *> validMultiBitCases;
     for (auto [index, caseVal] : llvm::enumerate(cases)) {
@@ -670,7 +770,7 @@ static bool emitEnumDecls(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("Enum Utility Declarations", os, records);
 
   for (const Record *def :
-       records.getAllDerivedDefinitionsIfDefined("EnumAttrInfo"))
+       records.getAllDerivedDefinitionsIfDefined("EnumInfo"))
     emitEnumDecl(*def, os);
 
   return false;
@@ -708,7 +808,7 @@ static bool emitEnumDefs(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("Enum Utility Definitions", os, records);
 
   for (const Record *def :
-       records.getAllDerivedDefinitionsIfDefined("EnumAttrInfo"))
+       records.getAllDerivedDefinitionsIfDefined("EnumInfo"))
     emitEnumDef(*def, os);
 
   return false;
