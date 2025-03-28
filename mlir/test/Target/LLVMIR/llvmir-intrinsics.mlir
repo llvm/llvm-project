@@ -40,6 +40,15 @@ llvm.func @exp2_test(%arg0: f32, %arg1: vector<8xf32>) {
   llvm.return
 }
 
+// CHECK-LABEL: @exp10_test
+llvm.func @exp10_test(%arg0: f32, %arg1: vector<8xf32>) {
+  // CHECK: call float @llvm.exp10.f32
+  "llvm.intr.exp10"(%arg0) : (f32) -> f32
+  // CHECK: call <8 x float> @llvm.exp10.v8f32
+  "llvm.intr.exp10"(%arg1) : (vector<8xf32>) -> vector<8xf32>
+  llvm.return
+}
+
 // CHECK-LABEL: @log_test
 llvm.func @log_test(%arg0: f32, %arg1: vector<8xf32>) {
   // CHECK: call float @llvm.log.f32
@@ -1119,6 +1128,23 @@ llvm.func @experimental_constrained_fptrunc(%s: f64, %v: vector<4xf32>) {
   // CHECK: metadata !"round.upward"
   // CHECK: metadata !"fpexcept.strict"
   %5 = llvm.intr.experimental.constrained.fptrunc %v upward strict : vector<4xf32> to vector<4xf16>
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_fpext
+llvm.func @experimental_constrained_fpext(%s: f32, %v: vector<4xf32>) {
+  // CHECK: call double @llvm.experimental.constrained.fpext.f64.f32(
+  // CHECK: metadata !"fpexcept.ignore"
+  %0 = llvm.intr.experimental.constrained.fpext %s ignore : f32 to f64
+  // CHECK: call double @llvm.experimental.constrained.fpext.f64.f32(
+  // CHECK: metadata !"fpexcept.maytrap"
+  %1 = llvm.intr.experimental.constrained.fpext %s maytrap : f32 to f64
+  // CHECK: call double @llvm.experimental.constrained.fpext.f64.f32(
+  // CHECK: metadata !"fpexcept.strict"
+  %2 = llvm.intr.experimental.constrained.fpext %s strict : f32 to f64
+  // CHECK: call <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(
+  // CHECK: metadata !"fpexcept.strict"
+  %5 = llvm.intr.experimental.constrained.fpext %v strict : vector<4xf32> to vector<4xf64>
   llvm.return
 }
 

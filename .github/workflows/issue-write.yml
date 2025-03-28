@@ -39,7 +39,7 @@ jobs:
 
       - name: 'Comment on PR'
         if: steps.download-artifact.outputs.artifact-id != ''
-        uses: actions/github-script@ffc2c79a5b2490bd33e0a41c1de74b877714d736 # v3.2.0
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -49,7 +49,7 @@ jobs:
               return;
             }
 
-            let runInfo = await github.actions.getWorkflowRun({
+            let runInfo = await github.rest.actions.getWorkflowRun({
               owner: context.repo.owner,
               repo: context.repo.repo,
               run_id: context.payload.workflow_run.id
@@ -122,7 +122,7 @@ jobs:
                 // Security check: Ensure that this comment was created by
                 // the github-actions bot, so a malicious input won't overwrite
                 // a user's comment.
-                github.issues.getComment({
+                github.rest.issues.getComment({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   comment_id: comment.id
@@ -132,7 +132,7 @@ jobs:
                     console.log("Invalid comment id: " + comment.id);
                     return;
                   }
-                  github.issues.updateComment({
+                  github.rest.issues.updateComment({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     issue_number: pr_number,
@@ -141,7 +141,7 @@ jobs:
                   });
                 });
               } else {
-                github.issues.createComment({
+                github.rest.issues.createComment({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: pr_number,

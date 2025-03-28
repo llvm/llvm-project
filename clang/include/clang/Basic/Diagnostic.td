@@ -155,6 +155,55 @@ class DefaultWarnNoWerror {
 }
 class DefaultRemark { Severity DefaultSeverity = SEV_Remark; }
 
+// C++ compatibility warnings.
+multiclass CXXCompat<
+    string message,
+    int std_ver,
+    bit ext_warn = true,
+    string std_ver_override = ""#std_ver> {
+    // 'X is a C++YZ extension'.
+    def compat_pre_cxx#std_ver#_#NAME :
+        Diagnostic<!strconcat(message, " a C++", std_ver_override,  " extension"),
+                   CLASS_EXTENSION,
+                   !if(ext_warn, SEV_Warning, SEV_Ignored)>,
+        InGroup<!cast<DiagGroup>("CXX"#std_ver)>;
+
+    // 'X is incompatible with C++98' (if std_ver == 11).
+    // 'X is incompatible with C++ standards before C++YZ' (otherwise).
+    def compat_cxx#std_ver#_#NAME :
+        Warning<!if(!eq(std_ver, 11),
+                    !strconcat(message, " incompatible with C++98"),
+                    !strconcat(message, " incompatible with C++ standards before C++", std_ver_override))>,
+        InGroup<!cast<DiagGroup>(!if(!eq(std_ver, 11),
+                                     "CXX98Compat",
+                                     "CXXPre"#std_ver#"Compat"))>,
+        DefaultIgnore;
+}
+
+// These generate pairs of C++ compatibility warnings of the form:
+//
+//    - compat_cxx<std>_<name>
+//    - compat_pre_cxx<std>_<name>
+//
+// The 'compat_cxx...' warning is intended to be issued in C++<std> mode,
+// and the 'compat_pre_cxx...' warning in C++ modes before C++<std>.
+//
+// Example:
+//
+//   defm inline_variable : CXX17Compat<"inline variables are">;
+//
+// This generates two warnings:
+//
+//   - compat_cxx17_inline_variable:     'inline variables are incompatible with C++ standards before C++17'
+//   - compat_pre_cxx17_inline_variable: 'inline variables are a C++17 extension'
+//
+multiclass CXX11Compat<string message, bit ext_warn = true> : CXXCompat<message, 11, ext_warn>;
+multiclass CXX14Compat<string message, bit ext_warn = true> : CXXCompat<message, 14, ext_warn>;
+multiclass CXX17Compat<string message, bit ext_warn = true> : CXXCompat<message, 17, ext_warn>;
+multiclass CXX20Compat<string message, bit ext_warn = true> : CXXCompat<message, 20, ext_warn>;
+multiclass CXX23Compat<string message, bit ext_warn = true> : CXXCompat<message, 23, ext_warn>;
+multiclass CXX26Compat<string message, bit ext_warn = true> : CXXCompat<message, 26, ext_warn, "2c">;
+
 // Definitions for Diagnostics.
 include "DiagnosticASTKinds.td"
 include "DiagnosticCommentKinds.td"

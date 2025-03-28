@@ -301,8 +301,6 @@ foreach i = 3...31 in
 // Machine Counter Setup
 //===----------------------------------------------------------------------===//
 def : SysReg<"mcountinhibit", 0x320>;
-let isAltName = 1 in
-def : SysReg<"mucounteren", 0x320>;
 
 // mhpmevent3-mhpmevent31 at 0x323-0x33F.
 foreach i = 3...31 in
@@ -324,8 +322,20 @@ def : SysReg<"scountinhibit", 0x120>;
 //===----------------------------------------------------------------------===//
 def : SysReg<"tselect", 0x7A0>;
 def : SysReg<"tdata1", 0x7A1>;
+let isAltName = 1 in {
+def : SysReg<"mcontrol", 0x7A1>;
+def : SysReg<"mcontrol6", 0x7A1>;
+def : SysReg<"icount", 0x7A1>;
+def : SysReg<"itrigger", 0x7A1>;
+def : SysReg<"etrigger", 0x7A1>;
+def : SysReg<"tmexttrigger", 0x7A1>;
+}
 def : SysReg<"tdata2", 0x7A2>;
 def : SysReg<"tdata3", 0x7A3>;
+let isAltName = 1 in {
+def : SysReg<"textra32", 0x7A3>;
+def : SysReg<"textra64", 0x7A3>;
+}
 def : SysReg<"tinfo", 0x7A4>;
 def : SysReg<"tcontrol", 0x7A5>;
 def : SysReg<"mcontext", 0x7A8>;
@@ -471,3 +481,32 @@ def : SysReg<"sctrstatus", 0x14f>;
 def : SysReg<"sctrdepth", 0x15f>;
 def : SysReg<"vsctrctl", 0x24e>;
 def : SysReg<"mctrctl", 0x34e>;
+
+//===-----------------------------------------------
+// Vendor CSRs
+//===-----------------------------------------------
+
+// Xqciint
+let FeaturesRequired = [{ {RISCV::FeatureVendorXqciint} }], isRV32Only = 1 in {
+def : SysReg<"qc.mmcr", 0x7C0>;
+def : SysReg<"qc.mntvec", 0x7C3>;
+def : SysReg<"qc.mstktopaddr", 0x7C4>;
+def : SysReg<"qc.mstkbottomaddr", 0x7C5>;
+def : SysReg<"qc.mthreadptr", 0x7C8>;
+def : SysReg<"qc.mcause", 0x7C9>;
+
+foreach i = 0 - 7 in {
+  def : SysReg<"qc.mclicip" # i, !add(0x7F0, i)>;
+  def : SysReg<"qc.mclicie" # i, !add(0x7F8, i)>;
+}
+
+foreach i = 0 - 31 in {
+  def : SysReg<"qc.mclicilvl" # !if(!lt(i, 10), "0", "") # i, 
+               !add(0xBC0, i)>;
+}
+
+foreach i = 0 - 3 in {
+  def : SysReg<"qc.mwpstartaddr" # i, !add(0x7D0, i)>;
+  def : SysReg<"qc.mwpendaddr" # i,   !add(0x7D4, i)>;
+}
+} // FeatureVendorXqciint, isRV32Only

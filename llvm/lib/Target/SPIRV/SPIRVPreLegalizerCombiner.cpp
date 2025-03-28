@@ -96,16 +96,21 @@ void applySPIRVDistance(MachineInstr &MI, MachineRegisterInfo &MRI,
       .addUse(SubOperand1)                     // Operand X
       .addUse(SubOperand2);                    // Operand Y
 
+  SPIRVGlobalRegistry *GR =
+      MI.getMF()->getSubtarget<SPIRVSubtarget>().getSPIRVGlobalRegistry();
   auto RemoveAllUses = [&](Register Reg) {
     SmallVector<MachineInstr *, 4> UsesToErase;
     for (auto &UseMI : MRI.use_instructions(Reg))
       UsesToErase.push_back(&UseMI);
 
     // calling eraseFromParent to early invalidates the iterator.
-    for (auto *MIToErase : UsesToErase)
+    for (auto *MIToErase : UsesToErase) {
+      GR->invalidateMachineInstr(MIToErase);
       MIToErase->eraseFromParent();
+    }
   };
   RemoveAllUses(SubDestReg);   // remove all uses of FSUB Result
+  GR->invalidateMachineInstr(SubInstr);
   SubInstr->eraseFromParent(); // remove FSUB instruction
 }
 

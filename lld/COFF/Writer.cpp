@@ -1278,8 +1278,7 @@ void Writer::createImportTables() {
       continue;
 
     std::string dll = StringRef(file->dllName).lower();
-    if (ctx.config.dllOrder.count(dll) == 0)
-      ctx.config.dllOrder[dll] = ctx.config.dllOrder.size();
+    ctx.config.dllOrder.try_emplace(dll, ctx.config.dllOrder.size());
 
     if (file->impSym && !isa<DefinedImportData>(file->impSym))
       Fatal(ctx) << file->symtab.printSymbol(file->impSym) << " was replaced";

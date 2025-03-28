@@ -3828,7 +3828,16 @@ void CXXNameMangler::mangleType(const IncompleteArrayType *T) {
 // <pointer-to-member-type> ::= M <class type> <member type>
 void CXXNameMangler::mangleType(const MemberPointerType *T) {
   Out << 'M';
-  mangleType(QualType(T->getClass(), 0));
+  if (auto *RD = T->getMostRecentCXXRecordDecl()) {
+    mangleCXXRecordDecl(RD);
+  } else {
+    NestedNameSpecifier *NNS = T->getQualifier();
+    if (auto *II = NNS->getAsIdentifier())
+      mangleType(getASTContext().getDependentNameType(
+          ElaboratedTypeKeyword::None, NNS->getPrefix(), II));
+    else
+      manglePrefix(NNS);
+  }
   QualType PointeeType = T->getPointeeType();
   if (const FunctionProtoType *FPT = dyn_cast<FunctionProtoType>(PointeeType)) {
     mangleType(FPT);
