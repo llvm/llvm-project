@@ -1439,6 +1439,8 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Error, "MaxTLSAlign",
                               getContext().getTargetInfo().getMaxTLSAlign());
 
+  getTargetCodeGenInfo().emitTargetGlobals(*this);
+
   getTargetCodeGenInfo().emitTargetMetadata(*this, MangledDeclNames);
 
   EmitBackendOptionsMetadata(getCodeGenOpts());
