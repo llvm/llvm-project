@@ -192,8 +192,15 @@ MCSymbol *X86MCInstLower::GetSymbolFromOperand(const MachineOperand &MO) const {
   }
 
   Name += Suffix;
-  if (!Sym)
-    Sym = Ctx.getOrCreateSymbol(Name);
+  if (!Sym) {
+    MCSymbol* S = Ctx.lookupSymbol(Name);
+    // If new MCSymbol needs to be created for
+    // MachineOperand::MO_ExternalSymbol, create is as an external symbol.
+    if(!S && MO.getType() == MachineOperand::MO_ExternalSymbol)
+      Sym = AsmPrinter.GetExternalSymbolSymbol(Name);
+    else
+      Sym = Ctx.getOrCreateSymbol(Name);
+  }
 
   // If the target flags on the operand changes the name of the symbol, do that
   // before we return the symbol.
@@ -349,12 +356,8 @@ MCOperand X86MCInstLower::LowerMachineOperand(const MachineInstr *MI,
     return MCOperand::createImm(MO.getImm());
   case MachineOperand::MO_MachineBasicBlock:
   case MachineOperand::MO_GlobalAddress:
-    return LowerSymbolOperand(MO, GetSymbolFromOperand(MO));
   case MachineOperand::MO_ExternalSymbol: {
-    MCSymbol *Sym = GetSymbolFromOperand(MO);
-    Sym->setExternal(true);
-    return LowerSymbolOperand(MO, Sym);
-  }
+    return LowerSymbolOperand(MO, GetSymbolFromOperand(MO));
   case MachineOperand::MO_MCSymbol:
     return LowerSymbolOperand(MO, MO.getMCSymbol());
   case MachineOperand::MO_JumpTableIndex:
