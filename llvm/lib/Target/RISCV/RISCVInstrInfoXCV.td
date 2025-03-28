@@ -590,10 +590,10 @@ let Predicates = [HasVendorXCVsimd, IsRV32] in {
 let Predicates = [HasVendorXCVbi, IsRV32] in {
   // Immediate branching operations
   def CV_BEQIMM : CVInstImmBranch<0b110, (outs),
-        (ins GPR:$rs1, simm5:$imm5, simm13_lsb0:$imm12),
+        (ins GPR:$rs1, simm5:$imm5, bare_simm13_lsb0:$imm12),
         "cv.beqimm", "$rs1, $imm5, $imm12">, Sched<[]>;
   def CV_BNEIMM : CVInstImmBranch<0b111, (outs),
-        (ins GPR:$rs1, simm5:$imm5, simm13_lsb0:$imm12),
+        (ins GPR:$rs1, simm5:$imm5, bare_simm13_lsb0:$imm12),
         "cv.bneimm", "$rs1, $imm5, $imm12">, Sched<[]>;
 }
 
@@ -793,9 +793,9 @@ let Predicates = [HasVendorXCValu, IsRV32], AddedComplexity = 1 in {
 
 let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
   def : Pat<(riscv_brcc GPR:$rs1, simm5:$imm5, SETEQ, bb:$imm12),
-            (CV_BEQIMM GPR:$rs1, simm5:$imm5, simm13_lsb0:$imm12)>;
+            (CV_BEQIMM GPR:$rs1, simm5:$imm5, bare_simm13_lsb0:$imm12)>;
   def : Pat<(riscv_brcc GPR:$rs1, simm5:$imm5, SETNE, bb:$imm12),
-            (CV_BNEIMM GPR:$rs1, simm5:$imm5, simm13_lsb0:$imm12)>;
+            (CV_BNEIMM GPR:$rs1, simm5:$imm5, bare_simm13_lsb0:$imm12)>;
 
   let usesCustomInserter = 1 in
   def Select_GPR_Using_CC_Imm : Pseudo<(outs GPR:$dst),
