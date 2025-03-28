@@ -595,7 +595,13 @@ public:
   llvm::Constant *GetEHType(QualType T) override;
 
   llvm::Function *GenerateMethod(const ObjCMethodDecl *OMD,
-                                 const ObjCContainerDecl *CD) override;
+                                 const ObjCContainerDecl *CD,
+                                 bool isThunk) override {
+    // isThunk is irrelevent for GNU.
+    return GenerateMethod(OMD, CD);
+  };
+  llvm::Function *GenerateMethod(const ObjCMethodDecl *OMD,
+                                 const ObjCContainerDecl *CD);
 
   // Map to unify direct method definitions.
   llvm::DenseMap<const ObjCMethodDecl *, llvm::Function *>
