@@ -32,7 +32,7 @@ void initRuntime() {
   if (PM == nullptr)
     PM = new PluginManager();
 
-  if (OffloadPolicy::get().Kind == OffloadPolicy::DISABLED) {
+  if (OffloadPolicy::isOffloadDisabled()) {
     DP("Offload is disabled. Skipping library initialization\n");
     // Do only absolutely needed initialization
     return;
