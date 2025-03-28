@@ -61,7 +61,7 @@ add_llvm_unittest(SupportTests
   MemoryBufferRefTest.cpp
   MemoryBufferTest.cpp
   MemoryTest.cpp
-  MustacheTest.cpp      
+  MustacheTest.cpp
   ModRefTest.cpp
   NativeFormatTests.cpp
   OptimizedStructLayoutTest.cpp
