@@ -151,7 +151,7 @@ static cl::opt<bool> UseLIRCodeSizeHeurs(
 
 static cl::opt<bool> ForceMemsetPatternIntrinsic(
     "loop-idiom-force-memset-pattern-intrinsic",
-    cl::desc("Enable use of the memset.pattern intrinsic"), cl::init(false),
+    cl::desc("Use memset.pattern intrinsic whenever possible"), cl::init(false),
     cl::Hidden);
 
 namespace {
