@@ -64,34 +64,40 @@ TEST_CONSTEXPR_CXX20 bool test() {
     const unsigned s = sizeof(ia) / sizeof(ia[0]);
 
     {
-      auto f  = for_each_test(0);
-      Iter it = std::for_each_n(Iter(ia), 0, std::ref(f));
+      unsigned count = 0;
+      Iter it        = std::for_each_n(Iter(ia), 0, [&count](int& i) mutable {
+        ++i;
+        ++count;
+      });
       assert(it == Iter(ia));
-      assert(f.count == 0);
+      assert(count == 0);
     }
 
     {
-      auto f  = for_each_test(0);
-      Iter it = std::for_each_n(Iter(ia), s, std::ref(f));
-
+      unsigned count = 0;
+      Iter it        = std::for_each_n(Iter(ia), s, [&count](int& i) mutable {
+        ++i;
+        ++count;
+      });
       assert(it == Iter(ia + s));
-      assert(f.count == s);
+      assert(count == s);
       for (unsigned i = 0; i < s; ++i)
         assert(ia[i] == static_cast<int>(i + 1));
     }
 
     {
-      auto f  = for_each_test(0);
-      Iter it = std::for_each_n(Iter(ia), 1, std::ref(f));
-
+      unsigned count = 0;
+      Iter it        = std::for_each_n(Iter(ia), 1, [&count](int& i) mutable {
+        ++i;
+        ++count;
+      });
       assert(it == Iter(ia + 1));
-      assert(f.count == 1);
+      assert(count == 1);
       for (unsigned i = 0; i < 1; ++i)
         assert(ia[i] == static_cast<int>(i + 2));
     }
   }
 
-#if TEST_STD_VER > 11
   {
     int ia[]            = {1, 3, 6, 7};
     int expected[]      = {3, 5, 8, 9};
@@ -100,7 +106,6 @@ TEST_CONSTEXPR_CXX20 bool test() {
     auto it = std::for_each_n(std::begin(ia), N, [](int& a) { a += 2; });
     assert(it == (std::begin(ia) + N) && std::equal(std::begin(ia), std::end(ia), std::begin(expected)));
   }
-#endif
 
   if (!TEST_IS_CONSTANT_EVALUATED) // TODO: Use TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED when std::deque is made constexpr
     test_segmented_deque_iterator();
