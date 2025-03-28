@@ -6,20 +6,20 @@ using namespace ABIFunction;
 
 class X86_64ABIInfo : public ABICall {
 public:
-  ABIArgInfo classifyReturnType(ABIBuiltinType RetTy) const;
-  ABIArgInfo classifyArgumentType(ABIBuiltinType RetTy) const;
+  ABIArgInfo classifyReturnType(ABIQualType RetTy) const;
+  ABIArgInfo classifyArgumentType(ABIQualType RetTy) const;
 
   void computeInfo(ABIFunctionInfo FI) const override;
 
 };
 
 ABIArgInfo
-X86_64ABIInfo::classifyReturnType(ABIBuiltinType Ty) const {
+X86_64ABIInfo::classifyReturnType(ABIQualType Ty) const {
 
 }
 
 ABIArgInfo
-X86_64ABIInfo::classifyArgumentType(ABIBuiltinType Ty) const {
+X86_64ABIInfo::classifyArgumentType(ABIQualType Ty) const {
 
 }
 
