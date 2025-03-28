@@ -750,9 +750,25 @@ bool DependencyScanningWorker::computeDependencies(
   auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
   SmallString<128> FakeInputPath;
-  // TODO: We should retry the creation if the path already exists.
-  llvm::sys::fs::createUniquePath(ModuleName + "-%%%%%%%%.input", FakeInputPath,
-                                  /*MakeAbsolute=*/false);
+  
+  unsigned RetryCount = 5; // retries to create 
+  bool UniquePathCreated = false;
+
+  for (unsigned i = 0; i < RetryCount; ++i) {
+    if (llvm::sys::fs::createUniquePath(ModuleName + "-%%%%%%%%.input", FakeInputPath,
+                                        /*MakeAbsolute=*/false)) {
+      if (!llvm::sys::fs::exists(FakeInputPath)) {
+        UniquePathCreated = true;
+        break; // Successfully created a unique path
+      }
+    }
+  }
+  if (!UniquePathCreated) {
+    llvm::errs() << "Error: Failed to create a unique input path after " 
+                 << RetryCount << " retries.\n";
+    return false; // Handle failure appropriately
+  }
+  
   InMemoryFS->addFile(FakeInputPath, 0, llvm::MemoryBuffer::getMemBuffer(""));
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
 
