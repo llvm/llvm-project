@@ -60,13 +60,11 @@ def MPI_CommRankOp : MPI_Op<"comm_rank", []> {
   let summary = "Get the current rank, equivalent to "
                 "`MPI_Comm_rank(comm, &rank)`";
   let description = [{
-    If communicator is not specified, `MPI_COMM_WORLD` is used by default.
-
     This operation can optionally return an `!mpi.retval` value that can be used
     to check for errors.
   }];
 
-  let arguments = (ins Optional<MPI_Comm> : $comm);
+  let arguments = (ins MPI_Comm : $comm);
 
   let results = (
     outs Optional<MPI_Retval> : $retval,
