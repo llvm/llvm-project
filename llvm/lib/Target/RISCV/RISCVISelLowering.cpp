@@ -4613,7 +4613,7 @@ static bool isElementRotate(std::array<std::pair<int, int>, 2> &SrcInfo,
          SrcInfo[1].second - SrcInfo[0].second == (int)NumElts;
 }
 
-static bool isAlternating(std::array<std::pair<int, int>, 2> &SrcInfo,
+static bool isAlternating(const std::array<std::pair<int, int>, 2> &SrcInfo,
                           ArrayRef<int> Mask, bool &Polarity) {
   int NumElts = Mask.size();
   bool NonUndefFound = false;
@@ -4621,7 +4621,7 @@ static bool isAlternating(std::array<std::pair<int, int>, 2> &SrcInfo,
     int M = Mask[i];
     if (M < 0)
       continue;
-    int Src = M >= (int)NumElts;
+    int Src = M >= NumElts;
     int Diff = (int)i - (M % NumElts);
     bool C = Src == SrcInfo[1].first && Diff == SrcInfo[1].second;
     if (!NonUndefFound) {
@@ -4629,21 +4629,20 @@ static bool isAlternating(std::array<std::pair<int, int>, 2> &SrcInfo,
       Polarity = (C == i % 2);
       continue;
     }
-    if ((Polarity && C != i % 2) || (!Polarity && C == i % 2))
+    if (Polarity != (C == i % 2))
       return false;
   }
   return true;
 }
 
-static bool isZipEven(std::array<std::pair<int, int>, 2> &SrcInfo,
+static bool isZipEven(const std::array<std::pair<int, int>, 2> &SrcInfo,
                       ArrayRef<int> Mask) {
   bool Polarity;
   return SrcInfo[0].second == 0 && SrcInfo[1].second == 1 &&
          isAlternating(SrcInfo, Mask, Polarity) && Polarity;
-  ;
 }
 
-static bool isZipOdd(std::array<std::pair<int, int>, 2> &SrcInfo,
+static bool isZipOdd(const std::array<std::pair<int, int>, 2> &SrcInfo,
                      ArrayRef<int> Mask) {
   bool Polarity;
   return SrcInfo[0].second == 0 && SrcInfo[1].second == -1 &&
@@ -5622,7 +5621,6 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       }
     }
   }
-
 
   if (SDValue V =
           lowerVECTOR_SHUFFLEAsVSlideup(DL, VT, V1, V2, Mask, Subtarget, DAG))
