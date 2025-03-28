@@ -800,7 +800,7 @@ struct AddressSanitizer {
 
   bool ignoreAccess(Instruction *Inst, Value *Ptr);
   void getInterestingMemoryOperands(
-      Instruction *I, SmallVectorImpl<InterestingMemoryOperand> &Interesting, 
+      Instruction *I, SmallVectorImpl<InterestingMemoryOperand> &Interesting,
       const TargetTransformInfo *TTI);
 
   void instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,

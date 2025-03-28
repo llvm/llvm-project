@@ -151,7 +151,6 @@ public:
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP);
 
-  
   bool getTgtMemIntrinsicOperand(
       IntrinsicInst *Inst,
       SmallVectorImpl<InterestingMemoryOperand> &Interesting) const;

@@ -39,7 +39,7 @@ static cl::opt<unsigned> SLPMaxVF(
     cl::Hidden);
 
 bool RISCVTTIImpl::getTgtMemIntrinsicOperand(
-    IntrinsicInst *Inst, 
+    IntrinsicInst *Inst,
     SmallVectorImpl<InterestingMemoryOperand> &Interesting) const {
   const DataLayout &DL = getDataLayout();
   Intrinsic::ID IID = Inst->getIntrinsicID();

@@ -909,7 +909,7 @@ public:
       IntrinsicInst *Inst,
       SmallVectorImpl<InterestingMemoryOperand> &Interesting) const {
     return false;
-  } 
+  }
   unsigned getAtomicMemIntrinsicMaxElementSize() const {
     // Note for overrides: You must ensure for all element unordered-atomic
     // memory intrinsics that all power-of-2 element sizes up to, and
