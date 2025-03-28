@@ -362,6 +362,7 @@ public:
   void setSanitizerMetadata(SanitizerMetadata Meta);
   void removeSanitizerMetadata();
   void setNoSanitizeMetadata();
+  void disableSanitizerMetadataGlobalTagging();
 
   bool isTagged() const {
     return hasSanitizerMetadata() && getSanitizerMetadata().Memtag;
