@@ -114,14 +114,10 @@ define <8 x float> @uitofp_v8i8_float(<8 x i8> %a) {
 ; CHECK-LABEL: uitofp_v8i8_float:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    bic v0.4h, #255, lsl #8
-; CHECK-NEXT:    bic v1.4h, #255, lsl #8
+; CHECK-NEXT:    ushll2 v1.4s, v0.8h, #0
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    ucvtf v0.4s, v0.4s
 ; CHECK-NEXT:    ucvtf v1.4s, v1.4s
+; CHECK-NEXT:    ucvtf v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %1 = uitofp <8 x i8> %a to <8 x float>
   ret <8 x float> %1
@@ -130,24 +126,16 @@ define <8 x float> @uitofp_v8i8_float(<8 x i8> %a) {
 define <16 x float> @uitofp_v16i8_float(<16 x i8> %a) {
 ; CHECK-LABEL: uitofp_v16i8_float:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll2 v1.8h, v0.16b, #0
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
-; CHECK-NEXT:    bic v0.4h, #255, lsl #8
-; CHECK-NEXT:    bic v1.4h, #255, lsl #8
-; CHECK-NEXT:    bic v2.4h, #255, lsl #8
-; CHECK-NEXT:    bic v3.4h, #255, lsl #8
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    ushll v4.4s, v2.4h, #0
-; CHECK-NEXT:    ushll v5.4s, v3.4h, #0
-; CHECK-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-NEXT:    ucvtf v2.4s, v1.4s
-; CHECK-NEXT:    ucvtf v3.4s, v4.4s
-; CHECK-NEXT:    ucvtf v1.4s, v5.4s
+; CHECK-NEXT:    ushll v1.8h, v0.8b, #0
+; CHECK-NEXT:    ushll2 v0.8h, v0.16b, #0
+; CHECK-NEXT:    ushll v2.4s, v1.4h, #0
+; CHECK-NEXT:    ushll2 v3.4s, v0.8h, #0
+; CHECK-NEXT:    ushll2 v1.4s, v1.8h, #0
+; CHECK-NEXT:    ushll v4.4s, v0.4h, #0
+; CHECK-NEXT:    ucvtf v0.4s, v2.4s
+; CHECK-NEXT:    ucvtf v3.4s, v3.4s
+; CHECK-NEXT:    ucvtf v1.4s, v1.4s
+; CHECK-NEXT:    ucvtf v2.4s, v4.4s
 ; CHECK-NEXT:    ret
   %1 = uitofp <16 x i8> %a to <16 x float>
   ret <16 x float> %1

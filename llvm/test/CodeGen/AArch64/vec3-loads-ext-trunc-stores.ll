@@ -444,8 +444,7 @@ define void @load_ext_to_64bits(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    orr w8, w9, w8, lsl #16
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    add x8, x1, #4
-; CHECK-NEXT:    zip1.8b v0, v0, v0
-; CHECK-NEXT:    bic.4h v0, #255, lsl #8
+; CHECK-NEXT:    ushll.8h v0, v0, #0
 ; CHECK-NEXT:    st1.h { v0 }[2], [x8]
 ; CHECK-NEXT:    str s0, [x1]
 ; CHECK-NEXT:    ret
@@ -480,8 +479,7 @@ define void @load_ext_to_64bits_default_align(ptr %src, ptr %dst) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    add x8, x1, #4
-; CHECK-NEXT:    zip1.8b v0, v0, v0
-; CHECK-NEXT:    bic.4h v0, #255, lsl #8
+; CHECK-NEXT:    ushll.8h v0, v0, #0
 ; CHECK-NEXT:    st1.h { v0 }[2], [x8]
 ; CHECK-NEXT:    str s0, [x1]
 ; CHECK-NEXT:    ret
@@ -491,8 +489,7 @@ define void @load_ext_to_64bits_default_align(ptr %src, ptr %dst) {
 ; BE-NEXT:    ldr s0, [x0]
 ; BE-NEXT:    add x8, x1, #4
 ; BE-NEXT:    rev32 v0.8b, v0.8b
-; BE-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; BE-NEXT:    bic v0.4h, #255, lsl #8
+; BE-NEXT:    ushll v0.8h, v0.8b, #0
 ; BE-NEXT:    rev32 v1.8h, v0.8h
 ; BE-NEXT:    st1 { v0.h }[2], [x8]
 ; BE-NEXT:    str s1, [x1]
@@ -509,8 +506,7 @@ define void @load_ext_to_64bits_align_4(ptr %src, ptr %dst) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    add x8, x1, #4
-; CHECK-NEXT:    zip1.8b v0, v0, v0
-; CHECK-NEXT:    bic.4h v0, #255, lsl #8
+; CHECK-NEXT:    ushll.8h v0, v0, #0
 ; CHECK-NEXT:    st1.h { v0 }[2], [x8]
 ; CHECK-NEXT:    str s0, [x1]
 ; CHECK-NEXT:    ret
@@ -520,8 +516,7 @@ define void @load_ext_to_64bits_align_4(ptr %src, ptr %dst) {
 ; BE-NEXT:    ldr s0, [x0]
 ; BE-NEXT:    add x8, x1, #4
 ; BE-NEXT:    rev32 v0.8b, v0.8b
-; BE-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; BE-NEXT:    bic v0.4h, #255, lsl #8
+; BE-NEXT:    ushll v0.8h, v0.8b, #0
 ; BE-NEXT:    rev32 v1.8h, v0.8h
 ; BE-NEXT:    st1 { v0.h }[2], [x8]
 ; BE-NEXT:    str s1, [x1]
@@ -541,13 +536,11 @@ define void @load_ext_add_to_64bits(ptr %src, ptr %dst) {
 ; CHECK-NEXT:  Lloh2:
 ; CHECK-NEXT:    adrp x8, lCPI15_0@PAGE
 ; CHECK-NEXT:  Lloh3:
-; CHECK-NEXT:    ldr d1, [x8, lCPI15_0@PAGEOFF]
+; CHECK-NEXT:    ldr d0, [x8, lCPI15_0@PAGEOFF]
 ; CHECK-NEXT:    add x8, x1, #4
 ; CHECK-NEXT:    orr w9, w10, w9, lsl #16
-; CHECK-NEXT:    fmov s0, w9
-; CHECK-NEXT:    zip1.8b v0, v0, v0
-; CHECK-NEXT:    bic.4h v0, #255, lsl #8
-; CHECK-NEXT:    add.4h v0, v0, v1
+; CHECK-NEXT:    fmov s1, w9
+; CHECK-NEXT:    uaddw.8h v0, v0, v1
 ; CHECK-NEXT:    st1.h { v0 }[2], [x8]
 ; CHECK-NEXT:    str s0, [x1]
 ; CHECK-NEXT:    ret
