@@ -28,9 +28,6 @@
 #include "../helper_macros.h"
 #include "../helper_types.h"
 
-#include <print> // REMOVE ME
-#include <iostream> // REMOVE ME
-
 template <typename CharT, typename TraitsT>
 void test_ispanstream(std::basic_ispanstream<CharT, TraitsT>& spSt, std::size_t size) {
   assert(spSt);
@@ -80,42 +77,41 @@ void test() {
   constexpr std::basic_string_view<CharT, TraitsT> sv{SV("zmt 94 hkt 82 pir 43vr")};
   assert(sv.size() < 30UZ);
 
-  // Create a std::span test value
-  CharT arr[30UZ]{};
-  initialize_array_from_string_view(arr, sv);
-
-  std::span<CharT> sp{arr};
-
-  // Create a "Read Only Sequence" test value
-  CharT rosArr[30UZ]{};
-  initialize_array_from_string_view(rosArr, sv);
-
-  ReadOnlySpan<CharT, 30UZ> ros{rosArr};
-  assert(ros.size() == 30UZ);
-
-  // std::span` + Mode: default (`in`)
   {
-    SpStream spSt(sp);
-    test_ispanstream(spSt, 30UZ);
-  }
-  // std::span` + Mode: explicit `in`
-  {
-    SpStream spSt(sp, std::ios_base::in);
-    test_ispanstream(spSt, 30UZ);
-  }
+    // Create a std::span test value
+    CharT arr[30UZ]{};
+    initialize_array_from_string_view(arr, sv);
 
-  // `ReadOnlySpan` + Mode: default (`in`)
-  {
-    SpStream spSt(ros);
-    test_ispanstream(spSt, 30UZ);
+    std::span<CharT> sp{arr};
+
+    // std::span` + Mode: default (`in`)
+    {
+      SpStream spSt(sp);
+      test_ispanstream(spSt, 30UZ);
+    }
+    // std::span` + Mode: explicit `in`
+    {
+      SpStream spSt(sp, std::ios_base::in);
+      test_ispanstream(spSt, 30UZ);
+    }
   }
 
   {
-    SpStream spSt(sp, std::ios_base::ate);
-    std::println(stderr, "spSt.span().size() = {}", spSt.span().size());
-    // std::println(stderr, "spSt.tellg() = {}", spSt.tellg());
-    std::cerr << "spSt.tellg() = " << spSt.tellg() << std::endl;
-    assert(false);
+    // Create a "Read Only Sequence" test value
+    CharT arr[30UZ]{};
+    initialize_array_from_string_view(arr, sv);
+
+    ReadOnlySpan<CharT, 30UZ> ros{arr};
+    assert(ros.size() == 30UZ);
+
+    {
+      SpStream spSt(ros);
+      test_ispanstream(spSt, 30UZ);
+    }
+    {
+      SpStream spSt(std::move(ros));
+      test_ispanstream(spSt, 30UZ);
+    }
   }
 }
 

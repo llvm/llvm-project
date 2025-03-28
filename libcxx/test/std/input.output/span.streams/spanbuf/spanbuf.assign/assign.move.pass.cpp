@@ -291,7 +291,7 @@ void test() {
     }
     // Mode: `ate`
     {
-      SpBuf rhsSpBuf{sp, std::ios_base : out | std::ios_base::ate};
+      SpBuf rhsSpBuf{sp, std::ios_base::out | std::ios_base::ate};
       assert(rhsSpBuf.span().data() == arr);
       assert(rhsSpBuf.span().size() == 4);
 
