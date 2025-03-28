@@ -145,8 +145,6 @@ inline static unsigned getXSfmmWiden(unsigned VType) {
   return 1 << (TWiden - 1);
 }
 
-inline static bool getXSfmmAltFmt(unsigned VType) { return (VType >> 8) & 1; }
-
 static inline bool isValidXSfmmVType(unsigned VTypeI) {
   return (VTypeI & ~0x738) == 0 && RISCVVType::hasXSfmmWiden(VTypeI) &&
          RISCVVType::getSEW(VTypeI) * RISCVVType::getXSfmmWiden(VTypeI) <= 64;

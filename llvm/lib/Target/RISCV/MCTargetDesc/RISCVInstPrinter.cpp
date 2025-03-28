@@ -226,7 +226,7 @@ void RISCVInstPrinter::printXSfmmVType(const MCInst *MI, unsigned OpNo,
   assert(RISCVVType::isValidXSfmmVType(Imm));
   unsigned SEW = RISCVVType::getSEW(Imm);
   O << "e" << SEW;
-  bool AltFmt = RISCVVType::getXSfmmAltFmt(Imm);
+  bool AltFmt = RISCVVType::isAltFmt(Imm);
   if (AltFmt)
     O << "alt";
   unsigned Widen = RISCVVType::getXSfmmWiden(Imm);
