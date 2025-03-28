@@ -15,26 +15,6 @@ using namespace llvm::hlsl::rootsig;
 namespace clang {
 namespace hlsl {
 
-static std::string FormatTokenKinds(ArrayRef<TokenKind> Kinds) {
-  std::string TokenString;
-  llvm::raw_string_ostream Out(TokenString);
-  bool First = true;
-  for (auto Kind : Kinds) {
-    if (!First)
-      Out << ", ";
-    switch (Kind) {
-#define TOK(X, SPELLING)                                                       \
-  case TokenKind::X:                                                           \
-    Out << SPELLING;                                                           \
-    break;
-#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
-    }
-    First = false;
-  }
-
-  return TokenString;
-}
-
 RootSignatureParser::RootSignatureParser(SmallVector<RootElement> &Elements,
                                          RootSignatureLexer &Lexer,
                                          Preprocessor &PP)
@@ -141,24 +121,18 @@ bool RootSignatureParser::peekExpectedToken(ArrayRef<TokenKind> AnyExpected) {
 bool RootSignatureParser::consumeExpectedToken(TokenKind Expected,
                                                unsigned DiagID,
                                                TokenKind Context) {
-  return consumeExpectedToken(ArrayRef{Expected}, DiagID, Context);
-}
-
-bool RootSignatureParser::consumeExpectedToken(ArrayRef<TokenKind> AnyExpected,
-                                               unsigned DiagID,
-                                               TokenKind Context) {
-  if (tryConsumeExpectedToken(AnyExpected))
+  if (tryConsumeExpectedToken(Expected))
     return false;
 
   // Report unexpected token kind error
   DiagnosticBuilder DB = getDiags().Report(CurToken.TokLoc, DiagID);
   switch (DiagID) {
   case diag::err_expected:
-    DB << FormatTokenKinds(AnyExpected);
+    DB << Expected;
     break;
   case diag::err_expected_either:
   case diag::err_expected_after:
-    DB << FormatTokenKinds(AnyExpected) << FormatTokenKinds({Context});
+    DB << Expected << Context;
     break;
   default:
     break;

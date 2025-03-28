@@ -83,9 +83,6 @@ private:
   bool consumeExpectedToken(TokenKind Expected,
                             unsigned DiagID = diag::err_expected,
                             TokenKind Context = TokenKind::invalid);
-  bool consumeExpectedToken(ArrayRef<TokenKind> AnyExpected,
-                            unsigned DiagID = diag::err_expected,
-                            TokenKind Context = TokenKind::invalid);
 
   /// Peek if the next token is of the expected kind and if it is then consume
   /// it.

@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LEX_LEXHLSLROOTSIGNATURE_H
 #define LLVM_CLANG_LEX_LEXHLSLROOTSIGNATURE_H
 
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 
 #include "llvm/ADT/SmallVector.h"
@@ -42,6 +43,18 @@ struct RootSignatureToken {
       : Kind(Kind), TokLoc(TokLoc) {}
 };
 using TokenKind = enum RootSignatureToken::Kind;
+
+inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
+                                           const TokenKind Kind) {
+  switch (Kind) {
+#define TOK(X, SPELLING)                                                       \
+  case TokenKind::X:                                                           \
+    DB << SPELLING;                                                            \
+    break;
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  }
+  return DB;
+}
 
 class RootSignatureLexer {
 public:
