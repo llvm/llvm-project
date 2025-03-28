@@ -40,8 +40,7 @@ static bool isReallyValidReturnType(Type *Ty) {
 }
 
 /// Insert a ret inst after \p NewRetValue, which returns the value it produces.
-static void rewriteFuncWithReturnType(Function &OldF,
-                                      Instruction *NewRetValue) {
+static void rewriteFuncWithReturnType(Function &OldF, Value *NewRetValue) {
   Type *NewRetTy = NewRetValue->getType();
   FunctionType *OldFuncTy = OldF.getFunctionType();
 
@@ -49,8 +48,10 @@ static void rewriteFuncWithReturnType(Function &OldF,
       FunctionType::get(NewRetTy, OldFuncTy->params(), OldFuncTy->isVarArg());
 
   LLVMContext &Ctx = OldF.getContext();
+  Instruction *NewRetI = cast<Instruction>(NewRetValue);
+  BasicBlock *NewRetBlock = NewRetI->getParent();
 
-  BasicBlock *NewRetBlock = NewRetValue->getParent();
+  BasicBlock::iterator NewValIt = NewRetI->getIterator();
 
   // Hack up any return values in other blocks, we can't leave them as ret void.
   if (OldFuncTy->getReturnType()->isVoidTy()) {
@@ -75,8 +76,8 @@ static void rewriteFuncWithReturnType(Function &OldF,
     Succ->removePredecessor(NewRetBlock, /*KeepOneInputPHIs=*/true);
 
   // Now delete the tail of this block, in reverse to delete uses before defs.
-  for (Instruction &I : make_early_inc_range(make_range(
-           NewRetBlock->rbegin(), NewRetValue->getIterator().getReverse()))) {
+  for (Instruction &I : make_early_inc_range(
+           make_range(NewRetBlock->rbegin(), NewValIt.getReverse()))) {
 
     Value *Replacement = getDefaultValue(I.getType());
     I.replaceAllUsesWith(Replacement);
@@ -193,12 +194,19 @@ static bool canHandleSuccessors(const BasicBlock &BB) {
   return true;
 }
 
-static bool tryForwardingValuesToReturn(
-    Function &F, Oracle &O,
-    std::vector<std::pair<Function *, Instruction *>> &FuncsToReplace) {
+static bool shouldForwardValueToReturn(const BasicBlock &BB, const Value *V,
+                                       Type *RetTy) {
+  if (!isReallyValidReturnType(V->getType()))
+    return false;
 
-  // TODO: Should this try to forward arguments to the return value before
-  // instructions?
+  return (RetTy->isVoidTy() ||
+          (RetTy == V->getType() && shouldReplaceNonVoidReturnValue(BB, V))) &&
+         canReplaceFuncUsers(*BB.getParent(), V->getType());
+}
+
+static bool tryForwardingInstructionsToReturn(
+    Function &F, Oracle &O,
+    std::vector<std::pair<Function *, Value *>> &FuncsToReplace) {
 
   // TODO: Should we try to expand returns to aggregate for function that
   // already have a return value?
@@ -209,12 +217,7 @@ static bool tryForwardingValuesToReturn(
       continue;
 
     for (Instruction &I : BB) {
-      if (!isReallyValidReturnType(I.getType()))
-        continue;
-
-      if ((RetTy->isVoidTy() ||
-           (RetTy == I.getType() && shouldReplaceNonVoidReturnValue(BB, &I))) &&
-          canReplaceFuncUsers(F, I.getType()) && !O.shouldKeep()) {
+      if (shouldForwardValueToReturn(BB, &I, RetTy) && !O.shouldKeep()) {
         FuncsToReplace.emplace_back(&F, &I);
         return true;
       }
@@ -224,18 +227,19 @@ static bool tryForwardingValuesToReturn(
   return false;
 }
 
-void llvm::reduceValuesToReturnDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceInstructionsToReturnDeltaPass(Oracle &O,
+                                               ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
 
   // We're going to chaotically hack on the other users of the function in other
   // functions, so we need to collect a worklist of returns to replace.
-  std::vector<std::pair<Function *, Instruction *>> FuncsToReplace;
+  std::vector<std::pair<Function *, Value *>> FuncsToReplace;
 
   for (Function &F : Program.functions()) {
     if (!F.isDeclaration() && canUseNonVoidReturnType(F))
-      tryForwardingValuesToReturn(F, O, FuncsToReplace);
+      tryForwardingInstructionsToReturn(F, O, FuncsToReplace);
   }
 
-  for (auto [F, I] : FuncsToReplace)
-    rewriteFuncWithReturnType(*F, I);
+  for (auto [F, NewRetVal] : FuncsToReplace)
+    rewriteFuncWithReturnType(*F, NewRetVal);
 }
