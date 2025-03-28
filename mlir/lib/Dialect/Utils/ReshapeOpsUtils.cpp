@@ -33,6 +33,9 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
                                          ArrayRef<int64_t> targetShape) {
   if (sourceShape.size() <= targetShape.size())
     return std::nullopt;
+  if (targetShape.size() == 1)
+    return SmallVector<ReassociationIndices>{
+        llvm::to_vector(llvm::seq<int64_t>(0, sourceShape.size()))};
   unsigned sourceDim = 0;
   SmallVector<ReassociationIndices> reassociationMap;
   reassociationMap.reserve(targetShape.size());
@@ -315,11 +318,11 @@ SmallVector<Range> SliceFromCollapseHelper::getExtractSliceParams(
     // have proven that these are not sliced. In this case we just take
     // the full extent of each dimension in the reassociation list.
     if (linearizedDimensions[it.index()]) {
-      llvm::append_range(
-          offsetsSizesAndStrides,
-          llvm::map_range(it.value(), [&](int64_t idx) -> Range {
-            return {zeroAttr, collapseShapeInputShape[idx], oneAttr};
-          }));
+      llvm::append_range(offsetsSizesAndStrides,
+                         llvm::map_range(it.value(), [&](int64_t idx) -> Range {
+                           return {zeroAttr, collapseShapeInputShape[idx],
+                                   oneAttr};
+                         }));
       continue;
     }
 
