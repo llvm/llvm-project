@@ -42,6 +42,8 @@ void printTraceSymbol(const Symbol &sym, StringRef name);
 enum {
   NEEDS_GOT = 1 << 0,
   NEEDS_PLT = 1 << 1,
+  // True if this is an ifunc with a direct relocation that cannot be
+  // represented as a RELATIVE relocation.
   HAS_DIRECT_RELOC = 1 << 2,
   // True if this symbol needs a canonical PLT entry, or (during
   // postScanRelocations) a copy relocation.
