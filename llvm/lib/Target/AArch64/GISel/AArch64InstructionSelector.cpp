@@ -6735,7 +6735,7 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
 
     MIB.buildCopy({AArch64::X16}, {ValReg});
     MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {AArch64::X17}, {});
-    MIB.buildInstr(AArch64::AUT)
+    MIB.buildInstr(AArch64::AUTx16x17)
         .addImm(AUTKey)
         .addImm(AUTConstDiscC)
         .addUse(AUTAddrDisc)
