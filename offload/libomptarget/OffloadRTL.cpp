@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "OffloadPolicy.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginManager.h"
 
@@ -30,6 +31,12 @@ void initRuntime() {
 
   if (PM == nullptr)
     PM = new PluginManager();
+
+  if (OffloadPolicy::get().Kind == OffloadPolicy::DISABLED) {
+    DP("Offload is disabled. Skipping library initialization\n");
+    // Do only absolutely needed initialization
+    return;
+  }
 
   RefCount++;
   if (RefCount == 1) {

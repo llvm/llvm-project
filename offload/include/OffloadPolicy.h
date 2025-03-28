@@ -26,7 +26,7 @@ extern "C" int __kmpc_get_target_offload(void) __attribute__((weak));
 
 class OffloadPolicy {
 
-  OffloadPolicy(PluginManager &PM) {
+  OffloadPolicy() {
     // TODO: Check for OpenMP.
     switch ((kmp_target_offload_kind_t)__kmpc_get_target_offload()) {
     case tgt_disabled:
@@ -36,6 +36,17 @@ class OffloadPolicy {
       Kind = MANDATORY;
       return;
     default:
+      // delay DEFAULT policy until PluginManager is ready
+      UserValue = false;
+      return;
+    };
+  }
+
+  OffloadPolicy(PluginManager &PM) {
+    const OffloadPolicy &OP = get();
+    if (!OP.UserValue) {
+      // User didn't specify a policy, decide
+      // based on number of devices discovered
       if (PM.getNumDevices()) {
         DP("Default TARGET OFFLOAD policy is now mandatory "
            "(devices were found)\n");
@@ -46,10 +57,16 @@ class OffloadPolicy {
         Kind = DISABLED;
       }
       return;
-    };
+    }
+    Kind = OP.Kind;
   }
 
 public:
+  static const OffloadPolicy &get() {
+    static OffloadPolicy OP;
+    return OP;
+  }
+
   static const OffloadPolicy &get(PluginManager &PM) {
     static OffloadPolicy OP(PM);
     return OP;
@@ -58,6 +75,7 @@ public:
   enum OffloadPolicyKind { DISABLED, MANDATORY };
 
   OffloadPolicyKind Kind = MANDATORY;
+  bool UserValue = true;
 };
 
 #endif // OMPTARGET_OFFLOAD_POLICY_H
