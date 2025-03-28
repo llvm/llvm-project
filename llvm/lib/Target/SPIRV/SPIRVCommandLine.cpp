@@ -87,6 +87,8 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
          SPIRV::Extension::Extension::SPV_KHR_shader_clock},
         {"SPV_KHR_cooperative_matrix",
          SPIRV::Extension::Extension::SPV_KHR_cooperative_matrix},
+        {"SPV_INTEL_fpga_dsp_control",
+         SPIRV::Extension::Extension::SPV_INTEL_fpga_dsp_control},
         {"SPV_KHR_non_semantic_info",
          SPIRV::Extension::Extension::SPV_KHR_non_semantic_info},
         {"SPV_INTEL_long_composites",
