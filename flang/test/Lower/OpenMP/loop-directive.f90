@@ -337,3 +337,24 @@ subroutine loop_teams_loop_reduction
     x = x + i
   end do
 end subroutine
+
+
+! Tests a regression when the pass encounters a multi-block `teams` region.
+subroutine multi_block_teams
+  implicit none
+  integer :: i
+
+  ! CHECK: omp.target {{.*}} {
+  ! CHECK:   omp.teams {
+  ! CHECK:   ^bb1:
+  ! CHECK:     cf.br ^bb2
+  ! CHECK:   ^bb2:
+  ! CHECK:     omp.terminator
+  ! CHECK:   }
+  ! CHECK: }
+  !$omp target teams
+  select case (i)
+  case(1)
+  end select
+  !$omp end target teams
+end subroutine

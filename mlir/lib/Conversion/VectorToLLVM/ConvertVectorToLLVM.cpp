@@ -263,22 +263,25 @@ public:
   LogicalResult
   matchAndRewrite(vector::GatherOp gather, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    Location loc = gather->getLoc();
     MemRefType memRefType = dyn_cast<MemRefType>(gather.getBaseType());
     assert(memRefType && "The base should be bufferized");
 
     if (failed(isMemRefTypeSupported(memRefType, *this->getTypeConverter())))
-      return failure();
+      return rewriter.notifyMatchFailure(gather, "memref type not supported");
 
     VectorType vType = gather.getVectorType();
-    if (vType.getRank() > 1)
-      return failure();
-
-    Location loc = gather->getLoc();
+    if (vType.getRank() > 1) {
+      return rewriter.notifyMatchFailure(
+          gather, "only 1-D vectors can be lowered to LLVM");
+    }
 
     // Resolve alignment.
     unsigned align;
-    if (failed(getMemRefAlignment(*getTypeConverter(), memRefType, align)))
-      return failure();
+    if (failed(getMemRefAlignment(*getTypeConverter(), memRefType, align))) {
+      return rewriter.notifyMatchFailure(gather,
+                                         "could not resolve memref alignment");
+    }
 
     // Resolve address.
     Value ptr = getStridedElementPtr(loc, memRefType, adaptor.getBase(),
@@ -309,15 +312,22 @@ public:
     MemRefType memRefType = scatter.getMemRefType();
 
     if (failed(isMemRefTypeSupported(memRefType, *this->getTypeConverter())))
-      return failure();
+      return rewriter.notifyMatchFailure(scatter, "memref type not supported");
+
+    VectorType vType = scatter.getVectorType();
+    if (vType.getRank() > 1) {
+      return rewriter.notifyMatchFailure(
+          scatter, "only 1-D vectors can be lowered to LLVM");
+    }
 
     // Resolve alignment.
     unsigned align;
-    if (failed(getMemRefAlignment(*getTypeConverter(), memRefType, align)))
-      return failure();
+    if (failed(getMemRefAlignment(*getTypeConverter(), memRefType, align))) {
+      return rewriter.notifyMatchFailure(scatter,
+                                         "could not resolve memref alignment");
+    }
 
     // Resolve address.
-    VectorType vType = scatter.getVectorType();
     Value ptr = getStridedElementPtr(loc, memRefType, adaptor.getBase(),
                                      adaptor.getIndices(), rewriter);
     Value ptrs =

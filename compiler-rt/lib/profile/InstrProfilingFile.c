@@ -1273,6 +1273,7 @@ COMPILER_RT_VISIBILITY int __llvm_profile_set_file_object(FILE *File,
   return 0;
 }
 
+#ifndef __APPLE__
 int __llvm_write_custom_profile(const char *Target,
                                 const __llvm_profile_data *DataBegin,
                                 const __llvm_profile_data *DataEnd,
@@ -1381,5 +1382,6 @@ int __llvm_write_custom_profile(const char *Target,
 
   return ReturnValue;
 }
+#endif
 
 #endif
