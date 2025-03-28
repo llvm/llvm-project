@@ -5224,37 +5224,43 @@ bool AsmParser::parseDirectiveIfc(SMLoc DirectiveLoc, bool ExpectEqual) {
 /// parseDirectiveIfeqs
 ///   ::= .ifeqs string1, string2
 bool AsmParser::parseDirectiveIfeqs(SMLoc DirectiveLoc, bool ExpectEqual) {
-  if (Lexer.isNot(AsmToken::String)) {
-    if (ExpectEqual)
-      return TokError("expected string parameter for '.ifeqs' directive");
-    return TokError("expected string parameter for '.ifnes' directive");
-  }
-
-  StringRef String1 = getTok().getStringContents();
-  Lex();
-
-  if (Lexer.isNot(AsmToken::Comma)) {
-    if (ExpectEqual)
-      return TokError(
-          "expected comma after first string for '.ifeqs' directive");
-    return TokError("expected comma after first string for '.ifnes' directive");
-  }
-
-  Lex();
-
-  if (Lexer.isNot(AsmToken::String)) {
-    if (ExpectEqual)
-      return TokError("expected string parameter for '.ifeqs' directive");
-    return TokError("expected string parameter for '.ifnes' directive");
-  }
-
-  StringRef String2 = getTok().getStringContents();
-  Lex();
-
   TheCondStack.push_back(TheCondState);
   TheCondState.TheCond = AsmCond::IfCond;
-  TheCondState.CondMet = ExpectEqual == (String1 == String2);
-  TheCondState.Ignore = !TheCondState.CondMet;
+
+  if (TheCondState.Ignore) {
+    eatToEndOfStatement();
+  } else {
+    if (Lexer.isNot(AsmToken::String)) {
+      if (ExpectEqual)
+        return TokError("expected string parameter for '.ifeqs' directive");
+      return TokError("expected string parameter for '.ifnes' directive");
+    }
+
+    StringRef String1 = getTok().getStringContents();
+    Lex();
+
+    if (Lexer.isNot(AsmToken::Comma)) {
+      if (ExpectEqual)
+        return TokError(
+            "expected comma after first string for '.ifeqs' directive");
+      return TokError(
+          "expected comma after first string for '.ifnes' directive");
+    }
+
+    Lex();
+
+    if (Lexer.isNot(AsmToken::String)) {
+      if (ExpectEqual)
+        return TokError("expected string parameter for '.ifeqs' directive");
+      return TokError("expected string parameter for '.ifnes' directive");
+    }
+
+    StringRef String2 = getTok().getStringContents();
+    Lex();
+
+    TheCondState.CondMet = ExpectEqual == (String1 == String2);
+    TheCondState.Ignore = !TheCondState.CondMet;
+  }
 
   return false;
 }

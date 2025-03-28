@@ -2748,12 +2748,6 @@ void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
       if (Remnant || CodeObjVer < MinCodeObjVer || CodeObjVer > MaxCodeObjVer)
         D.Diag(diag::err_drv_invalid_int_value)
             << CodeObjArg->getAsString(Args) << CodeObjArg->getValue();
-
-      // COV6 is only supported by LLVM at the time of writing this, and it's
-      // expected to take some time before all ROCm components fully
-      // support it. In the meantime, make sure users are aware of this.
-      if (CodeObjVer == 6)
-        D.Diag(diag::warn_drv_amdgpu_cov6);
     }
   }
 }
@@ -3176,4 +3170,24 @@ bool tools::shouldEnableVectorizerAtOLevel(const ArgList &Args, bool isSlpVec) {
   }
 
   return false;
+}
+
+void tools::handleVectorizeLoopsArgs(const ArgList &Args,
+                                     ArgStringList &CmdArgs) {
+  bool EnableVec = shouldEnableVectorizerAtOLevel(Args, false);
+  OptSpecifier vectorizeAliasOption =
+      EnableVec ? options::OPT_O_Group : options::OPT_fvectorize;
+  if (Args.hasFlag(options::OPT_fvectorize, vectorizeAliasOption,
+                   options::OPT_fno_vectorize, EnableVec))
+    CmdArgs.push_back("-vectorize-loops");
+}
+
+void tools::handleVectorizeSLPArgs(const ArgList &Args,
+                                   ArgStringList &CmdArgs) {
+  bool EnableSLPVec = shouldEnableVectorizerAtOLevel(Args, true);
+  OptSpecifier SLPVectAliasOption =
+      EnableSLPVec ? options::OPT_O_Group : options::OPT_fslp_vectorize;
+  if (Args.hasFlag(options::OPT_fslp_vectorize, SLPVectAliasOption,
+                   options::OPT_fno_slp_vectorize, EnableSLPVec))
+    CmdArgs.push_back("-vectorize-slp");
 }

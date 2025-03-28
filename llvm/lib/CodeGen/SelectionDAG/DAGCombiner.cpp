@@ -13940,14 +13940,22 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
     return DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, SDLoc(N), VT,
                        N0.getOperand(0));
 
-  // fold (sext (sext_inreg x)) -> (sext (trunc x))
   if (N0.getOpcode() == ISD::SIGN_EXTEND_INREG) {
     SDValue N00 = N0.getOperand(0);
     EVT ExtVT = cast<VTSDNode>(N0->getOperand(1))->getVT();
-    if ((N00.getOpcode() == ISD::TRUNCATE || TLI.isTruncateFree(N00, ExtVT)) &&
-        (!LegalTypes || TLI.isTypeLegal(ExtVT))) {
-      SDValue T = DAG.getNode(ISD::TRUNCATE, DL, ExtVT, N00);
-      return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, T);
+    if (N00.getOpcode() == ISD::TRUNCATE || TLI.isTruncateFree(N00, ExtVT)) {
+      // fold (sext (sext_inreg x)) -> (sext (trunc x))
+      if ((!LegalTypes || TLI.isTypeLegal(ExtVT))) {
+        SDValue T = DAG.getNode(ISD::TRUNCATE, DL, ExtVT, N00);
+        return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, T);
+      }
+
+      // If the trunc wasn't legal, try to fold to (sext_inreg (anyext x))
+      if ((!LegalTypes || TLI.isTypeLegal(VT)) && N0.hasOneUse()) {
+        SDValue ExtSrc = DAG.getAnyExtOrTrunc(N00, DL, VT);
+        return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, ExtSrc,
+                           N0->getOperand(1));
+      }
     }
   }
 

@@ -979,10 +979,10 @@ MCSection *TargetLoweringObjectFileELF::getUniqueSectionForFunction(
     return selectExplicitSectionGlobal(
         &F, Kind, TM, getContext(), getMangler(), NextUniqueID,
         Used.count(&F), /* ForceUnique = */true);
-  else
-    return selectELFSectionForGlobal(
-        getContext(), &F, Kind, getMangler(), TM, Used.count(&F),
-        /*EmitUniqueSection=*/true, Flags, &NextUniqueID);
+
+  return selectELFSectionForGlobal(
+      getContext(), &F, Kind, getMangler(), TM, Used.count(&F),
+      /*EmitUniqueSection=*/true, Flags, &NextUniqueID);
 }
 
 MCSection *TargetLoweringObjectFileELF::getSectionForJumpTable(

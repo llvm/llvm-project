@@ -2870,8 +2870,7 @@ InlineResult CallAnalyzer::analyze() {
 
     // If we're unable to select a particular successor, just count all of
     // them.
-    for (BasicBlock *Succ : successors(BB))
-      BBWorklist.insert(Succ);
+    BBWorklist.insert_range(successors(BB));
 
     onBlockAnalyzed(BB);
   }

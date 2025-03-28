@@ -877,7 +877,7 @@ def Wa_COMMA : CommaJoined<["-"], "Wa,">,
 def warning_suppression_mappings_EQ : Joined<["--"],
   "warning-suppression-mappings=">, Group<Diag_Group>,
   HelpText<"File containing diagnostic suppression mappings. See user manual "
-  "for file format.">, Visibility<[ClangOption, CC1Option]>;
+  "for file format.">, Visibility<[ClangOption, CLOption, CC1Option]>;
 def Wall : Flag<["-"], "Wall">, Group<W_Group>, Flags<[HelpHidden]>,
   Visibility<[ClangOption, CC1Option, FlangOption]>;
 def WCL4 : Flag<["-"], "WCL4">, Group<W_Group>, Flags<[HelpHidden]>,
@@ -1392,6 +1392,8 @@ def fhip_emit_relocatable : Flag<["-"], "fhip-emit-relocatable">,
   HelpText<"Compile HIP source to relocatable">;
 def fno_hip_emit_relocatable : Flag<["-"], "fno-hip-emit-relocatable">,
   HelpText<"Do not override toolchain to compile HIP source to relocatable">;
+def flto_partitions_EQ : Joined<["--"], "flto-partitions=">, Group<hip_Group>,
+  HelpText<"Number of partitions to use for parallel full LTO codegen. Use 1 to disable partitioning.">;
 }
 
 // Clang specific/exclusive options for OpenACC.
@@ -4028,13 +4030,14 @@ def fvectorize : Flag<["-"], "fvectorize">, Group<f_Group>,
 def fno_vectorize : Flag<["-"], "fno-vectorize">, Group<f_Group>;
 def : Flag<["-"], "ftree-vectorize">, Alias<fvectorize>;
 def : Flag<["-"], "fno-tree-vectorize">, Alias<fno_vectorize>;
-}
 
 def fslp_vectorize : Flag<["-"], "fslp-vectorize">, Group<f_Group>,
   HelpText<"Enable the superword-level parallelism vectorization passes">;
 def fno_slp_vectorize : Flag<["-"], "fno-slp-vectorize">, Group<f_Group>;
 def : Flag<["-"], "ftree-slp-vectorize">, Alias<fslp_vectorize>;
 def : Flag<["-"], "fno-tree-slp-vectorize">, Alias<fno_slp_vectorize>;
+}
+
 def Wlarge_by_value_copy_def : Flag<["-"], "Wlarge-by-value-copy">,
   HelpText<"Warn if a function definition returns or accepts an object larger "
            "in bytes than a given value">, Flags<[HelpHidden]>;
@@ -7382,6 +7385,9 @@ def mlink_bitcode_file
 def vectorize_loops : Flag<["-"], "vectorize-loops">,
   HelpText<"Run the Loop vectorization passes">,
   MarshallingInfoFlag<CodeGenOpts<"VectorizeLoop">>;
+def vectorize_slp : Flag<["-"], "vectorize-slp">,
+  HelpText<"Run the SLP vectorization passes">,
+  MarshallingInfoFlag<CodeGenOpts<"VectorizeSLP">>;
 } // let Visibility = [CC1Option, FC1Option]
 
 let Visibility = [CC1Option] in {
@@ -7497,9 +7503,6 @@ defm link_builtin_bitcode_postopt: BoolMOption<"link-builtin-bitcode-postopt",
   PosFlag<SetTrue, [], [ClangOption], "Link builtin bitcodes after the "
   "optimization pipeline">,
   NegFlag<SetFalse, [], [ClangOption]>>;
-def vectorize_slp : Flag<["-"], "vectorize-slp">,
-  HelpText<"Run the SLP vectorization passes">,
-  MarshallingInfoFlag<CodeGenOpts<"VectorizeSLP">>;
 def linker_option : Joined<["--"], "linker-option=">,
   HelpText<"Add linker option">,
   MarshallingInfoStringVector<CodeGenOpts<"LinkerOptions">>;

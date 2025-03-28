@@ -400,13 +400,13 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     RegOp Reg;
     ImmOp Imm;
     FPImmOp FPImm;
-    struct SysRegOp SysReg;
-    struct VTypeOp VType;
-    struct FRMOp FRM;
-    struct FenceOp Fence;
-    struct RlistOp Rlist;
-    struct SpimmOp Spimm;
-    struct RegRegOp RegReg;
+    SysRegOp SysReg;
+    VTypeOp VType;
+    FRMOp FRM;
+    FenceOp Fence;
+    RlistOp Rlist;
+    SpimmOp Spimm;
+    RegRegOp RegReg;
   };
 
   RISCVOperand(KindTy K) : Kind(K) {}
@@ -1288,7 +1288,7 @@ public:
   static std::unique_ptr<RISCVOperand>
   createReg(MCRegister Reg, SMLoc S, SMLoc E, bool IsGPRAsFPR = false) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::Register);
-    Op->Reg.RegNum = Reg.id();
+    Op->Reg.RegNum = Reg;
     Op->Reg.IsGPRAsFPR = IsGPRAsFPR;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -1360,8 +1360,8 @@ public:
   static std::unique_ptr<RISCVOperand> createRegReg(MCRegister Reg1,
                                                     MCRegister Reg2, SMLoc S) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::RegReg);
-    Op->RegReg.Reg1 = Reg1.id();
-    Op->RegReg.Reg2 = Reg2.id();
+    Op->RegReg.Reg1 = Reg1;
+    Op->RegReg.Reg2 = Reg2;
     Op->StartLoc = S;
     Op->EndLoc = S;
     return Op;
@@ -2235,8 +2235,8 @@ ParseStatus RISCVAsmParser::parseOperandWithSpecifier(OperandVector &Operands) {
   SMLoc S = getLoc();
   SMLoc E;
 
-  if (!parseOptionalToken(AsmToken::Percent))
-    return Error(getLoc(), "expected '%' relocation specifier");
+  if (parseToken(AsmToken::Percent, "expected '%' relocation specifier"))
+    return ParseStatus::Failure;
   const MCExpr *Expr = nullptr;
   bool Failed = parseExprWithSpecifier(Expr, E);
   if (!Failed)
@@ -3222,6 +3222,26 @@ bool RISCVAsmParser::parseDirectiveOption() {
     return false;
   }
 
+  if (Option == "exact") {
+    if (Parser.parseEOL())
+      return true;
+
+    getTargetStreamer().emitDirectiveOptionExact();
+    setFeatureBits(RISCV::FeatureExactAssembly, "exact-asm");
+    clearFeatureBits(RISCV::FeatureRelax, "relax");
+    return false;
+  }
+
+  if (Option == "noexact") {
+    if (Parser.parseEOL())
+      return true;
+
+    getTargetStreamer().emitDirectiveOptionNoExact();
+    clearFeatureBits(RISCV::FeatureExactAssembly, "exact-asm");
+    setFeatureBits(RISCV::FeatureRelax, "relax");
+    return false;
+  }
+
   if (Option == "rvc") {
     if (Parser.parseEOL())
       return true;
@@ -3278,9 +3298,10 @@ bool RISCVAsmParser::parseDirectiveOption() {
   }
 
   // Unknown option.
-  Warning(Parser.getTok().getLoc(), "unknown option, expected 'push', 'pop', "
-                                    "'rvc', 'norvc', 'arch', 'relax' or "
-                                    "'norelax'");
+  Warning(Parser.getTok().getLoc(),
+          "unknown option, expected 'push', 'pop', "
+          "'rvc', 'norvc', 'arch', 'relax', 'norelax', "
+          "'exact', or 'noexact'");
   Parser.eatToEndOfStatement();
   return false;
 }
@@ -3490,10 +3511,13 @@ bool RISCVAsmParser::parseDirectiveVariantCC() {
 
 void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
   MCInst CInst;
-  bool Res = RISCVRVC::compress(CInst, Inst, getSTI());
+  bool Res = false;
+  const MCSubtargetInfo &STI = getSTI();
+  if (!STI.hasFeature(RISCV::FeatureExactAssembly))
+    Res = RISCVRVC::compress(CInst, Inst, STI);
   if (Res)
     ++RISCVNumInstrsCompressed;
-  S.emitInstruction((Res ? CInst : Inst), getSTI());
+  S.emitInstruction((Res ? CInst : Inst), STI);
 }
 
 void RISCVAsmParser::emitLoadImm(MCRegister DestReg, int64_t Value,

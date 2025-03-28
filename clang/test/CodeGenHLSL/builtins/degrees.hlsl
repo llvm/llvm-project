@@ -62,3 +62,20 @@ float3 test_degrees_float3(float3 p0) { return degrees(p0); }
 // CHECK: %hlsl.degrees = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.[[TARGET]].degrees.v4f32
 // CHECK: ret <4 x float> %hlsl.degrees
 float4 test_degrees_float4(float4 p0) { return degrees(p0); }
+
+// CHECK: define [[FNATTRS]] float @
+// CHECK: %hlsl.degrees = call reassoc nnan ninf nsz arcp afn float @llvm.[[TARGET]].degrees.f32(
+// CHECK: ret float %hlsl.degrees
+float test_degrees_double(double p0) { return degrees(p0); }
+// CHECK: define [[FNATTRS]] <2 x float> @
+// CHECK: %hlsl.degrees = call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.[[TARGET]].degrees.v2f32
+// CHECK: ret <2 x float> %hlsl.degrees
+float2 test_degrees_double2(double2 p0) { return degrees(p0); }
+// CHECK: define [[FNATTRS]] <3 x float> @
+// CHECK: %hlsl.degrees = call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.[[TARGET]].degrees.v3f32
+// CHECK: ret <3 x float> %hlsl.degrees
+float3 test_degrees_double3(double3 p0) { return degrees(p0); }
+// CHECK: define [[FNATTRS]] <4 x float> @
+// CHECK: %hlsl.degrees = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.[[TARGET]].degrees.v4f32
+// CHECK: ret <4 x float> %hlsl.degrees
+float4 test_degrees_double4(double4 p0) { return degrees(p0); }

@@ -1343,17 +1343,41 @@ INTERCEPTOR(int, inotify_rm_watch, int fd, int wd) {
   __rtsan_notify_intercepted_call("inotify_rm_watch");
   return REAL(inotify_rm_watch)(fd, wd);
 }
+
+INTERCEPTOR(int, timerfd_create, int clockid, int flags) {
+  __rtsan_notify_intercepted_call("timerfd_create");
+  return REAL(timerfd_create)(clockid, flags);
+}
+
+INTERCEPTOR(int, timerfd_settime, int fd, int flags, const itimerspec *newval,
+            struct itimerspec *oldval) {
+  __rtsan_notify_intercepted_call("timerfd_settime");
+  return REAL(timerfd_settime)(fd, flags, newval, oldval);
+}
+
+INTERCEPTOR(int, timerfd_gettime, int fd, struct itimerspec *val) {
+  __rtsan_notify_intercepted_call("timerfd_gettime");
+  return REAL(timerfd_gettime)(fd, val);
+}
 #define RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT INTERCEPT_FUNCTION(inotify_init)
 #define RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT1 INTERCEPT_FUNCTION(inotify_init1)
 #define RTSAN_MAYBE_INTERCEPT_INOTIFY_ADD_WATCH                                \
   INTERCEPT_FUNCTION(inotify_add_watch)
 #define RTSAN_MAYBE_INTERCEPT_INOTIFY_RM_WATCH                                 \
   INTERCEPT_FUNCTION(inotify_rm_watch)
+#define RTSAN_MAYBE_INTERCEPT_TIMERFD_CREATE INTERCEPT_FUNCTION(timerfd_create)
+#define RTSAN_MAYBE_INTERCEPT_TIMERFD_SETTIME                                  \
+  INTERCEPT_FUNCTION(timerfd_settime)
+#define RTSAN_MAYBE_INTERCEPT_TIMERFD_GETTIME                                  \
+  INTERCEPT_FUNCTION(timerfd_gettime)
 #else
 #define RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT
 #define RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT1
 #define RTSAN_MAYBE_INTERCEPT_INOTIFY_ADD_WATCH
 #define RTSAN_MAYBE_INTERCEPT_INOTIFY_RM_WATCH
+#define RTSAN_MAYBE_INTERCEPT_TIMERFD_CREATE
+#define RTSAN_MAYBE_INTERCEPT_TIMERFD_SETTIME
+#define RTSAN_MAYBE_INTERCEPT_TIMERFD_GETTIME
 #endif
 
 INTERCEPTOR(int, pipe, int pipefd[2]) {
@@ -1616,6 +1640,10 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT1;
   RTSAN_MAYBE_INTERCEPT_INOTIFY_ADD_WATCH;
   RTSAN_MAYBE_INTERCEPT_INOTIFY_RM_WATCH;
+
+  RTSAN_MAYBE_INTERCEPT_TIMERFD_CREATE;
+  RTSAN_MAYBE_INTERCEPT_TIMERFD_SETTIME;
+  RTSAN_MAYBE_INTERCEPT_TIMERFD_GETTIME;
 
   INTERCEPT_FUNCTION(pipe);
   INTERCEPT_FUNCTION(mkfifo);

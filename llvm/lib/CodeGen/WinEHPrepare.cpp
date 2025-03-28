@@ -448,11 +448,12 @@ static void calculateCXXStateNumbers(WinEHFuncInfo &FuncInfo,
 
     // It's possible for a cleanup to be visited twice: it might have multiple
     // cleanupret instructions.
-    if (FuncInfo.EHPadStateMap.count(CleanupPad))
+    auto [It, Inserted] = FuncInfo.EHPadStateMap.try_emplace(CleanupPad);
+    if (!Inserted)
       return;
 
     int CleanupState = addUnwindMapEntry(FuncInfo, ParentState, BB);
-    FuncInfo.EHPadStateMap[CleanupPad] = CleanupState;
+    It->second = CleanupState;
     LLVM_DEBUG(dbgs() << "Assigning state #" << CleanupState << " to BB "
                       << BB->getName() << '\n');
     for (const BasicBlock *PredBlock : predecessors(BB)) {
@@ -554,11 +555,12 @@ static void calculateSEHStateNumbers(WinEHFuncInfo &FuncInfo,
 
     // It's possible for a cleanup to be visited twice: it might have multiple
     // cleanupret instructions.
-    if (FuncInfo.EHPadStateMap.count(CleanupPad))
+    auto [It, Inserted] = FuncInfo.EHPadStateMap.try_emplace(CleanupPad);
+    if (!Inserted)
       return;
 
     int CleanupState = addSEHFinally(FuncInfo, ParentState, BB);
-    FuncInfo.EHPadStateMap[CleanupPad] = CleanupState;
+    It->second = CleanupState;
     LLVM_DEBUG(dbgs() << "Assigning state #" << CleanupState << " to BB "
                       << BB->getName() << '\n');
     for (const BasicBlock *PredBlock : predecessors(BB))
