@@ -4641,12 +4641,24 @@ static bool isAlternating(const std::array<std::pair<int, int>, 2> &SrcInfo,
   return true;
 }
 
+/// Given a shuffle which can be represented as a pair of two slides,
+/// see if it is a zipeven idiom.  Zipeven is:
+/// vs2: a0 a1 a2 a3
+/// vs1: b0 b1 b2 b3
+/// vd:  a0 b0 a2 b2
 static bool isZipEven(const std::array<std::pair<int, int>, 2> &SrcInfo,
                       const ArrayRef<int> Mask) {
   return SrcInfo[0].second == 0 && SrcInfo[1].second == 1 &&
          isAlternating(SrcInfo, Mask, true);
 }
 
+/// Given a shuffle which can be represented as a pair of two slides,
+/// see if it is a zipodd idiom.  Zipodd is:
+/// vs2: a0 a1 a2 a3
+/// vs1: b0 b1 b2 b3
+/// vd:  a1 b1 a3 b3
+/// Note that the operand order is swapped due to the way we canonicalize
+/// the slides, so SrCInfo[0] is vs1, and SrcInfo[1] is vs2.
 static bool isZipOdd(const std::array<std::pair<int, int>, 2> &SrcInfo,
                      const ArrayRef<int> Mask) {
   return SrcInfo[0].second == 0 && SrcInfo[1].second == -1 &&
