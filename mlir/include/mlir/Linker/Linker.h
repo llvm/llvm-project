@@ -90,7 +90,7 @@ private:
   /// The options controlling the linker behavior
   LinkerOptions options;
 
-  /// The composti module that will contain the linked result
+  /// The composite module that will contain the linked result
   OwningOpRef<ModuleOp> composite;
 
   /// Modules registry used if `keepModulesAlive` is true
