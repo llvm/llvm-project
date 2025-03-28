@@ -878,6 +878,15 @@ public:
     return nullptr;
   }
 
+  // FIXME: Move to Info.
+  Value *DeactivationSymbol = nullptr;
+  Value *getDeactivationSymbol() const {
+    return DeactivationSymbol;
+  }
+  void setDeactivationSymbol(MachineFunction &MF, Value *DeactivationSymbol) {
+    this->DeactivationSymbol = DeactivationSymbol;
+  }
+
   /// Helper to extract a CFI type hash if one has been added.
   uint32_t getCFIType() const {
     if (!Info)

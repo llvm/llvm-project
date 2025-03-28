@@ -2896,6 +2896,18 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     OutStreamer->emitLabel(LOHLabel);
   }
 
+  const MCExpr *DeactDotExpr = nullptr;
+  if (MI->getDeactivationSymbol()) {
+    if (isa<GlobalAlias>(MI->getDeactivationSymbol())) {
+      // Just emit the nop directly.
+      EmitToStreamer(MCInstBuilder(AArch64::HINT).addImm(0));
+      return;
+    }
+    MCSymbol *Dot = OutContext.createTempSymbol();
+    OutStreamer->emitLabel(Dot);
+    DeactDotExpr = MCSymbolRefExpr::create(Dot, OutContext);
+  }
+
   AArch64TargetStreamer *TS =
     static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
   // Do any manual lowerings.
@@ -3437,6 +3449,17 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   MCInst TmpInst;
   MCInstLowering.Lower(MI, TmpInst);
   EmitToStreamer(*OutStreamer, TmpInst);
+
+  // Emit deactivation symbol relocation *after* any other relocations
+  // required by the instruction. Otherwise the other relocation may
+  // corrupt the NOP placed by the deactivation symbol relocation.
+  if (DeactDotExpr) {
+    MCSymbol *DS =
+        OutContext.getOrCreateSymbol(MI->getDeactivationSymbol()->getName());
+    const MCExpr *DSExpr = MCSymbolRefExpr::create(DS, OutContext);
+    OutStreamer->emitRelocDirective(*DeactDotExpr, "R_AARCH64_INST32", DSExpr,
+                                    SMLoc(), *TM.getMCSubtargetInfo());
+  }
 }
 
 void AArch64AsmPrinter::recordIfImportCall(
