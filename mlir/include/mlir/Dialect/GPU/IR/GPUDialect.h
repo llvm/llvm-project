@@ -128,7 +128,8 @@ struct MMAMatrixStorageType : public TypeStorage {
 ///           : index}: !gpu.mma_matrix<16x16xf32, "COp">, memref<16x16xf32>
 // TODO: consider moving this to ODS.
 class MMAMatrixType
-    : public Type::TypeBase<MMAMatrixType, Type, MMAMatrixStorageType> {
+    : public Type::TypeBase<MMAMatrixType, Type, MMAMatrixStorageType,
+                            MemRefElementTypeInterface::Trait> {
 public:
   using Base::Base;
 
@@ -162,6 +163,9 @@ public:
 
   /// Get elementType of a single element.
   Type getElementType() const;
+
+  /// Implementation for MemRefElementTypeInterface.
+  unsigned getAnalysisSizeInBytes() const;
 
   /// The general form of operation this type supports is given by the equation
   /// C += A*B. This function returns which operand in the given equation is
