@@ -411,9 +411,7 @@ define i1 @trunc_equality_either(i16 %x, i16 %y) {
 
 define i1 @trunc_equality_bool(i8 %a, i8 %b) {
 ; CHECK-LABEL: @trunc_equality_bool(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i8 [[TMP1]] to i1
-; CHECK-NEXT:    [[EQ:%.*]] = xor i1 [[TMP2]], true
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i8 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[EQ]]
 ;
   %at = trunc nuw i8 %a to i1
