@@ -4514,11 +4514,9 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
 }
 
 static bool hasReplicatorRegion(VPlan &Plan) {
-  for (auto *VPRB : VPBlockUtils::blocksOnly<VPRegionBlock>(
-           vp_depth_first_deep(Plan.getEntry())))
-    if (VPRB->isReplicator())
-      return true;
-  return false;
+  return any_of(VPBlockUtils::blocksOnly<VPRegionBlock>(
+                    vp_depth_first_deep(Plan.getEntry())),
+                [](auto *VPRB) { return VPRB->isReplicator(); });
 }
 
 #ifndef NDEBUG
