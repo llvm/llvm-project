@@ -71,6 +71,7 @@ Examples:
 
 Options
 -------
+
 .. option:: StrictMode
 
    Default value: 0.

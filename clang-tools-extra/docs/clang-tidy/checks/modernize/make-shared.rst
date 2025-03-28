@@ -53,4 +53,4 @@ Options
 
    If set to non-zero, the check does not suggest edits that will transform
    default initialization into value initialization, as this can cause
-   performance regressions. Default is `1`.
+   performance regressions. Default is `true`.
