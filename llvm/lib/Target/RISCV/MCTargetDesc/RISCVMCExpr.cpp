@@ -169,6 +169,7 @@ bool RISCVMCExpr::evaluateAsConstant(int64_t &Res) const {
   MCValue Value;
   if (specifier != VK_LO && specifier != VK_HI)
     return false;
+  return false;
 
   if (!getSubExpr()->evaluateAsRelocatable(Value, nullptr))
     return false;

@@ -18,8 +18,8 @@ flw f1, +4(ra)
 # CHECK-ASM-AND-OBJ: flw ft2, -2048(a3)
 # CHECK-ASM: encoding: [0x07,0xa1,0x06,0x80]
 flw f2, -2048(x13)
-# CHECK-ASM-AND-OBJ: flw ft3, -2048(s1)
-# CHECK-ASM: encoding: [0x87,0xa1,0x04,0x80]
+# CHECK-ASM: flw ft0, %lo(2048)(s6)  # encoding: [0x27'A',0x20'A',0x8b'A',A]
+# CHECK-OBJ: flw ft3, -2048(s1)
 flw f3, %lo(2048)(s1)
 # CHECK-ASM-AND-OBJ: flw ft4, 2047(s2)
 # CHECK-ASM: encoding: [0x07,0x22,0xf9,0x7f]
