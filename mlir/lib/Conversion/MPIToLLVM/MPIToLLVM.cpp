@@ -83,8 +83,16 @@ public:
   ModuleOp &getModuleOp() { return moduleOp; }
 
   /// Gets or creates MPI_COMM_WORLD as a Value.
+  /// Different MPI implementations have different types for communicator.
+  /// Using i64 as a portable, intermediate type.
+  /// Appropriate cast needs to take place before calling MPI functions.
   virtual Value getCommWorld(const Location loc,
                              ConversionPatternRewriter &rewriter) = 0;
+
+  /// Type converter provides i64 type for communicator type.
+  /// Converts to native type, which  might be ptr or int or whatever.
+  virtual Value castComm(const Location loc,
+                         ConversionPatternRewriter &rewriter, Value comm) = 0;
 
   /// Get the MPI_STATUS_IGNORE value (typically a pointer type).
   virtual intptr_t getStatusIgnore() = 0;
@@ -139,8 +147,13 @@ public:
   Value getCommWorld(const Location loc,
                      ConversionPatternRewriter &rewriter) override {
     static constexpr int MPI_COMM_WORLD = 0x44000000;
-    return rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI32Type(),
+    return rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(),
                                              MPI_COMM_WORLD);
+  }
+
+  Value castComm(const Location loc, ConversionPatternRewriter &rewriter,
+                 Value comm) override {
+    return rewriter.create<LLVM::TruncOp>(loc, rewriter.getI32Type(), comm);
   }
 
   intptr_t getStatusIgnore() override { return 1; }
@@ -256,9 +269,16 @@ public:
     getOrDefineExternalStruct(loc, rewriter, name, commStructT);
 
     // get address of symbol
-    return rewriter.create<LLVM::AddressOfOp>(
+    auto comm = rewriter.create<LLVM::AddressOfOp>(
         loc, LLVM::LLVMPointerType::get(context),
         SymbolRefAttr::get(context, name));
+    return rewriter.create<LLVM::PtrToIntOp>(loc, rewriter.getI64Type(), comm);
+  }
+
+  Value castComm(const Location loc, ConversionPatternRewriter &rewriter,
+                 Value comm) override {
+    return rewriter.create<LLVM::IntToPtrOp>(
+        loc, LLVM::LLVMPointerType::get(rewriter.getContext()), comm);
   }
 
   intptr_t getStatusIgnore() override { return 0; }
@@ -483,7 +503,7 @@ struct CommRankOpLowering : public ConvertOpToLLVMPattern<mpi::CommRankOp> {
 
     auto mpiTraits = MPIImplTraits::get(moduleOp);
     // get communicator
-    Value comm = adaptor.getComm();
+    Value comm = mpiTraits->castComm(loc, rewriter, adaptor.getComm());
 
     // LLVM Function type representing `i32 MPI_Comm_rank(ptr, ptr)`
     auto rankFuncType =
@@ -543,7 +563,7 @@ struct SendOpLowering : public ConvertOpToLLVMPattern<mpi::SendOp> {
         getRawPtrAndSize(loc, rewriter, adaptor.getRef(), elemType);
     auto mpiTraits = MPIImplTraits::get(moduleOp);
     Value dataType = mpiTraits->getDataType(loc, rewriter, elemType);
-    Value comm = adaptor.getComm();
+    Value comm = mpiTraits->castComm(loc, rewriter, adaptor.getComm());
 
     // LLVM Function type representing `i32 MPI_send(data, count, datatype, dst,
     // tag, comm)`
@@ -595,7 +615,7 @@ struct RecvOpLowering : public ConvertOpToLLVMPattern<mpi::RecvOp> {
         getRawPtrAndSize(loc, rewriter, adaptor.getRef(), elemType);
     auto mpiTraits = MPIImplTraits::get(moduleOp);
     Value dataType = mpiTraits->getDataType(loc, rewriter, elemType);
-    Value comm = adaptor.getComm();
+    Value comm = mpiTraits->castComm(loc, rewriter, adaptor.getComm());
     Value statusIgnore = rewriter.create<LLVM::ConstantOp>(
         loc, i64, mpiTraits->getStatusIgnore());
     statusIgnore =
@@ -696,10 +716,12 @@ struct FuncToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
 
 void mpi::populateMPIToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                               RewritePatternSet &patterns) {
-  // FIXME: Need tldi info to get mpi implementation to know the Communicator
-  //        type
-  Type commType = IntegerType::get(&converter.getContext(), 32);
-  converter.addConversion([&](mpi::CommType type) { return commType; });
+  // Using i64 as a portable, intermediate type for !mpi.comm.
+  // It would be nicer to somehow get the right type directly, but TLDI is not
+  // available here.
+  converter.addConversion([](mpi::CommType type) {
+    return IntegerType::get(type.getContext(), 64);
+  });
   patterns.add<CommRankOpLowering, CommWorldOpLowering, FinalizeOpLowering,
                InitOpLowering, SendOpLowering, RecvOpLowering,
                AllReduceOpLowering>(converter);
