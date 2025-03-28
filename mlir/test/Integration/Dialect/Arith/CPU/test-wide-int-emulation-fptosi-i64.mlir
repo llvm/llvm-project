@@ -35,12 +35,11 @@ func.func @entry() {
 
   %cstpow20 = arith.constant 1048576.0 : f64
   %cstnpow20 = arith.constant -1048576.0 : f64
-  
+
   %cst_i32_max = arith.constant 4294967295.0 : f64
   %cst_i32_min = arith.constant -4294967296.0 : f64
   %cst_i32_overflow = arith.constant 4294967296.0 : f64
   %cst_i32_noverflow = arith.constant -4294967297.0 : f64
-
 
   %cstpow40 = arith.constant 1099511627776.0 : f64
   %cstnpow40 = arith.constant -1099511627776.0 : f64
@@ -49,7 +48,7 @@ func.func @entry() {
 
   %cst_max = arith.constant 9007199254740992.0
   %cst_min = arith.constant -9007199254740992.0
-  
+
   // CHECK:         0
   func.call @check_fptosi(%cst0) : (f64) -> ()
   // CHECK-NEXT:    0
