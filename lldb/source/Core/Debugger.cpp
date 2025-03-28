@@ -2076,7 +2076,8 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
               }
             }
           } else if (broadcaster == &m_broadcaster) {
-            if (event_type & lldb::eBroadcastBitProgress)
+            if (event_type & lldb::eBroadcastBitProgress ||
+                event_type & lldb::eBroadcastBitExternalProgress)
               HandleProgressEvent(event_sp);
             else if (event_type & lldb::eBroadcastBitWarning)
               HandleDiagnosticEvent(event_sp);
@@ -2178,8 +2179,6 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
       m_progress_reports.push_back(progress_report);
     }
   }
-
-  RedrawStatusline();
 }
 
 std::optional<Debugger::ProgressReport>
