@@ -173,8 +173,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   }
 
   if (F.hasFnAttribute("amdgpu-cluster-dims")) {
-    SmallVector<unsigned, 3> V =
-        AMDGPU::getIntegerVecAttribute(F, "amdgpu-cluster-dims", 3);
+    SmallVector<unsigned, 3> V = AMDGPU::getIntegerVecAttribute(
+        F, "amdgpu-cluster-dims", /*Size=*/3, /*DefaultVal=*/0);
     if (any_of(V, [](unsigned D) { return D == 0; })) {
       LLVMContext &Ctx = F.getContext();
       Ctx.emitError("invalid amdgpu-cluster-dims in " + F.getName());

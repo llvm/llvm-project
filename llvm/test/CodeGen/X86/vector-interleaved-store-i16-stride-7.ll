@@ -2079,7 +2079,7 @@ define void @store_i16_stride7_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vpsrld $16, %xmm8, %xmm10
 ; AVX-NEXT:    vpunpckhdq {{.*#+}} xmm10 = xmm3[2],xmm10[2],xmm3[3],xmm10[3]
 ; AVX-NEXT:    vpunpckhwd {{.*#+}} xmm12 = xmm8[4],xmm3[4],xmm8[5],xmm3[5],xmm8[6],xmm3[6],xmm8[7],xmm3[7]
-; AVX-NEXT:    vpshufd {{.*#+}} xmm12 = xmm12[1,1,2,3]
+; AVX-NEXT:    vpshuflw {{.*#+}} xmm12 = xmm12[2,2,2,2,4,5,6,7]
 ; AVX-NEXT:    vpshufhw {{.*#+}} xmm12 = xmm12[0,1,2,3,4,5,5,4]
 ; AVX-NEXT:    vinsertf128 $1, %xmm10, %ymm12, %ymm10
 ; AVX-NEXT:    vandnps %ymm10, %ymm6, %ymm6
