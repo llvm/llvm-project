@@ -123,21 +123,13 @@ bool RootSignatureParser::parseDescriptorTableClause() {
   return false;
 }
 
-// Returns true when given token is one of the expected kinds
-static bool IsExpectedToken(TokenKind Kind, ArrayRef<TokenKind> AnyExpected) {
-  for (auto Expected : AnyExpected)
-    if (Kind == Expected)
-      return true;
-  return false;
-}
-
 bool RootSignatureParser::peekExpectedToken(TokenKind Expected) {
   return peekExpectedToken(ArrayRef{Expected});
 }
 
 bool RootSignatureParser::peekExpectedToken(ArrayRef<TokenKind> AnyExpected) {
   RootSignatureToken Result = Lexer.PeekNextToken();
-  return IsExpectedToken(Result.Kind, AnyExpected);
+  return llvm::is_contained(AnyExpected, Result.Kind);
 }
 
 bool RootSignatureParser::consumeExpectedToken(TokenKind Expected,
