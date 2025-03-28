@@ -7976,6 +7976,8 @@ void CodeGenModule::requireVectorDestructorDefinition(const CXXRecordDecl *RD) {
     auto *NewFn = llvm::Function::Create(
         cast<llvm::FunctionType>(VDEntry->getValueType()),
         llvm::Function::ExternalLinkage, VDName, &getModule());
+    SetFunctionAttributes(VectorDtorGD, NewFn, /*IsIncompleteFunction*/ false,
+                          /*IsThunk*/ false);
     NewFn->takeName(VDEntry);
     VDEntry->replaceAllUsesWith(NewFn);
     VDEntry->eraseFromParent();
