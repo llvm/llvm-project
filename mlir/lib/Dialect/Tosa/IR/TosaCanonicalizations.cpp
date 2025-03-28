@@ -1054,16 +1054,38 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
     return SplatElementsAttr::get(outputTy, operand.getSplatValue<Attribute>());
   }
 
-  if (inputTy.hasStaticShape() && outputTy.hasStaticShape() &&
-      outputTy.getNumElements() == 1) {
-    DenseElementsAttr startElems;
-    if (!matchPattern(getStart(), m_Constant(&startElems)))
-      return {};
+  if (!inputTy.hasStaticShape() || !outputTy.hasStaticShape())
+    return {};
 
-    llvm::SmallVector<uint64_t> indices =
-        llvm::to_vector(startElems.getValues<uint64_t>());
+  DenseElementsAttr startElems;
+  if (!matchPattern(getStart(), m_Constant(&startElems)))
+    return {};
+
+  auto indices = llvm::to_vector(startElems.getValues<uint64_t>());
+
+  if (outputTy.getNumElements() == 1) {
     auto value = operand.getValues<Attribute>()[indices];
     return SplatElementsAttr::get(outputTy, value);
+  }
+
+  DenseElementsAttr size_elems;
+  if (!matchPattern(getSize(), m_Constant(&size_elems)))
+    return {};
+
+  const auto sizes = llvm::to_vector(size_elems.getValues<uint64_t>());
+
+  // Fold slice when all operands are constant and the output is 'small'
+  // A 'small' output is currently defined as 1D and <= 6 elements
+  // (tosa_level_8k MAX_RANK)
+  if (inputTy.getRank() == 1 && outputTy.getRank() == 1 &&
+      outputTy.getNumElements() <= 6 && indices.size() == 1 &&
+      sizes.size() == 1) {
+    const auto begin = operand.value_begin<Attribute>();
+    const uint64_t offset = indices[0];
+    const uint64_t size = sizes[0];
+    const SmallVector<Attribute> slicedValues(begin + offset,
+                                              begin + offset + size);
+    return DenseElementsAttr::get(outputTy, slicedValues);
   }
 
   return {};
