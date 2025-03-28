@@ -3270,16 +3270,13 @@ StringRef TypeWithKeyword::getKeywordName(ElaboratedTypeKeyword Keyword) {
 }
 
 DependentTemplateSpecializationType::DependentTemplateSpecializationType(
-    ElaboratedTypeKeyword Keyword, NestedNameSpecifier *NNS,
-    const IdentifierInfo *Name, ArrayRef<TemplateArgument> Args, QualType Canon)
+    ElaboratedTypeKeyword Keyword, const DependentTemplateStorage &Name,
+    ArrayRef<TemplateArgument> Args, QualType Canon)
     : TypeWithKeyword(Keyword, DependentTemplateSpecialization, Canon,
-                      TypeDependence::DependentInstantiation |
-                          (NNS ? toTypeDependence(NNS->getDependence())
-                               : TypeDependence::None)),
-      NNS(NNS), Name(Name) {
+
+                      toTypeDependence(Name.getDependence())),
+      Name(Name) {
   DependentTemplateSpecializationTypeBits.NumArgs = Args.size();
-  assert((!NNS || NNS->isDependent()) &&
-         "DependentTemplateSpecializatonType requires dependent qualifier");
   auto *ArgBuffer = const_cast<TemplateArgument *>(template_arguments().data());
   for (const TemplateArgument &Arg : Args) {
     addDependence(toTypeDependence(Arg.getDependence() &
@@ -3289,16 +3286,12 @@ DependentTemplateSpecializationType::DependentTemplateSpecializationType(
   }
 }
 
-void
-DependentTemplateSpecializationType::Profile(llvm::FoldingSetNodeID &ID,
-                                             const ASTContext &Context,
-                                             ElaboratedTypeKeyword Keyword,
-                                             NestedNameSpecifier *Qualifier,
-                                             const IdentifierInfo *Name,
-                                             ArrayRef<TemplateArgument> Args) {
+void DependentTemplateSpecializationType::Profile(
+    llvm::FoldingSetNodeID &ID, const ASTContext &Context,
+    ElaboratedTypeKeyword Keyword, const DependentTemplateStorage &Name,
+    ArrayRef<TemplateArgument> Args) {
   ID.AddInteger(llvm::to_underlying(Keyword));
-  ID.AddPointer(Qualifier);
-  ID.AddPointer(Name);
+  Name.Profile(ID);
   for (const TemplateArgument &Arg : Args)
     Arg.Profile(ID, Context);
 }
