@@ -34,7 +34,7 @@ typedef const struct __attribute__((objc_bridge(NSString))) __CFString * CFStrin
 
 #ifdef __OBJC__
 @class NSString;
-@interface SystemObject : NSObject {
+@interface SystemObject {
   NSString *ns_string;
   CFStringRef cf_string;
 }
