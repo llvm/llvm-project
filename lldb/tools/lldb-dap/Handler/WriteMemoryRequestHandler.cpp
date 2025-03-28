@@ -101,10 +101,8 @@ void WriteMemoryRequestHandler::operator()(
 
   auto addr_opt = DecodeMemoryReference(memoryReference);
   if (!addr_opt.has_value()) {
-    response["success"] = false;
-    response["message"] =
-        "Malformed memory reference: " + memoryReference.str();
-    dap.SendJSON(llvm::json::Value(std::move(response)));
+    dap.SendErrorResponse(response, "Malformed memory reference: " +
+                                        memoryReference.str());
     return;
   }
 
@@ -114,9 +112,8 @@ void WriteMemoryRequestHandler::operator()(
 
   llvm::StringRef data64 = GetString(arguments, "data").value_or("");
   if (data64.empty()) {
-    response["success"] = false;
-    EmplaceSafeString(response, "message","Data cannot be empty value. Provide valid data");
-    dap.SendJSON(llvm::json::Value(std::move(response)));
+    dap.SendErrorResponse(response,
+                          "Data cannot be empty value. Provide valid data");
     return;
   }
 
@@ -127,10 +124,8 @@ void WriteMemoryRequestHandler::operator()(
   auto decode_error = llvm::decodeBase64(data64, output);
 
   if (decode_error) {
-    response["success"] = false;
-    EmpleceSafeErrorMessage(dap, response, "message",
-                      llvm::toString(std::move(decode_error)).c_str());
-    dap.SendJSON(llvm::json::Value(std::move(response)));
+    dap.SendErrorResponse(response,
+                          llvm::toString(std::move(decode_error)).c_str());
     return;
   }
 
@@ -150,11 +145,9 @@ void WriteMemoryRequestHandler::operator()(
       lldb::SBError error =
           process.GetMemoryRegionInfo(address_offset, region_info);
       if (!error.Success() || !region_info.IsWritable()) {
-        response["success"] = false;
-        EmplaceSafeString(response, "message",
-                          "Memory 0x" + llvm::utohexstr(address_offset) +
-                              " region is not writable");
-        dap.SendJSON(llvm::json::Value(std::move(response)));
+        dap.SendErrorResponse(response, "Memory 0x" +
+                                            llvm::utohexstr(address_offset) +
+                                            " region is not writable");
         return;
       }
     }
@@ -165,9 +158,7 @@ void WriteMemoryRequestHandler::operator()(
   }
 
   if (bytes_written == 0) {
-    response["success"] = false;
-    EmplaceSafeString(response, "message", write_error.GetCString());
-    dap.SendJSON(llvm::json::Value(std::move(response)));
+    dap.SendErrorResponse(response, write_error.GetCString());
     return;
   }
 

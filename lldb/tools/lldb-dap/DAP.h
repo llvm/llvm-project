@@ -397,6 +397,14 @@ struct DAP {
   InstructionBreakpoint *GetInstructionBreakpoint(const lldb::break_id_t bp_id);
 
   InstructionBreakpoint *GetInstructionBPFromStopReason(lldb::SBThread &thread);
+
+  /// Sends an error response in DAP with success=false and an error message.
+  ///
+  /// \param[out] response
+  ///   The response object to update.
+  /// \param[in] message
+  ///   The error message.
+  void SendErrorResponse(llvm::json::Object &response, llvm::StringRef message);
 };
 
 } // namespace lldb_dap
