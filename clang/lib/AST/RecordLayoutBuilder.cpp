@@ -3071,7 +3071,7 @@ void MicrosoftRecordLayoutBuilder::layoutBitField(const FieldDecl *FD) {
     Alignment = std::max(Alignment, Info.Alignment);
     RemainingBitsInField = Context.toBits(Info.Size) - Width;
     ::CheckFieldPadding(Context, IsUnion, Context.toBits(FieldOffset),
-                      UnpaddedFieldOffsetInBits, FD);
+                        UnpaddedFieldOffsetInBits, FD);
   }
   DataSize = Size;
 }
@@ -3102,7 +3102,7 @@ MicrosoftRecordLayoutBuilder::layoutZeroWidthBitField(const FieldDecl *FD) {
     Size = FieldOffset;
     Alignment = std::max(Alignment, Info.Alignment);
     ::CheckFieldPadding(Context, IsUnion, Context.toBits(FieldOffset),
-                      UnpaddedFieldOffsetInBits, FD);
+                        UnpaddedFieldOffsetInBits, FD);
   }
   DataSize = Size;
 }
