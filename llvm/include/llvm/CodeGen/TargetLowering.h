@@ -1651,7 +1651,10 @@ public:
     auto AccI = AccSVT.SimpleTy;
     auto InputI = InputSVT.SimpleTy;
     PartialReduceActionTypes TypePair = std::make_pair(AccI, InputI);
-    return PartialReduceMLAActions.lookup(TypePair);
+    auto It = PartialReduceMLAActions.find(TypePair);
+    if (It != PartialReduceMLAActions.end())
+      return It->second;
+    return Expand;
   }
 
   /// Return true if a PARTIAL_REDUCE_U/SMLA node with the specified types is
