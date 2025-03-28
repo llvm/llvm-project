@@ -18,6 +18,7 @@
 #include "lldb/API/SBType.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/lldb-types.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include <cstdint>
@@ -580,11 +581,11 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit);
 /// \return
 ///     A "runInTerminal" JSON object that follows the specification outlined by
 ///     Microsoft.
-llvm::json::Object
-CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
-                                  llvm::StringRef debug_adapter_path,
-                                  llvm::StringRef comm_file,
-                                  lldb::pid_t debugger_pid);
+llvm::json::Object CreateRunInTerminalReverseRequest(
+    llvm::StringRef program, const std::vector<std::string> &args,
+    const llvm::StringMap<std::string> env, llvm::StringRef cwd,
+    llvm::StringRef debug_adapter_path, llvm::StringRef comm_file,
+    lldb::pid_t debugger_pid);
 
 /// Create a "Terminated" JSON object that contains statistics
 ///

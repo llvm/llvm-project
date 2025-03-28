@@ -69,7 +69,8 @@ protected:
   // runInTerminal if applicable. It doesn't do any of the additional
   // initialization and bookkeeping stuff that is needed for `request_launch`.
   // This way we can reuse the process launching logic for RestartRequest too.
-  lldb::SBError LaunchProcess(const llvm::json::Object &request) const;
+  llvm::Error
+  LaunchProcess(const protocol::LaunchRequestArguments &request) const;
 
   // Check if the step-granularity is `instruction`.
   bool HasInstructionGranularity(const llvm::json::Object &request) const;
@@ -162,9 +163,15 @@ class RequestHandler : public BaseRequestHandler {
     }
 
     dap.Send(response);
+
+    PostRun();
   };
 
   virtual llvm::Expected<Body> Run(const Args &) const = 0;
+
+  /// A hook for a handler to asynchrounsly run an operation after the handler
+  /// is complete.
+  virtual void PostRun() const {};
 };
 
 class AttachRequestHandler : public LegacyRequestHandler {
@@ -254,11 +261,15 @@ public:
   Run(const protocol::InitializeRequestArguments &args) const override;
 };
 
-class LaunchRequestHandler : public LegacyRequestHandler {
+class LaunchRequestHandler
+    : public RequestHandler<protocol::LaunchRequestArguments,
+                            protocol::LaunchResponseBody> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "launch"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::LaunchResponseBody>
+  Run(const protocol::LaunchRequestArguments &arguments) const override;
+  void PostRun() const override;
 };
 
 class RestartRequestHandler : public LegacyRequestHandler {

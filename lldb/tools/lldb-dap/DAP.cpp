@@ -14,6 +14,7 @@
 #include "LLDBUtils.h"
 #include "OutputRedirector.h"
 #include "Protocol/ProtocolBase.h"
+#include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "Transport.h"
 #include "lldb/API/SBBreakpoint.h"
@@ -73,11 +74,8 @@ DAP::DAP(llvm::StringRef path, Log *log, const ReplMode default_repl_mode,
          std::vector<std::string> pre_init_commands, Transport &transport)
     : debug_adapter_path(path), log(log), transport(transport),
       broadcaster("lldb-dap"), exception_breakpoints(),
+      focus_tid(LLDB_INVALID_THREAD_ID), is_attach(false),
       pre_init_commands(std::move(pre_init_commands)),
-      focus_tid(LLDB_INVALID_THREAD_ID), stop_at_entry(false), is_attach(false),
-      enable_auto_variable_summaries(false),
-      enable_synthetic_child_debugging(false),
-      display_extended_backtrace(false),
       restarting_process_id(LLDB_INVALID_PROCESS_ID),
       configuration_done_sent(false), waiting_for_run_in_terminal(false),
       progress_event_reporter(
@@ -505,8 +503,9 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression,
                              bool partial_expression) {
   // Check for the escape hatch prefix.
   if (!expression.empty() &&
-      llvm::StringRef(expression).starts_with(command_escape_prefix)) {
-    expression = expression.substr(command_escape_prefix.size());
+      llvm::StringRef(expression)
+          .starts_with(configuration.commandEscapePrefix)) {
+    expression = expression.substr(configuration.commandEscapePrefix.size());
     return ReplMode::Command;
   }
 
@@ -546,7 +545,7 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression,
           << "Warning: Expression '" << term
           << "' is both an LLDB command and variable. It will be evaluated as "
              "a variable. To evaluate the expression as an LLDB command, use '"
-          << command_escape_prefix << "' as a prefix.\n";
+          << configuration.commandEscapePrefix << "' as a prefix.\n";
     }
 
     // Variables take preference to commands in auto, since commands can always
@@ -593,7 +592,7 @@ DAP::RunLaunchCommands(llvm::ArrayRef<std::string> launch_commands) {
 }
 
 llvm::Error DAP::RunInitCommands() {
-  if (!RunLLDBCommands("Running initCommands:", init_commands))
+  if (!RunLLDBCommands("Running initCommands:", configuration.initCommands))
     return createRunLLDBCommandsErrorMessage("initCommands");
   return llvm::Error::success();
 }
@@ -605,29 +604,31 @@ llvm::Error DAP::RunPreInitCommands() {
 }
 
 llvm::Error DAP::RunPreRunCommands() {
-  if (!RunLLDBCommands("Running preRunCommands:", pre_run_commands))
+  if (!RunLLDBCommands("Running preRunCommands:", configuration.preRunCommands))
     return createRunLLDBCommandsErrorMessage("preRunCommands");
   return llvm::Error::success();
 }
 
 void DAP::RunPostRunCommands() {
-  RunLLDBCommands("Running postRunCommands:", post_run_commands);
+  RunLLDBCommands("Running postRunCommands:", configuration.postRunCommands);
 }
 void DAP::RunStopCommands() {
-  RunLLDBCommands("Running stopCommands:", stop_commands);
+  RunLLDBCommands("Running stopCommands:", configuration.stopCommands);
 }
 
 void DAP::RunExitCommands() {
-  RunLLDBCommands("Running exitCommands:", exit_commands);
+  RunLLDBCommands("Running exitCommands:", configuration.exitCommands);
 }
 
 void DAP::RunTerminateCommands() {
-  RunLLDBCommands("Running terminateCommands:", terminate_commands);
+  RunLLDBCommands("Running terminateCommands:",
+                  configuration.terminateCommands);
 }
 
-lldb::SBTarget
-DAP::CreateTargetFromArguments(const llvm::json::Object &arguments,
-                               lldb::SBError &error) {
+lldb::SBTarget DAP::CreateTargetFromArguments(llvm::StringRef program,
+                                              llvm::StringRef targetTriple,
+                                              llvm::StringRef platformName,
+                                              lldb::SBError &error) {
   // Grab the name of the program we need to debug and create a target using
   // the given program as an argument. Executable file can be a source of target
   // architecture and platform, if they differ from the host. Setting exe path
@@ -638,15 +639,10 @@ DAP::CreateTargetFromArguments(const llvm::json::Object &arguments,
   // enough information to determine correct arch and platform (or ELF can be
   // omitted at all), so it is good to leave the user an apportunity to specify
   // those. Any of those three can be left empty.
-  const llvm::StringRef target_triple =
-      GetString(arguments, "targetTriple").value_or("");
-  const llvm::StringRef platform_name =
-      GetString(arguments, "platformName").value_or("");
-  const llvm::StringRef program = GetString(arguments, "program").value_or("");
-  auto target = this->debugger.CreateTarget(
-      program.data(), target_triple.data(), platform_name.data(),
-      true, // Add dependent modules.
-      error);
+  auto target = this->debugger.CreateTarget(program.data(), targetTriple.data(),
+                                            platformName.data(),
+                                            true, // Add dependent modules.
+                                            error);
 
   if (error.Fail()) {
     // Update message if there was an error.
@@ -802,7 +798,7 @@ llvm::Error DAP::Loop() {
   return llvm::Error::success();
 }
 
-lldb::SBError DAP::WaitForProcessToStop(uint32_t seconds) {
+lldb::SBError DAP::WaitForProcessToStop(std::chrono::seconds seconds) {
   lldb::SBError error;
   lldb::SBProcess process = target.GetProcess();
   if (!process.IsValid()) {
@@ -837,8 +833,8 @@ lldb::SBError DAP::WaitForProcessToStop(uint32_t seconds) {
     }
     std::this_thread::sleep_for(std::chrono::microseconds(250));
   }
-  error.SetErrorStringWithFormat("process failed to stop within %u seconds",
-                                 seconds);
+  error.SetErrorStringWithFormat("process failed to stop within %lld seconds",
+                                 seconds.count());
   return error;
 }
 
@@ -1033,6 +1029,36 @@ bool SendEventRequestHandler::DoExecute(lldb::SBDebugger debugger,
   dap.SendJSON(llvm::json::Value(std::move(event)));
   result.SetStatus(lldb::eReturnStatusSuccessFinishNoResult);
   return true;
+}
+
+void DAP::ConfigureSourceMaps() {
+  if (configuration.sourceMap.empty() && !configuration.sourcePath)
+    return;
+
+  std::string sourceMapCommand;
+  llvm::raw_string_ostream strm(sourceMapCommand);
+  strm << "settings set target.source-map ";
+
+  if (!configuration.sourceMap.empty()) {
+    for (const auto &kv : configuration.sourceMap) {
+      strm << "\"" << kv.first << "\" \"" << kv.second << "\" ";
+    }
+  } else if (configuration.sourcePath) {
+    strm << "\".\" \"" << *configuration.sourcePath << "\"";
+  }
+
+  RunLLDBCommands("Setting source map:", {sourceMapCommand});
+}
+
+void DAP::SetConfiguration(const protocol::DAPConfiguration &config,
+                           bool is_attach) {
+  configuration = config;
+  this->is_attach = is_attach;
+
+  if (configuration.customFrameFormat)
+    SetFrameFormat(*configuration.customFrameFormat);
+  if (configuration.customThreadFormat)
+    SetThreadFormat(*configuration.customThreadFormat);
 }
 
 void DAP::SetFrameFormat(llvm::StringRef format) {

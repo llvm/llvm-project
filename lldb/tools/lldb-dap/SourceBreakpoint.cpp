@@ -319,9 +319,9 @@ bool SourceBreakpoint::BreakpointHitCallback(
           frame.GetValueForVariablePath(expr, lldb::eDynamicDontRunTarget);
       if (value.GetError().Fail())
         value = frame.EvaluateExpression(expr);
-      output +=
-          VariableDescription(value, bp->dap.enable_auto_variable_summaries)
-              .display_value;
+      output += VariableDescription(
+                    value, bp->dap.configuration.enableAutoVariableSummaries)
+                    .display_value;
     } else {
       output += messagePart.text;
     }

@@ -9,70 +9,18 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "JSONUtils.h"
+#include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
 #include "llvm/Support/FileSystem.h"
 
 namespace lldb_dap {
 
-// "LaunchRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Launch request; value of command field is 'launch'.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "launch" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/LaunchRequestArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments"  ]
-//   }]
-// },
-// "LaunchRequestArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'launch' request.",
-//   "properties": {
-//     "noDebug": {
-//       "type": "boolean",
-//       "description": "If noDebug is true the launch request should launch
-//                       the program without enabling debugging."
-//     }
-//   }
-// },
-// "LaunchResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'launch' request. This is just an
-//                     acknowledgement, so no body field is required."
-//   }]
-// }
-void LaunchRequestHandler::operator()(const llvm::json::Object &request) const {
-  dap.is_attach = false;
-  dap.last_launch_or_attach_request = request;
-  llvm::json::Object response;
-  FillResponse(request, response);
-  const auto *arguments = request.getObject("arguments");
-  dap.init_commands = GetStrings(arguments, "initCommands");
-  dap.pre_run_commands = GetStrings(arguments, "preRunCommands");
-  dap.stop_commands = GetStrings(arguments, "stopCommands");
-  dap.exit_commands = GetStrings(arguments, "exitCommands");
-  dap.terminate_commands = GetStrings(arguments, "terminateCommands");
-  dap.post_run_commands = GetStrings(arguments, "postRunCommands");
-  dap.stop_at_entry = GetBoolean(arguments, "stopOnEntry").value_or(false);
-  const llvm::StringRef debuggerRoot =
-      GetString(arguments, "debuggerRoot").value_or("");
-  dap.enable_auto_variable_summaries =
-      GetBoolean(arguments, "enableAutoVariableSummaries").value_or(false);
-  dap.enable_synthetic_child_debugging =
-      GetBoolean(arguments, "enableSyntheticChildDebugging").value_or(false);
-  dap.display_extended_backtrace =
-      GetBoolean(arguments, "displayExtendedBacktrace").value_or(false);
-  dap.command_escape_prefix =
-      GetString(arguments, "commandEscapePrefix").value_or("`");
-  dap.SetFrameFormat(GetString(arguments, "customFrameFormat").value_or(""));
-  dap.SetThreadFormat(GetString(arguments, "customThreadFormat").value_or(""));
+/// Launch request; value of command field is 'launch'.
+llvm::Expected<protocol::LaunchResponseBody> LaunchRequestHandler::Run(
+    const protocol::LaunchRequestArguments &arguments) const {
+  dap.SetConfiguration(arguments.configuration, /*is_attach=*/false);
+  dap.last_launch_request = arguments;
+  dap.stop_at_entry = arguments.stopOnEntry;
 
   PrintWelcomeMessage();
 
@@ -80,55 +28,47 @@ void LaunchRequestHandler::operator()(const llvm::json::Object &request) const {
   // in the debug map of the main executable have relative paths which
   // require the lldb-dap binary to have its working directory set to that
   // relative root for the .o files in order to be able to load debug info.
+  const std::string debuggerRoot = dap.configuration.debuggerRoot.value_or("");
   if (!debuggerRoot.empty())
     llvm::sys::fs::set_current_path(debuggerRoot);
 
   // Run any initialize LLDB commands the user specified in the launch.json.
   // This is run before target is created, so commands can't do anything with
   // the targets - preRunCommands are run with the target.
-  if (llvm::Error err = dap.RunInitCommands()) {
-    response["success"] = false;
-    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
+  if (llvm::Error err = dap.RunInitCommands())
+    return err;
 
-  SetSourceMapFromArguments(*arguments);
+  dap.ConfigureSourceMaps();
 
   lldb::SBError status;
-  dap.SetTarget(dap.CreateTargetFromArguments(*arguments, status));
-  if (status.Fail()) {
-    response["success"] = llvm::json::Value(false);
-    EmplaceSafeString(response, "message", status.GetCString());
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
+  dap.SetTarget(dap.CreateTargetFromArguments(
+      arguments.program.value_or(""), arguments.targetTriple.value_or(""),
+      arguments.platformName.value_or(""), status));
+  if (status.Fail())
+    return llvm::make_error<DAPError>(status.GetCString());
 
   // Run any pre run LLDB commands the user specified in the launch.json
-  if (llvm::Error err = dap.RunPreRunCommands()) {
-    response["success"] = false;
-    EmplaceSafeString(response, "message", llvm::toString(std::move(err)));
-    dap.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
+  if (llvm::Error err = dap.RunPreRunCommands())
+    return err;
 
-  status = LaunchProcess(request);
+  if (llvm::Error err = LaunchProcess(arguments))
+    return err;
 
-  if (status.Fail()) {
-    response["success"] = llvm::json::Value(false);
-    EmplaceSafeString(response, "message", std::string(status.GetCString()));
-  } else {
-    dap.RunPostRunCommands();
-  }
+  dap.RunPostRunCommands();
 
-  dap.SendJSON(llvm::json::Value(std::move(response)));
+  return protocol::LaunchResponseBody();
+}
 
-  if (!status.Fail()) {
+void LaunchRequestHandler::PostRun() const {
+  if (dap.target.GetProcess().IsValid()) {
     if (dap.is_attach)
-      SendProcessEvent(dap, Attach); // this happens when doing runInTerminal
+      // this happens when doing runInTerminal
+      SendProcessEvent(dap, Attach);
     else
       SendProcessEvent(dap, Launch);
   }
+
   dap.SendJSON(CreateEventObject("initialized"));
 }
+
 } // namespace lldb_dap

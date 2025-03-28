@@ -35,6 +35,7 @@
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -128,21 +129,21 @@ struct Variables {
 
 struct StartDebuggingRequestHandler : public lldb::SBCommandPluginInterface {
   DAP &dap;
-  explicit StartDebuggingRequestHandler(DAP &d) : dap(d) {};
+  explicit StartDebuggingRequestHandler(DAP &d) : dap(d){};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct ReplModeRequestHandler : public lldb::SBCommandPluginInterface {
   DAP &dap;
-  explicit ReplModeRequestHandler(DAP &d) : dap(d) {};
+  explicit ReplModeRequestHandler(DAP &d) : dap(d){};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
   DAP &dap;
-  explicit SendEventRequestHandler(DAP &d) : dap(d) {};
+  explicit SendEventRequestHandler(DAP &d) : dap(d){};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
@@ -165,26 +166,21 @@ struct DAP {
   InstructionBreakpointMap instruction_breakpoints;
   std::optional<std::vector<ExceptionBreakpoint>> exception_breakpoints;
   llvm::once_flag init_exception_breakpoints_flag;
-  std::vector<std::string> pre_init_commands;
-  std::vector<std::string> init_commands;
-  std::vector<std::string> pre_run_commands;
-  std::vector<std::string> post_run_commands;
-  std::vector<std::string> exit_commands;
-  std::vector<std::string> stop_commands;
-  std::vector<std::string> terminate_commands;
+
   // Map step in target id to list of function targets that user can choose.
   llvm::DenseMap<lldb::addr_t, std::string> step_in_targets;
-  // A copy of the last LaunchRequest or AttachRequest so we can reuse its
-  // arguments if we get a RestartRequest.
-  std::optional<llvm::json::Object> last_launch_or_attach_request;
+  // A copy of the last LaunchRequest so we can reuse its arguments if we get a
+  // RestartRequest. Restarting an AttachRequest is not supported.
+  std::optional<protocol::LaunchRequestArguments> last_launch_request;
   lldb::tid_t focus_tid;
   bool disconnecting = false;
   llvm::once_flag terminated_event_flag;
-  bool stop_at_entry;
   bool is_attach;
-  bool enable_auto_variable_summaries;
-  bool enable_synthetic_child_debugging;
-  bool display_extended_backtrace;
+  bool stop_at_entry;
+  /// pre_init_commands are configured by a CLI flag and are not part of the
+  /// common launching/attaching definition.
+  std::vector<std::string> pre_init_commands;
+  protocol::DAPConfiguration configuration;
   // The process event thread normally responds to process exited events by
   // shutting down the entire adapter. When we're restarting, we keep the id of
   // the old process here so we can detect this case and keep running.
@@ -201,7 +197,6 @@ struct DAP {
   llvm::SmallDenseMap<int64_t, std::unique_ptr<ResponseHandler>>
       inflight_reverse_requests;
   ReplMode repl_mode;
-  std::string command_escape_prefix = "`";
   lldb::SBFormat frame_format;
   lldb::SBFormat thread_format;
   // This is used to allow request_evaluate to handle empty expressions
@@ -248,6 +243,13 @@ struct DAP {
 
   /// Stop event handler threads.
   void StopEventHandlers();
+
+  /// Configures the debug adapter for launching/attaching.
+  void SetConfiguration(const protocol::DAPConfiguration &confing,
+                        bool is_attach);
+
+  /// Configure source maps based on the current `DAPConfiguration`.
+  void ConfigureSourceMaps();
 
   /// Serialize the JSON value into a string and send the JSON packet to the
   /// "out" stream.
@@ -320,7 +322,9 @@ struct DAP {
   ///
   /// \return
   ///     An SBTarget object.
-  lldb::SBTarget CreateTargetFromArguments(const llvm::json::Object &arguments,
+  lldb::SBTarget CreateTargetFromArguments(llvm::StringRef program,
+                                           llvm::StringRef targetTriple,
+                                           llvm::StringRef platformName,
                                            lldb::SBError &error);
 
   /// Set given target object as a current target for lldb-dap and start
@@ -395,7 +399,7 @@ struct DAP {
   ///   The number of seconds to poll the process to wait until it is stopped.
   ///
   /// \return Error if waiting for the process fails, no error if succeeds.
-  lldb::SBError WaitForProcessToStop(uint32_t seconds);
+  lldb::SBError WaitForProcessToStop(std::chrono::seconds seconds);
 
   void SetFrameFormat(llvm::StringRef format);
 
