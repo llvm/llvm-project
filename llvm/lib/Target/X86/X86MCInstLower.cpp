@@ -194,7 +194,7 @@ MCSymbol *X86MCInstLower::GetSymbolFromOperand(const MachineOperand &MO) const {
   Name += Suffix;
   if (!Sym) {
     // If new MCSymbol needs to be created for
-    // MachineOperand::MO_ExternalSymbol, create it as an symbol
+    // MachineOperand::MO_ExternalSymbol, create it as a symbol
     // in AsmPrinter's OutContext.
     if (MO.isSymbol())
       Sym = AsmPrinter.OutContext.getOrCreateSymbol(Name);
