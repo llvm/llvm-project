@@ -242,12 +242,12 @@ float RISCVLoadFPImm::getFPImm(unsigned Imm) {
 
 void RISCVZC::printRlist(unsigned SlistEncode, raw_ostream &OS) {
   OS << "{ra";
-  if (SlistEncode > 4) {
+  if (SlistEncode > RISCVZC::RA) {
     OS << ", s0";
-    if (SlistEncode == 15)
+    if (SlistEncode == RISCVZC::RA_S0_S11)
       OS << "-s11";
-    else if (SlistEncode > 5 && SlistEncode <= 14)
-      OS << "-s" << (SlistEncode - 5);
+    else if (SlistEncode > RISCVZC::RA_S0 && SlistEncode <= RISCVZC::RA_S0_S11)
+      OS << "-s" << (SlistEncode - RISCVZC::RA_S0);
   }
   OS << "}";
 }

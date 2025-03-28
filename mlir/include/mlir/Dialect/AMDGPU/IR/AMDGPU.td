@@ -86,10 +86,12 @@ def AMDGPU_ExtPackedFp8Op :
     Arguments<(ins AnyTypeOf<[F8E5M2FNUZ, F8E4M3FNUZ, F8E5M2, F8E4M3FN,
         VectorOfLengthAndType<[1, 2, 3, 4], [F8E5M2FNUZ, F8E4M3FNUZ, F8E5M2, F8E4M3FN]>]>:$source,
       ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<3>]>:$index)>,
-    Results<(outs F32:$res)> {
-  let summary = "Extend one of a vector of packed fp8 values to a float";
+    Results<(outs AnyTypeOf<[F32, FixedVectorOfLengthAndType<[2], [F32]>]>:$res)> {
+  let summary = "Extend a fp8 value to a float or a vector of packed fp8 values to two floats";
+
   let description = [{
-    Extend the value `source[index]` to a 32-bit float and return it.
+    Extend one or two 8-bit floats in `source[index]` to a 32-bit float or
+    two floats and return them.
 
     This rather unusual signature arises from the fact that AMD GPUs cannot
     easily work with sub 32-bit quantities, so the compiler intrinsics for
@@ -97,7 +99,7 @@ def AMDGPU_ExtPackedFp8Op :
     this operation) take packed vectors of 4 such floats.
 
     If the passed-in vector has fewer than four elements, or the input is scalar,
-    the remaining values in the <4 x i8> will be filled with with
+    the remaining values in the <4 x i8> will be filled with
     undefined values as needed.
   }];
   let assemblyFormat = [{
