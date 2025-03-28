@@ -15,6 +15,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
 #include "src/__support/macros/config.h"       // LIBC_NAMESPACE_DECL
+#include "src/__support/macros/null_check.h"   // LIBC_CRASH_ON_VALUE
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/math_extras.h"
 
@@ -209,11 +210,9 @@ idiv(T x, T y) {
   using FXRep = FXRep<T>;
   using CompType = typename FXRep::CompType;
 
-  if (y == FXRep::ZERO()) {
-    // If the value of the second operand of the / operator is zero, the
-    // behavior is undefined. Ref: ISO/IEC TR 18037:2008(E) p.g. 16
-    return static_cast<XType>(0);
-  }
+  // If the value of the second operand of the / operator is zero, the
+  // behavior is undefined. Ref: ISO/IEC TR 18037:2008(E) p.g. 16
+  LIBC_CRASH_ON_VALUE(y, FXRep::ZERO());
 
   CompType x_comp = static_cast<CompType>(FXBits(x).get_bits());
   CompType y_comp = static_cast<CompType>(FXBits(y).get_bits());
