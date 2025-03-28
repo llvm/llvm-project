@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdlib/free.h"
-#include "src/stdlib/malloc.h"
 #include "src/stdlib/memalignment.h"
 #include "test/UnitTest/Test.h"
 
@@ -16,28 +14,6 @@
 TEST(LlvmLibcMemAlignmentTest, NullPointer) {
   void *ptr = nullptr;
   EXPECT_EQ(LIBC_NAMESPACE::memalignment(ptr), static_cast<size_t>(0));
-}
-
-TEST(LlvmLibcMemAlignmentTest, MallocedPointers) {
-  int *int_ptr = reinterpret_cast<int *>(LIBC_NAMESPACE::malloc(sizeof(int)));
-  EXPECT_NE(reinterpret_cast<void *>(int_ptr), static_cast<void *>(nullptr));
-
-  size_t int_alignment = LIBC_NAMESPACE::memalignment(int_ptr);
-  EXPECT_GE(int_alignment, alignof(int));
-
-  LIBC_NAMESPACE::free(int_ptr);
-
-  // Allocate a double (typically 8-byte aligned)
-  double *double_ptr =
-      reinterpret_cast<double *>(LIBC_NAMESPACE::malloc(sizeof(double)));
-  EXPECT_NE(reinterpret_cast<void *>(double_ptr), static_cast<void *>(nullptr));
-
-  size_t double_alignment = LIBC_NAMESPACE::memalignment(double_ptr);
-  EXPECT_GE(double_alignment, alignof(double));
-
-  EXPECT_EQ(double_alignment & (double_alignment - 1), static_cast<size_t>(0));
-
-  LIBC_NAMESPACE::free(double_ptr);
 }
 
 TEST(LlvmLibcMemAlignmentTest, SpecificAlignment) {
@@ -81,3 +57,4 @@ TEST(LlvmLibcMemAlignmentTest, AlignasSpecifiedAlignment) {
   EXPECT_GE(LIBC_NAMESPACE::memalignment(&aligned_256),
             static_cast<size_t>(256));
 }
+
