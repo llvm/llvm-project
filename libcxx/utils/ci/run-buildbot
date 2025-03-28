@@ -205,10 +205,12 @@ function test-armv7m-picolibc() {
     step "Generating CMake for compiler-rt"
     flags="--sysroot=${INSTALL_DIR}"
     # LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON means that we produce a file
-    # libclang_rt.builtins.a that will be installed to lib/armv7m-unknown-none-eabi/.
+    # libclang_rt.builtins.a that will be installed to
+    # ${INSTALL_DIR}/lib/armv7m-unknown-none-eabi/.
     # With LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF, the filename includes the
     # architecture name, which is not what Clang's driver expects to find.
-    # The install location will however be wrong, we correct that below.
+    # The install location will however be wrong with
+    # LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON, so we correct that below.
     ${CMAKE} \
         -S "${MONOREPO_ROOT}/compiler-rt" \
         -B "${BUILD_DIR}/compiler-rt" \
@@ -232,7 +234,7 @@ function test-armv7m-picolibc() {
     step "Installing compiler-rt"
     ${NINJA} -vC "${BUILD_DIR}/compiler-rt" install
     # Move compiler-rt libs into the same directory as all the picolib objects.
-    mv "${BUILD_DIR}/install/lib/armv7m-unknown-none-eabi"/* "${BUILD_DIR}/install/lib"
+    mv "${INSTALL_DIR}/lib/armv7m-unknown-none-eabi"/* "${INSTALL_DIR}/lib"
 
     check-runtimes
 }
