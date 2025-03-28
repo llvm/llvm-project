@@ -96,6 +96,20 @@ static bool shouldRemoveArguments(const Function &F) {
   return !F.arg_empty() && !F.isIntrinsic();
 }
 
+static bool allFuncUsersRewritable(const Function &F) {
+  for (const Use &U : F.uses()) {
+    const CallBase *CB = dyn_cast<CallBase>(U.getUser());
+    if (!CB || !CB->isCallee(&U))
+      continue;
+
+    // TODO: Handle all CallBase cases.
+    if (!isa<CallInst>(CB))
+      return false;
+  }
+
+  return true;
+}
+
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
 static void extractArgumentsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
@@ -107,7 +121,8 @@ static void extractArgumentsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
   for (auto &F : Program) {
     if (!shouldRemoveArguments(F))
       continue;
-
+    if (!allFuncUsersRewritable(F))
+      continue;
     Funcs.push_back(&F);
     for (auto &A : F.args()) {
       if (callingConvRequiresArgument(F, A) || O.shouldKeep())
