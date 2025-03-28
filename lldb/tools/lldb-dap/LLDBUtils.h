@@ -158,7 +158,8 @@ uint32_t GetLLDBFrameID(uint64_t dap_frame_id);
 lldb::SBEnvironment
 GetEnvironmentFromArguments(const llvm::json::Object &arguments);
 
-/// Helper for sending telemetry to lldb server.
+/// Helper for sending telemetry to lldb server, if client-telemetry is enabled.
+#if ENABLE_CLIENT_TELEMETRY
 class TelemetryDispatcher {
 public:
   TelemetryDispatcher(lldb::SBDebugger *debugger) {
@@ -194,7 +195,15 @@ private:
   llvm::json::Object m_telemetry_json;
   lldb::SBDebugger *debugger;
 };
-
+#else
+// Dummy class that does nothing.
+class TelemetryDispatcher {
+public:
+  TelemetryDispatcher(lldb::SBDebugger * /*debugger*/) {}
+  void Set(std::string /*key*/, std::string /*value*/) {}
+  void Set(std::string /*key*/, int64_t /*value*/) {}
+};
+#endif
 /// Take ownership of the stored error.
 llvm::Error ToError(const lldb::SBError &error);
 
