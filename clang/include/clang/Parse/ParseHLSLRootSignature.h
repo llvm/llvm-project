@@ -35,10 +35,10 @@ public:
   /// error is encountered or the end of the buffer.
   ///
   /// Returns true if a parsing error is encountered.
-  bool Parse();
+  bool parse();
 
 private:
-  DiagnosticsEngine &Diags() { return PP.getDiagnostics(); }
+  DiagnosticsEngine &getDiags() { return PP.getDiagnostics(); }
 
   // All private Parse.* methods follow a similar pattern:
   //   - Each method will start with an assert to denote what the CurToken is
@@ -66,24 +66,24 @@ private:
   // expected, or, there is a lexing error
 
   /// Root Element parse methods:
-  bool ParseDescriptorTable();
-  bool ParseDescriptorTableClause();
+  bool parseDescriptorTable();
+  bool parseDescriptorTableClause();
 
   /// Invoke the Lexer to consume a token and update CurToken with the result
-  void ConsumeNextToken() { CurToken = Lexer.ConsumeToken(); }
+  void consumeNextToken() { CurToken = Lexer.ConsumeToken(); }
 
   /// Return true if the next token one of the expected kinds
-  bool PeekExpectedToken(TokenKind Expected);
-  bool PeekExpectedToken(ArrayRef<TokenKind> AnyExpected);
+  bool peekExpectedToken(TokenKind Expected);
+  bool peekExpectedToken(ArrayRef<TokenKind> AnyExpected);
 
   /// Consumes the next token and report an error if it is not of the expected
   /// kind.
   ///
   /// Returns true if there was an error reported.
-  bool ConsumeExpectedToken(TokenKind Expected,
+  bool consumeExpectedToken(TokenKind Expected,
                             unsigned DiagID = diag::err_expected,
                             TokenKind Context = TokenKind::invalid);
-  bool ConsumeExpectedToken(ArrayRef<TokenKind> AnyExpected,
+  bool consumeExpectedToken(ArrayRef<TokenKind> AnyExpected,
                             unsigned DiagID = diag::err_expected,
                             TokenKind Context = TokenKind::invalid);
 
@@ -92,8 +92,8 @@ private:
   ///
   /// Returns true if it successfully matches the expected kind and the token
   /// was consumed.
-  bool TryConsumeExpectedToken(TokenKind Expected);
-  bool TryConsumeExpectedToken(ArrayRef<TokenKind> Expected);
+  bool tryConsumeExpectedToken(TokenKind Expected);
+  bool tryConsumeExpectedToken(ArrayRef<TokenKind> Expected);
 
 private:
   SmallVector<llvm::hlsl::rootsig::RootElement> &Elements;

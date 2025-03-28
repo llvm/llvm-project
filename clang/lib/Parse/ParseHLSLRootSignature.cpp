@@ -34,51 +34,51 @@ RootSignatureParser::RootSignatureParser(SmallVector<RootElement> &Elements,
                                          Preprocessor &PP)
     : Elements(Elements), Lexer(Lexer), PP(PP), CurToken(SourceLocation()) {}
 
-bool RootSignatureParser::Parse() {
+bool RootSignatureParser::parse() {
   // Iterate as many RootElements as possible
-  while (TryConsumeExpectedToken(TokenKind::kw_DescriptorTable)) {
+  while (tryConsumeExpectedToken(TokenKind::kw_DescriptorTable)) {
     // Dispatch onto parser method.
     // We guard against the unreachable here as we just ensured that CurToken
     // will be one of the kinds in the while condition
     switch (CurToken.Kind) {
     case TokenKind::kw_DescriptorTable:
-      if (ParseDescriptorTable())
+      if (parseDescriptorTable())
         return true;
       break;
     default:
       llvm_unreachable("Switch for consumed token was not provided");
     }
 
-    if (!TryConsumeExpectedToken(TokenKind::pu_comma))
+    if (!tryConsumeExpectedToken(TokenKind::pu_comma))
       break;
   }
 
-  return ConsumeExpectedToken(TokenKind::end_of_stream, diag::err_expected);
+  return consumeExpectedToken(TokenKind::end_of_stream, diag::err_expected);
 }
 
-bool RootSignatureParser::ParseDescriptorTable() {
+bool RootSignatureParser::parseDescriptorTable() {
   assert(CurToken.Kind == TokenKind::kw_DescriptorTable &&
          "Expects to only be invoked starting at given keyword");
 
   DescriptorTable Table;
 
-  if (ConsumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
+  if (consumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
                            CurToken.Kind))
     return true;
 
   // Iterate as many Clauses as possible
-  while (TryConsumeExpectedToken({TokenKind::kw_CBV, TokenKind::kw_SRV,
+  while (tryConsumeExpectedToken({TokenKind::kw_CBV, TokenKind::kw_SRV,
                                   TokenKind::kw_UAV, TokenKind::kw_Sampler})) {
-    if (ParseDescriptorTableClause())
+    if (parseDescriptorTableClause())
       return true;
 
     Table.NumClauses++;
 
-    if (!TryConsumeExpectedToken(TokenKind::pu_comma))
+    if (!tryConsumeExpectedToken(TokenKind::pu_comma))
       break;
   }
 
-  if (ConsumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_after,
+  if (consumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_after,
                            CurToken.Kind))
     return true;
 
@@ -86,7 +86,7 @@ bool RootSignatureParser::ParseDescriptorTable() {
   return false;
 }
 
-bool RootSignatureParser::ParseDescriptorTableClause() {
+bool RootSignatureParser::parseDescriptorTableClause() {
   assert((CurToken.Kind == TokenKind::kw_CBV ||
           CurToken.Kind == TokenKind::kw_SRV ||
           CurToken.Kind == TokenKind::kw_UAV ||
@@ -111,11 +111,11 @@ bool RootSignatureParser::ParseDescriptorTableClause() {
     break;
   }
 
-  if (ConsumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
+  if (consumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
                            CurToken.Kind))
     return true;
 
-  if (ConsumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_after,
+  if (consumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_after,
                            CurToken.Kind))
     return true;
 
@@ -131,29 +131,29 @@ static bool IsExpectedToken(TokenKind Kind, ArrayRef<TokenKind> AnyExpected) {
   return false;
 }
 
-bool RootSignatureParser::PeekExpectedToken(TokenKind Expected) {
-  return PeekExpectedToken(ArrayRef{Expected});
+bool RootSignatureParser::peekExpectedToken(TokenKind Expected) {
+  return peekExpectedToken(ArrayRef{Expected});
 }
 
-bool RootSignatureParser::PeekExpectedToken(ArrayRef<TokenKind> AnyExpected) {
+bool RootSignatureParser::peekExpectedToken(ArrayRef<TokenKind> AnyExpected) {
   RootSignatureToken Result = Lexer.PeekNextToken();
   return IsExpectedToken(Result.Kind, AnyExpected);
 }
 
-bool RootSignatureParser::ConsumeExpectedToken(TokenKind Expected,
+bool RootSignatureParser::consumeExpectedToken(TokenKind Expected,
                                                unsigned DiagID,
                                                TokenKind Context) {
-  return ConsumeExpectedToken(ArrayRef{Expected}, DiagID, Context);
+  return consumeExpectedToken(ArrayRef{Expected}, DiagID, Context);
 }
 
-bool RootSignatureParser::ConsumeExpectedToken(ArrayRef<TokenKind> AnyExpected,
+bool RootSignatureParser::consumeExpectedToken(ArrayRef<TokenKind> AnyExpected,
                                                unsigned DiagID,
                                                TokenKind Context) {
-  if (TryConsumeExpectedToken(AnyExpected))
+  if (tryConsumeExpectedToken(AnyExpected))
     return false;
 
   // Report unexpected token kind error
-  DiagnosticBuilder DB = Diags().Report(CurToken.TokLoc, DiagID);
+  DiagnosticBuilder DB = getDiags().Report(CurToken.TokLoc, DiagID);
   switch (DiagID) {
   case diag::err_expected:
     DB << FormatTokenKinds(AnyExpected);
@@ -168,16 +168,16 @@ bool RootSignatureParser::ConsumeExpectedToken(ArrayRef<TokenKind> AnyExpected,
   return true;
 }
 
-bool RootSignatureParser::TryConsumeExpectedToken(TokenKind Expected) {
-  return TryConsumeExpectedToken(ArrayRef{Expected});
+bool RootSignatureParser::tryConsumeExpectedToken(TokenKind Expected) {
+  return tryConsumeExpectedToken(ArrayRef{Expected});
 }
 
-bool RootSignatureParser::TryConsumeExpectedToken(
+bool RootSignatureParser::tryConsumeExpectedToken(
     ArrayRef<TokenKind> AnyExpected) {
   // If not the expected token just return
-  if (!PeekExpectedToken(AnyExpected))
+  if (!peekExpectedToken(AnyExpected))
     return false;
-  ConsumeNextToken();
+  consumeNextToken();
   return true;
 }
 
