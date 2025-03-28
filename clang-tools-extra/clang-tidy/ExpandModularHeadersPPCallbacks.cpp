@@ -89,15 +89,14 @@ ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
   HeaderInfo = std::make_unique<HeaderSearch>(HSOpts, Sources, Diags, LangOpts,
                                               &Compiler.getTarget());
 
-  auto PO = std::make_shared<PreprocessorOptions>();
-  *PO = Compiler.getPreprocessorOpts();
-
-  PP = std::make_unique<clang::Preprocessor>(PO, Diags, LangOpts, Sources,
-                                              *HeaderInfo, ModuleLoader,
-                                              /*IILookup=*/nullptr,
-                                              /*OwnsHeaderSearch=*/false);
+  PP = std::make_unique<clang::Preprocessor>(Compiler.getPreprocessorOpts(),
+                                             Diags, LangOpts, Sources,
+                                             *HeaderInfo, ModuleLoader,
+                                             /*IILookup=*/nullptr,
+                                             /*OwnsHeaderSearch=*/false);
   PP->Initialize(Compiler.getTarget(), Compiler.getAuxTarget());
-  InitializePreprocessor(*PP, *PO, Compiler.getPCHContainerReader(),
+  InitializePreprocessor(*PP, Compiler.getPreprocessorOpts(),
+                         Compiler.getPCHContainerReader(),
                          Compiler.getFrontendOpts(), Compiler.getCodeGenOpts());
   ApplyHeaderSearchOptions(*HeaderInfo, HSOpts, LangOpts,
                            Compiler.getTarget().getTriple());

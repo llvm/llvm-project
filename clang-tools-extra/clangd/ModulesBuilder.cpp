@@ -202,9 +202,10 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
   HeaderSearch HeaderInfo(HSOpts, SourceMgr, *Diags, LangOpts,
                           /*Target=*/nullptr);
 
+  PreprocessorOptions PPOpts;
   TrivialModuleLoader ModuleLoader;
-  Preprocessor PP(std::make_shared<PreprocessorOptions>(), *Diags, LangOpts,
-                  SourceMgr, HeaderInfo, ModuleLoader);
+  Preprocessor PP(PPOpts, *Diags, LangOpts, SourceMgr, HeaderInfo,
+                  ModuleLoader);
 
   IntrusiveRefCntPtr<ModuleCache> ModCache = createCrossProcessModuleCache();
   PCHContainerOperations PCHOperations;
