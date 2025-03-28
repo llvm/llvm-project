@@ -4902,9 +4902,9 @@ static bool isSpreadMask(ArrayRef<int> Mask, unsigned Factor, unsigned &Index) {
   return true;
 }
 
-static SDValue lowerVIZIP(unsigned Opc, SDValue Op0, SDValue Op1,
-                          const SDLoc &DL, SelectionDAG &DAG,
-                          const RISCVSubtarget &Subtarget) {
+static SDValue lowerVZIP(unsigned Opc, SDValue Op0, SDValue Op1,
+                         const SDLoc &DL, SelectionDAG &DAG,
+                         const RISCVSubtarget &Subtarget) {
   assert(RISCVISD::RI_VZIPEVEN_VL == Opc || RISCVISD::RI_VZIPODD_VL == Opc ||
          RISCVISD::RI_VZIP2A_VL == Opc);
   assert(Op0.getSimpleValueType() == Op1.getSimpleValueType());
@@ -5663,8 +5663,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                           EvenV, DAG.getVectorIdxConstant(0, DL));
       OddV = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT), OddV,
                          DAG.getVectorIdxConstant(0, DL));
-      return lowerVIZIP(RISCVISD::RI_VZIP2A_VL, EvenV, OddV, DL, DAG,
-                        Subtarget);
+      return lowerVZIP(RISCVISD::RI_VZIP2A_VL, EvenV, OddV, DL, DAG, Subtarget);
     }
     return getWideningInterleave(EvenV, OddV, DL, DAG, Subtarget);
   }
@@ -5720,14 +5719,13 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     if (Subtarget.hasVendorXRivosVizip() && isZipEven(SrcInfo, Mask)) {
       SDValue Src1 = SrcInfo[0].first == 0 ? V1 : V2;
       SDValue Src2 = SrcInfo[1].first == 0 ? V1 : V2;
-      return lowerVIZIP(RISCVISD::RI_VZIPEVEN_VL, Src1, Src2, DL, DAG,
-                        Subtarget);
+      return lowerVZIP(RISCVISD::RI_VZIPEVEN_VL, Src1, Src2, DL, DAG,
+                       Subtarget);
     }
     if (Subtarget.hasVendorXRivosVizip() && isZipOdd(SrcInfo, Mask)) {
       SDValue Src1 = SrcInfo[1].first == 0 ? V1 : V2;
       SDValue Src2 = SrcInfo[0].first == 0 ? V1 : V2;
-      return lowerVIZIP(RISCVISD::RI_VZIPODD_VL, Src1, Src2, DL, DAG,
-                        Subtarget);
+      return lowerVZIP(RISCVISD::RI_VZIPODD_VL, Src1, Src2, DL, DAG, Subtarget);
     }
 
     // Build the mask.  Note that vslideup unconditionally preserves elements
