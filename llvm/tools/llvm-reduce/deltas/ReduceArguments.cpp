@@ -61,8 +61,10 @@ static void replaceFunctionCalls(Function &OldF, Function &NewF,
         }
       }
 
-      // FIXME: Losing bundles
-      CallInst *NewCI = CallInst::Create(&NewF, Args);
+      SmallVector<OperandBundleDef, 2> OpBundles;
+      CI->getOperandBundlesAsDefs(OpBundles);
+
+      CallInst *NewCI = CallInst::Create(&NewF, Args, OpBundles);
       NewCI->setCallingConv(NewF.getCallingConv());
 
       AttrBuilder CallSiteAttrs(Ctx, CI->getAttributes().getFnAttrs());
