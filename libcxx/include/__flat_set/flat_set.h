@@ -385,7 +385,7 @@ public:
     return __emplace(std::forward<_Kp>(__x));
   }
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, const value_type& __x) {
-    return __emplace_hint(__hint, __x);
+    return emplace_hint(__hint, __x);
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, value_type&& __x) {
