@@ -28,6 +28,16 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::Attribute attr,
 
 mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage);
 
+class CIRToLLVMBrCondOpLowering
+    : public mlir::OpConversionPattern<cir::BrCondOp> {
+public:
+  using mlir::OpConversionPattern<cir::BrCondOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::BrCondOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMCastOpLowering : public mlir::OpConversionPattern<cir::CastOp> {
   mlir::DataLayout const &dataLayout;
 
@@ -165,6 +175,17 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::UnaryOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMBinOpLowering : public mlir::OpConversionPattern<cir::BinOp> {
+  mlir::LLVM::IntegerOverflowFlags getIntOverflowFlag(cir::BinOp op) const;
+
+public:
+  using mlir::OpConversionPattern<cir::BinOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::BinOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 

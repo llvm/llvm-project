@@ -2793,3 +2793,76 @@ module {
 
 // CHECK: !llvm.module.flags = !{![[#DBG:]]}
 // CHECK: ![[#DBG]] = !{i32 2, !"Debug Info Version", i32 3}
+
+// -----
+
+llvm.mlir.global external constant @const() {addr_space = 0 : i32, dso_local} : i32 {
+  %0 = llvm.mlir.addressof @const : !llvm.ptr
+  %1 = llvm.ptrtoint %0 : !llvm.ptr to i64
+  %2 = llvm.dso_local_equivalent @extern_func : !llvm.ptr
+  %3 = llvm.ptrtoint %2 : !llvm.ptr to i64
+  %4 = llvm.sub %3, %1 : i64
+  %5 = llvm.trunc %4 : i64 to i32
+  llvm.return %5 : i32
+}
+
+llvm.func @extern_func()
+
+// CHECK: @const = dso_local constant i32 trunc
+// CHECK-SAME: (i64 sub (i64 ptrtoint
+// CHECK-SAME: (ptr dso_local_equivalent @extern_func to i64),
+// CHECK-SAME: i64 ptrtoint (ptr @const to i64)) to i32)
+
+// -----
+
+llvm.func @extern_func() -> i32
+llvm.func @call_extern_func() {
+  %0 = llvm.dso_local_equivalent @extern_func : !llvm.ptr
+  %1 = llvm.call %0() : !llvm.ptr, () -> (i32 {llvm.noundef})
+  llvm.return
+}
+
+// CHECK-LABEL: @call_extern_func()
+// CHECK: call noundef i32 dso_local_equivalent @extern_func()
+
+// -----
+
+llvm.mlir.alias external @alias_func : !llvm.func<void ()> {
+  %0 = llvm.mlir.addressof @aliasee_func : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+llvm.func @aliasee_func() {
+  llvm.return
+}
+llvm.func @call_alias_func() {
+  %0 = llvm.dso_local_equivalent @alias_func : !llvm.ptr
+  llvm.call %0() : !llvm.ptr, () -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: @call_alias_func
+// CHECK: call void dso_local_equivalent @alias_func()
+
+// -----
+
+llvm.func local_unnamed_addr @testfn(!llvm.array<2 x f32> {llvm.alignstack = 8 : i64})
+llvm.func internal @g(%arg0: !llvm.array<2 x f32>) attributes {dso_local} {
+  // CHECK-LABEL: @g
+  // CHECK: call void @testfn([2 x float] alignstack(8) %0)
+  llvm.call @testfn(%arg0) : (!llvm.array<2 x f32> {llvm.alignstack = 8 : i64}) -> ()
+  llvm.return
+}
+llvm.func local_unnamed_addr @testfn2(!llvm.struct<(i8, i8)> {llvm.alignstack = 8 : i64})
+llvm.func internal @h(%arg0: !llvm.struct<(i8, i8)>) attributes {dso_local} {
+  // CHECK-LABEL: @h
+  // CHECK: call void @testfn2({ i8, i8 } alignstack(8) %0)
+  llvm.call @testfn2(%arg0) : (!llvm.struct<(i8, i8)> {llvm.alignstack = 8 : i64}) -> ()
+  llvm.return
+}
+llvm.func local_unnamed_addr @testfn3(i32 {llvm.alignstack = 8 : i64})
+llvm.func internal @i(%arg0: i32) attributes {dso_local} {
+  // CHECK-LABEL: @i
+  // CHECK: call void @testfn3(i32 alignstack(8) %0)
+  llvm.call @testfn3(%arg0) : (i32 {llvm.alignstack = 8 : i64}) -> ()
+  llvm.return
+}

@@ -1439,9 +1439,9 @@ public:
         AddStream(std::move(AddStream)), Cache(std::move(Cache)),
         ShouldEmitIndexFiles(ShouldEmitIndexFiles) {
     auto &Defs = CombinedIndex.cfiFunctionDefs();
-    CfiFunctionDefs.insert(Defs.guid_begin(), Defs.guid_end());
+    CfiFunctionDefs.insert_range(Defs.guids());
     auto &Decls = CombinedIndex.cfiFunctionDecls();
-    CfiFunctionDecls.insert(Decls.guid_begin(), Decls.guid_end());
+    CfiFunctionDecls.insert_range(Decls.guids());
   }
 
   virtual Error runThinLTOBackendThread(

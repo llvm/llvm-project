@@ -206,7 +206,7 @@ bool CompactUnwindInfo::GetUnwindPlan(Target &target, Address addr,
                                   function_info.valid_range_offset_end -
                                       function_info.valid_range_offset_start,
                                   sl);
-          unwind_plan.SetPlanValidAddressRange(func_range);
+          unwind_plan.SetPlanValidAddressRanges({func_range});
         }
       }
 

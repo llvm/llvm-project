@@ -1467,8 +1467,7 @@ static bool isFunctionMallocLike(Function *F, const SCCNodeSet &SCCNodes) {
       }
       case Instruction::PHI: {
         PHINode *PN = cast<PHINode>(RVI);
-        for (Value *IncValue : PN->incoming_values())
-          FlowsToReturn.insert(IncValue);
+        FlowsToReturn.insert_range(PN->incoming_values());
         continue;
       }
 

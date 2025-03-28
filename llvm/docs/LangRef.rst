@@ -6336,7 +6336,10 @@ array is currently associated.  The optional ``allocated`` is a
 DIExpression that describes whether the allocatable array is currently
 allocated.  The optional ``rank`` is a DIExpression that describes the
 rank (number of dimensions) of fortran assumed rank array (rank is
-known at runtime).
+known at runtime).  The optional ``bitStride`` is an unsigned constant
+that describes the number of bits occupied by an element of the array;
+this is only needed if it differs from the element type's natural
+size, and is normally used for packed arrays.
 
 For ``DW_TAG_enumeration_type``, the ``elements:`` should be :ref:`enumerator
 descriptors <DIEnumerator>`, each representing the definition of an enumeration

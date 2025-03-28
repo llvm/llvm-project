@@ -23,10 +23,14 @@ module attributes {gpu.container_module, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_e
     // CHECK: %[[ALLOCA:.*]] = fir.alloca f32
     %c1 = arith.constant 1 : index
     %c11_i32 = arith.constant 11 : i32
+    %c1024_i32 = arith.constant 1024 : i32
     %c6_i32 = arith.constant 6 : i32
     %c1_i32 = arith.constant 1 : i32
     // CHECK: gpu.launch_func  @cuda_device_mod::@_QPsub_device1 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}})  dynamic_shared_memory_size %c0{{.*}}
     cuf.kernel_launch @cuda_device_mod::@_QPsub_device1<<<%c1_i32, %c1_i32, %c1_i32, %c1_i32, %c1_i32, %c1_i32>>>()
+
+    // CHECK: gpu.launch_func  @cuda_device_mod::@_QPsub_device1 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}})  dynamic_shared_memory_size %c1024{{.*}}
+    cuf.kernel_launch @cuda_device_mod::@_QPsub_device1<<<%c1_i32, %c1_i32, %c1_i32, %c1_i32, %c1_i32, %c1_i32, %c1024_i32>>>()
 
     // CHECK: gpu.launch_func  @cuda_device_mod::@_QPsub_device2 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}})  dynamic_shared_memory_size %c0{{.*}} args(%[[ALLOCA]] : !fir.ref<f32>)
     cuf.kernel_launch @cuda_device_mod::@_QPsub_device2<<<%c1_i32, %c1_i32, %c1_i32, %c1_i32, %c1_i32, %c1_i32>>>(%0) : (!fir.ref<f32>)

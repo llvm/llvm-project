@@ -4004,39 +4004,20 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
         }
       }
     } else if (Op.getResNo() == 0) {
-      KnownBits Known0(!LD->getMemoryVT().isScalableVT()
-                           ? LD->getMemoryVT().getFixedSizeInBits()
-                           : BitWidth);
-      EVT VT = Op.getValueType();
-      // Fill in any known bits from range information. There are 3 types being
-      // used. The results VT (same vector elt size as BitWidth), the loaded
-      // MemoryVT (which may or may not be vector) and the range VTs original
-      // type. The range matadata needs the full range (i.e
-      // MemoryVT().getSizeInBits()), which is truncated to the correct elt size
-      // if it is know. These are then extended to the original VT sizes below.
-      if (const MDNode *MD = LD->getRanges()) {
-        computeKnownBitsFromRangeMetadata(*MD, Known0);
-        if (VT.isVector()) {
-          // Handle truncation to the first demanded element.
-          // TODO: Figure out which demanded elements are covered
-          if (DemandedElts != 1 || !getDataLayout().isLittleEndian())
-            break;
-          Known0 = Known0.trunc(BitWidth);
-        }
-      }
+      unsigned ScalarMemorySize = LD->getMemoryVT().getScalarSizeInBits();
+      KnownBits KnownScalarMemory(ScalarMemorySize);
+      if (const MDNode *MD = LD->getRanges())
+        computeKnownBitsFromRangeMetadata(*MD, KnownScalarMemory);
 
-      if (LD->getMemoryVT().isVector())
-        Known0 = Known0.trunc(LD->getMemoryVT().getScalarSizeInBits());
-
-      // Extend the Known bits from memory to the size of the result.
+      // Extend the Known bits from memory to the size of the scalar result.
       if (ISD::isZEXTLoad(Op.getNode()))
-        Known = Known0.zext(BitWidth);
+        Known = KnownScalarMemory.zext(BitWidth);
       else if (ISD::isSEXTLoad(Op.getNode()))
-        Known = Known0.sext(BitWidth);
+        Known = KnownScalarMemory.sext(BitWidth);
       else if (ISD::isEXTLoad(Op.getNode()))
-        Known = Known0.anyext(BitWidth);
+        Known = KnownScalarMemory.anyext(BitWidth);
       else
-        Known = Known0;
+        Known = KnownScalarMemory;
       assert(Known.getBitWidth() == BitWidth);
       return Known;
     }
@@ -5490,6 +5471,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::FREEZE:
   case ISD::CONCAT_VECTORS:
   case ISD::INSERT_SUBVECTOR:
+  case ISD::EXTRACT_SUBVECTOR:
   case ISD::SADDSAT:
   case ISD::UADDSAT:
   case ISD::SSUBSAT:
@@ -9166,7 +9148,7 @@ SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
   if (PtrInfo.V.isNull())
     PtrInfo = InferPointerInfo(PtrInfo, *this, Ptr, Offset);
 
-  LocationSize Size = LocationSize::precise(MemVT.getStoreSize());
+  TypeSize Size = MemVT.getStoreSize();
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(PtrInfo, MMOFlags, Size,
                                                    Alignment, AAInfo, Ranges);
@@ -9287,7 +9269,7 @@ SDValue SelectionDAG::getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
     PtrInfo = InferPointerInfo(PtrInfo, *this, Ptr);
 
   MachineFunction &MF = getMachineFunction();
-  LocationSize Size = LocationSize::precise(Val.getValueType().getStoreSize());
+  TypeSize Size = Val.getValueType().getStoreSize();
   MachineMemOperand *MMO =
       MF.getMachineMemOperand(PtrInfo, MMOFlags, Size, Alignment, AAInfo);
   return getStore(Chain, dl, Val, Ptr, MMO);
@@ -9340,8 +9322,7 @@ SDValue SelectionDAG::getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
 
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      PtrInfo, MMOFlags, LocationSize::precise(SVT.getStoreSize()), Alignment,
-      AAInfo);
+      PtrInfo, MMOFlags, SVT.getStoreSize(), Alignment, AAInfo);
   return getTruncStore(Chain, dl, Val, Ptr, SVT, MMO);
 }
 
@@ -9435,7 +9416,7 @@ SDValue SelectionDAG::getLoadVP(
   if (PtrInfo.V.isNull())
     PtrInfo = InferPointerInfo(PtrInfo, *this, Ptr, Offset);
 
-  LocationSize Size = LocationSize::precise(MemVT.getStoreSize());
+  TypeSize Size = MemVT.getStoreSize();
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(PtrInfo, MMOFlags, Size,
                                                    Alignment, AAInfo, Ranges);
@@ -9588,8 +9569,7 @@ SDValue SelectionDAG::getTruncStoreVP(SDValue Chain, const SDLoc &dl,
 
   MachineFunction &MF = getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      PtrInfo, MMOFlags, LocationSize::precise(SVT.getStoreSize()), Alignment,
-      AAInfo);
+      PtrInfo, MMOFlags, SVT.getStoreSize(), Alignment, AAInfo);
   return getTruncStoreVP(Chain, dl, Val, Ptr, Mask, EVL, SVT, MMO,
                          IsCompressing);
 }

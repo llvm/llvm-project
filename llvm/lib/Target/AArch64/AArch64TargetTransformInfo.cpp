@@ -2811,6 +2811,17 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
             BF16Tbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
       return AdjustCost(Entry->Cost);
 
+  // Symbolic constants for the SVE sitofp/uitofp entries in the table below
+  // The cost of unpacking twice is artificially increased for now in order
+  // to avoid regressions against NEON, which will use tbl instructions directly
+  // instead of multiple layers of [s|u]unpk[lo|hi].
+  // We use the unpacks in cases where the destination type is illegal and
+  // requires splitting of the input, even if the input type itself is legal.
+  const unsigned int SVE_EXT_COST = 1;
+  const unsigned int SVE_FCVT_COST = 1;
+  const unsigned int SVE_UNPACK_ONCE = 4;
+  const unsigned int SVE_UNPACK_TWICE = 16;
+
   static const TypeConversionCostTblEntry ConversionTbl[] = {
       {ISD::TRUNCATE, MVT::v2i8, MVT::v2i64, 1},    // xtn
       {ISD::TRUNCATE, MVT::v2i16, MVT::v2i64, 1},   // xtn
@@ -2936,13 +2947,59 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i32, 1},
       {ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i64, 1},
 
+      // SVE: to nxv2f16
+      {ISD::SINT_TO_FP, MVT::nxv2f16, MVT::nxv2i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f16, MVT::nxv2i16, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f16, MVT::nxv2i32, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f16, MVT::nxv2i64, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f16, MVT::nxv2i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f16, MVT::nxv2i16, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f16, MVT::nxv2i32, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f16, MVT::nxv2i64, SVE_FCVT_COST},
+
+      // SVE: to nxv4f16
+      {ISD::SINT_TO_FP, MVT::nxv4f16, MVT::nxv4i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv4f16, MVT::nxv4i16, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv4f16, MVT::nxv4i32, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f16, MVT::nxv4i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f16, MVT::nxv4i16, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f16, MVT::nxv4i32, SVE_FCVT_COST},
+
+      // SVE: to nxv8f16
+      {ISD::SINT_TO_FP, MVT::nxv8f16, MVT::nxv8i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv8f16, MVT::nxv8i16, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv8f16, MVT::nxv8i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv8f16, MVT::nxv8i16, SVE_FCVT_COST},
+
+      // SVE: to nxv16f16
+      {ISD::SINT_TO_FP, MVT::nxv16f16, MVT::nxv16i8,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv16f16, MVT::nxv16i8,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+
       // Complex: to v2f32
       {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i8, 3},
       {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i16, 3},
-      {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i64, 2},
       {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i8, 3},
       {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i16, 3},
-      {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i64, 2},
+
+      // SVE: to nxv2f32
+      {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i16, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i32, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i64, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f32, MVT::nxv2i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f32, MVT::nxv2i16, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f32, MVT::nxv2i32, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f32, MVT::nxv2i64, SVE_FCVT_COST},
 
       // Complex: to v4f32
       {ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i8, 4},
@@ -2950,11 +3007,37 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i8, 3},
       {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i16, 2},
 
+      // SVE: to nxv4f32
+      {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i16, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i32, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f32, MVT::nxv4i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f32, MVT::nxv4i16, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i32, SVE_FCVT_COST},
+
       // Complex: to v8f32
       {ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
       {ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i16, 4},
       {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
       {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i16, 4},
+
+      // SVE: to nxv8f32
+      {ISD::SINT_TO_FP, MVT::nxv8f32, MVT::nxv8i8,
+       SVE_EXT_COST + SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv8f32, MVT::nxv8i16,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv8f32, MVT::nxv8i8,
+       SVE_EXT_COST + SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv8f32, MVT::nxv8i16,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+
+      // SVE: to nxv16f32
+      {ISD::SINT_TO_FP, MVT::nxv16f32, MVT::nxv16i8,
+       SVE_UNPACK_TWICE + 4 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv16f32, MVT::nxv16i8,
+       SVE_UNPACK_TWICE + 4 * SVE_FCVT_COST},
 
       // Complex: to v16f32
       {ISD::SINT_TO_FP, MVT::v16f32, MVT::v16i8, 21},
@@ -2968,9 +3051,45 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i16, 4},
       {ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i32, 2},
 
+      // SVE: to nxv2f64
+      {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i16, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i32, SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i64, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i8,
+       SVE_EXT_COST + SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i16, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i32, SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i64, SVE_FCVT_COST},
+
       // Complex: to v4f64
       {ISD::SINT_TO_FP, MVT::v4f64, MVT::v4i32, 4},
       {ISD::UINT_TO_FP, MVT::v4f64, MVT::v4i32, 4},
+
+      // SVE: to nxv4f64
+      {ISD::SINT_TO_FP, MVT::nxv4f64, MVT::nxv4i8,
+       SVE_EXT_COST + SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv4f64, MVT::nxv4i16,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv4f64, MVT::nxv4i32,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f64, MVT::nxv4i8,
+       SVE_EXT_COST + SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f64, MVT::nxv4i16,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv4f64, MVT::nxv4i32,
+       SVE_UNPACK_ONCE + 2 * SVE_FCVT_COST},
+
+      // SVE: to nxv8f64
+      {ISD::SINT_TO_FP, MVT::nxv8f64, MVT::nxv8i8,
+       SVE_EXT_COST + SVE_UNPACK_TWICE + 4 * SVE_FCVT_COST},
+      {ISD::SINT_TO_FP, MVT::nxv8f64, MVT::nxv8i16,
+       SVE_UNPACK_TWICE + 4 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv8f64, MVT::nxv8i8,
+       SVE_EXT_COST + SVE_UNPACK_TWICE + 4 * SVE_FCVT_COST},
+      {ISD::UINT_TO_FP, MVT::nxv8f64, MVT::nxv8i16,
+       SVE_UNPACK_TWICE + 4 * SVE_FCVT_COST},
 
       // LowerVectorFP_TO_INT
       {ISD::FP_TO_SINT, MVT::v2i32, MVT::v2f32, 1},
@@ -3199,6 +3318,20 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
             FP16Tbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
       return AdjustCost(Entry->Cost);
 
+  // INT_TO_FP of i64->f32 will scalarize, which is required to avoid
+  // double-rounding issues.
+  if ((ISD == ISD::SINT_TO_FP || ISD == ISD::UINT_TO_FP) &&
+      DstTy.getScalarType() == MVT::f32 && SrcTy.getScalarSizeInBits() > 32 &&
+      isa<FixedVectorType>(Dst) && isa<FixedVectorType>(Src))
+    return AdjustCost(
+        cast<FixedVectorType>(Dst)->getNumElements() *
+            getCastInstrCost(Opcode, Dst->getScalarType(), Src->getScalarType(),
+                             CCH, CostKind) +
+        BaseT::getScalarizationOverhead(cast<FixedVectorType>(Src), false, true,
+                                        CostKind) +
+        BaseT::getScalarizationOverhead(cast<FixedVectorType>(Dst), true, false,
+                                        CostKind));
+
   if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
       CCH == TTI::CastContextHint::Masked &&
       ST->isSVEorStreamingSVEAvailable() &&
@@ -3302,8 +3435,8 @@ InstructionCost AArch64TTIImpl::getCFInstrCost(unsigned Opcode,
 }
 
 InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
-    unsigned Opcode, Type *Val, unsigned Index, bool HasRealUse,
-    const Instruction *I, Value *Scalar,
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    bool HasRealUse, const Instruction *I, Value *Scalar,
     ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) {
   assert(Val->isVectorTy() && "This must be a vector type");
 
@@ -3336,12 +3469,16 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     // and its second operand is a load, then we will generate a LD1, which
     // are expensive instructions.
     if (I && dyn_cast<LoadInst>(I->getOperand(1)))
-      return ST->getVectorInsertExtractBaseCost() + 1;
+      return CostKind == TTI::TCK_CodeSize
+                 ? 0
+                 : ST->getVectorInsertExtractBaseCost() + 1;
 
     // i1 inserts and extract will include an extra cset or cmp of the vector
     // value. Increase the cost by 1 to account.
     if (Val->getScalarSizeInBits() == 1)
-      return ST->getVectorInsertExtractBaseCost() + 1;
+      return CostKind == TTI::TCK_CodeSize
+                 ? 2
+                 : ST->getVectorInsertExtractBaseCost() + 1;
 
     // FIXME:
     // If the extract-element and insert-element instructions could be
@@ -3465,7 +3602,8 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     return 0;
 
   // All other insert/extracts cost this much.
-  return ST->getVectorInsertExtractBaseCost();
+  return CostKind == TTI::TCK_CodeSize ? 1
+                                       : ST->getVectorInsertExtractBaseCost();
 }
 
 InstructionCost AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
@@ -3474,22 +3612,22 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                    Value *Op1) {
   bool HasRealUse =
       Opcode == Instruction::InsertElement && Op0 && !isa<UndefValue>(Op0);
-  return getVectorInstrCostHelper(Opcode, Val, Index, HasRealUse);
+  return getVectorInstrCostHelper(Opcode, Val, CostKind, Index, HasRealUse);
 }
 
 InstructionCost AArch64TTIImpl::getVectorInstrCost(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
     Value *Scalar,
     ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) {
-  return getVectorInstrCostHelper(Opcode, Val, Index, false, nullptr, Scalar,
-                                  ScalarUserAndIdx);
+  return getVectorInstrCostHelper(Opcode, Val, CostKind, Index, false, nullptr,
+                                  Scalar, ScalarUserAndIdx);
 }
 
 InstructionCost AArch64TTIImpl::getVectorInstrCost(const Instruction &I,
                                                    Type *Val,
                                                    TTI::TargetCostKind CostKind,
                                                    unsigned Index) {
-  return getVectorInstrCostHelper(I.getOpcode(), Val, Index,
+  return getVectorInstrCostHelper(I.getOpcode(), Val, CostKind, Index,
                                   true /* HasRealUse */, &I);
 }
 

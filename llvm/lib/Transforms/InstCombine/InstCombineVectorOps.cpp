@@ -1111,7 +1111,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // For each predecessor, what is the source aggregate,
   // from which all the elements were originally extracted from?
   // Note that we want for the map to have stable iteration order!
-  SmallDenseMap<BasicBlock *, Value *, 4> SourceAggregates;
+  SmallMapVector<BasicBlock *, Value *, 4> SourceAggregates;
   bool FoundSrcAgg = false;
   for (BasicBlock *Pred : Preds) {
     std::pair<decltype(SourceAggregates)::iterator, bool> IV =

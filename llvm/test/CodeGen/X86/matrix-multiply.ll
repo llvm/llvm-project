@@ -1036,10 +1036,6 @@ define <16 x float> @test_mul4x4_f32(<16 x float> %a0, <16 x float> %a1) nounwin
 ;
 ; AVX512-LABEL: test_mul4x4_f32:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vextractf32x4 $2, %zmm1, %xmm2
-; AVX512-NEXT:    vextractf32x4 $3, %zmm1, %xmm3
-; AVX512-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm1, %zmm1
 ; AVX512-NEXT:    vshufps {{.*#+}} zmm2 = zmm1[1,1,1,1,5,5,5,5,9,9,9,9,13,13,13,13]
 ; AVX512-NEXT:    vshuff64x2 {{.*#+}} zmm3 = zmm0[2,3,2,3,2,3,2,3]
 ; AVX512-NEXT:    vmulps %zmm2, %zmm3, %zmm2

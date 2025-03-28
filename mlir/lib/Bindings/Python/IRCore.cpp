@@ -361,37 +361,45 @@ private:
 
 /// Regions of an op are fixed length and indexed numerically so are represented
 /// with a sequence-like container.
-class PyRegionList {
+class PyRegionList : public Sliceable<PyRegionList, PyRegion> {
 public:
-  PyRegionList(PyOperationRef operation) : operation(std::move(operation)) {}
+  static constexpr const char *pyClassName = "RegionSequence";
+
+  PyRegionList(PyOperationRef operation, intptr_t startIndex = 0,
+               intptr_t length = -1, intptr_t step = 1)
+      : Sliceable(startIndex,
+                  length == -1 ? mlirOperationGetNumRegions(operation->get())
+                               : length,
+                  step),
+        operation(std::move(operation)) {}
 
   PyRegionIterator dunderIter() {
     operation->checkValid();
     return PyRegionIterator(operation);
   }
 
-  intptr_t dunderLen() {
+  static void bindDerived(ClassTy &c) {
+    c.def("__iter__", &PyRegionList::dunderIter);
+  }
+
+private:
+  /// Give the parent CRTP class access to hook implementations below.
+  friend class Sliceable<PyRegionList, PyRegion>;
+
+  intptr_t getRawNumElements() {
     operation->checkValid();
     return mlirOperationGetNumRegions(operation->get());
   }
 
-  PyRegion dunderGetItem(intptr_t index) {
-    // dunderLen checks validity.
-    if (index < 0 || index >= dunderLen()) {
-      throw nb::index_error("attempt to access out of bounds region");
-    }
-    MlirRegion region = mlirOperationGetRegion(operation->get(), index);
-    return PyRegion(operation, region);
+  PyRegion getRawElement(intptr_t pos) {
+    operation->checkValid();
+    return PyRegion(operation, mlirOperationGetRegion(operation->get(), pos));
   }
 
-  static void bind(nb::module_ &m) {
-    nb::class_<PyRegionList>(m, "RegionSequence")
-        .def("__len__", &PyRegionList::dunderLen)
-        .def("__iter__", &PyRegionList::dunderIter)
-        .def("__getitem__", &PyRegionList::dunderGetItem);
+  PyRegionList slice(intptr_t startIndex, intptr_t length, intptr_t step) {
+    return PyRegionList(operation, startIndex, length, step);
   }
 
-private:
   PyOperationRef operation;
 };
 
@@ -450,6 +458,9 @@ public:
 
   PyBlock dunderGetItem(intptr_t index) {
     operation->checkValid();
+    if (index < 0) {
+      index += dunderLen();
+    }
     if (index < 0) {
       throw nb::index_error("attempt to access out of bounds block");
     }
@@ -546,6 +557,9 @@ public:
 
   nb::object dunderGetItem(intptr_t index) {
     parentOperation->checkValid();
+    if (index < 0) {
+      index += dunderLen();
+    }
     if (index < 0) {
       throw nb::index_error("attempt to access out of bounds operation");
     }
@@ -2629,6 +2643,9 @@ public:
   }
 
   PyNamedAttribute dunderGetItemIndexed(intptr_t index) {
+    if (index < 0) {
+      index += dunderLen();
+    }
     if (index < 0 || index >= dunderLen()) {
       throw nb::index_error("attempt to access out of bounds attribute");
     }
