@@ -1115,6 +1115,7 @@ ModuleImport::convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar) {
 
   SmallVector<Attribute> funcs;
   SmallVector<int32_t> priorities;
+  SmallVector<Attribute> dataList;
   for (llvm::Value *operand : initializer->operands()) {
     auto *aggregate = dyn_cast<llvm::ConstantAggregate>(operand);
     if (!aggregate || aggregate->getNumOperands() != 3)
@@ -1126,12 +1127,18 @@ ModuleImport::convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar) {
     if (!priority || !func || !data)
       return failure();
 
-    // GlobalCtorsOps and GlobalDtorsOps do not support non-null data fields.
-    if (!data->isNullValue())
+    auto *gv = dyn_cast_or_null<llvm::GlobalValue>(data);
+    Attribute dataAttr;
+    if (gv)
+      dataAttr = FlatSymbolRefAttr::get(context, gv->getName());
+    else if (data->isNullValue())
+      dataAttr = ZeroAttr::get(context);
+    else
       return failure();
 
     funcs.push_back(FlatSymbolRefAttr::get(context, func->getName()));
     priorities.push_back(priority->getValue().getZExtValue());
+    dataList.push_back(dataAttr);
   }
 
   // Insert the global after the last one or at the start of the module.
@@ -1140,12 +1147,12 @@ ModuleImport::convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar) {
   if (globalVar->getName() == getGlobalCtorsVarName()) {
     globalInsertionOp = builder.create<LLVM::GlobalCtorsOp>(
         mlirModule.getLoc(), builder.getArrayAttr(funcs),
-        builder.getI32ArrayAttr(priorities));
+        builder.getI32ArrayAttr(priorities), builder.getArrayAttr(dataList));
     return success();
   }
   globalInsertionOp = builder.create<LLVM::GlobalDtorsOp>(
       mlirModule.getLoc(), builder.getArrayAttr(funcs),
-      builder.getI32ArrayAttr(priorities));
+      builder.getI32ArrayAttr(priorities), builder.getArrayAttr(dataList));
   return success();
 }
 
