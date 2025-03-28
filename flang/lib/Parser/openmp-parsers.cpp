@@ -1277,8 +1277,11 @@ TYPE_PARSER(sourced( //
         Parser<OmpDirectiveSpecification>{})))
 
 // OMP 5.2 14.1 Interop construct
-TYPE_PARSER(sourced(construct<OpenMPInteropConstruct>(
-    verbatim("INTEROP"_tok), sourced(Parser<OmpClauseList>{}))))
+TYPE_PARSER(sourced( //
+    construct<OpenMPInteropConstruct>(
+        predicated(OmpDirectiveNameParser{},
+            IsDirective(llvm::omp::Directive::OMPD_interop)) >=
+        Parser<OmpDirectiveSpecification>{})))
 
 // Standalone Constructs
 TYPE_PARSER(

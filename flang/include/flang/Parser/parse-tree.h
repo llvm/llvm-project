@@ -4985,9 +4985,8 @@ struct OpenMPFlushConstruct {
 //
 // interop -> INTEROP clause[ [ [,] clause]...]
 struct OpenMPInteropConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPInteropConstruct);
+  WRAPPER_CLASS_BOILERPLATE(OpenMPInteropConstruct, OmpDirectiveSpecification);
   CharBlock source;
-  std::tuple<Verbatim, OmpClauseList> t;
 };
 
 struct OpenMPSimpleStandaloneConstruct {

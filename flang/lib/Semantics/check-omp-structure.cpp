@@ -5733,11 +5733,11 @@ void OmpStructureChecker::Leave(const parser::DoConstruct &x) {
 void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
   bool isDependClauseOccured{false};
   int targetCount{0}, targetSyncCount{0};
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
+  const auto &dir{std::get<parser::OmpDirectiveName>(x.v.t)};
   std::set<const Symbol *> objectSymbolList;
   PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_interop);
-  const auto &clauseList{std::get<parser::OmpClauseList>(x.t)};
-  for (const auto &clause : clauseList.v) {
+  const auto &clauseList{std::get<std::optional<parser::OmpClauseList>>(x.v.t)};
+  for (const auto &clause : clauseList->v) {
     common::visit(
         common::visitors{
             [&](const parser::OmpClause::Init &initClause) {

@@ -8,7 +8,7 @@ SUBROUTINE test_interop_01()
 END SUBROUTINE test_interop_01
 
 !UNPARSE: SUBROUTINE test_interop_01
-!UNPARSE: !$OMP INTEROP DEVICE(1_4)
+!UNPARSE: !$OMP INTEROP  DEVICE(1_4)
 !UNPARSE:  PRINT *, "pass"
 !UNPARSE: END SUBROUTINE test_interop_01
 
@@ -17,10 +17,11 @@ END SUBROUTINE test_interop_01
 !PARSE-TREE: | SpecificationPart
 !PARSE-TREE: | | ImplicitPart -> 
 !PARSE-TREE: | ExecutionPart -> Block
-!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPInteropConstruct
-!PARSE-TREE: | | | Verbatim
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPInteropConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = interop
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> Device -> OmpDeviceClause
 !PARSE-TREE: | | | | Scalar -> Integer -> Expr -> LiteralConstant -> IntLiteralConstant = '1'
+!PARSE-TREE: | | | Flags = None
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> PrintStmt
 !PARSE-TREE: | | | Format -> Star
 !PARSE-TREE: | | | OutputItem -> Expr -> LiteralConstant -> CharLiteralConstant
@@ -37,7 +38,7 @@ END SUBROUTINE test_interop_02
 !UNPARSE: SUBROUTINE test_interop_02
 !UNPARSE:  USE :: omp_lib
 !UNPARSE:  INTEGER(KIND=8_4) obj1, obj2, obj3
-!UNPARSE: !$OMP INTEROP INIT(TARGETSYNC: obj) USE(obj1) DESTROY(obj3)
+!UNPARSE: !$OMP INTEROP  INIT(TARGETSYNC: obj) USE(obj1) DESTROY(obj3)
 !UNPARSE:  PRINT *, "pass"
 !UNPARSE: END SUBROUTINE test_interop_02
 
@@ -56,13 +57,14 @@ END SUBROUTINE test_interop_02
 !PARSE-TREE: | | | EntityDecl
 !PARSE-TREE: | | | | Name = 'obj3'
 !PARSE-TREE: | ExecutionPart -> Block
-!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPInteropConstruct
-!PARSE-TREE: | | | Verbatim
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPInteropConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = interop
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> Init -> OmpInitClause
 !PARSE-TREE: | | | | Modifier -> OmpInteropType -> Value = TargetSync
 !PARSE-TREE: | | | | OmpObject -> Designator -> DataRef -> Name = 'obj'
 !PARSE-TREE: | | | OmpClause -> Use -> OmpUseClause -> OmpObject -> Designator -> DataRef -> Name = 'obj1'
 !PARSE-TREE: | | | OmpClause -> Destroy -> OmpDestroyClause -> OmpObject -> Designator -> DataRef -> Name = 'obj3'
+!PARSE-TREE: | | | Flags = None
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> PrintStmt
 !PARSE-TREE: | | | Format -> Star
 !PARSE-TREE: | | | OutputItem -> Expr -> LiteralConstant -> CharLiteralConstant
@@ -79,7 +81,7 @@ END SUBROUTINE test_interop_03
 !UNPARSE: SUBROUTINE test_interop_03
 !UNPARSE:  USE :: omp_lib
 !UNPARSE:  INTEGER(KIND=8_4) obj
-!UNPARSE: !$OMP INTEROP INIT(TARGETSYNC: obj) DEPEND(INOUT: obj)
+!UNPARSE: !$OMP INTEROP  INIT(TARGETSYNC: obj) DEPEND(INOUT: obj)
 !UNPARSE:  PRINT *, "pass"
 !UNPARSE: END SUBROUTINE test_interop_03
 
@@ -94,14 +96,15 @@ END SUBROUTINE test_interop_03
 !PARSE-TREE: | | | EntityDecl
 !PARSE-TREE: | | | | Name = 'obj'
 !PARSE-TREE: | ExecutionPart -> Block
-!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPInteropConstruct
-!PARSE-TREE: | | | Verbatim
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPInteropConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = interop
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> Init -> OmpInitClause
 !PARSE-TREE: | | | | Modifier -> OmpInteropType -> Value = TargetSync
 !PARSE-TREE: | | | | OmpObject -> Designator -> DataRef -> Name = 'obj'
 !PARSE-TREE: | | | OmpClause -> Depend -> OmpDependClause -> TaskDep
 !PARSE-TREE: | | | | Modifier -> OmpTaskDependenceType -> Value = Inout
 !PARSE-TREE: | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'obj'
+!PARSE-TREE: | | | Flags = None
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> PrintStmt
 !PARSE-TREE: | | | Format -> Star
 !PARSE-TREE: | | | OutputItem -> Expr -> LiteralConstant -> CharLiteralConstant
@@ -120,8 +123,8 @@ END SUBROUTINE test_interop_04
 !UNPARSE:  USE :: omp_lib
 !UNPARSE:  INTEGER(KIND=8_4) obj
 !UNPARSE:  INTEGER, DIMENSION(1_4,10_4) :: arr
-!UNPARSE: !$OMP INTEROP INIT(PREFER_TYPE("cuda"),TARGETSYNC,TARGET: obj) DEPEND(INOUT: a&
-!UNPARSE: !$OMP&rr) NOWAIT
+!UNPARSE: !$OMP INTEROP  INIT(PREFER_TYPE("cuda"),TARGETSYNC,TARGET: obj) DEPEND(INOUT: &
+!UNPARSE: !$OMP&arr) NOWAIT
 !UNPARSE:  PRINT *, "pass"
 !UNPARSE: END SUBROUTINE test_interop_04
 
@@ -144,8 +147,8 @@ END SUBROUTINE test_interop_04
 !PARSE-TREE: | | | EntityDecl
 !PARSE-TREE: | | | | Name = 'arr'
 !PARSE-TREE: | ExecutionPart -> Block
-!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPInteropConstruct
-!PARSE-TREE: | | | Verbatim
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPInteropConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = interop
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> Init -> OmpInitClause
 !PARSE-TREE: | | | | Modifier -> OmpInteropPreference -> OmpInteropRuntimeIdentifier -> CharLiteralConstant
 !PARSE-TREE: | | | | | string = 'cuda'
@@ -156,6 +159,7 @@ END SUBROUTINE test_interop_04
 !PARSE-TREE: | | | | Modifier -> OmpTaskDependenceType -> Value = Inout
 !PARSE-TREE: | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'arr'
 !PARSE-TREE: | | | OmpClause -> Nowait
+!PARSE-TREE: | | | Flags = None
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> PrintStmt
 !PARSE-TREE: | | | Format -> Star
 !PARSE-TREE: | | | OutputItem -> Expr -> LiteralConstant -> CharLiteralConstant
@@ -172,7 +176,7 @@ END SUBROUTINE test_interop_05
 !UNPARSE: SUBROUTINE test_interop_05
 !UNPARSE:  USE :: omp_lib
 !UNPARSE:  INTEGER(KIND=8_4) obj
-!UNPARSE: !$OMP INTEROP INIT(PREFER_TYPE(4_4),TARGETSYNC: obj) DEVICE(DEVICE_NUM: 0_4)
+!UNPARSE: !$OMP INTEROP  INIT(PREFER_TYPE(4_4),TARGETSYNC: obj) DEVICE(DEVICE_NUM: 0_4)
 !UNPARSE:  PRINT *, "pass"
 !UNPARSE: END SUBROUTINE test_interop_05
 
@@ -187,8 +191,8 @@ END SUBROUTINE test_interop_05
 !PARSE-TREE: | | | EntityDecl
 !PARSE-TREE: | | | | Name = 'obj'
 !PARSE-TREE: | ExecutionPart -> Block
-!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPInteropConstruct
-!PARSE-TREE: | | | Verbatim
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPInteropConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = interop
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> Init -> OmpInitClause
 !PARSE-TREE: | | | | Modifier -> OmpInteropPreference -> OmpInteropRuntimeIdentifier -> Scalar -> Integer -> Constant -> Expr -> Designator -> DataRef -> Name = 'omp_ifr_sycl'
 !PARSE-TREE: | | | | Modifier -> OmpInteropType -> Value = TargetSync
@@ -196,6 +200,7 @@ END SUBROUTINE test_interop_05
 !PARSE-TREE: | | | OmpClause -> Device -> OmpDeviceClause
 !PARSE-TREE: | | | | Modifier -> OmpDeviceModifier -> Value = Device_Num
 !PARSE-TREE: | | | | Scalar -> Integer -> Expr -> LiteralConstant -> IntLiteralConstant = '0'
+!PARSE-TREE: | | | Flags = None
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> PrintStmt
 !PARSE-TREE: | | | Format -> Star
 !PARSE-TREE: | | | OutputItem -> Expr -> LiteralConstant -> CharLiteralConstant

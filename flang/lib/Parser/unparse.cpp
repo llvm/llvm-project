@@ -2738,7 +2738,14 @@ public:
   void Unparse(const OpenMPInteropConstruct &x) {
     BeginOpenMP();
     Word("!$OMP INTEROP");
-    Walk(std::get<OmpClauseList>(x.t));
+    using Flags = OmpDirectiveSpecification::Flags;
+    if (std::get<Flags>(x.v.t) == Flags::DeprecatedSyntax) {
+      Walk("(", std::get<std::optional<OmpArgumentList>>(x.v.t), ")");
+      Walk(" ", std::get<std::optional<OmpClauseList>>(x.v.t));
+    } else {
+      Walk(" ", std::get<std::optional<OmpClauseList>>(x.v.t));
+      Walk(" (", std::get<std::optional<OmpArgumentList>>(x.v.t), ")");
+    }
     Put("\n");
     EndOpenMP();
   }
