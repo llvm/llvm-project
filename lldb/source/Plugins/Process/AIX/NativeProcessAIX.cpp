@@ -2000,7 +2000,21 @@ Status NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
     } else if (req == PT_WRITE_BLOCK) {
       ptrace64(req, pid, (long long)addr, (int)data_size, (int *)result);
     } else if (req == PT_ATTACH) {
+      // Block SIGCHLD signal during attach to the process, 
+      // to prevent interruptions.
+      // The ptrace operation may send SIGCHLD signals in certain cases 
+      // during the attach, which can interfere. 
+      static sigset_t signal_set;
+      sigemptyset (&signal_set);
+      sigaddset (&signal_set, SIGCHLD);
+      if(!pthread_sigmask( SIG_BLOCK, &signal_set,  NULL))
+        LLDB_LOG(log,"NativeProcessAIX::pthread_sigmask(SIG_BLOCK) Failed");
+      
       ptrace64(req, pid, 0, 0, nullptr);
+      
+      //Unblocking the SIGCHLD after attach work. 
+      if(!pthread_sigmask( SIG_UNBLOCK, &signal_set, NULL )) 
+        LLDB_LOG(log,"NativeProcessAIX::pthread_sigmask(SIG_UNBLOCK) Failed");
     } else if (req == PT_WATCH) {
       ptrace64(req, pid, (long long)addr, (int)data_size, nullptr);
     } else if (req == PT_DETACH) {
