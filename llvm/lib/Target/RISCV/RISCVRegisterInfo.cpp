@@ -522,11 +522,6 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (!IsRVVSpill)
     Offset += StackOffset::getFixed(MI.getOperand(FIOperandNum + 1).getImm());
 
-  if (!isInt<32>(Offset.getFixed())) {
-    report_fatal_error(
-        "Frame offsets outside of the signed 32-bit range not supported");
-  }
-
   if (!IsRVVSpill) {
     int64_t Val = Offset.getFixed();
     int64_t Lo12 = SignExtend64<12>(Val);
