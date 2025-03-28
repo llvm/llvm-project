@@ -81,6 +81,7 @@ createASTReader(CompilerInstance &CI, StringRef pchFile,
   case ASTReader::OutOfDate:
   case ASTReader::VersionMismatch:
   case ASTReader::ConfigurationMismatch:
+  case ASTReader::ModuleMismatch:
   case ASTReader::HadErrors:
     break;
   }
