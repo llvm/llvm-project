@@ -2,17 +2,17 @@
 ;
 ;; Profile for version 0 check node num:
 ; RUN: echo '!foo' > %t1
-; RUN: echo '#correct node_count given' >> %t1
-; RUN: echo '$node_count 14' >> %t1
+; RUN: echo '#wrong node_count given' >> %t1
+; RUN: echo '$node_count 15' >> %t1
 ; RUN: echo '!!0 5 6 18 3 4 8 9 11 15 16 12 13' >> %t1
 ; RUN: echo '!bar' >> %t1
-; RUN: echo '#wrong node_count given' >> %t1
-; RUN: echo '$node_count 4' >> %t1
+; RUN: echo '#correct node_count given' >> %t1
+; RUN: echo '$node_count 5' >> %t1
 ; RUN: echo '!!0 1 2' >> %t1
 ; RUN: echo '!main' >> %t1
 
-; RUN: llc -O0 --basic-block-sections=%t1 -o %t %s  2>&1 | FileCheck %s --check-prefix=CHECK-WARNING
-; CHECK-WARNING: warning: MF bar: node count mismatch (profile=4 actual=5)
+; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux --basic-block-sections=%t1  -o %t %s 2>&1 | FileCheck %s --check-prefix=CHECK-WARNING
+; CHECK-WARNING: warning: MF foo: node count mismatch (profile=15 actual=14)
 
 define dso_local void @bar() #0 {
   %1 = alloca i32, align 4
