@@ -230,18 +230,25 @@ bool Watchpoint::WatchedValueReportable(const ExecutionContext &exe_ctx) {
       exe_ctx.GetBestExecutionContextScope(), g_watch_name.GetStringRef(),
       watch_address, m_type);
   newest_valueobj_sp = newest_valueobj_sp->CreateConstantValue(g_watch_name);
-  Status error;
 
-  DataExtractor new_data;
-  DataExtractor old_data;
+  auto new_data_or_err = newest_valueobj_sp->GetData();
 
-  newest_valueobj_sp->GetData(new_data, error);
-  if (error.Fail())
+  if (!new_data_or_err) {
+    LLDB_LOG_ERRORV(GetLog(LLDBLog::Watchpoints), new_data_or_err.takeError(),
+                          "Failed to extract watchpoint new data: {0}");
     return true;
-  m_new_value_sp->GetData(old_data, error);
-  if (error.Fail())
-    return true;
+  }
 
+  auto new_data = std::move(*new_data_or_err);
+  auto old_data_or_err = m_new_value_sp->GetData();
+
+  if (!old_data_or_err) {
+    LLDB_LOG_ERRORV(GetLog(LLDBLog::Watchpoints), old_data_or_err.takeError(),
+                          "Failed to extract watchpoint old data: {0}");
+    return true;
+  }
+
+  auto old_data = std::move(*old_data_or_err);
   if (new_data.GetByteSize() != old_data.GetByteSize() ||
       new_data.GetByteSize() == 0)
     return true;
