@@ -9,7 +9,7 @@
 #ifndef _LIBCPP___ALGORITHM_RANGES_FOR_EACH_N_H
 #define _LIBCPP___ALGORITHM_RANGES_FOR_EACH_N_H
 
-#include <__algorithm/for_each.h>
+#include <__algorithm/for_each_n.h>
 #include <__algorithm/in_fun_result.h>
 #include <__config>
 #include <__functional/identity.h>
@@ -43,9 +43,8 @@ struct __for_each_n {
   _LIBCPP_HIDE_FROM_ABI constexpr for_each_n_result<_Iter, _Func>
   operator()(_Iter __first, iter_difference_t<_Iter> __count, _Func __func, _Proj __proj = {}) const {
     if constexpr (forward_iterator<_Iter>) {
-      auto __last = std::ranges::next(__first, __count);
       auto __f    = [&](auto&& __val) { std::invoke(__func, std::invoke(__proj, __val)); };
-      std::__for_each(__first, __last, __f);
+      auto __last = std::for_each_n(__first, __count, __f);
       return {std::move(__last), std::move(__func)};
     } else {
       while (__count-- > 0) {
