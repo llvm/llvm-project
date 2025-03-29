@@ -1312,7 +1312,7 @@ def TargetOp : OpenMP_Op<"target", traits = [
     ///
     /// \param capturedOp result of a still valid (no modifications made to any
     /// nested operations) previous call to `getInnermostCapturedOmpOp()`.
-    static llvm::omp::OMPTgtExecModeFlags
+    static ::mlir::omp::TargetRegionFlags
     getKernelExecFlags(Operation *capturedOp);
   }] # clausesExtraClassDeclaration;
 
