@@ -363,6 +363,15 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(func::FuncOp funcOp,
   for (memref::AllocaOp allocaOp : allocaOps)
     (void)normalizeMemRef(&allocaOp);
 
+  // Turn memrefs' non-identity layouts maps into ones with identity. Collect
+  // reinterpret_cast ops first and then process since normalizeMemRef
+  // replaces/erases ops during memref rewriting.
+  SmallVector<memref::ReinterpretCastOp> reinterpretCastOps;
+  funcOp.walk(
+      [&](memref::ReinterpretCastOp op) { reinterpretCastOps.push_back(op); });
+  for (memref::ReinterpretCastOp reinterpretCastOp : reinterpretCastOps)
+    (void)normalizeMemRef(&reinterpretCastOp);
+
   // We use this OpBuilder to create new memref layout later.
   OpBuilder b(funcOp);
 
