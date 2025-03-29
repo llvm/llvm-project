@@ -9,10 +9,6 @@ Revert "Recommit "[InstCombine] Expand `foldSelectICmpAndOr` -> `foldSelectICmpA
 contact: Selehov
 b2659ca44 [InstCombine] Propagate flags in `foldSelectICmpAndBinOp` (#127437)
 ---
-breaks build of hipRuntime
-51ad2901ca54 [Clang] Improve diagnostic on `[[nodiscard]]` attribute (#112521)
-Ron, Maneesh
----
 revert: breaks rocBLAS build
 d57230c7 [AMDGPU][MC] Disallow op_sel in some VOP3P dot instructions (#100485)
 ---
