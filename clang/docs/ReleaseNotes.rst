@@ -298,6 +298,8 @@ Improvements to Clang's diagnostics
 
 - Improve the ``-Wundefined-func-template`` warning when a function template is not instantiated due to being unreachable in modules.
 
+- Clang now downgrades the inconsistent language options between modules to warnings instead of errors.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
