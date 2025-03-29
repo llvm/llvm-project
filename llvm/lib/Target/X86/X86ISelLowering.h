@@ -1092,7 +1092,8 @@ namespace llvm {
     Align getByValTypeAlignment(Type *Ty, const DataLayout &DL) const override;
 
     EVT getOptimalMemOpType(const MemOp &Op,
-                            const AttributeList &FuncAttributes) const override;
+                            const AttributeList &FuncAttributes,
+                            bool PreferIntScalar) const override;
 
     /// Returns true if it's safe to use load / store of the
     /// specified type to expand memcpy / memset inline. This is mostly true
