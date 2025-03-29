@@ -2704,6 +2704,33 @@ struct FormatStyle {
   /// \version 12
   EmptyLineBeforeAccessModifierStyle EmptyLineBeforeAccessModifier;
 
+  /// Styles for ``enum`` trailing commas.
+  enum EnumTrailingCommaStyle : int8_t {
+    /// Don't insert or remove trailing commas.
+    /// \code
+    ///   enum { a, b, c, };
+    ///   enum Color { red, green, blue };
+    /// \endcode
+    ETC_Leave,
+    /// Insert trailing commas.
+    /// \code
+    ///   enum { a, b, c, };
+    ///   enum Color { red, green, blue, };
+    /// \endcode
+    ETC_Insert,
+    /// Remove trailing commas.
+    /// \code
+    ///   enum { a, b, c };
+    ///   enum Color { red, green, blue };
+    /// \endcode
+    ETC_Remove,
+  };
+
+  /// Insert a comma (if missing) or remove the comma at the end of an ``enum``
+  /// enumerator list.
+  /// \version 21
+  EnumTrailingCommaStyle EnumTrailingComma;
+
   /// If ``true``, clang-format detects whether function calls and
   /// definitions are formatted with one parameter per line.
   ///
@@ -5323,6 +5350,7 @@ struct FormatStyle {
            DisableFormat == R.DisableFormat &&
            EmptyLineAfterAccessModifier == R.EmptyLineAfterAccessModifier &&
            EmptyLineBeforeAccessModifier == R.EmptyLineBeforeAccessModifier &&
+           EnumTrailingComma == R.EnumTrailingComma &&
            ExperimentalAutoDetectBinPacking ==
                R.ExperimentalAutoDetectBinPacking &&
            FixNamespaceComments == R.FixNamespaceComments &&
