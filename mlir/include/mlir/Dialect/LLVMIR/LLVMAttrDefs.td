@@ -1330,6 +1330,7 @@ def ModuleFlagAttr
 //===----------------------------------------------------------------------===//
 // LLVM_DependentLibrariesAttr
 //===----------------------------------------------------------------------===//
+
 def LLVM_DependentLibrariesAttr
     : LLVM_Attr<"DependentLibraries", "dependent_libraries"> {
   let summary = "LLVM dependent libraries attribute";
