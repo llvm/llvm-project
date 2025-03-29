@@ -1023,9 +1023,14 @@ static FixedVectorType *getVectorTypeFor(const MemSetInst &II,
   if (Val.ugt(std::numeric_limits<unsigned>::max()))
     return nullptr;
 
-  auto *VTy =
-      FixedVectorType::get(II.getValue()->getType(), Val.getZExtValue());
-  if (DL.getTypeStoreSizeInBits(VTy) != DL.getTypeAllocSizeInBits(VTy))
+  uint64_t MemSetLen = Val.getZExtValue();
+  auto *VTy = FixedVectorType::get(II.getValue()->getType(), MemSetLen);
+
+  // FIXME: This is a workaround. Vector promotion sometimes inhibits our
+  // ability to merge constant stores. It seems to be related to the presence of
+  // alignment bytes. See
+  // test/Transforms/PhaseOrdering/X86/store-constant-merge.ll
+  if (MemSetLen != DL.getTypeAllocSize(VTy).getFixedValue())
     return nullptr;
 
   return VTy;
@@ -1203,23 +1208,17 @@ private:
     if (!IsOffsetKnown)
       return PI.setAborted(&II);
 
-    auto IsSplittable = [&]() {
-      FixedVectorType *VTy = getVectorTypeFor(II, DL);
-      Type *ATy = AS.AI.getAllocatedType();
+    bool Splittable;
 
-      if (!Length)
-        return false;
-      if (!VTy)
-        return true;
-      if (DL.getTypeAllocSize(VTy) != DL.getTypeAllocSize(ATy))
-        return true;
-      return isSplittableMemOp(ATy, II.isVolatile());
-    };
+    if (getVectorTypeFor(II, DL))
+      Splittable = isSplittableMemOp(AS.AI.getAllocatedType(), II.isVolatile());
+    else
+      Splittable = (bool)Length;
 
     insertUse(II, Offset,
               Length ? Length->getLimitedValue()
                      : AllocSize - Offset.getLimitedValue(),
-              IsSplittable());
+              Splittable);
   }
 
   void visitMemTransferInst(MemTransferInst &II) {

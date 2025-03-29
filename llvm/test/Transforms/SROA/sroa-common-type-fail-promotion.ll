@@ -140,9 +140,13 @@ define amdgpu_kernel void @test_struct_contain_multiple_types2() #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DATA1:%.*]] = load [4 x i32], ptr undef, align 4
 ; CHECK-NEXT:    [[DATA1_FCA_0_EXTRACT:%.*]] = extractvalue [4 x i32] [[DATA1]], 0
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_INSERT:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[DATA1_FCA_0_EXTRACT]], i32 0
 ; CHECK-NEXT:    [[DATA1_FCA_1_EXTRACT:%.*]] = extractvalue [4 x i32] [[DATA1]], 1
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_4_VEC_INSERT:%.*]] = insertelement <4 x i32> [[B_BLOCKWISE_COPY_SROA_0_0_VEC_INSERT]], i32 [[DATA1_FCA_1_EXTRACT]], i32 1
 ; CHECK-NEXT:    [[DATA1_FCA_2_EXTRACT:%.*]] = extractvalue [4 x i32] [[DATA1]], 2
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_8_VEC_INSERT:%.*]] = insertelement <4 x i32> [[B_BLOCKWISE_COPY_SROA_0_4_VEC_INSERT]], i32 [[DATA1_FCA_2_EXTRACT]], i32 2
 ; CHECK-NEXT:    [[DATA1_FCA_3_EXTRACT:%.*]] = extractvalue [4 x i32] [[DATA1]], 3
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_12_VEC_INSERT:%.*]] = insertelement <4 x i32> [[B_BLOCKWISE_COPY_SROA_0_8_VEC_INSERT]], i32 [[DATA1_FCA_3_EXTRACT]], i32 3
 ; CHECK-NEXT:    [[DATA2:%.*]] = load <4 x float>, ptr undef, align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA2]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
@@ -214,13 +218,17 @@ define amdgpu_kernel void @test_struct_array_vector_i16() #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DATA:%.*]] = load <4 x i32>, ptr undef, align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[DATA]] to <8 x i16>
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXPAND:%.*]] = shufflevector <8 x i16> [[TMP0]], <8 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VECBLEND:%.*]] = select <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <16 x i16> [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXPAND]], <16 x i16> zeroinitializer
 ; CHECK-NEXT:    [[DATA2:%.*]] = load <4 x i32>, ptr undef, align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[DATA2]] to <8 x i16>
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_16_VEC_EXPAND:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <16 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_16_VECBLEND:%.*]] = select <16 x i1> <i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x i16> [[B_BLOCKWISE_COPY_SROA_0_16_VEC_EXPAND]], <16 x i16> [[B_BLOCKWISE_COPY_SROA_0_0_VECBLEND]]
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 0
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP0]], i32 1
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_4_16_VEC_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP1]], i32 0
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <16 x i16> [[B_BLOCKWISE_COPY_SROA_0_16_VECBLEND]], i32 0
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_2_VEC_EXTRACT:%.*]] = extractelement <16 x i16> [[B_BLOCKWISE_COPY_SROA_0_16_VECBLEND]], i32 1
+; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_0_16_VEC_EXTRACT:%.*]] = extractelement <16 x i16> [[B_BLOCKWISE_COPY_SROA_0_16_VECBLEND]], i32 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
