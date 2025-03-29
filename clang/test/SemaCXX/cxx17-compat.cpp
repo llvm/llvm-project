@@ -137,8 +137,8 @@ template<typename T> struct A { A(T); };
 template<typename T> using B = A<T>;
 B b = {1};
 #if __cplusplus <= 201703L
-  // FIXME: diagnose as well
-#else
-  // expected-warning@-4 {{class template argument deduction for alias templates is incompatible with C++ standards before C++20}}
+  // expected-error@-2 {{alias template 'B' requires template arguments; argument deduction only allowed for class templates or alias templates}}
+  // expected-warning@-3 {{class template argument deduction for alias templates is incompatible with C++ standards before C++20}}
+  // expected-note@-5 {{template is declared here}}
 #endif
 }

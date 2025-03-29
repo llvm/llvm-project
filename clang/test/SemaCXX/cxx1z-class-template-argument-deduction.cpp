@@ -113,7 +113,7 @@ namespace dependent {
   };
   template<typename T> void f() {
     typename T::X tx = 0;
-    typename T::Y ty = 0;
+    typename T::template Y<int> ty = 0;
   }
   template void f<B>();
 
