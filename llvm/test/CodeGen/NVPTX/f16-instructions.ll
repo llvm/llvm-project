@@ -200,14 +200,14 @@ define half @test_fdiv(half %a, half %b) #0 {
 ; CHECK-NOFTZ-DAG:  cvt.f32.f16     [[FB:%f[0-9]+]], [[B]];
 ; CHECK-NOFTZ-NEXT: div.rn.f32      [[D:%f[0-9]+]], [[FA]], [[FB]];
 ; CHECK-NOFTZ-NEXT: cvt.rzi.f32.f32 [[DI:%f[0-9]+]], [[D]];
-; CHECK-NOFTZ-NEXT: mul.f32         [[RI:%f[0-9]+]], [[DI]], [[FB]];
-; CHECK-NOFTZ-NEXT: sub.f32         [[RF:%f[0-9]+]], [[FA]], [[RI]];
+; CHECK-NOFTZ-NEXT: neg.f32         [[DNEG:%f[0-9]+]], [[DI]];
+; CHECK-NOFTZ-NEXT: fma.rn.f32      [[RF:%f[0-9]+]], [[DNEG]], [[FB]], [[FA]];
 ; CHECK-F16-FTZ-DAG:  cvt.ftz.f32.f16     [[FA:%f[0-9]+]], [[A]];
 ; CHECK-F16-FTZ-DAG:  cvt.ftz.f32.f16     [[FB:%f[0-9]+]], [[B]];
 ; CHECK-F16-FTZ-NEXT: div.rn.ftz.f32      [[D:%f[0-9]+]], [[FA]], [[FB]];
 ; CHECK-F16-FTZ-NEXT: cvt.rzi.ftz.f32.f32 [[DI:%f[0-9]+]], [[D]];
-; CHECK-F16-FTZ-NEXT: mul.ftz.f32         [[RI:%f[0-9]+]], [[DI]], [[FB]];
-; CHECK-F16-FTZ-NEXT: sub.ftz.f32         [[RF:%f[0-9]+]], [[FA]], [[RI]];
+; CHECK-F16-FTZ-NEXT: neg.ftz.f32         [[DNEG:%f[0-9]+]], [[DI]];
+; CHECK-F16-FTZ-NEXT: fma.rn.ftz.f32      [[RF:%f[0-9]+]], [[DNEG]], [[FB]], [[FA]];
 ; CHECK-NEXT: testp.infinite.f32 [[ISBINF:%p[0-9]+]], [[FB]];
 ; CHECK-NEXT: selp.f32           [[RESULT:%f[0-9]+]], [[FA]], [[RF]], [[ISBINF]];
 ; CHECK-NEXT: cvt.rn.f16.f32     [[R:%rs[0-9]+]], [[RESULT]];

@@ -819,8 +819,7 @@ void StructurizeCFG::setPhiValues() {
 
     // Get the undefined blocks shared by all the phi nodes.
     if (!BlkPhis.empty()) {
-      for (const auto &VI : BlkPhis.front().second)
-        Incomings.insert(VI.first);
+      Incomings.insert_range(llvm::make_first_range(BlkPhis.front().second));
       findUndefBlocks(To, Incomings, UndefBlks);
     }
 

@@ -854,6 +854,33 @@ createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
   return Instructions;
 }
 
+SmallVector<unsigned, 1> getSpirvLoopControlOperandsFromLoopMetadata(Loop *L) {
+  unsigned LC = SPIRV::LoopControl::None;
+  // Currently used only to store PartialCount value. Later when other
+  // LoopControls are added - this map should be sorted before making
+  // them loop_merge operands to satisfy 3.23. Loop Control requirements.
+  std::vector<std::pair<unsigned, unsigned>> MaskToValueMap;
+  if (getBooleanLoopAttribute(L, "llvm.loop.unroll.disable")) {
+    LC |= SPIRV::LoopControl::DontUnroll;
+  } else {
+    if (getBooleanLoopAttribute(L, "llvm.loop.unroll.enable") ||
+        getBooleanLoopAttribute(L, "llvm.loop.unroll.full")) {
+      LC |= SPIRV::LoopControl::Unroll;
+    }
+    std::optional<int> Count =
+        getOptionalIntLoopAttribute(L, "llvm.loop.unroll.count");
+    if (Count && Count != 1) {
+      LC |= SPIRV::LoopControl::PartialCount;
+      MaskToValueMap.emplace_back(
+          std::make_pair(SPIRV::LoopControl::PartialCount, *Count));
+    }
+  }
+  SmallVector<unsigned, 1> Result = {LC};
+  for (auto &[Mask, Val] : MaskToValueMap)
+    Result.push_back(Val);
+  return Result;
+}
+
 const std::set<unsigned> &getTypeFoldingSupportedOpcodes() {
   // clang-format off
   static const std::set<unsigned> TypeFoldingSupportingOpcs = {

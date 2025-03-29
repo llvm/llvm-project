@@ -2957,10 +2957,11 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_loop_merge: {
     auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpLoopMerge));
     for (unsigned i = 1; i < I.getNumExplicitOperands(); ++i) {
-      assert(I.getOperand(i).isMBB());
-      MIB.addMBB(I.getOperand(i).getMBB());
+      if (I.getOperand(i).isMBB())
+        MIB.addMBB(I.getOperand(i).getMBB());
+      else
+        MIB.addImm(foldImm(I.getOperand(i), MRI));
     }
-    MIB.addImm(SPIRV::SelectionControl::None);
     return MIB.constrainAllUses(TII, TRI, RBI);
   }
   case Intrinsic::spv_selection_merge: {
@@ -3083,6 +3084,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::rsqrt, GL::InverseSqrt);
   case Intrinsic::spv_sign:
     return selectSign(ResVReg, ResType, I);
+  case Intrinsic::spv_smoothstep:
+    return selectExtInst(ResVReg, ResType, I, CL::smoothstep, GL::SmoothStep);
   case Intrinsic::spv_firstbituhigh: // There is no CL equivalent of FindUMsb
     return selectFirstBitHigh(ResVReg, ResType, I, /*IsSigned=*/false);
   case Intrinsic::spv_firstbitshigh: // There is no CL equivalent of FindSMsb

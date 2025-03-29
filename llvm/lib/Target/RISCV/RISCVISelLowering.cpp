@@ -2631,7 +2631,7 @@ static bool useRVVForFixedLengthVectorVT(MVT VT,
   // across all supported vector element types to avoid legalization issues.
   // Therefore -- since the largest is v1024i8/v512i16/etc -- the largest
   // fixed-length vector type we support is 1024 bytes.
-  if (VT.getFixedSizeInBits() > 1024 * 8)
+  if (VT.getVectorNumElements() > 1024 || VT.getFixedSizeInBits() > 1024 * 8)
     return false;
 
   unsigned MinVLen = Subtarget.getRealMinVLen();
@@ -4613,7 +4613,7 @@ static bool isMaskedSlidePair(ArrayRef<int> Mask,
 
 // Exactly matches the semantics of a previously existing custom matcher
 // to allow migration to new matcher without changing output.
-static bool isElementRotate(std::array<std::pair<int, int>, 2> &SrcInfo,
+static bool isElementRotate(const std::array<std::pair<int, int>, 2> &SrcInfo,
                             unsigned NumElts) {
   if (SrcInfo[1].first == -1)
     return true;
