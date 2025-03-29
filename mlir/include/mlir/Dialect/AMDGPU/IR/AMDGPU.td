@@ -668,6 +668,12 @@ def WMMAInTypes : AnyTypeOf<[VectorOfLengthAndType<
 def WMMAOutTypes : AnyTypeOf<[VectorOfLengthAndType<[4, 8], [F32, I32]>,
                               VectorOfLengthAndType<[4, 8, 16], [F16, BF16]>]>;
 
+// MI300: limit to only 4 bytes per elements.
+def GlobalLoadTypes : AnyTypeOf<[F16, F32, I8, SI8, UI8, I16, I32,
+                                VectorOfLengthAndType<[2], [F16, BF16, I16]>,
+                                VectorOfLengthAndType<[2, 4], [I8, SI8, UI8]>
+                               ]>;
+
 def AMDGPU_MFMAOp :
     AMDGPU_Op<"mfma", [AllTypesMatch<["destC", "destD"]>,
                         Pure]>,
@@ -761,6 +767,39 @@ def AMDGPU_WMMAOp :
     $sourceA `*` $sourceB `+` $destC
     attr-dict
     `:` type($sourceA) `,` type($sourceB) `,` type($destC)
+  }];
+  let hasVerifier = 1;
+}
+
+def GlobalLoadMemRefType : MemRefOf<[GlobalLoadTypes]>;
+
+def AMDGPU_GlobalLoadLDSOp :
+    AMDGPU_Op<"global_load", [SameVariadicOperandSize]>,
+    Arguments<(ins
+                   Arg<GlobalLoadMemRefType, "buffer to read from", [MemRead]>:$src,
+                   Variadic<I32>:$srcIndices,
+                   Arg<GlobalLoadMemRefType, "buffer to write to", [MemWrite]>:$dst,
+                   Variadic<I32>:$dstIndices
+                   )>,
+    Results<(outs)> {
+  let summary = "MLIR wrapper for CDNA mfma instructions";
+  let description = [{
+    The `amdgpu.global_load` op is a wrapper around the `global_load_lds` instructions.
+
+    Operands:
+    * `$src`: global memory memref to read from.
+    * `$srcIndices`: indices into `$src` to read from for this thread.
+    * `$dst`: LDS memory memref to write to.
+    * `$dstIndices`: base indices into `$dst` to write to for the subgroup of this thread.
+      number of subgroup size of elements will be written contiguously to `$dst[$dstIndices]`.
+    
+    The `$dst`, along with its indices, points to the memory location the subgroup of this thread
+    will write to.
+  
+    Note: only enabled for gfx942 and later.
+  }];
+  let assemblyFormat = [{
+    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` attr-dict `:` type($src) `,` type($dst)
   }];
   let hasVerifier = 1;
 }
