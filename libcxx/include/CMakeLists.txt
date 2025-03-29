@@ -732,7 +732,6 @@ set(files
   __string/char_traits.h
   __string/constexpr_c_functions.h
   __string/extern_template_lists.h
-  __support/ibm/gettod_zos.h
   __support/ibm/locale_mgmt_zos.h
   __support/ibm/nanosleep.h
   __support/xlocale/__nop_locale_mgmt.h
@@ -1562,7 +1561,6 @@ set(files
   __cxx03/__locale_dir/locale_base_api/bsd_locale_defaults.h
   __cxx03/__locale_dir/locale_base_api/bsd_locale_fallbacks.h
   __cxx03/__locale_dir/locale_base_api/fuchsia.h
-  __cxx03/__locale_dir/locale_base_api/ibm.h
   __cxx03/__locale_dir/locale_base_api/locale_guard.h
   __cxx03/__locale_dir/locale_base_api/musl.h
   __cxx03/__locale_dir/locale_base_api/newlib.h
@@ -1765,9 +1763,6 @@ set(files
   __cxx03/__string/char_traits.h
   __cxx03/__string/constexpr_c_functions.h
   __cxx03/__string/extern_template_lists.h
-  __cxx03/__support/ibm/gettod_zos.h
-  __cxx03/__support/ibm/locale_mgmt_zos.h
-  __cxx03/__support/ibm/nanosleep.h
   __cxx03/__support/xlocale/__nop_locale_mgmt.h
   __cxx03/__support/xlocale/__posix_l_fallback.h
   __cxx03/__support/xlocale/__strtonum_fallback.h
