@@ -424,6 +424,9 @@ extractOmpDirective(const parser::OpenMPConstruct &ompConstruct) {
                     },
                     [](const parser::OpenMPDepobjConstruct &c) {
                       return llvm::omp::OMPD_depobj;
+                    },
+                    [](const parser::OpenMPInteropConstruct &c) {
+                      return llvm::omp::OMPD_interop;
                     }},
                 c.u);
           },
@@ -3389,6 +3392,13 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   (void)clauses;
 
   TODO(converter.getCurrentLocation(), "OpenMPDepobjConstruct");
+}
+
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OpenMPInteropConstruct &interopConstruct) {
+  TODO(converter.getCurrentLocation(), "OpenMPInteropConstruct");
 }
 
 static void

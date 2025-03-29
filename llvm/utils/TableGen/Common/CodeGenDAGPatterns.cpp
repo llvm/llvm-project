@@ -217,10 +217,8 @@ bool TypeSetByHwMode::operator==(const TypeSetByHwMode &VTS) const {
     return false;
 
   SmallSet<unsigned, 4> Modes;
-  for (auto &I : *this)
-    Modes.insert(I.first);
-  for (const auto &I : VTS)
-    Modes.insert(I.first);
+  Modes.insert_range(llvm::make_first_range(*this));
+  Modes.insert_range(llvm::make_first_range(VTS));
 
   if (HaveDefault) {
     // Both sets have default mode.
