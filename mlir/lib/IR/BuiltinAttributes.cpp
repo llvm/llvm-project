@@ -589,7 +589,7 @@ static APInt readBits(const char *rawData, size_t bitPos, size_t bitWidth) {
 /// Returns true if 'values' corresponds to a splat, i.e. one element, or has
 /// the same element count as 'type'.
 template <typename Values>
-static bool hasSameElementsOrSplat(ShapedType type, const Values &values) {
+static bool hasSameNumElementsOrSplat(ShapedType type, const Values &values) {
   return (values.size() == 1) ||
          (type.getNumElements() == static_cast<int64_t>(values.size()));
 }
@@ -897,7 +897,7 @@ bool DenseElementsAttr::classof(Attribute attr) {
 
 DenseElementsAttr DenseElementsAttr::get(ShapedType type,
                                          ArrayRef<Attribute> values) {
-  assert(hasSameElementsOrSplat(type, values));
+  assert(hasSameNumElementsOrSplat(type, values));
 
   Type eltType = type.getElementType();
 
@@ -981,7 +981,7 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
 
 DenseElementsAttr DenseElementsAttr::get(ShapedType type,
                                          ArrayRef<bool> values) {
-  assert(hasSameElementsOrSplat(type, values));
+  assert(hasSameNumElementsOrSplat(type, values));
   assert(type.getElementType().isInteger(1));
 
   std::vector<char> buff(llvm::divideCeil(values.size(), CHAR_BIT));
@@ -1016,7 +1016,7 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
 DenseElementsAttr DenseElementsAttr::get(ShapedType type,
                                          ArrayRef<APInt> values) {
   assert(type.getElementType().isIntOrIndex());
-  assert(hasSameElementsOrSplat(type, values));
+  assert(hasSameNumElementsOrSplat(type, values));
   size_t storageBitWidth = getDenseElementStorageWidth(type.getElementType());
   return DenseIntOrFPElementsAttr::getRaw(type, storageBitWidth, values);
 }
@@ -1024,7 +1024,7 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
                                          ArrayRef<std::complex<APInt>> values) {
   ComplexType complex = llvm::cast<ComplexType>(type.getElementType());
   assert(llvm::isa<IntegerType>(complex.getElementType()));
-  assert(hasSameElementsOrSplat(type, values));
+  assert(hasSameNumElementsOrSplat(type, values));
   size_t storageBitWidth = getDenseElementStorageWidth(complex) / 2;
   ArrayRef<APInt> intVals(reinterpret_cast<const APInt *>(values.data()),
                           values.size() * 2);
@@ -1037,7 +1037,7 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
 DenseElementsAttr DenseElementsAttr::get(ShapedType type,
                                          ArrayRef<APFloat> values) {
   assert(llvm::isa<FloatType>(type.getElementType()));
-  assert(hasSameElementsOrSplat(type, values));
+  assert(hasSameNumElementsOrSplat(type, values));
   size_t storageBitWidth = getDenseElementStorageWidth(type.getElementType());
   return DenseIntOrFPElementsAttr::getRaw(type, storageBitWidth, values);
 }
@@ -1046,7 +1046,7 @@ DenseElementsAttr::get(ShapedType type,
                        ArrayRef<std::complex<APFloat>> values) {
   ComplexType complex = llvm::cast<ComplexType>(type.getElementType());
   assert(llvm::isa<FloatType>(complex.getElementType()));
-  assert(hasSameElementsOrSplat(type, values));
+  assert(hasSameNumElementsOrSplat(type, values));
   ArrayRef<APFloat> apVals(reinterpret_cast<const APFloat *>(values.data()),
                            values.size() * 2);
   size_t storageBitWidth = getDenseElementStorageWidth(complex) / 2;
