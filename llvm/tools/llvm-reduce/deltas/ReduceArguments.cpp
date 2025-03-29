@@ -168,15 +168,13 @@ static void extractArgumentsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
 
     auto *ClonedFunc = CloneFunction(F, VMap);
     // In order to preserve function order, we move Clone after old Function
+    ClonedFunc->takeName(F);
     ClonedFunc->removeFromParent();
     Program.getFunctionList().insertAfter(F->getIterator(), ClonedFunc);
 
     replaceFunctionCalls(*F, *ClonedFunc, ArgIndexesToKeep);
-    // Rename Cloned Function to Old's name
-    std::string FName = std::string(F->getName());
     F->replaceAllUsesWith(ClonedFunc);
     F->eraseFromParent();
-    ClonedFunc->setName(FName);
   }
 }
 
