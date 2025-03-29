@@ -112,3 +112,60 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         # Reads at offset 0x0 fail
         mem = self.dap_server.request_readMemory("0x0", 0, 6)
         self.assertEqual(mem["success"], False)
+
+    def test_writeMemory(self):
+        """
+        Tests the 'writeMemory' request
+        """
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.cpp"
+        self.source_path = os.path.join(os.getcwd(), source)
+        self.set_source_breakpoints(
+            source,
+            [line_number(source, "// Breakpoint")],
+        )
+        self.continue_to_next_stop()
+
+        # Get the 'not_a_ptr' writable variable reference address.
+        ptr_deref = self.dap_server.request_evaluate("not_a_ptr")["body"]
+        memref = ptr_deref["memoryReference"]
+
+        # Write the Base64-encoded string "Mg==", which decodes to binary 0x32
+        # which is decimal 50 and corresponds to the ASCII character '2'.
+        mem_response = self.writeMemory(memref, 50, 0, True)
+        self.assertEqual(mem_response["success"], True)
+        self.assertEqual(mem_response["body"]["bytesWritten"], 1)
+
+        # Read back the modified memory and verify that the written data matches
+        # the expected result.
+        mem_response = self.dap_server.request_readMemory(memref, 0, 1)
+        self.assertEqual(mem_response["success"], True)
+        self.assertEqual(mem_response["body"]["data"], "Mg==")
+
+        # Memory write failed for 0x0.
+        mem_response = self.writeMemory("0x0", 50, 0, True)
+        self.assertEqual(mem_response["success"], False)
+
+        # Malformed memory reference.
+        mem_response = self.writeMemory("12345", 50, 0, True)
+        self.assertEqual(mem_response["success"], False)
+
+        ptr_deref = self.dap_server.request_evaluate("nonWritable")["body"]
+        memref = ptr_deref["memoryReference"]
+
+        # Writing to non-writable region should return an appropriate error.
+        mem_response = self.writeMemory(memref, 50, 0, False)
+        self.assertEqual(mem_response["success"], False)
+        self.assertRegex(
+            mem_response["message"],
+            r"Memory " + memref + " region is not writable",
+        )
+
+        # Trying to write empty value; data=""
+        mem_response = self.writeMemory(memref)
+        self.assertEqual(mem_response["success"], False)
+        self.assertRegex(
+            mem_response["message"],
+            r"Data cannot be empty value. Provide valid data",
+        )
