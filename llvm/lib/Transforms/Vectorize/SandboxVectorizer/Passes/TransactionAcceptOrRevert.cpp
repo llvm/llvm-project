@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/TransactionAcceptOrRevert.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/SandboxIR/Utils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Debug.h"
@@ -29,9 +31,13 @@ bool TransactionAcceptOrRevert::runOnRegion(Region &Rgn, const Analyses &A) {
                     << CostAfter << "/" << CostThreshold << ")\n");
   // TODO: Print costs / write to remarks.
   auto &Tracker = Rgn.getContext().getTracker();
-  if (CostAfterMinusBefore < -CostThreshold) {
+  if (!Rgn.empty() && CostAfterMinusBefore < -CostThreshold) {
     bool HasChanges = !Tracker.empty();
     Tracker.accept();
+    // TODO: Use a more accurate debug location than Rgn.begin().
+    A.getORE().emit(
+        Utils::getOptimizationRemark(PASS_NAME, "Vectorized", *Rgn.begin())
+        << "Vectorized with cost " << ore::NV("Cost", CostAfterMinusBefore));
     LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "*** Transaction Accept ***\n");
     return HasChanges;
   }
