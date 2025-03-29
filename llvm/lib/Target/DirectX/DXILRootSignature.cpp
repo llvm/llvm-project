@@ -16,6 +16,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/BinaryFormat/RootSignatureVerifier.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -47,7 +48,7 @@ static bool parseRootFlags(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
     return reportError(Ctx, "Invalid format for RootFlag Element");
 
   auto *Flag = mdconst::extract<ConstantInt>(RootFlagNode->getOperand(1));
-  RSD.Flags = Flag->getZExtValue();
+  RSD.Header.Flags = Flag->getZExtValue();
 
   return false;
 }
@@ -93,7 +94,7 @@ static bool parse(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
 }
 
 static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
-  if (!dxbc::RootSignatureValidations::isValidRootFlag(RSD.Flags)) {
+  if (!dxbc::RootSignatureVerifier::verifyRootFlag(RSD.Header.Flags)) {
     return reportError(Ctx, "Invalid Root Signature flag value");
   }
   return false;
@@ -201,15 +202,14 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
 
     // start root signature header
     Space++;
-    OS << indent(Space) << "Flags: " << format_hex(RS.Flags, 8) << ":\n";
-    OS << indent(Space) << "Version: " << RS.Version << ":\n";
-    OS << indent(Space) << "NumParameters: " << RS.NumParameters << ":\n";
-    OS << indent(Space) << "RootParametersOffset: " << RS.RootParametersOffset
+    OS << indent(Space) << "Flags: " << format_hex(RS.Header.Flags, 8) << ":\n";
+    OS << indent(Space) << "Version: " << RS.Header.Version << ":\n";
+    OS << indent(Space) << "NumParameters: " << RS.Parameters.size() << ":\n";
+    OS << indent(Space) << "RootParametersOffset: " << sizeof(RS.Header)
        << ":\n";
-    OS << indent(Space) << "NumStaticSamplers: " << RS.NumStaticSamplers
-       << ":\n";
-    OS << indent(Space) << "StaticSamplersOffset: " << RS.StaticSamplersOffset
-       << ":\n";
+    OS << indent(Space) << "NumStaticSamplers: " << 0 << ":\n";
+    OS << indent(Space) << "StaticSamplersOffset: "
+       << sizeof(RS.Header) + RS.Parameters.size_in_bytes() << ":\n";
     Space--;
     // end root signature header
   }

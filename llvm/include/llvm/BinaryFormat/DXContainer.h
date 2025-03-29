@@ -157,6 +157,20 @@ enum class RootElementFlag : uint32_t {
 #include "DXContainerConstants.def"
 };
 
+#define ROOT_PARAMETER(Val, Enum) Enum = Val,
+enum class RootParameterType : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
+
+#define SHADER_VISIBILITY(Val, Enum) Enum = Val,
+enum class ShaderVisibility : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<ShaderVisibility>> getShaderVisibility();
+
 PartType parsePartType(StringRef S);
 
 struct VertexPSVInfo {
@@ -546,15 +560,47 @@ struct ProgramSignatureElement {
 static_assert(sizeof(ProgramSignatureElement) == 32,
               "ProgramSignatureElement is misaligned");
 
-struct RootSignatureValidations {
+struct RootConstants {
+  uint32_t Register;
+  uint32_t Space;
+  uint32_t NumOfConstants;
 
-  static bool isValidRootFlag(uint32_t Flags) { return (Flags & ~0xfff) == 0; }
-
-  static bool isValidVersion(uint32_t Version) {
-    return (Version == 1 || Version == 2);
+  void swapBytes() {
+    sys::swapByteOrder(Register);
+    sys::swapByteOrder(Space);
+    sys::swapByteOrder(NumOfConstants);
   }
 };
 
+struct RootParameterHeader {
+  dxbc::RootParameterType ParameterType;
+  dxbc::ShaderVisibility ShaderVisibility;
+  uint32_t ParameterOffset;
+
+  void swapBytes() {
+    sys::swapByteOrder(ParameterType);
+    sys::swapByteOrder(ShaderVisibility);
+    sys::swapByteOrder(ParameterOffset);
+  }
+};
+
+struct RootSignatureHeader {
+  uint32_t Version;
+  uint32_t NumParameters;
+  uint32_t ParametersOffset;
+  uint32_t NumStaticSamplers;
+  uint32_t StaticSamplerOffset;
+  uint32_t Flags;
+
+  void swapBytes() {
+    sys::swapByteOrder(Version);
+    sys::swapByteOrder(NumParameters);
+    sys::swapByteOrder(ParametersOffset);
+    sys::swapByteOrder(NumStaticSamplers);
+    sys::swapByteOrder(StaticSamplerOffset);
+    sys::swapByteOrder(Flags);
+  }
+};
 } // namespace dxbc
 } // namespace llvm
 
