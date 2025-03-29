@@ -51,10 +51,19 @@ end subroutine
 subroutine len_test_array_local_alloc(i)
   integer :: i
   character(:), allocatable :: c(:)
+! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> {bindc_name = "c", uniq_name = "_QFlen_test_array_local_allocEc"}
+! CHECK:  %[[VAL_2:.*]] = fir.alloca !fir.heap<!fir.array<?x!fir.char<1,?>>> {uniq_name = "_QFlen_test_array_local_allocEc.addr"}
+! CHECK:  %[[VAL_3:.*]] = fir.alloca index {uniq_name = "_QFlen_test_array_local_allocEc.lb0"}
+! CHECK:  %[[VAL_4:.*]] = fir.alloca index {uniq_name = "_QFlen_test_array_local_allocEc.ext0"}
 ! CHECK:  %[[VAL_5:.*]] = fir.alloca index {uniq_name = "_QFlen_test_array_local_allocEc.len"}
 ! CHECK:  %[[VAL_7:.*]] = arith.constant 10 : i32
-! CHECK:  %[[VAL_10:.*]] = fir.convert %[[VAL_7]] : (i32) -> index
-! CHECK:  fir.store %[[VAL_10]] to %[[VAL_5]] : !fir.ref<index>
+! CHECK:  %[[VAL_12:.*]] = fir.load %[[VAL_3]] : !fir.ref<index>
+! CHECK:  %[[VAL_13:.*]] = fir.load %[[VAL_4]] : !fir.ref<index>
+! CHECK:  %[[VAL_14:.*]] = fir.load %[[VAL_5]] : !fir.ref<index>
+! CHECK:  %[[VAL_15:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.heap<!fir.array<?x!fir.char<1,?>>>>
+! CHECK:  %[[VAL_16:.*]] = fir.shape_shift %[[VAL_12]], %[[VAL_13]] : (index, index) -> !fir.shapeshift<1>
+! CHECK:  %[[VAL_17:.*]] = fir.embox %[[VAL_15]](%[[VAL_16]]) typeparams %[[VAL_14]]
+! CHECK:  fir.store %[[VAL_17]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
   allocate(character(10):: c(100))
 ! CHECK:  %[[VAL_13:.*]] = fir.load %[[VAL_5]] : !fir.ref<index>
 ! CHECK:  %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (index) -> i32

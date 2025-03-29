@@ -22,7 +22,7 @@ end subroutine
 ! CHECK:      omp.parallel {
 ! CHECK:        fir.allocmem
 ! CHECK:        fir.allocmem
-! CHECK:        fir.freemem
-! CHECK:        fir.freemem
+! CHECK:        @_FortranAAllocatableDeallocate
+! CHECK:        @_FortranAAllocatableDeallocate
 ! CHECK:        omp.terminator
 ! CHECK-NEXT: }

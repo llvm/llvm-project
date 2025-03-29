@@ -30,115 +30,181 @@ subroutine system_clock_test()
 ! print*, m
 end subroutine
 
-! CHECK-LABEL: @_QPss
 subroutine ss(count)
-  ! CHECK:   %[[V_0:[0-9]+]] = fir.alloca !fir.box<!fir.heap<i64>> {bindc_name = "count_max", uniq_name = "_QFssEcount_max"}
-  ! CHECK:   %[[V_1:[0-9]+]] = fir.alloca !fir.heap<i64> {uniq_name = "_QFssEcount_max.addr"}
-  ! CHECK:   %[[V_2:[0-9]+]] = fir.zero_bits !fir.heap<i64>
-  ! CHECK:   fir.store %[[V_2]] to %[[V_1]] : !fir.ref<!fir.heap<i64>>
-  ! CHECK:   %[[V_3:[0-9]+]] = fir.alloca !fir.box<!fir.ptr<i64>> {bindc_name = "count_rate", uniq_name = "_QFssEcount_rate"}
-  ! CHECK:   %[[V_4:[0-9]+]] = fir.alloca !fir.ptr<i64> {uniq_name = "_QFssEcount_rate.addr"}
-  ! CHECK:   %[[V_5:[0-9]+]] = fir.zero_bits !fir.ptr<i64>
-  ! CHECK:   fir.store %[[V_5]] to %[[V_4]] : !fir.ref<!fir.ptr<i64>>
-  ! CHECK:   %[[V_6:[0-9]+]] = fir.alloca i64 {bindc_name = "count_rate_", fir.target, uniq_name = "_QFssEcount_rate_"}
-  ! CHECK:   %[[V_7:[0-9]+]] = fir.convert %[[V_6]] : (!fir.ref<i64>) -> !fir.ptr<i64>
-  ! CHECK:   fir.store %[[V_7]] to %[[V_4]] : !fir.ref<!fir.ptr<i64>>
-  ! CHECK:   %[[V_8:[0-9]+]] = fir.allocmem i64 {fir.must_be_heap = true, uniq_name = "_QFssEcount_max.alloc"}
-  ! CHECK:   fir.store %[[V_8]] to %[[V_1]] : !fir.ref<!fir.heap<i64>>
-  ! CHECK:   %[[V_9:[0-9]+]] = fir.load %[[V_4]] : !fir.ref<!fir.ptr<i64>>
-  ! CHECK:   %[[V_10:[0-9]+]] = fir.load %[[V_1]] : !fir.ref<!fir.heap<i64>>
-  ! CHECK:   %[[V_11:[0-9]+]] = fir.is_present %arg0 : (!fir.ref<i64>) -> i1
-  ! CHECK:   fir.if %[[V_11]] {
-  ! CHECK:     %[[V_29:[0-9]+]] = fir.call @_FortranASystemClockCount(%c8{{.*}}_i32) {{.*}}: (i32) -> i64
-  ! CHECK:     fir.store %[[V_29]] to %arg0 : !fir.ref<i64>
-  ! CHECK:   }
-  ! CHECK:   %[[V_12:[0-9]+]] = fir.convert %[[V_9]] : (!fir.ptr<i64>) -> i64
-  ! CHECK:   %[[V_13:[0-9]+]] = arith.cmpi ne, %[[V_12]], %c0{{.*}} : i64
-  ! CHECK:   fir.if %[[V_13]] {
-  ! CHECK:     %[[V_29:[0-9]+]] = fir.call @_FortranASystemClockCountRate(%c8{{.*}}_i32) {{.*}}: (i32) -> i64
-  ! CHECK:     fir.store %[[V_29]] to %[[V_9]] : !fir.ptr<i64>
-  ! CHECK:   }
-  ! CHECK:   %[[V_14:[0-9]+]] = fir.convert %[[V_10]] : (!fir.heap<i64>) -> i64
-  ! CHECK:   %[[V_15:[0-9]+]] = arith.cmpi ne, %[[V_14]], %c0{{.*}} : i64
-  ! CHECK:   fir.if %[[V_15]] {
-  ! CHECK:     %[[V_29]] = fir.call @_FortranASystemClockCountMax(%c8{{.*}}_i32) {{.*}}: (i32) -> i64
-  ! CHECK:     fir.store %[[V_29]] to %[[V_10]] : !fir.heap<i64>
-  ! CHECK:   }
-  ! CHECK:   %[[V_16:[0-9]+]] = fir.is_present %arg0 : (!fir.ref<i64>) -> i1
-  ! CHECK:   fir.if %[[V_16]] {
-  ! CHECK:     %[[V_31:[0-9]+]] = fir.call @_FortranAioBeginExternalListOutput
-  ! CHECK:     %[[V_32:[0-9]+]] = fir.load %arg0 : !fir.ref<i64>
-  ! CHECK:     %[[V_33:[0-9]+]] = fir.call @_FortranAioOutputInteger64(%[[V_31]], %[[V_32]]) {{.*}}: (!fir.ref<i8>, i64) -> i1
-  ! CHECK:     %[[V_34:[0-9]+]] = fir.load %[[V_4]] : !fir.ref<!fir.ptr<i64>>
-  ! CHECK:     %[[V_35:[0-9]+]] = fir.load %[[V_34]] : !fir.ptr<i64>
-  ! CHECK:     %[[V_36:[0-9]+]] = fir.call @_FortranAioOutputInteger64(%[[V_31]], %[[V_35]]) {{.*}}: (!fir.ref<i8>, i64) -> i1
-  ! CHECK:     %[[V_37:[0-9]+]] = fir.load %[[V_1]] : !fir.ref<!fir.heap<i64>>
-  ! CHECK:     %[[V_38:[0-9]+]] = fir.load %[[V_37]] : !fir.heap<i64>
-  ! CHECK:     %[[V_39:[0-9]+]] = fir.call @_FortranAioOutputInteger64(%[[V_31]], %[[V_38]]) {{.*}}: (!fir.ref<i8>, i64) -> i1
-  ! CHECK:     %[[V_40:[0-9]+]] = fir.call @_FortranAioEndIoStatement(%[[V_31]]) {{.*}}: (!fir.ref<i8>) -> i32
-  ! CHECK:   } else {
-  ! CHECK:     %[[V_29:[0-9]+]] = fir.load %[[V_4]] : !fir.ref<!fir.ptr<i64>>
-  ! CHECK:     %[[V_30:[0-9]+]] = fir.load %[[V_1]] : !fir.ref<!fir.heap<i64>>
-  ! CHECK:     %[[V_31:[0-9]+]] = fir.convert %[[V_29]] : (!fir.ptr<i64>) -> i64
-  ! CHECK:     %[[V_32:[0-9]+]] = arith.cmpi ne, %[[V_31]], %c0{{.*}} : i64
-  ! CHECK:     fir.if %[[V_32]] {
-  ! CHECK:       %[[V_45:[0-9]+]] = fir.call @_FortranASystemClockCountRate(%c8{{.*}}_i32) {{.*}}: (i32) -> i64
-  ! CHECK:       fir.store %[[V_45]] to %[[V_29]] : !fir.ptr<i64>
-  ! CHECK:     }
-  ! CHECK:     %[[V_33:[0-9]+]] = fir.convert %[[V_30]] : (!fir.heap<i64>) -> i64
-  ! CHECK:     %[[V_34:[0-9]+]] = arith.cmpi ne, %[[V_33]], %c0{{.*}} : i64
-  ! CHECK:     fir.if %[[V_34]] {
-  ! CHECK:       %[[V_45]] = fir.call @_FortranASystemClockCountMax(%c8{{.*}}_i32) {{.*}}: (i32) -> i64
-  ! CHECK:       fir.store %[[V_45]] to %[[V_30]] : !fir.heap<i64>
-  ! CHECK:     }
-  ! CHECK:     %[[V_37:[0-9]+]] = fir.call @_FortranAioBeginExternalListOutput
-  ! CHECK:     %[[V_38:[0-9]+]] = fir.load %[[V_4]] : !fir.ref<!fir.ptr<i64>>
-  ! CHECK:     %[[V_39:[0-9]+]] = fir.load %[[V_38]] : !fir.ptr<i64>
-  ! CHECK:     %[[V_40:[0-9]+]] = fir.call @_FortranAioOutputInteger64(%[[V_37]], %[[V_39]]) {{.*}}: (!fir.ref<i8>, i64) -> i1
-  ! CHECK:     %[[V_41:[0-9]+]] = fir.load %[[V_1]] : !fir.ref<!fir.heap<i64>>
-  ! CHECK:     %[[V_42:[0-9]+]] = fir.load %[[V_41]] : !fir.heap<i64>
-  ! CHECK:     %[[V_43:[0-9]+]] = fir.call @_FortranAioOutputInteger64(%[[V_37]], %[[V_42]]) {{.*}}: (!fir.ref<i8>, i64) -> i1
-  ! CHECK:     %[[V_44:[0-9]+]] = fir.call @_FortranAioEndIoStatement(%[[V_37]]) {{.*}}: (!fir.ref<i8>) -> i32
-  ! CHECK:   }
-  ! CHECK:   %[[V_17:[0-9]+]] = fir.is_present %arg0 : (!fir.ref<i64>) -> i1
-  ! CHECK:   fir.if %[[V_17]] {
-  ! CHECK:     %[[C_0:c[0-9a-z_]+]] = arith.constant 0 : i64
-  ! CHECK:     fir.store %[[C_0]] to %arg0 : !fir.ref<i64>
-  ! CHECK:   }
-  ! CHECK:   %[[V_18:[0-9]+]] = fir.zero_bits !fir.ptr<i64>
-  ! CHECK:   fir.store %[[V_18]] to %[[V_4]] : !fir.ref<!fir.ptr<i64>>
-  ! CHECK:   %[[V_19:[0-9]+]] = fir.load %[[V_1]] : !fir.ref<!fir.heap<i64>>
-  ! CHECK:   fir.freemem %[[V_19]] : !fir.heap<i64>
-  ! CHECK:   %[[V_20:[0-9]+]] = fir.zero_bits !fir.heap<i64>
-  ! CHECK:   fir.store %[[V_20]] to %[[V_1]] : !fir.ref<!fir.heap<i64>>
-  ! CHECK:   %[[V_21:[0-9]+]] = fir.load %[[V_4]] : !fir.ref<!fir.ptr<i64>>
-  ! CHECK:   %[[V_22:[0-9]+]] = fir.load %[[V_1]] : !fir.ref<!fir.heap<i64>>
-  ! CHECK:   %[[V_23:[0-9]+]] = fir.is_present %arg0 : (!fir.ref<i64>) -> i1
-  ! CHECK:   fir.if %[[V_23]] {
-  ! CHECK:     %[[V_29]] = fir.call @_FortranASystemClockCount(%c8{{.*}}_i32) {{.*}}: (i32) -> i64
-  ! CHECK:     fir.store %[[V_29]] to %arg0 : !fir.ref<i64>
-  ! CHECK:   }
-  ! CHECK:   %[[V_24:[0-9]+]] = fir.convert %[[V_21]] : (!fir.ptr<i64>) -> i64
-  ! CHECK:   %[[V_25:[0-9]+]] = arith.cmpi ne, %[[V_24]], %c0{{.*}} : i64
-  ! CHECK:   fir.if %[[V_25]] {
-  ! CHECK:     %[[V_29]] = fir.call @_FortranASystemClockCountRate(%c8{{.*}}_i32) {{.*}}: (i32) -> i64
-  ! CHECK:     fir.store %[[V_29]] to %[[V_21]] : !fir.ptr<i64>
-  ! CHECK:   }
-  ! CHECK:   %[[V_26:[0-9]+]] = fir.convert %[[V_22]] : (!fir.heap<i64>) -> i64
-  ! CHECK:   %[[V_27:[0-9]+]] = arith.cmpi ne, %[[V_26]], %c0{{.*}} : i64
-  ! CHECK:   fir.if %[[V_27]] {
-  ! CHECK:     %[[V_29]] = fir.call @_FortranASystemClockCountMax(%c8{{.*}}_i32) {{.*}}: (i32) -> i64
-  ! CHECK:     fir.store %[[V_29]] to %[[V_22]] : !fir.heap<i64>
-  ! CHECK:   }
-  ! CHECK:   %[[V_28:[0-9]+]] = fir.is_present %arg0 : (!fir.ref<i64>) -> i1
-  ! CHECK:   fir.if %[[V_28]] {
-  ! CHECK:     %[[V_31]] = fir.call @_FortranAioBeginExternalListOutput
-  ! CHECK:     %[[V_32]] = fir.load %arg0 : !fir.ref<i64>
-  ! CHECK:     %[[V_33]] = fir.call @_FortranAioOutputInteger64(%[[V_31]], %[[V_32]]) {{.*}}: (!fir.ref<i8>, i64) -> i1
-  ! CHECK:     %[[V_34]] = fir.call @_FortranAioEndIoStatement(%[[V_31]]) {{.*}}: (!fir.ref<i8>) -> i32
-  ! CHECK:   }
-  ! CHECK:   return
-  ! CHECK: }
+! CHECK-LABEL:   func.func @_QPss(
+! CHECK-SAME:                     %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i64> {fir.bindc_name = "count", fir.optional}) {
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.heap<i64>> {bindc_name = "count_max", uniq_name = "_QFssEcount_max"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.heap<i64> {uniq_name = "_QFssEcount_max.addr"}
+! CHECK:           %[[VAL_3:.*]] = fir.zero_bits !fir.heap<i64>
+! CHECK:           fir.store %[[VAL_3]] to %[[VAL_2]] : !fir.ref<!fir.heap<i64>>
+! CHECK:           %[[VAL_4:.*]] = fir.alloca !fir.box<!fir.ptr<i64>> {bindc_name = "count_rate", uniq_name = "_QFssEcount_rate"}
+! CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.ptr<i64> {uniq_name = "_QFssEcount_rate.addr"}
+! CHECK:           %[[VAL_6:.*]] = fir.zero_bits !fir.ptr<i64>
+! CHECK:           fir.store %[[VAL_6]] to %[[VAL_5]] : !fir.ref<!fir.ptr<i64>>
+! CHECK:           %[[VAL_7:.*]] = fir.alloca i64 {bindc_name = "count_rate_", fir.target, uniq_name = "_QFssEcount_rate_"}
+! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<i64>) -> !fir.ptr<i64>
+! CHECK:           fir.store %[[VAL_8]] to %[[VAL_5]] : !fir.ref<!fir.ptr<i64>>
+! CHECK:           %[[VAL_9:.*]] = arith.constant false
+! CHECK:           %[[VAL_10:.*]] = fir.absent !fir.box<none>
+! CHECK:           %[[VAL_11:.*]] = fir.address_of(@_QQclX0146bbb9ee5e88a6e67c6c1cf8871123) : !fir.ref<!fir.char<1,76>>
+! CHECK:           %[[VAL_12:.*]] = arith.constant {{.*}} : i32
+! CHECK:           %[[VAL_13:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.heap<i64>>
+! CHECK:           %[[VAL_14:.*]] = fir.embox %[[VAL_13]] : (!fir.heap<i64>) -> !fir.box<!fir.heap<i64>>
+! CHECK:           fir.store %[[VAL_14]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<i64>>>
+! CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.heap<i64>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_11]] : (!fir.ref<!fir.char<1,76>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_17:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_15]], %[[VAL_9]], %[[VAL_10]], %[[VAL_16]], %[[VAL_12]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:           %[[VAL_18:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<i64>>>
+! CHECK:           %[[VAL_19:.*]] = fir.box_addr %[[VAL_18]] : (!fir.box<!fir.heap<i64>>) -> !fir.heap<i64>
+! CHECK:           fir.store %[[VAL_19]] to %[[VAL_2]] : !fir.ref<!fir.heap<i64>>
+! CHECK:           %[[VAL_20:.*]] = fir.load %[[VAL_5]] : !fir.ref<!fir.ptr<i64>>
+! CHECK:           %[[VAL_21:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.heap<i64>>
+! CHECK:           %[[VAL_22:.*]] = fir.is_present %[[VAL_0]] : (!fir.ref<i64>) -> i1
+! CHECK:           fir.if %[[VAL_22]] {
+! CHECK:             %[[VAL_23:.*]] = arith.constant {{.*}} : i32
+! CHECK:             %[[VAL_24:.*]] = fir.call @_FortranASystemClockCount(%[[VAL_23]]) fastmath<contract> : (i32) -> i64
+! CHECK:             fir.store %[[VAL_24]] to %[[VAL_0]] : !fir.ref<i64>
+! CHECK:           }
+! CHECK:           %[[VAL_25:.*]] = fir.convert %[[VAL_20]] : (!fir.ptr<i64>) -> i64
+! CHECK:           %[[VAL_26:.*]] = arith.constant 0 : i64
+! CHECK:           %[[VAL_27:.*]] = arith.cmpi ne, %[[VAL_25]], %[[VAL_26]] : i64
+! CHECK:           fir.if %[[VAL_27]] {
+! CHECK:             %[[VAL_28:.*]] = arith.constant {{.*}} : i32
+! CHECK:             %[[VAL_29:.*]] = fir.call @_FortranASystemClockCountRate(%[[VAL_28]]) fastmath<contract> : (i32) -> i64
+! CHECK:             fir.store %[[VAL_29]] to %[[VAL_20]] : !fir.ptr<i64>
+! CHECK:           }
+! CHECK:           %[[VAL_30:.*]] = fir.convert %[[VAL_21]] : (!fir.heap<i64>) -> i64
+! CHECK:           %[[VAL_31:.*]] = arith.constant 0 : i64
+! CHECK:           %[[VAL_32:.*]] = arith.cmpi ne, %[[VAL_30]], %[[VAL_31]] : i64
+! CHECK:           fir.if %[[VAL_32]] {
+! CHECK:             %[[VAL_33:.*]] = arith.constant {{.*}} : i32
+! CHECK:             %[[VAL_34:.*]] = fir.call @_FortranASystemClockCountMax(%[[VAL_33]]) fastmath<contract> : (i32) -> i64
+! CHECK:             fir.store %[[VAL_34]] to %[[VAL_21]] : !fir.heap<i64>
+! CHECK:           }
+! CHECK:           %[[VAL_35:.*]] = fir.is_present %[[VAL_0]] : (!fir.ref<i64>) -> i1
+! CHECK:           fir.if %[[VAL_35]] {
+! CHECK:             %[[VAL_36:.*]] = arith.constant {{.*}} : i32
+! CHECK:             %[[VAL_37:.*]] = fir.address_of(@_QQclX0146bbb9ee5e88a6e67c6c1cf8871123) : !fir.ref<!fir.char<1,76>>
+! CHECK:             %[[VAL_38:.*]] = fir.convert %[[VAL_37]] : (!fir.ref<!fir.char<1,76>>) -> !fir.ref<i8>
+! CHECK:             %[[VAL_39:.*]] = arith.constant {{.*}} : i32
+! CHECK:             %[[VAL_40:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_36]], %[[VAL_38]], %[[VAL_39]]) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+! CHECK:             %[[VAL_41:.*]] = fir.load %[[VAL_0]] : !fir.ref<i64>
+! CHECK:             %[[VAL_42:.*]] = fir.call @_FortranAioOutputInteger64(%[[VAL_40]], %[[VAL_41]]) fastmath<contract> : (!fir.ref<i8>, i64) -> i1
+! CHECK:             %[[VAL_43:.*]] = fir.load %[[VAL_5]] : !fir.ref<!fir.ptr<i64>>
+! CHECK:             %[[VAL_44:.*]] = fir.load %[[VAL_43]] : !fir.ptr<i64>
+! CHECK:             %[[VAL_45:.*]] = fir.call @_FortranAioOutputInteger64(%[[VAL_40]], %[[VAL_44]]) fastmath<contract> : (!fir.ref<i8>, i64) -> i1
+! CHECK:             %[[VAL_46:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.heap<i64>>
+! CHECK:             %[[VAL_47:.*]] = fir.load %[[VAL_46]] : !fir.heap<i64>
+! CHECK:             %[[VAL_48:.*]] = fir.call @_FortranAioOutputInteger64(%[[VAL_40]], %[[VAL_47]]) fastmath<contract> : (!fir.ref<i8>, i64) -> i1
+! CHECK:             %[[VAL_49:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_40]]) fastmath<contract> : (!fir.ref<i8>) -> i32
+! CHECK:           } else {
+! CHECK:             %[[VAL_50:.*]] = fir.load %[[VAL_5]] : !fir.ref<!fir.ptr<i64>>
+! CHECK:             %[[VAL_51:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.heap<i64>>
+! CHECK:             %[[VAL_52:.*]] = fir.convert %[[VAL_50]] : (!fir.ptr<i64>) -> i64
+! CHECK:             %[[VAL_53:.*]] = arith.constant 0 : i64
+! CHECK:             %[[VAL_54:.*]] = arith.cmpi ne, %[[VAL_52]], %[[VAL_53]] : i64
+! CHECK:             fir.if %[[VAL_54]] {
+! CHECK:               %[[VAL_55:.*]] = arith.constant {{.*}} : i32
+! CHECK:               %[[VAL_56:.*]] = fir.call @_FortranASystemClockCountRate(%[[VAL_55]]) fastmath<contract> : (i32) -> i64
+! CHECK:               fir.store %[[VAL_56]] to %[[VAL_50]] : !fir.ptr<i64>
+! CHECK:             }
+! CHECK:             %[[VAL_57:.*]] = fir.convert %[[VAL_51]] : (!fir.heap<i64>) -> i64
+! CHECK:             %[[VAL_58:.*]] = arith.constant 0 : i64
+! CHECK:             %[[VAL_59:.*]] = arith.cmpi ne, %[[VAL_57]], %[[VAL_58]] : i64
+! CHECK:             fir.if %[[VAL_59]] {
+! CHECK:               %[[VAL_60:.*]] = arith.constant {{.*}} : i32
+! CHECK:               %[[VAL_61:.*]] = fir.call @_FortranASystemClockCountMax(%[[VAL_60]]) fastmath<contract> : (i32) -> i64
+! CHECK:               fir.store %[[VAL_61]] to %[[VAL_51]] : !fir.heap<i64>
+! CHECK:             }
+! CHECK:             %[[VAL_62:.*]] = arith.constant {{.*}} : i32
+! CHECK:             %[[VAL_63:.*]] = fir.address_of(@_QQclX0146bbb9ee5e88a6e67c6c1cf8871123) : !fir.ref<!fir.char<1,76>>
+! CHECK:             %[[VAL_64:.*]] = fir.convert %[[VAL_63]] : (!fir.ref<!fir.char<1,76>>) -> !fir.ref<i8>
+! CHECK:             %[[VAL_65:.*]] = arith.constant {{.*}} : i32
+! CHECK:             %[[VAL_66:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_62]], %[[VAL_64]], %[[VAL_65]]) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+! CHECK:             %[[VAL_67:.*]] = fir.load %[[VAL_5]] : !fir.ref<!fir.ptr<i64>>
+! CHECK:             %[[VAL_68:.*]] = fir.load %[[VAL_67]] : !fir.ptr<i64>
+! CHECK:             %[[VAL_69:.*]] = fir.call @_FortranAioOutputInteger64(%[[VAL_66]], %[[VAL_68]]) fastmath<contract> : (!fir.ref<i8>, i64) -> i1
+! CHECK:             %[[VAL_70:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.heap<i64>>
+! CHECK:             %[[VAL_71:.*]] = fir.load %[[VAL_70]] : !fir.heap<i64>
+! CHECK:             %[[VAL_72:.*]] = fir.call @_FortranAioOutputInteger64(%[[VAL_66]], %[[VAL_71]]) fastmath<contract> : (!fir.ref<i8>, i64) -> i1
+! CHECK:             %[[VAL_73:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_66]]) fastmath<contract> : (!fir.ref<i8>) -> i32
+! CHECK:           }
+! CHECK:           %[[VAL_74:.*]] = fir.is_present %[[VAL_0]] : (!fir.ref<i64>) -> i1
+! CHECK:           fir.if %[[VAL_74]] {
+! CHECK:             %[[VAL_75:.*]] = arith.constant 0 : i64
+! CHECK:             fir.store %[[VAL_75]] to %[[VAL_0]] : !fir.ref<i64>
+! CHECK:           }
+! CHECK:           %[[VAL_76:.*]] = fir.zero_bits !fir.ptr<i64>
+! CHECK:           fir.store %[[VAL_76]] to %[[VAL_5]] : !fir.ref<!fir.ptr<i64>>
+! CHECK:           %[[VAL_77:.*]] = arith.constant false
+! CHECK:           %[[VAL_78:.*]] = fir.absent !fir.box<none>
+! CHECK:           %[[VAL_79:.*]] = fir.address_of(@_QQclX0146bbb9ee5e88a6e67c6c1cf8871123) : !fir.ref<!fir.char<1,76>>
+! CHECK:           %[[VAL_80:.*]] = arith.constant {{.*}} : i32
+! CHECK:           %[[VAL_81:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.heap<i64>>
+! CHECK:           %[[VAL_82:.*]] = fir.embox %[[VAL_81]] : (!fir.heap<i64>) -> !fir.box<!fir.heap<i64>>
+! CHECK:           fir.store %[[VAL_82]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<i64>>>
+! CHECK:           %[[VAL_83:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.heap<i64>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_84:.*]] = fir.convert %[[VAL_79]] : (!fir.ref<!fir.char<1,76>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_85:.*]] = fir.call @_FortranAAllocatableDeallocate(%[[VAL_83]], %[[VAL_77]], %[[VAL_78]], %[[VAL_84]], %[[VAL_80]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:           %[[VAL_86:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<i64>>>
+! CHECK:           %[[VAL_87:.*]] = fir.box_addr %[[VAL_86]] : (!fir.box<!fir.heap<i64>>) -> !fir.heap<i64>
+! CHECK:           fir.store %[[VAL_87]] to %[[VAL_2]] : !fir.ref<!fir.heap<i64>>
+! CHECK:           %[[VAL_88:.*]] = fir.load %[[VAL_5]] : !fir.ref<!fir.ptr<i64>>
+! CHECK:           %[[VAL_89:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.heap<i64>>
+! CHECK:           %[[VAL_90:.*]] = fir.is_present %[[VAL_0]] : (!fir.ref<i64>) -> i1
+! CHECK:           fir.if %[[VAL_90]] {
+! CHECK:             %[[VAL_91:.*]] = arith.constant {{.*}} : i32
+! CHECK:             %[[VAL_92:.*]] = fir.call @_FortranASystemClockCount(%[[VAL_91]]) fastmath<contract> : (i32) -> i64
+! CHECK:             fir.store %[[VAL_92]] to %[[VAL_0]] : !fir.ref<i64>
+! CHECK:           }
+! CHECK:           %[[VAL_93:.*]] = fir.convert %[[VAL_88]] : (!fir.ptr<i64>) -> i64
+! CHECK:           %[[VAL_94:.*]] = arith.constant 0 : i64
+! CHECK:           %[[VAL_95:.*]] = arith.cmpi ne, %[[VAL_93]], %[[VAL_94]] : i64
+! CHECK:           fir.if %[[VAL_95]] {
+! CHECK:             %[[VAL_96:.*]] = arith.constant {{.*}} : i32
+! CHECK:             %[[VAL_97:.*]] = fir.call @_FortranASystemClockCountRate(%[[VAL_96]]) fastmath<contract> : (i32) -> i64
+! CHECK:             fir.store %[[VAL_97]] to %[[VAL_88]] : !fir.ptr<i64>
+! CHECK:           }
+! CHECK:           %[[VAL_98:.*]] = fir.convert %[[VAL_89]] : (!fir.heap<i64>) -> i64
+! CHECK:           %[[VAL_99:.*]] = arith.constant 0 : i64
+! CHECK:           %[[VAL_100:.*]] = arith.cmpi ne, %[[VAL_98]], %[[VAL_99]] : i64
+! CHECK:           fir.if %[[VAL_100]] {
+! CHECK:             %[[VAL_101:.*]] = arith.constant {{.*}} : i32
+! CHECK:             %[[VAL_102:.*]] = fir.call @_FortranASystemClockCountMax(%[[VAL_101]]) fastmath<contract> : (i32) -> i64
+! CHECK:             fir.store %[[VAL_102]] to %[[VAL_89]] : !fir.heap<i64>
+! CHECK:           }
+! CHECK:           %[[VAL_103:.*]] = fir.is_present %[[VAL_0]] : (!fir.ref<i64>) -> i1
+! CHECK:           fir.if %[[VAL_103]] {
+! CHECK:             %[[VAL_104:.*]] = arith.constant {{.*}} : i32
+! CHECK:             %[[VAL_105:.*]] = fir.address_of(@_QQclX0146bbb9ee5e88a6e67c6c1cf8871123) : !fir.ref<!fir.char<1,76>>
+! CHECK:             %[[VAL_106:.*]] = fir.convert %[[VAL_105]] : (!fir.ref<!fir.char<1,76>>) -> !fir.ref<i8>
+! CHECK:             %[[VAL_107:.*]] = arith.constant {{.*}} : i32
+! CHECK:             %[[VAL_108:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_104]], %[[VAL_106]], %[[VAL_107]]) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+! CHECK:             %[[VAL_109:.*]] = fir.load %[[VAL_0]] : !fir.ref<i64>
+! CHECK:             %[[VAL_110:.*]] = fir.call @_FortranAioOutputInteger64(%[[VAL_108]], %[[VAL_109]]) fastmath<contract> : (!fir.ref<i8>, i64) -> i1
+! CHECK:             %[[VAL_111:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_108]]) fastmath<contract> : (!fir.ref<i8>) -> i32
+! CHECK:           }
+! CHECK:           %[[VAL_112:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.heap<i64>>
+! CHECK:           %[[VAL_113:.*]] = fir.convert %[[VAL_112]] : (!fir.heap<i64>) -> i64
+! CHECK:           %[[VAL_114:.*]] = arith.constant 0 : i64
+! CHECK:           %[[VAL_115:.*]] = arith.cmpi ne, %[[VAL_113]], %[[VAL_114]] : i64
+! CHECK:           fir.if %[[VAL_115]] {
+! CHECK:             %[[VAL_116:.*]] = arith.constant false
+! CHECK:             %[[VAL_117:.*]] = fir.absent !fir.box<none>
+! CHECK:             %[[VAL_118:.*]] = fir.address_of(@_QQclX0146bbb9ee5e88a6e67c6c1cf8871123) : !fir.ref<!fir.char<1,76>>
+! CHECK:             %[[VAL_119:.*]] = arith.constant {{.*}} : i32
+! CHECK:             %[[VAL_120:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.heap<i64>>
+! CHECK:             %[[VAL_121:.*]] = fir.embox %[[VAL_120]] : (!fir.heap<i64>) -> !fir.box<!fir.heap<i64>>
+! CHECK:             fir.store %[[VAL_121]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<i64>>>
+! CHECK:             %[[VAL_122:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.heap<i64>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:             %[[VAL_123:.*]] = fir.convert %[[VAL_118]] : (!fir.ref<!fir.char<1,76>>) -> !fir.ref<i8>
+! CHECK:             %[[VAL_124:.*]] = fir.call @_FortranAAllocatableDeallocate(%[[VAL_122]], %[[VAL_116]], %[[VAL_117]], %[[VAL_123]], %[[VAL_119]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:             %[[VAL_125:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<i64>>>
+! CHECK:             %[[VAL_126:.*]] = fir.box_addr %[[VAL_125]] : (!fir.box<!fir.heap<i64>>) -> !fir.heap<i64>
+! CHECK:             fir.store %[[VAL_126]] to %[[VAL_2]] : !fir.ref<!fir.heap<i64>>
+! CHECK:           }
+! CHECK:           return
+! CHECK:         }
 
   integer(8), optional :: count
   integer(8), target :: count_rate_

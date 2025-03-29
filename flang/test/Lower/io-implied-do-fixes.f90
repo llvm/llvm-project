@@ -24,11 +24,12 @@ end subroutine
 
 ! CHECK-LABEL: func @_QPido2
 ! CHECK: %[[J_REF_ADDR:.*]] = fir.alloca !fir.heap<i32> {uniq_name = "_QFido2Eiptr.addr"}
+! CHECK: fir.call @_FortranAioBeginExternalListOutput
 ! CHECK: %[[J_ADDR:.*]] = fir.load %[[J_REF_ADDR]] : !fir.ref<!fir.heap<i32>>
 ! CHECK: %[[J_VAL_FINAL:.*]] = fir.do_loop %[[J_VAL:.*]] = %{{.*}} to %{{.*}} step %{{.*}} -> index {
 ! CHECK: %[[J_VAL_CVT1:.*]] = fir.convert %[[J_VAL]] : (index) -> i32
 ! CHECK: fir.store %[[J_VAL_CVT1]] to %[[J_ADDR]] : !fir.heap<i32>
-! CHECK: %[[J_VAL_NEXT:.*]] = arith.addi %[[J_VAL]], %{{[^ ]*}} overflow<nsw> : index
+! CHECK: %[[J_VAL_NEXT:.*]] = arith.addi %[[J_VAL]], %{{[^ ]*}}
 ! CHECK: fir.result %[[J_VAL_NEXT]] : index
 ! CHECK: }
 ! CHECK: %[[J_VAL_CVT2:.*]] = fir.convert %[[J_VAL_FINAL]] : (index) -> i32
@@ -41,6 +42,7 @@ end subroutine
 
 ! CHECK-LABEL: func @_QPido3
 ! CHECK:  %[[J_REF_ADDR:.*]] = fir.alloca !fir.heap<i32> {uniq_name = "_QFido3Ej.addr"}
+! CHECK: fir.call @_FortranAioBeginExternalListOutput
 ! CHECK:  %[[J_ADDR:.*]] = fir.load %[[J_REF_ADDR]] : !fir.ref<!fir.heap<i32>>
 ! CHECK:  %[[J_VAL_FINAL:.*]]:2 = fir.iterate_while (%[[J_VAL:.*]] = %{{.*}} to %{{.*}} step %{{.*}}) and (%[[OK:.*]] = {{.*}}) -> (index, i1) {
 ! CHECK:    %[[J_VAL_CVT1:.*]] = fir.convert %[[J_VAL]] : (index) -> i32

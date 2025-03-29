@@ -231,19 +231,14 @@ module acc_declare
 
     allocate(a(100))
 
-! CHECK: %{{.*}} = fir.allocmem !fir.array<?xi32>, %{{.*}} {fir.must_be_heap = true, uniq_name = "_QMacc_declareFacc_declare_allocateEa.alloc"}
-! CHECK: fir.store %{{.*}} to %{{.*}} {acc.declare_action = #acc.declare_action<postAlloc = @_QMacc_declareFacc_declare_allocateEa_acc_declare_update_desc_post_alloc>} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: %{{.*}} = fir.call @_FortranAAllocatableAllocate
 
     deallocate(a)
 
-! CHECK: %{{.*}} = fir.box_addr %{{.*}} {acc.declare_action = #acc.declare_action<preDealloc = @_QMacc_declareFacc_declare_allocateEa_acc_declare_update_desc_pre_dealloc>} : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-
-! CHECK: fir.freemem %{{.*}} : !fir.heap<!fir.array<?xi32>>
-! CHECK: fir.store %{{.*}} to %{{.*}} {acc.declare_action = #acc.declare_action<postDealloc = @_QMacc_declareFacc_declare_allocateEa_acc_declare_update_desc_post_dealloc>} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: %{{.*}} = fir.call @_FortranAAllocatableDeallocate
 
 ! CHECK: fir.if
-! CHECK: fir.freemem %{{.*}} : !fir.heap<!fir.array<?xi32>>
-! CHECK: fir.store %{{.*}} to %{{.*}}#0 {acc.declare_action = #acc.declare_action<postDealloc = @_QMacc_declareFacc_declare_allocateEa_acc_declare_update_desc_post_dealloc>} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: %{{.*}} = fir.call @_FortranAAllocatableDeallocate
 ! CHECK: }
 
   end subroutine
@@ -401,14 +396,13 @@ contains
   subroutine init()
     use acc_declare_allocatable_test
     allocate(data1(100))
-! CHECK: fir.store %{{.*}} to %{{.*}} {acc.declare_action = #acc.declare_action<postAlloc = @_QMacc_declare_allocatable_testEdata1_acc_declare_update_desc_post_alloc>} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: fir.call @_FortranAAllocatableAllocate
   end subroutine
 
   subroutine finalize()
     use acc_declare_allocatable_test
     deallocate(data1)
-! CHECK: %{{.*}} = fir.box_addr %{{.*}} {acc.declare_action = #acc.declare_action<preDealloc = @_QMacc_declare_allocatable_testEdata1_acc_declare_update_desc_pre_dealloc>} : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK: fir.store %{{.*}} to %{{.*}} {acc.declare_action = #acc.declare_action<postDealloc = @_QMacc_declare_allocatable_testEdata1_acc_declare_update_desc_post_dealloc>} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: fir.call @_FortranAAllocatableDeallocate
   end subroutine
 end module
 

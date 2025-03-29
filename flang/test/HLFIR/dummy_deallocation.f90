@@ -5,10 +5,10 @@
 ! is not deallocated in entry SUB_B.
 
 ! CHECK-LABEL: func.func @_QPsub_a
-! CHECK: fir.freemem
+! CHECK: fir.call @_FortranAAllocatableDeallocate
 
 ! CHECK-LABEL: func.func @_QPsub_b
-! CHECK-NOT: fir.freemem
+! CHECK-NOT: fir.call @_FortranAAllocatableDeallocate
 SUBROUTINE SUB_A(A)
   INTEGER, INTENT(out), ALLOCATABLE, DIMENSION (:) :: A
   RETURN
