@@ -37,21 +37,42 @@
 
 #define LLVM_LIBC_ATTR(name) EXPAND_THEN_SECOND(LLVM_LIBC_FUNCTION_ATTR_##name)
 
-// MacOS needs to be excluded because it does not support aliasing.
-#if defined(LIBC_COPT_PUBLIC_PACKAGING) && (!defined(__APPLE__))
-#define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)                           \
+// MacOS needs to be excluded because it does not support [[gnu::aliasing]].
+#ifndef __APPLE__
+
+#if defined(LIBC_COPT_PUBLIC_PACKAGING)
+#define LLVM_LIBC_FUNCTION(type, name, arglist)                                \
   LLVM_LIBC_ATTR(name)                                                         \
   LLVM_LIBC_FUNCTION_ATTR decltype(LIBC_NAMESPACE::name)                       \
-      __##name##_impl__ __asm__(#name);                                        \
+      __##name##_impl__ asm(#name);                                            \
   decltype(LIBC_NAMESPACE::name) name [[gnu::alias(#name)]];                   \
   type __##name##_impl__ arglist
-#else
-#define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist) type name arglist
-#endif
 
-// This extra layer of macro allows `name` to be a macro to rename a function.
+#define LLVM_LIBC_ALIAS(name, func)                                            \
+  decltype(LIBC_NAMESPACE::name) LIBC_NAMESPACE::name [[gnu::alias(#func)]];   \
+  extern "C" decltype(LIBC_NAMESPACE::name) name [[gnu::alias(#func)]];        \
+  static_assert(true, "Require semicolon")
+#else
 #define LLVM_LIBC_FUNCTION(type, name, arglist)                                \
-  LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)
+  LLVM_LIBC_ATTR(name)                                                         \
+  LLVM_LIBC_FUNCTION_ATTR decltype(LIBC_NAMESPACE::name)                       \
+      __##name##_impl__ asm("__" #name "_impl__");                             \
+  decltype(LIBC_NAMESPACE::name) name [[gnu::alias("__" #name "_impl__")]];    \
+  type __##name##_impl__ arglist
+
+#define LLVM_LIBC_ALIAS(name, func)                                            \
+  decltype(LIBC_NAMESPACE::name) LIBC_NAMESPACE::name                          \
+      [[gnu::alias("__" #func "_impl__")]];                                    \
+  static_assert(true, "Require semicolon")
+#endif // LIBC_COPT_PUBLIC_PACKAGING
+
+#else
+
+#define LLVM_LIBC_FUNCTION(type, name, arglist) type name arglist
+
+#define LLVM_LIBC_ALIAS(name, func) static_assert(true, "Require semicolon")
+
+#endif // !__APPLE__
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
