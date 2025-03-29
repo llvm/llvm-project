@@ -2607,6 +2607,15 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     if (shouldDisableTailCalls())
       FuncAttrs.addAttribute("disable-tail-calls", "true");
 
+    // These functions require the returns_twice attribute for correct codegen,
+    // but the attribute may not be added if -fno-builtin is specified. We
+    // explicitly add that attribute here.
+    static const llvm::StringSet<> ReturnsTwiceFn{
+        "_setjmpex", "setjmp",      "_setjmp", "vfork",
+        "sigsetjmp", "__sigsetjmp", "savectx", "getcontext"};
+    if (ReturnsTwiceFn.contains(Name))
+      FuncAttrs.addAttribute(llvm::Attribute::ReturnsTwice);
+
     // CPU/feature overrides.  addDefaultFunctionDefinitionAttributes
     // handles these separately to set them based on the global defaults.
     GetCPUAndFeaturesAttributes(CalleeInfo.getCalleeDecl(), FuncAttrs);
