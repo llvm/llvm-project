@@ -15329,8 +15329,10 @@ static void DetectPrecisionLossInComplexDivision(Sema &S, SourceLocation OpLoc,
           Ctx.getFloatTypeSemantics(ElementType);
       const llvm::fltSemantics &HigherElementTypeSemantics =
           Ctx.getFloatTypeSemantics(HigherElementType);
-      if (llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 >
-          llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) {
+      if ((llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 >
+           llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) ||
+          (HigherElementType == Ctx.LongDoubleTy &&
+           !Ctx.getTargetInfo().hasLongDoubleType())) {
         // Retain the location of the first use of higher precision type.
         if (!S.LocationOfExcessPrecisionNotSatisfied.isValid())
           S.LocationOfExcessPrecisionNotSatisfied = OpLoc;
