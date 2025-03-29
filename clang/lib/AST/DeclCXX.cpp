@@ -2533,9 +2533,43 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
       getOverloadedOperator() != OO_Array_Delete)
     return false;
 
+  if (isTypeAwareOperatorNewOrDelete()) {
+    // A variadic type aware allocation function is not a usual deallocation
+    // function
+    if (isVariadic())
+      return false;
+
+    // Type aware deallocation functions are only usual if they only accept the
+    // mandatory arguments
+    if (getNumParams() != FunctionDecl::RequiredTypeAwareDeleteParameterCount)
+      return false;
+
+    FunctionTemplateDecl *PrimaryTemplate = getPrimaryTemplate();
+    if (!PrimaryTemplate)
+      return true;
+
+    // A template instance is is only a usual deallocation function if it has a
+    // type-identity parameter, the type-identity parameter is a dependent type
+    // (i.e. the type-identity parameter is of type std::type_identity<U> where
+    // U shall be a dependent type), and the type-identity parameter is the only
+    // dependent parameter, and there are no template packs in the parameter
+    // list.
+    FunctionDecl *SpecializedDecl = PrimaryTemplate->getTemplatedDecl();
+    if (!SpecializedDecl->getParamDecl(0)->getType()->isDependentType())
+      return false;
+    for (unsigned Idx = 1; Idx < getNumParams(); ++Idx) {
+      if (SpecializedDecl->getParamDecl(Idx)->getType()->isDependentType())
+        return false;
+    }
+    return true;
+  }
+
   // C++ [basic.stc.dynamic.deallocation]p2:
   //   A template instance is never a usual deallocation function,
   //   regardless of its signature.
+  // Post-P2719 adoption:
+  //   A template instance is is only a usual deallocation function if it has a
+  //   type-identity parameter
   if (getPrimaryTemplate())
     return false;
 

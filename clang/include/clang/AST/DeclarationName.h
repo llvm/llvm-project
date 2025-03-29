@@ -477,6 +477,34 @@ public:
     return OO_None;
   }
 
+  bool isOperatorNew() const {
+    if (getNameKind() != DeclarationName::CXXOperatorName)
+      return false;
+    switch (getCXXOverloadedOperator()) {
+    case OO_New:
+    case OO_Array_New:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  bool isOperatorDelete() const {
+    if (getNameKind() != DeclarationName::CXXOperatorName)
+      return false;
+    switch (getCXXOverloadedOperator()) {
+    case OO_Delete:
+    case OO_Array_Delete:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  bool isOperatorNewOrDelete() const {
+    return isOperatorNew() || isOperatorDelete();
+  }
+
   /// If this name is the name of a literal operator,
   /// retrieve the identifier associated with it.
   const IdentifierInfo *getCXXLiteralIdentifier() const {
