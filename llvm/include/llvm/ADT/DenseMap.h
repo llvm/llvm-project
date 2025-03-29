@@ -369,6 +369,11 @@ protected:
   DenseMapBase() = default;
 
   void destroyAll() {
+    // Don't bother destroying trivially destructible stuff.
+    if constexpr (std::is_trivially_destructible_v<KeyT> &&
+                  std::is_trivially_destructible_v<ValueT>)
+      return;
+
     if (getNumBuckets() == 0) // Nothing to do.
       return;
 
