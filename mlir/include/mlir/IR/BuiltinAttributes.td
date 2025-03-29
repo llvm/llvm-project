@@ -164,7 +164,7 @@ def Builtin_DenseArrayRawDataParameter : ArrayRefParameter<
   }];
 }
 
-def Builtin_DenseArray : Builtin_Attr<"DenseArray", "dense_array", 
+def Builtin_DenseArray : Builtin_Attr<"DenseArray", "dense_array",
     [BlobAttrInterface]> {
   let summary = "A dense array of integer or floating point elements.";
   let description = [{
@@ -494,7 +494,7 @@ def Builtin_DenseResourceElementsAttr : Builtin_Attr<"DenseResourceElements",
     /// when building the attribute. The provided `blobName` is used as a hint
     /// for the key of the new handle for the `blob` resource, but may be
     /// changed if necessary to ensure uniqueness during insertion.
-    /// This base class builder does no element type specific size or alignment 
+    /// This base class builder does no element type specific size or alignment
     /// checking. Use the typed subclasses for more safety unless if performing
     /// generic operations.
     AttrBuilderWithInferredContext<(ins
@@ -1051,9 +1051,96 @@ def StridedLayoutAttr : Builtin_Attr<"StridedLayout", "strided_layout",
     /// Returns true if this layout is static, i.e. the strides and offset all
     /// have a known value > 0.
     bool hasStaticLayout() const;
+
+    /// Get a "canonical" strided layout for the given strides.
+    /// This constructs a strided layout with the given `offset` and `strides`,
+    /// except that if either the strides are empty or equal to [1], it returns
+    /// the corresponding ContiguousLayoutAttr in order to guard against multiple
+    /// representations of the identity layout.
+    static ::mlir::MemRefLayoutAttrInterface getCanonical(MLIRContext *context,
+      int64_t offset, ::llvm::ArrayRef<int64_t> strides);
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// ContiguousLayoutAttr
+//===----------------------------------------------------------------------===//
+
+def ContiguousLayoutAttr : Builtin_Attr<"ContiguousLayout", "contiguous_layout",
+    [DeclareAttrInterfaceMethods<MemRefLayoutAttrInterface,
+                                 ["isIdentity", "verifyLayout"]>]> {
+  let summary = "An Attribute representing a contiguous layout of a shaped type";
+  let description = [{
+    Syntax:
+
+    ```
+    contiguous-layout-attribute ::= `contiguous` `<` maybe-permutation
+                                 (`,` `offset` `:` dimension)? `>`
+    maybe-permutation ::= decimal-literal | `[` permutation `]`
+    permutation ::= decimal-literal (`,` decimal-literal)*
+    dimension ::= decimal-literal | `?`
+    ```
+
+    A contiguous layout is a layout that represents a sequence of dimensions
+    laid out in linear memory in its canonical form. Specifically, it indicates
+    that if one permutes the dimensions of a memref according to `permutaton`,
+    they will be in a row-major contiguos form: that is, the stride (in the
+    sense of the strided layout) of dimension `permutation[i]` is equal
+    to the products of the sizes of all dimensions appearing later in the permutation.
+
+    For example, a MxN memref with a `contiguous<[1, 0]>` layout is colmn-major:
+    advancing in the M dimension requires moving by 1 element in linear memory,
+    while the N dimension requires moving by M elements. Conversely,
+    if the layout is `contiguous<[0, 1]>` (which can be written `contiguous<2>`
+    for brevity and will be omitted from printing without an offset), the stride
+    of the N dimension will be 1 element while the stride of the M dimension will be
+    N elements.
+
+    As a more complex example, `memref<AxBxCxT, contigous<[2, 0, 1], offset: D>>`
+    , where A, B, C, and D are potentially dynamic values, means that
+    the value at index `[%i, %j, %k]` is located `%k * A * B + %i * B + %j + D`
+    elements from the beginning of the memory underlying that memref.
+
+    The permutation must contain the integers between 0 and the rank of the memref - 1,
+    and must have one distinct entry for each memref dimension. The value
+    `[0, 1, ..., N-1]`, specifying a row-major format, may be printed as `N`
+    for clarity.
+
+    If an offset is specified, it is a number of elements to move within
+    the underlying linear memory after the permutation is applied. This offset
+    may be _dynamic_, meaning that it may not be known at compile time.
+    A dynamic offset is represented as a `?` in the assembly syntax and as
+    `ShapedType::kDynamic` in the code. The offset must be non-negative.
+
+    See [Dialects/Builtin.md#memreftype](MemRef type) for more information.
+  }];
+
+  let parameters = (ins
+    "int64_t":$offset,
+    ArrayRefParameter<
+      "int64_t",
+      "permutation (64-bit integer)"
+    >:$permutation
+  );
+
+  let builders = [
+    // Builder for row-major contiguous attribute.
+    AttrBuilder<(ins "int64_t":$offset, "int64_t":$rank)>
+  ];
+  let genVerifyDecl = 1;
+
+  let extraClassDeclaration = [{
+    /// Print the attribute to the given output stream.
+    void print(raw_ostream &os) const;
+
+    /// Returns true if this layout is static, i.e. the offset has a static value.
+    bool hasStaticLayout() const;
+
+    /// Return true if this layout has a row-major permutation - that is, the
+    /// dimensions of the shape are not permuted.
+    bool isRowMajor() const;
+  }];
+}
 
 //===----------------------------------------------------------------------===//
 // StringAttr

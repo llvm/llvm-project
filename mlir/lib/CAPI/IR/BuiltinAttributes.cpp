@@ -981,6 +981,13 @@ MlirAttribute mlirStridedLayoutAttrGet(MlirContext ctx, int64_t offset,
                                      ArrayRef<int64_t>(strides, numStrides)));
 }
 
+MlirAttribute mlirStridedLayoutAttrGetCanonical(MlirContext ctx, int64_t offset,
+                                                intptr_t numStrides,
+                                                const int64_t *strides) {
+  return wrap(StridedLayoutAttr::getCanonical(
+      unwrap(ctx), offset, ArrayRef<int64_t>(strides, numStrides)));
+}
+
 int64_t mlirStridedLayoutAttrGetOffset(MlirAttribute attr) {
   return llvm::cast<StridedLayoutAttr>(unwrap(attr)).getOffset();
 }
@@ -996,4 +1003,43 @@ int64_t mlirStridedLayoutAttrGetStride(MlirAttribute attr, intptr_t pos) {
 
 MlirTypeID mlirStridedLayoutAttrGetTypeID(void) {
   return wrap(StridedLayoutAttr::getTypeID());
+}
+
+//===----------------------------------------------------------------------===//
+// Contiguous layout attribute.
+//===----------------------------------------------------------------------===//
+
+bool mlirAttributeIsAContiguousLayout(MlirAttribute attr) {
+  return llvm::isa<ContiguousLayoutAttr>(unwrap(attr));
+}
+
+MlirAttribute mlirContiguousLayoutAttrGet(MlirContext ctx, int64_t offset,
+                                          intptr_t rank,
+                                          const int64_t *permutation) {
+  return wrap(ContiguousLayoutAttr::get(unwrap(ctx), offset,
+                                        ArrayRef<int64_t>(permutation, rank)));
+}
+
+MlirAttribute mlirContiguousLayoutAttrGetRowMajor(MlirContext ctx,
+                                                  int64_t offset,
+                                                  intptr_t rank) {
+  return wrap(ContiguousLayoutAttr::get(unwrap(ctx), offset, rank));
+}
+
+int64_t mlirContiguousLayoutAttrGetOffset(MlirAttribute attr) {
+  return llvm::cast<ContiguousLayoutAttr>(unwrap(attr)).getOffset();
+}
+
+intptr_t mlirContiguousLayoutAttrGetRank(MlirAttribute attr) {
+  return static_cast<intptr_t>(
+      llvm::cast<ContiguousLayoutAttr>(unwrap(attr)).getPermutation().size());
+}
+
+int64_t mlirContiguousLayoutAttrGetPermutationEntry(MlirAttribute attr,
+                                                    intptr_t pos) {
+  return llvm::cast<ContiguousLayoutAttr>(unwrap(attr)).getPermutation()[pos];
+}
+
+MlirTypeID mlirContiguousLayoutAttrGetTypeID(void) {
+  return wrap(ContiguousLayoutAttr::getTypeID());
 }

@@ -585,20 +585,27 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
     layout must avoid internal aliasing, i.e., two distinct tuples of
     _in-bounds_ indices must be pointing to different elements in memory. The
     layout is an attribute that implements `MemRefLayoutAttrInterface`. The
-    bulitin dialect offers two kinds of layouts: strided and affine map, each
-    of which is available as an attribute. Other attributes may be used to
-    represent the layout as long as they can be converted to a
+    bulitin dialect offers three kinds of layouts: contiguous, strided and
+    affine map, each of which is available as an attribute. Other attributes may be
+    used to represent the layout as long as they can be converted to a
     [semi-affine map](Affine.md/#semi-affine-maps) and implement the required
     interface. Users of memref are expected to fallback to the affine
     representation when handling unknown memref layouts. Multi-dimensional
     affine forms are interpreted in _row-major_ fashion.
 
     In absence of an explicit layout, a memref is considered to have a
-    multi-dimensional identity affine map layout.  Identity layout maps do not
-    contribute to the MemRef type identification and are discarded on
-    construction. That is, a type with an explicit identity map is
+    row-major contiguous layout with an offset of 0, which is equivalent
+    to a multi-dimensional identity map.  For backwards compatibility,
+    identity layout maps do not contribute to the MemRef type identification and
+    are discarded on construction. That is, a type with an explicit identity map is
     `memref<?x?xf32, (i,j)->(i,j)>` is strictly the same as the one without a
-    layout, `memref<?x?xf32>`.
+    layout, `memref<?x?xf32>`, which, written explicitly, has the layout
+    `memref<?x?xf32, contiguous<2>>`.
+
+    The built-in layouts form a hierarchy: all contiguous layuts are strided layouts,
+    and all strided layouts are affine map layouts, but the reverse is not true.
+    Using a more specific layout may permit a greater degree of optimization in
+    the generated code.
 
     ##### Affine Map Layout
 
@@ -655,6 +662,37 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
 
     Therefore, it is never subject to the implicit row-major layout
     interpretation.
+
+    ### Contiguous layout
+
+    The most restricted of the built-in layouts is the _contiguous_ layout, which
+    expresses the fact that the in-memory layout of the memref would be row-major
+    without padding after the associated permutation is applied. Equivalently,
+    a contigous layout is a strided layout where the strides are implicitly computed
+    from the (permuted) sizes of the memref.
+
+    This layout is necessary to allow optimizations during lowering passes in the
+    presence of dynamic sizes, since
+    `memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>>` doesn't specify if it's
+    dimensions have padding in between tem or not - the two non-1 strides are
+    dynamic. By contrast, `contiguous<3, offset: ?>` indiates a row-major layout
+    with an offset, while `contiguous<[2, 1, 0], offset: ?>` indicates a
+    column-major layout. While this scheme could be expressed with an affine map,
+    some operations expect memrefs to be in a form compatible with the `strided`
+    layout, which can be difficult to detect from analyzing an affine expression.
+
+    In general, the layout `contiguous<[p0, p1, ..., pN], offset: V>`
+    corresponds to the affine map
+
+    ```mlir
+    affine_map<(d0, ..., dN) -> (d[p0], d[p1], ... + d[pN] + V)>
+    ```
+
+    where `V` is either `s0` if it is dynamic or some constant value.
+
+    For convenience, the layout `contigous<[0, 1, ..., N], offset: V>` is printed
+    as `contigous<N+1, offset: V>`, and the `, offset: V` segment is omitted if `V`
+    is `0`.
 
     ##### Codegen of Unranked Memref
 
@@ -815,6 +853,10 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
     ///   considering both _all_ and _only_ the trailing 3 dims,
     ///   - memref<5x4x3x2xi8, strided<[48, 6, 2, 1]> is _only_ contiguous when
     ///   considering the trailing 3 dims.
+    ///   - memref<?x?x?xi8, contiguous<3, offset: ?>> is contiguous when
+    ///   considering all dimensions.
+    ///   - memref<?x?x?x?xi32, contiguous<[1, 0, 2, 3], offset: ?>> is
+    ///   _only_ contiguous when considering the trailing 2 dimensions.
     ///
     bool areTrailingDimsContiguous(int64_t n);
 
@@ -830,8 +872,8 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
 
     /// Returns the strides of the MemRef if the layout map is in strided form.
     /// MemRefs with a layout map in strided form include:
-    ///   1. empty or identity layout map, in which case the stride information
-    ///      is the canonical form computed from sizes;
+    ///   1. the empty layout, the identity layout affine map, and any ContigousLayoutAttr,
+    ///      in which case the stride information is the canonical form computed from sizes;
     ///   2. a StridedLayoutAttr layout;
     ///   3. any other layout that be converted into a single affine map layout
     ///      of the form `K + k0 * d0 + ... kn * dn`, where K and ki's are

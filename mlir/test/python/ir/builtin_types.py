@@ -487,7 +487,7 @@ def testMemRefType():
         memref_f32 = MemRefType.get(shape, f32, memory_space=Attribute.parse("2"))
         # CHECK: memref type: memref<2x3xf32, 2>
         print("memref type:", memref_f32)
-        # CHECK: memref layout: AffineMapAttr(affine_map<(d0, d1) -> (d0, d1)>)
+        # CHECK: memref layout: ContiguousLayoutAttr(contiguous<2>)
         print("memref layout:", repr(memref_f32.layout))
         # CHECK: memref affine map: (d0, d1) -> (d0, d1)
         print("memref affine map:", memref_f32.affine_map)
