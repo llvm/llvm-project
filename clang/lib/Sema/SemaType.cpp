@@ -9544,6 +9544,7 @@ QualType Sema::BuildTypeofExprType(Expr *E, TypeOfKind Kind) {
     QualType T = E->getType();
     if (const TagType *TT = T->getAs<TagType>())
       DiagnoseUseOfDecl(TT->getDecl(), E->getExprLoc());
+    getCompletedType(E);
   }
   return Context.getTypeOfExprType(E, Kind);
 }
@@ -9588,6 +9589,8 @@ QualType Sema::getDecltypeForExpr(Expr *E) {
 
   if (E->isTypeDependent())
     return Context.DependentTy;
+
+  getCompletedType(IDExpr);
 
   // C++11 [dcl.type.simple]p4:
   //   The type denoted by decltype(e) is defined as follows:
