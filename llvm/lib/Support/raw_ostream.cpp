@@ -615,7 +615,7 @@ raw_fd_ostream::raw_fd_ostream(StringRef Filename, std::error_code &EC,
 /// FD is the file descriptor that this writes to.  If ShouldClose is true, this
 /// closes the file when the stream is destroyed.
 raw_fd_ostream::raw_fd_ostream(int fd, bool shouldClose, bool unbuffered,
-                               OStreamKind K)
+                               bool simpleStream, OStreamKind K)
     : raw_pwrite_stream(unbuffered, K), FD(fd), ShouldClose(shouldClose) {
   if (FD < 0 ) {
     ShouldClose = false;
@@ -632,6 +632,10 @@ raw_fd_ostream::raw_fd_ostream(int fd, bool shouldClose, bool unbuffered,
   // users must simply be aware that mixed output and remarks is a possibility.
   if (FD <= STDERR_FILENO)
     ShouldClose = false;
+
+  // Don't do unnecessary work for simple streams, like memfds
+  if (simpleStream)
+    return;
 
 #ifdef _WIN32
   // Check if this is a console device. This is not equivalent to isatty.
@@ -928,7 +932,7 @@ raw_fd_stream::raw_fd_stream(StringRef Filename, std::error_code &EC)
     : raw_fd_ostream(getFD(Filename, EC, sys::fs::CD_CreateAlways,
                            sys::fs::FA_Write | sys::fs::FA_Read,
                            sys::fs::OF_None),
-                     true, false, OStreamKind::OK_FDStream) {
+                     true, false, false, OStreamKind::OK_FDStream) {
   if (EC)
     return;
 
@@ -937,7 +941,7 @@ raw_fd_stream::raw_fd_stream(StringRef Filename, std::error_code &EC)
 }
 
 raw_fd_stream::raw_fd_stream(int fd, bool shouldClose)
-    : raw_fd_ostream(fd, shouldClose, false, OStreamKind::OK_FDStream) {}
+    : raw_fd_ostream(fd, shouldClose, false, false, OStreamKind::OK_FDStream) {}
 
 ssize_t raw_fd_stream::read(char *Ptr, size_t Size) {
   assert(get_fd() >= 0 && "File already closed.");
