@@ -486,6 +486,128 @@ public:
 #endif
 };
 
+/// ConstantDataSequential - A vector or array constant whose element type is a
+/// simple 1/2/4/8-byte integer or half/bfloat/float/double, and whose elements
+/// are just simple data values (i.e. ConstantInt/ConstantFP).  This Constant
+/// node has no operands because it stores all of the elements of the constant
+/// as densely packed data, instead of as Value*'s.
+///
+/// This is the common base class of ConstantDataArray and ConstantDataVector.
+class ConstantDataSequential : public Constant {
+protected:
+  ConstantDataSequential(ClassID ID, llvm::ConstantDataSequential *C,
+                         Context &Ctx)
+      : Constant(ID, C, Ctx) {}
+
+public:
+  /// Return true if a ConstantDataSequential can be formed with a vector or
+  /// array of the specified element type.
+  /// ConstantDataArray only works with normal float and int types that are
+  /// stored densely in memory, not with things like i42 or x86_f80.
+  static bool isElementTypeCompatible(Type *Ty) {
+    return llvm::ConstantDataSequential::isElementTypeCompatible(Ty->LLVMTy);
+  }
+  /// If this is a sequential container of integers (of any size), return the
+  /// specified element in the low bits of a uint64_t.
+  uint64_t getElementAsInteger(unsigned ElmIdx) const {
+    return cast<llvm::ConstantDataSequential>(Val)->getElementAsInteger(ElmIdx);
+  }
+  /// If this is a sequential container of integers (of any size), return the
+  /// specified element as an APInt.
+  APInt getElementAsAPInt(unsigned ElmIdx) const {
+    return cast<llvm::ConstantDataSequential>(Val)->getElementAsAPInt(ElmIdx);
+  }
+  /// If this is a sequential container of floating point type, return the
+  /// specified element as an APFloat.
+  APFloat getElementAsAPFloat(unsigned ElmIdx) const {
+    return cast<llvm::ConstantDataSequential>(Val)->getElementAsAPFloat(ElmIdx);
+  }
+  /// If this is an sequential container of floats, return the specified element
+  /// as a float.
+  float getElementAsFloat(unsigned ElmIdx) const {
+    return cast<llvm::ConstantDataSequential>(Val)->getElementAsFloat(ElmIdx);
+  }
+  /// If this is an sequential container of doubles, return the specified
+  /// element as a double.
+  double getElementAsDouble(unsigned ElmIdx) const {
+    return cast<llvm::ConstantDataSequential>(Val)->getElementAsDouble(ElmIdx);
+  }
+  /// Return a Constant for a specified index's element.
+  /// Note that this has to compute a new constant to return, so it isn't as
+  /// efficient as getElementAsInteger/Float/Double.
+  Constant *getElementAsConstant(unsigned ElmIdx) const {
+    return Ctx.getOrCreateConstant(
+        cast<llvm::ConstantDataSequential>(Val)->getElementAsConstant(ElmIdx));
+  }
+  /// Return the element type of the array/vector.
+  Type *getElementType() const {
+    return Ctx.getType(
+        cast<llvm::ConstantDataSequential>(Val)->getElementType());
+  }
+  /// Return the number of elements in the array or vector.
+  unsigned getNumElements() const {
+    return cast<llvm::ConstantDataSequential>(Val)->getNumElements();
+  }
+  /// Return the size (in bytes) of each element in the array/vector.
+  /// The size of the elements is known to be a multiple of one byte.
+  uint64_t getElementByteSize() const {
+    return cast<llvm::ConstantDataSequential>(Val)->getElementByteSize();
+  }
+  /// This method returns true if this is an array of \p CharSize integers.
+  bool isString(unsigned CharSize = 8) const {
+    return cast<llvm::ConstantDataSequential>(Val)->isString(CharSize);
+  }
+  /// This method returns true if the array "isString", ends with a null byte,
+  /// and does not contains any other null bytes.
+  bool isCString() const {
+    return cast<llvm::ConstantDataSequential>(Val)->isCString();
+  }
+  /// If this array is isString(), then this method returns the array as a
+  /// StringRef. Otherwise, it asserts out.
+  StringRef getAsString() const {
+    return cast<llvm::ConstantDataSequential>(Val)->getAsString();
+  }
+  /// If this array is isCString(), then this method returns the array (without
+  /// the trailing null byte) as a StringRef. Otherwise, it asserts out.
+  StringRef getAsCString() const {
+    return cast<llvm::ConstantDataSequential>(Val)->getAsCString();
+  }
+  /// Return the raw, underlying, bytes of this data. Note that this is an
+  /// extremely tricky thing to work with, as it exposes the host endianness of
+  /// the data elements.
+  StringRef getRawDataValues() const {
+    return cast<llvm::ConstantDataSequential>(Val)->getRawDataValues();
+  }
+
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::ConstantDataArray ||
+           From->getSubclassID() == ClassID::ConstantDataVector;
+  }
+};
+
+class ConstantDataArray final : public ConstantDataSequential {
+  ConstantDataArray(llvm::ConstantDataArray *C, Context &Ctx)
+      : ConstantDataSequential(ClassID::ConstantDataArray, C, Ctx) {}
+  friend class Context;
+
+public:
+  // TODO: Add missing functions.
+};
+
+/// A vector constant whose element type is a simple 1/2/4/8-byte integer or
+/// float/double, and whose elements are just simple data values
+/// (i.e. ConstantInt/ConstantFP). This Constant node has no operands because it
+/// stores all of the elements of the constant as densely packed data, instead
+/// of as Value*'s.
+class ConstantDataVector final : public ConstantDataSequential {
+  ConstantDataVector(llvm::ConstantDataVector *C, Context &Ctx)
+      : ConstantDataSequential(ClassID::ConstantDataVector, C, Ctx) {}
+  friend class Context;
+
+public:
+  // TODO: Add missing functions.
+};
+
 // TODO: Inherit from ConstantData.
 class ConstantPointerNull final : public Constant {
   ConstantPointerNull(llvm::ConstantPointerNull *C, Context &Ctx)
