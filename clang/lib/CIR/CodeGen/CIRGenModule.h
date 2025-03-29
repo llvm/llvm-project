@@ -113,6 +113,10 @@ public:
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
 
+  /// Return the result of value-initializing the given type, i.e. a null
+  /// expression of the given type.
+  mlir::Value emitNullConstant(QualType t, mlir::Location loc);
+
   cir::FuncOp
   getOrCreateCIRFunction(llvm::StringRef mangledName, mlir::Type funcType,
                          clang::GlobalDecl gd, bool forVTable,

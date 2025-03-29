@@ -80,6 +80,13 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
     Op<CIR_Dialect, mnemonic, traits>, LLVMLoweringInfo;
 
 //===----------------------------------------------------------------------===//
+// CIR Op Traits
+//===----------------------------------------------------------------------===//
+
+def SameFirstOperandAndResultType :
+  NativeOpTrait<"SameFirstOperandAndResultType">;
+
+//===----------------------------------------------------------------------===//
 // CastOp
 //===----------------------------------------------------------------------===//
 
@@ -227,6 +234,40 @@ def CastOp : CIR_Op<"cast",
   // The input and output types should match the cast kind.
   let hasVerifier = 1;
   let hasFolder = 1;
+}
+
+
+//===----------------------------------------------------------------------===//
+// PtrStrideOp
+//===----------------------------------------------------------------------===//
+
+def PtrStrideOp : CIR_Op<"ptr_stride",
+                         [Pure, SameFirstOperandAndResultType]> {
+  let summary = "Pointer access with stride";
+  let description = [{
+    Given a base pointer as first operand, provides a new pointer after applying
+    a stride (second operand).
+
+    ```mlir
+    %3 = cir.const 0 : i32
+    %4 = cir.ptr_stride(%2 : !cir.ptr<i32>, %3 : i32), !cir.ptr<i32>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$base, PrimitiveInt:$stride);
+  let results = (outs CIR_PointerType:$result);
+
+  let assemblyFormat = [{
+    `(` $base `:` qualified(type($base)) `,` $stride `:`
+    qualified(type($stride)) `)` `,` qualified(type($result)) attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    // Get type pointed by the base pointer.
+    mlir::Type getElementTy() {
+      return mlir::cast<cir::PointerType>(getBase().getType()).getPointee();
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//

@@ -110,6 +110,10 @@ private:
 public:
   mlir::Value createDummyValue(mlir::Location loc, clang::QualType qt);
 
+  void emitAggExpr(const clang::Expr *e, AggValueSlot slot);
+
+  void emitNullInitialization(mlir::Location loc, Address destPtr, QualType ty);
+
 private:
   // Track current variable initialization (if there's one)
   const clang::VarDecl *currVarDecl = nullptr;

@@ -57,6 +57,18 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   FP80Ty = cir::FP80Type::get(&getMLIRContext());
   FP128Ty = cir::FP128Type::get(&getMLIRContext());
 
+  PointerAlignInBytes =
+      astContext
+          .toCharUnitsFromBits(
+              astContext.getTargetInfo().getPointerAlign(LangAS::Default))
+          .getQuantity();
+
+  // TODO(CIR): Should be updated once TypeSizeInfoAttr is upstreamed
+  const unsigned sizeTypeSize =
+      astContext.getTypeSize(astContext.getSignedSizeType());
+  PtrDiffTy =
+      cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/true);
+
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
 }
