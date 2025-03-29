@@ -41,8 +41,6 @@ int main(int argc, char **argv) {
   // Matchers registered in alphabetical order for consistency:
   matcherRegistry.registerMatcher("getDefinitions", m_GetDefinitions);
   matcherRegistry.registerMatcher("definedBy", m_DefinedBy);
-  matcherRegistry.registerMatcher("usedBy", m_UsedBy);
-  matcherRegistry.registerMatcher("getUses", m_GetUses);
   matcherRegistry.registerMatcher("hasOpAttrName",
                                   static_cast<HasOpAttrName *>(m_Attr));
   matcherRegistry.registerMatcher("hasOpName", static_cast<HasOpName *>(m_Op));

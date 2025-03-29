@@ -167,10 +167,10 @@ QueryRef QueryParser::doParse() {
           .Case("#", ParsedQueryKind::Comment, /*isCompletion=*/false)
           .Case("help", ParsedQueryKind::Help)
           .Case("m", ParsedQueryKind::Match, /*isCompletion=*/false)
-          .Case("set", ParsedQueryKind::Set)
           .Case("match", ParsedQueryKind::Match)
           .Case("q", ParsedQueryKind::Quit, /*IsCompletion=*/false)
           .Case("quit", ParsedQueryKind::Quit)
+          .Case("set", ParsedQueryKind::Set)
           .Default(ParsedQueryKind::Invalid);
 
   switch (qKind) {
