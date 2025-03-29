@@ -149,26 +149,11 @@ public:
                                    Repl.getLength(), Repl.getReplacementText());
             auto &Entry = FileReplacements[R.getFilePath()];
             Replacements &Replacements = Entry.Replaces;
-            llvm::Error Err = Replacements.add(R);
-            if (Err) {
+            if (llvm::Error Err = Replacements.addOrMerge(R)) {
               // FIXME: Implement better conflict handling.
-              llvm::errs() << "Trying to resolve conflict: "
-                           << llvm::toString(std::move(Err)) << "\n";
-              unsigned NewOffset =
-                  Replacements.getShiftedCodePosition(R.getOffset());
-              unsigned NewLength = Replacements.getShiftedCodePosition(
-                                       R.getOffset() + R.getLength()) -
-                                   NewOffset;
-              if (NewLength == R.getLength()) {
-                R = Replacement(R.getFilePath(), NewOffset, NewLength,
-                                R.getReplacementText());
-                Replacements = Replacements.merge(tooling::Replacements(R));
-                CanBeApplied = true;
-                ++AppliedFixes;
-              } else {
-                llvm::errs()
-                    << "Can't resolve conflict, skipping the replacement.\n";
-              }
+              llvm::errs()
+                  << "Can't resolve conflict, skipping the replacement: "
+                  << llvm::toString(std::move(Err)) << '\n';
             } else {
               CanBeApplied = true;
               ++AppliedFixes;
