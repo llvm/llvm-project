@@ -673,13 +673,19 @@ void DAP::SetTarget(const lldb::SBTarget target) {
 }
 
 bool DAP::HandleObject(const protocol::Message &M) {
+  TelemetryDispatcher dispatcher(&debugger);
+  dispatcher.Set("client_name", transport.GetClientName().str());
   if (const auto *req = std::get_if<protocol::Request>(&M)) {
     auto handler_pos = request_handlers.find(req->command);
+    dispatcher.Set("client_data",
+                   llvm::Twine("request_command:", req->command).str());
     if (handler_pos != request_handlers.end()) {
       (*handler_pos->second)(*req);
       return true; // Success
     }
 
+    dispatcher.Set("error",
+                   llvm::Twine("unhandled-command:" + req->command).str());
     DAP_LOG(log, "({0}) error: unhandled command '{1}'",
             transport.GetClientName(), req->command);
     return false; // Fail
@@ -703,6 +709,8 @@ bool DAP::HandleObject(const protocol::Message &M) {
     // Result should be given, use null if not.
     if (resp->success) {
       (*response_handler)(resp->body);
+      dispatcher.Set("client_data",
+                     llvm::Twine("response_command:", resp->command).str());
     } else {
       llvm::StringRef message = "Unknown error, response failed";
       if (resp->message) {
@@ -722,6 +730,7 @@ bool DAP::HandleObject(const protocol::Message &M) {
                            }),
                        *resp->message);
       }
+      dispatcher.Set("error", message.str());
 
       (*response_handler)(llvm::createStringError(
           std::error_code(-1, std::generic_category()), message));
@@ -730,6 +739,7 @@ bool DAP::HandleObject(const protocol::Message &M) {
     return true;
   }
 
+  dispatcher.Set("error", "Unsupported protocol message");
   DAP_LOG(log, "Unsupported protocol message");
 
   return false;
