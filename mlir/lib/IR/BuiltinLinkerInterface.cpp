@@ -53,7 +53,7 @@ public:
     if (!linker->canBeLinked(op))
       return success();
 
-    ConflictPair conflict = linker->findConflict(op);
+    Conflict conflict = linker->findConflict(op);
     if (!linker->isLinkNeeded(conflict, forDependency))
       return success();
 

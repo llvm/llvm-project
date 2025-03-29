@@ -44,13 +44,13 @@ private:
   OpBuilder builder;
 };
 
-struct ConflictPair {
+struct Conflict {
   Operation *dst;
   Operation *src;
 
   bool hasConflict() const { return dst; }
 
-  static ConflictPair noConflict(Operation *src) { return {nullptr, src}; }
+  static Conflict noConflict(Operation *src) { return {nullptr, src}; }
 };
 
 template <typename ConcreteType>
@@ -96,13 +96,13 @@ public:
   virtual StringRef getSymbol(Operation *op) const = 0;
 
   /// Determines if an operation should be linked into the destination module.
-  virtual bool isLinkNeeded(ConflictPair pair, bool forDependency) const = 0;
+  virtual bool isLinkNeeded(Conflict pair, bool forDependency) const = 0;
 
   /// Checks if an operation conflicts with existing linked operations.
-  virtual ConflictPair findConflict(Operation *src) const = 0;
+  virtual Conflict findConflict(Operation *src) const = 0;
 
   /// Resolves a conflict between an existing operation and a new one.
-  virtual LogicalResult resolveConflict(ConflictPair pair) = 0;
+  virtual LogicalResult resolveConflict(Conflict pair) = 0;
 
   /// Records a non-conflicting operation for linking.
   virtual void registerForLink(Operation *op) = 0;
@@ -176,12 +176,12 @@ public:
     return success();
   }
 
-  ConflictPair findConflict(Operation *src) const {
+  Conflict findConflict(Operation *src) const {
     for (SymbolLinkerInterface *linker : interfaces) {
       if (auto pair = linker->findConflict(src); pair.hasConflict())
         return pair;
     }
-    return ConflictPair::noConflict(src);
+    return Conflict::noConflict(src);
   }
 
 private:

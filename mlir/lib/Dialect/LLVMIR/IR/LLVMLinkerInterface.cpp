@@ -165,20 +165,20 @@ public:
 
   StringRef getSymbol(Operation *op) const override { return symbol(op); }
 
-  ConflictPair findConflict(Operation *src) const override {
+  Conflict findConflict(Operation *src) const override {
     assert(canBeLinked(src) && "expected linkable operation");
 
     if (isLocalLinkage(getLinkage(src)))
-      return ConflictPair::noConflict(src);
+      return Conflict::noConflict(src);
 
     if (auto it = summary.find(getSymbol(src)); it != summary.end()) {
       return {it->second, src};
     }
 
-    return ConflictPair::noConflict(src);
+    return Conflict::noConflict(src);
   }
 
-  bool isLinkNeeded(ConflictPair pair, bool forDependency) const override {
+  bool isLinkNeeded(Conflict pair, bool forDependency) const override {
     assert(canBeLinked(pair.src) && "expected linkable operation");
     if (pair.src == pair.dst)
       return false;
@@ -214,7 +214,7 @@ public:
              isAvailableExternallyLinkage(srcLinkage));
   }
 
-  FailureOr<bool> shouldLinkFromSource(ConflictPair pair) const {
+  FailureOr<bool> shouldLinkFromSource(Conflict pair) const {
     auto srcLinkage = getLinkage(pair.src);
     auto dstLinkage = getLinkage(pair.dst);
 
@@ -271,7 +271,7 @@ public:
     return failure();
   }
 
-  LogicalResult resolveConflict(ConflictPair pair) override {
+  LogicalResult resolveConflict(Conflict pair) override {
     assert(canBeLinked(pair.src) && "expected linkable operation");
     assert(canBeLinked(pair.dst) && "expected linkable operation");
 
