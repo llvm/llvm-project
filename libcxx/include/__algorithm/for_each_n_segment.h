@@ -21,9 +21,11 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// __for_each_n_segment is a utility function for optimizing iterating over segmented iterators linearly.
-// __first and __orig_n are represent the begining and size of a segmented range. __func is expected to
-// take a range of local iterators. Anything that is returned from __func is ignored.
+// __for_each_n_segment optimizes linear iteration over segmented iterators. It processes a segmented
+// input range defined by (__first, __orig_n), where __first is the starting segmented iterator and
+// __orig_n is the number of elements to process. The functor __func is applied to each segment using
+// local iterator pairs for that segment. The return value of __func is ignored, and the function
+// returns an iterator pointing to one past the last processed element in the input range.
 
 template <class _SegmentedIterator, class _Size, class _Functor>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _SegmentedIterator
@@ -40,32 +42,33 @@ __for_each_n_segment(_SegmentedIterator __first, _Size __orig_n, _Functor __func
   auto __lfirst     = _Traits::__local(__first);
   auto __seg_size   = static_cast<_IntegralSize>(std::distance(__lfirst, __slast));
 
-  // We have only one single segment, which might not start or end at the boundaries of the segment
+  // Single-segment case: input range fits within a single segment (may not align with segment boundaries)
   if (__n <= __seg_size) {
     auto __llast = std::next(__lfirst, __n);
     __func(__lfirst, __llast);
     return _Traits::__compose(__seg, __llast);
   }
 
-  // We have more than one segment. Iterate over the first segment which might not start at the beginning
-  __func(__lfirst, std::next(__lfirst, __seg_size));
+  // Multi-segment case: input range spans multiple segments.
+  // Process the first segment which might not start at the beginning of the segment
+  __func(__lfirst, __slast);
   ++__seg;
   __n -= __seg_size;
 
-  // Iterate over the 2nd to last segments which are guaranteed to start at the beginning of each segment
+  // Process the 2nd to last segments guaranteed to start at the beginning of each segment
   while (true) {
     __sfirst   = _Traits::__begin(__seg);
     __slast    = _Traits::__end(__seg);
     __seg_size = std::distance(__sfirst, __slast);
 
-    // We are in the last segment
+    // The last (potentially partial) segment
     if (__n <= __seg_size) {
       auto __llast = std::next(__sfirst, __n);
       __func(__sfirst, __llast);
       return _Traits::__compose(__seg, __llast);
     }
 
-    // We are in middle segments that are completely in the range
+    // Middle whole segments that are completely in the range
     __func(__sfirst, __slast);
     ++__seg;
     __n -= __seg_size;
