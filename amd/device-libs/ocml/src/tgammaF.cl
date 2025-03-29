@@ -19,7 +19,7 @@ MATH_MANGLE(tgamma)(float x)
     if (ax > 0x1.0p-6f) {
         // For x < 3, push to larger value using gamma(x) = gamma(x+1) / x
         float d = 1.0f;
-        if (x < 1.0f) {
+        if (ax < 1.0f) {
             d = MATH_MAD((ax + 3.0f), ax, 2.0f) * ax;
             ax = ax + 3.0f;
         } else if (ax < 2.0f) {
