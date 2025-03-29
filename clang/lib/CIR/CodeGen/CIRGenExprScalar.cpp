@@ -1138,8 +1138,9 @@ mlir::Value ScalarExprEmitter::emitShl(const BinOpInfo &ops) {
            mlir::isa<cir::IntType>(ops.lhs.getType()))
     cgf.cgm.errorNYI("sanitizers");
 
-  cgf.cgm.errorNYI("shift ops");
-  return {};
+  return builder.create<cir::ShiftOp>(cgf.getLoc(ops.loc),
+                                      cgf.convertType(ops.fullType), ops.lhs,
+                                      ops.rhs, cgf.getBuilder().getUnitAttr());
 }
 
 mlir::Value ScalarExprEmitter::emitShr(const BinOpInfo &ops) {
@@ -1163,8 +1164,8 @@ mlir::Value ScalarExprEmitter::emitShr(const BinOpInfo &ops) {
 
   // Note that we don't need to distinguish unsigned treatment at this
   // point since it will be handled later by LLVM lowering.
-  cgf.cgm.errorNYI("shift ops");
-  return {};
+  return builder.create<cir::ShiftOp>(
+      cgf.getLoc(ops.loc), cgf.convertType(ops.fullType), ops.lhs, ops.rhs);
 }
 
 mlir::Value ScalarExprEmitter::emitAnd(const BinOpInfo &ops) {
