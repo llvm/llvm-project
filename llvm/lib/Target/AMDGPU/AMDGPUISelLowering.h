@@ -315,7 +315,7 @@ public:
                                            const SelectionDAG &DAG,
                                            unsigned Depth = 0) const override;
 
-  unsigned computeNumSignBitsForTargetInstr(GISelKnownBits &Analysis,
+  unsigned computeNumSignBitsForTargetInstr(GISelValueTracking &Analysis,
                                             Register R,
                                             const APInt &DemandedElts,
                                             const MachineRegisterInfo &MRI,
