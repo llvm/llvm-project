@@ -76,6 +76,41 @@ void IRBuilderBase::SetInstDebugLocation(Instruction *I) const {
     }
 }
 
+Value *IRBuilderBase::CreateAggregateCast(Value *V, Type *DestTy) {
+  Type *SrcTy = V->getType();
+  if (SrcTy == DestTy)
+    return V;
+  if (auto *SrcST = dyn_cast<StructType>(SrcTy)) {
+    assert(DestTy->isStructTy() && "Expected StructType");
+    auto *DestST = cast<StructType>(DestTy);
+    assert(SrcST->getNumElements() == DestST->getNumElements());
+    Value *Result = PoisonValue::get(DestTy);
+    for (unsigned int I = 0, E = SrcST->getNumElements(); I < E; ++I) {
+      Value *Element = CreateAggregateCast(CreateExtractValue(V, ArrayRef(I)),
+                                           DestST->getElementType(I));
+
+      Result = CreateInsertValue(Result, Element, ArrayRef(I));
+    }
+    return Result;
+  }
+  if (auto *SrcAT = dyn_cast<ArrayType>(SrcTy)) {
+    assert(DestTy->isArrayTy() && "Expected ArrayType");
+    auto *DestAT = cast<ArrayType>(DestTy);
+    assert(SrcAT->getNumElements() == DestAT->getNumElements());
+    Value *Result = PoisonValue::get(DestTy);
+    for (unsigned int I = 0, E = SrcAT->getNumElements(); I < E; ++I) {
+      Value *Element = CreateAggregateCast(CreateExtractValue(V, ArrayRef(I)),
+                                           DestAT->getElementType());
+
+      Result = CreateInsertValue(Result, Element, ArrayRef(I));
+    }
+    return Result;
+  }
+
+  assert(!DestTy->isAggregateType());
+  return CreateBitOrPointerCast(V, DestTy);
+}
+
 CallInst *
 IRBuilderBase::createCallHelper(Function *Callee, ArrayRef<Value *> Ops,
                                 const Twine &Name, FMFSource FMFSource,
