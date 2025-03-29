@@ -1821,7 +1821,7 @@ public:
 
       auto CheckSameEntryOrFail = [&]() {
         if (ArrayRef<TreeEntry *> TEs1 = R.getTreeEntries(V1); !TEs1.empty()) {
-          SmallPtrSet<TreeEntry *, 4> Set(TEs1.begin(), TEs1.end());
+          SmallPtrSet<TreeEntry *, 4> Set(llvm::from_range, TEs1);
           if (ArrayRef<TreeEntry *> TEs2 = R.getTreeEntries(V2);
               !TEs2.empty() &&
               any_of(TEs2, [&](TreeEntry *E) { return Set.contains(E); }))
@@ -6896,8 +6896,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
       SmallVector<TreeEntry *> GatherOps;
       if (!canReorderOperands(Data.first, Data.second, NonVectorized,
                               GatherOps)) {
-        for (const std::pair<unsigned, TreeEntry *> &Op : Data.second)
-          Visited.insert(Op.second);
+        Visited.insert_range(llvm::make_second_range(Data.second));
         continue;
       }
       // All operands are reordered and used only in this node - propagate the
@@ -7073,8 +7072,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         }
       }
       if (OrdersUses.empty()) {
-        for (const std::pair<unsigned, TreeEntry *> &Op : Data.second)
-          Visited.insert(Op.second);
+        Visited.insert_range(llvm::make_second_range(Data.second));
         continue;
       }
       // Choose the most used order.
@@ -7103,8 +7101,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
       }
       // Set order of the user node.
       if (isIdentityOrder(BestOrder)) {
-        for (const std::pair<unsigned, TreeEntry *> &Op : Data.second)
-          Visited.insert(Op.second);
+        Visited.insert_range(llvm::make_second_range(Data.second));
         continue;
       }
       fixupOrderingIndices(BestOrder);
@@ -8938,7 +8935,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         }
         return;
       }
-      SmallPtrSet<Value *, 8> Values(E->Scalars.begin(), E->Scalars.end());
+      SmallPtrSet<Value *, 8> Values(llvm::from_range, E->Scalars);
       if (all_of(VL, [&](Value *V) {
             return isa<PoisonValue>(V) || Values.contains(V);
           })) {
@@ -9038,8 +9035,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     SmallBitVector OpcodeMask(getAltInstrMask(VL, Opcode0, Opcode1));
     // Enable split node, only if all nodes do not form legal alternate
     // instruction (like X86 addsub).
-    SmallPtrSet<Value *, 4> UOp1(Op1.begin(), Op1.end());
-    SmallPtrSet<Value *, 4> UOp2(Op2.begin(), Op2.end());
+    SmallPtrSet<Value *, 4> UOp1(llvm::from_range, Op1);
+    SmallPtrSet<Value *, 4> UOp2(llvm::from_range, Op2);
     if (UOp1.size() <= 1 || UOp2.size() <= 1 ||
         TTI.isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask) ||
         !hasFullVectorsOrPowerOf2(TTI, Op1.front()->getType(), Op1.size()) ||
@@ -13350,7 +13347,8 @@ InstructionCost BoUpSLP::getSpillCost() {
     for (const TreeEntry *Op : Operands) {
       if (!Op->isGather())
         LiveEntries.push_back(Op);
-      if ((Entry->getOpcode() != Instruction::PHI && Op->isGather()) ||
+      if (Entry->State == TreeEntry::SplitVectorize ||
+          (Entry->getOpcode() != Instruction::PHI && Op->isGather()) ||
           (Op->isGather() && allConstant(Op->Scalars)))
         continue;
       Budget = 0;
@@ -14265,7 +14263,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     return std::nullopt;
   auto *NodeUI = DT->getNode(TEInsertBlock);
   assert(NodeUI && "Should only process reachable instructions");
-  SmallPtrSet<Value *, 4> GatheredScalars(VL.begin(), VL.end());
+  SmallPtrSet<Value *, 4> GatheredScalars(llvm::from_range, VL);
   auto CheckOrdering = [&](const Instruction *InsertPt) {
     // Argument InsertPt is an instruction where vector code for some other
     // tree entry (one that shares one or more scalars with TE) is going to be
@@ -21455,7 +21453,7 @@ public:
           }
         }
         V.transformNodes();
-        SmallPtrSet<Value *, 4> VLScalars(VL.begin(), VL.end());
+        SmallPtrSet<Value *, 4> VLScalars(llvm::from_range, VL);
         // Gather externally used values.
         SmallPtrSet<Value *, 4> Visited;
         for (unsigned Cnt = 0; Cnt < NumReducedVals; ++Cnt) {
@@ -23343,7 +23341,7 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
       // SetVector here to preserve program order. If the index computations
       // are vectorizable and begin with loads, we want to minimize the chance
       // of having to reorder them later.
-      SetVector<Value *> Candidates(GEPList.begin(), GEPList.end());
+      SetVector<Value *> Candidates(llvm::from_range, GEPList);
 
       // Some of the candidates may have already been vectorized after we
       // initially collected them or their index is optimized to constant value.

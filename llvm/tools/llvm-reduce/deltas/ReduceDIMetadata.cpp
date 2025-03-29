@@ -39,7 +39,7 @@ void identifyUninterestingMDNodes(Oracle &O, MDNodeList &MDs) {
     MDNode *MD = ToLook.back();
     ToLook.pop_back();
 
-    if (Visited.count(MD))
+    if (!Visited.insert(MD))
       continue;
 
     // Determine if the current MDNode is DebugInfo
@@ -55,8 +55,6 @@ void identifyUninterestingMDNodes(Oracle &O, MDNodeList &MDs) {
     for (Metadata *Op : MD->operands())
       if (MDNode *OMD = dyn_cast_or_null<MDNode>(Op))
         ToLook.push_back(OMD);
-
-    Visited.insert(MD);
   }
 
   for (auto &T : Tuples) {

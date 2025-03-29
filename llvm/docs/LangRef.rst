@@ -20080,7 +20080,7 @@ Arguments:
 
 The argument to this intrinsic must be a vector.
 
-'``llvm.vector.deinterleave2``' Intrinsic
+'``llvm.vector.deinterleave2/3/5/7``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -20091,31 +20091,37 @@ This is an overloaded intrinsic.
 
       declare {<2 x double>, <2 x double>} @llvm.vector.deinterleave2.v4f64(<4 x double> %vec1)
       declare {<vscale x 4 x i32>, <vscale x 4 x i32>}  @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %vec1)
+      declare {<vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>} @llvm.vector.deinterleave3.nxv6i8(<vscale x 6 x i8> %vec1)
+      declare {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} @llvm.vector.deinterleave5.v10i32(<10 x i32> %vec1)
+      declare {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} @llvm.vector.deinterleave7.v14i32(<14 x i32> %vec1)
 
 Overview:
 """""""""
 
-The '``llvm.vector.deinterleave2``' intrinsic constructs two
-vectors by deinterleaving the even and odd lanes of the input vector.
+The '``llvm.vector.deinterleave2/3/5/7``' intrinsics deinterleave adjacent lanes
+into 2, 3, 5, and 7 separate vectors, respectively, and return them as the
+result.
 
 This intrinsic works for both fixed and scalable vectors. While this intrinsic
 supports all vector types the recommended way to express this operation for
-fixed-width vectors is still to use a shufflevector, as that may allow for more
-optimization opportunities.
+factor of 2 on fixed-width vectors is still to use a shufflevector, as that
+may allow for more optimization opportunities.
 
 For example:
 
 .. code-block:: text
 
   {<2 x i64>, <2 x i64>} llvm.vector.deinterleave2.v4i64(<4 x i64> <i64 0, i64 1, i64 2, i64 3>); ==> {<2 x i64> <i64 0, i64 2>, <2 x i64> <i64 1, i64 3>}
+  {<2 x i32>, <2 x i32>, <2 x i32>} llvm.vector.deinterleave3.v6i32(<6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>)
+    ; ==> {<2 x i32> <i32 0, i32 3>, <2 x i32> <i32 1, i32 4>, <2 x i32> <i32 2, i32 5>}
 
 Arguments:
 """"""""""
 
 The argument is a vector whose type corresponds to the logical concatenation of
-the two result types.
+the aggregated result types.
 
-'``llvm.vector.interleave2``' Intrinsic
+'``llvm.vector.interleave2/3/5/7``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -20126,27 +20132,32 @@ This is an overloaded intrinsic.
 
       declare <4 x double> @llvm.vector.interleave2.v4f64(<2 x double> %vec1, <2 x double> %vec2)
       declare <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2)
+      declare <vscale x 6 x i8> @llvm.vector.interleave3.nxv6i8(<vscale x 2 x i8> %vec0, <vscale x 2 x i8> %vec1, <vscale x 2 x i8> %vec2)
+      declare <10 x i32> @llvm.vector.interleave5.v10i32(<2 x i32> %vec0, <2 x i32> %vec1, <2 x i32> %vec2, <2 x i32> %vec3, <2 x i32> %vec4)
+      declare <14 x i32> @llvm.vector.interleave7.v14i32(<2 x i32> %vec0, <2 x i32> %vec1, <2 x i32> %vec2, <2 x i32> %vec3, <2 x i32> %vec4, <2 x i32> %vec5, <2 x i32> %vec6)
 
 Overview:
 """""""""
 
-The '``llvm.vector.interleave2``' intrinsic constructs a vector
-by interleaving two input vectors.
+The '``llvm.vector.interleave2/3/5/7``' intrinsic constructs a vector
+by interleaving all the input vectors.
 
 This intrinsic works for both fixed and scalable vectors. While this intrinsic
 supports all vector types the recommended way to express this operation for
-fixed-width vectors is still to use a shufflevector, as that may allow for more
-optimization opportunities.
+factor of 2 on fixed-width vectors is still to use a shufflevector, as that
+may allow for more optimization opportunities.
 
 For example:
 
 .. code-block:: text
 
    <4 x i64> llvm.vector.interleave2.v4i64(<2 x i64> <i64 0, i64 2>, <2 x i64> <i64 1, i64 3>); ==> <4 x i64> <i64 0, i64 1, i64 2, i64 3>
+   <6 x i32> llvm.vector.interleave3.v6i32(<2 x i32> <i32 0, i32 3>, <2 x i32> <i32 1, i32 4>, <2 x i32> <i32 2, i32 5>)
+    ; ==> <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
 
 Arguments:
 """"""""""
-Both arguments must be vectors of the same type whereby their logical
+All arguments must be vectors of the same type whereby their logical
 concatenation matches the result type.
 
 '``llvm.experimental.cttz.elts``' Intrinsic

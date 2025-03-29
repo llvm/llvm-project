@@ -43,6 +43,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include <algorithm>
 #include <optional>
 using namespace llvm;

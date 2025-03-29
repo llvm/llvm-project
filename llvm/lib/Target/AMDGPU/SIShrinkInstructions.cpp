@@ -973,11 +973,13 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
         continue;
       }
 
-      if (!TII->hasVALU32BitEncoding(MI.getOpcode())) {
-        // If there is no chance we will shrink it and use VCC as sdst to get
-        // a 32 bit form try to replace dead sdst with NULL.
+      // If there is no chance we will shrink it and use VCC as sdst to get
+      // a 32 bit form try to replace dead sdst with NULL.
+      if (TII->isVOP3(MI.getOpcode())) {
         tryReplaceDeadSDST(MI);
-        continue;
+        if (!TII->hasVALU32BitEncoding(MI.getOpcode())) {
+          continue;
+        }
       }
 
       if (!TII->canShrink(MI, *MRI)) {

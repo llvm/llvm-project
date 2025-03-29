@@ -198,7 +198,6 @@ def _get_modified_projects(modified_files: list[str]) -> Set[str]:
         # Exclude files in the docs directory. They do not impact an test
         # targets and there is a separate workflow used for ensuring the
         # documentation builds.
-        print(path_parts)
         if len(path_parts) > 2 and path_parts[1] == "docs":
             continue
         modified_projects.add(pathlib.Path(modified_file).parts[0])

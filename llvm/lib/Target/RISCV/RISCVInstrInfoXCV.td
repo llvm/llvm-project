@@ -24,8 +24,6 @@ def CVrrAsmOperand : AsmOperandClass {
 def CVrr : Operand<i32>,
            ComplexPattern<i32, 2, "SelectAddrRegReg",[]> {
    let ParserMatchClass = CVrrAsmOperand;
-   let EncoderMethod =  "getRegReg";
-   let DecoderMethod = "decodeRegReg";
    let PrintMethod = "printRegReg";
    let MIOperandInfo = (ops GPR:$base, GPR:$offset);
 }
@@ -288,17 +286,9 @@ class CVLoad_rr_inc<bits<7> funct7, bits<3> funct3, string opcodestr>
 }
 
 class CVLoad_rr<bits<7> funct7, bits<3> funct3, string opcodestr>
-    : RVInstR<funct7, funct3, OPC_CUSTOM_1, (outs GPR:$rd), (ins CVrr:$cvrr),
-              opcodestr, "$rd, $cvrr"> {
-  bits<5> rd;
-  bits<10> cvrr;
-
-  let Inst{31-25} = funct7;
-  let Inst{24-20} = cvrr{4-0};
-  let Inst{19-15} = cvrr{9-5};
-  let Inst{14-12} = funct3;
-  let Inst{11-7} = rd;
-}
+    : RVInstR<funct7, funct3, OPC_CUSTOM_1, (outs GPR:$rd),
+              (ins (CVrr $rs1, $rs2):$addr),
+              opcodestr, "$rd, $addr">;
 } // hasSideEffects = 0, mayLoad = 1, mayStore = 0
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
@@ -327,16 +317,17 @@ class CVStore_rr_inc<bits<3> funct3, bits<7> funct7, string opcodestr>
 
 
 class CVStore_rr<bits<3> funct3, bits<7> funct7, string opcodestr>
-    : RVInst<(outs), (ins GPR:$rs2, CVrr:$cvrr), opcodestr, "$rs2, $cvrr", [],
-             InstFormatOther> {
+    : RVInst<(outs), (ins GPR:$rs2, (CVrr $rs1, $rs3):$addr), opcodestr,
+             "$rs2, $addr", [], InstFormatOther> {
+  bits<5> rs1;
   bits<5> rs2;
-  bits<10> cvrr;
+  bits<5> rs3;
 
   let Inst{31-25} = funct7;
   let Inst{24-20} = rs2;
-  let Inst{19-15} = cvrr{9-5};
+  let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;
-  let Inst{11-7} = cvrr{4-0};
+  let Inst{11-7} = rs3;
   let Inst{6-0} = OPC_CUSTOM_1.Value;
 }
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 1
@@ -599,10 +590,10 @@ let Predicates = [HasVendorXCVsimd, IsRV32] in {
 let Predicates = [HasVendorXCVbi, IsRV32] in {
   // Immediate branching operations
   def CV_BEQIMM : CVInstImmBranch<0b110, (outs),
-        (ins GPR:$rs1, simm5:$imm5, simm13_lsb0:$imm12),
+        (ins GPR:$rs1, simm5:$imm5, bare_simm13_lsb0:$imm12),
         "cv.beqimm", "$rs1, $imm5, $imm12">, Sched<[]>;
   def CV_BNEIMM : CVInstImmBranch<0b111, (outs),
-        (ins GPR:$rs1, simm5:$imm5, simm13_lsb0:$imm12),
+        (ins GPR:$rs1, simm5:$imm5, bare_simm13_lsb0:$imm12),
         "cv.bneimm", "$rs1, $imm5, $imm12">, Sched<[]>;
 }
 
@@ -802,9 +793,9 @@ let Predicates = [HasVendorXCValu, IsRV32], AddedComplexity = 1 in {
 
 let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
   def : Pat<(riscv_brcc GPR:$rs1, simm5:$imm5, SETEQ, bb:$imm12),
-            (CV_BEQIMM GPR:$rs1, simm5:$imm5, simm13_lsb0:$imm12)>;
+            (CV_BEQIMM GPR:$rs1, simm5:$imm5, bare_simm13_lsb0:$imm12)>;
   def : Pat<(riscv_brcc GPR:$rs1, simm5:$imm5, SETNE, bb:$imm12),
-            (CV_BNEIMM GPR:$rs1, simm5:$imm5, simm13_lsb0:$imm12)>;
+            (CV_BNEIMM GPR:$rs1, simm5:$imm5, bare_simm13_lsb0:$imm12)>;
 
   let usesCustomInserter = 1 in
   def Select_GPR_Using_CC_Imm : Pseudo<(outs GPR:$dst),

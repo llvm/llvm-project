@@ -391,6 +391,7 @@ unsigned VPUnrollPartAccessor<PartOpIdx>::getUnrollPart(VPUser &U) const {
 
 namespace llvm {
 template class VPUnrollPartAccessor<2>;
+template class VPUnrollPartAccessor<3>;
 }
 
 VPInstruction::VPInstruction(unsigned Opcode, CmpInst::Predicate Pred,
@@ -627,14 +628,15 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     // The recipe's operands are the reduction phi, followed by one operand for
     // each part of the reduction.
-    unsigned UF = getNumOperands() - 1;
-    Value *ReducedPartRdx = State.get(getOperand(1));
+    unsigned UF = getNumOperands() - 2;
+    Value *ReducedPartRdx = State.get(getOperand(2));
     for (unsigned Part = 1; Part < UF; ++Part) {
       ReducedPartRdx = createMinMaxOp(Builder, RecurKind::SMax, ReducedPartRdx,
-                                      State.get(getOperand(1 + Part)));
+                                      State.get(getOperand(2 + Part)));
     }
 
-    return createFindLastIVReduction(Builder, ReducedPartRdx, RdxDesc);
+    return createFindLastIVReduction(Builder, ReducedPartRdx,
+                                     State.get(getOperand(1), true), RdxDesc);
   }
   case VPInstruction::ComputeReductionResult: {
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
@@ -951,6 +953,8 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
     return true;
   case VPInstruction::PtrAdd:
     return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
+  case VPInstruction::ComputeFindLastIVResult:
+    return Op == getOperand(1);
   };
   llvm_unreachable("switch should return");
 }
@@ -1061,30 +1065,15 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-void VPIRInstruction::execute(VPTransformState &State) {
-  assert((isa<PHINode>(&I) || getNumOperands() == 0) &&
-         "Only PHINodes can have extra operands");
-  for (const auto &[Idx, Op] : enumerate(operands())) {
-    VPValue *ExitValue = Op;
-    auto Lane = vputils::isUniformAfterVectorization(ExitValue)
-                    ? VPLane::getFirstLane()
-                    : VPLane::getLastLaneForVF(State.VF);
-    VPBlockBase *Pred = getParent()->getPredecessors()[Idx];
-    auto *PredVPBB = Pred->getExitingBasicBlock();
-    BasicBlock *PredBB = State.CFG.VPBB2IRBB[PredVPBB];
-    // Set insertion point in PredBB in case an extract needs to be generated.
-    // TODO: Model extracts explicitly.
-    State.Builder.SetInsertPoint(PredBB, PredBB->getFirstNonPHIIt());
-    Value *V = State.get(ExitValue, VPLane(Lane));
-    auto *Phi = cast<PHINode>(&I);
-    // If there is no existing block for PredBB in the phi, add a new incoming
-    // value. Otherwise update the existing incoming value for PredBB.
-    if (Phi->getBasicBlockIndex(PredBB) == -1)
-      Phi->addIncoming(V, PredBB);
-    else
-      Phi->setIncomingValueForBlock(PredBB, V);
-  }
+VPIRInstruction *VPIRInstruction ::create(Instruction &I) {
+  if (auto *Phi = dyn_cast<PHINode>(&I))
+    return new VPIRPhi(*Phi);
+  return new VPIRInstruction(I);
+}
 
+void VPIRInstruction::execute(VPTransformState &State) {
+  assert(!isa<VPIRPhi>(this) && getNumOperands() == 0 &&
+         "PHINodes must be handled by VPIRPhi");
   // Advance the insert point after the wrapped IR instruction. This allows
   // interleaving VPIRInstructions and other recipes.
   State.Builder.SetInsertPoint(I.getParent(), std::next(I.getIterator()));
@@ -1117,6 +1106,40 @@ void VPIRInstruction::extractLastLaneOfOperand(VPBuilder &Builder) {
 void VPIRInstruction::print(raw_ostream &O, const Twine &Indent,
                             VPSlotTracker &SlotTracker) const {
   O << Indent << "IR " << I;
+}
+#endif
+
+void VPIRPhi::execute(VPTransformState &State) {
+  PHINode *Phi = &getIRPhi();
+  for (const auto &[Idx, Op] : enumerate(operands())) {
+    VPValue *ExitValue = Op;
+    auto Lane = vputils::isUniformAfterVectorization(ExitValue)
+                    ? VPLane::getFirstLane()
+                    : VPLane::getLastLaneForVF(State.VF);
+    VPBlockBase *Pred = getParent()->getPredecessors()[Idx];
+    auto *PredVPBB = Pred->getExitingBasicBlock();
+    BasicBlock *PredBB = State.CFG.VPBB2IRBB[PredVPBB];
+    // Set insertion point in PredBB in case an extract needs to be generated.
+    // TODO: Model extracts explicitly.
+    State.Builder.SetInsertPoint(PredBB, PredBB->getFirstNonPHIIt());
+    Value *V = State.get(ExitValue, VPLane(Lane));
+    // If there is no existing block for PredBB in the phi, add a new incoming
+    // value. Otherwise update the existing incoming value for PredBB.
+    if (Phi->getBasicBlockIndex(PredBB) == -1)
+      Phi->addIncoming(V, PredBB);
+    else
+      Phi->setIncomingValueForBlock(PredBB, V);
+  }
+
+  // Advance the insert point after the wrapped IR instruction. This allows
+  // interleaving VPIRInstructions and other recipes.
+  State.Builder.SetInsertPoint(Phi->getParent(), std::next(Phi->getIterator()));
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPIRPhi::print(raw_ostream &O, const Twine &Indent,
+                    VPSlotTracker &SlotTracker) const {
+  VPIRInstruction::print(O, Indent, SlotTracker);
 
   if (getNumOperands() != 0) {
     O << " (extra operand" << (getNumOperands() > 1 ? "s" : "") << ": ";
@@ -1592,7 +1615,6 @@ void VPWidenRecipe::execute(VPTransformState &State) {
   }
   case Instruction::Freeze: {
     Value *Op = State.get(getOperand(0));
-
     Value *Freeze = Builder.CreateFreeze(Op);
     State.set(this, Freeze);
     break;
@@ -2050,8 +2072,18 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
     StartLane = State.Lane->getKnownLane();
     EndLane = StartLane + 1;
   }
-  Value *StartIdx0 =
-      createStepForVF(Builder, IntStepTy, State.VF, getUnrollPart(*this));
+  Value *StartIdx0;
+  if (getUnrollPart(*this) == 0)
+    StartIdx0 = ConstantInt::get(IntStepTy, 0);
+  else {
+    StartIdx0 = State.get(getOperand(2), true);
+    if (getUnrollPart(*this) != 1) {
+      StartIdx0 =
+          Builder.CreateMul(StartIdx0, ConstantInt::get(StartIdx0->getType(),
+                                                        getUnrollPart(*this)));
+    }
+    StartIdx0 = Builder.CreateTrunc(StartIdx0, IntStepTy);
+  }
 
   if (!FirstLaneOnly && State.VF.isScalable()) {
     auto *SplatStartIdx = Builder.CreateVectorSplat(State.VF, StartIdx0);
