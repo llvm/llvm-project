@@ -7649,10 +7649,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
           IsVariableTemplate = true;
 
           // Only C++1y supports variable templates (N3651).
-          Diag(D.getIdentifierLoc(),
-               getLangOpts().CPlusPlus14
-                   ? diag::compat_cxx14_variable_template
-                   : diag::compat_pre_cxx14_variable_template);
+          DiagCompat(D.getIdentifierLoc(), diag_compat::variable_template);
         }
       }
     } else {
@@ -7718,10 +7715,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
           } else if (RD->isUnion()) {
             // C++98 [class.union]p1: If a union contains a static data member,
             // the program is ill-formed. C++11 drops this restriction.
-            Diag(D.getIdentifierLoc(),
-                 getLangOpts().CPlusPlus11
-                     ? diag::compat_cxx11_static_data_member_in_union
-                     : diag::compat_pre_cxx11_static_data_member_in_union)
+            DiagCompat(D.getIdentifierLoc(),
+                       diag_compat::static_data_member_in_union)
                 << Name;
           }
         }
