@@ -35,12 +35,14 @@ function at-exit {
   ccache --print-stats > artifacts/ccache_stats.txt
 
   # If building fails there will be no results files.
+  echo "running in exit" >> $GITHUB_STEP_SUMMARY
   shopt -s nullglob
   if command -v buildkite-agent 2>&1 >/dev/null
   then
     python3 "${MONOREPO_ROOT}"/.ci/generate_test_report_buildkite.py ":linux: Linux x64 Test Results" \
       "linux-x64-test-results" $retcode "${BUILD_DIR}"/test-results.*.xml
   else
+    echo "got to else" >> $GITHUB_STEP_SUMMARY
     python3 "${MONOREPO_ROOT}"/.ci/generate_test_report_github.py ":linux: Linux x64 Test Results" \
       $retcode "${BUILD_DIR}"/test-results.*.xml >> $GITHUB_STEP_SUMMARY
   fi
