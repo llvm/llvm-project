@@ -7,7 +7,7 @@ import argparse
 
 import generate_test_report_lib
 
-if __name__ == "__main___":
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "title", help="Title of the test report, without Markdown formatting."
