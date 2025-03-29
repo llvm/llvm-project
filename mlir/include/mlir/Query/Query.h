@@ -10,6 +10,7 @@
 #define MLIR_TOOLS_MLIRQUERY_QUERY_H
 
 #include "Matcher/VariantValue.h"
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/LineEditor/LineEditor.h"
@@ -17,7 +18,18 @@
 
 namespace mlir::query {
 
-enum class QueryKind { Invalid, NoOp, Help, Match, Quit };
+/// QueryOptions is a class derived from BackwardSliceOptions
+/// Addtional options can be added for further customization
+struct QueryOptions : public BackwardSliceOptions {};
+
+enum class QueryKind {
+  Invalid,
+  NoOp,
+  Help,
+  SetBool,
+  Match,
+  Quit,
+};
 
 class QuerySession;
 
@@ -101,6 +113,32 @@ struct MatchQuery : Query {
   static bool classof(const Query *query) {
     return query->kind == QueryKind::Match;
   }
+};
+
+template <typename T>
+struct SetQueryKind {};
+
+template <>
+struct SetQueryKind<bool> {
+  static const QueryKind value = QueryKind::SetBool;
+};
+template <typename T>
+struct SetQuery : Query {
+  SetQuery(T QuerySession::*var, T value)
+      : Query(SetQueryKind<T>::value), var(var), value(value) {}
+
+  llvm::LogicalResult run(llvm::raw_ostream &os,
+                          QuerySession &qs) const override {
+    qs.*var = value;
+    return mlir::success();
+  }
+
+  static bool classof(const Query *query) {
+    return query->kind == SetQueryKind<T>::value;
+  }
+
+  T QuerySession::*var;
+  T value;
 };
 
 } // namespace mlir::query

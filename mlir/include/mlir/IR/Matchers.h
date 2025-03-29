@@ -19,7 +19,8 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
-
+#include "mlir/Query/Matcher/MatchersInternal.h"
+#include "mlir/Query/Query.h"
 namespace mlir {
 
 namespace detail {
@@ -59,7 +60,7 @@ struct NameOpMatcher {
   NameOpMatcher(StringRef name) : name(name) {}
   bool match(Operation *op) { return op->getName().getStringRef() == name; }
 
-  StringRef name;
+  std::string name;
 };
 
 /// The matcher that matches operations that have the specified attribute name.
@@ -67,7 +68,7 @@ struct AttrOpMatcher {
   AttrOpMatcher(StringRef attrName) : attrName(attrName) {}
   bool match(Operation *op) { return op->hasAttr(attrName); }
 
-  StringRef attrName;
+  std::string attrName;
 };
 
 /// The matcher that matches operations that have the `ConstantLike` trait, and
@@ -363,7 +364,71 @@ struct RecursivePatternMatcher {
   std::tuple<OperandMatchers...> operandMatchers;
 };
 
+/// A matcher encapsulating the initial `getBackwardSlice` method from
+/// SliceAnalysis.h
+/// Additionally, it limits the slice computation to a certain depth level using
+/// a custom filter
+///
+/// Example starting from node 9, assuming the matcher
+/// computes the slice for the first two depth levels
+/// ============================
+///    1       2      3      4
+///    |_______|      |______|
+///    |   |             |
+///    |   5             6
+///    |___|_____________|
+///      |               |
+///      7               8
+///      |_______________|
+///              |
+///              9
+///
+/// Assuming all local orders match the numbering order:
+///     {5, 7, 6, 8, 9}
+class BackwardSliceMatcher {
+public:
+  BackwardSliceMatcher(query::matcher::DynMatcher &&innerMatcher,
+                       int64_t maxDepth)
+      : innerMatcher(std::move(innerMatcher)), maxDepth(maxDepth) {}
+  bool match(Operation *op, SetVector<Operation *> &backwardSlice,
+             query::QueryOptions &options) {
+
+    if (innerMatcher.match(op) &&
+        matches(op, backwardSlice, options, maxDepth)) {
+      return true;
+    }
+    return false;
+  }
+
+private:
+  bool matches(Operation *rootOp, llvm::SetVector<Operation *> &backwardSlice,
+               query::QueryOptions &options, int64_t maxDepth);
+
+private:
+  // The outer matcher (e.g., BackwardSliceMatcher) relies on the innerMatcher
+  // to determine whether we want to traverse the DAG or not. For example, we
+  // want to explore the DAG only if the top-level operation name is
+  // "arith.addf".
+  query::matcher::DynMatcher innerMatcher;
+  // maxDepth specifies the maximum depth that the matcher can traverse in the
+  // DAG. For example, if maxDepth is 2, the matcher will explore the defining
+  // operations of the top-level op up to 2 levels.
+  int64_t maxDepth;
+};
 } // namespace detail
+
+// Matches transitive defs of a top level operation up to 1 level
+inline detail::BackwardSliceMatcher
+m_DefinedBy(query::matcher::DynMatcher innerMatcher) {
+  return detail::BackwardSliceMatcher(std::move(innerMatcher), 1);
+}
+
+// Matches transitive defs of a top level operation up to N levels
+inline detail::BackwardSliceMatcher
+m_GetDefinitions(query::matcher::DynMatcher innerMatcher, int64_t maxDepth) {
+  assert(maxDepth >= 0 && "maxDepth must be non-negative");
+  return detail::BackwardSliceMatcher(std::move(innerMatcher), maxDepth);
+}
 
 /// Matches a constant foldable operation.
 inline detail::constant_op_matcher m_Constant() {
