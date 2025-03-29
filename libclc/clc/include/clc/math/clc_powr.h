@@ -6,6 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE pown(__CLC_GENTYPE x, __CLC_INTN y) {
-  return __clc_pown(x, y);
-}
+#ifndef __CLC_MATH_CLC_POWR_H__
+#define __CLC_MATH_CLC_POWR_H__
+
+#define __CLC_BODY <clc/shared/binary_decl.inc>
+#define __CLC_FUNCTION __clc_powr
+
+#include <clc/math/gentype.inc>
+
+#undef __CLC_BODY
+#undef __CLC_FUNCTION
+
+#endif // __CLC_MATH_CLC_POWR_H__
