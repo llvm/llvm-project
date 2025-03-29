@@ -47,6 +47,7 @@
 #include "deltas/ReduceRegisterUses.h"
 #include "deltas/ReduceSpecialGlobals.h"
 #include "deltas/ReduceUsingSimplifyCFG.h"
+#include "deltas/ReduceValuesToReturn.h"
 #include "deltas/ReduceVirtualRegisters.h"
 #include "deltas/RunIRPasses.h"
 #include "deltas/SimplifyInstructions.h"
@@ -110,6 +111,7 @@ static cl::list<std::string>
     DELTA_PASS("attributes", reduceAttributesDeltaPass)                        \
     DELTA_PASS("module-data", reduceModuleDataDeltaPass)                       \
     DELTA_PASS("opcodes", reduceOpcodesDeltaPass)                              \
+    DELTA_PASS("values-to-return", reduceValuesToReturnDeltaPass)              \
     DELTA_PASS("volatile", reduceVolatileInstructionsDeltaPass)                \
     DELTA_PASS("atomic-ordering", reduceAtomicOrderingDeltaPass)               \
     DELTA_PASS("syncscopes", reduceAtomicSyncScopesDeltaPass)                  \
