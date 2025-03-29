@@ -157,6 +157,10 @@ Changes to the RISC-V Backend
 * Adds assembler support for ``.option exact``, which disables automatic compression,
   and branch and linker relaxation. This can be disabled with ``.option noexact``,
   which is also the default.
+* Adds experimental assembler support for SiFive CLIC CSRs, under the names
+  `Zsfmclic` for the M-mode registers and `Zsfsclic` for the S-mode registers.
+* Adds Support for SiFive CLIC interrupt attributes, which automate writing CLIC
+  interrupt handlers without using inline assembly.
 
 Changes to the WebAssembly Backend
 ----------------------------------
