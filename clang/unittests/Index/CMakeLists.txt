@@ -1,6 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  )
-
 add_clang_unittest(IndexTests
   IndexTests.cpp
   CLANG_LIBS
@@ -14,8 +11,4 @@ add_clang_unittest(IndexTests
   LLVM_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   Support
-  )
-
-clang_target_link_libraries(IndexTests
-  PRIVATE
   )
