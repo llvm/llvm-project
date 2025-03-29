@@ -237,7 +237,6 @@ struct DAP {
   /// @}
 
   ExceptionBreakpoint *GetExceptionBreakpoint(const std::string &filter);
-  ExceptionBreakpoint *GetExceptionBreakpoint(const lldb::break_id_t bp_id);
 
   /// Redirect stdout and stderr fo the IDE's console output.
   ///
@@ -401,9 +400,64 @@ struct DAP {
 
   void SetThreadFormat(llvm::StringRef format);
 
-  InstructionBreakpoint *GetInstructionBreakpoint(const lldb::break_id_t bp_id);
+  // Check to see if we have hit the  <BreakpointType> breakpoint and return the
+  // last breakpoint. but only do so if all breakpoints that were hit are of
+  // <BreakpointType>.
+  // Caller uses this to set the reason accordingly. i.e. If all the breakpoints
+  // are exception breakpoints then reason is 'exception'; if all the
+  // breakpoints are function breakpoints then reason is 'function breakpoint';
+  // if all the breakpoints are instruction breakpoints then reason =
+  // 'instruction breakpoint'; if there are combination of one more breakpoints,
+  // then the reason will be 'breakpoint'.
+  template <typename BreakpointType>
+  BreakpointType *GetBreakpointFromStopReason(lldb::SBThread &thread) {
+    // Check to see if we have hit the  <BreakpointType> breakpoint and change
+    // the reason accordingly, but only do so if all breakpoints that were hit
+    // are of <BreakpointType>.
+    const auto num = thread.GetStopReasonDataCount();
+    BreakpointType *bp = nullptr;
+    for (size_t i = 0; i < num; i += 2) {
+      lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(i);
+      // If any breakpoint is not the <BreakpointType>, then stop and
+      // report this as a normal breakpoint
+      bp = GetBreakpoint<BreakpointType>(bp_id);
+      if (bp == nullptr)
+        return nullptr;
+    }
+    return bp;
+  }
 
-  InstructionBreakpoint *GetInstructionBPFromStopReason(lldb::SBThread &thread);
+  template <typename BreakpointType>
+  BreakpointType *GetBreakpoint(const lldb::break_id_t bp_id);
+
+  template <>
+  FunctionBreakpoint *
+  GetBreakpoint<FunctionBreakpoint>(const lldb::break_id_t bp_id) {
+    auto it = std::find_if(
+        function_breakpoints.begin(), function_breakpoints.end(),
+        [bp_id](const auto &bp) { return bp.second.bp.GetID() == bp_id; });
+    return it != function_breakpoints.end() ? &it->second : nullptr;
+  }
+
+  template <>
+  InstructionBreakpoint *
+  GetBreakpoint<InstructionBreakpoint>(const lldb::break_id_t bp_id) {
+    auto it = std::find_if(
+        instruction_breakpoints.begin(), instruction_breakpoints.end(),
+        [bp_id](const auto &bp) { return bp.second.bp.GetID() == bp_id; });
+    return it != instruction_breakpoints.end() ? &it->second : nullptr;
+  }
+
+  template <>
+  ExceptionBreakpoint *
+  GetBreakpoint<ExceptionBreakpoint>(const lldb::break_id_t bp_id) {
+    PopulateExceptionBreakpoints();
+
+    auto it = std::find_if(
+        exception_breakpoints->begin(), exception_breakpoints->end(),
+        [bp_id](const auto &bp) { return bp.bp.GetID() == bp_id; });
+    return it != exception_breakpoints->end() ? &*it : nullptr;
+  }
 };
 
 } // namespace lldb_dap
