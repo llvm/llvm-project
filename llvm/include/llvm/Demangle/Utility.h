@@ -27,12 +27,76 @@
 
 DEMANGLE_NAMESPACE_BEGIN
 
+template <class T> class ScopedOverride {
+  T &Loc;
+  T Original;
+
+public:
+  ScopedOverride(T &Loc_) : ScopedOverride(Loc_, Loc_) {}
+
+  ScopedOverride(T &Loc_, T NewVal) : Loc(Loc_), Original(Loc_) {
+    Loc_ = std::move(NewVal);
+  }
+  ~ScopedOverride() { Loc = std::move(Original); }
+
+  ScopedOverride(const ScopedOverride &) = delete;
+  ScopedOverride &operator=(const ScopedOverride &) = delete;
+};
+
+class OutputBuffer;
+
+// Stores information about parts of a demangled function name.
+struct FunctionNameInfo {
+  /// A [start, end) pair for the function basename.
+  /// The basename is the name without scope qualifiers
+  /// and without template parameters. E.g.,
+  /// \code{.cpp}
+  ///    void foo::bar<int>::someFunc<float>(int) const &&
+  ///                        ^       ^
+  ///                      Start    End
+  /// \endcode
+  std::pair<size_t, size_t> BasenameLocs;
+
+  /// A [start, end) pair for the function scope qualifiers.
+  /// E.g., for
+  /// \code{.cpp}
+  ///    void foo::bar<int>::qux<float>(int) const &&
+  ///         ^              ^
+  ///       Start           End
+  /// \endcode
+  std::pair<size_t, size_t> ScopeLocs;
+
+  /// Indicates the [start, end) of the function argument lits.
+  /// E.g.,
+  /// \code{.cpp}
+  ///    int (*getFunc<float>(float, double))(int, int)
+  ///                        ^              ^
+  ///                      start           end
+  /// \endcode
+  std::pair<size_t, size_t> ArgumentLocs;
+
+  bool startedPrintingArguments() const;
+  bool shouldTrack(OutputBuffer &OB) const;
+  bool canFinalize(OutputBuffer &OB) const;
+  void updateBasenameEnd(OutputBuffer &OB);
+  void updateScopeStart(OutputBuffer &OB);
+  void updateScopeEnd(OutputBuffer &OB);
+  void finalizeArgumentEnd(OutputBuffer &OB);
+  void finalizeStart(OutputBuffer &OB);
+  void finalizeEnd(OutputBuffer &OB);
+  bool hasBasename() const;
+};
+
 // Stream that AST nodes write their string representation into after the AST
 // has been parsed.
 class OutputBuffer {
   char *Buffer = nullptr;
   size_t CurrentPosition = 0;
   size_t BufferCapacity = 0;
+
+  /// When a function type is being printed this value is incremented.
+  /// When printing of the type is finished the value is decremented.
+  unsigned FunctionPrintingDepth = 0;
 
   // Ensure there are at least N more positions in the buffer.
   void grow(size_t N) {
@@ -92,7 +156,18 @@ public:
   /// Use a counter so we can simply increment inside parentheses.
   unsigned GtIsGt = 1;
 
+  /// When printing the mangle tree, this object will hold information about
+  /// the function name being printed (if any).
+  FunctionNameInfo FunctionInfo;
+
+  /// Called when we start printing a function type.
+  [[nodiscard]] ScopedOverride<unsigned> enterFunctionTypePrinting();
+
   bool isGtInsideTemplateArgs() const { return GtIsGt == 0; }
+
+  bool isPrintingTopLevelFunctionType() const {
+    return FunctionPrintingDepth == 1;
+  }
 
   void printOpen(char Open = '(') {
     GtIsGt++;
@@ -180,22 +255,6 @@ public:
   char *getBuffer() { return Buffer; }
   char *getBufferEnd() { return Buffer + CurrentPosition - 1; }
   size_t getBufferCapacity() const { return BufferCapacity; }
-};
-
-template <class T> class ScopedOverride {
-  T &Loc;
-  T Original;
-
-public:
-  ScopedOverride(T &Loc_) : ScopedOverride(Loc_, Loc_) {}
-
-  ScopedOverride(T &Loc_, T NewVal) : Loc(Loc_), Original(Loc_) {
-    Loc_ = std::move(NewVal);
-  }
-  ~ScopedOverride() { Loc = std::move(Original); }
-
-  ScopedOverride(const ScopedOverride &) = delete;
-  ScopedOverride &operator=(const ScopedOverride &) = delete;
 };
 
 DEMANGLE_NAMESPACE_END

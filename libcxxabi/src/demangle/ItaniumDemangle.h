@@ -851,11 +851,13 @@ public:
   // by printing out the return types's left, then print our parameters, then
   // finally print right of the return type.
   void printLeft(OutputBuffer &OB) const override {
+    auto Scoped = OB.enterFunctionTypePrinting();
     Ret->printLeft(OB);
     OB += " ";
   }
 
   void printRight(OutputBuffer &OB) const override {
+    auto Scoped = OB.enterFunctionTypePrinting();
     OB.printOpen();
     Params.printWithComma(OB);
     OB.printClose();
@@ -971,18 +973,32 @@ public:
   const Node *getName() const { return Name; }
 
   void printLeft(OutputBuffer &OB) const override {
+    // Nested FunctionEncoding parsing can happen with following productions:
+    // * <local-name>
+    // * <expr-primary>
+    auto Scoped = OB.enterFunctionTypePrinting();
+
     if (Ret) {
       Ret->printLeft(OB);
       if (!Ret->hasRHSComponent(OB))
         OB += " ";
     }
+
+    OB.FunctionInfo.updateScopeStart(OB);
+
     Name->print(OB);
   }
 
   void printRight(OutputBuffer &OB) const override {
+    auto Scoped = OB.enterFunctionTypePrinting();
+    OB.FunctionInfo.finalizeStart(OB);
+
     OB.printOpen();
     Params.printWithComma(OB);
     OB.printClose();
+
+    OB.FunctionInfo.finalizeArgumentEnd(OB);
+
     if (Ret)
       Ret->printRight(OB);
 
@@ -1005,6 +1021,8 @@ public:
       OB += " requires ";
       Requires->print(OB);
     }
+
+    OB.FunctionInfo.finalizeEnd(OB);
   }
 };
 
@@ -1072,7 +1090,9 @@ struct NestedName : Node {
   void printLeft(OutputBuffer &OB) const override {
     Qual->print(OB);
     OB += "::";
+    OB.FunctionInfo.updateScopeEnd(OB);
     Name->print(OB);
+    OB.FunctionInfo.updateBasenameEnd(OB);
   }
 };
 
@@ -1633,6 +1653,7 @@ struct NameWithTemplateArgs : Node {
 
   void printLeft(OutputBuffer &OB) const override {
     Name->print(OB);
+    OB.FunctionInfo.updateBasenameEnd(OB);
     TemplateArgs->print(OB);
   }
 };
