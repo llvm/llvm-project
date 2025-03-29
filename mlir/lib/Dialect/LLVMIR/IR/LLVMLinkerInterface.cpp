@@ -168,9 +168,6 @@ public:
   Conflict findConflict(Operation *src) const override {
     assert(canBeLinked(src) && "expected linkable operation");
 
-    if (isLocalLinkage(getLinkage(src)))
-      return Conflict::noConflict(src);
-
     if (auto it = summary.find(getSymbol(src)); it != summary.end()) {
       return {it->second, src};
     }
@@ -186,9 +183,8 @@ public:
     LLVM::Linkage srcLinkage = getLinkage(pair.src);
 
     // Always import variables with appending linkage.
-    if (isAppendingLinkage(srcLinkage)) {
+    if (isAppendingLinkage(srcLinkage))
       return true;
-    }
 
     bool alreadyDeclared = pair.dst && isDeclaration(pair.dst);
 
@@ -214,110 +210,22 @@ public:
              isAvailableExternallyLinkage(srcLinkage));
   }
 
-  FailureOr<bool> shouldLinkFromSource(Conflict pair) const {
-    auto srcLinkage = getLinkage(pair.src);
-    auto dstLinkage = getLinkage(pair.dst);
-
-    auto isDeclarationForLinker = [](Operation *op) {
-      if (isAvailableExternallyLinkage(getLinkage(op)))
-        return true;
-      return isDeclaration(op);
-    };
-
-    // Should we unconditionally use the src?
-    if (shouldOverrideFromSrc())
-      return true;
-
-    // We always have to add src if it has appending linkage.
-    if (isAppendingLinkage(srcLinkage) || isAppendingLinkage(dstLinkage))
-      return true;
-
-    if (isDeclarationForLinker(pair.src))
-      llvm_unreachable("Not implemented");
-
-    if (isDeclarationForLinker(pair.dst))
-      return true;
-
-    if (isCommonLinkage(srcLinkage)) {
-      if (isLinkOnceLinkage(dstLinkage) || isWeakLinkage(dstLinkage))
-        return true;
-      if (!isCommonLinkage(dstLinkage))
-        return true;
-    }
-
-    // TODO: This is not correct, should use some form of DataLayout concept
-    // taking into account alignment etc
-    auto srcType = pair.src->getAttrOfType<TypeAttr>("global_type");
-    auto dstType = pair.dst->getAttrOfType<TypeAttr>("global_type");
-    if (srcType && dstType)
-      return srcType.getValue().getIntOrFloatBitWidth() >
-             dstType.getValue().getIntOrFloatBitWidth();
-
-    if (isWeakForLinker(srcLinkage)) {
-      assert(!isExternalWeakLinkage(dstLinkage));
-      assert(!isAvailableExternallyLinkage(dstLinkage));
-
-      return isLinkOnceAnyLinkage(dstLinkage) || isWeakLinkage(dstLinkage);
-    }
-
-    if (isWeakForLinker(dstLinkage)) {
-      assert(isExternalLinkage(srcLinkage));
-      return true;
-    }
-
-    assert(!isExternalWeakLinkage(srcLinkage));
-    assert(!isExternalWeakLinkage(dstLinkage));
-    assert(isExternalLinkage(srcLinkage) && isExternalLinkage(dstLinkage));
-    return failure();
-  }
-
   LogicalResult resolveConflict(Conflict pair) override {
     assert(canBeLinked(pair.src) && "expected linkable operation");
     assert(canBeLinked(pair.dst) && "expected linkable operation");
 
-    auto srcLinkage = getLinkage(pair.src);
-    auto dstLinkage = getLinkage(pair.dst);
-
-    auto dvar = dyn_cast<LLVM::GlobalOp>(pair.dst);
-    auto svar = dyn_cast<LLVM::GlobalOp>(pair.src);
-    if (!isAppendingLinkage(srcLinkage)) {
-      if (dvar && svar) {
-        if (isDeclaration(dvar) && isDeclaration(svar))
-          if (dvar.getConstant() || svar.getConstant()) {
-            dvar.setConstant(false);
-            svar.setConstant(false);
-          }
-
-        if (isCommonLinkage(dstLinkage) && isCommonLinkage(srcLinkage)) {
-          std::optional<int64_t> dstAlign = dvar.getAlignment();
-          std::optional<int64_t> srcAlign = svar.getAlignment();
-          std::optional<unsigned> align = std::nullopt;
-
-          if (dstAlign || srcAlign)
-            align = std::max(dstAlign.value_or(1), srcAlign.value_or(1));
-
-          dvar.setAlignment(align);
-          svar.setAlignment(align);
-        }
-      }
-
-      // TODO: set visibility
-
-      // TODO: set unnamed addr
+    // If both `src` and `dst` are declarations, we can ignore the conflict.
+    if (isDeclaration(pair.src) && isDeclaration(pair.dst)) {
+      return success();
     }
 
-    FailureOr<bool> linkFromSrc = shouldLinkFromSource(pair);
-    if (failed(linkFromSrc))
-      return failure();
+    // If the `dst` is a declaration import `src` definition
+    if (isDeclaration(pair.dst) && !isDeclaration(pair.src)) {
+      registerForLink(pair.src);
+      return success();
+    }
 
-    LinkFrom comdatFrom = LinkFrom::Dst;
-
-    if (comdatFrom == LinkFrom::Both)
-      valuesToClone.insert(*linkFromSrc ? pair.dst : pair.src);
-
-    if (*linkFromSrc)
-      summary[getSymbol(pair.src)] = pair.src;
-    return success();
+    llvm_unreachable("unimplemented conflict resolution");
   }
 
   void registerForLink(Operation *op) override {
