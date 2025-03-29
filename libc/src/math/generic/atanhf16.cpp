@@ -72,7 +72,7 @@ LLVM_LIBC_FUNCTION(float16, atanhf16, (float16 x)) {
   }
 
   float xf = x;
-  return fputil::cast<float16>(0.5 * log_eval((xf + 1.0) / (xf - 1.0)));
+  return fputil::cast<float16>(0.5f * log_eval((xf + 1.0f) / (xf - 1.0f)));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
