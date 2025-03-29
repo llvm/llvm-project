@@ -343,6 +343,14 @@ public:
   }
 };
 
+/// Represents a G_POISON.
+class GPoison : public GenericMachineInstr {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_POISON;
+  }
+};
+
 /// Represents a G_SELECT.
 class GSelect : public GenericMachineInstr {
 public:
