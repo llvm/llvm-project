@@ -16,9 +16,12 @@
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 class Module;
+
+extern cl::opt<bool> ForceImportAll;
 
 /// Class to handle necessary GlobalValue changes required by ThinLTO
 /// function importing, including linkage changes and any necessary renaming.

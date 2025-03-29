@@ -15,11 +15,11 @@
 ; RUN: opt -passes=function-import -summary-file %t3.thinlto.bc %t.bc \
 ; RUN:  -import-instr-limit=1 -force-import-all -S \
 ; RUN:  | FileCheck %s --check-prefix=IMPORTALL
-; IMPORTALL-DAG: define available_externally void @globalfunc1()
-; IMPORTALL-DAG: define available_externally void @trampoline()
-; IMPORTALL-DAG: define available_externally void @largefunction()
-; IMPORTALL-DAG: define available_externally hidden void @staticfunc2.llvm.0()
-; IMPORTALL-DAG: define available_externally void @globalfunc2()
+; IMPORTALL-DAG: define void @globalfunc1()
+; IMPORTALL-DAG: define void @trampoline()
+; IMPORTALL-DAG: define void @largefunction()
+; IMPORTALL-DAG: define hidden void @staticfunc2.llvm.0()
+; IMPORTALL-DAG: define void @globalfunc2()
 
 declare void @globalfunc1()
 declare void @globalfunc2()

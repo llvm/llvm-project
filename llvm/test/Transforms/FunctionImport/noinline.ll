@@ -19,5 +19,5 @@ entry:
 }
 
 ; NOIMPORT: declare void @foo(ptr)
-; IMPORT: define available_externally void @foo
+; IMPORT: define void @foo
 declare void @foo(ptr) #1

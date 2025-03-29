@@ -79,10 +79,6 @@ static cl::opt<int> ImportCutoff(
     "import-cutoff", cl::init(-1), cl::Hidden, cl::value_desc("N"),
     cl::desc("Only import first N functions if N>=0 (default -1)"));
 
-static cl::opt<bool>
-    ForceImportAll("force-import-all", cl::init(false), cl::Hidden,
-                   cl::desc("Import functions with noinline attribute"));
-
 static cl::opt<float>
     ImportInstrFactor("import-instr-evolution-factor", cl::init(0.7),
                       cl::Hidden, cl::value_desc("x"),
@@ -1663,7 +1659,8 @@ void llvm::thinLTOFinalizeInModule(Module &TheModule,
     // interposable property and possibly get inlined. Simply drop
     // the definition in that case.
     if (GlobalValue::isAvailableExternallyLinkage(NewLinkage) &&
-        GlobalValue::isInterposableLinkage(GV.getLinkage())) {
+        GlobalValue::isInterposableLinkage(GV.getLinkage()) &&
+        !ForceImportAll) {
       if (!convertToDeclaration(GV))
         // FIXME: Change this to collect replaced GVs and later erase
         // them from the parent module once thinLTOResolvePrevailingGUID is
@@ -1680,11 +1677,12 @@ void llvm::thinLTOFinalizeInModule(Module &TheModule,
         assert(GV.canBeOmittedFromSymbolTable());
         GV.setVisibility(GlobalValue::HiddenVisibility);
       }
-
-      LLVM_DEBUG(dbgs() << "ODR fixing up linkage for `" << GV.getName()
-                        << "` from " << GV.getLinkage() << " to " << NewLinkage
-                        << "\n");
-      GV.setLinkage(NewLinkage);
+      if (!ForceImportAll) {
+        LLVM_DEBUG(dbgs() << "ODR fixing up linkage for `" << GV.getName()
+                          << "` from " << GV.getLinkage() << " to "
+                          << NewLinkage << "\n");
+        GV.setLinkage(NewLinkage);
+      }
     }
     // Remove declarations from comdats, including available_externally
     // as this is a declaration for the linker, and will be dropped eventually.

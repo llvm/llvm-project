@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
-#include "llvm/Support/CommandLine.h"
+
 using namespace llvm;
 
 /// Uses the "source_filename" instead of a Module hash ID for the suffix of
@@ -23,6 +23,12 @@ static cl::opt<bool> UseSourceFilenameForPromotedLocals(
     cl::desc("Uses the source file name instead of the Module hash. "
              "This requires that the source filename has a unique name / "
              "path to avoid name collisions."));
+
+namespace llvm {
+cl::opt<bool>
+    ForceImportAll("force-import-all", cl::init(false), cl::Hidden,
+                   cl::desc("Import functions with noinline attribute"));
+}
 
 /// Checks if we should import SGV as a definition, otherwise import as a
 /// declaration.
@@ -147,7 +153,8 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
     // and/or optimization, but are turned into declarations later
     // during the EliminateAvailableExternally pass.
     if (doImportAsDefinition(SGV) && !isa<GlobalAlias>(SGV))
-      return GlobalValue::AvailableExternallyLinkage;
+      return ForceImportAll ? GlobalValue::ExternalLinkage
+                            : GlobalValue::AvailableExternallyLinkage;
     // An imported external declaration stays external.
     return SGV->getLinkage();
 
@@ -175,7 +182,7 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
     // equivalent, so the issue described above for weak_any does not exist,
     // and the definition can be imported. It can be treated similarly
     // to an imported externally visible global value.
-    if (doImportAsDefinition(SGV) && !isa<GlobalAlias>(SGV))
+    if (doImportAsDefinition(SGV) && !isa<GlobalAlias>(SGV) && !ForceImportAll)
       return GlobalValue::AvailableExternallyLinkage;
     else
       return GlobalValue::ExternalLinkage;
@@ -193,7 +200,8 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
     // If we are promoting the local to global scope, it is handled
     // similarly to a normal externally visible global.
     if (DoPromote) {
-      if (doImportAsDefinition(SGV) && !isa<GlobalAlias>(SGV))
+      if (doImportAsDefinition(SGV) && !isa<GlobalAlias>(SGV) &&
+          !ForceImportAll)
         return GlobalValue::AvailableExternallyLinkage;
       else
         return GlobalValue::ExternalLinkage;
