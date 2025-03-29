@@ -26,6 +26,9 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <optional>
 
 using namespace llvm;
@@ -278,11 +281,16 @@ static void copyRegOperand(MachineOperand &To, const MachineOperand &From) {
   }
 }
 
+static bool isSameReg(const MachineOperand &Op, Register Reg) {
+  return Op.isReg() && Op.getReg() == Reg;
+}
+
+static bool isSameReg(const MachineOperand &Op, Register Reg, unsigned SubReg) {
+  return isSameReg(Op, Reg) && Op.getSubReg() == SubReg;
+}
+
 static bool isSameReg(const MachineOperand &LHS, const MachineOperand &RHS) {
-  return LHS.isReg() &&
-         RHS.isReg() &&
-         LHS.getReg() == RHS.getReg() &&
-         LHS.getSubReg() == RHS.getSubReg();
+  return RHS.isReg() && isSameReg(LHS, RHS.getReg(), RHS.getSubReg());
 }
 
 static MachineOperand *findSingleRegUse(const MachineOperand *Reg,
@@ -382,6 +390,97 @@ uint64_t SDWASrcOperand::getSrcMods(const SIInstrInfo *TII,
   return Mods;
 }
 
+// The following functions are helpers for dealing with REG_SEQUENCE
+// instructions. Those instructions are used to represent copies to
+// subregisters in SSA form.
+//
+// This pass should be able to peak through REG_SEQUENCE
+// instructions. An access to a subregister of a register defined
+// by a REG_SEQUENCE should be handled as if the register
+// that is being copied to the subregister was accessed.
+// Consider the following example:
+//    %1:vgpr_32 = V_ADD_U32_e64 %0, 10, 0
+//    %2:vgpr_32 = V_ADD_U32_e64 %0, 20, 0
+//    %3:sreg_32 = S_MOV_B32 255
+//    %4:vgpr_32 = V_AND_B32_e64 %2, %3
+//    %5:vgpr_32, %6:sreg_64_xexec = V_ADD_CO_U32_e64 %1, %4, 0
+//
+// The V_ADD_CO_U32_e64 instructions will be combined with the
+// V_AND_B32_e64 into an SDWA instruction.
+//
+// If one or more of the operands of V_ADD_CO_U32_e64 are accessed
+// through the subregisters of a REG_SEQUENCE as in the following
+// variation of the previous example, the optimization should still be
+// able to proceed in the same way:
+//
+//    [...]
+//    %4:vreg_64 = REG_SEQUENCE %1, %subreg.sub0, %3, %subreg.sub1
+//    %5:sreg_32 = S_MOV_B32 255
+//    %6:vgpr_32 = V_AND_B32_e64 %2, %5
+//    %7:vreg_64 = REG_SEQUENCE %6, %subreg.sub0, %3, %subreg.sub1
+//    %8:vgpr_32, %9:sreg_64_xexec = V_ADD_CO_U32_e64 %4.sub0, %7.sub0, 0
+//
+// To this end, the SDWASrcOperand implementation uses the following
+// functions to find out the register that is used as the source of
+// the subregister value and it uses this register directly instead of
+// the REG_SEQUENCE subregister.
+
+/// Return the subregister of the REG_SEQUENCE \p RegSeq
+/// which is copied from \p Op, i.e. the operand following
+/// \p Op in the operands of \p RegSeq, or nullopt if the
+/// the \p Op is not an operand of \p RegSeq.
+static std::optional<unsigned> regSequenceFindSubreg(const MachineInstr &RegSeq,
+                                                     Register Reg) {
+  if (!RegSeq.isRegSequence())
+    return {};
+
+  auto *End = RegSeq.operands_end();
+  // Operand pair at indices (i+1, i+2) is (register, subregister)
+  for (auto *It = RegSeq.operands_begin() + 1; It != End; It += 2) {
+    if (isSameReg(*It, Reg))
+      return (It + 1)->getImm();
+  }
+
+  return {};
+}
+
+/// Return the single use of \p RegSeq which accesses the subregister
+/// that copies from \p Reg. Returns nullptr if \p Reg is not used by
+/// exactly one operand of \p RegSeq.
+static MachineInstr *regSequenceFindSingleSubregUse(MachineInstr &RegSeq,
+                                                    Register Reg,
+                                                    MachineRegisterInfo *MRI) {
+  Register SeqReg = RegSeq.getOperand(0).getReg();
+  unsigned SubReg = *regSequenceFindSubreg(RegSeq, Reg);
+
+  MachineInstr *SingleUse = nullptr;
+  for (MachineInstr &UseMI : MRI->use_nodbg_instructions(SeqReg))
+    for (auto &Op : UseMI.operands())
+      if (Op.isReg() && Op.getReg() == SeqReg && Op.getSubReg() == SubReg) {
+        if (SingleUse)
+          return nullptr;
+        SingleUse = &UseMI;
+      }
+
+  return SingleUse;
+}
+
+/// If \p MI uses operand \p Reg and \p is defined by a copy-like
+/// instruction (currently, only REG_SEQUENCE is supported), this
+/// returns the instruction which defines the source register of the
+/// copy.
+static MachineInstr *findUseSrc(MachineInstr &MI, MachineOperand &Reg,
+                                MachineRegisterInfo *MRI) {
+  assert(Reg.isReg());
+
+  // TODO Handle other copy-like ops?
+  if (!MI.isRegSequence())
+    return &MI;
+
+  MachineInstr *Use = regSequenceFindSingleSubregUse(MI, Reg.getReg(), MRI);
+  return Use;
+}
+
 MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
                                                  const GCNSubtarget &ST,
                                                  SDWAOperandsMap *PotentialMatches) {
@@ -391,12 +490,14 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
     if (!Reg->isReg() || !Reg->isDef())
       return nullptr;
 
-    for (MachineInstr &UseMI : getMRI()->use_nodbg_instructions(Reg->getReg()))
-      // Check that all instructions that use Reg can be converted
-      if (!isConvertibleToSDWA(UseMI, ST, TII) ||
-          !canCombineSelections(UseMI, TII))
+    // Check that all instructions that use Reg can be converted
+    for (MachineInstr &UseMI :
+         getMRI()->use_nodbg_instructions(Reg->getReg())) {
+      MachineInstr *SrcMI = findUseSrc(UseMI, *Reg, getMRI());
+      if (!SrcMI || !isConvertibleToSDWA(*SrcMI, ST, TII) ||
+          !canCombineSelections(*SrcMI, TII))
         return nullptr;
-
+    }
     // Now that it's guaranteed all uses are legal, iterate over the uses again
     // to add them for later conversion.
     for (MachineOperand &UseMO : getMRI()->use_nodbg_operands(Reg->getReg())) {
@@ -404,8 +505,8 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
       assert(isSameReg(UseMO, *Reg));
 
       SDWAOperandsMap &potentialMatchesMap = *PotentialMatches;
-      MachineInstr *UseMI = UseMO.getParent();
-      potentialMatchesMap[UseMI].push_back(this);
+      MachineInstr *UseSrcMI = findUseSrc(*UseMO.getParent(), *Reg, getMRI());
+      potentialMatchesMap[UseSrcMI].push_back(this);
     }
     return nullptr;
   }
@@ -417,8 +518,34 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
     return nullptr;
 
   MachineInstr *Parent = PotentialMO->getParent();
+  if (Parent->isRegSequence()) {
+    Parent = regSequenceFindSingleSubregUse(
+        *Parent, getReplacedOperand()->getReg(), getMRI());
+    return Parent && canCombineSelections(*Parent, TII) ? Parent : nullptr;
+  }
 
   return canCombineSelections(*Parent, TII) ? Parent : nullptr;
+}
+
+/// Returns true if \p RHS is either the same register as LHS or the
+/// defining instruction of \p LHS is a REG_SEQUENCE in which \p
+/// RHS occurs as the operand for the register that corresponds to the
+/// subregister of LHS.
+static bool isSameRegOrCopy(const MachineOperand &LHS,
+                            const MachineOperand &RHS,
+                            const MachineRegisterInfo *MRI) {
+  if (isSameReg(LHS, RHS))
+    return true;
+
+  const MachineOperand *Def = findSingleRegDef(&LHS, MRI);
+  const MachineInstr *MI = Def ? Def->getParent() : nullptr;
+
+  // TODO Handle other copy-like instructions?
+  if (!MI || !MI->isRegSequence())
+    return false;
+
+  auto SubReg = regSequenceFindSubreg(*MI, RHS.getReg());
+  return SubReg && LHS.getSubReg() == SubReg;
 }
 
 bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
@@ -439,14 +566,13 @@ bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   MachineOperand *SrcMods =
       TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers);
   assert(Src && (Src->isReg() || Src->isImm()));
-  if (!isSameReg(*Src, *getReplacedOperand())) {
+  if (!isSameRegOrCopy(*Src, *getReplacedOperand(), getMRI())) {
     // If this is not src0 then it could be src1
     Src = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
     SrcSel = TII->getNamedOperand(MI, AMDGPU::OpName::src1_sel);
     SrcMods = TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers);
 
-    if (!Src ||
-        !isSameReg(*Src, *getReplacedOperand())) {
+    if (!Src || !isSameRegOrCopy(*Src, *getReplacedOperand(), getMRI())) {
       // It's possible this Src is a tied operand for
       // UNUSED_PRESERVE, in which case we can either
       // abandon the peephole attempt, or if legal we can
@@ -486,13 +612,14 @@ bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
          MI.getOpcode() == AMDGPU::V_FMAC_F32_sdwa ||
          MI.getOpcode() == AMDGPU::V_MAC_F16_sdwa ||
          MI.getOpcode() == AMDGPU::V_MAC_F32_sdwa) &&
-         !isSameReg(*Src, *getReplacedOperand())) {
+        !isSameRegOrCopy(*Src, *getReplacedOperand(), getMRI())) {
       // In case of v_mac_f16/32_sdwa this pass can try to apply src operand to
       // src2. This is not allowed.
       return false;
     }
 
-    assert(isSameReg(*Src, *getReplacedOperand()) &&
+    MachineOperand &ReplacedOp = *getReplacedOperand();
+    assert(isSameRegOrCopy(*Src, ReplacedOp, getMRI()) &&
            (IsPreserveSrc || (SrcSel && SrcMods)));
   }
   copyRegOperand(*Src, *getTargetOperand());
