@@ -4993,6 +4993,11 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   if (Instruction *Abs = canonicalizeAbs(I, Builder))
     return Abs;
 
+  if (KnownBits::haveNoCommonBitsSet(
+          computeKnownBits(I.getOperand(0), /*Depth=*/0, &I),
+          computeKnownBits(I.getOperand(1), /*Depth=*/0, &I)))
+    return BinaryOperator::CreateDisjointOr(I.getOperand(0), I.getOperand(1));
+
   // Otherwise, if all else failed, try to hoist the xor-by-constant:
   //   (X ^ C) ^ Y --> (X ^ Y) ^ C
   // Just like we do in other places, we completely avoid the fold
