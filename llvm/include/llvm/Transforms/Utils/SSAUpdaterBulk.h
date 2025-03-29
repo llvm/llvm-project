@@ -77,6 +77,13 @@ public:
   /// vector.
   void RewriteAllUses(DominatorTree *DT,
                       SmallVectorImpl<PHINode *> *InsertedPHIs = nullptr);
+
+private:
+  void createPHIsAndRewrite(DominatorTree *DT,
+                            SmallVectorImpl<PHINode *> &InsertedPHIs);
+  static bool simplifyPass(SmallVectorImpl<PHINode *> &Worklist);
+  static bool deduplicatePass(const SmallVectorImpl<PHINode *> &Worklist,
+                              SmallPtrSetImpl<PHINode *> &PHIToRemove);
 };
 
 } // end namespace llvm
