@@ -154,33 +154,107 @@ def XeGPU_FenceScopeAttr:
     let assemblyFormat = "$value";
 }
 
-def XeGPU_SGMapAttr : XeGPUAttr<"SGMap", "sg_map"> {
+def XeGPU_ScopeWG:     I32EnumAttrCase<"WG", 0, "wg">;        // workgroup level code
+def XeGPU_ScopeSG:     I32EnumAttrCase<"SG", 1, "sg">;        // subgroup level code
+def XeGPU_ScopeLane:   I32EnumAttrCase<"Lane", 2, "lane">;    // simt level code
+
+def XeGPU_ScopeEnums : I32EnumAttr<"Scope", "enumeration of scope",
+  [XeGPU_ScopeWG, XeGPU_ScopeSG, XeGPU_ScopeLane]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::xegpu";
+}
+
+def XeGPU_ScopeAttr
+  : EnumAttr<XeGPU_Dialect, XeGPU_ScopeEnums, "Scope"> {
+    let summary = [{Defines the programming scope of the IR,
+                    where WG represents the workgroup level,
+                    SG represents the subgroup level, and
+                    Lane represents the work-item level}];
+
+    let assemblyFormat = "``$value";
+}
+
+def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
   let summary = [{
-    Describes the mapping between work item (WI) and the 2D tensor specified by the tensor descriptor.
+    Describes the data distribution to subgroups and work-items for a tensor
+    specified by the tensor descriptor.
   }];
   let description = [{
-    To distribute the XeGPU operation to work items, the tensor_desc must be specified with the sg_map
-    attribute at the tensor description creation time.
-    Within the `sg_map`, `wi_layout` specifies the layout of work items,
-    describing the mapping of work items to the tensor.
-    wi_layout[0] x wi_layout[1] must be equal to the total number of work items within a subgroup.
-    `wi_data` specifies the minimum number of data elements assigned to each work item for a single distribution.
+    XeGPU operations use `LayoutAttr` to define how data is distributed across subgroups and work-items.
+    This attribute is specified in tensor descriptors during tensor description creation. `LayoutAttr`
+    includes the following parameters, categorized into three groups:
 
-    E.g., #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>
-    In this example, the subgroup has 16 work items in wi_layout=[1, 16],
-    each accessing 1 element as specified by wi_data=[1, 1].
+    ### Group 1:
+    * scope: Defines the scope of the code, which can be `wg` (workgroup), `sg` (subgroup),
+      or `lane` (work-item). It is mandatory for subgroup-level programming but optional
+      for workgroup and work-item levels. By default:
+        - If sg_layout is included, the layout is treated as workgroup level.
+        - If only `lane_layout` and `lane_data` are included, it is considered work-item level
 
-    `wi_data[0] * wi_data[1]` can be greater than 1, meaning that each work item operates on multiple elements,
-    which is eventually lowered to "SIMT-flavor" vector, like SPIR-V vector or llvm vector, or packed to a storage data type.
-    The multiple elements indicated by `wi_data` can only be from one dimension and must be contiguous in the memory along either dimension.
+    ### Group 2:
+    * sg_layout (optional): Specifies the total number of subgroups and their layout within a workgroup.
+      It is mandatory for workgroup-level programming. Its presence implies workgroup-level code, and
+      the scope must be empty or set to `wg`.
+    * sg_data (optional): Defines the data size accessed per subgroup. It must be used with sg_layout or
+      left empty, in which case it can be derived from `lane_layout` and `lane_data` using the formula:
+      `sg_data[i] = lane_layout[i] * lane_data[i]`.
+    * order (optional): Specifies the dimension order used to linearize n-dimensional sbugroup IDs to
+      1-dimensional IDs. The first dimension in the order list is the fastest-changing dimension.
+
+    ### Group 3:
+    * lane_layout (required): Specifies the total number of work-items and their layout within a subgroup
+    * lane_data: (required): Specifies the data size accessed per work-item for a single distribution.
+
+    `lane_data[0] * lane_data[1]` can be greater than 1, indicating that each work item operates on multiple
+    elements. These elements are eventually lowered to a "SIMT-flavor" vector, such as a SPIR-V vector or
+    an LLVM vector, or packed into a storage data type. The multiple elements specified by lane_data must
+    come from a single dimension and be contiguous in memory along either dimension.
+
+    ### Examples:
+      1. Work-item level layout:
+      ```mlir
+      #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+      ```
+      In this example, the subgroup consists of 16 work items arranged as lane_layout=[1, 16], with
+      each work item accessing a single element as defined by lane_data=[1, 1].
+
+      2. Workgroup level layout:
+      ```mlir
+      #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>
+      ```
+      In this example, the layout represents a workgroup distribution. A workgroup consists of 8 subgroups
+      arranged in a 2x4 layout. Each subgroup accesses a 16x16 block per instruction, which is further
+      distributed to 16 work items as described above.
   }];
+
   let parameters = (ins
-    ArrayRefParameter<"uint32_t">:$wi_layout,
-    ArrayRefParameter<"uint32_t">:$wi_data
+    OptionalParameter<"ScopeAttr">: $scope,
+    OptionalParameter<"DenseI32ArrayAttr">: $sg_layout,
+    OptionalParameter<"DenseI32ArrayAttr">: $sg_data,
+    OptionalParameter<"DenseI32ArrayAttr">: $order,
+    "DenseI32ArrayAttr": $lane_layout,
+    "DenseI32ArrayAttr": $lane_data
   );
 
+  let extraClassDeclaration = [{
+    bool isForWorkgroupLevel() {
+      if (!getScope())
+        return getSgLayout() != nullptr;
+      return getScope() == ScopeAttr::get(getContext(), Scope::WG);
+    }
 
-  let hasCustomAssemblyFormat = 1;
+    bool isForSubgroupLevel() {
+      return getScope() == ScopeAttr::get(getContext(), Scope::SG);
+    }
+
+    bool isForWorkItemLevel() {
+      if (!getScope())
+        return !getSgLayout() && !getSgData() && !getOrder();
+      return getScope() == ScopeAttr::get(getContext(), Scope::Lane);
+    }
+  }];
+
+  let assemblyFormat = "`<` struct(params) `>`";
   let genVerifyDecl = 1;
 }
 
