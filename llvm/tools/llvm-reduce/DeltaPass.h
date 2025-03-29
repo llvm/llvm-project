@@ -9,9 +9,9 @@
 #ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAPASS_H
 #define LLVM_TOOLS_LLVM_REDUCE_DELTAPASS_H
 
-#include "llvm/ADT/StringRef.h"
 #include "ReducerWorkItem.h"
 #include "deltas/Delta.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace llvm {
 struct DeltaPass {
