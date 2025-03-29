@@ -15120,6 +15120,117 @@ TEST_F(FormatTest, PullInlineFunctionDefinitionsIntoSingleLine) {
                MergeInlineOnly);
 }
 
+TEST_F(FormatTest, CustomShortFunctionOptions) {
+  FormatStyle CustomEmpty = getLLVMStyle();
+  CustomEmpty.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Custom;
+  CustomEmpty.AllowShortFunctionsOnASingleLineOptions.Empty = true;
+  CustomEmpty.AllowShortFunctionsOnASingleLineOptions.Inline = false;
+  CustomEmpty.AllowShortFunctionsOnASingleLineOptions.All = false;
+
+  // Empty functions should be on a single line
+  verifyFormat("int f() {}", CustomEmpty);
+  verifyFormat("class C {\n"
+               "  int f() {}\n"
+               "};",
+               CustomEmpty);
+
+  // Non-empty functions should be multi-line
+  verifyFormat("int f() {\n"
+               "  return 42;\n"
+               "}",
+               CustomEmpty);
+  verifyFormat("class C {\n"
+               "  int f() {\n"
+               "    return 42;\n"
+               "  }\n"
+               "};",
+               CustomEmpty);
+
+  // Test with AfterFunction = true
+  CustomEmpty.BreakBeforeBraces = FormatStyle::BS_Custom;
+  CustomEmpty.BraceWrapping.AfterFunction = true;
+  verifyFormat("int f() {}", CustomEmpty);
+  verifyFormat("int g()\n"
+               "{\n"
+               "  return 42;\n"
+               "}",
+               CustomEmpty);
+
+  // Test with Inline = true, All = false
+  FormatStyle CustomInline = getLLVMStyle();
+  CustomInline.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Custom;
+  CustomInline.AllowShortFunctionsOnASingleLineOptions.Empty = false;
+  CustomInline.AllowShortFunctionsOnASingleLineOptions.Inline = true;
+  CustomInline.AllowShortFunctionsOnASingleLineOptions.All = false;
+
+  verifyFormat("class C {\n"
+               "  int f() {}\n"
+               "};",
+               CustomInline);
+
+  // Non-empty inline functions should be single-line
+  verifyFormat("class C {\n"
+               "  int f() { return 42; }\n"
+               "};",
+               CustomInline);
+
+  // Non-inline functions should be multi-line
+  verifyFormat("int f() {\n"
+               "  return 42;\n"
+               "}",
+               CustomInline);
+  verifyFormat("int g() {\n"
+               "}",
+               CustomInline);
+
+  // Test with All = true
+  FormatStyle CustomAll = getLLVMStyle();
+  CustomAll.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Custom;
+  CustomAll.AllowShortFunctionsOnASingleLineOptions.Empty = false;
+  CustomAll.AllowShortFunctionsOnASingleLineOptions.Inline = false;
+  CustomAll.AllowShortFunctionsOnASingleLineOptions.All = true;
+
+  // All functions should be on a single line if they fit
+  verifyFormat("int f() { return 42; }", CustomAll);
+  verifyFormat("int g() { return f() + h(); }", CustomAll);
+  verifyFormat("class C {\n"
+               "  int f() { return 42; }\n"
+               "};",
+               CustomAll);
+
+  verifyFormat("int f() {}", CustomAll);
+  verifyFormat("class C {\n"
+               "  int f() {}\n"
+               "};",
+               CustomAll);
+
+  // Test various combinations
+  FormatStyle CustomMixed = getLLVMStyle();
+  CustomMixed.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Custom;
+  CustomMixed.AllowShortFunctionsOnASingleLineOptions.Empty = true;
+  CustomMixed.AllowShortFunctionsOnASingleLineOptions.Inline = true;
+  CustomMixed.AllowShortFunctionsOnASingleLineOptions.All = false;
+
+  // Empty functions should be on a single line
+  verifyFormat("int f() {}", CustomMixed);
+  verifyFormat("class C {\n"
+               "  int f() {}\n"
+               "};",
+               CustomMixed);
+
+  // Inline non-empty functions should be on a single line
+  verifyFormat("class C {\n"
+               "  int f() { return 42; }\n"
+               "};",
+               CustomMixed);
+
+  // Non-inline non-empty functions should be multi-line
+  verifyFormat("int f() {\n"
+               "  return 42;\n"
+               "}",
+               CustomMixed);
+}
+
 TEST_F(FormatTest, PullInlineOnlyFunctionDefinitionsIntoSingleLine) {
   FormatStyle MergeInlineOnly = getLLVMStyle();
   MergeInlineOnly.AllowShortFunctionsOnASingleLine =

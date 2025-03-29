@@ -1959,6 +1959,70 @@ the configuration (without a prefix: ``Auto``).
       };
       void f() { bar(); }
 
+  * ``SFS_Custom`` (in configuration: ``Custom``)
+    Configure merge behavior using AllowShortFunctionsOnASingleLineOptions
+
+
+
+.. _AllowShortFunctionsOnASingleLineOptions:
+
+**AllowShortFunctionsOnASingleLineOptions** (``ShortFunctionMergeFlags``) :versionbadge:`clang-format 21` :ref:`¶ <AllowShortFunctionsOnASingleLineOptions>`
+  Precise control over merging short functions
+
+  If ``AllowShortFunctionsOnASingleLine`` is set to ``Custom``, use this to
+  specify behavior in different situations.
+
+  .. code-block:: yaml
+
+    # Example of usage:
+    AllowShortFunctionsOnASingleLine: Custom
+    AllowShortFunctionsOnASingleLineOptions:
+      Empty: false
+      Inline: true
+      All: false
+
+  Nested configuration flags:
+
+  Precise control over merging short functions
+
+  .. code-block:: c++
+
+    # Should be declared this way:
+    AllowShortFunctionsOnASingleLine: Custom
+    AllowShortFunctionsOnASingleLineOptions:
+      Empty: false
+      Inline: true
+      All: false
+
+  * ``bool Empty`` Only merge empty functions.
+
+    .. code-block:: c++
+
+      void f() {}
+      void f2() {
+        bar2();
+      }
+
+  * ``bool Inline`` Only merge functions defined inside a class.
+
+    .. code-block:: c++
+
+      class Foo {
+        void f() { foo(); }
+      };
+      void f() {
+        foo();
+      }
+      void f() {}
+
+  * ``bool All`` Merge all functions fitting on a single line.
+
+    .. code-block:: c++
+
+      class Foo {
+        void f() { foo(); }
+      };
+      void f() { bar(); }
 
 
 .. _AllowShortIfStatementsOnASingleLine:

@@ -256,6 +256,9 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, InConditionalStatements);
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, InEmptyParentheses);
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, Other);
+  CHECK_PARSE_NESTED_BOOL(AllowShortFunctionsOnASingleLineOptions, Empty);
+  CHECK_PARSE_NESTED_BOOL(AllowShortFunctionsOnASingleLineOptions, Inline);
+  CHECK_PARSE_NESTED_BOOL(AllowShortFunctionsOnASingleLineOptions, All);
 }
 
 #undef CHECK_PARSE_BOOL
@@ -620,6 +623,9 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               AllowShortFunctionsOnASingleLine, FormatStyle::SFS_Empty);
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: All",
               AllowShortFunctionsOnASingleLine, FormatStyle::SFS_All);
+  CHECK_PARSE("AllowShortFunctionsOnASingleLine: Custom",
+              AllowShortFunctionsOnASingleLine, FormatStyle::SFS_Custom);
+
   // For backward compatibility:
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: false",
               AllowShortFunctionsOnASingleLine, FormatStyle::SFS_None);

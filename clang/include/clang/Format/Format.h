@@ -871,12 +871,80 @@ struct FormatStyle {
     ///   void f() { bar(); }
     /// \endcode
     SFS_All,
+    /// Configure merge behavior using AllowShortFunctionsOnASingleLineOptions
+    SFS_Custom,
   };
 
   /// Dependent on the value, ``int f() { return 0; }`` can be put on a
   /// single line.
   /// \version 3.5
   ShortFunctionStyle AllowShortFunctionsOnASingleLine;
+
+  /// Precise control over merging short functions
+  /// \code
+  ///   # Should be declared this way:
+  ///   AllowShortFunctionsOnASingleLine: Custom
+  ///   AllowShortFunctionsOnASingleLineOptions:
+  ///     Empty: false
+  ///     Inline: true
+  ///     All: false
+  /// \endcode
+  struct ShortFunctionMergeFlags {
+    /// Only merge empty functions.
+    /// \code
+    ///   void f() {}
+    ///   void f2() {
+    ///     bar2();
+    ///   }
+    /// \endcode
+    bool Empty;
+    /// Only merge functions defined inside a class.
+    /// \code
+    ///   class Foo {
+    ///     void f() { foo(); }
+    ///   };
+    ///   void f() {
+    ///     foo();
+    ///   }
+    ///   void f() {}
+    /// \endcode
+    bool Inline;
+    /// Merge all functions fitting on a single line.
+    /// \code
+    ///   class Foo {
+    ///     void f() { foo(); }
+    ///   };
+    ///   void f() { bar(); }
+    /// \endcode
+    bool All;
+
+    ShortFunctionMergeFlags() : Empty(false), Inline(false), All(false) {}
+
+    ShortFunctionMergeFlags(bool Empty, bool Inline, bool All)
+        : Empty(Empty), Inline(Inline), All(All) {}
+
+    bool operator==(const ShortFunctionMergeFlags &R) const {
+      return Empty == R.Empty && Inline == R.Inline && All == R.All;
+    }
+    bool operator!=(const ShortFunctionMergeFlags &R) const {
+      return !(*this == R);
+    }
+  };
+
+  /// Precise control over merging short functions
+  ///
+  /// If ``AllowShortFunctionsOnASingleLine`` is set to ``Custom``, use this to
+  /// specify behavior in different situations.
+  /// \code{.yaml}
+  ///   # Example of usage:
+  ///   AllowShortFunctionsOnASingleLine: Custom
+  ///   AllowShortFunctionsOnASingleLineOptions:
+  ///     Empty: false
+  ///     Inline: true
+  ///     All: false
+  /// \endcode
+  /// \version 21
+  ShortFunctionMergeFlags AllowShortFunctionsOnASingleLineOptions;
 
   /// Different styles for handling short if statements.
   enum ShortIfStyle : int8_t {
@@ -5281,6 +5349,8 @@ struct FormatStyle {
            AllowShortEnumsOnASingleLine == R.AllowShortEnumsOnASingleLine &&
            AllowShortFunctionsOnASingleLine ==
                R.AllowShortFunctionsOnASingleLine &&
+           AllowShortFunctionsOnASingleLineOptions ==
+               R.AllowShortFunctionsOnASingleLineOptions &&
            AllowShortIfStatementsOnASingleLine ==
                R.AllowShortIfStatementsOnASingleLine &&
            AllowShortLambdasOnASingleLine == R.AllowShortLambdasOnASingleLine &&
