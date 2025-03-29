@@ -35,14 +35,14 @@ CHECK_SIZE(Test4, 8);
 CHECK_ALIGN(Test4, 8);
 
 struct Test5 {
-  char c : 0x100000001; // expected-warning {{width of bit-field 'c' (4294967297 bits) exceeds the width of its type; value will be truncated to 8 bits}}
+  char c : 0x100000001; // expected-warning {{width of bit-field 'c' (4'294'967'297 bits) exceeds the width of its type; value will be truncated to 8 bits}}
 };
 // Size and align don't really matter here, just make sure we don't crash.
 CHECK_SIZE(Test5, 1);
 CHECK_ALIGN(Test5, 1);
 
 struct Test6 {
-  char c : (unsigned __int128)0xffffffffffffffff + 2; // expected-error {{bit-field 'c' is too wide (18446744073709551617 bits)}}
+  char c : (unsigned __int128)0xffffffffffffffff + 2; // expected-error {{bit-field 'c' is too wide (18'446'744'073'709'551'617 bits)}}
 };
 // Size and align don't really matter here, just make sure we don't crash.
 CHECK_SIZE(Test6, 1);
