@@ -184,11 +184,9 @@ static void substituteOperandWithArgument(Function *OldF,
   // Replace all OldF uses with NewF.
   replaceFunctionCalls(OldF, NewF);
 
-  // Rename NewF to OldF's name.
-  std::string FName = OldF->getName().str();
+  NewF->takeName(OldF);
   OldF->replaceAllUsesWith(NewF);
   OldF->eraseFromParent();
-  NewF->setName(FName);
 }
 
 static void reduceOperandsToArgs(Oracle &O, ReducerWorkItem &WorkItem) {
