@@ -681,6 +681,12 @@ Expected<HardwareLoopOptions> parseHardwareLoopOptions(StringRef Params) {
   return HardwareLoopOpts;
 }
 
+/// Parser of parameters for Lint pass.
+Expected<bool> parseLintOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "abort-on-error",
+                                            "LintPass");
+}
+
 /// Parser of parameters for LoopUnroll pass.
 Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
   LoopUnrollOptions UnrollOpts;
