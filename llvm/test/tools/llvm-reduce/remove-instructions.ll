@@ -1,6 +1,6 @@
 ; Test that llvm-reduce can remove uninteresting instructions.
 ;
-; RUN: llvm-reduce --test %python --test-arg %p/Inputs/remove-instructions.py %s -o %t
+; RUN: llvm-reduce -abort-on-invalid-reduction --test %python --test-arg %p/Inputs/remove-instructions.py %s -o %t
 ; RUN: cat %t | FileCheck -implicit-check-not=uninteresting %s
 ; REQUIRES: plugins
 
