@@ -108,6 +108,9 @@ private:
 
   void lower(MachineInstr &MI, const RegBankLLTMapping &Mapping,
              SmallSet<Register, 4> &SgprWaterfallOperandRegs);
+
+  void lowerDiv_BFE(MachineInstr &MI);
+  void lowerUni_BFE(MachineInstr &MI);
 };
 
 } // end namespace AMDGPU
