@@ -745,10 +745,9 @@ class Sema;
     }
 
     bool isPerfect(const ASTContext &C) const {
-      return (isStandard() && Standard.isIdentityConversion()
-              && !Standard.DirectBinding
-              ) ||
-             getKind() == StaticObjectArgumentConversion;
+      return isStandard() && Standard.isIdentityConversion() &&
+              (!Standard.ReferenceBinding  || C.hasSameType(Standard.getFromType(), Standard.getToType(2)))
+              ;
     }
 
     // True iff this is a conversion sequence from an initializer list to an
