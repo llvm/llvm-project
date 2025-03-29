@@ -1,4 +1,5 @@
 # Check if this is a in tree build.
+# Test comment.
 if (NOT DEFINED LLVM_MAIN_SRC_DIR)
   project(Polly)
   cmake_minimum_required(VERSION 3.20.0)
