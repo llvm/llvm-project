@@ -16,6 +16,7 @@
 #include <cassert>
 #include <deque>
 #include <flat_set>
+#include <functional>
 #include <string>
 #include <utility>
 
@@ -103,6 +104,14 @@ void test() {
     auto p = m.equal_range(Transparent<int>{3});
     assert(p.first != p.second);
     assert(transparent_used);
+  }
+  {
+    // std::string and C string literal
+    using M            = std::flat_multiset<std::string, std::less<>>;
+    M m                = {"alpha", "beta", "beta", "epsilon", "eta", "gamma"};
+    auto [first, last] = m.equal_range("beta");
+    assert(first == m.begin() + 1);
+    assert(last == m.begin() + 3);
   }
 }
 
