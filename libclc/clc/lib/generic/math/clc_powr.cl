@@ -6,9 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/math/clc_powr.h>
+#include <clc/clc_convert.h>
+#include <clc/clcmacro.h>
+#include <clc/internal/clc.h>
+#include <clc/math/clc_fabs.h>
+#include <clc/math/clc_fma.h>
+#include <clc/math/clc_ldexp.h>
+#include <clc/math/clc_mad.h>
+#include <clc/math/clc_subnormal_config.h>
+#include <clc/math/math.h>
+#include <clc/math/tables.h>
+#include <clc/relational/clc_select.h>
 
-#define FUNCTION powr
-#define __CLC_BODY <clc/shared/binary_def.inc>
+#define __CLC_BODY <clc_powr.inc>
 #include <clc/math/gentype.inc>
