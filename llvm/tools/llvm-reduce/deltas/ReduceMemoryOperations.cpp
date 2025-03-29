@@ -41,11 +41,6 @@ void llvm::reduceVolatileInstructionsDeltaPass(Oracle &O,
     removeVolatileInFunction(O, F);
 }
 
-// void llvm::reduceVolatileInstructionsDeltaPass(TestRunner &Test, StringRef
-// PassMessage) {
-//   runDeltaPass(Test, removeVolatileInModule, PassMessage);
-// }
-
 static void reduceAtomicSyncScopesInFunction(Oracle &O, Function &F) {
   for (Instruction &I : instructions(F)) {
     if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {

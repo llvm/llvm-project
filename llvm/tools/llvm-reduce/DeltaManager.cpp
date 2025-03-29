@@ -87,26 +87,18 @@ static const DeltaPass MIR_Passes[] = {
 #undef DELTA_PASS_MIR
 };
 
-static SmallString<64> getPassMessage(const DeltaPass &Pass) {
-  SmallString<64> Message = Pass.Desc;
-  Message += " (";
-  Message += Pass.Name;
-  Message += ')';
-  return Message;
-}
-
 static void runAllDeltaPasses(TestRunner &Tester,
                               const SmallStringSet &SkipPass) {
   if (Tester.getProgram().isMIR()) {
     for (const DeltaPass &Pass : MIR_Passes) {
       if (!SkipPass.count(Pass.Name)) {
-        runDeltaPass(Tester, Pass.Func, getPassMessage(Pass));
+        runDeltaPass(Tester, Pass);
       }
     }
   } else {
     for (const DeltaPass &Pass : IR_Passes) {
       if (!SkipPass.count(Pass.Name)) {
-        runDeltaPass(Tester, Pass.Func, getPassMessage(Pass));
+        runDeltaPass(Tester, Pass);
       }
     }
   }
@@ -116,14 +108,14 @@ static void runDeltaPassName(TestRunner &Tester, StringRef PassName) {
   if (Tester.getProgram().isMIR()) {
     for (const DeltaPass &Pass : MIR_Passes) {
       if (PassName == Pass.Name) {
-        runDeltaPass(Tester, Pass.Func, getPassMessage(Pass));
+        runDeltaPass(Tester, Pass);
         return;
       }
     }
   } else {
     for (const DeltaPass &Pass : IR_Passes) {
       if (PassName == Pass.Name) {
-        runDeltaPass(Tester, Pass.Func, getPassMessage(Pass));
+        runDeltaPass(Tester, Pass);
         return;
       }
     }

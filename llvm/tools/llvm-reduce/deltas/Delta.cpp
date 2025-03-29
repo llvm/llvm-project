@@ -31,6 +31,7 @@
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/WithColor.h"
 #include <fstream>
+#include "DeltaPass.h"
 
 using namespace llvm;
 
@@ -180,11 +181,10 @@ using SharedTaskQueue = std::deque<std::shared_future<SmallString<0>>>;
 /// reduces the amount of chunks that are considered interesting by the
 /// given test. The number of chunks is determined by a preliminary run of the
 /// reduction pass where no change must be made to the module.
-void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
-                        StringRef Message) {
+void llvm::runDeltaPass(TestRunner &Test, const DeltaPass &Pass) {
   assert(!Test.getProgram().verify(&errs()) &&
          "input module is broken before making changes");
-  errs() << "*** " << Message << "...\n";
+  errs() << "*** " << Pass.Desc << " ("  << Pass.Name << ')' << "...\n";
 
   int Targets;
   {
@@ -193,7 +193,7 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
     // made.
     std::vector<Chunk> AllChunks = {{0, INT_MAX}};
     Oracle Counter(AllChunks);
-    ExtractChunksFromModule(Counter, Test.getProgram());
+    Pass.Func(Counter, Test.getProgram());
     Targets = Counter.count();
 
     assert(!Test.getProgram().verify(&errs()) &&
@@ -215,7 +215,7 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
     Oracle NoChunksCounter(NoChunks);
     std::unique_ptr<ReducerWorkItem> Clone =
       Test.getProgram().clone(Test.getTargetMachine());
-    ExtractChunksFromModule(NoChunksCounter, *Clone);
+    Pass.Func(NoChunksCounter, *Clone);
     assert(Targets == NoChunksCounter.count() &&
            "number of chunks changes when reducing");
 #endif
@@ -281,7 +281,7 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
           Chunk ChunkToCheck = *(I + J);
           TaskQueue.emplace_back(ChunkThreadPool.async(
               ProcessChunkFromSerializedBitcode, ChunkToCheck, std::ref(Test),
-              ExtractChunksFromModule, UninterestingChunks,
+              Pass.Func, UninterestingChunks,
               ChunksStillConsideredInteresting, OriginalBC,
               std::ref(AnyReduced)));
         }
@@ -305,7 +305,7 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
               Chunk ChunkToCheck = *(I + NumScheduledTasks);
               TaskQueue.emplace_back(ChunkThreadPool.async(
                   ProcessChunkFromSerializedBitcode, ChunkToCheck,
-                  std::ref(Test), ExtractChunksFromModule, UninterestingChunks,
+                  std::ref(Test), Pass.Func, UninterestingChunks,
                   ChunksStillConsideredInteresting, OriginalBC,
                   std::ref(AnyReduced)));
             }
@@ -332,7 +332,7 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
       } else {
         Result =
             CheckChunk(*I, Test.getProgram().clone(Test.getTargetMachine()),
-                       Test, ExtractChunksFromModule, UninterestingChunks,
+                       Test, Pass.Func, UninterestingChunks,
                        ChunksStillConsideredInteresting);
       }
 
