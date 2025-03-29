@@ -311,18 +311,7 @@ ClangTidyDiagnosticConsumer::ClangTidyDiagnosticConsumer(
     : Context(Ctx), ExternalDiagEngine(ExternalDiagEngine),
       RemoveIncompatibleErrors(RemoveIncompatibleErrors),
       GetFixesFromNotes(GetFixesFromNotes),
-      EnableNolintBlocks(EnableNolintBlocks) {
-
-  if (Context.getOptions().HeaderFilterRegex &&
-      !Context.getOptions().HeaderFilterRegex->empty())
-    HeaderFilter =
-        std::make_unique<llvm::Regex>(*Context.getOptions().HeaderFilterRegex);
-
-  if (Context.getOptions().ExcludeHeaderFilterRegex &&
-      !Context.getOptions().ExcludeHeaderFilterRegex->empty())
-    ExcludeHeaderFilter = std::make_unique<llvm::Regex>(
-        *Context.getOptions().ExcludeHeaderFilterRegex);
-}
+      EnableNolintBlocks(EnableNolintBlocks) {}
 
 void ClangTidyDiagnosticConsumer::finalizeLastError() {
   if (!Errors.empty()) {
@@ -571,15 +560,28 @@ void ClangTidyDiagnosticConsumer::checkFilters(SourceLocation Location,
   }
 
   StringRef FileName(File->getName());
-  LastErrorRelatesToUserCode =
-      LastErrorRelatesToUserCode || Sources.isInMainFile(Location) ||
-      (HeaderFilter &&
-       (HeaderFilter->match(FileName) &&
-        !(ExcludeHeaderFilter && ExcludeHeaderFilter->match(FileName))));
+  LastErrorRelatesToUserCode = LastErrorRelatesToUserCode ||
+                               Sources.isInMainFile(Location) ||
+                               (getHeaderFilter()->match(FileName) &&
+                                !getExcludeHeaderFilter()->match(FileName));
 
   unsigned LineNumber = Sources.getExpansionLineNumber(Location);
   LastErrorPassesLineFilter =
       LastErrorPassesLineFilter || passesLineFilter(FileName, LineNumber);
+}
+
+llvm::Regex *ClangTidyDiagnosticConsumer::getHeaderFilter() {
+  if (!HeaderFilter)
+    HeaderFilter =
+        std::make_unique<llvm::Regex>(*Context.getOptions().HeaderFilterRegex);
+  return HeaderFilter.get();
+}
+
+llvm::Regex *ClangTidyDiagnosticConsumer::getExcludeHeaderFilter() {
+  if (!ExcludeHeaderFilter)
+    ExcludeHeaderFilter = std::make_unique<llvm::Regex>(
+        *Context.getOptions().ExcludeHeaderFilterRegex);
+  return ExcludeHeaderFilter.get();
 }
 
 void ClangTidyDiagnosticConsumer::removeIncompatibleErrors() {
