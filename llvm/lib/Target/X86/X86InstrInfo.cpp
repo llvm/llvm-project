@@ -6239,7 +6239,7 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     }
     if (MI.getOpcode() == X86::AVX512_256_SET0) {
       // No VLX so we must reference a zmm.
-      unsigned ZReg =
+      MCRegister ZReg =
           TRI->getMatchingSuperReg(SrcReg, X86::sub_ymm, &X86::VR512RegClass);
       MIB->getOperand(0).setReg(ZReg);
     }
