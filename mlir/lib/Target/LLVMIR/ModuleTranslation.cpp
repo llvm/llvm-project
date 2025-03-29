@@ -2045,7 +2045,7 @@ LogicalResult ModuleTranslation::createDependentLibrariesMetadata() {
     for (auto libAttr : dependentLibrariesAttr.getAsRange<StringAttr>()) {
       auto *md = llvm::MDNode::get(
           ctx,
-          llvm::MDString::get(ctx, mlir::cast<StringAttr>(lib).getValue()));
+          llvm::MDString::get(ctx, mlir::cast<StringAttr>(libAttr).getValue()));
       nmd->addOperand(md);
     }
   }
