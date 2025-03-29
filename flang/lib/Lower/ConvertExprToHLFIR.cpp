@@ -279,7 +279,8 @@ private:
   gen(const Fortran::evaluate::SymbolRef &symbolRef) {
     if (std::optional<fir::FortranVariableOpInterface> varDef =
             getSymMap().lookupVariableDefinition(symbolRef)) {
-      if (symbolRef->test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
+      if (symbolRef.get().GetUltimate().test(
+              Fortran::semantics::Symbol::Flag::CrayPointee)) {
         // The pointee is represented with a descriptor inheriting
         // the shape and type parameters of the pointee.
         // We have to update the base_addr to point to the current
