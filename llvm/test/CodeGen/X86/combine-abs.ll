@@ -164,10 +164,20 @@ define <16 x i8> @combine_v16i8_abs_constant(<16 x i8> %a) {
 ; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: combine_v16i8_abs_constant:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX2-LABEL: combine_v16i8_abs_constant:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: combine_v16i8_abs_constant:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: combine_v16i8_abs_constant:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512VL-NEXT:    retq
   %1 = insertelement <16 x i8> undef, i8 15, i32 0
   %2 = shufflevector <16 x i8> %1, <16 x i8> undef, <16 x i32> zeroinitializer
   %3 = and <16 x i8> %a, %2
@@ -189,6 +199,50 @@ define <8 x i32> @combine_v8i32_abs_pos(<8 x i32> %a) {
   %1 = lshr <8 x i32> %a, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %2 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %1, i1 false)
   ret <8 x i32> %2
+}
+
+; (abs x) upper bits are known zero if x has extra sign bits
+define i32 @combine_i32_abs_zerosign(i32 %a) {
+; CHECK-LABEL: combine_i32_abs_zerosign:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+  %1 = ashr i32 %a, 15
+  %2 = call i32 @llvm.abs.i32(i32 %1, i1 false)
+  %3 = and i32 %2, -524288 ; 0xFFF80000
+  ret i32 %3
+}
+
+define <8 x i16> @combine_v8i16_abs_zerosign(<8 x i16> %a) {
+; SSE-LABEL: combine_v8i16_abs_zerosign:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_v8i16_abs_zerosign:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = ashr <8 x i16> %a, <i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14>
+  %2 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %1, i1 false)
+  %3 = and <8 x i16> %2, <i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768, i16 32768>
+  ret <8 x i16> %3
+}
+
+; negative test - mask extends beyond known zero bits
+define i32 @combine_i32_abs_zerosign_negative(i32 %a) {
+; CHECK-LABEL: combine_i32_abs_zerosign_negative:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sarl $3, %edi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    cmovsl %edi, %eax
+; CHECK-NEXT:    andl $536346624, %eax # imm = 0x1FF80000
+; CHECK-NEXT:    retq
+  %1 = ashr i32 %a, 3
+  %2 = call i32 @llvm.abs.i32(i32 %1, i1 false)
+  %3 = and i32 %2, -524288 ; 0xFFF80000
+  ret i32 %3
 }
 
 declare <16 x i8> @llvm.abs.v16i8(<16 x i8>, i1) nounwind readnone

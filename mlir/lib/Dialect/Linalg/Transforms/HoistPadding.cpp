@@ -25,6 +25,7 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
+#include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/Debug.h"
 
@@ -292,8 +293,8 @@ void HoistPaddingAnalysis::enableHoistPadding(RewriterBase &rewriter) {
   // enclosing loop, try to apply hoisting on this outermost loop.
   // TODO: we may want finer-grained hoisting of only that particular `sliceOp`.
   if (!outermostEnclosingForOp.isDefinedOutsideOfLoop(sliceOp.getSource())) {
-    outermostEnclosingForOp =
-        hoistRedundantSubsetExtractInsert(rewriter, outermostEnclosingForOp);
+    outermostEnclosingForOp = cast<scf::ForOp>(
+        hoistLoopInvariantSubsets(rewriter, outermostEnclosingForOp));
   }
 }
 
@@ -467,7 +468,7 @@ HoistPaddingAnalysis::getHoistedPackedTensorSizes(RewriterBase &rewriter,
     FailureOr<OpFoldResult> loopUb = affine::reifyIndexValueBound(
         rewriter, loc, presburger::BoundType::UB, forOp.getUpperBound(),
         /*stopCondition=*/
-        [&](Value v, std::optional<int64_t> d) {
+        [&](Value v, std::optional<int64_t> d, ValueBoundsConstraintSet &cstr) {
           if (v == forOp.getUpperBound())
             return false;
           // Compute a bound that is independent of any affine op results.
@@ -632,15 +633,15 @@ static FailureOr<PackingResult> buildPackingLoopNestImpl(
                                       rewriter.getIndexAttr(1));
 
   // Step 3. Optionally transpose the padded tensor.
-  GenericOp maybeTransposeOp;
+  TransposeOp maybeTransposeOp;
   Value paddedTensor = bvm.lookup(opToHoist.getResult());
   if (!transposeVector.empty()) {
     Value outputTensor = rewriter.create<tensor::ExtractSliceOp>(
         loc, transposedTensorType, hoistedPackedTensor, offsets, sizes,
         strides);
-    maybeTransposeOp = makeTransposeOp(rewriter, loc, paddedTensor,
-                                       outputTensor, transposeVector);
-    paddedTensor = maybeTransposeOp.getResult(0);
+    maybeTransposeOp = rewriter.create<linalg::TransposeOp>(
+        loc, paddedTensor, outputTensor, transposeVector);
+    paddedTensor = maybeTransposeOp.getResult()[0];
   }
 
   // Innermost tensor.insert_slice and yields are optional / need loops.
@@ -810,7 +811,7 @@ padThroughLoopIterArg(RewriterBase &rewriter, Value paddedValueBeforeHoisting,
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPointAfter(hoistedPackedTensor.getDefiningOp());
 
-  unsigned iterArgNumber = forOp.getResultForOpOperand(*pUse).getResultNumber();
+  unsigned iterArgNumber = forOp.getTiedLoopResult(pUse).getResultNumber();
   auto yieldingExtractSliceOp = forOp.getYieldedValues()[iterArgNumber]
                                     .getDefiningOp<tensor::ExtractSliceOp>();
   if (!yieldingExtractSliceOp)
@@ -853,10 +854,10 @@ padThroughLoopIterArg(RewriterBase &rewriter, Value paddedValueBeforeHoisting,
   LLVM_DEBUG(DBGS() << "with result #"
                     << numOriginalForOpResults + iterArgNumber
                     << " of forOp, giving us: " << extracted << "\n");
-  rewriter.startRootUpdate(extracted);
+  rewriter.startOpModification(extracted);
   extracted.getSourceMutable().assign(
       newForOp.getResult(numOriginalForOpResults + iterArgNumber));
-  rewriter.finalizeRootUpdate(extracted);
+  rewriter.finalizeOpModification(extracted);
 
   LLVM_DEBUG(DBGS() << "replace uses of: " << paddedValueBeforeHoisting
                     << "\n");
@@ -937,7 +938,7 @@ static Value replaceByPackingResult(RewriterBase &rewriter,
 FailureOr<Value> mlir::linalg::hoistPaddingOnTensors(
     RewriterBase &rewriter, tensor::PadOp opToHoist, int64_t numLoops,
     ArrayRef<int64_t> transposeVector, tensor::PadOp &hoistedOp,
-    SmallVectorImpl<GenericOp> &transposeOps) {
+    SmallVectorImpl<TransposeOp> &transposeOps) {
   LLVM_DEBUG(DBGS() << "\n"; DBGS() << " Try to hoist " << *(opToHoist) << "\n";
              DBGS() << " by " << numLoops << " loops\n");
 
@@ -979,9 +980,9 @@ FailureOr<Value> mlir::linalg::hoistPaddingOnTensors(
     // Transpose the packed tensor back to the original storage order.
     Value emptyTensor = rewriter.create<tensor::EmptyOp>(
         loc, paddedTensorType.getShape(), paddedTensorType.getElementType());
-    GenericOp unTransposeOp =
-        makeTransposeOp(rewriter, loc, newResult, emptyTensor, transposeVector);
-    newResult = unTransposeOp.getResult(0);
+    TransposeOp unTransposeOp = rewriter.create<linalg::TransposeOp>(
+        loc, newResult, emptyTensor, transposeVector);
+    newResult = unTransposeOp.getResult()[0];
     transposeOps.push_back(unTransposeOp);
   }
 
@@ -998,11 +999,10 @@ FailureOr<Value> mlir::linalg::hoistPaddingOnTensors(
   return newResult;
 }
 
-FailureOr<Value>
-mlir::linalg::hoistPaddingOnTensors(tensor::PadOp opToHoist, int64_t numLoops,
-                                    ArrayRef<int64_t> transposeVector,
-                                    tensor::PadOp &hoistedOp,
-                                    SmallVectorImpl<GenericOp> &transposeOps) {
+FailureOr<Value> mlir::linalg::hoistPaddingOnTensors(
+    tensor::PadOp opToHoist, int64_t numLoops,
+    ArrayRef<int64_t> transposeVector, tensor::PadOp &hoistedOp,
+    SmallVectorImpl<TransposeOp> &transposeOps) {
   IRRewriter rewriter(opToHoist.getContext());
   return hoistPaddingOnTensors(rewriter, opToHoist, numLoops, transposeVector,
                                hoistedOp, transposeOps);

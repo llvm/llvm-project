@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_CONVERSION_SCFTOEMITC_SCFTOEMITC_H_
-#define MLIR_CONVERSION_SCFTOEMITC_SCFTOEMITC_H_
+#ifndef MLIR_CONVERSION_SCFTOEMITC_SCFTOEMITC_H
+#define MLIR_CONVERSION_SCFTOEMITC_SCFTOEMITC_H
 
+#include "mlir/Transforms/DialectConversion.h"
 #include <memory>
 
 namespace mlir {
@@ -19,11 +20,8 @@ class RewritePatternSet;
 #include "mlir/Conversion/Passes.h.inc"
 
 /// Collect a set of patterns to convert SCF operations to the EmitC dialect.
-void populateSCFToEmitCConversionPatterns(RewritePatternSet &patterns);
-
-/// Creates a pass to convert SCF operations to the EmitC dialect.
-std::unique_ptr<Pass> createConvertSCFToEmitCPass();
-
+void populateSCFToEmitCConversionPatterns(RewritePatternSet &patterns,
+                                          TypeConverter &typeConverter);
 } // namespace mlir
 
-#endif // MLIR_CONVERSION_SCFTOEMITC_SCFTOEMITC_H_
+#endif // MLIR_CONVERSION_SCFTOEMITC_SCFTOEMITC_H

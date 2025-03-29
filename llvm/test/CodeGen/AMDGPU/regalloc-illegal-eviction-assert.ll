@@ -1,10 +1,9 @@
-; RUN: not llc -march=amdgcn -mcpu=gfx908 -verify-machineinstrs -o - %s 2>%t.err | FileCheck %s
+; RUN: not llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs -o - %s 2>%t.err | FileCheck -implicit-check-not=error %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t.err
 
 ; This testcase would fail on an "illegal eviction". If the assert was
 ; relaxed to allow equivalent cascade numbers, it would infinite loop.
 
-; ERR: error: inline assembly requires more registers than available
 ; ERR: error: inline assembly requires more registers than available
 
 %asm.output = type { <16 x i32>, <8 x i32>, <5 x i32>, <4 x i32>, <16 x i32> }

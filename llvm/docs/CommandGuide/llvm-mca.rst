@@ -197,13 +197,31 @@ option specifies "``-``", then the output will also be sent to standard output.
 
   Enable all the view.
 
-.. option:: -instruction-tables
+.. option:: -instruction-tables=<level>
 
   Prints resource pressure information based on the static information
   available from the processor model. This differs from the resource pressure
   view because it doesn't require that the code is simulated. It instead prints
   the theoretical uniform distribution of resource pressure for every
   instruction in sequence.
+
+  The choice of `<level>` controls number of printed information.
+  `<level>` may be `none` (default), `normal`, `full`.
+  Note: If the option is used without `<label>`, default is `normal` (legacy).
+
+  When `<level>` is `full`, additional information are:
+  - `<Bypass Latency>`: Latency when a bypass is implemented between operands
+  in pipelines (see SchedReadAdvance).
+  - `<LLVM Opcode Name>`: mnemonic plus operands identifier.
+  - `<Resources units>`: Used resources associated with LLVM Opcode.
+  - `<instruction comment>`: reports comment if any from source assembly.
+
+  `<Resources units>` syntax can be:
+  - <Resource Name>: ReleaseAtCycle is 1.
+  - <Resource Name>[<ReleaseAtCycle>]: ReleaseAtCycle is greater than 1
+  and AcquireAtCycle is 0.
+  - <Resource Name>[<AcquireAtCycle>,<ReleaseAtCycle>]: ReleaseAtCycle
+  is greater than 1 and AcquireAtCycle is greater than 0.
 
 .. option:: -bottleneck-analysis
 
@@ -233,6 +251,16 @@ option specifies "``-``", then the output will also be sent to standard output.
   specific implementation. The generic class creates Instruments that provide
   no extra information, and InstrumentManager never overrides the default
   schedule class for a given instruction.
+
+.. option:: -skip-unsupported-instructions=<reason>
+
+  Force :program:`llvm-mca` to continue in the presence of instructions which do
+  not parse or lack key scheduling information. Note that the resulting analysis
+  is impacted since those unsupported instructions are ignored as-if they are
+  not supplied as a part of the input.
+
+  The choice of `<reason>` controls the when mca will report an error.
+  `<reason>` may be `none` (default), `lack-sched`, `parse-failure`, `any`.
 
 EXIT STATUS
 -----------
@@ -350,7 +378,7 @@ an InstrumentRegion does not need a comment to end the region.
 Comments that are prefixed with `LLVM-MCA-` but do not correspond to
 a valid `INSTRUMENT_TYPE` for the target cause an error, except for
 `BEGIN` and `END`, since those correspond to AnalysisRegions. Comments
-that do not start with `LLVM-MCA-` are ignored by :program `llvm-mca`.
+that do not start with `LLVM-MCA-` are ignored by :program:`llvm-mca`.
 
 An instruction (a MCInst) is added to an InstrumentRegion R only
 if its location is in range [R.RangeStart, R.RangeEnd].
@@ -908,6 +936,7 @@ process instructions.
 * Retire (Instruction is retired; writes are architecturally committed).
 
 The in-order pipeline implements the following sequence of stages:
+
 * InOrderIssue (Instruction is issued to the processor pipelines).
 * Retire (Instruction is retired; writes are architecturally committed).
 

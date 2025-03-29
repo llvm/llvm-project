@@ -23,8 +23,7 @@ def imm_sr_XFORM: SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant((Imm == 32 ? 0 : Imm), SDLoc(N), MVT::i32);
 }]>;
 def ThumbSRImmAsmOperand: ImmAsmOperand<1,32> { let Name = "ImmThumbSR"; }
-def imm_sr : Operand<i32>, PatLeaf<(imm), [{
-  uint64_t Imm = N->getZExtValue();
+def imm_sr : Operand<i32>, ImmLeaf<i32, [{
   return Imm > 0 && Imm <= 32;
 }], imm_sr_XFORM> {
   let PrintMethod = "printThumbSRImm";
@@ -288,8 +287,8 @@ def t_addrmode_sp : MemOperand,
 
 // Inspects parent to determine whether an or instruction can be implemented as
 // an add (i.e. whether we know overflow won't occur in the add).
-def AddLikeOrOp : ComplexPattern<i32, 1, "SelectAddLikeOr", [],
-                                 [SDNPWantParent]>;
+let WantsParent = true in
+def AddLikeOrOp : ComplexPattern<i32, 1, "SelectAddLikeOr">;
 
 // Pattern to exclude immediates from matching
 def non_imm32 : PatLeaf<(i32 GPR), [{ return !isa<ConstantSDNode>(N); }]>;
@@ -675,7 +674,7 @@ def tSVC : T1pI<(outs), (ins imm0_255:$imm), IIC_Br,
 }
 
 // The assembler uses 0xDEFE for a trap instruction.
-let isBarrier = 1, isTerminator = 1 in
+let isTrap = 1 in
 def tTRAP : TI<(outs), (ins), IIC_Br,
                "trap", [(trap)]>, Encoding16, Sched<[WriteBr]> {
   let Inst = 0xdefe;
@@ -1108,13 +1107,14 @@ let isCompare = 1, Defs = [CPSR] in {
 //  T1pIDPEncode<0b1011, (outs), (ins tGPR:$lhs, tGPR:$rhs),
 //               IIC_iCMPr,
 //               "cmn", "\t$lhs, $rhs",
-//               [(ARMcmp tGPR:$lhs, (ineg tGPR:$rhs))]>;
+//               [(set CPSR, (ARMcmp tGPR:$lhs, (ineg tGPR:$rhs)))]>;
 
 def tCMNz :                     // A8.6.33
   T1pIDPEncode<0b1011, (outs), (ins tGPR:$Rn, tGPR:$Rm),
                IIC_iCMPr,
                "cmn", "\t$Rn, $Rm",
-               [(ARMcmpZ tGPR:$Rn, (ineg tGPR:$Rm))]>, Sched<[WriteCMP]>;
+               [(set CPSR, (ARMcmpZ tGPR:$Rn, (ineg tGPR:$Rm)))]>,
+  Sched<[WriteCMP]>;
 
 } // isCompare = 1, Defs = [CPSR]
 
@@ -1122,7 +1122,7 @@ def tCMNz :                     // A8.6.33
 let isCompare = 1, Defs = [CPSR] in {
 def tCMPi8 : T1pI<(outs), (ins tGPR:$Rn, imm0_255:$imm8), IIC_iCMPi,
                   "cmp", "\t$Rn, $imm8",
-                  [(ARMcmp tGPR:$Rn, imm0_255:$imm8)]>,
+                  [(set CPSR, (ARMcmp tGPR:$Rn, imm0_255:$imm8))]>,
              T1General<{1,0,1,?,?}>, Sched<[WriteCMP]> {
   // A8.6.35
   bits<3> Rn;
@@ -1136,7 +1136,7 @@ def tCMPr :                     // A8.6.36 T1
   T1pIDPEncode<0b1010, (outs), (ins tGPR:$Rn, tGPR:$Rm),
                IIC_iCMPr,
                "cmp", "\t$Rn, $Rm",
-               [(ARMcmp tGPR:$Rn, tGPR:$Rm)]>, Sched<[WriteCMP]>;
+               [(set CPSR, (ARMcmp tGPR:$Rn, tGPR:$Rm))]>, Sched<[WriteCMP]>;
 
 def tCMPhir : T1pI<(outs), (ins GPR:$Rn, GPR:$Rm), IIC_iCMPr,
                    "cmp", "\t$Rn, $Rm", []>,
@@ -1210,7 +1210,7 @@ def tMOVi8 : T1sI<(outs tGPR:$Rd), (ins imm0_255_expr:$imm8), IIC_iMOVi,
 // Because we have an explicit tMOVSr below, we need an alias to handle
 // the immediate "movs" form here. Blech.
 def : tInstAlias <"movs $Rdn, $imm8",
-                 (tMOVi8 tGPR:$Rdn, CPSR, imm0_255_expr:$imm8, 14, 0)>;
+                 (tMOVi8 tGPR:$Rdn, CPSR, imm0_255_expr:$imm8, 14, zero_reg)>;
 
 // A7-73: MOV(2) - mov setting flag.
 
@@ -1400,12 +1400,6 @@ let hasPostISelHook = 1, Defs = [CPSR] in {
                 Sched<[WriteALU]>;
 }
 
-
-def : T1Pat<(ARMsubs tGPR:$Rn, tGPR:$Rm), (tSUBSrr $Rn, $Rm)>;
-def : T1Pat<(ARMsubs tGPR:$Rn, imm0_7:$imm3), (tSUBSi3 $Rn, imm0_7:$imm3)>;
-def : T1Pat<(ARMsubs tGPR:$Rn, imm0_255:$imm8), (tSUBSi8 $Rn, imm0_255:$imm8)>;
-
-
 // Sign-extend byte
 def tSXTB :                     // A8.6.222
   T1pIMiscEncode<{0,0,1,0,0,1,?}, (outs tGPR:$Rd), (ins tGPR:$Rm),
@@ -1429,7 +1423,7 @@ let isCompare = 1, isCommutable = 1, Defs = [CPSR] in
 def tTST :                      // A8.6.230
   T1pIDPEncode<0b1000, (outs), (ins tGPR:$Rn, tGPR:$Rm), IIC_iTSTr,
                "tst", "\t$Rn, $Rm",
-               [(ARMcmpZ (and_su tGPR:$Rn, tGPR:$Rm), 0)]>,
+               [(set CPSR, (ARMcmpZ (and_su tGPR:$Rn, tGPR:$Rm), 0))]>,
                Sched<[WriteALU]>;
 
 // A8.8.247  UDF - Undefined (Encoding T1)
@@ -1472,9 +1466,11 @@ def tUXTH :                     // A8.6.264
 // Expanded after instruction selection into a branch sequence.
 let usesCustomInserter = 1 in  // Expanded after instruction selection.
   def tMOVCCr_pseudo :
-  PseudoInst<(outs tGPR:$dst), (ins tGPR:$false, tGPR:$true, cmovpred:$p),
-             NoItinerary,
-             [(set tGPR:$dst, (ARMcmov tGPR:$false, tGPR:$true, cmovpred:$p))]>;
+  PseudoInst<(outs tGPR:$dst), (ins tGPR:$false, tGPR:$true, pred:$p),
+             NoItinerary, []>;
+
+def : Pat<(ARMcmov tGPR:$false, tGPR:$true, imm:$cc, CPSR),
+          (tMOVCCr_pseudo $false, $true, imm:$cc, CPSR)>;
 
 // tLEApcrel - Load a pc-relative address into a register without offending the
 // assembler.
@@ -1768,7 +1764,7 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
 
 // In Thumb1, "nop" is encoded as a "mov r8, r8". Technically, the bf00
 // encoding is available on ARMv6K, but we don't differentiate that finely.
-def : InstAlias<"nop", (tMOVr R8, R8, 14, 0), 0>, Requires<[IsThumb, IsThumb1Only]>;
+def : InstAlias<"nop", (tMOVr R8, R8, 14, zero_reg), 0>, Requires<[IsThumb, IsThumb1Only]>;
 
 
 // "neg" is and alias for "rsb rd, rn, #0"

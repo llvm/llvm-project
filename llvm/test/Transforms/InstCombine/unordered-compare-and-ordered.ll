@@ -360,7 +360,7 @@ define i1 @fcmp_ord_and_fneg_ueq(half %x, half %y) {
 ; CHECK-LABEL: @fcmp_ord_and_fneg_ueq(
 ; CHECK-NEXT:    [[FNEG_X:%.*]] = fneg half [[X:%.*]]
 ; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X]], 0xH0000
-; CHECK-NEXT:    [[UEQ:%.*]] = fcmp ueq half [[FNEG_X]], [[Y:%.*]]
+; CHECK-NEXT:    [[UEQ:%.*]] = fcmp ueq half [[Y:%.*]], [[FNEG_X]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[ORD]], [[UEQ]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
@@ -389,7 +389,7 @@ define i1 @fcmp_ord_fneg_and_fneg_ueq(half %x, half %y) {
 ; CHECK-LABEL: @fcmp_ord_fneg_and_fneg_ueq(
 ; CHECK-NEXT:    [[FNEG_X:%.*]] = fneg half [[X:%.*]]
 ; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X]], 0xH0000
-; CHECK-NEXT:    [[UEQ:%.*]] = fcmp ueq half [[FNEG_X]], [[Y:%.*]]
+; CHECK-NEXT:    [[UEQ:%.*]] = fcmp ueq half [[Y:%.*]], [[FNEG_X]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[ORD]], [[UEQ]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
@@ -405,7 +405,7 @@ define i1 @fcmp_ord_and_fneg_fabs_ueq(half %x, half %y) {
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
 ; CHECK-NEXT:    [[FNEG_FABS_X:%.*]] = fneg half [[FABS_X]]
 ; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X]], 0xH0000
-; CHECK-NEXT:    [[UEQ:%.*]] = fcmp ueq half [[FNEG_FABS_X]], [[Y:%.*]]
+; CHECK-NEXT:    [[UEQ:%.*]] = fcmp ueq half [[Y:%.*]], [[FNEG_FABS_X]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[ORD]], [[UEQ]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
@@ -451,7 +451,7 @@ define i1 @fcmp_ord_and_copysign_ueq_commute(half %x, half %y, half %z) {
 ; CHECK-LABEL: @fcmp_ord_and_copysign_ueq_commute(
 ; CHECK-NEXT:    [[COPYSIGN_X_Y:%.*]] = call half @llvm.copysign.f16(half [[X:%.*]], half [[Z:%.*]])
 ; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X]], 0xH0000
-; CHECK-NEXT:    [[UEQ:%.*]] = fcmp ueq half [[COPYSIGN_X_Y]], [[Y:%.*]]
+; CHECK-NEXT:    [[UEQ:%.*]] = fcmp ueq half [[Y:%.*]], [[COPYSIGN_X_Y]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[ORD]], [[UEQ]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;

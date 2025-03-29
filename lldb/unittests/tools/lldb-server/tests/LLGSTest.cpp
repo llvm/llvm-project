@@ -14,10 +14,6 @@ using namespace llgs_tests;
 using namespace lldb_private;
 using namespace llvm;
 
-#ifdef SendMessage
-#undef SendMessage
-#endif
-
 // Disable this test on Windows as it appears to have a race condition
 // that causes lldb-server not to exit after the inferior hangs up.
 #if !defined(_WIN32)

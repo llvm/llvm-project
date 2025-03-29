@@ -260,9 +260,10 @@
   .globl name SEPARATOR                                                        \
   SYMBOL_IS_FUNC(name) SEPARATOR                                               \
   DECLARE_SYMBOL_VISIBILITY_UNMANGLED(name) SEPARATOR                          \
-  CFI_START SEPARATOR                                                          \
   DECLARE_FUNC_ENCODING                                                        \
-  name: SEPARATOR BTI_C
+  name:                                                                        \
+  SEPARATOR CFI_START                                                          \
+  SEPARATOR BTI_C
 
 #define DEFINE_COMPILERRT_FUNCTION_ALIAS(name, target)                         \
   .globl SYMBOL_NAME(name) SEPARATOR                                           \
@@ -287,6 +288,18 @@
 #define END_COMPILERRT_FUNCTION(name)
 #define END_COMPILERRT_OUTLINE_FUNCTION(name)                                  \
   CFI_END
+#endif
+
+#ifdef __arm__
+#include "int_endianness.h"
+
+#if _YUGA_BIG_ENDIAN
+#define VMOV_TO_DOUBLE(dst, src0, src1) vmov dst, src1, src0 SEPARATOR
+#define VMOV_FROM_DOUBLE(dst0, dst1, src) vmov dst1, dst0, src SEPARATOR
+#else
+#define VMOV_TO_DOUBLE(dst, src0, src1) vmov dst, src0, src1 SEPARATOR
+#define VMOV_FROM_DOUBLE(dst0, dst1, src) vmov dst0, dst1, src SEPARATOR
+#endif
 #endif
 
 #endif // COMPILERRT_ASSEMBLY_H

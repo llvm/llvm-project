@@ -33,7 +33,7 @@ class TemplatedContainer {
 public:
   bool operator==(const TemplatedContainer<T>& other) const;
   bool operator!=(const TemplatedContainer<T>& other) const;
-  int size() const;
+  unsigned long size() const;
   bool empty() const;
 };
 
@@ -42,7 +42,7 @@ class PrivateEmpty {
 public:
   bool operator==(const PrivateEmpty<T>& other) const;
   bool operator!=(const PrivateEmpty<T>& other) const;
-  int size() const;
+  unsigned long size() const;
 private:
   bool empty() const;
 };
@@ -61,7 +61,7 @@ struct EnumSize {
 class Container {
 public:
   bool operator==(const Container& other) const;
-  int size() const;
+  unsigned long size() const;
   bool empty() const;
 };
 
@@ -70,13 +70,13 @@ class Derived : public Container {
 
 class Container2 {
 public:
-  int size() const;
+  unsigned long size() const;
   bool empty() const { return size() == 0; }
 };
 
 class Container3 {
 public:
-  int size() const;
+  unsigned long size() const;
   bool empty() const;
 };
 
@@ -85,7 +85,7 @@ bool Container3::empty() const { return this->size() == 0; }
 class Container4 {
 public:
   bool operator==(const Container4& rhs) const;
-  int size() const;
+  unsigned long size() const;
   bool empty() const { return *this == Container4(); }
 };
 
@@ -528,12 +528,12 @@ template <typename T> void f() {
   if (s.size())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
-  // CHECK-MESSAGES: string:28:8: note: method 'basic_string'::empty() defined here
+  // CHECK-MESSAGES: string:{{[0-9]+}}:8: note: method 'basic_string'::empty() defined here
   // CHECK-FIXES: {{^  }}if (!s.empty()){{$}}
   if (s.length())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'length' [readability-container-size-empty]
-  // CHECK-MESSAGES: string:28:8: note: method 'basic_string'::empty() defined here
+  // CHECK-MESSAGES: string:{{[0-9]+}}:8: note: method 'basic_string'::empty() defined here
   // CHECK-FIXES: {{^  }}if (!s.empty()){{$}}
 }
 
@@ -814,4 +814,84 @@ bool testNotEmptyStringLiterals(const std::string& s)
 {
   using namespace std::string_literals;
   return s == "foo"s;
+}
+
+namespace PR72619 {
+  struct SS {
+    bool empty() const;
+    int size() const;
+  };
+
+  struct SU {
+    bool empty() const;
+    unsigned size() const;
+  };
+
+  void f(const SU& s) {
+    if (s.size() < 0) {}
+    if (0 > s.size()) {}
+    if (s.size() >= 0) {}
+    if (0 <= s.size()) {}
+    if (s.size() < 1)
+      ;
+    // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+    // CHECK-FIXES: {{^    }}if (s.empty()){{$}}
+    if (1 > s.size())
+      ;
+    // CHECK-MESSAGES: :[[@LINE-2]]:13: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+    // CHECK-FIXES: {{^    }}if (s.empty()){{$}}
+    if (s.size() <= 0)
+      ;
+    // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+    // CHECK-FIXES: {{^    }}if (s.empty()){{$}}
+    if (0 >= s.size())
+      ;
+    // CHECK-MESSAGES: :[[@LINE-2]]:14: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+    // CHECK-FIXES: {{^    }}if (s.empty()){{$}}
+  }
+
+  void f(const SS& s) {
+    if (s.size() < 0) {}
+    if (0 > s.size()) {}
+    if (s.size() >= 0) {}
+    if (0 <= s.size()) {}
+    if (s.size() < 1) {}
+    if (1 > s.size()) {}
+    if (s.size() <= 0) {}
+    if (0 >= s.size()) {}
+  }
+}
+
+namespace PR88203 {
+  struct SS {
+    bool empty() const;
+    int size() const;
+    int length(int) const;
+  };
+
+  struct SU {
+    bool empty() const;
+    int size(int) const;
+    int length() const;
+  };
+
+  void f(const SS& s) {
+    if (0 == s.length(1)) {}
+    if (0 == s.size()) {}
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+    // CHECK-FIXES: {{^    }}if (s.empty()) {}{{$}}
+  }
+
+  void f(const SU& s) {
+    if (0 == s.size(1)) {}
+    if (0 == s.length()) {}
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: the 'empty' method should be used to check for emptiness instead of 'length' [readability-container-size-empty]
+    // CHECK-FIXES: {{^    }}if (s.empty()) {}{{$}}
+  }
+}
+
+namespace PR94454 {
+  template <char...>
+  int operator""_ci() { return 0; }
+  auto eq = 0_ci == 0;
 }

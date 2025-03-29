@@ -15,8 +15,9 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Mangler.h"
-#include "llvm/Transforms/Utils/ModuleUtils.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 
@@ -56,7 +57,7 @@ private:
   // same names are added to llvm.compiler.used to prevent them from being
   // deleted by optimizations.
   void initializeLibCalls(const Module &TheModule) {
-    TargetLibraryInfoImpl TLII(Triple(TM.getTargetTriple()));
+    TargetLibraryInfoImpl TLII(TM.getTargetTriple());
     TargetLibraryInfo TLI(TLII);
 
     // TargetLibraryInfo has info on C runtime library calls on the current

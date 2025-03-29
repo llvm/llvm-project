@@ -9,8 +9,10 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_VOID_T_H
 
 #include "src/__support/CPP/type_traits/type_identity.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 // void_t
 
@@ -21,6 +23,7 @@ template <typename... Ts> struct make_void : cpp::type_identity<void> {};
 template <typename... Ts>
 using void_t = typename detail::make_void<Ts...>::type;
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_VOID_T_H

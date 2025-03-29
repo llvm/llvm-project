@@ -12,16 +12,16 @@
 // UNSUPPORTED: c++03
 
 // TODO: Investigate these failures which break the CI.
-// UNSUPPORTED: clang-16, clang-17, clang-18
-
-// TODO: Investigate this failure on GCC 13 (in Ubuntu Jammy)
-// UNSUPPORTED: gcc-13
+// UNSUPPORTED: clang-18, clang-19, clang-20, clang-21
 
 // The Android libc++ tests are run on a non-Android host, connected to an
 // Android device over adb. gdb needs special support to make this work (e.g.
 // gdbclient.py, ndk-gdb.py, gdbserver), and the Android organization doesn't
 // support gdb anymore, favoring lldb instead.
 // UNSUPPORTED: android
+
+// This test doesn't work as such on Windows.
+// UNSUPPORTED: windows
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
 // Ensure locale-independence for unicode tests.
@@ -129,6 +129,12 @@ void CompareExpressionPrettyPrintToRegex(
   StopForDebugger(&value, &expectation);
 }
 
+template <typename TypeToPrint>
+void CompareListChildrenToChars(TypeToPrint value, const char* expectation) {
+  MarkAsLive(value);
+  StopForDebugger(&value, &expectation);
+}
+
 namespace example {
   struct example_struct {
     int a = 0;
@@ -158,6 +164,11 @@ void framework_self_test() {
 template <typename T> class UncompressibleAllocator : public std::allocator<T> {
  public:
   char X;
+
+  template <class U>
+  struct rebind {
+    using other = UncompressibleAllocator<U>;
+  };
 };
 
 void string_test() {
@@ -227,9 +238,7 @@ void u32string_test() {
 
 void tuple_test() {
   std::tuple<int, int, int> test0(2, 3, 4);
-  ComparePrettyPrintToChars(
-      test0,
-      "std::tuple containing = {[1] = 2, [2] = 3, [3] = 4}");
+  ComparePrettyPrintToChars(test0, "std::tuple containing = {[0] = 2, [1] = 3, [2] = 4}");
 
   std::tuple<> test1;
   ComparePrettyPrintToChars(
@@ -358,28 +367,28 @@ void multimap_test() {
 
 void queue_test() {
   std::queue<int> i_am_empty;
-  ComparePrettyPrintToChars(i_am_empty,
-      "std::queue wrapping = {std::deque is empty}");
+  ComparePrettyPrintToChars(i_am_empty, "std::queue wrapping: std::deque is empty");
 
   std::queue<int> one_two_three(std::deque<int>{1, 2, 3});
-    ComparePrettyPrintToChars(one_two_three,
-        "std::queue wrapping = {"
-        "std::deque with 3 elements = {1, 2, 3}}");
+  ComparePrettyPrintToChars(
+      one_two_three,
+      "std::queue wrapping: "
+      "std::deque with 3 elements = {1, 2, 3}");
 }
 
 void priority_queue_test() {
   std::priority_queue<int> i_am_empty;
-  ComparePrettyPrintToChars(i_am_empty,
-      "std::priority_queue wrapping = {std::vector of length 0, capacity 0}");
+  ComparePrettyPrintToChars(i_am_empty, "std::priority_queue wrapping: std::vector of length 0, capacity 0");
 
   std::priority_queue<int> one_two_three;
   one_two_three.push(11111);
   one_two_three.push(22222);
   one_two_three.push(33333);
 
-  ComparePrettyPrintToRegex(one_two_three,
-      R"(std::priority_queue wrapping = )"
-      R"({std::vector of length 3, capacity 3 = {33333)");
+  ComparePrettyPrintToRegex(
+      one_two_three,
+      R"(std::priority_queue wrapping: )"
+      R"(std::vector of length 3, capacity 3 = {33333)");
 
   ComparePrettyPrintToRegex(one_two_three, ".*11111.*");
   ComparePrettyPrintToRegex(one_two_three, ".*22222.*");
@@ -407,25 +416,22 @@ void set_test() {
 
 void stack_test() {
   std::stack<int> test0;
-  ComparePrettyPrintToChars(test0,
-                            "std::stack wrapping = {std::deque is empty}");
+  ComparePrettyPrintToChars(test0, "std::stack wrapping: std::deque is empty");
   test0.push(5);
   test0.push(6);
-  ComparePrettyPrintToChars(
-      test0, "std::stack wrapping = {std::deque with 2 elements = {5, 6}}");
+  ComparePrettyPrintToChars(test0, "std::stack wrapping: std::deque with 2 elements = {5, 6}");
   std::stack<bool> test1;
   test1.push(true);
   test1.push(false);
-  ComparePrettyPrintToChars(
-      test1,
-      "std::stack wrapping = {std::deque with 2 elements = {true, false}}");
+  ComparePrettyPrintToChars(test1, "std::stack wrapping: std::deque with 2 elements = {true, false}");
 
   std::stack<std::string> test2;
   test2.push("Hello");
   test2.push("World");
-  ComparePrettyPrintToChars(test2,
-                            "std::stack wrapping = {std::deque with 2 elements "
-                            "= {\"Hello\", \"World\"}}");
+  ComparePrettyPrintToChars(
+      test2,
+      "std::stack wrapping: std::deque with 2 elements "
+      "= {\"Hello\", \"World\"}");
 }
 
 void multiset_test() {
@@ -659,6 +665,25 @@ void streampos_test() {
   ComparePrettyPrintToRegex(test1, "^std::fpos with stream offset:5( with state: {count:0 value:0})?$");
 }
 
+void mi_mode_test() {
+  std::map<int, std::string> one_two_three_map;
+  one_two_three_map.insert({1, "one"});
+  one_two_three_map.insert({2, "two"});
+  one_two_three_map.insert({3, "three"});
+  CompareListChildrenToChars(
+      one_two_three_map, R"([{"key": 1, "value": "one"}, {"key": 2, "value": "two"}, {"key": 3, "value": "three"}])");
+
+  std::unordered_map<int, std::string> one_two_three_umap;
+  one_two_three_umap.insert({3, "three"});
+  one_two_three_umap.insert({2, "two"});
+  one_two_three_umap.insert({1, "one"});
+  CompareListChildrenToChars(
+      one_two_three_umap, R"([{"key": 3, "value": "three"}, {"key": 2, "value": "two"}, {"key": 1, "value": "one"}])");
+
+  std::deque<int> one_two_three_deque{1, 2, 3};
+  CompareListChildrenToChars(one_two_three_deque, "[1, 2, 3]");
+}
+
 int main(int, char**) {
   framework_self_test();
 
@@ -691,5 +716,6 @@ int main(int, char**) {
   unordered_set_iterator_test();
   pointer_negative_test();
   streampos_test();
+  mi_mode_test();
   return 0;
 }

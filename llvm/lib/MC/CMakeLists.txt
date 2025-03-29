@@ -1,6 +1,7 @@
 add_llvm_component_library(LLVMMC
   ConstantPools.cpp
   DXContainerPSVInfo.cpp
+  DXContainerRootSignature.cpp
   ELFObjectWriter.cpp
   GOFFObjectWriter.cpp
   MCAsmBackend.cpp
@@ -79,7 +80,6 @@ add_llvm_component_library(LLVMMC
   Support
   TargetParser
   BinaryFormat
-  DebugInfoCodeView
 
   DEPENDS
   intrinsics_gen

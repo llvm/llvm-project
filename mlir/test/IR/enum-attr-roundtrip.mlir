@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s | mlir-opt -test-patterns | FileCheck %s
+// RUN: mlir-opt %s | mlir-opt -test-greedy-patterns | FileCheck %s
 
 // CHECK-LABEL: @test_enum_attr_roundtrip
 func.func @test_enum_attr_roundtrip() -> () {
@@ -24,5 +24,14 @@ func.func @test_match_op_with_enum() -> () {
   test.op_with_enum third tag 0 : i32
   // CHECK: test.op_with_enum second tag 1 : i32
   test.op_with_enum first tag 0 : i32
+  return
+}
+
+// CHECK-LABEL: @test_match_op_with_bit_enum
+func.func @test_match_op_with_bit_enum() -> () {
+  // CHECK: test.op_with_bit_enum <write> tag 0 : i32
+  test.op_with_bit_enum <write> tag 0 : i32
+  // CHECK: test.op_with_bit_enum <read, execute> tag 1 : i32
+  test.op_with_bit_enum <execute, write> tag 0 : i32
   return
 }

@@ -10,8 +10,6 @@
 #include "src/stdlib/exit.h"
 #include "test/UnitTest/Test.h"
 
-#include <stdlib.h>
-
 TEST(LlvmLibcStdlib, _Exit) {
   EXPECT_EXITS([] { LIBC_NAMESPACE::_Exit(1); }, 1);
   EXPECT_EXITS([] { LIBC_NAMESPACE::_Exit(65); }, 65);

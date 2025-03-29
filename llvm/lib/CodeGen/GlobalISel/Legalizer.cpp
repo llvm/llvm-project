@@ -27,7 +27,6 @@
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 
@@ -218,7 +217,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
   // This will keep all the observers notified about new insertions/deletions.
   RAIIMFObsDelInstaller Installer(MF, WrapperObserver);
   LegalizerHelper Helper(MF, LI, WrapperObserver, MIRBuilder, KB);
-  LegalizationArtifactCombiner ArtCombiner(MIRBuilder, MRI, LI);
+  LegalizationArtifactCombiner ArtCombiner(MIRBuilder, MRI, LI, KB);
   bool Changed = false;
   SmallVector<MachineInstr *, 128> RetryList;
   do {

@@ -96,9 +96,9 @@
 
 # CHECK:         Program:
 # CHECK-NEXT:      DW_CFA_def_cfa_offset: +16
-# CHECK-NEXT:      DW_CFA_advance_loc: 6
+# CHECK-NEXT:      DW_CFA_advance_loc: 6 to 0x4004a6
 # CHECK-NEXT:      DW_CFA_def_cfa_offset: +24
-# CHECK-NEXT:      DW_CFA_advance_loc: 10
+# CHECK-NEXT:      DW_CFA_advance_loc: 10 to 0x4004b0
 # CHECK-NEXT:      DW_CFA_def_cfa_expression: DW_OP_breg7 +8, DW_OP_breg16 +0, DW_OP_lit15, DW_OP_and, DW_OP_lit11, DW_OP_ge, DW_OP_lit3, DW_OP_shl, DW_OP_plus
 # CHECK-NEXT:      DW_CFA_nop:
 # CHECK-NEXT:      DW_CFA_nop:
@@ -110,12 +110,12 @@
 # CHECK-NEXT:    address_range: 0x10 (end : 0x4005c6)
 
 # CHECK:         Program:
-# CHECK-NEXT:      DW_CFA_advance_loc: 1
+# CHECK-NEXT:      DW_CFA_advance_loc: 1 to 0x4005b7
 # CHECK-NEXT:      DW_CFA_def_cfa_offset: +16
 # CHECK-NEXT:      DW_CFA_offset: reg6 -16
-# CHECK-NEXT:      DW_CFA_advance_loc: 3
+# CHECK-NEXT:      DW_CFA_advance_loc: 3 to 0x4005ba
 # CHECK-NEXT:      DW_CFA_def_cfa_register: reg6
-# CHECK-NEXT:      DW_CFA_advance_loc: 11
+# CHECK-NEXT:      DW_CFA_advance_loc: 11 to 0x4005c5
 # CHECK-NEXT:      DW_CFA_def_cfa: reg7 +8
 # CHECK-NEXT:      DW_CFA_nop:
 # CHECK-NEXT:      DW_CFA_nop:
@@ -126,15 +126,15 @@
 # CHECK-NEXT:    address_range: 0xc7f (end : 0x40124f)
 
 # CHECK:         Program:
-# CHECK-NEXT:      DW_CFA_advance_loc: 5
+# CHECK-NEXT:      DW_CFA_advance_loc: 5 to 0x4005d5
 # CHECK-NEXT:      DW_CFA_def_cfa: reg10 +0
-# CHECK-NEXT:      DW_CFA_advance_loc: 9
+# CHECK-NEXT:      DW_CFA_advance_loc: 9 to 0x4005de
 # CHECK-NEXT:      DW_CFA_expression: reg6 DW_OP_breg6 +0
-# CHECK-NEXT:      DW_CFA_advance_loc: 5
+# CHECK-NEXT:      DW_CFA_advance_loc: 5 to 0x4005e3
 # CHECK-NEXT:      DW_CFA_def_cfa_expression: DW_OP_breg6 -8, DW_OP_deref
-# CHECK-NEXT:      DW_CFA_advance_loc2: 3174
+# CHECK-NEXT:      DW_CFA_advance_loc2: 3174 to 0x401249
 # CHECK-NEXT:      DW_CFA_def_cfa: reg10 +0
-# CHECK-NEXT:      DW_CFA_advance_loc: 5
+# CHECK-NEXT:      DW_CFA_advance_loc: 5 to 0x40124e
 # CHECK-NEXT:      DW_CFA_def_cfa: reg7 +8
 # CHECK-NEXT:      DW_CFA_nop:
 # CHECK-NEXT:      DW_CFA_nop:
@@ -146,21 +146,21 @@
 # CHECK-NEXT:    address_range: 0x66 (end : 0x4012b6)
 
 # CHECK:         Program:
-# CHECK-NEXT:      DW_CFA_advance_loc: 1
+# CHECK-NEXT:      DW_CFA_advance_loc: 1 to 0x401251
 # CHECK-NEXT:      DW_CFA_def_cfa_offset: +16
 # CHECK-NEXT:      DW_CFA_offset: reg6 -16
-# CHECK-NEXT:      DW_CFA_advance_loc: 3
+# CHECK-NEXT:      DW_CFA_advance_loc: 3 to 0x401254
 # CHECK-NEXT:      DW_CFA_def_cfa_register: reg6
-# CHECK-NEXT:      DW_CFA_advance_loc: 2
+# CHECK-NEXT:      DW_CFA_advance_loc: 2 to 0x401256
 # CHECK-NEXT:      DW_CFA_offset: reg15 -24
-# CHECK-NEXT:      DW_CFA_advance_loc: 5
+# CHECK-NEXT:      DW_CFA_advance_loc: 5 to 0x40125b
 # CHECK-NEXT:      DW_CFA_offset: reg14 -32
-# CHECK-NEXT:      DW_CFA_advance_loc: 7
+# CHECK-NEXT:      DW_CFA_advance_loc: 7 to 0x401262
 # CHECK-NEXT:      DW_CFA_offset: reg13 -40
 # CHECK-NEXT:      DW_CFA_offset: reg12 -48
-# CHECK-NEXT:      DW_CFA_advance_loc: 8
+# CHECK-NEXT:      DW_CFA_advance_loc: 8 to 0x40126a
 # CHECK-NEXT:      DW_CFA_offset: reg3 -56
-# CHECK-NEXT:      DW_CFA_advance_loc1: 75
+# CHECK-NEXT:      DW_CFA_advance_loc1: 75 to 0x4012b5
 # CHECK-NEXT:      DW_CFA_def_cfa: reg7 +8
 # CHECK-NEXT:      DW_CFA_nop:
 # CHECK-NEXT:      DW_CFA_nop:

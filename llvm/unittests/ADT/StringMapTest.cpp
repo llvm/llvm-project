@@ -381,6 +381,9 @@ struct MoveOnly {
     return *this;
   }
 
+  bool operator==(const MoveOnly &RHS) const { return i == RHS.i; }
+  bool operator!=(const MoveOnly &RHS) const { return i != RHS.i; }
+
 private:
   MoveOnly(const MoveOnly &) = delete;
   MoveOnly &operator=(const MoveOnly &) = delete;
@@ -487,6 +490,17 @@ TEST_F(StringMapTest, NotEqualWithDifferentValues) {
   ASSERT_TRUE(B != A);
 }
 
+TEST_F(StringMapTest, PrecomputedHash) {
+  StringMap<int> A;
+  StringRef Key = "foo";
+  int Value = 42;
+  uint64_t Hash = StringMap<int>::hash(Key);
+  A.insert({"foo", Value}, Hash);
+  auto I = A.find(Key, Hash);
+  ASSERT_NE(I, A.end());
+  ASSERT_EQ(I->second, Value);
+}
+
 struct Countable {
   int &InstanceCount;
   int Number;
@@ -538,6 +552,26 @@ TEST_F(StringMapTest, StructuredBindings) {
   for (auto &[Key, Value] : A) {
     EXPECT_EQ("a", Key);
     EXPECT_EQ(42, Value);
+  }
+
+  for (const auto &[Key, Value] : A) {
+    EXPECT_EQ("a", Key);
+    EXPECT_EQ(42, Value);
+  }
+}
+
+TEST_F(StringMapTest, StructuredBindingsMoveOnly) {
+  StringMap<MoveOnly> A;
+  A.insert(std::make_pair("a", MoveOnly(42)));
+
+  for (auto &[Key, Value] : A) {
+    EXPECT_EQ("a", Key);
+    EXPECT_EQ(MoveOnly(42), Value);
+  }
+
+  for (const auto &[Key, Value] : A) {
+    EXPECT_EQ("a", Key);
+    EXPECT_EQ(MoveOnly(42), Value);
   }
 }
 

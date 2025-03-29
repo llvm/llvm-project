@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -71,6 +72,27 @@ constexpr bool test() {
     assert(oldState.dtorCalled);
     assert(e.has_value());
     assert(e.value() == 10);
+  }
+
+  // TailClobberer
+  {
+    std::expected<TailClobberer<0>, bool> e(std::unexpect);
+    e.emplace();
+    assert(e.has_value());
+  }
+
+  // CheckForInvalidWrites
+  {
+    {
+      CheckForInvalidWrites<true> e;
+      e.emplace();
+      assert(e.check());
+    }
+    {
+      CheckForInvalidWrites<false> e;
+      e.emplace();
+      assert(e.check());
+    }
   }
 
   return true;

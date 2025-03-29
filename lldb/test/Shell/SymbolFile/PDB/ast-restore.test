@@ -1,10 +1,10 @@
 REQUIRES: system-windows, msvc
 RUN: %build --compiler=msvc --nodefaultlib --output=%t.exe %S/Inputs/AstRestoreTest.cpp
-RUN: env LLDB_USE_NATIVE_PDB_READER=0 lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=ENUM %s
+RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=ENUM %s
 RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=ENUM %s
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=GLOBAL %s
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=BASE %s
-RUN: env LLDB_USE_NATIVE_PDB_READER=0 lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=CLASS %s
+RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=CLASS %s
 RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=CLASS %s
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=INNER %s
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=TEMPLATE %s
@@ -25,12 +25,7 @@ ENUM:         }
 ENUM:     }
 ENUM: }
 
-GLOBAL: Module: {{.*}}
-GLOBAL: namespace N0 {
-GLOBAL:     namespace N1 {
-GLOBAL:         N0::N1::(anonymous namespace)::Enum Global;
-GLOBAL:     }
-GLOBAL: }
+GLOBAL: N0::N1::(anonymous namespace)::Enum {{.*}}Global;
 
 BASE: Module: {{.*}}
 BASE: namespace N0 {
@@ -77,7 +72,7 @@ INNER: }
 
 TEMPLATE: Module: {{.*}}
 TEMPLATE: struct Template<N0::N1::Class> {
-TEMPLATE:     inline void TemplateFunc<1>();
+TEMPLATE:     void TemplateFunc<1>();
 TEMPLATE: };
 
 FOO: Module: {{.*}}

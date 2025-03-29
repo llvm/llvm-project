@@ -181,8 +181,6 @@ def _gentbl_rule_impl(ctx):
 gentbl_rule = rule(
     _gentbl_rule_impl,
     doc = "Generates tabular code from a table definition file.",
-    # Match genrule behavior
-    output_to_genfiles = True,
     attrs = {
         "tblgen": attr.label(
             doc = "The TableGen executable with which to generate `out`.",
@@ -434,3 +432,136 @@ def gentbl_cc_library(
         copts = copts,
         **kwargs
     )
+
+def _gentbl_shard_impl(ctx):
+    args = ctx.actions.args()
+    args.add(ctx.file.src_file)
+    args.add("-op-shard-index", ctx.attr.index)
+    args.add("-o", ctx.outputs.out.path)
+    ctx.actions.run(
+        outputs = [ctx.outputs.out],
+        inputs = [ctx.file.src_file],
+        executable = ctx.executable.sharder,
+        arguments = [args],
+        use_default_shell_env = True,
+        mnemonic = "ShardGenerate",
+    )
+
+gentbl_shard_rule = rule(
+    _gentbl_shard_impl,
+    doc = "",
+    output_to_genfiles = True,
+    attrs = {
+        "index": attr.int(mandatory = True, doc = ""),
+        "sharder": attr.label(
+            doc = "",
+            executable = True,
+            cfg = "exec",
+        ),
+        "src_file": attr.label(
+            doc = "",
+            allow_single_file = True,
+            mandatory = True,
+        ),
+        "out": attr.output(
+            doc = "",
+            mandatory = True,
+        ),
+    },
+)
+
+def gentbl_sharded_ops(
+        name,
+        tblgen,
+        sharder,
+        td_file,
+        shard_count,
+        src_file,
+        src_out,
+        hdr_out,
+        test = False,
+        includes = [],
+        strip_include_prefix = None,
+        deps = []):
+    """Generate sharded op declarations and definitions.
+
+    This special build rule shards op definitions in a TableGen file and generates multiple copies
+    of a template source file for including and compiling each shard. The rule defines a filegroup
+    consisting of the source shards, the generated source file, and the generated header file.
+
+    Args:
+      name: The name of the filegroup.
+      tblgen: The binary used to produce the output.
+      sharder: The source file sharder to use.
+      td_file: The primary table definitions file.
+      shard_count: The number of op definition shards to produce.
+      src_file: The source file template.
+      src_out: The generated source file.
+      hdr_out: The generated header file.
+      test: Whether this is a test target.
+      includes: See gentbl_rule.includes
+      deps: See gentbl_rule.deps
+      strip_include_prefix: Attribute to pass through to cc_library.
+    """
+    cc_lib_name = name + "__gentbl_cc_lib"
+    gentbl_cc_library(
+        name = cc_lib_name,
+        strip_include_prefix = strip_include_prefix,
+        includes = includes,
+        tbl_outs = [
+            (
+                [
+                    "-gen-op-defs",
+                    "-op-shard-count=" + str(shard_count),
+                ],
+                src_out,
+            ),
+            (
+                [
+                    "-gen-op-decls",
+                    "-op-shard-count=" + str(shard_count),
+                ],
+                hdr_out,
+            ),
+        ],
+        tblgen = tblgen,
+        td_file = td_file,
+        test = test,
+        deps = deps,
+    )
+    all_files = [hdr_out, src_out]
+    for i in range(0, shard_count):
+        out_file = "shard_copy_" + str(i) + "_" + src_file
+        gentbl_shard_rule(
+            index = i,
+            name = name + "__src_shard" + str(i),
+            testonly = test,
+            out = out_file,
+            sharder = sharder,
+            src_file = src_file,
+        )
+        all_files.append(out_file)
+    native.filegroup(name = name, srcs = all_files)
+
+def gentbl_sharded_op_defs(name, source_file, shard_count):
+    """Generates multiple copies of a source file that includes sharded op definitions.
+
+    Args:
+      name: The name of the rule.
+      source_file: The source to copy.
+      shard_count: The number of shards.
+
+    Returns:
+      A list of the copied filenames to be included in the dialect library.
+    """
+    copies = []
+    for i in range(0, shard_count):
+        out_file = "shard_copy_" + str(i) + "_" + source_file
+        copies.append(out_file)
+        native.genrule(
+            name = name + "_shard_" + str(i),
+            srcs = [source_file],
+            outs = [out_file],
+            cmd = "echo -e \"#define GET_OP_DEFS_" + str(i) + "\n$$(cat $(SRCS))\" > $(OUTS)",
+        )
+    return copies

@@ -1,0 +1,49 @@
+# REQUIRES: x86
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 /dev/null -o 0.o
+
+#--- 1.lds
+SECTIONS {
+  .text + { *(.text) }
+  .keep : { *(.keep) } /*
+  comment line 1
+  comment line 2 */
+  .temp : { *(.temp) }
+}
+
+# RUN: not ld.lld -shared 0.o -T 1.lds 2>&1 | FileCheck %s --check-prefix=CHECK1 --match-full-lines --strict-whitespace
+#      CHECK1:{{.*}}:2: malformed number: {
+# CHECK1-NEXT:>>>   .text + { *(.text) }
+# CHECK1-NEXT:>>>           ^
+
+#--- 2.lds
+
+UNKNOWN_TAG {
+  .text : { *(.text) }
+  .keep : { *(.keep) }
+  .temp : { *(.temp) }
+}
+
+# RUN: not ld.lld -shared 0.o -T 2.lds 2>&1 | FileCheck %s --check-prefix=CHECK2 --match-full-lines --strict-whitespace
+#      CHECK2:{{.*}}:2: unknown directive: UNKNOWN_TAG
+# CHECK2-NEXT:>>> UNKNOWN_TAG {
+# CHECK2-NEXT:>>> ^
+
+#--- 3.lds
+SECTIONS {
+  .text : { *(.text) }
+  .keep : { *(.keep) }
+  boom ^temp : { *(.temp) }
+}
+#--- 3a.lds
+INCLUDE "3.lds"
+#--- 3b.lds
+foo = 3;
+INCLUDE "3a.lds"
+
+# RUN: not ld.lld -shared 0.o -T 3.lds 2>&1 | FileCheck %s --check-prefix=CHECK3 --match-full-lines --strict-whitespace
+# RUN: not ld.lld -shared 0.o -T 3a.lds 2>&1 | FileCheck %s --check-prefix=CHECK3 --match-full-lines --strict-whitespace
+# RUN: not ld.lld -shared 0.o -T 3b.lds 2>&1 | FileCheck %s --check-prefix=CHECK3 --match-full-lines --strict-whitespace
+#      CHECK3:{{.*}}3.lds:4: malformed number: ^
+# CHECK3-NEXT:>>>   boom ^temp : { *(.temp) }
+# CHECK3-NEXT:>>>        ^

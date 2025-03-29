@@ -33,7 +33,7 @@ namespace llvm {
 /// std::atomic<T>::notify_all() in \a loadOrGenerate().
 template <class T> class LazyAtomicPointer {
   static constexpr uintptr_t getNull() { return 0; }
-  static constexpr uintptr_t getBusy() { return -1ULL; }
+  static constexpr uintptr_t getBusy() { return UINTPTR_MAX; }
 
   static T *makePointer(uintptr_t Value) {
     assert(Value != getBusy());

@@ -1,5 +1,7 @@
-; RUN:  not llvm-as %s -o /dev/null 2>&1 | FileCheck %s --implicit-check-not=alias --implicit-check-not=Alias
+; RUN:  not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
 
+; CHECK: : assembly parsed, but does not verify as correct!
+; CHECK-NOT: {{(^A| a)lias(es)? }}
 
 declare void @f()
 @fa = alias void (), ptr @f

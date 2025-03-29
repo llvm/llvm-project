@@ -23,7 +23,7 @@
 func.func @_QPtest_i1(%arg0: !fir.ref<!fir.logical<4>> {fir.bindc_name = "x"}) {
   %c3_i32 = arith.constant 3 : i32
   %c-1_i32 = arith.constant -1 : i32
-  %0 = fir.address_of(@_QQcl.2E2F746573742E66393000) : !fir.ref<!fir.char<1,11>>
+  %0 = fir.address_of(@_QQclX2E2F746573742E66393000) : !fir.ref<!fir.char<1,11>>
   %1 = fir.convert %0 : (!fir.ref<!fir.char<1,11>>) -> !fir.ref<i8>
   %2 = fir.call @_FortranAioBeginExternalListOutput(%c-1_i32, %1, %c3_i32) : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
   %3 = fir.load %arg0 : !fir.ref<!fir.logical<4>>
@@ -33,7 +33,7 @@ func.func @_QPtest_i1(%arg0: !fir.ref<!fir.logical<4>> {fir.bindc_name = "x"}) {
   return
 }
 func.func private @_FortranAioBeginExternalListOutput(i32, !fir.ref<i8>, i32) -> !fir.ref<i8> attributes {fir.io, fir.runtime}
-fir.global linkonce @_QQcl.2E2F746573742E66393000 constant : !fir.char<1,11> {
+fir.global linkonce @_QQclX2E2F746573742E66393000 constant : !fir.char<1,11> {
   %0 = fir.string_lit "./test.f90\00"(11) : !fir.char<1,11>
   fir.has_value %0 : !fir.char<1,11>
 }

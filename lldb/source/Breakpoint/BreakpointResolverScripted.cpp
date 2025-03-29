@@ -58,17 +58,16 @@ void BreakpointResolverScripted::NotifyBreakpointSet() {
   CreateImplementationIfNeeded(GetBreakpoint());
 }
 
-BreakpointResolver *
-BreakpointResolverScripted::CreateFromStructuredData(
-    const BreakpointSP &bkpt, const StructuredData::Dictionary &options_dict,
-    Status &error) {
+BreakpointResolverSP BreakpointResolverScripted::CreateFromStructuredData(
+    const StructuredData::Dictionary &options_dict, Status &error) {
   llvm::StringRef class_name;
   bool success;
-  
+
   success = options_dict.GetValueForKeyAsString(
       GetKey(OptionNames::PythonClassName), class_name);
   if (!success) {
-    error.SetErrorString("BRFL::CFSD: Couldn't find class name entry.");
+    error =
+        Status::FromErrorString("BRFL::CFSD: Couldn't find class name entry.");
     return nullptr;
   }
   // The Python function will actually provide the search depth, this is a
@@ -80,8 +79,8 @@ BreakpointResolverScripted::CreateFromStructuredData(
   if (options_dict.GetValueForKeyAsDictionary(GetKey(OptionNames::ScriptArgs),
                                               args_dict))
     args_data_impl.SetObjectSP(args_dict->shared_from_this());
-  return new BreakpointResolverScripted(bkpt, class_name, depth, 
-                                        args_data_impl);
+  return std::make_shared<BreakpointResolverScripted>(nullptr, class_name,
+                                                      depth, args_data_impl);
 }
 
 StructuredData::ObjectSP

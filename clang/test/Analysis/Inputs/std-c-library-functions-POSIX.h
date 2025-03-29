@@ -11,6 +11,7 @@ typedef unsigned long int pthread_t;
 typedef unsigned long time_t;
 typedef unsigned long clockid_t;
 typedef __INT64_TYPE__ off64_t;
+typedef __INT64_TYPE__ fpos_t;
 
 typedef struct {
   int a;
@@ -42,9 +43,22 @@ FILE *fopen(const char *restrict pathname, const char *restrict mode);
 FILE *tmpfile(void);
 FILE *freopen(const char *restrict pathname, const char *restrict mode,
               FILE *restrict stream);
+FILE *fdopen(int fd, const char *mode);
 int fclose(FILE *stream);
+int putc(int c, FILE *stream);
+int fputc(int c, FILE *stream);
+char *fgets(char *restrict s, int n, FILE *restrict stream);
+int fputs(const char *restrict s, FILE *restrict stream);
 int fseek(FILE *stream, long offset, int whence);
+int fgetpos(FILE *restrict stream, fpos_t *restrict pos);
+int fsetpos(FILE *stream, const fpos_t *pos);
+int fflush(FILE *stream);
+long ftell(FILE *stream);
 int fileno(FILE *stream);
+void rewind(FILE *stream);
+void clearerr(FILE *stream);
+int feof(FILE *stream);
+int ferror(FILE *stream);
 long a64l(const char *str64);
 char *l64a(long value);
 int open(const char *path, int oflag, ...);
@@ -100,7 +114,6 @@ int pclose(FILE *stream);
 int close(int fildes);
 long fpathconf(int fildes, int name);
 long pathconf(const char *path, int name);
-FILE *fdopen(int fd, const char *mode);
 void rewinddir(DIR *dir);
 void seekdir(DIR *dirp, long loc);
 int rand_r(unsigned int *seedp);

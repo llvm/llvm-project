@@ -17,7 +17,6 @@
 
 #include "bolt/Core/Linker.h"
 #include "llvm/ADT/StringRef.h"
-#include <functional>
 #include <vector>
 
 namespace llvm {
@@ -59,7 +58,16 @@ protected:
   uint64_t RuntimeFiniAddress{0};
   uint64_t RuntimeStartAddress{0};
 
-  /// Get the full path to a runtime library specified by \p LibFileName.
+  /// Get the full path to a runtime library specified by \p LibFileName and \p
+  /// ToolPath.
+  static std::string getLibPathByToolPath(StringRef ToolPath,
+                                          StringRef LibFileName);
+
+  /// Get the full path to a runtime library by the install directory.
+  static std::string getLibPathByInstalled(StringRef LibFileName);
+
+  /// Gets the full path to a runtime library based on whether it exists
+  /// in the install libdir or runtime libdir.
   static std::string getLibPath(StringRef ToolPath, StringRef LibFileName);
 
   /// Load a static runtime library specified by \p LibPath.

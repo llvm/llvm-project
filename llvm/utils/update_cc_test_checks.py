@@ -34,7 +34,7 @@ SUBST = {
 }
 
 
-def get_line2func_list(args, clang_args):
+def get_line2func_list(args, clang_args, globals_name_prefix):
     ret = collections.defaultdict(list)
     # Use clang's JSON AST dump to get the mangled name
     json_dump_args = [args.clang] + clang_args + ["-fsyntax-only", "-o", "-"]
@@ -122,6 +122,14 @@ def get_line2func_list(args, clang_args):
         if search is None:
             search = spell
         mangled = node.get("mangledName", spell)
+        # Clang's AST dump includes the globals prefix, but when Clang emits
+        # LLVM IR this is not included and instead added as part of the asm
+        # output. Strip it from the mangled name of globals when needed
+        # (see DataLayout::getGlobalPrefix()).
+        if globals_name_prefix:
+            storage = node.get("storageClass", None)
+            if storage != "static" and mangled[0] == globals_name_prefix:
+                mangled = mangled[1:]
         ret[int(line) - 1].append((spell, mangled, search))
 
     ast = json.loads(stdout)
@@ -205,7 +213,10 @@ def config():
     )
     parser.add_argument(
         "--check-globals",
-        action="store_true",
+        nargs="?",
+        const="all",
+        default="default",
+        choices=["none", "smart", "all"],
         help="Check global entries (global variables, metadata, attribute sets, ...) for functions",
     )
     parser.add_argument("tests", nargs="+")
@@ -246,10 +257,10 @@ def config():
     return args, parser
 
 
-def get_function_body(builder, args, filename, clang_args, extra_commands, prefixes):
+def get_function_body(
+    builder, args, filename, clang_args, extra_commands, prefixes, raw_tool_output
+):
     # TODO Clean up duplication of asm/common build_function_body_dictionary
-    # Invoke external tool and extract function bodies.
-    raw_tool_output = common.invoke_tool(args.clang, clang_args, filename)
     for extra_command in extra_commands:
         extra_args = shlex.split(extra_command)
         with tempfile.NamedTemporaryFile() as f:
@@ -267,7 +278,7 @@ def get_function_body(builder, args, filename, clang_args, extra_commands, prefi
             raw_tool_output = common.invoke_tool(extra_args[0], extra_args[1:], f.name)
     if "-emit-llvm" in clang_args:
         builder.process_run_line(
-            common.OPT_FUNCTION_RE, common.scrub_body, raw_tool_output, prefixes, False
+            common.OPT_FUNCTION_RE, common.scrub_body, raw_tool_output, prefixes
         )
         builder.processed_prefixes(prefixes)
     else:
@@ -357,8 +368,15 @@ def main():
 
         # Store only filechecked runlines.
         filecheck_run_list = [i for i in run_list if i[0]]
+        ginfo = common.make_ir_generalizer(
+            ti.args.version, ti.args.check_globals == "none"
+        )
         builder = common.FunctionTestBuilder(
-            run_list=filecheck_run_list, flags=ti.args, scrubber_args=[], path=ti.path
+            run_list=filecheck_run_list,
+            flags=ti.args,
+            scrubber_args=[],
+            path=ti.path,
+            ginfo=ginfo,
         )
 
         for prefixes, args, extra_commands, triple_in_cmd in run_list:
@@ -375,13 +393,23 @@ def main():
             common.debug("Extracted clang cmd: clang {}".format(clang_args))
             common.debug("Extracted FileCheck prefixes: {}".format(prefixes))
 
+            # Invoke external tool and extract function bodies.
+            raw_tool_output = common.invoke_tool(ti.args.clang, clang_args, ti.path)
             get_function_body(
-                builder, ti.args, ti.path, clang_args, extra_commands, prefixes
+                builder,
+                ti.args,
+                ti.path,
+                clang_args,
+                extra_commands,
+                prefixes,
+                raw_tool_output,
             )
 
             # Invoke clang -Xclang -ast-dump=json to get mapping from start lines to
             # mangled names. Forward all clang args for now.
-            for k, v in get_line2func_list(ti.args, clang_args).items():
+            for k, v in get_line2func_list(
+                ti.args, clang_args, common.get_globals_name_prefix(raw_tool_output)
+            ).items():
                 line2func_list[k].extend(v)
 
         func_dict = builder.finish_and_get_func_dict()
@@ -412,40 +440,31 @@ def main():
 
             # Now generate all the checks.
             def check_generator(my_output_lines, prefixes, func):
-                if "-emit-llvm" in clang_args:
-                    return common.add_ir_checks(
-                        my_output_lines,
-                        "//",
-                        prefixes,
-                        func_dict,
-                        func,
-                        False,
-                        ti.args.function_signature,
-                        ti.args.version,
-                        global_vars_seen_dict,
-                        is_filtered=builder.is_filtered(),
-                    )
-                else:
-                    return asm.add_checks(
-                        my_output_lines,
-                        "//",
-                        prefixes,
-                        func_dict,
-                        func,
-                        global_vars_seen_dict,
-                        is_filtered=builder.is_filtered(),
-                    )
+                return common.add_ir_checks(
+                    my_output_lines,
+                    "//",
+                    prefixes,
+                    func_dict,
+                    func,
+                    False,
+                    ti.args.function_signature,
+                    ginfo,
+                    global_vars_seen_dict,
+                    is_filtered=builder.is_filtered(),
+                )
 
-            if ti.args.check_globals:
+            if ti.args.check_globals != 'none':
                 generated_prefixes.extend(
                     common.add_global_checks(
                         builder.global_var_dict(),
                         "//",
                         run_list,
                         output_lines,
+                        ginfo,
                         global_vars_seen_dict,
+                        False,
                         True,
-                        True,
+                        ti.args.check_globals,
                     )
                 )
             generated_prefixes.extend(
@@ -493,7 +512,7 @@ def main():
                                 output_lines.pop()
                                 last_line = output_lines[-1].strip()
                             if (
-                                ti.args.check_globals
+                                ti.args.check_globals != 'none'
                                 and not has_checked_pre_function_globals
                             ):
                                 generated_prefixes.extend(
@@ -502,9 +521,11 @@ def main():
                                         "//",
                                         run_list,
                                         output_lines,
+                                        ginfo,
                                         global_vars_seen_dict,
+                                        False,
                                         True,
-                                        True,
+                                        ti.args.check_globals,
                                     )
                                 )
                                 has_checked_pre_function_globals = True
@@ -520,7 +541,7 @@ def main():
                                     mangled,
                                     False,
                                     args.function_signature,
-                                    args.version,
+                                    ginfo,
                                     global_vars_seen_dict,
                                     is_filtered=builder.is_filtered(),
                                 )
@@ -531,16 +552,18 @@ def main():
                 if include_line:
                     output_lines.append(line.rstrip("\n"))
 
-        if ti.args.check_globals:
+        if ti.args.check_globals != 'none':
             generated_prefixes.extend(
                 common.add_global_checks(
                     builder.global_var_dict(),
                     "//",
                     run_list,
                     output_lines,
+                    ginfo,
                     global_vars_seen_dict,
-                    True,
                     False,
+                    False,
+                    ti.args.check_globals,
                 )
             )
         if ti.args.gen_unused_prefix_body:

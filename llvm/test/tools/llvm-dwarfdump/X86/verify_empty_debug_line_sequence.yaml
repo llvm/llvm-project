@@ -1,0 +1,55 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-dwarfdump -debug-line -verify %t.o | FileCheck %s
+
+# CHECK: Verifying .debug_line...
+# CHECK: No errors
+
+# In a line table like the one below, with no rows (other than the
+# end_sequence), we should never verify the file index because the state
+# machine initializes the file index to 1, which is invalid in DWARF 5 due to
+# its 0-based indexing.
+
+# file_names[  0]:
+#            name: "/home/umb/tests_2018/106_rnglists2"
+#       dir_index: 0
+# Address            Line   Column File   ISA Discriminator OpIndex Flags
+# ------------------ ------ ------ ------ --- ------------- ------- -------------
+# 0x0000000000000000      1      0      1   0             0       0  is_stmt end_sequence
+
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+  debug_info:
+    - Length:          0xd
+      Version:         5
+      UnitType:        DW_UT_compile
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x0
+Sections:
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         300000000500080025000000010101fb0e0d00010101010000000100000101011f010000000002011f020b010000000000000101
+  - Name:            .debug_line_str
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    Content:         2F686F6D652F756D622F74657374735F323031382F3130365F726E676C697374733200746573742E63707000

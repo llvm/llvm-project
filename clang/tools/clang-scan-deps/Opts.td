@@ -11,6 +11,8 @@ multiclass Eq<string name, string help> {
 def help : Flag<["--"], "help">, HelpText<"Display this help">;
 def version : Flag<["--"], "version">, HelpText<"Display the version">;
 
+def o : Arg<"o", "Destination of the primary output">;
+
 defm mode : Eq<"mode", "The preprocessing mode used to compute the dependencies">;
 
 defm format : Eq<"format", "The output format for the dependencies">;
@@ -18,7 +20,7 @@ defm format : Eq<"format", "The output format for the dependencies">;
 defm module_files_dir : Eq<"module-files-dir",
     "The build directory for modules. Defaults to the value of '-fmodules-cache-path=' from command lines for implicit modules">;
 
-def optimize_args : F<"optimize-args", "Whether to optimize command-line arguments of modules">;
+def optimize_args_EQ : CommaJoined<["-", "--"], "optimize-args=">, HelpText<"Which command-line arguments of modules to optimize">;
 def eager_load_pcm : F<"eager-load-pcm", "Load PCM files eagerly (instead of lazily on import)">;
 
 def j : Arg<"j", "Number of worker threads to use (default: use all concurrent threads)">;
@@ -26,6 +28,8 @@ def j : Arg<"j", "Number of worker threads to use (default: use all concurrent t
 defm compilation_database : Eq<"compilation-database", "Compilation database">;
 defm module_name : Eq<"module-name", "the module of which the dependencies are to be computed">;
 defm dependency_target : Eq<"dependency-target", "The names of dependency targets for the dependency file">;
+
+defm tu_buffer_path: Eq<"tu-buffer-path", "The path to the translation unit for depscan. Not compatible with -module-name">;
 
 def deprecated_driver_command : F<"deprecated-driver-command", "use a single driver command to build the tu (deprecated)">;
 

@@ -6,14 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/limits.h"
-#include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PlatformDefs.h"
-
 #include "src/stdio/sscanf.h"
 
-#include <stdio.h> // For EOF
-
+#include "hdr/stdio_macros.h" // For EOF
+#include "src/__support/CPP/limits.h"
+#include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -180,13 +177,25 @@ TEST(LlvmLibcSScanfTest, IntConvMaxLengthTests) {
   EXPECT_EQ(ret_val, 1);
   EXPECT_EQ(result, 0);
 
+  result = -999;
+
+  // 0x is a valid prefix, but not a valid number. This should be a matching
+  // failure and should not modify the values.
   ret_val = LIBC_NAMESPACE::sscanf("0x1", "%2i", &result);
-  EXPECT_EQ(ret_val, 1);
-  EXPECT_EQ(result, 0);
+  EXPECT_EQ(ret_val, 0);
+  EXPECT_EQ(result, -999);
 
   ret_val = LIBC_NAMESPACE::sscanf("-0x1", "%3i", &result);
+  EXPECT_EQ(ret_val, 0);
+  EXPECT_EQ(result, -999);
+
+  ret_val = LIBC_NAMESPACE::sscanf("0x1", "%3i", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_EQ(result, 0);
+  EXPECT_EQ(result, 1);
+
+  ret_val = LIBC_NAMESPACE::sscanf("-0x1", "%4i", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_EQ(result, -1);
 
   ret_val = LIBC_NAMESPACE::sscanf("-0x123", "%4i", &result);
   EXPECT_EQ(ret_val, 1);
@@ -215,7 +224,7 @@ TEST(LlvmLibcSScanfTest, IntConvNoWriteTests) {
   EXPECT_EQ(result, 0);
 
   ret_val = LIBC_NAMESPACE::sscanf("0x1", "%*2i", &result);
-  EXPECT_EQ(ret_val, 1);
+  EXPECT_EQ(ret_val, 0);
   EXPECT_EQ(result, 0);
 
   ret_val = LIBC_NAMESPACE::sscanf("a", "%*i", &result);
@@ -227,36 +236,37 @@ TEST(LlvmLibcSScanfTest, IntConvNoWriteTests) {
   EXPECT_EQ(result, 0);
 }
 
+#ifndef LIBC_COPT_SCANF_DISABLE_FLOAT
 TEST(LlvmLibcSScanfTest, FloatConvSimple) {
   int ret_val;
   float result = 0;
 
   float inf = LIBC_NAMESPACE::fputil::FPBits<float>::inf().get_val();
-  float nan = LIBC_NAMESPACE::fputil::FPBits<float>::build_nan(1);
+  float nan = LIBC_NAMESPACE::fputil::FPBits<float>::quiet_nan().get_val();
 
   ret_val = LIBC_NAMESPACE::sscanf("123", "%f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 123.0);
+  EXPECT_FP_EQ(result, 123.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("456.1", "%a", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 456.1);
+  EXPECT_FP_EQ(result, 456.1f);
 
   ret_val = LIBC_NAMESPACE::sscanf("0x789.ap0", "%e", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0x789.ap0);
+  EXPECT_FP_EQ(result, 0x789.ap0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("0x.8", "%e", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0x0.8p0);
+  EXPECT_FP_EQ(result, 0x0.8p0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("0x8.", "%e", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0x8.0p0);
+  EXPECT_FP_EQ(result, 0x8.0p0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("+12.0e1", "%g", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 12.0e1);
+  EXPECT_FP_EQ(result, 12.0e1f);
 
   ret_val = LIBC_NAMESPACE::sscanf("inf", "%F", &result);
   EXPECT_EQ(ret_val, 1);
@@ -272,19 +282,19 @@ TEST(LlvmLibcSScanfTest, FloatConvSimple) {
 
   ret_val = LIBC_NAMESPACE::sscanf("1e10", "%G", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 1e10);
+  EXPECT_FP_EQ(result, 1e10f);
 
   ret_val = LIBC_NAMESPACE::sscanf(".1", "%G", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.1);
+  EXPECT_FP_EQ(result, 0.1f);
 
   ret_val = LIBC_NAMESPACE::sscanf("1.", "%G", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 1.0);
+  EXPECT_FP_EQ(result, 1.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("0", "%f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("Not a float", "%f", &result);
   EXPECT_EQ(ret_val, 0);
@@ -297,7 +307,7 @@ TEST(LlvmLibcSScanfTest, FloatConvLengthModifier) {
 
   double d_inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
   long double ld_nan =
-      LIBC_NAMESPACE::fputil::FPBits<long double>::build_nan(1);
+      LIBC_NAMESPACE::fputil::FPBits<long double>::quiet_nan().get_val();
 
   ret_val = LIBC_NAMESPACE::sscanf("123", "%lf", &d_result);
   EXPECT_EQ(ret_val, 1);
@@ -323,7 +333,7 @@ TEST(LlvmLibcSScanfTest, FloatConvLengthModifier) {
   EXPECT_EQ(ret_val, 1);
 // 1e600 may be larger than the maximum long double (if long double is double).
 // In that case both of these should be evaluated as inf.
-#ifdef LONG_DOUBLE_IS_DOUBLE
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
   EXPECT_FP_EQ(ld_result, d_inf);
 #else
   EXPECT_FP_EQ(ld_result, 1.0e600L);
@@ -393,11 +403,11 @@ TEST(LlvmLibcSScanfTest, FloatConvComplexParsing) {
   float result = 0;
 
   float inf = LIBC_NAMESPACE::fputil::FPBits<float>::inf().get_val();
-  float nan = LIBC_NAMESPACE::fputil::FPBits<float>::build_nan(1);
+  float nan = LIBC_NAMESPACE::fputil::FPBits<float>::quiet_nan().get_val();
 
   ret_val = LIBC_NAMESPACE::sscanf("0x1.0e3", "%f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0x1.0e3p0);
+  EXPECT_FP_EQ(result, 0x1.0e3p0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("", "%a", &result);
   EXPECT_EQ(ret_val, 0);
@@ -453,11 +463,11 @@ TEST(LlvmLibcSScanfTest, FloatConvComplexParsing) {
 
   ret_val = LIBC_NAMESPACE::sscanf("-.1e1", "%f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, -.1e1);
+  EXPECT_FP_EQ(result, -.1e1f);
 
   ret_val = LIBC_NAMESPACE::sscanf("1.2.e1", "%f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 1.2);
+  EXPECT_FP_EQ(result, 1.2f);
 }
 
 TEST(LlvmLibcSScanfTest, FloatConvMaxWidth) {
@@ -468,22 +478,22 @@ TEST(LlvmLibcSScanfTest, FloatConvMaxWidth) {
 
   ret_val = LIBC_NAMESPACE::sscanf("123", "%3f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 123.0);
+  EXPECT_FP_EQ(result, 123.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("123", "%5f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 123.0);
+  EXPECT_FP_EQ(result, 123.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("456", "%1f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 4.0);
+  EXPECT_FP_EQ(result, 4.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("-789", "%1f", &result);
   EXPECT_EQ(ret_val, 0);
 
   ret_val = LIBC_NAMESPACE::sscanf("-123", "%2f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, -1.0);
+  EXPECT_FP_EQ(result, -1.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("inf", "%2f", &result);
   EXPECT_EQ(ret_val, 0);
@@ -509,11 +519,11 @@ TEST(LlvmLibcSScanfTest, FloatConvMaxWidth) {
 
   ret_val = LIBC_NAMESPACE::sscanf("01", "%1f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("0x1", "%2f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("100e", "%4f", &result);
   EXPECT_EQ(ret_val, 0);
@@ -523,7 +533,7 @@ TEST(LlvmLibcSScanfTest, FloatConvMaxWidth) {
 
   ret_val = LIBC_NAMESPACE::sscanf("100e10", "%5f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 100e1);
+  EXPECT_FP_EQ(result, 100e1f);
 }
 
 TEST(LlvmLibcSScanfTest, FloatConvNoWrite) {
@@ -532,56 +542,58 @@ TEST(LlvmLibcSScanfTest, FloatConvNoWrite) {
 
   ret_val = LIBC_NAMESPACE::sscanf("123", "%*f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("456.1", "%*a", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("0x789.ap0", "%*e", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("+12.0e1", "%*g", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("inf", "%*F", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("NaN", "%*A", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("-InFiNiTy", "%*E", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("1e10", "%*G", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf(".1", "%*G", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("123", "%*3f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("123", "%*5f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("456", "%*1f", &result);
   EXPECT_EQ(ret_val, 1);
-  EXPECT_FP_EQ(result, 0.0);
+  EXPECT_FP_EQ(result, 0.0f);
 
   ret_val = LIBC_NAMESPACE::sscanf("Not a float", "%*f", &result);
   EXPECT_EQ(ret_val, 0);
 }
+#endif
 
+#ifndef LIBC_COPT_SCANF_DISABLE_INDEX_MODE
 TEST(LlvmLibcSScanfTest, CurPosCombined) {
   int ret_val;
   int result = -1;
@@ -629,6 +641,7 @@ TEST(LlvmLibcSScanfTest, CurPosCombined) {
   EXPECT_EQ(ret_val, 1);
   EXPECT_EQ(result, 320);
 }
+#endif
 
 TEST(LlvmLibcSScanfTest, PointerConvCombined) {
   int ret_val;
@@ -678,13 +691,17 @@ TEST(LlvmLibcSScanfTest, CombinedConv) {
   EXPECT_EQ(result, 123);
   ASSERT_STREQ(buffer, "abc");
 
+  result = -1;
+
+  // 0x is a valid prefix, but not a valid number. This should be a matching
+  // failure and should not modify the values.
   ret_val = LIBC_NAMESPACE::sscanf("0xZZZ", "%i%s", &result, buffer);
-  EXPECT_EQ(ret_val, 2);
-  EXPECT_EQ(result, 0);
-  ASSERT_STREQ(buffer, "ZZZ");
+  EXPECT_EQ(ret_val, 0);
+  EXPECT_EQ(result, -1);
+  ASSERT_STREQ(buffer, "abc");
 
   ret_val = LIBC_NAMESPACE::sscanf("0xZZZ", "%X%s", &result, buffer);
-  EXPECT_EQ(ret_val, 2);
-  EXPECT_EQ(result, 0);
-  ASSERT_STREQ(buffer, "ZZZ");
+  EXPECT_EQ(ret_val, 0);
+  EXPECT_EQ(result, -1);
+  ASSERT_STREQ(buffer, "abc");
 }

@@ -1,7 +1,6 @@
 ! This test checks lowering of OpenACC declare directive in module specification
 ! part.
 
-! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
 module acc_declare_test
@@ -37,6 +36,14 @@ end module
 ! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_copyin_testEdata1) {acc.declare = #acc.declare<dataClause =  acc_copyin>} : !fir.ref<!fir.array<100000xf32>>
 ! CHECK:         %[[COPYIN:.*]] = acc.copyin varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.array<100000xf32>>) -> !fir.ref<!fir.array<100000xf32>> {name = "data1", structured = false}
 ! CHECK:         acc.declare_enter dataOperands(%[[COPYIN]] : !fir.ref<!fir.array<100000xf32>>)
+! CHECK:         acc.terminator
+! CHECK:       }
+
+! CHECK-LABEL: acc.global_dtor @_QMacc_declare_copyin_testEdata1_acc_dtor {
+! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_copyin_testEdata1) {acc.declare = #acc.declare<dataClause = acc_copyin>} : !fir.ref<!fir.array<100000xf32>>
+! CHECK:         %[[DEVICEPTR:.*]] = acc.getdeviceptr varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.array<100000xf32>>) -> !fir.ref<!fir.array<100000xf32>> {dataClause = #acc<data_clause acc_copyin>, name = "data1", structured = false}
+! CHECK:         acc.declare_exit dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<100000xf32>>)
+! CHECK:         acc.delete accPtr(%[[DEVICEPTR]] : !fir.ref<!fir.array<100000xf32>>) {dataClause = #acc<data_clause acc_copyin>, name = "data1", structured = false}
 ! CHECK:         acc.terminator
 ! CHECK:       }
 

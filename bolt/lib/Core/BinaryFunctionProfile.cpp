@@ -225,6 +225,7 @@ void BinaryFunction::mergeProfileDataInto(BinaryFunction &BF) const {
     for (const BinaryBasicBlock *BBSucc : BB->successors()) {
       (void)BBSucc;
       assert(getIndex(BBSucc) == BF.getIndex(*BBMergeSI));
+      (void)BBMergeSI;
 
       // At this point no branch count should be set to COUNT_NO_PROFILE.
       assert(BII->Count != BinaryBasicBlock::COUNT_NO_PROFILE &&
@@ -335,7 +336,8 @@ void BinaryFunction::inferFallThroughCounts() {
       if (SuccBI.Count == 0) {
         SuccBI.Count = Inferred;
         SuccBI.MispredictedCount = BinaryBasicBlock::COUNT_INFERRED;
-        Succ->ExecutionCount += Inferred;
+        Succ->ExecutionCount =
+            std::max(Succ->getKnownExecutionCount(), Inferred);
       }
     }
   }

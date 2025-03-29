@@ -1,5 +1,5 @@
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefixes=GFX10,W32 %s
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefixes=GFX10,W64 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefixes=GFX10,W32 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefixes=GFX10,W64 %s
 
 
 # GFX10: v_add_f16_dpp v255, v1, v2 quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 ; encoding: [0xfa,0x04,0xfe,0x65,0x01,0xe4,0x00,0x00]

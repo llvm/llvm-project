@@ -44,5 +44,5 @@ void braz(Foo *foo, ThirtyTwo *braz) {
 
   ThirtyTwo thirtyTwo1;
   ThirtyTwo thirtyTwo2;
-  __atomic_load(&thirtyTwo1, &thirtyTwo2, __ATOMIC_RELAXED); // expected-warning {{large atomic operation may incur significant performance penalty; the access size (32 bytes) exceeds the max lock-free size (16  bytes)}}
+  __atomic_load(&thirtyTwo1, &thirtyTwo2, __ATOMIC_RELAXED); // expected-warning {{large atomic operation may incur significant performance penalty; the access size (32 bytes) exceeds the max lock-free size (16 bytes)}}
 }

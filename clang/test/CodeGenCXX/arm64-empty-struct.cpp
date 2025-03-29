@@ -9,7 +9,6 @@ int take_args(int a, ...) {
 // CHECK: call void @llvm.va_start
 
   emptyvar = __builtin_va_arg(l, Empty);
-// CHECK: load ptr, ptr
 // CHECK-NOT: getelementptr
 
   // It's conceivable that EMPTY_PTR may not actually be a valid pointer

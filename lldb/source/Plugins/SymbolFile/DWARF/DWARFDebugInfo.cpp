@@ -24,6 +24,7 @@
 #include "DWARFDebugInfoEntry.h"
 #include "DWARFFormValue.h"
 #include "DWARFTypeUnit.h"
+#include "LogChannelDWARF.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -81,25 +82,92 @@ void DWARFDebugInfo::ParseUnitsFor(DIERef::Section section) {
                                 : m_context.getOrLoadDebugInfoData();
   lldb::offset_t offset = 0;
   while (data.ValidOffset(offset)) {
-    llvm::Expected<DWARFUnitSP> unit_sp = DWARFUnit::extract(
-        m_dwarf, m_units.size(), data, section, &offset);
+    const lldb::offset_t unit_header_offset = offset;
+    llvm::Expected<DWARFUnitSP> expected_unit_sp =
+        DWARFUnit::extract(m_dwarf, m_units.size(), data, section, &offset);
 
-    if (!unit_sp) {
-      // FIXME: Propagate this error up.
-      llvm::consumeError(unit_sp.takeError());
+    if (!expected_unit_sp) {
+      Log *log = GetLog(DWARFLog::DebugInfo);
+      if (log)
+        LLDB_LOG(log, "Unable to extract DWARFUnitHeader at {0:x}: {1}",
+                 unit_header_offset,
+                 llvm::toString(expected_unit_sp.takeError()));
+      else
+        llvm::consumeError(expected_unit_sp.takeError());
       return;
     }
 
-    // If it didn't return an error, then it should be returning a valid Unit.
-    assert(*unit_sp);
-    m_units.push_back(*unit_sp);
-    offset = (*unit_sp)->GetNextUnitOffset();
+    DWARFUnitSP unit_sp = *expected_unit_sp;
 
-    if (auto *type_unit = llvm::dyn_cast<DWARFTypeUnit>(unit_sp->get())) {
+    // If it didn't return an error, then it should be returning a valid Unit.
+    assert((bool)unit_sp);
+
+    // Keep a map of DWO ID back to the skeleton units. Sometimes accelerator
+    // table lookups can cause the DWO files to be accessed before the skeleton
+    // compile unit is parsed, so we keep a map to allow us to match up the DWO
+    // file to the back to the skeleton compile units.
+    if (unit_sp->GetUnitType() == lldb_private::dwarf::DW_UT_skeleton) {
+      if (std::optional<uint64_t> unit_dwo_id = unit_sp->GetHeaderDWOId())
+        m_dwarf5_dwo_id_to_skeleton_unit[*unit_dwo_id] = unit_sp.get();
+    }
+
+    m_units.push_back(unit_sp);
+    offset = unit_sp->GetNextUnitOffset();
+
+    if (auto *type_unit = llvm::dyn_cast<DWARFTypeUnit>(unit_sp.get())) {
       m_type_hash_to_unit_index.emplace_back(type_unit->GetTypeHash(),
-                                             unit_sp.get()->GetID());
+                                             unit_sp->GetID());
     }
   }
+}
+
+DWARFUnit *DWARFDebugInfo::GetSkeletonUnit(DWARFUnit *dwo_unit) {
+  // If this isn't a DWO unit, don't try and find the skeleton unit.
+  if (!dwo_unit->IsDWOUnit())
+    return nullptr;
+
+  auto dwo_id = dwo_unit->GetDWOId();
+  if (!dwo_id.has_value())
+    return nullptr;
+
+  // Parse the unit headers so that m_dwarf5_dwo_id_to_skeleton_unit is filled
+  // in with all of the DWARF5 skeleton compile units DWO IDs since it is easy
+  // to access the DWO IDs in the DWARFUnitHeader for each DWARFUnit.
+  ParseUnitHeadersIfNeeded();
+
+  // Find the value in our cache and return it we we find it. This cache may
+  // only contain DWARF5 units.
+  auto iter = m_dwarf5_dwo_id_to_skeleton_unit.find(*dwo_id);
+  if (iter != m_dwarf5_dwo_id_to_skeleton_unit.end())
+    return iter->second;
+
+  // DWARF5 unit headers have the DWO ID and should have already been in the map
+  // so if it wasn't found in the above find() call, then we didn't find it and
+  // don't need to do the more expensive DWARF4 search.
+  if (dwo_unit->GetVersion() >= 5)
+    return nullptr;
+
+  // Parse all DWO IDs from all DWARF4 and earlier compile units that have DWO
+  // IDs. It is more expensive to get the DWO IDs from DWARF4 compile units as
+  // we need to parse the unit DIE and extract the DW_AT_dwo_id or
+  // DW_AT_GNU_dwo_id attribute values, so do this only if we didn't find our
+  // match above search and only for DWARF4 and earlier compile units.
+  llvm::call_once(m_dwarf4_dwo_id_to_skeleton_unit_once_flag, [this]() {
+    for (uint32_t i = 0, num = GetNumUnits(); i < num; ++i) {
+      if (DWARFUnit *unit = GetUnitAtIndex(i)) {
+        if (unit->GetVersion() < 5) {
+          if (std::optional<uint64_t> unit_dwo_id = unit->GetDWOId())
+            m_dwarf4_dwo_id_to_skeleton_unit[*unit_dwo_id] = unit;
+        }
+      }
+    }
+  });
+
+  // Search the DWARF4 DWO results that we parsed lazily.
+  iter = m_dwarf4_dwo_id_to_skeleton_unit.find(*dwo_id);
+  if (iter != m_dwarf4_dwo_id_to_skeleton_unit.end())
+    return iter->second;
+  return nullptr;
 }
 
 void DWARFDebugInfo::ParseUnitHeadersIfNeeded() {
@@ -154,10 +222,6 @@ DWARFUnit *DWARFDebugInfo::GetUnitAtOffset(DIERef::Section section,
   return result;
 }
 
-DWARFUnit *DWARFDebugInfo::GetUnit(const DIERef &die_ref) {
-  return GetUnitContainingDIEOffset(die_ref.section(), die_ref.die_offset());
-}
-
 DWARFUnit *
 DWARFDebugInfo::GetUnitContainingDIEOffset(DIERef::Section section,
                                            dw_offset_t die_offset) {
@@ -166,6 +230,10 @@ DWARFDebugInfo::GetUnitContainingDIEOffset(DIERef::Section section,
   if (result && !result->ContainsDIEOffset(die_offset))
     return nullptr;
   return result;
+}
+
+const std::shared_ptr<SymbolFileDWARFDwo> &DWARFDebugInfo::GetDwpSymbolFile() {
+  return m_dwarf.GetDwpSymbolFile();
 }
 
 DWARFTypeUnit *DWARFDebugInfo::GetTypeUnitForHash(uint64_t hash) {
@@ -185,9 +253,8 @@ bool DWARFDebugInfo::ContainsTypeUnits() {
 //
 // Get the DIE (Debug Information Entry) with the specified offset.
 DWARFDIE
-DWARFDebugInfo::GetDIE(const DIERef &die_ref) {
-  DWARFUnit *cu = GetUnit(die_ref);
-  if (cu)
-    return cu->GetNonSkeletonUnit().GetDIE(die_ref.die_offset());
+DWARFDebugInfo::GetDIE(DIERef::Section section, dw_offset_t die_offset) {
+  if (DWARFUnit *cu = GetUnitContainingDIEOffset(section, die_offset))
+    return cu->GetNonSkeletonUnit().GetDIE(die_offset);
   return DWARFDIE(); // Not found
 }

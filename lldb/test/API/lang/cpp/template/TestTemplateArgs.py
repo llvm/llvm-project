@@ -50,14 +50,14 @@ class TemplateArgsTestCase(TestBase):
         self.assertTrue(
             testpos.IsValid(), 'make sure we find a local variabble named "testpos"'
         )
-        self.assertEquals(testpos.GetType().GetName(), "TestObj<1>")
+        self.assertEqual(testpos.GetType().GetName(), "TestObj<1>")
 
         expr_result = frame.EvaluateExpression("testpos.getArg()")
         self.assertTrue(
             expr_result.IsValid(),
             'got a valid expression result from expression "testpos.getArg()"',
         )
-        self.assertEquals(expr_result.GetValue(), "1", "testpos.getArg() == 1")
+        self.assertEqual(expr_result.GetValue(), "1", "testpos.getArg() == 1")
         self.assertEqual(
             expr_result.GetType().GetName(),
             "int",
@@ -68,7 +68,7 @@ class TemplateArgsTestCase(TestBase):
         self.assertTrue(
             testneg.IsValid(), 'make sure we find a local variabble named "testneg"'
         )
-        self.assertEquals(testneg.GetType().GetName(), "TestObj<-1>")
+        self.assertEqual(testneg.GetType().GetName(), "TestObj<-1>")
 
         expr_result = frame.EvaluateExpression("testneg.getArg()")
         self.assertTrue(
@@ -88,39 +88,39 @@ class TemplateArgsTestCase(TestBase):
 
         c1 = frame.FindVariable("c1")
         self.assertTrue(c1.IsValid(), 'make sure we find a local variabble named "c1"')
-        self.assertEquals(c1.GetType().GetName(), "C<float, T1>")
+        self.assertEqual(c1.GetType().GetName(), "C<float, T1>")
         f1 = (
             c1.GetChildMemberWithName("V")
             .GetChildAtIndex(0)
             .GetChildMemberWithName("f")
         )
-        self.assertEquals(f1.GetType().GetName(), "float")
-        self.assertEquals(f1.GetValue(), "1.5")
+        self.assertEqual(f1.GetType().GetName(), "float")
+        self.assertEqual(f1.GetValue(), "1.5")
 
         c2 = frame.FindVariable("c2")
         self.assertTrue(c2.IsValid(), 'make sure we find a local variabble named "c2"')
-        self.assertEquals(c2.GetType().GetName(), "C<double, T1, T2>")
+        self.assertEqual(c2.GetType().GetName(), "C<double, T1, T2>")
         f2 = (
             c2.GetChildMemberWithName("V")
             .GetChildAtIndex(0)
             .GetChildMemberWithName("f")
         )
-        self.assertEquals(f2.GetType().GetName(), "double")
-        self.assertEquals(f2.GetValue(), "1.5")
+        self.assertEqual(f2.GetType().GetName(), "double")
+        self.assertEqual(f2.GetValue(), "1.5")
         f3 = (
             c2.GetChildMemberWithName("V")
             .GetChildAtIndex(1)
             .GetChildMemberWithName("f")
         )
-        self.assertEquals(f3.GetType().GetName(), "double")
-        self.assertEquals(f3.GetValue(), "2.5")
+        self.assertEqual(f3.GetType().GetName(), "double")
+        self.assertEqual(f3.GetValue(), "2.5")
         f4 = (
             c2.GetChildMemberWithName("V")
             .GetChildAtIndex(1)
             .GetChildMemberWithName("i")
         )
-        self.assertEquals(f4.GetType().GetName(), "int")
-        self.assertEquals(f4.GetValue(), "42")
+        self.assertEqual(f4.GetType().GetName(), "int")
+        self.assertEqual(f4.GetValue(), "42")
 
     # Gcc does not generate the necessary DWARF attribute for enum template
     # parameters.

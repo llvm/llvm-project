@@ -1,6 +1,6 @@
-# This test reproduces a POP reordering issue in shrink wrapping where we would
-# incorrectly put a store after a load (instead of before) when having multiple
-# insertions at the same point. Check that the order is correct in this test.
+## This test reproduces a POP reordering issue in shrink wrapping where we would
+## incorrectly put a store after a load (instead of before) when having multiple
+## insertions at the same point. Check that the order is correct in this test.
 
 # REQUIRES: system-linux
 
@@ -25,23 +25,23 @@ c:
   pop   %rbp
   pop   %rbx
 
-# This basic block is treated as having 0 execution count.
-# push and pop will be sinked into this block.
+## This basic block is treated as having 0 execution count.
+## push and pop will be sinked into this block.
 a:
     ud2
     .cfi_endproc
 
 
-# Check shrink wrapping results:
+## Check shrink wrapping results:
 # CHECK: BOLT-INFO: Shrink wrapping moved 0 spills inserting load/stores and 2 spills inserting push/pops
 # CHECK: BOLT-INFO: Shrink wrapping reduced 6 store executions (28.6% total instructions executed, 100.0% store instructions)
 # CHECK: BOLT-INFO: Shrink wrapping failed at reducing 0 store executions (0.0% total instructions executed, 0.0% store instructions)
 
-# Check that order is correct
+## Check that order is correct
 # CHECK:      Binary Function "_start" after frame-optimizer
 # Pushes are ordered according to their reg number and come first
 # CHECK:      pushq   %rbp
 # CHECK:      pushq   %rbx
-# Pops are ordered according to their dominance relation and come last
+## Pops are ordered according to their dominance relation and come last
 # CHECK:      popq    %rbx
 # CHECK:      popq    %rbp

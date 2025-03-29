@@ -11,12 +11,6 @@
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/is_array.h>
-#include <__type_traits/is_function.h>
-#include <__type_traits/is_void.h>
-#include <__type_traits/remove_reference.h>
-#include <__utility/declval.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -25,11 +19,12 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _T1, class _T2>
-struct _LIBCPP_TEMPLATE_VIS is_convertible : public integral_constant<bool, __is_convertible(_T1, _T2)> {};
+struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS is_convertible
+    : public integral_constant<bool, __is_convertible(_T1, _T2)> {};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _From, class _To>
-inline constexpr bool is_convertible_v = __is_convertible(_From, _To);
+_LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_convertible_v = __is_convertible(_From, _To);
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

@@ -1,0 +1,26 @@
+test_direct_call:606:83
+ 1: 83
+ 2: 83 C:83
+ 3: 90 B:90
+ 4: 83 A:83
+ 5: 92 B:92
+ 6: 83 A:83
+ 7: 97 C:97
+ !CFGChecksum: 123456
+test_indirect_call:589:86
+ 1: 86
+ 2: 86 C:86
+ 3: 83 A:43 B:40
+ 4: 84 B:84
+ 6: 82 B:62 A:20
+ 7: 91 C:91
+ !CFGChecksum: 123456
+main:403:0
+ 1: 0
+ 2: 80
+ 3: 80
+ 4: 86 test_indirect_call:86
+ 5: 83 test_direct_call:83
+ 6: 83
+ 7: 0
+ !CFGChecksum: 563036051115663

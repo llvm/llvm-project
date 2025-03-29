@@ -11,30 +11,54 @@
 
 include "mlir/Pass/PassBase.td"
 
-def GpuLaunchSinkIndexComputations : Pass<"gpu-launch-sink-index-computations"> {
+def GpuLaunchSinkIndexComputationsPass
+    : Pass<"gpu-launch-sink-index-computations"> {
   let summary = "Sink index computations into gpu.launch body";
-  let constructor = "mlir::createGpuLauchSinkIndexComputationsPass()";
   let dependentDialects = ["mlir::gpu::GPUDialect"];
 }
 
-def GpuKernelOutlining : Pass<"gpu-kernel-outlining", "ModuleOp"> {
+def GpuKernelOutliningPass : Pass<"gpu-kernel-outlining", "ModuleOp"> {
   let summary = "Outline gpu.launch bodies to kernel functions";
-  let constructor = "mlir::createGpuKernelOutliningPass()";
   let dependentDialects = ["mlir::DLTIDialect", "cf::ControlFlowDialect"];
+  let options = [Option<"dataLayoutStr", "data-layout-str", "std::string",
+                        /*default=*/"",
+                        "String description of the data layout">];
 }
 
 def GpuAsyncRegionPass : Pass<"gpu-async-region", "func::FuncOp"> {
   let summary = "Make GPU ops async";
-  let constructor = "mlir::createGpuAsyncRegionPass()";
   let dependentDialects = ["async::AsyncDialect"];
 }
 
 def GpuMapParallelLoopsPass
     : Pass<"gpu-map-parallel-loops", "mlir::func::FuncOp"> {
   let summary = "Greedily maps loops to GPU hardware dimensions.";
-  let constructor = "mlir::createGpuMapParallelLoopsPass()";
-  let description = "Greedily maps loops to GPU hardware dimensions.";
+  let description = [{
+    Maps the parallel loops found in the given function to workgroups. The first
+    loop encountered will be mapped to the global workgroup and the second loop
+    encountered to the local workgroup. Within each mapping, the first three
+    dimensions are mapped to x/y/z hardware ids and all following dimensions are
+    mapped to sequential loops.
+  }];
   let dependentDialects = ["mlir::gpu::GPUDialect"];
+}
+
+def GpuEliminateBarriers
+    : Pass<"gpu-eliminate-barriers", "mlir::func::FuncOp"> {
+  let summary = "Erase unnecessary barriers";
+  let description = [{
+    Barrier elimination pass. If a barrier does not enforce any conflicting
+    pair of memory effects, including a pair that is enforced by another
+    barrier, it is unnecessary and can be removed. Adapted from
+    "High-Performance GPU-to-CPU Transpilation and Optimization via High-Level
+    Parallel Constructs" by Moses, Ivanov, Domke, Endo, Doerfert, and Zinenko in
+    PPoPP 2023 and implementation in Polygeist.
+  }];
+  let dependentDialects = [
+    "mlir::gpu::GPUDialect",
+    "mlir::memref::MemRefDialect",
+    "mlir::scf::SCFDialect"
+  ];
 }
 
 def GpuDecomposeMemrefsPass : Pass<"gpu-decompose-memrefs"> {
@@ -48,7 +72,6 @@ def GpuDecomposeMemrefsPass : Pass<"gpu-decompose-memrefs"> {
     and sizes/strides for dynamically-sized memrefs are not available inside
     `gpu.launch`.
   }];
-  let constructor = "mlir::createGpuDecomposeMemrefsPass()";
   let dependentDialects = [
     "mlir::gpu::GPUDialect", "mlir::memref::MemRefDialect",
     "mlir::affine::AffineDialect"
@@ -70,8 +93,6 @@ def GpuModuleToBinaryPass
     4. `fatbinary`, `fatbin`: produces fatbinaries.
   }];
   let options = [
-    Option<"offloadingHandler", "handler", "Attribute", "nullptr",
-           "Offloading handler to be attached to the resulting binary op.">,
     Option<"toolkitPath", "toolkit", "std::string", [{""}],
            "Toolkit path.">,
     ListOption<"linkFiles", "l", "std::string",
@@ -79,7 +100,9 @@ def GpuModuleToBinaryPass
     Option<"cmdOptions", "opts", "std::string", [{""}],
            "Command line options to pass to the tools.">,
     Option<"compilationTarget", "format", "std::string", [{"fatbin"}],
-           "The target representation of the compilation process.">
+           "The target representation of the compilation process.">,
+    Option<"elfSection", "section", "std::string", [{""}],
+           "ELF section where binary is to be located.">
   ];
 }
 
@@ -125,6 +148,9 @@ def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
            "Enable flush to zero for denormals.">,
     ListOption<"linkLibs", "l", "std::string",
            "Extra bitcode libraries paths to link to.">,
+    Option<"cmdOptions", "ptxas-cmd-options", "std::string",
+           /*default=*/ [{""}],
+           "Command line options passed to downstream compiler">,
   ];
 }
 
@@ -160,8 +186,8 @@ def GpuROCDLAttachTarget: Pass<"rocdl-attach-target", ""> {
            /*default=*/"\"\"",
            "Target features.">,
     Option<"abiVersion", "abi", "std::string",
-           /*default=*/"\"400\"",
-           "Optimization level.">,
+           /*default=*/"\"500\"",
+           "ABI version.">,
     Option<"optLevel", "O", "unsigned",
            /*default=*/"2",
            "Optimization level.">,
@@ -185,6 +211,50 @@ def GpuROCDLAttachTarget: Pass<"rocdl-attach-target", ""> {
            "Enable correct rounded sqrt.">,
     ListOption<"linkLibs", "l", "std::string",
            "Extra bitcode libraries paths to link to.">,
+  ];
+}
+
+def GpuSPIRVAttachTarget: Pass<"spirv-attach-target", ""> {
+  let summary = "Attaches an SPIR-V target attribute to a GPU Module.";
+  let description = [{
+    This pass searches for all GPU Modules in the immediate regions and attaches
+    an SPIR-V target if the module matches the name specified by the `module` argument.
+
+    Example:
+    ```
+    // Given the following file: in1.mlir:
+    gpu.module @nvvm_module_1 {...}
+    gpu.module @spirv_module_1 {...}
+    // With
+    // mlir-opt --spirv-attach-target="module=spirv.* ver=v1.0 caps=Kernel" in1.mlir
+    // it will generate,
+    gpu.module @nvvm_module_1 {...}
+    gpu.module @spirv_module_1 [#spirv.target<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>>] {...}
+    ```
+  }];
+  let options = [
+    Option<"moduleMatcher", "module", "std::string",
+           /*default=*/ [{""}],
+           "Regex used to identify the modules to attach the target to.">,
+    Option<"spirvVersion", "ver", "std::string",
+           /*default=*/ "\"v1.0\"",
+           "SPIR-V Version.">,
+    ListOption<"spirvCapabilities", "caps", "std::string",
+           "List of supported SPIR-V Capabilities">,
+    ListOption<"spirvExtensions", "exts", "std::string",
+           "List of supported SPIR-V Extensions">,
+    Option<"clientApi", "client_api", "std::string",
+           /*default=*/ "\"Unknown\"",
+           "Client API">,
+    Option<"deviceVendor", "vendor", "std::string",
+           /*default=*/ "\"Unknown\"",
+           "Device Vendor">,
+    Option<"deviceType", "device_type", "std::string",
+           /*default=*/ "\"Unknown\"",
+           "Device Type">,
+    Option<"deviceId", "device_id", "uint32_t",
+           /*default=*/ "",
+           "Device ID">,
   ];
 }
 

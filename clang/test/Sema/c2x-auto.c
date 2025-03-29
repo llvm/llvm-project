@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c2x -verify -pedantic -Wno-comments %s
+// RUN: %clang_cc1 -std=c2x -verify -pedantic -Wno-comments %s -fexperimental-new-constant-interpreter
 
 void test_basic_types(void) {
   auto undefined;     // expected-error {{declaration of variable 'undefined' with deduced type 'auto' requires an initializer}}

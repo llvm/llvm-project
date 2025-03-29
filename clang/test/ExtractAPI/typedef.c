@@ -1,111 +1,93 @@
 // RUN: rm -rf %t
-// RUN: split-file %s %t
-// RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
-// RUN: %t/reference.output.json.in >> %t/reference.output.json
-// RUN: %clang -extract-api --product-name=Typedef -target arm64-apple-macosx \
-// RUN: -x objective-c-header %t/input.h -o %t/output.json | FileCheck -allow-empty %s
+// RUN: %clang_cc1 -extract-api --pretty-sgf --emit-sgf-symbol-labels-for-testing \
+// RUN:   -triple arm64-apple-macosx -x objective-c-header %s -o %t/output.symbols.json -verify
 
-// Generator version is not consistent across test runs, normalize it.
-// RUN: sed -e "s@\"generator\": \".*\"@\"generator\": \"?\"@g" \
-// RUN: %t/output.json >> %t/output-normalized.json
-// RUN: diff %t/reference.output.json %t/output-normalized.json
-
-// CHECK-NOT: error:
-// CHECK-NOT: warning:
-
-//--- input.h
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix MYINT
 typedef int MyInt;
+// MYINT-LABEL: "!testLabel": "c:typedef.c@T@MyInt"
+// MYINT: "accessLevel": "public",
+// MYINT:      "declarationFragments": [
+// MYINT-NEXT:   {
+// MYINT-NEXT:     "kind": "keyword",
+// MYINT-NEXT:     "spelling": "typedef"
+// MYINT-NEXT:   },
+// MYINT-NEXT:   {
+// MYINT-NEXT:     "kind": "text",
+// MYINT-NEXT:     "spelling": " "
+// MYINT-NEXT:   },
+// MYINT-NEXT:   {
+// MYINT-NEXT:     "kind": "typeIdentifier",
+// MYINT-NEXT:     "preciseIdentifier": "c:I",
+// MYINT-NEXT:     "spelling": "int"
+// MYINT-NEXT:   },
+// MYINT-NEXT:   {
+// MYINT-NEXT:     "kind": "text",
+// MYINT-NEXT:     "spelling": " "
+// MYINT-NEXT:   },
+// MYINT-NEXT:   {
+// MYINT-NEXT:     "kind": "identifier",
+// MYINT-NEXT:     "spelling": "MyInt"
+// MYINT-NEXT:   },
+// MYINT-NEXT:   {
+// MYINT-NEXT:     "kind": "text",
+// MYINT-NEXT:     "spelling": ";"
+// MYINT-NEXT:   }
+// MYINT-NEXT: ],
+// MYINT:      "kind": {
+// MYINT-NEXT:   "displayName": "Type Alias",
+// MYINT-NEXT:   "identifier": "objective-c.typealias"
+// MYINT-NEXT: },
+// MYINT: "title": "MyInt"
+// MYINT:      "pathComponents": [
+// MYINT-NEXT:   "MyInt"
+// MYINT-NEXT: ],
+// MYINT: "type": "c:I"
 
-//--- reference.output.json.in
-{
-  "metadata": {
-    "formatVersion": {
-      "major": 0,
-      "minor": 5,
-      "patch": 3
-    },
-    "generator": "?"
-  },
-  "module": {
-    "name": "Typedef",
-    "platform": {
-      "architecture": "arm64",
-      "operatingSystem": {
-        "minimumVersion": {
-          "major": 11,
-          "minor": 0,
-          "patch": 0
-        },
-        "name": "macosx"
-      },
-      "vendor": "apple"
-    }
-  },
-  "relationships": [],
-  "symbols": [
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "typedef"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:I",
-          "spelling": "int"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "MyInt"
-        },
-        {
-          "kind": "text",
-          "spelling": ";"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "objective-c",
-        "precise": "c:input.h@T@MyInt"
-      },
-      "kind": {
-        "displayName": "Type Alias",
-        "identifier": "objective-c.typealias"
-      },
-      "location": {
-        "position": {
-          "character": 13,
-          "line": 1
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "MyInt"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "MyInt"
-          }
-        ],
-        "title": "MyInt"
-      },
-      "pathComponents": [
-        "MyInt"
-      ],
-      "type": "c:I"
-    }
-  ]
-}
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix BARPTR
+typedef struct Bar *BarPtr;
+// BARPTR-LABEL: "!testLabel": "c:typedef.c@T@BarPtr"
+// BARPTR: "accessLevel": "public",
+// BARPTR:      "declarationFragments": [
+// BARPTR-NEXT:   {
+// BARPTR-NEXT:     "kind": "keyword",
+// BARPTR-NEXT:     "spelling": "typedef"
+// BARPTR-NEXT:   },
+// BARPTR-NEXT:   {
+// BARPTR-NEXT:     "kind": "text",
+// BARPTR-NEXT:     "spelling": " "
+// BARPTR-NEXT:   },
+// BARPTR-NEXT:   {
+// BARPTR-NEXT:     "kind": "keyword",
+// BARPTR-NEXT:     "spelling": "struct"
+// BARPTR-NEXT:   },
+// BARPTR-NEXT:   {
+// BARPTR-NEXT:     "kind": "text",
+// BARPTR-NEXT:     "spelling": " "
+// BARPTR-NEXT:   },
+// BARPTR-NEXT:   {
+// BARPTR-NEXT:     "kind": "typeIdentifier",
+// BARPTR-NEXT:     "preciseIdentifier": "c:@S@Bar",
+// BARPTR-NEXT:     "spelling": "Bar"
+// BARPTR-NEXT:   },
+// BARPTR-NEXT:   {
+// BARPTR-NEXT:     "kind": "text",
+// BARPTR-NEXT:     "spelling": " * "
+// BARPTR-NEXT:   },
+// BARPTR-NEXT:   {
+// BARPTR-NEXT:     "kind": "identifier",
+// BARPTR-NEXT:     "spelling": "BarPtr"
+// BARPTR-NEXT:   },
+// BARPTR-NEXT:   {
+// BARPTR-NEXT:     "kind": "text",
+// BARPTR-NEXT:     "spelling": ";"
+// BARPTR-NEXT:   }
+// BARPTR-NEXT: ],
+// BARPTR: "type": "c:*$@S@Bar"
+
+// RUN: FileCheck %s --input-file %t/output.symbols.json
+void foo(BarPtr value);
+
+void baz(BarPtr *value);
+// CHECK-NOT: struct Bar *
+
+// expected-no-diagnostics

@@ -41,6 +41,9 @@ TEST(LlvmLibcSNPrintfTest, CutOff) {
   // passing null as the output pointer is allowed as long as buffsz is 0.
   written = LIBC_NAMESPACE::snprintf(nullptr, 0, "%s and more", "1234567890");
   EXPECT_EQ(written, 19);
+
+  written = LIBC_NAMESPACE::snprintf(nullptr, 0, "%*s", INT_MIN, "nothing");
+  EXPECT_EQ(written, INT_MAX);
 }
 
 TEST(LlvmLibcSNPrintfTest, NoCutOff) {

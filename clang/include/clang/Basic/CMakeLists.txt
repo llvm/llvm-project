@@ -3,6 +3,11 @@ macro(clang_diag_gen component)
     -gen-clang-diags-defs -clang-component=${component}
     SOURCE Diagnostic.td
     TARGET ClangDiagnostic${component})
+
+  clang_tablegen(Diagnostic${component}Enums.inc
+    -gen-clang-diags-enums -clang-component=${component}
+    SOURCE Diagnostic.td
+    TARGET ClangDiagnostic${component}Enums)
 endmacro(clang_diag_gen)
 
 clang_diag_gen(Analysis)
@@ -12,6 +17,7 @@ clang_diag_gen(Common)
 clang_diag_gen(CrossTU)
 clang_diag_gen(Driver)
 clang_diag_gen(Frontend)
+clang_diag_gen(InstallAPI)
 clang_diag_gen(Lex)
 clang_diag_gen(Parse)
 clang_diag_gen(Refactoring)
@@ -30,25 +36,20 @@ clang_tablegen(AttrList.inc -gen-clang-attr-list
   SOURCE Attr.td
   TARGET ClangAttrList)
 
-clang_tablegen(AttrLeftSideCanPrintList.inc -gen-clang-attr-can-print-left-list
+clang_tablegen(AttrParsedAttrList.inc -gen-clang-attr-parsed-attr-list
   -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
-  TARGET ClangAttrCanPrintLeftList)
-
-clang_tablegen(AttrLeftSideMustPrintList.inc -gen-clang-attr-must-print-left-list
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
-  SOURCE Attr.td
-  TARGET ClangAttrMustPrintLeftList)
+  TARGET ClangAttrParsedAttrList)
 
 clang_tablegen(AttrSubMatchRulesList.inc -gen-clang-attr-subject-match-rule-list
   -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
   TARGET ClangAttrSubjectMatchRuleList)
 
-clang_tablegen(AttrTokenKinds.inc -gen-clang-attr-token-kinds
+clang_tablegen(RegularKeywordAttrInfo.inc -gen-clang-regular-keyword-attr-info
   -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
-  TARGET ClangAttrTokenKinds
+  TARGET ClangRegularKeywordAttrInfo
   )
 
 clang_tablegen(AttrHasAttributeImpl.inc -gen-clang-attr-has-attribute-impl
@@ -57,6 +58,48 @@ clang_tablegen(AttrHasAttributeImpl.inc -gen-clang-attr-has-attribute-impl
   TARGET ClangAttrHasAttributeImpl
   )
 
+clang_tablegen(CXX11AttributeInfo.inc -gen-cxx11-attribute-info
+  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  SOURCE Attr.td
+  TARGET CXX11AttributeInfo
+  )
+
+clang_tablegen(Builtins.inc -gen-clang-builtins
+  SOURCE Builtins.td
+  TARGET ClangBuiltins)
+
+clang_tablegen(BuiltinsBPF.inc -gen-clang-builtins
+  SOURCE BuiltinsBPF.td
+  TARGET ClangBuiltinsBPF)
+
+clang_tablegen(BuiltinsHexagon.inc -gen-clang-builtins
+  SOURCE BuiltinsHexagon.td
+  TARGET ClangBuiltinsHexagon)
+
+clang_tablegen(BuiltinsNVPTX.inc -gen-clang-builtins
+  SOURCE BuiltinsNVPTX.td
+  TARGET ClangBuiltinsNVPTX)
+
+clang_tablegen(BuiltinsRISCV.inc -gen-clang-builtins
+  SOURCE BuiltinsRISCV.td
+  TARGET ClangBuiltinsRISCV)
+
+clang_tablegen(BuiltinsSPIRV.inc -gen-clang-builtins
+  SOURCE BuiltinsSPIRV.td
+  TARGET ClangBuiltinsSPIRV)
+
+clang_tablegen(BuiltinsX86.inc -gen-clang-builtins
+  SOURCE BuiltinsX86.td
+  TARGET ClangBuiltinsX86)
+
+clang_tablegen(BuiltinsX86_64.inc -gen-clang-builtins
+  SOURCE BuiltinsX86_64.td
+  TARGET ClangBuiltinsX86_64)
+
+clang_tablegen(BuiltinTemplates.inc -gen-clang-builtin-templates
+  SOURCE BuiltinTemplates.td
+  TARGET ClangBuiltinTemplates)
+
 # ARM NEON and MVE
 clang_tablegen(arm_neon.inc -gen-arm-neon-sema
   SOURCE arm_neon.td
@@ -64,6 +107,9 @@ clang_tablegen(arm_neon.inc -gen-arm-neon-sema
 clang_tablegen(arm_fp16.inc -gen-arm-neon-sema
   SOURCE arm_fp16.td
   TARGET ClangARMFP16)
+clang_tablegen(arm_immcheck_types.inc -gen-arm-immcheck-types
+  SOURCE arm_sve.td
+  TARGET ClangARMImmChecks)
 clang_tablegen(arm_mve_builtins.inc -gen-arm-mve-builtin-def
   SOURCE arm_mve.td
   TARGET ClangARMMveBuiltinsDef)
@@ -88,6 +134,9 @@ clang_tablegen(arm_sve_typeflags.inc -gen-arm-sve-typeflags
 clang_tablegen(arm_sve_sema_rangechecks.inc -gen-arm-sve-sema-rangechecks
   SOURCE arm_sve.td
   TARGET ClangARMSveSemaRangeChecks)
+clang_tablegen(arm_sve_streaming_attrs.inc -gen-arm-sve-streaming-attrs
+  SOURCE arm_sve.td
+  TARGET ClangARMSveStreamingAttrs)
 clang_tablegen(arm_sme_builtins.inc -gen-arm-sme-builtins
   SOURCE arm_sme.td
   TARGET ClangARMSmeBuiltins)
@@ -97,6 +146,12 @@ clang_tablegen(arm_sme_builtin_cg.inc -gen-arm-sme-builtin-codegen
 clang_tablegen(arm_sme_sema_rangechecks.inc -gen-arm-sme-sema-rangechecks
   SOURCE arm_sme.td
   TARGET ClangARMSmeSemaRangeChecks)
+clang_tablegen(arm_sme_streaming_attrs.inc -gen-arm-sme-streaming-attrs
+  SOURCE arm_sme.td
+  TARGET ClangARMSmeStreamingAttrs)
+clang_tablegen(arm_sme_builtins_za_state.inc -gen-arm-sme-builtin-za-state
+  SOURCE arm_sme.td
+  TARGET ClangARMSmeBuiltinsZAState)
 clang_tablegen(arm_cde_builtins.inc -gen-arm-cde-builtin-def
   SOURCE arm_cde.td
   TARGET ClangARMCdeBuiltinsDef)

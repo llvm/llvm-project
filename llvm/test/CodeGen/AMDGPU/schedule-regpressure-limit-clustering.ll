@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; Interleave loads and stores to fit into 9 VGPR limit.
 ; This requires to avoid load/store clustering.
@@ -42,4 +42,4 @@ bb2:
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { "amdgpu-num-vgpr"="9" }
+attributes #1 = { "amdgpu-num-vgpr"="9" "amdgpu-flat-work-group-size"="1024,1024" }

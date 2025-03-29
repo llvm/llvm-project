@@ -180,31 +180,20 @@ struct FileCheckString;
 class FileCheck {
   FileCheckRequest Req;
   std::unique_ptr<FileCheckPatternContext> PatternContext;
-  // C++17 TODO: make this a plain std::vector.
-  std::unique_ptr<std::vector<FileCheckString>> CheckStrings;
+  std::vector<FileCheckString> CheckStrings;
 
 public:
   explicit FileCheck(FileCheckRequest Req);
   ~FileCheck();
 
-  // Combines the check prefixes into a single regex so that we can efficiently
-  // scan for any of the set.
-  //
-  // The semantics are that the longest-match wins which matches our regex
-  // library.
-  Regex buildCheckPrefixRegex();
-
   /// Reads the check file from \p Buffer and records the expected strings it
   /// contains. Errors are reported against \p SM.
-  ///
-  /// Only expected strings whose prefix is one of those listed in \p PrefixRE
-  /// are recorded. \returns true in case of an error, false otherwise.
   ///
   /// If \p ImpPatBufferIDRange, then the range (inclusive start, exclusive end)
   /// of IDs for source buffers added to \p SM for implicit patterns are
   /// recorded in it.  The range is empty if there are none.
   bool
-  readCheckFile(SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
+  readCheckFile(SourceMgr &SM, StringRef Buffer,
                 std::pair<unsigned, unsigned> *ImpPatBufferIDRange = nullptr);
 
   bool ValidateCheckPrefixes();

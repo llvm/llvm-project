@@ -9,10 +9,8 @@
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Process.h"
 #include "llvm/TargetParser/Host.h"
 
@@ -20,6 +18,8 @@
 
 namespace llvm {
 namespace orc {
+
+DylibManager::~DylibManager() = default;
 
 ExecutorProcessControl::MemoryAccess::~MemoryAccess() = default;
 
@@ -41,15 +41,22 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
   this->PageSize = PageSize;
   this->MemMgr = OwnedMemMgr.get();
   this->MemAccess = this;
+  this->DylibMgr = this;
   this->JDI = {ExecutorAddr::fromPtr(jitDispatchViaWrapperFunctionManager),
                ExecutorAddr::fromPtr(this)};
+
   if (this->TargetTriple.isOSBinFormatMachO())
     GlobalManglingPrefix = '_';
 
-  this->BootstrapSymbols[rt::RegisterEHFrameSectionWrapperName] =
-      ExecutorAddr::fromPtr(&llvm_orc_registerEHFrameSectionWrapper);
-  this->BootstrapSymbols[rt::DeregisterEHFrameSectionWrapperName] =
-      ExecutorAddr::fromPtr(&llvm_orc_deregisterEHFrameSectionWrapper);
+  addDefaultBootstrapValuesForHostProcess(BootstrapMap, BootstrapSymbols);
+
+#ifdef __APPLE__
+  // FIXME: Don't add an UnwindInfoManager by default -- it's redundant when
+  //        the ORC runtime is loaded. We'll need a way to document this and
+  //        allow clients to choose.
+  if (UnwindInfoManager::TryEnable())
+    UnwindInfoManager::addBootstrapSymbols(this->BootstrapSymbols);
+#endif // __APPLE__
 }
 
 Expected<std::unique_ptr<SelfExecutorProcessControl>>
@@ -61,13 +68,8 @@ SelfExecutorProcessControl::Create(
   if (!SSP)
     SSP = std::make_shared<SymbolStringPool>();
 
-  if (!D) {
-#if LLVM_ENABLE_THREADS
-    D = std::make_unique<DynamicThreadPoolTaskDispatcher>();
-#else
+  if (!D)
     D = std::make_unique<InPlaceTaskDispatcher>();
-#endif
-  }
 
   auto PageSize = sys::Process::getPageSize();
   if (!PageSize)
@@ -89,13 +91,14 @@ SelfExecutorProcessControl::loadDylib(const char *DylibPath) {
   return ExecutorAddr::fromPtr(Dylib.getOSSpecificHandle());
 }
 
-Expected<std::vector<tpctypes::LookupResult>>
-SelfExecutorProcessControl::lookupSymbols(ArrayRef<LookupRequest> Request) {
+void SelfExecutorProcessControl::lookupSymbolsAsync(
+    ArrayRef<LookupRequest> Request,
+    DylibManager::SymbolLookupCompleteFn Complete) {
   std::vector<tpctypes::LookupResult> R;
 
   for (auto &Elem : Request) {
     sys::DynamicLibrary Dylib(Elem.Handle.toPtr<void *>());
-    R.push_back(std::vector<ExecutorAddr>());
+    R.push_back(std::vector<ExecutorSymbolDef>());
     for (auto &KV : Elem.Symbols) {
       auto &Sym = KV.first;
       std::string Tmp((*Sym).data() + !!GlobalManglingPrefix,
@@ -105,13 +108,16 @@ SelfExecutorProcessControl::lookupSymbols(ArrayRef<LookupRequest> Request) {
         // FIXME: Collect all failing symbols before erroring out.
         SymbolNameVector MissingSymbols;
         MissingSymbols.push_back(Sym);
-        return make_error<SymbolsNotFound>(SSP, std::move(MissingSymbols));
+        return Complete(
+            make_error<SymbolsNotFound>(SSP, std::move(MissingSymbols)));
       }
-      R.back().push_back(ExecutorAddr::fromPtr(Addr));
+      // FIXME: determine accurate JITSymbolFlags.
+      R.back().push_back(
+          {ExecutorAddr::fromPtr(Addr), JITSymbolFlags::Exported});
     }
   }
 
-  return R;
+  Complete(std::move(R));
 }
 
 Expected<int32_t>

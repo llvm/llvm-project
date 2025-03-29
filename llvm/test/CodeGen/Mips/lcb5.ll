@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static     < %s | FileCheck %s -check-prefix=ci
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static < %s | FileCheck %s -check-prefix=ci
 
 @i = global i32 0, align 4
 @j = common global i32 0, align 4
@@ -212,8 +212,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; ci:	btnez	$BB7_1  # 16 bit inst
 ; ci:	jal	$BB7_2	# branch
 ; ci:	nop
-; ci:	.p2align	2
 ; ci: $BB7_1:
+; ci:	.p2align	2
 ; ci:	.end	z4
 
 attributes #0 = { nounwind optsize "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

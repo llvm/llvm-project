@@ -1,4 +1,4 @@
-; RUN: llvm-reduce %s -o %t --delta-passes=operands-skip --test FileCheck --test-arg %s --test-arg --match-full-lines --test-arg --check-prefix=INTERESTING --test-arg --input-file
+; RUN: llvm-reduce %s -o %t --abort-on-invalid-reduction --delta-passes=operands-skip --test FileCheck --test-arg %s --test-arg --match-full-lines --test-arg --check-prefix=INTERESTING --test-arg --input-file
 ; RUN: FileCheck %s --input-file %t --check-prefixes=REDUCED
 
 ; INTERESTING: store i32 43, ptr {{(%imm|%indirect)}}, align 4
@@ -27,10 +27,10 @@
 
 @Global = global i32 42
 
-define void @func(ptr %arg1, ptr %arg2) {
+define void @func(ptr %arg1, ptr %arg2, i1 %arg) {
 entry:
   %val = getelementptr i32, ptr getelementptr (i32, ptr @Global, i32 1), i32 2
-  br i1 undef, label %branch, label %loop
+  br i1 %arg, label %branch, label %loop
 
 branch:
   %nondominating1 = getelementptr i32, ptr %val, i32 3
@@ -50,7 +50,7 @@ loop:
   store i32 49, ptr %imm, align 4 ; Reduce to null
 
   %nondominating2 = getelementptr i32, ptr %indirect, i32 6
-  br i1 undef, label %loop, label %exit
+  br i1 %arg, label %loop, label %exit
 
 exit:
   store i32 50, ptr %arg2, align 4 ; Reduce to %arg1 (compactify function arguments)

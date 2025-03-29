@@ -27,6 +27,7 @@ namespace clang {
   class FunctionTemplateDecl;
   class Module;
   class NamedDecl;
+  class NamespaceDecl;
   class ObjCCategoryDecl;
   class ObjCContainerDecl;
   class ObjCInterfaceDecl;
@@ -35,6 +36,7 @@ namespace clang {
   class QualType;
   class RecordDecl;
   class TagDecl;
+  class TranslationUnitDecl;
   class ValueDecl;
   class VarDecl;
   class VarTemplateDecl;
@@ -146,6 +148,31 @@ public:
   /// \param Record The RecordDecl that got a new attribute
   virtual void AddedAttributeToRecord(const Attr *Attr,
                                       const RecordDecl *Record) {}
+
+  /// The parser find the named module declaration.
+  virtual void EnteringModulePurview() {}
+
+  /// An mangling number was added to a Decl
+  ///
+  /// \param D The decl that got a mangling number
+  ///
+  /// \param Number The mangling number that was added to the Decl
+  virtual void AddedManglingNumber(const Decl *D, unsigned Number) {}
+
+  /// An static local number was added to a Decl
+  ///
+  /// \param D The decl that got a static local number
+  ///
+  /// \param Number The static local number that was added to the Decl
+  virtual void AddedStaticLocalNumbers(const Decl *D, unsigned Number) {}
+
+  /// An anonymous namespace was added the translation unit decl
+  ///
+  /// \param TU The translation unit decl that got a new anonymous namespace
+  ///
+  /// \param AnonNamespace The anonymous namespace that was added
+  virtual void AddedAnonymousNamespace(const TranslationUnitDecl *TU,
+                                       NamespaceDecl *AnonNamespace) {}
 
   // NOTE: If new methods are added they should also be added to
   // MultiplexASTMutationListener.

@@ -29,7 +29,6 @@ body:             |
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   successors: %bb.3(0x40000000), %bb.6(0x40000000)
   ; GCN-NEXT: {{  $}}
@@ -52,7 +51,6 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.4:
   ; GCN-NEXT:   successors: %bb.5(0x80000000)
-  ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.5:
   ; GCN-NEXT:   successors: %bb.6(0x80000000)
@@ -141,8 +139,8 @@ body:             |
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   dead undef %0.sub0:sgpr_256 = COPY $exec
-  ; GCN-NEXT:   dead %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, undef %2:sreg_64_xexec, implicit $exec
+  ; GCN-NEXT:   dead undef [[COPY:%[0-9]+]].sub0:sgpr_256 = COPY $exec
+  ; GCN-NEXT:   dead [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, undef %2:sreg_64_xexec, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:

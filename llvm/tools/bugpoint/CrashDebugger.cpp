@@ -72,7 +72,7 @@ cl::opt<bool> VerboseErrors("verbose-errors",
 
 static bool isValidModule(std::unique_ptr<Module> &M,
                           bool ExitOnFailure = true) {
-  if (!llvm::verifyModule(*M.get(), &llvm::errs()))
+  if (!llvm::verifyModule(*M, &llvm::errs()))
     return true;
 
   if (ExitOnFailure) {
@@ -245,7 +245,7 @@ static void RemoveFunctionReferences(Module *M, const char *Name) {
   auto *NewValElemTy = OldUsedVal->getType()->getElementType();
   auto *NewValTy = ArrayType::get(NewValElemTy, Used.size());
   auto *NewUsedVal = ConstantArray::get(NewValTy, Used);
-  UsedVar->mutateType(NewUsedVal->getType()->getPointerTo());
+  UsedVar->mutateType(PointerType::getUnqual(M->getContext()));
   UsedVar->setInitializer(NewUsedVal);
 }
 
@@ -417,9 +417,8 @@ void simpleSimplifyCfg(Function &F, SmallVectorImpl<BasicBlock *> &BBs) {
   // undefined behavior into unreachables, but bugpoint was the thing that
   // generated the undefined behavior, and we don't want it to kill the entire
   // program.
-  SmallPtrSet<BasicBlock *, 16> Visited;
-  for (auto *BB : depth_first(&F.getEntryBlock()))
-    Visited.insert(BB);
+  SmallPtrSet<BasicBlock *, 16> Visited(llvm::from_range,
+                                        depth_first(&F.getEntryBlock()));
 
   SmallVector<BasicBlock *, 16> Unreachable;
   for (auto &BB : F)
@@ -917,9 +916,7 @@ bool ReduceCrashingNamedMD::TestNamedMDs(std::vector<std::string> &NamedMDs) {
   outs() << ": ";
 
   // Make a StringMap for faster lookup
-  StringSet<> Names;
-  for (const std::string &Name : NamedMDs)
-    Names.insert(Name);
+  StringSet<> Names(llvm::from_range, NamedMDs);
 
   // First collect all the metadata to delete in a vector, then
   // delete them all at once to avoid invalidating the iterator
@@ -971,10 +968,7 @@ public:
 bool ReduceCrashingNamedMDOps::TestNamedMDOps(
     std::vector<const MDNode *> &NamedMDOps) {
   // Convert list to set for fast lookup...
-  SmallPtrSet<const MDNode *, 32> OldMDNodeOps;
-  for (unsigned i = 0, e = NamedMDOps.size(); i != e; ++i) {
-    OldMDNodeOps.insert(NamedMDOps[i]);
-  }
+  SmallPtrSet<const MDNode *, 32> OldMDNodeOps(llvm::from_range, NamedMDOps);
 
   outs() << "Checking for crash with only " << OldMDNodeOps.size();
   if (OldMDNodeOps.size() == 1)

@@ -127,17 +127,17 @@ Exit:
   ret void
 }
 
-define void @foo3() {
+define void @foo3(i1 %arg) {
 ; CHECK-LABEL: @foo3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[L1_HEADER:%.*]]
 ; CHECK:       L1_header:
 ; CHECK-NEXT:    [[A:%.*]] = phi ptr [ [[B:%.*]], [[L1_LATCH:%.*]] ], [ null, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    br i1 undef, label [[L2_HEADER_PREHEADER:%.*]], label [[L1_LATCH]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[L2_HEADER_PREHEADER:%.*]], label [[L1_LATCH]]
 ; CHECK:       L2_header.preheader:
 ; CHECK-NEXT:    br label [[L2_HEADER:%.*]]
 ; CHECK:       L2_header:
-; CHECK-NEXT:    br i1 false, label [[L2_LATCH:%.*]], label [[L1_LATCH_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[L2_LATCH:%.*]], label [[L1_LATCH_LOOPEXIT:%.*]]
 ; CHECK:       L2_latch:
 ; CHECK-NEXT:    [[A_LCSSA:%.*]] = phi ptr [ [[A]], [[L2_HEADER]] ]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
@@ -155,10 +155,10 @@ entry:
 
 L1_header:
   %a = phi ptr [ %b, %L1_latch ], [ null, %entry ]
-  br i1 undef, label %L2_header, label %L1_latch
+  br i1 %arg, label %L2_header, label %L1_latch
 
 L2_header:
-  br i1 undef, label %L2_latch, label %L1_latch
+  br i1 %arg, label %L2_latch, label %L1_latch
 
 L2_latch:
   br i1 true, label %L2_exit, label %L2_header

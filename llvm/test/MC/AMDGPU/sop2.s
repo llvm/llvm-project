@@ -235,7 +235,7 @@ s_absdiff_i32 s2, s4, s6
 
 s_add_u32 s101, s102, s103
 // SICI: s_add_u32 s101, s102, s103 ; encoding: [0x66,0x67,0x65,0x80]
-// NOGFX89: :[[@LINE-2]]:{{[0-9]+}}: error: register not available on this GPU
+// NOGFX89: :[[@LINE-2]]:{{[0-9]+}}: error: s102 register not available on this GPU
 // GFX10: s_add_u32 s101, s102, s103 ; encoding: [0x66,0x67,0x65,0x80]
 
 s_lshl1_add_u32 s5, s1, s2

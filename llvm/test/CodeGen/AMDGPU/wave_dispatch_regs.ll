@@ -12,7 +12,8 @@
 ; GCN-NEXT: amdpal.pipelines:
 ; GCN-NEXT:   - .hardware_stages:
 ; GCN-NEXT:       .cs:
-; GCN-NEXT:         .entry_point:    _amdgpu_cs_main
+; GCN-NEXT:         .entry_point:    _amdgpu_cs
+; GCN-NEXT:         .entry_point_symbol:    _amdgpu_cs_main
 ; GCN-NEXT:         .scratch_memory_size: 0
 ; SI-NEXT:          .sgpr_count:     0x11
 ; VI-NEXT:          .sgpr_count:     0x60
@@ -21,10 +22,10 @@
 ; VI-NEXT:          .vgpr_count:     0x5
 ; GFX9-NEXT:        .vgpr_count:     0x5
 ; GCN-NEXT:     .registers:
-; SI-NEXT:        0x2e12 (COMPUTE_PGM_RSRC1): 0x{{[0-9a-f]*}}81
-; VI-NEXT:        0x2e12 (COMPUTE_PGM_RSRC1): 0x{{[0-9a-f]*}}c1
-; GFX9-NEXT:      0x2e12 (COMPUTE_PGM_RSRC1): 0x{{[0-9a-f]*}}81
-; GCN-NEXT:       0x2e13 (COMPUTE_PGM_RSRC2): 0
+; SI-NEXT:        '0x2e12 (COMPUTE_PGM_RSRC1)': 0x{{[0-9a-f]*}}81
+; VI-NEXT:        '0x2e12 (COMPUTE_PGM_RSRC1)': 0x{{[0-9a-f]*}}c1
+; GFX9-NEXT:      '0x2e12 (COMPUTE_PGM_RSRC1)': 0x{{[0-9a-f]*}}81
+; GCN-NEXT:       '0x2e13 (COMPUTE_PGM_RSRC2)': 0
 ; GCN-NEXT: ...
 ; GCN-NEXT:         .end_amdgpu_pal_metadata
 

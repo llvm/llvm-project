@@ -34,6 +34,13 @@ program omp_copyprivate
   !$omp end parallel
   !$omp end parallel sections
 
+  !The use of FIRSTPRIVATE with COPYPRIVATE is allowed
+  !$omp parallel firstprivate(a)
+  !$omp single
+  a = a + k
+  !$omp end single copyprivate(a)
+  !$omp end parallel
+
   print *, a, b
 
 end program omp_copyprivate

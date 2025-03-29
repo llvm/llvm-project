@@ -29,6 +29,7 @@ static_library("Host") {
     "common/LZMA.cpp",
     "common/LockFileBase.cpp",
     "common/MainLoopBase.cpp",
+    "common/MemoryMonitor.cpp",
     "common/MonitoringProcessLauncher.cpp",
     "common/NativeProcessProtocol.cpp",
     "common/NativeRegisterContext.cpp",
@@ -88,6 +89,13 @@ static_library("Host") {
     ]
   }
 
+  if (current_os == "aix") {
+    sources += [
+      "aix/Host.cpp",
+      "aix/HostInfoAIX.cpp",
+    ]
+  }
+
   if (current_os == "mac") {
     sources += [
       "macosx/cfcpp/CFCBundle.cpp",
@@ -112,10 +120,7 @@ static_library("Host") {
     ]
   }
   if (current_os == "android") {
-    sources += [
-      "android/HostInfoAndroid.cpp",
-      "android/LibcGlue.cpp",
-    ]
+    sources += [ "android/HostInfoAndroid.cpp" ]
   }
 
   if (current_os == "freebsd") {

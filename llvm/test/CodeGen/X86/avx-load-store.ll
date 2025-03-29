@@ -220,7 +220,7 @@ define void @f_f() nounwind {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB9_4
 ; CHECK-NEXT:  # %bb.3: # %cif_mixed_test_all
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967295,0,0,0]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = [4294967295,0,0,0]
 ; CHECK-NEXT:    vmaskmovps %ymm0, %ymm0, (%rax)
 ; CHECK-NEXT:  .LBB9_4: # %cif_mixed_test_any_check
 ;

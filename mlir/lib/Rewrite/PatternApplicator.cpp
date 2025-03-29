@@ -40,7 +40,11 @@ static void logImpossibleToMatch(const Pattern &pattern) {
 
 /// Log IR after pattern application.
 static Operation *getDumpRootOp(Operation *op) {
-  return op->getParentWithTrait<mlir::OpTrait::IsIsolatedFromAbove>();
+  Operation *isolatedParent =
+      op->getParentWithTrait<mlir::OpTrait::IsIsolatedFromAbove>();
+  if (isolatedParent)
+    return isolatedParent;
+  return op;
 }
 static void logSucessfulPatternApplication(Operation *op) {
   llvm::dbgs() << "// *** IR Dump After Pattern Application ***\n";
@@ -152,7 +156,6 @@ LogicalResult PatternApplicator::matchAndRewrite(
     // Find the next pattern with the highest benefit.
     const Pattern *bestPattern = nullptr;
     unsigned *bestPatternIt = &opIt;
-    const PDLByteCode::MatchResult *pdlMatch = nullptr;
 
     /// Operation specific patterns.
     if (opIt < opE)
@@ -164,6 +167,8 @@ LogicalResult PatternApplicator::matchAndRewrite(
       bestPatternIt = &anyIt;
       bestPattern = anyOpPatterns[anyIt];
     }
+
+    const PDLByteCode::MatchResult *pdlMatch = nullptr;
     /// PDL patterns.
     if (pdlIt < pdlE && (!bestPattern || bestPattern->getBenefit() <
                                              pdlMatches[pdlIt].benefit)) {
@@ -171,6 +176,7 @@ LogicalResult PatternApplicator::matchAndRewrite(
       pdlMatch = &pdlMatches[pdlIt];
       bestPattern = pdlMatch->pattern;
     }
+
     if (!bestPattern)
       break;
 

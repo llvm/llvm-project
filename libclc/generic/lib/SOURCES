@@ -48,7 +48,6 @@ cl_khr_int64_extended_atomics/atom_max.cl
 cl_khr_int64_extended_atomics/atom_min.cl
 cl_khr_int64_extended_atomics/atom_or.cl
 cl_khr_int64_extended_atomics/atom_xor.cl
-convert.cl
 common/degrees.cl
 common/mix.cl
 common/radians.cl
@@ -69,6 +68,7 @@ integer/add_sat.cl
 integer/clz.cl
 integer/hadd.cl
 integer/mad24.cl
+integer/mad_hi.cl
 integer/mad_sat.cl
 integer/mul24.cl
 integer/mul_hi.cl
@@ -94,7 +94,6 @@ math/copysign.cl
 math/cos.cl
 math/cosh.cl
 math/cospi.cl
-math/ep_log.cl
 math/erf.cl
 math/erfc.cl
 math/exp.cl
@@ -106,11 +105,9 @@ math/exp10.cl
 math/fabs.cl
 math/fdim.cl
 math/floor.cl
-math/clc_fma.cl
 math/fma.cl
 math/fmax.cl
 math/fmin.cl
-math/clc_fmod.cl
 math/fmod.cl
 math/fract.cl
 math/frexp.cl
@@ -128,10 +125,8 @@ math/half_rsqrt.cl
 math/half_sin.cl
 math/half_sqrt.cl
 math/half_tan.cl
-math/clc_hypot.cl
 math/hypot.cl
 math/ilogb.cl
-math/clc_ldexp.cl
 math/ldexp.cl
 math/lgamma.cl
 math/lgamma_r.cl
@@ -160,17 +155,11 @@ math/native_sin.cl
 math/native_sqrt.cl
 math/native_tan.cl
 math/tables.cl
-math/clc_nextafter.cl
 math/nextafter.cl
-math/clc_pow.cl
 math/pow.cl
-math/clc_pown.cl
 math/pown.cl
-math/clc_powr.cl
 math/powr.cl
-math/clc_remainder.cl
 math/remainder.cl
-math/clc_remquo.cl
 math/remquo.cl
 math/rint.cl
 math/clc_rootn.cl
@@ -182,7 +171,6 @@ math/sincos.cl
 math/sincos_helpers.cl
 math/sinh.cl
 math/sinpi.cl
-math/clc_sqrt.cl
 math/sqrt.cl
 math/clc_tan.cl
 math/tan.cl

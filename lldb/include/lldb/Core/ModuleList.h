@@ -47,6 +47,26 @@ class UUID;
 class VariableList;
 struct ModuleFunctionSearchOptions;
 
+static constexpr OptionEnumValueElement g_auto_download_enum_values[] = {
+    {
+        lldb::eSymbolDownloadOff,
+        "off",
+        "Disable automatically downloading symbols.",
+    },
+    {
+        lldb::eSymbolDownloadBackground,
+        "background",
+        "Download symbols in the background for images as they appear in the "
+        "backtrace.",
+    },
+    {
+        lldb::eSymbolDownloadForeground,
+        "foreground",
+        "Download symbols in the foreground for images as they appear in the "
+        "backtrace.",
+    },
+};
+
 class ModuleListProperties : public Properties {
   mutable llvm::sys::RWMutex m_symlink_paths_mutex;
   PathMappingList m_symlink_paths;
@@ -60,7 +80,6 @@ public:
   bool SetClangModulesCachePath(const FileSpec &path);
   bool GetEnableExternalLookup() const;
   bool SetEnableExternalLookup(bool new_value);
-  bool GetEnableBackgroundLookup() const;
   bool GetEnableLLDBIndexCache() const;
   bool SetEnableLLDBIndexCache(bool new_value);
   uint64_t GetLLDBIndexCacheMaxByteSize();
@@ -70,6 +89,8 @@ public:
   bool SetLLDBIndexCachePath(const FileSpec &path);
 
   bool GetLoadSymbolOnDemand();
+
+  lldb::SymbolDownload GetSymbolAutoDownload() const;
 
   PathMappingList GetSymlinkMappings() const;
 };
@@ -305,11 +326,11 @@ public:
   void FindGlobalVariables(const RegularExpression &regex, size_t max_matches,
                            VariableList &variable_list) const;
 
-  /// Finds the first module whose file specification matches \a file_spec.
+  /// Finds modules whose file specification matches \a module_spec.
   ///
   /// \param[in] module_spec
   ///     A file specification object to match against the Module's
-  ///     file specifications. If \a file_spec does not have
+  ///     file specifications. If \a module_spec does not have
   ///     directory information, matches will occur by matching only
   ///     the basename of any modules in this list. If this value is
   ///     NULL, then file specifications won't be compared when
@@ -330,6 +351,7 @@ public:
   // UUID values is very efficient and accurate.
   lldb::ModuleSP FindModule(const UUID &uuid) const;
 
+  /// Finds the first module whose file specification matches \a module_spec.
   lldb::ModuleSP FindFirstModule(const ModuleSpec &module_spec) const;
 
   void FindSymbolsWithNameAndType(ConstString name,
@@ -340,26 +362,22 @@ public:
                                        lldb::SymbolType symbol_type,
                                        SymbolContextList &sc_list) const;
 
-  /// Find types by name.
+  /// Find types using a type-matching object that contains all search
+  /// parameters.
   ///
   /// \param[in] search_first
   ///     If non-null, this module will be searched before any other
   ///     modules.
   ///
-  /// \param[in] name
-  ///     The name of the type we are looking for.
+  /// \param[in] query
+  ///     A type matching object that contains all of the details of the type
+  ///     search.
   ///
-  /// \param[in] max_matches
-  ///     Allow the number of matches to be limited to \a
-  ///     max_matches. Specify UINT32_MAX to get all possible matches.
-  ///
-  /// \param[out] types
-  ///     A type list gets populated with any matches.
-  ///
-  void FindTypes(Module *search_first, ConstString name,
-                 bool name_is_fully_qualified, size_t max_matches,
-                 llvm::DenseSet<SymbolFile *> &searched_symbol_files,
-                 TypeList &types) const;
+  /// \param[in] results
+  ///     Any matching types will be populated into the \a results object using
+  ///     TypeMap::InsertUnique(...).
+  void FindTypes(Module *search_first, const TypeQuery &query,
+                 lldb_private::TypeResults &results) const;
 
   bool FindSourceFile(const FileSpec &orig_spec, FileSpec &new_spec) const;
 
@@ -504,14 +522,13 @@ protected:
   Notifier *m_notifier = nullptr;
 
 public:
-  typedef LockingAdaptedIterable<collection, lldb::ModuleSP, vector_adapter,
-                                 std::recursive_mutex>
+  typedef LockingAdaptedIterable<std::recursive_mutex, collection>
       ModuleIterable;
   ModuleIterable Modules() const {
     return ModuleIterable(m_modules, GetMutex());
   }
 
-  typedef AdaptedIterable<collection, lldb::ModuleSP, vector_adapter>
+  typedef llvm::iterator_range<collection::const_iterator>
       ModuleIterableNoLocking;
   ModuleIterableNoLocking ModulesNoLocking() const {
     return ModuleIterableNoLocking(m_modules);

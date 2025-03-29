@@ -1,10 +1,10 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=SI-SAFE,GCN,FUNC %s
-; RUN: llc -enable-no-nans-fp-math -enable-no-signed-zeros-fp-math -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN-NONAN,GCN,FUNC %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=SI-SAFE,GCN,FUNC %s
+; RUN: llc -enable-no-nans-fp-math -enable-no-signed-zeros-fp-math -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN-NONAN,GCN,FUNC %s
 
-; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI-SAFE,GCN,FUNC %s
-; RUN: llc -enable-no-nans-fp-math -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN-NONAN,GCN,FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI-SAFE,GCN,FUNC %s
+; RUN: llc -enable-no-nans-fp-math -enable-no-signed-zeros-fp-math -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN-NONAN,GCN,FUNC %s
 
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -enable-var-scope --check-prefixes=EG,FUNC %s
+; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -enable-var-scope --check-prefixes=EG,FUNC %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 

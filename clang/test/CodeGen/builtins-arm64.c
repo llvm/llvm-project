@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple arm64-unknown-linux -disable-O0-optnone -emit-llvm -o - %s | opt -S -passes=mem2reg | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-LINUX
-// RUN: %clang_cc1 -triple aarch64-windows -disable-O0-optnone -S -emit-llvm -o - %s | opt -S -passes=mem2reg | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-WIN
+// RUN: %clang_cc1 -triple aarch64-windows -disable-O0-optnone -emit-llvm -o - %s | opt -S -passes=mem2reg | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-WIN
 // RUN: %clang_cc1 -triple arm64_32-apple-ios13 -disable-O0-optnone -emit-llvm -o - %s | opt -S -passes=mem2reg | FileCheck %s
 #include <stdint.h>
 
@@ -154,6 +154,12 @@ int rndr(uint64_t *__addr) {
 __attribute__((target("rand")))
 int rndrrs(uint64_t *__addr) {
   return __builtin_arm_rndrrs(__addr);
+}
+
+// CHECK-LABEL: @trap(
+// CHECK: call void @llvm.aarch64.break(i32 42)
+void trap() {
+  __builtin_arm_trap(42);
 }
 
 // CHECK: ![[M0]] = !{!"1:2:3:4:5"}

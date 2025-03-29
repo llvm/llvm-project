@@ -15,6 +15,8 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Interpreter/CodeCompletion.h"
 #include "clang/Interpreter/Interpreter.h"
+#include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/Sema.h"
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/LineEditor/LineEditor.h"
@@ -123,28 +125,22 @@ ReplListCompleter::operator()(llvm::StringRef Buffer, size_t Pos,
 
     return {};
   }
-
-  codeComplete(
-      const_cast<clang::CompilerInstance *>((*Interp)->getCompilerInstance()),
-      Buffer, Lines, Pos + 1, MainInterp.getCompilerInstance(), Results);
-
-  size_t space_pos = Buffer.rfind(" ");
-  llvm::StringRef Prefix;
-  if (space_pos == llvm::StringRef::npos) {
-    Prefix = Buffer;
-  } else {
-    Prefix = Buffer.substr(space_pos + 1);
-  }
-
+  auto *MainCI = (*Interp)->getCompilerInstance();
+  auto CC = clang::ReplCodeCompleter();
+  CC.codeComplete(MainCI, Buffer, Lines, Pos + 1,
+                  MainInterp.getCompilerInstance(), Results);
   for (auto c : Results) {
-    if (c.find(Prefix) == 0)
-      Comps.push_back(llvm::LineEditor::Completion(c.substr(Prefix.size()), c));
+    if (c.find(CC.Prefix) == 0)
+      Comps.push_back(
+          llvm::LineEditor::Completion(c.substr(CC.Prefix.size()), c));
   }
   return Comps;
 }
 
 llvm::ExitOnError ExitOnErr;
 int main(int argc, const char **argv) {
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
+
   ExitOnErr.setBanner("clang-repl: ");
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
@@ -158,6 +154,7 @@ int main(int argc, const char **argv) {
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmPrinters();
+  llvm::InitializeAllAsmParsers();
 
   if (OptHostSupportsJit) {
     auto J = llvm::orc::LLJITBuilder().create();
@@ -220,12 +217,14 @@ int main(int argc, const char **argv) {
   } else
     Interp = ExitOnErr(clang::Interpreter::create(std::move(CI)));
 
-  for (const std::string &input : OptInputs) {
-    if (auto Err = Interp->ParseAndExecute(input))
-      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
-  }
-
   bool HasError = false;
+
+  for (const std::string &input : OptInputs) {
+    if (auto Err = Interp->ParseAndExecute(input)) {
+      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
+      HasError = true;
+    }
+  }
 
   if (OptInputs.empty()) {
     llvm::LineEditor LE("clang-repl");
@@ -234,9 +233,11 @@ int main(int argc, const char **argv) {
     while (std::optional<std::string> Line = LE.readLine()) {
       llvm::StringRef L = *Line;
       L = L.trim();
-      if (L.endswith("\\")) {
-        // FIXME: Support #ifdef X \ ...
+      if (L.ends_with("\\")) {
         Input += L.drop_back(1);
+        // If it is a preprocessor directive, new lines matter.
+        if (L.starts_with('#'))
+          Input += "\n";
         LE.setPrompt("clang-repl...   ");
         continue;
       }
@@ -246,18 +247,13 @@ int main(int argc, const char **argv) {
         break;
       }
       if (Input == R"(%undo)") {
-        if (auto Err = Interp->Undo()) {
+        if (auto Err = Interp->Undo())
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
-          HasError = true;
-        }
       } else if (Input.rfind("%lib ", 0) == 0) {
-        if (auto Err = Interp->LoadDynamicLibrary(Input.data() + 5)) {
+        if (auto Err = Interp->LoadDynamicLibrary(Input.data() + 5))
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
-          HasError = true;
-        }
       } else if (auto Err = Interp->ParseAndExecute(Input)) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
-        HasError = true;
       }
 
       Input = "";

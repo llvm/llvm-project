@@ -89,5 +89,5 @@ void InitializeFlags() {
 } // namespace __memprof
 
 SANITIZER_INTERFACE_WEAK_DEF(const char *, __memprof_default_options, void) {
-  return "";
+  return __memprof_default_options_str;
 }

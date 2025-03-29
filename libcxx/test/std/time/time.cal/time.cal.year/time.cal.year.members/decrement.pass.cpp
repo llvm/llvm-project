@@ -13,41 +13,35 @@
 //  constexpr year& operator--() noexcept;
 //  constexpr year operator--(int) noexcept;
 
-
 #include <chrono>
-#include <type_traits>
 #include <cassert>
+#include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 
-template <typename Y>
-constexpr bool testConstexpr()
-{
-    Y y1{10};
-    if (static_cast<int>(--y1) != 9) return false;
-    if (static_cast<int>(y1--) != 9) return false;
-    if (static_cast<int>(y1)   != 8) return false;
-    return true;
+using year = std::chrono::year;
+
+constexpr bool test() {
+  for (int i = 11000; i <= 11020; ++i) {
+    year yr(i);
+    assert(static_cast<int>(--yr) == i - 1);
+    assert(static_cast<int>(yr--) == i - 1);
+    assert(static_cast<int>(yr) == i - 2);
+  }
+
+  return true;
 }
 
-int main(int, char**)
-{
-    using year = std::chrono::year;
-    ASSERT_NOEXCEPT(--(std::declval<year&>())  );
-    ASSERT_NOEXCEPT(  (std::declval<year&>())--);
+int main(int, char**) {
+  ASSERT_NOEXCEPT(--(std::declval<year&>()));
+  ASSERT_NOEXCEPT((std::declval<year&>())--);
 
-    ASSERT_SAME_TYPE(year , decltype(  std::declval<year&>()--));
-    ASSERT_SAME_TYPE(year&, decltype(--std::declval<year&>()  ));
+  ASSERT_SAME_TYPE(year, decltype(std::declval<year&>()--));
+  ASSERT_SAME_TYPE(year&, decltype(--std::declval<year&>()));
 
-    static_assert(testConstexpr<year>(), "");
-
-    for (int i = 11000; i <= 11020; ++i)
-    {
-        year yr(i);
-        assert(static_cast<int>(--yr) == i - 1);
-        assert(static_cast<int>(yr--) == i - 1);
-        assert(static_cast<int>(yr)   == i - 2);
-    }
+  test();
+  static_assert(test());
 
   return 0;
 }

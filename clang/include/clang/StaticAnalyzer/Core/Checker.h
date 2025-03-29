@@ -193,9 +193,8 @@ public:
 
 class Location {
   template <typename CHECKER>
-  static void _checkLocation(void *checker,
-                             const SVal &location, bool isLoad, const Stmt *S,
-                             CheckerContext &C) {
+  static void _checkLocation(void *checker, SVal location, bool isLoad,
+                             const Stmt *S, CheckerContext &C) {
     ((const CHECKER *)checker)->checkLocation(location, isLoad, S, C);
   }
 
@@ -209,8 +208,7 @@ public:
 
 class Bind {
   template <typename CHECKER>
-  static void _checkBind(void *checker,
-                         const SVal &location, const SVal &val, const Stmt *S,
+  static void _checkBind(void *checker, SVal location, SVal val, const Stmt *S,
                          CheckerContext &C) {
     ((const CHECKER *)checker)->checkBind(location, val, S, C);
   }
@@ -456,10 +454,8 @@ namespace eval {
 
 class Assume {
   template <typename CHECKER>
-  static ProgramStateRef _evalAssume(void *checker,
-                                         ProgramStateRef state,
-                                         const SVal &cond,
-                                         bool assumption) {
+  static ProgramStateRef _evalAssume(void *checker, ProgramStateRef state,
+                                     SVal cond, bool assumption) {
     return ((const CHECKER *)checker)->evalAssume(state, cond, assumption);
   }
 
@@ -489,16 +485,53 @@ public:
 } // end eval namespace
 
 class CheckerBase : public ProgramPointTag {
-  CheckerNameRef Name;
+  /// A single checker class (i.e. a subclass of `CheckerBase`) can implement
+  /// multiple user-facing checkers that have separate names and can be enabled
+  /// separately, but are backed by the same singleton checker object.
+  SmallVector<std::optional<CheckerNameRef>, 1> RegisteredNames;
+
   friend class ::clang::ento::CheckerManager;
 
 public:
-  StringRef getTagDescription() const override;
-  CheckerNameRef getCheckerName() const;
+  CheckerNameRef getName(CheckerPartIdx Idx = DefaultPart) const {
+    assert(Idx < RegisteredNames.size() && "Checker part index is too large!");
+    std::optional<CheckerNameRef> Name = RegisteredNames[Idx];
+    assert(Name && "Requested checker part is not registered!");
+    return *Name;
+  }
 
-  /// See CheckerManager::runCheckersForPrintState.
+  bool isPartEnabled(CheckerPartIdx Idx) const {
+    return Idx < RegisteredNames.size() && RegisteredNames[Idx].has_value();
+  }
+
+  void registerCheckerPart(CheckerPartIdx Idx, CheckerNameRef Name) {
+    // Paranoia: notice if e.g. UINT_MAX is passed as a checker part index.
+    assert(Idx < 256 && "Checker part identifiers should be small integers.");
+
+    if (Idx >= RegisteredNames.size())
+      RegisteredNames.resize(Idx + 1, std::nullopt);
+
+    assert(!RegisteredNames[Idx] && "Repeated registration of checker a part!");
+    RegisteredNames[Idx] = Name;
+  }
+
+  StringRef getTagDescription() const override {
+    // When the ExplodedGraph is dumped for debugging (in DOT format), this
+    // method is called to attach a description to nodes created by this
+    // checker _class_. Ideally this should be recognizable identifier of the
+    // whole class, but for this debugging purpose it's sufficient to use the
+    // name of the first registered checker part.
+    for (const auto &OptName : RegisteredNames)
+      if (OptName)
+        return *OptName;
+
+    return "Unregistered checker";
+  }
+
+  /// Debug state dump callback, see CheckerManager::runCheckersForPrintState.
+  /// Default implementation does nothing.
   virtual void printState(raw_ostream &Out, ProgramStateRef State,
-                          const char *NL, const char *Sep) const { }
+                          const char *NL, const char *Sep) const;
 };
 
 /// Dump checker name to stream.

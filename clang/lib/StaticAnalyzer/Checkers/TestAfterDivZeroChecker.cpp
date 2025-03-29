@@ -78,7 +78,7 @@ public:
 class TestAfterDivZeroChecker
     : public Checker<check::PreStmt<BinaryOperator>, check::BranchCondition,
                      check::EndFunction> {
-  mutable std::unique_ptr<BugType> DivZeroBug;
+  const BugType DivZeroBug{this, "Division by zero"};
   void reportBug(SVal Val, CheckerContext &C) const;
 
 public:
@@ -165,12 +165,10 @@ bool TestAfterDivZeroChecker::hasDivZeroMap(SVal Var,
 
 void TestAfterDivZeroChecker::reportBug(SVal Val, CheckerContext &C) const {
   if (ExplodedNode *N = C.generateErrorNode(C.getState())) {
-    if (!DivZeroBug)
-      DivZeroBug.reset(new BugType(this, "Division by zero"));
-
     auto R = std::make_unique<PathSensitiveBugReport>(
-        *DivZeroBug, "Value being compared against zero has already been used "
-                     "for division",
+        DivZeroBug,
+        "Value being compared against zero has already been used "
+        "for division",
         N);
 
     R->addVisitor(std::make_unique<DivisionBRVisitor>(Val.getAsSymbol(),

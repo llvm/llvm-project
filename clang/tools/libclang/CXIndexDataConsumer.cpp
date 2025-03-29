@@ -431,14 +431,16 @@ bool CXIndexDataConsumer::isFunctionLocalDecl(const Decl *D) {
 
   if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
     switch (ND->getFormalLinkage()) {
-    case NoLinkage:
-    case InternalLinkage:
+    case Linkage::Invalid:
+      llvm_unreachable("Linkage hasn't been computed!");
+    case Linkage::None:
+    case Linkage::Internal:
       return true;
-    case VisibleNoLinkage:
-    case UniqueExternalLinkage:
+    case Linkage::VisibleNone:
+    case Linkage::UniqueExternal:
       llvm_unreachable("Not a sema linkage");
-    case ModuleLinkage:
-    case ExternalLinkage:
+    case Linkage::Module:
+    case Linkage::External:
       return false;
     }
   }
@@ -859,7 +861,7 @@ bool CXIndexDataConsumer::handleObjCProperty(const ObjCPropertyDecl *D) {
 }
 
 bool CXIndexDataConsumer::handleNamespace(const NamespaceDecl *D) {
-  DeclInfo DInfo(/*isRedeclaration=*/!D->isOriginalNamespace(),
+  DeclInfo DInfo(/*isRedeclaration=*/!D->isFirstDecl(),
                  /*isDefinition=*/true,
                  /*isContainer=*/true);
   return handleDecl(D, D->getLocation(), getCursor(D), DInfo);
@@ -950,18 +952,12 @@ void CXIndexDataConsumer::addContainerInMap(const DeclContext *DC,
   if (!DC)
     return;
 
-  ContainerMapTy::iterator I = ContainerMap.find(DC);
-  if (I == ContainerMap.end()) {
-    if (container)
-      ContainerMap[DC] = container;
-    return;
-  }
   // Allow changing the container of a previously seen DeclContext so we
   // can handle invalid user code, like a function re-definition.
   if (container)
-    I->second = container;
+    ContainerMap[DC] = container;
   else
-    ContainerMap.erase(I);
+    ContainerMap.erase(DC);
 }
 
 CXIdxClientEntity CXIndexDataConsumer::getClientEntity(const Decl *D) const {
@@ -1072,8 +1068,8 @@ CXIndexDataConsumer::getClientContainerForDC(const DeclContext *DC) const {
   return DC ? ContainerMap.lookup(DC) : nullptr;
 }
 
-CXIdxClientFile CXIndexDataConsumer::getIndexFile(const FileEntry *File) {
-  return File ? FileMap.lookup(File) : nullptr;
+CXIdxClientFile CXIndexDataConsumer::getIndexFile(OptionalFileEntryRef File) {
+  return File ? FileMap.lookup(*File) : nullptr;
 }
 
 CXIdxLoc CXIndexDataConsumer::getIndexLoc(SourceLocation Loc) const {
@@ -1102,8 +1098,8 @@ void CXIndexDataConsumer::translateLoc(SourceLocation Loc,
 
   if (FID.isInvalid())
     return;
-  
-  OptionalFileEntryRefDegradesToFileEntryPtr FE = SM.getFileEntryRefForID(FID);
+
+  OptionalFileEntryRef FE = SM.getFileEntryRefForID(FID);
   if (indexFile)
     *indexFile = getIndexFile(FE);
   if (file)

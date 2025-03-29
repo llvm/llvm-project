@@ -1,7 +1,4 @@
 // RUN: fir-opt %s | tco | FileCheck %s
-//
-// XFAIL:*
-// See: https://github.com/llvm/llvm-project/issues/63784
 
 // CHECK-LABEL: define i32 @f1(i32 %0, i32 %1)
 func.func @f1(%a : i32, %b : i32) -> i32 {
@@ -14,7 +11,7 @@ func.func @f1(%a : i32, %b : i32) -> i32 {
   return %3 : i32
 }
 
-// CHECK-LABEL: define i32 @f2(ptr %0)
+// CHECK-LABEL: define i32 @f2(ptr captures(none) %0)
 func.func @f2(%a : !fir.ref<i32>) -> i32 {
   %1 = fir.load %a : !fir.ref<i32>
   // CHECK: %[[r2:.*]] = load

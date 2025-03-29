@@ -68,7 +68,7 @@ void ExecuteOp::getSuccessorRegions(RegionBranchPoint point,
 void ExecuteOp::build(OpBuilder &builder, OperationState &result,
                       TypeRange resultTypes, ValueRange dependencies,
                       ValueRange operands, BodyBuilderFn bodyBuilder) {
-
+  OpBuilder::InsertionGuard guard(builder);
   result.addOperands(dependencies);
   result.addOperands(operands);
 
@@ -87,26 +87,21 @@ void ExecuteOp::build(OpBuilder &builder, OperationState &result,
 
   // Add a body region with block arguments as unwrapped async value operands.
   Region *bodyRegion = result.addRegion();
-  bodyRegion->push_back(new Block);
-  Block &bodyBlock = bodyRegion->front();
+  Block *bodyBlock = builder.createBlock(bodyRegion);
   for (Value operand : operands) {
     auto valueType = llvm::dyn_cast<ValueType>(operand.getType());
-    bodyBlock.addArgument(valueType ? valueType.getValueType()
-                                    : operand.getType(),
-                          operand.getLoc());
+    bodyBlock->addArgument(valueType ? valueType.getValueType()
+                                     : operand.getType(),
+                           operand.getLoc());
   }
 
   // Create the default terminator if the builder is not provided and if the
   // expected result is empty. Otherwise, leave this to the caller
   // because we don't know which values to return from the execute op.
   if (resultTypes.empty() && !bodyBuilder) {
-    OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPointToStart(&bodyBlock);
     builder.create<async::YieldOp>(result.location, ValueRange());
   } else if (bodyBuilder) {
-    OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPointToStart(&bodyBlock);
-    bodyBuilder(builder, result.location, bodyBlock.getArguments());
+    bodyBuilder(builder, result.location, bodyBlock->getArguments());
   }
 }
 
@@ -313,7 +308,7 @@ void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
   if (argAttrs.empty())
     return;
   assert(type.getNumInputs() == argAttrs.size());
-  function_interface_impl::addArgAndResultAttrs(
+  call_interface_impl::addArgAndResultAttrs(
       builder, state, argAttrs, /*resultAttrs=*/std::nullopt,
       getArgAttrsAttrName(state.name), getResAttrsAttrName(state.name));
 }

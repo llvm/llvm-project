@@ -27,22 +27,22 @@
 # BOGUS: error: invalid verify type specified: 'bogus'
 #
 # Positive tests in regular and verbose mode.
-# RUN: dsymutil --linker llvm -verify -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 %p/../Inputs/basic-archive.macho.x86_64 %p/../Inputs/basic-lto.macho.x86_64 %p/../Inputs/basic-lto-dw4.macho.x86_64 -o %t 2>&1 | FileCheck %s --allow-empty --check-prefix=QUIET-SUCCESS
-# RUN: dsymutil --linker llvm -verify -verbose -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 %p/../Inputs/basic-archive.macho.x86_64 %p/../Inputs/basic-lto.macho.x86_64 %p/../Inputs/basic-lto-dw4.macho.x86_64 -o %t 2>&1 | FileCheck %s --check-prefixes=QUIET-SUCCESS,VERBOSE
+# RUN: dsymutil --linker parallel -verify -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 %p/../Inputs/basic-archive.macho.x86_64 %p/../Inputs/basic-lto.macho.x86_64 %p/../Inputs/basic-lto-dw4.macho.x86_64 -o %t 2>&1 | FileCheck %s --allow-empty --check-prefix=QUIET-SUCCESS
+# RUN: dsymutil --linker parallel -verify -verbose -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 %p/../Inputs/basic-archive.macho.x86_64 %p/../Inputs/basic-lto.macho.x86_64 %p/../Inputs/basic-lto-dw4.macho.x86_64 -o %t 2>&1 | FileCheck %s --check-prefixes=QUIET-SUCCESS,VERBOSE
 #
 # # Negative output tests in regular and verbose mode.
 # (Invalid object generated from ../Inputs/invalid.s by modified the low PC.)
-# RUN: not dsymutil --linker llvm -verify -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-OUTPUT-FAIL
-# RUN: not dsymutil --linker llvm -verify-dwarf=output -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-OUTPUT-FAIL
-# RUN: not dsymutil --linker llvm -verify -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=QUIET-OUTPUT-FAIL,VERBOSE
+# RUN: not dsymutil --linker parallel -verify -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-OUTPUT-FAIL
+# RUN: not dsymutil --linker parallel -verify-dwarf=output -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-OUTPUT-FAIL
+# RUN: not dsymutil --linker parallel -verify -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=QUIET-OUTPUT-FAIL,VERBOSE
 #
 # # Negative input & output tests in regular and verbose mode. Only output failures result in a non-zero exit code.
-# RUN: dsymutil --linker llvm -verify-dwarf=input -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-INPUT-FAIL
-# RUN: dsymutil --linker llvm -verify-dwarf=input -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-INPUT-FAIL
-# RUN: dsymutil --linker llvm -verify-dwarf=none -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=QUIET-SUCCESS
-# RUN: not dsymutil --linker llvm -verify-dwarf=bogus -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=BOGUS
-# RUN: not dsymutil --linker llvm -verify-dwarf=all -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=QUIET-OUTPUT-FAIL,QUIET-INPUT-FAIL
-# RUN: not dsymutil --linker llvm -verify-dwarf=all -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=VERBOSE-INPUT-FAIL
+# RUN: dsymutil --linker parallel -verify-dwarf=input -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-INPUT-FAIL
+# RUN: dsymutil --linker parallel -verify-dwarf=input -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefix=QUIET-INPUT-FAIL
+# RUN: dsymutil --linker parallel -verify-dwarf=none -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=QUIET-SUCCESS
+# RUN: not dsymutil --linker parallel -verify-dwarf=bogus -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=BOGUS
+# RUN: not dsymutil --linker parallel -verify-dwarf=all -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=QUIET-OUTPUT-FAIL,QUIET-INPUT-FAIL
+# RUN: not dsymutil --linker parallel -verify-dwarf=all -verbose -oso-prepend-path=%p/../Inputs -y %s -o %t 2>&1 | FileCheck %s --check-prefixes=VERBOSE-INPUT-FAIL
 
 
 ---

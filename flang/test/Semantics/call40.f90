@@ -9,15 +9,22 @@ subroutine val_errors(array, string, polymorphic, derived)
   character(*) :: string
   type(t) :: derived
   type(*) :: polymorphic
-  !ERROR: %VAL argument must be a scalar numerical or logical expression
+  interface
+    subroutine foo5(a)
+      integer a(:)
+    end
+  end interface
+  !ERROR: %VAL argument must be a scalar numeric or logical expression
   call foo1(%val(array))
-  !ERROR: %VAL argument must be a scalar numerical or logical expression
+  !ERROR: %VAL argument must be a scalar numeric or logical expression
   call foo2(%val(string))
-  !ERROR: %VAL argument must be a scalar numerical or logical expression
+  !ERROR: %VAL argument must be a scalar numeric or logical expression
   call foo3(%val(derived))
-  !ERROR: %VAL argument must be a scalar numerical or logical expression
-  !ERROR: Assumed type argument requires an explicit interface
+  !ERROR: Assumed type actual argument requires an explicit interface
+  !ERROR: %VAL argument must be a scalar numeric or logical expression
   call foo4(%val(polymorphic))
+  !ERROR: %VAL or %REF are not allowed for dummy argument 'a=' that must be passed by means of a descriptor
+  call foo5(%ref(array))
 end subroutine
 
 subroutine val_ok()

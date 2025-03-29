@@ -1,4 +1,3 @@
-// XFAIL: target={{.*}}-aix{{.*}}
 // RUN: c-index-test core -print-source-symbols -- %s -target x86_64-unknown-unknown 2>&1 | FileCheck %s
 
 namespace ns {

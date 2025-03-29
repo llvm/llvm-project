@@ -87,21 +87,21 @@ int main(int argc, char **argv) {
 }
 
 // CHECK-mCRASH: malloc:
-// CHECK-mCRASH: SUMMARY: HWAddressSanitizer: allocation-size-too-big
+// CHECK-mCRASH: SUMMARY: HWAddressSanitizer: allocation-size-too-big {{.*}} in main
 // CHECK-cCRASH: calloc:
-// CHECK-cCRASH: SUMMARY: HWAddressSanitizer: allocation-size-too-big
+// CHECK-cCRASH: SUMMARY: HWAddressSanitizer: allocation-size-too-big {{.*}} in main
 // CHECK-coCRASH: calloc-overflow:
-// CHECK-coCRASH: SUMMARY: HWAddressSanitizer: calloc-overflow
+// CHECK-coCRASH: SUMMARY: HWAddressSanitizer: calloc-overflow {{.*}} in main
 // CHECK-rCRASH: realloc:
-// CHECK-rCRASH: SUMMARY: HWAddressSanitizer: allocation-size-too-big
+// CHECK-rCRASH: SUMMARY: HWAddressSanitizer: allocation-size-too-big {{.*}} in main
 // CHECK-mrCRASH: realloc-after-malloc:
-// CHECK-mrCRASH: SUMMARY: HWAddressSanitizer: allocation-size-too-big
+// CHECK-mrCRASH: SUMMARY: HWAddressSanitizer: allocation-size-too-big {{.*}} in main
 // CHECK-nCRASH: new:
-// CHECK-nCRASH: SUMMARY: HWAddressSanitizer: allocation-size-too-big
+// CHECK-nCRASH: SUMMARY: HWAddressSanitizer: allocation-size-too-big {{.*}} in main
 // CHECK-nCRASH-OOM: new:
-// CHECK-nCRASH-OOM: SUMMARY: HWAddressSanitizer: out-of-memory
+// CHECK-nCRASH-OOM: SUMMARY: HWAddressSanitizer: out-of-memory {{.*}} in main
 // CHECK-nnCRASH: new-nothrow:
-// CHECK-nnCRASH: SUMMARY: HWAddressSanitizer: allocation-size-too-big
+// CHECK-nnCRASH: SUMMARY: HWAddressSanitizer: allocation-size-too-big {{.*}} in main
 
 // CHECK-mNULL: malloc:
 // CHECK-mNULL: errno: 12

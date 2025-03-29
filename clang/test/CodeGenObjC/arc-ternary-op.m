@@ -67,7 +67,7 @@ void test1(int cond) {
   // CHECK:      [[T0:%.*]] = load ptr, ptr [[ARG]]
   // CHECK-NEXT: store ptr [[T0]], ptr [[TEMP1]]
   // CHECK-NEXT: br label
-  // CHECK:      [[W:%.*]] = phi ptr [ [[T0]], {{%.*}} ], [ undef, {{%.*}} ]
+  // CHECK:      [[W:%.*]] = phi ptr [ [[T0]], {{%.*}} ], [ poison, {{%.*}} ]
   // CHECK-NEXT: call void @test1_sink(ptr noundef [[T1]])
   // CHECK-NEXT: [[T0:%.*]] = icmp eq ptr [[ARG]], null
   // CHECK-NEXT: br i1 [[T0]],
@@ -153,22 +153,20 @@ void test3(int cond) {
   // CHECK: %[[_COMPOUNDLITERAL1:.*]] = alloca [2 x ptr], align 8
   // CHECK: %[[CLEANUP_COND4:.*]] = alloca i1, align 1
 
-  // CHECK: %[[ARRAYINIT_BEGIN:.*]] = getelementptr inbounds [2 x ptr], ptr %[[_COMPOUNDLITERAL]], i64 0, i64 0
   // CHECK: %[[V2:.*]] = load ptr, ptr @g0, align 8
   // CHECK: %[[V3:.*]] = call ptr @llvm.objc.retain(ptr %[[V2]])
-  // CHECK: store ptr %[[V3]], ptr %[[ARRAYINIT_BEGIN]], align 8
-  // CHECK: %[[ARRAYINIT_ELEMENT:.*]] = getelementptr inbounds ptr, ptr %[[ARRAYINIT_BEGIN]], i64 1
+  // CHECK: store ptr %[[V3]], ptr %[[_COMPOUNDLITERAL]], align 8
+  // CHECK: %[[ARRAYINIT_ELEMENT:.*]] = getelementptr inbounds ptr, ptr %[[_COMPOUNDLITERAL]], i64 1
   // CHECK: %[[V4:.*]] = load ptr, ptr @g1, align 8
   // CHECK: %[[V5:.*]] = call ptr @llvm.objc.retain(ptr %[[V4]])
   // CHECK: store ptr %[[V5]], ptr %[[ARRAYINIT_ELEMENT]], align 8
   // CHECK: store i1 true, ptr %[[CLEANUP_COND]], align 1
   // CHECK: %[[ARRAYDECAY:.*]] = getelementptr inbounds [2 x ptr], ptr %[[_COMPOUNDLITERAL]], i64 0, i64 0
 
-  // CHECK: %[[ARRAYINIT_BEGIN2:.*]] = getelementptr inbounds [2 x ptr], ptr %[[_COMPOUNDLITERAL1]], i64 0, i64 0
   // CHECK: %[[V6:.*]] = load ptr, ptr @g1, align 8
   // CHECK: %[[V7:.*]] = call ptr @llvm.objc.retain(ptr %[[V6]])
-  // CHECK: store ptr %[[V7]], ptr %[[ARRAYINIT_BEGIN2]], align 8
-  // CHECK: %[[ARRAYINIT_ELEMENT3:.*]] = getelementptr inbounds ptr, ptr %[[ARRAYINIT_BEGIN2]], i64 1
+  // CHECK: store ptr %[[V7]], ptr %[[_COMPOUNDLITERAL1]], align 8
+  // CHECK: %[[ARRAYINIT_ELEMENT3:.*]] = getelementptr inbounds ptr, ptr %[[_COMPOUNDLITERAL1]], i64 1
   // CHECK: %[[V8:.*]] = load ptr, ptr @g0, align 8
   // CHECK: %[[V9:.*]] = call ptr @llvm.objc.retain(ptr %[[V8]])
   // CHECK: store ptr %[[V9]], ptr %[[ARRAYINIT_ELEMENT3]], align 8

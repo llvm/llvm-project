@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-ignore-func=f.*,g.* -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-ignore-func=f.*,g.* '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; Check that the flag `-polly-ignore-func` works with regexes.
 ;

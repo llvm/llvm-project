@@ -26,7 +26,6 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <system_error>
-#include <vector>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -101,6 +100,8 @@ static cl::opt<int>
                                "of delta passes (default=5)"),
                       cl::init(5), cl::cat(LLVMReduceOptions));
 
+extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
+
 static codegen::RegisterCodeGenFlags CGF;
 
 /// Turn off crash debugging features
@@ -140,6 +141,7 @@ static std::pair<StringRef, bool> determineOutputType(bool IsMIR,
 int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
   const StringRef ToolName(Argv[0]);
+  PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
 
   cl::HideUnrelatedOptions({&LLVMReduceOptions, &getColorCategory()});
   cl::ParseCommandLineOptions(Argc, Argv, "LLVM automatic testcase reducer.\n");
@@ -158,7 +160,7 @@ int main(int Argc, char **Argv) {
   if (InputLanguage != InputLanguages::None) {
     if (InputLanguage == InputLanguages::MIR)
       ReduceModeMIR = true;
-  } else if (StringRef(InputFilename).endswith(".mir")) {
+  } else if (StringRef(InputFilename).ends_with(".mir")) {
     ReduceModeMIR = true;
   }
 

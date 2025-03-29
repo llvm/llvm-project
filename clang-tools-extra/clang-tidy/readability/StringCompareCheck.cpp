@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "StringCompareCheck.h"
-#include "../utils/FixItHintUtils.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/FixIt.h"
+#include "llvm/ADT/StringRef.h"
 
 using namespace clang::ast_matchers;
+namespace optutils = clang::tidy::utils::options;
 
 namespace clang::tidy::readability {
 
@@ -20,11 +23,27 @@ static const StringRef CompareMessage = "do not use 'compare' to test equality "
                                         "of strings; use the string equality "
                                         "operator instead";
 
+static const StringRef DefaultStringLikeClasses = "::std::basic_string;"
+                                                  "::std::basic_string_view";
+
+StringCompareCheck::StringCompareCheck(StringRef Name,
+                                       ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      StringLikeClasses(optutils::parseStringList(
+          Options.get("StringLikeClasses", DefaultStringLikeClasses))) {}
+
+void StringCompareCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "StringLikeClasses",
+                optutils::serializeStringList(StringLikeClasses));
+}
+
 void StringCompareCheck::registerMatchers(MatchFinder *Finder) {
+  if (StringLikeClasses.empty()) {
+    return;
+  }
   const auto StrCompare = cxxMemberCallExpr(
-      callee(cxxMethodDecl(hasName("compare"),
-                           ofClass(classTemplateSpecializationDecl(
-                               hasName("::std::basic_string"))))),
+      callee(cxxMethodDecl(hasName("compare"), ofClass(cxxRecordDecl(hasAnyName(
+                                                   StringLikeClasses))))),
       hasArgument(0, expr().bind("str2")), argumentCountIs(1),
       callee(memberExpr().bind("str1")));
 

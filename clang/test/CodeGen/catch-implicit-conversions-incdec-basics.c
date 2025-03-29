@@ -2,25 +2,25 @@
 
 // CHECK-DAG: @[[INT:.*]] = {{.*}} c"'int'\00" }
 // CHECK-DAG: @[[UNSIGNED_SHORT:.*]] = {{.*}} c"'unsigned short'\00" }
-// CHECK-DAG: @[[LINE_100:.*]] = {{.*}}, i32 100, i32 4 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 2 }
-// CHECK-DAG: @[[LINE_200:.*]] = {{.*}}, i32 200, i32 4 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 2 }
-// CHECK-DAG: @[[LINE_300:.*]] = {{.*}}, i32 300, i32 3 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 2 }
-// CHECK-DAG: @[[LINE_400:.*]] = {{.*}}, i32 400, i32 3 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 2 }
+// CHECK-DAG: @[[LINE_100:.*]] = {{.*}}, i32 100, i32 4 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 2, i32 0 }
+// CHECK-DAG: @[[LINE_200:.*]] = {{.*}}, i32 200, i32 4 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 2, i32 0 }
+// CHECK-DAG: @[[LINE_300:.*]] = {{.*}}, i32 300, i32 3 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 2, i32 0 }
+// CHECK-DAG: @[[LINE_400:.*]] = {{.*}}, i32 400, i32 3 }, ptr @[[INT]], ptr @[[UNSIGNED_SHORT]], i8 2, i32 0 }
 // CHECK-DAG: @[[SHORT:.*]] = {{.*}} c"'short'\00" }
-// CHECK-DAG: @[[LINE_500:.*]] = {{.*}}, i32 500, i32 4 }, ptr @[[INT]], ptr @[[SHORT]], i8 2 }
-// CHECK-DAG: @[[LINE_600:.*]] = {{.*}}, i32 600, i32 4 }, ptr @[[INT]], ptr @[[SHORT]], i8 2 }
-// CHECK-DAG: @[[LINE_700:.*]] = {{.*}}, i32 700, i32 3 }, ptr @[[INT]], ptr @[[SHORT]], i8 2 }
-// CHECK-DAG: @[[LINE_800:.*]] = {{.*}}, i32 800, i32 3 }, ptr @[[INT]], ptr @[[SHORT]], i8 2 }
+// CHECK-DAG: @[[LINE_500:.*]] = {{.*}}, i32 500, i32 4 }, ptr @[[INT]], ptr @[[SHORT]], i8 2, i32 0 }
+// CHECK-DAG: @[[LINE_600:.*]] = {{.*}}, i32 600, i32 4 }, ptr @[[INT]], ptr @[[SHORT]], i8 2, i32 0 }
+// CHECK-DAG: @[[LINE_700:.*]] = {{.*}}, i32 700, i32 3 }, ptr @[[INT]], ptr @[[SHORT]], i8 2, i32 0 }
+// CHECK-DAG: @[[LINE_800:.*]] = {{.*}}, i32 800, i32 3 }, ptr @[[INT]], ptr @[[SHORT]], i8 2, i32 0 }
 // CHECK-DAG: @[[UNSIGNED_CHAR:.*]] = {{.*}} c"'unsigned char'\00" }
-// CHECK-DAG: @[[LINE_900:.*]] = {{.*}}, i32 900, i32 4 }, ptr @[[INT]], ptr @[[UNSIGNED_CHAR]], i8 2 }
-// CHECK-DAG: @[[LINE_1000:.*]] = {{.*}}, i32 1000, i32 4 }, ptr @[[INT]], ptr @[[UNSIGNED_CHAR]], i8 2 }
-// CHECK-DAG: @[[LINE_1100:.*]] = {{.*}}, i32 1100, i32 3 }, ptr @[[INT]], ptr @[[UNSIGNED_CHAR]], i8 2 }
-// CHECK-DAG: @[[LINE_1200:.*]] = {{.*}}, i32 1200, i32 3 }, ptr @[[INT]], ptr @[[UNSIGNED_CHAR]], i8 2 }
+// CHECK-DAG: @[[LINE_900:.*]] = {{.*}}, i32 900, i32 4 }, ptr @[[INT]], ptr @[[UNSIGNED_CHAR]], i8 2, i32 0 }
+// CHECK-DAG: @[[LINE_1000:.*]] = {{.*}}, i32 1000, i32 4 }, ptr @[[INT]], ptr @[[UNSIGNED_CHAR]], i8 2, i32 0 }
+// CHECK-DAG: @[[LINE_1100:.*]] = {{.*}}, i32 1100, i32 3 }, ptr @[[INT]], ptr @[[UNSIGNED_CHAR]], i8 2, i32 0 }
+// CHECK-DAG: @[[LINE_1200:.*]] = {{.*}}, i32 1200, i32 3 }, ptr @[[INT]], ptr @[[UNSIGNED_CHAR]], i8 2, i32 0 }
 // CHECK-DAG: @[[SIGNED_CHAR:.*]] = {{.*}} c"'signed char'\00" }
-// CHECK-DAG: @[[LINE_1300:.*]] = {{.*}}, i32 1300, i32 4 }, ptr @[[INT]], ptr @[[SIGNED_CHAR]], i8 2 }
-// CHECK-DAG: @[[LINE_1400:.*]] = {{.*}}, i32 1400, i32 4 }, ptr @[[INT]], ptr @[[SIGNED_CHAR]], i8 2 }
-// CHECK-DAG: @[[LINE_1500:.*]] = {{.*}}, i32 1500, i32 3 }, ptr @[[INT]], ptr @[[SIGNED_CHAR]], i8 2 }
-// CHECK-DAG: @[[LINE_1600:.*]] = {{.*}}, i32 1600, i32 3 }, ptr @[[INT]], ptr @[[SIGNED_CHAR]], i8 2 }
+// CHECK-DAG: @[[LINE_1300:.*]] = {{.*}}, i32 1300, i32 4 }, ptr @[[INT]], ptr @[[SIGNED_CHAR]], i8 2, i32 0 }
+// CHECK-DAG: @[[LINE_1400:.*]] = {{.*}}, i32 1400, i32 4 }, ptr @[[INT]], ptr @[[SIGNED_CHAR]], i8 2, i32 0 }
+// CHECK-DAG: @[[LINE_1500:.*]] = {{.*}}, i32 1500, i32 3 }, ptr @[[INT]], ptr @[[SIGNED_CHAR]], i8 2, i32 0 }
+// CHECK-DAG: @[[LINE_1600:.*]] = {{.*}}, i32 1600, i32 3 }, ptr @[[INT]], ptr @[[SIGNED_CHAR]], i8 2, i32 0 }
 
 // CHECK-LABEL: @t0(
 unsigned short t0(unsigned short x) {

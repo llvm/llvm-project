@@ -170,7 +170,7 @@ TEST_F(ResourceTrackerStandardTest, BasicDefineAndRemoveAllAfterMaterializing) {
         cantFail(R->withResourceKeyDo(
             [&](ResourceKey K) { SRM.recordResource(K); }));
         cantFail(R->notifyResolved({{Foo, FooSym}}));
-        cantFail(R->notifyEmitted());
+        cantFail(R->notifyEmitted({}));
       });
 
   auto RT = JD.createResourceTracker();
@@ -252,7 +252,7 @@ TEST_F(ResourceTrackerStandardTest, JITDylibClear) {
         cantFail(R->withResourceKeyDo(
             [&](ResourceKey K) { ++SRM.getRecordedResources()[K]; }));
         cantFail(R->notifyResolved({{Foo, FooSym}}));
-        cantFail(R->notifyEmitted());
+        cantFail(R->notifyEmitted({}));
       })));
 
   // Add materializer for Bar.
@@ -262,7 +262,7 @@ TEST_F(ResourceTrackerStandardTest, JITDylibClear) {
         cantFail(R->withResourceKeyDo(
             [&](ResourceKey K) { ++SRM.getRecordedResources()[K]; }));
         cantFail(R->notifyResolved({{Bar, BarSym}}));
-        cantFail(R->notifyEmitted());
+        cantFail(R->notifyEmitted({}));
       })));
 
   EXPECT_TRUE(SRM.getRecordedResources().empty())
@@ -305,7 +305,7 @@ TEST_F(ResourceTrackerStandardTest,
           cantFail(R->withResourceKeyDo(
               [&](ResourceKey K) { SRM.recordResource(K); }));
           cantFail(R->notifyResolved({{Name, Sym}}));
-          cantFail(R->notifyEmitted());
+          cantFail(R->notifyEmitted({}));
         });
   };
 
@@ -355,7 +355,7 @@ TEST_F(ResourceTrackerStandardTest,
           cantFail(R->withResourceKeyDo(
               [&](ResourceKey K) { SRM.recordResource(K, 1); }));
           cantFail(R->notifyResolved({{Name, Sym}}));
-          cantFail(R->notifyEmitted());
+          cantFail(R->notifyEmitted({}));
         });
   };
 
@@ -446,7 +446,7 @@ TEST_F(ResourceTrackerStandardTest,
       << "Expected Resource value for BarRT to be '2' here";
 
   cantFail(FooMR->notifyResolved({{Foo, FooSym}}));
-  cantFail(FooMR->notifyEmitted());
+  cantFail(FooMR->notifyEmitted({}));
 }
 
 } // namespace

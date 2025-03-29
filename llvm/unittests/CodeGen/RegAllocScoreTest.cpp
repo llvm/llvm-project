@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../lib/CodeGen/RegAllocScore.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -18,12 +19,12 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
@@ -166,19 +167,20 @@ TEST(RegAllocScoreTest, Counts) {
   ASSERT_EQ(MF->size(), 2U);
   const auto TotalScore =
       llvm::calculateRegAllocScore(*MF, MBBFreqMock, IsRemat);
-  ASSERT_EQ(Freq1, TotalScore.copyCounts());
-  ASSERT_EQ(2.0 * Freq1 + Freq2, TotalScore.loadCounts());
-  ASSERT_EQ(Freq1 + Freq2, TotalScore.storeCounts());
-  ASSERT_EQ(Freq2, TotalScore.loadStoreCounts());
-  ASSERT_EQ(Freq1, TotalScore.cheapRematCounts());
-  ASSERT_EQ(Freq2, TotalScore.expensiveRematCounts());
-  ASSERT_EQ(TotalScore.getScore(),
-            TotalScore.copyCounts() * CopyWeight +
-                TotalScore.loadCounts() * LoadWeight +
-                TotalScore.storeCounts() * StoreWeight +
-                TotalScore.loadStoreCounts() * (LoadWeight + StoreWeight) +
-                TotalScore.cheapRematCounts() * CheapRematWeight +
-                TotalScore.expensiveRematCounts() * ExpensiveRematWeight
+  ASSERT_DOUBLE_EQ(Freq1, TotalScore.copyCounts());
+  ASSERT_DOUBLE_EQ(2.0 * Freq1 + Freq2, TotalScore.loadCounts());
+  ASSERT_DOUBLE_EQ(Freq1 + Freq2, TotalScore.storeCounts());
+  ASSERT_DOUBLE_EQ(Freq2, TotalScore.loadStoreCounts());
+  ASSERT_DOUBLE_EQ(Freq1, TotalScore.cheapRematCounts());
+  ASSERT_DOUBLE_EQ(Freq2, TotalScore.expensiveRematCounts());
+  ASSERT_DOUBLE_EQ(
+      TotalScore.getScore(),
+      TotalScore.copyCounts() * CopyWeight +
+          TotalScore.loadCounts() * LoadWeight +
+          TotalScore.storeCounts() * StoreWeight +
+          TotalScore.loadStoreCounts() * (LoadWeight + StoreWeight) +
+          TotalScore.cheapRematCounts() * CheapRematWeight +
+          TotalScore.expensiveRematCounts() * ExpensiveRematWeight
 
   );
 }

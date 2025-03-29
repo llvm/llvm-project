@@ -131,8 +131,8 @@ Status OptionValueProperties::SetSubValue(const ExecutionContext *exe_ctx,
     // Don't set an error if the path contained .experimental. - those are
     // allowed to be missing and should silently fail.
     if (!name_contains_experimental && error.AsCString() == nullptr) {
-      error.SetErrorStringWithFormat("invalid value path '%s'",
-                                     name.str().c_str());
+      error = Status::FromErrorStringWithFormat("invalid value path '%s'",
+                                                name.str().c_str());
     }
   }
   return error;

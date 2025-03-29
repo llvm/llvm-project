@@ -22,6 +22,8 @@
 
 #if __riscv_xlen == 32
 
+#ifndef __riscv_abi_rve
+
   .globl  __riscv_restore_12
   .type   __riscv_restore_12,@function
 __riscv_restore_12:
@@ -86,7 +88,28 @@ __riscv_restore_0:
   addi    sp, sp, 16
   ret
 
+#else
+
+  .globl  __riscv_restore_2
+  .type   __riscv_restore_2,@function
+  .globl  __riscv_restore_1
+  .type   __riscv_restore_1,@function
+  .globl  __riscv_restore_0
+  .type   __riscv_restore_0,@function
+__riscv_restore_2:
+__riscv_restore_1:
+__riscv_restore_0:
+  lw      s1,  0(sp)
+  lw      s0,  4(sp)
+  lw      ra,  8(sp)
+  addi    sp, sp, 12
+  ret
+
+#endif
+
 #elif __riscv_xlen == 64
+
+#ifndef __riscv_abi_rve
 
   .globl  __riscv_restore_12
   .type   __riscv_restore_12,@function
@@ -160,6 +183,25 @@ __riscv_restore_0:
   ld      ra,  8(sp)
   addi    sp, sp, 16
   ret
+
+#else
+
+  .globl  __riscv_restore_2
+  .type   __riscv_restore_2,@function
+  .globl  __riscv_restore_1
+  .type   __riscv_restore_1,@function
+  .globl  __riscv_restore_0
+  .type   __riscv_restore_0,@function
+__riscv_restore_2:
+__riscv_restore_1:
+__riscv_restore_0:
+  ld      s1,  0(sp)
+  ld      s0,  8(sp)
+  ld      ra,  16(sp)
+  addi    sp, sp, 24
+  ret
+
+#endif
 
 #else
 # error "xlen must be 32 or 64 for save-restore implementation

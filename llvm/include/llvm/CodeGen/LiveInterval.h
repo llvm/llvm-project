@@ -424,7 +424,7 @@ namespace llvm {
     }
 
     /// getVNInfoBefore - Return the VNInfo that is live up to but not
-    /// necessarilly including Idx, or NULL. Use this to find the reaching def
+    /// necessarily including Idx, or NULL. Use this to find the reaching def
     /// used by an instruction at this SlotIndex position.
     VNInfo *getVNInfoBefore(SlotIndex Idx) const {
       const_iterator I = FindSegmentContaining(Idx.getPrevSlot());
@@ -520,8 +520,9 @@ namespace llvm {
         endIndex() < End.getBoundaryIndex();
     }
 
-    /// Remove the specified segment from this range.  Note that the segment
-    /// must be a single Segment in its entirety.
+    /// Remove the specified interval from this live range.
+    /// Does nothing if interval is not part of this live range.
+    /// Note that the interval must be within a single Segment in its entirety.
     void removeSegment(SlotIndex Start, SlotIndex End,
                        bool RemoveDeadValNo = false);
 
@@ -661,9 +662,9 @@ namespace llvm {
     ///
     /// Note that this is a no-op when asserts are disabled.
 #ifdef NDEBUG
-    void verify() const {}
+    [[nodiscard]] bool verify() const { return true; }
 #else
-    void verify() const;
+    [[nodiscard]] bool verify() const;
 #endif
 
   protected:
@@ -719,7 +720,7 @@ namespace llvm {
     void incrementWeight(float Inc) { Weight += Inc; }
     void setWeight(float Value) { Weight = Value; }
 
-    LiveInterval(unsigned Reg, float Weight) : Reg(Reg), Weight(Weight) {}
+    LiveInterval(Register Reg, float Weight) : Reg(Reg), Weight(Weight) {}
 
     ~LiveInterval() {
       clearSubRanges();
@@ -730,6 +731,12 @@ namespace llvm {
       T *P;
 
     public:
+      using difference_type = ptrdiff_t;
+      using value_type = T;
+      using pointer = T *;
+      using reference = T &;
+      using iterator_category = std::forward_iterator_tag;
+
       SingleLinkedListIterator(T *P) : P(P) {}
 
       SingleLinkedListIterator<T> &operator++() {
@@ -886,9 +893,11 @@ namespace llvm {
     ///
     /// Note that this is a no-op when asserts are disabled.
 #ifdef NDEBUG
-    void verify(const MachineRegisterInfo *MRI = nullptr) const {}
+    [[nodiscard]] bool verify(const MachineRegisterInfo *MRI = nullptr) const {
+      return true;
+    }
 #else
-    void verify(const MachineRegisterInfo *MRI = nullptr) const;
+    [[nodiscard]] bool verify(const MachineRegisterInfo *MRI = nullptr) const;
 #endif
 
   private:

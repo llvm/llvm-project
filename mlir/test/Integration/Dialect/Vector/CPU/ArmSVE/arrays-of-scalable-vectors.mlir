@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -convert-vector-to-scf -arm-sve-legalize-vector-storage -convert-vector-to-llvm="enable-arm-sve" -test-lower-to-llvm | \
-// RUN: %mcr_aarch64_cmd -e=entry -entry-point-result=void --march=aarch64 --mattr="+sve" -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// RUN: %mcr_aarch64_cmd -e=entry -entry-point-result=void --march=aarch64 --mattr="+sve" -shared-libs=%native_mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
 /// This tests basic functionality of arrays of scalable vectors, which in MLIR
@@ -24,7 +24,7 @@ func.func @read_and_print_2d_vector(%memref: memref<3x?xf32>)  {
   /// Print each of the vectors.
   /// vscale is >= 1, so at least 8 elements will be printed.
 
-  vector.print str "read_and_print_2d_vector()"
+  vector.print str "read_and_print_2d_vector()\n"
   // CHECK-LABEL: read_and_print_2d_vector()
   // CHECK: ( 8, 8, 8, 8, 8, 8, 8, 8
   vector.print %row0 : vector<[8]xf32>
@@ -62,21 +62,21 @@ func.func @add_arrays_of_scalable_vectors(%a: memref<1x2x?xf32>, %b: memref<1x2x
   // CHECK-LABEL: Vector A
   // CHECK-NEXT: ( 5, 5, 5, 5
   // CHECK-NEXT: ( 5, 5, 5, 5
-  vector.print str "\nVector A"
+  vector.print str "\nVector A\n"
   %vector_a = vector.transfer_read %a[%c0, %c0, %c0], %cst, %mask_a {in_bounds = [true, true, true]} : memref<1x2x?xf32>, vector<1x2x[4]xf32>
   func.call @print_1x2xVSCALExf32(%vector_a) : (vector<1x2x[4]xf32>) -> ()
 
   // CHECK-LABEL: Vector B
   // CHECK-NEXT: ( 4, 4, 4, 4
   // CHECK-NEXT: ( 4, 4, 4, 4
-  vector.print str "\nVector B"
+  vector.print str "\nVector B\n"
   %vector_b = vector.transfer_read %b[%c0, %c0, %c0], %cst, %mask_b {in_bounds = [true, true, true]} : memref<1x2x?xf32>, vector<1x2x[4]xf32>
   func.call @print_1x2xVSCALExf32(%vector_b) : (vector<1x2x[4]xf32>) -> ()
 
   // CHECK-LABEL: Sum
   // CHECK-NEXT: ( 9, 9, 9, 9
   // CHECK-NEXT: ( 9, 9, 9, 9
-  vector.print str "\nSum"
+  vector.print str "\nSum\n"
   %sum = arith.addf %vector_a, %vector_b : vector<1x2x[4]xf32>
   func.call @print_1x2xVSCALExf32(%sum) : (vector<1x2x[4]xf32>) -> ()
 
@@ -97,7 +97,7 @@ func.func @entry() {
 
   linalg.fill ins(%f32_8 : f32) outs(%test_1_memref :memref<3x?xf32>)
 
-  vector.print str "=> Print and read 2D arrays of scalable vectors:"
+  vector.print str "=> Print and read 2D arrays of scalable vectors:\n"
   func.call @read_and_print_2d_vector(%test_1_memref) : (memref<3x?xf32>) -> ()
 
   vector.print str "\n====================\n"
@@ -109,7 +109,7 @@ func.func @entry() {
   linalg.fill ins(%f32_5 : f32) outs(%test_2_memref_a :memref<1x2x?xf32>)
   linalg.fill ins(%f32_4 : f32) outs(%test_2_memref_b :memref<1x2x?xf32>)
 
-  vector.print str "=> Reading and adding two 3D arrays of scalable vectors:"
+  vector.print str "=> Reading and adding two 3D arrays of scalable vectors:\n"
   func.call @add_arrays_of_scalable_vectors(
     %test_2_memref_a, %test_2_memref_b) : (memref<1x2x?xf32>, memref<1x2x?xf32>) -> ()
 

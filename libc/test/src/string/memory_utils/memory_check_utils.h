@@ -11,13 +11,14 @@
 
 #include "src/__support/CPP/span.h"
 #include "src/__support/libc_assert.h" // LIBC_ASSERT
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/sanitizer.h"
 #include "src/string/memory_utils/utils.h"
 #include <stddef.h> // size_t
 #include <stdint.h> // uintxx_t
 #include <stdlib.h> // malloc/free
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // Simple structure to allocate a buffer of a particular size.
 // When ASAN is present it also poisons the whole memory.
@@ -156,7 +157,7 @@ inline uint16_t Checksum(cpp::span<char> dst) {
   uint16_t sum1 = 0;
   uint16_t sum2 = 0;
   for (char c : dst) {
-    sum1 = (sum1 + c) % 255U;
+    sum1 = (sum1 + static_cast<uint16_t>(c)) % 255U;
     sum2 = (sum2 + sum1) % 255U;
   }
   return static_cast<uint16_t>((sum2 << 8) | sum1);
@@ -184,8 +185,10 @@ template <auto FnImpl>
 inline bool CheckMemmove(cpp::span<char> buffer, size_t size, int overlap) {
   LIBC_ASSERT(buffer.size() > (2 * size + 1));
   const size_t half_size = buffer.size() / 2;
-  LIBC_ASSERT((size_t)(overlap >= 0 ? overlap : -overlap) < half_size);
-  cpp::span<char> head = buffer.first(half_size + overlap).last(size);
+  LIBC_ASSERT(static_cast<size_t>(overlap >= 0 ? overlap : -overlap) <
+              half_size);
+  cpp::span<char> head =
+      buffer.first(half_size + static_cast<size_t>(overlap)).last(size);
   cpp::span<char> tail = buffer.last(half_size).first(size);
   LIBC_ASSERT(head.size() == size);
   LIBC_ASSERT(tail.size() == size);
@@ -198,6 +201,6 @@ inline bool CheckMemmove(cpp::span<char> buffer, size_t size, int overlap) {
   return true;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LIBC_TEST_SRC_STRING_MEMORY_UTILS_MEMORY_CHECK_UTILS_H

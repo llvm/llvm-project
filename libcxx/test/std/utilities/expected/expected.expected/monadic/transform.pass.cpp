@@ -9,8 +9,8 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // GCC has a issue for `Guaranteed copy elision for potentially-overlapping non-static data members`,
-// please refer to: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108333, but we have a workaround to
-// avoid this issue.
+// please refer to: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108333
+// XFAIL: gcc-14
 
 // <expected>
 
@@ -187,13 +187,13 @@ constexpr void test_val_types() {
 constexpr void test_take_val_return_void() {
   std::expected<int, int> e(1);
   int val = 0;
-  e.transform([&val]<typename T>(T&&) -> void {
+  (void)e.transform([&val]<typename T>(T&&) -> void {
     static_assert(std::is_same_v<T, int&>);
     assert(val == 0);
     val = 1;
   });
   assert(val == 1);
-  std::move(e).transform([&val]<typename T>(T&&) -> void {
+  (void)std::move(e).transform([&val]<typename T>(T&&) -> void {
     static_assert(std::is_same_v<T, int>);
     assert(val == 1);
     val = 2;
@@ -201,13 +201,13 @@ constexpr void test_take_val_return_void() {
 
   const auto& ce = e;
   assert(val == 2);
-  ce.transform([&val]<typename T>(T&&) -> void {
+  (void)ce.transform([&val]<typename T>(T&&) -> void {
     static_assert(std::is_same_v<T, const int&>);
     assert(val == 2);
     val = 3;
   });
   assert(val == 3);
-  std::move(ce).transform([&val]<typename T>(T&&) -> void {
+  (void)std::move(ce).transform([&val]<typename T>(T&&) -> void {
     static_assert(std::is_same_v<T, const int>);
     assert(val == 3);
     val = 4;
@@ -227,8 +227,8 @@ constexpr void test_direct_non_list_init() {
 constexpr void test_sfinae() {
   std::expected<NonConst, int> e(std::unexpected<int>(2));
   auto l = [](auto&& x) { return x.non_const(); };
-  e.transform(l);
-  std::move(e).transform(l);
+  (void)e.transform(l);
+  (void)std::move(e).transform(l);
 
   std::expected<int, int> e1(std::unexpected<int>(1));
   const auto& ce1         = e1;
@@ -237,10 +237,10 @@ constexpr void test_sfinae() {
     return std::expected<int, int>();
   };
 
-  e1.transform(never_called);
-  std::move(e1).transform(never_called);
-  ce1.and_then(never_called);
-  std::move(ce1).transform(never_called);
+  (void)e1.transform(never_called);
+  (void)std::move(e1).transform(never_called);
+  (void)ce1.transform(never_called);
+  (void)std::move(ce1).transform(never_called);
 }
 
 constexpr void test_move_only_error_type() {
@@ -248,14 +248,14 @@ constexpr void test_move_only_error_type() {
   {
       std::expected<int, MoveOnlyErrorType> e;
       auto l = [](int) { return 0; };
-      std::move(e).transform(l);
+      (void)std::move(e).transform(l);
   }
 
   // Test const&&
   {
       const std::expected<int, MoveOnlyErrorType> e;
       auto l = [](const int) { return 0; };
-      std::move(e).transform(l);
+      (void)std::move(e).transform(l);
   }
 }
 

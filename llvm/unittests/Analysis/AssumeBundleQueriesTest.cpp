@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/AsmParser/Parser.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "gtest/gtest.h"
 #include <random>
@@ -22,7 +23,6 @@ using namespace llvm;
 
 namespace llvm {
 extern cl::opt<bool> ShouldPreserveAllAttributes;
-extern cl::opt<bool> EnableKnowledgeRetention;
 } // namespace llvm
 
 static void RunTest(
@@ -87,7 +87,7 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
       "8 noalias %P1, i32* align 8 noundef %P2)\n",
       [](Instruction *I) {
         auto *Assume = buildAssumeFromInst(I);
-        Assume->insertBefore(I);
+        Assume->insertBefore(I->getIterator());
         ASSERT_TRUE(hasMatchesExactlyAttributes(Assume, I->getOperand(0),
                                        "(nonnull|align|dereferenceable)"));
         ASSERT_TRUE(hasMatchesExactlyAttributes(Assume, I->getOperand(1),
@@ -109,7 +109,7 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
       "%P, i32* nonnull align 16 dereferenceable(12) %P)\n",
       [](Instruction *I) {
         auto *Assume = buildAssumeFromInst(I);
-        Assume->insertBefore(I);
+        Assume->insertBefore(I->getIterator());
         ASSERT_TRUE(hasMatchesExactlyAttributes(Assume, I->getOperand(0),
                                        "(nonnull|align|dereferenceable)"));
         ASSERT_TRUE(hasMatchesExactlyAttributes(Assume, I->getOperand(1),
@@ -129,7 +129,7 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
       "call void @func_many(i32* align 8 noundef %P1) cold\n", [](Instruction *I) {
         ShouldPreserveAllAttributes.setValue(true);
         auto *Assume = buildAssumeFromInst(I);
-        Assume->insertBefore(I);
+        Assume->insertBefore(I->getIterator());
         ASSERT_TRUE(hasMatchesExactlyAttributes(
             Assume, nullptr,
             "(align|nounwind|norecurse|noundef|willreturn|cold)"));
@@ -148,7 +148,7 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
       "%P2, i32* nonnull align 16 dereferenceable(12) %P3)\n",
       [](Instruction *I) {
         auto *Assume = buildAssumeFromInst(I);
-        Assume->insertBefore(I);
+        Assume->insertBefore(I->getIterator());
         ASSERT_TRUE(hasMatchesExactlyAttributes(
             Assume, I->getOperand(0),
             "(align|dereferenceable)"));
@@ -184,7 +184,7 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
       "%P2, i32* nonnull align 16 dereferenceable(12) %P3)\n",
       [](Instruction *I) {
         auto *Assume = buildAssumeFromInst(I);
-        Assume->insertBefore(I);
+        Assume->insertBefore(I->getIterator());
         I->getOperand(1)->dropDroppableUses();
         I->getOperand(2)->dropDroppableUses();
         I->getOperand(3)->dropDroppableUses();
@@ -207,7 +207,7 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
       "8 noalias %P1, i32* %P1)\n",
       [](Instruction *I) {
         auto *Assume = buildAssumeFromInst(I);
-        Assume->insertBefore(I);
+        Assume->insertBefore(I->getIterator());
         Value *New = I->getFunction()->getArg(3);
         Value *Old = I->getOperand(0);
         ASSERT_TRUE(hasMatchesExactlyAttributes(Assume, New, ""));
@@ -264,7 +264,7 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
       "8 noalias %P1, i32* align 8 dereferenceable(8) %P2)\n",
       [](Instruction *I) {
         auto *Assume = buildAssumeFromInst(I);
-        Assume->insertBefore(I);
+        Assume->insertBefore(I->getIterator());
 
         RetainedKnowledgeMap Map;
         fillMapFromAssume(*Assume, Map);
@@ -289,7 +289,7 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
       "%P, i32* nonnull align 16 dereferenceable(12) %P)\n",
       [](Instruction *I) {
         auto *Assume = buildAssumeFromInst(I);
-        Assume->insertBefore(I);
+        Assume->insertBefore(I->getIterator());
 
         RetainedKnowledgeMap Map;
         fillMapFromAssume(*Assume, Map);
@@ -312,7 +312,7 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
       "call void @func_many(i32* align 8 %P1) cold\n", [](Instruction *I) {
         ShouldPreserveAllAttributes.setValue(true);
         auto *Assume = buildAssumeFromInst(I);
-        Assume->insertBefore(I);
+        Assume->insertBefore(I->getIterator());
 
         RetainedKnowledgeMap Map;
         fillMapFromAssume(*Assume, Map);
@@ -337,7 +337,7 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
       "%P2, i32* nonnull align 16 dereferenceable(12) %P3)\n",
       [](Instruction *I) {
         auto *Assume = buildAssumeFromInst(I);
-        Assume->insertBefore(I);
+        Assume->insertBefore(I->getIterator());
 
         RetainedKnowledgeMap Map;
         fillMapFromAssume(*Assume, Map);
@@ -374,7 +374,7 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
       "8 noalias %P1, i32* %P2)\n",
       [](Instruction *I) {
         auto *Assume = buildAssumeFromInst(I);
-        Assume->insertBefore(I);
+        Assume->insertBefore(I->getIterator());
 
         RetainedKnowledgeMap Map;
         fillMapFromAssume(*Assume, Map);
@@ -408,7 +408,6 @@ static void RunRandTest(uint64_t Seed, int Size, int MinCount, int MaxCount,
   LLVMContext C;
   SMDiagnostic Err;
 
-  std::random_device dev;
   std::mt19937 Rng(Seed);
   std::uniform_int_distribution<int> DistCount(MinCount, MaxCount);
   std::uniform_int_distribution<unsigned> DistValue(0, MaxValue);
@@ -431,7 +430,8 @@ static void RunRandTest(uint64_t Seed, int Size, int MinCount, int MaxCount,
   BB->insertInto(F);
   Instruction *Ret = ReturnInst::Create(C);
   Ret->insertInto(BB, BB->begin());
-  Function *FnAssume = Intrinsic::getDeclaration(Mod.get(), Intrinsic::assume);
+  Function *FnAssume =
+      Intrinsic::getOrInsertDeclaration(Mod.get(), Intrinsic::assume);
 
   std::vector<Argument *> ShuffledArgs;
   BitVector HasArg;
@@ -463,12 +463,12 @@ static void RunRandTest(uint64_t Seed, int Size, int MinCount, int MaxCount,
     if (count > 1)
       Args.push_back(ConstantInt::get(Type::getInt32Ty(C), value));
 
-    OpBundle.push_back(OperandBundleDef{ss.str().c_str(), std::move(Args)});
+    OpBundle.push_back(OperandBundleDef{str.c_str(), std::move(Args)});
   }
 
   auto *Assume = cast<AssumeInst>(CallInst::Create(
       FnAssume, ArrayRef<Value *>({ConstantInt::getTrue(C)}), OpBundle));
-  Assume->insertBefore(&F->begin()->front());
+  Assume->insertBefore(F->begin()->begin());
   RetainedKnowledgeMap Map;
   fillMapFromAssume(*Assume, Map);
   for (int i = 0; i < (Size * 2); i++) {

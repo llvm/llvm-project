@@ -1,5 +1,8 @@
 # RUN: llc -o - %s -O0 -regalloc=fast -run-pass=livedebugvalues | \
 # RUN:   FileCheck %s -implicit-check-not=DBG_VALUE
+
+# RUN: llc -o - %s -O0 -regalloc=fast -passes=live-debug-values | \
+# RUN:   FileCheck %s -implicit-check-not=DBG_VALUE
 --- |
   target triple = "arm64-apple-ios12.1.0"
 
@@ -24,7 +27,7 @@
   }
 
   declare void @llvm.dbg.value(metadata, metadata, metadata) #0
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
 
   attributes #0 = { nounwind readnone speculatable }
   attributes #1 = { nounwind }

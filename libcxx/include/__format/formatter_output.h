@@ -16,6 +16,8 @@
 #include <__bit/countl.h>
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
+#include <__cstddef/size_t.h>
 #include <__format/buffer.h>
 #include <__format/concepts.h>
 #include <__format/formatter.h>
@@ -23,16 +25,19 @@
 #include <__format/unicode.h>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/concepts.h>
-#include <__iterator/iterator_traits.h> // iter_value_t
+#include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
+#include <__memory/pointer_traits.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
-#include <cstddef>
 #include <string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -65,8 +70,8 @@ struct _LIBCPP_EXPORTED_FROM_ABI __padding_size_result {
 
 _LIBCPP_HIDE_FROM_ABI constexpr __padding_size_result
 __padding_size(size_t __size, size_t __width, __format_spec::__alignment __align) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(__width > __size, "don't call this function when no padding is required");
-  _LIBCPP_ASSERT_UNCATEGORIZED(
+  _LIBCPP_ASSERT_INTERNAL(__width > __size, "don't call this function when no padding is required");
+  _LIBCPP_ASSERT_INTERNAL(
       __align != __format_spec::__alignment::__zero_padding, "the caller should have handled the zero-padding");
 
   size_t __fill = __width - __size;
@@ -96,51 +101,55 @@ __padding_size(size_t __size, size_t __width, __format_spec::__alignment __align
 ///
 /// This uses a "mass output function" of __format::__output_buffer when possible.
 template <__fmt_char_type _CharT, __fmt_char_type _OutCharT = _CharT>
-_LIBCPP_HIDE_FROM_ABI auto __copy(basic_string_view<_CharT> __str, output_iterator<const _OutCharT&> auto __out_it)
-    -> decltype(__out_it) {
-  if constexpr (_VSTD::same_as<decltype(__out_it), _VSTD::back_insert_iterator<__format::__output_buffer<_OutCharT>>>) {
+_LIBCPP_HIDE_FROM_ABI auto
+__copy(basic_string_view<_CharT> __str, output_iterator<const _OutCharT&> auto __out_it) -> decltype(__out_it) {
+  if constexpr (std::same_as<decltype(__out_it), std::back_insert_iterator<__format::__output_buffer<_OutCharT>>>) {
     __out_it.__get_container()->__copy(__str);
     return __out_it;
-  } else if constexpr (_VSTD::same_as<decltype(__out_it),
-                                      typename __format::__retarget_buffer<_OutCharT>::__iterator>) {
+  } else if constexpr (std::same_as<decltype(__out_it), typename __format::__retarget_buffer<_OutCharT>::__iterator>) {
     __out_it.__buffer_->__copy(__str);
     return __out_it;
   } else {
-    return std::ranges::copy(__str, _VSTD::move(__out_it)).out;
+    return std::ranges::copy(__str, std::move(__out_it)).out;
   }
 }
 
-template <__fmt_char_type _CharT, __fmt_char_type _OutCharT = _CharT>
+template <contiguous_iterator _Iterator,
+          __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
+          __fmt_char_type _OutCharT = _CharT>
 _LIBCPP_HIDE_FROM_ABI auto
-__copy(const _CharT* __first, const _CharT* __last, output_iterator<const _OutCharT&> auto __out_it)
-    -> decltype(__out_it) {
-  return __formatter::__copy(basic_string_view{__first, __last}, _VSTD::move(__out_it));
+__copy(_Iterator __first, _Iterator __last, output_iterator<const _OutCharT&> auto __out_it) -> decltype(__out_it) {
+  return __formatter::__copy(basic_string_view{__first, __last}, std::move(__out_it));
 }
 
-template <__fmt_char_type _CharT, __fmt_char_type _OutCharT = _CharT>
-_LIBCPP_HIDE_FROM_ABI auto __copy(const _CharT* __first, size_t __n, output_iterator<const _OutCharT&> auto __out_it)
-    -> decltype(__out_it) {
-  return __formatter::__copy(basic_string_view{__first, __n}, _VSTD::move(__out_it));
+template <contiguous_iterator _Iterator,
+          __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
+          __fmt_char_type _OutCharT = _CharT>
+_LIBCPP_HIDE_FROM_ABI auto
+__copy(_Iterator __first, size_t __n, output_iterator<const _OutCharT&> auto __out_it) -> decltype(__out_it) {
+  return __formatter::__copy(basic_string_view{std::to_address(__first), __n}, std::move(__out_it));
 }
 
 /// Transform wrapper.
 ///
 /// This uses a "mass output function" of __format::__output_buffer when possible.
-template <__fmt_char_type _CharT, __fmt_char_type _OutCharT = _CharT, class _UnaryOperation>
+template <contiguous_iterator _Iterator,
+          __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
+          __fmt_char_type _OutCharT = _CharT,
+          class _UnaryOperation>
 _LIBCPP_HIDE_FROM_ABI auto
-__transform(const _CharT* __first,
-            const _CharT* __last,
+__transform(_Iterator __first,
+            _Iterator __last,
             output_iterator<const _OutCharT&> auto __out_it,
             _UnaryOperation __operation) -> decltype(__out_it) {
-  if constexpr (_VSTD::same_as<decltype(__out_it), _VSTD::back_insert_iterator<__format::__output_buffer<_OutCharT>>>) {
-    __out_it.__get_container()->__transform(__first, __last, _VSTD::move(__operation));
+  if constexpr (std::same_as<decltype(__out_it), std::back_insert_iterator<__format::__output_buffer<_OutCharT>>>) {
+    __out_it.__get_container()->__transform(__first, __last, std::move(__operation));
     return __out_it;
-  } else if constexpr (_VSTD::same_as<decltype(__out_it),
-                                      typename __format::__retarget_buffer<_OutCharT>::__iterator>) {
-    __out_it.__buffer_->__transform(__first, __last, _VSTD::move(__operation));
+  } else if constexpr (std::same_as<decltype(__out_it), typename __format::__retarget_buffer<_OutCharT>::__iterator>) {
+    __out_it.__buffer_->__transform(__first, __last, std::move(__operation));
     return __out_it;
   } else {
-    return std::ranges::transform(__first, __last, _VSTD::move(__out_it), __operation).out;
+    return std::ranges::transform(__first, __last, std::move(__out_it), __operation).out;
   }
 }
 
@@ -149,18 +158,18 @@ __transform(const _CharT* __first,
 /// This uses a "mass output function" of __format::__output_buffer when possible.
 template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
 _LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, _CharT __value) {
-  if constexpr (_VSTD::same_as<decltype(__out_it), _VSTD::back_insert_iterator<__format::__output_buffer<_CharT>>>) {
+  if constexpr (std::same_as<decltype(__out_it), std::back_insert_iterator<__format::__output_buffer<_CharT>>>) {
     __out_it.__get_container()->__fill(__n, __value);
     return __out_it;
-  } else if constexpr (_VSTD::same_as<decltype(__out_it), typename __format::__retarget_buffer<_CharT>::__iterator>) {
+  } else if constexpr (std::same_as<decltype(__out_it), typename __format::__retarget_buffer<_CharT>::__iterator>) {
     __out_it.__buffer_->__fill(__n, __value);
     return __out_it;
   } else {
-    return std::ranges::fill_n(_VSTD::move(__out_it), __n, __value);
+    return std::ranges::fill_n(std::move(__out_it), __n, __value);
   }
 }
 
-#  ifndef _LIBCPP_HAS_NO_UNICODE
+#  if _LIBCPP_HAS_UNICODE
 template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
   requires(same_as<_CharT, char>)
 _LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
@@ -174,7 +183,7 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::
   return __out_it;
 }
 
-#    ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#    if _LIBCPP_HAS_WIDE_CHARACTERS
 template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
   requires(same_as<_CharT, wchar_t> && sizeof(wchar_t) == 2)
 _LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
@@ -192,13 +201,13 @@ template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
 _LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
   return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
 }
-#    endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
-#  else    // _LIBCPP_HAS_NO_UNICODE
+#    endif // _LIBCPP_HAS_WIDE_CHARACTERS
+#  else    // _LIBCPP_HAS_UNICODE
 template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
 _LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
   return __formatter::__fill(std::move(__out_it), __n, __value.__data[0]);
 }
-#  endif   // _LIBCPP_HAS_NO_UNICODE
+#  endif   // _LIBCPP_HAS_UNICODE
 
 /// Writes the input to the output with the required padding.
 ///
@@ -228,12 +237,12 @@ __write(basic_string_view<_CharT> __str,
         __format_spec::__parsed_specifications<_ParserCharT> __specs,
         ptrdiff_t __size) -> decltype(__out_it) {
   if (__size >= __specs.__width_)
-    return __formatter::__copy(__str, _VSTD::move(__out_it));
+    return __formatter::__copy(__str, std::move(__out_it));
 
   __padding_size_result __padding = __formatter::__padding_size(__size, __specs.__width_, __specs.__std_.__alignment_);
-  __out_it                        = __formatter::__fill(_VSTD::move(__out_it), __padding.__before_, __specs.__fill_);
-  __out_it                        = __formatter::__copy(__str, _VSTD::move(__out_it));
-  return __formatter::__fill(_VSTD::move(__out_it), __padding.__after_, __specs.__fill_);
+  __out_it                        = __formatter::__fill(std::move(__out_it), __padding.__before_, __specs.__fill_);
+  __out_it                        = __formatter::__copy(__str, std::move(__out_it));
+  return __formatter::__fill(std::move(__out_it), __padding.__after_, __specs.__fill_);
 }
 
 template <contiguous_iterator _Iterator, class _ParserCharT>
@@ -243,8 +252,8 @@ __write(_Iterator __first,
         output_iterator<const iter_value_t<_Iterator>&> auto __out_it,
         __format_spec::__parsed_specifications<_ParserCharT> __specs,
         ptrdiff_t __size) -> decltype(__out_it) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(__first <= __last, "Not a valid range");
-  return __formatter::__write(basic_string_view{__first, __last}, _VSTD::move(__out_it), __specs, __size);
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(__first <= __last, "Not a valid range");
+  return __formatter::__write(basic_string_view{__first, __last}, std::move(__out_it), __specs, __size);
 }
 
 /// \overload
@@ -256,43 +265,47 @@ __write(_Iterator __first,
         _Iterator __last,
         output_iterator<const iter_value_t<_Iterator>&> auto __out_it,
         __format_spec::__parsed_specifications<_ParserCharT> __specs) -> decltype(__out_it) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(__first <= __last, "Not a valid range");
-  return __formatter::__write(__first, __last, _VSTD::move(__out_it), __specs, __last - __first);
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(__first <= __last, "Not a valid range");
+  return __formatter::__write(__first, __last, std::move(__out_it), __specs, __last - __first);
 }
 
-template <class _CharT, class _ParserCharT, class _UnaryOperation>
-_LIBCPP_HIDE_FROM_ABI auto __write_transformed(const _CharT* __first, const _CharT* __last,
-                                               output_iterator<const _CharT&> auto __out_it,
-                                               __format_spec::__parsed_specifications<_ParserCharT> __specs,
-                                               _UnaryOperation __op) -> decltype(__out_it) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(__first <= __last, "Not a valid range");
+template <contiguous_iterator _Iterator,
+          class _CharT = typename iterator_traits<_Iterator>::value_type,
+          class _ParserCharT,
+          class _UnaryOperation>
+_LIBCPP_HIDE_FROM_ABI auto __write_transformed(
+    _Iterator __first,
+    _Iterator __last,
+    output_iterator<const _CharT&> auto __out_it,
+    __format_spec::__parsed_specifications<_ParserCharT> __specs,
+    _UnaryOperation __op) -> decltype(__out_it) {
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(__first <= __last, "Not a valid range");
 
   ptrdiff_t __size = __last - __first;
   if (__size >= __specs.__width_)
-    return __formatter::__transform(__first, __last, _VSTD::move(__out_it), __op);
+    return __formatter::__transform(__first, __last, std::move(__out_it), __op);
 
   __padding_size_result __padding = __formatter::__padding_size(__size, __specs.__width_, __specs.__alignment_);
-  __out_it                        = __formatter::__fill(_VSTD::move(__out_it), __padding.__before_, __specs.__fill_);
-  __out_it                        = __formatter::__transform(__first, __last, _VSTD::move(__out_it), __op);
-  return __formatter::__fill(_VSTD::move(__out_it), __padding.__after_, __specs.__fill_);
+  __out_it                        = __formatter::__fill(std::move(__out_it), __padding.__before_, __specs.__fill_);
+  __out_it                        = __formatter::__transform(__first, __last, std::move(__out_it), __op);
+  return __formatter::__fill(std::move(__out_it), __padding.__after_, __specs.__fill_);
 }
 
 /// Writes a string using format's width estimation algorithm.
 ///
 /// \pre !__specs.__has_precision()
 ///
-/// \note When \c _LIBCPP_HAS_NO_UNICODE is defined the function assumes the
-/// input is ASCII.
+/// \note When \c _LIBCPP_HAS_UNICODE is false the function assumes the input is ASCII.
 template <class _CharT>
 _LIBCPP_HIDE_FROM_ABI auto __write_string_no_precision(
     basic_string_view<_CharT> __str,
     output_iterator<const _CharT&> auto __out_it,
     __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(!__specs.__has_precision(), "use __write_string");
+  _LIBCPP_ASSERT_INTERNAL(!__specs.__has_precision(), "use __write_string");
 
   // No padding -> copy the string
   if (!__specs.__has_width())
-    return __formatter::__copy(__str, _VSTD::move(__out_it));
+    return __formatter::__copy(__str, std::move(__out_it));
 
   // Note when the estimated width is larger than size there's no padding. So
   // there's no reason to get the real size when the estimate is larger than or
@@ -300,7 +313,7 @@ _LIBCPP_HIDE_FROM_ABI auto __write_string_no_precision(
   size_t __size =
       __format_spec::__estimate_column_width(__str, __specs.__width_, __format_spec::__column_width_rounding::__up)
           .__width_;
-  return __formatter::__write(__str, _VSTD::move(__out_it), __specs, __size);
+  return __formatter::__write(__str, std::move(__out_it), __specs, __size);
 }
 
 template <class _CharT>
@@ -313,8 +326,10 @@ _LIBCPP_HIDE_FROM_ABI int __truncate(basic_string_view<_CharT>& __str, int __pre
 
 } // namespace __formatter
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___FORMAT_FORMATTER_OUTPUT_H

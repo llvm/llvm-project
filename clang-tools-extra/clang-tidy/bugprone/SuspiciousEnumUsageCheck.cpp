@@ -171,8 +171,7 @@ void SuspiciousEnumUsageCheck::check(const MatchFinder::MatchResult &Result) {
     // Skip when one of the parameters is an empty enum. The
     // hasDisjointValueRange function could not decide the values properly in
     // case of an empty enum.
-    if (EnumDec->enumerator_begin() == EnumDec->enumerator_end() ||
-        OtherEnumDec->enumerator_begin() == OtherEnumDec->enumerator_end())
+    if (EnumDec->enumerators().empty() || OtherEnumDec->enumerators().empty())
       return;
 
     if (!hasDisjointValueRange(EnumDec, OtherEnumDec))

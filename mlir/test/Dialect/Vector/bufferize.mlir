@@ -1,8 +1,8 @@
-// RUN: mlir-opt %s -vector-bufferize -split-input-file | FileCheck %s
+// RUN: mlir-opt %s --one-shot-bufferize="dialect-filter=vector,bufferization copy-before-write unknown-type-conversion=identity-layout-map" -split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @transfer_read(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x?xf32>, %[[o1:.*]]: index, %[[o2:.*]]: index, %[[pad:.*]]: f32)
-//       CHECK:   %[[m:.*]] = bufferization.to_memref %[[t]] : memref<?x?xf32>
+//       CHECK:   %[[m:.*]] = bufferization.to_memref %[[t]] : tensor<?x?xf32> to memref<?x?xf32>
 //       CHECK:   %[[r:.*]] = vector.transfer_read %[[m]][%[[o1]], %[[o2]]], %[[pad]] {in_bounds = [true, false]} : memref<?x?xf32>, vector<5x6xf32>
 //       CHECK:   return %[[r]]
 func.func @transfer_read(%t: tensor<?x?xf32>, %o1: index,
@@ -16,7 +16,7 @@ func.func @transfer_read(%t: tensor<?x?xf32>, %o1: index,
 
 // CHECK-LABEL: func @transfer_write(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x?xf32>, %[[o1:.*]]: index, %[[o2:.*]]: index, %[[vec:.*]]: vector<5x6xf32>, %[[mask:.*]]: vector<5x6xi1>)
-//       CHECK:   %[[m:.*]] = bufferization.to_memref %[[t]] : memref<?x?xf32>
+//       CHECK:   %[[m:.*]] = bufferization.to_memref %[[t]] : tensor<?x?xf32> to memref<?x?xf32>
 //       CHECK:   %[[alloc:.*]] = memref.alloc(%{{.*}}, %{{.*}}) {{.*}} : memref<?x?xf32>
 //       CHECK:   memref.copy %[[m]], %[[alloc]]
 //       CHECK:   vector.transfer_write %[[vec]], %[[alloc]][%[[o1]], %[[o2]]], %[[mask]] {in_bounds = [true, false]} : vector<5x6xf32>, memref<?x?xf32>
@@ -35,7 +35,7 @@ func.func @transfer_write(%t: tensor<?x?xf32>, %o1: index,
 // CHECK-LABEL: func @gather(
 //  CHECK-SAME:     %[[base:.*]]: tensor<?x?xf32>, %[[v:.*]]: vector<16xi32>,
 //  CHECK-SAME:     %[[mask:.*]]: vector<16xi1>, %[[pass_thru:.*]]: vector<16xf32>)
-//       CHECK:   %[[m:.*]] = bufferization.to_memref %[[base]] : memref<?x?xf32>
+//       CHECK:   %[[m:.*]] = bufferization.to_memref %[[base]] : tensor<?x?xf32> to memref<?x?xf32>
 //       CHECK:   %[[c0:.*]] = arith.constant 0 : index
 //       CHECK:   %[[out:.*]] = vector.gather %[[m]][%[[c0]], %[[c0]]] [%[[v]]], %[[mask]], %[[pass_thru]] : memref<?x?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
 func.func @gather(%base: tensor<?x?xf32>, %v: vector<16xi32>, %mask: vector<16xi1>, %pass_thru: vector<16xf32>) -> vector<16xf32> {

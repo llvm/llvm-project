@@ -23,7 +23,6 @@ static_library("cert") {
     "LimitedRandomnessCheck.cpp",
     "MutatingCopyCheck.cpp",
     "NonTrivialTypesLibcMemoryCallsCheck.cpp",
-    "PostfixOperatorCheck.cpp",
     "ProperlySeededRandomGeneratorCheck.cpp",
     "SetLongJmpCheck.cpp",
     "StaticObjectExceptionCheck.cpp",

@@ -1,0 +1,15 @@
+; REQUIRES: x86
+
+;; Test linking an LTO object file that contains directives. The
+;; LTO object file is built with an older toolchain, to force it
+;; to be upgraded when loaded.
+
+;; The input file is compiled from source that looks like this:
+;;   void __declspec(dllexport) entry(void) { }
+;; with this command:
+;;   clang -target x86_64-windows-msvc -c main.c -flto
+
+; RUN: lld-link /entry:entry /subsystem:console %p/Inputs/lto-directives.obj /dll /out:%t.dll
+; RUN: llvm-readobj --coff-exports %t.dll | FileCheck %s
+
+; CHECK: Name: entry

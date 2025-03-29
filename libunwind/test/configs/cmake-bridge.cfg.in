@@ -20,7 +20,7 @@ config.name = os.path.basename('@LIBUNWIND_TEST_CONFIG@')
 config.test_source_root = os.path.join('@LIBUNWIND_SOURCE_DIR@', 'test')
 config.test_format = libcxx.test.format.CxxStandardLibraryTest()
 config.recursiveExpansionLimit = 10
-config.test_exec_root = os.path.join('@CMAKE_BINARY_DIR@', 'test')
+config.test_exec_root = os.path.join('@LIBUNWIND_BINARY_DIR@', 'test')
 
 # Add a few features that are common to all the configurations
 if @LIBUNWIND_USES_ARM_EHABI@:
@@ -29,7 +29,7 @@ if not @LIBUNWIND_ENABLE_THREADS@:
     config.available_features.add('libunwind-no-threads')
 
 # Add substitutions for bootstrapping the test suite configuration
-import shlex
-config.substitutions.append(('%{cxx}', shlex.quote('@CMAKE_CXX_COMPILER@')))
-config.substitutions.append(('%{include}', '@LIBUNWIND_SOURCE_DIR@/include'))
-config.substitutions.append(('%{lib}', '@LIBUNWIND_LIBRARY_DIR@'))
+config.substitutions.append(('%{install-prefix}', '@LIBUNWIND_TESTING_INSTALL_PREFIX@'))
+config.substitutions.append(('%{include}', '@LIBUNWIND_TESTING_INSTALL_PREFIX@/include'))
+config.substitutions.append(('%{lib}', '@LIBUNWIND_TESTING_INSTALL_PREFIX@/@LIBUNWIND_INSTALL_LIBRARY_DIR@'))
+config.substitutions.append(('%{benchmark_flags}', ''))

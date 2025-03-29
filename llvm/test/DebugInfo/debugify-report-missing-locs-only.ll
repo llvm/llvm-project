@@ -1,4 +1,5 @@
 ; RUN: opt -passes=check-debugify < %s -S -o - 2>&1 | FileCheck %s -implicit-check-not "WARNING: Instruction with empty DebugLoc in function bar"
+; RUN: opt --experimental-debuginfo-iterators=false -passes=check-debugify < %s -S -o - 2>&1 | FileCheck %s -implicit-check-not "WARNING: Instruction with empty DebugLoc in function bar"
 
 ; CHECK: WARNING: Instruction with empty DebugLoc in function foo --   ret void
 define void @foo() !dbg !6 {

@@ -32,7 +32,6 @@ class MachineRegisterInfo;
 class MCCFIInstruction;
 class MDNode;
 class ModuleSlotTracker;
-class TargetIntrinsicInfo;
 class TargetRegisterInfo;
 class hash_code;
 class raw_ostream;
@@ -283,8 +282,7 @@ public:
   /// Providing a valid \p TRI and \p IntrinsicInfo results in a more
   /// target-specific printing. If \p TRI and \p IntrinsicInfo are null, the
   /// function will try to pick it up from the parent.
-  void print(raw_ostream &os, const TargetRegisterInfo *TRI = nullptr,
-             const TargetIntrinsicInfo *IntrinsicInfo = nullptr) const;
+  void print(raw_ostream &os, const TargetRegisterInfo *TRI = nullptr) const;
 
   /// More complex way of printing a MachineOperand.
   /// \param TypeToPrint specifies the generic type to be printed on uses and
@@ -310,14 +308,12 @@ public:
   void print(raw_ostream &os, ModuleSlotTracker &MST, LLT TypeToPrint,
              std::optional<unsigned> OpIdx, bool PrintDef, bool IsStandalone,
              bool ShouldPrintRegisterTies, unsigned TiedOperandIdx,
-             const TargetRegisterInfo *TRI,
-             const TargetIntrinsicInfo *IntrinsicInfo) const;
+             const TargetRegisterInfo *TRI) const;
 
   /// Same as print(os, TRI, IntrinsicInfo), but allows to specify the low-level
   /// type to be printed the same way the full version of print(...) does it.
   void print(raw_ostream &os, LLT TypeToPrint,
-             const TargetRegisterInfo *TRI = nullptr,
-             const TargetIntrinsicInfo *IntrinsicInfo = nullptr) const;
+             const TargetRegisterInfo *TRI = nullptr) const;
 
   void dump() const;
 
@@ -645,8 +641,9 @@ public:
   /// mask pointers.
   static bool clobbersPhysReg(const uint32_t *RegMask, MCRegister PhysReg) {
     // See TargetRegisterInfo.h.
-    assert(PhysReg < (1u << 30) && "Not a physical register");
-    return !(RegMask[PhysReg / 32] & (1u << PhysReg % 32));
+    assert((!PhysReg.isValid() || PhysReg.isPhysical()) &&
+           "Not a physical register");
+    return !(RegMask[PhysReg.id() / 32] & (1u << PhysReg.id() % 32));
   }
 
   /// clobbersPhysReg - Returns true if this RegMask operand clobbers PhysReg.
@@ -782,6 +779,10 @@ public:
   void ChangeToGA(const GlobalValue *GV, int64_t Offset,
                   unsigned TargetFlags = 0);
 
+  /// ChangeToBA - Replace this operand with a new block address operand.
+  void ChangeToBA(const BlockAddress *BA, int64_t Offset,
+                  unsigned TargetFlags = 0);
+
   /// ChangeToMCSymbol - Replace this operand with a new MC symbol operand.
   void ChangeToMCSymbol(MCSymbol *Sym, unsigned TargetFlags = 0);
 
@@ -849,7 +850,7 @@ public:
     Op.IsEarlyClobber = isEarlyClobber;
     Op.TiedTo = 0;
     Op.IsDebug = isDebug;
-    Op.SmallContents.RegNo = Reg;
+    Op.SmallContents.RegNo = Reg.id();
     Op.Contents.Reg.Prev = nullptr;
     Op.Contents.Reg.Next = nullptr;
     Op.setSubReg(SubReg);

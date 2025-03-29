@@ -385,6 +385,20 @@ Users need to implement a single function to capture the CF table at startup:
     // the collected control flow.
   }
 
+Gated Trace Callbacks
+=====================
+
+Gate the invocation of the tracing callbacks with
+``-sanitizer-coverage-gated-trace-callbacks``.
+
+When this option is enabled, the instrumentation will not call into the
+runtime-provided callbacks for tracing, thus only incurring in a trivial
+branch without going through a function call.
+
+It is up to the runtime to toggle the value of the global variable in order to
+enable tracing.
+
+This option is only supported for trace-pc-guard and trace-cmp.
 
 Disabling instrumentation with ``__attribute__((no_sanitize("coverage")))``
 ===========================================================================
@@ -496,7 +510,7 @@ offsets in the corresponding binary/DSO that were executed during the run.
 Sancov Tool
 -----------
 
-An simple ``sancov`` tool is provided to process coverage files.
+A simple ``sancov`` tool is provided to process coverage files.
 The tool is part of LLVM project and is currently supported only on Linux.
 It can handle symbolization tasks autonomously without any extra support
 from the environment. You need to pass .sancov files (named

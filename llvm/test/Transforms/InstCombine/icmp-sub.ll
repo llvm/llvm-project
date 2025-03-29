@@ -36,7 +36,7 @@ define i1 @test_nuw_nsw_and_unsigned_pred(i64 %x) {
 
 define i1 @test_nuw_nsw_and_signed_pred(i64 %x) {
 ; CHECK-LABEL: @test_nuw_nsw_and_signed_pred(
-; CHECK-NEXT:    [[Z:%.*]] = icmp sgt i64 [[X:%.*]], 7
+; CHECK-NEXT:    [[Z:%.*]] = icmp ugt i64 [[X:%.*]], 7
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %y = sub nuw nsw i64 10, %x
@@ -46,8 +46,7 @@ define i1 @test_nuw_nsw_and_signed_pred(i64 %x) {
 
 define i1 @test_negative_nuw_and_signed_pred(i64 %x) {
 ; CHECK-LABEL: @test_negative_nuw_and_signed_pred(
-; CHECK-NEXT:    [[NOTSUB:%.*]] = add nuw i64 [[X:%.*]], -11
-; CHECK-NEXT:    [[Z:%.*]] = icmp sgt i64 [[NOTSUB]], -4
+; CHECK-NEXT:    [[Z:%.*]] = icmp ugt i64 [[X:%.*]], 7
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %y = sub nuw i64 10, %x
@@ -165,7 +164,7 @@ define <2 x i1> @icmp_eq_sub_non_splat(<2 x i32> %a) {
 
 define <2 x i1> @icmp_eq_sub_undef2(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_eq_sub_undef2(
-; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i32> <i32 15, i32 15>, [[A:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i32> splat (i32 15), [[A:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[SUB]], <i32 10, i32 undef>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
@@ -176,7 +175,7 @@ define <2 x i1> @icmp_eq_sub_undef2(<2 x i32> %a) {
 
 define <2 x i1> @icmp_eq_sub_non_splat2(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_eq_sub_non_splat2(
-; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i32> <i32 15, i32 15>, [[A:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i32> splat (i32 15), [[A:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[SUB]], <i32 10, i32 11>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
@@ -313,8 +312,8 @@ define i1 @neg_slt_42(i128 %x) {
 
 define <2 x i1> @neg_ugt_42_splat(<2 x i7> %x) {
 ; CHECK-LABEL: @neg_ugt_42_splat(
-; CHECK-NEXT:    [[NOTSUB:%.*]] = add <2 x i7> [[X:%.*]], <i7 -1, i7 -1>
-; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i7> [[NOTSUB]], <i7 -43, i7 -43>
+; CHECK-NEXT:    [[NOTSUB:%.*]] = add <2 x i7> [[X:%.*]], splat (i7 -1)
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i7> [[NOTSUB]], splat (i7 -43)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %negx = sub <2 x i7> zeroinitializer, %x
@@ -607,7 +606,7 @@ entry:
 define <2 x i1> @PR60818_ne_vector(<2 x i32> %a) {
 ; CHECK-LABEL: @PR60818_ne_vector(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i32> [[A:%.*]], <i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i32> [[A:%.*]], splat (i32 2147483647)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[TMP0]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
@@ -623,7 +622,7 @@ define i1 @PR60818_eq_multi_use(i32 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A:%.*]]
 ; CHECK-NEXT:    call void @use(i32 [[SUB]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SUB]], [[A]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], [[SUB]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
@@ -638,7 +637,7 @@ define i1 @PR60818_sgt(i32 %a) {
 ; CHECK-LABEL: @PR60818_sgt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[SUB]], [[A]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], [[SUB]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:

@@ -1,4 +1,4 @@
-# RUN: llc %s -start-after=shrink-wrap -march=mips64 -mcpu=mips64r6 -mattr=+fp64,+msa -o /dev/null
+# RUN: llc %s -start-after=shrink-wrap -mtriple=mips64 -mcpu=mips64r6 -mattr=+fp64,+msa -o /dev/null
 
 # Test that estimated size of the stack leads to the creation of an emergency
 # spill when MSA is in use. Previously, this test case would fail during
@@ -12,59 +12,59 @@
     %a.addr = alloca <16 x i8>, align 16
     %b.addr = alloca <16 x i8>, align 16
     %c.addr = alloca i32, align 4
-    %g = alloca <16 x i8>*, align 8
-    %d = alloca i8*, align 8
-    %0 = bitcast <16 x i8>* %a to { i64, i64 }*
-    %1 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %0, i32 0, i32 0
-    store i64 %a.coerce0, i64* %1, align 16
-    %2 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %0, i32 0, i32 1
-    store i64 %a.coerce1, i64* %2, align 8
-    %a1 = load <16 x i8>, <16 x i8>* %a, align 16
-    %3 = bitcast <16 x i8>* %b to { i64, i64 }*
-    %4 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %3, i32 0, i32 0
-    store i64 %b.coerce0, i64* %4, align 16
-    %5 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %3, i32 0, i32 1
-    store i64 %b.coerce1, i64* %5, align 8
-    %b2 = load <16 x i8>, <16 x i8>* %b, align 16
-    store <16 x i8> %a1, <16 x i8>* %a.addr, align 16
-    store <16 x i8> %b2, <16 x i8>* %b.addr, align 16
-    store i32 %c, i32* %c.addr, align 4
+    %g = alloca ptr, align 8
+    %d = alloca ptr, align 8
+    %0 = bitcast ptr %a to ptr
+    %1 = getelementptr inbounds { i64, i64 }, ptr %0, i32 0, i32 0
+    store i64 %a.coerce0, ptr %1, align 16
+    %2 = getelementptr inbounds { i64, i64 }, ptr %0, i32 0, i32 1
+    store i64 %a.coerce1, ptr %2, align 8
+    %a1 = load <16 x i8>, ptr %a, align 16
+    %3 = bitcast ptr %b to ptr
+    %4 = getelementptr inbounds { i64, i64 }, ptr %3, i32 0, i32 0
+    store i64 %b.coerce0, ptr %4, align 16
+    %5 = getelementptr inbounds { i64, i64 }, ptr %3, i32 0, i32 1
+    store i64 %b.coerce1, ptr %5, align 8
+    %b2 = load <16 x i8>, ptr %b, align 16
+    store <16 x i8> %a1, ptr %a.addr, align 16
+    store <16 x i8> %b2, ptr %b.addr, align 16
+    store i32 %c, ptr %c.addr, align 4
     %6 = alloca i8, i64 6400, align 16
-    %7 = bitcast i8* %6 to <16 x i8>*
-    store <16 x i8>* %7, <16 x i8>** %g, align 8
-    %8 = load <16 x i8>*, <16 x i8>** %g, align 8
-    call void @h(<16 x i8>* %b.addr, <16 x i8>* %8)
-    %9 = load <16 x i8>*, <16 x i8>** %g, align 8
-    %10 = bitcast <16 x i8>* %9 to i8*
-    store i8* %10, i8** %d, align 8
-    %11 = load <16 x i8>, <16 x i8>* %a.addr, align 16
-    %12 = load i8*, i8** %d, align 8
-    %arrayidx = getelementptr inbounds i8, i8* %12, i64 0
-    %13 = load i8, i8* %arrayidx, align 1
+    %7 = bitcast ptr %6 to ptr
+    store ptr %7, ptr %g, align 8
+    %8 = load ptr, ptr %g, align 8
+    call void @h(ptr %b.addr, ptr %8)
+    %9 = load ptr, ptr %g, align 8
+    %10 = bitcast ptr %9 to ptr
+    store ptr %10, ptr %d, align 8
+    %11 = load <16 x i8>, ptr %a.addr, align 16
+    %12 = load ptr, ptr %d, align 8
+    %arrayidx = getelementptr inbounds i8, ptr %12, i64 0
+    %13 = load i8, ptr %arrayidx, align 1
     %conv = sext i8 %13 to i32
     %14 = call <16 x i8> @llvm.mips.fill.b(i32 %conv)
     %add = add <16 x i8> %11, %14
-    %15 = load i8*, i8** %d, align 8
-    %arrayidx3 = getelementptr inbounds i8, i8* %15, i64 1
-    %16 = load i8, i8* %arrayidx3, align 1
+    %15 = load ptr, ptr %d, align 8
+    %arrayidx3 = getelementptr inbounds i8, ptr %15, i64 1
+    %16 = load i8, ptr %arrayidx3, align 1
     %conv4 = sext i8 %16 to i32
     %17 = call <16 x i8> @llvm.mips.fill.b(i32 %conv4)
     %add5 = add <16 x i8> %add, %17
-    %18 = load <16 x i8>, <16 x i8>* %b.addr, align 16
+    %18 = load <16 x i8>, ptr %b.addr, align 16
     %add6 = add <16 x i8> %18, %add5
-    store <16 x i8> %add6, <16 x i8>* %b.addr, align 16
-    %19 = load <16 x i8>, <16 x i8>* %b.addr, align 16
-    store <16 x i8> %19, <16 x i8>* %retval, align 16
-    %20 = bitcast <16 x i8>* %retval to { i64, i64 }*
-    %21 = load { i64, i64 }, { i64, i64 }* %20, align 16
+    store <16 x i8> %add6, ptr %b.addr, align 16
+    %19 = load <16 x i8>, ptr %b.addr, align 16
+    store <16 x i8> %19, ptr %retval, align 16
+    %20 = bitcast ptr %retval to ptr
+    %21 = load { i64, i64 }, ptr %20, align 16
     ret { i64, i64 } %21
   }
 
-  declare void @h(<16 x i8>*, <16 x i8>*)
+  declare void @h(ptr, ptr)
 
   declare <16 x i8> @llvm.mips.fill.b(i32)
 
-  declare void @llvm.stackprotector(i8*, i8**)
+  declare void @llvm.stackprotector(ptr, ptr)
 
 ...
 ---
@@ -90,7 +90,7 @@ frameInfo:
   stackSize:       0
   offsetAdjustment: 0
   maxAlignment:    16
-  adjustsStack:    false
+  adjustsStack:    true
   hasCalls:        true
   stackProtector:  ''
   maxCallFrameSize: 4294967295

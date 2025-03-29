@@ -106,6 +106,15 @@ public:
   /// address.
   llvm::Expected<FunctionInfo> getFunctionInfo(uint64_t Addr) const;
 
+  /// Get the full function info given an address index.
+  ///
+  /// \param AddrIdx A address index for an address in the address table.
+  ///
+  /// \returns An expected FunctionInfo that contains the function info object
+  /// or an error object that indicates reason for failing get the function
+  /// info object.
+  llvm::Expected<FunctionInfo> getFunctionInfoAtIndex(uint64_t AddrIdx) const;
+
   /// Lookup an address in the a GSYM.
   ///
   /// Lookup just the information needed for a specific address \a Addr. This
@@ -118,10 +127,29 @@ public:
   /// is much faster for lookups.
   ///
   /// \param Addr A virtual address from the orignal object file to lookup.
+  ///
+  /// \param MergedFuncsData A pointer to an optional DataExtractor that, if
+  /// non-null, will be set to the raw data of the MergedFunctionInfo, if
+  /// present.
+  ///
   /// \returns An expected LookupResult that contains only the information
   /// needed for the current address, or an error object that indicates reason
   /// for failing to lookup the address.
-  llvm::Expected<LookupResult> lookup(uint64_t Addr) const;
+  llvm::Expected<LookupResult>
+  lookup(uint64_t Addr,
+         std::optional<DataExtractor> *MergedFuncsData = nullptr) const;
+
+  /// Lookup all merged functions for a given address.
+  ///
+  /// This function performs a lookup for the specified address and then
+  /// retrieves additional LookupResults from any merged functions associated
+  /// with the primary LookupResult.
+  ///
+  /// \param Addr The address to lookup.
+  ///
+  /// \returns A vector of LookupResult objects, where the first element is the
+  /// primary result, followed by results for any merged functions
+  llvm::Expected<std::vector<LookupResult>> lookupAll(uint64_t Addr) const;
 
   /// Get a string from the string table.
   ///
@@ -157,7 +185,44 @@ public:
   /// \param  OS The output stream to dump to.
   ///
   /// \param FI The object to dump.
-  void dump(raw_ostream &OS, const FunctionInfo &FI);
+  ///
+  /// \param Indent The indentation as number of spaces. Used when dumping as an
+  /// item within MergedFunctionsInfo.
+  void dump(raw_ostream &OS, const FunctionInfo &FI, uint32_t Indent = 0);
+
+  /// Dump a MergedFunctionsInfo object.
+  ///
+  /// This function will dump a MergedFunctionsInfo object - basically by
+  /// dumping the contained FunctionInfo objects with indentation.
+  ///
+  /// \param  OS The output stream to dump to.
+  ///
+  /// \param MFI The object to dump.
+  void dump(raw_ostream &OS, const MergedFunctionsInfo &MFI);
+
+  /// Dump a CallSiteInfo object.
+  ///
+  /// This function will output the details of a CallSiteInfo object in a
+  /// human-readable format.
+  ///
+  /// \param OS The output stream to dump to.
+  ///
+  /// \param CSI The CallSiteInfo object to dump.
+  void dump(raw_ostream &OS, const CallSiteInfo &CSI);
+
+  /// Dump a CallSiteInfoCollection object.
+  ///
+  /// This function will iterate over a collection of CallSiteInfo objects and
+  /// dump each one.
+  ///
+  /// \param OS The output stream to dump to.
+  ///
+  /// \param CSIC The CallSiteInfoCollection object to dump.
+  ///
+  /// \param Indent The indentation as number of spaces. Used when dumping as an
+  /// item from within MergedFunctionsInfo.
+  void dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC,
+            uint32_t Indent = 0);
 
   /// Dump a LineTable object.
   ///
@@ -168,7 +233,10 @@ public:
   /// \param  OS The output stream to dump to.
   ///
   /// \param LT The object to dump.
-  void dump(raw_ostream &OS, const LineTable &LT);
+  ///
+  /// \param Indent The indentation as number of spaces. Used when dumping as an
+  /// item from within MergedFunctionsInfo.
+  void dump(raw_ostream &OS, const LineTable &LT, uint32_t Indent = 0);
 
   /// Dump a InlineInfo object.
   ///
@@ -266,6 +334,19 @@ protected:
       return std::nullopt;
     if (Iter == End || AddrOffset < *Iter)
       --Iter;
+
+    // GSYM files have sorted function infos with the most information (line
+    // table and/or inline info) first in the array of function infos, so
+    // always backup as much as possible as long as the address offset is the
+    // same as the previous entry.
+    while (Iter != Begin) {
+      auto Prev = Iter - 1;
+      if (*Prev == *Iter)
+        Iter = Prev;
+      else
+        break;
+    }
+
     return std::distance(Begin, Iter);
   }
 
@@ -303,6 +384,38 @@ protected:
   /// \returns An optional GSYM data offset for the offset of the FunctionInfo
   /// that needs to be decoded.
   std::optional<uint64_t> getAddressInfoOffset(size_t Index) const;
+
+  /// Given an address, find the correct function info data and function
+  /// address.
+  ///
+  /// Binary search the address table and find the matching address info
+  /// and make sure that the function info contains the address. GSYM allows
+  /// functions to overlap, and the most debug info is contained in the first
+  /// entries due to the sorting when GSYM files are created. We can have
+  /// multiple function info that start at the same address only if their
+  /// address range doesn't match. So find the first entry that matches \a Addr
+  /// and iterate forward until we find one that contains the address.
+  ///
+  /// \param[in] Addr A virtual address that matches the original object file
+  /// to lookup.
+  ///
+  /// \param[out] FuncStartAddr A virtual address that is the base address of
+  /// the function that is used for decoding the FunctionInfo.
+  ///
+  /// \returns An valid data extractor on success, or an error if we fail to
+  /// find the address in a function info or corrrectly decode the data
+  llvm::Expected<llvm::DataExtractor>
+  getFunctionInfoDataForAddress(uint64_t Addr, uint64_t &FuncStartAddr) const;
+
+  /// Get the function data and address given an address index.
+  ///
+  /// \param AddrIdx A address index from the address table.
+  ///
+  /// \returns An expected FunctionInfo that contains the function info object
+  /// or an error object that indicates reason for failing to lookup the
+  /// address.
+  llvm::Expected<llvm::DataExtractor>
+  getFunctionInfoDataAtIndex(uint64_t AddrIdx, uint64_t &FuncStartAddr) const;
 };
 
 } // namespace gsym

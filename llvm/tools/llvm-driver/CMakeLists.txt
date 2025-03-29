@@ -13,6 +13,11 @@ foreach(tool ${LLVM_DRIVER_TOOLS})
     string(REPLACE "llvm-" "" alias ${alias})
     set(def_decl "${def_decl}LLVM_DRIVER_TOOL(\"${alias}\", ${tool_entry})\n")
   endforeach()
+  get_property(hidden_tool_aliases GLOBAL PROPERTY LLVM_DRIVER_HIDDEN_TOOL_ALIASES_${tool})
+  foreach(alias ${hidden_tool_aliases})
+    string(REPLACE "llvm-" "" alias ${alias})
+    set(def_decl "${def_decl}LLVM_DRIVER_TOOL(\"${alias}\", ${tool_entry})\n")
+  endforeach()
 endforeach()
 
 file(WRITE

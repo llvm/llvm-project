@@ -15,9 +15,10 @@ file at compile-time.
 Goal and usage
 ==============
 
-Users of sanitizer tools, such as :doc:`AddressSanitizer`, :doc:`ThreadSanitizer`
-or :doc:`MemorySanitizer` may want to disable or alter some checks for
-certain source-level entities to:
+Users of sanitizer tools, such as :doc:`AddressSanitizer`,
+:doc:`HardwareAssistedAddressSanitizerDesign`, :doc:`ThreadSanitizer`,
+:doc:`MemorySanitizer` or :doc:`UndefinedBehaviorSanitizer` may want to disable
+or alter some checks for certain source-level entities to:
 
 * speedup hot function, which is known to be correct;
 * ignore a function that does some low-level magic (e.g. walks through the
@@ -48,6 +49,60 @@ Example
   $ clang -fsanitize=address -fsanitize-ignorelist=ignorelist.txt foo.c ; ./a.out
   # No error report here.
 
+Usage with UndefinedBehaviorSanitizer
+=====================================
+
+``unsigned-integer-overflow``, ``signed-integer-overflow``,
+``implicit-signed-integer-truncation``,
+``implicit-unsigned-integer-truncation``, and ``enum`` sanitizers support the
+ability to adjust instrumentation based on type.
+
+By default, supported sanitizers will have their instrumentation disabled for
+types specified within an ignorelist.
+
+.. code-block:: bash
+
+  $ cat foo.c
+  void foo() {
+    int a = 2147483647; // INT_MAX
+    ++a;                // Normally, an overflow with -fsanitize=signed-integer-overflow
+  }
+  $ cat ignorelist.txt
+  [signed-integer-overflow]
+  type:int
+  $ clang -fsanitize=signed-integer-overflow -fsanitize-ignorelist=ignorelist.txt foo.c ; ./a.out
+  # no signed-integer-overflow error
+
+For example, supplying the above ``ignorelist.txt`` to
+``-fsanitize-ignorelist=ignorelist.txt`` disables overflow sanitizer
+instrumentation for arithmetic operations containing values of type ``int``.
+
+The ``=sanitize`` category is also supported. Any types assigned to the
+``sanitize`` category will have their sanitizer instrumentation remain. If the
+same type appears within or across ignorelists with different categories the
+``sanitize`` category takes precedence -- regardless of order.
+
+With this, one may disable instrumentation for some or all types and
+specifically allow instrumentation for one or many types -- including types
+created via ``typedef``. This is a way to achieve a sort of "allowlist" for
+supported sanitizers.
+
+.. code-block:: bash
+
+  $ cat ignorelist.txt
+  [implicit-signed-integer-truncation]
+  type:*
+  type:T=sanitize
+
+  $ cat foo.c
+  typedef char T;
+  typedef char U;
+  void foo(int toobig) {
+    T a = toobig;    // instrumented
+    U b = toobig;    // not instrumented
+    char c = toobig; // also not instrumented
+  }
+
 Format
 ======
 
@@ -56,13 +111,18 @@ and lines starting with "#" are ignored.
 
 .. note::
 
-  In `D154014 <https://reviews.llvm.org/D154014>`_ we transitioned to using globs instead
-  of regexes to match patterns in special case lists. Since this was a
-  breaking change, we will temporarily support the original behavior using
-  regexes. If ``#!special-case-list-v2`` is the first line of the file, then
-  we will use the new behavior using globs. For more details, see
-  `this discourse post <https://discourse.llvm.org/t/use-glob-instead-of-regex-for-specialcaselists/71666>`_.
+  Prior to Clang 18, section names and entries described below use a variant of
+  regex where ``*`` is translated to ``.*``. Clang 18 (`D154014
+  <https://reviews.llvm.org/D154014>`) switches to glob and plans to remove
+  regex support in Clang 19.
 
+  For Clang 18, regex is supported if ``#!special-case-list-v1`` is the first
+  line of the file.
+
+  Many special case lists use ``.`` to indicate the literal character and do
+  not use regex metacharacters such as ``(``, ``)``. They are unaffected by the
+  regex to glob transition. For more details, see `this discourse post
+  <https://discourse.llvm.org/t/use-glob-instead-of-regex-for-specialcaselists/71666>`_.
 
 Section names are globs written in square brackets that denote
 which sanitizer the following entries apply to. For example, ``[address]``
@@ -80,7 +140,6 @@ tool-specific docs.
 
 .. code-block:: bash
 
-    #!special-case-list-v2
     # The line above is explained in the note above
     # Lines starting with # are ignored.
     # Turn off checks for the source file

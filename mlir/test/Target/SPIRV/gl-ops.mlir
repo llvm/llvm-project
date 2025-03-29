@@ -32,6 +32,8 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %14 = spirv.GL.Ldexp %arg0 : f32, %arg2 : i32 -> f32
     // CHECK: {{%.*}} = spirv.GL.FMix {{%.*}} : f32, {{%.*}} : f32, {{%.*}} : f32 -> f32
     %15 = spirv.GL.FMix %arg0 : f32, %arg1 : f32, %arg0 : f32 -> f32
+    // CHECK: {{%.*}} = spirv.GL.Fract {{%.*}} : f32
+    %16 = spirv.GL.Fract %arg0 : f32
     spirv.Return
   }
 
@@ -81,4 +83,24 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %2 = spirv.GL.FindUMsb %arg0 : i32
     spirv.Return
   }
+
+spirv.func @vector(%arg0 : f32, %arg1 : vector<3xf32>, %arg2 : vector<3xf32>) "None" {
+    // CHECK: {{%.*}} = spirv.GL.Cross {{%.*}}, {{%.*}} : vector<3xf32>
+    %0 = spirv.GL.Cross %arg1, %arg2 : vector<3xf32>
+    // CHECK: {{%.*}} = spirv.GL.Normalize {{%.*}} : f32
+    %1 = spirv.GL.Normalize %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Normalize {{%.*}} : vector<3xf32>
+    %2 = spirv.GL.Normalize %arg1 : vector<3xf32>
+    // CHECK: {{%.*}} = spirv.GL.Reflect {{%.*}}, {{%.*}} : f32
+    %3 = spirv.GL.Reflect %arg0, %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Reflect {{%.*}}, {{%.*}} : vector<3xf32>
+    %4 = spirv.GL.Reflect %arg1, %arg2 : vector<3xf32>
+    // CHECK: {{%.*}} = spirv.GL.Distance {{%.*}}, {{%.*}} : f32, f32 -> f32
+    %5 = spirv.GL.Distance %arg0, %arg0 : f32, f32 -> f32
+    // CHECK: {{%.*}} = spirv.GL.Distance {{%.*}}, {{%.*}} : vector<3xf32>, vector<3xf32> -> f32
+    %6 = spirv.GL.Distance %arg1, %arg2 : vector<3xf32>, vector<3xf32> -> f32
+    spirv.Return
+  }
+
+
 }

@@ -35,10 +35,16 @@ void DWARFCompileUnit::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
   OS << " (next unit at " << format("0x%08" PRIx64, getNextUnitOffset())
      << ")\n";
 
-  if (DWARFDie CUDie = getUnitDIE(false))
+  if (DWARFDie CUDie = getUnitDIE(false)) {
     CUDie.dump(OS, 0, DumpOpts);
-  else
+    if (DumpOpts.DumpNonSkeleton) {
+      DWARFDie NonSkeletonCUDie = getNonSkeletonUnitDIE(false);
+      if (NonSkeletonCUDie && CUDie != NonSkeletonCUDie)
+        NonSkeletonCUDie.dump(OS, 0, DumpOpts);
+    }
+  } else {
     OS << "<compile unit can't be parsed!>\n\n";
+  }
 }
 
 // VTable anchor.

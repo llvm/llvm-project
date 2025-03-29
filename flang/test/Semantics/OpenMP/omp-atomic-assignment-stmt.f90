@@ -1,4 +1,6 @@
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+! REQUIRES: openmp_runtime
+
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=50
 ! Semantic checks for various assignments related to atomic constructs
 
 program sample
@@ -12,6 +14,7 @@ program sample
         integer :: m
     endtype
     type(sample_type) :: z
+    character :: l, r
     !$omp atomic read
         v = x
 
@@ -82,4 +85,78 @@ program sample
     !$omp atomic write
     !ERROR: Expected scalar variable on the LHS of atomic assignment statement
         a = x
+
+    !$omp atomic capture
+        v = x
+        x = x + 1
+    !$omp end atomic
+
+    !$omp atomic release capture
+        v = x
+    !ERROR: Atomic update statement should be of form `x = x operator expr` OR `x = expr operator x`
+        x = b + (x*1)
+    !$omp end atomic
+
+    !$omp atomic capture hint(0)
+        v = x
+        x = 1
+    !$omp end atomic
+
+    !$omp atomic capture
+    !ERROR: Captured variable/array element/derived-type component x expected to be assigned in the second statement of ATOMIC CAPTURE construct
+        v = x
+        b = b + 1
+    !$omp end atomic
+
+    !$omp atomic capture
+    !ERROR: Captured variable/array element/derived-type component x expected to be assigned in the second statement of ATOMIC CAPTURE construct
+        v = x
+        b = 10
+    !$omp end atomic
+
+    !$omp atomic capture
+    !ERROR: Updated variable/array element/derived-type component x expected to be captured in the second statement of ATOMIC CAPTURE construct
+        x = x + 10
+        v = b
+    !$omp end atomic
+
+    !$omp atomic capture
+    !ERROR: Invalid ATOMIC CAPTURE construct statements. Expected one of [update-stmt, capture-stmt], [capture-stmt, update-stmt], or [capture-stmt, write-stmt]
+        v = 1
+        x = 4
+    !$omp end atomic
+
+    !$omp atomic capture
+    !ERROR: Captured variable/array element/derived-type component z%y expected to be assigned in the second statement of ATOMIC CAPTURE construct
+        x = z%y
+        z%m = z%m + 1.0
+    !$omp end atomic
+
+    !$omp atomic capture
+    !ERROR: Updated variable/array element/derived-type component z%m expected to be captured in the second statement of ATOMIC CAPTURE construct
+        z%m = z%m + 1.0
+        x = z%y
+    !$omp end atomic
+
+    !$omp atomic capture
+    !ERROR: Captured variable/array element/derived-type component y(2) expected to be assigned in the second statement of ATOMIC CAPTURE construct
+        x = y(2)
+        y(1) = y(1) + 1
+    !$omp end atomic
+
+    !$omp atomic capture
+    !ERROR: Updated variable/array element/derived-type component y(1) expected to be captured in the second statement of ATOMIC CAPTURE construct
+        y(1) = y(1) + 1
+        x = y(2)
+    !$omp end atomic
+
+    !$omp atomic read
+    !ERROR: Expected scalar variable on the LHS of atomic assignment statement
+    !ERROR: Expected scalar expression on the RHS of atomic assignment statement
+        l = r
+
+    !$omp atomic write
+    !ERROR: Expected scalar variable on the LHS of atomic assignment statement
+    !ERROR: Expected scalar expression on the RHS of atomic assignment statement
+        l = r
 end program

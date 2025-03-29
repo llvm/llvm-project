@@ -23,9 +23,7 @@ macro(add_ubsan_testsuite test_mode sanitizer arch lld thinlto)
     ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
     ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py)
   list(APPEND UBSAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
-  if(NOT COMPILER_RT_STANDALONE_BUILD)
-    list(APPEND UBSAN_TEST_DEPS ${sanitizer})
-  endif()
+  list(APPEND UBSAN_TEST_DEPS ${sanitizer})
 endmacro()
 
 macro(add_ubsan_testsuites test_mode sanitizer arch)
@@ -53,10 +51,10 @@ foreach(arch ${UBSAN_TEST_ARCH})
   if(COMPILER_RT_HAS_ASAN AND ";${ASAN_SUPPORTED_ARCH};" MATCHES ";${arch};")
     # TODO(wwchrome): Re-enable ubsan for asan win 64-bit when ready.
     # Disable ubsan with AddressSanitizer tests for Windows 64-bit,
-    # 64-bit Solaris/x86, and SPARC.
+    # 64-bit Solaris/x86 and 64-bit SPARC.
     if((NOT (OS_NAME MATCHES "Windows" AND CMAKE_SIZEOF_VOID_P EQUAL 8)) AND
        (NOT (OS_NAME MATCHES "SunOS" AND ${arch} MATCHES x86_64)) AND
-       (NOT ${arch} MATCHES sparc))
+       (NOT ${arch} MATCHES sparcv9))
       add_ubsan_testsuites("AddressSanitizer" asan ${arch})
     endif()
   endif()
@@ -135,5 +133,3 @@ endif()
 add_lit_testsuite(check-ubsan "Running UndefinedBehaviorSanitizer tests"
   ${UBSAN_TESTSUITES}
   DEPENDS ${UBSAN_TEST_DEPS})
-set_target_properties(check-ubsan PROPERTIES FOLDER "Compiler-RT Misc")
-

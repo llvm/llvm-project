@@ -14,9 +14,9 @@
 
 # CHECK: Breakpoint 1: no locations (pending).
 # CHECK: (lldb) run {{.*}}
+# CHECK: Process {{.*}} launched: {{.*}}
 # CHECK: Process {{.*}} stopped
 # CHECK: JIT(0x{{.*}})`jitbp() at jitbp.cpp:1:15
 # CHECK: -> 1    int jitbp() { return 0; }
 # CHECK:                       ^
 # CHECK:    2    int main() { return jitbp(); }
-# CHECK: Process {{.*}} launched: {{.*}}

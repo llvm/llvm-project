@@ -48,58 +48,58 @@ constexpr void test() {
   // Increment an iterator when it won't find another satisfied value after begin()
   {
     std::array<int, 5> array{0, 1, 2, 3, 4};
-    FilterView view = make_filter_view(array.begin(), array.end(), EqualTo{1});
+    FilterView view = make_filter_view(array.data(), array.data() + array.size(), EqualTo{1});
 
     FilterIterator it = view.begin();
     FilterIterator& result = ++it;
     ASSERT_SAME_TYPE(FilterIterator&, decltype(++it));
     assert(&result == &it);
-    assert(base(result.base()) == array.end());
+    assert(base(result.base()) == array.data() + array.size());
   }
 
   // Increment the iterator and it finds another value after begin()
   {
     std::array<int, 5> array{99, 1, 99, 1, 99};
-    FilterView view = make_filter_view(array.begin(), array.end(), EqualTo{1});
+    FilterView view = make_filter_view(array.data(), array.data() + array.size(), EqualTo{1});
 
     FilterIterator it = view.begin();
     ++it;
-    assert(base(it.base()) == array.begin() + 3);
+    assert(base(it.base()) == array.data() + 3);
   }
 
   // Increment advances all the way to the end of the range
   {
     std::array<int, 5> array{99, 1, 99, 99, 1};
-    FilterView view = make_filter_view(array.begin(), array.end(), EqualTo{1});
+    FilterView view = make_filter_view(array.data(), array.data() + array.size(), EqualTo{1});
 
     FilterIterator it = view.begin();
     ++it;
-    assert(base(it.base()) == array.begin() + 4);
+    assert(base(it.base()) == array.data() + 4);
   }
 
   // Increment an iterator multiple times
   {
     std::array<int, 10> array{0, 1, 2, 3, 1, 1, 4, 5, 1, 6};
-    FilterView view = make_filter_view(array.begin(), array.end(), EqualTo{1});
+    FilterView view = make_filter_view(array.data(), array.data() + array.size(), EqualTo{1});
 
     FilterIterator it = view.begin();
-          assert(base(it.base()) == array.begin() + 1);
-    ++it; assert(base(it.base()) == array.begin() + 4);
-    ++it; assert(base(it.base()) == array.begin() + 5);
-    ++it; assert(base(it.base()) == array.begin() + 8);
-    ++it; assert(base(it.base()) == array.end());
+          assert(base(it.base()) == array.data() + 1);
+    ++it; assert(base(it.base()) == array.data() + 4);
+    ++it; assert(base(it.base()) == array.data() + 5);
+    ++it; assert(base(it.base()) == array.data() + 8);
+    ++it; assert(base(it.base()) == array.data() + array.size());
   }
 
   // Test with a predicate that takes by non-const reference
   if constexpr (!IsConst) {
     std::array<int, 4> array{99, 1, 99, 1};
-    View v{Iterator(array.begin()), Sentinel(Iterator(array.end()))};
+    View v{Iterator(array.data()), Sentinel(Iterator(array.data() + array.size()))};
     auto pred = [](int& x) { return x == 1; };
     auto view = std::ranges::filter_view(std::move(v), pred);
     auto it = view.begin();
-    assert(base(it.base()) == array.begin() + 1);
+    assert(base(it.base()) == array.data() + 1);
     ++it;
-    assert(base(it.base()) == array.begin() + 3);
+    assert(base(it.base()) == array.data() + 3);
   }
 
   // Make sure we do not make a copy of the predicate when we increment
@@ -107,7 +107,7 @@ constexpr void test() {
   {
     bool moved = false, copied = false;
     std::array<int, 3> array{1, 1, 1};
-    View v{Iterator(array.begin()), Sentinel(Iterator(array.end()))};
+    View v{Iterator(array.data()), Sentinel(Iterator(array.data() + array.size()))};
     auto view = std::ranges::filter_view(std::move(v), TrackingPred(&moved, &copied));
     moved = false;
     copied = false;
@@ -121,39 +121,39 @@ constexpr void test() {
   // Check post-increment for input ranges
   if constexpr (!IsForwardRange) {
     std::array<int, 10> array{0, 1, 2, 3, 1, 1, 4, 5, 1, 6};
-    FilterView view = make_filter_view(array.begin(), array.end(), EqualTo{1});
+    FilterView view = make_filter_view(array.data(), array.data() + array.size(), EqualTo{1});
 
     FilterIterator it = view.begin();
-          assert(base(it.base()) == array.begin() + 1);
-    it++; assert(base(it.base()) == array.begin() + 4);
-    it++; assert(base(it.base()) == array.begin() + 5);
-    it++; assert(base(it.base()) == array.begin() + 8);
-    it++; assert(base(it.base()) == array.end());
+          assert(base(it.base()) == array.data() + 1);
+    it++; assert(base(it.base()) == array.data() + 4);
+    it++; assert(base(it.base()) == array.data() + 5);
+    it++; assert(base(it.base()) == array.data() + 8);
+    it++; assert(base(it.base()) == array.data() + array.size());
     static_assert(std::is_same_v<decltype(it++), void>);
   }
 
   // Check post-increment for forward ranges
   if constexpr (IsForwardRange) {
     std::array<int, 10> array{0, 1, 2, 3, 1, 1, 4, 5, 1, 6};
-    FilterView view = make_filter_view(array.begin(), array.end(), EqualTo{1});
+    FilterView view = make_filter_view(array.data(), array.data() + array.size(), EqualTo{1});
 
     FilterIterator it = view.begin();
     FilterIterator result = it++;
     ASSERT_SAME_TYPE(FilterIterator, decltype(it++));
-    assert(base(result.base()) == array.begin() + 1);
-    assert(base(it.base()) == array.begin() + 4);
+    assert(base(result.base()) == array.data() + 1);
+    assert(base(it.base()) == array.data() + 4);
 
     result = it++;
-    assert(base(result.base()) == array.begin() + 4);
-    assert(base(it.base()) == array.begin() + 5);
+    assert(base(result.base()) == array.data() + 4);
+    assert(base(it.base()) == array.data() + 5);
 
     result = it++;
-    assert(base(result.base()) == array.begin() + 5);
-    assert(base(it.base()) == array.begin() + 8);
+    assert(base(result.base()) == array.data() + 5);
+    assert(base(it.base()) == array.data() + 8);
 
     result = it++;
-    assert(base(result.base()) == array.begin() + 8);
-    assert(base(it.base()) == array.end());
+    assert(base(result.base()) == array.data() + 8);
+    assert(base(it.base()) == array.data() + array.size());
   }
 }
 

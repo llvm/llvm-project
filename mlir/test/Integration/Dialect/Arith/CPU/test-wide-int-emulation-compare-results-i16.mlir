@@ -5,7 +5,7 @@
 // RUN:             --convert-vector-to-scf --convert-scf-to-cf --convert-cf-to-llvm \
 // RUN:             --convert-vector-to-llvm --convert-func-to-llvm --convert-arith-to-llvm \
 // RUN:             --reconcile-unrealized-casts | \
-// RUN:   mlir-cpu-runner -e entry -entry-point-result=void \
+// RUN:   mlir-runner -e entry -entry-point-result=void \
 // RUN:      --shared-libs="%mlir_c_runner_utils,%mlir_runner_utils" | \
 // RUN:   FileCheck %s
 
@@ -26,7 +26,7 @@ func.func @check_results(%lhs : i16, %rhs : i16, %res0 : i16, %res1 : i16) -> ()
   %mismatch = arith.cmpi ne, %res0, %res1 : i16
   scf.if %mismatch -> () {
     vector.print %res1 : i16
-    vector.print str "Mismatch"
+    vector.print str "Mismatch\n"
   }
   return
 }

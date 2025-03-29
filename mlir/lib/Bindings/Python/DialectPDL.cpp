@@ -8,15 +8,16 @@
 
 #include "mlir-c/Dialect/PDL.h"
 #include "mlir-c/IR.h"
-#include "mlir/Bindings/Python/PybindAdaptors.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
+#include "mlir/Bindings/Python/Nanobind.h"
 
-namespace py = pybind11;
+namespace nb = nanobind;
 using namespace llvm;
 using namespace mlir;
 using namespace mlir::python;
-using namespace mlir::python::adaptors;
+using namespace mlir::python::nanobind_adaptors;
 
-void populateDialectPDLSubmodule(const pybind11::module &m) {
+void populateDialectPDLSubmodule(const nanobind::module_ &m) {
   //===-------------------------------------------------------------------===//
   // PDLType
   //===-------------------------------------------------------------------===//
@@ -31,11 +32,11 @@ void populateDialectPDLSubmodule(const pybind11::module &m) {
       mlir_type_subclass(m, "AttributeType", mlirTypeIsAPDLAttributeType);
   attributeType.def_classmethod(
       "get",
-      [](py::object cls, MlirContext ctx) {
+      [](nb::object cls, MlirContext ctx) {
         return cls(mlirPDLAttributeTypeGet(ctx));
       },
-      "Get an instance of AttributeType in given context.", py::arg("cls"),
-      py::arg("context") = py::none());
+      "Get an instance of AttributeType in given context.", nb::arg("cls"),
+      nb::arg("context").none() = nb::none());
 
   //===-------------------------------------------------------------------===//
   // OperationType
@@ -45,11 +46,11 @@ void populateDialectPDLSubmodule(const pybind11::module &m) {
       mlir_type_subclass(m, "OperationType", mlirTypeIsAPDLOperationType);
   operationType.def_classmethod(
       "get",
-      [](py::object cls, MlirContext ctx) {
+      [](nb::object cls, MlirContext ctx) {
         return cls(mlirPDLOperationTypeGet(ctx));
       },
-      "Get an instance of OperationType in given context.", py::arg("cls"),
-      py::arg("context") = py::none());
+      "Get an instance of OperationType in given context.", nb::arg("cls"),
+      nb::arg("context").none() = nb::none());
 
   //===-------------------------------------------------------------------===//
   // RangeType
@@ -58,12 +59,12 @@ void populateDialectPDLSubmodule(const pybind11::module &m) {
   auto rangeType = mlir_type_subclass(m, "RangeType", mlirTypeIsAPDLRangeType);
   rangeType.def_classmethod(
       "get",
-      [](py::object cls, MlirType elementType) {
+      [](nb::object cls, MlirType elementType) {
         return cls(mlirPDLRangeTypeGet(elementType));
       },
       "Gets an instance of RangeType in the same context as the provided "
       "element type.",
-      py::arg("cls"), py::arg("element_type"));
+      nb::arg("cls"), nb::arg("element_type"));
   rangeType.def_property_readonly(
       "element_type",
       [](MlirType type) { return mlirPDLRangeTypeGetElementType(type); },
@@ -76,11 +77,11 @@ void populateDialectPDLSubmodule(const pybind11::module &m) {
   auto typeType = mlir_type_subclass(m, "TypeType", mlirTypeIsAPDLTypeType);
   typeType.def_classmethod(
       "get",
-      [](py::object cls, MlirContext ctx) {
+      [](nb::object cls, MlirContext ctx) {
         return cls(mlirPDLTypeTypeGet(ctx));
       },
-      "Get an instance of TypeType in given context.", py::arg("cls"),
-      py::arg("context") = py::none());
+      "Get an instance of TypeType in given context.", nb::arg("cls"),
+      nb::arg("context").none() = nb::none());
 
   //===-------------------------------------------------------------------===//
   // ValueType
@@ -89,14 +90,14 @@ void populateDialectPDLSubmodule(const pybind11::module &m) {
   auto valueType = mlir_type_subclass(m, "ValueType", mlirTypeIsAPDLValueType);
   valueType.def_classmethod(
       "get",
-      [](py::object cls, MlirContext ctx) {
+      [](nb::object cls, MlirContext ctx) {
         return cls(mlirPDLValueTypeGet(ctx));
       },
-      "Get an instance of TypeType in given context.", py::arg("cls"),
-      py::arg("context") = py::none());
+      "Get an instance of TypeType in given context.", nb::arg("cls"),
+      nb::arg("context").none() = nb::none());
 }
 
-PYBIND11_MODULE(_mlirDialectsPDL, m) {
+NB_MODULE(_mlirDialectsPDL, m) {
   m.doc() = "MLIR PDL dialect.";
   populateDialectPDLSubmodule(m);
 }

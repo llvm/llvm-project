@@ -29,6 +29,13 @@
 #define LIBC_COPT_PRINTF_INDEX_ARR_LEN 128
 #endif
 
+// If fixed point is available and the user hasn't explicitly opted out, then
+// enable fixed point.
+#if defined(LIBC_COMPILER_HAS_FIXED_POINT) &&                                  \
+    !defined(LIBC_COPT_PRINTF_DISABLE_FIXED_POINT)
+#define LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+#endif
+
 // TODO(michaelrj): Provide a proper interface for these options.
 // LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
 // LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT

@@ -2,7 +2,7 @@
 ! clean NULL() status. This is required by f18 runtime to do pointer
 ! association with a RHS with an undefined association status from a
 ! Fortran point of view.
-! RUN: bbc -emit-fir -I nw %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -I nw %s -o - | FileCheck %s
 
 module test
   type t
@@ -38,7 +38,9 @@ subroutine test_local()
   type(t) :: x
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_local() {
-! CHECK:  fir.call @_FortranAInitialize(
+! CHECK: %[[x:.*]] = fir.alloca !fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}> {bindc_name = "x", uniq_name = "_QFtest_localEx"}
+! CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QMtestTt.DerivedInit) : !fir.ref<!fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
+! CHECK: fir.copy %[[ADDR]] to %[[x]] no_overlap : !fir.ref<!fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.ref<!fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
 
 subroutine test_saved()
   use test, only : t

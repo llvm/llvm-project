@@ -26,18 +26,19 @@ namespace {
 class ObjCSuperDeallocChecker
     : public Checker<check::PostObjCMessage, check::PreObjCMessage,
                      check::PreCall, check::Location> {
-
-  mutable IdentifierInfo *IIdealloc, *IINSObject;
+  mutable const IdentifierInfo *IIdealloc = nullptr;
+  mutable const IdentifierInfo *IINSObject = nullptr;
   mutable Selector SELdealloc;
 
-  std::unique_ptr<BugType> DoubleSuperDeallocBugType;
+  const BugType DoubleSuperDeallocBugType{
+      this, "[super dealloc] should not be called more than once",
+      categories::CoreFoundationObjectiveC};
 
   void initIdentifierInfoAndSelectors(ASTContext &Ctx) const;
 
   bool isSuperDeallocMessage(const ObjCMethodCall &M) const;
 
 public:
-  ObjCSuperDeallocChecker();
   void checkPostObjCMessage(const ObjCMethodCall &M, CheckerContext &C) const;
   void checkPreObjCMessage(const ObjCMethodCall &M, CheckerContext &C) const;
 
@@ -163,7 +164,7 @@ void ObjCSuperDeallocChecker::checkLocation(SVal L, bool IsLoad, const Stmt *S,
   if (IvarRegion) {
     OS << "Use of instance variable '" << *IvarRegion->getDecl() <<
           "' after 'self' has been deallocated";
-    Desc = OS.str();
+    Desc = Buf;
   }
 
   reportUseAfterDealloc(BaseSym, Desc, S, C);
@@ -188,7 +189,7 @@ void ObjCSuperDeallocChecker::reportUseAfterDealloc(SymbolRef Sym,
     Desc = "Use of 'self' after it has been deallocated";
 
   // Generate the report.
-  auto BR = std::make_unique<PathSensitiveBugReport>(*DoubleSuperDeallocBugType,
+  auto BR = std::make_unique<PathSensitiveBugReport>(DoubleSuperDeallocBugType,
                                                      Desc, ErrNode);
   BR->addRange(S->getSourceRange());
   BR->addVisitor(std::make_unique<SuperDeallocBRVisitor>(Sym));
@@ -211,14 +212,6 @@ void ObjCSuperDeallocChecker::diagnoseCallArguments(const CallEvent &CE,
       return;
     }
   }
-}
-
-ObjCSuperDeallocChecker::ObjCSuperDeallocChecker()
-    : IIdealloc(nullptr), IINSObject(nullptr) {
-
-  DoubleSuperDeallocBugType.reset(
-      new BugType(this, "[super dealloc] should not be called more than once",
-                  categories::CoreFoundationObjectiveC));
 }
 
 void

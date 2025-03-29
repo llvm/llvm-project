@@ -106,19 +106,19 @@ Most (but not all) of the features of the LFTS were accepted into C++17.
 +---------+-------------------------------------------------------+--------------------+------------------------------------------+-------------------------+
 | 8.2.2   | ``weak_ptr`` enhancements                             | Not yet            | Never added                              |                         |
 +---------+-------------------------------------------------------+--------------------+------------------------------------------+-------------------------+
-| 8.5     | ``memory_resource``                                   | Not yet            |                                          |                         |
+| 8.5     | ``memory_resource``                                   | 16.0               | 18.0                                     | Removed                 |
 +---------+-------------------------------------------------------+--------------------+------------------------------------------+-------------------------+
-| 8.6     | ``polymorphic_allocator``                             | Not yet            |                                          |                         |
+| 8.6     | ``polymorphic_allocator``                             | 16.0               | 18.0                                     | Removed                 |
 +---------+-------------------------------------------------------+--------------------+------------------------------------------+-------------------------+
 | 8.7     | ``resource_adaptor``                                  |                    | n/a                                      | Not part of C++17       |
 +---------+-------------------------------------------------------+--------------------+------------------------------------------+-------------------------+
-| 8.8     | Access to program-wide ``memory_resource`` objects    | Not yet            |                                          |                         |
+| 8.8     | Access to program-wide ``memory_resource`` objects    | 16.0               | 18.0                                     | Removed                 |
 +---------+-------------------------------------------------------+--------------------+------------------------------------------+-------------------------+
-| 8.9     | Pool resource classes                                 | Not yet            |                                          |                         |
+| 8.9     | Pool resource classes                                 | 16.0               | 18.0                                     | Removed                 |
 +---------+-------------------------------------------------------+--------------------+------------------------------------------+-------------------------+
-| 8.10    | ``monotonic_buffer_resource``                         | Not yet            |                                          |                         |
+| 8.10    | ``monotonic_buffer_resource``                         | 16.0               | 18.0                                     | Removed                 |
 +---------+-------------------------------------------------------+--------------------+------------------------------------------+-------------------------+
-| 8.11    | Alias templates using polymorphic memory resources    | Not yet            |                                          |                         |
+| 8.11    | Alias templates using polymorphic memory resources    | 16.0               | 18.0                                     | Removed                 |
 +---------+-------------------------------------------------------+--------------------+------------------------------------------+-------------------------+
 | 8.12    | Non-owning pointers                                   |                    | n/a                                      | Not part of C++17       |
 +---------+-------------------------------------------------------+--------------------+------------------------------------------+-------------------------+
@@ -160,8 +160,10 @@ has been removed in LLVM 17.0.
 
 `Networking TS <https://wg21.link/N4656>`__
 -------------------------------------------
-The Networking TS is not yet part of a shipping standard.
-We have not yet shipped an implementation of the Networking TS.
+The Networking TS is not yet part of a shipping standard, and there is discussion around removing it.
+Libc++ never shipped an implementation of the Networking TS and does not plan to do so in the future,
+unless the C++ Standards Committee expresses a desire to merge the Networking TS into the IS (which is
+unlikely at this point).
 
 `Ranges TS <https://wg21.link/N4685>`__
 ---------------------------------------

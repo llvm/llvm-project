@@ -54,7 +54,7 @@ define <8 x i64> @foo_512(i32 %0, <8 x i64> %1, <8 x i64> %2, ptr %3) {
 ; CHECK-NEXT:    andl $-4, %edx
 ; CHECK-NEXT:    leaq 192(%rsi), %rdi
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_8: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vpdpwssd -192(%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    vpmaddwd -128(%rdi), %zmm1, %zmm2
@@ -75,7 +75,7 @@ define <8 x i64> @foo_512(i32 %0, <8 x i64> %1, <8 x i64> %2, ptr %3) {
 ; CHECK-NEXT:    addq %rcx, %rsi
 ; CHECK-NEXT:    shll $6, %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_5: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vpdpwssd (%rsi,%rcx), %zmm1, %zmm0
 ; CHECK-NEXT:    addq $64, %rcx
@@ -135,17 +135,17 @@ define <8 x i64> @foo_512(i32 %0, <8 x i64> %1, <8 x i64> %2, ptr %3) {
   %40 = load <32 x i16>, ptr %39, align 64
   %41 = tail call <16 x i32> @llvm.x86.avx512.pmaddw.d.512(<32 x i16> %7, <32 x i16> %40)
   %42 = add <16 x i32> %41, %37
-  %43 = or i64 %36, 1
+  %43 = or disjoint i64 %36, 1
   %44 = getelementptr inbounds <8 x i64>, ptr %3, i64 %43
   %45 = load <32 x i16>, ptr %44, align 64
   %46 = tail call <16 x i32> @llvm.x86.avx512.pmaddw.d.512(<32 x i16> %7, <32 x i16> %45)
   %47 = add <16 x i32> %46, %42
-  %48 = or i64 %36, 2
+  %48 = or disjoint i64 %36, 2
   %49 = getelementptr inbounds <8 x i64>, ptr %3, i64 %48
   %50 = load <32 x i16>, ptr %49, align 64
   %51 = tail call <16 x i32> @llvm.x86.avx512.pmaddw.d.512(<32 x i16> %7, <32 x i16> %50)
   %52 = add <16 x i32> %51, %47
-  %53 = or i64 %36, 3
+  %53 = or disjoint i64 %36, 3
   %54 = getelementptr inbounds <8 x i64>, ptr %3, i64 %53
   %55 = load <32 x i16>, ptr %54, align 64
   %56 = tail call <16 x i32> @llvm.x86.avx512.pmaddw.d.512(<32 x i16> %7, <32 x i16> %55)
@@ -179,7 +179,7 @@ define void @bar_512(i32 %0, ptr %1, <8 x i64> %2, ptr %3) {
 ; CHECK-NEXT:    andl $-2, %edi
 ; CHECK-NEXT:    movl $64, %r8d
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB2_7: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqa64 (%rsi,%r8), %zmm1
 ; CHECK-NEXT:    vpmaddwd -64(%rdx,%r8), %zmm0, %zmm2
@@ -243,7 +243,7 @@ define void @bar_512(i32 %0, ptr %1, <8 x i64> %2, ptr %3) {
   %29 = load <16 x i32>, ptr %28, align 64
   %30 = tail call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %29, <16 x i32> %7, <16 x i32> %27)
   store <16 x i32> %30, ptr %28, align 64
-  %31 = or i64 %24, 1
+  %31 = or disjoint i64 %24, 1
   %32 = getelementptr inbounds <8 x i64>, ptr %3, i64 %31
   %33 = load <16 x i32>, ptr %32, align 64
   %34 = getelementptr inbounds <8 x i64>, ptr %1, i64 %31

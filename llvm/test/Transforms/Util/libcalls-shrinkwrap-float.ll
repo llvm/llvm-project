@@ -350,4 +350,4 @@ declare float @log2f(float)
 declare float @logbf(float)
 declare float @log1pf(float)
 
-; CHECK: ![[BRANCH_WEIGHT]] = !{!"branch_weights", i32 1, i32 2000}
+; CHECK: ![[BRANCH_WEIGHT]] = !{!"branch_weights", i32 1, i32 1048575}

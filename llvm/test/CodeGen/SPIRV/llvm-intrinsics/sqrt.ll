@@ -1,11 +1,11 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
 ; CHECK-DAG: %[[#ExtInstSetId:]] = OpExtInstImport "OpenCL.std"
 ; CHECK-DAG: %[[#Float:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#Double:]] = OpTypeFloat 64
 ; CHECK-DAG: %[[#Double4:]] = OpTypeVector %[[#Double]] 4
 ; CHECK-DAG: %[[#FloatArg:]] = OpConstant %[[#Float]]
-; CHECK-DAG: %[[#DoubleArg:]] = OpConstant %[[#Double]]
+; CHECK-DAG: %[[#DoubleArg:]] = OpConstant %[[#Double]] 2.71
 ; CHECK-DAG: %[[#Double4Arg:]] = OpConstantComposite %[[#Double4]]
 
 ;; We need to store sqrt results, otherwise isel does not emit sqrts as dead insts.

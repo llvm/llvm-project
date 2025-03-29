@@ -4,16 +4,19 @@ program bar
 ! CHECK: fir.address_of(@[[name1:.*]]my_data)
   integer, save :: my_data = 1
   print *, my_data
+  call foo()
+  call foo2()
+  call foo3()
 contains
 
-! CHECK-LABEL: func @_QFPfoo
+! CHECK-LABEL: func private @_QFPfoo
 subroutine foo()
 ! CHECK: fir.address_of(@[[name2:.*foo.*my_data]])
   integer, save :: my_data = 2
   print *, my_data + 1
 end subroutine
 
-! CHECK-LABEL: func @_QFPfoo2
+! CHECK-LABEL: func private @_QFPfoo2
 subroutine foo2()
 ! CHECK: fir.address_of(@[[name3:.*foo2.*my_data]])
   integer, save :: my_data
@@ -21,7 +24,7 @@ subroutine foo2()
   print *, my_data
 end subroutine
 
-! CHECK-LABEL: func @_QFPfoo3
+! CHECK-LABEL: func private @_QFPfoo3
 subroutine foo3()
 ! CHECK-DAG: fir.address_of(@[[name4:.*foo3.*idata]]){{.*}}fir.array<5xi32>
 ! CHECK-DAG: fir.address_of(@[[name5:.*foo3.*rdata]]){{.*}}fir.array<3xf16>

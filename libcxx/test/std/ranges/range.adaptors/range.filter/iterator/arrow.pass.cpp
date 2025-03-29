@@ -59,7 +59,7 @@ struct WithNonCopyableIterator : std::ranges::view_base {
     iterator(iterator&&);
     iterator& operator=(iterator&&);
     XYPoint& operator*() const;
-    iterator operator->() const;
+    XYPoint* operator->() const;
     iterator& operator++();
     iterator operator++(int);
 
@@ -73,23 +73,23 @@ struct WithNonCopyableIterator : std::ranges::view_base {
 };
 static_assert(std::ranges::input_range<WithNonCopyableIterator>);
 
-template <class Iterator, class Sentinel = sentinel_wrapper<Iterator>>
+template <class Iter, class Sent = sentinel_wrapper<Iter>>
 constexpr void test() {
   std::array<XYPoint, 5> array{{{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}}};
-  using View = minimal_view<Iterator, Sentinel>;
+  using View = minimal_view<Iter, Sent>;
   using FilterView = std::ranges::filter_view<View, AlwaysTrue>;
   using FilterIterator = std::ranges::iterator_t<FilterView>;
 
   auto make_filter_view = [](auto begin, auto end, auto pred) {
-    View view{Iterator(begin), Sentinel(Iterator(end))};
+    View view{Iter(begin), Sent(Iter(end))};
     return FilterView(std::move(view), pred);
   };
 
   for (std::ptrdiff_t n = 0; n != 5; ++n) {
-    FilterView view = make_filter_view(array.begin(), array.end(), AlwaysTrue{});
-    FilterIterator const iter(view, Iterator(array.begin() + n));
-    std::same_as<Iterator> decltype(auto) result = iter.operator->();
-    assert(base(result) == array.begin() + n);
+    FilterView view = make_filter_view(array.data(), array.data() + array.size(), AlwaysTrue{});
+    FilterIterator const iter(view, Iter(array.data() + n));
+    std::same_as<Iter> decltype(auto) result = iter.operator->();
+    assert(base(result) == array.data() + n);
     assert(iter->x == n);
     assert(iter->y == n);
   }

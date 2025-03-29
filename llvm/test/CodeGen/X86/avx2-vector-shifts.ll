@@ -60,14 +60,14 @@ define <8 x i32> @test_vpslld_var(i32 %shift) {
 ; X86-LABEL: test_vpslld_var:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    vmovdqa {{.*#+}} ymm1 = [192,193,194,195,196,197,198,199]
+; X86-NEXT:    vpmovzxbd {{.*#+}} ymm1 = [192,193,194,195,196,197,198,199]
 ; X86-NEXT:    vpslld %xmm0, %ymm1, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_vpslld_var:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovd %edi, %xmm0
-; X64-NEXT:    vmovdqa {{.*#+}} ymm1 = [192,193,194,195,196,197,198,199]
+; X64-NEXT:    vpmovzxbd {{.*#+}} ymm1 = [192,193,194,195,196,197,198,199]
 ; X64-NEXT:    vpslld %xmm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
   %amt = insertelement <8 x i32> undef, i32 %shift, i32 0
@@ -276,8 +276,7 @@ define <4 x i32> @srl_trunc_and_v4i64(<4 x i32> %x, <4 x i64> %y) nounwind {
 ;
 ; X86-FAST-ALL-LABEL: srl_trunc_and_v4i64:
 ; X86-FAST-ALL:       # %bb.0:
-; X86-FAST-ALL-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [0,2,4,6,0,2,4,6]
-; X86-FAST-ALL-NEXT:    # ymm2 = mem[0,1,0,1]
+; X86-FAST-ALL-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [0,2,4,6,0,0,0,0]
 ; X86-FAST-ALL-NEXT:    vpermd %ymm1, %ymm2, %ymm1
 ; X86-FAST-ALL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [8,8,8,8]
 ; X86-FAST-ALL-NEXT:    vpand %xmm2, %xmm1, %xmm1
@@ -307,8 +306,7 @@ define <4 x i32> @srl_trunc_and_v4i64(<4 x i32> %x, <4 x i64> %y) nounwind {
 ;
 ; X64-FAST-ALL-LABEL: srl_trunc_and_v4i64:
 ; X64-FAST-ALL:       # %bb.0:
-; X64-FAST-ALL-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [0,2,4,6,0,2,4,6]
-; X64-FAST-ALL-NEXT:    # ymm2 = mem[0,1,0,1]
+; X64-FAST-ALL-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [0,2,4,6,0,0,0,0]
 ; X64-FAST-ALL-NEXT:    vpermd %ymm1, %ymm2, %ymm1
 ; X64-FAST-ALL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [8,8,8,8]
 ; X64-FAST-ALL-NEXT:    vpand %xmm2, %xmm1, %xmm1

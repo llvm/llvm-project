@@ -19,6 +19,7 @@
 //     ranges::for_each(R&& r, Fun f, Proj proj = {});
 
 #include <algorithm>
+#include <array>
 #include <ranges>
 
 #include "almost_satisfies_types.h"
@@ -98,12 +99,12 @@ constexpr void test_iterator() {
 
   { // check that an empty range works
     {
-      int a[] = {};
-      std::ranges::for_each(Iter(a), Sent(Iter(a)), [](auto&) { assert(false); });
+      std::array<int, 0> a = {};
+      std::ranges::for_each(Iter(a.data()), Sent(Iter(a.data())), [](auto&) { assert(false); });
     }
     {
-      int a[] = {};
-      auto range = std::ranges::subrange(Iter(a), Sent(Iter(a)));
+      std::array<int, 0> a = {};
+      auto range           = std::ranges::subrange(Iter(a.data()), Sent(Iter(a.data())));
       std::ranges::for_each(range, [](auto&) { assert(false); });
     }
   }

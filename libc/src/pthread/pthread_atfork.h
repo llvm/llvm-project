@@ -9,13 +9,14 @@
 #ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATFORK_H
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATFORK_H
 
+#include "src/__support/macros/config.h"
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int pthread_atfork(__atfork_callback_t prepare, __atfork_callback_t parent,
                    __atfork_callback_t child);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATFORK_H

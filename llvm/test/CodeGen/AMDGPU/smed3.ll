@@ -1,6 +1,8 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global,-real-true16 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global,+real-true16 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11-TRUE16 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
@@ -98,6 +100,8 @@ declare i64 @llvm.smin.i64(i64, i64)
 ; VI: v_max_i16_e32 [[MAX:v[0-9]]], 12, {{v[0-9]}}
 ; VI: v_min_i16_e32 {{v[0-9]}}, 17, [[MAX]]
 ; GFX9: v_med3_i16 v{{[0-9]+}}, v{{[0-9]+}}, 12, 17
+; GFX11-TRUE16: v_med3_i16 v{{[0-9]+}}.l, v{{[0-9]+}}.l, 12, 17
+; GFX11-FAKE16: v_med3_i16 v{{[0-9]+}}, v{{[0-9]+}}, 12, 17
 define amdgpu_kernel void @v_test_smed3_r_i_i_i16(ptr addrspace(1) %out, ptr addrspace(1) %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i16, ptr addrspace(1) %aptr, i32 %tid
@@ -686,6 +690,8 @@ bb:
 ; VI: v_max_i16
 
 ; GFX9: v_med3_i16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX11-TRUE16: v_med3_i16 v{{[0-9]+}}.l, v{{[0-9]+}}.l, v{{[0-9]+}}.h, v{{[0-9]+}}.l
+; GFX11-FAKE16: v_med3_i16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 define amdgpu_kernel void @v_test_smed3_i16_pat_0(ptr addrspace(1) %arg, ptr addrspace(1) %out, ptr addrspace(1) %a.ptr) #1 {
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -707,6 +713,8 @@ bb:
 
 ; GCN-LABEL: {{^}}v_test_smed3_i16_pat_1:
 ; GFX9: v_med3_i16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX11-TRUE16: v_med3_i16 v{{[0-9]+}}.l, v{{[0-9]+}}.l, v{{[0-9]+}}.h, v{{[0-9]+}}.l
+; GFX11-FAKE16: v_med3_i16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
 define amdgpu_kernel void @v_test_smed3_i16_pat_1(ptr addrspace(1) %arg, ptr addrspace(1) %out, ptr addrspace(1) %a.ptr) #1 {
 bb:

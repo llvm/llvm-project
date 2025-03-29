@@ -14,6 +14,7 @@ list(APPEND PLUGIN_PLATFORM_MACOSX_SOURCES
   PlatformRemoteAppleBridge.cpp
   PlatformRemoteAppleTV.cpp
   PlatformRemoteAppleWatch.cpp
+  PlatformRemoteAppleXR.cpp
   PlatformRemoteDarwinDevice.cpp
   PlatformRemoteMacOSX.cpp
   PlatformRemoteiOS.cpp

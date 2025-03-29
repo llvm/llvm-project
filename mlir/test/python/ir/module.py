@@ -1,6 +1,7 @@
 # RUN: %PYTHON %s | FileCheck %s
 
 import gc
+from tempfile import NamedTemporaryFile
 from mlir.ir import *
 
 
@@ -25,6 +26,24 @@ def testParseSuccess():
     gc.collect()
     module.dump()  # Just outputs to stderr. Verifies that it functions.
     print(str(module))
+
+
+# Verify successful parse from file.
+# CHECK-LABEL: TEST: testParseFromFileSuccess
+# CHECK: module @successfulParse
+@run
+def testParseFromFileSuccess():
+    ctx = Context()
+    with NamedTemporaryFile(mode="w") as tmp_file:
+        tmp_file.write(r"""module @successfulParse {}""")
+        tmp_file.flush()
+        module = Module.parseFile(tmp_file.name, ctx)
+        assert module.context is ctx
+        print("CLEAR CONTEXT")
+        ctx = None  # Ensure that module captures the context.
+        gc.collect()
+        module.operation.verify()
+        print(str(module))
 
 
 # Verify parse error.
@@ -105,6 +124,10 @@ def testModuleOperation():
     assert ctx._get_live_module_count() == 1
     op1 = module.operation
     assert ctx._get_live_operation_count() == 1
+    live_ops = ctx._get_live_operation_objects()
+    assert len(live_ops) == 1
+    assert live_ops[0] is op1
+    live_ops = None
     # CHECK: module @successfulParse
     print(op1)
 

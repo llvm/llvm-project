@@ -2,20 +2,6 @@ Target Independent Opportunities:
 
 //===---------------------------------------------------------------------===//
 
-We should recognized various "overflow detection" idioms and translate them into
-llvm.uadd.with.overflow and similar intrinsics.  Here is a multiply idiom:
-
-unsigned int mul(unsigned int a,unsigned int b) {
- if ((unsigned long long)a*b>0xffffffff)
-   exit(0);
-  return a*b;
-}
-
-The legalization code for mul-with-overflow needs to be made more robust before
-this can be implemented though.
-
-//===---------------------------------------------------------------------===//
-
 Get the C front-end to expand hypot(x,y) -> llvm.sqrt(x*x+y*y) when errno and
 precision don't matter (ffastmath).  Misc/mandel will like this. :)  This isn't
 safe in general, even on darwin.  See the libm implementation of hypot for

@@ -14,6 +14,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
+#include <queue>
 
 using namespace llvm;
 
@@ -51,7 +52,7 @@ static bool shouldReduceOperand(Use &Op) {
   if (isa<GEPOperator>(Op.getUser()))
     return false;
   if (auto *CB = dyn_cast<CallBase>(Op.getUser())) {
-    if (&CB->getCalledOperandUse() == &Op)
+    if (CB->isCallee(&Op))
       return false;
   }
   return true;

@@ -16,6 +16,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
+#include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/SemaInternal.h"
@@ -178,8 +179,9 @@ static ScopePair GetDiagForGotoScopeDecl(Sema &S, const Decl *D) {
       }
     }
 
-    const Expr *Init = VD->getInit();
-    if (S.Context.getLangOpts().CPlusPlus && VD->hasLocalStorage() && Init) {
+    if (const Expr *Init = VD->getInit(); S.Context.getLangOpts().CPlusPlus &&
+                                          VD->hasLocalStorage() && Init &&
+                                          !Init->containsErrors()) {
       // C++11 [stmt.dcl]p3:
       //   A program that jumps from a point where a variable with automatic
       //   storage duration is not in scope to a point where it is in scope
@@ -559,12 +561,12 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     // implementable but a lot of work which we haven't felt up to doing.
     ExprWithCleanups *EWC = cast<ExprWithCleanups>(S);
     for (unsigned i = 0, e = EWC->getNumObjects(); i != e; ++i) {
-      if (auto *BDecl = EWC->getObject(i).dyn_cast<BlockDecl *>())
+      if (auto *BDecl = dyn_cast<BlockDecl *>(EWC->getObject(i)))
         for (const auto &CI : BDecl->captures()) {
           VarDecl *variable = CI.getVariable();
           BuildScopeInformation(variable, BDecl, origParentScope);
         }
-      else if (auto *CLE = EWC->getObject(i).dyn_cast<CompoundLiteralExpr *>())
+      else if (auto *CLE = dyn_cast<CompoundLiteralExpr *>(EWC->getObject(i)))
         BuildScopeInformation(CLE, origParentScope);
       else
         llvm_unreachable("unexpected cleanup object type");
@@ -577,11 +579,8 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     // automatic storage duration.
     MaterializeTemporaryExpr *MTE = cast<MaterializeTemporaryExpr>(S);
     if (MTE->getStorageDuration() == SD_Automatic) {
-      SmallVector<const Expr *, 4> CommaLHS;
-      SmallVector<SubobjectAdjustment, 4> Adjustments;
       const Expr *ExtendedObject =
-          MTE->getSubExpr()->skipRValueSubobjectAdjustments(CommaLHS,
-                                                            Adjustments);
+          MTE->getSubExpr()->skipRValueSubobjectAdjustments();
       if (ExtendedObject->getType().isDestructedType()) {
         Scopes.push_back(GotoScope(ParentScope, 0,
                                    diag::note_exits_temporary_dtor,
@@ -598,13 +597,24 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     LabelAndGotoScopes[S] = ParentScope;
     break;
 
-  case Stmt::AttributedStmtClass: {
-    AttributedStmt *AS = cast<AttributedStmt>(S);
-    if (GetMustTailAttr(AS)) {
-      LabelAndGotoScopes[AS] = ParentScope;
-      MustTailStmts.push_back(AS);
-    }
-    break;
+  case Stmt::OpenACCComputeConstructClass: {
+    unsigned NewParentScope = Scopes.size();
+    OpenACCComputeConstruct *CC = cast<OpenACCComputeConstruct>(S);
+    Scopes.push_back(GotoScope(
+        ParentScope, diag::note_acc_branch_into_compute_construct,
+        diag::note_acc_branch_out_of_compute_construct, CC->getBeginLoc()));
+    BuildScopeInformation(CC->getStructuredBlock(), NewParentScope);
+    return;
+  }
+
+  case Stmt::OpenACCCombinedConstructClass: {
+    unsigned NewParentScope = Scopes.size();
+    OpenACCCombinedConstruct *CC = cast<OpenACCCombinedConstruct>(S);
+    Scopes.push_back(GotoScope(
+        ParentScope, diag::note_acc_branch_into_compute_construct,
+        diag::note_acc_branch_out_of_compute_construct, CC->getBeginLoc()));
+    BuildScopeInformation(CC->getLoop(), NewParentScope);
+    return;
   }
 
   default:
@@ -630,7 +640,7 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
       continue;
     }
 
-    // Cases, labels, and defaults aren't "scope parents".  It's also
+    // Cases, labels, attributes, and defaults aren't "scope parents".  It's also
     // important to handle these iteratively instead of recursively in
     // order to avoid blowing out the stack.
     while (true) {
@@ -639,7 +649,13 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
         Next = SC->getSubStmt();
       else if (LabelStmt *LS = dyn_cast<LabelStmt>(SubStmt))
         Next = LS->getSubStmt();
-      else
+      else if (AttributedStmt *AS = dyn_cast<AttributedStmt>(SubStmt)) {
+        if (GetMustTailAttr(AS)) {
+          LabelAndGotoScopes[AS] = ParentScope;
+          MustTailStmts.push_back(AS);
+        }
+        Next = AS->getSubStmt();
+      } else
         break;
 
       LabelAndGotoScopes[SubStmt] = ParentScope;
@@ -752,8 +768,7 @@ void JumpScopeChecker::VerifyIndirectJumps() {
       if (CHECK_PERMISSIVE(!LabelAndGotoScopes.count(IG)))
         continue;
       unsigned IGScope = LabelAndGotoScopes[IG];
-      if (!JumpScopesMap.contains(IGScope))
-        JumpScopesMap[IGScope] = IG;
+      JumpScopesMap.try_emplace(IGScope, IG);
     }
     JumpScopes.reserve(JumpScopesMap.size());
     for (auto &Pair : JumpScopesMap)
@@ -768,8 +783,7 @@ void JumpScopeChecker::VerifyIndirectJumps() {
     if (CHECK_PERMISSIVE(!LabelAndGotoScopes.count(TheLabel->getStmt())))
       continue;
     unsigned LabelScope = LabelAndGotoScopes[TheLabel->getStmt()];
-    if (!TargetScopes.contains(LabelScope))
-      TargetScopes[LabelScope] = TheLabel;
+    TargetScopes.try_emplace(LabelScope, TheLabel);
   }
 
   // For each target scope, make sure it's trivially reachable from
@@ -939,11 +953,16 @@ void JumpScopeChecker::CheckJump(Stmt *From, Stmt *To, SourceLocation DiagLoc,
       if (Scopes[I].InDiag == diag::note_protected_by_seh_finally) {
         S.Diag(From->getBeginLoc(), diag::warn_jump_out_of_seh_finally);
         break;
-      }
-      if (Scopes[I].InDiag == diag::note_omp_protected_structured_block) {
+      } else if (Scopes[I].InDiag ==
+                 diag::note_omp_protected_structured_block) {
         S.Diag(From->getBeginLoc(), diag::err_goto_into_protected_scope);
         S.Diag(To->getBeginLoc(), diag::note_omp_exits_structured_block);
         break;
+      } else if (Scopes[I].InDiag ==
+                 diag::note_acc_branch_into_compute_construct) {
+        S.Diag(From->getBeginLoc(), diag::err_goto_into_protected_scope);
+        S.Diag(Scopes[I].Loc, diag::note_acc_branch_out_of_compute_construct);
+        return;
       }
     }
   }

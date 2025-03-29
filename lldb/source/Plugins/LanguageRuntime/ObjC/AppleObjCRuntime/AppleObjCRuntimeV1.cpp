@@ -48,7 +48,7 @@ AppleObjCRuntimeV1::AppleObjCRuntimeV1(Process *process)
 bool AppleObjCRuntimeV1::GetDynamicTypeAndAddress(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
     TypeAndOrName &class_type_or_name, Address &address,
-    Value::ValueType &value_type) {
+    Value::ValueType &value_type, llvm::ArrayRef<uint8_t> &local_buffer) {
   class_type_or_name.Clear();
   value_type = Value::ValueType::Scalar;
   if (CouldHaveDynamicValue(in_value)) {
@@ -161,7 +161,7 @@ AppleObjCRuntimeV1::CreateObjectChecker(std::string name,
                "           \n",
                name.c_str());
   assert(strformatsize < (int)sizeof(buf->contents));
-  (void)strformatsize;
+  UNUSED_IF_ASSERT_DISABLED(strformatsize);
 
   return GetTargetRef().CreateUtilityFunction(buf->contents, std::move(name),
                                               eLanguageTypeC, exe_ctx);

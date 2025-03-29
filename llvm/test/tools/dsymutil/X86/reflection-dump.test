@@ -9,7 +9,7 @@ RUN: yaml2obj %p/../Inputs/reflection_metadata.yaml -o %t.dir/tmp/reflection_met
 RUN: dsymutil -oso-prepend-path=%t.dir %t.dir/main -o %t.dir/main.dSYM
 RUN: llvm-objdump -s %t.dir/main.dSYM/Contents/Resources/DWARF/main | FileCheck %s
 
-RUN: dsymutil --linker llvm -oso-prepend-path=%t.dir %t.dir/main -o %t.dir/main.dSYM
+RUN: dsymutil --linker parallel -oso-prepend-path=%t.dir %t.dir/main -o %t.dir/main.dSYM
 RUN: llvm-objdump -s %t.dir/main.dSYM/Contents/Resources/DWARF/main | FileCheck %s
 
 REQUIRES: host-byteorder-little-endian

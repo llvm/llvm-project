@@ -128,4 +128,3 @@ class ProcessAttachTestCase(TestBase):
 
         # Call super's tearDown().
         TestBase.tearDown(self)
-

@@ -176,8 +176,9 @@ bool ScriptedThread::LoadArtificialStackFrames() {
   StackFrameListSP frames = GetStackFrameList();
 
   for (size_t idx = 0; idx < arr_size; idx++) {
-    StructuredData::Dictionary *dict;
-    if (!arr_sp->GetItemAtIndexAsDictionary(idx, dict) || !dict)
+    std::optional<StructuredData::Dictionary *> maybe_dict =
+        arr_sp->GetItemAtIndexAsDictionary(idx);
+    if (!maybe_dict)
       return ScriptedInterface::ErrorWithMessage<bool>(
           LLVM_PRETTY_FUNCTION,
           llvm::Twine(
@@ -185,6 +186,7 @@ bool ScriptedThread::LoadArtificialStackFrames() {
               llvm::Twine(idx) + llvm::Twine(") from stackframe array."))
               .str(),
           error, LLDBLog::Thread);
+    StructuredData::Dictionary *dict = *maybe_dict;
 
     lldb::addr_t pc;
     if (!dict->GetValueForKeyAsInteger("pc", pc))
@@ -226,6 +228,17 @@ bool ScriptedThread::CalculateStopInfo() {
     return ScriptedInterface::ErrorWithMessage<bool>(
         LLVM_PRETTY_FUNCTION, "Failed to get scripted thread stop info.", error,
         LLDBLog::Thread);
+
+  // If we're at a BreakpointSite, mark that we stopped there and
+  // need to hit the breakpoint when we resume.  This will be cleared
+  // if we CreateStopReasonWithBreakpointSiteID.
+  if (RegisterContextSP reg_ctx_sp = GetRegisterContext()) {
+    addr_t pc = reg_ctx_sp->GetPC();
+    if (BreakpointSiteSP bp_site_sp =
+            GetProcess()->GetBreakpointSiteList().FindByAddress(pc))
+      if (bp_site_sp->IsEnabled())
+        SetThreadStoppedAtUnexecutedBP(pc);
+  }
 
   lldb::StopInfoSP stop_info_sp;
   lldb::StopReason stop_reason_type;

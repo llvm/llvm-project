@@ -90,14 +90,14 @@ complicated behavior in a single node (rotate).
 
    Add an enum value for the new SelectionDAG node.
 
-#. ``lib/CodeGen/SelectionDAG/SelectionDAG.cpp``:
+#. ``lib/CodeGen/SelectionDAG/SelectionDAGDumper.cpp``:
 
    Add code to print the node to ``getOperationName``.  If your new node can be
-    evaluated at compile time when given constant arguments (such as an add of a
-    constant with another constant), find the ``getNode`` method that takes the
-    appropriate number of arguments, and add a case for your node to the switch
-    statement that performs constant folding for nodes that take the same number
-    of arguments as your new node.
+   evaluated at compile time when given constant arguments (such as an add of a
+   constant with another constant), find the ``getNode`` method that takes the
+   appropriate number of arguments, and add a case for your node to the switch
+   statement that performs constant folding for nodes that take the same number
+   of arguments as your new node.
 
 #. ``lib/CodeGen/SelectionDAG/LegalizeDAG.cpp``:
 
@@ -115,12 +115,12 @@ complicated behavior in a single node (rotate).
 #. ``lib/CodeGen/SelectionDAG/LegalizeDAG.cpp``:
 
    If targets may support the new node being added only at certain sizes, you
-    will also need to add code to your node's case statement in ``LegalizeOp``
-    to Promote your node's operands to a larger size, and perform the correct
-    operation.  You will also need to add code to ``PromoteOp`` to do this as
-    well.  For a good example, see ``ISD::BSWAP``, which promotes its operand to
-    a wider size, performs the byteswap, and then shifts the correct bytes right
-    to emulate the narrower byteswap in the wider type.
+   will also need to add code to your node's case statement in ``LegalizeOp``
+   to Promote your node's operands to a larger size, and perform the correct
+   operation.  You will also need to add code to ``PromoteOp`` to do this as
+   well.  For a good example, see ``ISD::BSWAP``, which promotes its operand to
+   a wider size, performs the byteswap, and then shifts the correct bytes right
+   to emulate the narrower byteswap in the wider type.
 
 #. ``lib/CodeGen/SelectionDAG/LegalizeDAG.cpp``:
 

@@ -11,8 +11,8 @@
 
 #include "formatting.h"
 #include "type.h"
-#include "flang/Common/default-kinds.h"
 #include "flang/Common/reference.h"
+#include "flang/Support/default-kinds.h"
 #include <map>
 #include <vector>
 
@@ -46,7 +46,8 @@ inline int GetRank(const ConstantSubscripts &s) {
   return static_cast<int>(s.size());
 }
 
-std::size_t TotalElementCount(const ConstantSubscripts &);
+// Returns the number of elements of shape, if no overflow occurs.
+std::optional<uint64_t> TotalElementCount(const ConstantSubscripts &shape);
 
 // Validate dimension re-ordering like ORDER in RESHAPE.
 // On success, return a vector that can be used as dimOrder in
@@ -64,6 +65,7 @@ public:
   ~ConstantBounds();
   const ConstantSubscripts &shape() const { return shape_; }
   int Rank() const { return GetRank(shape_); }
+  static constexpr int Corank() { return 0; }
   Constant<SubscriptInteger> SHAPE() const;
 
   // It is possible in this representation for a constant array to have
@@ -184,6 +186,8 @@ public:
 
   const Scalar<Result> &values() const { return values_; }
   ConstantSubscript LEN() const { return length_; }
+  bool wasHollerith() const { return wasHollerith_; }
+  void set_wasHollerith(bool yes = true) { wasHollerith_ = yes; }
 
   std::optional<Scalar<Result>> GetScalarValue() const {
     if (Rank() == 0) {
@@ -208,6 +212,7 @@ public:
 private:
   Scalar<Result> values_; // one contiguous string
   ConstantSubscript length_;
+  bool wasHollerith_{false};
 };
 
 class StructureConstructor;

@@ -4,7 +4,7 @@
 // RUN:   -analyzer-checker=alpha.unix.cstring \
 // RUN:   -analyzer-disable-checker=alpha.unix.cstring.UninitializedRead \
 // RUN:   -analyzer-checker=debug.ExprInspection \
-// RUN:   -analyzer-config eagerly-assume=false  
+// RUN:   -analyzer-config eagerly-assume=false
 //
 // RUN: %clang_analyze_cc1 -verify %s -DUSE_BUILTINS \
 // RUN:   -analyzer-checker=core \
@@ -131,7 +131,7 @@ void memcpy5(void) {
 
 void memcpy6(void) {
   int a[4] = {0};
-  memcpy(a, a, 8); // expected-warning{{overlapping}}  
+  memcpy(a, a, 8); // expected-warning{{overlapping}}
 }
 
 void memcpy7(void) {
@@ -257,7 +257,7 @@ void mempcpy5(void) {
 
 void mempcpy6(void) {
   int a[4] = {0};
-  mempcpy(a, a, 8); // expected-warning{{overlapping}}  
+  mempcpy(a, a, 8); // expected-warning{{overlapping}}
 }
 
 void mempcpy7(void) {
@@ -319,7 +319,7 @@ void mempcpy15(void) {
 
   p1 = (&s2) + 1;
   p2 = mempcpy(&s2, &s1, sizeof(struct st));
-  
+
   clang_analyzer_eval(p1 == p2); // expected-warning{{TRUE}}
 }
 
@@ -405,7 +405,7 @@ void memmove2 (void) {
 #define bcmp BUILTIN(bcmp)
 int bcmp(const void *s1, const void *s2, size_t n);
 #define memcmp bcmp
-// 
+//
 #else /* VARIANT */
 
 #define memcmp BUILTIN(memcmp)

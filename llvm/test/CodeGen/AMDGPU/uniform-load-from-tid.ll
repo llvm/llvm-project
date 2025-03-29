@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,W32 --enable-var-scope %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,W64 --enable-var-scope %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,W32 --enable-var-scope %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,W64 --enable-var-scope %s
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -S -amdgpu-annotate-uniform < %s | FileCheck --check-prefixes=OPT,OPT-W32 --enable-var-scope %s
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize64 -S -amdgpu-annotate-uniform < %s | FileCheck --check-prefixes=OPT,OPT-W64 --enable-var-scope %s
 

@@ -34,7 +34,7 @@ static void error(std::error_code EC, char const *Fmt, const Ts &...Vals) {
   std::string Buffer;
   raw_string_ostream Stream(Buffer);
   Stream << format(Fmt, Vals...);
-  WithColor::error(errs(), ToolName) << Stream.str() << "\n";
+  WithColor::error(errs(), ToolName) << Buffer << "\n";
   exit(1);
 }
 

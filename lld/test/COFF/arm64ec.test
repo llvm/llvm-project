@@ -4,6 +4,7 @@ RUN: split-file %s %t.dir && cd %t.dir
 RUN: llvm-mc -filetype=obj -triple=aarch64-windows arm64-data-sym.s -o arm64-data-sym.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows arm64ec-data-sym.s -o arm64ec-data-sym.obj
 RUN: llvm-mc -filetype=obj -triple=x86_64-windows x86_64-data-sym.s -o x86_64-data-sym.obj
+RUN: llvm-mc -filetype=obj -triple=i686-windows x86_64-data-sym.s -o i686-data-sym.obj
 RUN: llvm-cvtres -machine:arm64x -out:arm64x-resource.obj %S/Inputs/resource.res
 
 RUN: lld-link -out:test.dll -machine:arm64ec arm64ec-data-sym.obj -dll -noentry
@@ -45,6 +46,26 @@ INCOMPAT2: lld-link: error: arm64-data-sym.obj: machine type arm64 conflicts wit
 RUN: not lld-link -out:test.dll -machine:arm64 arm64-data-sym.obj x86_64-data-sym.obj \
 RUN:              -dll -noentry 2>&1 | FileCheck -check-prefix=INCOMPAT3 %s
 INCOMPAT3: lld-link: error: x86_64-data-sym.obj: machine type x64 conflicts with arm64
+
+arm64ec machine type can't be inferred, it must be specified explicitly.
+RUN: not lld-link -out:test.dll arm64ec-data-sym.obj \
+RUN:              -dll -noentry 2>&1 | FileCheck -check-prefix=INCOMPAT4 %s
+INCOMPAT4: lld-link: error: arm64ec-data-sym.obj: machine type arm64ec is ambiguous and cannot be inferred, use /machine:arm64ec or /machine:arm64x
+
+RUN: not lld-link -out:test.dll x86_64-data-sym.obj arm64ec-data-sym.obj \
+RUN:              -dll -noentry 2>&1 | FileCheck -check-prefix=INCOMPAT4 %s
+
+RUN: not lld-link -out:test.dll arm64-data-sym.obj arm64ec-data-sym.obj \
+RUN:              -dll -noentry 2>&1 | FileCheck -check-prefix=INCOMPAT4 %s
+
+RUN: not lld-link -out:test.dll i686-data-sym.obj arm64ec-data-sym.obj \
+RUN:              -dll -noentry 2>&1 | FileCheck -check-prefix=INCOMPAT5 %s
+INCOMPAT5: lld-link: error: arm64ec-data-sym.obj: machine type arm64ec conflicts with x86
+
+arm64x can be inferred and when mixed with ARM64, the first one wins
+RUN: lld-link -out:test.dll -dll -noentry arm64x-resource.obj arm64-data-sym.obj x86_64-data-sym.obj arm64ec-data-sym.obj
+RUN: not lld-link -out:test.dll -dll -noentry arm64-data-sym.obj arm64x-resource.obj x86_64-data-sym.obj 2>&1 | FileCheck -check-prefix=INCOMPAT3 %s
+RUN: not lld-link -out:test.dll -dll -noentry arm64-data-sym.obj arm64x-resource.obj arm64ec-data-sym.obj 2>&1 | FileCheck -check-prefix=INCOMPAT4 %s
 
 #--- arm64ec-data-sym.s
     .data

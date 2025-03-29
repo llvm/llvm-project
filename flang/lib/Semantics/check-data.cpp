@@ -84,14 +84,28 @@ public:
       return false;
     }
     if (IsProcedurePointer(symbol)) {
-      context_.Say(source_,
-          "Procedure pointer '%s' in a DATA statement is not standard"_port_en_US,
-          symbol.name());
+      if (!context_.IsEnabled(common::LanguageFeature::DataStmtExtensions)) {
+        context_.Say(source_,
+            "Procedure pointer '%s' may not appear in a DATA statement"_err_en_US,
+            symbol.name());
+        return false;
+      } else {
+        context_.Warn(common::LanguageFeature::DataStmtExtensions, source_,
+            "Procedure pointer '%s' in a DATA statement is not standard"_port_en_US,
+            symbol.name());
+      }
     }
     if (IsInBlankCommon(symbol)) {
-      context_.Say(source_,
-          "Blank COMMON object '%s' in a DATA statement is not standard"_port_en_US,
-          symbol.name());
+      if (!context_.IsEnabled(common::LanguageFeature::DataStmtExtensions)) {
+        context_.Say(source_,
+            "Blank COMMON object '%s' may not appear in a DATA statement"_err_en_US,
+            symbol.name());
+        return false;
+      } else {
+        context_.Warn(common::LanguageFeature::DataStmtExtensions, source_,
+            "Blank COMMON object '%s' in a DATA statement is not standard"_port_en_US,
+            symbol.name());
+      }
     }
     return true;
   }

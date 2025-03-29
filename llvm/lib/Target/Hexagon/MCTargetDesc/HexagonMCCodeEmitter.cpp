@@ -24,7 +24,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -44,10 +43,11 @@ STATISTIC(MCNumEmitted, "Number of MC instructions emitted");
 
 static const unsigned fixup_Invalid = ~0u;
 
+// clang-format off
 #define _ fixup_Invalid
 #define P(x) Hexagon::fixup_Hexagon##x
 static const std::map<unsigned, std::vector<unsigned>> ExtFixups = {
-  { MCSymbolRefExpr::VK_DTPREL,
+  { HexagonMCExpr::VK_DTPREL,
     { _,                _,              _,                      _,
       _,                _,              P(_DTPREL_16_X),        P(_DTPREL_11_X),
       P(_DTPREL_11_X),  P(_9_X),        _,                      P(_DTPREL_11_X),
@@ -57,7 +57,7 @@ static const std::map<unsigned, std::vector<unsigned>> ExtFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       P(_DTPREL_32_6_X) }},
-  { MCSymbolRefExpr::VK_GOT,
+  { HexagonMCExpr::VK_GOT,
     { _,                _,              _,                      _,
       _,                _,              P(_GOT_11_X),           _ /* [1] */,
       _ /* [1] */,      P(_9_X),        _,                      P(_GOT_11_X),
@@ -67,7 +67,7 @@ static const std::map<unsigned, std::vector<unsigned>> ExtFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       P(_GOT_32_6_X)    }},
-  { MCSymbolRefExpr::VK_GOTREL,
+  { HexagonMCExpr::VK_GOTREL,
     { _,                _,              _,                      _,
       _,                _,              P(_GOTREL_11_X),        P(_GOTREL_11_X),
       P(_GOTREL_11_X),  P(_9_X),        _,                      P(_GOTREL_11_X),
@@ -77,7 +77,7 @@ static const std::map<unsigned, std::vector<unsigned>> ExtFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       P(_GOTREL_32_6_X) }},
-  { MCSymbolRefExpr::VK_TPREL,
+  { HexagonMCExpr::VK_TPREL,
     { _,                _,              _,                      _,
       _,                _,              P(_TPREL_16_X),         P(_TPREL_11_X),
       P(_TPREL_11_X),   P(_9_X),        _,                      P(_TPREL_11_X),
@@ -87,7 +87,7 @@ static const std::map<unsigned, std::vector<unsigned>> ExtFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       P(_TPREL_32_6_X)  }},
-  { MCSymbolRefExpr::VK_Hexagon_GD_GOT,
+  { HexagonMCExpr::VK_GD_GOT,
     { _,                _,              _,                      _,
       _,                _,              P(_GD_GOT_16_X),        P(_GD_GOT_11_X),
       P(_GD_GOT_11_X),  P(_9_X),        _,                      P(_GD_GOT_11_X),
@@ -97,7 +97,7 @@ static const std::map<unsigned, std::vector<unsigned>> ExtFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       P(_GD_GOT_32_6_X) }},
-  { MCSymbolRefExpr::VK_Hexagon_GD_PLT,
+  { HexagonMCExpr::VK_GD_PLT,
     { _,                _,              _,                      _,
       _,                _,              _,                      _,
       _,                P(_9_X),        _,                      P(_GD_PLT_B22_PCREL_X),
@@ -107,7 +107,7 @@ static const std::map<unsigned, std::vector<unsigned>> ExtFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       _                 }},
-  { MCSymbolRefExpr::VK_Hexagon_IE,
+  { HexagonMCExpr::VK_IE,
     { _,                _,              _,                      _,
       _,                _,              P(_IE_16_X),            _,
       _,                P(_9_X),        _,                      _,
@@ -117,7 +117,7 @@ static const std::map<unsigned, std::vector<unsigned>> ExtFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       P(_IE_32_6_X)     }},
-  { MCSymbolRefExpr::VK_Hexagon_IE_GOT,
+  { HexagonMCExpr::VK_IE_GOT,
     { _,                _,              _,                      _,
       _,                _,              P(_IE_GOT_11_X),        P(_IE_GOT_11_X),
       P(_IE_GOT_11_X),  P(_9_X),        _,                      P(_IE_GOT_11_X),
@@ -127,7 +127,7 @@ static const std::map<unsigned, std::vector<unsigned>> ExtFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       P(_IE_GOT_32_6_X) }},
-  { MCSymbolRefExpr::VK_Hexagon_LD_GOT,
+  { HexagonMCExpr::VK_LD_GOT,
     { _,                _,              _,                      _,
       _,                _,              P(_LD_GOT_11_X),        P(_LD_GOT_11_X),
       P(_LD_GOT_11_X),  P(_9_X),        _,                      P(_LD_GOT_11_X),
@@ -137,7 +137,7 @@ static const std::map<unsigned, std::vector<unsigned>> ExtFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       P(_LD_GOT_32_6_X) }},
-  { MCSymbolRefExpr::VK_Hexagon_LD_PLT,
+  { HexagonMCExpr::VK_LD_PLT,
     { _,                _,              _,                      _,
       _,                _,              _,                      _,
       _,                P(_9_X),        _,                      P(_LD_PLT_B22_PCREL_X),
@@ -147,7 +147,7 @@ static const std::map<unsigned, std::vector<unsigned>> ExtFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       _                 }},
-  { MCSymbolRefExpr::VK_PCREL,
+  { HexagonMCExpr::VK_PCREL,
     { _,                _,              _,                      _,
       _,                _,              P(_6_PCREL_X),          _,
       _,                P(_9_X),        _,                      _,
@@ -157,7 +157,7 @@ static const std::map<unsigned, std::vector<unsigned>> ExtFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       P(_32_PCREL)      }},
-  { MCSymbolRefExpr::VK_None,
+  { HexagonMCExpr::VK_None,
     { _,                _,              _,                      _,
       _,                _,              P(_6_X),                P(_8_X),
       P(_8_X),          P(_9_X),        P(_10_X),               P(_11_X),
@@ -171,7 +171,7 @@ static const std::map<unsigned, std::vector<unsigned>> ExtFixups = {
 // [1] The fixup is GOT_16_X for signed values and GOT_11_X for unsigned.
 
 static const std::map<unsigned, std::vector<unsigned>> StdFixups = {
-  { MCSymbolRefExpr::VK_DTPREL,
+  { HexagonMCExpr::VK_DTPREL,
     { _,                _,              _,                      _,
       _,                _,              _,                      _,
       _,                _,              _,                      _,
@@ -181,7 +181,7 @@ static const std::map<unsigned, std::vector<unsigned>> StdFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       P(_DTPREL_32)     }},
-  { MCSymbolRefExpr::VK_GOT,
+  { HexagonMCExpr::VK_GOT,
     { _,                _,              _,                      _,
       _,                _,              _,                      _,
       _,                _,              _,                      _,
@@ -191,7 +191,7 @@ static const std::map<unsigned, std::vector<unsigned>> StdFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       P(_GOT_32)        }},
-  { MCSymbolRefExpr::VK_GOTREL,
+  { HexagonMCExpr::VK_GOTREL,
     { _,                _,              _,                      _,
       _,                _,              _,                      _,
       _,                _,              _,                      _,
@@ -201,7 +201,7 @@ static const std::map<unsigned, std::vector<unsigned>> StdFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       P(_GOTREL_32)     }},
-  { MCSymbolRefExpr::VK_PLT,
+  { HexagonMCExpr::VK_PLT,
     { _,                _,              _,                      _,
       _,                _,              _,                      _,
       _,                _,              _,                      _,
@@ -211,7 +211,7 @@ static const std::map<unsigned, std::vector<unsigned>> StdFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       _                 }},
-  { MCSymbolRefExpr::VK_TPREL,
+  { HexagonMCExpr::VK_TPREL,
     { _,                _,              _,                      _,
       _,                _,              _,                      _,
       _,                _,              _,                      P(_TPREL_11_X),
@@ -221,7 +221,7 @@ static const std::map<unsigned, std::vector<unsigned>> StdFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       P(_TPREL_32)      }},
-  { MCSymbolRefExpr::VK_Hexagon_GD_GOT,
+  { HexagonMCExpr::VK_GD_GOT,
     { _,                _,              _,                      _,
       _,                _,              _,                      _,
       _,                _,              _,                      _,
@@ -231,7 +231,7 @@ static const std::map<unsigned, std::vector<unsigned>> StdFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       P(_GD_GOT_32)     }},
-  { MCSymbolRefExpr::VK_Hexagon_GD_PLT,
+  { HexagonMCExpr::VK_GD_PLT,
     { _,                _,              _,                      _,
       _,                _,              _,                      _,
       _,                _,              _,                      _,
@@ -241,7 +241,7 @@ static const std::map<unsigned, std::vector<unsigned>> StdFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       _                 }},
-  { MCSymbolRefExpr::VK_Hexagon_GPREL,
+  { HexagonMCExpr::VK_GPREL,
     { _,                _,              _,                      _,
       _,                _,              _,                      _,
       _,                _,              _,                      _,
@@ -251,7 +251,7 @@ static const std::map<unsigned, std::vector<unsigned>> StdFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       _                 }},
-  { MCSymbolRefExpr::VK_Hexagon_HI16,
+  { HexagonMCExpr::VK_HI16,
     { _,                _,              _,                      _,
       _,                _,              _,                      _,
       _,                _,              _,                      _,
@@ -261,7 +261,7 @@ static const std::map<unsigned, std::vector<unsigned>> StdFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       _                 }},
-  { MCSymbolRefExpr::VK_Hexagon_IE,
+  { HexagonMCExpr::VK_IE,
     { _,                _,              _,                      _,
       _,                _,              _,                      _,
       _,                _,              _,                      _,
@@ -271,7 +271,7 @@ static const std::map<unsigned, std::vector<unsigned>> StdFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       P(_IE_32)         }},
-  { MCSymbolRefExpr::VK_Hexagon_IE_GOT,
+  { HexagonMCExpr::VK_IE_GOT,
     { _,                _,              _,                      _,
       _,                _,              _,                      _,
       _,                _,              _,                      _,
@@ -281,7 +281,7 @@ static const std::map<unsigned, std::vector<unsigned>> StdFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       P(_IE_GOT_32)     }},
-  { MCSymbolRefExpr::VK_Hexagon_LD_GOT,
+  { HexagonMCExpr::VK_LD_GOT,
     { _,                _,              _,                      _,
       _,                _,              _,                      _,
       _,                _,              _,                      _,
@@ -291,7 +291,7 @@ static const std::map<unsigned, std::vector<unsigned>> StdFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       P(_LD_GOT_32)     }},
-  { MCSymbolRefExpr::VK_Hexagon_LD_PLT,
+  { HexagonMCExpr::VK_LD_PLT,
     { _,                _,              _,                      _,
       _,                _,              _,                      _,
       _,                _,              _,                      _,
@@ -301,7 +301,7 @@ static const std::map<unsigned, std::vector<unsigned>> StdFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       _                 }},
-  { MCSymbolRefExpr::VK_Hexagon_LO16,
+  { HexagonMCExpr::VK_LO16,
     { _,                _,              _,                      _,
       _,                _,              _,                      _,
       _,                _,              _,                      _,
@@ -311,7 +311,7 @@ static const std::map<unsigned, std::vector<unsigned>> StdFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       _                 }},
-  { MCSymbolRefExpr::VK_PCREL,
+  { HexagonMCExpr::VK_PCREL,
     { _,                _,              _,                      _,
       _,                _,              _,                      _,
       _,                _,              _,                      _,
@@ -321,7 +321,7 @@ static const std::map<unsigned, std::vector<unsigned>> StdFixups = {
       _,                _,              _,                      _,
       _,                _,              _,                      _,
       P(_32_PCREL)      }},
-  { MCSymbolRefExpr::VK_None,
+  { HexagonMCExpr::VK_None,
     { _,                _,              _,                      _,
       _,                _,              _,                      _,
       _,                _,              _,                      _,
@@ -332,7 +332,7 @@ static const std::map<unsigned, std::vector<unsigned>> StdFixups = {
       _,                _,              _,                      _,
       P(_32)            }},
 };
-//
+// clang-format on
 // [2] The actual fixup is LO16 or HI16, depending on the instruction.
 #undef P
 #undef _
@@ -388,8 +388,8 @@ void HexagonMCCodeEmitter::encodeInstruction(const MCInst &MI,
   }
 }
 
-static bool RegisterMatches(unsigned Consumer, unsigned Producer,
-                            unsigned Producer2) {
+static bool RegisterMatches(MCRegister Consumer, MCRegister Producer,
+                            MCRegister Producer2) {
   return (Consumer == Producer) || (Consumer == Producer2) ||
          HexagonMCInstrInfo::IsSingleConsumerRefPairProducer(Producer,
                                                              Consumer);
@@ -457,15 +457,16 @@ void HexagonMCCodeEmitter::encodeSingleInstruction(
 
 /// Some insns are not extended and thus have no bits. These cases require
 /// a more brute force method for determining the correct relocation.
-Hexagon::Fixups HexagonMCCodeEmitter::getFixupNoBits(
-      MCInstrInfo const &MCII, const MCInst &MI, const MCOperand &MO,
-      const MCSymbolRefExpr::VariantKind VarKind) const {
+Hexagon::Fixups
+HexagonMCCodeEmitter::getFixupNoBits(MCInstrInfo const &MCII, const MCInst &MI,
+                                     const MCOperand &MO,
+                                     HexagonMCExpr::VariantKind VarKind) const {
   const MCInstrDesc &MCID = HexagonMCInstrInfo::getDesc(MCII, MI);
   unsigned InsnType = HexagonMCInstrInfo::getType(MCII, MI);
   using namespace Hexagon;
 
   if (InsnType == HexagonII::TypeEXTENDER) {
-    if (VarKind == MCSymbolRefExpr::VK_None) {
+    if (VarKind == HexagonMCExpr::VK_None) {
       auto Instrs = HexagonMCInstrInfo::bundleInstructions(*State.Bundle);
       for (auto I = Instrs.begin(), N = Instrs.end(); I != N; ++I) {
         if (I->getInst() != &MI)
@@ -480,18 +481,18 @@ Hexagon::Fixups HexagonMCCodeEmitter::getFixupNoBits(
       }
     }
 
-    static const std::map<unsigned,unsigned> Relocs = {
-      { MCSymbolRefExpr::VK_GOTREL,         fixup_Hexagon_GOTREL_32_6_X },
-      { MCSymbolRefExpr::VK_GOT,            fixup_Hexagon_GOT_32_6_X },
-      { MCSymbolRefExpr::VK_TPREL,          fixup_Hexagon_TPREL_32_6_X },
-      { MCSymbolRefExpr::VK_DTPREL,         fixup_Hexagon_DTPREL_32_6_X },
-      { MCSymbolRefExpr::VK_Hexagon_GD_GOT, fixup_Hexagon_GD_GOT_32_6_X },
-      { MCSymbolRefExpr::VK_Hexagon_LD_GOT, fixup_Hexagon_LD_GOT_32_6_X },
-      { MCSymbolRefExpr::VK_Hexagon_IE,     fixup_Hexagon_IE_32_6_X },
-      { MCSymbolRefExpr::VK_Hexagon_IE_GOT, fixup_Hexagon_IE_GOT_32_6_X },
-      { MCSymbolRefExpr::VK_PCREL,          fixup_Hexagon_B32_PCREL_X },
-      { MCSymbolRefExpr::VK_Hexagon_GD_PLT, fixup_Hexagon_GD_PLT_B32_PCREL_X },
-      { MCSymbolRefExpr::VK_Hexagon_LD_PLT, fixup_Hexagon_LD_PLT_B32_PCREL_X },
+    static const std::map<unsigned, unsigned> Relocs = {
+        {HexagonMCExpr::VK_GOTREL, fixup_Hexagon_GOTREL_32_6_X},
+        {HexagonMCExpr::VK_GOT, fixup_Hexagon_GOT_32_6_X},
+        {HexagonMCExpr::VK_TPREL, fixup_Hexagon_TPREL_32_6_X},
+        {HexagonMCExpr::VK_DTPREL, fixup_Hexagon_DTPREL_32_6_X},
+        {HexagonMCExpr::VK_GD_GOT, fixup_Hexagon_GD_GOT_32_6_X},
+        {HexagonMCExpr::VK_LD_GOT, fixup_Hexagon_LD_GOT_32_6_X},
+        {HexagonMCExpr::VK_IE, fixup_Hexagon_IE_32_6_X},
+        {HexagonMCExpr::VK_IE_GOT, fixup_Hexagon_IE_GOT_32_6_X},
+        {HexagonMCExpr::VK_PCREL, fixup_Hexagon_B32_PCREL_X},
+        {HexagonMCExpr::VK_GD_PLT, fixup_Hexagon_GD_PLT_B32_PCREL_X},
+        {HexagonMCExpr::VK_LD_PLT, fixup_Hexagon_LD_PLT_B32_PCREL_X},
     };
 
     auto F = Relocs.find(VarKind);
@@ -503,28 +504,28 @@ Hexagon::Fixups HexagonMCCodeEmitter::getFixupNoBits(
   if (MCID.isBranch())
     return fixup_Hexagon_B13_PCREL;
 
-  static const std::map<unsigned,unsigned> RelocsLo = {
-    { MCSymbolRefExpr::VK_GOT,            fixup_Hexagon_GOT_LO16 },
-    { MCSymbolRefExpr::VK_GOTREL,         fixup_Hexagon_GOTREL_LO16 },
-    { MCSymbolRefExpr::VK_Hexagon_GD_GOT, fixup_Hexagon_GD_GOT_LO16 },
-    { MCSymbolRefExpr::VK_Hexagon_LD_GOT, fixup_Hexagon_LD_GOT_LO16 },
-    { MCSymbolRefExpr::VK_Hexagon_IE,     fixup_Hexagon_IE_LO16 },
-    { MCSymbolRefExpr::VK_Hexagon_IE_GOT, fixup_Hexagon_IE_GOT_LO16 },
-    { MCSymbolRefExpr::VK_TPREL,          fixup_Hexagon_TPREL_LO16 },
-    { MCSymbolRefExpr::VK_DTPREL,         fixup_Hexagon_DTPREL_LO16 },
-    { MCSymbolRefExpr::VK_None,           fixup_Hexagon_LO16 },
+  static const std::map<unsigned, unsigned> RelocsLo = {
+      {HexagonMCExpr::VK_GOT, fixup_Hexagon_GOT_LO16},
+      {HexagonMCExpr::VK_GOTREL, fixup_Hexagon_GOTREL_LO16},
+      {HexagonMCExpr::VK_GD_GOT, fixup_Hexagon_GD_GOT_LO16},
+      {HexagonMCExpr::VK_LD_GOT, fixup_Hexagon_LD_GOT_LO16},
+      {HexagonMCExpr::VK_IE, fixup_Hexagon_IE_LO16},
+      {HexagonMCExpr::VK_IE_GOT, fixup_Hexagon_IE_GOT_LO16},
+      {HexagonMCExpr::VK_TPREL, fixup_Hexagon_TPREL_LO16},
+      {HexagonMCExpr::VK_DTPREL, fixup_Hexagon_DTPREL_LO16},
+      {HexagonMCExpr::VK_None, fixup_Hexagon_LO16},
   };
 
-  static const std::map<unsigned,unsigned> RelocsHi = {
-    { MCSymbolRefExpr::VK_GOT,            fixup_Hexagon_GOT_HI16 },
-    { MCSymbolRefExpr::VK_GOTREL,         fixup_Hexagon_GOTREL_HI16 },
-    { MCSymbolRefExpr::VK_Hexagon_GD_GOT, fixup_Hexagon_GD_GOT_HI16 },
-    { MCSymbolRefExpr::VK_Hexagon_LD_GOT, fixup_Hexagon_LD_GOT_HI16 },
-    { MCSymbolRefExpr::VK_Hexagon_IE,     fixup_Hexagon_IE_HI16 },
-    { MCSymbolRefExpr::VK_Hexagon_IE_GOT, fixup_Hexagon_IE_GOT_HI16 },
-    { MCSymbolRefExpr::VK_TPREL,          fixup_Hexagon_TPREL_HI16 },
-    { MCSymbolRefExpr::VK_DTPREL,         fixup_Hexagon_DTPREL_HI16 },
-    { MCSymbolRefExpr::VK_None,           fixup_Hexagon_HI16 },
+  static const std::map<unsigned, unsigned> RelocsHi = {
+      {HexagonMCExpr::VK_GOT, fixup_Hexagon_GOT_HI16},
+      {HexagonMCExpr::VK_GOTREL, fixup_Hexagon_GOTREL_HI16},
+      {HexagonMCExpr::VK_GD_GOT, fixup_Hexagon_GD_GOT_HI16},
+      {HexagonMCExpr::VK_LD_GOT, fixup_Hexagon_LD_GOT_HI16},
+      {HexagonMCExpr::VK_IE, fixup_Hexagon_IE_HI16},
+      {HexagonMCExpr::VK_IE_GOT, fixup_Hexagon_IE_GOT_HI16},
+      {HexagonMCExpr::VK_TPREL, fixup_Hexagon_TPREL_HI16},
+      {HexagonMCExpr::VK_DTPREL, fixup_Hexagon_DTPREL_HI16},
+      {HexagonMCExpr::VK_None, fixup_Hexagon_HI16},
   };
 
   switch (MCID.getOpcode()) {
@@ -616,7 +617,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
   const MCInstrDesc &MCID = HexagonMCInstrInfo::getDesc(MCII, MI);
   unsigned FixupWidth = HexagonMCInstrInfo::getExtentBits(MCII, MI) -
                         HexagonMCInstrInfo::getExtentAlignment(MCII, MI);
-  MCSymbolRefExpr::VariantKind VarKind = MCSRE->getKind();
+  HexagonMCExpr::VariantKind VarKind = getVariantKind(MCSRE);
   unsigned Opc = MCID.getOpcode();
   unsigned IType = HexagonMCInstrInfo::getType(MCII, MI);
 
@@ -631,7 +632,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
   // Handle special cases first, the rest will be looked up in the tables.
 
   if (FixupWidth == 16 && !State.Extended) {
-    if (VarKind == MCSymbolRefExpr::VK_None) {
+    if (VarKind == HexagonMCExpr::VK_None) {
       if (HexagonMCInstrInfo::s27_2_reloc(*MO.getExpr())) {
         // A2_iconst.
         FixupKind = Hexagon::fixup_Hexagon_27_REG;
@@ -649,7 +650,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
         if (UsesGP(MCID))
           FixupKind = GPRelFixups[Shift];
       }
-    } else if (VarKind == MCSymbolRefExpr::VK_GOTREL) {
+    } else if (VarKind == HexagonMCExpr::VK_GOTREL) {
       // Select between LO/HI.
       if (Opc == Hexagon::LO)
         FixupKind = Hexagon::fixup_Hexagon_GOTREL_LO16;
@@ -666,7 +667,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
         break;
       case 8:
       case 7:
-        if (State.Extended && VarKind == MCSymbolRefExpr::VK_GOT)
+        if (State.Extended && VarKind == HexagonMCExpr::VK_GOT)
           FixupKind = HexagonMCInstrInfo::isExtentSigned(MCII, MI)
                         ? Hexagon::fixup_Hexagon_GOT_16_X
                         : Hexagon::fixup_Hexagon_GOT_11_X;
@@ -721,9 +722,9 @@ HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
     // Calculate the new value distance to the associated producer
     unsigned SOffset = 0;
     unsigned VOffset = 0;
-    unsigned UseReg = MO.getReg();
-    unsigned DefReg1 = Hexagon::NoRegister;
-    unsigned DefReg2 = Hexagon::NoRegister;
+    MCRegister UseReg = MO.getReg();
+    MCRegister DefReg1;
+    MCRegister DefReg2;
 
     auto Instrs = HexagonMCInstrInfo::bundleInstructions(*State.Bundle);
     const MCOperand *I = Instrs.begin() + State.Index - 1;
@@ -734,8 +735,8 @@ HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
       if (HexagonMCInstrInfo::isImmext(Inst))
         continue;
 
-      DefReg1 = Hexagon::NoRegister;
-      DefReg2 = Hexagon::NoRegister;
+      DefReg1 = MCRegister();
+      DefReg2 = MCRegister();
       ++SOffset;
       if (HexagonMCInstrInfo::isVector(MCII, Inst)) {
         // Vector instructions don't count scalars.
@@ -770,7 +771,7 @@ HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
 
   assert(!MO.isImm());
   if (MO.isReg()) {
-    unsigned Reg = MO.getReg();
+    MCRegister Reg = MO.getReg();
     switch (HexagonMCInstrInfo::getDesc(MCII, MI)
                 .operands()[OperandNumber]
                 .RegClass) {

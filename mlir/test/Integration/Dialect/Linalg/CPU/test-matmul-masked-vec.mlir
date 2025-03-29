@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -transform-interpreter -test-transform-dialect-erase-schedule -one-shot-bufferize -func-bufferize -lower-vector-mask --test-lower-to-llvm | \
-// RUN: mlir-cpu-runner -e main -entry-point-result=void --shared-libs=%mlir_c_runner_utils,%mlir_runner_utils | \
+// RUN: mlir-opt %s -transform-interpreter -test-transform-dialect-erase-schedule -one-shot-bufferize="bufferize-function-boundaries" -buffer-deallocation-pipeline -lower-vector-mask --test-lower-to-llvm | \
+// RUN: mlir-runner -e main -entry-point-result=void --shared-libs=%mlir_c_runner_utils,%mlir_runner_utils | \
 // RUN: FileCheck %s
 
 func.func private @printMemrefF32(%ptr : tensor<*xf32>)

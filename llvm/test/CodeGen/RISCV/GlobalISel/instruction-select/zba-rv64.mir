@@ -203,30 +203,6 @@ body:             |
     $x10 = COPY %4(s64)
 ...
 ---
-name:            slli_uw_s32
-legalized:       true
-regBankSelected: true
-tracksRegLiveness: true
-body:             |
-  bb.0.entry:
-    liveins: $x10
-
-    ; CHECK-LABEL: name: slli_uw_s32
-    ; CHECK: liveins: $x10
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[SLLI_UW:%[0-9]+]]:gpr = SLLI_UW [[COPY]], 7
-    ; CHECK-NEXT: $x10 = COPY [[SLLI_UW]]
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s32) = G_TRUNC %0(s64)
-
-    %2:gprb(s64) = G_ZEXT %1(s32)
-    %3:gprb(s64) = G_CONSTANT i64 7
-    %4:gprb(s64) = G_SHL %2, %3
-
-    $x10 = COPY %4(s64)
-...
----
 name:            slli_uw_complex
 legalized:       true
 regBankSelected: true
@@ -248,4 +224,27 @@ body:             |
     %2:gprb(s64) = G_AND %0, %1
 
     $x10 = COPY %2(s64)
+...
+---
+name:            adduw
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+
+    ; CHECK-LABEL: name: adduw
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
+    ; CHECK-NEXT: [[ADD_UW:%[0-9]+]]:gpr = ADD_UW [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $x10 = COPY [[ADD_UW]]
+    %0:gprb(s64) = COPY $x10
+    %1:gprb(s64) = COPY $x11
+    %2:gprb(s64) = G_CONSTANT i64 4294967295
+    %3:gprb(s64) = G_AND %0, %2
+    %4:gprb(s64) = G_ADD %3, %1
+    $x10 = COPY %4(s64)
 ...

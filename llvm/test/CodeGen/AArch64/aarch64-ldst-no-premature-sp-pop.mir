@@ -7,16 +7,16 @@
 
   define hidden i32 @foo(i32 %0) {
     %2 = alloca [4 x i32], align 4
-    %3 = bitcast [4 x i32]* %2 to i8*
-    call void @llvm.memset.p0i8.i64(i8* nonnull align 4 dereferenceable(16) %3, i8 0, i64 16, i1 false)
+    %3 = bitcast ptr %2 to ptr
+    call void @llvm.memset.p0.i64(ptr nonnull align 4 dereferenceable(16) %3, i8 0, i64 16, i1 false)
     %4 = sext i32 %0 to i64
-    %5 = getelementptr inbounds [4 x i32], [4 x i32]* %2, i64 0, i64 %4
-    %6 = load i32, i32* %5, align 4
+    %5 = getelementptr inbounds [4 x i32], ptr %2, i64 0, i64 %4
+    %6 = load i32, ptr %5, align 4
     ret i32 %6
   }
 
-  declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #2
-  declare void @llvm.stackprotector(i8*, i8**) #3
+  declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #2
+  declare void @llvm.stackprotector(ptr, ptr) #3
 
   !llvm.module.flags = !{!0}
   !llvm.ident = !{!1}

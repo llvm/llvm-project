@@ -10,39 +10,30 @@
 #include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/SymbolTable.h"
 
 using namespace mlir;
 
-namespace {
-// TODO: Fix the LLVM utilities for looking up functions to take Operation*
-// with SymbolTable trait instead of ModuleOp and make similar change here. This
-// allows call sites to use getParentWithTrait<OpTrait::SymbolTable> instead
-// of getParentOfType<ModuleOp> to pass down the operation.
-LLVM::LLVMFuncOp getNotalignedAllocFn(const LLVMTypeConverter *typeConverter,
-                                      ModuleOp module, Type indexType) {
+static FailureOr<LLVM::LLVMFuncOp>
+getNotalignedAllocFn(const LLVMTypeConverter *typeConverter, Operation *module,
+                     Type indexType) {
+  bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
+  if (useGenericFn)
+    return LLVM::lookupOrCreateGenericAllocFn(module, indexType);
+
+  return LLVM::lookupOrCreateMallocFn(module, indexType);
+}
+
+static FailureOr<LLVM::LLVMFuncOp>
+getAlignedAllocFn(const LLVMTypeConverter *typeConverter, Operation *module,
+                  Type indexType) {
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
 
   if (useGenericFn)
-    return LLVM::lookupOrCreateGenericAllocFn(
-        module, indexType, typeConverter->useOpaquePointers());
+    return LLVM::lookupOrCreateGenericAlignedAllocFn(module, indexType);
 
-  return LLVM::lookupOrCreateMallocFn(module, indexType,
-                                      typeConverter->useOpaquePointers());
+  return LLVM::lookupOrCreateAlignedAllocFn(module, indexType);
 }
-
-LLVM::LLVMFuncOp getAlignedAllocFn(const LLVMTypeConverter *typeConverter,
-                                   ModuleOp module, Type indexType) {
-  bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
-
-  if (useGenericFn)
-    return LLVM::lookupOrCreateGenericAlignedAllocFn(
-        module, indexType, typeConverter->useOpaquePointers());
-
-  return LLVM::lookupOrCreateAlignedAllocFn(module, indexType,
-                                            typeConverter->useOpaquePointers());
-}
-
-} // end namespace
 
 Value AllocationOpLLVMLowering::createAligned(
     ConversionPatternRewriter &rewriter, Location loc, Value input,
@@ -59,17 +50,15 @@ static Value castAllocFuncResult(ConversionPatternRewriter &rewriter,
                                  MemRefType memRefType, Type elementPtrType,
                                  const LLVMTypeConverter &typeConverter) {
   auto allocatedPtrTy = cast<LLVM::LLVMPointerType>(allocatedPtr.getType());
-  unsigned memrefAddrSpace = *typeConverter.getMemRefAddressSpace(memRefType);
+  FailureOr<unsigned> maybeMemrefAddrSpace =
+      typeConverter.getMemRefAddressSpace(memRefType);
+  if (failed(maybeMemrefAddrSpace))
+    return Value();
+  unsigned memrefAddrSpace = *maybeMemrefAddrSpace;
   if (allocatedPtrTy.getAddressSpace() != memrefAddrSpace)
     allocatedPtr = rewriter.create<LLVM::AddrSpaceCastOp>(
-        loc,
-        typeConverter.getPointerType(allocatedPtrTy.getElementType(),
-                                     memrefAddrSpace),
+        loc, LLVM::LLVMPointerType::get(rewriter.getContext(), memrefAddrSpace),
         allocatedPtr);
-
-  if (!typeConverter.useOpaquePointers())
-    allocatedPtr =
-        rewriter.create<LLVM::BitcastOp>(loc, elementPtrType, allocatedPtr);
   return allocatedPtr;
 }
 
@@ -84,14 +73,25 @@ std::tuple<Value, Value> AllocationOpLLVMLowering::allocateBufferManuallyAlign(
   MemRefType memRefType = getMemRefResultType(op);
   // Allocate the underlying buffer.
   Type elementPtrType = this->getElementPtrType(memRefType);
-  LLVM::LLVMFuncOp allocFuncOp = getNotalignedAllocFn(
-      getTypeConverter(), op->getParentOfType<ModuleOp>(), getIndexType());
-  auto results = rewriter.create<LLVM::CallOp>(loc, allocFuncOp, sizeBytes);
+  if (!elementPtrType) {
+    emitError(loc, "conversion of memref memory space ")
+        << memRefType.getMemorySpace()
+        << " to integer address space "
+           "failed. Consider adding memory space conversions.";
+  }
+  FailureOr<LLVM::LLVMFuncOp> allocFuncOp = getNotalignedAllocFn(
+      getTypeConverter(), op->getParentWithTrait<OpTrait::SymbolTable>(),
+      getIndexType());
+  if (failed(allocFuncOp))
+    return std::make_tuple(Value(), Value());
+  auto results =
+      rewriter.create<LLVM::CallOp>(loc, allocFuncOp.value(), sizeBytes);
 
   Value allocatedPtr =
       castAllocFuncResult(rewriter, loc, results.getResult(), memRefType,
                           elementPtrType, *getTypeConverter());
-
+  if (!allocatedPtr)
+    return std::make_tuple(Value(), Value());
   Value alignedPtr = allocatedPtr;
   if (alignment) {
     // Compute the aligned pointer.
@@ -148,10 +148,13 @@ Value AllocationOpLLVMLowering::allocateBufferAutoAlign(
     sizeBytes = createAligned(rewriter, loc, sizeBytes, allocAlignment);
 
   Type elementPtrType = this->getElementPtrType(memRefType);
-  LLVM::LLVMFuncOp allocFuncOp = getAlignedAllocFn(
-      getTypeConverter(), op->getParentOfType<ModuleOp>(), getIndexType());
+  FailureOr<LLVM::LLVMFuncOp> allocFuncOp = getAlignedAllocFn(
+      getTypeConverter(), op->getParentWithTrait<OpTrait::SymbolTable>(),
+      getIndexType());
+  if (failed(allocFuncOp))
+    return Value();
   auto results = rewriter.create<LLVM::CallOp>(
-      loc, allocFuncOp, ValueRange({allocAlignment, sizeBytes}));
+      loc, allocFuncOp.value(), ValueRange({allocAlignment, sizeBytes}));
 
   return castAllocFuncResult(rewriter, loc, results.getResult(), memRefType,
                              elementPtrType, *getTypeConverter());
@@ -182,6 +185,10 @@ LogicalResult AllocLikeOpLLVMLowering::matchAndRewrite(
   // Allocate the underlying buffer.
   auto [allocatedPtr, alignedPtr] =
       this->allocateBuffer(rewriter, loc, size, op);
+
+  if (!allocatedPtr || !alignedPtr)
+    return rewriter.notifyMatchFailure(loc,
+                                       "underlying buffer allocation failed");
 
   // Create the MemRef descriptor.
   auto memRefDescriptor = this->createMemRefDescriptor(

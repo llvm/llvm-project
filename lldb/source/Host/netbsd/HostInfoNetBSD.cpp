@@ -45,7 +45,6 @@ llvm::VersionTuple HostInfoNetBSD::GetOSVersion() {
 
 std::optional<std::string> HostInfoNetBSD::GetOSBuildString() {
   int mib[2] = {CTL_KERN, KERN_OSREV};
-  char osrev_str[12];
   int osrev = 0;
   size_t osrev_len = sizeof(osrev);
 

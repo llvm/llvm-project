@@ -17,18 +17,10 @@
 #include <type_traits>
 
 typedef std::allocator<void> A1;
-typedef std::allocator<void const> A2;
-struct A3 : std::allocator<void> { };
-struct A4 : std::allocator<void const> { };
+struct A2 : std::allocator<void> { };
 
 static_assert(std::is_trivially_default_constructible<A1>::value, "");
 static_assert(std::is_trivial<A1>::value, "");
 
 static_assert(std::is_trivially_default_constructible<A2>::value, "");
 static_assert(std::is_trivial<A2>::value, "");
-
-static_assert(std::is_trivially_default_constructible<A3>::value, "");
-static_assert(std::is_trivial<A3>::value, "");
-
-static_assert(std::is_trivially_default_constructible<A4>::value, "");
-static_assert(std::is_trivial<A4>::value, "");

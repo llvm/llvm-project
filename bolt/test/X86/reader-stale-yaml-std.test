@@ -1,0 +1,69 @@
+# UNSUPPORTED: true
+## This script checks that YamlProfileReader in llvm-bolt is reading data
+## correctly and stale data is corrected by profile inference.
+
+RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
+RUN: llvm-bolt %t.exe -o %t.null -b %p/Inputs/blarge_profile_stale.std-hash.yaml \
+RUN:   --print-cfg --print-only=usqrt,SolveCubic --infer-stale-profile=1 -v=1 \
+RUN:   2>&1 | FileCheck %s
+
+## Verify that yaml reader works as expected.
+CHECK: pre-processing profile using YAML profile reader
+CHECK: BOLT-INFO: YAML profile with hash: std::hash
+
+## Function "SolveCubic" has stale profile, since there is one jump in the
+## profile (from bid=13 to bid=2) which is not in the CFG in the binary. The test
+## verifies that the inference is able to match two blocks (bid=1 and bid=13)
+## using "loose" hashes and then correctly propagate the counts.
+
+CHECK: Binary Function "SolveCubic" after building cfg {
+CHECK:   State       : CFG constructed
+CHECK:   Address     : 0x400e00
+CHECK:   Size        : 0x368
+CHECK:   Section     : .text
+CHECK:   IsSimple    : 1
+CHECK:   BB Count    : 18
+CHECK:   Exec Count  : 151
+CHECK:   Branch Count: 552
+CHECK: }
+## Verify block counts.
+CHECK: .LBB00 (43 instructions, align : 1)
+CHECK:   Successors: .Ltmp[[#BB07:]] (mispreds: 0, count: 0), .LFT[[#BB01:]] (mispreds: 0, count: 151)
+CHECK: .LFT[[#BB01:]] (5 instructions, align : 1)
+CHECK:   Successors: .Ltmp[[#BB013:]] (mispreds: 0, count: 151), .LFT[[#BB02:]] (mispreds: 0, count: 0)
+CHECK: .Ltmp[[#BB03:]] (26 instructions, align : 1)
+CHECK:   Successors: .Ltmp[[#BB05:]] (mispreds: 0, count: 151), .LFT[[#BB04:]] (mispreds: 0, count: 0)
+CHECK: .Ltmp[[#BB05:]] (9 instructions, align : 1)
+CHECK: .Ltmp[[#BB013:]] (12 instructions, align : 1)
+CHECK:   Successors: .Ltmp[[#BB03:]] (mispreds: 0, count: 151)
+CHECK: End of Function "SolveCubic"
+
+## Function "usqrt" has stale profile, since the number of blocks in the profile
+## (nblocks=6) does not match the size of the CFG in the binary. The entry
+## block (bid=0) has an incorrect (missing) count, which should be inferred by
+# #the algorithm.
+
+CHECK: Binary Function "usqrt" after building cfg {
+CHECK:   State       : CFG constructed
+CHECK:   Address     : 0x401170
+CHECK:   Size        : 0x43
+CHECK:   Section     : .text
+CHECK:   IsSimple    : 1
+CHECK:   BB Count    : 5
+CHECK:   Exec Count  : 20
+CHECK:   Branch Count: 640
+CHECK: }
+## Verify block counts.
+CHECK: .LBB01 (4 instructions, align : 1)
+CHECK:   Successors: .Ltmp[[#BB113:]] (mispreds: 0, count: 20)
+CHECK: .Ltmp[[#BB113:]] (9 instructions, align : 1)
+CHECK:   Successors: .Ltmp[[#BB112:]] (mispreds: 0, count: 320), .LFT[[#BB10:]] (mispreds: 0, count: 0)
+CHECK: .LFT[[#BB10:]] (2 instructions, align : 1)
+CHECK:   Successors: .Ltmp[[#BB112:]] (mispreds: 0, count: 0)
+CHECK: .Ltmp[[#BB112:]] (2 instructions, align : 1)
+CHECK:   Successors: .Ltmp[[#BB113:]] (mispreds: 0, count: 300), .LFT[[#BB11:]] (mispreds: 0, count: 20)
+CHECK: .LFT[[#BB11:]] (2 instructions, align : 1)
+CHECK: End of Function "usqrt"
+## Check the overall inference stats.
+CHECK: 2 out of 7 functions in the binary (28.6%) have non-empty execution profile
+CHECK: inferred profile for 2 (100.00% of profiled, 100.00% of stale) functions responsible for {{.*}} samples ({{.*}} out of {{.*}})

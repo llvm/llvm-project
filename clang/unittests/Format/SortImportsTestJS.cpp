@@ -17,7 +17,7 @@ namespace clang {
 namespace format {
 namespace {
 
-class SortImportsTestJS : public ::testing::Test {
+class SortImportsTestJS : public testing::Test {
 protected:
   std::string sort(StringRef Code, unsigned Offset = 0, unsigned Length = 0) {
     StringRef FileName = "input.js";
@@ -33,10 +33,9 @@ protected:
     return *Formatted;
   }
 
-  void _verifySort(const char *File, int Line, llvm::StringRef Expected,
-                   llvm::StringRef Code, unsigned Offset = 0,
-                   unsigned Length = 0) {
-    ::testing::ScopedTrace t(File, Line, ::testing::Message() << Code.str());
+  void _verifySort(const char *File, int Line, StringRef Expected,
+                   StringRef Code, unsigned Offset = 0, unsigned Length = 0) {
+    testing::ScopedTrace t(File, Line, testing::Message() << Code.str());
     std::string Result = sort(Code, Offset, Length);
     EXPECT_EQ(Expected.str(), Result) << "Expected:\n"
                                       << Expected << "\nActual:\n"

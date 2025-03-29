@@ -23,14 +23,14 @@
 
   @dup_mm_err = external dso_local local_unnamed_addr global i32, align 4, !dbg !0
 
-  declare dso_local i32 @atomic_long_read(%struct.atomic_t.0.6.15.24.48.51.54.57*) local_unnamed_addr #0
+  declare dso_local i32 @atomic_long_read(ptr) local_unnamed_addr #0
 
-  declare dso_local i32 @get_mm_counter(%struct.mm_struct.2.8.17.26.50.53.56.59*, i32) local_unnamed_addr #0
+  declare dso_local i32 @get_mm_counter(ptr, i32) local_unnamed_addr #0
 
-  define dso_local i32 @dup_mm() local_unnamed_addr !dbg !16 {
+  define dso_local i32 @dup_mm(i1 %arg) local_unnamed_addr !dbg !16 {
   entry:
-    %call = tail call i32 bitcast (i32 (...)* @kmem_cache_alloc to i32 (i32)*)(i32 0)
-    br i1 undef, label %cleanup, label %if.end
+    %call = tail call i32 @kmem_cache_alloc(i32 0)
+    br i1 %arg, label %cleanup, label %if.end
 
   if.end:                                           ; preds = %entry
     %tobool1.not = icmp eq i32 undef, 0
@@ -38,11 +38,11 @@
 
   if.end3:                                          ; preds = %if.end
     call void @llvm.dbg.value(metadata !DIArgList(i32 %call, i32 0), metadata !30, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 4, DW_OP_mul, DW_OP_plus, DW_OP_stack_value)), !dbg !40
-    %0 = load volatile i32, i32* undef, align 4
+    %0 = load volatile i32, ptr undef, align 4
     br label %cleanup
 
   free_pt:                                          ; preds = %if.end
-    store i32 0, i32* undef, align 4
+    store i32 0, ptr undef, align 4
     br label %cleanup
 
   cleanup:                                          ; preds = %free_pt, %if.end3, %entry
@@ -180,7 +180,7 @@ body:             |
   bb.2.if.end3:
     liveins: $r0
 
-    dead renamable $r1 = LDRi12 undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (volatile load (s32) from `i32* undef`)
+    dead renamable $r1 = LDRi12 undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (volatile load (s32) from `ptr undef`)
     renamable $r4 = COPY killed renamable $r0
     DBG_PHI $r4, 1
     DBG_VALUE $r4, $noreg, !30, !DIExpression(), debug-location !40
@@ -192,7 +192,7 @@ body:             |
     successors: %bb.4(0x80000000)
     liveins: $r4
 
-    STRi12 renamable $r4, undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (store (s32) into `i32* undef`)
+    STRi12 renamable $r4, undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (store (s32) into `ptr undef`)
 
   bb.4.cleanup:
     liveins: $r4

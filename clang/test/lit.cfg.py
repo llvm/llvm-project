@@ -29,10 +29,12 @@ config.suffixes = [
     ".c",
     ".cpp",
     ".i",
+    ".cir",
     ".cppm",
     ".m",
     ".mm",
     ".cu",
+    ".cuh",
     ".hip",
     ".hlsl",
     ".ll",
@@ -84,19 +86,24 @@ tool_dirs = [config.clang_tools_dir, config.llvm_tools_dir]
 tools = [
     "apinotes-test",
     "c-index-test",
+    "cir-opt",
     "clang-diff",
     "clang-format",
     "clang-repl",
     "clang-offload-packager",
     "clang-tblgen",
     "clang-scan-deps",
+    "clang-installapi",
     "opt",
     "llvm-ifs",
     "yaml2obj",
     "clang-linker-wrapper",
+    "clang-nvlink-wrapper",
+    "clang-sycl-linker",
     "llvm-lto",
     "llvm-lto2",
     "llvm-profdata",
+    "llvm-readtapi",
     ToolSubst(
         "%clang_extdef_map",
         command=FindTool("clang-extdef-mapping"),
@@ -179,6 +186,14 @@ if config.clang_staticanalyzer:
         )
     )
 
+    csv2json_path = os.path.join(config.test_source_root, "Analysis", "csv2json.py")
+    config.substitutions.append(
+        (
+            "%csv2json",
+            '"%s" %s' % (config.python_executable, csv2json_path),
+        )
+    )
+
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 config.substitutions.append(
@@ -206,6 +221,9 @@ config.substitutions.append(
 config.substitutions.append(("%host_cc", config.host_cc))
 config.substitutions.append(("%host_cxx", config.host_cxx))
 
+# Determine whether the test target is compatible with execution on the host.
+if "aarch64" in config.host_arch:
+    config.available_features.add("aarch64-host")
 
 # Plugins (loadable modules)
 if config.has_plugins and config.llvm_plugin_ext:
@@ -243,6 +261,7 @@ if platform.system() not in ["Darwin", "Fuchsia"]:
 
 
 def is_filesystem_case_insensitive():
+    os.makedirs(config.test_exec_root, exist_ok=True)
     handle, path = tempfile.mkstemp(prefix="case-test", dir=config.test_exec_root)
     isInsensitive = os.path.exists(
         os.path.join(os.path.dirname(path), os.path.basename(path).upper())
@@ -331,43 +350,6 @@ if config.clang_vendor_uti:
 if config.have_llvm_driver:
     config.available_features.add("llvm-driver")
 
-
-def exclude_unsupported_files_for_aix(dirname):
-    for filename in os.listdir(dirname):
-        source_path = os.path.join(dirname, filename)
-        if os.path.isdir(source_path):
-            continue
-        f = open(source_path, "r", encoding="ISO-8859-1")
-        try:
-            data = f.read()
-            # 64-bit object files are not supported on AIX, so exclude the tests.
-            if (
-                any(
-                    option in data
-                    for option in (
-                        "-emit-obj",
-                        "-fmodule-format=obj",
-                        "-fintegrated-as",
-                    )
-                )
-                and "64" in config.target_triple
-            ):
-                config.excludes += [filename]
-        finally:
-            f.close()
-
-
-if "aix" in config.target_triple:
-    for directory in (
-        "/CodeGenCXX",
-        "/Misc",
-        "/Modules",
-        "/PCH",
-        "/Driver",
-        "/ASTMerge/anonymous-fields",
-        "/ASTMerge/injected-class-name-decl",
-    ):
-        exclude_unsupported_files_for_aix(config.test_source_root + directory)
 
 # Some tests perform deep recursion, which requires a larger pthread stack size
 # than the relatively low default of 192 KiB for 64-bit processes on AIX. The

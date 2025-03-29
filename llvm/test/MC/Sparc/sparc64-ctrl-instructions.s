@@ -1191,28 +1191,36 @@
         brz,a,pn   %g1, .BB0
 
         ! CHECK: movrz   %g1, %g2, %g3 ! encoding: [0x87,0x78,0x44,0x02]
+        ! CHECK: movrz   %g1, %g2, %g3 ! encoding: [0x87,0x78,0x44,0x02]
         ! CHECK: movrlez %g1, %g2, %g3 ! encoding: [0x87,0x78,0x48,0x02]
         ! CHECK: movrlz  %g1, %g2, %g3 ! encoding: [0x87,0x78,0x4c,0x02]
+        ! CHECK: movrnz  %g1, %g2, %g3 ! encoding: [0x87,0x78,0x54,0x02]
         ! CHECK: movrnz  %g1, %g2, %g3 ! encoding: [0x87,0x78,0x54,0x02]
         ! CHECK: movrgz  %g1, %g2, %g3 ! encoding: [0x87,0x78,0x58,0x02]
         ! CHECK: movrgez %g1, %g2, %g3 ! encoding: [0x87,0x78,0x5c,0x02]
         movrz   %g1, %g2, %g3
+        movre   %g1, %g2, %g3
         movrlez %g1, %g2, %g3
         movrlz  %g1, %g2, %g3
         movrnz  %g1, %g2, %g3
+        movrne  %g1, %g2, %g3
         movrgz  %g1, %g2, %g3
         movrgez %g1, %g2, %g3
 
         ! CHECK: movrz   %g1, 2, %g3 ! encoding: [0x87,0x78,0x64,0x02]
+        ! CHECK: movrz   %g1, 2, %g3 ! encoding: [0x87,0x78,0x64,0x02]
         ! CHECK: movrlez %g1, 2, %g3 ! encoding: [0x87,0x78,0x68,0x02]
         ! CHECK: movrlz  %g1, 2, %g3 ! encoding: [0x87,0x78,0x6c,0x02]
+        ! CHECK: movrnz  %g1, 2, %g3 ! encoding: [0x87,0x78,0x74,0x02]
         ! CHECK: movrnz  %g1, 2, %g3 ! encoding: [0x87,0x78,0x74,0x02]
         ! CHECK: movrgz  %g1, 2, %g3 ! encoding: [0x87,0x78,0x78,0x02]
         ! CHECK: movrgez %g1, 2, %g3 ! encoding: [0x87,0x78,0x7c,0x02]
         movrz   %g1, 2, %g3
+        movre   %g1, 2, %g3
         movrlez %g1, 2, %g3
         movrlz  %g1, 2, %g3
         movrnz  %g1, 2, %g3
+        movrne  %g1, 2, %g3
         movrgz  %g1, 2, %g3
         movrgez %g1, 2, %g3
 

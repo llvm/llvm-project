@@ -1,11 +1,11 @@
-# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not llc -mtriple=x86_64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
 --- |
 
   define i32 @test(i32 %a) {
   entry:
     %b = alloca i32
-    store i32 %a, i32* %b
-    %c = load i32, i32* %b
+    store i32 %a, ptr %b
+    %c = load i32, ptr %b
     ret i32 %c
   }
 

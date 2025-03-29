@@ -20,6 +20,7 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -125,7 +126,7 @@ struct CognitiveComplexity final {
   // Limit of 25 is the "upstream"'s default.
   static constexpr unsigned DefaultLimit = 25U;
 
-  // Based on the publicly-avaliable numbers for some big open-source projects
+  // Based on the publicly-available numbers for some big open-source projects
   // https://sonarcloud.io/projects?languages=c%2Ccpp&size=5   we can estimate:
   // value ~20 would result in no allocs for 98% of functions, ~12 for 96%, ~10
   // for 91%, ~8 for 88%, ~6 for 84%, ~4 for 77%, ~2 for 64%, and ~1 for 37%.
@@ -167,15 +168,13 @@ static const std::array<const StringRef, 4> Msgs = {{
 // Criteria is a bitset, thus a few helpers are needed.
 CognitiveComplexity::Criteria operator|(CognitiveComplexity::Criteria LHS,
                                         CognitiveComplexity::Criteria RHS) {
-  return static_cast<CognitiveComplexity::Criteria>(
-      static_cast<std::underlying_type_t<CognitiveComplexity::Criteria>>(LHS) |
-      static_cast<std::underlying_type_t<CognitiveComplexity::Criteria>>(RHS));
+  return static_cast<CognitiveComplexity::Criteria>(llvm::to_underlying(LHS) |
+                                                    llvm::to_underlying(RHS));
 }
 CognitiveComplexity::Criteria operator&(CognitiveComplexity::Criteria LHS,
                                         CognitiveComplexity::Criteria RHS) {
-  return static_cast<CognitiveComplexity::Criteria>(
-      static_cast<std::underlying_type_t<CognitiveComplexity::Criteria>>(LHS) &
-      static_cast<std::underlying_type_t<CognitiveComplexity::Criteria>>(RHS));
+  return static_cast<CognitiveComplexity::Criteria>(llvm::to_underlying(LHS) &
+                                                    llvm::to_underlying(RHS));
 }
 CognitiveComplexity::Criteria &operator|=(CognitiveComplexity::Criteria &LHS,
                                           CognitiveComplexity::Criteria RHS) {

@@ -4,5 +4,5 @@
 #include <tmmintrin.h>
 
 __m64 test1(__m64 a, __m64 b, int c) {
-   return _mm_alignr_pi8(a, b, c); // expected-error {{argument to '__builtin_ia32_palignr' must be a constant integer}}
+   return _mm_alignr_pi8(a, b, c); // expected-error {{argument to '__builtin_ia32_psrldqi128_byteshift' must be a constant integer}}
 }

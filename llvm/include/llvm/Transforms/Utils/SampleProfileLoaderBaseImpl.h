@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -126,23 +127,50 @@ public:
 
   bool profileIsValid(const Function &F, const FunctionSamples &Samples) const {
     const auto *Desc = getDesc(F);
-    if (!Desc) {
-      LLVM_DEBUG(dbgs() << "Probe descriptor missing for Function "
-                        << F.getName() << "\n");
-      return false;
-    }
-    if (Desc->getFunctionHash() != Samples.getFunctionHash()) {
-      LLVM_DEBUG(dbgs() << "Hash mismatch for Function " << F.getName()
-                        << "\n");
-      return false;
-    }
-    return true;
+    bool IsAvailableExternallyLinkage =
+        GlobalValue::isAvailableExternallyLinkage(F.getLinkage());
+    // Always check the function attribute to determine checksum mismatch for
+    // `available_externally` functions even if their desc are available. This
+    // is because the desc is computed based on the original internal function
+    // and it's substituted by the `available_externally` function during link
+    // time. However, when unstable IR or ODR violation issue occurs, the
+    // definitions of the same function across different translation units could
+    // be different and result in different checksums. So we should use the
+    // state from the new (available_externally) function, which is saved in its
+    // attribute.
+    // TODO: If the function's profile only exists as nested inlinee profile in
+    // a different module, we don't have the attr mismatch state(unknown), we
+    // need to fix it later.
+    if (IsAvailableExternallyLinkage || !Desc)
+      return !F.hasFnAttribute("profile-checksum-mismatch");
+
+    return Desc && !profileIsHashMismatched(*Desc, Samples);
   }
 };
 
 
 
 extern cl::opt<bool> SampleProfileUseProfi;
+
+static inline bool skipProfileForFunction(const Function &F) {
+  return F.isDeclaration() || !F.hasFnAttribute("use-sample-profile");
+}
+
+static inline void
+buildTopDownFuncOrder(LazyCallGraph &CG,
+                      std::vector<Function *> &FunctionOrderList) {
+  CG.buildRefSCCs();
+  for (LazyCallGraph::RefSCC &RC : CG.postorder_ref_sccs()) {
+    for (LazyCallGraph::SCC &C : RC) {
+      for (LazyCallGraph::Node &N : C) {
+        Function &F = N.getFunction();
+        if (!skipProfileForFunction(F))
+          FunctionOrderList.push_back(&F);
+      }
+    }
+  }
+  std::reverse(FunctionOrderList.begin(), FunctionOrderList.end());
+}
 
 template <typename FT> class SampleProfileLoaderBaseImpl {
 public:
@@ -421,9 +449,6 @@ SampleProfileLoaderBaseImpl<BT>::getInstWeightImpl(const InstructionT &Inst) {
   return R;
 }
 
-// Here use error_code to represent: 1) The dangling probe. 2) Ignore the weight
-// of non-probe instruction. So if all instructions of the BB give error_code,
-// tell the inference algorithm to infer the BB weight.
 template <typename BT>
 ErrorOr<uint64_t>
 SampleProfileLoaderBaseImpl<BT>::getProbeWeight(const InstructionT &Inst) {
@@ -436,17 +461,13 @@ SampleProfileLoaderBaseImpl<BT>::getProbeWeight(const InstructionT &Inst) {
     return std::error_code();
 
   const FunctionSamples *FS = findFunctionSamples(Inst);
-  // If none of the instruction has FunctionSample, we choose to return zero
-  // value sample to indicate the BB is cold. This could happen when the
-  // instruction is from inlinee and no profile data is found.
-  // FIXME: This should not be affected by the source drift issue as 1) if the
-  // newly added function is top-level inliner, it won't match the CFG checksum
-  // in the function profile or 2) if it's the inlinee, the inlinee should have
-  // a profile, otherwise it wouldn't be inlined. For non-probe based profile,
-  // we can improve it by adding a switch for profile-sample-block-accurate for
-  // block level counts in the future.
-  if (!FS)
-    return 0;
+  if (!FS) {
+    // If we can't find the function samples for a probe, it could be due to the
+    // probe is later optimized away or the inlining context is mismatced. We
+    // treat it as unknown, leaving it to profile inference instead of forcing a
+    // zero count.
+    return std::error_code();
+  }
 
   auto R = FS->findSamplesAt(Probe->Id, Probe->Discriminator);
   if (R) {
@@ -625,13 +646,12 @@ void SampleProfileLoaderBaseImpl<BT>::findEquivalenceClasses(FunctionT &F) {
     BasicBlockT *BB1 = &BB;
 
     // Compute BB1's equivalence class once.
-    if (EquivalenceClass.count(BB1)) {
+    // By default, blocks are in their own equivalence class.
+    auto [It, Inserted] = EquivalenceClass.try_emplace(BB1, BB1);
+    if (!Inserted) {
       LLVM_DEBUG(printBlockEquivalence(dbgs(), BB1));
       continue;
     }
-
-    // By default, blocks are in their own equivalence class.
-    EquivalenceClass[BB1] = BB1;
 
     // Traverse all the blocks dominated by BB1. We are looking for
     // every basic block BB2 such that:
@@ -724,8 +744,9 @@ bool SampleProfileLoaderBaseImpl<BT>::propagateThroughEdges(
 
       if (i == 0) {
         // First, visit all predecessor edges.
-        NumTotalEdges = Predecessors[BB].size();
-        for (auto *Pred : Predecessors[BB]) {
+        auto &Preds = Predecessors[BB];
+        NumTotalEdges = Preds.size();
+        for (auto *Pred : Preds) {
           Edge E = std::make_pair(Pred, BB);
           TotalWeight += visitEdge(E, &NumUnknownEdges, &UnknownEdge);
           if (E.first == E.second)
@@ -736,8 +757,9 @@ bool SampleProfileLoaderBaseImpl<BT>::propagateThroughEdges(
         }
       } else {
         // On the second round, visit all successor edges.
-        NumTotalEdges = Successors[BB].size();
-        for (auto *Succ : Successors[BB]) {
+        auto &Succs = Successors[BB];
+        NumTotalEdges = Succs.size();
+        for (auto *Succ : Succs) {
           Edge E = std::make_pair(BB, Succ);
           TotalWeight += visitEdge(E, &NumUnknownEdges, &UnknownEdge);
         }
@@ -838,9 +860,9 @@ bool SampleProfileLoaderBaseImpl<BT>::propagateThroughEdges(
         LLVM_DEBUG(dbgs() << "Set self-referential edge weight to: ";
                    printEdgeWeight(dbgs(), SelfReferentialEdge));
       }
-      if (UpdateBlockCount && !VisitedBlocks.count(EC) && TotalWeight > 0) {
+      if (UpdateBlockCount && TotalWeight > 0 &&
+          VisitedBlocks.insert(EC).second) {
         BlockWeights[EC] = TotalWeight;
-        VisitedBlocks.insert(EC);
         Changed = true;
       }
     }
@@ -860,19 +882,21 @@ void SampleProfileLoaderBaseImpl<BT>::buildEdges(FunctionT &F) {
 
     // Add predecessors for B1.
     SmallPtrSet<BasicBlockT *, 16> Visited;
-    if (!Predecessors[B1].empty())
+    auto &Preds = Predecessors[B1];
+    if (!Preds.empty())
       llvm_unreachable("Found a stale predecessors list in a basic block.");
     for (auto *B2 : getPredecessors(B1))
       if (Visited.insert(B2).second)
-        Predecessors[B1].push_back(B2);
+        Preds.push_back(B2);
 
     // Add successors for B1.
     Visited.clear();
-    if (!Successors[B1].empty())
+    auto &Succs = Successors[B1];
+    if (!Succs.empty())
       llvm_unreachable("Found a stale successors list in a basic block.");
     for (auto *B2 : getSuccessors(B1))
       if (Visited.insert(B2).second)
-        Successors[B1].push_back(B2);
+        Succs.push_back(B2);
   }
 }
 

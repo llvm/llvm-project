@@ -8,11 +8,12 @@
 
 #include "lldb/DataFormatters/CXXFunctionPointer.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/lldb-enumerations.h"
 
 #include <string>
 
@@ -38,9 +39,8 @@ bool lldb_private::formatters::CXXFunctionPointerSummaryProvider(
 
       Address so_addr;
       Target *target = exe_ctx.GetTargetPtr();
-      if (target && !target->GetSectionLoadList().IsEmpty()) {
-        target->GetSectionLoadList().ResolveLoadAddress(func_ptr_address,
-                                                        so_addr);
+      if (target && target->HasLoadedSections()) {
+        target->ResolveLoadAddress(func_ptr_address, so_addr);
         if (so_addr.GetSection() == nullptr) {
           // If we have an address that doesn't correspond to any symbol,
           // it might have authentication bits.  Strip them & see if it
@@ -76,7 +76,10 @@ bool lldb_private::formatters::CXXFunctionPointerSummaryProvider(
     }
   }
   if (sstr.GetSize() > 0) {
-    stream.Printf("(%s)", sstr.GetData());
+    if (valobj.GetValueType() == lldb::eValueTypeVTableEntry)
+      stream.PutCString(sstr.GetData());
+    else
+      stream.Printf("(%s)", sstr.GetData());
     return true;
   } else
     return false;

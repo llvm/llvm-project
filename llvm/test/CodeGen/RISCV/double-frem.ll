@@ -11,24 +11,24 @@
 define double @frem_f64(double %a, double %b) nounwind {
 ; RV32IFD-LABEL: frem_f64:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    tail fmod@plt
+; RV32IFD-NEXT:    tail fmod
 ;
 ; RV64IFD-LABEL: frem_f64:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    tail fmod@plt
+; RV64IFD-NEXT:    tail fmod
 ;
 ; RV32IZFINXZDINX-LABEL: frem_f64:
 ; RV32IZFINXZDINX:       # %bb.0:
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    call fmod@plt
+; RV32IZFINXZDINX-NEXT:    call fmod
 ; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: frem_f64:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    tail fmod@plt
+; RV64IZFINXZDINX-NEXT:    tail fmod
   %1 = frem double %a, %b
   ret double %1
 }

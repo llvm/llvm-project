@@ -61,19 +61,11 @@ class StdUnorderedMapSynthProvider:
     def __init__(self, valobj, dict):
         self.valobj = valobj
         self.count = None
-        self.kind = self.get_object_kind(valobj)
-
-    def get_object_kind(self, valobj):
-        type_name = valobj.GetTypeName()
-        return "set" if "set" in type_name else "map"
 
     def extract_type(self):
         type = self.valobj.GetType()
-        # type of std::pair<key, value> is the first template
-        # argument type of the 4th template argument to std::map and
-        # 3rd template argument for std::set. That's why
-        # we need to know kind of the object
-        template_arg_num = 4 if self.kind == "map" else 3
+        # The last template argument is the allocator type.
+        template_arg_num = type.GetNumberOfTemplateArguments() - 1
         allocator_type = type.GetTemplateArgumentType(template_arg_num)
         data_type = allocator_type.GetTemplateArgumentType(0)
         return data_type
@@ -473,11 +465,7 @@ class StdVectorSynthProvider:
                 "[" + str(index) + "]", element_offset, element_type
             )
             bit = element.GetValueAsUnsigned(0) & (1 << bit_offset)
-            if bit != 0:
-                value_expr = "(bool)true"
-            else:
-                value_expr = "(bool)false"
-            return self.valobj.CreateValueFromExpression("[%d]" % index, value_expr)
+            return self.valobj.CreateBoolValue("[%d]" % index, bool(bit))
 
         def update(self):
             try:
@@ -914,12 +902,15 @@ def VariantSummaryProvider(valobj, dict):
     if index == npos_value:
         return " No Value"
 
+    # Strip references and typedefs.
+    variant_type = raw_obj.GetType().GetCanonicalType().GetDereferencedType()
+    template_arg_count = variant_type.GetNumberOfTemplateArguments()
+
     # Invalid index can happen when the variant is not initialized yet.
-    template_arg_count = data_obj.GetType().GetNumberOfTemplateArguments()
     if index >= template_arg_count:
         return " <Invalid>"
 
-    active_type = data_obj.GetType().GetTemplateArgumentType(index)
+    active_type = variant_type.GetTemplateArgumentType(index)
     return f" Active Type = {active_type.GetDisplayTypeName()} "
 
 

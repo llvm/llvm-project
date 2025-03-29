@@ -67,16 +67,13 @@ MCAsmInfo::MCAsmInfo() {
   UseIntegratedAssembler = true;
   ParseInlineAsmUsingAsmParser = false;
   PreserveAsmComments = true;
+  PPCUseFullRegisterNames = false;
 }
 
 MCAsmInfo::~MCAsmInfo() = default;
 
 void MCAsmInfo::addInitialFrameState(const MCCFIInstruction &Inst) {
   InitialFrameState.push_back(Inst);
-}
-
-bool MCAsmInfo::isSectionAtomizableBySymbols(const MCSection &Section) const {
-  return false;
 }
 
 const MCExpr *
@@ -126,4 +123,31 @@ bool MCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
   // FIXME: Does .section .bss/.data/.text work everywhere??
   return SectionName == ".text" || SectionName == ".data" ||
         (SectionName == ".bss" && !usesELFSectionDirectiveForBSS());
+}
+
+void MCAsmInfo::initializeVariantKinds(ArrayRef<VariantKindDesc> Descs) {
+  assert(SpecifierToName.empty() && "cannot initialize twice");
+  for (auto Desc : Descs) {
+    [[maybe_unused]] auto It =
+        SpecifierToName.try_emplace(Desc.Kind, Desc.Name);
+    assert(It.second && "duplicate Kind");
+    [[maybe_unused]] auto It2 =
+        NameToSpecifier.try_emplace(Desc.Name.lower(), Desc.Kind);
+    // Workaround for VK_PPC_L/VK_PPC_LO ("l").
+    assert(It2.second || Desc.Name == "l");
+  }
+}
+
+StringRef MCAsmInfo::getSpecifierName(uint32_t S) const {
+  auto It = SpecifierToName.find(S);
+  assert(It != SpecifierToName.end() &&
+         "ensure the specifier is set in initializeVariantKinds");
+  return It->second;
+}
+
+std::optional<uint32_t> MCAsmInfo::getSpecifierForName(StringRef Name) const {
+  auto It = NameToSpecifier.find(Name.lower());
+  if (It != NameToSpecifier.end())
+    return It->second;
+  return {};
 }

@@ -67,6 +67,44 @@ void foo(void) {
                                 default(parallel for)
   for (int i = 0; i < 100; i++)
   ;
+
+#pragma omp metadirective when(implementation = {extension(match_all)} \
+                               : nothing) default(parallel for)
+  for (int i = 0; i < 16; i++)
+    ;
+
+#pragma omp metadirective when(implementation = {extension(match_any)} \
+                               : parallel) default(nothing)
+  for (int i = 0; i < 16; i++)
+    ;
+
+#pragma omp metadirective when(user = {condition(0)}	\
+			       : parallel for) otherwise()
+  for (int i=0; i<10; i++)
+    ;
+#pragma omp metadirective when(user = {condition(0)}	\
+			       : parallel for)
+  for (int i=0; i<10; i++)
+    ;
+#pragma omp metadirective when(user = {condition(0)}		  \
+			       : parallel for) when(implementation = {extension(match_none)} \
+						    : parallel) default(parallel for)
+  for (int i=0; i<10; i++)
+    ;
+
+#pragma omp metadirective when(user = {condition(1)}	\
+			       : parallel for) otherwise()
+  for (int i=0; i<10; i++)
+    ;
+#pragma omp metadirective when(user = {condition(1)}	\
+			       : parallel for)
+  for (int i=0; i<10; i++)
+    ;
+#pragma omp metadirective when(user = {condition(1)}		  \
+			       : parallel for) when(implementation = {extension(match_none)} \
+						    : parallel) default(parallel for)
+  for (int i=0; i<10; i++)
+    ;
 }
 
 // CHECK: void bar(void);
@@ -95,5 +133,7 @@ void foo(void) {
 // CHECK-NEXT: for (int j = 0; j < 16; j++)
 // CHECK-AMDGCN: #pragma omp teams distribute parallel for
 // CHECK-AMDGCN-NEXT: for (int i = 0; i < 100; i++)
+// CHECK: for (int i = 0; i < 16; i++)
+// CHECK: for (int i = 0; i < 16; i++)
 
 #endif

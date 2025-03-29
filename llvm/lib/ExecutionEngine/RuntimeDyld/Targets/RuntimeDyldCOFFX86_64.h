@@ -160,13 +160,13 @@ public:
     OriginalRelValueRef.Addend = Addend;
     OriginalRelValueRef.SymbolName = TargetName.data();
 
-    auto Stub = Stubs.find(OriginalRelValueRef);
-    if (Stub == Stubs.end()) {
+    auto [Stub, Inserted] = Stubs.try_emplace(OriginalRelValueRef);
+    if (Inserted) {
       LLVM_DEBUG(dbgs() << " Create a new stub function for "
                         << TargetName.data() << "\n");
 
       StubOffset = Section.getStubOffset();
-      Stubs[OriginalRelValueRef] = StubOffset;
+      Stub->second = StubOffset;
       createStubFunction(Section.getAddressWithOffset(StubOffset));
       Section.advanceStubOffset(getMaxStubSize());
     } else {
@@ -226,7 +226,7 @@ public:
     unsigned TargetSectionID = 0;
     uint64_t TargetOffset = 0;
 
-    if (TargetName.startswith(getImportSymbolPrefix())) {
+    if (TargetName.starts_with(getImportSymbolPrefix())) {
       assert(IsExtern && "DLLImport not marked extern?");
       TargetSectionID = SectionID;
       TargetOffset = getDLLImportOffset(SectionID, Stubs, TargetName);

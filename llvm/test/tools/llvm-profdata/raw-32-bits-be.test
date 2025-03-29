@@ -1,37 +1,52 @@
+// gnuwin32 printf does not work for this test because it will print \15 (CR)
+// whenever \12 (LF) is in the input string.
+UNSUPPORTED: system-windows
+// Header
 RUN: printf '\377lprofR\201' > %t
-RUN: printf '\0\0\0\0\0\0\0\10' >> %t
+RUN: printf '\0\0\0\0\0\0\0\12' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\2' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\3' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\4' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\20' >> %t
 RUN: printf '\0\0\0\0\1\0\0\0' >> %t
+RUN: printf '\0\0\0\0\3\0\0\0' >> %t
 RUN: printf '\0\0\0\0\2\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 
 RUN: printf '\134\370\302\114\333\030\275\254' >> %t
 RUN: printf '\0\0\0\0\0\0\0\1' >> %t
 RUN: printf '\1\0\0\0' >> %t
+RUN: printf '\3\0\0\0' >> %t
 RUN: printf '\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0' >> %t
 RUN: printf '\0\0\0\1' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\3' >> %t
 
 RUN: printf '\344\023\165\112\031\035\265\067' >> %t
 RUN: printf '\0\0\0\0\0\0\0\2' >> %t
-RUN: printf '\0\xff\xff\xe0' >> %t
+RUN: printf '\0\xff\xff\xd8' >> %t
+RUN: printf '\2\xff\xff\xd3' >> %t
 RUN: printf '\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0' >> %t
 RUN: printf '\0\0\0\2' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\1' >> %t
 
 RUN: printf '\0\0\0\0\0\0\0\023' >> %t
 RUN: printf '\0\0\0\0\0\0\0\067' >> %t
 RUN: printf '\0\0\0\0\0\0\0\101' >> %t
+RUN: printf '\125\125\125\052' >> %t
 RUN: printf '\7\0foo\1bar\0\0\0\0\0\0\0' >> %t
 
 RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s
+RUN: llvm-profdata show %t -all-functions -text | FileCheck %s -check-prefix=MCDC
 
 CHECK: Counters:
 CHECK:   foo:
@@ -48,3 +63,14 @@ CHECK: Functions shown: 2
 CHECK: Total functions: 2
 CHECK: Maximum function count: 55
 CHECK: Maximum internal block count: 65
+
+MCDC: Num Bitmap Bytes:
+MCDC-NEXT: $3
+MCDC-NEXT: Bitmap Byte Values:
+MCDC-NEXT: 55
+MCDC-NEXT: 55
+MCDC-NEXT: 55
+MCDC: Num Bitmap Bytes:
+MCDC-NEXT: $1
+MCDC-NEXT: Bitmap Byte Values:
+MCDC-NEXT: 0x2a

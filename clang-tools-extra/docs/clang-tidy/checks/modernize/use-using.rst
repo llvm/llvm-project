@@ -28,6 +28,14 @@ After:
   using R_t = struct { int a; };
   using R_p = R_t*;
 
+The checker ignores `typedef` within `extern "C" { ... }` blocks.
+
+.. code-block:: c++
+
+  extern "C" {
+    typedef int InExternC; // Left intact.
+  }
+
 This check requires using C++11 or higher to run.
 
 Options
@@ -37,3 +45,8 @@ Options
 
    If set to `true`, the check will not give warnings inside macros. Default
    is `true`.
+
+.. option:: IgnoreExternC
+
+   If set to `true`, the check will not give warning inside `extern "C"`scope.
+   Default is `false`

@@ -644,7 +644,7 @@ define <8 x i64> @neg_scalar_broadcast_v8i64(i64 %a0, <2 x i64> %a1) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512-NEXT:    vpbroadcastq %rdi, %zmm1
-; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [1,0,1,1,0,1,0,0]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [1,0,1,1,0,1,0,0]
 ; AVX512-NEXT:    vpermq %zmm0, %zmm2, %zmm0
 ; AVX512-NEXT:    vpandnq %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
@@ -849,7 +849,7 @@ define <8 x i16> @neg_scalar_broadcast_v8i16(i16 %a0, <8 x i16> %a1) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd %edi, %xmm1
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,0,0,0,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; SSE-NEXT:    pandn %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
@@ -858,7 +858,7 @@ define <8 x i16> @neg_scalar_broadcast_v8i16(i16 %a0, <8 x i16> %a1) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovd %edi, %xmm1
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[0,0,0,0,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; AVX1-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -1169,6 +1169,25 @@ define <4 x i32> @neg_scalar_broadcast_two_uses(i32 %a0, <4 x i32> %a1, ptr %a2)
   store <4 x i32> %3, ptr %a2, align 16
   %4 = and <4 x i32> %3, %a1
   ret <4 x i32> %4
+}
+
+; PR84660 - check for illegal types
+define <2 x i128> @neg_scalar_broadcast_illegaltype(i128 %arg) {
+; CHECK-LABEL: neg_scalar_broadcast_illegaltype:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    notl %esi
+; CHECK-NEXT:    andl $1, %esi
+; CHECK-NEXT:    movq %rsi, 16(%rdi)
+; CHECK-NEXT:    movq %rsi, (%rdi)
+; CHECK-NEXT:    movq $0, 24(%rdi)
+; CHECK-NEXT:    movq $0, 8(%rdi)
+; CHECK-NEXT:    retq
+  %i = xor i128 %arg, 1
+  %i1 = insertelement <2 x i128> zeroinitializer, i128 %i, i64 0
+  %i2 = shufflevector <2 x i128> %i1, <2 x i128> zeroinitializer, <2 x i32> zeroinitializer
+  %i3 = and <2 x i128> <i128 1, i128 1>, %i2
+  ret <2 x i128> %i3
 }
 
 define <2 x i64> @andnp_xx(<2 x i64> %v0) nounwind {

@@ -9,9 +9,6 @@
 #include "src/time/time_func.h"
 #include "test/UnitTest/Test.h"
 
-#include <limits.h>
-#include <time.h>
-
 TEST(LlvmLibcTimeTest, SmokeTest) {
   time_t t1;
   time_t t2 = LIBC_NAMESPACE::time(&t1);

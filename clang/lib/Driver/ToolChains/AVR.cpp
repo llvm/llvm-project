@@ -400,6 +400,14 @@ void AVRToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 void AVRToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
     Action::OffloadKind DeviceOffloadKind) const {
+  // Reject C/C++ compilation for avr1 devices since they have no SRAM.
+  const Driver &D = getDriver();
+  std::string CPU = getCPUName(D, DriverArgs, getTriple());
+  std::optional<StringRef> FamilyName = GetMCUFamilyName(CPU);
+  if (CPU == "avr1" || (FamilyName && *FamilyName == "avr1"))
+    D.Diag(diag::err_drv_opt_unsupported_input_type)
+        << "-mmcu=" + CPU << "c/c++";
+
   // By default, use `.ctors` (not `.init_array`), as required by libgcc, which
   // runs constructors/destructors on AVR.
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
@@ -430,7 +438,7 @@ AVRToolChain::getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
   SmallString<256> Path(ToolChain::getCompilerRTPath());
   llvm::sys::path::append(Path, "avr");
   llvm::sys::path::append(Path, File.str());
-  return std::string(Path.str());
+  return std::string(Path);
 }
 
 void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -513,7 +521,15 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (D.isUsingLTO()) {
     assert(!Inputs.empty() && "Must have at least one input.");
-    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
+    // Find the first filename InputInfo object.
+    auto Input = llvm::find_if(
+        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
+    if (Input == Inputs.end())
+      // For a very rare case, all of the inputs to the linker are
+      // InputArg. If that happens, just use the first InputInfo.
+      Input = Inputs.begin();
+
+    addLTOOptions(TC, Args, CmdArgs, Output, *Input,
                   D.getLTOMode() == LTOK_Thin);
   }
 

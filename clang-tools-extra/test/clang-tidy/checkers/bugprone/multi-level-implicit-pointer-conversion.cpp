@@ -63,3 +63,15 @@ void test()
 
   takeSecondLevelVoidPtr(getSecondLevelVoidPtr());
 }
+
+namespace PR93959 {
+  void free(void*);
+
+  void test() {
+    char **p = nullptr;
+    free(p);
+    // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: multilevel pointer conversion from 'char **' to 'void *', please use explicit cast [bugprone-multi-level-implicit-pointer-conversion]
+    free((void *)p);
+    free(static_cast<void *>(p));
+  }
+}

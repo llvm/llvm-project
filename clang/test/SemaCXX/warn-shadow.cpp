@@ -64,7 +64,7 @@ class A {
   void test() {
     char *field; // expected-warning {{declaration shadows a field of 'A'}}
     char *data; // expected-warning {{declaration shadows a static data member of 'A'}}
-    char *a1; // no warning 
+    char *a1; // no warning
     char *a2; // no warning
     char *jj; // no warning
     char *jjj; // no warning
@@ -200,8 +200,8 @@ void avoidWarningWhenRedefining(int b) { // expected-note {{previous definition 
   using l=char; // no warning or error.
   using l=char; // no warning or error.
   typedef char l; // no warning or error.
- 
-  typedef char n; // no warning or error. 
+
+  typedef char n; // no warning or error.
   typedef char n; // no warning or error.
   using n=char; // no warning or error.
 }
@@ -307,3 +307,17 @@ void test4() {
 }
 
 }; // namespace structured_binding_tests
+
+namespace GH62588 {
+class Outer {
+public:
+  char *foo();          // expected-note {{previous declaration is here}} \
+                        // expected-note {{previous definition is here}}
+  enum Outer_E { foo }; // expected-error {{redefinition of 'foo'}} \
+                        // expected-warning {{declaration shadows a static data member of 'GH62588::Outer'}}
+  class Inner {
+  public:
+    enum Inner_E { foo }; // ok
+  };
+};
+} // namespace GH62588

@@ -16,10 +16,10 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
@@ -54,6 +54,14 @@ cl::opt<std::string> HTMLReportPath{
     "html",
     cl::desc("Specify an output filename for an HTML report. "
              "This describes both recommendations and reasons for changes."),
+    cl::cat(IncludeCleaner),
+};
+
+cl::opt<std::string> OnlyHeaders{
+    "only-headers",
+    cl::desc("A comma-separated list of regexes to match against suffix of a "
+             "header. Only headers that match will be analyzed."),
+    cl::init(""),
     cl::cat(IncludeCleaner),
 };
 
@@ -110,14 +118,16 @@ format::FormatStyle getStyle(llvm::StringRef Filename) {
 
 class Action : public clang::ASTFrontendAction {
 public:
-  Action(llvm::function_ref<bool(llvm::StringRef)> HeaderFilter)
-      : HeaderFilter(HeaderFilter){};
+  Action(llvm::function_ref<bool(llvm::StringRef)> HeaderFilter,
+         llvm::StringMap<std::string> &EditedFiles)
+      : HeaderFilter(HeaderFilter), EditedFiles(EditedFiles) {}
 
 private:
   RecordedAST AST;
   RecordedPP PP;
   PragmaIncludes PI;
   llvm::function_ref<bool(llvm::StringRef)> HeaderFilter;
+  llvm::StringMap<std::string> &EditedFiles;
 
   bool BeginInvocation(CompilerInstance &CI) override {
     // We only perform include-cleaner analysis. So we disable diagnostics that
@@ -129,7 +139,17 @@ private:
   }
 
   void ExecuteAction() override {
-    auto &P = getCompilerInstance().getPreprocessor();
+    const auto &CI = getCompilerInstance();
+
+    // Disable all warnings when running include-cleaner, as we are only
+    // interested in include-cleaner related findings. This makes the tool both
+    // more resilient around in-development code, and possibly faster as we
+    // skip some extra analysis.
+    auto &Diags = CI.getDiagnostics();
+    Diags.setEnableAllWarnings(false);
+    Diags.setSeverityForAll(clang::diag::Flavor::WarningOrError,
+                            clang::diag::Severity::Ignored);
+    auto &P = CI.getPreprocessor();
     P.addPPCallbacks(PP.record(P));
     PI.record(getCompilerInstance());
     ASTFrontendAction::ExecuteAction();
@@ -153,9 +173,11 @@ private:
     if (!HTMLReportPath.empty())
       writeHTML();
 
-    llvm::StringRef Path =
-        SM.getFileEntryForID(SM.getMainFileID())->tryGetRealPathName();
-    assert(!Path.empty() && "Main file path not known?");
+    // Source File's path of compiler invocation, converted to absolute path.
+    llvm::SmallString<256> AbsPath(
+        SM.getFileEntryRefForID(SM.getMainFileID())->getName());
+    assert(!AbsPath.empty() && "Main file path not known?");
+    SM.getFileManager().makeAbsolutePath(AbsPath);
     llvm::StringRef Code = SM.getBufferData(SM.getMainFileID());
 
     auto Results =
@@ -165,14 +187,14 @@ private:
       Results.Missing.clear();
     if (!Remove)
       Results.Unused.clear();
-    std::string Final = fixIncludes(Results, Path, Code, getStyle(Path));
+    std::string Final = fixIncludes(Results, AbsPath, Code, getStyle(AbsPath));
 
     if (Print.getNumOccurrences()) {
       switch (Print) {
       case PrintStyle::Changes:
         for (const Include *I : Results.Unused)
           llvm::outs() << "- " << I->quote() << " @Line:" << I->Line << "\n";
-        for (const auto &I : Results.Missing)
+        for (const auto &[I, _] : Results.Missing)
           llvm::outs() << "+ " << I << "\n";
         break;
       case PrintStyle::Final:
@@ -181,17 +203,8 @@ private:
       }
     }
 
-    if (Edit && (!Results.Missing.empty() || !Results.Unused.empty())) {
-      if (auto Err = llvm::writeToOutput(
-              Path, [&](llvm::raw_ostream &OS) -> llvm::Error {
-                OS << Final;
-                return llvm::Error::success();
-              })) {
-        llvm::errs() << "Failed to apply edits to " << Path << ": "
-                     << toString(std::move(Err)) << "\n";
-        ++Errors;
-      }
-    }
+    if (!Results.Missing.empty() || !Results.Unused.empty())
+      EditedFiles.try_emplace(AbsPath, Final);
   }
 
   void writeHTML() {
@@ -203,10 +216,9 @@ private:
       ++Errors;
       return;
     }
-    writeHTMLReport(
-        AST.Ctx->getSourceManager().getMainFileID(), PP.Includes, AST.Roots,
-        PP.MacroReferences, *AST.Ctx,
-        getCompilerInstance().getPreprocessor().getHeaderSearchInfo(), &PI, OS);
+    writeHTMLReport(AST.Ctx->getSourceManager().getMainFileID(), PP.Includes,
+                    AST.Roots, PP.MacroReferences, *AST.Ctx,
+                    getCompilerInstance().getPreprocessor(), &PI, OS);
   }
 };
 class ActionFactory : public tooling::FrontendActionFactory {
@@ -215,18 +227,25 @@ public:
       : HeaderFilter(HeaderFilter) {}
 
   std::unique_ptr<clang::FrontendAction> create() override {
-    return std::make_unique<Action>(HeaderFilter);
+    return std::make_unique<Action>(HeaderFilter, EditedFiles);
+  }
+
+  const llvm::StringMap<std::string> &editedFiles() const {
+    return EditedFiles;
   }
 
 private:
   llvm::function_ref<bool(llvm::StringRef)> HeaderFilter;
+  // Map from file name to final code with the include edits applied.
+  llvm::StringMap<std::string> EditedFiles;
 };
 
-std::function<bool(llvm::StringRef)> headerFilter() {
+// Compiles a regex list into a function that return true if any match a header.
+// Prints and returns nullptr if any regexes are invalid.
+std::function<bool(llvm::StringRef)> matchesAny(llvm::StringRef RegexFlag) {
   auto FilterRegs = std::make_shared<std::vector<llvm::Regex>>();
-
   llvm::SmallVector<llvm::StringRef> Headers;
-  llvm::StringRef(IgnoreHeaders).split(Headers, ',', -1, /*KeepEmpty=*/false);
+  RegexFlag.split(Headers, ',', -1, /*KeepEmpty=*/false);
   for (auto HeaderPattern : Headers) {
     std::string AnchoredPattern = "(" + HeaderPattern.str() + ")$";
     llvm::Regex CompiledRegex(AnchoredPattern);
@@ -245,6 +264,63 @@ std::function<bool(llvm::StringRef)> headerFilter() {
     }
     return false;
   };
+}
+
+std::function<bool(llvm::StringRef)> headerFilter() {
+  auto OnlyMatches = matchesAny(OnlyHeaders);
+  auto IgnoreMatches = matchesAny(IgnoreHeaders);
+  if (!OnlyMatches || !IgnoreMatches)
+    return nullptr;
+
+  return [OnlyMatches, IgnoreMatches](llvm::StringRef Header) {
+    if (!OnlyHeaders.empty() && !OnlyMatches(Header))
+      return true;
+    if (!IgnoreHeaders.empty() && IgnoreMatches(Header))
+      return true;
+    return false;
+  };
+}
+
+// Maps absolute path of each files of each compilation commands to the
+// absolute path of the input file.
+llvm::Expected<std::map<std::string, std::string>>
+mapInputsToAbsPaths(clang::tooling::CompilationDatabase &CDB,
+                    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+                    const std::vector<std::string> &Inputs) {
+  std::map<std::string, std::string> CDBToAbsPaths;
+  // Factory.editedFiles()` will contain the final code, along with the
+  // path given in the compilation database. That path can be
+  // absolute or relative, and if it is relative, it is relative to the
+  // "Directory" field in the compilation database. We need to make it
+  // absolute to write the final code to the correct path.
+  for (auto &Source : Inputs) {
+    llvm::SmallString<256> AbsPath(Source);
+    if (auto Err = VFS->makeAbsolute(AbsPath)) {
+      llvm::errs() << "Failed to get absolute path for " << Source << " : "
+                   << Err.message() << '\n';
+      return llvm::errorCodeToError(Err);
+    }
+    std::vector<clang::tooling::CompileCommand> Cmds =
+        CDB.getCompileCommands(AbsPath);
+    if (Cmds.empty()) {
+      // It should be found in the compilation database, even user didn't
+      // specify the compilation database, the `FixedCompilationDatabase` will
+      // create an entry from the arguments. So it is an error if we can't
+      // find the compile commands.
+      std::string ErrorMsg =
+          llvm::formatv("No compile commands found for {0}", AbsPath).str();
+      llvm::errs() << ErrorMsg << '\n';
+      return llvm::make_error<llvm::StringError>(
+          ErrorMsg, llvm::inconvertibleErrorCode());
+    }
+    for (const auto &Cmd : Cmds) {
+      llvm::SmallString<256> CDBPath(Cmd.Filename);
+      std::string Directory(Cmd.Directory);
+      llvm::sys::fs::make_absolute(Cmd.Directory, CDBPath);
+      CDBToAbsPaths[std::string(CDBPath)] = std::string(AbsPath);
+    }
+  }
+  return CDBToAbsPaths;
 }
 
 } // namespace
@@ -272,23 +348,40 @@ int main(int argc, const char **argv) {
     }
   }
 
-  clang::tooling::ClangTool Tool(OptionsParser->getCompilations(),
-                                 OptionsParser->getSourcePathList());
-  std::vector<std::unique_ptr<llvm::MemoryBuffer>> Buffers;
-  for (const auto &File : OptionsParser->getSourcePathList()) {
-    auto Content = llvm::MemoryBuffer::getFile(File);
-    if (!Content) {
-      llvm::errs() << "Error: can't read file '" << File
-                   << "': " << Content.getError().message() << "\n";
-      return 1;
-    }
-    Buffers.push_back(std::move(Content.get()));
-    Tool.mapVirtualFile(File, Buffers.back()->getBuffer());
-  }
+  auto VFS = llvm::vfs::getRealFileSystem();
+  auto &CDB = OptionsParser->getCompilations();
+  // CDBToAbsPaths is a map from the path in the compilation database to the
+  // writable absolute path of the file.
+  auto CDBToAbsPaths =
+      mapInputsToAbsPaths(CDB, VFS, OptionsParser->getSourcePathList());
+  if (!CDBToAbsPaths)
+    return 1;
+
+  clang::tooling::ClangTool Tool(CDB, OptionsParser->getSourcePathList());
 
   auto HeaderFilter = headerFilter();
   if (!HeaderFilter)
     return 1; // error already reported.
   ActionFactory Factory(HeaderFilter);
-  return Tool.run(&Factory) || Errors != 0;
+  auto ErrorCode = Tool.run(&Factory);
+  if (Edit) {
+    for (const auto &NameAndContent : Factory.editedFiles()) {
+      llvm::StringRef FileName = NameAndContent.first();
+      if (auto It = CDBToAbsPaths->find(FileName.str());
+          It != CDBToAbsPaths->end())
+        FileName = It->second;
+
+      const std::string &FinalCode = NameAndContent.second;
+      if (auto Err = llvm::writeToOutput(
+              FileName, [&](llvm::raw_ostream &OS) -> llvm::Error {
+                OS << FinalCode;
+                return llvm::Error::success();
+              })) {
+        llvm::errs() << "Failed to apply edits to " << FileName << ": "
+                     << toString(std::move(Err)) << "\n";
+        ++Errors;
+      }
+    }
+  }
+  return ErrorCode || Errors != 0;
 }

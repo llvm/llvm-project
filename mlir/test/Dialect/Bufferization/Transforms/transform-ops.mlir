@@ -111,23 +111,21 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-module {
-  // CHECK-LABEL: func @test_function(
-  //  CHECK-SAME:     %[[A:.*]]: tensor<?xf32>
-  func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf32>) {
-    %c0 = arith.constant 0 : index
+// CHECK-LABEL: func @test_function(
+//  CHECK-SAME:     %[[A:.*]]: tensor<?xf32>
+func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf32>) {
+  %c0 = arith.constant 0 : index
 
-    // CHECK: %[[A_memref:.*]] = bufferization.to_memref %[[A]]
-    // CHECK: %[[dim:.*]] = memref.dim %[[A_memref]]
-    // CHECK: %[[alloc:.*]] = memref.alloc(%[[dim]])
-    // CHECK: memref.copy %[[A_memref]], %[[alloc]]
-    // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
-    // CHECK: %[[res_tensor:.*]] = bufferization.to_tensor %[[alloc]]
-    %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
+  // CHECK: %[[A_memref:.*]] = bufferization.to_memref %[[A]]
+  // CHECK: %[[dim:.*]] = memref.dim %[[A_memref]]
+  // CHECK: %[[alloc:.*]] = memref.alloc(%[[dim]])
+  // CHECK: memref.copy %[[A_memref]], %[[alloc]]
+  // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
+  // CHECK: %[[res_tensor:.*]] = bufferization.to_tensor %[[alloc]]
+  %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
 
-    // CHECK: return %[[res_tensor]]
-    return %0 : tensor<?xf32>
-  }
+  // CHECK: return %[[res_tensor]]
+  return %0 : tensor<?xf32>
 }
 
 // -----
@@ -214,4 +212,27 @@ func.func @buffer_loop_hoisting(%lb: index, %ub: index, %step: index, %f: f32, %
     memref.store %f, %0[%pos] : memref<5xf32>
   }
   return
+}
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %alloc_tensor = transform.structured.match ops{["bufferization.alloc_tensor"]} in %arg1
+      : (!transform.any_op) -> !transform.op<"bufferization.alloc_tensor">
+    %2, %new = transform.structured.bufferize_to_allocation %alloc_tensor
+      {alloc_op = "memref.alloca"}
+        : !transform.op<"bufferization.alloc_tensor">
+    transform.yield
+  }
+}
+
+// Expect `bufferization.bufferize_to_allocation` to create an alloc.
+//  CHECK-LABEL: func.func @empty_to_tensor_alloc()
+func.func @empty_to_tensor_alloc() -> tensor<2x2xf32> {
+  // CHECK-NEXT: %[[alloca:.*]] = memref.alloca() : memref<2x2xf32>
+  // CHECK-NEXT: %[[tensor:.*]] = bufferization.to_tensor %[[alloca]] restrict writable : memref<2x2xf32>
+  // CHECK-NEXT: return %[[tensor]] : tensor<2x2xf32>
+  %0 = bufferization.alloc_tensor() : tensor<2x2xf32>
+  return %0 : tensor<2x2xf32>
 }

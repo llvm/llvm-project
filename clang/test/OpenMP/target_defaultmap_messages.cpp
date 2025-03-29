@@ -1,5 +1,8 @@
-// RUN: %clang_cc1 -verify -Wno-vla -fopenmp %s -verify=expected,omp51 -Wuninitialized -DOMP51
-// RUN: %clang_cc1 -verify -Wno-vla -fopenmp-simd %s -verify=expected,omp51 -Wuninitialized -DOMP51
+// RUN: %clang_cc1 -verify -Wno-vla -fopenmp %s -fopenmp-version=52 -verify=expected,omp5x,omp52 -Wuninitialized
+// RUN: %clang_cc1 -verify -Wno-vla -fopenmp-simd %s -fopenmp-version=52 -verify=expected,omp5x,omp52 -Wuninitialized
+
+// RUN: %clang_cc1 -verify -Wno-vla -fopenmp %s -fopenmp-version=51 -verify=expected,omp5x,omp51 -Wuninitialized -DOMP51
+// RUN: %clang_cc1 -verify -Wno-vla -fopenmp-simd %s -fopenmp-version=51 -verify=expected,omp5x,omp51 -Wuninitialized -DOMP51
 
 // RUN: %clang_cc1 -verify -Wno-vla -fopenmp -fopenmp-version=50 %s -verify=expected,omp5 -Wuninitialized -DOMP5
 // RUN: %clang_cc1 -verify -Wno-vla -fopenmp-simd -fopenmp-version=50 %s -verify=expected,omp5 -Wuninitialized -DOMP5
@@ -30,23 +33,23 @@ template <class T, typename S, int N, int ST>
 T tmain(T argc, S **argv) {
   #pragma omp target defaultmap // expected-error {{expected '(' after 'defaultmap'}}
   foo();
-#pragma omp target defaultmap( // omp51-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default', 'present' in OpenMP clause 'defaultmap'}} omp5-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default' in OpenMP clause 'defaultmap'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp45-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}}
+#pragma omp target defaultmap( // omp5x-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default', 'present' in OpenMP clause 'defaultmap'}} omp5-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default' in OpenMP clause 'defaultmap'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp45-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}}
   foo();
-#pragma omp target defaultmap() // omp51-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default', 'present' in OpenMP clause 'defaultmap'}} omp5-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default' in OpenMP clause 'defaultmap'}} omp45-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}}
+#pragma omp target defaultmap() // omp5x-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default', 'present' in OpenMP clause 'defaultmap'}} omp5-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default' in OpenMP clause 'defaultmap'}} omp45-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}}
   foo();
 #pragma omp target defaultmap(tofrom // expected-error {{expected ')'}} expected-note {{to match this '('}} omp45-warning {{missing ':' after defaultmap modifier - ignoring}} omp45-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
   foo();
-  #pragma omp target defaultmap (tofrom: // expected-error {{expected ')'}} expected-note {{to match this '('}} omp51-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} omp45-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
+  #pragma omp target defaultmap (tofrom: // expected-error {{expected ')'}} expected-note {{to match this '('}} omp52-error {{expected 'scalar', 'aggregate', 'pointer', 'all' in OpenMP clause 'defaultmap'}} omp51-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} omp45-error {{expected 'scalar' in OpenMP clause 'defaultmap'}} 
   foo();
 #pragma omp target defaultmap(tofrom) // omp45-warning {{missing ':' after defaultmap modifier - ignoring}} omp45-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
   foo();
 #pragma omp target defaultmap(tofrom, // expected-error {{expected ')'}} omp45-warning {{missing ':' after defaultmap modifier - ignoring}} expected-note {{to match this '('}} omp45-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
   foo();
-  #pragma omp target defaultmap (scalar: // omp51-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default', 'present' in OpenMP clause 'defaultmap'}} omp51-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} expected-error {{expected ')'}} omp5-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default' in OpenMP clause 'defaultmap'}} expected-note {{to match this '('}} omp45-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}}
+  #pragma omp target defaultmap (scalar: // omp5x-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default', 'present' in OpenMP clause 'defaultmap'}} omp52-error {{expected 'scalar', 'aggregate', 'pointer', 'all' in OpenMP clause 'defaultmap'}} omp51-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} expected-error {{expected ')'}} omp5-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default' in OpenMP clause 'defaultmap'}} expected-note {{to match this '('}} omp45-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}}
   foo();
 #pragma omp target defaultmap(tofrom, scalar // expected-error {{expected ')'}} omp45-warning {{missing ':' after defaultmap modifier - ignoring}} expected-note {{to match this '('}} omp45-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
   foo();
-  #pragma omp target defaultmap(tofrom:scalar) defaultmap(tofrom:scalar) // omp45-error {{directive '#pragma omp target' cannot contain more than one 'defaultmap' clause}} omp5-error {{at most one defaultmap clause for each variable-category can appear on the directive}} omp51-error {{at most one defaultmap clause for each variable-category can appear on the directive}}
+  #pragma omp target defaultmap(tofrom:scalar) defaultmap(tofrom:scalar) // omp45-error {{directive '#pragma omp target' cannot contain more than one 'defaultmap' clause}} omp5-error {{at most one defaultmap clause for each variable-category can appear on the directive}} omp5x-error {{at most one defaultmap clause for each variable-category can appear on the directive}}
 
   foo();
 
@@ -93,23 +96,23 @@ T tmain(T argc, S **argv) {
 int main(int argc, char **argv) {
 #pragma omp target defaultmap // expected-error {{expected '(' after 'defaultmap'}}
   foo();
-#pragma omp target defaultmap( // omp51-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default', 'present' in OpenMP clause 'defaultmap'}} omp5-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default' in OpenMP clause 'defaultmap'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp45-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}}
+#pragma omp target defaultmap( // omp5x-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default', 'present' in OpenMP clause 'defaultmap'}} omp5-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default' in OpenMP clause 'defaultmap'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp45-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}}
   foo();
-#pragma omp target defaultmap() // omp51-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default', 'present' in OpenMP clause 'defaultmap'}} omp5-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default' in OpenMP clause 'defaultmap'}} omp45-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}}
+#pragma omp target defaultmap() // omp5x-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default', 'present' in OpenMP clause 'defaultmap'}} omp5-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default' in OpenMP clause 'defaultmap'}} omp45-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}}
   foo();
 #pragma omp target defaultmap(tofrom // expected-error {{expected ')'}} expected-note {{to match this '('}} omp45-warning {{missing ':' after defaultmap modifier - ignoring}} omp45-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
   foo();
-#pragma omp target defaultmap(tofrom: // expected-error {{expected ')'}} expected-note {{to match this '('}} omp51-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} omp45-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
+#pragma omp target defaultmap(tofrom: // expected-error {{expected ')'}} expected-note {{to match this '('}} omp52-error {{expected 'scalar', 'aggregate', 'pointer', 'all' in OpenMP clause 'defaultmap'}} omp51-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} omp45-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
   foo();
 #pragma omp target defaultmap(tofrom) // omp45-warning {{missing ':' after defaultmap modifier - ignoring}} omp45-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
   foo();
 #pragma omp target defaultmap(tofrom, // expected-error {{expected ')'}} omp45-warning {{missing ':' after defaultmap modifier - ignoring}} expected-note {{to match this '('}} omp45-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
   foo();
-#pragma omp target defaultmap(scalar: // omp51-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default', 'present' in OpenMP clause 'defaultmap'}} omp51-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} expected-error {{expected ')'}} omp5-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default' in OpenMP clause 'defaultmap'}} expected-note {{to match this '('}} omp45-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}}
+#pragma omp target defaultmap(scalar: // omp5x-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default', 'present' in OpenMP clause 'defaultmap'}} omp52-error {{expected 'scalar', 'aggregate', 'pointer', 'all' in OpenMP clause 'defaultmap'}} omp51-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} expected-error {{expected ')'}} omp5-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default' in OpenMP clause 'defaultmap'}} expected-note {{to match this '('}} omp45-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}}
   foo();
 #pragma omp target defaultmap(tofrom, scalar // expected-error {{expected ')'}} omp45-warning {{missing ':' after defaultmap modifier - ignoring}} expected-note {{to match this '('}} omp45-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
   foo();
-#pragma omp target defaultmap(tofrom: scalar) defaultmap(tofrom: scalar) // omp45-error {{directive '#pragma omp target' cannot contain more than one 'defaultmap' clause}} omp5-error {{at most one defaultmap clause for each variable-category can appear on the directive}} omp51-error {{at most one defaultmap clause for each variable-category can appear on the directive}}
+#pragma omp target defaultmap(tofrom: scalar) defaultmap(tofrom: scalar) // omp45-error {{directive '#pragma omp target' cannot contain more than one 'defaultmap' clause}} omp5-error {{at most one defaultmap clause for each variable-category can appear on the directive}} omp5x-error {{at most one defaultmap clause for each variable-category can appear on the directive}}
   foo();
 
 #ifdef OMP5

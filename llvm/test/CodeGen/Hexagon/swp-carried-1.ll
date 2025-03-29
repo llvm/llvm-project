@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -rdf-opt=0 -disable-hexagon-misched -hexagon-initial-cfg-cleanup=0 -lsr-setupcost-depth-limit=1 -disable-cgp-delete-phis < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -mtriple=hexagon -rdf-opt=0 -disable-hexagon-misched -hexagon-initial-cfg-cleanup=0 -lsr-setupcost-depth-limit=1 -disable-cgp-delete-phis < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; Test that we generate the correct code when a loop carried value
 ; is scheduled one stage earlier than it's use. The code in

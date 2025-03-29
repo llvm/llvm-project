@@ -52,3 +52,17 @@ namespace bad_conversion {
     // CHECK-NEXT: void func(double*, int, int)
   }
 }
+
+namespace bad_deduction {
+  template <class> struct templ {};
+  template <class T> void func(templ<T>);
+  template <class T> void func(T*);
+  template <class T> auto func(T&) -> decltype(T().begin());
+  template <class T> auto func(const T&) -> decltype(T().begin());
+
+  bool doit() {
+    struct record {} r;
+    func(r); // expected-error {{no matching function for call to 'func'}}
+             // expected-note@* 4{{candidate}}
+  }
+}

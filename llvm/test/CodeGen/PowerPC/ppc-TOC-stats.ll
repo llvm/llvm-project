@@ -233,12 +233,12 @@ return:                                           ; preds = %if.else3, %if.else,
 }
 
 
-define i8* @testBlockAddr() {
+define ptr @testBlockAddr() {
 entry:
   br label %here
 
 here:
-  ret i8* blockaddress(@testBlockAddr, %here)
+  ret ptr blockaddress(@testBlockAddr, %here)
 }
 
 define noundef signext i32 @_Z5getG4v() local_unnamed_addr {

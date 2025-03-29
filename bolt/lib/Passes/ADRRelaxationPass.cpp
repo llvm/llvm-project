@@ -56,42 +56,53 @@ void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
           continue;
       }
 
-      BinaryFunction *TargetBF = BC.getFunctionForSymbol(Symbol);
-      if (TargetBF && TargetBF == &BF)
-        continue;
+      // Don't relax ADR if it points to the same function and is in the main
+      // fragment and BF initial size is < 1MB.
+      const unsigned OneMB = 0x100000;
+      if (BF.getSize() < OneMB) {
+        BinaryFunction *TargetBF = BC.getFunctionForSymbol(Symbol);
+        if (TargetBF == &BF && !BB.isSplit())
+          continue;
 
-      MCPhysReg Reg;
-      BC.MIB->getADRReg(Inst, Reg);
-      int64_t Addend = BC.MIB->getTargetAddend(Inst);
-      InstructionListType Addr;
+        // No relaxation needed if ADR references a basic block in the same
+        // fragment.
+        if (BinaryBasicBlock *TargetBB = BF.getBasicBlockForLabel(Symbol))
+          if (BB.getFragmentNum() == TargetBB->getFragmentNum())
+            continue;
+      }
 
+      InstructionListType AdrpAdd;
       {
         auto L = BC.scopeLock();
-        Addr = BC.MIB->materializeAddress(Symbol, BC.Ctx.get(), Reg, Addend);
+        AdrpAdd = BC.MIB->undoAdrpAddRelaxation(Inst, BC.Ctx.get());
       }
 
       if (It != BB.begin() && BC.MIB->isNoop(*std::prev(It))) {
         It = BB.eraseInstruction(std::prev(It));
-      } else if (opts::StrictMode && !BF.isSimple()) {
+      } else if (std::next(It) != BB.end() && BC.MIB->isNoop(*std::next(It))) {
+        BB.eraseInstruction(std::next(It));
+      } else if (!opts::StrictMode && !BF.isSimple()) {
         // If the function is not simple, it may contain a jump table undetected
         // by us. This jump table may use an offset from the branch instruction
         // to land in the desired place. If we add new instructions, we
         // invalidate this offset, so we have to rely on linker-inserted NOP to
         // replace it with ADRP, and abort if it is not present.
-        errs() << formatv("BOLT-ERROR: Cannot relax adr in non-simple function "
-                          "{0}. Can't proceed in current mode.\n",
-                          BF.getOneName());
+        auto L = BC.scopeLock();
+        BC.errs() << formatv(
+            "BOLT-ERROR: Cannot relax adr in non-simple function "
+            "{0}. Use --strict option to override\n",
+            BF.getOneName());
         PassFailed = true;
         return;
       }
-      It = BB.replaceInstruction(It, Addr);
+      It = BB.replaceInstruction(It, AdrpAdd);
     }
   }
 }
 
-void ADRRelaxationPass::runOnFunctions(BinaryContext &BC) {
+Error ADRRelaxationPass::runOnFunctions(BinaryContext &BC) {
   if (!opts::AdrPassOpt || !BC.HasRelocations)
-    return;
+    return Error::success();
 
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
     runOnFunction(BF);
@@ -102,7 +113,8 @@ void ADRRelaxationPass::runOnFunctions(BinaryContext &BC) {
       "ADRRelaxationPass");
 
   if (PassFailed)
-    exit(1);
+    return createFatalBOLTError("");
+  return Error::success();
 }
 
 } // end namespace bolt

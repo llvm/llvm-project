@@ -39,7 +39,7 @@ static Value buildBoolValue(OpBuilder &builder, Location loc, bool value) {
   return builder.create<arith::ConstantOp>(loc, builder.getBoolAttr(value));
 }
 
-static bool isMemref(Value v) { return v.getType().isa<BaseMemRefType>(); }
+static bool isMemref(Value v) { return isa<BaseMemRefType>(v.getType()); }
 
 //===----------------------------------------------------------------------===//
 // Ownership
@@ -197,8 +197,10 @@ LogicalResult DeallocationState::getMemrefsAndConditionsToDeallocate(
     // that we can call extract_strided_metadata on it.
     if (auto unrankedMemRefTy = dyn_cast<UnrankedMemRefType>(memref.getType()))
       memref = builder.create<memref::ReinterpretCastOp>(
-          loc, MemRefType::get({}, unrankedMemRefTy.getElementType()), memref,
-          0, SmallVector<int64_t>{}, SmallVector<int64_t>{});
+          loc, memref,
+          /*offset=*/builder.getIndexAttr(0),
+          /*sizes=*/ArrayRef<OpFoldResult>{},
+          /*strides=*/ArrayRef<OpFoldResult>{});
 
     // Use the `memref.extract_strided_metadata` operation to get the base
     // memref. This is needed because the same MemRef that was produced by the
@@ -222,8 +224,8 @@ bool ValueComparator::operator()(const Value &lhs, const Value &rhs) const {
     return false;
 
   // Block arguments are less than results.
-  bool lhsIsBBArg = lhs.isa<BlockArgument>();
-  if (lhsIsBBArg != rhs.isa<BlockArgument>()) {
+  bool lhsIsBBArg = isa<BlockArgument>(lhs);
+  if (lhsIsBBArg != isa<BlockArgument>(rhs)) {
     return lhsIsBBArg;
   }
 

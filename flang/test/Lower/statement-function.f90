@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -outline-intrinsics %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -outline-intrinsics %s -o - | FileCheck %s
 
 ! Test statement function lowering
 
@@ -159,7 +159,7 @@ end subroutine
 
 ! CHECK-LABEL: @_QPtruncate_arg
 ! CHECK: %[[c4:.*]] = arith.constant 4 : i32
-! CHECK: %[[arg:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,10>>
+! CHECK: %[[arg:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,10>>
 ! CHECK: %[[cast_arg:.*]] = fir.convert %[[arg]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK: %[[c10:.*]] = arith.constant 10 : i64
 ! CHECK: %[[temp:.*]] = fir.alloca !fir.char<1,10> {bindc_name = ".chrtmp"}

@@ -9,7 +9,6 @@
 #ifndef LLVM_TOOLS_LLVMPDBDUMP_LLVMPDBDUMP_H
 #define LLVM_TOOLS_LLVMPDBDUMP_LLVMPDBDUMP_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/DebugInfo/PDB/Native/LinePrinter.h"
 #include "llvm/Support/CommandLine.h"

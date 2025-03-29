@@ -26,17 +26,17 @@
   ; Function Attrs: noinline norecurse nounwind readonly
   define i32 @e() #0 !dbg !13 {
   entry:
-    %0 = load i32, i32* @a, align 4, !dbg !16
+    %0 = load i32, ptr @a, align 4, !dbg !16
     ret i32 %0, !dbg !16
   }
 
   ; Function Attrs: noinline nounwind
   define i32 @main() #1 !dbg !17 {
   entry:
-    %0 = load i32, i32* @c, align 4, !dbg !19
-    store i32 %0, i32* @d, align 4, !dbg !19
+    %0 = load i32, ptr @c, align 4, !dbg !19
+    store i32 %0, ptr @d, align 4, !dbg !19
     %call = tail call i32 @e(), !dbg !20
-    store i32 %call, i32* @b, align 4, !dbg !20
+    store i32 %call, ptr @b, align 4, !dbg !20
     %conv = sext i32 %0 to i64, !dbg !21
     tail call void @call(i64 %conv, i32 %0), !dbg !21
     ret i32 0, !dbg !22

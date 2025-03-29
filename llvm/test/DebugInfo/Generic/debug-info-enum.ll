@@ -2,11 +2,17 @@
 ; * test value representation for each possible underlying integer type
 ; * test the integer type is as expected
 ; * test the DW_AT_enum_class attribute is present (resp. absent) as expected.
+; * test that DW_AT_type is present for v3 and greater, and v2 when strict DWARF
+;   is not enabled.
 
 ; RUN: llc -debugger-tune=gdb -dwarf-version=4 -filetype=obj -o %t.o < %s
-; RUN: llvm-dwarfdump -debug-info %t.o | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-DW4
+; RUN: llvm-dwarfdump -debug-info %t.o | FileCheck %s --check-prefixes=CHECK,CHECK-DW4,CHECK-TYPE
+; RUN: llc -debugger-tune=gdb -dwarf-version=3 -filetype=obj -o %t.o < %s
+; RUN: llvm-dwarfdump -debug-info %t.o | FileCheck %s --check-prefixes=CHECK,CHECK-TYPE
 ; RUN: llc -debugger-tune=gdb -dwarf-version=2 -filetype=obj -o %t.o < %s
-; RUN: llvm-dwarfdump -debug-info %t.o | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-DW2
+; RUN: llvm-dwarfdump -debug-info %t.o | FileCheck %s --check-prefixes=CHECK,CHECK-TYPE
+; RUN: llc -debugger-tune=gdb -dwarf-version=2 -strict-dwarf=true -filetype=obj -o %t.o < %s
+; RUN: llvm-dwarfdump -debug-info %t.o | FileCheck %s --check-prefixes=CHECK,CHECK-DW2-STRICT
 
 @x0 = global i8 0, align 1, !dbg !0
 @x1 = global i8 0, align 1, !dbg !46
@@ -34,8 +40,8 @@
 !8 = !DIEnumerator(name: "A0", value: -128)
 !9 = !DIEnumerator(name: "B0", value: 127)
 ; CHECK:         DW_TAG_enumeration_type
-; CHECK-DW2-NOT:   DW_AT_type
-; CHECK-DW4:       DW_AT_type{{.*}}"signed char"
+; CHECK-DW2-STRICT-NOT: DW_AT_type
+; CHECK-TYPE:      DW_AT_type{{.*}}"signed char"
 ; CHECK-DW4:       DW_AT_enum_class        (true)
 ; CHECK:           DW_AT_name      ("E0")
 ; CHECK:         DW_TAG_enumerator
@@ -51,8 +57,8 @@
 !12 = !{!13}
 !13 = !DIEnumerator(name: "A1", value: 255, isUnsigned: true)
 ; CHECK:         DW_TAG_enumeration_type
-; CHECK-DW2-NOT:   DW_AT_type
-; CHECK-DW4:       DW_AT_type{{.*}}"unsigned char"
+; CHECK-DW2-STRICT-NOT: DW_AT_type
+; CHECK-TYPE:      DW_AT_type{{.*}}"unsigned char"
 ; CHECK-DW4:       DW_AT_enum_class        (true)
 ; CHECK:           DW_AT_name      ("E1")
 ; CHECK:         DW_TAG_enumerator
@@ -66,8 +72,8 @@
 !17 = !DIEnumerator(name: "A2", value: -32768)
 !18 = !DIEnumerator(name: "B2", value: 32767)
 ; CHECK:         DW_TAG_enumeration_type
-; CHECK-DW2-NOT:   DW_AT_type
-; CHECK-DW4:       DW_AT_type{{.*}} "short"
+; CHECK-DW2-STRICT-NOT:   DW_AT_type
+; CHECK-TYPE:      DW_AT_type{{.*}} "short"
 ; CHECK-DW4:       DW_AT_enum_class        (true)
 ; CHECK:           DW_AT_name      ("E2")
 ; CHECK:         DW_TAG_enumerator
@@ -83,8 +89,8 @@
 !21 = !{!22}
 !22 = !DIEnumerator(name: "A3", value: 65535, isUnsigned: true)
 ; CHECK:         DW_TAG_enumeration_type
-; CHECK-DW2-NOT:   DW_AT_type
-; CHECK-DW4:       DW_AT_type{{.*}}"unsigned short"
+; CHECK-DW2-STRICT-NOT: DW_AT_type
+; CHECK-TYPE       DW_AT_type{{.*}}"unsigned short"
 ; CHECK-DW4:       DW_AT_enum_class        (true)
 ; CHECK:           DW_AT_name      ("E3")
 ; CHECK:         DW_TAG_enumerator
@@ -98,8 +104,8 @@
 !26 = !DIEnumerator(name: "A4", value: -2147483648)
 !27 = !DIEnumerator(name: "B4", value: 2147483647)
 ; CHECK:         DW_TAG_enumeration_type
-; CHECK-DW2-NOT:   DW_AT_type
-; CHECK-DW4:       DW_AT_type{{.*}}"int"
+; CHECK-DW2-STRICT-NOT: DW_AT_type
+; CHECK-TYPE:      DW_AT_type{{.*}}"int"
 ; CHECK-DW4:       DW_AT_enum_class        (true)
 ; CHECK:           DW_AT_name      ("E4")
 ; CHECK:         DW_TAG_enumerator
@@ -115,8 +121,8 @@
 !30 = !{!31}
 !31 = !DIEnumerator(name: "A5", value: 4294967295, isUnsigned: true)
 ; CHECK:         DW_TAG_enumeration_type
-; CHECK-DW2-NOT:   DW_AT_type
-; CHECK-DW4:       DW_AT_type{{.*}}"unsigned int"
+; CHECK-DW2-STRICT-NOT: DW_AT_type
+; CHECK-TYPE:      DW_AT_type{{.*}}"unsigned int"
 ; CHECK-DW4:       DW_AT_enum_class        (true)
 ; CHECK:           DW_AT_name      ("E5")
 ; CHECK:         DW_TAG_enumerator
@@ -130,8 +136,8 @@
 !35 = !DIEnumerator(name: "A6", value: -9223372036854775808)
 !36 = !DIEnumerator(name: "B6", value: 9223372036854775807)
 ; CHECK:         DW_TAG_enumeration_type
-; CHECK-DW2-NOT:   DW_AT_type
-; CHECK-DW4:       DW_AT_type{{.*}}"long long int"
+; CHECK-DW2-STRICT-NOT:   DW_AT_type
+; CHECK-TYPE:      DW_AT_type{{.*}}"long long int"
 ; CHECK-DW4:       DW_AT_enum_class        (true)
 ; CHECK:           DW_AT_name      ("E6")
 ; CHECK:         DW_TAG_enumerator
@@ -147,8 +153,8 @@
 !39 = !{!40}
 !40 = !DIEnumerator(name: "A7", value: 18446744073709551615, isUnsigned: true)
 ; CHECK:         DW_TAG_enumeration_type
-; CHECK-DW2-NOT:   DW_AT_type
-; CHECK-DW4:       DW_AT_type{{.*}}"long long unsigned int"
+; CHECK-DW2-STRICT-NOT:   DW_AT_type
+; CHECK-TYPE:      DW_AT_type{{.*}}"long long unsigned int"
 ; CHECK-DW4:       DW_AT_enum_class        (true)
 ; CHECK:           DW_AT_name      ("E7")
 ; CHECK:         DW_TAG_enumerator
@@ -163,8 +169,8 @@
 !43 = !DIEnumerator(name: "A8", value: -128)
 !44 = !DIEnumerator(name: "B8", value: 127)
 ; CHECK:         DW_TAG_enumeration_type
-; CHECK-DW2-NOT:   DW_AT_type
-; CHECK-DW4:       DW_AT_type{{.*}}"int"
+; CHECK-DW2-STRICT-NOT:   DW_AT_type
+; CHECK-TYPE:      DW_AT_type{{.*}}"int"
 ; CHECK-NOT:       DW_AT_enum_class
 ; CHECK:           DW_AT_name      ("E8")
 

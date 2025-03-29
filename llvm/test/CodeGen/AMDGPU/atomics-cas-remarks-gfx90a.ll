@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs --pass-remarks=atomic-expand \
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs --pass-remarks=atomic-expand \
 ; RUN:      %s -o - 2>&1 | FileCheck %s --check-prefix=GFX90A-CAS
 
 ; GFX90A-CAS: A compare and swap loop was generated for an atomic fadd operation at system memory scope

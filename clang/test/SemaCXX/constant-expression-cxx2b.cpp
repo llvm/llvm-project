@@ -3,43 +3,43 @@
 
 struct NonLiteral { // cxx2a-note {{'NonLiteral' is not literal}} \
                     // cxx23-note 2{{'NonLiteral' is not literal}}
-  NonLiteral() {}
+  NonLiteral() {} // cxx23-note 2{{declared here}}
 };
 
 struct Constexpr{};
 
 #if __cplusplus > 202002L
 
-constexpr int f(int n) {  // expected-error {{constexpr function never produces a constant expression}}
-  static const int m = n; // expected-note {{control flows through the definition of a static variable}} \
+constexpr int f(int n) {  // cxx2a-error {{constexpr function never produces a constant expression}}
+  static const int m = n; // cxx2a-note {{control flows through the definition of a static variable}} \
                           // cxx23-warning {{definition of a static variable in a constexpr function is incompatible with C++ standards before C++23}}
   return m;
 }
-constexpr int g(int n) {        // expected-error {{constexpr function never produces a constant expression}}
-  thread_local const int m = n; // expected-note {{control flows through the definition of a thread_local variable}} \
+constexpr int g(int n) {        // cxx2a-error {{constexpr function never produces a constant expression}}
+  thread_local const int m = n; // cxx2a-note {{control flows through the definition of a thread_local variable}} \
                                 // cxx23-warning {{definition of a thread_local variable in a constexpr function is incompatible with C++ standards before C++23}}
   return m;
 }
 
-constexpr int c_thread_local(int n) { // expected-error {{constexpr function never produces a constant expression}}
-  static _Thread_local int m = 0;     // expected-note {{control flows through the definition of a thread_local variable}} \
+constexpr int c_thread_local(int n) { // cxx2a-error {{constexpr function never produces a constant expression}}
+  static _Thread_local int m = 0;     // cxx2a-note {{control flows through the definition of a thread_local variable}} \
                                       // cxx23-warning {{definition of a static variable in a constexpr function is incompatible with C++ standards before C++23}}
   return m;
 }
 
-constexpr int gnu_thread_local(int n) { // expected-error {{constexpr function never produces a constant expression}}
-  static __thread int m = 0;            // expected-note {{control flows through the definition of a thread_local variable}} \
+constexpr int gnu_thread_local(int n) { // cxx2a-error {{constexpr function never produces a constant expression}}
+  static __thread int m = 0;            // cxx2a-note {{control flows through the definition of a thread_local variable}} \
                                         // cxx23-warning {{definition of a static variable in a constexpr function is incompatible with C++ standards before C++23}}
   return m;
 }
 
-constexpr int h(int n) {  // expected-error {{constexpr function never produces a constant expression}}
-  static const int m = n; // expected-note {{control flows through the definition of a static variable}} \
+constexpr int h(int n) {  // cxx2a-error {{constexpr function never produces a constant expression}}
+  static const int m = n; // cxx2a-note {{control flows through the definition of a static variable}} \
                           // cxx23-warning {{definition of a static variable in a constexpr function is incompatible with C++ standards before C++23}}
   return &m - &m;
 }
-constexpr int i(int n) {        // expected-error {{constexpr function never produces a constant expression}}
-  thread_local const int m = n; // expected-note {{control flows through the definition of a thread_local variable}} \
+constexpr int i(int n) {        // cxx2a-error {{constexpr function never produces a constant expression}}
+  thread_local const int m = n; // cxx2a-note {{control flows through the definition of a thread_local variable}} \
                                  // cxx23-warning {{definition of a thread_local variable in a constexpr function is incompatible with C++ standards before C++23}}
   return &m - &m;
 }
@@ -165,9 +165,9 @@ int test_in_lambdas() {
 
   auto non_literal = [](bool b) constexpr {
     if (!b)
-      NonLiteral n; // cxx23-note {{non-literal type 'NonLiteral' cannot be used in a constant expression}} \
-                    // cxx2a-error {{variable of non-literal type 'NonLiteral' cannot be defined in a constexpr function before C++23}} \
-                    // cxx23-warning {{definition of a variable of non-literal type in a constexpr function is incompatible with C++ standards before C++23}}
+      NonLiteral n; // cxx2a-error {{variable of non-literal type 'NonLiteral' cannot be defined in a constexpr function before C++23}} \
+                    // cxx23-warning {{definition of a variable of non-literal type in a constexpr function is incompatible with C++ standards before C++23}} \
+		    // cxx23-note {{non-constexpr constructor 'NonLiteral' cannot be used in a constant expression}}
     return 0;
   };
 
@@ -217,7 +217,7 @@ int test_lambdas_implicitly_constexpr() {
 
   auto non_literal = [](bool b) { // cxx2a-note 2{{declared here}}
     if (b)
-      NonLiteral n; // cxx23-note {{non-literal type 'NonLiteral' cannot be used in a constant expression}}
+      NonLiteral n; // cxx23-note {{non-constexpr constructor 'NonLiteral' cannot be used in a constant expression}}
     return 0;
   };
 

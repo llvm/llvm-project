@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-aa-sched-mi < %s
+; RUN: llc -mtriple=hexagon -enable-aa-sched-mi < %s
 ; REQUIRES: asserts
 
 ; Make sure the base is a register and not an address.

@@ -25,8 +25,6 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -55,16 +53,16 @@ NestedNameSpecifier::FindOrInsert(const ASTContext &Context,
   return NNS;
 }
 
-NestedNameSpecifier *
-NestedNameSpecifier::Create(const ASTContext &Context,
-                            NestedNameSpecifier *Prefix, IdentifierInfo *II) {
+NestedNameSpecifier *NestedNameSpecifier::Create(const ASTContext &Context,
+                                                 NestedNameSpecifier *Prefix,
+                                                 const IdentifierInfo *II) {
   assert(II && "Identifier cannot be NULL");
   assert((!Prefix || Prefix->isDependent()) && "Prefix must be dependent");
 
   NestedNameSpecifier Mockup;
   Mockup.Prefix.setPointer(Prefix);
   Mockup.Prefix.setInt(StoredIdentifier);
-  Mockup.Specifier = II;
+  Mockup.Specifier = const_cast<IdentifierInfo *>(II);
   return FindOrInsert(Context, Mockup);
 }
 
@@ -87,7 +85,7 @@ NestedNameSpecifier::Create(const ASTContext &Context,
 NestedNameSpecifier *
 NestedNameSpecifier::Create(const ASTContext &Context,
                             NestedNameSpecifier *Prefix,
-                            NamespaceAliasDecl *Alias) {
+                            const NamespaceAliasDecl *Alias) {
   assert(Alias && "Namespace alias cannot be NULL");
   assert((!Prefix ||
           (Prefix->getAsType() == nullptr &&
@@ -96,7 +94,7 @@ NestedNameSpecifier::Create(const ASTContext &Context,
   NestedNameSpecifier Mockup;
   Mockup.Prefix.setPointer(Prefix);
   Mockup.Prefix.setInt(StoredDecl);
-  Mockup.Specifier = Alias;
+  Mockup.Specifier = const_cast<NamespaceAliasDecl *>(Alias);
   return FindOrInsert(Context, Mockup);
 }
 
@@ -112,13 +110,13 @@ NestedNameSpecifier::Create(const ASTContext &Context,
   return FindOrInsert(Context, Mockup);
 }
 
-NestedNameSpecifier *
-NestedNameSpecifier::Create(const ASTContext &Context, IdentifierInfo *II) {
+NestedNameSpecifier *NestedNameSpecifier::Create(const ASTContext &Context,
+                                                 const IdentifierInfo *II) {
   assert(II && "Identifier cannot be NULL");
   NestedNameSpecifier Mockup;
   Mockup.Prefix.setPointer(nullptr);
   Mockup.Prefix.setInt(StoredIdentifier);
-  Mockup.Specifier = II;
+  Mockup.Specifier = const_cast<IdentifierInfo *>(II);
   return FindOrInsert(Context, Mockup);
 }
 
@@ -247,10 +245,58 @@ bool NestedNameSpecifier::containsErrors() const {
   return getDependence() & NestedNameSpecifierDependence::Error;
 }
 
+const Type *
+NestedNameSpecifier::translateToType(const ASTContext &Context) const {
+  NestedNameSpecifier *Prefix = getPrefix();
+  switch (getKind()) {
+  case SpecifierKind::Identifier:
+    return Context
+        .getDependentNameType(ElaboratedTypeKeyword::None, Prefix,
+                              getAsIdentifier())
+        .getTypePtr();
+  case SpecifierKind::TypeSpec:
+  case SpecifierKind::TypeSpecWithTemplate: {
+    const Type *T = getAsType();
+    switch (T->getTypeClass()) {
+    case Type::DependentTemplateSpecialization: {
+      const auto *DT = cast<DependentTemplateSpecializationType>(T);
+      // FIXME: The type node can't represent the template keyword.
+      return Context
+          .getDependentTemplateSpecializationType(ElaboratedTypeKeyword::None,
+                                                  Prefix, DT->getIdentifier(),
+                                                  DT->template_arguments())
+          .getTypePtr();
+    }
+    case Type::Record:
+    case Type::TemplateSpecialization:
+    case Type::Using:
+    case Type::Enum:
+    case Type::Typedef:
+    case Type::UnresolvedUsing:
+      return Context
+          .getElaboratedType(ElaboratedTypeKeyword::None, Prefix,
+                             QualType(T, 0))
+          .getTypePtr();
+    default:
+      assert(Prefix == nullptr && "unexpected type with elaboration");
+      return T;
+    }
+  }
+  case SpecifierKind::Global:
+  case SpecifierKind::Namespace:
+  case SpecifierKind::NamespaceAlias:
+  case SpecifierKind::Super:
+    // These are not representable as types.
+    return nullptr;
+  }
+  llvm_unreachable("Unhandled SpecifierKind enum");
+}
+
 /// Print this nested name specifier to the given output
 /// stream.
 void NestedNameSpecifier::print(raw_ostream &OS, const PrintingPolicy &Policy,
-                                bool ResolveTemplateArguments) const {
+                                bool ResolveTemplateArguments,
+                                bool PrintFinalScopeResOp) const {
   if (getPrefix())
     getPrefix()->print(OS, Policy);
 
@@ -271,7 +317,8 @@ void NestedNameSpecifier::print(raw_ostream &OS, const PrintingPolicy &Policy,
     break;
 
   case Global:
-    break;
+    OS << "::";
+    return;
 
   case Super:
     OS << "__super";
@@ -297,6 +344,7 @@ void NestedNameSpecifier::print(raw_ostream &OS, const PrintingPolicy &Policy,
 
     PrintingPolicy InnerPolicy(Policy);
     InnerPolicy.SuppressScope = true;
+    InnerPolicy.SuppressTagKeyword = true;
 
     // Nested-name-specifiers are intended to contain minimally-qualified
     // types. An actual ElaboratedType will not occur, since we'll store
@@ -333,7 +381,8 @@ void NestedNameSpecifier::print(raw_ostream &OS, const PrintingPolicy &Policy,
   }
   }
 
-  OS << "::";
+  if (PrintFinalScopeResOp)
+    OS << "::";
 }
 
 LLVM_DUMP_METHOD void NestedNameSpecifier::dump(const LangOptions &LO) const {

@@ -3,7 +3,7 @@
 // RUN:     -disable-O0-optnone | opt -S -passes=mem2reg \
 // RUN:     | FileCheck %s  -check-prefix=RV32ZKND
 
-#include <stdint.h>
+#include <riscv_crypto.h>
 
 // RV32ZKND-LABEL: @aes32dsi(
 // RV32ZKND-NEXT:  entry:
@@ -11,7 +11,7 @@
 // RV32ZKND-NEXT:    ret i32 [[TMP0]]
 //
 uint32_t aes32dsi(uint32_t rs1, uint32_t rs2) {
-  return __builtin_riscv_aes32dsi(rs1, rs2, 3);
+  return __riscv_aes32dsi(rs1, rs2, 3);
 }
 
 // RV32ZKND-LABEL: @aes32dsmi(
@@ -20,5 +20,5 @@ uint32_t aes32dsi(uint32_t rs1, uint32_t rs2) {
 // RV32ZKND-NEXT:    ret i32 [[TMP0]]
 //
 uint32_t aes32dsmi(uint32_t rs1, uint32_t rs2) {
-  return __builtin_riscv_aes32dsmi(rs1, rs2, 3);
+  return __riscv_aes32dsmi(rs1, rs2, 3);
 }

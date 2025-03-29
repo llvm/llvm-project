@@ -67,6 +67,28 @@ define double @cos_f64(double %a) {
   ret double %1
 }
 
+define float @tan_f32(float %a) {
+; SMALL-LABEL: tan_f32
+; SMALL:       bl _tanf
+; LARGE-LABEL: tan_f32
+; LARGE:       adrp  [[REG:x[0-9]+]], _tanf@GOTPAGE
+; LARGE:       ldr [[REG]], [[[REG]], _tanf@GOTPAGEOFF]
+; LARGE-NEXT:  blr [[REG]]
+  %1 = call float @llvm.tan.f32(float %a)
+  ret float %1
+}
+
+define double @tan_f64(double %a) {
+; SMALL-LABEL: tan_f64
+; SMALL:       bl _tan
+; LARGE-LABEL: tan_f64
+; LARGE:       adrp  [[REG:x[0-9]+]], _tan@GOTPAGE
+; LARGE:       ldr [[REG]], [[[REG]], _tan@GOTPAGEOFF]
+; LARGE-NEXT:  blr [[REG]]
+  %1 = call double @llvm.tan.f64(double %a)
+  ret double %1
+}
+
 define float @pow_f32(float %a, float %b) {
 ; SMALL-LABEL: pow_f32
 ; SMALL:       bl _powf
@@ -92,5 +114,7 @@ declare float @llvm.sin.f32(float)
 declare double @llvm.sin.f64(double)
 declare float @llvm.cos.f32(float)
 declare double @llvm.cos.f64(double)
+declare float @llvm.tan.f32(float)
+declare double @llvm.tan.f64(double)
 declare float @llvm.pow.f32(float, float)
 declare double @llvm.pow.f64(double, double)

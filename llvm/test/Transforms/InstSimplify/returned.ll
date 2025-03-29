@@ -25,6 +25,31 @@ define i1 @gep3() {
   ret i1 %equal
 }
 
+define <8 x i1> @returned_vec_arg_casted(<2 x i32> %a) {
+; CHECK-LABEL: @returned_vec_arg_casted(
+; CHECK-NEXT:    [[X:%.*]] = call <8 x i8> @passthru_8i8v_from_2i32v(<2 x i32> [[A:%.*]])
+; CHECK-NEXT:    [[C:%.*]] = icmp slt <8 x i8> [[X]], zeroinitializer
+; CHECK-NEXT:    ret <8 x i1> [[C]]
+;
+  %x = call <8 x i8> @passthru_8i8v_from_2i32v(<2 x i32> %a)
+  %C = icmp slt <8 x i8> %x, zeroinitializer
+  ret <8 x i1> %C
+}
+
+define <8 x i1> @returned_vec_arg_casted2(<2 x i32> %a) {
+; CHECK-LABEL: @returned_vec_arg_casted2(
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[A:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[X:%.*]] = call <8 x i8> @passthru_8i8v_from_2i32v(<2 x i32> [[OR]])
+; CHECK-NEXT:    [[C:%.*]] = icmp ne <8 x i8> [[X]], zeroinitializer
+; CHECK-NEXT:    ret <8 x i1> [[C]]
+;
+  %or = or <2 x i32> %a, <i32 1, i32 1>
+  %x = call <8 x i8> @passthru_8i8v_from_2i32v(<2 x i32> %or)
+  %C = icmp ne <8 x i8> %x, zeroinitializer
+  ret <8 x i1> %C
+}
+
+declare <8 x i8> @passthru_8i8v_from_2i32v(<2 x i32> returned)
 declare ptr @func1(ptr returned) nounwind readnone willreturn
 declare ptr @func2(ptr returned) nounwind readnone willreturn
 

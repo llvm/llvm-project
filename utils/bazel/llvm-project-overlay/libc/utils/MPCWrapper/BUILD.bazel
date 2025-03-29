@@ -1,0 +1,59 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# A wrapper library over MPC for use with LLVM libc math unittests.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test_library")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+cc_library(
+    name = "mpc_impl",
+    hdrs = ["mpc_inc.h"],
+    target_compatible_with = select({
+        "//conditions:default": [],
+        "//libc:mpc_disable": ["@platforms//:incompatible"],
+    }),
+    deps = select(
+        {
+            "//conditions:default": [],
+            "//libc:mpc_external": ["@mpc//:mpc_external"],
+            "//libc:mpc_system": ["@mpc//:mpc_system"],
+        },
+    ),
+)
+
+libc_test_library(
+    name = "mpc_wrapper",
+    srcs = ["MPCUtils.cpp"],
+    hdrs = ["MPCUtils.h"],
+    # Disable layering check when using mpc_system.
+    features = select(
+        {
+            "//conditions:default": [],
+            "//libc:mpc_system": ["-layering_check"],
+        },
+    ),
+    target_compatible_with = select({
+        "//conditions:default": [],
+        "//libc:mpc_disable": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":mpc_impl",
+        "//libc:__support_complex_type",
+        "//libc:__support_cpp_array",
+        "//libc:__support_cpp_stringstream",
+        "//libc:__support_cpp_type_traits",
+        "//libc:__support_macros_config",
+        "//libc:__support_macros_properties_complex_types",
+        "//libc:__support_macros_properties_types",
+        "//libc:hdr_math_macros",
+        "//libc/test/UnitTest:LibcUnitTest",
+        "//libc/test/UnitTest:fp_test_helpers",
+        "//libc/utils/MPFRWrapper:mp_common",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)

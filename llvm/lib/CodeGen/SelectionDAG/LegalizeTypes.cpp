@@ -88,10 +88,9 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
         if (I != ReplacedValues.end()) {
           Mapped |= 1;
           // Check that remapped values are only used by nodes marked NewNode.
-          for (SDNode::use_iterator UI = Node.use_begin(), UE = Node.use_end();
-               UI != UE; ++UI)
-            if (UI.getUse().getResNo() == i)
-              assert(UI->getNodeId() == NewNode &&
+          for (SDUse &U : Node.uses())
+            if (U.getResNo() == i)
+              assert(U.getUser()->getNodeId() == NewNode &&
                      "Remapped value has non-trivial use!");
 
           // Check that the final result of applying ReplacedValues is not
@@ -188,9 +187,8 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
 
 #ifndef NDEBUG
   // Checked that NewNodes are only used by other NewNodes.
-  for (unsigned i = 0, e = NewNodes.size(); i != e; ++i) {
-    SDNode *N = NewNodes[i];
-    for (SDNode *U : N->uses())
+  for (SDNode *N : NewNodes) {
+    for (SDNode *U : N->users())
       assert(U->getNodeId() == NewNode && "NewNode used by non-NewNode!");
   }
 #endif
@@ -235,7 +233,11 @@ bool DAGTypeLegalizer::run() {
     assert(N->getNodeId() == ReadyToProcess &&
            "Node should be ready if on worklist!");
 
-    LLVM_DEBUG(dbgs() << "Legalizing node: "; N->dump(&DAG));
+    // Preserve fast math flags
+    SDNodeFlags FastMathFlags = N->getFlags() & SDNodeFlags::FastMathFlags;
+    SelectionDAG::FlagInserter FlagsInserter(DAG, FastMathFlags);
+
+    LLVM_DEBUG(dbgs() << "\nLegalizing node: "; N->dump(&DAG));
     if (IgnoreNodeResults(N)) {
       LLVM_DEBUG(dbgs() << "Ignoring node results\n");
       goto ScanOperands;
@@ -390,8 +392,7 @@ ScanOperands:
     }
 
     if (i == NumOperands) {
-      LLVM_DEBUG(dbgs() << "Legally typed node: "; N->dump(&DAG);
-                 dbgs() << "\n");
+      LLVM_DEBUG(dbgs() << "Legally typed node: "; N->dump(&DAG));
     }
     }
 NodeDone:
@@ -401,7 +402,7 @@ NodeDone:
     assert(N->getNodeId() == ReadyToProcess && "Node ID recalculated?");
     N->setNodeId(Processed);
 
-    for (SDNode *User : N->uses()) {
+    for (SDNode *User : N->users()) {
       int NodeId = User->getNodeId();
 
       // This node has two options: it can either be a new node or its Node ID

@@ -18,6 +18,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
 
@@ -28,7 +29,6 @@ using namespace llvm;
 static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
                                 int Priority, Constant *Data) {
   IRBuilder<> IRB(M.getContext());
-  FunctionType *FnTy = FunctionType::get(IRB.getVoidTy(), false);
 
   // Get the current set of static global constructors and add the new ctor
   // to the list.
@@ -45,16 +45,16 @@ static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
     GVCtor->eraseFromParent();
   } else {
     EltTy = StructType::get(
-        IRB.getInt32Ty(), PointerType::get(FnTy, F->getAddressSpace()),
-        IRB.getInt8PtrTy());
+        IRB.getInt32Ty(),
+        PointerType::get(M.getContext(), F->getAddressSpace()), IRB.getPtrTy());
   }
 
   // Build a 3 field global_ctor entry.  We don't take a comdat key.
   Constant *CSVals[3];
   CSVals[0] = IRB.getInt32(Priority);
   CSVals[1] = F;
-  CSVals[2] = Data ? ConstantExpr::getPointerCast(Data, IRB.getInt8PtrTy())
-                   : Constant::getNullValue(IRB.getInt8PtrTy());
+  CSVals[2] = Data ? ConstantExpr::getPointerCast(Data, IRB.getPtrTy())
+                   : Constant::getNullValue(IRB.getPtrTy());
   Constant *RuntimeCtorInit =
       ConstantStruct::get(EltTy, ArrayRef(CSVals, EltTy->getNumElements()));
 
@@ -78,6 +78,50 @@ void llvm::appendToGlobalDtors(Module &M, Function *F, int Priority, Constant *D
   appendToGlobalArray("llvm.global_dtors", M, F, Priority, Data);
 }
 
+static void transformGlobalArray(StringRef ArrayName, Module &M,
+                                 const GlobalCtorTransformFn &Fn) {
+  GlobalVariable *GVCtor = M.getNamedGlobal(ArrayName);
+  if (!GVCtor)
+    return;
+
+  IRBuilder<> IRB(M.getContext());
+  SmallVector<Constant *, 16> CurrentCtors;
+  bool Changed = false;
+  StructType *EltTy =
+      cast<StructType>(GVCtor->getValueType()->getArrayElementType());
+  if (Constant *Init = GVCtor->getInitializer()) {
+    CurrentCtors.reserve(Init->getNumOperands());
+    for (Value *OP : Init->operands()) {
+      Constant *C = cast<Constant>(OP);
+      Constant *NewC = Fn(C);
+      Changed |= (!NewC || NewC != C);
+      if (NewC)
+        CurrentCtors.push_back(NewC);
+    }
+  }
+  if (!Changed)
+    return;
+
+  GVCtor->eraseFromParent();
+
+  // Create a new initializer.
+  ArrayType *AT = ArrayType::get(EltTy, CurrentCtors.size());
+  Constant *NewInit = ConstantArray::get(AT, CurrentCtors);
+
+  // Create the new global variable and replace all uses of
+  // the old global variable with the new one.
+  (void)new GlobalVariable(M, NewInit->getType(), false,
+                           GlobalValue::AppendingLinkage, NewInit, ArrayName);
+}
+
+void llvm::transformGlobalCtors(Module &M, const GlobalCtorTransformFn &Fn) {
+  transformGlobalArray("llvm.global_ctors", M, Fn);
+}
+
+void llvm::transformGlobalDtors(Module &M, const GlobalCtorTransformFn &Fn) {
+  transformGlobalArray("llvm.global_dtors", M, Fn);
+}
+
 static void collectUsedGlobals(GlobalVariable *GV,
                                SmallSetVector<Constant *, 16> &Init) {
   if (!GV || !GV->hasInitializer())
@@ -96,7 +140,7 @@ static void appendToUsedList(Module &M, StringRef Name, ArrayRef<GlobalValue *> 
   if (GV)
     GV->eraseFromParent();
 
-  Type *ArrayEltTy = llvm::Type::getInt8PtrTy(M.getContext());
+  Type *ArrayEltTy = llvm::PointerType::getUnqual(M.getContext());
   for (auto *V : Values)
     Init.insert(ConstantExpr::getPointerBitCastOrAddrSpaceCast(V, ArrayEltTy));
 
@@ -160,11 +204,13 @@ void llvm::setKCFIType(Module &M, Function &F, StringRef MangledType) {
   // Matches CodeGenModule::CreateKCFITypeId in Clang.
   LLVMContext &Ctx = M.getContext();
   MDBuilder MDB(Ctx);
-  F.setMetadata(
-      LLVMContext::MD_kcfi_type,
-      MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
-                           Type::getInt32Ty(Ctx),
-                           static_cast<uint32_t>(xxHash64(MangledType))))));
+  std::string Type = MangledType.str();
+  if (M.getModuleFlag("cfi-normalize-integers"))
+    Type += ".normalized";
+  F.setMetadata(LLVMContext::MD_kcfi_type,
+                MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
+                                     Type::getInt32Ty(Ctx),
+                                     static_cast<uint32_t>(xxHash64(Type))))));
   // If the module was compiled with -fpatchable-function-entry, ensure
   // we use the same patchable-function-prefix.
   if (auto *MD = mdconst::extract_or_null<ConstantInt>(
@@ -221,7 +267,7 @@ std::pair<Function *, FunctionCallee> llvm::createSanitizerCtorAndInitFunctions(
         BasicBlock::Create(M.getContext(), "callfunc", Ctor, RetBB);
     auto *InitFn = cast<Function>(InitFunction.getCallee());
     auto *InitFnPtr =
-        PointerType::get(InitFn->getType(), InitFn->getAddressSpace());
+        PointerType::get(M.getContext(), InitFn->getAddressSpace());
     IRB.SetInsertPoint(EntryBB);
     Value *InitNotNull =
         IRB.CreateICmpNE(InitFn, ConstantPointerNull::get(InitFnPtr));
@@ -301,7 +347,7 @@ std::string llvm::getUniqueModuleId(Module *M) {
   MD5 Md5;
   bool ExportsSymbols = false;
   auto AddGlobal = [&](GlobalValue &GV) {
-    if (GV.isDeclaration() || GV.getName().startswith("llvm.") ||
+    if (GV.isDeclaration() || GV.getName().starts_with("llvm.") ||
         !GV.hasExternalLinkage() || GV.hasComdat())
       return;
     ExportsSymbols = true;
@@ -327,34 +373,6 @@ std::string llvm::getUniqueModuleId(Module *M) {
   SmallString<32> Str;
   MD5::stringifyResult(R, Str);
   return ("." + Str).str();
-}
-
-void VFABI::setVectorVariantNames(CallInst *CI,
-                                  ArrayRef<std::string> VariantMappings) {
-  if (VariantMappings.empty())
-    return;
-
-  SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  for (const std::string &VariantMapping : VariantMappings)
-    Out << VariantMapping << ",";
-  // Get rid of the trailing ','.
-  assert(!Buffer.str().empty() && "Must have at least one char.");
-  Buffer.pop_back();
-
-  Module *M = CI->getModule();
-#ifndef NDEBUG
-  for (const std::string &VariantMapping : VariantMappings) {
-    LLVM_DEBUG(dbgs() << "VFABI: adding mapping '" << VariantMapping << "'\n");
-    std::optional<VFInfo> VI = VFABI::tryDemangleForVFABI(VariantMapping, *M);
-    assert(VI && "Cannot add an invalid VFABI name.");
-    assert(M->getNamedValue(VI->VectorName) &&
-           "Cannot add variant to attribute: "
-           "vector function declaration is missing.");
-  }
-#endif
-  CI->addFnAttr(
-      Attribute::get(M->getContext(), MappingsAttrName, Buffer.str()));
 }
 
 void llvm::embedBufferInModule(Module &M, MemoryBufferRef Buf,

@@ -78,13 +78,13 @@ public:
   };
 
   PThreadMutex() {
-    int err;
+    [[maybe_unused]] int err;
     err = ::pthread_mutex_init(&m_mutex, NULL);
     assert(err == 0);
   }
 
   PThreadMutex(int type) {
-    int err;
+    [[maybe_unused]] int err;
     ::pthread_mutexattr_t attr;
     err = ::pthread_mutexattr_init(&attr);
     assert(err == 0);
@@ -97,7 +97,7 @@ public:
   }
 
   ~PThreadMutex() {
-    int err;
+    [[maybe_unused]] int err;
     err = ::pthread_mutex_destroy(&m_mutex);
     if (err != 0) {
       err = Unlock();

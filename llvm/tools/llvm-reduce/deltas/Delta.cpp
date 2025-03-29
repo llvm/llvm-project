@@ -22,14 +22,15 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/WithColor.h"
 #include <fstream>
-#include <set>
 
 using namespace llvm;
 
@@ -38,6 +39,12 @@ extern cl::OptionCategory LLVMReduceOptions;
 static cl::opt<bool> AbortOnInvalidReduction(
     "abort-on-invalid-reduction",
     cl::desc("Abort if any reduction results in invalid IR"),
+    cl::cat(LLVMReduceOptions));
+
+static cl::opt<bool> SkipVerifyAfterCountingChunks(
+    "skip-verify-interesting-after-counting-chunks",
+    cl::desc("Do not validate testcase is interesting after counting chunks "
+             "(may speed up reduction)"),
     cl::cat(LLVMReduceOptions));
 
 static cl::opt<unsigned int> StartingGranularityLevel(
@@ -191,8 +198,16 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
 
     assert(!Test.getProgram().verify(&errs()) &&
            "input module is broken after counting chunks");
-    assert(Test.getProgram().isReduced(Test) &&
-           "input module no longer interesting after counting chunks");
+
+    if (!SkipVerifyAfterCountingChunks && !Test.getProgram().isReduced(Test)) {
+      WithColor::warning()
+          << "input module no longer interesting after counting chunks\n";
+      WithColor::note() << "the interestingness test may be flaky, or there "
+                           "may be an llvm-reduce bug\n";
+      WithColor::note()
+          << "use -skip-verify-interesting-after-counting-chunks to "
+             "suppress this warning\n";
+    }
 
 #ifndef NDEBUG
     // Make sure that the number of chunks does not change as we reduce.
@@ -220,10 +235,10 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
   }
 
   std::atomic<bool> AnyReduced;
-  std::unique_ptr<ThreadPool> ChunkThreadPoolPtr;
+  std::unique_ptr<ThreadPoolInterface> ChunkThreadPoolPtr;
   if (NumJobs > 1)
     ChunkThreadPoolPtr =
-        std::make_unique<ThreadPool>(hardware_concurrency(NumJobs));
+        std::make_unique<DefaultThreadPool>(hardware_concurrency(NumJobs));
 
   bool FoundAtLeastOneNewUninterestingChunkWithCurrentGranularity;
   do {
@@ -252,7 +267,7 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
         unsigned NumInitialTasks = std::min(WorkLeft, unsigned(NumJobs));
         unsigned NumChunksProcessed = 0;
 
-        ThreadPool &ChunkThreadPool = *ChunkThreadPoolPtr;
+        ThreadPoolInterface &ChunkThreadPool = *ChunkThreadPoolPtr;
         assert(TaskQueue.empty());
 
         AnyReduced = false;

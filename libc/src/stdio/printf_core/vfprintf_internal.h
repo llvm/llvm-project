@@ -12,13 +12,14 @@
 #include "src/__support/File/file.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_main.h"
 #include "src/stdio/printf_core/writer.h"
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace internal {
 #ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
@@ -71,9 +72,9 @@ LIBC_INLINE int vfprintf_internal(::FILE *__restrict stream,
                                   internal::ArgList &args) {
   constexpr size_t BUFF_SIZE = 1024;
   char buffer[BUFF_SIZE];
-  printf_core::WriteBuffer wb(buffer, BUFF_SIZE, &file_write_hook,
-                              reinterpret_cast<void *>(stream));
-  Writer writer(&wb);
+  printf_core::WriteBuffer<Mode<WriteMode::FLUSH_TO_STREAM>::value> wb(
+      buffer, BUFF_SIZE, &file_write_hook, reinterpret_cast<void *>(stream));
+  Writer writer(wb);
   internal::flockfile(stream);
   int retval = printf_main(&writer, format, args);
   int flushval = wb.overflow_write("");
@@ -84,6 +85,6 @@ LIBC_INLINE int vfprintf_internal(::FILE *__restrict stream,
 }
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_VFPRINTF_INTERNAL_H

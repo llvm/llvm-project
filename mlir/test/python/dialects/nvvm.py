@@ -32,7 +32,7 @@ def testSmoke():
         nvvm.CpAsyncWaitGroupOp(5)
         # CHECK: %0 = llvm.mlir.undef : [[MAT_T:.*]]
         result = llvm.UndefOp(mat64f32_t)
-        # CHECK: %1 = nvvm.wgmma.mma_async %arg0, %arg1, <m = 64, n = 32, k = 16>, D[%0, <zero>], A[<f16>, <neg>, <col>], B[<f16>, <neg>, <col>] : [[MAT_T]] -> [[MAT_T]]
+        # CHECK: %1 = nvvm.wgmma.mma_async %arg0, %arg1, %0, <m = 64, n = 32, k = 16>, D[<f32>, <zero>], A[<f16>, <neg>, <col>], B[<f16>, <neg>, <col>] : [[MAT_T]] -> [[MAT_T]]
         result1 = nvvm.WgmmaMmaAsyncOp(
             results_=mat64f32_t,
             inouts=result,
@@ -41,6 +41,7 @@ def testSmoke():
             shape=shape_attr,
             typeA=nvvm.WGMMATypes.f16,
             typeB=nvvm.WGMMATypes.f16,
+            typeD=nvvm.WGMMATypes.f32,
             scaleD=nvvm.WGMMAScaleOut.zero,
             scaleA=nvvm.WGMMAScaleIn.neg,
             scaleB=nvvm.WGMMAScaleIn.neg,

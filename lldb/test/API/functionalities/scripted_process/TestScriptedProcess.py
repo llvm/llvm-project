@@ -60,6 +60,57 @@ class ScriptedProcesTestCase(TestBase):
         )
         shutil.copy(blueprint_origin_path, blueprint_destination_path)
 
+    # No dylib on Windows.
+    @skipIfWindows
+    def test_missing_methods_scripted_register_context(self):
+        """Test that we only instanciate scripted processes if they implement
+        all the required abstract methods."""
+        self.build()
+
+        os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"] = "1"
+
+        def cleanup():
+            del os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"]
+
+        self.addTearDownHook(cleanup)
+
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+        log_file = self.getBuildArtifact("script.log")
+        self.runCmd("log enable lldb script -f " + log_file)
+        self.assertTrue(os.path.isfile(log_file))
+        script_path = os.path.join(
+            self.getSourceDir(), "missing_methods_scripted_process.py"
+        )
+        self.runCmd("command script import " + script_path)
+
+        launch_info = lldb.SBLaunchInfo(None)
+        launch_info.SetProcessPluginName("ScriptedProcess")
+        launch_info.SetScriptedProcessClassName(
+            "missing_methods_scripted_process.MissingMethodsScriptedProcess"
+        )
+        error = lldb.SBError()
+
+        process = target.Launch(launch_info, error)
+
+        self.assertFailure(error)
+
+        with open(log_file, "r") as f:
+            log = f.read()
+
+        self.assertIn(
+            "Abstract method MissingMethodsScriptedProcess.read_memory_at_address not implemented",
+            log,
+        )
+        self.assertIn(
+            "Abstract method MissingMethodsScriptedProcess.is_alive not implemented",
+            log,
+        )
+        self.assertIn(
+            "Abstract method MissingMethodsScriptedProcess.get_scripted_thread_plugin not implemented",
+            log,
+        )
+
     @skipUnlessDarwin
     def test_invalid_scripted_register_context(self):
         """Test that we can launch an lldb scripted process with an invalid
@@ -136,6 +187,10 @@ class ScriptedProcesTestCase(TestBase):
             + os.path.join(self.getSourceDir(), scripted_process_example_relpath)
         )
 
+        self.runCmd(
+            "target stop-hook add -k first -v 1 -k second -v 2 -P dummy_scripted_process.DummyStopHook"
+        )
+
         launch_info = lldb.SBLaunchInfo(None)
         launch_info.SetProcessPluginName("ScriptedProcess")
         launch_info.SetScriptedProcessClassName(
@@ -150,13 +205,14 @@ class ScriptedProcesTestCase(TestBase):
 
         py_impl = process_0.GetScriptedImplementation()
         self.assertTrue(py_impl)
-        self.assertTrue(
-            isinstance(py_impl, dummy_scripted_process.DummyScriptedProcess)
-        )
+        self.assertIsInstance(py_impl, dummy_scripted_process.DummyScriptedProcess)
         self.assertFalse(hasattr(py_impl, "my_super_secret_member"))
         py_impl.my_super_secret_member = 42
         self.assertTrue(hasattr(py_impl, "my_super_secret_member"))
         self.assertEqual(py_impl.my_super_secret_method(), 42)
+
+        self.assertTrue(hasattr(py_impl, "handled_stop"))
+        self.assertTrue(py_impl.handled_stop)
 
         # Try reading from target #0 process ...
         addr = 0x500000000

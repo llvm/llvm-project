@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fms-extensions -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fms-extensions -emit-llvm -o - %s | FileCheck %s
 
 extern "C" {
 

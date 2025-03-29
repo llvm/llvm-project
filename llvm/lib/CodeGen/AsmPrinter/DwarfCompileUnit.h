@@ -25,7 +25,6 @@
 #include "llvm/CodeGen/LexicalScopes.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/Casting.h"
-#include <cassert>
 #include <cstdint>
 #include <memory>
 
@@ -44,8 +43,6 @@ class MDNode;
 enum class UnitKind { Skeleton, Full };
 
 class DwarfCompileUnit final : public DwarfUnit {
-  /// A numeric ID unique among all CUs in the module
-  unsigned UniqueID;
   bool HasRangeLists = false;
 
   /// The start of the unit line section, this is also
@@ -54,9 +51,6 @@ class DwarfCompileUnit final : public DwarfUnit {
 
   /// Skeleton unit associated with this unit.
   DwarfCompileUnit *Skeleton = nullptr;
-
-  /// The start of the unit within its section.
-  MCSymbol *LabelBegin = nullptr;
 
   /// The start of the unit macro info within macro section.
   MCSymbol *MacroLabelBegin;
@@ -151,13 +145,14 @@ public:
                    UnitKind Kind = UnitKind::Full);
 
   bool hasRangeLists() const { return HasRangeLists; }
-  unsigned getUniqueID() const { return UniqueID; }
 
   DwarfCompileUnit *getSkeleton() const {
     return Skeleton;
   }
 
   bool includeMinimalInlineScopes() const;
+
+  bool emitFuncLineTableOffsets() const;
 
   void initStmtList();
 
@@ -214,10 +209,10 @@ public:
   void attachLowHighPC(DIE &D, const MCSymbol *Begin, const MCSymbol *End);
 
   /// Find DIE for the given subprogram and attach appropriate
-  /// DW_AT_low_pc and DW_AT_high_pc attributes. If there are global
-  /// variables in this scope then create and insert DIEs for these
-  /// variables.
-  DIE &updateSubprogramScopeDIE(const DISubprogram *SP);
+  /// DW_AT_low_pc, DW_AT_high_pc and DW_AT_LLVM_stmt_sequence attributes.
+  /// If there are global variables in this scope then create and insert DIEs
+  /// for these variables.
+  DIE &updateSubprogramScopeDIE(const DISubprogram *SP, MCSymbol *LineTableSym);
 
   void constructScopeDIE(LexicalScope *Scope, DIE &ParentScopeDIE);
 
@@ -261,8 +256,8 @@ public:
   DIE *getOrCreateContextDIE(const DIScope *Ty) override;
 
   /// Construct a DIE for this subprogram scope.
-  DIE &constructSubprogramScopeDIE(const DISubprogram *Sub,
-                                   LexicalScope *Scope);
+  DIE &constructSubprogramScopeDIE(const DISubprogram *Sub, LexicalScope *Scope,
+                                   MCSymbol *LineTableSym);
 
   DIE *createAndAddScopeChildren(LexicalScope *Scope, DIE &ScopeDIE);
 
@@ -330,11 +325,6 @@ public:
   /// Add the DW_AT_addr_base attribute to the unit DIE.
   void addAddrTableBase();
 
-  MCSymbol *getLabelBegin() const {
-    assert(LabelBegin && "LabelBegin is not initialized");
-    return LabelBegin;
-  }
-
   MCSymbol *getMacroLabelBegin() const {
     return MacroLabelBegin;
   }
@@ -347,8 +337,8 @@ public:
   void addGlobalNameForTypeUnit(StringRef Name, const DIScope *Context);
 
   /// Add a new global type to the compile unit.
-  void addGlobalType(const DIType *Ty, const DIE &Die,
-                     const DIScope *Context) override;
+  void addGlobalTypeImpl(const DIType *Ty, const DIE &Die,
+                         const DIScope *Context) override;
 
   /// Add a new global type present in a type unit to this compile unit.
   void addGlobalTypeUnitType(const DIType *Ty, const DIScope *Context);

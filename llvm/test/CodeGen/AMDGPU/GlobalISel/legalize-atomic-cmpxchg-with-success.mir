@@ -16,7 +16,8 @@ body: |
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY1]](s32)
     ; CHECK-NEXT: [[AMDGPU_ATOMIC_CMPXCHG:%[0-9]+]]:_(s32) = G_AMDGPU_ATOMIC_CMPXCHG [[COPY]](p1), [[BUILD_VECTOR]] :: (load store syncscope("agent-one-as") monotonic monotonic (s32), addrspace 1)
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[AMDGPU_ATOMIC_CMPXCHG]](s32), [[COPY1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[AMDGPU_ATOMIC_CMPXCHG]](s32), implicit [[ICMP]](s1)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY [[AMDGPU_ATOMIC_CMPXCHG]](s32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY3]](s32), implicit [[ICMP]](s1)
   %0:_(p1) = COPY $vgpr0_vgpr1
   %1:_(s32) = COPY $vgpr2
   %2:_(s32) = COPY $vgpr3
@@ -40,7 +41,8 @@ body: |
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY1]](s32)
     ; CHECK-NEXT: [[AMDGPU_ATOMIC_CMPXCHG:%[0-9]+]]:_(s32) = G_AMDGPU_ATOMIC_CMPXCHG [[COPY]](p0), [[BUILD_VECTOR]] :: (load store syncscope("agent-one-as") monotonic monotonic (s32))
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[AMDGPU_ATOMIC_CMPXCHG]](s32), [[COPY1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[AMDGPU_ATOMIC_CMPXCHG]](s32), implicit [[ICMP]](s1)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY [[AMDGPU_ATOMIC_CMPXCHG]](s32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY3]](s32), implicit [[ICMP]](s1)
   %0:_(p0) = COPY $vgpr0_vgpr1
   %1:_(s32) = COPY $vgpr2
   %2:_(s32) = COPY $vgpr3
@@ -63,7 +65,8 @@ body: |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[ATOMIC_CMPXCHG:%[0-9]+]]:_(s32) = G_ATOMIC_CMPXCHG [[COPY]](p3), [[COPY1]], [[COPY2]] :: (load store syncscope("agent-one-as") monotonic monotonic (s32), addrspace 3)
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[ATOMIC_CMPXCHG]](s32), [[COPY1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[ATOMIC_CMPXCHG]](s32), implicit [[ICMP]](s1)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ATOMIC_CMPXCHG]](s32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY3]](s32), implicit [[ICMP]](s1)
   %0:_(p3) = COPY $vgpr0
   %1:_(s32) = COPY $vgpr1
   %2:_(s32) = COPY $vgpr2
@@ -87,7 +90,8 @@ body: |
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[COPY2]](s64), [[COPY1]](s64)
     ; CHECK-NEXT: [[AMDGPU_ATOMIC_CMPXCHG:%[0-9]+]]:_(s64) = G_AMDGPU_ATOMIC_CMPXCHG [[COPY]](p1), [[BUILD_VECTOR]] :: (load store syncscope("agent-one-as") monotonic monotonic (s64), addrspace 1)
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[AMDGPU_ATOMIC_CMPXCHG]](s64), [[COPY1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[AMDGPU_ATOMIC_CMPXCHG]](s64), implicit [[ICMP]](s1)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY [[AMDGPU_ATOMIC_CMPXCHG]](s64)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY3]](s64), implicit [[ICMP]](s1)
   %0:_(p1) = COPY $vgpr0_vgpr1
   %1:_(s64) = COPY $vgpr2_vgpr3
   %2:_(s64) = COPY $vgpr4_vgpr5
@@ -110,7 +114,8 @@ body: |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $vgpr3_vgpr4
     ; CHECK-NEXT: [[ATOMIC_CMPXCHG:%[0-9]+]]:_(s64) = G_ATOMIC_CMPXCHG [[COPY]](p3), [[COPY1]], [[COPY2]] :: (load store syncscope("agent-one-as") monotonic monotonic (s64), addrspace 3)
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[ATOMIC_CMPXCHG]](s64), [[COPY1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[ATOMIC_CMPXCHG]](s64), implicit [[ICMP]](s1)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY [[ATOMIC_CMPXCHG]](s64)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY3]](s64), implicit [[ICMP]](s1)
   %0:_(p3) = COPY $vgpr0
   %1:_(s64) = COPY $vgpr1_vgpr2
   %2:_(s64) = COPY $vgpr3_vgpr4

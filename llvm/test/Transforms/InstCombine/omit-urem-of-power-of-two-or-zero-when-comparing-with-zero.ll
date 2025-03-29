@@ -39,7 +39,7 @@ define i1 @p1_scalar_urem_by_nonconst(i32 %x, i32 %y) {
 define i1 @p2_scalar_shifted_urem_by_const(i32 %x, i32 %y) {
 ; CHECK-LABEL: @p2_scalar_shifted_urem_by_const(
 ; CHECK-NEXT:    [[T0:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[T1:%.*]] = shl i32 [[T0]], [[Y:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = shl nuw i32 [[T0]], [[Y:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = urem i32 [[T1]], 3
 ; CHECK-NEXT:    [[T3:%.*]] = icmp eq i32 [[T2]], 0
 ; CHECK-NEXT:    ret i1 [[T3]]
@@ -72,7 +72,7 @@ define i1 @p3_scalar_shifted2_urem_by_const(i32 %x, i32 %y) {
 
 define <4 x i1> @p4_vector_urem_by_const__splat(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @p4_vector_urem_by_const__splat(
-; CHECK-NEXT:    [[T0:%.*]] = and <4 x i32> [[X:%.*]], <i32 128, i32 128, i32 128, i32 128>
+; CHECK-NEXT:    [[T0:%.*]] = and <4 x i32> [[X:%.*]], splat (i32 128)
 ; CHECK-NEXT:    [[T2:%.*]] = icmp eq <4 x i32> [[T0]], zeroinitializer
 ; CHECK-NEXT:    ret <4 x i1> [[T2]]
 ;
@@ -95,41 +95,41 @@ define <4 x i1> @p5_vector_urem_by_const__nonsplat(<4 x i32> %x, <4 x i32> %y) {
   ret <4 x i1> %t2
 }
 
-define <4 x i1> @p6_vector_urem_by_const__nonsplat_undef0(<4 x i32> %x, <4 x i32> %y) {
-; CHECK-LABEL: @p6_vector_urem_by_const__nonsplat_undef0(
-; CHECK-NEXT:    [[T0:%.*]] = and <4 x i32> [[X:%.*]], <i32 128, i32 128, i32 undef, i32 128>
-; CHECK-NEXT:    [[T1:%.*]] = urem <4 x i32> [[T0]], <i32 6, i32 6, i32 6, i32 6>
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq <4 x i32> [[T1]], zeroinitializer
+; The poison value in the vector makes the whole function UB.
+
+define <4 x i1> @p6_vector_urem_by_const__nonsplat_poison0(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @p6_vector_urem_by_const__nonsplat_poison0(
+; CHECK-NEXT:    [[T0:%.*]] = and <4 x i32> [[X:%.*]], <i32 128, i32 128, i32 poison, i32 128>
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq <4 x i32> [[T0]], zeroinitializer
 ; CHECK-NEXT:    ret <4 x i1> [[T2]]
 ;
-  %t0 = and <4 x i32> %x, <i32 128, i32 128, i32 undef, i32 128>
+  %t0 = and <4 x i32> %x, <i32 128, i32 128, i32 poison, i32 128>
   %t1 = urem <4 x i32> %t0, <i32 6, i32 6, i32 6, i32 6> ; '6' is clearly not a power of two
   %t2 = icmp eq <4 x i32> %t1, <i32 0, i32 0, i32 0, i32 0>
   ret <4 x i1> %t2
 }
 
-define <4 x i1> @p7_vector_urem_by_const__nonsplat_undef2(<4 x i32> %x, <4 x i32> %y) {
-; CHECK-LABEL: @p7_vector_urem_by_const__nonsplat_undef2(
-; CHECK-NEXT:    [[T0:%.*]] = and <4 x i32> [[X:%.*]], <i32 128, i32 128, i32 128, i32 128>
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq <4 x i32> [[T0]], <i32 0, i32 0, i32 undef, i32 0>
+define <4 x i1> @p7_vector_urem_by_const__nonsplat_poison2(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @p7_vector_urem_by_const__nonsplat_poison2(
+; CHECK-NEXT:    [[T0:%.*]] = and <4 x i32> [[X:%.*]], splat (i32 128)
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq <4 x i32> [[T0]], <i32 0, i32 0, i32 poison, i32 0>
 ; CHECK-NEXT:    ret <4 x i1> [[T2]]
 ;
   %t0 = and <4 x i32> %x, <i32 128, i32 128, i32 128, i32 128> ; clearly a power-of-two or zero
   %t1 = urem <4 x i32> %t0, <i32 6, i32 6, i32 6, i32 6> ; '6' is clearly not a power of two
-  %t2 = icmp eq <4 x i32> %t1, <i32 0, i32 0, i32 undef, i32 0>
+  %t2 = icmp eq <4 x i32> %t1, <i32 0, i32 0, i32 poison, i32 0>
   ret <4 x i1> %t2
 }
 
-define <4 x i1> @p8_vector_urem_by_const__nonsplat_undef3(<4 x i32> %x, <4 x i32> %y) {
-; CHECK-LABEL: @p8_vector_urem_by_const__nonsplat_undef3(
-; CHECK-NEXT:    [[T0:%.*]] = and <4 x i32> [[X:%.*]], <i32 128, i32 128, i32 undef, i32 128>
-; CHECK-NEXT:    [[T1:%.*]] = urem <4 x i32> [[T0]], <i32 6, i32 6, i32 6, i32 6>
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq <4 x i32> [[T1]], <i32 0, i32 0, i32 undef, i32 0>
+define <4 x i1> @p8_vector_urem_by_const__nonsplat_poison3(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @p8_vector_urem_by_const__nonsplat_poison3(
+; CHECK-NEXT:    [[T0:%.*]] = and <4 x i32> [[X:%.*]], <i32 128, i32 128, i32 poison, i32 128>
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq <4 x i32> [[T0]], <i32 0, i32 0, i32 poison, i32 0>
 ; CHECK-NEXT:    ret <4 x i1> [[T2]]
 ;
-  %t0 = and <4 x i32> %x, <i32 128, i32 128, i32 undef, i32 128>
+  %t0 = and <4 x i32> %x, <i32 128, i32 128, i32 poison, i32 128>
   %t1 = urem <4 x i32> %t0, <i32 6, i32 6, i32 6, i32 6> ; '6' is clearly not a power of two
-  %t2 = icmp eq <4 x i32> %t1, <i32 0, i32 0, i32 undef, i32 0>
+  %t2 = icmp eq <4 x i32> %t1, <i32 0, i32 0, i32 poison, i32 0>
   ret <4 x i1> %t2
 }
 

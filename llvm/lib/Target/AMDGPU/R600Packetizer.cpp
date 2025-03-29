@@ -35,10 +35,10 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
-    AU.addRequired<MachineLoopInfo>();
-    AU.addPreserved<MachineLoopInfo>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -122,12 +122,9 @@ private:
 
   void substitutePV(MachineInstr &MI, const DenseMap<unsigned, unsigned> &PVs)
       const {
-    unsigned Ops[] = {
-      R600::OpName::src0,
-      R600::OpName::src1,
-      R600::OpName::src2
-    };
-    for (unsigned Op : Ops) {
+    const R600::OpName Ops[] = {R600::OpName::src0, R600::OpName::src1,
+                                R600::OpName::src2};
+    for (R600::OpName Op : Ops) {
       int OperandIdx = TII->getOperandIdx(MI.getOpcode(), Op);
       if (OperandIdx < 0)
         continue;
@@ -186,8 +183,7 @@ public:
     if (PredI != PredJ)
       return false;
     if (SUJ->isSucc(SUI)) {
-      for (unsigned i = 0, e = SUJ->Succs.size(); i < e; ++i) {
-        const SDep &Dep = SUJ->Succs[i];
+      for (const SDep &Dep : SUJ->Succs) {
         if (Dep.getSUnit() != SUI)
           continue;
         if (Dep.getKind() == SDep::Anti)
@@ -321,7 +317,7 @@ bool R600Packetizer::runOnMachineFunction(MachineFunction &Fn) {
   const R600Subtarget &ST = Fn.getSubtarget<R600Subtarget>();
   const R600InstrInfo *TII = ST.getInstrInfo();
 
-  MachineLoopInfo &MLI = getAnalysis<MachineLoopInfo>();
+  MachineLoopInfo &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
 
   // Instantiate the packetizer.
   R600PacketizerList Packetizer(Fn, ST, MLI);

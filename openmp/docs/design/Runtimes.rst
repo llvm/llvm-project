@@ -496,7 +496,9 @@ An extended syntax is available when ``KMP_TOPOLOGY_METHOD=hwloc``. Depending on
 resources are detected, you may be able to specify additional resources, such as
 NUMA domains and groups of hardware resources that share certain cache levels.
 
-**Basic syntax:** ``[num_units|*]ID[@offset][:attribute] [,[num_units|*]ID[@offset][:attribute]...]``
+**Basic syntax:** ``[:][num_units|*]ID[@offset][:attribute] [,[num_units|*]ID[@offset][:attribute]...]``
+
+An optional colon (:) can be specified at the beginning of the syntax to specify an explicit hardware subset. The default is an implicit hardware subset.
 
 Supported unit IDs are not case-insensitive.
 
@@ -547,6 +549,18 @@ When any numa or tile units are specified in ``KMP_HW_SUBSET`` and the hwloc
 topology method is available, the ``KMP_TOPOLOGY_METHOD`` will be automatically
 set to hwloc, so there is no need to set it explicitly.
 
+For an **explicit hardware subset**, if one or more topology layers detected by the
+runtime are omitted from the subset, then those topology layers are ignored.
+Only explicitly specified topology layers are used in the subset.
+
+For an **implicit hardware subset**, it is implied that the socket, core, and thread
+topology types should be included in the subset. Other topology layers are not
+implicitly included and are ignored if they are not specified in the subset.
+Because the socket, core and thread topology types are always included in
+implicit hardware subsets, when they are omitted, it is assumed that all
+available resources of that type should be used. Implicit hardware subsets are
+the default.
+
 If you don't specify one or more types of resource, such as socket or thread,
 all available resources of that type are used.
 
@@ -565,7 +579,7 @@ This variable does not work if ``KMP_AFFINITY=disabled``.
 **Default:** If omitted, the default value is to use all the
 available hardware resources.
 
-**Examples:**
+**Implicit Hardware Subset Examples:**
 
 * ``2s,4c,2t``: Use the first 2 sockets (s0 and s1), the first 4 cores on each
   socket (c0 - c3), and 2 threads per core.
@@ -589,6 +603,12 @@ available hardware resources.
   run-time library.
 * ``*c:eff1@3``: Use all available sockets, skip the first three cores of
   efficiency 1, and then use the rest of the available cores of efficiency 1.
+
+Explicit Hardware Subset Examples:
+
+* ``:2s,6t`` Use exactly the first two sockets and 6 threads per socket.
+* ``:1t@7`` Skip the first 7 threads (t0-t6) and use exactly one thread (t7).
+* ``:5c,1t`` Use exactly the first 5 cores (c0-c4) and the first thread on each core.
 
 To see the result of the setting, you can specify ``verbose`` modifier in
 ``KMP_AFFINITY`` environment variable. The OpenMP run-time library will output
@@ -708,6 +728,7 @@ variables is defined below.
 
     * ``LIBOMPTARGET_DEBUG=<Num>``
     * ``LIBOMPTARGET_PROFILE=<Filename>``
+    * ``LIBOMPTARGET_PROFILE_GRANULARITY=<Num> (default 500, in us)``
     * ``LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD=<Num>``
     * ``LIBOMPTARGET_INFO=<Num>``
     * ``LIBOMPTARGET_HEAP_SIZE=<Num>``
@@ -721,6 +742,9 @@ variables is defined below.
     * ``LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE=<out:Filename> (LLVM-IR file)``
     * ``LIBOMPTARGET_JIT_POST_OPT_IR_MODULE=<out:Filename> (LLVM-IR file)``
     * ``LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT=<Num> (default: 32)``
+    * ``LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT=[TRUE/FALSE] (default TRUE)``
+    * ``OFFLOAD_TRACK_ALLOCATION_TRACES=[TRUE/FALSE] (default FALSE)``
+    * ``OFFLOAD_TRACK_NUM_KERNEL_LAUNCH_TRACES=<Num> (default 0)``
 
 LIBOMPTARGET_DEBUG
 """"""""""""""""""
@@ -748,6 +772,12 @@ for time trace output. Note that this will turn ``libomp`` into a C++ library.
 .. _`Speedscope App`: https://www.speedscope.app/
 
 .. _`LLVM Support Library`: https://llvm.org/docs/SupportLibrary.html
+
+LIBOMPTARGET_PROFILE_GRANULARITY
+""""""""""""""""""""""""""""""""
+
+``LIBOMPTARGET_PROFILE_GRANULARITY`` allows to change the time profile
+granularity measured in `us`. Default is 500 (`us`).
 
 LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD
 """""""""""""""""""""""""""""""""""""
@@ -1016,9 +1046,9 @@ default. The solution is to add an explicit map clause in the target region.
 LIBOMPTARGET_STACK_SIZE
 """""""""""""""""""""""
 
-This environment variable sets the stack size in bytes for the CUDA plugin. This
-can be used to increase or decrease the standard amount of memory reserved for
-each thread's stack.
+This environment variable sets the stack size in bytes for the AMDGPU and CUDA
+plugins. This can be used to increase or decrease the standard amount of memory
+reserved for each thread's stack.
 
 LIBOMPTARGET_HEAP_SIZE
 """""""""""""""""""""""
@@ -1135,7 +1165,25 @@ of threads possible times the number of teams (aka. blocks) the device prefers
 count to increase outer (team/block) parallelism. The thread count will never
 be reduced below the value passed for this environment variable though.
 
+LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT
+"""""""""""""""""""""""""""""""""""""""""""""
 
+This environment variable can be used to control how the OpenMP runtime assigns
+blocks to loops with high trip counts. By default we reuse existing blocks
+rather than spawning new blocks.
+
+OFFLOAD_TRACK_ALLOCATION_TRACES
+"""""""""""""""""""""""""""""""
+
+This environment variable determines if the stack traces of allocations and
+deallocations are tracked to aid in error reporting, e.g., in case of
+double-free.
+
+OFFLOAD_TRACK_KERNEL_LAUNCH_TRACES
+""""""""""""""""""""""""""""""""""
+
+This environment variable determines how manytstack traces of kernel launches
+are tracked to aid in error reporting, e.g., what asynchronous kernel failed.
 
 .. _libomptarget_plugin:
 
@@ -1448,6 +1496,14 @@ clause. Examples for both are given below.
     $ clang++ -fopenmp --offload-arch=gfx90a -O3 shared.c
     $ env ./shared
 
+.. _libomptarget_device_allocator:
+
+Device Allocation
+^^^^^^^^^^^^^^^^^
+
+The device runtime supports basic runtime allocation via the ``omp_alloc`` 
+function. Currently, this allocates global memory for all default traits. Access 
+modifiers are currently not supported and return a null pointer.
 
 .. _libomptarget_device_debugging:
 
@@ -1466,3 +1522,4 @@ debugging features are supported.
     * Enable debugging assertions in the device. ``0x01``
     * Enable diagnosing common problems during offloading . ``0x4``
     * Enable device malloc statistics (amdgpu only). ``0x8``
+    * Dump device PGO counters (only if PGO on GPU is enabled). ``0x10``

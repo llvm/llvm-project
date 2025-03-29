@@ -92,6 +92,10 @@ bool Regex::match(StringRef String, SmallVectorImpl<StringRef> *Matches,
 
   unsigned nmatch = Matches ? preg->re_nsub+1 : 0;
 
+  // Update null string to empty string.
+  if (String.data() == nullptr)
+    String = "";
+
   // pmatch needs to have at least one element.
   SmallVector<llvm_regmatch_t, 8> pm;
   pm.resize(nmatch > 0 ? nmatch : 1);

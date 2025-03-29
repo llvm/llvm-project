@@ -10,16 +10,19 @@ define dso_local i32 @test_zext_i8() nounwind {
 ; RV32I-LABEL: test_zext_i8:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, %hi(bytes)
-; RV32I-NEXT:    addi a1, a0, %lo(bytes)
-; RV32I-NEXT:    lbu a0, %lo(bytes)(a0)
-; RV32I-NEXT:    lbu a1, 1(a1)
-; RV32I-NEXT:    xori a0, a0, 136
-; RV32I-NEXT:    xori a1, a1, 7
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    beqz a0, .LBB0_2
-; RV32I-NEXT:  # %bb.1: # %if.then
+; RV32I-NEXT:    lbu a1, %lo(bytes)(a0)
+; RV32I-NEXT:    li a2, 136
+; RV32I-NEXT:    bne a1, a2, .LBB0_3
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    addi a0, a0, %lo(bytes)
+; RV32I-NEXT:    lbu a0, 1(a0)
+; RV32I-NEXT:    li a1, 7
+; RV32I-NEXT:    bne a0, a1, .LBB0_3
+; RV32I-NEXT:  # %bb.2: # %if.end
+; RV32I-NEXT:    li a0, 0
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB0_3: # %if.then
 ; RV32I-NEXT:    li a0, 1
-; RV32I-NEXT:  .LBB0_2: # %if.end
 ; RV32I-NEXT:    ret
 entry:
   %0 = load i8, ptr @bytes, align 1
@@ -42,18 +45,20 @@ define dso_local i32 @test_zext_i16() nounwind {
 ; RV32I-LABEL: test_zext_i16:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, %hi(shorts)
-; RV32I-NEXT:    addi a1, a0, %lo(shorts)
-; RV32I-NEXT:    lhu a0, %lo(shorts)(a0)
-; RV32I-NEXT:    lhu a1, 2(a1)
+; RV32I-NEXT:    lhu a1, %lo(shorts)(a0)
 ; RV32I-NEXT:    lui a2, 16
 ; RV32I-NEXT:    addi a2, a2, -120
-; RV32I-NEXT:    xor a0, a0, a2
-; RV32I-NEXT:    xori a1, a1, 7
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    beqz a0, .LBB1_2
-; RV32I-NEXT:  # %bb.1: # %if.then
+; RV32I-NEXT:    bne a1, a2, .LBB1_3
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    addi a0, a0, %lo(shorts)
+; RV32I-NEXT:    lhu a0, 2(a0)
+; RV32I-NEXT:    li a1, 7
+; RV32I-NEXT:    bne a0, a1, .LBB1_3
+; RV32I-NEXT:  # %bb.2: # %if.end
+; RV32I-NEXT:    li a0, 0
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB1_3: # %if.then
 ; RV32I-NEXT:    li a0, 1
-; RV32I-NEXT:  .LBB1_2: # %if.end
 ; RV32I-NEXT:    ret
 entry:
   %0 = load i16, ptr @shorts, align 2

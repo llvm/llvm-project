@@ -9,11 +9,12 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_ROUNDING_MODE_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_ROUNDING_MODE_H
 
+#include "hdr/fenv_macros.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
 
-#include <fenv.h>
-
-namespace LIBC_NAMESPACE::fputil {
+namespace LIBC_NAMESPACE_DECL {
+namespace fputil {
 
 // Quick free-standing test whether fegetround() == FE_UPWARD.
 // Using the following observation:
@@ -74,6 +75,7 @@ LIBC_INLINE int quick_get_round() {
   return (2.0f + y == 2.0f) ? FE_TONEAREST : FE_UPWARD;
 }
 
-} // namespace LIBC_NAMESPACE::fputil
+} // namespace fputil
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_ROUNDING_MODE_H

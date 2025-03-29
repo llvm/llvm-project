@@ -9,15 +9,13 @@
 #ifndef LLVM_TOOLS_DSYMUTIL_LINKOPTIONS_H
 #define LLVM_TOOLS_DSYMUTIL_LINKOPTIONS_H
 
-#include "SymbolMap.h"
-
 #include "llvm/ADT/Twine.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 
-#include "llvm/DWARFLinker/DWARFLinker.h"
-#include "llvm/DWARFLinker/DWARFStreamer.h"
+#include "llvm/DWARFLinker/Classic/DWARFLinker.h"
+#include "llvm/DWARFLinker/Classic/DWARFStreamer.h"
 #include <string>
 
 namespace llvm {
@@ -32,13 +30,16 @@ enum class DsymutilAccelTableKind : uint8_t {
 };
 
 enum class DsymutilDWARFLinkerType : uint8_t {
-  Apple, /// Apple`s implementation of DWARFLinker.
-  LLVM   /// LLVM implementation of DWARFLinker.
+  Classic, /// Classic implementation of DWARFLinker.
+  Parallel /// Implementation of DWARFLinker heavily using parallel execution.
 };
 
 struct LinkOptions {
   /// Verbosity
   bool Verbose = false;
+
+  /// Quiet
+  bool Quiet = false;
 
   /// Statistics
   bool Statistics = false;
@@ -63,7 +64,7 @@ struct LinkOptions {
   bool KeepFunctionForStatic = false;
 
   /// Type of DWARFLinker to use.
-  DsymutilDWARFLinkerType DWARFLinkerType = DsymutilDWARFLinkerType::Apple;
+  DsymutilDWARFLinkerType DWARFLinkerType = DsymutilDWARFLinkerType::Classic;
 
   /// Use a 64-bit header when emitting universal binaries.
   bool Fat64 = false;
@@ -72,7 +73,8 @@ struct LinkOptions {
   unsigned Threads = 1;
 
   // Output file type.
-  DWARFLinker::OutputFileType FileType = DWARFLinker::OutputFileType::Object;
+  dwarf_linker::DWARFLinkerBase::OutputFileType FileType =
+      dwarf_linker::DWARFLinkerBase::OutputFileType::Object;
 
   /// The accelerator table kind
   DsymutilAccelTableKind TheAccelTableKind;
@@ -85,9 +87,6 @@ struct LinkOptions {
 
   /// The Resources directory in the .dSYM bundle.
   std::optional<std::string> ResourceDir;
-
-  /// Symbol map translator.
-  SymbolMapTranslator Translator;
 
   /// Virtual File System.
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =

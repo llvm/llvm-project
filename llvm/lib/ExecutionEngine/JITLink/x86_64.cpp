@@ -34,10 +34,18 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "Delta64";
   case Delta32:
     return "Delta32";
+  case Delta16:
+    return "Delta16";
+  case Delta8:
+    return "Delta8";
   case NegDelta64:
     return "NegDelta64";
   case NegDelta32:
     return "NegDelta32";
+  case Size64:
+    return "Size64";
+  case Size32:
+    return "Size32";
   case Delta64FromGOT:
     return "Delta64FromGOT";
   case PCRel32:
@@ -76,6 +84,30 @@ const char NullPointerContent[PointerSize] = {0x00, 0x00, 0x00, 0x00,
 
 const char PointerJumpStubContent[6] = {
     static_cast<char>(0xFFu), 0x25, 0x00, 0x00, 0x00, 0x00};
+
+const char ReentryTrampolineContent[5] = {
+  static_cast<char>(0xe8), 0x00, 0x00, 0x00, 0x00
+};
+
+void GOTTableManager::registerExistingEntries() {
+  for (auto *EntrySym : GOTSection->symbols()) {
+    assert(EntrySym->getBlock().edges_size() == 1 &&
+           "GOT block edge count != 1");
+    registerPreExistingEntry(EntrySym->getBlock().edges().begin()->getTarget(),
+                             *EntrySym);
+  }
+}
+
+void PLTTableManager::registerExistingEntries() {
+  for (auto *EntrySym : StubsSection->symbols()) {
+    assert(EntrySym->getBlock().edges_size() == 1 &&
+           "PLT block edge count != 1");
+    auto &GOTSym = EntrySym->getBlock().edges().begin()->getTarget();
+    assert(GOTSym.getBlock().edges_size() == 1 && "GOT block edge count != 1");
+    registerPreExistingEntry(GOTSym.getBlock().edges().begin()->getTarget(),
+                             *EntrySym);
+  }
+}
 
 Error optimizeGOTAndStubAccesses(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Optimizing GOT entries and stubs:\n");

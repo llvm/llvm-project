@@ -176,7 +176,7 @@ bool PopulateSwitch::prepare(const Selection &Sel) {
 
     // We need a stored value in order to continue; currently both C and ObjC
     // enums won't have one.
-    if (CE->getResultStorageKind() == ConstantExpr::RSK_None)
+    if (CE->getResultStorageKind() == ConstantResultStorageKind::None)
       return false;
     auto Iter = ExpectedCases.find(Normalize(CE->getResultAsAPSInt()));
     if (Iter != ExpectedCases.end())

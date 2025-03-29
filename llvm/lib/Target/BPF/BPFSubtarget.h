@@ -16,7 +16,12 @@
 #include "BPFFrameLowering.h"
 #include "BPFISelLowering.h"
 #include "BPFInstrInfo.h"
+#include "BPFRegisterInfo.h"
 #include "BPFSelectionDAGInfo.h"
+#include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
@@ -43,6 +48,8 @@ protected:
   // unused
   bool isDummyMode;
 
+  bool IsLittleEndian;
+
   // whether the cpu supports jmp ext
   bool HasJmpExt;
 
@@ -57,7 +64,13 @@ protected:
   bool UseDwarfRIS;
 
   // whether cpu v4 insns are enabled.
-  bool HasLdsx, HasMovsx, HasBswap, HasSdivSmod, HasGotol, HasStoreImm;
+  bool HasLdsx, HasMovsx, HasBswap, HasSdivSmod, HasGotol, HasStoreImm,
+      HasLoadAcqStoreRel;
+
+  std::unique_ptr<CallLowering> CallLoweringInfo;
+  std::unique_ptr<InstructionSelector> InstSelector;
+  std::unique_ptr<LegalizerInfo> Legalizer;
+  std::unique_ptr<RegisterBankInfo> RegBankInfo;
 
 public:
   // This constructor initializes the data members to match that
@@ -80,6 +93,9 @@ public:
   bool hasSdivSmod() const { return HasSdivSmod; }
   bool hasGotol() const { return HasGotol; }
   bool hasStoreImm() const { return HasStoreImm; }
+  bool hasLoadAcqStoreRel() const { return HasLoadAcqStoreRel; }
+
+  bool isLittleEndian() const { return IsLittleEndian; }
 
   const BPFInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const BPFFrameLowering *getFrameLowering() const override {
@@ -91,9 +107,14 @@ public:
   const BPFSelectionDAGInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
   }
-  const TargetRegisterInfo *getRegisterInfo() const override {
+  const BPFRegisterInfo *getRegisterInfo() const override {
     return &InstrInfo.getRegisterInfo();
   }
+
+  const CallLowering *getCallLowering() const override;
+  InstructionSelector *getInstructionSelector() const override;
+  const LegalizerInfo *getLegalizerInfo() const override;
+  const RegisterBankInfo *getRegBankInfo() const override;
 };
 } // End llvm namespace
 

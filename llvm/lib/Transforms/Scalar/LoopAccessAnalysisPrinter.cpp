@@ -20,7 +20,8 @@ PreservedAnalyses LoopAccessInfoPrinterPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   auto &LAIs = AM.getResult<LoopAccessAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
-  OS << "Loop access info in function '" << F.getName() << "':\n";
+  OS << "Printing analysis 'Loop Access Analysis' for function '" << F.getName()
+     << "':\n";
 
   SmallPriorityWorklist<Loop *, 4> Worklist;
   appendLoopsToWorklist(LI, Worklist);

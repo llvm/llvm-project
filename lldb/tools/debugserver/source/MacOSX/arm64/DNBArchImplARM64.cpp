@@ -26,8 +26,12 @@
 #include <cinttypes>
 #include <sys/sysctl.h>
 
+#undef DEBUGSERVER_IS_ARM64E
 #if __has_feature(ptrauth_calls)
 #include <ptrauth.h>
+#if defined(__LP64__)
+#define DEBUGSERVER_IS_ARM64E 1
+#endif
 #endif
 
 // Break only in privileged or user mode
@@ -89,6 +93,45 @@ DNBArchMachARM64::SoftwareBreakpointOpcode(nub_size_t byte_size) {
 
 uint32_t DNBArchMachARM64::GetCPUType() { return CPU_TYPE_ARM64; }
 
+static std::once_flag g_cpu_has_sme_once;
+bool DNBArchMachARM64::CPUHasSME() {
+  static bool g_has_sme = false;
+  std::call_once(g_cpu_has_sme_once, []() {
+    int ret = 0;
+    size_t size = sizeof(ret);
+    if (sysctlbyname("hw.optional.arm.FEAT_SME", &ret, &size, NULL, 0) != -1)
+      g_has_sme = ret == 1;
+  });
+  return g_has_sme;
+}
+
+static std::once_flag g_cpu_has_sme2_once;
+bool DNBArchMachARM64::CPUHasSME2() {
+  static bool g_has_sme2 = false;
+  std::call_once(g_cpu_has_sme2_once, []() {
+    int ret = 0;
+    size_t size = sizeof(ret);
+    if (sysctlbyname("hw.optional.arm.FEAT_SME2", &ret, &size, NULL, 0) != -1)
+      g_has_sme2 = ret == 1;
+  });
+  return g_has_sme2;
+}
+
+static std::once_flag g_sme_max_svl_once;
+unsigned int DNBArchMachARM64::GetSMEMaxSVL() {
+  static unsigned int g_sme_max_svl = 0;
+  std::call_once(g_sme_max_svl_once, []() {
+    if (CPUHasSME()) {
+      unsigned int ret = 0;
+      size_t size = sizeof(ret);
+      if (sysctlbyname("hw.optional.arm.sme_max_svl_b", &ret, &size, NULL, 0) !=
+          -1)
+        g_sme_max_svl = ret;
+    }
+  });
+  return g_sme_max_svl;
+}
+
 static uint64_t clear_pac_bits(uint64_t value) {
   uint32_t addressing_bits = 0;
   if (!DNBGetAddressingBits(addressing_bits))
@@ -115,7 +158,7 @@ static uint64_t clear_pac_bits(uint64_t value) {
 uint64_t DNBArchMachARM64::GetPC(uint64_t failValue) {
   // Get program counter
   if (GetGPRState(false) == KERN_SUCCESS)
-#if __has_feature(ptrauth_calls) && defined(__LP64__)
+#if defined(DEBUGSERVER_IS_ARM64E)
     return clear_pac_bits(
         reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc));
 #else
@@ -147,7 +190,7 @@ kern_return_t DNBArchMachARM64::SetPC(uint64_t value) {
 uint64_t DNBArchMachARM64::GetSP(uint64_t failValue) {
   // Get stack pointer
   if (GetGPRState(false) == KERN_SUCCESS)
-#if __has_feature(ptrauth_calls) && defined(__LP64__)
+#if defined(DEBUGSERVER_IS_ARM64E)
     return clear_pac_bits(
         reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_sp));
 #else
@@ -169,25 +212,24 @@ kern_return_t DNBArchMachARM64::GetGPRState(bool force) {
                          (thread_state_t)&m_state.context.gpr, &count);
   if (DNBLogEnabledForAny(LOG_THREAD)) {
     uint64_t *x = &m_state.context.gpr.__x[0];
-    DNBLogThreaded("thread_get_state signed regs "
-                   "\n   fp=%16.16llx"
-                   "\n   lr=%16.16llx"
-                   "\n   sp=%16.16llx"
-                   "\n   pc=%16.16llx",
-#if __has_feature(ptrauth_calls) && defined(__LP64__)
+
+    const char *log_str = "thread_get_state signed regs "
+                          "\n   fp=%16.16llx"
+                          "\n   lr=%16.16llx"
+                          "\n   sp=%16.16llx"
+                          "\n   pc=%16.16llx";
+#if defined(DEBUGSERVER_IS_ARM64E)
+    DNBLogThreaded(log_str,
                    reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_fp),
                    reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_lr),
                    reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_sp),
-                   reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc)
+                   reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc));
 #else
-                   m_state.context.gpr.__fp,
-                   m_state.context.gpr.__lr, 
-                   m_state.context.gpr.__sp,
-                   m_state.context.gpr.__pc
+    DNBLogThreaded(log_str, m_state.context.gpr.__fp, m_state.context.gpr.__lr,
+                   m_state.context.gpr.__sp, m_state.context.gpr.__pc);
 #endif
-    );
 
-#if __has_feature(ptrauth_calls) && defined(__LP64__)
+#if defined(DEBUGSERVER_IS_ARM64E)
     uint64_t log_fp = clear_pac_bits(
         reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_fp));
     uint64_t log_lr = clear_pac_bits(
@@ -412,6 +454,118 @@ kern_return_t DNBArchMachARM64::GetDBGState(bool force) {
   return kret;
 }
 
+kern_return_t DNBArchMachARM64::GetSVEState(bool force) {
+  int set = e_regSetSVE;
+  // Check if we have valid cached registers
+  if (!force && m_state.GetError(set, Read) == KERN_SUCCESS)
+    return KERN_SUCCESS;
+
+  if (!CPUHasSME())
+    return KERN_INVALID_ARGUMENT;
+
+  // If the processor is not in Streaming SVE Mode, these thread_get_states
+  // will fail, and we may return uninitialized data in the register context.
+  memset(&m_state.context.sve.z[0], 0,
+         ARM_SVE_Z_STATE_COUNT * sizeof(uint32_t));
+  memset(&m_state.context.sve.z[16], 0,
+         ARM_SVE_Z_STATE_COUNT * sizeof(uint32_t));
+  memset(&m_state.context.sve.p[0], 0,
+         ARM_SVE_P_STATE_COUNT * sizeof(uint32_t));
+
+  // Read the registers from our thread
+  mach_msg_type_number_t count = ARM_SVE_Z_STATE_COUNT;
+  kern_return_t kret =
+      ::thread_get_state(m_thread->MachPortNumber(), ARM_SVE_Z_STATE1,
+                         (thread_state_t)&m_state.context.sve.z[0], &count);
+  m_state.SetError(set, Read, kret);
+  DNBLogThreadedIf(LOG_THREAD, "Read SVE registers z0..z15 return value %d",
+                   kret);
+  if (kret != KERN_SUCCESS)
+    return kret;
+
+  count = ARM_SVE_Z_STATE_COUNT;
+  kret = thread_get_state(m_thread->MachPortNumber(), ARM_SVE_Z_STATE2,
+                          (thread_state_t)&m_state.context.sve.z[16], &count);
+  m_state.SetError(set, Read, kret);
+  DNBLogThreadedIf(LOG_THREAD, "Read SVE registers z16..z31 return value %d",
+                   kret);
+  if (kret != KERN_SUCCESS)
+    return kret;
+
+  count = ARM_SVE_P_STATE_COUNT;
+  kret = thread_get_state(m_thread->MachPortNumber(), ARM_SVE_P_STATE,
+                          (thread_state_t)&m_state.context.sve.p[0], &count);
+  m_state.SetError(set, Read, kret);
+  DNBLogThreadedIf(LOG_THREAD, "Read SVE registers p0..p15 return value %d",
+                   kret);
+
+  return kret;
+}
+
+kern_return_t DNBArchMachARM64::GetSMEState(bool force) {
+  int set = e_regSetSME;
+  // Check if we have valid cached registers
+  if (!force && m_state.GetError(set, Read) == KERN_SUCCESS)
+    return KERN_SUCCESS;
+
+  if (!CPUHasSME())
+    return KERN_INVALID_ARGUMENT;
+
+  // If the processor is not in Streaming SVE Mode, these thread_get_states
+  // will fail, and we may return uninitialized data in the register context.
+  memset(&m_state.context.sme.svcr, 0, ARM_SME_STATE_COUNT * sizeof(uint32_t));
+  memset(m_state.context.sme.za.data(), 0, m_state.context.sme.za.size());
+  if (CPUHasSME2())
+    memset(&m_state.context.sme.zt0, 0,
+           ARM_SME2_STATE_COUNT * sizeof(uint32_t));
+
+  // Read the registers from our thread
+  mach_msg_type_number_t count = ARM_SME_STATE_COUNT;
+  kern_return_t kret =
+      ::thread_get_state(m_thread->MachPortNumber(), ARM_SME_STATE,
+                         (thread_state_t)&m_state.context.sme.svcr, &count);
+  m_state.SetError(set, Read, kret);
+  DNBLogThreadedIf(LOG_THREAD, "Read ARM_SME_STATE return value %d", kret);
+  if (kret != KERN_SUCCESS)
+    return kret;
+
+  size_t za_size = m_state.context.sme.svl_b * m_state.context.sme.svl_b;
+  const size_t max_chunk_size = 4096;
+  int n_chunks;
+  size_t chunk_size;
+  if (za_size <= max_chunk_size) {
+    n_chunks = 1;
+    chunk_size = za_size;
+  } else {
+    n_chunks = za_size / max_chunk_size;
+    chunk_size = max_chunk_size;
+  }
+  for (int i = 0; i < n_chunks; i++) {
+    count = ARM_SME_ZA_STATE_COUNT;
+    arm_sme_za_state_t za_state;
+    kret = thread_get_state(m_thread->MachPortNumber(), ARM_SME_ZA_STATE1 + i,
+                            (thread_state_t)&za_state, &count);
+    m_state.SetError(set, Read, kret);
+    DNBLogThreadedIf(LOG_THREAD, "Read ARM_SME_STATE return value %d", kret);
+    if (kret != KERN_SUCCESS)
+      return kret;
+    memcpy(m_state.context.sme.za.data() + (i * chunk_size), &za_state,
+           chunk_size);
+  }
+
+  if (CPUHasSME2()) {
+    count = ARM_SME2_STATE_COUNT;
+    kret = thread_get_state(m_thread->MachPortNumber(), ARM_SME2_STATE,
+                            (thread_state_t)&m_state.context.sme.zt0, &count);
+    m_state.SetError(set, Read, kret);
+    DNBLogThreadedIf(LOG_THREAD, "Read ARM_SME2_STATE return value %d", kret);
+    if (kret != KERN_SUCCESS)
+      return kret;
+  }
+
+  return kret;
+}
+
 kern_return_t DNBArchMachARM64::SetGPRState() {
   int set = e_regSetGPR;
   kern_return_t kret = ::thread_set_state(
@@ -436,6 +590,80 @@ kern_return_t DNBArchMachARM64::SetVFPState() {
                                            // state in case registers are read
                                            // back differently
   return kret;                             // Return the error code
+}
+
+kern_return_t DNBArchMachARM64::SetSVEState() {
+  if (!CPUHasSME())
+    return KERN_INVALID_ARGUMENT;
+
+  int set = e_regSetSVE;
+  kern_return_t kret = thread_set_state(
+      m_thread->MachPortNumber(), ARM_SVE_Z_STATE1,
+      (thread_state_t)&m_state.context.sve.z[0], ARM_SVE_Z_STATE_COUNT);
+  m_state.SetError(set, Write, kret);
+  DNBLogThreadedIf(LOG_THREAD, "Write ARM_SVE_Z_STATE1 return value %d", kret);
+  if (kret != KERN_SUCCESS)
+    return kret;
+
+  kret = thread_set_state(m_thread->MachPortNumber(), ARM_SVE_Z_STATE2,
+                          (thread_state_t)&m_state.context.sve.z[16],
+                          ARM_SVE_Z_STATE_COUNT);
+  m_state.SetError(set, Write, kret);
+  DNBLogThreadedIf(LOG_THREAD, "Write ARM_SVE_Z_STATE2 return value %d", kret);
+  if (kret != KERN_SUCCESS)
+    return kret;
+
+  kret = thread_set_state(m_thread->MachPortNumber(), ARM_SVE_P_STATE,
+                          (thread_state_t)&m_state.context.sve.p[0],
+                          ARM_SVE_P_STATE_COUNT);
+  m_state.SetError(set, Write, kret);
+  DNBLogThreadedIf(LOG_THREAD, "Write ARM_SVE_P_STATE return value %d", kret);
+  if (kret != KERN_SUCCESS)
+    return kret;
+
+  return kret;
+}
+
+kern_return_t DNBArchMachARM64::SetSMEState() {
+  if (!CPUHasSME())
+    return KERN_INVALID_ARGUMENT;
+  kern_return_t kret;
+
+  int set = e_regSetSME;
+  size_t za_size = m_state.context.sme.svl_b * m_state.context.sme.svl_b;
+  const size_t max_chunk_size = 4096;
+  int n_chunks;
+  size_t chunk_size;
+  if (za_size <= max_chunk_size) {
+    n_chunks = 1;
+    chunk_size = za_size;
+  } else {
+    n_chunks = za_size / max_chunk_size;
+    chunk_size = max_chunk_size;
+  }
+  for (int i = 0; i < n_chunks; i++) {
+    arm_sme_za_state_t za_state;
+    memcpy(&za_state, m_state.context.sme.za.data() + (i * chunk_size),
+           chunk_size);
+    kret = thread_set_state(m_thread->MachPortNumber(), ARM_SME_ZA_STATE1 + i,
+                            (thread_state_t)&za_state, ARM_SME_ZA_STATE_COUNT);
+    m_state.SetError(set, Write, kret);
+    DNBLogThreadedIf(LOG_THREAD, "Write ARM_SME_STATE return value %d", kret);
+    if (kret != KERN_SUCCESS)
+      return kret;
+  }
+
+  if (CPUHasSME2()) {
+    kret = thread_set_state(m_thread->MachPortNumber(), ARM_SME2_STATE,
+                            (thread_state_t)&m_state.context.sme.zt0,
+                            ARM_SME2_STATE);
+    m_state.SetError(set, Write, kret);
+    DNBLogThreadedIf(LOG_THREAD, "Write ARM_SME2_STATE return value %d", kret);
+    if (kret != KERN_SUCCESS)
+      return kret;
+  }
+
+  return kret;
 }
 
 kern_return_t DNBArchMachARM64::SetEXCState() {
@@ -661,7 +889,7 @@ kern_return_t DNBArchMachARM64::EnableHardwareSingleStep(bool enable) {
     return err.Status();
   }
 
-#if __has_feature(ptrauth_calls) && defined(__LP64__)
+#if defined(DEBUGSERVER_IS_ARM64E)
   uint64_t pc = clear_pac_bits(
       reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc));
 #else
@@ -840,6 +1068,16 @@ uint32_t DNBArchMachARM64::EnableHardwareBreakpoint(nub_addr_t addr,
   return INVALID_NUB_HW_INDEX;
 }
 
+// This should be `std::bit_ceil(aligned_size)` but
+// that requires C++20.
+// Calculates the smallest integral power of two that is not smaller than x.
+static uint64_t bit_ceil(uint64_t input) {
+  if (input <= 1 || __builtin_popcount(input) == 1)
+    return input;
+
+  return 1ULL << (64 - __builtin_clzll(input));
+}
+
 std::vector<DNBArchMachARM64::WatchpointSpec>
 DNBArchMachARM64::AlignRequestedWatchpoint(nub_addr_t requested_addr,
                                            nub_size_t requested_size) {
@@ -852,18 +1090,11 @@ DNBArchMachARM64::AlignRequestedWatchpoint(nub_addr_t requested_addr,
   constexpr nub_size_t min_watchpoint_alignment = 8;
   nub_size_t aligned_size = std::max(requested_size, min_watchpoint_alignment);
 
-  // AArch64 addresses are 8 bytes.
-  constexpr int addr_byte_size = 8;
-  constexpr int addr_bit_size = addr_byte_size * 8;
-
   /// Round up \a requested_size to the next power-of-2 size, at least 8
   /// bytes
   /// requested_size == 8   -> aligned_size == 8
   /// requested_size == 9   -> aligned_size == 16
-  /// requested_size == 15  -> aligned_size == 16
-  /// requested_size == 192 -> aligned_size == 256
-  /// Could be `std::bit_ceil(aligned_size)` when we build with C++20?
-  aligned_size = 1ULL << (addr_bit_size - __builtin_clzll(aligned_size - 1));
+  aligned_size = aligned_size = bit_ceil(aligned_size);
 
   nub_addr_t aligned_start = requested_addr & ~(aligned_size - 1);
   // Does this power-of-2 memory range, aligned to power-of-2, completely
@@ -1525,6 +1756,59 @@ enum {
   vfp_d31
 };
 
+enum {
+  sve_z0,
+  sve_z1,
+  sve_z2,
+  sve_z3,
+  sve_z4,
+  sve_z5,
+  sve_z6,
+  sve_z7,
+  sve_z8,
+  sve_z9,
+  sve_z10,
+  sve_z11,
+  sve_z12,
+  sve_z13,
+  sve_z14,
+  sve_z15,
+  sve_z16,
+  sve_z17,
+  sve_z18,
+  sve_z19,
+  sve_z20,
+  sve_z21,
+  sve_z22,
+  sve_z23,
+  sve_z24,
+  sve_z25,
+  sve_z26,
+  sve_z27,
+  sve_z28,
+  sve_z29,
+  sve_z30,
+  sve_z31,
+  sve_p0,
+  sve_p1,
+  sve_p2,
+  sve_p3,
+  sve_p4,
+  sve_p5,
+  sve_p6,
+  sve_p7,
+  sve_p8,
+  sve_p9,
+  sve_p10,
+  sve_p11,
+  sve_p12,
+  sve_p13,
+  sve_p14,
+  sve_p15
+};
+
+enum { sme_svcr, sme_tpidr2, sme_svl_b, sme_za, sme_zt0 };
+
 enum { exc_far = 0, exc_esr, exc_exception };
 
 // These numbers from the "DWARF for the ARM 64-bit Architecture (AArch64)"
@@ -1675,7 +1959,60 @@ enum {
   debugserver_vfp_v30,
   debugserver_vfp_v31,
   debugserver_vfp_fpsr,
-  debugserver_vfp_fpcr
+  debugserver_vfp_fpcr,
+  debugserver_sve_z0,
+  debugserver_sve_z1,
+  debugserver_sve_z2,
+  debugserver_sve_z3,
+  debugserver_sve_z4,
+  debugserver_sve_z5,
+  debugserver_sve_z6,
+  debugserver_sve_z7,
+  debugserver_sve_z8,
+  debugserver_sve_z9,
+  debugserver_sve_z10,
+  debugserver_sve_z11,
+  debugserver_sve_z12,
+  debugserver_sve_z13,
+  debugserver_sve_z14,
+  debugserver_sve_z15,
+  debugserver_sve_z16,
+  debugserver_sve_z17,
+  debugserver_sve_z18,
+  debugserver_sve_z19,
+  debugserver_sve_z20,
+  debugserver_sve_z21,
+  debugserver_sve_z22,
+  debugserver_sve_z23,
+  debugserver_sve_z24,
+  debugserver_sve_z25,
+  debugserver_sve_z26,
+  debugserver_sve_z27,
+  debugserver_sve_z28,
+  debugserver_sve_z29,
+  debugserver_sve_z30,
+  debugserver_sve_z31,
+  debugserver_sve_p0,
+  debugserver_sve_p1,
+  debugserver_sve_p2,
+  debugserver_sve_p3,
+  debugserver_sve_p4,
+  debugserver_sve_p5,
+  debugserver_sve_p6,
+  debugserver_sve_p7,
+  debugserver_sve_p8,
+  debugserver_sve_p9,
+  debugserver_sve_p10,
+  debugserver_sve_p11,
+  debugserver_sve_p12,
+  debugserver_sve_p13,
+  debugserver_sve_p14,
+  debugserver_sve_p15,
+  debugserver_sme_svcr,
+  debugserver_sme_tpidr2,
+  debugserver_sme_svl_b,
+  debugserver_sme_za,
+  debugserver_sme_zt0
 };
 
 const char *g_contained_x0[]{"x0", NULL};
@@ -1900,38 +2237,74 @@ const char *g_contained_v29[]{"v29", NULL};
 const char *g_contained_v30[]{"v30", NULL};
 const char *g_contained_v31[]{"v31", NULL};
 
-const char *g_invalidate_v0[]{"v0", "d0", "s0", NULL};
-const char *g_invalidate_v1[]{"v1", "d1", "s1", NULL};
-const char *g_invalidate_v2[]{"v2", "d2", "s2", NULL};
-const char *g_invalidate_v3[]{"v3", "d3", "s3", NULL};
-const char *g_invalidate_v4[]{"v4", "d4", "s4", NULL};
-const char *g_invalidate_v5[]{"v5", "d5", "s5", NULL};
-const char *g_invalidate_v6[]{"v6", "d6", "s6", NULL};
-const char *g_invalidate_v7[]{"v7", "d7", "s7", NULL};
-const char *g_invalidate_v8[]{"v8", "d8", "s8", NULL};
-const char *g_invalidate_v9[]{"v9", "d9", "s9", NULL};
-const char *g_invalidate_v10[]{"v10", "d10", "s10", NULL};
-const char *g_invalidate_v11[]{"v11", "d11", "s11", NULL};
-const char *g_invalidate_v12[]{"v12", "d12", "s12", NULL};
-const char *g_invalidate_v13[]{"v13", "d13", "s13", NULL};
-const char *g_invalidate_v14[]{"v14", "d14", "s14", NULL};
-const char *g_invalidate_v15[]{"v15", "d15", "s15", NULL};
-const char *g_invalidate_v16[]{"v16", "d16", "s16", NULL};
-const char *g_invalidate_v17[]{"v17", "d17", "s17", NULL};
-const char *g_invalidate_v18[]{"v18", "d18", "s18", NULL};
-const char *g_invalidate_v19[]{"v19", "d19", "s19", NULL};
-const char *g_invalidate_v20[]{"v20", "d20", "s20", NULL};
-const char *g_invalidate_v21[]{"v21", "d21", "s21", NULL};
-const char *g_invalidate_v22[]{"v22", "d22", "s22", NULL};
-const char *g_invalidate_v23[]{"v23", "d23", "s23", NULL};
-const char *g_invalidate_v24[]{"v24", "d24", "s24", NULL};
-const char *g_invalidate_v25[]{"v25", "d25", "s25", NULL};
-const char *g_invalidate_v26[]{"v26", "d26", "s26", NULL};
-const char *g_invalidate_v27[]{"v27", "d27", "s27", NULL};
-const char *g_invalidate_v28[]{"v28", "d28", "s28", NULL};
-const char *g_invalidate_v29[]{"v29", "d29", "s29", NULL};
-const char *g_invalidate_v30[]{"v30", "d30", "s30", NULL};
-const char *g_invalidate_v31[]{"v31", "d31", "s31", NULL};
+const char *g_invalidate_v[32][4]{
+    {"v0", "d0", "s0", NULL},    {"v1", "d1", "s1", NULL},
+    {"v2", "d2", "s2", NULL},    {"v3", "d3", "s3", NULL},
+    {"v4", "d4", "s4", NULL},    {"v5", "d5", "s5", NULL},
+    {"v6", "d6", "s6", NULL},    {"v7", "d7", "s7", NULL},
+    {"v8", "d8", "s8", NULL},    {"v9", "d9", "s9", NULL},
+    {"v10", "d10", "s10", NULL}, {"v11", "d11", "s11", NULL},
+    {"v12", "d12", "s12", NULL}, {"v13", "d13", "s13", NULL},
+    {"v14", "d14", "s14", NULL}, {"v15", "d15", "s15", NULL},
+    {"v16", "d16", "s16", NULL}, {"v17", "d17", "s17", NULL},
+    {"v18", "d18", "s18", NULL}, {"v19", "d19", "s19", NULL},
+    {"v20", "d20", "s20", NULL}, {"v21", "d21", "s21", NULL},
+    {"v22", "d22", "s22", NULL}, {"v23", "d23", "s23", NULL},
+    {"v24", "d24", "s24", NULL}, {"v25", "d25", "s25", NULL},
+    {"v26", "d26", "s26", NULL}, {"v27", "d27", "s27", NULL},
+    {"v28", "d28", "s28", NULL}, {"v29", "d29", "s29", NULL},
+    {"v30", "d30", "s30", NULL}, {"v31", "d31", "s31", NULL}};
+
+const char *g_invalidate_z[32][5]{
+    {"z0", "v0", "d0", "s0", NULL},     {"z1", "v1", "d1", "s1", NULL},
+    {"z2", "v2", "d2", "s2", NULL},     {"z3", "v3", "d3", "s3", NULL},
+    {"z4", "v4", "d4", "s4", NULL},     {"z5", "v5", "d5", "s5", NULL},
+    {"z6", "v6", "d6", "s6", NULL},     {"z7", "v7", "d7", "s7", NULL},
+    {"z8", "v8", "d8", "s8", NULL},     {"z9", "v9", "d9", "s9", NULL},
+    {"z10", "v10", "d10", "s10", NULL}, {"z11", "v11", "d11", "s11", NULL},
+    {"z12", "v12", "d12", "s12", NULL}, {"z13", "v13", "d13", "s13", NULL},
+    {"z14", "v14", "d14", "s14", NULL}, {"z15", "v15", "d15", "s15", NULL},
+    {"z16", "v16", "d16", "s16", NULL}, {"z17", "v17", "d17", "s17", NULL},
+    {"z18", "v18", "d18", "s18", NULL}, {"z19", "v19", "d19", "s19", NULL},
+    {"z20", "v20", "d20", "s20", NULL}, {"z21", "v21", "d21", "s21", NULL},
+    {"z22", "v22", "d22", "s22", NULL}, {"z23", "v23", "d23", "s23", NULL},
+    {"z24", "v24", "d24", "s24", NULL}, {"z25", "v25", "d25", "s25", NULL},
+    {"z26", "v26", "d26", "s26", NULL}, {"z27", "v27", "d27", "s27", NULL},
+    {"z28", "v28", "d28", "s28", NULL}, {"z29", "v29", "d29", "s29", NULL},
+    {"z30", "v30", "d30", "s30", NULL}, {"z31", "v31", "d31", "s31", NULL}};
+
+const char *g_contained_z0[]{"z0", NULL};
+const char *g_contained_z1[]{"z1", NULL};
+const char *g_contained_z2[]{"z2", NULL};
+const char *g_contained_z3[]{"z3", NULL};
+const char *g_contained_z4[]{"z4", NULL};
+const char *g_contained_z5[]{"z5", NULL};
+const char *g_contained_z6[]{"z6", NULL};
+const char *g_contained_z7[]{"z7", NULL};
+const char *g_contained_z8[]{"z8", NULL};
+const char *g_contained_z9[]{"z9", NULL};
+const char *g_contained_z10[]{"z10", NULL};
+const char *g_contained_z11[]{"z11", NULL};
+const char *g_contained_z12[]{"z12", NULL};
+const char *g_contained_z13[]{"z13", NULL};
+const char *g_contained_z14[]{"z14", NULL};
+const char *g_contained_z15[]{"z15", NULL};
+const char *g_contained_z16[]{"z16", NULL};
+const char *g_contained_z17[]{"z17", NULL};
+const char *g_contained_z18[]{"z18", NULL};
+const char *g_contained_z19[]{"z19", NULL};
+const char *g_contained_z20[]{"z20", NULL};
+const char *g_contained_z21[]{"z21", NULL};
+const char *g_contained_z22[]{"z22", NULL};
+const char *g_contained_z23[]{"z23", NULL};
+const char *g_contained_z24[]{"z24", NULL};
+const char *g_contained_z25[]{"z25", NULL};
+const char *g_contained_z26[]{"z26", NULL};
+const char *g_contained_z27[]{"z27", NULL};
+const char *g_contained_z28[]{"z28", NULL};
+const char *g_contained_z29[]{"z29", NULL};
+const char *g_contained_z30[]{"z30", NULL};
+const char *g_contained_z31[]{"z31", NULL};
 
 #if defined(__arm64__) || defined(__aarch64__)
 #define VFP_V_OFFSET_IDX(idx)                                                  \
@@ -1942,141 +2315,18 @@ const char *g_invalidate_v31[]{"v31", "d31", "s31", NULL};
   (offsetof(DNBArchMachARM64::FPU, opaque) + (idx * 16) +                      \
    offsetof(DNBArchMachARM64::Context, vfp))
 #endif
-#define VFP_OFFSET_NAME(reg)                                                   \
-  (offsetof(DNBArchMachARM64::FPU, reg) +                                      \
-   offsetof(DNBArchMachARM64::Context, vfp))
 #define EXC_OFFSET(reg)                                                        \
   (offsetof(DNBArchMachARM64::EXC, reg) +                                      \
    offsetof(DNBArchMachARM64::Context, exc))
-
-//#define FLOAT_FORMAT Float
-#define DEFINE_VFP_V_IDX(idx)                                                  \
-  {                                                                            \
-    e_regSetVFP, vfp_v##idx, "v" #idx, "q" #idx, Vector, VectorOfUInt8, 16,    \
-        VFP_V_OFFSET_IDX(idx), INVALID_NUB_REGNUM, dwarf_v##idx,               \
-        INVALID_NUB_REGNUM, debugserver_vfp_v##idx, NULL, g_invalidate_v##idx  \
-  }
-#define DEFINE_PSEUDO_VFP_S_IDX(idx)                                           \
-  {                                                                            \
-    e_regSetVFP, vfp_s##idx, "s" #idx, NULL, IEEE754, Float, 4, 0,             \
-        INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,            \
-        INVALID_NUB_REGNUM, g_contained_v##idx, g_invalidate_v##idx            \
-  }
-#define DEFINE_PSEUDO_VFP_D_IDX(idx)                                           \
-  {                                                                            \
-    e_regSetVFP, vfp_d##idx, "d" #idx, NULL, IEEE754, Float, 8, 0,             \
-        INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,            \
-        INVALID_NUB_REGNUM, g_contained_v##idx, g_invalidate_v##idx            \
-  }
-
-// Floating point registers
-const DNBRegisterInfo DNBArchMachARM64::g_vfp_registers[] = {
-    DEFINE_VFP_V_IDX(0),
-    DEFINE_VFP_V_IDX(1),
-    DEFINE_VFP_V_IDX(2),
-    DEFINE_VFP_V_IDX(3),
-    DEFINE_VFP_V_IDX(4),
-    DEFINE_VFP_V_IDX(5),
-    DEFINE_VFP_V_IDX(6),
-    DEFINE_VFP_V_IDX(7),
-    DEFINE_VFP_V_IDX(8),
-    DEFINE_VFP_V_IDX(9),
-    DEFINE_VFP_V_IDX(10),
-    DEFINE_VFP_V_IDX(11),
-    DEFINE_VFP_V_IDX(12),
-    DEFINE_VFP_V_IDX(13),
-    DEFINE_VFP_V_IDX(14),
-    DEFINE_VFP_V_IDX(15),
-    DEFINE_VFP_V_IDX(16),
-    DEFINE_VFP_V_IDX(17),
-    DEFINE_VFP_V_IDX(18),
-    DEFINE_VFP_V_IDX(19),
-    DEFINE_VFP_V_IDX(20),
-    DEFINE_VFP_V_IDX(21),
-    DEFINE_VFP_V_IDX(22),
-    DEFINE_VFP_V_IDX(23),
-    DEFINE_VFP_V_IDX(24),
-    DEFINE_VFP_V_IDX(25),
-    DEFINE_VFP_V_IDX(26),
-    DEFINE_VFP_V_IDX(27),
-    DEFINE_VFP_V_IDX(28),
-    DEFINE_VFP_V_IDX(29),
-    DEFINE_VFP_V_IDX(30),
-    DEFINE_VFP_V_IDX(31),
-    {e_regSetVFP, vfp_fpsr, "fpsr", NULL, Uint, Hex, 4,
-     VFP_V_OFFSET_IDX(32) + 0, INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
-     INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, NULL, NULL},
-    {e_regSetVFP, vfp_fpcr, "fpcr", NULL, Uint, Hex, 4,
-     VFP_V_OFFSET_IDX(32) + 4, INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
-     INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, NULL, NULL},
-
-    DEFINE_PSEUDO_VFP_S_IDX(0),
-    DEFINE_PSEUDO_VFP_S_IDX(1),
-    DEFINE_PSEUDO_VFP_S_IDX(2),
-    DEFINE_PSEUDO_VFP_S_IDX(3),
-    DEFINE_PSEUDO_VFP_S_IDX(4),
-    DEFINE_PSEUDO_VFP_S_IDX(5),
-    DEFINE_PSEUDO_VFP_S_IDX(6),
-    DEFINE_PSEUDO_VFP_S_IDX(7),
-    DEFINE_PSEUDO_VFP_S_IDX(8),
-    DEFINE_PSEUDO_VFP_S_IDX(9),
-    DEFINE_PSEUDO_VFP_S_IDX(10),
-    DEFINE_PSEUDO_VFP_S_IDX(11),
-    DEFINE_PSEUDO_VFP_S_IDX(12),
-    DEFINE_PSEUDO_VFP_S_IDX(13),
-    DEFINE_PSEUDO_VFP_S_IDX(14),
-    DEFINE_PSEUDO_VFP_S_IDX(15),
-    DEFINE_PSEUDO_VFP_S_IDX(16),
-    DEFINE_PSEUDO_VFP_S_IDX(17),
-    DEFINE_PSEUDO_VFP_S_IDX(18),
-    DEFINE_PSEUDO_VFP_S_IDX(19),
-    DEFINE_PSEUDO_VFP_S_IDX(20),
-    DEFINE_PSEUDO_VFP_S_IDX(21),
-    DEFINE_PSEUDO_VFP_S_IDX(22),
-    DEFINE_PSEUDO_VFP_S_IDX(23),
-    DEFINE_PSEUDO_VFP_S_IDX(24),
-    DEFINE_PSEUDO_VFP_S_IDX(25),
-    DEFINE_PSEUDO_VFP_S_IDX(26),
-    DEFINE_PSEUDO_VFP_S_IDX(27),
-    DEFINE_PSEUDO_VFP_S_IDX(28),
-    DEFINE_PSEUDO_VFP_S_IDX(29),
-    DEFINE_PSEUDO_VFP_S_IDX(30),
-    DEFINE_PSEUDO_VFP_S_IDX(31),
-
-    DEFINE_PSEUDO_VFP_D_IDX(0),
-    DEFINE_PSEUDO_VFP_D_IDX(1),
-    DEFINE_PSEUDO_VFP_D_IDX(2),
-    DEFINE_PSEUDO_VFP_D_IDX(3),
-    DEFINE_PSEUDO_VFP_D_IDX(4),
-    DEFINE_PSEUDO_VFP_D_IDX(5),
-    DEFINE_PSEUDO_VFP_D_IDX(6),
-    DEFINE_PSEUDO_VFP_D_IDX(7),
-    DEFINE_PSEUDO_VFP_D_IDX(8),
-    DEFINE_PSEUDO_VFP_D_IDX(9),
-    DEFINE_PSEUDO_VFP_D_IDX(10),
-    DEFINE_PSEUDO_VFP_D_IDX(11),
-    DEFINE_PSEUDO_VFP_D_IDX(12),
-    DEFINE_PSEUDO_VFP_D_IDX(13),
-    DEFINE_PSEUDO_VFP_D_IDX(14),
-    DEFINE_PSEUDO_VFP_D_IDX(15),
-    DEFINE_PSEUDO_VFP_D_IDX(16),
-    DEFINE_PSEUDO_VFP_D_IDX(17),
-    DEFINE_PSEUDO_VFP_D_IDX(18),
-    DEFINE_PSEUDO_VFP_D_IDX(19),
-    DEFINE_PSEUDO_VFP_D_IDX(20),
-    DEFINE_PSEUDO_VFP_D_IDX(21),
-    DEFINE_PSEUDO_VFP_D_IDX(22),
-    DEFINE_PSEUDO_VFP_D_IDX(23),
-    DEFINE_PSEUDO_VFP_D_IDX(24),
-    DEFINE_PSEUDO_VFP_D_IDX(25),
-    DEFINE_PSEUDO_VFP_D_IDX(26),
-    DEFINE_PSEUDO_VFP_D_IDX(27),
-    DEFINE_PSEUDO_VFP_D_IDX(28),
-    DEFINE_PSEUDO_VFP_D_IDX(29),
-    DEFINE_PSEUDO_VFP_D_IDX(30),
-    DEFINE_PSEUDO_VFP_D_IDX(31)
-
-};
+#define SVE_OFFSET_Z_IDX(idx)                                                  \
+  (offsetof(DNBArchMachARM64::SVE, z[idx]) +                                   \
+   offsetof(DNBArchMachARM64::Context, sve))
+#define SVE_OFFSET_P_IDX(idx)                                                  \
+  (offsetof(DNBArchMachARM64::SVE, p[idx]) +                                   \
+   offsetof(DNBArchMachARM64::Context, sve))
+#define SME_OFFSET(reg)                                                        \
+  (offsetof(DNBArchMachARM64::SME, reg) +                                      \
+   offsetof(DNBArchMachARM64::Context, sme))
 
 //_STRUCT_ARM_EXCEPTION_STATE64
 //{
@@ -2100,29 +2350,220 @@ const DNBRegisterInfo DNBArchMachARM64::g_exc_registers[] = {
 // Number of registers in each register set
 const size_t DNBArchMachARM64::k_num_gpr_registers =
     sizeof(g_gpr_registers) / sizeof(DNBRegisterInfo);
-const size_t DNBArchMachARM64::k_num_vfp_registers =
-    sizeof(g_vfp_registers) / sizeof(DNBRegisterInfo);
 const size_t DNBArchMachARM64::k_num_exc_registers =
     sizeof(g_exc_registers) / sizeof(DNBRegisterInfo);
-const size_t DNBArchMachARM64::k_num_all_registers =
-    k_num_gpr_registers + k_num_vfp_registers + k_num_exc_registers;
 
-// Register set definitions. The first definitions at register set index
-// of zero is for all registers, followed by other registers sets. The
-// register information for the all register set need not be filled in.
-const DNBRegisterSetInfo DNBArchMachARM64::g_reg_sets[] = {
-    {"ARM64 Registers", NULL, k_num_all_registers},
-    {"General Purpose Registers", g_gpr_registers, k_num_gpr_registers},
-    {"Floating Point Registers", g_vfp_registers, k_num_vfp_registers},
-    {"Exception State Registers", g_exc_registers, k_num_exc_registers}};
-// Total number of register sets for this architecture
-const size_t DNBArchMachARM64::k_num_register_sets =
-    sizeof(g_reg_sets) / sizeof(DNBRegisterSetInfo);
+static std::vector<DNBRegisterInfo> g_sve_registers;
+static void initialize_sve_registers() {
+  static const char *g_z_regnames[32] = {
+      "z0",  "z1",  "z2",  "z3",  "z4",  "z5",  "z6",  "z7",
+      "z8",  "z9",  "z10", "z11", "z12", "z13", "z14", "z15",
+      "z16", "z17", "z18", "z19", "z20", "z21", "z22", "z23",
+      "z24", "z25", "z26", "z27", "z28", "z29", "z30", "z31"};
+  static const char *g_p_regnames[16] = {
+      "p0", "p1", "p2",  "p3",  "p4",  "p5",  "p6",  "p7",
+      "p8", "p9", "p10", "p11", "p12", "p13", "p14", "p15"};
 
+  if (DNBArchMachARM64::CPUHasSME()) {
+    uint32_t svl_bytes = DNBArchMachARM64::GetSMEMaxSVL();
+    for (uint32_t i = 0; i < 32; i++) {
+      g_sve_registers.push_back(
+          {DNBArchMachARM64::e_regSetSVE, (uint32_t)sve_z0 + i, g_z_regnames[i],
+           NULL, Vector, VectorOfUInt8, svl_bytes,
+           static_cast<uint32_t>(SVE_OFFSET_Z_IDX(i)), INVALID_NUB_REGNUM,
+           INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
+           (uint32_t)debugserver_sve_z0 + i, NULL, g_invalidate_z[i]});
+    }
+    for (uint32_t i = 0; i < 16; i++) {
+      g_sve_registers.push_back(
+          {DNBArchMachARM64::e_regSetSVE, (uint32_t)sve_p0 + i, g_p_regnames[i],
+           NULL, Vector, VectorOfUInt8, svl_bytes / 8,
+           (uint32_t)SVE_OFFSET_P_IDX(i), INVALID_NUB_REGNUM,
+           INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
+           (uint32_t)debugserver_sve_p0 + i, NULL, NULL});
+    }
+  }
+}
+
+static std::vector<DNBRegisterInfo> g_vfp_registers;
+static void initialize_vfp_registers() {
+  static const char *g_v_regnames[32] = {
+      "v0",  "v1",  "v2",  "v3",  "v4",  "v5",  "v6",  "v7",
+      "v8",  "v9",  "v10", "v11", "v12", "v13", "v14", "v15",
+      "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23",
+      "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31"};
+  static const char *g_q_regnames[32] = {
+      "q0",  "q1",  "q2",  "q3",  "q4",  "q5",  "q6",  "q7",
+      "q8",  "q9",  "q10", "q11", "q12", "q13", "q14", "q15",
+      "q16", "q17", "q18", "q19", "q20", "q21", "q22", "q23",
+      "q24", "q25", "q26", "q27", "q28", "q29", "q30", "q31"};
+
+  static const char *g_d_regnames[32] = {
+      "d0",  "d1",  "d2",  "d3",  "d4",  "d5",  "d6",  "d7",
+      "d8",  "d9",  "d10", "d11", "d12", "d13", "d14", "d15",
+      "d16", "d17", "d18", "d19", "d20", "d21", "d22", "d23",
+      "d24", "d25", "d26", "d27", "d28", "d29", "d30", "d31"};
+
+  static const char *g_s_regnames[32] = {
+      "s0",  "s1",  "s2",  "s3",  "s4",  "s5",  "s6",  "s7",
+      "s8",  "s9",  "s10", "s11", "s12", "s13", "s14", "s15",
+      "s16", "s17", "s18", "s19", "s20", "s21", "s22", "s23",
+      "s24", "s25", "s26", "s27", "s28", "s29", "s30", "s31"};
+
+  for (uint32_t i = 0; i < 32; i++)
+    if (DNBArchMachARM64::CPUHasSME())
+      g_vfp_registers.push_back(
+          {DNBArchMachARM64::e_regSetVFP, (uint32_t)vfp_v0 + i, g_v_regnames[i],
+           g_q_regnames[i], Vector, VectorOfUInt8, 16,
+           static_cast<uint32_t>(VFP_V_OFFSET_IDX(i)), INVALID_NUB_REGNUM,
+           (uint32_t)dwarf_v0 + i, INVALID_NUB_REGNUM,
+           (uint32_t)debugserver_vfp_v0 + i, NULL, g_invalidate_z[i]});
+    else
+      g_vfp_registers.push_back(
+          {DNBArchMachARM64::e_regSetVFP, (uint32_t)vfp_v0 + i, g_v_regnames[i],
+           g_q_regnames[i], Vector, VectorOfUInt8, 16,
+           static_cast<uint32_t>(VFP_V_OFFSET_IDX(i)), INVALID_NUB_REGNUM,
+           (uint32_t)dwarf_v0 + i, INVALID_NUB_REGNUM,
+           (uint32_t)debugserver_vfp_v0 + i, NULL, g_invalidate_v[i]});
+
+  g_vfp_registers.push_back(
+      {DNBArchMachARM64::e_regSetVFP, vfp_fpsr, "fpsr", NULL, Uint, Hex, 4,
+       VFP_V_OFFSET_IDX(32) + 0, INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
+       INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, NULL, NULL});
+  g_vfp_registers.push_back(
+      {DNBArchMachARM64::e_regSetVFP, vfp_fpcr, "fpcr", NULL, Uint, Hex, 4,
+       VFP_V_OFFSET_IDX(32) + 4, INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
+       INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, NULL, NULL});
+
+  for (uint32_t i = 0; i < 32; i++)
+    if (DNBArchMachARM64::CPUHasSME())
+      g_vfp_registers.push_back(
+          {DNBArchMachARM64::e_regSetVFP, (uint32_t)vfp_d0 + i, g_d_regnames[i],
+           NULL, IEEE754, Float, 8, 0, INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
+           INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, NULL, g_invalidate_z[i]});
+    else
+      g_vfp_registers.push_back(
+          {DNBArchMachARM64::e_regSetVFP, (uint32_t)vfp_d0 + i, g_d_regnames[i],
+           NULL, IEEE754, Float, 8, 0, INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
+           INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, NULL, g_invalidate_v[i]});
+
+  for (uint32_t i = 0; i < 32; i++)
+    if (DNBArchMachARM64::CPUHasSME())
+      g_vfp_registers.push_back(
+          {DNBArchMachARM64::e_regSetVFP, (uint32_t)vfp_s0 + i, g_s_regnames[i],
+           NULL, IEEE754, Float, 4, 0, INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
+           INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, NULL, g_invalidate_z[i]});
+    else
+      g_vfp_registers.push_back(
+          {DNBArchMachARM64::e_regSetVFP, (uint32_t)vfp_s0 + i, g_s_regnames[i],
+           NULL, IEEE754, Float, 4, 0, INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
+           INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, NULL, g_invalidate_v[i]});
+}
+
+static std::once_flag g_vfp_once;
+DNBRegisterInfo *
+DNBArchMachARM64::get_vfp_registerinfo(size_t &num_vfp_registers) {
+  std::call_once(g_vfp_once, []() { initialize_vfp_registers(); });
+  num_vfp_registers = g_vfp_registers.size();
+  if (num_vfp_registers > 0)
+    return g_vfp_registers.data();
+  else
+    return nullptr;
+}
+
+static std::once_flag g_sve_once;
+DNBRegisterInfo *
+DNBArchMachARM64::get_sve_registerinfo(size_t &num_sve_registers) {
+  std::call_once(g_sve_once, []() { initialize_sve_registers(); });
+  num_sve_registers = g_sve_registers.size();
+  if (num_sve_registers > 0)
+    return g_sve_registers.data();
+  else
+    return nullptr;
+}
+
+static std::vector<DNBRegisterInfo> g_sme_registers;
+static void initialize_sme_registers() {
+  if (DNBArchMachARM64::CPUHasSME()) {
+    uint32_t svl_bytes = DNBArchMachARM64::GetSMEMaxSVL();
+    g_sme_registers.push_back(
+        {DNBArchMachARM64::e_regSetSME, sme_svcr, "svcr", NULL, Uint, Hex, 8,
+         SME_OFFSET(svcr), INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
+         INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, NULL, NULL});
+    g_sme_registers.push_back(
+        {DNBArchMachARM64::e_regSetSME, sme_tpidr2, "tpidr2", NULL, Uint, Hex,
+         8, SME_OFFSET(tpidr2), INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
+         INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, NULL, NULL});
+    g_sme_registers.push_back(
+        {DNBArchMachARM64::e_regSetSME, sme_svl_b, "svl", NULL, Uint, Hex, 2,
+         SME_OFFSET(svl_b), INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
+         INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, NULL, NULL});
+    uint32_t za_max_size = svl_bytes * svl_bytes;
+    g_sme_registers.push_back({DNBArchMachARM64::e_regSetSME, sme_za, "za",
+                               NULL, Vector, VectorOfUInt8, za_max_size,
+                               SME_OFFSET(za), INVALID_NUB_REGNUM,
+                               INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
+                               INVALID_NUB_REGNUM, NULL, NULL});
+  }
+  if (DNBArchMachARM64::CPUHasSME2()) {
+    g_sme_registers.push_back({DNBArchMachARM64::e_regSetSME, sme_zt0, "zt0",
+                               NULL, Vector, VectorOfUInt8, 64, SME_OFFSET(zt0),
+                               INVALID_NUB_REGNUM, INVALID_NUB_REGNUM,
+                               INVALID_NUB_REGNUM, INVALID_NUB_REGNUM, NULL,
+                               NULL});
+  }
+}
+
+static std::once_flag g_sme_once;
+DNBRegisterInfo *
+DNBArchMachARM64::get_sme_registerinfo(size_t &num_sme_registers) {
+  std::call_once(g_sme_once, []() { initialize_sme_registers(); });
+  num_sme_registers = g_sme_registers.size();
+  if (num_sme_registers > 0)
+    return g_sme_registers.data();
+  else
+    return nullptr;
+}
+
+static std::vector<DNBRegisterSetInfo> g_reg_sets;
+void DNBArchMachARM64::initialize_reg_sets() {
+  nub_size_t num_all_registers = DNBArchMachARM64::k_num_gpr_registers +
+                                 DNBArchMachARM64::k_num_exc_registers;
+  size_t num_vfp_registers = 0;
+  DNBRegisterInfo *vfp_reginfos =
+      DNBArchMachARM64::get_vfp_registerinfo(num_vfp_registers);
+  size_t num_sve_registers = 0;
+  DNBRegisterInfo *sve_reginfos =
+      DNBArchMachARM64::get_sve_registerinfo(num_sve_registers);
+  size_t num_sme_registers = 0;
+  DNBRegisterInfo *sme_reginfos =
+      DNBArchMachARM64::get_sme_registerinfo(num_sme_registers);
+  num_all_registers +=
+      num_vfp_registers + num_sve_registers + num_sme_registers;
+  g_reg_sets.push_back({"ARM64 Registers", NULL, num_all_registers});
+  g_reg_sets.push_back({"General Purpose Registers",
+                        DNBArchMachARM64::g_gpr_registers,
+                        DNBArchMachARM64::k_num_gpr_registers});
+  g_reg_sets.push_back(
+      {"Floating Point Registers", vfp_reginfos, num_vfp_registers});
+  g_reg_sets.push_back({"Exception State Registers",
+                        DNBArchMachARM64::g_exc_registers,
+                        DNBArchMachARM64::k_num_exc_registers});
+  if (DNBArchMachARM64::CPUHasSME()) {
+    g_reg_sets.push_back({"Scalable Vector Extension Registers", sve_reginfos,
+                          num_sve_registers});
+    g_reg_sets.push_back({"Scalable Matrix Extension Registers", sme_reginfos,
+                          num_sme_registers});
+  }
+}
+
+static std::once_flag g_initialize_register_set_info;
 const DNBRegisterSetInfo *
 DNBArchMachARM64::GetRegisterSetInfo(nub_size_t *num_reg_sets) {
-  *num_reg_sets = k_num_register_sets;
-  return g_reg_sets;
+  std::call_once(g_initialize_register_set_info,
+                 []() { initialize_reg_sets(); });
+  *num_reg_sets = g_reg_sets.size();
+  return g_reg_sets.data();
 }
 
 bool DNBArchMachARM64::FixGenericRegisterNumber(uint32_t &set, uint32_t &reg) {
@@ -2179,12 +2620,13 @@ bool DNBArchMachARM64::GetRegisterValue(uint32_t set, uint32_t reg,
 
   const DNBRegisterInfo *regInfo = m_thread->GetRegisterInfo(set, reg);
   if (regInfo) {
+    uint16_t max_svl_bytes = GetSMEMaxSVL();
     value->info = *regInfo;
     switch (set) {
     case e_regSetGPR:
       if (reg <= gpr_pc) {
         switch (reg) {
-#if __has_feature(ptrauth_calls) && defined(__LP64__)
+#if defined(DEBUGSERVER_IS_ARM64E)
         case gpr_pc:
           value->value.uint64 = clear_pac_bits(
               reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc));
@@ -2271,6 +2713,46 @@ bool DNBArchMachARM64::GetRegisterValue(uint32_t set, uint32_t reg,
                ((uint8_t *)&m_state.context.vfp.opaque) + ((reg - vfp_d0) * 16),
                8);
 #endif
+        return true;
+      }
+      break;
+
+    case e_regSetSVE:
+      if (GetRegisterState(e_regSetSVE, false) != KERN_SUCCESS)
+        return false;
+
+      if (reg >= sve_z0 && reg <= sve_z31) {
+        memset(&value->value.v_uint8, 0, max_svl_bytes);
+        memcpy(&value->value.v_uint8, &m_state.context.sve.z[reg - sve_z0],
+               max_svl_bytes);
+        return true;
+      } else if (reg >= sve_p0 && reg <= sve_p15) {
+        memset(&value->value.v_uint8, 0, max_svl_bytes / 8);
+        memcpy(&value->value.v_uint8, &m_state.context.sve.p[reg - sve_p0],
+               max_svl_bytes / 8);
+        return true;
+      }
+      break;
+
+    case e_regSetSME:
+      if (GetRegisterState(e_regSetSME, false) != KERN_SUCCESS)
+        return false;
+
+      if (reg == sme_svcr) {
+        value->value.uint64 = m_state.context.sme.svcr;
+        return true;
+      } else if (reg == sme_tpidr2) {
+        value->value.uint64 = m_state.context.sme.tpidr2;
+        return true;
+      } else if (reg == sme_svl_b) {
+        value->value.uint64 = m_state.context.sme.svl_b;
+        return true;
+      } else if (reg == sme_za) {
+        memcpy(&value->value.v_uint8, m_state.context.sme.za.data(),
+               max_svl_bytes * max_svl_bytes);
+        return true;
+      } else if (reg == sme_zt0) {
+        memcpy(&value->value.v_uint8, &m_state.context.sme.zt0, 64);
         return true;
       }
       break;
@@ -2381,6 +2863,37 @@ bool DNBArchMachARM64::SetRegisterValue(uint32_t set, uint32_t reg,
       }
       break;
 
+    case e_regSetSVE:
+      if (reg >= sve_z0 && reg <= sve_z31) {
+        uint16_t max_svl_bytes = GetSMEMaxSVL();
+        memcpy(&m_state.context.sve.z[reg - sve_z0], &value->value.v_uint8,
+               max_svl_bytes);
+        success = true;
+      }
+      if (reg >= sve_p0 && reg <= sve_p15) {
+        uint16_t max_svl_bytes = GetSMEMaxSVL();
+        memcpy(&m_state.context.sve.p[reg - sve_p0], &value->value.v_uint8,
+               max_svl_bytes / 8);
+        success = true;
+      }
+      break;
+
+    case e_regSetSME:
+      // Cannot change ARM_SME_STATE registers with thread_set_state
+      if (reg == sme_svcr || reg == sme_tpidr2 || reg == sme_svl_b)
+        return false;
+      if (reg == sme_za) {
+        uint16_t max_svl_bytes = GetSMEMaxSVL();
+        memcpy(m_state.context.sme.za.data(), &value->value.v_uint8,
+               max_svl_bytes * max_svl_bytes);
+        success = true;
+      }
+      if (reg == sme_zt0) {
+        memcpy(&m_state.context.sme.zt0, &value->value.v_uint8, 64);
+        success = true;
+      }
+      break;
+
     case e_regSetEXC:
       if (reg == exc_far) {
         m_state.context.exc.__far = value->value.uint64;
@@ -2402,13 +2915,26 @@ bool DNBArchMachARM64::SetRegisterValue(uint32_t set, uint32_t reg,
 
 kern_return_t DNBArchMachARM64::GetRegisterState(int set, bool force) {
   switch (set) {
-  case e_regSetALL:
-    return GetGPRState(force) | GetVFPState(force) | GetEXCState(force) |
-           GetDBGState(force);
+  case e_regSetALL: {
+    kern_return_t retval = GetGPRState(force) | GetVFPState(force) |
+                           GetEXCState(force) | GetDBGState(force);
+    // If the processor is not in Streaming SVE Mode currently, these
+    // two will fail to read.  Don't return that as an error, it will
+    // be the most common case.
+    if (CPUHasSME()) {
+      GetSVEState(force);
+      GetSMEState(force);
+    }
+    return retval;
+  }
   case e_regSetGPR:
     return GetGPRState(force);
   case e_regSetVFP:
     return GetVFPState(force);
+  case e_regSetSVE:
+    return GetSVEState(force);
+  case e_regSetSME:
+    return GetSMEState(force);
   case e_regSetEXC:
     return GetEXCState(force);
   case e_regSetDBG:
@@ -2432,6 +2958,10 @@ kern_return_t DNBArchMachARM64::SetRegisterState(int set) {
     return SetGPRState();
   case e_regSetVFP:
     return SetVFPState();
+  case e_regSetSVE:
+    return SetSVEState();
+  case e_regSetSME:
+    return SetSMEState();
   case e_regSetEXC:
     return SetEXCState();
   case e_regSetDBG:
@@ -2449,6 +2979,15 @@ bool DNBArchMachARM64::RegisterSetStateIsValid(int set) const {
 nub_size_t DNBArchMachARM64::GetRegisterContext(void *buf, nub_size_t buf_len) {
   nub_size_t size = sizeof(m_state.context.gpr) + sizeof(m_state.context.vfp) +
                     sizeof(m_state.context.exc);
+  const bool cpu_has_sme = CPUHasSME();
+  if (cpu_has_sme) {
+    size += sizeof(m_state.context.sve);
+    // ZA register is in a std::vector<uint8_t> so we need to add
+    // the sizes of the SME manually.
+    size += ARM_SME_STATE_COUNT * sizeof(uint32_t);
+    size += m_state.context.sme.za.size();
+    size += ARM_SME2_STATE_COUNT * sizeof(uint32_t);
+  }
 
   if (buf && buf_len) {
     if (size > buf_len)
@@ -2457,6 +2996,13 @@ nub_size_t DNBArchMachARM64::GetRegisterContext(void *buf, nub_size_t buf_len) {
     bool force = false;
     if (GetGPRState(force) | GetVFPState(force) | GetEXCState(force))
       return 0;
+    // Don't error out if SME/SVE fail to read. These can only be read
+    // when the process is in Streaming SVE Mode, so the failure to read
+    // them will be common.
+    if (cpu_has_sme) {
+      GetSVEState(force);
+      GetSMEState(force);
+    }
 
     // Copy each struct individually to avoid any padding that might be between
     // the structs in m_state.context
@@ -2465,6 +3011,21 @@ nub_size_t DNBArchMachARM64::GetRegisterContext(void *buf, nub_size_t buf_len) {
     p += sizeof(m_state.context.gpr);
     ::memcpy(p, &m_state.context.vfp, sizeof(m_state.context.vfp));
     p += sizeof(m_state.context.vfp);
+    if (cpu_has_sme) {
+      ::memcpy(p, &m_state.context.sve, sizeof(m_state.context.sve));
+      p += sizeof(m_state.context.sve);
+
+      memcpy(p, &m_state.context.sme.svcr,
+             ARM_SME_STATE_COUNT * sizeof(uint32_t));
+      p += ARM_SME_STATE_COUNT * sizeof(uint32_t);
+      memcpy(p, m_state.context.sme.za.data(), m_state.context.sme.za.size());
+      p += m_state.context.sme.za.size();
+      if (CPUHasSME2()) {
+        memcpy(p, &m_state.context.sme.zt0,
+               ARM_SME2_STATE_COUNT * sizeof(uint32_t));
+        p += ARM_SME2_STATE_COUNT * sizeof(uint32_t);
+      }
+    }
     ::memcpy(p, &m_state.context.exc, sizeof(m_state.context.exc));
     p += sizeof(m_state.context.exc);
 
@@ -2484,6 +3045,15 @@ nub_size_t DNBArchMachARM64::SetRegisterContext(const void *buf,
                                                 nub_size_t buf_len) {
   nub_size_t size = sizeof(m_state.context.gpr) + sizeof(m_state.context.vfp) +
                     sizeof(m_state.context.exc);
+  if (CPUHasSME()) {
+    // m_state.context.za is three status registers, then a std::vector<uint8_t>
+    // for ZA, then zt0, so the size of the data is not statically knowable.
+    nub_size_t sme_size = ARM_SME_STATE_COUNT * sizeof(uint32_t);
+    sme_size += m_state.context.sme.za.size();
+    sme_size += ARM_SME2_STATE_COUNT * sizeof(uint32_t);
+
+    size += sizeof(m_state.context.sve) + sme_size;
+  }
 
   if (buf == NULL || buf_len == 0)
     size = 0;
@@ -2499,6 +3069,20 @@ nub_size_t DNBArchMachARM64::SetRegisterContext(const void *buf,
     p += sizeof(m_state.context.gpr);
     ::memcpy(&m_state.context.vfp, p, sizeof(m_state.context.vfp));
     p += sizeof(m_state.context.vfp);
+    if (CPUHasSME()) {
+      memcpy(&m_state.context.sve, p, sizeof(m_state.context.sve));
+      p += sizeof(m_state.context.sve);
+      memcpy(&m_state.context.sme.svcr, p,
+             ARM_SME_STATE_COUNT * sizeof(uint32_t));
+      p += ARM_SME_STATE_COUNT * sizeof(uint32_t);
+      memcpy(m_state.context.sme.za.data(), p, m_state.context.sme.za.size());
+      p += m_state.context.sme.za.size();
+      if (CPUHasSME2()) {
+        memcpy(&m_state.context.sme.zt0, p,
+               ARM_SME2_STATE_COUNT * sizeof(uint32_t));
+        p += ARM_SME2_STATE_COUNT * sizeof(uint32_t);
+      }
+    }
     ::memcpy(&m_state.context.exc, p, sizeof(m_state.context.exc));
     p += sizeof(m_state.context.exc);
 
@@ -2507,6 +3091,10 @@ nub_size_t DNBArchMachARM64::SetRegisterContext(const void *buf,
     assert(bytes_written == size);
     SetGPRState();
     SetVFPState();
+    if (CPUHasSME()) {
+      SetSVEState();
+      SetSMEState();
+    }
     SetEXCState();
   }
   DNBLogThreadedIf(

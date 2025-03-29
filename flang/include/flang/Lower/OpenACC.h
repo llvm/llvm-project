@@ -19,7 +19,7 @@ namespace llvm {
 template <typename T, unsigned N>
 class SmallVector;
 class StringRef;
-}
+} // namespace llvm
 
 namespace mlir {
 class Location;
@@ -35,6 +35,7 @@ class FirOpBuilder;
 
 namespace Fortran {
 namespace parser {
+struct AccClauseList;
 struct OpenACCConstruct;
 struct OpenACCDeclarativeConstruct;
 struct OpenACCRoutineConstruct;
@@ -43,7 +44,7 @@ struct OpenACCRoutineConstruct;
 namespace semantics {
 class SemanticsContext;
 class Symbol;
-}
+} // namespace semantics
 
 namespace lower {
 
@@ -64,9 +65,12 @@ static constexpr llvm::StringRef declarePreDeallocSuffix =
 static constexpr llvm::StringRef declarePostDeallocSuffix =
     "_acc_declare_update_desc_post_dealloc";
 
-void genOpenACCConstruct(AbstractConverter &,
-                         Fortran::semantics::SemanticsContext &,
-                         pft::Evaluation &, const parser::OpenACCConstruct &);
+static constexpr llvm::StringRef privatizationRecipePrefix = "privatization";
+
+mlir::Value genOpenACCConstruct(AbstractConverter &,
+                                Fortran::semantics::SemanticsContext &,
+                                pft::Evaluation &,
+                                const parser::OpenACCConstruct &);
 void genOpenACCDeclarativeConstruct(AbstractConverter &,
                                     Fortran::semantics::SemanticsContext &,
                                     StatementContext &,
@@ -74,11 +78,11 @@ void genOpenACCDeclarativeConstruct(AbstractConverter &,
                                     AccRoutineInfoMappingList &);
 void genOpenACCRoutineConstruct(AbstractConverter &,
                                 Fortran::semantics::SemanticsContext &,
-                                mlir::ModuleOp &,
+                                mlir::ModuleOp,
                                 const parser::OpenACCRoutineConstruct &,
                                 AccRoutineInfoMappingList &);
 
-void finalizeOpenACCRoutineAttachment(mlir::ModuleOp &,
+void finalizeOpenACCRoutineAttachment(mlir::ModuleOp,
                                       AccRoutineInfoMappingList &);
 
 /// Get a acc.private.recipe op for the given type or create it if it does not
@@ -111,6 +115,14 @@ void attachDeclarePostDeallocAction(AbstractConverter &, fir::FirOpBuilder &,
 
 void genOpenACCTerminator(fir::FirOpBuilder &, mlir::Operation *,
                           mlir::Location);
+
+int64_t getCollapseValue(const Fortran::parser::AccClauseList &);
+
+bool isInOpenACCLoop(fir::FirOpBuilder &);
+
+void setInsertionPointAfterOpenACCLoopIfInside(fir::FirOpBuilder &);
+
+void genEarlyReturnInOpenACCLoop(fir::FirOpBuilder &, mlir::Location);
 
 } // namespace lower
 } // namespace Fortran

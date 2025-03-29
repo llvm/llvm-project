@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -pass-pipeline='builtin.module(spirv.module(inline{default-pipeline=''}))' | FileCheck %s
+// RUN: mlir-opt %s --split-input-file --pass-pipeline='builtin.module(spirv.module(inline{default-pipeline=''}))' | FileCheck %s
 
 spirv.module Logical GLSL450 {
   spirv.func @callee() "None" {
@@ -37,7 +37,7 @@ spirv.module Logical GLSL450 {
   spirv.func @callee() "None" {
     %0 = spirv.mlir.addressof @data : !spirv.ptr<!spirv.struct<(!spirv.rtarray<i32> [0])>, StorageBuffer>
     %1 = spirv.Constant 0: i32
-    %2 = spirv.AccessChain %0[%1, %1] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<i32> [0])>, StorageBuffer>, i32, i32
+    %2 = spirv.AccessChain %0[%1, %1] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<i32> [0])>, StorageBuffer>, i32, i32 -> !spirv.ptr<i32, StorageBuffer>
     spirv.Branch ^next
 
   ^next:
@@ -196,7 +196,7 @@ spirv.module Logical GLSL450 {
     // CHECK: [[VAL:%.*]] = spirv.Load "StorageBuffer" [[LOADPTR]]
     %2 = spirv.mlir.addressof @arg_0 : !spirv.ptr<!spirv.struct<(i32 [0])>, StorageBuffer>
     %3 = spirv.mlir.addressof @arg_1 : !spirv.ptr<!spirv.struct<(i32 [0])>, StorageBuffer>
-    %4 = spirv.AccessChain %2[%1] : !spirv.ptr<!spirv.struct<(i32 [0])>, StorageBuffer>, i32
+    %4 = spirv.AccessChain %2[%1] : !spirv.ptr<!spirv.struct<(i32 [0])>, StorageBuffer>, i32 -> !spirv.ptr<i32, StorageBuffer>
     %5 = spirv.Load "StorageBuffer" %4 : i32
     %6 = spirv.SGreaterThan %5, %1 : i32
     // CHECK: spirv.mlir.selection
@@ -204,9 +204,9 @@ spirv.module Logical GLSL450 {
       spirv.BranchConditional %6, ^bb1, ^bb2
     ^bb1: // pred: ^bb0
       // CHECK: [[STOREPTR:%.*]] = spirv.AccessChain [[ADDRESS_ARG1]]
-      %7 = spirv.AccessChain %3[%1] : !spirv.ptr<!spirv.struct<(i32 [0])>, StorageBuffer>, i32
+      %7 = spirv.AccessChain %3[%1] : !spirv.ptr<!spirv.struct<(i32 [0])>, StorageBuffer>, i32 -> !spirv.ptr<i32, StorageBuffer>
       // CHECK-NOT: spirv.FunctionCall
-      // CHECK: spirv.AtomicIAdd "Device" "AcquireRelease" [[STOREPTR]], [[VAL]]
+      // CHECK: spirv.AtomicIAdd <Device> <AcquireRelease> [[STOREPTR]], [[VAL]]
       // CHECK: spirv.Branch
       spirv.FunctionCall @atomic_add(%5, %7) : (i32, !spirv.ptr<i32, StorageBuffer>) -> ()
       spirv.Branch ^bb2
@@ -217,11 +217,52 @@ spirv.module Logical GLSL450 {
     spirv.Return
   }
   spirv.func @atomic_add(%arg0: i32, %arg1: !spirv.ptr<i32, StorageBuffer>) "None" {
-    %0 = spirv.AtomicIAdd "Device" "AcquireRelease" %arg1, %arg0 : !spirv.ptr<i32, StorageBuffer>
+    %0 = spirv.AtomicIAdd <Device> <AcquireRelease> %arg1, %arg0 : !spirv.ptr<i32, StorageBuffer>
     spirv.Return
   }
   spirv.EntryPoint "GLCompute" @inline_into_selection_region
   spirv.ExecutionMode @inline_into_selection_region "LocalSize", 32, 1, 1
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // CHECK-LABEL: @foo
+  spirv.func @foo(%arg0: i32) -> i32 "None" {
+    // CHECK-NOT: spirv.FunctionCall
+    // CHECK-NEXT: spirv.Constant 1
+    %res = spirv.FunctionCall @bar(%arg0) : (i32) -> i32
+    spirv.ReturnValue %res : i32
+  }
+
+  spirv.func @bar(%arg1: i32) -> i32 "None" attributes {sym_visibility = "private"} {
+    %cst1_i32 = spirv.Constant 1 : i32
+    %0 = spirv.IEqual %arg1, %cst1_i32 : i32
+    spirv.BranchConditional %0, ^bb1(%cst1_i32 : i32), ^bb2
+  ^bb1(%1: i32):
+    spirv.ReturnValue %1 : i32
+  ^bb2:
+    spirv.ReturnValue %cst1_i32 : i32
+  }
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // CHECK-LABEL: @callee
+  spirv.func @callee() -> () "None" {
+    // CHECK-NEXT: spirv.Kill
+    spirv.Kill
+  }
+
+  // CHECK-LABEL: @do_not_inline_kill
+  spirv.func @do_not_inline_kill() -> () "None" {
+    // CHECK-NOT: spirv.Kill
+    // CHECK-NEXT: spirv.FunctionCall @callee() : () -> ()
+    spirv.FunctionCall @callee() : () -> ()
+    // CHECK-NEXT: spirv.Return
+    spirv.Return
+  }
 }
 
 // TODO: Add tests for inlining structured control flow into

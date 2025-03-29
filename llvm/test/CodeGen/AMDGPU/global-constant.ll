@@ -19,14 +19,14 @@
 ; GCN-DEFAULT: s_addc_u32 s{{[0-9]+}}, s[[PC1_HI]], private2@rel32@hi+12
 
 ; MESA uses absolute relocations.
-; GCN-MESA: s_add_u32 s2, s4, private1@abs32@lo
-; GCN-MESA: s_addc_u32 s3, s5, private1@abs32@hi
+; GCN-MESA: s_add_u32 s2, private1@abs32@lo, s4
+; GCN-MESA: s_addc_u32 s3, private1@abs32@hi, s5
 
 ; PAL uses absolute relocations.
-; GCN-PAL:    s_add_u32 s2, s4, private1@abs32@lo
-; GCN-PAL:    s_addc_u32 s3, s5, private1@abs32@hi
-; GCN-PAL:    s_add_u32 s4, s4, private2@abs32@lo
-; GCN-PAL:    s_addc_u32 s5, s5, private2@abs32@hi
+; GCN-PAL:    s_add_u32 s2, private1@abs32@lo, s4
+; GCN-PAL:    s_addc_u32 s3, private1@abs32@hi, s5
+; GCN-PAL:    s_add_u32 s4, private2@abs32@lo, s4
+; GCN-PAL:    s_addc_u32 s5, private2@abs32@hi, s5
 
 ; R600-LABEL: private_test
 define amdgpu_kernel void @private_test(i32 %index, ptr addrspace(1) %out) {
@@ -44,13 +44,13 @@ define amdgpu_kernel void @private_test(i32 %index, ptr addrspace(1) %out) {
 ; GCN-DEFAULT: s_add_u32 s{{[0-9]+}}, s[[PC0_LO]], available_externally@gotpcrel32@lo+4
 ; GCN-DEFAULT: s_addc_u32 s{{[0-9]+}}, s[[PC0_HI]], available_externally@gotpcrel32@hi+12
 
-; GCN-MESA:    s_mov_b32 s1, available_externally@abs32@hi+4
-; GCN-MESA:    s_mov_b32 s0, available_externally@abs32@lo+4
+; GCN-MESA:    s_mov_b32 s1, available_externally@abs32@hi
+; GCN-MESA:    s_mov_b32 s0, available_externally@abs32@lo
 
 ; R600-LABEL: available_externally_test
 
-; GCN-PAL:    s_mov_b32 s3, available_externally@abs32@hi+4
-; GCN-PAL:    s_mov_b32 s2, available_externally@abs32@lo+4
+; GCN-PAL:    s_mov_b32 s1, available_externally@abs32@hi
+; GCN-PAL:    s_mov_b32 s0, available_externally@abs32@lo
 define amdgpu_kernel void @available_externally_test(ptr addrspace(1) %out) {
   %ptr = getelementptr [256 x i32], ptr addrspace(4) @available_externally, i32 0, i32 1
   %val = load i32, ptr addrspace(4) %ptr

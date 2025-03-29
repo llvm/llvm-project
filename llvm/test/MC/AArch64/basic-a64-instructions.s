@@ -3347,6 +3347,11 @@ _func:
 // CHECK: mov      x2, #5299989643264             // encoding: [0x42,0x9a,0xc0,0xd2]
 // CHECK: movk     xzr, #{{4321|0x10e1}}, lsl #48 // encoding: [0x3f,0x1c,0xe2,0xf2]
 
+	.equ equvalue, 0x0001
+        movk x1, equvalue, lsl 16
+// CHECK: .set equvalue, 1
+// CHECK-NEXT: movk x1, #1, lsl #16 // encoding: [0x21,0x00,0xa0,0xf2]
+
         movz x2, #:abs_g0:sym
         movk w3, #:abs_g0_nc:sym
 
@@ -4369,10 +4374,13 @@ _func:
 	mrs x9, ID_AA64PFR2_EL1
 	mrs x9, ID_AA64DFR0_EL1
 	mrs x9, ID_AA64DFR1_EL1
+	mrs x9, ID_AA64DFR2_EL1
 	mrs x9, ID_AA64AFR0_EL1
 	mrs x9, ID_AA64AFR1_EL1
 	mrs x9, ID_AA64ISAR0_EL1
 	mrs x9, ID_AA64ISAR1_EL1
+	mrs x9, ID_AA64ISAR2_EL1
+	mrs x9, ID_AA64ISAR3_EL1
 	mrs x9, ID_AA64MMFR0_EL1
 	mrs x9, ID_AA64MMFR1_EL1
 	mrs x9, ID_AA64MMFR2_EL1
@@ -4706,10 +4714,13 @@ _func:
 // CHECK: mrs      x9, {{id_aa64pfr2_el1|ID_AA64PFR2_EL1}}        // encoding: [0x49,0x04,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64dfr0_el1|ID_AA64DFR0_EL1}}        // encoding: [0x09,0x05,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64dfr1_el1|ID_AA64DFR1_EL1}}        // encoding: [0x29,0x05,0x38,0xd5]
+// CHECK: mrs      x9, {{id_aa64dfr2_el1|ID_AA64DFR2_EL1}}        // encoding: [0x49,0x05,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64afr0_el1|ID_AA64AFR0_EL1}}        // encoding: [0x89,0x05,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64afr1_el1|ID_AA64AFR1_EL1}}        // encoding: [0xa9,0x05,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64isar0_el1|ID_AA64ISAR0_EL1}}       // encoding: [0x09,0x06,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64isar1_el1|ID_AA64ISAR1_EL1}}       // encoding: [0x29,0x06,0x38,0xd5]
+// CHECK: mrs      x9, {{id_aa64isar2_el1|ID_AA64ISAR2_EL1}}       // encoding: [0x49,0x06,0x38,0xd5]
+// CHECK: mrs      x9, {{id_aa64isar3_el1|ID_AA64ISAR3_EL1}}       // encoding: [0x69,0x06,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64mmfr0_el1|ID_AA64MMFR0_EL1}}       // encoding: [0x09,0x07,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64mmfr1_el1|ID_AA64MMFR1_EL1}}       // encoding: [0x29,0x07,0x38,0xd5]
 // CHECK: mrs      x9, {{id_aa64mmfr2_el1|ID_AA64MMFR2_EL1}}       // encoding: [0x49,0x07,0x38,0xd5]

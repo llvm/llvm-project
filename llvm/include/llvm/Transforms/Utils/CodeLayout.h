@@ -15,7 +15,6 @@
 #define LLVM_TRANSFORMS_UTILS_CODELAYOUT_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
 
 #include <utility>
 #include <vector>
@@ -50,12 +49,10 @@ std::vector<uint64_t> computeExtTspLayout(ArrayRef<uint64_t> NodeSizes,
 /// the given order, which is anti-correlated with the number of I-cache misses
 /// in a typical execution of the function.
 double calcExtTspScore(ArrayRef<uint64_t> Order, ArrayRef<uint64_t> NodeSizes,
-                       ArrayRef<uint64_t> NodeCounts,
                        ArrayRef<EdgeCount> EdgeCounts);
 
 /// Estimate the "quality" of the current node order in CFG.
 double calcExtTspScore(ArrayRef<uint64_t> NodeSizes,
-                       ArrayRef<uint64_t> NodeCounts,
                        ArrayRef<EdgeCount> EdgeCounts);
 
 /// Algorithm-specific params for Cache-Directed Sort. The values are tuned for

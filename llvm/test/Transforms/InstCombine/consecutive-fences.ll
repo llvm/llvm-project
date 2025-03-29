@@ -97,7 +97,7 @@ define void @acquire_single_thread_scope() {
 
 ; CHECK-LABEL: define void @debug
 ; CHECK-NOT: fence
-; CHECK: call void @llvm.dbg.value
+; CHECK: #dbg_value
 ; CHECK: fence seq_cst
 define void @debug() {
   fence seq_cst

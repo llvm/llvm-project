@@ -60,6 +60,8 @@ struct DebugValueDrop : public FunctionPass {
       for (Instruction &I : BB) {
         if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
           Dbgs.push_back(DVI);
+        // If there are any non-intrinsic records (DbgRecords), drop those too.
+        I.dropDbgRecords();
       }
     }
 

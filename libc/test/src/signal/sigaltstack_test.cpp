@@ -6,17 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/errno/libc_errno.h"
 #include "src/signal/linux/signal_utils.h"
 #include "src/signal/raise.h"
 #include "src/signal/sigaction.h"
 #include "src/signal/sigaltstack.h"
-
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <signal.h>
 #include <stdint.h>
 #include <sys/syscall.h>
 
@@ -47,7 +46,7 @@ static void handler(int) {
 
 TEST(LlvmLibcSignalTest, SigaltstackRunOnAltStack) {
   struct sigaction action;
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::sigaction(SIGUSR1, nullptr, &action),
               Succeeds(0));
   action.sa_handler = handler;

@@ -3,6 +3,8 @@
 ; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64I
 ; RUN: llc -mtriple=riscv64 -mattr=+zbs -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64ZBS
+; RUN: llc -mtriple=riscv64 -mattr=+zbs,+zbb -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64ZBS
 
 define signext i32 @bclr_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: bclr_i32:
@@ -374,7 +376,7 @@ define void @bext_i32_trunc(i32 signext %0, i32 signext %1) {
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB19_2:
-; RV64I-NEXT:    tail bar@plt
+; RV64I-NEXT:    tail bar
 ;
 ; RV64ZBS-LABEL: bext_i32_trunc:
 ; RV64ZBS:       # %bb.0:
@@ -383,7 +385,7 @@ define void @bext_i32_trunc(i32 signext %0, i32 signext %1) {
 ; RV64ZBS-NEXT:  # %bb.1:
 ; RV64ZBS-NEXT:    ret
 ; RV64ZBS-NEXT:  .LBB19_2:
-; RV64ZBS-NEXT:    tail bar@plt
+; RV64ZBS-NEXT:    tail bar
   %3 = shl i32 1, %1
   %4 = and i32 %3, %0
   %5 = icmp eq i32 %4, 0
@@ -1068,4 +1070,176 @@ define i64 @or_i64_66901(i64 %a) nounwind {
 ; RV64ZBS-NEXT:    ret
   %or = or i64 %a, 66901
   ret i64 %or
+}
+
+define signext i32 @bset_trailing_ones_i32_mask(i32 signext %a) nounwind {
+; RV64I-LABEL: bset_trailing_ones_i32_mask:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, -1
+; RV64I-NEXT:    sllw a0, a1, a0
+; RV64I-NEXT:    not a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: bset_trailing_ones_i32_mask:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    andi a0, a0, 31
+; RV64ZBS-NEXT:    bset a0, zero, a0
+; RV64ZBS-NEXT:    addi a0, a0, -1
+; RV64ZBS-NEXT:    ret
+  %and = and i32 %a, 31
+  %shift = shl nsw i32 -1, %and
+  %not = xor i32 %shift, -1
+  ret i32 %not
+}
+
+define signext i32 @bset_trailing_ones_i32_no_mask(i32 signext %a) nounwind {
+; RV64I-LABEL: bset_trailing_ones_i32_no_mask:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, -1
+; RV64I-NEXT:    sllw a0, a1, a0
+; RV64I-NEXT:    not a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: bset_trailing_ones_i32_no_mask:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    bset a0, zero, a0
+; RV64ZBS-NEXT:    addiw a0, a0, -1
+; RV64ZBS-NEXT:    ret
+  %shift = shl nsw i32 -1, %a
+  %not = xor i32 %shift, -1
+  ret i32 %not
+}
+
+define signext i64 @bset_trailing_ones_i64_mask(i64 signext %a) nounwind {
+; RV64I-LABEL: bset_trailing_ones_i64_mask:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, -1
+; RV64I-NEXT:    sll a0, a1, a0
+; RV64I-NEXT:    not a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: bset_trailing_ones_i64_mask:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    bset a0, zero, a0
+; RV64ZBS-NEXT:    addi a0, a0, -1
+; RV64ZBS-NEXT:    ret
+  %and = and i64 %a, 63
+  %shift = shl nsw i64 -1, %and
+  %not = xor i64 %shift, -1
+  ret i64 %not
+}
+
+define signext i64 @bset_trailing_ones_i64_no_mask(i64 signext %a) nounwind {
+; RV64I-LABEL: bset_trailing_ones_i64_no_mask:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, -1
+; RV64I-NEXT:    sll a0, a1, a0
+; RV64I-NEXT:    not a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: bset_trailing_ones_i64_no_mask:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    bset a0, zero, a0
+; RV64ZBS-NEXT:    addi a0, a0, -1
+; RV64ZBS-NEXT:    ret
+  %shift = shl nsw i64 -1, %a
+  %not = xor i64 %shift, -1
+  ret i64 %not
+}
+
+define i1 @icmp_eq_pow2(i32 signext %x) nounwind {
+; RV64I-LABEL: icmp_eq_pow2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 8
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: icmp_eq_pow2:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    binvi a0, a0, 15
+; RV64ZBS-NEXT:    seqz a0, a0
+; RV64ZBS-NEXT:    ret
+  %cmp = icmp eq i32 %x, 32768
+  ret i1 %cmp
+}
+
+define i1 @icmp_eq_pow2_64(i64 %x) nounwind {
+; RV64I-LABEL: icmp_eq_pow2_64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 1
+; RV64I-NEXT:    slli a1, a1, 40
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: icmp_eq_pow2_64:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    binvi a0, a0, 40
+; RV64ZBS-NEXT:    seqz a0, a0
+; RV64ZBS-NEXT:    ret
+  %cmp = icmp eq i64 %x, 1099511627776
+  ret i1 %cmp
+}
+
+define i1 @icmp_ne_pow2(i32 signext %x) nounwind {
+; RV64I-LABEL: icmp_ne_pow2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 8
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: icmp_ne_pow2:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    binvi a0, a0, 15
+; RV64ZBS-NEXT:    seqz a0, a0
+; RV64ZBS-NEXT:    ret
+  %cmp = icmp eq i32 %x, 32768
+  ret i1 %cmp
+}
+
+define i1 @icmp_eq_nonpow2(i32 signext %x) nounwind {
+; CHECK-LABEL: icmp_eq_nonpow2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 8
+; CHECK-NEXT:    addiw a1, a1, -1
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %cmp = icmp eq i32 %x, 32767
+  ret i1 %cmp
+}
+
+define signext i32 @fold_sextinreg_shl_to_sllw(i64 %x) nounwind {
+; CHECK-LABEL: fold_sextinreg_shl_to_sllw:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    sllw a0, a1, a0
+; CHECK-NEXT:    ret
+entry:
+  %mask = and i64 %x, 31
+  %shl = shl i64 1, %mask
+  %trunc = trunc i64 %shl to i32
+  ret i32 %trunc
+}
+
+define signext i32 @fold_sextinreg_shl_to_sllw_large_shamt(i64 %x) nounwind {
+; RV64I-LABEL: fold_sextinreg_shl_to_sllw_large_shamt:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    li a1, 1
+; RV64I-NEXT:    sll a0, a1, a0
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: fold_sextinreg_shl_to_sllw_large_shamt:
+; RV64ZBS:       # %bb.0: # %entry
+; RV64ZBS-NEXT:    bset a0, zero, a0
+; RV64ZBS-NEXT:    sext.w a0, a0
+; RV64ZBS-NEXT:    ret
+entry:
+  %mask = and i64 %x, 63
+  %shl = shl i64 1, %mask
+  %trunc = trunc i64 %shl to i32
+  ret i32 %trunc
 }

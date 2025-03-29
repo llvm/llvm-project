@@ -17,44 +17,47 @@ target triple = "x86_64-unknown-linux-gnu"
 define i8 @PR31243_zext(i8 %v0, i8 %v1, i8 %v2, i8 %v3, ptr %ptr) {
 ; SSE-LABEL: @PR31243_zext(
 ; SSE-NEXT:  entry:
-; SSE-NEXT:    [[TMP0:%.*]] = or i8 [[V0:%.*]], 1
-; SSE-NEXT:    [[TMP1:%.*]] = or i8 [[V1:%.*]], 1
-; SSE-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP0]] to i64
-; SSE-NEXT:    [[TMP_4:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[TMP2]]
-; SSE-NEXT:    [[TMP3:%.*]] = zext i8 [[TMP1]] to i64
-; SSE-NEXT:    [[TMP_5:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[TMP3]]
-; SSE-NEXT:    [[TMP_6:%.*]] = load i8, ptr [[TMP_4]], align 1
-; SSE-NEXT:    [[TMP_7:%.*]] = load i8, ptr [[TMP_5]], align 1
-; SSE-NEXT:    [[TMP_8:%.*]] = add i8 [[TMP_6]], [[TMP_7]]
-; SSE-NEXT:    ret i8 [[TMP_8]]
+; SSE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i8> poison, i8 [[V0:%.*]], i64 0
+; SSE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> [[TMP0]], i8 [[V1:%.*]], i64 1
+; SSE-NEXT:    [[TMP2:%.*]] = or <2 x i8> [[TMP1]], splat (i8 1)
+; SSE-NEXT:    [[TMP3:%.*]] = extractelement <2 x i8> [[TMP2]], i64 0
+; SSE-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i64
+; SSE-NEXT:    [[T4:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR:%.*]], i64 [[TMP4]]
+; SSE-NEXT:    [[TMP5:%.*]] = extractelement <2 x i8> [[TMP2]], i64 1
+; SSE-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i64
+; SSE-NEXT:    [[T5:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 [[TMP6]]
+; SSE-NEXT:    [[T6:%.*]] = load i8, ptr [[T4]], align 1
+; SSE-NEXT:    [[T7:%.*]] = load i8, ptr [[T5]], align 1
+; SSE-NEXT:    [[T8:%.*]] = add i8 [[T6]], [[T7]]
+; SSE-NEXT:    ret i8 [[T8]]
 ;
 ; AVX-LABEL: @PR31243_zext(
 ; AVX-NEXT:  entry:
 ; AVX-NEXT:    [[TMP0:%.*]] = insertelement <2 x i8> poison, i8 [[V0:%.*]], i64 0
 ; AVX-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> [[TMP0]], i8 [[V1:%.*]], i64 1
-; AVX-NEXT:    [[TMP2:%.*]] = or <2 x i8> [[TMP1]], <i8 1, i8 1>
+; AVX-NEXT:    [[TMP2:%.*]] = or <2 x i8> [[TMP1]], splat (i8 1)
 ; AVX-NEXT:    [[TMP3:%.*]] = extractelement <2 x i8> [[TMP2]], i64 0
 ; AVX-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i64
-; AVX-NEXT:    [[TMP_4:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[TMP4]]
+; AVX-NEXT:    [[T4:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR:%.*]], i64 [[TMP4]]
 ; AVX-NEXT:    [[TMP5:%.*]] = extractelement <2 x i8> [[TMP2]], i64 1
 ; AVX-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i64
-; AVX-NEXT:    [[TMP_5:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[TMP6]]
-; AVX-NEXT:    [[TMP_6:%.*]] = load i8, ptr [[TMP_4]], align 1
-; AVX-NEXT:    [[TMP_7:%.*]] = load i8, ptr [[TMP_5]], align 1
-; AVX-NEXT:    [[TMP_8:%.*]] = add i8 [[TMP_6]], [[TMP_7]]
-; AVX-NEXT:    ret i8 [[TMP_8]]
+; AVX-NEXT:    [[T5:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 [[TMP6]]
+; AVX-NEXT:    [[T6:%.*]] = load i8, ptr [[T4]], align 1
+; AVX-NEXT:    [[T7:%.*]] = load i8, ptr [[T5]], align 1
+; AVX-NEXT:    [[T8:%.*]] = add i8 [[T6]], [[T7]]
+; AVX-NEXT:    ret i8 [[T8]]
 ;
 entry:
-  %tmp_0 = zext i8 %v0 to i32
-  %tmp_1 = zext i8 %v1 to i32
-  %tmp_2 = or i32 %tmp_0, 1
-  %tmp_3 = or i32 %tmp_1, 1
-  %tmp_4 = getelementptr inbounds i8, ptr %ptr, i32 %tmp_2
-  %tmp_5 = getelementptr inbounds i8, ptr %ptr, i32 %tmp_3
-  %tmp_6 = load i8, ptr %tmp_4
-  %tmp_7 = load i8, ptr %tmp_5
-  %tmp_8 = add i8 %tmp_6, %tmp_7
-  ret i8 %tmp_8
+  %t0 = zext i8 %v0 to i32
+  %t1 = zext i8 %v1 to i32
+  %t2 = or i32 %t0, 1
+  %t3 = or i32 %t1, 1
+  %t4 = getelementptr inbounds i8, ptr %ptr, i32 %t2
+  %t5 = getelementptr inbounds i8, ptr %ptr, i32 %t3
+  %t6 = load i8, ptr %t4
+  %t7 = load i8, ptr %t5
+  %t8 = add i8 %t6, %t7
+  ret i8 %t8
 }
 
 ; When computing minimum sizes, if we cannot prove the sign bit is zero, we
@@ -73,43 +76,45 @@ entry:
 define i8 @PR31243_sext(i8 %v0, i8 %v1, i8 %v2, i8 %v3, ptr %ptr) {
 ; SSE-LABEL: @PR31243_sext(
 ; SSE-NEXT:  entry:
-; SSE-NEXT:    [[TMP0:%.*]] = or i8 [[V0:%.*]], 1
-; SSE-NEXT:    [[TMP1:%.*]] = or i8 [[V1:%.*]], 1
-; SSE-NEXT:    [[TMP2:%.*]] = sext i8 [[TMP0]] to i64
-; SSE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[TMP2]]
-; SSE-NEXT:    [[TMP3:%.*]] = sext i8 [[TMP1]] to i64
-; SSE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[TMP3]]
-; SSE-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP4]], align 1
-; SSE-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP5]], align 1
-; SSE-NEXT:    [[TMP8:%.*]] = add i8 [[TMP6]], [[TMP7]]
-; SSE-NEXT:    ret i8 [[TMP8]]
+; SSE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i8> poison, i8 [[V0:%.*]], i64 0
+; SSE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> [[TMP0]], i8 [[V1:%.*]], i64 1
+; SSE-NEXT:    [[TMP2:%.*]] = or <2 x i8> [[TMP1]], splat (i8 1)
+; SSE-NEXT:    [[TMP3:%.*]] = extractelement <2 x i8> [[TMP2]], i64 0
+; SSE-NEXT:    [[TMP4:%.*]] = sext i8 [[TMP3]] to i64
+; SSE-NEXT:    [[T4:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[TMP4]]
+; SSE-NEXT:    [[TMP5:%.*]] = extractelement <2 x i8> [[TMP2]], i64 1
+; SSE-NEXT:    [[TMP6:%.*]] = sext i8 [[TMP5]] to i64
+; SSE-NEXT:    [[T5:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[TMP6]]
+; SSE-NEXT:    [[T6:%.*]] = load i8, ptr [[T4]], align 1
+; SSE-NEXT:    [[T7:%.*]] = load i8, ptr [[T5]], align 1
+; SSE-NEXT:    [[T8:%.*]] = add i8 [[T6]], [[T7]]
+; SSE-NEXT:    ret i8 [[T8]]
 ;
 ; AVX-LABEL: @PR31243_sext(
 ; AVX-NEXT:  entry:
 ; AVX-NEXT:    [[TMP0:%.*]] = insertelement <2 x i8> poison, i8 [[V0:%.*]], i64 0
 ; AVX-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> [[TMP0]], i8 [[V1:%.*]], i64 1
-; AVX-NEXT:    [[TMP2:%.*]] = or <2 x i8> [[TMP1]], <i8 1, i8 1>
-; AVX-NEXT:    [[TMP3:%.*]] = sext <2 x i8> [[TMP2]] to <2 x i16>
-; AVX-NEXT:    [[TMP4:%.*]] = extractelement <2 x i16> [[TMP3]], i64 0
-; AVX-NEXT:    [[TMP5:%.*]] = sext i16 [[TMP4]] to i64
-; AVX-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[TMP5]]
-; AVX-NEXT:    [[TMP6:%.*]] = extractelement <2 x i16> [[TMP3]], i64 1
-; AVX-NEXT:    [[TMP7:%.*]] = sext i16 [[TMP6]] to i64
-; AVX-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[TMP7]]
-; AVX-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP4]], align 1
-; AVX-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP5]], align 1
-; AVX-NEXT:    [[TMP8:%.*]] = add i8 [[TMP6]], [[TMP7]]
-; AVX-NEXT:    ret i8 [[TMP8]]
+; AVX-NEXT:    [[TMP2:%.*]] = or <2 x i8> [[TMP1]], splat (i8 1)
+; AVX-NEXT:    [[TMP3:%.*]] = extractelement <2 x i8> [[TMP2]], i64 0
+; AVX-NEXT:    [[TMP4:%.*]] = sext i8 [[TMP3]] to i64
+; AVX-NEXT:    [[T4:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[TMP4]]
+; AVX-NEXT:    [[TMP5:%.*]] = extractelement <2 x i8> [[TMP2]], i64 1
+; AVX-NEXT:    [[TMP6:%.*]] = sext i8 [[TMP5]] to i64
+; AVX-NEXT:    [[T5:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[TMP6]]
+; AVX-NEXT:    [[T6:%.*]] = load i8, ptr [[T4]], align 1
+; AVX-NEXT:    [[T7:%.*]] = load i8, ptr [[T5]], align 1
+; AVX-NEXT:    [[T8:%.*]] = add i8 [[T6]], [[T7]]
+; AVX-NEXT:    ret i8 [[T8]]
 ;
 entry:
-  %tmp0 = sext i8 %v0 to i32
-  %tmp1 = sext i8 %v1 to i32
-  %tmp2 = or i32 %tmp0, 1
-  %tmp3 = or i32 %tmp1, 1
-  %tmp4 = getelementptr inbounds i8, ptr %ptr, i32 %tmp2
-  %tmp5 = getelementptr inbounds i8, ptr %ptr, i32 %tmp3
-  %tmp6 = load i8, ptr %tmp4
-  %tmp7 = load i8, ptr %tmp5
-  %tmp8 = add i8 %tmp6, %tmp7
-  ret i8 %tmp8
+  %t0 = sext i8 %v0 to i32
+  %t1 = sext i8 %v1 to i32
+  %t2 = or i32 %t0, 1
+  %t3 = or i32 %t1, 1
+  %t4 = getelementptr inbounds i8, ptr %ptr, i32 %t2
+  %t5 = getelementptr inbounds i8, ptr %ptr, i32 %t3
+  %t6 = load i8, ptr %t4
+  %t7 = load i8, ptr %t5
+  %t8 = add i8 %t6, %t7
+  ret i8 %t8
 }

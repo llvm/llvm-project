@@ -6,7 +6,7 @@
 ;; run time.
 
 ;; Check there is only one dbg.assign.
-; CHECK: call void @llvm.dbg.assign
+; CHECK: #dbg_assign
 
 ;; Check that the loop was actually modified.
 ; CHECK: extractelement

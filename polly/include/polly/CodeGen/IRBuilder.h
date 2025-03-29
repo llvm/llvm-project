@@ -58,9 +58,12 @@ public:
   /// Annotate the new instruction @p I for all parallel loops.
   void annotate(llvm::Instruction *I);
 
-  /// Annotate the loop latch @p B wrt. @p L.
-  void annotateLoopLatch(llvm::BranchInst *B, llvm::Loop *L, bool IsParallel,
-                         bool IsLoopVectorizerDisabled) const;
+  /// Annotate the loop latch @p B.
+  /// Last argument is optional, if no value is passed, we don't annotate
+  /// any vectorize metadata.
+  void annotateLoopLatch(
+      llvm::BranchInst *B, bool IsParallel,
+      std::optional<bool> EnableVectorizeMetadata = std::nullopt) const;
 
   /// Add alternative alias based pointers
   ///
@@ -123,9 +126,8 @@ public:
   IRInserter(ScopAnnotator &A) : Annotator(&A) {}
 
   void InsertHelper(llvm::Instruction *I, const llvm::Twine &Name,
-                    llvm::BasicBlock *BB,
                     llvm::BasicBlock::iterator InsertPt) const override {
-    llvm::IRBuilderDefaultInserter::InsertHelper(I, Name, BB, InsertPt);
+    llvm::IRBuilderDefaultInserter::InsertHelper(I, Name, InsertPt);
     if (Annotator)
       Annotator->annotate(I);
   }

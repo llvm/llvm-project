@@ -1,6 +1,6 @@
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s
 
-! CHECK-DAG: func.func private @proc1() attributes {fir.bindc_name = "proc1"}
+! CHECK-DAG: func.func private @proc1() attributes {fir.bindc_name = "proc1", fir.proc_attrs = #fir.proc_attrs<bind_c>}
 module decl1
   interface
      subroutine proc_iface() bind(C)
@@ -13,7 +13,7 @@ subroutine test1(x)
   call PrOc1
 end subroutine test1
 
-! CHECK-DAG: func.func private @proc2() attributes {fir.bindc_name = "proc2"}
+! CHECK-DAG: func.func private @proc2() attributes {fir.bindc_name = "proc2", fir.proc_attrs = #fir.proc_attrs<bind_c>}
 module decl2
   interface
      subroutine proc_iface() bind(C)
@@ -26,7 +26,7 @@ subroutine test2(x)
   call PrOc2
 end subroutine test2
 
-! CHECK-DAG: func.func private @func3() -> f32 attributes {fir.bindc_name = "func3"}
+! CHECK-DAG: func.func private @func3() -> f32 attributes {fir.bindc_name = "func3", fir.proc_attrs = #fir.proc_attrs<bind_c>}
 module decl3
   interface
      real function func_iface() bind(C)
@@ -40,7 +40,7 @@ subroutine test3(x)
   x = FuNc3()
 end subroutine test3
 
-! CHECK-DAG: func.func private @func4() -> f32 attributes {fir.bindc_name = "func4"}
+! CHECK-DAG: func.func private @func4() -> f32 attributes {fir.bindc_name = "func4", fir.proc_attrs = #fir.proc_attrs<bind_c>}
 module decl4
   interface
      real function func_iface() bind(C)

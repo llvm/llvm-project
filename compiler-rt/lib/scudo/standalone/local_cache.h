@@ -28,6 +28,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     if (LIKELY(S))
       S->link(&Stats);
     Allocator = A;
+    initCache();
   }
 
   void destroy(GlobalStats *S) {
@@ -40,8 +41,6 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     DCHECK_LT(ClassId, NumClasses);
     PerClass *C = &PerClassArray[ClassId];
     if (C->Count == 0) {
-      initCacheMaybe(C);
-
       // Refill half of the number of max cached.
       DCHECK_GT(C->MaxCount / 2, 0U);
       if (UNLIKELY(!refill(C, ClassId, C->MaxCount / 2)))
@@ -61,9 +60,6 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
   bool deallocate(uptr ClassId, void *P) {
     CHECK_LT(ClassId, NumClasses);
     PerClass *C = &PerClassArray[ClassId];
-    // We still have to initialize the cache in the event that the first heap
-    // operation in a thread is a deallocation.
-    initCacheMaybe(C);
 
     // If the cache is full, drain half of blocks back to the main allocator.
     const bool NeedToDrainCache = C->Count == C->MaxCount;
@@ -149,13 +145,6 @@ private:
   PerClass PerClassArray[NumClasses] = {};
   LocalStats Stats;
   SizeClassAllocator *Allocator = nullptr;
-
-  ALWAYS_INLINE void initCacheMaybe(PerClass *C) {
-    if (LIKELY(C->MaxCount))
-      return;
-    initCache();
-    DCHECK_NE(C->MaxCount, 0U);
-  }
 
   NOINLINE void initCache() {
     for (uptr I = 0; I < NumClasses; I++) {

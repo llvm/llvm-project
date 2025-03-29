@@ -203,7 +203,7 @@ hwasan.module_ctor:                     // @hwasan.module_ctor
 	.size	hwasan.module_ctor, .Lfunc_end1-hwasan.module_ctor
 	.cfi_endproc
                                         // -- End function
-	.section	.init_array.0,"aGw",@init_array,hwasan.module_ctor,comdat
+	.section	.init_array.0,"awG",@init_array,hwasan.module_ctor,comdat
 	.p2align	3
 	.xword	hwasan.module_ctor
 	.section	.debug_str,"MS",@progbits,1

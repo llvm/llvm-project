@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs -debug-only=machine-scheduler -o /dev/null < %s 2>&1 | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs -debug-only=machine-scheduler -o /dev/null < %s 2>&1 | FileCheck %s
 
 ; We are only targeting one wave. Check that the machine scheduler doesn't use
 ; register pressure heuristics to prioritize any candidate instruction.

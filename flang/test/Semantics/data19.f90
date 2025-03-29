@@ -1,6 +1,6 @@
 ! RUN: %flang_fc1 -fdebug-dump-symbols %s 2>&1 | FileCheck %s
 ! Test truncation/padding in DATA statement.
-
+program main
   character(len=3) :: c1, c2, c3(2), c4(2)
   data c1(1:2), c1(3:3) /'123', '4'/
   data c2(1:2), c2(3:3) /'1', '2'/

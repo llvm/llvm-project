@@ -33,7 +33,9 @@ source_set("tweaks") {
     "PopulateSwitch.cpp",
     "RawStringLiteral.cpp",
     "RemoveUsingNamespace.cpp",
+    "ScopifyEnum.cpp",
     "SpecialMembers.cpp",
+    "SwapBinaryOperands.cpp",
     "SwapIfBranches.cpp",
   ]
 }

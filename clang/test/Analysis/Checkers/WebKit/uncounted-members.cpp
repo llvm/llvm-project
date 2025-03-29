@@ -1,12 +1,16 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=webkit.NoUncountedMemberChecker -verify %s
 
 #include "mock-types.h"
+#include "mock-system-header.h"
 
 namespace members {
   struct Foo {
   private:
     RefCountable* a = nullptr;
 // expected-warning@-1{{Member variable 'a' in 'members::Foo' is a raw pointer to ref-countable type 'RefCountable'}}
+
+    [[clang::suppress]]
+    RefCountable* a_suppressed = nullptr;
 
   protected:
     RefPtr<RefCountable> b;
@@ -25,6 +29,11 @@ namespace members {
   };
 
   void forceTmplToInstantiate(FooTmpl<RefCountable>) {}
+
+  struct [[clang::suppress]] FooSuppressed {
+  private:
+    RefCountable* a = nullptr;
+  };
 }
 
 namespace ignore_unions {
@@ -40,4 +49,22 @@ namespace ignore_unions {
   };
 
   void forceTmplToInstantiate(RefPtr<RefCountable>) {}
+}
+
+namespace ignore_system_header {
+
+void foo(RefCountable* t) {
+  MemberVariable<RefCountable> var { t };
+  var.obj->method();
+}
+
+} // ignore_system_header
+
+namespace ignore_non_ref_countable {
+  struct Foo {
+  };
+
+  struct Bar {
+    Foo* foo;
+  };
 }

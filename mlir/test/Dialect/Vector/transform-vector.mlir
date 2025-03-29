@@ -16,7 +16,7 @@ func.func @matmul_tensors(
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.consumed}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %module_op : (!transform.any_op) -> !transform.any_op
-    %1, %loops:3 = transform.structured.tile_using_for %0 [8, 4, 2]
+    %1, %loops:3 = transform.structured.tile_using_for %0 tile_sizes [8, 4, 2]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
     %2 = transform.get_parent_op %1 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
     transform.structured.vectorize_children_and_apply_patterns %2 : (!transform.any_op) -> !transform.any_op
@@ -88,6 +88,44 @@ module attributes {transform.with_named_sequence} {
     %func = transform.structured.match ops{["func.func"]} in %module_op : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
       transform.apply_patterns.vector.fold_arith_extension
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: func.func @arith_to_outerproduct_scalable_i32
+//  CHECK-SAME:   %[[LHS:.*]]: vector<[4]xi32>,
+//  CHECK-SAME:   %[[RHS:.*]]: vector<[4]xi32>) -> vector<[4]x[4]xi32> {
+//       CHECK:     %[[RES:.*]] = vector.outerproduct %[[LHS]], %[[RHS]] : vector<[4]xi32>, vector<[4]xi32>
+//       CHECK:     return %[[RES]] : vector<[4]x[4]xi32>
+func.func @arith_to_outerproduct_scalable_i32(%lhs: vector<[4]xi32>, %rhs: vector<[4]xi32>) -> vector<[4]x[4]xi32> {
+  %lhsBcast = vector.broadcast %lhs : vector<[4]xi32> to vector<[4]x[4]xi32>
+  %lhsT = vector.transpose %lhsBcast, [1, 0] : vector<[4]x[4]xi32> to vector<[4]x[4]xi32>
+  %rhsBcast = vector.broadcast %rhs : vector<[4]xi32> to vector<[4]x[4]xi32>
+  %mul = arith.muli %lhsT, %rhsBcast : vector<[4]x[4]xi32>
+  return %mul: vector<[4]x[4]xi32>
+}
+
+// CHECK-LABEL: func.func @arith_to_outerproduct_trans_rhs_f32
+//  CHECK-SAME:   %[[LHS:.*]]: vector<16xf32>,
+//  CHECK-SAME:   %[[RHS:.*]]: vector<8xf32>) -> vector<8x16xf32> {
+//       CHECK:     %[[RES:.*]] = vector.outerproduct %[[RHS]], %[[LHS]] : vector<8xf32>, vector<16xf32>
+//       CHECK:     return %[[RES]] : vector<8x16xf32>
+func.func @arith_to_outerproduct_trans_rhs_f32(%lhs: vector<16xf32>, %rhs: vector<8xf32>) -> vector<8x16xf32> {
+  %rhsBcast = vector.broadcast %rhs : vector<8xf32> to vector<16x8xf32>
+  %rhsT = vector.transpose %rhsBcast, [1, 0] : vector<16x8xf32> to vector<8x16xf32>
+  %lhsBcast = vector.broadcast %lhs : vector<16xf32> to vector<8x16xf32>
+  %mul = arith.mulf %lhsBcast, %rhsT : vector<8x16xf32>
+  return %mul: vector<8x16xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %module_op : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.vector.elementwise_to_vector
     } : !transform.any_op
     transform.yield
   }

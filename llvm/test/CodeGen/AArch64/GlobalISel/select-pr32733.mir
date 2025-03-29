@@ -7,7 +7,7 @@
     ret i32 0
   }
 
-  declare i32 @printf(i8*, ...)
+  declare i32 @printf(ptr, ...)
 ...
 ---
 name:            main

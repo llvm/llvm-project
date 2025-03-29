@@ -9,11 +9,11 @@
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 0
 ; Num Functions
-; CHECK-NEXT:   .long 17
+; CHECK-NEXT:   .long 16
 ; Num LargeConstants
 ; CHECK-NEXT:   .long 4
 ; Num Callsites
-; CHECK-NEXT:   .long 21
+; CHECK-NEXT:   .long 20
 
 ; Functions and stack size
 ; CHECK-NEXT:   .quad _constantargs
@@ -38,9 +38,6 @@
 ; CHECK-NEXT:   .quad 8
 ; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _spilledValue
-; CHECK-NEXT:   .quad 8
-; CHECK-NEXT:   .quad 1
-; CHECK-NEXT:   .quad _spilledStackMapValue
 ; CHECK-NEXT:   .quad 8
 ; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _spillSubReg
@@ -367,28 +364,6 @@ entry:
   ret void
 }
 
-; Spilled stack map values.
-;
-; Verify 17 stack map entries.
-;
-; CHECK-LABEL:  .long L{{.*}}-_spilledStackMapValue
-; CHECK-NEXT:   .short 0
-; CHECK-NEXT:   .short 17
-;
-; Check that at least one is a spilled entry from RBP.
-; Location: Indirect RBP + ...
-; CHECK:        .byte 3
-; CHECK-NEXT:   .byte   0
-; CHECK-NEXT:   .short 8
-; CHECK-NEXT:   .short 6
-; CHECK-NEXT:   .short  0
-; CHECK-NEXT:   .long
-define webkit_jscc void @spilledStackMapValue(i64 %l0, i64 %l1, i64 %l2, i64 %l3, i64 %l4, i64 %l5, i64 %l6, i64 %l7, i64 %l8, i64 %l9, i64 %l10, i64 %l11, i64 %l12, i64 %l13, i64 %l14, i64 %l15, i64 %l16) {
-entry:
-  call void (i64, i32, ...) @llvm.experimental.stackmap(i64 12, i32 15, i64 %l0, i64 %l1, i64 %l2, i64 %l3, i64 %l4, i64 %l5, i64 %l6, i64 %l7, i64 %l8, i64 %l9, i64 %l10, i64 %l11, i64 %l12, i64 %l13, i64 %l14, i64 %l15, i64 %l16)
-  ret void
-}
-
 ; Spill a subregister stackmap operand.
 ;
 ; CHECK-LABEL:  .long L{{.*}}-_spillSubReg
@@ -404,23 +379,23 @@ entry:
 ; CHECK-NEXT:   .short 6
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long
-define void @spillSubReg(i64 %arg) #0 {
+define void @spillSubReg(i64 %arg, i1 %arg2) #0 {
 bb:
-  br i1 undef, label %bb1, label %bb2
+  br i1 %arg2, label %bb1, label %bb2
 
 bb1:
   unreachable
 
 bb2:
   %tmp = load i64, ptr inttoptr (i64 140685446136880 to ptr)
-  br i1 undef, label %bb16, label %bb17
+  br i1 %arg2, label %bb16, label %bb17
 
 bb16:
   unreachable
 
 bb17:
   %tmp32 = trunc i64 %tmp to i32
-  br i1 undef, label %bb60, label %bb61
+  br i1 %arg2, label %bb60, label %bb61
 
 bb60:
   tail call void asm sideeffect "nop", "~{ax},~{bx},~{cx},~{dx},~{bp},~{si},~{di},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"() nounwind

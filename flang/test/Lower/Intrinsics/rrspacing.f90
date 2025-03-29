@@ -1,5 +1,6 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s
+! REQUIRES: flang-supports-f128-math
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPrrspacing_test2(
 ! CHECK-SAME: %[[x:[^:]+]]: !fir.ref<f128>{{.*}}) -> f128

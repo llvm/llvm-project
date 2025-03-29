@@ -60,6 +60,12 @@
 # define DWORD_LO(x) (x)
 #endif
 
+#define mmap __llvm_profile_mmap
+#define munmap __llvm_profile_munmap
+#define msync __llvm_profile_msync
+#define madvise __llvm_profile_madvise
+#define flock __llvm_profile_flock
+
 void *mmap(void *start, size_t length, int prot, int flags, int fd,
            off_t offset);
 

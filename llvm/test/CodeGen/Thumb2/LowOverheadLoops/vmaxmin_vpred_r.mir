@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=thumbv8.1m.main -mattr=+mve -run-pass=arm-low-overhead-loops --verify-machineinstrs %s -o - | FileCheck %s
 
 --- |
-  define hidden i32 @arm_elementwise_mul_s8(i8* %input_1_vect, i8* %input_2_vect, i32 %input_1_offset, i32 %input_2_offset, i8* %output, i32 %out_offset, i32 %out_mult, i32 %out_shift, i32 %out_activation_min, i32 %out_activation_max, i32 %block_size) local_unnamed_addr #0 {
+  define hidden i32 @arm_elementwise_mul_s8(ptr %input_1_vect, ptr %input_2_vect, i32 %input_1_offset, i32 %input_2_offset, ptr %output, i32 %out_offset, i32 %out_mult, i32 %out_shift, i32 %out_activation_min, i32 %out_activation_max, i32 %block_size) local_unnamed_addr #0 {
   entry:
     %add = add i32 %block_size, 3
     %div = lshr i32 %add, 2
@@ -20,22 +20,22 @@
     ret i32 0
 
   for.body:                                         ; preds = %for.body, %for.body.lr.ph
-    %input_1_vect.addr.052 = phi i8* [ %input_1_vect, %for.body.lr.ph ], [ %add.ptr, %for.body ]
-    %input_2_vect.addr.051 = phi i8* [ %input_2_vect, %for.body.lr.ph ], [ %add.ptr14, %for.body ]
-    %output.addr.050 = phi i8* [ %output, %for.body.lr.ph ], [ %add.ptr15, %for.body ]
+    %input_1_vect.addr.052 = phi ptr [ %input_1_vect, %for.body.lr.ph ], [ %add.ptr, %for.body ]
+    %input_2_vect.addr.051 = phi ptr [ %input_2_vect, %for.body.lr.ph ], [ %add.ptr14, %for.body ]
+    %output.addr.050 = phi ptr [ %output, %for.body.lr.ph ], [ %add.ptr15, %for.body ]
     %num_elements.049 = phi i32 [ %block_size, %for.body.lr.ph ], [ %sub, %for.body ]
     %iv = phi i32 [ %div, %for.body.lr.ph ], [ %iv.next, %for.body ]
-    %output_cast = bitcast i8* %output.addr.050 to <4 x i32>*
-    %input_2_cast = bitcast i8* %input_2_vect.addr.051 to <4 x i32>*
-    %input_1_cast = bitcast i8* %input_1_vect.addr.052 to <4 x i32>*
+    %output_cast = bitcast ptr %output.addr.050 to ptr
+    %input_2_cast = bitcast ptr %input_2_vect.addr.051 to ptr
+    %input_1_cast = bitcast ptr %input_1_vect.addr.052 to ptr
     %pred = tail call <4 x i1> @llvm.arm.mve.vctp32(i32 %num_elements.049)
-    %load.1 = tail call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %input_1_cast, i32 4, <4 x i1> %pred, <4 x i32> undef)
+    %load.1 = tail call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %input_1_cast, i32 4, <4 x i1> %pred, <4 x i32> undef)
     %insert.input_1_offset = insertelement <4 x i32> undef, i32 %input_1_offset, i32 0
     %splat.input_1_offset = shufflevector <4 x i32> %insert.input_1_offset, <4 x i32> undef, <4 x i32> zeroinitializer
     %insert.input_2_offset = insertelement <4 x i32> undef, i32 %input_2_offset, i32 0
     %splat.input_2_offset = shufflevector <4 x i32> %insert.input_2_offset, <4 x i32> undef, <4 x i32> zeroinitializer
     %add.1 = add <4 x i32> %load.1, %splat.input_1_offset
-    %load.2 = tail call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %input_2_cast, i32 4, <4 x i1> %pred, <4 x i32> undef)
+    %load.2 = tail call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %input_2_cast, i32 4, <4 x i1> %pred, <4 x i32> undef)
     %add.2 = add <4 x i32> %load.2, %splat.input_2_offset
     %mul = mul <4 x i32> %add.1, %add.2
     %insert.output = insertelement <4 x i32> undef, i32 %out_offset, i32 0
@@ -43,23 +43,23 @@
     %add7 = add <4 x i32> %mul, %splat.output
     %max = tail call <4 x i32> @llvm.arm.mve.max.predicated.v4i32.v4i1(<4 x i32> %add7, <4 x i32> %.splat.i42, i32 1, <4 x i1> %pred, <4 x i32> undef)
     %min = tail call <4 x i32> @llvm.arm.mve.min.predicated.v4i32.v4i1(<4 x i32> %max, <4 x i32> %.splat.i, i32 1, <4 x i1> %pred, <4 x i32> undef)
-    tail call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %min, <4 x i32>* %output_cast, i32 4, <4 x i1> %pred)
-    %add.ptr = getelementptr inbounds i8, i8* %input_1_vect.addr.052, i32 4
-    %add.ptr14 = getelementptr inbounds i8, i8* %input_2_vect.addr.051, i32 4
-    %add.ptr15 = getelementptr inbounds i8, i8* %output.addr.050, i32 4
+    tail call void @llvm.masked.store.v4i32.p0(<4 x i32> %min, ptr %output_cast, i32 4, <4 x i1> %pred)
+    %add.ptr = getelementptr inbounds i8, ptr %input_1_vect.addr.052, i32 4
+    %add.ptr14 = getelementptr inbounds i8, ptr %input_2_vect.addr.051, i32 4
+    %add.ptr15 = getelementptr inbounds i8, ptr %output.addr.050, i32 4
     %sub = add i32 %num_elements.049, -4
     %iv.next = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %iv, i32 1)
     %cmp = icmp ne i32 %iv.next, 0
     br i1 %cmp, label %for.body, label %for.cond.cleanup
   }
   declare <4 x i1> @llvm.arm.mve.vctp32(i32) #1
-  declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>) #2
-  declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>) #3
+  declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32 immarg, <4 x i1>, <4 x i32>) #2
+  declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32 immarg, <4 x i1>) #3
   declare <4 x i32> @llvm.arm.mve.max.predicated.v4i32.v4i1(<4 x i32>, <4 x i32>, i32, <4 x i1>, <4 x i32>) #1
   declare <4 x i32> @llvm.arm.mve.min.predicated.v4i32.v4i1(<4 x i32>, <4 x i32>, i32, <4 x i1>, <4 x i32>) #1
   declare i1 @llvm.test.set.loop.iterations.i32(i32) #4
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #4
-  declare void @llvm.stackprotector(i8*, i8**) #5
+  declare void @llvm.stackprotector(ptr, ptr) #5
 ...
 ---
 name:            arm_elementwise_mul_s8
@@ -140,40 +140,46 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: arm_elementwise_mul_s8
   ; CHECK: bb.0.entry:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
-  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7
-  ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $r5, killed $r6, killed $r7, killed $lr, implicit-def $sp, implicit $sp
-  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 20
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r6, -12
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r5, -16
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r4, -20
-  ; CHECK:   renamable $r12 = t2LDRi12 $sp, 44, 14 /* CC::al */, $noreg :: (load (s32) from %fixed-stack.6, align 8)
-  ; CHECK:   $lr = MVE_WLSTP_32 killed renamable $r12, %bb.3
-  ; CHECK: bb.1.for.body.lr.ph:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3
-  ; CHECK:   $r7, $r6 = t2LDRDi8 $sp, 36, 14 /* CC::al */, $noreg :: (load (s32) from %fixed-stack.4, align 8), (load (s32) from %fixed-stack.5)
-  ; CHECK:   $r5, $r4 = t2LDRDi8 $sp, 20, 14 /* CC::al */, $noreg :: (load (s32) from %fixed-stack.0, align 8), (load (s32) from %fixed-stack.1)
-  ; CHECK:   renamable $q0 = MVE_VDUP32 killed renamable $r6, 0, $noreg, $noreg, undef renamable $q0
-  ; CHECK:   renamable $q1 = MVE_VDUP32 killed renamable $r7, 0, $noreg, $noreg, undef renamable $q1
-  ; CHECK: bb.2.for.body:
-  ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
-  ; CHECK:   liveins: $lr, $q0, $q1, $r0, $r1, $r2, $r3, $r4, $r5
-  ; CHECK:   renamable $r1, renamable $q2 = MVE_VLDRWU32_post killed renamable $r1, 4, 0, $noreg, $noreg :: (load (s128) from %ir.input_2_cast, align 4)
-  ; CHECK:   renamable $r0, renamable $q3 = MVE_VLDRWU32_post killed renamable $r0, 4, 0, $noreg, $noreg :: (load (s128) from %ir.input_1_cast, align 4)
-  ; CHECK:   renamable $q2 = MVE_VADD_qr_i32 killed renamable $q2, renamable $r3, 0, $noreg, $noreg, undef renamable $q2
-  ; CHECK:   renamable $q3 = MVE_VADD_qr_i32 killed renamable $q3, renamable $r2, 0, $noreg, $noreg, undef renamable $q3
-  ; CHECK:   renamable $q2 = MVE_VMULi32 killed renamable $q3, killed renamable $q2, 0, $noreg, $noreg, undef renamable $q2
-  ; CHECK:   renamable $q2 = MVE_VADD_qr_i32 killed renamable $q2, renamable $r4, 0, $noreg, $noreg, undef renamable $q2
-  ; CHECK:   renamable $q2 = MVE_VMAXu32 killed renamable $q2, renamable $q1, 0, $noreg, $noreg, undef renamable $q2
-  ; CHECK:   renamable $q2 = MVE_VMINu32 killed renamable $q2, renamable $q0, 0, $noreg, $noreg, undef renamable $q2
-  ; CHECK:   renamable $r5 = MVE_VSTRWU32_post killed renamable $q2, killed renamable $r5, 4, 0, killed $noreg, $noreg :: (store (s128) into %ir.output_cast, align 4)
-  ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.2
-  ; CHECK: bb.3.for.cond.cleanup:
-  ; CHECK:   $r0, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
-  ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $r5, def $r6, def $r7, def $pc, implicit killed $r0
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT:   liveins: $lr, $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $r5, killed $r6, killed $r7, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 20
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r7, -8
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r6, -12
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r5, -16
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r4, -20
+  ; CHECK-NEXT:   renamable $r12 = t2LDRi12 $sp, 44, 14 /* CC::al */, $noreg :: (load (s32) from %fixed-stack.6, align 8)
+  ; CHECK-NEXT:   $lr = MVE_WLSTP_32 killed renamable $r12, %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.for.body.lr.ph:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT:   liveins: $lr, $r0, $r1, $r2, $r3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $r7, $r6 = t2LDRDi8 $sp, 36, 14 /* CC::al */, $noreg :: (load (s32) from %fixed-stack.4, align 8), (load (s32) from %fixed-stack.5)
+  ; CHECK-NEXT:   $r5, $r4 = t2LDRDi8 $sp, 20, 14 /* CC::al */, $noreg :: (load (s32) from %fixed-stack.0, align 8), (load (s32) from %fixed-stack.1)
+  ; CHECK-NEXT:   renamable $q0 = MVE_VDUP32 killed renamable $r6, 0, $noreg, $noreg, undef renamable $q0
+  ; CHECK-NEXT:   renamable $q1 = MVE_VDUP32 killed renamable $r7, 0, $noreg, $noreg, undef renamable $q1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.for.body:
+  ; CHECK-NEXT:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
+  ; CHECK-NEXT:   liveins: $lr, $q0, $q1, $r0, $r1, $r2, $r3, $r4, $r5
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r1, renamable $q2 = MVE_VLDRWU32_post killed renamable $r1, 4, 0, $noreg, $noreg :: (load (s128) from %ir.input_2_cast, align 4)
+  ; CHECK-NEXT:   renamable $r0, renamable $q3 = MVE_VLDRWU32_post killed renamable $r0, 4, 0, $noreg, $noreg :: (load (s128) from %ir.input_1_cast, align 4)
+  ; CHECK-NEXT:   renamable $q2 = MVE_VADD_qr_i32 killed renamable $q2, renamable $r3, 0, $noreg, $noreg, undef renamable $q2
+  ; CHECK-NEXT:   renamable $q3 = MVE_VADD_qr_i32 killed renamable $q3, renamable $r2, 0, $noreg, $noreg, undef renamable $q3
+  ; CHECK-NEXT:   renamable $q2 = MVE_VMULi32 killed renamable $q3, killed renamable $q2, 0, $noreg, $noreg, undef renamable $q2
+  ; CHECK-NEXT:   renamable $q2 = MVE_VADD_qr_i32 killed renamable $q2, renamable $r4, 0, $noreg, $noreg, undef renamable $q2
+  ; CHECK-NEXT:   renamable $q2 = MVE_VMAXu32 killed renamable $q2, renamable $q1, 0, $noreg, $noreg, undef renamable $q2
+  ; CHECK-NEXT:   renamable $q2 = MVE_VMINu32 killed renamable $q2, renamable $q0, 0, $noreg, $noreg, undef renamable $q2
+  ; CHECK-NEXT:   renamable $r5 = MVE_VSTRWU32_post killed renamable $q2, killed renamable $r5, 4, 0, killed $noreg, $noreg :: (store (s128) into %ir.output_cast, align 4)
+  ; CHECK-NEXT:   $lr = MVE_LETP killed renamable $lr, %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3.for.cond.cleanup:
+  ; CHECK-NEXT:   $r0, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $r5, def $r6, def $r7, def $pc, implicit killed $r0
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.3(0x40000000)
     liveins: $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7, $lr

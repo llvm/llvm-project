@@ -61,3 +61,45 @@ define i32 @noubfiz32(i32 %v) {
   %add = add i32 %shl, %and
   ret i32 %add
 }
+
+define i64 @lsl32_not_ubfiz64(i64 %v) {
+; CHECK-LABEL: lsl32_not_ubfiz64:
+; CHECK: lsl	w0, w0, #6
+  %shl = shl i64 %v, 6
+  %and = and i64 %shl, 4294967295
+  ret i64 %and
+}
+
+define i64 @lsl_zext_i8_i64(i8 %b) {
+; CHECK-LABEL: lsl_zext_i8_i64:
+; CHECK:    ubfiz x0, x0, #1, #8
+  %1 = zext i8 %b to i64
+  %2 = shl i64 %1, 1
+  ret i64 %2
+}
+
+define i64 @lsl_zext_i16_i64(i16 %b) {
+; CHECK-LABEL: lsl_zext_i16_i64:
+; CHECK:    ubfiz x0, x0, #1, #16
+  %1 = zext i16 %b to i64
+  %2 = shl i64 %1, 1
+  ret i64 %2
+}
+
+; Regression test for:
+; https://github.com/llvm/llvm-project/pull/118974#issuecomment-2598521878
+; that exposed infinite loop in DAGCombiner.
+define void @_f(ptr %0, ptr %1, i64 %2) {
+; CHECK-LABEL: @_f
+; CHECK-NOT: ubfiz
+  store i64 -2401053089408754003, ptr %1, align 8
+  %4 = and i64 %2, -2401053089408754003
+  %5 = shl i64 %4, 1
+  store i64 %5, ptr %0, align 1
+  %6 = lshr i64 %4, 54
+  %7 = shl i64 %2, 10
+  %8 = and i64 %7, 131072
+  %9 = or i64 %8, %6
+  store i64 %9, ptr %1, align 1
+  ret void
+}

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 
 """adb_run.py is a utility for running a libc++ test program via adb.
 """
@@ -18,7 +18,7 @@ import shlex
 import socket
 import subprocess
 import sys
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 
 # Sync a host file /path/to/dir/file to ${REMOTE_BASE_DIR}/run-${HASH}/dir/file.

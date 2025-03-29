@@ -42,7 +42,7 @@ define float @icmp_select_fp_constants(i32 %x) nounwind readnone {
 define float @fcmp_select_fp_constants(float %x) nounwind readnone {
 ; X86-SSE-LABEL: fcmp_select_fp_constants:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = [-4.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X86-SSE-NEXT:    cmpneqss {{[0-9]+}}(%esp), %xmm0
 ; X86-SSE-NEXT:    movd %xmm0, %eax
 ; X86-SSE-NEXT:    andl $1, %eax
@@ -51,7 +51,7 @@ define float @fcmp_select_fp_constants(float %x) nounwind readnone {
 ;
 ; X86-AVX2-LABEL: fcmp_select_fp_constants:
 ; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-AVX2-NEXT:    vmovss {{.*#+}} xmm0 = [-4.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X86-AVX2-NEXT:    vcmpneqss {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX2-NEXT:    andl $1, %eax
@@ -85,8 +85,8 @@ define float @fcmp_select_fp_constants(float %x) nounwind readnone {
 ; X64-AVX512F-LABEL: fcmp_select_fp_constants:
 ; X64-AVX512F:       # %bb.0:
 ; X64-AVX512F-NEXT:    vcmpneqss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k1
-; X64-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-AVX512F-NEXT:    vmovss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1}
+; X64-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = [2.3E+1,0.0E+0,0.0E+0,0.0E+0]
+; X64-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 {%k1} = [4.2E+1,0.0E+0,0.0E+0,0.0E+0]
 ; X64-AVX512F-NEXT:    retq
  %c = fcmp une float %x, -4.0
  %r = select i1 %c, float 42.0, float 23.0

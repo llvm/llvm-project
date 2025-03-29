@@ -242,7 +242,7 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
   // continuations, and will conditionally branch to cleanup or suspend blocks.
 
   // The switch-resumed API based coroutine should be marked with
-  // coroutine.presplit attribute to mark the function as a coroutine.
+  // presplitcoroutine attribute to mark the function as a coroutine.
   func->setAttr("passthrough", builder.getArrayAttr(
                                    StringAttr::get(ctx, "presplitcoroutine")));
 
@@ -306,8 +306,7 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
   // Collect all outlined function inputs.
   SetVector<mlir::Value> functionInputs(execute.getDependencies().begin(),
                                         execute.getDependencies().end());
-  functionInputs.insert(execute.getBodyOperands().begin(),
-                        execute.getBodyOperands().end());
+  functionInputs.insert_range(execute.getBodyOperands());
   getUsedValuesDefinedAbove(execute.getBodyRegion(), functionInputs);
 
   // Collect types for the outlined function inputs and outputs.
@@ -582,7 +581,7 @@ public:
     // Inside regular functions we use the blocking wait operation to wait for
     // the async object (token, value or group) to become available.
     if (!isInCoroutine) {
-      ImplicitLocOpBuilder builder(loc, op, &rewriter);
+      ImplicitLocOpBuilder builder(loc, rewriter);
       builder.create<RuntimeAwaitOp>(loc, operand);
 
       // Assert that the awaited operands is not in the error state.
@@ -601,7 +600,7 @@ public:
       CoroMachinery &coro = funcCoro->getSecond();
       Block *suspended = op->getBlock();
 
-      ImplicitLocOpBuilder builder(loc, op, &rewriter);
+      ImplicitLocOpBuilder builder(loc, rewriter);
       MLIRContext *ctx = op->getContext();
 
       // Save the coroutine state and resume on a runtime managed thread when

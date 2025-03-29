@@ -11,6 +11,8 @@ should not. The functions which should not throw exceptions are the following:
 * Move assignment operators
 * The ``main()`` functions
 * ``swap()`` functions
+* ``iter_swap()`` functions
+* ``iter_move()`` functions
 * Functions marked with ``throw()`` or ``noexcept``
 * Other functions given as option
 

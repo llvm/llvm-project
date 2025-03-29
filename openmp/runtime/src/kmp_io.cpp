@@ -50,24 +50,6 @@ static HANDLE __kmp_stderr = NULL;
 static int __kmp_console_exists = FALSE;
 static kmp_str_buf_t __kmp_console_buf;
 
-static int is_console(void) {
-  char buffer[128];
-  DWORD rc = 0;
-  DWORD err = 0;
-  // Try to get console title.
-  SetLastError(0);
-  // GetConsoleTitle does not reset last error in case of success or short
-  // buffer, so we need to clear it explicitly.
-  rc = GetConsoleTitle(buffer, sizeof(buffer));
-  if (rc == 0) {
-    // rc == 0 means getting console title failed. Let us find out why.
-    err = GetLastError();
-    // err == 0 means buffer too short (we suppose console exists).
-    // In Window applications we usually have err == 6 (invalid handle).
-  }
-  return rc > 0 || err == 0;
-}
-
 void __kmp_close_console(void) {
   /* wait until user presses return before closing window */
   /* TODO only close if a window was opened */
@@ -84,7 +66,6 @@ void __kmp_close_console(void) {
 static void __kmp_redirect_output(void) {
   __kmp_acquire_bootstrap_lock(&__kmp_console_lock);
 
-  (void)is_console;
   if (!__kmp_console_exists) {
     HANDLE ho;
     HANDLE he;

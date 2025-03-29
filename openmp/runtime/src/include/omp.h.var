@@ -15,7 +15,14 @@
 #ifndef __OMP_H
 #   define __OMP_H
 
-#   include <stdlib.h>
+#   ifndef __has_include
+#   define __has_include(x) 0
+#   endif
+
+#   include <stddef.h>
+#   if (__has_include(<stdlib.h>))
+#     include <stdlib.h>
+#   endif
 #   include <stdint.h>
 
 #   define KMP_VERSION_MAJOR    @LIBOMP_VERSION_MAJOR@
@@ -154,6 +161,8 @@
 
     /* OpenMP 5.1 interop */
     typedef intptr_t omp_intptr_t;
+
+    extern void __KAI_KMPC_CONVENTION ompx_dump_mapping_tables(void);
 
     /* 0..omp_get_num_interop_properties()-1 are reserved for implementation-defined properties */
     typedef enum omp_interop_property {
@@ -473,7 +482,8 @@
     typedef enum omp_pause_resource_t {
       omp_pause_resume = 0,
       omp_pause_soft = 1,
-      omp_pause_hard = 2
+      omp_pause_hard = 2,
+      omp_pause_stop_tool = 3
     } omp_pause_resource_t;
     extern int __KAI_KMPC_CONVENTION omp_pause_resource(omp_pause_resource_t, int);
     extern int __KAI_KMPC_CONVENTION omp_pause_resource_all(omp_pause_resource_t);

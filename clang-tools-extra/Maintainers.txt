@@ -1,0 +1,75 @@
+=============================
+Clang Tools Extra Maintainers
+=============================
+
+This file is a list of the maintainers
+(https://llvm.org/docs/DeveloperPolicy.html#maintainers) for clang-tools-extra.
+
+
+Active Maintainers
+==================
+The following people are the active maintainers for the project. Please reach
+out to them for code reviews, questions about their area of expertise, or other
+assistance.
+
+Lead Maintainer
+---------------
+| Aaron Ballman
+| aaron@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
+
+
+clang-tidy
+----------
+| Congcong Cai
+| congcongcai0907@163.com (email), HerrCai0907 (GitHub), HerrCai0907 (Discourse)
+
+| Julian Schmidt
+| git.julian.schmidt@gmail.com (email), 5chmidti (GitHub), 5chmidti (Discourse), 5chmidti (Discord)
+
+| Piotr Zegar
+| me@piotrzegar.pl (email), PiotrZSL (GitHub), PiotrZSL (Discourse), PiotrZSL (Discord)
+
+
+clang-query
+-----------
+| Aaron Ballman
+| aaron@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
+
+
+clang-doc
+---------
+| Paul Kirth
+| paulkirth@google.com (email), ilovepi (GitHub), ilovepi (Discourse)
+
+| Peter Chou
+| peterchou411@gmail.com (email), PeterChou1 (GitHub), PeterChou1 (Discourse), .peterchou (Discord)
+
+
+clangd
+------
+| Nathan Ridge
+| zeratul976@hotmail.com (email), HighCommander4 (GitHub), HighCommander4 (Discourse), nridge (Discord)
+
+| Chris Bieneman
+| chris.bieneman@gmail.com (email), llvm-beanz (GitHub), beanz (Discord), beanz (Discourse)
+
+| Kadir Çetinkaya
+| kadircet@google.com (email), kadircet (GitHub) kadircet (Discourse), kadircet (Discord)
+
+
+Inactive Maintainers
+====================
+The following people have graciously spent time performing maintainership
+responsibilities but are no longer active in that role. Thank you for all your
+help with the success of the project!
+
+Emeritus Lead Maintainers
+-------------------------
+| Manuel Klimek (klimek@google.com (email), r4nt (GitHub))
+
+
+Inactive component maintainers
+------------------------------
+| Nathan James (n.james93@hotmail.co.uk) -- clang-tidy
+| Julie Hockett (juliehockett@google.com) -- clang-doc
+| Sam McCall (sammccall@google.com (email), sam-mccall (GitHub, Discourse, Discord)) -- clangd

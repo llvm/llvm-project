@@ -857,6 +857,12 @@ SelectionDAG-based instruction selection consists of the following steps:
 After all of these steps are complete, the SelectionDAG is destroyed and the
 rest of the code generation passes are run.
 
+One of the most common ways to debug these steps is using ``-debug-only=isel``,
+which prints out the DAG, along with other information like debug info,
+after each of these steps. Alternatively, ``-debug-only=isel-dump`` shows only
+the DAG dumps, but the results can be filtered by function names using
+``-filter-print-funcs=<function names>``.
+
 One great way to visualize what is going on here is to take advantage of a few
 LLC command line options.  The following options pop up a window displaying the
 SelectionDAG at specific times (if you only get errors printed to the console

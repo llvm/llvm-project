@@ -10,7 +10,7 @@
 
 ; The above test compiled with clang++ produces both a DW_AT_type and
 ; DW_AT_specification on the definition die for S::Arr, which previously caused
-; an assert in the LVELFReader:
+; an assert in the LVDWARFReader:
 ; $ clang++ -g -c dw-at-specification.cpp -o dw-at-specification.o
 
 ; RUN: llvm-debuginfo-analyzer --attribute=level,format,producer \

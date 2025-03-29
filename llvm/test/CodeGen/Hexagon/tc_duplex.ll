@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mattr=+duplex -mcpu=hexagonv67t < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mattr=+duplex -mcpu=hexagonv67t < %s | FileCheck %s
 
 ; Check that we generate two memory operations in tiny core if duplexes
 ; are enabled.

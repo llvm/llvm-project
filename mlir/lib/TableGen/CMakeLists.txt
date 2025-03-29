@@ -20,6 +20,7 @@ llvm_add_library(MLIRTableGen STATIC
   CodeGenHelpers.cpp
   Constraint.cpp
   Dialect.cpp
+  EnumInfo.cpp
   Format.cpp
   GenInfo.cpp
   Interfaces.cpp
@@ -40,6 +41,7 @@ llvm_add_library(MLIRTableGen STATIC
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/TableGen
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Support
 )
+set_target_properties(MLIRTableGen PROPERTIES FOLDER "MLIR/Tablegenning")
 
 mlir_check_all_link_libraries(MLIRTableGen)
 

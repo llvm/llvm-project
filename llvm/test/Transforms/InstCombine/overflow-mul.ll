@@ -216,7 +216,7 @@ define <4 x i32> @pr20113(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-NEXT:    [[VMOVL_I_I726:%.*]] = zext <4 x i16> [[A:%.*]] to <4 x i32>
 ; CHECK-NEXT:    [[VMOVL_I_I712:%.*]] = zext <4 x i16> [[B:%.*]] to <4 x i32>
 ; CHECK-NEXT:    [[MUL_I703:%.*]] = mul nuw <4 x i32> [[VMOVL_I_I712]], [[VMOVL_I_I726]]
-; CHECK-NEXT:    [[TMP:%.*]] = icmp sgt <4 x i32> [[MUL_I703]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP:%.*]] = icmp sgt <4 x i32> [[MUL_I703]], splat (i32 -1)
 ; CHECK-NEXT:    [[VCGEZ_I:%.*]] = sext <4 x i1> [[TMP]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[VCGEZ_I]]
 ;
@@ -237,7 +237,8 @@ define i1 @pr21445(i8 %a) {
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ext = zext i8 %a to i32
-  %mul = mul i32 %ext, zext (i8 ptrtoint (ptr @pr21445_data to i8) to i32)
+  %ext2 = zext i8 ptrtoint (ptr @pr21445_data to i8) to i32
+  %mul = mul i32 %ext, %ext2
   %and = and i32 %mul, 255
   %cmp = icmp ne i32 %mul, %and
   ret i1 %cmp
@@ -306,7 +307,7 @@ define i32 @extra_and_use_small_mask(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[UMUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    [[UMUL_VALUE:%.*]] = extractvalue { i32, i1 } [[UMUL]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[UMUL_VALUE]], 268435455
-; CHECK-NEXT:    [[AND:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[AND:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i32, i1 } [[UMUL]], 1
 ; CHECK-NEXT:    call void @use.i64(i64 [[AND]])
 ; CHECK-NEXT:    [[RETVAL:%.*]] = zext i1 [[OVERFLOW]] to i32

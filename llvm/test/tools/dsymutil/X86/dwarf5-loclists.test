@@ -24,11 +24,11 @@
 #RUN: llvm-dwarfdump --verify  %t.dSYM | FileCheck %s
 #RUN: llvm-dwarfdump -a --verbose  %t.dSYM | FileCheck %s --check-prefix UPD-DWARF-CHECK
 
-#RUN: dsymutil --linker llvm -oso-prepend-path %p/../Inputs -y %s -o %t.dSYM
+#RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs -y %s -o %t.dSYM
 #RUN: llvm-dwarfdump --verify  %t.dSYM | FileCheck %s
 #RUN: llvm-dwarfdump -a --verbose  %t.dSYM | FileCheck %s --check-prefix DWARF-CHECK
 
-#RUN: dsymutil --linker llvm --update -oso-prepend-path %p/../Inputs -y %s -o %t.dSYM
+#RUN: dsymutil --linker parallel --update -oso-prepend-path %p/../Inputs -y %s -o %t.dSYM
 #RUN: llvm-dwarfdump --verify  %t.dSYM | FileCheck %s
 #RUN: llvm-dwarfdump -a --verbose  %t.dSYM | FileCheck %s --check-prefix UPD-DWARF-CHECK
 

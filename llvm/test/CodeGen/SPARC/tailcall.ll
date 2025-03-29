@@ -74,7 +74,7 @@ entry:
 
 ; Perform tail call optimization for external symbol.
 
-define void @caller_extern(i8* %src) optsize #0 {
+define void @caller_extern(ptr %src) optsize #0 {
 ; V8-LABEL: caller_extern:
 ; V8:       ! %bb.0: ! %entry
 ; V8-NEXT:    sethi %hi(dest), %o1
@@ -101,16 +101,15 @@ define void @caller_extern(i8* %src) optsize #0 {
 ; V9-NEXT:    call memcpy
 ; V9-NEXT:    mov %g1, %o7
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(
-    i8* getelementptr inbounds ([2 x i8],
-    [2 x i8]* @dest, i32 0, i32 0),
-    i8* %src, i32 7, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i32(
+    ptr @dest,
+    ptr %src, i32 7, i1 false)
   ret void
 }
 
 ; Perform tail call optimization for function pointer.
 
-define i32 @func_ptr_test(i32 ()* nocapture %func_ptr) #0 {
+define i32 @func_ptr_test(ptr nocapture %func_ptr) #0 {
 ; V8-LABEL: func_ptr_test:
 ; V8:       ! %bb.0: ! %entry
 ; V8-NEXT:    jmp %o0
@@ -125,7 +124,7 @@ entry:
   ret i32 %call
 }
 
-define i32 @func_ptr_test2(i32 (i32, i32, i32)* nocapture %func_ptr,
+define i32 @func_ptr_test2(ptr nocapture %func_ptr,
 ; V8-LABEL: func_ptr_test2:
 ; V8:       ! %bb.0: ! %entry
 ; V8-NEXT:    save %sp, -96, %sp
@@ -210,14 +209,14 @@ define i32 @caller_byval() #0 {
 ; V9-NEXT:    ret
 ; V9-NEXT:    restore %g0, %o0, %o0
 entry:
-  %a = alloca i32*
-  %r = tail call i32 @callee_byval(i32** byval(i32*) %a)
+  %a = alloca ptr
+  %r = tail call i32 @callee_byval(ptr byval(ptr) %a)
   ret i32 %r
 }
 
 ; Perform tail call optimization for sret function.
 
-define void @sret_test(%struct.a* noalias sret(%struct.a) %agg.result) #0 {
+define void @sret_test(ptr noalias sret(%struct.a) %agg.result) #0 {
 ; V8-LABEL: sret_test:
 ; V8:       ! %bb.0: ! %entry
 ; V8-NEXT:    mov %o7, %g1
@@ -230,8 +229,7 @@ define void @sret_test(%struct.a* noalias sret(%struct.a) %agg.result) #0 {
 ; V9-NEXT:    call sret_func
 ; V9-NEXT:    mov %g1, %o7
 entry:
-  tail call void bitcast (void (%struct.a*)* @sret_func to
-                          void (%struct.a*)*)(%struct.a* sret(%struct.a) %agg.result)
+  tail call void @sret_func(ptr sret(%struct.a) %agg.result)
   ret void
 }
 
@@ -239,7 +237,7 @@ entry:
 ; a struct and the other does not. Returning a large
 ; struct will generate a memcpy as the tail function.
 
-define void @ret_large_struct(%struct.big* noalias sret(%struct.big) %agg.result) #0 {
+define void @ret_large_struct(ptr noalias sret(%struct.big) %agg.result) #0 {
 ; V8-LABEL: ret_large_struct:
 ; V8:       ! %bb.0: ! %entry
 ; V8-NEXT:    save %sp, -96, %sp
@@ -265,8 +263,8 @@ define void @ret_large_struct(%struct.big* noalias sret(%struct.big) %agg.result
 ; V9-NEXT:    ret
 ; V9-NEXT:    restore
 entry:
-  %0 = bitcast %struct.big* %agg.result to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %0, i8* align 4 bitcast (%struct.big* @bigstruct to i8*), i32 400, i1 false)
+  %0 = bitcast ptr %agg.result to ptr
+  tail call void @llvm.memcpy.p0.p0.i32(ptr align 4 %0, ptr align 4 @bigstruct, i32 400, i1 false)
   ret void
 }
 
@@ -286,7 +284,7 @@ define void @addri_test(i32 %ptr) #0 {
 ; V9-NEXT:    nop
 entry:
   %add = add nsw i32 %ptr, 4
-  %0 = inttoptr i32 %add to void ()*
+  %0 = inttoptr i32 %add to ptr
   tail call void %0() #1
   ret void
 }
@@ -297,9 +295,9 @@ entry:
 %struct.big = type { [100 x i32] }
 @bigstruct = global %struct.big zeroinitializer
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i1)
-declare void @sret_func(%struct.a* sret(%struct.a))
-declare i32 @callee_byval(i32** byval(i32*) %a)
+declare void @llvm.memcpy.p0.p0.i32(ptr, ptr, i32, i1)
+declare void @sret_func(ptr sret(%struct.a))
+declare i32 @callee_byval(ptr byval(ptr) %a)
 declare i32 @foo(i32)
 declare i32 @foo2(i32, i32)
 declare i32 @foo7(i32, i32, i32, i32, i32, i32, i32)

@@ -1,5 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -stress-early-ifcvt -amdgpu-early-ifcvt=1 -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -stress-early-ifcvt -amdgpu-early-ifcvt=1 -march=amdgcn -mcpu=gfx700 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCNX3 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -stress-early-ifcvt -amdgpu-early-ifcvt=1 -mtriple=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -stress-early-ifcvt -amdgpu-early-ifcvt=1 -mtriple=amdgcn -mcpu=gfx700 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCNX3 %s
 
 ; FIXME: Most of these cases that don't trigger because of broken cost
 ; heuristics. Should not need -stress-early-ifcvt

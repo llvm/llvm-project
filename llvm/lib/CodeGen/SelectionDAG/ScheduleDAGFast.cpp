@@ -118,7 +118,7 @@ void ScheduleDAGFast::Schedule() {
   LiveRegCycles.resize(TRI->getNumRegs(), 0);
 
   // Build the scheduling graph.
-  BuildSchedGraph(nullptr);
+  BuildSchedGraph();
 
   LLVM_DEBUG(dump());
 
@@ -296,28 +296,24 @@ SUnit *ScheduleDAGFast::CopyAndMoveSuccessors(SUnit *SU) {
       if (isNewLoad)
         AddPred(LoadSU, ChainPred);
     }
-    for (unsigned i = 0, e = LoadPreds.size(); i != e; ++i) {
-      const SDep &Pred = LoadPreds[i];
+    for (const SDep &Pred : LoadPreds) {
       RemovePred(SU, Pred);
       if (isNewLoad) {
         AddPred(LoadSU, Pred);
       }
     }
-    for (unsigned i = 0, e = NodePreds.size(); i != e; ++i) {
-      const SDep &Pred = NodePreds[i];
+    for (const SDep &Pred : NodePreds) {
       RemovePred(SU, Pred);
       AddPred(NewSU, Pred);
     }
-    for (unsigned i = 0, e = NodeSuccs.size(); i != e; ++i) {
-      SDep D = NodeSuccs[i];
+    for (SDep D : NodeSuccs) {
       SUnit *SuccDep = D.getSUnit();
       D.setSUnit(SU);
       RemovePred(SuccDep, D);
       D.setSUnit(NewSU);
       AddPred(SuccDep, D);
     }
-    for (unsigned i = 0, e = ChainSuccs.size(); i != e; ++i) {
-      SDep D = ChainSuccs[i];
+    for (SDep D : ChainSuccs) {
       SUnit *SuccDep = D.getSUnit();
       D.setSUnit(SU);
       RemovePred(SuccDep, D);
@@ -440,7 +436,7 @@ static MVT getPhysicalRegisterVT(SDNode *N, unsigned Reg,
 
 /// CheckForLiveRegDef - Return true and update live register vector if the
 /// specified register def of the specified SUnit clobbers any "live" registers.
-static bool CheckForLiveRegDef(SUnit *SU, unsigned Reg,
+static bool CheckForLiveRegDef(SUnit *SU, MCRegister Reg,
                                std::vector<SUnit *> &LiveRegDefs,
                                SmallSet<unsigned, 4> &RegAdded,
                                SmallVectorImpl<unsigned> &LRegs,
@@ -496,8 +492,7 @@ bool ScheduleDAGFast::DelayForLiveRegsBottomUp(SUnit *SU,
         --NumOps;  // Ignore the glue operand.
 
       for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
-        unsigned Flags =
-          cast<ConstantSDNode>(Node->getOperand(i))->getZExtValue();
+        unsigned Flags = Node->getConstantOperandVal(i);
         const InlineAsm::Flag F(Flags);
         unsigned NumVals = F.getNumOperandRegisters();
 
@@ -506,8 +501,8 @@ bool ScheduleDAGFast::DelayForLiveRegsBottomUp(SUnit *SU,
             F.isClobberKind()) {
           // Check for def of register or earlyclobber register.
           for (; NumVals; --NumVals, ++i) {
-            unsigned Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
-            if (Register::isPhysicalRegister(Reg))
+            Register Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
+            if (Reg.isPhysical())
               CheckForLiveRegDef(SU, Reg, LiveRegDefs, RegAdded, LRegs, TRI);
           }
         } else
@@ -627,11 +622,11 @@ void ScheduleDAGFast::ListScheduleBottomUp() {
     }
 
     // Add the nodes that aren't ready back onto the available list.
-    for (unsigned i = 0, e = NotReady.size(); i != e; ++i) {
-      NotReady[i]->isPending = false;
+    for (SUnit *SU : NotReady) {
+      SU->isPending = false;
       // May no longer be available due to backtracking.
-      if (NotReady[i]->isAvailable)
-        AvailableQueue.push(NotReady[i]);
+      if (SU->isAvailable)
+        AvailableQueue.push(SU);
     }
     NotReady.clear();
 
@@ -753,8 +748,7 @@ void ScheduleDAGLinearize::Schedule() {
       ++DAGSize;
   }
 
-  for (unsigned i = 0, e = Glues.size(); i != e; ++i) {
-    SDNode *Glue = Glues[i];
+  for (SDNode *Glue : Glues) {
     SDNode *GUser = GluedMap[Glue];
     unsigned Degree = Glue->getNodeId();
     unsigned UDegree = GUser->getNodeId();
@@ -762,7 +756,7 @@ void ScheduleDAGLinearize::Schedule() {
     // Glue user must be scheduled together with the glue operand. So other
     // users of the glue operand must be treated as its users.
     SDNode *ImmGUser = Glue->getGluedUser();
-    for (const SDNode *U : Glue->uses())
+    for (const SDNode *U : Glue->users())
       if (U == ImmGUser)
         --Degree;
     GUser->setNodeId(UDegree + Degree);
@@ -776,7 +770,7 @@ void ScheduleDAGLinearize::Schedule() {
 MachineBasicBlock*
 ScheduleDAGLinearize::EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
   InstrEmitter Emitter(DAG->getTarget(), BB, InsertPos);
-  DenseMap<SDValue, Register> VRBaseMap;
+  InstrEmitter::VRBaseMapType VRBaseMap;
 
   LLVM_DEBUG({ dbgs() << "\n*** Final schedule ***\n"; });
 

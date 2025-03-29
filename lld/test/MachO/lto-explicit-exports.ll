@@ -23,8 +23,8 @@
 ;; from the final symbol table.
 
 ; FULLLTO-SYMS:       SYMBOL TABLE:
-; FULLLTO-SYMS:       g     F __TEXT,__text _same_module_caller
 ; FULLLTO-SYMS:       g     F __TEXT,__text _refs_foo
+; FULLLTO-SYMS:       g     F __TEXT,__text _same_module_caller
 ; FULLLTO-SYMS:       *UND* dyld_stub_binder
 ; FULLLTO-SYMS-EMPTY:
 
@@ -47,8 +47,8 @@
 ; THINLTO-REFS-FOO: define dso_local void @refs_foo()
 
 ; THINLTO-SYMS: l     F __TEXT,__text .hidden _foo
-; THINLTO-SYMS: g     F __TEXT,__text _same_module_caller
 ; THINLTO-SYMS: g     F __TEXT,__text _refs_foo
+; THINLTO-SYMS: g     F __TEXT,__text _same_module_caller
 
 ;--- foo.ll
 

@@ -10,16 +10,16 @@
 ; be read in non-thinlto mode.
 ; RUN: opt < %s -passes='default<O2>' -pgo-kind=pgo-sample-use-pipeline -use-profiled-call-graph=0 -profile-file=%S/Inputs/ctxsplit.extbinary.afdo -S | FileCheck %s --check-prefix=NOTHINLTO
 
-; POSTLINK: define dso_local i32 @goo() {{.*}} !prof ![[ENTRY1:[0-9]+]] {
-; POSTLINK: define dso_local i32 @foo() {{.*}} !prof ![[ENTRY2:[0-9]+]] {
+; POSTLINK: define dso_local noundef i32 @goo() {{.*}} !prof ![[ENTRY1:[0-9]+]] {
+; POSTLINK: define dso_local noundef i32 @foo() {{.*}} !prof ![[ENTRY2:[0-9]+]] {
 ; POSTLINK: ![[ENTRY1]] = !{!"function_entry_count", i64 1001}
 ; POSTLINK: ![[ENTRY2]] = !{!"function_entry_count", i64 -1}
-; PRELINK: define dso_local i32 @goo() {{.*}} !prof ![[ENTRY1:[0-9]+]] {
-; PRELINK: define dso_local i32 @foo() {{.*}} !prof ![[ENTRY2:[0-9]+]] {
+; PRELINK: define dso_local noundef i32 @goo() {{.*}} !prof ![[ENTRY1:[0-9]+]] {
+; PRELINK: define dso_local noundef i32 @foo() {{.*}} !prof ![[ENTRY2:[0-9]+]] {
 ; PRELINK: ![[ENTRY1]] = !{!"function_entry_count", i64 1001}
 ; PRELINK: ![[ENTRY2]] = !{!"function_entry_count", i64 3001}
-; NOTHINLTO: define dso_local i32 @goo() {{.*}} !prof ![[ENTRY1:[0-9]+]] {
-; NOTHINLTO: define dso_local i32 @foo() {{.*}} !prof ![[ENTRY2:[0-9]+]] {
+; NOTHINLTO: define dso_local noundef i32 @goo() {{.*}} !prof ![[ENTRY1:[0-9]+]] {
+; NOTHINLTO: define dso_local noundef i32 @foo() {{.*}} !prof ![[ENTRY2:[0-9]+]] {
 ; NOTHINLTO: ![[ENTRY1]] = !{!"function_entry_count", i64 1001}
 ; NOTHINLTO: ![[ENTRY2]] = !{!"function_entry_count", i64 3001}
 

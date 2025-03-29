@@ -3,7 +3,7 @@
 # Lit requires a Python3 interpreter, let's be careful and fail early if it's
 # not present.
 if (NOT DEFINED Python3_EXECUTABLE)
-  message(FATAL_ERROR
+  message(SEND_ERROR
     "LLDB test suite requires a Python3 interpreter but none "
     "was found. Please install Python3 or disable tests with "
     "`LLDB_INCLUDE_TESTS=OFF`.")
@@ -11,13 +11,18 @@ endif()
 
 if(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS)
   message(STATUS "Enforcing strict test requirements for LLDB")
-  set(useful_python_modules
-    psutil # Lit uses psutil to do per-test timeouts.
-  )
+  # Lit uses psutil to do per-test timeouts.
+  set(useful_python_modules psutil packaging)
+
+  if(NOT WIN32)
+    # We no longer vendor pexpect and it is not used on Windows.
+    list(APPEND pexpect)
+  endif()
+
   foreach(module ${useful_python_modules})
     lldb_find_python_module(${module})
     if (NOT PY_${module}_FOUND)
-      message(FATAL_ERROR
+      message(SEND_ERROR
         "Python module '${module}' not found. Please install it via pip or via "
         "your operating system's package manager. Alternatively, disable "
         "strict testing requirements with "
@@ -61,10 +66,10 @@ if (LLDB_TEST_OBJC_GNUSTEP)
   find_package(GNUstepObjC)
   if (NOT GNUstepObjC_FOUND)
     if (LLDB_TEST_OBJC_GNUSTEP_DIR)
-      message(FATAL_ERROR "Failed to find GNUstep libobjc2 in ${LLDB_TEST_OBJC_GNUSTEP_DIR}. "
+      message(SEND_ERROR "Failed to find GNUstep libobjc2 in ${LLDB_TEST_OBJC_GNUSTEP_DIR}. "
                           "Please check LLDB_TEST_OBJC_GNUSTEP_DIR or turn off LLDB_TEST_OBJC_GNUSTEP.")
     else()
-      message(FATAL_ERROR "Failed to find GNUstep libobjc2. "
+      message(SEND_ERROR "Failed to find GNUstep libobjc2. "
                           "Please set LLDB_TEST_OBJC_GNUSTEP_DIR or turn off LLDB_TEST_OBJC_GNUSTEP.")
     endif()
   endif()
@@ -86,10 +91,11 @@ string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_TOOLS_DIR ${LLVM_RUNT
 
 # Create a custom target to track test dependencies.
 add_custom_target(lldb-test-depends)
-set_target_properties(lldb-test-depends PROPERTIES FOLDER "lldb misc")
+set_target_properties(lldb-test-depends PROPERTIES FOLDER "LLDB/Tests")
 
 # Create an alias for the legacy name of lldb-test-depends
 add_custom_target(lldb-test-deps)
+set_target_properties(lldb-test-deps PROPERTIES FOLDER "LLDB/Tests")
 add_dependencies(lldb-test-deps lldb-test-depends)
 
 function(add_lldb_test_dependency)
@@ -179,7 +185,7 @@ if(TARGET clang)
         set(LIBCXX_LIBRARY_DIR "${LLDB_TEST_LIBCXX_ROOT_DIR}/lib${LIBCXX_LIBDIR_SUFFIX}")
         set(LIBCXX_GENERATED_INCLUDE_DIR "${LLDB_TEST_LIBCXX_ROOT_DIR}/include/c++/v1")
       else()
-        message(FATAL_ERROR
+        message(SEND_ERROR
             "Couldn't find libcxx build in '${LLDB_TEST_LIBCXX_ROOT_DIR}'. To run the "
             "test-suite for a standalone LLDB build please build libcxx and point "
             "LLDB_TEST_LIBCXX_ROOT_DIR to it.")
@@ -188,7 +194,7 @@ if(TARGET clang)
       # We require libcxx for the test suite, so if we aren't building it,
       # provide a helpful error about how to resolve the situation.
       if(NOT LLDB_HAS_LIBCXX)
-        message(FATAL_ERROR
+        message(SEND_ERROR
           "LLDB test suite requires libc++, but it is currently disabled. "
           "Please add `libcxx` to `LLVM_ENABLE_RUNTIMES` or disable tests via "
           "`LLDB_INCLUDE_TESTS=OFF`.")
@@ -229,6 +235,8 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(LLDB_IS_64_BITS 1)
 endif()
 
+set(LLDB_TEST_SHELL_DISABLE_REMOTE OFF CACHE BOOL "Disable remote Shell tests execution")
+
 # These values are not canonicalized within LLVM.
 llvm_canonicalize_cmake_booleans(
   LLDB_BUILD_INTEL_PT
@@ -238,6 +246,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_SHARED_LIBS
   LLDB_HAS_LIBCXX
+  LLDB_TEST_SHELL_DISABLE_REMOTE
   LLDB_TOOL_LLDB_SERVER_BUILD
   LLDB_USE_SYSTEM_DEBUGSERVER
   LLDB_IS_64_BITS)
@@ -260,7 +269,6 @@ add_lit_testsuite(check-lldb "Running lldb lit test suite"
     lldb-api-test-deps
     lldb-shell-test-deps
     lldb-unit-test-deps)
-set_target_properties(check-lldb PROPERTIES FOLDER "lldb tests")
 
 if(LLDB_BUILT_STANDALONE)
   # This has to happen *AFTER* add_lit_testsuite.

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -S -emit-llvm -debug-info-kind=limited -o %t1.ll %s
-// RUN: %clang_cc1 -S -emit-llvm -debug-info-kind=limited -o %t2.ll %s
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -o %t1.ll %s
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -o %t2.ll %s
 // RUN: diff %t1.ll %t2.ll
 
 template <int N> struct C {

@@ -14,8 +14,8 @@
 ;; different inlined instances of a variable as the same variable.
 
 ; CHECK-LABEL: for.cond.cleanup: ; preds = %entry
-; CHECK-NEXT:    @llvm.dbg.value({{.+}}, metadata ![[P:[0-9]+]],{{.+}}), !dbg ![[DBG1:[0-9]+]]
-; CHECK-NEXT:    @llvm.dbg.value({{.+}}, metadata ![[P]],       {{.+}}), !dbg ![[DBG2:[0-9]+]]
+; CHECK-NEXT:    #dbg_value({{.+}}, ![[P:[0-9]+]],{{.+}},  ![[DBG1:[0-9]+]]
+; CHECK-NEXT:    #dbg_value({{.+}}, ![[P]],       {{.+}},  ![[DBG2:[0-9]+]]
 
 ; CHECK-DAG: ![[P]] = !DILocalVariable(name: "p",
 ; CHECK-DAG: ![[DBG1]] = !DILocation({{.+}}, inlinedAt: ![[IA1:[0-9]+]])

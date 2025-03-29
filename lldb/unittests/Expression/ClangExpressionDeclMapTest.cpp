@@ -35,7 +35,7 @@ struct FakeClangExpressionDeclMap : public ClangExpressionDeclMap {
     // The declaration needs to have '$' prefix in its name like every
     // persistent declaration and must be inside the scratch AST context.
     assert(d);
-    assert(d->getName().startswith("$"));
+    assert(d->getName().starts_with("$"));
     assert(&d->getASTContext() == &m_scratch_context->getASTContext());
     m_persistent_decls[d->getName()] = d;
   }

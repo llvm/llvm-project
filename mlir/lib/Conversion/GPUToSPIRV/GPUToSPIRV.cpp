@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -58,7 +59,8 @@ public:
 /// attribute on the surrounding FuncOp is used to replace the gpu::BlockDimOp.
 class WorkGroupSizeConversion : public OpConversionPattern<gpu::BlockDimOp> {
 public:
-  WorkGroupSizeConversion(TypeConverter &typeConverter, MLIRContext *context)
+  WorkGroupSizeConversion(const TypeConverter &typeConverter,
+                          MLIRContext *context)
       : OpConversionPattern(typeConverter, context, /*benefit*/ 10) {}
 
   LogicalResult
@@ -89,19 +91,6 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-class GPUModuleEndConversion final
-    : public OpConversionPattern<gpu::ModuleEndOp> {
-public:
-  using OpConversionPattern::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(gpu::ModuleEndOp endOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    rewriter.eraseOp(endOp);
-    return success();
-  }
-};
-
 /// Pattern to convert a gpu.return into a SPIR-V return.
 // TODO: This can go to DRR when GPU return has operands.
 class GPUReturnOpConversion final : public OpConversionPattern<gpu::ReturnOp> {
@@ -130,6 +119,15 @@ public:
 
   LogicalResult
   matchAndRewrite(gpu::ShuffleOp shuffleOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+class GPUPrintfConversion final : public OpConversionPattern<gpu::PrintfOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::PrintfOp gpuPrintfOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -485,46 +483,72 @@ static std::optional<Value> createGroupReduceOp(OpBuilder &builder,
                                                 Location loc, Value arg,
                                                 gpu::AllReduceOperation opType,
                                                 bool isGroup, bool isUniform) {
+  enum class ElemType { Float, Boolean, Integer };
   using FuncT = Value (*)(OpBuilder &, Location, Value, bool, bool);
   struct OpHandler {
-    gpu::AllReduceOperation type;
-    FuncT intFunc;
-    FuncT floatFunc;
+    gpu::AllReduceOperation kind;
+    ElemType elemType;
+    FuncT func;
   };
 
   Type type = arg.getType();
-  using MembptrT = FuncT OpHandler::*;
-  MembptrT handlerPtr;
+  ElemType elementType;
   if (isa<FloatType>(type)) {
-    handlerPtr = &OpHandler::floatFunc;
-  } else if (isa<IntegerType>(type)) {
-    handlerPtr = &OpHandler::intFunc;
+    elementType = ElemType::Float;
+  } else if (auto intTy = dyn_cast<IntegerType>(type)) {
+    elementType = (intTy.getIntOrFloatBitWidth() == 1) ? ElemType::Boolean
+                                                       : ElemType::Integer;
   } else {
     return std::nullopt;
   }
 
-  using ReduceType = gpu::AllReduceOperation;
-  namespace spv = spirv;
-  const OpHandler handlers[] = {
-      {ReduceType::ADD,
-       &createGroupReduceOpImpl<spv::GroupIAddOp, spv::GroupNonUniformIAddOp>,
-       &createGroupReduceOpImpl<spv::GroupFAddOp, spv::GroupNonUniformFAddOp>},
-      {ReduceType::MUL,
-       &createGroupReduceOpImpl<spv::GroupIMulKHROp,
-                                spv::GroupNonUniformIMulOp>,
-       &createGroupReduceOpImpl<spv::GroupFMulKHROp,
-                                spv::GroupNonUniformFMulOp>},
-      {ReduceType::MIN,
-       &createGroupReduceOpImpl<spv::GroupSMinOp, spv::GroupNonUniformSMinOp>,
-       &createGroupReduceOpImpl<spv::GroupFMinOp, spv::GroupNonUniformFMinOp>},
-      {ReduceType::MAX,
-       &createGroupReduceOpImpl<spv::GroupSMaxOp, spv::GroupNonUniformSMaxOp>,
-       &createGroupReduceOpImpl<spv::GroupFMaxOp, spv::GroupNonUniformFMaxOp>},
-  };
+  // TODO(https://github.com/llvm/llvm-project/issues/73459): The SPIR-V spec
+  // does not specify how -0.0 / +0.0 and NaN values are handled in *FMin/*FMax
+  // reduction ops. We should account possible precision requirements in this
+  // conversion.
 
-  for (auto &handler : handlers)
-    if (handler.type == opType)
-      return (handler.*handlerPtr)(builder, loc, arg, isGroup, isUniform);
+  using ReduceType = gpu::AllReduceOperation;
+  const OpHandler handlers[] = {
+      {ReduceType::ADD, ElemType::Integer,
+       &createGroupReduceOpImpl<spirv::GroupIAddOp,
+                                spirv::GroupNonUniformIAddOp>},
+      {ReduceType::ADD, ElemType::Float,
+       &createGroupReduceOpImpl<spirv::GroupFAddOp,
+                                spirv::GroupNonUniformFAddOp>},
+      {ReduceType::MUL, ElemType::Integer,
+       &createGroupReduceOpImpl<spirv::GroupIMulKHROp,
+                                spirv::GroupNonUniformIMulOp>},
+      {ReduceType::MUL, ElemType::Float,
+       &createGroupReduceOpImpl<spirv::GroupFMulKHROp,
+                                spirv::GroupNonUniformFMulOp>},
+      {ReduceType::MINUI, ElemType::Integer,
+       &createGroupReduceOpImpl<spirv::GroupUMinOp,
+                                spirv::GroupNonUniformUMinOp>},
+      {ReduceType::MINSI, ElemType::Integer,
+       &createGroupReduceOpImpl<spirv::GroupSMinOp,
+                                spirv::GroupNonUniformSMinOp>},
+      {ReduceType::MINNUMF, ElemType::Float,
+       &createGroupReduceOpImpl<spirv::GroupFMinOp,
+                                spirv::GroupNonUniformFMinOp>},
+      {ReduceType::MAXUI, ElemType::Integer,
+       &createGroupReduceOpImpl<spirv::GroupUMaxOp,
+                                spirv::GroupNonUniformUMaxOp>},
+      {ReduceType::MAXSI, ElemType::Integer,
+       &createGroupReduceOpImpl<spirv::GroupSMaxOp,
+                                spirv::GroupNonUniformSMaxOp>},
+      {ReduceType::MAXNUMF, ElemType::Float,
+       &createGroupReduceOpImpl<spirv::GroupFMaxOp,
+                                spirv::GroupNonUniformFMaxOp>},
+      {ReduceType::MINIMUMF, ElemType::Float,
+       &createGroupReduceOpImpl<spirv::GroupFMinOp,
+                                spirv::GroupNonUniformFMinOp>},
+      {ReduceType::MAXIMUMF, ElemType::Float,
+       &createGroupReduceOpImpl<spirv::GroupFMaxOp,
+                                spirv::GroupNonUniformFMaxOp>}};
+
+  for (const OpHandler &handler : handlers)
+    if (handler.kind == opType && elementType == handler.elemType)
+      return handler.func(builder, loc, arg, isGroup, isUniform);
 
   return std::nullopt;
 }
@@ -565,10 +589,16 @@ public:
   LogicalResult
   matchAndRewrite(gpu::SubgroupReduceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto opType = op.getOp();
-    auto result =
-        createGroupReduceOp(rewriter, op.getLoc(), adaptor.getValue(), opType,
-                            /*isGroup*/ false, op.getUniform());
+    if (op.getClusterSize())
+      return rewriter.notifyMatchFailure(
+          op, "lowering for clustered reduce not implemented");
+
+    if (!isa<spirv::ScalarType>(adaptor.getValue().getType()))
+      return rewriter.notifyMatchFailure(op, "reduction type is not a scalar");
+
+    auto result = createGroupReduceOp(rewriter, op.getLoc(), adaptor.getValue(),
+                                      adaptor.getOp(),
+                                      /*isGroup=*/false, adaptor.getUniform());
     if (!result)
       return failure();
 
@@ -577,15 +607,133 @@ public:
   }
 };
 
+// Formulate a unique variable/constant name after
+// searching in the module for existing variable/constant names.
+// This is to avoid name collision with existing variables.
+// Example: printfMsg0, printfMsg1, printfMsg2, ...
+static std::string makeVarName(spirv::ModuleOp moduleOp, llvm::Twine prefix) {
+  std::string name;
+  unsigned number = 0;
+
+  do {
+    name.clear();
+    name = (prefix + llvm::Twine(number++)).str();
+  } while (moduleOp.lookupSymbol(name));
+
+  return name;
+}
+
+/// Pattern to convert a gpu.printf op into a SPIR-V CLPrintf op.
+
+LogicalResult GPUPrintfConversion::matchAndRewrite(
+    gpu::PrintfOp gpuPrintfOp, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+
+  Location loc = gpuPrintfOp.getLoc();
+
+  auto moduleOp = gpuPrintfOp->getParentOfType<spirv::ModuleOp>();
+  if (!moduleOp)
+    return failure();
+
+  // SPIR-V global variable is used to initialize printf
+  // format string value, if there are multiple printf messages,
+  // each global var needs to be created with a unique name.
+  std::string globalVarName = makeVarName(moduleOp, llvm::Twine("printfMsg"));
+  spirv::GlobalVariableOp globalVar;
+
+  IntegerType i8Type = rewriter.getI8Type();
+  IntegerType i32Type = rewriter.getI32Type();
+
+  // Each character of printf format string is
+  // stored as a spec constant. We need to create
+  // unique name for this spec constant like
+  // @printfMsg0_sc0, @printfMsg0_sc1, ... by searching in the module
+  // for existing spec constant names.
+  auto createSpecConstant = [&](unsigned value) {
+    auto attr = rewriter.getI8IntegerAttr(value);
+    std::string specCstName =
+        makeVarName(moduleOp, llvm::Twine(globalVarName) + "_sc");
+
+    return rewriter.create<spirv::SpecConstantOp>(
+        loc, rewriter.getStringAttr(specCstName), attr);
+  };
+  {
+    Operation *parent =
+        SymbolTable::getNearestSymbolTable(gpuPrintfOp->getParentOp());
+
+    ConversionPatternRewriter::InsertionGuard guard(rewriter);
+
+    Block &entryBlock = *parent->getRegion(0).begin();
+    rewriter.setInsertionPointToStart(
+        &entryBlock); // insertion point at module level
+
+    // Create Constituents with SpecConstant by scanning format string
+    // Each character of format string is stored as a spec constant
+    // and then these spec constants are used to create a
+    // SpecConstantCompositeOp.
+    llvm::SmallString<20> formatString(adaptor.getFormat());
+    formatString.push_back('\0'); // Null terminate for C.
+    SmallVector<Attribute, 4> constituents;
+    for (char c : formatString) {
+      spirv::SpecConstantOp cSpecConstantOp = createSpecConstant(c);
+      constituents.push_back(SymbolRefAttr::get(cSpecConstantOp));
+    }
+
+    // Create SpecConstantCompositeOp to initialize the global variable
+    size_t contentSize = constituents.size();
+    auto globalType = spirv::ArrayType::get(i8Type, contentSize);
+    spirv::SpecConstantCompositeOp specCstComposite;
+    // There will be one SpecConstantCompositeOp per printf message/global var,
+    // so no need do lookup for existing ones.
+    std::string specCstCompositeName =
+        (llvm::Twine(globalVarName) + "_scc").str();
+
+    specCstComposite = rewriter.create<spirv::SpecConstantCompositeOp>(
+        loc, TypeAttr::get(globalType),
+        rewriter.getStringAttr(specCstCompositeName),
+        rewriter.getArrayAttr(constituents));
+
+    auto ptrType = spirv::PointerType::get(
+        globalType, spirv::StorageClass::UniformConstant);
+
+    // Define a GlobalVarOp initialized using specialized constants
+    // that is used to specify the printf format string
+    // to be passed to the SPIRV CLPrintfOp.
+    globalVar = rewriter.create<spirv::GlobalVariableOp>(
+        loc, ptrType, globalVarName, FlatSymbolRefAttr::get(specCstComposite));
+
+    globalVar->setAttr("Constant", rewriter.getUnitAttr());
+  }
+  // Get SSA value of Global variable and create pointer to i8 to point to
+  // the format string.
+  Value globalPtr = rewriter.create<spirv::AddressOfOp>(loc, globalVar);
+  Value fmtStr = rewriter.create<spirv::BitcastOp>(
+      loc,
+      spirv::PointerType::get(i8Type, spirv::StorageClass::UniformConstant),
+      globalPtr);
+
+  // Get printf arguments.
+  auto printfArgs = llvm::to_vector_of<Value, 4>(adaptor.getArgs());
+
+  rewriter.create<spirv::CLPrintfOp>(loc, i32Type, fmtStr, printfArgs);
+
+  // Need to erase the gpu.printf op as gpu.printf does not use result vs
+  // spirv::CLPrintfOp has i32 resultType so cannot replace with new SPIR-V
+  // printf op.
+  rewriter.eraseOp(gpuPrintfOp);
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // GPU To SPIRV Patterns.
 //===----------------------------------------------------------------------===//
 
-void mlir::populateGPUToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+void mlir::populateGPUToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                       RewritePatternSet &patterns) {
   patterns.add<
       GPUBarrierConversion, GPUFuncOpConversion, GPUModuleConversion,
-      GPUModuleEndConversion, GPUReturnOpConversion, GPUShuffleConversion,
+      GPUReturnOpConversion, GPUShuffleConversion,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
       LaunchConfigConversion<gpu::GridDimOp, spirv::BuiltIn::NumWorkgroups>,
       LaunchConfigConversion<gpu::BlockDimOp, spirv::BuiltIn::WorkgroupSize>,
@@ -600,5 +748,6 @@ void mlir::populateGPUToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
       SingleDimLaunchConfigConversion<gpu::SubgroupSizeOp,
                                       spirv::BuiltIn::SubgroupSize>,
       WorkGroupSizeConversion, GPUAllReduceConversion,
-      GPUSubgroupReduceConversion>(typeConverter, patterns.getContext());
+      GPUSubgroupReduceConversion, GPUPrintfConversion>(typeConverter,
+                                                        patterns.getContext());
 }

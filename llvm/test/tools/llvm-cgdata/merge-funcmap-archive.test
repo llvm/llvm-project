@@ -1,0 +1,83 @@
+# REQUIRES: shell, aarch64-registered-target
+# UNSUPPORTED: system-windows
+
+# Merge an archive that has two object files having cgdata (__llvm_merge)
+
+RUN: split-file %s %t
+
+# Synthesize raw cgdata without the header (32 byte) from the indexed cgdata.
+RUN: llvm-cgdata --convert --format binary %t/raw-1.cgtext -o %t/raw-1.cgdata
+RUN: od -t x1 -j 32 -An %t/raw-1.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-1-bytes.txt
+RUN: sed "s/<RAW_1_BYTES>/$(cat %t/raw-1-bytes.txt)/g" %t/merge-1-template.ll > %t/merge-1.ll
+RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-1.ll -o %t/merge-1.o
+
+# Synthesize raw cgdata without the header (32 byte) from the indexed cgdata.
+RUN: llvm-cgdata --convert --format binary %t/raw-2.cgtext -o %t/raw-2.cgdata
+RUN: od -t x1 -j 32 -An %t/raw-2.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-2-bytes.txt
+RUN: sed "s/<RAW_2_BYTES>/$(cat %t/raw-2-bytes.txt)/g" %t/merge-2-template.ll > %t/merge-2.ll
+RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-2.ll -o %t/merge-2.o
+
+# Make an archive from two object files
+RUN: llvm-ar rcs %t/merge-archive.a %t/merge-1.o %t/merge-2.o
+
+# Merge the archive into the codegen data file.
+RUN: llvm-cgdata --merge --skip-trim %t/merge-archive.a -o %t/merge-archive.cgdata
+RUN: llvm-cgdata --show %t/merge-archive.cgdata | FileCheck %s
+
+RUN: llvm-cgdata --show %t/merge-archive.cgdata| FileCheck %s
+CHECK: Stable function map:
+CHECK-NEXT:  Unique hash Count: 1
+CHECK-NEXT:  Total function Count: 2
+CHECK-NEXT:  Mergeable function Count: 2
+
+RUN: llvm-cgdata --convert %t/merge-archive.cgdata| FileCheck %s --check-prefix=MAP
+MAP: # Stable function map
+MAP-NEXT: :stable_function_map
+MAP-NEXT: ---
+MAP-NEXT: - Hash:            1
+MAP-NEXT:   FunctionName:    Func1
+MAP-NEXT:   ModuleName:      Mod1
+MAP-NEXT:   InstCount:       2
+MAP-NEXT:   IndexOperandHashes:
+MAP-NEXT:     - InstIndex:       0
+MAP-NEXT:       OpndIndex:       1
+MAP-NEXT:       OpndHash:        3
+MAP-NEXT: - Hash:            1
+MAP-NEXT:   FunctionName:    Func2
+MAP-NEXT:   ModuleName:      Mod1
+MAP-NEXT:   InstCount:       2
+MAP-NEXT:   IndexOperandHashes:
+MAP-NEXT:     - InstIndex:       0
+MAP-NEXT:       OpndIndex:       1
+MAP-NEXT:       OpndHash:        4
+MAP-NEXT: ...
+
+;--- raw-1.cgtext
+:stable_function_map
+- Hash:            1
+  FunctionName:    Func2
+  ModuleName:      Mod1
+  InstCount:       2
+  IndexOperandHashes:
+    - InstIndex:       0
+      OpndIndex:       1
+      OpndHash:        4
+...
+
+;--- merge-1-template.ll
+@.data = private unnamed_addr constant [60 x i8] c"<RAW_1_BYTES>", section "__DATA,__llvm_merge"
+
+;--- raw-2.cgtext
+:stable_function_map
+- Hash:            1
+  FunctionName:    Func1
+  ModuleName:      Mod1
+  InstCount:       2
+  IndexOperandHashes:
+    - InstIndex:       0
+      OpndIndex:       1
+      OpndHash:        3
+...
+
+;--- merge-2-template.ll
+@.data = private unnamed_addr constant [60 x i8] c"<RAW_2_BYTES>", section "__DATA,__llvm_merge"

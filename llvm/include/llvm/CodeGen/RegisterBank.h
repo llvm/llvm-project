@@ -13,7 +13,7 @@
 #ifndef LLVM_CODEGEN_REGISTERBANK_H
 #define LLVM_CODEGEN_REGISTERBANK_H
 
-#include "llvm/ADT/BitVector.h"
+#include <cstdint>
 
 namespace llvm {
 // Forward declarations.
@@ -28,19 +28,18 @@ class TargetRegisterInfo;
 class RegisterBank {
 private:
   unsigned ID;
+  unsigned NumRegClasses;
   const char *Name;
-  BitVector ContainedRegClasses;
-
-  /// Sentinel value used to recognize register bank not properly
-  /// initialized yet.
-  static const unsigned InvalidID;
+  const uint32_t *CoveredClasses;
 
   /// Only the RegisterBankInfo can initialize RegisterBank properly.
   friend RegisterBankInfo;
 
 public:
-  RegisterBank(unsigned ID, const char *Name, const uint32_t *CoveredClasses,
-               unsigned NumRegClasses);
+  constexpr RegisterBank(unsigned ID, const char *Name,
+                         const uint32_t *CoveredClasses, unsigned NumRegClasses)
+      : ID(ID), NumRegClasses(NumRegClasses), Name(Name),
+        CoveredClasses(CoveredClasses) {}
 
   /// Get the identifier of this register bank.
   unsigned getID() const { return ID; }
@@ -48,9 +47,6 @@ public:
   /// Get a user friendly name of this register bank.
   /// Should be used only for debugging purposes.
   const char *getName() const { return Name; }
-
-  /// Check whether this instance is ready to be used.
-  bool isValid() const;
 
   /// Check if this register bank is valid. In other words,
   /// if it has been properly constructed.
@@ -63,7 +59,6 @@ public:
   /// Check whether this register bank covers \p RC.
   /// In other words, check if this register bank fully covers
   /// the registers that \p RC contains.
-  /// \pre isValid()
   bool covers(const TargetRegisterClass &RC) const;
 
   /// Check whether \p OtherRB is the same as this.

@@ -12,11 +12,9 @@ define void @umin_unsigned_check(i64 %n) {
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,4099) S: [1,4099) Exits: (2 + (4096 umin %n))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @umin_unsigned_check
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (1 + (4096 umin %n))<nuw><nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 4097
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4097
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (1 + (4096 umin %n))<nuw><nsw>
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (1 + (4096 umin %n))<nuw><nsw>
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %min.cmp = icmp ult i64 4096, %n
@@ -43,11 +41,9 @@ define void @umin_signed_check(i64 %n) {
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,4099) S: [1,4099) Exits: (2 + (4096 umin %n))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @umin_signed_check
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (1 + (4096 umin %n))<nuw><nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 4097
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4097
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (1 + (4096 umin %n))<nuw><nsw>
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (1 + (4096 umin %n))<nuw><nsw>
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %min.cmp = icmp ult i64 4096, %n
@@ -74,11 +70,9 @@ define void @smin_signed_check(i64 %n) {
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,4099) S: [1,4099) Exits: (1 + (0 smax (1 + (4096 smin %n))<nsw>))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @smin_signed_check
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (0 smax (1 + (4096 smin %n))<nsw>)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 4097
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4097
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (0 smax (1 + (4096 smin %n))<nsw>)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (0 smax (1 + (4096 smin %n))<nsw>)
-; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %min.cmp = icmp slt i64 4096, %n
@@ -107,7 +101,6 @@ define void @smin_unsigned_check(i64 %n) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   %min.cmp = icmp slt i64 4096, %n

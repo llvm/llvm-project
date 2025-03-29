@@ -20,17 +20,17 @@
 
 void foo() {}
 
-int main(int, char**)
-{
-    void *p = nullptr;
-    (void) std::launder((               void *) nullptr);
-    (void) std::launder((const          void *) nullptr);
-    (void) std::launder((      volatile void *) nullptr);
-    (void) std::launder((const volatile void *) nullptr);  // expected-error-re@new:* 4 {{static assertion failed{{.*}}can't launder cv-void}}
-    // expected-error@new:* 0-4 {{void pointer argument to '__builtin_launder' is not allowed}}
+int main(int, char**) {
+  void* p = nullptr;
+  (void)std::launder((void*)nullptr);
+  (void)std::launder((const void*)nullptr);
+  (void)std::launder((volatile void*)nullptr);
+  (void)std::launder(
+      (const volatile void*)nullptr); // expected-error-re@*:* 4 {{static assertion failed{{.*}}can't launder cv-void}}
+  // expected-error@*:* 0-4 {{void pointer argument to '__builtin_launder' is not allowed}}
 
-    (void) std::launder(foo);                              // expected-error-re@new:* 1 {{static assertion failed{{.*}}can't launder functions}}
-    // expected-error@new:* 0-1 {{function pointer argument to '__builtin_launder' is not allowed}}
+  (void)std::launder(foo); // expected-error-re@*:* 1 {{static assertion failed{{.*}}can't launder functions}}
+  // expected-error@*:* 0-1 {{function pointer argument to '__builtin_launder' is not allowed}}
 
   return 0;
 }

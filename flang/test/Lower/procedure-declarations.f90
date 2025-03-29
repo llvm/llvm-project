@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Test procedure declarations. Change appearance order of definition and usages
 ! (passing a procedure and calling it), with and without definitions.

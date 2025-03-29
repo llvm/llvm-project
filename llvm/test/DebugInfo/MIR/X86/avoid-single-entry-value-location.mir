@@ -10,10 +10,10 @@
   target triple = "x86_64-unknown-linux-gnu"
   
   ; Function Attrs: noinline nounwind uwtable
-  define dso_local void @fn1(i8* %x) local_unnamed_addr !dbg !12 {
+  define dso_local void @fn1(ptr %x) local_unnamed_addr !dbg !12 {
   entry:
-    call void @llvm.dbg.value(metadata i8* %x, metadata !16, metadata !DIExpression()), !dbg !18
-    %0 = ptrtoint i8* %x to i64, !dbg !18
+    call void @llvm.dbg.value(metadata ptr %x, metadata !16, metadata !DIExpression()), !dbg !18
+    %0 = ptrtoint ptr %x to i64, !dbg !18
     %y = trunc i64 %0 to i32, !dbg !18
     call void @llvm.dbg.value(metadata i32 %y, metadata !17, metadata !DIExpression()), !dbg !18
     tail call void @fn2(i32 7), !dbg !18

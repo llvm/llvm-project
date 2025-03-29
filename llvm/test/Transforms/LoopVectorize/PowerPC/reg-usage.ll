@@ -79,7 +79,7 @@ for.body:                                         ; preds = %for.body, %entry
 define i64 @bar(ptr nocapture %a) {
 ; CHECK-LABEL: bar
 
-; CHECK: Executing best plan with VF=2, UF=12
+; CHECK: Executing best plan with VF=2, UF=8
 
 entry:
   br label %for.body
@@ -107,7 +107,7 @@ for.body:
 
 define void @hoo(i32 %n) {
 ; CHECK-LABEL: hoo
-; CHECK: Executing best plan with VF=1, UF=12
+; CHECK: Executing best plan with VF=1, UF=8
 
 entry:
   br label %for.body
@@ -179,7 +179,7 @@ define void @double_(ptr nocapture %A, i32 %n) nounwind uwtable ssp {
 
 ;CHECK-PWR9: LV(REG): VF = 1
 ;CHECK-PWR9: LV(REG): Found max usage: 2 item
-;CHECK-PWR9-NEXT: LV(REG): RegisterClass: PPC::GPRRC, 2 registers
+;CHECK-PWR9-NEXT: LV(REG): RegisterClass: PPC::GPRRC, 3 registers
 ;CHECK-PWR9-NEXT: LV(REG): RegisterClass: PPC::VSXRC, 5 registers
 ;CHECK-PWR9: LV(REG): Found invariant usage: 1 item
 ;CHECK-PWR9-NEXT: LV(REG): RegisterClass: PPC::GPRRC, 1 registers
@@ -248,7 +248,7 @@ define void @fp16_(ptr nocapture readonly %pIn, ptr nocapture %pOut, i32 %numRow
 ;CHECK-LABEL: fp16_
 ;CHECK: LV(REG): VF = 1
 ;CHECK: LV(REG): Found max usage: 2 item
-;CHECK: LV(REG): RegisterClass: PPC::GPRRC, 4 registers
+;CHECK: LV(REG): RegisterClass: PPC::GPRRC, 5 registers
 ;CHECK: LV(REG): RegisterClass: PPC::VSXRC, 2 registers
 entry:
   %tmp.0.extract.trunc = trunc i32 %scale.coerce to i16

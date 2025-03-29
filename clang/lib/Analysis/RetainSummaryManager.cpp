@@ -174,7 +174,7 @@ static bool isOSObjectPtr(QualType QT) {
 }
 
 static bool isISLObjectRef(QualType Ty) {
-  return StringRef(Ty.getAsString()).startswith("isl_");
+  return StringRef(Ty.getAsString()).starts_with("isl_");
 }
 
 static bool isOSIteratorSubclass(const Decl *D) {
@@ -255,13 +255,13 @@ RetainSummaryManager::getSummaryForOSObject(const FunctionDecl *FD,
       // TODO: Add support for the slightly common *Matching(table) idiom.
       // Cf. IOService::nameMatching() etc. - these function have an unusual
       // contract of returning at +0 or +1 depending on their last argument.
-      if (FName.endswith("Matching")) {
+      if (FName.ends_with("Matching")) {
         return getPersistentStopSummary();
       }
 
       // All objects returned with functions *not* starting with 'get',
       // or iterators, are returned at +1.
-      if ((!FName.startswith("get") && !FName.startswith("Get")) ||
+      if ((!FName.starts_with("get") && !FName.starts_with("Get")) ||
           isOSIteratorSubclass(PD)) {
         return getOSSummaryCreateRule(FD);
       } else {
@@ -392,9 +392,9 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
     return getPersistentSummary(RetEffect::MakeNoRet(),
                                 ScratchArgs,
                                 ArgEffect(DoNothing), ArgEffect(DoNothing));
-  } else if (FName.startswith("NSLog")) {
+  } else if (FName.starts_with("NSLog")) {
     return getDoNothingSummary();
-  } else if (FName.startswith("NS") && FName.contains("Insert")) {
+  } else if (FName.starts_with("NS") && FName.contains("Insert")) {
     // Allowlist NSXXInsertXX, for example NSMapInsertIfAbsent, since they can
     // be deallocated by NSMapRemove.
     ScratchArgs = AF.add(ScratchArgs, 1, ArgEffect(StopTracking));
@@ -453,9 +453,9 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
 
   // Check for release functions, the only kind of functions that we care
   // about that don't return a pointer type.
-  if (FName.startswith("CG") || FName.startswith("CF")) {
+  if (FName.starts_with("CG") || FName.starts_with("CF")) {
     // Test for 'CGCF'.
-    FName = FName.substr(FName.startswith("CGCF") ? 4 : 2);
+    FName = FName.substr(FName.starts_with("CGCF") ? 4 : 2);
 
     if (isRelease(FD, FName))
       return getUnarySummary(FT, DecRef);
@@ -1098,7 +1098,7 @@ RetainSummaryManager::getStandardMethodSummary(const ObjCMethodDecl *MD,
   if (S.isKeywordSelector()) {
     for (unsigned i = 0, e = S.getNumArgs(); i != e; ++i) {
       StringRef Slot = S.getNameForSlot(i);
-      if (Slot.substr(Slot.size() - 8).equals_insensitive("delegate")) {
+      if (Slot.ends_with_insensitive("delegate")) {
         if (ResultEff == ObjCInitRetE)
           ResultEff = RetEffect::MakeNoRetHard();
         else

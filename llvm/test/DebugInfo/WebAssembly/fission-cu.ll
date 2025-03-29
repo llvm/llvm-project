@@ -62,7 +62,7 @@ source_filename = "test/DebugInfo/WebAssembly/fission-cu.ll"
 ; CHECK-NEXT: DW_AT_stmt_list [DW_FORM_sec_offset]   (0x00000000)
 ; CHECK-NEXT: DW_AT_comp_dir [DW_FORM_strp]     ( .debug_str[0x00000000] = "/usr/local/google/home/echristo/tmp")
 ; CHECK-NEXT: DW_AT_GNU_dwo_name [DW_FORM_strp] ( .debug_str[0x00000024] = "baz.dwo")
-; CHECK-NEXT: DW_AT_GNU_dwo_id [DW_FORM_data8]  (0x1f1f859683d49324)
+; CHECK-NEXT: DW_AT_GNU_dwo_id [DW_FORM_data8]  ([[HASH:0x[0-9a-f]*]])
 
 ; Check that the rest of the compile units have information.
 ; CHECK: .debug_info.dwo contents:
@@ -74,7 +74,7 @@ source_filename = "test/DebugInfo/WebAssembly/fission-cu.ll"
 ; CHECK-NOT: DW_AT_low_pc
 ; CHECK-NOT: DW_AT_stmt_list
 ; CHECK-NOT: DW_AT_comp_dir
-; CHECK: DW_AT_GNU_dwo_id [DW_FORM_data8]  (0x1f1f859683d49324)
+; CHECK: DW_AT_GNU_dwo_id [DW_FORM_data8]  ([[HASH]])
 ; CHECK: DW_TAG_variable
 ; CHECK: DW_AT_name [DW_FORM_GNU_str_index]     (indexed (00000000) string = "a")
 ; CHECK: DW_AT_type [DW_FORM_ref4]       (cu + 0x{{[0-9a-f]*}} => {[[TYPE:0x[0-9a-f]*]]}

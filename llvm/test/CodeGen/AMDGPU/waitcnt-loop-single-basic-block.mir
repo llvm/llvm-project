@@ -1,6 +1,6 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=si-insert-waitcnts -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=si-insert-waitcnts -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
 
-# Check that the waitcnt propogates info in the case of a single basic block loop
+# Check that the waitcnt propagates info in the case of a single basic block loop
 
 # GCN-LABEL: waitcnt-loop-single-basic-block
 # GCN: bb.0

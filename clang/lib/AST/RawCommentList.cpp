@@ -15,8 +15,6 @@
 #include "clang/AST/CommentParser.h"
 #include "clang/AST/CommentSema.h"
 #include "clang/Basic/CharInfo.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Allocator.h"
 
 using namespace clang;
@@ -141,8 +139,8 @@ RawComment::RawComment(const SourceManager &SourceMgr, SourceRange SR,
     Kind = K.first;
     IsTrailingComment |= K.second;
 
-    IsAlmostTrailingComment = RawText.startswith("//<") ||
-                                 RawText.startswith("/*<");
+    IsAlmostTrailingComment =
+        RawText.starts_with("//<") || RawText.starts_with("/*<");
   } else {
     Kind = RCK_Merged;
     IsTrailingComment =
@@ -289,13 +287,13 @@ void RawCommentList::addComment(const RawComment &RC,
 
   // If this is the first Doxygen comment, save it (because there isn't
   // anything to merge it with).
-  if (OrderedComments[CommentFile].empty()) {
-    OrderedComments[CommentFile][CommentOffset] =
-        new (Allocator) RawComment(RC);
+  auto &OC = OrderedComments[CommentFile];
+  if (OC.empty()) {
+    OC[CommentOffset] = new (Allocator) RawComment(RC);
     return;
   }
 
-  const RawComment &C1 = *OrderedComments[CommentFile].rbegin()->second;
+  const RawComment &C1 = *OC.rbegin()->second;
   const RawComment &C2 = RC;
 
   // Merge comments only if there is only whitespace between them.

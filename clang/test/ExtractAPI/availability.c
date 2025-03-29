@@ -1,466 +1,101 @@
 // RUN: rm -rf %t
-// RUN: split-file %s %t
-// RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
-// RUN: %t/reference.output.json.in >> %t/reference.output.json
-// RUN: %clang_cc1 -extract-api --product-name=Availability -triple arm64-apple-macosx -x c-header %t/input.h -o %t/output.json -verify
+// RUN: %clang_cc1 -extract-api --pretty-sgf --emit-sgf-symbol-labels-for-testing -triple arm64-apple-macosx \
+// RUN:   -x c-header %s -o %t/output.symbols.json -verify
 
-// Generator version is not consistent across test runs, normalize it.
-// RUN: sed -e "s@\"generator\": \".*\"@\"generator\": \"?\"@g" \
-// RUN: %t/output.json >> %t/output-normalized.json
-// RUN: diff %t/reference.output.json %t/output-normalized.json
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix A
+void a(void) __attribute__((availability(macos, introduced=12.0)));
+// A-LABEL: "!testLabel": "c:@F@a"
+// A:      "availability": [
+// A-NEXT:   {
+// A-NEXT:     "domain": "macos",
+// A-NEXT:     "introduced": {
+// A-NEXT:       "major": 12,
+// A-NEXT:       "minor": 0,
+// A-NEXT:       "patch": 0
+// A-NEXT:     }
+// A-NEXT:   }
+// A-NEXT: ]
 
-// CHECK-NOT: error:
-// CHECK-NOT: warning:
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix B
+void b(void) __attribute__((availability(macos, introduced=11.0, deprecated=12.0, obsoleted=20.0)));
+// B-LABEL: "!testLabel": "c:@F@b"
+// B:      "availability": [
+// B-NEXT:   {
+// B-NEXT:     "deprecated": {
+// B-NEXT:       "major": 12,
+// B-NEXT:       "minor": 0,
+// B-NEXT:       "patch": 0
+// B-NEXT:     },
+// B-NEXT:     "domain": "macos",
+// B-NEXT:     "introduced": {
+// B-NEXT:       "major": 11,
+// B-NEXT:       "minor": 0,
+// B-NEXT:       "patch": 0
+// B-NEXT:     },
+// B-NEXT:     "obsoleted": {
+// B-NEXT:       "major": 20,
+// B-NEXT:       "minor": 0,
+// B-NEXT:       "patch": 0
+// B-NEXT:     }
+// B-NEXT:   }
+// B-NEXT: ]
 
-//--- input.h
-void a(void);
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix E
+void c(void) __attribute__((availability(macos, introduced=11.0, deprecated=12.0, obsoleted=20.0))) __attribute__((availability(ios, introduced=13.0)));
+// C-LABEL: "!testLabel": "c:@F@c"
+// C:       "availability": [
+// C-NEXT:    {
+// C-NEXT:      "deprecated": {
+// C-NEXT:        "major": 12,
+// C-NEXT:        "minor": 0,
+// C-NEXT:        "patch": 0
+// C-NEXT:      },
+// C-NEXT:      "domain": "macos",
+// C-NEXT:      "introduced": {
+// C-NEXT:        "major": 11,
+// C-NEXT:        "minor": 0,
+// C-NEXT:        "patch": 0
+// C-NEXT:      },
+// C-NEXT:      "obsoleted": {
+// C-NEXT:        "major": 20,
+// C-NEXT:        "minor": 0,
+// C-NEXT:        "patch": 0
+// C-NEXT:      }
+// C-NEXT:    }
+// C-NEXT: ]
 
-void b(void) __attribute__((availability(macos, introduced=12.0)));
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix D
+void d(void) __attribute__((deprecated)) __attribute__((availability(macos, introduced=11.0)));
+// D-LABEL: "!testLabel": "c:@F@d"
+// D:      "availability": [
+// D-NEXT:   {
+// D-NEXT:     "domain": "*",
+// D-NEXT:     "isUnconditionallyDeprecated": true
+// D-NEXT:   },
+// D-NEXT:   {
+// D-NEXT:     "domain": "macos",
+// D-NEXT:     "introduced": {
+// D-NEXT:       "major": 11,
+// D-NEXT:       "minor": 0,
+// D-NEXT:       "patch": 0
+// D-NEXT:     }
+// D-NEXT:   }
+// D-NEXT: ]
 
-void c(void) __attribute__((availability(macos, introduced=11.0, deprecated=12.0, obsoleted=20.0)));
+// This symbol should be dropped as it's unconditionally unavailable
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix E
+void e(void) __attribute__((unavailable)) __attribute__((availability(macos, introduced=11.0)));
+// E-NOT: "!testLabel": "c:@F@e"
 
-void d(void) __attribute__((availability(macos, introduced=11.0, deprecated=12.0, obsoleted=20.0))) __attribute__((availability(ios, introduced=13.0)));
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix F
+void f(void) __attribute__((availability(macos, unavailable)));
+// F-LABEL: "!testLabel": "c:@F@f"
+// F:      "availability": [
+// F-NEXT:   {
+// F-NEXT:     "domain": "macos",
+// F-NEXT:     "isUnconditionallyUnavailable": true
+// F-NEXT:   }
+// F-NEXT: ]
 
-void e(void) __attribute__((deprecated)) __attribute__((availability(macos, introduced=11.0)));
+// expected-no-diagnostics
 
-void f(void) __attribute__((unavailable)) __attribute__((availability(macos, introduced=11.0)));
-
-void d(void) __attribute__((availability(tvos, introduced=15.0)));
-
-void e(void) __attribute__((availability(tvos, unavailable)));
-
-///expected-no-diagnostics
-
-//--- reference.output.json.in
-{
-  "metadata": {
-    "formatVersion": {
-      "major": 0,
-      "minor": 5,
-      "patch": 3
-    },
-    "generator": "?"
-  },
-  "module": {
-    "name": "Availability",
-    "platform": {
-      "architecture": "arm64",
-      "operatingSystem": {
-        "minimumVersion": {
-          "major": 11,
-          "minor": 0,
-          "patch": 0
-        },
-        "name": "macosx"
-      },
-      "vendor": "apple"
-    }
-  },
-  "relationships": [],
-  "symbols": [
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:v",
-          "spelling": "void"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "a"
-        },
-        {
-          "kind": "text",
-          "spelling": "();"
-        }
-      ],
-      "functionSignature": {
-        "returns": [
-          {
-            "kind": "typeIdentifier",
-            "preciseIdentifier": "c:v",
-            "spelling": "void"
-          }
-        ]
-      },
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:@F@a"
-      },
-      "kind": {
-        "displayName": "Function",
-        "identifier": "c.func"
-      },
-      "location": {
-        "position": {
-          "character": 6,
-          "line": 1
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "a"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "a"
-          }
-        ],
-        "title": "a"
-      },
-      "pathComponents": [
-        "a"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "availability": [
-        {
-          "domain": "macos",
-          "introducedVersion": {
-            "major": 12,
-            "minor": 0,
-            "patch": 0
-          }
-        }
-      ],
-      "declarationFragments": [
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:v",
-          "spelling": "void"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "b"
-        },
-        {
-          "kind": "text",
-          "spelling": "();"
-        }
-      ],
-      "functionSignature": {
-        "returns": [
-          {
-            "kind": "typeIdentifier",
-            "preciseIdentifier": "c:v",
-            "spelling": "void"
-          }
-        ]
-      },
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:@F@b"
-      },
-      "kind": {
-        "displayName": "Function",
-        "identifier": "c.func"
-      },
-      "location": {
-        "position": {
-          "character": 6,
-          "line": 3
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "b"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "b"
-          }
-        ],
-        "title": "b"
-      },
-      "pathComponents": [
-        "b"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "availability": [
-        {
-          "deprecatedVersion": {
-            "major": 12,
-            "minor": 0,
-            "patch": 0
-          },
-          "domain": "macos",
-          "introducedVersion": {
-            "major": 11,
-            "minor": 0,
-            "patch": 0
-          },
-          "obsoletedVersion": {
-            "major": 20,
-            "minor": 0,
-            "patch": 0
-          }
-        }
-      ],
-      "declarationFragments": [
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:v",
-          "spelling": "void"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "c"
-        },
-        {
-          "kind": "text",
-          "spelling": "();"
-        }
-      ],
-      "functionSignature": {
-        "returns": [
-          {
-            "kind": "typeIdentifier",
-            "preciseIdentifier": "c:v",
-            "spelling": "void"
-          }
-        ]
-      },
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:@F@c"
-      },
-      "kind": {
-        "displayName": "Function",
-        "identifier": "c.func"
-      },
-      "location": {
-        "position": {
-          "character": 6,
-          "line": 5
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "c"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "c"
-          }
-        ],
-        "title": "c"
-      },
-      "pathComponents": [
-        "c"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "availability": [
-        {
-          "deprecatedVersion": {
-            "major": 12,
-            "minor": 0,
-            "patch": 0
-          },
-          "domain": "macos",
-          "introducedVersion": {
-            "major": 11,
-            "minor": 0,
-            "patch": 0
-          },
-          "obsoletedVersion": {
-            "major": 20,
-            "minor": 0,
-            "patch": 0
-          }
-        },
-        {
-          "domain": "ios",
-          "introducedVersion": {
-            "major": 13,
-            "minor": 0,
-            "patch": 0
-          }
-        },
-        {
-          "domain": "tvos",
-          "introducedVersion": {
-            "major": 15,
-            "minor": 0,
-            "patch": 0
-          }
-        }
-      ],
-      "declarationFragments": [
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:v",
-          "spelling": "void"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "d"
-        },
-        {
-          "kind": "text",
-          "spelling": "();"
-        }
-      ],
-      "functionSignature": {
-        "returns": [
-          {
-            "kind": "typeIdentifier",
-            "preciseIdentifier": "c:v",
-            "spelling": "void"
-          }
-        ]
-      },
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:@F@d"
-      },
-      "kind": {
-        "displayName": "Function",
-        "identifier": "c.func"
-      },
-      "location": {
-        "position": {
-          "character": 6,
-          "line": 7
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "d"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "d"
-          }
-        ],
-        "title": "d"
-      },
-      "pathComponents": [
-        "d"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "availability": [
-        {
-          "domain": "*",
-          "isUnconditionallyDeprecated": true
-        },
-        {
-          "domain": "macos",
-          "introducedVersion": {
-            "major": 11,
-            "minor": 0,
-            "patch": 0
-          }
-        },
-        {
-          "domain": "tvos",
-          "isUnconditionallyUnavailable": true
-        }
-      ],
-      "declarationFragments": [
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:v",
-          "spelling": "void"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "e"
-        },
-        {
-          "kind": "text",
-          "spelling": "();"
-        }
-      ],
-      "functionSignature": {
-        "returns": [
-          {
-            "kind": "typeIdentifier",
-            "preciseIdentifier": "c:v",
-            "spelling": "void"
-          }
-        ]
-      },
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:@F@e"
-      },
-      "kind": {
-        "displayName": "Function",
-        "identifier": "c.func"
-      },
-      "location": {
-        "position": {
-          "character": 6,
-          "line": 9
-        },
-        "uri": "file://INPUT_DIR/input.h"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "e"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "e"
-          }
-        ],
-        "title": "e"
-      },
-      "pathComponents": [
-        "e"
-      ]
-    }
-  ]
-}

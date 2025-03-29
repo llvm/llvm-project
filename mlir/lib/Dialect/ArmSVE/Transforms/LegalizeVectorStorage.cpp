@@ -106,7 +106,8 @@ struct RelaxScalableVectorAllocaAlignment
 
     // Set alignment based on the defaults for SVE vectors and predicates.
     unsigned aligment = vectorType.getElementType().isInteger(1) ? 2 : 16;
-    allocaOp.setAlignment(aligment);
+    rewriter.modifyOpInPlace(allocaOp,
+                             [&] { allocaOp.setAlignment(aligment); });
 
     return success();
   }
@@ -316,8 +317,7 @@ struct LegalizeVectorStorage
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateLegalizeVectorStoragePatterns(patterns);
-    if (failed(applyPatternsAndFoldGreedily(getOperation(),
-                                            std::move(patterns)))) {
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
       signalPassFailure();
     }
     ConversionTarget target(getContext());

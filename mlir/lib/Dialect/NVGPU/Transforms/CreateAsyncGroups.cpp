@@ -23,9 +23,9 @@ using namespace mlir;
 template <typename OpTy>
 static bool isContiguousXferOp(OpTy op) {
   return op.getPermutationMap().isMinorIdentity() && op.isDimInBounds(0) &&
-         op.hasBufferSemantics() &&
-         isLastMemrefDimUnitStride(
-             cast<MemRefType>(nvgpu::getMemrefOperand(op).getType()));
+         op.hasPureBufferSemantics() &&
+         cast<MemRefType>(nvgpu::getMemrefOperand(op).getType())
+             .isLastDimUnitStride();
 }
 
 /// Return "true" if the given op is a contiguous and suitable

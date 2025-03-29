@@ -24,13 +24,11 @@ public:
   VectorIteratorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp,
                                   llvm::ArrayRef<ConstString> item_names);
 
-  size_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
-  bool Update() override;
-
-  bool MightHaveChildren() override;
+  lldb::ChildCacheState Update() override;
 
   size_t GetIndexOfChildWithName(ConstString name) override;
 

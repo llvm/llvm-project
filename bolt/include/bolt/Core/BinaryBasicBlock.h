@@ -19,6 +19,7 @@
 #include "bolt/Core/MCPlus.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorOr.h"
@@ -115,7 +116,7 @@ private:
   unsigned Index{InvalidIndex};
 
   /// Index in the current layout.
-  mutable unsigned LayoutIndex{InvalidIndex};
+  unsigned LayoutIndex{InvalidIndex};
 
   /// Number of pseudo instructions in this block.
   uint32_t NumPseudos{0};
@@ -818,6 +819,9 @@ public:
     return OutputAddressRange;
   }
 
+  uint64_t getOutputStartAddress() const { return OutputAddressRange.first; }
+  uint64_t getOutputEndAddress() const { return OutputAddressRange.second; }
+
   bool hasLocSyms() const { return LocSyms != nullptr; }
 
   /// Return mapping of input offsets to symbols in the output.
@@ -841,15 +845,6 @@ public:
   /// initialized with the original fall-through for this BB.
   bool analyzeBranch(const MCSymbol *&TBB, const MCSymbol *&FBB,
                      MCInst *&CondBranch, MCInst *&UncondBranch);
-
-  /// Return true if iterator \p I is pointing to the first instruction in
-  /// a pair that could be macro-fused.
-  bool isMacroOpFusionPair(const_iterator I) const;
-
-  /// If the basic block has a pair of instructions suitable for macro-fusion,
-  /// return iterator to the first instruction of the pair.
-  /// Otherwise return end().
-  const_iterator getMacroOpFusionPair() const;
 
   /// Printer required for printing dominator trees.
   void printAsOperand(raw_ostream &OS, bool PrintType = true) {
@@ -891,7 +886,7 @@ public:
   }
 
   /// Set layout index. To be used by BinaryFunction.
-  void setLayoutIndex(unsigned Index) const { LayoutIndex = Index; }
+  void setLayoutIndex(unsigned Index) { LayoutIndex = Index; }
 
   /// Needed by graph traits.
   BinaryFunction *getParent() const { return getFunction(); }

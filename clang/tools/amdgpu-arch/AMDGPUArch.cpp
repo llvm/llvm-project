@@ -21,11 +21,14 @@ static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 // Mark all our options with this category.
 static cl::OptionCategory AMDGPUArchCategory("amdgpu-arch options");
 
+cl::opt<bool> Verbose("verbose", cl::desc("Enable verbose output"),
+                      cl::init(false), cl::cat(AMDGPUArchCategory));
+
 static void PrintVersion(raw_ostream &OS) {
   OS << clang::getClangToolFullVersion("amdgpu-arch") << '\n';
 }
 
-int printGPUsByHSA();
+int printGPUsByKFD();
 int printGPUsByHIP();
 
 int main(int argc, char *argv[]) {
@@ -45,7 +48,7 @@ int main(int argc, char *argv[]) {
   }
 
 #ifndef _WIN32
-  if (!printGPUsByHSA())
+  if (!printGPUsByKFD())
     return 0;
 #endif
 

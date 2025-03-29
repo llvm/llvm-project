@@ -70,7 +70,7 @@
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-NO-MATH-ERRNO
 // CHECK-NO-MATH-ERRNO: #define __NO_MATH_ERRNO__ 1
 //
-// RUN: %clang_cc1 %s -E -dM -ffinite-math-only -o - \
+// RUN: %clang_cc1 %s -E -dM -menable-no-nans -menable-no-infs -o - \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-FINITE-MATH-ONLY
 // CHECK-FINITE-MATH-ONLY: #define __FINITE_MATH_ONLY__ 1
 //
@@ -235,6 +235,16 @@
 // CHECK-SPIRV64-DAG: #define __SPIRV__ 1
 // CHECK-SPIRV64-DAG: #define __SPIRV64__ 1
 // CHECK-SPIRV64-NOT: #define __SPIRV32__ 1
+
+// RUN: %clang_cc1 %s -E -dM -o - -x cl -triple spirv64-amd-amdhsa \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-SPIRV64-AMDGCN
+// CHECK-SPIRV64-AMDGCN-DAG: #define __IMAGE_SUPPORT__ 1
+// CHECK-SPIRV64-AMDGCN-DAG: #define __SPIRV__ 1
+// CHECK-SPIRV64-AMDGCN-DAG: #define __SPIRV64__ 1
+// CHECK-SPIRV64-AMDGCN-DAG: #define __AMD__ 1
+// CHECK-SPIRV64-AMDGCN-DAG: #define __AMDGCN__ 1
+// CHECK-SPIRV64-AMDGCN-DAG: #define __AMDGPU__ 1
+// CHECK-SPIRV64-AMDGCN-NOT: #define __SPIRV32__ 1
 
 // RUN: %clang_cc1 %s -E -dM -o - -x hip -triple x86_64-unknown-linux-gnu \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-HIP

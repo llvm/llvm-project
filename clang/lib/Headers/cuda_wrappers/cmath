@@ -24,7 +24,11 @@
 #ifndef __CLANG_CUDA_WRAPPERS_CMATH
 #define __CLANG_CUDA_WRAPPERS_CMATH
 
+#if __has_include_next(<cmath>)
 #include_next <cmath>
+#else
+#error "Could not find standard C++ header 'cmath'. Add -v to your compilation command to check the include paths being searched. You may need to install the appropriate standard C++ library package corresponding to the search path."
+#endif
 
 #if defined(_LIBCPP_STD_VER)
 

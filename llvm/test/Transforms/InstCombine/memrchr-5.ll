@@ -16,37 +16,37 @@ declare ptr @memrchr(ptr, i32, i64)
 define void @fold_memrchr_a_16(ptr %pcmp) {
 ; BE-LABEL: @fold_memrchr_a_16(
 ; BE-NEXT:    store i64 0, ptr [[PCMP:%.*]], align 4
-; BE-NEXT:    [[PSTOR1:%.*]] = getelementptr i64, ptr [[PCMP]], i64 1
+; BE-NEXT:    [[PSTOR1:%.*]] = getelementptr i8, ptr [[PCMP]], i64 8
 ; BE-NEXT:    store i64 1, ptr [[PSTOR1]], align 4
-; BE-NEXT:    [[PSTOR2:%.*]] = getelementptr i64, ptr [[PCMP]], i64 2
+; BE-NEXT:    [[PSTOR2:%.*]] = getelementptr i8, ptr [[PCMP]], i64 16
 ; BE-NEXT:    store i64 2, ptr [[PSTOR2]], align 4
-; BE-NEXT:    [[PSTOR3:%.*]] = getelementptr i64, ptr [[PCMP]], i64 3
+; BE-NEXT:    [[PSTOR3:%.*]] = getelementptr i8, ptr [[PCMP]], i64 24
 ; BE-NEXT:    store i64 3, ptr [[PSTOR3]], align 4
-; BE-NEXT:    [[PSTOR4:%.*]] = getelementptr i64, ptr [[PCMP]], i64 4
+; BE-NEXT:    [[PSTOR4:%.*]] = getelementptr i8, ptr [[PCMP]], i64 32
 ; BE-NEXT:    store i64 13, ptr [[PSTOR4]], align 4
-; BE-NEXT:    [[PSTOR6:%.*]] = getelementptr i64, ptr [[PCMP]], i64 6
+; BE-NEXT:    [[PSTOR6:%.*]] = getelementptr i8, ptr [[PCMP]], i64 48
 ; BE-NEXT:    store i64 14, ptr [[PSTOR6]], align 4
-; BE-NEXT:    [[PSTOR7:%.*]] = getelementptr i64, ptr [[PCMP]], i64 7
+; BE-NEXT:    [[PSTOR7:%.*]] = getelementptr i8, ptr [[PCMP]], i64 56
 ; BE-NEXT:    store i64 15, ptr [[PSTOR7]], align 4
-; BE-NEXT:    [[PSTOR8:%.*]] = getelementptr i64, ptr [[PCMP]], i64 8
+; BE-NEXT:    [[PSTOR8:%.*]] = getelementptr i8, ptr [[PCMP]], i64 64
 ; BE-NEXT:    store i64 0, ptr [[PSTOR8]], align 4
 ; BE-NEXT:    ret void
 ;
 ; LE-LABEL: @fold_memrchr_a_16(
 ; LE-NEXT:    store i64 3, ptr [[PCMP:%.*]], align 4
-; LE-NEXT:    [[PSTOR1:%.*]] = getelementptr i64, ptr [[PCMP]], i64 1
+; LE-NEXT:    [[PSTOR1:%.*]] = getelementptr i8, ptr [[PCMP]], i64 8
 ; LE-NEXT:    store i64 2, ptr [[PSTOR1]], align 4
-; LE-NEXT:    [[PSTOR2:%.*]] = getelementptr i64, ptr [[PCMP]], i64 2
+; LE-NEXT:    [[PSTOR2:%.*]] = getelementptr i8, ptr [[PCMP]], i64 16
 ; LE-NEXT:    store i64 1, ptr [[PSTOR2]], align 4
-; LE-NEXT:    [[PSTOR3:%.*]] = getelementptr i64, ptr [[PCMP]], i64 3
+; LE-NEXT:    [[PSTOR3:%.*]] = getelementptr i8, ptr [[PCMP]], i64 24
 ; LE-NEXT:    store i64 0, ptr [[PSTOR3]], align 4
-; LE-NEXT:    [[PSTOR4:%.*]] = getelementptr i64, ptr [[PCMP]], i64 4
+; LE-NEXT:    [[PSTOR4:%.*]] = getelementptr i8, ptr [[PCMP]], i64 32
 ; LE-NEXT:    store i64 14, ptr [[PSTOR4]], align 4
-; LE-NEXT:    [[PSTOR6:%.*]] = getelementptr i64, ptr [[PCMP]], i64 6
+; LE-NEXT:    [[PSTOR6:%.*]] = getelementptr i8, ptr [[PCMP]], i64 48
 ; LE-NEXT:    store i64 13, ptr [[PSTOR6]], align 4
-; LE-NEXT:    [[PSTOR7:%.*]] = getelementptr i64, ptr [[PCMP]], i64 7
+; LE-NEXT:    [[PSTOR7:%.*]] = getelementptr i8, ptr [[PCMP]], i64 56
 ; LE-NEXT:    store i64 12, ptr [[PSTOR7]], align 4
-; LE-NEXT:    [[PSTOR8:%.*]] = getelementptr i64, ptr [[PCMP]], i64 8
+; LE-NEXT:    [[PSTOR8:%.*]] = getelementptr i8, ptr [[PCMP]], i64 64
 ; LE-NEXT:    store i64 0, ptr [[PSTOR8]], align 4
 ; LE-NEXT:    ret void
 ;
@@ -123,29 +123,29 @@ define void @fold_memrchr_a_16(ptr %pcmp) {
 define void @fold_memrchr_a_p1_16(ptr %pcmp) {
 ; BE-LABEL: @fold_memrchr_a_p1_16(
 ; BE-NEXT:    store i64 0, ptr [[PCMP:%.*]], align 4
-; BE-NEXT:    [[PSTOR1:%.*]] = getelementptr i64, ptr [[PCMP]], i64 1
+; BE-NEXT:    [[PSTOR1:%.*]] = getelementptr i8, ptr [[PCMP]], i64 8
 ; BE-NEXT:    store i64 1, ptr [[PSTOR1]], align 4
-; BE-NEXT:    [[PSTOR2:%.*]] = getelementptr i64, ptr [[PCMP]], i64 2
+; BE-NEXT:    [[PSTOR2:%.*]] = getelementptr i8, ptr [[PCMP]], i64 16
 ; BE-NEXT:    store i64 2, ptr [[PSTOR2]], align 4
-; BE-NEXT:    [[PSTOR3:%.*]] = getelementptr i64, ptr [[PCMP]], i64 3
+; BE-NEXT:    [[PSTOR3:%.*]] = getelementptr i8, ptr [[PCMP]], i64 24
 ; BE-NEXT:    store i64 3, ptr [[PSTOR3]], align 4
-; BE-NEXT:    [[PSTOR4:%.*]] = getelementptr i64, ptr [[PCMP]], i64 4
+; BE-NEXT:    [[PSTOR4:%.*]] = getelementptr i8, ptr [[PCMP]], i64 32
 ; BE-NEXT:    store i64 0, ptr [[PSTOR4]], align 4
-; BE-NEXT:    [[PSTOR5:%.*]] = getelementptr i64, ptr [[PCMP]], i64 5
+; BE-NEXT:    [[PSTOR5:%.*]] = getelementptr i8, ptr [[PCMP]], i64 40
 ; BE-NEXT:    store i64 0, ptr [[PSTOR5]], align 4
 ; BE-NEXT:    ret void
 ;
 ; LE-LABEL: @fold_memrchr_a_p1_16(
 ; LE-NEXT:    store i64 3, ptr [[PCMP:%.*]], align 4
-; LE-NEXT:    [[PSTOR1:%.*]] = getelementptr i64, ptr [[PCMP]], i64 1
+; LE-NEXT:    [[PSTOR1:%.*]] = getelementptr i8, ptr [[PCMP]], i64 8
 ; LE-NEXT:    store i64 2, ptr [[PSTOR1]], align 4
-; LE-NEXT:    [[PSTOR2:%.*]] = getelementptr i64, ptr [[PCMP]], i64 2
+; LE-NEXT:    [[PSTOR2:%.*]] = getelementptr i8, ptr [[PCMP]], i64 16
 ; LE-NEXT:    store i64 1, ptr [[PSTOR2]], align 4
-; LE-NEXT:    [[PSTOR3:%.*]] = getelementptr i64, ptr [[PCMP]], i64 3
+; LE-NEXT:    [[PSTOR3:%.*]] = getelementptr i8, ptr [[PCMP]], i64 24
 ; LE-NEXT:    store i64 0, ptr [[PSTOR3]], align 4
-; LE-NEXT:    [[PSTOR4:%.*]] = getelementptr i64, ptr [[PCMP]], i64 4
+; LE-NEXT:    [[PSTOR4:%.*]] = getelementptr i8, ptr [[PCMP]], i64 32
 ; LE-NEXT:    store i64 0, ptr [[PSTOR4]], align 4
-; LE-NEXT:    [[PSTOR5:%.*]] = getelementptr i64, ptr [[PCMP]], i64 5
+; LE-NEXT:    [[PSTOR5:%.*]] = getelementptr i8, ptr [[PCMP]], i64 40
 ; LE-NEXT:    store i64 0, ptr [[PSTOR5]], align 4
 ; LE-NEXT:    ret void
 ;
@@ -206,25 +206,25 @@ define void @fold_memrchr_a_p1_16(ptr %pcmp) {
 define void @fold_memrchr_a_20(ptr %pcmp) {
 ; BE-LABEL: @fold_memrchr_a_20(
 ; BE-NEXT:    store i64 16, ptr [[PCMP:%.*]], align 4
-; BE-NEXT:    [[PSTOR1:%.*]] = getelementptr i64, ptr [[PCMP]], i64 1
+; BE-NEXT:    [[PSTOR1:%.*]] = getelementptr i8, ptr [[PCMP]], i64 8
 ; BE-NEXT:    store i64 17, ptr [[PSTOR1]], align 4
-; BE-NEXT:    [[PSTOR2:%.*]] = getelementptr i64, ptr [[PCMP]], i64 2
+; BE-NEXT:    [[PSTOR2:%.*]] = getelementptr i8, ptr [[PCMP]], i64 16
 ; BE-NEXT:    store i64 18, ptr [[PSTOR2]], align 4
-; BE-NEXT:    [[PSTOR3:%.*]] = getelementptr i64, ptr [[PCMP]], i64 3
+; BE-NEXT:    [[PSTOR3:%.*]] = getelementptr i8, ptr [[PCMP]], i64 24
 ; BE-NEXT:    store i64 19, ptr [[PSTOR3]], align 4
-; BE-NEXT:    [[PSTOR4:%.*]] = getelementptr i64, ptr [[PCMP]], i64 4
+; BE-NEXT:    [[PSTOR4:%.*]] = getelementptr i8, ptr [[PCMP]], i64 32
 ; BE-NEXT:    store i64 4, ptr [[PSTOR4]], align 4
 ; BE-NEXT:    ret void
 ;
 ; LE-LABEL: @fold_memrchr_a_20(
 ; LE-NEXT:    store i64 19, ptr [[PCMP:%.*]], align 4
-; LE-NEXT:    [[PSTOR1:%.*]] = getelementptr i64, ptr [[PCMP]], i64 1
+; LE-NEXT:    [[PSTOR1:%.*]] = getelementptr i8, ptr [[PCMP]], i64 8
 ; LE-NEXT:    store i64 18, ptr [[PSTOR1]], align 4
-; LE-NEXT:    [[PSTOR2:%.*]] = getelementptr i64, ptr [[PCMP]], i64 2
+; LE-NEXT:    [[PSTOR2:%.*]] = getelementptr i8, ptr [[PCMP]], i64 16
 ; LE-NEXT:    store i64 17, ptr [[PSTOR2]], align 4
-; LE-NEXT:    [[PSTOR3:%.*]] = getelementptr i64, ptr [[PCMP]], i64 3
+; LE-NEXT:    [[PSTOR3:%.*]] = getelementptr i8, ptr [[PCMP]], i64 24
 ; LE-NEXT:    store i64 16, ptr [[PSTOR3]], align 4
-; LE-NEXT:    [[PSTOR4:%.*]] = getelementptr i64, ptr [[PCMP]], i64 4
+; LE-NEXT:    [[PSTOR4:%.*]] = getelementptr i8, ptr [[PCMP]], i64 32
 ; LE-NEXT:    store i64 7, ptr [[PSTOR4]], align 4
 ; LE-NEXT:    ret void
 ;

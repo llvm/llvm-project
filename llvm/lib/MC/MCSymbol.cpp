@@ -22,12 +22,12 @@
 using namespace llvm;
 
 // Only the address of this fragment is ever actually used.
-static MCDummyFragment SentinelFragment(nullptr);
+static MCDummyFragment SentinelFragment;
 
 // Sentinel value for the absolute pseudo fragment.
 MCFragment *MCSymbol::AbsolutePseudoFragment = &SentinelFragment;
 
-void *MCSymbol::operator new(size_t s, const StringMapEntry<bool> *Name,
+void *MCSymbol::operator new(size_t s, const MCSymbolTableEntry *Name,
                              MCContext &Ctx) {
   // We may need more space for a Name to account for alignment.  So allocate
   // space for the storage type and not the name pointer.

@@ -41,7 +41,7 @@ void foo(void)
 - (void) Meth : (id <NSCopying>)aKey; // expected-note {{passing argument to parameter 'aKey' here}}
 @end
 
-@class ForwarClass; // expected-note 3 {{conformance of forward class 'ForwarClass' to protocol 'NSCopying' can not be confirmed}}
+@class ForwarClass; // expected-note 3 {{conformance of forward class 'ForwarClass' to protocol 'NSCopying' cannot be confirmed}}
 
 ForwarClass *Test10751015 (I* pi, ForwarClass *ns_forward) {
 

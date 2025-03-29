@@ -90,7 +90,7 @@ reference, and its semantics guarantee immutability.
 // a fir.store here into array %a does not change %v
 ```
 
-# array_merge_store
+## array_merge_store
 
 The `array_merge_store` operation stores a merged array value to memory.
 

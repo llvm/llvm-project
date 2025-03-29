@@ -11,9 +11,14 @@
 #include "flang/Common/leading-zero-bit-count.h"
 #include "flang/Decimal/binary-floating-point.h"
 #include "flang/Decimal/decimal.h"
+#include "flang/Runtime/freestanding-tools.h"
 #include <cinttypes>
 #include <cstring>
-#include <ctype.h>
+#include <utility>
+
+// Some environments, viz. glibc 2.17 and *BSD, allow the macro HUGE
+// to leak out of <math.h>.
+#undef HUGE
 
 namespace Fortran::decimal {
 
@@ -190,12 +195,12 @@ public:
   static constexpr IntType topBit{IntType{1} << (precision - 1)};
   static constexpr IntType mask{topBit + (topBit - 1)};
 
-  IntermediateFloat() {}
+  RT_API_ATTRS IntermediateFloat() {}
   IntermediateFloat(const IntermediateFloat &) = default;
 
   // Assumes that exponent_ is valid on entry, and may increment it.
   // Returns the number of guard_ bits that have been determined.
-  template <typename UINT> bool SetTo(UINT n) {
+  template <typename UINT> RT_API_ATTRS bool SetTo(UINT n) {
     static constexpr int nBits{CHAR_BIT * sizeof n};
     if constexpr (precision >= nBits) {
       value_ = n;
@@ -217,14 +222,14 @@ public:
     }
   }
 
-  void ShiftIn(int bit = 0) { value_ = value_ + value_ + bit; }
-  bool IsFull() const { return value_ >= topBit; }
-  void AdjustExponent(int by) { exponent_ += by; }
-  void SetGuard(int g) {
+  RT_API_ATTRS void ShiftIn(int bit = 0) { value_ = value_ + value_ + bit; }
+  RT_API_ATTRS bool IsFull() const { return value_ >= topBit; }
+  RT_API_ATTRS void AdjustExponent(int by) { exponent_ += by; }
+  RT_API_ATTRS void SetGuard(int g) {
     guard_ |= (static_cast<GuardType>(g & 6) << (guardBits - 3)) | (g & 1);
   }
 
-  ConversionToBinaryResult<PREC> ToBinary(
+  RT_API_ATTRS ConversionToBinaryResult<PREC> ToBinary(
       bool isNegative, FortranRounding) const;
 
 private:
@@ -236,6 +241,15 @@ private:
   GuardType guard_{0};
   int exponent_{0};
 };
+
+// The standard says that these overflow cases round to "representable"
+// numbers, and some popular compilers interpret that to mean +/-HUGE()
+// rather than +/-Inf.
+static inline RT_API_ATTRS constexpr bool RoundOverflowToHuge(
+    enum FortranRounding rounding, bool isNegative) {
+  return rounding == RoundToZero || (!isNegative && rounding == RoundDown) ||
+      (isNegative && rounding == RoundUp);
+}
 
 template <int PREC>
 ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
@@ -256,12 +270,23 @@ ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
   if (guard != 0) {
     flags |= Inexact;
   }
-  if (fraction == 0 && guard <= oneHalf) {
-    if ((!isNegative && rounding == RoundUp) ||
-        (isNegative && rounding == RoundDown)) {
-      // round to minimum nonzero value
-    } else {
-      return {Binary{}, static_cast<enum ConversionResultFlags>(flags)};
+  if (fraction == 0) {
+    if (guard <= oneHalf) {
+      if ((!isNegative && rounding == RoundUp) ||
+          (isNegative && rounding == RoundDown)) {
+        // round to least nonzero value
+        expo = 0;
+      } else { // round to zero
+        if (guard != 0) {
+          flags |= Underflow;
+        }
+        Binary zero;
+        if (isNegative) {
+          zero.Negate();
+        }
+        return {
+            std::move(zero), static_cast<enum ConversionResultFlags>(flags)};
+      }
     }
   } else {
     // The value is nonzero; normalize it.
@@ -301,14 +326,21 @@ ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
   }
   if (expo == 1 && fraction < topBit) {
     expo = 0; // subnormal
-  }
-  if (expo >= Binary::maxExponent) {
-    expo = Binary::maxExponent; // Inf
-    flags |= Overflow;
-    if constexpr (Binary::bits == 80) { // x87
-      fraction = IntType{1} << 63;
-    } else {
-      fraction = 0;
+    flags |= Underflow;
+  } else if (expo == 0) {
+    flags |= Underflow;
+  } else if (expo >= Binary::maxExponent) {
+    if (RoundOverflowToHuge(rounding, isNegative)) {
+      expo = Binary::maxExponent - 1;
+      fraction = mask;
+    } else { // Inf
+      expo = Binary::maxExponent;
+      flags |= Overflow;
+      if constexpr (Binary::bits == 80) { // x87
+        fraction = IntType{1} << 63;
+      } else {
+        fraction = 0;
+      }
     }
   }
   using Raw = typename Binary::RawType;
@@ -338,14 +370,22 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary() {
   // Sanity checks for ridiculous exponents
   static constexpr int crazy{2 * Real::decimalRange + log10Radix};
   if (exponent_ < -crazy) {
+    enum ConversionResultFlags flags {
+      static_cast<enum ConversionResultFlags>(Inexact | Underflow)
+    };
     if ((!isNegative_ && rounding_ == RoundUp) ||
         (isNegative_ && rounding_ == RoundDown)) {
-      return {Real{Raw{1} | SignBit()}}; // return least nonzero value
+      // return least nonzero value
+      return {Real{Raw{1} | SignBit()}, flags};
     } else { // underflow to +/-0.
-      return {Real{SignBit()}, Inexact};
+      return {Real{SignBit()}, flags};
     }
-  } else if (exponent_ > crazy) { // overflow to +/-Inf.
-    return {Real{Infinity()}, Overflow};
+  } else if (exponent_ > crazy) { // overflow to +/-HUGE() or +/-Inf
+    if (RoundOverflowToHuge(rounding_, isNegative_)) {
+      return {Real{HUGE()}};
+    } else {
+      return {Real{Infinity()}, Overflow};
+    }
   }
   // Apply any negative decimal exponent by multiplication
   // by a power of two, adjusting the binary exponent to compensate.
@@ -432,8 +472,8 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary(
         ++q;
       }
     }
-    if ((!limit || limit >= q + 3) && toupper(q[0]) == 'N' &&
-        toupper(q[1]) == 'A' && toupper(q[2]) == 'N') {
+    if ((!limit || limit >= q + 3) && runtime::toupper(q[0]) == 'N' &&
+        runtime::toupper(q[1]) == 'A' && runtime::toupper(q[2]) == 'N') {
       // NaN
       p = q + 3;
       bool isQuiet{true};
@@ -457,11 +497,11 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary(
       }
       return {Real{NaN(isQuiet)}};
     } else { // Inf?
-      if ((!limit || limit >= q + 3) && toupper(q[0]) == 'I' &&
-          toupper(q[1]) == 'N' && toupper(q[2]) == 'F') {
-        if ((!limit || limit >= q + 8) && toupper(q[3]) == 'I' &&
-            toupper(q[4]) == 'N' && toupper(q[5]) == 'I' &&
-            toupper(q[6]) == 'T' && toupper(q[7]) == 'Y') {
+      if ((!limit || limit >= q + 3) && runtime::toupper(q[0]) == 'I' &&
+          runtime::toupper(q[1]) == 'N' && runtime::toupper(q[2]) == 'F') {
+        if ((!limit || limit >= q + 8) && runtime::toupper(q[3]) == 'I' &&
+            runtime::toupper(q[4]) == 'N' && runtime::toupper(q[5]) == 'I' &&
+            runtime::toupper(q[6]) == 'T' && runtime::toupper(q[7]) == 'Y') {
           p = q + 8;
         } else {
           p = q + 3;
@@ -495,6 +535,8 @@ template ConversionToBinaryResult<113> ConvertToBinary<113>(
     const char *&, enum FortranRounding, const char *end);
 
 extern "C" {
+RT_EXT_API_GROUP_BEGIN
+
 enum ConversionResultFlags ConvertDecimalToFloat(
     const char **p, float *f, enum FortranRounding rounding) {
   auto result{Fortran::decimal::ConvertToBinary<24>(*p, rounding)};
@@ -516,5 +558,7 @@ enum ConversionResultFlags ConvertDecimalToLongDouble(
       reinterpret_cast<const void *>(&result.binary), sizeof *ld);
   return result.flags;
 }
-}
+
+RT_EXT_API_GROUP_END
+} // extern "C"
 } // namespace Fortran::decimal

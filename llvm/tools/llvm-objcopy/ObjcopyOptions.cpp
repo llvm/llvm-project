@@ -10,11 +10,12 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/ObjCopy/ConfigManager.h"
 #include "llvm/ObjCopy/MachO/MachOConfig.h"
+#include "llvm/Object/Binary.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CRC.h"
@@ -26,6 +27,7 @@
 
 using namespace llvm;
 using namespace llvm::objcopy;
+using namespace llvm::object;
 using namespace llvm::opt;
 
 namespace {
@@ -37,12 +39,13 @@ enum ObjcopyID {
 };
 
 namespace objcopy_opt {
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "ObjcopyOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "ObjcopyOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info ObjcopyInfoTable[] = {
 #define OPTION(...)                                                            \
@@ -54,8 +57,12 @@ static constexpr opt::OptTable::Info ObjcopyInfoTable[] = {
 
 class ObjcopyOptTable : public opt::GenericOptTable {
 public:
-  ObjcopyOptTable() : opt::GenericOptTable(objcopy_opt::ObjcopyInfoTable) {
+  ObjcopyOptTable()
+      : opt::GenericOptTable(objcopy_opt::OptionStrTable,
+                             objcopy_opt::OptionPrefixesTable,
+                             objcopy_opt::ObjcopyInfoTable) {
     setGroupedShortOptions(true);
+    setDashDashParsing(true);
   }
 };
 
@@ -68,13 +75,13 @@ enum InstallNameToolID {
 };
 
 namespace install_name_tool {
-
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "InstallNameToolOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "InstallNameToolOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InstallNameToolInfoTable[] = {
 #define OPTION(...)                                                            \
@@ -87,7 +94,9 @@ static constexpr opt::OptTable::Info InstallNameToolInfoTable[] = {
 class InstallNameToolOptTable : public opt::GenericOptTable {
 public:
   InstallNameToolOptTable()
-      : GenericOptTable(install_name_tool::InstallNameToolInfoTable) {}
+      : GenericOptTable(install_name_tool::OptionStrTable,
+                        install_name_tool::OptionPrefixesTable,
+                        install_name_tool::InstallNameToolInfoTable) {}
 };
 
 enum BitcodeStripID {
@@ -99,13 +108,13 @@ enum BitcodeStripID {
 };
 
 namespace bitcode_strip {
-
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "BitcodeStripOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "BitcodeStripOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info BitcodeStripInfoTable[] = {
 #define OPTION(...)                                                            \
@@ -118,7 +127,9 @@ static constexpr opt::OptTable::Info BitcodeStripInfoTable[] = {
 class BitcodeStripOptTable : public opt::GenericOptTable {
 public:
   BitcodeStripOptTable()
-      : opt::GenericOptTable(bitcode_strip::BitcodeStripInfoTable) {}
+      : opt::GenericOptTable(bitcode_strip::OptionStrTable,
+                             bitcode_strip::OptionPrefixesTable,
+                             bitcode_strip::BitcodeStripInfoTable) {}
 };
 
 enum StripID {
@@ -129,12 +140,13 @@ enum StripID {
 };
 
 namespace strip {
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "StripOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "StripOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info StripInfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(STRIP_, __VA_ARGS__),
@@ -145,7 +157,9 @@ static constexpr opt::OptTable::Info StripInfoTable[] = {
 
 class StripOptTable : public opt::GenericOptTable {
 public:
-  StripOptTable() : GenericOptTable(strip::StripInfoTable) {
+  StripOptTable()
+      : GenericOptTable(strip::OptionStrTable, strip::OptionPrefixesTable,
+                        strip::StripInfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -255,6 +269,21 @@ parseSetSectionFlagValue(StringRef FlagValue) {
   return SFU;
 }
 
+static Expected<uint8_t> parseVisibilityType(StringRef VisType) {
+  const uint8_t Invalid = 0xff;
+  uint8_t type = StringSwitch<uint8_t>(VisType)
+                     .Case("default", ELF::STV_DEFAULT)
+                     .Case("hidden", ELF::STV_HIDDEN)
+                     .Case("internal", ELF::STV_INTERNAL)
+                     .Case("protected", ELF::STV_PROTECTED)
+                     .Default(Invalid);
+  if (type == Invalid)
+    return createStringError(errc::invalid_argument,
+                             "'%s' is not a valid symbol visibility",
+                             VisType.str().c_str());
+  return type;
+}
+
 namespace {
 struct TargetInfo {
   FileFormat Format;
@@ -300,6 +329,8 @@ static const StringMap<MachineInfo> TargetMap{
     // LoongArch
     {"elf32-loongarch", {ELF::EM_LOONGARCH, false, true}},
     {"elf64-loongarch", {ELF::EM_LOONGARCH, true, true}},
+    // SystemZ
+    {"elf64-s390", {ELF::EM_S390, true, false}},
 };
 
 static Expected<TargetInfo>
@@ -316,7 +347,7 @@ getOutputTargetInfoByTargetName(StringRef TargetName) {
     MI.OSABI = ELF::ELFOSABI_FREEBSD;
 
   FileFormat Format;
-  if (TargetName.startswith("elf"))
+  if (TargetName.starts_with("elf"))
     Format = FileFormat::ELF;
   else
     // This should never happen because `TargetName` is valid (it certainly
@@ -507,12 +538,44 @@ static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue) {
   return SI;
 }
 
+static Expected<RemoveNoteInfo> parseRemoveNoteInfo(StringRef FlagValue) {
+  // Parse value given with --remove-note option. The format is:
+  //
+  // [name/]type_id
+  //
+  // where:
+  // <name>    - optional note name. If not given, all notes with the specified
+  //             <type_id> are removed.
+  // <type_id> - note type value, can be decimal or hexadecimal number prefixed
+  //             with 0x.
+  RemoveNoteInfo NI;
+  StringRef TypeIdStr;
+  if (auto Idx = FlagValue.find('/'); Idx != StringRef::npos) {
+    if (Idx == 0)
+      return createStringError(
+          errc::invalid_argument,
+          "bad format for --remove-note, note name is empty");
+    NI.Name = FlagValue.slice(0, Idx);
+    TypeIdStr = FlagValue.substr(Idx + 1);
+  } else {
+    TypeIdStr = FlagValue;
+  }
+  if (TypeIdStr.empty())
+    return createStringError(errc::invalid_argument,
+                             "bad format for --remove-note, missing type_id");
+  if (TypeIdStr.getAsInteger(0, NI.TypeId))
+    return createStringError(errc::invalid_argument,
+                             "bad note type_id for --remove-note: '%s'",
+                             TypeIdStr.str().c_str());
+  return NI;
+}
+
 // Parse input option \p ArgValue and load section data. This function
 // extracts section name and name of the file keeping section data from
 // ArgValue, loads data from the file, and stores section name and data
 // into the vector of new sections \p NewSections.
 static Error loadNewSectionData(StringRef ArgValue, StringRef OptionName,
-                                std::vector<NewSectionInfo> &NewSections) {
+                                SmallVector<NewSectionInfo, 0> &NewSections) {
   if (!ArgValue.contains('='))
     return createStringError(errc::invalid_argument,
                              "bad format for " + OptionName + ": missing '='");
@@ -533,26 +596,120 @@ static Error loadNewSectionData(StringRef ArgValue, StringRef OptionName,
   return Error::success();
 }
 
+static Expected<int64_t> parseChangeSectionLMA(StringRef ArgValue,
+                                               StringRef OptionName) {
+  StringRef StringValue;
+  if (ArgValue.starts_with("*+")) {
+    StringValue = ArgValue.substr(2);
+  } else if (ArgValue.starts_with("*-")) {
+    StringValue = ArgValue.substr(1);
+  } else if (ArgValue.contains("=")) {
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName +
+                                 ": changing LMA to a specific value is not "
+                                 "supported. Use *+val or *-val instead");
+  } else if (ArgValue.contains("+") || ArgValue.contains("-")) {
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName +
+                                 ": changing a specific section LMA is not "
+                                 "supported. Use *+val or *-val instead");
+  }
+  if (StringValue.empty())
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName +
+                                 ": missing LMA offset");
+
+  auto LMAValue = getAsInteger<int64_t>(StringValue);
+  if (!LMAValue)
+    return createStringError(LMAValue.getError(),
+                             "bad format for " + OptionName + ": value after " +
+                                 ArgValue.slice(0, 2) + " is " + StringValue +
+                                 " when it should be an integer");
+  return *LMAValue;
+}
+
+static Expected<SectionPatternAddressUpdate>
+parseChangeSectionAddr(StringRef ArgValue, StringRef OptionName,
+                       MatchStyle SectionMatchStyle,
+                       function_ref<Error(Error)> ErrorCallback) {
+  SectionPatternAddressUpdate PatternUpdate;
+
+  size_t LastSymbolIndex = ArgValue.find_last_of("+-=");
+  if (LastSymbolIndex == StringRef::npos)
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName +
+                                 ": argument value " + ArgValue +
+                                 " is invalid. See --help");
+  char UpdateSymbol = ArgValue[LastSymbolIndex];
+
+  StringRef SectionPattern = ArgValue.slice(0, LastSymbolIndex);
+  if (SectionPattern.empty())
+    return createStringError(
+        errc::invalid_argument,
+        "bad format for " + OptionName +
+            ": missing section pattern to apply address change to");
+  if (Error E = PatternUpdate.SectionPattern.addMatcher(NameOrPattern::create(
+          SectionPattern, SectionMatchStyle, ErrorCallback)))
+    return std::move(E);
+
+  StringRef Value = ArgValue.substr(LastSymbolIndex + 1);
+  if (Value.empty()) {
+    switch (UpdateSymbol) {
+    case '+':
+    case '-':
+      return createStringError(errc::invalid_argument,
+                               "bad format for " + OptionName +
+                                   ": missing value of offset after '" +
+                                   std::string({UpdateSymbol}) + "'");
+
+    case '=':
+      return createStringError(errc::invalid_argument,
+                               "bad format for " + OptionName +
+                                   ": missing address value after '='");
+    }
+  }
+  auto AddrValue = getAsInteger<uint64_t>(Value);
+  if (!AddrValue)
+    return createStringError(AddrValue.getError(),
+                             "bad format for " + OptionName + ": value after " +
+                                 std::string({UpdateSymbol}) + " is " + Value +
+                                 " when it should be a 64-bit integer");
+
+  switch (UpdateSymbol) {
+  case '+':
+    PatternUpdate.Update.Kind = AdjustKind::Add;
+    break;
+  case '-':
+    PatternUpdate.Update.Kind = AdjustKind::Subtract;
+    break;
+  case '=':
+    PatternUpdate.Update.Kind = AdjustKind::Set;
+  }
+
+  PatternUpdate.Update.Value = *AddrValue;
+  return PatternUpdate;
+}
+
 // parseObjcopyOptions returns the config and sets the input arguments. If a
 // help flag is set then parseObjcopyOptions will print the help messege and
 // exit.
 Expected<DriverConfig>
-objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
+objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
                              function_ref<Error(Error)> ErrorCallback) {
   DriverConfig DC;
   ObjcopyOptTable T;
-
-  const char *const *DashDash =
-      llvm::find_if(RawArgsArr, [](StringRef Str) { return Str == "--"; });
-  ArrayRef<const char *> ArgsArr = ArrayRef(RawArgsArr.begin(), DashDash);
-  if (DashDash != RawArgsArr.end())
-    DashDash = std::next(DashDash);
 
   unsigned MissingArgumentIndex, MissingArgumentCount;
   llvm::opt::InputArgList InputArgs =
       T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
 
-  if (InputArgs.size() == 0 && DashDash == RawArgsArr.end()) {
+  if (MissingArgumentCount)
+    return createStringError(
+        errc::invalid_argument,
+        "argument to '%s' is missing (expected %d value(s))",
+        InputArgs.getArgString(MissingArgumentIndex), MissingArgumentCount);
+
+  if (InputArgs.size() == 0) {
     printHelp(T, errs(), ToolType::Objcopy);
     exit(1);
   }
@@ -576,7 +733,6 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
 
   for (auto *Arg : InputArgs.filtered(OBJCOPY_INPUT))
     Positional.push_back(Arg->getValue());
-  std::copy(DashDash, RawArgsArr.end(), std::back_inserter(Positional));
 
   if (Positional.empty())
     return createStringError(errc::invalid_argument, "no input file specified");
@@ -653,12 +809,13 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
             .Case("boot_application",
                   COFF::IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION)
             .Case("console", COFF::IMAGE_SUBSYSTEM_WINDOWS_CUI)
-            .Case("efi_application", COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION)
-            .Case("efi_boot_service_driver",
-                  COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
+            .Cases("efi_application", "efi-app",
+                   COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION)
+            .Cases("efi_boot_service_driver", "efi-bsd",
+                   COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
             .Case("efi_rom", COFF::IMAGE_SUBSYSTEM_EFI_ROM)
-            .Case("efi_runtime_driver",
-                  COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)
+            .Cases("efi_runtime_driver", "efi-rtd",
+                   COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)
             .Case("native", COFF::IMAGE_SUBSYSTEM_NATIVE)
             .Case("posix", COFF::IMAGE_SUBSYSTEM_POSIX_CUI)
             .Case("windows", COFF::IMAGE_SUBSYSTEM_WINDOWS_GUI)
@@ -688,6 +845,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
   Config.OutputFormat = StringSwitch<FileFormat>(OutputFormat)
                             .Case("binary", FileFormat::Binary)
                             .Case("ihex", FileFormat::IHex)
+                            .Case("srec", FileFormat::SREC)
                             .Default(FileFormat::Unspecified);
   if (Config.OutputFormat == FileFormat::Unspecified) {
     if (OutputFormat.empty()) {
@@ -718,6 +876,42 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
       return createStringError(errc::invalid_argument, Reason);
   }
 
+  for (const auto *A : InputArgs.filtered(OBJCOPY_compress_sections)) {
+    SmallVector<StringRef, 0> Fields;
+    StringRef(A->getValue()).split(Fields, '=');
+    if (Fields.size() != 2 || Fields[1].empty()) {
+      return createStringError(
+          errc::invalid_argument,
+          A->getSpelling() +
+              ": parse error, not 'section-glob=[none|zlib|zstd]'");
+    }
+
+    auto Type = StringSwitch<DebugCompressionType>(Fields[1])
+                    .Case("zlib", DebugCompressionType::Zlib)
+                    .Case("zstd", DebugCompressionType::Zstd)
+                    .Default(DebugCompressionType::None);
+    if (Type == DebugCompressionType::None && Fields[1] != "none") {
+      return createStringError(
+          errc::invalid_argument,
+          "invalid or unsupported --compress-sections format: %s",
+          A->getValue());
+    }
+
+    auto &P = Config.compressSections.emplace_back();
+    P.second = Type;
+    auto Matcher =
+        NameOrPattern::create(Fields[0], SectionMatchStyle, ErrorCallback);
+    // =none allows overriding a previous =zlib or =zstd. Reject negative
+    // patterns, which would be confusing.
+    if (Matcher && !Matcher->isPositiveMatch()) {
+      return createStringError(
+          errc::invalid_argument,
+          "--compress-sections: negative pattern is unsupported");
+    }
+    if (Error E = P.first.addMatcher(std::move(Matcher)))
+      return std::move(E);
+  }
+
   Config.AddGnuDebugLink = InputArgs.getLastArgValue(OBJCOPY_add_gnu_debuglink);
   // The gnu_debuglink's target is expected to not change or else its CRC would
   // become invalidated and get rejected. We can avoid recalculating the
@@ -732,11 +926,61 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
         llvm::crc32(arrayRefFromStringRef(Debug->getBuffer()));
   }
   Config.SplitDWO = InputArgs.getLastArgValue(OBJCOPY_split_dwo);
+
   Config.SymbolsPrefix = InputArgs.getLastArgValue(OBJCOPY_prefix_symbols);
+  Config.SymbolsPrefixRemove =
+      InputArgs.getLastArgValue(OBJCOPY_remove_symbol_prefix);
+
   Config.AllocSectionsPrefix =
       InputArgs.getLastArgValue(OBJCOPY_prefix_alloc_sections);
   if (auto Arg = InputArgs.getLastArg(OBJCOPY_extract_partition))
     Config.ExtractPartition = Arg->getValue();
+
+  if (const auto *A = InputArgs.getLastArg(OBJCOPY_gap_fill)) {
+    if (Config.OutputFormat != FileFormat::Binary)
+      return createStringError(
+          errc::invalid_argument,
+          "'--gap-fill' is only supported for binary output");
+    ErrorOr<uint64_t> Val = getAsInteger<uint64_t>(A->getValue());
+    if (!Val)
+      return createStringError(Val.getError(), "--gap-fill: bad number: %s",
+                               A->getValue());
+    uint8_t ByteVal = Val.get();
+    if (ByteVal != Val.get())
+      return createStringError(std::errc::value_too_large,
+                               "gap-fill value %s is out of range (0 to 0xff)",
+                               A->getValue());
+    Config.GapFill = ByteVal;
+  }
+
+  if (const auto *A = InputArgs.getLastArg(OBJCOPY_pad_to)) {
+    if (Config.OutputFormat != FileFormat::Binary)
+      return createStringError(
+          errc::invalid_argument,
+          "'--pad-to' is only supported for binary output");
+    ErrorOr<uint64_t> Addr = getAsInteger<uint64_t>(A->getValue());
+    if (!Addr)
+      return createStringError(Addr.getError(), "--pad-to: bad number: %s",
+                               A->getValue());
+    Config.PadTo = *Addr;
+  }
+
+  if (const auto *Arg = InputArgs.getLastArg(OBJCOPY_change_section_lma)) {
+    Expected<int64_t> LMAValue =
+        parseChangeSectionLMA(Arg->getValue(), Arg->getSpelling());
+    if (!LMAValue)
+      return LMAValue.takeError();
+    Config.ChangeSectionLMAValAll = *LMAValue;
+  }
+
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_change_section_address)) {
+    Expected<SectionPatternAddressUpdate> AddressUpdate =
+        parseChangeSectionAddr(Arg->getValue(), Arg->getSpelling(),
+                               SectionMatchStyle, ErrorCallback);
+    if (!AddressUpdate)
+      return AddressUpdate.takeError();
+    Config.ChangeSectionAddress.push_back(*AddressUpdate);
+  }
 
   for (auto *Arg : InputArgs.filtered(OBJCOPY_redefine_symbol)) {
     if (!StringRef(Arg->getValue()).contains('='))
@@ -854,6 +1098,10 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
                              ? DiscardType::All
                              : DiscardType::Locals;
   }
+
+  ELFConfig.VerifyNoteSections = InputArgs.hasFlag(
+      OBJCOPY_verify_note_sections, OBJCOPY_no_verify_note_sections, true);
+
   Config.OnlyKeepDebug = InputArgs.hasArg(OBJCOPY_only_keep_debug);
   ELFConfig.KeepFileSymbols = InputArgs.hasArg(OBJCOPY_keep_file_symbols);
   MachOConfig.KeepUndefined = InputArgs.hasArg(OBJCOPY_keep_undefined);
@@ -927,12 +1175,48 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
             addSymbolsFromFile(Config.SymbolsToKeep, DC.Alloc, Arg->getValue(),
                                SymbolMatchStyle, ErrorCallback))
       return std::move(E);
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_skip_symbol))
+    if (Error E = Config.SymbolsToSkip.addMatcher(NameOrPattern::create(
+            Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
+      return std::move(E);
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_skip_symbols))
+    if (Error E =
+            addSymbolsFromFile(Config.SymbolsToSkip, DC.Alloc, Arg->getValue(),
+                               SymbolMatchStyle, ErrorCallback))
+      return std::move(E);
   for (auto *Arg : InputArgs.filtered(OBJCOPY_add_symbol)) {
     Expected<NewSymbolInfo> SymInfo = parseNewSymbolInfo(Arg->getValue());
     if (!SymInfo)
       return SymInfo.takeError();
 
     Config.SymbolsToAdd.push_back(*SymInfo);
+  }
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_set_symbol_visibility)) {
+    if (!StringRef(Arg->getValue()).contains('='))
+      return createStringError(errc::invalid_argument,
+                               "bad format for --set-symbol-visibility");
+    auto [Sym, Visibility] = StringRef(Arg->getValue()).split('=');
+    Expected<uint8_t> Type = parseVisibilityType(Visibility);
+    if (!Type)
+      return Type.takeError();
+    ELFConfig.SymbolsToSetVisibility.emplace_back(NameMatcher(), *Type);
+    if (Error E = ELFConfig.SymbolsToSetVisibility.back().first.addMatcher(
+            NameOrPattern::create(Sym, SymbolMatchStyle, ErrorCallback)))
+      return std::move(E);
+  }
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_set_symbols_visibility)) {
+    if (!StringRef(Arg->getValue()).contains('='))
+      return createStringError(errc::invalid_argument,
+                               "bad format for --set-symbols-visibility");
+    auto [File, Visibility] = StringRef(Arg->getValue()).split('=');
+    Expected<uint8_t> Type = parseVisibilityType(Visibility);
+    if (!Type)
+      return Type.takeError();
+    ELFConfig.SymbolsToSetVisibility.emplace_back(NameMatcher(), *Type);
+    if (Error E =
+            addSymbolsFromFile(ELFConfig.SymbolsToSetVisibility.back().first,
+                               DC.Alloc, File, SymbolMatchStyle, ErrorCallback))
+      return std::move(E);
   }
 
   ELFConfig.AllowBrokenLinks = InputArgs.hasArg(OBJCOPY_allow_broken_links);
@@ -968,6 +1252,29 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
         return Expr(EAddr) + *EIncr;
       };
     }
+
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_remove_note)) {
+    Expected<RemoveNoteInfo> NoteInfo = parseRemoveNoteInfo(Arg->getValue());
+    if (!NoteInfo)
+      return NoteInfo.takeError();
+
+    ELFConfig.NotesToRemove.push_back(*NoteInfo);
+  }
+
+  if (!ELFConfig.NotesToRemove.empty()) {
+    if (!Config.ToRemove.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both --remove-note and --remove-section");
+    if (!Config.AddSection.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both --remove-note and --add-section");
+    if (!Config.UpdateSection.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both --remove-note and --update-section");
+  }
 
   if (Config.DecompressDebugSections &&
       Config.CompressionType != DebugCompressionType::None) {
@@ -1118,6 +1425,16 @@ objcopy::parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
         "llvm-install-name-tool expects a single input file");
   Config.InputFilename = Positional[0];
   Config.OutputFilename = Positional[0];
+
+  Expected<OwningBinary<Binary>> BinaryOrErr =
+      createBinary(Config.InputFilename);
+  if (!BinaryOrErr)
+    return createFileError(Config.InputFilename, BinaryOrErr.takeError());
+  auto *Binary = (*BinaryOrErr).getBinary();
+  if (!Binary->isMachO() && !Binary->isMachOUniversalBinary())
+    return createStringError(errc::invalid_argument,
+                             "input file: %s is not a Mach-O file",
+                             Config.InputFilename.str().c_str());
 
   DC.CopyConfigs.push_back(std::move(ConfigMgr));
   return std::move(DC);

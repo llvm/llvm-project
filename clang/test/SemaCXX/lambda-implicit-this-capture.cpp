@@ -1,3 +1,4 @@
+// RUN: %clang_cc1 -std=c++03 -verify=cxx11 %s -Wno-c++11-extensions
 // RUN: %clang_cc1 -std=c++11 -verify=cxx11 %s
 // RUN: %clang_cc1 -std=c++2a -verify=cxx2a %s
 // RUN: %clang_cc1 -std=c++2a -verify=cxx2a-no-deprecated %s -Wno-deprecated

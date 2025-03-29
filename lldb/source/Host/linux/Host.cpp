@@ -37,6 +37,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 namespace {
+
 enum class ProcessState {
   Unknown,
   Dead,
@@ -49,6 +50,33 @@ enum class ProcessState {
   TracedOrStopped,
   Zombie,
 };
+
+struct StatFields {
+  ::pid_t pid = LLDB_INVALID_PROCESS_ID;
+  // comm
+  char state;
+  ::pid_t ppid = LLDB_INVALID_PROCESS_ID;
+  ::pid_t pgrp = LLDB_INVALID_PROCESS_ID;
+  ::pid_t session = LLDB_INVALID_PROCESS_ID;
+  int tty_nr;
+  int tpgid;
+  unsigned flags;
+  long unsigned minflt;
+  long unsigned cminflt;
+  long unsigned majflt;
+  long unsigned cmajflt;
+  long unsigned utime;
+  long unsigned stime;
+  long cutime;
+  long cstime;
+  // In proc_pid_stat(5) this field is specified as priority
+  // but documented as realtime priority. To keep with the adopted
+  // nomenclature in ProcessInstanceInfo, we adopt the documented
+  // naming here.
+  long realtime_priority;
+  long priority;
+  // .... other things. We don't need them below
+};
 }
 
 namespace lldb_private {
@@ -60,11 +88,101 @@ static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,
                           ::pid_t &Tgid) {
   Log *log = GetLog(LLDBLog::Host);
 
-  auto BufferOrError = getProcFile(Pid, "status");
+  auto BufferOrError = getProcFile(Pid, "stat");
   if (!BufferOrError)
     return false;
 
   llvm::StringRef Rest = BufferOrError.get()->getBuffer();
+  if (Rest.empty())
+    return false;
+  StatFields stat_fields;
+  if (sscanf(
+          Rest.data(),
+          "%d %*s %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld",
+          &stat_fields.pid, /* comm, */ &stat_fields.state,
+          &stat_fields.ppid, &stat_fields.pgrp, &stat_fields.session,
+          &stat_fields.tty_nr, &stat_fields.tpgid, &stat_fields.flags,
+          &stat_fields.minflt, &stat_fields.cminflt, &stat_fields.majflt,
+          &stat_fields.cmajflt, &stat_fields.utime, &stat_fields.stime,
+          &stat_fields.cutime, &stat_fields.cstime,
+          &stat_fields.realtime_priority, &stat_fields.priority) < 0) {
+    return false;
+  }
+
+  auto convert = [sc_clk_ticks = sysconf(_SC_CLK_TCK)](auto time_in_ticks) {
+    ProcessInstanceInfo::timespec ts;
+    if (sc_clk_ticks <= 0) {
+      return ts;
+    }
+    ts.tv_sec = time_in_ticks / sc_clk_ticks;
+    double remainder =
+        (static_cast<double>(time_in_ticks) / sc_clk_ticks) - ts.tv_sec;
+    ts.tv_usec =
+        std::chrono::microseconds{std::lround(1e+6 * remainder)}.count();
+    return ts;
+  };
+
+  // Priority (nice) values run from 19 to -20 inclusive (in linux). In the
+  // prpsinfo struct pr_nice is a char.
+  auto priority_value = static_cast<int8_t>(
+      (stat_fields.priority < 0 ? 0x80 : 0x00) | (stat_fields.priority & 0x7f));
+
+  ProcessInfo.SetParentProcessID(stat_fields.ppid);
+  ProcessInfo.SetProcessGroupID(stat_fields.pgrp);
+  ProcessInfo.SetProcessSessionID(stat_fields.session);
+  ProcessInfo.SetUserTime(convert(stat_fields.utime));
+  ProcessInfo.SetSystemTime(convert(stat_fields.stime));
+  ProcessInfo.SetCumulativeUserTime(convert(stat_fields.cutime));
+  ProcessInfo.SetCumulativeSystemTime(convert(stat_fields.cstime));
+  ProcessInfo.SetPriorityValue(priority_value);
+  switch (stat_fields.state) {
+  case 'R':
+    State = ProcessState::Running;
+    break;
+  case 'S':
+    State = ProcessState::Sleeping;
+    break;
+  case 'D':
+    State = ProcessState::DiskSleep;
+    break;
+  case 'Z':
+    State = ProcessState::Zombie;
+    break;
+  case 'X':
+    State = ProcessState::Dead;
+    break;
+  case 'P':
+    State = ProcessState::Parked;
+    break;
+  case 'W':
+    State = ProcessState::Paging;
+    break;
+  case 'I':
+    State = ProcessState::Idle;
+    break;
+  case 'T': // Stopped on a signal or (before Linux 2.6.33) trace stopped
+    [[fallthrough]];
+  case 't':
+    State = ProcessState::TracedOrStopped;
+    break;
+  default:
+    State = ProcessState::Unknown;
+    break;
+  }
+  ProcessInfo.SetIsZombie(State == ProcessState::Zombie);
+
+  if (State == ProcessState::Unknown) {
+    LLDB_LOG(log, "Unknown process state {0}", stat_fields.state);
+  }
+
+  BufferOrError = getProcFile(Pid, "status");
+  if (!BufferOrError)
+    return false;
+
+  Rest = BufferOrError.get()->getBuffer();
+  if (Rest.empty())
+    return false;
+
   while (!Rest.empty()) {
     llvm::StringRef Line;
     std::tie(Line, Rest) = Rest.split('\n');
@@ -89,25 +207,6 @@ static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,
 
       ProcessInfo.SetUserID(RUid);
       ProcessInfo.SetEffectiveUserID(EUid);
-    } else if (Line.consume_front("PPid:")) {
-      ::pid_t PPid;
-      Line.ltrim().consumeInteger(10, PPid);
-      ProcessInfo.SetParentProcessID(PPid);
-    } else if (Line.consume_front("State:")) {
-      State = llvm::StringSwitch<ProcessState>(Line.ltrim().take_front(1))
-                  .Case("D", ProcessState::DiskSleep)
-                  .Case("I", ProcessState::Idle)
-                  .Case("R", ProcessState::Running)
-                  .Case("S", ProcessState::Sleeping)
-                  .CaseLower("T", ProcessState::TracedOrStopped)
-                  .Case("W", ProcessState::Paging)
-                  .Case("P", ProcessState::Parked)
-                  .Case("X", ProcessState::Dead)
-                  .Case("Z", ProcessState::Zombie)
-                  .Default(ProcessState::Unknown);
-      if (State == ProcessState::Unknown) {
-        LLDB_LOG(log, "Unknown process state {0}", Line);
-      }
     } else if (Line.consume_front("TracerPid:")) {
       Line = Line.ltrim();
       Line.consumeInteger(10, TracerPid);
@@ -312,10 +411,8 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
   return GetProcessAndStatInfo(pid, process_info, State, tracerpid);
 }
 
-Environment Host::GetEnvironment() { return Environment(environ); }
-
 Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
-  return Status("unimplemented");
+  return Status::FromErrorString("unimplemented");
 }
 
 std::optional<lldb::pid_t> lldb_private::getPIDForTID(lldb::pid_t tid) {

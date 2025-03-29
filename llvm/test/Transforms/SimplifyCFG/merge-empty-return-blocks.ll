@@ -34,8 +34,8 @@ end1:
 define i8 @t2(i1 %c, i8 %v0, i8 %v1) {
 ; CHECK-LABEL: @t2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C:%.*]], i8 [[V0:%.*]], i8 [[V1:%.*]]
-; CHECK-NEXT:    ret i8 [[SPEC_SELECT]]
+; CHECK-NEXT:    [[V0_V1:%.*]] = select i1 [[C:%.*]], i8 [[V0:%.*]], i8 [[V1:%.*]]
+; CHECK-NEXT:    ret i8 [[V0_V1]]
 ;
 entry:
   br i1 %c, label %end0, label %end1

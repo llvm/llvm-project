@@ -1,12 +1,12 @@
-# RUN: llvm-mc %s -triple=riscv32 -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv32 -M no-aliases \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST,CHECK-ASM-NOALIAS %s
 # RUN: llvm-mc %s -triple=riscv32 \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-ALIAS,CHECK-ASM %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
-# RUN:     | llvm-objdump -M no-aliases -d -r - \
+# RUN:     | llvm-objdump -M no-aliases --no-print-imm-hex -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ-NOALIAS,CHECK-EXPAND,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
-# RUN:     | llvm-objdump -d -r - \
+# RUN:     | llvm-objdump --no-print-imm-hex -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-ALIAS %s
 
 # The following check prefixes are used in this test:
@@ -254,7 +254,7 @@ sext.b x10, x11
 sext.h x10, x11
 
 # CHECK-INST: andi a0, a1, 255
-# CHECK-ALIAS: andi a0, a1, 255
+# CHECK-ALIAS: zext.b a0, a1
 zext.b x10, x11
 
 # CHECK-EXPAND: slli a0, a1, 16

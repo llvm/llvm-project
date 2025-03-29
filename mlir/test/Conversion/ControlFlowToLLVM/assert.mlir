@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-cf-to-llvm='use-opaque-pointers=1' | FileCheck %s
+// RUN: mlir-opt %s -convert-cf-to-llvm | FileCheck %s
 
 // Same below, but using the `ConvertToLLVMPatternInterface` entry point
 // and the generic `convert-to-llvm` pass.

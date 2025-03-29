@@ -1,8 +1,6 @@
 # RUN: %PYTHON %s | FileCheck %s
 
 import gc
-import io
-import itertools
 from mlir.ir import *
 
 

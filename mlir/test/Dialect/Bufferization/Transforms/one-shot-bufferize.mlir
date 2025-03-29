@@ -1,9 +1,9 @@
 // RUN: mlir-opt %s -one-shot-bufferize="allow-unknown-ops" -verify-diagnostics -split-input-file | FileCheck %s
 
 // Run fuzzer with different seeds.
-// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=23" -verify-diagnostics -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=59" -verify-diagnostics -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=91" -verify-diagnostics -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=23" -verify-diagnostics -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=59" -verify-diagnostics -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=91" -verify-diagnostics -split-input-file -o /dev/null
 
 // Run with top-down analysis.
 // RUN: mlir-opt %s -one-shot-bufferize="allow-unknown-ops analysis-heuristic=top-down" -verify-diagnostics -split-input-file | FileCheck %s --check-prefix=CHECK-TOP-DOWN-ANALYSIS
@@ -134,7 +134,7 @@ func.func @copy_deallocated() -> tensor<10xf32> {
 // CHECK-LABEL: func @select_different_tensors(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>
 func.func @select_different_tensors(%t: tensor<?xf32>, %sz: index, %pos: index, %c: i1) -> f32 {
-  // CHECK-DAG: %[[m:.*]] = bufferization.to_memref %[[t]] : memref<?xf32, strided{{.*}}>
+  // CHECK-DAG: %[[m:.*]] = bufferization.to_memref %[[t]] : tensor<?xf32> to memref<?xf32, strided{{.*}}>
   // CHECK-DAG: %[[alloc:.*]] = memref.alloc(%{{.*}}) {{.*}} : memref<?xf32>
   %0 = bufferization.alloc_tensor(%sz) : tensor<?xf32>
 
@@ -200,7 +200,7 @@ func.func @read_of_alias(%t: tensor<100xf32>, %pos1: index, %pos2: index,
 // CHECK-LABEL: func @from_unranked_to_unranked(
 //  CHECK-SAME:     %[[arg0:.*]]: tensor<*xi32>
 func.func @from_unranked_to_unranked(%arg0: tensor<*xi32>) -> tensor<*xi32> {
-  // CHECK: %[[m:.*]] = bufferization.to_memref %[[arg0]] : memref<*xi32>
+  // CHECK: %[[m:.*]] = bufferization.to_memref %[[arg0]] : tensor<*xi32> to memref<*xi32>
   // CHECK: %[[t:.*]] = bufferization.to_tensor %[[m]]
   // CHECK: return %[[t]] : tensor<*xi32>
   %0 = tensor.cast %arg0 : tensor<*xi32> to tensor<*xi32>
@@ -227,7 +227,7 @@ func.func @tensor_copy(%arg0: tensor<5xf32>) -> tensor<5xf32> {
 
 // CHECK-LABEL: func @materialize_in_destination_buffer(
 //  CHECK-SAME:     %[[t:.*]]: tensor<5xf32>, %[[m:.*]]: memref<5xf32>)
-//       CHECK:   %[[b:.*]] = bufferization.to_memref %[[t]] : memref<5xf32, strided<[?], offset: ?>>
+//       CHECK:   %[[b:.*]] = bufferization.to_memref %[[t]] : tensor<5xf32> to memref<5xf32, strided<[?], offset: ?>>
 //       CHECK:   memref.copy %[[b]], %[[m]]
 func.func @materialize_in_destination_buffer(%t: tensor<5xf32>, %m: memref<5xf32>) {
   bufferization.materialize_in_destination %t in restrict writable %m

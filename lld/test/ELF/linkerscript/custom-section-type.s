@@ -67,7 +67,7 @@ SECTIONS {
   nobits ( TYPE=SHT_NOBITS) : { BYTE(8) }
   init_array (TYPE=SHT_INIT_ARRAY ) : { QUAD(myinit) }
   fini_array (TYPE=SHT_FINI_ARRAY) : { QUAD(15) }
-  preinit_array (TYPE=SHT_PREINIT_ARRAY) : { QUAD(16) }
+  preinit_array . (TYPE=SHT_PREINIT_ARRAY) : { QUAD(16) }
   group (TYPE=17) : { LONG(17) }
   expr (TYPE=0x41+1) : { BYTE(0x42) *(expr) }
 }
@@ -76,7 +76,7 @@ SECTIONS {
 .section progbits,"a",@note
 .byte 0
 
-.section expr,"a",@12345
+.section expr,"a",@0x60000000
 .byte 0
 
 #--- unknown1.lds

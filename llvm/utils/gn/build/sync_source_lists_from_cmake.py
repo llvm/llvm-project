@@ -61,13 +61,13 @@ def sync_source_lists(write):
     gn_files = git_out(["ls-files", "*BUILD.gn"]).splitlines()
 
     # Matches e.g. |   "foo.cpp",|, captures |foo| in group 1.
-    gn_cpp_re = re.compile(r'^\s*"([^$"]+\.(?:cpp|c|h|S))",$', re.MULTILINE)
+    gn_cpp_re = re.compile(r'^\s*"([^$"]+\.(?:cpp|c|h|mm|S))",$', re.MULTILINE)
     # Matches e.g. |   bar_sources = [ "foo.cpp" ]|, captures |foo| in group 1.
     gn_cpp_re2 = re.compile(
-        r'^\s*(?:.*_)?sources \+?= \[ "([^$"]+\.(?:cpp|c|h|S))" ]$', re.MULTILINE
+        r'^\s*(?:.*_)?sources \+?= \[ "([^$"]+\.(?:cpp|c|h|mm|S))" ]$', re.MULTILINE
     )
     # Matches e.g. |   foo.cpp|, captures |foo| in group 1.
-    cmake_cpp_re = re.compile(r"^\s*([A-Za-z_0-9./-]+\.(?:cpp|c|h|S))$", re.MULTILINE)
+    cmake_cpp_re = re.compile(r"^\s*([A-Za-z_0-9./-]+\.(?:cpp|c|h|mm|S))$", re.MULTILINE)
 
     changes_by_rev = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
@@ -123,7 +123,8 @@ def sync_source_lists(write):
 
     # Output necessary changes grouped by revision.
     for rev in sorted(changes_by_rev):
-        print("[gn build] Port {0} -- https://reviews.llvm.org/rG{0}".format(rev))
+        commit_url = 'https://github.com/llvm/llvm-project/commit'
+        print("[gn build] Port {0} -- {1}/{0}".format(rev, commit_url))
         for gn_file, data in sorted(changes_by_rev[rev].items()):
             add = data.get("add", [])
             remove = data.get("remove", [])

@@ -471,3 +471,29 @@ define double @negated_op_extra_use(double %x) {
   %r = call double @llvm.minimum.f64(double %negx, double %x)
   ret double %r
 }
+
+; Testcase from PR 71548.
+define void @pr71548() {
+; CHECK-LABEL: @pr71548(
+; CHECK-NEXT:    [[C0:%.*]] = load atomic double, ptr addrspace(1) null unordered, align 8
+; CHECK-NEXT:    [[C1:%.*]] = load atomic i32, ptr addrspace(1) null unordered, align 4
+; CHECK-NEXT:    [[C2:%.*]] = sitofp i32 [[C1]] to double
+; CHECK-NEXT:    [[CRES_I:%.*]] = call noundef double @llvm.minimum.f64(double [[C0]], double [[C2]])
+; CHECK-NEXT:    [[C3:%.*]] = fcmp ult double [[CRES_I]], 0.000000e+00
+; CHECK-NEXT:    [[C_NOT16:%.*]] = icmp eq i32 [[C1]], 0
+; CHECK-NEXT:    [[COR_COND45:%.*]] = or i1 [[C3]], [[C_NOT16]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COR_COND45]])
+; CHECK-NEXT:    ret void
+;
+  %c0 = load atomic double, ptr addrspace(1) null unordered, align 8
+  %c1 = load atomic i32, ptr addrspace(1) null unordered, align 4
+  %c2 = sitofp i32 %c1 to double
+  %cres.i = call noundef double @llvm.minimum.f64(double %c0, double %c2)
+  %c3 = fcmp ult double %cres.i, 0.000000e+00
+  %c.not16 = icmp eq i32 %c1, 0
+  %cor.cond45 = or i1 %c3, %c.not16
+  call void @llvm.assume(i1 %cor.cond45)
+  ret void
+}
+
+declare void @llvm.assume(i1)

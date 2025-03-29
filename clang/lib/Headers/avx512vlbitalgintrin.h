@@ -15,13 +15,19 @@
 #define __AVX512VLBITALGINTRIN_H
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS128 __attribute__((__always_inline__, __nodebug__, __target__("avx512vl,avx512bitalg"), __min_vector_width__(128)))
-#define __DEFAULT_FN_ATTRS256 __attribute__((__always_inline__, __nodebug__, __target__("avx512vl,avx512bitalg"), __min_vector_width__(256)))
+#define __DEFAULT_FN_ATTRS128                                                  \
+  __attribute__((__always_inline__, __nodebug__,                               \
+                 __target__("avx512vl,avx512bitalg,no-evex512"),               \
+                 __min_vector_width__(128)))
+#define __DEFAULT_FN_ATTRS256                                                  \
+  __attribute__((__always_inline__, __nodebug__,                               \
+                 __target__("avx512vl,avx512bitalg,no-evex512"),               \
+                 __min_vector_width__(256)))
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_popcnt_epi16(__m256i __A)
 {
-  return (__m256i) __builtin_ia32_vpopcntw_256((__v16hi) __A);
+  return (__m256i)__builtin_elementwise_popcount((__v16hu)__A);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
@@ -43,7 +49,7 @@ _mm256_maskz_popcnt_epi16(__mmask16 __U, __m256i __B)
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_popcnt_epi16(__m128i __A)
 {
-  return (__m128i) __builtin_ia32_vpopcntw_128((__v8hi) __A);
+  return (__m128i)__builtin_elementwise_popcount((__v8hu)__A);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -65,7 +71,7 @@ _mm_maskz_popcnt_epi16(__mmask8 __U, __m128i __B)
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_popcnt_epi8(__m256i __A)
 {
-  return (__m256i) __builtin_ia32_vpopcntb_256((__v32qi) __A);
+  return (__m256i)__builtin_elementwise_popcount((__v32qu)__A);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
@@ -87,7 +93,7 @@ _mm256_maskz_popcnt_epi8(__mmask32 __U, __m256i __B)
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_popcnt_epi8(__m128i __A)
 {
-  return (__m128i) __builtin_ia32_vpopcntb_128((__v16qi) __A);
+  return (__m128i)__builtin_elementwise_popcount((__v16qu)__A);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128

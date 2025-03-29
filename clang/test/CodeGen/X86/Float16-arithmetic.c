@@ -178,9 +178,9 @@ _Float16 mulcompound_int_float16(int a, _Float16 c) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    store <2 x half> [[C_COERCE:%.*]], ptr [[C]], align 2
 // CHECK-NEXT:    store float [[A:%.*]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[C_REALP:%.*]] = getelementptr inbounds { half, half }, ptr [[C]], i32 0, i32 0
+// CHECK-NEXT:    [[C_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[C]], i32 0, i32 0
 // CHECK-NEXT:    [[C_REAL:%.*]] = load half, ptr [[C_REALP]], align 2
-// CHECK-NEXT:    [[C_IMAGP:%.*]] = getelementptr inbounds { half, half }, ptr [[C]], i32 0, i32 1
+// CHECK-NEXT:    [[C_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[C]], i32 0, i32 1
 // CHECK-NEXT:    [[C_IMAG:%.*]] = load half, ptr [[C_IMAGP]], align 2
 // CHECK-NEXT:    [[CONV:%.*]] = fpext half [[C_REAL]] to float
 // CHECK-NEXT:    [[CONV1:%.*]] = fpext half [[C_IMAG]] to float
@@ -188,7 +188,7 @@ _Float16 mulcompound_int_float16(int a, _Float16 c) {
 // CHECK-NEXT:    [[MUL_RL:%.*]] = fmul float [[TMP0]], [[CONV]]
 // CHECK-NEXT:    [[MUL_IR:%.*]] = fmul float [[TMP0]], [[CONV1]]
 // CHECK-NEXT:    store float [[MUL_RL]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[C_REALP2:%.*]] = getelementptr inbounds { half, half }, ptr [[C]], i32 0, i32 0
+// CHECK-NEXT:    [[C_REALP2:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[C]], i32 0, i32 0
 // CHECK-NEXT:    [[C_REAL3:%.*]] = load half, ptr [[C_REALP2]], align 2
 // CHECK-NEXT:    ret half [[C_REAL3]]
 //
@@ -214,7 +214,7 @@ _Float16 RealOp(_Float16 a) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A:%.*]] = alloca { half, half }, align 2
 // CHECK-NEXT:    store <2 x half> [[A_COERCE:%.*]], ptr [[A]], align 2
-// CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds { half, half }, ptr [[A]], i32 0, i32 0
+// CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[A]], i32 0, i32 0
 // CHECK-NEXT:    [[A_REAL:%.*]] = load half, ptr [[A_REALP]], align 2
 // CHECK-NEXT:    [[EXT:%.*]] = fpext half [[A_REAL]] to float
 // CHECK-NEXT:    [[UNPROMOTION:%.*]] = fptrunc float [[EXT]] to half
@@ -240,7 +240,7 @@ _Float16 ImagOp(_Float16 a) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A:%.*]] = alloca { half, half }, align 2
 // CHECK-NEXT:    store <2 x half> [[A_COERCE:%.*]], ptr [[A]], align 2
-// CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds { half, half }, ptr [[A]], i32 0, i32 1
+// CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[A]], i32 0, i32 1
 // CHECK-NEXT:    [[A_IMAG:%.*]] = load half, ptr [[A_IMAGP]], align 2
 // CHECK-NEXT:    [[EXT:%.*]] = fpext half [[A_IMAG]] to float
 // CHECK-NEXT:    [[UNPROMOTION:%.*]] = fptrunc float [[EXT]] to half
@@ -268,9 +268,9 @@ _Float16 MinusOp_r(_Float16 a) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A:%.*]] = alloca { half, half }, align 2
 // CHECK-NEXT:    store <2 x half> [[A_COERCE:%.*]], ptr [[A]], align 2
-// CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds { half, half }, ptr [[A]], i32 0, i32 0
+// CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[A]], i32 0, i32 0
 // CHECK-NEXT:    [[A_REAL:%.*]] = load half, ptr [[A_REALP]], align 2
-// CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds { half, half }, ptr [[A]], i32 0, i32 1
+// CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[A]], i32 0, i32 1
 // CHECK-NEXT:    [[A_IMAG:%.*]] = load half, ptr [[A_IMAGP]], align 2
 // CHECK-NEXT:    [[EXT:%.*]] = fpext half [[A_REAL]] to float
 // CHECK-NEXT:    [[EXT1:%.*]] = fpext half [[A_IMAG]] to float
@@ -301,9 +301,9 @@ _Float16 PlusOp_r(_Float16 a) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A:%.*]] = alloca { half, half }, align 2
 // CHECK-NEXT:    store <2 x half> [[A_COERCE:%.*]], ptr [[A]], align 2
-// CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds { half, half }, ptr [[A]], i32 0, i32 0
+// CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[A]], i32 0, i32 0
 // CHECK-NEXT:    [[A_REAL:%.*]] = load half, ptr [[A_REALP]], align 2
-// CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds { half, half }, ptr [[A]], i32 0, i32 1
+// CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[A]], i32 0, i32 1
 // CHECK-NEXT:    [[A_IMAG:%.*]] = load half, ptr [[A_IMAGP]], align 2
 // CHECK-NEXT:    [[EXT:%.*]] = fpext half [[A_REAL]] to float
 // CHECK-NEXT:    [[EXT1:%.*]] = fpext half [[A_IMAG]] to float
@@ -340,9 +340,9 @@ _Float16 MinusOp_r_r(_Float16 a, _Float16 c) {
 // CHECK-NEXT:    [[C_ADDR:%.*]] = alloca half, align 2
 // CHECK-NEXT:    store <2 x half> [[A_COERCE:%.*]], ptr [[A]], align 2
 // CHECK-NEXT:    store half [[C:%.*]], ptr [[C_ADDR]], align 2
-// CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds { half, half }, ptr [[A]], i32 0, i32 0
+// CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[A]], i32 0, i32 0
 // CHECK-NEXT:    [[A_REAL:%.*]] = load half, ptr [[A_REALP]], align 2
-// CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds { half, half }, ptr [[A]], i32 0, i32 1
+// CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[A]], i32 0, i32 1
 // CHECK-NEXT:    [[A_IMAG:%.*]] = load half, ptr [[A_IMAGP]], align 2
 // CHECK-NEXT:    [[EXT:%.*]] = fpext half [[A_REAL]] to float
 // CHECK-NEXT:    [[EXT1:%.*]] = fpext half [[A_IMAG]] to float
@@ -366,9 +366,9 @@ _Float16 MinusOp_c_r(_Float16 _Complex a, _Float16 c) {
 // CHECK-NEXT:    store half [[A:%.*]], ptr [[A_ADDR]], align 2
 // CHECK-NEXT:    [[TMP0:%.*]] = load half, ptr [[A_ADDR]], align 2
 // CHECK-NEXT:    [[EXT:%.*]] = fpext half [[TMP0]] to float
-// CHECK-NEXT:    [[C_REALP:%.*]] = getelementptr inbounds { half, half }, ptr [[C]], i32 0, i32 0
+// CHECK-NEXT:    [[C_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[C]], i32 0, i32 0
 // CHECK-NEXT:    [[C_REAL:%.*]] = load half, ptr [[C_REALP]], align 2
-// CHECK-NEXT:    [[C_IMAGP:%.*]] = getelementptr inbounds { half, half }, ptr [[C]], i32 0, i32 1
+// CHECK-NEXT:    [[C_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[C]], i32 0, i32 1
 // CHECK-NEXT:    [[C_IMAG:%.*]] = load half, ptr [[C_IMAGP]], align 2
 // CHECK-NEXT:    [[EXT1:%.*]] = fpext half [[C_REAL]] to float
 // CHECK-NEXT:    [[EXT2:%.*]] = fpext half [[C_IMAG]] to float
@@ -389,15 +389,15 @@ _Float16 MinusOp_r_c(_Float16 a, _Float16 _Complex c) {
 // CHECK-NEXT:    [[C:%.*]] = alloca { half, half }, align 2
 // CHECK-NEXT:    store <2 x half> [[A_COERCE:%.*]], ptr [[A]], align 2
 // CHECK-NEXT:    store <2 x half> [[C_COERCE:%.*]], ptr [[C]], align 2
-// CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds { half, half }, ptr [[A]], i32 0, i32 0
+// CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[A]], i32 0, i32 0
 // CHECK-NEXT:    [[A_REAL:%.*]] = load half, ptr [[A_REALP]], align 2
-// CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds { half, half }, ptr [[A]], i32 0, i32 1
+// CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[A]], i32 0, i32 1
 // CHECK-NEXT:    [[A_IMAG:%.*]] = load half, ptr [[A_IMAGP]], align 2
 // CHECK-NEXT:    [[EXT:%.*]] = fpext half [[A_REAL]] to float
 // CHECK-NEXT:    [[EXT1:%.*]] = fpext half [[A_IMAG]] to float
-// CHECK-NEXT:    [[C_REALP:%.*]] = getelementptr inbounds { half, half }, ptr [[C]], i32 0, i32 0
+// CHECK-NEXT:    [[C_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[C]], i32 0, i32 0
 // CHECK-NEXT:    [[C_REAL:%.*]] = load half, ptr [[C_REALP]], align 2
-// CHECK-NEXT:    [[C_IMAGP:%.*]] = getelementptr inbounds { half, half }, ptr [[C]], i32 0, i32 1
+// CHECK-NEXT:    [[C_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[C]], i32 0, i32 1
 // CHECK-NEXT:    [[C_IMAG:%.*]] = load half, ptr [[C_IMAGP]], align 2
 // CHECK-NEXT:    [[EXT2:%.*]] = fpext half [[C_REAL]] to float
 // CHECK-NEXT:    [[EXT3:%.*]] = fpext half [[C_IMAG]] to float
@@ -437,9 +437,9 @@ _Float16 PlusOp_r_r(_Float16 a, _Float16 c) {
 // CHECK-NEXT:    [[C_ADDR:%.*]] = alloca half, align 2
 // CHECK-NEXT:    store <2 x half> [[A_COERCE:%.*]], ptr [[A]], align 2
 // CHECK-NEXT:    store half [[C:%.*]], ptr [[C_ADDR]], align 2
-// CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds { half, half }, ptr [[A]], i32 0, i32 0
+// CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[A]], i32 0, i32 0
 // CHECK-NEXT:    [[A_REAL:%.*]] = load half, ptr [[A_REALP]], align 2
-// CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds { half, half }, ptr [[A]], i32 0, i32 1
+// CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[A]], i32 0, i32 1
 // CHECK-NEXT:    [[A_IMAG:%.*]] = load half, ptr [[A_IMAGP]], align 2
 // CHECK-NEXT:    [[EXT:%.*]] = fpext half [[A_REAL]] to float
 // CHECK-NEXT:    [[EXT1:%.*]] = fpext half [[A_IMAG]] to float
@@ -462,9 +462,9 @@ _Float16 PlusOp_c_r(_Float16 _Complex a, _Float16 c) {
 // CHECK-NEXT:    store half [[A:%.*]], ptr [[A_ADDR]], align 2
 // CHECK-NEXT:    [[TMP0:%.*]] = load half, ptr [[A_ADDR]], align 2
 // CHECK-NEXT:    [[EXT:%.*]] = fpext half [[TMP0]] to float
-// CHECK-NEXT:    [[C_REALP:%.*]] = getelementptr inbounds { half, half }, ptr [[C]], i32 0, i32 0
+// CHECK-NEXT:    [[C_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[C]], i32 0, i32 0
 // CHECK-NEXT:    [[C_REAL:%.*]] = load half, ptr [[C_REALP]], align 2
-// CHECK-NEXT:    [[C_IMAGP:%.*]] = getelementptr inbounds { half, half }, ptr [[C]], i32 0, i32 1
+// CHECK-NEXT:    [[C_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[C]], i32 0, i32 1
 // CHECK-NEXT:    [[C_IMAG:%.*]] = load half, ptr [[C_IMAGP]], align 2
 // CHECK-NEXT:    [[EXT1:%.*]] = fpext half [[C_REAL]] to float
 // CHECK-NEXT:    [[EXT2:%.*]] = fpext half [[C_IMAG]] to float
@@ -484,15 +484,15 @@ _Float16 PlusOp_r_c(_Float16 a, _Float16 _Complex c) {
 // CHECK-NEXT:    [[C:%.*]] = alloca { half, half }, align 2
 // CHECK-NEXT:    store <2 x half> [[A_COERCE:%.*]], ptr [[A]], align 2
 // CHECK-NEXT:    store <2 x half> [[C_COERCE:%.*]], ptr [[C]], align 2
-// CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds { half, half }, ptr [[A]], i32 0, i32 0
+// CHECK-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[A]], i32 0, i32 0
 // CHECK-NEXT:    [[A_REAL:%.*]] = load half, ptr [[A_REALP]], align 2
-// CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds { half, half }, ptr [[A]], i32 0, i32 1
+// CHECK-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[A]], i32 0, i32 1
 // CHECK-NEXT:    [[A_IMAG:%.*]] = load half, ptr [[A_IMAGP]], align 2
 // CHECK-NEXT:    [[EXT:%.*]] = fpext half [[A_REAL]] to float
 // CHECK-NEXT:    [[EXT1:%.*]] = fpext half [[A_IMAG]] to float
-// CHECK-NEXT:    [[C_REALP:%.*]] = getelementptr inbounds { half, half }, ptr [[C]], i32 0, i32 0
+// CHECK-NEXT:    [[C_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[C]], i32 0, i32 0
 // CHECK-NEXT:    [[C_REAL:%.*]] = load half, ptr [[C_REALP]], align 2
-// CHECK-NEXT:    [[C_IMAGP:%.*]] = getelementptr inbounds { half, half }, ptr [[C]], i32 0, i32 1
+// CHECK-NEXT:    [[C_IMAGP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[C]], i32 0, i32 1
 // CHECK-NEXT:    [[C_IMAG:%.*]] = load half, ptr [[C_IMAGP]], align 2
 // CHECK-NEXT:    [[EXT2:%.*]] = fpext half [[C_REAL]] to float
 // CHECK-NEXT:    [[EXT3:%.*]] = fpext half [[C_IMAG]] to float

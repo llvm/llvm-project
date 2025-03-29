@@ -39,62 +39,62 @@ bool Large_was_deallocated = false;
 bool Small_was_constructed = false;
 bool Small_was_destroyed = false;
 
-namespace std {
-  template <>
-  struct allocator<Large> {
-    using value_type = Large;
-    using size_type = std::size_t;
-    using difference_type = std::ptrdiff_t;
-    using propagate_on_container_move_assignment = std::true_type;
-    using is_always_equal = std::true_type;
+template <>
+struct std::allocator<Large> {
+  using value_type                             = Large;
+  using size_type                              = std::size_t;
+  using difference_type                        = std::ptrdiff_t;
+  using propagate_on_container_move_assignment = std::true_type;
+  using is_always_equal                        = std::true_type;
 
-    Large* allocate(std::size_t n) {
-      Large_was_allocated = true;
-      return static_cast<Large*>(::operator new(n * sizeof(Large)));
-    }
+  Large* allocate(std::size_t n) {
+    Large_was_allocated = true;
+    return static_cast<Large*>(::operator new(n * sizeof(Large)));
+  }
 
-    template <typename ...Args>
-    void construct(Large* p, Args&& ...args) {
-      new (p) Large(std::forward<Args>(args)...);
-      Large_was_constructed = true;
-    }
+  template <typename... Args>
+  void construct(Large* p, Args&&... args) {
+    new (p) Large(std::forward<Args>(args)...);
+    Large_was_constructed = true;
+  }
 
-    void destroy(Large* p) {
-      p->~Large();
-      Large_was_destroyed = true;
-    }
+  void destroy(Large* p) {
+    p->~Large();
+    Large_was_destroyed = true;
+  }
 
-    void deallocate(Large* p, std::size_t) {
-      Large_was_deallocated = true;
-      return ::operator delete(p);
-    }
-  };
+  void deallocate(Large* p, std::size_t) {
+    Large_was_deallocated = true;
+    return ::operator delete(p);
+  }
+};
 
-  template <>
-  struct allocator<Small> {
-    using value_type = Small;
-    using size_type = std::size_t;
-    using difference_type = std::ptrdiff_t;
-    using propagate_on_container_move_assignment = std::true_type;
-    using is_always_equal = std::true_type;
+template <>
+struct std::allocator<Small> {
+  using value_type                             = Small;
+  using size_type                              = std::size_t;
+  using difference_type                        = std::ptrdiff_t;
+  using propagate_on_container_move_assignment = std::true_type;
+  using is_always_equal                        = std::true_type;
 
-    Small* allocate(std::size_t) { assert(false); return nullptr; }
+  Small* allocate(std::size_t) {
+    assert(false);
+    return nullptr;
+  }
 
-    template <typename ...Args>
-    void construct(Small* p, Args&& ...args) {
-      new (p) Small(std::forward<Args>(args)...);
-      Small_was_constructed = true;
-    }
+  template <typename... Args>
+  void construct(Small* p, Args&&... args) {
+    new (p) Small(std::forward<Args>(args)...);
+    Small_was_constructed = true;
+  }
 
-    void destroy(Small* p) {
-      p->~Small();
-      Small_was_destroyed = true;
-    }
+  void destroy(Small* p) {
+    p->~Small();
+    Small_was_destroyed = true;
+  }
 
-    void deallocate(Small*, std::size_t) { assert(false); }
-  };
-} // end namespace std
-
+  void deallocate(Small*, std::size_t) { assert(false); }
+};
 
 int main(int, char**) {
   // Test large types

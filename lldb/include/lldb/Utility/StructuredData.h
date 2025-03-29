@@ -23,6 +23,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -220,70 +221,45 @@ public:
     }
 
     template <class IntType>
-    bool GetItemAtIndexAsInteger(size_t idx, IntType &result) const {
-      ObjectSP value_sp = GetItemAtIndex(idx);
-      if (value_sp.get()) {
+    std::optional<IntType> GetItemAtIndexAsInteger(size_t idx) const {
+      if (auto item_sp = GetItemAtIndex(idx)) {
         if constexpr (std::numeric_limits<IntType>::is_signed) {
-          if (auto signed_value = value_sp->GetAsSignedInteger()) {
-            result = static_cast<IntType>(signed_value->GetValue());
-            return true;
-          }
+          if (auto *signed_value = item_sp->GetAsSignedInteger())
+            return static_cast<IntType>(signed_value->GetValue());
         } else {
-          if (auto unsigned_value = value_sp->GetAsUnsignedInteger()) {
-            result = static_cast<IntType>(unsigned_value->GetValue());
-            return true;
-          }
+          if (auto *unsigned_value = item_sp->GetAsUnsignedInteger())
+            return static_cast<IntType>(unsigned_value->GetValue());
         }
       }
-      return false;
+      return {};
     }
 
-    template <class IntType>
-    bool GetItemAtIndexAsInteger(size_t idx, IntType &result,
-                                 IntType default_val) const {
-      bool success = GetItemAtIndexAsInteger(idx, result);
-      if (!success)
-        result = default_val;
-      return success;
-    }
-
-    bool GetItemAtIndexAsString(size_t idx, llvm::StringRef &result) const {
-      ObjectSP value_sp = GetItemAtIndex(idx);
-      if (value_sp.get()) {
-        if (auto string_value = value_sp->GetAsString()) {
-          result = string_value->GetValue();
-          return true;
-        }
+    std::optional<llvm::StringRef> GetItemAtIndexAsString(size_t idx) const {
+      if (auto item_sp = GetItemAtIndex(idx)) {
+        if (auto *string_value = item_sp->GetAsString())
+          return string_value->GetValue();
       }
-      return false;
+      return {};
     }
 
-    bool GetItemAtIndexAsString(size_t idx, llvm::StringRef &result,
-                                llvm::StringRef default_val) const {
-      bool success = GetItemAtIndexAsString(idx, result);
-      if (!success)
-        result = default_val;
-      return success;
-    }
-
-    bool GetItemAtIndexAsDictionary(size_t idx, Dictionary *&result) const {
-      result = nullptr;
-      ObjectSP value_sp = GetItemAtIndex(idx);
-      if (value_sp.get()) {
-        result = value_sp->GetAsDictionary();
-        return (result != nullptr);
+    /// Retrieves the element at index \a idx from a StructuredData::Array if it
+    /// is a Dictionary.
+    ///
+    /// \param[in] idx
+    ///   The index of the element to retrieve.
+    ///
+    /// \return
+    ///   If the element at index \a idx is a Dictionary, this method returns a
+    ///   valid pointer to the Dictionary wrapped in a std::optional. If the
+    ///   element is not a Dictionary or the index is invalid, this returns
+    ///   std::nullopt. Note that the underlying Dictionary pointer is never
+    ///   nullptr.
+    std::optional<Dictionary *> GetItemAtIndexAsDictionary(size_t idx) const {
+      if (auto item_sp = GetItemAtIndex(idx)) {
+        if (auto *dict = item_sp->GetAsDictionary())
+          return dict;
       }
-      return false;
-    }
-
-    bool GetItemAtIndexAsArray(size_t idx, Array *&result) const {
-      result = nullptr;
-      ObjectSP value_sp = GetItemAtIndex(idx);
-      if (value_sp.get()) {
-        result = value_sp->GetAsArray();
-        return (result != nullptr);
-      }
-      return false;
+      return {};
     }
 
     void Push(const ObjectSP &item) { m_items.push_back(item); }

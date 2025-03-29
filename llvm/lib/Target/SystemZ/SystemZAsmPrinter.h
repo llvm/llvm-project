@@ -9,9 +9,9 @@
 #ifndef LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZASMPRINTER_H
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZASMPRINTER_H
 
+#include "MCTargetDesc/SystemZTargetStreamer.h"
 #include "SystemZMCInstLower.h"
 #include "SystemZTargetMachine.h"
-#include "SystemZTargetStreamer.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -27,6 +27,7 @@ class LLVM_LIBRARY_VISIBILITY SystemZAsmPrinter : public AsmPrinter {
 private:
   MCSymbol *CurrentFnPPA1Sym;     // PPA1 Symbol.
   MCSymbol *CurrentFnEPMarkerSym; // Entry Point Marker.
+  MCSymbol *PPA2Sym;
 
   SystemZTargetStreamer *getTargetStreamer() {
     MCTargetStreamer *TS = OutStreamer->getTargetStreamer();
@@ -90,12 +91,15 @@ private:
   AssociatedDataAreaTable ADATable;
 
   void emitPPA1(MCSymbol *FnEndSym);
+  void emitPPA2(Module &M);
   void emitADASection();
+  void emitIDRLSection(Module &M);
 
 public:
   SystemZAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
       : AsmPrinter(TM, std::move(Streamer)), CurrentFnPPA1Sym(nullptr),
-        CurrentFnEPMarkerSym(nullptr), ADATable(TM.getPointerSize(0)) {}
+        CurrentFnEPMarkerSym(nullptr), PPA2Sym(nullptr),
+        ADATable(TM.getPointerSize(0)) {}
 
   // Override AsmPrinter.
   StringRef getPassName() const override { return "SystemZ Assembly Printer"; }
@@ -107,18 +111,31 @@ public:
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &OS) override;
 
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    AsmPrinter::runOnMachineFunction(MF);
+
+    // Emit the XRay table for this function.
+    emitXRayTable();
+
+    return false;
+  }
+
   bool doInitialization(Module &M) override {
     SM.reset();
     return AsmPrinter::doInitialization(M);
   }
   void emitFunctionEntryLabel() override;
   void emitFunctionBodyEnd() override;
+  void emitStartOfAsmFile(Module &M) override;
 
 private:
   void emitCallInformation(CallType CT);
   void LowerFENTRY_CALL(const MachineInstr &MI, SystemZMCInstLower &MCIL);
   void LowerSTACKMAP(const MachineInstr &MI);
   void LowerPATCHPOINT(const MachineInstr &MI, SystemZMCInstLower &Lower);
+  void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
+                                     SystemZMCInstLower &Lower);
+  void LowerPATCHABLE_RET(const MachineInstr &MI, SystemZMCInstLower &Lower);
   void emitAttributes(Module &M);
 };
 } // end namespace llvm

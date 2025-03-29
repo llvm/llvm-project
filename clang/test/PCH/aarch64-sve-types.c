@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -emit-pch -o %t %s
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -include-pch %t \
 // RUN:   -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -aux-triple aarch64-linux-gnu \
+// RUN:   -x hip-cpp-output -emit-pch -o %t %s
 
 // expected-no-diagnostics
 

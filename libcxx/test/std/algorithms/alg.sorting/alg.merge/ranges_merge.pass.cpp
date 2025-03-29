@@ -264,7 +264,7 @@ constexpr bool test() {
 
       assert(result.in1 == r1.end());
       assert(result.in2 == r2.end());
-      assert(result.out == out.end());
+      assert(result.out == out.data() + out.size());
       assert(std::ranges::equal(out, std::array<TracedCopy, 6>{1, 3, 3, 5, 8, 8}));
 
       assert(std::ranges::all_of(out, &TracedCopy::copiedOnce));
@@ -277,7 +277,7 @@ constexpr bool test() {
 
       assert(result.in1 == r1.end());
       assert(result.in2 == r2.end());
-      assert(result.out == out.end());
+      assert(result.out == out.data() + out.size());
       assert(std::ranges::equal(out, std::array<TracedCopy, 6>{1, 3, 3, 5, 8, 8}));
 
       assert(std::ranges::all_of(out, &TracedCopy::copiedOnce));
@@ -369,7 +369,7 @@ constexpr bool test() {
 
       assert(result.in1 == r1.end());
       assert(result.in2 == r2.end());
-      assert(result.out == out.end());
+      assert(result.out == out.data() + out.size());
     }
 
     // range overload
@@ -382,7 +382,7 @@ constexpr bool test() {
 
       assert(result.in1 == r1.end());
       assert(result.in2 == r2.end());
-      assert(result.out == out.end());
+      assert(result.out == out.data() + out.size());
     }
 
     // member pointer Comparator iterator overload
@@ -395,7 +395,7 @@ constexpr bool test() {
 
       assert(result.in1 == r1.end());
       assert(result.in2 == r2.end());
-      assert(result.out == out.end());
+      assert(result.out == out.data() + out.size());
     }
 
     // member pointer Comparator range overload
@@ -408,7 +408,7 @@ constexpr bool test() {
 
       assert(result.in1 == r1.end());
       assert(result.in2 == r2.end());
-      assert(result.out == out.end());
+      assert(result.out == out.data() + out.size());
     }
   }
 
@@ -431,7 +431,7 @@ constexpr bool test() {
 
       assert(result.in1 == r1.end());
       assert(result.in2 == r2.end());
-      assert(result.out == out.end());
+      assert(result.out == out.data() + out.size());
     }
 
     // range overload
@@ -444,7 +444,7 @@ constexpr bool test() {
 
       assert(result.in1 == r1.end());
       assert(result.in2 == r2.end());
-      assert(result.out == out.end());
+      assert(result.out == out.data() + out.size());
     }
 
     // member pointer Projection iterator overload
@@ -457,7 +457,7 @@ constexpr bool test() {
 
       assert(result.in1 == r1.end());
       assert(result.in2 == r2.end());
-      assert(result.out == out.end());
+      assert(result.out == out.data() + out.size());
     }
 
     // member pointer Projection range overload
@@ -470,7 +470,7 @@ constexpr bool test() {
 
       assert(result.in1 == r1.end());
       assert(result.in2 == r2.end());
-      assert(result.out == out.end());
+      assert(result.out == out.data() + out.size());
     }
   }
 

@@ -14,16 +14,22 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_GENERICMACHINEINSTRS_H
 #define LLVM_CODEGEN_GLOBALISEL_GENERICMACHINEINSTRS_H
 
-#include "llvm/IR/Instructions.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/Casting.h"
 
 namespace llvm {
 
 /// A base class for all GenericMachineInstrs.
 class GenericMachineInstr : public MachineInstr {
+  constexpr static unsigned PoisonFlags = NoUWrap | NoSWrap | NoUSWrap |
+                                          IsExact | Disjoint | NonNeg |
+                                          FmNoNans | FmNoInfs | SameSign;
+
 public:
   GenericMachineInstr() = delete;
 
@@ -33,6 +39,13 @@ public:
 
   static bool classof(const MachineInstr *MI) {
     return isPreISelGenericOpcode(MI->getOpcode());
+  }
+
+  bool hasPoisonGeneratingFlags() const { return getFlags() & PoisonFlags; }
+
+  void dropPoisonGeneratingFlags() {
+    clearFlags(PoisonFlags);
+    assert(!hasPoisonGeneratingFlags());
   }
 };
 
@@ -54,9 +67,9 @@ public:
   bool isUnordered() const { return getMMO().isUnordered(); }
 
   /// Returns the size in bytes of the memory access.
-  uint64_t getMemSize() const { return getMMO().getSize();
-  } /// Returns the size in bits of the memory access.
-  uint64_t getMemSizeInBits() const { return getMMO().getSizeInBits(); }
+  LocationSize getMemSize() const { return getMMO().getSize(); }
+  /// Returns the size in bits of the memory access.
+  LocationSize getMemSizeInBits() const { return getMMO().getSizeInBits(); }
 
   static bool classof(const MachineInstr *MI) {
     return GenericMachineInstr::classof(MI) && MI->hasOneMemOperand();
@@ -114,6 +127,21 @@ public:
   }
 };
 
+/// Represents either G_INDEXED_LOAD, G_INDEXED_ZEXTLOAD or G_INDEXED_SEXTLOAD.
+class GIndexedAnyExtLoad : public GIndexedLoad {
+public:
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_INDEXED_LOAD:
+    case TargetOpcode::G_INDEXED_ZEXTLOAD:
+    case TargetOpcode::G_INDEXED_SEXTLOAD:
+      return true;
+    default:
+      return false;
+    }
+  }
+};
+
 /// Represents a G_ZEXTLOAD.
 class GIndexedZExtLoad : GIndexedExtLoad {
 public:
@@ -155,6 +183,11 @@ class GAnyLoad : public GLoadStore {
 public:
   /// Get the definition register of the loaded value.
   Register getDstReg() const { return getOperand(0).getReg(); }
+
+  /// Returns the Ranges that describes the dereference.
+  const MDNode *getRanges() const {
+    return getMMO().getRanges();
+  }
 
   static bool classof(const MachineInstr *MI) {
     switch (MI->getOpcode()) {
@@ -271,6 +304,26 @@ public:
   }
 };
 
+/// Represents a G_BUILD_VECTOR_TRUNC.
+class GBuildVectorTrunc : public GMergeLikeInstr {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_BUILD_VECTOR_TRUNC;
+  }
+};
+
+/// Represents a G_SHUFFLE_VECTOR.
+class GShuffleVector : public GenericMachineInstr {
+public:
+  Register getSrc1Reg() const { return getOperand(1).getReg(); }
+  Register getSrc2Reg() const { return getOperand(2).getReg(); }
+  ArrayRef<int> getMask() const { return getOperand(3).getShuffleMask(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR;
+  }
+};
+
 /// Represents a G_PTR_ADD.
 class GPtrAdd : public GenericMachineInstr {
 public:
@@ -344,6 +397,8 @@ public:
   Register getCarryOutReg() const { return getReg(1); }
   MachineOperand &getLHS() { return getOperand(2); }
   MachineOperand &getRHS() { return getOperand(3); }
+  Register getLHSReg() const { return getOperand(2).getReg(); }
+  Register getRHSReg() const { return getOperand(3).getReg(); }
 
   static bool classof(const MachineInstr *MI) {
     switch (MI->getOpcode()) {
@@ -407,6 +462,40 @@ public:
     case TargetOpcode::G_SADDE:
     case TargetOpcode::G_USUBE:
     case TargetOpcode::G_SSUBE:
+      return true;
+    default:
+      return false;
+    }
+  }
+};
+
+/// Represents overflowing add operations.
+/// G_UADDO, G_SADDO
+class GAddCarryOut : public GBinOpCarryOut {
+public:
+  bool isSigned() const { return getOpcode() == TargetOpcode::G_SADDO; }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_UADDO:
+    case TargetOpcode::G_SADDO:
+      return true;
+    default:
+      return false;
+    }
+  }
+};
+
+/// Represents overflowing sub operations.
+/// G_USUBO, G_SSUBO
+class GSubCarryOut : public GBinOpCarryOut {
+public:
+  bool isSigned() const { return getOpcode() == TargetOpcode::G_SSUBO; }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_USUBO:
+    case TargetOpcode::G_SSUBO:
       return true;
     default:
       return false;
@@ -558,6 +647,380 @@ public:
   }
 };
 
+/// Represents a G_PHI.
+class GPhi : public GenericMachineInstr {
+public:
+  /// Returns the number of incoming values.
+  unsigned getNumIncomingValues() const { return (getNumOperands() - 1) / 2; }
+  /// Returns the I'th incoming vreg.
+  Register getIncomingValue(unsigned I) const {
+    return getOperand(I * 2 + 1).getReg();
+  }
+  /// Returns the I'th incoming basic block.
+  MachineBasicBlock *getIncomingBlock(unsigned I) const {
+    return getOperand(I * 2 + 2).getMBB();
+  }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_PHI;
+  }
+};
+
+/// Represents a binary operation, i.e, x = y op z.
+class GBinOp : public GenericMachineInstr {
+public:
+  Register getLHSReg() const { return getReg(1); }
+  Register getRHSReg() const { return getReg(2); }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    // Integer.
+    case TargetOpcode::G_ADD:
+    case TargetOpcode::G_SUB:
+    case TargetOpcode::G_MUL:
+    case TargetOpcode::G_SDIV:
+    case TargetOpcode::G_UDIV:
+    case TargetOpcode::G_SREM:
+    case TargetOpcode::G_UREM:
+    case TargetOpcode::G_SMIN:
+    case TargetOpcode::G_SMAX:
+    case TargetOpcode::G_UMIN:
+    case TargetOpcode::G_UMAX:
+    // Floating point.
+    case TargetOpcode::G_FMINNUM:
+    case TargetOpcode::G_FMAXNUM:
+    case TargetOpcode::G_FMINNUM_IEEE:
+    case TargetOpcode::G_FMAXNUM_IEEE:
+    case TargetOpcode::G_FMINIMUM:
+    case TargetOpcode::G_FMAXIMUM:
+    case TargetOpcode::G_FADD:
+    case TargetOpcode::G_FSUB:
+    case TargetOpcode::G_FMUL:
+    case TargetOpcode::G_FDIV:
+    case TargetOpcode::G_FPOW:
+    // Logical.
+    case TargetOpcode::G_AND:
+    case TargetOpcode::G_OR:
+    case TargetOpcode::G_XOR:
+      return true;
+    default:
+      return false;
+    }
+  };
+};
+
+/// Represents an integer binary operation.
+class GIntBinOp : public GBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_ADD:
+    case TargetOpcode::G_SUB:
+    case TargetOpcode::G_MUL:
+    case TargetOpcode::G_SDIV:
+    case TargetOpcode::G_UDIV:
+    case TargetOpcode::G_SREM:
+    case TargetOpcode::G_UREM:
+    case TargetOpcode::G_SMIN:
+    case TargetOpcode::G_SMAX:
+    case TargetOpcode::G_UMIN:
+    case TargetOpcode::G_UMAX:
+      return true;
+    default:
+      return false;
+    }
+  };
+};
+
+/// Represents a floating point binary operation.
+class GFBinOp : public GBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_FMINNUM:
+    case TargetOpcode::G_FMAXNUM:
+    case TargetOpcode::G_FMINNUM_IEEE:
+    case TargetOpcode::G_FMAXNUM_IEEE:
+    case TargetOpcode::G_FMINIMUM:
+    case TargetOpcode::G_FMAXIMUM:
+    case TargetOpcode::G_FADD:
+    case TargetOpcode::G_FSUB:
+    case TargetOpcode::G_FMUL:
+    case TargetOpcode::G_FDIV:
+    case TargetOpcode::G_FPOW:
+      return true;
+    default:
+      return false;
+    }
+  };
+};
+
+/// Represents a logical binary operation.
+class GLogicalBinOp : public GBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_AND:
+    case TargetOpcode::G_OR:
+    case TargetOpcode::G_XOR:
+      return true;
+    default:
+      return false;
+    }
+  };
+};
+
+/// Represents an integer addition.
+class GAdd : public GIntBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_ADD;
+  };
+};
+
+/// Represents a logical and.
+class GAnd : public GLogicalBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_AND;
+  };
+};
+
+/// Represents a logical or.
+class GOr : public GLogicalBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_OR;
+  };
+};
+
+/// Represents an extract vector element.
+class GExtractVectorElement : public GenericMachineInstr {
+public:
+  Register getVectorReg() const { return getOperand(1).getReg(); }
+  Register getIndexReg() const { return getOperand(2).getReg(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT;
+  }
+};
+
+/// Represents an insert vector element.
+class GInsertVectorElement : public GenericMachineInstr {
+public:
+  Register getVectorReg() const { return getOperand(1).getReg(); }
+  Register getElementReg() const { return getOperand(2).getReg(); }
+  Register getIndexReg() const { return getOperand(3).getReg(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_INSERT_VECTOR_ELT;
+  }
+};
+
+/// Represents an extract subvector.
+class GExtractSubvector : public GenericMachineInstr {
+public:
+  Register getSrcVec() const { return getOperand(1).getReg(); }
+  uint64_t getIndexImm() const { return getOperand(2).getImm(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_EXTRACT_SUBVECTOR;
+  }
+};
+
+/// Represents a insert subvector.
+class GInsertSubvector : public GenericMachineInstr {
+public:
+  Register getBigVec() const { return getOperand(1).getReg(); }
+  Register getSubVec() const { return getOperand(2).getReg(); }
+  uint64_t getIndexImm() const { return getOperand(3).getImm(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_INSERT_SUBVECTOR;
+  }
+};
+
+/// Represents a freeze.
+class GFreeze : public GenericMachineInstr {
+public:
+  Register getSourceReg() const { return getOperand(1).getReg(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_FREEZE;
+  }
+};
+
+/// Represents a cast operation.
+/// It models the llvm::CastInst concept.
+/// The exception is bitcast.
+class GCastOp : public GenericMachineInstr {
+public:
+  Register getSrcReg() const { return getOperand(1).getReg(); }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_ADDRSPACE_CAST:
+    case TargetOpcode::G_FPEXT:
+    case TargetOpcode::G_FPTOSI:
+    case TargetOpcode::G_FPTOUI:
+    case TargetOpcode::G_FPTOSI_SAT:
+    case TargetOpcode::G_FPTOUI_SAT:
+    case TargetOpcode::G_FPTRUNC:
+    case TargetOpcode::G_INTTOPTR:
+    case TargetOpcode::G_PTRTOINT:
+    case TargetOpcode::G_SEXT:
+    case TargetOpcode::G_SITOFP:
+    case TargetOpcode::G_TRUNC:
+    case TargetOpcode::G_UITOFP:
+    case TargetOpcode::G_ZEXT:
+    case TargetOpcode::G_ANYEXT:
+      return true;
+    default:
+      return false;
+    }
+  };
+};
+
+/// Represents a sext.
+class GSext : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_SEXT;
+  };
+};
+
+/// Represents a zext.
+class GZext : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_ZEXT;
+  };
+};
+
+/// Represents an any ext.
+class GAnyExt : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_ANYEXT;
+  };
+};
+
+/// Represents a trunc.
+class GTrunc : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_TRUNC;
+  };
+};
+
+/// Represents a vscale.
+class GVScale : public GenericMachineInstr {
+public:
+  APInt getSrc() const { return getOperand(1).getCImm()->getValue(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_VSCALE;
+  };
+};
+
+/// Represents a step vector.
+class GStepVector : public GenericMachineInstr {
+public:
+  uint64_t getStep() const {
+    return getOperand(1).getCImm()->getValue().getZExtValue();
+  }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_STEP_VECTOR;
+  };
+};
+
+/// Represents an integer subtraction.
+class GSub : public GIntBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_SUB;
+  };
+};
+
+/// Represents an integer multiplication.
+class GMul : public GIntBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_MUL;
+  };
+};
+
+/// Represents a shift left.
+class GShl : public GenericMachineInstr {
+public:
+  Register getSrcReg() const { return getOperand(1).getReg(); }
+  Register getShiftReg() const { return getOperand(2).getReg(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_SHL;
+  };
+};
+
+/// Represents a threeway compare.
+class GSUCmp : public GenericMachineInstr {
+public:
+  Register getLHSReg() const { return getOperand(1).getReg(); }
+  Register getRHSReg() const { return getOperand(2).getReg(); }
+
+  bool isSigned() const { return getOpcode() == TargetOpcode::G_SCMP; }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_SCMP:
+    case TargetOpcode::G_UCMP:
+      return true;
+    default:
+      return false;
+    }
+  };
+};
+
+/// Represents an integer-like extending operation.
+class GExtOp : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_SEXT:
+    case TargetOpcode::G_ZEXT:
+    case TargetOpcode::G_ANYEXT:
+      return true;
+    default:
+      return false;
+    }
+  };
+};
+
+/// Represents an integer-like extending or truncating operation.
+class GExtOrTruncOp : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_SEXT:
+    case TargetOpcode::G_ZEXT:
+    case TargetOpcode::G_ANYEXT:
+    case TargetOpcode::G_TRUNC:
+      return true;
+    default:
+      return false;
+    }
+  };
+};
+
+/// Represents a splat vector.
+class GSplatVector : public GenericMachineInstr {
+public:
+  Register getScalarReg() const { return getOperand(1).getReg(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_SPLAT_VECTOR;
+  };
+};
 
 } // namespace llvm
 

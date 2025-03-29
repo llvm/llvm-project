@@ -42,7 +42,7 @@ struct S1 bar1(void) { return s1; }
 struct S2 bar2(void) { return s2; }
 struct S1 bar3(union U1 u) { return s1; }
 // CHECK: define{{.*}} void @foo1()
-// CHECK: define{{.*}} void @foo2(ptr noalias sret([[UNION2_TYPE]]) align 4 %{{.+}})
+// CHECK: define{{.*}} void @foo2(ptr dead_on_unwind noalias writable sret([[UNION2_TYPE]]) align 4 %{{.+}})
 // CHECK: define{{.*}} i32 @foo3()
 // CHECK: define{{.*}} void @bar1()
 // CHECK: define{{.*}} i32 @bar2()
@@ -62,7 +62,7 @@ void run(void) {
   // CHECK: [[Y1:%.+]] = alloca [[STRUCT1_TYPE]]
   // CHECK: [[Y2:%.+]] = alloca [[STRUCT2_TYPE]]
   // CHECK: call void @foo1()
-  // CHECK: call void @foo2(ptr sret([[UNION2_TYPE]]) align 4 [[X2]])
+  // CHECK: call void @foo2(ptr dead_on_unwind writable sret([[UNION2_TYPE]]) align 4 [[X2]])
   // CHECK: {{.+}} = call i32 @foo3()
   // CHECK: call void @bar1()
   // CHECK: {{.+}} = call i32 @bar2()

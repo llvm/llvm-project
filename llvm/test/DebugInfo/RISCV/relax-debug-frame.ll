@@ -4,18 +4,22 @@
 ; RUN:     | FileCheck -check-prefix=RELAX-DWARFDUMP %s
 ;
 ; RELAX:      Section ({{.*}}) .rela.eh_frame {
-; RELAX-NEXT:   0x1C R_RISCV_32_PCREL <null> 0x0
-; RELAX-NEXT:   0x30 R_RISCV_32_PCREL <null> 0x0
-; RELAX-NEXT:   0x44 R_RISCV_32_PCREL <null> 0x0
-; RELAX-NEXT:   0x48 R_RISCV_ADD32 <null> 0x0
-; RELAX-NEXT:   0x48 R_RISCV_SUB32 <null> 0x0
-; RELAX-NEXT:  }
+; REALX-NEXT:   0x1C R_RISCV_32_PCREL .L0 0x0 
+; REALX-NEXT:   0x30 R_RISCV_32_PCREL .L0 0x0 
+; REALX-NEXT:   0x48 R_RISCV_32_PCREL .L0 0x0 
+; REALX-NEXT:   0x4C R_RISCV_ADD32 .L0 0x0 
+; REALX-NEXT:   0x4C R_RISCV_SUB32 .L0 0x0 
+; REALX-NEXT:   0x57 R_RISCV_SET6 .L0 0x0 
+; RELAX-NEXT-EMPTY:
 
 ; RELAX-DWARFDUMP-NOT: error: failed to compute relocation
 ; RELAX-DWARFDUMP:      FDE
 ; RELAX-DWARFDUMP-NEXT: Format:
 ; RELAX-DWARFDUMP:      DW_CFA_advance_loc: 4
 ; RELAX-DWARFDUMP-NEXT: DW_CFA_def_cfa_offset: +16
+; RELAX-DWARFDUMP-NEXT: DW_CFA_advance_loc: 8
+; RELAX-DWARFDUMP-NEXT: DW_CFA_def_cfa_offset: +0
+; RELAX-DWARFDUMP-NEXT: DW_CFA_nop:
 ; RELAX-DWARFDUMP-EMPTY:
 
 ; RELAX-DWARFDUMP:      FDE
@@ -24,7 +28,10 @@
 ; RELAX-DWARFDUMP-NEXT: DW_CFA_def_cfa_offset: +16
 ; RELAX-DWARFDUMP-NEXT: DW_CFA_advance_loc: 4
 ; RELAX-DWARFDUMP-NEXT: DW_CFA_offset: X1 -4
-; RELAX-DWARFDUMP-NEXT: DW_CFA_nop
+; RELAX-DWARFDUMP-NEXT: DW_CFA_advance_loc: 28
+; RELAX-DWARFDUMP-NEXT: DW_CFA_restore: X1
+; RELAX-DWARFDUMP-NEXT: DW_CFA_advance_loc: 4
+; RELAX-DWARFDUMP-NEXT: DW_CFA_def_cfa_offset: +0
 ; RELAX-DWARFDUMP-EMPTY:
 source_filename = "frame.c"
 
@@ -66,3 +73,4 @@ entry:
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"wchar_size", i32 4}
+

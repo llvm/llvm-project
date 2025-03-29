@@ -378,27 +378,6 @@ BasicBlock *SplitBlockPredecessors(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
 /// no other analyses. In particular, it does not preserve LoopSimplify
 /// (because it's complicated to handle the case where one of the edges being
 /// split is an exit of a loop with other exits).
-///
-/// FIXME: deprecated, switch to the DomTreeUpdater-based one.
-void SplitLandingPadPredecessors(BasicBlock *OrigBB,
-                                 ArrayRef<BasicBlock *> Preds,
-                                 const char *Suffix, const char *Suffix2,
-                                 SmallVectorImpl<BasicBlock *> &NewBBs,
-                                 DominatorTree *DT, LoopInfo *LI = nullptr,
-                                 MemorySSAUpdater *MSSAU = nullptr,
-                                 bool PreserveLCSSA = false);
-
-/// This method transforms the landing pad, OrigBB, by introducing two new basic
-/// blocks into the function. One of those new basic blocks gets the
-/// predecessors listed in Preds. The other basic block gets the remaining
-/// predecessors of OrigBB. The landingpad instruction OrigBB is clone into both
-/// of the new basic blocks. The new blocks are given the suffixes 'Suffix1' and
-/// 'Suffix2', and are returned in the NewBBs vector.
-///
-/// This currently updates the LLVM IR, DominatorTree, LoopInfo, and LCCSA but
-/// no other analyses. In particular, it does not preserve LoopSimplify
-/// (because it's complicated to handle the case where one of the edges being
-/// split is an exit of a loop with other exits).
 void SplitLandingPadPredecessors(
     BasicBlock *OrigBB, ArrayRef<BasicBlock *> Preds, const char *Suffix,
     const char *Suffix2, SmallVectorImpl<BasicBlock *> &NewBBs,
@@ -561,7 +540,7 @@ inline void SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
 /// SplitBefore.  Returns the first insert point in the loop body, and the
 /// PHINode for the induction variable (i.e. "i" above).
 std::pair<Instruction*, Value*>
-SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore);
+SplitBlockAndInsertSimpleForLoop(Value *End, BasicBlock::iterator SplitBefore);
 
 /// Utility function for performing a given action on each lane of a vector
 /// with \p EC elements.  To simplify porting legacy code, this defaults to
@@ -571,9 +550,9 @@ SplitBlockAndInsertSimpleForLoop(Value *End, Instruction *SplitBefore);
 /// IRBuilder whose insert point is correctly set for instantiating the
 /// given index, and a value which is (at runtime) the index to access.
 /// This index *may* be a constant.
-void SplitBlockAndInsertForEachLane(ElementCount EC, Type *IndexTy,
-    Instruction *InsertBefore,
-    std::function<void(IRBuilderBase&, Value*)> Func);
+void SplitBlockAndInsertForEachLane(
+    ElementCount EC, Type *IndexTy, BasicBlock::iterator InsertBefore,
+    std::function<void(IRBuilderBase &, Value *)> Func);
 
 /// Utility function for performing a given action on each lane of a vector
 /// with \p EVL effective length. EVL is assumed > 0. To simplify porting legacy
@@ -584,7 +563,7 @@ void SplitBlockAndInsertForEachLane(ElementCount EC, Type *IndexTy,
 /// the given index, and a value which is (at runtime) the index to access. This
 /// index *may* be a constant.
 void SplitBlockAndInsertForEachLane(
-    Value *End, Instruction *InsertBefore,
+    Value *End, BasicBlock::iterator InsertBefore,
     std::function<void(IRBuilderBase &, Value *)> Func);
 
 /// Check whether BB is the merge point of a if-region.
@@ -623,81 +602,6 @@ bool SplitIndirectBrCriticalEdges(Function &F, bool IgnoreBlocksWithoutPHI,
                                   BranchProbabilityInfo *BPI = nullptr,
                                   BlockFrequencyInfo *BFI = nullptr);
 
-/// Given a set of incoming and outgoing blocks, create a "hub" such that every
-/// edge from an incoming block InBB to an outgoing block OutBB is now split
-/// into two edges, one from InBB to the hub and another from the hub to
-/// OutBB. The hub consists of a series of guard blocks, one for each outgoing
-/// block. Each guard block conditionally branches to the corresponding outgoing
-/// block, or the next guard block in the chain. These guard blocks are returned
-/// in the argument vector.
-///
-/// Since the control flow edges from InBB to OutBB have now been replaced, the
-/// function also updates any PHINodes in OutBB. For each such PHINode, the
-/// operands corresponding to incoming blocks are moved to a new PHINode in the
-/// hub, and the hub is made an operand of the original PHINode.
-///
-/// Input CFG:
-/// ----------
-///
-///                    Def
-///                     |
-///                     v
-///           In1      In2
-///            |        |
-///            |        |
-///            v        v
-///  Foo ---> Out1     Out2
-///                     |
-///                     v
-///                    Use
-///
-///
-/// Create hub: Incoming = {In1, In2}, Outgoing = {Out1, Out2}
-/// ----------------------------------------------------------
-///
-///             Def
-///              |
-///              v
-///  In1        In2          Foo
-///   |    Hub   |            |
-///   |    + - - | - - +      |
-///   |    '     v     '      V
-///   +------> Guard1 -----> Out1
-///        '     |     '
-///        '     v     '
-///        '   Guard2 -----> Out2
-///        '           '      |
-///        + - - - - - +      |
-///                           v
-///                          Use
-///
-/// Limitations:
-/// -----------
-/// 1. This assumes that all terminators in the CFG are direct branches (the
-///    "br" instruction). The presence of any other control flow such as
-///    indirectbr, switch or callbr will cause an assert.
-///
-/// 2. The updates to the PHINodes are not sufficient to restore SSA
-///    form. Consider a definition Def, its use Use, incoming block In2 and
-///    outgoing block Out2, such that:
-///    a. In2 is reachable from D or contains D.
-///    b. U is reachable from Out2 or is contained in Out2.
-///    c. U is not a PHINode if U is contained in Out2.
-///
-///    Clearly, Def dominates Out2 since the program is valid SSA. But when the
-///    hub is introduced, there is a new path through the hub along which Use is
-///    reachable from entry without passing through Def, and SSA is no longer
-///    valid. To fix this, we need to look at all the blocks post-dominated by
-///    the hub on the one hand, and dominated by Out2 on the other. This is left
-///    for the caller to accomplish, since each specific use of this function
-///    may have additional information which simplifies this fixup. For example,
-///    see restoreSSA() in the UnifyLoopExits pass.
-BasicBlock *CreateControlFlowHub(
-    DomTreeUpdater *DTU, SmallVectorImpl<BasicBlock *> &GuardBlocks,
-    const SetVector<BasicBlock *> &Predecessors,
-    const SetVector<BasicBlock *> &Successors, const StringRef Prefix,
-    std::optional<unsigned> MaxControlFlowBooleans = std::nullopt);
-
 // Utility function for inverting branch condition and for swapping its
 // successors
 void InvertBranch(BranchInst *PBI, IRBuilderBase &Builder);
@@ -705,6 +609,25 @@ void InvertBranch(BranchInst *PBI, IRBuilderBase &Builder);
 // Check whether the function only has simple terminator:
 // br/brcond/unreachable/ret
 bool hasOnlySimpleTerminator(const Function &F);
+
+// Returns true if these basic blocks belong to a presplit coroutine and the
+// edge corresponds to the 'default' case in the switch statement in the
+// pattern:
+//
+// %0 = call i8 @llvm.coro.suspend(token none, i1 false)
+// switch i8 %0, label %suspend [i8 0, label %resume
+//                               i8 1, label %cleanup]
+//
+// i.e. the edge to the `%suspend` BB. This edge is special in that it will
+// be elided by coroutine lowering (coro-split), and the `%suspend` BB needs
+// to be kept as-is. It's not a real CFG edge - post-lowering, it will end
+// up being a `ret`, and it must be thus lowerable to support symmetric
+// transfer. For example:
+//  - this edge is not a loop exit edge if encountered in a loop (and should
+//    be ignored)
+//  - must not be split for PGO instrumentation, for example.
+bool isPresplitCoroSuspendExitEdge(const BasicBlock &Src,
+                                   const BasicBlock &Dest);
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_BASICBLOCKUTILS_H

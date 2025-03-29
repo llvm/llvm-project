@@ -68,8 +68,7 @@ int main() {
 // barrier_end and implicit_task_end before parallel_end!
 
 // CHECK-DAG: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_implicit_task_begin:
-// CHECK-DAG: {{^}}[[THREAD_ID]]: ompt_event_barrier_begin:
-
+// CHECK-DAG: {{^}}[[THREAD_ID]]: ompt_event_barrier_implicit_parallel_begin:
 
 // CHECK: ompt_event_parallel_end: parallel_id=[[PARALLEL_ID]], 
 // CHECK-SAME: task_id=[[PARENT_TASK_ID]], invoker=[[PARALLEL_INVOKER]]
@@ -141,8 +140,8 @@ int main() {
 // THREADS-NOT: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_end
 // explicit barrier
 
-// THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_begin:
-// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]], 
+// THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_explicit_begin:
+// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]],
 // THREADS-SAME: task_id=[[NESTED_IMPLICIT_TASK_ID]],
 // THREADS-SAME: codeptr_ra=[[BARRIER_RETURN_ADDRESS:0x[0-f]+]]{{[0-f][0-f]}}
 
@@ -151,8 +150,8 @@ int main() {
 // THREADS-SAME: task_id=[[NESTED_IMPLICIT_TASK_ID]],
 // THREADS-SAME: exit_frame=[[NESTED_EXIT]], reenter_frame=0x{{[0-f]+}}
 
-// THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_end:
-// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]], 
+// THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_explicit_end:
+// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]],
 // THREADS-SAME: task_id=[[NESTED_IMPLICIT_TASK_ID]]
 
 // THREADS: {{^}}[[MASTER_ID]]: fuzzy_address={{.*}}[[BARRIER_RETURN_ADDRESS]]
@@ -163,8 +162,8 @@ int main() {
 // THREADS-SAME: exit_frame=[[NESTED_EXIT]], reenter_frame=[[NULL]]
 
 // implicit barrier
-// THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_begin:
-// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]], 
+// THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_implicit_parallel_begin:
+// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]],
 // THREADS-SAME: task_id=[[NESTED_IMPLICIT_TASK_ID]],
 // THREADS-SAME: codeptr_ra=[[NESTED_RETURN_ADDRESS]]{{[0-f][0-f]}}
 
@@ -173,7 +172,7 @@ int main() {
 // THREADS-SAME: task_id=[[NESTED_IMPLICIT_TASK_ID]],
 // THREADS-SAME: exit_frame=[[NULL]], reenter_frame=[[NULL]]
 
-// THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_end:
+// THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_implicit_parallel_end:
 // THREADS-SAME: parallel_id={{[0-9]+}}, task_id=[[NESTED_IMPLICIT_TASK_ID]],
 // THREADS-SAME: codeptr_ra=[[NESTED_RETURN_ADDRESS]]{{[0-f][0-f]}}
 
@@ -195,7 +194,7 @@ int main() {
 // THREADS-SAME: reenter_frame=[[NULL]]
 
 // implicit barrier
-// THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_begin:
+// THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_implicit_parallel_begin:
 // THREADS-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]],
 // THREADS-SAME: codeptr_ra=[[RETURN_ADDRESS]]{{[0-f][0-f]}}
 
@@ -203,7 +202,7 @@ int main() {
 // THREADS-SAME: task_id=[[IMPLICIT_TASK_ID]], exit_frame=[[NULL]], 
 // THREADS-SAME: reenter_frame=[[NULL]]
 
-// THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_end:
+// THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_implicit_parallel_end:
 // THREADS-SAME: parallel_id={{[0-9]+}}, task_id=[[IMPLICIT_TASK_ID]],
 // THREADS-SAME: codeptr_ra=[[RETURN_ADDRESS]]{{[0-f][0-f]}}
 
@@ -260,11 +259,11 @@ int main() {
 
 // THREADS-NOT: {{^}}[[THREAD_ID]]: ompt_event_implicit_task_end
 
-// THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_begin:
-// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]], 
+// THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_implicit_parallel_begin:
+// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]],
 // THREADS-SAME: task_id=[[NESTED_IMPLICIT_TASK_ID]]
 
-// THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_end:
+// THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_implicit_parallel_end:
 // THREADS-SAME: parallel_id={{[0-9]+}}, task_id=[[NESTED_IMPLICIT_TASK_ID]]
 
 // THREADS: {{^}}[[THREAD_ID]]: ompt_event_implicit_task_end:
@@ -276,10 +275,10 @@ int main() {
 
 // THREADS-NOT: {{^}}[[THREAD_ID]]: ompt_event_implicit_task_end
 
-// THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_begin:
+// THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_implicit_parallel_begin:
 // THREADS-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]]
 
-// THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_end:
+// THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_implicit_parallel_end:
 // THREADS-SAME: parallel_id={{[0-9]+}}, task_id=[[IMPLICIT_TASK_ID]]
 
 // THREADS: {{^}}[[THREAD_ID]]: ompt_event_implicit_task_end:
@@ -310,11 +309,11 @@ int main() {
 
 // THREADS-NOT: {{^}}[[THREAD_ID]]: ompt_event_implicit_task_end
 
-// THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_begin:
-// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]], 
+// THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_implicit_parallel_begin:
+// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]],
 // THREADS-SAME: task_id=[[IMPLICIT_TASK_ID]]
 
-// THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_end:
+// THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_implicit_parallel_end:
 // THREADS-SAME: parallel_id={{[0-9]+}}, task_id=[[IMPLICIT_TASK_ID]]
 
 // THREADS: {{^}}[[THREAD_ID]]: ompt_event_implicit_task_end:
@@ -345,11 +344,11 @@ int main() {
 
 // THREADS-NOT: {{^}}[[THREAD_ID]]: ompt_event_implicit_task_end
 
-// THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_begin:
-// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]], 
+// THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_implicit_parallel_begin:
+// THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]],
 // THREADS-SAME: task_id=[[IMPLICIT_TASK_ID]]
 
-// THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_end:
+// THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_implicit_parallel_end:
 // THREADS-SAME: parallel_id={{[0-9]+}}, task_id=[[IMPLICIT_TASK_ID]]
 
 // THREADS: {{^}}[[THREAD_ID]]: ompt_event_implicit_task_end:

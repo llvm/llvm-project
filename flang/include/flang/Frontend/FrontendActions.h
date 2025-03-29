@@ -13,33 +13,16 @@
 #ifndef FORTRAN_FRONTEND_FRONTENDACTIONS_H
 #define FORTRAN_FRONTEND_FRONTENDACTIONS_H
 
-#include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/FrontendAction.h"
-#include "flang/Parser/parsing.h"
-#include "flang/Semantics/semantics.h"
+#include "flang/Frontend/ParserActions.h"
 
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/OwningOpRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Target/TargetMachine.h"
 #include <memory>
 
 namespace Fortran::frontend {
-
-// TODO: This is a copy from f18.cpp. It doesn't really belong here and should
-// be moved to a more suitable place in future.
-struct MeasurementVisitor {
-  template <typename A>
-  bool Pre(const A &) {
-    return true;
-  }
-  template <typename A>
-  void Post(const A &) {
-    ++objects;
-    bytes += sizeof(A);
-  }
-  size_t objects{0}, bytes{0};
-};
 
 //===----------------------------------------------------------------------===//
 // Custom Consumer Actions
@@ -106,6 +89,10 @@ class PrescanAndSemaAction : public FrontendAction {
 };
 
 class DebugUnparseWithSymbolsAction : public PrescanAndSemaAction {
+  void executeAction() override;
+};
+
+class DebugUnparseWithModulesAction : public PrescanAndSemaAction {
   void executeAction() override;
 };
 
@@ -204,8 +191,6 @@ class CodeGenAction : public FrontendAction {
   void executeAction() override;
   /// Runs prescan, parsing, sema and lowers to MLIR.
   bool beginSourceFileAction() override;
-  /// Sets up LLVM's TargetMachine.
-  bool setUpTargetMachine();
   /// Runs the optimization (aka middle-end) pipeline on the LLVM module
   /// associated with this action.
   void runOptimizationPipeline(llvm::raw_pwrite_stream &os);
@@ -214,16 +199,19 @@ protected:
   CodeGenAction(BackendActionTy act) : action{act} {};
   /// @name MLIR
   /// {
-  std::unique_ptr<mlir::ModuleOp> mlirModule;
   std::unique_ptr<mlir::MLIRContext> mlirCtx;
+  mlir::OwningOpRef<mlir::ModuleOp> mlirModule;
   /// }
 
   /// @name LLVM IR
   std::unique_ptr<llvm::LLVMContext> llvmCtx;
   std::unique_ptr<llvm::Module> llvmModule;
 
-  /// Embeds offload objects given with specified with -fembed-offload-object
+  /// Embeds offload objects specified with -fembed-offload-object
   void embedOffloadObjects();
+
+  /// Links in BC libraries spefified with -mlink-builtin-bitcode
+  void linkBuiltinBCLibs();
 
   /// Runs pass pipeline to lower HLFIR into FIR
   void lowerHLFIRToFIR();
@@ -234,7 +222,6 @@ protected:
 
   BackendActionTy action;
 
-  std::unique_ptr<llvm::TargetMachine> tm;
   /// }
 public:
   ~CodeGenAction() override;

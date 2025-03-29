@@ -11,6 +11,12 @@
 	.seh_stackalloc 32
 	# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: .seh_ directive must appear within an active frame
 
+	.seh_startepilogue
+	# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: .seh_ directive must appear within an active frame
+
+	.seh_endepilogue
+	# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: .seh_ directive must appear within an active frame
+
 	.def	 f;
 	.scl	2;
 	.type	32;
@@ -31,12 +37,18 @@ f:                                      # @f
 	.seh_stackalloc 7
 	# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: stack allocation size is not a multiple of 8
 	.seh_stackalloc 32
+	.seh_startepilogue
+	# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: starting epilogue (.seh_startepilogue) before prologue has ended (.seh_endprologue) in f
 	.seh_endprologue
 	nop
+	.seh_endepilogue
+	# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: Stray .seh_endepilogue in f
+	.seh_startepilogue
 	addq	$32, %rsp
 	popq	%rbx
 	popq	%rdi
 	popq	%rsi
+	.seh_endepilogue
 	retq
 	.seh_handlerdata
 	.text
@@ -63,8 +75,10 @@ g:
 	.seh_setframe 3, 128
 	# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: frame register and offset can be set at most once
 	nop
+	.seh_startepilogue
 	popq %rsi
 	popq %rbp
+	.seh_endepilogue
 	retq
 	.seh_endproc
 
@@ -90,9 +104,11 @@ h:                                      # @h
         addsd   %xmm6, %xmm7
         callq   getdbl
         addsd   %xmm7, %xmm0
+		.seh_startepilogue
         movaps  32(%rsp), %xmm6         # 16-byte Reload
         movaps  48(%rsp), %xmm7         # 16-byte Reload
         addq    $72, %rsp
+		.seh_endepilogue
         retq
         .seh_handlerdata
         .text
@@ -105,7 +121,7 @@ h:                                      # @h
 i:
 	.seh_proc i
 	pushq %rbp
-	.seh_pushreg 17
+	.seh_pushreg 32
 # CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: incorrect register number for use with this directive
 	pushq %rbx
 	.seh_pushreg %xmm0

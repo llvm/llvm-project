@@ -111,7 +111,7 @@ void BugDriver::EmitProgressBitcode(const Module &M, const std::string &ID,
   outs() << " " << getPassesString(PassesToRun) << "\n";
 }
 
-cl::opt<bool> SilencePasses(
+static cl::opt<bool> SilencePasses(
     "silence-passes",
     cl::desc("Suppress output of running passes (both stdout and stderr)"));
 
@@ -141,7 +141,7 @@ bool BugDriver::runPasses(Module &Program,
            << ": Error making unique filename: " << EC.message() << "\n";
     return true;
   }
-  OutputFilename = std::string(UniqueFilename.str());
+  OutputFilename = std::string(UniqueFilename);
 
   // set up the input file name
   Expected<sys::fs::TempFile> Temp =

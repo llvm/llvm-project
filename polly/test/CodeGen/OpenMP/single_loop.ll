@@ -1,14 +1,14 @@
-; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=AST
-; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-codegen -S -verify-dom-info < %s | FileCheck %s -check-prefix=IR
+; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force '-passes=print<polly-ast>' -disable-output < %s | FileCheck %s -check-prefix=AST
+; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force -passes=polly-codegen -S -verify-dom-info < %s | FileCheck %s -check-prefix=IR
 
-; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-import-jscop -polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=AST-STRIDE4
-; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-import-jscop -polly-codegen -S < %s | FileCheck %s -check-prefix=IR-STRIDE4
+; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force '-passes=polly-import-jscop,print<polly-ast>' -disable-output < %s | FileCheck %s -check-prefix=AST-STRIDE4
+; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force '-passes=polly-import-jscop,polly-codegen' -S < %s | FileCheck %s -check-prefix=IR-STRIDE4
 
-; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-codegen -polly-omp-backend=LLVM -polly-scheduling=static -polly-scheduling-chunksize=43 -S -verify-dom-info < %s | FileCheck %s -check-prefix=LIBOMP-IR-STATIC-CHUNKED
-; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-codegen -polly-omp-backend=LLVM -polly-scheduling=static -S -verify-dom-info < %s | FileCheck %s -check-prefix=LIBOMP-IR-STATIC
-; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-codegen -polly-omp-backend=LLVM -polly-scheduling=dynamic -S -verify-dom-info < %s | FileCheck %s -check-prefix=LIBOMP-IR-DYNAMIC
-; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-codegen -polly-omp-backend=LLVM -polly-scheduling=dynamic -polly-scheduling-chunksize=4 -S -verify-dom-info < %s | FileCheck %s -check-prefix=LIBOMP-IR-DYNAMIC-FOUR
-; RUN: opt %loadPolly -polly-parallel -polly-parallel-force -polly-import-jscop -polly-codegen -polly-omp-backend=LLVM -S < %s | FileCheck %s -check-prefix=LIBOMP-IR-STRIDE4
+; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force -passes=polly-codegen -polly-omp-backend=LLVM -polly-scheduling=static -polly-scheduling-chunksize=43 -S -verify-dom-info < %s | FileCheck %s -check-prefix=LIBOMP-IR-STATIC-CHUNKED
+; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force -passes=polly-codegen -polly-omp-backend=LLVM -polly-scheduling=static -S -verify-dom-info < %s | FileCheck %s -check-prefix=LIBOMP-IR-STATIC
+; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force -passes=polly-codegen -polly-omp-backend=LLVM -polly-scheduling=dynamic -S -verify-dom-info < %s | FileCheck %s -check-prefix=LIBOMP-IR-DYNAMIC
+; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force -passes=polly-codegen -polly-omp-backend=LLVM -polly-scheduling=dynamic -polly-scheduling-chunksize=4 -S -verify-dom-info < %s | FileCheck %s -check-prefix=LIBOMP-IR-DYNAMIC-FOUR
+; RUN: opt %loadNPMPolly -polly-parallel -polly-parallel-force '-passes=polly-import-jscop,polly-codegen' -polly-omp-backend=LLVM -S < %s | FileCheck %s -check-prefix=LIBOMP-IR-STRIDE4
 
 ; This extensive test case tests the creation of the full set of OpenMP calls
 ; as well as the subfunction creation using a trivial loop as example.

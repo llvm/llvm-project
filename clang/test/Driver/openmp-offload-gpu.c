@@ -2,11 +2,6 @@
 /// Perform several driver tests for OpenMP offloading
 ///
 
-// REQUIRES: x86-registered-target
-// REQUIRES: powerpc-registered-target
-// REQUIRES: nvptx-registered-target
-// REQUIRES: amdgpu-registered-target
-
 /// ###########################################################################
 
 /// Check -Xopenmp-target uses one of the archs provided when several archs are used.
@@ -75,40 +70,29 @@
 
 /// Check that the runtime bitcode library is part of the compile line.
 /// Create a bogus bitcode library and specify it with libomptarget-nvptx-bc-path
-// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
 // RUN:   --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc \
 // RUN:   -Xopenmp-target -march=sm_52 --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
 // RUN:   -fopenmp-relocatable-target -save-temps %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-BCLIB %s
 
 /// Specify the directory containing the bitcode lib, check clang picks the right one
-// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
 // RUN:   --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget \
 // RUN:   -Xopenmp-target -march=sm_52 --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
 // RUN:   -fopenmp-relocatable-target -save-temps \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=CHK-BCLIB-DIR %s
 
 /// Create a bogus bitcode library and find it with LIBRARY_PATH
-// RUN:   env LIBRARY_PATH=%S/Inputs/libomptarget/subdir %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
+// RUN:   env LIBRARY_PATH=%S/Inputs/libomptarget/subdir %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
 // RUN:   -Xopenmp-target -march=sm_52 --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
 // RUN:   -fopenmp-relocatable-target -save-temps \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=CHK-ENV-BCLIB %s
 
 // CHK-BCLIB: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-builtin-bitcode{{.*}}libomptarget-nvptx-test.bc
-// CHK-BCLIB-DIR: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-builtin-bitcode{{.*}}libomptarget{{/|\\\\}}libomptarget-nvptx-sm_52.bc
-// CHK-ENV-BCLIB: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-builtin-bitcode{{.*}}subdir{{/|\\\\}}libomptarget-nvptx-sm_52.bc
+// CHK-BCLIB-DIR: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-builtin-bitcode{{.*}}libomptarget{{/|\\\\}}libomptarget-nvptx.bc
+// CHK-ENV-BCLIB: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-builtin-bitcode{{.*}}subdir{{/|\\\\}}libomptarget-nvptx.bc
 // CHK-BCLIB-NOT: {{error:|warning:}}
-
-/// ###########################################################################
-
-/// Check that the warning is thrown when the libomptarget bitcode library is not found.
-/// Libomptarget requires sm_52 or newer so an sm_52 bitcode library should never exist.
-// RUN:   not %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
-// RUN:   -Xopenmp-target -march=sm_52 --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
-// RUN:   -fopenmp-relocatable-target -save-temps %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHK-BCLIB-WARN %s
-
-// CHK-BCLIB-WARN: no library 'libomptarget-nvptx-sm_52.bc' found in the default clang lib directory or in LIBRARY_PATH; use '--libomptarget-nvptx-bc-path' to specify nvptx bitcode library
 
 /// ###########################################################################
 
@@ -244,20 +228,20 @@
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-llvm-bc"{{.*}}"-x" "c"
 // CHECK: "-cc1" "-triple" "nvptx64-nvidia-cuda" "-aux-triple" "x86_64-unknown-linux-gnu"{{.*}}"-target-cpu" "sm_52"
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-obj"
-// CHECK: clang-linker-wrapper{{.*}}"--"{{.*}} "-o" "a.out"
+// CHECK: clang-linker-wrapper{{.*}} "-o" "a.out"
 
 // RUN:   %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_52 %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PHASES %s
 // CHECK-PHASES: 0: input, "[[INPUT:.+]]", c, (host-openmp)
 // CHECK-PHASES: 1: preprocessor, {0}, cpp-output, (host-openmp)
 // CHECK-PHASES: 2: compiler, {1}, ir, (host-openmp)
-// CHECK-PHASES: 3: input, "[[INPUT]]", c, (device-openmp)
-// CHECK-PHASES: 4: preprocessor, {3}, cpp-output, (device-openmp)
-// CHECK-PHASES: 5: compiler, {4}, ir, (device-openmp)
-// CHECK-PHASES: 6: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (nvptx64-nvidia-cuda)" {5}, ir
-// CHECK-PHASES: 7: backend, {6}, assembler, (device-openmp)
-// CHECK-PHASES: 8: assembler, {7}, object, (device-openmp)
-// CHECK-PHASES: 9: offload, "device-openmp (nvptx64-nvidia-cuda)" {8}, object
+// CHECK-PHASES: 3: input, "[[INPUT]]", c, (device-openmp, sm_52)
+// CHECK-PHASES: 4: preprocessor, {3}, cpp-output, (device-openmp, sm_52)
+// CHECK-PHASES: 5: compiler, {4}, ir, (device-openmp, sm_52)
+// CHECK-PHASES: 6: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (nvptx64-nvidia-cuda:sm_52)" {5}, ir
+// CHECK-PHASES: 7: backend, {6}, assembler, (device-openmp, sm_52)
+// CHECK-PHASES: 8: assembler, {7}, object, (device-openmp, sm_52)
+// CHECK-PHASES: 9: offload, "device-openmp (nvptx64-nvidia-cuda:sm_52)" {8}, object
 // CHECK-PHASES: 10: clang-offload-packager, {9}, image
 // CHECK-PHASES: 11: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (x86_64-unknown-linux-gnu)" {10}, ir
 // CHECK-PHASES: 12: backend, {11}, assembler, (host-openmp)
@@ -315,8 +299,8 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-EMIT-LLVM-IR-BC
 // CHECK-EMIT-LLVM-IR-BC: "-cc1"{{.*}}"-triple" "nvptx64-nvidia-cuda"{{.*}}"-emit-llvm-bc"
 
-// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvida-cuda -march=sm_70 \
-// RUN:          --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-new-nvptx-test.bc \
+// RUN:   %clang -### -fopenmp=libomp --offload-arch=sm_89 \
+// RUN:          --no-cuda-version-check \
 // RUN:          -nogpulib %s -o openmp-offload-gpu 2>&1 \
 // RUN:   | FileCheck -check-prefix=DRIVER_EMBEDDING %s
 
@@ -331,7 +315,7 @@
 // RUN:     -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_52 --offload-device-only -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-DEVICE-ONLY
 // CHECK-DEVICE-ONLY: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT:.*]]"], output: "[[HOST_BC:.*]]"
 // CHECK-DEVICE-ONLY: "nvptx64-nvidia-cuda" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[DEVICE_ASM:.*]]"
-// CHECK-DEVICE-ONLY: "nvptx64-nvidia-cuda" - "NVPTX::Assembler", inputs: ["[[DEVICE_ASM]]"], output: "{{.*}}-openmp-nvptx64-nvidia-cuda.o"
+// CHECK-DEVICE-ONLY: "nvptx64-nvidia-cuda" - "NVPTX::Assembler", inputs: ["[[DEVICE_ASM]]"], output: "{{.*}}-openmp-nvptx64-nvidia-cuda-sm_52.o"
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
 // RUN:     -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_52 --offload-device-only -E -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-DEVICE-ONLY-PP
@@ -388,19 +372,9 @@
 // XARCH-DEVICE: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-O3"
 // XARCH-DEVICE-NOT: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-O3"
 
-//
-// Check that `-gpulibc` includes the LLVM C libraries for the GPU.
-//
-// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
-// RUN:      --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc \
-// RUN:      --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
-// RUN:      --offload-arch=sm_52 -gpulibc -nogpuinc %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=LIBC-GPU %s
-// LIBC-GPU: "-lcgpu"{{.*}}"-lmgpu"
-
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
 // RUN:      --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc \
 // RUN:      --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
 // RUN:      --offload-arch=sm_52 -nogpulibc -nogpuinc %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=NO-LIBC-GPU %s
-// NO-LIBC-GPU-NOT: "-lcgpu"{{.*}}"-lmgpu"
+// RUN:   | FileCheck --check-prefix=LIBC-GPU %s
+// LIBC-GPU-NOT: clang-linker-wrapper{{.*}}"--device-linker"

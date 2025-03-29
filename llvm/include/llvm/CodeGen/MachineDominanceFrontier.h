@@ -73,30 +73,6 @@ public:
     return Base.find(B);
   }
 
-  iterator addBasicBlock(MachineBasicBlock *BB, const DomSetType &frontier) {
-    return Base.addBasicBlock(BB, frontier);
-  }
-
-  void removeBlock(MachineBasicBlock *BB) {
-    return Base.removeBlock(BB);
-  }
-
-  void addToFrontier(iterator I, MachineBasicBlock *Node) {
-    return Base.addToFrontier(I, Node);
-  }
-
-  void removeFromFrontier(iterator I, MachineBasicBlock *Node) {
-    return Base.removeFromFrontier(I, Node);
-  }
-
-  bool compareDomSet(DomSetType &DS1, const DomSetType &DS2) const {
-    return Base.compareDomSet(DS1, DS2);
-  }
-
-  bool compare(DominanceFrontierBase<MachineBasicBlock, false> &Other) const {
-    return Base.compare(Other);
-  }
-
   bool runOnMachineFunction(MachineFunction &F) override;
 
   void releaseMemory() override;

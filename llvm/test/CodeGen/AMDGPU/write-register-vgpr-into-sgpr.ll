@@ -1,6 +1,6 @@
 ; XFAIL: *
 ; REQUIRES: asserts
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s
 
 ; write_register doesn't prevent us from illegally trying to write a
 ; vgpr value into a scalar register, but I don't think there's much we

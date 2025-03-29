@@ -10,6 +10,7 @@
 
 #include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include <utility>
 
 using namespace mlir;
 
@@ -41,10 +42,18 @@ bool mlir::isOpTriviallyDead(Operation *op) {
 /// allows for marking region operations as trivially dead without always being
 /// conservative of terminators.
 static bool wouldOpBeTriviallyDeadImpl(Operation *rootOp) {
-  // The set of operations to consider when checking for side effects.
-  SmallVector<Operation *, 1> effectingOps(1, rootOp);
+  // The set of operation intervals (end-exclusive) to consider when checking
+  // for side effects.
+  SmallVector<std::pair<Block::iterator, Block::iterator>, 1> effectingOps = {
+      std::make_pair(Block::iterator(rootOp), ++Block::iterator(rootOp))};
   while (!effectingOps.empty()) {
-    Operation *op = effectingOps.pop_back_val();
+    Block::iterator &it = effectingOps.back().first;
+    Block::iterator end = effectingOps.back().second;
+    if (it == end) {
+      effectingOps.pop_back();
+      continue;
+    }
+    mlir::Operation *op = &*(it++);
 
     // If the operation has recursive effects, push all of the nested operations
     // on to the stack to consider.
@@ -53,8 +62,7 @@ static bool wouldOpBeTriviallyDeadImpl(Operation *rootOp) {
     if (hasRecursiveEffects) {
       for (Region &region : op->getRegions()) {
         for (auto &block : region) {
-          for (auto &nestedOp : block)
-            effectingOps.push_back(&nestedOp);
+          effectingOps.push_back(std::make_pair(block.begin(), block.end()));
         }
       }
     }
@@ -86,10 +94,9 @@ static bool wouldOpBeTriviallyDeadImpl(Operation *rootOp) {
         return false;
       }
       continue;
-
-      // Otherwise, if the op has recursive side effects we can treat the
-      // operation itself as having no effects.
     }
+    // Otherwise, if the op only has recursive side effects we can treat the
+    // operation itself as having no effects. We will visit its children next.
     if (hasRecursiveEffects)
       continue;
 
@@ -104,6 +111,28 @@ static bool wouldOpBeTriviallyDeadImpl(Operation *rootOp) {
 }
 
 template <typename EffectTy>
+bool mlir::hasSingleEffect(Operation *op) {
+  auto memOp = dyn_cast<MemoryEffectOpInterface>(op);
+  if (!memOp)
+    return false;
+  SmallVector<SideEffects::EffectInstance<MemoryEffects::Effect>, 4> effects;
+  memOp.getEffects(effects);
+  bool hasSingleEffectOnVal = false;
+  // Iterate through `effects` and check if an effect of type `EffectTy` and
+  // only of that type is present.
+  for (auto &effect : effects) {
+    hasSingleEffectOnVal = isa<EffectTy>(effect.getEffect());
+    if (!hasSingleEffectOnVal)
+      return false;
+  }
+  return hasSingleEffectOnVal;
+}
+template bool mlir::hasSingleEffect<MemoryEffects::Allocate>(Operation *);
+template bool mlir::hasSingleEffect<MemoryEffects::Free>(Operation *);
+template bool mlir::hasSingleEffect<MemoryEffects::Read>(Operation *);
+template bool mlir::hasSingleEffect<MemoryEffects::Write>(Operation *);
+
+template <typename EffectTy>
 bool mlir::hasSingleEffect(Operation *op, Value value) {
   auto memOp = dyn_cast<MemoryEffectOpInterface>(op);
   if (!memOp)
@@ -112,10 +141,9 @@ bool mlir::hasSingleEffect(Operation *op, Value value) {
   memOp.getEffects(effects);
   bool hasSingleEffectOnVal = false;
   // Iterate through `effects` and check if an effect of type `EffectTy` and
-  // only of that type is present. A `value` to check the effect on may or may
-  // not have been provided.
+  // only of that type is present.
   for (auto &effect : effects) {
-    if (value && effect.getValue() != value)
+    if (effect.getValue() != value)
       continue;
     hasSingleEffectOnVal = isa<EffectTy>(effect.getEffect());
     if (!hasSingleEffectOnVal)
@@ -125,10 +153,84 @@ bool mlir::hasSingleEffect(Operation *op, Value value) {
 }
 
 template bool mlir::hasSingleEffect<MemoryEffects::Allocate>(Operation *,
-                                                             Value);
-template bool mlir::hasSingleEffect<MemoryEffects::Free>(Operation *, Value);
-template bool mlir::hasSingleEffect<MemoryEffects::Read>(Operation *, Value);
-template bool mlir::hasSingleEffect<MemoryEffects::Write>(Operation *, Value);
+                                                             Value value);
+template bool mlir::hasSingleEffect<MemoryEffects::Free>(Operation *,
+                                                         Value value);
+template bool mlir::hasSingleEffect<MemoryEffects::Read>(Operation *,
+                                                         Value value);
+template bool mlir::hasSingleEffect<MemoryEffects::Write>(Operation *,
+                                                          Value value);
+
+template <typename ValueTy, typename EffectTy>
+bool mlir::hasSingleEffect(Operation *op, ValueTy value) {
+  auto memOp = dyn_cast<MemoryEffectOpInterface>(op);
+  if (!memOp)
+    return false;
+  SmallVector<SideEffects::EffectInstance<MemoryEffects::Effect>, 4> effects;
+  memOp.getEffects(effects);
+  bool hasSingleEffectOnVal = false;
+  // Iterate through `effects` and check if an effect of type `EffectTy` and
+  // only of that type is present on value.
+  for (auto &effect : effects) {
+    if (effect.getEffectValue<ValueTy>() != value)
+      continue;
+    hasSingleEffectOnVal = isa<EffectTy>(effect.getEffect());
+    if (!hasSingleEffectOnVal)
+      return false;
+  }
+  return hasSingleEffectOnVal;
+}
+
+template bool
+mlir::hasSingleEffect<OpOperand *, MemoryEffects::Allocate>(Operation *,
+                                                            OpOperand *);
+template bool
+mlir::hasSingleEffect<OpOperand *, MemoryEffects::Free>(Operation *,
+                                                        OpOperand *);
+template bool
+mlir::hasSingleEffect<OpOperand *, MemoryEffects::Read>(Operation *,
+                                                        OpOperand *);
+template bool
+mlir::hasSingleEffect<OpOperand *, MemoryEffects::Write>(Operation *,
+                                                         OpOperand *);
+template bool
+mlir::hasSingleEffect<OpResult, MemoryEffects::Allocate>(Operation *, OpResult);
+template bool mlir::hasSingleEffect<OpResult, MemoryEffects::Free>(Operation *,
+                                                                   OpResult);
+template bool mlir::hasSingleEffect<OpResult, MemoryEffects::Read>(Operation *,
+                                                                   OpResult);
+template bool mlir::hasSingleEffect<OpResult, MemoryEffects::Write>(Operation *,
+                                                                    OpResult);
+template bool
+mlir::hasSingleEffect<BlockArgument, MemoryEffects::Allocate>(Operation *,
+                                                              BlockArgument);
+template bool
+mlir::hasSingleEffect<BlockArgument, MemoryEffects::Free>(Operation *,
+                                                          BlockArgument);
+template bool
+mlir::hasSingleEffect<BlockArgument, MemoryEffects::Read>(Operation *,
+                                                          BlockArgument);
+template bool
+mlir::hasSingleEffect<BlockArgument, MemoryEffects::Write>(Operation *,
+                                                           BlockArgument);
+
+template <typename... EffectTys>
+bool mlir::hasEffect(Operation *op) {
+  auto memOp = dyn_cast<MemoryEffectOpInterface>(op);
+  if (!memOp)
+    return false;
+  SmallVector<SideEffects::EffectInstance<MemoryEffects::Effect>, 4> effects;
+  memOp.getEffects(effects);
+  return llvm::any_of(effects, [&](MemoryEffects::EffectInstance &effect) {
+    return isa<EffectTys...>(effect.getEffect());
+  });
+}
+template bool mlir::hasEffect<MemoryEffects::Allocate>(Operation *);
+template bool mlir::hasEffect<MemoryEffects::Free>(Operation *);
+template bool mlir::hasEffect<MemoryEffects::Read>(Operation *);
+template bool mlir::hasEffect<MemoryEffects::Write>(Operation *);
+template bool
+mlir::hasEffect<MemoryEffects::Write, MemoryEffects::Free>(Operation *);
 
 template <typename... EffectTys>
 bool mlir::hasEffect(Operation *op, Value value) {
@@ -138,17 +240,70 @@ bool mlir::hasEffect(Operation *op, Value value) {
   SmallVector<SideEffects::EffectInstance<MemoryEffects::Effect>, 4> effects;
   memOp.getEffects(effects);
   return llvm::any_of(effects, [&](MemoryEffects::EffectInstance &effect) {
-    if (value && effect.getValue() != value)
+    if (effect.getValue() != value)
       return false;
     return isa<EffectTys...>(effect.getEffect());
   });
 }
-template bool mlir::hasEffect<MemoryEffects::Allocate>(Operation *, Value);
-template bool mlir::hasEffect<MemoryEffects::Free>(Operation *, Value);
-template bool mlir::hasEffect<MemoryEffects::Read>(Operation *, Value);
-template bool mlir::hasEffect<MemoryEffects::Write>(Operation *, Value);
+template bool mlir::hasEffect<MemoryEffects::Allocate>(Operation *,
+                                                       Value value);
+template bool mlir::hasEffect<MemoryEffects::Free>(Operation *, Value value);
+template bool mlir::hasEffect<MemoryEffects::Read>(Operation *, Value value);
+template bool mlir::hasEffect<MemoryEffects::Write>(Operation *, Value value);
 template bool
-mlir::hasEffect<MemoryEffects::Write, MemoryEffects::Free>(Operation *, Value);
+mlir::hasEffect<MemoryEffects::Write, MemoryEffects::Free>(Operation *,
+                                                           Value value);
+
+template <typename ValueTy, typename... EffectTys>
+bool mlir::hasEffect(Operation *op, ValueTy value) {
+  auto memOp = dyn_cast<MemoryEffectOpInterface>(op);
+  if (!memOp)
+    return false;
+  SmallVector<SideEffects::EffectInstance<MemoryEffects::Effect>, 4> effects;
+  memOp.getEffects(effects);
+  return llvm::any_of(effects, [&](MemoryEffects::EffectInstance &effect) {
+    if (effect.getEffectValue<ValueTy>() != value)
+      return false;
+    return isa<EffectTys...>(effect.getEffect());
+  });
+}
+template bool
+mlir::hasEffect<OpOperand *, MemoryEffects::Allocate>(Operation *, OpOperand *);
+template bool mlir::hasEffect<OpOperand *, MemoryEffects::Free>(Operation *,
+                                                                OpOperand *);
+template bool mlir::hasEffect<OpOperand *, MemoryEffects::Read>(Operation *,
+                                                                OpOperand *);
+template bool mlir::hasEffect<OpOperand *, MemoryEffects::Write>(Operation *,
+                                                                 OpOperand *);
+template bool
+mlir::hasEffect<OpOperand *, MemoryEffects::Write, MemoryEffects::Free>(
+    Operation *, OpOperand *);
+
+template bool mlir::hasEffect<OpResult, MemoryEffects::Allocate>(Operation *,
+                                                                 OpResult);
+template bool mlir::hasEffect<OpResult, MemoryEffects::Free>(Operation *,
+                                                             OpResult);
+template bool mlir::hasEffect<OpResult, MemoryEffects::Read>(Operation *,
+                                                             OpResult);
+template bool mlir::hasEffect<OpResult, MemoryEffects::Write>(Operation *,
+                                                              OpResult);
+template bool
+mlir::hasEffect<OpResult, MemoryEffects::Write, MemoryEffects::Free>(
+    Operation *, OpResult);
+
+template bool
+mlir::hasEffect<BlockArgument, MemoryEffects::Allocate>(Operation *,
+                                                        BlockArgument);
+template bool
+mlir::hasEffect<BlockArgument, MemoryEffects::Free>(Operation *, BlockArgument);
+template bool
+mlir::hasEffect<BlockArgument, MemoryEffects::Read>(Operation *, BlockArgument);
+template bool
+mlir::hasEffect<BlockArgument, MemoryEffects::Write>(Operation *,
+                                                     BlockArgument);
+template bool
+mlir::hasEffect<BlockArgument, MemoryEffects::Write, MemoryEffects::Free>(
+    Operation *, BlockArgument);
 
 bool mlir::wouldOpBeTriviallyDead(Operation *op) {
   if (op->mightHaveTrait<OpTrait::IsTerminator>())

@@ -14,25 +14,20 @@
 //    -> vector<typename iterator_traits<InputIterator>::value_type, Allocator>;
 //
 
-#include <deque>
-#include <iterator>
 #include <cassert>
 #include <cstddef>
+#include <vector>
 
+int main(int, char**) {
+  //  Test the explicit deduction guides
+  // TODO: Should there be tests for explicit deduction guides?
 
-int main(int, char**)
-{
-//  Test the explicit deduction guides
-
-//  Test the implicit deduction guides
-    {
-//  vector (allocator &)
-    std::vector vec((std::allocator<int>()));  // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'vector'}}
-//  Note: The extra parens are necessary, since otherwise clang decides it is a function declaration.
-//  Also, we can't use {} instead of parens, because that constructs a
-//      deque<allocator<int>, allocator<allocator<int>>>
-    }
-
+  //  Test the implicit deduction guides
+  {
+    //  vector (allocator &)
+    // expected-error-re@+1 {{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}vector'}}
+    std::vector vec(std::allocator< int>{});
+  }
 
   return 0;
 }

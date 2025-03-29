@@ -38,9 +38,14 @@ protected:
     MF = &createVoidVoidPtrMachineFunction("TestFn", Mod.get(), MMI.get());
   }
 
-  void TestCommon(Benchmark::RepetitionModeE RepetitionMode) {
-    const auto Repetitor = SnippetRepetitor::Create(RepetitionMode, State);
-    const std::vector<MCInst> Instructions = {MCInstBuilder(X86::NOOP)};
+  void TestCommon(Benchmark::RepetitionModeE RepetitionMode,
+                  unsigned SnippetInstructions = 1) {
+    const auto Repetitor = SnippetRepetitor::Create(
+        RepetitionMode, State,
+        State.getExegesisTarget().getDefaultLoopCounterRegister(
+            State.getTargetMachine().getTargetTriple()));
+    const std::vector<MCInst> Instructions(SnippetInstructions,
+                                           MCInstBuilder(X86::NOOP));
     FunctionFiller Sink(*MF, {X86::EAX});
     const auto Fill =
         Repetitor->Repeat(Instructions, kMinInstructions, kLoopBodySize, false);
@@ -50,7 +55,7 @@ protected:
   static constexpr const unsigned kMinInstructions = 3;
   static constexpr const unsigned kLoopBodySize = 5;
 
-  std::unique_ptr<LLVMTargetMachine> TM;
+  std::unique_ptr<TargetMachine> TM;
   std::unique_ptr<LLVMContext> Context;
   std::unique_ptr<Module> Mod;
   std::unique_ptr<MachineModuleInfo> MMI;
@@ -74,6 +79,18 @@ TEST_F(X86SnippetRepetitorTest, Duplicate) {
                           HasOpcode(X86::NOOP), HasOpcode(X86::RET64)));
 }
 
+TEST_F(X86SnippetRepetitorTest, DuplicateSnippetInstructionCount) {
+  TestCommon(Benchmark::Duplicate, 2);
+  // Duplicating a snippet of two instructions with the minimum number of
+  // instructions set to three duplicates the snippet twice for a total of
+  // four instructions.
+  ASSERT_EQ(MF->getNumBlockIDs(), 1u);
+  EXPECT_THAT(MF->getBlockNumbered(0)->instrs(),
+              ElementsAre(HasOpcode(X86::NOOP), HasOpcode(X86::NOOP),
+                          HasOpcode(X86::NOOP), HasOpcode(X86::NOOP),
+                          HasOpcode(X86::RET64)));
+}
+
 TEST_F(X86SnippetRepetitorTest, Loop) {
   TestCommon(Benchmark::Loop);
   // Duplicating creates an entry block, a loop body and a ret block.
@@ -84,11 +101,12 @@ TEST_F(X86SnippetRepetitorTest, Loop) {
                           HasOpcode(X86::NOOP), HasOpcode(X86::NOOP),
                           HasOpcode(X86::NOOP), HasOpcode(X86::ADD64ri8),
                           HasOpcode(X86::JCC_1)));
-  EXPECT_THAT(LoopBlock.liveins(),
-              UnorderedElementsAre(
-                  LiveReg(X86::EAX),
-                  LiveReg(State.getExegesisTarget().getLoopCounterRegister(
-                      State.getTargetMachine().getTargetTriple()))));
+  EXPECT_THAT(
+      LoopBlock.liveins(),
+      UnorderedElementsAre(
+          LiveReg(X86::EAX),
+          LiveReg(State.getExegesisTarget().getDefaultLoopCounterRegister(
+              State.getTargetMachine().getTargetTriple()))));
   EXPECT_THAT(MF->getBlockNumbered(2)->instrs(),
               ElementsAre(HasOpcode(X86::RET64)));
 }

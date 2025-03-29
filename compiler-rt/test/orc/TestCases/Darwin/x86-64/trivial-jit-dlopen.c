@@ -5,8 +5,8 @@
 // RUN: %clang -c -o %t.inits.o %p/Inputs/standalone-ctor-and-cxa-atexit-dtor.S
 // RUN: %clang -c -o %t.test.o %s
 // RUN: %llvm_jitlink \
-// RUN:   -alias _dlopen=___orc_rt_macho_jit_dlopen \
-// RUN:   -alias _dlclose=___orc_rt_macho_jit_dlclose \
+// RUN:   -alias Platform:_dlopen=___orc_rt_macho_jit_dlopen \
+// RUN:   -alias Platform:_dlclose=___orc_rt_macho_jit_dlclose \
 // RUN:   %t.test.o -jd inits %t.inits.o -lmain | FileCheck %s
 
 // CHECK: entering main

@@ -11,12 +11,6 @@
 @v3 = addrspace(3) global i8 poison
 @unused = addrspace(3) global i16 poison
 
-; OPT: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t poison, align 16, !absolute_symbol !0
-; OPT: @llvm.compiler.used = appending addrspace(1) global [1 x ptr] [ptr addrspacecast (ptr addrspace(3) @llvm.amdgcn.module.lds to ptr)], section "llvm.metadata"
-; OPT: @llvm.amdgcn.kernel.kernel_no_table.lds = internal addrspace(3) global %llvm.amdgcn.kernel.kernel_no_table.lds.t poison, align 8, !absolute_symbol !0
-; OPT: @llvm.amdgcn.kernel.k01.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k01.lds.t poison, align 4, !absolute_symbol !1
-; OPT: @llvm.amdgcn.kernel.k23.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k23.lds.t poison, align 8, !absolute_symbol !0
-; OPT: @llvm.amdgcn.kernel.k123.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k123.lds.t poison, align 8, !absolute_symbol !2
 ; OPT{LITERAL}: @llvm.amdgcn.lds.offset.table = internal addrspace(4) constant [2 x [1 x i32]] [[1 x i32] [i32 ptrtoint (ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds to i32)], [1 x i32] [i32 ptrtoint (ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds to i32)]]
 
 define void @f0() {
@@ -167,25 +161,33 @@ define amdgpu_kernel void @k01() {
 ; GCN-LABEL: k01:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s32, 0
-; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s7
-; GCN-NEXT:    s_add_i32 s6, s6, s9
-; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
-; GCN-NEXT:    s_add_u32 s0, s0, s9
+; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GCN-NEXT:    s_add_i32 s12, s12, s17
+; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GCN-NEXT:    s_add_u32 s0, s0, s17
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
-; GCN-NEXT:    s_mov_b64 s[6:7], s[4:5]
-; GCN-NEXT:    s_getpc_b64 s[4:5]
-; GCN-NEXT:    s_add_u32 s4, s4, f0@gotpcrel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, f0@gotpcrel32@hi+12
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; GCN-NEXT:    s_mov_b32 s13, s15
+; GCN-NEXT:    s_mov_b32 s12, s14
+; GCN-NEXT:    s_getpc_b64 s[14:15]
+; GCN-NEXT:    s_add_u32 s14, s14, f0@gotpcrel32@lo+4
+; GCN-NEXT:    s_addc_u32 s15, s15, f0@gotpcrel32@hi+12
+; GCN-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
+; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GCN-NEXT:    v_or_b32_e32 v0, v0, v1
+; GCN-NEXT:    v_or_b32_e32 v31, v0, v2
+; GCN-NEXT:    s_mov_b32 s14, s16
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GCN-NEXT:    s_getpc_b64 s[4:5]
-; GCN-NEXT:    s_add_u32 s4, s4, f1@gotpcrel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, f1@gotpcrel32@hi+12
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
+; GCN-NEXT:    s_getpc_b64 s[14:15]
+; GCN-NEXT:    s_add_u32 s14, s14, f1@gotpcrel32@lo+4
+; GCN-NEXT:    s_addc_u32 s15, s15, f1@gotpcrel32@hi+12
+; GCN-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
+; GCN-NEXT:    s_mov_b32 s14, s16
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GCN-NEXT:    s_endpgm
+
   call void @f0()
   call void @f1()
   ret void
@@ -193,7 +195,7 @@ define amdgpu_kernel void @k01() {
 
 define amdgpu_kernel void @k23() {
 ; OPT-LABEL: @k23(
-; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds) ], !alias.scope !4, !noalias !7
+; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds) ], !alias.scope [[META5:![0-9]+]], !noalias [[META8:![0-9]+]]
 ; OPT-NEXT:    call void @f2()
 ; OPT-NEXT:    call void @f3()
 ; OPT-NEXT:    ret void
@@ -201,28 +203,40 @@ define amdgpu_kernel void @k23() {
 ; GCN-LABEL: k23:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s32, 0
-; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s7
-; GCN-NEXT:    s_add_i32 s6, s6, s9
-; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
-; GCN-NEXT:    s_add_u32 s0, s0, s9
+; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GCN-NEXT:    s_add_i32 s12, s12, s17
+; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GCN-NEXT:    s_add_u32 s0, s0, s17
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
-; GCN-NEXT:    s_mov_b64 s[8:9], s[4:5]
+; GCN-NEXT:    s_mov_b32 s20, s16
+; GCN-NEXT:    s_mov_b32 s13, s15
+; GCN-NEXT:    s_mov_b32 s12, s14
+; GCN-NEXT:    s_mov_b64 s[16:17], s[6:7]
+; GCN-NEXT:    s_mov_b64 s[18:19], s[4:5]
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, f2@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, f2@gotpcrel32@hi+12
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; GCN-NEXT:    s_load_dwordx2 s[22:23], s[4:5], 0x0
+; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GCN-NEXT:    v_or_b32_e32 v0, v0, v1
+; GCN-NEXT:    v_or_b32_e32 v31, v0, v2
 ; GCN-NEXT:    s_mov_b32 s15, 1
-; GCN-NEXT:    s_mov_b64 s[6:7], s[8:9]
+; GCN-NEXT:    s_mov_b64 s[4:5], s[18:19]
+; GCN-NEXT:    s_mov_b32 s14, s20
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; GCN-NEXT:    s_swappc_b64 s[30:31], s[22:23]
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, f3@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, f3@gotpcrel32@hi+12
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; GCN-NEXT:    s_mov_b64 s[6:7], s[8:9]
+; GCN-NEXT:    s_load_dwordx2 s[22:23], s[4:5], 0x0
+; GCN-NEXT:    s_mov_b64 s[4:5], s[18:19]
+; GCN-NEXT:    s_mov_b64 s[6:7], s[16:17]
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; GCN-NEXT:    s_swappc_b64 s[30:31], s[22:23]
 ; GCN-NEXT:    s_endpgm
+
+
   call void @f2()
   call void @f3()
   ret void
@@ -231,42 +245,50 @@ define amdgpu_kernel void @k23() {
 ; Access and allocate three variables
 define amdgpu_kernel void @k123() {
 ; OPT-LABEL: @k123(
-; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds) ], !alias.scope !10, !noalias !13
+; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds) ], !alias.scope [[META11:![0-9]+]], !noalias [[META14:![0-9]+]]
 ; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ]
 ; OPT-NEXT:    call void @f1()
-; OPT-NEXT:    [[LD:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 8, !alias.scope !13, !noalias !10
+; OPT-NEXT:    [[LD:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 8, !alias.scope [[META14]], !noalias [[META11]]
 ; OPT-NEXT:    [[MUL:%.*]] = mul i8 [[LD]], 8
-; OPT-NEXT:    store i8 [[MUL]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 8, !alias.scope !13, !noalias !10
+; OPT-NEXT:    store i8 [[MUL]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 8, !alias.scope [[META14]], !noalias [[META11]]
 ; OPT-NEXT:    call void @f2()
 ; OPT-NEXT:    ret void
 ;
 ; GCN-LABEL: k123:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s32, 0
-; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s7
-; GCN-NEXT:    s_add_i32 s6, s6, s9
-; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s6, 8
-; GCN-NEXT:    s_add_u32 s0, s0, s9
+; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GCN-NEXT:    s_add_i32 s12, s12, s17
+; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GCN-NEXT:    s_add_u32 s0, s0, s17
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
-; GCN-NEXT:    s_mov_b64 s[6:7], s[4:5]
-; GCN-NEXT:    s_getpc_b64 s[4:5]
-; GCN-NEXT:    s_add_u32 s4, s4, f1@gotpcrel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, f1@gotpcrel32@hi+12
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; GCN-NEXT:    s_mov_b32 s13, s15
+; GCN-NEXT:    s_mov_b32 s12, s14
+; GCN-NEXT:    s_getpc_b64 s[14:15]
+; GCN-NEXT:    s_add_u32 s14, s14, f1@gotpcrel32@lo+4
+; GCN-NEXT:    s_addc_u32 s15, s15, f1@gotpcrel32@hi+12
+; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; GCN-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
+; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GCN-NEXT:    v_or_b32_e32 v0, v0, v1
+; GCN-NEXT:    v_or_b32_e32 v31, v0, v2
+; GCN-NEXT:    s_mov_b32 s15, 0
+; GCN-NEXT:    s_mov_b32 s14, s16
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_mov_b32 m0, -1
 ; GCN-NEXT:    ds_read_u8 v1, v0 offset:16
-; GCN-NEXT:    s_getpc_b64 s[4:5]
-; GCN-NEXT:    s_add_u32 s4, s4, f2@gotpcrel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, f2@gotpcrel32@hi+12
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
+; GCN-NEXT:    s_getpc_b64 s[14:15]
+; GCN-NEXT:    s_add_u32 s14, s14, f2@gotpcrel32@lo+4
+; GCN-NEXT:    s_addc_u32 s15, s15, f2@gotpcrel32@hi+12
+; GCN-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 3, v1
 ; GCN-NEXT:    ds_write_b8 v0, v1 offset:16
 ; GCN-NEXT:    s_mov_b32 s15, 0
-; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; GCN-NEXT:    s_mov_b32 s14, s16
+; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GCN-NEXT:    s_endpgm
   call void @f1()
   %ld = load i8, ptr addrspace(3) @v3
@@ -276,13 +298,9 @@ define amdgpu_kernel void @k123() {
   ret void
 }
 
-
-; OPT: declare i32 @llvm.amdgcn.lds.kernel.id()
-
 !0 = !{i32 0}
 !1 = !{i32 2}
 !2 = !{i32 1}
-
 
 ; OPT: attributes #0 = { "amdgpu-lds-size"="8" }
 ; OPT: attributes #1 = { "amdgpu-lds-size"="16" }
@@ -293,24 +311,34 @@ define amdgpu_kernel void @k123() {
 ; OPT: !0 = !{i32 0, i32 1}
 ; OPT: !1 = !{i32 4, i32 5}
 ; OPT: !2 = !{i32 8, i32 9}
-; OPT: !3 = !{i32 1}
-; OPT: !4 = !{!5}
-; OPT: !5 = distinct !{!5, !6}
-; OPT: !6 = distinct !{!6}
-; OPT: !7 = !{!8}
-; OPT: !8 = distinct !{!8, !6}
-; OPT: !9 = !{i32 0}
-; OPT: !10 = !{!11}
-; OPT: !11 = distinct !{!11, !12}
-; OPT: !12 = distinct !{!12}
-; OPT: !13 = !{!14}
-; OPT: !14 = distinct !{!14, !12}
+; OPT: !3 = !{i32 1, !"amdhsa_code_object_version", i32 500}
+; OPT: !4 = !{i32 1}
+; OPT: !5 = !{!6}
+; OPT: !6 = distinct !{!6, !7}
+; OPT: !7 = distinct !{!7}
+; OPT: !8 = !{!9}
+; OPT: !9 = distinct !{!9, !7}
+; OPT: !10 = !{i32 0}
+; OPT: !11 = !{!12}
+; OPT: !12 = distinct !{!12, !13}
+; OPT: !13 = distinct !{!13}
+; OPT: !14 = !{!15}
+; OPT: !15 = distinct !{!15, !13}
+
+attributes #0 = { "amdgpu-lds-size"="8" }
+attributes #1 = { "amdgpu-lds-size"="16" }
+attributes #2 = { "amdgpu-lds-size"="24" }
+attributes #3 = { nocallback nofree nosync nounwind willreturn memory(none) }
+attributes #4 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
 ; Table size length number-kernels * number-variables * sizeof(uint16_t)
 ; GCN:      .type	llvm.amdgcn.lds.offset.table,@object
-; GCN-NEXT: .section	.data.rel.ro,#alloc,#write
+; GCN-NEXT: .section	.data.rel.ro,"aw"
 ; GCN-NEXT: .p2align	2, 0x0
 ; GCN-NEXT: llvm.amdgcn.lds.offset.table:
 ; GCN-NEXT: .long	8
 ; GCN-NEXT: .long	0
 ; GCN-NEXT: .size	llvm.amdgcn.lds.offset.table, 8
+
+!llvm.module.flags = !{!3}
+!3 = !{i32 1, !"amdhsa_code_object_version", i32 500}

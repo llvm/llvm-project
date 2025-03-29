@@ -18,7 +18,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
-#include <map>
 
 #undef  DEBUG_TYPE
 #define DEBUG_TYPE "bolt-prof"
@@ -55,7 +54,7 @@ bool hasVolatileName(const BinaryFunction &BF) {
 /// Return standard escaped name of the function possibly renamed by BOLT.
 std::string normalizeName(StringRef NameRef) {
   // Strip "PG." prefix used for globalized locals.
-  NameRef = NameRef.startswith("PG.") ? NameRef.substr(2) : NameRef;
+  NameRef = NameRef.starts_with("PG.") ? NameRef.substr(2) : NameRef;
   return getEscapedName(NameRef);
 }
 
@@ -599,8 +598,6 @@ void DataReader::readSampleData(BinaryFunction &BF) {
   }
 
   BF.ExecutionCount = TotalEntryCount;
-
-  estimateEdgeCounts(BF);
 }
 
 void DataReader::convertBranchData(BinaryFunction &BF) const {
@@ -698,7 +695,8 @@ bool DataReader::recordBranch(BinaryFunction &BF, uint64_t From, uint64_t To,
       if (!BC.MIB->isNoop(Instr))
         break;
 
-      Offset += BC.MIB->getAnnotationWithDefault<uint32_t>(Instr, "Size");
+      if (std::optional<uint32_t> Size = BC.MIB->getSize(Instr))
+        Offset += *Size;
     }
 
     if (To == Offset)
@@ -775,6 +773,7 @@ bool DataReader::recordBranch(BinaryFunction &BF, uint64_t From, uint64_t To,
     if (collectedInBoltedBinary() && FromBB == ToBB)
       return true;
 
+    // Allow passthrough blocks.
     BinaryBasicBlock *FTSuccessor = FromBB->getConditionalSuccessor(false);
     if (FTSuccessor && FTSuccessor->succ_size() == 1 &&
         FTSuccessor->getSuccessor(ToBB->getLabel())) {
@@ -1205,8 +1204,7 @@ std::error_code DataReader::parse() {
 
     // Add entry data for branches to another function or branches
     // to entry points (including recursive calls)
-    if (BI.To.IsSymbol &&
-        (!BI.From.Name.equals(BI.To.Name) || BI.To.Offset == 0)) {
+    if (BI.To.IsSymbol && (BI.From.Name != BI.To.Name || BI.To.Offset == 0)) {
       I = GetOrCreateFuncEntry(BI.To.Name);
       I->second.EntryData.emplace_back(std::move(BI));
     }

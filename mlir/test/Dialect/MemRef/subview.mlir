@@ -47,9 +47,9 @@ func.func @memref_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %7 = memref.alloc(%arg1, %arg2) : memref<?x?xf32>
   // CHECK: memref.subview {{%.*}}[0, 0] [4, 4] [1, 1] :
   // CHECK-SAME: memref<?x?xf32>
-  // CHECK-SAME: to memref<4x4xf32, strided<[?, 1], offset: ?>>
+  // CHECK-SAME: to memref<4x4xf32, strided<[?, 1]>>
   %8 = memref.subview %7[0, 0][4, 4][1, 1]
-    : memref<?x?xf32> to memref<4x4xf32, strided<[?, 1], offset: ?>>
+    : memref<?x?xf32> to memref<4x4xf32, strided<[?, 1]>>
 
   %9 = memref.alloc() : memref<16x4xf32>
   // CHECK: memref.subview {{%.*}}[{{%.*}}, {{%.*}}] [4, 4] [{{%.*}}, {{%.*}}] :

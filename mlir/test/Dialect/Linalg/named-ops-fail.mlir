@@ -176,6 +176,118 @@ func.func @negf_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
 
 // -----
 
+func.func @reciprocal_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) {
+  // CHECK: operand 1 ('f16') doesn't match the element type of the enclosing linalg.generic op ('f32')
+  linalg.reciprocal ins(%arg : memref<4x8x16xf16>) outs(%out: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+func.func @reciprocal_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
+  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  linalg.reciprocal ins(%arg : memref<8x16xf32>) outs(%out: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+func.func @round_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) {
+  // CHECK: operand 1 ('f16') doesn't match the element type of the enclosing linalg.generic op ('f32')
+  linalg.round ins(%arg : memref<4x8x16xf16>) outs(%out: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+func.func @round_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
+  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  linalg.round ins(%arg : memref<8x16xf32>) outs(%out: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+func.func @sqrt_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) {
+  // CHECK: operand 1 ('f16') doesn't match the element type of the enclosing linalg.generic op ('f32')
+  linalg.sqrt ins(%arg : memref<4x8x16xf16>) outs(%out: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+func.func @sqrt_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
+  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  linalg.sqrt ins(%arg : memref<8x16xf32>) outs(%out: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+func.func @rsqrt_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) {
+  // CHECK: operand 1 ('f16') doesn't match the element type of the enclosing linalg.generic op ('f32')
+  linalg.rsqrt ins(%arg : memref<4x8x16xf16>) outs(%out: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+func.func @rsqrt_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
+  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  linalg.rsqrt ins(%arg : memref<8x16xf32>) outs(%out: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+func.func @square_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) {
+  // CHECK: operand 1 ('f16') doesn't match the element type of the enclosing linalg.generic op ('f32')
+  linalg.square ins(%arg : memref<4x8x16xf16>) outs(%out: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+func.func @square_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
+  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  linalg.square ins(%arg : memref<8x16xf32>) outs(%out: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+func.func @tanh_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) {
+  // CHECK: operand 1 ('f16') doesn't match the element type of the enclosing linalg.generic op ('f32')
+  linalg.tanh ins(%arg : memref<4x8x16xf16>) outs(%out: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+func.func @tanh_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
+  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  linalg.tanh ins(%arg : memref<8x16xf32>) outs(%out: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+func.func @erf_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) {
+  // CHECK: operand 1 ('f16') doesn't match the element type of the enclosing linalg.generic op ('f32')
+  linalg.erf ins(%arg : memref<4x8x16xf16>) outs(%out: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+func.func @erf_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
+  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  linalg.erf ins(%arg : memref<8x16xf32>) outs(%out: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
 func.func @max_type_cast(%arg0: memref<4x8x16xf32>, %arg1: memref<4x8x16xf16>, %arg2: memref<4x8x16xf32>) {
   // CHECK: op requires the same type for all operands and results
   linalg.max ins(%arg0, %arg1 : memref<4x8x16xf32>, memref<4x8x16xf16>) outs(%arg2: memref<4x8x16xf32>)
@@ -189,3 +301,52 @@ func.func @max_broadcast(%arg0: memref<8x16xf32>, %arg1: memref<4x8x16xf32>, %ar
   linalg.max ins(%arg0, %arg1 : memref<8x16xf32>, memref<4x8x16xf32>) outs(%arg2: memref<4x8x16xf32>)
   return
 }
+
+// -----
+
+func.func @min_type_cast(%arg0: memref<4x8x16xf32>, %arg1: memref<4x8x16xf16>, %arg2: memref<4x8x16xf32>) {
+  // CHECK: op requires the same type for all operands and results
+  linalg.min ins(%arg0, %arg1 : memref<4x8x16xf32>, memref<4x8x16xf16>) outs(%arg2: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+func.func @min_broadcast(%arg0: memref<8x16xf32>, %arg1: memref<4x8x16xf32>, %arg2: memref<4x8x16xf32>) {
+  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  linalg.min ins(%arg0, %arg1 : memref<8x16xf32>, memref<4x8x16xf32>) outs(%arg2: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+func.func @powf_type_cast(%arg0: memref<4x8x16xf32>, %arg1: memref<4x8x16xf16>, %arg2: memref<4x8x16xf32>) {
+  // CHECK: op requires the same type for all operands and results
+  linalg.powf ins(%arg0, %arg1 : memref<4x8x16xf32>, memref<4x8x16xf16>) outs(%arg2: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+func.func @powf_broadcast(%arg0: memref<8x16xf32>, %arg1: memref<4x8x16xf32>, %arg2: memref<4x8x16xf32>) {
+  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  linalg.powf ins(%arg0, %arg1 : memref<8x16xf32>, memref<4x8x16xf32>) outs(%arg2: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+func.func @select_type_cast(%arg0: memref<4x8x16xi1>, %arg1: memref<4x8x16xf16>, %arg2: memref<4x8x16xf32>, %arg3: memref<4x8x16xf32>) {
+  // CHECK: op failed to verify that all of {true_value, false_value, result} have same type
+  linalg.select ins(%arg0, %arg1, %arg2 : memref<4x8x16xi1>, memref<4x8x16xf16>, memref<4x8x16xf32>) outs(%arg3: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+func.func @select_wrong_condition_type(%arg0: memref<4x8x16xf32>, %arg1: memref<4x8x16xf32>, %arg2: memref<4x8x16xf32>, %arg3: memref<4x8x16xf32>) {
+  // CHECK: op operand #0 must be bool-like, but got 'f32'
+  linalg.select ins(%arg0, %arg1, %arg2 : memref<4x8x16xf32>, memref<4x8x16xf32>, memref<4x8x16xf32>) outs(%arg3: memref<4x8x16xf32>)
+  return
+}
+

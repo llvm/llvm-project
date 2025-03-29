@@ -50,12 +50,12 @@ protected:
 /// corresponding scf.yield ops need to update their types accordingly to the
 /// TypeConverter, but otherwise don't care what type conversions are happening.
 void populateSCFStructuralTypeConversionsAndLegality(
-    TypeConverter &typeConverter, RewritePatternSet &patterns,
+    const TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target);
 
 /// Similar to `populateSCFStructuralTypeConversionsAndLegality` but does not
 /// populate the conversion target.
-void populateSCFStructuralTypeConversions(TypeConverter &typeConverter,
+void populateSCFStructuralTypeConversions(const TypeConverter &typeConverter,
                                           RewritePatternSet &patterns);
 
 /// Updates the ConversionTarget with dynamic legality of SCF operations based
@@ -66,8 +66,11 @@ void populateSCFStructuralTypeConversionTarget(
 /// Populates the provided pattern set with patterns that do 1:N type
 /// conversions on (some) SCF ops. This is intended to be used with
 /// applyPartialOneToNConversion.
-void populateSCFStructuralOneToNTypeConversions(TypeConverter &typeConverter,
-                                                RewritePatternSet &patterns);
+/// FIXME: The 1:N dialect conversion is deprecated and will be removed soon.
+/// 1:N support has been added to the regular dialect conversion driver.
+/// Use populateSCFStructuralTypeConversions() instead.
+void populateSCFStructuralOneToNTypeConversions(
+    const TypeConverter &typeConverter, RewritePatternSet &patterns);
 
 /// Populate patterns for SCF software pipelining transformation. See the
 /// ForLoopPipeliningPattern for the transformation details.
@@ -79,6 +82,15 @@ void populateSCFLoopPipeliningPatterns(RewritePatternSet &patterns,
 /// loop bounds and loop steps are canonicalized.
 void populateSCFForLoopCanonicalizationPatterns(RewritePatternSet &patterns);
 
+/// Populate patterns to uplift `scf.while` ops to `scf.for`.
+/// Uplifitng expects a specific ops pattern:
+///  * `before` block consisting of single arith.cmp op
+///  * `after` block containing arith.addi
+void populateUpliftWhileToForPatterns(RewritePatternSet &patterns);
+
+/// Populate patterns to rotate `scf.while` ops, constructing `do-while` loops
+/// from `while` loops.
+void populateSCFRotateWhileLoopPatterns(RewritePatternSet &patterns);
 } // namespace scf
 } // namespace mlir
 

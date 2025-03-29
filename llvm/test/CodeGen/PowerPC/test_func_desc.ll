@@ -37,7 +37,7 @@ entry:
 ; 64BIT-NEXT: .vbyte	8, .foo
 ; 64BIT-NEXT: .vbyte	8, TOC[TC0]
 ; 64BIT-NEXT: .vbyte	8, 0
-; CHECK-NEXT: .csect [PR],5
+; CHECK-NEXT: .csect ..text..[PR],5
 ; CHECK-LABEL: .foo:
 
 ; CHECK: .globl main[DS]
@@ -50,7 +50,7 @@ entry:
 ; 64BIT-NEXT: .vbyte	8, .main
 ; 64BIT-NEXT: .vbyte	8, TOC[TC0]
 ; 64BIT-NEXT: .vbyte	8, 0
-; CHECK-NEXT: .csect [PR],5
+; CHECK-NEXT: .csect ..text..[PR],5
 ; CHECK-LABEL: .main:
 ; CHECK: bl .foo
 ; CHECK: bl .extern_foo
@@ -66,7 +66,7 @@ entry:
 ; 64BIT-NEXT: .vbyte	8, .static_foo
 ; 64BIT-NEXT: .vbyte	8, TOC[TC0]
 ; 64BIT-NEXT: .vbyte	8, 0
-; CHECK-NEXT: .csect [PR],5
+; CHECK-NEXT: .csect ..text..[PR],5
 ; CHECK-LABEL: .static_foo:
 
 ; CHECK-NOT: .csect extern_foo

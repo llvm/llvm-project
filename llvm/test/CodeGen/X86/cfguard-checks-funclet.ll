@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-pc-windows-msvc | FileCheck %s -check-prefix=X32
+; RUN: llc < %s -mtriple=i686-pc-windows-msvc | FileCheck %s -check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s -check-prefixes=X64
 ; Control Flow Guard is currently only available on Windows
 
@@ -48,9 +48,9 @@ catch:
 try.cont:
   ret i32 0
 
-  ; X32-LABEL: func_cf_exception
-	; X32: 	     calll *___guard_check_icall_fptr
-	; X32-NEXT:  calll *%ecx
+  ; X86-LABEL: func_cf_exception
+  ; X86:         calll *___guard_check_icall_fptr
+  ; X86-NEXT:    calll *%ecx
 
   ; X64-LABEL: func_cf_exception
   ; X64:       callq *__guard_dispatch_icall_fptr(%rip)

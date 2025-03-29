@@ -23,6 +23,6 @@ void test_xsfvqmaccdod(vint32m1_t vd, vint8m1_t vs1, vint8m1_t vs2, size_t vl) {
   __riscv_sf_vqmacc_2x8x2(vd, vs1, vs2, vl);
 }
 
-void test_xsfvqmaccqoq(vint32m1_t vd, vint8m1_t vs1, vint8m1_t vs2, size_t vl) {
+void test_xsfvqmaccqoq(vint32m1_t vd, vint8m1_t vs1, vint8mf2_t vs2, size_t vl) {
   __riscv_sf_vqmacc_4x8x4(vd, vs1, vs2, vl);
 }

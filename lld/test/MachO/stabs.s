@@ -145,6 +145,13 @@
 # PIE-NEXT:  segment  section            address     type
 # PIE-EMPTY:
 
+## Check that an absolute DW_AT_name does not have DW_AT_comp_dir prepended
+## when forming N_SO.
+# RUN: llvm-mc -filetype obj -triple=x86_64-apple-darwin %t/abs-path.s -o %t/abs-path.o
+# RUN: %lld %t/abs-path.o -o %t/test
+# RUN: (llvm-objdump --section-headers %t/test; dsymutil -s %t/test) | FileCheck %s --check-prefix=ABS-PATH
+# ABS-PATH:      (N_SO         ) 00      0000   0000000000000000   '/foo.cpp'
+
 #--- test.s
 
 ## Make sure we don't create STABS entries for absolute symbols.
@@ -287,3 +294,53 @@ ltmp1:
 .globl _no_debug
 _no_debug:
   ret
+
+#--- abs-path.s
+.text
+.globl  _main
+_main:
+Lfunc_begin0:
+  retq
+Lfunc_end0:
+
+.section  __DWARF,__debug_str,regular,debug
+  .asciz  "/foo.cpp"             ## string offset=0
+  .asciz  "/tmp"                 ## string offset=9
+.section  __DWARF,__debug_abbrev,regular,debug
+Lsection_abbrev:
+  .byte  1                       ## Abbreviation Code
+  .byte  17                      ## DW_TAG_compile_unit
+  .byte  1                       ## DW_CHILDREN_yes
+  .byte  3                       ## DW_AT_name
+  .byte  14                      ## DW_FORM_strp
+  .byte  27                      ## DW_AT_comp_dir
+  .byte  14                      ## DW_FORM_strp
+  .byte  17                      ## DW_AT_low_pc
+  .byte  1                       ## DW_FORM_addr
+  .byte  18                      ## DW_AT_high_pc
+  .byte  6                       ## DW_FORM_data4
+  .byte  0                       ## EOM(1)
+  .byte  0                       ## EOM(2)
+  .byte  0                       ## EOM(3)
+.section  __DWARF,__debug_info,regular,debug
+.set Lset0, Ldebug_info_end0-Ldebug_info_start0 ## Length of Unit
+  .long  Lset0
+Ldebug_info_start0:
+  .short  4                       ## DWARF version number
+.set Lset1, Lsection_abbrev-Lsection_abbrev ## Offset Into Abbrev. Section
+  .long  Lset1
+  .byte  8                       ## Address Size (in bytes)
+  .byte  1                       ## Abbrev [1] 0xb:0x48 DW_TAG_compile_unit
+  .long  0                       ## DW_AT_name
+  .long  9                       ## DW_AT_comp_dir
+  .quad  Lfunc_begin0            ## DW_AT_low_pc
+.set Lset3, Lfunc_end0-Lfunc_begin0     ## DW_AT_high_pc
+  .long  Lset3
+  .byte  0                       ## End Of Children Mark
+Ldebug_info_end0:
+
+.section  __DWARF,__debug_aranges,regular,debug
+ltmp1:
+  .byte 0
+
+.subsections_via_symbols

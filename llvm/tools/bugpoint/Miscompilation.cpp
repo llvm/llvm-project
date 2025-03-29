@@ -830,8 +830,8 @@ CleanupAndPrepareModules(BugDriver &BD, std::unique_ptr<Module> Test,
   // Add the resolver to the Safe module.
   // Prototype: void *getPointerToNamedFunction(const char* Name)
   FunctionCallee resolverFunc = Safe->getOrInsertFunction(
-      "getPointerToNamedFunction", Type::getInt8PtrTy(Safe->getContext()),
-      Type::getInt8PtrTy(Safe->getContext()));
+      "getPointerToNamedFunction", PointerType::getUnqual(Safe->getContext()),
+      PointerType::getUnqual(Safe->getContext()));
 
   // Use the function we just added to get addresses of functions we need.
   for (Module::iterator F = Safe->begin(), E = Safe->end(); F != E; ++F) {
@@ -884,7 +884,7 @@ CleanupAndPrepareModules(BugDriver &BD, std::unique_ptr<Module> Test,
           // Check to see if we already looked up the value.
           Value *CachedVal =
               new LoadInst(F->getType(), Cache, "fpcache", EntryBB);
-          Value *IsNull = new ICmpInst(*EntryBB, ICmpInst::ICMP_EQ, CachedVal,
+          Value *IsNull = new ICmpInst(EntryBB, ICmpInst::ICMP_EQ, CachedVal,
                                        NullPtr, "isNull");
           BranchInst::Create(LookupBB, DoCallBB, IsNull, EntryBB);
 
@@ -894,18 +894,13 @@ CleanupAndPrepareModules(BugDriver &BD, std::unique_ptr<Module> Test,
           CallInst *Resolver = CallInst::Create(resolverFunc, ResolverArgs,
                                                 "resolver", LookupBB);
 
-          // Cast the result from the resolver to correctly-typed function.
-          CastInst *CastedResolver = new BitCastInst(
-              Resolver, PointerType::getUnqual(F->getFunctionType()),
-              "resolverCast", LookupBB);
-
           // Save the value in our cache.
-          new StoreInst(CastedResolver, Cache, LookupBB);
+          new StoreInst(Resolver, Cache, LookupBB);
           BranchInst::Create(DoCallBB, LookupBB);
 
           PHINode *FuncPtr =
               PHINode::Create(NullPtr->getType(), 2, "fp", DoCallBB);
-          FuncPtr->addIncoming(CastedResolver, LookupBB);
+          FuncPtr->addIncoming(Resolver, LookupBB);
           FuncPtr->addIncoming(CachedVal, EntryBB);
 
           // Save the argument list.
@@ -956,8 +951,7 @@ static Expected<bool> TestCodeGenerator(BugDriver &BD,
            << "Error making unique filename: " << EC.message() << "\n";
     exit(1);
   }
-  if (BD.writeProgramToFile(std::string(TestModuleBC.str()), TestModuleFD,
-                            *Test)) {
+  if (BD.writeProgramToFile(std::string(TestModuleBC), TestModuleFD, *Test)) {
     errs() << "Error writing bitcode to `" << TestModuleBC.str()
            << "'\nExiting.";
     exit(1);
@@ -976,8 +970,7 @@ static Expected<bool> TestCodeGenerator(BugDriver &BD,
     exit(1);
   }
 
-  if (BD.writeProgramToFile(std::string(SafeModuleBC.str()), SafeModuleFD,
-                            *Safe)) {
+  if (BD.writeProgramToFile(std::string(SafeModuleBC), SafeModuleFD, *Safe)) {
     errs() << "Error writing bitcode to `" << SafeModuleBC << "'\nExiting.";
     exit(1);
   }
@@ -985,7 +978,7 @@ static Expected<bool> TestCodeGenerator(BugDriver &BD,
   FileRemover SafeModuleBCRemover(SafeModuleBC.str(), !SaveTemps);
 
   Expected<std::string> SharedObject =
-      BD.compileSharedObject(std::string(SafeModuleBC.str()));
+      BD.compileSharedObject(std::string(SafeModuleBC));
   if (Error E = SharedObject.takeError())
     return std::move(E);
 
@@ -994,7 +987,7 @@ static Expected<bool> TestCodeGenerator(BugDriver &BD,
   // Run the code generator on the `Test' code, loading the shared library.
   // The function returns whether or not the new output differs from reference.
   Expected<bool> Result = BD.diffProgram(
-      BD.getProgram(), std::string(TestModuleBC.str()), *SharedObject, false);
+      BD.getProgram(), std::string(TestModuleBC), *SharedObject, false);
   if (Error E = Result.takeError())
     return std::move(E);
 
@@ -1051,8 +1044,7 @@ Error BugDriver::debugCodeGenerator() {
     exit(1);
   }
 
-  if (writeProgramToFile(std::string(TestModuleBC.str()), TestModuleFD,
-                         *ToCodeGen)) {
+  if (writeProgramToFile(std::string(TestModuleBC), TestModuleFD, *ToCodeGen)) {
     errs() << "Error writing bitcode to `" << TestModuleBC << "'\nExiting.";
     exit(1);
   }
@@ -1068,13 +1060,13 @@ Error BugDriver::debugCodeGenerator() {
     exit(1);
   }
 
-  if (writeProgramToFile(std::string(SafeModuleBC.str()), SafeModuleFD,
+  if (writeProgramToFile(std::string(SafeModuleBC), SafeModuleFD,
                          *ToNotCodeGen)) {
     errs() << "Error writing bitcode to `" << SafeModuleBC << "'\nExiting.";
     exit(1);
   }
   Expected<std::string> SharedObject =
-      compileSharedObject(std::string(SafeModuleBC.str()));
+      compileSharedObject(std::string(SafeModuleBC));
   if (Error E = SharedObject.takeError())
     return E;
 

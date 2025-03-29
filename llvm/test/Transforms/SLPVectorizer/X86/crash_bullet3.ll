@@ -7,40 +7,40 @@ target triple = "x86_64-apple-macosx10.8.0"
 %class.btVector3.23.221.463.485.507.573.595.683.727.749.815.837.991.1585.1607.1629.1651.1849.2047.2069.2091.2113 = type { [4 x float] }
 
 ; Function Attrs: ssp uwtable
-define void @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(ptr %vertices) #0 align 2 {
+define void @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(ptr %vertices, i1 %arg) #0 align 2 {
 ; CHECK-LABEL: @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[RETURN:%.*]], label [[IF_END:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[RETURN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN17_1:%.*]], label [[IF_END22_1:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_THEN17_1:%.*]], label [[IF_END22_1:%.*]]
 ; CHECK:       for.end36:
 ; CHECK-NEXT:    br label [[FOR_BODY144:%.*]]
 ; CHECK:       for.body144:
-; CHECK-NEXT:    br i1 undef, label [[FOR_END227:%.*]], label [[FOR_BODY144]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_END227:%.*]], label [[FOR_BODY144]]
 ; CHECK:       for.end227:
-; CHECK-NEXT:    br i1 undef, label [[FOR_END271:%.*]], label [[FOR_BODY233:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_END271:%.*]], label [[FOR_BODY233:%.*]]
 ; CHECK:       for.body233:
-; CHECK-NEXT:    br i1 undef, label [[FOR_BODY233]], label [[FOR_END271]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_BODY233]], label [[FOR_END271]]
 ; CHECK:       for.end271:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x float> [ <float 0x47EFFFFFE0000000, float 0x47EFFFFFE0000000>, [[FOR_END227]] ], [ undef, [[FOR_BODY233]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x float> [ splat (float 0x47EFFFFFE0000000), [[FOR_END227]] ], [ undef, [[FOR_BODY233]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x float> undef, [[TMP0]]
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN291:%.*]], label [[RETURN]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_THEN291:%.*]], label [[RETURN]]
 ; CHECK:       if.then291:
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[TMP1]], <float 5.000000e-01, float 5.000000e-01>
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[TMP1]], splat (float 5.000000e-01)
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x float> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    br i1 undef, label [[IF_END332:%.*]], label [[IF_ELSE319:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_END332:%.*]], label [[IF_ELSE319:%.*]]
 ; CHECK:       if.else319:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN325:%.*]], label [[IF_END327:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_THEN325:%.*]], label [[IF_END327:%.*]]
 ; CHECK:       if.then325:
 ; CHECK-NEXT:    br label [[IF_END327]]
 ; CHECK:       if.end327:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN329:%.*]], label [[IF_END332]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_THEN329:%.*]], label [[IF_END332]]
 ; CHECK:       if.then329:
 ; CHECK-NEXT:    br label [[IF_END332]]
 ; CHECK:       if.end332:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x float> [ [[TMP1]], [[IF_THEN329]] ], [ [[TMP1]], [[IF_END327]] ], [ <float 0x3F847AE140000000, float 0x3F847AE140000000>, [[IF_THEN291]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x float> [ [[TMP1]], [[IF_THEN329]] ], [ [[TMP1]], [[IF_END327]] ], [ splat (float 0x3F847AE140000000), [[IF_THEN291]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fsub <2 x float> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    store <2 x float> [[TMP5]], ptr [[VERTICES:%.*]], align 4
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -49,55 +49,55 @@ define void @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(ptr %ve
 ; CHECK:       if.then17.1:
 ; CHECK-NEXT:    br label [[IF_END22_1]]
 ; CHECK:       if.end22.1:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN17_2:%.*]], label [[IF_END22_2:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_THEN17_2:%.*]], label [[IF_END22_2:%.*]]
 ; CHECK:       if.then17.2:
 ; CHECK-NEXT:    br label [[IF_END22_2]]
 ; CHECK:       if.end22.2:
-; CHECK-NEXT:    br i1 undef, label [[FOR_END36:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_END36:%.*]], label [[FOR_BODY]]
 ;
 entry:
-  br i1 undef, label %return, label %if.end
+  br i1 %arg, label %return, label %if.end
 
 if.end:                                           ; preds = %entry
   br label %for.body
 
 for.body:                                         ; preds = %if.end22.2, %if.end
-  br i1 undef, label %if.then17.1, label %if.end22.1
+  br i1 %arg, label %if.then17.1, label %if.end22.1
 
 for.end36:                                        ; preds = %if.end22.2
   br label %for.body144
 
 for.body144:                                      ; preds = %for.body144, %for.end36
-  br i1 undef, label %for.end227, label %for.body144
+  br i1 %arg, label %for.end227, label %for.body144
 
 for.end227:                                       ; preds = %for.body144
-  br i1 undef, label %for.end271, label %for.body233
+  br i1 %arg, label %for.end271, label %for.body233
 
 for.body233:                                      ; preds = %for.body233, %for.end227
-  br i1 undef, label %for.body233, label %for.end271
+  br i1 %arg, label %for.body233, label %for.end271
 
 for.end271:                                       ; preds = %for.body233, %for.end227
   %0 = phi float [ 0x47EFFFFFE0000000, %for.end227 ], [ undef, %for.body233 ]
   %1 = phi float [ 0x47EFFFFFE0000000, %for.end227 ], [ undef, %for.body233 ]
   %sub275 = fsub float undef, %1
   %sub279 = fsub float undef, %0
-  br i1 undef, label %if.then291, label %return
+  br i1 %arg, label %if.then291, label %return
 
 if.then291:                                       ; preds = %for.end271
   %mul292 = fmul float %sub275, 5.000000e-01
   %add294 = fadd float %1, %mul292
   %mul295 = fmul float %sub279, 5.000000e-01
   %add297 = fadd float %0, %mul295
-  br i1 undef, label %if.end332, label %if.else319
+  br i1 %arg, label %if.end332, label %if.else319
 
 if.else319:                                       ; preds = %if.then291
-  br i1 undef, label %if.then325, label %if.end327
+  br i1 %arg, label %if.then325, label %if.end327
 
 if.then325:                                       ; preds = %if.else319
   br label %if.end327
 
 if.end327:                                        ; preds = %if.then325, %if.else319
-  br i1 undef, label %if.then329, label %if.end332
+  br i1 %arg, label %if.then329, label %if.end332
 
 if.then329:                                       ; preds = %if.end327
   br label %if.end332
@@ -119,13 +119,13 @@ if.then17.1:                                      ; preds = %for.body
   br label %if.end22.1
 
 if.end22.1:                                       ; preds = %if.then17.1, %for.body
-  br i1 undef, label %if.then17.2, label %if.end22.2
+  br i1 %arg, label %if.then17.2, label %if.end22.2
 
 if.then17.2:                                      ; preds = %if.end22.1
   br label %if.end22.2
 
 if.end22.2:                                       ; preds = %if.then17.2, %if.end22.1
-  br i1 undef, label %for.end36, label %for.body
+  br i1 %arg, label %for.end36, label %for.body
 }
 
 attributes #0 = { ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }

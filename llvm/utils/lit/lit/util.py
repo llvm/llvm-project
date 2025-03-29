@@ -6,6 +6,7 @@ import math
 import numbers
 import os
 import platform
+import re
 import signal
 import subprocess
 import sys
@@ -407,7 +408,7 @@ def executeCommand(
         out, err = p.communicate(input=input)
         exitCode = p.wait()
     finally:
-        if timerObject != None:
+        if timerObject is not None:
             timerObject.cancel()
 
     # Ensure the resulting output is always of string type.
@@ -427,6 +428,22 @@ def executeCommand(
         raise KeyboardInterrupt
 
     return out, err, exitCode
+
+
+def isAIXTriple(target_triple):
+    """Whether the given target triple is for AIX,
+    e.g. powerpc64-ibm-aix
+    """
+    return "aix" in target_triple
+
+
+def addAIXVersion(target_triple):
+    """Add the AIX version to the given target triple,
+    e.g. powerpc64-ibm-aix7.2.5.6
+    """
+    os_cmd = "oslevel -s | awk -F\'-\' \'{printf \"%.1f.%d.%d\", $1/1000, $2, $3}\'"
+    os_version = subprocess.run(os_cmd, capture_output=True, shell=True).stdout.decode()
+    return re.sub("aix", "aix" + os_version, target_triple)
 
 
 def isMacOSTriple(target_triple):
@@ -485,7 +502,7 @@ def killProcessAndChildrenIsSupported():
         otherwise is contains a string describing why the function is
         not supported.
     """
-    if platform.system() == "AIX":
+    if platform.system() == "AIX" or platform.system() == "OS/390":
         return (True, "")
     try:
         import psutil  # noqa: F401
@@ -511,6 +528,9 @@ def killProcessAndChildren(pid):
     """
     if platform.system() == "AIX":
         subprocess.call("kill -kill $(ps -o pid= -L{})".format(pid), shell=True)
+    elif platform.system() == "OS/390":
+        # FIXME: Only the process is killed.
+        subprocess.call("kill -KILL $(ps -s {} -o pid=)".format(pid), shell=True)
     else:
         import psutil
 

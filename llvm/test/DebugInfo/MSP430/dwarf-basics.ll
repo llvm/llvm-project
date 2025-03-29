@@ -97,12 +97,12 @@ source_filename = "dwarf-basics.c"
 target datalayout = "e-m:e-p:16:16-i32:16-i64:16-f32:16-f64:16-a:8-n8:16-S16"
 target triple = "msp430"
 
-%struct.X = type { i8* }
+%struct.X = type { ptr }
 
-define i16 @f(i32 %y, %struct.X* %p) !dbg !7 {
+define i16 @f(i32 %y, ptr %p) !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata i32 %y, metadata !18, metadata !DIExpression()), !dbg !20
-  call void @llvm.dbg.value(metadata %struct.X* %p, metadata !19, metadata !DIExpression()), !dbg !20
+  call void @llvm.dbg.value(metadata ptr %p, metadata !19, metadata !DIExpression()), !dbg !20
   ret i16 42, !dbg !21
 }
 

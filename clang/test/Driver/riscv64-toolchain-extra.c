@@ -3,7 +3,7 @@
 // The tests here are similar to those in riscv64-toolchain.c, however
 // these tests need to create symlinks to test directory trees in order to
 // set up the environment and therefore shell support is required.
-// REQUIRES: shell, riscv-registered-target
+// REQUIRES: shell
 // UNSUPPORTED: system-windows
 
 // If there is no GCC install detected then the driver searches for executables
@@ -29,8 +29,8 @@
 // C-RV64-BAREMETAL-LP64-NOGCC: "-internal-isystem" "{{.*}}/riscv64-nogcc/bin/../riscv64-unknown-elf/include"
 // C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}/riscv64-nogcc/bin/riscv64-unknown-elf-ld"
 // C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}/riscv64-nogcc/bin/../riscv64-unknown-elf/lib/crt0.o"
-// C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}/riscv64-nogcc/{{.*}}/lib/clang_rt.crtbegin-riscv64.o"
+// C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}/riscv64-nogcc/{{.*}}/riscv64-unknown-unknown-elf/clang_rt.crtbegin.o"
 // C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}/riscv64-nogcc/bin/../riscv64-unknown-elf/lib"
 // C-RV64-BAREMETAL-LP64-NOGCC: "--start-group" "-lc" "-lgloss" "--end-group"
-// C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}/riscv64-nogcc/{{.*}}/lib/libclang_rt.builtins-riscv64.a"
-// C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}/riscv64-nogcc/{{.*}}/lib/clang_rt.crtend-riscv64.o"
+// C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}/riscv64-nogcc/{{.*}}/riscv64-unknown-unknown-elf/libclang_rt.builtins.a"
+// C-RV64-BAREMETAL-LP64-NOGCC: "{{.*}}/riscv64-nogcc/{{.*}}/riscv64-unknown-unknown-elf/clang_rt.crtend.o"

@@ -3,6 +3,9 @@
 // CHECK:     error: invalid instruction, any one of the following would fix this:
 // CHECK-NEXT:  add sp, r0, #4
 // CHECK-NEXT:  ^
+// CHECK-NEXT: note: operand must be a register in range [r0, r7]
+// CHECK-NEXT:   add sp, r0, #4
+// CHECK-NEXT:       ^
 // CHECK-NEXT: note: operand must be a register sp
 // CHECK-NEXT:  add sp, r0, #4
 // CHECK-NEXT:          ^

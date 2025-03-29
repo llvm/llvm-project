@@ -17,6 +17,7 @@
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Region.h"
+#include "mlir/IR/ValueRange.h"
 #include <optional>
 
 namespace mlir {
@@ -116,7 +117,7 @@ public:
   /// operation). The given 'op' will be removed by the caller, after this
   /// function has been called.
   virtual void handleTerminator(Operation *op,
-                                ArrayRef<Value> valuesToReplace) const {
+                                ValueRange valuesToReplace) const {
     llvm_unreachable(
         "must implement handleTerminator in the case of one inlined block");
   }
@@ -175,6 +176,13 @@ public:
   /// is invoked before inlined terminator operations have been processed.
   virtual void processInlinedCallBlocks(
       Operation *call, iterator_range<Region::iterator> inlinedBlocks) const {}
+
+  /// Returns true if the inliner can assume a fast path of not creating a new
+  /// block, if there is only one block.
+  virtual bool allowSingleBlockOptimization(
+      iterator_range<Region::iterator> inlinedBlocks) const {
+    return true;
+  }
 };
 
 /// This interface provides the hooks into the inlining interface.
@@ -211,8 +219,7 @@ public:
   //===--------------------------------------------------------------------===//
 
   virtual void handleTerminator(Operation *op, Block *newDest) const;
-  virtual void handleTerminator(Operation *op,
-                                ArrayRef<Value> valuesToRepl) const;
+  virtual void handleTerminator(Operation *op, ValueRange valuesToRepl) const;
 
   virtual Value handleArgument(OpBuilder &builder, Operation *call,
                                Operation *callable, Value argument,
@@ -223,6 +230,9 @@ public:
 
   virtual void processInlinedCallBlocks(
       Operation *call, iterator_range<Region::iterator> inlinedBlocks) const;
+
+  virtual bool allowSingleBlockOptimization(
+      iterator_range<Region::iterator> inlinedBlocks) const;
 };
 
 //===----------------------------------------------------------------------===//

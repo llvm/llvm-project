@@ -1,5 +1,5 @@
 """
-Test exception behavior in DAP
+Test exception behavior in DAP with signal.
 """
 
 
@@ -16,8 +16,10 @@ class TestDAP_exception(lldbdap_testcase.DAPTestCaseBase):
         event.
         """
         program = self.getBuildArtifact("a.out")
-        print("test_stopped_description called", flush=True)
         self.build_and_launch(program)
-
         self.dap_server.request_continue()
         self.assertTrue(self.verify_stop_exception_info("signal SIGABRT"))
+        exceptionInfo = self.get_exceptionInfo()
+        self.assertEqual(exceptionInfo["breakMode"], "always")
+        self.assertEqual(exceptionInfo["description"], "signal SIGABRT")
+        self.assertEqual(exceptionInfo["exceptionId"], "signal")

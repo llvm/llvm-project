@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: cp %s %t
-// RUN: not %clang_cc1 -fsyntax-only -fixit -x c++ %t
+// RUN: not %clang_cc1 -fixit -x c++ %t
 // RUN: %clang_cc1 -fsyntax-only -pedantic -Werror -x c++ %t
 
 namespace dcl_fct_default_p10 {

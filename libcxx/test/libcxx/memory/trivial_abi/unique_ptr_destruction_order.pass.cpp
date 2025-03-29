@@ -17,6 +17,8 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 __attribute__((noinline)) void call_something() { asm volatile(""); }
 
 struct Base {
@@ -55,7 +57,7 @@ int main(int, char**) {
   func(A(shared_buf, &cur_idx), std::unique_ptr<B>(new B(shared_buf, &cur_idx)),
        C(shared_buf, &cur_idx));
 
-#if defined(_LIBCPP_ABI_MICROSOFT)
+#if defined(TEST_ABI_MICROSOFT)
   // On Microsoft ABI, the dtor order is always A,B,C (because callee-destroyed)
   assert(shared_buf[0] == 'A' && shared_buf[1] == 'B' && shared_buf[2] == 'C');
 #else

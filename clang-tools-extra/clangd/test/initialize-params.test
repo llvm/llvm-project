@@ -40,6 +40,7 @@
 # CHECK-NEXT:      "executeCommandProvider": {
 # CHECK-NEXT:        "commands": [
 # CHECK-NEXT:          "clangd.applyFix",
+# CHECK-NEXT:          "clangd.applyRename"
 # CHECK-NEXT:          "clangd.applyTweak"
 # CHECK-NEXT:        ]
 # CHECK-NEXT:      },

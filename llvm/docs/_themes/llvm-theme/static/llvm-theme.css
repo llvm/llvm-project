@@ -26,6 +26,7 @@ body {
     border: 1px solid #aaa;
     margin: 0px 80px 0px 80px;
     min-width: 740px;
+    position: relative;
 }
 
 div.logo {
@@ -94,9 +95,11 @@ div.sphinxsidebar {
     margin: 0;
     padding: 0.5em 15px 15px 0;
     width: 210px;
-    float: right;
     font-size: 1em;
     text-align: left;
+    float: none;
+    position: absolute;
+    right: 0;
 }
 
 div.sphinxsidebar h3, div.sphinxsidebar h4 {

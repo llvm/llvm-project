@@ -6,15 +6,19 @@
 # RUN: llvm-readobj --coff-exports %t.dll | FileCheck -check-prefix DECORATED-EXPORTS %s
 
 # DECORATED-IMPLIB: Name type: name
+# DECORATED-IMPLIB-NEXT: Export name: @fastcall@8
 # DECORATED-IMPLIB-NEXT: __imp_@fastcall@8
 # DECORATED-IMPLIB-NEXT: @fastcall@8
 # DECORATED-IMPLIB: Name type: name
+# DECORATED-IMPLIB-NEXT: Export name: _stdcall@8
 # DECORATED-IMPLIB-NEXT: __imp__stdcall@8
 # DECORATED-IMPLIB-NEXT: _stdcall@8
 # DECORATED-IMPLIB: Name type: noprefix
+# DECORATED-IMPLIB-NEXT: Export name: _underscored
 # DECORATED-IMPLIB-NEXT: __imp___underscored
 # DECORATED-IMPLIB-NEXT: __underscored
 # DECORATED-IMPLIB: Name type: name
+# DECORATED-IMPLIB-NEXT: Export name: vectorcall@@8
 # DECORATED-IMPLIB-NEXT: __imp_vectorcall@@8
 # DECORATED-IMPLIB-NEXT: vectorcall@@8
 

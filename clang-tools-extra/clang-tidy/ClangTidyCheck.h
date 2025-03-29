@@ -333,9 +333,9 @@ public:
     /// supply the mapping required to convert between ``T`` and a string.
     template <typename T>
     std::enable_if_t<std::is_enum_v<T>, std::optional<T>>
-    get(StringRef LocalName, bool IgnoreCase = false) const {
+    get(StringRef LocalName) const {
       if (std::optional<int64_t> ValueOr =
-              getEnumInt(LocalName, typeEraseMapping<T>(), false, IgnoreCase))
+              getEnumInt(LocalName, typeEraseMapping<T>(), false))
         return static_cast<T>(*ValueOr);
       return std::nullopt;
     }
@@ -353,9 +353,9 @@ public:
     /// \ref clang::tidy::OptionEnumMapping must be specialized for ``T`` to
     /// supply the mapping required to convert between ``T`` and a string.
     template <typename T>
-    std::enable_if_t<std::is_enum_v<T>, T> get(StringRef LocalName, T Default,
-                                               bool IgnoreCase = false) const {
-      return get<T>(LocalName, IgnoreCase).value_or(Default);
+    std::enable_if_t<std::is_enum_v<T>, T> get(StringRef LocalName,
+                                               T Default) const {
+      return get<T>(LocalName).value_or(Default);
     }
 
     /// Read a named option from the ``Context`` and parse it as an
@@ -373,9 +373,9 @@ public:
     /// supply the mapping required to convert between ``T`` and a string.
     template <typename T>
     std::enable_if_t<std::is_enum_v<T>, std::optional<T>>
-    getLocalOrGlobal(StringRef LocalName, bool IgnoreCase = false) const {
+    getLocalOrGlobal(StringRef LocalName) const {
       if (std::optional<int64_t> ValueOr =
-              getEnumInt(LocalName, typeEraseMapping<T>(), true, IgnoreCase))
+              getEnumInt(LocalName, typeEraseMapping<T>(), true))
         return static_cast<T>(*ValueOr);
       return std::nullopt;
     }
@@ -394,10 +394,9 @@ public:
     /// \ref clang::tidy::OptionEnumMapping must be specialized for ``T`` to
     /// supply the mapping required to convert between ``T`` and a string.
     template <typename T>
-    std::enable_if_t<std::is_enum_v<T>, T>
-    getLocalOrGlobal(StringRef LocalName, T Default,
-                     bool IgnoreCase = false) const {
-      return getLocalOrGlobal<T>(LocalName, IgnoreCase).value_or(Default);
+    std::enable_if_t<std::is_enum_v<T>, T> getLocalOrGlobal(StringRef LocalName,
+                                                            T Default) const {
+      return getLocalOrGlobal<T>(LocalName).value_or(Default);
     }
 
     /// Stores an option with the check-local name \p LocalName with
@@ -411,7 +410,10 @@ public:
     std::enable_if_t<std::is_integral_v<T>>
     store(ClangTidyOptions::OptionMap &Options, StringRef LocalName,
           T Value) const {
-      storeInt(Options, LocalName, Value);
+      if constexpr (std::is_signed_v<T>)
+        storeInt(Options, LocalName, Value);
+      else
+        storeUnsigned(Options, LocalName, Value);
     }
 
     /// Stores an option with the check-local name \p LocalName with
@@ -422,7 +424,7 @@ public:
     store(ClangTidyOptions::OptionMap &Options, StringRef LocalName,
           std::optional<T> Value) const {
       if (Value)
-        storeInt(Options, LocalName, *Value);
+        store(Options, LocalName, *Value);
       else
         store(Options, LocalName, "none");
     }
@@ -451,7 +453,7 @@ public:
 
     std::optional<int64_t> getEnumInt(StringRef LocalName,
                                       ArrayRef<NameAndValue> Mapping,
-                                      bool CheckGlobal, bool IgnoreCase) const;
+                                      bool CheckGlobal) const;
 
     template <typename T>
     std::enable_if_t<std::is_enum_v<T>, std::vector<NameAndValue>>
@@ -470,6 +472,8 @@ public:
     void storeInt(ClangTidyOptions::OptionMap &Options, StringRef LocalName,
                   int64_t Value) const;
 
+    void storeUnsigned(ClangTidyOptions::OptionMap &Options,
+                       StringRef LocalName, uint64_t Value) const;
 
     std::string NamePrefix;
     const ClangTidyOptions::OptionMap &CheckOptions;

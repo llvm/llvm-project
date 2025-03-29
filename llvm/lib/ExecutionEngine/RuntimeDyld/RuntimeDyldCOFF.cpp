@@ -15,7 +15,6 @@
 #include "Targets/RuntimeDyldCOFFI386.h"
 #include "Targets/RuntimeDyldCOFFThumb.h"
 #include "Targets/RuntimeDyldCOFFX86_64.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TargetParser/Triple.h"
@@ -83,20 +82,21 @@ uint64_t RuntimeDyldCOFF::getDLLImportOffset(unsigned SectionID, StubMap &Stubs,
                                              StringRef Name,
                                              bool SetSectionIDMinus1) {
   LLVM_DEBUG(dbgs() << "Getting DLLImport entry for " << Name << "... ");
-  assert(Name.startswith(getImportSymbolPrefix()) && "Not a DLLImport symbol?");
+  assert(Name.starts_with(getImportSymbolPrefix()) &&
+         "Not a DLLImport symbol?");
   RelocationValueRef Reloc;
   Reloc.SymbolName = Name.data();
-  auto I = Stubs.find(Reloc);
-  if (I != Stubs.end()) {
-    LLVM_DEBUG(dbgs() << format("{0:x8}", I->second) << "\n");
-    return I->second;
+  auto [It, Inserted] = Stubs.try_emplace(Reloc);
+  if (!Inserted) {
+    LLVM_DEBUG(dbgs() << format("{0:x8}", It->second) << "\n");
+    return It->second;
   }
 
   assert(SectionID < Sections.size() && "SectionID out of range");
   auto &Sec = Sections[SectionID];
   auto EntryOffset = alignTo(Sec.getStubOffset(), PointerSize);
   Sec.advanceStubOffset(EntryOffset + PointerSize - Sec.getStubOffset());
-  Stubs[Reloc] = EntryOffset;
+  It->second = EntryOffset;
 
   RelocationEntry RE(SectionID, EntryOffset, PointerReloc, 0, false,
                      Log2_64(PointerSize));
@@ -116,6 +116,16 @@ uint64_t RuntimeDyldCOFF::getDLLImportOffset(unsigned SectionID, StubMap &Stubs,
 
 bool RuntimeDyldCOFF::isCompatibleFile(const object::ObjectFile &Obj) const {
   return Obj.isCOFF();
+}
+
+bool RuntimeDyldCOFF::relocationNeedsDLLImportStub(
+    const RelocationRef &R) const {
+  object::symbol_iterator Symbol = R.getSymbol();
+  Expected<StringRef> TargetNameOrErr = Symbol->getName();
+  if (!TargetNameOrErr)
+    return false;
+
+  return TargetNameOrErr->starts_with(getImportSymbolPrefix());
 }
 
 } // namespace llvm

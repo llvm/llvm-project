@@ -32,6 +32,16 @@ def FeatureSoftFloat : SystemZFeature<
   "Use software emulation for floating point"
 >;
 
+def FeatureBackChain : SystemZFeature<
+  "backchain", "BackChain", (all_of FeatureBackChain),
+  "Store the address of the caller's frame into the callee's stack frame"
+>;
+
+def FeatureUnalignedSymbols : SystemZFeature<
+  "unaligned-symbols", "UnalignedSymbols", (all_of FeatureUnalignedSymbols),
+  "Don't apply the ABI minimum alignment to external symbols."
+>;
+
 //===----------------------------------------------------------------------===//
 //
 // New features added in the Ninth Edition of the z/Architecture
@@ -236,6 +246,11 @@ def FeatureInsertReferenceBitsMultiple : SystemZFeature<
   "Assume that the insert-reference-bits-multiple facility is installed"
 >;
 
+def FeatureTestPendingExternalInterruption : SystemZFeature<
+  "test-pending-external-interruption", "TestPendingExternalInterruption", (all_of FeatureTestPendingExternalInterruption),
+  "Assume that the test-pending-external-interruption facility is installed"
+>;
+
 def Arch12NewFeatures : SystemZFeatureList<[
     FeatureMiscellaneousExtensions2,
     FeatureGuardedStorage,
@@ -243,7 +258,8 @@ def Arch12NewFeatures : SystemZFeatureList<[
     FeatureMessageSecurityAssist8,
     FeatureVectorEnhancements1,
     FeatureVectorPackedDecimal,
-    FeatureInsertReferenceBitsMultiple
+    FeatureInsertReferenceBitsMultiple,
+    FeatureTestPendingExternalInterruption
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -332,6 +348,45 @@ def Arch14NewFeatures : SystemZFeatureList<[
 
 //===----------------------------------------------------------------------===//
 //
+// New features added in the Fifteenth Edition of the z/Architecture
+//
+//===----------------------------------------------------------------------===//
+
+def FeatureMiscellaneousExtensions4 : SystemZFeature<
+  "miscellaneous-extensions-4", "MiscellaneousExtensions4", (all_of FeatureMiscellaneousExtensions4),
+  "Assume that the miscellaneous-extensions facility 4 is installed"
+>;
+
+def FeatureVectorEnhancements3 : SystemZFeature<
+  "vector-enhancements-3", "VectorEnhancements3", (all_of FeatureVectorEnhancements3),
+  "Assume that the vector enhancements facility 3 is installed"
+>;
+
+def FeatureVectorPackedDecimalEnhancement3 : SystemZFeature<
+  "vector-packed-decimal-enhancement-3", "VectorPackedDecimalEnhancement3", (all_of FeatureVectorPackedDecimalEnhancement3),
+  "Assume that the vector packed decimal enhancement facility 3 is installed"
+>;
+
+def FeatureMessageSecurityAssist12 : SystemZFeature<
+  "message-security-assist-extension12", "MessageSecurityAssist12", (all_of FeatureMessageSecurityAssist12),
+  "Assume that the message-security-assist extension facility 12 is installed"
+>;
+
+def FeatureConcurrentFunctions : SystemZFeature<
+  "concurrent-functions", "ConcurrentFunctions", (all_of FeatureConcurrentFunctions),
+  "Assume that the concurrent-functions facility is installed"
+>;
+
+def Arch15NewFeatures : SystemZFeatureList<[
+    FeatureMiscellaneousExtensions4,
+    FeatureVectorEnhancements3,
+    FeatureVectorPackedDecimalEnhancement3,
+    FeatureMessageSecurityAssist12,
+    FeatureConcurrentFunctions
+]>;
+
+//===----------------------------------------------------------------------===//
+//
 // Cumulative supported and unsupported feature sets
 //
 //===----------------------------------------------------------------------===//
@@ -350,9 +405,13 @@ def Arch13SupportedFeatures
   : SystemZFeatureAdd<Arch12SupportedFeatures.List, Arch13NewFeatures.List>;
 def Arch14SupportedFeatures
   : SystemZFeatureAdd<Arch13SupportedFeatures.List, Arch14NewFeatures.List>;
+def Arch15SupportedFeatures
+  : SystemZFeatureAdd<Arch14SupportedFeatures.List, Arch15NewFeatures.List>;
 
-def Arch14UnsupportedFeatures
+def Arch15UnsupportedFeatures
   : SystemZFeatureList<[]>;
+def Arch14UnsupportedFeatures
+  : SystemZFeatureAdd<Arch15UnsupportedFeatures.List, Arch15NewFeatures.List>;
 def Arch13UnsupportedFeatures
   : SystemZFeatureAdd<Arch14UnsupportedFeatures.List, Arch14NewFeatures.List>;
 def Arch12UnsupportedFeatures

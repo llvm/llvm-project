@@ -38,12 +38,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
@@ -54,7 +55,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class StringsOptTable : public opt::GenericOptTable {
 public:
-  StringsOptTable() : GenericOptTable(InfoTable) {
+  StringsOptTable()
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
     setGroupedShortOptions(true);
     setDashDashParsing(true);
   }
@@ -173,7 +175,7 @@ int main(int argc, char **argv) {
 
   for (const auto &File : InputFileNames) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> Buffer =
-        MemoryBuffer::getFileOrSTDIN(File);
+        MemoryBuffer::getFileOrSTDIN(File, /*IsText=*/true);
     if (std::error_code EC = Buffer.getError())
       errs() << File << ": " << EC.message() << '\n';
     else

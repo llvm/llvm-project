@@ -1,8 +1,8 @@
-/* RUN: %clang_cc1 -std=c89 -fsyntax-only -Wvla -verify=expected,c89only -pedantic -Wno-c11-extensions %s
-   RUN: %clang_cc1 -std=c99 -fsyntax-only -Wvla -verify=expected,c99andup -pedantic -Wno-c11-extensions %s
-   RUN: %clang_cc1 -std=c11 -fsyntax-only -Wvla -verify=expected,c99andup -pedantic %s
-   RUN: %clang_cc1 -std=c17 -fsyntax-only -Wvla -verify=expected,c99andup -pedantic %s
-   RUN: %clang_cc1 -std=c2x -fsyntax-only -Wvla -verify=expected,c99andup -pedantic %s
+/* RUN: %clang_cc1 -std=c89 -fsyntax-only -Wvla -verify=expected,c89only,c17andearlier -pedantic -Wno-c11-extensions %s
+   RUN: %clang_cc1 -std=c99 -fsyntax-only -Wvla -verify=expected,c99andup,c17andearlier -pedantic -Wno-c11-extensions %s
+   RUN: %clang_cc1 -std=c11 -fsyntax-only -Wvla -verify=expected,c99andup,c17andearlier -pedantic %s
+   RUN: %clang_cc1 -std=c17 -fsyntax-only -Wvla -verify=expected,c99andup,c17andearlier -pedantic %s
+   RUN: %clang_cc1 -std=c2x -fsyntax-only -Wvla -verify=expected,c99andup,c23andup -pedantic %s
  */
 
 /* The following are DRs which do not require tests to demonstrate
@@ -69,13 +69,6 @@
 #if THIS != 1
 #error "We definitely should not have gotten here"
 #endif
-
-/* WG14 DR309: yes
- * Clarifying trigraph substitution
- */
-int dr309??(1??) = { 1 }; /* expected-warning {{trigraph converted to '[' character}}
-                             expected-warning {{trigraph converted to ']' character}}
-                           */
 
 /* WG14 DR311: yes
  * Definition of variably modified types
@@ -292,3 +285,17 @@ void f(long double f,
        char (**a)[10 * sizeof f]) {
   _Static_assert(sizeof **a == sizeof(long double) * 10, "");
 }
+
+/* WG14 DR309: yes
+ * Clarifying trigraph substitution
+ */
+int dr309??(1??) = { 1 }; /* c17andearlier-warning {{trigraph converted to '[' character}}
+                             c17andearlier-warning {{trigraph converted to ']' character}}
+                             c23andup-warning 2 {{trigraph ignored}}
+                             c23andup-error {{expected ';' after top level declarator}}
+                           */
+
+/* NOTE: Due to interactions with the diagnostic system, dr309 should be the
+ * last test case in this file because subsequent diagnostics may not be
+ * generated as expected.
+ */

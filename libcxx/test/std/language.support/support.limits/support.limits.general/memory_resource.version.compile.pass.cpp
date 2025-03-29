@@ -45,7 +45,7 @@
 
 #elif TEST_STD_VER == 17
 
-# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
 #   ifndef __cpp_lib_memory_resource
 #     error "__cpp_lib_memory_resource should be defined in c++17"
 #   endif
@@ -54,7 +54,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_memory_resource
-#     error "__cpp_lib_memory_resource should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)' is not met!"
+#     error "__cpp_lib_memory_resource should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR' is not met!"
 #   endif
 # endif
 
@@ -64,7 +64,7 @@
 
 #elif TEST_STD_VER == 20
 
-# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
 #   ifndef __cpp_lib_memory_resource
 #     error "__cpp_lib_memory_resource should be defined in c++20"
 #   endif
@@ -73,11 +73,11 @@
 #   endif
 # else
 #   ifdef __cpp_lib_memory_resource
-#     error "__cpp_lib_memory_resource should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)' is not met!"
+#     error "__cpp_lib_memory_resource should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR' is not met!"
 #   endif
 # endif
 
-# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
 #   ifndef __cpp_lib_polymorphic_allocator
 #     error "__cpp_lib_polymorphic_allocator should be defined in c++20"
 #   endif
@@ -86,13 +86,13 @@
 #   endif
 # else
 #   ifdef __cpp_lib_polymorphic_allocator
-#     error "__cpp_lib_polymorphic_allocator should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)' is not met!"
+#     error "__cpp_lib_polymorphic_allocator should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR' is not met!"
 #   endif
 # endif
 
 #elif TEST_STD_VER == 23
 
-# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
 #   ifndef __cpp_lib_memory_resource
 #     error "__cpp_lib_memory_resource should be defined in c++23"
 #   endif
@@ -101,11 +101,11 @@
 #   endif
 # else
 #   ifdef __cpp_lib_memory_resource
-#     error "__cpp_lib_memory_resource should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)' is not met!"
+#     error "__cpp_lib_memory_resource should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR' is not met!"
 #   endif
 # endif
 
-# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
 #   ifndef __cpp_lib_polymorphic_allocator
 #     error "__cpp_lib_polymorphic_allocator should be defined in c++23"
 #   endif
@@ -114,13 +114,13 @@
 #   endif
 # else
 #   ifdef __cpp_lib_polymorphic_allocator
-#     error "__cpp_lib_polymorphic_allocator should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)' is not met!"
+#     error "__cpp_lib_polymorphic_allocator should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR' is not met!"
 #   endif
 # endif
 
 #elif TEST_STD_VER > 23
 
-# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
 #   ifndef __cpp_lib_memory_resource
 #     error "__cpp_lib_memory_resource should be defined in c++26"
 #   endif
@@ -129,11 +129,11 @@
 #   endif
 # else
 #   ifdef __cpp_lib_memory_resource
-#     error "__cpp_lib_memory_resource should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)' is not met!"
+#     error "__cpp_lib_memory_resource should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR' is not met!"
 #   endif
 # endif
 
-# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
 #   ifndef __cpp_lib_polymorphic_allocator
 #     error "__cpp_lib_polymorphic_allocator should be defined in c++26"
 #   endif
@@ -142,7 +142,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_polymorphic_allocator
-#     error "__cpp_lib_polymorphic_allocator should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)' is not met!"
+#     error "__cpp_lib_polymorphic_allocator should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR' is not met!"
 #   endif
 # endif
 

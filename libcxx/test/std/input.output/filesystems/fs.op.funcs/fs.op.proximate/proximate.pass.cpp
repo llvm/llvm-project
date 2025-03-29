@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
 // UNSUPPORTED: availability-filesystem-missing
 
@@ -16,7 +16,7 @@
 // path proximate(const path& p, const path& base = current_path())
 // path proximate(const path& p, const path& base, error_code& ec);
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <cassert>
 
 #include "assert_macros.h"
@@ -25,6 +25,7 @@
 #include "count_new.h"
 #include "filesystem_test_helper.h"
 #include "../../class.path/path_helper.h"
+namespace fs = std::filesystem;
 
 static int count_path_elems(const fs::path& p) {
   int count = 0;

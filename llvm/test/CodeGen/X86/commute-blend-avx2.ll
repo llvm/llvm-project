@@ -88,3 +88,12 @@ define <4 x double> @commute_fold_vblendpd_256(<4 x double> %a, ptr %b) #0 {
   ret <4 x double> %2
 }
 declare <4 x double> @llvm.x86.avx.blend.pd.256(<4 x double>, <4 x double>, i8) nounwind readnone
+
+define <4 x float> @commute_vblendpd_128_for_code_size(<4 x float> %a, <4 x float> %b) optsize {
+; CHECK-LABEL: commute_vblendpd_128_for_code_size:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3]
+; CHECK-NEXT:    retq
+  %r = shufflevector <4 x float> %b, <4 x float> %a, <4 x i32> <i32 0, i32 5, i32 2, i32 3>
+  ret <4 x float> %r
+}

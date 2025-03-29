@@ -10,6 +10,7 @@
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
@@ -17,6 +18,10 @@ using namespace llvm::object;
 
 static Error parseFailed(const Twine &Msg) {
   return make_error<GenericBinaryError>(Msg.str(), object_error::parse_failed);
+}
+
+static Error validationFailed(const Twine &Msg) {
+  return make_error<StringError>(Msg.str(), inconvertibleErrorCode());
 }
 
 template <typename T>
@@ -72,13 +77,13 @@ Error DXContainer::parseDXILHeader(StringRef Part) {
   return Error::success();
 }
 
-Error DXContainer::parseShaderFlags(StringRef Part) {
-  if (ShaderFlags)
+Error DXContainer::parseShaderFeatureFlags(StringRef Part) {
+  if (ShaderFeatureFlags)
     return parseFailed("More than one SFI0 part is present in the file");
   uint64_t FlagValue = 0;
   if (Error Err = readInteger(Part, Part.begin(), FlagValue))
     return Err;
-  ShaderFlags = FlagValue;
+  ShaderFeatureFlags = FlagValue;
   return Error::success();
 }
 
@@ -89,6 +94,15 @@ Error DXContainer::parseHash(StringRef Part) {
   if (Error Err = readStruct(Part, Part.begin(), ReadHash))
     return Err;
   Hash = ReadHash;
+  return Error::success();
+}
+
+Error DXContainer::parseRootSignature(StringRef Part) {
+  if (RootSignature)
+    return parseFailed("More than one RTS0 part is present in the file");
+  RootSignature = DirectX::RootSignature();
+  if (Error Err = RootSignature->parse(Part))
+    return Err;
   return Error::success();
 }
 
@@ -168,7 +182,7 @@ Error DXContainer::parsePartOffsets() {
         return Err;
       break;
     case dxbc::PartType::SFI0:
-      if (Error Err = parseShaderFlags(PartData))
+      if (Error Err = parseShaderFeatureFlags(PartData))
         return Err;
       break;
     case dxbc::PartType::HASH:
@@ -192,6 +206,10 @@ Error DXContainer::parsePartOffsets() {
         return Err;
       break;
     case dxbc::PartType::Unknown:
+      break;
+    case dxbc::PartType::RTS0:
+      if (Error Err = parseRootSignature(PartData))
+        return Err;
       break;
     }
   }
@@ -228,6 +246,51 @@ void DXContainer::PartIterator::updateIteratorImpl(const uint32_t Offset) {
   IteratorState.Offset = Offset;
 }
 
+Error DirectX::RootSignature::parse(StringRef Data) {
+  const char *Current = Data.begin();
+
+  // Root Signature headers expects 6 integers to be present.
+  if (Data.size() < 6 * sizeof(uint32_t))
+    return parseFailed(
+        "Invalid root signature, insufficient space for header.");
+
+  uint32_t VValue =
+      support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Current += sizeof(uint32_t);
+
+  if (!dxbc::RootSignatureValidations::isValidVersion(VValue))
+    return validationFailed("unsupported root signature version read: " +
+                            llvm::Twine(VValue));
+  Version = VValue;
+
+  NumParameters =
+      support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Current += sizeof(uint32_t);
+
+  RootParametersOffset =
+      support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Current += sizeof(uint32_t);
+
+  NumStaticSamplers =
+      support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Current += sizeof(uint32_t);
+
+  StaticSamplersOffset =
+      support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Current += sizeof(uint32_t);
+
+  uint32_t FValue =
+      support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Current += sizeof(uint32_t);
+
+  if (!dxbc::RootSignatureValidations::isValidRootFlag(FValue))
+    return validationFailed("unsupported root signature flag value read: " +
+                            llvm::Twine(FValue));
+  Flags = FValue;
+
+  return Error::success();
+}
+
 Error DirectX::PSVRuntimeInfo::parse(uint16_t ShaderKind) {
   Triple::EnvironmentType ShaderStage = dxbc::getShaderStage(ShaderKind);
 
@@ -247,7 +310,14 @@ Error DirectX::PSVRuntimeInfo::parse(uint16_t ShaderKind) {
   const uint32_t PSVVersion = getVersion();
 
   // Detect the PSVVersion by looking at the size field.
-  if (PSVVersion == 2) {
+  if (PSVVersion == 3) {
+    v3::RuntimeInfo Info;
+    if (Error Err = readStruct(PSVInfoData, Current, Info))
+      return Err;
+    if (sys::IsBigEndianHost)
+      Info.swapBytes(ShaderStage);
+    BasicInfo = Info;
+  } else if (PSVVersion == 2) {
     v2::RuntimeInfo Info;
     if (Error Err = readStruct(PSVInfoData, Current, Info))
       return Err;
@@ -301,7 +371,7 @@ Error DirectX::PSVRuntimeInfo::parse(uint16_t ShaderKind) {
 
   // String table starts at a 4-byte offset.
   Current = reinterpret_cast<const char *>(
-      alignTo<4>(reinterpret_cast<const uintptr_t>(Current)));
+      alignTo<4>(reinterpret_cast<uintptr_t>(Current)));
 
   uint32_t StringTableSize = 0;
   if (Error Err = readInteger(Data, Current, StringTableSize))
@@ -341,7 +411,8 @@ Error DirectX::PSVRuntimeInfo::parse(uint16_t ShaderKind) {
     SigOutputElements.Stride = SigPatchOrPrimElements.Stride =
         SigInputElements.Stride;
 
-    if (Data.end() - Current < ElementCount * SigInputElements.Stride)
+    if (Data.end() - Current <
+        (ptrdiff_t)(ElementCount * SigInputElements.Stride))
       return parseFailed(
           "Signature elements extend beyond the size of the part");
 
@@ -424,6 +495,8 @@ Error DirectX::PSVRuntimeInfo::parse(uint16_t ShaderKind) {
 }
 
 uint8_t DirectX::PSVRuntimeInfo::getSigInputCount() const {
+  if (const auto *P = std::get_if<dxbc::PSV::v3::RuntimeInfo>(&BasicInfo))
+    return P->SigInputElements;
   if (const auto *P = std::get_if<dxbc::PSV::v2::RuntimeInfo>(&BasicInfo))
     return P->SigInputElements;
   if (const auto *P = std::get_if<dxbc::PSV::v1::RuntimeInfo>(&BasicInfo))
@@ -432,6 +505,8 @@ uint8_t DirectX::PSVRuntimeInfo::getSigInputCount() const {
 }
 
 uint8_t DirectX::PSVRuntimeInfo::getSigOutputCount() const {
+  if (const auto *P = std::get_if<dxbc::PSV::v3::RuntimeInfo>(&BasicInfo))
+    return P->SigOutputElements;
   if (const auto *P = std::get_if<dxbc::PSV::v2::RuntimeInfo>(&BasicInfo))
     return P->SigOutputElements;
   if (const auto *P = std::get_if<dxbc::PSV::v1::RuntimeInfo>(&BasicInfo))
@@ -440,6 +515,8 @@ uint8_t DirectX::PSVRuntimeInfo::getSigOutputCount() const {
 }
 
 uint8_t DirectX::PSVRuntimeInfo::getSigPatchOrPrimCount() const {
+  if (const auto *P = std::get_if<dxbc::PSV::v3::RuntimeInfo>(&BasicInfo))
+    return P->SigPatchOrPrimElements;
   if (const auto *P = std::get_if<dxbc::PSV::v2::RuntimeInfo>(&BasicInfo))
     return P->SigPatchOrPrimElements;
   if (const auto *P = std::get_if<dxbc::PSV::v1::RuntimeInfo>(&BasicInfo))

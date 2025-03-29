@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_SYS_SELECT_H
 #define LLVM_LIBC_SYS_SELECT_H
 
-#include <__llvm-libc-common.h>
+#include "__llvm-libc-common.h"
 
-#include <llvm-libc-macros/sys-select-macros.h>
+#include "../llvm-libc-macros/sys-select-macros.h"
 
 %%public_api()
 

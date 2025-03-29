@@ -1,27 +1,24 @@
-//
 // NOTE: this test requires gpu-sm80
 //
 // DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:   --sparse-compiler="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format
+// DEFINE:   --sparsifier="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format
 // DEFINE: %{run} = \
 // DEFINE:   env TENSOR0="%mlir_src_dir/test/Integration/data/block.mtx" \
-// DEFINE:   mlir-cpu-runner \
+// DEFINE:   mlir-runner \
 // DEFINE:   --shared-libs=%mlir_cuda_runtime \
 // DEFINE:   --shared-libs=%mlir_c_runner_utils \
-// DEFINE:   --e entry --entry-point-result=void \
+// DEFINE:   --e main --entry-point-result=void \
 // DEFINE: | FileCheck %s
 //
 // with RT lib:
 //
-// RUN:  %{compile} enable-runtime-library=true" | %{run}
+// RUN: %{compile} enable-runtime-library=true"  | %{run}
 //
 // without RT lib:
 //
-// TODO: make this work
-// R_UN:  %{compile} enable-runtime-library=false" | %{run}
-//
+// RUN: %{compile} enable-runtime-library=false" | %{run}
 
-!Filename = !llvm.ptr<i8>
+!Filename = !llvm.ptr
 
 #CSR = #sparse_tensor.encoding<{
   map = (d0, d1) -> (d0 : dense, d1 : compressed)
@@ -117,7 +114,7 @@ module {
   //
   // Main driver.
   //
-  func.func @entry() {
+  func.func @main() {
     llvm.call @mgpuCreateSparseEnv() : () -> ()
     %d0 = arith.constant 0.0 : f32
     %c0 = arith.constant 0 : index
@@ -169,15 +166,26 @@ module {
     // the result (which is why the block sparse version has actual results
     // in the original zero positions).
     //
-    // CHECK:      ( 5, 10, 24, 19, 53, 42, 55, 56 )
-    // CHECK-NEXT: ( 5, 10, 8, 19, 24, 24, 40, 53, 42, 55, 56, 64 )
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 8
+    // CHECK-NEXT: dim = ( 4, 6 )
+    // CHECK-NEXT: lvl = ( 4, 6 )
+    // CHECK-NEXT: pos[1] : ( 0, 3, 5, 7, 8 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 4, 1, 5, 2, 3, 2 )
+    // CHECK-NEXT: values : ( 5, 10, 24, 19, 53, 42, 55, 56 )
+    // CHECK-NEXT: ----
     //
-    %v0 = sparse_tensor.values %0 : tensor<?x?xf32, #CSR> to memref<?xf32>
-    %vv0 = vector.transfer_read %v0[%c0], %d0 : memref<?xf32>, vector<8xf32>
-    vector.print %vv0 : vector<8xf32>
-    %v1 = sparse_tensor.values %1 : tensor<?x?xf32, #BSR> to memref<?xf32>
-    %vv1 = vector.transfer_read %v1[%c0], %d0 : memref<?xf32>, vector<12xf32>
-    vector.print %vv1 : vector<12xf32>
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 12
+    // CHECK-NEXT: dim = ( 4, 6 )
+    // CHECK-NEXT: lvl = ( 2, 3, 2, 2 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3 )
+    // CHECK-NEXT: crd[1] : ( 0, 2, 1 )
+    // CHECK-NEXT: values : ( 5, 10, 8, 19, 24, 24, 40, 53, 42, 55, 56, 64 )
+    // CHECK-NEXT: ----
+    //
+    sparse_tensor.print %0 : tensor<?x?xf32, #CSR>
+    sparse_tensor.print %1 : tensor<?x?xf32, #BSR>
 
     // Release the resources.
     bufferization.dealloc_tensor %0 : tensor<?x?xf32, #CSR>

@@ -23,7 +23,7 @@ define void @baz(<8 x i32> %arg) local_unnamed_addr {
 ; TUNIT-LABEL: define {{[^@]+}}@baz
 ; TUNIT-SAME: (<8 x i32> [[ARG:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; TUNIT-NEXT:  bb:
-; TUNIT-NEXT:    [[TRUETMP1:%.*]] = extractvalue [[STRUCT_ZOT:%.*]] undef, 0, 0
+; TUNIT-NEXT:    [[TMP1:%.*]] = extractvalue [[STRUCT_ZOT:%.*]] undef, 0, 0
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)

@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -run-pass=si-fix-sgpr-copies -verify-machineinstrs -o - %s | FileCheck --check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -run-pass=si-fix-sgpr-copies -verify-machineinstrs -o - %s | FileCheck --check-prefix=GCN %s
 
 # GCN-LABEL: name: fix-sgpr-copies
 # GCN: V_ADD_CO_U32_e32
@@ -232,4 +232,23 @@ body:             |
   bb.0:
     %0:vreg_64 = V_MOV_B64_PSEUDO 0, implicit $exec
     %1:sreg_32 = COPY %0.sub0
+...
+
+---
+# GCN-LABEL: name: s_cselect_b64
+# GCN: %0:vgpr_32 = IMPLICIT_DEF
+# GCN: %1:vreg_64 = IMPLICIT_DEF
+# GCN: %2:sreg_32 = IMPLICIT_DEF
+# GCN: %3:sreg_64 = IMPLICIT_DEF
+# GCN: %7:sreg_64_xexec = V_CMP_EQ_U32_e64 %0, 0, implicit $exec
+# GCN: %6:vreg_64 = V_CNDMASK_B64_PSEUDO 0, %1, %7, implicit $exec
+name: s_cselect_b64
+body: |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vreg_64 = IMPLICIT_DEF
+    %2:sreg_32 = COPY %0
+    %3:sreg_64 = COPY %1
+    S_CMP_EQ_U32 %2, 0, implicit-def $scc
+    %4:sreg_64 = S_CSELECT_B64 %3, 0, implicit $scc
 ...

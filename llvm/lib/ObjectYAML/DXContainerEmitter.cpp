@@ -13,6 +13,7 @@
 
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
+#include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/Errc.h"
@@ -131,8 +132,8 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       if (!P.Program)
         continue;
       dxbc::ProgramHeader Header;
-      Header.MajorVersion = P.Program->MajorVersion;
-      Header.MinorVersion = P.Program->MinorVersion;
+      Header.Version = dxbc::ProgramHeader::getVersion(P.Program->MajorVersion,
+                                                       P.Program->MinorVersion);
       Header.Unused = 0;
       Header.ShaderKind = P.Program->ShaderKind;
       memcpy(Header.Bitcode.Magic, "DXIL", 4);
@@ -198,8 +199,9 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       if (!P.Info.has_value())
         continue;
       mcdxbc::PSVRuntimeInfo PSV;
-      memcpy(&PSV.BaseData, &P.Info->Info, sizeof(dxbc::PSV::v2::RuntimeInfo));
+      memcpy(&PSV.BaseData, &P.Info->Info, sizeof(dxbc::PSV::v3::RuntimeInfo));
       PSV.Resources = P.Info->Resources;
+      PSV.EntryName = P.Info->EntryName;
 
       for (auto El : P.Info->SigInputElements)
         PSV.InputElements.push_back(mcdxbc::PSVSignatureElement{
@@ -260,6 +262,20 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
     }
     case dxbc::PartType::Unknown:
       break; // Skip any handling for unrecognized parts.
+    case dxbc::PartType::RTS0:
+      if (!P.RootSignature.has_value())
+        continue;
+
+      mcdxbc::RootSignatureDesc RS;
+      RS.Flags = P.RootSignature->getEncodedFlags();
+      RS.Version = P.RootSignature->Version;
+      RS.NumParameters = P.RootSignature->NumParameters;
+      RS.RootParametersOffset = P.RootSignature->RootParametersOffset;
+      RS.NumStaticSamplers = P.RootSignature->NumStaticSamplers;
+      RS.StaticSamplersOffset = P.RootSignature->StaticSamplersOffset;
+
+      RS.write(OS);
+      break;
     }
     uint64_t BytesWritten = OS.tell() - DataStart;
     RollingOffset += BytesWritten;

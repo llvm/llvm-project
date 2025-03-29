@@ -130,7 +130,6 @@ protected:
 
 public:
   explicit CGOpenMPRuntimeGPU(CodeGenModule &CGM);
-  void clear() override;
 
   bool isGPU() const override { return true; };
 
@@ -150,9 +149,6 @@ public:
   void getKmpcFreeShared(
       CodeGenFunction &CGF,
       const std::pair<llvm::Value *, llvm::Value *> &AddrSizePair) override;
-
-  /// Get the GPU warp size.
-  llvm::Value *getGPUWarpSize(CodeGenFunction &CGF);
 
   /// Get the id of the current thread on the GPU.
   llvm::Value *getGPUThreadID(CodeGenFunction &CGF);
@@ -298,9 +294,10 @@ public:
 
   /// Emits call of the outlined function with the provided arguments,
   /// translating these arguments to correct target-specific arguments.
-  void emitOutlinedFunctionCall(
-      CodeGenFunction &CGF, SourceLocation Loc, llvm::FunctionCallee OutlinedFn,
-      ArrayRef<llvm::Value *> Args = std::nullopt) const override;
+  void
+  emitOutlinedFunctionCall(CodeGenFunction &CGF, SourceLocation Loc,
+                           llvm::FunctionCallee OutlinedFn,
+                           ArrayRef<llvm::Value *> Args = {}) const override;
 
   /// Emits OpenMP-specific function prolog.
   /// Required for device constructs.
@@ -386,7 +383,6 @@ private:
   /// Maps the function to the list of the globalized variables with their
   /// addresses.
   llvm::SmallDenseMap<llvm::Function *, FunctionData> FunctionGlobalizedDecls;
-  llvm::GlobalVariable *KernelTeamsReductionPtr = nullptr;
   /// List of the records with the list of fields for the reductions across the
   /// teams. Used to build the intermediate buffer for the fast teams
   /// reductions.

@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: can-create-symlinks
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <filesystem>
 
@@ -15,13 +16,13 @@
 // file_status status() const;
 // file_status status(error_code const&) const noexcept;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
 #include "filesystem_test_helper.h"
-
 #include "test_macros.h"
+namespace fs = std::filesystem;
 
 static void test_basic() {
   using namespace fs;
@@ -43,7 +44,7 @@ static void test_basic() {
     file_status es = e.status(eec);
     assert(ps.type() == es.type());
     assert(ps.permissions() == es.permissions());
-    assert(pec == eec);
+    assert(pec.default_error_condition() == eec.default_error_condition());
   }
   for (const auto& p : TestCases) {
     const directory_entry e(p);

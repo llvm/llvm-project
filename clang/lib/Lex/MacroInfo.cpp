@@ -18,8 +18,6 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -257,7 +255,7 @@ LLVM_DUMP_METHOD void MacroDirective::dump() const {
 }
 
 ModuleMacro *ModuleMacro::create(Preprocessor &PP, Module *OwningModule,
-                                 IdentifierInfo *II, MacroInfo *Macro,
+                                 const IdentifierInfo *II, MacroInfo *Macro,
                                  ArrayRef<ModuleMacro *> Overrides) {
   void *Mem = PP.getPreprocessorAllocator().Allocate(
       sizeof(ModuleMacro) + sizeof(ModuleMacro *) * Overrides.size(),

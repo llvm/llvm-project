@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
 
 ; CHECK-LABEL: polly.merge_new_and_old:
 ; CHECK-NEXT: %tmp7.ph.merge = phi ptr [ %tmp7.ph.final_reload, %polly.exiting ], [ %tmp7.ph, %bb6.region_exiting ]
@@ -19,7 +19,7 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb6, %bb
-  %tmp2 = phi ptr [ %tmp7, %bb6 ], [ undef, %bb ]
+  %tmp2 = phi ptr [ %tmp7, %bb6 ], [ poison, %bb ]
   %tmp = load ptr, ptr @global, align 8, !tbaa !1
   br label %bb3
 
@@ -31,7 +31,7 @@ bb5:                                              ; preds = %bb3
   br label %bb6
 
 bb6:                                              ; preds = %bb5, %bb3
-  %tmp7 = phi ptr [ %tmp2, %bb3 ], [ undef, %bb5 ]
+  %tmp7 = phi ptr [ %tmp2, %bb3 ], [ poison, %bb5 ]
   br i1 undef, label %bb8, label %bb1
 
 bb8:                                              ; preds = %bb6

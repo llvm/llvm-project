@@ -7,13 +7,16 @@ set(LLVM_LINK_COMPONENTS
   CodeGenTypes
   Core
   FileCheck
+  IRPrinter
   MC
   MIRParser
   Passes
+  ScalarOpts
   SelectionDAG
   Support
   Target
   TargetParser
+  TransformUtils
   )
 
 add_llvm_unittest(CodeGenTests
@@ -24,11 +27,13 @@ add_llvm_unittest(CodeGenTests
   CCStateTest.cpp
   DIEHashTest.cpp
   DIETest.cpp
+  DroppedVariableStatsMIRTest.cpp
   DwarfStringPoolEntryRefTest.cpp
   InstrRefLDVTest.cpp
   LowLevelTypeTest.cpp
   LexicalScopesTest.cpp
   MachineBasicBlockTest.cpp
+  MachineDomTreeUpdaterTest.cpp
   MachineInstrBundleIteratorTest.cpp
   MachineInstrTest.cpp
   MachineOperandTest.cpp
@@ -37,6 +42,7 @@ add_llvm_unittest(CodeGenTests
   ScalableVectorMVTsTest.cpp
   SchedBoundary.cpp
   SelectionDAGAddressAnalysisTest.cpp
+  SelectionDAGPatternMatchTest.cpp
   TypeTraitsTest.cpp
   TargetOptionsTest.cpp
   TestAsmPrinter.cpp

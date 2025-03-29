@@ -1,14 +1,29 @@
-# RUN: yaml-bench -canonical %s 2>&1 | FileCheck %s
+# RUN: yaml-bench -canonical %s 2>&1 | FileCheck %s --strict-whitespace
+# CHECK: "as space trimmed\nspecific\L escaped\t none"
+
+## Note: The example was originally taken from Spec 1.1, but the parsing rules
+## have been changed since then.
+## * The line-separator character '\u2028' is no longer considered a line-break
+##   character, so the line "...specific\u2028\nescaped..." is now parsed as 
+##   "...specific\L escaped...".
+## * The paragraph-separator character '\u2029' is also excluded from line-break
+##   characters, so the original sequence "escaped\t\\\u2029" is no longer
+##   considered valid. This is replaced by "escaped\t\\\n" in the test source,
+#    so the output has changed as well.
+## See https://yaml.org/spec/1.2.2/ext/changes/ for details.
+##
+## Note 2: Different parsers handle this corner case example differently.
+## * https://github.com/yaml/libyaml:
+##   "as space trimmed\nspecific\L\nescaped\t\nnone"
+## * https://github.com/yaml/yaml-reference-parser (parser-1.2):
+##   "as space trimmed\nspecific\L escaped\t none"
+## * https://github.com/yaml/yaml-reference-parser (parser-1.3):
+##   "as space trimmed\nspecific  escaped\t none"
 
  "as space
- trimmed
+ trimmed 
 
- specific
-
+ specific 
  escaped	\
+ 
  none"
-
-# FIXME: The string below should actually be
-#   "as space trimmed\nspecific\nescaped\tnone", but the parser currently has
-#   a bug when parsing multiline quoted strings.
-# CHECK: !!str "as space\n trimmed\n specific\n escaped\t none"

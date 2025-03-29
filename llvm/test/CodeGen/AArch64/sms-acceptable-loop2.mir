@@ -1,0 +1,79 @@
+# RUN: llc --verify-machineinstrs -mtriple=aarch64 -o - %s -run-pass pipeliner -aarch64-enable-pipeliner -debug-only=pipeliner 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# An acceptable loop by pipeliner: TBB == LoopBB, FBB == ExitBB, Branch with NZCV flags
+# CHECK: Schedule Found? 1
+
+--- |
+  define dso_local void @func(ptr noalias nocapture noundef writeonly %a, ptr nocapture noundef readonly %b, i32 noundef %n) local_unnamed_addr #0 {
+  entry:
+    %cmp6 = icmp sgt i32 %n, 0
+    br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
+
+  for.body.preheader:                               ; preds = %entry
+    %wide.trip.count = zext nneg i32 %n to i64
+    br label %for.body
+
+  for.cond.cleanup:                                 ; preds = %for.body, %entry
+    ret void
+
+  for.body:                                         ; preds = %for.body.preheader, %for.body
+    %lsr.iv11 = phi i64 [ %wide.trip.count, %for.body.preheader ], [ %lsr.iv.next, %for.body ]
+    %lsr.iv9 = phi ptr [ %b, %for.body.preheader ], [ %scevgep10, %for.body ]
+    %lsr.iv = phi ptr [ %a, %for.body.preheader ], [ %scevgep, %for.body ]
+    %0 = load float, ptr %lsr.iv9, align 4
+    %add = fadd float %0, 1.000000e+00
+    store float %add, ptr %lsr.iv, align 4
+    %scevgep = getelementptr i8, ptr %lsr.iv, i64 4
+    %scevgep10 = getelementptr i8, ptr %lsr.iv9, i64 4
+    %lsr.iv.next = add nsw i64 %lsr.iv11, -1
+    %exitcond.not = icmp eq i64 %lsr.iv.next, 0
+    br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  }
+
+...
+---
+name:            func
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0', virtual-reg: '%7' }
+  - { reg: '$x1', virtual-reg: '%8' }
+  - { reg: '$w2', virtual-reg: '%9' }
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x50000000), %bb.2(0x30000000)
+    liveins: $x0, $x1, $w2
+
+    %9:gpr32common = COPY $w2
+    %8:gpr64 = COPY $x1
+    %7:gpr64 = COPY $x0
+    dead $wzr = SUBSWri %9, 1, 0, implicit-def $nzcv
+    Bcc 11, %bb.2, implicit $nzcv
+    B %bb.1
+
+  bb.1.for.body.preheader:
+    %11:gpr32 = ORRWrs $wzr, %9, 0
+    %0:gpr64all = SUBREG_TO_REG 0, killed %11, %subreg.sub_32
+    %14:fpr32 = FMOVSi 112
+    B %bb.3
+
+  bb.2.for.cond.cleanup:
+    RET_ReallyLR
+
+  bb.3.for.body:
+    successors: %bb.2(0x04000000), %bb.3(0x7c000000)
+
+    %1:gpr64sp = PHI %0, %bb.1, %6, %bb.3
+    %2:gpr64sp = PHI %8, %bb.1, %5, %bb.3
+    %3:gpr64sp = PHI %7, %bb.1, %4, %bb.3
+    early-clobber %12:gpr64sp, %13:fpr32 = LDRSpost %2, 4 :: (load (s32) from %ir.lsr.iv9)
+    %15:fpr32 = nofpexcept FADDSrr killed %13, %14, implicit $fpcr
+    early-clobber %16:gpr64sp = STRSpost killed %15, %3, 4 :: (store (s32) into %ir.lsr.iv)
+    %4:gpr64all = COPY %16
+    %5:gpr64all = COPY %12
+    %17:gpr64 = nsw SUBSXri %1, 1, 0, implicit-def $nzcv
+    %6:gpr64all = COPY %17
+    Bcc 1, %bb.3, implicit $nzcv
+    B %bb.2
+
+...

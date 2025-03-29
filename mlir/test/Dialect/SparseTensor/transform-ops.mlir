@@ -12,7 +12,7 @@ module attributes { transform.with_named_sequence } {
   }
 
   transform.named_sequence @print_sparse_structured(%arg0: !transform.any_op {transform.readonly}) {
-    transform.test_print_remark_at_operand %arg0, "sparse_kernel" : !transform.any_op
+    transform.debug.emit_remark_at %arg0, "sparse_kernel" : !transform.any_op
     transform.yield
   }
 

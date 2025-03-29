@@ -145,6 +145,8 @@ bool MachTask::ExceptionPortIsValid() const {
 //----------------------------------------------------------------------
 void MachTask::Clear() {
   // Do any cleanup needed for this task
+  if (m_exception_thread)
+    ShutDownExcecptionThread();
   m_task = TASK_NULL;
   m_exception_thread = 0;
   m_exception_port = MACH_PORT_NULL;

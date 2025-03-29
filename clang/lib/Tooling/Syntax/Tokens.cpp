@@ -383,12 +383,13 @@ llvm::ArrayRef<syntax::Token> TokenBuffer::spelledTokens(FileID FID) const {
   return It->second.SpelledTokens;
 }
 
-const syntax::Token *TokenBuffer::spelledTokenAt(SourceLocation Loc) const {
+const syntax::Token *
+TokenBuffer::spelledTokenContaining(SourceLocation Loc) const {
   assert(Loc.isFileID());
   const auto *Tok = llvm::partition_point(
       spelledTokens(SourceMgr->getFileID(Loc)),
-      [&](const syntax::Token &Tok) { return Tok.location() < Loc; });
-  if (!Tok || Tok->location() != Loc)
+      [&](const syntax::Token &Tok) { return Tok.endLocation() <= Loc; });
+  if (!Tok || Loc < Tok->location())
     return nullptr;
   return Tok;
 }
@@ -401,6 +402,12 @@ std::string TokenBuffer::Mapping::str() const {
 
 std::optional<llvm::ArrayRef<syntax::Token>>
 TokenBuffer::spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const {
+  // In cases of invalid code, AST nodes can have source ranges that include
+  // the `eof` token. As there's no spelling for this token, exclude it from
+  // the range.
+  if (!Expanded.empty() && Expanded.back().kind() == tok::eof) {
+    Expanded = Expanded.drop_back();
+  }
   // Mapping an empty range is ambiguous in case of empty mappings at either end
   // of the range, bail out in that case.
   if (Expanded.empty())

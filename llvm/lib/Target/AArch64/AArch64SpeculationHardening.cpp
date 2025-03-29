@@ -90,7 +90,6 @@
 //   could be done for some indirect branches, such as switch jump tables.
 //===----------------------------------------------------------------------===//
 
-#include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/ADT/BitVector.h"
@@ -101,11 +100,9 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
@@ -299,7 +296,7 @@ bool AArch64SpeculationHardening::instrumentControlFlow(
     if (I == MBB.begin())
       RS.enterBasicBlock(MBB);
     else
-      RS.backward(std::prev(I));
+      RS.backward(I);
     // FIXME: The below just finds *a* unused register. Maybe code could be
     // optimized more if this looks for the register that isn't used for the
     // longest time around this place, to enable more scheduling freedom. Not

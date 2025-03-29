@@ -13,18 +13,18 @@
 
   @x = common local_unnamed_addr global i32 0, align 4, !dbg !0
 
-  define void @Process(i32* nocapture readonly %p) !dbg !10 {
+  define void @Process(ptr nocapture readonly %p) !dbg !10 {
   entry:
-    call void @llvm.dbg.value(metadata i32* %p, metadata !17, metadata !DIExpression()), !dbg !18
+    call void @llvm.dbg.value(metadata ptr %p, metadata !17, metadata !DIExpression()), !dbg !18
     br label %while.body, !dbg !19
 
   while.body:                                       ; preds = %while.body, %entry
-    %p.addr.0 = phi i32* [ %p, %entry ], [ %incdec.ptr, %while.body ]
-    call void @llvm.dbg.value(metadata i32* %p.addr.0, metadata !17, metadata !DIExpression()), !dbg !18
-    %incdec.ptr = getelementptr inbounds i32, i32* %p.addr.0, i64 1, !dbg !20
-    call void @llvm.dbg.value(metadata i32* %incdec.ptr, metadata !17, metadata !DIExpression()), !dbg !18
-    %0 = load i32, i32* %p.addr.0, align 4, !dbg !21
-    store i32 %0, i32* @x, align 4, !dbg !22
+    %p.addr.0 = phi ptr [ %p, %entry ], [ %incdec.ptr, %while.body ]
+    call void @llvm.dbg.value(metadata ptr %p.addr.0, metadata !17, metadata !DIExpression()), !dbg !18
+    %incdec.ptr = getelementptr inbounds i32, ptr %p.addr.0, i64 1, !dbg !20
+    call void @llvm.dbg.value(metadata ptr %incdec.ptr, metadata !17, metadata !DIExpression()), !dbg !18
+    %0 = load i32, ptr %p.addr.0, align 4, !dbg !21
+    store i32 %0, ptr @x, align 4, !dbg !22
     br label %while.body, !dbg !23, !llvm.loop !25
   }
 

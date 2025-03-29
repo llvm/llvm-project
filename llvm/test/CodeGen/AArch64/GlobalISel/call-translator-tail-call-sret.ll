@@ -8,10 +8,11 @@ declare void @test_explicit_sret(ptr sret(i64))
 define void @can_tail_call_forwarded_explicit_sret_ptr(ptr sret(i64) %arg) {
   ; CHECK-LABEL: name: can_tail_call_forwarded_explicit_sret_ptr
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $x8
-  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x8
-  ; CHECK:   $x8 = COPY [[COPY]](p0)
-  ; CHECK:   TCRETURNdi @test_explicit_sret, 0, csr_darwin_aarch64_aapcs, implicit $sp, implicit $x8
+  ; CHECK-NEXT:   liveins: $x8
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x8
+  ; CHECK-NEXT:   $x8 = COPY [[COPY]](p0)
+  ; CHECK-NEXT:   TCRETURNdi @test_explicit_sret, 0, csr_darwin_aarch64_aapcs, implicit $sp, implicit $x8
   tail call void @test_explicit_sret(ptr %arg)
   ret void
 }
@@ -20,13 +21,14 @@ define void @can_tail_call_forwarded_explicit_sret_ptr(ptr sret(i64) %arg) {
 define void @test_call_explicit_sret(ptr sret(i64) %arg) {
   ; CHECK-LABEL: name: test_call_explicit_sret
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $x8
-  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x8
-  ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK:   $x8 = COPY [[COPY]](p0)
-  ; CHECK:   BL @test_explicit_sret, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x8
-  ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   liveins: $x8
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x8
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   $x8 = COPY [[COPY]](p0)
+  ; CHECK-NEXT:   BL @test_explicit_sret, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x8
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   RET_ReallyLR
   call void @test_explicit_sret(ptr %arg)
   ret void
 }
@@ -34,12 +36,12 @@ define void @test_call_explicit_sret(ptr sret(i64) %arg) {
 define void @dont_tail_call_explicit_sret_alloca_unused() {
   ; CHECK-LABEL: name: dont_tail_call_explicit_sret_alloca_unused
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.l
-  ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK:   $x8 = COPY [[FRAME_INDEX]](p0)
-  ; CHECK:   BL @test_explicit_sret, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x8
-  ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.l
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   $x8 = COPY [[FRAME_INDEX]](p0)
+  ; CHECK-NEXT:   BL @test_explicit_sret, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x8
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   RET_ReallyLR
   %l = alloca i64, align 8
   tail call void @test_explicit_sret(ptr %l)
   ret void
@@ -48,16 +50,17 @@ define void @dont_tail_call_explicit_sret_alloca_unused() {
 define void @dont_tail_call_explicit_sret_alloca_dummyusers(ptr %ptr) {
   ; CHECK-LABEL: name: dont_tail_call_explicit_sret_alloca_dummyusers
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $x0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.l
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p0) :: (load (s64) from %ir.ptr)
-  ; CHECK:   G_STORE [[LOAD]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %ir.l)
-  ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK:   $x8 = COPY [[FRAME_INDEX]](p0)
-  ; CHECK:   BL @test_explicit_sret, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x8
-  ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.l
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p0) :: (load (s64) from %ir.ptr)
+  ; CHECK-NEXT:   G_STORE [[LOAD]](s64), [[FRAME_INDEX]](p0) :: (store (s64) into %ir.l)
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   $x8 = COPY [[FRAME_INDEX]](p0)
+  ; CHECK-NEXT:   BL @test_explicit_sret, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x8
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   RET_ReallyLR
   %l = alloca i64, align 8
   %r = load i64, ptr %ptr, align 8
   store i64 %r, ptr %l, align 8
@@ -68,15 +71,16 @@ define void @dont_tail_call_explicit_sret_alloca_dummyusers(ptr %ptr) {
 define void @dont_tail_call_tailcall_explicit_sret_gep(ptr %ptr) {
   ; CHECK-LABEL: name: dont_tail_call_tailcall_explicit_sret_gep
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $x0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
-  ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK:   $x8 = COPY [[PTR_ADD]](p0)
-  ; CHECK:   BL @test_explicit_sret, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x8
-  ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   liveins: $x0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   $x8 = COPY [[PTR_ADD]](p0)
+  ; CHECK-NEXT:   BL @test_explicit_sret, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x8
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   RET_ReallyLR
   %ptr2 = getelementptr i64, ptr %ptr, i32 1
   tail call void @test_explicit_sret(ptr %ptr2)
   ret void
@@ -85,14 +89,14 @@ define void @dont_tail_call_tailcall_explicit_sret_gep(ptr %ptr) {
 define i64 @dont_tail_call_sret_alloca_returned() {
   ; CHECK-LABEL: name: dont_tail_call_sret_alloca_returned
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.l
-  ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK:   $x8 = COPY [[FRAME_INDEX]](p0)
-  ; CHECK:   BL @test_explicit_sret, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x8
-  ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s64) from %ir.l)
-  ; CHECK:   $x0 = COPY [[LOAD]](s64)
-  ; CHECK:   RET_ReallyLR implicit $x0
+  ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.l
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   $x8 = COPY [[FRAME_INDEX]](p0)
+  ; CHECK-NEXT:   BL @test_explicit_sret, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x8
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s64) from %ir.l)
+  ; CHECK-NEXT:   $x0 = COPY [[LOAD]](s64)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %l = alloca i64, align 8
   tail call void @test_explicit_sret(ptr %l)
   %r = load i64, ptr %l, align 8

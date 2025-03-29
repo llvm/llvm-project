@@ -1,0 +1,12 @@
+RUN: llvm-opt-report -r %p %p/Inputs/scalable.yaml | FileCheck -strict-whitespace %s
+
+; CHECK: < {{.*[/\]}}scalable.c
+; CHECK-NEXT:  1        | #include <stddef.h>
+; CHECK-NEXT:  2        | 
+; CHECK-NEXT:  3        | void foo(size_t N, float A[restrict N], float B[N]) {
+; CHECK-NEXT:  4        |   #pragma clang loop vectorize_width(4, scalable)
+; CHECK-NEXT:  5 VNx4,2 |   for (size_t i = 0; i < N; i++) {
+; CHECK-NEXT:  6        |     A[i] = B[i] * 42.f;
+; CHECK-NEXT:  7        |   }
+; CHECK-NEXT:  8        | }
+; CHECK-NEXT:  9        | 

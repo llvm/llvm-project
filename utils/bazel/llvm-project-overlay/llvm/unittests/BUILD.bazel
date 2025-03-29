@@ -2,7 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-load("//llvm:tblgen.bzl", "gentbl")
+load("//mlir:tblgen.bzl", "gentbl_cc_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -41,6 +41,7 @@ cc_test(
         allow_empty = False,
         exclude = [
             # TODO: Add this file to the build.
+            "Analysis/ConstraintSystemTest.cpp",
             "Analysis/TFUtilsTest.cpp",
             "Analysis/TrainingLoggerTest.cpp",
             "Analysis/MLModelRunnerTest.cpp",
@@ -49,7 +50,9 @@ cc_test(
     deps = [
         "//llvm:Analysis",
         "//llvm:AsmParser",
+        "//llvm:CodeGen",
         "//llvm:Core",
+        "//llvm:Instrumentation",
         "//llvm:Passes",
         "//llvm:Support",
         "//llvm:TargetParser",
@@ -57,6 +60,7 @@ cc_test(
         "//llvm:TransformUtils",
         "//llvm:attributes_gen",
         "//llvm:config",
+        "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
@@ -110,6 +114,26 @@ cc_test(
         "//llvm:BitstreamReader",
         "//llvm:BitstreamWriter",
         "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "cgdata_tests",
+    size = "small",
+    srcs = glob(
+        ["CGData/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:CGData",
+        "//llvm:CodeGen",
+        "//llvm:Core",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
@@ -170,6 +194,7 @@ cc_test(
     deps = [
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
+        "//llvm:AsmParser",
         "//llvm:CodeGen",
         "//llvm:CodeGenTypes",
         "//llvm:Core",
@@ -299,16 +324,26 @@ cc_test(
         # keep one-per-line
         "--gtest_filter=-ObjectLinkingLayerTest.TestSetProcessAllSections",
     ],
+    linkopts = select({
+        "@platforms//os:macos": [],
+        "@platforms//os:windows": [],
+        "//conditions:default": [
+            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBWrapper",
+        ],
+    }),
     deps = [
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
+        "//llvm:Analysis",
         "//llvm:AsmParser",
+        "//llvm:BinaryFormat",
         "//llvm:Core",
         "//llvm:ExecutionEngine",
         "//llvm:IRReader",
         "//llvm:JITLink",
         "//llvm:MC",
         "//llvm:Object",
+        "//llvm:OrcDebugging",
         "//llvm:OrcJIT",
         "//llvm:OrcShared",
         "//llvm:OrcTargetProcess",
@@ -346,10 +381,12 @@ cc_test(
         [
             "IR/*.cpp",
             "IR/*.h",
-            "Support/KnownBitsTest.h",
         ],
         allow_empty = False,
-    ),
+    ) + [
+        "Support/KnownBitsTest.h",
+    ],
+    features = ["-layering_check"],
     shard_count = 20,
     deps = [
         "//llvm:Analysis",
@@ -400,6 +437,7 @@ cc_test(
         "//llvm:Passes",
         "//llvm:Support",
         "//llvm:TargetParser",
+        "//llvm:TestingSupport",
         "//llvm:TransformUtils",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
@@ -498,6 +536,7 @@ cc_test(
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
@@ -521,46 +560,34 @@ cc_test(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "option_tests_gen",
     strip_include_prefix = "Option",
     tbl_outs = [(
-        "-gen-opt-parser-defs",
+        ["-gen-opt-parser-defs"],
         "Option/Opts.inc",
     )],
     tblgen = "//llvm:llvm-tblgen",
     td_file = "Option/Opts.td",
-    td_srcs = [
-        "//llvm:include/llvm/Option/OptParser.td",
-    ],
+    deps = ["//llvm:OptParserTdFiles"],
 )
 
-gentbl(
-    name = "automata_automata_gen",
+gentbl_cc_library(
+    name = "automata_gen",
     strip_include_prefix = "TableGen",
-    tbl_outs = [(
-        "-gen-automata",
-        "TableGen/AutomataAutomata.inc",
-    )],
+    tbl_outs = [
+        (
+            ["-gen-automata"],
+            "TableGen/AutomataAutomata.inc",
+        ),
+        (
+            ["-gen-searchable-tables"],
+            "TableGen/AutomataTables.inc",
+        ),
+    ],
     tblgen = "//llvm:llvm-tblgen",
     td_file = "TableGen/Automata.td",
-    td_srcs = ["//llvm:common_target_td_sources"] + [
-        "TableGen/Automata.td",
-    ],
-)
-
-gentbl(
-    name = "automata_tables_gen",
-    strip_include_prefix = "TableGen",
-    tbl_outs = [(
-        "-gen-searchable-tables",
-        "TableGen/AutomataTables.inc",
-    )],
-    tblgen = "//llvm:llvm-tblgen",
-    td_file = "TableGen/Automata.td",
-    td_srcs = ["//llvm:common_target_td_sources"] + [
-        "TableGen/Automata.td",
-    ],
+    deps = ["//llvm:CommonTargetTdFiles"],
 )
 
 cc_test(
@@ -597,6 +624,24 @@ cc_test(
 )
 
 cc_test(
+    name = "sandboxir_tests",
+    size = "small",
+    srcs = glob(
+        ["SandboxIR/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:Analysis",
+        "//llvm:AsmParser",
+        "//llvm:Core",
+        "//llvm:SandboxIR",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+    ],
+)
+
+cc_test(
     name = "profile_data_tests",
     size = "small",
     srcs = glob(
@@ -604,6 +649,7 @@ cc_test(
         allow_empty = False,
     ),
     deps = [
+        "//llvm:BitReader",
         "//llvm:Core",
         "//llvm:Coverage",
         "//llvm:DebugInfo",
@@ -641,7 +687,7 @@ cc_test(
     ],
     linkstatic = 1,
     tags = [
-        "local",  # Not compatible with the sandbox on MacOS
+        "no-sandbox",  # FileSystemTest.permissions not compatible with the sandbox on MacOS
     ],
     deps = [
         "//llvm:AllTargetsCodeGens",
@@ -685,8 +731,7 @@ cc_test(
         allow_empty = False,
     ),
     deps = [
-        ":automata_automata_gen",
-        ":automata_tables_gen",
+        ":automata_gen",
         "//llvm:Support",
         "//llvm:TableGen",
         "//llvm:TableGenGlobalISel",
@@ -757,6 +802,7 @@ cc_test(
         "//llvm:IPO",
         "//llvm:IRReader",
         "//llvm:Passes",
+        "//llvm:ProfileData",
         "//llvm:Support",
         "//llvm:TestingSupport",
         "//llvm:TransformUtils",
@@ -795,6 +841,32 @@ cc_test(
         "//llvm:X86CodeGen",
         "//llvm:X86UtilsAndDesc",
         "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "llvm_mca_tests",
+    size = "small",
+    srcs = glob(
+        [
+            "tools/llvm-mca/*.cpp",
+            "tools/llvm-mca/*.h",
+            "tools/llvm-mca/X86/*.cpp",
+            "tools/llvm-mca/X86/*.h",
+        ],
+        allow_empty = False,
+    ),
+    includes = ["tools/llvm-mca"],
+    deps = [
+        "//llvm:MC",
+        "//llvm:MCA",
+        "//llvm:MCAApplication",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:X86CodeGen",
+        "//llvm:X86UtilsAndDesc",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],

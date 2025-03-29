@@ -49,7 +49,7 @@ private:
               for (const auto &range : ranges) {
                 auto pair{ComputeBounds(range)};
                 if (pair.first && pair.second && *pair.first > *pair.second) {
-                  context_.Say(stmt.source,
+                  context_.Warn(common::UsageWarning::EmptyCase, stmt.source,
                       "CASE has lower bound greater than upper bound"_warn_en_US);
                 } else {
                   if constexpr (T::category == TypeCategory::Logical) { // C1148
@@ -93,7 +93,7 @@ private:
               x->v = converted;
               return value;
             } else {
-              context_.Say(expr.source,
+              context_.Warn(common::UsageWarning::CaseOverflow, expr.source,
                   "CASE value (%s) overflows type (%s) of SELECT CASE expression"_warn_en_US,
                   folded.AsFortran(), caseExprType_.AsFortran());
               hasErrors_ = true;
@@ -253,6 +253,10 @@ void CaseChecker::Enter(const parser::CaseConstruct &construct) {
       common::SearchTypes(
           TypeVisitor<TypeCategory::Integer>{context_, *exprType, caseList});
       return;
+    case TypeCategory::Unsigned:
+      common::SearchTypes(
+          TypeVisitor<TypeCategory::Unsigned>{context_, *exprType, caseList});
+      return;
     case TypeCategory::Logical:
       CaseValues<evaluate::Type<TypeCategory::Logical, 1>>{context_, *exprType}
           .Check(caseList);
@@ -266,6 +270,8 @@ void CaseChecker::Enter(const parser::CaseConstruct &construct) {
     }
   }
   context_.Say(selectExpr.source,
-      "SELECT CASE expression must be integer, logical, or character"_err_en_US);
+      context_.IsEnabled(common::LanguageFeature::Unsigned)
+          ? "SELECT CASE expression must be integer, unsigned, logical, or character"_err_en_US
+          : "SELECT CASE expression must be integer, logical, or character"_err_en_US);
 }
 } // namespace Fortran::semantics

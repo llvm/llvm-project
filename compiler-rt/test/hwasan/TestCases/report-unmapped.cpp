@@ -36,4 +36,4 @@ int main(int argc, char **argv) {
 // CHECK: Tags for short granules around
 
 // Check that report is complete.
-// CHECK: SUMMARY: HWAddressSanitizer
+// CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in main

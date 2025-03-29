@@ -36,7 +36,7 @@ struct SimpleView : IntBufferViewBase {
   constexpr int* begin() const { return buffer_; }
   constexpr int* end() const { return buffer_ + size_; }
 };
-LIBCPP_STATIC_ASSERT(std::ranges::__simple_view<SimpleView>);
+static_assert(simple_view<SimpleView>);
 
 struct ConstNotRange : IntBufferViewBase {
   using IntBufferViewBase::IntBufferViewBase;
@@ -54,6 +54,6 @@ struct NonSimple : IntBufferViewBase {
   constexpr int* end() { return buffer_ + size_; }
 };
 static_assert(std::ranges::view<NonSimple>);
-LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<NonSimple>);
+static_assert(!simple_view<NonSimple>);
 
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_TAKE_WHILE_TYPES_H

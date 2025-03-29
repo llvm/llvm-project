@@ -18,13 +18,13 @@ define i32 @foo(ptr nocapture %A, i32 %n, i32 %k) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[K:%.*]], i32 1
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_024:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD10:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[I_024]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP3]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD10]] = add nsw i32 [[I_024]], 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD10]], 10000
@@ -41,17 +41,17 @@ for.body:                                         ; preds = %entry, %for.body
   %0 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %0, %n
   store i32 %add, ptr %arrayidx, align 4
-  %add121 = or i32 %i.024, 1
+  %add121 = or disjoint i32 %i.024, 1
   %arrayidx2 = getelementptr inbounds i32, ptr %A, i32 %add121
   %1 = load i32, ptr %arrayidx2, align 4
   %add3 = add nsw i32 %1, %k
   store i32 %add3, ptr %arrayidx2, align 4
-  %add422 = or i32 %i.024, 2
+  %add422 = or disjoint i32 %i.024, 2
   %arrayidx5 = getelementptr inbounds i32, ptr %A, i32 %add422
   %2 = load i32, ptr %arrayidx5, align 4
   %add6 = add nsw i32 %2, %n
   store i32 %add6, ptr %arrayidx5, align 4
-  %add723 = or i32 %i.024, 3
+  %add723 = or disjoint i32 %i.024, 3
   %arrayidx8 = getelementptr inbounds i32, ptr %A, i32 %add723
   %3 = load i32, ptr %arrayidx8, align 4
   %add9 = add nsw i32 %3, %k

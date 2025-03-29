@@ -22,7 +22,7 @@ add_libc_unittest(
     libc.src.signal.kill
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -32,11 +32,11 @@ add_libc_unittest(
   SRCS
     sigaction_test.cpp
   DEPENDS
-    libc.include.errno
-    libc.include.signal
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
     libc.src.signal.raise
     libc.src.signal.sigaction
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -51,7 +51,7 @@ add_libc_unittest(
     libc.src.signal.sigaddset
     libc.src.signal.sigemptyset
     libc.src.signal.sigprocmask
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -61,10 +61,10 @@ add_libc_unittest(
   SRCS
     sigaddset_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.signal
+    libc.src.errno.errno
     libc.src.signal.sigaddset
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -74,11 +74,10 @@ add_libc_unittest(
   SRCS
     signal_test.cpp
   DEPENDS
-    libc.include.signal
     libc.src.errno.errno
     libc.src.signal.raise
     libc.src.signal.signal
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -88,12 +87,12 @@ add_libc_unittest(
   SRCS
     sigfillset_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.signal
+    libc.src.errno.errno
     libc.src.signal.raise
     libc.src.signal.sigfillset
     libc.src.signal.sigprocmask
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -103,13 +102,13 @@ add_libc_unittest(
   SRCS
     sigdelset_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.signal
+    libc.src.errno.errno
     libc.src.signal.raise
     libc.src.signal.sigdelset
     libc.src.signal.sigfillset
     libc.src.signal.sigprocmask
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
@@ -119,10 +118,10 @@ add_libc_unittest(
   SRCS
     sigaltstack_test.cpp
   DEPENDS
-    libc.include.signal
+    libc.hdr.signal_macros
     libc.src.errno.errno
     libc.src.signal.raise
     libc.src.signal.sigaltstack
     libc.src.signal.sigaction
-    libc.test.errno_setter_matcher
+    libc.test.UnitTest.ErrnoSetterMatcher
 )

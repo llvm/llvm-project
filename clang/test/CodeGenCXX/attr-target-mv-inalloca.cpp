@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++11 -triple i686-windows-msvc -emit-llvm %s -o - | FileCheck %s --check-prefix=WINDOWS
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-windows-msvc -emit-llvm %s -o - | FileCheck %s --check-prefix=WINDOWS64
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-pc-linux -emit-llvm %s -o - | FileCheck %s --check-prefix=LINUX
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-macos -emit-llvm %s -o - | FileCheck %s --check-prefix=DARWIN
 
 struct Foo {
   Foo();
@@ -16,22 +18,25 @@ void usage() {
   bar(f);
 }
 
+// DARWIN-NOT: inalloca(
+// LINUX-NOT: inalloca(
+
 // WINDOWS: define dso_local noundef i32 @"?bar@@YAHUFoo@@@Z"(ptr inalloca(<{ %struct.Foo }>) %0)
-// WINDOWS: %[[O:[0-9a-zA-Z]+]] = getelementptr inbounds <{ %struct.Foo }>, ptr %0, i32 0, i32 0
-// WINDOWS: %[[X:[0-9a-zA-Z]+]] = getelementptr inbounds %struct.Foo, ptr %[[O]], i32 0, i32 0
+// WINDOWS: %[[O:[0-9a-zA-Z]+]] = getelementptr inbounds nuw <{ %struct.Foo }>, ptr %0, i32 0, i32 0
+// WINDOWS: %[[X:[0-9a-zA-Z]+]] = getelementptr inbounds nuw %struct.Foo, ptr %[[O]], i32 0, i32 0
 // WINDOWS: %[[LOAD:[0-9a-zA-Z]+]] = load i32, ptr %[[X]]
 // WINDOWS: ret i32 %[[LOAD]]
 
 // WINDOWS: define dso_local noundef i32 @"?bar@@YAHUFoo@@@Z.sse4.2"(ptr inalloca(<{ %struct.Foo }>) %0)
-// WINDOWS: %[[O:[0-9a-zA-Z]+]] = getelementptr inbounds <{ %struct.Foo }>, ptr %0, i32 0, i32 0
-// WINDOWS: %[[X:[0-9a-zA-Z]+]] = getelementptr inbounds %struct.Foo, ptr %[[O]], i32 0, i32 0
+// WINDOWS: %[[O:[0-9a-zA-Z]+]] = getelementptr inbounds nuw <{ %struct.Foo }>, ptr %0, i32 0, i32 0
+// WINDOWS: %[[X:[0-9a-zA-Z]+]] = getelementptr inbounds nuw %struct.Foo, ptr %[[O]], i32 0, i32 0
 // WINDOWS: %[[LOAD:[0-9a-zA-Z]+]] = load i32, ptr %[[X]]
 // WINDOWS: %[[ADD:[0-9a-zA-Z]+]] = add nsw i32 %[[LOAD]], 1
 // WINDOWS: ret i32 %[[ADD]]
 
 // WINDOWS: define dso_local noundef i32 @"?bar@@YAHUFoo@@@Z.arch_ivybridge"(ptr inalloca(<{ %struct.Foo }>) %0)
-// WINDOWS: %[[O:[0-9a-zA-Z]+]] = getelementptr inbounds <{ %struct.Foo }>, ptr %0, i32 0, i32 0
-// WINDOWS: %[[X:[0-9a-zA-Z]+]] = getelementptr inbounds %struct.Foo, ptr %[[O]], i32 0, i32 0
+// WINDOWS: %[[O:[0-9a-zA-Z]+]] = getelementptr inbounds nuw <{ %struct.Foo }>, ptr %0, i32 0, i32 0
+// WINDOWS: %[[X:[0-9a-zA-Z]+]] = getelementptr inbounds nuw %struct.Foo, ptr %[[O]], i32 0, i32 0
 // WINDOWS: %[[LOAD:[0-9a-zA-Z]+]] = load i32, ptr %[[X]]
 // WINDOWS: %[[ADD:[0-9a-zA-Z]+]] = add nsw i32 %[[LOAD]], 2
 // WINDOWS: ret i32 %[[ADD]]
@@ -51,18 +56,18 @@ void usage() {
 
 
 // WINDOWS64: define dso_local noundef i32 @"?bar@@YAHUFoo@@@Z"(ptr noundef %[[O:[0-9a-zA-Z]+]])
-// WINDOWS64: %[[X:[0-9a-zA-Z]+]] = getelementptr inbounds %struct.Foo, ptr %[[O]], i32 0, i32 0
+// WINDOWS64: %[[X:[0-9a-zA-Z]+]] = getelementptr inbounds nuw %struct.Foo, ptr %[[O]], i32 0, i32 0
 // WINDOWS64: %[[LOAD:[0-9a-zA-Z]+]] = load i32, ptr %[[X]]
 // WINDOWS64: ret i32 %[[LOAD]]
 
 // WINDOWS64: define dso_local noundef i32 @"?bar@@YAHUFoo@@@Z.sse4.2"(ptr noundef %[[O:[0-9a-zA-Z]+]])
-// WINDOWS64: %[[X:[0-9a-zA-Z]+]] = getelementptr inbounds %struct.Foo, ptr %[[O]], i32 0, i32 0
+// WINDOWS64: %[[X:[0-9a-zA-Z]+]] = getelementptr inbounds nuw %struct.Foo, ptr %[[O]], i32 0, i32 0
 // WINDOWS64: %[[LOAD:[0-9a-zA-Z]+]] = load i32, ptr %[[X]]
 // WINDOWS64: %[[ADD:[0-9a-zA-Z]+]] = add nsw i32 %[[LOAD]], 1
 // WINDOWS64: ret i32 %[[ADD]]
 
 // WINDOWS64: define dso_local noundef i32 @"?bar@@YAHUFoo@@@Z.arch_ivybridge"(ptr noundef %[[O:[0-9a-zA-Z]+]])
-// WINDOWS64: %[[X:[0-9a-zA-Z]+]] = getelementptr inbounds %struct.Foo, ptr %[[O]], i32 0, i32 0
+// WINDOWS64: %[[X:[0-9a-zA-Z]+]] = getelementptr inbounds nuw %struct.Foo, ptr %[[O]], i32 0, i32 0
 // WINDOWS64: %[[LOAD:[0-9a-zA-Z]+]] = load i32, ptr %[[X]]
 // WINDOWS64: %[[ADD:[0-9a-zA-Z]+]] = add nsw i32 %[[LOAD]], 2
 // WINDOWS64: ret i32 %[[ADD]]

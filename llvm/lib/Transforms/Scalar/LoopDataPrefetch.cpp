@@ -24,7 +24,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
@@ -391,7 +390,7 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
       continue;
 
     BasicBlock *BB = P.InsertPt->getParent();
-    SCEVExpander SCEVE(*SE, BB->getModule()->getDataLayout(), "prefaddr");
+    SCEVExpander SCEVE(*SE, BB->getDataLayout(), "prefaddr");
     const SCEV *NextLSCEV = SE->getAddExpr(P.LSCEVAddRec, SE->getMulExpr(
       SE->getConstant(P.LSCEVAddRec->getType(), ItersAhead),
       P.LSCEVAddRec->getStepRecurrence(*SE)));
@@ -399,19 +398,15 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
       continue;
 
     unsigned PtrAddrSpace = NextLSCEV->getType()->getPointerAddressSpace();
-    Type *I8Ptr = Type::getInt8PtrTy(BB->getContext(), PtrAddrSpace);
+    Type *I8Ptr = PointerType::get(BB->getContext(), PtrAddrSpace);
     Value *PrefPtrValue = SCEVE.expandCodeFor(NextLSCEV, I8Ptr, P.InsertPt);
 
     IRBuilder<> Builder(P.InsertPt);
-    Module *M = BB->getParent()->getParent();
     Type *I32 = Type::getInt32Ty(BB->getContext());
-    Function *PrefetchFunc = Intrinsic::getDeclaration(
-        M, Intrinsic::prefetch, PrefPtrValue->getType());
-    Builder.CreateCall(
-        PrefetchFunc,
-        {PrefPtrValue,
-         ConstantInt::get(I32, P.Writes),
-         ConstantInt::get(I32, 3), ConstantInt::get(I32, 1)});
+    Builder.CreateIntrinsic(Intrinsic::prefetch, PrefPtrValue->getType(),
+                            {PrefPtrValue, ConstantInt::get(I32, P.Writes),
+                             ConstantInt::get(I32, 3),
+                             ConstantInt::get(I32, 1)});
     ++NumPrefetches;
     LLVM_DEBUG(dbgs() << "  Access: "
                << *P.MemI->getOperand(isa<LoadInst>(P.MemI) ? 0 : 1)

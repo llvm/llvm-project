@@ -11,11 +11,10 @@ define dso_local void @foo() #0 {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addiusp -24
-; CHECK-NEXT:    li16 $2, 0
-; CHECK-NEXT:    sw $2, 4($sp)
-; CHECK-NEXT:    sw $2, 0($sp)
-; CHECK-NEXT:    sw $2, 12($sp)
-; CHECK-NEXT:    sw $2, 8($sp)
+; CHECK-NEXT:    mtc1 $zero, $f0
+; CHECK-NEXT:    mthc1 $zero, $f0
+; CHECK-NEXT:    sdc1 $f0, 0($sp)
+; CHECK-NEXT:    sdc1 $f0, 8($sp)
 ; CHECK-NEXT:    ldc1 $f0, 0($sp)
 ; CHECK-NEXT:    sdc1 $f0, 16($sp)
 ; CHECK-NEXT:    addiusp 24

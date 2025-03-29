@@ -17,6 +17,8 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestFuncToLLVM
     MLIRAffineTransformsTestPasses
     MLIRArithTestPasses
+    MLIRArmNeonTestPasses
+    MLIRArmSMETestPasses
     MLIRBufferizationTestPasses
     MLIRControlFlowTestPasses
     MLIRDLTITestPasses
@@ -25,35 +27,46 @@ if(MLIR_INCLUDE_TESTS)
     MLIRLinalgTestPasses
     MLIRLoopLikeInterfaceTestPasses
     MLIRMathTestPasses
+    MLIRTestMathToVCIX
     MLIRMemRefTestPasses
+    MLIRMeshTest
     MLIRNVGPUTestPasses
     MLIRSCFTestPasses
     MLIRShapeTestPasses
     MLIRSPIRVTestPasses
     MLIRTensorTestPasses
     MLIRTestAnalysis
+    MLIRTestConvertToSPIRV
     MLIRTestDialect
     MLIRTestDynDialect
     MLIRTestIR
     MLIRTestOneToNTypeConversionPass
     MLIRTestPass
-    MLIRTestPDLL
     MLIRTestReducer
-    MLIRTestRewrite
-    MLIRTestTransformDialect
     MLIRTestTransforms
     MLIRTilingInterfaceTestPasses
+    MLIRTosaTestPasses
     MLIRVectorTestPasses
     MLIRTestVectorToSPIRV
     MLIRLLVMTestPasses
     )
+  set(test_libs ${test_libs}
+    MLIRTestPDLL
+    MLIRTestTransformDialect
+    )
+
+  if (MLIR_ENABLE_PDL_IN_PATTERNMATCH)
+    set(test_libs ${test_libs}
+      MLIRTestPDLL
+      MLIRTestRewrite
+      )
+  endif()
 endif()
 
 set(LIBS
   ${dialect_libs}
   ${conversion_libs}
   ${extension_libs}
-  ${test_libs}
 
   MLIRAffineAnalysis
   MLIRAnalysis
@@ -66,6 +79,10 @@ set(LIBS
   MLIRTransformUtils
   MLIRSupport
   MLIRIR
+
+  # TODO: Remove when registerAllGPUToLLVMIRTranslations is no longer
+  # registered directly in mlir-opt.cpp.
+  MLIRToLLVMIRTranslationRegistration
   )
 
 # Exclude from libMLIR.so because this has static options intended for
@@ -74,28 +91,20 @@ add_mlir_library(MLIRMlirOptMain
   mlir-opt.cpp
 
   EXCLUDE_FROM_LIBMLIR
-
-  LINK_LIBS PUBLIC
+  )
+mlir_target_link_libraries(MLIRMlirOptMain PUBLIC
   ${LIBS}
+  ${test_libs}
   )
 
 add_mlir_tool(mlir-opt
   mlir-opt.cpp
 
-  DEPENDS
-  ${LIBS}
   SUPPORT_PLUGINS
   )
-target_link_libraries(mlir-opt PRIVATE ${LIBS})
+mlir_target_link_libraries(mlir-opt PRIVATE ${LIBS})
+target_link_libraries(mlir-opt PRIVATE ${test_libs})
 llvm_update_compile_flags(mlir-opt)
 
 mlir_check_all_link_libraries(mlir-opt)
 export_executable_symbols_for_plugins(mlir-opt)
-
-if(MLIR_ENABLE_DEPRECATED_GPU_SERIALIZATION)
-  # Enable deprecated serialization passes.
-  target_compile_definitions(mlir-opt
-    PRIVATE
-    MLIR_DEPRECATED_GPU_SERIALIZATION_ENABLE=1
-  )
-endif()

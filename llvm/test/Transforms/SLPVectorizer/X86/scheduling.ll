@@ -9,17 +9,17 @@ define i32 @foo(ptr nocapture readonly %diff) #0 {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[A_088:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[OP_RDX:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[INDVARS_IV]], 3
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DIFF:%.*]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[DIFF]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[INDVARS_IV]], 3
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DIFF:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i64 [[TMP0]], 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[DIFF]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [8 x [8 x i32]], ptr [[M2]], i64 0, i64 [[INDVARS_IV]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x i32>, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <4 x i32> [[TMP6]], [[TMP4]]
-; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[ARRAYIDX6]], align 16
-; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP7]])
-; CHECK-NEXT:    [[OP_RDX]] = add i32 [[TMP9]], [[A_088]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[ARRAYIDX6]], align 16
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
+; CHECK-NEXT:    [[OP_RDX]] = add i32 [[TMP5]], [[A_088]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 8
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
@@ -37,37 +37,37 @@ for.body:                                         ; preds = %for.body, %entry
   %0 = shl i64 %indvars.iv, 3
   %arrayidx = getelementptr inbounds i32, ptr %diff, i64 %0
   %1 = load i32, ptr %arrayidx, align 4
-  %2 = or i64 %0, 4
+  %2 = or disjoint i64 %0, 4
   %arrayidx2 = getelementptr inbounds i32, ptr %diff, i64 %2
   %3 = load i32, ptr %arrayidx2, align 4
   %add3 = add nsw i32 %3, %1
   %arrayidx6 = getelementptr inbounds [8 x [8 x i32]], ptr %m2, i64 0, i64 %indvars.iv, i64 0
   store i32 %add3, ptr %arrayidx6, align 16
   %add10 = add nsw i32 %add3, %a.088
-  %4 = or i64 %0, 1
+  %4 = or disjoint i64 %0, 1
   %arrayidx13 = getelementptr inbounds i32, ptr %diff, i64 %4
   %5 = load i32, ptr %arrayidx13, align 4
-  %6 = or i64 %0, 5
+  %6 = or disjoint i64 %0, 5
   %arrayidx16 = getelementptr inbounds i32, ptr %diff, i64 %6
   %7 = load i32, ptr %arrayidx16, align 4
   %add17 = add nsw i32 %7, %5
   %arrayidx20 = getelementptr inbounds [8 x [8 x i32]], ptr %m2, i64 0, i64 %indvars.iv, i64 1
   store i32 %add17, ptr %arrayidx20, align 4
   %add24 = add nsw i32 %add10, %add17
-  %8 = or i64 %0, 2
+  %8 = or disjoint i64 %0, 2
   %arrayidx27 = getelementptr inbounds i32, ptr %diff, i64 %8
   %9 = load i32, ptr %arrayidx27, align 4
-  %10 = or i64 %0, 6
+  %10 = or disjoint i64 %0, 6
   %arrayidx30 = getelementptr inbounds i32, ptr %diff, i64 %10
   %11 = load i32, ptr %arrayidx30, align 4
   %add31 = add nsw i32 %11, %9
   %arrayidx34 = getelementptr inbounds [8 x [8 x i32]], ptr %m2, i64 0, i64 %indvars.iv, i64 2
   store i32 %add31, ptr %arrayidx34, align 8
   %add38 = add nsw i32 %add24, %add31
-  %12 = or i64 %0, 3
+  %12 = or disjoint i64 %0, 3
   %arrayidx41 = getelementptr inbounds i32, ptr %diff, i64 %12
   %13 = load i32, ptr %arrayidx41, align 4
-  %14 = or i64 %0, 7
+  %14 = or disjoint i64 %0, 7
   %arrayidx44 = getelementptr inbounds i32, ptr %diff, i64 %14
   %15 = load i32, ptr %arrayidx44, align 4
   %add45 = add nsw i32 %15, %13

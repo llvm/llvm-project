@@ -21,25 +21,31 @@ namespace sparse_tensor {
 
 ///===----------------------------------------------------------------------===//
 /// The sparse tensor storage scheme for a tensor is organized as a single
-/// compound type with the following fields. Note that every memref with ? size
-/// actually behaves as a "vector", i.e. the stored size is the capacity and the
-/// used size resides in the storage_specifier struct.
+/// compound type with the following fields. Note that every memref with `?`
+/// size actually behaves as a "vector", i.e. the stored size is the capacity
+/// and the used size resides in the storage_specifier struct.
 ///
 /// struct {
 ///   ; per-level l:
 ///   ;  if dense:
 ///        <nothing>
-///   ;  if compresed:
-///        memref<? x pos>  positions-l   ; positions for sparse level l
-///        memref<? x crd>  coordinates-l ; coordinates for sparse level l
-///   ;  if singleton:
-///        memref<? x crd>  coordinates-l ; coordinates for singleton level l
+///   ;  if compressed:
+///        memref<[batch] x ? x pos>  positions   ; positions for level l
+///        memref<[batch] x ? x crd>  coordinates ; coordinates for level l
+///   ;  if loose-[batch] x compressed:
+///        memref<[batch] x ? x pos>  positions   ; lo/hi pos pairs for level l
+///        memref<[batch] x ? x crd>  coordinates ; coordinates for level l
+///   ;  if singleton/2-out-of-4:
+///        memref<[batch] x ? x crd>  coordinates ; coordinates for level l
 ///
-///   memref<? x eltType> values        ; values
+///   memref<[batch] x ? x eltType> values        ; values
 ///
 ///   struct sparse_tensor.storage_specifier {
 ///     array<rank x int> lvlSizes    ; sizes/cardinalities for each level
-///     array<n x int> memSizes;      ; sizes/lengths for each data memref
+///     // TODO: memSizes need to be expanded to array<[batch] x n x int> to
+///     // support different sizes for different batches. At the moment, we
+///     // assume that every batch occupies the same memory size.
+///     array<n x int> memSizes       ; sizes/lengths for each data memref
 ///   }
 /// };
 ///
@@ -59,25 +65,25 @@ namespace sparse_tensor {
 /// Examples.
 ///
 /// #CSR storage of 2-dim matrix yields
-///   memref<?xindex>                           ; positions-1
-///   memref<?xindex>                           ; coordinates-1
-///   memref<?xf64>                             ; values
-///   struct<(array<2 x i64>, array<3 x i64>)>) ; lvl0, lvl1, 3xsizes
+///  memref<?xindex>                           ; positions-1
+///  memref<?xindex>                           ; coordinates-1
+///  memref<?xf64>                             ; values
+///  struct<(array<2 x i64>, array<3 x i64>)>) ; lvl0, lvl1, 3xsizes
 ///
 /// #COO storage of 2-dim matrix yields
-///   memref<?xindex>,                          ; positions-0, essentially
-///   [0,sz] memref<?xindex>                           ; AOS coordinates storage
-///   memref<?xf64>                             ; values
-///   struct<(array<2 x i64>, array<3 x i64>)>) ; lvl0, lvl1, 3xsizes
+///  memref<?xindex>,                          ; positions-0, essentially [0,sz]
+///  memref<?xindex>                           ; AOS coordinates storage
+///  memref<?xf64>                             ; values
+///  struct<(array<2 x i64>, array<3 x i64>)>) ; lvl0, lvl1, 3xsizes
 ///
 /// Slice on #COO storage of 2-dim matrix yields
-///   ;; Inherited from the original sparse tensors
-///   memref<?xindex>,                          ; positions-0, essentially
-///   [0,sz] memref<?xindex>                           ; AOS coordinates storage
-///   memref<?xf64>                             ; values
-///   struct<(array<2 x i64>, array<3 x i64>,   ; lvl0, lvl1, 3xsizes
-///   ;; Extra slicing-metadata
-///           array<2 x i64>, array<2 x i64>)>) ; dim offset, dim stride.
+///  ;; Inherited from the original sparse tensors
+///  memref<?xindex>,                          ; positions-0, essentially [0,sz]
+///  memref<?xindex>                           ; AOS coordinates storage
+///  memref<?xf64>                             ; values
+///  struct<(array<2 x i64>, array<3 x i64>,   ; lvl0, lvl1, 3xsizes
+///  ;; Extra slicing-metadata
+///          array<2 x i64>, array<2 x i64>)>) ; dim offset, dim stride.
 ///
 ///===----------------------------------------------------------------------===//
 
@@ -107,9 +113,6 @@ using FieldIndex = unsigned;
 /// encoding.
 class StorageLayout {
 public:
-  // TODO: Functions/methods marked with [NUMFIELDS] should use
-  // `FieldIndex` for their return type, via the same reasoning for why
-  // `Dimension`/`Level` are used both for identifiers and ranks.
   explicit StorageLayout(const SparseTensorType &stt)
       : StorageLayout(stt.getEncoding()) {}
   explicit StorageLayout(SparseTensorEncodingAttr enc) : enc(enc) {
@@ -126,7 +129,7 @@ public:
   void foreachField(
       llvm::function_ref<bool(
           FieldIndex /*fieldIdx*/, SparseTensorFieldKind /*fieldKind*/,
-          Level /*lvl (if applicable)*/, DimLevelType /*DLT (if applicable)*/)>)
+          Level /*lvl (if applicable)*/, LevelType /*LT (if applicable)*/)>)
       const;
 
   /// Gets the field index for required field.
@@ -154,12 +157,10 @@ private:
 // Wrapper functions to invoke StorageLayout-related method.
 //
 
-// See note [NUMFIELDS].
 inline unsigned getNumFieldsFromEncoding(SparseTensorEncodingAttr enc) {
   return StorageLayout(enc).getNumFields();
 }
 
-// See note [NUMFIELDS].
 inline unsigned getNumDataFieldsFromEncoding(SparseTensorEncodingAttr enc) {
   return StorageLayout(enc).getNumDataFields();
 }
@@ -167,7 +168,7 @@ inline unsigned getNumDataFieldsFromEncoding(SparseTensorEncodingAttr enc) {
 inline void foreachFieldInSparseTensor(
     SparseTensorEncodingAttr enc,
     llvm::function_ref<bool(FieldIndex, SparseTensorFieldKind, Level,
-                            DimLevelType)>
+                            LevelType)>
         callback) {
   return StorageLayout(enc).foreachField(callback);
 }
@@ -175,7 +176,7 @@ inline void foreachFieldInSparseTensor(
 void foreachFieldAndTypeInSparseTensor(
     SparseTensorType,
     llvm::function_ref<bool(Type, FieldIndex, SparseTensorFieldKind, Level,
-                            DimLevelType)>);
+                            LevelType)>);
 
 } // namespace sparse_tensor
 } // namespace mlir

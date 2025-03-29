@@ -3,5 +3,5 @@
 
 template<typename T> struct S {};
 
-// CHECK: cannot mangle this built-in __SVInt8_t type yet
+// CHECK: cannot mangle this built-in type: __SVInt8_t yet
 void f1(S<__SVInt8_t>) {}

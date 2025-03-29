@@ -53,11 +53,14 @@ define i32 @sink_to_use_call() {
 ; CHECK-NEXT:    .cfi_offset ra, -4
 ; CHECK-NEXT:    .cfi_offset s0, -8
 ; CHECK-NEXT:    csrr s0, vlenb
-; CHECK-NEXT:    call unknown@plt
+; CHECK-NEXT:    call unknown
 ; CHECK-NEXT:    mv a0, s0
 ; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 entry:
   %v1 = call i32 @llvm.read_register.i32(metadata !0)
@@ -71,11 +74,14 @@ define void @machine_licm() {
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -4
+; CHECK-NEXT:    .cfi_offset s0, -8
+; CHECK-NEXT:    csrr s0, vlenb
 ; CHECK-NEXT:  .LBB4_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    call use@plt
+; CHECK-NEXT:    mv a0, s0
+; CHECK-NEXT:    call use
 ; CHECK-NEXT:    j .LBB4_1
 entry:
   br label %loop

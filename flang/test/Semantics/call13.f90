@@ -22,15 +22,14 @@ subroutine s(assumedRank, coarray, class, classStar, typeStar)
   call implicit10(1, 2, keyword=3)  ! 15.4.2.2(1)
   !ERROR: Assumed rank argument requires an explicit interface
   call implicit11(assumedRank)  ! 15.4.2.2(3)(c)
-  !ERROR: Coarray argument requires an explicit interface
-  call implicit12(coarray)  ! 15.4.2.2(3)(d)
-  !ERROR: Parameterized derived type argument requires an explicit interface
+  call implicit12(coarray)  ! ok
+  call implicit12a(coarray[1]) ! ok
+  !ERROR: Parameterized derived type actual argument requires an explicit interface
   call implicit13(pdtx)  ! 15.4.2.2(3)(e)
-  !ERROR: Polymorphic argument requires an explicit interface
-  call implicit14(class)  ! 15.4.2.2(3)(f)
-  !ERROR: Polymorphic argument requires an explicit interface
+  call implicit14(class)  ! ok
+  !ERROR: Unlimited polymorphic actual argument requires an explicit interface
   call implicit15(classStar)  ! 15.4.2.2(3)(f)
-  !ERROR: Assumed type argument requires an explicit interface
+  !ERROR: Assumed type actual argument requires an explicit interface
   call implicit16(typeStar)  ! 15.4.2.2(3)(f)
   !ERROR: TYPE(*) dummy argument may only be used as an actual argument
   if (typeStar) then

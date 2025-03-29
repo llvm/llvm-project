@@ -146,10 +146,13 @@ class Checker {
   ClangdLSPServer::Options Opts;
   // from buildCommand
   tooling::CompileCommand Cmd;
+  std::unique_ptr<GlobalCompilationDatabase> BaseCDB;
+  std::unique_ptr<GlobalCompilationDatabase> CDB;
   // from buildInvocation
   ParseInputs Inputs;
   std::unique_ptr<CompilerInvocation> Invocation;
   format::FormatStyle Style;
+  std::optional<ModulesBuilder> ModulesManager;
   // from buildAST
   std::shared_ptr<const PreambleData> Preamble;
   std::optional<ParsedAST> AST;
@@ -160,7 +163,7 @@ public:
   unsigned ErrCount = 0;
 
   Checker(llvm::StringRef File, const ClangdLSPServer::Options &Opts)
-      : File(File), Opts(Opts) {}
+      : File(File), Opts(Opts), Index(/*SupportContainedRefs=*/true) {}
 
   // Read compilation database and choose a compile command for the file.
   bool buildCommand(const ThreadsafeFS &TFS) {
@@ -168,14 +171,14 @@ public:
     DirectoryBasedGlobalCompilationDatabase::Options CDBOpts(TFS);
     CDBOpts.CompileCommandsDir =
         Config::current().CompileFlags.CDBSearch.FixedCDBPath;
-    std::unique_ptr<GlobalCompilationDatabase> BaseCDB =
+    BaseCDB =
         std::make_unique<DirectoryBasedGlobalCompilationDatabase>(CDBOpts);
     auto Mangler = CommandMangler::detect();
     Mangler.SystemIncludeExtractor =
         getSystemIncludeExtractor(llvm::ArrayRef(Opts.QueryDriverGlobs));
     if (Opts.ResourceDir)
       Mangler.ResourceDir = *Opts.ResourceDir;
-    auto CDB = std::make_unique<OverlayCDB>(
+    CDB = std::make_unique<OverlayCDB>(
         BaseCDB.get(), std::vector<std::string>{}, std::move(Mangler));
 
     if (auto TrueCmd = CDB->getCompileCommand(File)) {
@@ -213,6 +216,11 @@ public:
         return false;
       }
     }
+    if (Opts.EnableExperimentalModulesSupport) {
+      if (!ModulesManager)
+        ModulesManager.emplace(*CDB);
+      Inputs.ModulesManager = &*ModulesManager;
+    }
     log("Parsing command...");
     Invocation =
         buildCompilerInvocation(Inputs, CaptureInvocationDiags, &CC1Args);
@@ -226,7 +234,7 @@ public:
 
     // FIXME: Check that resource-dir/built-in-headers exist?
 
-    Style = getFormatStyleForFile(File, Inputs.Contents, TFS);
+    Style = getFormatStyleForFile(File, Inputs.Contents, TFS, false);
 
     return true;
   }
@@ -367,7 +375,13 @@ public:
     auto Hints = inlayHints(*AST, LineRange);
 
     for (const auto &Hint : Hints) {
-      vlog("  {0} {1} {2}", Hint.kind, Hint.position, Hint.label);
+      vlog("  {0} {1} [{2}]", Hint.kind, Hint.position, [&] {
+        return llvm::join(llvm::map_range(Hint.label,
+                                          [&](auto &L) {
+                                            return llvm::formatv("{{{0}}", L);
+                                          }),
+                          ", ");
+      }());
     }
   }
 

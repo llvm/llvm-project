@@ -1,6 +1,6 @@
-# This test checks that trampolines are inserted in split fragments if
-# necessary. There are 4 LSDA ranges with a landing pad to three landing pads.
-# After splitting all blocks, there have to be 4 trampolines in the output.
+## This test checks that trampolines are inserted in split fragments if
+## necessary. There are 4 LSDA ranges with a landing pad to three landing pads.
+## After splitting all blocks, there have to be 4 trampolines in the output.
 
 # RUN: llvm-mc --filetype=obj --triple x86_64-unknown-unknown %s -o %t.o
 # RUN: %clangxx %cxxflags %t.o -o %t.exe -Wl,-q -pie

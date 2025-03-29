@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple mips-linux-gnu  -S -emit-llvm %s -o - | FileCheck %s -check-prefix=MIPS
-// RUN: %clang_cc1 -triple mips64-linux-gnu  -S -emit-llvm %s -o - | FileCheck %s -check-prefix=MIPS64
-// RUN: %clang_cc1 -triple armebv7-linux-gnueabihf -S -emit-llvm %s -o - | FileCheck %s -check-prefix=ARM
+// RUN: %clang_cc1 -triple mips-linux-gnu  -emit-llvm %s -o - | FileCheck %s -check-prefix=MIPS
+// RUN: %clang_cc1 -triple mips64-linux-gnu  -emit-llvm %s -o - | FileCheck %s -check-prefix=MIPS64
+// RUN: %clang_cc1 -triple armebv7-linux-gnueabihf -emit-llvm %s -o - | FileCheck %s -check-prefix=ARM
 
 #include <stdarg.h>
 

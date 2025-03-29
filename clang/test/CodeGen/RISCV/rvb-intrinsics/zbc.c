@@ -6,7 +6,7 @@
 // RUN:     -disable-O0-optnone | opt -S -passes=mem2reg \
 // RUN:     | FileCheck %s  -check-prefix=RV64ZBC
 
-#include <stdint.h>
+#include <riscv_bitmanip.h>
 
 #if __riscv_xlen == 64
 // RV64ZBC-LABEL: @clmul_64(
@@ -15,7 +15,7 @@
 // RV64ZBC-NEXT:    ret i64 [[TMP0]]
 //
 uint64_t clmul_64(uint64_t a, uint64_t b) {
-  return __builtin_riscv_clmul_64(a, b);
+  return __riscv_clmul_64(a, b);
 }
 
 // RV64ZBC-LABEL: @clmulh_64(
@@ -24,7 +24,7 @@ uint64_t clmul_64(uint64_t a, uint64_t b) {
 // RV64ZBC-NEXT:    ret i64 [[TMP0]]
 //
 uint64_t clmulh_64(uint64_t a, uint64_t b) {
-  return __builtin_riscv_clmulh_64(a, b);
+  return __riscv_clmulh_64(a, b);
 }
 
 // RV64ZBC-LABEL: @clmulr_64(
@@ -33,7 +33,7 @@ uint64_t clmulh_64(uint64_t a, uint64_t b) {
 // RV64ZBC-NEXT:    ret i64 [[TMP0]]
 //
 uint64_t clmulr_64(uint64_t a, uint64_t b) {
-  return __builtin_riscv_clmulr_64(a, b);
+  return __riscv_clmulr_64(a, b);
 }
 #endif
 
@@ -48,7 +48,7 @@ uint64_t clmulr_64(uint64_t a, uint64_t b) {
 // RV64ZBC-NEXT:    ret i32 [[TMP0]]
 //
 uint32_t clmul_32(uint32_t a, uint32_t b) {
-  return __builtin_riscv_clmul_32(a, b);
+  return __riscv_clmul_32(a, b);
 }
 
 #if __riscv_xlen == 32
@@ -58,7 +58,7 @@ uint32_t clmul_32(uint32_t a, uint32_t b) {
 // RV32ZBC-NEXT:    ret i32 [[TMP0]]
 //
 uint32_t clmulh_32(uint32_t a, uint32_t b) {
-  return __builtin_riscv_clmulh_32(a, b);
+  return __riscv_clmulh_32(a, b);
 }
 
 // RV32ZBC-LABEL: @clmulr_32(
@@ -67,6 +67,6 @@ uint32_t clmulh_32(uint32_t a, uint32_t b) {
 // RV32ZBC-NEXT:    ret i32 [[TMP0]]
 //
 uint32_t clmulr_32(uint32_t a, uint32_t b) {
-  return __builtin_riscv_clmulr_32(a, b);
+  return __riscv_clmulr_32(a, b);
 }
 #endif

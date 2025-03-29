@@ -11,6 +11,7 @@
 
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include <map>
 #include <mutex>
@@ -24,7 +25,6 @@ public:
   typedef void (*ChangedCallback)(const PathMappingList &path_list,
                                   void *baton);
 
-  // Constructors and Destructors
   PathMappingList();
 
   PathMappingList(ChangedCallback callback, void *callback_baton);
@@ -52,12 +52,12 @@ public:
   llvm::json::Value ToJSON();
 
   bool IsEmpty() const {
-    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    std::lock_guard<std::mutex> lock(m_pairs_mutex);
     return m_pairs.empty();
   }
 
   size_t GetSize() const {
-    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    std::lock_guard<std::mutex> lock(m_pairs_mutex);
     return m_pairs.size();
   }
 
@@ -133,28 +133,35 @@ public:
   ///     The newly remapped filespec that is guaranteed to exist.
   std::optional<FileSpec> FindFile(const FileSpec &orig_spec) const;
 
-  uint32_t FindIndexForPath(llvm::StringRef path) const;
-
   uint32_t GetModificationID() const {
-    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    std::lock_guard<std::mutex> lock(m_pairs_mutex);
     return m_mod_id;
   }
 
 protected:
-  mutable std::recursive_mutex m_mutex;
   typedef std::pair<ConstString, ConstString> pair;
   typedef std::vector<pair> collection;
   typedef collection::iterator iterator;
   typedef collection::const_iterator const_iterator;
+
+  void AppendNoLock(llvm::StringRef path, llvm::StringRef replacement);
+  uint32_t FindIndexForPathNoLock(llvm::StringRef path) const;
+  void Notify(bool notify) const;
 
   iterator FindIteratorForPath(ConstString path);
 
   const_iterator FindIteratorForPath(ConstString path) const;
 
   collection m_pairs;
+  mutable std::mutex m_pairs_mutex;
+
   ChangedCallback m_callback = nullptr;
   void *m_callback_baton = nullptr;
-  uint32_t m_mod_id = 0; // Incremented anytime anything is added or removed.
+  mutable std::mutex m_callback_mutex;
+
+  /// Incremented anytime anything is added to or removed from m_pairs. Also
+  /// protected by m_pairs_mutex.
+  uint32_t m_mod_id = 0;
 };
 
 } // namespace lldb_private

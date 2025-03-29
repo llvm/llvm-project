@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -tbaa -polly-codegen -disable-output %s
+; RUN: opt %loadNPMPolly -aa-pipeline=tbaa -passes=polly-codegen -disable-output %s
 ;
 ; Check that we do not crash here.
 ;

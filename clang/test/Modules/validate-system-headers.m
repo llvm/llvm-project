@@ -1,7 +1,7 @@
 // RUN: rm -rf %t/ModuleCache
 // RUN: mkdir -p %t/Inputs/usr/include
 // RUN: touch %t/Inputs/usr/include/foo.h
-// RUN: echo 'module Foo [system] { header "foo.h" }' > %t/Inputs/usr/include/module.map
+// RUN: echo 'module Foo [system] { header "foo.h" }' > %t/Inputs/usr/include/module.modulemap
 
 ////
 // Build a module using a system header

@@ -561,7 +561,7 @@ static bool isMyCode(const SymbolGroup &Group) {
     return true;
 
   StringRef Name = Group.name();
-  if (Name.startswith("Import:"))
+  if (Name.starts_with("Import:"))
     return false;
   if (Name.ends_with_insensitive(".dll"))
     return false;

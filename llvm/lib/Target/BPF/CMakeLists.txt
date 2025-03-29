@@ -11,13 +11,20 @@ tablegen(LLVM BPFGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM BPFGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM BPFGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM BPFGenSubtargetInfo.inc -gen-subtarget)
+tablegen(LLVM BPFGenGlobalISel.inc -gen-global-isel)
+tablegen(LLVM BPFGenRegisterBank.inc -gen-register-bank)
 
 add_public_tablegen_target(BPFCommonTableGen)
 
 add_llvm_target(BPFCodeGen
+  GISel/BPFCallLowering.cpp
+  GISel/BPFInstructionSelector.cpp
+  GISel/BPFRegisterBankInfo.cpp
+  GISel/BPFLegalizerInfo.cpp
   BPFAbstractMemberAccess.cpp
   BPFAdjustOpt.cpp
   BPFAsmPrinter.cpp
+  BPFASpaceCastSimplifyPass.cpp
   BPFCheckAndAdjustIR.cpp
   BPFFrameLowering.cpp
   BPFInstrInfo.cpp
@@ -26,6 +33,7 @@ add_llvm_target(BPFCodeGen
   BPFISelLowering.cpp
   BPFMCInstLower.cpp
   BPFPreserveDIType.cpp
+  BPFPreserveStaticOffset.cpp
   BPFRegisterInfo.cpp
   BPFSelectionDAGInfo.cpp
   BPFSubtarget.cpp
@@ -43,8 +51,10 @@ add_llvm_target(BPFCodeGen
   CodeGen
   CodeGenTypes
   Core
+  GlobalISel
   IPO
   MC
+  Passes
   Scalar
   SelectionDAG
   Support

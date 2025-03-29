@@ -29,7 +29,7 @@
   
   declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
   
-  declare void @llvm.stackprotector(i8*, i8**) #2
+  declare void @llvm.stackprotector(ptr, ptr) #2
   
   attributes #0 = { "target-cpu"="z13" "use-soft-float"="false" }
   attributes #1 = { nounwind readnone speculatable "target-cpu"="z13" }

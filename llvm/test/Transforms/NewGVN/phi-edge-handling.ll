@@ -9,8 +9,8 @@ define i16 @hoge() {
 ; CHECK-LABEL: @hoge(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    switch i8 undef, label [[BB7:%.*]] [
-; CHECK-NEXT:    i8 0, label [[BB1:%.*]]
-; CHECK-NEXT:    i8 12, label [[BB2:%.*]]
+; CHECK-NEXT:      i8 0, label [[BB1:%.*]]
+; CHECK-NEXT:      i8 12, label [[BB2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB6:%.*]]

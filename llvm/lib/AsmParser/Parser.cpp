@@ -12,6 +12,7 @@
 
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/AsmParser/LLParser.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -223,4 +224,19 @@ Type *llvm::parseTypeAtBeginning(StringRef Asm, unsigned &Read,
           .parseTypeAtBeginning(Ty, Read, Slots))
     return nullptr;
   return Ty;
+}
+
+DIExpression *llvm::parseDIExpressionBodyAtBeginning(StringRef Asm,
+                                                     unsigned &Read,
+                                                     SMDiagnostic &Err,
+                                                     const Module &M,
+                                                     const SlotMapping *Slots) {
+  SourceMgr SM;
+  std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(Asm);
+  SM.AddNewSourceBuffer(std::move(Buf), SMLoc());
+  MDNode *MD;
+  if (LLParser(Asm, SM, Err, const_cast<Module *>(&M), nullptr, M.getContext())
+          .parseDIExpressionBodyAtBeginning(MD, Read, Slots))
+    return nullptr;
+  return dyn_cast<DIExpression>(MD);
 }

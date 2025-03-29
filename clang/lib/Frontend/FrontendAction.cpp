@@ -49,52 +49,6 @@ LLVM_INSTANTIATE_REGISTRY(FrontendPluginRegistry)
 
 namespace {
 
-class DelegatingDeserializationListener : public ASTDeserializationListener {
-  ASTDeserializationListener *Previous;
-  bool DeletePrevious;
-
-public:
-  explicit DelegatingDeserializationListener(
-      ASTDeserializationListener *Previous, bool DeletePrevious)
-      : Previous(Previous), DeletePrevious(DeletePrevious) {}
-  ~DelegatingDeserializationListener() override {
-    if (DeletePrevious)
-      delete Previous;
-  }
-
-  DelegatingDeserializationListener(const DelegatingDeserializationListener &) =
-      delete;
-  DelegatingDeserializationListener &
-  operator=(const DelegatingDeserializationListener &) = delete;
-
-  void ReaderInitialized(ASTReader *Reader) override {
-    if (Previous)
-      Previous->ReaderInitialized(Reader);
-  }
-  void IdentifierRead(serialization::IdentID ID,
-                      IdentifierInfo *II) override {
-    if (Previous)
-      Previous->IdentifierRead(ID, II);
-  }
-  void TypeRead(serialization::TypeIdx Idx, QualType T) override {
-    if (Previous)
-      Previous->TypeRead(Idx, T);
-  }
-  void DeclRead(serialization::DeclID ID, const Decl *D) override {
-    if (Previous)
-      Previous->DeclRead(ID, D);
-  }
-  void SelectorRead(serialization::SelectorID ID, Selector Sel) override {
-    if (Previous)
-      Previous->SelectorRead(ID, Sel);
-  }
-  void MacroDefinitionRead(serialization::PreprocessedEntityID PPID,
-                           MacroDefinitionRecord *MD) override {
-    if (Previous)
-      Previous->MacroDefinitionRead(PPID, MD);
-  }
-};
-
 /// Dumps deserialized declarations.
 class DeserializedDeclsDumper : public DelegatingDeserializationListener {
 public:
@@ -102,7 +56,7 @@ public:
                                    bool DeletePrevious)
       : DelegatingDeserializationListener(Previous, DeletePrevious) {}
 
-  void DeclRead(serialization::DeclID ID, const Decl *D) override {
+  void DeclRead(GlobalDeclID ID, const Decl *D) override {
     llvm::outs() << "PCH DECL: " << D->getDeclKindName();
     if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
       llvm::outs() << " - ";
@@ -128,7 +82,7 @@ public:
       : DelegatingDeserializationListener(Previous, DeletePrevious), Ctx(Ctx),
         NamesToCheck(NamesToCheck) {}
 
-  void DeclRead(serialization::DeclID ID, const Decl *D) override {
+  void DeclRead(GlobalDeclID ID, const Decl *D) override {
     if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
       if (NamesToCheck.find(ND->getNameAsString()) != NamesToCheck.end()) {
         unsigned DiagID
@@ -358,7 +312,7 @@ static std::error_code collectModuleHeaderIncludes(
 
   // Add includes for each of these headers.
   for (auto HK : {Module::HK_Normal, Module::HK_Private}) {
-    for (Module::Header &H : Module->Headers[HK]) {
+    for (const Module::Header &H : Module->getHeaders(HK)) {
       Module->addTopHeader(H.Entry);
       // Use the path as specified in the module map file. We'll look for this
       // file relative to the module build directory (the directory containing
@@ -534,9 +488,14 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
     }
     if (*OriginalModuleMap != CI.getSourceManager().getFileEntryRefForID(
                                   CI.getSourceManager().getMainFileID())) {
-      M->IsInferred = true;
-      CI.getPreprocessor().getHeaderSearchInfo().getModuleMap()
-        .setInferredModuleAllowedBy(M, *OriginalModuleMap);
+      auto FileCharacter =
+          M->IsSystem ? SrcMgr::C_System_ModuleMap : SrcMgr::C_User_ModuleMap;
+      FileID OriginalModuleMapFID = CI.getSourceManager().getOrCreateFileID(
+          *OriginalModuleMap, FileCharacter);
+      CI.getPreprocessor()
+          .getHeaderSearchInfo()
+          .getModuleMap()
+          .setInferredModuleAllowedBy(M, OriginalModuleMapFID);
     }
   }
 
@@ -619,9 +578,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     StringRef InputFile = Input.getFile();
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
-        std::string(InputFile), CI.getPCHContainerReader(),
-        ASTUnit::LoadPreprocessorOnly, ASTDiags, CI.getFileSystemOpts(),
-        /*HeaderSearchOptions=*/nullptr, CI.getCodeGenOpts().DebugTypeExtRefs);
+        InputFile, CI.getPCHContainerReader(), ASTUnit::LoadPreprocessorOnly,
+        ASTDiags, CI.getFileSystemOpts(),
+        /*HeaderSearchOptions=*/nullptr);
     if (!AST)
       return false;
 
@@ -687,10 +646,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     StringRef InputFile = Input.getFile();
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
-        std::string(InputFile), CI.getPCHContainerReader(),
-        ASTUnit::LoadEverything, Diags, CI.getFileSystemOpts(),
-        CI.getHeaderSearchOptsPtr(),
-        CI.getCodeGenOpts().DebugTypeExtRefs);
+        InputFile, CI.getPCHContainerReader(), ASTUnit::LoadEverything, Diags,
+        CI.getFileSystemOpts(), CI.getHeaderSearchOptsPtr(),
+        CI.getLangOptsPtr());
 
     if (!AST)
       return false;
@@ -752,8 +710,11 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
   // IR files bypass the rest of initialization.
   if (Input.getKind().getLanguage() == Language::LLVM_IR) {
-    assert(hasIRSupport() &&
-           "This action does not have IR file support!");
+    if (!hasIRSupport()) {
+      CI.getDiagnostics().Report(diag::err_ast_action_on_llvm_ir)
+          << Input.getFile();
+      return false;
+    }
 
     // Inform the diagnostic client we are processing a source file.
     CI.getDiagnosticClient().BeginSourceFile(CI.getLangOpts(), nullptr);
@@ -1062,12 +1023,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
 llvm::Error FrontendAction::Execute() {
   CompilerInstance &CI = getCompilerInstance();
-
-  if (CI.hasFrontendTimer()) {
-    llvm::TimeRegion Timer(CI.getFrontendTimer());
-    ExecuteAction();
-  }
-  else ExecuteAction();
+  ExecuteAction();
 
   // If we are supposed to rebuild the global module index, do so now unless
   // there were any module-build failures.
@@ -1118,10 +1074,14 @@ void FrontendAction::EndSourceFile() {
 
   if (CI.getFrontendOpts().ShowStats) {
     llvm::errs() << "\nSTATISTICS FOR '" << getCurrentFileOrBufferName() << "':\n";
-    CI.getPreprocessor().PrintStats();
-    CI.getPreprocessor().getIdentifierTable().PrintStats();
-    CI.getPreprocessor().getHeaderSearchInfo().PrintStats();
-    CI.getSourceManager().PrintStats();
+    if (CI.hasPreprocessor()) {
+      CI.getPreprocessor().PrintStats();
+      CI.getPreprocessor().getIdentifierTable().PrintStats();
+      CI.getPreprocessor().getHeaderSearchInfo().PrintStats();
+    }
+    if (CI.hasSourceManager()) {
+      CI.getSourceManager().PrintStats();
+    }
     llvm::errs() << "\n";
   }
 

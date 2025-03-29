@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-static unsigned int g_timeout = 100000;
+static unsigned int g_timeout = 1000000;
 
 extern int usleep(unsigned int);
 

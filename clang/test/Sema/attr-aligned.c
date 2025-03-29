@@ -1,10 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple i586-intel-elfiamcu -fsyntax-only -verify %s
 
 int x __attribute__((aligned(3))); // expected-error {{requested alignment is not a power of 2}}
 int y __attribute__((aligned(1ull << 33))); // expected-error {{requested alignment must be 4294967296 bytes or smaller}}
 int y __attribute__((aligned(1ull << 32)));
-// GH50534
-int z __attribute__((aligned((__int128_t)0x1234567890abcde0ULL << 64))); // expected-error {{requested alignment must be 4294967296 bytes or smaller}}
 
 // PR26444
 int y __attribute__((aligned(1 << 29)));
@@ -12,7 +11,14 @@ int y __attribute__((aligned(1 << 28)));
 
 // PR3254
 short g0[3] __attribute__((aligned));
+#ifdef __iamcu
+short g0_chk[__alignof__(g0) == 4 ? 1 : -1];
+#else
 short g0_chk[__alignof__(g0) == 16 ? 1 : -1];
+
+// GH50534
+int z __attribute__((aligned((__int128_t)0x1234567890abcde0ULL << 64))); // expected-error {{requested alignment must be 4294967296 bytes or smaller}}
+#endif
 
 typedef char ueber_aligned_char __attribute__((aligned(8)));
 

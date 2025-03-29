@@ -26,16 +26,48 @@ namespace llvm {
 class X86MCExpr : public MCTargetExpr {
 
 private:
-  const int64_t RegNo; // All
+  const MCRegister Reg; // All
 
-  explicit X86MCExpr(int64_t R) : RegNo(R) {}
+  explicit X86MCExpr(MCRegister R) : Reg(R) {}
 
 public:
+  // Relocation specifier. Named VK_ for legacy reasons.
+  enum Specifier {
+    VK_None,
+
+    VK_ABS8 = MCSymbolRefExpr::FirstTargetSpecifier,
+    VK_DTPOFF,
+    VK_DTPREL,
+    VK_GOT,
+    VK_GOTENT,
+    VK_GOTNTPOFF,
+    VK_GOTOFF,
+    VK_GOTPCREL,
+    VK_GOTPCREL_NORELAX,
+    VK_GOTREL,
+    VK_GOTTPOFF,
+    VK_INDNTPOFF,
+    VK_NTPOFF,
+    VK_PCREL,
+    VK_PLT,
+    VK_PLTOFF,
+    VK_SIZE,
+    VK_TLSCALL,
+    VK_TLSDESC,
+    VK_TLSGD,
+    VK_TLSLD,
+    VK_TLSLDM,
+    VK_TLVP,
+    VK_TLVPPAGE,
+    VK_TLVPPAGEOFF,
+    VK_TPOFF,
+  };
+
   /// @name Construction
   /// @{
 
-  static const X86MCExpr *create(int64_t RegNo, MCContext &Ctx) {
-    return new (Ctx) X86MCExpr(RegNo);
+  static const X86MCExpr *create(MCRegister Reg, MCContext &Ctx) {
+    return new (Ctx) X86MCExpr(Reg);
   }
 
   /// @}
@@ -43,38 +75,38 @@ public:
   /// @{
 
   /// getSubExpr - Get the child of this expression.
-  int64_t getRegNo() const { return RegNo; }
+  MCRegister getReg() const { return Reg; }
 
   /// @}
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override {
     if (!MAI || MAI->getAssemblerDialect() == 0)
       OS << '%';
-    OS << X86ATTInstPrinter::getRegisterName(RegNo);
+    OS << X86ATTInstPrinter::getRegisterName(Reg);
   }
 
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAsmLayout *Layout,
-                                 const MCFixup *Fixup) const override {
+  bool evaluateAsRelocatableImpl(MCValue &Res,
+                                 const MCAssembler *Asm) const override {
     return false;
   }
   // Register values should be inlined as they are not valid .set expressions.
   bool inlineAssignedExpr() const override { return true; }
   bool isEqualTo(const MCExpr *X) const override {
     if (auto *E = dyn_cast<X86MCExpr>(X))
-      return getRegNo() == E->getRegNo();
+      return getReg() == E->getReg();
     return false;
   }
   void visitUsedExpr(MCStreamer &Streamer) const override {}
   MCFragment *findAssociatedFragment() const override { return nullptr; }
-
-  // There are no TLS X86MCExprs at the moment.
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override {}
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }
 };
 
+static inline X86MCExpr::Specifier getSpecifier(const MCSymbolRefExpr *SRE) {
+  return X86MCExpr::Specifier(SRE->getKind());
+}
 } // end namespace llvm
 
 #endif

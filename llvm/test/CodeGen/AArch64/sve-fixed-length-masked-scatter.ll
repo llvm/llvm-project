@@ -39,12 +39,12 @@ define void @masked_scatter_v4i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-NEXT:    cmeq v1.4h, v0.4h, #0
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x1]
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    sunpklo z1.d, z1.s
-; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
-; CHECK-NEXT:    st1b { z0.d }, p0, [z2.d]
+; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    st1b { z0.d }, p1, [z1.d]
 ; CHECK-NEXT:    ret
   %vals = load <4 x i8>, ptr %a
   %ptrs = load <4 x ptr>, ptr %b
@@ -61,11 +61,11 @@ define void @masked_scatter_v8i8(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    cmeq v1.8b, v0.8b, #0
 ; VBITS_GE_256-NEXT:    zip1 v3.8b, v0.8b, v0.8b
+; VBITS_GE_256-NEXT:    ld1d { z4.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    zip1 v2.8b, v1.8b, v0.8b
 ; VBITS_GE_256-NEXT:    zip2 v1.8b, v1.8b, v0.8b
 ; VBITS_GE_256-NEXT:    zip2 v0.8b, v0.8b, v0.8b
 ; VBITS_GE_256-NEXT:    uunpklo z3.s, z3.h
-; VBITS_GE_256-NEXT:    ld1d { z4.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    shl v2.4h, v2.4h, #8
 ; VBITS_GE_256-NEXT:    shl v1.4h, v1.4h, #8
 ; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h
@@ -92,12 +92,12 @@ define void @masked_scatter_v8i8(ptr %a, ptr %b) #0 {
 ; VBITS_GE_512-NEXT:    uunpklo z0.h, z0.b
 ; VBITS_GE_512-NEXT:    sunpklo z1.h, z1.b
 ; VBITS_GE_512-NEXT:    uunpklo z0.s, z0.h
-; VBITS_GE_512-NEXT:    ld1d { z2.d }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_GE_512-NEXT:    uunpklo z0.d, z0.s
 ; VBITS_GE_512-NEXT:    sunpklo z1.d, z1.s
-; VBITS_GE_512-NEXT:    cmpne p0.d, p0/z, z1.d, #0
-; VBITS_GE_512-NEXT:    st1b { z0.d }, p0, [z2.d]
+; VBITS_GE_512-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    st1b { z0.d }, p1, [z1.d]
 ; VBITS_GE_512-NEXT:    ret
   %vals = load <8 x i8>, ptr %a
   %ptrs = load <8 x ptr>, ptr %b
@@ -115,12 +115,12 @@ define void @masked_scatter_v16i8(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    sunpklo z1.h, z1.b
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x1]
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    sunpklo z1.d, z1.s
-; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
-; CHECK-NEXT:    st1b { z0.d }, p0, [z2.d]
+; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    st1b { z0.d }, p1, [z1.d]
 ; CHECK-NEXT:    ret
   %vals = load <16 x i8>, ptr %a
   %ptrs = load <16 x ptr>, ptr %b
@@ -135,13 +135,13 @@ define void @masked_scatter_v32i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ptrue p0.b, vl32
 ; CHECK-NEXT:    ptrue p1.d, vl32
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
-; CHECK-NEXT:    ld1d { z1.d }, p1/z, [x1]
+; CHECK-NEXT:    uunpklo z1.h, z0.b
 ; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
-; CHECK-NEXT:    uunpklo z0.h, z0.b
+; CHECK-NEXT:    uunpklo z0.s, z1.h
 ; CHECK-NEXT:    punpklo p0.h, p0.b
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    ld1d { z1.d }, p1/z, [x1]
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1b { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
@@ -187,10 +187,10 @@ define void @masked_scatter_v4i16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x1]
 ; CHECK-NEXT:    sunpklo z1.d, z1.s
-; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
-; CHECK-NEXT:    st1h { z0.d }, p0, [z2.d]
+; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    st1h { z0.d }, p1, [z1.d]
 ; CHECK-NEXT:    ret
   %vals = load <4 x i16>, ptr %a
   %ptrs = load <4 x ptr>, ptr %b
@@ -208,19 +208,19 @@ define void @masked_scatter_v8i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    cmeq v1.8h, v0.8h, #0
 ; VBITS_GE_256-NEXT:    uunpklo z3.s, z0.h
 ; VBITS_GE_256-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    ld1d { z4.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    sunpklo z2.s, z1.h
 ; VBITS_GE_256-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    uunpklo z3.d, z3.s
-; VBITS_GE_256-NEXT:    ld1d { z4.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    sunpklo z2.d, z2.s
 ; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
 ; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_GE_256-NEXT:    cmpne p1.d, p0/z, z2.d, #0
 ; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    st1h { z3.d }, p1, [z2.d]
 ; VBITS_GE_256-NEXT:    cmpne p0.d, p0/z, z1.d, #0
+; VBITS_GE_256-NEXT:    st1h { z3.d }, p1, [z2.d]
 ; VBITS_GE_256-NEXT:    st1h { z0.d }, p0, [z4.d]
 ; VBITS_GE_256-NEXT:    ret
 ;
@@ -232,10 +232,10 @@ define void @masked_scatter_v8i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_512-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_GE_512-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_GE_512-NEXT:    uunpklo z0.d, z0.s
-; VBITS_GE_512-NEXT:    ld1d { z2.d }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    sunpklo z1.d, z1.s
-; VBITS_GE_512-NEXT:    cmpne p0.d, p0/z, z1.d, #0
-; VBITS_GE_512-NEXT:    st1h { z0.d }, p0, [z2.d]
+; VBITS_GE_512-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    st1h { z0.d }, p1, [z1.d]
 ; VBITS_GE_512-NEXT:    ret
   %vals = load <8 x i16>, ptr %a
   %ptrs = load <8 x ptr>, ptr %b
@@ -253,8 +253,8 @@ define void @masked_scatter_v16i16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ld1d { z1.d }, p1/z, [x1]
 ; CHECK-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1h { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
@@ -274,8 +274,8 @@ define void @masked_scatter_v32i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ld1d { z1.d }, p1/z, [x1]
 ; CHECK-NEXT:    cmpeq p0.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1h { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
@@ -317,9 +317,9 @@ define void @masked_scatter_v4i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    cmeq v1.4s, v0.4s, #0
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    sunpklo z1.d, z1.s
-; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x1]
-; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
-; CHECK-NEXT:    st1w { z0.d }, p0, [z2.d]
+; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    st1w { z0.d }, p1, [z1.d]
 ; CHECK-NEXT:    ret
   %vals = load <4 x i32>, ptr %a
   %ptrs = load <4 x ptr>, ptr %b
@@ -333,22 +333,22 @@ define void @masked_scatter_v8i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
+; VBITS_GE_256-NEXT:    ptrue p1.d, vl4
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    cmpeq p1.s, p0/z, z0.s, #0
-; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    ld1d { z3.d }, p1/z, [x1]
+; VBITS_GE_256-NEXT:    ld1d { z4.d }, p1/z, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    cmpeq p0.s, p0/z, z0.s, #0
 ; VBITS_GE_256-NEXT:    uunpklo z2.d, z0.s
 ; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
-; VBITS_GE_256-NEXT:    mov z1.s, p1/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_256-NEXT:    punpklo p2.h, p1.b
 ; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
+; VBITS_GE_256-NEXT:    mov z1.s, p0/z, #-1 // =0xffffffffffffffff
+; VBITS_GE_256-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_256-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z1.b, #16
-; VBITS_GE_256-NEXT:    ld1d { z3.d }, p0/z, [x1, x8, lsl #3]
-; VBITS_GE_256-NEXT:    ld1d { z4.d }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    st1w { z2.d }, p0, [z3.d]
 ; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
-; VBITS_GE_256-NEXT:    and p1.b, p2/z, p2.b, p0.b
-; VBITS_GE_256-NEXT:    cmpne p0.d, p0/z, z1.d, #0
-; VBITS_GE_256-NEXT:    st1w { z2.d }, p1, [z4.d]
-; VBITS_GE_256-NEXT:    st1w { z0.d }, p0, [z3.d]
+; VBITS_GE_256-NEXT:    cmpne p0.d, p1/z, z1.d, #0
+; VBITS_GE_256-NEXT:    st1w { z0.d }, p0, [z4.d]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_scatter_v8i32:
@@ -434,8 +434,8 @@ define void @masked_scatter_v1i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @masked_scatter_v2i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    cmeq v1.2d, v0.2d, #0
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
 ; CHECK-NEXT:    ldr q1, [x1]
@@ -454,8 +454,8 @@ define void @masked_scatter_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; CHECK-NEXT:    cmpeq p0.d, p0/z, z0.d, #0
-; CHECK-NEXT:    st1d { z0.d }, p0, [z1.d]
+; CHECK-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
+; CHECK-NEXT:    st1d { z0.d }, p1, [z1.d]
 ; CHECK-NEXT:    ret
   %vals = load <4 x i64>, ptr %a
   %ptrs = load <4 x ptr>, ptr %b
@@ -469,14 +469,14 @@ define void @masked_scatter_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
-; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x1, x8, lsl #3]
-; VBITS_GE_256-NEXT:    ld1d { z3.d }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    cmpeq p1.d, p0/z, z1.d, #0
-; VBITS_GE_256-NEXT:    cmpeq p0.d, p0/z, z0.d, #0
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p1, [z3.d]
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [z2.d]
+; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x0, x8, lsl #3]
+; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    ld1d { z3.d }, p0/z, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
+; VBITS_GE_256-NEXT:    cmpeq p0.d, p0/z, z2.d, #0
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p1, [z1.d]
+; VBITS_GE_256-NEXT:    st1d { z2.d }, p0, [z3.d]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_scatter_v8i64:
@@ -484,8 +484,8 @@ define void @masked_scatter_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; VBITS_GE_512-NEXT:    cmpeq p0.d, p0/z, z0.d, #0
-; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [z1.d]
+; VBITS_GE_512-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
+; VBITS_GE_512-NEXT:    st1d { z0.d }, p1, [z1.d]
 ; VBITS_GE_512-NEXT:    ret
   %vals = load <8 x i64>, ptr %a
   %ptrs = load <8 x ptr>, ptr %b
@@ -500,8 +500,8 @@ define void @masked_scatter_v16i64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl16
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; CHECK-NEXT:    cmpeq p0.d, p0/z, z0.d, #0
-; CHECK-NEXT:    st1d { z0.d }, p0, [z1.d]
+; CHECK-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
+; CHECK-NEXT:    st1d { z0.d }, p1, [z1.d]
 ; CHECK-NEXT:    ret
   %vals = load <16 x i64>, ptr %a
   %ptrs = load <16 x ptr>, ptr %b
@@ -516,8 +516,8 @@ define void @masked_scatter_v32i64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl32
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; CHECK-NEXT:    cmpeq p0.d, p0/z, z0.d, #0
-; CHECK-NEXT:    st1d { z0.d }, p0, [z1.d]
+; CHECK-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
+; CHECK-NEXT:    st1d { z0.d }, p1, [z1.d]
 ; CHECK-NEXT:    ret
   %vals = load <32 x i64>, ptr %a
   %ptrs = load <32 x ptr>, ptr %b
@@ -539,15 +539,15 @@ define void @masked_scatter_v2f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    fcmeq v2.4h, v1.4h, #0.0
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    sshll v2.4s, v2.4h, #0
-; CHECK-NEXT:    uunpklo z1.d, z1.s
 ; CHECK-NEXT:    mov v0.h[0], v2.h[0]
 ; CHECK-NEXT:    mov w8, v2.s[1]
 ; CHECK-NEXT:    mov v0.h[1], w8
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
-; CHECK-NEXT:    ldr q0, [x1]
-; CHECK-NEXT:    st1h { z1.d }, p0, [z0.d]
+; CHECK-NEXT:    uunpklo z0.d, z1.s
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    st1h { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
   %vals = load <2 x half>, ptr %a
   %ptrs = load <2 x ptr>, ptr %b
@@ -565,10 +565,10 @@ define void @masked_scatter_v4f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x1]
 ; CHECK-NEXT:    sunpklo z1.d, z1.s
-; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
-; CHECK-NEXT:    st1h { z0.d }, p0, [z2.d]
+; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    st1h { z0.d }, p1, [z1.d]
 ; CHECK-NEXT:    ret
   %vals = load <4 x half>, ptr %a
   %ptrs = load <4 x ptr>, ptr %b
@@ -586,19 +586,19 @@ define void @masked_scatter_v8f16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    fcmeq v1.8h, v0.8h, #0.0
 ; VBITS_GE_256-NEXT:    uunpklo z3.s, z0.h
 ; VBITS_GE_256-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    ld1d { z4.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    sunpklo z2.s, z1.h
 ; VBITS_GE_256-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    uunpklo z3.d, z3.s
-; VBITS_GE_256-NEXT:    ld1d { z4.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    sunpklo z2.d, z2.s
 ; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
 ; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_GE_256-NEXT:    cmpne p1.d, p0/z, z2.d, #0
 ; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    st1h { z3.d }, p1, [z2.d]
 ; VBITS_GE_256-NEXT:    cmpne p0.d, p0/z, z1.d, #0
+; VBITS_GE_256-NEXT:    st1h { z3.d }, p1, [z2.d]
 ; VBITS_GE_256-NEXT:    st1h { z0.d }, p0, [z4.d]
 ; VBITS_GE_256-NEXT:    ret
 ;
@@ -610,10 +610,10 @@ define void @masked_scatter_v8f16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_512-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_GE_512-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_GE_512-NEXT:    uunpklo z0.d, z0.s
-; VBITS_GE_512-NEXT:    ld1d { z2.d }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    sunpklo z1.d, z1.s
-; VBITS_GE_512-NEXT:    cmpne p0.d, p0/z, z1.d, #0
-; VBITS_GE_512-NEXT:    st1h { z0.d }, p0, [z2.d]
+; VBITS_GE_512-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    st1h { z0.d }, p1, [z1.d]
 ; VBITS_GE_512-NEXT:    ret
   %vals = load <8 x half>, ptr %a
   %ptrs = load <8 x ptr>, ptr %b
@@ -631,8 +631,8 @@ define void @masked_scatter_v16f16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ld1d { z1.d }, p1/z, [x1]
 ; CHECK-NEXT:    fcmeq p0.h, p0/z, z0.h, #0.0
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1h { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
@@ -652,8 +652,8 @@ define void @masked_scatter_v32f16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ld1d { z1.d }, p1/z, [x1]
 ; CHECK-NEXT:    fcmeq p0.h, p0/z, z0.h, #0.0
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1h { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
@@ -695,9 +695,9 @@ define void @masked_scatter_v4f32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    fcmeq v1.4s, v0.4s, #0.0
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    sunpklo z1.d, z1.s
-; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x1]
-; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
-; CHECK-NEXT:    st1w { z0.d }, p0, [z2.d]
+; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    st1w { z0.d }, p1, [z1.d]
 ; CHECK-NEXT:    ret
   %vals = load <4 x float>, ptr %a
   %ptrs = load <4 x ptr>, ptr %b
@@ -711,22 +711,22 @@ define void @masked_scatter_v8f32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
+; VBITS_GE_256-NEXT:    ptrue p1.d, vl4
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    fcmeq p1.s, p0/z, z0.s, #0.0
-; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    ld1d { z3.d }, p1/z, [x1]
+; VBITS_GE_256-NEXT:    ld1d { z4.d }, p1/z, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
 ; VBITS_GE_256-NEXT:    uunpklo z2.d, z0.s
 ; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
-; VBITS_GE_256-NEXT:    mov z1.s, p1/z, #-1 // =0xffffffffffffffff
-; VBITS_GE_256-NEXT:    punpklo p2.h, p1.b
 ; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
-; VBITS_GE_256-NEXT:    ld1d { z3.d }, p0/z, [x1, x8, lsl #3]
-; VBITS_GE_256-NEXT:    ld1d { z4.d }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    mov z1.s, p0/z, #-1 // =0xffffffffffffffff
+; VBITS_GE_256-NEXT:    punpklo p0.h, p0.b
+; VBITS_GE_256-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z1.b, #16
+; VBITS_GE_256-NEXT:    st1w { z2.d }, p0, [z3.d]
 ; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
-; VBITS_GE_256-NEXT:    and p1.b, p2/z, p2.b, p0.b
-; VBITS_GE_256-NEXT:    cmpne p0.d, p0/z, z1.d, #0
-; VBITS_GE_256-NEXT:    st1w { z2.d }, p1, [z4.d]
-; VBITS_GE_256-NEXT:    st1w { z0.d }, p0, [z3.d]
+; VBITS_GE_256-NEXT:    cmpne p0.d, p1/z, z1.d, #0
+; VBITS_GE_256-NEXT:    st1w { z0.d }, p0, [z4.d]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_scatter_v8f32:
@@ -812,8 +812,8 @@ define void @masked_scatter_v1f64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 define void @masked_scatter_v2f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    fcmeq v1.2d, v0.2d, #0.0
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
 ; CHECK-NEXT:    ldr q1, [x1]
@@ -847,14 +847,14 @@ define void @masked_scatter_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
-; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x1, x8, lsl #3]
-; VBITS_GE_256-NEXT:    ld1d { z3.d }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    fcmeq p1.d, p0/z, z1.d, #0.0
-; VBITS_GE_256-NEXT:    fcmeq p0.d, p0/z, z0.d, #0.0
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p1, [z3.d]
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [z2.d]
+; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x0, x8, lsl #3]
+; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; VBITS_GE_256-NEXT:    ld1d { z3.d }, p0/z, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    fcmeq p1.d, p0/z, z0.d, #0.0
+; VBITS_GE_256-NEXT:    fcmeq p0.d, p0/z, z2.d, #0.0
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p1, [z1.d]
+; VBITS_GE_256-NEXT:    st1d { z2.d }, p0, [z3.d]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_scatter_v8f64:

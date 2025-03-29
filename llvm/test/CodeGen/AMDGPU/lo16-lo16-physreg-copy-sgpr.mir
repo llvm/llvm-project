@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
 
 # Note: GFX8 did not allow SDWA SGPR sources. Therefor no HI16 subregs can be used there.
 

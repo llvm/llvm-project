@@ -20,6 +20,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/MisExpect.h"
 
@@ -101,10 +102,7 @@ static bool handleSwitchExpect(SwitchInst &SI) {
   misexpect::checkExpectAnnotations(SI, Weights, /*IsFrontend=*/true);
 
   SI.setCondition(ArgValue);
-
-  SI.setMetadata(LLVMContext::MD_prof,
-                 MDBuilder(CI->getContext()).createBranchWeights(Weights));
-
+  setBranchWeights(SI, Weights, /*IsExpected=*/true);
   return true;
 }
 
@@ -264,11 +262,13 @@ static void handlePhiDef(CallInst *Expect) {
     if (IsOpndComingFromSuccessor(BI->getSuccessor(1)))
       BI->setMetadata(LLVMContext::MD_prof,
                       MDB.createBranchWeights(LikelyBranchWeightVal,
-                                              UnlikelyBranchWeightVal));
+                                              UnlikelyBranchWeightVal,
+                                              /*IsExpected=*/true));
     else if (IsOpndComingFromSuccessor(BI->getSuccessor(0)))
       BI->setMetadata(LLVMContext::MD_prof,
                       MDB.createBranchWeights(UnlikelyBranchWeightVal,
-                                              LikelyBranchWeightVal));
+                                              LikelyBranchWeightVal,
+                                              /*IsExpected=*/true));
   }
 }
 
@@ -333,12 +333,12 @@ template <class BrSelInst> static bool handleBrSelExpect(BrSelInst &BSI) {
   SmallVector<uint32_t, 4> ExpectedWeights;
   if ((ExpectedValue->getZExtValue() == ValueComparedTo) ==
       (Predicate == CmpInst::ICMP_EQ)) {
-    Node =
-        MDB.createBranchWeights(LikelyBranchWeightVal, UnlikelyBranchWeightVal);
+    Node = MDB.createBranchWeights(
+        LikelyBranchWeightVal, UnlikelyBranchWeightVal, /*IsExpected=*/true);
     ExpectedWeights = {LikelyBranchWeightVal, UnlikelyBranchWeightVal};
   } else {
-    Node =
-        MDB.createBranchWeights(UnlikelyBranchWeightVal, LikelyBranchWeightVal);
+    Node = MDB.createBranchWeights(UnlikelyBranchWeightVal,
+                                   LikelyBranchWeightVal, /*IsExpected=*/true);
     ExpectedWeights = {UnlikelyBranchWeightVal, LikelyBranchWeightVal};
   }
 

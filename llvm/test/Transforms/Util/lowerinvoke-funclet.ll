@@ -1,4 +1,4 @@
-; RUN: opt -passes=lowerinvoke -S < %s | FileCheck %s
+; RUN: opt -passes=lower-invoke -S < %s | FileCheck %s
 
 ; Test if invoke instructions that have a funclet operand bundle can be lowered.
 

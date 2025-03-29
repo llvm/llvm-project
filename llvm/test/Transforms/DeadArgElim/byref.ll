@@ -17,6 +17,6 @@ define void @dont_replace_by_poison(ptr %ptr) {
 ; CHECK-NEXT:    call void @unused_byref_arg(ptr byref(i32) poison)
 ; CHECK-NEXT:    ret void
 ;
-  call void @unused_byref_arg(i32* byref(i32) %ptr)
+  call void @unused_byref_arg(ptr byref(i32) %ptr)
   ret void
 }

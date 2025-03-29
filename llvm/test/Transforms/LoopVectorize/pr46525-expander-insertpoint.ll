@@ -28,7 +28,7 @@ define void @test(i16 %x, i64 %y, ptr %ptr) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    store i32 0, ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
@@ -43,7 +43,7 @@ define void @test(i16 %x, i64 %y, ptr %ptr) {
 ; CHECK-NEXT:    [[V3:%.*]] = add i8 [[V2]], 1
 ; CHECK-NEXT:    [[CMP15:%.*]] = icmp slt i8 [[V3]], 5
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], [[INC]]
-; CHECK-NEXT:    br i1 [[CMP15]], label [[LOOP]], label [[LOOP_EXIT]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP15]], label [[LOOP]], label [[LOOP_EXIT]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       loop.exit:
 ; CHECK-NEXT:    [[DIV_1:%.*]] = udiv i64 [[Y]], [[ADD]]
 ; CHECK-NEXT:    [[V1:%.*]] = add i64 [[DIV_1]], 1

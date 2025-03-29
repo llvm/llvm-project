@@ -8,13 +8,13 @@
 
 #include "mlir-c/Dialect/Async.h"
 
-#include <pybind11/pybind11.h>
+#include "mlir/Bindings/Python/Nanobind.h"
 
 // -----------------------------------------------------------------------------
 // Module initialization.
 // -----------------------------------------------------------------------------
 
-PYBIND11_MODULE(_mlirAsyncPasses, m) {
+NB_MODULE(_mlirAsyncPasses, m) {
   m.doc() = "MLIR Async Dialect Passes";
 
   // Register all Async passes on load.

@@ -76,12 +76,12 @@ TypeSize LegacyCBufferLayout::getTypeAllocSize(Type *Ty) {
   } else if (auto *AT = dyn_cast<ArrayType>(Ty)) {
     unsigned NumElts = AT->getNumElements();
     if (NumElts == 0)
-      return TypeSize::Fixed(0);
+      return TypeSize::getFixed(0);
 
     TypeSize EltSize = getTypeAllocSize(AT->getElementType());
     TypeSize AlignedEltSize = alignTo4Dwords(EltSize);
     // Each new element start 4 dwords aligned.
-    return TypeSize::Fixed(AlignedEltSize * (NumElts - 1) + EltSize);
+    return TypeSize::getFixed(AlignedEltSize * (NumElts - 1) + EltSize);
   } else {
     // NOTE: Use type store size, not align to ABI on basic types for legacy
     // layout.
@@ -95,7 +95,7 @@ LegacyCBufferLayout::getStructLayout(StructType *ST) {
   if (it != StructLayouts.end())
     return it->second;
 
-  TypeSize Offset = TypeSize::Fixed(0);
+  TypeSize Offset = TypeSize::getFixed(0);
   LegacyStructLayout Layout;
   Layout.ST = ST;
   for (Type *EltTy : ST->elements()) {

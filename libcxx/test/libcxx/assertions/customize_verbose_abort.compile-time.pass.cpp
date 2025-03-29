@@ -22,6 +22,6 @@ void my_abort(char const*, ...) {
 }
 
 int main(int, char**) {
-  _LIBCPP_ASSERT(false, "message");
+  _LIBCPP_VERBOSE_ABORT("%s", "message");
   return EXIT_FAILURE;
 }

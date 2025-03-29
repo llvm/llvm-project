@@ -1,5 +1,5 @@
-! RUN: bbc --always-execute-loop-body --emit-fir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -mmlir --always-execute-loop-body -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --always-execute-loop-body --emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -mmlir --always-execute-loop-body -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s
 
 ! Given the flag `--always-execute-loop-body` the compiler emits an extra
 ! code to change to tripcount, test tries to verify the extra emitted FIR.

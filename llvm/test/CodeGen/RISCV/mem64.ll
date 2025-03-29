@@ -363,7 +363,7 @@ define void @addi_fold_crash(i64 %arg) nounwind {
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    sb zero, 0(a0)
 ; RV64I-NEXT:    mv a0, a1
-; RV64I-NEXT:    call snork@plt
+; RV64I-NEXT:    call snork
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret

@@ -1,10 +1,33 @@
-# RUN: %PYTHON %s | FileCheck %s
+# RUN: %PYTHON %s pybind11 | FileCheck %s
+# RUN: %PYTHON %s nanobind | FileCheck %s
 
+import sys
 from mlir.ir import *
 import mlir.dialects.func as func
 import mlir.dialects.python_test as test
 import mlir.dialects.tensor as tensor
 import mlir.dialects.arith as arith
+
+if sys.argv[1] == "pybind11":
+    from mlir._mlir_libs._mlirPythonTestPybind11 import (
+        TestAttr,
+        TestType,
+        TestTensorValue,
+        TestIntegerRankedTensorType,
+    )
+
+    test.register_python_test_dialect(get_dialect_registry(), use_nanobind=False)
+elif sys.argv[1] == "nanobind":
+    from mlir._mlir_libs._mlirPythonTestNanobind import (
+        TestAttr,
+        TestType,
+        TestTensorValue,
+        TestIntegerRankedTensorType,
+    )
+
+    test.register_python_test_dialect(get_dialect_registry(), use_nanobind=True)
+else:
+    raise ValueError("Expected pybind11 or nanobind as argument")
 
 
 def run(f):
@@ -17,8 +40,6 @@ def run(f):
 @run
 def testAttributes():
     with Context() as ctx, Location.unknown():
-        ctx.allow_unregistered_dialects = True
-
         #
         # Check op construction with attributes.
         #
@@ -28,7 +49,7 @@ def testAttributes():
         two = IntegerAttr.get(i32, 2)
         unit = UnitAttr.get()
 
-        # CHECK: "python_test.attributed_op"() {
+        # CHECK: python_test.attributed_op  {
         # CHECK-DAG: mandatory_i32 = 1 : i32
         # CHECK-DAG: optional_i32 = 2 : i32
         # CHECK-DAG: unit
@@ -36,7 +57,7 @@ def testAttributes():
         op = test.AttributedOp(one, optional_i32=two, unit=unit)
         print(f"{op}")
 
-        # CHECK: "python_test.attributed_op"() {
+        # CHECK: python_test.attributed_op  {
         # CHECK: mandatory_i32 = 2 : i32
         # CHECK: }
         op2 = test.AttributedOp(two)
@@ -48,21 +69,21 @@ def testAttributes():
 
         assert "additional" not in op.attributes
 
-        # CHECK: "python_test.attributed_op"() {
+        # CHECK: python_test.attributed_op  {
         # CHECK-DAG: additional = 1 : i32
         # CHECK-DAG: mandatory_i32 = 2 : i32
         # CHECK: }
         op2.attributes["additional"] = one
         print(f"{op2}")
 
-        # CHECK: "python_test.attributed_op"() {
+        # CHECK: python_test.attributed_op  {
         # CHECK-DAG: additional = 2 : i32
         # CHECK-DAG: mandatory_i32 = 2 : i32
         # CHECK: }
         op2.attributes["additional"] = two
         print(f"{op2}")
 
-        # CHECK: "python_test.attributed_op"() {
+        # CHECK: python_test.attributed_op  {
         # CHECK-NOT: additional = 2 : i32
         # CHECK:     mandatory_i32 = 2 : i32
         # CHECK: }
@@ -139,7 +160,6 @@ def testAttributes():
 @run
 def attrBuilder():
     with Context() as ctx, Location.unknown():
-        ctx.allow_unregistered_dialects = True
         # CHECK: python_test.attributes_op
         op = test.AttributesOp(
             # CHECK-DAG: x_affinemap = affine_map<() -> (2)>
@@ -168,7 +188,7 @@ def attrBuilder():
             x_f32arr=[2.0, 3.0],
             x_f64=4.25,  # CHECK-DAG: x_f64 = 4.250000e+00 : f64
             x_f64arr=[4.0, 8.0],  # CHECK-DAG: x_f64arr = [4.000000e+00, 8.000000e+00]
-            # CHECK-DAG: x_f64elems = dense<[3.952530e-323, 7.905050e-323]> : tensor<2xf64>
+            # CHECK-DAG: x_f64elems = dense<[8.000000e+00, 1.600000e+01]> : tensor<2xf64>
             x_f64elems=[8.0, 16.0],
             # CHECK-DAG: x_flatsymrefarr = [@symbol1, @symbol2]
             x_flatsymrefarr=["symbol1", "symbol2"],
@@ -177,10 +197,10 @@ def attrBuilder():
             x_i16=42,  # CHECK-DAG: x_i16 = 42 : i16
             x_i32=6,  # CHECK-DAG: x_i32 = 6 : i32
             x_i32arr=[4, 5],  # CHECK-DAG: x_i32arr = [4 : i32, 5 : i32]
-            x_i32elems=[5, 6],  # CHECK-DAG: x_i32elems = dense<[5, 6]> : tensor<2xsi32>
+            x_i32elems=[5, 6],  # CHECK-DAG: x_i32elems = dense<[5, 6]> : tensor<2xi32>
             x_i64=9,  # CHECK-DAG: x_i64 = 9 : i64
             x_i64arr=[7, 8],  # CHECK-DAG: x_i64arr = [7, 8]
-            x_i64elems=[8, 9],  # CHECK-DAG: x_i64elems = dense<[8, 9]> : tensor<2xsi64>
+            x_i64elems=[8, 9],  # CHECK-DAG: x_i64elems = dense<[8, 9]> : tensor<2xi64>
             x_i64svecarr=[10, 11],  # CHECK-DAG: x_i64svecarr = [10, 11]
             x_i8=11,  # CHECK-DAG: x_i8 = 11 : i8
             x_idx=10,  # CHECK-DAG: x_idx = 10 : index
@@ -216,7 +236,6 @@ def attrBuilder():
 @run
 def inferReturnTypes():
     with Context() as ctx, Location.unknown(ctx):
-        test.register_python_test_dialect(ctx)
         module = Module.create()
         with InsertionPoint(module.body):
             op = test.InferResultsOp()
@@ -261,7 +280,6 @@ def inferReturnTypes():
 @run
 def resultTypesDefinedByTraits():
     with Context() as ctx, Location.unknown(ctx):
-        test.register_python_test_dialect(ctx)
         module = Module.create()
         with InsertionPoint(module.body):
             inferred = test.InferResultsOp()
@@ -296,8 +314,6 @@ def resultTypesDefinedByTraits():
 @run
 def testOptionalOperandOp():
     with Context() as ctx, Location.unknown():
-        test.register_python_test_dialect(ctx)
-
         module = Module.create()
         with InsertionPoint(module.body):
             op1 = test.OptionalOperandOp()
@@ -312,18 +328,29 @@ def testOptionalOperandOp():
 # CHECK-LABEL: TEST: testCustomAttribute
 @run
 def testCustomAttribute():
-    with Context() as ctx:
-        test.register_python_test_dialect(ctx)
-        a = test.TestAttr.get()
+    with Context() as ctx, Location.unknown():
+        a = TestAttr.get()
         # CHECK: #python_test.test_attr
         print(a)
 
+        # CHECK: python_test.custom_attributed_op  {
+        # CHECK: #python_test.test_attr
+        # CHECK: }
+        op2 = test.CustomAttributedOp(a)
+        print(f"{op2}")
+
+        # CHECK: #python_test.test_attr
+        print(f"{op2.test_attr}")
+
+        # CHECK: TestAttr(#python_test.test_attr)
+        print(repr(op2.test_attr))
+
         # The following cast must not assert.
-        b = test.TestAttr(a)
+        b = TestAttr(a)
 
         unit = UnitAttr.get()
         try:
-            test.TestAttr(unit)
+            TestAttr(unit)
         except ValueError as e:
             assert "Cannot cast attribute to TestAttr" in str(e)
         else:
@@ -332,7 +359,7 @@ def testCustomAttribute():
         # The following must trigger a TypeError from our adaptors and must not
         # crash.
         try:
-            test.TestAttr(42)
+            TestAttr(42)
         except TypeError as e:
             assert "Expected an MLIR object" in str(e)
         else:
@@ -341,7 +368,7 @@ def testCustomAttribute():
         # The following must trigger a TypeError from pybind (therefore, not
         # checking its message) and must not crash.
         try:
-            test.TestAttr(42, 56)
+            TestAttr(42, 56)
         except TypeError:
             pass
         else:
@@ -351,13 +378,12 @@ def testCustomAttribute():
 @run
 def testCustomType():
     with Context() as ctx:
-        test.register_python_test_dialect(ctx)
-        a = test.TestType.get()
+        a = TestType.get()
         # CHECK: !python_test.test_type
         print(a)
 
         # The following cast must not assert.
-        b = test.TestType(a)
+        b = TestType(a)
         # Instance custom types should have typeids
         assert isinstance(b.typeid, TypeID)
         # Subclasses of ir.Type should not have a static_typeid
@@ -369,7 +395,7 @@ def testCustomType():
 
         i8 = IntegerType.get_signless(8)
         try:
-            test.TestType(i8)
+            TestType(i8)
         except ValueError as e:
             assert "Cannot cast type to TestType" in str(e)
         else:
@@ -378,7 +404,7 @@ def testCustomType():
         # The following must trigger a TypeError from our adaptors and must not
         # crash.
         try:
-            test.TestType(42)
+            TestType(42)
         except TypeError as e:
             assert "Expected an MLIR object" in str(e)
         else:
@@ -387,7 +413,7 @@ def testCustomType():
         # The following must trigger a TypeError from pybind (therefore, not
         # checking its message) and must not crash.
         try:
-            test.TestType(42, 56)
+            TestType(42, 56)
         except TypeError:
             pass
         else:
@@ -398,11 +424,9 @@ def testCustomType():
 # CHECK-LABEL: TEST: testTensorValue
 def testTensorValue():
     with Context() as ctx, Location.unknown():
-        test.register_python_test_dialect(ctx)
-
         i8 = IntegerType.get_signless(8)
 
-        class Tensor(test.TestTensorValue):
+        class Tensor(TestTensorValue):
             def __str__(self):
                 return super().__str__().replace("Value", "Tensor")
 
@@ -422,16 +446,21 @@ def testTensorValue():
 
             # Classes of custom types that inherit from concrete types should have
             # static_typeid
-            assert isinstance(test.TestIntegerRankedTensorType.static_typeid, TypeID)
+            assert isinstance(TestIntegerRankedTensorType.static_typeid, TypeID)
             # And it should be equal to the in-tree concrete type
-            assert test.TestIntegerRankedTensorType.static_typeid == t.type.typeid
+            assert TestIntegerRankedTensorType.static_typeid == t.type.typeid
+
+            d = tensor.EmptyOp([1, 2, 3], IntegerType.get_signless(5)).result
+            # CHECK: Value(%{{.*}} = tensor.empty() : tensor<1x2x3xi5>)
+            print(d)
+            # CHECK: TestTensorValue
+            print(repr(d))
 
 
 # CHECK-LABEL: TEST: inferReturnTypeComponents
 @run
 def inferReturnTypeComponents():
     with Context() as ctx, Location.unknown(ctx):
-        test.register_python_test_dialect(ctx)
         module = Module.create()
         i32 = IntegerType.get_signless(32)
         with InsertionPoint(module.body):
@@ -483,9 +512,7 @@ def inferReturnTypeComponents():
 @run
 def testCustomTypeTypeCaster():
     with Context() as ctx, Location.unknown():
-        test.register_python_test_dialect(ctx)
-
-        a = test.TestType.get()
+        a = TestType.get()
         assert a.typeid is not None
 
         b = Type.parse("!python_test.test_type")
@@ -494,7 +521,7 @@ def testCustomTypeTypeCaster():
         # CHECK: TestType(!python_test.test_type)
         print(repr(b))
 
-        c = test.TestIntegerRankedTensorType.get([10, 10], 5)
+        c = TestIntegerRankedTensorType.get([10, 10], 5)
         # CHECK: tensor<10x10xi5>
         print(c)
         # CHECK: TestIntegerRankedTensorType(tensor<10x10xi5>)
@@ -503,17 +530,28 @@ def testCustomTypeTypeCaster():
         # CHECK: Type caster is already registered
         try:
 
+            @register_type_caster(c.typeid)
             def type_caster(pytype):
-                return test.TestIntegerRankedTensorType(pytype)
+                return TestIntegerRankedTensorType(pytype)
 
-            register_type_caster(c.typeid, type_caster)
         except RuntimeError as e:
             print(e)
 
+        # python_test dialect registers a caster for RankedTensorType in its extension (pybind) module.
+        # So this one replaces that one (successfully). And then just to be sure we restore the original caster below.
+        @register_type_caster(c.typeid, replace=True)
         def type_caster(pytype):
-            return test.TestIntegerRankedTensorType(pytype)
+            return RankedTensorType(pytype)
 
-        register_type_caster(c.typeid, type_caster, replace=True)
+        d = tensor.EmptyOp([10, 10], IntegerType.get_signless(5)).result
+        # CHECK: tensor<10x10xi5>
+        print(d.type)
+        # CHECK: ranked tensor type RankedTensorType(tensor<10x10xi5>)
+        print("ranked tensor type", repr(d.type))
+
+        @register_type_caster(c.typeid, replace=True)
+        def type_caster(pytype):
+            return TestIntegerRankedTensorType(pytype)
 
         d = tensor.EmptyOp([10, 10], IntegerType.get_signless(5)).result
         # CHECK: tensor<10x10xi5>
@@ -526,7 +564,6 @@ def testCustomTypeTypeCaster():
 @run
 def testInferTypeOpInterface():
     with Context() as ctx, Location.unknown(ctx):
-        test.register_python_test_dialect(ctx)
         module = Module.create()
         with InsertionPoint(module.body):
             i64 = IntegerType.get_signless(64)
@@ -539,3 +576,123 @@ def testInferTypeOpInterface():
             two_operands = test.InferResultsVariadicInputsOp(single=zero, doubled=zero)
             # CHECK: f32
             print(two_operands.result.type)
+
+
+# CHECK-LABEL: TEST: testVariadicOperandAccess
+@run
+def testVariadicOperandAccess():
+    def values(lst):
+        return [str(e) for e in lst]
+
+    with Context() as ctx, Location.unknown(ctx):
+        module = Module.create()
+        with InsertionPoint(module.body):
+            i32 = IntegerType.get_signless(32)
+            zero = arith.ConstantOp(i32, 0)
+            one = arith.ConstantOp(i32, 1)
+            two = arith.ConstantOp(i32, 2)
+            three = arith.ConstantOp(i32, 3)
+            four = arith.ConstantOp(i32, 4)
+
+            variadic_operands = test.SameVariadicOperandSizeOp(
+                [zero, one], two, [three, four]
+            )
+            # CHECK: Value(%{{.*}} = arith.constant 2 : i32)
+            print(variadic_operands.non_variadic)
+            # CHECK: ['Value(%{{.*}} = arith.constant 0 : i32)', 'Value(%{{.*}} = arith.constant 1 : i32)']
+            print(values(variadic_operands.variadic1))
+            # CHECK: ['Value(%{{.*}} = arith.constant 3 : i32)', 'Value(%{{.*}} = arith.constant 4 : i32)']
+            print(values(variadic_operands.variadic2))
+
+
+# CHECK-LABEL: TEST: testVariadicResultAccess
+@run
+def testVariadicResultAccess():
+    def types(lst):
+        return [e.type for e in lst]
+
+    with Context() as ctx, Location.unknown(ctx):
+        module = Module.create()
+        with InsertionPoint(module.body):
+            i = [IntegerType.get_signless(k) for k in range(7)]
+
+            # Test Variadic-Fixed-Variadic
+            op = test.SameVariadicResultSizeOpVFV([i[0], i[1]], i[2], [i[3], i[4]])
+            # CHECK: i2
+            print(op.non_variadic.type)
+            # CHECK: [IntegerType(i0), IntegerType(i1)]
+            print(types(op.variadic1))
+            # CHECK: [IntegerType(i3), IntegerType(i4)]
+            print(types(op.variadic2))
+
+            #  Test Variadic-Variadic-Variadic
+            op = test.SameVariadicResultSizeOpVVV(
+                [i[0], i[1]], [i[2], i[3]], [i[4], i[5]]
+            )
+            # CHECK: [IntegerType(i0), IntegerType(i1)]
+            print(types(op.variadic1))
+            # CHECK: [IntegerType(i2), IntegerType(i3)]
+            print(types(op.variadic2))
+            # CHECK: [IntegerType(i4), IntegerType(i5)]
+            print(types(op.variadic3))
+
+            #  Test Fixed-Fixed-Variadic
+            op = test.SameVariadicResultSizeOpFFV(i[0], i[1], [i[2], i[3], i[4]])
+            # CHECK: i0
+            print(op.non_variadic1.type)
+            # CHECK: i1
+            print(op.non_variadic2.type)
+            # CHECK: [IntegerType(i2), IntegerType(i3), IntegerType(i4)]
+            print(types(op.variadic))
+
+            #  Test Variadic-Variadic-Fixed
+            op = test.SameVariadicResultSizeOpVVF(
+                [i[0], i[1], i[2]], [i[3], i[4], i[5]], i[6]
+            )
+            # CHECK: [IntegerType(i0), IntegerType(i1), IntegerType(i2)]
+            print(types(op.variadic1))
+            # CHECK: [IntegerType(i3), IntegerType(i4), IntegerType(i5)]
+            print(types(op.variadic2))
+            # CHECK: i6
+            print(op.non_variadic.type)
+
+            # Test Fixed-Variadic-Fixed-Variadic-Fixed
+            op = test.SameVariadicResultSizeOpFVFVF(
+                i[0], [i[1], i[2]], i[3], [i[4], i[5]], i[6]
+            )
+            # CHECK: i0
+            print(op.non_variadic1.type)
+            # CHECK: [IntegerType(i1), IntegerType(i2)]
+            print(types(op.variadic1))
+            # CHECK: i3
+            print(op.non_variadic2.type)
+            # CHECK: [IntegerType(i4), IntegerType(i5)]
+            print(types(op.variadic2))
+            # CHECK: i6
+            print(op.non_variadic3.type)
+
+            # Test Fixed-Variadic-Fixed-Variadic-Fixed - Variadic group size 0
+            op = test.SameVariadicResultSizeOpFVFVF(i[0], [], i[1], [], i[2])
+            # CHECK: i0
+            print(op.non_variadic1.type)
+            # CHECK: []
+            print(types(op.variadic1))
+            # CHECK: i1
+            print(op.non_variadic2.type)
+            # CHECK: []
+            print(types(op.variadic2))
+            # CHECK: i2
+            print(op.non_variadic3.type)
+
+            # Test Fixed-Variadic-Fixed-Variadic-Fixed - Variadic group size 1
+            op = test.SameVariadicResultSizeOpFVFVF(i[0], [i[1]], i[2], [i[3]], i[4])
+            # CHECK: i0
+            print(op.non_variadic1.type)
+            # CHECK: [IntegerType(i1)]
+            print(types(op.variadic1))
+            # CHECK: i2
+            print(op.non_variadic2.type)
+            # CHECK: [IntegerType(i3)]
+            print(types(op.variadic2))
+            # CHECK: i4
+            print(op.non_variadic3.type)

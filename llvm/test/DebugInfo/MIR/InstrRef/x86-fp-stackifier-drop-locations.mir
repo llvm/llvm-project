@@ -41,13 +41,13 @@
     %add = fadd x86_fp80 %a, %b, !dbg !21
     call void @llvm.dbg.value(metadata x86_fp80 %add, metadata !17, metadata !DIExpression()), !dbg !20
     call void @llvm.dbg.value(metadata x86_fp80 undef, metadata !18, metadata !DIExpression()), !dbg !20
-    %call = tail call x86_fp80 bitcast (x86_fp80 (...)* @ext to x86_fp80 ()*)() #3, !dbg !22
+    %call = tail call x86_fp80 @ext() #3, !dbg !22
     %mul = fmul x86_fp80 %add, %call, !dbg !23
     call void @llvm.dbg.value(metadata x86_fp80 %mul, metadata !17, metadata !DIExpression()), !dbg !20
-    %call2 = tail call x86_fp80 bitcast (x86_fp80 (...)* @ext to x86_fp80 ()*)() #3, !dbg !24
+    %call2 = tail call x86_fp80 @ext() #3, !dbg !24
     call void @llvm.dbg.value(metadata x86_fp80 undef, metadata !18, metadata !DIExpression()), !dbg !20
     %cmp = fcmp olt x86_fp80 %mul, 0xK4001A000000000000000, !dbg !25
-    %0 = load x86_fp80, x86_fp80* @glob, align 4, !dbg !27
+    %0 = load x86_fp80, ptr @glob, align 4, !dbg !27
     %add3 = fadd x86_fp80 %mul, %0, !dbg !27
     %a.addr.0 = select i1 %cmp, x86_fp80 %add3, x86_fp80 %mul, !dbg !27
     %add1 = fadd x86_fp80 %b, %c, !dbg !28
@@ -177,7 +177,7 @@ body:             |
     renamable $fp0 = nofpexcept DIV_Fp80 killed renamable $fp1, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw, debug-instr-number 19, debug-location !29
     renamable $fp0 = nofpexcept SUB_Fp80 killed renamable $fp3, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw, debug-instr-number 20, debug-location !30
     ;; Edited in:
-    renamable $fp0 = ADD_Fp64m killed renamable $fp0, killed $esp, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw, debug-instr-number 21,  :: (load (s64) from `i32 *undef`)
+    renamable $fp0 = ADD_Fp64m killed renamable $fp0, killed $esp, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw, debug-instr-number 21,  :: (load (s64) from `ptr undef`)
     RET 0, killed renamable $fp0, debug-location !31
 
 ...

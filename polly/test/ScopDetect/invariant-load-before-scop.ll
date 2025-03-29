@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-detect -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s -match-full-lines
 ;
 ; The LoadInst %.b761 is defined outside the SCoP, hence is always constant
 ; within it. It is no "required invariant load".

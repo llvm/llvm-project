@@ -10,7 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 
 #include "SPIRVOpUtils.h"
@@ -85,7 +87,9 @@ ParseResult BranchConditionalOp::parse(OpAsmParser &parser,
         parser.parseRSquare())
       return failure();
 
-    result.addAttribute(kBranchWeightAttrName,
+    StringAttr branchWeightsAttrName =
+        BranchConditionalOp::getBranchWeightsAttrName(result.name);
+    result.addAttribute(branchWeightsAttrName,
                         builder.getArrayAttr({trueWeight, falseWeight}));
   }
 
@@ -197,11 +201,11 @@ LogicalResult FunctionCallOp::verify() {
 }
 
 CallInterfaceCallable FunctionCallOp::getCallableForCallee() {
-  return (*this)->getAttrOfType<SymbolRefAttr>(kCallee);
+  return (*this)->getAttrOfType<SymbolRefAttr>(getCalleeAttrName());
 }
 
 void FunctionCallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
-  (*this)->setAttr(kCallee, callee.get<SymbolRefAttr>());
+  (*this)->setAttr(getCalleeAttrName(), cast<SymbolRefAttr>(callee));
 }
 
 Operation::operand_range FunctionCallOp::getArgOperands() {
@@ -255,6 +259,13 @@ static bool isMergeBlock(Block &block) {
          isa<spirv::MergeOp>(block.front());
 }
 
+/// Returns true if a `spirv.mlir.merge` op outside the merge block.
+static bool hasOtherMerge(Region &region) {
+  return !region.empty() && llvm::any_of(region.getOps(), [&](Operation &op) {
+    return isa<spirv::MergeOp>(op) && op.getBlock() != &region.back();
+  });
+}
+
 LogicalResult LoopOp::verifyRegions() {
   auto *op = getOperation();
 
@@ -294,6 +305,9 @@ LogicalResult LoopOp::verifyRegions() {
   if (!isMergeBlock(merge))
     return emitOpError("last block must be the merge block with only one "
                        "'spirv.mlir.merge' op");
+  if (hasOtherMerge(region))
+    return emitOpError(
+        "should not have 'spirv.mlir.merge' op outside the merge block");
 
   if (std::next(region.begin()) == region.end())
     return emitOpError(
@@ -363,33 +377,14 @@ Block *LoopOp::getMergeBlock() {
   return &getBody().back();
 }
 
-void LoopOp::addEntryAndMergeBlock() {
+void LoopOp::addEntryAndMergeBlock(OpBuilder &builder) {
   assert(getBody().empty() && "entry and merge block already exist");
-  getBody().push_back(new Block());
-  auto *mergeBlock = new Block();
-  getBody().push_back(mergeBlock);
-  OpBuilder builder = OpBuilder::atBlockEnd(mergeBlock);
+  OpBuilder::InsertionGuard g(builder);
+  builder.createBlock(&getBody());
+  builder.createBlock(&getBody());
 
   // Add a spirv.mlir.merge op into the merge block.
   builder.create<spirv::MergeOp>(getLoc());
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.mlir.merge
-//===----------------------------------------------------------------------===//
-
-LogicalResult MergeOp::verify() {
-  auto *parentOp = (*this)->getParentOp();
-  if (!parentOp || !isa<spirv::SelectionOp, spirv::LoopOp>(parentOp))
-    return emitOpError(
-        "expected parent op to be 'spirv.mlir.selection' or 'spirv.mlir.loop'");
-
-  // TODO: This check should be done in `verifyRegions` of parent op.
-  Block &parentLastBlock = (*this)->getParentRegion()->back();
-  if (getOperation() != parentLastBlock.getTerminator())
-    return emitOpError("can only be used in the last block of "
-                       "'spirv.mlir.selection' or 'spirv.mlir.loop'");
-  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -427,6 +422,27 @@ LogicalResult SelectOp::verify() {
     }
   }
   return success();
+}
+
+// Custom availability implementation is needed for spirv.Select given the
+// syntax changes starting v1.4.
+SmallVector<ArrayRef<spirv::Extension>, 1> SelectOp::getExtensions() {
+  return {};
+}
+SmallVector<ArrayRef<spirv::Capability>, 1> SelectOp::getCapabilities() {
+  return {};
+}
+std::optional<spirv::Version> SelectOp::getMinVersion() {
+  // Per the spec, "Before version 1.4, results are only computed per
+  // component."
+  if (isa<spirv::ScalarType>(getCondition().getType()) &&
+      isa<spirv::CompositeType>(getType()))
+    return Version::V_1_4;
+
+  return Version::V_1_0;
+}
+std::optional<spirv::Version> SelectOp::getMaxVersion() {
+  return Version::V_1_6;
 }
 
 //===----------------------------------------------------------------------===//
@@ -483,6 +499,9 @@ LogicalResult SelectionOp::verifyRegions() {
   if (!isMergeBlock(region.back()))
     return emitOpError("last block must be the merge block with only one "
                        "'spirv.mlir.merge' op");
+  if (hasOtherMerge(region))
+    return emitOpError(
+        "should not have 'spirv.mlir.merge' op outside the merge block");
 
   if (std::next(region.begin()) == region.end())
     return emitOpError("must have a selection header block");
@@ -502,11 +521,10 @@ Block *SelectionOp::getMergeBlock() {
   return &getBody().back();
 }
 
-void SelectionOp::addMergeBlock() {
+void SelectionOp::addMergeBlock(OpBuilder &builder) {
   assert(getBody().empty() && "entry and merge block already exist");
-  auto *mergeBlock = new Block();
-  getBody().push_back(mergeBlock);
-  OpBuilder builder = OpBuilder::atBlockEnd(mergeBlock);
+  OpBuilder::InsertionGuard guard(builder);
+  builder.createBlock(&getBody());
 
   // Add a spirv.mlir.merge op into the merge block.
   builder.create<spirv::MergeOp>(getLoc());
@@ -519,7 +537,7 @@ SelectionOp::createIfThen(Location loc, Value condition,
   auto selectionOp =
       builder.create<spirv::SelectionOp>(loc, spirv::SelectionControl::None);
 
-  selectionOp.addMergeBlock();
+  selectionOp.addMergeBlock(builder);
   Block *mergeBlock = selectionOp.getMergeBlock();
   Block *thenBlock = nullptr;
 

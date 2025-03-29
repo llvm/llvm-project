@@ -8,15 +8,14 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// FIXME: Timeouts.
-// UNSUPPORTED: sanitizer-new-delete
+// The machine emulated in tests does not have enough memory for code.
+// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
 
 // <experimental/simd>
 //
 // [simd.reference]
 // template<class U> reference=(U&& x) && noexcept;
-//
-// XFAIL: LIBCXX-AIX-FIXME
+// XFAIL: target=powerpc{{.*}}le-unknown-linux-gnu
 
 #include "../test_utils.h"
 #include <experimental/simd>
@@ -73,10 +72,10 @@ template <class T, std::size_t>
 struct CheckReferenceAssignment {
   template <class SimdAbi>
   void operator()() {
-    types::for_each(arithmetic_no_bool_types(), CheckSimdReferenceAssignmentHelper<T, SimdAbi>());
-    types::for_each(arithmetic_no_bool_types(), CheckMaskReferenceAssignmentHelper<T, SimdAbi>());
+    types::for_each(simd_test_types(), CheckSimdReferenceAssignmentHelper<T, SimdAbi>());
+    types::for_each(simd_test_types(), CheckMaskReferenceAssignmentHelper<T, SimdAbi>());
 
-    types::for_each(arithmetic_no_bool_types(), CheckReferenceAssignmentTraitsHelper<T, SimdAbi>());
+    types::for_each(simd_test_types(), CheckReferenceAssignmentTraitsHelper<T, SimdAbi>());
   }
 };
 

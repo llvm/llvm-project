@@ -49,7 +49,7 @@ After branching for an LLVM release:
 3. Update ``_LIBCPPABI_VERSION`` in ``libcxxabi/include/cxxabi.h``
 4. Update ``_LIBUNWIND_VERSION`` in ``libunwind/include/__libunwind_config.h``
 5. Create a release notes file for the next release from the template
-6. Point to the new release notes file from ``libcxx/docs/index.rst``
+6. Point to the new release notes file from ``libcxx/docs/ReleaseNotes.rst``
 
 Post branching
 ==============

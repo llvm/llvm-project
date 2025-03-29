@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=aarch64-unknown-unknown -run-pass=early-ifcvt -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-unknown-unknown -passes=early-ifcvt -verify-each %s -o - | FileCheck %s
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
   target triple = "arm64-apple-ios13.3.0"
@@ -7,7 +8,7 @@
     br i1 undef, label %if.then139.i, label %if.else142.i
 
   if.then139.i:                                     ; preds = %entry
-    %0 = load double, double* undef, align 8
+    %0 = load double, ptr undef, align 8
     br label %if.end161.i
 
   if.else142.i:                                     ; preds = %entry
@@ -35,7 +36,7 @@
     ret void
   }
   declare double @llvm.fabs.f64(double) #1
-  declare void @llvm.stackprotector(i8*, i8**) #2
+  declare void @llvm.stackprotector(ptr, ptr) #2
 
   attributes #0 = { "target-cpu"="apple-a7" }
   attributes #1 = { nounwind readnone speculatable willreturn }
@@ -128,7 +129,7 @@ body:             |
   bb.2.if.then139.i:
     successors: %bb.5(0x80000000)
 
-    %7:gpr64 = LDRXui %8, 0 :: (load (s64) from `double* undef`)
+    %7:gpr64 = LDRXui %8, 0 :: (load (s64) from `ptr undef`)
     B %bb.5
 
   bb.3.if.else142.i:

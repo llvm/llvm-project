@@ -30,6 +30,21 @@
 # RUN:     -debug-entry-values -mtriple=x86_64-unknown-unknown \
 # RUN:     -start-after=machineverifier -o - %s | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-DWARF5
 
+## === DWARF3, tune for gdb ===
+# RUN: llc -emit-call-site-info -dwarf-version 3 -debugger-tune=gdb -filetype=obj \
+# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s  \
+# RUN:     | llvm-dwarfdump - | FileCheck %s -implicit-check-not=DW_AT_call
+
+## === DWARF3, tune for lldb ===
+# RUN: llc -dwarf-version 3 -debugger-tune=lldb -emit-call-site-info -filetype=obj \
+# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s   \
+# RUN:     | llvm-dwarfdump - | FileCheck %s -implicit-check-not=DW_AT_GNU_call
+
+## === DWARF3, tune for sce ===
+# RUN: llc -emit-call-site-info -dwarf-version 3 -filetype=obj -debugger-tune=sce \
+# RUN:     -debug-entry-values -mtriple=x86_64-unknown-unknown \
+# RUN:     -start-after=machineverifier -o - %s | llvm-dwarfdump - | FileCheck %s -implicit-check-not=DW_AT_call
+
 ## This is based on the following reproducer:
 ##
 ## extern void fn();
@@ -92,9 +107,9 @@
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux-gnu"
   ; Function Attrs: nounwind uwtable
-  define dso_local i32 @fn1(i32 (...)* nocapture %fn4) local_unnamed_addr !dbg !18 {
+  define dso_local i32 @fn1(ptr nocapture %fn4) local_unnamed_addr !dbg !18 {
   entry:
-    call void @llvm.dbg.value(metadata i32 (...)* %fn4, metadata !23, metadata !DIExpression()), !dbg !25
+    call void @llvm.dbg.value(metadata ptr %fn4, metadata !23, metadata !DIExpression()), !dbg !25
     tail call void (...) @fn(), !dbg !26
     tail call void @fn2(i32 5), !dbg !27
     %call = tail call i32 (...) %fn4(), !dbg !28

@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
@@ -37,8 +38,8 @@ public:
   virtual ~SimpleExecutorDylibManager();
 
   Expected<tpctypes::DylibHandle> open(const std::string &Path, uint64_t Mode);
-  Expected<std::vector<ExecutorAddr>> lookup(tpctypes::DylibHandle H,
-                                             const RemoteSymbolLookupSet &L);
+  Expected<std::vector<ExecutorSymbolDef>>
+  lookup(tpctypes::DylibHandle H, const RemoteSymbolLookupSet &L);
 
   Error shutdown() override;
   void addBootstrapSymbols(StringMap<ExecutorAddr> &M) override;

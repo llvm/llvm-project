@@ -39,6 +39,7 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/IntegerSet.h"
 #include "mlir-c/Pass.h"
+#include "mlir-c/Rewrite.h"
 
 // The 'mlir' Python package is relocatable and supports co-existing in multiple
 // projects. Each project must define its outer package prefix with this define
@@ -118,12 +119,27 @@
 
 /** Attribute on main C extension module (_mlir) that corresponds to the
  * type caster registration binding. The signature of the function is:
- *   def register_type_caster(MlirTypeID mlirTypeID, py::function typeCaster,
- *                              bool replace)
- * where replace indicates the typeCaster should replace any existing registered
- * type casters (such as those for upstream ConcreteTypes).
+ *   def register_type_caster(MlirTypeID mlirTypeID, *, bool replace)
+ * which then takes a typeCaster (register_type_caster is meant to be used as a
+ * decorator from python), and where replace indicates the typeCaster should
+ * replace any existing registered type casters (such as those for upstream
+ * ConcreteTypes). The interface of the typeCaster is: def type_caster(ir.Type)
+ * -> SubClassTypeT where SubClassTypeT indicates the result should be a
+ * subclass (inherit from) ir.Type.
  */
 #define MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR "register_type_caster"
+
+/** Attribute on main C extension module (_mlir) that corresponds to the
+ * value caster registration binding. The signature of the function is:
+ *   def register_value_caster(MlirTypeID mlirTypeID, *, bool replace)
+ * which then takes a valueCaster (register_value_caster is meant to be used as
+ * a decorator, from python), and where replace indicates the valueCaster should
+ * replace any existing registered value casters. The interface of the
+ * valueCaster is: def value_caster(ir.Value) -> SubClassValueT where
+ * SubClassValueT indicates the result should be a subclass (inherit from)
+ * ir.Value.
+ */
+#define MLIR_PYTHON_CAPI_VALUE_CASTER_REGISTER_ATTR "register_value_caster"
 
 /// Gets a void* from a wrapped struct. Needed because const cast is different
 /// between C/C++.
@@ -267,6 +283,26 @@ static inline MlirModule mlirPythonCapsuleToModule(PyObject *capsule) {
   void *ptr = PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_MODULE);
   MlirModule module = {ptr};
   return module;
+}
+
+/** Creates a capsule object encapsulating the raw C-API
+ * MlirFrozenRewritePatternSet.
+ * The returned capsule does not extend or affect ownership of any Python
+ * objects that reference the module in any way. */
+static inline PyObject *
+mlirPythonFrozenRewritePatternSetToCapsule(MlirFrozenRewritePatternSet pm) {
+  return PyCapsule_New(MLIR_PYTHON_GET_WRAPPED_POINTER(pm),
+                       MLIR_PYTHON_CAPSULE_PASS_MANAGER, NULL);
+}
+
+/** Extracts an MlirFrozenRewritePatternSet from a capsule as produced from
+ * mlirPythonFrozenRewritePatternSetToCapsule. If the capsule is not of the
+ * right type, then a null module is returned. */
+static inline MlirFrozenRewritePatternSet
+mlirPythonCapsuleToFrozenRewritePatternSet(PyObject *capsule) {
+  void *ptr = PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_PASS_MANAGER);
+  MlirFrozenRewritePatternSet pm = {ptr};
+  return pm;
 }
 
 /** Creates a capsule object encapsulating the raw C-API MlirPassManager.

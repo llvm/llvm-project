@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
+// MSVC warning C4244: 'initializing': conversion from '_Ty' to '_Ty', possible loss of data
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4244
+
 // <mdspan>
 
 // template<class OtherElementType, class OtherExtents,
@@ -36,9 +39,10 @@
 //   || !is_convertible_v<const OtherAccessor&, accessor_type>
 
 #include <mdspan>
-#include <type_traits>
-#include <concepts>
 #include <cassert>
+#include <concepts>
+#include <span> // dynamic_extent
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -227,13 +231,13 @@ int main(int, char**) {
   test<t, o, t, o, t, t, t, t, checked_accessor<const MinimalElementType>>(checked_accessor<MinimalElementType>(1024));
   test<t, o, t, o, t, t, t, t, conv_test_accessor_c<int, t, t, t, t>>(conv_test_accessor_nc<int, t, t>());
   test<t, o, t, t, t, t, t, t, conv_test_accessor_c<int, t, t, o, o>>(conv_test_accessor_nc<int, t, o>());
-  // FIXME: these tests trigger what appears to be a compiler bug on MINGW32 with --target=x86_64-w64-windows-gnu
-  // https://godbolt.org/z/KK8aj5bs7
-  // Bug report: https://github.com/llvm/llvm-project/issues/64077
-  #ifndef __MINGW32__
+// FIXME: these tests trigger what appears to be a compiler bug on MINGW32 with --target=x86_64-w64-windows-gnu
+// https://godbolt.org/z/KK8aj5bs7
+// Bug report: https://github.com/llvm/llvm-project/issues/64077
+#ifndef __MINGW32__
   test<t, t, t, o, t, t, t, t, conv_test_accessor_c<int, o, t, t, t>>(conv_test_accessor_nc<int, t, t>());
   test<t, t, t, t, t, t, t, t, conv_test_accessor_c<int, o, o, o, o>>(conv_test_accessor_nc<int, t, o>());
-  #endif
+#endif
 
   // ElementType convertible, but accessor not constructible
   test<o, o, o, o, o, o, o, o, std::default_accessor<float>>(std::default_accessor<int>());

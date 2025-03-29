@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <filesystem>
 
@@ -19,8 +19,7 @@
 // * InputIterator with a value_type of _ECharT
 // * A character array, which points to a NTCTS after array-to-pointer decay.
 
-
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
@@ -28,6 +27,7 @@
 #include "test_iterators.h"
 #include "min_allocator.h"
 #include "constexpr_char_traits.h"
+namespace fs = std::filesystem;
 
 using fs::__is_pathable;
 

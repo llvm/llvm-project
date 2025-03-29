@@ -54,7 +54,7 @@ void *__asan_memmove(void *dest, const void *src, uptr n) {
 
 // Functions concerning RTL startup and initialization
 void __asan_init(void) {
-  static_assert(sizeof(uptr) == 8);
+  static_assert(sizeof(uptr) == 8 || sizeof(uptr) == 4);
   static_assert(sizeof(u64) == 8);
   static_assert(sizeof(u32) == 4);
 
@@ -65,8 +65,8 @@ void __asan_handle_no_return(void) { __asan_abi_handle_no_return(); }
 
 // Variables concerning RTL state. These provisionally exist for completeness
 // but will likely move into the Stable ABI implementation and not in the shim.
-uptr __asan_shadow_memory_dynamic_address = (uptr)0xdeaddeaddeadbeaf;
-int __asan_option_detect_stack_use_after_return = 0;
+uptr __asan_shadow_memory_dynamic_address = (uptr)0L;
+int __asan_option_detect_stack_use_after_return = 1;
 
 // Functions concerning memory load and store reporting
 void __asan_report_load1(uptr addr) {

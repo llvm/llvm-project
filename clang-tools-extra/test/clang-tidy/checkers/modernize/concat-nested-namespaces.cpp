@@ -178,9 +178,9 @@ namespace n47 {
 void foo() {}
 } // namespace n47
 #pragma clang diagnostic pop
-} //namespace n46
+} // namespace n46
 #undef N45_INNER
-} //namespace n45
+} // namespace n45
 // CHECK-FIXES-NORMAL: #define N45_INNER
 // CHECK-FIXES-NORMAL: #pragma clang diagnostic push
 // CHECK-FIXES-NORMAL: namespace n45::n46::n47 {

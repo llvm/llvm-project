@@ -1,6 +1,7 @@
 ; This test just makes sure that llvm-ar can extract bytecode members
 ; from various style archives.
 
+; UNSUPPORTED: target={{.*}}-zos{{.*}}
 ; RUN: rm -rf %t && mkdir -p %t && cd %t
 
 ; RUN: rm -f very_long_bytecode_file_name.bc

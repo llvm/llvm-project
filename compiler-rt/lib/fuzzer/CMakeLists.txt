@@ -59,7 +59,7 @@ CHECK_CXX_SOURCE_COMPILES("
 
 set(LIBFUZZER_CFLAGS ${COMPILER_RT_COMMON_CFLAGS})
 
-if(OS_NAME MATCHES "Linux|Fuchsia" AND
+if(OS_NAME MATCHES "Android|Linux|Fuchsia" AND
    COMPILER_RT_LIBCXX_PATH AND
    COMPILER_RT_LIBCXXABI_PATH)
   list(APPEND LIBFUZZER_CFLAGS -D_LIBCPP_ABI_VERSION=Fuzzer)
@@ -135,7 +135,7 @@ add_compiler_rt_runtime(clang_rt.fuzzer_interceptors
   CFLAGS ${LIBFUZZER_CFLAGS}
   PARENT_TARGET fuzzer)
 
-if(OS_NAME MATCHES "Linux|Fuchsia" AND
+if(OS_NAME MATCHES "Android|Linux|Fuchsia" AND
    COMPILER_RT_LIBCXX_PATH AND
    COMPILER_RT_LIBCXXABI_PATH)
   macro(partially_link_libcxx name dir arch)
@@ -166,11 +166,11 @@ if(OS_NAME MATCHES "Linux|Fuchsia" AND
                  -DLIBCXX_ABI_NAMESPACE=__Fuzzer
                  -DLIBCXX_ENABLE_EXCEPTIONS=OFF)
     target_compile_options(RTfuzzer.${arch} PRIVATE -isystem ${LIBCXX_${arch}_PREFIX}/include/c++/v1)
-    add_dependencies(RTfuzzer.${arch} libcxx_fuzzer_${arch}-build)
+    add_dependencies(RTfuzzer.${arch} libcxx_fuzzer_${arch}-install-cmake326-workaround)
     target_compile_options(RTfuzzer_main.${arch} PRIVATE -isystem ${LIBCXX_${arch}_PREFIX}/include/c++/v1)
-    add_dependencies(RTfuzzer_main.${arch} libcxx_fuzzer_${arch}-build)
+    add_dependencies(RTfuzzer_main.${arch} libcxx_fuzzer_${arch}-install-cmake326-workaround)
     target_compile_options(RTfuzzer_interceptors.${arch} PRIVATE -isystem ${LIBCXX_${arch}_PREFIX}/include/c++/v1)
-    add_dependencies(RTfuzzer_interceptors.${arch} libcxx_fuzzer_${arch}-build)
+    add_dependencies(RTfuzzer_interceptors.${arch} libcxx_fuzzer_${arch}-install-cmake326-workaround)
     partially_link_libcxx(fuzzer_no_main ${LIBCXX_${arch}_PREFIX} ${arch})
     partially_link_libcxx(fuzzer_interceptors ${LIBCXX_${arch}_PREFIX} ${arch})
     partially_link_libcxx(fuzzer ${LIBCXX_${arch}_PREFIX} ${arch})

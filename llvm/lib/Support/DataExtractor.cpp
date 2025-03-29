@@ -202,7 +202,7 @@ static T getLEB128(StringRef Data, uint64_t *OffsetPtr, Error *Err,
   if (isError(Err))
     return T();
 
-  const char *error;
+  const char *error = nullptr;
   unsigned bytes_read;
   T result =
       Decoder(Bytes.data() + *OffsetPtr, &bytes_read, Bytes.end(), &error);
@@ -227,7 +227,7 @@ int64_t DataExtractor::getSLEB128(uint64_t *offset_ptr, Error *Err) const {
 }
 
 void DataExtractor::skip(Cursor &C, uint64_t Length) const {
-  ErrorAsOutParameter ErrAsOut(&C.Err);
+  ErrorAsOutParameter ErrAsOut(C.Err);
   if (isError(&C.Err))
     return;
 

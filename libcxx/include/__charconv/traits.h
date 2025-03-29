@@ -10,10 +10,12 @@
 #ifndef _LIBCPP___CHARCONV_TRAITS
 #define _LIBCPP___CHARCONV_TRAITS
 
+#include <__assert>
 #include <__bit/countl.h>
 #include <__charconv/tables.h>
 #include <__charconv/to_chars_base_10.h>
 #include <__config>
+#include <__memory/addressof.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_unsigned.h>
 #include <cstdint>
@@ -87,7 +89,7 @@ struct _LIBCPP_HIDDEN __traits_base<_Tp, __enable_if_t<sizeof(_Tp) == sizeof(uin
   }
 };
 
-#  ifndef _LIBCPP_HAS_NO_INT128
+#  if _LIBCPP_HAS_INT128
 template <typename _Tp>
 struct _LIBCPP_HIDDEN __traits_base<_Tp, __enable_if_t<sizeof(_Tp) == sizeof(__uint128_t)> > {
   using type = __uint128_t;
@@ -101,11 +103,11 @@ struct _LIBCPP_HIDDEN __traits_base<_Tp, __enable_if_t<sizeof(_Tp) == sizeof(__u
   /// zero is set to one. This means the first element of the lookup table is
   /// zero.
   static _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int __width(_Tp __v) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_INTERNAL(
         __v > numeric_limits<uint64_t>::max(), "The optimizations for this algorithm fail when this isn't true.");
     // There's always a bit set in the upper 64-bits.
     auto __t = (128 - std::__libcpp_clz(static_cast<uint64_t>(__v >> 64))) * 1233 >> 12;
-    _LIBCPP_ASSERT_UNCATEGORIZED(__t >= __itoa::__pow10_128_offset, "Index out of bounds");
+    _LIBCPP_ASSERT_INTERNAL(__t >= __itoa::__pow10_128_offset, "Index out of bounds");
     // __t is adjusted since the lookup table misses the lower entries.
     return __t - (__v < __itoa::__pow10_128[__t - __itoa::__pow10_128_offset]) + 1;
   }
@@ -141,7 +143,7 @@ __mul_overflowed(unsigned short __a, _Tp __b, unsigned short& __r) {
 template <typename _Tp>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool __mul_overflowed(_Tp __a, _Tp __b, _Tp& __r) {
   static_assert(is_unsigned<_Tp>::value, "");
-  return __builtin_mul_overflow(__a, __b, &__r);
+  return __builtin_mul_overflow(__a, __b, std::addressof(__r));
 }
 
 template <typename _Tp, typename _Up>

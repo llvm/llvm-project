@@ -10,6 +10,12 @@
 // CHECK-PG: "-cc1" "-triple" "i686-pc-openbsd"
 // CHECK-PG: ld{{.*}}" "-e" "__start" "--eh-frame-hdr" "-dynamic-linker" "{{.*}}ld.so" "-nopie" "-o" "a.out" "{{.*}}gcrt0.o" "{{.*}}crtbegin.o" "{{.*}}.o" "-lcompiler_rt" "-lpthread_p" "-lc_p" "-lcompiler_rt" "{{.*}}crtend.o"
 
+// Check for variants of crt* when creating shared libs
+// RUN: %clang --target=i686-pc-openbsd -pthread -shared -### %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-SHARED %s
+// CHECK-SHARED: "-cc1" "-triple" "i686-pc-openbsd"
+// CHECK-SHARED: ld{{.*}}" "--eh-frame-hdr" "-shared" "-o" "a.out" "{{.*}}crtbeginS.o" "{{.*}}.o" "-lcompiler_rt" "-lpthread" "-lcompiler_rt" "{{.*}}crtendS.o"
+
 // Check CPU type for i386
 // RUN: %clang --target=i386-unknown-openbsd -### -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-i386-CPU %s
@@ -121,7 +127,22 @@
 // UNWIND-TABLES: "-funwind-tables=2"
 // NO-UNWIND-TABLES-NOT: "-funwind-tables=2"
 
-// Check that the -X flag is passed to the linker on riscv64
-// RUN: %clang --target=riscv64-unknown-openbsd -### %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK-RISCV64-FLAGS %s
-// CHECK-RISCV64-FLAGS: "-X"
+// Check that the -X and --no-relax flags are passed to the linker on riscv64
+// RUN: %clang --target=riscv64-unknown-openbsd -mno-relax -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=RISCV64-FLAGS %s
+// RISCV64-FLAGS: "-X" "--no-relax"
+
+// Check passing LTO flags to the linker
+// RUN: %clang --target=amd64-unknown-openbsd -flto -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-LTO-FLAGS %s
+// CHECK-LTO-FLAGS: "-plugin-opt=mcpu=x86-64"
+
+// Check 64-bit ARM for BTI and PAC flags
+// RUN: %clang --target=aarch64-unknown-openbsd -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-AARCH64-BTI-PAC %s
+// CHECK-AARCH64-BTI-PAC: "-msign-return-address=non-leaf" "-msign-return-address-key=a_key" "-mbranch-target-enforce"
+
+// Check 64-bit X86 for IBT flags
+// RUN: %clang --target=amd64-unknown-openbsd -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-AMD64-IBT %s
+// CHECK-AMD64-IBT: "-fcf-protection=branch" "-fno-jump-tables"

@@ -68,7 +68,7 @@ struct ExpandReallocOpPattern : public OpRewritePattern<memref::ReallocOp> {
 
     // Get the size of the original buffer.
     int64_t inputSize =
-        op.getSource().getType().cast<BaseMemRefType>().getDimSize(0);
+        cast<BaseMemRefType>(op.getSource().getType()).getDimSize(0);
     OpFoldResult currSize = rewriter.getIndexAttr(inputSize);
     if (ShapedType::isDynamic(inputSize)) {
       Value dimZero = getValueOrCreateConstantIndexOp(rewriter, loc,
@@ -79,7 +79,7 @@ struct ExpandReallocOpPattern : public OpRewritePattern<memref::ReallocOp> {
 
     // Get the requested size that the new buffer should have.
     int64_t outputSize =
-        op.getResult().getType().cast<BaseMemRefType>().getDimSize(0);
+        cast<BaseMemRefType>(op.getResult().getType()).getDimSize(0);
     OpFoldResult targetSize = ShapedType::isDynamic(outputSize)
                                   ? OpFoldResult{op.getDynamicResultSize()}
                                   : rewriter.getIndexAttr(outputSize);
@@ -127,7 +127,7 @@ struct ExpandReallocOpPattern : public OpRewritePattern<memref::ReallocOp> {
           // is already bigger than the requested size, the cast represents a
           // subview operation.
           Value casted = builder.create<memref::ReinterpretCastOp>(
-              loc, op.getResult().getType().cast<MemRefType>(), op.getSource(),
+              loc, cast<MemRefType>(op.getResult().getType()), op.getSource(),
               rewriter.getIndexAttr(0), ArrayRef<OpFoldResult>{targetSize},
               ArrayRef<OpFoldResult>{rewriter.getIndexAttr(1)});
           builder.create<scf::YieldOp>(loc, casted);

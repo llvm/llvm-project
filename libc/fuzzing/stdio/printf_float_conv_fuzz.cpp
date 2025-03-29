@@ -90,7 +90,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   int prec = 0;
   int width = 0;
 
-  LIBC_NAMESPACE::fputil::FPBits<double>::UIntType raw_num = 0;
+  LIBC_NAMESPACE::fputil::FPBits<double>::StorageType raw_num = 0;
 
   // Copy as many bytes of data as will fit into num, prec, and with. Any extras
   // are ignored.

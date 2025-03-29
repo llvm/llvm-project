@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Tools/mlir-pdll-lsp-server/MlirPdllLspServerMain.h"
 
 using namespace mlir;

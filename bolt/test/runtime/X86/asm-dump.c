@@ -1,5 +1,5 @@
 /**
- * Test for asm-dump functionality.
+ ** Test for asm-dump functionality.
  *
  * REQUIRES: x86_64-linux,bolt-runtime
  *
@@ -14,7 +14,7 @@
  * RUN: %t.instr > %t.result
  *
  * Run BOLT with asm-dump
- * RUN: llvm-bolt %t.exe -p %t.fdata --funcs=main --asm-dump=%t -o /dev/null \
+ * RUN: llvm-bolt %t.exe -p %t.fdata --funcs=main --asm-dump=%t -o %t.null \
  * RUN:   | FileCheck %s --check-prefix=CHECK-BOLT
  *
  * Check asm file contents
@@ -42,7 +42,7 @@
  * RUN: %clang -fPIC %t.o -o %t.exe.reopt -Wl,-q
  *
  * Finally consume reoptimized file with reconstructed fdata
- * RUN: llvm-bolt %t.exe.reopt -p %t.fdata.reconst -o /dev/null \
+ * RUN: llvm-bolt %t.exe.reopt -p %t.fdata.reconst -o %t.null \
  * RUN:   | FileCheck %s --check-prefix=CHECK-REOPT
  *
  * CHECK-BOLT: BOLT-INFO: Dumping function assembly to {{.*}}/main.s

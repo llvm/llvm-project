@@ -15,6 +15,7 @@
 #define LLVM_ANALYSIS_TYPEMETADATAUTILS_H
 
 #include <cstdint>
+#include <utility>
 
 namespace llvm {
 
@@ -24,6 +25,7 @@ class CallInst;
 class Constant;
 class Function;
 class DominatorTree;
+class GlobalVariable;
 class Instruction;
 class Module;
 
@@ -64,7 +66,7 @@ void findDevirtualizableCallsForTypeCheckedLoad(
 /// Used for example from GlobalDCE to find an entry in a C++ vtable that
 /// matches a vcall offset.
 ///
-/// To support Swift vtables, getPointerAtOffset can see through "relative
+/// To support relative vtables, getPointerAtOffset can see through "relative
 /// pointers", i.e. (sub-)expressions of the form of:
 ///
 /// @symbol = ... {
@@ -77,9 +79,16 @@ void findDevirtualizableCallsForTypeCheckedLoad(
 Constant *getPointerAtOffset(Constant *I, uint64_t Offset, Module &M,
                              Constant *TopLevelGlobal = nullptr);
 
+/// Given a vtable and a specified offset, returns the function and the trivial
+/// pointer at the specified offset in pair iff the pointer at the specified
+/// offset is a function or an alias to a function. Returns a pair of nullptr
+/// otherwise.
+std::pair<Function *, Constant *>
+getFunctionAtVTableOffset(GlobalVariable *GV, uint64_t Offset, Module &M);
+
 /// Finds the same "relative pointer" pattern as described above, where the
-/// target is `F`, and replaces the entire pattern with a constant zero.
-void replaceRelativePointerUsersWithZero(Function *F);
+/// target is `C`, and replaces the entire pattern with a constant zero.
+void replaceRelativePointerUsersWithZero(Constant *C);
 
 } // namespace llvm
 

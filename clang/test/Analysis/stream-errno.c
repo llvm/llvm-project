@@ -1,4 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,alpha.unix.Errno,unix.StdCLibraryFunctions,debug.ExprInspection \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Stream,unix.Errno,unix.StdCLibraryFunctions,debug.ExprInspection \
+// RUN:   -analyzer-config unix.Stream:Pedantic=true \
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true -verify %s
 
 #include "Inputs/system-header-simulator.h"
@@ -15,7 +16,17 @@ void check_fopen(void) {
     if (errno) {} // no-warning
     return;
   }
-  if (errno) {} // expected-warning{{An undefined value may be read from 'errno' [alpha.unix.Errno]}}
+  if (errno) {} // expected-warning{{An undefined value may be read from 'errno' [unix.Errno]}}
+}
+
+void check_fdopen(int Fd) {
+  FILE *F = fdopen(Fd, "r");
+  if (!F) {
+    clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
+    if (errno) {}                    // no-warning
+  } else {
+    if (errno) {}                    // expected-warning{{An undefined value may be read from 'errno' [unix.Errno]}}
+  }
 }
 
 void check_tmpfile(void) {
@@ -25,7 +36,7 @@ void check_tmpfile(void) {
     if (errno) {} // no-warning
     return;
   }
-  if (errno) {} // expected-warning{{An undefined value may be read from 'errno' [alpha.unix.Errno]}}
+  if (errno) {} // expected-warning{{An undefined value may be read from 'errno' [unix.Errno]}}
 }
 
 void check_freopen(void) {
@@ -129,11 +140,27 @@ void check_fseek(void) {
   int S = fseek(F, 11, SEEK_SET);
   if (S != 0) {
     clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
+    clang_analyzer_eval(S == -1);    // expected-warning{{TRUE}}
     if (errno) {} // no-warning
     fclose(F);
     return;
   }
   if (errno) {} // expected-warning{{An undefined value may be read from 'errno'}}
+}
+
+void check_fseeko(void) {
+  FILE *F = tmpfile();
+  if (!F)
+    return;
+  int S = fseeko(F, 11, SEEK_SET);
+  if (S == -1) {
+    clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
+    if (errno) {}                    // no-warning
+  } else {
+    clang_analyzer_eval(S == 0);     // expected-warning{{TRUE}}
+    if (errno) {}                    // expected-warning{{An undefined value may be read from 'errno'}}
+  }
+  fclose(F);
 }
 
 void check_no_errno_change(void) {
@@ -146,6 +173,8 @@ void check_no_errno_change(void) {
   feof(F);
   if (errno) {} // no-warning
   ferror(F);
+  if (errno) {} // no-warning
+  fileno(F);
   if (errno) {} // no-warning
   clang_analyzer_eval(errno == 1); // expected-warning{{TRUE}}
   fclose(F);
@@ -197,6 +226,21 @@ void check_ftell(void) {
   fclose(F);
 }
 
+void check_ftello(void) {
+  FILE *F = tmpfile();
+  if (!F)
+    return;
+  off_t Ret = ftello(F);
+  if (Ret >= 0) {
+    if (errno) {}                    // expected-warning{{An undefined value may be read from 'errno'}}
+  } else {
+    clang_analyzer_eval(Ret == -1);  // expected-warning{{TRUE}}
+    clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
+    if (errno) {}                    // no-warning
+  }
+  fclose(F);
+}
+
 void check_rewind(void) {
   FILE *F = tmpfile();
   if (!F)
@@ -209,16 +253,28 @@ void check_rewind(void) {
   fclose(F);
 }
 
-void check_fileno(void) {
+void check_fflush_opened_file(void) {
   FILE *F = tmpfile();
   if (!F)
     return;
-  int N = fileno(F);
-  if (N == -1) {
+  int N = fflush(F);
+  if (N == EOF) {
     clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
-    if (errno) {} // no-warning
-    fclose(F);
-    return;
+    if (errno) {}                    // no-warning
+  } else {
+    clang_analyzer_eval(N == 0);     // expected-warning{{TRUE}}
+    if (errno) {}                    // expected-warning{{An undefined value may be read from 'errno'}}
   }
-  if (errno) {} // expected-warning{{An undefined value may be read from 'errno'}}
+  fclose(F);
+}
+
+void check_fflush_all(void) {
+  int N = fflush(NULL);
+  if (N == 0) {
+    if (errno) {}                    // expected-warning{{An undefined value may be read from 'errno'}}
+  } else {
+    clang_analyzer_eval(N == EOF);   // expected-warning{{TRUE}}
+    clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
+    if (errno) {}                    // no-warning
+  }
 }

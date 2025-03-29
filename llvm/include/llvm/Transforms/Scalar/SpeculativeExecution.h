@@ -65,13 +65,18 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+class BasicBlock;
 class TargetTransformInfo;
+
 class SpeculativeExecutionPass
     : public PassInfoMixin<SpeculativeExecutionPass> {
 public:
   SpeculativeExecutionPass(bool OnlyIfDivergentTarget = false);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   // Glue for old PM
   bool runImpl(Function &F, TargetTransformInfo *TTI);

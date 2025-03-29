@@ -19,8 +19,8 @@
   ; CHECK-NEXT:    // implicit-def: $p4
   ; CHECK-NEXT:    addvl sp, sp, #1
   ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
-  ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
   ; CHECK-NEXT:    ldr z8, [sp, #1, mul vl] // 16-byte Folded Reload
+  ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
   ; CHECK-NEXT:    addvl sp, sp, #2
   ; CHECK-NEXT:    .cfi_def_cfa wsp, 16
   ; CHECK-NEXT:    .cfi_restore z8
@@ -30,6 +30,7 @@
   ; CHECK-NEXT:    ret
 ...
 name: fix_restorepoint_p4
+tracksRegLiveness: true
 stack:
   - { id: 0, stack-id: scalable-vector, size: 16, alignment: 16 }
 body:             |

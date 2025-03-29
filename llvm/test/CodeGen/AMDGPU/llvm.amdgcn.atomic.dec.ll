@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,CIVI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,CIVI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,CIVI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,CIVI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 
 declare i32 @llvm.amdgcn.atomic.dec.i32.p1(ptr addrspace(1) nocapture, i32, i32, i32, i1) #2
 declare i32 @llvm.amdgcn.atomic.dec.i32.p3(ptr addrspace(3) nocapture, i32, i32, i32, i1) #2
@@ -269,7 +269,7 @@ define amdgpu_kernel void @flat_atomic_dec_noret_i64_offset_addr64(ptr %ptr) #0 
   ret void
 }
 
-@lds0 = addrspace(3) global [512 x i32] undef
+@lds0 = addrspace(3) global [512 x i32] poison
 
 ; GCN-LABEL: {{^}}atomic_dec_shl_base_lds_0:
 ; CIVI-DAG: s_mov_b32 m0
@@ -418,7 +418,7 @@ define amdgpu_kernel void @global_atomic_dec_noret_i64_offset_addr64(ptr addrspa
   ret void
 }
 
-@lds1 = addrspace(3) global [512 x i64] undef, align 8
+@lds1 = addrspace(3) global [512 x i64] poison, align 8
 
 ; GCN-LABEL: {{^}}atomic_dec_shl_base_lds_0_i64:
 ; CIVI-DAG: s_mov_b32 m0

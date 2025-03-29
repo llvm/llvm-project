@@ -318,6 +318,7 @@ static void checkARM64Instructions(MCStreamer &Streamer,
     case Win64EH::UOP_TrapFrame:
     case Win64EH::UOP_PushMachFrame:
     case Win64EH::UOP_Context:
+    case Win64EH::UOP_ECContext:
     case Win64EH::UOP_ClearUnwoundToCall:
       // Can't reason about these opcodes and how they map to actual
       // instructions.
@@ -409,6 +410,9 @@ static uint32_t ARM64CountOfUnwindCodes(ArrayRef<WinEH::Instruction> Insns) {
       Count += 1;
       break;
     case Win64EH::UOP_Context:
+      Count += 1;
+      break;
+    case Win64EH::UOP_ECContext:
       Count += 1;
       break;
     case Win64EH::UOP_ClearUnwoundToCall:
@@ -591,6 +595,10 @@ static void ARM64EmitUnwindCode(MCStreamer &streamer,
     break;
   case Win64EH::UOP_Context:
     b = 0xEA;
+    streamer.emitInt8(b);
+    break;
+  case Win64EH::UOP_ECContext:
+    b = 0xEB;
     streamer.emitInt8(b);
     break;
   case Win64EH::UOP_ClearUnwoundToCall:
@@ -1010,6 +1018,7 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
       return false;
     case Win64EH::UOP_TrapFrame:
     case Win64EH::UOP_Context:
+    case Win64EH::UOP_ECContext:
     case Win64EH::UOP_ClearUnwoundToCall:
     case Win64EH::UOP_PushMachFrame:
       // These are special opcodes that aren't normally generated.

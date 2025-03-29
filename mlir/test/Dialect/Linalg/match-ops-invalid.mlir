@@ -64,7 +64,7 @@ transform.sequence failures(suppress) {
 ^bb0(%arg0: !transform.any_op):
   transform.match.structured %arg0 : !transform.any_op {
   ^bb1(%arg1: !transform.any_op):
-    // expected-error @below {{only one of {"reduction_position", "passthrough", "contraction"} is allowed}}
+    // expected-error @below {{only one of {"reduction_position", "passthrough", "elementwise", "contraction"} is allowed}}
     transform.match.structured.body %arg1 { passthrough, reduction_position = 0 } : !transform.any_op
     transform.match.structured.yield
   }

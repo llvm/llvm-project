@@ -13,8 +13,9 @@
 #include <cstddef>
 #include <iterator>
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include "make_string.h"
+namespace fs = std::filesystem;
 
 // Testing the allocation behavior of the code_cvt functions requires
 // *knowing* that the allocation was not done by "path::__str_".

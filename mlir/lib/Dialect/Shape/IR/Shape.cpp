@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Shape/IR/Shape.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Traits.h"
@@ -64,9 +65,8 @@ LogicalResult shape::getShapeVec(Value input,
 }
 
 static bool isErrorPropagationPossible(TypeRange operandTypes) {
-  return llvm::any_of(operandTypes, [](Type ty) {
-    return llvm::isa<SizeType, ShapeType, ValueShapeType>(ty);
-  });
+  return llvm::any_of(operandTypes,
+                      llvm::IsaPred<SizeType, ShapeType, ValueShapeType>);
 }
 
 static LogicalResult verifySizeOrIndexOp(Operation *op) {
@@ -143,6 +143,8 @@ void ShapeDialect::initialize() {
   // still evolving it makes it simple to start with an unregistered ops and
   // try different variants before actually defining the op.
   allowUnknownOperations();
+  declarePromisedInterfaces<bufferization::BufferizableOpInterface, AssumingOp,
+                            AssumingYieldOp>();
 }
 
 Operation *ShapeDialect::materializeConstant(OpBuilder &builder,
@@ -375,15 +377,13 @@ void AssumingOp::inlineRegionIntoParent(AssumingOp &op,
 void AssumingOp::build(
     OpBuilder &builder, OperationState &result, Value witness,
     function_ref<SmallVector<Value, 2>(OpBuilder &, Location)> bodyBuilder) {
+  OpBuilder::InsertionGuard g(builder);
 
   result.addOperands(witness);
   Region *bodyRegion = result.addRegion();
-  bodyRegion->push_back(new Block);
-  Block &bodyBlock = bodyRegion->front();
+  builder.createBlock(bodyRegion);
 
   // Build body.
-  OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointToStart(&bodyBlock);
   SmallVector<Value, 2> yieldValues = bodyBuilder(builder, result.location);
   builder.create<AssumingYieldOp>(result.location, yieldValues);
 
@@ -695,8 +695,16 @@ struct RemoveEmptyShapeOperandsPattern : public OpRewritePattern<OpTy> {
       }
       return true;
     };
-    auto newOperands = llvm::to_vector<8>(
-        llvm::make_filter_range(op->getOperands(), isPotentiallyNonEmptyShape));
+    auto newOperands = llvm::filter_to_vector<8>(op->getOperands(),
+                                                 isPotentiallyNonEmptyShape);
+
+    // Replace the op with empty shape constant if all operants are reduced to
+    // be empty.
+    if (newOperands.empty()) {
+      rewriter.replaceOpWithNewOp<ConstShapeOp>(
+          op, op->getResultTypes().front(), rewriter.getIndexTensorAttr({}));
+      return success();
+    }
 
     // Reduce op to equivalent without empty shape operands.
     if (newOperands.size() < op.getNumOperands()) {
@@ -1289,7 +1297,7 @@ void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
   if (argAttrs.empty())
     return;
   assert(type.getNumInputs() == argAttrs.size());
-  function_interface_impl::addArgAndResultAttrs(
+  call_interface_impl::addArgAndResultAttrs(
       builder, state, argAttrs, /*resultAttrs=*/std::nullopt,
       getArgAttrsAttrName(state.name), getResAttrsAttrName(state.name));
 }
@@ -1678,27 +1686,60 @@ LogicalResult shape::MulOp::verify() { return verifySizeOrIndexOp(*this); }
 // ShapeOfOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult ShapeOfOp::fold(FoldAdaptor) {
-  auto type = llvm::dyn_cast<ShapedType>(getOperand().getType());
-  if (!type || !type.hasStaticShape())
-    return nullptr;
-  Builder builder(getContext());
-  return builder.getIndexTensorAttr(type.getShape());
-}
-
 namespace {
-struct ShapeOfWithTensor : public OpRewritePattern<shape::ShapeOfOp> {
+/// Replace shape_of(x) where x has a constant shape with a const_shape op.
+struct ShapeOfOpToConstShapeOp : public OpRewritePattern<shape::ShapeOfOp> {
   using OpRewritePattern<shape::ShapeOfOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(shape::ShapeOfOp op,
                                 PatternRewriter &rewriter) const override {
-    if (!llvm::isa<ShapedType>(op.getArg().getType()))
+    auto type = llvm::dyn_cast<ShapedType>(op.getArg().getType());
+    if (!type || !type.hasStaticShape())
       return failure();
-    if (llvm::isa<ShapedType>(op.getType()))
-      return failure();
+    Location loc = op.getLoc();
+    Value constShape =
+        rewriter
+            .create<ConstShapeOp>(loc,
+                                  rewriter.getIndexTensorAttr(type.getShape()))
+            .getResult();
+    if (constShape.getType() != op.getResult().getType())
+      constShape = rewriter.create<tensor::CastOp>(
+          loc, op.getResult().getType(), constShape);
+    rewriter.replaceOp(op, constShape);
+    return success();
+  }
+};
 
-    rewriter.replaceOpWithNewOp<shape::ShapeOfOp>(op.getOperation(),
-                                                  op.getArg());
+// Canonicalize
+//
+// %0 = tensor.reshape %input(%shape) : (tensor<*xf32>, tensor<?xindex>) -> tensor<*xf32>
+// %1 = shape.shape_of %0 : tensor<*xf32> -> tensor<?xindex>
+//
+// to
+//
+// %0 = tensor.reshape %input(%shape) : (tensor<*xf32>, tensor<?xindex>) -> tensor<*xf32>
+// %1 = %shape
+//
+struct ShapeOfFromReshape : public OpRewritePattern<shape::ShapeOfOp> {
+  using OpRewritePattern<shape::ShapeOfOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(shape::ShapeOfOp op,
+                                PatternRewriter &rewriter) const override {
+    auto tensorReshapeOp = op.getArg().getDefiningOp<tensor::ReshapeOp>();
+    if (!tensorReshapeOp)
+      return rewriter.notifyMatchFailure(op, "producer is not tensor.reshape");
+    if (!isa<TensorType>(op.getType()))
+      return rewriter.notifyMatchFailure(op, "result is not a tensor");
+
+    // Operand 'shape' of 'tensor.reshape' may now be used as the result of
+    // 'shape.shape_of'. While its type is guaranteed to be compatible in well-
+    // formed IR, it may not be identical (dynamically vs statically shaped),
+    // in which case it needs to be cast first.
+    Value shape = tensorReshapeOp.getShape();
+    if (op.getType() != shape.getType())
+      shape = rewriter.create<tensor::CastOp>(op.getLoc(), op.getType(), shape);
+
+    rewriter.replaceOp(op, shape);
     return success();
   }
 };
@@ -1738,8 +1779,9 @@ struct ShapeOfCastExtentTensor : public OpRewritePattern<tensor::CastOp> {
 
 void ShapeOfOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                             MLIRContext *context) {
-  patterns.add<ShapeOfCastExtentTensor, ShapeOfWithTensor,
-               ExtractFromShapeOfExtentTensor>(context);
+  patterns.add<ShapeOfCastExtentTensor, ShapeOfFromReshape,
+               ExtractFromShapeOfExtentTensor, ShapeOfOpToConstShapeOp>(
+      context);
 }
 
 LogicalResult mlir::shape::ShapeOfOp::inferReturnTypes(
@@ -1888,23 +1930,23 @@ bool ToExtentTensorOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 
 void ReduceOp::build(OpBuilder &builder, OperationState &result, Value shape,
                      ValueRange initVals) {
+  OpBuilder::InsertionGuard g(builder);
   result.addOperands(shape);
   result.addOperands(initVals);
 
   Region *bodyRegion = result.addRegion();
-  bodyRegion->push_back(new Block);
-  Block &bodyBlock = bodyRegion->front();
-  bodyBlock.addArgument(builder.getIndexType(), result.location);
+  Block *bodyBlock = builder.createBlock(
+      bodyRegion, /*insertPt=*/{}, builder.getIndexType(), result.location);
 
   Type elementType;
   if (auto tensorType = llvm::dyn_cast<TensorType>(shape.getType()))
     elementType = tensorType.getElementType();
   else
     elementType = SizeType::get(builder.getContext());
-  bodyBlock.addArgument(elementType, shape.getLoc());
+  bodyBlock->addArgument(elementType, shape.getLoc());
 
   for (Value initVal : initVals) {
-    bodyBlock.addArgument(initVal.getType(), initVal.getLoc());
+    bodyBlock->addArgument(initVal.getType(), initVal.getLoc());
     result.addTypes(initVal.getType());
   }
 }

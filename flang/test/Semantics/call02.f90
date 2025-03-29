@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! 15.5.1 procedure reference constraints and restrictions
 
 subroutine s01(elem, subr)
@@ -72,6 +72,7 @@ module m01
  contains
   elemental real function elem03(x)
     real, value :: x
+    elem03 = 0.
   end function
   subroutine test
     intrinsic :: cos
@@ -87,6 +88,7 @@ module m01
    contains
     elemental real function elem04(x)
       real, value :: x
+      elem04 = 0.
     end function
   end subroutine
 end module

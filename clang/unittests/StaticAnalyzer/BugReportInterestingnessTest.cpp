@@ -19,6 +19,7 @@
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
 #include "clang/Tooling/Tooling.h"
 #include "gtest/gtest.h"
+#include <memory>
 
 using namespace clang;
 using namespace ento;
@@ -33,11 +34,13 @@ class InterestingnessTestChecker : public Checker<check::PreCall> {
                                        const CallEvent &, CheckerContext &)>;
 
   CallDescriptionMap<HandlerFn> Handlers = {
-      {{{"setInteresting"}, 1}, &InterestingnessTestChecker::handleInteresting},
-      {{{"setNotInteresting"}, 1},
+      {{CDM::SimpleFunc, {"setInteresting"}, 1},
+       &InterestingnessTestChecker::handleInteresting},
+      {{CDM::SimpleFunc, {"setNotInteresting"}, 1},
        &InterestingnessTestChecker::handleNotInteresting},
-      {{{"check"}, 1}, &InterestingnessTestChecker::handleCheck},
-      {{{"bug"}, 1}, &InterestingnessTestChecker::handleBug},
+      {{CDM::SimpleFunc, {"check"}, 1},
+       &InterestingnessTestChecker::handleCheck},
+      {{CDM::SimpleFunc, {"bug"}, 1}, &InterestingnessTestChecker::handleBug},
   };
 
   void handleInteresting(const CallEvent &Call, CheckerContext &C) const;
@@ -112,8 +115,9 @@ public:
                                                  StringRef File) override {
     std::unique_ptr<AnalysisASTConsumer> AnalysisConsumer =
         CreateAnalysisConsumer(Compiler);
-    AnalysisConsumer->AddDiagnosticConsumer(new VerifyPathDiagnosticConsumer(
-        std::move(ExpectedDiags), Compiler.getSourceManager()));
+    AnalysisConsumer->AddDiagnosticConsumer(
+        std::make_unique<VerifyPathDiagnosticConsumer>(
+            std::move(ExpectedDiags), Compiler.getSourceManager()));
     AnalysisConsumer->AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
       Registry.addChecker<InterestingnessTestChecker>("test.Interestingness",
                                                       "Description", "");

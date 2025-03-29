@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=amdgcn -verify-machineinstrs | FileCheck %s --check-prefix=GCN --check-prefix=FUNC
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=GCN --check-prefix=FUNC
-; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s --check-prefix=EG --check-prefix=FUNC
-; RUN: llc < %s -march=r600 -mcpu=cayman | FileCheck %s --check-prefix=CM --check-prefix=FUNC
+; RUN: llc < %s -mtriple=amdgcn -verify-machineinstrs | FileCheck %s --check-prefix=GCN --check-prefix=FUNC
+; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=GCN --check-prefix=FUNC
+; RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s --check-prefix=EG --check-prefix=FUNC
+; RUN: llc < %s -mtriple=r600 -mcpu=cayman | FileCheck %s --check-prefix=CM --check-prefix=FUNC
 
 ; FUNC-LABEL: {{^}}i32_mad24:
 ; Signed 24-bit multiply is not supported on pre-Cayman GPUs.

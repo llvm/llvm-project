@@ -14,10 +14,12 @@
 #include "ObjDumper.h"
 #include "llvm-readobj.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Object/Decompressor.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 
@@ -80,8 +82,8 @@ void ObjDumper::printAsStringList(StringRef StringContent,
       continue;
     }
     W.startLine() << format("[%6tx] ", CurrentWord - StrContent);
-    printAsPrintable(W.startLine(), CurrentWord, WordSize);
-    W.startLine() << '\n';
+    printAsPrintable(W.getOStream(), CurrentWord, WordSize);
+    W.getOStream() << '\n';
     CurrentWord += WordSize + 1;
   }
 }
@@ -89,8 +91,10 @@ void ObjDumper::printAsStringList(StringRef StringContent,
 void ObjDumper::printFileSummary(StringRef FileStr, object::ObjectFile &Obj,
                                  ArrayRef<std::string> InputFilenames,
                                  const object::Archive *A) {
-  W.startLine() << "\n";
-  W.printString("File", FileStr);
+  if (!FileStr.empty()) {
+    W.getOStream() << "\n";
+    W.printString("File", FileStr);
+  }
   W.printString("Format", Obj.getFileFormatName());
   W.printString("Arch", Triple::getArchTypeName(Obj.getArch()));
   W.printString("AddressSize",
@@ -102,7 +106,7 @@ static std::vector<object::SectionRef>
 getSectionRefsByNameOrIndex(const object::ObjectFile &Obj,
                             ArrayRef<std::string> Sections) {
   std::vector<object::SectionRef> Ret;
-  std::map<std::string, bool> SecNames;
+  std::map<std::string, bool, std::less<>> SecNames;
   std::map<unsigned, bool> SecIndices;
   unsigned SecIndex;
   for (StringRef Section : Sections) {
@@ -115,7 +119,7 @@ getSectionRefsByNameOrIndex(const object::ObjectFile &Obj,
   SecIndex = Obj.isELF() ? 0 : 1;
   for (object::SectionRef SecRef : Obj.sections()) {
     StringRef SecName = unwrapOrError(Obj.getFileName(), SecRef.getName());
-    auto NameIt = SecNames.find(std::string(SecName));
+    auto NameIt = SecNames.find(SecName);
     if (NameIt != SecNames.end())
       NameIt->second = true;
     auto IndexIt = SecIndices.find(SecIndex);
@@ -141,38 +145,51 @@ getSectionRefsByNameOrIndex(const object::ObjectFile &Obj,
   return Ret;
 }
 
+static void maybeDecompress(const object::ObjectFile &Obj,
+                            StringRef SectionName, StringRef &SectionContent,
+                            SmallString<0> &Out) {
+  Expected<object::Decompressor> Decompressor = object::Decompressor::create(
+      SectionName, SectionContent, Obj.isLittleEndian(), Obj.is64Bit());
+  if (!Decompressor)
+    reportWarning(Decompressor.takeError(), Obj.getFileName());
+  else if (auto Err = Decompressor->resizeAndDecompress(Out))
+    reportWarning(std::move(Err), Obj.getFileName());
+  else
+    SectionContent = Out;
+}
+
 void ObjDumper::printSectionsAsString(const object::ObjectFile &Obj,
-                                      ArrayRef<std::string> Sections) {
-  bool First = true;
+                                      ArrayRef<std::string> Sections,
+                                      bool Decompress) {
+  SmallString<0> Out;
   for (object::SectionRef Section :
        getSectionRefsByNameOrIndex(Obj, Sections)) {
     StringRef SectionName = unwrapOrError(Obj.getFileName(), Section.getName());
-
-    if (!First)
-      W.startLine() << '\n';
-    First = false;
+    W.getOStream() << '\n';
     W.startLine() << "String dump of section '" << SectionName << "':\n";
 
     StringRef SectionContent =
         unwrapOrError(Obj.getFileName(), Section.getContents());
+    if (Decompress && Section.isCompressed())
+      maybeDecompress(Obj, SectionName, SectionContent, Out);
     printAsStringList(SectionContent);
   }
 }
 
 void ObjDumper::printSectionsAsHex(const object::ObjectFile &Obj,
-                                   ArrayRef<std::string> Sections) {
-  bool First = true;
+                                   ArrayRef<std::string> Sections,
+                                   bool Decompress) {
+  SmallString<0> Out;
   for (object::SectionRef Section :
        getSectionRefsByNameOrIndex(Obj, Sections)) {
     StringRef SectionName = unwrapOrError(Obj.getFileName(), Section.getName());
-
-    if (!First)
-      W.startLine() << '\n';
-    First = false;
+    W.getOStream() << '\n';
     W.startLine() << "Hex dump of section '" << SectionName << "':\n";
 
     StringRef SectionContent =
         unwrapOrError(Obj.getFileName(), Section.getContents());
+    if (Decompress && Section.isCompressed())
+      maybeDecompress(Obj, SectionName, SectionContent, Out);
     const uint8_t *SecContent = SectionContent.bytes_begin();
     const uint8_t *SecEnd = SecContent + SectionContent.size();
 
@@ -183,13 +200,13 @@ void ObjDumper::printSectionsAsHex(const object::ObjectFile &Obj,
 
       W.startLine() << format_hex(Section.getAddress() + (SecPtr - SecContent),
                                   10);
-      W.startLine() << ' ';
+      W.getOStream() << ' ';
       for (i = 0; TmpSecPtr < SecEnd && i < 4; ++i) {
         for (k = 0; TmpSecPtr < SecEnd && k < 4; k++, TmpSecPtr++) {
           uint8_t Val = *(reinterpret_cast<const uint8_t *>(TmpSecPtr));
-          W.startLine() << format_hex_no_prefix(Val, 2);
+          W.getOStream() << format_hex_no_prefix(Val, 2);
         }
-        W.startLine() << ' ';
+        W.getOStream() << ' ';
       }
 
       // We need to print the correct amount of spaces to match the format.
@@ -198,17 +215,17 @@ void ObjDumper::printSectionsAsHex(const object::ObjectFile &Obj,
       // Least, if we cut in a middle of a row, we add the remaining characters,
       // which is (8 - (k * 2)).
       if (i < 4)
-        W.startLine() << format("%*c", (4 - i) * 8 + (4 - i), ' ');
+        W.getOStream() << format("%*c", (4 - i) * 8 + (4 - i), ' ');
       if (k < 4)
-        W.startLine() << format("%*c", 8 - k * 2, ' ');
+        W.getOStream() << format("%*c", 8 - k * 2, ' ');
 
       TmpSecPtr = SecPtr;
       for (i = 0; TmpSecPtr + i < SecEnd && i < 16; ++i)
-        W.startLine() << (isPrint(TmpSecPtr[i])
-                              ? static_cast<char>(TmpSecPtr[i])
-                              : '.');
+        W.getOStream() << (isPrint(TmpSecPtr[i])
+                               ? static_cast<char>(TmpSecPtr[i])
+                               : '.');
 
-      W.startLine() << '\n';
+      W.getOStream() << '\n';
     }
   }
 }

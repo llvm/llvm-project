@@ -23,10 +23,29 @@ void mlir::populateConversionTargetFromOperation(
       return;
     // First time we encounter this dialect: if it implements the interface,
     // let's populate patterns !
-    auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+    auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
     if (!iface)
       return;
     iface->populateConvertToLLVMConversionPatterns(target, typeConverter,
                                                    patterns);
   });
 }
+
+void mlir::populateOpConvertToLLVMConversionPatterns(
+    Operation *op, ConversionTarget &target, LLVMTypeConverter &typeConverter,
+    RewritePatternSet &patterns) {
+  auto iface = dyn_cast<ConvertToLLVMOpInterface>(op);
+  if (!iface)
+    iface = op->getParentOfType<ConvertToLLVMOpInterface>();
+  if (!iface)
+    return;
+  SmallVector<ConvertToLLVMAttrInterface, 12> attrs;
+  iface.getConvertToLLVMConversionAttrs(attrs);
+  for (ConvertToLLVMAttrInterface attr : attrs)
+    attr.populateConvertToLLVMConversionPatterns(target, typeConverter,
+                                                 patterns);
+}
+
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMAttrInterface.cpp.inc"
+
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMOpInterface.cpp.inc"

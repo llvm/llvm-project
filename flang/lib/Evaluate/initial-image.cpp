@@ -18,7 +18,11 @@ auto InitialImage::Add(ConstantSubscript offset, std::size_t bytes,
   if (offset < 0 || offset + bytes > data_.size()) {
     return OutOfRange;
   } else {
-    auto elements{TotalElementCount(x.shape())};
+    auto optElements{TotalElementCount(x.shape())};
+    if (!optElements) {
+      return TooManyElems;
+    }
+    auto elements{*optElements};
     auto elementBytes{bytes > 0 ? bytes / elements : 0};
     if (elements * elementBytes != bytes) {
       return SizeMismatch;
@@ -89,7 +93,9 @@ public:
     }
     using Const = Constant<T>;
     using Scalar = typename Const::Element;
-    std::size_t elements{TotalElementCount(extents_)};
+    std::optional<uint64_t> optElements{TotalElementCount(extents_)};
+    CHECK(optElements);
+    uint64_t elements{*optElements};
     std::vector<Scalar> typedValue(elements);
     auto elemBytes{ToInt64(type_.MeasureSizeInBytes(
         context_, GetRank(extents_) > 0, charLength_))};
@@ -113,9 +119,16 @@ public:
             for (std::size_t j{0}; j < elements; ++j, at += stride) {
               if (Result value{image_.AsConstantPointer(at)}) {
                 typedValue[j].emplace(component, std::move(*value));
+              } else {
+                typedValue[j].emplace(component, Expr<SomeType>{NullPointer{}});
               }
             }
-          } else if (!IsAllocatable(component)) {
+          } else if (IsAllocatable(component)) {
+            // Lowering needs an explicit NULL() for allocatables
+            for (std::size_t j{0}; j < elements; ++j, at += stride) {
+              typedValue[j].emplace(component, Expr<SomeType>{NullPointer{}});
+            }
+          } else {
             auto componentType{DynamicType::From(component)};
             CHECK(componentType.has_value());
             auto componentExtents{GetConstantExtents(context_, component)};

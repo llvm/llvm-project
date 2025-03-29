@@ -101,7 +101,7 @@ class ARMTTIImpl : public BasicTTIImplBase<ARMTTIImpl> {
 
 public:
   explicit ARMTTIImpl(const ARMBaseTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
   bool areInlineCompatible(const Function *Caller,
@@ -165,15 +165,15 @@ public:
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
     switch (K) {
     case TargetTransformInfo::RGK_Scalar:
-      return TypeSize::Fixed(32);
+      return TypeSize::getFixed(32);
     case TargetTransformInfo::RGK_FixedWidthVector:
       if (ST->hasNEON())
-        return TypeSize::Fixed(128);
+        return TypeSize::getFixed(128);
       if (ST->hasMVEIntegerOps())
-        return TypeSize::Fixed(128);
-      return TypeSize::Fixed(0);
+        return TypeSize::getFixed(128);
+      return TypeSize::getFixed(0);
     case TargetTransformInfo::RGK_ScalableVector:
-      return TypeSize::Scalable(0);
+      return TypeSize::getScalable(0);
     }
     llvm_unreachable("Unsupported register kind");
   }
@@ -220,13 +220,12 @@ public:
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
-                                 ArrayRef<const Value *> Args = std::nullopt);
+                                 ArrayRef<const Value *> Args = {},
+                                 const Instruction *CxtI = nullptr);
 
-  bool preferInLoopReduction(unsigned Opcode, Type *Ty,
-                             TTI::ReductionFlags Flags) const;
+  bool preferInLoopReduction(unsigned Opcode, Type *Ty) const;
 
-  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
-                                       TTI::ReductionFlags Flags) const;
+  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty) const;
 
   bool shouldExpandReduction(const IntrinsicInst *II) const { return false; }
 
@@ -238,10 +237,12 @@ public:
                                    TTI::TargetCostKind CostKind,
                                    const Instruction *I = nullptr);
 
-  InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
-                                     CmpInst::Predicate VecPred,
-                                     TTI::TargetCostKind CostKind,
-                                     const Instruction *I = nullptr);
+  InstructionCost getCmpSelInstrCost(
+      unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+      TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
+      TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
+      const Instruction *I = nullptr);
 
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
@@ -255,8 +256,7 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
-      const Instruction *CxtI = nullptr);
+      ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr);
 
   InstructionCost
   getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
@@ -284,7 +284,7 @@ public:
                                              TTI::TargetCostKind CostKind);
   InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
                                            Type *ResTy, VectorType *ValTy,
-                                           FastMathFlags FMF,
+                                           std::optional<FastMathFlags> FMF,
                                            TTI::TargetCostKind CostKind);
   InstructionCost getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
                                          VectorType *ValTy,
@@ -300,9 +300,9 @@ public:
   /// getScalingFactorCost - Return the cost of the scaling used in
   /// addressing mode represented by AM.
   /// If the AM is supported, the return value must be >= 0.
-  /// If the AM is not supported, the return value must be negative.
+  /// If the AM is not supported, the return value is an invalid cost.
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
-                                       int64_t BaseOffset, bool HasBaseReg,
+                                       StackOffset BaseOffset, bool HasBaseReg,
                                        int64_t Scale, unsigned AddrSpace) const;
 
   bool maybeLoweredToCall(Instruction &I);
@@ -332,6 +332,11 @@ public:
   }
 
   bool hasArmWideBranch(bool Thumb) const;
+
+  bool isProfitableToSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const;
+
+  unsigned getNumBytesToPadGlobalArray(unsigned Size, Type *ArrayType) const;
 
   /// @}
 };

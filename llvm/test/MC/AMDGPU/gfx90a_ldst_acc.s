@@ -8257,15 +8257,15 @@ ds_read_u16 a5, v1
 // NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 ds_read_u16 a5, v1 offset:4
 
-// GFX90A: ds_swizzle_b32 a5, v1 offset:65535 ; encoding: [0xff,0xff,0x7a,0xda,0x01,0x00,0x00,0x05]
+// GFX90A: ds_swizzle_b32 a5, v1 offset:swizzle(FFT,31) ; encoding: [0xff,0xff,0x7a,0xda,0x01,0x00,0x00,0x05]
 // NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 ds_swizzle_b32 a5, v1 offset:65535
 
-// GFX90A: ds_swizzle_b32 a255, v1 offset:65535 ; encoding: [0xff,0xff,0x7a,0xda,0x01,0x00,0x00,0xff]
+// GFX90A: ds_swizzle_b32 a255, v1 offset:swizzle(FFT,31) ; encoding: [0xff,0xff,0x7a,0xda,0x01,0x00,0x00,0xff]
 // NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 ds_swizzle_b32 a255, v1 offset:65535
 
-// GFX90A: ds_swizzle_b32 a5, v255 offset:65535 ; encoding: [0xff,0xff,0x7a,0xda,0xff,0x00,0x00,0x05]
+// GFX90A: ds_swizzle_b32 a5, v255 offset:swizzle(FFT,31) ; encoding: [0xff,0xff,0x7a,0xda,0xff,0x00,0x00,0x05]
 // NOT-GFX90A: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register class: agpr loads and stores not supported on this GPU
 ds_swizzle_b32 a5, v255 offset:65535
 

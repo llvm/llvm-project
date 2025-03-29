@@ -3,7 +3,7 @@
 
 --- |
 
-    @x = external hidden local_unnamed_addr global i32*, align 8
+    @x = external hidden local_unnamed_addr global ptr, align 8
 
     define void @select_add_low_without_offset() { ret void }
     define void @select_add_low_with_offset() { ret void }

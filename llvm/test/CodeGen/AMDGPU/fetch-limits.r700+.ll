@@ -1,15 +1,15 @@
-; RUN: llc < %s -march=r600 -mcpu=rv710 | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=rv730 | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=rv770 | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=cedar | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=sumo | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=juniper | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=cypress | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=barts | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=turks | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=caicos | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=cayman | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=rv710 | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=rv730 | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=rv770 | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=cedar | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=sumo | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=juniper | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=cypress | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=barts | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=turks | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=caicos | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=cayman | FileCheck %s
 
 ; r700+ supports 16 fetches in a clause
 ; CHECK: {{^}}fetch_limits_r700:

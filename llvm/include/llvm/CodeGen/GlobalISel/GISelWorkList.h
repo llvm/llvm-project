@@ -82,7 +82,7 @@ public:
   /// Remove I from the worklist if it exists.
   void remove(const MachineInstr *I) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    assert((Finalized || WorklistMap.empty()) && "Neither finalized nor empty");
+    assert(Finalized && "GISelWorkList used without finalizing");
 #endif
     auto It = WorklistMap.find(I);
     if (It == WorklistMap.end())

@@ -14,58 +14,81 @@
 // constexpr year_month_day& operator-=(const months& m) noexcept;
 
 #include <chrono>
-#include <type_traits>
 #include <cassert>
+#include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 
-template <typename D, typename Ds>
-constexpr bool testConstexpr(D d1)
-{
-    if (static_cast<unsigned>((d1          ).month()) !=  1) return false;
-    if (static_cast<unsigned>((d1 += Ds{ 1}).month()) !=  2) return false;
-    if (static_cast<unsigned>((d1 += Ds{ 2}).month()) !=  4) return false;
-    if (static_cast<unsigned>((d1 += Ds{12}).month()) !=  4) return false;
-    if (static_cast<unsigned>((d1 -= Ds{ 1}).month()) !=  3) return false;
-    if (static_cast<unsigned>((d1 -= Ds{ 2}).month()) !=  1) return false;
-    if (static_cast<unsigned>((d1 -= Ds{12}).month()) !=  1) return false;
-    return true;
+using year           = std::chrono::year;
+using month          = std::chrono::month;
+using day            = std::chrono::day;
+using year_month_day = std::chrono::year_month_day;
+using months         = std::chrono::months;
+
+constexpr bool test() {
+  for (unsigned i = 0; i <= 10; ++i) {
+    year y{1234};
+    day d{23};
+    year_month_day ymd(y, month{i}, d);
+
+    ymd += months{2};
+    assert(ymd.year() == y);
+    assert(ymd.day() == d);
+    assert(static_cast<unsigned>((ymd).month()) == i + 2);
+
+    ymd -= months{1};
+    assert(ymd.year() == y);
+    assert(ymd.day() == d);
+    assert(static_cast<unsigned>((ymd).month()) == i + 1);
+  }
+
+  { // Validate the ok status when the day is not present in the new month.
+    year_month_day ymd{year{2020}, month{3}, day{31}};
+    ymd += months{1};
+    assert((ymd == year_month_day{year{2020}, month{4}, day{31}}));
+    assert(!ymd.ok());
+
+    ymd -= months{1};
+    assert((ymd == year_month_day{year{2020}, month{3}, day{31}}));
+    assert(ymd.ok());
+  }
+
+  { // Validate the ok status when the day becomes present in the new month.
+    year_month_day ymd{year{2020}, month{4}, day{31}};
+    assert(!ymd.ok());
+
+    ymd += months{1};
+    assert((ymd == year_month_day{year{2020}, month{5}, day{31}}));
+    assert(ymd.ok());
+
+    ymd -= months{2};
+    assert((ymd == year_month_day{year{2020}, month{3}, day{31}}));
+    assert(ymd.ok());
+  }
+
+  { // Test year wrapping
+    year_month_day ymd{year{2020}, month{4}, day{31}};
+
+    ymd += months{12};
+    assert((ymd == year_month_day{year{2021}, month{4}, day{31}}));
+
+    ymd -= months{12};
+    assert((ymd == year_month_day{year{2020}, month{4}, day{31}}));
+  }
+
+  return true;
 }
 
-int main(int, char**)
-{
-    using year           = std::chrono::year;
-    using month          = std::chrono::month;
-    using day            = std::chrono::day;
-    using year_month_day = std::chrono::year_month_day;
-    using months         = std::chrono::months;
+int main(int, char**) {
+  ASSERT_NOEXCEPT(std::declval<year_month_day&>() += std::declval<months>());
+  ASSERT_NOEXCEPT(std::declval<year_month_day&>() -= std::declval<months>());
 
-    ASSERT_NOEXCEPT(std::declval<year_month_day&>() += std::declval<months>());
-    ASSERT_NOEXCEPT(std::declval<year_month_day&>() -= std::declval<months>());
+  ASSERT_SAME_TYPE(year_month_day&, decltype(std::declval<year_month_day&>() += std::declval<months>()));
+  ASSERT_SAME_TYPE(year_month_day&, decltype(std::declval<year_month_day&>() -= std::declval<months>()));
 
-    ASSERT_SAME_TYPE(year_month_day&, decltype(std::declval<year_month_day&>() += std::declval<months>()));
-    ASSERT_SAME_TYPE(year_month_day&, decltype(std::declval<year_month_day&>() -= std::declval<months>()));
-
-    static_assert(testConstexpr<year_month_day, months>(year_month_day{year{1234}, month{1}, day{1}}), "");
-
-    for (unsigned i = 0; i <= 10; ++i)
-    {
-        year y{1234};
-        day   d{23};
-        year_month_day ym(y, month{i}, d);
-        assert(static_cast<unsigned>((ym += months{2}).month()) == i + 2);
-        assert(ym.year() == y);
-        assert(ym.day()  == d);
-        assert(static_cast<unsigned>((ym             ).month()) == i + 2);
-        assert(ym.year() == y);
-        assert(ym.day()  == d);
-        assert(static_cast<unsigned>((ym -= months{1}).month()) == i + 1);
-        assert(ym.year() == y);
-        assert(ym.day()  == d);
-        assert(static_cast<unsigned>((ym             ).month()) == i + 1);
-        assert(ym.year() == y);
-        assert(ym.day()  == d);
-    }
+  test();
+  static_assert(test());
 
   return 0;
 }

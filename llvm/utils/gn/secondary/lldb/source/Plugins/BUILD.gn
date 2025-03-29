@@ -160,12 +160,22 @@ lldb_plugins += [
     "//lldb/source/Plugins/SymbolFile/Symtab",
     "SymbolFileSymtab",
   ],
+  [
+    "//lldb/source/Plugins/SymbolLocator/Default",
+    "SymbolLocatorDefault",
+  ],
 ]
 if (current_os == "mac") {
-  lldb_plugins += [ [
-        "//lldb/source/Plugins/SymbolVendor/MacOSX",
-        "SymbolVendorMacOSX",
-      ] ]
+  lldb_plugins += [
+    [
+      "//lldb/source/Plugins/SymbolLocator/DebugSymbols",
+      "SymbolLocatorDebugSymbols",
+    ],
+    [
+      "//lldb/source/Plugins/SymbolVendor/MacOSX",
+      "SymbolVendorMacOSX",
+    ],
+  ]
 }
 lldb_plugins += [
   [

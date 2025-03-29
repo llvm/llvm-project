@@ -30,13 +30,13 @@ TEST_MAIN(int argc, char **argv, char **envp) {
   // Bad size
   cwd = LIBC_NAMESPACE::getcwd(buffer, 0);
   ASSERT_TRUE(cwd == nullptr);
-  ASSERT_EQ(libc_errno, EINVAL);
-  libc_errno = 0;
+  ASSERT_ERRNO_EQ(EINVAL);
+  LIBC_NAMESPACE::libc_errno = 0;
 
   // Insufficient size
   cwd = LIBC_NAMESPACE::getcwd(buffer, 2);
   ASSERT_TRUE(cwd == nullptr);
-  int err = libc_errno;
+  int err = LIBC_NAMESPACE::libc_errno;
   ASSERT_EQ(err, ERANGE);
 
   return 0;

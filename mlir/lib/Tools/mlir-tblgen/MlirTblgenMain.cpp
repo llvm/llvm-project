@@ -30,8 +30,8 @@ enum DeprecatedAction { None, Warn, Error };
 static DeprecatedAction actionOnDeprecatedValue;
 
 // Returns if there is a use of `deprecatedInit` in `field`.
-static bool findUse(Init *field, Init *deprecatedInit,
-                    llvm::DenseMap<Init *, bool> &known) {
+static bool findUse(const Init *field, const Init *deprecatedInit,
+                    llvm::DenseMap<const Init *, bool> &known) {
   if (field == deprecatedInit)
     return true;
 
@@ -64,13 +64,13 @@ static bool findUse(Init *field, Init *deprecatedInit,
     if (findUse(dagInit->getOperator(), deprecatedInit, known))
       return memoize(true);
 
-    return memoize(llvm::any_of(dagInit->getArgs(), [&](Init *arg) {
+    return memoize(llvm::any_of(dagInit->getArgs(), [&](const Init *arg) {
       return findUse(arg, deprecatedInit, known);
     }));
   }
 
-  if (ListInit *li = dyn_cast<ListInit>(field)) {
-    return memoize(llvm::any_of(li->getValues(), [&](Init *jt) {
+  if (const ListInit *li = dyn_cast<ListInit>(field)) {
+    return memoize(llvm::any_of(li->getValues(), [&](const Init *jt) {
       return findUse(jt, deprecatedInit, known);
     }));
   }
@@ -83,14 +83,14 @@ static bool findUse(Init *field, Init *deprecatedInit,
 }
 
 // Returns if there is a use of `deprecatedInit` in `record`.
-static bool findUse(Record &record, Init *deprecatedInit,
-                    llvm::DenseMap<Init *, bool> &known) {
+static bool findUse(Record &record, const Init *deprecatedInit,
+                    llvm::DenseMap<const Init *, bool> &known) {
   return llvm::any_of(record.getValues(), [&](const RecordVal &val) {
     return findUse(val.getValue(), deprecatedInit, known);
   });
 }
 
-static void warnOfDeprecatedUses(RecordKeeper &records) {
+static void warnOfDeprecatedUses(const RecordKeeper &records) {
   // This performs a direct check for any def marked as deprecated and then
   // finds all uses of deprecated def. Deprecated defs are not expected to be
   // either numerous or long lived.
@@ -100,7 +100,7 @@ static void warnOfDeprecatedUses(RecordKeeper &records) {
     if (!r || !r->getValue())
       continue;
 
-    llvm::DenseMap<Init *, bool> hasUse;
+    llvm::DenseMap<const Init *, bool> hasUse;
     if (auto *si = dyn_cast<StringInit>(r->getValue())) {
       for (auto &jt : records.getDefs()) {
         // Skip anonymous defs.
@@ -126,7 +126,7 @@ static const mlir::GenInfo *generator;
 
 // TableGenMain requires a function pointer so this function is passed in which
 // simply wraps the call to the generator.
-static bool mlirTableGenMain(raw_ostream &os, RecordKeeper &records) {
+static bool mlirTableGenMain(raw_ostream &os, const RecordKeeper &records) {
   if (actionOnDeprecatedValue != DeprecatedAction::None)
     warnOfDeprecatedUses(records);
 

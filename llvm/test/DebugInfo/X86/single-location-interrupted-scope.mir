@@ -55,9 +55,9 @@
   define dso_local void @funone(i32 %one, i32 %two) local_unnamed_addr !dbg !17 {
   entry:
     call void @llvm.dbg.value(metadata i32 %one, metadata !20, metadata !DIExpression()), !dbg !23
-    store i32 %one, i32* @globa, align 4, !dbg !25
+    store i32 %one, ptr @globa, align 4, !dbg !25
     %add = add nsw i32 %two, %one, !dbg !30
-    store i32 %add, i32* @globb, align 4, !dbg !31
+    store i32 %add, ptr @globb, align 4, !dbg !31
     %cmp = icmp sgt i32 %add, 0, !dbg !32
     br i1 %cmp, label %if.then, label %if.end, !dbg !34
 
@@ -72,9 +72,9 @@
   define dso_local void @funtwo(i32 %one, i32 %two) local_unnamed_addr !dbg !37 {
   entry:
     call void @llvm.dbg.value(metadata i32 %one, metadata !20, metadata !DIExpression()), !dbg !41
-    store i32 %one, i32* @globa, align 4, !dbg !43
+    store i32 %one, ptr @globa, align 4, !dbg !43
     %add = add nsw i32 %two, %one, !dbg !44
-    store i32 %add, i32* @globb, align 4, !dbg !45
+    store i32 %add, ptr @globb, align 4, !dbg !45
     %cmp = icmp sgt i32 %two, 0, !dbg !46
     br i1 %cmp, label %if.then, label %if.end, !dbg !48
 

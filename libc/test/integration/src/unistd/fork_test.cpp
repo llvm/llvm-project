@@ -6,17 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/OSUtil/syscall.h"
 #include "src/pthread/pthread_atfork.h"
 #include "src/signal/raise.h"
+#include "src/stdlib/exit.h"
 #include "src/sys/wait/wait.h"
 #include "src/sys/wait/wait4.h"
 #include "src/sys/wait/waitpid.h"
 #include "src/unistd/fork.h"
+#include "src/unistd/gettid.h"
 
 #include "test/IntegrationTest/test.h"
 
-#include <errno.h>
 #include <signal.h>
+#include <sys/syscall.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -140,7 +143,24 @@ void fork_with_atfork_callbacks() {
   ASSERT_NE(child, DONE);
 }
 
+void gettid_test() {
+  // fork and verify tid is consistent with the syscall result.
+  int pid = LIBC_NAMESPACE::fork();
+  ASSERT_EQ(LIBC_NAMESPACE::gettid(),
+            LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_gettid));
+  if (pid == 0)
+    LIBC_NAMESPACE::exit(0);
+  // make sure child process exits normally
+  int status;
+  pid_t cpid = LIBC_NAMESPACE::waitpid(pid, &status, 0);
+  ASSERT_TRUE(cpid > 0);
+  ASSERT_EQ(cpid, pid);
+  ASSERT_TRUE(WIFEXITED(status));
+  ASSERT_EQ(WEXITSTATUS(status), 0);
+}
+
 TEST_MAIN(int argc, char **argv, char **envp) {
+  gettid_test();
   fork_and_wait_normal_exit();
   fork_and_wait4_normal_exit();
   fork_and_waitpid_normal_exit();

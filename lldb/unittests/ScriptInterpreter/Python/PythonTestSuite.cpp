@@ -9,43 +9,27 @@
 #include "gtest/gtest.h"
 
 #include "Plugins/ScriptInterpreter/Python/SWIGPythonBridge.h"
-#include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPython.h"
-#include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPythonImpl.h"
 #include "Plugins/ScriptInterpreter/Python/lldb-python.h"
-
-#include "lldb/Host/FileSystem.h"
-#include "lldb/Host/HostInfo.h"
 
 #include "PythonTestSuite.h"
 #include <optional>
 
-using namespace lldb_private;
-class TestScriptInterpreterPython : public ScriptInterpreterPythonImpl {
-public:
-  using ScriptInterpreterPythonImpl::Initialize;
-};
-
 void PythonTestSuite::SetUp() {
-  FileSystem::Initialize();
-  HostInfoBase::Initialize();
-  // ScriptInterpreterPython::Initialize() depends on HostInfo being
-  // initializedso it can compute the python directory etc.
-  TestScriptInterpreterPython::Initialize();
-
   // Although we don't care about concurrency for the purposes of running
   // this test suite, Python requires the GIL to be locked even for
   // deallocating memory, which can happen when you call Py_DECREF or
   // Py_INCREF.  So acquire the GIL for the entire duration of this
   // test suite.
+  Py_InitializeEx(0);
   m_gil_state = PyGILState_Ensure();
+  PyRun_SimpleString("import sys");
 }
 
 void PythonTestSuite::TearDown() {
   PyGILState_Release(m_gil_state);
 
-  TestScriptInterpreterPython::Terminate();
-  HostInfoBase::Terminate();
-  FileSystem::Terminate();
+  // We could call Py_FinalizeEx here, but initializing and finalizing Python is
+  // pretty slow, so just keep Python initialized across tests.
 }
 
 // The following functions are the Pythonic implementations of the required
@@ -94,26 +78,6 @@ lldb_private::python::SWIGBridge::LLDBSwigPythonCreateCommandObject(
     const char *python_class_name, const char *session_dictionary_name,
     lldb::DebuggerSP debugger_sp) {
   return python::PythonObject();
-}
-
-python::PythonObject
-lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedThreadPlan(
-    const char *python_class_name, const char *session_dictionary_name,
-    const StructuredDataImpl &args_data, std::string &error_string,
-    const lldb::ThreadPlanSP &thread_plan_sp) {
-  return python::PythonObject();
-}
-
-bool lldb_private::python::SWIGBridge::LLDBSWIGPythonCallThreadPlan(
-    void *implementor, const char *method_name, Event *event_sp,
-    bool &got_error) {
-  return false;
-}
-
-bool lldb_private::python::SWIGBridge::LLDBSWIGPythonCallThreadPlan(
-    void *implementor, const char *method_name, Stream *event_sp,
-    bool &got_error) {
-  return false;
 }
 
 python::PythonObject lldb_private::python::SWIGBridge::
@@ -171,11 +135,26 @@ lldb_private::python::LLDBSWIGPython_CastPyObjectToSBError(PyObject *data) {
 }
 
 void *
+lldb_private::python::LLDBSWIGPython_CastPyObjectToSBEvent(PyObject *data) {
+  return nullptr;
+}
+
+void *
+lldb_private::python::LLDBSWIGPython_CastPyObjectToSBStream(PyObject *data) {
+  return nullptr;
+}
+
+void *
 lldb_private::python::LLDBSWIGPython_CastPyObjectToSBValue(PyObject *data) {
   return nullptr;
 }
 
 void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(
+    PyObject *data) {
+  return nullptr;
+}
+
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBExecutionContext(
     PyObject *data) {
   return nullptr;
 }
@@ -216,6 +195,33 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommandObject(
     lldb_private::CommandReturnObject &cmd_retobj,
     lldb::ExecutionContextRefSP exe_ctx_ref_sp) {
   return false;
+}
+
+bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
+    PyObject *implementor, lldb::DebuggerSP debugger,
+    StructuredDataImpl &args_impl,
+    lldb_private::CommandReturnObject &cmd_retobj,
+    lldb::ExecutionContextRefSP exe_ctx_ref_sp) {
+  return false;
+}
+
+std::optional<std::string>
+LLDBSwigPythonGetRepeatCommandForScriptedCommand(PyObject *implementor,
+                                                 std::string &command) {
+  return std::nullopt;
+}
+
+StructuredData::DictionarySP
+LLDBSwigPythonHandleArgumentCompletionForScriptedCommand(
+    PyObject *implementor, std::vector<llvm::StringRef> &args, size_t args_pos,
+    size_t pos_in_arg) {
+  return {};
+}
+
+StructuredData::DictionarySP
+LLDBSwigPythonHandleOptionArgumentCompletionForScriptedCommand(
+    PyObject *implementor, llvm::StringRef &long_options, size_t char_in_arg) {
+  return {};
 }
 
 bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallModuleInit(
@@ -281,21 +287,7 @@ void *lldb_private::python::SWIGBridge::LLDBSWIGPython_GetDynamicSetting(
 }
 
 python::PythonObject
-lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedStopHook(
-    lldb::TargetSP target_sp, const char *python_class_name,
-    const char *session_dictionary_name, const StructuredDataImpl &args_impl,
-    Status &error) {
-  return python::PythonObject();
-}
-
-bool lldb_private::python::SWIGBridge::LLDBSwigPythonStopHookCallHandleStop(
-    void *implementor, lldb::ExecutionContextRefSP exc_ctx_sp,
-    lldb::StreamSP stream) {
-  return false;
-}
-
-python::PythonObject
-lldb_private::python::SWIGBridge::ToSWIGWrapper(const Status &status) {
+lldb_private::python::SWIGBridge::ToSWIGWrapper(Status &&status) {
   return python::PythonObject();
 }
 
@@ -320,11 +312,31 @@ lldb_private::python::SWIGBridge::ToSWIGWrapper(lldb::ExecutionContextRefSP) {
 }
 
 python::PythonObject
+lldb_private::python::SWIGBridge::ToSWIGWrapper(lldb::ThreadPlanSP) {
+  return python::PythonObject();
+}
+
+python::PythonObject
 lldb_private::python::SWIGBridge::ToSWIGWrapper(lldb::ProcessSP) {
   return python::PythonObject();
 }
 
 python::PythonObject lldb_private::python::SWIGBridge::ToSWIGWrapper(
     const lldb_private::StructuredDataImpl &) {
+  return python::PythonObject();
+}
+
+python::PythonObject
+lldb_private::python::SWIGBridge::ToSWIGWrapper(Event *event) {
+  return python::PythonObject();
+}
+
+python::PythonObject
+lldb_private::python::SWIGBridge::ToSWIGWrapper(const Stream *stream) {
+  return python::PythonObject();
+}
+
+python::PythonObject lldb_private::python::SWIGBridge::ToSWIGWrapper(
+    std::shared_ptr<lldb::SBStream> stream_sb) {
   return python::PythonObject();
 }

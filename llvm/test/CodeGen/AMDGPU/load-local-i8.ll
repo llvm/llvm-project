@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn-- -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,SI,SICIVI,FUNC %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=-enable-ds128 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,VI,SICIVI,FUNC %s
+; RUN: llc -mtriple=amdgcn-- -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,SICIVI,FUNC %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=-enable-ds128 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,SICIVI,FUNC %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-enable-ds128 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9,FUNC %s
-; RUN: llc -march=r600 -mtriple=r600-- -mcpu=redwood -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -mtriple=r600-- -mcpu=redwood -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=EG -check-prefix=FUNC %s
 
 ; Testing for ds_read/write_b128
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=+enable-ds128 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=CIVI,FUNC %s
@@ -161,12 +161,8 @@ define amdgpu_kernel void @local_zextload_v2i8_to_v2i32(ptr addrspace(3) %out, p
 ;          t31: i32 = any_extend t23
 ;        t33: i32 = sign_extend_inreg t31, ValueType:ch:i8
 
-; SI-DAG: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 8, 8
-; SI-DAG: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 8
-
-; VI-DAG: v_lshrrev_b16_e32 [[SHIFT:v[0-9]+]], 8, v{{[0-9]+}}
-; VI-DAG: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 8
-; VI-DAG: v_bfe_i32 v{{[0-9]+}}, [[SHIFT]], 0, 8
+; GCN-DAG: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 8, 8
+; GCN-DAG: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 8
 
 ; EG: LDS_USHORT_READ_RET
 ; EG-DAG: BFE_INT
@@ -182,8 +178,7 @@ define amdgpu_kernel void @local_sextload_v2i8_to_v2i32(ptr addrspace(3) %out, p
 ; GFX9-NOT: m0
 ; GCN: ds_read_b32
 
-; SI-DAG: v_bfe_u32 v{{[0-9]+}}, v{{[0-9]+}}, 8, 8
-; VI-DAG: v_lshrrev_b16_e32 v{{[0-9]+}}, 8, {{v[0-9]+}}
+; GCN-DAG: v_bfe_u32 v{{[0-9]+}}, v{{[0-9]+}}, 8, 8
 ; GCN-DAG: v_bfe_u32 v{{[0-9]+}}, v{{[0-9]+}}, 16, 8
 ; GCN-DAG: v_and_b32_e32 v{{[0-9]+}}, 0xff,
 

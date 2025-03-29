@@ -1,6 +1,5 @@
 ! This test checks lowering of OpenACC set directive.
 
-! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s --check-prefixes=CHECK,FIR
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,HLFIR
 
 program test_acc_set
@@ -14,7 +13,7 @@ program test_acc_set
 
 !$acc set device_type(*)
 
-!$acc set device_type(0)
+!$acc set device_type(multicore)
 
 end
 
@@ -26,7 +25,6 @@ end
 ! CHECK: acc.set default_async(%[[C1]] : i32)
 
 ! CHECK: %[[C1:.*]] = arith.constant 1 : i32
-! FIR: %[[LOAD_L:.*]] = fir.load %[[L]] : !fir.ref<!fir.logical<4>>
 ! HLFIR: %[[LOAD_L:.*]] = fir.load %[[DECLL]]#0 : !fir.ref<!fir.logical<4>>
 ! CHECK: %[[CONV_L:.*]] = fir.convert %[[LOAD_L]] : (!fir.logical<4>) -> i1
 ! CHECK: acc.set default_async(%[[C1]] : i32) if(%[[CONV_L]])
@@ -34,10 +32,8 @@ end
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
 ! CHECK: acc.set device_num(%[[C0]] : i32)
 
-! CHECK: %[[C_1:.*]] = arith.constant -1 : index
-! CHECK: acc.set device_type(%[[C_1]] : index)
+! CHECK: acc.set attributes {device_type = #acc.device_type<star>}
 
-! CHECK: %[[C0:.*]] = arith.constant 0 : i32
-! CHECK: acc.set device_type(%[[C0]] : i32)
+! CHECK: acc.set attributes {device_type = #acc.device_type<multicore>}
 
 

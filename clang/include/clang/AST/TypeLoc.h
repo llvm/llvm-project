@@ -139,6 +139,7 @@ public:
   }
 
   /// Get the pointer where source information is stored.
+  // FIXME: This should provide a type-safe interface.
   void *getOpaqueData() const {
     return Data;
   }
@@ -189,6 +190,9 @@ public:
   /// pointer types, but not through decltype or typedefs.
   AutoTypeLoc getContainedAutoTypeLoc() const;
 
+  /// Get the SourceLocation of the template keyword (if any).
+  SourceLocation getTemplateKeywordLoc() const;
+
   /// Initializes this to state that every location in this
   /// type is the given location.
   ///
@@ -228,6 +232,9 @@ public:
   /// Find the location of the nullability specifier (__nonnull,
   /// __nullable, or __null_unspecifier), if there is one.
   SourceLocation findNullabilityLoc() const;
+
+  void dump() const;
+  void dump(llvm::raw_ostream &, const ASTContext &) const;
 
 private:
   static bool isKind(const TypeLoc&) {
@@ -391,6 +398,7 @@ public:
     unsigned extraAlign = asDerived()->getExtraLocalDataAlignment();
     size = llvm::alignTo(size, extraAlign);
     size += asDerived()->getExtraLocalDataSize();
+    size = llvm::alignTo(size, asDerived()->getLocalDataAlignment());
     return size;
   }
 
@@ -884,6 +892,10 @@ public:
     return getInnerTypeLoc();
   }
 
+  TypeLoc getEquivalentTypeLoc() const {
+    return TypeLoc(getTypePtr()->getEquivalentType(), getNonLocalData());
+  }
+
   /// The type attribute.
   const Attr *getAttr() const {
     return getLocalData()->TypeAttr;
@@ -928,6 +940,37 @@ public:
   void initializeLocal(ASTContext &Context, SourceLocation loc) {}
 
   QualType getInnerType() const { return getTypePtr()->getWrappedType(); }
+};
+
+struct HLSLAttributedResourceLocInfo {
+  SourceRange Range;
+  TypeSourceInfo *ContainedTyInfo;
+};
+
+/// Type source information for HLSL attributed resource type.
+class HLSLAttributedResourceTypeLoc
+    : public ConcreteTypeLoc<UnqualTypeLoc, HLSLAttributedResourceTypeLoc,
+                             HLSLAttributedResourceType,
+                             HLSLAttributedResourceLocInfo> {
+public:
+  TypeLoc getWrappedLoc() const { return getInnerTypeLoc(); }
+
+  TypeSourceInfo *getContainedTypeSourceInfo() const {
+    return getLocalData()->ContainedTyInfo;
+  }
+  void setContainedTypeSourceInfo(TypeSourceInfo *TSI) const {
+    getLocalData()->ContainedTyInfo = TSI;
+  }
+
+  void setSourceRange(const SourceRange &R) { getLocalData()->Range = R; }
+  SourceRange getLocalSourceRange() const { return getLocalData()->Range; }
+  void initializeLocal(ASTContext &Context, SourceLocation loc) {
+    setSourceRange(SourceRange());
+  }
+  QualType getInnerType() const { return getTypePtr()->getWrappedType(); }
+  unsigned getLocalDataSize() const {
+    return sizeof(HLSLAttributedResourceLocInfo);
+  }
 };
 
 struct ObjCObjectTypeLocInfo {
@@ -1110,6 +1153,32 @@ public:
   }
 };
 
+struct BoundsAttributedLocInfo {};
+class BoundsAttributedTypeLoc
+    : public ConcreteTypeLoc<UnqualTypeLoc, BoundsAttributedTypeLoc,
+                             BoundsAttributedType, BoundsAttributedLocInfo> {
+public:
+  TypeLoc getInnerLoc() const { return getInnerTypeLoc(); }
+  QualType getInnerType() const { return getTypePtr()->desugar(); }
+  void initializeLocal(ASTContext &Context, SourceLocation Loc) {
+    // nothing to do
+  }
+  // LocalData is empty and TypeLocBuilder doesn't handle DataSize 1.
+  unsigned getLocalDataSize() const { return 0; }
+};
+
+class CountAttributedTypeLoc final
+    : public InheritingConcreteTypeLoc<BoundsAttributedTypeLoc,
+                                       CountAttributedTypeLoc,
+                                       CountAttributedType> {
+public:
+  Expr *getCountExpr() const { return getTypePtr()->getCountExpr(); }
+  bool isCountInBytes() const { return getTypePtr()->isCountInBytes(); }
+  bool isOrNull() const { return getTypePtr()->isOrNull(); }
+
+  SourceRange getLocalSourceRange() const;
+};
+
 struct MacroQualifiedLocInfo {
   SourceLocation ExpansionLoc;
 };
@@ -1287,7 +1356,7 @@ public:
 };
 
 struct MemberPointerLocInfo : public PointerLikeLocInfo {
-  TypeSourceInfo *ClassTInfo;
+  void *QualifierData = nullptr;
 };
 
 /// Wrapper for source info for member pointers.
@@ -1303,28 +1372,32 @@ public:
     setSigilLoc(Loc);
   }
 
-  const Type *getClass() const {
-    return getTypePtr()->getClass();
+  NestedNameSpecifierLoc getQualifierLoc() const {
+    return NestedNameSpecifierLoc(getTypePtr()->getQualifier(),
+                                  getLocalData()->QualifierData);
   }
 
-  TypeSourceInfo *getClassTInfo() const {
-    return getLocalData()->ClassTInfo;
-  }
-
-  void setClassTInfo(TypeSourceInfo* TI) {
-    getLocalData()->ClassTInfo = TI;
+  void setQualifierLoc(NestedNameSpecifierLoc QualifierLoc) {
+    assert(QualifierLoc.getNestedNameSpecifier() ==
+               getTypePtr()->getQualifier() &&
+           "Inconsistent nested-name-specifier pointer");
+    getLocalData()->QualifierData = QualifierLoc.getOpaqueData();
   }
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc) {
     setSigilLoc(Loc);
-    setClassTInfo(nullptr);
+    if (auto *Qualifier = getTypePtr()->getQualifier()) {
+      NestedNameSpecifierLocBuilder Builder;
+      Builder.MakeTrivial(Context, Qualifier, Loc);
+      setQualifierLoc(Builder.getWithLocInContext(Context));
+    } else
+      getLocalData()->QualifierData = nullptr;
   }
 
   SourceRange getLocalSourceRange() const {
-    if (TypeSourceInfo *TI = getClassTInfo())
-      return SourceRange(TI->getTypeLoc().getBeginLoc(), getStarLoc());
-    else
-      return SourceRange(getStarLoc());
+    if (NestedNameSpecifierLoc QL = getQualifierLoc())
+      return SourceRange(QL.getBeginLoc(), getStarLoc());
+    return SourceRange(getStarLoc());
   }
 };
 
@@ -1575,6 +1648,11 @@ class ConstantArrayTypeLoc :
                                      ConstantArrayType> {
 };
 
+/// Wrapper for source info for array parameter types.
+class ArrayParameterTypeLoc
+    : public InheritingConcreteTypeLoc<
+          ConstantArrayTypeLoc, ArrayParameterTypeLoc, ArrayParameterType> {};
+
 class IncompleteArrayTypeLoc :
     public InheritingConcreteTypeLoc<ArrayTypeLoc,
                                      IncompleteArrayTypeLoc,
@@ -1684,7 +1762,7 @@ public:
   }
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc) {
-    setTemplateKeywordLoc(Loc);
+    setTemplateKeywordLoc(SourceLocation());
     setTemplateNameLoc(Loc);
     setLAngleLoc(Loc);
     setRAngleLoc(Loc);
@@ -2055,6 +2133,34 @@ public:
   }
 };
 
+struct PackIndexingTypeLocInfo {
+  SourceLocation EllipsisLoc;
+};
+
+class PackIndexingTypeLoc
+    : public ConcreteTypeLoc<UnqualTypeLoc, PackIndexingTypeLoc,
+                             PackIndexingType, PackIndexingTypeLocInfo> {
+
+public:
+  Expr *getIndexExpr() const { return getTypePtr()->getIndexExpr(); }
+  QualType getPattern() const { return getTypePtr()->getPattern(); }
+
+  SourceLocation getEllipsisLoc() const { return getLocalData()->EllipsisLoc; }
+  void setEllipsisLoc(SourceLocation Loc) { getLocalData()->EllipsisLoc = Loc; }
+
+  void initializeLocal(ASTContext &Context, SourceLocation Loc) {
+    setEllipsisLoc(Loc);
+  }
+
+  TypeLoc getPatternLoc() const { return getInnerTypeLoc(); }
+
+  QualType getInnerType() const { return this->getTypePtr()->getPattern(); }
+
+  SourceRange getLocalSourceRange() const {
+    return SourceRange(getEllipsisLoc(), getEllipsisLoc());
+  }
+};
+
 struct UnaryTransformTypeLocInfo {
   // FIXME: While there's only one unary transform right now, future ones may
   // need different representations
@@ -2294,7 +2400,7 @@ public:
   QualType getInnerType() const { return getTypePtr()->getNamedType(); }
 
   bool isEmpty() const {
-    return getTypePtr()->getKeyword() == ElaboratedTypeKeyword::ETK_None &&
+    return getTypePtr()->getKeyword() == ElaboratedTypeKeyword::None &&
            !getTypePtr()->getQualifier();
   }
 
@@ -2620,6 +2726,8 @@ inline T TypeLoc::getAsAdjusted() const {
     else if (auto ATL = Cur.getAs<AttributedTypeLoc>())
       Cur = ATL.getModifiedLoc();
     else if (auto ATL = Cur.getAs<BTFTagAttributedTypeLoc>())
+      Cur = ATL.getWrappedLoc();
+    else if (auto ATL = Cur.getAs<HLSLAttributedResourceTypeLoc>())
       Cur = ATL.getWrappedLoc();
     else if (auto ETL = Cur.getAs<ElaboratedTypeLoc>())
       Cur = ETL.getNamedTypeLoc();

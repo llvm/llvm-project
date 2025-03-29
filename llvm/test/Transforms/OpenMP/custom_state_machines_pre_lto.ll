@@ -10,7 +10,7 @@
 ;; void p1(void);
 ;; int unknown(void);
 ;; void unknown_pure(void) __attribute__((pure));
-;; void unknown_no_openmp(void) __attribute__((assume("omp_no_openmp")));
+;; [[omp::assume("omp_no_openmp")]] void unknown_no_openmp(void);
 ;;
 ;; int G;
 ;; void no_parallel_region_in_here(void) {
@@ -123,28 +123,28 @@
 
 %struct.ident_t = type { i32, i32, i32, i32, ptr }
 %struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
-%struct.ConfigurationEnvironmentTy = type { i8, i8, i8, i32, i32, i32, i32 }
+%struct.ConfigurationEnvironmentTy = type { i8, i8, i8, i32, i32, i32, i32, i32, i32 }
 
 @0 = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00", align 1
 @1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @0 }, align 8
 @2 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 2, i32 0, ptr @0 }, align 8
 @G = external global i32, align 4
 @3 = private unnamed_addr constant %struct.ident_t { i32 0, i32 322, i32 2, i32 0, ptr @0 }, align 8
-@__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
-@__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
-@__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
-@__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
-@__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
-@__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
-@__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
-@__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
+@__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
+@__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
+@__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
+@__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
+@__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
+@__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
+@__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
+@__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
 
-define weak void @__omp_offloading_14_a36502b_no_state_machine_needed_l14() #0 {
+define weak ptx_kernel void @__omp_offloading_14_a36502b_no_state_machine_needed_l14(ptr %dyn) #0 {
 entry:
   %.zero.addr = alloca i32, align 4
   %.threadid_temp. = alloca i32, align 4
   store i32 0, ptr %.zero.addr, align 4
-  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment)
+  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment, ptr %dyn)
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %worker.exit
 
@@ -196,12 +196,12 @@ declare i32 @__kmpc_global_thread_num(ptr) #3
 
 declare void @__kmpc_target_deinit()
 
-define weak void @__omp_offloading_14_a36502b_simple_state_machine_l22() #0 {
+define weak ptx_kernel void @__omp_offloading_14_a36502b_simple_state_machine_l22(ptr %dyn) #0 {
 entry:
   %.zero.addr = alloca i32, align 4
   %.threadid_temp. = alloca i32, align 4
   store i32 0, ptr %.zero.addr, align 4
-  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment)
+  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment, ptr %dyn)
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %worker.exit
 
@@ -289,12 +289,12 @@ entry:
   ret void
 }
 
-define weak void @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39() #0 {
+define weak ptx_kernel void @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39(ptr %dyn) #0 {
 entry:
   %.zero.addr = alloca i32, align 4
   %.threadid_temp. = alloca i32, align 4
   store i32 0, ptr %.zero.addr, align 4
-  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment)
+  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment, ptr %dyn)
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %worker.exit
 
@@ -366,12 +366,12 @@ entry:
   ret void
 }
 
-define weak void @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55() #0 {
+define weak ptx_kernel void @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55(ptr %dyn) #0 {
 entry:
   %.zero.addr = alloca i32, align 4
   %.threadid_temp. = alloca i32, align 4
   store i32 0, ptr %.zero.addr, align 4
-  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment)
+  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment, ptr %dyn)
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %worker.exit
 
@@ -452,12 +452,12 @@ entry:
   ret void
 }
 
-define weak void @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66() #0 {
+define weak ptx_kernel void @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66(ptr %dyn) #0 {
 entry:
   %.zero.addr = alloca i32, align 4
   %.threadid_temp. = alloca i32, align 4
   store i32 0, ptr %.zero.addr, align 4
-  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment)
+  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment, ptr %dyn)
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %worker.exit
 
@@ -536,12 +536,12 @@ entry:
   ret void
 }
 
-define weak void @__omp_offloading_14_a36502b_simple_state_machine_pure_l77() #0 {
+define weak ptx_kernel void @__omp_offloading_14_a36502b_simple_state_machine_pure_l77(ptr %dyn) #0 {
 entry:
   %.zero.addr = alloca i32, align 4
   %.threadid_temp. = alloca i32, align 4
   store i32 0, ptr %.zero.addr, align 4
-  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment)
+  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment, ptr %dyn)
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %worker.exit
 
@@ -623,12 +623,12 @@ entry:
   ret void
 }
 
-define weak void @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92() #0 {
+define weak ptx_kernel void @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92(ptr %dyn) #0 {
 entry:
   %.zero.addr = alloca i32, align 4
   %.threadid_temp. = alloca i32, align 4
   store i32 0, ptr %.zero.addr, align 4
-  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment)
+  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment, ptr %dyn)
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %worker.exit
 
@@ -678,12 +678,12 @@ return:                                           ; preds = %if.end, %if.then
 
 declare i32 @omp_get_thread_num(...) #4
 
-define weak void @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112() #0 {
+define weak ptx_kernel void @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112(ptr %dyn) #0 {
 entry:
   %.zero.addr = alloca i32, align 4
   %.threadid_temp. = alloca i32, align 4
   store i32 0, ptr %.zero.addr, align 4
-  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment)
+  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment, ptr %dyn)
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %worker.exit
 
@@ -811,7 +811,6 @@ attributes #8 = { convergent "llvm.assume"="omp_no_openmp" }
 attributes #9 = { convergent nounwind readonly willreturn }
 
 !omp_offload.info = !{!0, !1, !2, !3, !4, !5, !6, !7}
-!nvvm.annotations = !{!8, !9, !10, !11, !12, !13, !14, !15}
 !llvm.module.flags = !{!16, !17, !18}
 
 !0 = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_interprocedural", i32 39, i32 2}
@@ -822,109 +821,101 @@ attributes #9 = { convergent nounwind readonly willreturn }
 !5 = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_interprocedural_nested_recursive", i32 92, i32 6}
 !6 = !{i32 0, i32 20, i32 171331627, !"no_state_machine_weak_callee", i32 112, i32 7}
 !7 = !{i32 0, i32 20, i32 171331627, !"simple_state_machine", i32 22, i32 1}
-!8 = !{ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14, !"kernel", i32 1}
-!9 = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_l22, !"kernel", i32 1}
-!10 = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39, !"kernel", i32 1}
-!11 = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55, !"kernel", i32 1}
-!12 = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66, !"kernel", i32 1}
-!13 = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77, !"kernel", i32 1}
-!14 = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92, !"kernel", i32 1}
-!15 = !{ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112, !"kernel", i32 1}
 !16 = !{i32 1, !"wchar_size", i32 4}
 !17 = !{i32 7, !"openmp", i32 50}
 !18 = !{i32 7, !"openmp-device", i32 50}
 ;.
 ; AMDGPU1: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
-; AMDGPU1: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; AMDGPU1: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
-; AMDGPU1: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i32, align 4
-; AMDGPU1: @[[GLOB3:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 322, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
-; AMDGPU1: @[[__OMP_OFFLOADING_14_A36502B_NO_STATE_MACHINE_NEEDED_L14_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU1: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_L22_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU1: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_INTERPROCEDURAL_L39_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU1: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_WITH_FALLBACK_L55_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU1: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_NO_OPENMP_ATTR_L66_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU1: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_PURE_L77_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU1: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_INTERPROCEDURAL_NESTED_RECURSIVE_L92_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU1: @[[__OMP_OFFLOADING_14_A36502B_NO_STATE_MACHINE_WEAK_CALLEE_L112_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU1: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
+; AMDGPU1: @[[GLOB2:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
+; AMDGPU1: @G = external global i32, align 4
+; AMDGPU1: @[[GLOB3:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 322, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
+; AMDGPU1: @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU1: @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU1: @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU1: @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU1: @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU1: @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU1: @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU1: @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ;.
 ; NVPTX1: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
-; NVPTX1: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; NVPTX1: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
-; NVPTX1: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i32, align 4
-; NVPTX1: @[[GLOB3:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 322, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
-; NVPTX1: @[[__OMP_OFFLOADING_14_A36502B_NO_STATE_MACHINE_NEEDED_L14_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX1: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_L22_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX1: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_INTERPROCEDURAL_L39_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX1: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_WITH_FALLBACK_L55_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX1: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_NO_OPENMP_ATTR_L66_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX1: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_PURE_L77_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX1: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_INTERPROCEDURAL_NESTED_RECURSIVE_L92_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX1: @[[__OMP_OFFLOADING_14_A36502B_NO_STATE_MACHINE_WEAK_CALLEE_L112_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX1: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
+; NVPTX1: @[[GLOB2:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
+; NVPTX1: @G = external global i32, align 4
+; NVPTX1: @[[GLOB3:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 322, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
+; NVPTX1: @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX1: @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX1: @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX1: @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX1: @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX1: @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX1: @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX1: @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ;.
 ; AMDGPU2: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
-; AMDGPU2: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; AMDGPU2: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
-; AMDGPU2: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i32, align 4
-; AMDGPU2: @[[GLOB3:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 322, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
-; AMDGPU2: @[[__OMP_OFFLOADING_14_A36502B_NO_STATE_MACHINE_NEEDED_L14_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU2: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_L22_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU2: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_INTERPROCEDURAL_L39_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU2: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_WITH_FALLBACK_L55_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU2: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_NO_OPENMP_ATTR_L66_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU2: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_PURE_L77_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU2: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_INTERPROCEDURAL_NESTED_RECURSIVE_L92_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU2: @[[__OMP_OFFLOADING_14_A36502B_NO_STATE_MACHINE_WEAK_CALLEE_L112_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU2: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
+; AMDGPU2: @[[GLOB2:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
+; AMDGPU2: @G = external global i32, align 4
+; AMDGPU2: @[[GLOB3:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 322, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
+; AMDGPU2: @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU2: @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU2: @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU2: @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU2: @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU2: @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU2: @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU2: @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ;.
 ; AMDGPU3: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
-; AMDGPU3: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; AMDGPU3: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
-; AMDGPU3: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i32, align 4
-; AMDGPU3: @[[GLOB3:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 322, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
-; AMDGPU3: @[[__OMP_OFFLOADING_14_A36502B_NO_STATE_MACHINE_NEEDED_L14_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU3: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_L22_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU3: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_INTERPROCEDURAL_L39_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU3: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_WITH_FALLBACK_L55_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU3: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_NO_OPENMP_ATTR_L66_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU3: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_PURE_L77_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU3: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_INTERPROCEDURAL_NESTED_RECURSIVE_L92_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU3: @[[__OMP_OFFLOADING_14_A36502B_NO_STATE_MACHINE_WEAK_CALLEE_L112_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU3: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
+; AMDGPU3: @[[GLOB2:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
+; AMDGPU3: @G = external global i32, align 4
+; AMDGPU3: @[[GLOB3:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 322, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
+; AMDGPU3: @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU3: @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU3: @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU3: @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU3: @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU3: @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU3: @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU3: @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ;.
 ; NVPTX2: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
-; NVPTX2: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; NVPTX2: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
-; NVPTX2: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i32, align 4
-; NVPTX2: @[[GLOB3:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 322, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
-; NVPTX2: @[[__OMP_OFFLOADING_14_A36502B_NO_STATE_MACHINE_NEEDED_L14_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX2: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_L22_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX2: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_INTERPROCEDURAL_L39_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX2: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_WITH_FALLBACK_L55_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX2: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_NO_OPENMP_ATTR_L66_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX2: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_PURE_L77_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX2: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_INTERPROCEDURAL_NESTED_RECURSIVE_L92_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX2: @[[__OMP_OFFLOADING_14_A36502B_NO_STATE_MACHINE_WEAK_CALLEE_L112_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX2: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
+; NVPTX2: @[[GLOB2:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
+; NVPTX2: @G = external global i32, align 4
+; NVPTX2: @[[GLOB3:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 322, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
+; NVPTX2: @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX2: @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX2: @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX2: @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX2: @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX2: @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX2: @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX2: @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ;.
 ; NVPTX3: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
-; NVPTX3: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; NVPTX3: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
-; NVPTX3: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i32, align 4
-; NVPTX3: @[[GLOB3:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 322, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
-; NVPTX3: @[[__OMP_OFFLOADING_14_A36502B_NO_STATE_MACHINE_NEEDED_L14_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX3: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_L22_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX3: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_INTERPROCEDURAL_L39_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX3: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_WITH_FALLBACK_L55_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX3: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_NO_OPENMP_ATTR_L66_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX3: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_PURE_L77_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 1, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX3: @[[__OMP_OFFLOADING_14_A36502B_SIMPLE_STATE_MACHINE_INTERPROCEDURAL_NESTED_RECURSIVE_L92_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX3: @[[__OMP_OFFLOADING_14_A36502B_NO_STATE_MACHINE_WEAK_CALLEE_L112_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX3: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
+; NVPTX3: @[[GLOB2:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
+; NVPTX3: @G = external global i32, align 4
+; NVPTX3: @[[GLOB3:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 322, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
+; NVPTX3: @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX3: @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX3: @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX3: @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX3: @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX3: @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX3: @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX3: @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ;.
 ; AMDGPU1: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU1-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_no_state_machine_needed_l14
-; AMDGPU1-SAME: () #[[ATTR0:[0-9]+]] {
+; AMDGPU1-SAME: (ptr [[DYN:%.*]]) #[[ATTR0:[0-9]+]] {
 ; AMDGPU1-NEXT:  entry:
 ; AMDGPU1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment)
+; AMDGPU1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment, ptr [[DYN]])
 ; AMDGPU1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU1:       user_code.entry:
@@ -983,11 +974,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU1: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU1-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_l22
-; AMDGPU1-SAME: () #[[ATTR0]] {
+; AMDGPU1-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; AMDGPU1-NEXT:  entry:
 ; AMDGPU1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment)
+; AMDGPU1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment, ptr [[DYN]])
 ; AMDGPU1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU1:       user_code.entry:
@@ -1061,11 +1052,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU1: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU1-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39
-; AMDGPU1-SAME: () #[[ATTR0]] {
+; AMDGPU1-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; AMDGPU1-NEXT:  entry:
 ; AMDGPU1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment)
+; AMDGPU1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment, ptr [[DYN]])
 ; AMDGPU1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU1:       user_code.entry:
@@ -1156,11 +1147,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU1: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU1-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55
-; AMDGPU1-SAME: () #[[ATTR0]] {
+; AMDGPU1-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; AMDGPU1-NEXT:  entry:
 ; AMDGPU1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment)
+; AMDGPU1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment, ptr [[DYN]])
 ; AMDGPU1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU1:       user_code.entry:
@@ -1233,11 +1224,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU1: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU1-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66
-; AMDGPU1-SAME: () #[[ATTR0]] {
+; AMDGPU1-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; AMDGPU1-NEXT:  entry:
 ; AMDGPU1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment)
+; AMDGPU1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment, ptr [[DYN]])
 ; AMDGPU1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU1:       user_code.entry:
@@ -1310,11 +1301,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU1: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU1-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_pure_l77
-; AMDGPU1-SAME: () #[[ATTR0]] {
+; AMDGPU1-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; AMDGPU1-NEXT:  entry:
 ; AMDGPU1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment)
+; AMDGPU1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment, ptr [[DYN]])
 ; AMDGPU1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU1:       user_code.entry:
@@ -1387,11 +1378,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU1: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU1-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92
-; AMDGPU1-SAME: () #[[ATTR0]] {
+; AMDGPU1-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; AMDGPU1-NEXT:  entry:
 ; AMDGPU1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment)
+; AMDGPU1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment, ptr [[DYN]])
 ; AMDGPU1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU1:       user_code.entry:
@@ -1458,11 +1449,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU1: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU1-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112
-; AMDGPU1-SAME: () #[[ATTR0]] {
+; AMDGPU1-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; AMDGPU1-NEXT:  entry:
 ; AMDGPU1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment)
+; AMDGPU1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment, ptr [[DYN]])
 ; AMDGPU1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU1:       user_code.entry:
@@ -1582,11 +1573,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX1: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX1-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_no_state_machine_needed_l14
-; NVPTX1-SAME: () #[[ATTR0:[0-9]+]] {
+; NVPTX1-SAME: (ptr [[DYN:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NVPTX1-NEXT:  entry:
 ; NVPTX1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment)
+; NVPTX1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment, ptr [[DYN]])
 ; NVPTX1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX1:       user_code.entry:
@@ -1645,11 +1636,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX1: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX1-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_l22
-; NVPTX1-SAME: () #[[ATTR0]] {
+; NVPTX1-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; NVPTX1-NEXT:  entry:
 ; NVPTX1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment)
+; NVPTX1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment, ptr [[DYN]])
 ; NVPTX1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX1:       user_code.entry:
@@ -1723,11 +1714,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX1: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX1-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39
-; NVPTX1-SAME: () #[[ATTR0]] {
+; NVPTX1-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; NVPTX1-NEXT:  entry:
 ; NVPTX1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment)
+; NVPTX1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment, ptr [[DYN]])
 ; NVPTX1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX1:       user_code.entry:
@@ -1818,11 +1809,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX1: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX1-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55
-; NVPTX1-SAME: () #[[ATTR0]] {
+; NVPTX1-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; NVPTX1-NEXT:  entry:
 ; NVPTX1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment)
+; NVPTX1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment, ptr [[DYN]])
 ; NVPTX1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX1:       user_code.entry:
@@ -1895,11 +1886,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX1: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX1-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66
-; NVPTX1-SAME: () #[[ATTR0]] {
+; NVPTX1-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; NVPTX1-NEXT:  entry:
 ; NVPTX1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment)
+; NVPTX1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment, ptr [[DYN]])
 ; NVPTX1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX1:       user_code.entry:
@@ -1972,11 +1963,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX1: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX1-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_pure_l77
-; NVPTX1-SAME: () #[[ATTR0]] {
+; NVPTX1-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; NVPTX1-NEXT:  entry:
 ; NVPTX1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment)
+; NVPTX1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment, ptr [[DYN]])
 ; NVPTX1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX1:       user_code.entry:
@@ -2049,11 +2040,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX1: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX1-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92
-; NVPTX1-SAME: () #[[ATTR0]] {
+; NVPTX1-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; NVPTX1-NEXT:  entry:
 ; NVPTX1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment)
+; NVPTX1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment, ptr [[DYN]])
 ; NVPTX1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX1:       user_code.entry:
@@ -2120,11 +2111,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX1: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX1-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112
-; NVPTX1-SAME: () #[[ATTR0]] {
+; NVPTX1-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; NVPTX1-NEXT:  entry:
 ; NVPTX1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX1-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment)
+; NVPTX1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment, ptr [[DYN]])
 ; NVPTX1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX1:       user_code.entry:
@@ -2244,11 +2235,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU2: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU2-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_no_state_machine_needed_l14
-; AMDGPU2-SAME: () #[[ATTR0:[0-9]+]] {
+; AMDGPU2-SAME: (ptr [[DYN:%.*]]) #[[ATTR0:[0-9]+]] {
 ; AMDGPU2-NEXT:  entry:
 ; AMDGPU2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU2-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment)
+; AMDGPU2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment, ptr [[DYN]])
 ; AMDGPU2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU2:       user_code.entry:
@@ -2307,11 +2298,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU2: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU2-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_l22
-; AMDGPU2-SAME: () #[[ATTR0]] {
+; AMDGPU2-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; AMDGPU2-NEXT:  entry:
 ; AMDGPU2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU2-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment)
+; AMDGPU2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment, ptr [[DYN]])
 ; AMDGPU2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU2:       user_code.entry:
@@ -2385,11 +2376,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU2: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU2-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39
-; AMDGPU2-SAME: () #[[ATTR0]] {
+; AMDGPU2-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; AMDGPU2-NEXT:  entry:
 ; AMDGPU2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU2-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment)
+; AMDGPU2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment, ptr [[DYN]])
 ; AMDGPU2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU2:       user_code.entry:
@@ -2480,11 +2471,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU2: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU2-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55
-; AMDGPU2-SAME: () #[[ATTR0]] {
+; AMDGPU2-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; AMDGPU2-NEXT:  entry:
 ; AMDGPU2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU2-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment)
+; AMDGPU2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment, ptr [[DYN]])
 ; AMDGPU2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU2:       user_code.entry:
@@ -2557,11 +2548,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU2: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU2-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66
-; AMDGPU2-SAME: () #[[ATTR0]] {
+; AMDGPU2-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; AMDGPU2-NEXT:  entry:
 ; AMDGPU2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU2-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment)
+; AMDGPU2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment, ptr [[DYN]])
 ; AMDGPU2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU2:       user_code.entry:
@@ -2634,11 +2625,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU2: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU2-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_pure_l77
-; AMDGPU2-SAME: () #[[ATTR0]] {
+; AMDGPU2-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; AMDGPU2-NEXT:  entry:
 ; AMDGPU2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU2-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment)
+; AMDGPU2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment, ptr [[DYN]])
 ; AMDGPU2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU2:       user_code.entry:
@@ -2711,11 +2702,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU2: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU2-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92
-; AMDGPU2-SAME: () #[[ATTR0]] {
+; AMDGPU2-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; AMDGPU2-NEXT:  entry:
 ; AMDGPU2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU2-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment)
+; AMDGPU2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment, ptr [[DYN]])
 ; AMDGPU2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU2:       user_code.entry:
@@ -2782,11 +2773,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU2: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU2-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112
-; AMDGPU2-SAME: () #[[ATTR0]] {
+; AMDGPU2-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; AMDGPU2-NEXT:  entry:
 ; AMDGPU2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU2-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment)
+; AMDGPU2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment, ptr [[DYN]])
 ; AMDGPU2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU2:       user_code.entry:
@@ -2906,11 +2897,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU3: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU3-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_no_state_machine_needed_l14
-; AMDGPU3-SAME: () #[[ATTR0:[0-9]+]] {
+; AMDGPU3-SAME: (ptr [[DYN:%.*]]) #[[ATTR0:[0-9]+]] {
 ; AMDGPU3-NEXT:  entry:
 ; AMDGPU3-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU3-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment)
+; AMDGPU3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment, ptr [[DYN]])
 ; AMDGPU3-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU3:       user_code.entry:
@@ -2969,11 +2960,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU3: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU3-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_l22
-; AMDGPU3-SAME: () #[[ATTR0]] {
+; AMDGPU3-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; AMDGPU3-NEXT:  entry:
 ; AMDGPU3-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU3-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment)
+; AMDGPU3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment, ptr [[DYN]])
 ; AMDGPU3-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU3:       user_code.entry:
@@ -3047,11 +3038,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU3: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU3-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39
-; AMDGPU3-SAME: () #[[ATTR0]] {
+; AMDGPU3-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; AMDGPU3-NEXT:  entry:
 ; AMDGPU3-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU3-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment)
+; AMDGPU3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment, ptr [[DYN]])
 ; AMDGPU3-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU3:       user_code.entry:
@@ -3142,11 +3133,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU3: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU3-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55
-; AMDGPU3-SAME: () #[[ATTR0]] {
+; AMDGPU3-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; AMDGPU3-NEXT:  entry:
 ; AMDGPU3-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU3-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment)
+; AMDGPU3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment, ptr [[DYN]])
 ; AMDGPU3-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU3:       user_code.entry:
@@ -3219,11 +3210,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU3: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU3-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66
-; AMDGPU3-SAME: () #[[ATTR0]] {
+; AMDGPU3-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; AMDGPU3-NEXT:  entry:
 ; AMDGPU3-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU3-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment)
+; AMDGPU3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment, ptr [[DYN]])
 ; AMDGPU3-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU3:       user_code.entry:
@@ -3296,11 +3287,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU3: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU3-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_pure_l77
-; AMDGPU3-SAME: () #[[ATTR0]] {
+; AMDGPU3-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; AMDGPU3-NEXT:  entry:
 ; AMDGPU3-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU3-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment)
+; AMDGPU3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment, ptr [[DYN]])
 ; AMDGPU3-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU3:       user_code.entry:
@@ -3373,11 +3364,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU3: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU3-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92
-; AMDGPU3-SAME: () #[[ATTR0]] {
+; AMDGPU3-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; AMDGPU3-NEXT:  entry:
 ; AMDGPU3-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU3-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment)
+; AMDGPU3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment, ptr [[DYN]])
 ; AMDGPU3-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU3:       user_code.entry:
@@ -3444,11 +3435,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; AMDGPU3: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU3-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112
-; AMDGPU3-SAME: () #[[ATTR0]] {
+; AMDGPU3-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; AMDGPU3-NEXT:  entry:
 ; AMDGPU3-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU3-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; AMDGPU3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment)
+; AMDGPU3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment, ptr [[DYN]])
 ; AMDGPU3-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; AMDGPU3:       user_code.entry:
@@ -3568,11 +3559,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX2: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX2-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_no_state_machine_needed_l14
-; NVPTX2-SAME: () #[[ATTR0:[0-9]+]] {
+; NVPTX2-SAME: (ptr [[DYN:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NVPTX2-NEXT:  entry:
 ; NVPTX2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX2-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment)
+; NVPTX2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment, ptr [[DYN]])
 ; NVPTX2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX2:       user_code.entry:
@@ -3631,11 +3622,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX2: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX2-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_l22
-; NVPTX2-SAME: () #[[ATTR0]] {
+; NVPTX2-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; NVPTX2-NEXT:  entry:
 ; NVPTX2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX2-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment)
+; NVPTX2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment, ptr [[DYN]])
 ; NVPTX2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX2:       user_code.entry:
@@ -3709,11 +3700,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX2: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX2-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39
-; NVPTX2-SAME: () #[[ATTR0]] {
+; NVPTX2-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; NVPTX2-NEXT:  entry:
 ; NVPTX2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX2-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment)
+; NVPTX2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment, ptr [[DYN]])
 ; NVPTX2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX2:       user_code.entry:
@@ -3804,11 +3795,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX2: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX2-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55
-; NVPTX2-SAME: () #[[ATTR0]] {
+; NVPTX2-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; NVPTX2-NEXT:  entry:
 ; NVPTX2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX2-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment)
+; NVPTX2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment, ptr [[DYN]])
 ; NVPTX2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX2:       user_code.entry:
@@ -3881,11 +3872,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX2: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX2-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66
-; NVPTX2-SAME: () #[[ATTR0]] {
+; NVPTX2-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; NVPTX2-NEXT:  entry:
 ; NVPTX2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX2-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment)
+; NVPTX2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment, ptr [[DYN]])
 ; NVPTX2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX2:       user_code.entry:
@@ -3958,11 +3949,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX2: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX2-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_pure_l77
-; NVPTX2-SAME: () #[[ATTR0]] {
+; NVPTX2-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; NVPTX2-NEXT:  entry:
 ; NVPTX2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX2-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment)
+; NVPTX2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment, ptr [[DYN]])
 ; NVPTX2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX2:       user_code.entry:
@@ -4035,11 +4026,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX2: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX2-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92
-; NVPTX2-SAME: () #[[ATTR0]] {
+; NVPTX2-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; NVPTX2-NEXT:  entry:
 ; NVPTX2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX2-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment)
+; NVPTX2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment, ptr [[DYN]])
 ; NVPTX2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX2:       user_code.entry:
@@ -4106,11 +4097,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX2: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX2-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112
-; NVPTX2-SAME: () #[[ATTR0]] {
+; NVPTX2-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; NVPTX2-NEXT:  entry:
 ; NVPTX2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX2-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment)
+; NVPTX2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment, ptr [[DYN]])
 ; NVPTX2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX2:       user_code.entry:
@@ -4230,11 +4221,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX3: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX3-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_no_state_machine_needed_l14
-; NVPTX3-SAME: () #[[ATTR0:[0-9]+]] {
+; NVPTX3-SAME: (ptr [[DYN:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NVPTX3-NEXT:  entry:
 ; NVPTX3-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX3-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment)
+; NVPTX3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14_kernel_environment, ptr [[DYN]])
 ; NVPTX3-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX3:       user_code.entry:
@@ -4293,11 +4284,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX3: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX3-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_l22
-; NVPTX3-SAME: () #[[ATTR0]] {
+; NVPTX3-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; NVPTX3-NEXT:  entry:
 ; NVPTX3-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX3-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment)
+; NVPTX3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_l22_kernel_environment, ptr [[DYN]])
 ; NVPTX3-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX3:       user_code.entry:
@@ -4371,11 +4362,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX3: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX3-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39
-; NVPTX3-SAME: () #[[ATTR0]] {
+; NVPTX3-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; NVPTX3-NEXT:  entry:
 ; NVPTX3-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX3-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment)
+; NVPTX3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39_kernel_environment, ptr [[DYN]])
 ; NVPTX3-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX3:       user_code.entry:
@@ -4466,11 +4457,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX3: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX3-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55
-; NVPTX3-SAME: () #[[ATTR0]] {
+; NVPTX3-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; NVPTX3-NEXT:  entry:
 ; NVPTX3-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX3-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment)
+; NVPTX3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55_kernel_environment, ptr [[DYN]])
 ; NVPTX3-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX3:       user_code.entry:
@@ -4543,11 +4534,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX3: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX3-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66
-; NVPTX3-SAME: () #[[ATTR0]] {
+; NVPTX3-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; NVPTX3-NEXT:  entry:
 ; NVPTX3-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX3-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment)
+; NVPTX3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66_kernel_environment, ptr [[DYN]])
 ; NVPTX3-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX3:       user_code.entry:
@@ -4620,11 +4611,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX3: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX3-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_pure_l77
-; NVPTX3-SAME: () #[[ATTR0]] {
+; NVPTX3-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; NVPTX3-NEXT:  entry:
 ; NVPTX3-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX3-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment)
+; NVPTX3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77_kernel_environment, ptr [[DYN]])
 ; NVPTX3-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX3:       user_code.entry:
@@ -4697,11 +4688,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX3: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX3-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92
-; NVPTX3-SAME: () #[[ATTR0]] {
+; NVPTX3-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; NVPTX3-NEXT:  entry:
 ; NVPTX3-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX3-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment)
+; NVPTX3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92_kernel_environment, ptr [[DYN]])
 ; NVPTX3-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX3:       user_code.entry:
@@ -4768,11 +4759,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ;
 ; NVPTX3: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX3-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112
-; NVPTX3-SAME: () #[[ATTR0]] {
+; NVPTX3-SAME: (ptr [[DYN:%.*]]) #[[ATTR0]] {
 ; NVPTX3-NEXT:  entry:
 ; NVPTX3-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX3-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
-; NVPTX3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment)
+; NVPTX3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112_kernel_environment, ptr [[DYN]])
 ; NVPTX3-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; NVPTX3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; NVPTX3:       user_code.entry:
@@ -4976,17 +4967,9 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU1: [[META5:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_interprocedural_nested_recursive", i32 92, i32 6}
 ; AMDGPU1: [[META6:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"no_state_machine_weak_callee", i32 112, i32 7}
 ; AMDGPU1: [[META7:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine", i32 22, i32 1}
-; AMDGPU1: [[META8:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14, !"kernel", i32 1}
-; AMDGPU1: [[META9:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_l22, !"kernel", i32 1}
-; AMDGPU1: [[META10:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39, !"kernel", i32 1}
-; AMDGPU1: [[META11:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55, !"kernel", i32 1}
-; AMDGPU1: [[META12:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66, !"kernel", i32 1}
-; AMDGPU1: [[META13:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77, !"kernel", i32 1}
-; AMDGPU1: [[META14:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92, !"kernel", i32 1}
-; AMDGPU1: [[META15:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112, !"kernel", i32 1}
-; AMDGPU1: [[META16:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-; AMDGPU1: [[META17:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; AMDGPU1: [[META18:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+; AMDGPU1: [[META8:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+; AMDGPU1: [[META9:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+; AMDGPU1: [[META10:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ;.
 ; NVPTX1: [[META0:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_interprocedural", i32 39, i32 2}
 ; NVPTX1: [[META1:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_no_openmp_attr", i32 66, i32 4}
@@ -4996,17 +4979,9 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX1: [[META5:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_interprocedural_nested_recursive", i32 92, i32 6}
 ; NVPTX1: [[META6:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"no_state_machine_weak_callee", i32 112, i32 7}
 ; NVPTX1: [[META7:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine", i32 22, i32 1}
-; NVPTX1: [[META8:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14, !"kernel", i32 1}
-; NVPTX1: [[META9:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_l22, !"kernel", i32 1}
-; NVPTX1: [[META10:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39, !"kernel", i32 1}
-; NVPTX1: [[META11:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55, !"kernel", i32 1}
-; NVPTX1: [[META12:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66, !"kernel", i32 1}
-; NVPTX1: [[META13:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77, !"kernel", i32 1}
-; NVPTX1: [[META14:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92, !"kernel", i32 1}
-; NVPTX1: [[META15:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112, !"kernel", i32 1}
-; NVPTX1: [[META16:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-; NVPTX1: [[META17:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; NVPTX1: [[META18:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+; NVPTX1: [[META8:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+; NVPTX1: [[META9:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+; NVPTX1: [[META10:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ;.
 ; AMDGPU2: [[META0:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_interprocedural", i32 39, i32 2}
 ; AMDGPU2: [[META1:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_no_openmp_attr", i32 66, i32 4}
@@ -5016,17 +4991,9 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU2: [[META5:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_interprocedural_nested_recursive", i32 92, i32 6}
 ; AMDGPU2: [[META6:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"no_state_machine_weak_callee", i32 112, i32 7}
 ; AMDGPU2: [[META7:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine", i32 22, i32 1}
-; AMDGPU2: [[META8:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14, !"kernel", i32 1}
-; AMDGPU2: [[META9:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_l22, !"kernel", i32 1}
-; AMDGPU2: [[META10:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39, !"kernel", i32 1}
-; AMDGPU2: [[META11:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55, !"kernel", i32 1}
-; AMDGPU2: [[META12:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66, !"kernel", i32 1}
-; AMDGPU2: [[META13:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77, !"kernel", i32 1}
-; AMDGPU2: [[META14:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92, !"kernel", i32 1}
-; AMDGPU2: [[META15:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112, !"kernel", i32 1}
-; AMDGPU2: [[META16:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-; AMDGPU2: [[META17:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; AMDGPU2: [[META18:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+; AMDGPU2: [[META8:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+; AMDGPU2: [[META9:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+; AMDGPU2: [[META10:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ;.
 ; AMDGPU3: [[META0:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_interprocedural", i32 39, i32 2}
 ; AMDGPU3: [[META1:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_no_openmp_attr", i32 66, i32 4}
@@ -5036,17 +5003,9 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU3: [[META5:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_interprocedural_nested_recursive", i32 92, i32 6}
 ; AMDGPU3: [[META6:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"no_state_machine_weak_callee", i32 112, i32 7}
 ; AMDGPU3: [[META7:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine", i32 22, i32 1}
-; AMDGPU3: [[META8:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14, !"kernel", i32 1}
-; AMDGPU3: [[META9:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_l22, !"kernel", i32 1}
-; AMDGPU3: [[META10:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39, !"kernel", i32 1}
-; AMDGPU3: [[META11:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55, !"kernel", i32 1}
-; AMDGPU3: [[META12:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66, !"kernel", i32 1}
-; AMDGPU3: [[META13:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77, !"kernel", i32 1}
-; AMDGPU3: [[META14:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92, !"kernel", i32 1}
-; AMDGPU3: [[META15:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112, !"kernel", i32 1}
-; AMDGPU3: [[META16:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-; AMDGPU3: [[META17:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; AMDGPU3: [[META18:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+; AMDGPU3: [[META8:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+; AMDGPU3: [[META9:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+; AMDGPU3: [[META10:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ;.
 ; NVPTX2: [[META0:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_interprocedural", i32 39, i32 2}
 ; NVPTX2: [[META1:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_no_openmp_attr", i32 66, i32 4}
@@ -5056,17 +5015,9 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX2: [[META5:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_interprocedural_nested_recursive", i32 92, i32 6}
 ; NVPTX2: [[META6:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"no_state_machine_weak_callee", i32 112, i32 7}
 ; NVPTX2: [[META7:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine", i32 22, i32 1}
-; NVPTX2: [[META8:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14, !"kernel", i32 1}
-; NVPTX2: [[META9:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_l22, !"kernel", i32 1}
-; NVPTX2: [[META10:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39, !"kernel", i32 1}
-; NVPTX2: [[META11:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55, !"kernel", i32 1}
-; NVPTX2: [[META12:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66, !"kernel", i32 1}
-; NVPTX2: [[META13:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77, !"kernel", i32 1}
-; NVPTX2: [[META14:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92, !"kernel", i32 1}
-; NVPTX2: [[META15:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112, !"kernel", i32 1}
-; NVPTX2: [[META16:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-; NVPTX2: [[META17:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; NVPTX2: [[META18:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+; NVPTX2: [[META8:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+; NVPTX2: [[META9:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+; NVPTX2: [[META10:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ;.
 ; NVPTX3: [[META0:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_interprocedural", i32 39, i32 2}
 ; NVPTX3: [[META1:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_no_openmp_attr", i32 66, i32 4}
@@ -5076,15 +5027,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX3: [[META5:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine_interprocedural_nested_recursive", i32 92, i32 6}
 ; NVPTX3: [[META6:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"no_state_machine_weak_callee", i32 112, i32 7}
 ; NVPTX3: [[META7:![0-9]+]] = !{i32 0, i32 20, i32 171331627, !"simple_state_machine", i32 22, i32 1}
-; NVPTX3: [[META8:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_no_state_machine_needed_l14, !"kernel", i32 1}
-; NVPTX3: [[META9:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_l22, !"kernel", i32 1}
-; NVPTX3: [[META10:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_l39, !"kernel", i32 1}
-; NVPTX3: [[META11:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_with_fallback_l55, !"kernel", i32 1}
-; NVPTX3: [[META12:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_no_openmp_attr_l66, !"kernel", i32 1}
-; NVPTX3: [[META13:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_pure_l77, !"kernel", i32 1}
-; NVPTX3: [[META14:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_simple_state_machine_interprocedural_nested_recursive_l92, !"kernel", i32 1}
-; NVPTX3: [[META15:![0-9]+]] = !{ptr @__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112, !"kernel", i32 1}
-; NVPTX3: [[META16:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-; NVPTX3: [[META17:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; NVPTX3: [[META18:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+; NVPTX3: [[META8:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+; NVPTX3: [[META9:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+; NVPTX3: [[META10:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ;.

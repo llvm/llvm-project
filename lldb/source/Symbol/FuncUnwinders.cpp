@@ -31,15 +31,29 @@
 using namespace lldb;
 using namespace lldb_private;
 
-/// constructor
+static AddressRange CollapseRanges(llvm::ArrayRef<AddressRange> ranges) {
+  if (ranges.empty())
+    return AddressRange();
+  if (ranges.size() == 1)
+    return ranges[0];
 
-FuncUnwinders::FuncUnwinders(UnwindTable &unwind_table, AddressRange range)
-    : m_unwind_table(unwind_table), m_range(range), m_mutex(),
-      m_unwind_plan_assembly_sp(), m_unwind_plan_eh_frame_sp(),
-      m_unwind_plan_eh_frame_augmented_sp(), m_unwind_plan_compact_unwind(),
-      m_unwind_plan_arm_unwind_sp(), m_unwind_plan_fast_sp(),
-      m_unwind_plan_arch_default_sp(),
-      m_unwind_plan_arch_default_at_func_entry_sp(),
+  Address lowest_addr = ranges[0].GetBaseAddress();
+  addr_t highest_addr = lowest_addr.GetFileAddress() + ranges[0].GetByteSize();
+  for (const AddressRange &range : ranges.drop_front()) {
+    Address range_begin = range.GetBaseAddress();
+    addr_t range_end = range_begin.GetFileAddress() + range.GetByteSize();
+    if (range_begin.GetFileAddress() < lowest_addr.GetFileAddress())
+      lowest_addr = range_begin;
+    if (range_end > highest_addr)
+      highest_addr = range_end;
+  }
+  return AddressRange(lowest_addr, highest_addr - lowest_addr.GetFileAddress());
+}
+
+FuncUnwinders::FuncUnwinders(UnwindTable &unwind_table, Address addr,
+                             AddressRanges ranges)
+    : m_unwind_table(unwind_table), m_addr(std::move(addr)),
+      m_ranges(std::move(ranges)), m_range(CollapseRanges(m_ranges)),
       m_tried_unwind_plan_assembly(false), m_tried_unwind_plan_eh_frame(false),
       m_tried_unwind_plan_object_file(false),
       m_tried_unwind_plan_debug_frame(false),
@@ -334,12 +348,22 @@ UnwindPlanSP FuncUnwinders::GetAssemblyUnwindPlan(Target &target,
 
   m_tried_unwind_plan_assembly = true;
 
+  // Don't analyze more than 10 megabytes of instructions,
+  // if a function is legitimately larger than that, we'll
+  // miss the epilogue instructions, but guard against a
+  // bogusly large function and analyzing large amounts of
+  // non-instruction data.
+  AddressRange range = m_range;
+  const addr_t func_size =
+      std::min(range.GetByteSize(), (addr_t)1024 * 10 * 10);
+  range.SetByteSize(func_size);
+
   UnwindAssemblySP assembly_profiler_sp(GetUnwindAssemblyProfiler(target));
   if (assembly_profiler_sp) {
     m_unwind_plan_assembly_sp =
         std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
     if (!assembly_profiler_sp->GetNonCallSiteUnwindPlanFromAssembly(
-            m_range, thread, *m_unwind_plan_assembly_sp)) {
+            range, thread, *m_unwind_plan_assembly_sp)) {
       m_unwind_plan_assembly_sp.reset();
     }
   }
@@ -356,13 +380,13 @@ LazyBool FuncUnwinders::CompareUnwindPlansForIdenticalInitialPCLocation(
   RegisterNumber pc_reg(thread, eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
   uint32_t pc_reg_lldb_regnum = pc_reg.GetAsKind(eRegisterKindLLDB);
 
-  if (a.get() && b.get()) {
-    UnwindPlan::RowSP a_first_row = a->GetRowAtIndex(0);
-    UnwindPlan::RowSP b_first_row = b->GetRowAtIndex(0);
+  if (a && b) {
+    const UnwindPlan::Row *a_first_row = a->GetRowAtIndex(0);
+    const UnwindPlan::Row *b_first_row = b->GetRowAtIndex(0);
 
-    if (a_first_row.get() && b_first_row.get()) {
-      UnwindPlan::Row::RegisterLocation a_pc_regloc;
-      UnwindPlan::Row::RegisterLocation b_pc_regloc;
+    if (a_first_row && b_first_row) {
+      UnwindPlan::Row::AbstractRegisterLocation a_pc_regloc;
+      UnwindPlan::Row::AbstractRegisterLocation b_pc_regloc;
 
       a_first_row->GetRegisterInfo(pc_reg_lldb_regnum, a_pc_regloc);
       b_first_row->GetRegisterInfo(pc_reg_lldb_regnum, b_pc_regloc);
@@ -458,17 +482,10 @@ UnwindPlanSP FuncUnwinders::GetUnwindPlanArchitectureDefault(Thread &thread) {
 
   m_tried_unwind_arch_default = true;
 
-  Address current_pc;
   ProcessSP process_sp(thread.CalculateProcess());
   if (process_sp) {
-    ABI *abi = process_sp->GetABI().get();
-    if (abi) {
-      m_unwind_plan_arch_default_sp =
-          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
-      if (!abi->CreateDefaultUnwindPlan(*m_unwind_plan_arch_default_sp)) {
-        m_unwind_plan_arch_default_sp.reset();
-      }
-    }
+    if (ABI *abi = process_sp->GetABI().get())
+      m_unwind_plan_arch_default_sp = abi->CreateDefaultUnwindPlan();
   }
 
   return m_unwind_plan_arch_default_sp;
@@ -486,14 +503,9 @@ FuncUnwinders::GetUnwindPlanArchitectureDefaultAtFunctionEntry(Thread &thread) {
   Address current_pc;
   ProcessSP process_sp(thread.CalculateProcess());
   if (process_sp) {
-    ABI *abi = process_sp->GetABI().get();
-    if (abi) {
+    if (ABI *abi = process_sp->GetABI().get()) {
       m_unwind_plan_arch_default_at_func_entry_sp =
-          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
-      if (!abi->CreateFunctionEntryUnwindPlan(
-              *m_unwind_plan_arch_default_at_func_entry_sp)) {
-        m_unwind_plan_arch_default_at_func_entry_sp.reset();
-      }
+          abi->CreateFunctionEntryUnwindPlan();
     }
   }
 
@@ -513,9 +525,7 @@ Address &FuncUnwinders::GetFirstNonPrologueInsn(Target &target) {
   return m_first_non_prologue_insn;
 }
 
-const Address &FuncUnwinders::GetFunctionStartAddress() const {
-  return m_range.GetBaseAddress();
-}
+const Address &FuncUnwinders::GetFunctionStartAddress() const { return m_addr; }
 
 lldb::UnwindAssemblySP
 FuncUnwinders::GetUnwindAssemblyProfiler(Target &target) {

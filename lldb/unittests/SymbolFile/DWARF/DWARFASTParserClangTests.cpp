@@ -287,6 +287,141 @@ DWARF:
   ASSERT_EQ(found_function_types, expected_function_types);
 }
 
+TEST_F(DWARFASTParserClangTests, TestPtrAuthParsing) {
+  // Tests parsing values with type DW_TAG_LLVM_ptrauth_type corresponding to
+  // explicitly signed raw function pointers
+
+  // This is Dwarf for the following C code:
+  // ```
+  // void (*__ptrauth(0, 0, 42) a)();
+  // ```
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_str:
+    - a
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x01
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x02
+          Tag:             DW_TAG_variable
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+        - Code:            0x03
+          Tag:             DW_TAG_LLVM_ptrauth_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_LLVM_ptrauth_key
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_LLVM_ptrauth_extra_discriminator
+              Form:            DW_FORM_data2
+        - Code:            0x04
+          Tag:             DW_TAG_pointer_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x05
+          Tag:             DW_TAG_subroutine_type
+          Children:        DW_CHILDREN_yes
+        - Code:            0x06
+          Tag:             DW_TAG_unspecified_parameters
+          Children:        DW_CHILDREN_no
+
+  debug_info:
+    - Version:         5
+      UnitType:        DW_UT_compile
+      AddrSize:        8
+      Entries:
+# 0x0c: DW_TAG_compile_unit
+#         DW_AT_language [DW_FORM_data2]    (DW_LANG_C99)
+        - AbbrCode:        0x01
+          Values:
+            - Value:           0x0c
+
+# 0x0f:   DW_TAG_variable
+#           DW_AT_name [DW_FORM_strp]       (\"a\")
+#           DW_AT_type [DW_FORM_ref4]       (0x00000018 \"void (*__ptrauth(0, 0, 0x02a)\")
+#           DW_AT_external [DW_FORM_flag_present]   (true)
+        - AbbrCode:        0x02
+          Values:
+            - Value:           0x00
+            - Value:           0x18
+
+# 0x18:   DW_TAG_LLVM_ptrauth_type
+#           DW_AT_type [DW_FORM_ref4]       (0x00000020 \"void (*)(...)\")
+#           DW_AT_LLVM_ptrauth_key [DW_FORM_data1]  (0x00)
+#           DW_AT_LLVM_ptrauth_extra_discriminator [DW_FORM_data2]  (0x002a)
+        - AbbrCode:        0x03
+          Values:
+            - Value:           0x20
+            - Value:           0x00
+            - Value:           0x2a
+
+# 0x20:   DW_TAG_pointer_type
+#           DW_AT_type [DW_AT_type [DW_FORM_ref4]       (0x00000025 \"void (...)\")
+        - AbbrCode:        0x04
+          Values:
+            - Value:           0x25
+
+# 0x25:   DW_TAG_subroutine_type
+        - AbbrCode:        0x05
+
+# 0x26:     DW_TAG_unspecified_parameters
+        - AbbrCode:        0x06
+
+        - AbbrCode:        0x00 # end of child tags of 0x25
+        - AbbrCode:        0x00 # end of child tags of 0x0c
+...
+)";
+  YAMLModuleTester t(yamldata);
+
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
+  DWARFDIE cu_die(unit, cu_entry);
+
+  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
+  auto &ast_ctx = *holder->GetAST();
+  DWARFASTParserClangStub ast_parser(ast_ctx);
+
+  DWARFDIE ptrauth_variable = cu_die.GetFirstChild();
+  ASSERT_EQ(ptrauth_variable.Tag(), DW_TAG_variable);
+  DWARFDIE ptrauth_type =
+      ptrauth_variable.GetAttributeValueAsReferenceDIE(DW_AT_type);
+  ASSERT_EQ(ptrauth_type.Tag(), DW_TAG_LLVM_ptrauth_type);
+
+  SymbolContext sc;
+  bool new_type = false;
+  lldb::TypeSP type_sp =
+      ast_parser.ParseTypeFromDWARF(sc, ptrauth_type, &new_type);
+  CompilerType compiler_type = type_sp->GetForwardCompilerType();
+  ASSERT_EQ(compiler_type.GetPtrAuthKey(), 0U);
+  ASSERT_EQ(compiler_type.GetPtrAuthAddressDiversity(), false);
+  ASSERT_EQ(compiler_type.GetPtrAuthDiscriminator(), 42U);
+}
+
 struct ExtractIntFromFormValueTest : public testing::Test {
   SubsystemRAII<FileSystem, HostInfo> subsystems;
   clang_utils::TypeSystemClangHolder holder;
@@ -462,4 +597,658 @@ TEST_F(DWARFASTParserClangTests, TestDefaultTemplateParamParsing) {
       check_decl(decl);
     }
   }
+}
+
+TEST_F(DWARFASTParserClangTests, TestUniqueDWARFASTTypeMap_CppInsertMapFind) {
+  // This tests the behaviour of UniqueDWARFASTTypeMap under
+  // following scenario:
+  // 1. DWARFASTParserClang parses a forward declaration and
+  // inserts it into the UniqueDWARFASTTypeMap.
+  // 2. We then MapDeclDIEToDefDIE which updates the map
+  // entry with the line number/file information of the definition.
+  // 3. Parse the definition DIE, which should return the previously
+  // parsed type from the UniqueDWARFASTTypeMap.
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_str:
+    - Foo
+
+  debug_line:      
+    - Version:         4
+      MinInstLength:   1
+      MaxOpsPerInst:   1
+      DefaultIsStmt:   1
+      LineBase:        0
+      LineRange:       0
+      Files:           
+        - Name:            main.cpp
+          DirIdx:          0
+          ModTime:         0
+          Length:          0
+
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x01
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x02
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_declaration
+              Form:            DW_FORM_flag_present
+        - Code:            0x03
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+
+  debug_info:
+    - Version:         5
+      UnitType:        DW_UT_compile
+      AddrSize:        8
+      Entries:
+# 0x0c: DW_TAG_compile_unit
+#         DW_AT_language [DW_FORM_data2]    (DW_LANG_C_plus_plus)
+#         DW_AT_stmt_list [DW_FORM_sec_offset]
+        - AbbrCode:        0x01
+          Values:
+            - Value:           0x04
+            - Value:           0x0000000000000000
+
+# 0x0d:   DW_TAG_structure_type
+#           DW_AT_name [DW_FORM_strp]       (\"Foo\")
+#           DW_AT_declaration [DW_FORM_flag_present] (true)
+        - AbbrCode:        0x02
+          Values:
+            - Value:           0x00
+
+# 0x0f:   DW_TAG_structure_type
+#           DW_AT_name [DW_FORM_strp]       (\"Foo\")
+#           DW_AT_decl_file [DW_FORM_data1] (main.cpp)
+#           DW_AT_decl_line [DW_FORM_data1] (3)
+        - AbbrCode:        0x03
+          Values:
+            - Value:           0x00
+            - Value:           0x01
+            - Value:           0x03
+
+        - AbbrCode:        0x00 # end of child tags of 0x0c
+...
+)";
+  YAMLModuleTester t(yamldata);
+
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
+  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
+  DWARFDIE cu_die(unit, cu_entry);
+
+  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
+  auto &ast_ctx = *holder->GetAST();
+  DWARFASTParserClangStub ast_parser(ast_ctx);
+
+  DWARFDIE decl_die;
+  DWARFDIE def_die;
+  for (auto const &die : cu_die.children()) {
+    if (die.Tag() != DW_TAG_structure_type)
+      continue;
+
+    if (die.GetAttributeValueAsOptionalUnsigned(llvm::dwarf::DW_AT_declaration))
+      decl_die = die;
+    else
+      def_die = die;
+  }
+
+  ASSERT_TRUE(decl_die.IsValid());
+  ASSERT_TRUE(def_die.IsValid());
+  ASSERT_NE(decl_die, def_die);
+
+  ParsedDWARFTypeAttributes attrs(def_die);
+  ASSERT_TRUE(attrs.decl.IsValid());
+
+  SymbolContext sc;
+  bool new_type = false;
+  lldb::TypeSP type_sp = ast_parser.ParseTypeFromDWARF(sc, decl_die, &new_type);
+  ASSERT_NE(type_sp, nullptr);
+
+  ast_parser.MapDeclDIEToDefDIE(decl_die, def_die);
+
+  lldb::TypeSP reparsed_type_sp =
+      ast_parser.ParseTypeFromDWARF(sc, def_die, &new_type);
+  ASSERT_NE(reparsed_type_sp, nullptr);
+
+  ASSERT_EQ(type_sp, reparsed_type_sp);
+}
+
+TEST_F(DWARFASTParserClangTests, TestParseDWARFAttributes_ObjectPointer) {
+  // This tests the behaviour of ParsedDWARFTypeAttributes
+  // for DW_TAG_subprogram definitions which have a DW_AT_object_pointer
+  // *and* a DW_AT_specification that also has a DW_AT_object_pointer.
+  // We don't want the declaration DW_AT_object_pointer to overwrite the
+  // one from the more specific definition's.
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_str:
+    - Context
+    - func
+    - this
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x3
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_declaration
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_object_pointer
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_artificial
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+        - Code:            0x4
+          Tag:             DW_TAG_formal_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_artificial
+              Form:            DW_FORM_flag_present
+        - Code:            0x5
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_object_pointer
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_specification
+              Form:            DW_FORM_ref4
+        - Code:            0x6
+          Tag:             DW_TAG_formal_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_artificial
+              Form:            DW_FORM_flag_present
+  debug_info:
+     - Version:         5
+       UnitType:        DW_UT_compile
+       AddrSize:        8
+       Entries:
+
+# DW_TAG_compile_unit
+#   DW_AT_language [DW_FORM_data2]    (DW_LANG_C_plus_plus)
+
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x04
+
+#   DW_TAG_structure_type
+#     DW_AT_name [DW_FORM_strp] ("Context")
+
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x0
+
+#     DW_TAG_subprogram
+#       DW_AT_name [DW_FORM_strp] ("func")
+#       DW_AT_object_pointer [DW_FORM_ref4]
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x8
+            - Value:           0x1
+            - Value:           0x1d
+            - Value:           0x1
+            - Value:           0x1
+
+#       DW_TAG_formal_parameter
+#         DW_AT_artificial
+        - AbbrCode:        0x4
+          Values:
+          - Value: 0x1
+
+        - AbbrCode: 0x0
+        - AbbrCode: 0x0
+
+#     DW_TAG_subprogram
+#       DW_AT_object_pointer [DW_FORM_ref4] ("this")
+#       DW_AT_specification [DW_FORM_ref4] ("func")
+        - AbbrCode:        0x5
+          Values:
+            - Value:           0x29
+            - Value:           0x14
+
+#       DW_TAG_formal_parameter
+#         DW_AT_name [DW_FORM_strp] ("this")
+#         DW_AT_artificial
+        - AbbrCode:        0x6
+          Values:
+            - Value:           0xd
+            - Value:           0x1
+
+        - AbbrCode: 0x0
+        - AbbrCode: 0x0
+...
+)";
+  YAMLModuleTester t(yamldata);
+
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
+  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
+  DWARFDIE cu_die(unit, cu_entry);
+
+  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
+  auto &ast_ctx = *holder->GetAST();
+  DWARFASTParserClangStub ast_parser(ast_ctx);
+
+  auto context_die = cu_die.GetFirstChild();
+  ASSERT_TRUE(context_die.IsValid());
+  ASSERT_EQ(context_die.Tag(), DW_TAG_structure_type);
+
+  auto subprogram_definition = context_die.GetSibling();
+  ASSERT_TRUE(subprogram_definition.IsValid());
+  ASSERT_EQ(subprogram_definition.Tag(), DW_TAG_subprogram);
+  ASSERT_FALSE(subprogram_definition.GetAttributeValueAsOptionalUnsigned(
+      DW_AT_external));
+
+  auto param_die = subprogram_definition.GetFirstChild();
+  ASSERT_TRUE(param_die.IsValid());
+
+  ParsedDWARFTypeAttributes attrs(subprogram_definition);
+  EXPECT_TRUE(attrs.object_pointer.IsValid());
+  EXPECT_EQ(attrs.object_pointer, param_die);
+}
+
+TEST_F(DWARFASTParserClangTests, TestParseSubroutine_ExplicitObjectParameter) {
+  // Tests parsing of a C++ non-static member function with an explicit object
+  // parameter that isn't called "this" and is not a pointer (but a CV-qualified
+  // rvalue reference instead).
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_str:
+    - Context
+    - func
+    - mySelf
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x3
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_declaration
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_object_pointer
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+        - Code:            0x4
+          Tag:             DW_TAG_formal_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x5
+          Tag:             DW_TAG_rvalue_reference_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x6
+          Tag:             DW_TAG_const_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x7
+          Tag:             DW_TAG_volatile_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+  debug_info:
+     - Version:         5
+       UnitType:        DW_UT_compile
+       AddrSize:        8
+       Entries:
+
+# DW_TAG_compile_unit
+#   DW_AT_language [DW_FORM_data2]    (DW_LANG_C_plus_plus)
+
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x04
+
+#   DW_TAG_structure_type
+#     DW_AT_name [DW_FORM_strp] ("Context")
+
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x0
+
+#     DW_TAG_subprogram
+#       DW_AT_name [DW_FORM_strp] ("func")
+#       DW_AT_object_pointer [DW_FORM_ref4]
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x8
+            - Value:           0x1
+            - Value:           0x1d
+            - Value:           0x1
+
+#       DW_TAG_formal_parameter
+#         DW_AT_name [DW_FORM_strp] ("mySelf")
+#         DW_AT_type [DW_FORM_ref4] (const volatile Context &&)
+        - AbbrCode:        0x4
+          Values:
+            - Value: 0xd
+            - Value: 0x28
+
+        - AbbrCode: 0x0
+        - AbbrCode: 0x0
+
+#   DW_TAG_rvalue_reference_type
+#     DW_AT_type [DW_FORM_ref4] ("const volatile Context")
+
+        - AbbrCode:        0x5
+          Values:
+            - Value:           0x2d
+
+#   DW_TAG_const_type
+#     DW_AT_type [DW_FORM_ref4] ("volatile Context")
+
+        - AbbrCode:        0x6
+          Values:
+            - Value:           0x32
+
+#   DW_TAG_volatile_type
+#     DW_AT_type [DW_FORM_ref4] ("Context")
+
+        - AbbrCode:        0x7
+          Values:
+            - Value:           0xf
+
+        - AbbrCode: 0x0
+...
+)";
+  YAMLModuleTester t(yamldata);
+
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
+  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
+  DWARFDIE cu_die(unit, cu_entry);
+
+  auto ts_or_err =
+      cu_die.GetDWARF()->GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
+  ASSERT_TRUE(static_cast<bool>(ts_or_err));
+  llvm::consumeError(ts_or_err.takeError());
+  auto *parser =
+      static_cast<DWARFASTParserClang *>((*ts_or_err)->GetDWARFParser());
+
+  auto context_die = cu_die.GetFirstChild();
+  ASSERT_TRUE(context_die.IsValid());
+  ASSERT_EQ(context_die.Tag(), DW_TAG_structure_type);
+
+  SymbolContext sc;
+  bool new_type;
+  auto context_type_sp = parser->ParseTypeFromDWARF(sc, context_die, &new_type);
+  ASSERT_NE(context_type_sp, nullptr);
+
+  ASSERT_TRUE(
+      parser->CompleteTypeFromDWARF(context_die, context_type_sp.get(),
+                                    context_type_sp->GetForwardCompilerType()));
+
+  auto *record_decl = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(
+      ClangUtil::GetAsTagDecl(context_type_sp->GetForwardCompilerType()));
+  ASSERT_NE(record_decl, nullptr);
+
+  auto method_it = record_decl->method_begin();
+  ASSERT_NE(method_it, record_decl->method_end());
+
+  // Check that we didn't parse the function as static.
+  EXPECT_FALSE(method_it->isStatic());
+
+  // Check that method qualifiers were correctly set.
+  EXPECT_EQ(method_it->getMethodQualifiers(),
+            clang::Qualifiers::fromCVRMask(clang::Qualifiers::Const |
+                                           clang::Qualifiers::Volatile));
+}
+
+TEST_F(DWARFASTParserClangTests, TestParseSubroutine_ParameterCreation) {
+  // Tests parsing of a C++ free function will create clang::ParmVarDecls with
+  // the correct clang::DeclContext.
+  //
+  // Also ensures we attach names to the ParmVarDecls (even when DWARF contains
+  // a mix of named/unnamed parameters).
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_str:
+    - func
+    - int
+    - short
+    - namedParam
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x3
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_declaration
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+        - Code:            0x4
+          Tag:             DW_TAG_formal_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x5
+          Tag:             DW_TAG_formal_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x6
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+  debug_info:
+     - Version:         5
+       UnitType:        DW_UT_compile
+       AddrSize:        8
+       Entries:
+
+# DW_TAG_compile_unit
+#   DW_AT_language [DW_FORM_data2]    (DW_LANG_C_plus_plus)
+
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x04
+
+#     DW_TAG_subprogram
+#       DW_AT_name [DW_FORM_strp] ("func")
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x0
+            - Value:           0x1
+            - Value:           0x1
+
+#       DW_TAG_formal_parameter
+#         DW_AT_type [DW_FORM_ref4] (int)
+        - AbbrCode:        0x4
+          Values:
+            - Value: 0x23
+
+#       DW_TAG_formal_parameter
+#         DW_AT_type [DW_FORM_ref4] (short)
+#         DW_AT_name [DW_FORM_strp] ("namedParam")
+        - AbbrCode:        0x5
+          Values:
+            - Value: 0x2a
+            - Value: 0xf
+
+        - AbbrCode: 0x0
+
+#   DW_TAG_base_type
+#     DW_AT_name      [DW_FORM_strp] ("int")
+#     DW_AT_encoding  [DW_FORM_data1]
+#     DW_AT_byte_size [DW_FORM_data1]
+
+        - AbbrCode:        0x6
+          Values:
+            - Value:           0x0000000000000005
+            - Value:           0x0000000000000005 # DW_ATE_signed
+            - Value:           0x0000000000000004
+
+#   DW_TAG_base_type
+#     DW_AT_name      [DW_FORM_strp] ("short")
+#     DW_AT_encoding  [DW_FORM_data1]
+#     DW_AT_byte_size [DW_FORM_data1]
+
+        - AbbrCode:        0x6
+          Values:
+            - Value:           0x0000000000000009
+            - Value:           0x0000000000000005 # DW_ATE_signed
+            - Value:           0x0000000000000004
+
+        - AbbrCode: 0x0
+...
+)";
+  YAMLModuleTester t(yamldata);
+
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
+  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
+  DWARFDIE cu_die(unit, cu_entry);
+
+  auto ts_or_err =
+      cu_die.GetDWARF()->GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
+  ASSERT_TRUE(static_cast<bool>(ts_or_err));
+  llvm::consumeError(ts_or_err.takeError());
+
+  auto *ts = static_cast<TypeSystemClang *>(ts_or_err->get());
+  auto *parser = static_cast<DWARFASTParserClang *>(ts->GetDWARFParser());
+
+  auto subprogram = cu_die.GetFirstChild();
+  ASSERT_TRUE(subprogram.IsValid());
+  ASSERT_EQ(subprogram.Tag(), DW_TAG_subprogram);
+
+  SymbolContext sc;
+  bool new_type;
+  auto type_sp = parser->ParseTypeFromDWARF(sc, subprogram, &new_type);
+  ASSERT_NE(type_sp, nullptr);
+
+  auto result = ts->GetTranslationUnitDecl()->lookup(
+      clang_utils::getDeclarationName(*ts, "func"));
+  ASSERT_TRUE(result.isSingleResult());
+
+  auto const *func = llvm::cast<clang::FunctionDecl>(result.front());
+
+  EXPECT_EQ(func->getNumParams(), 2U);
+  EXPECT_EQ(func->getParamDecl(0)->getDeclContext(), func);
+  EXPECT_TRUE(func->getParamDecl(0)->getName().empty());
+  EXPECT_EQ(func->getParamDecl(1)->getDeclContext(), func);
+  EXPECT_EQ(func->getParamDecl(1)->getName(), "namedParam");
 }

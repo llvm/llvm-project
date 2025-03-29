@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-hvx-widen=32 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-hvx-widen=32 < %s | FileCheck %s
 
 ; Truncating a type-to-be-widenened to a legal type (v8i8).
 ; Check that this compiles successfully.

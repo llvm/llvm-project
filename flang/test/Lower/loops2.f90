@@ -1,5 +1,5 @@
 ! Test loop variables increment
-! RUN: bbc -emit-fir -o - %s | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
 
 module test_loop_var
   implicit none
@@ -107,7 +107,7 @@ contains
 ! CHECK:       ^bb4:
 ! CHECK:         %[[VAL_20:.*]] = fir.load %[[VAL_3]] : !fir.ptr<i32>
 ! CHECK:         %[[VAL_21:.*]] = arith.constant 1 : i32
-! CHECK:         %[[VAL_22:.*]] = arith.addi %[[VAL_20]], %[[VAL_21]] : i32
+! CHECK:         %[[VAL_22:.*]] = arith.addi %[[VAL_20]], %[[VAL_21]] overflow<nsw> : i32
 ! CHECK:         fir.store %[[VAL_22]] to %[[VAL_3]] : !fir.ptr<i32>
 ! CHECK:         br ^bb1
 ! CHECK:       ^bb5:

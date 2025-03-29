@@ -71,7 +71,8 @@ int main(int argc, char **argv) {
   switch (argc) {
 #pragma omp cancel taskgroup // expected-error {{orphaned 'omp cancel' directives are prohibited; perhaps you forget to enclose the directive into a region?}}
   case 1:
-#pragma omp cancel parallel // expected-error {{orphaned 'omp cancel' directives are prohibited; perhaps you forget to enclose the directive into a region?}}
+#pragma omp cancel parallel // expected-error {{orphaned 'omp cancel' directives are prohibited; perhaps you forget to enclose the directive into a region?}} \
+                               expected-error {{'#pragma omp cancel' cannot be an immediate substatement}}
     break;
   default: {
 #pragma omp cancel sections // expected-error {{orphaned 'omp cancel' directives are prohibited; perhaps you forget to enclose the directive into a region?}}
@@ -83,7 +84,8 @@ int main(int argc, char **argv) {
 #pragma omp cancel taskgroup // expected-error {{orphaned 'omp cancel' directives are prohibited; perhaps you forget to enclose the directive into a region?}}
     }
 label:
-#pragma omp cancel parallel // expected-error {{orphaned 'omp cancel' directives are prohibited; perhaps you forget to enclose the directive into a region?}}
+#pragma omp cancel parallel // expected-error {{orphaned 'omp cancel' directives are prohibited; perhaps you forget to enclose the directive into a region?}} \
+                               expected-error {{'#pragma omp cancel' cannot be an immediate substatement}}
 label1 : {
 #pragma omp cancel sections // expected-error {{orphaned 'omp cancel' directives are prohibited; perhaps you forget to enclose the directive into a region?}}
 }

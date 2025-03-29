@@ -44,7 +44,6 @@ void expectDumpResult(const dwarf::CIE &TestCIE, bool IsEH,
   auto DumpOpts = DIDumpOptions();
   DumpOpts.IsEH = IsEH;
   TestCIE.dump(OS, DumpOpts);
-  OS.flush();
   StringRef FirstLine = StringRef(Output).split('\n').first;
   EXPECT_EQ(FirstLine, ExpectedFirstLine);
 }
@@ -56,7 +55,6 @@ void expectDumpResult(const dwarf::FDE &TestFDE, bool IsEH,
   auto DumpOpts = DIDumpOptions();
   DumpOpts.IsEH = IsEH;
   TestFDE.dump(OS, DumpOpts);
-  OS.flush();
   StringRef FirstLine = StringRef(Output).split('\n').first;
   EXPECT_EQ(FirstLine, ExpectedFirstLine);
 }
@@ -176,6 +174,7 @@ TEST(DWARFDebugFrame, InvalidCFIOpcodesTest) {
       dwarf::DW_CFA_MIPS_advance_loc8,
       dwarf::DW_CFA_GNU_window_save,
       dwarf::DW_CFA_AARCH64_negate_ra_state,
+      dwarf::DW_CFA_AARCH64_negate_ra_state_with_pc,
       dwarf::DW_CFA_GNU_args_size};
 
   dwarf::CIE TestCIE = createCIE(/*IsDWARF64=*/false,
@@ -344,7 +343,6 @@ void expectDumpResult(const dwarf::UnwindLocation &Loc,
   std::string Output;
   raw_string_ostream OS(Output);
   OS << Loc;
-  OS.flush();
   StringRef FirstLine = StringRef(Output).split('\n').first;
   EXPECT_EQ(FirstLine, ExpectedFirstLine);
 }
@@ -387,7 +385,6 @@ void expectDumpResult(const dwarf::RegisterLocations &Locs,
   std::string Output;
   raw_string_ostream OS(Output);
   OS << Locs;
-  OS.flush();
   StringRef FirstLine = StringRef(Output).split('\n').first;
   EXPECT_EQ(FirstLine, ExpectedFirstLine);
 }

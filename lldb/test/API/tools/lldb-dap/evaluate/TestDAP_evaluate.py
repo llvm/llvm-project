@@ -2,6 +2,7 @@
 Test lldb-dap completions request
 """
 
+import re
 
 import lldbdap_testcase
 import dap_server
@@ -10,9 +11,9 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
-class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
     def assertEvaluate(self, expression, regex):
-        self.assertRegexpMatches(
+        self.assertRegex(
             self.dap_server.request_evaluate(expression, context=self.context)["body"][
                 "result"
             ],
@@ -24,6 +25,9 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             "result",
             self.dap_server.request_evaluate(expression, context=self.context)["body"],
         )
+
+    def isResultExpandedDescription(self):
+        return self.context == "repl"
 
     def isExpressionParsedExpected(self):
         return self.context != "hover"
@@ -50,26 +54,57 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 line_number(source, "// breakpoint 5"),
                 line_number(source, "// breakpoint 6"),
                 line_number(source, "// breakpoint 7"),
+                line_number(source, "// breakpoint 8"),
             ],
         )
         self.continue_to_next_stop()
 
         # Expressions at breakpoint 1, which is in main
         self.assertEvaluate("var1", "20")
+        # Empty expression should equate to the previous expression.
+        if context == "repl":
+            self.assertEvaluate("", "20")
+        else:
+            self.assertEvaluateFailure("")
         self.assertEvaluate("var2", "21")
+        if context == "repl":
+            self.assertEvaluate("", "21")
+            self.assertEvaluate("", "21")
         self.assertEvaluate("static_int", "42")
         self.assertEvaluate("non_static_int", "43")
-        self.assertEvaluate(
-            "struct1", "{foo:15}" if enableAutoVariableSummaries else "my_struct @ 0x"
-        )
-        self.assertEvaluate(
-            "struct2", "0x.* {foo:16}" if enableAutoVariableSummaries else "0x.*"
-        )
-        self.assertEvaluate("struct3", "0x.*0")
         self.assertEvaluate("struct1.foo", "15")
         self.assertEvaluate("struct2->foo", "16")
 
-        self.assertEvaluateFailure("var")  # local variable of a_function
+        if self.isResultExpandedDescription():
+            self.assertEvaluate(
+                "struct1",
+                r"\(my_struct\) (struct1|\$\d+) = \(foo = 15\)",
+            )
+            self.assertEvaluate("struct2", r"\(my_struct \*\) (struct2|\$\d+) = 0x.*")
+            self.assertEvaluate(
+                "struct3", r"\(my_struct \*\) (struct3|\$\d+) = nullptr"
+            )
+        else:
+            self.assertEvaluate(
+                "struct1",
+                (
+                    re.escape("{foo:15}")
+                    if enableAutoVariableSummaries
+                    else "my_struct @ 0x"
+                ),
+            )
+            self.assertEvaluate(
+                "struct2", "0x.* {foo:16}" if enableAutoVariableSummaries else "0x.*"
+            )
+            self.assertEvaluate("struct3", "0x.*0")
+
+        if context == "repl":
+            # In the repl context expressions may be interpreted as lldb
+            # commands since no variables have the same name as the command.
+            self.assertEvaluate("list", r"\(lldb\) list\n.*")
+        else:
+            self.assertEvaluateFailure("list")  # local variable of a_function
+
         self.assertEvaluateFailure("my_struct")  # type name
         self.assertEvaluateFailure("int")  # type name
         self.assertEvaluateFailure("foo")  # member of my_struct
@@ -95,9 +130,20 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.assertEvaluate(
             "non_static_int", "10"
         )  # different variable with the same name
-        self.assertEvaluate(
-            "struct1", "{foo:15}" if enableAutoVariableSummaries else "my_struct @ 0x"
-        )
+        if self.isResultExpandedDescription():
+            self.assertEvaluate(
+                "struct1",
+                r"\(my_struct\) (struct1|\$\d+) = \(foo = 15\)",
+            )
+        else:
+            self.assertEvaluate(
+                "struct1",
+                (
+                    re.escape("{foo:15}")
+                    if enableAutoVariableSummaries
+                    else "my_struct @ 0x"
+                ),
+            )
         self.assertEvaluate("struct1.foo", "15")
         self.assertEvaluate("struct2->foo", "16")
 
@@ -116,7 +162,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         # Expressions at breakpoint 3, which is inside a_function
         self.continue_to_next_stop()
-        self.assertEvaluate("var", "42")
+        self.assertEvaluate("list", "42")
         self.assertEvaluate("static_int", "42")
         self.assertEvaluate("non_static_int", "43")
 
@@ -130,13 +176,13 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         if self.isExpressionParsedExpected():
             self.assertEvaluate("a_function", "0x.*a.out`a_function.*")
             self.assertEvaluate("a_function(1)", "1")
-            self.assertEvaluate("var + 1", "43")
+            self.assertEvaluate("list + 1", "43")
             self.assertEvaluate("foo_func", "0x.*a.out`foo_func.*")
             self.assertEvaluate("foo_var", "44")
         else:
             self.assertEvaluateFailure("a_function")
             self.assertEvaluateFailure("a_function(1)")
-            self.assertEvaluateFailure("var + 1")
+            self.assertEvaluateFailure("list + 1")
             self.assertEvaluateFailure("foo_func")
             self.assertEvaluateFailure("foo_var")
 
@@ -154,26 +200,36 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_next_stop()
         self.assertEvaluate("my_bool_vec", "size=2")
 
+        # Test memory read, especially with 'empty' repeat commands.
+        if context == "repl":
+            self.continue_to_next_stop()
+            self.assertEvaluate("memory read -c 1 &my_ints", ".* 05 .*\n")
+            self.assertEvaluate("", ".* 0a .*\n")
+            self.assertEvaluate("", ".* 0f .*\n")
+            self.assertEvaluate("", ".* 14 .*\n")
+            self.assertEvaluate("", ".* 19 .*\n")
+
     @skipIfWindows
-    @skipIfRemote
     def test_generic_evaluate_expressions(self):
         # Tests context-less expression evaluations
         self.run_test_evaluate_expressions(enableAutoVariableSummaries=False)
 
     @skipIfWindows
-    @skipIfRemote
     def test_repl_evaluate_expressions(self):
         # Tests expression evaluations that are triggered from the Debug Console
-        self.run_test_evaluate_expressions("repl", enableAutoVariableSummaries=True)
+        self.run_test_evaluate_expressions("repl", enableAutoVariableSummaries=False)
 
     @skipIfWindows
-    @skipIfRemote
     def test_watch_evaluate_expressions(self):
         # Tests expression evaluations that are triggered from a watch expression
-        self.run_test_evaluate_expressions("watch", enableAutoVariableSummaries=False)
+        self.run_test_evaluate_expressions("watch", enableAutoVariableSummaries=True)
 
     @skipIfWindows
-    @skipIfRemote
     def test_hover_evaluate_expressions(self):
         # Tests expression evaluations that are triggered when hovering on the editor
-        self.run_test_evaluate_expressions("hover", enableAutoVariableSummaries=True)
+        self.run_test_evaluate_expressions("hover", enableAutoVariableSummaries=False)
+
+    @skipIfWindows
+    def test_variable_evaluate_expressions(self):
+        # Tests expression evaluations that are triggered in the variable explorer
+        self.run_test_evaluate_expressions("variable", enableAutoVariableSummaries=True)

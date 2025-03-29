@@ -35,7 +35,7 @@
 #include "InstrProfilingUtil.h"
 
 /* This variable is an external reference to symbol defined by the compiler. */
-COMPILER_RT_VISIBILITY extern intptr_t INSTR_PROF_PROFILE_COUNTER_BIAS_VAR;
+COMPILER_RT_VISIBILITY extern int64_t INSTR_PROF_PROFILE_COUNTER_BIAS_VAR;
 
 COMPILER_RT_VISIBILITY unsigned lprofProfileDumped(void) {
   return 1;

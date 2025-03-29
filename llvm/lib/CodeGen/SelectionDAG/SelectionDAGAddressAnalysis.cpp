@@ -38,15 +38,18 @@ bool BaseIndexOffset::equalBaseIndex(const BaseIndexOffset &Other,
       return true;
 
     // Match GlobalAddresses
-    if (auto *A = dyn_cast<GlobalAddressSDNode>(Base))
+    if (auto *A = dyn_cast<GlobalAddressSDNode>(Base)) {
       if (auto *B = dyn_cast<GlobalAddressSDNode>(Other.Base))
         if (A->getGlobal() == B->getGlobal()) {
           Off += B->getOffset() - A->getOffset();
           return true;
         }
 
+      return false;
+    }
+
     // Match Constants
-    if (auto *A = dyn_cast<ConstantPoolSDNode>(Base))
+    if (auto *A = dyn_cast<ConstantPoolSDNode>(Base)) {
       if (auto *B = dyn_cast<ConstantPoolSDNode>(Other.Base)) {
         bool IsMatch =
             A->isMachineConstantPoolEntry() == B->isMachineConstantPoolEntry();
@@ -62,7 +65,8 @@ bool BaseIndexOffset::equalBaseIndex(const BaseIndexOffset &Other,
         }
       }
 
-    const MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+      return false;
+    }
 
     // Match FrameIndexes.
     if (auto *A = dyn_cast<FrameIndexSDNode>(Base))
@@ -73,6 +77,7 @@ bool BaseIndexOffset::equalBaseIndex(const BaseIndexOffset &Other,
         // Non-equal FrameIndexes - If both frame indices are fixed
         // we know their relative offsets and can compare them. Otherwise
         // we must be conservative.
+        const MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
         if (MFI.isFixedObjectIndex(A->getIndex()) &&
             MFI.isFixedObjectIndex(B->getIndex())) {
           Off += MFI.getObjectOffset(B->getIndex()) -
@@ -81,42 +86,42 @@ bool BaseIndexOffset::equalBaseIndex(const BaseIndexOffset &Other,
         }
       }
   }
+
   return false;
 }
 
 bool BaseIndexOffset::computeAliasing(const SDNode *Op0,
-                                      const std::optional<int64_t> NumBytes0,
+                                      const LocationSize NumBytes0,
                                       const SDNode *Op1,
-                                      const std::optional<int64_t> NumBytes1,
+                                      const LocationSize NumBytes1,
                                       const SelectionDAG &DAG, bool &IsAlias) {
-
   BaseIndexOffset BasePtr0 = match(Op0, DAG);
-  BaseIndexOffset BasePtr1 = match(Op1, DAG);
-
-  if (!(BasePtr0.getBase().getNode() && BasePtr1.getBase().getNode()))
+  if (!BasePtr0.getBase().getNode())
     return false;
+
+  BaseIndexOffset BasePtr1 = match(Op1, DAG);
+  if (!BasePtr1.getBase().getNode())
+    return false;
+
   int64_t PtrDiff;
-  if (NumBytes0 && NumBytes1 &&
-      BasePtr0.equalBaseIndex(BasePtr1, DAG, PtrDiff)) {
+  if (BasePtr0.equalBaseIndex(BasePtr1, DAG, PtrDiff)) {
     // If the size of memory access is unknown, do not use it to analysis.
-    // One example of unknown size memory access is to load/store scalable
-    // vector objects on the stack.
     // BasePtr1 is PtrDiff away from BasePtr0. They alias if none of the
     // following situations arise:
-    if (PtrDiff >= 0 &&
-        *NumBytes0 != static_cast<int64_t>(MemoryLocation::UnknownSize)) {
+    if (PtrDiff >= 0 && NumBytes0.hasValue() && !NumBytes0.isScalable()) {
       // [----BasePtr0----]
       //                         [---BasePtr1--]
       // ========PtrDiff========>
-      IsAlias = !(*NumBytes0 <= PtrDiff);
+      IsAlias = !(static_cast<int64_t>(NumBytes0.getValue().getFixedValue()) <=
+                  PtrDiff);
       return true;
     }
-    if (PtrDiff < 0 &&
-        *NumBytes1 != static_cast<int64_t>(MemoryLocation::UnknownSize)) {
+    if (PtrDiff < 0 && NumBytes1.hasValue() && !NumBytes1.isScalable()) {
       //                     [----BasePtr0----]
       // [---BasePtr1--]
       // =====(-PtrDiff)====>
-      IsAlias = !((PtrDiff + *NumBytes1) <= 0);
+      IsAlias = !((PtrDiff + static_cast<int64_t>(
+                                 NumBytes1.getValue().getFixedValue())) <= 0);
       return true;
     }
     return false;

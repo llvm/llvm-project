@@ -1,3 +1,4 @@
+
 //===-- StackFrame.h --------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -14,14 +15,16 @@
 
 #include "lldb/Utility/Flags.h"
 
-#include "lldb/Core/ValueObjectList.h"
+#include "lldb/Core/FormatEntity.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/StackID.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UserID.h"
+#include "lldb/ValueObject/ValueObjectList.h"
 
 namespace lldb_private {
 
@@ -193,14 +196,10 @@ public:
   /// \param [out] value
   ///   The address of the CFA for this frame, if available.
   ///
-  /// \param [out] error_ptr
-  ///   If there is an error determining the CFA address, this may contain a
-  ///   string explaining the failure.
-  ///
   /// \return
-  ///   Returns true if the CFA value was successfully set in value.  Some
-  ///   frames may be unable to provide this value; they will return false.
-  bool GetFrameBaseValue(Scalar &value, Status *error_ptr);
+  ///   If there is an error determining the CFA address, return an error
+  ///   explaining the failure. Success otherwise.
+  llvm::Error GetFrameBaseValue(Scalar &value);
 
   /// Get the DWARFExpressionList corresponding to the Canonical Frame Address.
   ///
@@ -324,8 +323,23 @@ public:
   ///    C string with the assembly instructions for this function.
   const char *Disassemble();
 
+  /// Print a description of this frame using the provided frame format.
+  ///
+  /// \param[out] strm
+  ///   The Stream to print the description to.
+  ///
+  /// \param[in] frame_marker
+  ///   Optional string that will be prepended to the frame output description.
+  ///
+  /// \return
+  ///   \b true if and only if dumping with the given \p format worked.
+  bool DumpUsingFormat(Stream &strm,
+                       const lldb_private::FormatEntity::Entry *format,
+                       llvm::StringRef frame_marker = {});
+
   /// Print a description for this frame using the frame-format formatter
-  /// settings.
+  /// settings. If the current frame-format settings are invalid, then the
+  /// default formatter will be used (see \a StackFrame::Dump()).
   ///
   /// \param [in] strm
   ///   The Stream to print the description to.
@@ -390,6 +404,28 @@ public:
   /// may have limited support for inspecting variables.
   bool IsArtificial() const;
 
+  /// Query whether this frame should be hidden from backtraces. Frame
+  /// recognizers can customize this behavior and hide distracting
+  /// system implementation details this way.
+  bool IsHidden();
+
+  /// Language plugins can use this API to report language-specific
+  /// runtime information about this compile unit, such as additional
+  /// language version details or feature flags.
+  StructuredData::ObjectSP GetLanguageSpecificData();
+
+  /// Get the frame's demangled name.
+  ///
+  ///  /// \return
+  ///   A C-String containing the function demangled name. Can be null.
+  const char *GetFunctionName();
+
+  /// Get the frame's demangled display name.
+  ///
+  ///  /// \return
+  ///   A C-String containing the function demangled display name. Can be null.
+  const char *GetDisplayFunctionName();
+
   /// Query this frame to find what frame it is in this Thread's
   /// StackFrameList.
   ///
@@ -430,13 +466,12 @@ public:
   /// Query this frame to determine what the default language should be when
   /// parsing expressions given the execution context.
   ///
-  /// \return
-  ///   The language of the frame if known, else lldb::eLanguageTypeUnknown.
-  lldb::LanguageType GetLanguage();
+  /// \return   The language of the frame if known.
+  SourceLanguage GetLanguage();
 
-  // similar to GetLanguage(), but is allowed to take a potentially incorrect
-  // guess if exact information is not available
-  lldb::LanguageType GuessLanguage();
+  /// Similar to GetLanguage(), but is allowed to take a potentially incorrect
+  /// guess if exact information is not available.
+  SourceLanguage GuessLanguage();
 
   /// Attempt to econstruct the ValueObject for a given raw address touched by
   /// the current instruction.  The ExpressionPath should indicate how to get
@@ -502,33 +537,46 @@ protected:
   bool HasCachedData() const;
 
 private:
-  // For StackFrame only
+  /// Private methods, called from GetValueForVariableExpressionPath.
+  /// See that method for documentation of parameters and return value.
+  lldb::ValueObjectSP LegacyGetValueForVariableExpressionPath(
+      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+      uint32_t options, lldb::VariableSP &var_sp, Status &error);
+
+  lldb::ValueObjectSP DILGetValueForVariableExpressionPath(
+      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+      uint32_t options, lldb::VariableSP &var_sp, Status &error);
+
+  /// For StackFrame only.
+  /// \{
   lldb::ThreadWP m_thread_wp;
   uint32_t m_frame_index;
   uint32_t m_concrete_frame_index;
   lldb::RegisterContextSP m_reg_context_sp;
   StackID m_id;
-  Address m_frame_code_addr; // The frame code address (might not be the same as
-                             // the actual PC for inlined frames) as a
-                             // section/offset address
+  /// \}
+
+  /// The frame code address (might not be the same as the actual PC
+  /// for inlined frames) as a section/offset address.
+  Address m_frame_code_addr;
   SymbolContext m_sc;
   Flags m_flags;
   Scalar m_frame_base;
   Status m_frame_base_error;
-  bool m_cfa_is_valid; // Does this frame have a CFA?  Different from CFA ==
-                       // LLDB_INVALID_ADDRESS
+  uint16_t m_frame_recognizer_generation = 0;
+  /// Does this frame have a CFA?  Different from CFA == LLDB_INVALID_ADDRESS.
+  bool m_cfa_is_valid;
   Kind m_stack_frame_kind;
 
-  // Whether this frame behaves like the zeroth frame, in the sense
-  // that its pc value might not immediately follow a call (and thus might
-  // be the first address of its function). True for actual frame zero as
-  // well as any other frame with the same trait.
+  /// Whether this frame behaves like the zeroth frame, in the sense
+  /// that its pc value might not immediately follow a call (and thus might
+  /// be the first address of its function). True for actual frame zero as
+  /// well as any other frame with the same trait.
   bool m_behaves_like_zeroth_frame;
   lldb::VariableListSP m_variable_list_sp;
-  ValueObjectList m_variable_list_value_objects; // Value objects for each
-                                                 // variable in
-                                                 // m_variable_list_sp
-  lldb::RecognizedStackFrameSP m_recognized_frame_sp;
+  /// Value objects for each variable in m_variable_list_sp.
+  ValueObjectList m_variable_list_value_objects;
+  std::optional<lldb::RecognizedStackFrameSP> m_recognized_frame_sp;
   StreamString m_disassembly;
   std::recursive_mutex m_mutex;
 

@@ -9,9 +9,9 @@
 // However, not all of them should result in the check.
 // So here, we *only* check which should and which should not result in checks.
 
-// CHECK-DAG: @[[LINE_1100_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 1100, i32 10 }, {{.*}}, {{.*}}, i8 2 }
-// CHECK-DAG: @[[LINE_1500_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 1500, i32 10 }, {{.*}}, {{.*}}, i8 2 }
-// CHECK-DAG: @[[LINE_1600_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 1600, i32 10 }, {{.*}}, {{.*}}, i8 2 }
+// CHECK-DAG: @[[LINE_1100_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 1100, i32 10 }, {{.*}}, {{.*}}, i8 2, i32 0 }
+// CHECK-DAG: @[[LINE_1500_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 1500, i32 10 }, {{.*}}, {{.*}}, i8 2, i32 0 }
+// CHECK-DAG: @[[LINE_1600_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 1600, i32 10 }, {{.*}}, {{.*}}, i8 2, i32 0 }
 
 // CHECK-LABEL: @convert_unsigned_int_to_unsigned_int
 unsigned int convert_unsigned_int_to_unsigned_int(unsigned int x) {

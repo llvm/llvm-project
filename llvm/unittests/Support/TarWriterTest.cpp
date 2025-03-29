@@ -119,7 +119,7 @@ TEST_F(TarWriterTest, Pax) {
   EXPECT_EQ("", StringRef(Hdr->Name));
 
   StringRef Pax = StringRef((char *)(Buf.data() + 512), 512);
-  EXPECT_TRUE(Pax.startswith("211 path=/" + std::string(200, 'x')));
+  EXPECT_TRUE(Pax.starts_with("211 path=/" + std::string(200, 'x')));
 }
 
 TEST_F(TarWriterTest, SingleFile) {

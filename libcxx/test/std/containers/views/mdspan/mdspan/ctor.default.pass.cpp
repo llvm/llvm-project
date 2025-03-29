@@ -22,9 +22,10 @@
 // Effects: Value-initializes ptr_, map_, and acc_.
 
 #include <mdspan>
-#include <type_traits>
-#include <concepts>
 #include <cassert>
+#include <concepts>
+#include <span> // dynamic_extent
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -42,7 +43,7 @@ constexpr void test_mdspan_types(const H&, const M&, const A&) {
 
   if constexpr (MDS::rank_dynamic() > 0 && hc && mc && ac) {
     MDS m;
-    static_assert(noexcept(MDS()) == (noexcept(H())&& noexcept(M())&& noexcept(A())));
+    static_assert(noexcept(MDS()) == (noexcept(H()) && noexcept(M()) && noexcept(A())));
     assert(m.extents() == typename MDS::extents_type());
     if constexpr (std::equality_comparable<H>)
       assert(m.data_handle() == H());
@@ -59,10 +60,10 @@ template <bool hc, bool mc, bool ac, class H, class L, class A>
 constexpr void mixin_extents(const H& handle, const L& layout, const A& acc) {
   constexpr size_t D = std::dynamic_extent;
   test_mdspan_types<hc, mc, ac>(handle, construct_mapping(layout, std::extents<int>()), acc);
-  test_mdspan_types<hc, mc, ac>(handle, construct_mapping(layout, std::extents<char, D>(7)), acc);
+  test_mdspan_types<hc, mc, ac>(handle, construct_mapping(layout, std::extents<signed char, D>(7)), acc);
   test_mdspan_types<hc, mc, ac>(handle, construct_mapping(layout, std::extents<unsigned, 7>()), acc);
   test_mdspan_types<hc, mc, ac>(handle, construct_mapping(layout, std::extents<size_t, D, 4, D>(2, 3)), acc);
-  test_mdspan_types<hc, mc, ac>(handle, construct_mapping(layout, std::extents<char, D, 7, D>(0, 3)), acc);
+  test_mdspan_types<hc, mc, ac>(handle, construct_mapping(layout, std::extents<signed char, D, 7, D>(0, 3)), acc);
   test_mdspan_types<hc, mc, ac>(
       handle, construct_mapping(layout, std::extents<int64_t, D, 7, D, 4, D, D>(1, 2, 3, 2)), acc);
 }
@@ -74,8 +75,7 @@ constexpr void mixin_layout(const H& handle, const A& acc) {
 
   // Use weird layout, make sure it has the properties we want to test
   constexpr size_t D = std::dynamic_extent;
-  static_assert(
-      !std::is_default_constructible_v< typename layout_wrapping_integral<4>::template mapping<std::extents<char, D>>>);
+  static_assert(!std::is_default_constructible_v< layout_wrapping_integral<4>::mapping<std::extents<signed char, D>>>);
   mixin_extents<hc, false, ac>(handle, layout_wrapping_integral<4>(), acc);
 }
 

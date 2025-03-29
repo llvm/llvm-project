@@ -10,7 +10,7 @@ template<typename tx>
 tx ftemplate(int n) {
   tx a = 0;
 
-  #pragma omp target teams ompx_bare
+  #pragma omp target teams ompx_bare num_teams(1) thread_limit(32)
   {
     a = 2;
   }
@@ -28,11 +28,13 @@ int bar(int n){
 
 #endif
 // CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l13
-// CHECK-SAME: (i64 noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[A_ADDR]], align 1
 // CHECK-NEXT:    store i8 [[TMP0]], ptr [[A_CASTED]], align 1

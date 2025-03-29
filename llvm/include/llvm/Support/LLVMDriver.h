@@ -9,8 +9,6 @@
 #ifndef LLVM_SUPPORT_LLVMDRIVER_H
 #define LLVM_SUPPORT_LLVMDRIVER_H
 
-#include "llvm/ADT/SmallVector.h"
-
 namespace llvm {
 
 struct ToolContext {

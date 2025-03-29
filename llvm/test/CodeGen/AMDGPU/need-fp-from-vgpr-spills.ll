@@ -12,7 +12,7 @@ define hidden fastcc void @callee_has_fp() #1 {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s33
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    s_add_i32 s32, s32, 0xfffffe00
+; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s4
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %alloca = alloca i32, addrspace(5)
@@ -50,10 +50,10 @@ define internal fastcc void @csr_vgpr_spill_fp_callee() #0 {
 ; CHECK-NEXT:    v_readlane_b32 s31, v1, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v1, 0
 ; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
+; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-NEXT:    s_add_i32 s32, s32, 0xfffffc00
 ; CHECK-NEXT:    s_mov_b32 s33, s18
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -66,16 +66,13 @@ bb:
 define amdgpu_kernel void @kernel_call() {
 ; CHECK-LABEL: kernel_call:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_mov_b32 s32, 0x400
+; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:    s_add_u32 s0, s0, s17
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    ; implicit-def: $vgpr3 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    v_writelane_b32 v3, s16, 0
-; CHECK-NEXT:    s_or_saveexec_b64 s[24:25], -1
-; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:4 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_mov_b64 exec, s[24:25]
 ; CHECK-NEXT:    s_mov_b32 s13, s15
 ; CHECK-NEXT:    s_mov_b32 s12, s14
 ; CHECK-NEXT:    v_readlane_b32 s14, v3, 0
@@ -93,10 +90,6 @@ define amdgpu_kernel void @kernel_call() {
 ; CHECK-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; CHECK-NEXT:    s_mov_b64 s[2:3], s[22:23]
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; CHECK-NEXT:    s_or_saveexec_b64 s[24:25], -1
-; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:4 ; 4-byte Folded Reload
-; CHECK-NEXT:    s_mov_b64 exec, s[24:25]
-; CHECK-NEXT:    ; kill: killed $vgpr0
 ; CHECK-NEXT:    s_endpgm
 bb:
   tail call fastcc void @csr_vgpr_spill_fp_callee()
@@ -134,16 +127,13 @@ bb:
 define amdgpu_kernel void @kernel_tailcall() {
 ; CHECK-LABEL: kernel_tailcall:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_mov_b32 s32, 0x400
+; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:    s_add_u32 s0, s0, s17
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    ; implicit-def: $vgpr3 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    v_writelane_b32 v3, s16, 0
-; CHECK-NEXT:    s_or_saveexec_b64 s[24:25], -1
-; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:4 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_mov_b64 exec, s[24:25]
 ; CHECK-NEXT:    s_mov_b32 s13, s15
 ; CHECK-NEXT:    s_mov_b32 s12, s14
 ; CHECK-NEXT:    v_readlane_b32 s14, v3, 0
@@ -161,10 +151,6 @@ define amdgpu_kernel void @kernel_tailcall() {
 ; CHECK-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; CHECK-NEXT:    s_mov_b64 s[2:3], s[22:23]
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; CHECK-NEXT:    s_or_saveexec_b64 s[24:25], -1
-; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:4 ; 4-byte Folded Reload
-; CHECK-NEXT:    s_mov_b64 exec, s[24:25]
-; CHECK-NEXT:    ; kill: killed $vgpr0
 ; CHECK-NEXT:    s_endpgm
 bb:
   tail call fastcc void @csr_vgpr_spill_fp_tailcall_callee()
@@ -206,10 +192,10 @@ define hidden i32 @caller_save_vgpr_spill_fp_tail_call() #0 {
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_readlane_b32 s31, v1, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v1, 0
+; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s33 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-NEXT:    s_add_i32 s32, s32, 0xfffffc00
 ; CHECK-NEXT:    s_mov_b32 s33, s18
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -240,10 +226,10 @@ define hidden i32 @caller_save_vgpr_spill_fp() #0 {
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_readlane_b32 s31, v2, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v2, 0
+; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s33 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-NEXT:    s_add_i32 s32, s32, 0xfffffc00
 ; CHECK-NEXT:    s_mov_b32 s33, s19
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -255,16 +241,13 @@ entry:
 define protected amdgpu_kernel void @kernel() {
 ; CHECK-LABEL: kernel:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_mov_b32 s32, 0x400
+; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:    s_add_u32 s0, s0, s17
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    ; implicit-def: $vgpr3 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    v_writelane_b32 v3, s16, 0
-; CHECK-NEXT:    s_or_saveexec_b64 s[24:25], -1
-; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], 0 offset:4 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_mov_b64 exec, s[24:25]
 ; CHECK-NEXT:    s_mov_b32 s13, s15
 ; CHECK-NEXT:    s_mov_b32 s12, s14
 ; CHECK-NEXT:    v_readlane_b32 s14, v3, 0
@@ -282,11 +265,6 @@ define protected amdgpu_kernel void @kernel() {
 ; CHECK-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; CHECK-NEXT:    s_mov_b64 s[2:3], s[22:23]
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; CHECK-NEXT:    ; kill: def $vgpr1 killed $vgpr0 killed $exec
-; CHECK-NEXT:    s_or_saveexec_b64 s[24:25], -1
-; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:4 ; 4-byte Folded Reload
-; CHECK-NEXT:    s_mov_b64 exec, s[24:25]
-; CHECK-NEXT:    ; kill: killed $vgpr0
 ; CHECK-NEXT:    s_endpgm
 entry:
   %call = call i32 @caller_save_vgpr_spill_fp()
@@ -295,3 +273,6 @@ entry:
 
 attributes #0 = { "frame-pointer"="none" noinline }
 attributes #1 = { "frame-pointer"="all" noinline }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

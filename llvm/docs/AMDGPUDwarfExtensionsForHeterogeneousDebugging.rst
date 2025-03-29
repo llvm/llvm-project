@@ -448,11 +448,34 @@ See ``DW_AT_LLVM_vector_size`` in :ref:`amdgpu-dwarf-base-type-entries`.
 
 AMDGPU optimized code may spill vector registers to non-global address space
 memory, and this spilling may be done only for SIMT lanes that are active on
-entry to the subprogram.
+entry to the subprogram. To support this the CFI rule for the partially spilled
+register needs to use an expression that uses the EXEC register as a bit mask to
+select between the register (for inactive lanes) and the stack spill location
+(for active lanes that are spilled). This needs to evaluate to a location
+description, and not a value, as a debugger needs to change the value if the
+user assigns to the variable.
 
-To support this, a composite location description that can be created as a
-masked select is required. In addition, an operation that creates a composite
+Another usage is to create an expression that evaluates to provide a vector of
+logical PCs for active and inactive lanes in a SIMT execution model. Again the
+EXEC register is used to select between active and inactive PC values. In order
+to represent a vector of PC values, a way to create a composite location
+description that is a vector of a single location is used.
+
+It may be possible to use existing DWARF to incrementally build the composite
+location description, possibly using the DWARF operations for control flow to
+create a loop. However, for the AMDGPU that would require loop iteration of 64.
+A concern is that the resulting DWARF would have a significant size and would be
+reasonably common as it is needed for every vector register that is spilled in a
+function. AMDGPU can have up to 512 vector registers. Another concern is the
+time taken to evaluate such non-trivial expressions repeatedly.
+
+To avoid these issues, a composite location description that can be created as a
+masked select is proposed. In addition, an operation that creates a composite
 location description that is a vector on another location description is needed.
+These operations generate the composite location description using a single
+DWARF operation that combines all lanes of the vector in one step. The DWARF
+expression is more compact, and can be evaluated by a consumer far more
+efficiently.
 
 An example that uses these operations is referenced in the
 :ref:`amdgpu-dwarf-further-examples` appendix.
@@ -2464,7 +2487,7 @@ type.
     .. note::
 
       Could also consider adding ``DW_OP_LLVM_aspace_breg0,
-      DW_OP_LLVM_aspace_breg1, ..., DW_OP_LLVM_aspace_bref31`` which would save
+      DW_OP_LLVM_aspace_breg1, ..., DW_OP_LLVM_aspace_breg31`` which would save
       encoding size.
 
 .. _amdgpu-dwarf-register-location-description-operations:
@@ -3780,6 +3803,12 @@ A.5.1 Base Type Entries
       it better to add an attribute to the existing ``DW_TAG_base_type`` debug
       entry, or allow some forms of ``DW_TAG_array_type`` (those that have the
       ``DW_AT_GNU_vector`` attribute) to be used as stack entry value types?
+
+2. A ``DW_TAG_base_type`` debugger information entry with the encoding
+   ``DW_ATE_address`` may have a ``DW_AT_LLVM_address_space`` attribute whose
+   value is an architecture specific address space (see
+   :ref:`amdgpu-dwarf-address-spaces`). If omitted it defaults to
+   ``DW_ASPACE_LLVM_none``.
 
 .. _amdgpu-dwarf-type-modifier-entries:
 

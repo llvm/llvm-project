@@ -308,9 +308,9 @@ bool FileSpec::Match(const FileSpec &pattern, const FileSpec &file) {
 
 std::optional<FileSpec::Style>
 FileSpec::GuessPathStyle(llvm::StringRef absolute_path) {
-  if (absolute_path.startswith("/"))
+  if (absolute_path.starts_with("/"))
     return Style::posix;
-  if (absolute_path.startswith(R"(\\)"))
+  if (absolute_path.starts_with(R"(\\)"))
     return Style::windows;
   if (absolute_path.size() >= 3 && llvm::isAlpha(absolute_path[0]) &&
       (absolute_path.substr(1, 2) == R"(:\)" ||
@@ -328,6 +328,13 @@ void FileSpec::Dump(llvm::raw_ostream &s) const {
   char path_separator = GetPreferredPathSeparator(m_style);
   if (!m_filename && !path.empty() && path.back() != path_separator)
     s << path_separator;
+}
+
+llvm::json::Value FileSpec::ToJSON() const {
+  std::string str;
+  llvm::raw_string_ostream stream(str);
+  this->Dump(stream);
+  return llvm::json::Value(std::move(str));
 }
 
 FileSpec::Style FileSpec::GetPathStyle() const { return m_style; }

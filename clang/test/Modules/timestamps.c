@@ -20,7 +20,7 @@
 // CHECK-NEXT: <INPUT_FILE abbrevid=4 op0=1 op1=[[#]]
 // TIMESTAMP-NOT: op2=0
 // NOTIMESTAMP: op2=0
-// CHECK-SAME: blob data = 'module.map'
+// CHECK-SAME: blob data = 'module.modulemap'
 // CHECK-NEXT: <INPUT_FILE_HASH abbrevid=[[#]] op0=[[#]] op1=[[#]]/>
 // CHECK-NEXT: <INPUT_FILE abbrevid=4 op0=2 op1=[[#]]
 // TIMESTAMP-NOT: op2=0

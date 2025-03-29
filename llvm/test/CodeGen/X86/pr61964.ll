@@ -30,7 +30,7 @@ define { <8 x i32>, <8 x i32> } @splitTransposeDecode_8_avx2(<16 x i16> %a, <16 
 ; AVX2-LABEL: splitTransposeDecode_8_avx2:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpunpcklwd {{.*#+}} ymm2 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11]
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [0,4,1,5,2,6,3,7]
+; AVX2-NEXT:    vpmovsxbd {{.*#+}} ymm3 = [0,4,1,5,2,6,3,7]
 ; AVX2-NEXT:    vpermd %ymm2, %ymm3, %ymm2
 ; AVX2-NEXT:    vpunpckhwd {{.*#+}} ymm0 = ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15]
 ; AVX2-NEXT:    vpermd %ymm0, %ymm3, %ymm1
@@ -39,9 +39,9 @@ define { <8 x i32>, <8 x i32> } @splitTransposeDecode_8_avx2(<16 x i16> %a, <16 
 ;
 ; AVX512VL-LABEL: splitTransposeDecode_8_avx2:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,16,8,24,1,17,9,25,2,18,10,26,3,19,11,27]
+; AVX512VL-NEXT:    vpmovsxbw {{.*#+}} ymm2 = [0,16,8,24,1,17,9,25,2,18,10,26,3,19,11,27]
 ; AVX512VL-NEXT:    vpermi2w %ymm1, %ymm0, %ymm2
-; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm3 = [4,20,12,28,5,21,13,29,6,22,14,30,7,23,15,31]
+; AVX512VL-NEXT:    vpmovsxbw {{.*#+}} ymm3 = [4,20,12,28,5,21,13,29,6,22,14,30,7,23,15,31]
 ; AVX512VL-NEXT:    vpermi2w %ymm1, %ymm0, %ymm3
 ; AVX512VL-NEXT:    vmovdqa %ymm2, %ymm0
 ; AVX512VL-NEXT:    vmovdqa %ymm3, %ymm1
@@ -67,7 +67,7 @@ define { <8 x i32>, <8 x i32> } @splitTransposeDecode_8_avx2(<16 x i16> %a, <16 
 ; XOPAVX2-LABEL: splitTransposeDecode_8_avx2:
 ; XOPAVX2:       # %bb.0:
 ; XOPAVX2-NEXT:    vpunpcklwd {{.*#+}} ymm2 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11]
-; XOPAVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [0,4,1,5,2,6,3,7]
+; XOPAVX2-NEXT:    vpmovsxbd {{.*#+}} ymm3 = [0,4,1,5,2,6,3,7]
 ; XOPAVX2-NEXT:    vpermd %ymm2, %ymm3, %ymm2
 ; XOPAVX2-NEXT:    vpunpckhwd {{.*#+}} ymm0 = ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15]
 ; XOPAVX2-NEXT:    vpermd %ymm0, %ymm3, %ymm1

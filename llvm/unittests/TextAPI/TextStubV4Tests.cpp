@@ -100,6 +100,7 @@ TEST(TBDv4, ReadFile) {
   EXPECT_EQ(5U, File->getSwiftABIVersion());
   EXPECT_FALSE(File->isTwoLevelNamespace());
   EXPECT_TRUE(File->isApplicationExtensionSafe());
+  EXPECT_FALSE(File->isOSLibNotForSharedCache());
   InterfaceFileRef client("ClientA", Targets);
   InterfaceFileRef reexport("/System/Library/Frameworks/A.framework/A",
                             {Targets[0]});
@@ -132,19 +133,19 @@ TEST(TBDv4, ReadFile) {
   llvm::sort(Undefineds);
 
   static ExportedSymbol ExpectedExportedSymbols[] = {
-      {SymbolKind::GlobalSymbol, "_symA", false, false},
-      {SymbolKind::GlobalSymbol, "_symAB", false, false},
-      {SymbolKind::GlobalSymbol, "_symB", false, false},
+      {EncodeKind::GlobalSymbol, "_symA", false, false},
+      {EncodeKind::GlobalSymbol, "_symAB", false, false},
+      {EncodeKind::GlobalSymbol, "_symB", false, false},
   };
 
   static ExportedSymbol ExpectedReexportedSymbols[] = {
-      {SymbolKind::GlobalSymbol, "_symC", false, false},
-      {SymbolKind::GlobalSymbol, "weakReexport", true, false},
+      {EncodeKind::GlobalSymbol, "_symC", false, false},
+      {EncodeKind::GlobalSymbol, "weakReexport", true, false},
   };
 
   static ExportedSymbol ExpectedUndefinedSymbols[] = {
-      {SymbolKind::GlobalSymbol, "_symD", false, false},
-      {SymbolKind::GlobalSymbol, "weakReference", true, false},
+      {EncodeKind::GlobalSymbol, "_symD", false, false},
+      {EncodeKind::GlobalSymbol, "weakReference", true, false},
   };
 
   EXPECT_EQ(std::size(ExpectedExportedSymbols), Exports.size());
@@ -289,16 +290,16 @@ TEST(TBDv4, ReadMultipleDocuments) {
   llvm::sort(Undefineds);
 
   static ExportedSymbol ExpectedExportedSymbols[] = {
-      {SymbolKind::GlobalSymbol, "_symA", false, false},
-      {SymbolKind::GlobalSymbol, "_symAB", false, false},
+      {EncodeKind::GlobalSymbol, "_symA", false, false},
+      {EncodeKind::GlobalSymbol, "_symAB", false, false},
   };
 
   static ExportedSymbol ExpectedReexportedSymbols[] = {
-      {SymbolKind::GlobalSymbol, "_symC", false, false},
+      {EncodeKind::GlobalSymbol, "_symC", false, false},
   };
 
   static ExportedSymbol ExpectedUndefinedSymbols[] = {
-      {SymbolKind::GlobalSymbol, "_symD", false, false},
+      {EncodeKind::GlobalSymbol, "_symD", false, false},
   };
 
   EXPECT_EQ(std::size(ExpectedExportedSymbols), Exports.size());
@@ -351,11 +352,11 @@ TEST(TBDv4, WriteFile) {
   File.addAllowableClient("ClientA", Targets[0]);
   File.addParentUmbrella(Targets[0], "System");
   File.addParentUmbrella(Targets[1], "System");
-  File.addSymbol(SymbolKind::GlobalSymbol, "_symA", {Targets[0]});
-  File.addSymbol(SymbolKind::GlobalSymbol, "_symB", {Targets[1]});
-  File.addSymbol(SymbolKind::GlobalSymbol, "_symC", {Targets[0]},
+  File.addSymbol(EncodeKind::GlobalSymbol, "_symA", {Targets[0]});
+  File.addSymbol(EncodeKind::GlobalSymbol, "_symB", {Targets[1]});
+  File.addSymbol(EncodeKind::GlobalSymbol, "_symC", {Targets[0]},
                  SymbolFlags::WeakDefined);
-  File.addSymbol(SymbolKind::ObjectiveCClass, "Class1", {Targets[0]});
+  File.addSymbol(EncodeKind::ObjectiveCClass, "Class1", {Targets[0]});
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
@@ -419,11 +420,11 @@ TEST(TBDv4, WriteMultipleDocuments) {
   Document.setCurrentVersion(PackedVersion(1, 0, 0));
   Document.setTwoLevelNamespace();
   Document.setApplicationExtensionSafe(true);
-  Document.addSymbol(SymbolKind::GlobalSymbol, "_symA", Targets);
-  Document.addSymbol(SymbolKind::GlobalSymbol, "_symAB", {Targets[1]});
-  Document.addSymbol(SymbolKind::GlobalSymbol, "_symC", {Targets[0]},
+  Document.addSymbol(EncodeKind::GlobalSymbol, "_symA", Targets);
+  Document.addSymbol(EncodeKind::GlobalSymbol, "_symAB", {Targets[1]});
+  Document.addSymbol(EncodeKind::GlobalSymbol, "_symC", {Targets[0]},
                      SymbolFlags::WeakDefined);
-  Document.addSymbol(SymbolKind::ObjectiveCClass, "Class1", Targets);
+  Document.addSymbol(EncodeKind::ObjectiveCClass, "Class1", Targets);
   File.addDocument(std::make_shared<InterfaceFile>(std::move(Document)));
 
   SmallString<4096> Buffer;
@@ -750,6 +751,35 @@ TEST(TBDv4, Target_i386_driverkit) {
             stripWhitespace(Buffer.c_str()));
 }
 
+TEST(TBDv4, Target_arm64_xros) {
+  static const char TBDv4ArchArm64e[] =
+      "--- !tapi-tbd\n"
+      "tbd-version: 4\n"
+      "targets: [ arm64e-xros, arm64e-xros-simulator ]\n"
+      "install-name: Test.dylib\n"
+      "...\n";
+
+  auto Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv4ArchArm64e, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  auto File = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V4, File->getFileType());
+  PlatformSet ExpectedSet;
+  ExpectedSet.insert(PLATFORM_XROS);
+  ExpectedSet.insert(PLATFORM_XROS_SIMULATOR);
+  EXPECT_EQ(File->getPlatforms().size(), 2U);
+  for (auto Platform : File->getPlatforms())
+    EXPECT_EQ(ExpectedSet.count(Platform), 1U);
+
+  EXPECT_EQ(ArchitectureSet(AK_arm64e), File->getArchitectures());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(TBDv4ArchArm64e), stripWhitespace(Buffer.c_str()));
+}
+
 TEST(TBDv4, Swift_1) {
   static const char TBDv4SwiftVersion1[] = "--- !tapi-tbd\n"
                                            "tbd-version: 4\n"
@@ -830,6 +860,29 @@ TEST(TBDv4, Swift_99) {
   EXPECT_TRUE(!WriteResult);
   EXPECT_EQ(stripWhitespace(TBDv4SwiftVersion99),
             stripWhitespace(Buffer.c_str()));
+}
+
+TEST(TBDv4, NotForSharedCache) {
+
+  static const char TBDv4NotForSharedCache[] =
+      "--- !tapi-tbd\n"
+      "tbd-version: 4\n"
+      "targets: [  arm64-macos ]\n"
+      "flags: [ not_for_dyld_shared_cache ]\n"
+      "install-name: /S/L/F/Foo.framework/Foo\n"
+      "...\n";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv4NotForSharedCache, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  Target ExpectedTarget = Target(AK_arm64, PLATFORM_MACOS);
+  TBDFile ReadFile = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V4, ReadFile->getFileType());
+  EXPECT_EQ(std::string("/S/L/F/Foo.framework/Foo"),
+            ReadFile->getInstallName());
+  EXPECT_TRUE(ReadFile->targets().begin() != ReadFile->targets().end());
+  EXPECT_EQ(*ReadFile->targets().begin(), ExpectedTarget);
+  EXPECT_TRUE(ReadFile->isOSLibNotForSharedCache());
 }
 
 TEST(TBDv4, InvalidArchitecture) {
@@ -1110,7 +1163,7 @@ TEST(TBDv4, InterfaceInequality) {
                                Target(AK_i386, PLATFORM_MACOS));
   }));
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
-    File->addSymbol(SymbolKind::GlobalSymbol, "_symA",
+    File->addSymbol(EncodeKind::GlobalSymbol, "_symA",
                     {Target(AK_x86_64, PLATFORM_MACOS)});
   }));
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {

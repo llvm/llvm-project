@@ -19,7 +19,7 @@
 //     ranges::transform(I1 first1, S1 last1, I2 first2, S2 last2, O result,
 //                       F binary_op, Proj1 proj1 = {}, Proj2 proj2 = {});
 
-// The range overloads are tested in ranges.tranform.binary.range.pass.cpp.
+// The range overloads are tested in ranges.transform.binary.range.pass.cpp.
 
 #include <algorithm>
 #include <array>
@@ -89,41 +89,41 @@ constexpr bool test_iterators() {
   }
 
   { // first range empty
-    int a[] = {};
+    std::array<int, 0> a = {};
     int b[] = {5, 4, 3, 2, 1};
     int c[5];
 
     auto ret = std::ranges::transform(
-        In1(a), Sent1(In1(a)), In2(b), Sent2(In2(b + 5)), Out(c), [](int i, int j) { return i + j; });
+        In1(a.data()), Sent1(In1(a.data())), In2(b), Sent2(In2(b + 5)), Out(c), [](int i, int j) { return i + j; });
 
-    assert(base(ret.in1) == a);
+    assert(base(ret.in1) == a.data());
     assert(base(ret.in2) == b);
     assert(base(ret.out) == c);
   }
 
   { // second range empty
     int a[] = {5, 4, 3, 2, 1};
-    int b[] = {};
+    std::array<int, 0> b = {};
     int c[5];
 
     auto ret = std::ranges::transform(
-        In1(a), Sent1(In1(a + 5)), In2(b), Sent2(In2(b)), Out(c), [](int i, int j) { return i + j; });
+        In1(a), Sent1(In1(a + 5)), In2(b.data()), Sent2(In2(b.data())), Out(c), [](int i, int j) { return i + j; });
 
     assert(base(ret.in1) == a);
-    assert(base(ret.in2) == b);
+    assert(base(ret.in2) == b.data());
     assert(base(ret.out) == c);
   }
 
   { // both ranges empty
-    int a[] = {};
-    int b[] = {};
+    std::array<int, 0> a = {};
+    std::array<int, 0> b = {};
     int c[5];
 
     auto ret = std::ranges::transform(
-        In1(a), Sent1(In1(a)), In2(b), Sent2(In2(b)), Out(c), [](int i, int j) { return i + j; });
+        In1(a.data()), Sent1(In1(a.data())), In2(b.data()), Sent2(In2(b.data())), Out(c), [](int i, int j) { return i + j; });
 
-    assert(base(ret.in1) == a);
-    assert(base(ret.in2) == b);
+    assert(base(ret.in1) == a.data());
+    assert(base(ret.in2) == b.data());
     assert(base(ret.out) == c);
   }
 

@@ -21,15 +21,11 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -630,15 +626,16 @@ bool PrintingCodeCompleteConsumer::isResultFilteredOut(
     StringRef Filter, CodeCompletionResult Result) {
   switch (Result.Kind) {
   case CodeCompletionResult::RK_Declaration:
-    return !(Result.Declaration->getIdentifier() &&
-             Result.Declaration->getIdentifier()->getName().startswith(Filter));
+    return !(
+        Result.Declaration->getIdentifier() &&
+        Result.Declaration->getIdentifier()->getName().starts_with(Filter));
   case CodeCompletionResult::RK_Keyword:
-    return !StringRef(Result.Keyword).startswith(Filter);
+    return !StringRef(Result.Keyword).starts_with(Filter);
   case CodeCompletionResult::RK_Macro:
-    return !Result.Macro->getName().startswith(Filter);
+    return !Result.Macro->getName().starts_with(Filter);
   case CodeCompletionResult::RK_Pattern:
     return !(Result.Pattern->getTypedText() &&
-             StringRef(Result.Pattern->getTypedText()).startswith(Filter));
+             StringRef(Result.Pattern->getTypedText()).starts_with(Filter));
   }
   llvm_unreachable("Unknown code completion result Kind.");
 }
@@ -853,7 +850,8 @@ StringRef CodeCompletionResult::getOrderedName(std::string &Saved) const {
   if (IdentifierInfo *Id = Name.getAsIdentifierInfo())
     return Id->getName();
   if (Name.isObjCZeroArgSelector())
-    if (IdentifierInfo *Id = Name.getObjCSelector().getIdentifierInfoForSlot(0))
+    if (const IdentifierInfo *Id =
+            Name.getObjCSelector().getIdentifierInfoForSlot(0))
       return Id->getName();
 
   Saved = Name.getAsString();

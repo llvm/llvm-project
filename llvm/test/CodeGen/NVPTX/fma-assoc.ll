@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -fp-contract=fast | FileCheck %s -check-prefix=CHECK
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -fp-contract=fast -enable-unsafe-fp-math | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-UNSAFE
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -fp-contract=fast | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -fp-contract=fast -enable-unsafe-fp-math | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 -fp-contract=fast | FileCheck %s -check-prefix=CHECK
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 -fp-contract=fast -enable-unsafe-fp-math | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-UNSAFE
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 -fp-contract=fast | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 -fp-contract=fast -enable-unsafe-fp-math | %ptxas-verify %}
 
 define ptx_device float @t1_f32(float %x, float %y, float %z,
                                 float %u, float %v) {

@@ -98,4 +98,4 @@ bb:
   ret void
 }
 
-attributes #0 = { nounwind noinline "amdgpu-flat-work-group-size"="1,512" }
+attributes #0 = { nounwind noinline "amdgpu-flat-work-group-size"="1,512" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

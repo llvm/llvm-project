@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+// REQUIRES: c++17 || c++20 || c++23
 // UNSUPPORTED: no-wide-characters
 
 // <codecvt>
 
-// ensure that codecvt content is marked as deprecated
+// Ensure that codecvt content is marked as deprecated.
+// The header has been removed in C++26.
 
 #include <codecvt>
 

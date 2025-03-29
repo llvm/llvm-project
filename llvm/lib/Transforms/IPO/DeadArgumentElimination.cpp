@@ -19,6 +19,7 @@
 #include "llvm/Transforms/IPO/DeadArgumentElimination.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
@@ -174,6 +175,7 @@ bool DeadArgumentEliminationPass::deleteDeadVarargs(Function &F) {
   NF->setComdat(F.getComdat());
   F.getParent()->getFunctionList().insert(F.getIterator(), NF);
   NF->takeName(&F);
+  NF->IsNewDbgInfoFormat = F.IsNewDbgInfoFormat;
 
   // Loop over all the callers of the function, transforming the call sites
   // to pass in a smaller number of arguments into the new function.
@@ -203,9 +205,9 @@ bool DeadArgumentEliminationPass::deleteDeadVarargs(Function &F) {
     CallBase *NewCB = nullptr;
     if (InvokeInst *II = dyn_cast<InvokeInst>(CB)) {
       NewCB = InvokeInst::Create(NF, II->getNormalDest(), II->getUnwindDest(),
-                                 Args, OpBundles, "", CB);
+                                 Args, OpBundles, "", CB->getIterator());
     } else {
-      NewCB = CallInst::Create(NF, Args, OpBundles, "", CB);
+      NewCB = CallInst::Create(NF, Args, OpBundles, "", CB->getIterator());
       cast<CallInst>(NewCB)->setTailCallKind(
           cast<CallInst>(CB)->getTailCallKind());
     }
@@ -248,7 +250,7 @@ bool DeadArgumentEliminationPass::deleteDeadVarargs(Function &F) {
     NF->addMetadata(KindID, *Node);
 
   // Fix up any BlockAddresses that refer to the function.
-  F.replaceAllUsesWith(ConstantExpr::getBitCast(NF, F.getType()));
+  F.replaceAllUsesWith(NF);
   // Delete the bitcast that we just created, so that NF does not
   // appear to be address-taken.
   NF->removeDeadConstantUsers();
@@ -318,9 +320,7 @@ bool DeadArgumentEliminationPass::removeDeadArgumentsFromCallers(Function &F) {
       continue;
 
     // Now go through all unused args and replace them with poison.
-    for (unsigned I = 0, E = UnusedArgs.size(); I != E; ++I) {
-      unsigned ArgNo = UnusedArgs[I];
-
+    for (unsigned ArgNo : UnusedArgs) {
       Value *Arg = CB->getArgOperand(ArgNo);
       CB->setArgOperand(ArgNo, PoisonValue::get(Arg->getType()));
       CB->removeParamAttrs(ArgNo, UBImplyingAttributes);
@@ -749,6 +749,7 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
   // Set up to build a new list of parameter attributes.
   SmallVector<AttributeSet, 8> ArgAttrVec;
   const AttributeList &PAL = F->getAttributes();
+  OptimizationRemarkEmitter ORE(F);
 
   // Remember which arguments are still alive.
   SmallVector<bool, 10> ArgAlive(FTy->getNumParams(), false);
@@ -766,6 +767,12 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
       HasLiveReturnedArg |= PAL.hasParamAttr(ArgI, Attribute::Returned);
     } else {
       ++NumArgumentsEliminated;
+
+      ORE.emit([&]() {
+        return OptimizationRemark(DEBUG_TYPE, "ArgumentRemoved", F)
+               << "eliminating argument " << ore::NV("ArgName", I->getName())
+               << "(" << ore::NV("ArgIndex", ArgI) << ")";
+      });
       LLVM_DEBUG(dbgs() << "DeadArgumentEliminationPass - Removing argument "
                         << ArgI << " (" << I->getName() << ") from "
                         << F->getName() << "\n");
@@ -811,6 +818,11 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
         NewRetIdxs[Ri] = RetTypes.size() - 1;
       } else {
         ++NumRetValsEliminated;
+
+        ORE.emit([&]() {
+          return OptimizationRemark(DEBUG_TYPE, "ReturnValueRemoved", F)
+                 << "removing return value " << std::to_string(Ri);
+        });
         LLVM_DEBUG(
             dbgs() << "DeadArgumentEliminationPass - Removing return value "
                    << Ri << " from " << F->getName() << "\n");
@@ -845,9 +857,10 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
   // here. Currently, this should not be possible, but special handling might be
   // required when new return value attributes are added.
   if (NRetTy->isVoidTy())
-    RAttrs.remove(AttributeFuncs::typeIncompatible(NRetTy));
+    RAttrs.remove(AttributeFuncs::typeIncompatible(NRetTy, PAL.getRetAttrs()));
   else
-    assert(!RAttrs.overlaps(AttributeFuncs::typeIncompatible(NRetTy)) &&
+    assert(!RAttrs.overlaps(
+               AttributeFuncs::typeIncompatible(NRetTy, PAL.getRetAttrs())) &&
            "Return attributes no longer compatible?");
 
   AttributeSet RetAttrs = AttributeSet::get(F->getContext(), RAttrs);
@@ -877,6 +890,7 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
   // it again.
   F->getParent()->getFunctionList().insert(F->getIterator(), NF);
   NF->takeName(F);
+  NF->IsNewDbgInfoFormat = F->IsNewDbgInfoFormat;
 
   // Loop over all the callers of the function, transforming the call sites to
   // pass in a smaller number of arguments into the new function.
@@ -890,7 +904,8 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
     // Adjust the call return attributes in case the function was changed to
     // return void.
     AttrBuilder RAttrs(F->getContext(), CallPAL.getRetAttrs());
-    RAttrs.remove(AttributeFuncs::typeIncompatible(NRetTy));
+    RAttrs.remove(
+        AttributeFuncs::typeIncompatible(NRetTy, CallPAL.getRetAttrs()));
     AttributeSet RetAttrs = AttributeSet::get(F->getContext(), RAttrs);
 
     // Declare these outside of the loops, so we can reuse them for the second
@@ -944,7 +959,7 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
       NewCB = InvokeInst::Create(NF, II->getNormalDest(), II->getUnwindDest(),
                                  Args, OpBundles, "", CB.getParent());
     } else {
-      NewCB = CallInst::Create(NFTy, NF, Args, OpBundles, "", &CB);
+      NewCB = CallInst::Create(NFTy, NF, Args, OpBundles, "", CB.getIterator());
       cast<CallInst>(NewCB)->setTailCallKind(
           cast<CallInst>(&CB)->getTailCallKind());
     }
@@ -962,8 +977,7 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
       } else if (NewCB->getType()->isVoidTy()) {
         // If the return value is dead, replace any uses of it with poison
         // (any non-debug value uses will get removed later on).
-        if (!CB.getType()->isX86_MMXTy())
-          CB.replaceAllUsesWith(PoisonValue::get(CB.getType()));
+        CB.replaceAllUsesWith(PoisonValue::get(CB.getType()));
       } else {
         assert((RetTy->isStructTy() || RetTy->isArrayTy()) &&
                "Return type changed, but not into a void. The old return type"
@@ -1027,8 +1041,7 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
     } else {
       // If this argument is dead, replace any uses of it with poison
       // (any non-debug value uses will get removed later on).
-      if (!I->getType()->isX86_MMXTy())
-        I->replaceAllUsesWith(PoisonValue::get(I->getType()));
+      I->replaceAllUsesWith(PoisonValue::get(I->getType()));
     }
 
   // If we change the return value of the function we must rewrite any return
@@ -1068,7 +1081,8 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
         }
         // Replace the return instruction with one returning the new return
         // value (possibly 0 if we became void).
-        auto *NewRet = ReturnInst::Create(F->getContext(), RetVal, RI);
+        auto *NewRet =
+            ReturnInst::Create(F->getContext(), RetVal, RI->getIterator());
         NewRet->setDebugLoc(RI->getDebugLoc());
         RI->eraseFromParent();
       }

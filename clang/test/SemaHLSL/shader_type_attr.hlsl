@@ -47,9 +47,9 @@ int forwardDecl() {
 
 // expected-error@+1 {{'shader' attribute takes one argument}}
 [shader()]
-// expected-error@+1 {{'shader' attribute takes one argument}}
+// expected-error@+1 {{expected string literal as argument of 'shader' attribute}}
 [shader(1, 2)]
-// expected-error@+1 {{'shader' attribute requires a string}}
+// expected-error@+1 {{expected string literal as argument of 'shader' attribute}}
 [shader(1)]
 // expected-warning@+1 {{'shader' attribute argument not supported: cs}}
 [shader("cs")]

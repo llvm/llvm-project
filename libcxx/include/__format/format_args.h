@@ -10,12 +10,11 @@
 #ifndef _LIBCPP___FORMAT_FORMAT_ARGS_H
 #define _LIBCPP___FORMAT_FORMAT_ARGS_H
 
-#include <__availability>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__format/format_arg.h>
 #include <__format/format_arg_store.h>
-#include <__format/format_fwd.h>
-#include <cstddef>
+#include <__fwd/format.h>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -29,22 +28,19 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Context>
 class _LIBCPP_TEMPLATE_VIS basic_format_args {
 public:
-  basic_format_args() noexcept = default;
-
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI basic_format_args(const __format_arg_store<_Context, _Args...>& __store) noexcept
       : __size_(sizeof...(_Args)) {
     if constexpr (sizeof...(_Args) != 0) {
       if constexpr (__format::__use_packed_format_arg_store(sizeof...(_Args))) {
         __values_ = __store.__storage.__values_;
-        __types_ = __store.__storage.__types_;
+        __types_  = __store.__storage.__types_;
       } else
         __args_ = __store.__storage.__args_;
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI
-  basic_format_arg<_Context> get(size_t __id) const noexcept {
+  _LIBCPP_HIDE_FROM_ABI basic_format_arg<_Context> get(size_t __id) const noexcept {
     if (__id >= __size_)
       return basic_format_arg<_Context>{};
 
@@ -75,7 +71,7 @@ private:
 template <class _Context, class... _Args>
 basic_format_args(__format_arg_store<_Context, _Args...>) -> basic_format_args<_Context>;
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

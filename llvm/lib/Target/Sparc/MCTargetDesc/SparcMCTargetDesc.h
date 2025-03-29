@@ -34,8 +34,8 @@ MCCodeEmitter *createSparcMCCodeEmitter(const MCInstrInfo &MCII,
 MCAsmBackend *createSparcAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                     const MCRegisterInfo &MRI,
                                     const MCTargetOptions &Options);
-std::unique_ptr<MCObjectTargetWriter> createSparcELFObjectWriter(bool Is64Bit,
-                                                                 uint8_t OSABI);
+std::unique_ptr<MCObjectTargetWriter>
+createSparcELFObjectWriter(bool Is64Bit, bool IsV8Plus, uint8_t OSABI);
 
 // Defines symbolic names for Sparc v9 ASI tag names.
 namespace SparcASITag {
@@ -48,6 +48,17 @@ struct ASITag {
 #define GET_ASITagsList_DECL
 #include "SparcGenSearchableTables.inc"
 } // end namespace SparcASITag
+
+// Defines symbolic names for Sparc v9 prefetch tag names.
+namespace SparcPrefetchTag {
+struct PrefetchTag {
+  const char *Name;
+  unsigned Encoding;
+};
+
+#define GET_PrefetchTagsList_DECL
+#include "SparcGenSearchableTables.inc"
+} // end namespace SparcPrefetchTag
 } // End llvm namespace
 
 // Defines symbolic names for Sparc registers.  This defines a mapping from

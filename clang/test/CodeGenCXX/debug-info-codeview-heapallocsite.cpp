@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fexceptions -triple x86_64-windows-msvc -debug-info-kind=limited -gcodeview -fdeclspec -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fexceptions -triple x86_64-windows-msvc -debug-info-kind=limited -gcodeview -fdeclspec -emit-llvm %s -o - | FileCheck %s
 
 struct Foo {
   int x;

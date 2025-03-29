@@ -19,6 +19,310 @@
 
 using namespace llvm;
 
+char ErrataWorkaround::ID = 0;
+
+ErrataWorkaround::ErrataWorkaround() : MachineFunctionPass(ID) {
+  initializeErrataWorkaroundPass(*PassRegistry::getPassRegistry());
+}
+
+INITIALIZE_PASS(ErrataWorkaround, "errata-workaround", "Errata workaround pass",
+                false, false)
+
+// Move iterator to the next instruction in the function, ignoring
+// meta instructions and inline assembly. Returns false when reaching
+// the end of the function.
+bool ErrataWorkaround::moveNext(MachineBasicBlock::iterator &I) {
+
+  MachineBasicBlock *MBB = I->getParent();
+
+  do {
+    I++;
+
+    while (I == MBB->end()) {
+      if (MBB->getFallThrough() == nullptr)
+        return false;
+      MBB = MBB->getFallThrough();
+      I = MBB->begin();
+    }
+  } while (I->isMetaInstruction() || I->isInlineAsm());
+
+  return true;
+}
+
+void ErrataWorkaround::insertNop(MachineBasicBlock::iterator I) {
+  BuildMI(*I->getParent(), I, I->getDebugLoc(), TII->get(SP::NOP));
+}
+
+bool ErrataWorkaround::isFloat(MachineBasicBlock::iterator I) {
+  if (I->getNumOperands() == 0)
+    return false;
+
+  if (!I->getOperand(0).isReg())
+    return false;
+
+  unsigned reg = I->getOperand(0).getReg();
+
+  if (!SP::FPRegsRegClass.contains(reg) && !SP::DFPRegsRegClass.contains(reg))
+    return false;
+
+  return true;
+}
+
+bool ErrataWorkaround::isDivSqrt(MachineBasicBlock::iterator I) {
+  switch (I->getOpcode()) {
+  case SP::FDIVS:
+  case SP::FDIVD:
+  case SP::FSQRTS:
+  case SP::FSQRTD:
+    return true;
+  }
+  return false;
+}
+
+// Prevents the following code sequence from being generated:
+// (stb/sth/st/stf) -> (single non-store/load instruction) -> (any store)
+// If the sequence is detected a NOP instruction is inserted after
+// the first store instruction.
+bool ErrataWorkaround::checkSeqTN0009A(MachineBasicBlock::iterator I) {
+  switch (I->getOpcode()) {
+  case SP::STrr:
+  case SP::STri:
+  case SP::STBrr:
+  case SP::STBri:
+  case SP::STHrr:
+  case SP::STHri:
+  case SP::STFrr:
+  case SP::STFri:
+    break;
+  default:
+    return false;
+  }
+
+  MachineBasicBlock::iterator MI = I;
+  if (!moveNext(MI))
+    return false;
+
+  if (MI->mayStore() || MI->mayLoad())
+    return false;
+
+  MachineBasicBlock::iterator PatchHere = MI;
+
+  if (!moveNext(MI))
+    return false;
+
+  if (!MI->mayStore())
+    return false;
+
+  insertNop(PatchHere);
+  return true;
+}
+
+// Prevents the following code sequence from being generated:
+// (std/stdf) -> (any store)
+// If the sequence is detected a NOP instruction is inserted after
+// the first store instruction.
+bool ErrataWorkaround::checkSeqTN0009B(MachineBasicBlock::iterator I) {
+
+  switch (I->getOpcode()) {
+  case SP::STDrr:
+  case SP::STDri:
+  case SP::STDFrr:
+  case SP::STDFri:
+    break;
+  default:
+    return false;
+  }
+
+  MachineBasicBlock::iterator MI = I;
+
+  if (!moveNext(MI))
+    return false;
+
+  if (!MI->mayStore())
+    return false;
+
+  insertNop(MI);
+  return true;
+}
+
+// Insert a NOP at branch target if load in delay slot and atomic
+// instruction at branch target. Also insert a NOP between load
+// instruction and atomic instruction (swap or casa).
+bool ErrataWorkaround::checkSeqTN0010(MachineBasicBlock::iterator I) {
+
+  // Check for load instruction or branch bundled with load instruction
+  if (!I->mayLoad())
+    return false;
+
+  // Check for branch to atomic instruction with load in delay slot
+  if (I->isBranch()) {
+    MachineBasicBlock *TargetMBB = I->getOperand(0).getMBB();
+    MachineBasicBlock::iterator MI = TargetMBB->begin();
+
+    while (MI != TargetMBB->end() && MI->isMetaInstruction())
+      MI++;
+
+    if (MI == TargetMBB->end())
+      return false;
+
+    switch (MI->getOpcode()) {
+    case SP::SWAPrr:
+    case SP::SWAPri:
+    case SP::CASArr:
+      insertNop(MI);
+      break;
+    default:
+      break;
+    }
+  }
+
+  // Check for load followed by atomic instruction
+  MachineBasicBlock::iterator MI = I;
+  if (!moveNext(MI))
+    return false;
+
+  switch (MI->getOpcode()) {
+  case SP::SWAPrr:
+  case SP::SWAPri:
+  case SP::CASArr:
+    break;
+  default:
+    return false;
+  }
+  insertNop(MI);
+  return true;
+}
+
+// Do not allow functions to begin with an atomic instruction
+bool ErrataWorkaround::checkSeqTN0010First(MachineBasicBlock &MBB) {
+  MachineBasicBlock::iterator I = MBB.begin();
+  while (I != MBB.end() && I->isMetaInstruction())
+    I++;
+  switch (I->getOpcode()) {
+  case SP::SWAPrr:
+  case SP::SWAPri:
+  case SP::CASArr:
+    break;
+  default:
+    return false;
+  }
+  insertNop(I);
+  return true;
+}
+
+// Inserts a NOP instruction at the target of an integer branch if the
+// target is a floating-point instruction or floating-point branch.
+bool ErrataWorkaround::checkSeqTN0012(MachineBasicBlock::iterator I) {
+
+  if (I->getOpcode() != SP::BCOND && I->getOpcode() != SP::BCONDA)
+    return false;
+
+  MachineBasicBlock *TargetMBB = I->getOperand(0).getMBB();
+  MachineBasicBlock::iterator MI = TargetMBB->begin();
+
+  while (MI != TargetMBB->end() && MI->isMetaInstruction())
+    MI++;
+
+  if (MI == TargetMBB->end())
+    return false;
+
+  if (!isFloat(MI) && MI->getOpcode() != SP::FBCOND)
+    return false;
+
+  insertNop(MI);
+  return true;
+}
+
+// Prevents the following code sequence from being generated:
+// (div/sqrt) -> (2 to 3 floating-point operations or loads) -> (div/sqrt)
+// If the sequence is detected one or two NOP instruction are inserted after
+// the first div/sqrt instruction. No NOPs are inserted if one of the floating-
+// point instructions in the middle of the sequence is a (div/sqrt), or if
+// they have dependency on the destination register of the first (div/sqrt).
+//
+// The function also prevents the following code sequence from being generated,
+// (div/sqrt) -> (branch), by inserting a NOP instruction after the (div/sqrt).
+bool ErrataWorkaround::checkSeqTN0013(MachineBasicBlock::iterator I) {
+
+  if (!isDivSqrt(I))
+    return false;
+
+  unsigned dstReg = I->getOperand(0).getReg();
+
+  MachineBasicBlock::iterator MI = I;
+  if (!moveNext(MI))
+    return false;
+
+  if (MI->isBranch()) {
+    insertNop(MI);
+    return true;
+  }
+
+  MachineBasicBlock::iterator PatchHere = MI;
+
+  unsigned fpFound = 0;
+  for (unsigned i = 0; i < 4; i++) {
+
+    if (!isFloat(MI)) {
+      if (!moveNext(MI))
+        return false;
+      continue;
+    }
+
+    if (MI->readsRegister(dstReg, TRI))
+      return false;
+
+    if (isDivSqrt(MI)) {
+      if (i < 2)
+        return false;
+      if (fpFound < 2)
+        return false;
+
+      insertNop(PatchHere);
+      if (i == 2)
+        insertNop(PatchHere);
+      return true;
+    }
+
+    fpFound++;
+    if (!moveNext(MI))
+      return false;
+  }
+
+  return false;
+}
+
+bool ErrataWorkaround::runOnMachineFunction(MachineFunction &MF) {
+  bool Changed = false;
+  ST = &MF.getSubtarget<SparcSubtarget>();
+
+  if (!(ST->fixTN0009() || ST->fixTN0010() || ST->fixTN0012() ||
+        ST->fixTN0013()))
+    return false;
+
+  TII = ST->getInstrInfo();
+  TRI = ST->getRegisterInfo();
+
+  if (ST->fixTN0010())
+    Changed |= checkSeqTN0010First(MF.front());
+
+  for (auto &MBB : MF) {
+    for (auto &I : MBB) {
+      if (ST->fixTN0009()) {
+        Changed |= checkSeqTN0009A(I);
+        Changed |= checkSeqTN0009B(I);
+      }
+      if (ST->fixTN0010())
+        Changed |= checkSeqTN0010(I);
+      if (ST->fixTN0012())
+        Changed |= checkSeqTN0012(I);
+      if (ST->fixTN0013())
+        Changed |= checkSeqTN0013(I);
+    }
+  }
+  return Changed;
+}
+
 LEONMachineFunctionPass::LEONMachineFunctionPass(char &ID)
     : MachineFunctionPass(ID) {}
 

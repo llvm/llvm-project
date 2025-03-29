@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_STRUCT_RLIMIT_H__
-#define __LLVM_LIBC_TYPES_STRUCT_RLIMIT_H__
+#ifndef LLVM_LIBC_TYPES_STRUCT_RLIMIT_H
+#define LLVM_LIBC_TYPES_STRUCT_RLIMIT_H
 
-#include <llvm-libc-types/rlim_t.h>
+#include "rlim_t.h"
 
 struct rlimit {
   rlim_t rlim_cur;
   rlim_t rlim_max;
 };
 
-#endif // __LLVM_LIBC_TYPES_STRUCT_RLIMIT_H__
+#endif // LLVM_LIBC_TYPES_STRUCT_RLIMIT_H

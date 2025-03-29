@@ -1,14 +1,17 @@
 # REQUIRES: loongarch
 # RUN: rm -rf %t && split-file %s %t
 
-## LoongArch psABI doesn't specify TLS relaxation. Though the code sequences are not
-## relaxed, dynamic relocations can be omitted for GD->LE relaxation.
+## LoongArch psABI doesn't specify TLS relaxation. It can be handled the same way as gcc:
+## (a) code sequence can be converted from `pcalau12i+addi.[wd]` to `pcaddi`.
+## (b) dynamic relocations can be omitted for GD->LE relaxation.
 
 # RUN: llvm-mc --filetype=obj --triple=loongarch32 %t/a.s -o %t/a.32.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=+relax %t/a.s -o %t/a.32.relax.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch32 %t/bc.s -o %t/bc.32.o
 # RUN: ld.lld -shared -soname=bc.so %t/bc.32.o -o %t/bc.32.so
 # RUN: llvm-mc --filetype=obj --triple=loongarch32 %t/tga.s -o %t/tga.32.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 %t/a.s -o %t/a.64.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch64 %t/a.s -mattr=+relax -o %t/a.64.relax.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 %t/bc.s -o %t/bc.64.o
 # RUN: ld.lld -shared -soname=bc.so %t/bc.64.o -o %t/bc.64.so
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 %t/tga.s -o %t/tga.64.o
@@ -17,6 +20,9 @@
 # RUN: ld.lld -shared %t/a.32.o %t/bc.32.o -o %t/gd.32.so
 # RUN: llvm-readobj -r %t/gd.32.so | FileCheck --check-prefix=GD32-REL %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t/gd.32.so | FileCheck --check-prefix=GD32 %s
+# RUN: ld.lld -shared %t/a.32.relax.o %t/bc.32.o -o %t/gd.32.relax.so
+# RUN: llvm-readobj -r %t/gd.32.relax.so | FileCheck --check-prefix=GD32-REL-RELAX %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t/gd.32.relax.so | FileCheck --check-prefix=GD32-RELAX %s
 
 ## LA32 GD -> LE
 # RUN: ld.lld %t/a.32.o %t/bc.32.o %t/tga.32.o -o %t/le.32
@@ -35,6 +41,9 @@
 # RUN: ld.lld -shared %t/a.64.o %t/bc.64.o -o %t/gd.64.so
 # RUN: llvm-readobj -r %t/gd.64.so | FileCheck --check-prefix=GD64-REL %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t/gd.64.so | FileCheck --check-prefix=GD64 %s
+# RUN: ld.lld -shared %t/a.64.relax.o %t/bc.64.o -o %t/gd.64.relax.so
+# RUN: llvm-readobj -r %t/gd.64.relax.so | FileCheck --check-prefix=GD64-REL-RELAX %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t/gd.64.relax.so | FileCheck --check-prefix=GD64-RELAX %s
 
 ## LA64 GD -> LE
 # RUN: ld.lld %t/a.64.o %t/bc.64.o %t/tga.64.o -o %t/le.64
@@ -66,6 +75,21 @@
 # GD32-NEXT:        addi.w $a0, $a0, 792
 # GD32-NEXT:        bl 44
 
+# GD32-REL-RELAX:      .rela.dyn {
+# GD32-REL-RELAX-NEXT:   0x20300 R_LARCH_TLS_DTPMOD32 a 0x0
+# GD32-REL-RELAX-NEXT:   0x20304 R_LARCH_TLS_DTPREL32 a 0x0
+# GD32-REL-RELAX-NEXT:   0x20308 R_LARCH_TLS_DTPMOD32 b 0x0
+# GD32-REL-RELAX-NEXT:   0x2030C R_LARCH_TLS_DTPREL32 b 0x0
+# GD32-REL-RELAX-NEXT: }
+
+## &DTPMOD(a) - . = 0x20300 - 0x10250 = 16428<<2
+# GD32-RELAX:      10250: pcaddi $a0, 16428
+# GD32-RELAX-NEXT:        bl 44
+
+## &DTPMOD(b) - . = 0x20308 - 0x10258 = 16428<<2
+# GD32-RELAX:      10258: pcaddi $a0, 16428
+# GD32-RELAX-NEXT:        bl 36
+
 # GD64-REL:      .rela.dyn {
 # GD64-REL-NEXT:   0x204C0 R_LARCH_TLS_DTPMOD64 a 0x0
 # GD64-REL-NEXT:   0x204C8 R_LARCH_TLS_DTPREL64 a 0x0
@@ -82,6 +106,21 @@
 # GD64:      103a4: pcalau12i $a0, 16
 # GD64-NEXT:        addi.d $a0, $a0, 1232
 # GD64-NEXT:        bl 36
+
+# GD64-REL-RELAX:      .rela.dyn {
+# GD64-REL-RELAX-NEXT:   0x204C0 R_LARCH_TLS_DTPMOD64 a 0x0
+# GD64-REL-RELAX-NEXT:   0x204C8 R_LARCH_TLS_DTPREL64 a 0x0
+# GD64-REL-RELAX-NEXT:   0x204D0 R_LARCH_TLS_DTPMOD64 b 0x0
+# GD64-REL-RELAX-NEXT:   0x204D8 R_LARCH_TLS_DTPREL64 b 0x0
+# GD64-REL-RELAX-NEXT: }
+
+## &DTPMOD(a) - . = 0x204c0 - 0x10398 = 16458<<2
+# GD64-RELAX:      10398: pcaddi $a0, 16458
+# GD64-RELAX-NEXT:        bl 52
+
+## &DTPMOD(b) - . = 0x204d0 - 0x103a0 = 16460<<2
+# GD64-RELAX:      103a0: pcaddi $a0, 16460
+# GD64-RELAX-NEXT:        bl 44
 
 # NOREL: no relocations
 

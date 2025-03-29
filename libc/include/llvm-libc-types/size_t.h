@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_SIZE_T_H__
-#define __LLVM_LIBC_TYPES_SIZE_T_H__
+#ifndef LLVM_LIBC_TYPES_SIZE_T_H
+#define LLVM_LIBC_TYPES_SIZE_T_H
 
 // Since __need_size_t is defined, we get the definition of size_t from the
 // standalone C header stddef.h. Also, because __need_size_t is defined,
@@ -16,4 +16,4 @@
 #include <stddef.h>
 #undef __need_size_t
 
-#endif // __LLVM_LIBC_TYPES_SIZE_T_H__
+#endif // LLVM_LIBC_TYPES_SIZE_T_H

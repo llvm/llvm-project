@@ -8,10 +8,11 @@
 
 #include "src/stdlib/strtof.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/str_to_float.h"
 #include "src/errno/libc_errno.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, strtof,
                    (const char *__restrict str, char **__restrict str_end)) {
@@ -19,10 +20,10 @@ LLVM_LIBC_FUNCTION(float, strtof,
   if (result.has_error())
     libc_errno = result.error;
 
-  if (str_end != NULL)
+  if (str_end != nullptr)
     *str_end = const_cast<char *>(str + result.parsed_len);
 
   return result.value;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

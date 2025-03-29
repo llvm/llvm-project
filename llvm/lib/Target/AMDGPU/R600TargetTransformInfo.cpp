@@ -24,7 +24,7 @@ using namespace llvm;
 #define DEBUG_TYPE "R600tti"
 
 R600TTIImpl::R600TTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
-    : BaseT(TM, F.getParent()->getDataLayout()),
+    : BaseT(TM, F.getDataLayout()),
       ST(static_cast<const R600Subtarget *>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()), CommonTTI(TM, F) {}
 
@@ -38,7 +38,7 @@ unsigned R600TTIImpl::getNumberOfRegisters(bool Vec) const {
 
 TypeSize
 R600TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
-  return TypeSize::Fixed(32);
+  return TypeSize::getFixed(32);
 }
 
 unsigned R600TTIImpl::getMinVectorRegisterBitWidth() const { return 32; }

@@ -41,6 +41,8 @@ AST_MATCHER(FunctionDecl, hasOtherDeclarations) {
 void UseConstraintsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       functionTemplateDecl(
+          // Skip external libraries included as system headers
+          unless(isExpansionInSystemHeader()),
           has(functionDecl(unless(hasOtherDeclarations()), isDefinition(),
                            hasReturnTypeLoc(typeLoc().bind("return")))
                   .bind("function")))
@@ -53,10 +55,12 @@ matchEnableIfSpecializationImplTypename(TypeLoc TheType) {
   if (const auto Dep = TheType.getAs<DependentNameTypeLoc>()) {
     const IdentifierInfo *Identifier = Dep.getTypePtr()->getIdentifier();
     if (!Identifier || Identifier->getName() != "type" ||
-        Dep.getTypePtr()->getKeyword() != ETK_Typename) {
+        Dep.getTypePtr()->getKeyword() != ElaboratedTypeKeyword::Typename) {
       return std::nullopt;
     }
     TheType = Dep.getQualifierLoc().getTypeLoc();
+    if (TheType.isNull())
+      return std::nullopt;
   }
 
   if (const auto SpecializationLoc =
@@ -105,7 +109,7 @@ matchEnableIfSpecializationImplTrait(TypeLoc TheType) {
     if (const auto *AliasedType =
             dyn_cast<DependentNameType>(Specialization->getAliasedType())) {
       if (AliasedType->getIdentifier()->getName() != "type" ||
-          AliasedType->getKeyword() != ETK_Typename) {
+          AliasedType->getKeyword() != ElaboratedTypeKeyword::Typename) {
         return std::nullopt;
       }
     } else {
@@ -173,9 +177,11 @@ matchTrailingTemplateParam(const FunctionTemplateDecl *FunctionTemplate) {
           dyn_cast<TemplateTypeParmDecl>(LastParam)) {
     if (LastTemplateParam->hasDefaultArgument() &&
         LastTemplateParam->getIdentifier() == nullptr) {
-      return {matchEnableIfSpecialization(
-                  LastTemplateParam->getDefaultArgumentInfo()->getTypeLoc()),
-              LastTemplateParam};
+      return {
+          matchEnableIfSpecialization(LastTemplateParam->getDefaultArgument()
+                                          .getTypeSourceInfo()
+                                          ->getTypeLoc()),
+          LastTemplateParam};
     }
   }
   return {};
@@ -254,7 +260,7 @@ findInsertionForConstraint(const FunctionDecl *Function, ASTContext &Context) {
         return utils::lexer::findPreviousTokenKind(Init->getSourceLocation(),
                                                    SM, LangOpts, tok::colon);
     }
-    if (Constructor->init_begin() != Constructor->init_end())
+    if (!Constructor->inits().empty())
       return std::nullopt;
   }
   if (Function->isDeleted()) {

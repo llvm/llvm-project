@@ -25,7 +25,15 @@ EHPersonality llvm::classifyEHPersonality(const Value *Pers) {
       Pers ? dyn_cast<GlobalValue>(Pers->stripPointerCasts()) : nullptr;
   if (!F || !F->getValueType() || !F->getValueType()->isFunctionTy())
     return EHPersonality::Unknown;
-  return StringSwitch<EHPersonality>(F->getName())
+
+  StringRef Name = F->getName();
+  if (F->getParent()->getTargetTriple().isWindowsArm64EC()) {
+    // ARM64EC function symbols are mangled by prefixing them with "#".
+    // Demangle them by skipping this prefix.
+    Name.consume_front("#");
+  }
+
+  return StringSwitch<EHPersonality>(Name)
       .Case("__gnat_eh_personality", EHPersonality::GNU_Ada)
       .Case("__gxx_personality_v0", EHPersonality::GNU_CXX)
       .Case("__gxx_personality_seh0", EHPersonality::GNU_CXX)
@@ -42,6 +50,7 @@ EHPersonality llvm::classifyEHPersonality(const Value *Pers) {
       .Case("rust_eh_personality", EHPersonality::Rust)
       .Case("__gxx_wasm_personality_v0", EHPersonality::Wasm_CXX)
       .Case("__xlcxx_personality_v1", EHPersonality::XL_CXX)
+      .Case("__zos_cxx_personality_v2", EHPersonality::ZOS_CXX)
       .Default(EHPersonality::Unknown);
 }
 
@@ -73,6 +82,8 @@ StringRef llvm::getEHPersonalityName(EHPersonality Pers) {
     return "__gxx_wasm_personality_v0";
   case EHPersonality::XL_CXX:
     return "__xlcxx_personality_v1";
+  case EHPersonality::ZOS_CXX:
+    return "__zos_cxx_personality_v2";
   case EHPersonality::Unknown:
     llvm_unreachable("Unknown EHPersonality!");
   }
@@ -114,7 +125,7 @@ DenseMap<BasicBlock *, ColorVector> llvm::colorEHFunclets(Function &F) {
   // Note: Despite not being a funclet in the truest sense, a catchswitch is
   // considered to belong to its own funclet for the purposes of coloring.
 
-  DEBUG_WITH_TYPE("winehprepare-coloring",
+  DEBUG_WITH_TYPE("win-eh-prepare-coloring",
                   dbgs() << "\nColoring funclets for " << F.getName() << "\n");
 
   Worklist.push_back({EntryBlock, EntryBlock});
@@ -123,10 +134,10 @@ DenseMap<BasicBlock *, ColorVector> llvm::colorEHFunclets(Function &F) {
     BasicBlock *Visiting;
     BasicBlock *Color;
     std::tie(Visiting, Color) = Worklist.pop_back_val();
-    DEBUG_WITH_TYPE("winehprepare-coloring",
+    DEBUG_WITH_TYPE("win-eh-prepare-coloring",
                     dbgs() << "Visiting " << Visiting->getName() << ", "
                            << Color->getName() << "\n");
-    Instruction *VisitingHead = Visiting->getFirstNonPHI();
+    BasicBlock::iterator VisitingHead = Visiting->getFirstNonPHIIt();
     if (VisitingHead->isEHPad()) {
       // Mark this funclet head as a member of itself.
       Color = Visiting;
@@ -138,7 +149,7 @@ DenseMap<BasicBlock *, ColorVector> llvm::colorEHFunclets(Function &F) {
     else
       continue;
 
-    DEBUG_WITH_TYPE("winehprepare-coloring",
+    DEBUG_WITH_TYPE("win-eh-prepare-coloring",
                     dbgs() << "  Assigned color \'" << Color->getName()
                            << "\' to block \'" << Visiting->getName()
                            << "\'.\n");

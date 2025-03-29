@@ -14,7 +14,6 @@
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Passes/DataflowInfoManager.h"
 #include "bolt/Passes/FrameAnalysis.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include <optional>
 #include <queue>
@@ -281,18 +280,16 @@ bool ValidateInternalCalls::analyzeFunction(BinaryFunction &Function) const {
           LLVM_DEBUG({
             dbgs() << "Detected out-of-range PIC reference in " << Function
                    << "\nReturn address load: ";
-            BC.InstPrinter->printInst(TargetInst, 0, "", *BC.STI, dbgs());
-            dbgs() << "\nUse: ";
-            BC.InstPrinter->printInst(&Use, 0, "", *BC.STI, dbgs());
-            dbgs() << "\n";
+            BC.dump(*TargetInst);
+            dbgs() << "Use: ";
+            BC.dump(Use);
             Function.dump();
           });
           return false;
         }
         LLVM_DEBUG({
           dbgs() << "Validated access: ";
-          BC.InstPrinter->printInst(&Use, 0, "", *BC.STI, dbgs());
-          dbgs() << "\n";
+          BC.dump(Use);
         });
       }
       if (!UseDetected) {
@@ -304,10 +301,7 @@ bool ValidateInternalCalls::analyzeFunction(BinaryFunction &Function) const {
   return true;
 }
 
-void ValidateInternalCalls::runOnFunctions(BinaryContext &BC) {
-  if (!BC.isX86())
-    return;
-
+Error ValidateInternalCalls::runOnFunctions(BinaryContext &BC) {
   // Look for functions that need validation. This should be pretty rare.
   std::set<BinaryFunction *> NeedsValidation;
   for (auto &BFI : BC.getBinaryFunctions()) {
@@ -315,17 +309,23 @@ void ValidateInternalCalls::runOnFunctions(BinaryContext &BC) {
     for (BinaryBasicBlock &BB : Function) {
       for (MCInst &Inst : BB) {
         if (getInternalCallTarget(Function, Inst)) {
+          BC.errs() << "BOLT-WARNING: internal call detected in function "
+                    << Function << '\n';
           NeedsValidation.insert(&Function);
           Function.setSimple(false);
+          Function.setPreserveNops(true);
           break;
         }
       }
     }
   }
 
+  if (!BC.isX86())
+    return Error::success();
+
   // Skip validation for non-relocation mode
   if (!BC.HasRelocations)
-    return;
+    return Error::success();
 
   // Since few functions need validation, we can work with our most expensive
   // algorithms here. Fix the CFG treating internal calls as unconditional
@@ -341,13 +341,15 @@ void ValidateInternalCalls::runOnFunctions(BinaryContext &BC) {
   }
 
   if (!Invalid.empty()) {
-    errs() << "BOLT-WARNING: will skip the following function(s) as unsupported"
-              " internal calls were detected:\n";
+    BC.errs()
+        << "BOLT-WARNING: will skip the following function(s) as unsupported"
+           " internal calls were detected:\n";
     for (BinaryFunction *Function : Invalid) {
-      errs() << "              " << *Function << "\n";
+      BC.errs() << "              " << *Function << "\n";
       Function->setIgnored();
     }
   }
+  return Error::success();
 }
 
 } // namespace bolt

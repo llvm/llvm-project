@@ -92,3 +92,50 @@ extern __attribute__((address_space(0))) int type_attr_test_2;          // expec
 void invalid_param_fn(__attribute__((address_space(1))) int i); // expected-error {{parameter may not be qualified with an address space}}
 typeof(invalid_param_fn) invalid_param_1;
 typeof_unqual(invalid_param_fn) invalid_param_2;
+
+// Ensure restrict is stripped
+extern int *restrict p1;
+extern int *p2;
+extern typeof(p1) p1;
+extern typeof_unqual(p1) p2;
+
+// Ensure array qualifications are removed
+extern const int aci[2];
+extern const int acii[2][2];
+extern int ai[2];
+extern int aii[2][2];
+extern typeof(aci) aci;
+extern typeof_unqual(aci) ai;
+extern typeof(acii) acii;
+extern typeof_unqual(acii) aii;
+
+extern int *restrict arpi[2];
+extern int *restrict arpii[2][2];
+extern int *api[2];
+extern int *apii[2][2];
+extern typeof(arpi) arpi;
+extern typeof_unqual(arpi) api;
+extern typeof(arpii) arpii;
+extern typeof_unqual(arpii) apii;
+
+extern int _Atomic aAi[2];
+extern int _Atomic aAii[2][2];
+extern typeof(aAi) aAi;
+extern typeof_unqual(aAi) aAi;
+extern typeof(aAii) aAii;
+extern typeof_unqual(aAii) aAii;
+
+extern _Atomic(int) aAi[2];
+extern _Atomic(int) aAii[2][2];
+extern typeof(aAi) aAi;
+extern typeof_unqual(aAi) aAi;
+extern typeof(aAii) aAii;
+extern typeof_unqual(aAii) aAii;
+
+const char* const animals[] = { "aardvark", "bluejay", "catte" };
+void GH92667(void) {
+ const char* animals2_array1[3];
+ typeof_unqual(animals) animals2_array;
+ animals2_array1[0] = 0;
+ animals2_array[0] = 0;
+}

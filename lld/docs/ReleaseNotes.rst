@@ -25,21 +25,25 @@ Non-comprehensive list of changes in this release
 
 ELF Improvements
 ----------------
+* For AArch64, added support for ``-zgcs-report-dynamic``, enabling checks for
+  GNU GCS Attribute Flags in Dynamic Objects when GCS is enabled. Inherits value
+  from ``-zgcs-report`` (capped at ``warning`` level) unless user-defined,
+  ensuring compatibility with GNU ld linker.
 
-* ``--fat-lto-objects`` option is added to support LLVM FatLTO.
-  Without ``--fat-lto-objects``, LLD will link LLVM FatLTO objects using the
-  relocatable object file. (`D146778 <https://reviews.llvm.org/D146778>`_)
-* common-page-size can now be larger than the system page-size.
-  (`#57618 <https://github.com/llvm/llvm-project/issues/57618>`_)
+* The default Hexagon architecture version in ELF object files produced by
+  lld is changed to v68. This change is only effective when the version is
+  not provided in the command line by the user and cannot be inferred from
+  inputs.
+
+* ``--why-live=<glob>`` prints for each symbol matching ``<glob>`` a chain of
+  items that kept it live during garbage collection. This is inspired by the
+  Mach-O LLD feature of the same name.
 
 Breaking changes
 ----------------
 
 COFF Improvements
 -----------------
-
-* Added support for ``--time-trace`` and associated ``--time-trace-granularity``.
-  This generates a .json profile trace of the linker execution.
 
 MinGW Improvements
 ------------------

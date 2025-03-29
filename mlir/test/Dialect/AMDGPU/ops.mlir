@@ -4,11 +4,18 @@
 // Verify the generic form can be parsed.
 // RUN: mlir-opt -allow-unregistered-dialect -mlir-print-op-generic %s | mlir-opt -allow-unregistered-dialect | FileCheck %s
 
-// CHECK-LABEL: func @ext_packed_fp8
-// CHECK: amdgpu.ext_packed_fp8
-func.func @ext_packed_fp8(%v: vector<4xf8E4M3FNUZ>) -> f32 {
+// CHECK-LABEL: func @ext_packed_fp8_s
+// CHECK: amdgpu.ext_packed_fp8 {{.*}} vector<4xf8E4M3FNUZ> to f32
+func.func @ext_packed_fp8_s(%v: vector<4xf8E4M3FNUZ>) -> f32 {
   %ret = amdgpu.ext_packed_fp8 %v[0] : vector<4xf8E4M3FNUZ> to f32
   func.return %ret : f32
+}
+
+// CHECK-LABEL: func @ext_packed_fp8_v
+// CHECK: amdgpu.ext_packed_fp8 {{.*}} vector<4xf8E4M3FNUZ> to vector<2xf32
+func.func @ext_packed_fp8_v(%v: vector<4xf8E4M3FNUZ>) -> vector<2xf32> {
+  %ret = amdgpu.ext_packed_fp8 %v[0] : vector<4xf8E4M3FNUZ> to vector<2xf32>
+  func.return %ret : vector<2xf32>
 }
 
 // CHECK-LABEL: func @packed_trunc_2xfp8
@@ -23,6 +30,25 @@ func.func @packed_trunc_2xfp8(%v1: f32, %v2: f32, %others: vector<4xf8E5M2FNUZ>,
 func.func @packed_stoch_round_fp8(%v1: f32, %stoch: i32, %others: vector<4xf8E5M2FNUZ>) -> vector<4xf8E5M2FNUZ> {
   %ret = amdgpu.packed_stoch_round_fp8 %v1 + %stoch into %others[2] : f32 to vector<4xf8E5M2FNUZ> into vector<4xf8E5M2FNUZ>
   func.return %ret : vector<4xf8E5M2FNUZ>
+}
+
+// CHECK-LABEL: func @fat_raw_buffer_cast_easy
+// CHECK: amdgpu.fat_raw_buffer_cast
+func.func @fat_raw_buffer_cast_easy(%m: memref<8xi32>) -> memref<8xi32, #amdgpu.address_space<fat_raw_buffer>> {
+  %ret = amdgpu.fat_raw_buffer_cast %m : memref<8xi32> to memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
+  func.return %ret : memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
+}
+
+// CHECK-LABEL: func @fat_raw_buffer_cast
+// CHECK: amdgpu.fat_raw_buffer_cast
+// CHECK-SAME: validBytes(%{{[^)]*}})
+// CHECK-SAME: cacheSwizzleStride(%{{[^)]*}})
+// CHECK-SAME: boundsCheck(false)
+// CHECK-SAME: resetOffset
+func.func @fat_raw_buffer_cast(%m: memref<8xi32, strided<[1], offset: ?>>, %validBytes: i32, %cacheSwizzle: i14) -> memref<8xi32, strided<[1]>, #amdgpu.address_space<fat_raw_buffer>> {
+  %ret = amdgpu.fat_raw_buffer_cast %m validBytes(%validBytes) cacheSwizzleStride(%cacheSwizzle) boundsCheck(false) resetOffset
+    : memref<8xi32, strided<[1], offset: ?>> to memref<8xi32, strided<[1]>, #amdgpu.address_space<fat_raw_buffer>>
+  func.return %ret : memref<8xi32, strided<[1]>, #amdgpu.address_space<fat_raw_buffer>>
 }
 
 // CHECK-LABEL: func @raw_buffer_load_f32_from_rank_1
@@ -106,6 +132,15 @@ func.func @raw_buffer_atomic_cmpswap_f32(%src : f32, %cmp : f32, %dst : memref<1
 func.func @lds_barrier() {
   // CHECK: amdgpu.lds_barrier
   amdgpu.lds_barrier
+  func.return
+}
+
+// CHECK-LABEL: func @sched_barrier
+func.func @sched_barrier() {
+  // CHECK: amdgpu.sched_barrier allow = <none>
+  amdgpu.sched_barrier allow = <none>
+  // CHECK: amdgpu.sched_barrier allow = <valu|all_vmem>
+  amdgpu.sched_barrier allow = <valu|all_vmem>
   func.return
 }
 

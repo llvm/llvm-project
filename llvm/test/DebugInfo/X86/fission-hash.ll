@@ -3,8 +3,8 @@
 
 ; The source is an empty file, modified to include/retain an 'int' type, since empty CUs are omitted.
 
-; CHECK: DW_AT_GNU_dwo_id [DW_FORM_data8] (0x50d985146a74bb00)
-; CHECK: DW_AT_GNU_dwo_id [DW_FORM_data8] (0x50d985146a74bb00)
+; CHECK: DW_AT_GNU_dwo_id [DW_FORM_data8] (0xb1b50e9a23896bc1)
+; CHECK: DW_AT_GNU_dwo_id [DW_FORM_data8] (0xb1b50e9a23896bc1)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

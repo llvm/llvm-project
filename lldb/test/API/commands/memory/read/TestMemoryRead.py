@@ -57,7 +57,7 @@ class MemoryReadTestCase(TestBase):
         address = int(items[0], 0)
         argc = int(items[1], 0)
         self.assertGreater(address, 0)
-        self.assertEquals(argc, 1)
+        self.assertEqual(argc, 1)
 
         # (lldb) memory read --format uint32_t[] --size 4 --count 4 `&argc`
         # 0x7fff5fbff9a0: {0x00000001}
@@ -130,7 +130,7 @@ class MemoryReadTestCase(TestBase):
             # Check that we got back 4 0x0000 etc bytes
             for o in objects_read:
                 self.assertEqual(len(o), expected_object_length)
-            self.assertEquals(len(objects_read), 4)
+            self.assertEqual(len(objects_read), 4)
 
     def test_memory_read_file(self):
         self.build_run_stop()

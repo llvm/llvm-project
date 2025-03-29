@@ -170,15 +170,15 @@ as an actual argument to `foo()`.
 
 The trampoline has the following structure:
 
-```assembly
+```asm
 callee_trampoline:
-  MOV <static-chain-address>, R#
-  JMP <callee-address>
+  MOV static-chain-address, R#
+  JMP callee-address
 ```
 
 Where:
-- `<callee-address>` is the address of function `callee()`.
-- `<static-chain-address>` - the address of the static chain
+- `callee-address` is the address of function `callee()`.
+- `static-chain-address` - the address of the static chain
   object created inside `host()`.
 - `R#` is a target specific register.
 
@@ -239,7 +239,7 @@ automatically deallocated at the end of `host()` invocation.
 Unfortunately, this requires the program stack to be writeable and executable
 at the same time, which might be a security concern.
 
-> NOTE: LLVM's AArch64 backend supports `nest` attribute, but it does not seem to support trampoline intrinsics.
+> NOTE: LLVM's AArch64 backend supports `nest` attribute, but it requires the compiler-rt runtime selected via the `-rtlib=compiler-rt` flag.
 
 ## Alternative implementation(s)
 
@@ -249,7 +249,7 @@ One of the options is to use separate allocations for the trampoline code
 and the trampoline "data".
 
 The trampolines may be located in non-writeable executable memory:
-```assembly
+```asm
 trampoline0:
   MOV (TDATA[0].static_chain_address), R#
   JMP (TDATA[0].callee_address)

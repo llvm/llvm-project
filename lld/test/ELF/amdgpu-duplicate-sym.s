@@ -1,5 +1,5 @@
 # REQUIRES: amdgpu
-# RUN: llvm-mc -filetype=obj -triple amdgcn-amd-amdhsa -mcpu=gfx1031 --position-independent --relax-relocations %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple amdgcn-amd-amdhsa -mcpu=gfx1031 --position-independent %s -o %t.o
 
 # We use lld-link on purpose to exercise -flavor.
 # RUN: lld-link -flavor gnu -shared %t.o -o /dev/null

@@ -20,7 +20,7 @@ entry:
 
 loop:
   %phi = phi i16 [ 0, %entry ], [ %or, %loop ]
-  %or = or i16 %phi, %trunc
+  %or = or disjoint i16 %phi, %trunc
   %phi.ext = sext i16 %phi to i64
   %add.ptr = getelementptr i8, ptr null, i64 %phi.ext
   br label %loop

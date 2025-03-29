@@ -252,12 +252,13 @@ void VLIWPacketizerList::PacketizeMIs(MachineBasicBlock *MBB,
 bool VLIWPacketizerList::alias(const MachineMemOperand &Op1,
                                const MachineMemOperand &Op2,
                                bool UseTBAA) const {
-  if (!Op1.getValue() || !Op2.getValue())
+  if (!Op1.getValue() || !Op2.getValue() || !Op1.getSize().hasValue() ||
+      !Op2.getSize().hasValue())
     return true;
 
   int64_t MinOffset = std::min(Op1.getOffset(), Op2.getOffset());
-  int64_t Overlapa = Op1.getSize() + Op1.getOffset() - MinOffset;
-  int64_t Overlapb = Op2.getSize() + Op2.getOffset() - MinOffset;
+  int64_t Overlapa = Op1.getSize().getValue() + Op1.getOffset() - MinOffset;
+  int64_t Overlapb = Op2.getSize().getValue() + Op2.getOffset() - MinOffset;
 
   AliasResult AAResult =
       AA->alias(MemoryLocation(Op1.getValue(), Overlapa,

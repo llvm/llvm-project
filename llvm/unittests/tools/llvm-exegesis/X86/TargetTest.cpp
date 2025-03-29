@@ -12,7 +12,9 @@
 #include <memory>
 
 #include "MCTargetDesc/X86MCTargetDesc.h"
+#include "MmapUtils.h"
 #include "SubprocessMemory.h"
+#include "TestBase.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gmock/gmock.h"
@@ -111,19 +113,9 @@ Matcher<MCInst> IsStackDeallocate(unsigned Size) {
                ElementsAre(IsReg(X86::RSP), IsReg(X86::RSP), IsImm(Size)));
 }
 
-constexpr const char kTriple[] = "x86_64-unknown-linux";
-
-class X86TargetTest : public ::testing::Test {
+class X86TargetTest : public X86TestBase {
 protected:
-  X86TargetTest(const char *Features)
-      : State(cantFail(LLVMState::Create(kTriple, "core2", Features))) {}
-
-  static void SetUpTestCase() {
-    LLVMInitializeX86TargetInfo();
-    LLVMInitializeX86Target();
-    LLVMInitializeX86TargetMC();
-    InitializeX86ExegesisTarget();
-  }
+  X86TargetTest(const char *Features) : X86TestBase("core2", Features) {}
 
   std::vector<MCInst> setRegTo(unsigned Reg, const APInt &Value) {
     return State.getExegesisTarget().setRegTo(State.getSubtargetInfo(), Reg,
@@ -133,8 +125,6 @@ protected:
   const Instruction &getInstr(unsigned OpCode) {
     return State.getIC().getInstr(OpCode);
   }
-
-  LLVMState State;
 };
 
 class X86Core2TargetTest : public X86TargetTest {
@@ -241,7 +231,20 @@ TEST_F(X86Core2AvxTargetTest, SetRegToVR128Value_Use_VMOVDQUrm) {
                   IsStackDeallocate(16)));
 }
 
-TEST_F(X86Core2Avx512TargetTest, SetRegToVR128Value_Use_VMOVDQU32Z128rm) {
+TEST_F(X86Core2Avx512TargetTest,
+       SetRegToVR128ValueHighXMM_Use_VMOVDQU32Z128rm) {
+  EXPECT_THAT(
+      setRegTo(X86::XMM16, APInt(128, "11112222333344445555666677778888", 16)),
+      ElementsAre(IsStackAllocate(16),
+                  IsMovValueToStack(X86::MOV32mi, 0x77778888UL, 0),
+                  IsMovValueToStack(X86::MOV32mi, 0x55556666UL, 4),
+                  IsMovValueToStack(X86::MOV32mi, 0x33334444UL, 8),
+                  IsMovValueToStack(X86::MOV32mi, 0x11112222UL, 12),
+                  IsMovValueFromStack(X86::VMOVDQU32Z128rm, X86::XMM16),
+                  IsStackDeallocate(16)));
+}
+
+TEST_F(X86Core2Avx512TargetTest, SetRegToVR128ValueLowXMM_Use_VMOVDQUrm) {
   EXPECT_THAT(
       setRegTo(X86::XMM0, APInt(128, "11112222333344445555666677778888", 16)),
       ElementsAre(IsStackAllocate(16),
@@ -249,7 +252,7 @@ TEST_F(X86Core2Avx512TargetTest, SetRegToVR128Value_Use_VMOVDQU32Z128rm) {
                   IsMovValueToStack(X86::MOV32mi, 0x55556666UL, 4),
                   IsMovValueToStack(X86::MOV32mi, 0x33334444UL, 8),
                   IsMovValueToStack(X86::MOV32mi, 0x11112222UL, 12),
-                  IsMovValueFromStack(X86::VMOVDQU32Z128rm, X86::XMM0),
+                  IsMovValueFromStack(X86::VMOVDQUrm, X86::XMM0),
                   IsStackDeallocate(16)));
 }
 
@@ -271,7 +274,26 @@ TEST_F(X86Core2AvxTargetTest, SetRegToVR256Value_Use_VMOVDQUYrm) {
                         IsStackDeallocate(32)}));
 }
 
-TEST_F(X86Core2Avx512TargetTest, SetRegToVR256Value_Use_VMOVDQU32Z256rm) {
+TEST_F(X86Core2Avx512TargetTest,
+       SetRegToVR256ValueHighYMM_Use_VMOVDQU32Z256rm) {
+  const char ValueStr[] =
+      "1111111122222222333333334444444455555555666666667777777788888888";
+  EXPECT_THAT(
+      setRegTo(X86::YMM16, APInt(256, ValueStr, 16)),
+      ElementsAreArray({IsStackAllocate(32),
+                        IsMovValueToStack(X86::MOV32mi, 0x88888888UL, 0),
+                        IsMovValueToStack(X86::MOV32mi, 0x77777777UL, 4),
+                        IsMovValueToStack(X86::MOV32mi, 0x66666666UL, 8),
+                        IsMovValueToStack(X86::MOV32mi, 0x55555555UL, 12),
+                        IsMovValueToStack(X86::MOV32mi, 0x44444444UL, 16),
+                        IsMovValueToStack(X86::MOV32mi, 0x33333333UL, 20),
+                        IsMovValueToStack(X86::MOV32mi, 0x22222222UL, 24),
+                        IsMovValueToStack(X86::MOV32mi, 0x11111111UL, 28),
+                        IsMovValueFromStack(X86::VMOVDQU32Z256rm, X86::YMM16),
+                        IsStackDeallocate(32)}));
+}
+
+TEST_F(X86Core2Avx512TargetTest, SetRegToVR256ValueLowYMM_Use_VMOVDQUYrm) {
   const char ValueStr[] =
       "1111111122222222333333334444444455555555666666667777777788888888";
   EXPECT_THAT(
@@ -285,7 +307,7 @@ TEST_F(X86Core2Avx512TargetTest, SetRegToVR256Value_Use_VMOVDQU32Z256rm) {
                         IsMovValueToStack(X86::MOV32mi, 0x33333333UL, 20),
                         IsMovValueToStack(X86::MOV32mi, 0x22222222UL, 24),
                         IsMovValueToStack(X86::MOV32mi, 0x11111111UL, 28),
-                        IsMovValueFromStack(X86::VMOVDQU32Z256rm, X86::YMM0),
+                        IsMovValueFromStack(X86::VMOVDQUYrm, X86::YMM0),
                         IsStackDeallocate(32)}));
 }
 
@@ -552,6 +574,14 @@ TEST_F(X86Core2TargetTest, SetRegToFP1_4Bits) {
                           OpcodeIs(X86::LD_Fp80m), IsStackDeallocate(10)));
 }
 
+TEST_F(X86Core2TargetTest, SetRegToDf1) {
+  EXPECT_THAT(setRegTo(X86::DF, APInt(1, 1)), ElementsAre(OpcodeIs(X86::STD)));
+}
+
+TEST_F(X86Core2TargetTest, SetRegToDf0) {
+  EXPECT_THAT(setRegTo(X86::DF, APInt(1, 0)), ElementsAre(OpcodeIs(X86::CLD)));
+}
+
 TEST_F(X86Core2Avx512TargetTest, FillMemoryOperands_ADD64rm) {
   const Instruction &I = getInstr(X86::ADD64rm);
   InstructionTemplate IT(&I);
@@ -598,9 +628,9 @@ TEST_F(X86Core2TargetTest, GenerateLowerMunmapTest) {
 }
 
 #ifdef __arm__
-static constexpr const intptr_t VAddressSpaceCeiling = 0xC0000000;
+static constexpr const uintptr_t VAddressSpaceCeiling = 0xC0000000;
 #else
-static constexpr const intptr_t VAddressSpaceCeiling = 0x0000800000000000;
+static constexpr const uintptr_t VAddressSpaceCeiling = 0x0000800000000000;
 #endif
 
 TEST_F(X86Core2TargetTest, GenerateUpperMunmapTest) {
@@ -624,21 +654,6 @@ TEST_F(X86Core2TargetTest, GenerateExitSyscallTest) {
                           IsMovImmediate(X86::MOV64ri, X86::RAX, SYS_exit),
                           OpcodeIs(X86::SYSCALL)));
 }
-
-// Before kernel 4.17, Linux did not support MAP_FIXED_NOREPLACE, so if it is
-// not available, simplfy define it as MAP_FIXED which performs the same
-// function but does not guarantee existing mappings won't get clobbered.
-#ifndef MAP_FIXED_NOREPLACE
-#define MAP_FIXED_NOREPLACE MAP_FIXED
-#endif
-
-// Some 32-bit architectures don't have mmap and define mmap2 instead. The only
-// difference between the two syscalls is that mmap2's offset parameter is in
-// terms 4096 byte offsets rather than individual bytes, so for our purposes
-// they are effectively the same as all ofsets here are set to 0.
-#if defined(SYS_mmap2) && !defined(SYS_mmap)
-#define SYS_mmap SYS_mmap2
-#endif
 
 TEST_F(X86Core2TargetTest, GenerateMmapTest) {
   EXPECT_THAT(State.getExegesisTarget().generateMmap(0x1000, 4096, 0x2000),

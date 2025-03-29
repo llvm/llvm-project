@@ -21,8 +21,9 @@
 #include <cassert>
 #include <iterator>
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include "test_comparisons.h"
+namespace fs = std::filesystem;
 
 int main(int, char**) {
   AssertEqualityAreNoexcept<fs::recursive_directory_iterator>();

@@ -63,7 +63,7 @@ ProgramStateRef SimpleConstraintManager::assumeAux(ProgramStateRef State,
     return assumeSymUnsupported(State, Sym, Assumption);
   }
 
-  switch (Cond.getSubKind()) {
+  switch (Cond.getKind()) {
   default:
     llvm_unreachable("'Assume' not implemented for this NonLoc");
 
@@ -75,7 +75,7 @@ ProgramStateRef SimpleConstraintManager::assumeAux(ProgramStateRef State,
   }
 
   case nonloc::ConcreteIntKind: {
-    bool b = Cond.castAs<nonloc::ConcreteInt>().getValue() != 0;
+    bool b = *Cond.castAs<nonloc::ConcreteInt>().getValue().get() != 0;
     bool isFeasible = b ? Assumption : !Assumption;
     return isFeasible ? State : nullptr;
   }
@@ -107,7 +107,7 @@ ProgramStateRef SimpleConstraintManager::assumeInclusiveRangeInternal(
     return assumeSymInclusiveRange(State, Sym, From, To, InRange);
   }
 
-  switch (Value.getSubKind()) {
+  switch (Value.getKind()) {
   default:
     llvm_unreachable("'assumeInclusiveRange' is not implemented"
                      "for this NonLoc");

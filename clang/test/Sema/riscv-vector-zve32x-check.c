@@ -97,11 +97,3 @@ __rvv_bool32_t vbool32 () { /* expected-error {{RISC-V type '__rvv_bool32_t' req
 
   return b32; /* expected-error {{RISC-V type '__rvv_bool32_t' requires the 'zve32x' extension}} */
 }
-
-__rvv_bool64_t vbool64 () { /* expected-error {{RISC-V type '__rvv_bool64_t' requires the 'zve32x' extension}} */
-  __rvv_bool64_t b64; /* expected-error {{RISC-V type '__rvv_bool64_t' requires the 'zve32x' extension}} */
-
-  (void)b64; /* expected-error {{RISC-V type '__rvv_bool64_t' requires the 'zve32x' extension}} */
-
-  return b64; /* expected-error {{RISC-V type '__rvv_bool64_t' requires the 'zve32x' extension}} */
-}

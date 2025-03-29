@@ -272,6 +272,10 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     /// eventually branch back to the same region. (Maybe after passing through
     /// other regions.)
     bool isRepetitiveRegion(unsigned index);
+
+    /// Return `true` if there is a loop in the region branching graph. Only
+    /// reachable regions (starting from the entry regions) are considered.
+    bool hasLoop();
   }];
 }
 
@@ -337,6 +341,38 @@ def RegionBranchTerminatorOpInterface :
       return getMutableSuccessorOperands(point);
     }
   }];
+}
+
+def SelectLikeOpInterface : OpInterface<"SelectLikeOpInterface"> {
+  let description = [{
+    This interface provides information for select-like operations, i.e.,
+    operations that forward specific operands to the output, depending on a
+    binary condition.
+
+    If the value of the condition is 1, then the `true` operand is returned,
+    and the third operand is ignored, even if it was poison.
+
+    If the value of the condition is 0, then the `false` operand is returned,
+    and the second operand is ignored, even if it was poison.
+
+    If the condition is poison, then poison is returned.
+
+    Implementing operations can also accept shaped conditions, in which case
+    the operation works element-wise.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<[{
+        Returns the operand that would be chosen for a false condition.
+      }], "::mlir::Value", "getFalseValue", (ins)>,
+    InterfaceMethod<[{
+        Returns the operand that would be chosen for a true condition.
+      }], "::mlir::Value", "getTrueValue", (ins)>,
+    InterfaceMethod<[{
+        Returns the condition operand.
+      }], "::mlir::Value", "getCondition", (ins)>
+  ];
 }
 
 //===----------------------------------------------------------------------===//

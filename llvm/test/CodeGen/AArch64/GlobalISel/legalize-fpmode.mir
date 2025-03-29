@@ -79,11 +79,8 @@ body:             |
     ; CHECK-LABEL: name: func_reset
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[C]](s64)
-    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
     ; CHECK-NEXT: $x0 = COPY [[INTTOPTR]](p0)
-    ; CHECK-NEXT: BL &fesetmode, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0
-    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    ; CHECK-NEXT: RET_ReallyLR
+    ; CHECK-NEXT: TCRETURNdi &fesetmode, 0, csr_aarch64_aapcs, implicit $sp, implicit $x0
     G_RESET_FPMODE
     RET_ReallyLR
 

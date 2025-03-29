@@ -16,7 +16,7 @@ void f1(s1 i) {}
 typedef struct {
   int cc;
 } s2;
-// CHECK: define{{.*}} void @f2(ptr noalias sret(%struct.s2) align 4 %agg.result)
+// CHECK: define{{.*}} void @f2(ptr dead_on_unwind noalias writable sret(%struct.s2) align 4 %agg.result)
 s2 f2(void) {
   s2 foo;
   return foo;
@@ -26,7 +26,7 @@ typedef struct {
   int cc;
   int dd;
 } s3;
-// CHECK: define{{.*}} void @f3(ptr noalias sret(%struct.s3) align 4 %agg.result)
+// CHECK: define{{.*}} void @f3(ptr dead_on_unwind noalias writable sret(%struct.s3) align 4 %agg.result)
 s3 f3(void) {
   s3 foo;
   return foo;

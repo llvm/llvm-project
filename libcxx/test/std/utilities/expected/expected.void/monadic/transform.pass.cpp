@@ -35,7 +35,7 @@ static_assert(!has_transform<const std::expected<int, std::unique_ptr<int>>&&, i
 constexpr void test_val_types() {
   // Test & overload
   {
-    auto l = [] -> int { return 1; };
+    auto l = []() -> int { return 1; };
     std::expected<void, int> v;
     std::same_as<std::expected<int, int>> decltype(auto) val = v.transform(l);
     assert(val == 1);
@@ -43,7 +43,7 @@ constexpr void test_val_types() {
 
   // Test const& overload
   {
-    auto l = [] -> int { return 1; };
+    auto l = []() -> int { return 1; };
     const std::expected<void, int> v;
     std::same_as<std::expected<int, int>> decltype(auto) val = v.transform(l);
     assert(val == 1);
@@ -51,7 +51,7 @@ constexpr void test_val_types() {
 
   // Test && overload
   {
-    auto l = [] -> int { return 1; };
+    auto l = []() -> int { return 1; };
     std::expected<void, int> v;
     std::same_as<std::expected<int, int>> decltype(auto) val = std::move(v).transform(l);
     assert(val == 1);
@@ -59,7 +59,7 @@ constexpr void test_val_types() {
 
   // Test const&& overload
   {
-    auto l = [] -> int { return 1; };
+    auto l = []() -> int { return 1; };
     const std::expected<void, int> v;
     std::same_as<std::expected<int, int>> decltype(auto) val = std::move(v).transform(l);
     assert(val == 1);
@@ -69,7 +69,7 @@ constexpr void test_val_types() {
 constexpr void test_fail() {
   // Test & overload
   {
-    auto l = [] -> int {
+    auto l = []() -> int {
       assert(false);
       return 0;
     };
@@ -80,7 +80,7 @@ constexpr void test_fail() {
 
   // Test const& overload
   {
-    auto l = [] -> int {
+    auto l = []() -> int {
       assert(false);
       return 0;
     };
@@ -91,7 +91,7 @@ constexpr void test_fail() {
 
   // Test && overload
   {
-    auto l = [] -> int {
+    auto l = []() -> int {
       assert(false);
       return 0;
     };
@@ -102,7 +102,7 @@ constexpr void test_fail() {
 
   // Test const&& overload
   {
-    auto l = [] -> int {
+    auto l = []() -> int {
       assert(false);
       return 0;
     };

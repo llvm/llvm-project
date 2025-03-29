@@ -12,6 +12,7 @@
 
 #include "kmp.h"
 #include "kmp_atomic.h"
+#include "kmp_utils.h"
 
 #if OMPT_SUPPORT
 #include "ompt-specific.h"
@@ -143,7 +144,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_BARRIER)(void) {
 
 // Mutual exclusion
 
-// The symbol that icc/ifort generates for unnamed for unnamed critical sections
+// The symbol that icc/ifort generates for unnamed critical sections
 // - .gomp_critical_user_ - is defined using .comm in any objects reference it.
 // We can't reference it directly here in C code, as the symbol contains a ".".
 //
@@ -356,7 +357,8 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_ORDERED_END)(void) {
 // They come in two flavors: 64-bit unsigned, and either 32-bit signed
 // (IA-32 architecture) or 64-bit signed (Intel(R) 64).
 
-#if KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_MIPS
+#if KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_WASM ||          \
+    KMP_ARCH_PPC || KMP_ARCH_AARCH64_32
 #define KMP_DISPATCH_INIT __kmp_aux_dispatch_init_4
 #define KMP_DISPATCH_FINI_CHUNK __kmp_aux_dispatch_fini_chunk_4
 #define KMP_DISPATCH_NEXT __kmpc_dispatch_next_4
@@ -1280,7 +1282,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASK)(void (*func)(void *), void *data,
       KMP_ASSERT(depend);
       kmp_gomp_depends_info_t gomp_depends(depend);
       kmp_int32 ndeps = gomp_depends.get_num_deps();
-      kmp_depend_info_t dep_list[ndeps];
+      SimpleVLA<kmp_depend_info_t> dep_list(ndeps);
       for (kmp_int32 i = 0; i < ndeps; i++)
         dep_list[i] = gomp_depends.get_kmp_depend(i);
       kmp_int32 ndeps_cnv;
@@ -1309,7 +1311,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASK)(void (*func)(void *), void *data,
       KMP_ASSERT(depend);
       kmp_gomp_depends_info_t gomp_depends(depend);
       kmp_int32 ndeps = gomp_depends.get_num_deps();
-      kmp_depend_info_t dep_list[ndeps];
+      SimpleVLA<kmp_depend_info_t> dep_list(ndeps);
       for (kmp_int32 i = 0; i < ndeps; i++)
         dep_list[i] = gomp_depends.get_kmp_depend(i);
       __kmpc_omp_wait_deps(&loc, gtid, ndeps, dep_list, 0, NULL);
@@ -1993,7 +1995,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASKWAIT_DEPEND)(void **depend) {
   KA_TRACE(20, ("GOMP_taskwait_depend: T#%d\n", gtid));
   kmp_gomp_depends_info_t gomp_depends(depend);
   kmp_int32 ndeps = gomp_depends.get_num_deps();
-  kmp_depend_info_t dep_list[ndeps];
+  SimpleVLA<kmp_depend_info_t> dep_list(ndeps);
   for (kmp_int32 i = 0; i < ndeps; i++)
     dep_list[i] = gomp_depends.get_kmp_depend(i);
 #if OMPT_SUPPORT

@@ -10,10 +10,11 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // This function is currently linux only. It has to be refactored suitably if
 // posix_madvise is to be supported on non-linux operating systems also.
@@ -28,4 +29,4 @@ LLVM_LIBC_FUNCTION(int, posix_madvise, (void *addr, size_t size, int advice)) {
   return ret < 0 ? -ret : 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

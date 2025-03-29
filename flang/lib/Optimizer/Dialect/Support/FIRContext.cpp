@@ -60,6 +60,92 @@ fir::KindMapping fir::getKindMapping(mlir::Operation *op) {
   return getKindMapping(moduleOp);
 }
 
+static constexpr const char *targetCpuName = "fir.target_cpu";
+
+void fir::setTargetCPU(mlir::ModuleOp mod, llvm::StringRef cpu) {
+  if (cpu.empty())
+    return;
+
+  auto *ctx = mod.getContext();
+  mod->setAttr(targetCpuName, mlir::StringAttr::get(ctx, cpu));
+}
+
+llvm::StringRef fir::getTargetCPU(mlir::ModuleOp mod) {
+  if (auto attr = mod->getAttrOfType<mlir::StringAttr>(targetCpuName))
+    return attr.getValue();
+
+  return {};
+}
+
+static constexpr const char *tuneCpuName = "fir.tune_cpu";
+
+void fir::setTuneCPU(mlir::ModuleOp mod, llvm::StringRef cpu) {
+  if (cpu.empty())
+    return;
+
+  auto *ctx = mod.getContext();
+
+  mod->setAttr(tuneCpuName, mlir::StringAttr::get(ctx, cpu));
+}
+
+llvm::StringRef fir::getTuneCPU(mlir::ModuleOp mod) {
+  if (auto attr = mod->getAttrOfType<mlir::StringAttr>(tuneCpuName))
+    return attr.getValue();
+
+  return {};
+}
+
+static constexpr const char *targetFeaturesName = "fir.target_features";
+
+void fir::setTargetFeatures(mlir::ModuleOp mod, llvm::StringRef features) {
+  if (features.empty())
+    return;
+
+  auto *ctx = mod.getContext();
+  mod->setAttr(targetFeaturesName,
+               mlir::LLVM::TargetFeaturesAttr::get(ctx, features));
+}
+
+mlir::LLVM::TargetFeaturesAttr fir::getTargetFeatures(mlir::ModuleOp mod) {
+  if (auto attr = mod->getAttrOfType<mlir::LLVM::TargetFeaturesAttr>(
+          targetFeaturesName))
+    return attr;
+
+  return {};
+}
+
+void fir::setIdent(mlir::ModuleOp mod, llvm::StringRef ident) {
+  if (ident.empty())
+    return;
+
+  mlir::MLIRContext *ctx = mod.getContext();
+  mod->setAttr(mlir::LLVM::LLVMDialect::getIdentAttrName(),
+               mlir::StringAttr::get(ctx, ident));
+}
+
+llvm::StringRef fir::getIdent(mlir::ModuleOp mod) {
+  if (auto attr = mod->getAttrOfType<mlir::StringAttr>(
+          mlir::LLVM::LLVMDialect::getIdentAttrName()))
+    return attr;
+  return {};
+}
+
+void fir::setCommandline(mlir::ModuleOp mod, llvm::StringRef cmdLine) {
+  if (cmdLine.empty())
+    return;
+
+  mlir::MLIRContext *ctx = mod.getContext();
+  mod->setAttr(mlir::LLVM::LLVMDialect::getCommandlineAttrName(),
+               mlir::StringAttr::get(ctx, cmdLine));
+}
+
+llvm::StringRef fir::getCommandline(mlir::ModuleOp mod) {
+  if (auto attr = mod->getAttrOfType<mlir::StringAttr>(
+          mlir::LLVM::LLVMDialect::getCommandlineAttrName()))
+    return attr;
+  return {};
+}
+
 std::string fir::determineTargetTriple(llvm::StringRef triple) {
   // Treat "" or "default" as stand-ins for the default machine.
   if (triple.empty() || triple == "default")

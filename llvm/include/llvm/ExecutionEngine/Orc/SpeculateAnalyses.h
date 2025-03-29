@@ -17,8 +17,6 @@
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Speculation.h"
 
-#include <vector>
-
 namespace llvm {
 
 namespace orc {

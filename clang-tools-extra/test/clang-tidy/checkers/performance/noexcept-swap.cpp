@@ -32,6 +32,10 @@ void swap(A &, A &);
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: swap functions should be marked noexcept [performance-noexcept-swap]
 // CHECK-FIXES: void swap(A &, A &) noexcept ;
 
+void iter_swap(A &, A &);
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: swap functions should be marked noexcept [performance-noexcept-swap]
+// CHECK-FIXES: void iter_swap(A &, A &) noexcept ;
+
 struct B {
   static constexpr bool kFalse = false;
   void swap(B &) noexcept(kFalse);

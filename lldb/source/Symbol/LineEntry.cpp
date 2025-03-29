@@ -14,26 +14,15 @@
 using namespace lldb_private;
 
 LineEntry::LineEntry()
-    : range(), file(), is_start_of_statement(0), is_start_of_basic_block(0),
-      is_prologue_end(0), is_epilogue_begin(0), is_terminal_entry(0) {}
-
-LineEntry::LineEntry(const lldb::SectionSP &section_sp,
-                     lldb::addr_t section_offset, lldb::addr_t byte_size,
-                     const FileSpec &_file, uint32_t _line, uint16_t _column,
-                     bool _is_start_of_statement, bool _is_start_of_basic_block,
-                     bool _is_prologue_end, bool _is_epilogue_begin,
-                     bool _is_terminal_entry)
-    : range(section_sp, section_offset, byte_size), file(_file),
-      original_file(_file), line(_line), column(_column),
-      is_start_of_statement(_is_start_of_statement),
-      is_start_of_basic_block(_is_start_of_basic_block),
-      is_prologue_end(_is_prologue_end), is_epilogue_begin(_is_epilogue_begin),
-      is_terminal_entry(_is_terminal_entry) {}
+    : range(), file_sp(std::make_shared<SupportFile>()),
+      original_file_sp(std::make_shared<SupportFile>()),
+      is_start_of_statement(0), is_start_of_basic_block(0), is_prologue_end(0),
+      is_epilogue_begin(0), is_terminal_entry(0) {}
 
 void LineEntry::Clear() {
   range.Clear();
-  file.Clear();
-  original_file.Clear();
+  file_sp = std::make_shared<SupportFile>();
+  original_file_sp = std::make_shared<SupportFile>();
   line = LLDB_INVALID_LINE_NUMBER;
   column = 0;
   is_start_of_statement = 0;
@@ -48,6 +37,7 @@ bool LineEntry::IsValid() const {
 }
 
 bool LineEntry::DumpStopContext(Stream *s, bool show_fullpaths) const {
+  const FileSpec &file = file_sp->GetSpecOnly();
   if (file) {
     if (show_fullpaths)
       file.Dump(s->AsRawOstream());
@@ -80,7 +70,7 @@ bool LineEntry::Dump(Stream *s, Target *target, bool show_file,
       return false;
   }
   if (show_file)
-    *s << ", file = " << file;
+    *s << ", file = " << GetFile();
   if (line)
     s->Printf(", line = %u", line);
   if (column)
@@ -116,7 +106,7 @@ bool LineEntry::GetDescription(Stream *s, lldb::DescriptionLevel level,
                  Address::DumpStyleFileAddress);
     }
 
-    *s << ": " << file;
+    *s << ": " << GetFile();
 
     if (line) {
       s->Printf(":%u", line);
@@ -186,7 +176,7 @@ int LineEntry::Compare(const LineEntry &a, const LineEntry &b) {
   if (a.column > b.column)
     return +1;
 
-  return FileSpec::Compare(a.file, b.file, true);
+  return FileSpec::Compare(a.GetFile(), b.GetFile(), true);
 }
 
 AddressRange LineEntry::GetSameLineContiguousAddressRange(
@@ -195,7 +185,7 @@ AddressRange LineEntry::GetSameLineContiguousAddressRange(
   // different file / line number.
   AddressRange complete_line_range = range;
   auto symbol_context_scope = lldb::eSymbolContextLineEntry;
-  Declaration start_call_site(original_file, line);
+  Declaration start_call_site(original_file_sp->GetSpecOnly(), line);
   if (include_inlined_functions)
     symbol_context_scope |= lldb::eSymbolContextBlock;
 
@@ -209,7 +199,8 @@ AddressRange LineEntry::GetSameLineContiguousAddressRange(
         next_line_sc.line_entry.range.GetByteSize() == 0)
       break;
 
-    if (original_file == next_line_sc.line_entry.original_file &&
+    if (original_file_sp->Equal(*next_line_sc.line_entry.original_file_sp,
+                                SupportFile::eEqualFileSpecAndChecksumIfSet) &&
         (next_line_sc.line_entry.line == 0 ||
          line == next_line_sc.line_entry.line)) {
       // Include any line 0 entries - they indicate that this is compiler-
@@ -253,8 +244,10 @@ AddressRange LineEntry::GetSameLineContiguousAddressRange(
 void LineEntry::ApplyFileMappings(lldb::TargetSP target_sp) {
   if (target_sp) {
     // Apply any file remappings to our file.
-    if (auto new_file_spec =
-            target_sp->GetSourcePathMap().FindFile(original_file))
-      file = *new_file_spec;
+    if (auto new_file_spec = target_sp->GetSourcePathMap().FindFile(
+            original_file_sp->GetSpecOnly())) {
+      file_sp = std::make_shared<SupportFile>(*new_file_spec,
+                                              original_file_sp->GetChecksum());
+    }
   }
 }

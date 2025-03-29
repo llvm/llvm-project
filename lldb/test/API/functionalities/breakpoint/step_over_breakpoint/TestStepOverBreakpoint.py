@@ -5,7 +5,6 @@ which should be eStopReasonBreakpoint in general,
 and eStopReasonPlanComplete when breakpoint's condition fails.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -59,7 +58,7 @@ class StepOverBreakpointsTestCase(TestBase):
     def test_step_instruction(self):
         # Count instructions between breakpoint_1 and breakpoint_4
         contextList = self.target.FindFunctions("main", lldb.eFunctionNameTypeAuto)
-        self.assertEquals(contextList.GetSize(), 1)
+        self.assertEqual(contextList.GetSize(), 1)
         symbolContext = contextList.GetContextAtIndex(0)
         function = symbolContext.GetFunction()
         self.assertTrue(function)
@@ -83,13 +82,18 @@ class StepOverBreakpointsTestCase(TestBase):
             )
             if self.thread.GetStopReason() == lldb.eStopReasonBreakpoint:
                 # we should not stop on breakpoint_2 and _3 because they have false condition
-                self.assertEquals(
+                self.assertEqual(
                     self.thread.GetFrameAtIndex(0).GetLineEntry().GetLine(), self.line4
                 )
                 # breakpoint_2 and _3 should not affect step count
-                self.assertTrue(step_count >= steps_expected)
+                self.assertGreaterEqual(step_count, steps_expected)
                 break
 
+        # We did a `stepi` when we hit our last breakpoint, and the stepi was not
+        # completed yet, so when we resume it will complete (running process.Continue()
+        # would have the same result - we step one instruction and stop again when
+        # our interrupted stepi completes).
+        self.thread.StepInstruction(True)
         # Run the process until termination
         self.process.Continue()
         self.assertState(self.process.GetState(), lldb.eStateExited)
@@ -113,13 +117,13 @@ class StepOverBreakpointsTestCase(TestBase):
         thread1 = lldbutil.get_one_thread_stopped_at_breakpoint(
             self.process, self.breakpoint4
         )
-        self.assertEquals(self.thread, thread1, "Didn't stop at breakpoint 4.")
+        self.assertEqual(self.thread, thread1, "Didn't stop at breakpoint 4.")
 
         # Check that stepping does not affect breakpoint's hit count
-        self.assertEquals(self.breakpoint1.GetHitCount(), 1)
-        self.assertEquals(self.breakpoint2.GetHitCount(), 0)
-        self.assertEquals(self.breakpoint3.GetHitCount(), 0)
-        self.assertEquals(self.breakpoint4.GetHitCount(), 1)
+        self.assertEqual(self.breakpoint1.GetHitCount(), 1)
+        self.assertEqual(self.breakpoint2.GetHitCount(), 0)
+        self.assertEqual(self.breakpoint3.GetHitCount(), 0)
+        self.assertEqual(self.breakpoint4.GetHitCount(), 1)
 
         # Run the process until termination
         self.process.Continue()

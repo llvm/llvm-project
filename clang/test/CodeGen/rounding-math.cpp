@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -S -emit-llvm -triple i386-linux -Wno-unknown-pragmas -frounding-math %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple i386-linux -Wno-unknown-pragmas -frounding-math %s -o - | FileCheck %s
 
 constexpr float func_01(float x, float y) {
   return x + y;

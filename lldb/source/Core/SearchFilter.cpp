@@ -80,7 +80,8 @@ SearchFilterSP SearchFilter::CreateFromStructuredData(
     Status &error) {
   SearchFilterSP result_sp;
   if (!filter_dict.IsValid()) {
-    error.SetErrorString("Can't deserialize from an invalid data object.");
+    error = Status::FromErrorString(
+        "Can't deserialize from an invalid data object.");
     return result_sp;
   }
 
@@ -89,13 +90,14 @@ SearchFilterSP SearchFilter::CreateFromStructuredData(
   bool success = filter_dict.GetValueForKeyAsString(
       GetSerializationSubclassKey(), subclass_name);
   if (!success) {
-    error.SetErrorString("Filter data missing subclass key");
+    error = Status::FromErrorString("Filter data missing subclass key");
     return result_sp;
   }
 
   FilterTy filter_type = NameToFilterTy(subclass_name);
   if (filter_type == UnknownFilter) {
-    error.SetErrorStringWithFormatv("Unknown filter type: {0}.", subclass_name);
+    error = Status::FromErrorStringWithFormatv("Unknown filter type: {0}.",
+                                               subclass_name);
     return result_sp;
   }
 
@@ -103,7 +105,8 @@ SearchFilterSP SearchFilter::CreateFromStructuredData(
   success = filter_dict.GetValueForKeyAsDictionary(
       GetSerializationSubclassOptionsKey(), subclass_options);
   if (!success || !subclass_options || !subclass_options->IsValid()) {
-    error.SetErrorString("Filter data missing subclass options key.");
+    error =
+        Status::FromErrorString("Filter data missing subclass options key.");
     return result_sp;
   }
 
@@ -125,7 +128,8 @@ SearchFilterSP SearchFilter::CreateFromStructuredData(
         target_sp, *subclass_options, error);
     break;
   case Exception:
-    error.SetErrorString("Can't serialize exception breakpoints yet.");
+    error =
+        Status::FromErrorString("Can't serialize exception breakpoints yet.");
     break;
   default:
     llvm_unreachable("Should never get an uresolvable filter type.");
@@ -148,7 +152,7 @@ bool SearchFilter::FunctionPasses(Function &function) {
   // This is a slightly cheesy job, but since we don't have finer grained 
   // filters yet, just checking that the start address passes is probably
   // good enough for the base class behavior.
-  Address addr = function.GetAddressRange().GetBaseAddress();
+  Address addr = function.GetAddress();
   return AddressPasses(addr);
 }
 
@@ -460,24 +464,26 @@ SearchFilterSP SearchFilterByModule::CreateFromStructuredData(
   bool success = data_dict.GetValueForKeyAsArray(GetKey(OptionNames::ModList),
                                                  modules_array);
   if (!success) {
-    error.SetErrorString("SFBM::CFSD: Could not find the module list key.");
+    error = Status::FromErrorString(
+        "SFBM::CFSD: Could not find the module list key.");
     return nullptr;
   }
 
   size_t num_modules = modules_array->GetSize();
   if (num_modules > 1) {
-    error.SetErrorString(
+    error = Status::FromErrorString(
         "SFBM::CFSD: Only one modules allowed for SearchFilterByModule.");
     return nullptr;
   }
 
-  llvm::StringRef module;
-  success = modules_array->GetItemAtIndexAsString(0, module);
-  if (!success) {
-    error.SetErrorString("SFBM::CFSD: filter module item not a string.");
+  std::optional<llvm::StringRef> maybe_module =
+      modules_array->GetItemAtIndexAsString(0);
+  if (!maybe_module) {
+    error =
+        Status::FromErrorString("SFBM::CFSD: filter module item not a string.");
     return nullptr;
   }
-  FileSpec module_spec(module);
+  FileSpec module_spec(*maybe_module);
 
   return std::make_shared<SearchFilterByModule>(target_sp, module_spec);
 }
@@ -596,14 +602,14 @@ SearchFilterSP SearchFilterByModuleList::CreateFromStructuredData(
   FileSpecList modules;
   size_t num_modules = modules_array->GetSize();
   for (size_t i = 0; i < num_modules; i++) {
-    llvm::StringRef module;
-    success = modules_array->GetItemAtIndexAsString(i, module);
-    if (!success) {
-      error.SetErrorStringWithFormat(
+    std::optional<llvm::StringRef> maybe_module =
+        modules_array->GetItemAtIndexAsString(i);
+    if (!maybe_module) {
+      error = Status::FromErrorStringWithFormat(
           "SFBM::CFSD: filter module item %zu not a string.", i);
       return nullptr;
     }
-    modules.EmplaceBack(module);
+    modules.EmplaceBack(*maybe_module);
   }
   return std::make_shared<SearchFilterByModuleList>(target_sp, modules);
 }
@@ -644,14 +650,14 @@ lldb::SearchFilterSP SearchFilterByModuleListAndCU::CreateFromStructuredData(
   if (success) {
     size_t num_modules = modules_array->GetSize();
     for (size_t i = 0; i < num_modules; i++) {
-      llvm::StringRef module;
-      success = modules_array->GetItemAtIndexAsString(i, module);
-      if (!success) {
-        error.SetErrorStringWithFormat(
+      std::optional<llvm::StringRef> maybe_module =
+          modules_array->GetItemAtIndexAsString(i);
+      if (!maybe_module) {
+        error = Status::FromErrorStringWithFormat(
             "SFBM::CFSD: filter module item %zu not a string.", i);
         return result_sp;
       }
-      modules.EmplaceBack(module);
+      modules.EmplaceBack(*maybe_module);
     }
   }
 
@@ -659,21 +665,22 @@ lldb::SearchFilterSP SearchFilterByModuleListAndCU::CreateFromStructuredData(
   success =
       data_dict.GetValueForKeyAsArray(GetKey(OptionNames::CUList), cus_array);
   if (!success) {
-    error.SetErrorString("SFBM::CFSD: Could not find the CU list key.");
+    error =
+        Status::FromErrorString("SFBM::CFSD: Could not find the CU list key.");
     return result_sp;
   }
 
   size_t num_cus = cus_array->GetSize();
   FileSpecList cus;
   for (size_t i = 0; i < num_cus; i++) {
-    llvm::StringRef cu;
-    success = cus_array->GetItemAtIndexAsString(i, cu);
-    if (!success) {
-      error.SetErrorStringWithFormat(
+    std::optional<llvm::StringRef> maybe_cu =
+        cus_array->GetItemAtIndexAsString(i);
+    if (!maybe_cu) {
+      error = Status::FromErrorStringWithFormat(
           "SFBM::CFSD: filter CU item %zu not a string.", i);
       return nullptr;
     }
-    cus.EmplaceBack(cu);
+    cus.EmplaceBack(*maybe_cu);
   }
 
   return std::make_shared<SearchFilterByModuleListAndCU>(

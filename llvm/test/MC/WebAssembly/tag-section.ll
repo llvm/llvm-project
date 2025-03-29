@@ -53,4 +53,4 @@ define i32 @test_throw1(ptr %p) {
 
 ; SEC:          Type: TAG (0xD)
 ; SEC-NEXT:     Size: 3
-; SEC-NEXT:     Offset: 63
+; SEC-NEXT:     Offset: 69

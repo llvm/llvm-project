@@ -15,7 +15,6 @@
 #include "CodeGenModule.h"
 #include "TargetInfo.h"
 #include "clang/Basic/TargetInfo.h"
-#include <optional>
 
 using namespace clang;
 using namespace CodeGen;
@@ -78,7 +77,7 @@ void SwiftAggLowering::addTypedData(QualType type, CharUnits begin) {
 
     QualType eltType = arrayType->getElementType();
     auto eltSize = CGM.getContext().getTypeSizeInChars(eltType);
-    for (uint64_t i = 0, e = arrayType->getSize().getZExtValue(); i != e; ++i) {
+    for (uint64_t i = 0, e = arrayType->getZExtSize(); i != e; ++i) {
       addTypedData(eltType, begin + i * eltSize);
     }
 
@@ -187,7 +186,7 @@ void SwiftAggLowering::addBitFieldData(const FieldDecl *bitfield,
                                        uint64_t bitfieldBitBegin) {
   assert(bitfield->isBitField());
   auto &ctx = CGM.getContext();
-  auto width = bitfield->getBitWidthValue(ctx);
+  auto width = bitfield->getBitWidthValue();
 
   // We can ignore zero-width bit-fields.
   if (width == 0) return;
@@ -797,11 +796,14 @@ bool swiftcall::mustPassRecordIndirectly(CodeGenModule &CGM,
 
 static ABIArgInfo classifyExpandedType(SwiftAggLowering &lowering,
                                        bool forReturn,
-                                       CharUnits alignmentForIndirect) {
+                                       CharUnits alignmentForIndirect,
+                                       unsigned IndirectAS) {
   if (lowering.empty()) {
     return ABIArgInfo::getIgnore();
   } else if (lowering.shouldPassIndirectly(forReturn)) {
-    return ABIArgInfo::getIndirect(alignmentForIndirect, /*byval*/ false);
+    return ABIArgInfo::getIndirect(alignmentForIndirect,
+                                   /*AddrSpace=*/IndirectAS,
+                                   /*byval=*/false);
   } else {
     auto types = lowering.getCoerceAndExpandTypes();
     return ABIArgInfo::getCoerceAndExpand(types.first, types.second);
@@ -810,18 +812,21 @@ static ABIArgInfo classifyExpandedType(SwiftAggLowering &lowering,
 
 static ABIArgInfo classifyType(CodeGenModule &CGM, CanQualType type,
                                bool forReturn) {
+  unsigned IndirectAS = CGM.getDataLayout().getAllocaAddrSpace();
   if (auto recordType = dyn_cast<RecordType>(type)) {
     auto record = recordType->getDecl();
     auto &layout = CGM.getContext().getASTRecordLayout(record);
 
     if (mustPassRecordIndirectly(CGM, record))
-      return ABIArgInfo::getIndirect(layout.getAlignment(), /*byval*/ false);
+      return ABIArgInfo::getIndirect(layout.getAlignment(),
+                                     /*AddrSpace=*/IndirectAS, /*byval=*/false);
 
     SwiftAggLowering lowering(CGM);
     lowering.addTypedData(recordType->getDecl(), CharUnits::Zero(), layout);
     lowering.finish();
 
-    return classifyExpandedType(lowering, forReturn, layout.getAlignment());
+    return classifyExpandedType(lowering, forReturn, layout.getAlignment(),
+                                IndirectAS);
   }
 
   // Just assume that all of our target ABIs can support returning at least
@@ -837,7 +842,7 @@ static ABIArgInfo classifyType(CodeGenModule &CGM, CanQualType type,
     lowering.finish();
 
     CharUnits alignment = CGM.getContext().getTypeAlignInChars(type);
-    return classifyExpandedType(lowering, forReturn, alignment);
+    return classifyExpandedType(lowering, forReturn, alignment, IndirectAS);
   }
 
   // Member pointer types need to be expanded, but it's a simple form of

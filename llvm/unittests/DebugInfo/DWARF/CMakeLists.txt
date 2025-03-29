@@ -31,5 +31,3 @@ add_llvm_unittest(DebugInfoDWARFTests
   )
 
 target_link_libraries(DebugInfoDWARFTests PRIVATE LLVMTestingSupport)
-
-set_property(TARGET DebugInfoDWARFTests PROPERTY FOLDER "Tests/UnitTests/DebugInfoTests")

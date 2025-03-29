@@ -71,7 +71,7 @@ func.func @nested_region_control_flow(
     scf.yield %1 : memref<?x?xf32>
   } else {
     %3 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
-    "test.memref_user"(%3) : (memref<?x?xf32>) -> ()
+    "test.read_buffer"(%3) : (memref<?x?xf32>) -> ()
     scf.yield %1 : memref<?x?xf32>
   }
   return %2 : memref<?x?xf32>
@@ -253,7 +253,7 @@ func.func @loop_alloc(
   %buf: memref<2xf32>,
   %res: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
-  "test.memref_user"(%0) : (memref<2xf32>) -> ()
+  "test.read_buffer"(%0) : (memref<2xf32>) -> ()
   %1 = scf.for %i = %lb to %ub step %step
     iter_args(%iterBuf = %buf) -> memref<2xf32> {
     %2 = arith.cmpi eq, %i, %ub : index
@@ -385,7 +385,7 @@ func.func @loop_nested_alloc(
   %buf: memref<2xf32>,
   %res: memref<2xf32>) {
   %0 = memref.alloc() : memref<2xf32>
-  "test.memref_user"(%0) : (memref<2xf32>) -> ()
+  "test.read_buffer"(%0) : (memref<2xf32>) -> ()
   %1 = scf.for %i = %lb to %ub step %step
     iter_args(%iterBuf = %buf) -> memref<2xf32> {
     %2 = scf.for %i2 = %lb to %ub step %step
@@ -393,7 +393,7 @@ func.func @loop_nested_alloc(
       %3 = scf.for %i3 = %lb to %ub step %step
         iter_args(%iterBuf3 = %iterBuf2) -> memref<2xf32> {
         %4 = memref.alloc() : memref<2xf32>
-        "test.memref_user"(%4) : (memref<2xf32>) -> ()
+        "test.read_buffer"(%4) : (memref<2xf32>) -> ()
         %5 = arith.cmpi eq, %i, %ub : index
         %6 = scf.if %5 -> (memref<2xf32>) {
           %7 = memref.alloc() : memref<2xf32>
@@ -476,7 +476,7 @@ func.func @assumingOp(
   // Confirm the alloc will be dealloc'ed in the block.
   %1 = shape.assuming %arg0 -> memref<2xf32> {
     %0 = memref.alloc() : memref<2xf32>
-    "test.memref_user"(%0) : (memref<2xf32>) -> ()
+    "test.read_buffer"(%0) : (memref<2xf32>) -> ()
     shape.assuming_yield %arg2 : memref<2xf32>
   }
   // Confirm the alloc will be returned and dealloc'ed after its use.
@@ -511,35 +511,40 @@ func.func @assumingOp(
 
 // -----
 
-// Test Case: The op "test.bar" does not implement the RegionBranchOpInterface.
-// This is only allowed in buffer deallocation because the operation's region
-// does not deal with any MemRef values.
+// Test Case: The op "test.one_region_with_recursive_memory_effects" does not
+// implement the RegionBranchOpInterface. This is allowed during buffer
+// deallocation because the operation's region does not deal with any MemRef
+// values.
 
 func.func @noRegionBranchOpInterface() {
-  %0 = "test.bar"() ({
-    %1 = "test.bar"() ({
-      "test.yield"() : () -> ()
+  %0 = "test.one_region_with_recursive_memory_effects"() ({
+    %1 = "test.one_region_with_recursive_memory_effects"() ({
+      %2 = memref.alloc() : memref<2xi32>
+      "test.read_buffer"(%2) : (memref<2xi32>) -> ()
+      "test.return"() : () -> ()
     }) : () -> (i32)
-    "test.yield"() : () -> ()
+    "test.return"() : () -> ()
   }) : () -> (i32)
-  "test.terminator"() : () -> ()
+  "test.return"() : () -> ()
 }
 
 // -----
 
-// Test Case: The op "test.bar" does not implement the RegionBranchOpInterface.
-// This is not allowed in buffer deallocation.
+// Test Case: The second op "test.one_region_with_recursive_memory_effects" does
+// not implement the RegionBranchOpInterface but has buffer semantics. This is
+// not allowed during buffer deallocation.
 
 func.func @noRegionBranchOpInterface() {
-  // expected-error@+1 {{All operations with attached regions need to implement the RegionBranchOpInterface.}}
-  %0 = "test.bar"() ({
-    %1 = "test.bar"() ({
-      %2 = "test.get_memref"() : () -> memref<2xi32>
-      "test.yield"(%2) : (memref<2xi32>) -> ()
+  %0 = "test.one_region_with_recursive_memory_effects"() ({
+    // expected-error@+1 {{All operations with attached regions need to implement the RegionBranchOpInterface.}}
+    %1 = "test.one_region_with_recursive_memory_effects"() ({
+      %2 = memref.alloc() : memref<2xi32>
+      "test.read_buffer"(%2) : (memref<2xi32>) -> ()
+      "test.return"(%2) : (memref<2xi32>) -> ()
     }) : () -> (memref<2xi32>)
-    "test.yield"() : () -> ()
+    "test.return"() : () -> ()
   }) : () -> (i32)
-  "test.terminator"() : () -> ()
+  "test.return"() : () -> ()
 }
 
 // -----
@@ -547,7 +552,8 @@ func.func @noRegionBranchOpInterface() {
 func.func @while_two_arg(%arg0: index) {
   %a = memref.alloc(%arg0) : memref<?xf32>
   scf.while (%arg1 = %a, %arg2 = %a) : (memref<?xf32>, memref<?xf32>) -> (memref<?xf32>, memref<?xf32>) {
-    %0 = "test.make_condition"() : () -> i1
+    // This op has a side effect, but it's not an allocate/free side effect.
+    %0 = "test.side_effect_op"() {effects = [{effect="read"}]} : () -> i1
     scf.condition(%0) %arg1, %arg2 : memref<?xf32>, memref<?xf32>
   } do {
   ^bb0(%arg1: memref<?xf32>, %arg2: memref<?xf32>):
@@ -576,7 +582,8 @@ func.func @while_two_arg(%arg0: index) {
 func.func @while_three_arg(%arg0: index) {
   %a = memref.alloc(%arg0) : memref<?xf32>
   scf.while (%arg1 = %a, %arg2 = %a, %arg3 = %a) : (memref<?xf32>, memref<?xf32>, memref<?xf32>) -> (memref<?xf32>, memref<?xf32>, memref<?xf32>) {
-    %0 = "test.make_condition"() : () -> i1
+    // This op has a side effect, but it's not an allocate/free side effect.
+    %0 = "test.side_effect_op"() {effects = [{effect="read"}]} : () -> i1
     scf.condition(%0) %arg1, %arg2, %arg3 : memref<?xf32>, memref<?xf32>, memref<?xf32>
   } do {
   ^bb0(%arg1: memref<?xf32>, %arg2: memref<?xf32>, %arg3: memref<?xf32>):

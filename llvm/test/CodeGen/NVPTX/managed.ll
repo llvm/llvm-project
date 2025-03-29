@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_30 -mattr=+ptx40 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_30 -mattr=+ptx40 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_30 -mattr=+ptx40 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_30 -mattr=+ptx40 | %ptxas-verify %}
 
-; RUN: not --crash llc < %s -march=nvptx64 -mcpu=sm_20 2>&1 | FileCheck %s --check-prefix ERROR
+; RUN: not --crash llc < %s -mtriple=nvptx64 -mcpu=sm_20 2>&1 | FileCheck %s --check-prefix ERROR
 ; ERROR: LLVM ERROR: .attribute(.managed) requires PTX version >= 4.0 and sm_30
 
 ; CHECK: .visible .global .align 4 .u32 device_g;

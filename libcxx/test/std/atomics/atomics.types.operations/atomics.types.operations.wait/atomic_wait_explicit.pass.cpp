@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: no-threads
-// XFAIL: c++03
-// XFAIL: !non-lockfree-atomics
+// UNSUPPORTED: c++03, c++11, c++14, c++17
+// XFAIL: !has-1024-bit-atomics
 
 // XFAIL: availability-synchronization_library-missing
 

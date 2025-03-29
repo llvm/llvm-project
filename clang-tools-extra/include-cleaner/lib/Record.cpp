@@ -34,6 +34,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
 #include <algorithm>
 #include <assert.h>
@@ -65,7 +66,8 @@ public:
                           StringRef SpelledFilename, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind) override {
     if (!Active)
       return;
@@ -178,7 +180,10 @@ public:
       : RecordPragma(CI.getPreprocessor(), Out) {}
   RecordPragma(const Preprocessor &P, PragmaIncludes *Out)
       : SM(P.getSourceManager()), HeaderInfo(P.getHeaderSearchInfo()), Out(Out),
-        UniqueStrings(Arena) {}
+        Arena(std::make_shared<llvm::BumpPtrAllocator>()),
+        UniqueStrings(*Arena),
+        MainFileStem(llvm::sys::path::stem(
+            SM.getNonBuiltinFilenameForID(SM.getMainFileID()).value_or(""))) {}
 
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
@@ -204,7 +209,7 @@ public:
           std::unique(It.getSecond().begin(), It.getSecond().end()),
           It.getSecond().end());
     }
-    Out->Arena = std::move(Arena);
+    Out->Arena.emplace_back(std::move(Arena));
   }
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
@@ -213,7 +218,8 @@ public:
                           OptionalFileEntryRef File,
                           llvm::StringRef /*SearchPath*/,
                           llvm::StringRef /*RelativePath*/,
-                          const clang::Module * /*Imported*/,
+                          const clang::Module * /*SuggestedModule*/,
+                          bool /*ModuleImported*/,
                           SrcMgr::CharacteristicKind FileKind) override {
     FileID HashFID = SM.getFileID(HashLoc);
     int HashLine = SM.getLineNumber(HashFID, SM.getFileOffset(HashLoc));
@@ -225,8 +231,9 @@ public:
       }
     if (!IncludedHeader && File)
       IncludedHeader = *File;
-    checkForExport(HashFID, HashLine, std::move(IncludedHeader), File);
+    checkForExport(HashFID, HashLine, IncludedHeader, File);
     checkForKeep(HashLine, File);
+    checkForDeducedAssociated(IncludedHeader);
   }
 
   void checkForExport(FileID IncludingFile, int HashLine,
@@ -240,20 +247,10 @@ public:
     // Make sure current include is covered by the export pragma.
     if ((Top.Block && HashLine > Top.SeenAtLine) ||
         Top.SeenAtLine == HashLine) {
-      if (IncludedHeader) {
-        switch (IncludedHeader->kind()) {
-        case Header::Physical:
-          Out->IWYUExportBy[IncludedHeader->physical().getUniqueID()]
-              .push_back(Top.Path);
-          break;
-        case Header::Standard:
-          Out->StdIWYUExportBy[IncludedHeader->standard()].push_back(Top.Path);
-          break;
-        case Header::Verbatim:
-          assert(false && "unexpected Verbatim header");
-          break;
-        }
-      }
+      if (IncludedFile)
+        Out->IWYUExportBy[IncludedFile->getUniqueID()].push_back(Top.Path);
+      if (IncludedHeader && IncludedHeader->kind() == Header::Standard)
+        Out->StdIWYUExportBy[IncludedHeader->standard()].push_back(Top.Path);
       // main-file #include with export pragma should never be removed.
       if (Top.SeenAtFile == SM.getMainFileID() && IncludedFile)
         Out->ShouldKeep.insert(IncludedFile->getUniqueID());
@@ -276,6 +273,27 @@ public:
       KeepStack.pop_back(); // Pop immediately for single-line keep pragma.
   }
 
+  // Consider marking H as the "associated header" of the main file.
+  //
+  // Our heuristic:
+  // - it must be the first #include in the main file
+  // - it must have the same name stem as the main file (foo.h and foo.cpp)
+  // (IWYU pragma: associated is also supported, just not by this function).
+  //
+  // We consider the associated header as if it had a keep pragma.
+  // (Unlike IWYU, we don't treat #includes inside the associated header as if
+  // they were written in the main file.)
+  void checkForDeducedAssociated(std::optional<Header> H) {
+    namespace path = llvm::sys::path;
+    if (!InMainFile || SeenAssociatedCandidate)
+      return;
+    SeenAssociatedCandidate = true; // Only the first #include is our candidate.
+    if (!H || H->kind() != Header::Physical)
+      return;
+    if (path::stem(H->physical().getName(), path::Style::posix) == MainFileStem)
+      Out->ShouldKeep.insert(H->physical().getUniqueID());
+  }
+
   bool HandleComment(Preprocessor &PP, SourceRange Range) override {
     auto &SM = PP.getSourceManager();
     auto Pragma =
@@ -287,7 +305,9 @@ public:
     int CommentLine = SM.getLineNumber(CommentFID, CommentOffset);
 
     if (InMainFile) {
-      if (Pragma->startswith("keep")) {
+      if (Pragma->starts_with("keep") ||
+          // Limited support for associated headers: never consider unused.
+          Pragma->starts_with("associated")) {
         KeepStack.push_back({CommentLine, false});
       } else if (Pragma->starts_with("begin_keep")) {
         KeepStack.push_back({CommentLine, true});
@@ -310,9 +330,10 @@ public:
       StringRef PublicHeader;
       if (Pragma->consume_front(", include ")) {
         // We always insert using the spelling from the pragma.
-        PublicHeader = save(Pragma->startswith("<") || Pragma->startswith("\"")
-                                ? (*Pragma)
-                                : ("\"" + *Pragma + "\"").str());
+        PublicHeader =
+            save(Pragma->starts_with("<") || Pragma->starts_with("\"")
+                     ? (*Pragma)
+                     : ("\"" + *Pragma + "\"").str());
       }
       Out->IWYUPublic.insert({CommentUID, PublicHeader});
       return false;
@@ -323,11 +344,11 @@ public:
     }
     auto Filename = FE->getName();
     // Record export pragma.
-    if (Pragma->startswith("export")) {
+    if (Pragma->starts_with("export")) {
       ExportStack.push_back({CommentLine, CommentFID, save(Filename), false});
-    } else if (Pragma->startswith("begin_exports")) {
+    } else if (Pragma->starts_with("begin_exports")) {
       ExportStack.push_back({CommentLine, CommentFID, save(Filename), true});
-    } else if (Pragma->startswith("end_exports")) {
+    } else if (Pragma->starts_with("end_exports")) {
       // FIXME: be robust on unmatching cases. We should only pop the stack if
       // the begin_exports and end_exports is in the same file.
       if (!ExportStack.empty()) {
@@ -345,9 +366,12 @@ private:
   const SourceManager &SM;
   const HeaderSearch &HeaderInfo;
   PragmaIncludes *Out;
-  llvm::BumpPtrAllocator Arena;
+  std::shared_ptr<llvm::BumpPtrAllocator> Arena;
   /// Intern table for strings. Contents are on the arena.
   llvm::StringSaver UniqueStrings;
+  // Used when deducing associated header.
+  llvm::StringRef MainFileStem;
+  bool SeenAssociatedCandidate = false;
 
   struct ExportPragma {
     // The line number where we saw the begin_exports or export pragma.

@@ -11,14 +11,16 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/spawn/file_actions.h"
 
-#include <fcntl.h>
+#include "hdr/fcntl_macros.h"
+#include "hdr/types/mode_t.h"
 #include <signal.h> // For SIGCHLD
 #include <spawn.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace {
 
@@ -145,4 +147,4 @@ LLVM_LIBC_FUNCTION(int, posix_spawn,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

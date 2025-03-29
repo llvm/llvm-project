@@ -18,7 +18,7 @@ RUN: llvm-dwarfdump --verify %t.dSYM
 RUN: llvm-otool -s __TEXT __eh_frame %p/../Inputs/private/tmp/eh_frame/eh_frame.out | FileCheck %s
 RUN: llvm-otool -s __TEXT __eh_frame %t.dSYM/Contents/Resources/DWARF/eh_frame.out | FileCheck %s
 
-RUN: dsymutil --linker llvm -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/eh_frame/eh_frame.out -o %t.dSYM
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/eh_frame/eh_frame.out -o %t.dSYM
 RUN: llvm-dwarfdump --verify %t.dSYM
 RUN: llvm-otool -s __TEXT __eh_frame %p/../Inputs/private/tmp/eh_frame/eh_frame.out | FileCheck %s
 RUN: llvm-otool -s __TEXT __eh_frame %t.dSYM/Contents/Resources/DWARF/eh_frame.out | FileCheck %s

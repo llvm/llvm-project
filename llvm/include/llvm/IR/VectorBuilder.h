@@ -57,6 +57,11 @@ private:
     return RetType();
   }
 
+  /// Helper function for creating VP intrinsic call.
+  Value *createVectorInstructionImpl(Intrinsic::ID VPID, Type *ReturnTy,
+                                     ArrayRef<Value *> VecOpArray,
+                                     const Twine &Name = Twine());
+
 public:
   VectorBuilder(IRBuilderBase &Builder,
                 Behavior ErrorHandling = Behavior::ReportAndAbort)
@@ -82,6 +87,12 @@ public:
     StaticVectorLength = ElementCount::getFixed(NewFixedVL);
     return *this;
   }
+
+  /// Get the flags to be applied to created floating point ops.
+  const FastMathFlags &getFastMathFlags() const {
+    return Builder.getFastMathFlags();
+  }
+
   // TODO: setStaticVL(ElementCount) for scalable types.
 
   // Emit a VP intrinsic call that mimics a regular instruction.
@@ -92,6 +103,15 @@ public:
   Value *createVectorInstruction(unsigned Opcode, Type *ReturnTy,
                                  ArrayRef<Value *> VecOpArray,
                                  const Twine &Name = Twine());
+
+  /// Emit a VP reduction intrinsic call for recurrence kind.
+  /// \param RdxID       The intrinsic ID of llvm.vector.reduce.*
+  /// \param ValTy       The type of operand which the reduction operation is
+  ///                    performed.
+  /// \param VecOpArray  The operand list.
+  Value *createSimpleReduction(Intrinsic::ID RdxID, Type *ValTy,
+                               ArrayRef<Value *> VecOpArray,
+                               const Twine &Name = Twine());
 };
 
 } // namespace llvm

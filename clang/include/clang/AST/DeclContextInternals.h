@@ -42,11 +42,12 @@ class StoredDeclsList {
   /// external declarations.
   DeclsAndHasExternalTy Data;
 
-  template<typename Fn>
-  void erase_if(Fn ShouldErase) {
+  template <typename Fn> DeclListNode::Decls *erase_if(Fn ShouldErase) {
     Decls List = Data.getPointer();
+
     if (!List)
-      return;
+      return nullptr;
+
     ASTContext &C = getASTContext();
     DeclListNode::Decls NewHead = nullptr;
     DeclListNode::Decls *NewLast = nullptr;
@@ -69,7 +70,7 @@ class StoredDeclsList {
         // want to keep (if any) will be of the form DeclListNode(D, <rest>);
         // replace it with just D.
         if (NewLast) {
-          DeclListNode *Node = NewLast->get<DeclListNode*>();
+          DeclListNode *Node = cast<DeclListNode *>(*NewLast);
           *NewLast = Node->D;
           C.DeallocateDeclListNode(Node);
         }
@@ -79,6 +80,17 @@ class StoredDeclsList {
     Data.setPointer(NewHead);
 
     assert(llvm::none_of(getLookupResult(), ShouldErase) && "Still exists!");
+
+    if (!Data.getPointer())
+      // All declarations are erased.
+      return nullptr;
+    else if (isa<NamedDecl *>(NewHead))
+      // The list only contains a declaration, the header itself.
+      return (DeclListNode::Decls *)&Data;
+    else {
+      assert(NewLast && isa<NamedDecl *>(*NewLast) && "Not the tail?");
+      return NewLast;
+    }
   }
 
   void erase(NamedDecl *ND) {
@@ -160,12 +172,16 @@ public:
 
   void replaceExternalDecls(ArrayRef<NamedDecl*> Decls) {
     // Remove all declarations that are either external or are replaced with
-    // external declarations.
-    erase_if([Decls](NamedDecl *ND) {
+    // external declarations with higher visibilities.
+    DeclListNode::Decls *Tail = erase_if([Decls](NamedDecl *ND) {
       if (ND->isFromASTFile())
         return true;
+      // FIXME: Can we get rid of this loop completely?
       for (NamedDecl *D : Decls)
-        if (D->declarationReplaces(ND, /*IsKnownNewer=*/false))
+        // Only replace the local declaration if the external declaration has
+        // higher visibilities.
+        if (D->getModuleOwnershipKind() <= ND->getModuleOwnershipKind() &&
+            D->declarationReplaces(ND, /*IsKnownNewer=*/false))
           return true;
       return false;
     });
@@ -185,27 +201,18 @@ public:
       DeclsAsList = Node;
     }
 
-    DeclListNode::Decls Head = Data.getPointer();
-    if (Head.isNull()) {
+    if (!Data.getPointer()) {
       Data.setPointer(DeclsAsList);
       return;
     }
 
-    // Find the end of the existing list.
-    // FIXME: It would be possible to preserve information from erase_if to
-    // avoid this rescan looking for the end of the list.
-    DeclListNode::Decls *Tail = &Head;
-    while (DeclListNode *Node = Tail->dyn_cast<DeclListNode *>())
-      Tail = &Node->Rest;
-
     // Append the Decls.
-    DeclListNode *Node = C.AllocateDeclListNode(Tail->get<NamedDecl *>());
+    DeclListNode *Node = C.AllocateDeclListNode(cast<NamedDecl *>(*Tail));
     Node->Rest = DeclsAsList;
     *Tail = Node;
-    Data.setPointer(Head);
   }
 
-  /// Return an array of all the decls that this list represents.
+  /// Return the list of all the decls.
   DeclContext::lookup_result getLookupResult() const {
     return DeclContext::lookup_result(Data.getPointer());
   }
@@ -286,7 +293,7 @@ public:
         llvm::errs() << '[' << Node->D << "] -> ";
         D = Node->Rest;
       } else {
-        llvm::errs() << '[' << D.get<NamedDecl*>() << "]\n";
+        llvm::errs() << '[' << cast<NamedDecl *>(D) << "]\n";
         return;
       }
     }

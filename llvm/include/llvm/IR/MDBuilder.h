@@ -59,10 +59,25 @@ public:
   //===------------------------------------------------------------------===//
 
   /// Return metadata containing two branch weights.
-  MDNode *createBranchWeights(uint32_t TrueWeight, uint32_t FalseWeight);
+  /// @param TrueWeight the weight of the true branch
+  /// @param FalseWeight the weight of the false branch
+  /// @param Do these weights come from __builtin_expect*
+  MDNode *createBranchWeights(uint32_t TrueWeight, uint32_t FalseWeight,
+                              bool IsExpected = false);
+
+  /// Return metadata containing two branch weights, with significant bias
+  /// towards `true` destination.
+  MDNode *createLikelyBranchWeights();
+
+  /// Return metadata containing two branch weights, with significant bias
+  /// towards `false` destination.
+  MDNode *createUnlikelyBranchWeights();
 
   /// Return metadata containing a number of branch weights.
-  MDNode *createBranchWeights(ArrayRef<uint32_t> Weights);
+  /// @param Weights the weights of all the branches
+  /// @param Do these weights come from __builtin_expect*
+  MDNode *createBranchWeights(ArrayRef<uint32_t> Weights,
+                              bool IsExpected = false);
 
   /// Return metadata specifying that a branch or switch is unpredictable.
   MDNode *createUnpredictable();
@@ -74,8 +89,8 @@ public:
   MDNode *createFunctionEntryCount(uint64_t Count, bool Synthetic,
                                    const DenseSet<GlobalValue::GUID> *Imports);
 
-  /// Return metadata containing the section prefix for a function.
-  MDNode *createFunctionSectionPrefix(StringRef Prefix);
+  /// Return metadata containing the section prefix for a global object.
+  MDNode *createGlobalObjectSectionPrefix(StringRef Prefix);
 
   /// Return metadata containing the pseudo probe descriptor for a function.
   MDNode *createPseudoProbeDesc(uint64_t GUID, uint64_t Hash, StringRef FName);

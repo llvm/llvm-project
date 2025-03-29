@@ -128,7 +128,6 @@ define void @fptoint_nofpexcept(ppc_fp128 %p, fp128 %m, ptr %addr1, ptr %addr2) 
   ; CHECK-NEXT: bb.1.entry:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.entry:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:f8rc = PHI [[COPY13]], %bb.1, [[XXLXORdpz]], %bb.0
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 32, 0, implicit-def dead $r1, implicit $r1

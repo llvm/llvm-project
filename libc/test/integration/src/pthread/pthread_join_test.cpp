@@ -19,13 +19,13 @@ static void nullJoinTest() {
   pthread_t Tid;
   ASSERT_EQ(LIBC_NAMESPACE::pthread_create(&Tid, nullptr, simpleFunc, nullptr),
             0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(LIBC_NAMESPACE::pthread_join(Tid, nullptr), 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 }
 
 TEST_MAIN() {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   nullJoinTest();
   return 0;
 }

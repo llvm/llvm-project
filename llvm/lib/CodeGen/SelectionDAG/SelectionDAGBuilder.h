@@ -21,11 +21,11 @@
 #include "llvm/CodeGen/AssignmentTrackingAnalysis.h"
 #include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/BranchProbability.h"
@@ -106,54 +106,39 @@ class SelectionDAGBuilder {
 
   /// Helper type for DanglingDebugInfoMap.
   class DanglingDebugInfo {
-    using DbgValTy = const DbgValueInst *;
-    using VarLocTy = const VarLocInfo *;
-    PointerUnion<DbgValTy, VarLocTy> Info;
     unsigned SDNodeOrder = 0;
 
   public:
+    DILocalVariable *Variable;
+    DIExpression *Expression;
+    DebugLoc dl;
     DanglingDebugInfo() = default;
-    DanglingDebugInfo(const DbgValueInst *DI, unsigned SDNO)
-        : Info(DI), SDNodeOrder(SDNO) {}
-    DanglingDebugInfo(const VarLocInfo *VarLoc, unsigned SDNO)
-        : Info(VarLoc), SDNodeOrder(SDNO) {}
+    DanglingDebugInfo(DILocalVariable *Var, DIExpression *Expr, DebugLoc DL,
+                      unsigned SDNO)
+        : SDNodeOrder(SDNO), Variable(Var), Expression(Expr),
+          dl(std::move(DL)) {}
 
-    DILocalVariable *getVariable(const FunctionVarLocs *Locs) const {
-      if (isa<VarLocTy>(Info))
-        return Locs->getDILocalVariable(cast<VarLocTy>(Info)->VariableID);
-      return cast<DbgValTy>(Info)->getVariable();
-    }
-    DIExpression *getExpression() const {
-      if (isa<VarLocTy>(Info))
-        return cast<VarLocTy>(Info)->Expr;
-      return cast<DbgValTy>(Info)->getExpression();
-    }
-    Value *getVariableLocationOp(unsigned Idx) const {
-      assert(Idx == 0 && "Dangling variadic debug values not supported yet");
-      if (isa<VarLocTy>(Info))
-        return cast<VarLocTy>(Info)->Values.getVariableLocationOp(Idx);
-      return cast<DbgValTy>(Info)->getVariableLocationOp(Idx);
-    }
-    DebugLoc getDebugLoc() const {
-      if (isa<VarLocTy>(Info))
-        return cast<VarLocTy>(Info)->DL;
-      return cast<DbgValTy>(Info)->getDebugLoc();
-    }
+    DILocalVariable *getVariable() const { return Variable; }
+    DIExpression *getExpression() const { return Expression; }
+    DebugLoc getDebugLoc() const { return dl; }
     unsigned getSDNodeOrder() const { return SDNodeOrder; }
 
     /// Helper for printing DanglingDebugInfo. This hoop-jumping is to
-    /// accommodate the fact that an argument is required for getVariable.
+    /// store a Value pointer, so that we can print a whole DDI as one object.
     /// Call SelectionDAGBuilder::printDDI instead of using directly.
     struct Print {
-      Print(const DanglingDebugInfo &DDI, const FunctionVarLocs *VarLocs)
-          : DDI(DDI), VarLocs(VarLocs) {}
+      Print(const Value *V, const DanglingDebugInfo &DDI) : V(V), DDI(DDI) {}
+      const Value *V;
       const DanglingDebugInfo &DDI;
-      const FunctionVarLocs *VarLocs;
       friend raw_ostream &operator<<(raw_ostream &OS,
                                      const DanglingDebugInfo::Print &P) {
-        OS << "DDI(var=" << *P.DDI.getVariable(P.VarLocs)
-           << ", val= " << *P.DDI.getVariableLocationOp(0)
-           << ", expr=" << *P.DDI.getExpression()
+        OS << "DDI(var=" << *P.DDI.getVariable();
+        if (P.V)
+          OS << ", val=" << *P.V;
+        else
+          OS << ", val=nullptr";
+
+        OS << ", expr=" << *P.DDI.getExpression()
            << ", order=" << P.DDI.getSDNodeOrder()
            << ", loc=" << P.DDI.getDebugLoc() << ")";
         return OS;
@@ -164,8 +149,9 @@ class SelectionDAGBuilder {
   /// Returns an object that defines `raw_ostream &operator<<` for printing.
   /// Usage example:
   ////    errs() << printDDI(MyDanglingInfo) << " is dangling\n";
-  DanglingDebugInfo::Print printDDI(const DanglingDebugInfo &DDI) {
-    return DanglingDebugInfo::Print(DDI, DAG.getFunctionVarLocs());
+  DanglingDebugInfo::Print printDDI(const Value *V,
+                                    const DanglingDebugInfo &DDI) {
+    return DanglingDebugInfo::Print(V, DDI);
   }
 
   /// Helper type for DanglingDebugInfoMap.
@@ -214,12 +200,6 @@ private:
   /// create.
   unsigned SDNodeOrder;
 
-  /// Determine the rank by weight of CC in [First,Last]. If CC has more weight
-  /// than each cluster in the range, its rank is 0.
-  unsigned caseClusterRank(const SwitchCG::CaseCluster &CC,
-                           SwitchCG::CaseClusterIt First,
-                           SwitchCG::CaseClusterIt Last);
-
   /// Emit comparison and split W into two subtrees.
   void splitWorkItem(SwitchCG::SwitchWorkList &WorkList,
                      const SwitchCG::SwitchWorkListItem &W, Value *Cond,
@@ -245,7 +225,7 @@ public:
   static const unsigned LowestSDNodeOrder = 1;
 
   SelectionDAG &DAG;
-  AAResults *AA = nullptr;
+  BatchAAResults *BatchAA = nullptr;
   AssumptionCache *AC = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
 
@@ -274,7 +254,7 @@ public:
 
   // Emit PHI-node-operand constants only once even if used by multiple
   // PHI nodes.
-  DenseMap<const Constant *, unsigned> ConstantsOut;
+  DenseMap<const Constant *, Register> ConstantsOut;
 
   /// Information about the function as a whole.
   FunctionLoweringInfo &FuncInfo;
@@ -300,7 +280,7 @@ public:
         SL(std::make_unique<SDAGSwitchLowering>(this, funcinfo)),
         FuncInfo(funcinfo), SwiftError(swifterror) {}
 
-  void init(GCFunctionInfo *gfi, AAResults *AA, AssumptionCache *AC,
+  void init(GCFunctionInfo *gfi, BatchAAResults *BatchAA, AssumptionCache *AC,
             const TargetLibraryInfo *li);
 
   /// Clear out the current SelectionDAG and the associated state and prepare
@@ -340,10 +320,11 @@ public:
     return CurInst ? CurInst->getDebugLoc() : DebugLoc();
   }
 
-  void CopyValueToVirtualRegister(const Value *V, unsigned Reg,
+  void CopyValueToVirtualRegister(const Value *V, Register Reg,
                                   ISD::NodeType ExtendType = ISD::ANY_EXTEND);
 
   void visit(const Instruction &I);
+  void visitDbgInfo(const Instruction &I);
 
   void visit(unsigned Opcode, const User &I);
 
@@ -352,8 +333,9 @@ public:
   SDValue getCopyFromRegs(const Value *V, Type *Ty);
 
   /// Register a dbg_value which relies on a Value which we have not yet seen.
-  void addDanglingDebugInfo(const DbgValueInst *DI, unsigned Order);
-  void addDanglingDebugInfo(const VarLocInfo *VarLoc, unsigned Order);
+  void addDanglingDebugInfo(SmallVectorImpl<Value *> &Values,
+                            DILocalVariable *Var, DIExpression *Expr,
+                            bool IsVariadic, DebugLoc DL, unsigned Order);
 
   /// If we have dangling debug info that describes \p Variable, or an
   /// overlapping part of variable considering the \p Expr, then this method
@@ -368,7 +350,7 @@ public:
   /// For the given dangling debuginfo record, perform last-ditch efforts to
   /// resolve the debuginfo to something that is represented in this DAG. If
   /// this cannot be done, produce an Undef debug value record.
-  void salvageUnresolvedDbgValue(DanglingDebugInfo &DDI);
+  void salvageUnresolvedDbgValue(const Value *V, DanglingDebugInfo &DDI);
 
   /// For a given list of Values, attempt to create and record a SDDbgValue in
   /// the SelectionDAG.
@@ -379,6 +361,9 @@ public:
   /// Create a record for a kill location debug intrinsic.
   void handleKillDebugValue(DILocalVariable *Var, DIExpression *Expr,
                             DebugLoc DbgLoc, unsigned Order);
+
+  void handleDebugDeclare(Value *Address, DILocalVariable *Variable,
+                          DIExpression *Expression, DebugLoc DL);
 
   /// Evict any dangling debug information, attempting to salvage it first.
   void resolveOrClearDbgInfo();
@@ -400,6 +385,11 @@ public:
     N = NewN;
   }
 
+  bool shouldKeepJumpConditionsTogether(
+      const FunctionLoweringInfo &FuncInfo, const BranchInst &I,
+      Instruction::BinaryOps Opc, const Value *Lhs, const Value *Rhs,
+      TargetLoweringBase::CondMergingParams Params) const;
+
   void FindMergedConditions(const Value *Cond, MachineBasicBlock *TBB,
                             MachineBasicBlock *FBB, MachineBasicBlock *CurBB,
                             MachineBasicBlock *SwitchBB,
@@ -416,7 +406,8 @@ public:
   void CopyToExportRegsIfNeeded(const Value *V);
   void ExportFromCurrentBlock(const Value *V);
   void LowerCallTo(const CallBase &CB, SDValue Callee, bool IsTailCall,
-                   bool IsMustTailCall, const BasicBlock *EHPadBB = nullptr);
+                   bool IsMustTailCall, const BasicBlock *EHPadBB = nullptr,
+                   const TargetLowering::PtrAuthInfo *PAI = nullptr);
 
   // Lower range metadata from 0 to N to assert zext to an integer of nearest
   // floor power of two.
@@ -448,8 +439,8 @@ public:
     /// The set of gc.relocate calls associated with this gc.statepoint.
     SmallVector<const GCRelocateInst *, 16> GCRelocates;
 
-    /// The full list of gc arguments to the gc.statepoint being lowered.
-    ArrayRef<const Use> GCArgs;
+    /// The full list of gc-live arguments to the gc.statepoint being lowered.
+    ArrayRef<const Use> GCLives;
 
     /// The gc.statepoint instruction.
     const Instruction *StatepointInstr = nullptr;
@@ -459,7 +450,7 @@ public:
     ArrayRef<const Use> GCTransitionArgs;
 
     /// The ID that the resulting STATEPOINT instruction has to report.
-    unsigned ID = -1;
+    uint64_t ID = -1;
 
     /// Information regarding the underlying call instruction.
     TargetLowering::CallLoweringInfo CLI;
@@ -500,6 +491,9 @@ public:
                                         bool VarArgDisallowed,
                                         bool ForceVoidReturnTy);
 
+  void LowerCallSiteWithPtrAuthBundle(const CallBase &CB,
+                                      const BasicBlock *EHPadBB);
+
   /// Returns the type of FrameIndex and TargetFrameIndex nodes.
   MVT getFrameIndexTy() {
     return DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout());
@@ -532,7 +526,7 @@ public:
   void visitBitTestHeader(SwitchCG::BitTestBlock &B,
                           MachineBasicBlock *SwitchBB);
   void visitBitTestCase(SwitchCG::BitTestBlock &BB, MachineBasicBlock *NextMBB,
-                        BranchProbability BranchProbToNext, unsigned Reg,
+                        BranchProbability BranchProbToNext, Register Reg,
                         SwitchCG::BitTestCase &B, MachineBasicBlock *SwitchBB);
   void visitJumpTable(SwitchCG::JumpTable &JT);
   void visitJumpTableHeader(SwitchCG::JumpTable &JT,
@@ -569,8 +563,8 @@ private:
   void visitShl (const User &I) { visitShift(I, ISD::SHL); }
   void visitLShr(const User &I) { visitShift(I, ISD::SRL); }
   void visitAShr(const User &I) { visitShift(I, ISD::SRA); }
-  void visitICmp(const User &I);
-  void visitFCmp(const User &I);
+  void visitICmp(const ICmpInst &I);
+  void visitFCmp(const FCmpInst &I);
   // Visit the conversion instructions
   void visitTrunc(const User &I);
   void visitZExt(const User &I);
@@ -627,10 +621,15 @@ private:
   void visitInlineAsm(const CallBase &Call,
                       const BasicBlock *EHPadBB = nullptr);
 
-  bool visitEntryValueDbgValue(const DbgValueInst &I);
+  bool visitEntryValueDbgValue(ArrayRef<const Value *> Values,
+                               DILocalVariable *Variable, DIExpression *Expr,
+                               DebugLoc DbgLoc);
   void visitIntrinsicCall(const CallInst &I, unsigned Intrinsic);
   void visitTargetIntrinsic(const CallInst &I, unsigned Intrinsic);
   void visitConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI);
+  void visitConvergenceControl(const CallInst &I, unsigned Intrinsic);
+  void visitVectorHistogram(const CallInst &I, unsigned IntrinsicID);
+  void visitVectorExtractLastActive(const CallInst &I, unsigned Intrinsic);
   void visitVPLoad(const VPIntrinsic &VPIntrin, EVT VT,
                    const SmallVectorImpl<SDValue> &OpValues);
   void visitVPStore(const VPIntrinsic &VPIntrin,
@@ -660,8 +659,8 @@ private:
   void visitVectorReduce(const CallInst &I, unsigned Intrinsic);
   void visitVectorReverse(const CallInst &I);
   void visitVectorSplice(const CallInst &I);
-  void visitVectorInterleave(const CallInst &I);
-  void visitVectorDeinterleave(const CallInst &I);
+  void visitVectorInterleave(const CallInst &I, unsigned Factor);
+  void visitVectorDeinterleave(const CallInst &I, unsigned Factor);
   void visitStepVector(const CallInst &I);
 
   void visitUserOp1(const Instruction &I) {
@@ -706,9 +705,6 @@ private:
                           DIExpression *Expr, const DebugLoc &dl,
                           unsigned DbgSDNodeOrder);
 
-  /// Lowers CallInst to an external symbol.
-  void lowerCallToExternalSymbol(const CallInst &I, const char *FunctionName);
-
   SDValue lowerStartEH(SDValue Chain, const BasicBlock *EHPadBB,
                        MCSymbol *&BeginLabel);
   SDValue lowerEndEH(SDValue Chain, const InvokeInst *II,
@@ -742,7 +738,7 @@ struct RegsForValue {
   /// This list holds the registers assigned to the values.
   /// Each legal or promoted value requires one register, and each
   /// expanded value requires multiple registers.
-  SmallVector<unsigned, 4> Regs;
+  SmallVector<Register, 4> Regs;
 
   /// This list holds the number of registers for each value.
   SmallVector<unsigned, 4> RegCount;
@@ -752,10 +748,10 @@ struct RegsForValue {
   std::optional<CallingConv::ID> CallConv;
 
   RegsForValue() = default;
-  RegsForValue(const SmallVector<unsigned, 4> &regs, MVT regvt, EVT valuevt,
+  RegsForValue(const SmallVector<Register, 4> &regs, MVT regvt, EVT valuevt,
                std::optional<CallingConv::ID> CC = std::nullopt);
   RegsForValue(LLVMContext &Context, const TargetLowering &TLI,
-               const DataLayout &DL, unsigned Reg, Type *Ty,
+               const DataLayout &DL, Register Reg, Type *Ty,
                std::optional<CallingConv::ID> CC);
 
   bool isABIMangled() const { return CallConv.has_value(); }
@@ -798,7 +794,7 @@ struct RegsForValue {
   }
 
   /// Return a list of registers and their sizes.
-  SmallVector<std::pair<unsigned, TypeSize>, 4> getRegsAndSizes() const;
+  SmallVector<std::pair<Register, TypeSize>, 4> getRegsAndSizes() const;
 };
 
 } // end namespace llvm

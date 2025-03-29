@@ -40,8 +40,8 @@ namespace C {
 }
 
 void test2(X *xp) {
-  xp->::i = 7; // expected-error{{qualified member access refers to a member in the global namespace}}
-  xp->C::i = 7; // expected-error{{qualified member access refers to a member in namespace 'C'}}
+  xp->::i = 7; // expected-error{{'i' is not a member of class 'X'}}
+  xp->C::i = 7; // expected-error{{'C::i' is not a member of class 'X'}}
 }
 
 

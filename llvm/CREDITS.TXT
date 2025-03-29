@@ -432,10 +432,6 @@ W: http://vladimir_prus.blogspot.com
 E: ghost@cs.msu.su
 D: Made inst_iterator behave like a proper iterator, LowerConstantExprs pass
 
-N: QIU Chaofan
-E: qiucofan@cn.ibm.com
-D: PowerPC Backend Developer
-
 N: Kalle Raiskila
 E: kalle.rasikila@nokia.com
 D: Some bugfixes to CellSPU

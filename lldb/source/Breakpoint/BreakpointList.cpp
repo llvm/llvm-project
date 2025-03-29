@@ -17,9 +17,12 @@ using namespace lldb_private;
 
 static void NotifyChange(const BreakpointSP &bp, BreakpointEventType event) {
   Target &target = bp->GetTarget();
-  if (target.EventTypeHasListeners(Target::eBroadcastBitBreakpointChanged))
+  if (target.EventTypeHasListeners(Target::eBroadcastBitBreakpointChanged)) {
+    auto event_data_sp =
+        std::make_shared<Breakpoint::BreakpointEventData>(event, bp);
     target.BroadcastEvent(Target::eBroadcastBitBreakpointChanged,
-                          new Breakpoint::BreakpointEventData(event, bp));
+                          event_data_sp);
+  }
 }
 
 BreakpointList::BreakpointList(bool is_internal)

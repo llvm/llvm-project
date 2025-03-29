@@ -8,6 +8,8 @@
 
 #include "lldb/Utility/Status.h"
 
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/VASPrintf.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
@@ -37,66 +39,106 @@ class raw_ostream;
 using namespace lldb;
 using namespace lldb_private;
 
-Status::Status() : m_string() {}
+char CloneableError::ID;
+char CloneableECError::ID;
+char MachKernelError::ID;
+char Win32Error::ID;
 
-Status::Status(ValueType err, ErrorType type)
-    : m_code(err), m_type(type), m_string() {}
+namespace {
+/// A std::error_code category for eErrorTypeGeneric.
+class LLDBGenericCategory : public std::error_category {
+  const char *name() const noexcept override { return "LLDBGenericCategory"; }
+  std::string message(int __ev) const override { return "generic LLDB error"; };
+};
+LLDBGenericCategory &lldb_generic_category() {
+  static LLDBGenericCategory g_generic_category;
+  return g_generic_category;
+}
+} // namespace
 
-// This logic is confusing because c++ calls the traditional (posix) errno codes
+Status::Status() : m_error(llvm::Error::success()) {}
+
+static llvm::Error ErrorFromEnums(Status::ValueType err, ErrorType type,
+                                  std::string msg) {
+  switch (type) {
+  case eErrorTypeMachKernel:
+    return llvm::make_error<MachKernelError>(
+        std::error_code(err, std::system_category()));
+  case eErrorTypeWin32:
+#ifdef _WIN32
+    if (err == NO_ERROR)
+      return llvm::Error::success();
+#endif
+    return llvm::make_error<Win32Error>(
+        std::error_code(err, std::system_category()));
+  case eErrorTypePOSIX:
+    if (msg.empty())
+      return llvm::errorCodeToError(
+          std::error_code(err, std::generic_category()));
+    return llvm::createStringError(
+        std::move(msg), std::error_code(err, std::generic_category()));
+  default:
+    return llvm::createStringError(
+        std::move(msg), std::error_code(err, lldb_generic_category()));
+  }
+}
+
+Status::Status(ValueType err, ErrorType type, std::string msg)
+    : m_error(ErrorFromEnums(err, type, msg)) {}
+
+// This logic is confusing because C++ calls the traditional (posix) errno codes
 // "generic errors", while we use the term "generic" to mean completely
 // arbitrary (text-based) errors.
 Status::Status(std::error_code EC)
-    : m_code(EC.value()),
-      m_type(EC.category() == std::generic_category() ? eErrorTypePOSIX
-                                                      : eErrorTypeGeneric),
-      m_string(EC.message()) {}
+    : m_error(!EC ? llvm::Error::success() : llvm::errorCodeToError(EC)) {}
 
-Status::Status(const char *format, ...) : m_string() {
-  va_list args;
-  va_start(args, format);
-  SetErrorToGenericError();
-  SetErrorStringWithVarArg(format, args);
-  va_end(args);
-}
+Status::Status(std::string err_str)
+    : m_error(
+          llvm::createStringError(llvm::inconvertibleErrorCode(), err_str)) {}
 
-const Status &Status::operator=(llvm::Error error) {
-  if (!error) {
-    Clear();
-    return *this;
-  }
-
-  // if the error happens to be a errno error, preserve the error code
-  error = llvm::handleErrors(
-      std::move(error), [&](std::unique_ptr<llvm::ECError> e) -> llvm::Error {
-        std::error_code ec = e->convertToErrorCode();
-        if (ec.category() == std::generic_category()) {
-          m_code = ec.value();
-          m_type = ErrorType::eErrorTypePOSIX;
-          return llvm::Error::success();
-        }
-        return llvm::Error(std::move(e));
-      });
-
-  // Otherwise, just preserve the message
-  if (error) {
-    SetErrorToGenericError();
-    SetErrorString(llvm::toString(std::move(error)));
-  }
-
+const Status &Status::operator=(Status &&other) {
+  Clear();
+  llvm::consumeError(std::move(m_error));
+  m_error = std::move(other.m_error);
   return *this;
 }
 
-llvm::Error Status::ToError() const {
-  if (Success())
-    return llvm::Error::success();
-  if (m_type == ErrorType::eErrorTypePOSIX)
-    return llvm::errorCodeToError(
-        std::error_code(m_code, std::generic_category()));
-  return llvm::make_error<llvm::StringError>(AsCString(),
-                                             llvm::inconvertibleErrorCode());
+Status Status::FromErrorStringWithFormat(const char *format, ...) {
+  std::string string;
+  va_list args;
+  va_start(args, format);
+  if (format != nullptr && format[0]) {
+    llvm::SmallString<1024> buf;
+    VASprintf(buf, format, args);
+    string = std::string(buf.str());
+  }
+  va_end(args);
+  return Status(string);
 }
 
-Status::~Status() = default;
+/// Creates a deep copy of all known errors and converts all other
+/// errors to a new llvm::StringError.
+static llvm::Error CloneError(const llvm::Error &error) {
+  llvm::Error result = llvm::Error::success();
+  auto clone = [](const llvm::ErrorInfoBase &e) {
+    if (e.isA<CloneableError>())
+      return llvm::Error(static_cast<const CloneableError &>(e).Clone());
+    if (e.isA<llvm::ECError>())
+      return llvm::errorCodeToError(e.convertToErrorCode());
+    return llvm::make_error<llvm::StringError>(e.message(),
+                                               e.convertToErrorCode(), true);
+  };
+  llvm::visitErrors(error, [&](const llvm::ErrorInfoBase &e) {
+    result = joinErrors(std::move(result), clone(e));
+  });
+  return result;
+}
+
+Status Status::FromError(llvm::Error error) { return Status(std::move(error)); }
+
+llvm::Error Status::ToError() const { return CloneError(m_error); }
+
+Status::~Status() { llvm::consumeError(std::move(m_error)); }
 
 #ifdef _WIN32
 static std::string RetrieveWin32ErrorString(uint32_t error_code) {
@@ -124,6 +166,29 @@ static std::string RetrieveWin32ErrorString(uint32_t error_code) {
 }
 #endif
 
+std::string MachKernelError::message() const {
+#if defined(__APPLE__)
+  if (const char *s = ::mach_error_string(convertToErrorCode().value()))
+    return s;
+#endif
+  return "MachKernelError";
+}
+
+std::string Win32Error::message() const {
+#if defined(_WIN32)
+  return RetrieveWin32ErrorString(convertToErrorCode().value());
+#endif
+  return "Win32Error";
+}
+
+std::unique_ptr<CloneableError> MachKernelError::Clone() const {
+  return std::make_unique<MachKernelError>(convertToErrorCode());
+}
+
+std::unique_ptr<CloneableError> Win32Error::Clone() const {
+  return std::make_unique<Win32Error>(convertToErrorCode());
+}
+
 // Get the error value as a NULL C string. The error string will be fetched and
 // cached on demand. The cached error string value will remain until the error
 // value is changed or cleared.
@@ -131,29 +196,12 @@ const char *Status::AsCString(const char *default_error_str) const {
   if (Success())
     return nullptr;
 
-  if (m_string.empty()) {
-    switch (m_type) {
-    case eErrorTypeMachKernel:
-#if defined(__APPLE__)
-      if (const char *s = ::mach_error_string(m_code))
-        m_string.assign(s);
-#endif
-      break;
+  m_string = llvm::toStringWithoutConsuming(m_error);
+  // Backwards compatibility with older implementations of Status.
+  if (m_error.isA<llvm::ECError>())
+    if (!m_string.empty() && m_string[m_string.size() - 1] == '\n')
+      m_string.pop_back();
 
-    case eErrorTypePOSIX:
-      m_string = llvm::sys::StrError(m_code);
-      break;
-
-    case eErrorTypeWin32:
-#if defined(_WIN32)
-      m_string = RetrieveWin32ErrorString(m_code);
-#endif
-      break;
-
-    default:
-      break;
-    }
-  }
   if (m_string.empty()) {
     if (default_error_str)
       m_string.assign(default_error_str);
@@ -165,126 +213,95 @@ const char *Status::AsCString(const char *default_error_str) const {
 
 // Clear the error and any cached error string that it might contain.
 void Status::Clear() {
-  m_code = 0;
-  m_type = eErrorTypeInvalid;
-  m_string.clear();
+  if (m_error)
+    LLDB_LOG_ERRORV(GetLog(LLDBLog::API), std::move(m_error),
+                    "dropping error {0}");
+  m_error = llvm::Error::success();
 }
 
-// Access the error value.
-Status::ValueType Status::GetError() const { return m_code; }
-
-// Access the error type.
-ErrorType Status::GetType() const { return m_type; }
-
-// Returns true if this object contains a value that describes an error or
-// otherwise non-success result.
-bool Status::Fail() const { return m_code != 0; }
-
-// Set accessor for the error value to "err" and the type to
-// "eErrorTypeMachKernel"
-void Status::SetMachError(uint32_t err) {
-  m_code = err;
-  m_type = eErrorTypeMachKernel;
-  m_string.clear();
+Status::ValueType Status::GetError() const {
+  Status::ValueType result = 0;
+  llvm::visitErrors(m_error, [&](const llvm::ErrorInfoBase &error) {
+    // Return the first only.
+    if (result)
+      return;
+    std::error_code ec = error.convertToErrorCode();
+    result = ec.value();
+  });
+  return result;
 }
 
-void Status::SetExpressionError(lldb::ExpressionResults result,
-                                const char *mssg) {
-  m_code = result;
-  m_type = eErrorTypeExpression;
-  m_string = mssg;
+static ErrorType ErrorCodeToErrorType(std::error_code ec) {
+  if (ec.category() == std::generic_category())
+    return eErrorTypePOSIX;
+  if (ec.category() == lldb_generic_category() ||
+      ec == llvm::inconvertibleErrorCode())
+    return eErrorTypeGeneric;
+  return eErrorTypeInvalid;
 }
 
-int Status::SetExpressionErrorWithFormat(lldb::ExpressionResults result,
-                                         const char *format, ...) {
-  int length = 0;
-
-  if (format != nullptr && format[0]) {
-    va_list args;
-    va_start(args, format);
-    length = SetErrorStringWithVarArg(format, args);
-    va_end(args);
-  } else {
-    m_string.clear();
-  }
-  m_code = result;
-  m_type = eErrorTypeExpression;
-  return length;
+ErrorType CloneableECError::GetErrorType() const {
+  return ErrorCodeToErrorType(EC);
 }
 
-// Set accessor for the error value and type.
-void Status::SetError(ValueType err, ErrorType type) {
-  m_code = err;
-  m_type = type;
-  m_string.clear();
+lldb::ErrorType MachKernelError::GetErrorType() const {
+  return lldb::eErrorTypeMachKernel;
 }
 
-// Update the error value to be "errno" and update the type to be "POSIX".
-void Status::SetErrorToErrno() {
-  m_code = errno;
-  m_type = eErrorTypePOSIX;
-  m_string.clear();
+lldb::ErrorType Win32Error::GetErrorType() const {
+  return lldb::eErrorTypeWin32;
 }
 
-// Update the error value to be LLDB_GENERIC_ERROR and update the type to be
-// "Generic".
-void Status::SetErrorToGenericError() {
-  m_code = LLDB_GENERIC_ERROR;
-  m_type = eErrorTypeGeneric;
-  m_string.clear();
+StructuredData::ObjectSP Status::GetAsStructuredData() const {
+  auto dict_up = std::make_unique<StructuredData::Dictionary>();
+  auto array_up = std::make_unique<StructuredData::Array>();
+  llvm::visitErrors(m_error, [&](const llvm::ErrorInfoBase &error) {
+    if (error.isA<CloneableError>())
+      array_up->AddItem(
+          static_cast<const CloneableError &>(error).GetAsStructuredData());
+    else
+      array_up->AddStringItem(error.message());
+  });
+  dict_up->AddIntegerItem("version", 1u);
+  dict_up->AddIntegerItem("type", (unsigned)GetType());
+  dict_up->AddItem("errors", std::move(array_up));
+  return dict_up;
 }
 
-// Set accessor for the error string value for a specific error. This allows
-// any string to be supplied as an error explanation. The error string value
-// will remain until the error value is cleared or a new error value/type is
-// assigned.
-void Status::SetErrorString(llvm::StringRef err_str) {
-  if (!err_str.empty()) {
-    // If we have an error string, we should always at least have an error set
-    // to a generic value.
-    if (Success())
-      SetErrorToGenericError();
-  }
-  m_string = std::string(err_str);
+StructuredData::ObjectSP CloneableECError::GetAsStructuredData() const {
+  auto dict_up = std::make_unique<StructuredData::Dictionary>();
+  dict_up->AddIntegerItem("version", 1u);
+  dict_up->AddIntegerItem("error_code", EC.value());
+  dict_up->AddStringItem("message", message());
+  return dict_up;
 }
 
-/// Set the current error string to a formatted error string.
-///
-/// \param format
-///     A printf style format string
-int Status::SetErrorStringWithFormat(const char *format, ...) {
-  if (format != nullptr && format[0]) {
-    va_list args;
-    va_start(args, format);
-    int length = SetErrorStringWithVarArg(format, args);
-    va_end(args);
-    return length;
-  } else {
-    m_string.clear();
-  }
-  return 0;
+ErrorType Status::GetType() const {
+  ErrorType result = eErrorTypeInvalid;
+  llvm::visitErrors(m_error, [&](const llvm::ErrorInfoBase &error) {
+    // Return the first only.
+    if (result != eErrorTypeInvalid)
+      return;
+    if (error.isA<CloneableError>())
+      result = static_cast<const CloneableError &>(error).GetErrorType();
+    else
+      result = ErrorCodeToErrorType(error.convertToErrorCode());
+
+  });
+  return result;
 }
 
-int Status::SetErrorStringWithVarArg(const char *format, va_list args) {
-  if (format != nullptr && format[0]) {
-    // If we have an error string, we should always at least have an error set
-    // to a generic value.
-    if (Success())
-      SetErrorToGenericError();
-
-    llvm::SmallString<1024> buf;
-    VASprintf(buf, format, args);
-    m_string = std::string(buf.str());
-    return buf.size();
-  } else {
-    m_string.clear();
-  }
-  return 0;
+bool Status::Fail() const {
+  // Note that this does not clear the checked flag in
+  // m_error. Otherwise we'd need to make this thread-safe.
+  return m_error.isA<llvm::ErrorInfoBase>();
 }
+
+Status Status::FromErrno() { return Status(llvm::errnoAsErrorCode()); }
 
 // Returns true if the error code in this object is considered a successful
 // return value.
-bool Status::Success() const { return m_code == 0; }
+bool Status::Success() const { return !Fail(); }
 
 void llvm::format_provider<lldb_private::Status>::format(
     const lldb_private::Status &error, llvm::raw_ostream &OS,

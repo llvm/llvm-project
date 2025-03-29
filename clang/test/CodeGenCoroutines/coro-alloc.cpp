@@ -70,7 +70,8 @@ extern "C" void f0(global_new_delete_tag) {
   // CHECK: br i1 %[[NeedDealloc]], label %[[FreeBB:.+]], label %[[Afterwards:.+]]
 
   // CHECK: [[FreeBB]]:
-  // CHECK: call void @_ZdlPv(ptr noundef %[[MEM]])
+  // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
+  // CHECK: call void @_ZdlPvm(ptr noundef %[[MEM]], i64 noundef %[[SIZE]])
   // CHECK: br label %[[Afterwards]]
 
   // CHECK: [[Afterwards]]:
@@ -99,7 +100,8 @@ extern "C" void f1(promise_new_tag ) {
 
   // CHECK: %[[FRAME:.+]] = call ptr @llvm.coro.begin(
   // CHECK: %[[MEM:.+]] = call ptr @llvm.coro.free(token %[[ID]], ptr %[[FRAME]])
-  // CHECK: call void @_ZdlPv(ptr noundef %[[MEM]])
+  // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
+  // CHECK: call void @_ZdlPvm(ptr noundef %[[MEM]], i64 noundef %[[SIZE]])
   co_return;
 }
 

@@ -9,9 +9,7 @@
 #include "ARM.h"
 #include "ARMMachineFunctionInfo.h"
 #include "ARMSubtarget.h"
-#include "MCTargetDesc/ARMBaseInfo.h"
 #include "Thumb2InstrInfo.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -23,8 +21,6 @@
 #include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/MC/MCInstrDesc.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 #include <cassert>
 #include <new>
@@ -132,7 +128,8 @@ static bool StepOverPredicatedInstrs(MachineBasicBlock::instr_iterator &Iter,
 static bool IsVPRDefinedOrKilledByBlock(MachineBasicBlock::iterator Iter,
                                         MachineBasicBlock::iterator End) {
   for (; Iter != End; ++Iter)
-    if (Iter->definesRegister(ARM::VPR) || Iter->killsRegister(ARM::VPR))
+    if (Iter->definesRegister(ARM::VPR, /*TRI=*/nullptr) ||
+        Iter->killsRegister(ARM::VPR, /*TRI=*/nullptr))
       return true;
   return false;
 }

@@ -9,6 +9,8 @@
 #include "TestAsmPrinter.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterHandler.h"
+#include "llvm/CodeGen/DebugHandlerBase.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
@@ -398,21 +400,17 @@ protected:
       return false;
 
     auto *AP = TestPrinter->getAP();
-    AP->addAsmPrinterHandler(AsmPrinter::HandlerInfo(
-        std::unique_ptr<AsmPrinterHandler>(new TestHandler(*this)),
-        "TestTimerName", "TestTimerDesc", "TestGroupName", "TestGroupDesc"));
-    LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(&AP->TM);
+    AP->addAsmPrinterHandler(std::make_unique<TestHandler>(*this));
+    TargetMachine *TM = &AP->TM;
     legacy::PassManager PM;
-    PM.add(new MachineModuleInfoWrapperPass(LLVMTM));
+    PM.add(new MachineModuleInfoWrapperPass(TM));
     PM.add(TestPrinter->releaseAP()); // Takes ownership of destroying AP
     LLVMContext Context;
     std::unique_ptr<Module> M(new Module("TestModule", Context));
-    M->setDataLayout(LLVMTM->createDataLayout());
+    M->setDataLayout(TM->createDataLayout());
     PM.run(*M);
     // Now check that we can run it twice.
-    AP->addAsmPrinterHandler(AsmPrinter::HandlerInfo(
-        std::unique_ptr<AsmPrinterHandler>(new TestHandler(*this)),
-        "TestTimerName", "TestTimerDesc", "TestGroupName", "TestGroupDesc"));
+    AP->addAsmPrinterHandler(std::make_unique<TestHandler>(*this));
     PM.run(*M);
     return true;
   }

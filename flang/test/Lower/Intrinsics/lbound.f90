@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s
 
 
 ! CHECK-LABEL: func @_QPlbound_test(
@@ -40,8 +40,8 @@ end subroutine
 subroutine lbound_test_3(a, dim, res)
   real, dimension(2:10, 3:*) :: a
   integer(8):: dim, res
+! CHECK:  %[[VAL_0:.*]] = arith.constant -1 : index
 ! CHECK:  %[[VAL_1:.*]] = fir.load %arg1 : !fir.ref<i64>
-! CHECK:  %[[VAL_0:.*]] = arith.constant 1 : index
 ! CHECK:  %[[VAL_2:.*]] = fir.shape_shift %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_0]] : (index, index, index, index) -> !fir.shapeshift<2>
 ! CHECK:         %[[VAL_3:.*]] = fir.embox %arg0(%[[VAL_2]]) : (!fir.ref<!fir.array<9x?xf32>>, !fir.shapeshift<2>) -> !fir.box<!fir.array<9x?xf32>>
 ! CHECK:         %[[VAL_4:.*]] = fir.address_of(

@@ -42,11 +42,11 @@ static LogicalResult areAllLLVMTypes(Operation *op, ValueRange operands,
 static constexpr StringRef kInvalidCaseStr = "Unsupported WMMA variant.";
 
 static NVVM::MMAFrag convertOperand(StringRef operandName) {
-  if (operandName.equals("AOp"))
+  if (operandName == "AOp")
     return NVVM::MMAFrag::a;
-  if (operandName.equals("BOp"))
+  if (operandName == "BOp")
     return NVVM::MMAFrag::b;
-  if (operandName.equals("COp"))
+  if (operandName == "COp")
     return NVVM::MMAFrag::c;
   llvm_unreachable("Unknown operand name");
 }
@@ -55,8 +55,8 @@ static NVVM::MMATypes getElementType(gpu::MMAMatrixType type) {
   if (type.getElementType().isF16())
     return NVVM::MMATypes::f16;
   if (type.getElementType().isF32())
-    return type.getOperand().equals("COp") ? NVVM::MMATypes::f32
-                                           : NVVM::MMATypes::tf32;
+    return type.getOperand() == "COp" ? NVVM::MMATypes::f32
+                                      : NVVM::MMATypes::tf32;
 
   if (type.getElementType().isSignedInteger(8))
     return NVVM::MMATypes::s8;
@@ -99,15 +99,15 @@ struct WmmaLoadOpToNVVMLowering
     NVVM::MMATypes eltype = getElementType(retType);
     // NVVM intrinsics require to give mxnxk dimensions, infer the missing
     // dimension based on the valid intrinsics available.
-    if (retType.getOperand().equals("AOp")) {
+    if (retType.getOperand() == "AOp") {
       m = retTypeShape[0];
       k = retTypeShape[1];
       n = NVVM::WMMALoadOp::inferNDimension(m, k, eltype);
-    } else if (retType.getOperand().equals("BOp")) {
+    } else if (retType.getOperand() == "BOp") {
       k = retTypeShape[0];
       n = retTypeShape[1];
       m = NVVM::WMMALoadOp::inferMDimension(k, n, eltype);
-    } else if (retType.getOperand().equals("COp")) {
+    } else if (retType.getOperand() == "COp") {
       m = retTypeShape[0];
       n = retTypeShape[1];
       k = NVVM::WMMALoadOp::inferKDimension(m, n, eltype);
@@ -279,7 +279,7 @@ struct WmmaConstantOpToNVVMLowering
         cast<gpu::MMAMatrixType>(subgroupMmaConstantOp.getType()));
     // If the element type is a vector create a vector from the operand.
     if (auto vecType = dyn_cast<VectorType>(type.getBody()[0])) {
-      Value vecCst = rewriter.create<LLVM::UndefOp>(loc, vecType);
+      Value vecCst = rewriter.create<LLVM::PoisonOp>(loc, vecType);
       for (int64_t vecEl = 0; vecEl < vecType.getNumElements(); vecEl++) {
         Value idx = rewriter.create<LLVM::ConstantOp>(
             loc, rewriter.getI32Type(), vecEl);
@@ -288,7 +288,7 @@ struct WmmaConstantOpToNVVMLowering
       }
       cst = vecCst;
     }
-    Value matrixStruct = rewriter.create<LLVM::UndefOp>(loc, type);
+    Value matrixStruct = rewriter.create<LLVM::PoisonOp>(loc, type);
     for (size_t i : llvm::seq(size_t(0), type.getBody().size())) {
       matrixStruct =
           rewriter.create<LLVM::InsertValueOp>(loc, matrixStruct, cst, i);
@@ -355,7 +355,7 @@ struct WmmaElementwiseOpToNVVMLowering
     size_t numOperands = adaptor.getOperands().size();
     LLVM::LLVMStructType destType = convertMMAToLLVMType(
         cast<gpu::MMAMatrixType>(subgroupMmaElementwiseOp.getType()));
-    Value matrixStruct = rewriter.create<LLVM::UndefOp>(loc, destType);
+    Value matrixStruct = rewriter.create<LLVM::PoisonOp>(loc, destType);
     for (size_t i = 0, e = destType.getBody().size(); i < e; ++i) {
       SmallVector<Value> extractedOperands;
       for (size_t opIdx = 0; opIdx < numOperands; opIdx++) {
@@ -388,8 +388,9 @@ LLVM::LLVMStructType mlir::convertMMAToLLVMType(gpu::MMAMatrixType type) {
 }
 
 void mlir::populateGpuWMMAToNVVMConversionPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    PatternBenefit benefit) {
   patterns.add<WmmaLoadOpToNVVMLowering, WmmaMmaOpToNVVMLowering,
                WmmaStoreOpToNVVMLowering, WmmaConstantOpToNVVMLowering,
-               WmmaElementwiseOpToNVVMLowering>(converter);
+               WmmaElementwiseOpToNVVMLowering>(converter, benefit);
 }

@@ -50,7 +50,7 @@ define i32 @extern_non_convergent_call() convergent {
 define i32 @indirect_convergent_call(ptr %f) convergent {
 ; CHECK: Function Attrs: convergent
 ; CHECK-LABEL: define {{[^@]+}}@indirect_convergent_call
-; CHECK-SAME: (ptr nocapture readonly [[F:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (ptr readonly captures(none) [[F:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[A:%.*]] = call i32 [[F]]() #[[ATTR1]]
 ; CHECK-NEXT:    ret i32 [[A]]
 ;
@@ -62,7 +62,7 @@ define i32 @indirect_convergent_call(ptr %f) convergent {
 define i32 @indirect_non_convergent_call(ptr %f) convergent norecurse {
 ; CHECK: Function Attrs: norecurse
 ; CHECK-LABEL: define {{[^@]+}}@indirect_non_convergent_call
-; CHECK-SAME: (ptr nocapture readonly [[F:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: (ptr readonly captures(none) [[F:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[A:%.*]] = call i32 [[F]]()
 ; CHECK-NEXT:    ret i32 [[A]]
 ;
@@ -74,7 +74,7 @@ declare void @llvm.nvvm.barrier0() convergent
 
 define i32 @intrinsic() convergent {
   ; Implicitly convergent, because the intrinsic is convergent.
-; CHECK: Function Attrs: convergent nounwind
+; CHECK: Function Attrs: convergent norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@intrinsic
 ; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.nvvm.barrier0()
