@@ -61,6 +61,7 @@
 #include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -111,6 +112,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      NestedNameSpecifier *NNS1,
                                      NestedNameSpecifier *NNS2);
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     const Attr *Attr1, const Attr *Attr2);
 static bool IsStructurallyEquivalent(const IdentifierInfo *Name1,
                                      const IdentifierInfo *Name2);
 
@@ -449,6 +452,112 @@ public:
   }
 };
 } // namespace
+
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     const Attr *Attr1, const Attr *Attr2) {
+  // Two attributes are structurally equivalent if they are the same kind
+  // of attribute, spelled with the same spelling kind, and have the same
+  // arguments. This means that [[noreturn]] and __attribute__((noreturn)) are
+  // not structurally equivalent, nor are [[nodiscard("foo")]] and
+  // [[nodiscard("bar")]].
+  if (Attr1->getKind() != Attr2->getKind())
+    return false;
+
+  if (Attr1->getSyntax() != Attr2->getSyntax())
+    return false;
+
+  if (Attr1->getSpellingListIndex() != Attr2->getSpellingListIndex())
+    return false;
+
+  auto GetAttrName = [](const Attr *A) {
+    if (const IdentifierInfo *II = A->getAttrName())
+      return II->getName();
+    return StringRef{};
+  };
+
+  if (GetAttrName(Attr1) != GetAttrName(Attr2))
+    return false;
+
+  // FIXME: check the attribute arguments. Attr does not track the arguments on
+  // the base class, which makes this awkward. We may want to tablegen a
+  // comparison function for attributes? In the meantime, we're doing this the
+  // cheap way by pretty printing the attributes and checking they produce
+  // equivalent string representations.
+  std::string AttrStr1, AttrStr2;
+  PrintingPolicy DefaultPolicy(Context.LangOpts);
+  llvm::raw_string_ostream SS1(AttrStr1), SS2(AttrStr2);
+  Attr1->printPretty(SS1, DefaultPolicy);
+  Attr2->printPretty(SS2, DefaultPolicy);
+
+  return SS1.str() == SS2.str();
+}
+
+static bool
+CheckStructurallyEquivalentAttributes(StructuralEquivalenceContext &Context,
+                                      const Decl *D1, const Decl *D2,
+                                      const Decl *PrimaryDecl = nullptr) {
+  // Gather the attributes and sort them by name so that they're in equivalent
+  // orders. This means that __attribute__((foo, bar)) is equivalent to
+  // __attribute__((bar, foo)).
+  llvm::SmallVector<const Attr *, 2> Attrs1, Attrs2;
+  llvm::copy(D1->attrs(), std::back_inserter(Attrs1));
+  llvm::copy(D2->attrs(), std::back_inserter(Attrs2));
+
+  auto Sorter = [](const Attr *LHS, const Attr *RHS) {
+    const IdentifierInfo *II1 = LHS->getAttrName(), *II2 = RHS->getAttrName();
+    if (!II1 || !II2)
+      return II1 == II2;
+    return *II1 < *II2;
+  };
+  llvm::sort(Attrs1, Sorter);
+  llvm::sort(Attrs2, Sorter);
+
+  auto A2 = Attrs2.begin(), A2End = Attrs2.end();
+  const auto *DiagnoseDecl = cast<TypeDecl>(PrimaryDecl ? PrimaryDecl : D2);
+  for (auto A1 = Attrs1.begin(), A1End = Attrs1.end(); A1 != A1End;
+       ++A1, ++A2) {
+    if (A2 == A2End) {
+      if (Context.Complain) {
+        Context.Diag2(DiagnoseDecl->getLocation(),
+                      Context.getApplicableDiagnostic(
+                          diag::err_odr_tag_type_inconsistent))
+            << Context.ToCtx.getTypeDeclType(DiagnoseDecl)
+            << (&Context.FromCtx != &Context.ToCtx);
+        Context.Diag1((*A1)->getLocation(), diag::note_odr_attr) << *A1;
+        Context.Diag2(D2->getLocation(), diag::note_odr_attr_missing);
+      }
+      return false;
+    }
+
+    if (!IsStructurallyEquivalent(Context, *A1, *A2)) {
+      if (Context.Complain) {
+        Context.Diag2(DiagnoseDecl->getLocation(),
+                      Context.getApplicableDiagnostic(
+                          diag::err_odr_tag_type_inconsistent))
+            << Context.ToCtx.getTypeDeclType(DiagnoseDecl)
+            << (&Context.FromCtx != &Context.ToCtx);
+        Context.Diag2((*A2)->getLocation(), diag::note_odr_attr) << *A2;
+        Context.Diag1((*A1)->getLocation(), diag::note_odr_attr) << *A1;
+      }
+      return false;
+    }
+  }
+
+  if (A2 != A2End) {
+    if (Context.Complain) {
+      Context.Diag2(
+          DiagnoseDecl->getLocation(),
+          Context.getApplicableDiagnostic(diag::err_odr_tag_type_inconsistent))
+          << Context.ToCtx.getTypeDeclType(DiagnoseDecl)
+          << (&Context.FromCtx != &Context.ToCtx);
+      Context.Diag1(D1->getLocation(), diag::note_odr_attr_missing);
+      Context.Diag1((*A2)->getLocation(), diag::note_odr_attr) << *A2;
+    }
+    return false;
+  }
+
+  return true;
+}
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      const UnaryOperator *E1,
@@ -1456,6 +1565,12 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      QualType Owner2Type) {
   const auto *Owner2 = cast<Decl>(Field2->getDeclContext());
 
+  // In C23 mode, check for structural equivalence of attributes on the fields.
+  // FIXME: Should this happen in C++ as well?
+  if (Context.LangOpts.C23 &&
+      !CheckStructurallyEquivalentAttributes(Context, Field1, Field2, Owner2))
+    return false;
+
   // For anonymous structs/unions, match up the anonymous struct/union type
   // declarations directly, so that we don't go off searching for anonymous
   // types
@@ -1474,7 +1589,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       Context.Diag2(
           Owner2->getLocation(),
           Context.getApplicableDiagnostic(diag::err_odr_tag_type_inconsistent))
-          << Owner2Type;
+          << Owner2Type << (&Context.FromCtx != &Context.ToCtx);
       Context.Diag2(Field2->getLocation(), diag::note_odr_field_name)
           << Field2->getDeclName();
       Context.Diag1(Field1->getLocation(), diag::note_odr_field_name)
@@ -1489,7 +1604,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       Context.Diag2(
           Owner2->getLocation(),
           Context.getApplicableDiagnostic(diag::err_odr_tag_type_inconsistent))
-          << Owner2Type;
+          << Owner2Type << (&Context.FromCtx != &Context.ToCtx);
       Context.Diag2(Field2->getLocation(), diag::note_odr_field)
           << Field2->getDeclName() << Field2->getType();
       Context.Diag1(Field1->getLocation(), diag::note_odr_field)
@@ -1498,9 +1613,39 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return false;
   }
 
-  if (Field1->isBitField())
-    return IsStructurallyEquivalent(Context, Field1->getBitWidth(),
-                                    Field2->getBitWidth());
+  if ((Field1->isBitField() || Field2->isBitField()) &&
+      !IsStructurallyEquivalent(Context, Field1->getBitWidth(),
+                                Field2->getBitWidth())) {
+    // Two bit-fields can be structurally unequivalent but still be okay for
+    // the purposes of C where they simply need to have the same values, not
+    // the same token sequences.
+    bool Diagnose = true;
+    if (Context.LangOpts.C23 && Field1->isBitField() && Field2->isBitField())
+      Diagnose = Field1->getBitWidthValue() != Field2->getBitWidthValue();
+
+    if (Diagnose && Context.Complain) {
+      auto DiagNote = [&](const FieldDecl *FD,
+                          DiagnosticBuilder (
+                              StructuralEquivalenceContext::*Diag)(
+                              SourceLocation, unsigned)) {
+        if (FD->isBitField()) {
+          (Context.*Diag)(FD->getLocation(), diag::note_odr_field_bit_width)
+              << FD->getDeclName() << FD->getBitWidthValue();
+        } else {
+          (Context.*Diag)(FD->getLocation(), diag::note_odr_field_not_bit_field)
+              << FD->getDeclName();
+        }
+      };
+
+      Context.Diag2(
+          Owner2->getLocation(),
+          Context.getApplicableDiagnostic(diag::err_odr_tag_type_inconsistent))
+          << Owner2Type << (&Context.FromCtx != &Context.ToCtx);
+      DiagNote(Field2, &StructuralEquivalenceContext::Diag2);
+      DiagNote(Field1, &StructuralEquivalenceContext::Diag1);
+    }
+    return false;
+  }
 
   return true;
 }
@@ -1637,6 +1782,28 @@ static bool NameIsStructurallyEquivalent(const TagDecl &D1, const TagDecl &D2) {
 /// Determine structural equivalence of two records.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      RecordDecl *D1, RecordDecl *D2) {
+  // C23 6.2.7p1:
+  // ... Moreover, two complete structure, union, or enumerated types declared
+  // with the same tag are compatible if members satisfy the following
+  // requirements:
+  //  - there shall be a one-to-one correspondence between their members such
+  //    that each pair of corresponding members are declared with compatible
+  //    types;
+  //  - if one member of the pair is declared with an alignment specifier, the
+  //    other is declared with an equivalent alignment specifier;
+  //  - and, if one member of the pair is declared with a name, the other is
+  //    declared with the same name.
+  // For two structures, corresponding members shall be declared in the same
+  // order. For two unions declared in the same translation unit, corresponding
+  // members shall be declared in the same order. For two structures or unions,
+  // corresponding bit-fields shall have the same widths. ... For determining
+  // type compatibility, anonymous structures and unions are considered a
+  // regular member of the containing structure or union type, and the type of
+  // an anonymous structure or union is considered compatible to the type of
+  // another anonymous structure or union, respectively, if their members
+  // fulfill the preceding requirements. ... Otherwise, the structure, union,
+  // or enumerated types are incompatible.
+
   if (!NameIsStructurallyEquivalent(*D1, *D2)) {
     return false;
   }
@@ -1645,7 +1812,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (Context.Complain) {
       Context.Diag2(D2->getLocation(), Context.getApplicableDiagnostic(
                                            diag::err_odr_tag_type_inconsistent))
-          << Context.ToCtx.getTypeDeclType(D2);
+          << Context.ToCtx.getTypeDeclType(D2)
+          << (&Context.FromCtx != &Context.ToCtx);
       Context.Diag1(D1->getLocation(), diag::note_odr_tag_kind_here)
           << D1->getDeclName() << (unsigned)D1->getTagKind();
     }
@@ -1666,10 +1834,19 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     }
   }
 
+  // In C23 mode, check for structural equivalence of attributes on the record
+  // itself. FIXME: Should this happen in C++ as well?
+  if (Context.LangOpts.C23 &&
+      !CheckStructurallyEquivalentAttributes(Context, D1, D2))
+    return false;
+
   // If the records occur in different context (namespace), these should be
   // different. This is specially important if the definition of one or both
-  // records is missing.
-  if (!IsRecordContextStructurallyEquivalent(Context, D1, D2))
+  // records is missing. In C23, different contexts do not make for a different
+  // structural type (a local struct definition can be a valid redefinition of
+  // a file scope struct definition).
+  if (!Context.LangOpts.C23 &&
+      !IsRecordContextStructurallyEquivalent(Context, D1, D2))
     return false;
 
   // If both declarations are class template specializations, we know
@@ -1698,11 +1875,11 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   // Compare the definitions of these two records. If either or both are
   // incomplete (i.e. it is a forward decl), we assume that they are
-  // equivalent.
+  // equivalent. except in C23 mode.
   D1 = D1->getDefinition();
   D2 = D2->getDefinition();
   if (!D1 || !D2)
-    return true;
+    return !Context.LangOpts.C23;
 
   // If any of the records has external storage and we do a minimal check (or
   // AST import) we assume they are equivalent. (If we didn't have this
@@ -1737,7 +1914,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
           Context.Diag2(D2->getLocation(),
                         Context.getApplicableDiagnostic(
                             diag::err_odr_tag_type_inconsistent))
-              << Context.ToCtx.getTypeDeclType(D2);
+              << Context.ToCtx.getTypeDeclType(D2)
+              << (&Context.FromCtx != &Context.ToCtx);
           Context.Diag2(D2->getLocation(), diag::note_odr_number_of_bases)
               << D2CXX->getNumBases();
           Context.Diag1(D1->getLocation(), diag::note_odr_number_of_bases)
@@ -1757,7 +1935,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
             Context.Diag2(D2->getLocation(),
                           Context.getApplicableDiagnostic(
                               diag::err_odr_tag_type_inconsistent))
-                << Context.ToCtx.getTypeDeclType(D2);
+                << Context.ToCtx.getTypeDeclType(D2)
+                << (&Context.FromCtx != &Context.ToCtx);
             Context.Diag2(Base2->getBeginLoc(), diag::note_odr_base)
                 << Base2->getType() << Base2->getSourceRange();
             Context.Diag1(Base1->getBeginLoc(), diag::note_odr_base)
@@ -1772,7 +1951,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
             Context.Diag2(D2->getLocation(),
                           Context.getApplicableDiagnostic(
                               diag::err_odr_tag_type_inconsistent))
-                << Context.ToCtx.getTypeDeclType(D2);
+                << Context.ToCtx.getTypeDeclType(D2)
+                << (&Context.FromCtx != &Context.ToCtx);
             Context.Diag2(Base2->getBeginLoc(), diag::note_odr_virtual_base)
                 << Base2->isVirtual() << Base2->getSourceRange();
             Context.Diag1(Base1->getBeginLoc(), diag::note_odr_base)
@@ -1793,7 +1973,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
             Context.Diag2(D2->getLocation(),
                           Context.getApplicableDiagnostic(
                               diag::err_odr_tag_type_inconsistent))
-                << Context.ToCtx.getTypeDeclType(D2CXX);
+                << Context.ToCtx.getTypeDeclType(D2CXX)
+                << (&Context.FromCtx != &Context.ToCtx);
             Context.Diag1((*Friend1)->getFriendLoc(), diag::note_odr_friend);
             Context.Diag2(D2->getLocation(), diag::note_odr_missing_friend);
           }
@@ -1805,7 +1986,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
             Context.Diag2(D2->getLocation(),
                           Context.getApplicableDiagnostic(
                               diag::err_odr_tag_type_inconsistent))
-                << Context.ToCtx.getTypeDeclType(D2CXX);
+                << Context.ToCtx.getTypeDeclType(D2CXX)
+                << (&Context.FromCtx != &Context.ToCtx);
             Context.Diag1((*Friend1)->getFriendLoc(), diag::note_odr_friend);
             Context.Diag2((*Friend2)->getFriendLoc(), diag::note_odr_friend);
           }
@@ -1818,7 +2000,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
           Context.Diag2(D2->getLocation(),
                         Context.getApplicableDiagnostic(
                             diag::err_odr_tag_type_inconsistent))
-              << Context.ToCtx.getTypeDeclType(D2);
+              << Context.ToCtx.getTypeDeclType(D2)
+              << (&Context.FromCtx != &Context.ToCtx);
           Context.Diag2((*Friend2)->getFriendLoc(), diag::note_odr_friend);
           Context.Diag1(D1->getLocation(), diag::note_odr_missing_friend);
         }
@@ -1829,7 +2012,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
         Context.Diag2(D2->getLocation(),
                       Context.getApplicableDiagnostic(
                           diag::err_odr_tag_type_inconsistent))
-            << Context.ToCtx.getTypeDeclType(D2);
+            << Context.ToCtx.getTypeDeclType(D2)
+            << (&Context.FromCtx != &Context.ToCtx);
         const CXXBaseSpecifier *Base1 = D1CXX->bases_begin();
         Context.Diag1(Base1->getBeginLoc(), diag::note_odr_base)
             << Base1->getType() << Base1->getSourceRange();
@@ -1851,7 +2035,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
         Context.Diag2(D2->getLocation(),
                       Context.getApplicableDiagnostic(
                           diag::err_odr_tag_type_inconsistent))
-            << Context.ToCtx.getTypeDeclType(D2);
+            << Context.ToCtx.getTypeDeclType(D2)
+            << (&Context.FromCtx != &Context.ToCtx);
         Context.Diag1(Field1->getLocation(), diag::note_odr_field)
             << Field1->getDeclName() << Field1->getType();
         Context.Diag2(D2->getLocation(), diag::note_odr_missing_field);
@@ -1867,7 +2052,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (Context.Complain) {
       Context.Diag2(D2->getLocation(), Context.getApplicableDiagnostic(
                                            diag::err_odr_tag_type_inconsistent))
-          << Context.ToCtx.getTypeDeclType(D2);
+          << Context.ToCtx.getTypeDeclType(D2)
+          << (&Context.FromCtx != &Context.ToCtx);
       Context.Diag2(Field2->getLocation(), diag::note_odr_field)
           << Field2->getDeclName() << Field2->getType();
       Context.Diag1(D1->getLocation(), diag::note_odr_missing_field);
@@ -1907,54 +2093,84 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   // Compare the definitions of these two enums. If either or both are
   // incomplete (i.e. forward declared), we assume that they are equivalent.
+  // In C23, the order of the enumerations does not matter, only the names and
+  // values do.
   D1 = D1->getDefinition();
   D2 = D2->getDefinition();
   if (!D1 || !D2)
     return true;
 
-  EnumDecl::enumerator_iterator EC2 = D2->enumerator_begin(),
-                                EC2End = D2->enumerator_end();
-  for (EnumDecl::enumerator_iterator EC1 = D1->enumerator_begin(),
-                                     EC1End = D1->enumerator_end();
-       EC1 != EC1End; ++EC1, ++EC2) {
+  if (Context.LangOpts.C23 &&
+      !CheckStructurallyEquivalentAttributes(Context, D1, D2))
+    return false;
+
+  llvm::SmallVector<const EnumConstantDecl *, 8> D1Enums, D2Enums;
+  auto CopyEnumerators =
+      [](auto &&Range, llvm::SmallVectorImpl<const EnumConstantDecl *> &Cont) {
+        for (const EnumConstantDecl *ECD : Range)
+          Cont.push_back(ECD);
+      };
+  CopyEnumerators(D1->enumerators(), D1Enums);
+  CopyEnumerators(D2->enumerators(), D2Enums);
+
+  // In C23 mode, the order of the enumerations does not matter, so sort them
+  // by name to get them both into a consistent ordering.
+  if (Context.LangOpts.C23) {
+    auto Sorter = [](const EnumConstantDecl *LHS, const EnumConstantDecl *RHS) {
+      return LHS->getName() < RHS->getName();
+    };
+    llvm::sort(D1Enums, Sorter);
+    llvm::sort(D2Enums, Sorter);
+  }
+
+  auto EC2 = D2Enums.begin(), EC2End = D2Enums.end();
+  for (auto EC1 = D1Enums.begin(), EC1End = D1Enums.end(); EC1 != EC1End;
+       ++EC1, ++EC2) {
     if (EC2 == EC2End) {
       if (Context.Complain) {
         Context.Diag2(D2->getLocation(),
                       Context.getApplicableDiagnostic(
                           diag::err_odr_tag_type_inconsistent))
-            << Context.ToCtx.getTypeDeclType(D2);
-        Context.Diag1(EC1->getLocation(), diag::note_odr_enumerator)
-            << EC1->getDeclName() << toString(EC1->getInitVal(), 10);
+            << Context.ToCtx.getTypeDeclType(D2)
+            << (&Context.FromCtx != &Context.ToCtx);
+        Context.Diag1((*EC1)->getLocation(), diag::note_odr_enumerator)
+            << (*EC1)->getDeclName() << toString((*EC1)->getInitVal(), 10);
         Context.Diag2(D2->getLocation(), diag::note_odr_missing_enumerator);
       }
       return false;
     }
 
-    llvm::APSInt Val1 = EC1->getInitVal();
-    llvm::APSInt Val2 = EC2->getInitVal();
+    llvm::APSInt Val1 = (*EC1)->getInitVal();
+    llvm::APSInt Val2 = (*EC2)->getInitVal();
     if (!llvm::APSInt::isSameValue(Val1, Val2) ||
-        !IsStructurallyEquivalent(EC1->getIdentifier(), EC2->getIdentifier())) {
+        !IsStructurallyEquivalent((*EC1)->getIdentifier(),
+                                  (*EC2)->getIdentifier())) {
       if (Context.Complain) {
         Context.Diag2(D2->getLocation(),
                       Context.getApplicableDiagnostic(
                           diag::err_odr_tag_type_inconsistent))
-            << Context.ToCtx.getTypeDeclType(D2);
-        Context.Diag2(EC2->getLocation(), diag::note_odr_enumerator)
-            << EC2->getDeclName() << toString(EC2->getInitVal(), 10);
-        Context.Diag1(EC1->getLocation(), diag::note_odr_enumerator)
-            << EC1->getDeclName() << toString(EC1->getInitVal(), 10);
+            << Context.ToCtx.getTypeDeclType(D2)
+            << (&Context.FromCtx != &Context.ToCtx);
+        Context.Diag2((*EC2)->getLocation(), diag::note_odr_enumerator)
+            << (*EC2)->getDeclName() << toString((*EC2)->getInitVal(), 10);
+        Context.Diag1((*EC1)->getLocation(), diag::note_odr_enumerator)
+            << (*EC1)->getDeclName() << toString((*EC1)->getInitVal(), 10);
       }
       return false;
     }
+    if (Context.LangOpts.C23 &&
+        !CheckStructurallyEquivalentAttributes(Context, *EC1, *EC2, D2))
+      return false;
   }
 
   if (EC2 != EC2End) {
     if (Context.Complain) {
       Context.Diag2(D2->getLocation(), Context.getApplicableDiagnostic(
                                            diag::err_odr_tag_type_inconsistent))
-          << Context.ToCtx.getTypeDeclType(D2);
-      Context.Diag2(EC2->getLocation(), diag::note_odr_enumerator)
-          << EC2->getDeclName() << toString(EC2->getInitVal(), 10);
+          << Context.ToCtx.getTypeDeclType(D2)
+          << (&Context.FromCtx != &Context.ToCtx);
+      Context.Diag2((*EC2)->getLocation(), diag::note_odr_enumerator)
+          << (*EC2)->getDeclName() << toString((*EC2)->getInitVal(), 10);
       Context.Diag1(D1->getLocation(), diag::note_odr_missing_enumerator);
     }
     return false;
