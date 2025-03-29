@@ -476,7 +476,7 @@ AArch64PostLegalizerCombinerImpl::AArch64PostLegalizerCombinerImpl(
     const AArch64PostLegalizerCombinerImplRuleConfig &RuleConfig,
     const AArch64Subtarget &STI, MachineDominatorTree *MDT,
     const LegalizerInfo *LI)
-    : Combiner(MF, CInfo, TPC, &KB, CSEInfo),
+    : Combiner(MF, CInfo, TPC, &VT, CSEInfo),
       Opt(std::make_unique<OptMIRBuilder>(MF, CSEInfo, Observer, LI,
                                           /*IsPrelegalize=*/false)),
       B(*Opt), Helper(Observer, B, /*IsPreLegalize*/ false, &VT, MDT, LI),
