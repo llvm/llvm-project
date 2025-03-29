@@ -10,19 +10,17 @@
 #ifndef _LIBCPP___FLAT_MAP_FLAT_MULTISET_H
 #define _LIBCPP___FLAT_MAP_FLAT_MULTISET_H
 
-#include "utils.h"
+#include <__algorithm/equal_range.h>
 #include <__algorithm/lexicographical_compare_three_way.h>
+#include <__algorithm/lower_bound.h>
 #include <__algorithm/min.h>
 #include <__algorithm/ranges_equal.h>
-#include <__algorithm/ranges_equal_range.h>
 #include <__algorithm/ranges_inplace_merge.h>
 #include <__algorithm/ranges_is_sorted.h>
-#include <__algorithm/ranges_lower_bound.h>
-#include <__algorithm/ranges_partition_point.h>
 #include <__algorithm/ranges_sort.h>
 #include <__algorithm/ranges_unique.h>
-#include <__algorithm/ranges_upper_bound.h>
 #include <__algorithm/remove_if.h>
+#include <__algorithm/upper_bound.h>
 #include <__assert>
 #include <__compare/synth_three_way.h>
 #include <__concepts/convertible_to.h>
@@ -523,43 +521,47 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const key_type& __x) {
-    return iterator(ranges::lower_bound(std::as_const(__keys_), __x, __compare_));
+    const auto& __keys = __keys_;
+    return iterator(std::lower_bound(__keys.begin(), __keys.end(), __x, __compare_));
   }
 
   _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const key_type& __x) const {
-    return const_iterator(ranges::lower_bound(__keys_, __x, __compare_));
+    return const_iterator(std::lower_bound(__keys_.begin(), __keys_.end(), __x, __compare_));
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const _Kp& __x) {
-    return iterator(ranges::lower_bound(std::as_const(__keys_), __x, __compare_));
+    const auto& __keys = __keys_;
+    return iterator(std::lower_bound(__keys.begin(), __keys.end(), __x, __compare_));
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const _Kp& __x) const {
-    return const_iterator(ranges::lower_bound(__keys_, __x, __compare_));
+    return const_iterator(std::lower_bound(__keys_.begin(), __keys_.end(), __x, __compare_));
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const key_type& __x) {
-    return iterator(ranges::upper_bound(std::as_const(__keys_), __x, __compare_));
+    const auto& __keys = __keys_;
+    return iterator(std::upper_bound(__keys.begin(), __keys.end(), __x, __compare_));
   }
 
   _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const key_type& __x) const {
-    return const_iterator(ranges::upper_bound(__keys_, __x, __compare_));
+    return const_iterator(std::upper_bound(__keys_.begin(), __keys_.end(), __x, __compare_));
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const _Kp& __x) {
-    return iterator(ranges::upper_bound(std::as_const(__keys_), __x, __compare_));
+    const auto& __keys = __keys_;
+    return iterator(std::upper_bound(__keys.begin(), __keys.end(), __x, __compare_));
   }
 
   template <class _Kp>
     requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const _Kp& __x) const {
-    return const_iterator(ranges::upper_bound(__keys_, __x, __compare_));
+    return const_iterator(std::upper_bound(__keys_.begin(), __keys_.end(), __x, __compare_));
   }
 
   _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const key_type& __x) {
@@ -630,7 +632,7 @@ private:
       //                   |
       //                  hint
       // We want to insert "2" after the last existing "2"
-      __hint = ranges::upper_bound(begin(), __hint, __key, __compare_);
+      __hint = std::upper_bound(begin(), __hint, __key, __compare_);
     } else {
       _LIBCPP_ASSERT_INTERNAL(!__prev_larger && __next_smaller, "this means that the multiset is not sorted");
 
@@ -641,7 +643,7 @@ private:
       //  |
       // hint
       // We want to insert "2" before the first existing "2"
-      __hint = ranges::lower_bound(__hint, end(), __key, __compare_);
+      __hint = std::lower_bound(__hint, end(), __key, __compare_);
     }
     return __flat_set_utils::__emplace_exact_pos(*this, __hint, std::forward<_Kp>(__key));
   }
@@ -658,8 +660,9 @@ private:
 
   template <class _Self, class _Kp>
   _LIBCPP_HIDE_FROM_ABI static auto __equal_range_impl(_Self&& __self, const _Kp& __key) {
-    using __iter                   = _If<is_const_v<__libcpp_remove_reference_t<_Self>>, const_iterator, iterator>;
-    auto [__key_first, __key_last] = ranges::equal_range(__self.__keys_, __key, __self.__compare_);
+    using __iter = _If<is_const_v<__libcpp_remove_reference_t<_Self>>, const_iterator, iterator>;
+    auto [__key_first, __key_last] =
+        std::equal_range(__self.__keys_.begin(), __self.__keys_.end(), __key, __self.__compare_);
     return std::make_pair(__iter(__key_first), __iter(__key_last));
   }
 
