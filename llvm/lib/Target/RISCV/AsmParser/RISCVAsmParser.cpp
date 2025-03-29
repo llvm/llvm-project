@@ -843,7 +843,7 @@ public:
   bool isUImm8Lsb000() const { return isUImmShifted<5, 3>(); }
 
   bool isUImm9Lsb000() const { return isUImmShifted<6, 3>(); }
-  
+
   bool isUImm14Lsb00() const { return isUImmShifted<12, 2>(); }
 
   bool isUImm10Lsb00NonZero() const {
