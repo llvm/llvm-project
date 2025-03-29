@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple="arm-apple-ios3.0.0" | FileCheck %s
+; RUN: llc < %s -mtriple="armv4t-apple-ios3.0.0" | FileCheck %s
 
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:32:64-v128:32:128-a0:0:32-n32-S32"
 
@@ -10,8 +10,7 @@ target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:64-
 ; CHECK: quux
 ; CHECK: lsl
 ; CHECK: asr
-; CHECK: bl
-; CHECK: pop
+; CHECK: b
 define void @quux(ptr %arg) {
 bb:
   %tmp1 = getelementptr inbounds %struct.eggs, ptr %arg, i32 0, i32 1
