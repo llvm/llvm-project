@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceMemoryOperations.h"
-#include "Delta.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -36,14 +35,16 @@ static void removeVolatileInFunction(Oracle &O, Function &F) {
   }
 }
 
-static void removeVolatileInModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceVolatileInstructionsDeltaPass(Oracle &O,
+                                               ReducerWorkItem &WorkItem) {
   for (Function &F : WorkItem.getModule())
     removeVolatileInFunction(O, F);
 }
 
-void llvm::reduceVolatileInstructionsDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, removeVolatileInModule, "Reducing Volatile Instructions");
-}
+// void llvm::reduceVolatileInstructionsDeltaPass(TestRunner &Test, StringRef
+// PassMessage) {
+//   runDeltaPass(Test, removeVolatileInModule, PassMessage);
+// }
 
 static void reduceAtomicSyncScopesInFunction(Oracle &O, Function &F) {
   for (Instruction &I : instructions(F)) {
@@ -66,15 +67,10 @@ static void reduceAtomicSyncScopesInFunction(Oracle &O, Function &F) {
   }
 }
 
-static void reduceAtomicSyncScopesInModule(Oracle &O,
+void llvm::reduceAtomicSyncScopesDeltaPass(Oracle &O,
                                            ReducerWorkItem &WorkItem) {
   for (Function &F : WorkItem.getModule())
     reduceAtomicSyncScopesInFunction(O, F);
-}
-
-void llvm::reduceAtomicSyncScopesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, reduceAtomicSyncScopesInModule,
-               "Reducing Atomic Sync Scopes");
 }
 
 // TODO: Might be helpful to incrementally relax orders
@@ -100,11 +96,7 @@ static void reduceAtomicOrderingInFunction(Oracle &O, Function &F) {
   }
 }
 
-static void reduceAtomicOrderingInModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceAtomicOrderingDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   for (Function &F : WorkItem.getModule())
     reduceAtomicOrderingInFunction(O, F);
-}
-
-void llvm::reduceAtomicOrderingDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, reduceAtomicOrderingInModule, "Reducing Atomic Ordering");
 }

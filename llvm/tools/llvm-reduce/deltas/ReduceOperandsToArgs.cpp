@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceOperandsToArgs.h"
-#include "Delta.h"
 #include "Utils.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/IR/Constants.h"
@@ -189,7 +188,7 @@ static void substituteOperandWithArgument(Function *OldF,
   OldF->eraseFromParent();
 }
 
-static void reduceOperandsToArgs(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceOperandsToArgsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
 
   SmallVector<Use *> OperandsToReduce;
@@ -210,9 +209,4 @@ static void reduceOperandsToArgs(Oracle &O, ReducerWorkItem &WorkItem) {
 
     substituteOperandWithArgument(&F, OperandsToReduce);
   }
-}
-
-void llvm::reduceOperandsToArgsDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, reduceOperandsToArgs,
-               "Converting operands to function arguments");
 }
