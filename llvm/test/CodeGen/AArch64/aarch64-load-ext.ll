@@ -273,18 +273,15 @@ define <3 x i16> @fsext_v3i16(ptr %a) {
 ; CHECK-LE-LABEL: fsext_v3i16:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr s0, [x0]
-; CHECK-LE-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-LE-NEXT:    shl v0.4h, v0.4h, #8
-; CHECK-LE-NEXT:    sshr v0.4h, v0.4h, #8
+; CHECK-LE-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: fsext_v3i16:
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldr s0, [x0]
 ; CHECK-BE-NEXT:    rev32 v0.8b, v0.8b
-; CHECK-BE-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-BE-NEXT:    shl v0.4h, v0.4h, #8
-; CHECK-BE-NEXT:    sshr v0.4h, v0.4h, #8
+; CHECK-BE-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
 ; CHECK-BE-NEXT:    ret
   %x = load <3 x i8>, ptr %a

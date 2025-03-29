@@ -59,23 +59,18 @@ define void @masked_scatter_v8i8(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    ldr d0, [x0]
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    cmeq v1.8b, v0.8b, #0
-; VBITS_GE_256-NEXT:    zip1 v3.8b, v0.8b, v0.8b
+; VBITS_GE_256-NEXT:    ushll v0.8h, v0.8b, #0
 ; VBITS_GE_256-NEXT:    ld1d { z4.d }, p0/z, [x1, x8, lsl #3]
-; VBITS_GE_256-NEXT:    zip1 v2.8b, v1.8b, v0.8b
-; VBITS_GE_256-NEXT:    zip2 v1.8b, v1.8b, v0.8b
-; VBITS_GE_256-NEXT:    zip2 v0.8b, v0.8b, v0.8b
-; VBITS_GE_256-NEXT:    uunpklo z3.s, z3.h
-; VBITS_GE_256-NEXT:    shl v2.4h, v2.4h, #8
-; VBITS_GE_256-NEXT:    shl v1.4h, v1.4h, #8
+; VBITS_GE_256-NEXT:    cmeq v1.8h, v0.8h, #0
+; VBITS_GE_256-NEXT:    uunpklo z3.s, z0.h
+; VBITS_GE_256-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    sunpklo z2.s, z1.h
+; VBITS_GE_256-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; VBITS_GE_256-NEXT:    uunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    uunpklo z3.d, z3.s
-; VBITS_GE_256-NEXT:    sshr v2.4h, v2.4h, #8
-; VBITS_GE_256-NEXT:    sshr v1.4h, v1.4h, #8
-; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
-; VBITS_GE_256-NEXT:    sunpklo z2.s, z2.h
 ; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    sunpklo z2.d, z2.s
+; VBITS_GE_256-NEXT:    uunpklo z0.d, z0.s
 ; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_GE_256-NEXT:    cmpne p1.d, p0/z, z2.d, #0
 ; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x1]

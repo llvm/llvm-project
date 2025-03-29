@@ -59,20 +59,18 @@ define void @masked_gather_v4i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @masked_gather_v8i8(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: masked_gather_v8i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    ldr d0, [x0]
+; VBITS_GE_256-NEXT:    ldp s0, s1, [x0]
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    cmeq v0.8b, v0.8b, #0
-; VBITS_GE_256-NEXT:    zip2 v1.8b, v0.8b, v0.8b
-; VBITS_GE_256-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; VBITS_GE_256-NEXT:    shl v1.4h, v1.4h, #8
-; VBITS_GE_256-NEXT:    shl v0.4h, v0.4h, #8
-; VBITS_GE_256-NEXT:    sshr v1.4h, v1.4h, #8
-; VBITS_GE_256-NEXT:    sshr v0.4h, v0.4h, #8
-; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
+; VBITS_GE_256-NEXT:    ushll v0.8h, v0.8b, #0
+; VBITS_GE_256-NEXT:    ushll v1.8h, v1.8b, #0
+; VBITS_GE_256-NEXT:    mov v0.d[1], v1.d[0]
+; VBITS_GE_256-NEXT:    cmeq v0.8h, v0.8h, #0
+; VBITS_GE_256-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; VBITS_GE_256-NEXT:    sunpklo z0.s, z0.h
-; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
+; VBITS_GE_256-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_GE_256-NEXT:    sunpklo z0.d, z0.s
+; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_GE_256-NEXT:    cmpne p1.d, p0/z, z1.d, #0
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1b { z1.d }, p1/z, [z1.d]

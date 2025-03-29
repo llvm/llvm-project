@@ -43,8 +43,7 @@ define void @v3i8(ptr %p1) {
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    ldr s0, [x0]
-; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-SD-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-SD-NEXT:    uaddlp v0.4h, v0.8b
 ; CHECK-SD-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
